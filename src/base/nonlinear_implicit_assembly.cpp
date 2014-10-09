@@ -16,22 +16,56 @@
 
 
 MAST::NonlinearImplicitAssembly::
-NonlinearImplicitAssembly(MAST::PhysicsDisciplineBase& discipline,
-                          MAST::SystemInitialization& sys):
-MAST::AssemblyBase(discipline, sys) {
+NonlinearImplicitAssembly():
+MAST::AssemblyBase() {
+    
+}
+
+
+
+MAST::NonlinearImplicitAssembly::~NonlinearImplicitAssembly() {
+    
+}
+
+
+
+
+void
+MAST::NonlinearImplicitAssembly::
+attach_discipline_and_system(MAST::PhysicsDisciplineBase &discipline,
+                             MAST::SystemInitialization &system) {
+    
+    libmesh_assert_msg(!_discipline && !_system,
+                       "Error: Assembly should be cleared before attaching System.");
+    
+    _discipline = &discipline;
+    _system     = &system;
+    
     libMesh::NonlinearImplicitSystem& nonlin_sys =
-    dynamic_cast<libMesh::NonlinearImplicitSystem&>(sys.system());
+    dynamic_cast<libMesh::NonlinearImplicitSystem&>(system.system());
+    
     nonlin_sys.nonlinear_solver->residual_and_jacobian_object = this;
     nonlin_sys.attach_sensitivity_assemble_object(*this);
 }
 
 
 
-MAST::NonlinearImplicitAssembly::~NonlinearImplicitAssembly() {
-    libMesh::NonlinearImplicitSystem& nonlin_sys =
-    dynamic_cast<libMesh::NonlinearImplicitSystem&>(_system.system());
-    nonlin_sys.nonlinear_solver->residual_and_jacobian_object = NULL;
-    nonlin_sys.reset_sensitivity_assembly();
+
+void
+MAST::NonlinearImplicitAssembly::
+clear_discipline_and_system( ) {
+    
+    if (_system && _discipline) {
+
+        libMesh::NonlinearImplicitSystem& nonlin_sys =
+        dynamic_cast<libMesh::NonlinearImplicitSystem&>(_system->system());
+        
+        nonlin_sys.nonlinear_solver->residual_and_jacobian_object = NULL;
+        nonlin_sys.reset_sensitivity_assembly();
+    }
+    
+    _discipline = NULL;
+    _system     = NULL;
 }
 
 
@@ -44,7 +78,7 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
                        libMesh::NonlinearImplicitSystem& S) {
     
     libMesh::NonlinearImplicitSystem& nonlin_sys =
-    dynamic_cast<libMesh::NonlinearImplicitSystem&>(_system.system());
+    dynamic_cast<libMesh::NonlinearImplicitSystem&>(_system->system());
     
     // make sure that the system for which this object was created,
     // and the system passed through the function call are the same
@@ -60,7 +94,7 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
     RealMatrixX mat;
     
     std::vector<libMesh::dof_id_type> dof_indices;
-    const libMesh::DofMap& dof_map = _system.system().get_dof_map();
+    const libMesh::DofMap& dof_map = _system->system().get_dof_map();
     std::auto_ptr<MAST::ElementBase> physics_elem;
     
     std::auto_ptr<libMesh::NumericVector<Real> > localized_solution;
@@ -135,7 +169,7 @@ sensitivity_assemble (const libMesh::ParameterVector& parameters,
                       libMesh::NumericVector<Real>& sensitivity_rhs) {
     
     libMesh::NonlinearImplicitSystem& nonlin_sys =
-    dynamic_cast<libMesh::NonlinearImplicitSystem&>(_system.system());
+    dynamic_cast<libMesh::NonlinearImplicitSystem&>(_system->system());
     
     sensitivity_rhs.zero();
     
@@ -175,7 +209,7 @@ sensitivity_assemble (const libMesh::ParameterVector& parameters,
         for (unsigned int i=0; i<dof_indices.size(); i++)
             sol(i) = (*localized_solution)(dof_indices[i]);
         
-        physics_elem->sensitivity_param = _discipline.get_parameter(parameters[i]);
+        physics_elem->sensitivity_param = _discipline->get_parameter(parameters[i]);
         physics_elem->set_solution(sol);
         
         // perform the element level calculations

@@ -25,9 +25,7 @@ namespace MAST {
         /*!
          *   constructor associates this assembly object with the system
          */
-        TransientAssembly(MAST::PhysicsDisciplineBase& assembly,
-                          MAST::TransientSolverBase& solver,
-                          MAST::SystemInitialization& sys);
+        TransientAssembly();
         
         
         /*!
@@ -36,6 +34,21 @@ namespace MAST {
          */
         virtual ~TransientAssembly();
         
+        /*!
+         *   attaches a system to this discipline, and vice-a-versa
+         */
+        virtual void
+        attach_discipline_and_system(MAST::PhysicsDisciplineBase& discipline,
+                                     MAST::TransientSolverBase& solver,
+                                     MAST::SystemInitialization& sys);
+        
+        
+        /*!
+         *   clears association with a system to this discipline, and vice-a-versa
+         */
+        virtual void
+        clear_discipline_and_system();
+
         
         /*!
          *    function that assembles the matrices and vectors quantities for
@@ -95,7 +108,7 @@ namespace MAST {
          *   Pointer to a transient solver object that combines the
          *   element transient data appropriately for the nonlinear solver.
          */
-        MAST::TransientSolverBase& _transient_solver;
+        MAST::TransientSolverBase* _transient_solver;
     };
     
     

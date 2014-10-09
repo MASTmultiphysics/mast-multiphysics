@@ -20,8 +20,7 @@ namespace MAST {
         /*!
          *   constructor associates this assembly object with the system
          */
-        NonlinearImplicitAssembly(MAST::PhysicsDisciplineBase& assembly,
-                                  MAST::SystemInitialization& sys);
+        NonlinearImplicitAssembly();
         
         
         /*!
@@ -30,6 +29,21 @@ namespace MAST {
          */
         virtual ~NonlinearImplicitAssembly();
         
+        
+        /*!
+         *   attaches a system to this discipline, and vice-a-versa
+         */
+        virtual void
+        attach_discipline_and_system(MAST::PhysicsDisciplineBase& discipline,
+                                     MAST::SystemInitialization& system);
+        
+        
+        /*!
+         *   clears association with a system to this discipline, and vice-a-versa
+         */
+        virtual void
+        clear_discipline_and_system( );
+
         
         /*!
          *    function that assembles the matrices and vectors quantities for

@@ -11,6 +11,8 @@
 		6921397019E4771800CDFB4F /* heat_conduction_discipline.h in Headers */ = {isa = PBXBuildFile; fileRef = 6921396E19E4771800CDFB4F /* heat_conduction_discipline.h */; };
 		6921397D19E4834900CDFB4F /* heat_conduction_system_initialization.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6921397B19E4834900CDFB4F /* heat_conduction_system_initialization.cpp */; };
 		6921397E19E4834900CDFB4F /* heat_conduction_system_initialization.h in Headers */ = {isa = PBXBuildFile; fileRef = 6921397C19E4834900CDFB4F /* heat_conduction_system_initialization.h */; };
+		69A624F019E70F4600B5B303 /* output_assembly_base.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69A624EE19E70F4600B5B303 /* output_assembly_base.cpp */; };
+		69A624F119E70F4600B5B303 /* output_assembly_base.h in Headers */ = {isa = PBXBuildFile; fileRef = 69A624EF19E70F4600B5B303 /* output_assembly_base.h */; };
 		69D2758E19D48B1B007F5A68 /* transient_solver_base.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69D2758C19D48B1B007F5A68 /* transient_solver_base.cpp */; };
 		69D2758F19D48B1B007F5A68 /* transient_solver_base.h in Headers */ = {isa = PBXBuildFile; fileRef = 69D2758D19D48B1B007F5A68 /* transient_solver_base.h */; };
 		69D2759219D490DD007F5A68 /* utility.h in Headers */ = {isa = PBXBuildFile; fileRef = 69D2759119D490DD007F5A68 /* utility.h */; };
@@ -90,6 +92,8 @@
 		6921396E19E4771800CDFB4F /* heat_conduction_discipline.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = heat_conduction_discipline.h; sourceTree = "<group>"; };
 		6921397B19E4834900CDFB4F /* heat_conduction_system_initialization.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = heat_conduction_system_initialization.cpp; sourceTree = "<group>"; };
 		6921397C19E4834900CDFB4F /* heat_conduction_system_initialization.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = heat_conduction_system_initialization.h; sourceTree = "<group>"; };
+		69A624EE19E70F4600B5B303 /* output_assembly_base.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = output_assembly_base.cpp; sourceTree = "<group>"; };
+		69A624EF19E70F4600B5B303 /* output_assembly_base.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = output_assembly_base.h; sourceTree = "<group>"; };
 		69D2758C19D48B1B007F5A68 /* transient_solver_base.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = transient_solver_base.cpp; sourceTree = "<group>"; };
 		69D2758D19D48B1B007F5A68 /* transient_solver_base.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = transient_solver_base.h; sourceTree = "<group>"; };
 		69D2759119D490DD007F5A68 /* utility.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = utility.h; sourceTree = "<group>"; };
@@ -309,6 +313,8 @@
 				69E1275C19D365C7001BADE2 /* transient_assembly.h */,
 				69FC1B9419E5D13900BA00BB /* constant_field_function.cpp */,
 				69FC1B9519E5D13900BA00BB /* constant_field_function.h */,
+				69A624EE19E70F4600B5B303 /* output_assembly_base.cpp */,
+				69A624EF19E70F4600B5B303 /* output_assembly_base.h */,
 			);
 			path = base;
 			sourceTree = "<group>";
@@ -393,6 +399,7 @@
 				69E1274619D343C3001BADE2 /* mast_data_types.h in Headers */,
 				69D275F319D609BC007F5A68 /* local_2d_elem.h in Headers */,
 				69D2759E19D5CDA4007F5A68 /* boundary_condition_base.h in Headers */,
+				69A624F119E70F4600B5B303 /* output_assembly_base.h in Headers */,
 				69ECA02A19DA4354009BB5B0 /* material_property_card_base.h in Headers */,
 				69FC1B8F19E59F2A00BA00BB /* heat_conduction_nonlinear_assembly.h in Headers */,
 				69D275F719D60ABF007F5A68 /* heat_conduction_elem_base.h in Headers */,
@@ -492,6 +499,7 @@
 				69D2758E19D48B1B007F5A68 /* transient_solver_base.cpp in Sources */,
 				69FC1B9619E5D13900BA00BB /* constant_field_function.cpp in Sources */,
 				69E1275119D3644D001BADE2 /* system_initialization.cpp in Sources */,
+				69A624F019E70F4600B5B303 /* output_assembly_base.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

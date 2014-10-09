@@ -14,26 +14,58 @@
 
 
 
-MAST::EigenproblemAssembly::EigenproblemAssembly(MAST::PhysicsDisciplineBase& discipline,
-                                                 MAST::SystemInitialization& sys):
-MAST::AssemblyBase(discipline, sys) {
+MAST::EigenproblemAssembly::EigenproblemAssembly():
+MAST::AssemblyBase() {
     
-    libMesh::EigenSystem& eigen_sys =
-    dynamic_cast<libMesh::EigenSystem&>(sys.system());
-    eigen_sys.attach_assemble_object(*this);
-    eigen_sys.attach_eigenproblem_sensitivity_assemble_object(*this);
 }
 
 
 
 MAST::EigenproblemAssembly::~EigenproblemAssembly() {
     
-    libMesh::EigenSystem& eigen_sys =
-    dynamic_cast<libMesh::EigenSystem&>(_system.system());
-    
-    eigen_sys.reset_assembly();
-    eigen_sys.reset_eigenproblem_sensitivity_assembly();
 }
+
+
+
+
+void
+MAST::EigenproblemAssembly::
+attach_discipline_and_system(MAST::PhysicsDisciplineBase &discipline,
+                             MAST::SystemInitialization &system) {
+    
+    libmesh_assert_msg(!_discipline && !_system,
+                       "Error: Assembly should be cleared before attaching System.");
+    
+    _discipline = &discipline;
+    _system     = &system;
+    
+    // now attach this to the system
+    libMesh::EigenSystem& eigen_sys =
+    dynamic_cast<libMesh::EigenSystem&>(system.system());
+    eigen_sys.attach_assemble_object(*this);
+    eigen_sys.attach_eigenproblem_sensitivity_assemble_object(*this);
+}
+
+
+
+
+void
+MAST::EigenproblemAssembly::
+clear_discipline_and_system( ) {
+    
+    if (_system && _discipline) {
+
+        libMesh::EigenSystem& eigen_sys =
+        dynamic_cast<libMesh::EigenSystem&>(_system->system());
+        
+        eigen_sys.reset_assembly();
+        eigen_sys.reset_eigenproblem_sensitivity_assembly();
+    }
+    
+    _discipline = NULL;
+    _system     = NULL;
+}
+
 
 
 
@@ -41,15 +73,15 @@ void
 MAST::EigenproblemAssembly::assemble() {
     
     libMesh::EigenSystem& eigen_sys =
-    dynamic_cast<libMesh::EigenSystem&>(_system.system());
+    dynamic_cast<libMesh::EigenSystem&>(_system->system());
     
     // zero the solution since it is not needed for eigenproblem
     eigen_sys.solution->zero();
     
     libMesh::SparseMatrix<Real>&  matrix_A =
-    *(dynamic_cast<libMesh::EigenSystem&>(_system).matrix_A);
+    *(dynamic_cast<libMesh::EigenSystem*>(_system)->matrix_A);
     libMesh::SparseMatrix<Real>&  matrix_B =
-    *(dynamic_cast<libMesh::EigenSystem&>(_system).matrix_B);
+    *(dynamic_cast<libMesh::EigenSystem*>(_system)->matrix_B);
     
     matrix_A.zero();
     matrix_B.zero();
@@ -128,15 +160,15 @@ sensitivity_assemble(const libMesh::ParameterVector& parameters,
                      libMesh::SparseMatrix<Real>* sensitivity_B) {
     
     libMesh::EigenSystem& eigen_sys =
-    dynamic_cast<libMesh::EigenSystem&>(_system.system());
+    dynamic_cast<libMesh::EigenSystem&>(_system->system());
     
     // zero the solution since it is not needed for eigenproblem
     eigen_sys.solution->zero();
     
     libMesh::SparseMatrix<Real>&  matrix_A =
-    *(dynamic_cast<libMesh::EigenSystem&>(_system).matrix_A);
+    *(dynamic_cast<libMesh::EigenSystem*>(_system)->matrix_A);
     libMesh::SparseMatrix<Real>&  matrix_B =
-    *(dynamic_cast<libMesh::EigenSystem&>(_system).matrix_B);
+    *(dynamic_cast<libMesh::EigenSystem*>(_system)->matrix_B);
     
     matrix_A.zero();
     matrix_B.zero();
@@ -189,7 +221,7 @@ sensitivity_assemble(const libMesh::ParameterVector& parameters,
         physics_elem->set_base_solution(sol, true);
         
         // tell the element about the sensitivity parameter
-        physics_elem->sensitivity_param = _discipline.get_parameter(parameters[i]);
+        physics_elem->sensitivity_param = _discipline->get_parameter(parameters[i]);
         
         _elem_sensitivity_calculations(*physics_elem, mat_A, mat_B);
 

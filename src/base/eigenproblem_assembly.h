@@ -21,8 +21,7 @@ namespace MAST {
         /*!
          *   constructor associates the eigen system with this assembly object
          */
-        EigenproblemAssembly(MAST::PhysicsDisciplineBase& assembly,
-                             MAST::SystemInitialization& sys);
+        EigenproblemAssembly();
         
         /*!
          *   destructor resets the association with the eigen system
@@ -30,6 +29,21 @@ namespace MAST {
          */
         virtual ~EigenproblemAssembly();
         
+
+        /*!
+         *   attaches a system to this discipline, and vice-a-versa
+         */
+        virtual void
+        attach_discipline_and_system(MAST::PhysicsDisciplineBase& discipline,
+                                     MAST::SystemInitialization& system);
+        
+        
+        /*!
+         *   clears association with a system to this discipline, and vice-a-versa
+         */
+        virtual void
+        clear_discipline_and_system( );
+
         /*!
          *    @returns a reference to the A matrix of the EigenSystem
          */

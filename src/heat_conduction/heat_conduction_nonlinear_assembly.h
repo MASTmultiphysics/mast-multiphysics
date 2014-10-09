@@ -18,8 +18,7 @@ namespace MAST {
         /*!
          *   constructor associates this assembly object with the system
          */
-        HeatConductionNonlinearAssembly(MAST::PhysicsDisciplineBase& discipline,
-                                        MAST::SystemInitialization& sys);
+        HeatConductionNonlinearAssembly();
         
         
         /*!

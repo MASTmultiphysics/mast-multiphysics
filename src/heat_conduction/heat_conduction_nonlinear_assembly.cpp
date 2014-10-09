@@ -9,9 +9,8 @@
 
 
 MAST::HeatConductionNonlinearAssembly::
-HeatConductionNonlinearAssembly(MAST::PhysicsDisciplineBase& discipline,
-                                MAST::SystemInitialization& sys):
-MAST::NonlinearImplicitAssembly(discipline, sys) {
+HeatConductionNonlinearAssembly():
+MAST::NonlinearImplicitAssembly() {
     
 }
 
@@ -29,10 +28,10 @@ MAST::HeatConductionNonlinearAssembly::_build_elem(const libMesh::Elem& elem) {
 
     
     const MAST::ElementPropertyCardBase& p =
-    dynamic_cast<const MAST::ElementPropertyCardBase&>(_discipline.get_property_card(elem));
+    dynamic_cast<const MAST::ElementPropertyCardBase&>(_discipline->get_property_card(elem));
     
     MAST::ElementBase* rval =
-    new MAST::HeatConductionElementBase(_system, elem, p);
+    new MAST::HeatConductionElementBase(*_system, elem, p);
     
     return std::auto_ptr<MAST::ElementBase>(rval);
 }
@@ -54,8 +53,8 @@ _elem_calculations(MAST::ElementBase& elem,
     mat.setZero();
     
     e.internal_residual(if_jac, vec, mat);
-    e.side_external_residual(if_jac, vec, mat, _discipline.side_loads());
-    e.volume_external_residual(if_jac, vec, mat, _discipline.volume_loads());
+    e.side_external_residual(if_jac, vec, mat, _discipline->side_loads());
+    e.volume_external_residual(if_jac, vec, mat, _discipline->volume_loads());
 }
 
 
@@ -73,8 +72,8 @@ _elem_sensitivity_calculations(MAST::ElementBase& elem,
     RealMatrixX mat; // dummy matrix
     
     e.internal_residual_sensitivity(false, vec, mat);
-    e.side_external_residual_sensitivity(false, vec, mat, _discipline.side_loads());
-    e.volume_external_residual_sensitivity(false, vec, mat, _discipline.volume_loads());
+    e.side_external_residual_sensitivity(false, vec, mat, _discipline->side_loads());
+    e.volume_external_residual_sensitivity(false, vec, mat, _discipline->volume_loads());
 }
 
 

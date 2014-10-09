@@ -37,18 +37,14 @@ namespace MAST {
     class ElementBase;
     
     
-    class AssemblyBase:
-    public libMesh::System::QOI,
-    public libMesh::System::QOIDerivative,
-    public libMesh::System::QOIParameterSensitivity {
+    class AssemblyBase {
     public:
         
         /*!
          *  constructor takes a reference to the discipline that provides
          *  the boundary conditions, volume loads, properties, etc.
          */
-        AssemblyBase(MAST::PhysicsDisciplineBase& discipline,
-                     MAST::SystemInitialization& system);
+        AssemblyBase();
         
         /*!
          *   virtual destructor
@@ -59,18 +55,29 @@ namespace MAST {
          *   @returns a const reference to the PhysicsDisciplineBase object
          *   associated with this object
          */
-        const MAST::PhysicsDisciplineBase& discipline() const {
-            return _discipline;
-        }
+        const MAST::PhysicsDisciplineBase& discipline() const;
         
         /*!
          *   @returns a non-const reference to the PhysicsDisciplineBase object
          *   associated with this object
          */
-        MAST::PhysicsDisciplineBase& discipline() {
-            return _discipline;
-        }
+        MAST::PhysicsDisciplineBase& discipline();
         
+        
+        /*!
+         *   attaches a system to this discipline, and vice-a-versa
+         */
+        virtual void
+        attach_discipline_and_system(MAST::PhysicsDisciplineBase& discipline,
+                                     MAST::SystemInitialization& system) = 0;
+
+        
+        /*!
+         *   clears association with a system to this discipline, and vice-a-versa
+         */
+        virtual void
+        clear_discipline_and_system( ) = 0;
+
         
         /*!
          *   @returns a const reference to the libMesh::System object
@@ -107,13 +114,13 @@ namespace MAST {
         /*!
          *   PhysicsDisciplineBase object for which this class is assembling
          */
-        MAST::PhysicsDisciplineBase& _discipline;
+        MAST::PhysicsDisciplineBase* _discipline;
         
         
         /*!
          *   System for which this assembly is performed
          */
-        MAST::SystemInitialization& _system;
+        MAST::SystemInitialization* _system;
     };
         
 }

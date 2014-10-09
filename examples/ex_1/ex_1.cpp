@@ -36,10 +36,16 @@ int main(int argc, const char * argv[]) {
     libMesh::System& sys = eq_sys.add_system<libMesh::NonlinearImplicitSystem>("thermal");
     
     // initialize the mesh
+    unsigned int
+    nx        = 10,
+    ny        = 10;
     const Real
-    width = 10.,
-    height = 10.;
-    libMesh::MeshTools::Generation::build_square(mesh, width, height);
+    width     = 10.,
+    height    = 10.;
+    libMesh::MeshTools::Generation::build_square(mesh,
+                                                 nx, ny,
+                                                 0., width,
+                                                 0., height);
     mesh.prepare_for_use();
     
     // variable type
@@ -122,10 +128,10 @@ int main(int argc, const char * argv[]) {
     heat_cond.set_property_for_subdomain(0, section_property);
     
     // create the nonlinear assembly object
-    MAST::HeatConductionNonlinearAssembly   assembly(heat_cond, heat_cond_sys);
+    MAST::HeatConductionNonlinearAssembly   assembly;
     
     // now solve the system
-    MAST::Driver::nonlinear_solution(assembly);
+    MAST::Driver::nonlinear_solution(heat_cond, heat_cond_sys, assembly);
 
     // write the solution for visualization
     libMesh::ExodusII_IO(mesh).write_equation_systems("mesh.exo", eq_sys);

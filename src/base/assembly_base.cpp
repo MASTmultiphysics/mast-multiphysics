@@ -8,18 +8,10 @@
 #include "libmesh/dof_map.h"
 
 
-MAST::AssemblyBase::AssemblyBase(MAST::PhysicsDisciplineBase& discipline,
-                                 MAST::SystemInitialization& system):
-libMesh::System::QOI(),
-libMesh::System::QOIDerivative(),
-libMesh::System::QOIParameterSensitivity(),
-_discipline(discipline),
-_system(system) {
+MAST::AssemblyBase::AssemblyBase():
+_discipline(NULL),
+_system(NULL) {
     
-    libMesh::System& sys = system.system();
-    sys.attach_QOI_object(*this);
-    sys.attach_QOI_derivative_object(*this);
-    sys.attach_QOI_parameter_sensitivity_object(*this);
 }
 
 
@@ -27,26 +19,46 @@ _system(system) {
 
 MAST::AssemblyBase::~AssemblyBase() {
     
-    libMesh::System& sys = _system.system();
-    
-    sys.reset_QOI();
-    sys.reset_QOI_derivative();
-    sys.reset_QOI_parameter_sensitivity();
 }
+
+
+
+const MAST::PhysicsDisciplineBase&
+MAST::AssemblyBase::discipline() const {
+    
+    libmesh_assert_msg(_discipline,
+                       "Error: Discipline not yet attached to Assembly.");
+    return *_discipline;
+}
+
+
+
+MAST::PhysicsDisciplineBase&
+MAST::AssemblyBase::discipline() {
+    
+    libmesh_assert_msg(_discipline,
+                       "Error: Discipline not yet attached to Assembly.");
+    return *_discipline;
+}
+
 
 
 
 const libMesh::System&
 MAST::AssemblyBase::system() const {
     
-    return _system.system();
+    libmesh_assert_msg(_discipline,
+                       "Error: System not yet attached to Assembly.");
+    return _system->system();
 }
 
 
 libMesh::System&
 MAST::AssemblyBase::system() {
     
-    return _system.system();
+    libmesh_assert_msg(_discipline,
+                       "Error: System not yet attached to Assembly.");
+    return _system->system();
 }
 
 
