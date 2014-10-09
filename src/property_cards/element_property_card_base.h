@@ -79,40 +79,40 @@ namespace MAST
         
 
         virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
-        stiffness_A_matrix(const MAST::ElementBase& e) = 0;
+        stiffness_A_matrix(const MAST::ElementBase& e) const = 0;
 
         virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
-        stiffness_B_matrix(const MAST::ElementBase& e) = 0;
+        stiffness_B_matrix(const MAST::ElementBase& e) const = 0;
 
         virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
-        stiffness_D_matrix(const MAST::ElementBase& e) = 0;
+        stiffness_D_matrix(const MAST::ElementBase& e) const = 0;
 
         virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
-        damping_matrix(const MAST::ElementBase& e) = 0;
+        damping_matrix(const MAST::ElementBase& e) const = 0;
 
         virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
-        inertia_matrix(const MAST::ElementBase& e) = 0;
+        inertia_matrix(const MAST::ElementBase& e) const = 0;
 
         virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
-        thermal_expansion_A_matrix(const MAST::ElementBase& e) = 0;
+        thermal_expansion_A_matrix(const MAST::ElementBase& e) const = 0;
 
         virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
-        thermal_expansion_B_matrix(const MAST::ElementBase& e) = 0;
+        thermal_expansion_B_matrix(const MAST::ElementBase& e) const = 0;
 
         virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
-        transverse_shear_stiffness_matrix(const MAST::ElementBase& e) = 0;
+        transverse_shear_stiffness_matrix(const MAST::ElementBase& e) const = 0;
 
         virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
-        prestress_A_matrix(const MAST::ElementBase& e) = 0;
+        prestress_A_matrix(const MAST::ElementBase& e) const = 0;
 
         virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
-        prestress_B_matrix(const MAST::ElementBase& e) = 0;
+        prestress_B_matrix(const MAST::ElementBase& e) const = 0;
         
         virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
-        thermal_conductance_matrix(const MAST::ElementBase& e) = 0;
+        thermal_conductance_matrix(const MAST::ElementBase& e) const = 0;
 
         virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
-        thermal_capacitance_matrix(const MAST::ElementBase& e) = 0;
+        thermal_capacitance_matrix(const MAST::ElementBase& e) const= 0;
 
         /*!
          *    returns the id for this card
@@ -125,7 +125,7 @@ namespace MAST
         /*!
          *   return true if the property is isotropic
          */
-        virtual bool if_isotropic() = 0;
+        virtual bool if_isotropic() const = 0;
         
         
         /*!
@@ -141,7 +141,7 @@ namespace MAST
         /*!
          *   dimension of the element for which this property is defined
          */
-        virtual unsigned int dim() = 0;
+        virtual unsigned int dim() const = 0;
         
         
         /*!

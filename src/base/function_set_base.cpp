@@ -29,7 +29,8 @@ void
 MAST::FunctionSetBase::add(MAST::FunctionBase& f) {
     
     // make sure that this funciton does not already exist
-    libmesh_assert(!_properties.count(f.name()));
+    libmesh_assert_msg(!_properties.count(f.name()),
+                       "Function already exists: " + f.name());
     
     bool success = _properties.insert(std::pair<std::string, MAST::FunctionBase*>
                                       (f.name(), &f)).second;

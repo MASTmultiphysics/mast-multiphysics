@@ -570,7 +570,7 @@ MAST::ElementProperty3D::ThermalCapacitanceMatrix::derivative (const MAST::Deriv
 
 std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::ElementPropertyCard3D::
-stiffness_A_matrix(const MAST::ElementBase& e)  {
+stiffness_A_matrix(const MAST::ElementBase& e) const {
     
     MAST::FieldFunction<RealMatrixX>* rval =
     new MAST::ElementProperty3D::StiffnessMatrix
@@ -583,7 +583,7 @@ stiffness_A_matrix(const MAST::ElementBase& e)  {
 
 std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::ElementPropertyCard3D::
-stiffness_B_matrix(const MAST::ElementBase& e) {
+stiffness_B_matrix(const MAST::ElementBase& e) const {
     
     libmesh_assert(false);
     
@@ -595,7 +595,7 @@ stiffness_B_matrix(const MAST::ElementBase& e) {
 
 std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::ElementPropertyCard3D::
-stiffness_D_matrix(const MAST::ElementBase& e) {
+stiffness_D_matrix(const MAST::ElementBase& e) const {
     
     libmesh_assert(false);
     
@@ -606,7 +606,7 @@ stiffness_D_matrix(const MAST::ElementBase& e) {
 
 std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::ElementPropertyCard3D::
-damping_matrix(const MAST::ElementBase& e) {
+damping_matrix(const MAST::ElementBase& e) const {
     
     libmesh_assert(false);
     
@@ -616,7 +616,7 @@ damping_matrix(const MAST::ElementBase& e) {
 
 std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::ElementPropertyCard3D::
-inertia_matrix(const MAST::ElementBase& e) {
+inertia_matrix(const MAST::ElementBase& e) const {
     
     MAST::FieldFunction<RealMatrixX>* rval =
     new MAST::ElementProperty3D::InertiaMatrix
@@ -629,7 +629,7 @@ inertia_matrix(const MAST::ElementBase& e) {
 
 std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::ElementPropertyCard3D::
-thermal_expansion_A_matrix(const MAST::ElementBase& e) {
+thermal_expansion_A_matrix(const MAST::ElementBase& e) const {
     
     libmesh_assert(false);
     
@@ -639,7 +639,7 @@ thermal_expansion_A_matrix(const MAST::ElementBase& e) {
 
 std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::ElementPropertyCard3D::
-thermal_expansion_B_matrix(const MAST::ElementBase& e) {
+thermal_expansion_B_matrix(const MAST::ElementBase& e) const {
     
     libmesh_assert(false);
     
@@ -650,7 +650,7 @@ thermal_expansion_B_matrix(const MAST::ElementBase& e) {
 
 std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::ElementPropertyCard3D::
-transverse_shear_stiffness_matrix(const MAST::ElementBase& e) {
+transverse_shear_stiffness_matrix(const MAST::ElementBase& e) const {
     
     libmesh_assert(false);
     
@@ -660,7 +660,7 @@ transverse_shear_stiffness_matrix(const MAST::ElementBase& e) {
 
 std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::ElementPropertyCard3D::
-prestress_A_matrix(const MAST::ElementBase& e) {
+prestress_A_matrix(const MAST::ElementBase& e) const {
     
     libmesh_assert(false);
     
@@ -670,7 +670,7 @@ prestress_A_matrix(const MAST::ElementBase& e) {
 
 std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::ElementPropertyCard3D::
-prestress_B_matrix(const MAST::ElementBase& e) {
+prestress_B_matrix(const MAST::ElementBase& e) const {
     
     libmesh_assert(false);
     
@@ -680,7 +680,7 @@ prestress_B_matrix(const MAST::ElementBase& e) {
 
 std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::ElementPropertyCard3D::
-thermal_conductance_matrix(const MAST::ElementBase& e) {
+thermal_conductance_matrix(const MAST::ElementBase& e) const {
     
     MAST::FieldFunction<RealMatrixX>* rval =
     new MAST::ElementProperty3D::ThermalConductanceMatrix
@@ -692,7 +692,7 @@ thermal_conductance_matrix(const MAST::ElementBase& e) {
 
 std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::ElementPropertyCard3D::
-thermal_capacitance_matrix(const MAST::ElementBase& e) {
+thermal_capacitance_matrix(const MAST::ElementBase& e) const {
     
     MAST::FieldFunction<RealMatrixX>* rval =
     new MAST::ElementProperty3D::ThermalCapacitanceMatrix

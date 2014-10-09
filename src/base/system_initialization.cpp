@@ -1,9 +1,16 @@
-//
-//  system_initialization.cpp
-//  mast
-//
-//  Created by Manav Bhatia on 9/24/14.
-//  Copyright (c) 2014 MAST. All rights reserved.
-//
 
+// MAST includes
 #include "base/system_initialization.h"
+
+
+MAST::SystemInitialization::SystemInitialization (libMesh::System& sys,
+                                                  const std::string& prefix):
+_system(sys),
+_prefix(prefix)
+{ }
+
+
+
+MAST::SystemInitialization::~SystemInitialization()
+{ }
+

@@ -11,10 +11,6 @@
 
 
 namespace MAST {
-
-    // Forward declerations
-    template <typename ValType> class FieldFunction;
-
     
     /*!
      *    This creates the base class for functions that have a saptial and
@@ -22,11 +18,12 @@ namespace MAST {
      *    to the functions and parameters.
      */
     template <typename ValType>
-    class FieldFunction: public MAST::FunctionBase {
+    class FieldFunction:
+    public MAST::FunctionBase {
         
     public:
         FieldFunction(const std::string& nm):
-        MAST::FunctionBase(nm)
+        MAST::FunctionBase(nm, true)
         { }
 
         

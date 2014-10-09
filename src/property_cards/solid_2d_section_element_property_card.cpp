@@ -1293,11 +1293,13 @@ operator() (const libMesh::Point& p,
 
 
 void
-MAST::Solid2DSectionProperty::ThermalCapacitanceMatrix::derivative (const MAST::DerivativeType d,
-                                                                    const MAST::FunctionBase& f,
-                                                                    const libMesh::Point& p,
-                                                                    const Real t,
-                                                                    RealMatrixX& m) const {
+MAST::Solid2DSectionProperty::ThermalCapacitanceMatrix::
+derivative (const MAST::DerivativeType d,
+            const MAST::FunctionBase& f,
+            const libMesh::Point& p,
+            const Real t,
+            RealMatrixX& m) const {
+    
     m.resize(1, 1);
     RealMatrixX dm;
     Real h, dh;
@@ -1325,7 +1327,7 @@ MAST::Solid2DSectionProperty::ThermalCapacitanceMatrix::derivative (const MAST::
 
 std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::Solid2DSectionElementPropertyCard::
-stiffness_A_matrix(const MAST::ElementBase& e) {
+stiffness_A_matrix(const MAST::ElementBase& e) const {
     
     MAST::FieldFunction<RealMatrixX>* rval =
     new MAST::Solid2DSectionProperty::ExtensionStiffnessMatrix
@@ -1338,7 +1340,7 @@ stiffness_A_matrix(const MAST::ElementBase& e) {
 
 std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::Solid2DSectionElementPropertyCard::
-stiffness_B_matrix(const MAST::ElementBase& e) {
+stiffness_B_matrix(const MAST::ElementBase& e) const {
     
     MAST::FieldFunction<RealMatrixX>* rval =
     new MAST::Solid2DSectionProperty::ExtensionBendingStiffnessMatrix
@@ -1352,7 +1354,7 @@ stiffness_B_matrix(const MAST::ElementBase& e) {
 
 std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::Solid2DSectionElementPropertyCard::
-stiffness_D_matrix(const MAST::ElementBase& e) {
+stiffness_D_matrix(const MAST::ElementBase& e) const {
     
     
     MAST::FieldFunction<RealMatrixX>* rval =
@@ -1367,7 +1369,7 @@ stiffness_D_matrix(const MAST::ElementBase& e) {
 
 std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::Solid2DSectionElementPropertyCard::
-damping_matrix(const MAST::ElementBase& e) {
+damping_matrix(const MAST::ElementBase& e) const {
     
     libmesh_error();
     
@@ -1378,7 +1380,7 @@ damping_matrix(const MAST::ElementBase& e) {
 
 std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::Solid2DSectionElementPropertyCard::
-inertia_matrix(const MAST::ElementBase& e) {
+inertia_matrix(const MAST::ElementBase& e) const {
     
     
     MAST::FieldFunction<RealMatrixX>* rval =
@@ -1394,7 +1396,7 @@ inertia_matrix(const MAST::ElementBase& e) {
 
 std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::Solid2DSectionElementPropertyCard::
-thermal_expansion_A_matrix(const MAST::ElementBase& e) {
+thermal_expansion_A_matrix(const MAST::ElementBase& e) const {
     
     MAST::FieldFunction<RealMatrixX>* rval =
     new MAST::Solid2DSectionProperty::ThermalExpansionAMatrix
@@ -1409,7 +1411,7 @@ thermal_expansion_A_matrix(const MAST::ElementBase& e) {
 
 std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::Solid2DSectionElementPropertyCard::
-thermal_expansion_B_matrix(const MAST::ElementBase& e) {
+thermal_expansion_B_matrix(const MAST::ElementBase& e) const {
     
     
     MAST::FieldFunction<RealMatrixX>* rval =
@@ -1425,7 +1427,7 @@ thermal_expansion_B_matrix(const MAST::ElementBase& e) {
 
 std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::Solid2DSectionElementPropertyCard::
-transverse_shear_stiffness_matrix(const MAST::ElementBase& e) {
+transverse_shear_stiffness_matrix(const MAST::ElementBase& e) const {
     
     
     MAST::FieldFunction<RealMatrixX>* rval =
@@ -1439,7 +1441,7 @@ transverse_shear_stiffness_matrix(const MAST::ElementBase& e) {
 
 std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::Solid2DSectionElementPropertyCard::
-prestress_A_matrix(const MAST::ElementBase& e) {
+prestress_A_matrix(const MAST::ElementBase& e) const {
     
     MAST::FieldFunction<RealMatrixX>* rval =
     new MAST::Solid2DSectionProperty::PrestressAMatrix
@@ -1453,7 +1455,7 @@ prestress_A_matrix(const MAST::ElementBase& e) {
 
 std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::Solid2DSectionElementPropertyCard::
-prestress_B_matrix(const MAST::ElementBase& e) {
+prestress_B_matrix(const MAST::ElementBase& e) const {
     
     MAST::FieldFunction<RealMatrixX>* rval =
     new MAST::Solid2DSectionProperty::PrestressBMatrix
@@ -1469,7 +1471,7 @@ prestress_B_matrix(const MAST::ElementBase& e) {
 
 std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::Solid2DSectionElementPropertyCard::
-thermal_conductance_matrix(const MAST::ElementBase& e) {
+thermal_conductance_matrix(const MAST::ElementBase& e) const {
     
     
     MAST::FieldFunction<RealMatrixX>* rval =
@@ -1484,7 +1486,7 @@ thermal_conductance_matrix(const MAST::ElementBase& e) {
 
 std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::Solid2DSectionElementPropertyCard::
-thermal_capacitance_matrix(const MAST::ElementBase& e) {
+thermal_capacitance_matrix(const MAST::ElementBase& e) const {
     
     
     MAST::FieldFunction<RealMatrixX>* rval =

@@ -9,9 +9,9 @@ MAST::ElementBase::ElementBase(MAST::SystemInitialization& sys,
                                const libMesh::Elem& elem):
 _system(sys),
 _elem(elem),
-_time(_system.system().time)
-{ }
-
+_time(_system.system().time) {
+    
+}
 
 
 MAST::ElementBase::~ElementBase()

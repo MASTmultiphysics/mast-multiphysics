@@ -17,16 +17,12 @@ namespace MAST {
          *   all variables name.
          */
         SystemInitialization (libMesh::System& sys,
-                              std::string& prefix):
-        _system(sys),
-        _prefix(prefix)
-        { }
+                              const std::string& prefix);
         
         /*!
          *   virtual destructor
          */
-        virtual ~SystemInitialization()
-        { }
+        virtual ~SystemInitialization();
         
         
         /*!

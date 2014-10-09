@@ -308,7 +308,7 @@ right_multiply(T& r, const T& m) const {
     libmesh_assert_equal_to(r.cols(), m.cols());
     libmesh_assert_equal_to(m.rows(), n());
     
-    r.zero();
+    r.setZero();
     unsigned int index = 0;
     
     for (unsigned int i=0; i<_n_interpolated_vars; i++) // row
@@ -363,7 +363,7 @@ right_multiply_transpose(T& r, const MAST::FEMOperatorMatrix& m) const {
     libmesh_assert_equal_to(r.cols(), m.n());
     libmesh_assert_equal_to(_n_interpolated_vars, m._n_interpolated_vars);
     
-    r.zero();
+    r.setZero();
     unsigned int index_i, index_j = 0;
     
     for (unsigned int i=0; i<_n_discrete_vars; i++) // row of result

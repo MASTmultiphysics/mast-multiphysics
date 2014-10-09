@@ -46,16 +46,20 @@ namespace MAST
         /*!
          *   initializes the parameter to the given name
          */
-        FunctionBase(const std::string& nm ):
+        FunctionBase(const std::string& nm ,
+                     const bool is_field_func):
         _name(nm),
+        _is_field_func(is_field_func),
         _master(NULL)
         { }
 
+        
         /*!
-         *    Copy constructor for use with
+         *    Copy constructor
          */
         FunctionBase(const MAST::FunctionBase& f):
         _name(f._name),
+        _is_field_func(f._is_field_func),
         _master(f._master)
         { }
 
@@ -79,6 +83,16 @@ namespace MAST
                 return _master;
             else             // this is the master
                 return this;
+        }
+        
+        
+        /*!
+         *   @returns \p true if this is a field function, and \p false
+         *   otherwise
+         */
+        bool is_field_function() const {
+            
+            return _is_field_func;
         }
         
         
@@ -118,6 +132,11 @@ namespace MAST
          *    name of this parameter
          */
         std::string _name;
+        
+        /*!
+         *    flag to store the nature of field function
+         */
+        bool _is_field_func;
         
         /*!
          *    pointer to the master function that this is a copy of. A NULL

@@ -5,6 +5,7 @@
 
 // MAST includes
 #include "base/mast_data_types.h"
+#include "base/field_function_base.h"
 
 
 // libMesh includes
@@ -53,7 +54,7 @@ namespace MAST {
          *    returns the transformation matrix for this element. This is used
          *    to map the coordinates from local to global coordinate system
          */
-        const RealMatrix3& T_matrix() const {
+        const RealMatrixX& T_matrix() const {
             return _T_mat;
         }
         
@@ -133,12 +134,47 @@ namespace MAST {
          *    local cs,    an_j = T^t a_i, and the reverse transformation is
          *    obtained as  a_j  = T  an_i
          */
-        RealMatrix3 _T_mat;
+        RealMatrixX _T_mat;
 
         
-        MAST::FieldFunction<RealMatrixX>* _T_mat_function;
+        std::auto_ptr<MAST::FieldFunction<RealMatrixX> > _T_mat_function;
     };
+
+
     
+    
+    /*!
+     *   Presently, this function is defined for planar elements. 
+     *   Extensions to curved elements is to be added in the near future.
+     */
+    class TransformMatrixFunction:
+    public MAST::FieldFunction<RealMatrixX> {
+        
+    public:
+        
+        TransformMatrixFunction(const RealMatrixX& Tmat);
+        
+        TransformMatrixFunction(const MAST::TransformMatrixFunction& f);
+        
+        std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+        clone() const;
+
+        virtual void operator() (const libMesh::Point& p,
+                                 const Real t,
+                                 RealMatrixX& v) const;
+        
+        
+        virtual void derivative (const MAST::DerivativeType d,
+                                 const MAST::FunctionBase& f,
+                                 const libMesh::Point& p,
+                                 const Real t,
+                                 RealMatrixX& v) const;
+        
+    protected:
+        
+
+        const RealMatrixX& _Tmat;
+    };
 }
 
 #endif // __mast__local_elem_base__

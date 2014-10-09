@@ -37,7 +37,7 @@ namespace MAST {
         
         Parameter(const std::string& nm,
                   const Real& val):
-        MAST::FunctionBase(nm),
+        MAST::FunctionBase(nm, false),
         _val(new Real)
         { *_val = val;}
 

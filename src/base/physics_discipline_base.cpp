@@ -53,21 +53,6 @@ MAST::PhysicsDisciplineBase::add_dirichlet_bc(libMesh::boundary_id_type bid,
     _dirichlet_bc_map.insert(MAST::DirichletBCMapType::value_type(bid, &load)).second;
     
     libmesh_assert(insert_success);
-    
-    /*
-     if (load.type() == MAST::DIRICHLET) {
-     
-     // get the Dirichlet boundary condition object
-     libMesh::DirichletBoundary& dirichlet_b =
-     (dynamic_cast<MAST::DirichletBoundaryCondition&>(load)).dirichlet_boundary();
-     
-     // add an entry for each boundary of this dirichlet object.
-     for (std::set<libMesh::boundary_id_type>::const_iterator it = dirichlet_b.b.begin();
-     it != dirichlet_b.b.end(); it++)
-     _side_bc_map.insert(std::multimap<libMesh::boundary_id_type, MAST::BoundaryConditionBase*>::value_type
-     (*it, &load));
-     }
-     */
 }
 
 
@@ -140,6 +125,7 @@ MAST::PhysicsDisciplineBase::get_property_card(const libMesh::Elem& elem) const 
 }
 
 
+
 void
 MAST::PhysicsDisciplineBase::add_parameter(MAST::Parameter& f) {
     
@@ -175,26 +161,39 @@ MAST::PhysicsDisciplineBase::get_parameter(Real* par) const {
 template <typename SysType>
 void
 MAST::PhysicsDisciplineBase::
-init_system_dirichlet_bc(MAST::SystemInitialization& sys) const {
+init_system_dirichlet_bc(SysType& sys) const {
     
-    SysType& system = dynamic_cast<SysType&>(sys.system());
     
     // iterate over all the dirichlet boundary conditions and add them
     // to the system
     MAST::DirichletBCMapType::const_iterator it = _dirichlet_bc_map.begin();
     
     for ( ; it != _dirichlet_bc_map.end(); it++)
-        system.get_dof_map().add_dirichlet_boundary(*it->second);
+        sys.get_dof_map().add_dirichlet_boundary(it->second->dirichlet_boundary());
 }
+
+
+
+
+template <typename SysType>
+void
+MAST::PhysicsDisciplineBase::
+clear_system_dirichlet_bc(SysType& sys) const {
+    
+    // iterate over all the dirichlet boundary conditions and add them
+    // to the system
+    MAST::DirichletBCMapType::const_iterator it = _dirichlet_bc_map.begin();
+    
+    for ( ; it != _dirichlet_bc_map.end(); it++)
+        sys.get_dof_map().remove_dirichlet_boundary(it->second->dirichlet_boundary());
+}
+
 
 
 
 template <>
 void MAST::PhysicsDisciplineBase::
-init_system_dirichlet_bc<libMesh::CondensedEigenSystem>(MAST::SystemInitialization& vars) const {
-    
-    libMesh::CondensedEigenSystem& system =
-    dynamic_cast<libMesh::CondensedEigenSystem&>(vars.system());
+init_system_dirichlet_bc<libMesh::CondensedEigenSystem>(libMesh::CondensedEigenSystem& sys) const {
     
     // first prepare a map of boundary ids and the constrained vars on that
     // boundary
@@ -207,7 +206,7 @@ init_system_dirichlet_bc<libMesh::CondensedEigenSystem>(MAST::SystemInitializati
     for ( ; it != _dirichlet_bc_map.end(); it++) {
         
         libMesh::DirichletBoundary& dirichlet_b = it->second->dirichlet_boundary();
-        system.get_dof_map().add_dirichlet_boundary(dirichlet_b);
+        sys.get_dof_map().add_dirichlet_boundary(dirichlet_b);
         constrained_vars_map[it->first] = dirichlet_b.variables;
     }
     
@@ -216,16 +215,16 @@ init_system_dirichlet_bc<libMesh::CondensedEigenSystem>(MAST::SystemInitializati
     // now collect the ids that correspond to the specified boundary conditions
     //
     // Get a constant reference to the mesh object
-    const libMesh::MeshBase& mesh = system.get_mesh();
+    const libMesh::MeshBase& mesh = sys.get_mesh();
     
     // The dimension that we are running.
     const unsigned int dim = mesh.mesh_dimension();
     
     // Get a constant reference to the Finite Element type
     // for the first variable in the system.
-    libMesh::FEType fe_type = system.get_dof_map().variable_type(0);
+    libMesh::FEType fe_type = sys.get_dof_map().variable_type(0);
     
-    const libMesh::DofMap& dof_map = system.get_dof_map();
+    const libMesh::DofMap& dof_map = sys.get_dof_map();
     
     // the constrained dofs needed for CondensedEigenSystem
     std::set<unsigned int> dof_ids;
@@ -272,7 +271,15 @@ init_system_dirichlet_bc<libMesh::CondensedEigenSystem>(MAST::SystemInitializati
     
     // now that the dofs are available, tell the system to condense out
     // the constrained dofs
-    system.initialize_condensed_dofs(dof_ids);
+    sys.initialize_condensed_dofs(dof_ids);
 }
 
+
+
+// explicit instantiations
+template void MAST::PhysicsDisciplineBase::
+init_system_dirichlet_bc<libMesh::System>(libMesh::System& sys) const;
+
+template void MAST::PhysicsDisciplineBase::
+clear_system_dirichlet_bc<libMesh::System>(libMesh::System& sys) const;
 

@@ -65,7 +65,7 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
     
     std::auto_ptr<libMesh::NumericVector<Real> > localized_solution;
     localized_solution.reset(_build_localized_vector(nonlin_sys,
-                                                     *nonlin_sys.solution).release());
+                                                     X).release());
     
     
     
@@ -73,7 +73,8 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
     nonlin_sys.get_mesh().active_local_elements_begin();
     const libMesh::MeshBase::const_element_iterator end_el =
     nonlin_sys.get_mesh().active_local_elements_end();
-    
+        
+
     for ( ; el != end_el; ++el) {
         
         const libMesh::Elem* elem = *el;
@@ -123,7 +124,6 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
     
     if (R) R->close();
     if (J) J->close();
-    
 }
 
 

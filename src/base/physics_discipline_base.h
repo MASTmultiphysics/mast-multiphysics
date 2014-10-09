@@ -127,8 +127,15 @@ namespace MAST {
          *    initializes the system for dirichlet boundary conditions
          */
         template <typename SysType>
-        void init_system_dirichlet_bc(MAST::SystemInitialization& sys) const;
+        void init_system_dirichlet_bc(SysType& sys) const;
+
         
+        /*!
+         *    clears the system dirichlet boundary conditions
+         */
+        template <typename SysType>
+        void clear_system_dirichlet_bc(SysType& sys) const;
+
         /*!
          *    sets the same property for all elements in the specified subdomain
          */

@@ -6,15 +6,18 @@
 
 
 MAST::LocalElemBase::~LocalElemBase() {
-    delete _T_mat_function;
+
 }
 
 
 
 std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::LocalElemBase::T_matrix_function() const {
-    
-    return _T_mat_function->clone();
+
+    MAST::FieldFunction<RealMatrixX>* rval =
+    new MAST::TransformMatrixFunction(_T_mat);
+        
+    return std::auto_ptr<MAST::FieldFunction<RealMatrixX> > (rval);
 }
 
 
@@ -46,3 +49,52 @@ MAST::LocalElemBase::global_coordinates_normal(const libMesh::Point& local,
         for (unsigned int k=0; k<3; k++)
             global(j) += _T_mat(j,k)*local(k);
 }
+
+
+MAST::TransformMatrixFunction::
+TransformMatrixFunction(const RealMatrixX& Tmat):
+MAST::FieldFunction<RealMatrixX>("T_function"),
+_Tmat(Tmat) {
+    
+}
+
+
+
+MAST::TransformMatrixFunction::
+TransformMatrixFunction(const MAST::TransformMatrixFunction& f):
+MAST::FieldFunction<RealMatrixX>(f),
+_Tmat(f._Tmat) {
+    
+}
+
+
+
+std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+MAST::TransformMatrixFunction::clone() const {
+    MAST::FieldFunction<RealMatrixX> *rval =
+    new MAST::TransformMatrixFunction(*this);
+    
+    return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >(rval);
+}
+
+
+
+void
+MAST::TransformMatrixFunction::operator() (const libMesh::Point& p,
+                                           const Real t,
+                                           RealMatrixX& v) const {
+    v = _Tmat;
+}
+
+
+
+void
+MAST::TransformMatrixFunction::derivative (const MAST::DerivativeType d,
+                                           const MAST::FunctionBase& f,
+                                           const libMesh::Point& p,
+                                           const Real t,
+                                           RealMatrixX& v) const {
+    v.setZero(3, 3);
+}
+
+

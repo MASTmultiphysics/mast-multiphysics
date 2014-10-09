@@ -78,42 +78,42 @@ namespace MAST {
         
         
         virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
-        stiffness_A_matrix(const MAST::ElementBase& e);
+        stiffness_A_matrix(const MAST::ElementBase& e) const;
         
         virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
-        stiffness_B_matrix(const MAST::ElementBase& e);
+        stiffness_B_matrix(const MAST::ElementBase& e) const;
         
         virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
-        stiffness_D_matrix(const MAST::ElementBase& e);
+        stiffness_D_matrix(const MAST::ElementBase& e) const;
         
         virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
-        damping_matrix(const MAST::ElementBase& e);
+        damping_matrix(const MAST::ElementBase& e) const;
         
         virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
-        inertia_matrix(const MAST::ElementBase& e);
+        inertia_matrix(const MAST::ElementBase& e) const;
         
         virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
-        thermal_expansion_A_matrix(const MAST::ElementBase& e);
+        thermal_expansion_A_matrix(const MAST::ElementBase& e) const;
         
         virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
-        thermal_expansion_B_matrix(const MAST::ElementBase& e);
+        thermal_expansion_B_matrix(const MAST::ElementBase& e) const;
         
         virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
-        transverse_shear_stiffness_matrix(const MAST::ElementBase& e);
+        transverse_shear_stiffness_matrix(const MAST::ElementBase& e) const;
         
         virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
-        prestress_A_matrix(const MAST::ElementBase& e);
+        prestress_A_matrix(const MAST::ElementBase& e) const;
         
         virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
-        prestress_B_matrix(const MAST::ElementBase& e);
-        
-        
-        virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
-        thermal_conductance_matrix(const MAST::ElementBase& e);
+        prestress_B_matrix(const MAST::ElementBase& e) const;
         
         
         virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
-        thermal_capacitance_matrix(const MAST::ElementBase& e);
+        thermal_conductance_matrix(const MAST::ElementBase& e) const;
+        
+        
+        virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+        thermal_capacitance_matrix(const MAST::ElementBase& e) const;
         
     protected:
         

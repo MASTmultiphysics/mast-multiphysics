@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		6921396F19E4771800CDFB4F /* heat_conduction_discipline.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6921396D19E4771800CDFB4F /* heat_conduction_discipline.cpp */; };
+		6921397019E4771800CDFB4F /* heat_conduction_discipline.h in Headers */ = {isa = PBXBuildFile; fileRef = 6921396E19E4771800CDFB4F /* heat_conduction_discipline.h */; };
+		6921397D19E4834900CDFB4F /* heat_conduction_system_initialization.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6921397B19E4834900CDFB4F /* heat_conduction_system_initialization.cpp */; };
+		6921397E19E4834900CDFB4F /* heat_conduction_system_initialization.h in Headers */ = {isa = PBXBuildFile; fileRef = 6921397C19E4834900CDFB4F /* heat_conduction_system_initialization.h */; };
 		69D2758E19D48B1B007F5A68 /* transient_solver_base.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69D2758C19D48B1B007F5A68 /* transient_solver_base.cpp */; };
 		69D2758F19D48B1B007F5A68 /* transient_solver_base.h in Headers */ = {isa = PBXBuildFile; fileRef = 69D2758D19D48B1B007F5A68 /* transient_solver_base.h */; };
 		69D2759219D490DD007F5A68 /* utility.h in Headers */ = {isa = PBXBuildFile; fileRef = 69D2759119D490DD007F5A68 /* utility.h */; };
@@ -71,9 +75,21 @@
 		69ECA03B19DAFE0A009BB5B0 /* element_property_card_2D.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69ECA03A19DAFE0A009BB5B0 /* element_property_card_2D.cpp */; };
 		69ECA03F19DB036C009BB5B0 /* bending_operator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69ECA03D19DB036C009BB5B0 /* bending_operator.cpp */; };
 		69ECA04019DB036C009BB5B0 /* bending_operator.h in Headers */ = {isa = PBXBuildFile; fileRef = 69ECA03E19DB036C009BB5B0 /* bending_operator.h */; };
+		69FC1B8A19E595FB00BA00BB /* driver_base.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69FC1B8819E595FB00BA00BB /* driver_base.cpp */; };
+		69FC1B8B19E595FB00BA00BB /* driver_base.h in Headers */ = {isa = PBXBuildFile; fileRef = 69FC1B8919E595FB00BA00BB /* driver_base.h */; };
+		69FC1B8E19E59F2A00BA00BB /* heat_conduction_nonlinear_assembly.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69FC1B8C19E59F2A00BA00BB /* heat_conduction_nonlinear_assembly.cpp */; };
+		69FC1B8F19E59F2A00BA00BB /* heat_conduction_nonlinear_assembly.h in Headers */ = {isa = PBXBuildFile; fileRef = 69FC1B8D19E59F2A00BA00BB /* heat_conduction_nonlinear_assembly.h */; };
+		69FC1B9219E5C52700BA00BB /* local_3d_elem.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69FC1B9019E5C52700BA00BB /* local_3d_elem.cpp */; };
+		69FC1B9319E5C52700BA00BB /* local_3d_elem.h in Headers */ = {isa = PBXBuildFile; fileRef = 69FC1B9119E5C52700BA00BB /* local_3d_elem.h */; };
+		69FC1B9619E5D13900BA00BB /* constant_field_function.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69FC1B9419E5D13900BA00BB /* constant_field_function.cpp */; };
+		69FC1B9719E5D13900BA00BB /* constant_field_function.h in Headers */ = {isa = PBXBuildFile; fileRef = 69FC1B9519E5D13900BA00BB /* constant_field_function.h */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		6921396D19E4771800CDFB4F /* heat_conduction_discipline.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = heat_conduction_discipline.cpp; sourceTree = "<group>"; };
+		6921396E19E4771800CDFB4F /* heat_conduction_discipline.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = heat_conduction_discipline.h; sourceTree = "<group>"; };
+		6921397B19E4834900CDFB4F /* heat_conduction_system_initialization.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = heat_conduction_system_initialization.cpp; sourceTree = "<group>"; };
+		6921397C19E4834900CDFB4F /* heat_conduction_system_initialization.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = heat_conduction_system_initialization.h; sourceTree = "<group>"; };
 		69D2758C19D48B1B007F5A68 /* transient_solver_base.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = transient_solver_base.cpp; sourceTree = "<group>"; };
 		69D2758D19D48B1B007F5A68 /* transient_solver_base.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = transient_solver_base.h; sourceTree = "<group>"; };
 		69D2759119D490DD007F5A68 /* utility.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = utility.h; sourceTree = "<group>"; };
@@ -140,6 +156,14 @@
 		69ECA03A19DAFE0A009BB5B0 /* element_property_card_2D.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = element_property_card_2D.cpp; sourceTree = "<group>"; };
 		69ECA03D19DB036C009BB5B0 /* bending_operator.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = bending_operator.cpp; sourceTree = "<group>"; };
 		69ECA03E19DB036C009BB5B0 /* bending_operator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = bending_operator.h; sourceTree = "<group>"; };
+		69FC1B8819E595FB00BA00BB /* driver_base.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = driver_base.cpp; sourceTree = "<group>"; };
+		69FC1B8919E595FB00BA00BB /* driver_base.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = driver_base.h; sourceTree = "<group>"; };
+		69FC1B8C19E59F2A00BA00BB /* heat_conduction_nonlinear_assembly.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = heat_conduction_nonlinear_assembly.cpp; sourceTree = "<group>"; };
+		69FC1B8D19E59F2A00BA00BB /* heat_conduction_nonlinear_assembly.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = heat_conduction_nonlinear_assembly.h; sourceTree = "<group>"; };
+		69FC1B9019E5C52700BA00BB /* local_3d_elem.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = local_3d_elem.cpp; sourceTree = "<group>"; };
+		69FC1B9119E5C52700BA00BB /* local_3d_elem.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = local_3d_elem.h; sourceTree = "<group>"; };
+		69FC1B9419E5D13900BA00BB /* constant_field_function.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = constant_field_function.cpp; sourceTree = "<group>"; };
+		69FC1B9519E5D13900BA00BB /* constant_field_function.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = constant_field_function.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -192,8 +216,14 @@
 		69D275E219D5FF81007F5A68 /* heat_conduction */ = {
 			isa = PBXGroup;
 			children = (
+				6921396D19E4771800CDFB4F /* heat_conduction_discipline.cpp */,
+				6921396E19E4771800CDFB4F /* heat_conduction_discipline.h */,
 				69D275F419D60ABF007F5A68 /* heat_conduction_elem_base.cpp */,
 				69D275F519D60ABF007F5A68 /* heat_conduction_elem_base.h */,
+				69FC1B8C19E59F2A00BA00BB /* heat_conduction_nonlinear_assembly.cpp */,
+				69FC1B8D19E59F2A00BA00BB /* heat_conduction_nonlinear_assembly.h */,
+				6921397B19E4834900CDFB4F /* heat_conduction_system_initialization.cpp */,
+				6921397C19E4834900CDFB4F /* heat_conduction_system_initialization.h */,
 			);
 			path = heat_conduction;
 			sourceTree = "<group>";
@@ -203,10 +233,12 @@
 			children = (
 				69D275E819D60170007F5A68 /* local_1d_elem.cpp */,
 				69D275E919D60170007F5A68 /* local_1d_elem.h */,
-				69D275EC19D602E8007F5A68 /* local_elem_base.cpp */,
-				69D275ED19D602E8007F5A68 /* local_elem_base.h */,
 				69D275F019D609BC007F5A68 /* local_2d_elem.cpp */,
 				69D275F119D609BC007F5A68 /* local_2d_elem.h */,
+				69FC1B9019E5C52700BA00BB /* local_3d_elem.cpp */,
+				69FC1B9119E5C52700BA00BB /* local_3d_elem.h */,
+				69D275EC19D602E8007F5A68 /* local_elem_base.cpp */,
+				69D275ED19D602E8007F5A68 /* local_elem_base.h */,
 			);
 			path = mesh;
 			sourceTree = "<group>";
@@ -238,6 +270,7 @@
 			children = (
 				69E1274419D343C3001BADE2 /* base */,
 				69D275CA19D5CF06007F5A68 /* boundary_condition */,
+				69FC1B8719E595FB00BA00BB /* driver */,
 				69ECA03C19DB036C009BB5B0 /* elasticity */,
 				69D275E219D5FF81007F5A68 /* heat_conduction */,
 				69D275E719D6009A007F5A68 /* mesh */,
@@ -274,6 +307,8 @@
 				69E1275019D3644D001BADE2 /* system_initialization.h */,
 				69E1275B19D365C7001BADE2 /* transient_assembly.cpp */,
 				69E1275C19D365C7001BADE2 /* transient_assembly.h */,
+				69FC1B9419E5D13900BA00BB /* constant_field_function.cpp */,
+				69FC1B9519E5D13900BA00BB /* constant_field_function.h */,
 			);
 			path = base;
 			sourceTree = "<group>";
@@ -312,6 +347,15 @@
 			path = elasticity;
 			sourceTree = "<group>";
 		};
+		69FC1B8719E595FB00BA00BB /* driver */ = {
+			isa = PBXGroup;
+			children = (
+				69FC1B8819E595FB00BA00BB /* driver_base.cpp */,
+				69FC1B8919E595FB00BA00BB /* driver_base.h */,
+			);
+			path = driver;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXHeadersBuildPhase section */
@@ -324,6 +368,7 @@
 				69ECA03319DA4354009BB5B0 /* element_property_card_1D.h in Headers */,
 				69ECA03719DA4354009BB5B0 /* element_property_card_base.h in Headers */,
 				69D275EB19D60170007F5A68 /* local_1d_elem.h in Headers */,
+				6921397019E4771800CDFB4F /* heat_conduction_discipline.h in Headers */,
 				69D275E619D5FFD5007F5A68 /* fem_operator_matrix.h in Headers */,
 				69D2759A19D5B8BC007F5A68 /* function_set_base.h in Headers */,
 				69ECA02919DA4354009BB5B0 /* isotropic_material_property_card.h in Headers */,
@@ -333,6 +378,8 @@
 				69E1275219D3644D001BADE2 /* system_initialization.h in Headers */,
 				69D2759619D4B98F007F5A68 /* parameter.h in Headers */,
 				69D275D519D5F944007F5A68 /* first_order_newmark_transient_solver.h in Headers */,
+				69FC1B9719E5D13900BA00BB /* constant_field_function.h in Headers */,
+				6921397E19E4834900CDFB4F /* heat_conduction_system_initialization.h in Headers */,
 				69E1275A19D36575001BADE2 /* nonlinear_implicit_assembly.h in Headers */,
 				69D275CC19D5CF26007F5A68 /* dirichlet_boundary_condition.h in Headers */,
 				69E1275E19D365C7001BADE2 /* transient_assembly.h in Headers */,
@@ -341,10 +388,13 @@
 				69D2759219D490DD007F5A68 /* utility.h in Headers */,
 				69ECA03419DA4354009BB5B0 /* element_property_card_2D.h in Headers */,
 				69E1276219D36610001BADE2 /* eigenproblem_assembly.h in Headers */,
+				69FC1B8B19E595FB00BA00BB /* driver_base.h in Headers */,
+				69FC1B9319E5C52700BA00BB /* local_3d_elem.h in Headers */,
 				69E1274619D343C3001BADE2 /* mast_data_types.h in Headers */,
 				69D275F319D609BC007F5A68 /* local_2d_elem.h in Headers */,
 				69D2759E19D5CDA4007F5A68 /* boundary_condition_base.h in Headers */,
 				69ECA02A19DA4354009BB5B0 /* material_property_card_base.h in Headers */,
+				69FC1B8F19E59F2A00BA00BB /* heat_conduction_nonlinear_assembly.h in Headers */,
 				69D275F719D60ABF007F5A68 /* heat_conduction_elem_base.h in Headers */,
 				69ECA02C19DA4354009BB5B0 /* multilayer_1d_section_element_property_card.h in Headers */,
 				69D2759819D4B98F007F5A68 /* function_base.h in Headers */,
@@ -410,6 +460,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				6921396F19E4771800CDFB4F /* heat_conduction_discipline.cpp in Sources */,
 				69ECA03919DAFC6D009BB5B0 /* element_property_card_1D.cpp in Sources */,
 				69ECA03F19DB036C009BB5B0 /* bending_operator.cpp in Sources */,
 				69D275D019D5D0A0007F5A68 /* dirichlet_boundary_condition.cpp in Sources */,
@@ -427,14 +478,19 @@
 				69E1275519D364BE001BADE2 /* physics_discipline_base.cpp in Sources */,
 				69E1276119D36610001BADE2 /* eigenproblem_assembly.cpp in Sources */,
 				69ECA03B19DAFE0A009BB5B0 /* element_property_card_2D.cpp in Sources */,
+				69FC1B8E19E59F2A00BA00BB /* heat_conduction_nonlinear_assembly.cpp in Sources */,
+				69FC1B8A19E595FB00BA00BB /* driver_base.cpp in Sources */,
 				69D275F619D60ABF007F5A68 /* heat_conduction_elem_base.cpp in Sources */,
 				69E1275919D36575001BADE2 /* nonlinear_implicit_assembly.cpp in Sources */,
+				6921397D19E4834900CDFB4F /* heat_conduction_system_initialization.cpp in Sources */,
 				69D2759719D4B98F007F5A68 /* function_base.cpp in Sources */,
 				69E1274919D3457F001BADE2 /* elem_base.cpp in Sources */,
 				69E1274D19D34591001BADE2 /* assembly_base.cpp in Sources */,
 				69D275D419D5F944007F5A68 /* first_order_newmark_transient_solver.cpp in Sources */,
 				69D275E519D5FFD5007F5A68 /* fem_operator_matrix.cpp in Sources */,
+				69FC1B9219E5C52700BA00BB /* local_3d_elem.cpp in Sources */,
 				69D2758E19D48B1B007F5A68 /* transient_solver_base.cpp in Sources */,
+				69FC1B9619E5D13900BA00BB /* constant_field_function.cpp in Sources */,
 				69E1275119D3644D001BADE2 /* system_initialization.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -519,12 +575,13 @@
 		69E1274119D34331001BADE2 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD)";
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				EXECUTABLE_PREFIX = lib;
 				GCC_ENABLE_CPP_EXCEPTIONS = YES;
 				GCC_ENABLE_CPP_RTTI = YES;
-				GCC_SYMBOLS_PRIVATE_EXTERN = YES;
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
 					/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include,
@@ -546,6 +603,7 @@
 		69E1274219D34331001BADE2 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD)";
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				EXECUTABLE_PREFIX = lib;
