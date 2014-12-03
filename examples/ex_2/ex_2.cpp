@@ -64,7 +64,9 @@ public:
     }
     
     
-    virtual void qoi_derivative (const libMesh::QoISet& qoi_indices) {
+    virtual void qoi_derivative (const libMesh::QoISet& qoi_indices,
+                                 bool include_liftfunc,
+                                 bool apply_constraints) {
         
         libMesh::NumericVector<Real>& deriv = _sys.get_adjoint_rhs();
         deriv.zero();

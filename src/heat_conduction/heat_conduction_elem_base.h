@@ -111,93 +111,154 @@ namespace MAST {
                 
         
         /*!
-         *    Calculates the force vector and Jacobian due to surface pressure.
-         *    this should be implemented for each element type
+         *    Calculates the residual vector and Jacobian due to surface flux
+         *    on element side \par s.
          */
         virtual bool surface_flux_residual(bool request_jacobian,
                                            RealVectorX& f,
                                            RealMatrixX& jac,
-                                           MAST::BoundaryConditionBase& p,
-                                           const libMesh::FEBase& fe);
-        
+                                           const unsigned int s,
+                                           MAST::BoundaryConditionBase& p);
         
         /*!
-         *    Calculates the force vector and Jacobian due to surface pressure.
+         *    Calculates the residual vector sensitivity due to
+         *    surface flux on element volumetric domain. This is used only for
+         *    2D or 3D elements.
          */
-        virtual bool
-        surface_flux_residual_sensitivity(bool request_jacobian,
-                                          RealVectorX& f,
-                                          RealMatrixX& jac,
-                                          MAST::BoundaryConditionBase& p,
-                                          const libMesh::FEBase& fe);
+        virtual bool surface_flux_residual(bool request_jacobian,
+                                           RealVectorX& f,
+                                           RealMatrixX& jac,
+                                           MAST::BoundaryConditionBase& p);
+        
+        /*!
+         *    Calculates the residual vector sensitivity and Jacobian due to
+         *    surface flux on element side \par s.
+         */
+        virtual bool surface_flux_residual_sensitivity(bool request_jacobian,
+                                                       RealVectorX& f,
+                                                       RealMatrixX& jac,
+                                                       const unsigned int s,
+                                                       MAST::BoundaryConditionBase& p);
+        
+        /*!
+         *    Calculates the residual vector and Jacobian due to surface flux
+         *    on element volumetric domain. This is used only for 1D or 2D
+         *    elements.
+         */
+        virtual bool surface_flux_residual_sensitivity(bool request_jacobian,
+                                                       RealVectorX& f,
+                                                       RealMatrixX& jac,
+                                                       MAST::BoundaryConditionBase& p);
         
         
         /*!
-         *    Calculates the force vector and Jacobian due to surface pressure.
-         *    this should be implemented for each element type
+         *    Calculates the residual vector and Jacobian due to surface
+         *    convection.
          */
         virtual bool surface_convection_residual(bool request_jacobian,
                                                  RealVectorX& f,
                                                  RealMatrixX& jac,
-                                                 MAST::BoundaryConditionBase& p,
-                                                 const libMesh::FEBase& fe);
-        
+                                                 const unsigned int s,
+                                                 MAST::BoundaryConditionBase& p);
+
         
         /*!
-         *    Calculates the force vector and Jacobian due to surface pressure.
+         *    Calculates the residual vector and Jacobian due to surface
+         *    convection on the element domain. This is relevant only for
+         *    1D and 2D elements.
+         */
+        virtual bool surface_convection_residual(bool request_jacobian,
+                                                 RealVectorX& f,
+                                                 RealMatrixX& jac,
+                                                 MAST::BoundaryConditionBase& p);
+
+        
+        /*!
+         *    Calculates the residual vector sensitivity and Jacobian due
+         *    to surface convection.
          */
         virtual bool
         surface_convection_residual_sensitivity(bool request_jacobian,
                                                 RealVectorX& f,
                                                 RealMatrixX& jac,
-                                                MAST::BoundaryConditionBase& p,
-                                                const libMesh::FEBase& fe);
-        
+                                                const unsigned int s,
+                                                MAST::BoundaryConditionBase& p);
+
+        /*!
+         *    Calculates the residual vector sensitivity and Jacobian due
+         *    to surface convection on element domain. This is relevant only 
+         *    for 1D and 2D elements.
+         */
+        virtual bool
+        surface_convection_residual_sensitivity(bool request_jacobian,
+                                                RealVectorX& f,
+                                                RealMatrixX& jac,
+                                                MAST::BoundaryConditionBase& p);
+
         
         /*!
-         *    Calculates the force vector and Jacobian due to surface pressure.
-         *    this should be implemented for each element type
+         *    Calculates the residual vector and Jacobian due to surface
+         *    radiation flux on side s.
          */
         virtual bool surface_radiation_residual(bool request_jacobian,
                                                 RealVectorX& f,
                                                 RealMatrixX& jac,
-                                                MAST::BoundaryConditionBase& p,
-                                                const libMesh::FEBase& fe);
-        
+                                                const unsigned int s,
+                                                MAST::BoundaryConditionBase& p);
+
         
         /*!
-         *    Calculates the force vector and Jacobian due to surface pressure.
+         *    Calculates the residual vector and Jacobian due to surface 
+         *    radiation flux on element domain.
+         */
+        virtual bool surface_radiation_residual(bool request_jacobian,
+                                                RealVectorX& f,
+                                                RealMatrixX& jac,
+                                                MAST::BoundaryConditionBase& p);
+
+        
+        /*!
+         *    Calculates the residual vector sensitivity and Jacobian due
+         *    to surface radiation flux on element side.
          */
         virtual bool
         surface_radiation_residual_sensitivity(bool request_jacobian,
                                                RealVectorX& f,
                                                RealMatrixX& jac,
-                                               MAST::BoundaryConditionBase& p,
-                                               const libMesh::FEBase& fe);
-        
+                                               const unsigned int s,
+                                               MAST::BoundaryConditionBase& p);
+
         
         /*!
-         *    Calculates the force vector and Jacobian due to surface pressure
-         *    applied on the entire element domain. This is applicable for
-         *    only 1D and 2D elements.
+         *    Calculates the residual vector sensitivity and Jacobian due
+         *    to surface radiation flux on element domain.
+         */
+        virtual bool
+        surface_radiation_residual_sensitivity(bool request_jacobian,
+                                               RealVectorX& f,
+                                               RealMatrixX& jac,
+                                               MAST::BoundaryConditionBase& p);
+
+        
+        /*!
+         *    Calculates the residual vector and Jacobian due to volume heat
+         *    source.
          */
         virtual bool volume_heat_source_residual(bool request_jacobian,
                                                  RealVectorX& f,
                                                  RealMatrixX& jac,
-                                                 MAST::BoundaryConditionBase& p,
-                                                 const libMesh::FEBase& fe);
+                                                 MAST::BoundaryConditionBase& p);
 
         
         /*!
-         *    Calculates the force vector and Jacobian due to surface pressure.
-         *    this should be implemented for each element type
+         *    Calculates the residual vector and Jacobian due to volume heat 
+         *    source.
          */
         virtual bool
         volume_heat_source_residual_sensitivity(bool request_jacobian,
                                                 RealVectorX& f,
                                                 RealMatrixX& jac,
-                                                MAST::BoundaryConditionBase& p,
-                                                const libMesh::FEBase& fe);
+                                                MAST::BoundaryConditionBase& p);
         
         /*!
          *    When \p mass = false, initializes the FEM operator matrix to the

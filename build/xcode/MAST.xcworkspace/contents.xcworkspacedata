@@ -1,4 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Workspace
    version = "1.0">
+   <FileRef
+      location = "group:mast/mast.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:ex_1/ex_1.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:ex_2/ex_2.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:ex_3/ex_3.xcodeproj">
+   </FileRef>
 </Workspace>

@@ -162,17 +162,17 @@ MAST::HeatConductionElementBase::velocity_residual (bool request_jacobian,
         
         _initialize_mass_fem_operator(qp, Bmat);
 
-        Bmat.right_multiply(vec1, _vel);
-        Bmat.vector_mult_transpose(vec2_n2, vec1);
+        Bmat.right_multiply(vec1, _vel);               //  B * T
+        Bmat.vector_mult_transpose(vec2_n2, vec1);     //  B^T * B * T
         
-        f      += JxW[qp] * material_mat(0,0) * vec2_n2;
+        f      += JxW[qp] * material_mat(0,0) * vec2_n2; // B^T B T (rho*cp)*JxW
         
         if (request_jacobian) {
             
             // TODO: add Jacobian contribution from temperature dependent property
             
-            Bmat.right_multiply_transpose(mat_n2n2, Bmat);
-            jac += JxW[qp] * material_mat(0,0) * mat_n2n2;
+            Bmat.right_multiply_transpose(mat_n2n2, Bmat);  // B^T B
+            jac += JxW[qp] * material_mat(0,0) * mat_n2n2;  // B^T B * JxW (rho*cp)
         }
         
     }
@@ -208,11 +208,6 @@ side_external_residual (bool request_jacobian,
         if (!binfo.n_boundary_ids(&_elem, n))
             continue;
         
-        // prepare the side finite element
-        std::auto_ptr<libMesh::FEBase> fe;
-        std::auto_ptr<libMesh::QBase> qrule;
-        _get_side_fe_and_qrule(_get_elem_for_quadrature(), n, fe, qrule);
-        
         // check to see if any of the specified boundary ids has a boundary
         // condition associated with them
         std::vector<libMesh::boundary_id_type> bc_ids = binfo.boundary_ids(&_elem, n);
@@ -231,24 +226,24 @@ side_external_residual (bool request_jacobian,
                         calculate_jac = (calculate_jac ||
                                          surface_flux_residual(request_jacobian,
                                                                f, jac,
-                                                               *it.first->second,
-                                                               *fe));
+                                                               n,
+                                                               *it.first->second));
                         break;
                         
                     case MAST::CONVECTION_HEAT_FLUX:
                         calculate_jac = (calculate_jac ||
                                          surface_convection_residual(request_jacobian,
                                                                      f, jac,
-                                                                     *it.first->second,
-                                                                     *fe));
+                                                                     n,
+                                                                     *it.first->second));
                         break;
                         
                     case MAST::SURFACE_RADIATION_HEAT_FLUX:
                         calculate_jac = (calculate_jac ||
                                          surface_radiation_residual(request_jacobian,
                                                                     f, jac,
-                                                                    *it.first->second,
-                                                                    *fe));
+                                                                    n,
+                                                                    *it.first->second));
                         break;
                         
                     case MAST::DIRICHLET:
@@ -298,31 +293,27 @@ volume_external_residual (bool request_jacobian,
                 calculate_jac = (calculate_jac ||
                                  surface_flux_residual(request_jacobian,
                                                        f, jac,
-                                                       *it.first->second,
-                                                       *_fe));
+                                                       *it.first->second));
                 break;
             case MAST::CONVECTION_HEAT_FLUX:
                 calculate_jac = (calculate_jac ||
                                  surface_convection_residual(request_jacobian,
                                                              f, jac,
-                                                             *it.first->second,
-                                                             *_fe));
+                                                             *it.first->second));
                 break;
                 
             case MAST::SURFACE_RADIATION_HEAT_FLUX:
                 calculate_jac = (calculate_jac ||
                                  surface_radiation_residual(request_jacobian,
                                                             f, jac,
-                                                            *it.first->second,
-                                                            *_fe));
+                                                            *it.first->second));
                 break;
                 
             case MAST::HEAT_SOURCE:
                 calculate_jac = (calculate_jac ||
                                  volume_heat_source_residual(request_jacobian,
                                                              f, jac,
-                                                             *it.first->second,
-                                                             *_fe));
+                                                             *it.first->second));
                 break;
                 
             default:
@@ -363,11 +354,6 @@ side_external_residual_sensitivity (bool request_jacobian,
         if (!binfo.n_boundary_ids(&_elem, n))
             continue;
         
-        // prepare the side finite element
-        std::auto_ptr<libMesh::FEBase> fe;
-        std::auto_ptr<libMesh::QBase> qrule;
-        _get_side_fe_and_qrule(_get_elem_for_quadrature(), n, fe, qrule);
-        
         // check to see if any of the specified boundary ids has a boundary
         // condition associated with them
         std::vector<libMesh::boundary_id_type> bc_ids = binfo.boundary_ids(&_elem, n);
@@ -386,24 +372,24 @@ side_external_residual_sensitivity (bool request_jacobian,
                         calculate_jac = (calculate_jac ||
                                          surface_flux_residual_sensitivity(request_jacobian,
                                                                            f, jac,
-                                                                           *it.first->second,
-                                                                           *fe));
+                                                                           n,
+                                                                           *it.first->second));
                         break;
                         
                     case MAST::CONVECTION_HEAT_FLUX:
                         calculate_jac = (calculate_jac ||
                                          surface_convection_residual_sensitivity(request_jacobian,
                                                                                  f, jac,
-                                                                                 *it.first->second,
-                                                                                 *fe));
+                                                                                 n,
+                                                                                 *it.first->second));
                         break;
                         
                     case MAST::SURFACE_RADIATION_HEAT_FLUX:
                         calculate_jac = (calculate_jac ||
                                          surface_radiation_residual_sensitivity(request_jacobian,
                                                                                 f, jac,
-                                                                                *it.first->second,
-                                                                                *fe));
+                                                                                n,
+                                                                                *it.first->second));
                         break;
                         
                     case MAST::DIRICHLET:
@@ -452,31 +438,27 @@ volume_external_residual_sensitivity (bool request_jacobian,
                 calculate_jac = (calculate_jac ||
                                  surface_flux_residual_sensitivity(request_jacobian,
                                                                    f, jac,
-                                                                   *it.first->second,
-                                                                   *_fe));
+                                                                   *it.first->second));
                 break;
             case MAST::CONVECTION_HEAT_FLUX:
                 calculate_jac = (calculate_jac ||
                                  surface_convection_residual_sensitivity(request_jacobian,
                                                                          f, jac,
-                                                                         *it.first->second,
-                                                                         *_fe));
+                                                                         *it.first->second));
                 break;
                 
             case MAST::SURFACE_RADIATION_HEAT_FLUX:
                 calculate_jac = (calculate_jac ||
                                  surface_radiation_residual_sensitivity(request_jacobian,
                                                                         f, jac,
-                                                                        *it.first->second,
-                                                                        *_fe));
+                                                                        *it.first->second));
                 break;
                 
             case MAST::HEAT_SOURCE:
                 calculate_jac = (calculate_jac ||
                                  volume_heat_source_residual_sensitivity(request_jacobian,
                                                                          f, jac,
-                                                                         *it.first->second,
-                                                                         *_fe));
+                                                                         *it.first->second));
                 break;
                 
             default:
@@ -524,10 +506,13 @@ MAST::HeatConductionElementBase::
 surface_flux_residual(bool request_jacobian,
                       RealVectorX& f,
                       RealMatrixX& jac,
-                      MAST::BoundaryConditionBase& p,
-                      const libMesh::FEBase& fe) {
+                      const unsigned int s,
+                      MAST::BoundaryConditionBase& p) {
     
-    libmesh_assert(_elem.dim() < 3); // only applicable for lower dimensional elements
+    // prepare the side finite element
+    std::auto_ptr<libMesh::FEBase> fe;
+    std::auto_ptr<libMesh::QBase> qrule;
+    _get_side_fe_and_qrule(_get_elem_for_quadrature(), s, fe, qrule);
     
     
     // get the function from this boundary condition
@@ -535,9 +520,9 @@ surface_flux_residual(bool request_jacobian,
     p.get<MAST::FieldFunction<Real> >("heat_flux");
     
     
-    const std::vector<Real> &JxW                 = fe.get_JxW();
-    const std::vector<libMesh::Point>& qpoint    = fe.get_xyz();
-    const std::vector<std::vector<Real> >& phi   = fe.get_phi();
+    const std::vector<Real> &JxW                 = fe->get_JxW();
+    const std::vector<libMesh::Point>& qpoint    = fe->get_xyz();
+    const std::vector<std::vector<Real> >& phi   = fe->get_phi();
     const unsigned int n_phi                     = (unsigned int)phi.size();
     
     RealVectorX phi_vec   (n_phi);
@@ -546,7 +531,7 @@ surface_flux_residual(bool request_jacobian,
     
     for (unsigned int qp=0; qp<qpoint.size(); qp++) {
         
-        _local_elem->global_coordinates_location                (qpoint[qp], pt);
+        _local_elem->global_coordinates_location (qpoint[qp], pt);
         
         // now set the shape function values
         for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
@@ -568,11 +553,66 @@ surface_flux_residual(bool request_jacobian,
 
 bool
 MAST::HeatConductionElementBase::
+surface_flux_residual(bool request_jacobian,
+                      RealVectorX& f,
+                      RealMatrixX& jac,
+                      MAST::BoundaryConditionBase& p) {
+    
+    // get the function from this boundary condition
+    const MAST::FieldFunction<Real>& func =
+    p.get<MAST::FieldFunction<Real> >("heat_flux");
+    
+    
+    const std::vector<Real> &JxW                 = _fe->get_JxW();
+    const std::vector<libMesh::Point>& qpoint    = _fe->get_xyz();
+    const std::vector<std::vector<Real> >& phi   = _fe->get_phi();
+    const unsigned int n_phi                     = (unsigned int)phi.size();
+    
+    RealVectorX phi_vec   (n_phi);
+    libMesh::Point pt;
+    Real  flux;
+    
+    for (unsigned int qp=0; qp<qpoint.size(); qp++) {
+        
+        _local_elem->global_coordinates_location (qpoint[qp], pt);
+        
+        // now set the shape function values
+        for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
+            phi_vec(i_nd) = phi[i_nd][qp];
+        
+        // get the value of flux = q_i . n_i
+        func(pt, _time, flux);
+        
+        f   +=  JxW[qp] * phi_vec * flux;
+    }
+    
+    // calculation of the load vector is independent of solution
+    return false;
+}
+
+
+
+
+bool
+MAST::HeatConductionElementBase::
 surface_flux_residual_sensitivity(bool request_jacobian,
                                   RealVectorX& f,
                                   RealMatrixX& jac,
-                                  MAST::BoundaryConditionBase& p,
-                                  const libMesh::FEBase& fe) {
+                                  const unsigned int s,
+                                  MAST::BoundaryConditionBase& p) {
+    
+    return false;
+}
+
+
+
+
+bool
+MAST::HeatConductionElementBase::
+surface_flux_residual_sensitivity(bool request_jacobian,
+                                  RealVectorX& f,
+                                  RealMatrixX& jac,
+                                  MAST::BoundaryConditionBase& p) {
     
     return false;
 }
@@ -585,17 +625,80 @@ MAST::HeatConductionElementBase::
 surface_convection_residual(bool request_jacobian,
                             RealVectorX& f,
                             RealMatrixX& jac,
-                            MAST::BoundaryConditionBase& p,
-                            const libMesh::FEBase& fe) {
+                            const unsigned int s,
+                            MAST::BoundaryConditionBase& p) {
+    
+    // prepare the side finite element
+    std::auto_ptr<libMesh::FEBase> fe;
+    std::auto_ptr<libMesh::QBase> qrule;
+    _get_side_fe_and_qrule(_get_elem_for_quadrature(), s, fe, qrule);
+
+    // get the function from this boundary condition
+    const MAST::FieldFunction<Real>
+    &coeff = p.get<MAST::FieldFunction<Real> >("convection_coeff"),
+    &T_amb = p.get<MAST::FieldFunction<Real> >("ambient_temperature");
+    
+    const std::vector<Real> &JxW               = fe->get_JxW();
+    const std::vector<libMesh::Point>& qpoint  = fe->get_xyz();
+    const std::vector<std::vector<Real> >& phi = fe->get_phi();
+    const unsigned int n_phi                   = (unsigned int)phi.size();
+    
+    
+    RealVectorX  phi_vec  (n_phi);
+    RealMatrixX  mat      (n_phi, n_phi);
+    Real temp, amb_temp, h_coeff;
+    libMesh::Point pt;
+    MAST::FEMOperatorMatrix Bmat;
+    
+    
+    for (unsigned int qp=0; qp<qpoint.size(); qp++) {
+        
+        _local_elem->global_coordinates_location (qpoint[qp], pt);
+        
+        // now set the shape function values
+        for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
+            phi_vec(i_nd) = phi[i_nd][qp];
+        
+        // value of flux
+        coeff(pt, _time, h_coeff);
+        T_amb(pt, _time, amb_temp);
+        temp  = phi_vec.dot(_sol);
+        
+        // normal flux is given as:
+        // qi_ni = h_coeff * (T - T_amb)
+        //
+        f   += JxW[qp] * phi_vec * h_coeff * (temp - amb_temp);
+        
+        if (request_jacobian) {
+            
+            Bmat.reinit(1, phi_vec);
+            Bmat.right_multiply_transpose(mat, Bmat);
+            jac += JxW[qp] * mat * h_coeff;
+        }
+    }
+    
+    return request_jacobian;
+}
+
+
+
+
+
+bool
+MAST::HeatConductionElementBase::
+surface_convection_residual(bool request_jacobian,
+                            RealVectorX& f,
+                            RealMatrixX& jac,
+                            MAST::BoundaryConditionBase& p) {
     
     // get the function from this boundary condition
     const MAST::FieldFunction<Real>
     &coeff = p.get<MAST::FieldFunction<Real> >("convection_coeff"),
     &T_amb = p.get<MAST::FieldFunction<Real> >("ambient_temperature");
     
-    const std::vector<Real> &JxW               = fe.get_JxW();
-    const std::vector<libMesh::Point>& qpoint  = fe.get_xyz();
-    const std::vector<std::vector<Real> >& phi = fe.get_phi();
+    const std::vector<Real> &JxW               = _fe->get_JxW();
+    const std::vector<libMesh::Point>& qpoint  = _fe->get_xyz();
+    const std::vector<std::vector<Real> >& phi = _fe->get_phi();
     const unsigned int n_phi                   = (unsigned int)phi.size();
     
     
@@ -644,8 +747,21 @@ MAST::HeatConductionElementBase::
 surface_convection_residual_sensitivity(bool request_jacobian,
                                         RealVectorX& f,
                                         RealMatrixX& jac,
-                                        MAST::BoundaryConditionBase& p,
-                                        const libMesh::FEBase& fe) {
+                                        const unsigned int s,
+                                        MAST::BoundaryConditionBase& p) {
+    
+    return false;
+}
+
+
+
+
+bool
+MAST::HeatConductionElementBase::
+surface_convection_residual_sensitivity(bool request_jacobian,
+                                        RealVectorX& f,
+                                        RealMatrixX& jac,
+                                        MAST::BoundaryConditionBase& p) {
     
     return false;
 }
@@ -659,9 +775,14 @@ MAST::HeatConductionElementBase::
 surface_radiation_residual(bool request_jacobian,
                            RealVectorX& f,
                            RealMatrixX& jac,
-                           MAST::BoundaryConditionBase& p,
-                           const libMesh::FEBase& fe) {
+                           const unsigned int s,
+                           MAST::BoundaryConditionBase& p) {
     
+    // prepare the side finite element
+    std::auto_ptr<libMesh::FEBase> fe;
+    std::auto_ptr<libMesh::QBase> qrule;
+    _get_side_fe_and_qrule(_get_elem_for_quadrature(), s, fe, qrule);
+
     // get the function from this boundary condition
     const MAST::FieldFunction<Real>
     &emissivity = p.get<MAST::FieldFunction<Real> >("emissivity"),
@@ -670,9 +791,9 @@ surface_radiation_residual(bool request_jacobian,
     &sb_const   = p.get<MAST::Parameter>("stefan_bolzmann_constant");
     
     
-    const std::vector<Real> &JxW               = fe.get_JxW();
-    const std::vector<libMesh::Point>& qpoint  = fe.get_xyz();
-    const std::vector<std::vector<Real> >& phi = fe.get_phi();
+    const std::vector<Real> &JxW               = fe->get_JxW();
+    const std::vector<libMesh::Point>& qpoint  = fe->get_xyz();
+    const std::vector<std::vector<Real> >& phi = fe->get_phi();
     const unsigned int n_phi                   = (unsigned int)phi.size();
     
     RealVectorX phi_vec  (n_phi);
@@ -695,13 +816,72 @@ surface_radiation_residual(bool request_jacobian,
         T_amb     (pt, _time, amb_temp);
         temp  = phi_vec.dot(_sol);
         
-        f   += JxW[qp] * phi_vec * sbc * emiss * pow(temp-amb_temp, 4.);
+        f   += JxW[qp] * phi_vec * sbc * emiss *
+        (pow(temp, 4.) - pow(amb_temp, 4.));
         
         if (request_jacobian) {
             
             Bmat.reinit(1, phi_vec);
             Bmat.right_multiply_transpose(mat, Bmat);
-            jac +=  JxW[qp] * mat * sbc * emiss * 4. * pow(temp-amb_temp, 3.);
+            jac +=  JxW[qp] * mat * sbc * emiss * 4. * pow(temp, 3.);
+        }
+    }
+    
+    
+    return request_jacobian;
+}
+
+
+
+
+bool
+MAST::HeatConductionElementBase::
+surface_radiation_residual(bool request_jacobian,
+                           RealVectorX& f,
+                           RealMatrixX& jac,
+                           MAST::BoundaryConditionBase& p) {
+    
+    // get the function from this boundary condition
+    const MAST::FieldFunction<Real>
+    &emissivity = p.get<MAST::FieldFunction<Real> >("emissivity"),
+    &T_amb      = p.get<MAST::FieldFunction<Real> >("ambient_temperature");
+    const MAST::Parameter
+    &sb_const   = p.get<MAST::Parameter>("stefan_bolzmann_constant");
+    
+    
+    const std::vector<Real> &JxW               = _fe->get_JxW();
+    const std::vector<libMesh::Point>& qpoint  = _fe->get_xyz();
+    const std::vector<std::vector<Real> >& phi = _fe->get_phi();
+    const unsigned int n_phi                   = (unsigned int)phi.size();
+    
+    RealVectorX phi_vec  (n_phi);
+    RealMatrixX mat      (n_phi, n_phi);
+    const Real sbc = sb_const();
+    Real temp, amb_temp, emiss;
+    libMesh::Point pt;
+    MAST::FEMOperatorMatrix Bmat;
+    
+    for (unsigned int qp=0; qp<qpoint.size(); qp++) {
+        
+        _local_elem->global_coordinates_location (qpoint[qp], pt);
+        
+        // now set the shape function values
+        for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
+            phi_vec(i_nd) = phi[i_nd][qp];
+        
+        // value of flux
+        emissivity(pt, _time, emiss);
+        T_amb     (pt, _time, amb_temp);
+        temp  = phi_vec.dot(_sol);
+        
+        f   += JxW[qp] * phi_vec * sbc * emiss *
+        (pow(temp, 4.) - pow(amb_temp, 4.));
+        
+        if (request_jacobian) {
+            
+            Bmat.reinit(1, phi_vec);
+            Bmat.right_multiply_transpose(mat, Bmat);
+            jac +=  JxW[qp] * mat * sbc * emiss * 4. * pow(temp, 3.);
         }
     }
     
@@ -713,14 +893,26 @@ surface_radiation_residual(bool request_jacobian,
 
 
 
+bool
+MAST::HeatConductionElementBase::
+surface_radiation_residual_sensitivity(bool request_jacobian,
+                                       RealVectorX& f,
+                                       RealMatrixX& jac,
+                                       const unsigned int s,
+                                       MAST::BoundaryConditionBase& p) {
+    
+    return true;
+}
+
+
+
 
 bool
 MAST::HeatConductionElementBase::
 surface_radiation_residual_sensitivity(bool request_jacobian,
                                        RealVectorX& f,
                                        RealMatrixX& jac,
-                                       MAST::BoundaryConditionBase& p,
-                                       const libMesh::FEBase& fe) {
+                                       MAST::BoundaryConditionBase& p) {
     
     return true;
 }
@@ -734,8 +926,7 @@ MAST::HeatConductionElementBase::
 volume_heat_source_residual(bool request_jacobian,
                             RealVectorX& f,
                             RealMatrixX& jac,
-                            MAST::BoundaryConditionBase& p,
-                            const libMesh::FEBase& fe) {
+                            MAST::BoundaryConditionBase& p) {
     
     return false;
 }
@@ -747,8 +938,7 @@ MAST::HeatConductionElementBase::
 volume_heat_source_residual_sensitivity(bool request_jacobian,
                                         RealVectorX& f,
                                         RealMatrixX& jac,
-                                        MAST::BoundaryConditionBase& p,
-                                        const libMesh::FEBase& fe) {
+                                        MAST::BoundaryConditionBase& p) {
     
     return false;
 }
