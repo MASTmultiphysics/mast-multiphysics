@@ -7,7 +7,6 @@
 #include "base/mast_data_types.h"
 
 // libMesh includes
-#include "libmesh/transient_system.h"
 #include "libmesh/nonlinear_implicit_system.h"
 
 
@@ -67,6 +66,14 @@ namespace MAST {
         
         
         /*!
+         *   This should be called before the first time step. All state vectors
+         *   from the current and the previous time steps are set equal to
+         *   \par val.
+         */
+        virtual void set_initial_condition(Real val);
+
+        
+        /*!
          *   advances the time step and copies the current solution to old
          *   solution, and so on.
          */
@@ -83,6 +90,11 @@ namespace MAST {
     protected:
         
         /*!
+         *    flag to check if this is the first time step.
+         */
+        bool  _first_step;
+        
+        /*!
          *    @returns the number of iterations for which solution and velocity
          *    are to be stored.
          */
@@ -91,7 +103,19 @@ namespace MAST {
         /*!
          *    localizes the relevant solutions for system assembly.
          */
-        virtual void _localize_solutions();
+        virtual void _localize_solutions(const libMesh::NumericVector<Real>& current_sol);
+        
+        /*!
+         *    provides the element with the transient data for calculations
+         */
+        virtual void _set_element_data(std::vector<libMesh::dof_id_type>& dof_indices,
+                                       MAST::ElementBase& elem) = 0;
+
+        /*!
+         *    update the transient solution based on the current solution
+         */
+        virtual void _update_velocity(libMesh::NumericVector<Real>& vec) = 0;
+        
         
         /*!
          *   performs the element calculations over \par elem, and returns
@@ -122,17 +146,17 @@ namespace MAST {
         MAST::TransientAssembly* _assembly;
         
         /*!
-         *   TransientNonlinearImplicitSystem for which this object is
+         *   NonlinearImplicitSystem for which this object is
          *   calculating the solution
          */
-        libMesh::TransientNonlinearImplicitSystem* _system;
+        libMesh::NonlinearImplicitSystem* _system;
         
         /*!
          *   localized solution vector from previous time step needed for
          *   element calculations on local processor
          */
         std::vector<libMesh::NumericVector<Real>*> _solution;
-
+        
         
         /*!
          *   localized solution vector needed for element calculations

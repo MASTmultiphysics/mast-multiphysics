@@ -9,6 +9,7 @@ MAST::ElementBase::ElementBase(MAST::SystemInitialization& sys,
                                const libMesh::Elem& elem):
 _system(sys),
 _elem(elem),
+_active_sol_function(NULL),
 _time(_system.system().time) {
     
 }
@@ -59,6 +60,7 @@ MAST::ElementBase::set_velocity(const RealVectorX &vec,
 
 
 
+
 void
 MAST::ElementBase::set_base_solution(const RealVectorX& vec,
                                      bool if_sens) {
@@ -78,6 +80,22 @@ MAST::ElementBase::_get_elem_for_quadrature() const {
 }
 
 
+
+void
+MAST::ElementBase::attach_active_solution_function(MAST::FunctionBase &f) {
+    
+    // make sure that this has not already been set
+    libmesh_assert(!_active_sol_function);
+    
+    _active_sol_function = &f;
+}
+
+
+void
+MAST::ElementBase::detach_active_solution_function() {
+    
+    _active_sol_function = NULL;
+}
 
 
 

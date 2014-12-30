@@ -35,6 +35,7 @@ namespace MAST {
     class PhysicsDisciplineBase;
     class SystemInitialization;
     class ElementBase;
+    template <typename ValType> class MeshFieldFunction;
     
     
     class AssemblyBase {
@@ -91,6 +92,19 @@ namespace MAST {
          */
         libMesh::System& system();
         
+
+        /*!
+         *   tells the assembly object that this function is will
+         *   need to be initialized before each residual evaluation
+         */
+        void attach_solution_function(MAST::MeshFieldFunction<RealVectorX>& f);
+
+        
+        /*!
+         *   removes the attachment of the solution function
+         */
+        void detach_solution_function();
+        
         
     protected:
         
@@ -121,6 +135,11 @@ namespace MAST {
          *   System for which this assembly is performed
          */
         MAST::SystemInitialization* _system;
+        
+        /*!
+         *   system solution that will be initialized before each solution
+         */
+        MAST::MeshFieldFunction<RealVectorX>* _sol_function;
     };
         
 }

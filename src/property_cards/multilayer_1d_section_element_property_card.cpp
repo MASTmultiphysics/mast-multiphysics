@@ -37,7 +37,7 @@ namespace MAST {
             _layer_num(layer_num),
             _layer_hz(layer_hz) {
                 for (unsigned int i=0; i < _layer_hz.size(); i++)
-                    _functions.insert(_layer_hz[i]);
+                    _functions.insert(_layer_hz[i]->master());
             }
             
             LayerOffset(const MAST::Multilayer1DSectionProperty::LayerOffset &f):
@@ -49,7 +49,7 @@ namespace MAST {
                 _layer_hz.resize(f._layer_hz.size());
                 for (unsigned int i=0; i < _layer_hz.size(); i++) {
                     _layer_hz[i] = f._layer_hz[i]->clone().release();
-                    _functions.insert(_layer_hz[i]);
+                    _functions.insert(_layer_hz[i]->master());
                 }
             }
             
@@ -127,7 +127,7 @@ namespace MAST {
             MAST::FieldFunction<RealMatrixX>("Matrix1D"),
             _layer_mats(layer_mats) {
                 for (unsigned int i=0; i < _layer_mats.size(); i++) {
-                    _functions.insert(_layer_mats[i]);
+                    _functions.insert(_layer_mats[i]->master());
                 }
             }
             
@@ -137,7 +137,7 @@ namespace MAST {
                 _layer_mats.resize(f._layer_mats.size());
                 for (unsigned int i=0; i < _layer_mats.size(); i++) {
                     _layer_mats[i] = f._layer_mats[i]->clone().release();
-                    _functions.insert(_layer_mats[i]);
+                    _functions.insert(_layer_mats[i]->master());
                 }
             }
             

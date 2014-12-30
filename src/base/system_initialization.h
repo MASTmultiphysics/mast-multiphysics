@@ -2,6 +2,9 @@
 #ifndef __mast__system_initialization__
 #define __mast__system_initialization__
 
+// C++ includes
+#include <memory>
+
 
 // libMesh includes
 #include "libmesh/system.h"
@@ -72,6 +75,13 @@ namespace MAST {
         const std::string& prefix() const {
             return _prefix;
         }
+        
+        
+//        /*!
+//         *   @returns a smart-pointer to the solution function of this system.
+//         */
+//        std::auto_ptr<MAST::FieldFunction<RealVectorX> >
+//        solution_function();
         
     protected:
         

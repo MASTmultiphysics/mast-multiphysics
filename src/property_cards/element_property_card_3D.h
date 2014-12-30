@@ -33,8 +33,8 @@ namespace MAST
         
     public:
     public:
-        ElementPropertyCard3D(unsigned int pid):
-        MAST::ElementPropertyCardBase(pid),
+        ElementPropertyCard3D():
+        MAST::ElementPropertyCardBase(),
         _material(NULL)
         { }
         
@@ -75,6 +75,26 @@ namespace MAST
             return *_material;
         }
         
+
+        /*!
+         *   returns the bending model to be used for the element. Should be
+         *   reimplemented in the derived classes
+         */
+        virtual MAST::BendingOperatorType
+        bending_model(const libMesh::Elem& elem,
+                      const libMesh::FEType& fe) const {
+            libmesh_assert(false);
+        }
+        
+        /*!
+         *    returns the extra quadrature order (on top of the system) that
+         *    this element should use. By default this is zero, and can be
+         *    changed by the derived classes
+         */
+        virtual int extra_quadrature_order(const libMesh::Elem& elem,
+                                           const libMesh::FEType& fe) const {
+            libmesh_assert(false);
+        }
 
         /*!
          *  returns true if the property card depends on the function \p f

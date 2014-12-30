@@ -32,9 +32,11 @@ namespace MAST {
         
     public:
         
-        IsotropicMaterialPropertyCard(unsigned int pid):
-        MAST::MaterialPropertyCardBase (pid)
+        IsotropicMaterialPropertyCard():
+        MAST::MaterialPropertyCardBase ()
         { }
+        
+        virtual ~IsotropicMaterialPropertyCard() {}
         
         
         virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >

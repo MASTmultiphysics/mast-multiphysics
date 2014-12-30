@@ -35,18 +35,12 @@ namespace MAST
         
     public:
         
-        MaterialPropertyCardBase(unsigned int pid):
-        MAST::FunctionSetBase (),
-        _pid(pid)
+        MaterialPropertyCardBase():
+        MAST::FunctionSetBase ()
         { }
         
-        /*!
-         *    returns the id for this card
-         */
-        unsigned int id() const {
-            return _pid;
-        }
-
+        virtual ~MaterialPropertyCardBase() {}
+        
         virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
         stiffness_matrix(const unsigned int dim,
                          const bool plane_stress = true) = 0;
@@ -70,11 +64,6 @@ namespace MAST
         conductance_matrix(const unsigned int dim) = 0;
 
     protected:
-        
-        /*!
-         *   property card id
-         */
-        unsigned int _pid;
         
     };
     

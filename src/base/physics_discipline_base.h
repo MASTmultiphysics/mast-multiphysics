@@ -27,6 +27,7 @@ namespace MAST {
     class PropertyCardBase;
     class FunctionBase;
     class FunctionSetBase;
+    class ElementPropertyCardBase;
     template <typename T> class ConstantFunction;
     class SystemInitialization;
     class Parameter;
@@ -34,7 +35,7 @@ namespace MAST {
     // typedefs
     typedef std::multimap<libMesh::boundary_id_type, MAST::BoundaryConditionBase*>  SideBCMapType;
     typedef std::multimap<libMesh::subdomain_id_type, MAST::BoundaryConditionBase*> VolumeBCMapType;
-    typedef std::map<libMesh::subdomain_id_type, const MAST::FunctionSetBase*>      PropertyCardMapType;
+    typedef std::map<libMesh::subdomain_id_type, const MAST::ElementPropertyCardBase*>      PropertyCardMapType;
     typedef std::map<libMesh::boundary_id_type, MAST::DirichletBoundaryCondition*>  DirichletBCMapType;
 
     
@@ -140,17 +141,17 @@ namespace MAST {
          *    sets the same property for all elements in the specified subdomain
          */
         void set_property_for_subdomain(const libMesh::subdomain_id_type sid,
-                                        const MAST::FunctionSetBase& prop);
+                                        const MAST::ElementPropertyCardBase& prop);
         
         /*!
-         *    get the material property for the specified element
+         *    get property card for the specified element
          */
-        const MAST::FunctionSetBase& get_property_card(const libMesh::Elem& elem) const;
+        const MAST::ElementPropertyCardBase& get_property_card(const libMesh::Elem& elem) const;
         
         /*!
-         *    get the material property for the specified subdomain id \par i
+         *    get property card for the specified subdomain id \par i
          */
-        const MAST::FunctionSetBase& get_property_card(const unsigned int i) const;
+        const MAST::ElementPropertyCardBase& get_property_card(const unsigned int i) const;
         
         /*!
          *   Adds the parameter and function pairing

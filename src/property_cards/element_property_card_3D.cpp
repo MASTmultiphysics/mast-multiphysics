@@ -37,7 +37,7 @@ namespace MAST {
             StiffnessMatrix(const MAST::ElementProperty3D::StiffnessMatrix& f):
             MAST::FieldFunction<RealMatrixX>(f),
             _material_stiffness(f._material_stiffness->clone().release()) {
-                _functions.insert(_material_stiffness);
+                _functions.insert(_material_stiffness->master());
             }
             
             /*!
@@ -75,7 +75,7 @@ namespace MAST {
             InertiaMatrix(const MAST::ElementProperty3D::InertiaMatrix& f):
             MAST::FieldFunction<RealMatrixX>(f),
             _material_inertia(f._material_inertia->clone().release()) {
-                _functions.insert(_material_inertia);
+                _functions.insert(_material_inertia->master());
             }
             
             /*!
@@ -115,8 +115,8 @@ namespace MAST {
             MAST::FieldFunction<RealMatrixX>(f),
             _material_stiffness(f._material_stiffness->clone().release()),
             _material_expansion(f._material_expansion->clone().release()) {
-                _functions.insert(_material_stiffness);
-                _functions.insert(_material_expansion);
+                _functions.insert(_material_stiffness->master());
+                _functions.insert(_material_expansion->master());
             }
             
             /*!
@@ -159,7 +159,7 @@ namespace MAST {
             PrestressAMatrix(const MAST::ElementProperty3D::PrestressAMatrix& f):
             MAST::FieldFunction<RealMatrixX>(f),
             _prestress(f._prestress->clone().release()) {
-                _functions.insert(_prestress);
+                _functions.insert(_prestress->master());
             }
             
             /*!
@@ -278,7 +278,7 @@ MAST::ElementProperty3D::StiffnessMatrix::
 StiffnessMatrix(MAST::FieldFunction<RealMatrixX> *mat):
 MAST::FieldFunction<RealMatrixX> ("StiffnessMatrix3D"),
 _material_stiffness(mat) {
-    _functions.insert(mat);
+    _functions.insert(mat->master());
 }
 
 
@@ -312,7 +312,7 @@ MAST::ElementProperty3D::
 InertiaMatrix::InertiaMatrix(MAST::FieldFunction<RealMatrixX> *mat):
 MAST::FieldFunction<RealMatrixX>("InertiaMatrix3D"),
 _material_inertia(mat) {
-    _functions.insert(mat);
+    _functions.insert(mat->master());
 }
 
 
@@ -363,8 +363,8 @@ ThermalExpansionMatrix(MAST::FieldFunction<RealMatrixX> *mat_stiff,
 MAST::FieldFunction<RealMatrixX>("ThermalExpansionMatrix3D"),
 _material_stiffness(mat_stiff),
 _material_expansion(mat_expansion) {
-    _functions.insert(mat_stiff);
-    _functions.insert(mat_expansion);
+    _functions.insert(mat_stiff->master());
+    _functions.insert(mat_expansion->master());
 }
 
 
@@ -403,7 +403,7 @@ MAST::ElementProperty3D::PrestressAMatrix::
 PrestressAMatrix(MAST::FieldFunction<RealMatrixX> *prestress):
 MAST::FieldFunction<RealMatrixX>("PrestressAMatrix3D"),
 _prestress(prestress){
-    _functions.insert(prestress);
+    _functions.insert(prestress->master());
 }
 
 
@@ -439,16 +439,16 @@ ThermalConductanceMatrix(MAST::FieldFunction<RealMatrixX> *mat_cond):
 MAST::FieldFunction<RealMatrixX>("ThermalConductanceMatrix"),
 _mat_cond(mat_cond) {
     
-    _functions.insert(mat_cond);
+    _functions.insert(mat_cond->master());
 }
 
 
 MAST::ElementProperty3D::ThermalConductanceMatrix::
 ThermalConductanceMatrix(const MAST::ElementProperty3D::ThermalConductanceMatrix &f):
 MAST::FieldFunction<RealMatrixX>(f),
-_mat_cond(f._mat_cond) {
+_mat_cond(f._mat_cond->clone().release()) {
     
-    _functions.insert(_mat_cond);
+    _functions.insert(_mat_cond->master());
 }
 
 
@@ -503,16 +503,16 @@ ThermalCapacitanceMatrix(MAST::FieldFunction<RealMatrixX> *mat_cap):
 MAST::FieldFunction<RealMatrixX>("ThermalCapacitanceMatrix"),
 _mat_cap(mat_cap) {
     
-    _functions.insert(mat_cap);
+    _functions.insert(mat_cap->master());
 }
 
 
 MAST::ElementProperty3D::ThermalCapacitanceMatrix::
 ThermalCapacitanceMatrix(const MAST::ElementProperty3D::ThermalCapacitanceMatrix &f):
 MAST::FieldFunction<RealMatrixX>(f),
-_mat_cap(f._mat_cap) {
+_mat_cap(f._mat_cap->clone().release()) {
     
-    _functions.insert(_mat_cap);
+    _functions.insert(_mat_cap->master());
 }
 
 

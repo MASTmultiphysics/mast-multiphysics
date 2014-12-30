@@ -32,8 +32,8 @@ namespace MAST {
         
     public:
         
-        Solid1DSectionElementPropertyCard(unsigned int pid):
-        MAST::ElementPropertyCard1D(pid),
+        Solid1DSectionElementPropertyCard():
+        MAST::ElementPropertyCard1D(),
         _initialized(false),
         _material(NULL)
         { }

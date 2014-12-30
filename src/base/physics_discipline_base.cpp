@@ -92,7 +92,7 @@ MAST::PhysicsDisciplineBase::clear_volume_load(libMesh::subdomain_id_type bid,
 void
 MAST::PhysicsDisciplineBase::
 set_property_for_subdomain(const libMesh::subdomain_id_type sid,
-                           const MAST::FunctionSetBase& prop) {
+                           const MAST::ElementPropertyCardBase& prop) {
     
     MAST::PropertyCardMapType::const_iterator elem_p_it = _element_property.find(sid);
     libmesh_assert(elem_p_it == _element_property.end());
@@ -102,7 +102,7 @@ set_property_for_subdomain(const libMesh::subdomain_id_type sid,
 
 
 
-const MAST::FunctionSetBase&
+const MAST::ElementPropertyCardBase&
 MAST::PhysicsDisciplineBase::get_property_card(const unsigned int i) const {
     
     MAST::PropertyCardMapType::const_iterator
@@ -114,7 +114,7 @@ MAST::PhysicsDisciplineBase::get_property_card(const unsigned int i) const {
 
 
 
-const MAST::FunctionSetBase&
+const MAST::ElementPropertyCardBase&
 MAST::PhysicsDisciplineBase::get_property_card(const libMesh::Elem& elem) const {
     
     MAST::PropertyCardMapType::const_iterator

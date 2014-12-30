@@ -7,6 +7,8 @@ namespace MAST {
     class PhysicsDisciplineBase;
     class SystemInitialization;
     class NonlinearImplicitAssembly;
+    class TransientAssembly;
+    class TransientSolverBase;
     class OutputAssemblyBase;
     
 
@@ -15,6 +17,11 @@ namespace MAST {
         bool nonlinear_solution(MAST::PhysicsDisciplineBase&     discipline,
                                 MAST::SystemInitialization&      system,
                                 MAST::NonlinearImplicitAssembly& assembly);
+
+        bool transient_solution_step(MAST::PhysicsDisciplineBase&     discipline,
+                                     MAST::SystemInitialization&      system,
+                                     MAST::TransientAssembly&         assembly,
+                                     MAST::TransientSolverBase&       solver);
 
         bool output_evaluation(MAST::PhysicsDisciplineBase&     discipline,
                                MAST::SystemInitialization&      system,

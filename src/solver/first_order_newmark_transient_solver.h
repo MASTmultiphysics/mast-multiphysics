@@ -12,6 +12,22 @@ namespace MAST {
     /*!
      *    This class implements the Newmark solver for solution of a
      *    first-order ODE.
+     *
+     *    The system is represented as 
+     *    \f[ x^k_t = x_{t_0} + (1-\beta)dt\dot{x}_{t_0} + \beta dt\dot{x}^k_t \f],
+     *    where \f$k\f$ is the nonlinear iteration for each time step from 
+     *    \f$t_0\f$ to \f$t\f$, and $\beta=[0,1]$ is a user defined factor.
+     *
+     *    A finite element solver provides the following semi-discrete form for
+     *    a first order transient system:
+     *    \f[ M^k \dot{x}^k_t + f(x^k_t) = 0 \f].
+     *    Then, to solve for \f$x^k_t\f$, the expression for \f$x^k_t\f$ is 
+     *    multiplied by \f$M^k\f$ and written in a residual form as
+     *    \f[ r(x^k_t) = M^k \left( x^k_t - x_{t_0} - (1-\beta)dt\dot{x}_{t_0}\right) + \beta dt f(x^k_t) \f]
+     *    where the Jacobian is defined as 
+     *    \f[ J^k = \frac{\partial r(x^k_t)}{\partial x^k_t} = M^k + \beta dt \frac{\partial f(x^k_t)}{\partial x^k_t} \f].
+     *    This assumes that the mass matrix is independent of the \f$x^k_t\f$.
+     *
      */
     class FirstOrderNewmarkTransientSolver:
     public MAST::TransientSolverBase {
@@ -47,6 +63,18 @@ namespace MAST {
         }
         
         /*!
+         *    provides the element with the transient data for calculations
+         */
+        virtual void _set_element_data(std::vector<libMesh::dof_id_type>& dof_indices,
+                                       MAST::ElementBase& elem);
+
+        /*!
+         *    update the transient solution based on the current solution
+         */
+        virtual void _update_velocity(libMesh::NumericVector<Real>& vec);
+        
+        
+        /*!
          *   performs the element calculations over \par elem, and returns
          *   the element vector and matrix quantities in \par mat and
          *   \par vec, respectively. \par if_jac tells the method to also
@@ -67,12 +95,6 @@ namespace MAST {
         _elem_sensitivity_calculations(MAST::ElementBase& elem,
                                        const std::vector<libMesh::dof_id_type>& dof_indices,
                                        RealVectorX& vec);
-        
-        /*!
-         *   Associated TransientAssembly object that provides the
-         *   element level quantities
-         */
-        MAST::TransientAssembly* _assembly;
     };
     
 }

@@ -29,8 +29,8 @@ namespace MAST {
     class Solid2DSectionElementPropertyCard :
     public MAST::ElementPropertyCard2D {
     public:
-        Solid2DSectionElementPropertyCard(unsigned int pid):
-        MAST::ElementPropertyCard2D(pid),
+        Solid2DSectionElementPropertyCard():
+        MAST::ElementPropertyCard2D(),
         _material(NULL)
         { }
         

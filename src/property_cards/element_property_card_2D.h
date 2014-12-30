@@ -30,8 +30,8 @@ namespace MAST
     class ElementPropertyCard2D: public MAST::ElementPropertyCardBase {
         
     public:
-        ElementPropertyCard2D(unsigned int pid):
-        MAST::ElementPropertyCardBase(pid),
+        ElementPropertyCard2D():
+        MAST::ElementPropertyCardBase(),
         _bending_model(MAST::DEFAULT_BENDING),
         _if_plane_stress(true)
         { }

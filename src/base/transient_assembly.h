@@ -39,6 +39,16 @@ namespace MAST {
          */
         virtual void
         attach_discipline_and_system(MAST::PhysicsDisciplineBase& discipline,
+                                     MAST::SystemInitialization& system) {
+            
+            libmesh_error_msg("Error! Invalid function call for TransientSystemAssembly.");
+        }
+
+        /*!
+         *   attaches a system to this discipline, and vice-a-versa
+         */
+        virtual void
+        attach_discipline_and_system(MAST::PhysicsDisciplineBase& discipline,
                                      MAST::TransientSolverBase& solver,
                                      MAST::SystemInitialization& sys);
         
@@ -83,16 +93,23 @@ namespace MAST {
         
         
         /*!
-         *   performs the element calculations over \par elem, and returns
+         *   performs the element calculations over \par elem, for a 
+         *   system of the form
+         *   \f[ M \dot{x} + f(x) = 0 \f].
+         *   \param f_x     = \f$ f(x) \f$
+         *   \param mass    = \f$ M \f$
+         *   \param f_x_jac =  \f$ \frac{\partial (f(x)}{\partial x} \f$
          *   the element vector and matrix quantities in \par mat and
          *   \par vec, respectively. \par if_jac tells the method to also
          *   assemble the Jacobian, in addition to the residual vector.
          */
         virtual void _elem_calculations(MAST::ElementBase& elem,
                                         bool if_jac,
-                                        RealVectorX& x_dot,
-                                        RealMatrixX& mass,
-                                        RealMatrixX& jac) = 0;
+                                        RealVectorX& f_m,
+                                        RealVectorX& f_x,
+                                        RealMatrixX& f_m_jac_xdot,
+                                        RealMatrixX& f_m_jac,
+                                        RealMatrixX& f_x_jac) = 0;
         
         /*!
          *   performs the element sensitivity calculations over \par elem,

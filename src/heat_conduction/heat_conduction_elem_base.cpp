@@ -12,6 +12,7 @@
 #include "mesh/local_1d_elem.h"
 #include "mesh/local_2d_elem.h"
 #include "mesh/local_3d_elem.h"
+#include "base/mesh_field_function.h"
 
 
 MAST::HeatConductionElementBase::HeatConductionElementBase(MAST::SystemInitialization& sys,
@@ -71,6 +72,7 @@ MAST::HeatConductionElementBase::internal_residual (bool request_jacobian,
     
     RealMatrixX
     material_mat(dim, dim),
+    dmaterial_mat(dim, dim), // for calculation of Jac when k is temp. dep.
     mat_n2n2(n_phi, n_phi);
     RealVectorX
     vec1(1),
@@ -82,24 +84,33 @@ MAST::HeatConductionElementBase::internal_residual (bool request_jacobian,
     
     libMesh::Point p;
     std::vector<MAST::FEMOperatorMatrix> dBmat(dim);
+    MAST::FEMOperatorMatrix Bmat; // for calculation of Jac when k is temp. dep.
 
     
     for (unsigned int qp=0; qp<JxW.size(); qp++) {
-        
+
+        // initialize the Bmat operator for this term
+        _initialize_mass_fem_operator(qp, Bmat);
+        Bmat.right_multiply(vec1, _sol);
+
+        if (_active_sol_function)
+            dynamic_cast<MAST::MeshFieldFunction<RealVectorX>*>
+            (_active_sol_function)->set_element_quadrature_point_solution(vec1);
+
         _local_elem->global_coordinates_location(xyz[qp], p);
         
         (*conductance)(p, _time, material_mat);
-        
-        _initialize_flux_fem_operator(qp, dBmat);
 
+        _initialize_flux_fem_operator(qp, dBmat);
+        
         // calculate the flux for each dimension and add its weighted
         // component to the residual
         flux.setZero();
         for (unsigned int j=0; j<dim; j++) {
-            dBmat[j].right_multiply(vec1, _sol);
+            dBmat[j].right_multiply(vec1, _sol);        // dT_dxj
             
             for (unsigned int i=0; i<dim; i++)
-                flux(i) += vec1(0) * material_mat(i,j);
+                flux(i) += vec1(0) * material_mat(i,j); // q_i = k_ij dT_dxj
         }
 
         // now add to the residual vector
@@ -112,16 +123,41 @@ MAST::HeatConductionElementBase::internal_residual (bool request_jacobian,
         
         if (request_jacobian) {
             
-            // TODO: add Jacobian contribution from temperature dependent property
+            // Jacobian contribution from int_omega dB_dxi^T k_ij dB_dxj
             for (unsigned int i=0; i<dim; i++)
                 for (unsigned int j=0; j<dim; j++) {
                     
                     dBmat[i].right_multiply_transpose(mat_n2n2, dBmat[j]);
                     jac += JxW[qp] * material_mat(i,j) * mat_n2n2;
                 }
+            
+            // Jacobian contribution from int_omega dB_dxi dT_dxj dk_ij/dT B
+            if (_active_sol_function) {
+                // get derivative of the conductance matrix wrt temperature
+                conductance->derivative(MAST::PARTIAL_DERIVATIVE,
+                                        *_active_sol_function,
+                                        p,
+                                        _time, dmaterial_mat);
+                
+                for (unsigned int j=0; j<dim; j++) {
+                    dBmat[j].right_multiply(vec1, _sol);  // dT_dxj
+
+                    for (unsigned int i=0; i<dim; i++)
+                        if (dmaterial_mat(i,j) != 0.) { // no need to process for zero terms
+                            // dB_dxi^T B
+                            dBmat[i].right_multiply_transpose(mat_n2n2, Bmat);
+                            // dB_dxi^T (dT_dxj dk_ij/dT) B
+                            jac += JxW[qp] * vec1(0) * dmaterial_mat(i,j) * mat_n2n2;
+                        }
+                }
+            }
         }
     }
     
+    if (_active_sol_function)
+        dynamic_cast<MAST::MeshFieldFunction<RealVectorX>*>
+        (_active_sol_function)->clear_element_quadrature_point_solution();
+
     return request_jacobian;
 }
 
@@ -132,6 +168,7 @@ MAST::HeatConductionElementBase::internal_residual (bool request_jacobian,
 bool
 MAST::HeatConductionElementBase::velocity_residual (bool request_jacobian,
                                                     RealVectorX& f,
+                                                    RealMatrixX& jac_xdot,
                                                     RealMatrixX& jac) {
     MAST::FEMOperatorMatrix Bmat;
     
@@ -156,27 +193,49 @@ MAST::HeatConductionElementBase::velocity_residual (bool request_jacobian,
     
     for (unsigned int qp=0; qp<JxW.size(); qp++) {
         
+        _initialize_mass_fem_operator(qp, Bmat);
+        Bmat.right_multiply(vec1, _sol);               //  B * T
+        
+        if (_active_sol_function)
+            dynamic_cast<MAST::MeshFieldFunction<RealVectorX>*>
+            (_active_sol_function)->set_element_quadrature_point_solution(vec1);
+
         _local_elem->global_coordinates_location(xyz[qp], p);
         
         (*capacitance)(p, _time, material_mat);
         
-        _initialize_mass_fem_operator(qp, Bmat);
-
-        Bmat.right_multiply(vec1, _vel);               //  B * T
-        Bmat.vector_mult_transpose(vec2_n2, vec1);     //  B^T * B * T
+        Bmat.right_multiply(vec1, _vel);               //  B * T_dot
+        Bmat.vector_mult_transpose(vec2_n2, vec1);     //  B^T * B * T_dot
         
-        f      += JxW[qp] * material_mat(0,0) * vec2_n2; // B^T B T (rho*cp)*JxW
+        f      += JxW[qp] * material_mat(0,0) * vec2_n2; // (rho*cp)*JxW B^T B T_dot
         
         if (request_jacobian) {
             
-            // TODO: add Jacobian contribution from temperature dependent property
-            
             Bmat.right_multiply_transpose(mat_n2n2, Bmat);  // B^T B
-            jac += JxW[qp] * material_mat(0,0) * mat_n2n2;  // B^T B * JxW (rho*cp)
+            jac_xdot += JxW[qp] * material_mat(0,0) * mat_n2n2;  // B^T B * JxW (rho*cp)
+            
+            // Jacobian contribution from int_omega B T d(rho*cp)/dT B
+            if (_active_sol_function) {
+                // get derivative of the conductance matrix wrt temperature
+                capacitance->derivative(MAST::PARTIAL_DERIVATIVE,
+                                        *_active_sol_function,
+                                        p,
+                                        _time, material_mat);
+                
+                if (material_mat(0,0) != 0.) { // no need to process for zero terms
+                    
+                    // B^T (T d(rho cp)/dT) B
+                    jac += JxW[qp] * vec1(0) * material_mat(0,0) * mat_n2n2;
+                }
+            }
         }
-        
     }
     
+    
+    if (_active_sol_function)
+        dynamic_cast<MAST::MeshFieldFunction<RealVectorX>*>
+        (_active_sol_function)->clear_element_quadrature_point_solution();
+
     return request_jacobian;
 }
 
@@ -785,9 +844,10 @@ surface_radiation_residual(bool request_jacobian,
 
     // get the function from this boundary condition
     const MAST::FieldFunction<Real>
-    &emissivity = p.get<MAST::FieldFunction<Real> >("emissivity"),
-    &T_amb      = p.get<MAST::FieldFunction<Real> >("ambient_temperature");
+    &emissivity = p.get<MAST::FieldFunction<Real> >("emissivity");
+    
     const MAST::Parameter
+    &T_amb      = p.get<MAST::Parameter>("ambient_temperature"),
     &sb_const   = p.get<MAST::Parameter>("stefan_bolzmann_constant");
     
     
@@ -798,8 +858,10 @@ surface_radiation_residual(bool request_jacobian,
     
     RealVectorX phi_vec  (n_phi);
     RealMatrixX mat      (n_phi, n_phi);
-    const Real sbc = sb_const();
-    Real temp, amb_temp, emiss;
+    const Real
+    sbc      = sb_const(),
+    amb_temp = T_amb();
+    Real temp, emiss;
     libMesh::Point pt;
     MAST::FEMOperatorMatrix Bmat;
     
@@ -813,7 +875,6 @@ surface_radiation_residual(bool request_jacobian,
         
         // value of flux
         emissivity(pt, _time, emiss);
-        T_amb     (pt, _time, amb_temp);
         temp  = phi_vec.dot(_sol);
         
         f   += JxW[qp] * phi_vec * sbc * emiss *
@@ -843,9 +904,10 @@ surface_radiation_residual(bool request_jacobian,
     
     // get the function from this boundary condition
     const MAST::FieldFunction<Real>
-    &emissivity = p.get<MAST::FieldFunction<Real> >("emissivity"),
-    &T_amb      = p.get<MAST::FieldFunction<Real> >("ambient_temperature");
+    &emissivity = p.get<MAST::FieldFunction<Real> >("emissivity");
+    
     const MAST::Parameter
+    &T_amb      = p.get<MAST::Parameter>("ambient_temperature"),
     &sb_const   = p.get<MAST::Parameter>("stefan_bolzmann_constant");
     
     
@@ -856,8 +918,10 @@ surface_radiation_residual(bool request_jacobian,
     
     RealVectorX phi_vec  (n_phi);
     RealMatrixX mat      (n_phi, n_phi);
-    const Real sbc = sb_const();
-    Real temp, amb_temp, emiss;
+    const Real
+    sbc      = sb_const(),
+    amb_temp = T_amb();
+    Real temp, emiss;
     libMesh::Point pt;
     MAST::FEMOperatorMatrix Bmat;
     
@@ -871,7 +935,6 @@ surface_radiation_residual(bool request_jacobian,
         
         // value of flux
         emissivity(pt, _time, emiss);
-        T_amb     (pt, _time, amb_temp);
         temp  = phi_vec.dot(_sol);
         
         f   += JxW[qp] * phi_vec * sbc * emiss *

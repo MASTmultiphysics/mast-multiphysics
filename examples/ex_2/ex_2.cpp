@@ -192,7 +192,7 @@ int main(int argc, const char * argv[]) {
     
     
     // add them to a material property card
-    MAST::IsotropicMaterialPropertyCard       materials(1);
+    MAST::IsotropicMaterialPropertyCard       materials;
     materials.add(k_th);
     materials.add(c_th);
     
@@ -204,7 +204,7 @@ int main(int argc, const char * argv[]) {
     MAST::ConstantFieldFunction  h_val("h", h);
     
     // add to a section property card
-    MAST::Solid2DSectionElementPropertyCard section_property(1);
+    MAST::Solid2DSectionElementPropertyCard section_property;
     section_property.add(h_val);
     
     

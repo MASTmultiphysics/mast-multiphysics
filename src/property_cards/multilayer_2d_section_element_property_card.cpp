@@ -38,7 +38,7 @@ namespace MAST {
             _layer_num(layer_num),
             _layer_h(layer_h) {
                 for (unsigned int i=0; i < _layer_h.size(); i++)
-                    _functions.insert(_layer_h[i]);
+                    _functions.insert(_layer_h[i]->master());
             }
             
             LayerOffset(const MAST::Multilayer2DSectionProperty::LayerOffset &f):
@@ -50,7 +50,7 @@ namespace MAST {
                 _layer_h.resize(f._layer_h.size());
                 for (unsigned int i=0; i < _layer_h.size(); i++) {
                     _layer_h[i] = f._layer_h[i]->clone().release();
-                    _functions.insert(_layer_h[i]);
+                    _functions.insert(_layer_h[i]->master());
                 }
             }
             
@@ -125,7 +125,7 @@ namespace MAST {
             MAST::FieldFunction<RealMatrixX>("Matrix2D"),
             _layer_mats(layer_mats) {
                 for (unsigned int i=0; i < _layer_mats.size(); i++) {
-                    _functions.insert(_layer_mats[i]);
+                    _functions.insert(_layer_mats[i]->master());
                 }
             }
             
@@ -135,7 +135,7 @@ namespace MAST {
                 _layer_mats.resize(f._layer_mats.size());
                 for (unsigned int i=0; i < _layer_mats.size(); i++) {
                     _layer_mats[i] = f._layer_mats[i]->clone().release();
-                    _functions.insert(_layer_mats[i]);
+                    _functions.insert(_layer_mats[i]->master());
                 }
             }
             

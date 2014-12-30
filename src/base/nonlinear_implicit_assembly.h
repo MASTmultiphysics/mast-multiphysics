@@ -89,6 +89,15 @@ namespace MAST {
          */
         virtual void _elem_sensitivity_calculations(MAST::ElementBase& elem,
                                                     RealVectorX& vec) = 0;
+        
+        
+        /*!
+         *    a helper function to evaluate the numerical Jacobian 
+         *    and compare it with the analytical Jacobian.
+         */
+        void _check_element_numerical_jacobian(MAST::ElementBase& e,
+                                               RealVectorX& sol);
+
     };
 }
 

@@ -26,15 +26,19 @@ MAST::LocalElemBase::T_matrix_function() const {
 void
 MAST::LocalElemBase::global_coordinates_location(const libMesh::Point& local,
                                                  libMesh::Point& global) const {
-    global = 0.;
-    
-    // now calculate the global coordinates with respect to the origin
-    for (unsigned int j=0; j<3; j++)
-        for (unsigned int k=0; k<3; k++)
-            global(j) += _T_mat(j,k)*local(k);
-    
-    // shift to the global coordinate
-    global += (*_elem.get_node(0));
+    if (!_local_elem) // no local elem is created for the case of 3D elem
+        global = local;
+    else {
+        global = 0.;
+        
+        // now calculate the global coordinates with respect to the origin
+        for (unsigned int j=0; j<3; j++)
+            for (unsigned int k=0; k<3; k++)
+                global(j) += _T_mat(j,k)*local(k);
+        
+        // shift to the global coordinate
+        global += (*_elem.get_node(0));
+    }
 }
 
 
@@ -42,12 +46,17 @@ MAST::LocalElemBase::global_coordinates_location(const libMesh::Point& local,
 void
 MAST::LocalElemBase::global_coordinates_normal(const libMesh::Point& local,
                                                RealVector3& global) const {
-    global.setZero();
-    
-    // now calculate the global coordinates with respect to the origin
-    for (unsigned int j=0; j<3; j++)
-        for (unsigned int k=0; k<3; k++)
-            global(j) += _T_mat(j,k)*local(k);
+    if (!_local_elem)
+        for (unsigned int i=0; i<3; i++)
+            global(i) = local(i);
+    else {
+        global.setZero();
+        
+        // now calculate the global coordinates with respect to the origin
+        for (unsigned int j=0; j<3; j++)
+            for (unsigned int k=0; k<3; k++)
+                global(j) += _T_mat(j,k)*local(k);
+    }
 }
 
 

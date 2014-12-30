@@ -94,19 +94,15 @@ int main(int argc, const char * argv[]) {
     // initialize the material properties. First the parameters, which
     // are used to define the properties to be constants
     MAST::Parameter k  (  "k", 2.0);   // thermal conductance
-    MAST::Parameter c  (  "c", 2.0);   // thermal capacitance
-    MAST::Parameter rho("rho", 2.0); // material density
     
     
     // define material property based on the parameter
     MAST::ConstantFieldFunction  k_th("k_th", k);
-    MAST::ConstantFieldFunction  c_th("c_th", c);
 
     
     // add them to a material property card
-    MAST::IsotropicMaterialPropertyCard       materials(1);
+    MAST::IsotropicMaterialPropertyCard       materials;
     materials.add(k_th);
-    materials.add(c_th);
     
     
     // initialize the element section property
@@ -116,7 +112,7 @@ int main(int argc, const char * argv[]) {
     MAST::ConstantFieldFunction  h_val("h", h);
     
     // add to a section property card
-    MAST::Solid2DSectionElementPropertyCard section_property(1);
+    MAST::Solid2DSectionElementPropertyCard section_property;
     section_property.add(h_val);
     
     

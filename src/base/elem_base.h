@@ -130,6 +130,7 @@ namespace MAST {
         virtual void set_velocity(const RealVectorX& vec,
                                   bool if_sens = false);
         
+        
         /*!
          *   This is used for cases where a linearized problem is solved
          *   about a stationary base solution. This method stores
@@ -138,6 +139,19 @@ namespace MAST {
          */
         virtual void set_base_solution(const RealVectorX& vec,
                                        bool if_sens = false);
+        
+        /*!
+         *   Attaches the function that represents the system solution
+         */
+        void attach_active_solution_function(MAST::FunctionBase &f);
+        
+        
+        /*!
+         *   Detaches the function object that may have been attached to the
+         *   element.
+         */
+        void detach_active_solution_function();
+
         
         /*!
          *   parameter for which sensitivity has to be calculated.
@@ -192,6 +206,15 @@ namespace MAST {
         
         
         /*!
+         *   pointer to the active solution mesh field function. If this 
+         *   has been set, then some of the element properties are
+         *   dependent on the element solution, and the element should 
+         *   perform the necessary operations in calculation of the Jacobian
+         */
+        MAST::FunctionBase* _active_sol_function;
+        
+        
+        /*!
          *   local element to support the presence of 1D and 2D elements
          *   in 3D space
          */
@@ -226,7 +249,7 @@ namespace MAST {
          *   local velocity
          */
         RealVectorX _vel_sens;
-        
+
         
         /*!
          *   local acceleration

@@ -36,8 +36,8 @@ namespace MAST {
         
     public:
         
-        Multilayer1DSectionElementPropertyCard(unsigned int pid):
-        MAST::ElementPropertyCard1D(pid)
+        Multilayer1DSectionElementPropertyCard():
+        MAST::ElementPropertyCard1D()
         { }
         
         

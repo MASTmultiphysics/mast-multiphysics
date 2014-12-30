@@ -38,8 +38,8 @@ namespace MAST {
             MAST::FieldFunction<RealMatrixX>(f),
             _material_stiffness(f._material_stiffness->clone().release()),
             _h(f._h->clone().release()) {
-                _functions.insert(_material_stiffness);
-                _functions.insert(_h);
+                _functions.insert(_material_stiffness->master());
+                _functions.insert(_h->master());
             }
             
             
@@ -86,9 +86,9 @@ namespace MAST {
             _material_stiffness(f._material_stiffness->clone().release()),
             _h(f._h->clone().release()),
             _off(f._off->clone().release()) {
-                _functions.insert(_material_stiffness);
-                _functions.insert(_h);
-                _functions.insert(_off);
+                _functions.insert(_material_stiffness->master());
+                _functions.insert(_h->master());
+                _functions.insert(_off->master());
             }
             
             virtual ~ExtensionBendingStiffnessMatrix() {
@@ -133,9 +133,9 @@ namespace MAST {
             _material_stiffness(f._material_stiffness->clone().release()),
             _h(f._h->clone().release()),
             _off(f._off->clone().release()) {
-                _functions.insert(_material_stiffness);
-                _functions.insert(_h);
-                _functions.insert(_off);
+                _functions.insert(_material_stiffness->master());
+                _functions.insert(_h->master());
+                _functions.insert(_off->master());
             }
             
             
@@ -179,8 +179,8 @@ namespace MAST {
             MAST::FieldFunction<RealMatrixX>("TransverseStiffnessMatrix2D"),
             _material_stiffness(mat),
             _h(h) {
-                _functions.insert(mat);
-                _functions.insert(h);
+                _functions.insert(mat->master());
+                _functions.insert(h->master());
             }
             
             
@@ -188,8 +188,8 @@ namespace MAST {
             MAST::FieldFunction<RealMatrixX>(f),
             _material_stiffness(f._material_stiffness->clone().release()),
             _h(f._h->clone().release()) {
-                _functions.insert(_material_stiffness);
-                _functions.insert(_h);
+                _functions.insert(_material_stiffness->master());
+                _functions.insert(_h->master());
             }
             
             /*!
@@ -246,9 +246,9 @@ namespace MAST {
             _rho(f._rho->clone().release()),
             _h(f._h->clone().release()),
             _off(f._off->clone().release()) {
-                _functions.insert(_rho);
-                _functions.insert(_h);
-                _functions.insert(_off);
+                _functions.insert(_rho->master());
+                _functions.insert(_h->master());
+                _functions.insert(_off->master());
             }
             
             
@@ -294,9 +294,9 @@ namespace MAST {
             _material_stiffness(f._material_stiffness->clone().release()),
             _material_expansion(f._material_expansion->clone().release()),
             _h(f._h->clone().release()) {
-                _functions.insert(_material_stiffness);
-                _functions.insert(_material_expansion);
-                _functions.insert(_h);
+                _functions.insert(_material_stiffness->master());
+                _functions.insert(_material_expansion->master());
+                _functions.insert(_h->master());
             }
             
             
@@ -351,10 +351,10 @@ namespace MAST {
             _material_expansion(f._material_expansion->clone().release()),
             _h(f._h->clone().release()),
             _off(f._off->clone().release()) {
-                _functions.insert(_material_stiffness);
-                _functions.insert(_material_expansion);
-                _functions.insert(_h);
-                _functions.insert(_off);
+                _functions.insert(_material_stiffness->master());
+                _functions.insert(_material_expansion->master());
+                _functions.insert(_h->master());
+                _functions.insert(_off->master());
             }
             
             
@@ -408,9 +408,9 @@ namespace MAST {
             _prestress(f._prestress->clone().release()),
             _T(f._T->clone().release()),
             _h(f._h->clone().release()) {
-                _functions.insert(_prestress);
-                _functions.insert(_T);
-                _functions.insert(_h);
+                _functions.insert(_prestress->master());
+                _functions.insert(_T->master());
+                _functions.insert(_h->master());
             }
             
             
@@ -462,10 +462,10 @@ namespace MAST {
             _T(f._T->clone().release()),
             _h(f._h->clone().release()),
             _off(f._off->clone().release()) {
-                _functions.insert(_prestress);
-                _functions.insert(_T);
-                _functions.insert(_h);
-                _functions.insert(_off);
+                _functions.insert(_prestress->master());
+                _functions.insert(_T->master());
+                _functions.insert(_h->master());
+                _functions.insert(_off->master());
             }
             
             
@@ -601,8 +601,8 @@ ExtensionStiffnessMatrix(MAST::FieldFunction<RealMatrixX> *mat,
 MAST::FieldFunction<RealMatrixX> ("ExtensionStiffnessMatrix2D"),
 _material_stiffness(mat),
 _h(h) {
-    _functions.insert(mat);
-    _functions.insert(h);
+    _functions.insert(mat->master());
+    _functions.insert(h->master());
 }
 
 
@@ -654,9 +654,9 @@ MAST::FieldFunction<RealMatrixX> ("ExtensionBendingStiffnessMatrix2D"),
 _material_stiffness(mat),
 _h(h),
 _off(off) {
-    _functions.insert(mat);
-    _functions.insert(h);
-    _functions.insert(off);
+    _functions.insert(mat->master());
+    _functions.insert(h->master());
+    _functions.insert(off->master());
 }
 
 
@@ -706,9 +706,9 @@ MAST::FieldFunction<RealMatrixX> ("BendingStiffnessMatrix2D"),
 _material_stiffness(mat),
 _h(h),
 _off(off) {
-    _functions.insert(mat);
-    _functions.insert(h);
-    _functions.insert(off);
+    _functions.insert(mat->master());
+    _functions.insert(h->master());
+    _functions.insert(off->master());
 }
 
 
@@ -762,9 +762,9 @@ MAST::FieldFunction<RealMatrixX>("InertiaMatrix2D"),
 _rho(rho),
 _h(h),
 _off(off) {
-    _functions.insert(rho);
-    _functions.insert(h);
-    _functions.insert(off);
+    _functions.insert(rho->master());
+    _functions.insert(h->master());
+    _functions.insert(off->master());
 }
 
 
@@ -839,9 +839,9 @@ MAST::FieldFunction<RealMatrixX>("ThermalExpansionAMatrix2D"),
 _material_stiffness(mat_stiff),
 _material_expansion(mat_expansion),
 _h(h) {
-    _functions.insert(mat_stiff);
-    _functions.insert(mat_expansion);
-    _functions.insert(h);
+    _functions.insert(mat_stiff->master());
+    _functions.insert(mat_expansion->master());
+    _functions.insert(h->master());
 }
 
 
@@ -905,10 +905,10 @@ _material_stiffness(mat_stiff),
 _material_expansion(mat_expansion),
 _h(h),
 _off(off) {
-    _functions.insert(mat_stiff);
-    _functions.insert(mat_expansion);
-    _functions.insert(h);
-    _functions.insert(off);
+    _functions.insert(mat_stiff->master());
+    _functions.insert(mat_expansion->master());
+    _functions.insert(h->master());
+    _functions.insert(off->master());
 }
 
 
@@ -971,9 +971,9 @@ MAST::FieldFunction<RealMatrixX>("PrestressAMatrix2D"),
 _prestress(prestress),
 _T(T),
 _h(h) {
-    _functions.insert(prestress);
-    _functions.insert(T);
-    _functions.insert(h);
+    _functions.insert(prestress->master());
+    _functions.insert(T->master());
+    _functions.insert(h->master());
 }
 
 
@@ -1073,10 +1073,10 @@ _prestress(prestress),
 _T(T),
 _h(h),
 _off(off) {
-    _functions.insert(prestress);
-    _functions.insert(T);
-    _functions.insert(h);
-    _functions.insert(off);
+    _functions.insert(prestress->master());
+    _functions.insert(T->master());
+    _functions.insert(h->master());
+    _functions.insert(off->master());
 }
 
 
@@ -1158,8 +1158,8 @@ ThermalConductanceMatrix(MAST::FieldFunction<RealMatrixX> *mat_cond,
 MAST::FieldFunction<RealMatrixX>("ThermalConductanceMatrix"),
 _mat_cond(mat_cond),
 _h(h) {
-    _functions.insert(mat_cond);
-    _functions.insert(h);
+    _functions.insert(mat_cond->master());
+    _functions.insert(h->master());
 }
 
 
@@ -1168,8 +1168,8 @@ ThermalConductanceMatrix(const MAST::Solid2DSectionProperty::ThermalConductanceM
 MAST::FieldFunction<RealMatrixX>(f),
 _mat_cond(f._mat_cond),
 _h(f._h) {
-    _functions.insert(_mat_cond);
-    _functions.insert(_h);
+    _functions.insert(_mat_cond->master());
+    _functions.insert(_h->master());
 }
 
 
@@ -1239,8 +1239,8 @@ ThermalCapacitanceMatrix(MAST::FieldFunction<RealMatrixX> *mat_cap,
 MAST::FieldFunction<RealMatrixX>("ThermalCapacitanceMatrix"),
 _mat_cap(mat_cap),
 _h(h) {
-    _functions.insert(mat_cap);
-    _functions.insert(h);
+    _functions.insert(mat_cap->master());
+    _functions.insert(h->master());
 }
 
 
@@ -1249,8 +1249,8 @@ ThermalCapacitanceMatrix(const MAST::Solid2DSectionProperty::ThermalCapacitanceM
 MAST::FieldFunction<RealMatrixX>(f),
 _mat_cap(f._mat_cap),
 _h(f._h) {
-    _functions.insert(_mat_cap);
-    _functions.insert(_h);
+    _functions.insert(_mat_cap->master());
+    _functions.insert(_h->master());
 }
 
 

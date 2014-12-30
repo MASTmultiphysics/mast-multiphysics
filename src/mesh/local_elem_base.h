@@ -156,6 +156,8 @@ namespace MAST {
         
         TransformMatrixFunction(const MAST::TransformMatrixFunction& f);
         
+        virtual ~TransformMatrixFunction() {}
+        
         std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
         clone() const;
 

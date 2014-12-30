@@ -60,7 +60,7 @@ namespace MAST
         FunctionBase(const MAST::FunctionBase& f):
         _name(f._name),
         _is_field_func(f._is_field_func),
-        _master(f._master)
+        _master(f.master())
         { }
 
         
@@ -84,7 +84,6 @@ namespace MAST
             else             // this is the master
                 return this;
         }
-        
         
         /*!
          *   @returns \p true if this is a field function, and \p false
@@ -149,31 +148,6 @@ namespace MAST
          */
         std::set<const MAST::FunctionBase*> _functions;
     };
-    
-    
-        
-    //    template <typename ValType>
-    //    void
-    //    Function<ValType>::derivative (const MAST::DerivativeType d,
-    //                                   const MAST::FunctionBase& f,
-    //                                   const Real t,
-    //                                   ValType& v) const {
-    //
-    //        // iterate over each parameter and get its sensitivity
-    //        std::set<MAST::FunctionBase*>::const_iterator it, end;
-    //        it   = _functions.begin();
-    //        end  = _functions.end();
-    //
-    //        for ( ; it != end; it++) {
-    //            MAST::FunctionBase& p = **i;
-    //            typename MAST::DerivativeType<ValType, p::ValType> dfunc_dp;
-    //            typename MAST::DerivativeType<p::ValType, f::ValType> dp_df;
-    //
-    //            this->partial(p, t, dfunc_dp);
-    //            p.total(f, t, dp_df);
-    //            v += dfunc_dp * dp_df;
-    //        }
-    //    }
     
 }
 

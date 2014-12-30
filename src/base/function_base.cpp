@@ -22,19 +22,6 @@
 
 
 
-//bool
-//MAST::FunctionBase::depends_on(const MAST::FunctionBase &p) const {
-//    
-//    // only first order sensitivities are calculated at this point
-//    libmesh_assert_equal_to(p.total_order(), 1);
-//    
-//    const MAST::FunctionBase::ParameterMap& p_map = p.get_map();
-//    MAST::SensitivityParameters::ParameterMap::const_iterator it, end;
-//    it = p_map.begin(); end = p_map.end();
-//    
-//    const MAST::FunctionBase& f = *(it->first);
-//    return this->depends_on(f);
-//}
 
 
 

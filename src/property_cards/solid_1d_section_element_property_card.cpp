@@ -36,16 +36,16 @@ namespace MAST {
             MAST::FieldFunction<Real>("Area"),
             _hy(hy),
             _hz(hz) {
-                _functions.insert(hy);
-                _functions.insert(hz);
+                _functions.insert(hy->master());
+                _functions.insert(hz->master());
             }
             
             Area(const MAST::Solid1DSectionProperty::Area &f):
             MAST::FieldFunction<Real>(f),
             _hy(f._hy->clone().release()),
             _hz(f._hz->clone().release()) {
-                _functions.insert(_hy);
-                _functions.insert(_hz);
+                _functions.insert(_hy->master());
+                _functions.insert(_hz->master());
             }
             
             /*!
@@ -97,16 +97,16 @@ namespace MAST {
             MAST::FieldFunction<Real>("TorsionalConstant"),
             _hy(hy),
             _hz(hz) {
-                _functions.insert(hy);
-                _functions.insert(hz);
+                _functions.insert(hy->master());
+                _functions.insert(hz->master());
             }
             
             TorsionalConstant(const MAST::Solid1DSectionProperty::TorsionalConstant &f):
             MAST::FieldFunction<Real>(f),
             _hy(f._hy->clone().release()),
             _hz(f._hz->clone().release()) {
-                _functions.insert(_hy);
-                _functions.insert(_hz);
+                _functions.insert(_hy->master());
+                _functions.insert(_hz->master());
             }
             
             /*!
@@ -190,10 +190,10 @@ namespace MAST {
             _hz(hz),
             _hy_offset(hy_offset),
             _hz_offset(hz_offset) {
-                _functions.insert(hy);
-                _functions.insert(hz);
-                _functions.insert(hy_offset);
-                _functions.insert(hz_offset);
+                _functions.insert(hy->master());
+                _functions.insert(hz->master());
+                _functions.insert(hy_offset->master());
+                _functions.insert(hz_offset->master());
             }
             
             PolarInertia(const MAST::Solid1DSectionProperty::PolarInertia &f):
@@ -202,10 +202,10 @@ namespace MAST {
             _hz(f._hz->clone().release()),
             _hy_offset(f._hy_offset->clone().release()),
             _hz_offset(f._hz_offset->clone().release()) {
-                _functions.insert(_hy);
-                _functions.insert(_hz);
-                _functions.insert(_hy_offset);
-                _functions.insert(_hz_offset);
+                _functions.insert(_hy->master());
+                _functions.insert(_hz->master());
+                _functions.insert(_hy_offset->master());
+                _functions.insert(_hz_offset->master());
             }
             
             /*!
@@ -272,9 +272,9 @@ namespace MAST {
             _hy(hy),
             _hz(hz),
             _hz_offset(hz_offset) {
-                _functions.insert(hy);
-                _functions.insert(hz);
-                _functions.insert(hz_offset);
+                _functions.insert(hy->master());
+                _functions.insert(hz->master());
+                _functions.insert(hz_offset->master());
             }
             
             AreaYMoment(const MAST::Solid1DSectionProperty::AreaYMoment &f):
@@ -282,9 +282,9 @@ namespace MAST {
             _hy(f._hy->clone().release()),
             _hz(f._hz->clone().release()),
             _hz_offset(f._hz_offset->clone().release()) {
-                _functions.insert(_hy);
-                _functions.insert(_hz);
-                _functions.insert(_hz_offset);
+                _functions.insert(_hy->master());
+                _functions.insert(_hz->master());
+                _functions.insert(_hz_offset->master());
             }
             
             /*!
@@ -342,9 +342,9 @@ namespace MAST {
             _hy(hy),
             _hz(hz),
             _hy_offset(hy_offset) {
-                _functions.insert(hy);
-                _functions.insert(hz);
-                _functions.insert(hy_offset);
+                _functions.insert(hy->master());
+                _functions.insert(hz->master());
+                _functions.insert(hy_offset->master());
             }
             
             AreaZMoment(const MAST::Solid1DSectionProperty::AreaZMoment &f):
@@ -352,9 +352,9 @@ namespace MAST {
             _hy(f._hy->clone().release()),
             _hz(f._hz->clone().release()),
             _hy_offset(f._hy_offset->clone().release()) {
-                _functions.insert(_hy);
-                _functions.insert(_hz);
-                _functions.insert(_hy_offset);
+                _functions.insert(_hy->master());
+                _functions.insert(_hz->master());
+                _functions.insert(_hy_offset->master());
             }
             
             /*!
@@ -415,10 +415,10 @@ namespace MAST {
             _hz(hz),
             _hy_offset(hy_offset),
             _hz_offset(hz_offset) {
-                _functions.insert(hy);
-                _functions.insert(hz);
-                _functions.insert(hy_offset);
-                _functions.insert(hz_offset);
+                _functions.insert(hy->master());
+                _functions.insert(hz->master());
+                _functions.insert(hy_offset->master());
+                _functions.insert(hz_offset->master());
             }
             
             AreaInertiaMatrix(const MAST::Solid1DSectionProperty::AreaInertiaMatrix &f):
@@ -427,10 +427,10 @@ namespace MAST {
             _hz(f._hz->clone().release()),
             _hy_offset(f._hy_offset->clone().release()),
             _hz_offset(f._hz_offset->clone().release()) {
-                _functions.insert(_hy);
-                _functions.insert(_hz);
-                _functions.insert(_hy_offset);
-                _functions.insert(_hz_offset);
+                _functions.insert(_hy->master());
+                _functions.insert(_hz->master());
+                _functions.insert(_hy_offset->master());
+                _functions.insert(_hz_offset->master());
             }
             
             /*!
@@ -504,9 +504,9 @@ namespace MAST {
             _material_stiffness(f._material_stiffness->clone().release()),
             _A(f._A->clone().release()),
             _J(f._J->clone().release()) {
-                _functions.insert(_material_stiffness);
-                _functions.insert(_A);
-                _functions.insert(_J);
+                _functions.insert(_material_stiffness->master());
+                _functions.insert(_A->master());
+                _functions.insert(_J->master());
             }
             
             /*!
@@ -554,9 +554,9 @@ namespace MAST {
             _material_stiffness(f._material_stiffness->clone().release()),
             _A_y_moment(f._A_y_moment->clone().release()),
             _A_z_moment(f._A_z_moment->clone().release()) {
-                _functions.insert(_material_stiffness);
-                _functions.insert(_A_y_moment);
-                _functions.insert(_A_z_moment);
+                _functions.insert(_material_stiffness->master());
+                _functions.insert(_A_y_moment->master());
+                _functions.insert(_A_z_moment->master());
             }
             
             /*!
@@ -601,8 +601,8 @@ namespace MAST {
             MAST::FieldFunction<RealMatrixX>(f),
             _material_stiffness(f._material_stiffness->clone().release()),
             _I(f._I->clone().release()) {
-                _functions.insert(_material_stiffness);
-                _functions.insert(_I);
+                _functions.insert(_material_stiffness->master());
+                _functions.insert(_I->master());
             }
             
             /*!
@@ -644,8 +644,8 @@ namespace MAST {
             MAST::FieldFunction<RealMatrixX>("TransverseStiffnessMatrix1D"),
             _material_stiffness(mat),
             _A(A) {
-                _functions.insert(mat);
-                _functions.insert(A);
+                _functions.insert(mat->master());
+                _functions.insert(A->master());
             }
             
             
@@ -653,8 +653,8 @@ namespace MAST {
             MAST::FieldFunction<RealMatrixX>(f),
             _material_stiffness(f._material_stiffness->clone().release()),
             _A(f._A->clone().release()) {
-                _functions.insert(_material_stiffness);
-                _functions.insert(_A);
+                _functions.insert(_material_stiffness->master());
+                _functions.insert(_A->master());
             }
             
             /*!
@@ -717,12 +717,12 @@ namespace MAST {
             _A_z_moment(f._A_z_moment->clone().release()),
             _Ip(f._Ip->clone().release()),
             _I(f._I->clone().release()) {
-                _functions.insert(_rho);
-                _functions.insert(_A);
-                _functions.insert(_A_y_moment);
-                _functions.insert(_A_z_moment);
-                _functions.insert(_Ip);
-                _functions.insert(_I);
+                _functions.insert(_rho->master());
+                _functions.insert(_A->master());
+                _functions.insert(_A_y_moment->master());
+                _functions.insert(_A_z_moment->master());
+                _functions.insert(_Ip->master());
+                _functions.insert(_I->master());
             }
             
             /*!
@@ -773,9 +773,9 @@ namespace MAST {
             _material_stiffness(f._material_stiffness->clone().release()),
             _material_expansion(f._material_expansion->clone().release()),
             _A(f._A->clone().release()) {
-                _functions.insert(_material_stiffness);
-                _functions.insert(_material_expansion);
-                _functions.insert(_A);
+                _functions.insert(_material_stiffness->master());
+                _functions.insert(_material_expansion->master());
+                _functions.insert(_A->master());
             }
             
             /*!
@@ -826,10 +826,10 @@ namespace MAST {
             _material_expansion(f._material_expansion->clone().release()),
             _A_y_moment(f._A_y_moment->clone().release()),
             _A_z_moment(f._A_z_moment->clone().release()) {
-                _functions.insert(_material_stiffness);
-                _functions.insert(_material_expansion);
-                _functions.insert(_A_y_moment);
-                _functions.insert(_A_z_moment);
+                _functions.insert(_material_stiffness->master());
+                _functions.insert(_material_expansion->master());
+                _functions.insert(_A_y_moment->master());
+                _functions.insert(_A_z_moment->master());
             }
             
             /*!
@@ -881,9 +881,9 @@ namespace MAST {
             _prestress(f._prestress->clone().release()),
             _T(f._T->clone().release()),
             _A(f._A->clone().release()) {
-                _functions.insert(_prestress);
-                _functions.insert(_T);
-                _functions.insert(_A);
+                _functions.insert(_prestress->master());
+                _functions.insert(_T->master());
+                _functions.insert(_A->master());
             }
             
             /*!
@@ -936,10 +936,10 @@ namespace MAST {
             _T(f._T->clone().release()),
             _A_y_moment(f._A_y_moment->clone().release()),
             _A_z_moment(f._A_z_moment->clone().release()) {
-                _functions.insert(_prestress);
-                _functions.insert(_T);
-                _functions.insert(_A_y_moment);
-                _functions.insert(_A_z_moment);
+                _functions.insert(_prestress->master());
+                _functions.insert(_T->master());
+                _functions.insert(_A_y_moment->master());
+                _functions.insert(_A_z_moment->master());
             }
             
             /*!
@@ -1071,9 +1071,9 @@ MAST::FieldFunction<RealMatrixX> ("ExtensionStiffnessMatrix1D"),
 _material_stiffness(mat),
 _A(A),
 _J(J) {
-    _functions.insert(mat);
-    _functions.insert(A);
-    _functions.insert(J);
+    _functions.insert(mat->master());
+    _functions.insert(A->master());
+    _functions.insert(J->master());
 }
 
 
@@ -1134,9 +1134,9 @@ MAST::FieldFunction<RealMatrixX> ("ExtensionBendingStiffnessMatrix1D"),
 _material_stiffness(mat),
 _A_y_moment(A_y_moment),
 _A_z_moment(A_z_moment) {
-    _functions.insert(mat);
-    _functions.insert(A_y_moment);
-    _functions.insert(A_z_moment);
+    _functions.insert(mat->master());
+    _functions.insert(A_y_moment->master());
+    _functions.insert(A_z_moment->master());
 }
 
 
@@ -1193,8 +1193,8 @@ BendingStiffnessMatrix(MAST::FieldFunction<RealMatrixX> *mat,
 MAST::FieldFunction<RealMatrixX> ("BendingStiffnessMatrix1D"),
 _material_stiffness(mat),
 _I(I) {
-    _functions.insert(mat);
-    _functions.insert(I);
+    _functions.insert(mat->master());
+    _functions.insert(I->master());
 }
 
 
@@ -1255,12 +1255,12 @@ _A_y_moment(A_y_moment),
 _A_z_moment(A_z_moment),
 _Ip(Ip),
 _I(I) {
-    _functions.insert(_rho);
-    _functions.insert(_A);
-    _functions.insert(_A_y_moment);
-    _functions.insert(_A_z_moment);
-    _functions.insert(_Ip);
-    _functions.insert(_I);
+    _functions.insert(_rho->master());
+    _functions.insert(_A->master());
+    _functions.insert(_A_y_moment->master());
+    _functions.insert(_A_z_moment->master());
+    _functions.insert(_Ip->master());
+    _functions.insert(_I->master());
 }
 
 
@@ -1370,9 +1370,9 @@ MAST::FieldFunction<RealMatrixX>("ThermalExpansionAMatrix1D"),
 _material_stiffness(mat_stiff),
 _material_expansion(mat_expansion),
 _A(A) {
-    _functions.insert(mat_stiff);
-    _functions.insert(mat_expansion);
-    _functions.insert(_A);
+    _functions.insert(mat_stiff->master());
+    _functions.insert(mat_expansion->master());
+    _functions.insert(_A->master());
 }
 
 
@@ -1435,10 +1435,10 @@ _material_stiffness(mat_stiff),
 _material_expansion(mat_expansion),
 _A_y_moment(A_y_moment),
 _A_z_moment(A_z_moment) {
-    _functions.insert(mat_stiff);
-    _functions.insert(mat_expansion);
-    _functions.insert(_A_y_moment);
-    _functions.insert(_A_z_moment);
+    _functions.insert(mat_stiff->master());
+    _functions.insert(mat_expansion->master());
+    _functions.insert(_A_y_moment->master());
+    _functions.insert(_A_z_moment->master());
 }
 
 
@@ -1505,9 +1505,9 @@ MAST::FieldFunction<RealMatrixX>("PrestressAMatrix1D"),
 _prestress(prestress),
 _T(T),
 _A(A) {
-    _functions.insert(prestress);
-    _functions.insert(T);
-    _functions.insert(A);
+    _functions.insert(prestress->master());
+    _functions.insert(T->master());
+    _functions.insert(A->master());
 }
 
 
@@ -1590,10 +1590,10 @@ _prestress(prestress),
 _T(T),
 _A_y_moment(A_y_moment),
 _A_z_moment(A_z_moment) {
-    _functions.insert(prestress);
-    _functions.insert(T);
-    _functions.insert(A_y_moment);
-    _functions.insert(A_z_moment);
+    _functions.insert(prestress->master());
+    _functions.insert(T->master());
+    _functions.insert(A_y_moment->master());
+    _functions.insert(A_z_moment->master());
 }
 
 
@@ -1676,18 +1676,18 @@ ThermalConductanceMatrix(MAST::FieldFunction<RealMatrixX> *mat_cond,
 MAST::FieldFunction<RealMatrixX>("ThermalConductanceMatrix"),
 _mat_cond(mat_cond),
 _A(A) {
-    _functions.insert(mat_cond);
-    _functions.insert(A);
+    _functions.insert(mat_cond->master());
+    _functions.insert(A->master());
 }
 
 
 MAST::Solid1DSectionProperty::ThermalConductanceMatrix::
 ThermalConductanceMatrix(const MAST::Solid1DSectionProperty::ThermalConductanceMatrix &f):
 MAST::FieldFunction<RealMatrixX>(f),
-_mat_cond(f._mat_cond),
-_A(f._A) {
-    _functions.insert(_mat_cond);
-    _functions.insert(_A);
+_mat_cond(f._mat_cond->clone().release()),
+_A(f._A->clone().release()) {
+    _functions.insert(_mat_cond->master());
+    _functions.insert(_A->master());
 }
 
 
@@ -1755,18 +1755,18 @@ ThermalCapacitanceMatrix(MAST::FieldFunction<RealMatrixX> *mat_cap,
 MAST::FieldFunction<RealMatrixX>("ThermalCapacitanceMatrix"),
 _mat_cap(mat_cap),
 _h(h) {
-    _functions.insert(mat_cap);
-    _functions.insert(h);
+    _functions.insert(mat_cap->master());
+    _functions.insert(h->master());
 }
 
 
 MAST::Solid1DSectionProperty::ThermalCapacitanceMatrix::
 ThermalCapacitanceMatrix(const MAST::Solid1DSectionProperty::ThermalCapacitanceMatrix &f):
 MAST::FieldFunction<RealMatrixX>(f),
-_mat_cap(f._mat_cap),
-_h(f._h) {
-    _functions.insert(_mat_cap);
-    _functions.insert(_h);
+_mat_cap(f._mat_cap->clone().release()),
+_h(f._h->clone().release()) {
+    _functions.insert(_mat_cap->master());
+    _functions.insert(_h->master());
 }
 
 

@@ -37,8 +37,8 @@ namespace MAST {
             MAST::FieldFunction<RealMatrixX>(f),
             _E(f._E->clone().release()),
             _nu(f._nu->clone().release()){
-                _functions.insert(_E);
-                _functions.insert(_nu);
+                _functions.insert(_E->master());
+                _functions.insert(_nu->master());
             }
             
             /*!
@@ -50,7 +50,10 @@ namespace MAST {
                 (new MAST::IsotropicMaterialProperty::StiffnessMatrix1D(*this));
             }
             
-            virtual ~StiffnessMatrix1D();
+            virtual ~StiffnessMatrix1D() {
+                delete _E;
+                delete _nu;
+            }
             
             virtual void operator() (const libMesh::Point& p,
                                      const Real t,
@@ -79,9 +82,11 @@ namespace MAST {
             TransverseShearStiffnessMatrix(const MAST::IsotropicMaterialProperty::TransverseShearStiffnessMatrix& f):
             MAST::FieldFunction<RealMatrixX>(f),
             _E(f._E->clone().release()),
-            _nu(f._nu->clone().release()) {
-                _functions.insert(_E);
-                _functions.insert(_nu);
+            _nu(f._nu->clone().release()),
+            _kappa(f._kappa->clone().release()) {
+                _functions.insert(_E->master());
+                _functions.insert(_nu->master());
+                _functions.insert(_kappa->master());
             }
             
             /*!
@@ -92,7 +97,11 @@ namespace MAST {
                 (new MAST::IsotropicMaterialProperty::TransverseShearStiffnessMatrix(*this));
             }
             
-            virtual ~TransverseShearStiffnessMatrix();
+            virtual ~TransverseShearStiffnessMatrix() {
+                delete _E;
+                delete _nu;
+                delete _kappa;
+            }
             
             virtual void operator() (const libMesh::Point& p,
                                      const Real t,
@@ -123,8 +132,8 @@ namespace MAST {
             _E(f._E->clone().release()),
             _nu(f._nu->clone().release()),
             _plane_stress(f._plane_stress) {
-                _functions.insert(_E);
-                _functions.insert(_nu);
+                _functions.insert(_E->master());
+                _functions.insert(_nu->master());
             }
             
             /*!
@@ -135,7 +144,10 @@ namespace MAST {
                 (new MAST::IsotropicMaterialProperty::StiffnessMatrix2D(*this));
             }
             
-            virtual ~StiffnessMatrix2D();
+            virtual ~StiffnessMatrix2D() {
+                delete _E;
+                delete _nu;
+            }
             
             
             virtual void operator() (const libMesh::Point& p,
@@ -166,8 +178,8 @@ namespace MAST {
             MAST::FieldFunction<RealMatrixX>(f),
             _E(f._E->clone().release()),
             _nu(f._nu->clone().release()) {
-                _functions.insert(_E);
-                _functions.insert(_nu);
+                _functions.insert(_E->master());
+                _functions.insert(_nu->master());
             }
             
             /*!
@@ -178,7 +190,10 @@ namespace MAST {
                 (new MAST::IsotropicMaterialProperty::StiffnessMatrix3D(*this));
             }
             
-            virtual ~StiffnessMatrix3D();
+            virtual ~StiffnessMatrix3D() {
+                delete _E;
+                delete _nu;
+            }
             
             virtual void operator() (const libMesh::Point& p,
                                      const Real t,
@@ -206,14 +221,14 @@ namespace MAST {
             MAST::FieldFunction<RealMatrixX>("ThermalExpansionMatrix"),
             _dim(dim),
             _alpha(alpha) {
-                _functions.insert(_alpha);
+                _functions.insert(_alpha->master());
             }
             
             ThermalExpansionMatrix(const MAST::IsotropicMaterialProperty::ThermalExpansionMatrix& f):
             MAST::FieldFunction<RealMatrixX>(f),
             _dim(f._dim),
             _alpha(f._alpha->clone().release()) {
-                _functions.insert(_alpha);
+                _functions.insert(_alpha->master());
             }
             
             /*!
@@ -257,14 +272,14 @@ namespace MAST {
             MAST::FieldFunction<RealMatrixX>("ThermalConductanceMatrix"),
             _dim(dim),
             _k(k) {
-                _functions.insert(_k);
+                _functions.insert(_k->master());
             }
             
             ThermalConductanceMatrix(const MAST::IsotropicMaterialProperty::ThermalConductanceMatrix& f):
             MAST::FieldFunction<RealMatrixX>(f),
             _dim(f._dim),
             _k(f._k->clone().release()) {
-                _functions.insert(_k);
+                _functions.insert(_k->master());
             }
             
             /*!
@@ -310,8 +325,8 @@ namespace MAST {
             _rho(rho),
             _cp(cp) {
                 
-                _functions.insert(_rho);
-                _functions.insert(_cp);
+                _functions.insert(_rho->master());
+                _functions.insert(_cp->master());
             }
             
             ThermalCapacitanceMatrix(const MAST::IsotropicMaterialProperty::ThermalCapacitanceMatrix& f):
@@ -320,8 +335,8 @@ namespace MAST {
             _rho(f._rho->clone().release()),
             _cp(f._cp->clone().release()) {
                 
-                _functions.insert(_rho);
-                _functions.insert(_cp);
+                _functions.insert(_rho->master());
+                _functions.insert(_cp->master());
             }
             
             /*!
@@ -370,14 +385,11 @@ MAST::FieldFunction<RealMatrixX>("StiffnessMatrix1D"),
 _E(E),
 _nu(nu)
 {
-    _functions.insert(E);
-    _functions.insert(nu);
+    _functions.insert(E->master());
+    _functions.insert(nu->master());
 }
 
 
-
-MAST::IsotropicMaterialProperty::
-StiffnessMatrix1D::~StiffnessMatrix1D() { }
 
 
 void
@@ -431,15 +443,11 @@ _E(E),
 _nu(nu),
 _kappa(kappa)
 {
-    _functions.insert(E);
-    _functions.insert(nu);
-    _functions.insert(kappa);
+    _functions.insert(E->master());
+    _functions.insert(nu->master());
+    _functions.insert(kappa->master());
 }
 
-
-
-MAST::IsotropicMaterialProperty::
-TransverseShearStiffnessMatrix::~TransverseShearStiffnessMatrix() { }
 
 
 void
@@ -502,14 +510,10 @@ _E(E),
 _nu(nu),
 _plane_stress(plane_stress)
 {
-    _functions.insert(E);
-    _functions.insert(nu);
+    _functions.insert(E->master());
+    _functions.insert(nu->master());
 }
 
-
-
-MAST::IsotropicMaterialProperty::
-StiffnessMatrix2D::~StiffnessMatrix2D() { }
 
 
 
@@ -582,14 +586,12 @@ MAST::FieldFunction<RealMatrixX>("StiffnessMatrix2D"),
 _E(E),
 _nu(nu)
 {
-    _functions.insert(E);
-    _functions.insert(nu);
+    _functions.insert(E->master());
+    _functions.insert(nu->master());
 }
 
 
 
-MAST::IsotropicMaterialProperty::
-StiffnessMatrix3D::~StiffnessMatrix3D() { }
 
 
 void

@@ -49,9 +49,8 @@ namespace MAST
     public MAST::FunctionSetBase {
         
     public:
-        ElementPropertyCardBase(unsigned int pid):
+        ElementPropertyCardBase():
         MAST::FunctionSetBase(),
-        _pid(pid),
         _strain_type(MAST::LINEAR_STRAIN),
         _diagonal_mass(false)
         { }
@@ -114,13 +113,6 @@ namespace MAST
         virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
         thermal_capacitance_matrix(const MAST::ElementBase& e) const= 0;
 
-        /*!
-         *    returns the id for this card
-         */
-        unsigned int id() const {
-            return _pid;
-        }
-        
         
         /*!
          *   return true if the property is isotropic
@@ -187,11 +179,6 @@ namespace MAST
         
         
     protected:
-        
-        /*!
-         *    property card id
-         */
-        unsigned int _pid;
         
         /*!
          *    type of nonlinear strain to be used for analysis

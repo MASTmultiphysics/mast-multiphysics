@@ -31,8 +31,8 @@ namespace MAST
     class ElementPropertyCard1D: public MAST::ElementPropertyCardBase {
         
     public:
-        ElementPropertyCard1D(unsigned int pid):
-        MAST::ElementPropertyCardBase(pid),
+        ElementPropertyCard1D():
+        MAST::ElementPropertyCardBase(),
         _bending_model(MAST::DEFAULT_BENDING)
         { }
         

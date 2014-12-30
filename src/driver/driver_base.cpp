@@ -2,12 +2,14 @@
 // MAST includes
 #include "driver/driver_base.h"
 #include "base/nonlinear_implicit_assembly.h"
+#include "base/transient_assembly.h"
+#include "solver/transient_solver_base.h"
 #include "base/output_assembly_base.h"
 #include "base/physics_discipline_base.h"
 
+
 // libMesh includes
 #include "libmesh/nonlinear_implicit_system.h"
-
 
 
 bool
@@ -19,8 +21,26 @@ MAST::Driver::nonlinear_solution(MAST::PhysicsDisciplineBase&     discipline,
     
     libMesh::NonlinearImplicitSystem&      nonlin_sys   =
     dynamic_cast<libMesh::NonlinearImplicitSystem&>(assembly.system());
-        
+    
     nonlin_sys.solve();
+    
+    assembly.clear_discipline_and_system();
+    
+    return true;
+}
+
+
+
+bool
+MAST::Driver::transient_solution_step(MAST::PhysicsDisciplineBase&     discipline,
+                                      MAST::SystemInitialization&      system,
+                                      MAST::TransientAssembly&         assembly,
+                                      MAST::TransientSolverBase&       solver) {
+    
+    assembly.attach_discipline_and_system(discipline, solver, system);
+    solver.set_assembly(assembly);
+    
+    solver.solve();
 
     assembly.clear_discipline_and_system();
     

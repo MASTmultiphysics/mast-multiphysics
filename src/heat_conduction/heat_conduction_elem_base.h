@@ -14,6 +14,24 @@ namespace MAST {
     class BoundaryConditionBase;
     class FEMOperatorMatrix;
     
+    
+    /*!
+     *    This element implements the Galerkin discretization of the 
+     *    heat conduction problem
+     *    \f[ \rho c_p \frac{\partial T}{\partial t} - \frac{\partial }{\partial x_i}\left( -k_{ij} \frac{\partial T}{\partial x_j} \right) = q_v \mbox{ in } \Omega \f]
+     *    with the flux provided on the boundary with Neumann boundary conditions. 
+     *    The discrete form is represented as
+     *    \f[ M^k \dot{x}^k_t + f(x^k_t) = 0 \f],
+     *    where 
+     *    \f[ M^k \dot{x}^k_t  = \int_{\Omega_e} \phi \rho c_p \dot{x}^k_t \f],
+     *    and 
+     *    \f[ f(x^k_t) = 
+     *    \int_{\Omega_e} \frac{\partial \phi}{\partial x_i} k_ij \frac{\partial T}{\partial x_j}
+     *    - \int_{\partial\Omega_e \cap \partial_N\Omega} \phi q_n 
+     *    - \int_{\Omega_e} \phi q_v \f],
+     *    where \f$q_n\f$ is the boundary normal surface flux on
+     *    \f$\partial_N\Omega\f$ and \f$q_v\f$ is the volumetric heat generation.
+     */
     class HeatConductionElementBase:
     public MAST::ElementBase
     {
@@ -53,6 +71,7 @@ namespace MAST {
         virtual bool
         velocity_residual (bool request_jacobian,
                            RealVectorX& f,
+                           RealMatrixX& jac_xdot,
                            RealMatrixX& jac);
         
         /*!

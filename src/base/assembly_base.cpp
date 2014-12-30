@@ -10,7 +10,8 @@
 
 MAST::AssemblyBase::AssemblyBase():
 _discipline(NULL),
-_system(NULL) {
+_system(NULL),
+_sol_function(NULL) {
     
 }
 
@@ -86,5 +87,22 @@ MAST::AssemblyBase::_build_localized_vector(const libMesh::System& sys,
 
 
 
+
+void
+MAST::AssemblyBase::attach_solution_function(MAST::MeshFieldFunction<RealVectorX>& f){
+    
+    // make sure that no prior association is specified
+    libmesh_assert(!_sol_function);
+    
+    _sol_function = &f;
+}
+
+
+
+
+void
+MAST::AssemblyBase::detach_solution_function() {
+    _sol_function = NULL;
+}
 
 
