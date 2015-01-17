@@ -848,6 +848,7 @@ surface_radiation_residual(bool request_jacobian,
     
     const MAST::Parameter
     &T_amb      = p.get<MAST::Parameter>("ambient_temperature"),
+    &T_ref_zero = p.get<MAST::Parameter>("reference_zero_temperature"),
     &sb_const   = p.get<MAST::Parameter>("stefan_bolzmann_constant");
     
     
@@ -860,7 +861,8 @@ surface_radiation_residual(bool request_jacobian,
     RealMatrixX mat      (n_phi, n_phi);
     const Real
     sbc      = sb_const(),
-    amb_temp = T_amb();
+    amb_temp = T_amb(),
+    zero_ref = T_ref_zero();
     Real temp, emiss;
     libMesh::Point pt;
     MAST::FEMOperatorMatrix Bmat;
@@ -878,13 +880,13 @@ surface_radiation_residual(bool request_jacobian,
         temp  = phi_vec.dot(_sol);
         
         f   += JxW[qp] * phi_vec * sbc * emiss *
-        (pow(temp, 4.) - pow(amb_temp, 4.));
+        (pow(temp-zero_ref, 4.) - pow(amb_temp-zero_ref, 4.));
         
         if (request_jacobian) {
             
             Bmat.reinit(1, phi_vec);
             Bmat.right_multiply_transpose(mat, Bmat);
-            jac +=  JxW[qp] * mat * sbc * emiss * 4. * pow(temp, 3.);
+            jac +=  JxW[qp] * mat * sbc * emiss * 4. * pow(temp-zero_ref, 3.);
         }
     }
     
@@ -908,6 +910,7 @@ surface_radiation_residual(bool request_jacobian,
     
     const MAST::Parameter
     &T_amb      = p.get<MAST::Parameter>("ambient_temperature"),
+    &T_ref_zero = p.get<MAST::Parameter>("reference_zero_temperature"),
     &sb_const   = p.get<MAST::Parameter>("stefan_bolzmann_constant");
     
     
@@ -920,7 +923,8 @@ surface_radiation_residual(bool request_jacobian,
     RealMatrixX mat      (n_phi, n_phi);
     const Real
     sbc      = sb_const(),
-    amb_temp = T_amb();
+    amb_temp = T_amb(),
+    zero_ref = T_ref_zero();
     Real temp, emiss;
     libMesh::Point pt;
     MAST::FEMOperatorMatrix Bmat;
@@ -938,13 +942,13 @@ surface_radiation_residual(bool request_jacobian,
         temp  = phi_vec.dot(_sol);
         
         f   += JxW[qp] * phi_vec * sbc * emiss *
-        (pow(temp, 4.) - pow(amb_temp, 4.));
+        (pow(temp-zero_ref, 4.) - pow(amb_temp-zero_ref, 4.));
         
         if (request_jacobian) {
             
             Bmat.reinit(1, phi_vec);
             Bmat.right_multiply_transpose(mat, Bmat);
-            jac +=  JxW[qp] * mat * sbc * emiss * 4. * pow(temp, 3.);
+            jac +=  JxW[qp] * mat * sbc * emiss * 4. * pow(temp-zero_ref, 3.);
         }
     }
     

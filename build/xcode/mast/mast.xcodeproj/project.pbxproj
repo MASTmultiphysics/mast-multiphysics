@@ -11,6 +11,12 @@
 		6921397019E4771800CDFB4F /* heat_conduction_discipline.h in Headers */ = {isa = PBXBuildFile; fileRef = 6921396E19E4771800CDFB4F /* heat_conduction_discipline.h */; };
 		6921397D19E4834900CDFB4F /* heat_conduction_system_initialization.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6921397B19E4834900CDFB4F /* heat_conduction_system_initialization.cpp */; };
 		6921397E19E4834900CDFB4F /* heat_conduction_system_initialization.h in Headers */ = {isa = PBXBuildFile; fileRef = 6921397C19E4834900CDFB4F /* heat_conduction_system_initialization.h */; };
+		693561D11A378D5700BAFD3A /* mesh_field_function.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 693561CF1A378D5700BAFD3A /* mesh_field_function.cpp */; };
+		693561D21A378D5700BAFD3A /* mesh_field_function.h in Headers */ = {isa = PBXBuildFile; fileRef = 693561D01A378D5700BAFD3A /* mesh_field_function.h */; };
+		6946EB021A4A0107004CBB5E /* heat_conduction_transient_assembly.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6946EB001A4A0107004CBB5E /* heat_conduction_transient_assembly.cpp */; };
+		6946EB031A4A0107004CBB5E /* heat_conduction_transient_assembly.h in Headers */ = {isa = PBXBuildFile; fileRef = 6946EB011A4A0107004CBB5E /* heat_conduction_transient_assembly.h */; };
+		698129EC1A51FE7B0049B210 /* multilinear_field_function.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 698129EA1A51FE7B0049B210 /* multilinear_field_function.cpp */; };
+		698129ED1A51FE7B0049B210 /* multilinear_field_function.h in Headers */ = {isa = PBXBuildFile; fileRef = 698129EB1A51FE7B0049B210 /* multilinear_field_function.h */; };
 		69A624F019E70F4600B5B303 /* output_assembly_base.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69A624EE19E70F4600B5B303 /* output_assembly_base.cpp */; };
 		69A624F119E70F4600B5B303 /* output_assembly_base.h in Headers */ = {isa = PBXBuildFile; fileRef = 69A624EF19E70F4600B5B303 /* output_assembly_base.h */; };
 		69D2758E19D48B1B007F5A68 /* transient_solver_base.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69D2758C19D48B1B007F5A68 /* transient_solver_base.cpp */; };
@@ -92,6 +98,12 @@
 		6921396E19E4771800CDFB4F /* heat_conduction_discipline.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = heat_conduction_discipline.h; sourceTree = "<group>"; };
 		6921397B19E4834900CDFB4F /* heat_conduction_system_initialization.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = heat_conduction_system_initialization.cpp; sourceTree = "<group>"; };
 		6921397C19E4834900CDFB4F /* heat_conduction_system_initialization.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = heat_conduction_system_initialization.h; sourceTree = "<group>"; };
+		693561CF1A378D5700BAFD3A /* mesh_field_function.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = mesh_field_function.cpp; sourceTree = "<group>"; };
+		693561D01A378D5700BAFD3A /* mesh_field_function.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = mesh_field_function.h; sourceTree = "<group>"; };
+		6946EB001A4A0107004CBB5E /* heat_conduction_transient_assembly.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = heat_conduction_transient_assembly.cpp; sourceTree = "<group>"; };
+		6946EB011A4A0107004CBB5E /* heat_conduction_transient_assembly.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = heat_conduction_transient_assembly.h; sourceTree = "<group>"; };
+		698129EA1A51FE7B0049B210 /* multilinear_field_function.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = multilinear_field_function.cpp; sourceTree = "<group>"; };
+		698129EB1A51FE7B0049B210 /* multilinear_field_function.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = multilinear_field_function.h; sourceTree = "<group>"; };
 		69A624EE19E70F4600B5B303 /* output_assembly_base.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = output_assembly_base.cpp; sourceTree = "<group>"; };
 		69A624EF19E70F4600B5B303 /* output_assembly_base.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = output_assembly_base.h; sourceTree = "<group>"; };
 		69D2758C19D48B1B007F5A68 /* transient_solver_base.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = transient_solver_base.cpp; sourceTree = "<group>"; };
@@ -204,6 +216,8 @@
 				69D275E319D5FFD5007F5A68 /* fem_operator_matrix.cpp */,
 				69D275E419D5FFD5007F5A68 /* fem_operator_matrix.h */,
 				69D2759119D490DD007F5A68 /* utility.h */,
+				698129EA1A51FE7B0049B210 /* multilinear_field_function.cpp */,
+				698129EB1A51FE7B0049B210 /* multilinear_field_function.h */,
 			);
 			path = numerics;
 			sourceTree = "<group>";
@@ -228,6 +242,8 @@
 				69FC1B8D19E59F2A00BA00BB /* heat_conduction_nonlinear_assembly.h */,
 				6921397B19E4834900CDFB4F /* heat_conduction_system_initialization.cpp */,
 				6921397C19E4834900CDFB4F /* heat_conduction_system_initialization.h */,
+				6946EB001A4A0107004CBB5E /* heat_conduction_transient_assembly.cpp */,
+				6946EB011A4A0107004CBB5E /* heat_conduction_transient_assembly.h */,
 			);
 			path = heat_conduction;
 			sourceTree = "<group>";
@@ -292,6 +308,8 @@
 				69E1274B19D34591001BADE2 /* assembly_base.cpp */,
 				69E1274C19D34591001BADE2 /* assembly_base.h */,
 				69D2759D19D5CDA4007F5A68 /* boundary_condition_base.h */,
+				69FC1B9419E5D13900BA00BB /* constant_field_function.cpp */,
+				69FC1B9519E5D13900BA00BB /* constant_field_function.h */,
 				69E1275F19D36610001BADE2 /* eigenproblem_assembly.cpp */,
 				69E1276019D36610001BADE2 /* eigenproblem_assembly.h */,
 				69E1274719D3457F001BADE2 /* elem_base.cpp */,
@@ -302,8 +320,12 @@
 				69D2759B19D5B94A007F5A68 /* function_set_base.cpp */,
 				69D2759919D5B8BC007F5A68 /* function_set_base.h */,
 				69E1274519D343C3001BADE2 /* mast_data_types.h */,
+				693561CF1A378D5700BAFD3A /* mesh_field_function.cpp */,
+				693561D01A378D5700BAFD3A /* mesh_field_function.h */,
 				69E1275719D36575001BADE2 /* nonlinear_implicit_assembly.cpp */,
 				69E1275819D36575001BADE2 /* nonlinear_implicit_assembly.h */,
+				69A624EE19E70F4600B5B303 /* output_assembly_base.cpp */,
+				69A624EF19E70F4600B5B303 /* output_assembly_base.h */,
 				69D2759319D4B98F007F5A68 /* parameter.h */,
 				69E1275319D364BE001BADE2 /* physics_discipline_base.cpp */,
 				69E1275419D364BE001BADE2 /* physics_discipline_base.h */,
@@ -311,10 +333,6 @@
 				69E1275019D3644D001BADE2 /* system_initialization.h */,
 				69E1275B19D365C7001BADE2 /* transient_assembly.cpp */,
 				69E1275C19D365C7001BADE2 /* transient_assembly.h */,
-				69FC1B9419E5D13900BA00BB /* constant_field_function.cpp */,
-				69FC1B9519E5D13900BA00BB /* constant_field_function.h */,
-				69A624EE19E70F4600B5B303 /* output_assembly_base.cpp */,
-				69A624EF19E70F4600B5B303 /* output_assembly_base.h */,
 			);
 			path = base;
 			sourceTree = "<group>";
@@ -370,6 +388,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				69ECA03019DA4354009BB5B0 /* solid_1d_section_element_property_card.h in Headers */,
+				6946EB031A4A0107004CBB5E /* heat_conduction_transient_assembly.h in Headers */,
 				69ECA03219DA4354009BB5B0 /* solid_2d_section_element_property_card.h in Headers */,
 				69ECA03319DA4354009BB5B0 /* element_property_card_1D.h in Headers */,
 				69ECA03719DA4354009BB5B0 /* element_property_card_base.h in Headers */,
@@ -384,6 +403,8 @@
 				69E1275219D3644D001BADE2 /* system_initialization.h in Headers */,
 				69D2759619D4B98F007F5A68 /* parameter.h in Headers */,
 				69D275D519D5F944007F5A68 /* first_order_newmark_transient_solver.h in Headers */,
+				698129ED1A51FE7B0049B210 /* multilinear_field_function.h in Headers */,
+				693561D21A378D5700BAFD3A /* mesh_field_function.h in Headers */,
 				69FC1B9719E5D13900BA00BB /* constant_field_function.h in Headers */,
 				6921397E19E4834900CDFB4F /* heat_conduction_system_initialization.h in Headers */,
 				69E1275A19D36575001BADE2 /* nonlinear_implicit_assembly.h in Headers */,
@@ -437,7 +458,7 @@
 		69E1272D19D34331001BADE2 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 0600;
+				LastUpgradeCheck = 0610;
 				ORGANIZATIONNAME = MAST;
 				TargetAttributes = {
 					69E1273419D34331001BADE2 = {
@@ -473,6 +494,7 @@
 				69D275D019D5D0A0007F5A68 /* dirichlet_boundary_condition.cpp in Sources */,
 				69ECA03519DA4354009BB5B0 /* element_property_card_3D.cpp in Sources */,
 				69D275EA19D60170007F5A68 /* local_1d_elem.cpp in Sources */,
+				6946EB021A4A0107004CBB5E /* heat_conduction_transient_assembly.cpp in Sources */,
 				69ECA02B19DA4354009BB5B0 /* multilayer_1d_section_element_property_card.cpp in Sources */,
 				69E1275D19D365C7001BADE2 /* transient_assembly.cpp in Sources */,
 				69D2759C19D5B94A007F5A68 /* function_set_base.cpp in Sources */,
@@ -487,6 +509,8 @@
 				69ECA03B19DAFE0A009BB5B0 /* element_property_card_2D.cpp in Sources */,
 				69FC1B8E19E59F2A00BA00BB /* heat_conduction_nonlinear_assembly.cpp in Sources */,
 				69FC1B8A19E595FB00BA00BB /* driver_base.cpp in Sources */,
+				698129EC1A51FE7B0049B210 /* multilinear_field_function.cpp in Sources */,
+				693561D11A378D5700BAFD3A /* mesh_field_function.cpp in Sources */,
 				69D275F619D60ABF007F5A68 /* heat_conduction_elem_base.cpp in Sources */,
 				69E1275919D36575001BADE2 /* nonlinear_implicit_assembly.cpp in Sources */,
 				6921397D19E4834900CDFB4F /* heat_conduction_system_initialization.cpp in Sources */,
@@ -583,7 +607,7 @@
 		69E1274119D34331001BADE2 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = "$(ARCHS_STANDARD)";
+				COMBINE_HIDPI_IMAGES = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				EXECUTABLE_PREFIX = lib;
@@ -604,6 +628,7 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = "";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRIP_STYLE = all;
 				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/../../../src $(SRCROOT)/../../../../libmesh/real/libmesh/include /opt/local/include/eigen3";
 			};
 			name = Debug;
@@ -611,7 +636,7 @@
 		69E1274219D34331001BADE2 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = "$(ARCHS_STANDARD)";
+				COMBINE_HIDPI_IMAGES = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				EXECUTABLE_PREFIX = lib;
@@ -632,6 +657,7 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = "";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRIP_STYLE = all;
 				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/../../../src $(SRCROOT)/../../../../libmesh/real/libmesh/include /opt/local/include/eigen3";
 			};
 			name = Release;
