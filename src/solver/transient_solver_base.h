@@ -39,6 +39,12 @@ namespace MAST {
         Real dt;
 
         /*!
+         *    @returns the highest order time derivative that the solver 
+         *    will handle
+         */
+        virtual int ode_order() const = 0;
+        
+        /*!
          *    @returns a const reference to the localized solution from 
          *    iteration number = current - prev_iter. So, \par prev_iter = 0
          *    gives the current solution estimate. Note that \par prev_iter
@@ -57,6 +63,17 @@ namespace MAST {
          */
         const libMesh::NumericVector<Real>&
         velocity(unsigned int prev_iter = 0) const;
+
+        
+        /*!
+         *    @returns a const reference to the localized acceleration from
+         *    iteration number = current - prev_iter. So, \par prev_iter = 0
+         *    gives the current acceleration estimate. Note that \par prev_iter
+         *    cannot be greater than the total number of iterations that this
+         *    solver stores solutions for.
+         */
+        const libMesh::NumericVector<Real>&
+        acceleration(unsigned int prev_iter = 0) const;
 
         
         /*!
@@ -110,12 +127,16 @@ namespace MAST {
          */
         virtual void _set_element_data(std::vector<libMesh::dof_id_type>& dof_indices,
                                        MAST::ElementBase& elem) = 0;
-
+        
         /*!
-         *    update the transient solution based on the current solution
+         *    update the transient velocity based on the current solution
          */
         virtual void _update_velocity(libMesh::NumericVector<Real>& vec) = 0;
         
+        /*!
+         *    update the transient acceleration based on the current solution
+         */
+        virtual void _update_acceleration(libMesh::NumericVector<Real>& vec) = 0;
         
         /*!
          *   performs the element calculations over \par elem, and returns
@@ -159,11 +180,17 @@ namespace MAST {
         
         
         /*!
-         *   localized solution vector needed for element calculations
+         *   localized velocity vector needed for element calculations
          *   on local processor
          */
         std::vector<libMesh::NumericVector<Real>*> _velocity;
-        
+
+        /*!
+         *   localized acceleration vector needed for element calculations
+         *   on local processor
+         */
+        std::vector<libMesh::NumericVector<Real>*> _acceleration;
+
     };
 
 }
