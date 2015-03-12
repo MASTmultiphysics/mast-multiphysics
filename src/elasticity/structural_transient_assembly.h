@@ -1,6 +1,7 @@
 
-#ifndef __mast__heat_conduction_transient_assembly__
-#define __mast__heat_conduction_transient_assembly__
+#ifndef __mast__structural_transient_assembly__
+#define __mast__structural_transient_assembly__
+
 
 // MAST includes
 #include "base/transient_assembly.h"
@@ -10,26 +11,38 @@
 namespace MAST {
     
     
-    class HeatConductionTransientAssembly:
+    class StructuralTransientAssembly:
     public MAST::TransientAssembly {
     public:
         
         /*!
          *   constructor associates this assembly object with the system
          */
-        HeatConductionTransientAssembly();
+        StructuralTransientAssembly();
         
         
         /*!
          *   destructor resets the association of this assembly object with
          *   the system
          */
-        virtual ~HeatConductionTransientAssembly();
+        virtual ~StructuralTransientAssembly();
         
         //**************************************************************
         //these methods are provided for use by the solvers
         //**************************************************************
         
+        
+        /*!
+         *   This call for first order ode should not be used for this
+         *   transient assembly
+         */
+        virtual void _elem_calculations(MAST::ElementBase& elem,
+                                        bool if_jac,
+                                        RealVectorX& f_m,
+                                        RealVectorX& f_x,
+                                        RealMatrixX& f_m_jac_x_dot,
+                                        RealMatrixX& f_m_jac,
+                                        RealMatrixX& f_x_jac);
         
         /*!
          *   performs the element calculations over \par elem, and returns
@@ -41,26 +54,12 @@ namespace MAST {
                                         bool if_jac,
                                         RealVectorX& f_m,
                                         RealVectorX& f_x,
-                                        RealMatrixX& f_m_jac_x_dot,
-                                        RealMatrixX& f_m_jac,
-                                        RealMatrixX& f_x_jac);
-        
-        /*!
-         *   This call for second order ode should not be used for this 
-         *   transient assembly
-         */
-        virtual void _elem_calculations(MAST::ElementBase& elem,
-                                        bool if_jac,
-                                        RealVectorX& f_m,
-                                        RealVectorX& f_x,
                                         RealMatrixX& f_m_jac_xddot,
                                         RealMatrixX& f_m_jac_xdot,
                                         RealMatrixX& f_m_jac,
                                         RealMatrixX& f_x_jac_xdot,
-                                        RealMatrixX& f_x_jac) {
-            libmesh_error();
-        }
-
+                                        RealMatrixX& f_x_jac);
+        
         /*!
          *   performs the element sensitivity calculations over \par elem,
          *   and returns the element residual sensitivity in \par vec .
@@ -78,10 +77,12 @@ namespace MAST {
          */
         virtual std::auto_ptr<MAST::ElementBase>
         _build_elem(const libMesh::Elem& elem);
-
+        
     };
     
     
 }
 
-#endif // __mast__heat_conduction_transient_assembly__
+
+#endif // __mast__structural_transient_assembly__
+

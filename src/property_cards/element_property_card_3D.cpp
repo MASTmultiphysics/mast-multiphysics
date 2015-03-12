@@ -631,9 +631,12 @@ std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::ElementPropertyCard3D::
 thermal_expansion_A_matrix(const MAST::ElementBase& e) const {
     
-    libmesh_assert(false);
+    MAST::FieldFunction<RealMatrixX>* rval =
+    new MAST::ElementProperty3D::ThermalExpansionMatrix
+    (_material->stiffness_matrix(3).release(),
+     _material->thermal_expansion_matrix(3).release());
     
-    return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >(NULL);
+    return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >(rval);
 }
 
 
@@ -641,9 +644,8 @@ std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::ElementPropertyCard3D::
 thermal_expansion_B_matrix(const MAST::ElementBase& e) const {
     
-    libmesh_assert(false);
-    
-    return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >(NULL);
+    // for 3D elements, there is no difference between the A and B matrices
+    return this->thermal_expansion_A_matrix(e);
 }
 
 

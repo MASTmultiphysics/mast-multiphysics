@@ -15,9 +15,10 @@
 #include "base/mesh_field_function.h"
 
 
-MAST::HeatConductionElementBase::HeatConductionElementBase(MAST::SystemInitialization& sys,
-                                                           const libMesh::Elem& elem,
-                                                           const MAST::ElementPropertyCardBase& p):
+MAST::HeatConductionElementBase::
+HeatConductionElementBase(MAST::SystemInitialization& sys,
+                          const libMesh::Elem& elem,
+                          const MAST::ElementPropertyCardBase& p):
 MAST::ElementBase(sys, elem),
 _property(p) {
 
@@ -64,6 +65,7 @@ bool
 MAST::HeatConductionElementBase::internal_residual (bool request_jacobian,
                                                     RealVectorX& f,
                                                     RealMatrixX& jac) {
+    
     const std::vector<Real>& JxW           = _fe->get_JxW();
     const std::vector<libMesh::Point>& xyz = _fe->get_xyz();
     const unsigned int
@@ -571,7 +573,7 @@ surface_flux_residual(bool request_jacobian,
     // prepare the side finite element
     std::auto_ptr<libMesh::FEBase> fe;
     std::auto_ptr<libMesh::QBase> qrule;
-    _get_side_fe_and_qrule(_get_elem_for_quadrature(), s, fe, qrule);
+    _get_side_fe_and_qrule(get_elem_for_quadrature(), s, fe, qrule);
     
     
     // get the function from this boundary condition
@@ -690,7 +692,7 @@ surface_convection_residual(bool request_jacobian,
     // prepare the side finite element
     std::auto_ptr<libMesh::FEBase> fe;
     std::auto_ptr<libMesh::QBase> qrule;
-    _get_side_fe_and_qrule(_get_elem_for_quadrature(), s, fe, qrule);
+    _get_side_fe_and_qrule(get_elem_for_quadrature(), s, fe, qrule);
 
     // get the function from this boundary condition
     const MAST::FieldFunction<Real>
@@ -840,7 +842,7 @@ surface_radiation_residual(bool request_jacobian,
     // prepare the side finite element
     std::auto_ptr<libMesh::FEBase> fe;
     std::auto_ptr<libMesh::QBase> qrule;
-    _get_side_fe_and_qrule(_get_elem_for_quadrature(), s, fe, qrule);
+    _get_side_fe_and_qrule(get_elem_for_quadrature(), s, fe, qrule);
 
     // get the function from this boundary condition
     const MAST::FieldFunction<Real>

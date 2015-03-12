@@ -11,7 +11,7 @@ MAST::SystemInitialization(sys, prefix) {
 
     _vars.resize(1);
     
-    std::string nm = prefix + "T";
+    std::string nm = prefix + "_T";
     
     _vars[0] = sys.add_variable(nm, fe_type);
     

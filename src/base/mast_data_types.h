@@ -36,11 +36,19 @@ typedef Matrix<Real, Dynamic, 1> RealVectorX;
 typedef Matrix<Real, 3, 1> RealVector3;
 typedef Matrix<Complex, Dynamic, 1> ComplexVectorX;
 typedef Matrix<Complex, 3, 1> ComplexVector3;
+template <typename ValType> struct VectorType{typedef void return_type;};
+template < > struct VectorType<Real> {typedef RealVectorX return_type;};
+template < > struct VectorType<Complex> {typedef ComplexVectorX return_type;};
+
 
 typedef Matrix<Real, Dynamic, Dynamic> RealMatrixX;
 typedef Matrix<Real, 3, 3> RealMatrix3;
 typedef Matrix<Complex, Dynamic, Dynamic> ComplexMatrixX;
 typedef Matrix<Complex, 3, 3> ComplexMatrix3;
+template <typename ValType> struct MatrixType{typedef void return_type;};
+template < > struct MatrixType<Real>    {typedef RealMatrixX return_type;};
+template < > struct MatrixType<Complex> {typedef ComplexMatrixX return_type;};
+
 
 typedef libMesh::DenseMatrix<Real> DenseRealMatrix;
 typedef libMesh::DenseMatrix<Complex> DenseComplexMatrix;

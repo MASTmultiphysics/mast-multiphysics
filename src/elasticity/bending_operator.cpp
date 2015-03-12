@@ -19,16 +19,58 @@
 
 // MAST includes
 #include "elasticity/bending_operator.h"
+#include "elasticity/structural_element_base.h"
+#include "elasticity/bernoulli_bending_operator.h"
+#include "elasticity/dkt_bending_operator.h"
+#include "elasticity/mindlin_bending_operator.h"
+#include "elasticity/timoshenko_bending_operator.h"
 
 
-//MAST::BendingOperator::BendingOperator(MAST::ElementBase& elem):
-//_structural_elem(elem),
-//_elem(_structural_elem.get_elem_for_quadrature()),
-//_qrule(_structural_elem.quadrature_rule())
-//{ }
-//
-//
-//
-//MAST::BendingOperator::~BendingOperator()
-//{ }
 
+MAST::BendingOperator::BendingOperator(MAST::StructuralElementBase& elem):
+_structural_elem(elem),
+_elem(_structural_elem.get_elem_for_quadrature()),
+_qrule(_structural_elem.quadrature_rule())
+{ }
+
+
+
+MAST::BendingOperator::~BendingOperator()
+{ }
+
+
+
+std::auto_ptr<MAST::BendingOperator>
+MAST::build_bending_operator(MAST::BendingOperatorType type,
+                             MAST::StructuralElementBase& elem) {
+    
+    std::auto_ptr<MAST::BendingOperator> rval;
+    
+    switch (type) {
+        case MAST::BERNOULLI:
+            rval.reset(new MAST::BernoulliBendingOperator(elem));
+            break;
+            
+        case MAST::TIMOSHENKO:
+            rval.reset(new MAST::TimoshenkoBendingOperator(elem));
+            break;
+            
+        case MAST::DKT:
+            rval.reset(new MAST::DKTBendingOperator(elem));
+            break;
+            
+        case MAST::MINDLIN:
+            rval.reset(new MAST::MindlinBendingOperator(elem));
+            break;
+            
+        case MAST::NO_BENDING:
+            // nothing to be done
+            break;
+            
+        default:
+            libmesh_error(); // should not get here
+            break;
+    }
+    
+    return rval;
+}

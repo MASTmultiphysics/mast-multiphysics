@@ -32,7 +32,7 @@
 namespace MAST {
     
     // Forward declerations
-    class ElementBase;
+    class StructuralElementBase;
     class FunctionBase;
     class SensitivityParameters;
     class FEMOperatorMatrix;
@@ -51,7 +51,7 @@ namespace MAST {
     class BendingOperator {
     public:
         
-        BendingOperator(MAST::ElementBase& elem);
+        BendingOperator(MAST::StructuralElementBase& elem);
         
         virtual ~BendingOperator();
         
@@ -71,10 +71,10 @@ namespace MAST {
          *   calculate the transverse shear component for the element
          */
         virtual void
-        calculate_transverse_shear_force(bool request_jacobian,
-                                         RealVectorX& local_f,
-                                         RealMatrixX& local_jac,
-                                         const MAST::FunctionBase* sens_params )
+        calculate_transverse_shear_residual(bool request_jacobian,
+                                            RealVectorX& local_f,
+                                            RealMatrixX& local_jac,
+                                            const MAST::FunctionBase* sens_params )
         { libmesh_error(); }
         
         
@@ -83,7 +83,7 @@ namespace MAST {
         /*!
          *   structural element associated with this
          */
-        MAST::ElementBase& _structural_elem;
+        MAST::StructuralElementBase& _structural_elem;
         
         /*!
          *    element for which bending operator is created
@@ -106,7 +106,7 @@ namespace MAST {
     public MAST::BendingOperator {
         
     public:
-        BendingOperator1D(MAST::ElementBase& elem):
+        BendingOperator1D(MAST::StructuralElementBase& elem):
         MAST::BendingOperator(elem)
         { }
         
@@ -127,7 +127,7 @@ namespace MAST {
      */
     class BendingOperator2D: public MAST::BendingOperator {
     public:
-        BendingOperator2D(MAST::ElementBase& elem):
+        BendingOperator2D(MAST::StructuralElementBase& elem):
         MAST::BendingOperator(elem)
         { }
         
@@ -140,6 +140,15 @@ namespace MAST {
                                                   MAST::FEMOperatorMatrix& Bmat) = 0;
         
     };
+    
+    
+    /*!
+     *   builds a bending operator and returns it in a smart-pointer
+     */
+    std::auto_ptr<MAST::BendingOperator>
+    build_bending_operator(MAST::BendingOperatorType type,
+                           MAST::StructuralElementBase& elem);
+
 }
 
 #endif

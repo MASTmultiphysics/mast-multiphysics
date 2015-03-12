@@ -60,6 +60,18 @@ MAST::ElementBase::set_velocity(const RealVectorX &vec,
 
 
 
+void
+MAST::ElementBase::set_acceleration(const RealVectorX &vec,
+                                    bool if_sens) {
+    
+    if (!if_sens)
+        _accel = vec;
+    else
+        _accel_sens = vec;
+}
+
+
+
 
 void
 MAST::ElementBase::set_base_solution(const RealVectorX& vec,
@@ -74,7 +86,7 @@ MAST::ElementBase::set_base_solution(const RealVectorX& vec,
 
 
 const libMesh::Elem&
-MAST::ElementBase::_get_elem_for_quadrature() const {
+MAST::ElementBase::get_elem_for_quadrature() const {
     
     return _local_elem->local_elem();
 }

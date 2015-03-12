@@ -149,7 +149,7 @@ int main(int argc, const char * argv[]) {
     unsigned int t_step  = 0;
     unsigned int n_steps = 100;
     solver.dt            = 1.0e1;
-    solver.beta          = 1.;
+    solver.beta          = 1.0;
     solver.set_initial_condition(250.);
     
     // loop over time steps

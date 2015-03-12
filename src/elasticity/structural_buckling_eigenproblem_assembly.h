@@ -1,0 +1,8 @@
+
+#ifndef __mast__structural_buckling_eigenproblem_assembly__
+#define __mast__structural_buckling_eigenproblem_assembly__
+
+
+
+
+#endif // __mast__structural_buckling_eigenproblem_assembly__

@@ -7,9 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		6935E6DC1A93B7D900B8C9B6 /* libslepc.3.5.3.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 6935E6DB1A93B7D900B8C9B6 /* libslepc.3.5.3.dylib */; };
+		6935E6DE1A93B7E900B8C9B6 /* libpetsc.3.5.2.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 6935E6DD1A93B7E900B8C9B6 /* libpetsc.3.5.2.dylib */; };
+		6935E6E01A93B7F200B8C9B6 /* Accelerate.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6935E6DF1A93B7F200B8C9B6 /* Accelerate.framework */; };
 		6990DE381A2F740900300AEF /* libmast.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 6990DE371A2F740900300AEF /* libmast.dylib */; };
-		69A6250B19E7133600B5B303 /* libslepc.3.5.0.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 69A6250519E7133600B5B303 /* libslepc.3.5.0.dylib */; };
-		69A6250C19E7133600B5B303 /* libpetsc.3.5.1.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 69A6250619E7133600B5B303 /* libpetsc.3.5.1.dylib */; };
 		69A6250D19E7133600B5B303 /* libmesh_dbg.0.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 69A6250719E7133600B5B303 /* libmesh_dbg.0.dylib */; };
 		69A6250E19E7133600B5B303 /* libmpi_cxx.1.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 69A6250819E7133600B5B303 /* libmpi_cxx.1.dylib */; };
 		69A6250F19E7133600B5B303 /* libmpi.1.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 69A6250919E7133600B5B303 /* libmpi.1.dylib */; };
@@ -29,10 +30,11 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		6935E6DB1A93B7D900B8C9B6 /* libslepc.3.5.3.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libslepc.3.5.3.dylib; path = ../../../../../../../../opt/local/lib/slepc/lib/libslepc.3.5.3.dylib; sourceTree = "<group>"; };
+		6935E6DD1A93B7E900B8C9B6 /* libpetsc.3.5.2.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libpetsc.3.5.2.dylib; path = ../../../../../../../../opt/local/lib/petsc/lib/libpetsc.3.5.2.dylib; sourceTree = "<group>"; };
+		6935E6DF1A93B7F200B8C9B6 /* Accelerate.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Accelerate.framework; path = System/Library/Frameworks/Accelerate.framework; sourceTree = SDKROOT; };
 		6990DE371A2F740900300AEF /* libmast.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libmast.dylib; path = "../../../../../../Library/Developer/Xcode/DerivedData/MAST-dkoqgnxoxkrjwgcocsplbdukbbnw/Build/Products/Debug/libmast.dylib"; sourceTree = "<group>"; };
 		69A624FB19E7130400B5B303 /* ex_2 */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = ex_2; sourceTree = BUILT_PRODUCTS_DIR; };
-		69A6250519E7133600B5B303 /* libslepc.3.5.0.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libslepc.3.5.0.dylib; path = ../../../../numerical_lib/slepc/real/lib/libslepc.3.5.0.dylib; sourceTree = "<group>"; };
-		69A6250619E7133600B5B303 /* libpetsc.3.5.1.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libpetsc.3.5.1.dylib; path = ../../../../numerical_lib/petsc/real/lib/libpetsc.3.5.1.dylib; sourceTree = "<group>"; };
 		69A6250719E7133600B5B303 /* libmesh_dbg.0.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libmesh_dbg.0.dylib; path = ../../../../libmesh/real/lib/libmesh_dbg.0.dylib; sourceTree = "<group>"; };
 		69A6250819E7133600B5B303 /* libmpi_cxx.1.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libmpi_cxx.1.dylib; path = "../../../../../../../../opt/local/lib/openmpi-mp/libmpi_cxx.1.dylib"; sourceTree = "<group>"; };
 		69A6250919E7133600B5B303 /* libmpi.1.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libmpi.1.dylib; path = "../../../../../../../../opt/local/lib/openmpi-mp/libmpi.1.dylib"; sourceTree = "<group>"; };
@@ -46,8 +48,9 @@
 			files = (
 				6990DE381A2F740900300AEF /* libmast.dylib in Frameworks */,
 				69A6250D19E7133600B5B303 /* libmesh_dbg.0.dylib in Frameworks */,
-				69A6250B19E7133600B5B303 /* libslepc.3.5.0.dylib in Frameworks */,
-				69A6250C19E7133600B5B303 /* libpetsc.3.5.1.dylib in Frameworks */,
+				6935E6DE1A93B7E900B8C9B6 /* libpetsc.3.5.2.dylib in Frameworks */,
+				6935E6DC1A93B7D900B8C9B6 /* libslepc.3.5.3.dylib in Frameworks */,
+				6935E6E01A93B7F200B8C9B6 /* Accelerate.framework in Frameworks */,
 				69A6250E19E7133600B5B303 /* libmpi_cxx.1.dylib in Frameworks */,
 				69A6250F19E7133600B5B303 /* libmpi.1.dylib in Frameworks */,
 			);
@@ -59,9 +62,10 @@
 		69A624F219E7130400B5B303 = {
 			isa = PBXGroup;
 			children = (
+				6935E6DF1A93B7F200B8C9B6 /* Accelerate.framework */,
+				6935E6DD1A93B7E900B8C9B6 /* libpetsc.3.5.2.dylib */,
+				6935E6DB1A93B7D900B8C9B6 /* libslepc.3.5.3.dylib */,
 				6990DE371A2F740900300AEF /* libmast.dylib */,
-				69A6250519E7133600B5B303 /* libslepc.3.5.0.dylib */,
-				69A6250619E7133600B5B303 /* libpetsc.3.5.1.dylib */,
 				69A6250719E7133600B5B303 /* libmesh_dbg.0.dylib */,
 				69A6250819E7133600B5B303 /* libmpi_cxx.1.dylib */,
 				69A6250919E7133600B5B303 /* libmpi.1.dylib */,
@@ -240,6 +244,8 @@
 					"/opt/local/lib/openmpi-mp",
 					"$(USER_LIBRARY_DIR)/Developer/Xcode/DerivedData/MAST-dkoqgnxoxkrjwgcocsplbdukbbnw/Build/Products/Debug",
 					/Users/manav/Documents/codes/MAST_clean/build/xcode/mast/build/Debug,
+					/opt/local/lib/slepc/lib,
+					/opt/local/lib/petsc/lib,
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/../../../src $(SRCROOT)/../../../../libmesh/real/libmesh/include /opt/local/include/eigen3";
@@ -262,6 +268,8 @@
 					"/opt/local/lib/openmpi-mp",
 					"$(USER_LIBRARY_DIR)/Developer/Xcode/DerivedData/MAST-dkoqgnxoxkrjwgcocsplbdukbbnw/Build/Products/Debug",
 					/Users/manav/Documents/codes/MAST_clean/build/xcode/mast/build/Debug,
+					/opt/local/lib/slepc/lib,
+					/opt/local/lib/petsc/lib,
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/../../../src $(SRCROOT)/../../../../libmesh/real/libmesh/include /opt/local/include/eigen3";

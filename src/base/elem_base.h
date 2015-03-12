@@ -129,7 +129,15 @@ namespace MAST {
          */
         virtual void set_velocity(const RealVectorX& vec,
                                   bool if_sens = false);
+
         
+        /*!
+         *    stores \p vec as acceleration for element level calculations,
+         *    or its sensitivity if \p if_sens is true.
+         */
+        virtual void set_acceleration(const RealVectorX& vec,
+                                      bool if_sens = false);
+
         
         /*!
          *   This is used for cases where a linearized problem is solved
@@ -159,8 +167,6 @@ namespace MAST {
         const MAST::FunctionBase* sensitivity_param;
         
         
-    protected:
-        
         /*!
          *   @returns a constant reference to the geometric element used for
          *   initialization of finite element quadrature and shape functions.
@@ -169,7 +175,9 @@ namespace MAST {
          *   has been transformed to a local coordinate system. For a 3D element,
          *   the method returns the element used to initialize this object.
          */
-        const libMesh::Elem& _get_elem_for_quadrature() const;
+        const libMesh::Elem& get_elem_for_quadrature() const;
+        
+    protected:
         
         
         /*!
