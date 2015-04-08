@@ -17,17 +17,17 @@ MAST::StructuralElement3D::internal_residual(bool request_jacobian,
     const std::vector<Real>& JxW            = _fe->get_JxW();
     const std::vector<libMesh::Point>& xyz  = _fe->get_xyz();
     const unsigned int
-    n_phi              = (unsigned int)JxW.size(),
+    n_phi              = (unsigned int)_fe->n_shape_functions(),
     n1                 =6,
     n2                 =3*n_phi;
     
     RealMatrixX
     material_mat,
-    mat1_n1n2(n1, n2),
-    mat2_n2n2(n2, n2);
+    mat1_n1n2    = RealMatrixX::Zero(n1, n2),
+    mat2_n2n2    = RealMatrixX::Zero(n2, n2);
     RealVectorX
-    vec1_n1(n1),
-    vec2_n2(n2);
+    vec1_n1   = RealVectorX::Zero(n1),
+    vec2_n2   = RealVectorX::Zero(n2);
     
     std::auto_ptr<MAST::FieldFunction<RealMatrixX> > mat_stiff =
     _property.stiffness_A_matrix(*this);
@@ -121,14 +121,14 @@ MAST::StructuralElement3D::thermal_residual(bool request_jacobian,
     
     RealMatrixX
     material_exp_A_mat,
-    mat1_n1n2(n1, n2),
-    mat2_n2n2(n2, n2),
+    mat1_n1n2    = RealMatrixX::Zero(n1, n2),
+    mat2_n2n2    = RealMatrixX::Zero(n2, n2),
     stress;
     RealVectorX
-    vec1_n1(n1),
-    vec2_n1(n1),
-    vec3_n2(n2),
-    delta_t(1);
+    vec1_n1   = RealVectorX::Zero(n1),
+    vec2_n1   = RealVectorX::Zero(n1),
+    vec3_n2   = RealVectorX::Zero(n2),
+    delta_t   = RealVectorX::Zero(1);
     
     
     libMesh::Point p;
@@ -159,7 +159,7 @@ MAST::StructuralElement3D::thermal_residual(bool request_jacobian,
         
         Bmat.vector_mult_transpose(vec3_n2, vec1_n1);
         
-        f += JxW[qp] * vec3_n2;
+        f -= JxW[qp] * vec3_n2;
     }
     
     // Jacobian contribution from von Karman strain
@@ -186,7 +186,7 @@ MAST::StructuralElement3D::initialize_strain_operator (const unsigned int qp,
     dphi = _fe->get_dphi();
     
     unsigned int n_phi = (unsigned int)dphi.size();
-    RealVectorX phi(n_phi);
+    RealVectorX phi  = RealVectorX::Zero(n_phi);
     
     // now set the shape function values
     // dN/dx

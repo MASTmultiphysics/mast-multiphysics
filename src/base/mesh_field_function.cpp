@@ -87,7 +87,7 @@ MAST::MeshFieldFunction<RealVectorX>::operator() (const libMesh::Point& p,
     libmesh_assert(v1.size());
     
     // now copy this to the output vector
-    v.resize(v1.size());
+    v = RealVectorX::Zero(v1.size());
     for (unsigned int i=0; i<v1.size(); i++)
         v(i) = v1(i);
 }

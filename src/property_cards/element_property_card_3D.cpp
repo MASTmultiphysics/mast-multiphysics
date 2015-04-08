@@ -323,7 +323,7 @@ InertiaMatrix::operator() (const libMesh::Point& p,
                            const Real t,
                            RealMatrixX& m) const {
     RealMatrixX mat;
-    m.resize(6, 6);
+    m = RealMatrixX::Zero(6, 6);
     // this only returns the material inertia
     (*_material_inertia)(p, t, mat);
     for (unsigned int i=0; i<3; i++) {
@@ -345,7 +345,7 @@ InertiaMatrix::derivative (const MAST::DerivativeType d,
                       const Real t,
                       RealMatrixX& m) const {
     RealMatrixX mat;
-    m.resize(6, 6);
+    m  = RealMatrixX::Zero(6, 6);
     // this only returns the material inertia
     // sensitivity of rotary inertia is assumed to be zero
     _material_inertia->derivative(d, f, p, t, mat);

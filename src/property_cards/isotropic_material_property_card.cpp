@@ -397,7 +397,7 @@ MAST::IsotropicMaterialProperty::
 StiffnessMatrix1D::operator() (const libMesh::Point& p,
                                const Real t,
                                RealMatrixX& m) const {
-    m.resize(2,2);
+    m  = RealMatrixX::Zero(2,2);
     Real E, nu, G;
     (*_E)(p, t, E); (*_nu)(p, t, nu);
     G = E/2./(1.+nu);
@@ -416,7 +416,7 @@ StiffnessMatrix1D::derivative(const MAST::DerivativeType d,
     
     
     RealMatrixX dm;
-    m.resize(2,2); dm.resize(2,2);
+    m = RealMatrixX::Zero(2,2); dm = RealMatrixX::Zero(2,2);
     Real E, nu, dEdf, dnudf;
     (*_E)(p, t, E);     _E->derivative(d, f, p, t, dEdf);
     (*_nu)(p, t, nu);  _nu->derivative(d, f, p, t, dnudf);
@@ -455,7 +455,7 @@ MAST::IsotropicMaterialProperty::
 TransverseShearStiffnessMatrix::operator() (const libMesh::Point& p,
                                             const Real t,
                                             RealMatrixX& m) const {
-    m.resize(2,2);
+    m = RealMatrixX::Zero(2,2);
     Real E, nu, kappa, G;
     (*_E)(p, t, E); (*_nu)(p, t, nu); (*_kappa)(p, t, kappa);
     G = E/2./(1.+nu);
@@ -473,7 +473,7 @@ TransverseShearStiffnessMatrix::derivative(const MAST::DerivativeType d,
                                            const Real t,
                                            RealMatrixX& m) const {
     RealMatrixX dm;
-    m.resize(2,2); dm.resize(2, 2);
+    m = RealMatrixX::Zero(2,2); dm = RealMatrixX::Zero(2, 2);
     Real E, nu, kappa, dEdf, dnudf, dkappadf, G;
     (*_E)    (p, t, E);         _E->derivative(d, f, p, t, dEdf);
     (*_nu)   (p, t, nu);       _nu->derivative(d, f, p, t, dnudf);
@@ -523,7 +523,7 @@ StiffnessMatrix2D::operator() (const libMesh::Point& p,
                                const Real t,
                                RealMatrixX& m) const {
     libmesh_assert(_plane_stress); // currently only implemented for plane stress
-    m.resize(3,3);
+    m = RealMatrixX::Zero(3,3);
     Real E, nu;
     (*_E)(p, t, E); (*_nu)(p, t, nu);
     for (unsigned int i=0; i<2; i++) {
@@ -548,7 +548,7 @@ StiffnessMatrix2D::derivative (const MAST::DerivativeType d,
                                RealMatrixX& m) const {
     libmesh_assert(_plane_stress); // currently only implemented for plane stress
     RealMatrixX dm;
-    m.resize(3,3); dm.resize(3, 3);
+    m = RealMatrixX::Zero(3,3); dm = RealMatrixX::Zero(3, 3);
     Real E, nu, dEdf, dnudf;
     (*_E)  (p, t, E);   _E->derivative(d, f, p, t, dEdf);
     (*_nu) (p, t, nu); _nu->derivative(d, f, p, t, dnudf);
@@ -599,7 +599,7 @@ MAST::IsotropicMaterialProperty::
 StiffnessMatrix3D::operator() (const libMesh::Point& p,
                                const Real t,
                                RealMatrixX& m) const {
-    m.resize(3,3);
+    m = RealMatrixX::Zero(3,3);
     Real E, nu;
     (*_E)(p, t, E); (*_nu)(p, t, nu);
     for (unsigned int i=0; i<3; i++) {
@@ -623,7 +623,7 @@ StiffnessMatrix3D::derivative (const MAST::DerivativeType d,
                                const Real t,
                                RealMatrixX& m) const {
     RealMatrixX dm;
-    m.resize(3,3); dm.resize(3, 3);
+    m = RealMatrixX::Zero(3,3); dm = RealMatrixX::Zero(3, 3);
     Real E, nu, dEdf, dnudf;
     (*_E)  (p, t, E);   _E->derivative(d, f, p, t, dEdf);
     (*_nu) (p, t, nu); _nu->derivative(d, f, p, t, dnudf);
@@ -665,15 +665,15 @@ operator() (const libMesh::Point& p,
     (*_alpha)(p, t, alpha);
     switch (_dim) {
         case 1:
-            m.resize(2,1);
+            m = RealMatrixX::Zero(2,1);
             break;
             
         case 2:
-            m.resize(3,1);
+            m = RealMatrixX::Zero(3,1);
             break;
             
         case 3:
-            m.resize(3,1);
+            m = RealMatrixX::Zero(3,1);
             break;
     }
     
@@ -698,15 +698,15 @@ derivative (const MAST::DerivativeType d,
     _alpha->derivative(d, f, p, t, alpha);
     switch (_dim) {
         case 1:
-            m.resize(2,1);
+            m = RealMatrixX::Zero(2,1);
             break;
             
         case 2:
-            m.resize(3,1);
+            m = RealMatrixX::Zero(3,1);
             break;
             
         case 3:
-            m.resize(3,1);
+            m = RealMatrixX::Zero(3,1);
             break;
     }
     

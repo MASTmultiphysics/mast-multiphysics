@@ -40,7 +40,7 @@ MAST::Local1DElem::_create_local_elem() {
     v3 /= v3.size();
     v2 = v3.cross(v1); v2 /= v2.size();      // local y
     
-    _T_mat.resize(3,3);
+    _T_mat  = RealMatrixX::Zero(3,3);
     
     _local_elem = libMesh::Elem::build(_elem.type()).release();
     _local_nodes.resize(_elem.n_nodes());

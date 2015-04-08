@@ -101,7 +101,7 @@ initialize_bending_strain_operator_for_z(const unsigned int qp,
     
     const unsigned int n_phi = (unsigned int)phi.size();
     
-    RealVectorX phi_vec(n_phi);
+    RealVectorX phi_vec = RealVectorX::Zero(n_phi);
     for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
         phi_vec(i_nd) = dphi[i_nd][qp](0);  // dphi/dx
     
@@ -168,14 +168,14 @@ calculate_transverse_shear_residual(bool request_jacobian,
     n2    = 6*n_phi;
     
     RealVectorX
-    phi_vec(n_phi),
-    vec3_n2(n2),
-    vec4_2(2),
-    vec5_2(2);
+    phi_vec   = RealVectorX::Zero(n_phi),
+    vec3_n2   = RealVectorX::Zero(n2),
+    vec4_2    = RealVectorX::Zero(2),
+    vec5_2    = RealVectorX::Zero(2);
     RealMatrixX
     material_trans_shear_mat,
-    mat2_n2n2(n2,n2),
-    mat4_2n2(2,n2);
+    mat2_n2n2    = RealMatrixX::Zero(n2,n2),
+    mat4_2n2     = RealMatrixX::Zero(2,n2);
     
     
     FEMOperatorMatrix Bmat_trans;
@@ -224,14 +224,14 @@ calculate_transverse_shear_residual(bool request_jacobian,
         Bmat_trans.vector_mult(vec4_2, _structural_elem.local_solution());
         vec5_2 = material_trans_shear_mat * vec4_2;
         Bmat_trans.vector_mult_transpose(vec3_n2, vec5_2);
-        local_f -= JxW[qp] * vec3_n2;
+        local_f += JxW[qp] * vec3_n2;
         
         if (request_jacobian) {
             
             // now add the transverse shear component
             Bmat_trans.left_multiply(mat4_2n2, material_trans_shear_mat);
             Bmat_trans.right_multiply_transpose(mat2_n2n2, mat4_2n2);
-            local_jac -= JxW[qp] * mat2_n2n2;
+            local_jac += JxW[qp] * mat2_n2n2;
         }
     }
 }

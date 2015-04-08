@@ -65,8 +65,10 @@ MAST::StructuralElementBase::set_solution(const RealVectorX& vec,
                                           bool if_sens) {
     
     // convert the vector to the local element coordinate system
-    if (!if_sens)
+    if (!if_sens) {
+        _local_sol.setZero(vec.size());
         this->transform_vector_to_local_system(vec, _local_sol);
+    }
     else
         libmesh_error();
     
@@ -79,8 +81,10 @@ void
 MAST::StructuralElementBase::set_velocity(const RealVectorX& vec,
                                           bool if_sens) {
     
-    if (!if_sens)
+    if (!if_sens) {
+        _local_vel.setZero(vec.size());
         this->transform_vector_to_local_system(vec, _local_vel);
+    }
     else
         libmesh_error();
     
@@ -92,8 +96,10 @@ void
 MAST::StructuralElementBase::set_base_solution(const RealVectorX& vec,
                                                bool if_sens) {
     
-    if (!if_sens)
+    if (!if_sens) {
+        _local_base_sol.setZero(vec.size());
         this->transform_vector_to_local_system(vec, _local_base_sol);
+    }
     else
         libmesh_error();
     
@@ -121,15 +127,14 @@ MAST::StructuralElementBase::inertial_residual (bool request_jacobian,
     
     RealMatrixX
     material_mat,
-    mat1_n1n2(n1, n2),
-    mat2_n2n2(n2, n2),
-    local_jac(n2, n2);
+    mat1_n1n2     = RealMatrixX::Zero(n1, n2),
+    mat2_n2n2     = RealMatrixX::Zero(n2, n2),
+    local_jac     = RealMatrixX::Zero(n2, n2);
     RealVectorX
-    phi_vec(n_phi),
-    vec1_n1(n1),
-    vec2_n2(n2),
-    local_f(n2);
-    
+    phi_vec    = RealVectorX::Zero(n_phi),
+    vec1_n1    = RealVectorX::Zero(n1),
+    vec2_n2    = RealVectorX::Zero(n2),
+    local_f    = RealVectorX::Zero(n2);
     
     std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
     mat_inertia  = _property.inertia_matrix(*this);
@@ -377,11 +382,10 @@ surface_pressure_residual(bool request_jacobian,
     libMesh::Point pt;
     
     RealVectorX
-    phi_vec(n_phi),
-    force(2*n1),
-    local_f(n2),
-    vec_n2(n2);
-    
+    phi_vec     = RealVectorX::Zero(n_phi),
+    force       = RealVectorX::Zero(2*n1),
+    local_f     = RealVectorX::Zero(n2),
+    vec_n2      = RealVectorX::Zero(n2);
     
     for (unsigned int qp=0; qp<qpoint.size(); qp++) {
         
@@ -408,10 +412,10 @@ surface_pressure_residual(bool request_jacobian,
     // now transform to the global system and add
     if (_elem.dim() < 3) {
         transform_vector_to_global_system(local_f, vec_n2);
-        f += vec_n2;
+        f -= vec_n2;
     }
     else
-        f += local_f;
+        f -= local_f;
     
     
     return (request_jacobian && follower_forces);
@@ -457,10 +461,10 @@ surface_pressure_residual(bool request_jacobian,
     libMesh::Point pt;
     
     RealVectorX
-    phi_vec (n_phi),
-    force   (2*n1),
-    local_f (n2),
-    vec_n2  (n2);
+    phi_vec  = RealVectorX::Zero(n_phi),
+    force    = RealVectorX::Zero(2*n1),
+    local_f  = RealVectorX::Zero(n2),
+    vec_n2   = RealVectorX::Zero(n2);
     
     
     for (unsigned int qp=0; qp<qpoint.size(); qp++)
@@ -488,7 +492,7 @@ surface_pressure_residual(bool request_jacobian,
     
     // now transform to the global system and add
     transform_vector_to_global_system(local_f, vec_n2);
-    f += vec_n2;
+    f -= vec_n2;
     
     
     return (request_jacobian && follower_forces);
@@ -534,12 +538,12 @@ small_disturbance_surface_pressure_residual(bool request_jacobian,
     n1    = 3,
     n2    = 6*n_phi;
     
-    RealVectorX phi_vec(n_phi);
+    RealVectorX phi_vec   = RealVectorX::Zero(n_phi);
     Eigen::Matrix<ValType, Dynamic, 1>
-    dn_rot  (3),
-    force   (2*n1),
-    local_f (n2),
-    vec_n2  (n2);
+    dn_rot  = Eigen::Matrix<ValType, Dynamic, 1>::Zero(3),
+    force   = Eigen::Matrix<ValType, Dynamic, 1>::Zero(2*n1),
+    local_f = Eigen::Matrix<ValType, Dynamic, 1>::Zero(n2),
+    vec_n2  = Eigen::Matrix<ValType, Dynamic, 1>::Zero(n2);
     
     
     FEMOperatorMatrix Bmat;
@@ -582,7 +586,7 @@ small_disturbance_surface_pressure_residual(bool request_jacobian,
         
         Bmat.vector_mult_transpose(vec_n2, force);
         
-        local_f += JxW[qp] * vec_n2;
+        local_f -= JxW[qp] * vec_n2;
     }
     
     // now transform to the global system and add
@@ -637,13 +641,12 @@ small_disturbance_surface_pressure_residual(bool request_jacobian,
     // to the element face for 2D and along local y-axis for 1D element.
     normal(_elem.dim()) = -1.;
     
-    RealVectorX phi_vec;
+    RealVectorX phi_vec = RealVectorX::Zero(n_phi);
     Eigen::Matrix<ValType, Dynamic, 1>
-    dn_rot (3),
-    force  (2*n1),
-    local_f(n2),
-    vec_n2 (n2);
-    
+    dn_rot  = Eigen::Matrix<ValType, Dynamic, 1>::Zero(3),
+    force   = Eigen::Matrix<ValType, Dynamic, 1>::Zero(2*n1),
+    local_f = Eigen::Matrix<ValType, Dynamic, 1>::Zero(n2),
+    vec_n2  = Eigen::Matrix<ValType, Dynamic, 1>::Zero(n2);
     
     FEMOperatorMatrix Bmat;
     libMesh::Point pt;
@@ -684,7 +687,7 @@ small_disturbance_surface_pressure_residual(bool request_jacobian,
         
         Bmat.vector_mult_transpose(vec_n2, force);
         
-        local_f += JxW[qp] * vec_n2;
+        local_f -= JxW[qp] * vec_n2;
     }
     
     // now transform to the global system and add
@@ -714,8 +717,11 @@ transform_matrix_to_global_system(const ValType& local_mat,
     libmesh_assert_equal_to( local_mat.rows(), global_mat.rows());
     
     const unsigned int n_dofs = _fe->n_shape_functions();
-    global_mat.setConstant(0.);
+
     ValType mat(6*n_dofs, 6*n_dofs);
+    
+    mat.setZero();
+    global_mat.setZero();
     
     const RealMatrixX& Tmat = this->local_elem().T_matrix();
     // now initialize the global T matrix
@@ -741,9 +747,10 @@ transform_vector_to_local_system(const ValType& global_vec,
     libmesh_assert_equal_to( local_vec.size(),  global_vec.size());
     
     const unsigned int n_dofs = _fe->n_shape_functions();
-    local_vec.setConstant(0.);
-    RealMatrixX mat(6*n_dofs, 6*n_dofs);
+    RealMatrixX mat  = RealMatrixX::Zero(6*n_dofs, 6*n_dofs);
     
+    local_vec.setZero();
+
     const RealMatrixX& Tmat = this->local_elem().T_matrix();
     // now initialize the global T matrix
     for (unsigned int i=0; i<n_dofs; i++)
@@ -768,8 +775,10 @@ transform_vector_to_global_system(const ValType& local_vec,
     libmesh_assert_equal_to( local_vec.size(),  global_vec.size());
     
     const unsigned int n_dofs = _fe->n_shape_functions();
-    global_vec.setConstant(0.);
-    RealMatrixX mat(6*n_dofs, 6*n_dofs);
+
+    RealMatrixX mat  = RealMatrixX::Zero(6*n_dofs, 6*n_dofs);
+
+    global_vec.setZero();
     
     const RealMatrixX& Tmat = this->local_elem().T_matrix();
     // now initialize the global T matrix

@@ -66,7 +66,8 @@ namespace MAST {
             _properties.find(nm);
             
             // make sure that this funciton exists
-            libmesh_assert(it != _properties.end());
+            if(it == _properties.end())
+                libmesh_error_msg("property not found for : " << nm );
             
             return dynamic_cast<const ValType&>(*(it->second));
         }
@@ -83,7 +84,8 @@ namespace MAST {
             _properties.find(nm);
             
             // make sure that this funciton exists
-            libmesh_assert(it != _properties.end());
+            if(it == _properties.end())
+                libmesh_error_msg("property not found for : " << nm );
             
             return dynamic_cast<ValType&>(*(it->second));
         }

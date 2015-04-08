@@ -685,7 +685,7 @@ ExtensionBendingStiffnessMatrix::derivative (const MAST::DerivativeType d,
                                              const Real t,
                                              RealMatrixX& m) const {
     RealMatrixX dm;
-    m.resize(3,3); dm.resize(3, 3);
+    m = RealMatrixX::Zero(3,3); dm = RealMatrixX::Zero(3, 3);
     Real h, off, dh, doff;
     
     (*_h)(p, t, h); _h->derivative(d, f, p, t, dh);
@@ -737,7 +737,7 @@ BendingStiffnessMatrix::derivative (const MAST::DerivativeType d,
                                     const Real t,
                                     RealMatrixX& m) const {
     RealMatrixX dm;
-    m.resize(3,3); dm.resize(3, 3);
+    m = RealMatrixX::Zero(3,3); dm = RealMatrixX::Zero(3, 3);
     Real h, dhdf, off, doff;
     (*_h)(p, t, h); _h->derivative(d, f, p, t, dhdf);
     (*_off)(p, t, off); _h->derivative(d, f, p, t, doff);
@@ -775,7 +775,7 @@ MAST::Solid2DSectionProperty::
 InertiaMatrix::operator() (const libMesh::Point& p,
                            const Real t,
                            RealMatrixX& m) const {
-    m.resize(6, 6);
+    m = RealMatrixX::Zero(6, 6);
     Real h, rho, off;
     (*_h)(p, t, h);
     (*_off)(p, t, off);
@@ -808,7 +808,7 @@ InertiaMatrix::derivative (const MAST::DerivativeType d,
                            const libMesh::Point& p,
                            const Real t,
                            RealMatrixX& m) const {
-    m.resize(6,6);
+    m = RealMatrixX::Zero(6,6);
     Real h, dhdf, rho, drhodf, off, doff;
     (*_h)(p, t, h); _h->derivative(d, f, p, t, dhdf);
     (*_off)(p, t, off); _off->derivative(d, f, p, t, doff);
@@ -985,7 +985,7 @@ PrestressAMatrix::operator() (const libMesh::Point& p,
                               const Real t,
                               RealMatrixX& m) const {
     RealMatrixX s, T;
-    m.resize(2, 2);
+    m = RealMatrixX::Zero(2, 2);
     Real h;
     (*_h)(p, t, h);
     (*_prestress)(p, t, s);
@@ -1013,7 +1013,7 @@ PrestressAMatrix::derivative (const MAST::DerivativeType d,
                               const Real t,
                               RealMatrixX& m) const {
     RealMatrixX s, ds, T, dT;
-    m.resize(2, 2);
+    m = RealMatrixX::Zero(2, 2);
     Real h, dh;
     (*_h)(p, t, h); _h->derivative(d, f, p, t, dh);
     (*_prestress)(p, t, s); _prestress->derivative(d, f, p, t, ds);
@@ -1088,7 +1088,7 @@ PrestressBMatrix::operator() (const libMesh::Point& p,
                               const Real t,
                               RealMatrixX& m) const {
     RealMatrixX s, T;
-    m.resize(2, 2);
+    m = RealMatrixX::Zero(2, 2);
     Real h, off;
     (*_h)(p, t, h);
     (*_off)(p, t, off);
@@ -1116,7 +1116,7 @@ PrestressBMatrix::derivative (const MAST::DerivativeType d,
                               const Real t,
                               RealMatrixX& m) const {
     RealMatrixX s, ds, T, dT;
-    m.resize(2, 2);
+    m = RealMatrixX::Zero(2, 2);
     Real h, dh, off, doff;
     (*_h)(p, t, h); _h->derivative(d, f, p, t, dh);
     (*_off)(p, t, off); _off->derivative(d, f, p, t, doff);
@@ -1200,7 +1200,7 @@ operator() (const libMesh::Point& p,
             const Real t,
             RealMatrixX& m) const {
     
-    m.resize(2, 2);
+    m = RealMatrixX::Zero(2, 2);
     Real h;
     (*_mat_cond)(p, t, m);
     (*_h)(p, t, h);
@@ -1217,7 +1217,7 @@ MAST::Solid2DSectionProperty::ThermalConductanceMatrix::derivative (const MAST::
                                                                     const libMesh::Point& p,
                                                                     const Real t,
                                                                     RealMatrixX& m) const {
-    m.resize(2, 2);
+    m = RealMatrixX::Zero(2, 2);
     RealMatrixX dm;
     Real h, dh;
     (*_mat_cond)(p, t, m);
@@ -1281,7 +1281,7 @@ operator() (const libMesh::Point& p,
             const Real t,
             RealMatrixX& m) const {
     
-    m.resize(1, 1);
+    m = RealMatrixX::Zero(1, 1);
     Real h;
     (*_mat_cap)(p, t, m);
     (*_h)(p, t, h);
@@ -1300,7 +1300,7 @@ derivative (const MAST::DerivativeType d,
             const Real t,
             RealMatrixX& m) const {
     
-    m.resize(1, 1);
+    m = RealMatrixX::Zero(1, 1);
     RealMatrixX dm;
     Real h, dh;
     (*_mat_cap)(p, t, m);

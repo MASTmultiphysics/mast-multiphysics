@@ -163,7 +163,7 @@ namespace MAST {
                     // use the size of the layer matrix to resize the output
                     // all other layers should return the same sized matrices
                     if (i==0)
-                        m.resize(mi.rows(), mi.cols());
+                        m = RealMatrixX::Zero(mi.rows(), mi.cols());
                     
                     m += mi;
                 }
@@ -177,13 +177,13 @@ namespace MAST {
                                 RealMatrixX& m) const {
                 // add the values of each matrix to get the integrated value
                 RealMatrixX mi;
-                m.resize(2,2);
+                m = RealMatrixX::Zero(2,2);
                 for (unsigned int i=0; i<_layer_mats.size(); i++) {
                     _layer_mats[i]->derivative(d, f, p, t, mi);
                     // use the size of the layer matrix to resize the output
                     // all other layers should return the same sized matrices
                     if (i==0)
-                        m.resize(mi.rows(), mi.cols());
+                        m = RealMatrixX::Zero(mi.rows(), mi.cols());
                     
                     m += mi;
                 }

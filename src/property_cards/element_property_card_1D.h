@@ -79,11 +79,11 @@ namespace MAST
         }
         
         
-        /*!
-         *   returns value of the property \par val. The string values for 
-         *   \par val are IYY, IZZ, IYZ
-         */
-        virtual Real value(const std::string& val) const = 0;
+//        /*!
+//         *   returns value of the property \par val. The string values for 
+//         *   \par val are IYY, IZZ, IYZ
+//         */
+//        virtual Real value(const std::string& val) const = 0;
         
         /*!
          *   vector in the x-y plane of the element. This should not be the same

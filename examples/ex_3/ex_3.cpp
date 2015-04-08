@@ -81,7 +81,7 @@ public:
         k0   = _k0(),
         k1   = _k1();
 
-        RealVectorX temp(1);
+        RealVectorX temp = RealVectorX::Zero(1);
         
         // get temperature value
         _temp(p, t, temp);

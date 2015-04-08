@@ -43,7 +43,7 @@ MAST::Local2DElem::_create_local_elem() {
     for (unsigned int i=0; i<3; i++)
         _domain_surface_normal(i) = v3(i);
     
-    _T_mat.resize(3,3);
+    _T_mat = RealMatrixX::Zero(3,3);
     
     _local_elem = libMesh::Elem::build(_elem.type()).release();
     _local_nodes.resize(_elem.n_nodes());

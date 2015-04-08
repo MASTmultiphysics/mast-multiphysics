@@ -73,13 +73,13 @@ MAST::HeatConductionElementBase::internal_residual (bool request_jacobian,
     dim    = _elem.dim();
     
     RealMatrixX
-    material_mat(dim, dim),
-    dmaterial_mat(dim, dim), // for calculation of Jac when k is temp. dep.
-    mat_n2n2(n_phi, n_phi);
+    material_mat   = RealMatrixX::Zero(dim, dim),
+    dmaterial_mat  = RealMatrixX::Zero(dim, dim), // for calculation of Jac when k is temp. dep.
+    mat_n2n2       = RealMatrixX::Zero(n_phi, n_phi);
     RealVectorX
-    vec1(1),
-    vec2_n2(n_phi),
-    flux(dim);
+    vec1     = RealVectorX::Zero(1),
+    vec2_n2  = RealVectorX::Zero(n_phi),
+    flux     = RealVectorX::Zero(dim);
     
     std::auto_ptr<MAST::FieldFunction<RealMatrixX> > conductance =
     _property.thermal_conductance_matrix(*this);
@@ -182,11 +182,11 @@ MAST::HeatConductionElementBase::velocity_residual (bool request_jacobian,
     dim        = _elem.dim();
     
     RealMatrixX
-    material_mat(dim, dim),
-    mat_n2n2(n_phi, n_phi);
+    material_mat    = RealMatrixX::Zero(dim, dim),
+    mat_n2n2        = RealMatrixX::Zero(n_phi, n_phi);
     RealVectorX
-    vec1(1),
-    vec2_n2(n_phi);
+    vec1    = RealVectorX::Zero(1),
+    vec2_n2 = RealVectorX::Zero(n_phi);
     
     std::auto_ptr<MAST::FieldFunction<RealMatrixX> > capacitance =
     _property.thermal_capacitance_matrix(*this);
@@ -586,7 +586,7 @@ surface_flux_residual(bool request_jacobian,
     const std::vector<std::vector<Real> >& phi   = fe->get_phi();
     const unsigned int n_phi                     = (unsigned int)phi.size();
     
-    RealVectorX phi_vec   (n_phi);
+    RealVectorX phi_vec  = RealVectorX::Zero(n_phi);
     libMesh::Point pt;
     Real  flux;
     
@@ -629,7 +629,7 @@ surface_flux_residual(bool request_jacobian,
     const std::vector<std::vector<Real> >& phi   = _fe->get_phi();
     const unsigned int n_phi                     = (unsigned int)phi.size();
     
-    RealVectorX phi_vec   (n_phi);
+    RealVectorX phi_vec  = RealVectorX::Zero(n_phi);
     libMesh::Point pt;
     Real  flux;
     
@@ -705,8 +705,8 @@ surface_convection_residual(bool request_jacobian,
     const unsigned int n_phi                   = (unsigned int)phi.size();
     
     
-    RealVectorX  phi_vec  (n_phi);
-    RealMatrixX  mat      (n_phi, n_phi);
+    RealVectorX  phi_vec  = RealVectorX::Zero(n_phi);
+    RealMatrixX  mat      = RealMatrixX::Zero(n_phi, n_phi);
     Real temp, amb_temp, h_coeff;
     libMesh::Point pt;
     MAST::FEMOperatorMatrix Bmat;
@@ -763,8 +763,8 @@ surface_convection_residual(bool request_jacobian,
     const unsigned int n_phi                   = (unsigned int)phi.size();
     
     
-    RealVectorX  phi_vec  (n_phi);
-    RealMatrixX  mat      (n_phi, n_phi);
+    RealVectorX  phi_vec  = RealVectorX::Zero(n_phi);
+    RealMatrixX  mat      = RealMatrixX::Zero(n_phi, n_phi);
     Real temp, amb_temp, h_coeff;
     libMesh::Point pt;
     MAST::FEMOperatorMatrix Bmat;
@@ -859,8 +859,8 @@ surface_radiation_residual(bool request_jacobian,
     const std::vector<std::vector<Real> >& phi = fe->get_phi();
     const unsigned int n_phi                   = (unsigned int)phi.size();
     
-    RealVectorX phi_vec  (n_phi);
-    RealMatrixX mat      (n_phi, n_phi);
+    RealVectorX phi_vec  = RealVectorX::Zero(n_phi);
+    RealMatrixX mat      = RealMatrixX::Zero(n_phi, n_phi);
     const Real
     sbc      = sb_const(),
     amb_temp = T_amb(),
@@ -921,8 +921,8 @@ surface_radiation_residual(bool request_jacobian,
     const std::vector<std::vector<Real> >& phi = _fe->get_phi();
     const unsigned int n_phi                   = (unsigned int)phi.size();
     
-    RealVectorX phi_vec  (n_phi);
-    RealMatrixX mat      (n_phi, n_phi);
+    RealVectorX phi_vec  = RealVectorX::Zero(n_phi);
+    RealMatrixX mat      = RealMatrixX::Zero(n_phi, n_phi);
     const Real
     sbc      = sb_const(),
     amb_temp = T_amb(),
@@ -1023,7 +1023,7 @@ _initialize_mass_fem_operator(const unsigned int qp,
     
     const unsigned int n_phi = (unsigned int)phi_fe.size();
     
-    RealVectorX phi(n_phi);
+    RealVectorX phi = RealVectorX::Zero(n_phi);
     
     // shape function values
     // N
@@ -1044,7 +1044,7 @@ _initialize_flux_fem_operator(const unsigned int qp,
     const std::vector<std::vector<libMesh::RealVectorValue> >& dphi = _fe->get_dphi();
     
     const unsigned int n_phi = (unsigned int)dphi.size();
-    RealVectorX phi(n_phi);
+    RealVectorX phi = RealVectorX::Zero(n_phi);
     
     // now set the shape function values
     // dN/dx

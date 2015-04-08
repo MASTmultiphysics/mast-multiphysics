@@ -165,7 +165,7 @@ namespace MAST {
                     // use the size of the layer matrix to resize the output
                     // all other layers should return the same sized matrices
                     if (i==0)
-                        m.resize(mi.rows(), mi.cols());
+                        m = RealMatrixX::Zero(mi.rows(), mi.cols());
                     
                     m += mi;
                 }
@@ -184,7 +184,7 @@ namespace MAST {
                     // use the size of the layer matrix to resize the output
                     // all other layers should return the same sized matrices
                     if (i==0)
-                        m.resize(mi.rows(), mi.cols());
+                        m = RealMatrixX::Zero(mi.rows(), mi.cols());
                     
                     m += mi;
                 }

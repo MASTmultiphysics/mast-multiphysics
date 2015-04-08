@@ -90,7 +90,7 @@ initialize_bending_strain_operator_for_yz (const unsigned int qp,
     // N3 = (1.0/4.0) * (0.0 -  1.0        - 2.0*xi  +         3.0*pow(xi,2));  // needs a -1.0 factor for theta_y
     // N4 = (1.0/4.0) * (0.0 -  1.0        + 2.0*xi  +         3.0*pow(xi,2));  // needs a -1.0 factor for theta_y
     
-    RealVectorX N(2);
+    RealVectorX N = RealVectorX::Zero(2);
     
     // second order shape function derivative
     N(0) = (0.5/_length) * (  0.0     +  12.0/_length*xi);

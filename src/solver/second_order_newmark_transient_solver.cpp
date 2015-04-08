@@ -52,12 +52,12 @@ _set_element_data(std::vector<libMesh::dof_id_type>& dof_indices,
     // get the current state and velocity estimates
     // also get the current discrete velocity replacement
     RealVectorX
-    sol         (n_dofs),
-    vel         (n_dofs),
-    accel       (n_dofs),
-    prev_sol    (n_dofs),
-    prev_vel    (n_dofs),
-    prev_accel  (n_dofs);
+    sol          = RealVectorX::Zero(n_dofs),
+    vel          = RealVectorX::Zero(n_dofs),
+    accel        = RealVectorX::Zero(n_dofs),
+    prev_sol     = RealVectorX::Zero(n_dofs),
+    prev_vel     = RealVectorX::Zero(n_dofs),
+    prev_accel   = RealVectorX::Zero(n_dofs);
     
     
     // get the references to current and previous sol and velocity
@@ -148,15 +148,15 @@ _elem_calculations(MAST::ElementBase& elem,
     unsigned int n_dofs = (unsigned int)dof_indices.size();
     
     RealVectorX
-    f_x    (n_dofs),
-    f_m    (n_dofs);
+    f_x     = RealVectorX::Zero(n_dofs),
+    f_m     = RealVectorX::Zero(n_dofs);
     
     RealMatrixX
-    f_m_jac_xddot   (n_dofs, n_dofs),
-    f_m_jac_xdot    (n_dofs, n_dofs),
-    f_m_jac         (n_dofs, n_dofs),
-    f_x_jac_xdot    (n_dofs, n_dofs),
-    f_x_jac         (n_dofs, n_dofs);
+    f_m_jac_xddot    = RealMatrixX::Zero(n_dofs, n_dofs),
+    f_m_jac_xdot     = RealMatrixX::Zero(n_dofs, n_dofs),
+    f_m_jac          = RealMatrixX::Zero(n_dofs, n_dofs),
+    f_x_jac_xdot     = RealMatrixX::Zero(n_dofs, n_dofs),
+    f_x_jac          = RealMatrixX::Zero(n_dofs, n_dofs);
     
     // perform the element assembly
     _assembly->_elem_calculations(elem,

@@ -1,0 +1,297 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		69A93ECA1AD4D8DF000F4E86 /* bar_extension.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69A93EC91AD4D8DF000F4E86 /* bar_extension.cpp */; };
+		69A93ED31AD4DCFC000F4E86 /* libmesh_dbg.0.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 69A93ECD1AD4DCFC000F4E86 /* libmesh_dbg.0.dylib */; };
+		69A93ED41AD4DCFC000F4E86 /* libmpi_cxx.1.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 69A93ECE1AD4DCFC000F4E86 /* libmpi_cxx.1.dylib */; };
+		69A93ED51AD4DCFC000F4E86 /* libmpi.1.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 69A93ECF1AD4DCFC000F4E86 /* libmpi.1.dylib */; };
+		69A93EDC1AD4E0D0000F4E86 /* libslepc.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 69A93EDB1AD4E0D0000F4E86 /* libslepc.dylib */; };
+		69A93EDE1AD4E0E1000F4E86 /* libpetsc.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 69A93EDD1AD4E0E1000F4E86 /* libpetsc.dylib */; };
+		69A93EDF1AD4E0F0000F4E86 /* libmast.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 69A93ED01AD4DCFC000F4E86 /* libmast.dylib */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		69A93EBD1AD4D896000F4E86 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = /usr/share/man/man1/;
+			dstSubfolderSpec = 0;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		69A93EBF1AD4D896000F4E86 /* bar_extension */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = bar_extension; sourceTree = BUILT_PRODUCTS_DIR; };
+		69A93EC91AD4D8DF000F4E86 /* bar_extension.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = bar_extension.cpp; path = ../../../../examples/structural/bar_extension/bar_extension.cpp; sourceTree = "<group>"; };
+		69A93ECD1AD4DCFC000F4E86 /* libmesh_dbg.0.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libmesh_dbg.0.dylib; path = ../../../../libmesh/real/lib/libmesh_dbg.0.dylib; sourceTree = "<group>"; };
+		69A93ECE1AD4DCFC000F4E86 /* libmpi_cxx.1.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libmpi_cxx.1.dylib; path = "../../../../../../../../opt/local/lib/openmpi-mp/libmpi_cxx.1.dylib"; sourceTree = "<group>"; };
+		69A93ECF1AD4DCFC000F4E86 /* libmpi.1.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libmpi.1.dylib; path = "../../../../../../../../opt/local/lib/openmpi-mp/libmpi.1.dylib"; sourceTree = "<group>"; };
+		69A93ED01AD4DCFC000F4E86 /* libmast.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libmast.dylib; path = "../../../../../../Library/Developer/Xcode/DerivedData/MAST-dkoqgnxoxkrjwgcocsplbdukbbnw/Build/Products/Debug/libmast.dylib"; sourceTree = "<group>"; };
+		69A93EDB1AD4E0D0000F4E86 /* libslepc.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libslepc.dylib; path = ../../../../numerical_lib/slepc/petsc_with_external_libs/lib/libslepc.dylib; sourceTree = "<group>"; };
+		69A93EDD1AD4E0E1000F4E86 /* libpetsc.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libpetsc.dylib; path = ../../../../numerical_lib/petsc/petsc_with_external_libs/lib/libpetsc.dylib; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		69A93EBC1AD4D896000F4E86 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				69A93EDF1AD4E0F0000F4E86 /* libmast.dylib in Frameworks */,
+				69A93ED31AD4DCFC000F4E86 /* libmesh_dbg.0.dylib in Frameworks */,
+				69A93EDC1AD4E0D0000F4E86 /* libslepc.dylib in Frameworks */,
+				69A93EDE1AD4E0E1000F4E86 /* libpetsc.dylib in Frameworks */,
+				69A93ED41AD4DCFC000F4E86 /* libmpi_cxx.1.dylib in Frameworks */,
+				69A93ED51AD4DCFC000F4E86 /* libmpi.1.dylib in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		69A93EB61AD4D896000F4E86 = {
+			isa = PBXGroup;
+			children = (
+				69A93EDD1AD4E0E1000F4E86 /* libpetsc.dylib */,
+				69A93EDB1AD4E0D0000F4E86 /* libslepc.dylib */,
+				69A93ECD1AD4DCFC000F4E86 /* libmesh_dbg.0.dylib */,
+				69A93ECE1AD4DCFC000F4E86 /* libmpi_cxx.1.dylib */,
+				69A93ECF1AD4DCFC000F4E86 /* libmpi.1.dylib */,
+				69A93ED01AD4DCFC000F4E86 /* libmast.dylib */,
+				69A93EC11AD4D896000F4E86 /* bar_extension */,
+				69A93EC01AD4D896000F4E86 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		69A93EC01AD4D896000F4E86 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				69A93EBF1AD4D896000F4E86 /* bar_extension */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		69A93EC11AD4D896000F4E86 /* bar_extension */ = {
+			isa = PBXGroup;
+			children = (
+				69A93EC91AD4D8DF000F4E86 /* bar_extension.cpp */,
+			);
+			path = bar_extension;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		69A93EBE1AD4D896000F4E86 /* bar_extension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 69A93EC61AD4D896000F4E86 /* Build configuration list for PBXNativeTarget "bar_extension" */;
+			buildPhases = (
+				69A93EBB1AD4D896000F4E86 /* Sources */,
+				69A93EBC1AD4D896000F4E86 /* Frameworks */,
+				69A93EBD1AD4D896000F4E86 /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = bar_extension;
+			productName = bar_extension;
+			productReference = 69A93EBF1AD4D896000F4E86 /* bar_extension */;
+			productType = "com.apple.product-type.tool";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		69A93EB71AD4D896000F4E86 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 0620;
+				ORGANIZATIONNAME = MAST;
+				TargetAttributes = {
+					69A93EBE1AD4D896000F4E86 = {
+						CreatedOnToolsVersion = 6.2;
+					};
+				};
+			};
+			buildConfigurationList = 69A93EBA1AD4D896000F4E86 /* Build configuration list for PBXProject "bar_extension" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = 69A93EB61AD4D896000F4E86;
+			productRefGroup = 69A93EC01AD4D896000F4E86 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				69A93EBE1AD4D896000F4E86 /* bar_extension */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		69A93EBB1AD4D896000F4E86 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				69A93ECA1AD4D8DF000F4E86 /* bar_extension.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		69A93EC41AD4D896000F4E86 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.10;
+				MTL_ENABLE_DEBUG_INFO = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		69A93EC51AD4D896000F4E86 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.10;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		69A93EC71AD4D896000F4E86 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include,
+					"/opt/local/include/openmpi-mp",
+				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					/Users/manav/Documents/codes/numerical_lib/slepc/real/lib,
+					/Users/manav/Documents/codes/numerical_lib/petsc/real/lib,
+					/Users/manav/Documents/codes/libmesh/real/lib,
+					"/opt/local/lib/openmpi-mp",
+					"$(USER_LIBRARY_DIR)/Developer/Xcode/DerivedData/MAST-dkoqgnxoxkrjwgcocsplbdukbbnw/Build/Products/Debug",
+					/Users/manav/Documents/codes/MAST_clean/build/xcode/mast/build/Debug,
+					/Users/manav/Documents/codes/numerical_lib/slepc/petsc_with_external_libs/lib,
+					/Users/manav/Documents/codes/numerical_lib/petsc/petsc_with_external_libs/lib,
+				);
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/../../../src $(SRCROOT)/../../../../libmesh/real/libmesh/include /opt/local/include/eigen3";
+			};
+			name = Debug;
+		};
+		69A93EC81AD4D896000F4E86 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include,
+					"/opt/local/include/openmpi-mp",
+				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					/Users/manav/Documents/codes/numerical_lib/slepc/real/lib,
+					/Users/manav/Documents/codes/numerical_lib/petsc/real/lib,
+					/Users/manav/Documents/codes/libmesh/real/lib,
+					"/opt/local/lib/openmpi-mp",
+					"$(USER_LIBRARY_DIR)/Developer/Xcode/DerivedData/MAST-dkoqgnxoxkrjwgcocsplbdukbbnw/Build/Products/Debug",
+					/Users/manav/Documents/codes/MAST_clean/build/xcode/mast/build/Debug,
+					/Users/manav/Documents/codes/numerical_lib/slepc/petsc_with_external_libs/lib,
+					/Users/manav/Documents/codes/numerical_lib/petsc/petsc_with_external_libs/lib,
+				);
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/../../../src $(SRCROOT)/../../../../libmesh/real/libmesh/include /opt/local/include/eigen3";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		69A93EBA1AD4D896000F4E86 /* Build configuration list for PBXProject "bar_extension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				69A93EC41AD4D896000F4E86 /* Debug */,
+				69A93EC51AD4D896000F4E86 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		69A93EC61AD4D896000F4E86 /* Build configuration list for PBXNativeTarget "bar_extension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				69A93EC71AD4D896000F4E86 /* Debug */,
+				69A93EC81AD4D896000F4E86 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 69A93EB71AD4D896000F4E86 /* Project object */;
+}

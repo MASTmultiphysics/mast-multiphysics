@@ -163,14 +163,14 @@ initialize_bending_strain_operator_for_z (const unsigned int qp,
     const unsigned int n_phi = (unsigned int)dphi.size();
     
     RealVectorX
-    phi(n_phi),
-    dbetaxdx(9),
-    dbetaxdy(9),
-    dbetaydx(9),
-    dbetaydy(9),
-    w(3),
-    thetax(3),
-    thetay(3);
+    phi       = RealVectorX::Zero(n_phi),
+    dbetaxdx  = RealVectorX::Zero(9),
+    dbetaxdy  = RealVectorX::Zero(9),
+    dbetaydx  = RealVectorX::Zero(9),
+    dbetaydy  = RealVectorX::Zero(9),
+    w         = RealVectorX::Zero(3),
+    thetax    = RealVectorX::Zero(3),
+    thetay    = RealVectorX::Zero(3);
 
     
     for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
