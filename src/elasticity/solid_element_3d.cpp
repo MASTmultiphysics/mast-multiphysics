@@ -19,7 +19,7 @@ MAST::StructuralElement3D::internal_residual(bool request_jacobian,
     const unsigned int
     n_phi              = (unsigned int)_fe->n_shape_functions(),
     n1                 =6,
-    n2                 =3*n_phi;
+    n2                 =n1*n_phi;
     
     RealMatrixX
     material_mat,
@@ -35,7 +35,7 @@ MAST::StructuralElement3D::internal_residual(bool request_jacobian,
     libMesh::Point p;
     MAST::FEMOperatorMatrix Bmat;
     // six stress components, related to three displacements
-    Bmat.reinit(n1, 3, _elem.n_nodes());
+    Bmat.reinit(n1, n1, _elem.n_nodes());
     
     for (unsigned int qp=0; qp<JxW.size(); qp++) {
         
@@ -117,7 +117,7 @@ MAST::StructuralElement3D::thermal_residual(bool request_jacobian,
     const unsigned int
     n_phi = (unsigned int)_fe->get_phi().size(),
     n1    = 6,
-    n2    = 3*n_phi;
+    n2    = 6*n_phi;
     
     RealMatrixX
     material_exp_A_mat,
@@ -133,7 +133,7 @@ MAST::StructuralElement3D::thermal_residual(bool request_jacobian,
     
     libMesh::Point p;
     FEMOperatorMatrix Bmat;
-    Bmat.reinit(n1, 3, n_phi); // three stress-strain components
+    Bmat.reinit(n1, n1, n_phi); // three stress-strain components
     
     std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
     mat = _property.thermal_expansion_A_matrix(*this);

@@ -599,7 +599,7 @@ MAST::IsotropicMaterialProperty::
 StiffnessMatrix3D::operator() (const libMesh::Point& p,
                                const Real t,
                                RealMatrixX& m) const {
-    m = RealMatrixX::Zero(3,3);
+    m = RealMatrixX::Zero(6,6);
     Real E, nu;
     (*_E)(p, t, E); (*_nu)(p, t, nu);
     for (unsigned int i=0; i<3; i++) {
@@ -623,7 +623,7 @@ StiffnessMatrix3D::derivative (const MAST::DerivativeType d,
                                const Real t,
                                RealMatrixX& m) const {
     RealMatrixX dm;
-    m = RealMatrixX::Zero(3,3); dm = RealMatrixX::Zero(3, 3);
+    m = RealMatrixX::Zero(6,6); dm = RealMatrixX::Zero(6,6);
     Real E, nu, dEdf, dnudf;
     (*_E)  (p, t, E);   _E->derivative(d, f, p, t, dEdf);
     (*_nu) (p, t, nu); _nu->derivative(d, f, p, t, dnudf);
@@ -673,7 +673,7 @@ operator() (const libMesh::Point& p,
             break;
             
         case 3:
-            m = RealMatrixX::Zero(3,1);
+            m = RealMatrixX::Zero(6,1);
             break;
     }
     
@@ -706,7 +706,7 @@ derivative (const MAST::DerivativeType d,
             break;
             
         case 3:
-            m = RealMatrixX::Zero(3,1);
+            m = RealMatrixX::Zero(6,1);
             break;
     }
     

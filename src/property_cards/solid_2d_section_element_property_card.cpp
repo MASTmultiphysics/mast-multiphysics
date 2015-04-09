@@ -1332,7 +1332,7 @@ stiffness_A_matrix(const MAST::ElementBase& e) const {
     MAST::FieldFunction<RealMatrixX>* rval =
     new MAST::Solid2DSectionProperty::ExtensionStiffnessMatrix
     (_material->stiffness_matrix(2).release(),
-     this->get<FieldFunction<Real> >("h").clone().release());
+     this->get<const FieldFunction<Real> >("h").clone().release());
     
     return std::auto_ptr<MAST::FieldFunction<RealMatrixX> > (rval);
 }

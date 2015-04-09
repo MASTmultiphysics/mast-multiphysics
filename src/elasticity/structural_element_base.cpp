@@ -66,8 +66,12 @@ MAST::StructuralElementBase::set_solution(const RealVectorX& vec,
     
     // convert the vector to the local element coordinate system
     if (!if_sens) {
-        _local_sol.setZero(vec.size());
-        this->transform_vector_to_local_system(vec, _local_sol);
+        if (_elem.dim() == 3)
+            _local_sol = vec;
+        else {
+            _local_sol = RealVectorX::Zero(vec.size());
+            this->transform_vector_to_local_system(vec, _local_sol);
+        }
     }
     else
         libmesh_error();
@@ -82,8 +86,12 @@ MAST::StructuralElementBase::set_velocity(const RealVectorX& vec,
                                           bool if_sens) {
     
     if (!if_sens) {
-        _local_vel.setZero(vec.size());
-        this->transform_vector_to_local_system(vec, _local_vel);
+        if (_elem.dim() == 3)
+            _local_vel = vec;
+        else {
+            _local_vel = RealVectorX::Zero(vec.size());
+            this->transform_vector_to_local_system(vec, _local_vel);
+        }
     }
     else
         libmesh_error();
@@ -97,8 +105,12 @@ MAST::StructuralElementBase::set_base_solution(const RealVectorX& vec,
                                                bool if_sens) {
     
     if (!if_sens) {
-        _local_base_sol.setZero(vec.size());
-        this->transform_vector_to_local_system(vec, _local_base_sol);
+        if (_elem.dim() == 3)
+            _local_base_sol = vec;
+        else {
+            _local_base_sol = RealVectorX::Zero(vec.size());
+            this->transform_vector_to_local_system(vec, _local_base_sol);
+        }
     }
     else
         libmesh_error();
