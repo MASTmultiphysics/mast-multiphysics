@@ -99,6 +99,24 @@ namespace MAST {
          */
         void initialize_strain_operator (const unsigned int qp,
                                          FEMOperatorMatrix& Bmat);
+        
+        /*!
+         *    initialize the strain operator matrices for the 
+         *    Green-Lagrange strain matrices
+         */
+        void initialize_green_lagrange_strain_operator(const unsigned int qp,
+                                                       const RealVectorX& local_disp,
+                                                       RealVectorX& epsilon,
+                                                       RealMatrixX& mat_x,
+                                                       RealMatrixX& mat_y,
+                                                       RealMatrixX& mat_z,
+                                                       MAST::FEMOperatorMatrix& Bmat_lin,
+                                                       MAST::FEMOperatorMatrix& Bmat_nl_x,
+                                                       MAST::FEMOperatorMatrix& Bmat_nl_y,
+                                                       MAST::FEMOperatorMatrix& Bmat_nl_z,
+                                                       MAST::FEMOperatorMatrix& Bmat_nl_u,
+                                                       MAST::FEMOperatorMatrix& Bmat_nl_v,
+                                                       MAST::FEMOperatorMatrix& Bmat_nl_w);
     };
 }
 

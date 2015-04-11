@@ -18,7 +18,7 @@
  */
 
 // MAST includes
-#include "Numerics/fem_operator_matrix.h"
+#include "numerics/fem_operator_matrix.h"
 
 
 MAST::FEMOperatorMatrix::FEMOperatorMatrix():
