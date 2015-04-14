@@ -30,6 +30,7 @@ namespace MAST {
                             const MAST::ElementPropertyCardBase& p):
         StructuralElementBase(sys, elem, p) {
             
+            _init_incompatible_fe_mapping(elem);
         }
         
         /*!
@@ -117,6 +118,25 @@ namespace MAST {
                                                        MAST::FEMOperatorMatrix& Bmat_nl_u,
                                                        MAST::FEMOperatorMatrix& Bmat_nl_v,
                                                        MAST::FEMOperatorMatrix& Bmat_nl_w);
+        
+        /*!
+         *   initialize incompatible strain operator
+         */
+        void initialize_incompatible_strain_operator(const unsigned int qp,
+                                                     FEMOperatorMatrix& Bmat,
+                                                     RealMatrixX& G_mat);
+
+        /*!
+         *   initialize the Jacobian needed for incompatible modes
+         */
+        void _init_incompatible_fe_mapping( const libMesh::Elem& e);
+
+        
+        /*!
+         *   Jacobian matrix at element center needed for incompatible modes
+         */
+        RealMatrixX _T0_inv_tr;
+
     };
 }
 
