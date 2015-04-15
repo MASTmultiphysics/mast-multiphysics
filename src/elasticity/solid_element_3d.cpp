@@ -566,8 +566,8 @@ initialize_green_lagrange_strain_operator(const unsigned int qp,
 
     // nonlinear strain operator in u
     Bmat_nl_u.set_shape_function(0, 0, phi); // du/dx
-    Bmat_nl_v.set_shape_function(1, 1, phi); // dv/dx
-    Bmat_nl_w.set_shape_function(2, 2, phi); // dw/dx
+    Bmat_nl_v.set_shape_function(0, 1, phi); // dv/dx
+    Bmat_nl_w.set_shape_function(0, 2, phi); // dw/dx
 
     
     // dN/dy
@@ -584,9 +584,9 @@ initialize_green_lagrange_strain_operator(const unsigned int qp,
     Bmat_nl_y.set_shape_function(2, 2, phi); // dw/dy
 
     // nonlinear strain operator in v
-    Bmat_nl_u.set_shape_function(0, 0, phi); // du/dy
+    Bmat_nl_u.set_shape_function(1, 0, phi); // du/dy
     Bmat_nl_v.set_shape_function(1, 1, phi); // dv/dy
-    Bmat_nl_w.set_shape_function(2, 2, phi); // dw/dy
+    Bmat_nl_w.set_shape_function(1, 2, phi); // dw/dy
 
     // dN/dz
     for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
@@ -601,8 +601,8 @@ initialize_green_lagrange_strain_operator(const unsigned int qp,
     Bmat_nl_z.set_shape_function(2, 2, phi); // dw/dz
 
     // nonlinear strain operator in w
-    Bmat_nl_u.set_shape_function(0, 0, phi); // du/dz
-    Bmat_nl_v.set_shape_function(1, 1, phi); // dv/dz
+    Bmat_nl_u.set_shape_function(2, 0, phi); // du/dz
+    Bmat_nl_v.set_shape_function(2, 1, phi); // dv/dz
     Bmat_nl_w.set_shape_function(2, 2, phi); // dw/dz
 
     
@@ -641,12 +641,12 @@ initialize_green_lagrange_strain_operator(const unsigned int qp,
     mat_x.row(3) =     ddisp_dy;
     mat_x.row(5) =     ddisp_dz;
     
-    mat_y.row(1) =     ddisp_dx;
+    mat_y.row(1) =     ddisp_dy;
     mat_y.row(3) =     ddisp_dx;
     mat_y.row(4) =     ddisp_dz;
 
     
-    mat_z.row(2) =     ddisp_dx;
+    mat_z.row(2) =     ddisp_dz;
     mat_z.row(4) =     ddisp_dy;
     mat_z.row(5) =     ddisp_dx;
 
