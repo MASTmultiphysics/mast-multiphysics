@@ -11,6 +11,12 @@
 		6921397019E4771800CDFB4F /* heat_conduction_discipline.h in Headers */ = {isa = PBXBuildFile; fileRef = 6921396E19E4771800CDFB4F /* heat_conduction_discipline.h */; };
 		6921397D19E4834900CDFB4F /* heat_conduction_system_initialization.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6921397B19E4834900CDFB4F /* heat_conduction_system_initialization.cpp */; };
 		6921397E19E4834900CDFB4F /* heat_conduction_system_initialization.h in Headers */ = {isa = PBXBuildFile; fileRef = 6921397C19E4834900CDFB4F /* heat_conduction_system_initialization.h */; };
+		692284091AE05A8300C9AF86 /* coordinate_base.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 692284071AE05A8300C9AF86 /* coordinate_base.cpp */; };
+		6922840A1AE05A8300C9AF86 /* coordinate_base.h in Headers */ = {isa = PBXBuildFile; fileRef = 692284081AE05A8300C9AF86 /* coordinate_base.h */; };
+		6922840D1AE0654D00C9AF86 /* polar_coordinate.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6922840B1AE0654D00C9AF86 /* polar_coordinate.cpp */; };
+		6922840E1AE0654D00C9AF86 /* polar_coordinate.h in Headers */ = {isa = PBXBuildFile; fileRef = 6922840C1AE0654D00C9AF86 /* polar_coordinate.h */; };
+		692284111AE067F800C9AF86 /* basis_matrix_coordinate.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6922840F1AE067F800C9AF86 /* basis_matrix_coordinate.cpp */; };
+		692284121AE067F800C9AF86 /* basis_matrix_coordinate.h in Headers */ = {isa = PBXBuildFile; fileRef = 692284101AE067F800C9AF86 /* basis_matrix_coordinate.h */; };
 		693561D11A378D5700BAFD3A /* mesh_field_function.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 693561CF1A378D5700BAFD3A /* mesh_field_function.cpp */; };
 		693561D21A378D5700BAFD3A /* mesh_field_function.h in Headers */ = {isa = PBXBuildFile; fileRef = 693561D01A378D5700BAFD3A /* mesh_field_function.h */; };
 		6935E6E91A93C80F00B8C9B6 /* solid_element_3d.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6935E6E71A93C80F00B8C9B6 /* solid_element_3d.cpp */; };
@@ -87,6 +93,10 @@
 		69E1275E19D365C7001BADE2 /* transient_assembly.h in Headers */ = {isa = PBXBuildFile; fileRef = 69E1275C19D365C7001BADE2 /* transient_assembly.h */; };
 		69E1276119D36610001BADE2 /* eigenproblem_assembly.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69E1275F19D36610001BADE2 /* eigenproblem_assembly.cpp */; };
 		69E1276219D36610001BADE2 /* eigenproblem_assembly.h in Headers */ = {isa = PBXBuildFile; fileRef = 69E1276019D36610001BADE2 /* eigenproblem_assembly.h */; };
+		69E53D161ADF0F6600856C84 /* orthotropic_material_property_card.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69E53D141ADF0F6600856C84 /* orthotropic_material_property_card.cpp */; };
+		69E53D171ADF0F6600856C84 /* orthotropic_material_property_card.h in Headers */ = {isa = PBXBuildFile; fileRef = 69E53D151ADF0F6600856C84 /* orthotropic_material_property_card.h */; };
+		69E53D1A1AE00C2600856C84 /* orthotropic_element_property_card_3D.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69E53D181AE00C2600856C84 /* orthotropic_element_property_card_3D.cpp */; };
+		69E53D1B1AE00C2600856C84 /* orthotropic_element_property_card_3D.h in Headers */ = {isa = PBXBuildFile; fileRef = 69E53D191AE00C2600856C84 /* orthotropic_element_property_card_3D.h */; };
 		69ECA02819DA4354009BB5B0 /* isotropic_material_property_card.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69ECA01819DA4354009BB5B0 /* isotropic_material_property_card.cpp */; };
 		69ECA02919DA4354009BB5B0 /* isotropic_material_property_card.h in Headers */ = {isa = PBXBuildFile; fileRef = 69ECA01919DA4354009BB5B0 /* isotropic_material_property_card.h */; };
 		69ECA02A19DA4354009BB5B0 /* material_property_card_base.h in Headers */ = {isa = PBXBuildFile; fileRef = 69ECA01A19DA4354009BB5B0 /* material_property_card_base.h */; };
@@ -100,8 +110,8 @@
 		69ECA03219DA4354009BB5B0 /* solid_2d_section_element_property_card.h in Headers */ = {isa = PBXBuildFile; fileRef = 69ECA02219DA4354009BB5B0 /* solid_2d_section_element_property_card.h */; };
 		69ECA03319DA4354009BB5B0 /* element_property_card_1D.h in Headers */ = {isa = PBXBuildFile; fileRef = 69ECA02319DA4354009BB5B0 /* element_property_card_1D.h */; };
 		69ECA03419DA4354009BB5B0 /* element_property_card_2D.h in Headers */ = {isa = PBXBuildFile; fileRef = 69ECA02419DA4354009BB5B0 /* element_property_card_2D.h */; };
-		69ECA03519DA4354009BB5B0 /* element_property_card_3D.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69ECA02519DA4354009BB5B0 /* element_property_card_3D.cpp */; };
-		69ECA03619DA4354009BB5B0 /* element_property_card_3D.h in Headers */ = {isa = PBXBuildFile; fileRef = 69ECA02619DA4354009BB5B0 /* element_property_card_3D.h */; };
+		69ECA03519DA4354009BB5B0 /* isotropic_element_property_card_3D.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69ECA02519DA4354009BB5B0 /* isotropic_element_property_card_3D.cpp */; };
+		69ECA03619DA4354009BB5B0 /* isotropic_element_property_card_3D.h in Headers */ = {isa = PBXBuildFile; fileRef = 69ECA02619DA4354009BB5B0 /* isotropic_element_property_card_3D.h */; };
 		69ECA03719DA4354009BB5B0 /* element_property_card_base.h in Headers */ = {isa = PBXBuildFile; fileRef = 69ECA02719DA4354009BB5B0 /* element_property_card_base.h */; };
 		69ECA03919DAFC6D009BB5B0 /* element_property_card_1D.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69ECA03819DAFC6D009BB5B0 /* element_property_card_1D.cpp */; };
 		69ECA03B19DAFE0A009BB5B0 /* element_property_card_2D.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69ECA03A19DAFE0A009BB5B0 /* element_property_card_2D.cpp */; };
@@ -122,6 +132,12 @@
 		6921396E19E4771800CDFB4F /* heat_conduction_discipline.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = heat_conduction_discipline.h; sourceTree = "<group>"; };
 		6921397B19E4834900CDFB4F /* heat_conduction_system_initialization.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = heat_conduction_system_initialization.cpp; sourceTree = "<group>"; };
 		6921397C19E4834900CDFB4F /* heat_conduction_system_initialization.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = heat_conduction_system_initialization.h; sourceTree = "<group>"; };
+		692284071AE05A8300C9AF86 /* coordinate_base.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = coordinate_base.cpp; sourceTree = "<group>"; };
+		692284081AE05A8300C9AF86 /* coordinate_base.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = coordinate_base.h; sourceTree = "<group>"; };
+		6922840B1AE0654D00C9AF86 /* polar_coordinate.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = polar_coordinate.cpp; sourceTree = "<group>"; };
+		6922840C1AE0654D00C9AF86 /* polar_coordinate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = polar_coordinate.h; sourceTree = "<group>"; };
+		6922840F1AE067F800C9AF86 /* basis_matrix_coordinate.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = basis_matrix_coordinate.cpp; sourceTree = "<group>"; };
+		692284101AE067F800C9AF86 /* basis_matrix_coordinate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = basis_matrix_coordinate.h; sourceTree = "<group>"; };
 		693561CF1A378D5700BAFD3A /* mesh_field_function.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = mesh_field_function.cpp; sourceTree = "<group>"; };
 		693561D01A378D5700BAFD3A /* mesh_field_function.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = mesh_field_function.h; sourceTree = "<group>"; };
 		6935E6E71A93C80F00B8C9B6 /* solid_element_3d.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = solid_element_3d.cpp; sourceTree = "<group>"; };
@@ -204,6 +220,10 @@
 		69E1275C19D365C7001BADE2 /* transient_assembly.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = transient_assembly.h; sourceTree = "<group>"; };
 		69E1275F19D36610001BADE2 /* eigenproblem_assembly.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = eigenproblem_assembly.cpp; sourceTree = "<group>"; };
 		69E1276019D36610001BADE2 /* eigenproblem_assembly.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = eigenproblem_assembly.h; sourceTree = "<group>"; };
+		69E53D141ADF0F6600856C84 /* orthotropic_material_property_card.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = orthotropic_material_property_card.cpp; sourceTree = "<group>"; };
+		69E53D151ADF0F6600856C84 /* orthotropic_material_property_card.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = orthotropic_material_property_card.h; sourceTree = "<group>"; };
+		69E53D181AE00C2600856C84 /* orthotropic_element_property_card_3D.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = orthotropic_element_property_card_3D.cpp; sourceTree = "<group>"; };
+		69E53D191AE00C2600856C84 /* orthotropic_element_property_card_3D.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = orthotropic_element_property_card_3D.h; sourceTree = "<group>"; };
 		69ECA01819DA4354009BB5B0 /* isotropic_material_property_card.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = isotropic_material_property_card.cpp; sourceTree = "<group>"; };
 		69ECA01919DA4354009BB5B0 /* isotropic_material_property_card.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = isotropic_material_property_card.h; sourceTree = "<group>"; };
 		69ECA01A19DA4354009BB5B0 /* material_property_card_base.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = material_property_card_base.h; sourceTree = "<group>"; };
@@ -217,8 +237,8 @@
 		69ECA02219DA4354009BB5B0 /* solid_2d_section_element_property_card.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = solid_2d_section_element_property_card.h; sourceTree = "<group>"; };
 		69ECA02319DA4354009BB5B0 /* element_property_card_1D.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = element_property_card_1D.h; sourceTree = "<group>"; };
 		69ECA02419DA4354009BB5B0 /* element_property_card_2D.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = element_property_card_2D.h; sourceTree = "<group>"; };
-		69ECA02519DA4354009BB5B0 /* element_property_card_3D.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = element_property_card_3D.cpp; sourceTree = "<group>"; };
-		69ECA02619DA4354009BB5B0 /* element_property_card_3D.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = element_property_card_3D.h; sourceTree = "<group>"; };
+		69ECA02519DA4354009BB5B0 /* isotropic_element_property_card_3D.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = isotropic_element_property_card_3D.cpp; sourceTree = "<group>"; };
+		69ECA02619DA4354009BB5B0 /* isotropic_element_property_card_3D.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = isotropic_element_property_card_3D.h; sourceTree = "<group>"; };
 		69ECA02719DA4354009BB5B0 /* element_property_card_base.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = element_property_card_base.h; sourceTree = "<group>"; };
 		69ECA03819DAFC6D009BB5B0 /* element_property_card_1D.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = element_property_card_1D.cpp; sourceTree = "<group>"; };
 		69ECA03A19DAFE0A009BB5B0 /* element_property_card_2D.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = element_property_card_2D.cpp; sourceTree = "<group>"; };
@@ -249,6 +269,19 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		692284061AE05A8300C9AF86 /* coordinates */ = {
+			isa = PBXGroup;
+			children = (
+				6922840F1AE067F800C9AF86 /* basis_matrix_coordinate.cpp */,
+				692284101AE067F800C9AF86 /* basis_matrix_coordinate.h */,
+				692284071AE05A8300C9AF86 /* coordinate_base.cpp */,
+				692284081AE05A8300C9AF86 /* coordinate_base.h */,
+				6922840B1AE0654D00C9AF86 /* polar_coordinate.cpp */,
+				6922840C1AE0654D00C9AF86 /* polar_coordinate.h */,
+			);
+			path = coordinates;
+			sourceTree = "<group>";
+		};
 		69C7BF9D1AA12F4E0003E3A9 /* fluid */ = {
 			isa = PBXGroup;
 			children = (
@@ -349,6 +382,7 @@
 			children = (
 				69E1274419D343C3001BADE2 /* base */,
 				69D275CA19D5CF06007F5A68 /* boundary_condition */,
+				692284061AE05A8300C9AF86 /* coordinates */,
 				69FC1B8719E595FB00BA00BB /* driver */,
 				69ECA03C19DB036C009BB5B0 /* elasticity */,
 				69C7BF9D1AA12F4E0003E3A9 /* fluid */,
@@ -404,9 +438,9 @@
 				69ECA02319DA4354009BB5B0 /* element_property_card_1D.h */,
 				69ECA03A19DAFE0A009BB5B0 /* element_property_card_2D.cpp */,
 				69ECA02419DA4354009BB5B0 /* element_property_card_2D.h */,
-				69ECA02519DA4354009BB5B0 /* element_property_card_3D.cpp */,
-				69ECA02619DA4354009BB5B0 /* element_property_card_3D.h */,
 				69ECA02719DA4354009BB5B0 /* element_property_card_base.h */,
+				69ECA02519DA4354009BB5B0 /* isotropic_element_property_card_3D.cpp */,
+				69ECA02619DA4354009BB5B0 /* isotropic_element_property_card_3D.h */,
 				69ECA01819DA4354009BB5B0 /* isotropic_material_property_card.cpp */,
 				69ECA01919DA4354009BB5B0 /* isotropic_material_property_card.h */,
 				69ECA01A19DA4354009BB5B0 /* material_property_card_base.h */,
@@ -414,6 +448,10 @@
 				69ECA01C19DA4354009BB5B0 /* multilayer_1d_section_element_property_card.h */,
 				69ECA01D19DA4354009BB5B0 /* multilayer_2d_section_element_property_card.cpp */,
 				69ECA01E19DA4354009BB5B0 /* multilayer_2d_section_element_property_card.h */,
+				69E53D181AE00C2600856C84 /* orthotropic_element_property_card_3D.cpp */,
+				69E53D191AE00C2600856C84 /* orthotropic_element_property_card_3D.h */,
+				69E53D141ADF0F6600856C84 /* orthotropic_material_property_card.cpp */,
+				69E53D151ADF0F6600856C84 /* orthotropic_material_property_card.h */,
 				69ECA01F19DA4354009BB5B0 /* solid_1d_section_element_property_card.cpp */,
 				69ECA02019DA4354009BB5B0 /* solid_1d_section_element_property_card.h */,
 				69ECA02119DA4354009BB5B0 /* solid_2d_section_element_property_card.cpp */,
@@ -473,9 +511,11 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				6922840E1AE0654D00C9AF86 /* polar_coordinate.h in Headers */,
 				694A5CA61A6B3ADE00FDE960 /* structural_system_initialization.h in Headers */,
 				69ECA03019DA4354009BB5B0 /* solid_1d_section_element_property_card.h in Headers */,
 				6946EB031A4A0107004CBB5E /* heat_conduction_transient_assembly.h in Headers */,
+				692284121AE067F800C9AF86 /* basis_matrix_coordinate.h in Headers */,
 				69ECA03219DA4354009BB5B0 /* solid_2d_section_element_property_card.h in Headers */,
 				69ECA03319DA4354009BB5B0 /* element_property_card_1D.h in Headers */,
 				69ECA03719DA4354009BB5B0 /* element_property_card_base.h in Headers */,
@@ -508,6 +548,7 @@
 				6935E6EA1A93C80F00B8C9B6 /* solid_element_3d.h in Headers */,
 				69ECA03419DA4354009BB5B0 /* element_property_card_2D.h in Headers */,
 				69E1276219D36610001BADE2 /* eigenproblem_assembly.h in Headers */,
+				6922840A1AE05A8300C9AF86 /* coordinate_base.h in Headers */,
 				69FC1B8B19E595FB00BA00BB /* driver_base.h in Headers */,
 				69FC1B9319E5C52700BA00BB /* local_3d_elem.h in Headers */,
 				69E1274619D343C3001BADE2 /* mast_data_types.h in Headers */,
@@ -515,6 +556,7 @@
 				69C7BF8B1A9E801D0003E3A9 /* structural_element_1d.h in Headers */,
 				69D275F319D609BC007F5A68 /* local_2d_elem.h in Headers */,
 				69D2759E19D5CDA4007F5A68 /* boundary_condition_base.h in Headers */,
+				69E53D171ADF0F6600856C84 /* orthotropic_material_property_card.h in Headers */,
 				6935E6EE1A93C86600B8C9B6 /* structural_element_base.h in Headers */,
 				694A5CA21A6B3A5400FDE960 /* structural_discipline.h in Headers */,
 				6965F9421AB2428300AF1685 /* structural_nonlinear_assembly.h in Headers */,
@@ -526,7 +568,8 @@
 				69ECA02C19DA4354009BB5B0 /* multilayer_1d_section_element_property_card.h in Headers */,
 				69D2759819D4B98F007F5A68 /* function_base.h in Headers */,
 				69D2758F19D48B1B007F5A68 /* transient_solver_base.h in Headers */,
-				69ECA03619DA4354009BB5B0 /* element_property_card_3D.h in Headers */,
+				69E53D1B1AE00C2600856C84 /* orthotropic_element_property_card_3D.h in Headers */,
+				69ECA03619DA4354009BB5B0 /* isotropic_element_property_card_3D.h in Headers */,
 				69E1274E19D34591001BADE2 /* assembly_base.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -587,6 +630,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				69E53D1A1AE00C2600856C84 /* orthotropic_element_property_card_3D.cpp in Sources */,
 				6921396F19E4771800CDFB4F /* heat_conduction_discipline.cpp in Sources */,
 				69ECA03919DAFC6D009BB5B0 /* element_property_card_1D.cpp in Sources */,
 				69ECA03F19DB036C009BB5B0 /* bending_operator.cpp in Sources */,
@@ -594,13 +638,14 @@
 				69D275D019D5D0A0007F5A68 /* dirichlet_boundary_condition.cpp in Sources */,
 				69C7BF961A9FBF430003E3A9 /* structural_element_2d.cpp in Sources */,
 				69C7BF8A1A9E801D0003E3A9 /* structural_element_1d.cpp in Sources */,
-				69ECA03519DA4354009BB5B0 /* element_property_card_3D.cpp in Sources */,
+				69ECA03519DA4354009BB5B0 /* isotropic_element_property_card_3D.cpp in Sources */,
 				6965F9451AB2429400AF1685 /* structural_modal_eigenproblem_assembly.cpp in Sources */,
 				69D275EA19D60170007F5A68 /* local_1d_elem.cpp in Sources */,
 				6946EB021A4A0107004CBB5E /* heat_conduction_transient_assembly.cpp in Sources */,
 				6965F93D1AB2423400AF1685 /* structural_transient_assembly.cpp in Sources */,
 				69C7BFA01AA12F8C0003E3A9 /* fluid_base.cpp in Sources */,
 				69ECA02B19DA4354009BB5B0 /* multilayer_1d_section_element_property_card.cpp in Sources */,
+				692284111AE067F800C9AF86 /* basis_matrix_coordinate.cpp in Sources */,
 				6935E6ED1A93C86600B8C9B6 /* structural_element_base.cpp in Sources */,
 				69E1275D19D365C7001BADE2 /* transient_assembly.cpp in Sources */,
 				69D2759C19D5B94A007F5A68 /* function_set_base.cpp in Sources */,
@@ -624,8 +669,11 @@
 				69E1275919D36575001BADE2 /* nonlinear_implicit_assembly.cpp in Sources */,
 				6921397D19E4834900CDFB4F /* heat_conduction_system_initialization.cpp in Sources */,
 				69D2759719D4B98F007F5A68 /* function_base.cpp in Sources */,
+				692284091AE05A8300C9AF86 /* coordinate_base.cpp in Sources */,
 				69E1274919D3457F001BADE2 /* elem_base.cpp in Sources */,
 				69C7BFA41AA66E7C0003E3A9 /* second_order_newmark_transient_solver.cpp in Sources */,
+				6922840D1AE0654D00C9AF86 /* polar_coordinate.cpp in Sources */,
+				69E53D161ADF0F6600856C84 /* orthotropic_material_property_card.cpp in Sources */,
 				69E1274D19D34591001BADE2 /* assembly_base.cpp in Sources */,
 				69C7BF8E1A9E818A0003E3A9 /* bending_structural_element.cpp in Sources */,
 				694A5CA11A6B3A5400FDE960 /* structural_discipline.cpp in Sources */,
