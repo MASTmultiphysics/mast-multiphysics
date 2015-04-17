@@ -33,6 +33,9 @@ namespace MAST {
                                                  RealMatrixX& mat);
         
 
+        void stress_strain_transformation_matrix_sens(const RealMatrixX& T,
+                                                      const RealMatrixX& dT,
+                                                      RealMatrixX& mat);
     protected:
         
     };

@@ -16,7 +16,7 @@ namespace MAST {
      *    to one in the global basis
      */
     class BasisMatrixCoordinate:
-    public MAST::FieldFunction<RealMatrixX> {
+    public MAST::CoordinateBase {
         
     public:
         BasisMatrixCoordinate(const std::string& nm,

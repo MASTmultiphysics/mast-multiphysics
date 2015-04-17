@@ -27,6 +27,9 @@
 
 namespace MAST
 {
+    // Forward declerations
+    class CoordinateBase;
+    
     
     class OrthotropicElementPropertyCard3D:
     public MAST::ElementPropertyCardBase {
@@ -82,7 +85,7 @@ namespace MAST
         /*!
          *   sets the orientation coordinate system for this section.
          */
-        virtual void set_orientation(MAST::FieldFunction<RealMatrixX>& orient); 
+        virtual void set_orientation(const MAST::CoordinateBase& orient);
         
         
         /*!
@@ -157,7 +160,7 @@ namespace MAST
         /*!
          *    coordinate system to define orientation
          */
-        MAST::FieldFunction<RealMatrixX> *_orient;
+        MAST::CoordinateBase *_orient;
     };
 }
 

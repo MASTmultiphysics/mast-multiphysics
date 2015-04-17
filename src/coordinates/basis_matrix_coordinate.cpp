@@ -5,7 +5,7 @@
 
 MAST::BasisMatrixCoordinate::BasisMatrixCoordinate(const std::string& nm,
                                                    MAST::FieldFunction<RealMatrixX>* basis):
-MAST::FieldFunction<RealMatrixX>(nm),
+MAST::CoordinateBase(nm),
 _basis(basis) {
     
     _functions.insert(basis->master());
@@ -23,7 +23,7 @@ MAST::BasisMatrixCoordinate::~BasisMatrixCoordinate() {
 
 
 MAST::BasisMatrixCoordinate::BasisMatrixCoordinate(const MAST::BasisMatrixCoordinate& c):
-MAST::FieldFunction<RealMatrixX>(c),
+MAST::CoordinateBase(c),
 _basis(c._basis->clone().release()) {
     
     _functions.insert(_basis->master());
