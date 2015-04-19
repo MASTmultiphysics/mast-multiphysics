@@ -258,36 +258,36 @@ namespace MAST {
                                    MAST::FieldFunction<Real>* alpha33 = NULL):
             MAST::FieldFunction<RealMatrixX>("ThermalExpansionMatrix"),
             _dim(dim),
-            _alpha11(alpha11),
-            _alpha22(alpha22),
-            _alpha33(alpha33) {
-                switch (dim) {
+            _alpha(dim) {
+
+                switch (dim-1) {
                     case 2:
-                        libmesh_assert_msg(alpha33, "alpha33 cannot be zero for 3D matrix");
-                        _functions.insert(_alpha33->master());
+                        libmesh_assert_msg(alpha33, "alpha33 cannot be NULL for 3D matrix");
+                        _alpha[2] = alpha33;
                     case 1:
-                        libmesh_assert_msg(alpha22, "alpha22 cannot be zero for 2D/3D matrix");
-                        _functions.insert(_alpha22->master());
+                        libmesh_assert_msg(alpha22, "alpha22 cannot be NULL for 2D/3D matrix");
+                        _alpha[1] = alpha22;
                     case 0:
-                        libmesh_assert_msg(alpha11, "alpha11 cannot be zero for 1D/2D/3D matrix");
-                        _functions.insert(_alpha11->master());
+                        libmesh_assert_msg(alpha11, "alpha11 cannot be NULL for 1D/2D/3D matrix");
+                        _alpha[0] = alpha11;
                         break;
-                        
                     default:
                         libmesh_error();
-                        break;
                 }
+                
+                for (unsigned int i=0; i<dim; i++)
+                    _functions.insert(_alpha[i]->master());
             }
             
             ThermalExpansionMatrix(const MAST::OrthotropicMaterialProperty::ThermalExpansionMatrix& f):
             MAST::FieldFunction<RealMatrixX>(f),
             _dim(f._dim),
-            _alpha11(f._alpha11->clone().release()),
-            _alpha22(f._alpha22->clone().release()),
-            _alpha33(f._alpha33->clone().release()) {
-                _functions.insert(_alpha11->master());
-                _functions.insert(_alpha22->master());
-                _functions.insert(_alpha33->master());
+            _alpha(f._dim) {
+                
+                for (unsigned int i=0; i<f._dim; i++) {
+                    _alpha[i] = f._alpha[i]->clone().release();
+                    _functions.insert(_alpha[i]->master());
+                }
             }
             
             /*!
@@ -299,9 +299,9 @@ namespace MAST {
             }
             
             virtual ~ThermalExpansionMatrix() {
-                delete _alpha11;
-                delete _alpha22;
-                delete _alpha33;
+                
+                for (unsigned int i=0; i<_dim; i++)
+                    delete _alpha[i];
             }
             
             virtual void operator() (const libMesh::Point& p,
@@ -318,7 +318,7 @@ namespace MAST {
             
             const unsigned int _dim;
             
-            MAST::FieldFunction<Real> *_alpha11, *_alpha22, *_alpha33;
+            std::vector<MAST::FieldFunction<Real>*> _alpha;
         };
         
         
@@ -336,7 +336,7 @@ namespace MAST {
             _dim(dim),
             _k(dim) {
 
-                switch (dim) {
+                switch (dim-1) {
                     case 2:
                         libmesh_assert_msg(k33, "k33 cannot be NULL for 3D matrix");
                         _k[2] = k33;
@@ -353,7 +353,6 @@ namespace MAST {
 
                 for (unsigned int i=0; i<dim; i++)
                     _functions.insert(_k[i]->master());
-
             }
             
             ThermalConductanceMatrix(const MAST::OrthotropicMaterialProperty::ThermalConductanceMatrix& f):
@@ -852,31 +851,26 @@ operator() (const libMesh::Point& p,
             const Real t,
             RealMatrixX& m) const {
     
-    Real alpha11, alpha22, alpha33;
-    (*_alpha11)(p, t, alpha11);
+
+    Real alpha;
     switch (_dim) {
         case 1:
-            m = RealMatrixX::Zero(2,1);
-            m(0,0) = alpha11;
+            m.setZero(2, 1);
             break;
             
         case 2:
-            m = RealMatrixX::Zero(3,1);
-            (*_alpha22)(p, t, alpha22);
-            m(0,0) = alpha11;
-            m(1,0) = alpha22;
+            m.setZero(3, 1);
             break;
             
         case 3:
-            m = RealMatrixX::Zero(6,1);
-            (*_alpha22)(p, t, alpha22);
-            (*_alpha33)(p, t, alpha33);
-            m(0,0) = alpha11;
-            m(1,0) = alpha22;
-            m(2,0) = alpha33;
+            m.setZero(6, 1);
             break;
     }
     
+    for (unsigned int i=0; i<_dim; i++) {
+        (*_alpha[i])  (p, t, alpha);
+        m(i,0) = alpha;
+    }
 }
 
 
@@ -892,32 +886,26 @@ derivative (const MAST::DerivativeType d,
             RealMatrixX& m) const {
     
     
-    Real alpha11, alpha22, alpha33;
-    _alpha11->derivative(d, f, p, t, alpha11);
+    
+    Real alpha;
     switch (_dim) {
         case 1:
-            m = RealMatrixX::Zero(2,1);
-            m(0,0) = alpha11;
+            m.setZero(2, 1);
             break;
             
         case 2:
-            m = RealMatrixX::Zero(3,1);
-            _alpha22->derivative(d, f, p, t, alpha22);
-            m(0,0) = alpha11;
-            m(1,0) = alpha22;
+            m.setZero(3, 1);
             break;
             
         case 3:
-            m = RealMatrixX::Zero(6,1);
-            _alpha22->derivative(d, f, p, t, alpha22);
-            _alpha33->derivative(d, f, p, t, alpha33);
-            m(0,0) = alpha11;
-            m(1,0) = alpha22;
-            m(2,0) = alpha33;
+            m.setZero(6, 1);
             break;
     }
     
-    
+    for (unsigned int i=0; i<_dim; i++) {
+        _alpha[i]->derivative(d, f, p, t, alpha);
+        m(i,0) = alpha;
+    }
 }
 
 
@@ -1079,11 +1067,35 @@ MAST::OrthotropicMaterialPropertyCard::inertia_matrix(const unsigned int dim) {
 
 std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::OrthotropicMaterialPropertyCard::thermal_expansion_matrix(const unsigned int dim) {
+
+    MAST::FieldFunction<RealMatrixX> *rval = NULL;
     
-    MAST::FieldFunction<RealMatrixX> *rval =
-    new MAST::OrthotropicMaterialProperty::ThermalExpansionMatrix
-    (dim,
-     this->get<MAST::FieldFunction<Real> >("alpha").clone().release());
+    switch (dim) {
+        case 1:
+            rval = new MAST::OrthotropicMaterialProperty::ThermalExpansionMatrix
+            (dim,
+             this->get<MAST::FieldFunction<Real> >("alpha11_expansion").clone().release());
+            break;
+            
+        case 2:
+            rval = new MAST::OrthotropicMaterialProperty::ThermalExpansionMatrix
+            (dim,
+             this->get<MAST::FieldFunction<Real> >("alpha11_expansion").clone().release(),
+             this->get<MAST::FieldFunction<Real> >("alpha22_expansion").clone().release());
+            break;
+            
+        case 3:
+            rval = new MAST::OrthotropicMaterialProperty::ThermalExpansionMatrix
+            (dim,
+             this->get<MAST::FieldFunction<Real> >("alpha11_expansion").clone().release(),
+             this->get<MAST::FieldFunction<Real> >("alpha22_expansion").clone().release(),
+             this->get<MAST::FieldFunction<Real> >("alpha33_expansion").clone().release());
+            break;
+            
+        default:
+            libmesh_error();
+            break;
+    }
     
     return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >(rval);
 }
@@ -1127,20 +1139,20 @@ MAST::OrthotropicMaterialPropertyCard::conductance_matrix(const unsigned int dim
     MAST::FieldFunction<RealMatrixX> *rval = NULL;
     
     switch (dim) {
-        case 0:
+        case 1:
             rval = new MAST::OrthotropicMaterialProperty::ThermalConductanceMatrix
             (dim,
              this->get<MAST::FieldFunction<Real> >("k11_th").clone().release());
             break;
 
-        case 1:
+        case 2:
             rval = new MAST::OrthotropicMaterialProperty::ThermalConductanceMatrix
             (dim,
              this->get<MAST::FieldFunction<Real> >("k11_th").clone().release(),
              this->get<MAST::FieldFunction<Real> >("k22_th").clone().release());
             break;
 
-        case 2:
+        case 3:
             rval = new MAST::OrthotropicMaterialProperty::ThermalConductanceMatrix
             (dim,
              this->get<MAST::FieldFunction<Real> >("k11_th").clone().release(),
@@ -1152,8 +1164,6 @@ MAST::OrthotropicMaterialPropertyCard::conductance_matrix(const unsigned int dim
             libmesh_error();
             break;
     }
-    
-    
     
     return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >(rval);
 }

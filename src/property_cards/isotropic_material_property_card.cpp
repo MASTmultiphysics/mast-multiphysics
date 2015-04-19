@@ -869,7 +869,7 @@ MAST::IsotropicMaterialPropertyCard::thermal_expansion_matrix(const unsigned int
     MAST::FieldFunction<RealMatrixX> *rval =
     new MAST::IsotropicMaterialProperty::ThermalExpansionMatrix
     (dim,
-     this->get<MAST::FieldFunction<Real> >("alpha").clone().release());
+     this->get<MAST::FieldFunction<Real> >("alpha_expansion").clone().release());
     
     return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >(rval);
 }
