@@ -12,6 +12,11 @@
 namespace MAST {
     
     
+    /*!
+     *   Assembles the system of equations for an eigenproblem of type
+     *   \f$ {\bf A} {\bf x} = \lambda {\bf B} {\bf x} \f$. If the
+     */
+    
     class EigenproblemAssembly:
     public MAST::AssemblyBase,
     public libMesh::System::Assembly,
@@ -106,6 +111,15 @@ namespace MAST {
         const libMesh::NumericVector<Real>&
         base_sol(bool if_sens = false) const;
         
+        
+        /*!
+         *   sets the flag for exchanging the A and B matrices for solution of
+         *   eigenvalue problem.
+         */
+        void set_exchange_A_and_B_matrices(bool val) {
+            _if_exchange_A_and_B_matrices = val;
+        }
+
         
         /*!
          *   @returns true if the object was requested to exchange the

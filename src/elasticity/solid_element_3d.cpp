@@ -9,6 +9,94 @@
 
 
 bool
+MAST::StructuralElement3D::inertial_residual (bool request_jacobian,
+                                              RealVectorX& f,
+                                              RealMatrixX& jac_xddot,
+                                              RealMatrixX& jac_xdot,
+                                              RealMatrixX& jac) {
+    
+    const std::vector<Real>& JxW               = _fe->get_JxW();
+    const std::vector<libMesh::Point>& xyz     = _fe->get_xyz();
+    const std::vector<std::vector<Real> >& phi = _fe->get_phi();
+    
+    const unsigned int
+    n_phi    = (unsigned int)phi.size(),
+    n_vars   = _system.system().n_vars(),
+    n1       =3,
+    n2       =3*n_phi;
+    
+    RealMatrixX
+    material_mat,
+    mat1_n1n2     = RealMatrixX::Zero(n1, n2),
+    mat2_n2n2     = RealMatrixX::Zero(n2, n2);
+    RealVectorX
+    phi_vec    = RealVectorX::Zero(n_phi),
+    vec1_n1    = RealVectorX::Zero(n1),
+    vec2_n2    = RealVectorX::Zero(n2);
+    
+    std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+    mat_inertia  = _property.inertia_matrix(*this);
+    
+    libMesh::Point p;
+    MAST::FEMOperatorMatrix Bmat;
+    
+    if (_property.if_diagonal_mass_matrix()) {
+        
+        // as an approximation, get matrix at the first quadrature point
+        _local_elem->global_coordinates_location(xyz[0], p);
+        
+        (*mat_inertia)(p, _time, material_mat);
+        
+        Real vol = 0.;
+        const unsigned int nshp = _fe->n_shape_functions();
+        for (unsigned int i=0; i<JxW.size(); i++)
+            vol += JxW[i];
+        vol /= (1.* nshp);
+        for (unsigned int i_var=0; i_var<3; i_var++)
+            for (unsigned int i=0; i<nshp; i++)
+                jac_xddot(i_var*nshp+i, i_var*nshp+i) =
+                vol*material_mat(i_var, i_var);
+        
+        f.topRows(n2) =  jac_xddot.topLeftCorner(n2, n2) * _local_accel.topRows(n2);
+    }
+    else {
+        libMesh::Point p;
+        
+        for (unsigned int qp=0; qp<JxW.size(); qp++) {
+            
+            _local_elem->global_coordinates_location(xyz[0], p);
+            
+            (*mat_inertia)(p, _time, material_mat);
+            
+            // now set the shape function values
+            for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
+                phi_vec(i_nd) = phi[i_nd][qp];
+            
+            Bmat.reinit(3, phi_vec);
+            
+            Bmat.left_multiply(mat1_n1n2, material_mat);
+            
+            vec1_n1 = mat1_n1n2 * _local_accel;
+            Bmat.vector_mult_transpose(vec2_n2, vec1_n1);
+            
+            f.topRows(n2) += JxW[qp] * vec2_n2;
+            
+            if (request_jacobian) {
+                
+                Bmat.right_multiply_transpose(mat2_n2n2,
+                                              mat1_n1n2);
+                jac_xddot.topLeftCorner(n2, n2) += JxW[qp]*mat2_n2n2;
+            }
+        }
+    }
+    
+    return request_jacobian;
+}
+
+
+
+
+bool
 MAST::StructuralElement3D::internal_residual(bool request_jacobian,
                                              RealVectorX& f,
                                              RealMatrixX& jac,
@@ -124,15 +212,15 @@ MAST::StructuralElement3D::internal_residual(bool request_jacobian,
     }
     
     
-//    // incompatible mode corrections
-//    K_alphaalpha = K_alphaalpha.inverse();
-//    K_corr = K_ualpha * K_alphaalpha * K_ualpha.transpose();
+    // incompatible mode corrections
+    K_alphaalpha = K_alphaalpha.inverse();
+    K_corr = K_ualpha * K_alphaalpha * K_ualpha.transpose();
     
-//    if (request_jacobian)
-//        jac.topLeftCorner(n2, n2) -= K_corr;
+    if (request_jacobian)
+        jac.topLeftCorner(n2, n2) -= K_corr;
 
-//    // alpha values for use in the stress evaluation
-//    alpha = -K_alphaalpha * (K_ualpha.transpose() * local_disp);
+    // alpha values for use in the stress evaluation
+    alpha = -K_alphaalpha * (K_ualpha.transpose() * local_disp);
 
     
     
@@ -163,29 +251,29 @@ MAST::StructuralElement3D::internal_residual(bool request_jacobian,
         
         // calculate contribution to the residual from the
         // enhanced modes
-//        f.topRows(n2) -= JxW[qp] * K_ualpha * (K_alphaalpha *
-//                                               (Gmat.transpose() * stress));
+        f.topRows(n2) -= JxW[qp] * K_ualpha * (K_alphaalpha *
+                                               (Gmat.transpose() * stress));
         
         // calculate contribution to the residual
         // linear strain operator
         Bmat_lin.vector_mult_transpose(vec2_n2, stress);
         f.topRows(n2) += JxW[qp] * vec2_n2;
         
-        // nonlinear strain operator
-        // x
-        vec3_3 = mat_x.transpose() * stress;
-        Bmat_nl_x.vector_mult_transpose(vec2_n2, vec3_3);
-        f.topRows(n2) += JxW[qp] * vec2_n2;
-
-        // y
-        vec3_3 = mat_y.transpose() * stress;
-        Bmat_nl_y.vector_mult_transpose(vec2_n2, vec3_3);
-        f.topRows(n2) += JxW[qp] * vec2_n2;
-
-        // z
-        vec3_3 = mat_z.transpose() * stress;
-        Bmat_nl_z.vector_mult_transpose(vec2_n2, vec3_3);
-        f.topRows(n2) += JxW[qp] * vec2_n2;
+//        // nonlinear strain operator
+//        // x
+//        vec3_3 = mat_x.transpose() * stress;
+//        Bmat_nl_x.vector_mult_transpose(vec2_n2, vec3_3);
+//        f.topRows(n2) += JxW[qp] * vec2_n2;
+//
+//        // y
+//        vec3_3 = mat_y.transpose() * stress;
+//        Bmat_nl_y.vector_mult_transpose(vec2_n2, vec3_3);
+//        f.topRows(n2) += JxW[qp] * vec2_n2;
+//
+//        // z
+//        vec3_3 = mat_z.transpose() * stress;
+//        Bmat_nl_z.vector_mult_transpose(vec2_n2, vec3_3);
+//        f.topRows(n2) += JxW[qp] * vec2_n2;
 
         
         if (request_jacobian) {
@@ -201,86 +289,86 @@ MAST::StructuralElement3D::internal_residual(bool request_jacobian,
             Bmat_lin.right_multiply_transpose(mat2_n2n2, mat1_n1n2);
             jac.topLeftCorner(n2, n2) += JxW[qp] * mat2_n2n2;
             
-            // B_x^T mat_x^T C B_lin
-            mat3_3n2 = mat_x.transpose() * mat1_n1n2;
-            Bmat_nl_x.right_multiply_transpose(mat2_n2n2, mat3_3n2);
-            jac.topLeftCorner(n2, n2) += JxW[qp] * mat2_n2n2;
-            
-            // B_y^T mat_y^T C B_lin
-            mat3_3n2 = mat_y.transpose() * mat1_n1n2;
-            Bmat_nl_y.right_multiply_transpose(mat2_n2n2, mat3_3n2);
-            jac.topLeftCorner(n2, n2) += JxW[qp] * mat2_n2n2;
-
-            // B_z^T mat_z^T C B_lin
-            mat3_3n2 = mat_z.transpose() * mat1_n1n2;
-            Bmat_nl_z.right_multiply_transpose(mat2_n2n2, mat3_3n2);
-            jac.topLeftCorner(n2, n2) += JxW[qp] * mat2_n2n2;
-
-            
-            ///////////////////////////////////////////////////////
-            for (unsigned int i_dim=0; i_dim<3; i_dim++) {
-                switch (i_dim) {
-                    case 0:
-                        Bmat_nl_x.left_multiply(mat1_n1n2, mat_x);
-                        break;
-                        
-                    case 1:
-                        Bmat_nl_y.left_multiply(mat1_n1n2, mat_y);
-                        break;
-                        
-                    case 2:
-                        Bmat_nl_z.left_multiply(mat1_n1n2, mat_z);
-                        break;
-                }
-                
-                // B_lin^T C mat_x_i B_x_i
-                mat1_n1n2 =  material_mat * mat1_n1n2;
-                Bmat_lin.right_multiply_transpose(mat2_n2n2, mat1_n1n2);
-                jac.topLeftCorner(n2, n2) += JxW[qp] * mat2_n2n2;
-                
-                // B_x^T mat_x^T C mat_x B_x
-                mat3_3n2 = mat_x.transpose() * mat1_n1n2;
-                Bmat_nl_x.right_multiply_transpose(mat2_n2n2, mat3_3n2);
-                jac.topLeftCorner(n2, n2) += JxW[qp] * mat2_n2n2;
-                
-                // B_y^T mat_y^T C mat_x B_x
-                mat3_3n2 = mat_y.transpose() * mat1_n1n2;
-                Bmat_nl_y.right_multiply_transpose(mat2_n2n2, mat3_3n2);
-                jac.topLeftCorner(n2, n2) += JxW[qp] * mat2_n2n2;
-                
-                // B_z^T mat_z^T C mat_x B_x
-                mat3_3n2 = mat_z.transpose() * mat1_n1n2;
-                Bmat_nl_z.right_multiply_transpose(mat2_n2n2, mat3_3n2);
-                jac.topLeftCorner(n2, n2) += JxW[qp] * mat2_n2n2;
-            }
-            
-            // use the stress to calculate the final contribution
-            // to the Jacobian stiffness matrix
-            mat4_33(0,0) = stress(0);
-            mat4_33(1,1) = stress(1);
-            mat4_33(2,2) = stress(2);
-            mat4_33(0,1) = mat4_33(1,0) = stress(3);
-            mat4_33(1,2) = mat4_33(2,1) = stress(4);
-            mat4_33(0,2) = mat4_33(2,0) = stress(5);
-
-            // u-disp
-            Bmat_nl_u.left_multiply(mat3_3n2, mat4_33);
-            Bmat_nl_u.right_multiply_transpose(mat2_n2n2, mat3_3n2);
-            jac.topLeftCorner(n2, n2) += JxW[qp] * mat2_n2n2;
-            
-            // v-disp
-            Bmat_nl_v.left_multiply(mat3_3n2, mat4_33);
-            Bmat_nl_v.right_multiply_transpose(mat2_n2n2, mat3_3n2);
-            jac.topLeftCorner(n2, n2) += JxW[qp] * mat2_n2n2;
-
-            // w-disp
-            Bmat_nl_w.left_multiply(mat3_3n2, mat4_33);
-            Bmat_nl_w.right_multiply_transpose(mat2_n2n2, mat3_3n2);
-            jac.topLeftCorner(n2, n2) += JxW[qp] * mat2_n2n2;
+//            // B_x^T mat_x^T C B_lin
+//            mat3_3n2 = mat_x.transpose() * mat1_n1n2;
+//            Bmat_nl_x.right_multiply_transpose(mat2_n2n2, mat3_3n2);
+//            jac.topLeftCorner(n2, n2) += JxW[qp] * mat2_n2n2;
+//            
+//            // B_y^T mat_y^T C B_lin
+//            mat3_3n2 = mat_y.transpose() * mat1_n1n2;
+//            Bmat_nl_y.right_multiply_transpose(mat2_n2n2, mat3_3n2);
+//            jac.topLeftCorner(n2, n2) += JxW[qp] * mat2_n2n2;
+//
+//            // B_z^T mat_z^T C B_lin
+//            mat3_3n2 = mat_z.transpose() * mat1_n1n2;
+//            Bmat_nl_z.right_multiply_transpose(mat2_n2n2, mat3_3n2);
+//            jac.topLeftCorner(n2, n2) += JxW[qp] * mat2_n2n2;
+//
+//            
+//            ///////////////////////////////////////////////////////
+//            for (unsigned int i_dim=0; i_dim<3; i_dim++) {
+//                switch (i_dim) {
+//                    case 0:
+//                        Bmat_nl_x.left_multiply(mat1_n1n2, mat_x);
+//                        break;
+//                        
+//                    case 1:
+//                        Bmat_nl_y.left_multiply(mat1_n1n2, mat_y);
+//                        break;
+//                        
+//                    case 2:
+//                        Bmat_nl_z.left_multiply(mat1_n1n2, mat_z);
+//                        break;
+//                }
+//                
+//                // B_lin^T C mat_x_i B_x_i
+//                mat1_n1n2 =  material_mat * mat1_n1n2;
+//                Bmat_lin.right_multiply_transpose(mat2_n2n2, mat1_n1n2);
+//                jac.topLeftCorner(n2, n2) += JxW[qp] * mat2_n2n2;
+//                
+//                // B_x^T mat_x^T C mat_x B_x
+//                mat3_3n2 = mat_x.transpose() * mat1_n1n2;
+//                Bmat_nl_x.right_multiply_transpose(mat2_n2n2, mat3_3n2);
+//                jac.topLeftCorner(n2, n2) += JxW[qp] * mat2_n2n2;
+//                
+//                // B_y^T mat_y^T C mat_x B_x
+//                mat3_3n2 = mat_y.transpose() * mat1_n1n2;
+//                Bmat_nl_y.right_multiply_transpose(mat2_n2n2, mat3_3n2);
+//                jac.topLeftCorner(n2, n2) += JxW[qp] * mat2_n2n2;
+//                
+//                // B_z^T mat_z^T C mat_x B_x
+//                mat3_3n2 = mat_z.transpose() * mat1_n1n2;
+//                Bmat_nl_z.right_multiply_transpose(mat2_n2n2, mat3_3n2);
+//                jac.topLeftCorner(n2, n2) += JxW[qp] * mat2_n2n2;
+//            }
+//            
+//            // use the stress to calculate the final contribution
+//            // to the Jacobian stiffness matrix
+//            mat4_33(0,0) = stress(0);
+//            mat4_33(1,1) = stress(1);
+//            mat4_33(2,2) = stress(2);
+//            mat4_33(0,1) = mat4_33(1,0) = stress(3);
+//            mat4_33(1,2) = mat4_33(2,1) = stress(4);
+//            mat4_33(0,2) = mat4_33(2,0) = stress(5);
+//
+//            // u-disp
+//            Bmat_nl_u.left_multiply(mat3_3n2, mat4_33);
+//            Bmat_nl_u.right_multiply_transpose(mat2_n2n2, mat3_3n2);
+//            jac.topLeftCorner(n2, n2) += JxW[qp] * mat2_n2n2;
+//            
+//            // v-disp
+//            Bmat_nl_v.left_multiply(mat3_3n2, mat4_33);
+//            Bmat_nl_v.right_multiply_transpose(mat2_n2n2, mat3_3n2);
+//            jac.topLeftCorner(n2, n2) += JxW[qp] * mat2_n2n2;
+//
+//            // w-disp
+//            Bmat_nl_w.left_multiply(mat3_3n2, mat4_33);
+//            Bmat_nl_w.right_multiply_transpose(mat2_n2n2, mat3_3n2);
+//            jac.topLeftCorner(n2, n2) += JxW[qp] * mat2_n2n2;
         }
     }
     
-//    // place small values at diagonal of the rotational terms
+    //    // place small values at diagonal of the rotational terms
 //    if (request_jacobian) {
 //        for (unsigned int i=n2/2; i<n2; i++)
 //            jac(i,i) += 1.0e-12;
@@ -412,51 +500,51 @@ MAST::StructuralElement3D::thermal_residual(bool request_jacobian,
         Bmat_lin.vector_mult_transpose(vec3_n2, vec1_n1);
         f.topRows(n2) -= JxW[qp] * vec3_n2;
         
-        // nonlinear strain operotor
-        // x
-        vec2_3 = mat_x.transpose() * vec1_n1;
-        Bmat_nl_x.vector_mult_transpose(vec3_n2, vec2_3);
-        f.topRows(n2) -= JxW[qp] * vec3_n2;
-
-        // y
-        vec2_3 = mat_y.transpose() * vec1_n1;
-        Bmat_nl_y.vector_mult_transpose(vec3_n2, vec2_3);
-        f.topRows(n2) -= JxW[qp] * vec3_n2;
-
-        // z
-        vec2_3 = mat_z.transpose() * vec1_n1;
-        Bmat_nl_z.vector_mult_transpose(vec3_n2, vec2_3);
-        f.topRows(n2) -= JxW[qp] * vec3_n2;
+//        // nonlinear strain operotor
+//        // x
+//        vec2_3 = mat_x.transpose() * vec1_n1;
+//        Bmat_nl_x.vector_mult_transpose(vec3_n2, vec2_3);
+//        f.topRows(n2) -= JxW[qp] * vec3_n2;
+//
+//        // y
+//        vec2_3 = mat_y.transpose() * vec1_n1;
+//        Bmat_nl_y.vector_mult_transpose(vec3_n2, vec2_3);
+//        f.topRows(n2) -= JxW[qp] * vec3_n2;
+//
+//        // z
+//        vec2_3 = mat_z.transpose() * vec1_n1;
+//        Bmat_nl_z.vector_mult_transpose(vec3_n2, vec2_3);
+//        f.topRows(n2) -= JxW[qp] * vec3_n2;
         
         // Jacobian for the nonlinear case
-        if (request_jacobian) {
-
-            // use the stress to calculate the final contribution
-            // to the Jacobian stiffness matrix
-            mat4_33(0,0) = vec1_n1(0);
-            mat4_33(1,1) = vec1_n1(1);
-            mat4_33(2,2) = vec1_n1(2);
-            mat4_33(0,1) = mat4_33(1,0) = vec1_n1(3);
-            mat4_33(1,2) = mat4_33(2,1) = vec1_n1(4);
-            mat4_33(0,2) = mat4_33(2,0) = vec1_n1(5);
-            
-            // u-disp
-            Bmat_nl_u.left_multiply(mat3_3n2, mat4_33);
-            Bmat_nl_u.right_multiply_transpose(mat2_n2n2, mat3_3n2);
-            jac.topLeftCorner(n2, n2) -= JxW[qp] * mat2_n2n2;
-            
-            // v-disp
-            Bmat_nl_v.left_multiply(mat3_3n2, mat4_33);
-            Bmat_nl_v.right_multiply_transpose(mat2_n2n2, mat3_3n2);
-            jac.topLeftCorner(n2, n2) -= JxW[qp] * mat2_n2n2;
-            
-            // w-disp
-            Bmat_nl_w.left_multiply(mat3_3n2, mat4_33);
-            Bmat_nl_w.right_multiply_transpose(mat2_n2n2, mat3_3n2);
-            jac.topLeftCorner(n2, n2) -= JxW[qp] * mat2_n2n2;
-        }
+//        if (request_jacobian) {
+//
+//            // use the stress to calculate the final contribution
+//            // to the Jacobian stiffness matrix
+//            mat4_33(0,0) = vec1_n1(0);
+//            mat4_33(1,1) = vec1_n1(1);
+//            mat4_33(2,2) = vec1_n1(2);
+//            mat4_33(0,1) = mat4_33(1,0) = vec1_n1(3);
+//            mat4_33(1,2) = mat4_33(2,1) = vec1_n1(4);
+//            mat4_33(0,2) = mat4_33(2,0) = vec1_n1(5);
+//            
+//            // u-disp
+//            Bmat_nl_u.left_multiply(mat3_3n2, mat4_33);
+//            Bmat_nl_u.right_multiply_transpose(mat2_n2n2, mat3_3n2);
+//            jac.topLeftCorner(n2, n2) -= JxW[qp] * mat2_n2n2;
+//            
+//            // v-disp
+//            Bmat_nl_v.left_multiply(mat3_3n2, mat4_33);
+//            Bmat_nl_v.right_multiply_transpose(mat2_n2n2, mat3_3n2);
+//            jac.topLeftCorner(n2, n2) -= JxW[qp] * mat2_n2n2;
+//            
+//            // w-disp
+//            Bmat_nl_w.left_multiply(mat3_3n2, mat4_33);
+//            Bmat_nl_w.right_multiply_transpose(mat2_n2n2, mat3_3n2);
+//            jac.topLeftCorner(n2, n2) -= JxW[qp] * mat2_n2n2;
+//        }
     }
-    
+
     // Jacobian contribution from von Karman strain
     return request_jacobian;
 }

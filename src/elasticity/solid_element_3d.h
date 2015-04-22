@@ -33,6 +33,18 @@ namespace MAST {
             _init_incompatible_fe_mapping(elem);
         }
         
+        
+        
+        /*!
+         *   Calculates the inertial force and the Jacobian matrices
+         */
+        virtual bool inertial_residual (bool request_jacobian,
+                                        RealVectorX& f,
+                                        RealMatrixX& jac_xddot,
+                                        RealMatrixX& jac_xdot,
+                                        RealMatrixX& jac);
+        
+        
         /*!
          *    Calculates the internal residual vector and Jacobian due to
          *    strain energy

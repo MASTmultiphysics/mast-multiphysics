@@ -213,6 +213,46 @@ namespace MAST {
         
         
         
+        class InertiaMatrix3D: public MAST::FieldFunction<RealMatrixX> {
+        public:
+            InertiaMatrix3D(MAST::FieldFunction<Real>* rho);
+            
+            InertiaMatrix3D(const MAST::IsotropicMaterialProperty::InertiaMatrix3D &f):
+            MAST::FieldFunction<RealMatrixX>(f),
+            _rho(f._rho->clone().release()) {
+                _functions.insert(_rho->master());
+            }
+            
+            /*!
+             *   @returns a clone of the function
+             */
+            virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> > clone() const {
+                return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+                (new MAST::IsotropicMaterialProperty::InertiaMatrix3D(*this));
+            }
+            
+            virtual ~InertiaMatrix3D() {
+                delete _rho;
+            }
+            
+            virtual void operator() (const libMesh::Point& p,
+                                     const Real t,
+                                     RealMatrixX& m) const;
+            
+            virtual void derivative(const MAST::DerivativeType d,
+                                    const MAST::FunctionBase& f,
+                                    const libMesh::Point& p,
+                                    const Real t,
+                                    RealMatrixX& m) const;
+            
+        protected:
+            
+            MAST::FieldFunction<Real> *_rho;
+            
+        };
+
+        
+        
         class ThermalExpansionMatrix: public MAST::FieldFunction<RealMatrixX> {
         public:
             
@@ -654,6 +694,47 @@ StiffnessMatrix3D::derivative (const MAST::DerivativeType d,
 
 
 
+MAST::IsotropicMaterialProperty::
+InertiaMatrix3D::InertiaMatrix3D(MAST::FieldFunction<Real> * rho):
+MAST::FieldFunction<RealMatrixX>("InertiaMatrix3D"),
+_rho(rho) {
+    
+    _functions.insert(rho->master());
+}
+
+
+void
+MAST::IsotropicMaterialProperty::
+InertiaMatrix3D::operator() (const libMesh::Point& p,
+                             const Real t,
+                             RealMatrixX& m) const {
+    m  = RealMatrixX::Zero(3,3);
+    Real rho;
+    (*_rho)(p, t, rho);
+    m(0,0) = rho;
+    m(1,1) = rho;
+    m(2,2) = rho;
+}
+
+
+void
+MAST::IsotropicMaterialProperty::
+InertiaMatrix3D::derivative(const MAST::DerivativeType d,
+                            const MAST::FunctionBase &f,
+                            const libMesh::Point &p,
+                            const Real t,
+                            RealMatrixX &m) const {
+    
+    
+    m  = RealMatrixX::Zero(3,3);
+    Real rho;
+    _rho->derivative(d, f, p, t, rho);
+    m(0,0) = rho;
+    m(1,1) = rho;
+    m(2,2) = rho;
+}
+
+
 
 void
 MAST::IsotropicMaterialProperty::ThermalExpansionMatrix::
@@ -854,8 +935,20 @@ MAST::IsotropicMaterialPropertyCard::inertia_matrix(const unsigned int dim) {
     
     MAST::FieldFunction<RealMatrixX> *rval = NULL;
     
-    // make sure that this is not null
-    libmesh_assert(rval);
+    switch (dim) {
+        case 3:
+            rval = new MAST::IsotropicMaterialProperty::InertiaMatrix3D
+            (this->get<MAST::FieldFunction<Real> >("rho").clone().release());
+            break;
+            
+        case 1:
+        case 2:
+        default:
+            // implemented only for 3D since the 2D and 1D elements
+            // calculate it themselves
+            libmesh_error();
+            
+    }
     
     return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >(rval);
 }

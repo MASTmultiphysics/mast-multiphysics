@@ -24,9 +24,8 @@ namespace MAST {
     class LocalElemBase;
     class BoundaryConditionBase;
     class FEMOperatorMatrix;
-    
-    
-    
+    class OutputFunctionBase;
+        
     
     class StructuralElementBase:
     public MAST::ElementBase
@@ -56,7 +55,15 @@ namespace MAST {
          */
         virtual void set_velocity(const RealVectorX& vec,
                                   bool if_sens = false);
+
         
+        /*!
+         *    stores \p vec as acceleration for element level calculations,
+         *    or its sensitivity if \p if_sens is true.
+         */
+        virtual void set_acceleration(const RealVectorX& vec,
+                                      bool if_sens = false);
+
         
         /*!
          *   This is used for cases where a linearized problem is solved
@@ -196,6 +203,14 @@ namespace MAST {
                                                    RealMatrixX& jac,
                                                    std::multimap<libMesh::subdomain_id_type, MAST::BoundaryConditionBase*>& bc);
         
+
+        /*!
+         *    calculate the output quantities that depend on volume
+         */
+        bool volume_output_functions(bool request_derivative,
+                                     std::multimap<libMesh::subdomain_id_type, MAST::OutputFunctionBase*>& output);
+        
+
         /*!
          *    flag for follower forces
          */
@@ -329,6 +344,20 @@ namespace MAST {
                                                   RealVectorX& f,
                                                   RealMatrixX& jac,
                                                   MAST::BoundaryConditionBase& bc) = 0;
+        
+        
+        /*!
+         *    Calculates the stress tensor
+         */
+        virtual bool calculate_stress(bool request_derivative,
+                                      MAST::OutputFunctionBase& output) {return false;}//= 0;
+
+        
+        /*!
+         *    Calculates the stress tensor
+         */
+        virtual bool calculate_stress_sensitivity(MAST::OutputFunctionBase& output) {return false;}//= 0;
+
         
         /*!
          *   element property

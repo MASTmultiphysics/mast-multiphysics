@@ -15,7 +15,8 @@
 
 
 MAST::EigenproblemAssembly::EigenproblemAssembly():
-MAST::AssemblyBase() {
+MAST::AssemblyBase(),
+_if_exchange_A_and_B_matrices(false) {
     
 }
 
@@ -79,9 +80,9 @@ MAST::EigenproblemAssembly::assemble() {
     eigen_sys.solution->zero();
     
     libMesh::SparseMatrix<Real>&  matrix_A =
-    *(dynamic_cast<libMesh::EigenSystem*>(_system)->matrix_A);
+    *(dynamic_cast<libMesh::EigenSystem&>(_system->system()).matrix_A);
     libMesh::SparseMatrix<Real>&  matrix_B =
-    *(dynamic_cast<libMesh::EigenSystem*>(_system)->matrix_B);
+    *(dynamic_cast<libMesh::EigenSystem&>(_system->system()).matrix_B);
     
     matrix_A.zero();
     matrix_B.zero();

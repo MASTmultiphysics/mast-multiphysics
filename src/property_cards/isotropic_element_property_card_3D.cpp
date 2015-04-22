@@ -322,16 +322,8 @@ MAST::IsotropicElementProperty3D::
 InertiaMatrix::operator() (const libMesh::Point& p,
                            const Real t,
                            RealMatrixX& m) const {
-    RealMatrixX mat;
-    m = RealMatrixX::Zero(6, 6);
-    // this only returns the material inertia
-    (*_material_inertia)(p, t, mat);
-    for (unsigned int i=0; i<3; i++) {
-        for (unsigned int j=0; j<3; j++) {
-            m(i,j) = mat(i,j);
-        }
-        m(i+3,i+3) = mat(i,i) * 1.0e-12;
-    }
+
+    (*_material_inertia)(p, t, m);
 }
 
 
@@ -344,14 +336,8 @@ InertiaMatrix::derivative (const MAST::DerivativeType d,
                            const libMesh::Point& p,
                            const Real t,
                            RealMatrixX& m) const {
-    RealMatrixX mat;
-    m  = RealMatrixX::Zero(6, 6);
-    // this only returns the material inertia
-    // sensitivity of rotary inertia is assumed to be zero
-    _material_inertia->derivative(d, f, p, t, mat);
-    for (unsigned int i=0; i<3; i++)
-        for (unsigned int j=0; j<3; j++)
-            m(i,j) = mat(i,j);
+
+    _material_inertia->derivative(d, f, p, t, m);
 }
 
 

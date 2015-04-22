@@ -267,6 +267,20 @@ init_system_dirichlet_bc<libMesh::CondensedEigenSystem>(libMesh::CondensedEigenS
                     } // end of boundary loop
             } // end of side loop
     }// end of element loop
+
+    // also, it is likely that some of the bcs have been applied via the
+    // DofMap API by specification of row constraints. In that case,
+    // factor out the dofs that are not coupled to any other dofs
+    libMesh::DofConstraints::const_iterator
+    constraint_it  = dof_map.constraint_rows_begin(),
+    constraint_end = dof_map.constraint_rows_end();
+    
+    for ( ; constraint_it != constraint_end; constraint_it++) {
+        // if the dof constraint has only one entry, then add it to the
+        // constrained set
+        if (!constraint_it->second.size())
+            dof_ids.insert(constraint_it->first);
+    }
     
     
     // now that the dofs are available, tell the system to condense out

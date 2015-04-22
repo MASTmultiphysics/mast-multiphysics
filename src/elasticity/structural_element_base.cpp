@@ -20,6 +20,7 @@ MAST::StructuralElementBase::StructuralElementBase(MAST::SystemInitialization& s
                                                    const libMesh::Elem& elem,
                                                    const MAST::ElementPropertyCardBase& p):
 MAST::ElementBase(sys, elem),
+follower_forces(false),
 _property(p) {
     
     MAST::LocalElemBase* rval = NULL;
@@ -98,6 +99,27 @@ MAST::StructuralElementBase::set_velocity(const RealVectorX& vec,
     
     MAST::ElementBase::set_velocity(vec, if_sens);
 }
+
+
+
+void
+MAST::StructuralElementBase::set_acceleration(const RealVectorX& vec,
+                                              bool if_sens) {
+    
+    if (!if_sens) {
+        if (_elem.dim() == 3)
+            _local_accel = vec;
+        else {
+            _local_accel = RealVectorX::Zero(vec.size());
+            this->transform_vector_to_local_system(vec, _local_accel);
+        }
+    }
+    else
+        libmesh_error();
+    
+    MAST::ElementBase::set_acceleration(vec, if_sens);
+}
+
 
 
 void
@@ -181,6 +203,7 @@ MAST::StructuralElementBase::inertial_residual (bool request_jacobian,
             _local_elem->global_coordinates_location(xyz[0], p);
             
             (*mat_inertia)(p, _time, material_mat);
+            std::cout << material_mat << std::endl;
             
             // now set the shape function values
             for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
@@ -354,6 +377,19 @@ volume_external_residual (bool request_jacobian,
     }
     
     return (request_jacobian && calculate_jac);
+}
+
+
+
+
+
+bool
+MAST::StructuralElementBase::volume_output_functions
+(bool request_derivative,
+ std::multimap<libMesh::subdomain_id_type, MAST::OutputFunctionBase*>& output) {
+    
+    
+    return false;
 }
 
 
