@@ -132,9 +132,9 @@ MAST::ElementBase::_init_fe_and_qrule( const libMesh::Elem& e) {
     _fe->get_phi();
     _fe->get_JxW();
     _fe->get_dphi();
-    _fe->get_dxyzdxi();
-    _fe->get_dxyzdeta();
-    _fe->get_dxyzdzeta();
+    _fe->get_dphidxi();
+    _fe->get_dphideta();
+    _fe->get_dphidzeta();
 
     _fe->reinit(&e);
 }

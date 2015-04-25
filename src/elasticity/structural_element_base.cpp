@@ -21,7 +21,8 @@ MAST::StructuralElementBase::StructuralElementBase(MAST::SystemInitialization& s
                                                    const MAST::ElementPropertyCardBase& p):
 MAST::ElementBase(sys, elem),
 follower_forces(false),
-_property(p) {
+_property(p),
+_incompatible_sol(NULL) {
     
     MAST::LocalElemBase* rval = NULL;
     

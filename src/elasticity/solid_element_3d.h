@@ -30,7 +30,6 @@ namespace MAST {
                             const MAST::ElementPropertyCardBase& p):
         StructuralElementBase(sys, elem, p) {
             
-            _init_incompatible_fe_mapping(elem);
         }
         
         
@@ -87,6 +86,31 @@ namespace MAST {
                                                      RealVectorX& f,
                                                      RealMatrixX& jac);
         
+        
+        
+        /*!
+         *  @returns false since this element formulation does not use
+         *  incompatible modes
+         */
+        virtual bool if_incompatible_modes() const {
+            return true;
+        }
+
+        
+        /*!
+         *  @returns the dimension of the incompatible mode vector
+         */
+        virtual unsigned int incompatible_mode_size() const {
+            return 30;
+        }
+
+        /*!
+         *    updates the incompatible solution for this element. \p dsol
+         *    is the update to the element solution for the current
+         *    nonlinear step.
+         */
+        virtual void update_incompatible_mode_solution(const RealVectorX& dsol);
+         
         
     protected:
         

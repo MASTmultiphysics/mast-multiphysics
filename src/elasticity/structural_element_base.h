@@ -212,6 +212,45 @@ namespace MAST {
         
 
         /*!
+         *  @returns true/false based on whether or not an element uses
+         *  the incompatible mode approach to enrich local strain fields
+         */
+        virtual bool if_incompatible_modes() const = 0;
+
+        
+        /*!
+         *  @returns the dimension of the incompatible mode vector
+         */
+        virtual unsigned int incompatible_mode_size() const {
+            // needs to be implemented only in inherited elements
+            // that use incompatible modes
+            libmesh_error();
+            return 0;
+        }
+
+        
+        /*!
+         *  sets the pointer to the incompatible mode solution vector. This
+         *  is stored as a pointer, and any modifications will overwrite the
+         *  original vector
+         */
+        void set_incompatible_mode_solution(RealVectorX& vec) {
+            _incompatible_sol = &vec;
+        }
+        
+        
+        /*!
+         *    updates the incompatible solution for this element. \p dsol
+         *    is the update to the element solution for the current
+         *    nonlinear step.
+         */
+        virtual void update_incompatible_mode_solution(const RealVectorX& dsol) {
+            // should be implemented in derived classes, if relevant
+            libmesh_error();
+        }
+
+        
+        /*!
          *    flag for follower forces
          */
         bool follower_forces;
@@ -412,6 +451,11 @@ namespace MAST {
          */
         RealVectorX _local_base_sol_sens;
 
+        /*!
+         *   incompatible mode solution vector
+         */
+        RealVectorX* _incompatible_sol;
+        
     };
     
     

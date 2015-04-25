@@ -78,6 +78,15 @@ namespace MAST {
                                                      RealVectorX& f,
                                                      RealMatrixX& jac);
         
+        /*!
+         *  @returns false since this element formulation does not use
+         *  incompatible modes
+         */
+        virtual bool if_incompatible_modes() const {
+            return false;
+        }
+
+        
     protected:
         
         

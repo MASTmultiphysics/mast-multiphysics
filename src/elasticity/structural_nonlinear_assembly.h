@@ -26,6 +26,22 @@ namespace MAST {
          */
         virtual ~StructuralNonlinearAssembly();
         
+
+        /*!
+         *    function that assembles the matrices and vectors quantities for
+         *    nonlinear solution
+         */
+        virtual void
+        residual_and_jacobian (const libMesh::NumericVector<Real>& X,
+                               libMesh::NumericVector<Real>* R,
+                               libMesh::SparseMatrix<Real>*  J,
+                               libMesh::NonlinearImplicitSystem& S);
+
+        /*!
+         *   asks the system to update the nonlinear incompatible mode solution
+         */
+        void update_incompatible_solution(libMesh::NumericVector<Real>& X,
+                                          libMesh::NumericVector<Real>& dX);
         
     protected:
         
@@ -53,6 +69,11 @@ namespace MAST {
          */
         virtual void _elem_sensitivity_calculations(MAST::ElementBase& elem,
                                                     RealVectorX& vec);
+        
+        /*!
+         *   map of local incompatible mode solution per 3D elements
+         */
+        std::map<const libMesh::Elem*, RealVectorX> _incompatible_sol;
     };
 }
 
