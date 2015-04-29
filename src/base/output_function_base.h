@@ -26,7 +26,7 @@
 // MAST includes
 
 // libMesh includes
-#include "geom/point.h"
+#include "libmesh/point.h"
 
 
 

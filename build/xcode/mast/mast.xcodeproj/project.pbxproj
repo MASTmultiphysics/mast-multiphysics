@@ -808,7 +808,7 @@
 				MACOSX_DEPLOYMENT_TARGET = "";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRIP_STYLE = all;
-				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/../../../src $(SRCROOT)/../../../../libmesh/real/libmesh/include /opt/local/include/eigen3";
+				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/../../../src $(SRCROOT)/../../../../libmesh/real/include /opt/local/include/eigen3";
 			};
 			name = Debug;
 		};
@@ -839,7 +839,7 @@
 				MACOSX_DEPLOYMENT_TARGET = "";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRIP_STYLE = all;
-				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/../../../src $(SRCROOT)/../../../../libmesh/real/libmesh/include /opt/local/include/eigen3";
+				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/../../../src $(SRCROOT)/../../../../libmesh/real/include /opt/local/include/eigen3";
 			};
 			name = Release;
 		};
