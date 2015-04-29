@@ -41,7 +41,8 @@ namespace MAST {
          */
         HeatConductionElementBase(MAST::SystemInitialization& sys,
                                   const libMesh::Elem& elem,
-                                  const MAST::ElementPropertyCardBase& p);
+                                  const MAST::ElementPropertyCardBase& p,
+                                  const bool if_output_eval);
         
         
         virtual ~HeatConductionElementBase();

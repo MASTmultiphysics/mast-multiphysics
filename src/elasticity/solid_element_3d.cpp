@@ -6,6 +6,7 @@
 #include "property_cards/element_property_card_base.h"
 #include "base/boundary_condition_base.h"
 #include "base/system_initialization.h"
+#include "elasticity/stress_output_base.h"
 
 
 bool
@@ -685,8 +686,171 @@ MAST::StructuralElement3D::thermal_residual_sensitivity(bool request_jacobian,
                                                         RealMatrixX& jac,
                                                         MAST::BoundaryConditionBase& p) {
     
+    // to be implemented
+    libmesh_error();
+    
     return false;
 }
+
+
+
+
+bool MAST::StructuralElement3D::calculate_stress(bool request_derivative,
+                                                 MAST::OutputFunctionBase& output) {
+    
+    // ask the output object about the quadrature points at which
+    // the stress evaluations need to be peformed
+    MAST::PointwiseOutputEvaluationMode mode = output.evaluation_mode();
+
+    std::vector<libMesh::Point> qp_loc;
+    
+    switch (mode) {
+        case MAST::CENTROID: {
+            qp_loc.resize(1);
+            qp_loc[0] = libMesh::Point();
+        }
+            break;
+            
+        case MAST::SPECIFIED_QP: {
+            qp_loc = output.get_qp_for_evaluation();
+            _init_fe_and_qrule(_elem, &qp_loc);
+        }
+            break;
+         
+        case MAST::ELEM_QP:
+            // this will initialize the FE object at the points specified
+            // by the quadrature rule
+            _init_fe_and_qrule(_elem);
+            qp_loc = _qrule->get_points();
+            break;
+            
+        defalut:
+            // should not get here
+            libmesh_error();
+    }
+    
+    // now that the FE object has been initialized, evaluate the stress values
+    
+    
+    const std::vector<libMesh::Point>& xyz    = _fe->get_xyz();
+    const unsigned int
+    n_phi              = (unsigned int)_fe->n_shape_functions(),
+    n1                 =6,
+    n2                 =3*n_phi,
+    n3                 =30;
+    
+    RealMatrixX
+    material_mat,
+    mat_x        = RealMatrixX::Zero(6,3),
+    mat_y        = RealMatrixX::Zero(6,3),
+    mat_z        = RealMatrixX::Zero(6,3),
+    mat1_n1n2    = RealMatrixX::Zero(n1, n2),
+    mat2_n2n2    = RealMatrixX::Zero(n2, n2),
+    mat3_3n2     = RealMatrixX::Zero(3, n2),
+    mat4_33      = RealMatrixX::Zero(3, 3),
+    mat5_n1n3    = RealMatrixX::Zero(n1, n3),
+    mat6_n2n3    = RealMatrixX::Zero(n2, n3),
+    mat7_3n3     = RealMatrixX::Zero(3, n3),
+    Gmat         = RealMatrixX::Zero(6, n3),
+    K_alphaalpha = RealMatrixX::Zero(n3, n3),
+    K_ualpha     = RealMatrixX::Zero(n2, n3),
+    K_corr       = RealMatrixX::Zero(n2, n2);
+    RealVectorX
+    strain    = RealVectorX::Zero(6),
+    stress    = RealVectorX::Zero(6),
+    vec1_n1   = RealVectorX::Zero(n1),
+    vec2_n2   = RealVectorX::Zero(n2),
+    vec3_3    = RealVectorX::Zero(3),
+    local_disp= RealVectorX::Zero(n2),
+    f_alpha   = RealVectorX::Zero(n3),
+    &alpha    = *_incompatible_sol;
+    
+    // copy the values from the global to the local element
+    local_disp.topRows(n2) = _local_sol.topRows(n2);
+    
+    std::auto_ptr<MAST::FieldFunction<RealMatrixX> > mat_stiff =
+    _property.stiffness_A_matrix(*this);
+    
+    libMesh::Point p;
+    MAST::FEMOperatorMatrix
+    Bmat_lin,
+    Bmat_nl_x,
+    Bmat_nl_y,
+    Bmat_nl_z,
+    Bmat_nl_u,
+    Bmat_nl_v,
+    Bmat_nl_w,
+    Bmat_inc;
+    // six stress components, related to three displacements
+    Bmat_lin.reinit(n1, 3, _elem.n_nodes());
+    Bmat_nl_x.reinit(3, 3, _elem.n_nodes());
+    Bmat_nl_y.reinit(3, 3, _elem.n_nodes());
+    Bmat_nl_z.reinit(3, 3, _elem.n_nodes());
+    Bmat_nl_u.reinit(3, 3, _elem.n_nodes());
+    Bmat_nl_v.reinit(3, 3, _elem.n_nodes());
+    Bmat_nl_w.reinit(3, 3, _elem.n_nodes());
+    Bmat_inc.reinit(n1, n3, 1);            // six stress-strain components
+    
+    // a reference to the stress output data structure
+    MAST::StressStrainOutputBase& stress_output =
+    dynamic_cast<MAST::StressStrainOutputBase&>(output);
+    
+    // initialize the incompatible mode mapping at element mid-point
+    _init_incompatible_fe_mapping(_elem);
+    
+    ///////////////////////////////////////////////////////////////////////
+    // second for loop to calculate the residual and stiffness contributions
+    for (unsigned int qp=0; qp<qp_loc.size(); qp++) {
+        
+        _local_elem->global_coordinates_location(xyz[qp], p);
+        
+        // get the material matrix
+        (*mat_stiff)(p, _time, material_mat);
+        
+        this->initialize_green_lagrange_strain_operator(qp,
+                                                        local_disp,
+                                                        strain,
+                                                        mat_x, mat_y, mat_z,
+                                                        Bmat_lin,
+                                                        Bmat_nl_x,
+                                                        Bmat_nl_y,
+                                                        Bmat_nl_z,
+                                                        Bmat_nl_u,
+                                                        Bmat_nl_v,
+                                                        Bmat_nl_w);
+        this->initialize_incompatible_strain_operator(qp, Bmat_inc, Gmat);
+        
+        // calculate the stress
+        strain += Gmat * alpha;
+        stress = material_mat * strain;
+        
+        if (stress_output.if_evaluate_strain())
+            stress_output.add_strain_at_qp_location(qp_loc[qp], xyz[qp], strain);
+
+        if (stress_output.if_evaluate_stress())
+            stress_output.add_stress_at_qp_location(qp_loc[qp], xyz[qp], stress);
+
+        if (request_derivative) {
+            // to be implemented
+            libmesh_error();
+        }
+    }
+    
+    return request_derivative;
+}
+
+
+
+
+bool
+MAST::StructuralElement3D::calculate_stress_sensitivity(MAST::OutputFunctionBase& output) {
+
+    
+    
+    
+    return true;
+}
+
 
 
 void
@@ -900,9 +1064,9 @@ MAST::StructuralElement3D::initialize_incompatible_strain_operator(const unsigne
     
     // set the current values of nodal coordinates
     for (unsigned int i_node=0; i_node<_elem.n_nodes(); i_node++) {
-        xdef(i_node) = _elem.point(i_node)(0) + _sol(i_node*3+0);
-        ydef(i_node) = _elem.point(i_node)(1) + _sol(i_node*3+1);
-        zdef(i_node) = _elem.point(i_node)(2) + _sol(i_node*3+2);
+        xdef(i_node) = _elem.point(i_node)(0);// + _sol(i_node*3+0);
+        ydef(i_node) = _elem.point(i_node)(1);// + _sol(i_node*3+1);
+        zdef(i_node) = _elem.point(i_node)(2);// + _sol(i_node*3+2);
     }
     
     // calculate dxyz/dxi
@@ -1031,9 +1195,9 @@ MAST::StructuralElement3D::_init_incompatible_fe_mapping( const libMesh::Elem& e
     
     // set the current values of nodal coordinates
     for (unsigned int i_node=0; i_node<_elem.n_nodes(); i_node++) {
-        xdef(i_node) = _elem.point(i_node)(0) + _local_sol(i_node*3+0);
-        ydef(i_node) = _elem.point(i_node)(1) + _local_sol(i_node*3+1);
-        zdef(i_node) = _elem.point(i_node)(2) + _local_sol(i_node*3+2);
+        xdef(i_node) = _elem.point(i_node)(0);// + _local_sol(i_node*3+0);
+        ydef(i_node) = _elem.point(i_node)(1);// + _local_sol(i_node*3+1);
+        zdef(i_node) = _elem.point(i_node)(2);// + _local_sol(i_node*3+2);
     }
     
     // calculate dxyz/dxi

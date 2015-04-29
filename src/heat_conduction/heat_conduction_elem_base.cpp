@@ -18,7 +18,8 @@
 MAST::HeatConductionElementBase::
 HeatConductionElementBase(MAST::SystemInitialization& sys,
                           const libMesh::Elem& elem,
-                          const MAST::ElementPropertyCardBase& p):
+                          const MAST::ElementPropertyCardBase& p,
+                          const bool if_output_eval):
 MAST::ElementBase(sys, elem),
 _property(p) {
 
@@ -49,7 +50,8 @@ _property(p) {
     _local_elem.reset(rval);
     
     // now initialize the finite element data structures
-    _init_fe_and_qrule(_local_elem->local_elem());
+    if (!if_output_eval)
+        _init_fe_and_qrule(_local_elem->local_elem());
 }
 
 

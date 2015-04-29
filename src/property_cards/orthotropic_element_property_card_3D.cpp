@@ -587,8 +587,13 @@ operator() (const libMesh::Point& p,
             const Real t,
             RealMatrixX& m) const {
     
+    RealMatrixX
+    A    = RealMatrixX::Zero(3, 3);
+    
     (*_mat_cond)(p, t, m);
-    libmesh_error();
+    (*_orient)  (p, t, A);
+
+    m = A.transpose() * m * A;
 }
 
 
@@ -600,7 +605,20 @@ MAST::OrthotropicProperty3D::ThermalConductanceMatrix::derivative (const MAST::D
                                                                           const libMesh::Point& p,
                                                                           const Real t,
                                                                           RealMatrixX& m) const {
-    _mat_cond->derivative(d, f, p, t, m);
+    RealMatrixX
+    dm    = RealMatrixX::Zero(3, 3),
+    A     = RealMatrixX::Zero(3, 3),
+    dA    = RealMatrixX::Zero(3, 3);
+    
+    (*_mat_cond)   (p, t, m);
+    (*_orient)     (p, t, A);
+    _mat_cond->derivative(d, f, p, t, dm);
+    _orient->derivative  (d, f, p, t, dA);
+    
+    m =
+    dA.transpose() *  m * A +
+    A.transpose()  * dm * A +
+    A.transpose()  *  m * dA;
 }
 
 

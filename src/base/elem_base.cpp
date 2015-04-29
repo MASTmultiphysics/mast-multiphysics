@@ -112,7 +112,8 @@ MAST::ElementBase::detach_active_solution_function() {
 
 
 void
-MAST::ElementBase::_init_fe_and_qrule( const libMesh::Elem& e) {
+MAST::ElementBase::_init_fe_and_qrule(const libMesh::Elem& e,
+                                      const std::vector<libMesh::Point>* pts) {
     
     unsigned int nv = _system.n_vars();
     
@@ -125,18 +126,22 @@ MAST::ElementBase::_init_fe_and_qrule( const libMesh::Elem& e) {
     
     // Create an adequate quadrature rule
     _fe.reset(libMesh::FEBase::build(e.dim(), fe_type).release());
-    _qrule.reset(fe_type.default_quadrature_rule
-                 (e.dim(),
-                  _system.system().extra_quadrature_order).release());  // system extra quadrature
-    _fe->attach_quadrature_rule(_qrule.get());
     _fe->get_phi();
     _fe->get_JxW();
     _fe->get_dphi();
     _fe->get_dphidxi();
     _fe->get_dphideta();
     _fe->get_dphidzeta();
-
-    _fe->reinit(&e);
+    
+    if (pts == NULL) {
+        _qrule.reset(fe_type.default_quadrature_rule
+                     (e.dim(),
+                      _system.system().extra_quadrature_order).release());  // system extra quadrature
+        _fe->attach_quadrature_rule(_qrule.get());
+        _fe->reinit(&e);
+    }
+    else
+        _fe->reinit(&e, pts);
 }
 
 

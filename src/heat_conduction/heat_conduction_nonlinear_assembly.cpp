@@ -31,7 +31,7 @@ MAST::HeatConductionNonlinearAssembly::_build_elem(const libMesh::Elem& elem) {
     dynamic_cast<const MAST::ElementPropertyCardBase&>(_discipline->get_property_card(elem));
     
     MAST::ElementBase* rval =
-    new MAST::HeatConductionElementBase(*_system, elem, p);
+    new MAST::HeatConductionElementBase(*_system, elem, p, false);
     
     return std::auto_ptr<MAST::ElementBase>(rval);
 }

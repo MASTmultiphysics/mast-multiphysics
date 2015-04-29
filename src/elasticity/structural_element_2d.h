@@ -26,7 +26,8 @@ namespace MAST {
     public:
         StructuralElement2D(MAST::SystemInitialization& sys,
                             const libMesh::Elem& elem,
-                            const MAST::ElementPropertyCardBase& p);
+                            const MAST::ElementPropertyCardBase& p,
+                            const bool output_eval_mode);
         
         
         /*!
@@ -113,6 +114,24 @@ namespace MAST {
                                                   RealMatrixX& jac,
                                                   MAST::BoundaryConditionBase& bc);
         
+        /*!
+         *    Calculates the stress tensor
+         */
+        virtual bool calculate_stress(bool request_derivative,
+                                      MAST::OutputFunctionBase& output) {
+            // to be implemented
+            libmesh_error();
+        }
+        
+        
+        /*!
+         *    Calculates the stress tensor sensitivity
+         */
+        virtual bool calculate_stress_sensitivity(MAST::OutputFunctionBase& output) {
+            // to be implemented
+            libmesh_error();
+        }
+
         /*!
          *   initialize membrane strain operator matrix
          */

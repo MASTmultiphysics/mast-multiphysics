@@ -36,7 +36,8 @@ namespace MAST {
          */
         StructuralElementBase(MAST::SystemInitialization& sys,
                               const libMesh::Elem& elem,
-                              const MAST::ElementPropertyCardBase& p);
+                              const MAST::ElementPropertyCardBase& p,
+                              const bool output_eval_mode);
         
         virtual ~StructuralElementBase();
         
@@ -389,13 +390,13 @@ namespace MAST {
          *    Calculates the stress tensor
          */
         virtual bool calculate_stress(bool request_derivative,
-                                      MAST::OutputFunctionBase& output) {return false;}//= 0;
+                                      MAST::OutputFunctionBase& output) = 0;
 
         
         /*!
-         *    Calculates the stress tensor
+         *    Calculates the stress tensor sensitivity
          */
-        virtual bool calculate_stress_sensitivity(MAST::OutputFunctionBase& output) {return false;}//= 0;
+        virtual bool calculate_stress_sensitivity(MAST::OutputFunctionBase& output) = 0;
 
         
         /*!
@@ -465,7 +466,8 @@ namespace MAST {
     std::auto_ptr<MAST::StructuralElementBase>
     build_structural_element(MAST::SystemInitialization& sys,
                              const libMesh::Elem& elem,
-                             const MAST::ElementPropertyCardBase& p);
+                             const MAST::ElementPropertyCardBase& p,
+                             const bool output_eval_mode);
 }
 
 

@@ -18,7 +18,8 @@
 
 MAST::StructuralElementBase::StructuralElementBase(MAST::SystemInitialization& sys,
                                                    const libMesh::Elem& elem,
-                                                   const MAST::ElementPropertyCardBase& p):
+                                                   const MAST::ElementPropertyCardBase& p,
+                                                   const bool output_eval_mode):
 MAST::ElementBase(sys, elem),
 follower_forces(false),
 _property(p),
@@ -51,7 +52,11 @@ _incompatible_sol(NULL) {
     _local_elem.reset(rval);
     
     // now initialize the finite element data structures
-    _init_fe_and_qrule(_local_elem->local_elem());
+    // only if the outputs are not being evaluated, in which case
+    // the output evaluation routines are responsible for the initialization
+    // of the data structure
+    if (!output_eval_mode)
+        _init_fe_and_qrule(_local_elem->local_elem());
 }
 
 
@@ -204,7 +209,6 @@ MAST::StructuralElementBase::inertial_residual (bool request_jacobian,
             _local_elem->global_coordinates_location(xyz[0], p);
             
             (*mat_inertia)(p, _time, material_mat);
-            std::cout << material_mat << std::endl;
             
             // now set the shape function values
             for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
@@ -849,21 +853,22 @@ transform_vector_to_global_system(const ValType& local_vec,
 std::auto_ptr<MAST::StructuralElementBase>
 MAST::build_structural_element(MAST::SystemInitialization& sys,
                                const libMesh::Elem& elem,
-                               const MAST::ElementPropertyCardBase& p) {
+                               const MAST::ElementPropertyCardBase& p,
+                               const bool output_eval_mode) {
     
     std::auto_ptr<MAST::StructuralElementBase> e;
     
     switch (elem.dim()) {
         case 1:
-            e.reset(new MAST::StructuralElement1D(sys, elem, p));
+            e.reset(new MAST::StructuralElement1D(sys, elem, p, output_eval_mode));
             break;
             
         case 2:
-            e.reset(new MAST::StructuralElement2D(sys, elem, p));
+            e.reset(new MAST::StructuralElement2D(sys, elem, p, output_eval_mode));
             break;
             
         case 3:
-            e.reset(new MAST::StructuralElement3D(sys, elem, p));
+            e.reset(new MAST::StructuralElement3D(sys, elem, p, output_eval_mode));
             break;
             
         default:

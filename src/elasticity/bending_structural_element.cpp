@@ -8,8 +8,9 @@
 MAST::BendingStructuralElem::
 BendingStructuralElem(MAST::SystemInitialization& sys,
                       const libMesh::Elem& elem,
-                      const MAST::ElementPropertyCardBase& p):
-MAST::StructuralElementBase(sys, elem, p) {
+                      const MAST::ElementPropertyCardBase& p,
+                      const bool output_eval_mode):
+MAST::StructuralElementBase(sys, elem, p, output_eval_mode) {
     
     // initialize the bending operator
     MAST::BendingOperatorType bending_model =

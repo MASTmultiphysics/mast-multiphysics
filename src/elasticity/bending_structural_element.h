@@ -22,7 +22,8 @@ namespace MAST {
     public:
         BendingStructuralElem(MAST::SystemInitialization& sys,
                               const libMesh::Elem& elem,
-                              const MAST::ElementPropertyCardBase& p);
+                              const MAST::ElementPropertyCardBase& p,
+                              const bool output_eval_mode);
         
         /*!
          *    row dimension of the direct strain matrix, also used for the

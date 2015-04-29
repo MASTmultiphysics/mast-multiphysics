@@ -11,8 +11,9 @@
 MAST::StructuralElement2D::
 StructuralElement2D(MAST::SystemInitialization& sys,
                     const libMesh::Elem& elem,
-                    const MAST::ElementPropertyCardBase& p):
-MAST::BendingStructuralElem(sys, elem, p)
+                    const MAST::ElementPropertyCardBase& p,
+                    const bool output_eval_mode):
+MAST::BendingStructuralElem(sys, elem, p, output_eval_mode)
 { }
 
 

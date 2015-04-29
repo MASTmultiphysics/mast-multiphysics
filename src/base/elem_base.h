@@ -183,10 +183,13 @@ namespace MAST {
         /*!
          *   Initializes the quadrature and finite element for element volume
          *   integration.
-         *   \param e libMesh::Elem for which the finite element is initialized
+         *   \param e libMesh::Elem for which the finite element is initialized.
+         *   \param pts the points at which the element should be initialized. If NULL, 
+         *    the points specified by quadrature rule will be used.
          */
         virtual void
-        _init_fe_and_qrule(const libMesh::Elem& e);
+        _init_fe_and_qrule(const libMesh::Elem& e,
+                           const std::vector<libMesh::Point>* pts = NULL);
         
         
         /*!
