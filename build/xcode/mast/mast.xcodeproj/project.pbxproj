@@ -25,6 +25,10 @@
 		6935E6EE1A93C86600B8C9B6 /* structural_element_base.h in Headers */ = {isa = PBXBuildFile; fileRef = 6935E6EC1A93C86600B8C9B6 /* structural_element_base.h */; };
 		6946EB021A4A0107004CBB5E /* heat_conduction_transient_assembly.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6946EB001A4A0107004CBB5E /* heat_conduction_transient_assembly.cpp */; };
 		6946EB031A4A0107004CBB5E /* heat_conduction_transient_assembly.h in Headers */ = {isa = PBXBuildFile; fileRef = 6946EB011A4A0107004CBB5E /* heat_conduction_transient_assembly.h */; };
+		69490AF91AF0153600C82893 /* output_function_base.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69490AF71AF0153600C82893 /* output_function_base.cpp */; };
+		69490AFA1AF0153600C82893 /* output_function_base.h in Headers */ = {isa = PBXBuildFile; fileRef = 69490AF81AF0153600C82893 /* output_function_base.h */; };
+		69490AFD1AF0160B00C82893 /* stress_output_base.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69490AFB1AF0160B00C82893 /* stress_output_base.cpp */; };
+		69490AFE1AF0160B00C82893 /* stress_output_base.h in Headers */ = {isa = PBXBuildFile; fileRef = 69490AFC1AF0160B00C82893 /* stress_output_base.h */; };
 		694A5CA11A6B3A5400FDE960 /* structural_discipline.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 694A5C9F1A6B3A5400FDE960 /* structural_discipline.cpp */; };
 		694A5CA21A6B3A5400FDE960 /* structural_discipline.h in Headers */ = {isa = PBXBuildFile; fileRef = 694A5CA01A6B3A5400FDE960 /* structural_discipline.h */; };
 		694A5CA51A6B3ADE00FDE960 /* structural_system_initialization.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 694A5CA31A6B3ADE00FDE960 /* structural_system_initialization.cpp */; };
@@ -146,6 +150,10 @@
 		6935E6EC1A93C86600B8C9B6 /* structural_element_base.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = structural_element_base.h; sourceTree = "<group>"; };
 		6946EB001A4A0107004CBB5E /* heat_conduction_transient_assembly.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = heat_conduction_transient_assembly.cpp; sourceTree = "<group>"; };
 		6946EB011A4A0107004CBB5E /* heat_conduction_transient_assembly.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = heat_conduction_transient_assembly.h; sourceTree = "<group>"; };
+		69490AF71AF0153600C82893 /* output_function_base.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = output_function_base.cpp; sourceTree = "<group>"; };
+		69490AF81AF0153600C82893 /* output_function_base.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = output_function_base.h; sourceTree = "<group>"; };
+		69490AFB1AF0160B00C82893 /* stress_output_base.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = stress_output_base.cpp; sourceTree = "<group>"; };
+		69490AFC1AF0160B00C82893 /* stress_output_base.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = stress_output_base.h; sourceTree = "<group>"; };
 		694A5C9F1A6B3A5400FDE960 /* structural_discipline.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = structural_discipline.cpp; sourceTree = "<group>"; };
 		694A5CA01A6B3A5400FDE960 /* structural_discipline.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = structural_discipline.h; sourceTree = "<group>"; };
 		694A5CA31A6B3ADE00FDE960 /* structural_system_initialization.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = structural_system_initialization.cpp; sourceTree = "<group>"; };
@@ -420,6 +428,8 @@
 				69E1275819D36575001BADE2 /* nonlinear_implicit_assembly.h */,
 				69A624EE19E70F4600B5B303 /* output_assembly_base.cpp */,
 				69A624EF19E70F4600B5B303 /* output_assembly_base.h */,
+				69490AF71AF0153600C82893 /* output_function_base.cpp */,
+				69490AF81AF0153600C82893 /* output_function_base.h */,
 				69D2759319D4B98F007F5A68 /* parameter.h */,
 				69E1275319D364BE001BADE2 /* physics_discipline_base.cpp */,
 				69E1275419D364BE001BADE2 /* physics_discipline_base.h */,
@@ -472,6 +482,8 @@
 				69C7BF921A9F9CD10003E3A9 /* mindlin_bending_operator.h */,
 				6935E6E71A93C80F00B8C9B6 /* solid_element_3d.cpp */,
 				6935E6E81A93C80F00B8C9B6 /* solid_element_3d.h */,
+				69490AFB1AF0160B00C82893 /* stress_output_base.cpp */,
+				69490AFC1AF0160B00C82893 /* stress_output_base.h */,
 				6965F9471AB242A600AF1685 /* structural_buckling_eigenproblem_assembly.cpp */,
 				6965F9481AB242A600AF1685 /* structural_buckling_eigenproblem_assembly.h */,
 				694A5C9F1A6B3A5400FDE960 /* structural_discipline.cpp */,
@@ -522,6 +534,7 @@
 				69D275EB19D60170007F5A68 /* local_1d_elem.h in Headers */,
 				6921397019E4771800CDFB4F /* heat_conduction_discipline.h in Headers */,
 				69D275E619D5FFD5007F5A68 /* fem_operator_matrix.h in Headers */,
+				69490AFA1AF0153600C82893 /* output_function_base.h in Headers */,
 				69C7BF971A9FBF430003E3A9 /* structural_element_2d.h in Headers */,
 				69D2759A19D5B8BC007F5A68 /* function_set_base.h in Headers */,
 				69C7BF8F1A9E818A0003E3A9 /* bending_structural_element.h in Headers */,
@@ -544,6 +557,7 @@
 				69E1275619D364BE001BADE2 /* physics_discipline_base.h in Headers */,
 				69ECA02E19DA4354009BB5B0 /* multilayer_2d_section_element_property_card.h in Headers */,
 				69C7BFA11AA12F8C0003E3A9 /* fluid_base.h in Headers */,
+				69490AFE1AF0160B00C82893 /* stress_output_base.h in Headers */,
 				69D2759219D490DD007F5A68 /* utility.h in Headers */,
 				6935E6EA1A93C80F00B8C9B6 /* solid_element_3d.h in Headers */,
 				69ECA03419DA4354009BB5B0 /* element_property_card_2D.h in Headers */,
@@ -635,6 +649,7 @@
 				69ECA03919DAFC6D009BB5B0 /* element_property_card_1D.cpp in Sources */,
 				69ECA03F19DB036C009BB5B0 /* bending_operator.cpp in Sources */,
 				6965F9491AB242A600AF1685 /* structural_buckling_eigenproblem_assembly.cpp in Sources */,
+				69490AF91AF0153600C82893 /* output_function_base.cpp in Sources */,
 				69D275D019D5D0A0007F5A68 /* dirichlet_boundary_condition.cpp in Sources */,
 				69C7BF961A9FBF430003E3A9 /* structural_element_2d.cpp in Sources */,
 				69C7BF8A1A9E801D0003E3A9 /* structural_element_1d.cpp in Sources */,
@@ -666,6 +681,7 @@
 				698129EC1A51FE7B0049B210 /* multilinear_field_function.cpp in Sources */,
 				693561D11A378D5700BAFD3A /* mesh_field_function.cpp in Sources */,
 				69D275F619D60ABF007F5A68 /* heat_conduction_elem_base.cpp in Sources */,
+				69490AFD1AF0160B00C82893 /* stress_output_base.cpp in Sources */,
 				69E1275919D36575001BADE2 /* nonlinear_implicit_assembly.cpp in Sources */,
 				6921397D19E4834900CDFB4F /* heat_conduction_system_initialization.cpp in Sources */,
 				69D2759719D4B98F007F5A68 /* function_base.cpp in Sources */,
