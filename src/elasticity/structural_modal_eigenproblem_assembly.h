@@ -78,6 +78,10 @@ namespace MAST {
                                        RealMatrixX& mat_A,
                                        RealMatrixX& mat_B);
         
+        /*!
+         *   map of local incompatible mode solution per 3D elements
+         */
+        std::map<const libMesh::Elem*, RealVectorX> _incompatible_sol;
     };
     
 }

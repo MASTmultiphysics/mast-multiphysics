@@ -101,6 +101,17 @@ MAST::StructuralModalEigenproblemAssembly::assemble() {
         physics_elem->set_acceleration(dummy);
         
         
+        // set the incompatible mode solution if required by the
+        // element
+        MAST::StructuralElementBase& p_elem =
+        dynamic_cast<MAST::StructuralElementBase&>(*physics_elem);
+        if (p_elem.if_incompatible_modes()) {
+            // check if the vector exists in the map
+            if (!_incompatible_sol.count(elem))
+                _incompatible_sol[elem] = RealVectorX::Zero(p_elem.incompatible_mode_size());
+            p_elem.set_incompatible_mode_solution(_incompatible_sol[elem]);
+        }
+
         _elem_calculations(*physics_elem, mat_A, mat_B);
         
         // copy to the libMesh matrix for further processing
