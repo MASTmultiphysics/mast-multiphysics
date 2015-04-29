@@ -278,7 +278,7 @@ _localize_solutions(const libMesh::NumericVector<Real>& current_sol) {
         vec->localize(*_velocity[i], send_list);
         _velocity[i]->close();
         
-        if (this->ode_order()) {
+        if (this->ode_order()>1) {
             ///////////////////////////////////////////
             // localize the acceleration
             ///////////////////////////////////////////
