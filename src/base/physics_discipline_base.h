@@ -42,13 +42,15 @@ namespace MAST {
     template <typename T> class ConstantFunction;
     class SystemInitialization;
     class Parameter;
+    class PointLoadCondition;
     
     // typedefs
     typedef std::multimap<libMesh::boundary_id_type, MAST::BoundaryConditionBase*>  SideBCMapType;
     typedef std::multimap<libMesh::subdomain_id_type, MAST::BoundaryConditionBase*> VolumeBCMapType;
     typedef std::map<libMesh::subdomain_id_type, const MAST::ElementPropertyCardBase*>      PropertyCardMapType;
     typedef std::map<libMesh::boundary_id_type, MAST::DirichletBoundaryCondition*>  DirichletBCMapType;
-
+    typedef std::set<MAST::PointLoadCondition*> PointLoadSetType;
+    
     
     class PhysicsDisciplineBase {
     public:
@@ -119,21 +121,43 @@ namespace MAST {
          */
         void add_volume_load(libMesh::subdomain_id_type bid,
                              MAST::BoundaryConditionBase& load);
-        
+
         
         /*!
-         *    @returns a const reference to the bolume boundary conditions
+         *   adds the specified point load
+         */
+        void add_point_load(MAST::PointLoadCondition& load);
+
+        
+        /*!
+         *    @returns a const reference to the volume boundary conditions
          */
         const MAST::VolumeBCMapType& volume_loads() const{
             return _vol_bc_map;
         }
         
         /*!
-         *    @returns a reference to the bolume boundary conditions
+         *    @returns a reference to the volume boundary conditions
          */
         MAST::VolumeBCMapType& volume_loads() {
             return _vol_bc_map;
         }
+
+        
+        /*!
+         *    @returns a const reference to the point load boundary conditions
+         */
+        const MAST::PointLoadSetType& point_loads() const{
+            return _point_loads;
+        }
+        
+        /*!
+         *    @returns a reference to the point load boundary conditions
+         */
+        MAST::PointLoadSetType& point_loads() {
+            return _point_loads;
+        }
+
         
         /*!
          *    initializes the system for dirichlet boundary conditions
@@ -207,6 +231,11 @@ namespace MAST {
          *   volume boundary condition map of boundary id and load
          */
         MAST::VolumeBCMapType _vol_bc_map;
+        
+        /*!
+         *   point loads
+         */
+        MAST::PointLoadSetType _point_loads;
     };
     
 }

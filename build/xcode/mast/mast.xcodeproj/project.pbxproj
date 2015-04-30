@@ -41,6 +41,12 @@
 		6965F9461AB2429400AF1685 /* structural_modal_eigenproblem_assembly.h in Headers */ = {isa = PBXBuildFile; fileRef = 6965F9441AB2429400AF1685 /* structural_modal_eigenproblem_assembly.h */; };
 		6965F9491AB242A600AF1685 /* structural_buckling_eigenproblem_assembly.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6965F9471AB242A600AF1685 /* structural_buckling_eigenproblem_assembly.cpp */; };
 		6965F94A1AB242A600AF1685 /* structural_buckling_eigenproblem_assembly.h in Headers */ = {isa = PBXBuildFile; fileRef = 6965F9481AB242A600AF1685 /* structural_buckling_eigenproblem_assembly.h */; };
+		696D4B4A1AF1D090003C6020 /* libpetsc.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 696D4B491AF1D090003C6020 /* libpetsc.dylib */; };
+		696D4B4C1AF1D094003C6020 /* libslepc.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 696D4B4B1AF1D094003C6020 /* libslepc.dylib */; };
+		696D4B4F1AF1D652003C6020 /* point_load_condition.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 696D4B4D1AF1D652003C6020 /* point_load_condition.cpp */; };
+		696D4B501AF1D652003C6020 /* point_load_condition.h in Headers */ = {isa = PBXBuildFile; fileRef = 696D4B4E1AF1D652003C6020 /* point_load_condition.h */; };
+		696D4B531AF1E109003C6020 /* structural_assembly.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 696D4B511AF1E109003C6020 /* structural_assembly.cpp */; };
+		696D4B541AF1E109003C6020 /* structural_assembly.h in Headers */ = {isa = PBXBuildFile; fileRef = 696D4B521AF1E109003C6020 /* structural_assembly.h */; };
 		698129EC1A51FE7B0049B210 /* multilinear_field_function.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 698129EA1A51FE7B0049B210 /* multilinear_field_function.cpp */; };
 		698129ED1A51FE7B0049B210 /* multilinear_field_function.h in Headers */ = {isa = PBXBuildFile; fileRef = 698129EB1A51FE7B0049B210 /* multilinear_field_function.h */; };
 		69A624F019E70F4600B5B303 /* output_assembly_base.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69A624EE19E70F4600B5B303 /* output_assembly_base.cpp */; };
@@ -166,6 +172,12 @@
 		6965F9441AB2429400AF1685 /* structural_modal_eigenproblem_assembly.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = structural_modal_eigenproblem_assembly.h; sourceTree = "<group>"; };
 		6965F9471AB242A600AF1685 /* structural_buckling_eigenproblem_assembly.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = structural_buckling_eigenproblem_assembly.cpp; sourceTree = "<group>"; };
 		6965F9481AB242A600AF1685 /* structural_buckling_eigenproblem_assembly.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = structural_buckling_eigenproblem_assembly.h; sourceTree = "<group>"; };
+		696D4B491AF1D090003C6020 /* libpetsc.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libpetsc.dylib; path = ../../../../numerical_lib/petsc/petsc_with_external_libs/lib/libpetsc.dylib; sourceTree = "<group>"; };
+		696D4B4B1AF1D094003C6020 /* libslepc.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libslepc.dylib; path = ../../../../numerical_lib/slepc/petsc_with_external_libs/lib/libslepc.dylib; sourceTree = "<group>"; };
+		696D4B4D1AF1D652003C6020 /* point_load_condition.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = point_load_condition.cpp; sourceTree = "<group>"; };
+		696D4B4E1AF1D652003C6020 /* point_load_condition.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = point_load_condition.h; sourceTree = "<group>"; };
+		696D4B511AF1E109003C6020 /* structural_assembly.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = structural_assembly.cpp; sourceTree = "<group>"; };
+		696D4B521AF1E109003C6020 /* structural_assembly.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = structural_assembly.h; sourceTree = "<group>"; };
 		698129EA1A51FE7B0049B210 /* multilinear_field_function.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = multilinear_field_function.cpp; sourceTree = "<group>"; };
 		698129EB1A51FE7B0049B210 /* multilinear_field_function.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = multilinear_field_function.h; sourceTree = "<group>"; };
 		69A624EE19E70F4600B5B303 /* output_assembly_base.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = output_assembly_base.cpp; sourceTree = "<group>"; };
@@ -268,6 +280,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				69D275DB19D5FB48007F5A68 /* libmesh_dbg.0.dylib in Frameworks */,
+				696D4B4A1AF1D090003C6020 /* libpetsc.dylib in Frameworks */,
+				696D4B4C1AF1D094003C6020 /* libslepc.dylib in Frameworks */,
 				69D275E119D5FB7A007F5A68 /* Accelerate.framework in Frameworks */,
 				69D275D819D5FB28007F5A68 /* libmpi_cxx.1.dylib in Frameworks */,
 				69D275D919D5FB28007F5A68 /* libmpi.1.dylib in Frameworks */,
@@ -329,6 +343,8 @@
 			children = (
 				69D275CF19D5D0A0007F5A68 /* dirichlet_boundary_condition.cpp */,
 				69D275CB19D5CF26007F5A68 /* dirichlet_boundary_condition.h */,
+				696D4B4D1AF1D652003C6020 /* point_load_condition.cpp */,
+				696D4B4E1AF1D652003C6020 /* point_load_condition.h */,
 			);
 			path = boundary_condition;
 			sourceTree = "<group>";
@@ -368,6 +384,8 @@
 		69E1272C19D34331001BADE2 = {
 			isa = PBXGroup;
 			children = (
+				696D4B4B1AF1D094003C6020 /* libslepc.dylib */,
+				696D4B491AF1D090003C6020 /* libpetsc.dylib */,
 				69D275E019D5FB7A007F5A68 /* Accelerate.framework */,
 				69D275DA19D5FB48007F5A68 /* libmesh_dbg.0.dylib */,
 				69D275D619D5FB28007F5A68 /* libmpi_cxx.1.dylib */,
@@ -503,6 +521,8 @@
 				6965F93B1AB2423400AF1685 /* structural_transient_assembly.cpp */,
 				6965F93C1AB2423400AF1685 /* structural_transient_assembly.h */,
 				69C7BF931A9F9CE10003E3A9 /* timoshenko_bending_operator.h */,
+				696D4B511AF1E109003C6020 /* structural_assembly.cpp */,
+				696D4B521AF1E109003C6020 /* structural_assembly.h */,
 			);
 			path = elasticity;
 			sourceTree = "<group>";
@@ -526,6 +546,7 @@
 				6922840E1AE0654D00C9AF86 /* polar_coordinate.h in Headers */,
 				694A5CA61A6B3ADE00FDE960 /* structural_system_initialization.h in Headers */,
 				69ECA03019DA4354009BB5B0 /* solid_1d_section_element_property_card.h in Headers */,
+				696D4B541AF1E109003C6020 /* structural_assembly.h in Headers */,
 				6946EB031A4A0107004CBB5E /* heat_conduction_transient_assembly.h in Headers */,
 				692284121AE067F800C9AF86 /* basis_matrix_coordinate.h in Headers */,
 				69ECA03219DA4354009BB5B0 /* solid_2d_section_element_property_card.h in Headers */,
@@ -571,6 +592,7 @@
 				69D275F319D609BC007F5A68 /* local_2d_elem.h in Headers */,
 				69D2759E19D5CDA4007F5A68 /* boundary_condition_base.h in Headers */,
 				69E53D171ADF0F6600856C84 /* orthotropic_material_property_card.h in Headers */,
+				696D4B501AF1D652003C6020 /* point_load_condition.h in Headers */,
 				6935E6EE1A93C86600B8C9B6 /* structural_element_base.h in Headers */,
 				694A5CA21A6B3A5400FDE960 /* structural_discipline.h in Headers */,
 				6965F9421AB2428300AF1685 /* structural_nonlinear_assembly.h in Headers */,
@@ -686,12 +708,14 @@
 				6921397D19E4834900CDFB4F /* heat_conduction_system_initialization.cpp in Sources */,
 				69D2759719D4B98F007F5A68 /* function_base.cpp in Sources */,
 				692284091AE05A8300C9AF86 /* coordinate_base.cpp in Sources */,
+				696D4B531AF1E109003C6020 /* structural_assembly.cpp in Sources */,
 				69E1274919D3457F001BADE2 /* elem_base.cpp in Sources */,
 				69C7BFA41AA66E7C0003E3A9 /* second_order_newmark_transient_solver.cpp in Sources */,
 				6922840D1AE0654D00C9AF86 /* polar_coordinate.cpp in Sources */,
 				69E53D161ADF0F6600856C84 /* orthotropic_material_property_card.cpp in Sources */,
 				69E1274D19D34591001BADE2 /* assembly_base.cpp in Sources */,
 				69C7BF8E1A9E818A0003E3A9 /* bending_structural_element.cpp in Sources */,
+				696D4B4F1AF1D652003C6020 /* point_load_condition.cpp in Sources */,
 				694A5CA11A6B3A5400FDE960 /* structural_discipline.cpp in Sources */,
 				69D275D419D5F944007F5A68 /* first_order_newmark_transient_solver.cpp in Sources */,
 				69D275E519D5FFD5007F5A68 /* fem_operator_matrix.cpp in Sources */,
@@ -740,6 +764,11 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include,
+					/Users/manav/Documents/codes/numerical_lib/petsc/petsc_with_external_libs/include,
+				);
 				MACOSX_DEPLOYMENT_TARGET = 10.10;
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -775,6 +804,11 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include,
+					/Users/manav/Documents/codes/numerical_lib/petsc/petsc_with_external_libs/include,
+				);
 				MACOSX_DEPLOYMENT_TARGET = 10.10;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				SDKROOT = macosx;
@@ -804,6 +838,8 @@
 					/Users/manav/Documents/codes/numerical_lib/slepc/real/lib,
 					/opt/local/lib/petsc/lib,
 					/opt/local/lib/slepc/lib,
+					/Users/manav/Documents/codes/numerical_lib/petsc/petsc_with_external_libs/lib,
+					/Users/manav/Documents/codes/numerical_lib/slepc/petsc_with_external_libs/lib,
 				);
 				MACOSX_DEPLOYMENT_TARGET = "";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -835,6 +871,8 @@
 					/Users/manav/Documents/codes/numerical_lib/slepc/real/lib,
 					/opt/local/lib/petsc/lib,
 					/opt/local/lib/slepc/lib,
+					/Users/manav/Documents/codes/numerical_lib/petsc/petsc_with_external_libs/lib,
+					/Users/manav/Documents/codes/numerical_lib/slepc/petsc_with_external_libs/lib,
 				);
 				MACOSX_DEPLOYMENT_TARGET = "";
 				PRODUCT_NAME = "$(TARGET_NAME)";

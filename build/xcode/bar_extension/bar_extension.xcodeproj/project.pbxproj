@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		69A93ECA1AD4D8DF000F4E86 /* bar_extension.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69A93EC91AD4D8DF000F4E86 /* bar_extension.cpp */; };
+		698F90151AF1C52C0063BF3B /* bar_extension.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 698F90141AF1C52C0063BF3B /* bar_extension.cpp */; };
 		69A93ED31AD4DCFC000F4E86 /* libmesh_dbg.0.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 69A93ECD1AD4DCFC000F4E86 /* libmesh_dbg.0.dylib */; };
 		69A93ED41AD4DCFC000F4E86 /* libmpi_cxx.1.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 69A93ECE1AD4DCFC000F4E86 /* libmpi_cxx.1.dylib */; };
 		69A93ED51AD4DCFC000F4E86 /* libmpi.1.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 69A93ECF1AD4DCFC000F4E86 /* libmpi.1.dylib */; };
@@ -29,8 +29,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		698F90141AF1C52C0063BF3B /* bar_extension.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = bar_extension.cpp; sourceTree = "<group>"; };
 		69A93EBF1AD4D896000F4E86 /* bar_extension */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = bar_extension; sourceTree = BUILT_PRODUCTS_DIR; };
-		69A93EC91AD4D8DF000F4E86 /* bar_extension.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = bar_extension.cpp; path = ../../../../examples/structural/bar_extension/bar_extension.cpp; sourceTree = "<group>"; };
 		69A93ECD1AD4DCFC000F4E86 /* libmesh_dbg.0.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libmesh_dbg.0.dylib; path = ../../../../libmesh/real/lib/libmesh_dbg.0.dylib; sourceTree = "<group>"; };
 		69A93ECE1AD4DCFC000F4E86 /* libmpi_cxx.1.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libmpi_cxx.1.dylib; path = "../../../../../../../../opt/local/lib/openmpi-mp/libmpi_cxx.1.dylib"; sourceTree = "<group>"; };
 		69A93ECF1AD4DCFC000F4E86 /* libmpi.1.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libmpi.1.dylib; path = "../../../../../../../../opt/local/lib/openmpi-mp/libmpi.1.dylib"; sourceTree = "<group>"; };
@@ -56,6 +56,15 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		698F90131AF1C52C0063BF3B /* bar_extension */ = {
+			isa = PBXGroup;
+			children = (
+				698F90141AF1C52C0063BF3B /* bar_extension.cpp */,
+			);
+			name = bar_extension;
+			path = ../../../examples/structural/bar_extension;
+			sourceTree = "<group>";
+		};
 		69A93EB61AD4D896000F4E86 = {
 			isa = PBXGroup;
 			children = (
@@ -65,7 +74,7 @@
 				69A93ECE1AD4DCFC000F4E86 /* libmpi_cxx.1.dylib */,
 				69A93ECF1AD4DCFC000F4E86 /* libmpi.1.dylib */,
 				69A93ED01AD4DCFC000F4E86 /* libmast.dylib */,
-				69A93EC11AD4D896000F4E86 /* bar_extension */,
+				698F90131AF1C52C0063BF3B /* bar_extension */,
 				69A93EC01AD4D896000F4E86 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -76,14 +85,6 @@
 				69A93EBF1AD4D896000F4E86 /* bar_extension */,
 			);
 			name = Products;
-			sourceTree = "<group>";
-		};
-		69A93EC11AD4D896000F4E86 /* bar_extension */ = {
-			isa = PBXGroup;
-			children = (
-				69A93EC91AD4D8DF000F4E86 /* bar_extension.cpp */,
-			);
-			path = bar_extension;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -142,7 +143,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				69A93ECA1AD4D8DF000F4E86 /* bar_extension.cpp in Sources */,
+				698F90151AF1C52C0063BF3B /* bar_extension.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -290,6 +291,7 @@
 				69A93EC81AD4D896000F4E86 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};

@@ -21,6 +21,7 @@
 // MAST includes
 #include "elasticity/structural_nonlinear_assembly.h"
 #include "elasticity/structural_element_base.h"
+#include "elasticity/structural_assembly.h"
 #include "property_cards/element_property_card_base.h"
 #include "base/physics_discipline_base.h"
 #include "base/system_initialization.h"
@@ -32,6 +33,8 @@
 #include "libmesh/numeric_vector.h"
 #include "libmesh/sparse_matrix.h"
 #include "libmesh/dof_map.h"
+#include "libmesh/petsc_nonlinear_solver.h"
+#include "libmesh/petsc_vector.h"
 
 
 
@@ -310,6 +313,58 @@ _elem_sensitivity_calculations(MAST::ElementBase& elem,
 }
 
 
+
+
+void
+MAST::StructuralNonlinearAssembly::
+attach_discipline_and_system(MAST::PhysicsDisciplineBase& discipline,
+                             MAST::SystemInitialization& system) {
+
+    // call the parent's method firts
+    MAST::NonlinearImplicitAssembly::attach_discipline_and_system(discipline,
+                                                                  system);
+    
+    // get the nonlinear solver SNES object from System and
+    // add a monitor to it so that it can be used to update the
+    // incompatible mode solution after each update
+    
+    libMesh::PetscNonlinearSolver<Real> &petsc_nonlinear_solver =
+    *(dynamic_cast<libMesh::PetscNonlinearSolver<Real>*>
+      (dynamic_cast<libMesh::NonlinearImplicitSystem&>(system.system()).nonlinear_solver.get()));
+    
+    // get the SNES object
+    SNES snes = petsc_nonlinear_solver.snes();
+    
+    PetscErrorCode ierr =
+    SNESMonitorSet(snes,
+                   _snes_structural_nonlinear_assembly_monitor_function,
+                   (void*)this,
+                   PETSC_NULL);
+    
+    libmesh_assert(!ierr);
+}
+
+
+
+void
+MAST::StructuralNonlinearAssembly::
+clear_discipline_and_system( ) {
+
+    // call the parent's method firts
+    MAST::NonlinearImplicitAssembly::clear_discipline_and_system();
+
+    // next, remove the monitor function from the snes object
+    libMesh::PetscNonlinearSolver<Real> &petsc_nonlinear_solver =
+    *(dynamic_cast<libMesh::PetscNonlinearSolver<Real>*>
+      (dynamic_cast<libMesh::NonlinearImplicitSystem&>(_system->system()).nonlinear_solver.get()));
+    
+    // get the SNES object
+    SNES snes = petsc_nonlinear_solver.snes();
+    
+    PetscErrorCode ierr =
+    SNESMonitorCancel(snes);
+    libmesh_assert(!ierr);
+}
 
 
 

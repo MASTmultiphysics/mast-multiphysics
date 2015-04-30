@@ -1,0 +1,291 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		698F90121AF1C5180063BF3B /* circular_cantilever.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 698F90111AF1C5180063BF3B /* circular_cantilever.cpp */; };
+		698F901B1AF1C85F0063BF3B /* libpetsc.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 698F90161AF1C85F0063BF3B /* libpetsc.dylib */; };
+		698F901C1AF1C85F0063BF3B /* libslepc.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 698F90171AF1C85F0063BF3B /* libslepc.dylib */; };
+		698F901D1AF1C85F0063BF3B /* libmesh_dbg.0.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 698F90181AF1C85F0063BF3B /* libmesh_dbg.0.dylib */; };
+		698F901E1AF1C85F0063BF3B /* libmpi_cxx.1.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 698F90191AF1C85F0063BF3B /* libmpi_cxx.1.dylib */; };
+		698F901F1AF1C85F0063BF3B /* libmpi.1.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 698F901A1AF1C85F0063BF3B /* libmpi.1.dylib */; };
+		698F90231AF1CDF90063BF3B /* libmast.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 698F90221AF1CDF90063BF3B /* libmast.dylib */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		69FCC39F1AF1B24C0070942B /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = /usr/share/man/man1/;
+			dstSubfolderSpec = 0;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		698F90111AF1C5180063BF3B /* circular_cantilever.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = circular_cantilever.cpp; path = ../../../examples/structural/nonlinear_circular_cantilever/circular_cantilever.cpp; sourceTree = "<group>"; };
+		698F90161AF1C85F0063BF3B /* libpetsc.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libpetsc.dylib; path = ../../../../numerical_lib/petsc/petsc_with_external_libs/lib/libpetsc.dylib; sourceTree = "<group>"; };
+		698F90171AF1C85F0063BF3B /* libslepc.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libslepc.dylib; path = ../../../../numerical_lib/slepc/petsc_with_external_libs/lib/libslepc.dylib; sourceTree = "<group>"; };
+		698F90181AF1C85F0063BF3B /* libmesh_dbg.0.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libmesh_dbg.0.dylib; path = ../../../../libmesh/real/lib/libmesh_dbg.0.dylib; sourceTree = "<group>"; };
+		698F90191AF1C85F0063BF3B /* libmpi_cxx.1.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libmpi_cxx.1.dylib; path = "../../../../../../../../opt/local/lib/openmpi-mp/libmpi_cxx.1.dylib"; sourceTree = "<group>"; };
+		698F901A1AF1C85F0063BF3B /* libmpi.1.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libmpi.1.dylib; path = "../../../../../../../../opt/local/lib/openmpi-mp/libmpi.1.dylib"; sourceTree = "<group>"; };
+		698F90221AF1CDF90063BF3B /* libmast.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libmast.dylib; path = ../mast/build/Debug/libmast.dylib; sourceTree = "<group>"; };
+		69FCC3A11AF1B24C0070942B /* circular_cantilever */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = circular_cantilever; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		69FCC39E1AF1B24C0070942B /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				698F90231AF1CDF90063BF3B /* libmast.dylib in Frameworks */,
+				698F901D1AF1C85F0063BF3B /* libmesh_dbg.0.dylib in Frameworks */,
+				698F901B1AF1C85F0063BF3B /* libpetsc.dylib in Frameworks */,
+				698F901C1AF1C85F0063BF3B /* libslepc.dylib in Frameworks */,
+				698F901E1AF1C85F0063BF3B /* libmpi_cxx.1.dylib in Frameworks */,
+				698F901F1AF1C85F0063BF3B /* libmpi.1.dylib in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		69FCC3981AF1B24C0070942B = {
+			isa = PBXGroup;
+			children = (
+				698F90221AF1CDF90063BF3B /* libmast.dylib */,
+				698F90161AF1C85F0063BF3B /* libpetsc.dylib */,
+				698F90171AF1C85F0063BF3B /* libslepc.dylib */,
+				698F90181AF1C85F0063BF3B /* libmesh_dbg.0.dylib */,
+				698F90191AF1C85F0063BF3B /* libmpi_cxx.1.dylib */,
+				698F901A1AF1C85F0063BF3B /* libmpi.1.dylib */,
+				698F90111AF1C5180063BF3B /* circular_cantilever.cpp */,
+				69FCC3A21AF1B24C0070942B /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		69FCC3A21AF1B24C0070942B /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				69FCC3A11AF1B24C0070942B /* circular_cantilever */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		69FCC3A01AF1B24C0070942B /* circular_cantilever */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 69FCC3A81AF1B24C0070942B /* Build configuration list for PBXNativeTarget "circular_cantilever" */;
+			buildPhases = (
+				69FCC39D1AF1B24C0070942B /* Sources */,
+				69FCC39E1AF1B24C0070942B /* Frameworks */,
+				69FCC39F1AF1B24C0070942B /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = circular_cantilever;
+			productName = circular_cantilever;
+			productReference = 69FCC3A11AF1B24C0070942B /* circular_cantilever */;
+			productType = "com.apple.product-type.tool";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		69FCC3991AF1B24C0070942B /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 0630;
+				ORGANIZATIONNAME = MAST;
+				TargetAttributes = {
+					69FCC3A01AF1B24C0070942B = {
+						CreatedOnToolsVersion = 6.3.1;
+					};
+				};
+			};
+			buildConfigurationList = 69FCC39C1AF1B24C0070942B /* Build configuration list for PBXProject "circular_cantilever" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = 69FCC3981AF1B24C0070942B;
+			productRefGroup = 69FCC3A21AF1B24C0070942B /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				69FCC3A01AF1B24C0070942B /* circular_cantilever */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		69FCC39D1AF1B24C0070942B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				698F90121AF1C5180063BF3B /* circular_cantilever.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		69FCC3A61AF1B24C0070942B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.10;
+				MTL_ENABLE_DEBUG_INFO = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		69FCC3A71AF1B24C0070942B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.10;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		69FCC3A91AF1B24C0070942B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include,
+					"/opt/local/include/openmpi-mp",
+					/Users/manav/Documents/codes/numerical_lib/petsc/petsc_with_external_libs/include,
+				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					/Users/manav/Documents/codes/numerical_lib/petsc/petsc_with_external_libs/lib,
+					/Users/manav/Documents/codes/numerical_lib/slepc/petsc_with_external_libs/lib,
+					/Users/manav/Documents/codes/libmesh/real/lib,
+					"/opt/local/lib/openmpi-mp",
+					"$(USER_LIBRARY_DIR)/Developer/Xcode/DerivedData/MAST-dkoqgnxoxkrjwgcocsplbdukbbnw/Build/Products/Debug",
+					/Users/manav/Documents/codes/MAST_clean/build/xcode/mast/build/Debug,
+				);
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/../../../src $(SRCROOT)/../../../../libmesh/real/include /opt/local/include/eigen3";
+			};
+			name = Debug;
+		};
+		69FCC3AA1AF1B24C0070942B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include,
+					"/opt/local/include/openmpi-mp",
+					/Users/manav/Documents/codes/numerical_lib/petsc/petsc_with_external_libs/include,
+				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					/Users/manav/Documents/codes/numerical_lib/petsc/petsc_with_external_libs/lib,
+					/Users/manav/Documents/codes/numerical_lib/slepc/petsc_with_external_libs/lib,
+					/Users/manav/Documents/codes/libmesh/real/lib,
+					"/opt/local/lib/openmpi-mp",
+					"$(USER_LIBRARY_DIR)/Developer/Xcode/DerivedData/MAST-dkoqgnxoxkrjwgcocsplbdukbbnw/Build/Products/Debug",
+					/Users/manav/Documents/codes/MAST_clean/build/xcode/mast/build/Debug,
+				);
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/../../../src $(SRCROOT)/../../../../libmesh/real/include /opt/local/include/eigen3";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		69FCC39C1AF1B24C0070942B /* Build configuration list for PBXProject "circular_cantilever" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				69FCC3A61AF1B24C0070942B /* Debug */,
+				69FCC3A71AF1B24C0070942B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		69FCC3A81AF1B24C0070942B /* Build configuration list for PBXNativeTarget "circular_cantilever" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				69FCC3A91AF1B24C0070942B /* Debug */,
+				69FCC3AA1AF1B24C0070942B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 69FCC3991AF1B24C0070942B /* Project object */;
+}
