@@ -1,0 +1,20 @@
+The following dependencies are required in order to build MAST
+
+libMesh
+VTK
+TBB
+PETSc
+BOOST
+BOOST unit test framework
+MPI
+lapack
+blas
+
+
+In order to build MAST, go into build/opt or build/debug and type following command with the 
+specific path locations set. 
+
+cmake ../ -Dlibmesh_dir=~/Documents/codes/libmesh/real -Dvtk_include_dir=/opt/local/include/vtk-5.10 -Dvtk_lib_dir=/opt/local/lib/vtk-5.10 -Dtbb_include_dir=/opt/local/include/tbb -Dtbb_lib_dir=/opt/local/lib  -Dpetsc_dir=~/Documents/codes/numerical_lib/petsc/petsc_with_external_libs -Dboost_include_dir=/opt/local/include -Dmpi_include_dir=/opt/local/include/openmpi-mp -Dmpi_lib_dir=/opt/local/lib/openmpi-mp -Dlapack_lib_dir=/usr/lib -Dblas_lib_dir=/usr/lib -Dboost_lib_dir=/opt/local/lib -Dboost_test_lib=boost_unit_test_framework-mt -DCMAKE_Fortran_COMPILER=mpif90-openmpi-mp -DCMAKE_BUILD_TYPE=Release
+
+Note: CMAKE_BUILD_TYPE=Release builds an optimized version, while CMAKE_BUILD_TYPE=Debug builds the 
+debug version of the code. 
