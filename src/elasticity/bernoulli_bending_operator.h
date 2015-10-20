@@ -94,7 +94,7 @@ initialize_bending_strain_operator_for_yz (const unsigned int qp,
                                            const Real z,
                                            MAST::FEMOperatorMatrix& Bmat) {
     
-    const Real xi = _qrule.get_points()[qp](0);
+    const Real xi = _structural_elem.quadrature_rule().get_points()[qp](0);
     
     // shape function values
     // N1 = (length/8.0) * (4.0/length -  6.0/length*xi + 0.0 +  2.0/length*pow(xi,3));

@@ -32,6 +32,13 @@
 
 namespace MAST {
     
+    // identifies the various output quantities implemented in the code
+    enum OutputQuantityType {
+        
+        STRAIN_STRESS_TENSOR
+    };
+    
+    
     // identifies the evaluation mode for pointwise quantities
     enum PointwiseOutputEvaluationMode {
         CENTROID,    // at the element centroid
@@ -45,16 +52,22 @@ namespace MAST {
         
     public:
         
-        OutputFunctionBase();
+        OutputFunctionBase(MAST::OutputQuantityType t);
 
         /*!
          *    virtual destructor
          */
         virtual ~OutputFunctionBase();
        
+       
+        /*!
+         *   @returns the type of this output quantity
+         */
+        MAST::OutputQuantityType type() const;
+        
         
         /*!
-         *   sets the points of evaluation
+         *   sets the quadrature points of evaluation of the quantity
          */
         void set_qp_for_evaluation(const std::vector<libMesh::Point>& pts);
 
@@ -77,6 +90,12 @@ namespace MAST {
         
         
     protected:
+
+        
+        /*!
+         *   Type of this quantity
+         */
+        MAST::OutputQuantityType _type;
         
 
         std::vector<libMesh::Point> _eval_points;

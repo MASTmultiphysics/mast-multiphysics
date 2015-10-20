@@ -103,14 +103,14 @@ namespace MAST {
          *    allows the element to provide the solution and in turn
          *    override the mesh function evaluation.
          */
-        void set_element_quadrature_point_solution(RealVectorX& sol);
+        virtual void set_element_quadrature_point_solution(RealVectorX& sol);
 
         
         /*!
          *    clears the quadrature point solution provided by the 
          *    corresponding set method above.
          */
-        void clear_element_quadrature_point_solution();
+        virtual void clear_element_quadrature_point_solution();
 
         
         /*!

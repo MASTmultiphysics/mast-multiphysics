@@ -109,9 +109,21 @@ namespace MAST {
         }
         
         /*!
+         *   @returns a constant reference to the section area function
+         */
+        const MAST::FieldFunction<Real>& A() const;
+
+        
+        /*!
          *   @returns reference to the section area function
          */
         MAST::FieldFunction<Real>& A();
+
+        /*!
+         *   @returns constant reference to the function that calculates the
+         *   section torsional constant
+         */
+        const MAST::FieldFunction<Real>& J() const;
 
         /*!
          *   @returns reference to the function that calculates the 
@@ -122,7 +134,18 @@ namespace MAST {
         /*!
          *   @returns reference to the section polar moment function
          */
+        const MAST::FieldFunction<Real>& Ip() const;
+
+        /*!
+         *   @returns reference to the section polar moment function
+         */
         MAST::FieldFunction<Real>& Ip();
+
+        /*!
+         *   @returns constant reference to the function that calculates
+         *   section area moment about y-axis
+         */
+        const MAST::FieldFunction<Real>& Ay() const;
 
         /*!
          *   @returns reference to the function that calculates
@@ -131,11 +154,24 @@ namespace MAST {
         MAST::FieldFunction<Real>& Ay();
 
         /*!
+         *   @returns constant reference to the function that calculates
+         *   section area moment about z-axis
+         */
+        const MAST::FieldFunction<Real>& Az() const;
+
+        /*!
          *   @returns reference to the function that calculates
          *   section area moment about z-axis
          */
         MAST::FieldFunction<Real>& Az();
 
+        /*!
+         *   @returns constant reference to the function that calculates the
+         *   section area moment of inertia
+         */
+        const MAST::FieldFunction<RealMatrixX>& I() const;
+
+        
         /*!
          *   @returns reference to the function that calculates the 
          *   section area moment of inertia

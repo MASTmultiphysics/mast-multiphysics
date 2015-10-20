@@ -123,7 +123,7 @@ MAST::HeatConductionElementBase::internal_residual (bool request_jacobian,
         
         (*conductance)(p, _time, material_mat);
 
-        _initialize_flux_fem_operator(qp, dBmat);
+        _initialize_fem_gradient_operator(qp, dim, dBmat);
         
         // calculate the flux for each dimension and add its weighted
         // component to the residual
@@ -593,7 +593,7 @@ surface_flux_residual(bool request_jacobian,
     // prepare the side finite element
     std::auto_ptr<libMesh::FEBase> fe;
     std::auto_ptr<libMesh::QBase> qrule;
-    _get_side_fe_and_qrule(get_elem_for_quadrature(), s, fe, qrule);
+    _get_side_fe_and_qrule(get_elem_for_quadrature(), s, fe, qrule, false);
     
     
     // get the function from this boundary condition
@@ -712,7 +712,7 @@ surface_convection_residual(bool request_jacobian,
     // prepare the side finite element
     std::auto_ptr<libMesh::FEBase> fe;
     std::auto_ptr<libMesh::QBase> qrule;
-    _get_side_fe_and_qrule(get_elem_for_quadrature(), s, fe, qrule);
+    _get_side_fe_and_qrule(get_elem_for_quadrature(), s, fe, qrule, false);
 
     // get the function from this boundary condition
     const MAST::FieldFunction<Real>
@@ -862,7 +862,7 @@ surface_radiation_residual(bool request_jacobian,
     // prepare the side finite element
     std::auto_ptr<libMesh::FEBase> fe;
     std::auto_ptr<libMesh::QBase> qrule;
-    _get_side_fe_and_qrule(get_elem_for_quadrature(), s, fe, qrule);
+    _get_side_fe_and_qrule(get_elem_for_quadrature(), s, fe, qrule, false);
 
     // get the function from this boundary condition
     const MAST::FieldFunction<Real>
@@ -1058,8 +1058,11 @@ _initialize_mass_fem_operator(const unsigned int qp,
 
 void
 MAST::HeatConductionElementBase::
-_initialize_flux_fem_operator(const unsigned int qp,
-                              std::vector<MAST::FEMOperatorMatrix>& dBmat) {
+_initialize_fem_gradient_operator(const unsigned int qp,
+                                  const unsigned int dim,
+                                  std::vector<MAST::FEMOperatorMatrix>& dBmat) {
+    
+    libmesh_assert(dBmat.size() == dim);
     
     const std::vector<std::vector<libMesh::RealVectorValue> >& dphi = _fe->get_dphi();
     
@@ -1067,28 +1070,11 @@ _initialize_flux_fem_operator(const unsigned int qp,
     RealVectorX phi = RealVectorX::Zero(n_phi);
     
     // now set the shape function values
-    // dN/dx
-    for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
-        phi(i_nd) = dphi[i_nd][qp](0);
-    
-    dBmat[0].reinit(1, phi); // dT/dx
-    
-    // only for 2D and 3D elements
-    if (_elem.dim() > 1) {
+    for (unsigned int i_dim=0; i_dim<dim; i_dim++) {
         
-        // dN/dy
         for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
-            phi(i_nd) = dphi[i_nd][qp](1);
-        dBmat[1].reinit(1, phi); //  dT/dy
-        
-        // only for 3D elements
-        if (_elem.dim() > 2) {
-            
-            // dN/dz
-            for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
-                phi(i_nd) = dphi[i_nd][qp](2);
-            dBmat[2].reinit(1, phi); //  dT/dz
-        }
+            phi(i_nd) = dphi[i_nd][qp](i_dim);
+        dBmat[i_dim].reinit(1, phi); //  dT/dx_i
     }
 }
 

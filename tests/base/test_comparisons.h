@@ -33,18 +33,19 @@ namespace MAST {
         
         if (!boost::test_tools::check_is_close(v0,
                                                v,
-                                               boost::test_tools::percent_tolerance(tol))) {
-            std::cout
-            << "Failed comparison: "
-            << "expected: " << v0 << "  , "
-            << "found: "    << v << " : "
-            << "diff: " << v - v
-            << std::endl;
+                                               boost::test_tools::percent_tolerance<Real>(tol))) {
+            BOOST_TEST_MESSAGE ("Failed comparison: "
+                                << "expected: " << v0 << "  , "
+                                << "found: "    << v << " : "
+                                << "diff: " << v0 - v << " , "
+                                << "tol: " << tol);
             pass = false;
         }
         
         return pass;
     }
+    
+    
     
     inline bool
     compare_vector(const RealVectorX& v, const RealVectorX& v0, const Real tol) {
@@ -59,19 +60,20 @@ namespace MAST {
             if (!boost::test_tools::check_is_close(v0(i),
                                                    v(i),
                                                    boost::test_tools::percent_tolerance(tol))) {
-                std::cout
-                << "Failed comparison at i = ("
-                << i << ") : "
-                << "expected: " << v0(i) << "  , "
-                << "found: "    << v(i) << " : "
-                << "diff: " << v0(i) - v(i)
-                << std::endl;
+                BOOST_TEST_MESSAGE("Failed comparison at i = ("
+                                   << i << ") : "
+                                   << "expected: " << v0(i) << "  , "
+                                   << "found: "    << v(i) << " : "
+                                   << "diff: " << v0(i) - v(i) << " , "
+                                   << "tol: " << tol);
                 pass = false;
             }
         }
         
         return pass;
     }
+    
+    
     
     
     inline bool
@@ -90,13 +92,12 @@ namespace MAST {
                 if (!boost::test_tools::check_is_close(m0(i,j),
                                                        m(i,j),
                                                        boost::test_tools::percent_tolerance(tol))) {
-                    std::cout
-                    << "Failed comparison at (i,j) = ("
-                    << i << ", " << j << ") : "
-                    << "expected: " << m0(i,j) << "  , "
-                    << "found: "    << m(i,j) << " : "
-                    << "diff: " << m0(i,j) - m(i,j)
-                    << std::endl;
+                    BOOST_TEST_MESSAGE("Failed comparison at (i,j) = ("
+                                       << i << ", " << j << ") : "
+                                       << "expected: " << m0(i,j) << "  , "
+                                       << "found: "    << m(i,j) << " : "
+                                       << "diff: " << m0(i,j) - m(i,j) << " , "
+                                       << "tol: " << tol);
                     pass = false;
                 }
         }

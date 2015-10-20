@@ -182,7 +182,7 @@ update_incompatible_solution(libMesh::NumericVector<Real>& X,
     
     // iterate over each element and ask the 3D elements to update
     // their local solutions
- 
+    
     libMesh::NonlinearImplicitSystem& nonlin_sys =
     dynamic_cast<libMesh::NonlinearImplicitSystem&>(_system->system());
     
@@ -286,10 +286,20 @@ _elem_calculations(MAST::ElementBase& elem,
     
     vec.setZero();
     mat.setZero();
+    RealMatrixX
+    dummy = RealMatrixX::Zero(mat.rows(), mat.cols());
     
     e.internal_residual(if_jac, vec, mat, false);
-    e.side_external_residual<Real>(if_jac, vec, mat, _discipline->side_loads());
-    e.volume_external_residual<Real>(if_jac, vec, mat, _discipline->volume_loads());
+    e.side_external_residual<Real>(if_jac,
+                                   vec,
+                                   dummy,
+                                   mat,
+                                   _discipline->side_loads());
+    e.volume_external_residual<Real>(if_jac,
+                                     vec,
+                                     dummy,
+                                     mat,
+                                     _discipline->volume_loads());
 }
 
 
@@ -305,11 +315,11 @@ _elem_sensitivity_calculations(MAST::ElementBase& elem,
     
     vec.setZero();
     RealMatrixX mat; // dummy matrix
-
+    
     libmesh_error();
-//    e.internal_residual_sensitivity(false, vec, mat, false);
-//    e.side_external_residual_sensitivity<Real>(false, vec, mat, _discipline->side_loads());
-//    e.volume_external_residual_sensitivity<Real>(false, vec, mat, _discipline->volume_loads());
+    //    e.internal_residual_sensitivity(false, vec, mat, false);
+    //    e.side_external_residual_sensitivity<Real>(false, vec, mat, _discipline->side_loads());
+    //    e.volume_external_residual_sensitivity<Real>(false, vec, mat, _discipline->volume_loads());
 }
 
 
@@ -319,7 +329,7 @@ void
 MAST::StructuralNonlinearAssembly::
 attach_discipline_and_system(MAST::PhysicsDisciplineBase& discipline,
                              MAST::SystemInitialization& system) {
-
+    
     // call the parent's method firts
     MAST::NonlinearImplicitAssembly::attach_discipline_and_system(discipline,
                                                                   system);
@@ -349,10 +359,7 @@ attach_discipline_and_system(MAST::PhysicsDisciplineBase& discipline,
 void
 MAST::StructuralNonlinearAssembly::
 clear_discipline_and_system( ) {
-
-    // call the parent's method firts
-    MAST::NonlinearImplicitAssembly::clear_discipline_and_system();
-
+    
     // next, remove the monitor function from the snes object
     libMesh::PetscNonlinearSolver<Real> &petsc_nonlinear_solver =
     *(dynamic_cast<libMesh::PetscNonlinearSolver<Real>*>
@@ -364,6 +371,11 @@ clear_discipline_and_system( ) {
     PetscErrorCode ierr =
     SNESMonitorCancel(snes);
     libmesh_assert(!ierr);
+    
+    // call the parent's method firts
+    MAST::NonlinearImplicitAssembly::clear_discipline_and_system();
+    
+    
 }
 
 

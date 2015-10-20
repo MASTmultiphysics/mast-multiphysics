@@ -63,12 +63,22 @@ MAST::BuildStructural1DElem::BuildStructural1DElem() {
     
     // create the property functions and add them to the
     
-    _thy            = new MAST::Parameter("thy",0.002);
-    _thz             = new MAST::Parameter("thy",   1.);
+    _thy             = new MAST::Parameter("thy",0.002);
+    _thz             = new MAST::Parameter("thz",   1.);
     _E               = new MAST::Parameter("E",  72.e9);
     _nu              = new MAST::Parameter("nu",  0.33);
     _zero            = new MAST::Parameter("zero",  0.);
     
+    
+
+    // prepare the vector of parameters with respect to which the sensitivity
+    // needs to be benchmarked
+    _params_for_sensitivity.push_back(_E);
+    _params_for_sensitivity.push_back(_nu);
+    _params_for_sensitivity.push_back(_thy);
+    _params_for_sensitivity.push_back(_thz);
+    
+
     
     _thy_f           = new MAST::ConstantFieldFunction("hy",     *_thy);
     _thz_f           = new MAST::ConstantFieldFunction("hz",     *_thz);

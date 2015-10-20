@@ -18,12 +18,12 @@
  */
 
 
-#ifndef __mast_test_build_structural_element_h__
-#define __mast_test_build_structural_element_h__
+#ifndef __mast_test_build_structural_element_1d_h__
+#define __mast_test_build_structural_element_1d_h__
 
 // C++ includes
 #include <memory>
-
+#include <vector>
 
 // libMesh includes
 #include "libmesh/libmesh.h"
@@ -94,8 +94,11 @@ namespace MAST {
         
         // create the boundary condition
         MAST::PistonTheoryBoundaryCondition*    _p_theory;
+        
+        // vector of parameters to evaluate sensitivity wrt
+        std::vector<MAST::Parameter*> _params_for_sensitivity;
     };
 }
 
 
-#endif // __mast_test_build_structural_element_h__
+#endif // __mast_test_build_structural_element_1d_h__

@@ -62,8 +62,16 @@ _elem_calculations(MAST::ElementBase& elem,
     
     // assembly of the flux terms
     e.internal_residual(if_jac, f_x, f_x_jac, false);
-    e.side_external_residual<Real>(if_jac, f_x, f_x_jac, _discipline->side_loads());
-    e.volume_external_residual<Real>(if_jac, f_x, f_x_jac, _discipline->volume_loads());
+    e.side_external_residual<Real>(if_jac,
+                                   f_x,
+                                   f_m_jac_xdot,
+                                   f_x_jac,
+                                   _discipline->side_loads());
+    e.volume_external_residual<Real>(if_jac,
+                                     f_x,
+                                     f_m_jac_xdot,
+                                     f_x_jac,
+                                     _discipline->volume_loads());
     
     //assembly of the capacitance term
     e.damping_residual(if_jac, f_m, f_m_jac_xdot, f_m_jac);
@@ -98,8 +106,16 @@ _elem_calculations(MAST::ElementBase& elem,
     // assembly of the flux terms
     e.internal_residual(if_jac, f_x, f_x_jac, false);
     e.damping_residual(if_jac, f_x, f_x_jac_xdot, f_x_jac);
-    e.side_external_residual<Real>(if_jac, f_x, f_x_jac, _discipline->side_loads());
-    e.volume_external_residual<Real>(if_jac, f_x, f_x_jac, _discipline->volume_loads());
+    e.side_external_residual<Real>(if_jac,
+                                   f_x,
+                                   f_m_jac_xdot,
+                                   f_x_jac,
+                                   _discipline->side_loads());
+    e.volume_external_residual<Real>(if_jac,
+                                     f_x,
+                                     f_m_jac_xdot,
+                                     f_x_jac,
+                                     _discipline->volume_loads());
     
     //assembly of the capacitance term
     e.inertial_residual(if_jac, f_m, f_m_jac_xddot, f_m_jac_xdot, f_m_jac);

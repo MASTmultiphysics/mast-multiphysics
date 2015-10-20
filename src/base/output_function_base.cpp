@@ -20,7 +20,9 @@
 // MAST includes
 #include "base/output_function_base.h"
 
-MAST::OutputFunctionBase::OutputFunctionBase() {
+MAST::OutputFunctionBase::OutputFunctionBase(MAST::OutputQuantityType t):
+_type(t),
+_eval_mode(MAST::CENTROID) {
     
 }
 
@@ -30,6 +32,13 @@ MAST::OutputFunctionBase::~OutputFunctionBase() {
     
 }
 
+
+
+MAST::OutputQuantityType
+MAST::OutputFunctionBase::type() const {
+    
+    return _type;
+}
 
 
 void

@@ -29,8 +29,7 @@
 
 MAST::BendingOperator::BendingOperator(MAST::StructuralElementBase& elem):
 _structural_elem(elem),
-_elem(_structural_elem.get_elem_for_quadrature()),
-_qrule(_structural_elem.quadrature_rule())
+_elem(_structural_elem.get_elem_for_quadrature())
 { }
 
 

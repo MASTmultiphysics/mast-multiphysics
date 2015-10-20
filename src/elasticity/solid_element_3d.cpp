@@ -713,8 +713,29 @@ MAST::StructuralElement3D::thermal_residual_sensitivity(bool request_jacobian,
 
 
 
-bool MAST::StructuralElement3D::calculate_stress(bool request_derivative,
-                                                 MAST::OutputFunctionBase& output) {
+bool
+MAST::StructuralElement3D::
+piston_theory_residual(bool request_jacobian,
+                       RealVectorX &f,
+                       RealMatrixX& jac_xdot,
+                       RealMatrixX& jac,
+                       const unsigned int side,
+                       MAST::BoundaryConditionBase& bc) {
+    
+    
+    libmesh_error(); // to be implemented
+    
+    return (request_jacobian && follower_forces);
+}
+
+
+
+
+
+bool
+MAST::StructuralElement3D::calculate_stress(bool request_derivative,
+                                            bool request_sensitivity,
+                                            MAST::OutputFunctionBase& output) {
     
     // ask the output object about the quadrature points at which
     // the stress evaluations need to be peformed
@@ -762,25 +783,12 @@ bool MAST::StructuralElement3D::calculate_stress(bool request_derivative,
     mat_x        = RealMatrixX::Zero(6,3),
     mat_y        = RealMatrixX::Zero(6,3),
     mat_z        = RealMatrixX::Zero(6,3),
-    mat1_n1n2    = RealMatrixX::Zero(n1, n2),
-    mat2_n2n2    = RealMatrixX::Zero(n2, n2),
-    mat3_3n2     = RealMatrixX::Zero(3, n2),
-    mat4_33      = RealMatrixX::Zero(3, 3),
-    mat5_n1n3    = RealMatrixX::Zero(n1, n3),
-    mat6_n2n3    = RealMatrixX::Zero(n2, n3),
-    mat7_3n3     = RealMatrixX::Zero(3, n3),
-    Gmat         = RealMatrixX::Zero(6, n3),
-    K_alphaalpha = RealMatrixX::Zero(n3, n3),
-    K_ualpha     = RealMatrixX::Zero(n2, n3),
-    K_corr       = RealMatrixX::Zero(n2, n2);
+    Gmat         = RealMatrixX::Zero(6, n3);
+    
     RealVectorX
     strain    = RealVectorX::Zero(6),
     stress    = RealVectorX::Zero(6),
-    vec1_n1   = RealVectorX::Zero(n1),
-    vec2_n2   = RealVectorX::Zero(n2),
-    vec3_3    = RealVectorX::Zero(3),
     local_disp= RealVectorX::Zero(n2),
-    f_alpha   = RealVectorX::Zero(n3),
     &alpha    = *_incompatible_sol;
     
     // copy the values from the global to the local element
@@ -842,12 +850,11 @@ bool MAST::StructuralElement3D::calculate_stress(bool request_derivative,
         strain += Gmat * alpha;
         stress = material_mat * strain;
         
-        if (stress_output.if_evaluate_strain())
-            stress_output.add_strain_at_qp_location(qp_loc[qp], xyz[qp], strain);
-
-        if (stress_output.if_evaluate_stress())
-            stress_output.add_stress_at_qp_location(qp_loc[qp], xyz[qp], stress);
-
+        stress_output.add_stress_strain_at_qp_location(qp_loc[qp],
+                                                       xyz[qp],
+                                                       stress,
+                                                       strain);
+        
         if (request_derivative) {
             // to be implemented
             libmesh_error();
@@ -859,15 +866,6 @@ bool MAST::StructuralElement3D::calculate_stress(bool request_derivative,
 
 
 
-
-bool
-MAST::StructuralElement3D::calculate_stress_sensitivity(MAST::OutputFunctionBase& output) {
-
-    
-    
-    
-    return true;
-}
 
 
 
@@ -1299,4 +1297,5 @@ MAST::StructuralElement3D::_init_incompatible_fe_mapping( const libMesh::Elem& e
     
     _T0_inv_tr = jac.determinant() * T0.inverse().transpose();
 }
+
 

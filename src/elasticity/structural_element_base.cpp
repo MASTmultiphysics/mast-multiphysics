@@ -31,6 +31,7 @@
 #include "mesh/local_3d_elem.h"
 #include "numerics/fem_operator_matrix.h"
 #include "numerics/utility.h"
+#include "elasticity/stress_output_base.h"
 
 
 
@@ -98,8 +99,16 @@ MAST::StructuralElementBase::set_solution(const RealVectorX& vec,
             this->transform_vector_to_local_system(vec, _local_sol);
         }
     }
-    else
-        libmesh_error();
+    else {
+        
+        // set the element solution sensitivity.
+        if (_elem.dim() == 3)
+            _local_sol_sens = vec;
+        else {
+            _local_sol_sens = RealVectorX::Zero(vec.size());
+            this->transform_vector_to_local_system(vec, _local_sol_sens);
+        }
+    }
     
     MAST::ElementBase::set_solution(vec, if_sens);
 }
@@ -118,9 +127,16 @@ MAST::StructuralElementBase::set_velocity(const RealVectorX& vec,
             this->transform_vector_to_local_system(vec, _local_vel);
         }
     }
-    else
-        libmesh_error();
-    
+    else {
+        
+        if (_elem.dim() == 3)
+            _local_vel_sens = vec;
+        else {
+            _local_vel_sens = RealVectorX::Zero(vec.size());
+            this->transform_vector_to_local_system(vec, _local_vel_sens);
+        }
+    }
+
     MAST::ElementBase::set_velocity(vec, if_sens);
 }
 
@@ -138,8 +154,15 @@ MAST::StructuralElementBase::set_acceleration(const RealVectorX& vec,
             this->transform_vector_to_local_system(vec, _local_accel);
         }
     }
-    else
-        libmesh_error();
+    else {
+
+        if (_elem.dim() == 3)
+            _local_accel_sens = vec;
+        else {
+            _local_accel_sens = RealVectorX::Zero(vec.size());
+            this->transform_vector_to_local_system(vec, _local_accel_sens);
+        }
+    }
     
     MAST::ElementBase::set_acceleration(vec, if_sens);
 }
@@ -278,6 +301,7 @@ bool
 MAST::StructuralElementBase::
 side_external_residual(bool request_jacobian,
                        RealVectorX& f,
+                       RealMatrixX& jac_xdot,
                        RealMatrixX& jac,
                        std::multimap<libMesh::boundary_id_type, MAST::BoundaryConditionBase*>& bc) {
     
@@ -320,6 +344,18 @@ side_external_residual(bool request_jacobian,
                                                                    n,
                                                                    *it.first->second));
                         break;
+
+                        
+                    case MAST::PISTON_THEORY:
+                        calculate_jac = (calculate_jac ||
+                                         piston_theory_residual(request_jacobian,
+                                                                f,
+                                                                jac_xdot,
+                                                                jac,
+                                                                n,
+                                                                *it.first->second));
+                        break;
+
                         
                     case MAST::SMALL_DISTURBANCE_MOTION:
                         calculate_jac = (calculate_jac ||
@@ -352,6 +388,7 @@ bool
 MAST::StructuralElementBase::
 volume_external_residual (bool request_jacobian,
                           RealVectorX& f,
+                          RealMatrixX& jac_xdot,
                           RealMatrixX& jac,
                           std::multimap<libMesh::subdomain_id_type, MAST::BoundaryConditionBase*>& bc) {
     
@@ -377,6 +414,16 @@ volume_external_residual (bool request_jacobian,
                                                            f, jac,
                                                            *it.first->second));
                 break;
+
+            case MAST::PISTON_THEORY:
+                calculate_jac = (calculate_jac ||
+                                 piston_theory_residual(request_jacobian,
+                                                        f,
+                                                        jac_xdot,
+                                                        jac,
+                                                        *it.first->second));
+                break;
+
             case MAST::TEMPERATURE:
                 calculate_jac = (calculate_jac ||
                                  thermal_residual(request_jacobian,
@@ -407,11 +454,44 @@ volume_external_residual (bool request_jacobian,
 
 
 bool
-MAST::StructuralElementBase::volume_output_functions
+MAST::StructuralElementBase::volume_output_quantity
 (bool request_derivative,
+ bool request_sensitivity,
  std::multimap<libMesh::subdomain_id_type, MAST::OutputFunctionBase*>& output) {
     
     
+    
+    // iterate over the boundary ids given in the provided force map
+    std::pair<std::multimap<libMesh::subdomain_id_type, MAST::OutputFunctionBase*>::const_iterator,
+    std::multimap<libMesh::subdomain_id_type, MAST::OutputFunctionBase*>::const_iterator> it;
+    
+    // for each subdomain id, check if the element has this domain id
+    bool calculate_derivative = false;
+    
+    libMesh::subdomain_id_type sid = _elem.subdomain_id();
+    // find the loads on this boundary and evaluate the f and jac
+    it =  output.equal_range(sid);
+    
+    for ( ; it.first != it.second; it.first++) {
+        // apply all the types of loading
+        switch (it.first->second->type()) {
+                
+            case MAST::STRAIN_STRESS_TENSOR:
+                calculate_derivative = (calculate_derivative ||
+                                        calculate_stress(request_derivative,
+                                                         request_sensitivity,
+                                                         *it.first->second));
+                break;
+                
+            default:
+                // not implemented yet
+                libmesh_error();
+                break;
+        }
+    }
+    
+    return ((request_derivative || request_sensitivity) && calculate_derivative);
+
     return false;
 }
 
@@ -431,7 +511,7 @@ surface_pressure_residual(bool request_jacobian,
     // prepare the side finite element
     std::auto_ptr<libMesh::FEBase> fe;
     std::auto_ptr<libMesh::QBase> qrule;
-    _get_side_fe_and_qrule(get_elem_for_quadrature(), side, fe, qrule);
+    _get_side_fe_and_qrule(get_elem_for_quadrature(), side, fe, qrule, false);
     
     const std::vector<Real> &JxW                    = fe->get_JxW();
     const std::vector<libMesh::Point>& qpoint       = fe->get_xyz();
@@ -595,7 +675,7 @@ small_disturbance_surface_pressure_residual(bool request_jacobian,
     
     std::auto_ptr<libMesh::FEBase> fe;
     std::auto_ptr<libMesh::QBase> qrule;
-    _get_side_fe_and_qrule(this->local_elem().local_elem(), side, fe, qrule);
+    _get_side_fe_and_qrule(this->local_elem().local_elem(), side, fe, qrule, false);
     
     
     // Physical location of the quadrature points
@@ -899,6 +979,70 @@ MAST::build_structural_element(MAST::SystemInitialization& sys,
 
 
 
+Real
+MAST::StructuralElementBase::piston_theory_cp(const unsigned int order,
+                                              const Real vel_normal,
+                                              const Real a_inf,
+                                              const Real gamma,
+                                              const Real mach) {
+    
+    
+    Real cp     = 0.0;
+    switch (order)
+    {
+        case 3:
+            cp  += (gamma+1.0)/12.0*pow(vel_normal/a_inf,3);
+        case 2:
+            cp  += (gamma+1.0)/4.0*pow(vel_normal/a_inf,2);
+        case 1: {
+            cp  += vel_normal/a_inf;
+            cp  *= 2.0/pow(mach,2);
+        }
+            break;
+            
+        default:
+            libmesh_error_msg("Invalid Piston Theory Order: " << order);
+            break;
+    }
+    
+    return cp;
+}
+
+
+
+
+Real
+MAST::StructuralElementBase::piston_theory_dcp_dvn(const unsigned int order,
+                                                   const Real vel_normal,
+                                                   const Real a_inf,
+                                                   const Real gamma,
+                                                   const Real mach) {
+    
+    
+    Real dcp_dvn     = 0.0;
+    switch (order)
+    {
+        case 3:
+            dcp_dvn  += (gamma+1.0)/4.0*pow(vel_normal,2)/pow(a_inf,3);
+        case 2:
+            dcp_dvn  += (gamma+1.0)/2.0*vel_normal/pow(a_inf,2);
+        case 1: {
+            dcp_dvn  += 1./a_inf;
+            dcp_dvn  *= 2.0/pow(mach,2);
+        }
+            break;
+            
+        default:
+            libmesh_error_msg("Invalid Piston Theory Order: " << order);
+            break;
+    }
+    
+    return dcp_dvn;
+}
+
+
+
+
 // template instantiations
 template
 void
@@ -947,6 +1091,7 @@ bool
 MAST::StructuralElementBase::side_external_residual<Real>
 (bool request_jacobian,
  RealVectorX &f,
+ RealMatrixX& jac_xdot,
  RealMatrixX &jac,
  std::multimap<libMesh::boundary_id_type, MAST::BoundaryConditionBase*> &bc);
 
@@ -956,6 +1101,7 @@ bool
 MAST::StructuralElementBase::side_external_residual<Complex>
 (bool request_jacobian,
  RealVectorX &f,
+ RealMatrixX& jac_xdot,
  RealMatrixX &jac,
  std::multimap<libMesh::boundary_id_type, MAST::BoundaryConditionBase*> &bc);
 
@@ -983,6 +1129,7 @@ bool
 MAST::StructuralElementBase::volume_external_residual<Real>
 (bool request_jacobian,
  RealVectorX& f,
+ RealMatrixX& jac_xdot,
  RealMatrixX& jac,
  std::multimap<libMesh::subdomain_id_type, MAST::BoundaryConditionBase*>& bc);
 
@@ -992,6 +1139,7 @@ bool
 MAST::StructuralElementBase::volume_external_residual<Complex>
 (bool request_jacobian,
  RealVectorX& f,
+ RealMatrixX& jac_xdot,
  RealMatrixX& jac,
  std::multimap<libMesh::subdomain_id_type, MAST::BoundaryConditionBase*>& bc);
 

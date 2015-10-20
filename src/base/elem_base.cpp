@@ -168,7 +168,8 @@ void
 MAST::ElementBase::_get_side_fe_and_qrule(const libMesh::Elem& e,
                                           unsigned int s,
                                           std::auto_ptr<libMesh::FEBase>& fe,
-                                          std::auto_ptr<libMesh::QBase>& qrule) {
+                                          std::auto_ptr<libMesh::QBase>& qrule,
+                                          bool if_calculate_dphi) {
     unsigned int nv = _system.n_vars();
     
     libmesh_assert (nv);
@@ -185,6 +186,8 @@ MAST::ElementBase::_get_side_fe_and_qrule(const libMesh::Elem& e,
     fe->attach_quadrature_rule(qrule.get());
     fe->get_phi();
     fe->get_JxW();
+    if (if_calculate_dphi)
+        fe->get_dphi();
     
     fe->reinit(&e, s);
 }

@@ -214,13 +214,17 @@ namespace MAST {
         /*!
          *   @returns the quadrature and finite element for element side
          *   integration. These are raw pointers created using new. The
-         *   pointers must be deleted at the end of scope.
+         *   pointers must be deleted at the end of scope. The last argument
+         *   \p if_calculate_dphi tell the function to request the 
+         *   \p fe object to also initialize the calculation of shape function
+         *   derivatives 
          */
         virtual void
         _get_side_fe_and_qrule(const libMesh::Elem& e,
                                unsigned int s,
                                std::auto_ptr<libMesh::FEBase>& fe,
-                               std::auto_ptr<libMesh::QBase>& qrule);
+                               std::auto_ptr<libMesh::QBase>& qrule,
+                               bool if_calculate_dphi);
         
         
         /*!

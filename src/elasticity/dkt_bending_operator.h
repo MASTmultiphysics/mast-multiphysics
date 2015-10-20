@@ -77,7 +77,7 @@ namespace MAST
             // now setup the shape functions
             _fe = libMesh::FEBase::build(2, libMesh::FEType(libMesh::SECOND,
                                                             libMesh::LAGRANGE)).release();
-            _fe->attach_quadrature_rule(&_qrule);
+            _fe->attach_quadrature_rule(&_structural_elem.quadrature_rule());
             _fe->get_phi();
             _fe->get_dphi();
             _fe->reinit(_tri6);

@@ -103,7 +103,7 @@ namespace MAST {
         /*!
          *   This should be called before the first time step. All state vectors
          *   from the current and the previous time steps are set equal to
-         *   \par val.
+         *   \par val. This is useful for system with scalar unknowns.
          */
         virtual void set_initial_condition(Real val);
 

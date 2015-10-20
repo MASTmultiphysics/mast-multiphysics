@@ -423,7 +423,7 @@ left_multiply_transpose(T& r, const T& m) const {
     libmesh_assert_equal_to(r.cols(), _n_interpolated_vars);
     libmesh_assert_equal_to(m.cols(), n());
     
-    r.zero();
+    r.setZero();
     unsigned int index = 0;
     
     for (unsigned int i=0; i<_n_interpolated_vars; i++) // row

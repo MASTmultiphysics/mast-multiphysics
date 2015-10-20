@@ -1837,6 +1837,57 @@ depends_on(const MAST::FunctionBase& f) const {
 
 
 
+const MAST::FieldFunction<Real>&
+MAST::Solid1DSectionElementPropertyCard::A() const {
+    
+    libmesh_assert(_initialized);
+    return *_A;
+}
+
+
+
+const MAST::FieldFunction<Real>&
+MAST::Solid1DSectionElementPropertyCard::J() const {
+    
+    libmesh_assert(_initialized);
+    return *_J;
+}
+
+
+const MAST::FieldFunction<Real>&
+MAST::Solid1DSectionElementPropertyCard::Ip() const {
+    
+    libmesh_assert(_initialized);
+    return *_Ip;
+}
+
+
+const MAST::FieldFunction<Real>&
+MAST::Solid1DSectionElementPropertyCard::Ay() const {
+    
+    libmesh_assert(_initialized);
+    return *_Ay;
+}
+
+
+const MAST::FieldFunction<Real>&
+MAST::Solid1DSectionElementPropertyCard::Az() const {
+    
+    libmesh_assert(_initialized);
+    return *_Az;
+}
+
+
+const MAST::FieldFunction<RealMatrixX>&
+MAST::Solid1DSectionElementPropertyCard::I() const {
+    
+    libmesh_assert(_initialized);
+    return *_AI;
+}
+
+
+
+
 MAST::FieldFunction<Real>&
 MAST::Solid1DSectionElementPropertyCard::A() {
     
@@ -1927,6 +1978,9 @@ std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::Solid1DSectionElementPropertyCard::
 stiffness_A_matrix(const MAST::ElementBase& e) const {
     
+    // make sure that the init method has been called on the card
+    libmesh_assert(_initialized);
+    
     MAST::FieldFunction<RealMatrixX>* rval =
     new MAST::Solid1DSectionProperty::ExtensionStiffnessMatrix
     (_material->stiffness_matrix(1).release(),
@@ -1941,6 +1995,9 @@ std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::Solid1DSectionElementPropertyCard::
 stiffness_B_matrix(const MAST::ElementBase& e) const {
     
+    // make sure that the init method has been called on the card
+    libmesh_assert(_initialized);
+
     MAST::FieldFunction<RealMatrixX>* rval =
     new MAST::Solid1DSectionProperty::ExtensionBendingStiffnessMatrix
     (_material->stiffness_matrix(1).release(),
@@ -1955,6 +2012,8 @@ std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::Solid1DSectionElementPropertyCard::
 stiffness_D_matrix(const MAST::ElementBase& e) const {
     
+    // make sure that the init method has been called on the card
+    libmesh_assert(_initialized);
     
     MAST::FieldFunction<RealMatrixX>* rval =
     new MAST::Solid1DSectionProperty::BendingStiffnessMatrix
@@ -1980,6 +2039,8 @@ std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::Solid1DSectionElementPropertyCard::
 inertia_matrix(const MAST::ElementBase& e) const {
     
+    // make sure that the init method has been called on the card
+    libmesh_assert(_initialized);
     
     MAST::FieldFunction<RealMatrixX>* rval =
     new MAST::Solid1DSectionProperty::InertiaMatrix
@@ -1999,6 +2060,9 @@ std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::Solid1DSectionElementPropertyCard::
 thermal_expansion_A_matrix(const MAST::ElementBase& e) const {
     
+    // make sure that the init method has been called on the card
+    libmesh_assert(_initialized);
+
     MAST::FieldFunction<RealMatrixX>* rval =
     new MAST::Solid1DSectionProperty::ThermalExpansionAMatrix
     (_material->stiffness_matrix(1).release(),
@@ -2015,6 +2079,9 @@ MAST::Solid1DSectionElementPropertyCard::
 thermal_expansion_B_matrix(const MAST::ElementBase& e) const {
     
     
+    // make sure that the init method has been called on the card
+    libmesh_assert(_initialized);
+
     MAST::FieldFunction<RealMatrixX>* rval =
     new MAST::Solid1DSectionProperty::ThermalExpansionBMatrix
     (_material->stiffness_matrix(1).release(),
@@ -2031,6 +2098,9 @@ MAST::Solid1DSectionElementPropertyCard::
 transverse_shear_stiffness_matrix(const MAST::ElementBase& e) const {
     
     
+    // make sure that the init method has been called on the card
+    libmesh_assert(_initialized);
+
     MAST::FieldFunction<RealMatrixX>* rval =
     new MAST::Solid1DSectionProperty::TransverseStiffnessMatrix
     (_material->transverse_shear_stiffness_matrix().release(),
@@ -2044,6 +2114,9 @@ std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::Solid1DSectionElementPropertyCard::
 prestress_A_matrix(const MAST::ElementBase& e) const {
     
+    // make sure that the init method has been called on the card
+    libmesh_assert(_initialized);
+
     MAST::FieldFunction<RealMatrixX>* rval =
     new MAST::Solid1DSectionProperty::PrestressAMatrix
     (this->get<MAST::FieldFunction<RealMatrixX> >("prestress").clone().release(),
@@ -2058,6 +2131,9 @@ std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::Solid1DSectionElementPropertyCard::
 prestress_B_matrix(const MAST::ElementBase& e) const {
     
+    // make sure that the init method has been called on the card
+    libmesh_assert(_initialized);
+
     MAST::FieldFunction<RealMatrixX>* rval =
     new MAST::Solid1DSectionProperty::PrestressBMatrix
     (this->get<MAST::FieldFunction<RealMatrixX> >("prestress").clone().release(),
@@ -2074,6 +2150,8 @@ std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::Solid1DSectionElementPropertyCard::
 thermal_conductance_matrix(const MAST::ElementBase& e) const {
     
+    // make sure that the init method has been called on the card
+    libmesh_assert(_initialized);
     
     MAST::FieldFunction<RealMatrixX>* rval =
     new MAST::Solid1DSectionProperty::ThermalConductanceMatrix
@@ -2089,6 +2167,8 @@ std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::Solid1DSectionElementPropertyCard::
 thermal_capacitance_matrix(const MAST::ElementBase& e) const {
     
+    // make sure that the init method has been called on the card
+    libmesh_assert(_initialized);
     
     MAST::FieldFunction<RealMatrixX>* rval =
     new MAST::Solid1DSectionProperty::ThermalCapacitanceMatrix

@@ -27,7 +27,8 @@ namespace MAST {
     namespace IsotropicMaterialProperty {
         
         
-        class StiffnessMatrix1D: public MAST::FieldFunction<RealMatrixX> {
+        class StiffnessMatrix1D:
+        public MAST::FieldFunction<RealMatrixX> {
         public:
             
             StiffnessMatrix1D( MAST::FieldFunction<Real>* E,

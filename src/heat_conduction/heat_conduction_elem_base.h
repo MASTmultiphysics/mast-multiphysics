@@ -318,8 +318,9 @@ namespace MAST {
          *
          *    \f[  dB[2] = \frac{\partial {\bf N}}{\partial z} \f]
          */
-        void _initialize_flux_fem_operator(const unsigned int qp,
-                                           std::vector<MAST::FEMOperatorMatrix>& dBmat);
+        void _initialize_fem_gradient_operator(const unsigned int qp,
+                                               const unsigned int dim,
+                                               std::vector<MAST::FEMOperatorMatrix>& dBmat);
 
         /*!
          *   element property

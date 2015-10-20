@@ -144,17 +144,41 @@ namespace MAST {
                                                   MAST::BoundaryConditionBase& p);
         
         /*!
+         *    Calculates the force vector and Jacobian due to piston-theory
+         *    based surface pressure on the entire element domain.
+         *    This is applicable for only 1D and 2D elements. The order
+         *    of the boundary condition and direction of fluid flow are
+         *    obtained from the BoundaryConditionBase object.
+         */
+        virtual bool piston_theory_residual(bool request_jacobian,
+                                            RealVectorX &f,
+                                            RealMatrixX& jac_xdot,
+                                            RealMatrixX& jac,
+                                            MAST::BoundaryConditionBase& bc) {
+            libmesh_error_msg("Invalid Function Call: Piston theory force \
+                              is not defined for solid element volume.");
+        }
+        
+        /*!
+         *    Calculates the force vector and Jacobian due to piston-theory
+         *    based surface pressure on the side identified by \p side.
+         *    The order of the boundary condition and direction of fluid
+         *     flow are obtained from the BoundaryConditionBase object.
+         */
+        virtual bool piston_theory_residual(bool request_jacobian,
+                                            RealVectorX &f,
+                                            RealMatrixX& jac_xdot,
+                                            RealMatrixX& jac,
+                                            const unsigned int side,
+                                            MAST::BoundaryConditionBase& bc);
+
+        /*!
          *    Calculates the stress tensor
          */
         virtual bool calculate_stress(bool request_derivative,
+                                      bool request_sensitivity,
                                       MAST::OutputFunctionBase& output);
         
-        
-        /*!
-         *    Calculates the stress tensor sensitivity
-         */
-        virtual bool calculate_stress_sensitivity(MAST::OutputFunctionBase& output);
-
         
         /*!
          *   initialize strain operator matrix

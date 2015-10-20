@@ -41,7 +41,6 @@ namespace MAST {
         
         MindlinBendingOperator(MAST::StructuralElementBase& elem):
         MAST::BendingOperator2D(elem),
-        _fe(elem.fe()),
         _shear_quadrature_reduction(1)
         { }
         
@@ -84,11 +83,6 @@ namespace MAST {
     protected:
         
         /*!
-         *   reference to finite elmement object for the element
-         */
-        libMesh::FEBase& _fe;
-        
-        /*!
          *   reduction in quadrature for shear energy
          */
         unsigned int _shear_quadrature_reduction;
@@ -114,8 +108,10 @@ initialize_bending_strain_operator_for_z(const unsigned int qp,
                                          const Real z,
                                          MAST::FEMOperatorMatrix& Bmat_bend) {
     
-    const std::vector<std::vector<libMesh::RealVectorValue> >& dphi = _fe.get_dphi();
-    const std::vector<std::vector<Real> >& phi = _fe.get_phi();
+    libMesh::FEBase& fe = _structural_elem.fe();
+    
+    const std::vector<std::vector<libMesh::RealVectorValue> >& dphi = fe.get_dphi();
+    const std::vector<std::vector<Real> >& phi = fe.get_phi();
     
     const unsigned int n_phi = (unsigned int)phi.size();
     
@@ -162,7 +158,7 @@ calculate_transverse_shear_residual(bool request_jacobian,
     
     std::auto_ptr<libMesh::FEBase> fe;
     std::auto_ptr<libMesh::QBase> qrule;
-    libMesh::FEType fe_type = _fe.get_fe_type();
+    libMesh::FEType fe_type = _structural_elem.fe().get_fe_type();
     
     fe.reset(libMesh::FEBase::build(_elem.dim(), fe_type).release());
     qrule.reset(fe_type.default_quadrature_rule
@@ -213,7 +209,7 @@ calculate_transverse_shear_residual(bool request_jacobian,
                          _structural_elem.system().time,
                          material_trans_shear_mat);
         else
-            mat_stiff->derivative(MAST::TOTAL_DERIVARIVE,
+            mat_stiff->derivative(MAST::PARTIAL_DERIVATIVE,
                                   *sens_param,
                                   p,
                                   _structural_elem.system().time,

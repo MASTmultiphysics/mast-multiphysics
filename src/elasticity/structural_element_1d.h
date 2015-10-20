@@ -128,22 +128,45 @@ namespace MAST {
         
         
         /*!
-         *    Calculates the stress tensor
+         *    Calculates the force vector and Jacobian due to piston-theory
+         *    based surface pressure on the entire element domain.
+         *    This is applicable for only 1D and 2D elements. The order
+         *    of the boundary condition and direction of fluid flow are
+         *    obtained from the BoundaryConditionBase object.
          */
-        virtual bool calculate_stress(bool request_derivative,
-                                      MAST::OutputFunctionBase& output) {
-            // to be implemented
-            libmesh_error();
-        }
-        
+        virtual bool piston_theory_residual(bool request_jacobian,
+                                            RealVectorX &f,
+                                            RealMatrixX& jac_xdot,
+                                            RealMatrixX& jac,
+                                            MAST::BoundaryConditionBase& bc);
         
         /*!
-         *    Calculates the stress tensor sensitivity
+         *    Calculates the force vector and Jacobian due to piston-theory
+         *    based surface pressure on the side identified by \p side.
+         *    The order of the boundary condition and direction of fluid
+         *     flow are obtained from the BoundaryConditionBase object.
          */
-        virtual bool calculate_stress_sensitivity(MAST::OutputFunctionBase& output) {
-            // to be implemented
-            libmesh_error();
+        virtual bool piston_theory_residual(bool request_jacobian,
+                                            RealVectorX &f,
+                                            RealMatrixX& jac_xdot,
+                                            RealMatrixX& jac,
+                                            const unsigned int side,
+                                            MAST::BoundaryConditionBase& bc) {
+            
+            libmesh_error_msg("Invalid Function Call: Piston theory force \
+                              is not defined for 1D element side.");
         }
+
+        
+        /*!
+         *    Calculates the stress tensor. If derivative and sensitivity 
+         *    with respect to the parameter \p sesitivity_param are calculated
+         *    and provided if the respective flags are true.
+         */
+        virtual bool calculate_stress(bool request_derivative,
+                                      bool request_sensitivity,
+                                      MAST::OutputFunctionBase& output);
+        
         
 
         /*!

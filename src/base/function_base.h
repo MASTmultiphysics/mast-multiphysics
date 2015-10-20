@@ -36,7 +36,7 @@ namespace MAST
      */
     enum DerivativeType {
         PARTIAL_DERIVATIVE,
-        TOTAL_DERIVARIVE
+        TOTAL_DERIVATIVE
     };
     
     

@@ -89,12 +89,12 @@ namespace MAST {
          *    element for which bending operator is created
          */
         const libMesh::Elem& _elem;
-        
-        /*!
-         *   quadrature rule to be used. This should already be of the correct order
-         */
-        libMesh::QBase& _qrule;
-        
+//
+//        /*!
+//         *   quadrature rule to be used. This should already be of the correct order
+//         */
+//        libMesh::QBase& _qrule;
+//        
     };
     
     
