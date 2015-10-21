@@ -111,7 +111,7 @@ void check_stress (ValType& v) {
     
     const Real
     delta   = 1.0e-5,
-    tol     = 1.0e-6;
+    tol     = 1.0e-7;
     
     Real
     vm0     = 0.,

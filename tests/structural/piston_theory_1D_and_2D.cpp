@@ -100,8 +100,7 @@ check_piston_theory_jacobian (ValType& v) {
                                       v._discipline->volume_loads());
     
     for (unsigned int i=0; i<ndofs; i++) {
-        
-        
+                
         // first the Jacobian due to x
         x      = x0;
         xdot   = xdot0;

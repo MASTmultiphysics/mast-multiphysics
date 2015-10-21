@@ -531,12 +531,12 @@ TransverseShearStiffnessMatrix::derivative(const MAST::DerivativeType d,
     // parM/parnu * parnu/parf
     dm(0,0) = -E/2./pow(1.+nu,2)*kappa;
     dm(1,1) = dm(0,0);
-    m+= dnudf*dm;
+    m += dnudf*dm;
     
     // parM/parnu * parkappa/parf
     
     dm(0,0) = G; dm(1,1) = G;
-    dm += dkappadf*dm;
+    m += dkappadf*dm;
 }
 
 

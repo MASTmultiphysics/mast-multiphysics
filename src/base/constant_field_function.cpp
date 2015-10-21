@@ -29,6 +29,7 @@ ConstantFieldFunction(const std::string& nm,
 MAST::FieldFunction<Real>(nm),
 _p(p) {
     
+    _functions.insert(p.master());
 }
 
 
@@ -42,6 +43,7 @@ MAST::ConstantFieldFunction::ConstantFieldFunction(const MAST::ConstantFieldFunc
 MAST::FieldFunction<Real>(f),
 _p(f._p) {
     
+    _functions.insert(f.master());
 }
 
 

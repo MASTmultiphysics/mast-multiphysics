@@ -407,8 +407,6 @@ MAST::StructuralElement2D::internal_residual (bool request_jacobian,
                                               RealMatrixX& jac,
                                               bool if_ignore_ho_jac)
 {
-    FEMOperatorMatrix Bmat_mem, Bmat_bend, Bmat_vk;
-    
     const std::vector<Real>& JxW = _fe->get_JxW();
     const std::vector<libMesh::Point>& xyz = _fe->get_xyz();
     
@@ -441,6 +439,8 @@ MAST::StructuralElement2D::internal_residual (bool request_jacobian,
     
     local_f.setZero();
     local_jac.setZero();
+    
+    FEMOperatorMatrix Bmat_mem, Bmat_bend, Bmat_vk;
     
     Bmat_mem.reinit(n1, _system.n_vars(), n_phi); // three stress-strain components
     Bmat_bend.reinit(n1, _system.n_vars(), n_phi);
@@ -488,7 +488,6 @@ MAST::StructuralElement2D::internal_residual (bool request_jacobian,
     if (if_bending &&
         _bending_operator->include_transverse_shear_energy())
         _bending_operator->calculate_transverse_shear_residual(request_jacobian,
-                                                               
                                                                local_f,
                                                                local_jac,
                                                                NULL);
@@ -497,6 +496,7 @@ MAST::StructuralElement2D::internal_residual (bool request_jacobian,
     // now transform to the global coorodinate system
     transform_vector_to_global_system(local_f, vec3_n2);
     f += vec3_n2;
+    
     if (request_jacobian) {
         // for 2D elements
         if (_elem.dim() == 2) {
@@ -536,20 +536,22 @@ MAST::StructuralElement2D::internal_residual_sensitivity (bool request_jacobian,
     if (!calculate)
         return false;
     
-    FEMOperatorMatrix Bmat_mem, Bmat_bend, Bmat_vk;
-    
     const std::vector<Real>& JxW = _fe->get_JxW();
     const std::vector<libMesh::Point>& xyz = _fe->get_xyz();
-    const unsigned int n_phi = (unsigned int)_fe->get_phi().size();
-    const unsigned int n1= this->n_direct_strain_components(), n2=6*n_phi,
-    n3 = this->n_von_karman_strain_components();
+    
+    const unsigned int
+    n_phi    = (unsigned int)_fe->get_phi().size(),
+    n1       = this->n_direct_strain_components(),
+    n2       =6*n_phi,
+    n3       = this->n_von_karman_strain_components();
+
     RealMatrixX
     material_A_mat,
     material_B_mat,
     material_D_mat,
     material_trans_shear_mat,
     mat1_n1n2     = RealMatrixX::Zero(n1,n2),
-    mat2_n2n2     = RealMatrixX::Zero(n1,n2),
+    mat2_n2n2     = RealMatrixX::Zero(n2,n2),
     mat3,
     mat4_n3n2     = RealMatrixX::Zero(n3,n2),
     vk_dwdxi_mat  = RealMatrixX::Zero(n1,n3),
@@ -563,6 +565,8 @@ MAST::StructuralElement2D::internal_residual_sensitivity (bool request_jacobian,
     vec4_n3    = RealVectorX::Zero(n3),
     vec5_n3    = RealVectorX::Zero(n3),
     local_f    = RealVectorX::Zero(n2);
+    
+    FEMOperatorMatrix Bmat_mem, Bmat_bend, Bmat_vk;
     
     Bmat_mem.reinit(n1, _system.n_vars(), n_phi); // three stress-strain components
     Bmat_bend.reinit(n1, _system.n_vars(), n_phi);
@@ -632,6 +636,14 @@ MAST::StructuralElement2D::internal_residual_sensitivity (bool request_jacobian,
         }
     }
     
+    // now calculate the transverse shear contribution if appropriate for the
+    // element
+    if (if_bending && _bending_operator->include_transverse_shear_energy())
+        _bending_operator->calculate_transverse_shear_residual(request_jacobian,
+                                                               local_f,
+                                                               local_jac,
+                                                               this->sensitivity_param);
+
     // now transform to the global coorodinate system
     transform_vector_to_global_system(local_f, vec3_n2);
     f += vec3_n2;
@@ -641,13 +653,6 @@ MAST::StructuralElement2D::internal_residual_sensitivity (bool request_jacobian,
         jac += mat2_n2n2;
     }
     
-    // now calculate the transverse shear contribution if appropriate for the
-    // element
-    if (if_bending && _bending_operator->include_transverse_shear_energy())
-        _bending_operator->calculate_transverse_shear_residual(request_jacobian,
-                                                               local_f,
-                                                               local_jac,
-                                                               this->sensitivity_param);
     
     return request_jacobian;
 }
