@@ -314,12 +314,20 @@ _elem_sensitivity_calculations(MAST::ElementBase& elem,
     dynamic_cast<MAST::StructuralElementBase&>(elem);
     
     vec.setZero();
-    RealMatrixX mat; // dummy matrix
+    RealMatrixX
+    dummy = RealMatrixX::Zero(vec.size(), vec.size());
     
-    libmesh_error();
-    //    e.internal_residual_sensitivity(false, vec, mat, false);
-    //    e.side_external_residual_sensitivity<Real>(false, vec, mat, _discipline->side_loads());
-    //    e.volume_external_residual_sensitivity<Real>(false, vec, mat, _discipline->volume_loads());
+    e.internal_residual_sensitivity(false, vec, dummy, false);
+    e.side_external_residual_sensitivity<Real>(false,
+                                               vec,
+                                               dummy,
+                                               dummy,
+                                               _discipline->side_loads());
+    e.volume_external_residual_sensitivity<Real>(false,
+                                                 vec,
+                                                 dummy,
+                                                 dummy,
+                                                 _discipline->volume_loads());
 }
 
 

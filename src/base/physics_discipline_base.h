@@ -194,6 +194,12 @@ namespace MAST {
         void add_parameter(MAST::Parameter& f);
         
         /*!
+         *   Removes the parameter and function pairing
+         */
+        void remove_parameter(MAST::Parameter& f);
+        
+
+        /*!
          *   Returns the function corresponding to a parameter
          */
         const MAST::FunctionBase* get_parameter(Real* par) const;

@@ -386,6 +386,34 @@ namespace MAST {
                                             MAST::BoundaryConditionBase& bc) = 0;
 
         
+        
+        /*!
+         *    Calculates the force vector and Jacobian due to piston-theory
+         *    based surface pressure on the entire element domain.
+         *    This is applicable for only 1D and 2D elements. The order
+         *    of the boundary condition and direction of fluid flow are
+         *    obtained from the BoundaryConditionBase object.
+         */
+        virtual bool piston_theory_residual_sensitivity(bool request_jacobian,
+                                                        RealVectorX &f,
+                                                        RealMatrixX& jac_xdot,
+                                                        RealMatrixX& jac,
+                                                        MAST::BoundaryConditionBase& bc) = 0;
+        
+        /*!
+         *    Calculates the force vector and Jacobian due to piston-theory
+         *    based surface pressure on the side identified by \p side.
+         *    The order of the boundary condition and direction of fluid
+         *     flow are obtained from the BoundaryConditionBase object.
+         */
+        virtual bool piston_theory_residual_sensitivity(bool request_jacobian,
+                                                        RealVectorX &f,
+                                                        RealMatrixX& jac_xdot,
+                                                        RealMatrixX& jac,
+                                                        const unsigned int side,
+                                                        MAST::BoundaryConditionBase& bc) = 0;
+
+        
         /*!
          *    Calculates the force vector and Jacobian due to small
          *    perturbation surface pressure.
@@ -441,23 +469,23 @@ namespace MAST {
         /*!
          *    Calculates the force vector and Jacobian due to surface pressure.
          */
-        virtual bool surface_pressure_residual_sensitivity(bool request_jacobian,
-                                                           RealVectorX& f,
-                                                           RealMatrixX& jac,
-                                                           const unsigned int side,
-                                                           MAST::BoundaryConditionBase& bc)
-        { libmesh_error();}
-        
+        virtual bool
+        surface_pressure_residual_sensitivity(bool request_jacobian,
+                                              RealVectorX& f,
+                                              RealMatrixX& jac,
+                                              const unsigned int side,
+                                              MAST::BoundaryConditionBase& bc);
         
         /*!
          *    Calculates the force vector and Jacobian due to surface pressure.
          *    this should be implemented for each element type
          */
-        virtual bool surface_pressure_residual_sensitivity(bool request_jacobian,
-                                                           RealVectorX& f,
-                                                           RealMatrixX& jac,
-                                                           MAST::BoundaryConditionBase& bc)
-        { libmesh_error();}
+        virtual bool
+        surface_pressure_residual_sensitivity(bool request_jacobian,
+                                              RealVectorX& f,
+                                              RealMatrixX& jac,
+                                              MAST::BoundaryConditionBase& bc);
+
         
         
         /*!

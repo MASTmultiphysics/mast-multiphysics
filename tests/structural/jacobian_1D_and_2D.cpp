@@ -40,6 +40,10 @@
 // libMesh includes
 #include "libmesh/dof_map.h"
 
+extern const Real
+delta,
+tol;
+
 
 template <typename ValType>
 void check_internal_force_jacobian (ValType& v) {
@@ -73,9 +77,6 @@ void check_internal_force_jacobian (ValType& v) {
     jac_x_fd    = RealMatrixX::Zero(ndofs, ndofs),
     dummy;
     
-    const Real
-    delta   = 1.0e-5,
-    tol     = 1.0e-7;
     
     // tell the element about the solution and velocity
     e->set_solution(x);

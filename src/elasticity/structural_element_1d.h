@@ -139,6 +139,22 @@ namespace MAST {
                                             RealMatrixX& jac_xdot,
                                             RealMatrixX& jac,
                                             MAST::BoundaryConditionBase& bc);
+
+        
+        /*!
+         *    Calculates the sensitivity of force vector and
+         *    Jacobian due to piston-theory based surface pressure on the
+         *    entire element domain. This is applicable for only 1D and 2D
+         *    elements. The order of the boundary condition and direction of
+         *    fluid flow are obtained from the BoundaryConditionBase object.
+         */
+        virtual bool
+        piston_theory_residual_sensitivity(bool request_jacobian,
+                                           RealVectorX &f,
+                                           RealMatrixX& jac_xdot,
+                                           RealMatrixX& jac,
+                                           MAST::BoundaryConditionBase& bc);
+
         
         /*!
          *    Calculates the force vector and Jacobian due to piston-theory
@@ -154,6 +170,24 @@ namespace MAST {
                                             MAST::BoundaryConditionBase& bc) {
             
             libmesh_error_msg("Invalid Function Call: Piston theory force \
+                              is not defined for 1D element side.");
+        }
+
+        
+        /*!
+         *    Calculates the force vector and Jacobian due to piston-theory
+         *    sensitivity based surface pressure on the side identified by \p side.
+         *    The order of the boundary condition and direction of fluid
+         *     flow are obtained from the BoundaryConditionBase object.
+         */
+        virtual bool piston_theory_residual_sensitivity(bool request_jacobian,
+                                                        RealVectorX &f,
+                                                        RealMatrixX& jac_xdot,
+                                                        RealMatrixX& jac,
+                                                        const unsigned int side,
+                                                        MAST::BoundaryConditionBase& bc) {
+            
+            libmesh_error_msg("Invalid Function Call: Piston theory force sensitivity \
                               is not defined for 1D element side.");
         }
 

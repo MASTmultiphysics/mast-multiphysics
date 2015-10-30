@@ -28,6 +28,7 @@ namespace MAST {
     class TransientAssembly;
     class TransientSolverBase;
     class OutputAssemblyBase;
+    class Parameter;
     
 
     namespace Driver {
@@ -36,6 +37,13 @@ namespace MAST {
                                 MAST::SystemInitialization&      system,
                                 MAST::NonlinearImplicitAssembly& assembly);
 
+
+        bool sensitivity_solution(MAST::PhysicsDisciplineBase&     discipline,
+                                  MAST::SystemInitialization&      system,
+                                  MAST::NonlinearImplicitAssembly& assembly,
+                                  MAST::Parameter&        f);
+
+        
         bool transient_solution_step(MAST::PhysicsDisciplineBase&     discipline,
                                      MAST::SystemInitialization&      system,
                                      MAST::TransientAssembly&         assembly,

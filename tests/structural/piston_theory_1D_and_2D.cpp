@@ -40,6 +40,12 @@
 // libMesh includes
 #include "libmesh/dof_map.h"
 
+
+extern const Real
+delta,
+tol;
+
+
 template <typename ValType>
 void
 check_piston_theory_jacobian (ValType& v) {
@@ -83,9 +89,6 @@ check_piston_theory_jacobian (ValType& v) {
     jac_xdot_fd = RealMatrixX::Zero(ndofs, ndofs),
     dummy;
     
-    const Real
-    delta   = 1.0e-5,
-    tol     = 1.0e-7;
     
     // tell the element about the solution and velocity
     e->set_solution(x);

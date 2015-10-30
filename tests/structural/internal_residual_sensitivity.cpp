@@ -44,6 +44,10 @@ extern void
 set_deformation(const unsigned int dim,
                 RealVectorX& vec);
 
+extern const Real
+delta,
+tol;
+
 
 template <typename ValType>
 void check_internal_force_and_jacobian_sensitivity (ValType& v) {
@@ -77,10 +81,6 @@ void check_internal_force_and_jacobian_sensitivity (ValType& v) {
     djacdp     = RealMatrixX::Zero(ndofs, ndofs),
     djacdp_fd  = RealMatrixX::Zero(ndofs, ndofs),
     dummy;
-    
-    const Real
-    delta   = 1.0e-6,
-    tol     = 1.0e-4;
     
     Real
     p0      = 0.,

@@ -75,7 +75,8 @@ namespace MAST {
         
         /**
          * Assembly function.  This function will be called
-         * to assemble the sensitivity of system residual prior to a solve and must
+         * to assemble the RHS of the sensitivity equations (which is -1 times
+         * sensitivity of system residual) prior to a solve and must
          * be provided by the user in a derived class. The method provides dR/dp_i
          * for \par i ^th parameter in the vector \par parameters.
          *

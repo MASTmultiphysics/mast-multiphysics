@@ -24,10 +24,11 @@
 #include "solver/transient_solver_base.h"
 #include "base/output_assembly_base.h"
 #include "base/physics_discipline_base.h"
-
+#include "base/parameter.h"
 
 // libMesh includes
 #include "libmesh/nonlinear_implicit_system.h"
+#include "libmesh/parameter_vector.h"
 
 
 bool
@@ -41,6 +42,32 @@ MAST::Driver::nonlinear_solution(MAST::PhysicsDisciplineBase&     discipline,
     dynamic_cast<libMesh::NonlinearImplicitSystem&>(assembly.system());
     
     nonlin_sys.solve();
+    
+    assembly.clear_discipline_and_system();
+    
+    return true;
+}
+
+
+
+
+
+bool
+MAST::Driver::sensitivity_solution(MAST::PhysicsDisciplineBase&     discipline,
+                                   MAST::SystemInitialization&      system,
+                                   MAST::NonlinearImplicitAssembly& assembly,
+                                   MAST::Parameter& f) {
+    
+    assembly.attach_discipline_and_system(discipline, system);
+    
+    libMesh::NonlinearImplicitSystem&      nonlin_sys   =
+    dynamic_cast<libMesh::NonlinearImplicitSystem&>(assembly.system());
+    
+    libMesh::ParameterVector params;
+    params.resize(1);
+    params[0]  =  f.ptr();
+    
+    nonlin_sys.sensitivity_solve(params);
     
     assembly.clear_discipline_and_system();
     

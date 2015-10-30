@@ -42,6 +42,10 @@
 #include "libmesh/dof_map.h"
 #include "libmesh/elem.h"
 
+extern const Real
+delta,
+tol;
+
 void
 set_deformation(const unsigned int dim,
                 RealVectorX& vec) {
@@ -109,9 +113,6 @@ void check_stress (ValType& v) {
     dstraindX0   = RealMatrixX::Zero(6, ndofs),
     dstraindX_fd = RealMatrixX::Zero(6, ndofs);
     
-    const Real
-    delta   = 1.0e-5,
-    tol     = 1.0e-7;
     
     Real
     vm0     = 0.,

@@ -26,22 +26,27 @@
 // C++ includes
 #include <memory>
 
+// MAST includes
+#include "base/mast_data_types.h"
+
 // libMesh includes
 #include "libmesh/libmesh.h"
 
 
 std::auto_ptr<libMesh::LibMeshInit>  _init;
 
+const Real
+delta    = 1.e-5,
+tol      = 1.0e-4;
+
 
 struct GlobalTestFixture {
     
     GlobalTestFixture() {
         
-        int argc = 0;
-        const char* argv = " ";
-        
         // create the libMeshInit function
-        _init.reset(new libMesh::LibMeshInit(argc, &argv));
+        _init.reset(new libMesh::LibMeshInit(boost::unit_test::framework::master_test_suite().argc,
+                                             boost::unit_test::framework::master_test_suite().argv));
     }
     
     ~GlobalTestFixture() {

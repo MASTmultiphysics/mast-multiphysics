@@ -725,7 +725,24 @@ piston_theory_residual(bool request_jacobian,
     
     libmesh_error(); // to be implemented
     
-    return (request_jacobian && follower_forces);
+    return (request_jacobian);
+}
+
+
+
+bool
+MAST::StructuralElement3D::
+piston_theory_residual_sensitivity(bool request_jacobian,
+                                   RealVectorX &f,
+                                   RealMatrixX& jac_xdot,
+                                   RealMatrixX& jac,
+                                   const unsigned int side,
+                                   MAST::BoundaryConditionBase& bc) {
+    
+    
+    libmesh_error(); // to be implemented
+    
+    return (request_jacobian);
 }
 
 

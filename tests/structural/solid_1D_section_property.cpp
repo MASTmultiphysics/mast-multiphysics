@@ -41,6 +41,11 @@
 #include "libmesh/dof_map.h"
 
 
+extern const Real
+delta,
+tol;
+
+
 BOOST_FIXTURE_TEST_SUITE  (StructuralSectionPropertyEvaluation, MAST::BuildStructural1DElem)
 
 BOOST_AUTO_TEST_CASE   (Solid1DSection) {
@@ -61,10 +66,6 @@ BOOST_AUTO_TEST_CASE   (Solid1DSection) {
     std::auto_ptr<MAST::FieldFunction<RealMatrixX > >
     mat_stiff_A  = _p_card->stiffness_A_matrix(*e);
 
-    
-    const Real
-    delta   = 1.0e-5,
-    tol     = 1.0e-6;
     
     RealMatrixX
     mat0,

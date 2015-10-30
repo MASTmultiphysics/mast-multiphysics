@@ -162,6 +162,21 @@ MAST::PhysicsDisciplineBase::add_parameter(MAST::Parameter& f) {
 
 
 
+
+void
+MAST::PhysicsDisciplineBase::remove_parameter(MAST::Parameter& f) {
+    
+    // now add this to the map
+    std::map<Real*, const MAST::FunctionBase*>::iterator
+    it = _parameter_map.find(f.ptr());
+    
+    if (it != _parameter_map.end())
+        _parameter_map.erase(it);
+}
+
+
+
+
 const MAST::FunctionBase*
 MAST::PhysicsDisciplineBase::get_parameter(Real* par) const {
     // make sure valid values are given
