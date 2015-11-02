@@ -103,7 +103,9 @@ void check_stress (ValType& v) {
     strain0      = RealVectorX::Zero(6),
     strain       = RealVectorX::Zero(6),
     dvm_dX0      = RealVectorX::Zero(ndofs),
+    dvmf_dX0     = RealVectorX::Zero(ndofs),
     dvm_dX_fd    = RealVectorX::Zero(ndofs),
+    dvmf_dX_fd   = RealVectorX::Zero(ndofs),
     dstressdp    = RealVectorX::Zero(6),
     dstraindp    = RealVectorX::Zero(6);
     
@@ -115,11 +117,17 @@ void check_stress (ValType& v) {
     
     
     Real
-    vm0     = 0.,
-    vm      = 0.,
-    dvmdp   = 0.,
-    p0      = 0.,
-    dp      = 0.;
+    vm0          = 0.,
+    vm           = 0.,
+    vmf0         = 0.,
+    dvmdp        = 0.,
+    dvmf_dp      = 0.,
+    dvmf_dp_fd   = 0.,
+    p0           = 0.,
+    dp           = 0.;
+    
+    const Real
+    pval    = 3.;
     
     // tell the element about the solution and velocity
     set_deformation(elem.dim(), x0);
@@ -132,7 +140,7 @@ void check_stress (ValType& v) {
     // get access to the vector of stress/strain data for this element.
     {
         const std::vector<MAST::StressStrainOutputBase::Data*>&
-        stress_data = output.get_stress_strain_data();
+        stress_data = output.get_stress_strain_data_for_elem(&elem);
         
         libmesh_assert_equal_to(stress_data.size(), 1); // this should have one element
         
@@ -142,6 +150,8 @@ void check_stress (ValType& v) {
         dstraindX0  = stress_data[0]->get_dstrain_dX();
         vm0         = stress_data[0]->von_Mises_stress();
         dvm_dX0     = stress_data[0]->dvon_Mises_stress_dX();
+        vmf0        = output.von_Mises_p_norm_functional_for_all_elems(pval);
+        dvmf_dX0    = output.von_Mises_p_norm_functional_state_derivartive_for_all_elems(pval);
         
         output.clear();
     }
@@ -158,7 +168,7 @@ void check_stress (ValType& v) {
         // now use the updated stress to calculate the finite difference data
         {
             const std::vector<MAST::StressStrainOutputBase::Data*>&
-            stress_data = output.get_stress_strain_data();
+            stress_data = output.get_stress_strain_data_for_elem(&elem);
             
             libmesh_assert_equal_to(stress_data.size(), 1); // this should have one element
             
@@ -168,6 +178,7 @@ void check_stress (ValType& v) {
             dstraindX_fd.col(i) = (strain-strain0)/delta;
             vm                  = stress_data[0]->von_Mises_stress();
             dvm_dX_fd(i)        = (vm-vm0)/delta;
+            dvmf_dX_fd(i)       = (output.von_Mises_p_norm_functional_for_all_elems(pval)-vm0)/delta;
             
             output.clear();
         }
@@ -180,7 +191,8 @@ void check_stress (ValType& v) {
     BOOST_CHECK(MAST::compare_matrix(   dstraindX0,    dstraindX_fd, tol));
     BOOST_TEST_MESSAGE("  ** VM-Stress Derivative  wrt State **");
     BOOST_CHECK(MAST::compare_vector(      dvm_dX0,       dvm_dX_fd, tol));
-    
+    BOOST_TEST_MESSAGE("  ** VM_func-Stress Derivative  wrt State **");
+    BOOST_CHECK(MAST::compare_vector(      dvmf_dX0,       dvmf_dX_fd, tol));
     
     // now, check the sensitivity with respect to various parameters
     
@@ -213,18 +225,21 @@ void check_stress (ValType& v) {
         // next, check the total derivative of the quantity wrt the parameter
         {
             const std::vector<MAST::StressStrainOutputBase::Data*>&
-            stress_data = output.get_stress_strain_data();
+            stress_data = output.get_stress_strain_data_for_elem(&elem);
             
             libmesh_assert_equal_to(stress_data.size(), 1); // this should have one element
             
             dstressdp           = stress_data[0]->get_stress_sensitivity(&f);
             dstraindp           = stress_data[0]->get_strain_sensitivity(&f);
             dvmdp               = stress_data[0]->dvon_Mises_stress_dp  (&f);
-            
+            dvmf_dp             =
+            output.von_Mises_p_norm_functional_sensitivity_for_all_elems(pval, &f);
             
             stress              = (stress_data[0]->stress() - stress0)/dp;
             strain              = (stress_data[0]->strain() - strain0)/dp;
             vm                  = (stress_data[0]->von_Mises_stress() - vm0)/dp;
+            dvmf_dp_fd          =
+            (output.von_Mises_p_norm_functional_for_all_elems(pval)-vmf0)/dp;
             
             output.clear();
         }
@@ -236,6 +251,8 @@ void check_stress (ValType& v) {
         BOOST_CHECK(MAST::compare_vector(dstraindp, strain, tol));
         BOOST_TEST_MESSAGE("  ** dVM-Stress/dp (partial) wrt : " << f.name() << " **");
         BOOST_CHECK(MAST::compare_value (    dvmdp,     vm, tol));
+        BOOST_TEST_MESSAGE("  ** dVM_func-Stress/dp (partial) wrt : " << f.name() << " **");
+        BOOST_CHECK(MAST::compare_value (    dvmf_dp,     dvmf_dp_fd, tol));
     }
     
     
@@ -283,18 +300,22 @@ void check_stress (ValType& v) {
             // next, check the total derivative of the quantity wrt the parameter
             {
                 const std::vector<MAST::StressStrainOutputBase::Data*>&
-                stress_data = output.get_stress_strain_data();
+                stress_data = output.get_stress_strain_data_for_elem(&elem);
                 
                 libmesh_assert_equal_to(stress_data.size(), 1); // this should have one element
                 
                 dstressdp           = stress_data[0]->get_stress_sensitivity(&f);
                 dstraindp           = stress_data[0]->get_strain_sensitivity(&f);
                 dvmdp               = stress_data[0]->dvon_Mises_stress_dp  (&f);
-                
+                dvmf_dp             =
+                output.von_Mises_p_norm_functional_sensitivity_for_all_elems(pval, &f);
+
                 
                 stress              = (stress_data[0]->stress() - stress0)/dp;
                 strain              = (stress_data[0]->strain() - strain0)/dp;
                 vm                  = (stress_data[0]->von_Mises_stress() - vm0)/dp;
+                dvmf_dp_fd          =
+                (output.von_Mises_p_norm_functional_for_all_elems(pval)-vmf0)/dp;
                 
                 output.clear();
             }
@@ -306,6 +327,8 @@ void check_stress (ValType& v) {
             BOOST_CHECK(MAST::compare_vector(dstraindp, strain, tol));
             BOOST_TEST_MESSAGE("  ** dVM-Stress/dp (total) wrt : " << f.name() << " **");
             BOOST_CHECK(MAST::compare_value (    dvmdp,     vm, tol));
+            BOOST_TEST_MESSAGE("  ** dVM_func-Stress/dp (partial) wrt : " << f.name() << " **");
+            BOOST_CHECK(MAST::compare_value (    dvmf_dp,     dvmf_dp_fd, tol));
         }
         
         // reset the parameter value

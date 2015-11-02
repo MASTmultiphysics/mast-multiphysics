@@ -26,11 +26,13 @@
 MAST::StressStrainOutputBase::Data::Data(const RealVectorX& stress,
                                          const RealVectorX& strain,
                                          const libMesh::Point& qp,
-                                         const libMesh::Point& xyz):
+                                         const libMesh::Point& xyz,
+                                         Real JxW):
 _stress(stress),
 _strain(strain),
 _qp(qp),
-_xyz(xyz) {
+_xyz(xyz),
+_JxW(JxW) {
 
     // make sure that both the stress and strain are for a 3D configuration,
     // which is the default for this data structure
@@ -42,7 +44,7 @@ _xyz(xyz) {
 
 
 
-const RealVectorX
+const RealVectorX&
 MAST::StressStrainOutputBase::Data::stress() const {
     
     return _stress;
@@ -50,7 +52,7 @@ MAST::StressStrainOutputBase::Data::stress() const {
 
 
 
-const RealVectorX
+const RealVectorX&
 MAST::StressStrainOutputBase::Data::strain() const {
     return _strain;
 }
@@ -84,6 +86,12 @@ MAST::StressStrainOutputBase::Data::get_dstrain_dX() const {
     return _dstrain_dX;
 }
 
+
+Real
+MAST::StressStrainOutputBase::Data::quadrature_point_JxW() const {
+    
+    return _JxW;
+}
 
 
 void
@@ -140,7 +148,6 @@ MAST::StressStrainOutputBase::Data::von_Mises_stress() const {
     // make sure that the data is available
     libmesh_assert_equal_to(_stress.size(), 6);
 
-    
     return
     pow(0.5 * (pow(_stress(0)-_stress(1),2) +    //(((sigma_xx - sigma_yy)^2    +
                pow(_stress(1)-_stress(2),2) +    //  (sigma_yy - sigma_zz)^2    +
@@ -234,14 +241,21 @@ MAST::StressStrainOutputBase::~StressStrainOutputBase() {
 void
 MAST::StressStrainOutputBase::clear() {
     
-    // iterate over all the data and delete them
-    std::vector<MAST::StressStrainOutputBase::Data*>::iterator
-    it   =  _stress_data.begin(),
-    end  =  _stress_data.end();
+    std::map<const libMesh::Elem*, std::vector<MAST::StressStrainOutputBase::Data*> >::iterator
+    map_it  =  _stress_data.begin(),
+    map_end =  _stress_data.end();
     
-    for ( ; it != end; it++) {
+    for ( ; map_it != map_end; map_it++) {
         
-        delete *it;
+        // iterate over all the data and delete them
+        std::vector<MAST::StressStrainOutputBase::Data*>::iterator
+        it   =  map_it->second.begin(),
+        end  =  map_it->second.end();
+        
+        for ( ; it != end; it++)
+            delete *it;
+        
+        map_it->second.clear();
     }
     
     _stress_data.clear();
@@ -253,27 +267,272 @@ MAST::StressStrainOutputBase::clear() {
 
 MAST::StressStrainOutputBase::Data& 
 MAST::StressStrainOutputBase::
-add_stress_strain_at_qp_location(const libMesh::Point& quadrature_pt,
+add_stress_strain_at_qp_location(const libMesh::Elem* e,
+                                 const libMesh::Point& quadrature_pt,
                                  const libMesh::Point& physical_pt,
                                  const RealVectorX& stress,
-                                 const RealVectorX& strain) {
+                                 const RealVectorX& strain,
+                                 Real JxW) {
     
     
     MAST::StressStrainOutputBase::Data* d =
     new MAST::StressStrainOutputBase::Data (stress,
                                             strain,
                                             quadrature_pt,
-                                            physical_pt);
+                                            physical_pt,
+                                            JxW);
+
     
-    _stress_data.push_back(d);
+    // check if the specified element exists in the map. If not, add it
+    std::map<const libMesh::Elem*, std::vector<MAST::StressStrainOutputBase::Data*> >::iterator
+    it = _stress_data.find(e);
+    
+    // if the element does not exist in the map, add it to the map.
+    if (it == _stress_data.end())
+        it =
+        _stress_data.insert(std::pair<const libMesh::Elem*, std::vector<MAST::StressStrainOutputBase::Data*> >
+                            (e, std::vector<MAST::StressStrainOutputBase::Data*>())).first;
+    
+    it->second.push_back(d);
     
     return *d;
 }
 
 
 
-const std::vector<MAST::StressStrainOutputBase::Data*>&
+const std::map<const libMesh::Elem*, std::vector<MAST::StressStrainOutputBase::Data*> >&
 MAST::StressStrainOutputBase::get_stress_strain_data() const {
     
     return _stress_data;
+}
+
+
+
+
+const std::vector<MAST::StressStrainOutputBase::Data*>&
+MAST::StressStrainOutputBase::
+get_stress_strain_data_for_elem(const libMesh::Elem *e) const {
+    
+    // check if the specified element exists in the map. If not, add it
+    std::map<const libMesh::Elem*, std::vector<MAST::StressStrainOutputBase::Data*> >::const_iterator
+    it = _stress_data.find(e);
+
+    // make sure that the specified elem exists in the map
+    libmesh_assert(it != _stress_data.end());
+    
+    return it->second;
+}
+
+
+
+
+Real
+MAST::StressStrainOutputBase::
+von_Mises_p_norm_functional_for_all_elems(const Real p) const {
+    
+    Real
+    max_val  = 0.,
+    e_val    = 0.,
+    JxW_val  = 0.,
+    JxW      = 0.,
+    val      = 0.;
+    
+    // first find the data with the maximum value, to be used for scaling
+    
+    // iterate over all element data
+    std::map<const libMesh::Elem*, std::vector<MAST::StressStrainOutputBase::Data*> >::const_iterator
+    map_it   =  _stress_data.begin(),
+    map_end  =  _stress_data.end();
+    
+    
+    for ( ; map_it != map_end; map_it++) {
+        
+        std::vector<MAST::StressStrainOutputBase::Data*>::const_iterator
+        vec_it   = map_it->second.begin(),
+        vec_end  = map_it->second.end();
+        
+        for ( ; vec_it != vec_end; vec_it++) {
+            
+            // ask this data point for the von Mises stress value
+            e_val    =   (*vec_it)->von_Mises_stress();
+            
+            (e_val > max_val) ?  max_val = e_val: 0; // to find the maximum value
+        }
+    }
+    
+    
+    // now that we have the maximum value, we evaluate the p-norm
+    map_it   =  _stress_data.begin();
+    
+    
+    for ( ; map_it != map_end; map_it++) {
+        
+        std::vector<MAST::StressStrainOutputBase::Data*>::const_iterator
+        vec_it   = map_it->second.begin(),
+        vec_end  = map_it->second.end();
+        
+        for ( ; vec_it != vec_end; vec_it++) {
+            
+            // ask this data point for the von Mises stress value
+            e_val    =   (*vec_it)->von_Mises_stress();
+            JxW      =   (*vec_it)->quadrature_point_JxW();
+            
+            // we do not use absolute value here, since von Mises stress
+            // is >= 0.
+            val     +=   pow(e_val/max_val, p) * JxW;
+            JxW_val +=   JxW;
+        }
+    }
+    
+    val   = max_val / JxW_val * pow(val, 1./p);
+    
+    return val;
+}
+
+
+
+Real
+MAST::StressStrainOutputBase::
+von_Mises_p_norm_functional_sensitivity_for_all_elems
+(const Real p,
+ const MAST::FunctionBase* f) const {
+    
+    
+    Real
+    max_val  = 0.,
+    de_val   = 0.,
+    e_val    = 0.,
+    JxW_val  = 0.,
+    JxW      = 0.,
+    val      = 0.,
+    dval     = 0.;
+    
+    // first find the data with the maximum value, to be used for scaling
+    
+    // iterate over all element data
+    std::map<const libMesh::Elem*, std::vector<MAST::StressStrainOutputBase::Data*> >::const_iterator
+    map_it   =  _stress_data.begin(),
+    map_end  =  _stress_data.end();
+    
+    
+    for ( ; map_it != map_end; map_it++) {
+        
+        std::vector<MAST::StressStrainOutputBase::Data*>::const_iterator
+        vec_it   = map_it->second.begin(),
+        vec_end  = map_it->second.end();
+        
+        for ( ; vec_it != vec_end; vec_it++) {
+            
+            // ask this data point for the von Mises stress value
+            e_val    =   (*vec_it)->von_Mises_stress();
+            
+            (e_val > max_val) ?  max_val = e_val: 0; // to find the maximum value
+        }
+    }
+    
+    
+    // now that we have the maximum value, we evaluate the p-norm
+    map_it   =  _stress_data.begin();
+    
+    
+    for ( ; map_it != map_end; map_it++) {
+        
+        std::vector<MAST::StressStrainOutputBase::Data*>::const_iterator
+        vec_it   = map_it->second.begin(),
+        vec_end  = map_it->second.end();
+        
+        for ( ; vec_it != vec_end; vec_it++) {
+            
+            // ask this data point for the von Mises stress value
+            e_val    =   (*vec_it)->von_Mises_stress();
+            de_val   =   (*vec_it)->dvon_Mises_stress_dp(f);
+            JxW      =   (*vec_it)->quadrature_point_JxW();
+            
+            // we do not use absolute value here, since von Mises stress
+            // is >= 0.
+            val     +=   pow(e_val/max_val, p) * JxW;
+            dval    +=   p * pow(e_val/max_val, p-1.) * JxW * de_val/max_val;
+            JxW_val +=   JxW;
+        }
+    }
+    
+    val   = 1./p * max_val / JxW_val * pow(val, 1./p-1.) * dval;
+    
+    return val;
+}
+
+
+
+
+RealVectorX
+MAST::StressStrainOutputBase::
+von_Mises_p_norm_functional_state_derivartive_for_all_elems(const Real p) const {
+    
+    
+    Real
+    max_val  = 0.,
+    e_val    = 0.,
+    JxW_val  = 0.,
+    JxW      = 0.,
+    val      = 0.;
+    
+    unsigned int
+    n_dofs   = 0;
+    
+    
+    // first find the data with the maximum value, to be used for scaling
+    
+    // iterate over all element data
+    std::map<const libMesh::Elem*, std::vector<MAST::StressStrainOutputBase::Data*> >::const_iterator
+    map_it   =  _stress_data.begin(),
+    map_end  =  _stress_data.end();
+    
+    
+    for ( ; map_it != map_end; map_it++) {
+        
+        std::vector<MAST::StressStrainOutputBase::Data*>::const_iterator
+        vec_it   = map_it->second.begin(),
+        vec_end  = map_it->second.end();
+        
+        for ( ; vec_it != vec_end; vec_it++) {
+            
+            // ask this data point for the von Mises stress value
+            e_val    =   (*vec_it)->von_Mises_stress();
+            (e_val > max_val) ?  max_val = e_val: 0; // to find the maximum value
+            (n_dofs==0)? n_dofs = (unsigned int)(*vec_it)->dvon_Mises_stress_dX().size(): 0;
+        }
+    }
+    
+    
+    // now create the vector with the correct dimensions
+    RealVectorX
+    de_val     = RealVectorX::Zero(n_dofs),
+    dval       = RealVectorX::Zero(n_dofs);
+
+    // now that we have the maximum value, we evaluate the p-norm
+    map_it   =  _stress_data.begin();
+    
+    
+    for ( ; map_it != map_end; map_it++) {
+        
+        std::vector<MAST::StressStrainOutputBase::Data*>::const_iterator
+        vec_it   = map_it->second.begin(),
+        vec_end  = map_it->second.end();
+        
+        for ( ; vec_it != vec_end; vec_it++) {
+            
+            // ask this data point for the von Mises stress value
+            e_val    =   (*vec_it)->von_Mises_stress();
+            de_val   =   (*vec_it)->dvon_Mises_stress_dX();
+            JxW      =   (*vec_it)->quadrature_point_JxW();
+            
+            // we do not use absolute value here, since von Mises stress
+            // is >= 0.
+            val     +=   pow(e_val/max_val, p) * JxW;
+            dval    +=   p * pow(e_val/max_val, p-1.) * JxW * de_val/max_val;
+            JxW_val +=   JxW;
+        }
+    }
+    
+    return 1./p * max_val / JxW_val * pow(val, 1./p-1.) * dval;
 }

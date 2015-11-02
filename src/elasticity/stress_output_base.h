@@ -22,11 +22,15 @@
 
 // C++ includes
 #include <map>
+#include <vector>
 
 // MAST includes
 #include "base/output_function_base.h"
 #include "base/mast_data_types.h"
 
+
+// libMesh includes
+#include "libmesh/elem.h"
 
 namespace MAST {
 
@@ -70,7 +74,8 @@ namespace MAST {
             Data(const RealVectorX& stress,
                  const RealVectorX& strain,
                  const libMesh::Point& qp,
-                 const libMesh::Point& xyz);
+                 const libMesh::Point& xyz,
+                 Real JxW);
  
             
             
@@ -78,14 +83,19 @@ namespace MAST {
             /*!
              *   @returns stress
              */
-            const RealVectorX stress() const;
+            const RealVectorX& stress() const;
 
             
             /*!
              *   @returns strain
              */
-            const RealVectorX strain() const;
+            const RealVectorX& strain() const;
             
+            
+            /*!
+             *   @returns the quadrature point JxW
+             */
+            Real quadrature_point_JxW() const;
             
             /*!
              *   @returns von Mises stress
@@ -185,10 +195,23 @@ namespace MAST {
             RealMatrixX   _dstrain_dX;
 
             
+            /*!
+             *   quadrature point location in element coordinates
+             */
             libMesh::Point            _qp;
             
             
+            /*!
+             *   quadrature point location in physical coordinates
+             */
             libMesh::Point            _xyz;
+            
+            
+            /*!
+             *   quadrature point JxW (product of transformation Jacobian and
+             *   quadrature weight) for use in definition of functionals
+             */
+            Real _JxW;
         };
         
 
@@ -213,17 +236,58 @@ namespace MAST {
          *   to \p Data.
          */
         MAST::StressStrainOutputBase::Data&
-        add_stress_strain_at_qp_location(const libMesh::Point& quadrature_pt,
+        add_stress_strain_at_qp_location(const libMesh::Elem*,
+                                         const libMesh::Point& quadrature_pt,
                                          const libMesh::Point& physical_pt,
                                          const RealVectorX& strain,
-                                         const RealVectorX& stress);
+                                         const RealVectorX& stress,
+                                         Real JxW);
         
         
         /*!
-         *    @returns the vector of stress/strain data
+         *    @returns the map of stress/strain data for all elems
+         */
+        const std::map<const libMesh::Elem*,
+        std::vector<MAST::StressStrainOutputBase::Data*> >&
+        get_stress_strain_data() const;
+
+        
+        /*!
+         *    @returns the vector of stress/strain data for specified elem.
          */
         const std::vector<MAST::StressStrainOutputBase::Data*>&
-        get_stress_strain_data() const;
+        get_stress_strain_data_for_elem(const libMesh::Elem* e) const;
+        
+        
+        
+        /*!
+         *   calculates and returns the von Mises p-norm functional for 
+         *   all the elements that this object currently stores data for
+         */
+        Real
+        von_Mises_p_norm_functional_for_all_elems(const Real p) const;
+
+        
+        /*!
+         *   calculates and returns the sensitivity of von Mises p-norm
+         *   functional for all the elements that this object currently 
+         *   stores data for
+         */
+        Real
+        von_Mises_p_norm_functional_sensitivity_for_all_elems
+        (const Real p,
+         const MAST::FunctionBase* f) const;
+
+        
+        /*!
+         *   calculates and returns the derivative of von Mises p-norm
+         *   functional wrt state vector for all the elements that
+         *   this object currently stores data for
+         */
+        RealVectorX
+        von_Mises_p_norm_functional_state_derivartive_for_all_elems(const Real p) const;
+
+        
         
     protected:
 
@@ -231,7 +295,8 @@ namespace MAST {
         /*!
          *    vector of stress with the associated location details
          */
-        std::vector<MAST::StressStrainOutputBase::Data*> _stress_data;
+        std::map<const libMesh::Elem*, std::vector<MAST::StressStrainOutputBase::Data*> >
+        _stress_data;
 
     };
 }

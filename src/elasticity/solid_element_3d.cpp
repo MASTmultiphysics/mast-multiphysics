@@ -788,6 +788,7 @@ MAST::StructuralElement3D::calculate_stress(bool request_derivative,
     // now that the FE object has been initialized, evaluate the stress values
     
     
+    const std::vector<Real> &JxW              = _fe->get_JxW();
     const std::vector<libMesh::Point>& xyz    = _fe->get_xyz();
     const unsigned int
     n_phi              = (unsigned int)_fe->n_shape_functions(),
@@ -867,10 +868,12 @@ MAST::StructuralElement3D::calculate_stress(bool request_derivative,
         strain += Gmat * alpha;
         stress = material_mat * strain;
         
-        stress_output.add_stress_strain_at_qp_location(qp_loc[qp],
+        stress_output.add_stress_strain_at_qp_location(&_elem,
+                                                       qp_loc[qp],
                                                        xyz[qp],
                                                        stress,
-                                                       strain);
+                                                       strain,
+                                                       JxW[qp]);
         
         if (request_derivative) {
             // to be implemented
