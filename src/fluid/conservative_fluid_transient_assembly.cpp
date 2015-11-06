@@ -88,7 +88,7 @@ MAST::ConservativeFluidTransientAssembly::_build_elem(const libMesh::Elem& elem)
     dynamic_cast<const MAST::ElementPropertyCardBase&>(_discipline->get_property_card(elem));
     
     MAST::ElementBase* rval =
-    new MAST::ConservativeFluidElementBase(*_system, elem, p, false);
+    new MAST::ConservativeFluidElementBase(*_system, elem, p);
     
     return std::auto_ptr<MAST::ElementBase>(rval);
 }

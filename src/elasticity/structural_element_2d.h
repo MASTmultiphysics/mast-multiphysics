@@ -44,8 +44,7 @@ namespace MAST {
     public:
         StructuralElement2D(MAST::SystemInitialization& sys,
                             const libMesh::Elem& elem,
-                            const MAST::ElementPropertyCardBase& p,
-                            const bool output_eval_mode);
+                            const MAST::ElementPropertyCardBase& p);
         
         
         /*!
@@ -208,6 +207,7 @@ namespace MAST {
          */
         virtual void
         initialize_direct_strain_operator(const unsigned int qp,
+                                          const libMesh::FEBase& fe,
                                           MAST::FEMOperatorMatrix& Bmat);
         
         /*!
@@ -218,6 +218,7 @@ namespace MAST {
          */
         virtual void
         initialize_von_karman_strain_operator(const unsigned int qp,
+                                              const libMesh::FEBase& fe,
                                               RealVectorX& vk_strain,
                                               RealMatrixX& vk_dwdxi_mat,
                                               MAST::FEMOperatorMatrix& Bmat_vk);
@@ -229,6 +230,7 @@ namespace MAST {
          */
         virtual void
         initialize_von_karman_strain_operator_sensitivity(const unsigned int qp,
+                                                          const libMesh::FEBase& fe,
                                                           RealMatrixX& vk_dwdxi_mat_sens);
         
         /*!
@@ -241,6 +243,7 @@ namespace MAST {
                                      bool if_vk,
                                      const unsigned int n2,
                                      const unsigned int qp,
+                                     const libMesh::FEBase& fe,
                                      const std::vector<Real>& JxW,
                                      bool request_jacobian,
                                      bool if_ignore_ho_jac,
@@ -272,6 +275,7 @@ namespace MAST {
         _linearized_geometric_stiffness_sensitivity_with_static_solution
         (const unsigned int n2,
          const unsigned int qp,
+         const libMesh::FEBase& fe,
          const std::vector<Real>& JxW,
          RealMatrixX& local_jac,
          MAST::FEMOperatorMatrix& Bmat_mem,

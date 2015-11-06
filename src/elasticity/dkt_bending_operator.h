@@ -38,7 +38,8 @@ namespace MAST
     class DKTBendingOperator:
     public MAST::BendingOperator2D {
     public:
-        DKTBendingOperator(MAST::StructuralElementBase& elem):
+        DKTBendingOperator(MAST::StructuralElementBase& elem,
+                           const std::vector<libMesh::Point>& pts):
         MAST::BendingOperator2D(elem),
         _fe(NULL),
         _tri6(NULL),
@@ -77,10 +78,9 @@ namespace MAST
             // now setup the shape functions
             _fe = libMesh::FEBase::build(2, libMesh::FEType(libMesh::SECOND,
                                                             libMesh::LAGRANGE)).release();
-            _fe->attach_quadrature_rule(&_structural_elem.quadrature_rule());
             _fe->get_phi();
             _fe->get_dphi();
-            _fe->reinit(_tri6);
+            _fe->reinit(_tri6, &pts);
         }
         
         
@@ -108,16 +108,20 @@ namespace MAST
          *   integration where the D matrix is calculated by section integration by
          *   the ElementPropertyCard2D.
          */
-        virtual void initialize_bending_strain_operator (const unsigned int qp,
-                                                         FEMOperatorMatrix& Bmat);
+        virtual void
+        initialize_bending_strain_operator (const libMesh::FEBase& fe,
+                                            const unsigned int qp,
+                                            FEMOperatorMatrix& Bmat);
         
         /*!
          *    initializes the bending strain operator for the specified quadrature
          * point and z-location.
          */
-        void initialize_bending_strain_operator_for_z(const unsigned int qp,
-                                                      const Real z,
-                                                      FEMOperatorMatrix& Bmat_bend);
+        void
+        initialize_bending_strain_operator_for_z(const libMesh::FEBase& fe,
+                                                 const unsigned int qp,
+                                                 const Real z,
+                                                 FEMOperatorMatrix& Bmat_bend);
         
     protected:
         
@@ -162,10 +166,11 @@ namespace MAST
 inline
 void
 MAST::DKTBendingOperator::
-initialize_bending_strain_operator (const unsigned int qp,
+initialize_bending_strain_operator (const libMesh::FEBase& fe,
+                                    const unsigned int qp,
                                     FEMOperatorMatrix& Bmat) {
     
-    this->initialize_bending_strain_operator_for_z(qp, 1., Bmat);
+    this->initialize_bending_strain_operator_for_z(fe, qp, 1., Bmat);
 }
 
 
@@ -173,10 +178,12 @@ initialize_bending_strain_operator (const unsigned int qp,
 inline
 void
 MAST::DKTBendingOperator::
-initialize_bending_strain_operator_for_z (const unsigned int qp,
+initialize_bending_strain_operator_for_z (const libMesh::FEBase& fe,
+                                          const unsigned int qp,
                                           const Real z,
                                           FEMOperatorMatrix& Bmat) {
     
+    // the DKT operator uses its own fe object, and not the one from this argument
     const std::vector<std::vector<libMesh::RealVectorValue> >& dphi = _fe->get_dphi();
     const unsigned int n_phi = (unsigned int)dphi.size();
     

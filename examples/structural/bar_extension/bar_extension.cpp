@@ -7,6 +7,7 @@
 #include "examples/structural/bar_extension/bar_extension.h"
 #include "elasticity/structural_system_initialization.h"
 #include "elasticity/structural_discipline.h"
+#include "elasticity/stress_output_base.h"
 #include "property_cards/solid_1d_section_element_property_card.h"
 #include "base/parameter.h"
 #include "base/constant_field_function.h"
@@ -16,11 +17,11 @@
 #include "boundary_condition/dirichlet_boundary_condition.h"
 #include "driver/driver_base.h"
 
-
 // libMesh includes
 #include "libmesh/mesh_generation.h"
 #include "libmesh/exodusII_io.h"
 #include "libmesh/numeric_vector.h"
+#include "libmesh/parameter_vector.h"
 
 
 extern libMesh::LibMeshInit* _init;
@@ -122,6 +123,25 @@ MAST::BarExtension::BarExtension() {
         
     _discipline->set_property_for_subdomain(0, *_p_card);
     
+    
+    // create the output objects, one for each element
+    libMesh::MeshBase::const_element_iterator
+    e_it    = _mesh->elements_begin(),
+    e_end   = _mesh->elements_end();
+    
+    for ( ; e_it != e_end; e_it++) {
+        
+        MAST::StressStrainOutputBase * output = new MAST::StressStrainOutputBase;
+        
+        // tell the object to evaluate the data for this object only
+        std::set<const libMesh::Elem*> e_set;
+        e_set.insert(*e_it);
+        output->set_elements_in_domain(e_set);
+        output->set_evaluation_mode(MAST::ELEM_QP);
+        _outputs.push_back(output);
+        
+        _discipline->add_volume_output((*e_it)->subdomain_id(), *output);
+    }
 }
 
 
@@ -162,7 +182,15 @@ MAST::BarExtension::~BarExtension() {
     delete _discipline;
     delete _structural_sys;
     
+    // iterate over the output quantities and delete them
+    std::vector<MAST::StressStrainOutputBase*>::iterator
+    it   =   _outputs.begin(),
+    end  =   _outputs.end();
     
+    for ( ; it != end; it++)
+        delete *it;
+    
+    _outputs.clear();
 }
 
 
@@ -175,10 +203,17 @@ MAST::BarExtension::solve() {
     // create the nonlinear assembly object
     MAST::StructuralNonlinearAssembly   assembly;
     
-    // now solve the system
-    MAST::Driver::nonlinear_solution(*_discipline,
-                                     *_structural_sys,
-                                     assembly);
+    assembly.attach_discipline_and_system(*_discipline, *_structural_sys);
+    
+    libMesh::NonlinearImplicitSystem&      nonlin_sys   =
+    dynamic_cast<libMesh::NonlinearImplicitSystem&>(assembly.system());
+    
+    nonlin_sys.solve();
+    
+    // evaluate the outputs
+    //assembly.calculate_outputs(*(_sys->solution));
+
+    assembly.clear_discipline_and_system();
     
     // write the solution for visualization
     //libMesh::ExodusII_IO(mesh).write_equation_systems("mesh.exo", eq_sys);
@@ -197,11 +232,19 @@ MAST::BarExtension::sensitivity_solve(MAST::Parameter& p) {
     // create the nonlinear assembly object
     MAST::StructuralNonlinearAssembly   assembly;
     
-    // now solve the system
-    MAST::Driver::sensitivity_solution(*_discipline,
-                                       *_structural_sys,
-                                       assembly,
-                                       p);
+    assembly.attach_discipline_and_system(*_discipline, *_structural_sys);
+
+    libMesh::NonlinearImplicitSystem&      nonlin_sys   =
+    dynamic_cast<libMesh::NonlinearImplicitSystem&>(assembly.system());
+
+    libMesh::ParameterVector params;
+    params.resize(1);
+    params[0]  =  p.ptr();
+
+    nonlin_sys.sensitivity_solve(params);
+
+    assembly.clear_discipline_and_system();
+
     
     // write the solution for visualization
     //libMesh::ExodusII_IO(mesh).write_equation_systems("mesh.exo", eq_sys);

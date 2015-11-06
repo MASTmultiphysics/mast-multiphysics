@@ -28,13 +28,18 @@ MAST::ElementBase::ElementBase(MAST::SystemInitialization& sys,
 _system(sys),
 _elem(elem),
 _active_sol_function(NULL),
-_time(_system.system().time) {
+_time(_system.system().time),
+_fe(NULL),
+_qrule(NULL) {
     
 }
 
 
-MAST::ElementBase::~ElementBase()
-{ }
+MAST::ElementBase::~ElementBase() {
+
+    if (_fe)     delete _fe;
+    if (_qrule)  delete _qrule;
+}
 
 
 libMesh::System&
@@ -131,6 +136,8 @@ MAST::ElementBase::detach_active_solution_function() {
 
 void
 MAST::ElementBase::_init_fe_and_qrule(const libMesh::Elem& e,
+                                      libMesh::FEBase **fe,
+                                      libMesh::QBase **qrule,
                                       const std::vector<libMesh::Point>* pts) {
     
     unsigned int nv = _system.n_vars();
@@ -143,23 +150,22 @@ MAST::ElementBase::_init_fe_and_qrule(const libMesh::Elem& e,
         libmesh_assert(fe_type == _system.fetype(i));
     
     // Create an adequate quadrature rule
-    _fe.reset(libMesh::FEBase::build(e.dim(), fe_type).release());
-    _fe->get_phi();
-    _fe->get_JxW();
-    _fe->get_dphi();
-    _fe->get_dphidxi();
-    _fe->get_dphideta();
-    _fe->get_dphidzeta();
+    (*fe) = libMesh::FEBase::build(e.dim(), fe_type).release();
+    (*fe)->get_phi();
+    (*fe)->get_JxW();
+    (*fe)->get_dphi();
+    (*fe)->get_dphidxi();
+    (*fe)->get_dphideta();
+    (*fe)->get_dphidzeta();
     
     if (pts == NULL) {
-        _qrule.reset(fe_type.default_quadrature_rule
-                     (e.dim(),
-                      _system.system().extra_quadrature_order).release());  // system extra quadrature
-        _fe->attach_quadrature_rule(_qrule.get());
-        _fe->reinit(&e);
+        (*qrule) = fe_type.default_quadrature_rule(e.dim(),
+                                                _system.system().extra_quadrature_order).release();  // system extra quadrature
+        (*fe)->attach_quadrature_rule(*qrule);
+        (*fe)->reinit(&e);
     }
     else
-        _fe->reinit(&e, pts);
+        (*fe)->reinit(&e, pts);
 }
 
 
@@ -167,8 +173,8 @@ MAST::ElementBase::_init_fe_and_qrule(const libMesh::Elem& e,
 void
 MAST::ElementBase::_get_side_fe_and_qrule(const libMesh::Elem& e,
                                           unsigned int s,
-                                          std::auto_ptr<libMesh::FEBase>& fe,
-                                          std::auto_ptr<libMesh::QBase>& qrule,
+                                          libMesh::FEBase **fe,
+                                          libMesh::QBase **qrule,
                                           bool if_calculate_dphi) {
     unsigned int nv = _system.n_vars();
     
@@ -179,16 +185,15 @@ MAST::ElementBase::_get_side_fe_and_qrule(const libMesh::Elem& e,
         libmesh_assert(fe_type == _system.fetype(i));
     
     // Create an adequate quadrature rule
-    fe.reset(libMesh::FEBase::build(e.dim(), fe_type).release());
-    qrule.reset(fe_type.default_quadrature_rule
-                (e.dim()-1,
-                 _system.system().extra_quadrature_order).release());  // system extra quadrature
-    fe->attach_quadrature_rule(qrule.get());
-    fe->get_phi();
-    fe->get_JxW();
+    (*fe)    = libMesh::FEBase::build(e.dim(), fe_type).release();
+    (*qrule) = fe_type.default_quadrature_rule(e.dim()-1,
+                                            _system.system().extra_quadrature_order).release();  // system extra quadrature
+    (*fe)->attach_quadrature_rule(*qrule);
+    (*fe)->get_phi();
+    (*fe)->get_JxW();
     if (if_calculate_dphi)
-        fe->get_dphi();
+        (*fe)->get_dphi();
     
-    fe->reinit(&e, s);
+    (*fe)->reinit(&e, s);
 }
 

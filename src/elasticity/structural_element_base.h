@@ -43,16 +43,11 @@ namespace MAST {
     {
     public:
         /*!
-         *   Constructor. \p output_eval_mode is true if post-process quantities
-         *   will be calculated. The finite element data structures will be
-         *   initialized only if the outputs are not being evaluated, in which
-         *   case the output evaluation routines are responsible for the
-         *   initialization of the data structure.
+         *   Constructor.
          */
         StructuralElementBase(MAST::SystemInitialization& sys,
                               const libMesh::Elem& elem,
-                              const MAST::ElementPropertyCardBase& p,
-                              const bool output_eval_mode);
+                              const MAST::ElementPropertyCardBase& p);
         
         virtual ~StructuralElementBase();
         
@@ -166,8 +161,10 @@ namespace MAST {
          *   identified in the map. The derivative with respect to the 
          *   state variables is provided if \p request_derivative is true.
          */
-        bool side_output_quantity (bool request_derivative,
-                                   std::multimap<libMesh::boundary_id_type, MAST::OutputFunctionBase*>& output) {
+        virtual bool
+        side_output_quantity (bool request_derivative,
+                              std::multimap<libMesh::boundary_id_type, MAST::OutputFunctionBase*>& output) {
+            
             libmesh_error(); // to be implemented
         }
         
@@ -198,9 +195,9 @@ namespace MAST {
          *   identified in the map. The derivative with respect to the
          *   state variables is provided if \p request_derivative is true.
          */
-        bool volume_output_quantity (bool request_derivative,
-                                     bool request_sensitivity,
-                                     std::multimap<libMesh::subdomain_id_type, MAST::OutputFunctionBase*>& output);
+        virtual bool volume_output_quantity (bool request_derivative,
+                                             bool request_sensitivity,
+                                             std::multimap<libMesh::subdomain_id_type, MAST::OutputFunctionBase*>& output);
 
         
         /*!
@@ -585,8 +582,7 @@ namespace MAST {
     std::auto_ptr<MAST::StructuralElementBase>
     build_structural_element(MAST::SystemInitialization& sys,
                              const libMesh::Elem& elem,
-                             const MAST::ElementPropertyCardBase& p,
-                             const bool output_eval_mode);
+                             const MAST::ElementPropertyCardBase& p);
 }
 
 

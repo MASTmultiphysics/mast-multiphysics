@@ -37,8 +37,7 @@
 
 MAST::StructuralElementBase::StructuralElementBase(MAST::SystemInitialization& sys,
                                                    const libMesh::Elem& elem,
-                                                   const MAST::ElementPropertyCardBase& p,
-                                                   const bool output_eval_mode):
+                                                   const MAST::ElementPropertyCardBase& p):
 MAST::ElementBase(sys, elem),
 follower_forces(false),
 _property(p),
@@ -70,12 +69,6 @@ _incompatible_sol(NULL) {
     
     _local_elem.reset(rval);
     
-    // now initialize the finite element data structures
-    // only if the outputs are not being evaluated, in which case
-    // the output evaluation routines are responsible for the initialization
-    // of the data structure
-    if (!output_eval_mode)
-        _init_fe_and_qrule(_local_elem->local_elem());
 }
 
 
@@ -673,9 +666,15 @@ surface_pressure_residual(bool request_jacobian,
     libmesh_assert(!follower_forces); // not implemented yet for follower forces
     
     // prepare the side finite element
-    std::auto_ptr<libMesh::FEBase> fe;
-    std::auto_ptr<libMesh::QBase> qrule;
-    _get_side_fe_and_qrule(get_elem_for_quadrature(), side, fe, qrule, false);
+    libMesh::FEBase *fe_ptr    = NULL;
+    libMesh::QBase  *qrule_ptr = NULL;
+    _get_side_fe_and_qrule(get_elem_for_quadrature(),
+                           side,
+                           &fe_ptr,
+                           &qrule_ptr,
+                           false);
+    std::auto_ptr<libMesh::FEBase> fe(fe_ptr);
+    std::auto_ptr<libMesh::QBase>  qrule(qrule_ptr);
     
     const std::vector<Real> &JxW                    = fe->get_JxW();
     const std::vector<libMesh::Point>& qpoint       = fe->get_xyz();
@@ -733,7 +732,7 @@ surface_pressure_residual(bool request_jacobian,
         f -= local_f;
     
     
-    return (request_jacobian && follower_forces);
+    return (request_jacobian);
 }
 
 
@@ -753,9 +752,15 @@ surface_pressure_residual_sensitivity(bool request_jacobian,
     libmesh_assert(!follower_forces); // not implemented yet for follower forces
     
     // prepare the side finite element
-    std::auto_ptr<libMesh::FEBase> fe;
-    std::auto_ptr<libMesh::QBase> qrule;
-    _get_side_fe_and_qrule(get_elem_for_quadrature(), side, fe, qrule, false);
+    libMesh::FEBase *fe_ptr    = NULL;
+    libMesh::QBase  *qrule_ptr = NULL;
+    _get_side_fe_and_qrule(get_elem_for_quadrature(),
+                           side,
+                           &fe_ptr,
+                           &qrule_ptr,
+                           false);
+    std::auto_ptr<libMesh::FEBase> fe(fe_ptr);
+    std::auto_ptr<libMesh::QBase>  qrule(qrule_ptr);
     
     const std::vector<Real> &JxW                    = fe->get_JxW();
     const std::vector<libMesh::Point>& qpoint       = fe->get_xyz();
@@ -817,7 +822,7 @@ surface_pressure_residual_sensitivity(bool request_jacobian,
         f -= local_f;
     
     
-    return (request_jacobian && follower_forces);
+    return (request_jacobian);
 }
 
 
@@ -894,7 +899,7 @@ surface_pressure_residual(bool request_jacobian,
     f -= vec_n2;
     
     
-    return (request_jacobian && follower_forces);
+    return (request_jacobian);
 }
 
 
@@ -976,7 +981,7 @@ surface_pressure_residual_sensitivity(bool request_jacobian,
     f -= vec_n2;
     
     
-    return (request_jacobian && follower_forces);
+    return (request_jacobian);
 }
 
 
@@ -1003,9 +1008,15 @@ small_disturbance_surface_pressure_residual(bool request_jacobian,
     dn_rot_fn = bc.get<MAST::FieldFunction<typename VectorType<ValType>::return_type> >("dnormal");
     
     
-    std::auto_ptr<libMesh::FEBase> fe;
-    std::auto_ptr<libMesh::QBase> qrule;
-    _get_side_fe_and_qrule(this->local_elem().local_elem(), side, fe, qrule, false);
+    libMesh::FEBase *fe_ptr    = NULL;
+    libMesh::QBase  *qrule_ptr = NULL;
+    _get_side_fe_and_qrule(get_elem_for_quadrature(),
+                           side,
+                           &fe_ptr,
+                           &qrule_ptr,
+                           false);
+    std::auto_ptr<libMesh::FEBase> fe(fe_ptr);
+    std::auto_ptr<libMesh::QBase>  qrule(qrule_ptr);
     
     
     // Physical location of the quadrature points
@@ -1079,7 +1090,7 @@ small_disturbance_surface_pressure_residual(bool request_jacobian,
         MAST::add_to_assembled_vector(f, local_f);
     
     
-    return (request_jacobian && follower_forces);
+    return (request_jacobian);
 }
 
 
@@ -1176,7 +1187,7 @@ small_disturbance_surface_pressure_residual(bool request_jacobian,
     MAST::add_to_assembled_vector(f, vec_n2);
     
     
-    return (request_jacobian && follower_forces);
+    return (request_jacobian);
 }
 
 
@@ -1213,7 +1224,7 @@ transform_matrix_to_global_system(const ValType& local_mat,
                 mat((j+3)*n_dofs+i, (k+3)*n_dofs+i) = Tmat(j,k); // for tx,ty,tz
             }
     
-    // right multiply with T^T, and left multiply with T.
+    // right multiply with T^tr, and left multiply with T.
     global_mat = mat * local_mat * mat.transpose();
 }
 
@@ -1241,7 +1252,7 @@ transform_vector_to_local_system(const ValType& global_vec,
                 mat((j+3)*n_dofs+i, (k+3)*n_dofs+i) = Tmat(j,k); // for tx,ty,tz
             }
     
-    // left multiply with T^T
+    // left multiply with T^tr
     local_vec = mat.transpose() * global_vec;
 }
 
@@ -1281,22 +1292,21 @@ transform_vector_to_global_system(const ValType& local_vec,
 std::auto_ptr<MAST::StructuralElementBase>
 MAST::build_structural_element(MAST::SystemInitialization& sys,
                                const libMesh::Elem& elem,
-                               const MAST::ElementPropertyCardBase& p,
-                               const bool output_eval_mode) {
+                               const MAST::ElementPropertyCardBase& p) {
     
     std::auto_ptr<MAST::StructuralElementBase> e;
     
     switch (elem.dim()) {
         case 1:
-            e.reset(new MAST::StructuralElement1D(sys, elem, p, output_eval_mode));
+            e.reset(new MAST::StructuralElement1D(sys, elem, p));
             break;
             
         case 2:
-            e.reset(new MAST::StructuralElement2D(sys, elem, p, output_eval_mode));
+            e.reset(new MAST::StructuralElement2D(sys, elem, p));
             break;
             
         case 3:
-            e.reset(new MAST::StructuralElement3D(sys, elem, p, output_eval_mode));
+            e.reset(new MAST::StructuralElement3D(sys, elem, p));
             break;
             
         default:

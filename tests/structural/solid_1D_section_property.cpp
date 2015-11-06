@@ -60,7 +60,7 @@ BOOST_AUTO_TEST_CASE   (Solid1DSection) {
     std::auto_ptr<MAST::StructuralElementBase>
     e(MAST::build_structural_element(*_structural_sys,
                                      elem,
-                                     *_p_card, false).release());
+                                     *_p_card).release());
     
 
     std::auto_ptr<MAST::FieldFunction<RealMatrixX > >

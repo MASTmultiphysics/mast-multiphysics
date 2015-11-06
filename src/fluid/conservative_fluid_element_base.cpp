@@ -29,15 +29,13 @@
 MAST::ConservativeFluidElementBase::
 ConservativeFluidElementBase(MAST::SystemInitialization& sys,
                              const libMesh::Elem& elem,
-                             const MAST::ElementPropertyCardBase& p,
-                             const bool if_output_eval):
+                             const MAST::ElementPropertyCardBase& p):
 MAST::FluidElemBase(),
 MAST::ElementBase(sys, elem),
 _property(p) {
     
     // initialize the finite element data structures
-    if (!if_output_eval)
-        _init_fe_and_qrule(elem);
+    _init_fe_and_qrule(elem, &_fe, &_qrule);
 }
 
 
@@ -113,7 +111,7 @@ MAST::ConservativeFluidElementBase::internal_residual (bool request_jacobian,
                            if_viscous());
         
         // initialize the FEM derivative operator
-        _initialize_fem_gradient_operator(qp, dim, dBmat);
+        _initialize_fem_gradient_operator(qp, dim, *_fe, dBmat);
         
         AiBi_adv.setZero();
         for (unsigned int i_dim=0; i_dim<dim; i_dim++) {
@@ -271,7 +269,7 @@ MAST::ConservativeFluidElementBase::velocity_residual (bool request_jacobian,
                            if_viscous());
         
         // initialize the FEM derivative operator
-        _initialize_fem_gradient_operator(qp, dim, dBmat);
+        _initialize_fem_gradient_operator(qp, dim, *_fe, dBmat);
         
         AiBi_adv.setZero();
         for (unsigned int i_dim=0; i_dim<dim; i_dim++) {
@@ -524,9 +522,11 @@ symmetry_surface_residual(bool request_jacobian,
                           MAST::BoundaryConditionBase& p) {
     
     // prepare the side finite element
-    std::auto_ptr<libMesh::FEBase> fe;
-    std::auto_ptr<libMesh::QBase> qrule;
-    _get_side_fe_and_qrule(get_elem_for_quadrature(), s, fe, qrule, false);
+    libMesh::FEBase *fe_ptr    = NULL;
+    libMesh::QBase  *qrule_ptr = NULL;
+    _get_side_fe_and_qrule(get_elem_for_quadrature(), s, &fe_ptr, &qrule_ptr, false);
+    std::auto_ptr<libMesh::FEBase> fe(fe_ptr);
+    std::auto_ptr<libMesh::QBase>  qrule(qrule_ptr);
     
     const std::vector<Real> &JxW                 = fe->get_JxW();
     const std::vector<libMesh::Point>& normals   = fe->get_normals();
@@ -632,9 +632,11 @@ slip_wall_surface_residual(bool request_jacobian,
     // qi ni = 0       (since heat flux occurs only on no-slip wall and far-field bc)
     
     // prepare the side finite element
-    std::auto_ptr<libMesh::FEBase> fe;
-    std::auto_ptr<libMesh::QBase> qrule;
-    _get_side_fe_and_qrule(get_elem_for_quadrature(), s, fe, qrule, false);
+    libMesh::FEBase *fe_ptr    = NULL;
+    libMesh::QBase  *qrule_ptr = NULL;
+    _get_side_fe_and_qrule(get_elem_for_quadrature(), s, &fe_ptr, &qrule_ptr, false);
+    std::auto_ptr<libMesh::FEBase> fe(fe_ptr);
+    std::auto_ptr<libMesh::QBase>  qrule(qrule_ptr);
     
     const std::vector<Real> &JxW                 = fe->get_JxW();
     const std::vector<libMesh::Point>& normals   = fe->get_normals();
@@ -773,9 +775,11 @@ far_field_surface_residual(bool request_jacobian,
     // -- f_diff_i ni  = f_diff                         (evaluation of diffusion flux based on domain solution)
 
     // prepare the side finite element
-    std::auto_ptr<libMesh::FEBase> fe;
-    std::auto_ptr<libMesh::QBase> qrule;
-    _get_side_fe_and_qrule(get_elem_for_quadrature(), s, fe, qrule, false);
+    libMesh::FEBase *fe_ptr    = NULL;
+    libMesh::QBase  *qrule_ptr = NULL;
+    _get_side_fe_and_qrule(get_elem_for_quadrature(), s, &fe_ptr, &qrule_ptr, false);
+    std::auto_ptr<libMesh::FEBase> fe(fe_ptr);
+    std::auto_ptr<libMesh::QBase>  qrule(qrule_ptr);
     
     const std::vector<Real> &JxW                 = fe->get_JxW();
     const std::vector<libMesh::Point>& normals   = fe->get_normals();
@@ -934,11 +938,12 @@ void
 MAST::ConservativeFluidElementBase::
 _initialize_fem_gradient_operator(const unsigned int qp,
                                   const unsigned int dim,
+                                  const libMesh::FEBase& fe,
                                   std::vector<MAST::FEMOperatorMatrix>& dBmat) {
     
     libmesh_assert(dBmat.size() == dim);
     
-    const std::vector<std::vector<libMesh::RealVectorValue> >& dphi = _fe->get_dphi();
+    const std::vector<std::vector<libMesh::RealVectorValue> >& dphi = fe.get_dphi();
     
     const unsigned int n_phi = (unsigned int)dphi.size();
     RealVectorX phi = RealVectorX::Zero(n_phi);

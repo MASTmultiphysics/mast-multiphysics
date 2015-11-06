@@ -18,45 +18,40 @@
  */
 
 
-#define BOOST_TEST_DYN_LINK
-#define BOOST_TEST_MODULE MAST_TESTS
-#include <boost/test/included/unit_test.hpp>
+// BOOST includes
+#include <boost/test/unit_test.hpp>
 
-
-// C++ includes
-#include <memory>
 
 // MAST includes
-#include "base/mast_data_types.h"
+#include "examples/structural/natural_vibration/beam_modal_analysis.h"
+#include "tests/base/test_comparisons.h"
+#include "elasticity/structural_system_initialization.h"
+#include "elasticity/structural_discipline.h"
+#include "property_cards/solid_1d_section_element_property_card.h"
+#include "base/parameter.h"
+#include "base/constant_field_function.h"
+#include "property_cards/isotropic_material_property_card.h"
+#include "elasticity/structural_element_base.h"
 
 // libMesh includes
-#include "libmesh/libmesh.h"
+#include "libmesh/numeric_vector.h"
 
-
-std::auto_ptr<libMesh::LibMeshInit>  _init;
 
 extern const Real
-delta    = 1.e-8,
-tol      = 1.e-3;
+delta,
+tol;
 
 
-struct GlobalTestFixture {
+BOOST_FIXTURE_TEST_SUITE  (Structural1DBeamModalAnalysis,
+                           MAST::BeamModalAnalysis)
+
+BOOST_AUTO_TEST_CASE   (BeamModalSolution) {
     
-    GlobalTestFixture() {
-        
-        // create the libMeshInit function
-        _init.reset(new libMesh::LibMeshInit(boost::unit_test::framework::master_test_suite().argc,
-                                             boost::unit_test::framework::master_test_suite().argv));
-    }
-    
-    ~GlobalTestFixture() {
-        
-    }
-    
-};
+    this->solve();
+}
 
 
-BOOST_GLOBAL_FIXTURE( GlobalTestFixture );
+BOOST_AUTO_TEST_SUITE_END()
 
 
 

@@ -35,9 +35,11 @@ namespace MAST {
     public MAST::BendingOperator1D {
         
     public:
-        BernoulliBendingOperator(MAST::StructuralElementBase& elem):
+        BernoulliBendingOperator(MAST::StructuralElementBase& elem,
+                                 const std::vector<libMesh::Point>& qpts):
         MAST::BendingOperator1D(elem),
-        _length(_elem.volume())
+        _length(_elem.volume()),
+        _qpts(qpts)
         { }
         
         /*!
@@ -54,7 +56,8 @@ namespace MAST {
          *   the ElementPropertyCard1D.
          */
         virtual void
-        initialize_bending_strain_operator (const unsigned int qp,
+        initialize_bending_strain_operator (const libMesh::FEBase& fe,
+                                            const unsigned int qp,
                                             MAST::FEMOperatorMatrix& Bmat);
         
         /*!
@@ -62,7 +65,8 @@ namespace MAST {
          * point and y,z-location.
          */
         void
-        initialize_bending_strain_operator_for_yz(const unsigned int qp,
+        initialize_bending_strain_operator_for_yz(const libMesh::FEBase& fe,
+                                                  const unsigned int qp,
                                                   const Real y,
                                                   const Real z,
                                                   MAST::FEMOperatorMatrix& Bmat_bend);
@@ -73,28 +77,36 @@ namespace MAST {
          *   element length
          */
         Real _length;
+        
+        /*!
+         *   this element needs the locations of the points for which 
+         *   the FE is initialized
+         */
+        const std::vector<libMesh::Point> _qpts;
     };
 }
 
 
 inline void
 MAST::BernoulliBendingOperator::
-initialize_bending_strain_operator (const unsigned int qp,
+initialize_bending_strain_operator (const libMesh::FEBase& fe,
+                                    const unsigned int qp,
                                     MAST::FEMOperatorMatrix& Bmat) {
     
-    this->initialize_bending_strain_operator_for_yz(qp, 1., 1., Bmat);
+    this->initialize_bending_strain_operator_for_yz(fe, qp, 1., 1., Bmat);
 }
 
 
 
 inline void
 MAST::BernoulliBendingOperator::
-initialize_bending_strain_operator_for_yz (const unsigned int qp,
+initialize_bending_strain_operator_for_yz (const libMesh::FEBase& fe,
+                                           const unsigned int qp,
                                            const Real y,
                                            const Real z,
                                            MAST::FEMOperatorMatrix& Bmat) {
     
-    const Real xi = _structural_elem.quadrature_rule().get_points()[qp](0);
+    const Real xi = _qpts[qp](0);
     
     // shape function values
     // N1 = (length/8.0) * (4.0/length -  6.0/length*xi + 0.0 +  2.0/length*pow(xi,3));

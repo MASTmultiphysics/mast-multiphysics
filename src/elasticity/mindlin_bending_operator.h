@@ -60,7 +60,8 @@ namespace MAST {
          *   the ElementPropertyCard2D.
          */
         virtual void
-        initialize_bending_strain_operator (const unsigned int qp,
+        initialize_bending_strain_operator (const libMesh::FEBase& fe,
+                                            const unsigned int qp,
                                             MAST::FEMOperatorMatrix& Bmat);
         
         /*!
@@ -68,7 +69,8 @@ namespace MAST {
          * point and z-location.
          */
         void
-        initialize_bending_strain_operator_for_z(const unsigned int qp,
+        initialize_bending_strain_operator_for_z(const libMesh::FEBase& fe,
+                                                 const unsigned int qp,
                                                  const Real z,
                                                  MAST::FEMOperatorMatrix& Bmat_bend);
         /*!
@@ -94,22 +96,22 @@ namespace MAST {
 
 inline void
 MAST::MindlinBendingOperator::
-initialize_bending_strain_operator(const unsigned int qp,
+initialize_bending_strain_operator(const libMesh::FEBase& fe,
+                                   const unsigned int qp,
                                    MAST::FEMOperatorMatrix& Bmat_bend) {
     
-    this->initialize_bending_strain_operator_for_z(qp, 1., Bmat_bend);
+    this->initialize_bending_strain_operator_for_z(fe, qp, 1., Bmat_bend);
 }
 
 
 
 inline void
 MAST::MindlinBendingOperator::
-initialize_bending_strain_operator_for_z(const unsigned int qp,
+initialize_bending_strain_operator_for_z(const libMesh::FEBase& fe,
+                                         const unsigned int qp,
                                          const Real z,
                                          MAST::FEMOperatorMatrix& Bmat_bend) {
-    
-    libMesh::FEBase& fe = _structural_elem.fe();
-    
+
     const std::vector<std::vector<libMesh::RealVectorValue> >& dphi = fe.get_dphi();
     const std::vector<std::vector<Real> >& phi = fe.get_phi();
     

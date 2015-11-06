@@ -27,6 +27,18 @@
 #include "elasticity/stress_output_base.h"
 
 
+MAST::StructuralElement3D::
+StructuralElement3D(MAST::SystemInitialization& sys,
+                    const libMesh::Elem& elem,
+                    const MAST::ElementPropertyCardBase& p):
+MAST::StructuralElementBase(sys, elem, p) {
+    
+    // now initialize the finite element data structures
+    _init_fe_and_qrule(get_elem_for_quadrature(), &_fe, &_qrule);
+    
+}
+
+
 bool
 MAST::StructuralElement3D::inertial_residual (bool request_jacobian,
                                               RealVectorX& f,
@@ -193,6 +205,7 @@ MAST::StructuralElement3D::internal_residual(bool request_jacobian,
         (*mat_stiff)(p, _time, material_mat);
         
         this->initialize_green_lagrange_strain_operator(qp,
+                                                        *_fe,
                                                         local_disp,
                                                         strain,
                                                         mat_x, mat_y, mat_z,
@@ -203,7 +216,7 @@ MAST::StructuralElement3D::internal_residual(bool request_jacobian,
                                                         Bmat_nl_u,
                                                         Bmat_nl_v,
                                                         Bmat_nl_w);
-        this->initialize_incompatible_strain_operator(qp, Bmat_inc, Gmat);
+        this->initialize_incompatible_strain_operator(qp, *_fe, Bmat_inc, Gmat);
         
         // calculate the incompatible mode matrices
         // incompatible mode diagonal stiffness matrix
@@ -251,6 +264,7 @@ MAST::StructuralElement3D::internal_residual(bool request_jacobian,
         (*mat_stiff)(p, _time, material_mat);
         
         this->initialize_green_lagrange_strain_operator(qp,
+                                                        *_fe,
                                                         local_disp,
                                                         strain,
                                                         mat_x, mat_y, mat_z,
@@ -261,7 +275,7 @@ MAST::StructuralElement3D::internal_residual(bool request_jacobian,
                                                         Bmat_nl_u,
                                                         Bmat_nl_v,
                                                         Bmat_nl_w);
-        this->initialize_incompatible_strain_operator(qp, Bmat_inc, Gmat);
+        this->initialize_incompatible_strain_operator(qp, *_fe, Bmat_inc, Gmat);
         
         // calculate the stress
         stress = material_mat * (strain + Gmat * alpha);
@@ -471,6 +485,7 @@ update_incompatible_mode_solution(const RealVectorX& dsol) {
         (*mat_stiff)(p, _time, material_mat);
         
         this->initialize_green_lagrange_strain_operator(qp,
+                                                        *_fe,
                                                         local_disp,
                                                         strain,
                                                         mat_x, mat_y, mat_z,
@@ -481,7 +496,7 @@ update_incompatible_mode_solution(const RealVectorX& dsol) {
                                                         Bmat_nl_u,
                                                         Bmat_nl_v,
                                                         Bmat_nl_w);
-        this->initialize_incompatible_strain_operator(qp, Bmat_inc, Gmat);
+        this->initialize_incompatible_strain_operator(qp, *_fe, Bmat_inc, Gmat);
 
         // calculate the stress
         stress = material_mat * (strain + Gmat * alpha);
@@ -632,6 +647,7 @@ MAST::StructuralElement3D::thermal_residual(bool request_jacobian,
         vec1_n1 = material_exp_A_mat * delta_t; // [C]{alpha (T - T0)}
         
         this->initialize_green_lagrange_strain_operator(qp,
+                                                        *_fe,
                                                         local_disp,
                                                         strain,
                                                         mat_x, mat_y, mat_z,
@@ -760,24 +776,28 @@ MAST::StructuralElement3D::calculate_stress(bool request_derivative,
 
     std::vector<libMesh::Point> qp_loc;
     
+    libMesh::FEBase         *fe_ptr     = NULL;
+    libMesh::QBase          *qrule_ptr  = NULL;
+
     switch (mode) {
         case MAST::CENTROID: {
             qp_loc.resize(1);
             qp_loc[0] = libMesh::Point();
+            _init_fe_and_qrule(get_elem_for_quadrature(), &fe_ptr, &qrule_ptr, &qp_loc);
         }
             break;
             
         case MAST::SPECIFIED_QP: {
             qp_loc = output.get_qp_for_evaluation();
-            _init_fe_and_qrule(_elem, &qp_loc);
+            _init_fe_and_qrule(get_elem_for_quadrature(), &fe_ptr, &qrule_ptr, &qp_loc);
         }
             break;
          
         case MAST::ELEM_QP:
             // this will initialize the FE object at the points specified
             // by the quadrature rule
-            _init_fe_and_qrule(_elem);
-            qp_loc = _qrule->get_points();
+            _init_fe_and_qrule(get_elem_for_quadrature(), &fe_ptr, &qrule_ptr);
+            qp_loc = qrule_ptr->get_points();
             break;
             
         defalut:
@@ -785,13 +805,16 @@ MAST::StructuralElement3D::calculate_stress(bool request_derivative,
             libmesh_error();
     }
     
+    std::auto_ptr<libMesh::FEBase>         fe(fe_ptr);
+    std::auto_ptr<libMesh::QBase>          qrule(qrule_ptr);
+
     // now that the FE object has been initialized, evaluate the stress values
     
     
-    const std::vector<Real> &JxW              = _fe->get_JxW();
-    const std::vector<libMesh::Point>& xyz    = _fe->get_xyz();
+    const std::vector<Real> &JxW              = fe->get_JxW();
+    const std::vector<libMesh::Point>& xyz    = fe->get_xyz();
     const unsigned int
-    n_phi              = (unsigned int)_fe->n_shape_functions(),
+    n_phi              = (unsigned int)fe->n_shape_functions(),
     n1                 =6,
     n2                 =3*n_phi,
     n3                 =30;
@@ -852,6 +875,7 @@ MAST::StructuralElement3D::calculate_stress(bool request_derivative,
         (*mat_stiff)(p, _time, material_mat);
         
         this->initialize_green_lagrange_strain_operator(qp,
+                                                        *fe,
                                                         local_disp,
                                                         strain,
                                                         mat_x, mat_y, mat_z,
@@ -862,7 +886,7 @@ MAST::StructuralElement3D::calculate_stress(bool request_derivative,
                                                         Bmat_nl_u,
                                                         Bmat_nl_v,
                                                         Bmat_nl_w);
-        this->initialize_incompatible_strain_operator(qp, Bmat_inc, Gmat);
+        this->initialize_incompatible_strain_operator(qp, *fe, Bmat_inc, Gmat);
         
         // calculate the stress
         strain += Gmat * alpha;
@@ -891,10 +915,11 @@ MAST::StructuralElement3D::calculate_stress(bool request_derivative,
 
 void
 MAST::StructuralElement3D::initialize_strain_operator (const unsigned int qp,
+                                                       const libMesh::FEBase& fe,
                                                        FEMOperatorMatrix& Bmat) {
     
     const std::vector<std::vector<libMesh::RealVectorValue> >&
-    dphi = _fe->get_dphi();
+    dphi = fe.get_dphi();
     
     unsigned int n_phi = (unsigned int)dphi.size();
     RealVectorX phi  = RealVectorX::Zero(n_phi);
@@ -927,6 +952,7 @@ MAST::StructuralElement3D::initialize_strain_operator (const unsigned int qp,
 void
 MAST::StructuralElement3D::
 initialize_green_lagrange_strain_operator(const unsigned int qp,
+                                          const libMesh::FEBase& fe,
                                           const RealVectorX& local_disp,
                                           RealVectorX& epsilon,
                                           RealMatrixX& mat_x,
@@ -943,7 +969,7 @@ initialize_green_lagrange_strain_operator(const unsigned int qp,
 
     
     const std::vector<std::vector<libMesh::RealVectorValue> >&
-    dphi = _fe->get_dphi();
+    dphi = fe.get_dphi();
     
     unsigned int n_phi = (unsigned int)dphi.size();
     RealVectorX phi  = RealVectorX::Zero(n_phi);
@@ -1072,9 +1098,11 @@ initialize_green_lagrange_strain_operator(const unsigned int qp,
 
 
 void
-MAST::StructuralElement3D::initialize_incompatible_strain_operator(const unsigned int qp,
-                                                                   FEMOperatorMatrix& Bmat,
-                                                                   RealMatrixX& G_mat) {
+MAST::StructuralElement3D::
+initialize_incompatible_strain_operator(const unsigned int qp,
+                                        const libMesh::FEBase& fe,
+                                        FEMOperatorMatrix& Bmat,
+                                        RealMatrixX& G_mat) {
     
     RealVectorX phi_vec = RealVectorX::Zero(1);
     
@@ -1086,9 +1114,9 @@ MAST::StructuralElement3D::initialize_incompatible_strain_operator(const unsigne
     phi = q_point[qp](2);
     
     const std::vector<std::vector<Real> >&
-    dshapedxi  = _fe->get_dphidxi(),
-    dshapedeta = _fe->get_dphideta(),
-    dshapedphi = _fe->get_dphidzeta();
+    dshapedxi  = fe.get_dphidxi(),
+    dshapedeta = fe.get_dphideta(),
+    dshapedphi = fe.get_dphidzeta();
     
     // calculate the deformed xyz coordinates
     const unsigned int n_nodes = _elem.n_nodes();

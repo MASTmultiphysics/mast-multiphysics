@@ -20,6 +20,9 @@
 #ifndef __mast__system_assembly_base__
 #define __mast__system_assembly_base__
 
+// C++ includes
+#include <map>
+
 
 // MAST includes
 #include "base/mast_data_types.h"
@@ -35,8 +38,8 @@ namespace MAST {
     class PhysicsDisciplineBase;
     class SystemInitialization;
     class ElementBase;
+    class OutputFunctionBase;
     template <typename ValType> class MeshFieldFunction;
-    
     
     class AssemblyBase {
     public:
@@ -106,6 +109,12 @@ namespace MAST {
         void detach_solution_function();
         
         
+        /*!
+         *   evaluates the volume and boundary outputs for the specified
+         *   solution
+         */
+        void calculate_outputs(const libMesh::NumericVector<Real>& X);
+        
     protected:
         
         /*!
@@ -124,6 +133,14 @@ namespace MAST {
         _build_localized_vector(const libMesh::System& sys,
                                 const libMesh::NumericVector<Real>& global);
         
+        
+        
+        /*!
+         *   assembles the outputs for this element
+         */
+        virtual void
+        _elem_outputs(MAST::ElementBase& elem,
+                      std::multimap<libMesh::subdomain_id_type, MAST::OutputFunctionBase*>& vol_output);
         
         /*!
          *   PhysicsDisciplineBase object for which this class is assembling

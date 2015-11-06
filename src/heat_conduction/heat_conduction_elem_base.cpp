@@ -36,8 +36,7 @@
 MAST::HeatConductionElementBase::
 HeatConductionElementBase(MAST::SystemInitialization& sys,
                           const libMesh::Elem& elem,
-                          const MAST::ElementPropertyCardBase& p,
-                          const bool if_output_eval):
+                          const MAST::ElementPropertyCardBase& p):
 MAST::ElementBase(sys, elem),
 _property(p) {
 
@@ -68,8 +67,7 @@ _property(p) {
     _local_elem.reset(rval);
     
     // now initialize the finite element data structures
-    if (!if_output_eval)
-        _init_fe_and_qrule(_local_elem->local_elem());
+    _init_fe_and_qrule(get_elem_for_quadrature(), &_fe, &_qrule);
 }
 
 
@@ -112,7 +110,7 @@ MAST::HeatConductionElementBase::internal_residual (bool request_jacobian,
     for (unsigned int qp=0; qp<JxW.size(); qp++) {
 
         // initialize the Bmat operator for this term
-        _initialize_mass_fem_operator(qp, Bmat);
+        _initialize_mass_fem_operator(qp, *_fe, Bmat);
         Bmat.right_multiply(vec1, _sol);
 
         if (_active_sol_function)
@@ -123,7 +121,7 @@ MAST::HeatConductionElementBase::internal_residual (bool request_jacobian,
         
         (*conductance)(p, _time, material_mat);
 
-        _initialize_fem_gradient_operator(qp, dim, dBmat);
+        _initialize_fem_gradient_operator(qp, dim, *_fe, dBmat);
         
         // calculate the flux for each dimension and add its weighted
         // component to the residual
@@ -215,7 +213,7 @@ MAST::HeatConductionElementBase::velocity_residual (bool request_jacobian,
     
     for (unsigned int qp=0; qp<JxW.size(); qp++) {
         
-        _initialize_mass_fem_operator(qp, Bmat);
+        _initialize_mass_fem_operator(qp, *_fe, Bmat);
         Bmat.right_multiply(vec1, _sol);               //  B * T
         
         if (_active_sol_function)
@@ -591,9 +589,11 @@ surface_flux_residual(bool request_jacobian,
                       MAST::BoundaryConditionBase& p) {
     
     // prepare the side finite element
-    std::auto_ptr<libMesh::FEBase> fe;
-    std::auto_ptr<libMesh::QBase> qrule;
-    _get_side_fe_and_qrule(get_elem_for_quadrature(), s, fe, qrule, false);
+    libMesh::FEBase *fe_ptr    = NULL;
+    libMesh::QBase  *qrule_ptr = NULL;
+    _get_side_fe_and_qrule(get_elem_for_quadrature(), s, &fe_ptr, &qrule_ptr, false);
+    std::auto_ptr<libMesh::FEBase> fe(fe_ptr);
+    std::auto_ptr<libMesh::QBase>  qrule(qrule_ptr);
     
     
     // get the function from this boundary condition
@@ -710,9 +710,11 @@ surface_convection_residual(bool request_jacobian,
                             MAST::BoundaryConditionBase& p) {
     
     // prepare the side finite element
-    std::auto_ptr<libMesh::FEBase> fe;
-    std::auto_ptr<libMesh::QBase> qrule;
-    _get_side_fe_and_qrule(get_elem_for_quadrature(), s, fe, qrule, false);
+    libMesh::FEBase *fe_ptr    = NULL;
+    libMesh::QBase  *qrule_ptr = NULL;
+    _get_side_fe_and_qrule(get_elem_for_quadrature(), s, &fe_ptr, &qrule_ptr, false);
+    std::auto_ptr<libMesh::FEBase> fe(fe_ptr);
+    std::auto_ptr<libMesh::QBase>  qrule(qrule_ptr);
 
     // get the function from this boundary condition
     const MAST::FieldFunction<Real>
@@ -860,9 +862,11 @@ surface_radiation_residual(bool request_jacobian,
                            MAST::BoundaryConditionBase& p) {
     
     // prepare the side finite element
-    std::auto_ptr<libMesh::FEBase> fe;
-    std::auto_ptr<libMesh::QBase> qrule;
-    _get_side_fe_and_qrule(get_elem_for_quadrature(), s, fe, qrule, false);
+    libMesh::FEBase *fe_ptr    = NULL;
+    libMesh::QBase  *qrule_ptr = NULL;
+    _get_side_fe_and_qrule(get_elem_for_quadrature(), s, &fe_ptr, &qrule_ptr, false);
+    std::auto_ptr<libMesh::FEBase> fe(fe_ptr);
+    std::auto_ptr<libMesh::QBase>  qrule(qrule_ptr);
 
     // get the function from this boundary condition
     const MAST::FieldFunction<Real>
@@ -1037,9 +1041,10 @@ volume_heat_source_residual_sensitivity(bool request_jacobian,
 void
 MAST::HeatConductionElementBase::
 _initialize_mass_fem_operator(const unsigned int qp,
+                              const libMesh::FEBase& fe,
                               MAST::FEMOperatorMatrix& Bmat) {
     
-    const std::vector<std::vector<Real> >& phi_fe = _fe->get_phi();
+    const std::vector<std::vector<Real> >& phi_fe = fe.get_phi();
     
     const unsigned int n_phi = (unsigned int)phi_fe.size();
     
@@ -1060,11 +1065,12 @@ void
 MAST::HeatConductionElementBase::
 _initialize_fem_gradient_operator(const unsigned int qp,
                                   const unsigned int dim,
+                                  const libMesh::FEBase& fe,
                                   std::vector<MAST::FEMOperatorMatrix>& dBmat) {
     
     libmesh_assert(dBmat.size() == dim);
     
-    const std::vector<std::vector<libMesh::RealVectorValue> >& dphi = _fe->get_dphi();
+    const std::vector<std::vector<libMesh::RealVectorValue> >& dphi = fe.get_dphi();
     
     const unsigned int n_phi = (unsigned int)dphi.size();
     RealVectorX phi = RealVectorX::Zero(n_phi);

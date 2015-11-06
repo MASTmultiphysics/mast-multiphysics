@@ -59,8 +59,7 @@ namespace MAST {
          */
         HeatConductionElementBase(MAST::SystemInitialization& sys,
                                   const libMesh::Elem& elem,
-                                  const MAST::ElementPropertyCardBase& p,
-                                  const bool if_output_eval);
+                                  const MAST::ElementPropertyCardBase& p);
         
         
         virtual ~HeatConductionElementBase();
@@ -144,6 +143,34 @@ namespace MAST {
                                               RealMatrixX& jac,
                                               std::multimap<libMesh::subdomain_id_type, MAST::BoundaryConditionBase*>& bc);
         
+        /*!
+         *   evaluates an output quantity requested in the map over the
+         *   boundary of the element that may coincide with the boundary
+         *   identified in the map. The derivative with respect to the
+         *   state variables is provided if \p request_derivative is true.
+         */
+        virtual bool
+        volume_output_quantity (bool request_derivative,
+                                bool request_sensitivity,
+                                std::multimap<libMesh::subdomain_id_type, MAST::OutputFunctionBase*>& output) {
+            
+            libmesh_error(); // to be implemented
+        }
+        
+        
+        /*!
+         *   evaluates an output quantity requested in the map over the
+         *   boundary of the element that may coincide with the boundary
+         *   identified in the map. The derivative with respect to the
+         *   state variables is provided if \p request_derivative is true.
+         */
+        virtual bool
+        side_output_quantity (bool request_derivative,
+                              std::multimap<libMesh::boundary_id_type, MAST::OutputFunctionBase*>& output) {
+            
+            libmesh_error(); // to be implemented
+        }
+
     protected:
         
                 
@@ -306,6 +333,7 @@ namespace MAST {
          *    \end{array} \right] \f]
          */
         void _initialize_mass_fem_operator(const unsigned int qp,
+                                           const libMesh::FEBase& fe,
                                            MAST::FEMOperatorMatrix& Bmat);
 
         
@@ -320,6 +348,7 @@ namespace MAST {
          */
         void _initialize_fem_gradient_operator(const unsigned int qp,
                                                const unsigned int dim,
+                                               const libMesh::FEBase& fe,
                                                std::vector<MAST::FEMOperatorMatrix>& dBmat);
 
         /*!

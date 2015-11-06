@@ -41,13 +41,14 @@ MAST::BendingOperator::~BendingOperator()
 
 std::auto_ptr<MAST::BendingOperator>
 MAST::build_bending_operator(MAST::BendingOperatorType type,
-                             MAST::StructuralElementBase& elem) {
+                             MAST::StructuralElementBase& elem,
+                             const std::vector<libMesh::Point>& pts) {
     
     std::auto_ptr<MAST::BendingOperator> rval;
     
     switch (type) {
         case MAST::BERNOULLI:
-            rval.reset(new MAST::BernoulliBendingOperator(elem));
+            rval.reset(new MAST::BernoulliBendingOperator(elem, pts));
             break;
             
         case MAST::TIMOSHENKO:
@@ -55,7 +56,7 @@ MAST::build_bending_operator(MAST::BendingOperatorType type,
             break;
             
         case MAST::DKT:
-            rval.reset(new MAST::DKTBendingOperator(elem));
+            rval.reset(new MAST::DKTBendingOperator(elem, pts));
             break;
             
         case MAST::MINDLIN:

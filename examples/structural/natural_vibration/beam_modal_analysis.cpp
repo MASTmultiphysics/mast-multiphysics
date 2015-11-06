@@ -4,7 +4,7 @@
 
 
 // MAST includes
-#include "examples/structural/buckling/beam_column_buckling.h"
+#include "examples/structural/natural_vibration/beam_modal_analysis.h"
 #include "elasticity/structural_system_initialization.h"
 #include "elasticity/structural_discipline.h"
 #include "elasticity/stress_output_base.h"
@@ -26,7 +26,7 @@
 extern libMesh::LibMeshInit* _init;
 
 
-MAST::BeamColumnBucklingAnalysis::BeamColumnBucklingAnalysis() {
+MAST::BeamModalAnalysis::BeamModalAnalysis() {
     
     
     // create the mesh
@@ -43,7 +43,7 @@ MAST::BeamColumnBucklingAnalysis::BeamColumnBucklingAnalysis() {
     _sys       = &(_eq_sys->add_system<libMesh::CondensedEigenSystem>("structural"));
     _sys->set_eigenproblem_type(libMesh::GHEP);
     _sys->eigen_solver->set_position_of_spectrum(libMesh::LARGEST_MAGNITUDE);
-
+    
     // FEType to initialize the system
     libMesh::FEType fetype (libMesh::FIRST, libMesh::LAGRANGE);
     
@@ -135,7 +135,7 @@ MAST::BeamColumnBucklingAnalysis::BeamColumnBucklingAnalysis() {
 
 
 
-MAST::BeamColumnBucklingAnalysis::~BeamColumnBucklingAnalysis() {
+MAST::BeamModalAnalysis::~BeamModalAnalysis() {
     
     delete _m_card;
     delete _p_card;
@@ -172,7 +172,7 @@ MAST::BeamColumnBucklingAnalysis::~BeamColumnBucklingAnalysis() {
 
 
 const libMesh::NumericVector<Real>&
-MAST::BeamColumnBucklingAnalysis::solve() {
+MAST::BeamModalAnalysis::solve() {
     
     
     // create the nonlinear assembly object
@@ -215,7 +215,7 @@ MAST::BeamColumnBucklingAnalysis::solve() {
         libMesh::ExodusII_IO(*_mesh).write_equation_systems(file_name.str(),
                                                             *_eq_sys);
     }
-
+    
     
     return *(_sys->solution);
 }
@@ -225,23 +225,22 @@ MAST::BeamColumnBucklingAnalysis::solve() {
 
 
 const libMesh::NumericVector<Real>&
-MAST::BeamColumnBucklingAnalysis::sensitivity_solve(MAST::Parameter& p) {
+MAST::BeamModalAnalysis::sensitivity_solve(MAST::Parameter& p) {
     
     
-//    // create the nonlinear assembly object
-//    MAST::StructuralNonlinearAssembly   assembly;
-//    
-//    // now solve the system
-//    MAST::Driver::sensitivity_solution(*_discipline,
-//                                       *_structural_sys,
-//                                       assembly,
-//                                       p);
-//    
-//    // write the solution for visualization
-//    //libMesh::ExodusII_IO(mesh).write_equation_systems("mesh.exo", eq_sys);
-//    
+    //    // create the nonlinear assembly object
+    //    MAST::StructuralNonlinearAssembly   assembly;
+    //
+    //    // now solve the system
+    //    MAST::Driver::sensitivity_solution(*_discipline,
+    //                                       *_structural_sys,
+    //                                       assembly,
+    //                                       p);
+    //
+    //    // write the solution for visualization
+    //    //libMesh::ExodusII_IO(mesh).write_equation_systems("mesh.exo", eq_sys);
+    //
     return _sys->get_sensitivity_solution(0);
 }
-
 
 

@@ -20,6 +20,10 @@
 // MAST includes
 #include "base/assembly_base.h"
 #include "base/system_initialization.h"
+#include "base/mesh_field_function.h"
+#include "base/elem_base.h"
+#include "base/physics_discipline_base.h"
+
 
 // libMesh includes
 #include "libmesh/numeric_vector.h"
@@ -121,6 +125,84 @@ MAST::AssemblyBase::attach_solution_function(MAST::MeshFieldFunction<RealVectorX
 void
 MAST::AssemblyBase::detach_solution_function() {
     _sol_function = NULL;
+}
+
+
+
+void
+MAST::AssemblyBase::calculate_outputs(const libMesh::NumericVector<Real>& X) {
+    
+    
+    libMesh::System& sys = _system->system();
+    
+    // iterate over each element, initialize it and get the relevant
+    // analysis quantities
+    RealVectorX vec, sol;
+    RealMatrixX mat;
+    
+    std::vector<libMesh::dof_id_type> dof_indices;
+    const libMesh::DofMap& dof_map = _system->system().get_dof_map();
+    std::auto_ptr<MAST::ElementBase> physics_elem;
+    
+    std::auto_ptr<libMesh::NumericVector<Real> > localized_solution;
+    localized_solution.reset(_build_localized_vector(sys, X).release());
+    
+    
+    // if a solution function is attached, initialize it
+    if (_sol_function)
+        _sol_function->init_for_system_and_solution(*_system, X);
+    
+    
+    libMesh::MeshBase::const_element_iterator       el     =
+    sys.get_mesh().active_local_elements_begin();
+    const libMesh::MeshBase::const_element_iterator end_el =
+    sys.get_mesh().active_local_elements_end();
+    
+    
+    for ( ; el != end_el; ++el) {
+        
+        const libMesh::Elem* elem = *el;
+        
+        dof_map.dof_indices (elem, dof_indices);
+        
+        physics_elem.reset(_build_elem(*elem).release());
+        
+        // get the solution
+        unsigned int ndofs = (unsigned int)dof_indices.size();
+        sol.setZero(ndofs);
+        vec.setZero(ndofs);
+        mat.setZero(ndofs, ndofs);
+        
+        for (unsigned int i=0; i<dof_indices.size(); i++)
+            sol(i) = (*localized_solution)(dof_indices[i]);
+        
+        physics_elem->set_solution(sol);
+        
+        if (_sol_function)
+            physics_elem->attach_active_solution_function(*_sol_function);
+        
+        // perform the element level calculations
+        _elem_outputs(*physics_elem, _discipline->volume_output());
+        
+        physics_elem->detach_active_solution_function();
+    }
+    
+    
+    // if a solution function is attached, clear it
+    if (_sol_function)
+        _sol_function->clear();
+}
+
+
+
+
+void
+MAST::AssemblyBase::_elem_outputs(MAST::ElementBase &elem,
+                                  std::multimap<libMesh::subdomain_id_type, MAST::OutputFunctionBase *> &vol_output) {
+    
+    
+    // ask the element to provide the outputs
+    elem.volume_output_quantity(false, false, vol_output);
 }
 
 

@@ -38,11 +38,7 @@ namespace MAST {
     public:
         StructuralElement3D(MAST::SystemInitialization& sys,
                             const libMesh::Elem& elem,
-                            const MAST::ElementPropertyCardBase& p,
-                            const bool output_eval_mode):
-        StructuralElementBase(sys, elem, p, output_eval_mode) {
-            
-        }
+                            const MAST::ElementPropertyCardBase& p);
         
         
         
@@ -216,6 +212,7 @@ namespace MAST {
          *   initialize strain operator matrix
          */
         void initialize_strain_operator (const unsigned int qp,
+                                         const libMesh::FEBase& fe,
                                          FEMOperatorMatrix& Bmat);
         
         /*!
@@ -223,6 +220,7 @@ namespace MAST {
          *    Green-Lagrange strain matrices
          */
         void initialize_green_lagrange_strain_operator(const unsigned int qp,
+                                                       const libMesh::FEBase& fe,
                                                        const RealVectorX& local_disp,
                                                        RealVectorX& epsilon,
                                                        RealMatrixX& mat_x,
@@ -240,6 +238,7 @@ namespace MAST {
          *   initialize incompatible strain operator
          */
         void initialize_incompatible_strain_operator(const unsigned int qp,
+                                                     const libMesh::FEBase& fe,
                                                      FEMOperatorMatrix& Bmat,
                                                      RealMatrixX& G_mat);
 

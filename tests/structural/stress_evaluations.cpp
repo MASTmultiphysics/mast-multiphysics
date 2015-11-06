@@ -81,8 +81,7 @@ void check_stress (ValType& v) {
     std::auto_ptr<MAST::StructuralElementBase>
     e(MAST::build_structural_element(*v._structural_sys,
                                      elem,
-                                     *v._p_card,
-                                     false).release());
+                                     *v._p_card).release());
     
     
     // number of dofs in this element

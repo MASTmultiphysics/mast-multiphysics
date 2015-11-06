@@ -43,6 +43,8 @@ namespace MAST {
     class SystemInitialization;
     class Parameter;
     class PointLoadCondition;
+    class OutputFunctionBase;
+    
     
     // typedefs
     typedef std::multimap<libMesh::boundary_id_type, MAST::BoundaryConditionBase*>  SideBCMapType;
@@ -50,6 +52,7 @@ namespace MAST {
     typedef std::map<libMesh::subdomain_id_type, const MAST::ElementPropertyCardBase*>      PropertyCardMapType;
     typedef std::map<libMesh::boundary_id_type, MAST::DirichletBoundaryCondition*>  DirichletBCMapType;
     typedef std::set<MAST::PointLoadCondition*> PointLoadSetType;
+    typedef std::multimap<libMesh::subdomain_id_type, MAST::OutputFunctionBase*> VolumeOutputMapType;
     
     
     class PhysicsDisciplineBase {
@@ -145,6 +148,23 @@ namespace MAST {
 
         
         /*!
+         *    @returns a const reference to the volume outputs
+         */
+        const MAST::VolumeOutputMapType& volume_output() const{
+            return _vol_output_map;
+        }
+
+        
+        /*!
+         *    @returns a  reference to the volume outputs
+         */
+        MAST::VolumeOutputMapType& volume_output() {
+            
+            return _vol_output_map;
+        }
+
+        
+        /*!
          *    @returns a const reference to the point load boundary conditions
          */
         const MAST::PointLoadSetType& point_loads() const{
@@ -158,6 +178,14 @@ namespace MAST {
             return _point_loads;
         }
 
+        
+        
+        /*!
+         *    adds the output to this discipline for evaluation
+         */
+        void add_volume_output(libMesh::subdomain_id_type bid,
+                               MAST::OutputFunctionBase& output);
+        
         
         /*!
          *    initializes the system for dirichlet boundary conditions
@@ -242,6 +270,11 @@ namespace MAST {
          *   point loads
          */
         MAST::PointLoadSetType _point_loads;
+        
+        /*!
+         *   volume output functions
+         */
+        MAST::VolumeOutputMapType _vol_output_map;
     };
     
 }

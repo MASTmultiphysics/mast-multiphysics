@@ -60,7 +60,8 @@ namespace MAST {
          *   the ElementPropertyCard1D.
          */
         virtual void
-        initialize_bending_strain_operator (const unsigned int qp,
+        initialize_bending_strain_operator (const libMesh::FEBase& fe,
+                                            const unsigned int qp,
                                             MAST::FEMOperatorMatrix& Bmat);
         
         /*!
@@ -68,7 +69,8 @@ namespace MAST {
          * point and y,z-location.
          */
         virtual void
-        initialize_bending_strain_operator_for_yz(const unsigned int qp,
+        initialize_bending_strain_operator_for_yz(const libMesh::FEBase& fe,
+                                                  const unsigned int qp,
                                                   const Real y,
                                                   const Real z,
                                                   MAST::FEMOperatorMatrix& Bmat_bend);
@@ -96,10 +98,11 @@ namespace MAST {
 
 inline void
 MAST::TimoshenkoBendingOperator::
-initialize_bending_strain_operator(const unsigned int qp,
+initialize_bending_strain_operator(const libMesh::FEBase& fe,
+                                   const unsigned int qp,
                                    MAST::FEMOperatorMatrix& Bmat_bend) {
     
-    this->initialize_bending_strain_operator_for_yz(qp, 1., 1., Bmat_bend);
+    this->initialize_bending_strain_operator_for_yz(fe, qp, 1., 1., Bmat_bend);
 }
 
 
@@ -107,12 +110,11 @@ initialize_bending_strain_operator(const unsigned int qp,
 
 inline void
 MAST::TimoshenkoBendingOperator::
-initialize_bending_strain_operator_for_yz(const unsigned int qp,
+initialize_bending_strain_operator_for_yz(const libMesh::FEBase& fe,
+                                          const unsigned int qp,
                                           const Real y,
                                           const Real z,
                                           MAST::FEMOperatorMatrix& Bmat_bend) {
-    
-    libMesh::FEBase& fe = _structural_elem.fe();
     
     const std::vector<std::vector<libMesh::RealVectorValue> >& dphi = fe.get_dphi();
     const std::vector<std::vector<Real> >& phi = fe.get_phi();

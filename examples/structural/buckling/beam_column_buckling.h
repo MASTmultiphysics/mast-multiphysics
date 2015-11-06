@@ -17,8 +17,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#ifndef __mast_bar_extension_h__
-#define __mast_bar_extension_h__
+#ifndef __mast_beam_column_buckling_h__
+#define __mast_beam_column_buckling_h__
 
 
 // C++ includes
@@ -33,7 +33,7 @@
 #include "libmesh/equation_systems.h"
 #include "libmesh/serial_mesh.h"
 #include "libmesh/mesh_generation.h"
-#include "libmesh/nonlinear_implicit_system.h"
+#include "libmesh/condensed_eigen_system.h"
 #include "libmesh/fe_type.h"
 #include "libmesh/dof_map.h"
 
@@ -50,16 +50,15 @@ namespace MAST {
     class Solid1DSectionElementPropertyCard;
     class DirichletBoundaryCondition;
     class BoundaryConditionBase;
-    class StressStrainOutputBase;
     
     
-    struct BarExtension {
+    struct BeamColumnBucklingAnalysis {
         
         
-        BarExtension();
+        BeamColumnBucklingAnalysis();
         
         
-        ~BarExtension();
+        ~BeamColumnBucklingAnalysis();
         
         
         /*!
@@ -81,7 +80,7 @@ namespace MAST {
         libMesh::EquationSystems*      _eq_sys;
         
         // create the libmesh system
-        libMesh::NonlinearImplicitSystem*  _sys;
+        libMesh::CondensedEigenSystem*  _sys;
         
         // initialize the system to the right set of variables
         MAST::StructuralSystemInitialization* _structural_sys;
@@ -91,19 +90,19 @@ namespace MAST {
         MAST::Parameter
         *_thy,
         *_thz,
+        *_rho,
         *_E,
         *_nu,
-        *_press,
         *_zero;
         
         MAST::ConstantFieldFunction
         *_thy_f,
         *_thz_f,
+        *_rho_f,
         *_E_f,
         *_nu_f,
         *_hyoff_f,
-        *_hzoff_f,
-        *_press_f;
+        *_hzoff_f;
         
         // create the material property card
         MAST::IsotropicMaterialPropertyCard*     _m_card;
@@ -111,20 +110,17 @@ namespace MAST {
         // create the element property card
         MAST::Solid1DSectionElementPropertyCard* _p_card;
         
-        // create the Dirichlet boundary condition
-        MAST::DirichletBoundaryCondition*     _dirichlet;
-        
-        // create the pressure boundary condition
-        MAST::BoundaryConditionBase*             _p_load;
+        // create the Dirichlet boundary condition on left edge
+        MAST::DirichletBoundaryCondition*     _dirichlet_left;
+
+        // create the Dirichlet boundary condition on right edge
+        MAST::DirichletBoundaryCondition*     _dirichlet_right;
         
         // vector of parameters to evaluate sensitivity wrt
         std::vector<MAST::Parameter*> _params_for_sensitivity;
-        
-        // output quantity objects to evaluate stress
-        std::vector<MAST::StressStrainOutputBase*>  _outputs;
     };
 }
 
 
 
-#endif //  __mast_bar_extension_h__
+#endif //  __mast_beam_column_buckling_h__

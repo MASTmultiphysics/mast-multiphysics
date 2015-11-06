@@ -25,7 +25,7 @@
 #include "libmesh/numeric_vector.h"
 
 
-int main(int argc, const char * argv[]) {
+int main_7(int argc, const char * argv[]) {
 
     // initialize the libMesh object
     libMesh::LibMeshInit              init(argc, argv);

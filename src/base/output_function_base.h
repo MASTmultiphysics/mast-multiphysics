@@ -79,6 +79,16 @@ namespace MAST {
 
         
         /*!
+         *   sets the mode of output evaluation
+         */
+        void set_evaluation_mode(MAST::PointwiseOutputEvaluationMode m)  {
+            
+            _eval_mode = m;
+        }
+
+        
+        
+        /*!
          *   @returns the mode of output evaluation
          */
         MAST::PointwiseOutputEvaluationMode evaluation_mode() const {

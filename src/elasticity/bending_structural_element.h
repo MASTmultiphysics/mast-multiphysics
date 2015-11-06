@@ -40,8 +40,13 @@ namespace MAST {
     public:
         BendingStructuralElem(MAST::SystemInitialization& sys,
                               const libMesh::Elem& elem,
-                              const MAST::ElementPropertyCardBase& p,
-                              const bool output_eval_mode);
+                              const MAST::ElementPropertyCardBase& p);
+        
+        /*!
+         *   destructor
+         */
+        virtual ~BendingStructuralElem();
+        
         
         /*!
          *    row dimension of the direct strain matrix, also used for the
@@ -61,13 +66,24 @@ namespace MAST {
          *   initialize membrane strain operator matrix
          */
         virtual void initialize_direct_strain_operator(const unsigned int qp,
+                                                       const libMesh::FEBase& fe,
                                                        FEMOperatorMatrix& Bmat) = 0;
         
+        /*!
+         *   Initializes the bending strain operator based on the FE 
+         *   initialization.
+         */
+        virtual void
+        _init_fe_operators(const libMesh::Elem& e,
+                           libMesh::FEBase **fe,
+                           libMesh::QBase  **qrule,
+                           MAST::BendingOperator **bend,
+                           const std::vector<libMesh::Point>* pts = NULL);
         
         /*!
          *    bending operator used for this elmeent
          */
-        std::auto_ptr<MAST::BendingOperator> _bending_operator;
+        MAST::BendingOperator *_bending_operator;
         
     };
 }

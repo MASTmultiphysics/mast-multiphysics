@@ -142,7 +142,7 @@ MAST::StructuralTransientAssembly::_build_elem(const libMesh::Elem& elem) {
     dynamic_cast<const MAST::ElementPropertyCardBase&>(_discipline->get_property_card(elem));
     
     MAST::ElementBase* rval =
-    MAST::build_structural_element(*_system, elem, p, false).release();
+    MAST::build_structural_element(*_system, elem, p).release();
     
     return std::auto_ptr<MAST::ElementBase>(rval);
 }

@@ -102,6 +102,7 @@ protected:
     
     virtual std::auto_ptr<MAST::ElementBase>
     _build_elem(const libMesh::Elem& elem) {
+        
         libmesh_not_implemented();
     }
 
@@ -113,7 +114,7 @@ protected:
 
 
 
-int main(int argc, const char * argv[]) {
+int main_8(int argc, const char * argv[]) {
     
     // initialize the libMesh object
     libMesh::LibMeshInit              init(argc, argv);

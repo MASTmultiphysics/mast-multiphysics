@@ -259,13 +259,28 @@ MAST::StressStrainOutputBase::clear() {
     }
     
     _stress_data.clear();
+    _elem_subset.clear();
+}
+
+
+
+
+void
+MAST::StressStrainOutputBase::
+set_elements_in_domain(const std::set<const libMesh::Elem*>& elems) {
+    
+    // make sure that the no data exists
+    libmesh_assert(_stress_data.size() == 0);
+    libmesh_assert(_elem_subset.size() == 0);
+    
+    _elem_subset = elems;
 }
 
 
 
 
 
-MAST::StressStrainOutputBase::Data& 
+MAST::StressStrainOutputBase::Data&
 MAST::StressStrainOutputBase::
 add_stress_strain_at_qp_location(const libMesh::Elem* e,
                                  const libMesh::Point& quadrature_pt,
@@ -273,6 +288,11 @@ add_stress_strain_at_qp_location(const libMesh::Elem* e,
                                  const RealVectorX& stress,
                                  const RealVectorX& strain,
                                  Real JxW) {
+    
+    // if the element subset has been provided, then make sure that this
+    // element exists in the subdomain.
+    if (_elem_subset.size())
+        libmesh_assert(_elem_subset.count(e));
     
     
     MAST::StressStrainOutputBase::Data* d =

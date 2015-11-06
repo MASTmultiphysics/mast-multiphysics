@@ -20,6 +20,9 @@
 #ifndef __mast__elem_base__
 #define __mast__elem_base__
 
+// C++ includes
+#include <map>
+
 // MAST includes
 #include "base/mast_data_types.h"
 
@@ -37,7 +40,7 @@ namespace MAST {
     class FunctionBase;
     class SystemInitialization;
     class LocalElemBase;
-    
+    class OutputFunctionBase;
     
     /*!
      *    This is the base class for elements that implement calculation of
@@ -196,6 +199,29 @@ namespace MAST {
          */
         const libMesh::Elem& get_elem_for_quadrature() const;
         
+        /*!
+         *   evaluates an output quantity requested in the map over the
+         *   boundary of the element that may coincide with the boundary
+         *   identified in the map. The derivative with respect to the
+         *   state variables is provided if \p request_derivative is true.
+         */
+        virtual bool
+        volume_output_quantity (bool request_derivative,
+                                bool request_sensitivity,
+                                std::multimap<libMesh::subdomain_id_type, MAST::OutputFunctionBase*>& output) = 0;
+        
+        
+        /*!
+         *   evaluates an output quantity requested in the map over the
+         *   boundary of the element that may coincide with the boundary
+         *   identified in the map. The derivative with respect to the
+         *   state variables is provided if \p request_derivative is true.
+         */
+        virtual bool
+        side_output_quantity (bool request_derivative,
+                              std::multimap<libMesh::boundary_id_type, MAST::OutputFunctionBase*>& output) = 0;
+
+    
     protected:
         
         
@@ -208,6 +234,8 @@ namespace MAST {
          */
         virtual void
         _init_fe_and_qrule(const libMesh::Elem& e,
+                           libMesh::FEBase **fe,
+                           libMesh::QBase **qrule,
                            const std::vector<libMesh::Point>* pts = NULL);
         
         
@@ -222,8 +250,8 @@ namespace MAST {
         virtual void
         _get_side_fe_and_qrule(const libMesh::Elem& e,
                                unsigned int s,
-                               std::auto_ptr<libMesh::FEBase>& fe,
-                               std::auto_ptr<libMesh::QBase>& qrule,
+                               libMesh::FEBase **fe,
+                               libMesh::QBase **qrule,
                                bool if_calculate_dphi);
         
         
@@ -312,13 +340,13 @@ namespace MAST {
         /*!
          *   element finite element for computations
          */
-        std::auto_ptr<libMesh::FEBase> _fe;
+        libMesh::FEBase *_fe;
         
         
         /*!
          *   element quadrature rule for computations
          */
-        std::auto_ptr<libMesh::QBase> _qrule;
+        libMesh::QBase *_qrule;
     };
 }
 

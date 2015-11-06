@@ -26,6 +26,7 @@
 // libMesh includes
 #include "libmesh/elem.h"
 #include "libmesh/quadrature.h"
+#include "libmesh/fe_base.h"
 
 
 
@@ -64,7 +65,8 @@ namespace MAST {
          *   initialze the bending strain operator for the specified quadrature point
          */
         virtual void
-        initialize_bending_strain_operator (const unsigned int qp,
+        initialize_bending_strain_operator (const libMesh::FEBase& fe,
+                                            const unsigned int qp,
                                             MAST::FEMOperatorMatrix& Bmat) = 0;
         
         /*!
@@ -89,12 +91,6 @@ namespace MAST {
          *    element for which bending operator is created
          */
         const libMesh::Elem& _elem;
-//
-//        /*!
-//         *   quadrature rule to be used. This should already be of the correct order
-//         */
-//        libMesh::QBase& _qrule;
-//        
     };
     
     
@@ -114,7 +110,8 @@ namespace MAST {
          *   initialze the bending strain operator for the specified quadrature point
          */
         virtual void
-        initialize_bending_strain_operator_for_yz (const unsigned int qp,
+        initialize_bending_strain_operator_for_yz (const libMesh::FEBase& fe,
+                                                   const unsigned int qp,
                                                    const Real y,
                                                    const Real z,
                                                    MAST::FEMOperatorMatrix& Bmat) = 0;
@@ -135,7 +132,8 @@ namespace MAST {
          *   initialze the bending strain operator for the specified quadrature point
          */
         virtual void
-        initialize_bending_strain_operator_for_z (const unsigned int qp,
+        initialize_bending_strain_operator_for_z (const libMesh::FEBase& fe,
+                                                  const unsigned int qp,
                                                   const Real z,
                                                   MAST::FEMOperatorMatrix& Bmat) = 0;
         
@@ -147,7 +145,8 @@ namespace MAST {
      */
     std::auto_ptr<MAST::BendingOperator>
     build_bending_operator(MAST::BendingOperatorType type,
-                           MAST::StructuralElementBase& elem);
+                           MAST::StructuralElementBase& elem,
+                           const std::vector<libMesh::Point>& pts);
 
 }
 

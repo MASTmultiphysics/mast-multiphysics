@@ -230,6 +230,16 @@ namespace MAST {
          */
         void clear();
         
+
+        /*!
+         *   sets the elements for which this object will evaluate and store
+         *   the stress and strain data. This allows the user the specify a 
+         *   smaller subset of elements that will be grouped together in the 
+         *   stress functionals for constraint evaluation. If this method is 
+         *   not called, then the object will store data for all elements in 
+         *   the subdomain.
+         */
+        void set_elements_in_domain(const std::set<const libMesh::Elem*>& elems);
         
         /*!
          *   add the stress tensor associated with the qp. @returns a reference
@@ -297,6 +307,13 @@ namespace MAST {
          */
         std::map<const libMesh::Elem*, std::vector<MAST::StressStrainOutputBase::Data*> >
         _stress_data;
+        
+        
+        /*!
+         *    set of elements for which the data will be stored. If this is 
+         *    empty, then data for all elements will be stored.
+         */
+        std::set<const libMesh::Elem*> _elem_subset;
 
     };
 }
