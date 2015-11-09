@@ -104,7 +104,6 @@ BOOST_AUTO_TEST_CASE   (BarExtensionSensitivity) {
     dsol,
     dsol_fd;
     
-    this->solve(); this->clear_stresss();
     const libMesh::NumericVector<Real>& sol_vec = this->solve();
 
     // make sure that each stress object has a single stored value
@@ -225,7 +224,7 @@ BOOST_AUTO_TEST_CASE   (BarExtensionSensitivity) {
         BOOST_TEST_MESSAGE("  ** dX/dp (total) wrt : " << f.name() << " **");
         BOOST_CHECK(MAST::compare_vector(   dsol,    dsol_fd, tol));
         // now compare the stress sensitivity
-        BOOST_TEST_MESSAGE("  ** dstress/dp (total) wrt : " << f.name() << " **");
+        BOOST_TEST_MESSAGE("  ** dvm-stress/dp (total) wrt : " << f.name() << " **");
         BOOST_CHECK(MAST::compare_vector(   dstressdp,    dstressdp_fd, tol));
     }
     

@@ -325,7 +325,7 @@ sensitivity_assemble (const libMesh::ParameterVector& parameters,
         _sol_function->clear();
     
     sensitivity_rhs.close();
-
+    
     return true;
 }
 

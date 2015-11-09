@@ -41,6 +41,7 @@
 // libMesh includes
 #include "libmesh/dof_map.h"
 #include "libmesh/elem.h"
+#include "libmesh/edge_edge2.h"
 
 extern const Real
 delta,
@@ -334,6 +335,118 @@ void check_stress (ValType& v) {
         f()        = p0;
     }
 }
+
+
+BOOST_AUTO_TEST_CASE   (VonMisesStress) {
+
+    
+    // check the accuracy of sensitivity analysis of von Mises stress,
+    // and the von Mises stress functional
+    // this simulates a case with 4 different stress values for an element
+    
+    std::auto_ptr<libMesh::Elem> elem(new libMesh::Edge2);
+    MAST::Parameter f("a", 0.);
+    libMesh::Point     p;
+    RealVectorX
+    strain = RealVectorX::Zero(6),
+    stress = RealVectorX::Zero(6);
+
+    
+    Real
+    stress1  = 5.e6,
+    stress2  = 15.e6,
+    dstress1 = -1.e8,
+    dstress2 = -3.e8,
+    func     = 0.,
+    dfunc    = 0.,
+    JxW      = 0.1;
+    
+    MAST::StressStrainOutputBase  output;
+    
+    // the four stress values
+    stress(0)   =   stress1;
+    output.add_stress_strain_at_qp_location(elem.get(), p, p, stress, strain, JxW);
+    stress(0)   =  -stress1;
+    output.add_stress_strain_at_qp_location(elem.get(), p, p, stress, strain, JxW);
+    stress(0)   =   stress2;
+    output.add_stress_strain_at_qp_location(elem.get(), p, p, stress, strain, JxW);
+    stress(0)   =  -stress2;
+    output.add_stress_strain_at_qp_location(elem.get(), p, p, stress, strain, JxW);
+
+    // now, the stress sensitivity values
+    const std::vector<MAST::StressStrainOutputBase::Data*>&
+    data = output.get_stress_strain_data_for_elem(elem.get());
+    
+    // set the sensitivity for each stress
+    stress(0)   =   dstress1;
+    data[0]->set_sensitivity(&f, stress, strain);
+    stress(0)   =  -dstress1;
+    data[1]->set_sensitivity(&f, stress, strain);
+    stress(0)   =   dstress2;
+    data[2]->set_sensitivity(&f, stress, strain);
+    stress(0)   =  -dstress2;
+    data[3]->set_sensitivity(&f, stress, strain);
+    
+    // now check the vm stress value for each case
+    BOOST_TEST_MESSAGE("   ** von Mises Stress ** ");
+    BOOST_CHECK(MAST::compare_value(fabs(stress1),
+                                    data[0]->von_Mises_stress(),
+                                    tol));
+    BOOST_CHECK(MAST::compare_value(fabs(stress1),
+                                    data[1]->von_Mises_stress(),
+                                    tol));
+    BOOST_CHECK(MAST::compare_value(fabs(stress2),
+                                    data[2]->von_Mises_stress(),
+                                    tol));
+    BOOST_CHECK(MAST::compare_value(fabs(stress2),
+                                    data[3]->von_Mises_stress(),
+                                    tol));
+    
+    BOOST_TEST_MESSAGE("   ** dvm-stress/dp **");
+    BOOST_CHECK(MAST::compare_value(dstress1,
+                                    data[0]->dvon_Mises_stress_dp(&f),
+                                    tol));
+    BOOST_CHECK(MAST::compare_value(dstress1,
+                                    data[1]->dvon_Mises_stress_dp(&f),
+                                    tol));
+    BOOST_CHECK(MAST::compare_value(dstress2,
+                                    data[2]->dvon_Mises_stress_dp(&f),
+                                    tol));
+    BOOST_CHECK(MAST::compare_value(dstress2,
+                                    data[3]->dvon_Mises_stress_dp(&f),
+                                    tol));
+
+    BOOST_TEST_MESSAGE("   ** vm-stress functional **");
+    func    =  stress2/pow(4.*JxW,0.5)*
+    pow(pow(fabs( stress1)/stress2,2)*JxW +
+        pow(fabs(-stress1)/stress2,2)*JxW +
+        pow(fabs( stress2)/stress2,2)*JxW +
+        pow(fabs(-stress2)/stress2,2)*JxW,0.5);
+    
+    BOOST_CHECK(MAST::compare_value(func,
+                                    output.von_Mises_p_norm_functional_for_all_elems(2),
+                                    tol));
+    
+    
+    BOOST_TEST_MESSAGE("   ** dvm-stress functional/dp **");
+    // update the stress values for a small perturbation
+    dfunc   =  stress2/pow(4.*JxW,0.5)*0.5*
+    pow(pow(fabs( stress1)/stress2,2)*JxW +
+        pow(fabs(-stress1)/stress2,2)*JxW +
+        pow(fabs( stress2)/stress2,2)*JxW +
+        pow(fabs(-stress2)/stress2,2)*JxW,-.5) *
+    2 *(fabs( stress1)/stress2*dstress1/stress2*JxW +
+        fabs(-stress1)/stress2*dstress1/stress2*JxW +
+        fabs( stress2)/stress2*dstress2/stress2*JxW +
+        fabs(-stress2)/stress2*dstress2/stress2*JxW);
+
+    BOOST_CHECK(MAST::compare_value
+                (dfunc,
+                 output.von_Mises_p_norm_functional_sensitivity_for_all_elems(2, &f),
+                 tol));
+    
+}
+
 
 
 BOOST_FIXTURE_TEST_SUITE  (Structural1DStressEvaluation, MAST::BuildStructural1DElem)

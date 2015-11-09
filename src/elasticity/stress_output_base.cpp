@@ -530,7 +530,7 @@ von_Mises_p_norm_functional_sensitivity_for_all_elems
         }
     }
     
-    val   = 1./p * max_val / pow(1./JxW_val, 1./p) * pow(val, 1./p-1.) * dval;
+    val   = 1./p * max_val / pow(JxW_val, 1./p) * pow(val, 1./p-1.) * dval;
     
     return val;
 }
@@ -608,5 +608,5 @@ von_Mises_p_norm_functional_state_derivartive_for_all_elems(const Real p) const 
         }
     }
     
-    return 1./p * max_val / pow(1./JxW_val, 1./p) * pow(val, 1./p-1.) * dval;
+    return 1./p * max_val / pow(JxW_val, 1./p) * pow(val, 1./p-1.) * dval;
 }

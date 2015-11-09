@@ -207,6 +207,9 @@ MAST::BarExtension::solve() {
     libMesh::NonlinearImplicitSystem&      nonlin_sys   =
     dynamic_cast<libMesh::NonlinearImplicitSystem&>(assembly.system());
     
+    // zero the solution before solving
+    nonlin_sys.solution->zero();
+
     nonlin_sys.solve();
     
     // evaluate the outputs
@@ -239,6 +242,9 @@ MAST::BarExtension::sensitivity_solve(MAST::Parameter& p) {
     libMesh::ParameterVector params;
     params.resize(1);
     params[0]  =  p.ptr();
+
+    // zero the solution before solving
+    nonlin_sys.add_sensitivity_solution(0).zero();
 
     nonlin_sys.sensitivity_solve(params);
     

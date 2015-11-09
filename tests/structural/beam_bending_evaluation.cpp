@@ -155,7 +155,6 @@ BOOST_AUTO_TEST_CASE   (BeamBendingSensitivity) {
     dsol,
     dsol_fd;
     
-    this->solve(); this->clear_stresss();
     const libMesh::NumericVector<Real>& sol_vec = this->solve();
     
     // make sure that each stress object has a single stored value
@@ -190,7 +189,7 @@ BOOST_AUTO_TEST_CASE   (BeamBendingSensitivity) {
     
     // copy the solution for later use
     for (unsigned int i=0; i<n_dofs; i++)  sol(i)  = sol_vec(i);
-    
+
     // now clear the stress data structures
     this->clear_stresss();
     
@@ -198,8 +197,16 @@ BOOST_AUTO_TEST_CASE   (BeamBendingSensitivity) {
     // sensitivity and compare with the numerical sensitivity
     
     Real
-    p0    = 0.,
-    dp    = 0.;
+    press       = (*_press)(),
+    th_y        = (*_thy)(),
+    th_z        = (*_thz)(),
+    x           = 0.,
+    xi          = 0.,
+    eta         = 0.,
+    analytical  = 0.,
+    numerical   = 0.,
+    p0          = 0.,
+    dp          = 0.;
     
     /////////////////////////////////////////////////////////
     // now evaluate the direct sensitivity
@@ -217,6 +224,51 @@ BOOST_AUTO_TEST_CASE   (BeamBendingSensitivity) {
         // calculate the analytical sensitivity
         _discipline->add_parameter(f);
         const libMesh::NumericVector<Real>& dsol_vec = this->sensitivity_solve(f);
+        
+        
+        ////////////////////////////////////////////////////////
+        //   compare the direct stress sensitivity with
+        //   analytical expressions
+        ////////////////////////////////////////////////////////
+        BOOST_TEST_MESSAGE("  ** dstress/dp (total) wrt : " << f.name() << " **");
+        for (unsigned int ii=0; ii<_outputs.size(); ii++) {
+            
+            // get the element and the nodes to evaluate the stress
+            const libMesh::Elem& e  = **(_outputs[ii]->get_elem_subset().begin());
+            
+            const std::vector<MAST::StressStrainOutputBase::Data*>&
+            data = _outputs[ii]->get_stress_strain_data_for_elem(&e);
+            
+            // find the location of quadrature point
+            for (unsigned int j=0; j<data.size(); j++) {
+                
+                // logitudinal strain for this location
+                numerical = data[j]->get_stress_sensitivity(&f)(0);
+                
+                xi         = data[j]->point_location_in_element_coordinate()(0);
+                eta        = data[j]->point_location_in_element_coordinate()(1);
+                
+                // assuming linear Lagrange interpolation for elements
+                x          =  e.point(0)(0) * (1.-xi)/2. +  e.point(1)(0) * (1.+xi)/2.;
+                // this gives the stress sensitivity
+                analytical = 0.;
+                if (f.name() == "E" || f.name() == "nu")
+                    analytical   = 0.;
+                else if (f.name() == "thy")
+                    analytical   = -2*(12./pow(th_y,3)/th_z)*eta/2.*press*(pow(x,2)/2. -
+                                                                           _length*x/2. +
+                                                                           pow(_length,2)/12.);
+                else if (f.name() == "thz")
+                    analytical   = -12./pow(th_y*th_z,2)*eta/2.*press*(pow(x,2)/2. -
+                                                                       _length*x/2. +
+                                                                       pow(_length,2)/12.);
+                else
+                    libmesh_error(); // should not get here
+                
+                BOOST_CHECK(MAST::compare_value(analytical, numerical, tol));
+            }
+        }
+        
         
         // make sure that each stress object has a single stored value
         for (unsigned int i=0; i<_outputs.size(); i++)
@@ -257,6 +309,10 @@ BOOST_AUTO_TEST_CASE   (BeamBendingSensitivity) {
         dsol_fd -= sol;
         dsol_fd /= dp;
         
+        
+        ////////////////////////////////////////////////////////
+        //   compare the von Mises stress sensitivity
+        ////////////////////////////////////////////////////////
         // copy the perturbed stress values
         for (unsigned int j=0; j<n_elems; j++)
             dstressdp_fd(j)  =
@@ -266,9 +322,6 @@ BOOST_AUTO_TEST_CASE   (BeamBendingSensitivity) {
         dstressdp_fd  -= stress0;
         dstressdp_fd  /= dp;
         
-        // now clear the stress data structures
-        this->clear_stresss();
-        
         // reset the parameter value
         f()        = p0;
         
@@ -276,8 +329,12 @@ BOOST_AUTO_TEST_CASE   (BeamBendingSensitivity) {
         BOOST_TEST_MESSAGE("  ** dX/dp (total) wrt : " << f.name() << " **");
         BOOST_CHECK(MAST::compare_vector(   dsol,    dsol_fd, tol));
         // now compare the stress sensitivity
-        BOOST_TEST_MESSAGE("  ** dstress/dp (total) wrt : " << f.name() << " **");
+        BOOST_TEST_MESSAGE("  ** dvm-stress/dp (total) wrt : " << f.name() << " **");
         BOOST_CHECK(MAST::compare_vector(   dstressdp,    dstressdp_fd, tol));
+
+        // now clear the stress data structures
+        this->clear_stresss();
+
     }
     
     

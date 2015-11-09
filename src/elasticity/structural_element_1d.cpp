@@ -314,6 +314,9 @@ MAST::StructuralElement1D::calculate_stress(bool request_derivative,
             hz(p, _time, z);
             // TODO: this assumes isotropic section. Multilayered sections need
             // special considerations
+            // This operator depends on the y and z thickness values. Sensitivity
+            // analysis should include the sensitivity of this operator on
+            // these thickness values
             bend->initialize_bending_strain_operator_for_yz(*fe,
                                                             qp,
                                                             qp_loc[qp](1) * y/2.,
@@ -392,6 +395,36 @@ MAST::StructuralElement1D::calculate_stress(bool request_derivative,
                 // TODO: include shape sensitivity.
                 // presently, only material parameter is included
 
+                dstrain_dp  =  RealVectorX::Zero(n1);
+                
+                // include the dependence of strain on the thickness
+                if (if_bending) {
+                    
+                    // add to this the bending strain
+                    // TODO: add coupling due to h_offset
+                    hy.derivative(MAST::PARTIAL_DERIVATIVE,
+                                  *sensitivity_param,
+                                  p, _time, y);
+                    hz.derivative(MAST::PARTIAL_DERIVATIVE,
+                                  *sensitivity_param,
+                                  p, _time, z);
+                    
+                    bend->initialize_bending_strain_operator_for_yz(*fe,
+                                                                    qp,
+                                                                    qp_loc[qp](1) * y/2.,
+                                                                    qp_loc[qp](2) * z/2.,
+                                                                    Bmat_bend);
+                    Bmat_bend.vector_mult(strain_bend, _local_sol);
+                    
+                    
+                    // add stress due to bending.
+                    dstrain_dp += strain_bend;
+                }
+
+                
+                // now use this to calculate the stress sensitivity.
+                dstress_dp  =  material_mat * dstrain_dp;
+
                 // get the material matrix sensitivity
                 mat_stiff->derivative(MAST::PARTIAL_DERIVATIVE,
                                         *sensitivity_param,
@@ -404,8 +437,8 @@ MAST::StructuralElement1D::calculate_stress(bool request_derivative,
                 // TODO: shape sensitivity of strain operator
 
                 // now use this to calculate the stress sensitivity.
-                dstress_dp  =  material_mat * strain;
-                dstrain_dp  =  RealVectorX::Zero(n1);
+                dstress_dp +=  material_mat * strain;
+
                 
                 //
                 // use the derivative data to evaluate the second term in the
