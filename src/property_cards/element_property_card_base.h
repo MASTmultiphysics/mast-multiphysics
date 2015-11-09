@@ -170,7 +170,7 @@ namespace MAST
         
         
         /*!
-         *    returns true if the element prestress has been specified, false
+         *    @returns true if the element prestress has been specified, false
          *    otherwise
          */
         virtual bool if_prestressed() const {

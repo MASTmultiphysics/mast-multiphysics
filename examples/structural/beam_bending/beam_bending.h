@@ -17,8 +17,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#ifndef __mast_bar_extension_h__
-#define __mast_bar_extension_h__
+#ifndef __mast_beam_bending_h__
+#define __mast_beam_bending_h__
 
 
 // C++ includes
@@ -53,13 +53,13 @@ namespace MAST {
     class StressStrainOutputBase;
     
     
-    struct BarExtension {
+    struct BeamBending {
         
         
-        BarExtension();
+        BeamBending();
         
         
-        ~BarExtension();
+        ~BeamBending();
         
         
         /*!
@@ -79,7 +79,9 @@ namespace MAST {
          */
         void clear_stresss();
         
-        
+        // length of domain
+        Real _length;
+
         // create the mesh
         libMesh::SerialMesh*           _mesh;
         
@@ -117,8 +119,11 @@ namespace MAST {
         // create the element property card
         MAST::Solid1DSectionElementPropertyCard* _p_card;
         
-        // create the Dirichlet boundary condition
-        MAST::DirichletBoundaryCondition*     _dirichlet;
+        // create the Dirichlet boundary condition on left edge
+        MAST::DirichletBoundaryCondition*     _dirichlet_left;
+        
+        // create the Dirichlet boundary condition on right edge
+        MAST::DirichletBoundaryCondition*     _dirichlet_right;
         
         // create the pressure boundary condition
         MAST::BoundaryConditionBase*             _p_load;
@@ -133,4 +138,4 @@ namespace MAST {
 
 
 
-#endif //  __mast_bar_extension_h__
+#endif //  __mast_beam_bending_h__

@@ -43,6 +43,13 @@ _JxW(JxW) {
 
 
 
+const libMesh::Point&
+MAST::StressStrainOutputBase::Data::
+point_location_in_element_coordinate() const {
+
+    return _qp;
+}
+
 
 const RealVectorX&
 MAST::StressStrainOutputBase::Data::stress() const {
@@ -147,7 +154,7 @@ MAST::StressStrainOutputBase::Data::von_Mises_stress() const {
     
     // make sure that the data is available
     libmesh_assert_equal_to(_stress.size(), 6);
-
+    
     return
     pow(0.5 * (pow(_stress(0)-_stress(1),2) +    //(((sigma_xx - sigma_yy)^2    +
                pow(_stress(1)-_stress(2),2) +    //  (sigma_yy - sigma_zz)^2    +
@@ -208,8 +215,6 @@ dvon_Mises_stress_dp(const MAST::FunctionBase* f) const {
            pow(_stress(4), 2) +              //     tau_yy^2 +
            pow(_stress(5), 2));              //     tau_zz^2)
 
-    
-    
     return
     (((dstress_dp(0) - dstress_dp(1)) * (_stress(0) - _stress(1)) +
       (dstress_dp(1) - dstress_dp(2)) * (_stress(1) - _stress(2)) +
@@ -232,14 +237,14 @@ MAST::OutputFunctionBase(MAST::STRAIN_STRESS_TENSOR) {
 
 MAST::StressStrainOutputBase::~StressStrainOutputBase() {
     
-    this->clear();
+    this->clear(true);
 }
 
 
 
 
 void
-MAST::StressStrainOutputBase::clear() {
+MAST::StressStrainOutputBase::clear(bool clear_elem_subset) {
     
     std::map<const libMesh::Elem*, std::vector<MAST::StressStrainOutputBase::Data*> >::iterator
     map_it  =  _stress_data.begin(),
@@ -259,9 +264,28 @@ MAST::StressStrainOutputBase::clear() {
     }
     
     _stress_data.clear();
-    _elem_subset.clear();
+    if (clear_elem_subset)
+        _elem_subset.clear();
 }
 
+
+
+
+
+bool
+MAST::StressStrainOutputBase::
+evaluate_for_element(const libMesh::Elem& elem) const {
+
+    bool rval = false;
+    
+    if ((_elem_subset.size() && _elem_subset.count(&elem)) ||
+        (_elem_subset.size() == 0))
+        rval = true;
+    else
+        rval = false;
+    
+    return rval;
+}
 
 
 
@@ -276,6 +300,13 @@ set_elements_in_domain(const std::set<const libMesh::Elem*>& elems) {
     _elem_subset = elems;
 }
 
+
+
+const std::set<const libMesh::Elem*>&
+MAST::StressStrainOutputBase::get_elem_subset() const {
+    
+    return _elem_subset;
+}
 
 
 
@@ -326,6 +357,30 @@ MAST::StressStrainOutputBase::get_stress_strain_data() const {
     return _stress_data;
 }
 
+
+
+unsigned int
+MAST::StressStrainOutputBase::
+n_elem_in_storage() const {
+    
+    return (unsigned int)_stress_data.size();
+}
+
+
+unsigned int
+MAST::StressStrainOutputBase::
+n_stress_strain_data_for_elem(const libMesh::Elem* e) const {
+    
+    unsigned int n = 0;
+    
+    std::map<const libMesh::Elem*, std::vector<MAST::StressStrainOutputBase::Data*> >::const_iterator
+    it = _stress_data.find(e);
+    
+    if ( it != _stress_data.end())
+        n = (unsigned int)it->second.size();
+    
+    return n;
+}
 
 
 
@@ -384,7 +439,6 @@ von_Mises_p_norm_functional_for_all_elems(const Real p) const {
     // now that we have the maximum value, we evaluate the p-norm
     map_it   =  _stress_data.begin();
     
-    
     for ( ; map_it != map_end; map_it++) {
         
         std::vector<MAST::StressStrainOutputBase::Data*>::const_iterator
@@ -404,7 +458,7 @@ von_Mises_p_norm_functional_for_all_elems(const Real p) const {
         }
     }
     
-    val   = max_val / JxW_val * pow(val, 1./p);
+    val   = max_val * pow(val/JxW_val, 1./p);
     
     return val;
 }
@@ -476,7 +530,7 @@ von_Mises_p_norm_functional_sensitivity_for_all_elems
         }
     }
     
-    val   = 1./p * max_val / JxW_val * pow(val, 1./p-1.) * dval;
+    val   = 1./p * max_val / pow(1./JxW_val, 1./p) * pow(val, 1./p-1.) * dval;
     
     return val;
 }
@@ -554,5 +608,5 @@ von_Mises_p_norm_functional_state_derivartive_for_all_elems(const Real p) const 
         }
     }
     
-    return 1./p * max_val / JxW_val * pow(val, 1./p-1.) * dval;
+    return 1./p * max_val / pow(1./JxW_val, 1./p) * pow(val, 1./p-1.) * dval;
 }

@@ -103,6 +103,77 @@ namespace MAST
         }
         
         
+        /*!
+         *   @returns a constant reference to the section area function
+         */
+        virtual const MAST::FieldFunction<Real>& A() const = 0;
+        
+        
+        /*!
+         *   @returns reference to the section area function
+         */
+        virtual MAST::FieldFunction<Real>& A() = 0;
+        
+        /*!
+         *   @returns constant reference to the function that calculates the
+         *   section torsional constant
+         */
+        virtual const MAST::FieldFunction<Real>& J() const = 0;
+        
+        /*!
+         *   @returns reference to the function that calculates the
+         *   section torsional constant
+         */
+        virtual MAST::FieldFunction<Real>& J() = 0;
+        
+        /*!
+         *   @returns reference to the section polar moment function
+         */
+        virtual const MAST::FieldFunction<Real>& Ip() const = 0;
+        
+        /*!
+         *   @returns reference to the section polar moment function
+         */
+        virtual MAST::FieldFunction<Real>& Ip() = 0;
+        
+        /*!
+         *   @returns constant reference to the function that calculates
+         *   section area moment about y-axis
+         */
+        virtual const MAST::FieldFunction<Real>& Ay() const = 0;
+        
+        /*!
+         *   @returns reference to the function that calculates
+         *   section area moment about y-axis
+         */
+        virtual MAST::FieldFunction<Real>& Ay() = 0;
+        
+        /*!
+         *   @returns constant reference to the function that calculates
+         *   section area moment about z-axis
+         */
+        virtual const MAST::FieldFunction<Real>& Az() const = 0;
+        
+        /*!
+         *   @returns reference to the function that calculates
+         *   section area moment about z-axis
+         */
+        virtual MAST::FieldFunction<Real>& Az() = 0;
+        
+        /*!
+         *   @returns constant reference to the function that calculates the
+         *   section area moment of inertia
+         */
+        virtual const MAST::FieldFunction<RealMatrixX>& I() const = 0;
+        
+        
+        /*!
+         *   @returns reference to the function that calculates the
+         *   section area moment of inertia
+         */
+        virtual MAST::FieldFunction<RealMatrixX>& I() = 0;
+
+        
     protected:
         
         /*!

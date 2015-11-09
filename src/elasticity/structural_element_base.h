@@ -315,11 +315,12 @@ namespace MAST {
         /*!
          *    Calculates the force vector and Jacobian due to surface pressure.
          */
-        virtual bool surface_pressure_residual(bool request_jacobian,
-                                               RealVectorX& f,
-                                               RealMatrixX& jac,
-                                               const unsigned int side,
-                                               MAST::BoundaryConditionBase& bc);
+        virtual bool
+        surface_pressure_residual(bool request_jacobian,
+                                  RealVectorX& f,
+                                  RealMatrixX& jac,
+                                  const unsigned int side,
+                                  MAST::BoundaryConditionBase& bc) = 0;
         
         
         /*!
@@ -327,10 +328,11 @@ namespace MAST {
          *    applied on the entire element domain. This is applicable for
          *    only 1D and 2D elements.
          */
-        virtual bool surface_pressure_residual(bool request_jacobian,
-                                               RealVectorX& f,
-                                               RealMatrixX& jac,
-                                               MAST::BoundaryConditionBase& bc);
+        virtual bool
+        surface_pressure_residual(bool request_jacobian,
+                                  RealVectorX& f,
+                                  RealMatrixX& jac,
+                                  MAST::BoundaryConditionBase& bc);
         
         
         /*!
@@ -471,7 +473,7 @@ namespace MAST {
                                               RealVectorX& f,
                                               RealMatrixX& jac,
                                               const unsigned int side,
-                                              MAST::BoundaryConditionBase& bc);
+                                              MAST::BoundaryConditionBase& bc) = 0;
         
         /*!
          *    Calculates the force vector and Jacobian due to surface pressure.

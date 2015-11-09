@@ -28,6 +28,7 @@
 // libMesh includes
 #include "libmesh/numeric_vector.h"
 #include "libmesh/dof_map.h"
+#include "libmesh/parameter_vector.h"
 
 
 MAST::AssemblyBase::AssemblyBase():
@@ -196,13 +197,127 @@ MAST::AssemblyBase::calculate_outputs(const libMesh::NumericVector<Real>& X) {
 
 
 
+
 void
-MAST::AssemblyBase::_elem_outputs(MAST::ElementBase &elem,
-                                  std::multimap<libMesh::subdomain_id_type, MAST::OutputFunctionBase *> &vol_output) {
+MAST::AssemblyBase::
+calculate_output_sensitivity(libMesh::ParameterVector &params,
+                             const bool if_total_sensitivity,
+                             const libMesh::NumericVector<Real> &X) {
+    
+    
+    libMesh::System& sys = _system->system();
+    
+    // iterate over each element, initialize it and get the relevant
+    // analysis quantities
+    RealVectorX vec, sol, sol_sens;
+    RealMatrixX mat;
+    
+    std::vector<libMesh::dof_id_type> dof_indices;
+    const libMesh::DofMap& dof_map = _system->system().get_dof_map();
+    std::auto_ptr<MAST::ElementBase> physics_elem;
+    
+    std::auto_ptr<libMesh::NumericVector<Real> >
+    localized_solution,
+    localized_solution_sensitivity;
+    
+    localized_solution.reset(_build_localized_vector(sys, X).release());
+    
+    
+    // if a solution function is attached, initialize it
+    if (_sol_function)
+        _sol_function->init_for_system_and_solution(*_system, X);
+    
+    // iterate over the parameters
+    for ( unsigned int i=0; i<params.size(); i++) {
+        
+        if (if_total_sensitivity)
+            localized_solution_sensitivity.reset
+            (_build_localized_vector(sys,
+                                     sys.get_sensitivity_solution(i)).release());
+    
+        libMesh::MeshBase::const_element_iterator       el     =
+        sys.get_mesh().active_local_elements_begin();
+        const libMesh::MeshBase::const_element_iterator end_el =
+        sys.get_mesh().active_local_elements_end();
+        
+        
+        for ( ; el != end_el; ++el) {
+            
+            const libMesh::Elem* elem = *el;
+            
+            dof_map.dof_indices (elem, dof_indices);
+            
+            physics_elem.reset(_build_elem(*elem).release());
+            
+            // get the solution
+            unsigned int ndofs = (unsigned int)dof_indices.size();
+            sol.setZero(ndofs);
+            sol_sens.setZero(ndofs);
+            vec.setZero(ndofs);
+            mat.setZero(ndofs, ndofs);
+
+            // tell the element about the sensitivity paramete
+            physics_elem->sensitivity_param = _discipline->get_parameter(params[i]);
+            
+            // get the solution
+            for (unsigned int i=0; i<dof_indices.size(); i++)
+                sol(i) = (*localized_solution)(dof_indices[i]);
+
+            // tell the element about the solution
+            physics_elem->set_solution(sol);
+
+            // get the solution sensitivity
+            if (if_total_sensitivity)
+                for (unsigned int i=0; i<dof_indices.size(); i++)
+                    sol_sens(i) = (*localized_solution_sensitivity)(dof_indices[i]);
+        
+            // tell the solution about the sensitivity
+            physics_elem->set_solution(sol_sens, true);
+
+            if (_sol_function)
+                physics_elem->attach_active_solution_function(*_sol_function);
+            
+            // perform the element level calculations
+            _elem_output_sensitivity(*physics_elem,
+                                     _discipline->volume_output());
+            
+            physics_elem->detach_active_solution_function();
+        }
+        
+    }
+    
+    // if a solution function is attached, clear it
+    if (_sol_function)
+        _sol_function->clear();
+}
+
+
+
+
+void
+MAST::AssemblyBase::
+_elem_outputs(MAST::ElementBase &elem,
+              std::multimap<libMesh::subdomain_id_type,MAST::OutputFunctionBase *> &vol_output) {
     
     
     // ask the element to provide the outputs
     elem.volume_output_quantity(false, false, vol_output);
 }
+
+
+
+
+void
+MAST::AssemblyBase::
+_elem_output_sensitivity(MAST::ElementBase &elem,
+                         std::multimap<libMesh::subdomain_id_type, MAST::OutputFunctionBase *> &vol_output) {
+    
+    
+    // ask the element to provide the outputs
+    elem.volume_output_quantity(false,  // false for adjoints
+                                true,   // true for sensitivity
+                                vol_output);
+}
+
 
 

@@ -114,6 +114,25 @@ namespace MAST {
          *   solution
          */
         void calculate_outputs(const libMesh::NumericVector<Real>& X);
+
+        
+        /*!
+         *   evaluates the sensitivity of the outputs in the attached 
+         *   discipline with respect to the parametrs in \par params.
+         *   The base solution should be provided in \par X. If the parameter 
+         *   \par if_total_sensitivity is true, then the method will calculate 
+         *   the total derivative of the output with respect to the parameters.
+         *   In this case, the method will look for the sensitivity solution for 
+         *   the i^th parameter in get_sensitivity_solution() of the associated
+         *   libMesh::System object. If the parameter \par if_total_sensitivity
+         *   if \p false, then the method will calculate the sensitivity 
+         *   assuming the sensitivity of solution is zero. This can be used for
+         *   adjoint sensitivity analysis.
+         */
+        void calculate_output_sensitivity(libMesh::ParameterVector& params,
+                                          const bool if_total_sensitivity,
+                                          const libMesh::NumericVector<Real>& X);
+
         
     protected:
         
@@ -141,7 +160,15 @@ namespace MAST {
         virtual void
         _elem_outputs(MAST::ElementBase& elem,
                       std::multimap<libMesh::subdomain_id_type, MAST::OutputFunctionBase*>& vol_output);
+
         
+        /*!
+         *   assembles the sensitivity of outputs for this element
+         */
+        virtual void
+        _elem_output_sensitivity(MAST::ElementBase& elem,
+                                 std::multimap<libMesh::subdomain_id_type, MAST::OutputFunctionBase*>& vol_output);
+
         /*!
          *   PhysicsDisciplineBase object for which this class is assembling
          */

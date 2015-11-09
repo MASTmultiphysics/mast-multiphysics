@@ -43,22 +43,22 @@ MAST::OutputFunctionBase::type() const {
 
 void
 MAST::OutputFunctionBase::
-set_qp_for_evaluation(const std::vector<libMesh::Point>& pts) {
+set_points_for_evaluation(const std::vector<libMesh::Point>& pts) {
     
     // make sure that some points were specified
     libmesh_assert(pts.size());
     
-    _eval_mode = MAST::SPECIFIED_QP;
+    _eval_mode = MAST::SPECIFIED_POINTS;
     _eval_points = pts;
 }
 
 
 
 const std::vector<libMesh::Point>&
-MAST::OutputFunctionBase::get_qp_for_evaluation() const {
+MAST::OutputFunctionBase::get_points_for_evaluation() const {
 
     // make sure that the data was provide
-    libmesh_assert(_eval_mode == MAST::SPECIFIED_QP);
+    libmesh_assert(_eval_mode == MAST::SPECIFIED_POINTS);
     return _eval_points;
 }
 

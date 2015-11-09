@@ -191,8 +191,8 @@ MAST::StructuralElement2D::calculate_stress(bool request_derivative,
         }
             break;
             
-        case MAST::SPECIFIED_QP: {
-            qp_loc = output.get_qp_for_evaluation();
+        case MAST::SPECIFIED_POINTS: {
+            qp_loc = output.get_points_for_evaluation();
             _init_fe_operators(get_elem_for_quadrature(),
                                &fe_ptr,
                                &qrule_ptr,
@@ -1234,6 +1234,199 @@ MAST::StructuralElement2D::prestress_residual_sensitivity (bool request_jacobian
     
     // only the nonlinear strain returns a Jacobian for prestressing
     return (request_jacobian && if_vk);
+}
+
+
+
+
+
+bool
+MAST::StructuralElement2D::
+surface_pressure_residual(bool request_jacobian,
+                          RealVectorX &f,
+                          RealMatrixX &jac,
+                          const unsigned int side,
+                          MAST::BoundaryConditionBase& bc) {
+    
+    libmesh_assert(!follower_forces); // not implemented yet for follower forces
+    
+    // prepare the side finite element
+    libMesh::FEBase *fe_ptr    = NULL;
+    libMesh::QBase  *qrule_ptr = NULL;
+    _get_side_fe_and_qrule(get_elem_for_quadrature(),
+                           side,
+                           &fe_ptr,
+                           &qrule_ptr,
+                           false);
+    std::auto_ptr<libMesh::FEBase> fe(fe_ptr);
+    std::auto_ptr<libMesh::QBase>  qrule(qrule_ptr);
+    
+    const std::vector<Real> &JxW                    = fe->get_JxW();
+    const std::vector<libMesh::Point>& qpoint       = fe->get_xyz();
+    const std::vector<std::vector<Real> >& phi      = fe->get_phi();
+    const std::vector<libMesh::Point>& face_normals = fe->get_normals();
+    const unsigned int
+    n_phi  = (unsigned int)phi.size(),
+    n1     = 3,
+    n2     = 6*n_phi;
+    
+    
+    // get the function from this boundary condition
+    const MAST::FieldFunction<Real>& p_func =
+    bc.get<MAST::FieldFunction<Real> >("pressure");
+    
+    // get the thickness function to calculate the force
+    std::auto_ptr<MAST::FieldFunction<Real> > t_func =
+    _property.get<MAST::FieldFunction<Real> >("h").clone();
+    
+    FEMOperatorMatrix Bmat;
+    Real
+    press   = 0.,
+    t_val   = 0.;
+    libMesh::Point pt;
+    
+    RealVectorX
+    phi_vec     = RealVectorX::Zero(n_phi),
+    force       = RealVectorX::Zero(2*n1),
+    local_f     = RealVectorX::Zero(n2),
+    vec_n2      = RealVectorX::Zero(n2);
+    
+    for (unsigned int qp=0; qp<qpoint.size(); qp++) {
+        
+        _local_elem->global_coordinates_location(qpoint[qp], pt);
+        
+        // now set the shape function values
+        for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
+            phi_vec(i_nd) = phi[i_nd][qp];
+        
+        Bmat.reinit(2*n1, phi_vec);
+        
+        // get pressure and thickness values
+        p_func(pt, _time, press);
+        (*t_func)(pt, _time, t_val);
+        
+        // calculate force
+        for (unsigned int i_dim=0; i_dim<n1; i_dim++)
+            force(i_dim) = (press*t_val) * face_normals[qp](i_dim);
+        
+        Bmat.vector_mult_transpose(vec_n2, force);
+        
+        local_f += JxW[qp] * vec_n2;
+    }
+    
+    // now transform to the global system and add
+    if (_elem.dim() < 3) {
+        transform_vector_to_global_system(local_f, vec_n2);
+        f -= vec_n2;
+    }
+    else
+        f -= local_f;
+    
+    
+    return (request_jacobian);
+}
+
+
+
+
+
+bool
+MAST::StructuralElement2D::
+surface_pressure_residual_sensitivity(bool request_jacobian,
+                                      RealVectorX &f,
+                                      RealMatrixX &jac,
+                                      const unsigned int side,
+                                      MAST::BoundaryConditionBase& bc) {
+    
+    libmesh_assert(!follower_forces); // not implemented yet for follower forces
+    
+    // prepare the side finite element
+    libMesh::FEBase *fe_ptr    = NULL;
+    libMesh::QBase  *qrule_ptr = NULL;
+    _get_side_fe_and_qrule(get_elem_for_quadrature(),
+                           side,
+                           &fe_ptr,
+                           &qrule_ptr,
+                           false);
+    std::auto_ptr<libMesh::FEBase> fe(fe_ptr);
+    std::auto_ptr<libMesh::QBase>  qrule(qrule_ptr);
+    
+    const std::vector<Real> &JxW                    = fe->get_JxW();
+    const std::vector<libMesh::Point>& qpoint       = fe->get_xyz();
+    const std::vector<std::vector<Real> >& phi      = fe->get_phi();
+    const std::vector<libMesh::Point>& face_normals = fe->get_normals();
+    const unsigned int
+    n_phi  = (unsigned int)phi.size(),
+    n1     = 3,
+    n2     = 6*n_phi;
+    
+    
+    // get the function from this boundary condition
+    const MAST::FieldFunction<Real>& p_func =
+    bc.get<MAST::FieldFunction<Real> >("pressure");
+
+    // get the thickness function to calculate the force
+    std::auto_ptr<MAST::FieldFunction<Real> > t_func =
+    _property.get<MAST::FieldFunction<Real> >("h").clone();
+
+    
+    FEMOperatorMatrix Bmat;
+    Real
+    press   =  0.,
+    dpress  =  0.,
+    t_val   =  0.,
+    dt_val  =  0.;
+    libMesh::Point pt;
+    
+    RealVectorX
+    phi_vec     = RealVectorX::Zero(n_phi),
+    force       = RealVectorX::Zero(2*n1),
+    local_f     = RealVectorX::Zero(n2),
+    vec_n2      = RealVectorX::Zero(n2);
+    
+    for (unsigned int qp=0; qp<qpoint.size(); qp++) {
+        
+        _local_elem->global_coordinates_location(qpoint[qp], pt);
+        
+        // now set the shape function values
+        for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
+            phi_vec(i_nd) = phi[i_nd][qp];
+        
+        Bmat.reinit(2*n1, phi_vec);
+        
+        // get pressure and thickness values and their sensitivities
+        p_func(pt, _time, press);
+        p_func.derivative(MAST::TOTAL_DERIVATIVE,
+                          *sensitivity_param,
+                          pt,
+                          _time,
+                          dpress);
+        (*t_func)(pt, _time, t_val);
+        t_func->derivative(MAST::PARTIAL_DERIVATIVE,
+                           *sensitivity_param,
+                           pt,
+                           _time,
+                           dt_val);
+        
+        // calculate force
+        for (unsigned int i_dim=0; i_dim<n1; i_dim++)
+            force(i_dim) = (press*dt_val + dpress*t_val) * face_normals[qp](i_dim);
+        
+        Bmat.vector_mult_transpose(vec_n2, force);
+        
+        local_f += JxW[qp] * vec_n2;
+    }
+    
+    // now transform to the global system and add
+    if (_elem.dim() < 3) {
+        transform_vector_to_global_system(local_f, vec_n2);
+        f -= vec_n2;
+    }
+    else
+        f -= local_f;
+    
+    
+    return (request_jacobian);
 }
 
 

@@ -152,7 +152,7 @@ void check_stress (ValType& v) {
         vmf0        = output.von_Mises_p_norm_functional_for_all_elems(pval);
         dvmf_dX0    = output.von_Mises_p_norm_functional_state_derivartive_for_all_elems(pval);
         
-        output.clear();
+        output.clear(false);
     }
     
     // now, verify the adjoints using finite differencing
@@ -179,7 +179,7 @@ void check_stress (ValType& v) {
             dvm_dX_fd(i)        = (vm-vm0)/delta;
             dvmf_dX_fd(i)       = (output.von_Mises_p_norm_functional_for_all_elems(pval)-vm0)/delta;
             
-            output.clear();
+            output.clear(false);
         }
     }
     
@@ -240,7 +240,7 @@ void check_stress (ValType& v) {
             dvmf_dp_fd          =
             (output.von_Mises_p_norm_functional_for_all_elems(pval)-vmf0)/dp;
             
-            output.clear();
+            output.clear(false);
         }
         
         // compare and benchmark the values
@@ -316,7 +316,7 @@ void check_stress (ValType& v) {
                 dvmf_dp_fd          =
                 (output.von_Mises_p_norm_functional_for_all_elems(pval)-vmf0)/dp;
                 
-                output.clear();
+                output.clear(false);
             }
             
             // compare and benchmark the values

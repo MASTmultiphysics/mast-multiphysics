@@ -78,7 +78,12 @@ namespace MAST {
                  Real JxW);
  
             
-            
+            /*!
+             *   @returns the point at which stress is evaluated, in the
+             *   element coordinate system.
+             */
+            const libMesh::Point&
+            point_location_in_element_coordinate() const;
             
             /*!
              *   @returns stress
@@ -226,10 +231,19 @@ namespace MAST {
 
         /*!
          *   clears the data structure of any stored values so that it can be 
-         *   used for another element.
+         *   used for another element. If \par clear_elem_subset is true, then 
+         *   the default behaviour will return to calculation and storage of all
+         *   elements in the subdomain. Otherwise, the object will retain the 
+         *   element subsets specified using \p set_elements_in_domain.
          */
-        void clear();
+        void clear(bool clear_elem_subset);
         
+        
+        /*!
+         *    checks to see if the object has been told about the subset of 
+         *    elements and if the specified element is in the subset.
+         */
+        bool evaluate_for_element(const libMesh::Elem& elem) const;
 
         /*!
          *   sets the elements for which this object will evaluate and store
@@ -240,6 +254,33 @@ namespace MAST {
          *   the subdomain.
          */
         void set_elements_in_domain(const std::set<const libMesh::Elem*>& elems);
+        
+        
+        
+        /*!
+         *   @returns the number of elements for which data is stored in this 
+         *   object.
+         */
+        unsigned int
+        n_elem_in_storage() const;
+
+        
+        /*!
+         *    @returns the set of elements for which data will be stored. This 
+         *    is set using the \par set_elements_in_domain method.
+         */
+        const std::set<const libMesh::Elem*>&
+        get_elem_subset() const;
+        
+        
+        /*!
+         *   @returns the number of points for which stress-strain data is 
+         *   stored for the given element.
+         */
+        unsigned int
+        n_stress_strain_data_for_elem(const libMesh::Elem* e) const;
+
+        
         
         /*!
          *   add the stress tensor associated with the qp. @returns a reference

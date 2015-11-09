@@ -109,6 +109,26 @@ namespace MAST {
         
         
         /*!
+         *    Calculates the force vector and Jacobian due to surface pressure.
+         */
+        bool surface_pressure_residual(bool request_jacobian,
+                                       RealVectorX &f,
+                                       RealMatrixX &jac,
+                                       const unsigned int side,
+                                       MAST::BoundaryConditionBase& bc);
+        
+        /*!
+         *    Calculates the force vector and Jacobian due to surface pressure.
+         */
+        virtual bool
+        surface_pressure_residual_sensitivity(bool request_jacobian,
+                                              RealVectorX& f,
+                                              RealMatrixX& jac,
+                                              const unsigned int side,
+                                              MAST::BoundaryConditionBase& bc);
+
+        
+        /*!
          *    Calculates the force vector and Jacobian due to thermal stresses
          */
         virtual bool thermal_residual(bool request_jacobian,

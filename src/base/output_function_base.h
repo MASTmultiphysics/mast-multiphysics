@@ -43,7 +43,7 @@ namespace MAST {
     enum PointwiseOutputEvaluationMode {
         CENTROID,    // at the element centroid
         ELEM_QP,     // at the element quadrature points
-        SPECIFIED_QP // at quadrature points specified by the user
+        SPECIFIED_POINTS // at quadrature points specified by the user
     };
     
     
@@ -69,13 +69,13 @@ namespace MAST {
         /*!
          *   sets the quadrature points of evaluation of the quantity
          */
-        void set_qp_for_evaluation(const std::vector<libMesh::Point>& pts);
+        void set_points_for_evaluation(const std::vector<libMesh::Point>& pts);
 
         
         /*!
          *   returns the points of evaluation
          */
-        const std::vector<libMesh::Point>& get_qp_for_evaluation() const;
+        const std::vector<libMesh::Point>& get_points_for_evaluation() const;
 
         
         /*!

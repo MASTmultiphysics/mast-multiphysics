@@ -63,13 +63,22 @@ namespace MAST {
         
         
         /*!
-         *    returns a reference to the material
+         *    returns a const reference to the material
          */
         virtual const MAST::MaterialPropertyCardBase& get_material() const {
             libmesh_assert(_material); // make sure it has already been set
             return *_material;
         }
+
         
+        /*!
+         *    returns a reference to the material
+         */
+        virtual MAST::MaterialPropertyCardBase& get_material() {
+            libmesh_assert(_material); // make sure it has already been set
+            return *_material;
+        }
+
         
         /*!
          *  returns true if the property card depends on the function \p f

@@ -111,72 +111,72 @@ namespace MAST {
         /*!
          *   @returns a constant reference to the section area function
          */
-        const MAST::FieldFunction<Real>& A() const;
+        virtual const MAST::FieldFunction<Real>& A() const;
 
         
         /*!
          *   @returns reference to the section area function
          */
-        MAST::FieldFunction<Real>& A();
+        virtual MAST::FieldFunction<Real>& A();
 
         /*!
          *   @returns constant reference to the function that calculates the
          *   section torsional constant
          */
-        const MAST::FieldFunction<Real>& J() const;
+        virtual const MAST::FieldFunction<Real>& J() const;
 
         /*!
          *   @returns reference to the function that calculates the 
          *   section torsional constant
          */
-        MAST::FieldFunction<Real>& J();
+        virtual MAST::FieldFunction<Real>& J();
 
         /*!
          *   @returns reference to the section polar moment function
          */
-        const MAST::FieldFunction<Real>& Ip() const;
+        virtual const MAST::FieldFunction<Real>& Ip() const;
 
         /*!
          *   @returns reference to the section polar moment function
          */
-        MAST::FieldFunction<Real>& Ip();
+        virtual MAST::FieldFunction<Real>& Ip();
 
         /*!
          *   @returns constant reference to the function that calculates
          *   section area moment about y-axis
          */
-        const MAST::FieldFunction<Real>& Ay() const;
+        virtual const MAST::FieldFunction<Real>& Ay() const;
 
         /*!
          *   @returns reference to the function that calculates
          *   section area moment about y-axis
          */
-        MAST::FieldFunction<Real>& Ay();
+        virtual MAST::FieldFunction<Real>& Ay();
 
         /*!
          *   @returns constant reference to the function that calculates
          *   section area moment about z-axis
          */
-        const MAST::FieldFunction<Real>& Az() const;
+        virtual const MAST::FieldFunction<Real>& Az() const;
 
         /*!
          *   @returns reference to the function that calculates
          *   section area moment about z-axis
          */
-        MAST::FieldFunction<Real>& Az();
+        virtual MAST::FieldFunction<Real>& Az();
 
         /*!
          *   @returns constant reference to the function that calculates the
          *   section area moment of inertia
          */
-        const MAST::FieldFunction<RealMatrixX>& I() const;
+        virtual const MAST::FieldFunction<RealMatrixX>& I() const;
 
         
         /*!
          *   @returns reference to the function that calculates the 
          *   section area moment of inertia
          */
-        MAST::FieldFunction<RealMatrixX>& I();
+        virtual MAST::FieldFunction<RealMatrixX>& I();
 
         /*!
          *  returns true if the property card depends on the function \p f

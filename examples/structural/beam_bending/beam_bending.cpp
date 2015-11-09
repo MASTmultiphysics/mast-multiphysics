@@ -4,7 +4,7 @@
 
 
 // MAST includes
-#include "examples/structural/bar_extension/bar_extension.h"
+#include "examples/structural/beam_bending/beam_bending.h"
 #include "elasticity/structural_system_initialization.h"
 #include "elasticity/structural_element_base.h"
 #include "elasticity/structural_nonlinear_assembly.h"
@@ -26,14 +26,17 @@
 extern libMesh::LibMeshInit* _init;
 
 
-MAST::BarExtension::BarExtension() {
+MAST::BeamBending::BeamBending() {
+    
+    // length of domain
+    _length     = 10.;
     
     
     // create the mesh
     _mesh       = new libMesh::SerialMesh(_init->comm());
     
     // initialize the mesh with one element
-    libMesh::MeshTools::Generation::build_line(*_mesh, 10, 0, 10);
+    libMesh::MeshTools::Generation::build_line(*_mesh, 50, 0, _length);
     _mesh->prepare_for_use();
     
     // create the equation system
@@ -53,9 +56,18 @@ MAST::BarExtension::BarExtension() {
 
     
     // create and add the boundary condition and loads
-    _dirichlet      = new MAST::DirichletBoundaryCondition;
-    _dirichlet->init(0, _structural_sys->vars());
-    _discipline->add_dirichlet_bc(0, *_dirichlet);
+    _dirichlet_left = new MAST::DirichletBoundaryCondition;
+    _dirichlet_right= new MAST::DirichletBoundaryCondition;
+    std::vector<unsigned int> constrained_vars(4);
+    // not constraning ty, tz will keep it simply supported
+    constrained_vars[0] = 0;  // u
+    constrained_vars[1] = 1;  // v
+    constrained_vars[2] = 2;  // w
+    constrained_vars[3] = 3;  // tx
+    _dirichlet_left->init (0, _structural_sys->vars());
+    _dirichlet_right->init(1, _structural_sys->vars());
+    _discipline->add_dirichlet_bc(0, *_dirichlet_left);
+    _discipline->add_dirichlet_bc(1, *_dirichlet_right);
     _discipline->init_system_dirichlet_bc(dynamic_cast<libMesh::System&>(*_sys));
     
     // initialize the equation system
@@ -92,7 +104,7 @@ MAST::BarExtension::BarExtension() {
     // initialize the load
     _p_load          = new MAST::BoundaryConditionBase(MAST::SURFACE_PRESSURE);
     _p_load->add(*_press_f);
-    _discipline->add_side_load(1, *_p_load);
+    _discipline->add_volume_load(0, *_p_load);
     
     // create the material property card
     _m_card         = new MAST::IsotropicMaterialPropertyCard;
@@ -128,6 +140,13 @@ MAST::BarExtension::BarExtension() {
     e_it    = _mesh->elements_begin(),
     e_end   = _mesh->elements_end();
     
+    // points where stress is evaluated
+    std::vector<libMesh::Point> pts;
+    pts.push_back(libMesh::Point(-1/sqrt(3), 1., 0.)); // upper skin
+    pts.push_back(libMesh::Point(-1/sqrt(3),-1., 0.)); // lower skin
+    pts.push_back(libMesh::Point( 1/sqrt(3), 1., 0.)); // upper skin
+    pts.push_back(libMesh::Point( 1/sqrt(3),-1., 0.)); // lower skin
+    
     for ( ; e_it != e_end; e_it++) {
         
         MAST::StressStrainOutputBase * output = new MAST::StressStrainOutputBase;
@@ -136,7 +155,7 @@ MAST::BarExtension::BarExtension() {
         std::set<const libMesh::Elem*> e_set;
         e_set.insert(*e_it);
         output->set_elements_in_domain(e_set);
-        output->set_evaluation_mode(MAST::ELEM_QP);
+        output->set_points_for_evaluation(pts);
         _outputs.push_back(output);
         
         _discipline->add_volume_output((*e_it)->subdomain_id(), *output);
@@ -149,13 +168,14 @@ MAST::BarExtension::BarExtension() {
 
 
 
-MAST::BarExtension::~BarExtension() {
+MAST::BeamBending::~BeamBending() {
     
     delete _m_card;
     delete _p_card;
     
     delete _p_load;
-    delete _dirichlet;
+    delete _dirichlet_left;
+    delete _dirichlet_right;
     
     delete _thy_f;
     delete _thz_f;
@@ -196,7 +216,7 @@ MAST::BarExtension::~BarExtension() {
 
 
 const libMesh::NumericVector<Real>&
-MAST::BarExtension::solve() {
+MAST::BeamBending::solve() {
     
 
     // create the nonlinear assembly object
@@ -225,7 +245,7 @@ MAST::BarExtension::solve() {
 
 
 const libMesh::NumericVector<Real>&
-MAST::BarExtension::sensitivity_solve(MAST::Parameter& p) {
+MAST::BeamBending::sensitivity_solve(MAST::Parameter& p) {
     
     
     // create the nonlinear assembly object
@@ -260,7 +280,7 @@ MAST::BarExtension::sensitivity_solve(MAST::Parameter& p) {
 
 
 void
-MAST::BarExtension::clear_stresss() {
+MAST::BeamBending::clear_stresss() {
     
     // iterate over the output quantities and delete them
     std::vector<MAST::StressStrainOutputBase*>::iterator
