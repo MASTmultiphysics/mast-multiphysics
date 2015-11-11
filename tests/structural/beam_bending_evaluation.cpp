@@ -222,7 +222,6 @@ BOOST_AUTO_TEST_CASE   (BeamBendingSensitivity) {
         dstressdp_fd =   RealVectorX::Zero(n_elems);
         
         // calculate the analytical sensitivity
-        _discipline->add_parameter(f);
         const libMesh::NumericVector<Real>& dsol_vec = this->sensitivity_solve(f);
         
         
@@ -282,8 +281,6 @@ BOOST_AUTO_TEST_CASE   (BeamBendingSensitivity) {
             dstressdp(j)  =
             _outputs[j]->von_Mises_p_norm_functional_sensitivity_for_all_elems
             (p_val, &f);
-        
-        _discipline->remove_parameter(f);
         
         // now clear the stress data structures
         this->clear_stresss();

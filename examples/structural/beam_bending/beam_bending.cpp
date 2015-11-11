@@ -1,3 +1,21 @@
+/*
+ * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
+ * Copyright (C) 2013-2015  Manav Bhatia
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ */
 
 // C++ includes
 #include <iostream>
@@ -214,9 +232,46 @@ MAST::BeamBending::~BeamBending() {
 
 
 
+MAST::Parameter*
+MAST::BeamBending::get_parameter(const std::string &nm) {
+    
+    MAST::Parameter *rval = NULL;
+    
+    // look through the vector of parameters to see if the name is available
+    std::vector<MAST::Parameter*>::iterator
+    it   =  _params_for_sensitivity.begin(),
+    end  =  _params_for_sensitivity.end();
+    
+    bool
+    found = false;
+    
+    for ( ; it != end; it++) {
+        
+        if (nm == (*it)->name()) {
+            rval    = *it;
+            found   = true;
+        }
+    }
+    
+    // if the param was not found, then print the message
+    if (!found) {
+        std::cout
+        << std::endl
+        << "Parameter not found by name: " << nm << std::endl
+        << "Valid names are: "
+        << std::endl;
+        for (it = _params_for_sensitivity.begin(); it != end; it++)
+            std::cout << "   " << (*it)->name() << std::endl;
+        std::cout << std::endl;
+    }
+    
+    return rval;
+}
+
+
 
 const libMesh::NumericVector<Real>&
-MAST::BeamBending::solve() {
+MAST::BeamBending::solve(bool if_write_output) {
     
 
     // create the nonlinear assembly object
@@ -229,6 +284,7 @@ MAST::BeamBending::solve() {
     
     // zero the solution before solving
     nonlin_sys.solution->zero();
+    this->clear_stresss();
     
     nonlin_sys.solve();
     
@@ -237,8 +293,14 @@ MAST::BeamBending::solve() {
 
     assembly.clear_discipline_and_system();
     
-    // write the solution for visualization
-    //libMesh::ExodusII_IO(mesh).write_equation_systems("mesh.exo", eq_sys);
+    if (if_write_output) {
+        
+        std::cout << "Writing output to : output.exo" << std::endl;
+        
+        // write the solution for visualization
+        libMesh::ExodusII_IO(*_mesh).write_equation_systems("output.exo",
+                                                            *_eq_sys);
+    }
     
     return *(_sys->solution);
 }
@@ -248,8 +310,10 @@ MAST::BeamBending::solve() {
 
 
 const libMesh::NumericVector<Real>&
-MAST::BeamBending::sensitivity_solve(MAST::Parameter& p) {
+MAST::BeamBending::sensitivity_solve(MAST::Parameter& p,
+                                     bool if_write_output) {
     
+    _discipline->add_parameter(p);
     
     // create the nonlinear assembly object
     MAST::StructuralNonlinearAssembly   assembly;
@@ -265,7 +329,8 @@ MAST::BeamBending::sensitivity_solve(MAST::Parameter& p) {
 
     // zero the solution before solving
     nonlin_sys.add_sensitivity_solution(0).zero();
-
+    this->clear_stresss();
+    
     nonlin_sys.sensitivity_solve(params);
     
     // evaluate sensitivity of the outputs
@@ -275,10 +340,27 @@ MAST::BeamBending::sensitivity_solve(MAST::Parameter& p) {
     
     
     assembly.clear_discipline_and_system();
-
+    _discipline->remove_parameter(p);
     
     // write the solution for visualization
-    //libMesh::ExodusII_IO(mesh).write_equation_systems("mesh.exo", eq_sys);
+    if (if_write_output) {
+        
+        std::ostringstream oss;
+        oss << "output_" << p.name() << ".exo";
+        
+        std::cout
+        << "Writing sensitivity output to : " << oss.str()
+        << std::endl;
+        
+        
+        _sys->solution->swap(_sys->get_sensitivity_solution(0));
+        
+        // write the solution for visualization
+        libMesh::ExodusII_IO(*_mesh).write_equation_systems(oss.str(),
+                                                            *_eq_sys);
+        
+        _sys->solution->swap(_sys->get_sensitivity_solution(0));
+    }
     
     return _sys->get_sensitivity_solution(0);
 }

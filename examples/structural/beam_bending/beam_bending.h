@@ -63,15 +63,26 @@ namespace MAST {
         
         
         /*!
+         *   @returns a pointer to the parameter of the specified name.
+         *   If no parameter exists by the specified name, then a \p NULL
+         *   pointer is returned and a message is printed with a valid list
+         *   of parameters.
+         */
+        MAST::Parameter* get_parameter(const std::string& nm);
+        
+        /*!
          *  solves the system and returns the final solution
          */
-        const libMesh::NumericVector<Real>& solve();
+        const libMesh::NumericVector<Real>&
+        solve(bool if_write_output = false);
         
         
         /*!
          *  solves the sensitivity of system and returns the final solution
          */
-        const libMesh::NumericVector<Real>& sensitivity_solve(MAST::Parameter& p);
+        const libMesh::NumericVector<Real>&
+        sensitivity_solve(MAST::Parameter& p,
+                          bool if_write_output = false);
         
         
         /*!
