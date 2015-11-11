@@ -174,15 +174,15 @@ namespace MAST {
      *   values and gradients of the objective and constraint functions
      *   for this optimization problem
      */
-    class SizingOptimization:
+    class BeamBendingSizingOptimization:
     public MAST::FunctionEvaluation {
         
     public:
         
-        SizingOptimization(libMesh::LibMeshInit& init,
-                           std::ostream& output);
+        BeamBendingSizingOptimization(libMesh::LibMeshInit& init,
+                                      std::ostream& output);
         
-        virtual ~SizingOptimization();
+        virtual ~BeamBendingSizingOptimization();
         
         
         /*!

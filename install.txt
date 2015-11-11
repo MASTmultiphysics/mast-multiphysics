@@ -1,20 +1,140 @@
-The following dependencies are required in order to build MAST
+========================
+DEPENDENCY LIST
+========================
 
-libMesh
-VTK
-TBB
-PETSc
-BOOST
-BOOST unit test framework
-MPI
-lapack
-blas
+MAST depends on the following libraries:
+
+-- PETSc (http://www.mcs.anl.gov/petsc/)
+   MAST has been tested with PETSc version 3.5.x, and is not presently
+   compatible with version 3.6.x.  
+
+-- SLEPc (http://slepc.upv.es)
+   This builds on top of PETSc and provides the eigensolvers. The
+   version numbers are in sync with that of PETSc, so a 3.5.x version
+   of this library should be used.  
+
+-- libMesh (http://libmesh.github.io)
+   The specific commit form libMesh that MAST uses is:
+   abb4c2ffde19788495882db392f61fde18d365d3. Several additional
+   modifications to libMesh are needed, and can be found in the file
+   contrib/libmesh_patches. The following commands will provide access
+   to the commit and apply the patch:
+      $> git clone git://github.com/libMesh/libmesh.git
+      $> cd libmesh
+      $> git reset --hard abb4c2ffde19788495882db392f61fde18d365d3
+      $> patch -p1 < MAST_DIR/contrib/libmesh_patch
+
+-- MPI
+
+-- LAPACK
+
+-- BLAS
+
+-- BOOST (http://www.boost.org)
+
+-- BOOST unit test framework 
+
+-- EIGEN (http://eigen.tuxfamily.org/index.php?title=Main_Page)
 
 
-In order to build MAST, go into build/opt or build/debug and type following command with the 
-specific path locations set. 
+-- PARMETIS/METIS (http://glaros.dtc.umn.edu/gkhome/metis/parmetis/overview)
+   Both PETSc and libMesh use these libraries. PETSc can be requested
+   to download and install a version of this library during compile
+   time. libMesh includes these libraries in the contrib
+   subdirectory, which it can compile and link to.
 
-cmake ../ -Dlibmesh_dir=~/Documents/codes/libmesh/real -Dvtk_include_dir=/opt/local/include/vtk-5.10 -Dvtk_lib_dir=/opt/local/lib/vtk-5.10 -Dtbb_include_dir=/opt/local/include/tbb -Dtbb_lib_dir=/opt/local/lib  -Dpetsc_dir=~/Documents/codes/numerical_lib/petsc/petsc_with_external_libs -Dboost_include_dir=/opt/local/include -Dmpi_include_dir=/opt/local/include/openmpi-mp -Dmpi_lib_dir=/opt/local/lib/openmpi-mp -Dlapack_lib_dir=/usr/lib -Dblas_lib_dir=/usr/lib -Dboost_lib_dir=/opt/local/lib -Dboost_test_lib=boost_unit_test_framework-mt -DCMAKE_Fortran_COMPILER=mpif90-openmpi-mp -DCMAKE_BUILD_TYPE=Release
+-- HDF5 (https://www.hdfgroup.org/HDF5/)
+   This is used for the ExodusII output formats, which are efficiently
+   read into Paraview. libMesh also provides interfaces to Tecplot,
+   and can be configured ot build with Tecplot, in which case ExodusII
+   becomes optional.
 
-Note: CMAKE_BUILD_TYPE=Release builds an optimized version, while CMAKE_BUILD_TYPE=Debug builds the 
-debug version of the code. 
+
+-- GCMMA
+   Presently, this is the default optimization library. Please obtain it from
+   the author of GCMMA at: krille@math.kth.se
+
+-- libgfortran
+   GCMMA is written in fortran. Hence, linking to GCMMA requires that MAST be linked
+   to libgfortran.
+   
+
+========================
+BUILD INSTRUCTIONS
+========================
+
+1.  Download, build and install METIS and PARMETIS (PETSC can be request to
+install this during its configuration, which case skip this step.)
+2.  Download, build and install PETSc with MPI support. Please make
+sure to build the shared verion of this library. 
+3.  Download, build and install SLEPc using the PETSc installation.
+4.  Download libMesh and change to the specific commit described
+above.
+5.  Apply the patch to libMesh.
+6.  Configure libMesh. Following configuration options are used
+locally. Please change the options to suit your local system. Note
+that shared library is being build. 
+
+PETSC_DIR=/Users/manav/Documents/codes/numerical_lib/petsc/petsc_with_external_libs\
+SLEPC_DIR=/Users/manav/Documents/codes/numerical_lib/slepc/petsc_with_external_libs\
+FC=mpif90-openmpi-mp F77=mpif90-openmpi-mp  CC=mpicc-openmpi-mp\
+CXX=mpicxx-openmpi-mp ./configure\
+--prefix=${PWD}/../ --enable-mpi --enable-unique-id\
+--enable-dependency-tracking --enable-fortran --enable-shared\
+--enable-exceptions --disable-openmp --disable-default-comm-world\
+--enable-tracefiles  --enable-amr  --enable-vsmoother\
+--enable-periodic  --enable-dirichlet  --enable-parmesh\
+--enable-nodeconstraint  --enable-ghosted  --enable-pfem\
+--enable-ifem --enable-second --enable-xdr --enable-reference-counting\
+--enable-perflog --enable-examples --enable-boost --disable-trilinos\
+--disable-tbb --enable-sfc --disable-tecplot --disable-tecio\
+--enable-metis --enable-parmetis --enable-tetgen --enable-triangle\
+--disable-vtk --enable-hdf5 --enable-libHilbert --enable-nanoflann\
+--enable-exodus --enable-netcdf --enable-petsc --enable-slepc\
+--with-mpi=/opt/local --with-metis=internal --with-hdf5=/opt/local/\
+--with-methods="opt dbg"\
+
+7.  Build and install libMesh
+8.  Create a subdirectory MAST_DIR/build/opt to build MAST. In the
+subdirectory, configure cmake build system using the following
+command. Please modify it based on your local system
+configuration. You can use -DCMAKE_BUILD_TYPE=Debug to build the debug  
+version. 
+
+cmake ../ -Dlibmesh_dir=~/Documents/codes/libmesh/real \
+-Dpetsc_dir=~/Documents/codes/numerical_lib/petsc/petsc_with_external_libs \
+-Dboost_include_dir=/opt/local/include \
+-Dmpi_include_dir=/opt/local/include/openmpi-mp \
+-Dmpi_lib_dir=/opt/local/lib/openmpi-mp -Dlapack_lib_dir=/usr/lib \
+-Dblas_lib_dir=/usr/lib -Dboost_lib_dir=/opt/local/lib \
+-Dgcmma_lib_file=gcmma \
+-Dgcmma_lib_dir=~/Documents/codes/numerical_lib/gcmma/build \
+-Dfortran_lib_file=libgfortran.3.dylib \
+-Dfortran_lib_dir=/opt/local/lib/libgcc \
+-Dboost_test_lib=boost_unit_test_framework-mt \
+-DCMAKE_Fortran_COMPILER=mpif90-openmpi-mp -DCMAKE_BUILD_TYPE=Release 
+
+Note: CMAKE_BUILD_TYPE=Release builds an optimized version, while
+CMAKE_BUILD_TYPE=Debug builds the debug version of the code. 
+
+9.  Build the library using
+     $> make mast
+
+10.  Build one of the examples using. 
+     $> make fluid_analysis
+
+11.  The following examples can be build:
+     gaussian_bump_convergence
+     panel_flutter_convergence
+     beam_flutter_sizing
+     stiffened_panel_sizing
+     structural_eigensolution
+     fluid_analysis
+
+
+
+
+
+
+
+

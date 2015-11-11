@@ -1,0 +1,3165 @@
+diff --git a/contrib/netcdf/4.3.1/libsrc4/nc4file.c b/contrib/netcdf/4.3.1/libsrc4/nc4file.c
+index 77cf0a0..e890e1b 100644
+--- a/contrib/netcdf/4.3.1/libsrc4/nc4file.c
++++ b/contrib/netcdf/4.3.1/libsrc4/nc4file.c
+@@ -302,12 +302,21 @@ nc4_create_file(const char *path, int cmode, MPI_Comm comm, MPI_Info info,
+ 	 if (H5Pset_fapl_mpio(fapl_id, comm, info) < 0)
+ 	    BAIL(NC_EPARINIT);
+       }
++#ifdef USE_PARALLEL_POSIX
+       else /* MPI/POSIX */
+       {
+ 	 LOG((4, "creating parallel file with MPI/posix"));
+ 	 if (H5Pset_fapl_mpiposix(fapl_id, comm, 0) < 0)
+ 	    BAIL(NC_EPARINIT);
+       }
++#else /* USE_PARALLEL_POSIX */
++      /* Should not happen! Code in NC4_create/NC4_open should alias the
++       *        NC_MPIPOSIX flag to NC_MPIIO, if the MPI-POSIX VFD is not
++       *        available in HDF5. -QAK
++       */
++      else /* MPI/POSIX */
++         BAIL(NC_EPARINIT);
++#endif /* USE_PARALLEL_POSIX */
+ 
+       /* Keep copies of the MPI Comm & Info objects */
+       if (MPI_SUCCESS != MPI_Comm_dup(comm, &nc4_info->comm))
+@@ -455,6 +464,17 @@ NC4_create(const char* path, int cmode, size_t initialsz, int basepe,
+       )
+       return NC_EINVAL;
+ 
++#ifndef USE_PARALLEL_POSIX
++/* If the HDF5 library has been compiled without the MPI-POSIX VFD, alias
++ *      the NC_MPIPOSIX flag to NC_MPIIO. -QAK
++ */
++   if(cmode & NC_MPIPOSIX)
++   {
++      cmode &= ~NC_MPIPOSIX;
++      cmode |= NC_MPIIO;
++   }
++#endif /* USE_PARALLEL_POSIX */
++
+    cmode |= NC_NETCDF4;
+ 
+    /* Apply default create format. */
+@@ -2115,12 +2135,21 @@ nc4_open_file(const char *path, int mode, MPI_Comm comm,
+ 	 if (H5Pset_fapl_mpio(fapl_id, comm, info) < 0)
+ 	    BAIL(NC_EPARINIT);
+       }
++#ifdef USE_PARALLEL_POSIX
+       else /* MPI/POSIX */
+       {
+ 	 LOG((4, "opening parallel file with MPI/posix"));
+ 	 if (H5Pset_fapl_mpiposix(fapl_id, comm, 0) < 0)
+ 	    BAIL(NC_EPARINIT);
+       }
++#else /* USE_PARALLEL_POSIX */
++      /* Should not happen! Code in NC4_create/NC4_open should alias the
++       *        NC_MPIPOSIX flag to NC_MPIIO, if the MPI-POSIX VFD is not
++       *        available in HDF5. -QAK
++       */
++      else /* MPI/POSIX */
++         BAIL(NC_EPARINIT);
++#endif /* USE_PARALLEL_POSIX */
+ 
+       /* Keep copies of the MPI Comm & Info objects */
+       if (MPI_SUCCESS != MPI_Comm_dup(comm, &nc4_info->comm))
+@@ -2586,6 +2615,17 @@ NC4_open(const char *path, int mode, int basepe, size_t *chunksizehintp,
+        (mode & NC_MPIIO && mode & NC_MPIPOSIX))
+       return NC_EINVAL;
+ 
++#ifndef USE_PARALLEL_POSIX
++/* If the HDF5 library has been compiled without the MPI-POSIX VFD, alias
++ *      the NC_MPIPOSIX flag to NC_MPIIO. -QAK
++ */
++   if(mode & NC_MPIPOSIX)
++   {
++      mode &= ~NC_MPIPOSIX;
++      mode |= NC_MPIIO;
++   }
++#endif /* USE_PARALLEL_POSIX */
++
+ 
+    /* Depending on the type of file, open it. */
+ 
+diff --git a/contrib/netcdf/4.3.1/nc_test4/tst_nc4perf.c b/contrib/netcdf/4.3.1/nc_test4/tst_nc4perf.c
+index 0b1e4e9..4a58e63 100644
+--- a/contrib/netcdf/4.3.1/nc_test4/tst_nc4perf.c
++++ b/contrib/netcdf/4.3.1/nc_test4/tst_nc4perf.c
+@@ -244,6 +244,11 @@ int test_pio_4d(size_t cache_size, int facc_type, int access_flag, MPI_Comm comm
+    return 0;
+ }
+ 
++/* Note: When the MPI-POSIX VFD is not compiled in to HDF5, the NC_MPIPOSIX
++ *      flag will be aliased to the NC_MPIIO flag within the library, and
++ *      therefore this test will exercise the aliasing, with the MPI-IO VFD,
++ *      under that configuration. -QAK
++ */
+ #define NUM_MODES 2
+ #define NUM_FACC 2
+ #define NUM_CHUNK_COMBOS_2D 3
+diff --git a/contrib/netcdf/4.3.1/nc_test4/tst_parallel3.c b/contrib/netcdf/4.3.1/nc_test4/tst_parallel3.c
+index db2ef75..378b33b 100644
+--- a/contrib/netcdf/4.3.1/nc_test4/tst_parallel3.c
++++ b/contrib/netcdf/4.3.1/nc_test4/tst_parallel3.c
+@@ -129,6 +129,11 @@ int main(int argc, char **argv)
+    if (mpi_rank == 0)
+       SUMMARIZE_ERR;
+ 
++/* Note: When the MPI-POSIX VFD is not compiled in to HDF5, the NC_MPIPOSIX
++ *      flag will be aliased to the NC_MPIIO flag within the library, and
++ *      therefore this test will exercise the aliasing, with the MPI-IO VFD,
++ *      under that configuration. -QAK
++ */
+    if (mpi_rank == 0)
+       printf("*** Testing parallel IO for raw-data with MPIPOSIX-IO (driver)...");
+    facc_type = NC_NETCDF4|NC_MPIPOSIX;
+diff --git a/include/mesh/.DS_Store b/include/mesh/.DS_Store
+new file mode 100644
+index 0000000..5008ddf
+Binary files /dev/null and b/include/mesh/.DS_Store differ
+diff --git a/include/mesh/exodusII_io.h b/include/mesh/exodusII_io.h
+index bf1c650..63ddeba 100644
+--- a/include/mesh/exodusII_io.h
++++ b/include/mesh/exodusII_io.h
+@@ -76,6 +76,7 @@ public:
+    * Works in 3D for \p TET4s, \p TET10s, \p HEX8s, and \p HEX27s.
+    */
+   virtual void read (const std::string& name);
++  virtual void read_parallel (const std::string& base_filename);
+ 
+   /**
+    * This method implements writing a mesh to a specified file.
+diff --git a/include/mesh/vtk_io.h b/include/mesh/vtk_io.h
+index e59913b..a1900e3 100644
+--- a/include/mesh/vtk_io.h
++++ b/include/mesh/vtk_io.h
+@@ -37,6 +37,7 @@
+ class vtkUnstructuredGrid;
+ class vtkPoints;
+ class vtkCellArray;
++class vtkIdList;
+ 
+ namespace libMesh
+ {
+@@ -76,6 +77,9 @@ public:
+   explicit
+   VTKIO (const MeshBase& mesh, MeshData* mesh_data=NULL);
+ 
++    explicit
++    VTKIO (const MeshBase& mesh, bool write_boundary_mesh);
++
+   /**
+    * This method implements writing a mesh with nodal data to a
+    * specified file where the nodal data and variable names are provided.
+@@ -119,9 +123,10 @@ private:
+    * Map libMesh element types to VTK element types
+    */
+   vtkIdType get_elem_type(ElemType type);
++
+ #endif
+ 
+-  /**
++    /**
+    * write the nodes from the mesh into a vtkUnstructuredGrid
+    */
+   void nodes_to_vtk();
+@@ -151,6 +156,8 @@ private:
+    * Flag to indicate whether the output should be compressed
+    */
+   bool _compress;
++    
++  bool _write_boundary_mesh;
+ 
+   /**
+    * maps global node id to node id of partition
+diff --git a/include/numerics/dense_matrix.h b/include/numerics/dense_matrix.h
+index 02ba1da..995df72 100644
+--- a/include/numerics/dense_matrix.h
++++ b/include/numerics/dense_matrix.h
+@@ -97,6 +97,22 @@ public:
+   virtual T & el(const unsigned int i,
+                  const unsigned int j)     { return (*this)(i,j); }
+ 
++    
++    /**
++     *   Copies the elements of the column \p col to vector \p v
++     */
++    void get_column (const unsigned int col, DenseVector<T>& v);
++    
++    /**
++     *   Copies the elements of the vector \p v to column \p col
++     */
++    void set_column (const unsigned int col, const DenseVector<T>& v);
++
++    /**
++     *   Adds the vector \par v times \par f to the column \p col of this matrix
++     */
++    void add_column (const unsigned int col, T f, const DenseVector<T>& v);
++
+   /**
+    * Left multipliess by the matrix \p M2.
+    */
+@@ -217,6 +233,11 @@ public:
+    */
+   void scale_column (const unsigned int col, const T factor);
+ 
++    /**
++     * Multiplies every element in the row \p row matrix by \p factor.
++     */
++    void scale_row (const unsigned int row, const T factor);
++
+   /**
+    * Multiplies every element in the matrix by \p factor.
+    */
+@@ -534,7 +555,17 @@ private:
+                    DenseMatrix<T>& U,
+                    DenseMatrix<T>& VT);
+ 
+-  /**
++    /**
++     * Computes the eigenvalues and right eigenvectors of the matrix using LAPACK.
++     * This assumes that the matrix is non-Hermitian, so the eigensystem 
++     * can be complex.
++     * Lapack routine "dgeev".
++     * [ Implementation in dense_matrix_blas_lapack.C ]
++     */
++  void _nonhermitian_eig_lapack(DenseVector<T>& dreal, DenseVector<T>& dimag,
++                                DenseMatrix<T>& vreal, DenseMatrix<T>& vimag);
++    
++    /**
+    * Helper function that actually performs the SVD.
+    * [ Implementation in dense_matrix_blas_lapack.C ]
+    */
+@@ -549,7 +580,8 @@ private:
+    * Lapack routine "DGEEV".
+    * [ Implementation in dense_matrix_blas_lapack.C ]
+    */
+-  void _evd_lapack(DenseVector<T>& lambda_real, DenseVector<T>& lambda_imag);
++  template <typename T2>
++  void _evd_lapack(DenseVector<T2>& lambda_real, DenseVector<T2>& lambda_imag);
+ 
+   /**
+    * This array is used to store pivot indices.  May be used
+@@ -582,9 +614,10 @@ private:
+    *
+    * [ Implementation in dense_matrix_blas_lapack.C ]
+    */
+-  void _matvec_blas(T alpha, T beta,
+-                    DenseVector<T>& dest,
+-                    const DenseVector<T>& arg,
++  template <typename T2>
++  void _matvec_blas(T2 alpha, T2 beta,
++                    DenseVector<T2>& dest,
++                    const DenseVector<T2>& arg,
+                     bool trans=false) const;
+ };
+ 
+@@ -782,6 +815,44 @@ void DenseMatrix<T>::scale_column (const unsigned int col, const T factor)
+     (*this)(i, col) *= factor;
+ }
+ 
++    
++template<typename T>
++inline
++void DenseMatrix<T>::scale_row (const unsigned int row, const T factor)
++{
++    for (unsigned int i=0; i<this->n(); i++)
++        (*this)(row, i) *= factor;
++}
++
++    
++    
++template<typename T>
++inline
++void DenseMatrix<T>::get_column (const unsigned int col, DenseVector<T>& v)
++{
++    libmesh_assert_equal_to (this->m(), v.size());
++    for (unsigned int i=0; i<this->m(); i++)
++        v(i) = (*this)(i, col);
++}
++
++template<typename T>
++inline
++void DenseMatrix<T>::set_column (const unsigned int col, const DenseVector<T>& v)
++{
++    libmesh_assert_equal_to (this->m(), v.size());
++    for (unsigned int i=0; i<this->m(); i++)
++        (*this)(i, col) = v(i);
++}
++
++    
++template<typename T>
++inline
++void DenseMatrix<T>::add_column (const unsigned int col, T f, const DenseVector<T>& v)
++{
++    libmesh_assert_equal_to (this->m(), v.size());
++    for (unsigned int i=0; i<this->m(); i++)
++        (*this)(i, col) += v(i)*f;
++}
+ 
+ 
+ template<typename T>
+diff --git a/include/numerics/dense_subvector.h b/include/numerics/dense_subvector.h
+index b1eaf54..ca1116a 100644
+--- a/include/numerics/dense_subvector.h
++++ b/include/numerics/dense_subvector.h
+@@ -108,6 +108,22 @@ public:
+   void reposition(const unsigned int ioff,
+                   const unsigned int n);
+ 
++    /**
++     * Adds \p factor times \p vec to this vector.
++     * This should only work if T += T2 * T3 is valid C++ and
++     * if T2 is scalar.  Return type is void
++     */
++    template <typename T2, typename T3>
++    void add (const T2 factor,
++              const DenseVector<T3>& vec);
++
++    /**
++     * Evaluate dot product with \p vec. In the complex-valued case, use the
++     * complex conjugate of vec.
++     */
++    template <typename T2>
++    typename CompareTypes<T, T2>::supertype dot (const DenseVector<T2> &vec) const;
++
+   /**
+    * @returns the minimum element in the vector.
+    * In case of complex numbers, this returns the minimum
+@@ -222,6 +238,34 @@ T & DenseSubVector<T>::operator () (const unsigned int i)
+   return _parent_vector (i + this->i_off());
+ }
+ 
++
++    template<typename T>
++    template <typename T2, typename T3>
++    void
++    DenseSubVector<T>::add (const T2 factor,
++                            const DenseVector<T3>& vec)
++    {
++        libmesh_assert_equal_to (_n, vec.size());
++
++        for (unsigned int i=0; i<_n; i++)
++            _parent_vector (i+this->i_off()) += factor * vec(i);
++    }
++    
++    
++    template<typename T>
++    template <typename T2>
++    typename CompareTypes<T, T2>::supertype
++    DenseSubVector<T>::dot (const DenseVector<T2> &vec) const
++    {
++        libmesh_assert_equal_to (_n, vec.size());
++        
++        typename CompareTypes<T, T2>::supertype val = 0.;
++        
++        for (unsigned int i=0; i<_n; i++)
++            val += _parent_vector (i+this->i_off()) * vec(i);
++    }
++
++    
+ template<typename T>
+ inline
+ Real DenseSubVector<T>::min () const
+diff --git a/include/solvers/eigen_solver.h b/include/solvers/eigen_solver.h
+index 20168fd..d775907 100644
+--- a/include/solvers/eigen_solver.h
++++ b/include/solvers/eigen_solver.h
+@@ -197,11 +197,51 @@ public:
+ 
+ 
+   /**
+-   * Returns the \p ith eigenvalue (real and imaginary part),
+-   * and copies the \ ith eigen vector to the solution vector.
++   * This function returns the real and imaginary part of the
++   * ith eigenvalue and copies the respective eigenvector to the
++   * solution vector. Note that also in case of purely real matrix
++   * entries the eigenpair may be complex values.
++   *
++   * For real matrices, first vector will store only the real part of the
++   * eigenvector. The second vector \p eig_vec_im can be provided to
++   * get the imaginary part of the eigenvector.
++   *
++   * For complex matrices, the second vector is not needed, and should be
++   * NULL.
+    */
+   virtual std::pair<Real, Real> get_eigenpair (unsigned int i,
+-                                               NumericVector<T> &solution) = 0;
++                                               NumericVector<T> &eig_vec,
++                                               NumericVector<T> *eig_vec_im = NULL) = 0;
++
++  /**
++   * This function copies the respective RIGHT eigenvector to the
++   * provided vector(s).
++   *
++   * For real matrices, first vector will store only the real part of the
++   * eigenvector. The second vector \p eig_vec_im can be provided to
++   * get the imaginary part of the eigenvector.
++   *
++   * For complex matrices, the second vector is not needed, and should be
++   * NULL.
++   */
++  virtual void get_right_eigenvector (unsigned int i,
++                                      NumericVector<T> &eig_vec,
++                                      NumericVector<T>* eig_vec_im = NULL) = 0;
++  
++  /**
++   * This function copies the respective LEFT eigenvector to the
++   * provided vector(s).
++   *
++   * For real matrices, first vector will store only the real part of the
++   * eigenvector. The second vector \p eig_vec_im can be provided to
++   * get the imaginary part of the eigenvector.
++   *
++   * For complex matrices, the second vector is not needed, and should be
++   * NULL.
++   */
++  virtual void get_left_eigenvector (unsigned int i,
++                                     NumericVector<T> &eig_vec,
++                                     NumericVector<T>* eig_vec_im) = 0;
+ 
+   /**
+    * Returns the \p ith eigenvalue (real and imaginary part).
+diff --git a/include/solvers/slepc_eigen_solver.h b/include/solvers/slepc_eigen_solver.h
+index 2b0f1b8..a2691f3 100644
+--- a/include/solvers/slepc_eigen_solver.h
++++ b/include/solvers/slepc_eigen_solver.h
+@@ -175,10 +175,50 @@ public:
+    * This function returns the real and imaginary part of the
+    * ith eigenvalue and copies the respective eigenvector to the
+    * solution vector. Note that also in case of purely real matrix
+-   * entries the eigenpair may be complex values.
++   * entries the eigenpair may be complex values. 
++   *
++   * For real matrices, first vector will store only the real part of the 
++   * eigenvector. The second vector \p eig_vec_im can be provided to 
++   * get the imaginary part of the eigenvector. 
++   *
++   * For complex matrices, the second vector is not needed, and should be 
++   * NULL.
+    */
+   std::pair<Real, Real> get_eigenpair (unsigned int i,
+-                                       NumericVector<T> &solution_in);
++                                       NumericVector<T> &eig_vec,
++                                       NumericVector<T>* eig_vec_im);
++
++  /**
++   * This function copies the respective RIGHT eigenvector to the
++   * provided vector(s).
++   *
++   * For real matrices, first vector will store only the real part of the
++   * eigenvector. The second vector \p eig_vec_im can be provided to
++   * get the imaginary part of the eigenvector.
++   *
++   * For complex matrices, the second vector is not needed, and should be
++   * NULL.
++   */
++  virtual void get_right_eigenvector (unsigned int i,
++                                      NumericVector<T> &eig_vec,
++                                      NumericVector<T>* eig_vec_im = NULL);
++  
++  /**
++   * This function copies the respective LEFT eigenvector to the
++   * provided vector(s).
++   *
++   * For real matrices, first vector will store only the real part of the
++   * eigenvector. The second vector \p eig_vec_im can be provided to
++   * get the imaginary part of the eigenvector.
++   *
++   * For complex matrices, the second vector is not needed, and should be
++   * NULL.
++   */
++  virtual void get_left_eigenvector (unsigned int i,
++                                     NumericVector<T> &eig_vec,
++                                     NumericVector<T>* eig_vec_im = NULL) {
++    libmesh_error();
++  }
+ 
+   /**
+    * Same as above, but does not copy the eigenvector.
+diff --git a/include/systems/condensed_eigen_system.h b/include/systems/condensed_eigen_system.h
+index dca474d..00c34fa 100644
+--- a/include/systems/condensed_eigen_system.h
++++ b/include/systems/condensed_eigen_system.h
+@@ -96,9 +96,25 @@ public:
+    * the condensed eigensolve. We only set the non-condensed
+    * entries of the solution vector (the condensed
+    * entries are set to zero by default).
++   *
++   * Returns real and imaginary part of the ith eigenvalue. If the vectors are
++   * provided in the function argument through \p vec_re and \p vec_im, this
++   * method copies the eigenvector in the given vector(s), else copies the
++   * vector to System::solution.
++   *
++   * Note that with Number = Complex, \p vec_im must be NULL, and for
++   * Number = Real and eigen problem type HEP or GHEP, \p vec_im must be NULL.
++   * For Number = Real and eigenproblem type NHEP or GNHEP, the real and imag.
++   * parts of the eigenvector are copied to \p vec_re and \p vec_im,
++   * respectively. If \p vec_im is not provided, then only the real part will be
++   * copied to either \p vec_re or System::solution depending on the second
++   * argument.
+    */
+-  virtual std::pair<Real, Real> get_eigenpair(unsigned int i);
++  virtual std::pair<Real, Real> get_eigenpair (unsigned int i,
++                                               NumericVector<Number>* vec_re = NULL,
++                                               NumericVector<Number>* vec_im = NULL);
+ 
++  
+   /**
+    * The (condensed) system matrix for standard eigenvalue problems.
+    */
+diff --git a/include/systems/eigen_system.h b/include/systems/eigen_system.h
+index bc03498..6ba37b9 100644
+--- a/include/systems/eigen_system.h
++++ b/include/systems/eigen_system.h
+@@ -68,6 +68,36 @@ public:
+   virtual ~EigenSystem ();
+ 
+   /**
++   * Abstract base class to be used for assembly of sensitivity
++   * data for EigenSystem. A user class derived from this class may be used to
++   * assemble the sensitivity of system by attaching an object
++   * with the method \p attach_eigenproblem_sensitivity_assemble_object.
++   */
++  class EigenproblemSensitivityAssembly
++  {
++  public:
++    /**
++     * Destructor.  Virtual because we will have virtual functions.
++     */
++    virtual ~EigenproblemSensitivityAssembly () {}
++    
++    /**
++     * Assembly function.  This function will be called
++     * to assemble the sensitivity of eigenproblem matrices. 
++     * The method provides dA/dp_i and dB/dpi for \par i ^th parameter 
++     * in the vector \par parameters.
++     *
++     * If the routine is not able to provide sensitivity for this parameter,
++     * then it should return false, and the system will attempt to use
++     * finite differencing.
++     */
++    virtual bool sensitivity_assemble (const ParameterVector& parameters,
++                                       const unsigned int i,
++                                       SparseMatrix<Number>* sensitivity_A,
++                                       SparseMatrix<Number>* sensitivity_B) = 0;
++  };
++
++  /**
+    * The type of system.
+    */
+   typedef EigenSystem sys_type;
+@@ -100,15 +130,46 @@ public:
+   virtual void solve ();
+ 
+   /**
++   * Solves the sensitivity system, for the provided parameters. The return
++   * parameters are irrelevant for EigenSystem. Sensitivity of eigenvalues
++   * are returned in \p sens.
++   *
++   * This method is only implemented in some derived classes.
++   */
++  virtual std::pair<unsigned int, Real>
++  sensitivity_solve (const ParameterVector& parameters,
++                     std::vector<Number>& sens);
++
++  
++  /**
+    * Assembles the system matrix.
+    */
+   virtual void assemble ();
+ 
++  /*!
++   *  Assembles the sensitivity of matrix_A and matrix_B with respect to the 
++   *  specified parameter
++   */
++  virtual void assemble_eigensystem_sensitivity(const ParameterVector& parameters,
++                                                const unsigned int p);
++  
+   /**
+-   * Returns real and imaginary part of the ith eigenvalue and copies
+-   * the respective eigen vector to the solution vector.
++   * Returns real and imaginary part of the ith eigenvalue. If the vectors are
++   * provided in the function argument through \p vec_re and \p vec_im, this
++   * method copies the eigenvector in the given vector(s), else copies the
++   * vector to System::solution.
++   *
++   * Note that with Number = Complex, \p vec_im must be NULL, and for 
++   * Number = Real and eigen problem type HEP or GHEP, \p vec_im must be NULL.
++   * For Number = Real and eigenproblem type NHEP or GNHEP, the real and imag.
++   * parts of the eigenvector are copied to \p vec_re and \p vec_im,
++   * respectively. If \p vec_im is not provided, then only the real part will be 
++   * copied to either \p vec_re or System::solution depending on the second
++   * argument.
+    */
+-  virtual std::pair<Real, Real> get_eigenpair (unsigned int i);
++  virtual std::pair<Real, Real> get_eigenpair (unsigned int i,
++                                               NumericVector<Number>* vec_re = NULL,
++                                               NumericVector<Number>* vec_im = NULL);
+ 
+   /**
+    * @returns \p "Eigen".  Helps in identifying
+@@ -148,6 +209,31 @@ public:
+   bool generalized () const { return _is_generalized_eigenproblem; }
+ 
+   /**
++   * Register a user function to use in assembling the system
++   * RHS sensitivity. If the routine is unable to provide sensitivity for this
++   * parameter, then it should return false.
++   */
++  void attach_eigenproblem_sensitivity_assemble_function
++  (bool fptr(EquationSystems& es,
++             const std::string& name,
++             const ParameterVector& parameters,
++             const unsigned int i,
++             SparseMatrix<Number>* sensitivity_A,
++             SparseMatrix<Number>* sensitivity_B));
++  
++  /**
++   * Register a user object to use in assembling the system matrix sensitivities
++   */
++  void attach_eigenproblem_sensitivity_assemble_object (EigenproblemSensitivityAssembly& assemble);
++
++  
++  /**
++   *    clears the user specified function/object for use in assembling
++   *    the system matrix sensitivities
++   */
++  void reset_eigenproblem_sensitivity_assembly();
++
++  /**
+    * The system matrix for standard eigenvalue problems.
+    */
+   SparseMatrix<Number> *matrix_A;
+@@ -193,6 +279,16 @@ protected:
+   { _n_iterations = its;}
+ 
+ 
++  /*!
++   *   checks if either a user provided function or object is available to calculate
++   *   the sensitivity of A & B matrices for this eigenproblem. Returns true
++   *   if user provided function/object is able to calculate the sensitivity
++   *   for this parameter, otherwise returns false.
++   */
++  bool user_eigensystem_sensitivity_assemble(const ParameterVector& parameters,
++                                             const unsigned int p);
++
++  
+ private:
+ 
+   /**
+@@ -216,6 +312,20 @@ private:
+    */
+   EigenProblemType _eigen_problem_type;
+ 
++  /**
++   * Function that assembles the sensitivity of eigen_system.
++   */
++  bool (* _eigenproblem_sensitivity_assemble_system_function) (EquationSystems& es,
++                                                               const std::string& name,
++                                                               const ParameterVector& parameter,
++                                                               const unsigned int i,
++                                                               SparseMatrix<Number>* sensitivity_A,
++                                                               SparseMatrix<Number>* sensitivity_B);
++  
++  /**
++   * Object that assembles the sensitivity of eigen_system.
++   */
++  EigenproblemSensitivityAssembly * _eigenproblem_sensitivity_assemble_system_object;
+ 
+ };
+ 
+diff --git a/include/systems/implicit_system.h b/include/systems/implicit_system.h
+index 0771f09..6668466 100644
+--- a/include/systems/implicit_system.h
++++ b/include/systems/implicit_system.h
+@@ -150,17 +150,29 @@ public:
+   { libmesh_not_implemented(); }
+ 
+   /**
+-   * Residual parameter derivative function.
+-   *
+-   * Uses finite differences by default.
++   * Residual parameter derivative function using finite differencing.
+    *
+    * This will assemble the sensitivity rhs vectors to hold
+-   * -(partial R / partial p_i), making them ready to solve
+-   * the forward sensitivity equation.
++   * -(partial R / partial p_i), for the \par i ^th parameter in \par v.
++   */
++  virtual void assemble_residual_derivative (const ParameterVector& parameters,
++                                             const unsigned int p,
++                                             NumericVector<Number>& sensitivity_rhs);
++  
++  
++  /*!
++   * Solves for the derivative of each of the system's quantities of
++   * interest q in \p qoi[qoi_indices] with respect to \p j ^th parameter in
++   * \p parameters, placing the result for qoi \p i into
++   * \p partialq_partialp[i][j].
+    *
+-   * @e Can be overloaded in derived classes.
++   * First checks if the user provided assembly objects can provide this data, 
++   * otherwise, uses finite differences.
+    */
+-  virtual void assemble_residual_derivatives (const ParameterVector& parameters);
++  virtual void assemble_qoi_parameter_partial_derivative(const QoISet&          qoi_indices,
++                                                         const ParameterVector& parameters,
++                                                         const unsigned int j,
++                                                         std::vector<Number>& partialq_partialp);
+ 
+   /**
+    * Assembles & solves the linear system(s) (dR/du)*u_p = -dR/dp, for
+diff --git a/include/systems/system.h b/include/systems/system.h
+index c6d5c66..752aecf 100644
+--- a/include/systems/system.h
++++ b/include/systems/system.h
+@@ -137,6 +137,39 @@ public:
+ 
+ 
+ 
++  
++  
++  /**
++   * Abstract base class to be used for assembly of sensitivity 
++   * data. A user class derived from this class may be used to
++   * assemble the sensitivity of system by attaching an object
++   * with the method \p attach_sensitivity_assemble_object.
++   */
++  class SensitivityAssembly
++  {
++  public:
++    /**
++     * Destructor.  Virtual because we will have virtual functions.
++     */
++    virtual ~SensitivityAssembly () {}
++    
++    /**
++     * Assembly function.  This function will be called
++     * to assemble the sensitivity of system residual prior to a solve and must
++     * be provided by the user in a derived class. The method provides dR/dp_i
++     * for \par i ^th parameter in the vector \par parameters.
++     *
++     * If the routine is not able to provide sensitivity for this parameter, 
++     * then it should return false, and the system will attempt to use 
++     * finite differencing.
++     */
++    virtual bool sensitivity_assemble (const ParameterVector& parameters,
++                                       const unsigned int i,
++                                       NumericVector<Number>& sensitivity_rhs) = 0;
++  };
++  
++  
++  
+   /**
+    * Abstract base class to be used for sysem constraints.
+    * A user class derived from this class may be used to
+@@ -210,6 +243,35 @@ public:
+        bool apply_constraints) = 0;
+   };
+ 
++  
++  /**
++   * Abstract base class to be used for parameter sensitivities of quantities
++   * of interest, partial q/ partial p. A user class derived from 
++   * this class may be used to compute quantities of interest by attaching
++   * an object with the method \p attach_QOI_parameter_sensitivity_object.
++   */
++  class QOIParameterSensitivity
++  {
++  public:
++    /**
++     * Destructor.  Virtual because we will have virtual functions.
++     */
++    virtual ~QOIParameterSensitivity () {}
++    
++    /**
++     * Quantitiy of interest derivative function. This function will
++     * be called to compute derivatived of quantities of interest and
++     * must be provided by the user in a derived class. 
++     *
++     * Return true if the method provides sensitivity for the specified parameter, 
++     * otherwise, return false and the system will use finite differencing.
++     */
++    virtual bool qoi_parameter_sensitivity (const QoISet& qoi_indices,
++                                            const ParameterVector& parameters,
++                                            const unsigned int p,
++                                            std::vector<Number>& partialq_partialp) = 0;
++  };
++
+ 
+ 
+   /**
+@@ -288,7 +350,23 @@ public:
+    *
+    * This method is only implemented in some derived classes.
+    */
+-  virtual void assemble_residual_derivatives (const ParameterVector& parameters);
++  virtual void assemble_residual_derivative (const ParameterVector& parameters,
++                                              const unsigned int p,
++                                              NumericVector<Number>& sensitivity_rhs);
++
++  /*!
++   * Solves for the derivative of each of the system's quantities of
++   * interest q in \p qoi[qoi_indices] with respect to \p j ^th parameter in
++   * \p parameters, placing the result for qoi \p i into
++   * \p partialq_partialp[i][j].
++   *
++   * First checks if the user provided assembly objects can provide this data,
++   * otherwise, uses finite differences.
++   */
++  virtual void assemble_qoi_parameter_partial_derivative(const QoISet&          qoi_indices,
++                                                         const ParameterVector& parameters,
++                                                         const unsigned int j,
++                                                         std::vector<Number>& partialq_partialp);
+ 
+   /**
+    * After calling this method, any solve will be restricted to the
+@@ -1345,6 +1423,35 @@ public:
+   void attach_assemble_object (Assembly& assemble);
+ 
+   /**
++   * clears the user specified function/object for assembling the system
++   * matrix and RHS.
++   */
++  void reset_assembly();
++
++  /**
++   * Register a user function to use in assembling the system
++   * RHS sensitivity. If the routine is unable to provide sensitivity for this
++   * parameter, then it should return false.
++   */
++  void attach_sensitivity_assemble_function (bool fptr(EquationSystems& es,
++                                                       const std::string& name,
++                                                       const ParameterVector& parameters,
++                                                       const unsigned int i,
++                                                       NumericVector<Number>& sensitivity_rhs));
++  
++  /**
++   * Register a user object to use in assembling the system
++   * RHS sensitivity.
++   */
++  void attach_sensitivity_assemble_object (SensitivityAssembly& assemble);
++
++  /**
++   * clears the user specified function/object for assembling the system
++   * RHS sensitivity.
++   */
++  void reset_sensitivity_assembly ();
++
++  /**
+    * Register a user function for imposing constraints.
+    */
+   void attach_constraint_function (void fptr(EquationSystems& es,
+@@ -1369,6 +1476,13 @@ public:
+    */
+   void attach_QOI_object (QOI& qoi);
+ 
++
++    /**
++     * Removes association with a QOI assembly object or function
++     */
++    void reset_QOI ();
++
++    
+   /**
+    * Register a user function for evaluating derivatives of a quantity
+    * of interest with respect to test functions, whose values should
+@@ -1387,6 +1501,37 @@ public:
+    */
+   void attach_QOI_derivative_object (QOIDerivative& qoi_derivative);
+ 
++    
++    /**
++     * Removes association with a QOI derivative object or function
++     */
++    void reset_QOI_derivative ();
++
++  
++  /**
++   * Register a user function for evaluating partial derivatives of a quantity
++   * of interest with respect to specified parameter
++   */
++  void attach_QOI_parameter_sensitivity (bool fptr(EquationSystems& es,
++                                                   const std::string& name,
++                                                   const QoISet& qoi_indices,
++                                                   const ParameterVector& parameters,
++                                                   const unsigned int p,
++                                                   std::vector<Number>& partialq_partialp));
++  
++  /**
++   * Register a user object for evaluating derivatives of a quantity
++   * of interest with respect to test functions, whose values should
++   * be placed in \p System::rhs
++   */
++  void attach_QOI_parameter_sensitivity_object (QOIParameterSensitivity& qoi_sensitivity);
++
++    
++    /**
++     * Removes association with a QOI parameteric sensitivity object or function
++     */
++    void reset_QOI_parameter_sensitivity ();
++
+   /**
+    * Calls user's attached initialization function, or is overloaded by
+    * the user in derived classes.
+@@ -1400,6 +1545,15 @@ public:
+   virtual void user_assembly ();
+ 
+   /**
++   *  returs true if a user provided function or object is able to provide
++   *  the sensitivity data for the \par i ^th parameter in the vector
++   *  \par parameters.
++   */
++  bool user_sensitivity_assembly(const ParameterVector& parameters,
++                                 const unsigned int i,
++                                 NumericVector<Number>& sensitivity_rhs);
++
++  /**
+    * Calls user's attached constraint function, or is overloaded by
+    * the user in derived classes.
+    */
+@@ -1421,6 +1575,15 @@ public:
+    bool apply_constraints = true);
+ 
+   /**
++   * Calls user's attached quantity of interest derivative function,
++   * or is overloaded by the user in derived classes.
++   */
++  virtual bool user_QOI_parameter_sensitivity (const QoISet& qoi_indices,
++                                               const ParameterVector& parameters,
++                                               const unsigned int p,
++                                               std::vector<Number>& partialq_partialp);
++
++  /**
+    * Re-update the local values when the mesh has changed.
+    * This method takes the data updated by \p update() and
+    * makes it up-to-date on the current mesh.
+@@ -1765,6 +1928,22 @@ private:
+    */
+   Assembly * _assemble_system_object;
+ 
++
++  /**
++   * Function that assembles the sensitivity of system.
++   */
++  bool (* _sensitivity_assemble_system_function) (EquationSystems& es,
++                                                  const std::string& name,
++                                                  const ParameterVector& parameter,
++                                                  const unsigned int i,
++                                                  NumericVector<Number>& sensitivity_rhs);
++  
++  /**
++   * Object that assembles the sensitivity of system.
++   */
++  SensitivityAssembly * _sensitivity_assemble_system_object;
++
++
+   /**
+    * Function to impose constraints.
+    */
+@@ -1798,11 +1977,26 @@ private:
+                                               bool apply_constraints);
+ 
+   /**
++   * Function to evaluate quantity of interest partial derivative wrt parameter
++   */
++  bool (* _qoi_evaluate_parameter_sensitivity_function) (EquationSystems& es,
++                                                         const std::string& name,
++                                                         const QoISet& qoi_indices,
++                                                         const ParameterVector& parameters,
++                                                         const unsigned int p,
++                                                         std::vector<Number>& partialq_partialp);
++
++  /**
+    * Object to compute derivatives of quantities of interest.
+    */
+   QOIDerivative *_qoi_evaluate_derivative_object;
+ 
+   /**
++   * Object to compute partial sensitivity of quantities of interest wrt parameter.
++   */
++  QOIParameterSensitivity *_qoi_evaluate_parameter_sensitivity_object;
++
++  /**
+    * Data structure describing the relationship between
+    * nodes, variables, etc... and degrees of freedom.
+    */
+@@ -2177,7 +2371,18 @@ System::const_vectors_iterator System::vectors_end () const
+ }
+ 
+ inline
+-void System::assemble_residual_derivatives (const ParameterVector&)
++void System::assemble_residual_derivative (const ParameterVector&,
++                                           const unsigned int ,
++                                           NumericVector<Number>& )
++{
++  libmesh_not_implemented();
++}
++
++inline
++void System::assemble_qoi_parameter_partial_derivative(const QoISet& ,
++                                                         const ParameterVector& ,
++                                                         const unsigned int ,
++                                                         std::vector<Number>& )
+ {
+   libmesh_not_implemented();
+ }
+diff --git a/src/.DS_Store b/src/.DS_Store
+new file mode 100644
+index 0000000..098e8b7
+Binary files /dev/null and b/src/.DS_Store differ
+diff --git a/src/apps/.DS_Store b/src/apps/.DS_Store
+new file mode 100644
+index 0000000..7374fe4
+Binary files /dev/null and b/src/apps/.DS_Store differ
+diff --git a/src/base/.DS_Store b/src/base/.DS_Store
+new file mode 100644
+index 0000000..d2ef2dc
+Binary files /dev/null and b/src/base/.DS_Store differ
+diff --git a/src/base/dof_map_constraints.C b/src/base/dof_map_constraints.C
+index 57897b5..1965bf7 100644
+--- a/src/base/dof_map_constraints.C
++++ b/src/base/dof_map_constraints.C
+@@ -2440,7 +2440,7 @@ void DofMap::build_constraint_matrix_and_vector
+ 
+           // If x = Cy + h and y = Dz + g
+           // Then x = (CD)z + (Cg + h)
+-          C.vector_mult_add(H, 1, Hnew);
++          C.vector_mult_add(H, (Number)1., Hnew);
+         }
+ 
+       libmesh_assert_equal_to (C.n(), elem_dofs.size());
+diff --git a/src/base/libmesh.C b/src/base/libmesh.C
+index 6bc300e..c76f836 100644
+--- a/src/base/libmesh.C
++++ b/src/base/libmesh.C
+@@ -706,7 +706,6 @@ LibMeshInit::~LibMeshInit()
+     }
+ #endif
+ 
+-
+ #if defined(LIBMESH_HAVE_MPI)
+   // Allow the user to bypass MPI finalization
+   if (!libMesh::on_command_line ("--disable-mpi"))
+@@ -715,7 +714,6 @@ LibMeshInit::~LibMeshInit()
+ #ifndef LIBMESH_DISABLE_COMMWORLD
+       Parallel::Communicator_World.clear();
+ #endif
+-
+       if (libmesh_initialized_mpi)
+         MPI_Finalize();
+     }
+diff --git a/src/error_estimation/.DS_Store b/src/error_estimation/.DS_Store
+new file mode 100644
+index 0000000..a77e2f8
+Binary files /dev/null and b/src/error_estimation/.DS_Store differ
+diff --git a/src/fe/.DS_Store b/src/fe/.DS_Store
+new file mode 100644
+index 0000000..6135d03
+Binary files /dev/null and b/src/fe/.DS_Store differ
+diff --git a/src/mesh/exodusII_io.C b/src/mesh/exodusII_io.C
+index 33736e0..adebf3d 100644
+--- a/src/mesh/exodusII_io.C
++++ b/src/mesh/exodusII_io.C
+@@ -33,6 +33,18 @@
+ #include "libmesh/system.h"
+ #include "libmesh/numeric_vector.h"
+ #include "libmesh/exodusII_io_helper.h"
++#include "libmesh/nemesis_io_helper.h"
++#include "libmesh/mesh_communication.h"
++#include "libmesh/parallel_mesh.h"
++
++// Include the ParMETIS header files
++namespace Parmetis {
++    extern "C" {
++#     include "libmesh/ignore_warnings.h"
++#     include "parmetis.h"
++#     include "libmesh/restore_warnings.h"
++    }
++}
+ 
+ namespace libMesh
+ {
+@@ -352,6 +364,477 @@ void ExodusII_IO::read (const std::string& fname)
+ }
+ 
+ 
++    
++    
++    void ExodusII_IO::read_parallel (const std::string& base_filename)
++    {
++      // On one processor, Nemesis and ExodusII should be equivalent, so
++      // let's cowardly defer to that implementation...
++      if (this->n_processors() == 1)
++      {
++        // We can do this in one line but if the verbose flag was set in this
++        // object, it will no longer be set... thus no extra print-outs for serial runs.
++        // ExodusII_IO(this->mesh()).read (base_filename); // ambiguous when Nemesis_IO is multiply-inherited
++        
++        this->read (base_filename);
++        return;
++      }
++      
++      START_LOG ("read()","Exodus_IO");
++      
++      
++      libMesh::out << "getting into read" << std::endl;
++      
++      // This function must be run on all processors at once
++      parallel_object_only();
++      
++      // Open the Exodus file
++      this->exio_helper->open(base_filename.c_str(), true); // just to avoid error from within this class
++      ExodusII_IO_Helper ex_io_helper(this->comm(), true, false);
++      ex_io_helper.open(base_filename.c_str(), true);
++      
++      // Get a reference to the mesh.  We need to be specific
++      // since Nemesis_IO is multiply-inherited
++      // MeshBase& mesh = this->mesh();
++      MeshBase& mesh = MeshInput<MeshBase>::mesh();
++      
++      // Local information: Read the following information from the standard Exodus header
++      //  title[0]
++      //  num_dim
++      //  num_nodes
++      //  num_elem
++      //  num_elem_blk
++      //  num_node_sets
++      //  num_side_sets
++      ex_io_helper.read_header();
++      ex_io_helper.print_header();
++      
++      libMesh::out << "after header" << std::endl;
++      
++      ex_io_helper.read_block_info();
++      
++      exII::ex_get_elem_block(ex_io_helper.ex_id,
++                              ex_io_helper.block_ids[0],
++                              &ex_io_helper.elem_type[0],
++                              &ex_io_helper.num_elem_this_blk,
++                              &ex_io_helper.num_nodes_per_elem,
++                              &ex_io_helper.num_attr);
++      
++      libMesh::out << "after read block info" << std::endl;
++      
++      //    // Get global information: number of nodes, elems, blocks, nodesets and sidesets
++      //    ex_helper.get_init_global();
++      
++      // the approach is to partition the elements based on a space-filling approach.
++      // So, the centroid information of each element is obtained using the nodal information.
++      // First, each processor reads in its chunk of the elements
++      
++      // beginning and end of elem_ids on each processor
++      std::vector<int> proc_elems(this->n_processors()+1, 0);
++      int n_remaining_elems = ex_io_helper.num_elem,
++      n_elems_per_proc = ex_io_helper.num_elem / this->n_processors();
++      
++      proc_elems[0] = 1; // exodus numbering starts from 1
++      for (unsigned int i=0; i<this->n_processors(); i++)
++      {
++        proc_elems[i+1] = proc_elems[i] + std::min( n_elems_per_proc, n_remaining_elems)+1;
++        n_remaining_elems -= (proc_elems[i+1]-proc_elems[i]);
++      }
++      
++      proc_elems[this->n_processors()] += n_remaining_elems; // in case any elements were left unassigned
++      
++      unsigned int n_local_elems =
++      proc_elems[this->processor_id()+1] - proc_elems[this->processor_id()];
++      std::vector<char> elem_type(10);
++      int n_elem_in_block=0, n_nodes_per_elem=0, n_attr=0;
++      
++      libMesh::out << "Elem range on proc: " << this->processor_id() << "  "
++      << proc_elems[this->processor_id()] << "  " << proc_elems[this->processor_id()+1]
++      << " n elem on proc: " << n_local_elems << std::endl;
++      
++      exII::ex_get_elem_block(ex_io_helper.ex_id, ex_io_helper.block_ids[0], &elem_type[0],
++                              &n_elem_in_block,
++                              &n_nodes_per_elem,
++                              &n_attr);
++      
++      libMesh::out << "after block elem info" << std::endl;
++      
++      std::vector<int> elem_conn(n_local_elems * n_nodes_per_elem, 0);
++      std::vector<float> elem_xyz(n_local_elems*ex_io_helper.num_dim, 0.);
++      
++      int err = Nemesis::ne_get_n_elem_conn(ex_io_helper.ex_id, ex_io_helper.block_ids[0], proc_elems[this->processor_id()],
++                                            n_local_elems, &elem_conn[0]);
++      
++      libMesh::out << "after elem conn" << std::endl;
++      
++      // find the first and last nodes
++      dof_id_type first_node=ex_io_helper.num_nodes, last_node=0;
++      for (dof_id_type i=0; i<elem_conn.size(); i++)
++      {
++        if (first_node > elem_conn[i])
++          first_node = elem_conn[i];
++        if (last_node < elem_conn[i])
++          last_node = elem_conn[i];
++      }
++      
++      libMesh::out << "Node range on proc: " << this->processor_id() << "  " << first_node << "  " << last_node << std::endl;
++      
++      // now read in the detail for each node specified in the connectivity list for each element, and calculate
++      // the centroid information
++      // hopefully the size of these vectors will not be too huge
++      std::vector<Real> node_x(last_node-first_node+1, 0.),
++      node_y(last_node-first_node+1, 0.), node_z(last_node-first_node+1, 0.);
++      err = Nemesis::ne_get_n_coord(ex_io_helper.ex_id, first_node, last_node-first_node+1,
++                                    &node_x[0], &node_y[0], &node_z[0]);
++      
++      unsigned int node_pos_in_vector;
++      for (unsigned int i_elem=0; i_elem<n_local_elems; i_elem++)
++      {
++        for (unsigned int i_node=0; i_node<n_nodes_per_elem; i_node++)
++        {
++          node_pos_in_vector = elem_conn[i_elem*n_nodes_per_elem+i_node]-first_node;
++          elem_xyz[i_elem*ex_io_helper.num_dim+0] += node_x[node_pos_in_vector];
++          elem_xyz[i_elem*ex_io_helper.num_dim+1] += node_y[node_pos_in_vector];
++          elem_xyz[i_elem*ex_io_helper.num_dim+2] += node_z[node_pos_in_vector];
++        }
++        elem_xyz[i_elem*ex_io_helper.num_dim+0] /= n_nodes_per_elem;
++        elem_xyz[i_elem*ex_io_helper.num_dim+1] /= n_nodes_per_elem;
++        elem_xyz[i_elem*ex_io_helper.num_dim+2] /= n_nodes_per_elem;
++      }
++      
++      // clear unneeded storage
++      node_x.clear(); node_y.clear(); node_z.clear();
++      
++      // now call the partitioner
++      std::vector<int> part(n_local_elems, 0);
++      MPI_Comm mpi_comm = this->comm().get();
++      
++      libMesh::out << "getting into Parmetis" << std::endl;
++      
++      err = Parmetis::ParMETIS_V3_PartGeom(&proc_elems[0], &ex_io_helper.num_dim, &elem_xyz[0],
++                                           &part[0], &mpi_comm);
++      
++      libMesh::out << "after Parmetis" << std::endl;
++      
++      // clear unneeded storage
++      elem_xyz.clear();
++      
++      // now, this partitioning needs to be communicated to the respective processors
++      std::vector<dof_id_type> collected_elems_on_proc, elems_for_comm;
++      
++      // add elements from the local processor
++      unsigned int n_elems_for_comm = 0;
++      elems_for_comm.resize(n_local_elems);
++      
++      // iterate over the elements locally and create the list of
++      // elements that belong to proc dest
++      for (unsigned int i=0; i<n_local_elems; i++)
++        if (part[i] == this->processor_id())
++        {
++          elems_for_comm[n_elems_for_comm] = proc_elems[this->processor_id()]+i;
++          n_elems_for_comm++;
++        }
++      collected_elems_on_proc.insert(collected_elems_on_proc.end(),
++                                     elems_for_comm.begin(),
++                                     elems_for_comm.begin()+n_elems_for_comm);
++      
++      
++      for (processor_id_type pid=0; pid<mesh.n_processors(); pid++) // pid received data from others
++      {
++        if (pid == this->processor_id()) // receive from others
++        {
++          std::cout << "***** Receiving for pid: " << pid << std::endl;
++          for (processor_id_type source=0; source<mesh.n_processors(); source++)
++            if (source != this->processor_id()) // don't send to self
++            {
++              elems_for_comm.clear();
++              this->comm().receive(source, elems_for_comm);
++              std::cout << "Received: " << elems_for_comm.size() << " elems from proc: " << source << std::endl;
++              collected_elems_on_proc.insert(collected_elems_on_proc.end(),
++                                             elems_for_comm.begin(), elems_for_comm.end());
++            }
++          std::cout << "Total: " << collected_elems_on_proc.size() << " elems on proc: " << pid << std::endl;
++        }
++        else // send data to pid
++        {
++          std::cout << "***** Sending from pid: " << this->processor_id() << std::endl;
++          elems_for_comm.resize(n_local_elems); // upper limit of the size for this vector
++          
++          n_elems_for_comm = 0;
++          
++          // iterate over the elements locally and create the list of
++          // elements that belong to proc dest
++          for (unsigned int i=0; i<n_local_elems; i++)
++            if (part[i] == pid)
++            {
++              elems_for_comm[n_elems_for_comm] = proc_elems[this->processor_id()]+i;
++              n_elems_for_comm++;
++            }
++          
++          std::vector<dof_id_type> elem_send_list;
++          elem_send_list.insert(elem_send_list.end(),
++                                elems_for_comm.begin(),
++                                elems_for_comm.begin()+n_elems_for_comm);
++          
++          std::cout << "Sending: " << elem_send_list.size() << " elems to proc: " << pid << std::endl;
++          this->comm().send(pid, elem_send_list);
++        }
++      }
++      
++      // clear the unneeded storage
++      elems_for_comm.clear(); part.clear();
++      
++      // find the range of element ids
++      unsigned int first_elem=ex_io_helper.num_elem, last_elem=0;
++      for (std::vector<unsigned int>::const_iterator elem_it=collected_elems_on_proc.begin();
++           elem_it != collected_elems_on_proc.end(); elem_it++)
++      {
++        if (*elem_it > last_elem)
++          last_elem = *elem_it;
++        if (*elem_it < first_elem)
++          first_elem = *elem_it;
++      }
++      
++      // now, get the node details for this element range
++      n_local_elems = collected_elems_on_proc.size();
++      elem_conn.resize((last_elem-first_elem+1) * n_nodes_per_elem); // this stores the connectivity for the entire range
++      
++      libMesh::out << "Elem range: " << first_elem << "  --  "  << last_elem << "  : with total elems:  " << n_local_elems << std::endl;
++      
++      
++      libMesh::out << "Reading updated element connectivity " << std::endl;
++      
++      err = Nemesis::ne_get_n_elem_conn(ex_io_helper.ex_id, ex_io_helper.block_ids[0], first_elem,
++                                        (last_elem-first_elem+1), &elem_conn[0]);
++      
++      libMesh::out << "Done reading updated element connectivity: Preparing node process ids" << std::endl;
++      
++      // find the node ownership and the range of node ids on this processor.
++      // If a node lies on multiple processors, then the smallest processor id would take ownership of the node
++      
++      std::map<dof_id_type, processor_id_type> node_processor_id_map;
++      
++      unsigned int elem_offset, node_offset;
++      for (std::vector<unsigned int>::const_iterator elem_it=collected_elems_on_proc.begin();
++           elem_it != collected_elems_on_proc.end(); elem_it++)
++      {
++        elem_offset = (*elem_it-first_elem)*n_nodes_per_elem; // offset for connectivity data
++        
++        for (unsigned int j=0; j<n_nodes_per_elem; j++)
++          // start by identify each node to be on this processor
++          // this will be changed later
++          node_processor_id_map[elem_conn[elem_offset+j]] = this->processor_id();
++      }
++      
++      // get the first and last node ids from the map
++      first_node = node_processor_id_map.begin()->first;
++      last_node = node_processor_id_map.rbegin()->first;
++      
++      libMesh::out << "Done preparing node process ids: communicating IDs to processors" << std::endl;
++      
++      // now each processor communicates to the higher rank processors about the ownership
++      for (processor_id_type pid=0; pid<mesh.n_processors(); pid++) // pid sends data to higher ranked processors
++      {
++        //prepare the node vector and send it to higher ranked processors
++        if (pid == this->processor_id())
++        {
++          std::vector<dof_id_type> locally_owned_nodes(node_processor_id_map.size());
++          dof_id_type index=0;
++          for (std::map<dof_id_type, processor_id_type>::const_iterator map_it=node_processor_id_map.begin();
++               map_it != node_processor_id_map.end(); map_it++)
++          {
++            if (map_it->second == pid) // pid == this->processor_id() here
++              locally_owned_nodes[index++] = map_it->first;
++          }
++          
++          // send the data to the processor in a vector that is
++          // sized for the number of locally owned nodes
++          std::vector<dof_id_type> data_to_send;
++          data_to_send.insert(data_to_send.end(), locally_owned_nodes.begin(), locally_owned_nodes.end());
++          locally_owned_nodes.clear();
++          
++          // send this to all processors of higher rank
++          std::cout << "Sending nodes to processors: n_nodes = " << data_to_send.size() << " : from pid = " <<  pid << std::endl;
++          for (processor_id_type dest=pid+1; dest<mesh.n_processors(); dest++)
++            this->comm().send(dest, data_to_send);
++        }
++        else if (pid < this->processor_id()) // receive from lower ranked processors
++        {
++          // get the remote node ids
++          std::vector<dof_id_type> remote_nodes;
++          this->comm().receive(pid, remote_nodes);
++          
++          libMesh::out << "Received from : " << pid << " by " << this->processor_id() << " n_nodes : " << remote_nodes.size()  << std::endl;
++          
++          // now iterate over these nodes and set their processor ids
++          std::map<dof_id_type, processor_id_type>::iterator map_it;
++          std::map<dof_id_type, processor_id_type>::const_iterator map_end = node_processor_id_map.end();
++          for (std::vector<dof_id_type>::const_iterator node_it=remote_nodes.begin();
++               node_it != remote_nodes.end(); node_it++)
++          {
++            // check if the node also lies on this processor
++            map_it = node_processor_id_map.find(*node_it);
++            if (map_it != map_end)
++              map_it->second = pid;
++          }
++        }
++      }
++      
++      libMesh::out << "Node range on proc: " << this->processor_id() << "  " << first_node << "  " << last_node << std::endl;
++      
++      // now read in the detail for each node specified in the connectivity list for each element, and calculate
++      // the centroid information
++      // hopefully the size of these vectors will not be too huge
++      node_x.resize(last_node-first_node+1, 0.);
++      node_y.resize(last_node-first_node+1, 0.);
++      node_z.resize(last_node-first_node+1, 0.);
++      
++      libMesh::out << "Reading node coordinates " << std::endl;
++      
++      err = Nemesis::ne_get_n_coord(ex_io_helper.ex_id, first_node, last_node-first_node+1,
++                                    &node_x[0], &node_y[0], &node_z[0]);
++      
++      libMesh::out << "Done reading node coordinates: Now adding nodes and elements to mesh " << std::endl;
++      
++      // add the nodes and elements
++      ExodusII_IO_Helper::ElementMaps em;     // Instantiate the ElementMaps interface
++      const std::string type_str (ex_io_helper.get_elem_type());
++      const ExodusII_IO_Helper::Conversion conv = em.assign_conversion(type_str);
++      
++      Node* node_ptr;
++      std::map<dof_id_type, processor_id_type>::const_iterator map_it,
++      map_end = node_processor_id_map.end();
++      // Loop over all the elements in this block
++      for (std::vector<unsigned int>::const_iterator elem_it=collected_elems_on_proc.begin();
++           elem_it != collected_elems_on_proc.end(); elem_it++)
++      {
++        elem_offset = (*elem_it-first_elem)*n_nodes_per_elem; // offset for connectivity data
++        
++        Elem* elem = Elem::build (conv.get_canonical_type()).release(); // create the element
++        elem->processor_id(this->processor_id()); // only add locally
++        elem->set_id(*elem_it); // prescribe the elem id
++        
++        for (unsigned int j=0; j<n_nodes_per_elem; j++)
++        {
++          node_ptr = mesh.query_node_ptr(elem_conn[elem_offset+j]);
++          if (node_ptr == NULL)
++          {
++            node_offset = elem_conn[elem_offset+j] - first_node;
++            
++            // local map should certainly have this node id
++            map_it = node_processor_id_map.find(elem_conn[elem_offset+j]);
++            libmesh_assert(map_it != map_end);
++            
++            // use the node id, add processor id identified earlies
++            node_ptr = mesh.add_point(Point(node_x[node_offset],
++                                            node_y[node_offset],
++                                            node_z[node_offset]),
++                                      elem_conn[elem_offset+j],
++                                      map_it->second);
++          }
++          
++          elem->set_node(j) = node_ptr;
++        }
++        
++        mesh.add_elem(elem);
++      }
++      
++      // clear unneeded storage
++      collected_elems_on_proc.clear(); elem_conn.clear();
++      node_x.clear(); node_y.clear(); node_z.clear();
++      node_processor_id_map.clear();
++      
++      
++      unsigned int n_side_sets = 0;
++      // Read in sideset information -- this is useful for applying boundary conditions
++      {
++        ex_io_helper.read_sideset_info(); // Get basic information about ALL sidesets
++        int offset=0;
++        for (int i=0; i<ex_io_helper.num_side_sets; i++)
++        {
++          offset += (i > 0 ? ex_io_helper.num_sides_per_set[i-1] : 0); // Compute new offset
++          ex_io_helper.read_sideset (i, offset);
++          
++          mesh.boundary_info->sideset_name(ex_io_helper.get_side_set_id(i)) =
++          ex_io_helper.get_side_set_name(i);
++        }
++        
++        const std::vector<int>& elem_list = ex_io_helper.elem_list;
++        const std::vector<int>& side_list = ex_io_helper.side_list;
++        const std::vector<int>& id_list   = ex_io_helper.id_list;
++        
++        for (unsigned int e=0; e<elem_list.size(); e++)
++        {
++          // Set any relevant node/edge maps for this element
++          
++          Elem * elem = mesh.query_elem(elem_list[e]);
++          
++          if (elem != NULL) // proceed only if this processor contains this elemid
++          {
++            
++            const ExodusII_IO_Helper::Conversion conv =
++            em.assign_conversion(elem->type());
++            
++            mesh.boundary_info->add_side (elem_list[e],
++                                          conv.get_side_map(side_list[e]-1),
++                                          id_list[e]);
++            n_side_sets++;
++          }
++        }
++      }
++      
++      
++      std::cout << "Done adding side set: on pid: " << this->processor_id() << " : n_side_sets : " << n_side_sets << std::endl;
++      this->comm().sum(n_side_sets);
++      std::cout << "Total side sets: " << n_side_sets << std::endl;
++      
++      // Read nodeset info
++      {
++        ex_io_helper.read_nodeset_info();
++        
++        for (int nodeset=0; nodeset<ex_io_helper.num_node_sets; nodeset++)
++        {
++          int nodeset_id = ex_io_helper.get_node_set_id(nodeset);
++          
++          mesh.boundary_info->nodeset_name(nodeset_id) =
++          ex_io_helper.get_node_set_name(nodeset);
++          
++          ex_io_helper.read_nodeset(nodeset);
++          
++          const std::vector<int>& node_list = ex_io_helper.node_list;
++          
++          for(unsigned int node=0; node<node_list.size(); node++)
++          {
++            Node * node_ptr = mesh.query_node_ptr(node_list[node]);
++            if (node_ptr != NULL)
++              mesh.boundary_info->add_node(node_list[node], nodeset_id);
++          }
++        }
++      }
++      
++      
++      
++      libMesh::out << "Done adding elements to mesh: Now preparing for use " << std::endl;
++      
++      err = exII::ex_close(ex_io_helper.ex_id);
++      
++      
++      // For ParallelMesh, it seems that _is_serial is true by default.  A hack to
++      // make the Mesh think it's parallel might be to call:
++      mesh.update_post_partitioning();
++      mesh.delete_remote_elements();
++      
++      // now prepare for use
++      MeshCommunication().gather_neighboring_elements(libmesh_cast_ref<ParallelMesh&>(mesh));
++      
++      libMesh::out << "Done " << std::endl;
++      
++      STOP_LOG ("read()","Exodus_IO");
++      
++      return;
++    }
++  
++
+ 
+ void ExodusII_IO::verbose (bool set_verbosity)
+ {
+diff --git a/src/mesh/nemesis_io_helper.C b/src/mesh/nemesis_io_helper.C
+index f26164f..af8b6d5 100644
+--- a/src/mesh/nemesis_io_helper.C
++++ b/src/mesh/nemesis_io_helper.C
+@@ -1771,7 +1771,7 @@ void Nemesis_IO_Helper::build_element_and_node_maps(const MeshBase& pmesh)
+       */
+ 
+       this->subdomain_map[cur_subdomain].push_back
+-        (cast_int<subdomain_id_type>(elem->id()));
++        (cast_int<unsigned>(elem->id()));
+     }
+ 
+   // Set num_nodes which is used by exodusII_io_helper
+diff --git a/src/mesh/vtk_io.C b/src/mesh/vtk_io.C
+index 8714c5b..3f04348 100644
+--- a/src/mesh/vtk_io.C
++++ b/src/mesh/vtk_io.C
+@@ -202,9 +202,10 @@ void VTKIO::nodes_to_vtk()
+   // add points to grid
+   _vtk_grid->SetPoints(points);
+ }
++  
++  
+ 
+-
+-
++  
+ void VTKIO::cells_to_vtk()
+ {
+   const MeshBase& mesh = MeshOutput<MeshBase>::mesh();
+@@ -213,7 +214,7 @@ void VTKIO::cells_to_vtk()
+   vtkSmartPointer<vtkIdList> pts = vtkSmartPointer<vtkIdList>::New();
+ 
+   std::vector<int> types(mesh.n_active_local_elem());
+-  unsigned active_element_counter = 0;
++  unsigned int active_element_counter = 0;
+ 
+   vtkSmartPointer<vtkIntArray> elem_id = vtkSmartPointer<vtkIntArray>::New();
+   elem_id->SetName("libmesh_elem_id");
+@@ -225,7 +226,7 @@ void VTKIO::cells_to_vtk()
+ 
+   MeshBase::const_element_iterator it = mesh.active_local_elements_begin();
+   const MeshBase::const_element_iterator end = mesh.active_local_elements_end();
+-  for (; it != end; ++it, ++active_element_counter)
++  for (; it != end; ++it)
+     {
+       Elem *elem = *it;
+ 
+@@ -234,9 +235,9 @@ void VTKIO::cells_to_vtk()
+       // get the connectivity for this element
+       std::vector<dof_id_type> conn;
+       elem->connectivity(0, VTK, conn);
+-
++      
+       for (unsigned int i=0; i<conn.size(); ++i)
+-        {
++      {
+           // If the node ID is not found in the _local_node_map, we'll
+           // add it to the _vtk_grid.  NOTE[JWP]: none of the examples
+           // I have actually enters this section of code...
+@@ -266,8 +267,8 @@ void VTKIO::cells_to_vtk()
+           // Otherwise, the node ID was found in the _local_node_map, so
+           // insert it into the vtkIdList.
+           pts->InsertId(i, _local_node_map[conn[i]]);
+-        }
+-
++      }
++      
+       vtkIdType vtkcellid = cells->InsertNextCell(pts);
+       types[active_element_counter] =
+         cast_int<int>(this->get_elem_type(elem->type()));
+@@ -360,6 +361,7 @@ VTKIO::VTKIO (MeshBase& mesh, MeshData* mesh_data) :
+   MeshOutput<MeshBase>(mesh),
+   _mesh_data(mesh_data),
+   _compress(false),
++  _write_boundary_mesh(false),
+   _local_node_map()
+ {
+   _vtk_grid = NULL;
+@@ -373,6 +375,7 @@ VTKIO::VTKIO (const MeshBase& mesh, MeshData* mesh_data) :
+   MeshOutput<MeshBase>(mesh),
+   _mesh_data(mesh_data),
+   _compress(false),
++  _write_boundary_mesh(false),
+   _local_node_map()
+ {
+   _vtk_grid = NULL;
+@@ -381,6 +384,19 @@ VTKIO::VTKIO (const MeshBase& mesh, MeshData* mesh_data) :
+ 
+ 
+ 
++// Constructor for writing
++VTKIO::VTKIO (const MeshBase& mesh, bool write_boundary_mesh) :
++MeshOutput<MeshBase>(mesh),
++_mesh_data(NULL),
++_compress(false),
++_write_boundary_mesh(write_boundary_mesh),
++_local_node_map()
++{
++    _vtk_grid = NULL;
++    libmesh_experimental();
++}
++    
++
+ vtkUnstructuredGrid* VTKIO::get_vtk_grid()
+ {
+   return _vtk_grid;
+diff --git a/src/numerics/dense_matrix.C b/src/numerics/dense_matrix.C
+index 7ca4754..4077b88 100644
+--- a/src/numerics/dense_matrix.C
++++ b/src/numerics/dense_matrix.C
+@@ -394,7 +394,7 @@ void DenseMatrix<T>::vector_mult (DenseVector<T>& dest,
+     return;
+ 
+   if (this->use_blas_lapack)
+-    this->_matvec_blas(1., 0., dest, arg);
++    this->_matvec_blas((T)1., (T)0., dest, arg);
+   else
+     {
+       const unsigned int n_rows = this->m();
+@@ -434,7 +434,8 @@ void DenseMatrix<T>::vector_mult (DenseVector<typename CompareTypes<T,T2>::super
+ 
+ 
+ 
+-template<typename T>
++
++  template<typename T>
+ void DenseMatrix<T>::vector_mult_transpose (DenseVector<T>& dest,
+                                             const DenseVector<T>& arg) const
+ {
+@@ -451,7 +452,7 @@ void DenseMatrix<T>::vector_mult_transpose (DenseVector<T>& dest,
+ 
+   if (this->use_blas_lapack)
+     {
+-      this->_matvec_blas(1., 0., dest, arg, /*trans=*/true);
++      this->_matvec_blas((T)1., (T)0., dest, arg, /*trans=*/true);
+     }
+   else
+     {
+@@ -517,7 +518,7 @@ void DenseMatrix<T>::vector_mult_add (DenseVector<T>& dest,
+     }
+ 
+   if (this->use_blas_lapack)
+-    this->_matvec_blas(factor, 1., dest, arg);
++    this->_matvec_blas(factor, (T)1., dest, arg);
+   else
+     {
+       DenseVector<T> temp(arg.size());
+@@ -917,10 +918,10 @@ void DenseMatrix<T>::_cholesky_decompose ()
+ 
+           if (i == j)
+             {
+-#ifndef LIBMESH_USE_COMPLEX_NUMBERS
++/*#ifndef LIBMESH_USE_COMPLEX_NUMBERS
+               if (A(i,j) <= 0.0)
+                 libmesh_error_msg("Error! Can only use Cholesky decomposition with symmetric positive definite matrices.");
+-#endif
++#endif*/
+ 
+               A(i,i) = std::sqrt(A(i,j));
+             }
+@@ -1051,7 +1052,7 @@ LIBMESH_VMA_INSTANTIATE(Real,float,Real);
+ LIBMESH_VMA_INSTANTIATE(Real,double,Real);
+ #endif
+ 
+-#ifdef LIBMESH_USE_COMPLEX_NUMBERS
++  //#ifdef LIBMESH_USE_COMPLEX_NUMBERS
+ template class DenseMatrix<Complex>;
+ template void DenseMatrix<Complex>::cholesky_solve(const DenseVector<Complex>&,DenseVector<Complex>&);
+ template void DenseMatrix<Complex>::_cholesky_back_substitute(const DenseVector<Complex>&, DenseVector<Complex>&) const;
+@@ -1085,6 +1086,6 @@ LIBMESH_VMA_INSTANTIATE(Real,std::complex<double>,Complex);
+ LIBMESH_VMA_INSTANTIATE(Complex,std::complex<double>,Complex);
+ #endif
+ LIBMESH_VMA_INSTANTIATE(Complex,std::complex<double>,Real);
+-#endif
++  //#endif
+ 
+ } // namespace libMesh
+diff --git a/src/numerics/dense_matrix_base.C b/src/numerics/dense_matrix_base.C
+index e3a8d0b..4da5426 100644
+--- a/src/numerics/dense_matrix_base.C
++++ b/src/numerics/dense_matrix_base.C
+@@ -124,21 +124,49 @@ void DenseMatrixBase<T>::print_scientific (std::ostream& os) const
+ 
+ 
+ 
+-template<typename T>
+-void DenseMatrixBase<T>::print (std::ostream& os) const
++template<>
++void DenseMatrixBase<Real>::print (std::ostream& os) const
+ {
+-  for (unsigned int i=0; i<this->m(); i++)
++    unsigned int width = 17, precision = 9;
++    
++    out << "Size: " << this->m() << ",  " << this->n() << std::endl;
++    for (unsigned int i=0; i< this->m(); i++)
+     {
+-      for (unsigned int j=0; j<this->n(); j++)
+-        os << std::setw(8)
+-           << this->el(i,j) << " ";
+-
+-      os << std::endl;
++        for (unsigned int j=0; j < this->n(); j++)
++            if (this->el(i,j) == 0.0)
++                out << std::setw(width) << this->el(i,j);
++            else if (log10(fabs(this->el(i,j))) >= -1)
++                out << std::setw(width) << std::setprecision(precision) << this->el(i,j);
++            else
++                out << std::setw(width) << std::showpoint << std::setprecision(precision) << this->el(i,j);
++        out << std::endl;
+     }
+ 
+   return;
+ }
+ 
++    
++template<>
++void DenseMatrixBase<Complex>::print (std::ostream& os) const
++{
++    unsigned int width = 30, precision = 9;
++
++    out << "Size: " << this->m() << ",  " << this->n() << std::endl;
++    for (unsigned int i=0; i< this->m(); i++)
++    {
++        for (unsigned int j=0; j < this->n(); j++)
++            if (std::abs(this->el(i,j)) == 0.0)
++                out << std::setw(width) << this->el(i,j);
++            else if (log10(std::abs(this->el(i,j))) >= -1)
++                out << std::setw(width) << std::setprecision(precision) << this->el(i,j);
++            else
++                out << std::setw(width) << std::showpoint << std::setprecision(precision) << this->el(i,j);
++        out << std::endl;
++    }
++    
++    return;
++}
++
+ 
+ 
+ 
+@@ -151,8 +179,8 @@ void DenseMatrixBase<T>::print (std::ostream& os) const
+ // Explicit instantiations
+ template class DenseMatrixBase<Real>;
+ 
+-#ifdef LIBMESH_USE_COMPLEX_NUMBERS
++  //#ifdef LIBMESH_USE_COMPLEX_NUMBERS
+ template class DenseMatrixBase<Complex>;
+-#endif
++  //#endif
+ 
+ } // namespace libMesh
+diff --git a/src/numerics/dense_matrix_blas_lapack.C b/src/numerics/dense_matrix_blas_lapack.C
+index bdfeda9..c9c32cb 100644
+--- a/src/numerics/dense_matrix_blas_lapack.C
++++ b/src/numerics/dense_matrix_blas_lapack.C
+@@ -188,6 +188,13 @@ void DenseMatrix<T>::_multiply_blas(const DenseMatrixBase<T>& other,
+   this->_val.swap(result);
+ }
+ 
++  template<>
++  void DenseMatrix<Complex>::_multiply_blas(const DenseMatrixBase<Complex>& ,
++                                      _BLAS_Multiply_Flag )
++  {
++    libmesh_error_msg("No PETSc-provided BLAS/LAPACK available!");
++  }
++
+ #else
+ 
+ template<typename T>
+@@ -263,6 +270,12 @@ void DenseMatrix<T>::_lu_decompose_lapack ()
+   this->_decomposition_type = LU_BLAS_LAPACK;
+ }
+ 
++  template<>
++  void DenseMatrix<Complex>::_lu_decompose_lapack ()
++  {
++    libmesh_error_msg("No PETSc-provided BLAS/LAPACK available!");
++  }
++
+ #else
+ 
+ template<typename T>
+@@ -384,6 +397,81 @@ void DenseMatrix<T>::_svd_lapack (DenseVector<T>& sigma, DenseMatrix<T>& U, Dens
+ 
+ }
+ 
++    
++    // Hermitian
++    //extern "C"
++    //{
++    //    extern int dgeev_(char*, char*, int*, double*, int*, double*, double*, double*,
++    //                  int*, double*, int*, double*, int*, int*);
++  //}
++
++template<typename T>
++void DenseMatrix<T>::_nonhermitian_eig_lapack(DenseVector<T>& dreal, DenseVector<T>& dimag,
++                                              DenseMatrix<T>& vreal, DenseMatrix<T>& vimag)
++{
++    int dim = this->n();
++    dreal.resize(dim); dimag.resize(dim);
++    vreal.resize(dim, dim); vimag.resize(dim, dim);
++    
++    int lwork=16*dim, info=0;
++    std::vector<Real> &alpha_r = dreal.get_values(),
++    & alpha_i = dimag.get_values(),
++    &eig_vec_right = vreal.get_values(),
++    eig_vec_left(dim*dim), work(lwork);
++
++    char N='N',V='V';
++    
++    dgeev_(&N, &V, &dim, _val[0], &dim,
++           &(alpha_r[0]), &(alpha_i[0]), &(eig_vec_left[0]), &dim,
++           &(eig_vec_right[0]), &dim, &(work[0]), &lwork, &info);
++    
++    // check the convergence
++    if (info == 0)
++    {
++        // first copy the eigenvectors and eigenvalues to the solver data structure
++        // any complex eigenvalue appears in conjugate pairs, and the associated eigenvector would
++        // occupy two consecutive columns in the eigenvector matrices. Hence, one should look for conjugate pairs
++        
++        bool if_conjugate = false;
++        unsigned int eig_id = 0;
++        DenseVector<Real> tmp; tmp.resize(dim);
++        
++        while (eig_id < dim)
++        {
++            // if this is the last eigenvalue, then it is not conjugate
++            if (eig_id == dim-1)
++                if_conjugate = false;
++            else
++            {
++                // if the real part for two consecutive eigenvalues is the same, and imaginary part
++                // is opposite in sign, then it is a complex conjugate pair
++                if ((alpha_r[eig_id] == alpha_r[eig_id+1]) &&
++                    (alpha_i[eig_id] == -alpha_i[eig_id+1]))
++                    if_conjugate = true;
++                else
++                    if_conjugate = false;
++            }
++            
++            // look at the two
++            if (if_conjugate)
++            {
++                // first eigenvector (right)
++                vreal.get_column(eig_id+1, tmp); // imaginary part
++                vimag.set_column(eig_id, tmp);
++                tmp.scale(-1.);
++                vimag.set_column(eig_id, tmp); // conjugate
++                
++                vreal.get_column(eig_id, tmp); // real part
++                vreal.set_column(eig_id+1, tmp);
++                eig_id+=2;
++            }
++            else
++                eig_id+=1;
++        }
++    }
++}
++
++    
+ #if (LIBMESH_HAVE_PETSC && LIBMESH_USE_REAL_NUMBERS)
+ 
+ template<typename T>
+@@ -494,6 +582,15 @@ void DenseMatrix<T>::_svd_helper (char JOBU,
+     libmesh_error_msg("INFO=" << INFO << ", Error during Lapack SVD calculation!");
+ }
+ 
++  template<>
++  void DenseMatrix<Complex>::_svd_helper (char,
++                                    char,
++                                    std::vector<Complex>&,
++                                    std::vector<Complex>&,
++                                    std::vector<Complex>&)
++  {
++    libmesh_error_msg("No PETSc-provided BLAS/LAPACK available!");
++  }
+ 
+ #else
+ 
+@@ -515,7 +612,8 @@ void DenseMatrix<T>::_svd_helper (char,
+ #if (LIBMESH_HAVE_SLEPC && LIBMESH_USE_REAL_NUMBERS)
+ 
+ template<typename T>
+-void DenseMatrix<T>::_evd_lapack (DenseVector<T>& lambda_real, DenseVector<T>& lambda_imag)
++  template <typename T2>
++void DenseMatrix<T>::_evd_lapack (DenseVector<T2>& lambda_real, DenseVector<T2>& lambda_imag)
+ {
+   // The calling sequence for dgeev is:
+   // DGEEVX( BALANC, JOBVL, JOBVR, SENSE, N, A, LDA, WR, WI, VL, LDVL, VR,
+@@ -649,6 +747,14 @@ void DenseMatrix<T>::_evd_lapack (DenseVector<T>& lambda_real, DenseVector<T>& l
+     libmesh_error_msg("INFO=" << INFO << ", Error during Lapack eigenvalue calculation!");
+ }
+ 
++  template<>
++  template <>
++  void DenseMatrix<Complex>::_evd_lapack (DenseVector<Complex>& lambda_real, DenseVector<Complex>& lambda_imag)
++  {
++    libmesh_error_msg("No PETSc-provided BLAS/LAPACK available!");
++  }
++
++  
+ #else
+ 
+ template<typename T>
+@@ -738,6 +844,13 @@ void DenseMatrix<T>::_lu_back_substitute_lapack (const DenseVector<T>& b,
+   // b.swap(x);
+ }
+ 
++  template<>
++  void DenseMatrix<Complex>::_lu_back_substitute_lapack (const DenseVector<Complex>& ,
++                                                         DenseVector<Complex>& )
++  {
++    libmesh_error_msg("No PETSc-provided BLAS/LAPACK available!");
++  }
++
+ #else
+ 
+ template<typename T>
+@@ -756,9 +869,10 @@ void DenseMatrix<T>::_lu_back_substitute_lapack (const DenseVector<T>& ,
+ #if (LIBMESH_HAVE_PETSC && LIBMESH_USE_REAL_NUMBERS)
+ 
+ template<typename T>
+-void DenseMatrix<T>::_matvec_blas(T alpha, T beta,
+-                                  DenseVector<T>& dest,
+-                                  const DenseVector<T>& arg,
++template <typename T2>
++void DenseMatrix<T>::_matvec_blas(T2 alpha, T2 beta,
++				  DenseVector<T2>& dest,
++				  const DenseVector<T2>& arg,
+                                   bool trans) const
+ {
+   // Ensure that dest and arg sizes are compatible
+@@ -859,21 +973,31 @@ void DenseMatrix<T>::_matvec_blas(T alpha, T beta,
+   BLASgemv_(TRANS, &M, &N, &alpha, &(a[0]), &LDA, &(x[0]), &INCX, &beta, &(y[0]), &INCY);
+ }
+ 
++  template<>
++  template <>
++  void DenseMatrix<Complex>::_matvec_blas(Complex , Complex,
++                                    DenseVector<Complex>& ,
++                                    const DenseVector<Complex>&,
++                                    bool ) const
++  {
++    libmesh_error_msg("No PETSc-provided BLAS/LAPACK available!");
++  }
+ 
+-#else
++  #else
+ 
+ 
+ template<typename T>
+-void DenseMatrix<T>::_matvec_blas(T , T,
+-                                  DenseVector<T>& ,
+-                                  const DenseVector<T>&,
++template <typename T2>
++void DenseMatrix<T>::_matvec_blas(T2 , T2,
++				  DenseVector<T2>& ,
++				  const DenseVector<T2>&,
+                                   bool ) const
+ {
+   libmesh_error_msg("No PETSc-provided BLAS/LAPACK available!");
+ }
+ 
+ 
+-#endif
++  #endif
+ 
+ 
+ //--------------------------------------------------------------
+@@ -893,22 +1017,25 @@ template void DenseMatrix<Real>::_svd_helper (char, char, std::vector<Real>&,
+                                               std::vector<Real>& );
+ template void DenseMatrix<Real>::_evd_lapack(DenseVector<Real>&, DenseVector<Real>&);
+ 
+-#if !(LIBMESH_USE_REAL_NUMBERS)
+-template void DenseMatrix<Number>::_multiply_blas(const DenseMatrixBase<Number>&, _BLAS_Multiply_Flag);
+-template void DenseMatrix<Number>::_lu_decompose_lapack();
+-template void DenseMatrix<Number>::_lu_back_substitute_lapack(const DenseVector<Number>& ,
+-                                                              DenseVector<Number>&);
+-template void DenseMatrix<Number>::_matvec_blas(Number, Number,
+-                                                DenseVector<Number>& ,
+-                                                const DenseVector<Number>&,
+-                                                bool ) const;
+-template void DenseMatrix<Number>::_svd_lapack(DenseVector<Number>&);
+-template void DenseMatrix<Number>::_svd_lapack(DenseVector<Number>&, DenseMatrix<Number>&, DenseMatrix<Number>&);
+-template void DenseMatrix<Number>::_svd_helper (char, char, std::vector<Number>&,
+-                                                std::vector<Number>&,
+-                                                std::vector<Number>& );
+-template void DenseMatrix<Number>::_evd_lapack(DenseVector<Number>&, DenseVector<Number>&);
+-
+-#endif
++  //#if !(LIBMESH_USE_REAL_NUMBERS)
++template void DenseMatrix<Complex>::_multiply_blas(const DenseMatrixBase<Complex>&, _BLAS_Multiply_Flag);
++template void DenseMatrix<Complex>::_lu_decompose_lapack();
++template void DenseMatrix<Complex>::_lu_back_substitute_lapack(const DenseVector<Complex>& ,
++                                                              DenseVector<Complex>&);
++  template void DenseMatrix<Complex>::_matvec_blas<Complex>(Complex, Complex,
++					        DenseVector<Complex>& ,
++					        const DenseVector<Complex>&,
++						bool ) const;
++template void DenseMatrix<Complex>::_matvec_blas<Complex>(Complex, Complex,
++                                              DenseVector<Complex>& ,
++                                              const DenseVector<Complex>&,
++                                              bool ) const;
++template void DenseMatrix<Complex>::_svd_lapack(DenseVector<Complex>&);
++template void DenseMatrix<Complex>::_svd_lapack(DenseVector<Complex>&, DenseMatrix<Complex>&, DenseMatrix<Complex>&);
++template void DenseMatrix<Complex>::_svd_helper (char, char, std::vector<Complex>&,
++                                                std::vector<Complex>&,
++                                                std::vector<Complex>& );
++template void DenseMatrix<Complex>::_evd_lapack(DenseVector<Complex>&, DenseVector<Complex>&);
++  //#endif
+ 
+ } // namespace libMesh
+diff --git a/src/numerics/dense_submatrix.C b/src/numerics/dense_submatrix.C
+index 82cf133..d2e94df 100644
+--- a/src/numerics/dense_submatrix.C
++++ b/src/numerics/dense_submatrix.C
+@@ -67,8 +67,8 @@ void DenseSubMatrix<T>::right_multiply (const DenseMatrixBase<T>& M3)
+ // Explicit instantiations
+ template class DenseSubMatrix<Real>;
+ 
+-#ifdef LIBMESH_USE_COMPLEX_NUMBERS
++  //ifdef LIBMESH_USE_COMPLEX_NUMBERS
+ template class DenseSubMatrix<Complex>;
+-#endif
++  //#endif
+ 
+ } // namespace libMesh
+diff --git a/src/numerics/dense_subvector.C b/src/numerics/dense_subvector.C
+index cefba80..dc105ba 100644
+--- a/src/numerics/dense_subvector.C
++++ b/src/numerics/dense_subvector.C
+@@ -26,8 +26,8 @@ namespace libMesh
+ // Explicit instantiations
+ template class DenseSubVector<Real>;
+ 
+-#ifdef LIBMESH_USE_COMPLEX_NUMBERS
++  //#ifdef LIBMESH_USE_COMPLEX_NUMBERS
+ template class DenseSubVector<Complex>;
+-#endif
++  //#endif
+ 
+ } // namespace libMesh
+diff --git a/src/numerics/dense_vector_base.C b/src/numerics/dense_vector_base.C
+index 5503122..8f17dc2 100644
+--- a/src/numerics/dense_vector_base.C
++++ b/src/numerics/dense_vector_base.C
+@@ -72,8 +72,8 @@ void DenseVectorBase<T>::print (std::ostream& os) const
+ // Explicit instantiations
+ template class DenseVectorBase<Real>;
+ 
+-#ifdef LIBMESH_USE_COMPLEX_NUMBERS
++  //#ifdef LIBMESH_USE_COMPLEX_NUMBERS
+ template class DenseVectorBase<Complex>;
+-#endif
++  //#endif
+ 
+ } // namespace libMesh
+diff --git a/src/solvers/eigen_time_solver.C b/src/solvers/eigen_time_solver.C
+index acf7520..8449618 100644
+--- a/src/solvers/eigen_time_solver.C
++++ b/src/solvers/eigen_time_solver.C
+@@ -96,6 +96,8 @@ void EigenTimeSolver::solve ()
+   _system.matrix =   &( _system.get_matrix ("System Matrix") );
+   this->now_assembling = Matrix_A;
+   _system.assembly(true, true);
++  _system.rhs->close();
++  _system.matrix->close();
+   //_system.matrix->print_matlab("matrix_A.m");
+ 
+   // Point the system's matrix at B, call assembly again.
+@@ -104,6 +106,8 @@ void EigenTimeSolver::solve ()
+   _system.matrix =   &( _system.get_matrix ("B") );
+   this->now_assembling = Matrix_B;
+   _system.assembly(true, true);
++  _system.rhs->close();
++  _system.matrix->close();
+   //_system.matrix->print_matlab("matrix_B.m");
+ 
+   // Send matrices A, B to Steffen's SlepcEigenSolver interface
+diff --git a/src/solvers/slepc_eigen_solver.C b/src/solvers/slepc_eigen_solver.C
+index ecad096..497d3b3 100644
+--- a/src/solvers/slepc_eigen_solver.C
++++ b/src/solvers/slepc_eigen_solver.C
+@@ -669,21 +669,42 @@ void SlepcEigenSolver<T>:: set_slepc_position_of_spectrum()
+ 
+ template <typename T>
+ std::pair<Real, Real> SlepcEigenSolver<T>::get_eigenpair(unsigned int i,
+-                                                         NumericVector<T> &solution_in)
++                                                         NumericVector<T> &eig_vec,
++                                                         NumericVector<T> *eig_vec_im)
+ {
++  // make sure that for non-Hermitian problems with real matrices
++  // a vector is provided for imaginary part.
++#ifdef LIBMESH_USE_COMPLEX_NUMBERS
++  libmesh_assert(eig_vec_im == NULL);
++#else
++  if (this->eigen_problem_type() == HEP ||
++      this->eigen_problem_type() == GHEP)
++    libmesh_assert(eig_vec_im == NULL);
++#endif
++
+   PetscErrorCode ierr=0;
+ 
+   PetscReal re, im;
+ 
+   // Make sure the NumericVector passed in is really a PetscVector
+-  PetscVector<T>* solution = cast_ptr<PetscVector<T>*>(&solution_in);
++  PetscVector<T>* v_re = cast_ptr<PetscVector<T>*>(&eig_vec);
++  PetscVector<T>* v_im = NULL;
+ 
+   // real and imaginary part of the ith eigenvalue.
+   PetscScalar kr, ki;
+ 
+-  solution->close();
++  eig_vec.close();
++  if (eig_vec_im)
++  {
++    eig_vec_im = libmesh_cast_ptr<PetscVector<T>*>(eig_vec_im);
++    eig_vec_im->close();
++    
++    // now get the eigenvector
++    ierr = EPSGetEigenpair(_eps, i, &kr, &ki, v_re->vec(), v_im->vec());
++  }
++  else
++    ierr = EPSGetEigenpair(_eps, i, &kr, &ki, v_re->vec(), PETSC_NULL);
+ 
+-  ierr = EPSGetEigenpair(_eps, i, &kr, &ki, solution->vec(), PETSC_NULL);
+   LIBMESH_CHKERRABORT(ierr);
+ 
+ #ifdef LIBMESH_USE_COMPLEX_NUMBERS
+@@ -697,6 +718,85 @@ std::pair<Real, Real> SlepcEigenSolver<T>::get_eigenpair(unsigned int i,
+   return std::make_pair(re, im);
+ }
+ 
++  
++  
++template <typename T>
++void SlepcEigenSolver<T>::get_right_eigenvector(unsigned int i,
++                                                NumericVector<T> &eig_vec,
++                                                NumericVector<T> *eig_vec_im)
++{
++  // make sure that for non-Hermitian problems with real matrices
++  // a vector is provided for imaginary part.
++#ifdef LIBMESH_USE_COMPLEX_NUMBERS
++  libmesh_assert(eig_vec_im == NULL);
++#else
++  if (this->eigen_problem_type() == HEP ||
++      this->eigen_problem_type() == GHEP)
++    libmesh_assert(eig_vec_im == NULL);
++#endif
++
++  PetscErrorCode ierr=0;
++  
++  // Make sure the NumericVector passed in is really a PetscVector
++  PetscVector<T>* v_re = libmesh_cast_ptr<PetscVector<T>*>(&eig_vec);
++  PetscVector<T>* v_im = NULL;
++  
++  eig_vec.close();
++  if (eig_vec_im)
++  {
++    eig_vec_im = libmesh_cast_ptr<PetscVector<T>*>(eig_vec_im);
++    eig_vec_im->close();
++
++    // now get the eigenvector
++    ierr = EPSGetEigenvector(_eps, i, v_re->vec(), v_im->vec());
++  }
++  else
++    ierr = EPSGetEigenvector(_eps, i, v_re->vec(), PETSC_NULL);
++
++  
++  LIBMESH_CHKERRABORT(ierr);
++}
++
++  
++/*
++template <typename T>
++void SlepcEigenSolver<T>::get_left_eigenvector(unsigned int i,
++                                               NumericVector<T> &eig_vec,
++                                               NumericVector<T> *eig_vec_im)
++{
++  // make sure that for non-Hermitian problems with real matrices
++  // a vector is provided for imaginary part.
++#ifdef LIBMESH_USE_COMPLEX_NUMBERS
++  libmesh_assert(eig_vec_im == NULL);
++#else
++  if (this->eigen_problem_type() == HEP ||
++      this->eigen_problem_type() == GHEP)
++    libmesh_assert(eig_vec_im == NULL);
++#endif
++  
++  PetscErrorCode ierr=0;
++  
++  // Make sure the NumericVector passed in is really a PetscVector
++  PetscVector<T>* v_re = libmesh_cast_ptr<PetscVector<T>*>(&eig_vec);
++  PetscVector<T>* v_im = NULL;
++  
++  eig_vec.close();
++  if (eig_vec_im)
++  {
++    eig_vec_im = libmesh_cast_ptr<PetscVector<T>*>(eig_vec_im);
++    eig_vec_im->close();
++    
++    // now get the eigenvector
++    ierr = EPSGetEigenvectorLeft(_eps, i, v_re->vec(), v_im->vec());
++  }
++  else
++    ierr = EPSGetEigenvectorLeft(_eps, i, v_re->vec(), PETSC_NULL);
++  
++  
++  LIBMESH_CHKERRABORT(ierr);
++}
++*/
++  
+ 
+ template <typename T>
+ std::pair<Real, Real> SlepcEigenSolver<T>::get_eigenvalue(unsigned int i)
+diff --git a/src/systems/condensed_eigen_system.C b/src/systems/condensed_eigen_system.C
+index 254a0d7..69a75b5 100644
+--- a/src/systems/condensed_eigen_system.C
++++ b/src/systems/condensed_eigen_system.C
+@@ -175,41 +175,80 @@ void CondensedEigenSystem::solve()
+ 
+ 
+ 
+-std::pair<Real, Real> CondensedEigenSystem::get_eigenpair(unsigned int i)
++std::pair<Real, Real> CondensedEigenSystem::get_eigenpair(unsigned int i,
++                                                          NumericVector<Number>* vec_re,
++                                                          NumericVector<Number>* vec_im)
+ {
+   START_LOG("get_eigenpair()", "CondensedEigenSystem");
+ 
+   // If we haven't initialized any condensed dofs,
+   // just use the default eigen_system
+   if(!condensed_dofs_initialized)
+-    {
+-      STOP_LOG("get_eigenpair()", "CondensedEigenSystem");
+-      return Parent::get_eigenpair(i);
+-    }
++  {
++    STOP_LOG("get_eigenpair()", "CondensedEigenSystem");
++    return Parent::get_eigenpair(i, vec_re, vec_im);
++  }
+ 
+   // If we reach here, then there should be some non-condensed dofs
+   libmesh_assert(!local_non_condensed_dofs_vector.empty());
+ 
++  
++  NumericVector<Number>* sol_re = NULL;
++#ifdef LIBMESH_USE_COMPLEX_NUMBERS
++  libmesh_assert (vec_im == NULL);
++#else
++  if (this->get_eigenproblem_type() == HEP ||
++      this->get_eigenproblem_type() == GHEP)
++    libmesh_assert (vec_im == NULL);
++#endif
++  
++  sol_re = vec_re;
++  
++  if (sol_re == NULL)
++    sol_re = this->solution.get();
++
++  
+   // This function assumes that condensed_solve has just been called.
+   // If this is not the case, then we will trip an asset in get_eigenpair
+-  AutoPtr< NumericVector<Number> > temp = NumericVector<Number>::build(this->comm());
++  AutoPtr< NumericVector<Number> > temp_re = NumericVector<Number>::build(this->comm()),
++  temp_im;
++  
+   unsigned int n_local = local_non_condensed_dofs_vector.size();
+   unsigned int n       = n_local;
+   this->comm().sum(n);
++  
++  temp_re->init (n, n_local, false, PARALLEL);
+ 
+-  temp->init (n, n_local, false, PARALLEL);
++  if (vec_im)
++  {
++    temp_im.reset(NumericVector<Number>::build(this->comm()).release());
++    temp_im->init (n, n_local, false, PARALLEL);
++  }
+ 
+-  std::pair<Real, Real> eval = eigen_solver->get_eigenpair (i, *temp);
++  std::pair<Real, Real> eval = eigen_solver->get_eigenpair (i, *temp_re, temp_im.get());
+ 
+   // Now map temp to solution. Loop over local entries of local_non_condensed_dofs_vector
+-  this->solution->zero();
++  // the real part
++  sol_re->zero();
+   for (unsigned int j=0; j<local_non_condensed_dofs_vector.size(); j++)
++  {
++    unsigned int index = local_non_condensed_dofs_vector[j];
++    sol_re->set(index,(*temp_re)(temp_re->first_local_index()+j));
++  }
++  sol_re->close();
++  
++  // now the imaginary part if it was provided
++  if (vec_im)
++  {
++    vec_im->zero();
++    for (unsigned int j=0; j<local_non_condensed_dofs_vector.size(); j++)
+     {
+       unsigned int index = local_non_condensed_dofs_vector[j];
+-      solution->set(index,(*temp)(temp->first_local_index()+j));
++      vec_im->set(index,(*temp_im)(temp_im->first_local_index()+j));
+     }
++    vec_im->close();
++  }
+ 
+-  solution->close();
+   this->update();
+ 
+   STOP_LOG("get_eigenpair()", "CondensedEigenSystem");
+diff --git a/src/systems/eigen_system.C b/src/systems/eigen_system.C
+index 6eb18d5..79670b7 100644
+--- a/src/systems/eigen_system.C
++++ b/src/systems/eigen_system.C
+@@ -31,6 +31,9 @@
+ #include "libmesh/eigen_solver.h"
+ #include "libmesh/dof_map.h"
+ #include "libmesh/mesh_base.h"
++#include "libmesh/parameter_vector.h"
++#include "libmesh/numeric_vector.h"
++
+ 
+ namespace libMesh
+ {
+@@ -49,7 +52,9 @@ EigenSystem::EigenSystem (EquationSystems& es,
+   _n_converged_eigenpairs (0),
+   _n_iterations           (0),
+   _is_generalized_eigenproblem (false),
+-  _eigen_problem_type (NHEP)
++  _eigen_problem_type (NHEP),
++  _eigenproblem_sensitivity_assemble_system_function(NULL),
++  _eigenproblem_sensitivity_assemble_system_object(NULL)
+ {
+ }
+ 
+@@ -256,6 +261,100 @@ void EigenSystem::solve ()
+ 
+ }
+ 
++  
++std::pair<unsigned int, Real>
++EigenSystem::sensitivity_solve (const ParameterVector& parameters,
++                                std::vector<Number>& sens)
++  {
++    // make sure that eigensolution is already available
++    libmesh_assert(_n_converged_eigenpairs);
++    
++    // the sensitivity is calculated based on the inner product of the left and
++    // right eigen vectors.
++    //
++    //    y^T [A] x - lambda y^T [B] x = 0
++    //    where y and x are the left and right eigenvectors
++    //    d lambda/dp = (y^T (d[A]/dp - lambda d[B]/dp) x) / (y^T [B] x)
++    //
++    //    the denominator remain constant for all sensitivity calculations.
++    //
++    std::vector<Number> denom(_n_converged_eigenpairs, 0.);
++    sens.resize(_n_converged_eigenpairs*parameters.size(), 0.);
++    std::pair<Real, Real> eig_val;
++    
++    AutoPtr< NumericVector<Number> > x_right = NumericVector<Number>::build(this->comm()),
++    x_left = NumericVector<Number>::build(this->comm()),
++    tmp = NumericVector<Number>::build(this->comm());
++    x_right->init(this->n_dofs(), this->n_local_dofs(), false, solution->type());
++    x_left->init(this->n_dofs(), this->n_local_dofs(), false, solution->type());
++    tmp->init(this->n_dofs(), this->n_local_dofs(), false, solution->type());
++    
++    for (unsigned int i=0; i<_n_converged_eigenpairs; i++)
++    {
++      switch (_eigen_problem_type) {
++        case HEP:
++          // right and left eigenvectors are same
++          // imaginary part of eigenvector for real matrices is zero
++          this->get_eigenpair(i, x_right.get(), NULL);
++          denom[i] = x_right->dot(*x_right);               // x^H x
++          break;
++          
++        case GHEP:
++          // imaginary part of eigenvector for real matrices is zero
++          this->get_eigenpair(i, x_right.get(), NULL);
++          matrix_B->vector_mult(*tmp, *x_right);
++          denom[i] = x_right->dot(*tmp);                  // x^H B x
++          break;
++          
++        default:
++          // to be implemented for the non-Hermitian problems
++          libmesh_error();
++          break;
++      }
++    }
++    
++    unsigned int num;
++    for (unsigned int p=0; p<parameters.size(); p++)
++    {
++      // calculate sensitivity of matrix quantities
++      this->solution->zero();
++      this->assemble_eigensystem_sensitivity(parameters, p);
++      
++      // now calculate sensitivity of each eigenvalue for the parameter
++      for (unsigned int i=0; i<_n_converged_eigenpairs; i++)
++      {
++        num = p*_n_converged_eigenpairs+i;
++        switch (_eigen_problem_type)
++        {
++          case HEP:
++            eig_val = this->get_eigenpair(i, x_right.get());
++            matrix_A->vector_mult(*tmp, *x_right);
++            sens[num] = x_right->dot(*tmp);                     // x^H A' x
++            sens[num]-= eig_val.first * x_right->dot(*x_right); // - lambda x^H x
++            sens[num] /= denom[i];                              // x^H x
++            break;
++
++          case GHEP:
++            eig_val = this->get_eigenpair(i, x_right.get());
++            matrix_A->vector_mult(*tmp, *x_right);
++            sens[num] = x_right->dot(*tmp);                 // x^H A' x
++            matrix_B->vector_mult(*tmp, *x_right);
++            sens[num]-= eig_val.first * x_right->dot(*tmp); // - lambda x^H B' x
++            sens[num] /= denom[i];                          // x^H B x
++            break;
++            
++          default:
++            // to be implemented for the non-Hermitian problems
++            libmesh_error();
++            break;
++        }
++      }
++    }
++    
++    return std::pair<unsigned int, Real> (0, 0.);
++  }
++
++  
+ 
+ void EigenSystem::assemble ()
+ {
+@@ -266,12 +365,116 @@ void EigenSystem::assemble ()
+ }
+ 
+ 
+-std::pair<Real, Real> EigenSystem::get_eigenpair (unsigned int i)
++std::pair<Real, Real> EigenSystem::get_eigenpair (unsigned int i,
++                                                  NumericVector<Number>* vec_re,
++                                                  NumericVector<Number>* vec_im)
+ {
++  NumericVector<Number>* sol_re = NULL;
++#ifdef LIBMESH_USE_COMPLEX_NUMBERS
++  libmesh_assert (vec_im == NULL);
++#else
++  if (_eigen_problem_type == HEP ||
++      _eigen_problem_type == GHEP)
++    libmesh_assert (vec_im == NULL);
++#endif
++  
++  sol_re = vec_re;
++  
++  if (sol_re == NULL)
++    sol_re = this->solution.get();
++  
+   // call the eigen_solver get_eigenpair method
+-  return eigen_solver->get_eigenpair (i, *solution);
++  return eigen_solver->get_eigenpair (i, *sol_re, vec_im);
++}
++
++  
++  
++bool EigenSystem::user_eigensystem_sensitivity_assemble(const ParameterVector& parameters,
++                                                        const unsigned int p)
++{
++  bool rval = false;
++  
++  // Call the user-provided assembly function,
++  // if it was provided
++  if (_eigenproblem_sensitivity_assemble_system_function != NULL)
++    rval = this->_eigenproblem_sensitivity_assemble_system_function (this->get_equation_systems(),
++                                                                     this->name(),
++                                                                     parameters,
++                                                                     p,
++                                                                     matrix_A,
++                                                                     matrix_B);
++  
++  // ...or the user-provided assembly object.
++  else if (_eigenproblem_sensitivity_assemble_system_object != NULL)
++    rval = this->_eigenproblem_sensitivity_assemble_system_object->sensitivity_assemble
++    (parameters, p, matrix_A, matrix_B);
++  
++
++  return rval;
++}
++
++  
++
++  
++void EigenSystem::assemble_eigensystem_sensitivity(const ParameterVector& parameters,
++                                                   const unsigned int p)
++{
++  // if this has not been calculated by the use provided routines, then
++  // use central differencing to calculate the sensitivity matrices
++  if (!this->user_eigensystem_sensitivity_assemble(parameters, p))
++  {
++    libMesh::err << "Error: EigenSystem is currently not setup to calculate matrix "
++    << "sensitivity using finite differencing!";
++    libmesh_error();
++  }
++}
++
++  
++void EigenSystem::attach_eigenproblem_sensitivity_assemble_function
++  (bool fptr(EquationSystems& es,
++             const std::string& name,
++             const ParameterVector& parameters,
++             const unsigned int i,
++             SparseMatrix<Number>* sensitivity_A,
++             SparseMatrix<Number>* sensitivity_B))
++{
++  libmesh_assert(fptr);
++  
++  if (_eigenproblem_sensitivity_assemble_system_object != NULL)
++  {
++    libmesh_here();
++    libMesh::out << "WARNING:  Cannot specify both assembly sensitivity function and object!"
++    << std::endl;
++    
++    _eigenproblem_sensitivity_assemble_system_object = NULL;
++  }
++  
++  _eigenproblem_sensitivity_assemble_system_function = fptr;
++}
++  
++
++void EigenSystem::attach_eigenproblem_sensitivity_assemble_object (EigenproblemSensitivityAssembly& assemble)
++{
++  if (_eigenproblem_sensitivity_assemble_system_function != NULL)
++  {
++    libmesh_here();
++    libMesh::out << "WARNING:  Cannot specify both assembly object and function!"
++    << std::endl;
++    
++    _eigenproblem_sensitivity_assemble_system_function = NULL;
++  }
++  
++  _eigenproblem_sensitivity_assemble_system_object = &assemble;
++}
++
++  
++void EigenSystem::reset_eigenproblem_sensitivity_assembly ()
++{
++  _eigenproblem_sensitivity_assemble_system_function = NULL;
++  _eigenproblem_sensitivity_assemble_system_object   = NULL;
+ }
+ 
++  
+ } // namespace libMesh
+ 
+ #endif // LIBMESH_HAVE_SLEPC
+diff --git a/src/systems/equation_systems.C b/src/systems/equation_systems.C
+index 48142ee..b1da089 100644
+--- a/src/systems/equation_systems.C
++++ b/src/systems/equation_systems.C
+@@ -806,7 +806,7 @@ void EquationSystems::build_solution_vector (std::vector<Number>& soln,
+                   for (unsigned int i=0; i<dof_indices.size(); i++)
+                     elem_soln[i] = sys_soln(dof_indices[i]);
+ 
+-                  FEInterface::nodal_soln (dim,
++                  FEInterface::nodal_soln (elem->dim(),
+                                            fe_type,
+                                            elem,
+                                            elem_soln,
+@@ -1083,11 +1083,11 @@ void EquationSystems::build_discontinuous_solution_vector (std::vector<Number>&
+                     for (unsigned int i=0; i<dof_indices.size(); i++)
+                       elem_soln[i] = sys_soln[dof_indices[i]];
+ 
+-                    FEInterface::nodal_soln (dim,
+-                                             fe_type,
+-                                             elem,
+-                                             elem_soln,
+-                                             nodal_soln);
++                  FEInterface::nodal_soln (elem->dim(),
++                                           fe_type,
++                                           elem,
++                                           elem_soln,
++                                           nodal_soln);
+ 
+ #ifdef LIBMESH_ENABLE_INFINITE_ELEMENTS
+                     // infinite elements should be skipped...
+diff --git a/src/systems/implicit_system.C b/src/systems/implicit_system.C
+index 7297b6e..72d16f5 100644
+--- a/src/systems/implicit_system.C
++++ b/src/systems/implicit_system.C
+@@ -316,7 +316,12 @@ ImplicitSystem::sensitivity_solve (const ParameterVector& parameters)
+       this->matrix->close();
+ 
+       // Reset and build the RHS from the residual derivatives
+-      this->assemble_residual_derivatives(parameters);
++      for (unsigned int p=0; p<parameters.size(); p++)
++      {
++        NumericVector<Number> &sensitivity_rhs = this->add_sensitivity_rhs(p);
++        this->assemble_residual_derivative(parameters, p,
++                                           sensitivity_rhs);
++      }
+     }
+ 
+   // The sensitivity problem is linear
+@@ -651,35 +656,38 @@ ImplicitSystem::weighted_sensitivity_solve (const ParameterVector& parameters,
+ 
+ 
+ 
+-void ImplicitSystem::assemble_residual_derivatives(const ParameterVector& parameters)
+-{
+-  const unsigned int Np = cast_int<unsigned int>
+-    (parameters.size());
+-  Real deltap = TOLERANCE;
+-
+-  for (unsigned int p=0; p != Np; ++p)
++void ImplicitSystem::assemble_residual_derivative(const ParameterVector& parameters,
++                                                  const unsigned int p,
++                                                  NumericVector<Number>& sensitivity_rhs)
++  {
++    Real deltap = TOLERANCE;
++    
++    // Call the user-provided sensitivity assembly function,
++    // if it was provided
++    if (!user_sensitivity_assembly(parameters, p, sensitivity_rhs))
+     {
+-      NumericVector<Number> &sensitivity_rhs = this->add_sensitivity_rhs(p);
+-
++      // use the system provided finite difference routine if no
++      // user provided routine was available
++      
+       // Approximate -(partial R / partial p) by
+       // (R(p-dp) - R(p+dp)) / (2*dp)
+-
++      
+       Number old_parameter = *parameters[p];
+       *parameters[p] -= deltap;
+-
++      
+       this->assembly(true, false);
+       this->rhs->close();
+       sensitivity_rhs = *this->rhs;
+-
++      
+       *parameters[p] = old_parameter + deltap;
+-
++      
+       this->assembly(true, false);
+       this->rhs->close();
+-
++      
+       sensitivity_rhs -= *this->rhs;
+       sensitivity_rhs /= (2*deltap);
+       sensitivity_rhs.close();
+-
++      
+       *parameters[p] = old_parameter;
+     }
+ }
+@@ -696,9 +704,6 @@ void ImplicitSystem::adjoint_qoi_parameter_sensitivity
+   const unsigned int Nq = cast_int<unsigned int>
+     (qoi.size());
+ 
+-  // We currently get partial derivatives via central differencing
+-  const Real delta_p = TOLERANCE;
+-
+   // An introduction to the problem:
+   //
+   // Residual R(u(p),p) = 0
+@@ -743,6 +748,10 @@ void ImplicitSystem::adjoint_qoi_parameter_sensitivity
+   // to derive an equivalent equation:
+   // dq/dp = (partial q / partial p) - (z+phi) * (partial R / partial p)
+ 
++  AutoPtr<NumericVector<Number> >
++  partialR_partialp(NumericVector<Number>::build(this->rhs->comm()).release());
++  partialR_partialp->init(*this->solution);
++    
+ 
+   // If we have non-zero adjoint dofs on Dirichlet constrained
+   // boundary dofs, then we need the residual components
+@@ -756,46 +765,15 @@ void ImplicitSystem::adjoint_qoi_parameter_sensitivity
+ 
+   for (unsigned int j=0; j != Np; ++j)
+     {
+-      // (partial q / partial p) ~= (q(p+dp)-q(p-dp))/(2*dp)
+-      // (partial R / partial p) ~= (rhs(p+dp) - rhs(p-dp))/(2*dp)
+-
+-      Number old_parameter = *parameters[j];
+-      // Number old_qoi = this->qoi;
+-
+-      *parameters[j] = old_parameter - delta_p;
+-      this->assemble_qoi(qoi_indices);
+-      std::vector<Number> qoi_minus = this->qoi;
+-
+-      this->assembly(true, false);
+-      this->rhs->close();
+-
+-      // FIXME - this can and should be optimized to avoid the clone()
+-      AutoPtr<NumericVector<Number> > partialR_partialp = this->rhs->clone();
+-      *partialR_partialp *= -1;
+-
+-      *parameters[j] = old_parameter + delta_p;
+-      this->assemble_qoi(qoi_indices);
+-      std::vector<Number>& qoi_plus = this->qoi;
+-
+       std::vector<Number> partialq_partialp(Nq, 0);
++      this->assemble_residual_derivative(parameters, j,
++                                         *partialR_partialp);
++      this->assemble_qoi_parameter_partial_derivative(qoi_indices, parameters,
++                                                      j, partialq_partialp);
++      
+       for (unsigned int i=0; i != Nq; ++i)
+         if (qoi_indices.has_index(i))
+-          partialq_partialp[i] = (qoi_plus[i] - qoi_minus[i]) / (2.*delta_p);
+-
+-      this->assembly(true, false);
+-      this->rhs->close();
+-      *partialR_partialp += *this->rhs;
+-      *partialR_partialp /= (2.*delta_p);
+-
+-      // Don't leave the parameter changed
+-      *parameters[j] = old_parameter;
+-
+-      for (unsigned int i=0; i != Nq; ++i)
+-        if (qoi_indices.has_index(i))
+-          {
+-            sensitivities[i][j] = partialq_partialp[i] -
+-              partialR_partialp->dot(this->get_adjoint_solution(i));
+-
++        {
+             if (this->get_dof_map().has_adjoint_dirichlet_boundaries(i))
+               {
+                 AutoPtr<NumericVector<Number> > lift_func =
+@@ -831,9 +809,6 @@ void ImplicitSystem::forward_qoi_parameter_sensitivity
+   const unsigned int Nq = cast_int<unsigned int>
+     (qoi.size());
+ 
+-  // We currently get partial derivatives via central differencing
+-  const Real delta_p = TOLERANCE;
+-
+   // An introduction to the problem:
+   //
+   // Residual R(u(p),p) = 0
+@@ -872,25 +847,10 @@ void ImplicitSystem::forward_qoi_parameter_sensitivity
+ 
+   for (unsigned int j=0; j != Np; ++j)
+     {
+-      // (partial q / partial p) ~= (q(p+dp)-q(p-dp))/(2*dp)
+-
+-      Number old_parameter = *parameters[j];
+-
+-      *parameters[j] = old_parameter - delta_p;
+-      this->assemble_qoi();
+-      std::vector<Number> qoi_minus = this->qoi;
+-
+-      *parameters[j] = old_parameter + delta_p;
+-      this->assemble_qoi();
+-      std::vector<Number>& qoi_plus = this->qoi;
+ 
+       std::vector<Number> partialq_partialp(Nq, 0);
+-      for (unsigned int i=0; i != Nq; ++i)
+-        if (qoi_indices.has_index(i))
+-          partialq_partialp[i] = (qoi_plus[i] - qoi_minus[i]) / (2.*delta_p);
+-
+-      // Don't leave the parameter changed
+-      *parameters[j] = old_parameter;
++      this->assemble_qoi_parameter_partial_derivative(qoi_indices, parameters,
++                                                      j, partialq_partialp);
+ 
+       for (unsigned int i=0; i != Nq; ++i)
+         if (qoi_indices.has_index(i))
+@@ -908,6 +868,50 @@ void ImplicitSystem::forward_qoi_parameter_sensitivity
+   this->assemble_qoi(qoi_indices);
+ }
+ 
++  
++
++  
++void ImplicitSystem::assemble_qoi_parameter_partial_derivative(const QoISet&          qoi_indices,
++                                                               const ParameterVector& parameters,
++                                                               const unsigned int j,
++                                                               std::vector<Number>& partialq_partialp)
++{
++  // check if the user supplied routine are able to provide this data
++  if (!this->user_QOI_parameter_sensitivity(qoi_indices, parameters,
++                                            j, partialq_partialp))
++  {
++    
++    const unsigned int Nq = libmesh_cast_int<unsigned int>
++    (qoi.size());
++    
++    // We currently get partial derivatives via central differencing
++    const Real delta_p = TOLERANCE;
++    
++    // (partial q / partial p) ~= (q(p+dp)-q(p-dp))/(2*dp)
++    // (partial R / partial p) ~= (rhs(p+dp) - rhs(p-dp))/(2*dp)
++    
++    Number old_parameter = *parameters[j];
++    // Number old_qoi = this->qoi;
++    
++    *parameters[j] = old_parameter - delta_p;
++    this->assemble_qoi(qoi_indices);
++    std::vector<Number> qoi_minus = this->qoi;
++    
++    *parameters[j] = old_parameter + delta_p;
++    this->assemble_qoi(qoi_indices);
++    std::vector<Number>& qoi_plus = this->qoi;
++    
++    for (unsigned int i=0; i != Nq; ++i)
++      if (qoi_indices.has_index(i))
++        partialq_partialp[i] = (qoi_plus[i] - qoi_minus[i]) / (2.*delta_p);
++    
++    // Don't leave the parameter changed
++    *parameters[j] = old_parameter;
++  }
++}
++  
++  
++
+ 
+ 
+ void ImplicitSystem::qoi_parameter_hessian_vector_product
+diff --git a/src/systems/system.C b/src/systems/system.C
+index a0b2f1b..3bf2d6a 100644
+--- a/src/systems/system.C
++++ b/src/systems/system.C
+@@ -56,35 +56,39 @@ System::System (EquationSystems& es,
+                 const std::string& name_in,
+                 const unsigned int number_in) :
+ 
+-  ParallelObject                    (es),
+-  assemble_before_solve             (true),
+-  use_fixed_solution                (false),
+-  extra_quadrature_order            (0),
+-  solution                          (NumericVector<Number>::build(this->comm())),
+-  current_local_solution            (NumericVector<Number>::build(this->comm())),
+-  time                              (0.),
+-  qoi                               (0),
+-  _init_system_function             (NULL),
+-  _init_system_object               (NULL),
+-  _assemble_system_function         (NULL),
+-  _assemble_system_object           (NULL),
+-  _constrain_system_function        (NULL),
+-  _constrain_system_object          (NULL),
+-  _qoi_evaluate_function            (NULL),
+-  _qoi_evaluate_object              (NULL),
+-  _qoi_evaluate_derivative_function (NULL),
+-  _qoi_evaluate_derivative_object   (NULL),
+-  _dof_map                          (new DofMap(number_in, *this)),
+-  _equation_systems                 (es),
+-  _mesh                             (es.get_mesh()),
+-  _sys_name                         (name_in),
+-  _sys_number                       (number_in),
+-  _active                           (true),
+-  _solution_projection              (true),
+-  _basic_system_only                (false),
+-  _can_add_vectors                  (true),
+-  _identify_variable_groups         (true),
+-  _additional_data_written          (false),
++  ParallelObject                               (es),
++  assemble_before_solve                        (true),
++  use_fixed_solution                           (false),
++  extra_quadrature_order                       (0),
++  solution                                     (NumericVector<Number>::build(this->comm())),
++  current_local_solution                       (NumericVector<Number>::build(this->comm())),
++  time                                         (0.),
++  qoi                                          (0),
++  _init_system_function                        (NULL),
++  _init_system_object                          (NULL),
++  _assemble_system_function                    (NULL),
++  _sensitivity_assemble_system_function        (NULL),
++  _assemble_system_object                      (NULL),
++  _sensitivity_assemble_system_object          (NULL),
++  _constrain_system_function                   (NULL),
++  _constrain_system_object                     (NULL),
++  _qoi_evaluate_function                       (NULL),
++  _qoi_evaluate_object                         (NULL),
++  _qoi_evaluate_derivative_function            (NULL),
++  _qoi_evaluate_derivative_object              (NULL),
++  _qoi_evaluate_parameter_sensitivity_function (NULL),
++  _qoi_evaluate_parameter_sensitivity_object   (NULL),
++  _dof_map                                     (new DofMap(number_in, *this)),
++  _equation_systems                            (es),
++  _mesh                                        (es.get_mesh()),
++  _sys_name                                    (name_in),
++  _sys_number                                  (number_in),
++  _active                                      (true),
++  _solution_projection                         (true),
++  _basic_system_only                           (false),
++  _can_add_vectors                             (true),
++  _identify_variable_groups                    (true),
++  _additional_data_written                     (false),
+   adjoint_already_solved            (false)
+ {
+ }
+@@ -1797,6 +1801,60 @@ void System::attach_assemble_object (System::Assembly& assemble_in)
+   _assemble_system_object = &assemble_in;
+ }
+ 
++  
++  
++void System::reset_assembly ()
++{
++  _assemble_system_function = NULL;
++  _assemble_system_object   = NULL;
++}
++
++    
++    
++    
++void System::attach_sensitivity_assemble_function (bool fptr(EquationSystems& es,
++                                                             const std::string& name,
++                                                             const ParameterVector& parameters,
++                                                             const unsigned int i,
++                                                             NumericVector<Number>& sensitivity_rhs))
++{
++    libmesh_assert(fptr);
++    
++    if (_sensitivity_assemble_system_object != NULL)
++    {
++        libmesh_here();
++        libMesh::out << "WARNING:  Cannot specify both assembly sensitivity function and object!"
++        << std::endl;
++        
++        _sensitivity_assemble_system_object = NULL;
++    }
++    
++    _sensitivity_assemble_system_function = fptr;
++}
++
++
++
++void System::attach_sensitivity_assemble_object (System::SensitivityAssembly& assemble_in)
++{
++    if (_sensitivity_assemble_system_function != NULL)
++    {
++        libmesh_here();
++        libMesh::out << "WARNING:  Cannot specify both assembly object and function!"
++        << std::endl;
++        
++        _sensitivity_assemble_system_function = NULL;
++    }
++    
++    _sensitivity_assemble_system_object = &assemble_in;
++}
++
++  
++void System::reset_sensitivity_assembly ()
++{
++  _sensitivity_assemble_system_function = NULL;
++  _sensitivity_assemble_system_object   = NULL;
++}
++
+ 
+ 
+ void System::attach_constraint_function(void fptr(EquationSystems& es,
+@@ -1868,6 +1926,14 @@ void System::attach_QOI_object (QOI& qoi_in)
+   _qoi_evaluate_object = &qoi_in;
+ }
+ 
++  
++  
++  void System::reset_QOI ()
++  {
++    _qoi_evaluate_function = NULL;
++    _qoi_evaluate_object   = NULL;
++  }
++
+ 
+ 
+ void System::attach_QOI_derivative
+@@ -1905,6 +1971,61 @@ void System::attach_QOI_derivative_object (QOIDerivative& qoi_derivative)
+ }
+ 
+ 
++  void System::reset_QOI_derivative ()
++  {
++    _qoi_evaluate_derivative_function = NULL;
++    _qoi_evaluate_derivative_object   = NULL;
++  }
++
++  
++  
++void System::attach_QOI_parameter_sensitivity(bool (*fptr)(libMesh::EquationSystems &,
++                                                           const std::string &,
++                                                           const libMesh::QoISet &,
++                                                           const libMesh::ParameterVector &,
++                                                           const unsigned int,
++                                                           std::vector<Number> &))
++{
++  libmesh_assert(fptr);
++  
++  if (_qoi_evaluate_parameter_sensitivity_object != NULL)
++  {
++    libmesh_here();
++    libMesh::out << "WARNING:  Cannot specify both QOI derivative function and object!"
++    << std::endl;
++    
++    _qoi_evaluate_parameter_sensitivity_object = NULL;
++  }
++  
++  _qoi_evaluate_parameter_sensitivity_function = fptr;
++}
++
++
++
++void System::attach_QOI_parameter_sensitivity_object (QOIParameterSensitivity& qoi_sensitivity)
++{
++  if (_qoi_evaluate_parameter_sensitivity_function != NULL)
++  {
++    libmesh_here();
++    libMesh::out << "WARNING:  Cannot specify both QOI derivative object and function!"
++    << std::endl;
++    
++    _qoi_evaluate_parameter_sensitivity_function = NULL;
++  }
++  
++  _qoi_evaluate_parameter_sensitivity_object = &qoi_sensitivity;
++}
++
++  
++  
++  void System::reset_QOI_parameter_sensitivity ()
++  {
++
++    _qoi_evaluate_parameter_sensitivity_function = NULL;
++    _qoi_evaluate_parameter_sensitivity_object   = NULL;    
++  }
++
++
+ 
+ void System::user_initialization ()
+ {
+@@ -1932,6 +2053,31 @@ void System::user_assembly ()
+     this->_assemble_system_object->assemble();
+ }
+ 
++    
++    
++bool System::user_sensitivity_assembly (const ParameterVector& parameters,
++                                        const unsigned int i,
++                                        NumericVector<Number>& sensitivity_rhs)
++{
++    bool rval = false;
++    
++    // Call the user-provided assembly function,
++    // if it was provided
++    if (_sensitivity_assemble_system_function != NULL)
++        rval = this->_sensitivity_assemble_system_function (_equation_systems,
++                                                            this->name(),
++                                                            parameters,
++                                                            i,
++                                                            sensitivity_rhs);
++    
++    // ...or the user-provided assembly object.
++    else if (_sensitivity_assemble_system_object != NULL)
++        rval = this->_sensitivity_assemble_system_object->sensitivity_assemble
++        (parameters, i, sensitivity_rhs);
++    
++    return rval;
++}
++
+ 
+ 
+ void System::user_constrain ()
+@@ -1981,6 +2127,32 @@ void System::user_QOI_derivative
+ }
+ 
+ 
++bool System::user_QOI_parameter_sensitivity(const libMesh::QoISet &qoi_indices,
++                                            const libMesh::ParameterVector &parameters,
++                                            const unsigned int p,
++                                            std::vector<Number> &partialq_partialp)
++{
++  bool rval = false;
++
++  // Call the user-provided quantity of interest derivative,
++  // if it was provided
++  if (_qoi_evaluate_parameter_sensitivity_function != NULL)
++    rval = this->_qoi_evaluate_parameter_sensitivity_function(_equation_systems,
++                                                              this->name(),
++                                                              qoi_indices,
++                                                              parameters, p,
++                                                              partialq_partialp);
++  
++  // ...or the user-provided QOI derivative function object.
++  else if (_qoi_evaluate_parameter_sensitivity_object != NULL)
++    rval = this->_qoi_evaluate_parameter_sensitivity_object->qoi_parameter_sensitivity
++    (qoi_indices, parameters, p, partialq_partialp);
++  
++  return rval;
++}
++  
++
++  
+ 
+ Number System::point_value(unsigned int var, const Point &p, const bool insist_on_success) const
+ {
+diff --git a/tests/.DS_Store b/tests/.DS_Store
+new file mode 100644
+index 0000000..7439e52
+Binary files /dev/null and b/tests/.DS_Store differ
