@@ -21,7 +21,7 @@
 #include <iostream>
 
 // MAST includes
-#include "examples/structural/beam_optimization/beam_optimization.h"
+#include "examples/structural/beam_optimization_single_stress_functional/beam_optimization.h"
 #include "driver/driver_base.h"
 #include "elasticity/stress_output_base.h"
 #include "optimization/optimization_interface.h"
@@ -38,8 +38,9 @@
 
 
 
-MAST::BeamBendingSizingOptimization::
-BeamBendingSizingOptimization(GetPot& infile,
+
+MAST::BeamBendingSingleFunctionalSizingOptimization::
+BeamBendingSingleFunctionalSizingOptimization(GetPot& infile,
                               std::ostream& output):
 MAST::FunctionEvaluation(output),
 _n_elems(0),
@@ -55,7 +56,7 @@ _n_stations(0) {
     // now setup the optimization data
     _n_vars                = _n_stations; // for thickness variable
     _n_eq                  = 0;
-    _n_ineq                = _n_elems;   // one element stress functional per elem
+    _n_ineq                = 1;           // one element stress functional for all elems
     _max_iters             = 1000;
     
     
@@ -217,10 +218,6 @@ _n_stations(0) {
     
     
     // create the output objects, one for each element
-    libMesh::MeshBase::const_element_iterator
-    e_it    = _mesh->elements_begin(),
-    e_end   = _mesh->elements_end();
-    
     // points where stress is evaluated
     std::vector<libMesh::Point> pts;
     pts.push_back(libMesh::Point(-1/sqrt(3), 1., 0.)); // upper skin
@@ -228,19 +225,9 @@ _n_stations(0) {
     pts.push_back(libMesh::Point( 1/sqrt(3), 1., 0.)); // upper skin
     pts.push_back(libMesh::Point( 1/sqrt(3),-1., 0.)); // lower skin
     
-    for ( ; e_it != e_end; e_it++) {
-        
-        MAST::StressStrainOutputBase * output = new MAST::StressStrainOutputBase;
-        
-        // tell the object to evaluate the data for this object only
-        std::set<const libMesh::Elem*> e_set;
-        e_set.insert(*e_it);
-        output->set_elements_in_domain(e_set);
-        output->set_points_for_evaluation(pts);
-        _outputs.push_back(output);
-        
-        _discipline->add_volume_output((*e_it)->subdomain_id(), *output);
-    }
+    _outputs = new MAST::StressStrainOutputBase;
+    _outputs->set_points_for_evaluation(pts);
+    _discipline->add_volume_output(0, *_outputs);
     
     // create the assembly object
     _assembly = new MAST::StructuralNonlinearAssembly;
@@ -255,7 +242,7 @@ _n_stations(0) {
 
 
 
-MAST::BeamBendingSizingOptimization::~BeamBendingSizingOptimization() {
+MAST::BeamBendingSingleFunctionalSizingOptimization::~BeamBendingSingleFunctionalSizingOptimization() {
     
     delete _m_card;
     delete _p_card;
@@ -288,16 +275,7 @@ MAST::BeamBendingSizingOptimization::~BeamBendingSizingOptimization() {
     delete _discipline;
     delete _structural_sys;
     
-    // iterate over the output quantities and delete them
-    {
-        std::vector<MAST::StressStrainOutputBase*>::iterator
-        it   =   _outputs.begin(),
-        end  =   _outputs.end();
-        for ( ; it != end; it++) delete *it;
-        
-        _outputs.clear();
-    }
-
+    delete _outputs;
     
     // delete the h_y station functions
     {
@@ -321,7 +299,7 @@ MAST::BeamBendingSizingOptimization::~BeamBendingSizingOptimization() {
 
 
 void
-MAST::BeamBendingSizingOptimization::init_dvar(std::vector<Real>& x,
+MAST::BeamBendingSingleFunctionalSizingOptimization::init_dvar(std::vector<Real>& x,
                                                std::vector<Real>& xmin,
                                                std::vector<Real>& xmax) {
     // one DV for each element
@@ -334,7 +312,7 @@ MAST::BeamBendingSizingOptimization::init_dvar(std::vector<Real>& x,
 
 
 void
-MAST::BeamBendingSizingOptimization::evaluate(const std::vector<Real>& dvars,
+MAST::BeamBendingSingleFunctionalSizingOptimization::evaluate(const std::vector<Real>& dvars,
                                               Real& obj,
                                               bool eval_obj_grad,
                                               std::vector<Real>& obj_grad,
@@ -407,9 +385,8 @@ MAST::BeamBendingSizingOptimization::evaluate(const std::vector<Real>& dvars,
     obj = wt;
     
     // copy the element von Mises stress values as the functions
-    for (unsigned int i=0; i<_n_elems; i++)
-        fvals[i] =  -1. +
-        _outputs[i]->von_Mises_p_norm_functional_for_all_elems(pval)/_stress_limit;
+    fvals[0] =  -1. +
+    _outputs->von_Mises_p_norm_functional_for_all_elems(pval)/_stress_limit;
     
 
     
@@ -468,10 +445,9 @@ MAST::BeamBendingSizingOptimization::evaluate(const std::vector<Real>& dvars,
                                                     *(_sys->solution));
             
             // copy the sensitivity values in the output
-            for (unsigned int j=0; j<_n_elems; j++)
-                grads[i*_n_elems+j] = _dv_scaling[i]/_stress_limit *
-                _outputs[j]->von_Mises_p_norm_functional_sensitivity_for_all_elems
-                (pval, _thy_station_parameters[i]);
+            grads[i] = _dv_scaling[i]/_stress_limit *
+            _outputs->von_Mises_p_norm_functional_sensitivity_for_all_elems
+            (pval, _thy_station_parameters[i]);
         }
     }
     
@@ -485,15 +461,9 @@ MAST::BeamBendingSizingOptimization::evaluate(const std::vector<Real>& dvars,
 
 
 void
-MAST::BeamBendingSizingOptimization::clear_stresss() {
+MAST::BeamBendingSingleFunctionalSizingOptimization::clear_stresss() {
     
-    // iterate over the output quantities and delete them
-    std::vector<MAST::StressStrainOutputBase*>::iterator
-    it   =   _outputs.begin(),
-    end  =   _outputs.end();
-    
-    for ( ; it != end; it++)
-        (*it)->clear(false);
+    _outputs->clear(false);
 }
 
 
@@ -501,7 +471,7 @@ MAST::BeamBendingSizingOptimization::clear_stresss() {
 
 
 void
-MAST::BeamBendingSizingOptimization::output(unsigned int iter,
+MAST::BeamBendingSingleFunctionalSizingOptimization::output(unsigned int iter,
                                             const std::vector<Real>& x,
                                             Real obj,
                                             const std::vector<Real>& fval,

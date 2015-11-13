@@ -21,6 +21,7 @@
 #include "examples/structural/bar_extension/bar_extension.h"
 #include "examples/structural/beam_bending/beam_bending.h"
 #include "examples/structural/beam_optimization/beam_optimization.h"
+#include "examples/structural/beam_optimization_single_stress_functional/beam_optimization.h"
 
 // libMesh includes
 #include "libmesh/libmesh.h"
@@ -100,6 +101,36 @@ int main(int argc, char* const argv[]) {
         
         // create and attach sizing optimization object
         MAST::BeamBendingSizingOptimization func_eval(infile, output);
+        
+        //std::vector<Real> dvals(func_eval.n_vars());
+        //std::fill(dvals.begin(), dvals.end(), 0.05);
+        //func_eval.verify_gradients(dvals);
+        
+        // attach and optimize
+        gcmma.attach_function_evaluation_object(func_eval);
+        gcmma.optimize();
+        
+        output.close();
+    }
+    else if (case_name == "beam_bending_single_functional_optimization") {
+        
+        std::cout
+        << "Beam Bending Optimization with Single Functional:" << std::endl
+        << "  input.in should be provided in the working directory with"
+        << " desired parameter values."
+        << "  In absence of a parameter value, its default value will be used."
+        << std::endl
+        << "  Output per iteration is written to optimization_output.txt."
+        << std::endl;
+        
+        GetPot infile("input.in");
+        std::ofstream output;
+        output.open("optimization_output.txt", std::ofstream::out);
+        
+        MAST::GCMMAOptimizationInterface gcmma;
+        
+        // create and attach sizing optimization object
+        MAST::BeamBendingSingleFunctionalSizingOptimization func_eval(infile, output);
         
         //std::vector<Real> dvals(func_eval.n_vars());
         //std::fill(dvals.begin(), dvals.end(), 0.05);

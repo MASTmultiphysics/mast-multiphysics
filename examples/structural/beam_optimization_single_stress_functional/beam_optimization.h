@@ -17,8 +17,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#ifndef __mast_beam_optimization_h__
-#define __mast_beam_optimization_h__
+#ifndef __mast_beam_single_functional_optimization_h__
+#define __mast_beam_single_functional_optimization_h__
 
 // C++ includes
 #include <memory>
@@ -56,7 +56,7 @@ extern libMesh::LibMeshInit* _init;
 
 
 namespace MAST {
-    
+        
     
     // Forward declerations
     class StructuralSystemInitialization;
@@ -71,15 +71,15 @@ namespace MAST {
     class StructuralNonlinearAssembly;
     
     
-    struct BeamBendingSizingOptimization:
+    struct BeamBendingSingleFunctionalSizingOptimization:
     public MAST::FunctionEvaluation {
         
         
-        BeamBendingSizingOptimization(GetPot& infile,
-                                      std::ostream& output);
+        BeamBendingSingleFunctionalSizingOptimization(GetPot& infile,
+                                                      std::ostream& output);
         
         
-        ~BeamBendingSizingOptimization();
+        ~BeamBendingSingleFunctionalSizingOptimization();
         
         /*!
          *   initialize the design variables values and bounds
@@ -205,7 +205,7 @@ namespace MAST {
         MAST::BoundaryConditionBase*                    _p_load;
         
         // output quantity objects to evaluate stress
-        std::vector<MAST::StressStrainOutputBase*>      _outputs;
+        MAST::StressStrainOutputBase*                   _outputs;
         
 
         // stationwise parameter definitions
@@ -230,4 +230,4 @@ namespace MAST {
 }
 
 
-#endif /* __mast_beam_optimization_h__ */
+#endif /* __mast_beam_single_functional_optimization_h__ */
