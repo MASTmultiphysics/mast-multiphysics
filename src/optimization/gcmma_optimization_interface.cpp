@@ -18,7 +18,8 @@
  */
 
 // MAST includes
-#include "Optimization/gcmma_optimization_interface.h"
+#include "optimization/gcmma_optimization_interface.h"
+#include "optimization/function_evaluation.h"
 
 
 void
@@ -115,7 +116,7 @@ MAST::GCMMAOptimizationInterface::optimize() {
     _feval->init_dvar(XVAL, XMIN, XMAX);
     // set the value of C[i] to be very large numbers
     Real max_x = 0.;
-    for (unsigned int i=0; i<M; i++)
+    for (unsigned int i=0; i<N; i++)
         if (max_x < fabs(XVAL[i]))
             max_x = fabs(XVAL[i]);
     std::fill(C.begin(), C.end(), std::max(1.e6*max_x, 1.e6));

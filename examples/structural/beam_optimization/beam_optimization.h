@@ -33,13 +33,25 @@
 #include "base/parameter.h"
 #include "base/constant_field_function.h"
 #include "optimization/gcmma_optimization_interface.h"
+#include "optimization/function_evaluation.h"
 #include "boundary_condition/dirichlet_boundary_condition.h"
 
 
 // libMesh includes
+#include "libmesh/libmesh.h"
+#include "libmesh/equation_systems.h"
+#include "libmesh/serial_mesh.h"
+#include "libmesh/mesh_generation.h"
 #include "libmesh/nonlinear_implicit_system.h"
+#include "libmesh/fe_type.h"
+#include "libmesh/dof_map.h"
 #include "libmesh/mesh_function.h"
 #include "libmesh/parameter_vector.h"
+#include "libmesh/getpot.h"
+
+
+// get this from the global namespace
+extern libMesh::LibMeshInit* _init;
 
 
 namespace MAST {
@@ -169,21 +181,28 @@ namespace MAST {
     };
     
     
-    /*!
-     *   This class implements the function evaluation routine that provides
-     *   values and gradients of the objective and constraint functions
-     *   for this optimization problem
-     */
-    class BeamBendingSizingOptimization:
+    // Forward declerations
+    class StructuralSystemInitialization;
+    class StructuralDiscipline;
+    class Parameter;
+    class ConstantFieldFunction;
+    class IsotropicMaterialPropertyCard;
+    class Solid1DSectionElementPropertyCard;
+    class DirichletBoundaryCondition;
+    class BoundaryConditionBase;
+    class StressStrainOutputBase;
+    class StructuralNonlinearAssembly;
+    
+    
+    struct BeamBendingSizingOptimization:
     public MAST::FunctionEvaluation {
         
-    public:
         
-        BeamBendingSizingOptimization(libMesh::LibMeshInit& init,
+        BeamBendingSizingOptimization(GetPot& infile,
                                       std::ostream& output);
         
-        virtual ~BeamBendingSizingOptimization();
         
+        ~BeamBendingSizingOptimization();
         
         /*!
          *   initialize the design variables values and bounds
@@ -212,73 +231,120 @@ namespace MAST {
                             Real obj,
                             const std::vector<Real>& fval,
                             bool if_write_to_optim_file) const;
-        
-    protected:
+
         
         /*!
-         *   member function that initializes the data structures. Gets called
-         *   by the constructor.
+         *   @returns a pointer to the parameter of the specified name.
+         *   If no parameter exists by the specified name, then a \p NULL
+         *   pointer is returned and a message is printed with a valid list
+         *   of parameters.
          */
-        void _init();
+        MAST::Parameter* get_parameter(const std::string& nm);
+        
+        /*!
+         *  solves the system and returns the final solution
+         */
+        const libMesh::NumericVector<Real>&
+        solve(bool if_write_output = false);
         
         
+        /*!
+         *  solves the sensitivity of system and returns the final solution
+         */
+        const libMesh::NumericVector<Real>&
+        sensitivity_solve(MAST::Parameter& p,
+                          bool if_write_output = false);
         
         
-        libMesh::LibMeshInit                            &_libmesh_init;
+        /*!
+         *   clears the stress data structures for a followup analysis
+         */
+        void clear_stresss();
+        
+        
+        // length of domain
+        Real _length;
+
+        
+        // length of domain
+        Real _stress_limit;
+
+        // number of elements and number of stations at which DVs are defined
         unsigned int
         _n_elems,
         _n_stations;
         
-        Real
-        _disp_0,
-        _vf_0;
+        // create the mesh
+        libMesh::SerialMesh*           _mesh;
         
-        MAST::Weight                                    *_weight;
+        // create the equation system
+        libMesh::EquationSystems*      _eq_sys;
         
-        libMesh::UnstructuredMesh                       *_mesh;
-        libMesh::EquationSystems                        *_eq_systems;
-        libMesh::NonlinearImplicitSystem                *_static_system;
-        std::auto_ptr<MAST::StructuralDiscipline>       _structural_discipline;
-        std::auto_ptr<MAST::StructuralSystemInitialization> _structural_sys;
-        std::auto_ptr<MAST::DirichletBoundaryCondition> _dirichlet;
-        std::auto_ptr<MAST::BoundaryConditionBase>      _flux_load;
-        std::auto_ptr<MAST::MaterialPropertyCardBase>   _materials;
-        std::auto_ptr<MAST::ElementPropertyCardBase>    _elem_properties;
-        std::auto_ptr<libMesh::MeshFunction>            _disp_function;
-        std::vector<libMesh::MeshFunction*>             _disp_function_sens;
-        std::auto_ptr<MAST::Parameter>
-        _pressure,
-        _E,
-        _nu,
-        _rho,
-        _kappa,
-        _h_z,
-        _offset_h_z,
-        _temperature,
-        _ref_temperature;
-        std::auto_ptr<MAST::ConstantFieldFunction>
-        _pressure_fn,
-        _E_fn,
-        _nu_fn,
-        _rho_fn,
-        _kappa_fn,
-        _h_z_fn,
-        _offset_h_z_fn,
-        _temperature_fn,
-        _ref_temperature_fn;
+        // create the libmesh system
+        libMesh::NonlinearImplicitSystem*  _sys;
+        
+        // initialize the system to the right set of variables
+        MAST::StructuralSystemInitialization* _structural_sys;
+        MAST::StructuralDiscipline*           _discipline;
+        
+        // nonlinear assembly object
+        MAST::StructuralNonlinearAssembly *_assembly;
+        
+        // create the property functions and add them to the
+        MAST::Parameter
+        *_thz,
+        *_E,
+        *_nu,
+        *_rho,
+        *_press,
+        *_zero;
+        
+        MAST::ConstantFieldFunction
+        *_thz_f,
+        *_E_f,
+        *_nu_f,
+        *_rho_f,
+        *_hyoff_f,
+        *_hzoff_f,
+        *_press_f;
+        
+        
+        // Weight function to calculate the weight of the structure
+        MAST::Weight *_weight;
+        
+        // create the material property card
+        MAST::IsotropicMaterialPropertyCard*            _m_card;
+        
+        // create the element property card
+        MAST::Solid1DSectionElementPropertyCard*        _p_card;
+        
+        // create the Dirichlet boundary condition on left edge
+        MAST::DirichletBoundaryCondition*               _dirichlet_left;
+        
+        // create the Dirichlet boundary condition on right edge
+        MAST::DirichletBoundaryCondition*               _dirichlet_right;
+        
+        // create the pressure boundary condition
+        MAST::BoundaryConditionBase*                    _p_load;
+        
+        // output quantity objects to evaluate stress
+        std::vector<MAST::StressStrainOutputBase*>      _outputs;
+        
+
+        // stationwise parameter definitions
+        std::vector<MAST::Parameter*>                   _thy_station_parameters;
+        
+        // stationwise function objects for thickness
+        std::vector<MAST::ConstantFieldFunction*>       _thy_station_functions;
         
         /*!
-         *    map of thickness functions at discrete stations
+         *   interpolates thickness between stations
          */
-        std::map<Real, MAST::FieldFunction<Real>*>      _h_y_station_vals;
-        std::auto_ptr<MAST::MultilinearInterpolation>   _h_y_fn;
-        std::auto_ptr<MAST::BeamOffset>                 _offset_h_y_fn;
+        std::auto_ptr<MAST::MultilinearInterpolation>   _thy_f;
         
-        
-        libMesh::ParameterVector                        _parameters;
-        std::vector<MAST::ConstantFieldFunction*>       _parameter_functions;
-        
-        
+        /*!
+         *   scaling parameters for design optimization problem
+         */
         std::vector<Real>
         _dv_scaling,
         _dv_low,

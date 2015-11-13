@@ -25,8 +25,8 @@
 #include <vector>
 
 // MAST includes
-#include "base/output_function_base.h"
 #include "base/mast_data_types.h"
+#include "base/output_function_base.h"
 
 
 // libMesh includes
