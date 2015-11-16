@@ -220,8 +220,10 @@ MAST::StructuralElement1D::calculate_stress(bool request_derivative,
     n3       = this->n_von_karman_strain_components();
 
     Real
-    y = 0.,
-    z = 0.;
+    y     =  0.,
+    z     =  0.,
+    y_off =  0.,
+    z_off =  0.;
     
     RealMatrixX
     material_mat,
@@ -267,7 +269,9 @@ MAST::StructuralElement1D::calculate_stress(bool request_derivative,
     // get the thickness values for the bending strain calculation
     const MAST::FieldFunction<Real>
     &hy     =  _property.get<MAST::FieldFunction<Real> >("hy"),
-    &hz     =  _property.get<MAST::FieldFunction<Real> >("hz");
+    &hz     =  _property.get<MAST::FieldFunction<Real> >("hz"),
+    &hy_off =  _property.get<MAST::FieldFunction<Real> >("hy_off"),
+    &hz_off =  _property.get<MAST::FieldFunction<Real> >("hz_off");
 
     
     bool if_vk = (_property.strain_type() == MAST::VON_KARMAN_STRAIN),
@@ -309,9 +313,11 @@ MAST::StructuralElement1D::calculate_stress(bool request_derivative,
             }
             
             // add to this the bending strain
-            // TODO: add coupling due to h_offset
-            hy(p, _time, y);
-            hz(p, _time, z);
+            hy    (p, _time,     y);
+            hz    (p, _time,     z);
+            hy_off(p, _time, y_off);
+            hz_off(p, _time, z_off);
+
             // TODO: this assumes isotropic section. Multilayered sections need
             // special considerations
             // This operator depends on the y and z thickness values. Sensitivity
@@ -319,8 +325,8 @@ MAST::StructuralElement1D::calculate_stress(bool request_derivative,
             // these thickness values
             bend->initialize_bending_strain_operator_for_yz(*fe,
                                                             qp,
-                                                            qp_loc[qp](1) * y/2.,
-                                                            qp_loc[qp](2) * z/2.,
+                                                            qp_loc[qp](1) * y/2.+y_off,
+                                                            qp_loc[qp](2) * z/2.+z_off,
                                                             Bmat_bend);
             Bmat_bend.vector_mult(strain_bend, _local_sol);
             
@@ -408,11 +414,17 @@ MAST::StructuralElement1D::calculate_stress(bool request_derivative,
                     hz.derivative(MAST::PARTIAL_DERIVATIVE,
                                   *sensitivity_param,
                                   p, _time, z);
-                    
+                    hy_off.derivative(MAST::PARTIAL_DERIVATIVE,
+                                      *sensitivity_param,
+                                      p, _time, y_off);
+                    hz_off.derivative(MAST::PARTIAL_DERIVATIVE,
+                                      *sensitivity_param,
+                                      p, _time, z_off);
+
                     bend->initialize_bending_strain_operator_for_yz(*fe,
                                                                     qp,
-                                                                    qp_loc[qp](1) * y/2.,
-                                                                    qp_loc[qp](2) * z/2.,
+                                                                    qp_loc[qp](1) * y/2.+y_off,
+                                                                    qp_loc[qp](2) * z/2.+z_off,
                                                                     Bmat_bend);
                     Bmat_bend.vector_mult(strain_bend, _local_sol);
                     
@@ -444,6 +456,7 @@ MAST::StructuralElement1D::calculate_stress(bool request_derivative,
                 // use the derivative data to evaluate the second term in the
                 // sensitivity
                 //
+                
                 dstress_dp  += dstress_dX * _local_sol_sens;
                 dstrain_dp  += dstrain_dX * _local_sol_sens;
                 

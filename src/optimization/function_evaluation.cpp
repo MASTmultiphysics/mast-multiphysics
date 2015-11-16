@@ -113,7 +113,8 @@ MAST::FunctionEvaluation::verify_gradients(const std::vector<Real>& dvars) {
     
     // first call theh evaluate method to get the analytical sensitivities
     Real
-    delta           = 1.e-4,
+    delta           = 1.e-8,
+    tol             = 1.e-3,
     obj             = 0.,
     obj_fd          = 0.;
     
@@ -195,7 +196,6 @@ MAST::FunctionEvaluation::verify_gradients(const std::vector<Real>& dvars) {
     << " *** Objective function gradients: analytical vs numerical"
     << std::endl;
     
-    Real tol = 1.e-3;
     bool accurate_sens = true;
     
     for (unsigned int i=0; i<_n_vars; i++)
@@ -225,6 +225,13 @@ MAST::FunctionEvaluation::verify_gradients(const std::vector<Real>& dvars) {
             }
     }
 
+    // print the message that all sensitivity data satisfied limits.
+    if (accurate_sens)
+        std::cout
+        << "Verify gradients: all gradients satisfied relative tol: " << tol
+        << "  with delta:  " << delta
+        << std::endl;
+    
     return accurate_sens;
 }
 
