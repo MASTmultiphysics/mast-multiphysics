@@ -67,6 +67,8 @@ MAST::BuildStructural1DElem::BuildStructural1DElem() {
     _thz             = new MAST::Parameter("thz",   1.);
     _E               = new MAST::Parameter("E",  72.e9);
     _nu              = new MAST::Parameter("nu",  0.33);
+    _hy_off          = new MAST::Parameter("hyoff", 0.);
+    _hz_off          = new MAST::Parameter("hzoff", 0.);
     _zero            = new MAST::Parameter("zero",  0.);
     
     
@@ -77,6 +79,8 @@ MAST::BuildStructural1DElem::BuildStructural1DElem() {
     _params_for_sensitivity.push_back(_nu);
     _params_for_sensitivity.push_back(_thy);
     _params_for_sensitivity.push_back(_thz);
+    _params_for_sensitivity.push_back(_hy_off);
+    _params_for_sensitivity.push_back(_hz_off);
     
 
     
@@ -84,8 +88,8 @@ MAST::BuildStructural1DElem::BuildStructural1DElem() {
     _thz_f           = new MAST::ConstantFieldFunction("hz",     *_thz);
     _E_f             = new MAST::ConstantFieldFunction("E",      *_E);
     _nu_f            = new MAST::ConstantFieldFunction("nu",     *_nu);
-    _hyoff_f         = new MAST::ConstantFieldFunction("hy_off", *_zero);
-    _hzoff_f         = new MAST::ConstantFieldFunction("hz_off", *_zero);
+    _hyoff_f         = new MAST::ConstantFieldFunction("hy_off", *_hy_off);
+    _hzoff_f         = new MAST::ConstantFieldFunction("hz_off", *_hz_off);
     
     // create the material property card
     _m_card         = new MAST::IsotropicMaterialPropertyCard;
@@ -159,6 +163,8 @@ MAST::BuildStructural1DElem::~BuildStructural1DElem() {
 
     delete _thy;
     delete _thz;
+    delete _hy_off;
+    delete _hz_off;
     delete _E;
     delete _nu;
     delete _zero;

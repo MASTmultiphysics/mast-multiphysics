@@ -104,7 +104,7 @@ void check_internal_force_jacobian (ValType& v) {
     }
     
     // now compare the matrices
-    BOOST_CHECK(MAST::compare_matrix(   jac_x,    jac_x_fd, tol));
+    BOOST_CHECK(MAST::compare_matrix(  jac_x_fd,  jac_x,  tol));
 }
 
 
@@ -112,6 +112,8 @@ void check_internal_force_jacobian (ValType& v) {
 BOOST_FIXTURE_TEST_SUITE  (Structural1DJacobianEvaluation, MAST::BuildStructural1DElem)
 
 BOOST_AUTO_TEST_CASE   (InternalForce1D) {
+ 
+    RealVectorX v;
     
     check_internal_force_jacobian<MAST::BuildStructural1DElem>(*this);
 }

@@ -42,6 +42,7 @@
 
 extern void
 set_deformation(const unsigned int dim,
+                const unsigned int case_num,
                 RealVectorX& vec);
 
 extern const Real
@@ -50,7 +51,8 @@ tol;
 
 
 template <typename ValType>
-void check_internal_force_and_jacobian_sensitivity (ValType& v) {
+void check_internal_force_and_jacobian_sensitivity (ValType& v,
+                                                    const RealVectorX& x) {
     
     // get reference to the element in this mesh
     const libMesh::Elem& elem = **(v._mesh->local_elements_begin());
@@ -68,10 +70,12 @@ void check_internal_force_and_jacobian_sensitivity (ValType& v) {
     dofmap.dof_indices(&elem, dof_ids);
     
     const unsigned int ndofs = (unsigned int)dof_ids.size();
+
+    // make sure that the input dof vector is properly sized
+    libmesh_assert(ndofs == x.size());
     
     // now get the residual and Jacobian evaluations
     RealVectorX
-    x           = RealVectorX::Zero(ndofs),
     res0        = RealVectorX::Zero(ndofs),
     dresdp      = RealVectorX::Zero(ndofs),
     dresdp_fd   = RealVectorX::Zero(ndofs);
@@ -88,7 +92,6 @@ void check_internal_force_and_jacobian_sensitivity (ValType& v) {
     
     
     // tell the element about the solution
-    set_deformation(elem.dim(), x);
     e->set_solution(x);
     e->internal_residual(true, res0, jac0, false);
     
@@ -131,9 +134,9 @@ void check_internal_force_and_jacobian_sensitivity (ValType& v) {
         
         // now compare the matrices
         BOOST_TEST_MESSAGE("  ** dres/dp (partial) wrt : " << f.name() << " **");
-        BOOST_CHECK(MAST::compare_vector(   dresdp,    dresdp_fd, tol));
+        BOOST_CHECK(MAST::compare_vector(  dresdp_fd,  dresdp,    tol));
         BOOST_TEST_MESSAGE("  ** djac/dp (partial) wrt : " << f.name() << " **");
-        BOOST_CHECK(MAST::compare_matrix(   djacdp,    djacdp_fd, tol));
+        BOOST_CHECK(MAST::compare_matrix(   djacdp_fd,  djacdp,   tol));
     }
 }
 
@@ -144,7 +147,23 @@ BOOST_FIXTURE_TEST_SUITE  (Structural1DInternalForceSensitivity,
 
 BOOST_AUTO_TEST_CASE   (InternalForceSensitivity1D) {
     
-    check_internal_force_and_jacobian_sensitivity<MAST::BuildStructural1DElem>(*this);
+    RealVectorX v;
+
+    // pure axial deformation
+    set_deformation(1, 0, v);
+    check_internal_force_and_jacobian_sensitivity<MAST::BuildStructural1DElem>
+    (*this, v);
+
+    // pure bending deformation
+    set_deformation(1, 1, v);
+    check_internal_force_and_jacobian_sensitivity<MAST::BuildStructural1DElem>
+    (*this, v);
+    
+    // combination of axial and bending deformation
+    set_deformation(1, 2, v);
+    check_internal_force_and_jacobian_sensitivity<MAST::BuildStructural1DElem>
+    (*this, v);
+    
 }
 
 BOOST_AUTO_TEST_SUITE_END()
@@ -155,8 +174,13 @@ BOOST_FIXTURE_TEST_SUITE  (Structural2DInternalForceSensitivity,
                            MAST::BuildStructural2DElem)
 
 BOOST_AUTO_TEST_CASE   (InternalForceSensitivity2D) {
+
+    RealVectorX v;
     
-    check_internal_force_and_jacobian_sensitivity<MAST::BuildStructural2DElem>(*this);
+    // pure axial deformation
+    set_deformation(2, 0, v);
+    check_internal_force_and_jacobian_sensitivity<MAST::BuildStructural2DElem>
+    (*this, v);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

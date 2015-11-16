@@ -76,6 +76,8 @@ namespace MAST {
         *_thz,
         *_E,
         *_nu,
+        *_hy_off,
+        *_hz_off,
         *_zero;
         
         MAST::ConstantFieldFunction

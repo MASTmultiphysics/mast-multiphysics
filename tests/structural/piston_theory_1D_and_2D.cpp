@@ -146,8 +146,8 @@ check_piston_theory_jacobian (ValType& v) {
     
     
     // now compare the matrices
-    BOOST_CHECK(MAST::compare_matrix(   jac_x,    jac_x_fd, tol));
-    BOOST_CHECK(MAST::compare_matrix(jac_xdot, jac_xdot_fd, tol));
+    BOOST_CHECK(MAST::compare_matrix( jac_x_fd,   jac_x,    tol));
+    BOOST_CHECK(MAST::compare_matrix(jac_xdot_fd, jac_xdot, tol));
 }
 
 

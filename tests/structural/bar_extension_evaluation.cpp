@@ -219,10 +219,10 @@ BOOST_AUTO_TEST_CASE   (BarExtensionSensitivity) {
 
         // now compare the solution sensitivity
         BOOST_TEST_MESSAGE("  ** dX/dp (total) wrt : " << f.name() << " **");
-        BOOST_CHECK(MAST::compare_vector(   dsol,    dsol_fd, tol));
+        BOOST_CHECK(MAST::compare_vector( dsol_fd,  dsol, tol));
         // now compare the stress sensitivity
         BOOST_TEST_MESSAGE("  ** dvm-stress/dp (total) wrt : " << f.name() << " **");
-        BOOST_CHECK(MAST::compare_vector(   dstressdp,    dstressdp_fd, tol));
+        BOOST_CHECK(MAST::compare_vector( dstressdp_fd, dstressdp, tol));
     }
     
     

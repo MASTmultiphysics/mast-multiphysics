@@ -49,13 +49,36 @@ tol;
 
 void
 set_deformation(const unsigned int dim,
+                const unsigned int case_num,
                 RealVectorX& vec) {
-    if (dim == 1)
+    if (dim == 1) {
+        
         // assuming an edge2 with Lagrange interpolation
-        vec(1) = 2.e-2;          // some arbitrary axial deformation
+        vec   = RealVectorX::Zero(12);
+        
+        
+        switch (case_num) {
+            case 0: // some arbitrary axial deformation
+                vec(1)  = 2.e-2;
+                break;
+            case 1: // some arbitrary bending deformation
+                vec(10) = 2.e-2;
+                break;
+            case 2: { // combination of axial and bending
+                vec(1)  = 2.e-2;
+                vec(10) = 2.e-2;
+            }
+                break;
+            default:
+                libmesh_error(); // should not get here
+        }
+    }
     else if (dim == 2) {
         
         // assuming a quad4 with Lagrange interpolation
+        vec   = RealVectorX::Zero(24);
+        
+        
         vec(2) = 2.e-2;
         vec(3) = 4.e-2;
         
@@ -66,10 +89,15 @@ set_deformation(const unsigned int dim,
 }
 
 template <typename ValType>
-void check_stress (ValType& v) {
+void check_stress (ValType& v, const RealVectorX& x0) {
 
     // stress output
     MAST::StressStrainOutputBase output;
+    std::vector<libMesh::Point> pts(1);
+    pts[0] = libMesh::Point(0., 1., 0.);  // upper surface, elem mid-point
+
+    //pts[1] = libMesh::Point(0.,-1., 0.);  // lower surface, elem mid-point
+    output.set_points_for_evaluation(pts);
     std::multimap<libMesh::subdomain_id_type, MAST::OutputFunctionBase*> output_map;
     output_map.insert(std::pair<libMesh::subdomain_id_type, MAST::OutputFunctionBase*>
                       (0, &output));
@@ -91,10 +119,12 @@ void check_stress (ValType& v) {
     dofmap.dof_indices(&elem, dof_ids);
     
     const unsigned int ndofs = (unsigned int)dof_ids.size();
+
+    // make sure that the input dof vector is properly sized
+    libmesh_assert(ndofs == x0.size());
     
     // now get the residual and Jacobian evaluations
     RealVectorX
-    x0           = RealVectorX::Zero(ndofs),
     xdot0        = RealVectorX::Zero(ndofs),
     x            = RealVectorX::Zero(ndofs),
     xdot         = RealVectorX::Zero(ndofs),
@@ -130,7 +160,6 @@ void check_stress (ValType& v) {
     pval    = 3.;
     
     // tell the element about the solution and velocity
-    set_deformation(elem.dim(), x0);
     e->set_solution(x0);
     e->set_velocity(xdot0);
     
@@ -186,13 +215,13 @@ void check_stress (ValType& v) {
     
     // now compare the matrices
     BOOST_TEST_MESSAGE("  ** Stress Derivative  wrt State **");
-    BOOST_CHECK(MAST::compare_matrix(   dstressdX0,    dstressdX_fd, tol));
+    BOOST_CHECK(MAST::compare_matrix(   dstressdX_fd,  dstressdX0,    tol));
     BOOST_TEST_MESSAGE("  ** Strain Derivative  wrt State **");
-    BOOST_CHECK(MAST::compare_matrix(   dstraindX0,    dstraindX_fd, tol));
+    BOOST_CHECK(MAST::compare_matrix(  dstraindX_fd,   dstraindX0,    tol));
     BOOST_TEST_MESSAGE("  ** VM-Stress Derivative  wrt State **");
-    BOOST_CHECK(MAST::compare_vector(      dvm_dX0,       dvm_dX_fd, tol));
+    BOOST_CHECK(MAST::compare_vector(     dvm_dX_fd,    dvm_dX0,      tol));
     BOOST_TEST_MESSAGE("  ** VM_func-Stress Derivative  wrt State **");
-    BOOST_CHECK(MAST::compare_vector(      dvmf_dX0,       dvmf_dX_fd, tol));
+    BOOST_CHECK(MAST::compare_vector(    dvmf_dX_fd,   dvmf_dX0,      tol));
     
     // now, check the sensitivity with respect to various parameters
     
@@ -211,17 +240,9 @@ void check_stress (ValType& v) {
         e->set_solution(x0);
         e->set_solution(x, true);  // sets the sensitivity to zero
         
-        // identify the perturbation in the parameter
-        p0           = f();
-        (p0 > 0)?  dp=delta*p0 : dp=delta;
-        f()         += dp;
-        
         // get the stress, strain and von Mises stress sensitivity
         e->volume_output_quantity(false, true, output_map);
-        
-        // reset the parameter value
-        f()        = p0;
-        
+
         // next, check the total derivative of the quantity wrt the parameter
         {
             const std::vector<MAST::StressStrainOutputBase::Data*>&
@@ -235,6 +256,29 @@ void check_stress (ValType& v) {
             dvmf_dp             =
             output.von_Mises_p_norm_functional_sensitivity_for_all_elems(pval, &f);
             
+            output.clear(false);
+        }
+
+        
+        // now the finite difference sensitivity
+        // identify the perturbation in the parameter
+        p0           = f();
+        (p0 > 0)?  dp=delta*p0 : dp=delta;
+        f()         += dp;
+        
+        // get the stress, strain and von Mises stress sensitivity
+        e->volume_output_quantity(false, false, output_map);
+        
+        // reset the parameter value
+        f()        = p0;
+        
+        // next, check the total derivative of the quantity wrt the parameter
+        {
+            const std::vector<MAST::StressStrainOutputBase::Data*>&
+            stress_data = output.get_stress_strain_data_for_elem(&elem);
+            
+            libmesh_assert_equal_to(stress_data.size(), 1); // this should have one element
+            
             stress              = (stress_data[0]->stress() - stress0)/dp;
             strain              = (stress_data[0]->strain() - strain0)/dp;
             vm                  = (stress_data[0]->von_Mises_stress() - vm0)/dp;
@@ -246,59 +290,48 @@ void check_stress (ValType& v) {
         
         // compare and benchmark the values
         BOOST_TEST_MESSAGE("  ** dStress/dp (partial) wrt : " << f.name() << " **");
-        BOOST_CHECK(MAST::compare_vector(dstressdp, stress, tol));
+        BOOST_CHECK(MAST::compare_vector(stress, dstressdp, tol));
         BOOST_TEST_MESSAGE("  ** dStrain/dp (partial) wrt : " << f.name() << " **");
-        BOOST_CHECK(MAST::compare_vector(dstraindp, strain, tol));
+        BOOST_CHECK(MAST::compare_vector(strain, dstraindp, tol));
         BOOST_TEST_MESSAGE("  ** dVM-Stress/dp (partial) wrt : " << f.name() << " **");
-        BOOST_CHECK(MAST::compare_value (    dvmdp,     vm, tol));
+        BOOST_CHECK(MAST::compare_value (    vm,     dvmdp, tol));
         BOOST_TEST_MESSAGE("  ** dVM_func-Stress/dp (partial) wrt : " << f.name() << " **");
-        BOOST_CHECK(MAST::compare_value (    dvmf_dp,     dvmf_dp_fd, tol));
+        BOOST_CHECK(MAST::compare_value (dvmf_dp_fd,  dvmf_dp, tol));
     }
     
     
-    
-    
-    // NOTE:
-    // Next, we will set the dp = 0, so that the derivative of the output
-    // quantity is only the partial derivative including sensitivity of
-    // the state vector wrt the parameter.
     //
-    
+    // now the total sensitivity including the sensitivity of the state.
+    // Each dof is independently assigned a nonzero sensitivity value
+    //
     for (unsigned int i=0; i<v._params_for_sensitivity.size(); i++) {
         
         MAST::Parameter& f = *v._params_for_sensitivity[i];
         
-        // identify the perturbation in the parameter
-        // if delta=1.e-5, and dp=1.e-3, then delta/dp = 1.e-2
-        // magnitude of delta/dp should not matter, since the
-        // sensitivity is linear in it. We really want delta and dp to be
-        // small so that finite differencing can be accurately done
-        p0           = f();
-        (p0 > 0)?  dp=std::max(delta*p0, delta) : dp=delta;
-        f()         += dp;
-        
-        // set the sensitivity of solution to be zero
-        e->sensitivity_param  = &f;
         
         // now perturb each element of the vector independently
         for (unsigned int j=0; j<ndofs; j++) {
             
-            // first perturb the solution for fd sensitivity
-            x       = x0;
-            x(j)   += delta;
-            e->set_solution(x);
+            // first calculate the analytical sensitivity
+            e->set_solution(x0);
+            // identify the perturbation in the parameter
+            // if delta=1.e-5, and dp=1.e-3, then delta/dp = 1.e-2
+            // magnitude of delta/dp should not matter, since the
+            // sensitivity is linear in it. We really want delta and dp to be
+            // small so that finite differencing can be accurately done
+            p0           = f();
+            (p0 > 0)?  dp=std::max(delta*p0, delta) : dp=delta;
             // now, set the solution sensitivity for analytical sensitivity
-            x       = RealVectorX::Zero(ndofs);
-            x(j)    = delta/dp;
-            e->set_solution(x, true);  // sets the sensitivity to zero
-            
-            
-            
-            // get the stress, strain and von Mises stress sensitivity
+            x            = RealVectorX::Zero(ndofs);
+            x(j)         = delta/dp;
+            e->set_solution(x, true);  // sets the sensitivity
+            e->sensitivity_param  = &f;
+
+            // sensitivity output
             e->volume_output_quantity(false, true, output_map);
-            
-            // next, check the total derivative of the quantity wrt the parameter
+
             {
+                // copy it for comparison
                 const std::vector<MAST::StressStrainOutputBase::Data*>&
                 stress_data = output.get_stress_strain_data_for_elem(&elem);
                 
@@ -309,7 +342,37 @@ void check_stress (ValType& v) {
                 dvmdp               = stress_data[0]->dvon_Mises_stress_dp  (&f);
                 dvmf_dp             =
                 output.von_Mises_p_norm_functional_sensitivity_for_all_elems(pval, &f);
+                
+                output.clear(false);
+            }
+            
+            
+            // now pertueb the parameter for finite differencing
+            f()         += dp;
+            
+            // remove the sensitivity association
+            e->sensitivity_param  = NULL;
 
+            // first perturb the solution for fd sensitivity
+            x       = x0;
+            x(j)   += delta;
+            e->set_solution(x);
+            // now, set the solution sensitivity for analytical sensitivity
+            x       = RealVectorX::Zero(ndofs);
+            e->set_solution(x, true);  // sets the sensitivity to zero
+            
+            // get the stress, strain and von Mises stress for finite-differencing
+            e->volume_output_quantity(false, false, output_map);
+
+            // reset the parameter value
+            f()        = p0;
+
+            // next, check the total derivative of the quantity wrt the parameter
+            {
+                const std::vector<MAST::StressStrainOutputBase::Data*>&
+                stress_data = output.get_stress_strain_data_for_elem(&elem);
+                
+                libmesh_assert_equal_to(stress_data.size(), 1); // this should have one element
                 
                 stress              = (stress_data[0]->stress() - stress0)/dp;
                 strain              = (stress_data[0]->strain() - strain0)/dp;
@@ -321,18 +384,15 @@ void check_stress (ValType& v) {
             }
             
             // compare and benchmark the values
-            BOOST_TEST_MESSAGE("  ** dStress/dp (total) wrt : " << f.name() << " **");
-            BOOST_CHECK(MAST::compare_vector(dstressdp, stress, tol));
-            BOOST_TEST_MESSAGE("  ** dStrain/dp (total) wrt : " << f.name() << " **");
-            BOOST_CHECK(MAST::compare_vector(dstraindp, strain, tol));
-            BOOST_TEST_MESSAGE("  ** dVM-Stress/dp (total) wrt : " << f.name() << " **");
-            BOOST_CHECK(MAST::compare_value (    dvmdp,     vm, tol));
-            BOOST_TEST_MESSAGE("  ** dVM_func-Stress/dp (partial) wrt : " << f.name() << " **");
-            BOOST_CHECK(MAST::compare_value (    dvmf_dp,     dvmf_dp_fd, tol));
+            BOOST_TEST_MESSAGE("  ** dStress/dp (total: dof = " << j << ") wrt : " << f.name() << " **");
+            BOOST_CHECK(MAST::compare_vector( stress, dstressdp, tol));
+            BOOST_TEST_MESSAGE("  ** dStrain/dp (total: dof = " << j << ") wrt : " << f.name() << " **");
+            BOOST_CHECK(MAST::compare_vector( strain, dstraindp, tol));
+            BOOST_TEST_MESSAGE("  ** dVM-Stress/dp (total: dof = " << j << ") wrt : " << f.name() << " **");
+            BOOST_CHECK(MAST::compare_value (  vm,   dvmdp,  tol));
+            BOOST_TEST_MESSAGE("  ** dVM_func-Stress/dp (total: dof = " << j << ") wrt : " << f.name() << " **");
+            BOOST_CHECK(MAST::compare_value ( dvmf_dp_fd, dvmf_dp, tol));
         }
-        
-        // reset the parameter value
-        f()        = p0;
     }
 }
 
@@ -453,7 +513,19 @@ BOOST_FIXTURE_TEST_SUITE  (Structural1DStressEvaluation, MAST::BuildStructural1D
 
 BOOST_AUTO_TEST_CASE   (Stress1D) {
     
-    check_stress(*this);
+    RealVectorX v;
+    // first with axial deformation
+    set_deformation(1, 0, v);
+    check_stress(*this, v);
+
+    // then with bending deformation
+    set_deformation(1, 1, v);
+    check_stress(*this, v);
+
+    // then with axial and bending deformation
+    set_deformation(1, 2, v);
+    check_stress(*this, v);
+
 }
 
 BOOST_AUTO_TEST_SUITE_END()
@@ -463,7 +535,9 @@ BOOST_FIXTURE_TEST_SUITE  (Structural2DStressEvaluation, MAST::BuildStructural2D
 
 BOOST_AUTO_TEST_CASE   (Stress2D) {
     
-    check_stress(*this);
+    RealVectorX v;
+    set_deformation(2, 0, v);
+    check_stress(*this, v);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

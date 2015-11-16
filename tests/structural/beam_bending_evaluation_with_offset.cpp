@@ -23,7 +23,7 @@
 
 
 // MAST includes
-#include "examples/structural/beam_bending/beam_bending.h"
+#include "examples/structural/beam_bending_with_offset/beam_bending_with_offset.h"
 #include "tests/base/test_comparisons.h"
 #include "elasticity/structural_system_initialization.h"
 #include "elasticity/structural_discipline.h"
@@ -46,9 +46,9 @@ tol;
 
 
 BOOST_FIXTURE_TEST_SUITE  (Structural1DBeamBending,
-                           MAST::BeamBending)
+                           MAST::BeamBendingWithOffset)
 
-BOOST_AUTO_TEST_CASE   (BeamBendingSolution) {
+BOOST_AUTO_TEST_CASE   (BeamBendingWithOffsetSolution) {
     
     this->solve();
     
@@ -65,7 +65,7 @@ BOOST_AUTO_TEST_CASE   (BeamBendingSolution) {
     press       = (*_press)(),
     th_y        = (*_thy)(),
     th_z        = (*_thz)(),
-    Izz         = th_z*pow(th_y,3)/12.,
+    Izz         = th_z*pow(th_y,3)/12.+th_z*th_y*pow(th_y*.5,2),
     x           = 0.,
     xi          = 0.,
     eta         = 0.,
@@ -80,7 +80,7 @@ BOOST_AUTO_TEST_CASE   (BeamBendingSolution) {
     for ( ; it!=end; it++) {
         const libMesh::Node* node = *it;
         x            = (*node)(0);
-
+        
         // v-displacement
         analytical   = -press/Eval/Izz*(pow(x,4)/24. -
                                         _length*pow(x,3)/12. +
@@ -102,7 +102,7 @@ BOOST_AUTO_TEST_CASE   (BeamBendingSolution) {
                                         0);
         numerical    =   _sys->solution->el(dof_num);
         BOOST_CHECK(MAST::compare_value(analytical, numerical, tol));
-
+        
     }
     
     
@@ -123,7 +123,7 @@ BOOST_AUTO_TEST_CASE   (BeamBendingSolution) {
         
         // find the location of quadrature point
         for (unsigned int j=0; j<data.size(); j++) {
-
+            
             // logitudinal strain for this location
             numerical = data[j]->stress()(0);
             
@@ -138,16 +138,16 @@ BOOST_AUTO_TEST_CASE   (BeamBendingSolution) {
                                             pow(_length,2)/12.);
             // use this to evaluate the stress. The stress at both upper and
             // lower skins is same, but in opposite sign.
-            analytical  *= -Eval*th_y*eta/2.;
+            analytical  *= -Eval*(th_y*eta/2.+th_y/2.);
             
             BOOST_CHECK(MAST::compare_value(analytical, numerical, tol));
         }
     }
-
+    
 }
 
 
-BOOST_AUTO_TEST_CASE   (BeamBendingSensitivity) {
+BOOST_AUTO_TEST_CASE   (BeamBendingWithOffsetSensitivity) {
     
     // verify the sensitivity solution of this system
     RealVectorX
@@ -189,7 +189,7 @@ BOOST_AUTO_TEST_CASE   (BeamBendingSensitivity) {
     
     // copy the solution for later use
     for (unsigned int i=0; i<n_dofs; i++)  sol(i)  = sol_vec(i);
-
+    
     // now clear the stress data structures
     this->clear_stresss();
     
@@ -324,21 +324,21 @@ BOOST_AUTO_TEST_CASE   (BeamBendingSensitivity) {
         
         // now compare the solution sensitivity
         BOOST_TEST_MESSAGE("  ** dX/dp (total) wrt : " << f.name() << " **");
-        BOOST_CHECK(MAST::compare_vector( dsol_fd,  dsol, tol));
+        BOOST_CHECK(MAST::compare_vector( dsol_fd,   dsol,    tol));
         // now compare the stress sensitivity
         BOOST_TEST_MESSAGE("  ** dvm-stress/dp (total) wrt : " << f.name() << " **");
-        BOOST_CHECK(MAST::compare_vector(   dstressdp_fd,  dstressdp, tol));
-
+        BOOST_CHECK(MAST::compare_vector(    dstressdp_fd,  dstressdp,  tol));
+        
         // now clear the stress data structures
         this->clear_stresss();
-
+        
     }
     
     
     /////////////////////////////////////////////////////////
     // now evaluate the adjoint sensitivity
     /////////////////////////////////////////////////////////
-    
+    this->clear_stresss();
     
 }
 

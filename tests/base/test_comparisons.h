@@ -27,7 +27,7 @@
 namespace MAST {
     
     inline bool
-    compare_value(const Real v, const Real v0, const Real tol) {
+    compare_value(const Real v0, const Real v, const Real tol) {
         
         bool pass = true;
         
@@ -35,8 +35,8 @@ namespace MAST {
                                                v,
                                                boost::test_tools::percent_tolerance<Real>(tol))) {
             BOOST_TEST_MESSAGE ("Failed comparison: "
-                                << "expected: " << v0 << "  , "
-                                << "found: "    << v << " : "
+                                << "expected: " << v0<< "  , "
+                                << "computed: " << v << " : "
                                 << "diff: " << v0 - v << " , "
                                 << "tol: " << tol);
             pass = false;
@@ -48,7 +48,7 @@ namespace MAST {
     
     
     inline bool
-    compare_vector(const RealVectorX& v, const RealVectorX& v0, const Real tol) {
+    compare_vector(const RealVectorX& v0, const RealVectorX& v, const Real tol) {
         
         unsigned int
         v0_size = (unsigned int) v0.rows();
@@ -63,7 +63,7 @@ namespace MAST {
                 BOOST_TEST_MESSAGE("Failed comparison at i = ("
                                    << i << ") : "
                                    << "expected: " << v0(i) << "  , "
-                                   << "found: "    << v(i) << " : "
+                                   << "computed: " << v(i) << " : "
                                    << "diff: " << v0(i) - v(i) << " , "
                                    << "tol: " << tol);
                 pass = false;
@@ -77,7 +77,7 @@ namespace MAST {
     
     
     inline bool
-    compare_matrix(const RealMatrixX& m, const RealMatrixX& m0, const Real tol) {
+    compare_matrix(const RealMatrixX& m0, const RealMatrixX& m, const Real tol) {
         
         unsigned int
         m0_rows = (unsigned int) m0.rows(),
@@ -95,7 +95,7 @@ namespace MAST {
                     BOOST_TEST_MESSAGE("Failed comparison at (i,j) = ("
                                        << i << ", " << j << ") : "
                                        << "expected: " << m0(i,j) << "  , "
-                                       << "found: "    << m(i,j) << " : "
+                                       << "computed: " << m(i,j) << " : "
                                        << "diff: " << m0(i,j) - m(i,j) << " , "
                                        << "tol: " << tol);
                     pass = false;

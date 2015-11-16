@@ -114,7 +114,7 @@ BOOST_AUTO_TEST_CASE   (Solid1DSection) {
         dmat     /= dp;
         
         // compare and benchmark the values
-        BOOST_CHECK(MAST::compare_matrix (dmatdp,   dmat,   tol));
+        BOOST_CHECK(MAST::compare_matrix ( dmat, dmatdp,  tol));
     }
 }
 
