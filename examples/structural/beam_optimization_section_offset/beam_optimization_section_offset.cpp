@@ -21,7 +21,7 @@
 #include <iostream>
 
 // MAST includes
-#include "examples/structural/beam_optimization_single_stress_functional/beam_optimization.h"
+#include "examples/structural/beam_optimization_section_offset/beam_optimization_section_offset.h"
 #include "driver/driver_base.h"
 #include "elasticity/stress_output_base.h"
 #include "optimization/optimization_interface.h"
@@ -39,8 +39,8 @@
 
 
 
-MAST::BeamBendingSingleFunctionalSizingOptimization::
-BeamBendingSingleFunctionalSizingOptimization(GetPot& infile,
+MAST::BeamBendingSectionOffsetSizingOptimization::
+BeamBendingSectionOffsetSizingOptimization(GetPot& infile,
                               std::ostream& output):
 MAST::FunctionEvaluation(output),
 _n_elems(0),
@@ -178,9 +178,9 @@ _n_stations(0) {
     _E_f             = new MAST::ConstantFieldFunction("E",            *_E);
     _nu_f            = new MAST::ConstantFieldFunction("nu",          *_nu);
     _rho_f           = new MAST::ConstantFieldFunction("rho",        *_rho);
-    _hyoff_f         = new MAST::ConstantFieldFunction("hy_off",    *_zero);
     _hzoff_f         = new MAST::ConstantFieldFunction("hz_off",    *_zero);
     _press_f         = new MAST::ConstantFieldFunction("pressure", *_press);
+    _hyoff_f         = new MAST::BeamOffset( "hy_off", _thy_f->clone().release());
     
     // initialize the load
     _p_load          = new MAST::BoundaryConditionBase(MAST::SURFACE_PRESSURE);
@@ -242,7 +242,7 @@ _n_stations(0) {
 
 
 
-MAST::BeamBendingSingleFunctionalSizingOptimization::~BeamBendingSingleFunctionalSizingOptimization() {
+MAST::BeamBendingSectionOffsetSizingOptimization::~BeamBendingSectionOffsetSizingOptimization() {
     
     delete _m_card;
     delete _p_card;
@@ -299,7 +299,7 @@ MAST::BeamBendingSingleFunctionalSizingOptimization::~BeamBendingSingleFunctiona
 
 
 void
-MAST::BeamBendingSingleFunctionalSizingOptimization::init_dvar(std::vector<Real>& x,
+MAST::BeamBendingSectionOffsetSizingOptimization::init_dvar(std::vector<Real>& x,
                                                std::vector<Real>& xmin,
                                                std::vector<Real>& xmax) {
     // one DV for each element
@@ -312,7 +312,7 @@ MAST::BeamBendingSingleFunctionalSizingOptimization::init_dvar(std::vector<Real>
 
 
 void
-MAST::BeamBendingSingleFunctionalSizingOptimization::evaluate(const std::vector<Real>& dvars,
+MAST::BeamBendingSectionOffsetSizingOptimization::evaluate(const std::vector<Real>& dvars,
                                               Real& obj,
                                               bool eval_obj_grad,
                                               std::vector<Real>& obj_grad,
@@ -461,7 +461,7 @@ MAST::BeamBendingSingleFunctionalSizingOptimization::evaluate(const std::vector<
 
 
 void
-MAST::BeamBendingSingleFunctionalSizingOptimization::clear_stresss() {
+MAST::BeamBendingSectionOffsetSizingOptimization::clear_stresss() {
     
     _outputs->clear(false);
 }
@@ -471,7 +471,7 @@ MAST::BeamBendingSingleFunctionalSizingOptimization::clear_stresss() {
 
 
 void
-MAST::BeamBendingSingleFunctionalSizingOptimization::output(unsigned int iter,
+MAST::BeamBendingSectionOffsetSizingOptimization::output(unsigned int iter,
                                             const std::vector<Real>& x,
                                             Real obj,
                                             const std::vector<Real>& fval,

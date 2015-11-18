@@ -63,13 +63,15 @@ MAST::BuildStructural1DElem::BuildStructural1DElem() {
     
     // create the property functions and add them to the
     
-    _thy             = new MAST::Parameter("thy",0.002);
-    _thz             = new MAST::Parameter("thz",   1.);
+    _thy             = new MAST::Parameter("thy", 0.06);
+    _thz             = new MAST::Parameter("thz", 0.02);
     _E               = new MAST::Parameter("E",  72.e9);
     _nu              = new MAST::Parameter("nu",  0.33);
     _hy_off          = new MAST::Parameter("hyoff", 0.);
     _hz_off          = new MAST::Parameter("hzoff", 0.);
     _zero            = new MAST::Parameter("zero",  0.);
+    _temp            = new MAST::Parameter("temp",300.);
+    _alpha           = new MAST::Parameter("alpha",2.5e-5);
     
     
 
@@ -90,6 +92,9 @@ MAST::BuildStructural1DElem::BuildStructural1DElem() {
     _nu_f            = new MAST::ConstantFieldFunction("nu",     *_nu);
     _hyoff_f         = new MAST::ConstantFieldFunction("hy_off", *_hy_off);
     _hzoff_f         = new MAST::ConstantFieldFunction("hz_off", *_hz_off);
+    _temp_f          = new MAST::ConstantFieldFunction("temperature", *_temp);
+    _ref_temp_f      = new MAST::ConstantFieldFunction("ref_temperature", *_zero);
+    _alpha_f         = new MAST::ConstantFieldFunction("alpha_expansion", *_alpha);
     
     // create the material property card
     _m_card         = new MAST::IsotropicMaterialPropertyCard;
@@ -97,6 +102,7 @@ MAST::BuildStructural1DElem::BuildStructural1DElem() {
     // add the material properties to the card
     _m_card->add(*_E_f);
     _m_card->add(*_nu_f);
+    _m_card->add(*_alpha_f);
     
     // create the element property card
     _p_card         = new MAST::Solid1DSectionElementPropertyCard;
@@ -137,8 +143,9 @@ MAST::BuildStructural1DElem::BuildStructural1DElem() {
                                                               gamma,
                                                               rho,
                                                               vel);
-    
-    
+    _thermal_load   = new MAST::BoundaryConditionBase(MAST::TEMPERATURE);
+    _thermal_load->add(*_temp_f);
+    _thermal_load->add(*_ref_temp_f);
 }
 
 
@@ -153,6 +160,7 @@ MAST::BuildStructural1DElem::~BuildStructural1DElem() {
     delete _p_card;
     
     delete _p_theory;
+    delete _thermal_load;
     
     delete _thy_f;
     delete _thz_f;
@@ -160,7 +168,10 @@ MAST::BuildStructural1DElem::~BuildStructural1DElem() {
     delete _nu_f;
     delete _hyoff_f;
     delete _hzoff_f;
-
+    delete _temp_f;
+    delete _ref_temp_f;
+    delete _alpha_f;
+    
     delete _thy;
     delete _thz;
     delete _hy_off;
@@ -168,8 +179,8 @@ MAST::BuildStructural1DElem::~BuildStructural1DElem() {
     delete _E;
     delete _nu;
     delete _zero;
-    
-    
+    delete _temp;
+    delete _alpha;
     
 
     delete _eq_sys;

@@ -23,7 +23,7 @@
 
 
 // MAST includes
-#include "examples/structural/beam_bending_with_offset/beam_bending_with_offset.h"
+#include "examples/structural/beam_bending_thermal_stress_with_offset/beam_bending_thermal_stress.h"
 #include "tests/base/test_comparisons.h"
 #include "elasticity/structural_system_initialization.h"
 #include "elasticity/structural_discipline.h"
@@ -46,9 +46,9 @@ tol;
 
 
 BOOST_FIXTURE_TEST_SUITE  (Structural1DBeamBending,
-                           MAST::BeamBendingWithOffset)
+                           MAST::BeamBendingThermalStress)
 
-BOOST_AUTO_TEST_CASE   (BeamBendingWithOffsetSolution) {
+BOOST_AUTO_TEST_CASE   (BeamBendingWithThermalStressSolution) {
     
     this->solve();
     
@@ -62,20 +62,20 @@ BOOST_AUTO_TEST_CASE   (BeamBendingWithOffsetSolution) {
     end    =  _mesh->local_nodes_end();
     
     Real
-    press       = (*_press)(),
+    temp        = (*_temp)(),
     th_y        = (*_thy)(),
-    th_z        = (*_thz)(),
-    Izz         = th_z*pow(th_y,3)/12.+th_z*pow(th_y,3)/4.,
+//    th_z        = (*_thz)(),
     x           = 0.,
     xi          = 0.,
     eta         = 0.,
     Eval        = (*_E)(),
+    alpha       = (*_alpha)(),
     analytical  = 0.,
     numerical   = 0.;
     
-    // analytical solution to the clamped-clamped problem is
-    // w(x)    = p/EI ( x^4/24 - L x^3/12 + L^2 x^2/24)
-    // dwdx(x) = p/EI ( x^3/6  - L x^2/4  + L^2  x/12)
+    // analytical solution to the simply supported problem is
+    // w(x)    = -alpha*T*A*th_y/2/Izz*(x^2/2 - L*x/2);
+    // dwdx(x) = -alpha*T*A*th_y/2/Izz*(x - L/2);
     
     BOOST_TEST_MESSAGE("  ** v-displacement and theta-z rotation **");
     for ( ; it!=end; it++) {
@@ -83,21 +83,16 @@ BOOST_AUTO_TEST_CASE   (BeamBendingWithOffsetSolution) {
         x            = (*node)(0);
         
         // v-displacement
-        analytical   = -press/Eval/Izz*(pow(x,4)/24. -
-                                        _length*pow(x,3)/12. +
-                                        pow(_length,2)*pow(x,2)/24.);
+        analytical   = -alpha*temp/th_y*3./2.*(pow(x,2)/2. - _length*x/2.);
         
         dof_num      = node->dof_number(_sys->number(),
                                         _structural_sys->vars()[1], // v-displ.
                                         0);
         numerical    =   _sys->solution->el(dof_num);
-
         BOOST_CHECK(MAST::compare_value(analytical, numerical, tol));
         
         // theta-z rotation
-        analytical   = -press/Eval/Izz*(pow(x,3)/6. -
-                                        _length*pow(x,2)/4. +
-                                        pow(_length,2)*x/12.);
+        analytical   = -alpha*temp/th_y*3./2.*(x - _length/2.);
         
         dof_num      = node->dof_number(_sys->number(),
                                         _structural_sys->vars()[5], // tz-rotation
@@ -135,25 +130,22 @@ BOOST_AUTO_TEST_CASE   (BeamBendingWithOffsetSolution) {
             
             // assuming linear Lagrange interpolation for elements
             x =  e.point(0)(0) * (1.-xi)/2. +  e.point(1)(0) * (1.+xi)/2.;
-            // this gives the rotation at this point.
-            analytical   = press/Izz*(th_y*eta/2.+th_y/2.)*
-            (pow(x,2)/2. - _length*x/2. + pow(_length,2)/12.);
+            // stress is a combination of the bending and compressive stress.
+            analytical   = Eval*alpha*temp*(0.75*(eta+1.) - 1.);
             
             
             BOOST_CHECK(MAST::compare_value(analytical, numerical, tol));
         }
     }
-    
 }
 
 
-BOOST_AUTO_TEST_CASE   (BeamBendingWithOffsetSensitivity) {
+BOOST_AUTO_TEST_CASE   (BeamBendingWithThermalStressSensitivity) {
     
     // verify the sensitivity solution of this system
     RealVectorX
     sol,
-    dsol,
-    dsol_fd;
+    dsol;
     
     const libMesh::NumericVector<Real>& sol_vec = this->solve();
     
@@ -164,6 +156,9 @@ BOOST_AUTO_TEST_CASE   (BeamBendingWithOffsetSensitivity) {
     const unsigned int
     n_dofs     = sol_vec.size(),
     n_elems    = _mesh->n_elem();
+    
+    unsigned int
+    dof_num   = 0;
     
     const Real
     p_val      = 2.;
@@ -196,18 +191,25 @@ BOOST_AUTO_TEST_CASE   (BeamBendingWithOffsetSensitivity) {
     // now iterate over all the parameters and calculate the analytical
     // sensitivity and compare with the numerical sensitivity
     
+
+
     Real
-    press       = (*_press)(),
+    temp        = (*_temp)(),
     th_y        = (*_thy)(),
-    th_z        = (*_thz)(),
-    Izz         = th_z*pow(th_y,3)/12.+th_z*pow(th_y,3)/4.,
-    dIzzdth_y   = 3.*th_z*pow(th_y,2)/12.+3.*th_z*pow(th_y,2)/4.,
-    dIzzdth_z   = pow(th_y,3)/12.+pow(th_y,3)/4.,
+//    th_z        = (*_thz)(),
+//    A           = th_y * th_z,
+//    dAdth_y     = th_z,
+//    dAdth_z     = th_y,
+//    Izz         = th_z*pow(th_y,3)/12.+th_z*pow(th_y,3)/4.,
+//    dIzzdth_y   = 3.*th_z*pow(th_y,2)/12.+3.*th_z*pow(th_y,2)/4.,
+//    dIzzdth_z   = pow(th_y,3)/12.+pow(th_y,3)/4.,
     x           = 0.,
     xi          = 0.,
     eta         = 0.,
     analytical  = 0.,
     numerical   = 0.,
+//    Eval        = (*_E)(),
+    alpha       = (*_alpha)(),
     p0          = 0.,
     dp          = 0.;
     
@@ -220,12 +222,67 @@ BOOST_AUTO_TEST_CASE   (BeamBendingWithOffsetSensitivity) {
         MAST::Parameter& f = *this->_params_for_sensitivity[i];
         
         dsol         =   RealVectorX::Zero(n_dofs);
-        dsol_fd      =   RealVectorX::Zero(n_dofs);
         dstressdp    =   RealVectorX::Zero(n_elems);
         dstressdp_fd =   RealVectorX::Zero(n_elems);
         
         // calculate the analytical sensitivity
         const libMesh::NumericVector<Real>& dsol_vec = this->sensitivity_solve(f);
+        
+        ////////////////////////////////////////////////////////
+        //   compare the displacement sensitivity
+        ////////////////////////////////////////////////////////
+        BOOST_TEST_MESSAGE("  ** dX/dp (total) wrt : " << f.name() << " **");
+        libMesh::MeshBase::const_node_iterator
+        it     =  _mesh->local_nodes_begin(),
+        end    =  _mesh->local_nodes_end();
+        for ( ; it!=end; it++) {
+            
+            const libMesh::Node* node = *it;
+            x            = (*node)(0);
+            
+            // v-displacement
+            analytical   = 0.;
+            if (f.name() == "nu")
+                analytical = 0.;
+            else if (f.name() == "E")
+                analytical = 0.;
+            else if (f.name() == "thy")
+                analytical   =
+                alpha*temp/pow(th_y,2)*3./2.*(pow(x,2)/2. - _length*x/2.);
+            else if (f.name() == "thz")
+                analytical   = 0.;
+            else
+                libmesh_error(); // should not get here
+
+            
+            dof_num      = node->dof_number(_sys->number(),
+                                            _structural_sys->vars()[1], // v-displ.
+                                            0);
+            numerical    =   dsol_vec.el(dof_num);
+            BOOST_CHECK(MAST::compare_value(analytical, numerical, tol));
+            
+            
+            
+            // theta-z rotation
+            analytical   = 0.;
+            if (f.name() == "nu")
+                analytical = 0.;
+            else if (f.name() == "E")
+                analytical = 0.;
+            else if (f.name() == "thy")
+                analytical   = alpha*temp/pow(th_y,2)*3./2.*(x - _length/2.);
+            else if (f.name() == "thz")
+                analytical   = 0.;
+            else
+                libmesh_error(); // should not get here
+            
+            dof_num      = node->dof_number(_sys->number(),
+                                            _structural_sys->vars()[5], // tz-rotation
+                                            0);
+            numerical    =   dsol_vec.el(dof_num);
+            BOOST_CHECK(MAST::compare_value(analytical, numerical, tol));
+        }
+        
         
         
         ////////////////////////////////////////////////////////
@@ -252,19 +309,17 @@ BOOST_AUTO_TEST_CASE   (BeamBendingWithOffsetSensitivity) {
                 
                 // assuming linear Lagrange interpolation for elements
                 x          =  e.point(0)(0) * (1.-xi)/2. +  e.point(1)(0) * (1.+xi)/2.;
+                
                 // this gives the stress sensitivity
                 analytical = 0.;
-                if (f.name() == "E" || f.name() == "nu")
-                    analytical   = 0.;
+                if (f.name() == "nu")
+                    analytical = 0.;
+                else if (f.name() == "E")
+                    analytical   = alpha*temp*(0.75*(eta+1.) - 1.);
                 else if (f.name() == "thy")
-                    analytical   =
-                    (-press/pow(Izz,2)*dIzzdth_y*(th_y*eta/2.+th_y/2.)+
-                     press/Izz*(eta/2.+1./2.))*
-                    (pow(x,2)/2. - _length*x/2. + pow(_length,2)/12.);
+                    analytical   = 0.;
                 else if (f.name() == "thz")
-                    analytical   =
-                    -press/pow(Izz,2)*dIzzdth_z*(th_y*eta/2.+th_y/2.)*
-                    (pow(x,2)/2. - _length*x/2. + pow(_length,2)/12.);
+                    analytical   = 0.;
                 else
                     libmesh_error(); // should not get here
                 
@@ -297,18 +352,11 @@ BOOST_AUTO_TEST_CASE   (BeamBendingWithOffsetSensitivity) {
         f()         += dp;
         
         // solve at the perturbed parameter value
-        const libMesh::NumericVector<Real>& sol_vec1 = this->solve();
+        this->solve();
         
         // make sure that each stress object has a single stored value
         for (unsigned int i=0; i<_outputs.size(); i++)
             BOOST_CHECK((_outputs[i]->n_elem_in_storage() == 1));
-        
-        // copy the perturbed solution
-        for (unsigned int i=0; i<n_dofs; i++)  dsol_fd(i)  = sol_vec1(i);
-        
-        // calculate the finite difference sensitivity for solution
-        dsol_fd -= sol;
-        dsol_fd /= dp;
         
         
         ////////////////////////////////////////////////////////
@@ -326,9 +374,6 @@ BOOST_AUTO_TEST_CASE   (BeamBendingWithOffsetSensitivity) {
         // reset the parameter value
         f()        = p0;
         
-        // now compare the solution sensitivity
-        BOOST_TEST_MESSAGE("  ** dX/dp (total) wrt : " << f.name() << " **");
-        BOOST_CHECK(MAST::compare_vector( dsol_fd,   dsol,    tol));
         // now compare the stress sensitivity
         BOOST_TEST_MESSAGE("  ** dvm-stress/dp (total) wrt : " << f.name() << " **");
         BOOST_CHECK(MAST::compare_vector(    dstressdp_fd,  dstressdp,  tol));

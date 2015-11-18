@@ -965,7 +965,7 @@ MAST::StructuralElement3D::calculate_stress(bool request_derivative,
             qp_loc = qrule_ptr->get_points();
             break;
             
-        defalut:
+        default:
             // should not get here
             libmesh_error();
     }

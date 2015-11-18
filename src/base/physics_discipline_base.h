@@ -87,7 +87,7 @@ namespace MAST {
         /*!
          *   clear the specified volume load from the applied loads
          */
-        void clear_volume_load(libMesh::subdomain_id_type bid,
+        void clear_volume_load(libMesh::subdomain_id_type sid,
                                MAST::BoundaryConditionBase& load);
         
         /*!

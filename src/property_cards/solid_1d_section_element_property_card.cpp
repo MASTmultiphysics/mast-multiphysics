@@ -262,7 +262,10 @@ namespace MAST {
         
         
         
-        
+        /*!
+         *   calculates the area moment about the Y-axis due to an offset 
+         *   along the Z-axis
+         */
         class AreaYMoment: public MAST::FieldFunction<Real> {
         public:
             AreaYMoment(MAST::FieldFunction<Real>* hy,
@@ -333,6 +336,10 @@ namespace MAST {
         
         
         
+        /*!
+         *   calculates the area moment about the Z-axis due to an offset
+         *   along the Y-axis
+         */
         class AreaZMoment: public MAST::FieldFunction<Real> {
         public:
             AreaZMoment(MAST::FieldFunction<Real>* hy,
@@ -403,7 +410,15 @@ namespace MAST {
         
         
         
-        
+        /*!
+         *   calculates the 2x2 matrix of area inertia for the section with 
+         *   individual entries as 
+         *
+         *   0 x 0 = int_omega  (y+yoff)^2 dy dz
+         *   0 x 1 = int_omega  (y+yoff) (z+zoff) dy dz
+         *   1 x 0 = int_omega  (y+yoff) (z+zoff) dy dz
+         *   1 x 1 = int_omega  (z+zoff)^2 dy dz
+         */
         class AreaInertiaMatrix: public MAST::FieldFunction<RealMatrixX> {
         public:
             AreaInertiaMatrix(MAST::FieldFunction<Real>* hy,
@@ -1457,8 +1472,8 @@ ThermalExpansionBMatrix::operator() (const libMesh::Point& p,
     (*_material_expansion)(p, t, at);
     
     m *= at;
-    m(1,0)  = Ay * m(0,0);
-    m(0,0) *= Az;
+    m(1,0)  = Ay * m(0,0); // for w-displacement, area moment about Y-axis
+    m(0,0) *= Az;          // for v-displacement, area moment about Z-axis
 }
 
 
@@ -1567,18 +1582,6 @@ PrestressAMatrix::derivative (const MAST::DerivativeType d,
 
 
 
-//void
-//MAST::Solid1DSectionProperty::
-//PrestressAMatrix::convert_to_vector(const RealMatrixX &m,
-//                                                     RealVectorX &v)  const {
-//    libmesh_assert_equal_to(m.rows(), 2);
-//    libmesh_assert_equal_to(m.cols(), 2);
-//    v.resize(2);
-//    v(0) = m(0,0);
-//}
-
-
-
 
 MAST::Solid1DSectionProperty::PrestressBMatrix::
 PrestressBMatrix(MAST::FieldFunction<RealMatrixX> *prestress,
@@ -1655,17 +1658,6 @@ PrestressBMatrix::derivative (const MAST::DerivativeType d,
 }
 
 
-
-//void
-//MAST::Solid1DSectionProperty::
-//PrestressBMatrix::convert_to_vector(const RealMatrixX &m,
-//                                                     RealVectorX &v)  const {
-//    libmesh_assert_equal_to(m.rows(), 2);
-//    libmesh_assert_equal_to(m.cols(), 2);
-//    v.resize(2);
-//    v(0) = m(0,0);
-//    v(1) = m(0,1);
-//}
 
 
 
@@ -1955,10 +1947,10 @@ MAST::Solid1DSectionElementPropertyCard::init() {
                                                     hz.clone().release()));
     _Ay.reset(new MAST::Solid1DSectionProperty::AreaYMoment(hy.clone().release(),
                                                             hz.clone().release(),
-                                                            hy_off.clone().release()));
+                                                            hz_off.clone().release()));
     _Az.reset(new MAST::Solid1DSectionProperty::AreaZMoment(hy.clone().release(),
                                                             hz.clone().release(),
-                                                            hz_off.clone().release()));
+                                                            hy_off.clone().release()));
     _J.reset(new MAST::Solid1DSectionProperty::TorsionalConstant(hy.clone().release(),
                                                                  hz.clone().release()));
     _Ip.reset(new MAST::Solid1DSectionProperty::PolarInertia(hy.clone().release(),

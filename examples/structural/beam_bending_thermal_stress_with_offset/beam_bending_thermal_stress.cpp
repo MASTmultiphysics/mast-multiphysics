@@ -22,7 +22,8 @@
 
 
 // MAST includes
-#include "examples/structural/beam_bending/beam_bending.h"
+#include "examples/structural/beam_bending_thermal_stress_with_offset/beam_bending_thermal_stress.h"
+#include "examples/structural/beam_optimization/beam_optimization_base.h"
 #include "elasticity/structural_system_initialization.h"
 #include "elasticity/structural_element_base.h"
 #include "elasticity/structural_nonlinear_assembly.h"
@@ -44,7 +45,7 @@
 extern libMesh::LibMeshInit* _init;
 
 
-MAST::BeamBending::BeamBending() {
+MAST::BeamBendingThermalStress::BeamBendingThermalStress() {
     
     // length of domain
     _length     = 10.;
@@ -54,7 +55,7 @@ MAST::BeamBending::BeamBending() {
     _mesh       = new libMesh::SerialMesh(_init->comm());
     
     // initialize the mesh with one element
-    libMesh::MeshTools::Generation::build_line(*_mesh, 5, 0, _length);
+    libMesh::MeshTools::Generation::build_line(*_mesh, 4, 0, _length);
     _mesh->prepare_for_use();
     
     // create the equation system
@@ -76,8 +77,14 @@ MAST::BeamBending::BeamBending() {
     // create and add the boundary condition and loads
     _dirichlet_left = new MAST::DirichletBoundaryCondition;
     _dirichlet_right= new MAST::DirichletBoundaryCondition;
-    _dirichlet_left->init (0, _structural_sys->vars());
-    _dirichlet_right->init(1, _structural_sys->vars());
+    std::vector<unsigned int> constrained_vars(4);
+    // not constraning ty, tz will keep it simply supported
+    constrained_vars[0] = 0;  // u
+    constrained_vars[1] = 1;  // v
+    constrained_vars[2] = 2;  // w
+    constrained_vars[3] = 3;  // tx
+    _dirichlet_left->init (0, constrained_vars);
+    _dirichlet_right->init(1, constrained_vars);
     _discipline->add_dirichlet_bc(0, *_dirichlet_left);
     _discipline->add_dirichlet_bc(1, *_dirichlet_right);
     _discipline->init_system_dirichlet_bc(dynamic_cast<libMesh::System&>(*_sys));
@@ -90,9 +97,10 @@ MAST::BeamBending::BeamBending() {
     _thy             = new MAST::Parameter("thy", 0.06);
     _thz             = new MAST::Parameter("thz", 0.02);
     _E               = new MAST::Parameter("E",  72.e9);
+    _alpha           = new MAST::Parameter("alpha",  2.5e-5);
     _nu              = new MAST::Parameter("nu",  0.33);
     _zero            = new MAST::Parameter("zero",  0.);
-    _press           = new MAST::Parameter( "p",  2.e4);
+    _temp            = new MAST::Parameter( "temperature",  300.);
     
     
     
@@ -102,21 +110,25 @@ MAST::BeamBending::BeamBending() {
     _params_for_sensitivity.push_back(_nu);
     _params_for_sensitivity.push_back(_thy);
     _params_for_sensitivity.push_back(_thz);
+    //_params_for_sensitivity.push_back(_alpha);
     
     
     
     _thy_f           = new MAST::ConstantFieldFunction("hy",     *_thy);
     _thz_f           = new MAST::ConstantFieldFunction("hz",     *_thz);
     _E_f             = new MAST::ConstantFieldFunction("E",      *_E);
+    _alpha_f         = new MAST::ConstantFieldFunction("alpha_expansion", *_alpha);
     _nu_f            = new MAST::ConstantFieldFunction("nu",     *_nu);
-    _hyoff_f         = new MAST::ConstantFieldFunction("hy_off", *_zero);
     _hzoff_f         = new MAST::ConstantFieldFunction("hz_off", *_zero);
-    _press_f         = new MAST::ConstantFieldFunction("pressure", *_press);
+    _temp_f          = new MAST::ConstantFieldFunction("temperature", *_temp);
+    _ref_temp_f      = new MAST::ConstantFieldFunction("ref_temperature", *_zero);
+    _hyoff_f         = new MAST::BeamOffset("hy_off", _thy_f->clone().release());
     
     // initialize the load
-    _p_load          = new MAST::BoundaryConditionBase(MAST::SURFACE_PRESSURE);
-    _p_load->add(*_press_f);
-    _discipline->add_volume_load(0, *_p_load);
+    _T_load          = new MAST::BoundaryConditionBase(MAST::TEMPERATURE);
+    _T_load->add(*_temp_f);
+    _T_load->add(*_ref_temp_f);
+    _discipline->add_volume_load(0, *_T_load);
     
     // create the material property card
     _m_card         = new MAST::IsotropicMaterialPropertyCard;
@@ -124,6 +136,7 @@ MAST::BeamBending::BeamBending() {
     // add the material properties to the card
     _m_card->add(*_E_f);
     _m_card->add(*_nu_f);
+    _m_card->add(*_alpha_f);
     
     // create the element property card
     _p_card         = new MAST::Solid1DSectionElementPropertyCard;
@@ -168,6 +181,7 @@ MAST::BeamBending::BeamBending() {
         e_set.insert(*e_it);
         output->set_elements_in_domain(e_set);
         output->set_points_for_evaluation(pts);
+        output->set_volume_loads(_discipline->volume_loads());
         _outputs.push_back(output);
         
         _discipline->add_volume_output((*e_it)->subdomain_id(), *output);
@@ -180,31 +194,32 @@ MAST::BeamBending::BeamBending() {
 
 
 
-MAST::BeamBending::~BeamBending() {
+MAST::BeamBendingThermalStress::~BeamBendingThermalStress() {
     
     delete _m_card;
     delete _p_card;
     
-    delete _p_load;
+    delete _T_load;
     delete _dirichlet_left;
     delete _dirichlet_right;
     
     delete _thy_f;
     delete _thz_f;
     delete _E_f;
+    delete _alpha_f;
     delete _nu_f;
     delete _hyoff_f;
     delete _hzoff_f;
-    delete _press_f;
+    delete _temp_f;
+    delete _ref_temp_f;
     
     delete _thy;
     delete _thz;
     delete _E;
+    delete _alpha;
     delete _nu;
     delete _zero;
-    delete _press;
-    
-    
+    delete _temp;
     
     
     delete _eq_sys;
@@ -227,7 +242,7 @@ MAST::BeamBending::~BeamBending() {
 
 
 MAST::Parameter*
-MAST::BeamBending::get_parameter(const std::string &nm) {
+MAST::BeamBendingThermalStress::get_parameter(const std::string &nm) {
     
     MAST::Parameter *rval = NULL;
     
@@ -265,7 +280,7 @@ MAST::BeamBending::get_parameter(const std::string &nm) {
 
 
 const libMesh::NumericVector<Real>&
-MAST::BeamBending::solve(bool if_write_output) {
+MAST::BeamBendingThermalStress::solve(bool if_write_output) {
     
 
     // create the nonlinear assembly object
@@ -304,8 +319,8 @@ MAST::BeamBending::solve(bool if_write_output) {
 
 
 const libMesh::NumericVector<Real>&
-MAST::BeamBending::sensitivity_solve(MAST::Parameter& p,
-                                     bool if_write_output) {
+MAST::BeamBendingThermalStress::sensitivity_solve(MAST::Parameter& p,
+                                               bool if_write_output) {
     
     _discipline->add_parameter(p);
     
@@ -362,7 +377,7 @@ MAST::BeamBending::sensitivity_solve(MAST::Parameter& p,
 
 
 void
-MAST::BeamBending::clear_stresss() {
+MAST::BeamBendingThermalStress::clear_stresss() {
     
     // iterate over the output quantities and delete them
     std::vector<MAST::StressStrainOutputBase*>::iterator

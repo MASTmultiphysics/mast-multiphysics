@@ -20,7 +20,7 @@
 
 // MAST includes
 #include "elasticity/stress_output_base.h"
-
+#include "base/boundary_condition_base.h"
 
 
 MAST::StressStrainOutputBase::Data::Data(const RealVectorX& stress,
@@ -181,15 +181,22 @@ MAST::StressStrainOutputBase::Data::dvon_Mises_stress_dX() const {
     3.0 * (pow(_stress(3), 2) +              // 3* (tau_xx^2 +
            pow(_stress(4), 2) +              //     tau_yy^2 +
            pow(_stress(5), 2));              //     tau_zz^2)
+
+    RealVectorX
+    dp = RealVectorX::Zero(6);
     
-    return
-    (((_dstress_dX.row(0) - _dstress_dX.row(1)) * (_stress(0) - _stress(1)) +
-      (_dstress_dX.row(1) - _dstress_dX.row(2)) * (_stress(1) - _stress(2)) +
-      (_dstress_dX.row(2) - _dstress_dX.row(0)) * (_stress(2) - _stress(0))) +
-     6.0 * (_dstress_dX.row(3) * _stress(3)+
-            _dstress_dX.row(4) * _stress(4)+
-            _dstress_dX.row(5) * _stress(5))) * 0.5 * pow(p, -0.5);
+    // if p == 0, then the sensitivity returns nan
+    // Hennce, we are avoiding this by setting it to zero whenever p = 0.
+    if (fabs(p) > 0.)
+        dp =
+        (((_dstress_dX.row(0) - _dstress_dX.row(1)) * (_stress(0) - _stress(1)) +
+          (_dstress_dX.row(1) - _dstress_dX.row(2)) * (_stress(1) - _stress(2)) +
+          (_dstress_dX.row(2) - _dstress_dX.row(0)) * (_stress(2) - _stress(0))) +
+         6.0 * (_dstress_dX.row(3) * _stress(3)+
+                _dstress_dX.row(4) * _stress(4)+
+                _dstress_dX.row(5) * _stress(5))) * 0.5 * pow(p, -0.5);
     
+    return dp;
 }
 
 
@@ -213,22 +220,28 @@ dvon_Mises_stress_dp(const MAST::FunctionBase* f) const {
            pow(_stress(2)-_stress(0),2)) +   // (sigma_zz - sigma_xx)^2)/2 +
     3.0 * (pow(_stress(3), 2) +              // 3* (tau_xx^2 +
            pow(_stress(4), 2) +              //     tau_yy^2 +
-           pow(_stress(5), 2));              //     tau_zz^2)
-
-    return
-    (((dstress_dp(0) - dstress_dp(1)) * (_stress(0) - _stress(1)) +
-      (dstress_dp(1) - dstress_dp(2)) * (_stress(1) - _stress(2)) +
-      (dstress_dp(2) - dstress_dp(0)) * (_stress(2) - _stress(0))) +
-     6.0 * (dstress_dp(3) * _stress(3)+
-            dstress_dp(4) * _stress(4)+
-            dstress_dp(5) * _stress(5))) * 0.5 * pow(p, -0.5);
+           pow(_stress(5), 2)),              //     tau_zz^2)
+    dp = 0.;
     
+    // if p == 0, then the sensitivity returns nan
+    // Hennce, we are avoiding this by setting it to zero whenever p = 0.
+    if (fabs(p) > 0.)
+        dp =
+        (((dstress_dp(0) - dstress_dp(1)) * (_stress(0) - _stress(1)) +
+          (dstress_dp(1) - dstress_dp(2)) * (_stress(1) - _stress(2)) +
+          (dstress_dp(2) - dstress_dp(0)) * (_stress(2) - _stress(0))) +
+         6.0 * (dstress_dp(3) * _stress(3)+
+                dstress_dp(4) * _stress(4)+
+                dstress_dp(5) * _stress(5))) * 0.5 * pow(p, -0.5);
+    
+    return dp;
 }
 
 
 
 MAST::StressStrainOutputBase::StressStrainOutputBase():
-MAST::OutputFunctionBase(MAST::STRAIN_STRESS_TENSOR) {
+MAST::OutputFunctionBase(MAST::STRAIN_STRESS_TENSOR),
+_vol_loads(NULL) {
     
 }
 
@@ -264,8 +277,12 @@ MAST::StressStrainOutputBase::clear(bool clear_elem_subset) {
     }
     
     _stress_data.clear();
-    if (clear_elem_subset)
+    
+    if (clear_elem_subset) {
         _elem_subset.clear();
+        _vol_loads = NULL;
+    }
+    
 }
 
 
@@ -396,6 +413,46 @@ get_stress_strain_data_for_elem(const libMesh::Elem *e) const {
     libmesh_assert(it != _stress_data.end());
     
     return it->second;
+}
+
+
+
+void
+MAST::StressStrainOutputBase::set_volume_loads(MAST::VolumeBCMapType& vol_loads) {
+    
+    // make sure that no existing objects are related
+    libmesh_assert(!_vol_loads);
+    
+    _vol_loads  =  &vol_loads;
+    
+}
+
+
+
+MAST::BoundaryConditionBase*
+MAST::StressStrainOutputBase::get_thermal_load_for_elem(const libMesh::Elem& elem) {
+
+    MAST::BoundaryConditionBase *rval = NULL;
+    
+    if (_vol_loads) {
+        
+        std::pair<std::multimap<libMesh::subdomain_id_type, MAST::BoundaryConditionBase*>::const_iterator,
+        std::multimap<libMesh::subdomain_id_type, MAST::BoundaryConditionBase*>::const_iterator> it;
+        
+        it =  _vol_loads->equal_range(elem.subdomain_id());
+
+        for ( ; it.first != it.second; it.first++)
+            if (it.first->second->type() == MAST::TEMPERATURE) {
+                
+                // make sure that only one thermal load exists for an element
+                libmesh_assert(!rval);
+                
+                rval = it.first->second;
+            }
+    }
+    
+    
+    return rval;
 }
 
 

@@ -637,11 +637,15 @@ MAST::StructuralElementBase::volume_output_quantity
                 // evaluate the stress only if the object needs it
                 MAST::StressStrainOutputBase& stress =
                 dynamic_cast<MAST::StressStrainOutputBase&>(*(it.first->second));
-                if (stress.evaluate_for_element(_elem))
+                if (stress.evaluate_for_element(_elem)) {
+                    // look through the discipline to see if there are
+                    // any thermal stress conditions defined for this
+                    // element.
                     calculate_derivative = (calculate_derivative ||
                                             calculate_stress(request_derivative,
                                                              request_sensitivity,
                                                              *it.first->second));
+                }
             }
                 break;
                 

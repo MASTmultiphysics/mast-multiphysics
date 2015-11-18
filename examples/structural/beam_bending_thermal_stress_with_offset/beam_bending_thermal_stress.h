@@ -17,13 +17,16 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+#ifndef __mast_beam_bending_thermal_stress_h__
+#define __mast_beam_bending_thermal_stress_h__
 
-#ifndef __mast_test_build_structural_element_1d_h__
-#define __mast_test_build_structural_element_1d_h__
 
 // C++ includes
 #include <memory>
 #include <vector>
+
+// MAST includes
+#include "base/mast_data_types.h"
 
 // libMesh includes
 #include "libmesh/libmesh.h"
@@ -37,7 +40,7 @@
 
 
 namespace MAST {
-
+    
     // Forward declerations
     class StructuralSystemInitialization;
     class StructuralDiscipline;
@@ -45,19 +48,51 @@ namespace MAST {
     class ConstantFieldFunction;
     class IsotropicMaterialPropertyCard;
     class Solid1DSectionElementPropertyCard;
-    class PistonTheoryBoundaryCondition;
+    class DirichletBoundaryCondition;
     class BoundaryConditionBase;
+    class StressStrainOutputBase;
+    class BeamOffset;
     
-    
-    struct BuildStructural1DElem {
-
+    struct BeamBendingThermalStress {
         
-        BuildStructural1DElem();
-
         
-        ~BuildStructural1DElem();
-
+        BeamBendingThermalStress();
         
+        
+        ~BeamBendingThermalStress();
+        
+        
+        /*!
+         *   @returns a pointer to the parameter of the specified name.
+         *   If no parameter exists by the specified name, then a \p NULL
+         *   pointer is returned and a message is printed with a valid list
+         *   of parameters.
+         */
+        MAST::Parameter* get_parameter(const std::string& nm);
+        
+        /*!
+         *  solves the system and returns the final solution
+         */
+        const libMesh::NumericVector<Real>&
+        solve(bool if_write_output = false);
+        
+        
+        /*!
+         *  solves the sensitivity of system and returns the final solution
+         */
+        const libMesh::NumericVector<Real>&
+        sensitivity_solve(MAST::Parameter& p,
+                          bool if_write_output = false);
+        
+        
+        /*!
+         *   clears the stress data structures for a followup analysis
+         */
+        void clear_stresss();
+        
+        // length of domain
+        Real _length;
+
         // create the mesh
         libMesh::SerialMesh*           _mesh;
         
@@ -76,23 +111,23 @@ namespace MAST {
         *_thy,
         *_thz,
         *_E,
+        *_alpha,
         *_nu,
-        *_hy_off,
-        *_hz_off,
-        *_zero,
         *_temp,
-        *_alpha;
+        *_zero;
         
         MAST::ConstantFieldFunction
         *_thy_f,
         *_thz_f,
         *_E_f,
+        *_alpha_f,
         *_nu_f,
-        *_hyoff_f,
         *_hzoff_f,
         *_temp_f,
-        *_ref_temp_f,
-        *_alpha_f;
+        *_ref_temp_f;
+
+        
+        MAST::BeamOffset *_hyoff_f;
         
         // create the material property card
         MAST::IsotropicMaterialPropertyCard*     _m_card;
@@ -100,17 +135,23 @@ namespace MAST {
         // create the element property card
         MAST::Solid1DSectionElementPropertyCard* _p_card;
         
-        // create the piston theory boundary condition
-        MAST::PistonTheoryBoundaryCondition*    _p_theory;
-
-        // create the temperature boundary condition
-        MAST::BoundaryConditionBase*            _thermal_load;
-
+        // create the Dirichlet boundary condition on left edge
+        MAST::DirichletBoundaryCondition*     _dirichlet_left;
+        
+        // create the Dirichlet boundary condition on right edge
+        MAST::DirichletBoundaryCondition*     _dirichlet_right;
+        
+        // create the temperature load
+        MAST::BoundaryConditionBase*             _T_load;
+        
         // vector of parameters to evaluate sensitivity wrt
         std::vector<MAST::Parameter*> _params_for_sensitivity;
+        
+        // output quantity objects to evaluate stress
+        std::vector<MAST::StressStrainOutputBase*>  _outputs;
     };
 }
 
 
-#endif // __mast_test_build_structural_element_1d_h__
 
+#endif //  __mast_beam_bending_thermal_stress_h__

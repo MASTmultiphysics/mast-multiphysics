@@ -197,7 +197,7 @@ MAST::StructuralElement1D::calculate_stress(bool request_derivative,
             qp_loc = qrule_ptr->get_points();
             break;
             
-        defalut:
+        default:
             // should not get here
             libmesh_error();
     }
@@ -223,7 +223,13 @@ MAST::StructuralElement1D::calculate_stress(bool request_derivative,
     y     =  0.,
     z     =  0.,
     y_off =  0.,
-    z_off =  0.;
+    z_off =  0.,
+    temp  =  0.,
+    ref_t =  0.,
+    alpha =  0.,
+    dtemp =  0.,
+    dref_t=  0.,
+    dalpha=  0.;
     
     RealMatrixX
     material_mat,
@@ -281,6 +287,26 @@ MAST::StructuralElement1D::calculate_stress(bool request_derivative,
     MAST::StressStrainOutputBase& stress_output =
     dynamic_cast<MAST::StressStrainOutputBase&>(output);
 
+    // check to see if the element has any thermal loads specified
+    // The object returns null
+    MAST::BoundaryConditionBase *thermal_load =
+    stress_output.get_thermal_load_for_elem(_elem);
+
+    const MAST::FieldFunction<Real>
+    *temp_func     = NULL,
+    *ref_temp_func = NULL,
+    *alpha_func    = NULL;
+
+    // get pointers to the temperature, if thermal load is specified
+    if (thermal_load) {
+        temp_func     =
+        &(thermal_load->get<MAST::FieldFunction<Real> >("temperature")),
+        ref_temp_func =
+        &(thermal_load->get<MAST::FieldFunction<Real> >("ref_temperature"));
+        alpha_func    =
+        &(_property.get_material().get<MAST::FieldFunction<Real> >("alpha_expansion"));
+    }
+    
     // TODO: improve the stress calculation by including shear stress due
     // to torsion and shear flow due to beam bending.
     
@@ -297,6 +323,16 @@ MAST::StructuralElement1D::calculate_stress(bool request_derivative,
         
         // first handle constant throught the thickness stresses: membrane and vonKarman
         Bmat_mem.vector_mult(strain, _local_sol);
+        
+        // if thermal load was specified, then set the thermal strain
+        // component of the total strain
+        if (thermal_load) {
+            (*temp_func)    (p, _time, temp);
+            (*ref_temp_func)(p, _time, ref_t);
+            (*alpha_func)   (p, _time, alpha);
+            strain(0)  -=  alpha*(temp-ref_t);
+        }
+
         
         if (if_bending) {
             // von Karman strain
@@ -402,6 +438,21 @@ MAST::StructuralElement1D::calculate_stress(bool request_derivative,
                 // presently, only material parameter is included
 
                 dstrain_dp  =  RealVectorX::Zero(n1);
+
+                // if thermal load was specified, then set the thermal strain
+                // component of the total strain
+                if (thermal_load) {
+                    temp_func->derivative(MAST::PARTIAL_DERIVATIVE,
+                                          *sensitivity_param,
+                                          p, _time, dtemp);
+                    ref_temp_func->derivative(MAST::PARTIAL_DERIVATIVE,
+                                              *sensitivity_param,
+                                              p, _time, dref_t);
+                    alpha_func->derivative(MAST::PARTIAL_DERIVATIVE,
+                                           *sensitivity_param,
+                                           p, _time, dalpha);
+                    dstrain_dp(0)  -=  alpha*(dtemp-dref_t) - dalpha*(temp-ref_t);
+                }
                 
                 // include the dependence of strain on the thickness
                 if (if_bending) {
@@ -1032,6 +1083,8 @@ _internal_residual_operation(bool if_bending,
         //  evaluate the bending stress and add that to the stress vector
         // for evaluation in the nonlinear stress term
         Bmat_bend.vector_mult(vec2_n1, _local_sol);
+        // vec2_n1(0) is the longitudinal force due to v-bending
+        // vec2_n1(1) is the longitudinal force due to w-bending
         vec1_n1 = material_B_mat * vec2_n1;
         stress_l(0,0) += vec1_n1(0);
         stress(0,0)   += vec1_n1(0);
@@ -1080,7 +1133,7 @@ _internal_residual_operation(bool if_bending,
         stress(1,1) = 0.;
         // now coupling with the bending strain
         // B_bend^T [B] B_mem
-        vec1_n1 = material_B_mat * vec2_n1;
+        vec1_n1 = material_B_mat.transpose() * vec2_n1;
         Bmat_bend.vector_mult_transpose(vec3_n2, vec1_n1);
         local_f += JxW[qp] * vec3_n2;
         
@@ -1210,7 +1263,8 @@ _internal_residual_operation(bool if_bending,
             }
             
             // bending - membrane
-            Bmat_mem.left_multiply(mat1_n1n2, material_B_mat);
+            mat3 = material_B_mat.transpose();
+            Bmat_mem.left_multiply(mat1_n1n2, mat3);
             Bmat_bend.right_multiply_transpose(mat2_n2n2, mat1_n1n2);
             local_jac += JxW[qp] * mat2_n2n2;
             

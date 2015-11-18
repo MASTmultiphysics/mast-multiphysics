@@ -98,8 +98,8 @@ _n_stations(0) {
     constrained_vars[1] = 1;  // v
     constrained_vars[2] = 2;  // w
     constrained_vars[3] = 3;  // tx
-    _dirichlet_left->init (0, _structural_sys->vars());
-    _dirichlet_right->init(1, _structural_sys->vars());
+    _dirichlet_left->init (0, constrained_vars);
+    _dirichlet_right->init(1, constrained_vars);
     _discipline->add_dirichlet_bc(0, *_dirichlet_left);
     _discipline->add_dirichlet_bc(1, *_dirichlet_right);
     _discipline->init_system_dirichlet_bc(dynamic_cast<libMesh::System&>(*_sys));

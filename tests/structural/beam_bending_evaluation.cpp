@@ -90,6 +90,7 @@ BOOST_AUTO_TEST_CASE   (BeamBendingSolution) {
                                         _structural_sys->vars()[1], // v-displ.
                                         0);
         numerical    =   _sys->solution->el(dof_num);
+
         BOOST_CHECK(MAST::compare_value(analytical, numerical, tol));
         
         // theta-z rotation

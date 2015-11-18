@@ -21,7 +21,7 @@
 #include <iostream>
 
 // MAST includes
-#include "examples/structural/beam_optimization_single_stress_functional/beam_optimization.h"
+#include "examples/structural/beam_optimization_thermal_stress/beam_optimization_thermal_stress.h"
 #include "driver/driver_base.h"
 #include "elasticity/stress_output_base.h"
 #include "optimization/optimization_interface.h"
@@ -38,10 +38,9 @@
 
 
 
-
-MAST::BeamBendingSingleFunctionalSizingOptimization::
-BeamBendingSingleFunctionalSizingOptimization(GetPot& infile,
-                              std::ostream& output):
+MAST::BeamBendingThermalStressSizingOptimization::
+BeamBendingThermalStressSizingOptimization(GetPot& infile,
+                                           std::ostream& output):
 MAST::FunctionEvaluation(output),
 _n_elems(0),
 _n_stations(0) {
@@ -56,7 +55,7 @@ _n_stations(0) {
     // now setup the optimization data
     _n_vars                = _n_stations; // for thickness variable
     _n_eq                  = 0;
-    _n_ineq                = 1;           // one element stress functional for all elems
+    _n_ineq                = _n_elems;   // one element stress functional per elem
     _max_iters             = 1000;
     
     
@@ -166,26 +165,30 @@ _n_stations(0) {
     
     // create the property functions and add them to the
     
-    _thz             = new MAST::Parameter( "thz",                   1.0);
-    _E               = new MAST::Parameter(   "E", infile("E",    72.e9));
-    _nu              = new MAST::Parameter(  "nu", infile("nu",    0.33));
-    _rho             = new MAST::Parameter( "rho", infile("rho", 2700.0));
-    _zero            = new MAST::Parameter("zero",                    0.);
-    _press           = new MAST::Parameter(   "p", infile("press", 2.e4));
+    _thz             = new MAST::Parameter( "thz",                     1.0);
+    _E               = new MAST::Parameter(   "E",   infile("E",    72.e9));
+    _alpha           = new MAST::Parameter("alpha", infile("alpha",2.5e-5));
+    _nu              = new MAST::Parameter(  "nu",   infile("nu",    0.33));
+    _rho             = new MAST::Parameter( "rho",   infile("rho", 2700.0));
+    _zero            = new MAST::Parameter("zero",                      0.);
+    _temp            = new MAST::Parameter( "temp", infile("temp",  300.0));
     
     
-    _thz_f           = new MAST::ConstantFieldFunction("hz",         *_thz);
-    _E_f             = new MAST::ConstantFieldFunction("E",            *_E);
-    _nu_f            = new MAST::ConstantFieldFunction("nu",          *_nu);
-    _rho_f           = new MAST::ConstantFieldFunction("rho",        *_rho);
-    _hyoff_f         = new MAST::ConstantFieldFunction("hy_off",    *_zero);
-    _hzoff_f         = new MAST::ConstantFieldFunction("hz_off",    *_zero);
-    _press_f         = new MAST::ConstantFieldFunction("pressure", *_press);
-    
+    _thz_f           = new MAST::ConstantFieldFunction("hz",                *_thz);
+    _E_f             = new MAST::ConstantFieldFunction("E",                   *_E);
+    _nu_f            = new MAST::ConstantFieldFunction("nu",                 *_nu);
+    _alpha_f         = new MAST::ConstantFieldFunction("alpha_expansion", *_alpha);
+    _rho_f           = new MAST::ConstantFieldFunction("rho",               *_rho);
+    _hzoff_f         = new MAST::ConstantFieldFunction("hz_off",           *_zero);
+    _temp_f          = new MAST::ConstantFieldFunction("temperature",      *_temp);
+    _ref_temp_f      = new MAST::ConstantFieldFunction("ref_temperature",  *_zero);
+    _hyoff_f         = new MAST::BeamOffset("hy_off", _thy_f->clone().release());
+
     // initialize the load
-    _p_load          = new MAST::BoundaryConditionBase(MAST::SURFACE_PRESSURE);
-    _p_load->add(*_press_f);
-    _discipline->add_volume_load(0, *_p_load);
+    _T_load          = new MAST::BoundaryConditionBase(MAST::TEMPERATURE);
+    _T_load->add(*_temp_f);
+    _T_load->add(*_ref_temp_f);
+    _discipline->add_volume_load(0, *_T_load);
     
     // create the material property card
     _m_card         = new MAST::IsotropicMaterialPropertyCard;
@@ -194,7 +197,8 @@ _n_stations(0) {
     _m_card->add(  *_E_f);
     _m_card->add( *_nu_f);
     _m_card->add(*_rho_f);
-    
+    _m_card->add(*_alpha_f);
+
     // create the element property card
     _p_card         = new MAST::Solid1DSectionElementPropertyCard;
     
@@ -218,6 +222,10 @@ _n_stations(0) {
     
     
     // create the output objects, one for each element
+    libMesh::MeshBase::const_element_iterator
+    e_it    = _mesh->elements_begin(),
+    e_end   = _mesh->elements_end();
+    
     // points where stress is evaluated
     std::vector<libMesh::Point> pts;
     pts.push_back(libMesh::Point(-1/sqrt(3), 1., 0.)); // upper skin
@@ -225,9 +233,19 @@ _n_stations(0) {
     pts.push_back(libMesh::Point( 1/sqrt(3), 1., 0.)); // upper skin
     pts.push_back(libMesh::Point( 1/sqrt(3),-1., 0.)); // lower skin
     
-    _outputs = new MAST::StressStrainOutputBase;
-    _outputs->set_points_for_evaluation(pts);
-    _discipline->add_volume_output(0, *_outputs);
+    for ( ; e_it != e_end; e_it++) {
+        
+        MAST::StressStrainOutputBase * output = new MAST::StressStrainOutputBase;
+        
+        // tell the object to evaluate the data for this object only
+        std::set<const libMesh::Elem*> e_set;
+        e_set.insert(*e_it);
+        output->set_elements_in_domain(e_set);
+        output->set_points_for_evaluation(pts);
+        _outputs.push_back(output);
+        
+        _discipline->add_volume_output((*e_it)->subdomain_id(), *output);
+    }
     
     // create the assembly object
     _assembly = new MAST::StructuralNonlinearAssembly;
@@ -242,27 +260,31 @@ _n_stations(0) {
 
 
 
-MAST::BeamBendingSingleFunctionalSizingOptimization::~BeamBendingSingleFunctionalSizingOptimization() {
+MAST::BeamBendingThermalStressSizingOptimization::
+~BeamBendingThermalStressSizingOptimization() {
     
     delete _m_card;
     delete _p_card;
     
-    delete _p_load;
+    delete _T_load;
     delete _dirichlet_left;
     delete _dirichlet_right;
     
     delete _thz_f;
     delete _E_f;
+    delete _alpha_f;
     delete _nu_f;
     delete _hyoff_f;
     delete _hzoff_f;
-    delete _press_f;
+    delete _temp_f;
+    delete _ref_temp_f;
     
     delete _thz;
     delete _E;
     delete _nu;
+    delete _alpha;
     delete _zero;
-    delete _press;
+    delete _temp;
     
     delete _weight;
     
@@ -275,7 +297,16 @@ MAST::BeamBendingSingleFunctionalSizingOptimization::~BeamBendingSingleFunctiona
     delete _discipline;
     delete _structural_sys;
     
-    delete _outputs;
+    // iterate over the output quantities and delete them
+    {
+        std::vector<MAST::StressStrainOutputBase*>::iterator
+        it   =   _outputs.begin(),
+        end  =   _outputs.end();
+        for ( ; it != end; it++) delete *it;
+        
+        _outputs.clear();
+    }
+
     
     // delete the h_y station functions
     {
@@ -299,9 +330,11 @@ MAST::BeamBendingSingleFunctionalSizingOptimization::~BeamBendingSingleFunctiona
 
 
 void
-MAST::BeamBendingSingleFunctionalSizingOptimization::init_dvar(std::vector<Real>& x,
-                                               std::vector<Real>& xmin,
-                                               std::vector<Real>& xmax) {
+MAST::BeamBendingThermalStressSizingOptimization::
+init_dvar(std::vector<Real>& x,
+          std::vector<Real>& xmin,
+          std::vector<Real>& xmax) {
+    
     // one DV for each element
     x       = _dv_init;
     xmin    = _dv_low;
@@ -312,13 +345,14 @@ MAST::BeamBendingSingleFunctionalSizingOptimization::init_dvar(std::vector<Real>
 
 
 void
-MAST::BeamBendingSingleFunctionalSizingOptimization::evaluate(const std::vector<Real>& dvars,
-                                              Real& obj,
-                                              bool eval_obj_grad,
-                                              std::vector<Real>& obj_grad,
-                                              std::vector<Real>& fvals,
-                                              std::vector<bool>& eval_grads,
-                                              std::vector<Real>& grads) {
+MAST::BeamBendingThermalStressSizingOptimization
+::evaluate(const std::vector<Real>& dvars,
+           Real& obj,
+           bool eval_obj_grad,
+           std::vector<Real>& obj_grad,
+           std::vector<Real>& fvals,
+           std::vector<bool>& eval_grads,
+           std::vector<Real>& grads) {
     
     
     libmesh_assert_equal_to(dvars.size(), _n_vars);
@@ -385,8 +419,9 @@ MAST::BeamBendingSingleFunctionalSizingOptimization::evaluate(const std::vector<
     obj = wt;
     
     // copy the element von Mises stress values as the functions
-    fvals[0] =  -1. +
-    _outputs->von_Mises_p_norm_functional_for_all_elems(pval)/_stress_limit;
+    for (unsigned int i=0; i<_n_elems; i++)
+        fvals[i] =  -1. +
+        _outputs[i]->von_Mises_p_norm_functional_for_all_elems(pval)/_stress_limit;
     
 
     
@@ -445,9 +480,10 @@ MAST::BeamBendingSingleFunctionalSizingOptimization::evaluate(const std::vector<
                                                     *(_sys->solution));
             
             // copy the sensitivity values in the output
-            grads[i] = _dv_scaling[i]/_stress_limit *
-            _outputs->von_Mises_p_norm_functional_sensitivity_for_all_elems
-            (pval, _thy_station_parameters[i]);
+            for (unsigned int j=0; j<_n_elems; j++)
+                grads[i*_n_elems+j] = _dv_scaling[i]/_stress_limit *
+                _outputs[j]->von_Mises_p_norm_functional_sensitivity_for_all_elems
+                (pval, _thy_station_parameters[i]);
         }
     }
     
@@ -461,9 +497,15 @@ MAST::BeamBendingSingleFunctionalSizingOptimization::evaluate(const std::vector<
 
 
 void
-MAST::BeamBendingSingleFunctionalSizingOptimization::clear_stresss() {
+MAST::BeamBendingThermalStressSizingOptimization::clear_stresss() {
     
-    _outputs->clear(false);
+    // iterate over the output quantities and delete them
+    std::vector<MAST::StressStrainOutputBase*>::iterator
+    it   =   _outputs.begin(),
+    end  =   _outputs.end();
+    
+    for ( ; it != end; it++)
+        (*it)->clear(false);
 }
 
 
@@ -471,11 +513,12 @@ MAST::BeamBendingSingleFunctionalSizingOptimization::clear_stresss() {
 
 
 void
-MAST::BeamBendingSingleFunctionalSizingOptimization::output(unsigned int iter,
-                                            const std::vector<Real>& x,
-                                            Real obj,
-                                            const std::vector<Real>& fval,
-                                            bool if_write_to_optim_file) const {
+MAST::BeamBendingThermalStressSizingOptimization::
+output(unsigned int iter,
+       const std::vector<Real>& x,
+       Real obj,
+       const std::vector<Real>& fval,
+       bool if_write_to_optim_file) const {
     
     libmesh_assert_equal_to(x.size(), _n_vars);
     

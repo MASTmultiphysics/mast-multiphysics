@@ -27,6 +27,7 @@
 // MAST includes
 #include "base/mast_data_types.h"
 #include "base/output_function_base.h"
+#include "base/physics_discipline_base.h"
 
 
 // libMesh includes
@@ -254,8 +255,25 @@ namespace MAST {
          *   the subdomain.
          */
         void set_elements_in_domain(const std::set<const libMesh::Elem*>& elems);
+
         
+        /*!
+         *   If the discipline includes loads such as thermal stresses and
+         *   prestresses in the analysis, then those need to be included in 
+         *   the analysis. This method can be used to specify the volume loads
+         *   that the elements can use for stress calculations.
+         */
+        void set_volume_loads(MAST::VolumeBCMapType& vol_loads);
+
         
+        /*!
+         *   @returns the thermal load for this element, if present in the
+         *   the volume loads. A \p NULL pointer is returned if no load is 
+         *   present.
+         */
+        MAST::BoundaryConditionBase*
+        get_thermal_load_for_elem(const libMesh::Elem& elem);
+
         
         /*!
          *   @returns the number of elements for which data is stored in this 
@@ -355,6 +373,11 @@ namespace MAST {
          *    empty, then data for all elements will be stored.
          */
         std::set<const libMesh::Elem*> _elem_subset;
+        
+        /*!
+         *    Volume loads used in the analysis
+         */
+        MAST::VolumeBCMapType* _vol_loads;
 
     };
 }

@@ -22,7 +22,8 @@
 
 
 // MAST includes
-#include "examples/structural/beam_bending/beam_bending.h"
+#include "examples/structural/beam_bending_with_offset/beam_bending_with_offset.h"
+#include "examples/structural/beam_optimization/beam_optimization_base.h"
 #include "elasticity/structural_system_initialization.h"
 #include "elasticity/structural_element_base.h"
 #include "elasticity/structural_nonlinear_assembly.h"
@@ -44,7 +45,7 @@
 extern libMesh::LibMeshInit* _init;
 
 
-MAST::BeamBending::BeamBending() {
+MAST::BeamBendingWithOffset::BeamBendingWithOffset() {
     
     // length of domain
     _length     = 10.;
@@ -109,9 +110,9 @@ MAST::BeamBending::BeamBending() {
     _thz_f           = new MAST::ConstantFieldFunction("hz",     *_thz);
     _E_f             = new MAST::ConstantFieldFunction("E",      *_E);
     _nu_f            = new MAST::ConstantFieldFunction("nu",     *_nu);
-    _hyoff_f         = new MAST::ConstantFieldFunction("hy_off", *_zero);
     _hzoff_f         = new MAST::ConstantFieldFunction("hz_off", *_zero);
     _press_f         = new MAST::ConstantFieldFunction("pressure", *_press);
+    _hyoff_f         = new MAST::BeamOffset("hy_off", _thy_f->clone().release());
     
     // initialize the load
     _p_load          = new MAST::BoundaryConditionBase(MAST::SURFACE_PRESSURE);
@@ -180,7 +181,7 @@ MAST::BeamBending::BeamBending() {
 
 
 
-MAST::BeamBending::~BeamBending() {
+MAST::BeamBendingWithOffset::~BeamBendingWithOffset() {
     
     delete _m_card;
     delete _p_card;
@@ -227,7 +228,7 @@ MAST::BeamBending::~BeamBending() {
 
 
 MAST::Parameter*
-MAST::BeamBending::get_parameter(const std::string &nm) {
+MAST::BeamBendingWithOffset::get_parameter(const std::string &nm) {
     
     MAST::Parameter *rval = NULL;
     
@@ -265,7 +266,7 @@ MAST::BeamBending::get_parameter(const std::string &nm) {
 
 
 const libMesh::NumericVector<Real>&
-MAST::BeamBending::solve(bool if_write_output) {
+MAST::BeamBendingWithOffset::solve(bool if_write_output) {
     
 
     // create the nonlinear assembly object
@@ -304,8 +305,8 @@ MAST::BeamBending::solve(bool if_write_output) {
 
 
 const libMesh::NumericVector<Real>&
-MAST::BeamBending::sensitivity_solve(MAST::Parameter& p,
-                                     bool if_write_output) {
+MAST::BeamBendingWithOffset::sensitivity_solve(MAST::Parameter& p,
+                                               bool if_write_output) {
     
     _discipline->add_parameter(p);
     
@@ -362,7 +363,7 @@ MAST::BeamBending::sensitivity_solve(MAST::Parameter& p,
 
 
 void
-MAST::BeamBending::clear_stresss() {
+MAST::BeamBendingWithOffset::clear_stresss() {
     
     // iterate over the output quantities and delete them
     std::vector<MAST::StressStrainOutputBase*>::iterator

@@ -23,17 +23,46 @@
 // MAST includes
 #include "base/mast_data_types.h"
 
+extern Real eps;
 
 namespace MAST {
+    
+    inline bool
+    is_numerical_zero(const Real v, const Real eps) {
+        
+        return fabs(v) <= eps;
+    }
+    
+    
+    inline bool
+    compare(const Real v1, const Real v2, const Real tol) {
+        
+        bool rval = false;
+        
+        // check to see if the values are both small enough
+        // to be zero
+        if (MAST::is_numerical_zero(v1, eps) &&
+            MAST::is_numerical_zero(v2, eps))
+            rval = true;
+        // check to see if the absolute difference is small enough
+        else if (MAST::is_numerical_zero(v1-v2, eps))
+            rval = true;
+        // check to see if the relative difference is small enough
+        else if (fabs(v1) > 0)
+            rval = fabs((v1-v2)/v1) <= tol;
+            
+        return rval;
+    }
+    
+    
+    
     
     inline bool
     compare_value(const Real v0, const Real v, const Real tol) {
         
         bool pass = true;
         
-        if (!boost::test_tools::check_is_close(v0,
-                                               v,
-                                               boost::test_tools::percent_tolerance<Real>(tol))) {
+        if (!MAST::compare(v0, v, tol)) {
             BOOST_TEST_MESSAGE ("Failed comparison: "
                                 << "expected: " << v0<< "  , "
                                 << "computed: " << v << " : "
@@ -57,9 +86,7 @@ namespace MAST {
         
         bool pass = true;
         for (unsigned int i=0; i<v0_size; i++) {
-            if (!boost::test_tools::check_is_close(v0(i),
-                                                   v(i),
-                                                   boost::test_tools::percent_tolerance(tol))) {
+            if (!MAST::compare(v0(i), v(i), tol)) {
                 BOOST_TEST_MESSAGE("Failed comparison at i = ("
                                    << i << ") : "
                                    << "expected: " << v0(i) << "  , "
@@ -89,9 +116,7 @@ namespace MAST {
         bool pass = true;
         for (unsigned int i=0; i<m0_rows; i++) {
             for (unsigned int j=0; j<m0_cols; j++)
-                if (!boost::test_tools::check_is_close(m0(i,j),
-                                                       m(i,j),
-                                                       boost::test_tools::percent_tolerance(tol))) {
+                if (!MAST::compare(m0(i,j), m(i,j), tol)) {
                     BOOST_TEST_MESSAGE("Failed comparison at (i,j) = ("
                                        << i << ", " << j << ") : "
                                        << "expected: " << m0(i,j) << "  , "
