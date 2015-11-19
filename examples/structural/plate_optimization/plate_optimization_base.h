@@ -17,8 +17,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#ifndef __mast_beam_optimization_base_h__
-#define __mast_beam_optimization_base_h__
+#ifndef __mast_plate_optimization_base_h__
+#define __mast_plate_optimization_base_h__
 
 // C++ includes
 #include <map>
@@ -38,19 +38,19 @@ namespace MAST {
      *   This class provides the ability to interpolate a function in between
      *   a set of tabulated points.
      */
-    class BeamMultilinearInterpolation:
+    class PlateMultilinearInterpolation:
     public MAST::FieldFunction<Real> {
     public:
-        BeamMultilinearInterpolation(const std::string& nm,
-                                     std::map<Real, MAST::FieldFunction<Real>*>& values);
+        PlateMultilinearInterpolation(const std::string& nm,
+                                 std::map<Real, MAST::FieldFunction<Real>*>& values);
         
-        BeamMultilinearInterpolation(const MAST::BeamMultilinearInterpolation& o);
+        PlateMultilinearInterpolation(const MAST::PlateMultilinearInterpolation& o);
         
         
         virtual std::auto_ptr<MAST::FieldFunction<Real> > clone() const;
         
         
-        virtual ~BeamMultilinearInterpolation();
+        virtual ~PlateMultilinearInterpolation();
         
     protected:
         
@@ -71,16 +71,16 @@ namespace MAST {
     /*!
      *   Function object evaluates the beam offset for the specified height
      */
-    class BeamOffset: public MAST::FieldFunction<Real> {
+    class PlateOffset: public MAST::FieldFunction<Real> {
     public:
-        BeamOffset(const std::string& nm,
-                   MAST::FieldFunction<Real> *thickness);
+        PlateOffset(const std::string& nm,
+                    MAST::FieldFunction<Real> *thickness);
         
-        BeamOffset(const MAST::BeamOffset& o);
+        PlateOffset(const MAST::PlateOffset& o);
         
         virtual std::auto_ptr<MAST::FieldFunction<Real> > clone() const;
         
-        virtual ~BeamOffset();
+        virtual ~PlateOffset();
         
     protected:
         
@@ -101,21 +101,21 @@ namespace MAST {
     
     
     /*!
-     *   Function object evaluates the BeamWeight and its sensitivity with
+     *   Function object evaluates the PlateWeight and its sensitivity with
      *   respect to the specified variable.
      */
-    class BeamWeight: public MAST::FieldFunction<Real> {
+    class PlateWeight: public MAST::FieldFunction<Real> {
     public:
         
         /*!
          *   Constructor requires the mesh and the
          */
-        BeamWeight(MAST::PhysicsDisciplineBase& discipline);
+        PlateWeight(MAST::PhysicsDisciplineBase& discipline);
         
         /*!
          *  copy constructor
          */
-        BeamWeight(const MAST::BeamWeight& w);
+        PlateWeight(const MAST::PlateWeight& w);
         
         /*!
          *  @returns a new object as a clone, encapsulated in a smart-pointer
@@ -125,7 +125,7 @@ namespace MAST {
         /*!
          *  virtual destructor
          */
-        virtual ~BeamWeight();
+        virtual ~PlateWeight();
         
     protected:
         
@@ -160,5 +160,5 @@ namespace MAST {
 }
 
 
-#endif // __mast_beam_optimization_base_h__
+#endif // __mast_plate_optimization_base_h__
 

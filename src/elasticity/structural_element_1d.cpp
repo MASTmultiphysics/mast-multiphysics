@@ -153,8 +153,6 @@ MAST::StructuralElement1D::calculate_stress(bool request_derivative,
                                             bool request_sensitivity,
                                             MAST::OutputFunctionBase& output) {
     
-    // prepare the side finite element
-
     // ask the output object about the quadrature points at which
     // the stress evaluations need to be peformed
     MAST::PointwiseOutputEvaluationMode mode = output.evaluation_mode();
@@ -458,7 +456,6 @@ MAST::StructuralElement1D::calculate_stress(bool request_derivative,
                 if (if_bending) {
                     
                     // add to this the bending strain
-                    // TODO: add coupling due to h_offset
                     hy.derivative(MAST::PARTIAL_DERIVATIVE,
                                   *sensitivity_param,
                                   p, _time, y);

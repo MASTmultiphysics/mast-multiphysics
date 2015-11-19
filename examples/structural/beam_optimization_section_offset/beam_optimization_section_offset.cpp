@@ -161,7 +161,7 @@ _n_stations(0) {
     }
     
     // now create the h_y function and give it to the property card
-    _thy_f.reset(new MAST::MultilinearInterpolation("hy", thy_station_vals));
+    _thy_f.reset(new MAST::BeamMultilinearInterpolation("hy", thy_station_vals));
 
     
     // create the property functions and add them to the
@@ -236,7 +236,7 @@ _n_stations(0) {
     
     
     // create the function to calculate weight
-    _weight = new MAST::Weight(*_discipline);
+    _weight = new MAST::BeamWeight(*_discipline);
 }
 
 

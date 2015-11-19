@@ -41,14 +41,14 @@
 #include "libmesh/dof_map.h"
 
 
-extern const Real
-delta,
-tol;
-
 
 template <typename ValType>
 void
 check_piston_theory_jacobian (ValType& v) {
+
+    const Real
+    delta    = 1.e-4,
+    tol      = 1.e-2;
 
     // tell the discipline about the section property and the piston theory
     // boundary condition

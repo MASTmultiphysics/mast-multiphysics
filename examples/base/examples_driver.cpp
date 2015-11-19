@@ -19,12 +19,18 @@
 
 // MAST includes
 #include "examples/structural/bar_extension/bar_extension.h"
+#include "examples/structural/beam_modal_analysis/beam_modal_analysis.h"
 #include "examples/structural/beam_bending/beam_bending.h"
 #include "examples/structural/beam_bending_with_offset/beam_bending_with_offset.h"
 #include "examples/structural/beam_optimization/beam_optimization.h"
 #include "examples/structural/beam_optimization_single_stress_functional/beam_optimization.h"
 #include "examples/structural/beam_optimization_section_offset/beam_optimization_section_offset.h"
 #include "examples/structural/beam_optimization_thermal_stress/beam_optimization_thermal_stress.h"
+#include "examples/structural/membrane_extension_uniaxial_stress/membrane_extension_uniaxial.h"
+#include "examples/structural/membrane_extension_biaxial_stress/membrane_extension_biaxial.h"
+#include "examples/structural/plate_bending/plate_bending.h"
+#include "examples/structural/plate_optimization/plate_optimization.h"
+
 
 // libMesh includes
 #include "libmesh/libmesh.h"
@@ -66,6 +72,25 @@ int main(int argc, char* const argv[]) {
                 << "  wrt  " << par_name << std::endl;
                 run_case.sensitivity_solve(*p, true);
             }
+        }
+    }
+    else if (case_name == "beam_modal_analysis") {
+        
+        libmesh_error_msg("this case has a memory issue that we need to debug");
+        MAST::BeamModalAnalysis run_case;
+        
+        std::cout << "Running case: " << case_name << std::endl;
+        run_case.solve(true);
+        if (with_sens) {
+            libmesh_error(); // sensitivity method to be added
+            /*MAST::Parameter* p = run_case.get_parameter(par_name);
+            if (p) {
+                
+                std::cout
+                << "Running sensitivity for case: " << case_name
+                << "  wrt  " << par_name << std::endl;
+                run_case.sensitivity_solve(*p, true);
+            }*/
         }
     }
     else if (case_name == "beam_bending") {
@@ -248,6 +273,89 @@ int main(int argc, char* const argv[]) {
         
         output.close();
     }
+    else if (case_name == "membrane_extension_uniaxial") {
+        
+        MAST::MembraneExtensionUniaxial run_case;
+        
+        std::cout << "Running case: " << case_name << std::endl;
+        run_case.solve(true);
+        if (with_sens) {
+            MAST::Parameter* p = run_case.get_parameter(par_name);
+            if (p) {
+                
+                std::cout
+                << "Running sensitivity for case: " << case_name
+                << "  wrt  " << par_name << std::endl;
+                run_case.sensitivity_solve(*p, true);
+            }
+        }
+    }
+    else if (case_name == "membrane_extension_biaxial") {
+        
+        MAST::MembraneExtensionBiaxial run_case;
+        
+        std::cout << "Running case: " << case_name << std::endl;
+        run_case.solve(true);
+        if (with_sens) {
+            MAST::Parameter* p = run_case.get_parameter(par_name);
+            if (p) {
+                
+                std::cout
+                << "Running sensitivity for case: " << case_name
+                << "  wrt  " << par_name << std::endl;
+                run_case.sensitivity_solve(*p, true);
+            }
+        }
+    }
+    else if (case_name == "plate_bending") {
+        
+        MAST::PlateBending run_case;
+        
+        std::cout << "Running case: " << case_name << std::endl;
+        run_case.solve(true);
+        if (with_sens) {
+            MAST::Parameter* p = run_case.get_parameter(par_name);
+            if (p) {
+                
+                std::cout
+                << "Running sensitivity for case: " << case_name
+                << "  wrt  " << par_name << std::endl;
+                run_case.sensitivity_solve(*p, true);
+            }
+        }
+    }
+    else if (case_name == "plate_bending_sizing_optimization") {
+        
+        std::cout
+        << "Plate Bending Optimization:" << std::endl
+        << "  input.in should be provided in the working directory with"
+        << " desired parameter values."
+        << "  In absence of a parameter value, its default value will be used."
+        << std::endl
+        << "  Output per iteration is written to optimization_output.txt."
+        << std::endl;
+        
+        GetPot infile("input.in");
+        std::ofstream output;
+        output.open("optimization_output.txt", std::ofstream::out);
+        
+        MAST::GCMMAOptimizationInterface gcmma;
+        
+        // create and attach sizing optimization object
+        MAST::PlateBendingSizingOptimization func_eval(infile, output);
+        
+        std::vector<Real> dvals(func_eval.n_vars());
+        std::fill(dvals.begin(), dvals.end(), 0.02);
+        std::cout << "******* Begin: Verifying gradients ***********" << std::endl;
+        //func_eval.verify_gradients(dvals);
+        std::cout << "******* End: Verifying gradients ***********" << std::endl;
+        
+        // attach and optimize
+        gcmma.attach_function_evaluation_object(func_eval);
+        gcmma.optimize();
+        
+        output.close();
+    }
     else {
         std::cout
         << "Please run the driver with the name of example specified as: \n"
@@ -263,6 +371,10 @@ int main(int argc, char* const argv[]) {
         << "  beam_bending_single_functional_optimization \n"
         << "  beam_bending_section_offset_optimization \n"
         << "  beam_bending_thermal_stress_optimization \n"
+        << "  membrane_extension_uniaxial \n"
+        << "  membrane_extension_biaxial \n"
+        << "  plate_bending \n"
+        << "  plate_bending_optimization \n"
         << "*  The default for --with_sensitivity is: false.\n"
         << "*  param is used to specify the parameter name for which sensitivity is desired."
         << std::endl;

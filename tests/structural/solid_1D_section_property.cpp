@@ -41,15 +41,14 @@
 #include "libmesh/dof_map.h"
 
 
-extern const Real
-delta,
-tol;
-
 
 BOOST_FIXTURE_TEST_SUITE  (StructuralSectionPropertyEvaluation, MAST::BuildStructural1DElem)
 
 BOOST_AUTO_TEST_CASE   (Solid1DSection) {
     
+    const Real
+    delta    = 1.e-4,
+    tol      = 1.e-2;
 
     
     

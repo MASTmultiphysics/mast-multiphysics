@@ -23,8 +23,6 @@
 // MAST includes
 #include "base/mast_data_types.h"
 
-extern Real eps;
-
 namespace MAST {
     
     inline bool
@@ -36,7 +34,10 @@ namespace MAST {
     
     inline bool
     compare(const Real v1, const Real v2, const Real tol) {
-        
+
+        const Real
+        eps      = 1.0e-7;
+
         bool rval = false;
         
         // check to see if the values are both small enough

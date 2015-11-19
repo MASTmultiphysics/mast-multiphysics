@@ -43,9 +43,7 @@
 #include "libmesh/elem.h"
 #include "libmesh/edge_edge2.h"
 
-extern const Real
-delta,
-tol;
+
 
 void
 set_deformation(const unsigned int dim,
@@ -90,6 +88,10 @@ set_deformation(const unsigned int dim,
 
 template <typename ValType>
 void check_stress (ValType& v, const RealVectorX& x0) {
+
+    const Real
+    delta    = 1.e-4,
+    tol      = 1.e-2;
 
     // stress output
     MAST::StressStrainOutputBase output;
@@ -399,6 +401,8 @@ void check_stress (ValType& v, const RealVectorX& x0) {
 
 BOOST_AUTO_TEST_CASE   (VonMisesStress) {
 
+    const Real
+    tol      = 1.e-2;
     
     // check the accuracy of sensitivity analysis of von Mises stress,
     // and the von Mises stress functional

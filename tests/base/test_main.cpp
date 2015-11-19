@@ -35,11 +35,6 @@
 
 std::auto_ptr<libMesh::LibMeshInit>  _init;
 
-extern const Real
-delta    = 1.e-7,
-tol      = 1.e-2,
-eps      = 1.0e-7;
-
 
 struct GlobalTestFixture {
     

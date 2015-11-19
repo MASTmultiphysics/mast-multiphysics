@@ -46,16 +46,16 @@ set_deformation(const unsigned int dim,
                 const unsigned int case_num,
                 RealVectorX& vec);
 
-extern const Real
-delta,
-tol;
-
 
 
 template <typename ValType>
 void
 check_thermal_residual_force_jacobian (ValType& v) {
-    
+
+    const Real
+    delta    = 1.e-4,
+    tol      = 1.e-2;
+
     // tell the discipline about the section property and the piston theory
     // boundary condition
     v._discipline->add_volume_load(0, *v._thermal_load);
@@ -166,6 +166,10 @@ template <typename ValType>
 void check_thermal_force_and_jacobian_sensitivity (ValType& v,
                                                    const RealVectorX& x) {
     
+    const Real
+    delta    = 1.e-4,
+    tol      = 1.e-2;
+
     // tell the discipline about the section property and the piston theory
     // boundary condition
     v._discipline->add_volume_load(0, *v._thermal_load);

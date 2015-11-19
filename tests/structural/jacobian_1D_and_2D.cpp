@@ -40,13 +40,14 @@
 // libMesh includes
 #include "libmesh/dof_map.h"
 
-extern const Real
-delta,
-tol;
 
 
 template <typename ValType>
 void check_internal_force_jacobian (ValType& v) {
+
+    const Real
+    delta    = 1.e-4,
+    tol      = 1.e-2;
 
     // get reference to the element in this mesh
     const libMesh::Elem& elem = **(v._mesh->local_elements_begin());

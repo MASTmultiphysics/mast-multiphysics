@@ -18,12 +18,13 @@
  */
 
 // MAST includes
-#include "examples/structural/beam_optimization/beam_optimization_base.h"
-#include "property_cards/solid_1d_section_element_property_card.h"
+#include "examples/structural/plate_optimization/plate_optimization_base.h"
+#include "property_cards/solid_2d_section_element_property_card.h"
 #include "property_cards/material_property_card_base.h"
 
 
-MAST::BeamMultilinearInterpolation::BeamMultilinearInterpolation
+
+MAST::PlateMultilinearInterpolation::PlateMultilinearInterpolation
 (const std::string& nm,
  std::map<Real, MAST::FieldFunction<Real>*>& values):
 MAST::FieldFunction<Real>(nm),
@@ -40,8 +41,11 @@ _values(values) {
         _functions.insert(it->second->master());
 }
 
-MAST::BeamMultilinearInterpolation::BeamMultilinearInterpolation
-(const MAST::BeamMultilinearInterpolation& o):
+
+
+
+MAST::PlateMultilinearInterpolation::PlateMultilinearInterpolation
+(const MAST::PlateMultilinearInterpolation& o):
 MAST::FieldFunction<Real>(o),
 _values(o._values) {
     std::map<Real, MAST::FieldFunction<Real>*>::iterator
@@ -53,22 +57,28 @@ _values(o._values) {
 }
 
 
+
+
 std::auto_ptr<MAST::FieldFunction<Real> >
-MAST::BeamMultilinearInterpolation::clone() const {
+MAST::PlateMultilinearInterpolation::clone() const {
     
     return std::auto_ptr<MAST::FieldFunction<Real> >
-    (new MAST::BeamMultilinearInterpolation(*this));
+    (new MAST::PlateMultilinearInterpolation(*this));
 }
 
-MAST::BeamMultilinearInterpolation::~BeamMultilinearInterpolation() {
+
+
+
+MAST::PlateMultilinearInterpolation::~PlateMultilinearInterpolation() {
     
 }
+
 
 
 void
-MAST::BeamMultilinearInterpolation::operator() (const libMesh::Point& p,
-                                                Real t,
-                                                Real& v) const {
+MAST::PlateMultilinearInterpolation::operator() (const libMesh::Point& p,
+                                                 Real t,
+                                                 Real& v) const {
     
     //
     // the following is used for calculation of the return value
@@ -110,12 +120,14 @@ MAST::BeamMultilinearInterpolation::operator() (const libMesh::Point& p,
     }
 }
 
+
+
 void
-MAST::BeamMultilinearInterpolation::derivative(const MAST::DerivativeType d,
-                                               const MAST::FunctionBase& f,
-                                               const libMesh::Point& p,
-                                               Real t,
-                                               Real& v) const {
+MAST::PlateMultilinearInterpolation::derivative(const MAST::DerivativeType d,
+                                                const MAST::FunctionBase& f,
+                                                const libMesh::Point& p,
+                                                Real t,
+                                                Real& v) const {
     
     //
     // the following is used for calculation of the return value
@@ -160,15 +172,15 @@ MAST::BeamMultilinearInterpolation::derivative(const MAST::DerivativeType d,
 
 
 
-MAST::BeamOffset::BeamOffset(const std::string& nm,
-                             MAST::FieldFunction<Real> *thickness):
+MAST::PlateOffset::PlateOffset(const std::string& nm,
+                               MAST::FieldFunction<Real> *thickness):
 MAST::FieldFunction<Real>(nm),
 _dim(thickness) {
     
     _functions.insert(thickness->master());
 }
 
-MAST::BeamOffset::BeamOffset(const MAST::BeamOffset& o):
+MAST::PlateOffset::PlateOffset(const MAST::PlateOffset& o):
 MAST::FieldFunction<Real>(o),
 _dim(o._dim->clone().release()) {
     
@@ -176,23 +188,27 @@ _dim(o._dim->clone().release()) {
 }
 
 
+
+
 std::auto_ptr<MAST::FieldFunction<Real> >
-MAST::BeamOffset::clone() const {
+MAST::PlateOffset::clone() const {
     
     return std::auto_ptr<MAST::FieldFunction<Real> >
-    (new MAST::BeamOffset(*this));
+    (new MAST::PlateOffset(*this));
 }
 
 
-MAST::BeamOffset::~BeamOffset() {
+
+MAST::PlateOffset::~PlateOffset() {
     delete _dim;
 }
 
 
+
 void
-MAST::BeamOffset::operator() (const libMesh::Point& p,
-                              Real t,
-                              Real& v) const {
+MAST::PlateOffset::operator() (const libMesh::Point& p,
+                               Real t,
+                               Real& v) const {
     
     (*_dim)(p, t, v);
     v *= 0.5;
@@ -200,11 +216,11 @@ MAST::BeamOffset::operator() (const libMesh::Point& p,
 
 
 void
-MAST::BeamOffset::derivative(const MAST::DerivativeType d,
-                             const MAST::FunctionBase& f,
-                             const libMesh::Point& p,
-                             Real t,
-                             Real& v) const {
+MAST::PlateOffset::derivative(const MAST::DerivativeType d,
+                              const MAST::FunctionBase& f,
+                              const libMesh::Point& p,
+                              Real t,
+                              Real& v) const {
     _dim->derivative(d, f, p, t, v);
     v *= 0.5;
 }
@@ -212,14 +228,14 @@ MAST::BeamOffset::derivative(const MAST::DerivativeType d,
 
 
 
-MAST::BeamWeight::BeamWeight(MAST::PhysicsDisciplineBase& discipline):
-MAST::FieldFunction<Real>("BeamWeight"),
+MAST::PlateWeight::PlateWeight(MAST::PhysicsDisciplineBase& discipline):
+MAST::FieldFunction<Real>("PlateWeight"),
 _discipline(discipline)
 { }
 
 
 
-MAST::BeamWeight::BeamWeight(const MAST::BeamWeight& w):
+MAST::PlateWeight::PlateWeight(const MAST::PlateWeight& w):
 MAST::FieldFunction<Real>(w),
 _discipline(w._discipline)
 { }
@@ -227,22 +243,22 @@ _discipline(w._discipline)
 
 
 std::auto_ptr<MAST::FieldFunction<Real> >
-MAST::BeamWeight::clone() const {
+MAST::PlateWeight::clone() const {
     
     return std::auto_ptr<MAST::FieldFunction<Real> >
-    (new MAST::BeamWeight(*this));
+    (new MAST::PlateWeight(*this));
 }
 
 
 
-MAST::BeamWeight::~BeamWeight() { }
+MAST::PlateWeight::~PlateWeight() { }
 
 
 
 void
-MAST::BeamWeight::operator() (const libMesh::Point& p,
-                              Real t,
-                              Real& v) const {
+MAST::PlateWeight::operator() (const libMesh::Point& p,
+                               Real t,
+                               Real& v) const {
     
     // get a reference to the mesh
     const libMesh::MeshBase&
@@ -251,11 +267,9 @@ MAST::BeamWeight::operator() (const libMesh::Point& p,
     eit     = mesh.active_local_elements_begin(),
     eend    = mesh.active_local_elements_end();
     
-    Real h, rho, x0, x1, dx;
+    Real h, rho;
     v = 0.;
-    
     libMesh::Point elem_p;
-    const unsigned int n_sec = 3; // number of quadrature divs
     
     for ( ; eit != eend; eit++ ) {
         
@@ -271,31 +285,22 @@ MAST::BeamWeight::operator() (const libMesh::Point& p,
         
         // before that, convert the property to a 1D section property
         // card
-        const MAST::Solid1DSectionElementPropertyCard& prop1d =
-        dynamic_cast<const MAST::Solid1DSectionElementPropertyCard&>(prop);
+        const MAST::Solid2DSectionElementPropertyCard& prop2d =
+        dynamic_cast<const MAST::Solid2DSectionElementPropertyCard&>(prop);
         
         // get a reference to the section area
-        const MAST::FieldFunction<Real>& area = prop1d.A();
+        const MAST::FieldFunction<Real>& th =
+        prop2d.get<MAST::FieldFunction<Real> >("h");
         
         // get a reference to the density variable
         const MAST::MaterialPropertyCardBase& mat = prop.get_material();
         const MAST::FieldFunction<Real> &rhof =
         mat.get<MAST::FieldFunction<Real> >("rho");
         
-        
-        // for each element iterate over the length and calculate the
-        // BeamWeight from the section area and section density
-        // use three point trapezoidal rule to calculate the integral
-        x0 = e->point(0)(0);
-        x1 = e->point(1)(0);
-        dx = (x1-x0)/n_sec;
-        for (unsigned int i=0; i<n_sec; i++) {
-            elem_p(0) = x0 + dx*(i+0.5);
-            area(elem_p, 0., h);
-            rhof(elem_p, 0., rho);
-            v += h * rho * dx;
-        }
-        
+        elem_p  = e->centroid();
+        th  ( elem_p, 0.,   h);
+        rhof( elem_p, 0., rho);
+        v = e->volume() * h * rho;
     }
 }
 
@@ -304,11 +309,11 @@ MAST::BeamWeight::operator() (const libMesh::Point& p,
 
 
 void
-MAST::BeamWeight::derivative(const MAST::DerivativeType d,
-                             const MAST::FunctionBase& f,
-                             const libMesh::Point& p,
-                             Real t,
-                             Real& v) const {
+MAST::PlateWeight::derivative(const MAST::DerivativeType d,
+                              const MAST::FunctionBase& f,
+                              const libMesh::Point& p,
+                              Real t,
+                              Real& v) const {
     
     // get a reference to the mesh
     const libMesh::MeshBase&
@@ -317,11 +322,9 @@ MAST::BeamWeight::derivative(const MAST::DerivativeType d,
     eit     = mesh.active_local_elements_begin(),
     eend    = mesh.active_local_elements_end();
     
-    Real h, rho, dh, drho, x0, x1, dx;
+    Real h, rho, dh, drho;
     v = 0.;
-    
     libMesh::Point elem_p;
-    const unsigned int n_sec = 3; // number of quadrature divs
     
     for ( ; eit != eend; eit++ ) {
         
@@ -337,12 +340,12 @@ MAST::BeamWeight::derivative(const MAST::DerivativeType d,
         
         // before that, convert the property to a 1D section property
         // card
-        const MAST::Solid1DSectionElementPropertyCard& prop1d =
-        dynamic_cast<const MAST::Solid1DSectionElementPropertyCard&>(prop);
+        const MAST::Solid2DSectionElementPropertyCard& prop2d =
+        dynamic_cast<const MAST::Solid2DSectionElementPropertyCard&>(prop);
         
         // get a reference to the section area
-        const MAST::FieldFunction<Real>&
-        area = prop1d.A();
+        const MAST::FieldFunction<Real>& th =
+        prop2d.get<MAST::FieldFunction<Real> >("h");
         
         // get a reference to the density variable
         const MAST::MaterialPropertyCardBase& mat =
@@ -350,21 +353,15 @@ MAST::BeamWeight::derivative(const MAST::DerivativeType d,
         const MAST::FieldFunction<Real> &rhof =
         mat.get<MAST::FieldFunction<Real> >("rho");
         
-        
+        elem_p = e->centroid();
         // for each element iterate over the length and calculate the
-        // BeamWeight from the section area and section density
+        // PlateWeight from the section area and section density
         // use three point trapezoidal rule to calculate the integral
-        x0 = e->point(0)(0);
-        x1 = e->point(1)(0);
-        dx = (x1-x0)/n_sec;
-        for (unsigned int i=0; i<n_sec; i++) {
-            elem_p(0) = x0 + dx*(i+0.5);
-            area(elem_p, 0., h);
-            area.derivative(d, f, elem_p, 0., dh);
-            rhof(elem_p, 0., rho);
-            rhof.derivative(d, f, elem_p, 0., drho);
-            v += (dh * rho + h * drho) * dx;
-        }
+        th  ( elem_p, 0., h);
+        rhof( elem_p, 0., rho);
+        th.derivative  (d, f, elem_p, 0.,   dh);
+        rhof.derivative(d, f, elem_p, 0., drho);
+        v = e->volume() * (dh * rho + h * drho);
         
     }
 }

@@ -45,14 +45,13 @@ set_deformation(const unsigned int dim,
                 const unsigned int case_num,
                 RealVectorX& vec);
 
-extern const Real
-delta,
-tol;
-
 
 template <typename ValType>
 void check_internal_force_and_jacobian_sensitivity (ValType& v,
                                                     const RealVectorX& x) {
+    const Real
+    delta    = 1.e-4,
+    tol      = 1.e-2;
     
     // get reference to the element in this mesh
     const libMesh::Elem& elem = **(v._mesh->local_elements_begin());

@@ -23,7 +23,7 @@
 
 
 // MAST includes
-#include "examples/structural/natural_vibration/beam_modal_analysis.h"
+#include "examples/structural/beam_modal_analysis/beam_modal_analysis.h"
 #include "tests/base/test_comparisons.h"
 #include "elasticity/structural_system_initialization.h"
 #include "elasticity/structural_discipline.h"
@@ -37,17 +37,13 @@
 #include "libmesh/numeric_vector.h"
 
 
-extern const Real
-delta,
-tol;
-
 
 BOOST_FIXTURE_TEST_SUITE  (Structural1DBeamModalAnalysis,
                            MAST::BeamModalAnalysis)
 
 BOOST_AUTO_TEST_CASE   (BeamModalSolution) {
     
-    this->solve();
+    //this->solve();
 }
 
 

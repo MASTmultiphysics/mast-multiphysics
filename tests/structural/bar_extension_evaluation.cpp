@@ -40,16 +40,16 @@
 #include "libmesh/numeric_vector.h"
 
 
-extern const Real
-delta,
-tol;
-
-
 BOOST_FIXTURE_TEST_SUITE  (Structural1DBarExtension,
                            MAST::BarExtension)
 
 BOOST_AUTO_TEST_CASE   (BarExtensionSolution) {
     
+    const Real
+    delta    = 1.e-4,
+    tol      = 1.e-2,
+    eps      = 1.0e-7;
+
     this->solve();
 
     // check the solution
@@ -98,6 +98,10 @@ BOOST_AUTO_TEST_CASE   (BarExtensionSolution) {
 
 BOOST_AUTO_TEST_CASE   (BarExtensionSensitivity) {
     
+    const Real
+    delta    = 1.e-4,
+    tol      = 1.e-2;
+
     // verify the sensitivity solution of this system
     RealVectorX
     sol,
@@ -163,6 +167,9 @@ BOOST_AUTO_TEST_CASE   (BarExtensionSensitivity) {
         dstressdp_fd =   RealVectorX::Zero(n_elems);
 
         // calculate the analytical sensitivity
+        // analysis is required at the baseline before sensitivity solution
+        // and the solution has changed after the previous perturbed solution
+        this->solve();
         const libMesh::NumericVector<Real>& dsol_vec = this->sensitivity_solve(f);
 
         // make sure that each stress object has a single stored value

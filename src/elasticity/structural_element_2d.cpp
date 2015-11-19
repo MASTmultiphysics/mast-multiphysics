@@ -27,6 +27,7 @@
 #include "elasticity/piston_theory_boundary_condition.h"
 #include "elasticity/stress_output_base.h"
 #include "elasticity/bending_operator.h"
+#include "property_cards/material_property_card_base.h"
 
 
 MAST::StructuralElement2D::
@@ -233,10 +234,17 @@ MAST::StructuralElement2D::calculate_stress(bool request_derivative,
     n3       = this->n_von_karman_strain_components();
     
     Real
-    z = 0.;
+    z     =  0.,
+    z_off =  0.,
+    temp  =  0.,
+    ref_t =  0.,
+    alpha =  0.,
+    dtemp =  0.,
+    dref_t=  0.,
+    dalpha=  0.;
     
     RealMatrixX
-    material_A_mat,
+    material_mat,
     vk_dwdxi_mat = RealMatrixX::Zero(n1,n3),
     dstrain_dX   = RealMatrixX::Zero(n1,n2),
     dstress_dX   = RealMatrixX::Zero(n1,n2),
@@ -266,12 +274,17 @@ MAST::StructuralElement2D::calculate_stress(bool request_derivative,
     Bmat_bend.reinit(n1, _system.n_vars(), n_phi);
     Bmat_vk.reinit  (n3, _system.n_vars(), n_phi);
     
+    // TODO: remove this const-cast, which may need change in API of
+    // material card
     std::auto_ptr<MAST::FieldFunction<RealMatrixX > >
-    mat_stiff_A  = _property.stiffness_A_matrix(*this);
+    mat_stiff  =
+    const_cast<MAST::MaterialPropertyCardBase&>(_property.get_material()).
+    stiffness_matrix(2);
     
     // get the thickness values for the bending strain calculation
     const MAST::FieldFunction<Real>
-    &h     =  _property.get<MAST::FieldFunction<Real> >("h");
+    &h      =  _property.get<MAST::FieldFunction<Real> >("h"),
+    &h_off  =  _property.get<MAST::FieldFunction<Real> >("off");
     
     
     bool if_vk = (_property.strain_type() == MAST::VON_KARMAN_STRAIN),
@@ -281,6 +294,25 @@ MAST::StructuralElement2D::calculate_stress(bool request_derivative,
     MAST::StressStrainOutputBase& stress_output =
     dynamic_cast<MAST::StressStrainOutputBase&>(output);
     
+    // check to see if the element has any thermal loads specified
+    // The object returns null
+    MAST::BoundaryConditionBase *thermal_load =
+    stress_output.get_thermal_load_for_elem(_elem);
+    
+    const MAST::FieldFunction<Real>
+    *temp_func     = NULL,
+    *ref_temp_func = NULL,
+    *alpha_func    = NULL;
+    
+    // get pointers to the temperature, if thermal load is specified
+    if (thermal_load) {
+        temp_func     =
+        &(thermal_load->get<MAST::FieldFunction<Real> >("temperature")),
+        ref_temp_func =
+        &(thermal_load->get<MAST::FieldFunction<Real> >("ref_temperature"));
+        alpha_func    =
+        &(_property.get_material().get<MAST::FieldFunction<Real> >("alpha_expansion"));
+    }
     
     ///////////////////////////////////////////////////////////////////////
     // second for loop to calculate the residual and stiffness contributions
@@ -289,7 +321,7 @@ MAST::StructuralElement2D::calculate_stress(bool request_derivative,
         _local_elem->global_coordinates_location(xyz[qp], p);
         
         // get the material matrix
-        (*mat_stiff_A)(p, _time, material_A_mat);
+        (*mat_stiff)(p, _time, material_mat);
         
         this->initialize_direct_strain_operator(qp, *fe, Bmat_mem);
         
@@ -297,6 +329,16 @@ MAST::StructuralElement2D::calculate_stress(bool request_derivative,
         Bmat_mem.vector_mult(strain, _local_sol);
         
         
+        // if thermal load was specified, then set the thermal strain
+        // component of the total strain
+        if (thermal_load) {
+            (*temp_func)    (p, _time, temp);
+            (*ref_temp_func)(p, _time, ref_t);
+            (*alpha_func)   (p, _time, alpha);
+            strain(0)  -=  alpha*(temp-ref_t);  // epsilon-xx
+            strain(1)  -=  alpha*(temp-ref_t);  // epsilon-yy
+        }
+
         if (if_bending) {
             
             // von Karman strain
@@ -312,12 +354,13 @@ MAST::StructuralElement2D::calculate_stress(bool request_derivative,
             
             // add to this the bending strain
             // TODO: add coupling due to h_offset
-            h(p, _time, z);
+            h    (p, _time,     z);
+            h_off(p, _time, z_off);
             // TODO: this assumes isotropic section. Multilayered sections need
             // special considerations
             bend->initialize_bending_strain_operator_for_z(*fe,
                                                            qp,
-                                                           qp_loc[qp](2) * z/2.,
+                                                           qp_loc[qp](2) * z/2.+z_off,
                                                            Bmat_bend);
             Bmat_bend.vector_mult(strain_bend, _local_sol);
             
@@ -327,15 +370,19 @@ MAST::StructuralElement2D::calculate_stress(bool request_derivative,
         }
         
         // note that this assumes linear material laws
-        stress = material_A_mat * strain; 
+        stress = material_mat * strain;
 
         
         // now set the data for the 3D stress-strain vector
         // this is using only the direct strain/stress.
         // this can be improved by estimating the shear stresses from
         // torsion and shear flow from bending.
-        strain_3D(0)  =   strain(0);
-        stress_3D(0)  =   stress(0);
+        stress_3D(0) = stress(0);  // sigma-xx
+        stress_3D(1) = stress(1);  // sigma-yy
+        stress_3D(3) = stress(2);  // tau-xy
+        strain_3D(0) = strain(0);  // epsilon-xx
+        strain_3D(1) = strain(1);  // epsilon-yy
+        strain_3D(3) = strain(2);  // gamma-xy
         
         // set the stress and strain data
         MAST::StressStrainOutputBase::Data&
@@ -365,12 +412,16 @@ MAST::StructuralElement2D::calculate_stress(bool request_derivative,
                 dstrain_dX  +=   mat_n1n2;
             }
             
-            // note: this assumes lienar material laws
-            dstress_dX  = material_A_mat * dstrain_dX;
+            // note: this assumes linear material laws
+            dstress_dX  = material_mat * dstrain_dX;
             
             // copy to the 3D structure
-            dstress_dX_3D.row(0)  = dstress_dX.row(0);
-            dstrain_dX_3D.row(0)  = dstrain_dX.row(0);
+            dstress_dX_3D.row(0) = dstress_dX.row(0);  // sigma-xx
+            dstress_dX_3D.row(1) = dstress_dX.row(1);  // sigma-yy
+            dstress_dX_3D.row(3) = dstress_dX.row(2);  // tau-xy
+            dstrain_dX_3D.row(0) = dstrain_dX.row(0);  // epsilon-xx
+            dstrain_dX_3D.row(1) = dstrain_dX.row(1);  // epsilon-yy
+            dstrain_dX_3D.row(3) = dstrain_dX.row(2);  // gamma-xy
             
             if (request_derivative)
                 data.set_derivatives(dstress_dX_3D, dstrain_dX_3D);
@@ -389,20 +440,66 @@ MAST::StructuralElement2D::calculate_stress(bool request_derivative,
                 // TODO: include shape sensitivity.
                 // presently, only material parameter is included
                 
+                
+                dstrain_dp  =  RealVectorX::Zero(n1);
+
+                // if thermal load was specified, then set the thermal strain
+                // component of the total strain
+                if (thermal_load) {
+                    temp_func->derivative(MAST::PARTIAL_DERIVATIVE,
+                                          *sensitivity_param,
+                                          p, _time, dtemp);
+                    ref_temp_func->derivative(MAST::PARTIAL_DERIVATIVE,
+                                              *sensitivity_param,
+                                              p, _time, dref_t);
+                    alpha_func->derivative(MAST::PARTIAL_DERIVATIVE,
+                                           *sensitivity_param,
+                                           p, _time, dalpha);
+                    dstrain_dp(0)  -=  alpha*(dtemp-dref_t) - dalpha*(temp-ref_t); // epsilon-xx
+                    dstrain_dp(1)  -=  alpha*(dtemp-dref_t) - dalpha*(temp-ref_t); // epsilon-yy
+                }
+
+                
+                
+                if (if_bending) {
+                    
+                    // add to this the bending strain
+                    h.derivative    (MAST::PARTIAL_DERIVATIVE,
+                                     *sensitivity_param,
+                                     p, _time,     z);
+                    h_off.derivative(MAST::PARTIAL_DERIVATIVE,
+                                     *sensitivity_param,
+                                     p, _time, z_off);
+                    // TODO: this assumes isotropic section. Multilayered sections need
+                    // special considerations
+                    bend->initialize_bending_strain_operator_for_z(*fe,
+                                                                   qp,
+                                                                   qp_loc[qp](2) * z/2.+z_off,
+                                                                   Bmat_bend);
+                    Bmat_bend.vector_mult(strain_bend, _local_sol);
+                    
+                    
+                    // add stress due to bending.
+                    dstrain_dp += strain_bend;
+                }
+
+                
+                // now use this to calculate the stress sensitivity.
+                dstress_dp  =  material_mat * dstrain_dp;
+
                 // get the material matrix sensitivity
-                mat_stiff_A->derivative(MAST::PARTIAL_DERIVATIVE,
-                                        *sensitivity_param,
-                                        p,
-                                        _time,
-                                        material_A_mat);
+                mat_stiff->derivative(MAST::PARTIAL_DERIVATIVE,
+                                      *sensitivity_param,
+                                      p,
+                                      _time,
+                                      material_mat);
                 
                 // partial sensitivity of strain is zero unless it is a
                 // shape parameter.
                 // TODO: shape sensitivity of strain operator
                 
                 // now use this to calculate the stress sensitivity.
-                dstress_dp  =  material_A_mat * strain;
-                dstrain_dp  =  RealVectorX::Zero(n1);
+                dstress_dp +=  material_mat * strain;
                 
                 //
                 // use the derivative data to evaluate the second term in the
@@ -412,8 +509,12 @@ MAST::StructuralElement2D::calculate_stress(bool request_derivative,
                 dstrain_dp  += dstrain_dX * _local_sol_sens;
                 
                 // copy the 3D object
-                stress_3D(0) = dstress_dp(0);
-                strain_3D(0) = dstrain_dp(0);
+                stress_3D(0) = dstress_dp(0);  // sigma-xx
+                stress_3D(1) = dstress_dp(1);  // sigma-yy
+                stress_3D(3) = dstress_dp(2);  // tau-xy
+                strain_3D(0) = dstrain_dp(0);  // epsilon-xx
+                strain_3D(1) = dstrain_dp(1);  // epsilon-yy
+                strain_3D(3) = dstrain_dp(2);  // gamma-xy
                 
                 // tell the data object about the sensitivity values
                 data.set_sensitivity(sensitivity_param,
@@ -423,6 +524,11 @@ MAST::StructuralElement2D::calculate_stress(bool request_derivative,
         }
     }
     
+    // make sure that the number of data points for this element is
+    // the same as the number of requested points
+    libmesh_assert(qp_loc.size() ==
+                   stress_output.n_stress_strain_data_for_elem(&_elem));
+
     // if either derivative or sensitivity was requested, it was provided
     // by this routine
     return request_derivative || request_sensitivity;
@@ -790,7 +896,7 @@ MAST::StructuralElement2D::_internal_residual_operation
         
         // now coupling with the bending strain
         // B_bend^T [B] B_mem
-        vec1_n1 = material_B_mat * vec2_n1;
+        vec1_n1 = material_B_mat.transpose() * vec2_n1;
         Bmat_bend.vector_mult_transpose(vec3_n2, vec1_n1);
         local_f += JxW[qp] * vec3_n2;
         
@@ -862,7 +968,8 @@ MAST::StructuralElement2D::_internal_residual_operation
             }
             
             // bending - membrane
-            Bmat_mem.left_multiply(mat1_n1n2, material_B_mat);
+            mat3 = material_B_mat.transpose();
+            Bmat_mem.left_multiply(mat1_n1n2, mat3);
             Bmat_bend.right_multiply_transpose(mat2_n2n2, mat1_n1n2);
             local_jac += JxW[qp] * mat2_n2n2;
             
@@ -1315,12 +1422,8 @@ surface_pressure_residual(bool request_jacobian,
     }
     
     // now transform to the global system and add
-    if (_elem.dim() < 3) {
-        transform_vector_to_global_system(local_f, vec_n2);
-        f -= vec_n2;
-    }
-    else
-        f -= local_f;
+    transform_vector_to_global_system(local_f, vec_n2);
+    f -= vec_n2;
     
     
     return (request_jacobian);
@@ -1418,12 +1521,8 @@ surface_pressure_residual_sensitivity(bool request_jacobian,
     }
     
     // now transform to the global system and add
-    if (_elem.dim() < 3) {
-        transform_vector_to_global_system(local_f, vec_n2);
-        f -= vec_n2;
-    }
-    else
-        f -= local_f;
+    transform_vector_to_global_system(local_f, vec_n2);
+    f -= vec_n2;
     
     
     return (request_jacobian);
