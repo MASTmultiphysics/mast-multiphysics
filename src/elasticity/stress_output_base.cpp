@@ -492,6 +492,8 @@ von_Mises_p_norm_functional_for_all_elems(const Real p) const {
         }
     }
     
+    // If the maximum value is very small, then set it to 1.0.
+    if (max_val <= 1.0e-6)  max_val = 1.;
     
     // now that we have the maximum value, we evaluate the p-norm
     map_it   =  _stress_data.begin();
@@ -562,10 +564,13 @@ von_Mises_p_norm_functional_sensitivity_for_all_elems
     }
     
     
+    // If the maximum value is very small, then set it to 1.0.
+    if (max_val <= 1.0e-6)  max_val = 1.;
+
     // now that we have the maximum value, we evaluate the p-norm
     map_it   =  _stress_data.begin();
     
-    
+
     for ( ; map_it != map_end; map_it++) {
         
         std::vector<MAST::StressStrainOutputBase::Data*>::const_iterator
@@ -587,8 +592,9 @@ von_Mises_p_norm_functional_sensitivity_for_all_elems
         }
     }
     
-    val   = 1./p * max_val / pow(JxW_val, 1./p) * pow(val, 1./p-1.) * dval;
-    
+    if (val > 0.)
+        val   = 1./p * max_val / pow(JxW_val, 1./p) * pow(val, 1./p-1.) * dval;
+
     return val;
 }
 
@@ -634,6 +640,8 @@ von_Mises_p_norm_functional_state_derivartive_for_all_elems(const Real p) const 
         }
     }
     
+    // If the maximum value is very small, then set it to 1.0.
+    if (max_val <= 1.0e-6)  max_val = 1.;
     
     // now create the vector with the correct dimensions
     RealVectorX
