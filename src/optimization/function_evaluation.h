@@ -111,6 +111,50 @@ namespace MAST {
         
         
         
+        /*!
+         *  @returns a pointer to the function that evaluates the objective
+         */
+        typedef void (*funobj) (int*    mode,
+        int*    n,
+        double* x,
+        double* f,
+        double* g,
+        int*    nstate);
+        
+        virtual funobj
+        get_objective_evaluation_function() {
+            
+            // should not get here, if the derived method implements its
+            // specialized method
+            libmesh_assert(false);
+            return NULL;
+        }
+
+        
+        /*!
+         *  @returns a pointer to the function that evaluates the constraint
+         */
+        typedef void (*funcon) (int*    mode,
+        int*    ncnln,
+        int*    n,
+        int*    ldJ,
+        int*    needc,
+        double* x,
+        double* c,
+        double* cJac,
+        int*    nstate);
+        
+        virtual funcon
+        get_constraint_evaluation_function() {
+            
+            // should not get here, if the derived method implements its
+            // specialized method
+            libmesh_assert(false);
+            return NULL;
+        }
+
+        
+        
     protected:
         
         unsigned int _n_vars;

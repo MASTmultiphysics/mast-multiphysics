@@ -30,6 +30,8 @@
 #include "examples/structural/membrane_extension_biaxial_stress/membrane_extension_biaxial.h"
 #include "examples/structural/plate_bending/plate_bending.h"
 #include "examples/structural/plate_optimization/plate_optimization.h"
+#include "optimization/npsol_optimization_interface.h"
+#include "optimization/dot_optimization_interface.h"
 
 
 // libMesh includes
@@ -37,7 +39,8 @@
 #include "libmesh/getpot.h"
 
 
-libMesh::LibMeshInit *_init = NULL;
+libMesh::LibMeshInit     *_init          = NULL;
+MAST::FunctionEvaluation *__my_func_eval = NULL;
 
 
 int main(int argc, char* const argv[]) {
@@ -159,10 +162,11 @@ int main(int argc, char* const argv[]) {
         std::ofstream output;
         output.open("optimization_output.txt", std::ofstream::out);
         
-        MAST::GCMMAOptimizationInterface gcmma;
+        MAST::GCMMAOptimizationInterface optimizer;
         
         // create and attach sizing optimization object
         MAST::BeamBendingSizingOptimization func_eval(infile, output);
+        __my_func_eval = &func_eval;
         
         std::vector<Real> dvals(func_eval.n_vars());
         std::fill(dvals.begin(), dvals.end(), 0.05);
@@ -171,8 +175,8 @@ int main(int argc, char* const argv[]) {
         std::cout << "******* End: Verifying gradients ***********" << std::endl;
         
         // attach and optimize
-        gcmma.attach_function_evaluation_object(func_eval);
-        gcmma.optimize();
+        optimizer.attach_function_evaluation_object(func_eval);
+        optimizer.optimize();
         
         output.close();
     }
@@ -191,10 +195,11 @@ int main(int argc, char* const argv[]) {
         std::ofstream output;
         output.open("optimization_output.txt", std::ofstream::out);
         
-        MAST::GCMMAOptimizationInterface gcmma;
+        MAST::GCMMAOptimizationInterface optimizer;
         
         // create and attach sizing optimization object
         MAST::BeamBendingSingleFunctionalSizingOptimization func_eval(infile, output);
+        __my_func_eval = &func_eval;
         
         std::vector<Real> dvals(func_eval.n_vars());
         std::fill(dvals.begin(), dvals.end(), 0.05);
@@ -203,8 +208,8 @@ int main(int argc, char* const argv[]) {
         std::cout << "******* End: Verifying gradients ***********" << std::endl;
         
         // attach and optimize
-        gcmma.attach_function_evaluation_object(func_eval);
-        gcmma.optimize();
+        optimizer.attach_function_evaluation_object(func_eval);
+        optimizer.optimize();
         
         output.close();
     }
@@ -223,10 +228,11 @@ int main(int argc, char* const argv[]) {
         std::ofstream output;
         output.open("optimization_output.txt", std::ofstream::out);
         
-        MAST::GCMMAOptimizationInterface gcmma;
+        MAST::GCMMAOptimizationInterface optimizer;
         
         // create and attach sizing optimization object
         MAST::BeamBendingSectionOffsetSizingOptimization func_eval(infile, output);
+        __my_func_eval = &func_eval;
         
         std::vector<Real> dvals(func_eval.n_vars());
         std::fill(dvals.begin(), dvals.end(), 0.05);
@@ -235,8 +241,8 @@ int main(int argc, char* const argv[]) {
         std::cout << "******* End: Verifying gradients ***********" << std::endl;
         
         // attach and optimize
-        gcmma.attach_function_evaluation_object(func_eval);
-        gcmma.optimize();
+        optimizer.attach_function_evaluation_object(func_eval);
+        optimizer.optimize();
         
         output.close();
     }
@@ -256,11 +262,12 @@ int main(int argc, char* const argv[]) {
         std::ofstream output;
         output.open("optimization_output.txt", std::ofstream::out);
         
-        MAST::GCMMAOptimizationInterface gcmma;
+        MAST::GCMMAOptimizationInterface optimizer;
         
         // create and attach sizing optimization object
         MAST::BeamBendingThermalStressSizingOptimization func_eval(infile, output);
-        
+        __my_func_eval = &func_eval;
+
         std::vector<Real> dvals(func_eval.n_vars());
         std::fill(dvals.begin(), dvals.end(), 0.02);
         std::cout << "******* Begin: Verifying gradients ***********" << std::endl;
@@ -268,8 +275,8 @@ int main(int argc, char* const argv[]) {
         std::cout << "******* End: Verifying gradients ***********" << std::endl;
         
         // attach and optimize
-        gcmma.attach_function_evaluation_object(func_eval);
-        gcmma.optimize();
+        optimizer.attach_function_evaluation_object(func_eval);
+        optimizer.optimize();
         
         output.close();
     }
@@ -339,11 +346,12 @@ int main(int argc, char* const argv[]) {
         std::ofstream output;
         output.open("optimization_output.txt", std::ofstream::out);
         
-        MAST::GCMMAOptimizationInterface gcmma;
+        MAST::DOTOptimizationInterface optimizer;
         
         // create and attach sizing optimization object
         MAST::PlateBendingSizingOptimization func_eval(infile, output);
-        
+        __my_func_eval = &func_eval;
+
         std::vector<Real> dvals(func_eval.n_vars());
         std::fill(dvals.begin(), dvals.end(), 0.02);
         std::cout << "******* Begin: Verifying gradients ***********" << std::endl;
@@ -351,8 +359,8 @@ int main(int argc, char* const argv[]) {
         std::cout << "******* End: Verifying gradients ***********" << std::endl;
         
         // attach and optimize
-        gcmma.attach_function_evaluation_object(func_eval);
-        gcmma.optimize();
+        optimizer.attach_function_evaluation_object(func_eval);
+        optimizer.optimize();
         
         output.close();
     }

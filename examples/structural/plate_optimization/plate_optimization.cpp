@@ -37,6 +37,134 @@
 #include "libmesh/string_to_enum.h"
 
 
+extern
+MAST::FunctionEvaluation *__my_func_eval;
+
+
+
+void
+plate_optim_obj(int*    mode,
+                int*    n,
+                double* x,
+                double* f,
+                double* g,
+                int*    nstate) {
+
+    
+    // make sure that the global variable has been setup
+    libmesh_assert(__my_func_eval);
+    
+    // initialize the local variables
+    Real
+    obj = 0.;
+    
+    unsigned int
+    n_vars  =  __my_func_eval->n_vars(),
+    n_con   =  __my_func_eval->n_eq()+__my_func_eval->n_ineq();
+    
+    libmesh_assert_equal_to(*n, n_vars);
+    
+    std::vector<Real>
+    dvars   (*n,    0.),
+    obj_grad(*n,    0.),
+    fvals   (n_con, 0.),
+    grads   (0);
+    
+    std::vector<bool>
+    eval_grads(n_con);
+    std::fill(eval_grads.begin(), eval_grads.end(), false);
+    
+    // copy the dvars
+    for (unsigned int i=0; i<n_vars; i++)
+        dvars[i] = x[i];
+    
+    
+    __my_func_eval->evaluate(dvars,
+                             obj,
+                             true,       // request the derivatives of obj
+                             obj_grad,
+                             fvals,
+                             eval_grads,
+                             grads);
+    
+    
+    // now copy them back as necessary
+    *f  = obj;
+    for (unsigned int i=0; i<n_vars; i++)
+        g[i] = obj_grad[i];
+}
+
+
+
+
+
+
+void
+plate_optim_con(int*    mode,
+                int*    ncnln,
+                int*    n,
+                int*    ldJ,
+                int*    needc,
+                double* x,
+                double* c,
+                double* cJac,
+                int*    nstate) {
+    
+    
+    // make sure that the global variable has been setup
+    libmesh_assert(__my_func_eval);
+    
+    // initialize the local variables
+    Real
+    obj = 0.;
+    
+    unsigned int
+    n_vars  =  __my_func_eval->n_vars(),
+    n_con   =  __my_func_eval->n_eq()+__my_func_eval->n_ineq();
+    
+    libmesh_assert_equal_to(    *n, n_vars);
+    libmesh_assert_equal_to(*ncnln, n_con);
+    
+    std::vector<Real>
+    dvars   (*n,    0.),
+    obj_grad(*n,    0.),
+    fvals   (n_con, 0.),
+    grads   (n_vars*n_con, 0.);
+    
+    std::vector<bool>
+    eval_grads(n_con);
+    std::fill(eval_grads.begin(), eval_grads.end(), true);
+    
+    // copy the dvars
+    for (unsigned int i=0; i<n_vars; i++)
+        dvars[i] = x[i];
+    
+    
+    __my_func_eval->evaluate(dvars,
+                             obj,
+                             true,       // request the derivatives of obj
+                             obj_grad,
+                             fvals,
+                             eval_grads,
+                             grads);
+    
+    
+    // now copy them back as necessary
+    
+    // first the constraint functions
+    for (unsigned int i=0; i<n_con; i++)
+        c[i] = fvals[i];
+    
+    // next, the constraint gradients
+    for (unsigned int i=0; i<n_con*n_vars; i++)
+        cJac[i] = grads[i];
+    
+    
+}
+
+
+
+
 
 MAST::PlateBendingSizingOptimization::
 PlateBendingSizingOptimization(GetPot& infile,
@@ -48,9 +176,9 @@ _n_elems(0),
 _n_stations_x(0) {
     
     // number of elements
-    _n_divs_x    = infile("n_divs_x", 8);
-    _n_divs_y    = infile("n_divs_y", 8);
-    _n_elems     = 2*_n_divs_x*_n_divs_y;
+    _n_divs_x    = infile("n_divs_x", 16);
+    _n_divs_y    = infile("n_divs_y", 16);
+    _n_elems     = _n_divs_x*_n_divs_y;
     
     // number of stations
     _n_stations_x = infile("n_stations", 8);
@@ -79,7 +207,7 @@ _n_stations_x(0) {
                                                  _n_divs_x, _n_divs_y,
                                                  0, _length,
                                                  0, _width,
-                                                 libMesh::TRI3);
+                                                 libMesh::QUAD4);
     _mesh->prepare_for_use();
     
     // create the equation system
@@ -131,8 +259,8 @@ _n_stations_x(0) {
     // initialize the dv vector data
     const Real
     th_l                   = infile("thickness_lower", 0.001),
-    th_u                   = infile("thickness_upper", 0.2),
-    th                     = infile("thickness", 0.01),
+    th_u                   = infile("thickness_upper",   0.5),
+    th                     = infile("thickness",        0.01),
     dx                     = _length/(_n_stations_x-1);
     
     _dv_init.resize    (_n_vars);
@@ -187,13 +315,15 @@ _n_stations_x(0) {
     
     _E               = new MAST::Parameter(   "E", infile("E",    72.e9));
     _nu              = new MAST::Parameter(  "nu", infile("nu",    0.33));
+    _kappa           = new MAST::Parameter("kappa",infile("kappa",5./6.));
     _rho             = new MAST::Parameter( "rho", infile("rho", 2700.0));
     _zero            = new MAST::Parameter("zero",                    0.);
-    _press           = new MAST::Parameter(   "p", infile("press", 2.e2));
+    _press           = new MAST::Parameter(   "p", infile("press", 2.e5));
     
     
     _E_f             = new MAST::ConstantFieldFunction("E",            *_E);
     _nu_f            = new MAST::ConstantFieldFunction("nu",          *_nu);
+    _kappa_f         = new MAST::ConstantFieldFunction("kappa",    *_kappa);
     _rho_f           = new MAST::ConstantFieldFunction("rho",        *_rho);
     _hoff_f          = new MAST::ConstantFieldFunction("off",       *_zero);
     _press_f         = new MAST::ConstantFieldFunction("pressure", *_press);
@@ -210,6 +340,7 @@ _n_stations_x(0) {
     _m_card->add(  *_E_f);
     _m_card->add( *_nu_f);
     _m_card->add(*_rho_f);
+    _m_card->add(*_kappa_f);
     
     // create the element property card
     _p_card         = new MAST::Solid2DSectionElementPropertyCard;
@@ -217,7 +348,7 @@ _n_stations_x(0) {
     // add the section properties to the card
     _p_card->add(*_th_f);
     _p_card->add(*_hoff_f);
-    
+
     // tell the section property about the material property
     _p_card->set_material(*_m_card);
     
@@ -280,11 +411,13 @@ MAST::PlateBendingSizingOptimization::~PlateBendingSizingOptimization() {
     
     delete _E_f;
     delete _nu_f;
+    delete _kappa_f;
     delete _hoff_f;
     delete _press_f;
     
     delete _E;
     delete _nu;
+    delete _kappa;
     delete _zero;
     delete _press;
     
@@ -488,7 +621,7 @@ MAST::PlateBendingSizingOptimization::evaluate(const std::vector<Real>& dvars,
     
     
     // write the evaluation output
-    this->output(0, dvars, obj, fvals, false);
+    //this->output(0, dvars, obj, fvals, false);
 }
 
 
@@ -533,4 +666,20 @@ MAST::PlateBendingSizingOptimization::output(unsigned int iter,
 
 }
 
+
+
+
+MAST::FunctionEvaluation::funobj
+MAST::PlateBendingSizingOptimization::get_objective_evaluation_function() {
+    
+    return plate_optim_obj;
+}
+
+
+
+MAST::FunctionEvaluation::funcon
+MAST::PlateBendingSizingOptimization::get_constraint_evaluation_function() {
+    
+    return plate_optim_con;
+}
 

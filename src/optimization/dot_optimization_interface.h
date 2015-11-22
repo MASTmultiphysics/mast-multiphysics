@@ -17,48 +17,55 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#ifndef __MAST_optimization_interface_h__
-#define __MAST_optimization_interface_h__
+#ifndef __MAST_dot_optimization_interface_h__
+#define __MAST_dot_optimization_interface_h__
 
 // MAST includes
-#include "base/mast_data_types.h"
+#include "Optimization/optimization_interface.h"
+
+extern "C" {
+    extern void dot_(int*    INFO,
+                     int*    METHOD,
+                     int*    IPRINT,
+                     int*    NDV,
+                     int*    NCON,
+                     double* X,
+                     double* XL,
+                     double* XU,
+                     double* OBJ,
+                     int*    MINMAX,
+                     double* G,
+                     double* RPRM,
+                     int*    IPRM,
+                     double* WK,
+                     int*    NRWK,
+                     int*    IWK,
+                     int*    NRIWK);
+}
 
 
 namespace MAST {
-
-    // Forward declerations
-    class FunctionEvaluation;
     
-    /*!
-     *    Provides the basic interface API for classes the provide 
-     *    implement optimization problems.
-     */
-    class OptimizationInterface {
+    class DOTOptimizationInterface: public MAST::OptimizationInterface {
+        
     public:
-     
-        OptimizationInterface():
-        _feval(NULL)
+        
+        DOTOptimizationInterface()
         { }
         
-        virtual ~OptimizationInterface()
+        virtual ~DOTOptimizationInterface()
         { }
-
         
-        virtual void optimize() = 0;
-        
-
-        virtual void
-        attach_function_evaluation_object (MAST::FunctionEvaluation& feval) {
-            _feval = &feval;
-        }
+        virtual void optimize();
         
         
     protected:
         
-        MAST::FunctionEvaluation* _feval;
     };
 }
 
 
 
-#endif  // __MAST_optimization_interface_h__
+
+
+#endif // __MAST_dot_optimization_interface_h__

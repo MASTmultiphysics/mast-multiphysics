@@ -109,7 +109,19 @@ namespace MAST {
                             const std::vector<Real>& fval,
                             bool if_write_to_optim_file) const;
         
+        /*!
+         *  @returns a pointer to the function that evaluates the objective
+         */
+        virtual MAST::FunctionEvaluation::funobj
+        get_objective_evaluation_function();
         
+        
+        /*!
+         *  @returns a pointer to the function that evaluates the constraint
+         */
+        virtual MAST::FunctionEvaluation::funcon
+        get_constraint_evaluation_function();
+
         /*!
          *   clears the stress data structures for a followup analysis
          */
@@ -152,6 +164,7 @@ namespace MAST {
         MAST::Parameter
         *_E,
         *_nu,
+        *_kappa,
         *_rho,
         *_press,
         *_zero;
@@ -159,6 +172,7 @@ namespace MAST {
         MAST::ConstantFieldFunction
         *_E_f,
         *_nu_f,
+        *_kappa_f,
         *_rho_f,
         *_hoff_f,
         *_press_f;

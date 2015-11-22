@@ -1,0 +1,206 @@
+/*
+ * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
+ * Copyright (C) 2013-2015  Manav Bhatia
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ */
+
+// MAST includes
+#include "optimization/npsol_optimization_interface.h"
+#include "optimization/function_evaluation.h"
+
+
+
+extern "C" {
+    
+    extern void npsol_(int*    N,
+                       int*    NCLIN,
+                       int*    NCNLN,
+                       int*    LDA,
+                       int*    LDJ,
+                       int*    LDR,
+                       double* A,
+                       double* BL,
+                       double* BU,
+                       void    (*)(int*    mode,
+                                   int*    ncnln,
+                                   int*    n,
+                                   int*    ldJ,
+                                   int*    needc,
+                                   double* x,
+                                   double* c,
+                                   double* cJac,
+                                   int*    nstate),
+                       void    (*)(int*    mode,
+                                   int*    n,
+                                   double* x,
+                                   double* f,
+                                   double* g,
+                                   int*    nstate),
+                       int*    INFORM,
+                       int*    ITER,
+                       int*    ISTATE,
+                       double* C,
+                       double* CJAC,
+                       double* CLAMBDA,
+                       double* F,
+                       double* G,
+                       double* R,
+                       double* X,
+                       int*    IW,
+                       int*    LENIW,
+                       double* W,
+                       int*    LENW);
+    
+    extern void npoptn_(const char*, int );
+}
+
+
+
+MAST::NPSOLOptimizationInterface::NPSOLOptimizationInterface():
+_funobj(NULL),
+_funcon(NULL) {
+    
+}
+
+
+
+void
+MAST::NPSOLOptimizationInterface::
+attach_function_evaluation_object (MAST::FunctionEvaluation& feval) {
+    
+    MAST::OptimizationInterface::attach_function_evaluation_object(feval);
+    
+    // make sure that these pointers haven't already been provided
+    libmesh_assert(_funobj == NULL);
+    libmesh_assert(_funcon == NULL);
+    
+    _funobj = feval.get_objective_evaluation_function();
+    _funcon = feval.get_constraint_evaluation_function();
+    
+}
+
+
+
+void
+MAST::NPSOLOptimizationInterface::optimize() {
+    
+    // make sure that functions have been provided
+    libmesh_assert(_funobj);
+    libmesh_assert(_funcon);
+    
+    int
+    N      =  _feval->n_vars(),
+    NCLIN  =  0,
+    NCNLN  =  _feval->n_eq()+_feval->n_ineq(),
+    NCTOTL =  N+NCLIN+NCNLN,
+    LDA    =  std::max(NCLIN, 1),
+    LDJ    =  std::max(NCNLN, 1),
+    LDR    =  N,
+    INFORM =  0,           // on exit: Reports result of call to NPSOL
+                           // < 0 either funobj or funcon has set this to -ve
+                           // 0 => converged to point x
+                           // 1 => x satisfies optimality conditions, but sequence of iterates has not converged
+                           // 2 => Linear constraints and bounds cannot be satisfied. No feasible solution
+                           // 3 => Nonlinear constraints and bounds cannot be satisfied. No feasible solution
+                           // 4 => Major iter limit was reached
+                           // 6 => x does not satisfy first-order optimality to required accuracy
+                           // 7 => function derivatives seem to be incorrect
+                           // 9 => input parameter invalid
+    ITER   = 0,            // iter count
+    LENIW  = 3*N + NCLIN + 2*NCNLN,
+    LENW   = 2*N*N + N*NCLIN + 2*N*NCNLN + 20*N + 11*NCLIN + 21*NCNLN;
+    
+    Real
+    F      =  0.;          // on exit: final objective
+
+    std::vector<int>
+    IW      (LENIW,  0),
+    ISTATE  (NCTOTL, 0);    // status of constraints l <= r(x) <= u,
+                            // -2 => lower bound is violated by more than delta
+                            // -1 => upper bound is violated by more than delta
+                            // 0  => both bounds are satisfied by more than delta
+                            // 1  => lower bound is active (to within delta)
+                            // 2  => upper bound is active (to within delta)
+                            // 3  => boundars are equal and equality constraint is satisfied
+    
+    std::vector<Real>
+    A       (LDA,    0.),   // this is used for liear constraints, not currently handled
+    BL      (NCTOTL, 0.),
+    BU      (NCTOTL, 0.),
+    C       (NCNLN,  0.),   // on exit: nonlinear constraints
+    CJAC    (LDJ* N, 0.),   //
+                            // on exit: CJAC(i,j) is the partial derivative of ith nonlinear constraint
+    CLAMBDA (NCTOTL, 0.),   // on entry: need not be initialized for cold start
+                            // on exit: QP multiplier from the QP subproblem, >=0 if istate(j)=1, <0 if istate(j)=2
+    G       (N,      0.),   // on exit: objective gradient
+    R       (LDR*N,  0.),   // on entry: need not be initialized if called with Cold Statrt
+                            // on exit: information about Hessian, if Hessian=Yes, R is upper Cholesky factor of approx H
+    X       (N,      0.),   // on entry: initial point
+                            // on exit: final estimate of solution
+    W       (LENW,   0.),   // workspace
+    xmin    (N,      0.),
+    xmax    (N,      0.);
+    
+    
+    // now setup the lower and upper limits for the variables and constraints
+    _feval->init_dvar(X, xmin, xmax);
+    for (unsigned int i=0; i<N; i++) {
+        BL[i] = xmin[i];
+        BU[i] = xmax[i];
+    }
+    
+    // all constraints are assumed to be g_i(x) <= 0, so that the upper
+    // bound is 0 and lower bound is -infinity
+    for (unsigned int i=0; i<NCNLN; i++) {
+        BL[i+N] = -1.e20;
+        BU[i+N] =     0.;
+    }
+    
+    std::string nm;
+//    nm = "List";
+//    npoptn_(nm.c_str(), (int)nm.length());
+//    nm = "Verify level 3";
+//    npoptn_(nm.c_str(), (int)nm.length());
+    
+    npsol_(&N,
+           &NCLIN,
+           &NCNLN,
+           &LDA,
+           &LDJ,
+           &LDR,
+           &A[0],
+           &BL[0],
+           &BU[0],
+           _funcon,
+           _funobj,
+           &INFORM,
+           &ITER,
+           &ISTATE[0],
+           &C[0],
+           &CJAC[0],
+           &CLAMBDA[0],
+           &F,
+           &G[0],
+           &R[0],
+           &X[0],
+           &IW[0],
+           &LENIW,
+           &W[0],
+           &LENW);
+    
+
+}
+
