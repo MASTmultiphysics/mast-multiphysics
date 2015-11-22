@@ -245,9 +245,9 @@ _n_stations_x(0) {
     _dirichlet_top->init    (2, constrained_vars);
     _dirichlet_left->init   (3, constrained_vars);
     
-    _discipline->add_dirichlet_bc(0, *_dirichlet_bottom);
+    //_discipline->add_dirichlet_bc(0, *_dirichlet_bottom);
     _discipline->add_dirichlet_bc(1,  *_dirichlet_right);
-    _discipline->add_dirichlet_bc(2,    *_dirichlet_top);
+    //_discipline->add_dirichlet_bc(2,    *_dirichlet_top);
     _discipline->add_dirichlet_bc(3,   *_dirichlet_left);
 
     _discipline->init_system_dirichlet_bc(dynamic_cast<libMesh::System&>(*_sys));
@@ -318,7 +318,7 @@ _n_stations_x(0) {
     _kappa           = new MAST::Parameter("kappa",infile("kappa",5./6.));
     _rho             = new MAST::Parameter( "rho", infile("rho", 2700.0));
     _zero            = new MAST::Parameter("zero",                    0.);
-    _press           = new MAST::Parameter(   "p", infile("press", 2.e5));
+    _press           = new MAST::Parameter(   "p", infile("press", 2.e6));
     
     
     _E_f             = new MAST::ConstantFieldFunction("E",            *_E);
@@ -525,15 +525,6 @@ MAST::PlateBendingSizingOptimization::evaluate(const std::vector<Real>& dvars,
     _sys->solve();
     _assembly->calculate_outputs(*(_sys->solution));
     
-    // output the solution
-    {
-        std::set<std::string> names;
-        names.insert("StaticStructuralSystem");
-        libMesh::ExodusII_IO(*_mesh).write_equation_systems("str.exo",
-                                                            *_eq_sys,
-                                                            &names);
-    }
-    
     
     //////////////////////////////////////////////////////////////////////
     // get the objective and constraints
@@ -575,7 +566,6 @@ MAST::PlateBendingSizingOptimization::evaluate(const std::vector<Real>& dvars,
                                 w_sens);
             obj_grad[i] = w_sens*_dv_scaling[i];
         }
-        
     }
     
     
@@ -662,8 +652,6 @@ MAST::PlateBendingSizingOptimization::output(unsigned int iter,
                                                         *_eq_sys);
 
     MAST::FunctionEvaluation::output(iter, x, obj, fval, if_write_to_optim_file);
-    
-
 }
 
 

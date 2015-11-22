@@ -359,15 +359,6 @@ MAST::BeamBendingSingleFunctionalSizingOptimization::evaluate(const std::vector<
     _sys->solve();
     _assembly->calculate_outputs(*(_sys->solution));
     
-    // output the solution
-    {
-        std::set<std::string> names;
-        names.insert("StaticStructuralSystem");
-        libMesh::ExodusII_IO(*_mesh).write_equation_systems("str.exo",
-                                                            *_eq_sys,
-                                                            &names);
-    }
-    
     
     //////////////////////////////////////////////////////////////////////
     // get the objective and constraints

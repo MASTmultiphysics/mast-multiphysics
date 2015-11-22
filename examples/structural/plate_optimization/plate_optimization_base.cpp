@@ -300,7 +300,7 @@ MAST::PlateWeight::operator() (const libMesh::Point& p,
         elem_p  = e->centroid();
         th  ( elem_p, 0.,   h);
         rhof( elem_p, 0., rho);
-        v = e->volume() * h * rho;
+        v += e->volume() * h * rho;
     }
 }
 
@@ -361,7 +361,7 @@ MAST::PlateWeight::derivative(const MAST::DerivativeType d,
         rhof( elem_p, 0., rho);
         th.derivative  (d, f, elem_p, 0.,   dh);
         rhof.derivative(d, f, elem_p, 0., drho);
-        v = e->volume() * (dh * rho + h * drho);
+        v += e->volume() * (dh * rho + h * drho);
         
     }
 }

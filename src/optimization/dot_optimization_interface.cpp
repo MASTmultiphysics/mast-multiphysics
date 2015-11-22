@@ -43,8 +43,8 @@ MAST::DOTOptimizationInterface::optimize() {
     NDV     = _feval->n_vars(),
     NCON    = _feval->n_eq() + _feval->n_ineq(),
     MINMAX  = 0,      //  MINMAX = 0,-1 for minimization, = 1 for maximization
-    NRWK    = NDV*NCON*10, // add a factor of 10 to be safe.
-    NRIWK   = NDV*NCON*10; // May need to be changed for individual problems
+    NRWK    = std::max(NDV*NCON*10, 300), // add a factor of 10 to be safe.
+    NRIWK   = std::max(NDV*NCON*10, 300); // May need to be changed for individual problems
 
     libmesh_assert_greater(NDV,  0);
     libmesh_assert_greater(NCON, 0);

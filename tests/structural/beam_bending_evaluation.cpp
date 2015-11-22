@@ -151,8 +151,7 @@ BOOST_AUTO_TEST_CASE   (BeamBendingSensitivity) {
     
     const Real
     delta    = 1.e-4,
-    tol      = 1.e-2,
-    eps      = 1.0e-7;
+    tol      = 1.e-2;
 
     // verify the sensitivity solution of this system
     RealVectorX
