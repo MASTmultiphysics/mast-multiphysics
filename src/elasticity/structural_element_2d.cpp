@@ -855,6 +855,9 @@ MAST::StructuralElement2D::_internal_residual_operation
         stress(1,0) += vec1_n1(2); // sigma_yx
         stress(1,1) += vec1_n1(1); // sigma_yy
         
+        // set vec2_n1 to zero, because we need to store only the vk-strain
+        // in it for the next operation
+        vec2_n1.setZero();
         if (if_vk)  { // get the vonKarman strain operator if needed
             this->initialize_von_karman_strain_operator(qp,
                                                         fe,

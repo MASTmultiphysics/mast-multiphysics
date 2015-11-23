@@ -183,7 +183,7 @@ MAST::StressStrainOutputBase::Data::dvon_Mises_stress_dX() const {
            pow(_stress(5), 2));              //     tau_zz^2)
 
     RealVectorX
-    dp = RealVectorX::Zero(6);
+    dp = RealVectorX::Zero(_dstress_dX.cols());
     
     // if p == 0, then the sensitivity returns nan
     // Hennce, we are avoiding this by setting it to zero whenever p = 0.
