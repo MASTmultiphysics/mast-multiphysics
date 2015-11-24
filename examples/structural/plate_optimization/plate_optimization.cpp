@@ -175,10 +175,16 @@ _n_divs_y(0),
 _n_elems(0),
 _n_stations_x(0) {
     
+    libMesh::ElemType
+    e_type       = libMesh::QUAD4;
+    
     // number of elements
     _n_divs_x    = infile("n_divs_x", 16);
     _n_divs_y    = infile("n_divs_y", 16);
     _n_elems     = _n_divs_x*_n_divs_y;
+    if (e_type == libMesh::TRI3)
+        _n_elems    *= 2;
+    
     
     // number of stations
     _n_stations_x = infile("n_stations", 8);
@@ -207,7 +213,7 @@ _n_stations_x(0) {
                                                  _n_divs_x, _n_divs_y,
                                                  0, _length,
                                                  0, _width,
-                                                 libMesh::QUAD4);
+                                                 e_type);
     _mesh->prepare_for_use();
     
     // create the equation system
@@ -245,9 +251,9 @@ _n_stations_x(0) {
     _dirichlet_top->init    (2, constrained_vars);
     _dirichlet_left->init   (3, constrained_vars);
     
-    //_discipline->add_dirichlet_bc(0, *_dirichlet_bottom);
+    _discipline->add_dirichlet_bc(0, *_dirichlet_bottom);
     _discipline->add_dirichlet_bc(1,  *_dirichlet_right);
-    //_discipline->add_dirichlet_bc(2,    *_dirichlet_top);
+    _discipline->add_dirichlet_bc(2,    *_dirichlet_top);
     _discipline->add_dirichlet_bc(3,   *_dirichlet_left);
 
     _discipline->init_system_dirichlet_bc(dynamic_cast<libMesh::System&>(*_sys));
@@ -259,8 +265,8 @@ _n_stations_x(0) {
     // initialize the dv vector data
     const Real
     th_l                   = infile("thickness_lower", 0.001),
-    th_u                   = infile("thickness_upper",   0.5),
-    th                     = infile("thickness",        0.01),
+    th_u                   = infile("thickness_upper",   0.2),
+    th                     = infile("thickness",         0.2),
     dx                     = _length/(_n_stations_x-1);
     
     _dv_init.resize    (_n_vars);
@@ -318,7 +324,7 @@ _n_stations_x(0) {
     _kappa           = new MAST::Parameter("kappa",infile("kappa",5./6.));
     _rho             = new MAST::Parameter( "rho", infile("rho", 2700.0));
     _zero            = new MAST::Parameter("zero",                    0.);
-    _press           = new MAST::Parameter(   "p", infile("press", 2.e6));
+    _press           = new MAST::Parameter(   "p", infile("press", 8.e5));
     
     
     _E_f             = new MAST::ConstantFieldFunction("E",            *_E);

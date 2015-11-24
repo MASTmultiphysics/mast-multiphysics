@@ -34,9 +34,45 @@
 extern libMesh::LibMeshInit* _init;
 
 
-MAST::BuildStructural1DElem::BuildStructural1DElem() {
-
+MAST::BuildStructural1DElem::BuildStructural1DElem():
+_initialized(false),
+_mesh(NULL),
+_eq_sys(NULL),
+_sys(NULL),
+_structural_sys(NULL),
+_discipline(NULL),
+_thy(NULL),
+_thz(NULL),
+_E(NULL),
+_nu(NULL),
+_hy_off(NULL),
+_hz_off(NULL),
+_zero(NULL),
+_temp(NULL),
+_alpha(NULL),
+_thy_f(NULL),
+_thz_f(NULL),
+_E_f(NULL),
+_nu_f(NULL),
+_hyoff_f(NULL),
+_hzoff_f(NULL),
+_temp_f(NULL),
+_ref_temp_f(NULL),
+_alpha_f(NULL),
+_m_card(NULL),
+_p_card(NULL),
+_p_theory(NULL),
+_thermal_load(NULL) {
     
+ }
+
+
+void
+MAST::BuildStructural1DElem::init(bool if_link_offset_to_th) {
+
+    // make sure that this has not already been initialized
+    libmesh_assert(!_initialized);
+
     // create the mesh
     _mesh       = new libMesh::SerialMesh(_init->comm());
     
@@ -90,11 +126,18 @@ MAST::BuildStructural1DElem::BuildStructural1DElem() {
     _thz_f           = new MAST::ConstantFieldFunction("hz",     *_thz);
     _E_f             = new MAST::ConstantFieldFunction("E",      *_E);
     _nu_f            = new MAST::ConstantFieldFunction("nu",     *_nu);
-    _hyoff_f         = new MAST::ConstantFieldFunction("hy_off", *_hy_off);
-    _hzoff_f         = new MAST::ConstantFieldFunction("hz_off", *_hz_off);
     _temp_f          = new MAST::ConstantFieldFunction("temperature", *_temp);
     _ref_temp_f      = new MAST::ConstantFieldFunction("ref_temperature", *_zero);
     _alpha_f         = new MAST::ConstantFieldFunction("alpha_expansion", *_alpha);
+    if (!if_link_offset_to_th) {
+        _hyoff_f         = new MAST::ConstantFieldFunction("hy_off", *_hy_off);
+        _hzoff_f         = new MAST::ConstantFieldFunction("hz_off", *_hz_off);
+    }
+    else {
+        _hyoff_f         = new MAST::ConstantFieldFunction("hy_off", *_thy);
+        _hzoff_f         = new MAST::ConstantFieldFunction("hz_off", *_thz);
+    }
+    
     
     // create the material property card
     _m_card         = new MAST::IsotropicMaterialPropertyCard;

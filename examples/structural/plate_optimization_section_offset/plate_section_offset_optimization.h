@@ -17,8 +17,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#ifndef __mast_plate_single_stress_functional_optimization_h__
-#define __mast_plate_single_stress_functional_optimization_h__
+#ifndef __mast_plate_section_offset_optimization_h__
+#define __mast_plate_section_offset_optimization_h__
 
 // C++ includes
 #include <memory>
@@ -71,15 +71,15 @@ namespace MAST {
     class StructuralNonlinearAssembly;
     
     
-    struct PlateBendingSingleStressFunctionalSizingOptimization:
+    struct PlateBendingSectionOffsetSizingOptimization:
     public MAST::FunctionEvaluation {
         
         
-        PlateBendingSingleStressFunctionalSizingOptimization(GetPot& infile,
-                                                             std::ostream& output);
+        PlateBendingSectionOffsetSizingOptimization(GetPot& infile,
+                                       std::ostream& output);
         
         
-        ~PlateBendingSingleStressFunctionalSizingOptimization();
+        ~PlateBendingSectionOffsetSizingOptimization();
         
         /*!
          *   initialize the design variables values and bounds
@@ -121,7 +121,7 @@ namespace MAST {
          */
         virtual MAST::FunctionEvaluation::funcon
         get_constraint_evaluation_function();
-        
+
         /*!
          *   clears the stress data structures for a followup analysis
          */
@@ -133,7 +133,7 @@ namespace MAST {
         
         // width of domain
         Real _width;
-        
+
         // length of domain
         Real _stress_limit;
         
@@ -174,12 +174,14 @@ namespace MAST {
         *_nu_f,
         *_kappa_f,
         *_rho_f,
-        *_hoff_f,
         *_press_f;
+
+        // Section offset
+        MAST::PlateOffset*                              _hoff_f;
         
         
         // Weight function to calculate the weight of the structure
-        MAST::PlateWeight *_weight;
+        MAST::PlateWeight*                              _weight;
         
         // create the material property card
         MAST::IsotropicMaterialPropertyCard*            _m_card;
@@ -203,7 +205,7 @@ namespace MAST {
         MAST::BoundaryConditionBase*                    _p_load;
         
         // output quantity objects to evaluate stress
-        MAST::StressStrainOutputBase*                   _outputs;
+        std::vector<MAST::StressStrainOutputBase*>      _outputs;
         
         
         // stationwise parameter definitions
@@ -228,5 +230,5 @@ namespace MAST {
 }
 
 
-#endif /* __mast_plate_single_stress_functional_optimization_h__ */
+#endif /* __mast_plate_section_offset_optimization_h__ */
 

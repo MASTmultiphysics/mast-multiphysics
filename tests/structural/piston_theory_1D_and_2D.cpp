@@ -155,6 +155,7 @@ BOOST_FIXTURE_TEST_SUITE  (Structural1DJacobianEvaluation, MAST::BuildStructural
 
 BOOST_AUTO_TEST_CASE   (PistonTheory1D) {
     
+    this->init(false);
     check_piston_theory_jacobian<MAST::BuildStructural1DElem>(*this);
     
 }
@@ -164,10 +165,20 @@ BOOST_AUTO_TEST_SUITE_END()
 
 
 BOOST_FIXTURE_TEST_SUITE  (Structural2DJacobianEvaluation, MAST::BuildStructural2DElem)
-BOOST_AUTO_TEST_CASE   (PistonTheory2D) {
+
+BOOST_AUTO_TEST_CASE   (PistonTheory2DQUAD4) {
     
+    this->init(false, libMesh::QUAD4);
     check_piston_theory_jacobian<MAST::BuildStructural2DElem>(*this);
 }
+
+
+BOOST_AUTO_TEST_CASE   (PistonTheory2DTRI3) {
+    
+    this->init(false, libMesh::TRI3);
+    check_piston_theory_jacobian<MAST::BuildStructural2DElem>(*this);
+}
+
 
 BOOST_AUTO_TEST_SUITE_END()
 

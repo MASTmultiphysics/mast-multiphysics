@@ -21,7 +21,7 @@
 #include <iostream>
 
 // MAST includes
-#include "examples/structural/plate_optimization_single_stress_functional/plate_optimization_single_functional.h"
+#include "examples/structural/plate_optimization_section_offset/plate_section_offset_optimization.h"
 #include "driver/driver_base.h"
 #include "elasticity/stress_output_base.h"
 #include "optimization/optimization_interface.h"
@@ -43,12 +43,12 @@ MAST::FunctionEvaluation *__my_func_eval;
 
 
 void
-plate_stress_functional_optim_obj(int*    mode,
-                                  int*    n,
-                                  double* x,
-                                  double* f,
-                                  double* g,
-                                  int*    nstate) {
+plate_section_offset_optim_obj(int*    mode,
+                               int*    n,
+                               double* x,
+                               double* f,
+                               double* g,
+                               int*    nstate) {
     
     
     // make sure that the global variable has been setup
@@ -100,15 +100,15 @@ plate_stress_functional_optim_obj(int*    mode,
 
 
 void
-plate_stress_functional_optim_con(int*    mode,
-                                  int*    ncnln,
-                                  int*    n,
-                                  int*    ldJ,
-                                  int*    needc,
-                                  double* x,
-                                  double* c,
-                                  double* cJac,
-                                  int*    nstate) {
+plate_section_offset_optim_con(int*    mode,
+                               int*    ncnln,
+                               int*    n,
+                               int*    ldJ,
+                               int*    needc,
+                               double* x,
+                               double* c,
+                               double* cJac,
+                               int*    nstate) {
     
     
     // make sure that the global variable has been setup
@@ -166,9 +166,9 @@ plate_stress_functional_optim_con(int*    mode,
 
 
 
-MAST::PlateBendingSingleStressFunctionalSizingOptimization::
-PlateBendingSingleStressFunctionalSizingOptimization(GetPot& infile,
-                                                     std::ostream& output):
+MAST::PlateBendingSectionOffsetSizingOptimization::
+PlateBendingSectionOffsetSizingOptimization(GetPot& infile,
+                               std::ostream& output):
 MAST::FunctionEvaluation(output),
 _n_divs_x(0),
 _n_divs_y(0),
@@ -184,7 +184,7 @@ _n_stations_x(0) {
     _n_elems     = _n_divs_x*_n_divs_y;
     if (e_type == libMesh::TRI3)
         _n_elems    *= 2;
-
+    
     // number of stations
     _n_stations_x = infile("n_stations", 8);
     
@@ -192,7 +192,7 @@ _n_stations_x(0) {
     // now setup the optimization data
     _n_vars                = _n_stations_x; // for thickness variable
     _n_eq                  = 0;
-    _n_ineq                = 1;            // all stress constraints combined into single functional
+    _n_ineq                = _n_elems;   // one element stress functional per elem
     _max_iters             = 1000;
     
     
@@ -264,8 +264,8 @@ _n_stations_x(0) {
     // initialize the dv vector data
     const Real
     th_l                   = infile("thickness_lower", 0.001),
-    th_u                   = infile("thickness_upper",   0.2),
-    th                     = infile("thickness",         0.2),
+    th_u                   = infile("thickness_upper",   0.5),
+    th                     = infile("thickness",         0.5),
     dx                     = _length/(_n_stations_x-1);
     
     _dv_init.resize    (_n_vars);
@@ -323,15 +323,16 @@ _n_stations_x(0) {
     _kappa           = new MAST::Parameter("kappa",infile("kappa",5./6.));
     _rho             = new MAST::Parameter( "rho", infile("rho", 2700.0));
     _zero            = new MAST::Parameter("zero",                    0.);
-    _press           = new MAST::Parameter(   "p", infile("press", 2.e6));
+    _press           = new MAST::Parameter(   "p", infile("press", 8.e5));
     
     
     _E_f             = new MAST::ConstantFieldFunction("E",            *_E);
     _nu_f            = new MAST::ConstantFieldFunction("nu",          *_nu);
     _kappa_f         = new MAST::ConstantFieldFunction("kappa",    *_kappa);
     _rho_f           = new MAST::ConstantFieldFunction("rho",        *_rho);
-    _hoff_f          = new MAST::ConstantFieldFunction("off",       *_zero);
     _press_f         = new MAST::ConstantFieldFunction("pressure", *_press);
+    _hoff_f          = new MAST::PlateOffset("off", _th_f->clone().release());
+    
     
     // initialize the load
     _p_load          = new MAST::BoundaryConditionBase(MAST::SURFACE_PRESSURE);
@@ -376,10 +377,19 @@ _n_stations_x(0) {
     pts.push_back(libMesh::Point(-1/sqrt(3),  1/sqrt(3), 1.)); // upper skin
     pts.push_back(libMesh::Point(-1/sqrt(3),  1/sqrt(3),-1.)); // lower skin
     
-
-    _outputs = new MAST::StressStrainOutputBase;
-    _outputs->set_points_for_evaluation(pts);
-    _discipline->add_volume_output((*e_it)->subdomain_id(), *_outputs);
+    for ( ; e_it != e_end; e_it++) {
+        
+        MAST::StressStrainOutputBase * output = new MAST::StressStrainOutputBase;
+        
+        // tell the object to evaluate the data for this object only
+        std::set<const libMesh::Elem*> e_set;
+        e_set.insert(*e_it);
+        output->set_elements_in_domain(e_set);
+        output->set_points_for_evaluation(pts);
+        _outputs.push_back(output);
+        
+        _discipline->add_volume_output((*e_it)->subdomain_id(), *output);
+    }
     
     // create the assembly object
     _assembly = new MAST::StructuralNonlinearAssembly;
@@ -394,8 +404,7 @@ _n_stations_x(0) {
 
 
 
-MAST::PlateBendingSingleStressFunctionalSizingOptimization::
-~PlateBendingSingleStressFunctionalSizingOptimization() {
+MAST::PlateBendingSectionOffsetSizingOptimization::~PlateBendingSectionOffsetSizingOptimization() {
     
     delete _m_card;
     delete _p_card;
@@ -428,7 +437,16 @@ MAST::PlateBendingSingleStressFunctionalSizingOptimization::
     
     delete _discipline;
     delete _structural_sys;
-    delete _outputs;
+    
+    // iterate over the output quantities and delete them
+    {
+        std::vector<MAST::StressStrainOutputBase*>::iterator
+        it   =   _outputs.begin(),
+        end  =   _outputs.end();
+        for ( ; it != end; it++) delete *it;
+        
+        _outputs.clear();
+    }
     
     
     // delete the h_y station functions
@@ -453,11 +471,9 @@ MAST::PlateBendingSingleStressFunctionalSizingOptimization::
 
 
 void
-MAST::PlateBendingSingleStressFunctionalSizingOptimization::
-init_dvar(std::vector<Real>& x,
-          std::vector<Real>& xmin,
-          std::vector<Real>& xmax) {
-    
+MAST::PlateBendingSectionOffsetSizingOptimization::init_dvar(std::vector<Real>& x,
+                                                std::vector<Real>& xmin,
+                                                std::vector<Real>& xmax) {
     // one DV for each element
     x       = _dv_init;
     xmin    = _dv_low;
@@ -468,14 +484,13 @@ init_dvar(std::vector<Real>& x,
 
 
 void
-MAST::PlateBendingSingleStressFunctionalSizingOptimization::
-evaluate(const std::vector<Real>& dvars,
-         Real& obj,
-         bool eval_obj_grad,
-         std::vector<Real>& obj_grad,
-         std::vector<Real>& fvals,
-         std::vector<bool>& eval_grads,
-         std::vector<Real>& grads) {
+MAST::PlateBendingSectionOffsetSizingOptimization::evaluate(const std::vector<Real>& dvars,
+                                               Real& obj,
+                                               bool eval_obj_grad,
+                                               std::vector<Real>& obj_grad,
+                                               std::vector<Real>& fvals,
+                                               std::vector<bool>& eval_grads,
+                                               std::vector<Real>& grads) {
     
     
     libmesh_assert_equal_to(dvars.size(), _n_vars);
@@ -533,8 +548,9 @@ evaluate(const std::vector<Real>& dvars,
     obj = wt;
     
     // copy the element von Mises stress values as the functions
-    fvals[0] =  -1. +
-    _outputs->von_Mises_p_norm_functional_for_all_elems(pval)/_stress_limit;
+    for (unsigned int i=0; i<_n_elems; i++)
+        fvals[i] =  -1. +
+        _outputs[i]->von_Mises_p_norm_functional_for_all_elems(pval)/_stress_limit;
     
     
     
@@ -592,9 +608,10 @@ evaluate(const std::vector<Real>& dvars,
                                                     *(_sys->solution));
             
             // copy the sensitivity values in the output
-            grads[i] = _dv_scaling[i]/_stress_limit *
-            _outputs->von_Mises_p_norm_functional_sensitivity_for_all_elems
-            (pval, _th_station_parameters[i]);
+            for (unsigned int j=0; j<_n_elems; j++)
+                grads[i*_n_elems+j] = _dv_scaling[i]/_stress_limit *
+                _outputs[j]->von_Mises_p_norm_functional_sensitivity_for_all_elems
+                (pval, _th_station_parameters[i]);
         }
     }
     
@@ -608,9 +625,15 @@ evaluate(const std::vector<Real>& dvars,
 
 
 void
-MAST::PlateBendingSingleStressFunctionalSizingOptimization::clear_stresss() {
+MAST::PlateBendingSectionOffsetSizingOptimization::clear_stresss() {
     
-    _outputs->clear(false);
+    // iterate over the output quantities and delete them
+    std::vector<MAST::StressStrainOutputBase*>::iterator
+    it   =   _outputs.begin(),
+    end  =   _outputs.end();
+    
+    for ( ; it != end; it++)
+        (*it)->clear(false);
 }
 
 
@@ -618,12 +641,11 @@ MAST::PlateBendingSingleStressFunctionalSizingOptimization::clear_stresss() {
 
 
 void
-MAST::PlateBendingSingleStressFunctionalSizingOptimization::
-output(unsigned int iter,
-       const std::vector<Real>& x,
-       Real obj,
-       const std::vector<Real>& fval,
-       bool if_write_to_optim_file) const {
+MAST::PlateBendingSectionOffsetSizingOptimization::output(unsigned int iter,
+                                             const std::vector<Real>& x,
+                                             Real obj,
+                                             const std::vector<Real>& fval,
+                                             bool if_write_to_optim_file) const {
     
     libmesh_assert_equal_to(x.size(), _n_vars);
     
@@ -642,18 +664,16 @@ output(unsigned int iter,
 
 
 MAST::FunctionEvaluation::funobj
-MAST::PlateBendingSingleStressFunctionalSizingOptimization::
-get_objective_evaluation_function() {
+MAST::PlateBendingSectionOffsetSizingOptimization::get_objective_evaluation_function() {
     
-    return plate_stress_functional_optim_obj;
+    return plate_section_offset_optim_obj;
 }
 
 
 
 MAST::FunctionEvaluation::funcon
-MAST::PlateBendingSingleStressFunctionalSizingOptimization::
-get_constraint_evaluation_function() {
+MAST::PlateBendingSectionOffsetSizingOptimization::get_constraint_evaluation_function() {
     
-    return plate_stress_functional_optim_con;
+    return plate_section_offset_optim_con;
 }
 

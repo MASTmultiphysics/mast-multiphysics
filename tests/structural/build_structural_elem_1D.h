@@ -58,6 +58,12 @@ namespace MAST {
         ~BuildStructural1DElem();
 
         
+        void init(bool if_link_offset_to_th);
+        
+        
+        bool _initialized;
+        
+        
         // create the mesh
         libMesh::SerialMesh*           _mesh;
         

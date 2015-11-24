@@ -34,8 +34,40 @@
 extern libMesh::LibMeshInit* _init;
 
 
-MAST::BuildStructural2DElem::BuildStructural2DElem() {
+MAST::BuildStructural2DElem::BuildStructural2DElem():
+_initialized(false),
+_e_type(libMesh::INVALID_ELEM),
+_mesh(NULL),
+_eq_sys(NULL),
+_sys(NULL),
+_structural_sys(NULL),
+_discipline(NULL),
+_thz(NULL),
+_E(NULL),
+_nu(NULL),
+_kappa(NULL),
+_hzoff(NULL),
+_zero(NULL),
+_thz_f(NULL),
+_E_f(NULL),
+_nu_f(NULL),
+_kappa_f(NULL),
+_hzoff_f(NULL),
+_m_card(NULL),
+_p_card(NULL),
+_p_theory(NULL) {
     
+}
+
+
+
+void
+MAST::BuildStructural2DElem::init(bool if_link_offset_to_th,
+                                  libMesh::ElemType e_type) {
+    
+    // make sure that this has not already been initialized
+    libmesh_assert(!_initialized);
+    _e_type = e_type;
     
     // create the mesh
     _mesh       = new libMesh::SerialMesh(_init->comm());
@@ -44,7 +76,8 @@ MAST::BuildStructural2DElem::BuildStructural2DElem() {
     libMesh::MeshTools::Generation::build_square(*_mesh,
                                                  1, 1,
                                                  0, 2,
-                                                 0, 2);
+                                                 0, 2,
+                                                 e_type);
     
     // create the equation system
     _eq_sys    = new  libMesh::EquationSystems(*_mesh);
@@ -71,6 +104,7 @@ MAST::BuildStructural2DElem::BuildStructural2DElem() {
     _nu              = new MAST::Parameter(   "nu",     0.33);
     _kappa           = new MAST::Parameter("kappa",    5./6.);
     _zero            = new MAST::Parameter( "zero",       0.);
+    _hzoff           = new MAST::Parameter( "hzoff",      0.);
     
     
     
@@ -87,7 +121,10 @@ MAST::BuildStructural2DElem::BuildStructural2DElem() {
     _E_f             = new MAST::ConstantFieldFunction(    "E",       *_E);
     _nu_f            = new MAST::ConstantFieldFunction(   "nu",      *_nu);
     _kappa_f         = new MAST::ConstantFieldFunction("kappa",   *_kappa);
-    _hzoff_f         = new MAST::ConstantFieldFunction(  "off",    *_zero);
+    if (!if_link_offset_to_th)
+        _hzoff_f         = new MAST::ConstantFieldFunction(  "off",   *_hzoff);
+    else
+        _hzoff_f         = new MAST::ConstantFieldFunction(  "off",   *_thz);
     
     // create the material property card
     _m_card         = new MAST::IsotropicMaterialPropertyCard;
@@ -150,6 +187,7 @@ MAST::BuildStructural2DElem::~BuildStructural2DElem() {
     delete _hzoff_f;
     
     delete _thz;
+    delete _hzoff;
     delete _E;
     delete _nu;
     delete _zero;

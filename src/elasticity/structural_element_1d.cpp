@@ -769,12 +769,14 @@ MAST::StructuralElement1D::internal_residual_sensitivity (bool request_jacobian,
     // element
     if (if_bending && _bending_operator->include_transverse_shear_energy())
         _bending_operator->calculate_transverse_shear_residual(request_jacobian,
-                                                               local_f, local_jac,
+                                                               local_f,
+                                                               local_jac,
                                                                this->sensitivity_param);
     
     // now transform to the global coorodinate system
     transform_vector_to_global_system(local_f, vec3_n2);
     f += vec3_n2;
+    
     if (request_jacobian) {
         transform_matrix_to_global_system(local_jac, mat2_n2n2);
         jac += mat2_n2n2;

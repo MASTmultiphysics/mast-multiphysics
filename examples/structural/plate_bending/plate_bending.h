@@ -114,6 +114,7 @@ namespace MAST {
         *_th,
         *_E,
         *_nu,
+        *_kappa,
         *_press,
         *_zero;
         
@@ -121,6 +122,7 @@ namespace MAST {
         *_th_f,
         *_E_f,
         *_nu_f,
+        *_kappa_f,
         *_hoff_f,
         *_press_f;
         

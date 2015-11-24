@@ -44,6 +44,7 @@
 extern void
 set_deformation(const unsigned int dim,
                 const unsigned int case_num,
+                const libMesh::ElemType e_type,
                 RealVectorX& vec);
 
 
@@ -279,13 +280,24 @@ void check_thermal_force_and_jacobian_sensitivity (ValType& v,
 
 
 
-BOOST_FIXTURE_TEST_SUITE  (Structural1DJacobianEvaluation, MAST::BuildStructural1DElem)
+BOOST_FIXTURE_TEST_SUITE  (Structural1DJacobianEvaluation,
+                           MAST::BuildStructural1DElem)
 
-BOOST_AUTO_TEST_CASE   (ThermalResidual1D) {
-    
+BOOST_AUTO_TEST_CASE   (ThermalResidual1DIndependentOffset) {
+
+    this->init(false);
     check_thermal_residual_force_jacobian<MAST::BuildStructural1DElem>(*this);
     
 }
+
+
+BOOST_AUTO_TEST_CASE   (ThermalResidual1DDependentOffset) {
+    
+    this->init(true);
+    check_thermal_residual_force_jacobian<MAST::BuildStructural1DElem>(*this);
+    
+}
+
 
 BOOST_AUTO_TEST_SUITE_END()
 
@@ -294,26 +306,54 @@ BOOST_AUTO_TEST_SUITE_END()
 BOOST_FIXTURE_TEST_SUITE  (Structural1DThermalForceSensitivity,
                            MAST::BuildStructural1DElem)
 
-BOOST_AUTO_TEST_CASE   (ThermalForceSensitivity1D) {
+BOOST_AUTO_TEST_CASE   (ThermalForceSensitivity1DIndependentOffset) {
+
+    this->init(false);
     
     RealVectorX v;
     
     // pure axial deformation
-    set_deformation(1, 0, v);
+    set_deformation(1, 0, libMesh::INVALID_ELEM, v);
     check_thermal_force_and_jacobian_sensitivity<MAST::BuildStructural1DElem>
     (*this, v);
     
     // pure bending deformation
-    set_deformation(1, 1, v);
+    set_deformation(1, 1, libMesh::INVALID_ELEM, v);
     check_thermal_force_and_jacobian_sensitivity<MAST::BuildStructural1DElem>
     (*this, v);
     
     // combination of axial and bending deformation
-    set_deformation(1, 2, v);
+    set_deformation(1, 2, libMesh::INVALID_ELEM, v);
     check_thermal_force_and_jacobian_sensitivity<MAST::BuildStructural1DElem>
     (*this, v);
     
 }
+
+
+
+BOOST_AUTO_TEST_CASE   (ThermalForceSensitivity1DDependentOffset) {
+    
+    this->init(true);
+    
+    RealVectorX v;
+    
+    // pure axial deformation
+    set_deformation(1, 0, libMesh::INVALID_ELEM, v);
+    check_thermal_force_and_jacobian_sensitivity<MAST::BuildStructural1DElem>
+    (*this, v);
+    
+    // pure bending deformation
+    set_deformation(1, 1, libMesh::INVALID_ELEM, v);
+    check_thermal_force_and_jacobian_sensitivity<MAST::BuildStructural1DElem>
+    (*this, v);
+    
+    // combination of axial and bending deformation
+    set_deformation(1, 2, libMesh::INVALID_ELEM, v);
+    check_thermal_force_and_jacobian_sensitivity<MAST::BuildStructural1DElem>
+    (*this, v);
+    
+}
+
 
 BOOST_AUTO_TEST_SUITE_END()
 

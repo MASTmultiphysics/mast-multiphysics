@@ -23,16 +23,21 @@
 
 
 // MAST includes
-#include "examples/structural/plate_bending/plate_bending.h"
+#include "examples/structural/plate_bending_section_offset/plate_bending_section_offset.h"
 #include "tests/base/check_sensitivity.h"
 
 
 
+// libMesh includes
+#include "libmesh/numeric_vector.h"
 
-BOOST_FIXTURE_TEST_SUITE  (Structural2DPlateBending,
-                           MAST::PlateBending)
 
-BOOST_AUTO_TEST_CASE   (PlateBendingSensitivity) {
+
+BOOST_FIXTURE_TEST_SUITE  (Structural2DPlateBendingWithOffset,
+                           MAST::PlateBendingWithOffset)
+
+BOOST_AUTO_TEST_CASE   (PlateBendingWithOffsetSensitivity) {
+    
     
     MAST::check_sensitivity(*this);
 }

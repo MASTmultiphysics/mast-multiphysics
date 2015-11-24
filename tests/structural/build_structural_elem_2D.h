@@ -57,6 +57,14 @@ namespace MAST {
         ~BuildStructural2DElem();
         
         
+        void init(bool if_link_offset_to_th,
+                  libMesh::ElemType e_type);
+
+        
+        bool _initialized;
+
+        libMesh::ElemType _e_type;
+        
         // create the mesh
         libMesh::SerialMesh*           _mesh;
         
@@ -76,6 +84,7 @@ namespace MAST {
         *_E,
         *_nu,
         *_kappa,
+        *_hzoff,
         *_zero;
         
         MAST::ConstantFieldFunction

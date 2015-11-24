@@ -110,7 +110,7 @@ MAST::BeamBendingThermalStress::BeamBendingThermalStress() {
     _params_for_sensitivity.push_back(_nu);
     _params_for_sensitivity.push_back(_thy);
     _params_for_sensitivity.push_back(_thz);
-    //_params_for_sensitivity.push_back(_alpha);
+    _params_for_sensitivity.push_back(_alpha);
     
     
     

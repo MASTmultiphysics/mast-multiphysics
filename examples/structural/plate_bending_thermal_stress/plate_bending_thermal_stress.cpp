@@ -22,7 +22,8 @@
 
 
 // MAST includes
-#include "examples/structural/plate_bending/plate_bending.h"
+#include "examples/structural/plate_bending_thermal_stress/plate_bending_thermal_stress.h"
+#include "examples/structural/plate_optimization/plate_optimization_base.h"
 #include "elasticity/structural_system_initialization.h"
 #include "elasticity/structural_element_base.h"
 #include "elasticity/structural_nonlinear_assembly.h"
@@ -44,7 +45,7 @@
 extern libMesh::LibMeshInit* _init;
 
 
-MAST::PlateBending::PlateBending() {
+MAST::PlateBendingThermalStress::PlateBendingThermalStress() {
     
     // length of domain
     _length     = 10.,
@@ -102,10 +103,11 @@ MAST::PlateBending::PlateBending() {
     
     _th              = new MAST::Parameter("th",  0.06);
     _E               = new MAST::Parameter("E",  72.e9);
-    _nu              = new MAST::Parameter("nu",  0.33);
+    _alpha           = new MAST::Parameter("alpha",  2.5e-5);
     _kappa           = new MAST::Parameter("kappa",  5./6.);
+    _nu              = new MAST::Parameter("nu",  0.33);
     _zero            = new MAST::Parameter("zero",  0.);
-    _press           = new MAST::Parameter( "p",  2.e4);
+    _temp            = new MAST::Parameter( "temperature",  300.);
     
     
     
@@ -114,20 +116,23 @@ MAST::PlateBending::PlateBending() {
     _params_for_sensitivity.push_back(_E);
     _params_for_sensitivity.push_back(_nu);
     _params_for_sensitivity.push_back(_th);
-    
+    _params_for_sensitivity.push_back(_alpha);
     
     
     _th_f            = new MAST::ConstantFieldFunction("h",           *_th);
     _E_f             = new MAST::ConstantFieldFunction("E",            *_E);
-    _nu_f            = new MAST::ConstantFieldFunction("nu",          *_nu);
+    _alpha_f         = new MAST::ConstantFieldFunction("alpha_expansion", *_alpha);
     _kappa_f         = new MAST::ConstantFieldFunction("kappa",    *_kappa);
-    _hoff_f          = new MAST::ConstantFieldFunction("off",       *_zero);
-    _press_f         = new MAST::ConstantFieldFunction("pressure", *_press);
+    _nu_f            = new MAST::ConstantFieldFunction("nu",          *_nu);
+    _temp_f          = new MAST::ConstantFieldFunction("temperature", *_temp);
+    _ref_temp_f      = new MAST::ConstantFieldFunction("ref_temperature", *_zero);
+    _hoff_f          = new MAST::PlateOffset("off", _th_f->clone().release());
     
     // initialize the load
-    _p_load          = new MAST::BoundaryConditionBase(MAST::SURFACE_PRESSURE);
-    _p_load->add(*_press_f);
-    _discipline->add_volume_load(0, *_p_load);
+    _T_load          = new MAST::BoundaryConditionBase(MAST::TEMPERATURE);
+    _T_load->add(*_temp_f);
+    _T_load->add(*_ref_temp_f);
+    _discipline->add_volume_load(0, *_T_load);
     
     // create the material property card
     _m_card         = new MAST::IsotropicMaterialPropertyCard;
@@ -135,8 +140,9 @@ MAST::PlateBending::PlateBending() {
     // add the material properties to the card
     _m_card->add(*_E_f);
     _m_card->add(*_nu_f);
+    _m_card->add(*_alpha_f);
     _m_card->add(*_kappa_f);
-
+    
     // create the element property card
     _p_card         = new MAST::Solid2DSectionElementPropertyCard;
     
@@ -187,12 +193,12 @@ MAST::PlateBending::PlateBending() {
 
 
 
-MAST::PlateBending::~PlateBending() {
+MAST::PlateBendingThermalStress::~PlateBendingThermalStress() {
     
     delete _m_card;
     delete _p_card;
     
-    delete _p_load;
+    delete _T_load;
     delete _dirichlet_bottom;
     delete _dirichlet_right;
     delete _dirichlet_top;
@@ -200,17 +206,20 @@ MAST::PlateBending::~PlateBending() {
     
     delete _th_f;
     delete _E_f;
+    delete _alpha_f;
     delete _nu_f;
     delete _kappa_f;
     delete _hoff_f;
-    delete _press_f;
+    delete _temp_f;
+    delete _ref_temp_f;
     
     delete _th;
     delete _E;
-    delete _nu;
+    delete _alpha;
     delete _kappa;
+    delete _nu;
     delete _zero;
-    delete _press;
+    delete _temp;
     
     
     
@@ -234,7 +243,7 @@ MAST::PlateBending::~PlateBending() {
 
 
 MAST::Parameter*
-MAST::PlateBending::get_parameter(const std::string &nm) {
+MAST::PlateBendingThermalStress::get_parameter(const std::string &nm) {
     
     MAST::Parameter *rval = NULL;
     
@@ -272,7 +281,7 @@ MAST::PlateBending::get_parameter(const std::string &nm) {
 
 
 const libMesh::NumericVector<Real>&
-MAST::PlateBending::solve(bool if_write_output) {
+MAST::PlateBendingThermalStress::solve(bool if_write_output) {
     
 
     // create the nonlinear assembly object
@@ -311,7 +320,7 @@ MAST::PlateBending::solve(bool if_write_output) {
 
 
 const libMesh::NumericVector<Real>&
-MAST::PlateBending::sensitivity_solve(MAST::Parameter& p,
+MAST::PlateBendingThermalStress::sensitivity_solve(MAST::Parameter& p,
                                      bool if_write_output) {
     
     _discipline->add_parameter(p);
@@ -369,7 +378,7 @@ MAST::PlateBending::sensitivity_solve(MAST::Parameter& p,
 
 
 void
-MAST::PlateBending::clear_stresss() {
+MAST::PlateBendingThermalStress::clear_stresss() {
     
     // iterate over the output quantities and delete them
     std::vector<MAST::StressStrainOutputBase*>::iterator

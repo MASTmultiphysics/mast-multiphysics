@@ -46,7 +46,7 @@ template <typename ValType>
 void check_internal_force_jacobian (ValType& v) {
 
     const Real
-    delta    = 1.e-4,
+    delta    = 1.e-3,
     tol      = 1.e-2;
 
     // get reference to the element in this mesh
@@ -112,22 +112,106 @@ void check_internal_force_jacobian (ValType& v) {
 
 BOOST_FIXTURE_TEST_SUITE  (Structural1DJacobianEvaluation, MAST::BuildStructural1DElem)
 
-BOOST_AUTO_TEST_CASE   (InternalForce1D) {
- 
+BOOST_AUTO_TEST_CASE   (InternalForceJacobian1DIndependentOffset) {
+
+    this->init(false);
+    
     RealVectorX v;
     
     check_internal_force_jacobian<MAST::BuildStructural1DElem>(*this);
 }
 
+
+BOOST_AUTO_TEST_CASE   (InternalForceJacobian1DWithConstantOffset) {
+    
+    this->init(false);
+
+    RealVectorX v;
+    
+    // set a finite value of the offset
+    (*_hy_off)()  = 0.5*(*_thy)();
+    
+    check_internal_force_jacobian<MAST::BuildStructural1DElem>(*this);
+}
+
+
+
+BOOST_AUTO_TEST_CASE   (InternalForceJacobian1DIndependentOffsetDependentOffset) {
+    
+    this->init(true);
+    
+    RealVectorX v;
+    
+    check_internal_force_jacobian<MAST::BuildStructural1DElem>(*this);
+}
+
+
+
+
 BOOST_AUTO_TEST_SUITE_END()
 
 
 
-BOOST_FIXTURE_TEST_SUITE  (Structural2DJacobianEvaluation, MAST::BuildStructural2DElem)
+BOOST_FIXTURE_TEST_SUITE  (Structural2DJacobianEvaluation,
+                           MAST::BuildStructural2DElem)
 
-BOOST_AUTO_TEST_CASE   (InternalForce2D) {
+BOOST_AUTO_TEST_CASE   (InternalForceJacobian2DIndependentOffsetQUAD4) {
+    
+    this->init(false, libMesh::QUAD4);
     
     check_internal_force_jacobian<MAST::BuildStructural2DElem>(*this);
 }
 
+
+BOOST_AUTO_TEST_CASE   (InternalForceJacobian2DWithConstantOffsetQUAD4) {
+
+    this->init(false, libMesh::QUAD4);
+    
+    // set a finite value of the offset
+    (*_hzoff)()  = 0.5*(*_thz)();
+
+    check_internal_force_jacobian<MAST::BuildStructural2DElem>(*this);
+}
+
+
+BOOST_AUTO_TEST_CASE   (InternalForceJacobian2DDependentOffsetQUAD4) {
+    
+    this->init(true, libMesh::QUAD4);
+    
+    check_internal_force_jacobian<MAST::BuildStructural2DElem>(*this);
+}
+
+
+
+BOOST_AUTO_TEST_CASE   (InternalForceJacobian2DIndependentOffsetTRI3) {
+    
+    this->init(false, libMesh::TRI3);
+    
+    check_internal_force_jacobian<MAST::BuildStructural2DElem>(*this);
+}
+
+
+BOOST_AUTO_TEST_CASE   (InternalForceJacobian2DWithConstantOffsetTRI3) {
+    
+    this->init(false, libMesh::TRI3);
+    
+    // set a finite value of the offset
+    (*_hzoff)()  = 0.5*(*_thz)();
+    
+    check_internal_force_jacobian<MAST::BuildStructural2DElem>(*this);
+}
+
+
+BOOST_AUTO_TEST_CASE   (InternalForceJacobian2DDependentOffsetTRI3) {
+    
+    this->init(true, libMesh::TRI3);
+    
+    check_internal_force_jacobian<MAST::BuildStructural2DElem>(*this);
+}
+
+
+
 BOOST_AUTO_TEST_SUITE_END()
+
+
+

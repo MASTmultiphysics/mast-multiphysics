@@ -48,6 +48,7 @@
 void
 set_deformation(const unsigned int dim,
                 const unsigned int case_num,
+                const libMesh::ElemType e,
                 RealVectorX& vec) {
     if (dim == 1) {
         
@@ -74,14 +75,60 @@ set_deformation(const unsigned int dim,
     else if (dim == 2) {
         
         // assuming a quad4 with Lagrange interpolation
-        vec   = RealVectorX::Zero(24);
         
+        std::vector<unsigned int>
+        mem_dofs,
+        bend_dofs;
         
-        vec(2) = 2.e-2;
-        vec(3) = 4.e-2;
+        if (e == libMesh::QUAD4) {
+            vec   = RealVectorX::Zero(24);
+            mem_dofs  = {2, 3, 6, 7};
+            bend_dofs = {14, 15, 18, 19};
+        }
+        else if (e == libMesh::TRI3) {
+            vec   = RealVectorX::Zero(18);
+            mem_dofs  = {1, 2, 4, 5};
+            bend_dofs = {10, 11, 13, 14};
+        }
+        else
+            libmesh_error(); // should not get here.
         
-        vec(6) = -2.e-2;
-        vec(7) = +6.e-2;
+        switch (case_num) {
+                
+            case 0: { // sets values for u and v
+                vec(mem_dofs[0]) = 2.e-2;
+                vec(mem_dofs[1]) = 4.e-2;
+                
+                vec(mem_dofs[2]) = -2.e-2;
+                vec(mem_dofs[3]) = +6.e-2;
+            }
+                break;
+
+            case 1: { // sets values for theta-x and theta-y
+                vec(bend_dofs[0]) = 2.e-2;
+                vec(bend_dofs[1]) = 4.e-2;
+                
+                vec(bend_dofs[2]) = -2.e-2;
+                vec(bend_dofs[3]) = +6.e-2;
+            }
+                break;
+
+            case 2: {
+                vec(mem_dofs[0]) = 2.e-2;
+                vec(mem_dofs[1]) = 4.e-2;
+                
+                vec(mem_dofs[2]) = -2.e-2;
+                vec(mem_dofs[3]) = +6.e-2;
+
+                vec(bend_dofs[0]) = 2.e-2;
+                vec(bend_dofs[1]) = 4.e-2;
+                
+                vec(bend_dofs[2]) = -2.e-2;
+                vec(bend_dofs[3]) = +6.e-2;
+            }
+                break;
+
+        }
     }
 
 }
@@ -123,7 +170,7 @@ void check_stress (ValType& v, const RealVectorX& x0) {
     const unsigned int ndofs = (unsigned int)dof_ids.size();
 
     // make sure that the input dof vector is properly sized
-    libmesh_assert(ndofs == x0.size());
+    libmesh_assert_equal_to(ndofs, x0.size());
     
     // now get the residual and Jacobian evaluations
     RealVectorX
@@ -515,34 +562,143 @@ BOOST_AUTO_TEST_CASE   (VonMisesStress) {
 
 BOOST_FIXTURE_TEST_SUITE  (Structural1DStressEvaluation, MAST::BuildStructural1DElem)
 
-BOOST_AUTO_TEST_CASE   (Stress1D) {
+BOOST_AUTO_TEST_CASE   (Stress1DIndependentOffset) {
+
+    this->init(false);
     
     RealVectorX v;
-    // first with axial deformation
-    set_deformation(1, 0, v);
-    check_stress(*this, v);
 
-    // then with bending deformation
-    set_deformation(1, 1, v);
+    // pure axial deformation
+    BOOST_TEST_MESSAGE("**** Pure Extension Deformation **");
+    set_deformation(1, 0, libMesh::INVALID_ELEM, v);
     check_stress(*this, v);
-
-    // then with axial and bending deformation
-    set_deformation(1, 2, v);
+    
+    // pure bending deformation
+    BOOST_TEST_MESSAGE("**** Pure Bending Deformation **");
+    set_deformation(1, 1, libMesh::INVALID_ELEM, v);
     check_stress(*this, v);
-
+    
+    // combination of axial and bending deformation
+    BOOST_TEST_MESSAGE("**** Combined Extension-Bending Deformation **");
+    set_deformation(1, 2, libMesh::INVALID_ELEM, v);
+    check_stress(*this, v);
 }
+
+
+
+BOOST_AUTO_TEST_CASE   (Stress1DDependentOffset) {
+    
+    this->init(true);
+    
+    RealVectorX v;
+    
+    // pure axial deformation
+    BOOST_TEST_MESSAGE("**** Pure Extension Deformation **");
+    set_deformation(1, 0, libMesh::INVALID_ELEM, v);
+    check_stress(*this, v);
+    
+    // pure bending deformation
+    BOOST_TEST_MESSAGE("**** Pure Bending Deformation **");
+    set_deformation(1, 1, libMesh::INVALID_ELEM, v);
+    check_stress(*this, v);
+    
+    // combination of axial and bending deformation
+    BOOST_TEST_MESSAGE("**** Combined Extension-Bending Deformation **");
+    set_deformation(1, 2, libMesh::INVALID_ELEM, v);
+    check_stress(*this, v);
+}
+
 
 BOOST_AUTO_TEST_SUITE_END()
 
 
 BOOST_FIXTURE_TEST_SUITE  (Structural2DStressEvaluation, MAST::BuildStructural2DElem)
 
-BOOST_AUTO_TEST_CASE   (Stress2D) {
+BOOST_AUTO_TEST_CASE   (Stress2DIndependentOffsetQUAD4) {
+
+    this->init(false, libMesh::QUAD4);
     
     RealVectorX v;
-    set_deformation(2, 0, v);
+
+    // pure axial deformation
+    BOOST_TEST_MESSAGE("**** Pure Extension Deformation **");
+    set_deformation(2, 0, libMesh::QUAD4, v);
+    check_stress(*this, v);
+    
+    BOOST_TEST_MESSAGE("**** Pure Bending Deformation **");
+    set_deformation(2, 1, libMesh::QUAD4, v);
+    check_stress(*this, v);
+    
+    BOOST_TEST_MESSAGE("**** Combined Extension-Bending Deformation **");
+    set_deformation(2, 2, libMesh::QUAD4, v);
     check_stress(*this, v);
 }
+
+
+BOOST_AUTO_TEST_CASE   (Stress2DIndependentOffsetTRI3) {
+    
+    this->init(false, libMesh::TRI3);
+    
+    RealVectorX v;
+    
+    // pure axial deformation
+    BOOST_TEST_MESSAGE("**** Pure Extension Deformation **");
+    set_deformation(2, 0, libMesh::TRI3, v);
+    check_stress(*this, v);
+    
+    BOOST_TEST_MESSAGE("**** Pure Bending Deformation **");
+    set_deformation(2, 1, libMesh::TRI3, v);
+    check_stress(*this, v);
+    
+    BOOST_TEST_MESSAGE("**** Combined Extension-Bending Deformation **");
+    set_deformation(2, 2, libMesh::TRI3, v);
+    check_stress(*this, v);
+}
+
+
+BOOST_AUTO_TEST_CASE   (Stress2DDependentOffsetQUAD4) {
+    
+    this->init(true, libMesh::QUAD4);
+    
+    RealVectorX v;
+    
+    // pure axial deformation
+    BOOST_TEST_MESSAGE("**** Pure Extension Deformation **");
+    set_deformation(2, 0, libMesh::QUAD4, v);
+    check_stress(*this, v);
+    
+    BOOST_TEST_MESSAGE("**** Pure Bending Deformation **");
+    set_deformation(2, 1, libMesh::QUAD4, v);
+    check_stress(*this, v);
+    
+    BOOST_TEST_MESSAGE("**** Combined Extension-Bending Deformation **");
+    set_deformation(2, 2, libMesh::QUAD4, v);
+    check_stress(*this, v);
+}
+
+
+
+BOOST_AUTO_TEST_CASE   (Stress2DDependentOffsetTRI3) {
+    
+    this->init(true, libMesh::TRI3);
+    
+    RealVectorX v;
+    
+    // pure axial deformation
+    BOOST_TEST_MESSAGE("**** Pure Extension Deformation **");
+    set_deformation(2, 0, libMesh::TRI3, v);
+    check_stress(*this, v);
+    
+    BOOST_TEST_MESSAGE("**** Pure Bending Deformation **");
+    set_deformation(2, 1, libMesh::TRI3, v);
+    check_stress(*this, v);
+    
+    BOOST_TEST_MESSAGE("**** Combined Extension-Bending Deformation **");
+    set_deformation(2, 2, libMesh::TRI3, v);
+    check_stress(*this, v);
+}
+
+
 
 BOOST_AUTO_TEST_SUITE_END()
 

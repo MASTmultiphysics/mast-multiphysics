@@ -30,8 +30,12 @@
 #include "examples/structural/membrane_extension_uniaxial_stress/membrane_extension_uniaxial.h"
 #include "examples/structural/membrane_extension_biaxial_stress/membrane_extension_biaxial.h"
 #include "examples/structural/plate_bending/plate_bending.h"
+#include "examples/structural/plate_bending_section_offset/plate_bending_section_offset.h"
+#include "examples/structural/plate_bending_thermal_stress/plate_bending_thermal_stress.h"
 #include "examples/structural/plate_optimization/plate_optimization.h"
 #include "examples/structural/plate_optimization_single_stress_functional/plate_optimization_single_functional.h"
+#include "examples/structural/plate_optimization_section_offset/plate_section_offset_optimization.h"
+#include "examples/structural/plate_optimization_thermal_stress/plate_thermal_stress_optimization.h"
 #include "optimization/npsol_optimization_interface.h"
 #include "optimization/dot_optimization_interface.h"
 
@@ -152,10 +156,18 @@ int main(int argc, char* const argv[]) {
         analysis<MAST::MembraneExtensionBiaxial>(case_name, with_sens, par_name);
     else if (case_name == "plate_bending")
         analysis<MAST::PlateBending>(case_name, with_sens, par_name);
+    else if (case_name == "plate_bending_section_offset")
+        analysis<MAST::PlateBendingWithOffset>(case_name, with_sens, par_name);
+    else if (case_name == "plate_bending_thermal_stress")
+        analysis<MAST::PlateBendingThermalStress>(case_name, with_sens, par_name);
     else if (case_name == "plate_bending_sizing_optimization")
         optimization<MAST::PlateBendingSizingOptimization>(case_name);
     else if (case_name == "plate_bending_single_functional_sizing_optimization")
         optimization<MAST::PlateBendingSingleStressFunctionalSizingOptimization>(case_name);
+    else if (case_name == "plate_bending_section_offset_optimization")
+        optimization<MAST::PlateBendingSectionOffsetSizingOptimization>(case_name);
+    else if (case_name == "plate_bending_thermal_stress_optimization")
+        optimization<MAST::PlateBendingThermalStressSizingOptimization>(case_name);
     else {
         std::cout
         << "Please run the driver with the name of example specified as: \n"
@@ -174,8 +186,12 @@ int main(int argc, char* const argv[]) {
         << "  membrane_extension_uniaxial \n"
         << "  membrane_extension_biaxial \n"
         << "  plate_bending \n"
+        << "  plate_bending_section_offset \n"
+        << "  plate_bending_thermal_stress \n"
         << "  plate_bending_optimization \n"
         << "  plate_bending_single_functional_sizing_optimization \n"
+        << "  plate_bending_section_offset_optimization \n"
+        << "  plate_bending_thermal_stress_optimization \n"
         << "*  The default for --with_sensitivity is: false.\n"
         << "*  param is used to specify the parameter name for which sensitivity is desired."
         << std::endl;

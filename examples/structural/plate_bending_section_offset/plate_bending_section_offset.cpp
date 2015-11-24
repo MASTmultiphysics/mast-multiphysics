@@ -23,6 +23,7 @@
 
 // MAST includes
 #include "examples/structural/plate_bending_section_offset/plate_bending_section_offset.h"
+#include "examples/structural/plate_optimization/plate_optimization_base.h"
 #include "elasticity/structural_system_initialization.h"
 #include "elasticity/structural_element_base.h"
 #include "elasticity/structural_nonlinear_assembly.h"
@@ -46,11 +47,9 @@ extern libMesh::LibMeshInit* _init;
 
 MAST::PlateBendingWithOffset::PlateBendingWithOffset() {
     
-    libmesh_error(); // needs definition of offset
-    
     // length of domain
     _length     = 10.,
-    _width      =  5.;
+    _width      = 10.;
     
     
     // create the mesh
@@ -58,10 +57,10 @@ MAST::PlateBendingWithOffset::PlateBendingWithOffset() {
     
     // initialize the mesh with one element
     libMesh::MeshTools::Generation::build_square(*_mesh,
-                                                 10, 10,
+                                                 2, 2,
                                                  0, _length,
                                                  0, _width,
-                                                 libMesh::TRI3);
+                                                 libMesh::QUAD4);
     _mesh->prepare_for_use();
     
     // create the equation system
@@ -105,6 +104,7 @@ MAST::PlateBendingWithOffset::PlateBendingWithOffset() {
     _th              = new MAST::Parameter("th",  0.06);
     _E               = new MAST::Parameter("E",  72.e9);
     _nu              = new MAST::Parameter("nu",  0.33);
+    _kappa           = new MAST::Parameter("kappa",  5./6.);
     _zero            = new MAST::Parameter("zero",  0.);
     _press           = new MAST::Parameter( "p",  2.e4);
     
@@ -121,8 +121,9 @@ MAST::PlateBendingWithOffset::PlateBendingWithOffset() {
     _th_f            = new MAST::ConstantFieldFunction("h",           *_th);
     _E_f             = new MAST::ConstantFieldFunction("E",            *_E);
     _nu_f            = new MAST::ConstantFieldFunction("nu",          *_nu);
-    _hoff_f          = new MAST::ConstantFieldFunction("off",       *_zero);
+    _kappa_f         = new MAST::ConstantFieldFunction("kappa",    *_kappa);
     _press_f         = new MAST::ConstantFieldFunction("pressure", *_press);
+    _hoff_f          = new MAST::PlateOffset("off", _th_f->clone().release());
     
     // initialize the load
     _p_load          = new MAST::BoundaryConditionBase(MAST::SURFACE_PRESSURE);
@@ -135,6 +136,7 @@ MAST::PlateBendingWithOffset::PlateBendingWithOffset() {
     // add the material properties to the card
     _m_card->add(*_E_f);
     _m_card->add(*_nu_f);
+    _m_card->add(*_kappa_f);
     
     // create the element property card
     _p_card         = new MAST::Solid2DSectionElementPropertyCard;
@@ -200,12 +202,14 @@ MAST::PlateBendingWithOffset::~PlateBendingWithOffset() {
     delete _th_f;
     delete _E_f;
     delete _nu_f;
+    delete _kappa_f;
     delete _hoff_f;
     delete _press_f;
     
     delete _th;
     delete _E;
     delete _nu;
+    delete _kappa;
     delete _zero;
     delete _press;
     

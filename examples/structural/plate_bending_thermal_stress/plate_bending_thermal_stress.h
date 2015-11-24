@@ -17,8 +17,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#ifndef __mast_plate_bending_with_offset_h__
-#define __mast_plate_bending_with_offset_h__
+#ifndef __mast_plate_bending_thermal_stress_h__
+#define __mast_plate_bending_thermal_stress_h__
 
 
 // C++ includes
@@ -54,13 +54,13 @@ namespace MAST {
     class PlateOffset;
     
     
-    struct PlateBendingWithOffset {
+    struct PlateBendingThermalStress {
         
         
-        PlateBendingWithOffset();
+        PlateBendingThermalStress();
         
         
-        ~PlateBendingWithOffset();
+        ~PlateBendingThermalStress();
         
         
         /*!
@@ -93,10 +93,10 @@ namespace MAST {
         
         // length of domain
         Real _length;
-
+        
         // width of domain
         Real _width;
-
+        
         // create the mesh
         libMesh::SerialMesh*           _mesh;
         
@@ -114,17 +114,20 @@ namespace MAST {
         MAST::Parameter
         *_th,
         *_E,
-        *_nu,
+        *_alpha,
         *_kappa,
-        *_press,
+        *_nu,
+        *_temp,
         *_zero;
         
         MAST::ConstantFieldFunction
         *_th_f,
         *_E_f,
-        *_nu_f,
+        *_alpha_f,
         *_kappa_f,
-        *_press_f;
+        *_nu_f,
+        *_temp_f,
+        *_ref_temp_f;
         
         // Section offset
         MAST::PlateOffset*                       _hoff_f;
@@ -140,16 +143,15 @@ namespace MAST {
         
         // create the Dirichlet boundary condition on right edge
         MAST::DirichletBoundaryCondition*     _dirichlet_right;
-
+        
         // create the Dirichlet boundary condition on bottom edge
         MAST::DirichletBoundaryCondition*     _dirichlet_bottom;
-
+        
         // create the Dirichlet boundary condition on top edge
         MAST::DirichletBoundaryCondition*     _dirichlet_top;
-
         
-        // create the pressure boundary condition
-        MAST::BoundaryConditionBase*             _p_load;
+        // create the temperature load
+        MAST::BoundaryConditionBase*             _T_load;
         
         // vector of parameters to evaluate sensitivity wrt
         std::vector<MAST::Parameter*> _params_for_sensitivity;
@@ -161,5 +163,5 @@ namespace MAST {
 
 
 
-#endif //  __mast_plate_bending_with_offset_h__
+#endif //  __mast_plate_bending_thermal_stress_h__
 
