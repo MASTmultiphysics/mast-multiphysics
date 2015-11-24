@@ -43,7 +43,7 @@ namespace MAST {
         
         
         const Real
-        delta    = 1.e-6,
+        delta    = 1.e-5,
         tol      = 1.e-2;
         
         // verify the sensitivity solution of this system
@@ -182,9 +182,9 @@ namespace MAST {
             // now compare the solution sensitivity
             BOOST_TEST_MESSAGE("  ** dX/dp (total) wrt : " << f.name() << " **");
             BOOST_CHECK(MAST::compare_vector( dsol_fd,  dsol, tol));
+            
             // now compare the stress sensitivity
             BOOST_TEST_MESSAGE("  ** dvm-stress/dp (total) wrt : " << f.name() << " **");
-            
             BOOST_CHECK(MAST::compare_vector( dstressdp_fd, dstressdp, tol));
         }
         

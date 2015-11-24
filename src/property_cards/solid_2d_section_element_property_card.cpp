@@ -723,7 +723,7 @@ BendingStiffnessMatrix::operator() (const libMesh::Point& p,
     (*_h)(p, t, h);
     (*_off)(p, t, off);
     (*_material_stiffness)(p, t, m);
-    m *= pow(h,3)/12. + h*pow(off,2);
+    m *= (pow(h,3)/12. + h*pow(off,2));
 }
 
 
@@ -740,11 +740,11 @@ BendingStiffnessMatrix::derivative (const MAST::DerivativeType d,
     m = RealMatrixX::Zero(3,3); dm = RealMatrixX::Zero(3, 3);
     Real h, dhdf, off, doff;
     (*_h)(p, t, h); _h->derivative(d, f, p, t, dhdf);
-    (*_off)(p, t, off); _h->derivative(d, f, p, t, doff);
+    (*_off)(p, t, off); _off->derivative(d, f, p, t, doff);
     (*_material_stiffness)(p, t, m); _material_stiffness->derivative(d, f, p, t, dm);
     
     // [C]*dh
-    m *= pow(h,2)/4.*dhdf + dhdf*pow(off,2) + h*2.*off*doff;
+    m *= (pow(h,2)/4.*dhdf + dhdf*pow(off,2) + h*2.*off*doff);
     
     // += [dC]*h
     m += (pow(h,3)/12. + h*pow(off, 2))* dm;

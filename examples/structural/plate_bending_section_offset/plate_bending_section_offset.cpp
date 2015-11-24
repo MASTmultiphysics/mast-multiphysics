@@ -49,7 +49,7 @@ MAST::PlateBendingWithOffset::PlateBendingWithOffset() {
     
     // length of domain
     _length     = 10.,
-    _width      = 10.;
+    _width      =  5.;
     
     
     // create the mesh
@@ -57,7 +57,7 @@ MAST::PlateBendingWithOffset::PlateBendingWithOffset() {
     
     // initialize the mesh with one element
     libMesh::MeshTools::Generation::build_square(*_mesh,
-                                                 2, 2,
+                                                 16, 16,
                                                  0, _length,
                                                  0, _width,
                                                  libMesh::QUAD4);
