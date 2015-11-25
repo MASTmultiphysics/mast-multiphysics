@@ -21,7 +21,7 @@
 #include <iostream>
 
 // MAST includes
-#include "examples/structural/plate_optimization_single_stress_functional/plate_optimization_single_functional.h"
+#include "examples/structural/beam_optimization_single_stress_functional/beam_optimization.h"
 #include "driver/driver_base.h"
 #include "elasticity/stress_output_base.h"
 #include "optimization/optimization_interface.h"
@@ -37,169 +37,32 @@
 #include "libmesh/string_to_enum.h"
 
 
-extern
-MAST::FunctionEvaluation *__my_func_eval;
 
 
-
-void
-plate_stress_functional_optim_obj(int*    mode,
-                                  int*    n,
-                                  double* x,
-                                  double* f,
-                                  double* g,
-                                  int*    nstate) {
-    
-    
-    // make sure that the global variable has been setup
-    libmesh_assert(__my_func_eval);
-    
-    // initialize the local variables
-    Real
-    obj = 0.;
-    
-    unsigned int
-    n_vars  =  __my_func_eval->n_vars(),
-    n_con   =  __my_func_eval->n_eq()+__my_func_eval->n_ineq();
-    
-    libmesh_assert_equal_to(*n, n_vars);
-    
-    std::vector<Real>
-    dvars   (*n,    0.),
-    obj_grad(*n,    0.),
-    fvals   (n_con, 0.),
-    grads   (0);
-    
-    std::vector<bool>
-    eval_grads(n_con);
-    std::fill(eval_grads.begin(), eval_grads.end(), false);
-    
-    // copy the dvars
-    for (unsigned int i=0; i<n_vars; i++)
-        dvars[i] = x[i];
-    
-    
-    __my_func_eval->evaluate(dvars,
-                             obj,
-                             true,       // request the derivatives of obj
-                             obj_grad,
-                             fvals,
-                             eval_grads,
-                             grads);
-    
-    
-    // now copy them back as necessary
-    *f  = obj;
-    for (unsigned int i=0; i<n_vars; i++)
-        g[i] = obj_grad[i];
-}
-
-
-
-
-
-
-void
-plate_stress_functional_optim_con(int*    mode,
-                                  int*    ncnln,
-                                  int*    n,
-                                  int*    ldJ,
-                                  int*    needc,
-                                  double* x,
-                                  double* c,
-                                  double* cJac,
-                                  int*    nstate) {
-    
-    
-    // make sure that the global variable has been setup
-    libmesh_assert(__my_func_eval);
-    
-    // initialize the local variables
-    Real
-    obj = 0.;
-    
-    unsigned int
-    n_vars  =  __my_func_eval->n_vars(),
-    n_con   =  __my_func_eval->n_eq()+__my_func_eval->n_ineq();
-    
-    libmesh_assert_equal_to(    *n, n_vars);
-    libmesh_assert_equal_to(*ncnln, n_con);
-    
-    std::vector<Real>
-    dvars   (*n,    0.),
-    obj_grad(*n,    0.),
-    fvals   (n_con, 0.),
-    grads   (n_vars*n_con, 0.);
-    
-    std::vector<bool>
-    eval_grads(n_con);
-    std::fill(eval_grads.begin(), eval_grads.end(), true);
-    
-    // copy the dvars
-    for (unsigned int i=0; i<n_vars; i++)
-        dvars[i] = x[i];
-    
-    
-    __my_func_eval->evaluate(dvars,
-                             obj,
-                             true,       // request the derivatives of obj
-                             obj_grad,
-                             fvals,
-                             eval_grads,
-                             grads);
-    
-    
-    // now copy them back as necessary
-    
-    // first the constraint functions
-    for (unsigned int i=0; i<n_con; i++)
-        c[i] = fvals[i];
-    
-    // next, the constraint gradients
-    for (unsigned int i=0; i<n_con*n_vars; i++)
-        cJac[i] = grads[i];
-    
-    
-}
-
-
-
-
-
-MAST::PlateBendingSingleStressFunctionalSizingOptimization::
-PlateBendingSingleStressFunctionalSizingOptimization(GetPot& infile,
-                                                     std::ostream& output):
+MAST::BeamBendingSingleFunctionalSizingOptimization::
+BeamBendingSingleFunctionalSizingOptimization(GetPot& infile,
+                              std::ostream& output):
 MAST::FunctionEvaluation(output),
-_n_divs_x(0),
-_n_divs_y(0),
 _n_elems(0),
-_n_stations_x(0) {
-    
-    libMesh::ElemType
-    e_type       = libMesh::QUAD4;
+_n_stations(0) {
 
     // number of elements
-    _n_divs_x    = infile("n_divs_x", 16);
-    _n_divs_y    = infile("n_divs_y", 16);
-    _n_elems     = _n_divs_x*_n_divs_y;
-    if (e_type == libMesh::TRI3)
-        _n_elems    *= 2;
-
+    _n_elems    = infile("n_elems", 20);
+    
     // number of stations
-    _n_stations_x = infile("n_stations", 8);
+    _n_stations = infile("n_stations", 20);
     
     
     // now setup the optimization data
-    _n_vars                = _n_stations_x; // for thickness variable
+    _n_vars                = _n_stations; // for thickness variable
     _n_eq                  = 0;
-    _n_ineq                = 1;            // all stress constraints combined into single functional
+    _n_ineq                = 1;           // one element stress functional for all elems
     _max_iters             = 1000;
     
     
     
     // length of domain
-    _length        = infile("length", 0.50);
-    _width         = infile("width",  0.25);
+    _length        = infile("length", 10.);
     
     // limit stress
     _stress_limit  = infile("max_stress", 4.00e8);
@@ -208,11 +71,7 @@ _n_stations_x(0) {
     _mesh          = new libMesh::SerialMesh(_init->comm());
     
     // initialize the mesh with one element
-    libMesh::MeshTools::Generation::build_square(*_mesh,
-                                                 _n_divs_x, _n_divs_y,
-                                                 0, _length,
-                                                 0, _width,
-                                                 e_type);
+    libMesh::MeshTools::Generation::build_line(*_mesh, _n_elems, 0, _length);
     _mesh->prepare_for_use();
     
     // create the equation system
@@ -232,29 +91,18 @@ _n_stations_x(0) {
     
     
     // create and add the boundary condition and loads
+    _dirichlet_left = new MAST::DirichletBoundaryCondition;
+    _dirichlet_right= new MAST::DirichletBoundaryCondition;
     std::vector<unsigned int> constrained_vars(4);
     // not constraning ty, tz will keep it simply supported
     constrained_vars[0] = 0;  // u
     constrained_vars[1] = 1;  // v
     constrained_vars[2] = 2;  // w
-    constrained_vars[3] = 5;  // tz
-    
-    // create and add the boundary condition and loads
-    _dirichlet_bottom = new MAST::DirichletBoundaryCondition;
-    _dirichlet_right  = new MAST::DirichletBoundaryCondition;
-    _dirichlet_top    = new MAST::DirichletBoundaryCondition;
-    _dirichlet_left   = new MAST::DirichletBoundaryCondition;
-    
-    _dirichlet_bottom->init (0, constrained_vars);
-    _dirichlet_right->init  (1, constrained_vars);
-    _dirichlet_top->init    (2, constrained_vars);
-    _dirichlet_left->init   (3, constrained_vars);
-    
-    _discipline->add_dirichlet_bc(0, *_dirichlet_bottom);
-    _discipline->add_dirichlet_bc(1,  *_dirichlet_right);
-    _discipline->add_dirichlet_bc(2,    *_dirichlet_top);
-    _discipline->add_dirichlet_bc(3,   *_dirichlet_left);
-    
+    constrained_vars[3] = 3;  // tx
+    _dirichlet_left->init (0, constrained_vars);
+    _dirichlet_right->init(1, constrained_vars);
+    _discipline->add_dirichlet_bc(0, *_dirichlet_left);
+    _discipline->add_dirichlet_bc(1, *_dirichlet_right);
     _discipline->init_system_dirichlet_bc(dynamic_cast<libMesh::System&>(*_sys));
     
     // initialize the equation system
@@ -264,9 +112,9 @@ _n_stations_x(0) {
     // initialize the dv vector data
     const Real
     th_l                   = infile("thickness_lower", 0.0001),
-    th_u                   = infile("thickness_upper",   0.2),
-    th                     = infile("thickness",         0.2),
-    dx                     = _length/(_n_stations_x-1);
+    th_u                   = infile("thickness_upper", 0.2),
+    th                     = infile("thickness", 0.01),
+    dx                     = _length/(_n_stations-1);
     
     _dv_init.resize    (_n_vars);
     _dv_scaling.resize (_n_vars);
@@ -282,55 +130,56 @@ _n_stations_x(0) {
     
     
     // create the thickness variables
-    _th_station_parameters.resize(_n_vars);
-    _th_station_functions.resize(_n_vars);
+    _thy_station_parameters.resize(_n_vars);
+    _thy_station_functions.resize(_n_vars);
     
-    std::map<Real, MAST::FieldFunction<Real>*> th_station_vals;
+    std::map<Real, MAST::FieldFunction<Real>*> thy_station_vals;
     
-    for (unsigned int i=0; i<_n_stations_x; i++) {
+    for (unsigned int i=0; i<_n_stations; i++) {
         std::ostringstream oss;
-        oss << "h_" << i;
+        oss << "h_y_" << i;
         
         // now we need a parameter that defines the thickness at the
         // specified station and a constant function that defines the
         // field function at that location.
-        MAST::Parameter* h               =
+        MAST::Parameter* h_y               =
         new MAST::Parameter(oss.str(), infile("thickness", 0.002));
         
-        MAST::ConstantFieldFunction* h_f =
-        new MAST::ConstantFieldFunction("h", *h);
+        MAST::ConstantFieldFunction* h_y_f =
+        new MAST::ConstantFieldFunction("hy", *h_y);
         
         // add this to the thickness map
-        th_station_vals.insert(std::pair<Real, MAST::FieldFunction<Real>*>
-                               (i*dx, h_f));
+        thy_station_vals.insert(std::pair<Real, MAST::FieldFunction<Real>*>
+                                (i*dx, h_y_f));
         
         // add the function to the parameter set
-        _th_station_parameters[i]          = h;
-        _th_station_functions[i]           = h_f;
+        _thy_station_parameters[i]          = h_y;
+        _thy_station_functions[i]           = h_y_f;
         
         // tell the assembly system about the sensitvity parameter
-        _discipline->add_parameter(*h);
+        _discipline->add_parameter(*h_y);
     }
     
     // now create the h_y function and give it to the property card
-    _th_f.reset(new MAST::PlateMultilinearInterpolation("h", th_station_vals));
-    
+    _thy_f.reset(new MAST::BeamMultilinearInterpolation("hy", thy_station_vals));
+
     
     // create the property functions and add them to the
     
+    _thz             = new MAST::Parameter( "thz",                   1.0);
     _E               = new MAST::Parameter(   "E", infile("E",    72.e9));
     _nu              = new MAST::Parameter(  "nu", infile("nu",    0.33));
-    _kappa           = new MAST::Parameter("kappa",infile("kappa",5./6.));
     _rho             = new MAST::Parameter( "rho", infile("rho", 2700.0));
     _zero            = new MAST::Parameter("zero",                    0.);
-    _press           = new MAST::Parameter(   "p", infile("press", 2.e6));
+    _press           = new MAST::Parameter(   "p", infile("press", 2.e4));
     
     
+    _thz_f           = new MAST::ConstantFieldFunction("hz",         *_thz);
     _E_f             = new MAST::ConstantFieldFunction("E",            *_E);
     _nu_f            = new MAST::ConstantFieldFunction("nu",          *_nu);
-    _kappa_f         = new MAST::ConstantFieldFunction("kappa",    *_kappa);
     _rho_f           = new MAST::ConstantFieldFunction("rho",        *_rho);
-    _hoff_f          = new MAST::ConstantFieldFunction("off",       *_zero);
+    _hyoff_f         = new MAST::ConstantFieldFunction("hy_off",    *_zero);
+    _hzoff_f         = new MAST::ConstantFieldFunction("hz_off",    *_zero);
     _press_f         = new MAST::ConstantFieldFunction("pressure", *_press);
     
     // initialize the load
@@ -345,57 +194,40 @@ _n_stations_x(0) {
     _m_card->add(  *_E_f);
     _m_card->add( *_nu_f);
     _m_card->add(*_rho_f);
-    _m_card->add(*_kappa_f);
     
     // create the element property card
-    _p_card         = new MAST::Solid2DSectionElementPropertyCard;
+    _p_card         = new MAST::Solid1DSectionElementPropertyCard;
+    
+    // tell the card about the orientation
+    libMesh::Point orientation;
+    orientation(1) = 1.;
+    _p_card->y_vector() = orientation;
     
     // add the section properties to the card
-    _p_card->add(*_th_f);
-    _p_card->add(*_hoff_f);
+    _p_card->add(*_thy_f);
+    _p_card->add(*_thz_f);
+    _p_card->add(*_hyoff_f);
+    _p_card->add(*_hzoff_f);
     
     // tell the section property about the material property
     _p_card->set_material(*_m_card);
+    
+    _p_card->init();
     
     _discipline->set_property_for_subdomain(0, *_p_card);
     
     
     // create the output objects, one for each element
-    libMesh::MeshBase::const_element_iterator
-    e_it    = _mesh->elements_begin(),
-    e_end   = _mesh->elements_end();
-    
     // points where stress is evaluated
     std::vector<libMesh::Point> pts;
-
-    if (e_type == libMesh::QUAD4 ||
-        e_type == libMesh::QUAD8 ||
-        e_type == libMesh::QUAD9) {
-        
-        pts.push_back(libMesh::Point(-1/sqrt(3), -1/sqrt(3), 1.)); // upper skin
-        pts.push_back(libMesh::Point(-1/sqrt(3), -1/sqrt(3),-1.)); // lower skin
-        pts.push_back(libMesh::Point( 1/sqrt(3), -1/sqrt(3), 1.)); // upper skin
-        pts.push_back(libMesh::Point( 1/sqrt(3), -1/sqrt(3),-1.)); // lower skin
-        pts.push_back(libMesh::Point( 1/sqrt(3),  1/sqrt(3), 1.)); // upper skin
-        pts.push_back(libMesh::Point( 1/sqrt(3),  1/sqrt(3),-1.)); // lower skin
-        pts.push_back(libMesh::Point(-1/sqrt(3),  1/sqrt(3), 1.)); // upper skin
-        pts.push_back(libMesh::Point(-1/sqrt(3),  1/sqrt(3),-1.)); // lower skin
-    }
-    else if (e_type == libMesh::TRI3 ||
-             e_type == libMesh::TRI6) {
-        
-        pts.push_back(libMesh::Point(1./3., 1./3., 1.)); // upper skin
-        pts.push_back(libMesh::Point(1./3., 1./3.,-1.)); // lower skin
-        pts.push_back(libMesh::Point(2./3., 1./3., 1.)); // upper skin
-        pts.push_back(libMesh::Point(2./3., 1./3.,-1.)); // lower skin
-        pts.push_back(libMesh::Point(1./3., 2./3., 1.)); // upper skin
-        pts.push_back(libMesh::Point(1./3., 2./3.,-1.)); // lower skin
-    }
-
-
+    pts.push_back(libMesh::Point(-1/sqrt(3), 1., 0.)); // upper skin
+    pts.push_back(libMesh::Point(-1/sqrt(3),-1., 0.)); // lower skin
+    pts.push_back(libMesh::Point( 1/sqrt(3), 1., 0.)); // upper skin
+    pts.push_back(libMesh::Point( 1/sqrt(3),-1., 0.)); // lower skin
+    
     _outputs = new MAST::StressStrainOutputBase;
     _outputs->set_points_for_evaluation(pts);
-    _discipline->add_volume_output((*e_it)->subdomain_id(), *_outputs);
+    _discipline->add_volume_output(0, *_outputs);
     
     // create the assembly object
     _assembly = new MAST::StructuralNonlinearAssembly;
@@ -404,33 +236,31 @@ _n_stations_x(0) {
     
     
     // create the function to calculate weight
-    _weight = new MAST::PlateWeight(*_discipline);
+    _weight = new MAST::BeamWeight(*_discipline);
 }
 
 
 
 
-MAST::PlateBendingSingleStressFunctionalSizingOptimization::
-~PlateBendingSingleStressFunctionalSizingOptimization() {
+MAST::BeamBendingSingleFunctionalSizingOptimization::~BeamBendingSingleFunctionalSizingOptimization() {
     
     delete _m_card;
     delete _p_card;
     
     delete _p_load;
-    delete _dirichlet_bottom;
-    delete _dirichlet_right;
-    delete _dirichlet_top;
     delete _dirichlet_left;
+    delete _dirichlet_right;
     
+    delete _thz_f;
     delete _E_f;
     delete _nu_f;
-    delete _kappa_f;
-    delete _hoff_f;
+    delete _hyoff_f;
+    delete _hzoff_f;
     delete _press_f;
     
+    delete _thz;
     delete _E;
     delete _nu;
-    delete _kappa;
     delete _zero;
     delete _press;
     
@@ -438,42 +268,40 @@ MAST::PlateBendingSingleStressFunctionalSizingOptimization::
     
     _assembly->clear_discipline_and_system();
     delete _assembly;
-    
+
     delete _eq_sys;
     delete _mesh;
     
     delete _discipline;
     delete _structural_sys;
-    delete _outputs;
     
+    delete _outputs;
     
     // delete the h_y station functions
     {
         std::vector<MAST::ConstantFieldFunction*>::iterator
-        it  = _th_station_functions.begin(),
-        end = _th_station_functions.end();
+        it  = _thy_station_functions.begin(),
+        end = _thy_station_functions.end();
         for (; it != end; it++)  delete *it;
     }
-    
+
     
     // delete the h_y station parameters
     {
         std::vector<MAST::Parameter*>::iterator
-        it  = _th_station_parameters.begin(),
-        end = _th_station_parameters.end();
+        it  = _thy_station_parameters.begin(),
+        end = _thy_station_parameters.end();
         for (; it != end; it++)  delete *it;
     }
-    
+
 }
 
 
 
 void
-MAST::PlateBendingSingleStressFunctionalSizingOptimization::
-init_dvar(std::vector<Real>& x,
-          std::vector<Real>& xmin,
-          std::vector<Real>& xmax) {
-    
+MAST::BeamBendingSingleFunctionalSizingOptimization::init_dvar(std::vector<Real>& x,
+                                               std::vector<Real>& xmin,
+                                               std::vector<Real>& xmax) {
     // one DV for each element
     x       = _dv_init;
     xmin    = _dv_low;
@@ -484,21 +312,20 @@ init_dvar(std::vector<Real>& x,
 
 
 void
-MAST::PlateBendingSingleStressFunctionalSizingOptimization::
-evaluate(const std::vector<Real>& dvars,
-         Real& obj,
-         bool eval_obj_grad,
-         std::vector<Real>& obj_grad,
-         std::vector<Real>& fvals,
-         std::vector<bool>& eval_grads,
-         std::vector<Real>& grads) {
+MAST::BeamBendingSingleFunctionalSizingOptimization::evaluate(const std::vector<Real>& dvars,
+                                              Real& obj,
+                                              bool eval_obj_grad,
+                                              std::vector<Real>& obj_grad,
+                                              std::vector<Real>& fvals,
+                                              std::vector<bool>& eval_grads,
+                                              std::vector<Real>& grads) {
     
     
     libmesh_assert_equal_to(dvars.size(), _n_vars);
     
     // set the parameter values equal to the DV value
     for (unsigned int i=0; i<_n_vars; i++)
-        (*_th_station_parameters[i]) = dvars[i]*_dv_scaling[i];
+        (*_thy_station_parameters[i]) = dvars[i]*_dv_scaling[i];
     
     // DO NOT zero out the gradient vector, since GCMMA needs it for the
     // subproblem solution
@@ -523,8 +350,8 @@ evaluate(const std::vector<Real>& dvars,
     //////////////////////////////////////////////////////////////////////
     _sys->solution->zero();
     this->clear_stresss();
-    
-    
+
+
     
     //////////////////////////////////////////////////////////////////////
     // now solve for this load step
@@ -536,7 +363,7 @@ evaluate(const std::vector<Real>& dvars,
     //////////////////////////////////////////////////////////////////////
     // get the objective and constraints
     //////////////////////////////////////////////////////////////////////
-    
+
     // now get the displacement constraint
     //pt(0) = 3.;
     //DenseRealVector disp_vec;
@@ -552,12 +379,12 @@ evaluate(const std::vector<Real>& dvars,
     fvals[0] =  -1. +
     _outputs->von_Mises_p_norm_functional_for_all_elems(pval)/_stress_limit;
     
-    
+
     
     //////////////////////////////////////////////////////////////////
     //   evaluate sensitivity if needed
     //////////////////////////////////////////////////////////////////
-    
+
     // sensitivity of the objective function
     if (eval_obj_grad) {
         
@@ -566,15 +393,16 @@ evaluate(const std::vector<Real>& dvars,
         // set gradient of weight
         for (unsigned int i=0; i<_n_vars; i++) {
             _weight->derivative(MAST::PARTIAL_DERIVATIVE,
-                                *_th_station_parameters[i],
+                                *_thy_station_parameters[i],
                                 pt,
                                 0.,
                                 w_sens);
             obj_grad[i] = w_sens*_dv_scaling[i];
         }
+
     }
     
-    
+
     // now check if the sensitivity of objective function is requested
     bool if_sens = false;
     
@@ -590,10 +418,10 @@ evaluate(const std::vector<Real>& dvars,
         
         // we are going to choose to use one parametric sensitivity at a time
         for (unsigned int i=0; i<_n_vars; i++) {
-            
+
             libMesh::ParameterVector params;
             params.resize(1);
-            params[0]  = _th_station_parameters[i]->ptr();
+            params[0]  = _thy_station_parameters[i]->ptr();
             
             // iterate over each dv and calculate the sensitivity
             _sys->add_sensitivity_solution(0).zero();
@@ -610,13 +438,13 @@ evaluate(const std::vector<Real>& dvars,
             // copy the sensitivity values in the output
             grads[i] = _dv_scaling[i]/_stress_limit *
             _outputs->von_Mises_p_norm_functional_sensitivity_for_all_elems
-            (pval, _th_station_parameters[i]);
+            (pval, _thy_station_parameters[i]);
         }
     }
     
     
     // write the evaluation output
-    //this->output(0, dvars, obj, fvals, false);
+    this->output(0, dvars, obj, fvals, false);
 }
 
 
@@ -624,7 +452,7 @@ evaluate(const std::vector<Real>& dvars,
 
 
 void
-MAST::PlateBendingSingleStressFunctionalSizingOptimization::clear_stresss() {
+MAST::BeamBendingSingleFunctionalSizingOptimization::clear_stresss() {
     
     _outputs->clear(false);
 }
@@ -634,42 +462,19 @@ MAST::PlateBendingSingleStressFunctionalSizingOptimization::clear_stresss() {
 
 
 void
-MAST::PlateBendingSingleStressFunctionalSizingOptimization::
-output(unsigned int iter,
-       const std::vector<Real>& x,
-       Real obj,
-       const std::vector<Real>& fval,
-       bool if_write_to_optim_file) const {
+MAST::BeamBendingSingleFunctionalSizingOptimization::output(unsigned int iter,
+                                            const std::vector<Real>& x,
+                                            Real obj,
+                                            const std::vector<Real>& fval,
+                                            bool if_write_to_optim_file) const {
     
     libmesh_assert_equal_to(x.size(), _n_vars);
     
     // set the parameter values equal to the DV value
     for (unsigned int i=0; i<_n_vars; i++)
-        *_th_station_parameters[i] = x[i];
-    
-    // write the solution for visualization
-    libMesh::ExodusII_IO(*_mesh).write_equation_systems("output.exo",
-                                                        *_eq_sys);
+        *_thy_station_parameters[i] = x[i];
     
     MAST::FunctionEvaluation::output(iter, x, obj, fval, if_write_to_optim_file);
 }
 
-
-
-
-MAST::FunctionEvaluation::funobj
-MAST::PlateBendingSingleStressFunctionalSizingOptimization::
-get_objective_evaluation_function() {
-    
-    return plate_stress_functional_optim_obj;
-}
-
-
-
-MAST::FunctionEvaluation::funcon
-MAST::PlateBendingSingleStressFunctionalSizingOptimization::
-get_constraint_evaluation_function() {
-    
-    return plate_stress_functional_optim_con;
-}
 

@@ -45,11 +45,19 @@
 extern libMesh::LibMeshInit* _init;
 
 
-MAST::PlateBendingWithOffset::PlateBendingWithOffset() {
+MAST::PlateBendingWithOffset::PlateBendingWithOffset():
+_initialized(false) {
     
+}
+    
+    
+void
+MAST::PlateBendingWithOffset::init(libMesh::ElemType e_type,
+                                   bool if_vk) {
+
     // length of domain
-    _length     = 10.,
-    _width      =  5.;
+    _length     = 0.50,
+    _width      = 0.25;
     
     
     // create the mesh
@@ -60,7 +68,7 @@ MAST::PlateBendingWithOffset::PlateBendingWithOffset() {
                                                  16, 16,
                                                  0, _length,
                                                  0, _width,
-                                                 libMesh::QUAD4);
+                                                 e_type);
     _mesh->prepare_for_use();
     
     // create the equation system
@@ -101,7 +109,7 @@ MAST::PlateBendingWithOffset::PlateBendingWithOffset() {
     
     // create the property functions and add them to the
     
-    _th              = new MAST::Parameter("th",  0.06);
+    _th              = new MAST::Parameter("th", 0.006);
     _E               = new MAST::Parameter("E",  72.e9);
     _nu              = new MAST::Parameter("nu",  0.33);
     _kappa           = new MAST::Parameter("kappa",  5./6.);
@@ -147,6 +155,7 @@ MAST::PlateBendingWithOffset::PlateBendingWithOffset() {
     
     // tell the section property about the material property
     _p_card->set_material(*_m_card);
+    if (if_vk) _p_card->set_strain(MAST::VON_KARMAN_STRAIN);
     
     _discipline->set_property_for_subdomain(0, *_p_card);
     
@@ -158,15 +167,31 @@ MAST::PlateBendingWithOffset::PlateBendingWithOffset() {
     
     // points where stress is evaluated
     std::vector<libMesh::Point> pts;
-    pts.push_back(libMesh::Point(-1/sqrt(3), -1/sqrt(3), 1.)); // upper skin
-    pts.push_back(libMesh::Point(-1/sqrt(3), -1/sqrt(3),-1.)); // lower skin
-    pts.push_back(libMesh::Point( 1/sqrt(3), -1/sqrt(3), 1.)); // upper skin
-    pts.push_back(libMesh::Point( 1/sqrt(3), -1/sqrt(3),-1.)); // lower skin
-    pts.push_back(libMesh::Point( 1/sqrt(3),  1/sqrt(3), 1.)); // upper skin
-    pts.push_back(libMesh::Point( 1/sqrt(3),  1/sqrt(3),-1.)); // lower skin
-    pts.push_back(libMesh::Point(-1/sqrt(3),  1/sqrt(3), 1.)); // upper skin
-    pts.push_back(libMesh::Point(-1/sqrt(3),  1/sqrt(3),-1.)); // lower skin
-    
+
+    if (e_type == libMesh::QUAD4 ||
+        e_type == libMesh::QUAD8 ||
+        e_type == libMesh::QUAD9) {
+        
+        pts.push_back(libMesh::Point(-1/sqrt(3), -1/sqrt(3), 1.)); // upper skin
+        pts.push_back(libMesh::Point(-1/sqrt(3), -1/sqrt(3),-1.)); // lower skin
+        pts.push_back(libMesh::Point( 1/sqrt(3), -1/sqrt(3), 1.)); // upper skin
+        pts.push_back(libMesh::Point( 1/sqrt(3), -1/sqrt(3),-1.)); // lower skin
+        pts.push_back(libMesh::Point( 1/sqrt(3),  1/sqrt(3), 1.)); // upper skin
+        pts.push_back(libMesh::Point( 1/sqrt(3),  1/sqrt(3),-1.)); // lower skin
+        pts.push_back(libMesh::Point(-1/sqrt(3),  1/sqrt(3), 1.)); // upper skin
+        pts.push_back(libMesh::Point(-1/sqrt(3),  1/sqrt(3),-1.)); // lower skin
+    }
+    else if (e_type == libMesh::TRI3 ||
+             e_type == libMesh::TRI6) {
+        
+        pts.push_back(libMesh::Point(1./3., 1./3., 1.)); // upper skin
+        pts.push_back(libMesh::Point(1./3., 1./3.,-1.)); // lower skin
+        pts.push_back(libMesh::Point(2./3., 1./3., 1.)); // upper skin
+        pts.push_back(libMesh::Point(2./3., 1./3.,-1.)); // lower skin
+        pts.push_back(libMesh::Point(1./3., 2./3., 1.)); // upper skin
+        pts.push_back(libMesh::Point(1./3., 2./3.,-1.)); // lower skin
+    }
+
     for ( ; e_it != e_end; e_it++) {
         
         MAST::StressStrainOutputBase * output = new MAST::StressStrainOutputBase;
@@ -180,6 +205,8 @@ MAST::PlateBendingWithOffset::PlateBendingWithOffset() {
         
         _discipline->add_volume_output((*e_it)->subdomain_id(), *output);
     }
+    
+    _initialized = true;
 }
 
 
@@ -190,46 +217,49 @@ MAST::PlateBendingWithOffset::PlateBendingWithOffset() {
 
 MAST::PlateBendingWithOffset::~PlateBendingWithOffset() {
     
-    delete _m_card;
-    delete _p_card;
-    
-    delete _p_load;
-    delete _dirichlet_bottom;
-    delete _dirichlet_right;
-    delete _dirichlet_top;
-    delete _dirichlet_left;
-    
-    delete _th_f;
-    delete _E_f;
-    delete _nu_f;
-    delete _kappa_f;
-    delete _hoff_f;
-    delete _press_f;
-    
-    delete _th;
-    delete _E;
-    delete _nu;
-    delete _kappa;
-    delete _zero;
-    delete _press;
-    
-    
-    
-    delete _eq_sys;
-    delete _mesh;
-    
-    delete _discipline;
-    delete _structural_sys;
-    
-    // iterate over the output quantities and delete them
-    std::vector<MAST::StressStrainOutputBase*>::iterator
-    it   =   _outputs.begin(),
-    end  =   _outputs.end();
-    
-    for ( ; it != end; it++)
-        delete *it;
-    
-    _outputs.clear();
+    if (_initialized) {
+        
+        delete _m_card;
+        delete _p_card;
+        
+        delete _p_load;
+        delete _dirichlet_bottom;
+        delete _dirichlet_right;
+        delete _dirichlet_top;
+        delete _dirichlet_left;
+        
+        delete _th_f;
+        delete _E_f;
+        delete _nu_f;
+        delete _kappa_f;
+        delete _hoff_f;
+        delete _press_f;
+        
+        delete _th;
+        delete _E;
+        delete _nu;
+        delete _kappa;
+        delete _zero;
+        delete _press;
+        
+        
+        
+        delete _eq_sys;
+        delete _mesh;
+        
+        delete _discipline;
+        delete _structural_sys;
+        
+        // iterate over the output quantities and delete them
+        std::vector<MAST::StressStrainOutputBase*>::iterator
+        it   =   _outputs.begin(),
+        end  =   _outputs.end();
+        
+        for ( ; it != end; it++)
+            delete *it;
+        
+        _outputs.clear();
+    }
 }
 
 
@@ -237,6 +267,8 @@ MAST::PlateBendingWithOffset::~PlateBendingWithOffset() {
 MAST::Parameter*
 MAST::PlateBendingWithOffset::get_parameter(const std::string &nm) {
     
+    libmesh_assert(_initialized);
+
     MAST::Parameter *rval = NULL;
     
     // look through the vector of parameters to see if the name is available
@@ -275,6 +307,7 @@ MAST::PlateBendingWithOffset::get_parameter(const std::string &nm) {
 const libMesh::NumericVector<Real>&
 MAST::PlateBendingWithOffset::solve(bool if_write_output) {
     
+    libmesh_assert(_initialized);
 
     // create the nonlinear assembly object
     MAST::StructuralNonlinearAssembly   assembly;
@@ -314,7 +347,9 @@ MAST::PlateBendingWithOffset::solve(bool if_write_output) {
 const libMesh::NumericVector<Real>&
 MAST::PlateBendingWithOffset::sensitivity_solve(MAST::Parameter& p,
                                      bool if_write_output) {
-    
+
+    libmesh_assert(_initialized);
+
     _discipline->add_parameter(p);
     
     // create the nonlinear assembly object
@@ -372,6 +407,8 @@ MAST::PlateBendingWithOffset::sensitivity_solve(MAST::Parameter& p,
 void
 MAST::PlateBendingWithOffset::clear_stresss() {
     
+    libmesh_assert(_initialized);
+
     // iterate over the output quantities and delete them
     std::vector<MAST::StressStrainOutputBase*>::iterator
     it   =   _outputs.begin(),

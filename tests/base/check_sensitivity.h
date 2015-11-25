@@ -44,7 +44,7 @@ namespace MAST {
         
         const Real
         delta    = 1.e-5,
-        tol      = 1.e-2;
+        tol      = 1.e-3;
         
         // verify the sensitivity solution of this system
         RealVectorX

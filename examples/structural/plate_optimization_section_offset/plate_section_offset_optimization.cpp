@@ -198,8 +198,8 @@ _n_stations_x(0) {
     
     
     // length of domain
-    _length        = infile("length", 10.);
-    _width         = infile("width",   5.);
+    _length        = infile("length", 0.50);
+    _width         = infile("width",  0.25);
     
     // limit stress
     _stress_limit  = infile("max_stress", 4.00e8);
@@ -263,9 +263,9 @@ _n_stations_x(0) {
     
     // initialize the dv vector data
     const Real
-    th_l                   = infile("thickness_lower", 0.001),
-    th_u                   = infile("thickness_upper",   0.5),
-    th                     = infile("thickness",         0.5),
+    th_l                   = infile("thickness_lower", 0.0001),
+    th_u                   = infile("thickness_upper",   0.2),
+    th                     = infile("thickness",         0.2),
     dx                     = _length/(_n_stations_x-1);
     
     _dv_init.resize    (_n_vars);
@@ -323,7 +323,7 @@ _n_stations_x(0) {
     _kappa           = new MAST::Parameter("kappa",infile("kappa",5./6.));
     _rho             = new MAST::Parameter( "rho", infile("rho", 2700.0));
     _zero            = new MAST::Parameter("zero",                    0.);
-    _press           = new MAST::Parameter(   "p", infile("press", 8.e5));
+    _press           = new MAST::Parameter(   "p", infile("press", 2.e6));
     
     
     _E_f             = new MAST::ConstantFieldFunction("E",            *_E);
@@ -357,7 +357,7 @@ _n_stations_x(0) {
     
     // tell the section property about the material property
     _p_card->set_material(*_m_card);
-    
+
     _discipline->set_property_for_subdomain(0, *_p_card);
     
     
@@ -368,15 +368,31 @@ _n_stations_x(0) {
     
     // points where stress is evaluated
     std::vector<libMesh::Point> pts;
-    pts.push_back(libMesh::Point(-1/sqrt(3), -1/sqrt(3), 1.)); // upper skin
-    pts.push_back(libMesh::Point(-1/sqrt(3), -1/sqrt(3),-1.)); // lower skin
-    pts.push_back(libMesh::Point( 1/sqrt(3), -1/sqrt(3), 1.)); // upper skin
-    pts.push_back(libMesh::Point( 1/sqrt(3), -1/sqrt(3),-1.)); // lower skin
-    pts.push_back(libMesh::Point( 1/sqrt(3),  1/sqrt(3), 1.)); // upper skin
-    pts.push_back(libMesh::Point( 1/sqrt(3),  1/sqrt(3),-1.)); // lower skin
-    pts.push_back(libMesh::Point(-1/sqrt(3),  1/sqrt(3), 1.)); // upper skin
-    pts.push_back(libMesh::Point(-1/sqrt(3),  1/sqrt(3),-1.)); // lower skin
-    
+
+    if (e_type == libMesh::QUAD4 ||
+        e_type == libMesh::QUAD8 ||
+        e_type == libMesh::QUAD9) {
+        
+        pts.push_back(libMesh::Point(-1/sqrt(3), -1/sqrt(3), 1.)); // upper skin
+        pts.push_back(libMesh::Point(-1/sqrt(3), -1/sqrt(3),-1.)); // lower skin
+        pts.push_back(libMesh::Point( 1/sqrt(3), -1/sqrt(3), 1.)); // upper skin
+        pts.push_back(libMesh::Point( 1/sqrt(3), -1/sqrt(3),-1.)); // lower skin
+        pts.push_back(libMesh::Point( 1/sqrt(3),  1/sqrt(3), 1.)); // upper skin
+        pts.push_back(libMesh::Point( 1/sqrt(3),  1/sqrt(3),-1.)); // lower skin
+        pts.push_back(libMesh::Point(-1/sqrt(3),  1/sqrt(3), 1.)); // upper skin
+        pts.push_back(libMesh::Point(-1/sqrt(3),  1/sqrt(3),-1.)); // lower skin
+    }
+    else if (e_type == libMesh::TRI3 ||
+             e_type == libMesh::TRI6) {
+        
+        pts.push_back(libMesh::Point(1./3., 1./3., 1.)); // upper skin
+        pts.push_back(libMesh::Point(1./3., 1./3.,-1.)); // lower skin
+        pts.push_back(libMesh::Point(2./3., 1./3., 1.)); // upper skin
+        pts.push_back(libMesh::Point(2./3., 1./3.,-1.)); // lower skin
+        pts.push_back(libMesh::Point(1./3., 2./3., 1.)); // upper skin
+        pts.push_back(libMesh::Point(1./3., 2./3.,-1.)); // lower skin
+    }
+
     for ( ; e_it != e_end; e_it++) {
         
         MAST::StressStrainOutputBase * output = new MAST::StressStrainOutputBase;

@@ -74,6 +74,32 @@ void analysis(const std::string& case_name,
 
 
 
+
+template <typename ValType>
+void plate_analysis(const std::string& case_name,
+                    bool with_sens,
+                    std::string& par_name)  {
+    
+    ValType run_case;
+    run_case.init(libMesh::QUAD4, true);
+    
+    std::cout << "Running case: " << case_name << std::endl;
+    run_case.solve(true);
+    if (with_sens) {
+        MAST::Parameter* p = run_case.get_parameter(par_name);
+        if (p) {
+            
+            std::cout
+            << "Running sensitivity for case: " << case_name
+            << "  wrt  " << par_name << std::endl;
+            run_case.sensitivity_solve(*p, true);
+        }
+    }
+    
+}
+
+
+
 template <typename ValType>
 void optimization(const std::string& case_name)  {
 
@@ -100,7 +126,7 @@ void optimization(const std::string& case_name)  {
     std::vector<Real> dvals(func_eval.n_vars());
     std::fill(dvals.begin(), dvals.end(), 0.05);
     std::cout << "******* Begin: Verifying gradients ***********" << std::endl;
-    func_eval.verify_gradients(dvals);
+    //func_eval.verify_gradients(dvals);
     std::cout << "******* End: Verifying gradients ***********" << std::endl;
     
     // attach and optimize
@@ -155,11 +181,11 @@ int main(int argc, char* const argv[]) {
     else if (case_name == "membrane_extension_biaxial")
         analysis<MAST::MembraneExtensionBiaxial>(case_name, with_sens, par_name);
     else if (case_name == "plate_bending")
-        analysis<MAST::PlateBending>(case_name, with_sens, par_name);
+        plate_analysis<MAST::PlateBending>(case_name, with_sens, par_name);
     else if (case_name == "plate_bending_section_offset")
-        analysis<MAST::PlateBendingWithOffset>(case_name, with_sens, par_name);
+        plate_analysis<MAST::PlateBendingWithOffset>(case_name, with_sens, par_name);
     else if (case_name == "plate_bending_thermal_stress")
-        analysis<MAST::PlateBendingThermalStress>(case_name, with_sens, par_name);
+        plate_analysis<MAST::PlateBendingThermalStress>(case_name, with_sens, par_name);
     else if (case_name == "plate_bending_sizing_optimization")
         optimization<MAST::PlateBendingSizingOptimization>(case_name);
     else if (case_name == "plate_bending_single_functional_sizing_optimization")

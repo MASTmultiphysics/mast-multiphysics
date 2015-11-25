@@ -64,6 +64,12 @@ namespace MAST {
         
         
         /*!
+         *   initializes the object for specified characteristics
+         */
+        void init(libMesh::ElemType e_type, bool if_vk);
+
+        
+        /*!
          *   @returns a pointer to the parameter of the specified name.
          *   If no parameter exists by the specified name, then a \p NULL
          *   pointer is returned and a message is printed with a valid list
@@ -91,6 +97,8 @@ namespace MAST {
          */
         void clear_stresss();
         
+        bool _initialized;
+
         // length of domain
         Real _length;
 

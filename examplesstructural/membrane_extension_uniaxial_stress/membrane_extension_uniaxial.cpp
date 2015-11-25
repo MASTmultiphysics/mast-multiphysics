@@ -22,8 +22,7 @@
 
 
 // MAST includes
-#include "examples/structural/plate_bending_thermal_stress/plate_bending_thermal_stress.h"
-#include "examples/structural/plate_optimization/plate_optimization_base.h"
+#include "examples/structural/membrane_extension_uniaxial_stress/membrane_extension_uniaxial.h"
 #include "elasticity/structural_system_initialization.h"
 #include "elasticity/structural_element_base.h"
 #include "elasticity/structural_nonlinear_assembly.h"
@@ -45,15 +44,10 @@
 extern libMesh::LibMeshInit* _init;
 
 
-MAST::PlateBendingThermalStress::PlateBendingThermalStress():
-_initialized(false) {
+MAST::MembraneExtensionUniaxial::MembraneExtensionUniaxial() {
     
-}
-
-
-void
-MAST::PlateBendingThermalStress::init(libMesh::ElemType e_type,
-                                      bool if_vk) {
+    libMesh::ElemType
+    e_type       = libMesh::QUAD4;
 
     // length of domain
     _length     = 0.50,
@@ -88,27 +82,25 @@ MAST::PlateBendingThermalStress::init(libMesh::ElemType e_type,
 
     
     // create and add the boundary condition and loads
-    std::vector<unsigned int> constrained_vars(4);
+    _dirichlet_left   = new MAST::DirichletBoundaryCondition;
+    _dirichlet_bottom = new MAST::DirichletBoundaryCondition;
+    
+    std::vector<unsigned int> constrained_vars(5);
     // not constraning ty, tz will keep it simply supported
     constrained_vars[0] = 0;  // u
-    constrained_vars[1] = 1;  // v
-    constrained_vars[2] = 2;  // w
-    constrained_vars[3] = 5;  // tz
-
-    _dirichlet_bottom = new MAST::DirichletBoundaryCondition;
-    _dirichlet_right  = new MAST::DirichletBoundaryCondition;
-    _dirichlet_top    = new MAST::DirichletBoundaryCondition;
-    _dirichlet_left   = new MAST::DirichletBoundaryCondition;
-    
-    _dirichlet_bottom->init (0, constrained_vars);
-    _dirichlet_right->init  (1, constrained_vars);
-    _dirichlet_top->init    (2, constrained_vars);
+    constrained_vars[1] = 2;  // w
+    constrained_vars[2] = 3;  // tx
+    constrained_vars[3] = 4;  // ty
+    constrained_vars[4] = 5;  // tz
     _dirichlet_left->init   (3, constrained_vars);
+
+    constrained_vars.resize(1);
+    constrained_vars[0] = 1;  // v
+    _dirichlet_bottom->init   (0, constrained_vars);
     
-    _discipline->add_dirichlet_bc(0, *_dirichlet_bottom);
-    _discipline->add_dirichlet_bc(1,  *_dirichlet_right);
-    _discipline->add_dirichlet_bc(2,    *_dirichlet_top);
+    _discipline->add_dirichlet_bc(0,   *_dirichlet_bottom);
     _discipline->add_dirichlet_bc(3,   *_dirichlet_left);
+
     _discipline->init_system_dirichlet_bc(dynamic_cast<libMesh::System&>(*_sys));
     
     // initialize the equation system
@@ -116,13 +108,12 @@ MAST::PlateBendingThermalStress::init(libMesh::ElemType e_type,
     
     // create the property functions and add them to the
     
-    _th              = new MAST::Parameter("th", 0.006);
-    _E               = new MAST::Parameter("E",  72.e9);
-    _alpha           = new MAST::Parameter("alpha",  2.5e-5);
-    _kappa           = new MAST::Parameter("kappa",  5./6.);
-    _nu              = new MAST::Parameter("nu",  0.33);
-    _zero            = new MAST::Parameter("zero",  0.);
-    _temp            = new MAST::Parameter( "temperature",  300.);
+    _th              = new MAST::Parameter("th",    0.006);
+    _E               = new MAST::Parameter("E",     72.e9);
+    _nu              = new MAST::Parameter("nu",     0.33);
+    _kappa           = new MAST::Parameter("kappa", 5./6.);
+    _zero            = new MAST::Parameter("zero",     0.);
+    _press           = new MAST::Parameter( "p",     2.e9);
     
     
     
@@ -131,23 +122,20 @@ MAST::PlateBendingThermalStress::init(libMesh::ElemType e_type,
     _params_for_sensitivity.push_back(_E);
     _params_for_sensitivity.push_back(_nu);
     _params_for_sensitivity.push_back(_th);
-    _params_for_sensitivity.push_back(_alpha);
+    
     
     
     _th_f            = new MAST::ConstantFieldFunction("h",           *_th);
     _E_f             = new MAST::ConstantFieldFunction("E",            *_E);
-    _alpha_f         = new MAST::ConstantFieldFunction("alpha_expansion", *_alpha);
-    _kappa_f         = new MAST::ConstantFieldFunction("kappa",    *_kappa);
     _nu_f            = new MAST::ConstantFieldFunction("nu",          *_nu);
-    _temp_f          = new MAST::ConstantFieldFunction("temperature", *_temp);
-    _ref_temp_f      = new MAST::ConstantFieldFunction("ref_temperature", *_zero);
-    _hoff_f          = new MAST::PlateOffset("off", _th_f->clone().release());
+    _kappa_f         = new MAST::ConstantFieldFunction("kappa",    *_kappa);
+    _hoff_f          = new MAST::ConstantFieldFunction("off",       *_zero);
+    _press_f         = new MAST::ConstantFieldFunction("pressure", *_press);
     
     // initialize the load
-    _T_load          = new MAST::BoundaryConditionBase(MAST::TEMPERATURE);
-    _T_load->add(*_temp_f);
-    _T_load->add(*_ref_temp_f);
-    _discipline->add_volume_load(0, *_T_load);
+    _p_load          = new MAST::BoundaryConditionBase(MAST::SURFACE_PRESSURE);
+    _p_load->add(*_press_f);
+    _discipline->add_side_load(1, *_p_load);
     
     // create the material property card
     _m_card         = new MAST::IsotropicMaterialPropertyCard;
@@ -155,7 +143,6 @@ MAST::PlateBendingThermalStress::init(libMesh::ElemType e_type,
     // add the material properties to the card
     _m_card->add(*_E_f);
     _m_card->add(*_nu_f);
-    _m_card->add(*_alpha_f);
     _m_card->add(*_kappa_f);
     
     // create the element property card
@@ -167,7 +154,6 @@ MAST::PlateBendingThermalStress::init(libMesh::ElemType e_type,
     
     // tell the section property about the material property
     _p_card->set_material(*_m_card);
-    if (if_vk) _p_card->set_strain(MAST::VON_KARMAN_STRAIN);
     
     _discipline->set_property_for_subdomain(0, *_p_card);
     
@@ -217,9 +203,6 @@ MAST::PlateBendingThermalStress::init(libMesh::ElemType e_type,
         
         _discipline->add_volume_output((*e_it)->subdomain_id(), *output);
     }
-    
-    
-    _initialized = true;
 }
 
 
@@ -228,62 +211,52 @@ MAST::PlateBendingThermalStress::init(libMesh::ElemType e_type,
 
 
 
-MAST::PlateBendingThermalStress::~PlateBendingThermalStress() {
+MAST::MembraneExtensionUniaxial::~MembraneExtensionUniaxial() {
     
-    if (_initialized) {
-        
-        delete _m_card;
-        delete _p_card;
-        
-        delete _T_load;
-        delete _dirichlet_bottom;
-        delete _dirichlet_right;
-        delete _dirichlet_top;
-        delete _dirichlet_left;
-        
-        delete _th_f;
-        delete _E_f;
-        delete _alpha_f;
-        delete _nu_f;
-        delete _kappa_f;
-        delete _hoff_f;
-        delete _temp_f;
-        delete _ref_temp_f;
-        
-        delete _th;
-        delete _E;
-        delete _alpha;
-        delete _kappa;
-        delete _nu;
-        delete _zero;
-        delete _temp;
-        
-        
-        
-        delete _eq_sys;
-        delete _mesh;
-        
-        delete _discipline;
-        delete _structural_sys;
-        
-        // iterate over the output quantities and delete them
-        std::vector<MAST::StressStrainOutputBase*>::iterator
-        it   =   _outputs.begin(),
-        end  =   _outputs.end();
-        
-        for ( ; it != end; it++)
-            delete *it;
-        
-        _outputs.clear();
-    }
+    delete _m_card;
+    delete _p_card;
+    
+    delete _p_load;
+    delete _dirichlet_bottom;
+    delete _dirichlet_left;
+    
+    delete _th_f;
+    delete _E_f;
+    delete _nu_f;
+    delete _kappa_f;
+    delete _hoff_f;
+    delete _press_f;
+    
+    delete _th;
+    delete _E;
+    delete _nu;
+    delete _kappa;
+    delete _zero;
+    delete _press;
+    
+    
+    
+    delete _eq_sys;
+    delete _mesh;
+    
+    delete _discipline;
+    delete _structural_sys;
+    
+    // iterate over the output quantities and delete them
+    std::vector<MAST::StressStrainOutputBase*>::iterator
+    it   =   _outputs.begin(),
+    end  =   _outputs.end();
+    
+    for ( ; it != end; it++)
+        delete *it;
+    
+    _outputs.clear();
 }
 
 
 
 MAST::Parameter*
-MAST::PlateBendingThermalStress::get_parameter(const std::string &nm) {
-    
-    libmesh_assert(_initialized);
+MAST::MembraneExtensionUniaxial::get_parameter(const std::string &nm) {
     
     MAST::Parameter *rval = NULL;
     
@@ -321,9 +294,8 @@ MAST::PlateBendingThermalStress::get_parameter(const std::string &nm) {
 
 
 const libMesh::NumericVector<Real>&
-MAST::PlateBendingThermalStress::solve(bool if_write_output) {
+MAST::MembraneExtensionUniaxial::solve(bool if_write_output) {
     
-    libmesh_assert(_initialized);
 
     // create the nonlinear assembly object
     MAST::StructuralNonlinearAssembly   assembly;
@@ -361,11 +333,9 @@ MAST::PlateBendingThermalStress::solve(bool if_write_output) {
 
 
 const libMesh::NumericVector<Real>&
-MAST::PlateBendingThermalStress::sensitivity_solve(MAST::Parameter& p,
+MAST::MembraneExtensionUniaxial::sensitivity_solve(MAST::Parameter& p,
                                      bool if_write_output) {
     
-    libmesh_assert(_initialized);
-
     _discipline->add_parameter(p);
     
     // create the nonlinear assembly object
@@ -421,10 +391,8 @@ MAST::PlateBendingThermalStress::sensitivity_solve(MAST::Parameter& p,
 
 
 void
-MAST::PlateBendingThermalStress::clear_stresss() {
+MAST::MembraneExtensionUniaxial::clear_stresss() {
     
-    libmesh_assert(_initialized);
-
     // iterate over the output quantities and delete them
     std::vector<MAST::StressStrainOutputBase*>::iterator
     it   =   _outputs.begin(),

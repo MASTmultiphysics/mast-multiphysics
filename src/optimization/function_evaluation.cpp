@@ -113,7 +113,7 @@ MAST::FunctionEvaluation::verify_gradients(const std::vector<Real>& dvars) {
     
     // first call theh evaluate method to get the analytical sensitivities
     Real
-    delta           = 1.e-8,
+    delta           = 1.e-5,
     tol             = 1.e-3,
     obj             = 0.,
     obj_fd          = 0.;
@@ -134,7 +134,7 @@ MAST::FunctionEvaluation::verify_gradients(const std::vector<Real>& dvars) {
     
     std::vector<bool>
     eval_grads (_n_eq+_n_ineq);
-
+    
     
     std::fill(    dvars_fd.begin(),     dvars_fd.end(),   0.);
     std::fill(    obj_grad.begin(),     obj_grad.end(),   0.);
@@ -144,7 +144,7 @@ MAST::FunctionEvaluation::verify_gradients(const std::vector<Real>& dvars) {
     std::fill(       grads.begin(),        grads.end(),   0.);
     std::fill(    grads_fd.begin(),     grads_fd.end(),   0.);
     std::fill(  eval_grads.begin(),   eval_grads.end(), true);
-
+    
     
     // calculate the analytical sensitivity
     this->evaluate(dvars,
@@ -155,7 +155,7 @@ MAST::FunctionEvaluation::verify_gradients(const std::vector<Real>& dvars) {
                    eval_grads,
                    grads);
     
-
+    
     // now turn off the sensitivity variables
     eval_obj_grad = false;
     std::fill(  eval_grads.begin(),   eval_grads.end(), false);
@@ -170,7 +170,7 @@ MAST::FunctionEvaluation::verify_gradients(const std::vector<Real>& dvars) {
         
         // now perturb it
         dvars_fd[i] += delta;
-
+        
         // call the evaluate routine
         obj_fd       = 0.;
         std::fill(    fvals_fd.begin(),     fvals_fd.end(),   0.);
@@ -199,13 +199,13 @@ MAST::FunctionEvaluation::verify_gradients(const std::vector<Real>& dvars) {
     bool accurate_sens = true;
     
     for (unsigned int i=0; i<_n_vars; i++)
-        //if (fabs(obj_grad[i] - obj_grad_fd[i])/obj_grad[i] > tol) {
+        if (fabs(obj_grad[i] - obj_grad_fd[i])/obj_grad[i] > tol) {
             std::cout
             << " Mismatched sensitivity: DV:  "  << i << "   "
             << obj_grad[i] << "    " << obj_grad_fd[i] << std::endl;
             accurate_sens = false;
-    //}
-
+        }
+    
     
     
     std::cout
@@ -215,16 +215,16 @@ MAST::FunctionEvaluation::verify_gradients(const std::vector<Real>& dvars) {
     for (unsigned int j=0; j<_n_eq+_n_ineq; j++) {
         std::cout << "  Constraint: " << j << std::endl;
         for (unsigned int i=0; i<_n_vars; i++)
-            //if (fabs(grads[i*(_n_eq+_n_ineq)+j] - grads_fd[i*(_n_eq+_n_ineq)+j])/grads[i*(_n_eq+_n_ineq)+j] > tol) {
-
+            if (fabs(grads[i*(_n_eq+_n_ineq)+j] - grads_fd[i*(_n_eq+_n_ineq)+j])/grads[i*(_n_eq+_n_ineq)+j] > tol) {
+                
                 std::cout
                 << " Mismatched sensitivity:  DV:  "  << i << "   "
                 << grads[i*(_n_eq+_n_ineq)+j] << "    "
                 << grads_fd[i*(_n_eq+_n_ineq)+j] << std::endl;
                 accurate_sens = false;
-        //}
+            }
     }
-
+    
     // print the message that all sensitivity data satisfied limits.
     if (accurate_sens)
         std::cout

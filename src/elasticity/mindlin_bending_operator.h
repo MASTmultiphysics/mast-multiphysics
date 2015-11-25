@@ -41,7 +41,7 @@ namespace MAST {
         
         MindlinBendingOperator(MAST::StructuralElementBase& elem):
         MAST::BendingOperator2D(elem),
-        _shear_quadrature_reduction(1)
+        _shear_quadrature_reduction(2)
         { }
         
         virtual ~MindlinBendingOperator() { }
@@ -135,12 +135,6 @@ initialize_bending_strain_operator_for_z(const libMesh::FEBase& fe,
                                                  //Bmat_trans.set_shape_function(1, 2, phi_vec); // gamma-yz : w
     phi_vec   *= -1.0;
     Bmat_bend.set_shape_function(1, 3, phi_vec); // epsilon-y: thetax
-    
-    
-    for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
-        phi_vec(i_nd) = phi[i_nd][qp];  // phi
-    
-    phi_vec    *= -1.0;
 }
 
 

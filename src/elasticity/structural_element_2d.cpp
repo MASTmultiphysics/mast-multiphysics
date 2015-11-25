@@ -217,6 +217,11 @@ MAST::StructuralElement2D::calculate_stress(bool request_derivative,
             libmesh_error();
     }
     
+//    delete bend_ptr;
+//    bend_ptr = MAST::build_bending_operator(MAST::MINDLIN,
+//                                            *this,
+//                                            qp_loc).release();
+    
     std::auto_ptr<libMesh::FEBase>         fe(fe_ptr);
     std::auto_ptr<libMesh::QBase>          qrule(qrule_ptr);
     std::auto_ptr<MAST::BendingOperator2D>
@@ -256,7 +261,7 @@ MAST::StructuralElement2D::calculate_stress(bool request_derivative,
     RealVectorX
     strain      = RealVectorX::Zero(n1),
     stress      = RealVectorX::Zero(n1),
-    strain_vk   = RealVectorX::Zero(n3),
+    strain_vk   = RealVectorX::Zero(n1),
     strain_bend = RealVectorX::Zero(n1),
     strain_3D   = RealVectorX::Zero(6),
     stress_3D   = RealVectorX::Zero(6),
@@ -542,7 +547,7 @@ MAST::StructuralElement2D::internal_residual (bool request_jacobian,
                                               RealMatrixX& jac,
                                               bool if_ignore_ho_jac)
 {
-    const std::vector<Real>& JxW = _fe->get_JxW();
+    const std::vector<Real>& JxW           = _fe->get_JxW();
     const std::vector<libMesh::Point>& xyz = _fe->get_xyz();
     
     const unsigned int
@@ -593,7 +598,7 @@ MAST::StructuralElement2D::internal_residual (bool request_jacobian,
     libMesh::Point p;
     
     for (unsigned int qp=0; qp<JxW.size(); qp++) {
-        
+                
         this->local_elem().global_coordinates_location(xyz[qp], p);
         
         // get the material matrix

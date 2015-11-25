@@ -39,7 +39,7 @@ BOOST_FIXTURE_TEST_SUITE  (Structural2DPlateBendingWithOffset,
 BOOST_AUTO_TEST_CASE   (PlateBendingWithThermalStressSensitivity) {
     
     
-    //MAST::check_sensitivity(*this);
+    MAST::check_sensitivity(*this);
 }
 
 
