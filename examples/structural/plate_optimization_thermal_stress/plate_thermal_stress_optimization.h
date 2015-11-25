@@ -76,11 +76,16 @@ namespace MAST {
     public MAST::FunctionEvaluation {
         
         
-        PlateBendingThermalStressSizingOptimization(GetPot& infile,
-                                       std::ostream& output);
+        PlateBendingThermalStressSizingOptimization(std::ostream& output);
         
         
         ~PlateBendingThermalStressSizingOptimization();
+        
+        /*!
+         *   initializes the object for specified characteristics
+         */
+        void init(GetPot& infile, libMesh::ElemType e_type, bool if_vk);
+
         
         /*!
          *   initialize the design variables values and bounds
@@ -128,6 +133,9 @@ namespace MAST {
          */
         void clear_stresss();
         
+        
+        bool _initialized;
+
         
         // length of domain
         Real _length;

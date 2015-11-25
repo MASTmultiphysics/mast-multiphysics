@@ -55,6 +55,9 @@ void
 MAST::PlateBendingWithOffset::init(libMesh::ElemType e_type,
                                    bool if_vk) {
 
+    libmesh_assert(!_initialized);
+
+    
     // length of domain
     _length     = 0.50,
     _width      = 0.25;
@@ -309,6 +312,16 @@ MAST::PlateBendingWithOffset::solve(bool if_write_output) {
     
     libmesh_assert(_initialized);
 
+    bool if_vk = (_p_card->strain_type() == MAST::VON_KARMAN_STRAIN);
+    
+    // set the number of load steps
+    unsigned int
+    n_steps = 1;
+    if (if_vk) n_steps = 10;
+    
+    Real
+    p0      = (*_press)();
+
     // create the nonlinear assembly object
     MAST::StructuralNonlinearAssembly   assembly;
     
@@ -321,7 +334,14 @@ MAST::PlateBendingWithOffset::solve(bool if_write_output) {
     nonlin_sys.solution->zero();
     this->clear_stresss();
     
-    nonlin_sys.solve();
+    // now iterate over the load steps
+    for (unsigned int i=0; i<n_steps; i++) {
+        std::cout
+        << "Load step: " << i << std::endl;
+        
+        (*_press)()  =  p0*(i+1.)/(1.*n_steps);
+        nonlin_sys.solve();
+    }
     
     // evaluate the outputs
     assembly.calculate_outputs(*(_sys->solution));

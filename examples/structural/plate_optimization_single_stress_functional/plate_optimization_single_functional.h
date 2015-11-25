@@ -75,11 +75,16 @@ namespace MAST {
     public MAST::FunctionEvaluation {
         
         
-        PlateBendingSingleStressFunctionalSizingOptimization(GetPot& infile,
-                                                             std::ostream& output);
+        PlateBendingSingleStressFunctionalSizingOptimization(std::ostream& output);
         
         
         ~PlateBendingSingleStressFunctionalSizingOptimization();
+        
+        /*!
+         *   initializes the object for specified characteristics
+         */
+        void init(GetPot& infile, libMesh::ElemType e_type, bool if_vk);
+
         
         /*!
          *   initialize the design variables values and bounds
@@ -128,6 +133,8 @@ namespace MAST {
         void clear_stresss();
         
         
+        bool _initialized;
+
         // length of domain
         Real _length;
         

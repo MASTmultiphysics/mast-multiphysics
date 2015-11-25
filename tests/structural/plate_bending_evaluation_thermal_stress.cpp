@@ -36,9 +36,16 @@
 BOOST_FIXTURE_TEST_SUITE  (Structural2DPlateBendingWithOffset,
                            MAST::PlateBendingThermalStress)
 
-BOOST_AUTO_TEST_CASE   (PlateBendingWithThermalStressSensitivity) {
+BOOST_AUTO_TEST_CASE   (PlateLinearBendingWithThermalStressSensitivity) {
     
+    this->init(libMesh::QUAD4, false);
+    MAST::check_sensitivity(*this);
+}
+
+
+BOOST_AUTO_TEST_CASE   (PlateNonlinearBendingWithThermalStressSensitivity) {
     
+    this->init(libMesh::QUAD4, true);
     MAST::check_sensitivity(*this);
 }
 

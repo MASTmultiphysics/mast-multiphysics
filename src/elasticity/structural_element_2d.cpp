@@ -217,11 +217,6 @@ MAST::StructuralElement2D::calculate_stress(bool request_derivative,
             libmesh_error();
     }
     
-//    delete bend_ptr;
-//    bend_ptr = MAST::build_bending_operator(MAST::MINDLIN,
-//                                            *this,
-//                                            qp_loc).release();
-    
     std::auto_ptr<libMesh::FEBase>         fe(fe_ptr);
     std::auto_ptr<libMesh::QBase>          qrule(qrule_ptr);
     std::auto_ptr<MAST::BendingOperator2D>

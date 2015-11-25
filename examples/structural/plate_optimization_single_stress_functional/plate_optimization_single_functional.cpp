@@ -167,16 +167,23 @@ plate_stress_functional_optim_con(int*    mode,
 
 
 MAST::PlateBendingSingleStressFunctionalSizingOptimization::
-PlateBendingSingleStressFunctionalSizingOptimization(GetPot& infile,
-                                                     std::ostream& output):
+PlateBendingSingleStressFunctionalSizingOptimization(std::ostream& output):
 MAST::FunctionEvaluation(output),
+_initialized(false),
 _n_divs_x(0),
 _n_divs_y(0),
 _n_elems(0),
-_n_stations_x(0) {
-    
-    libMesh::ElemType
-    e_type       = libMesh::QUAD4;
+_n_stations_x(0) { }
+
+
+
+void
+MAST::PlateBendingSingleStressFunctionalSizingOptimization::
+init(GetPot& infile,
+     libMesh::ElemType e_type,
+     bool if_vk) {
+
+    libmesh_assert(!_initialized);
 
     // number of elements
     _n_divs_x    = infile("n_divs_x", 16);
@@ -356,6 +363,7 @@ _n_stations_x(0) {
     
     // tell the section property about the material property
     _p_card->set_material(*_m_card);
+    if (if_vk) _p_card->set_strain(MAST::VON_KARMAN_STRAIN);
     
     _discipline->set_property_for_subdomain(0, *_p_card);
     
@@ -405,6 +413,8 @@ _n_stations_x(0) {
     
     // create the function to calculate weight
     _weight = new MAST::PlateWeight(*_discipline);
+    
+    _initialized = true;
 }
 
 
@@ -413,57 +423,59 @@ _n_stations_x(0) {
 MAST::PlateBendingSingleStressFunctionalSizingOptimization::
 ~PlateBendingSingleStressFunctionalSizingOptimization() {
     
-    delete _m_card;
-    delete _p_card;
-    
-    delete _p_load;
-    delete _dirichlet_bottom;
-    delete _dirichlet_right;
-    delete _dirichlet_top;
-    delete _dirichlet_left;
-    
-    delete _E_f;
-    delete _nu_f;
-    delete _kappa_f;
-    delete _hoff_f;
-    delete _press_f;
-    
-    delete _E;
-    delete _nu;
-    delete _kappa;
-    delete _zero;
-    delete _press;
-    
-    delete _weight;
-    
-    _assembly->clear_discipline_and_system();
-    delete _assembly;
-    
-    delete _eq_sys;
-    delete _mesh;
-    
-    delete _discipline;
-    delete _structural_sys;
-    delete _outputs;
-    
-    
-    // delete the h_y station functions
-    {
-        std::vector<MAST::ConstantFieldFunction*>::iterator
-        it  = _th_station_functions.begin(),
-        end = _th_station_functions.end();
-        for (; it != end; it++)  delete *it;
+    if (_initialized) {
+        
+        delete _m_card;
+        delete _p_card;
+        
+        delete _p_load;
+        delete _dirichlet_bottom;
+        delete _dirichlet_right;
+        delete _dirichlet_top;
+        delete _dirichlet_left;
+        
+        delete _E_f;
+        delete _nu_f;
+        delete _kappa_f;
+        delete _hoff_f;
+        delete _press_f;
+        
+        delete _E;
+        delete _nu;
+        delete _kappa;
+        delete _zero;
+        delete _press;
+        
+        delete _weight;
+        
+        _assembly->clear_discipline_and_system();
+        delete _assembly;
+        
+        delete _eq_sys;
+        delete _mesh;
+        
+        delete _discipline;
+        delete _structural_sys;
+        delete _outputs;
+        
+        
+        // delete the h_y station functions
+        {
+            std::vector<MAST::ConstantFieldFunction*>::iterator
+            it  = _th_station_functions.begin(),
+            end = _th_station_functions.end();
+            for (; it != end; it++)  delete *it;
+        }
+        
+        
+        // delete the h_y station parameters
+        {
+            std::vector<MAST::Parameter*>::iterator
+            it  = _th_station_parameters.begin(),
+            end = _th_station_parameters.end();
+            for (; it != end; it++)  delete *it;
+        }
     }
-    
-    
-    // delete the h_y station parameters
-    {
-        std::vector<MAST::Parameter*>::iterator
-        it  = _th_station_parameters.begin(),
-        end = _th_station_parameters.end();
-        for (; it != end; it++)  delete *it;
-    }
-    
 }
 
 
@@ -527,9 +539,28 @@ evaluate(const std::vector<Real>& dvars,
     
     
     //////////////////////////////////////////////////////////////////////
-    // now solve for this load step
+    // now solve using appropriate number of load steps this load step
     //////////////////////////////////////////////////////////////////////
-    _sys->solve();
+    bool if_vk = (_p_card->strain_type() == MAST::VON_KARMAN_STRAIN);
+    
+    // set the number of load steps
+    unsigned int
+    n_steps = 1;
+    if (if_vk) n_steps = 10;
+    
+    Real
+    p0      = (*_press)();
+    
+    // now iterate over the load steps
+    for (unsigned int i=0; i<n_steps; i++) {
+        std::cout
+        << "Load step: " << i << std::endl;
+        
+        (*_press)()  =  p0*(i+1.)/(1.*n_steps);
+        _sys->solve();
+    }
+    
+    // calculate the stresses
     _assembly->calculate_outputs(*(_sys->solution));
     
     

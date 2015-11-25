@@ -32,8 +32,16 @@
 BOOST_FIXTURE_TEST_SUITE  (Structural2DPlateBending,
                            MAST::PlateBending)
 
-BOOST_AUTO_TEST_CASE   (PlateBendingSensitivity) {
+BOOST_AUTO_TEST_CASE   (PlateLinearBendingSensitivity) {
     
+    this->init(libMesh::QUAD4, false);
+    MAST::check_sensitivity(*this);
+}
+
+
+BOOST_AUTO_TEST_CASE   (PlateNonlinearBendingSensitivity) {
+    
+    this->init(libMesh::QUAD4, true);
     MAST::check_sensitivity(*this);
 }
 

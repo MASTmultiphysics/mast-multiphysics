@@ -46,9 +46,12 @@ extern libMesh::LibMeshInit* _init;
 
 MAST::MembraneExtensionBiaxial::MembraneExtensionBiaxial() {
     
+    libMesh::ElemType
+    e_type       = libMesh::QUAD4;
+
     // length of domain
-    _length     = 10.,
-    _width      =  5.;
+    _length     = 0.50,
+    _width      = 0.25;
     
     
     // create the mesh
@@ -56,10 +59,10 @@ MAST::MembraneExtensionBiaxial::MembraneExtensionBiaxial() {
     
     // initialize the mesh with one element
     libMesh::MeshTools::Generation::build_square(*_mesh,
-                                                 10, 10,
+                                                 16, 16,
                                                  0, _length,
                                                  0, _width,
-                                                 libMesh::QUAD4);
+                                                 e_type);
     _mesh->prepare_for_use();
     
     // create the equation system
@@ -90,7 +93,7 @@ MAST::MembraneExtensionBiaxial::MembraneExtensionBiaxial() {
     
     // create the property functions and add them to the
     
-    _th              = new MAST::Parameter("th",     0.06);
+    _th              = new MAST::Parameter("th",    0.006);
     _E               = new MAST::Parameter("E",     72.e9);
     _nu              = new MAST::Parameter("nu",     0.33);
     _kappa           = new MAST::Parameter("kappa", 5./6.);
@@ -147,15 +150,31 @@ MAST::MembraneExtensionBiaxial::MembraneExtensionBiaxial() {
     
     // points where stress is evaluated
     std::vector<libMesh::Point> pts;
-    pts.push_back(libMesh::Point(-1/sqrt(3), -1/sqrt(3), 1.)); // upper skin
-    pts.push_back(libMesh::Point(-1/sqrt(3), -1/sqrt(3),-1.)); // lower skin
-    pts.push_back(libMesh::Point( 1/sqrt(3), -1/sqrt(3), 1.)); // upper skin
-    pts.push_back(libMesh::Point( 1/sqrt(3), -1/sqrt(3),-1.)); // lower skin
-    pts.push_back(libMesh::Point( 1/sqrt(3),  1/sqrt(3), 1.)); // upper skin
-    pts.push_back(libMesh::Point( 1/sqrt(3),  1/sqrt(3),-1.)); // lower skin
-    pts.push_back(libMesh::Point(-1/sqrt(3),  1/sqrt(3), 1.)); // upper skin
-    pts.push_back(libMesh::Point(-1/sqrt(3),  1/sqrt(3),-1.)); // lower skin
-    
+
+    if (e_type == libMesh::QUAD4 ||
+        e_type == libMesh::QUAD8 ||
+        e_type == libMesh::QUAD9) {
+        
+        pts.push_back(libMesh::Point(-1/sqrt(3), -1/sqrt(3), 1.)); // upper skin
+        pts.push_back(libMesh::Point(-1/sqrt(3), -1/sqrt(3),-1.)); // lower skin
+        pts.push_back(libMesh::Point( 1/sqrt(3), -1/sqrt(3), 1.)); // upper skin
+        pts.push_back(libMesh::Point( 1/sqrt(3), -1/sqrt(3),-1.)); // lower skin
+        pts.push_back(libMesh::Point( 1/sqrt(3),  1/sqrt(3), 1.)); // upper skin
+        pts.push_back(libMesh::Point( 1/sqrt(3),  1/sqrt(3),-1.)); // lower skin
+        pts.push_back(libMesh::Point(-1/sqrt(3),  1/sqrt(3), 1.)); // upper skin
+        pts.push_back(libMesh::Point(-1/sqrt(3),  1/sqrt(3),-1.)); // lower skin
+    }
+    else if (e_type == libMesh::TRI3 ||
+             e_type == libMesh::TRI6) {
+        
+        pts.push_back(libMesh::Point(1./3., 1./3., 1.)); // upper skin
+        pts.push_back(libMesh::Point(1./3., 1./3.,-1.)); // lower skin
+        pts.push_back(libMesh::Point(2./3., 1./3., 1.)); // upper skin
+        pts.push_back(libMesh::Point(2./3., 1./3.,-1.)); // lower skin
+        pts.push_back(libMesh::Point(1./3., 2./3., 1.)); // upper skin
+        pts.push_back(libMesh::Point(1./3., 2./3.,-1.)); // lower skin
+    }
+
     for ( ; e_it != e_end; e_it++) {
         
         MAST::StressStrainOutputBase * output = new MAST::StressStrainOutputBase;

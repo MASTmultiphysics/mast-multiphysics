@@ -77,11 +77,12 @@ void analysis(const std::string& case_name,
 
 template <typename ValType>
 void plate_analysis(const std::string& case_name,
+                    const bool nonlinear,
                     bool with_sens,
                     std::string& par_name)  {
     
     ValType run_case;
-    run_case.init(libMesh::QUAD4, true);
+    run_case.init(libMesh::QUAD4, nonlinear);
     
     std::cout << "Running case: " << case_name << std::endl;
     run_case.solve(true);
@@ -101,7 +102,7 @@ void plate_analysis(const std::string& case_name,
 
 
 template <typename ValType>
-void optimization(const std::string& case_name)  {
+void optimization(const std::string& case_name, bool verify_grads)  {
 
     
     std::cout
@@ -122,12 +123,58 @@ void optimization(const std::string& case_name)  {
     // create and attach sizing optimization object
     ValType func_eval(infile, output);
     __my_func_eval = &func_eval;
+
+    if (verify_grads) {
+        std::vector<Real> dvals(func_eval.n_vars());
+        std::fill(dvals.begin(), dvals.end(), 0.05);
+        std::cout << "******* Begin: Verifying gradients ***********" << std::endl;
+        func_eval.verify_gradients(dvals);
+        std::cout << "******* End: Verifying gradients ***********" << std::endl;
+    }
+
+    // attach and optimize
+    optimizer.attach_function_evaluation_object(func_eval);
+    optimizer.optimize();
     
-    std::vector<Real> dvals(func_eval.n_vars());
-    std::fill(dvals.begin(), dvals.end(), 0.05);
-    std::cout << "******* Begin: Verifying gradients ***********" << std::endl;
-    //func_eval.verify_gradients(dvals);
-    std::cout << "******* End: Verifying gradients ***********" << std::endl;
+    output.close();
+}
+
+
+
+
+template <typename ValType>
+void plate_optimization(const std::string& case_name,
+                        bool verify_grads,
+                        bool nonlinear)  {
+    
+    
+    std::cout
+    << case_name << std::endl
+    << "  input.in should be provided in the working directory with"
+    << " desired parameter values."
+    << "  In absence of a parameter value, its default value will be used."
+    << std::endl
+    << "  Output per iteration is written to optimization_output.txt."
+    << std::endl;
+    
+    GetPot infile("input.in");
+    std::ofstream output;
+    output.open("optimization_output.txt", std::ofstream::out);
+    
+    MAST::GCMMAOptimizationInterface optimizer;
+    
+    // create and attach sizing optimization object
+    ValType func_eval(output);
+    __my_func_eval = &func_eval;
+    func_eval.init(infile, libMesh::QUAD4, nonlinear);
+    
+    if (verify_grads) {
+        std::vector<Real> dvals(func_eval.n_vars());
+        std::fill(dvals.begin(), dvals.end(), 0.05);
+        std::cout << "******* Begin: Verifying gradients ***********" << std::endl;
+        func_eval.verify_gradients(dvals);
+        std::cout << "******* End: Verifying gradients ***********" << std::endl;
+    }
     
     // attach and optimize
     optimizer.attach_function_evaluation_object(func_eval);
@@ -149,10 +196,12 @@ int main(int argc, char* const argv[]) {
     
     // look for the name that the user has requested to run
     std::string
-    case_name = command_line("run_case", ""),
-    par_name  = command_line(   "param", "");
+    case_name    = command_line("run_case", ""),
+    par_name     = command_line(   "param", "");
     bool
-    with_sens = command_line("with_sensitivity", false);
+    with_sens    = command_line("with_sensitivity",    false),
+    if_nonlin    = command_line("nonlinear",           false),
+    verify_grads = command_line("verify_grads",        false);
     
 
     
@@ -169,35 +218,47 @@ int main(int argc, char* const argv[]) {
     else if (case_name == "beam_bending_thermal_stress")
         analysis<MAST::BeamBendingThermalStress>(case_name, with_sens, par_name);
     else if (case_name == "beam_bending_optimization")
-        optimization<MAST::BeamBendingSizingOptimization>(case_name);
+        optimization<MAST::BeamBendingSizingOptimization>(case_name, verify_grads);
     else if (case_name == "beam_bending_single_functional_optimization")
-        optimization<MAST::BeamBendingSingleFunctionalSizingOptimization>(case_name);
+        optimization<MAST::BeamBendingSingleFunctionalSizingOptimization>
+        (case_name, verify_grads);
     else if (case_name == "beam_bending_section_offset_optimization")
-        optimization<MAST::BeamBendingSectionOffsetSizingOptimization>(case_name);
+        optimization<MAST::BeamBendingSectionOffsetSizingOptimization>
+        (case_name, verify_grads);
     else if (case_name == "beam_bending_thermal_stress_optimization")
-        optimization<MAST::BeamBendingThermalStressSizingOptimization>(case_name);
+        optimization<MAST::BeamBendingThermalStressSizingOptimization>
+        (case_name, verify_grads);
     else if (case_name == "membrane_extension_uniaxial")
         analysis<MAST::MembraneExtensionUniaxial>(case_name, with_sens, par_name);
     else if (case_name == "membrane_extension_biaxial")
         analysis<MAST::MembraneExtensionBiaxial>(case_name, with_sens, par_name);
     else if (case_name == "plate_bending")
-        plate_analysis<MAST::PlateBending>(case_name, with_sens, par_name);
+        plate_analysis<MAST::PlateBending>
+        (case_name, if_nonlin, with_sens, par_name);
     else if (case_name == "plate_bending_section_offset")
-        plate_analysis<MAST::PlateBendingWithOffset>(case_name, with_sens, par_name);
+        plate_analysis<MAST::PlateBendingWithOffset>
+        (case_name, if_nonlin, with_sens, par_name);
     else if (case_name == "plate_bending_thermal_stress")
-        plate_analysis<MAST::PlateBendingThermalStress>(case_name, with_sens, par_name);
+        plate_analysis<MAST::PlateBendingThermalStress>
+        (case_name, if_nonlin, with_sens, par_name);
     else if (case_name == "plate_bending_sizing_optimization")
-        optimization<MAST::PlateBendingSizingOptimization>(case_name);
+        plate_optimization<MAST::PlateBendingSizingOptimization>
+        (case_name, verify_grads, if_nonlin);
     else if (case_name == "plate_bending_single_functional_sizing_optimization")
-        optimization<MAST::PlateBendingSingleStressFunctionalSizingOptimization>(case_name);
+        plate_optimization<MAST::PlateBendingSingleStressFunctionalSizingOptimization>
+        (case_name, verify_grads, if_nonlin);
     else if (case_name == "plate_bending_section_offset_optimization")
-        optimization<MAST::PlateBendingSectionOffsetSizingOptimization>(case_name);
+        plate_optimization<MAST::PlateBendingSectionOffsetSizingOptimization>
+        (case_name, verify_grads, if_nonlin);
     else if (case_name == "plate_bending_thermal_stress_optimization")
-        optimization<MAST::PlateBendingThermalStressSizingOptimization>(case_name);
+        plate_optimization<MAST::PlateBendingThermalStressSizingOptimization>
+        (case_name, verify_grads, if_nonlin);
     else {
         std::cout
         << "Please run the driver with the name of example specified as: \n"
         << "   run_case=<name>"
+        << "   nonlinear=<true/false>"
+        << "   verify_grads=<true/false>"
         << "   with_sensitivity=<true/false>"
         << "   param=<name>\n\n"
         << "Possible values are:\n"
@@ -214,12 +275,14 @@ int main(int argc, char* const argv[]) {
         << "  plate_bending \n"
         << "  plate_bending_section_offset \n"
         << "  plate_bending_thermal_stress \n"
-        << "  plate_bending_optimization \n"
+        << "  plate_bending_sizing_optimization \n"
         << "  plate_bending_single_functional_sizing_optimization \n"
         << "  plate_bending_section_offset_optimization \n"
         << "  plate_bending_thermal_stress_optimization \n"
         << "*  The default for --with_sensitivity is: false.\n"
-        << "*  param is used to specify the parameter name for which sensitivity is desired."
+        << "*  param is used to specify the parameter name for which sensitivity is desired.\n"
+        << "*  nonlinear is used to turn on/off nonlinear stiffening in the problem.\n"
+        << "*  verify_grads=true will also verify the gradients of the optimization problem before calling the optimizer.\n"
         << std::endl;
     }
     
