@@ -109,6 +109,10 @@ cmake ../ -Dlibmesh_dir=~/Documents/codes/libmesh/real \
 -Dblas_lib_dir=/usr/lib -Dboost_lib_dir=/opt/local/lib \
 -Dgcmma_lib_file=gcmma \
 -Dgcmma_lib_dir=~/Documents/codes/numerical_lib/gcmma/build \
+-Ddot_lib_file=dot \
+-Ddot_lib_dir=~/Documents/codes/numerical_lib/optimization_codes/dot/build \
+-Dnpsol_lib_file=npsol \
+-Dnpsol_lib_dir=~/Documents/codes/numerical_lib/optimization_codes/npsol/build \
 -Dfortran_lib_file=libgfortran.3.dylib \
 -Dfortran_lib_dir=/opt/local/lib/libgcc \
 -Dboost_test_lib=boost_unit_test_framework-mt \

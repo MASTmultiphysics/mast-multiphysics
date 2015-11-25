@@ -23,6 +23,10 @@ set (mpi_include_dir   "mpi-include-dir" CACHE STRING "Directory containing MPI 
 set (mpi_lib_dir       "mpi-lib-dir" CACHE STRING "Directory containing MPI library files")
 set (gcmma_lib_file    "gcmma-lib-file" CACHE STRING "GCMMA optimization library")
 set (gcmma_lib_dir     "gcmma-lib-dir" CACHE STRING "Directory containing GCMMA optimization library")
+set (dot_lib_file      "dot-lib-file" CACHE STRING "DOT optimization library")
+set (dot_lib_dir       "dot-lib-dir" CACHE STRING "Directory containing DOT optimization library")
+set (npsol_lib_file    "npsol-lib-file" CACHE STRING "NPSOL optimization library")
+set (npsol_lib_dir     "npsol-lib-dir" CACHE STRING "Directory containing NPSOL optimization library")
 set (fortran_lib_file  "fortran-lib-file" CACHE STRING "fortran library")
 set (fortran_lib_dir   "fortran-lib-dir" CACHE STRING "Directory containing fortran library")
 set (lapack_lib_file   "lapack" CACHE STRING "LAPACK library")
@@ -59,6 +63,8 @@ find_library (mpi_lib       mpi                  ${mpi_lib_dir})
 find_library (boost_unit_test_lib   ${boost_test_lib}    ${boost_lib_dir})
 
 find_library (gcmma_lib   ${gcmma_lib_file}    ${gcmma_lib_dir})
+find_library (dot_lib     ${dot_lib_file}      ${dot_lib_dir})
+find_library (npsol_lib   ${npsol_lib_file}    ${npsol_lib_dir})
 
 find_library (fortran_lib   ${fortran_lib_file}    ${fortran_lib_dir})
 
@@ -88,13 +94,14 @@ add_library (mast ${mast_source_files})
 target_link_libraries (mast  
 		      debug ${mesh_dbg}
 		      optimized ${mesh_opt}
-		      #gcmma
 		      ${petsc_lib}
 		      ${lapack_lib}
 		      ${blas_lib}
 		      #${vtk_lib}
 		      #${tbb_lib}
 		      ${gcmma_lib}
+		      ${dot_lib}
+		      ${npsol_lib}
 		      ${fortran_lib}
 		      ${mpicxx_lib}
 		      ${mpi_lib})
