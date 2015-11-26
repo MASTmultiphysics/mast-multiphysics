@@ -17,8 +17,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#ifndef __mast_plate_optimization_base_h__
-#define __mast_plate_optimization_base_h__
+#ifndef __mast_stiffened_plate_optimization_base_h__
+#define __mast_stiffened_plate_optimization_base_h__
 
 // C++ includes
 #include <map>
@@ -31,6 +31,7 @@
 
 // libMesh includes
 #include "libmesh/point.h"
+#include "libmesh/mesh_base.h"
 
 namespace MAST {
     
@@ -39,18 +40,18 @@ namespace MAST {
      *   Function object evaluates the PlateWeight and its sensitivity with
      *   respect to the specified variable.
      */
-    class PlateWeight: public MAST::FieldFunction<Real> {
+    class StiffenedPlateWeight: public MAST::FieldFunction<Real> {
     public:
         
         /*!
          *   Constructor requires the mesh and the
          */
-        PlateWeight(MAST::PhysicsDisciplineBase& discipline);
+        StiffenedPlateWeight(MAST::PhysicsDisciplineBase& discipline);
         
         /*!
          *  copy constructor
          */
-        PlateWeight(const MAST::PlateWeight& w);
+        StiffenedPlateWeight(const MAST::StiffenedPlateWeight& w);
         
         /*!
          *  @returns a new object as a clone, encapsulated in a smart-pointer
@@ -60,7 +61,7 @@ namespace MAST {
         /*!
          *  virtual destructor
          */
-        virtual ~PlateWeight();
+        virtual ~StiffenedPlateWeight();
         
     protected:
         
@@ -92,8 +93,45 @@ namespace MAST {
                                 Real t,
                                 Real& v) const ;
     };
+    
+
+    /*!
+     *    builds the mesh for a stiffened panel
+     */
+    class StiffenedPanelMesh {
+    public:
+        StiffenedPanelMesh() { }
+        
+        ~StiffenedPanelMesh() { }
+        
+        
+        void init (const unsigned int n_stiff,
+                   const unsigned int n_x_divs,
+                   const unsigned int n_y_divs_between_stiffeners,
+                   const Real length,
+                   const Real width,
+                   libMesh::MeshBase& mesh,
+                   libMesh::ElemType t,
+                   bool beam_stiffeners);
+        
+    protected:
+        
+        enum Component {
+            PANEL,
+            STIFFENER_X,
+            STIFFENER_Y
+        };
+        
+        void _combine_mesh(libMesh::MeshBase& panel,
+                           libMesh::MeshBase& stiffener,
+                           MAST::StiffenedPanelMesh::Component c,
+                           Real stiff_offset,
+                           libMesh::subdomain_id_type sid);
+        
+    };
+    
 }
 
 
-#endif // __mast_plate_optimization_base_h__
+#endif // __mast_stiffened__plate_optimization_base_h__
 

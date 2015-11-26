@@ -17,21 +17,22 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#ifndef __mast_beam_optimization_h__
-#define __mast_beam_optimization_h__
+#ifndef __mast_stiffened_plate_thermal_stress_optimization_h__
+#define __mast_stiffened_plate_thermal_stress_optimization_h__
 
 // C++ includes
 #include <memory>
 
 // MAST includes
 #include "examples/base/multilinear_interpolation.h"
-#include "examples/structural/beam_optimization/beam_optimization_base.h"
+#include "examples/structural/plate_optimization/plate_optimization_base.h"
 #include "base/field_function_base.h"
 #include "base/physics_discipline_base.h"
 #include "elasticity/structural_discipline.h"
 #include "elasticity/structural_system_initialization.h"
 #include "property_cards/isotropic_material_property_card.h"
 #include "property_cards/solid_1d_section_element_property_card.h"
+#include "property_cards/solid_2d_section_element_property_card.h"
 #include "base/parameter.h"
 #include "base/constant_field_function.h"
 #include "optimization/gcmma_optimization_interface.h"
@@ -65,22 +66,29 @@ namespace MAST {
     class Parameter;
     class ConstantFieldFunction;
     class IsotropicMaterialPropertyCard;
-    class Solid1DSectionElementPropertyCard;
+    class Solid2DSectionElementPropertyCard;
     class DirichletBoundaryCondition;
     class BoundaryConditionBase;
     class StressStrainOutputBase;
     class StructuralNonlinearAssembly;
+    class SectionOffset;
+    class StiffenedPlateWeight;
     
     
-    struct BeamBendingSizingOptimization:
+    struct StiffenedPlateBendingThermalStressSizingOptimization:
     public MAST::FunctionEvaluation {
         
         
-        BeamBendingSizingOptimization(GetPot& infile,
-                                      std::ostream& output);
+        StiffenedPlateBendingThermalStressSizingOptimization(std::ostream& output);
         
         
-        ~BeamBendingSizingOptimization();
+        ~StiffenedPlateBendingThermalStressSizingOptimization();
+        
+        /*!
+         *   initializes the object for specified characteristics
+         */
+        void init(GetPot& infile, libMesh::ElemType e_type, bool if_vk);
+
         
         /*!
          *   initialize the design variables values and bounds
@@ -109,8 +117,7 @@ namespace MAST {
                             Real obj,
                             const std::vector<Real>& fval,
                             bool if_write_to_optim_file) const;
-
-                
+        
         /*!
          *  @returns a pointer to the function that evaluates the objective
          */
@@ -124,24 +131,33 @@ namespace MAST {
         virtual MAST::FunctionEvaluation::funcon
         get_constraint_evaluation_function();
 
-        
         /*!
          *   clears the stress data structures for a followup analysis
          */
         void clear_stresss();
         
         
-        // length of domain
-        Real _length;
+        bool _initialized;
 
         
         // length of domain
-        Real _stress_limit;
+        Real _length;
+        
+        // width of domain
+        Real _width;
 
+        // length of domain
+        Real _stress_limit;
+        
         // number of elements and number of stations at which DVs are defined
         unsigned int
+        _n_divs_x,
+        _n_divs_between_stiff,
+        _n_stiff, // assumed along x-axis with equidistance spacing
+        _n_plate_elems,
+        _n_elems_per_stiff,
         _n_elems,
-        _n_stations;
+        _n_dv_stations_x;
         
         // create the mesh
         libMesh::SerialMesh*           _mesh;
@@ -161,55 +177,89 @@ namespace MAST {
         
         // create the property functions and add them to the
         MAST::Parameter
-        *_thz,
         *_E,
+        *_alpha,
         *_nu,
+        *_kappa,
         *_rho,
-        *_press,
+        *_temp,
+        *_thz_stiff,
         *_zero;
         
         MAST::ConstantFieldFunction
-        *_thz_f,
         *_E_f,
         *_nu_f,
+        *_alpha_f,
+        *_kappa_f,
         *_rho_f,
-        *_hyoff_f,
-        *_hzoff_f,
-        *_press_f;
+        *_temp_f,
+        *_thz_stiff_f,
+        *_thzoff_stiff_f,
+        *_ref_temp_f;
+
         
+        // section offset for plate
+        MAST::SectionOffset*                            _hoff_plate_f;
+        
+        // section offset for each stiffener
+        std::vector<MAST::SectionOffset*>               _hyoff_stiff_f;
         
         // Weight function to calculate the weight of the structure
-        MAST::BeamWeight *_weight;
+        MAST::StiffenedPlateWeight *                    _weight;
         
         // create the material property card
         MAST::IsotropicMaterialPropertyCard*            _m_card;
         
-        // create the element property card
-        MAST::Solid1DSectionElementPropertyCard*        _p_card;
-        
+        // create the element property card for the plate
+        MAST::Solid2DSectionElementPropertyCard*        _p_card_plate;
+
+        // create the element property card, one for each stiffener
+        std::vector<MAST::Solid1DSectionElementPropertyCard*>   _p_card_stiff;
+
         // create the Dirichlet boundary condition on left edge
         MAST::DirichletBoundaryCondition*               _dirichlet_left;
         
         // create the Dirichlet boundary condition on right edge
         MAST::DirichletBoundaryCondition*               _dirichlet_right;
         
-        // create the pressure boundary condition
-        MAST::BoundaryConditionBase*                    _p_load;
+        // create the Dirichlet boundary condition on bottom edge
+        MAST::DirichletBoundaryCondition*               _dirichlet_bottom;
+        
+        // create the Dirichlet boundary condition on top edge
+        MAST::DirichletBoundaryCondition*               _dirichlet_top;
+        
+        // create the temperature load
+        MAST::BoundaryConditionBase*                    _T_load;
         
         // output quantity objects to evaluate stress
         std::vector<MAST::StressStrainOutputBase*>      _outputs;
         
-
+        
         // stationwise parameter definitions
-        std::vector<MAST::Parameter*>                   _thy_station_parameters;
+        std::vector<MAST::Parameter*>
+        _th_station_parameters_plate,
+        _th_station_parameters_stiff; // N_stiff*N_stations params
         
         // stationwise function objects for thickness
-        std::vector<MAST::ConstantFieldFunction*>       _thy_station_functions;
+        std::vector<MAST::ConstantFieldFunction*>
+        _th_station_functions_plate,
+        _th_station_functions_stiff; // N_stiff*N_stations functions
         
         /*!
          *   interpolates thickness between stations
          */
-        std::auto_ptr<MAST::MultilinearInterpolation>   _thy_f;
+        std::auto_ptr<MAST::MultilinearInterpolation>   _th_plate_f;
+
+        /*!
+         *   interpolates thickness between stations
+         */
+        std::vector<MAST::MultilinearInterpolation*> _thy_stiff_f; // one per stiffener
+
+        
+        /*!
+         *   vector of problem parameters
+         */
+        std::vector<MAST::Parameter*>                _problem_parameters;
         
         /*!
          *   scaling parameters for design optimization problem
@@ -222,4 +272,5 @@ namespace MAST {
 }
 
 
-#endif /* __mast_beam_optimization_h__ */
+#endif /* __mast_stiffened_plate_thermal_stress_optimization_h__ */
+

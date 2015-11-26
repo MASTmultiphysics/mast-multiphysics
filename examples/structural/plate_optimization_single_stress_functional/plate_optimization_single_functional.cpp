@@ -320,7 +320,7 @@ init(GetPot& infile,
     }
     
     // now create the h_y function and give it to the property card
-    _th_f.reset(new MAST::PlateMultilinearInterpolation("h", th_station_vals));
+    _th_f.reset(new MAST::MultilinearInterpolation("h", th_station_vals));
     
     
     // create the property functions and add them to the
@@ -399,6 +399,8 @@ init(GetPot& infile,
         pts.push_back(libMesh::Point(1./3., 2./3., 1.)); // upper skin
         pts.push_back(libMesh::Point(1./3., 2./3.,-1.)); // lower skin
     }
+    else
+        libmesh_assert(false); // should not get here
 
 
     _outputs = new MAST::StressStrainOutputBase;
@@ -439,12 +441,14 @@ MAST::PlateBendingSingleStressFunctionalSizingOptimization::
         delete _kappa_f;
         delete _hoff_f;
         delete _press_f;
+        delete _rho_f;
         
         delete _E;
         delete _nu;
         delete _kappa;
         delete _zero;
         delete _press;
+        delete _rho;
         
         delete _weight;
         
@@ -673,11 +677,7 @@ output(unsigned int iter,
        bool if_write_to_optim_file) const {
     
     libmesh_assert_equal_to(x.size(), _n_vars);
-    
-    // set the parameter values equal to the DV value
-    for (unsigned int i=0; i<_n_vars; i++)
-        *_th_station_parameters[i] = x[i];
-    
+        
     // write the solution for visualization
     libMesh::ExodusII_IO(*_mesh).write_equation_systems("output.exo",
                                                         *_eq_sys);

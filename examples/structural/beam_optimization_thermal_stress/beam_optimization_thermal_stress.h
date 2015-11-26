@@ -24,6 +24,7 @@
 #include <memory>
 
 // MAST includes
+#include "examples/base/multilinear_interpolation.h"
 #include "examples/structural/beam_optimization/beam_optimization_base.h"
 #include "base/field_function_base.h"
 #include "base/physics_discipline_base.h"
@@ -165,7 +166,7 @@ namespace MAST {
         *_ref_temp_f;
         
         
-        MAST::BeamOffset *_hyoff_f;
+        MAST::SectionOffset *_hyoff_f;
 
         // Weight function to calculate the weight of the structure
         MAST::BeamWeight *_weight;
@@ -198,7 +199,7 @@ namespace MAST {
         /*!
          *   interpolates thickness between stations
          */
-        std::auto_ptr<MAST::BeamMultilinearInterpolation>   _thy_f;
+        std::auto_ptr<MAST::MultilinearInterpolation>   _thy_f;
         
         /*!
          *   scaling parameters for design optimization problem

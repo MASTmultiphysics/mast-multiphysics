@@ -23,6 +23,7 @@
 
 // MAST includes
 #include "examples/structural/plate_bending_thermal_stress/plate_bending_thermal_stress.h"
+#include "examples/base/multilinear_interpolation.h"
 #include "examples/structural/plate_optimization/plate_optimization_base.h"
 #include "elasticity/structural_system_initialization.h"
 #include "elasticity/structural_element_base.h"
@@ -143,7 +144,9 @@ MAST::PlateBendingThermalStress::init(libMesh::ElemType e_type,
     _nu_f            = new MAST::ConstantFieldFunction("nu",          *_nu);
     _temp_f          = new MAST::ConstantFieldFunction("temperature", *_temp);
     _ref_temp_f      = new MAST::ConstantFieldFunction("ref_temperature", *_zero);
-    _hoff_f          = new MAST::PlateOffset("off", _th_f->clone().release());
+    _hoff_f          = new MAST::SectionOffset("off",
+                                               _th_f->clone().release(),
+                                               1.);
     
     // initialize the load
     _T_load          = new MAST::BoundaryConditionBase(MAST::TEMPERATURE);
@@ -205,6 +208,8 @@ MAST::PlateBendingThermalStress::init(libMesh::ElemType e_type,
         pts.push_back(libMesh::Point(1./3., 2./3., 1.)); // upper skin
         pts.push_back(libMesh::Point(1./3., 2./3.,-1.)); // lower skin
     }
+    else
+        libmesh_assert(false); // should not get here
 
     for ( ; e_it != e_end; e_it++) {
         

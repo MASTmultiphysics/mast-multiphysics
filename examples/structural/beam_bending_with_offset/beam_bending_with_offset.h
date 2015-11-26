@@ -51,7 +51,7 @@ namespace MAST {
     class DirichletBoundaryCondition;
     class BoundaryConditionBase;
     class StressStrainOutputBase;
-    class BeamOffset;
+    class SectionOffset;
     
     struct BeamBendingWithOffset {
         
@@ -124,7 +124,7 @@ namespace MAST {
         *_press_f;
 
         
-        MAST::BeamOffset *_hyoff_f;
+        MAST::SectionOffset *_hyoff_f;
         
         // create the material property card
         MAST::IsotropicMaterialPropertyCard*     _m_card;

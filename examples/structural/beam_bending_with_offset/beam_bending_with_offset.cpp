@@ -23,6 +23,7 @@
 
 // MAST includes
 #include "examples/structural/beam_bending_with_offset/beam_bending_with_offset.h"
+#include "examples/base/multilinear_interpolation.h"
 #include "examples/structural/beam_optimization/beam_optimization_base.h"
 #include "elasticity/structural_system_initialization.h"
 #include "elasticity/structural_element_base.h"
@@ -112,7 +113,9 @@ MAST::BeamBendingWithOffset::BeamBendingWithOffset() {
     _nu_f            = new MAST::ConstantFieldFunction("nu",     *_nu);
     _hzoff_f         = new MAST::ConstantFieldFunction("hz_off", *_zero);
     _press_f         = new MAST::ConstantFieldFunction("pressure", *_press);
-    _hyoff_f         = new MAST::BeamOffset("hy_off", _thy_f->clone().release());
+    _hyoff_f         = new MAST::SectionOffset("hy_off",
+                                               _thy_f->clone().release(),
+                                               1.);
     
     // initialize the load
     _p_load          = new MAST::BoundaryConditionBase(MAST::SURFACE_PRESSURE);

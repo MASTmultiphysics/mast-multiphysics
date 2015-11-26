@@ -24,6 +24,7 @@
 #include <memory>
 
 // MAST includes
+#include "examples/base/multilinear_interpolation.h"
 #include "examples/structural/plate_optimization/plate_optimization_base.h"
 #include "base/field_function_base.h"
 #include "base/physics_discipline_base.h"
@@ -69,7 +70,7 @@ namespace MAST {
     class BoundaryConditionBase;
     class StressStrainOutputBase;
     class StructuralNonlinearAssembly;
-    class PlateOffset;
+    class SectionOffset;
     
     
     struct PlateBendingThermalStressSizingOptimization:
@@ -189,7 +190,7 @@ namespace MAST {
         *_ref_temp_f;
         
         // Section offset
-        MAST::PlateOffset*                       _hoff_f;
+        MAST::SectionOffset*                       _hoff_f;
         
         // Weight function to calculate the weight of the structure
         MAST::PlateWeight *_weight;
@@ -228,7 +229,7 @@ namespace MAST {
         /*!
          *   interpolates thickness between stations
          */
-        std::auto_ptr<MAST::PlateMultilinearInterpolation>   _th_f;
+        std::auto_ptr<MAST::MultilinearInterpolation>   _th_f;
         
         /*!
          *   scaling parameters for design optimization problem

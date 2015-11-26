@@ -189,6 +189,8 @@ MAST::MembraneExtensionUniaxial::MembraneExtensionUniaxial() {
         pts.push_back(libMesh::Point(1./3., 2./3., 1.)); // upper skin
         pts.push_back(libMesh::Point(1./3., 2./3.,-1.)); // lower skin
     }
+    else
+        libmesh_assert(false); // should not get here
 
     for ( ; e_it != e_end; e_it++) {
         

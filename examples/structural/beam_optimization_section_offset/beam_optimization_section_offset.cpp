@@ -161,7 +161,7 @@ _n_stations(0) {
     }
     
     // now create the h_y function and give it to the property card
-    _thy_f.reset(new MAST::BeamMultilinearInterpolation("hy", thy_station_vals));
+    _thy_f.reset(new MAST::MultilinearInterpolation("hy", thy_station_vals));
 
     
     // create the property functions and add them to the
@@ -180,7 +180,9 @@ _n_stations(0) {
     _rho_f           = new MAST::ConstantFieldFunction("rho",        *_rho);
     _hzoff_f         = new MAST::ConstantFieldFunction("hz_off",    *_zero);
     _press_f         = new MAST::ConstantFieldFunction("pressure", *_press);
-    _hyoff_f         = new MAST::BeamOffset( "hy_off", _thy_f->clone().release());
+    _hyoff_f         = new MAST::SectionOffset( "hy_off",
+                                               _thy_f->clone().release(),
+                                               1.);
     
     // initialize the load
     _p_load          = new MAST::BoundaryConditionBase(MAST::SURFACE_PRESSURE);
@@ -257,12 +259,14 @@ MAST::BeamBendingSectionOffsetSizingOptimization::~BeamBendingSectionOffsetSizin
     delete _hyoff_f;
     delete _hzoff_f;
     delete _press_f;
+    delete _rho_f;
     
     delete _thz;
     delete _E;
     delete _nu;
     delete _zero;
     delete _press;
+    delete _rho;
     
     delete _weight;
     
@@ -469,10 +473,6 @@ MAST::BeamBendingSectionOffsetSizingOptimization::output(unsigned int iter,
                                             bool if_write_to_optim_file) const {
     
     libmesh_assert_equal_to(x.size(), _n_vars);
-    
-    // set the parameter values equal to the DV value
-    for (unsigned int i=0; i<_n_vars; i++)
-        *_thy_station_parameters[i] = x[i];
     
     MAST::FunctionEvaluation::output(iter, x, obj, fval, if_write_to_optim_file);
 }

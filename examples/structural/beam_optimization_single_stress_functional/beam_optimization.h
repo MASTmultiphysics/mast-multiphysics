@@ -24,6 +24,7 @@
 #include <memory>
 
 // MAST includes
+#include "examples/base/multilinear_interpolation.h"
 #include "examples/structural/beam_optimization/beam_optimization_base.h"
 #include "base/field_function_base.h"
 #include "base/physics_discipline_base.h"
@@ -194,7 +195,7 @@ namespace MAST {
         /*!
          *   interpolates thickness between stations
          */
-        std::auto_ptr<MAST::BeamMultilinearInterpolation>   _thy_f;
+        std::auto_ptr<MAST::MultilinearInterpolation>   _thy_f;
         
         /*!
          *   scaling parameters for design optimization problem

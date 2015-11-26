@@ -21,9 +21,9 @@
 #include <iostream>
 
 // MAST includes
-#include "examples/structural/plate_optimization_thermal_stress/plate_thermal_stress_optimization.h"
-#include "examples/base/multilinear_interpolation.h"
-#include "examples/structural/plate_optimization/plate_optimization_base.h"
+#include "examples/structural/stiffened_plate_optimization_thermal_stress/stiffened_plate_thermal_stress_optimization.h"
+#include "examples/structural/stiffened_plate_optimization/stiffened_plate_optimization_base.h"
+#include "examples/structural/beam_bending/beam_bending.h"
 #include "driver/driver_base.h"
 #include "elasticity/stress_output_base.h"
 #include "optimization/optimization_interface.h"
@@ -32,7 +32,6 @@
 
 // libMesh includes
 #include "libmesh/parallel_mesh.h"
-#include "libmesh/mesh_generation.h"
 #include "libmesh/exodusII_io.h"
 #include "libmesh/numeric_vector.h"
 #include "libmesh/getpot.h"
@@ -45,12 +44,12 @@ MAST::FunctionEvaluation *__my_func_eval;
 
 
 void
-plate_thermal_stress_optim_obj(int*    mode,
-                               int*    n,
-                               double* x,
-                               double* f,
-                               double* g,
-                               int*    nstate) {
+stiffened_plate_thermal_stress_optim_obj(int*    mode,
+                                         int*    n,
+                                         double* x,
+                                         double* f,
+                                         double* g,
+                                         int*    nstate) {
     
     
     // make sure that the global variable has been setup
@@ -102,15 +101,15 @@ plate_thermal_stress_optim_obj(int*    mode,
 
 
 void
-plate_thermal_stress_optim_con(int*    mode,
-                               int*    ncnln,
-                               int*    n,
-                               int*    ldJ,
-                               int*    needc,
-                               double* x,
-                               double* c,
-                               double* cJac,
-                               int*    nstate) {
+stiffened_plate_thermal_stress_optim_con(int*    mode,
+                                         int*    ncnln,
+                                         int*    n,
+                                         int*    ldJ,
+                                         int*    needc,
+                                         double* x,
+                                         double* c,
+                                         double* cJac,
+                                         int*    nstate) {
     
     
     // make sure that the global variable has been setup
@@ -168,37 +167,49 @@ plate_thermal_stress_optim_con(int*    mode,
 
 
 
-MAST::PlateBendingThermalStressSizingOptimization::
-PlateBendingThermalStressSizingOptimization(std::ostream& output):
+MAST::StiffenedPlateBendingThermalStressSizingOptimization::
+StiffenedPlateBendingThermalStressSizingOptimization(std::ostream& output):
 MAST::FunctionEvaluation(output),
 _initialized(false),
 _n_divs_x(0),
-_n_divs_y(0),
+_n_divs_between_stiff(0),
+_n_stiff(0),
+_n_plate_elems(0),
+_n_elems_per_stiff(0),
 _n_elems(0),
-_n_stations_x(0) { }
+_n_dv_stations_x(0)
+{ }
+
+
 
 
 void
-MAST::PlateBendingThermalStressSizingOptimization::
+MAST::StiffenedPlateBendingThermalStressSizingOptimization::
 init(GetPot& infile,
      libMesh::ElemType e_type,
      bool if_vk) {
-
+    
     libmesh_assert(!_initialized);
     
     // number of elements
-    _n_divs_x    = infile("n_divs_x", 16);
-    _n_divs_y    = infile("n_divs_y", 16);
-    _n_elems     = _n_divs_x*_n_divs_y;
+    _n_divs_x                = infile("n_divs_x",             16);
+    _n_divs_between_stiff    = infile("n_divs_between_stiff",  5);
+    _n_stiff                 = infile("n_stiffeners",          3);
+
+    _n_plate_elems           = _n_divs_x*(_n_stiff+1)*_n_divs_between_stiff;
     if (e_type == libMesh::TRI3)
-        _n_elems    *= 2;
+        _n_plate_elems    *= 2;
+
+    _n_elems_per_stiff       = _n_divs_x;
+    _n_elems                 = _n_plate_elems + _n_stiff * _n_elems_per_stiff;
+
     
     // number of stations
-    _n_stations_x = infile("n_stations", 8);
+    _n_dv_stations_x         = infile("n_stations", 4);
     
     
     // now setup the optimization data
-    _n_vars                = _n_stations_x; // for thickness variable
+    _n_vars                = _n_dv_stations_x + _n_dv_stations_x * _n_stiff; // for thickness variable
     _n_eq                  = 0;
     _n_ineq                = _n_elems;   // one element stress functional per elem
     _max_iters             = 1000;
@@ -216,11 +227,15 @@ init(GetPot& infile,
     _mesh          = new libMesh::SerialMesh(_init->comm());
     
     // initialize the mesh with one element
-    libMesh::MeshTools::Generation::build_square(*_mesh,
-                                                 _n_divs_x, _n_divs_y,
-                                                 0, _length,
-                                                 0, _width,
-                                                 e_type);
+    MAST::StiffenedPanelMesh panel_mesh;
+    panel_mesh.init(_n_stiff,
+                    _n_divs_x,
+                    _n_divs_between_stiff,
+                    _length,
+                    _width,
+                    *_mesh,
+                    e_type,
+                    true);
     _mesh->prepare_for_use();
     
     // create the equation system
@@ -274,28 +289,29 @@ init(GetPot& infile,
     th_l                   = infile("thickness_lower", 0.0001),
     th_u                   = infile("thickness_upper",    0.2),
     th                     = infile("thickness",          0.2),
-    dx                     = _length/(_n_stations_x-1);
+    dx                     = _length/(_n_dv_stations_x-1);
     
     _dv_init.resize    (_n_vars);
     _dv_scaling.resize (_n_vars);
     _dv_low.resize     (_n_vars);
+    _problem_parameters.resize(_n_vars);
     
     // design variables for the thickness values
     for (unsigned int i=0; i<_n_vars; i++) {
         
         _dv_init[i]    =  infile("dv_init", th/th_u, i);
-        _dv_low[i]     = th_l/th_u;
+        _dv_low[i]     =  th_l/th_u;
         _dv_scaling[i] =      th_u;
     }
     
     
     // create the thickness variables
-    _th_station_parameters.resize(_n_vars);
-    _th_station_functions.resize(_n_vars);
+    _th_station_parameters_plate.resize(_n_dv_stations_x);
+    _th_station_functions_plate.resize(_n_dv_stations_x);
     
     std::map<Real, MAST::FieldFunction<Real>*> th_station_vals;
     
-    for (unsigned int i=0; i<_n_stations_x; i++) {
+    for (unsigned int i=0; i<_n_dv_stations_x; i++) {
         std::ostringstream oss;
         oss << "h_" << i;
         
@@ -313,18 +329,19 @@ init(GetPot& infile,
                                (i*dx, h_f));
         
         // add the function to the parameter set
-        _th_station_parameters[i]          = h;
-        _th_station_functions[i]           = h_f;
+        _th_station_parameters_plate[i]          = h;
+        _th_station_functions_plate[i]           = h_f;
         
         // tell the assembly system about the sensitvity parameter
         _discipline->add_parameter(*h);
+        _problem_parameters[i] = h;
     }
     
     // now create the h_y function and give it to the property card
-    _th_f.reset(new MAST::MultilinearInterpolation("h", th_station_vals));
+    _th_plate_f.reset(new MAST::MultilinearInterpolation("h", th_station_vals));
     
     
-    // create the property functions and add them to the
+    // create the property functions and add them to the card
     
     _E               = new MAST::Parameter(   "E", infile("E",    72.e9));
     _nu              = new MAST::Parameter(  "nu", infile("nu",    0.33));
@@ -333,6 +350,7 @@ init(GetPot& infile,
     _rho             = new MAST::Parameter( "rho", infile("rho", 2700.0));
     _zero            = new MAST::Parameter("zero",                    0.);
     _temp            = new MAST::Parameter( "temperature",infile("temp", 300.));
+    _thz_stiff       = new MAST::Parameter( "thz", infile("thz", 0.01)); // currently, an arbitrary thickness
     
     
     _E_f             = new MAST::ConstantFieldFunction("E",            *_E);
@@ -342,15 +360,19 @@ init(GetPot& infile,
     _rho_f           = new MAST::ConstantFieldFunction("rho",        *_rho);
     _temp_f          = new MAST::ConstantFieldFunction("temperature", *_temp);
     _ref_temp_f      = new MAST::ConstantFieldFunction("ref_temperature", *_zero);
-    _hoff_f          = new MAST::SectionOffset("off",
-                                               _th_f->clone().release(),
-                                               1.);
+    _thz_stiff_f     = new MAST::ConstantFieldFunction("hz",    *_thz_stiff);
+    _thzoff_stiff_f  = new MAST::ConstantFieldFunction("hz_off",     *_zero);
+    _hoff_plate_f          = new MAST::SectionOffset("off",
+                                                     _th_plate_f->clone().release(),
+                                                     1.);
     
     // initialize the load
     _T_load          = new MAST::BoundaryConditionBase(MAST::TEMPERATURE);
     _T_load->add(*_temp_f);
     _T_load->add(*_ref_temp_f);
-    _discipline->add_volume_load(0, *_T_load);
+    _discipline->add_volume_load(0, *_T_load);          // for the panel
+    for (unsigned int i=0; i<_n_stiff; i++)
+        _discipline->add_volume_load(i+1, *_T_load);    // for the stiffeners
     
     // create the material property card
     _m_card         = new MAST::IsotropicMaterialPropertyCard;
@@ -363,17 +385,92 @@ init(GetPot& infile,
     _m_card->add(*_alpha_f);
     
     // create the element property card
-    _p_card         = new MAST::Solid2DSectionElementPropertyCard;
+    _p_card_plate         = new MAST::Solid2DSectionElementPropertyCard;
     
     // add the section properties to the card
-    _p_card->add(*_th_f);
-    _p_card->add(*_hoff_f);
+    _p_card_plate->add(*_th_plate_f);
+    _p_card_plate->add(*_hoff_plate_f);
     
     // tell the section property about the material property
-    _p_card->set_material(*_m_card);
-    if (if_vk) _p_card->set_strain(MAST::VON_KARMAN_STRAIN);
+    _p_card_plate->set_material(*_m_card);
+    if (if_vk) _p_card_plate->set_strain(MAST::VON_KARMAN_STRAIN);
     
-    _discipline->set_property_for_subdomain(0, *_p_card);
+    _discipline->set_property_for_subdomain(0, *_p_card_plate);
+
+    
+    // now add the property cards for each stiffener
+    // element orientation
+    libMesh::Point orientation;
+    orientation(2) = 1.;
+    
+    // property card per stiffener
+    _p_card_stiff.resize(_n_stiff);
+    
+    // thickness per stiffener station
+    _th_station_parameters_stiff.resize(_n_dv_stations_x*_n_stiff);
+    _th_station_functions_stiff.resize(_n_dv_stations_x*_n_stiff);
+    _thy_stiff_f.resize(_n_stiff);
+    _hyoff_stiff_f.resize(_n_stiff);
+    
+    for (unsigned int i=0; i<_n_stiff; i++) {
+        
+        // this map is used to store the thickness parameter along length
+        th_station_vals.clear();
+        
+        // first define the thickness station parameters and the thickness
+        // field function
+        for (unsigned int j=0; j<_n_dv_stations_x; j++) {
+            std::ostringstream oss;
+            oss << "h_y_" << j;
+            
+            // now we need a parameter that defines the thickness at the
+            // specified station and a constant function that defines the
+            // field function at that location.
+            MAST::Parameter* h_y               =
+            new MAST::Parameter(oss.str(), infile("thickness", 0.002));
+            
+            MAST::ConstantFieldFunction* h_y_f =
+            new MAST::ConstantFieldFunction("hy", *h_y);
+            
+            // add this to the thickness map
+            th_station_vals.insert(std::pair<Real, MAST::FieldFunction<Real>*>
+                                   (j*dx, h_y_f));
+            
+            // add the function to the parameter set
+            _th_station_parameters_stiff[i*_n_dv_stations_x+j]          = h_y;
+            _th_station_functions_stiff [i*_n_dv_stations_x+j]          = h_y_f;
+            
+            // tell the assembly system about the sensitvity parameter
+            _discipline->add_parameter(*h_y);
+            _problem_parameters[(i+1)*_n_dv_stations_x+j] = h_y;
+        }
+        
+        // now create the h_y function and give it to the property card
+        _thy_stiff_f[i]   = new MAST::MultilinearInterpolation("hy", th_station_vals);
+        _hyoff_stiff_f[i] = new MAST::SectionOffset("hy_off",
+                                                    _thy_stiff_f[i]->clone().release(),
+                                                    1.);
+        
+        
+        _p_card_stiff[i]  = new MAST::Solid1DSectionElementPropertyCard;
+        
+        
+        // add the section properties to the card
+        _p_card_stiff[i]->add(*_thy_stiff_f[i]);
+        _p_card_stiff[i]->add(*_thz_stiff_f);
+        _p_card_stiff[i]->add(*_hyoff_stiff_f[i]);
+        _p_card_stiff[i]->add(*_thzoff_stiff_f);
+        _p_card_stiff[i]->y_vector() = orientation;
+        
+        // tell the section property about the material property
+        _p_card_stiff[i]->set_material(*_m_card);
+        if (if_vk) _p_card_stiff[i]->set_strain(MAST::VON_KARMAN_STRAIN);
+        
+        _p_card_stiff[i]->init();
+        
+        // the domain ID of the stiffener is 1 plus the stiff number
+        _discipline->set_property_for_subdomain(i+1, *_p_card_stiff[i]);
+    }
     
     
     // create the output objects, one for each element
@@ -383,34 +480,44 @@ init(GetPot& infile,
     
     // points where stress is evaluated
     std::vector<libMesh::Point> pts;
-
-    if (e_type == libMesh::QUAD4 ||
-        e_type == libMesh::QUAD8 ||
-        e_type == libMesh::QUAD9) {
-        
-        pts.push_back(libMesh::Point(-1/sqrt(3), -1/sqrt(3), 1.)); // upper skin
-        pts.push_back(libMesh::Point(-1/sqrt(3), -1/sqrt(3),-1.)); // lower skin
-        pts.push_back(libMesh::Point( 1/sqrt(3), -1/sqrt(3), 1.)); // upper skin
-        pts.push_back(libMesh::Point( 1/sqrt(3), -1/sqrt(3),-1.)); // lower skin
-        pts.push_back(libMesh::Point( 1/sqrt(3),  1/sqrt(3), 1.)); // upper skin
-        pts.push_back(libMesh::Point( 1/sqrt(3),  1/sqrt(3),-1.)); // lower skin
-        pts.push_back(libMesh::Point(-1/sqrt(3),  1/sqrt(3), 1.)); // upper skin
-        pts.push_back(libMesh::Point(-1/sqrt(3),  1/sqrt(3),-1.)); // lower skin
-    }
-    else if (e_type == libMesh::TRI3 ||
-             e_type == libMesh::TRI6) {
-        
-        pts.push_back(libMesh::Point(1./3., 1./3., 1.)); // upper skin
-        pts.push_back(libMesh::Point(1./3., 1./3.,-1.)); // lower skin
-        pts.push_back(libMesh::Point(2./3., 1./3., 1.)); // upper skin
-        pts.push_back(libMesh::Point(2./3., 1./3.,-1.)); // lower skin
-        pts.push_back(libMesh::Point(1./3., 2./3., 1.)); // upper skin
-        pts.push_back(libMesh::Point(1./3., 2./3.,-1.)); // lower skin
-    }
-    else
-        libmesh_assert(false); // should not get here
-
+    
     for ( ; e_it != e_end; e_it++) {
+    
+        pts.clear();
+        if ((*e_it)->type() == libMesh::QUAD4 ||
+            (*e_it)->type() == libMesh::QUAD8 ||
+            (*e_it)->type() == libMesh::QUAD9) {
+            
+            pts.push_back(libMesh::Point(-1/sqrt(3), -1/sqrt(3), 1.)); // upper skin
+            pts.push_back(libMesh::Point(-1/sqrt(3), -1/sqrt(3),-1.)); // lower skin
+            pts.push_back(libMesh::Point( 1/sqrt(3), -1/sqrt(3), 1.)); // upper skin
+            pts.push_back(libMesh::Point( 1/sqrt(3), -1/sqrt(3),-1.)); // lower skin
+            pts.push_back(libMesh::Point( 1/sqrt(3),  1/sqrt(3), 1.)); // upper skin
+            pts.push_back(libMesh::Point( 1/sqrt(3),  1/sqrt(3),-1.)); // lower skin
+            pts.push_back(libMesh::Point(-1/sqrt(3),  1/sqrt(3), 1.)); // upper skin
+            pts.push_back(libMesh::Point(-1/sqrt(3),  1/sqrt(3),-1.)); // lower skin
+        }
+        else if ((*e_it)->type() == libMesh::TRI3 ||
+                 (*e_it)->type() == libMesh::TRI6) {
+            
+            pts.push_back(libMesh::Point(1./3., 1./3., 1.)); // upper skin
+            pts.push_back(libMesh::Point(1./3., 1./3.,-1.)); // lower skin
+            pts.push_back(libMesh::Point(2./3., 1./3., 1.)); // upper skin
+            pts.push_back(libMesh::Point(2./3., 1./3.,-1.)); // lower skin
+            pts.push_back(libMesh::Point(1./3., 2./3., 1.)); // upper skin
+            pts.push_back(libMesh::Point(1./3., 2./3.,-1.)); // lower skin
+        }
+        else if ((*e_it)->type() == libMesh::EDGE2 ||
+                 (*e_it)->type() == libMesh::EDGE3) {
+            
+            pts.push_back(libMesh::Point(-1/sqrt(3), 1., 0.)); // upper skin
+            pts.push_back(libMesh::Point(-1/sqrt(3),-1., 0.)); // lower skin
+            pts.push_back(libMesh::Point( 1/sqrt(3), 1., 0.)); // upper skin
+            pts.push_back(libMesh::Point( 1/sqrt(3),-1., 0.)); // lower skin
+        }
+        else
+            libmesh_assert(false); // should not get here
+
         
         MAST::StressStrainOutputBase * output = new MAST::StressStrainOutputBase;
         
@@ -431,7 +538,7 @@ init(GetPot& infile,
     
     
     // create the function to calculate weight
-    _weight = new MAST::PlateWeight(*_discipline);
+    _weight = new MAST::StiffenedPlateWeight(*_discipline);
     
     _initialized = true;
 }
@@ -439,12 +546,14 @@ init(GetPot& infile,
 
 
 
-MAST::PlateBendingThermalStressSizingOptimization::~PlateBendingThermalStressSizingOptimization() {
+MAST::StiffenedPlateBendingThermalStressSizingOptimization::
+~StiffenedPlateBendingThermalStressSizingOptimization() {
     
     if (_initialized) {
         
         delete _m_card;
-        delete _p_card;
+        delete _p_card_plate;
+        for (unsigned int i=0; i<_n_stiff; i++) delete _p_card_stiff[i];
         
         delete _T_load;
         delete _dirichlet_bottom;
@@ -456,18 +565,24 @@ MAST::PlateBendingThermalStressSizingOptimization::~PlateBendingThermalStressSiz
         delete _alpha_f;
         delete _nu_f;
         delete _kappa_f;
-        delete _hoff_f;
+        delete _rho_f;
+        delete _hoff_plate_f;
         delete _temp_f;
         delete _ref_temp_f;
-        delete _rho_f;
+        delete _thz_stiff_f;
+        delete _thzoff_stiff_f;
+        for (unsigned int i=0; i<_n_stiff; i++) delete _hyoff_stiff_f[i];
+        for (unsigned int i=0; i<_n_stiff; i++) delete _thy_stiff_f[i];
         
         delete _E;
         delete _nu;
         delete _alpha;
         delete _kappa;
+        delete _rho;
         delete _zero;
         delete _temp;
-        delete _rho;
+        delete _thz_stiff;
+        
         
         delete _weight;
         
@@ -494,17 +609,33 @@ MAST::PlateBendingThermalStressSizingOptimization::~PlateBendingThermalStressSiz
         // delete the h_y station functions
         {
             std::vector<MAST::ConstantFieldFunction*>::iterator
-            it  = _th_station_functions.begin(),
-            end = _th_station_functions.end();
+            it  = _th_station_functions_plate.begin(),
+            end = _th_station_functions_plate.end();
             for (; it != end; it++)  delete *it;
         }
+
         
+        {
+            std::vector<MAST::ConstantFieldFunction*>::iterator
+            it  = _th_station_functions_stiff.begin(),
+            end = _th_station_functions_stiff.end();
+            for (; it != end; it++)  delete *it;
+        }
+
         
         // delete the h_y station parameters
         {
             std::vector<MAST::Parameter*>::iterator
-            it  = _th_station_parameters.begin(),
-            end = _th_station_parameters.end();
+            it  = _th_station_parameters_plate.begin(),
+            end = _th_station_parameters_plate.end();
+            for (; it != end; it++)  delete *it;
+        }
+
+    
+        {
+            std::vector<MAST::Parameter*>::iterator
+            it  = _th_station_parameters_stiff.begin(),
+            end = _th_station_parameters_stiff.end();
             for (; it != end; it++)  delete *it;
         }
     }
@@ -513,9 +644,9 @@ MAST::PlateBendingThermalStressSizingOptimization::~PlateBendingThermalStressSiz
 
 
 void
-MAST::PlateBendingThermalStressSizingOptimization::init_dvar(std::vector<Real>& x,
-                                                             std::vector<Real>& xmin,
-                                                             std::vector<Real>& xmax) {
+MAST::StiffenedPlateBendingThermalStressSizingOptimization::init_dvar(std::vector<Real>& x,
+                                                                      std::vector<Real>& xmin,
+                                                                      std::vector<Real>& xmax) {
     // one DV for each element
     x       = _dv_init;
     xmin    = _dv_low;
@@ -526,20 +657,22 @@ MAST::PlateBendingThermalStressSizingOptimization::init_dvar(std::vector<Real>& 
 
 
 void
-MAST::PlateBendingThermalStressSizingOptimization::evaluate(const std::vector<Real>& dvars,
-                                                            Real& obj,
-                                                            bool eval_obj_grad,
-                                                            std::vector<Real>& obj_grad,
-                                                            std::vector<Real>& fvals,
-                                                            std::vector<bool>& eval_grads,
-                                                            std::vector<Real>& grads) {
+MAST::StiffenedPlateBendingThermalStressSizingOptimization::evaluate(const std::vector<Real>& dvars,
+                                                                     Real& obj,
+                                                                     bool eval_obj_grad,
+                                                                     std::vector<Real>& obj_grad,
+                                                                     std::vector<Real>& fvals,
+                                                                     std::vector<bool>& eval_grads,
+                                                                     std::vector<Real>& grads) {
     
     
     libmesh_assert_equal_to(dvars.size(), _n_vars);
     
     // set the parameter values equal to the DV value
+    // first the plate thickness values
     for (unsigned int i=0; i<_n_vars; i++)
-        (*_th_station_parameters[i]) = dvars[i]*_dv_scaling[i];
+        (*_problem_parameters[i]) = dvars[i]*_dv_scaling[i];
+    
     
     // DO NOT zero out the gradient vector, since GCMMA needs it for the
     // subproblem solution
@@ -570,7 +703,7 @@ MAST::PlateBendingThermalStressSizingOptimization::evaluate(const std::vector<Re
     //////////////////////////////////////////////////////////////////////
     // now solve using appropriate number of load steps this load step
     //////////////////////////////////////////////////////////////////////
-    bool if_vk = (_p_card->strain_type() == MAST::VON_KARMAN_STRAIN);
+    bool if_vk = (_p_card_plate->strain_type() == MAST::VON_KARMAN_STRAIN);
     
     // set the number of load steps
     unsigned int
@@ -588,7 +721,7 @@ MAST::PlateBendingThermalStressSizingOptimization::evaluate(const std::vector<Re
         (*_temp)()  =  T0*(i+1.)/(1.*n_steps);
         _sys->solve();
     }
-    
+
     // calculate the stresses
     _assembly->calculate_outputs(*(_sys->solution));
     
@@ -627,7 +760,7 @@ MAST::PlateBendingThermalStressSizingOptimization::evaluate(const std::vector<Re
         // set gradient of weight
         for (unsigned int i=0; i<_n_vars; i++) {
             _weight->derivative(MAST::PARTIAL_DERIVATIVE,
-                                *_th_station_parameters[i],
+                                *_problem_parameters[i],
                                 pt,
                                 0.,
                                 w_sens);
@@ -654,7 +787,7 @@ MAST::PlateBendingThermalStressSizingOptimization::evaluate(const std::vector<Re
             
             libMesh::ParameterVector params;
             params.resize(1);
-            params[0]  = _th_station_parameters[i]->ptr();
+            params[0]  = _problem_parameters[i]->ptr();
             
             // iterate over each dv and calculate the sensitivity
             _sys->add_sensitivity_solution(0).zero();
@@ -672,7 +805,7 @@ MAST::PlateBendingThermalStressSizingOptimization::evaluate(const std::vector<Re
             for (unsigned int j=0; j<_n_elems; j++)
                 grads[i*_n_elems+j] = _dv_scaling[i]/_stress_limit *
                 _outputs[j]->von_Mises_p_norm_functional_sensitivity_for_all_elems
-                (pval, _th_station_parameters[i]);
+                (pval, _problem_parameters[i]);
         }
     }
     
@@ -686,7 +819,7 @@ MAST::PlateBendingThermalStressSizingOptimization::evaluate(const std::vector<Re
 
 
 void
-MAST::PlateBendingThermalStressSizingOptimization::clear_stresss() {
+MAST::StiffenedPlateBendingThermalStressSizingOptimization::clear_stresss() {
     
     // iterate over the output quantities and delete them
     std::vector<MAST::StressStrainOutputBase*>::iterator
@@ -702,11 +835,11 @@ MAST::PlateBendingThermalStressSizingOptimization::clear_stresss() {
 
 
 void
-MAST::PlateBendingThermalStressSizingOptimization::output(unsigned int iter,
-                                                          const std::vector<Real>& x,
-                                                          Real obj,
-                                                          const std::vector<Real>& fval,
-                                                          bool if_write_to_optim_file) const {
+MAST::StiffenedPlateBendingThermalStressSizingOptimization::output(unsigned int iter,
+                                                                   const std::vector<Real>& x,
+                                                                   Real obj,
+                                                                   const std::vector<Real>& fval,
+                                                                   bool if_write_to_optim_file) const {
     
     libmesh_assert_equal_to(x.size(), _n_vars);
         
@@ -721,16 +854,16 @@ MAST::PlateBendingThermalStressSizingOptimization::output(unsigned int iter,
 
 
 MAST::FunctionEvaluation::funobj
-MAST::PlateBendingThermalStressSizingOptimization::get_objective_evaluation_function() {
+MAST::StiffenedPlateBendingThermalStressSizingOptimization::get_objective_evaluation_function() {
     
-    return plate_thermal_stress_optim_obj;
+    return stiffened_plate_thermal_stress_optim_obj;
 }
 
 
 
 MAST::FunctionEvaluation::funcon
-MAST::PlateBendingThermalStressSizingOptimization::get_constraint_evaluation_function() {
+MAST::StiffenedPlateBendingThermalStressSizingOptimization::get_constraint_evaluation_function() {
     
-    return plate_thermal_stress_optim_con;
+    return stiffened_plate_thermal_stress_optim_con;
 }
 

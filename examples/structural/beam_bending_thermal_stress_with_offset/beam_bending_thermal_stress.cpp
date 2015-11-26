@@ -23,6 +23,7 @@
 
 // MAST includes
 #include "examples/structural/beam_bending_thermal_stress_with_offset/beam_bending_thermal_stress.h"
+#include "examples/base/multilinear_interpolation.h"
 #include "examples/structural/beam_optimization/beam_optimization_base.h"
 #include "elasticity/structural_system_initialization.h"
 #include "elasticity/structural_element_base.h"
@@ -122,7 +123,9 @@ MAST::BeamBendingThermalStress::BeamBendingThermalStress() {
     _hzoff_f         = new MAST::ConstantFieldFunction("hz_off", *_zero);
     _temp_f          = new MAST::ConstantFieldFunction("temperature", *_temp);
     _ref_temp_f      = new MAST::ConstantFieldFunction("ref_temperature", *_zero);
-    _hyoff_f         = new MAST::BeamOffset("hy_off", _thy_f->clone().release());
+    _hyoff_f         = new MAST::SectionOffset("hy_off",
+                                               _thy_f->clone().release(),
+                                               1.);
     
     // initialize the load
     _T_load          = new MAST::BoundaryConditionBase(MAST::TEMPERATURE);

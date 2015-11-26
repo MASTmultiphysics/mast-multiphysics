@@ -51,7 +51,7 @@ namespace MAST {
     class DirichletBoundaryCondition;
     class BoundaryConditionBase;
     class StressStrainOutputBase;
-    class PlateOffset;
+    class SectionOffset;
     
     
     struct PlateBendingThermalStress {
@@ -136,7 +136,7 @@ namespace MAST {
         *_ref_temp_f;
         
         // Section offset
-        MAST::PlateOffset*                       _hoff_f;
+        MAST::SectionOffset*                       _hoff_f;
 
         // create the material property card
         MAST::IsotropicMaterialPropertyCard*     _m_card;

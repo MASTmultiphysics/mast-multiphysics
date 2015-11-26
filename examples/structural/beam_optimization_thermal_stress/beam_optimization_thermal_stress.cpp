@@ -160,7 +160,7 @@ _n_stations(0) {
     }
     
     // now create the h_y function and give it to the property card
-    _thy_f.reset(new MAST::BeamMultilinearInterpolation("hy", thy_station_vals));
+    _thy_f.reset(new MAST::MultilinearInterpolation("hy", thy_station_vals));
 
     
     // create the property functions and add them to the
@@ -182,7 +182,11 @@ _n_stations(0) {
     _hzoff_f         = new MAST::ConstantFieldFunction("hz_off",           *_zero);
     _temp_f          = new MAST::ConstantFieldFunction("temperature",      *_temp);
     _ref_temp_f      = new MAST::ConstantFieldFunction("ref_temperature",  *_zero);
-    _hyoff_f         = new MAST::BeamOffset("hy_off", _thy_f->clone().release());
+    _hyoff_f         = new MAST::SectionOffset("hy_off",
+                                               _thy_f->clone().release(),
+                                               1.); // this moves the beam up so
+                                                    // that it is constrained at the lower
+                                                    // layer of material
 
     // initialize the load
     _T_load          = new MAST::BoundaryConditionBase(MAST::TEMPERATURE);
@@ -279,6 +283,7 @@ MAST::BeamBendingThermalStressSizingOptimization::
     delete _hzoff_f;
     delete _temp_f;
     delete _ref_temp_f;
+    delete _rho_f;
     
     delete _thz;
     delete _E;
@@ -286,6 +291,7 @@ MAST::BeamBendingThermalStressSizingOptimization::
     delete _alpha;
     delete _zero;
     delete _temp;
+    delete _rho;
     
     delete _weight;
     
@@ -514,9 +520,6 @@ output(unsigned int iter,
     
     libmesh_assert_equal_to(x.size(), _n_vars);
     
-    // set the parameter values equal to the DV value
-    for (unsigned int i=0; i<_n_vars; i++)
-        *_thy_station_parameters[i] = x[i];
     
     MAST::FunctionEvaluation::output(iter, x, obj, fval, if_write_to_optim_file);
 }
