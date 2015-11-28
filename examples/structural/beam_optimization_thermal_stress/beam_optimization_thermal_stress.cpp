@@ -110,7 +110,7 @@ _n_stations(0) {
     
     // initialize the dv vector data
     const Real
-    th_l                   = infile("thickness_lower", 0.0001),
+    th_l                   = infile("thickness_lower", 0.001),
     th_u                   = infile("thickness_upper", 0.2),
     th                     = infile("thickness", 0.01),
     dx                     = _length/(_n_stations-1);
@@ -171,7 +171,7 @@ _n_stations(0) {
     _nu              = new MAST::Parameter(  "nu",   infile("nu",    0.33));
     _rho             = new MAST::Parameter( "rho",   infile("rho", 2700.0));
     _zero            = new MAST::Parameter("zero",                      0.);
-    _temp            = new MAST::Parameter( "temp", infile("temp",  300.0));
+    _temp            = new MAST::Parameter( "temp", infile("temp",  60.0));
     
     
     _thz_f           = new MAST::ConstantFieldFunction("hz",                *_thz);

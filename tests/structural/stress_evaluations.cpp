@@ -61,11 +61,18 @@ set_deformation(const unsigned int dim,
                 vec(1)  = 2.e-2;
                 break;
             case 1: // some arbitrary bending deformation
-                vec(10) = 2.e-2;
+                vec(9)  = 2.e-2;
                 break;
             case 2: { // combination of axial and bending
                 vec(1)  = 2.e-2;
-                vec(10) = 2.e-2;
+                vec(9)  = 2.e-2;
+            }
+            case 3: { // combination of axial and bending
+                vec(1)  = 2.e-1;   // u
+                vec(3)  = 2.e-1;   // v
+                vec(5)  = 2.e-1;   // w
+                vec(9)  = 2.e-1;   // theta-y
+                vec(11) = 2.e-1;   // theta-z
             }
                 break;
             default:
@@ -83,12 +90,12 @@ set_deformation(const unsigned int dim,
         if (e == libMesh::QUAD4) {
             vec   = RealVectorX::Zero(24);
             mem_dofs  = {2, 3, 6, 7};
-            bend_dofs = {14, 15, 18, 19};
+            bend_dofs = {10, 11, 14, 15, 18, 19};
         }
         else if (e == libMesh::TRI3) {
             vec   = RealVectorX::Zero(18);
             mem_dofs  = {1, 2, 4, 5};
-            bend_dofs = {10, 11, 13, 14};
+            bend_dofs = {7, 8, 10, 11, 13, 14};
         }
         else
             libmesh_error(); // should not get here.
@@ -110,6 +117,9 @@ set_deformation(const unsigned int dim,
                 
                 vec(bend_dofs[2]) = -2.e-2;
                 vec(bend_dofs[3]) = +6.e-2;
+
+                vec(bend_dofs[4]) = -2.e-2;
+                vec(bend_dofs[5]) = +6.e-2;
             }
                 break;
 
@@ -125,9 +135,32 @@ set_deformation(const unsigned int dim,
                 
                 vec(bend_dofs[2]) = -2.e-2;
                 vec(bend_dofs[3]) = +6.e-2;
+
+                vec(bend_dofs[4]) = -2.e-2;
+                vec(bend_dofs[5]) = +6.e-2;
             }
                 break;
 
+            case 3: {
+                vec(mem_dofs[0]) = 2.e-1;
+                vec(mem_dofs[1]) = 4.e-1;
+                
+                vec(mem_dofs[2]) = -2.e-1;
+                vec(mem_dofs[3]) = +6.e-1;
+                
+                vec(bend_dofs[0]) = 2.e-1;
+                vec(bend_dofs[1]) = 4.e-1;
+                
+                vec(bend_dofs[2]) = -2.e-1;
+                vec(bend_dofs[3]) = +6.e-1;
+                
+                vec(bend_dofs[4]) = -2.e-1;
+                vec(bend_dofs[5]) = +6.e-1;
+            }
+                break;
+                
+            default:
+                libmesh_assert(false); // should not get here.
         }
     }
 
@@ -137,7 +170,7 @@ template <typename ValType>
 void check_stress (ValType& v, const RealVectorX& x0) {
 
     const Real
-    delta    = 1.e-4,
+    delta    = 1.e-5,
     tol      = 1.e-2;
 
     // stress output
@@ -562,9 +595,9 @@ BOOST_AUTO_TEST_CASE   (VonMisesStress) {
 
 BOOST_FIXTURE_TEST_SUITE  (Structural1DStressEvaluation, MAST::BuildStructural1DElem)
 
-BOOST_AUTO_TEST_CASE   (Stress1DIndependentOffset) {
+BOOST_AUTO_TEST_CASE   (StressLinear1DIndependentOffset) {
 
-    this->init(false);
+    this->init(false, false);
     
     RealVectorX v;
 
@@ -586,9 +619,24 @@ BOOST_AUTO_TEST_CASE   (Stress1DIndependentOffset) {
 
 
 
-BOOST_AUTO_TEST_CASE   (Stress1DDependentOffset) {
+
+BOOST_AUTO_TEST_CASE   (StressNonlinear1DIndependentOffset) {
     
-    this->init(true);
+    this->init(false, true);
+    
+    RealVectorX v;
+    
+    // combination of axial and bending deformation
+    BOOST_TEST_MESSAGE("**** Combined Extension-Bending Large Deformation **");
+    set_deformation(1, 3, libMesh::INVALID_ELEM, v);
+    check_stress(*this, v);
+}
+
+
+
+BOOST_AUTO_TEST_CASE   (StressLinear1DDependentOffset) {
+    
+    this->init(true, false);
     
     RealVectorX v;
     
@@ -605,6 +653,20 @@ BOOST_AUTO_TEST_CASE   (Stress1DDependentOffset) {
     // combination of axial and bending deformation
     BOOST_TEST_MESSAGE("**** Combined Extension-Bending Deformation **");
     set_deformation(1, 2, libMesh::INVALID_ELEM, v);
+    check_stress(*this, v);
+}
+
+
+
+BOOST_AUTO_TEST_CASE   (StressNonlinear1DDependentOffset) {
+    
+    this->init(true, true);
+    
+    RealVectorX v;
+    
+    // combination of axial and bending deformation
+    BOOST_TEST_MESSAGE("**** Combined Extension-Bending Large Deformation **");
+    set_deformation(1, 3, libMesh::INVALID_ELEM, v);
     check_stress(*this, v);
 }
 
@@ -614,9 +676,9 @@ BOOST_AUTO_TEST_SUITE_END()
 
 BOOST_FIXTURE_TEST_SUITE  (Structural2DStressEvaluation, MAST::BuildStructural2DElem)
 
-BOOST_AUTO_TEST_CASE   (Stress2DIndependentOffsetQUAD4) {
+BOOST_AUTO_TEST_CASE   (StressLinear2DIndependentOffsetQUAD4) {
 
-    this->init(false, libMesh::QUAD4);
+    this->init(false, false, libMesh::QUAD4);
     
     RealVectorX v;
 
@@ -635,9 +697,23 @@ BOOST_AUTO_TEST_CASE   (Stress2DIndependentOffsetQUAD4) {
 }
 
 
-BOOST_AUTO_TEST_CASE   (Stress2DIndependentOffsetTRI3) {
+
+BOOST_AUTO_TEST_CASE   (Stress2DNonlinearIndependentOffsetQUAD4) {
     
-    this->init(false, libMesh::TRI3);
+    this->init(false, true, libMesh::QUAD4);
+    
+    RealVectorX v;
+    
+    BOOST_TEST_MESSAGE("**** Combined Extension-Bending Large Deformation **");
+    set_deformation(2, 3, libMesh::QUAD4, v);
+    check_stress(*this, v);
+}
+
+
+
+BOOST_AUTO_TEST_CASE   (StressLinear2DIndependentOffsetTRI3) {
+    
+    this->init(false, false, libMesh::TRI3);
     
     RealVectorX v;
     
@@ -656,9 +732,23 @@ BOOST_AUTO_TEST_CASE   (Stress2DIndependentOffsetTRI3) {
 }
 
 
-BOOST_AUTO_TEST_CASE   (Stress2DDependentOffsetQUAD4) {
+
+BOOST_AUTO_TEST_CASE   (StressNonlinear2DIndependentOffsetTRI3) {
     
-    this->init(true, libMesh::QUAD4);
+    this->init(false, true, libMesh::TRI3);
+    
+    RealVectorX v;
+    
+    BOOST_TEST_MESSAGE("**** Combined Extension-Bending Large Deformation **");
+    set_deformation(2, 3, libMesh::TRI3, v);
+    check_stress(*this, v);
+}
+
+
+
+BOOST_AUTO_TEST_CASE   (StressLinear2DDependentOffsetQUAD4) {
+    
+    this->init(true, false, libMesh::QUAD4);
     
     RealVectorX v;
     
@@ -678,9 +768,22 @@ BOOST_AUTO_TEST_CASE   (Stress2DDependentOffsetQUAD4) {
 
 
 
-BOOST_AUTO_TEST_CASE   (Stress2DDependentOffsetTRI3) {
+BOOST_AUTO_TEST_CASE   (StressNonlinear2DDependentOffsetQUAD4) {
     
-    this->init(true, libMesh::TRI3);
+    this->init(true, true, libMesh::QUAD4);
+    
+    RealVectorX v;
+    
+    BOOST_TEST_MESSAGE("**** Combined Extension-Bending Large Deformation **");
+    set_deformation(2, 3, libMesh::QUAD4, v);
+    check_stress(*this, v);
+}
+
+
+
+BOOST_AUTO_TEST_CASE   (StressLinear2DDependentOffsetTRI3) {
+    
+    this->init(true, false, libMesh::TRI3);
     
     RealVectorX v;
     
@@ -695,6 +798,20 @@ BOOST_AUTO_TEST_CASE   (Stress2DDependentOffsetTRI3) {
     
     BOOST_TEST_MESSAGE("**** Combined Extension-Bending Deformation **");
     set_deformation(2, 2, libMesh::TRI3, v);
+    check_stress(*this, v);
+}
+
+
+
+
+BOOST_AUTO_TEST_CASE   (StressNonlinear2DDependentOffsetTRI3) {
+    
+    this->init(true, true, libMesh::TRI3);
+    
+    RealVectorX v;
+    
+    BOOST_TEST_MESSAGE("**** Combined Extension-Bending Large Deformation **");
+    set_deformation(2, 3, libMesh::TRI3, v);
     check_stress(*this, v);
 }
 

@@ -58,7 +58,8 @@ namespace MAST {
         ~BuildStructural1DElem();
 
         
-        void init(bool if_link_offset_to_th);
+        void init(bool if_link_offset_to_th,
+                  bool if_nonlinear);
         
         
         bool _initialized;

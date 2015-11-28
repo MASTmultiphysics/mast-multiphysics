@@ -95,13 +95,13 @@ MAST::BeamBendingThermalStress::BeamBendingThermalStress() {
     
     // create the property functions and add them to the
     
-    _thy             = new MAST::Parameter("thy", 0.06);
-    _thz             = new MAST::Parameter("thz", 0.02);
-    _E               = new MAST::Parameter("E",  72.e9);
-    _alpha           = new MAST::Parameter("alpha",  2.5e-5);
-    _nu              = new MAST::Parameter("nu",  0.33);
-    _zero            = new MAST::Parameter("zero",  0.);
-    _temp            = new MAST::Parameter( "temperature",  300.);
+    _thy             = new MAST::Parameter("thy",          0.06);
+    _thz             = new MAST::Parameter("thz",          0.02);
+    _E               = new MAST::Parameter("E",           72.e9);
+    _alpha           = new MAST::Parameter("alpha",      2.5e-5);
+    _nu              = new MAST::Parameter("nu",           0.33);
+    _zero            = new MAST::Parameter("zero",           0.);
+    _temp            = new MAST::Parameter( "temperature",  60.);
     
     
     

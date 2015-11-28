@@ -47,7 +47,7 @@ void
 check_piston_theory_jacobian (ValType& v) {
 
     const Real
-    delta    = 1.e-4,
+    delta    = 1.e-5,
     tol      = 1.e-2;
 
     // tell the discipline about the section property and the piston theory
@@ -155,7 +155,7 @@ BOOST_FIXTURE_TEST_SUITE  (Structural1DJacobianEvaluation, MAST::BuildStructural
 
 BOOST_AUTO_TEST_CASE   (PistonTheory1D) {
     
-    this->init(false);
+    this->init(false, false); // keeping nonlinear strain off, since it does not influence piston theory
     check_piston_theory_jacobian<MAST::BuildStructural1DElem>(*this);
     
 }
@@ -168,14 +168,14 @@ BOOST_FIXTURE_TEST_SUITE  (Structural2DJacobianEvaluation, MAST::BuildStructural
 
 BOOST_AUTO_TEST_CASE   (PistonTheory2DQUAD4) {
     
-    this->init(false, libMesh::QUAD4);
+    this->init(false, false, libMesh::QUAD4);
     check_piston_theory_jacobian<MAST::BuildStructural2DElem>(*this);
 }
 
 
 BOOST_AUTO_TEST_CASE   (PistonTheory2DTRI3) {
     
-    this->init(false, libMesh::TRI3);
+    this->init(false, false, libMesh::TRI3);
     check_piston_theory_jacobian<MAST::BuildStructural2DElem>(*this);
 }
 

@@ -119,13 +119,13 @@ MAST::PlateBendingThermalStress::init(libMesh::ElemType e_type,
     
     // create the property functions and add them to the
     
-    _th              = new MAST::Parameter("th", 0.006);
-    _E               = new MAST::Parameter("E",  72.e9);
-    _alpha           = new MAST::Parameter("alpha",  2.5e-5);
-    _kappa           = new MAST::Parameter("kappa",  5./6.);
-    _nu              = new MAST::Parameter("nu",  0.33);
-    _zero            = new MAST::Parameter("zero",  0.);
-    _temp            = new MAST::Parameter( "temperature",  300.);
+    _th              = new MAST::Parameter("th",          0.006);
+    _E               = new MAST::Parameter("E",           72.e9);
+    _alpha           = new MAST::Parameter("alpha",      2.5e-5);
+    _kappa           = new MAST::Parameter("kappa",       5./6.);
+    _nu              = new MAST::Parameter("nu",           0.33);
+    _zero            = new MAST::Parameter("zero",           0.);
+    _temp            = new MAST::Parameter( "temperature",  90.);
     
     
     

@@ -68,7 +68,8 @@ _thermal_load(NULL) {
 
 
 void
-MAST::BuildStructural1DElem::init(bool if_link_offset_to_th) {
+MAST::BuildStructural1DElem::init(bool if_link_offset_to_th,
+                                  bool if_nonlinear) {
 
     // make sure that this has not already been initialized
     libmesh_assert(!_initialized);
@@ -99,15 +100,15 @@ MAST::BuildStructural1DElem::init(bool if_link_offset_to_th) {
     
     // create the property functions and add them to the
     
-    _thy             = new MAST::Parameter("thy", 0.06);
-    _thz             = new MAST::Parameter("thz", 0.02);
-    _E               = new MAST::Parameter("E",  72.e9);
-    _nu              = new MAST::Parameter("nu",  0.33);
-    _hy_off          = new MAST::Parameter("hyoff", 0.);
-    _hz_off          = new MAST::Parameter("hzoff", 0.);
-    _zero            = new MAST::Parameter("zero",  0.);
-    _temp            = new MAST::Parameter("temp",300.);
-    _alpha           = new MAST::Parameter("alpha",2.5e-5);
+    _thy             = new MAST::Parameter("thy",      0.06);
+    _thz             = new MAST::Parameter("thz",      0.02);
+    _E               = new MAST::Parameter("E",       72.e9);
+    _nu              = new MAST::Parameter("nu",       0.33);
+    _hy_off          = new MAST::Parameter("hyoff",      0.);
+    _hz_off          = new MAST::Parameter("hzoff",      0.);
+    _zero            = new MAST::Parameter("zero",       0.);
+    _temp            = new MAST::Parameter("temp",      60.);
+    _alpha           = new MAST::Parameter("alpha",  2.5e-5);
     
     
 
@@ -163,6 +164,7 @@ MAST::BuildStructural1DElem::init(bool if_link_offset_to_th) {
     
     // tell the section property about the material property
     _p_card->set_material(*_m_card);
+    if (if_nonlinear) _p_card->set_strain(MAST::VON_KARMAN_STRAIN);
     
     _p_card->init();
     

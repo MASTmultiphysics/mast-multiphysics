@@ -63,6 +63,7 @@ _p_theory(NULL) {
 
 void
 MAST::BuildStructural2DElem::init(bool if_link_offset_to_th,
+                                  bool if_nonlinear,
                                   libMesh::ElemType e_type) {
     
     // make sure that this has not already been initialized
@@ -105,6 +106,8 @@ MAST::BuildStructural2DElem::init(bool if_link_offset_to_th,
     _kappa           = new MAST::Parameter("kappa",    5./6.);
     _zero            = new MAST::Parameter( "zero",       0.);
     _hzoff           = new MAST::Parameter( "hzoff",      0.);
+    _temp            = new MAST::Parameter("temp",       60.);
+    _alpha           = new MAST::Parameter("alpha",   2.5e-5);
     
     
     
@@ -121,6 +124,9 @@ MAST::BuildStructural2DElem::init(bool if_link_offset_to_th,
     _E_f             = new MAST::ConstantFieldFunction(    "E",       *_E);
     _nu_f            = new MAST::ConstantFieldFunction(   "nu",      *_nu);
     _kappa_f         = new MAST::ConstantFieldFunction("kappa",   *_kappa);
+    _temp_f          = new MAST::ConstantFieldFunction("temperature", *_temp);
+    _ref_temp_f      = new MAST::ConstantFieldFunction("ref_temperature", *_zero);
+    _alpha_f         = new MAST::ConstantFieldFunction("alpha_expansion", *_alpha);
     if (!if_link_offset_to_th)
         _hzoff_f         = new MAST::ConstantFieldFunction(  "off",   *_hzoff);
     else
@@ -133,6 +139,7 @@ MAST::BuildStructural2DElem::init(bool if_link_offset_to_th,
     _m_card->add(    *_E_f);
     _m_card->add(   *_nu_f);
     _m_card->add(*_kappa_f);
+    _m_card->add(*_alpha_f);
     
     // create the element property card
     _p_card         = new MAST::Solid2DSectionElementPropertyCard;
@@ -143,6 +150,7 @@ MAST::BuildStructural2DElem::init(bool if_link_offset_to_th,
     
     // tell the section property about the material property
     _p_card->set_material(*_m_card);
+    if (if_nonlinear) _p_card->set_strain(MAST::VON_KARMAN_STRAIN);
     
     const unsigned int order = 1;
     Real
@@ -166,6 +174,9 @@ MAST::BuildStructural2DElem::init(bool if_link_offset_to_th,
                                                               vel);
     
     
+    _thermal_load   = new MAST::BoundaryConditionBase(MAST::TEMPERATURE);
+    _thermal_load->add(*_temp_f);
+    _thermal_load->add(*_ref_temp_f);
 }
 
 
@@ -180,18 +191,23 @@ MAST::BuildStructural2DElem::~BuildStructural2DElem() {
     delete _p_card;
     
     delete _p_theory;
+    delete _thermal_load;
     
     delete _thz_f;
     delete _E_f;
     delete _nu_f;
     delete _hzoff_f;
+    delete _temp_f;
+    delete _ref_temp_f;
+    delete _alpha_f;
     
     delete _thz;
     delete _hzoff;
     delete _E;
     delete _nu;
     delete _zero;
-    
+    delete _temp;
+    delete _alpha;
     
     
     

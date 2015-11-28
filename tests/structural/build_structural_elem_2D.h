@@ -46,6 +46,7 @@ namespace MAST {
     class IsotropicMaterialPropertyCard;
     class Solid2DSectionElementPropertyCard;
     class PistonTheoryBoundaryCondition;
+    class BoundaryConditionBase;
     
     
     struct BuildStructural2DElem {
@@ -58,6 +59,7 @@ namespace MAST {
         
         
         void init(bool if_link_offset_to_th,
+                  bool if_nonlinear,
                   libMesh::ElemType e_type);
 
         
@@ -85,14 +87,19 @@ namespace MAST {
         *_nu,
         *_kappa,
         *_hzoff,
-        *_zero;
+        *_zero,
+        *_temp,
+        *_alpha;
         
         MAST::ConstantFieldFunction
         *_thz_f,
         *_E_f,
         *_nu_f,
         *_kappa_f,
-        *_hzoff_f;
+        *_hzoff_f,
+        *_temp_f,
+        *_ref_temp_f,
+        *_alpha_f;
         
         // create the material property card
         MAST::IsotropicMaterialPropertyCard*     _m_card;
@@ -103,6 +110,9 @@ namespace MAST {
         // create the boundary condition
         MAST::PistonTheoryBoundaryCondition*    _p_theory;
         
+        // create the temperature boundary condition
+        MAST::BoundaryConditionBase*            _thermal_load;
+
         // vector of parameters to evaluate sensitivity wrt
         std::vector<MAST::Parameter*> _params_for_sensitivity;
     };

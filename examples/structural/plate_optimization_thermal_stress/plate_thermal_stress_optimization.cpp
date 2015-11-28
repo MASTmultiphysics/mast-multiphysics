@@ -271,7 +271,7 @@ init(GetPot& infile,
     
     // initialize the dv vector data
     const Real
-    th_l                   = infile("thickness_lower", 0.0001),
+    th_l                   = infile("thickness_lower", 0.001),
     th_u                   = infile("thickness_upper",    0.2),
     th                     = infile("thickness",          0.2),
     dx                     = _length/(_n_stations_x-1);
@@ -326,22 +326,22 @@ init(GetPot& infile,
     
     // create the property functions and add them to the
     
-    _E               = new MAST::Parameter(   "E", infile("E",    72.e9));
-    _nu              = new MAST::Parameter(  "nu", infile("nu",    0.33));
-    _kappa           = new MAST::Parameter("kappa",infile("kappa",5./6.));
-    _alpha           = new MAST::Parameter("alpha",infile("alpha",2.5e-5));
-    _rho             = new MAST::Parameter( "rho", infile("rho", 2700.0));
-    _zero            = new MAST::Parameter("zero",                    0.);
-    _temp            = new MAST::Parameter( "temperature",infile("temp", 300.));
+    _E               = new MAST::Parameter(   "E", infile("E",         72.e9));
+    _nu              = new MAST::Parameter(  "nu", infile("nu",         0.33));
+    _kappa           = new MAST::Parameter("kappa",infile("kappa",     5./6.));
+    _alpha           = new MAST::Parameter("alpha",infile("alpha",    2.5e-5));
+    _rho             = new MAST::Parameter( "rho", infile("rho",      2700.0));
+    _zero            = new MAST::Parameter("zero",                         0.);
+    _temp            = new MAST::Parameter( "temperature",infile("temp", 60.));
     
     
-    _E_f             = new MAST::ConstantFieldFunction("E",            *_E);
-    _nu_f            = new MAST::ConstantFieldFunction("nu",          *_nu);
-    _kappa_f         = new MAST::ConstantFieldFunction("kappa",    *_kappa);
+    _E_f             = new MAST::ConstantFieldFunction("E",                   *_E);
+    _nu_f            = new MAST::ConstantFieldFunction("nu",                 *_nu);
+    _kappa_f         = new MAST::ConstantFieldFunction("kappa",           *_kappa);
     _alpha_f         = new MAST::ConstantFieldFunction("alpha_expansion", *_alpha);
-    _rho_f           = new MAST::ConstantFieldFunction("rho",        *_rho);
-    _temp_f          = new MAST::ConstantFieldFunction("temperature", *_temp);
-    _ref_temp_f      = new MAST::ConstantFieldFunction("ref_temperature", *_zero);
+    _rho_f           = new MAST::ConstantFieldFunction("rho",               *_rho);
+    _temp_f          = new MAST::ConstantFieldFunction("temperature",      *_temp);
+    _ref_temp_f      = new MAST::ConstantFieldFunction("ref_temperature",  *_zero);
     _hoff_f          = new MAST::SectionOffset("off",
                                                _th_f->clone().release(),
                                                1.);

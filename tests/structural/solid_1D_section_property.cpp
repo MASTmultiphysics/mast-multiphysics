@@ -153,14 +153,14 @@ BOOST_FIXTURE_TEST_SUITE  (Structural1DSectionPropertyEvaluation,
 
 BOOST_AUTO_TEST_CASE   (Property1DSensitivityIndependentOffset) {
  
-    this->init(false);
+    this->init(false, false); // nonlinear strain does not influence this
     check_material_property<MAST::BuildStructural1DElem>(*this);
 }
 
 
 BOOST_AUTO_TEST_CASE   (Property1DSensitivityDependentOffset) {
     
-    this->init(true);
+    this->init(true, false); // nonlinear strain does not influence this
     check_material_property<MAST::BuildStructural1DElem>(*this);
 }
 
@@ -174,28 +174,28 @@ BOOST_FIXTURE_TEST_SUITE  (Structural2DSectionPropertyEvaluation,
 
 BOOST_AUTO_TEST_CASE   (Property2DSensitivityIndependentOffsetQUAD4) {
     
-    this->init(false, libMesh::QUAD4);
+    this->init(false, false, libMesh::QUAD4);
     check_material_property<MAST::BuildStructural2DElem>(*this);
 }
 
 
 BOOST_AUTO_TEST_CASE   (Property2DSensitivityDependentOffsetQUAD4) {
     
-    this->init(true, libMesh::QUAD4);
+    this->init(true, false, libMesh::QUAD4);
     check_material_property<MAST::BuildStructural2DElem>(*this);
 }
 
 
 BOOST_AUTO_TEST_CASE   (Property2DSensitivityIndependentOffsetTRI3) {
     
-    this->init(false, libMesh::TRI3);
+    this->init(false, false, libMesh::TRI3);
     check_material_property<MAST::BuildStructural2DElem>(*this);
 }
 
 
 BOOST_AUTO_TEST_CASE   (Property2DSensitivityDependentOffsetTRI3) {
     
-    this->init(true, libMesh::TRI3);
+    this->init(true, false, libMesh::TRI3);
     check_material_property<MAST::BuildStructural2DElem>(*this);
 }
 

@@ -237,7 +237,7 @@ _n_stations(0) {
     
     // initialize the dv vector data
     const Real
-    th_l                   = infile("thickness_lower", 0.0001),
+    th_l                   = infile("thickness_lower", 0.001),
     th_u                   = infile("thickness_upper", 0.2),
     th                     = infile("thickness", 0.01),
     dx                     = _length/(_n_stations-1);

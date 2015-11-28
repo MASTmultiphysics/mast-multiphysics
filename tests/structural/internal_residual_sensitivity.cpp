@@ -51,7 +51,7 @@ template <typename ValType>
 void check_internal_force_and_jacobian_sensitivity (ValType& v,
                                                     const RealVectorX& x) {
     const Real
-    delta    = 1.e-4,
+    delta    = 1.e-5,
     tol      = 1.e-2;
     
     // get reference to the element in this mesh
@@ -145,9 +145,9 @@ void check_internal_force_and_jacobian_sensitivity (ValType& v,
 BOOST_FIXTURE_TEST_SUITE  (Structural1DInternalForceSensitivity,
                            MAST::BuildStructural1DElem)
 
-BOOST_AUTO_TEST_CASE   (InternalForceJacobianSensitivity1DIndependentOffset) {
+BOOST_AUTO_TEST_CASE   (InternalForceJacobianLinearSensitivity1DIndependentOffset) {
     
-    this->init(false);
+    this->init(false, false);
     
     RealVectorX v;
 
@@ -173,9 +173,25 @@ BOOST_AUTO_TEST_CASE   (InternalForceJacobianSensitivity1DIndependentOffset) {
 
 
 
-BOOST_AUTO_TEST_CASE   (InternalForceJacobianSensitivity1DDependentOffset) {
+BOOST_AUTO_TEST_CASE   (InternalForceJacobianNonlinearSensitivity1DIndependentOffset) {
     
-    this->init(true);
+    this->init(false, true);
+    
+    RealVectorX v;
+    
+    // large deformation
+    BOOST_TEST_MESSAGE("**** Combined Extension-Bending Large Deformation **");
+    set_deformation(1, 3, libMesh::INVALID_ELEM, v);
+    check_internal_force_and_jacobian_sensitivity<MAST::BuildStructural1DElem>
+    (*this, v);
+    
+}
+
+
+
+BOOST_AUTO_TEST_CASE   (InternalForceJacobianLinearSensitivity1DDependentOffset) {
+    
+    this->init(true, false);
     
     RealVectorX v;
     
@@ -198,6 +214,21 @@ BOOST_AUTO_TEST_CASE   (InternalForceJacobianSensitivity1DDependentOffset) {
     (*this, v);
     
 }
+
+
+BOOST_AUTO_TEST_CASE   (InternalForceJacobianNonlinearSensitivity1DDependentOffset) {
+    
+    this->init(true, true);
+    
+    RealVectorX v;
+    
+    // large deformation
+    BOOST_TEST_MESSAGE("**** Combined Extension-Bending Large Deformation **");
+    set_deformation(1, 3, libMesh::INVALID_ELEM, v);
+    check_internal_force_and_jacobian_sensitivity<MAST::BuildStructural1DElem>
+    (*this, v);
+}
+
 
 BOOST_AUTO_TEST_SUITE_END()
 
@@ -206,9 +237,9 @@ BOOST_AUTO_TEST_SUITE_END()
 BOOST_FIXTURE_TEST_SUITE  (Structural2DInternalForceSensitivity,
                            MAST::BuildStructural2DElem)
 
-BOOST_AUTO_TEST_CASE   (InternalForceJacobianSensitivity2DIndependentOffsetQUAD4) {
+BOOST_AUTO_TEST_CASE   (InternalForceJacobianLinearSensitivity2DIndependentOffsetQUAD4) {
 
-    this->init(false, libMesh::QUAD4);
+    this->init(false, true, libMesh::QUAD4);
     
     RealVectorX v;
     
@@ -231,9 +262,103 @@ BOOST_AUTO_TEST_CASE   (InternalForceJacobianSensitivity2DIndependentOffsetQUAD4
 
 
 
-BOOST_AUTO_TEST_CASE   (InternalForceJacobianSensitivity2DIndependentOffsetTRI3) {
+
+BOOST_AUTO_TEST_CASE   (InternalForceJacobianNonlinearSensitivity2DIndependentOffsetQUAD4) {
     
-    this->init(false, libMesh::TRI3);
+    this->init(false, true, libMesh::QUAD4);
+    
+    RealVectorX v;
+    
+    BOOST_TEST_MESSAGE("**** Combined Extension-Bending Large Deformation **");
+    set_deformation(2, 3, libMesh::QUAD4, v);
+    check_internal_force_and_jacobian_sensitivity<MAST::BuildStructural2DElem>
+    (*this, v);
+}
+
+
+
+BOOST_AUTO_TEST_CASE   (InternalForceJacobianLinearSensitivity2DIndependentOffsetTRI3) {
+    
+    this->init(false, false, libMesh::TRI3);
+    
+    RealVectorX v;
+    
+    // pure axial deformation
+    BOOST_TEST_MESSAGE("**** Pure Extension Deformation **");
+    set_deformation(2, 0, libMesh::TRI3, v);
+    check_internal_force_and_jacobian_sensitivity<MAST::BuildStructural2DElem>
+    (*this, v);
+    
+    BOOST_TEST_MESSAGE("**** Pure Bending Deformation **");
+    set_deformation(2, 1, libMesh::TRI3, v);
+    check_internal_force_and_jacobian_sensitivity<MAST::BuildStructural2DElem>
+    (*this, v);
+    
+    BOOST_TEST_MESSAGE("**** Combined Extension-Bending Deformation **");
+    set_deformation(2, 2, libMesh::TRI3, v);
+    check_internal_force_and_jacobian_sensitivity<MAST::BuildStructural2DElem>
+    (*this, v);
+}
+
+
+
+BOOST_AUTO_TEST_CASE   (InternalForceJacobianNonlinearSensitivity2DIndependentOffsetTRI3) {
+    
+    this->init(false, true, libMesh::TRI3);
+    
+    RealVectorX v;
+    
+    BOOST_TEST_MESSAGE("**** Combined Extension-Bending Large Deformation **");
+    set_deformation(2, 3, libMesh::TRI3, v);
+    check_internal_force_and_jacobian_sensitivity<MAST::BuildStructural2DElem>
+    (*this, v);
+}
+
+
+
+
+BOOST_AUTO_TEST_CASE   (InternalForceJacobianLinearSensitivity2DDependentOffsetQUAD4) {
+    
+    this->init(true, false, libMesh::QUAD4);
+    
+    RealVectorX v;
+    
+    // pure axial deformation
+    BOOST_TEST_MESSAGE("**** Pure Extension Deformation **");
+    set_deformation(2, 0, libMesh::QUAD4, v);
+    check_internal_force_and_jacobian_sensitivity<MAST::BuildStructural2DElem>
+    (*this, v);
+    
+    BOOST_TEST_MESSAGE("**** Pure Bending Deformation **");
+    set_deformation(2, 1, libMesh::QUAD4, v);
+    check_internal_force_and_jacobian_sensitivity<MAST::BuildStructural2DElem>
+    (*this, v);
+    
+    BOOST_TEST_MESSAGE("**** Combined Extension-Bending Deformation **");
+    set_deformation(2, 2, libMesh::QUAD4, v);
+    check_internal_force_and_jacobian_sensitivity<MAST::BuildStructural2DElem>
+    (*this, v);
+}
+
+
+
+BOOST_AUTO_TEST_CASE   (InternalForceJacobianNonlinearSensitivity2DDependentOffsetQUAD4) {
+    
+    this->init(true, true, libMesh::QUAD4);
+    
+    RealVectorX v;
+    
+    BOOST_TEST_MESSAGE("**** Combined Extension-Bending Large Deformation **");
+    set_deformation(2, 3, libMesh::QUAD4, v);
+    check_internal_force_and_jacobian_sensitivity<MAST::BuildStructural2DElem>
+    (*this, v);
+}
+
+
+
+BOOST_AUTO_TEST_CASE   (InternalForceJacobianLinearSensitivity2DDependentOffsetTRI3) {
+    
+    this->init(true, false, libMesh::TRI3);
     
     RealVectorX v;
     
@@ -257,49 +382,14 @@ BOOST_AUTO_TEST_CASE   (InternalForceJacobianSensitivity2DIndependentOffsetTRI3)
 
 
 
-BOOST_AUTO_TEST_CASE   (InternalForceJacobianSensitivity2DDependentOffsetQUAD4) {
+BOOST_AUTO_TEST_CASE   (InternalForceJacobianNonlinearSensitivity2DDependentOffsetTRI3) {
     
-    this->init(true, libMesh::QUAD4);
-    
-    RealVectorX v;
-    
-    // pure axial deformation
-    BOOST_TEST_MESSAGE("**** Pure Extension Deformation **");
-    set_deformation(2, 0, libMesh::QUAD4, v);
-    check_internal_force_and_jacobian_sensitivity<MAST::BuildStructural2DElem>
-    (*this, v);
-    
-    BOOST_TEST_MESSAGE("**** Pure Bending Deformation **");
-    set_deformation(2, 1, libMesh::QUAD4, v);
-    check_internal_force_and_jacobian_sensitivity<MAST::BuildStructural2DElem>
-    (*this, v);
-    
-    BOOST_TEST_MESSAGE("**** Combined Extension-Bending Deformation **");
-    set_deformation(2, 2, libMesh::QUAD4, v);
-    check_internal_force_and_jacobian_sensitivity<MAST::BuildStructural2DElem>
-    (*this, v);
-}
-
-
-BOOST_AUTO_TEST_CASE   (InternalForceJacobianSensitivity2DDependentOffsetTRI3) {
-    
-    this->init(true, libMesh::TRI3);
+    this->init(true, true, libMesh::TRI3);
     
     RealVectorX v;
     
-    // pure axial deformation
-    BOOST_TEST_MESSAGE("**** Pure Extension Deformation **");
-    set_deformation(2, 0, libMesh::TRI3, v);
-    check_internal_force_and_jacobian_sensitivity<MAST::BuildStructural2DElem>
-    (*this, v);
-    
-    BOOST_TEST_MESSAGE("**** Pure Bending Deformation **");
-    set_deformation(2, 1, libMesh::TRI3, v);
-    check_internal_force_and_jacobian_sensitivity<MAST::BuildStructural2DElem>
-    (*this, v);
-    
-    BOOST_TEST_MESSAGE("**** Combined Extension-Bending Deformation **");
-    set_deformation(2, 2, libMesh::TRI3, v);
+    BOOST_TEST_MESSAGE("**** Combined Extension-Bending Large Deformation **");
+    set_deformation(2, 3, libMesh::TRI3, v);
     check_internal_force_and_jacobian_sensitivity<MAST::BuildStructural2DElem>
     (*this, v);
 }

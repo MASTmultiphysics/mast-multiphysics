@@ -51,10 +51,11 @@ set_deformation(const unsigned int dim,
 
 template <typename ValType>
 void
-check_thermal_residual_force_jacobian (ValType& v) {
+check_thermal_residual_force_jacobian (ValType& v,
+                                       const RealVectorX& sol) {
 
     const Real
-    delta    = 1.e-4,
+    delta    = 1.e-5,
     tol      = 1.e-2;
 
     // tell the discipline about the section property and the piston theory
@@ -79,6 +80,9 @@ check_thermal_residual_force_jacobian (ValType& v) {
     
     const unsigned int ndofs = (unsigned int)dof_ids.size();
     
+    // make sure that the solution vector has been appropriately dimensioned
+    libmesh_assert_equal_to(sol.size(), ndofs);
+    
     // now get the residual and Jacobian evaluations
     RealVectorX
     x0          = RealVectorX::Zero(ndofs),
@@ -94,6 +98,11 @@ check_thermal_residual_force_jacobian (ValType& v) {
     jac_x_fd    = RealMatrixX::Zero(ndofs, ndofs),
     jac_xdot_fd = RealMatrixX::Zero(ndofs, ndofs),
     dummy;
+    
+
+    // set the solution
+    x0          = sol;
+    x           = sol;
     
     
     // tell the element about the solution and velocity
@@ -168,7 +177,7 @@ void check_thermal_force_and_jacobian_sensitivity (ValType& v,
                                                    const RealVectorX& x) {
     
     const Real
-    delta    = 1.e-4,
+    delta    = 1.e-5,
     tol      = 1.e-2;
 
     // tell the discipline about the section property and the piston theory
@@ -193,7 +202,7 @@ void check_thermal_force_and_jacobian_sensitivity (ValType& v,
     const unsigned int ndofs = (unsigned int)dof_ids.size();
     
     // make sure that the input dof vector is properly sized
-    libmesh_assert(ndofs == x.size());
+    libmesh_assert_equal_to(x.size(), ndofs);
     
     // now get the residual and Jacobian evaluations
     RealVectorX
@@ -283,19 +292,46 @@ void check_thermal_force_and_jacobian_sensitivity (ValType& v,
 BOOST_FIXTURE_TEST_SUITE  (Structural1DJacobianEvaluation,
                            MAST::BuildStructural1DElem)
 
-BOOST_AUTO_TEST_CASE   (ThermalResidual1DIndependentOffset) {
-
-    this->init(false);
-    check_thermal_residual_force_jacobian<MAST::BuildStructural1DElem>(*this);
+BOOST_AUTO_TEST_CASE   (ThermalResidualLinear1DIndependentOffset) {
     
+    RealVectorX v;
+    
+    this->init(false, false);
+    set_deformation(1, 3, libMesh::INVALID_ELEM, v);
+    check_thermal_residual_force_jacobian<MAST::BuildStructural1DElem>(*this, v);
 }
 
 
-BOOST_AUTO_TEST_CASE   (ThermalResidual1DDependentOffset) {
+
+BOOST_AUTO_TEST_CASE   (ThermalResidualNonlinear1DIndependentOffset) {
+
+    RealVectorX v;
     
-    this->init(true);
-    check_thermal_residual_force_jacobian<MAST::BuildStructural1DElem>(*this);
+    this->init(false, true);
+    set_deformation(1, 3, libMesh::INVALID_ELEM, v);
+    check_thermal_residual_force_jacobian<MAST::BuildStructural1DElem>(*this, v);
+}
+
+
+
+BOOST_AUTO_TEST_CASE   (ThermalResidualLinear1DDependentOffset) {
     
+    RealVectorX v;
+    
+    this->init(true, false);
+    set_deformation(1, 3, libMesh::INVALID_ELEM, v);
+    check_thermal_residual_force_jacobian<MAST::BuildStructural1DElem>(*this, v);
+}
+
+
+
+BOOST_AUTO_TEST_CASE   (ThermalResidualNonlinear1DDependentOffset) {
+    
+    RealVectorX v;
+
+    this->init(true, true);
+    set_deformation(1, 3, libMesh::INVALID_ELEM, v);
+    check_thermal_residual_force_jacobian<MAST::BuildStructural1DElem>(*this, v);
 }
 
 
@@ -306,23 +342,26 @@ BOOST_AUTO_TEST_SUITE_END()
 BOOST_FIXTURE_TEST_SUITE  (Structural1DThermalForceSensitivity,
                            MAST::BuildStructural1DElem)
 
-BOOST_AUTO_TEST_CASE   (ThermalForceSensitivity1DIndependentOffset) {
+BOOST_AUTO_TEST_CASE   (ThermalForceLinearSensitivity1DIndependentOffset) {
 
-    this->init(false);
+    this->init(false, false);
     
     RealVectorX v;
     
     // pure axial deformation
+    BOOST_TEST_MESSAGE("**** Pure Extension Deformation **");
     set_deformation(1, 0, libMesh::INVALID_ELEM, v);
     check_thermal_force_and_jacobian_sensitivity<MAST::BuildStructural1DElem>
     (*this, v);
     
     // pure bending deformation
+    BOOST_TEST_MESSAGE("**** Pure Bending Deformation **");
     set_deformation(1, 1, libMesh::INVALID_ELEM, v);
     check_thermal_force_and_jacobian_sensitivity<MAST::BuildStructural1DElem>
     (*this, v);
     
     // combination of axial and bending deformation
+    BOOST_TEST_MESSAGE("**** Combined Extension-Bending Deformation **");
     set_deformation(1, 2, libMesh::INVALID_ELEM, v);
     check_thermal_force_and_jacobian_sensitivity<MAST::BuildStructural1DElem>
     (*this, v);
@@ -331,23 +370,41 @@ BOOST_AUTO_TEST_CASE   (ThermalForceSensitivity1DIndependentOffset) {
 
 
 
-BOOST_AUTO_TEST_CASE   (ThermalForceSensitivity1DDependentOffset) {
+BOOST_AUTO_TEST_CASE   (ThermalForceNonlinearSensitivity1DIndependentOffset) {
     
-    this->init(true);
+    this->init(false, true);
+    
+    RealVectorX v;
+    
+    // combination of axial and bending deformation
+    BOOST_TEST_MESSAGE("**** Combined Extension-Bending Large Deformation **");
+    set_deformation(1, 3, libMesh::INVALID_ELEM, v);
+    check_thermal_force_and_jacobian_sensitivity<MAST::BuildStructural1DElem>
+    (*this, v);
+}
+
+
+
+BOOST_AUTO_TEST_CASE   (ThermalForceLinearSensitivity1DDependentOffset) {
+    
+    this->init(true, false);
     
     RealVectorX v;
     
     // pure axial deformation
+    BOOST_TEST_MESSAGE("**** Pure Extension Deformation **");
     set_deformation(1, 0, libMesh::INVALID_ELEM, v);
     check_thermal_force_and_jacobian_sensitivity<MAST::BuildStructural1DElem>
     (*this, v);
     
     // pure bending deformation
+    BOOST_TEST_MESSAGE("**** Pure Bending Deformation **");
     set_deformation(1, 1, libMesh::INVALID_ELEM, v);
     check_thermal_force_and_jacobian_sensitivity<MAST::BuildStructural1DElem>
     (*this, v);
     
     // combination of axial and bending deformation
+    BOOST_TEST_MESSAGE("**** Combined Extension-Bending Deformation **");
     set_deformation(1, 2, libMesh::INVALID_ELEM, v);
     check_thermal_force_and_jacobian_sensitivity<MAST::BuildStructural1DElem>
     (*this, v);
@@ -355,16 +412,304 @@ BOOST_AUTO_TEST_CASE   (ThermalForceSensitivity1DDependentOffset) {
 }
 
 
-BOOST_AUTO_TEST_SUITE_END()
 
 
-
-BOOST_FIXTURE_TEST_SUITE  (Structural2DJacobianEvaluation, MAST::BuildStructural2DElem)
-BOOST_AUTO_TEST_CASE   (ThermalResidual2D) {
+BOOST_AUTO_TEST_CASE   (ThermalForceNonlinearSensitivity1DDependentOffset) {
     
-    //check_thermal_residual_force_jacobian<MAST::BuildStructural2DElem>(*this);
+    this->init(true, true);
+    
+    RealVectorX v;
+    
+    // combination of axial and bending deformation
+    BOOST_TEST_MESSAGE("**** Combined Extension-Bending Large Deformation **");
+    set_deformation(1, 3, libMesh::INVALID_ELEM, v);
+    check_thermal_force_and_jacobian_sensitivity<MAST::BuildStructural1DElem>
+    (*this, v);
+    
 }
 
+
+
 BOOST_AUTO_TEST_SUITE_END()
 
 
+
+BOOST_FIXTURE_TEST_SUITE  (Structural2DJacobianEvaluation,
+                           MAST::BuildStructural2DElem)
+
+
+BOOST_AUTO_TEST_CASE   (ThermalResidualLinearQUAD42DIndependentOffset) {
+    
+    RealVectorX v;
+    
+    this->init(false, false, libMesh::QUAD4);
+    set_deformation(2, 3, libMesh::QUAD4, v);
+    check_thermal_residual_force_jacobian<MAST::BuildStructural2DElem>(*this, v);
+}
+
+
+
+BOOST_AUTO_TEST_CASE   (ThermalResidualLinearTRI32DIndependentOffset) {
+    
+    RealVectorX v;
+    
+    this->init(false, false, libMesh::TRI3);
+    set_deformation(2, 3, libMesh::TRI3, v);
+    check_thermal_residual_force_jacobian<MAST::BuildStructural2DElem>(*this, v);
+}
+
+
+
+BOOST_AUTO_TEST_CASE   (ThermalResidualNonlinearQUAD42DIndependentOffset) {
+    
+    RealVectorX v;
+    
+    this->init(false, true, libMesh::QUAD4);
+    set_deformation(2, 3, libMesh::QUAD4, v);
+    check_thermal_residual_force_jacobian<MAST::BuildStructural2DElem>(*this, v);
+}
+
+
+
+BOOST_AUTO_TEST_CASE   (ThermalResidualNonlinearTRI32DIndependentOffset) {
+    
+    RealVectorX v;
+    
+    this->init(false, true, libMesh::TRI3);
+    set_deformation(2, 3, libMesh::TRI3, v);
+    check_thermal_residual_force_jacobian<MAST::BuildStructural2DElem>(*this, v);
+}
+
+
+
+BOOST_AUTO_TEST_CASE   (ThermalResidualLinearQUAD42DDependentOffset) {
+    
+    RealVectorX v;
+    
+    this->init(true, false, libMesh::QUAD4);
+    set_deformation(2, 3, libMesh::QUAD4, v);
+    check_thermal_residual_force_jacobian<MAST::BuildStructural2DElem>(*this, v);
+}
+
+
+
+BOOST_AUTO_TEST_CASE   (ThermalResidualLinearTRI32DDependentOffset) {
+    
+    RealVectorX v;
+    
+    this->init(true, false, libMesh::TRI3);
+    set_deformation(2, 3, libMesh::TRI3, v);
+    check_thermal_residual_force_jacobian<MAST::BuildStructural2DElem>(*this, v);
+}
+
+
+
+BOOST_AUTO_TEST_CASE   (ThermalResidualNonlinearQUAD42DDependentOffset) {
+    
+    RealVectorX v;
+    
+    this->init(true, true, libMesh::QUAD4);
+    set_deformation(2, 3, libMesh::QUAD4, v);
+    check_thermal_residual_force_jacobian<MAST::BuildStructural2DElem>(*this, v);
+}
+
+
+
+BOOST_AUTO_TEST_CASE   (ThermalResidualNonlinearTRI32DDependentOffset) {
+    
+    RealVectorX v;
+    
+    this->init(true, true, libMesh::TRI3);
+    set_deformation(2, 3, libMesh::TRI3, v);
+    check_thermal_residual_force_jacobian<MAST::BuildStructural2DElem>(*this, v);
+}
+
+
+BOOST_AUTO_TEST_SUITE_END()
+
+
+
+
+BOOST_FIXTURE_TEST_SUITE  (Structural2DThermalForceSensitivity,
+                           MAST::BuildStructural2DElem)
+
+BOOST_AUTO_TEST_CASE   (ThermalForceLinearSensitivityQUAD42DIndependentOffset) {
+    
+    this->init(false, false, libMesh::QUAD4);
+    
+    RealVectorX v;
+    
+    // pure axial deformation
+    BOOST_TEST_MESSAGE("**** Pure Extension Deformation **");
+    set_deformation(2, 0, libMesh::QUAD4, v);
+    check_thermal_force_and_jacobian_sensitivity<MAST::BuildStructural2DElem>
+    (*this, v);
+    
+    // pure bending deformation
+    BOOST_TEST_MESSAGE("**** Pure Bending Deformation **");
+    set_deformation(2, 1, libMesh::QUAD4, v);
+    check_thermal_force_and_jacobian_sensitivity<MAST::BuildStructural2DElem>
+    (*this, v);
+    
+    // combination of axial and bending deformation
+    BOOST_TEST_MESSAGE("**** Combined Extension-Bending Deformation **");
+    set_deformation(2, 2, libMesh::QUAD4, v);
+    check_thermal_force_and_jacobian_sensitivity<MAST::BuildStructural2DElem>
+    (*this, v);
+    
+}
+
+
+
+BOOST_AUTO_TEST_CASE   (ThermalForceLinearSensitivityTRI32DIndependentOffset) {
+    
+    this->init(false, false, libMesh::TRI3);
+    
+    RealVectorX v;
+    
+    // pure axial deformation
+    BOOST_TEST_MESSAGE("**** Pure Extension Deformation **");
+    set_deformation(2, 0, libMesh::TRI3, v);
+    check_thermal_force_and_jacobian_sensitivity<MAST::BuildStructural2DElem>
+    (*this, v);
+    
+    // pure bending deformation
+    BOOST_TEST_MESSAGE("**** Pure Bending Deformation **");
+    set_deformation(2, 1, libMesh::TRI3, v);
+    check_thermal_force_and_jacobian_sensitivity<MAST::BuildStructural2DElem>
+    (*this, v);
+    
+    // combination of axial and bending deformation
+    BOOST_TEST_MESSAGE("**** Combined Extension-Bending Deformation **");
+    set_deformation(2, 2, libMesh::TRI3, v);
+    check_thermal_force_and_jacobian_sensitivity<MAST::BuildStructural2DElem>
+    (*this, v);
+    
+}
+
+
+
+
+BOOST_AUTO_TEST_CASE   (ThermalForceNonlinearSensitivityQUAD42DIndependentOffset) {
+    
+    this->init(false, true, libMesh::QUAD4);
+    
+    RealVectorX v;
+    
+    // combination of axial and bending deformation
+    BOOST_TEST_MESSAGE("**** Combined Extension-Bending Large Deformation **");
+    set_deformation(2, 3, libMesh::QUAD4, v);
+    check_thermal_force_and_jacobian_sensitivity<MAST::BuildStructural2DElem>
+    (*this, v);
+    
+}
+
+
+
+BOOST_AUTO_TEST_CASE   (ThermalForceNonlinearSensitivityTRI32DIndependentOffset) {
+    
+    this->init(false, true, libMesh::TRI3);
+    
+    RealVectorX v;
+    
+    // combination of axial and bending deformation
+    BOOST_TEST_MESSAGE("**** Combined Extension-Bending Large Deformation **");
+    set_deformation(2, 3, libMesh::TRI3, v);
+    check_thermal_force_and_jacobian_sensitivity<MAST::BuildStructural2DElem>
+    (*this, v);
+    
+}
+
+
+
+
+BOOST_AUTO_TEST_CASE   (ThermalForceLinearSensitivityQUAD42DDependentOffset) {
+    
+    this->init(true, false, libMesh::QUAD4);
+    
+    RealVectorX v;
+    
+    // pure axial deformation
+    BOOST_TEST_MESSAGE("**** Pure Extension Deformation **");
+    set_deformation(2, 0, libMesh::QUAD4, v);
+    check_thermal_force_and_jacobian_sensitivity<MAST::BuildStructural2DElem>
+    (*this, v);
+    
+    // pure bending deformation
+    BOOST_TEST_MESSAGE("**** Pure Bending Deformation **");
+    set_deformation(2, 1, libMesh::QUAD4, v);
+    check_thermal_force_and_jacobian_sensitivity<MAST::BuildStructural2DElem>
+    (*this, v);
+    
+    // combination of axial and bending deformation
+    BOOST_TEST_MESSAGE("**** Combined Extension-Bending Deformation **");
+    set_deformation(2, 2, libMesh::QUAD4, v);
+    check_thermal_force_and_jacobian_sensitivity<MAST::BuildStructural2DElem>
+    (*this, v);
+    
+}
+
+
+
+BOOST_AUTO_TEST_CASE   (ThermalForceLinearSensitivityTRI32DDependentOffset) {
+    
+    this->init(true, false, libMesh::TRI3);
+    
+    RealVectorX v;
+    
+    // pure axial deformation
+    BOOST_TEST_MESSAGE("**** Pure Extension Deformation **");
+    set_deformation(2, 0, libMesh::TRI3, v);
+    check_thermal_force_and_jacobian_sensitivity<MAST::BuildStructural2DElem>
+    (*this, v);
+    
+    // pure bending deformation
+    BOOST_TEST_MESSAGE("**** Pure Bending Deformation **");
+    set_deformation(2, 1, libMesh::TRI3, v);
+    check_thermal_force_and_jacobian_sensitivity<MAST::BuildStructural2DElem>
+    (*this, v);
+    
+    // combination of axial and bending deformation
+    BOOST_TEST_MESSAGE("**** Combined Extension-Bending Deformation **");
+    set_deformation(2, 2, libMesh::TRI3, v);
+    check_thermal_force_and_jacobian_sensitivity<MAST::BuildStructural2DElem>
+    (*this, v);
+    
+}
+
+
+
+
+BOOST_AUTO_TEST_CASE   (ThermalForceNonlinearSensitivityQUAD42DDependentOffset) {
+    
+    this->init(true, true, libMesh::QUAD4);
+    
+    RealVectorX v;
+    
+    // combination of axial and bending deformation
+    BOOST_TEST_MESSAGE("**** Combined Extension-Bending Large Deformation **");
+    set_deformation(2, 3, libMesh::QUAD4, v);
+    check_thermal_force_and_jacobian_sensitivity<MAST::BuildStructural2DElem>
+    (*this, v);
+    
+}
+
+
+
+BOOST_AUTO_TEST_CASE   (ThermalForceNonlinearSensitivityTRI32DDependentOffset) {
+    
+    this->init(true, true, libMesh::TRI3);
+    
+    RealVectorX v;
+    
+    // combination of axial and bending deformation
+    BOOST_TEST_MESSAGE("**** Combined Extension-Bending Large Deformation **");
+    set_deformation(2, 3, libMesh::TRI3, v);
+    check_thermal_force_and_jacobian_sensitivity<MAST::BuildStructural2DElem>
+    (*this, v);
+    
+}
+
+
+
+BOOST_AUTO_TEST_SUITE_END()

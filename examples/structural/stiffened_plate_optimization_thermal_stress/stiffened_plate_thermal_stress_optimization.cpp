@@ -286,7 +286,7 @@ init(GetPot& infile,
     
     // initialize the dv vector data
     const Real
-    th_l                   = infile("thickness_lower", 0.0001),
+    th_l                   = infile("thickness_lower",  0.001),
     th_u                   = infile("thickness_upper",    0.2),
     th                     = infile("thickness",          0.2),
     dx                     = _length/(_n_dv_stations_x-1);
@@ -343,28 +343,28 @@ init(GetPot& infile,
     
     // create the property functions and add them to the card
     
-    _E               = new MAST::Parameter(   "E", infile("E",    72.e9));
-    _nu              = new MAST::Parameter(  "nu", infile("nu",    0.33));
-    _kappa           = new MAST::Parameter("kappa",infile("kappa",5./6.));
-    _alpha           = new MAST::Parameter("alpha",infile("alpha",2.5e-5));
-    _rho             = new MAST::Parameter( "rho", infile("rho", 2700.0));
-    _zero            = new MAST::Parameter("zero",                    0.);
-    _temp            = new MAST::Parameter( "temperature",infile("temp", 300.));
-    _thz_stiff       = new MAST::Parameter( "thz", infile("thz", 0.01)); // currently, an arbitrary thickness
+    _E               = new MAST::Parameter(   "E", infile("E",         72.e9));
+    _nu              = new MAST::Parameter(  "nu", infile("nu",         0.33));
+    _kappa           = new MAST::Parameter("kappa",infile("kappa",     5./6.));
+    _alpha           = new MAST::Parameter("alpha",infile("alpha",    2.5e-5));
+    _rho             = new MAST::Parameter( "rho", infile("rho",      2700.0));
+    _zero            = new MAST::Parameter("zero",                         0.);
+    _temp            = new MAST::Parameter( "temperature",infile("temp", 60.));
+    _thz_stiff       = new MAST::Parameter( "thz", infile("thz",        0.01)); // currently, an arbitrary thickness
     
     
-    _E_f             = new MAST::ConstantFieldFunction("E",            *_E);
-    _nu_f            = new MAST::ConstantFieldFunction("nu",          *_nu);
-    _kappa_f         = new MAST::ConstantFieldFunction("kappa",    *_kappa);
+    _E_f             = new MAST::ConstantFieldFunction("E",                   *_E);
+    _nu_f            = new MAST::ConstantFieldFunction("nu",                 *_nu);
+    _kappa_f         = new MAST::ConstantFieldFunction("kappa",           *_kappa);
     _alpha_f         = new MAST::ConstantFieldFunction("alpha_expansion", *_alpha);
-    _rho_f           = new MAST::ConstantFieldFunction("rho",        *_rho);
-    _temp_f          = new MAST::ConstantFieldFunction("temperature", *_temp);
-    _ref_temp_f      = new MAST::ConstantFieldFunction("ref_temperature", *_zero);
-    _thz_stiff_f     = new MAST::ConstantFieldFunction("hz",    *_thz_stiff);
-    _thzoff_stiff_f  = new MAST::ConstantFieldFunction("hz_off",     *_zero);
-    _hoff_plate_f          = new MAST::SectionOffset("off",
-                                                     _th_plate_f->clone().release(),
-                                                     1.);
+    _rho_f           = new MAST::ConstantFieldFunction("rho",               *_rho);
+    _temp_f          = new MAST::ConstantFieldFunction("temperature",      *_temp);
+    _ref_temp_f      = new MAST::ConstantFieldFunction("ref_temperature",  *_zero);
+    _thz_stiff_f     = new MAST::ConstantFieldFunction("hz",          *_thz_stiff);
+    _thzoff_stiff_f  = new MAST::ConstantFieldFunction("hz_off",           *_zero);
+    _hoff_plate_f    = new MAST::SectionOffset("off",
+                                               _th_plate_f->clone().release(),
+                                               0.);
     
     // initialize the load
     _T_load          = new MAST::BoundaryConditionBase(MAST::TEMPERATURE);
@@ -680,6 +680,11 @@ MAST::StiffenedPlateBendingThermalStressSizingOptimization::evaluate(const std::
     libMesh::Point pt; // dummy point object
     
     libMesh::out << "New Eval" << std::endl;
+    for (unsigned int i=0; i<_n_vars; i++)
+        libMesh::out
+        << "th     [ " << std::setw(10) << i << " ] = "
+        << std::setw(20) << (*_problem_parameters[i])() << std::endl;
+    
     
     // the optimization problem is defined as
     // min weight, subject to constraints on displacement and stresses
@@ -842,7 +847,14 @@ MAST::StiffenedPlateBendingThermalStressSizingOptimization::output(unsigned int 
                                                                    bool if_write_to_optim_file) const {
     
     libmesh_assert_equal_to(x.size(), _n_vars);
-        
+    
+    // write the DVs in the physical dimension
+    for (unsigned int i=0; i<_n_vars; i++)
+        libMesh::out
+        << "th     [ " << std::setw(10) << i << " ] = "
+        << std::setw(20) << (*_problem_parameters[i])() << std::endl;
+
+    
     // write the solution for visualization
     libMesh::ExodusII_IO(*_mesh).write_equation_systems("output.exo",
                                                         *_eq_sys);

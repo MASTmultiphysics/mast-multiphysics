@@ -41,12 +41,21 @@
 #include "libmesh/dof_map.h"
 
 
+extern
+void
+set_deformation(const unsigned int dim,
+                const unsigned int case_num,
+                const libMesh::ElemType e,
+                RealVectorX& vec);
+
+
 
 template <typename ValType>
-void check_internal_force_jacobian (ValType& v) {
+void check_internal_force_jacobian (ValType& v,
+                                    const RealVectorX& sol) {
 
     const Real
-    delta    = 1.e-3,
+    delta    = 1.e-5,
     tol      = 1.e-2;
 
     // get reference to the element in this mesh
@@ -65,6 +74,11 @@ void check_internal_force_jacobian (ValType& v) {
     dofmap.dof_indices(&elem, dof_ids);
     
     const unsigned int ndofs = (unsigned int)dof_ids.size();
+
+    
+    // make sure that the number of dofs are appropriately set
+    libmesh_assert_equal_to(sol.size(), ndofs);
+    
     
     // now get the residual and Jacobian evaluations
     RealVectorX
@@ -78,6 +92,10 @@ void check_internal_force_jacobian (ValType& v) {
     jac_x_fd    = RealMatrixX::Zero(ndofs, ndofs),
     dummy;
     
+
+    // set the solution about which to evaluate the nonlinearity
+    x0          = sol;
+    x           = sol;
     
     // tell the element about the solution and velocity
     e->set_solution(x);
@@ -112,37 +130,71 @@ void check_internal_force_jacobian (ValType& v) {
 
 BOOST_FIXTURE_TEST_SUITE  (Structural1DJacobianEvaluation, MAST::BuildStructural1DElem)
 
-BOOST_AUTO_TEST_CASE   (InternalForceJacobian1DIndependentOffset) {
+BOOST_AUTO_TEST_CASE   (InternalForceJacobianLinear1DIndependentOffset) {
 
-    this->init(false);
+    this->init(false, false);
     
     RealVectorX v;
-    
-    check_internal_force_jacobian<MAST::BuildStructural1DElem>(*this);
+    set_deformation(1, 3, libMesh::INVALID_ELEM, v);
+    check_internal_force_jacobian<MAST::BuildStructural1DElem>(*this, v);
 }
 
 
-BOOST_AUTO_TEST_CASE   (InternalForceJacobian1DWithConstantOffset) {
+BOOST_AUTO_TEST_CASE   (InternalForceJacobianNonlinear1DIndependentOffset) {
     
-    this->init(false);
+    this->init(false, true);
+    
+    RealVectorX v;
+    set_deformation(1, 3, libMesh::INVALID_ELEM, v);
+    check_internal_force_jacobian<MAST::BuildStructural1DElem>(*this, v);
+}
+
+
+BOOST_AUTO_TEST_CASE   (InternalForceJacobianLinear1DWithConstantOffset) {
+    
+    this->init(false, false);
 
     RealVectorX v;
     
     // set a finite value of the offset
     (*_hy_off)()  = 0.5*(*_thy)();
+    set_deformation(1, 3, libMesh::INVALID_ELEM, v);
+    check_internal_force_jacobian<MAST::BuildStructural1DElem>(*this, v);
+}
+
+
+BOOST_AUTO_TEST_CASE   (InternalForceJacobianNonlinear1DWithConstantOffset) {
     
-    check_internal_force_jacobian<MAST::BuildStructural1DElem>(*this);
+    this->init(false, true);
+    
+    RealVectorX v;
+    
+    // set a finite value of the offset
+    (*_hy_off)()  = 0.5*(*_thy)();
+    set_deformation(1, 3, libMesh::INVALID_ELEM, v);
+    check_internal_force_jacobian<MAST::BuildStructural1DElem>(*this, v);
 }
 
 
 
-BOOST_AUTO_TEST_CASE   (InternalForceJacobian1DIndependentOffsetDependentOffset) {
+BOOST_AUTO_TEST_CASE   (InternalForceJacobianLinear1DIndependentOffsetDependentOffset) {
     
-    this->init(true);
+    this->init(true, false);
     
     RealVectorX v;
+    set_deformation(1, 3, libMesh::INVALID_ELEM, v);
+    check_internal_force_jacobian<MAST::BuildStructural1DElem>(*this, v);
+}
+
+
+
+BOOST_AUTO_TEST_CASE   (InternalForceJacobianNonlinear1DIndependentOffsetDependentOffset) {
     
-    check_internal_force_jacobian<MAST::BuildStructural1DElem>(*this);
+    this->init(true, true);
+    
+    RealVectorX v;
+    set_deformation(1, 3, libMesh::INVALID_ELEM, v);
+    check_internal_force_jacobian<MAST::BuildStructural1DElem>(*this, v);
 }
 
 
@@ -155,58 +207,136 @@ BOOST_AUTO_TEST_SUITE_END()
 BOOST_FIXTURE_TEST_SUITE  (Structural2DJacobianEvaluation,
                            MAST::BuildStructural2DElem)
 
-BOOST_AUTO_TEST_CASE   (InternalForceJacobian2DIndependentOffsetQUAD4) {
+BOOST_AUTO_TEST_CASE   (InternalForceJacobianLinear2DIndependentOffsetQUAD4) {
     
-    this->init(false, libMesh::QUAD4);
-    
-    check_internal_force_jacobian<MAST::BuildStructural2DElem>(*this);
+    this->init(false, false, libMesh::QUAD4);
+
+    RealVectorX v;
+    set_deformation(2, 3, libMesh::QUAD4, v);
+    check_internal_force_jacobian<MAST::BuildStructural2DElem>(*this, v);
 }
 
 
-BOOST_AUTO_TEST_CASE   (InternalForceJacobian2DWithConstantOffsetQUAD4) {
+BOOST_AUTO_TEST_CASE   (InternalForceJacobianNonlinear2DIndependentOffsetQUAD4) {
+    
+    this->init(false, true, libMesh::QUAD4);
+    
+    RealVectorX v;
+    set_deformation(2, 3, libMesh::QUAD4, v);
+    check_internal_force_jacobian<MAST::BuildStructural2DElem>(*this, v);
+}
 
-    this->init(false, libMesh::QUAD4);
+
+BOOST_AUTO_TEST_CASE   (InternalForceJacobianLinear2DWithConstantOffsetQUAD4) {
+
+    this->init(false, false, libMesh::QUAD4);
     
     // set a finite value of the offset
     (*_hzoff)()  = 0.5*(*_thz)();
 
-    check_internal_force_jacobian<MAST::BuildStructural2DElem>(*this);
+    RealVectorX v;
+    set_deformation(2, 3, libMesh::QUAD4, v);
+    check_internal_force_jacobian<MAST::BuildStructural2DElem>(*this, v);
 }
 
 
-BOOST_AUTO_TEST_CASE   (InternalForceJacobian2DDependentOffsetQUAD4) {
+BOOST_AUTO_TEST_CASE   (InternalForceJacobianNonlinear2DWithConstantOffsetQUAD4) {
     
-    this->init(true, libMesh::QUAD4);
-    
-    check_internal_force_jacobian<MAST::BuildStructural2DElem>(*this);
-}
-
-
-
-BOOST_AUTO_TEST_CASE   (InternalForceJacobian2DIndependentOffsetTRI3) {
-    
-    this->init(false, libMesh::TRI3);
-    
-    check_internal_force_jacobian<MAST::BuildStructural2DElem>(*this);
-}
-
-
-BOOST_AUTO_TEST_CASE   (InternalForceJacobian2DWithConstantOffsetTRI3) {
-    
-    this->init(false, libMesh::TRI3);
+    this->init(false, true, libMesh::QUAD4);
     
     // set a finite value of the offset
     (*_hzoff)()  = 0.5*(*_thz)();
     
-    check_internal_force_jacobian<MAST::BuildStructural2DElem>(*this);
+    RealVectorX v;
+    set_deformation(2, 3, libMesh::QUAD4, v);
+    check_internal_force_jacobian<MAST::BuildStructural2DElem>(*this, v);
 }
 
 
-BOOST_AUTO_TEST_CASE   (InternalForceJacobian2DDependentOffsetTRI3) {
+BOOST_AUTO_TEST_CASE   (InternalForceJacobianLinear2DDependentOffsetQUAD4) {
     
-    this->init(true, libMesh::TRI3);
+    this->init(true, false, libMesh::QUAD4);
     
-    check_internal_force_jacobian<MAST::BuildStructural2DElem>(*this);
+    RealVectorX v;
+    set_deformation(2, 3, libMesh::QUAD4, v);
+    check_internal_force_jacobian<MAST::BuildStructural2DElem>(*this, v);
+}
+
+
+BOOST_AUTO_TEST_CASE   (InternalForceJacobianNonlinear2DDependentOffsetQUAD4) {
+    
+    this->init(true, true, libMesh::QUAD4);
+    
+    RealVectorX v;
+    set_deformation(2, 3, libMesh::QUAD4, v);
+    check_internal_force_jacobian<MAST::BuildStructural2DElem>(*this, v);
+}
+
+
+
+BOOST_AUTO_TEST_CASE   (InternalForceJacobianLinear2DIndependentOffsetTRI3) {
+    
+    this->init(false, false, libMesh::TRI3);
+    
+    RealVectorX v;
+    set_deformation(2, 3, libMesh::TRI3, v);
+    check_internal_force_jacobian<MAST::BuildStructural2DElem>(*this, v);
+}
+
+
+BOOST_AUTO_TEST_CASE   (InternalForceJacobianNonlinear2DIndependentOffsetTRI3) {
+    
+    this->init(false, true, libMesh::TRI3);
+    
+    RealVectorX v;
+    set_deformation(2, 3, libMesh::TRI3, v);
+    check_internal_force_jacobian<MAST::BuildStructural2DElem>(*this, v);
+}
+
+
+BOOST_AUTO_TEST_CASE   (InternalForceJacobianLinear2DWithConstantOffsetTRI3) {
+    
+    this->init(false, false, libMesh::TRI3);
+    
+    // set a finite value of the offset
+    (*_hzoff)()  = 0.5*(*_thz)();
+    
+    RealVectorX v;
+    set_deformation(2, 3, libMesh::TRI3, v);
+    check_internal_force_jacobian<MAST::BuildStructural2DElem>(*this, v);
+}
+
+
+BOOST_AUTO_TEST_CASE   (InternalForceJacobianNonlinear2DWithConstantOffsetTRI3) {
+    
+    this->init(false, true, libMesh::TRI3);
+    
+    // set a finite value of the offset
+    (*_hzoff)()  = 0.5*(*_thz)();
+    
+    RealVectorX v;
+    set_deformation(2, 3, libMesh::TRI3, v);
+    check_internal_force_jacobian<MAST::BuildStructural2DElem>(*this, v);
+}
+
+
+BOOST_AUTO_TEST_CASE   (InternalForceJacobianLinear2DDependentOffsetTRI3) {
+    
+    this->init(true, false, libMesh::TRI3);
+    
+    RealVectorX v;
+    set_deformation(2, 3, libMesh::TRI3, v);
+    check_internal_force_jacobian<MAST::BuildStructural2DElem>(*this, v);
+}
+
+
+BOOST_AUTO_TEST_CASE   (InternalForceJacobianNonlinear2DDependentOffsetTRI3) {
+    
+    this->init(true, true, libMesh::TRI3);
+    
+    RealVectorX v;
+    set_deformation(2, 3, libMesh::TRI3, v);
+    check_internal_force_jacobian<MAST::BuildStructural2DElem>(*this, v);
 }
 
 

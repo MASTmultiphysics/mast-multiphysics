@@ -92,13 +92,13 @@ int main_5(int argc, const char * argv[]) {
         flight_cond.body_euler_angles(i)  = infile( "body_euler_angles", 0., i);
         flight_cond.body_angular_rates(i) = infile("body_angular_rates", 0., i);
     }
-    flight_cond.ref_chord       = infile("ref_c",   1.);
-    flight_cond.altitude        = infile( "alt",    0.);
-    flight_cond.mach            = infile("mach",    .5);
-    flight_cond.gas_property.cp = infile(  "cp", 1003.);
-    flight_cond.gas_property.cv = infile(  "cv",  716.);
-    flight_cond.gas_property.T  = infile("temp",  300.);
-    flight_cond.gas_property.rho= infile( "rho",  1.05);
+    flight_cond.ref_chord       = infile("ref_c",    1.);
+    flight_cond.altitude        = infile( "alt",     0.);
+    flight_cond.mach            = infile("mach",     .5);
+    flight_cond.gas_property.cp = infile(  "cp",  1003.);
+    flight_cond.gas_property.cv = infile(  "cv",   716.);
+    flight_cond.gas_property.T  = infile("temp",    60.);
+    flight_cond.gas_property.rho= infile( "rho",   1.05);
     flight_cond.init();
     
     // tell the discipline about the fluid values
