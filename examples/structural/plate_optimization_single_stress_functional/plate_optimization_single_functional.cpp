@@ -681,6 +681,7 @@ output(unsigned int iter,
     // write the solution for visualization
     libMesh::ExodusII_IO(*_mesh).write_equation_systems("output.exo",
                                                         *_eq_sys);
+    _discipline->plot_stress_strain_data<libMesh::ExodusII_IO>("stress_output.exo");
     
     MAST::FunctionEvaluation::output(iter, x, obj, fval, if_write_to_optim_file);
 }
