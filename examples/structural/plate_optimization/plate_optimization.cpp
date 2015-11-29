@@ -701,8 +701,11 @@ MAST::PlateBendingSizingOptimization::output(unsigned int iter,
     libmesh_assert_equal_to(x.size(), _n_vars);
         
     // write the solution for visualization
+    std::set<std::string> nm;
+    nm.insert(_sys->name());
     libMesh::ExodusII_IO(*_mesh).write_equation_systems("output.exo",
-                                                        *_eq_sys);
+                                                        *_eq_sys,
+                                                        &nm);
     _discipline->plot_stress_strain_data<libMesh::ExodusII_IO>("stress_output.exo");
     
     MAST::FunctionEvaluation::output(iter, x, obj, fval, if_write_to_optim_file);

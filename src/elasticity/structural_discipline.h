@@ -58,6 +58,9 @@ namespace MAST {
         
     protected:
         
+        libMesh::System*           _stress_output_sys;
+        
+        std::vector<unsigned int>  _stress_vars;
         
     };
 }
