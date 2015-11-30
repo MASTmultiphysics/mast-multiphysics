@@ -240,7 +240,7 @@ sensitivity_assemble(const libMesh::ParameterVector& parameters,
         physics_elem->set_base_solution(sol, true);
         
         // tell the element about the sensitivity parameter
-        physics_elem->sensitivity_param = _discipline->get_parameter(parameters[i]);
+        physics_elem->sensitivity_param = _discipline->get_parameter(&(parameters[i].get()));
         
         _elem_sensitivity_calculations(*physics_elem, mat_A, mat_B);
 

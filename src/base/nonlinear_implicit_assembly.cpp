@@ -292,7 +292,7 @@ sensitivity_assemble (const libMesh::ParameterVector& parameters,
         for (unsigned int i=0; i<dof_indices.size(); i++)
             sol(i) = (*localized_solution)(dof_indices[i]);
         
-        physics_elem->sensitivity_param = _discipline->get_parameter(parameters[i]);
+        physics_elem->sensitivity_param = _discipline->get_parameter(&(parameters[i].get()));
         physics_elem->set_solution(sol);
         
         if (_sol_function)

@@ -29,6 +29,7 @@
 #include "libmesh/dirichlet_boundaries.h"
 #include "libmesh/fe_interface.h"
 #include "libmesh/dirichlet_boundaries.h"
+#include "libmesh/elem.h"
 
 
 void
@@ -171,7 +172,7 @@ MAST::PhysicsDisciplineBase::add_parameter(MAST::Parameter& f) {
     
     // now add this to the map
     bool insert_success = _parameter_map.insert
-    (std::map<Real*, MAST::FunctionBase*>::value_type(par, &f)).second;
+    (std::map<const Real*, MAST::FunctionBase*>::value_type(par, &f)).second;
     
     libmesh_assert(insert_success);
 }
@@ -183,7 +184,7 @@ void
 MAST::PhysicsDisciplineBase::remove_parameter(MAST::Parameter& f) {
     
     // now add this to the map
-    std::map<Real*, const MAST::FunctionBase*>::iterator
+    std::map<const Real*, const MAST::FunctionBase*>::iterator
     it = _parameter_map.find(f.ptr());
     
     if (it != _parameter_map.end())
@@ -194,11 +195,11 @@ MAST::PhysicsDisciplineBase::remove_parameter(MAST::Parameter& f) {
 
 
 const MAST::FunctionBase*
-MAST::PhysicsDisciplineBase::get_parameter(Real* par) const {
+MAST::PhysicsDisciplineBase::get_parameter(const Real* par) const {
     // make sure valid values are given
     libmesh_assert(par);
     
-    std::map<Real*, const MAST::FunctionBase*>::const_iterator
+    std::map<const Real*, const MAST::FunctionBase*>::const_iterator
     it = _parameter_map.find(par);
     
     // make sure it does not already exist in the map

@@ -204,7 +204,7 @@ MAST::TransientAssembly::
 sensitivity_assemble (const libMesh::ParameterVector& parameters,
                       const unsigned int i,
                       libMesh::NumericVector<Real>& sensitivity_rhs) {
-    
+
     libMesh::NonlinearImplicitSystem& transient_sys =
     dynamic_cast<libMesh::NonlinearImplicitSystem&>(_system->system());
     
@@ -267,7 +267,7 @@ sensitivity_assemble (const libMesh::ParameterVector& parameters,
         if (_sol_function)
             physics_elem->attach_active_solution_function(*_sol_function);
 
-        physics_elem->sensitivity_param = _discipline->get_parameter(parameters[i]);
+        physics_elem->sensitivity_param = _discipline->get_parameter(&(parameters[i].get()));
         physics_elem->set_solution(sol);
         
         // perform the element level calculations

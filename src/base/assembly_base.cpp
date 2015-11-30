@@ -257,7 +257,7 @@ calculate_output_sensitivity(libMesh::ParameterVector &params,
             mat.setZero(ndofs, ndofs);
 
             // tell the element about the sensitivity paramete
-            physics_elem->sensitivity_param = _discipline->get_parameter(params[i]);
+            physics_elem->sensitivity_param = _discipline->get_parameter(&(params[i].get()));
             
             // get the solution
             for (unsigned int i=0; i<dof_indices.size(); i++)

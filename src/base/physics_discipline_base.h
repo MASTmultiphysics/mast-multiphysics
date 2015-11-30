@@ -230,7 +230,7 @@ namespace MAST {
         /*!
          *   Returns the function corresponding to a parameter
          */
-        const MAST::FunctionBase* get_parameter(Real* par) const;
+        const MAST::FunctionBase* get_parameter(const Real* par) const;
         
         
     protected:
@@ -249,7 +249,7 @@ namespace MAST {
          *   map of sensitivity parameters and the corresponding functions that
          *   are directly dependent on these parameters
          */
-        std::map<Real*, const MAST::FunctionBase*> _parameter_map;
+        std::map<const Real*, const MAST::FunctionBase*> _parameter_map;
         
         /*!
          *   side boundary condition map of boundary id and load

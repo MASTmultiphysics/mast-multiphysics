@@ -62,11 +62,38 @@ MAST::FunctionEvaluation::output(unsigned int iter, const std::vector<Real> &x,
     if (_n_ineq) {
         libMesh::out << std::endl
         << "Inequality Constraints: " << std::endl;
+        unsigned int
+        n_active      = 0,
+        n_violated    = 0,
+        max_constr_id = 0;
+        Real
+        max_constr  = -1.e20;
         
-        for (unsigned int i=0; i<_n_ineq; i++)
+        for (unsigned int i=0; i<_n_ineq; i++) {
             libMesh::out
             << "fineq [ " << std::setw(10) << i << " ] = "
-            << std::setw(20) << fval[i+_n_eq] << std::endl;
+            << std::setw(20) << fval[i+_n_eq];
+            if (fabs(fval[i+_n_eq]) <= _tol) {
+                n_active++;
+                libMesh::out << "  ***" << std::endl;
+            }
+            else if (fval[i+_n_eq] > _tol) {
+                n_violated++;
+                libMesh::out << "  +++" << std::endl;
+            }
+            if (max_constr < fval[i+_n_eq]) {
+                max_constr_id = i;
+                max_constr    = fval[i+_n_eq];
+            }
+        }
+        
+        libMesh::out << std::endl
+        << std::setw(35) << " N Active Constraints: "
+        << std::setw(20) << n_active << std::endl
+        << std::setw(35) << " N Violated Constraints: "
+        << std::setw(20) << n_violated << std::endl
+        << std::setw(35) << " Most critical constraint: "
+        << std::setw(20) << max_constr << std::endl;
     }
     
     libMesh::out << std::endl
