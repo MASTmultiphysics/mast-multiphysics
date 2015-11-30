@@ -5,23 +5,20 @@ DEPENDENCY LIST
 MAST depends on the following libraries:
 
 -- PETSc (http://www.mcs.anl.gov/petsc/)
-   MAST has been tested with PETSc version 3.5.x, and is not presently
-   compatible with version 3.6.x.  
 
 -- SLEPc (http://slepc.upv.es)
    This builds on top of PETSc and provides the eigensolvers. The
-   version numbers are in sync with that of PETSc, so a 3.5.x version
-   of this library should be used.  
+   version numbers are in sync with that of PETSc.
 
 -- libMesh (http://libmesh.github.io)
-   The specific commit form libMesh that MAST uses is:
-   abb4c2ffde19788495882db392f61fde18d365d3. Several additional
+   The specific version of libMesh that MAST has been tested with is
+   892b71d3b0e0179045cfdddfd659445fcad34001. Several additional
    modifications to libMesh are needed, and can be found in the file
    contrib/libmesh_patches. The following commands will provide access
    to the commit and apply the patch:
       $> git clone git://github.com/libMesh/libmesh.git
       $> cd libmesh
-      $> git reset --hard abb4c2ffde19788495882db392f61fde18d365d3
+      $> git reset --hard 892b71d3b0e0179045cfdddfd659445fcad34001
       $> patch -p1 < MAST_DIR/contrib/libmesh_patch
 
 -- MPI

@@ -121,7 +121,7 @@ file (GLOB_RECURSE example_driver_source_files
 #	../examples/fluid/*.h
 	../examples/structural/*.cpp
 	../examples/structural/*.cpp
-	../examples/base/examples_driver.cpp) 
+	../examples/base/*.cpp) 
 add_executable (example_driver ${example_driver_source_files})
 
 target_link_libraries (example_driver
