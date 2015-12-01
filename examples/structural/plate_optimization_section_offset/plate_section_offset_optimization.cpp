@@ -37,6 +37,8 @@
 #include "libmesh/string_to_enum.h"
 
 
+extern 
+libMesh::LibMeshInit     *__init;
 extern
 MAST::FunctionEvaluation *__my_func_eval;
 
@@ -212,7 +214,7 @@ init(GetPot& infile,
     _stress_limit  = infile("max_stress", 4.00e8);
     
     // create the mesh
-    _mesh          = new libMesh::SerialMesh(_init->comm());
+    _mesh          = new libMesh::SerialMesh(__init->comm());
     
     // initialize the mesh with one element
     libMesh::MeshTools::Generation::build_square(*_mesh,

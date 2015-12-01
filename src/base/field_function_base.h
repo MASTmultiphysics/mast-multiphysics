@@ -21,6 +21,9 @@
 #ifndef __mast__field_function_base__
 #define __mast__field_function_base__
 
+// C++ includes
+#include <memory>
+
 // MAST includes
 #include "base/function_base.h"
 

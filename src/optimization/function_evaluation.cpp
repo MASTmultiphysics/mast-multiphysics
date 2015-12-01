@@ -75,12 +75,14 @@ MAST::FunctionEvaluation::output(unsigned int iter, const std::vector<Real> &x,
             << std::setw(20) << fval[i+_n_eq];
             if (fabs(fval[i+_n_eq]) <= _tol) {
                 n_active++;
-                libMesh::out << "  ***" << std::endl;
+                libMesh::out << "  ***";
             }
             else if (fval[i+_n_eq] > _tol) {
                 n_violated++;
-                libMesh::out << "  +++" << std::endl;
+                libMesh::out << "  +++";
             }
+            libMesh::out  << std::endl;
+            
             if (max_constr < fval[i+_n_eq]) {
                 max_constr_id = i;
                 max_constr    = fval[i+_n_eq];

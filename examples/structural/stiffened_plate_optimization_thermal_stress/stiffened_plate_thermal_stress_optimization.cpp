@@ -37,7 +37,8 @@
 #include "libmesh/getpot.h"
 #include "libmesh/string_to_enum.h"
 
-
+extern 
+libMesh::LibMeshInit     *__init;
 extern
 MAST::FunctionEvaluation *__my_func_eval;
 
@@ -177,7 +178,8 @@ _n_stiff(0),
 _n_plate_elems(0),
 _n_elems_per_stiff(0),
 _n_elems(0),
-_n_dv_stations_x(0)
+_n_dv_stations_x(0),
+_n_load_steps(0)
 { }
 
 
@@ -207,6 +209,9 @@ init(GetPot& infile,
     // number of stations
     _n_dv_stations_x         = infile("n_stations", 4);
     
+    // number of load steps
+    _n_load_steps            = infile("n_load_steps", 20);
+    
     
     // now setup the optimization data
     _n_vars                = _n_dv_stations_x + _n_dv_stations_x * _n_stiff; // for thickness variable
@@ -224,7 +229,7 @@ init(GetPot& infile,
     _stress_limit  = infile("max_stress", 4.00e8);
     
     // create the mesh
-    _mesh          = new libMesh::SerialMesh(_init->comm());
+    _mesh          = new libMesh::SerialMesh(__init->comm());
     
     // initialize the mesh with one element
     MAST::StiffenedPanelMesh panel_mesh;
@@ -713,11 +718,12 @@ MAST::StiffenedPlateBendingThermalStressSizingOptimization::evaluate(const std::
     // set the number of load steps
     unsigned int
     n_steps = 1;
-    if (if_vk) n_steps = 40;
+    if (if_vk) n_steps = _n_load_steps;
     
     Real
     T0      = (*_temp)();
     
+    libMesh::ExodusII_IO out(*_mesh);
     // now iterate over the load steps
     for (unsigned int i=0; i<n_steps; i++) {
         std::cout
@@ -725,11 +731,13 @@ MAST::StiffenedPlateBendingThermalStressSizingOptimization::evaluate(const std::
         
         (*_temp)()  =  T0*(i+1.)/(1.*n_steps);
         _sys->solve();
+        _assembly->calculate_outputs(*(_sys->solution));
+        _discipline->plot_stress_strain_data<libMesh::ExodusII_IO>("stress_out.exo");
+        out.write_timestep("out.exo", *_eq_sys, i+1, (i+1.)/n_steps);
     }
 
     // calculate the stresses
-    _assembly->calculate_outputs(*(_sys->solution));
-    
+    //_assembly->calculate_outputs(*(_sys->solution));
     
     //////////////////////////////////////////////////////////////////////
     // get the objective and constraints

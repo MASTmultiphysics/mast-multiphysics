@@ -20,6 +20,9 @@
 #ifndef __mast__material_property_card_base__
 #define __mast__material_property_card_base__
 
+// C++ includes
+#include <memory>
+
 // MAST includes
 #include "base/function_set_base.h"
 

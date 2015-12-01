@@ -37,6 +37,8 @@
 #include "libmesh/string_to_enum.h"
 
 
+extern 
+libMesh::LibMeshInit     *__init;
 
 
 MAST::BeamBendingSingleFunctionalSizingOptimization::
@@ -68,7 +70,7 @@ _n_stations(0) {
     _stress_limit  = infile("max_stress", 4.00e8);
     
     // create the mesh
-    _mesh          = new libMesh::SerialMesh(_init->comm());
+    _mesh          = new libMesh::SerialMesh(__init->comm());
     
     // initialize the mesh with one element
     libMesh::MeshTools::Generation::build_line(*_mesh, _n_elems, 0, _length);

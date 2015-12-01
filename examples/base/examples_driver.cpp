@@ -46,7 +46,7 @@
 #include "libmesh/getpot.h"
 
 
-libMesh::LibMeshInit     *_init          = NULL;
+libMesh::LibMeshInit     *__init         = NULL;
 MAST::FunctionEvaluation *__my_func_eval = NULL;
 
 
@@ -190,7 +190,7 @@ void plate_optimization(const std::string& case_name,
 int main(int argc, char* const argv[]) {
 
     libMesh::LibMeshInit init(argc, argv);
-    _init  = &init;
+    __init  = &init;
     
     // use to get arguments from the command line
     GetPot command_line(argc, argv);

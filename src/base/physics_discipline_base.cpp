@@ -242,9 +242,10 @@ clear_system_dirichlet_bc(SysType& sys) const {
 
 
 
+namespace MAST {
 
 template <>
-void MAST::PhysicsDisciplineBase::
+void PhysicsDisciplineBase::
 init_system_dirichlet_bc<libMesh::CondensedEigenSystem>(libMesh::CondensedEigenSystem& sys) const {
     
     // first prepare a map of boundary ids and the constrained vars on that
@@ -339,7 +340,7 @@ init_system_dirichlet_bc<libMesh::CondensedEigenSystem>(libMesh::CondensedEigenS
     // the constrained dofs
     sys.initialize_condensed_dofs(dof_ids);
 }
-
+}
 
 
 // explicit instantiations

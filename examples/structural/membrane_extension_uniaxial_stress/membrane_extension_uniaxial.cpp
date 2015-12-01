@@ -41,7 +41,7 @@
 #include "libmesh/parameter_vector.h"
 
 
-extern libMesh::LibMeshInit* _init;
+extern libMesh::LibMeshInit* __init;
 
 
 MAST::MembraneExtensionUniaxial::MembraneExtensionUniaxial() {
@@ -55,7 +55,7 @@ MAST::MembraneExtensionUniaxial::MembraneExtensionUniaxial() {
     
     
     // create the mesh
-    _mesh       = new libMesh::SerialMesh(_init->comm());
+    _mesh       = new libMesh::SerialMesh(__init->comm());
     
     // initialize the mesh with one element
     libMesh::MeshTools::Generation::build_square(*_mesh,

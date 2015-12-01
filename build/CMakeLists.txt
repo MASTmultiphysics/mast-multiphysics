@@ -105,11 +105,13 @@ target_link_libraries (mast
 		      ${fortran_lib}
 		      ${mpicxx_lib}
 		      ${mpi_lib})
+
 set_property (TARGET mast APPEND 
 	     PROPERTY INCLUDE_DIRECTORIES 
-	     ${libmesh_dir}/include
+	     ${libmesh_dir}/include)
+set_property (TARGET mast APPEND 
+	     PROPERTY INCLUDE_DIRECTORIES 
 	     ${petsc_dir}/include) 
-
 
 #
 #  tell cmake to link example driver with mast library

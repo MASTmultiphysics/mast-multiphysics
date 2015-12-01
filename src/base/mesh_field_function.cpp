@@ -77,9 +77,10 @@ MAST::MeshFieldFunction<ValType>::clone() const {
 
 
 
+namespace MAST {
 template <>
 void
-MAST::MeshFieldFunction<RealVectorX>::operator() (const libMesh::Point& p,
+MeshFieldFunction<RealVectorX>::operator() (const libMesh::Point& p,
                                                   const Real t,
                                                   RealVectorX& v) const {
     
@@ -115,7 +116,7 @@ MAST::MeshFieldFunction<RealVectorX>::operator() (const libMesh::Point& p,
 
 template <>
 void
-MAST::MeshFieldFunction<RealVectorX>::derivative (const MAST::DerivativeType d,
+MeshFieldFunction<RealVectorX>::derivative (const MAST::DerivativeType d,
                                                   const MAST::FunctionBase& f,
                                                   const libMesh::Point& p,
                                                   const Real t,
@@ -124,7 +125,7 @@ MAST::MeshFieldFunction<RealVectorX>::derivative (const MAST::DerivativeType d,
     
     libmesh_error_msg("To be implemented.");
 }
-
+}
 
 
 
@@ -239,6 +240,7 @@ clear_element_quadrature_point_solution() {
 
 
 // explicit instantiations
-template class MAST::MeshFieldFunction<RealVectorX>;
-
+namespace MAST {
+template class MeshFieldFunction<RealVectorX>;
+}
 

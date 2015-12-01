@@ -157,7 +157,8 @@ namespace MAST {
         _n_plate_elems,
         _n_elems_per_stiff,
         _n_elems,
-        _n_dv_stations_x;
+        _n_dv_stations_x,
+        _n_load_steps;
         
         // create the mesh
         libMesh::SerialMesh*           _mesh;

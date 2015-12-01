@@ -21,7 +21,7 @@
 #define __MAST_gcmma_optimization_interface_h__
 
 // MAST includes
-#include "Optimization/optimization_interface.h"
+#include "optimization/optimization_interface.h"
 
 extern "C" {
     extern void raasta_(int *M, int *N,

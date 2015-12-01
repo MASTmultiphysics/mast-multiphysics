@@ -23,14 +23,14 @@
 #include "libmesh/exodusII_io.h"
 #include "libmesh/numeric_vector.h"
 
-extern libMesh::LibMeshInit* _init;
+extern libMesh::LibMeshInit* __init;
 
 
 MAST::BeamModalAnalysis::BeamModalAnalysis() {
     
     
     // create the mesh
-    _mesh       = new libMesh::SerialMesh(_init->comm());
+    _mesh       = new libMesh::SerialMesh(__init->comm());
     
     // initialize the mesh with one element
     libMesh::MeshTools::Generation::build_line(*_mesh, 10, 0, 10);
