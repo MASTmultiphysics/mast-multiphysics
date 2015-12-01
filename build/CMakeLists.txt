@@ -140,8 +140,20 @@ file (GLOB_RECURSE mast_test_source_files
 #	../examples/thermal/*.cpp
 #	../examples/fluid/*.cpp 
 #	../examples/fluid/*.h
-	../examples/structural/*.cpp
-	../examples/structural/*.cpp
+	../examples/base/multilinear_interpolation.cpp
+	../examples/structural/bar_extension/*.cpp
+	../examples/structural/beam_bending/*.cpp
+	../examples/structural/beam_optimization/beam_optimization_base.cpp
+	../examples/structural/beam_bending_thermal_stress_with_offset/*.cpp
+	../examples/structural/beam_bending_with_offset/*.cpp
+	../examples/structural/beam_modal_analysis/*.cpp
+	../examples/structural/membrane_extension_biaxial_stress/*.cpp
+	../examples/structural/membrane_extension_uniaxial_stress/*.cpp
+	../examples/structural/nonlinear_circular_cantilever/*.cpp
+	../examples/structural/plate_bending/*.cpp
+	../examples/structural/plate_optimization/plate_optimization_base.cpp
+	../examples/structural/plate_bending_section_offset/*.cpp
+	../examples/structural/plate_bending_thermal_stress/*.cpp
 	../tests/*.cpp 
 	../tests/*.h)
 add_executable (mast_tests ${mast_test_source_files})

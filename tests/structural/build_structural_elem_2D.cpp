@@ -31,7 +31,7 @@
 #include "elasticity/structural_element_base.h"
 
 
-extern libMesh::LibMeshInit* _init;
+extern libMesh::LibMeshInit* __init;
 
 
 MAST::BuildStructural2DElem::BuildStructural2DElem():
@@ -71,7 +71,7 @@ MAST::BuildStructural2DElem::init(bool if_link_offset_to_th,
     _e_type = e_type;
     
     // create the mesh
-    _mesh       = new libMesh::SerialMesh(_init->comm());
+    _mesh       = new libMesh::SerialMesh(__init->comm());
     
     // initialize the mesh with one element
     libMesh::MeshTools::Generation::build_square(*_mesh,
