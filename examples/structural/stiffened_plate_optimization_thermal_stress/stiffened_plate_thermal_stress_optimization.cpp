@@ -734,10 +734,11 @@ MAST::StiffenedPlateBendingThermalStressSizingOptimization::evaluate(const std::
         _assembly->calculate_outputs(*(_sys->solution));
         _discipline->plot_stress_strain_data<libMesh::ExodusII_IO>("stress_out.exo");
         out.write_timestep("out.exo", *_eq_sys, i+1, (i+1.)/n_steps);
+        this->clear_stresss();
     }
 
     // calculate the stresses
-    //_assembly->calculate_outputs(*(_sys->solution));
+    _assembly->calculate_outputs(*(_sys->solution));
     
     //////////////////////////////////////////////////////////////////////
     // get the objective and constraints
