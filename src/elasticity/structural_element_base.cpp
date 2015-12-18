@@ -649,6 +649,11 @@ MAST::StructuralElementBase::volume_output_quantity
             }
                 break;
                 
+            case MAST::STRUCTURAL_COMPLIANCE:
+                // nothing to be done here since it is handled separately
+                // in the structural implicit assembly
+                break;
+                
             default:
                 // not implemented yet
                 libmesh_error();

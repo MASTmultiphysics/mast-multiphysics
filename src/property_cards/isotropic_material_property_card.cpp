@@ -605,7 +605,6 @@ StiffnessMatrix2D::derivative (const MAST::DerivativeType d,
     dm(2,2) = 1./2./(1.+nu); // diagonal: shear stress
     m += dEdf * dm;
     
-    
     // parM/parnu * parnu/parf
     for (unsigned int i=0; i<2; i++) {
         for (unsigned int j=0; j<2; j++)

@@ -113,7 +113,7 @@ namespace MAST {
          *   evaluates the volume and boundary outputs for the specified
          *   solution
          */
-        void calculate_outputs(const libMesh::NumericVector<Real>& X);
+        virtual void calculate_outputs(const libMesh::NumericVector<Real>& X);
 
         
         /*!

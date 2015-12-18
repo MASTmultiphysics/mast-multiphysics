@@ -35,7 +35,8 @@ namespace MAST {
     // identifies the various output quantities implemented in the code
     enum OutputQuantityType {
         
-        STRAIN_STRESS_TENSOR
+        STRAIN_STRESS_TENSOR,
+        STRUCTURAL_COMPLIANCE
     };
     
     

@@ -37,6 +37,7 @@
 #include "examples/structural/plate_optimization_section_offset/plate_section_offset_optimization.h"
 #include "examples/structural/plate_optimization_thermal_stress/plate_thermal_stress_optimization.h"
 #include "examples/structural/stiffened_plate_optimization_thermal_stress/stiffened_plate_thermal_stress_optimization.h"
+#include "examples/structural/topology_optim_2D/topology_optim_2D.h"
 #include "optimization/npsol_optimization_interface.h"
 #include "optimization/dot_optimization_interface.h"
 
@@ -257,6 +258,9 @@ int main(int argc, char* const argv[]) {
     else if (case_name == "stiffened_plate_bending_thermal_stress_optimization")
         plate_optimization<MAST::StiffenedPlateBendingThermalStressSizingOptimization>
         (case_name, verify_grads, if_nonlin);
+    else if (case_name == "topology_optimization_2D")
+        plate_optimization<MAST::TopologyOptimization2D>
+        (case_name, verify_grads, if_nonlin);
     else {
         std::cout
         << "Please run the driver with the name of example specified as: \n"
@@ -284,6 +288,7 @@ int main(int argc, char* const argv[]) {
         << "  plate_bending_section_offset_optimization \n"
         << "  plate_bending_thermal_stress_optimization \n"
         << "  stiffened_plate_bending_thermal_stress_optimization \n"
+        << "  topology_optimization_2D \n"
         << "*  The default for --with_sensitivity is: false.\n"
         << "*  param is used to specify the parameter name for which sensitivity is desired.\n"
         << "*  nonlinear is used to turn on/off nonlinear stiffening in the problem.\n"

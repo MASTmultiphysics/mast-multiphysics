@@ -299,7 +299,7 @@ sensitivity_assemble (const libMesh::ParameterVector& parameters,
             physics_elem->attach_active_solution_function(*_sol_function);
         
         // perform the element level calculations
-        _elem_sensitivity_calculations(*physics_elem, vec);
+        _elem_sensitivity_calculations(*physics_elem, false, vec, mat);
         
         // the sensitivity method provides sensitivity of the residual.
         // Hence, this is multiplied with -1 to make it the RHS of the

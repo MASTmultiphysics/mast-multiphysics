@@ -26,6 +26,11 @@
 
 namespace MAST {
     
+
+    // Forward declerations
+    class RealOutputFunction;
+    class FunctionBase;
+    
     
     class StructuralNonlinearAssembly:
     public MAST::NonlinearImplicitAssembly {
@@ -74,9 +79,44 @@ namespace MAST {
          */
         void update_incompatible_solution(libMesh::NumericVector<Real>& X,
                                           libMesh::NumericVector<Real>& dX);
+ 
+        
+        /*!
+         *   Evaluates the volume and boundary outputs for the specified
+         *   solution. This reimplements the virtual method from the parent 
+         *   class to handle the structural compliance evaluation.
+         */
+        virtual void calculate_outputs(const libMesh::NumericVector<Real>& X);
+
+        
+        /*!
+         *   This reimplements the virtual method from the parent
+         *   class to handle the structural compliance evaluation.
+         */
+        void calculate_output_sensitivity(libMesh::ParameterVector& params,
+                                          const bool if_total_sensitivity,
+                                          const libMesh::NumericVector<Real>& X);
+
         
     protected:
         
+        /*!
+         *  calculates the elastic compliance of the system \p S about the
+         *  solution defined by \p X. If sensitivity of the quantity is
+         *  desired with respect to a parameter, then the parameter can
+         *  be specified. If \p dX is provided, then the total sensitivity
+         *  is evaluated with respect to the parameter, otherwise the partial
+         *  derivative of the output quantity is evaluated.
+         */
+        virtual void
+        _calculate_compliance (const libMesh::NumericVector<Real>& X,
+                               libMesh::NonlinearImplicitSystem& S,
+                               MAST::RealOutputFunction& output,
+                               const MAST::FunctionBase* f = NULL,
+                               const libMesh::NumericVector<Real>* dX = NULL);
+        
+        
+
         /*!
          *   @returns a smart-pointer to a newly created element for
          *   calculation of element quantities.
@@ -100,7 +140,9 @@ namespace MAST {
          *   and returns the element residual sensitivity in \par vec .
          */
         virtual void _elem_sensitivity_calculations(MAST::ElementBase& elem,
-                                                    RealVectorX& vec);
+                                                    bool if_jac,
+                                                    RealVectorX& vec,
+                                                    RealMatrixX& mat);
         
         /*!
          *   map of local incompatible mode solution per 3D elements

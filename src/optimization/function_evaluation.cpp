@@ -228,7 +228,7 @@ MAST::FunctionEvaluation::verify_gradients(const std::vector<Real>& dvars) {
     bool accurate_sens = true;
     
     for (unsigned int i=0; i<_n_vars; i++)
-        if (fabs(obj_grad[i] - obj_grad_fd[i])/obj_grad[i] > tol) {
+        if (fabs((obj_grad[i] - obj_grad_fd[i])/obj_grad[i]) > tol) {
             std::cout
             << " Mismatched sensitivity: DV:  "  << i << "   "
             << obj_grad[i] << "    " << obj_grad_fd[i] << std::endl;
@@ -244,7 +244,7 @@ MAST::FunctionEvaluation::verify_gradients(const std::vector<Real>& dvars) {
     for (unsigned int j=0; j<_n_eq+_n_ineq; j++) {
         std::cout << "  Constraint: " << j << std::endl;
         for (unsigned int i=0; i<_n_vars; i++)
-            if (fabs(grads[i*(_n_eq+_n_ineq)+j] - grads_fd[i*(_n_eq+_n_ineq)+j])/grads[i*(_n_eq+_n_ineq)+j] > tol) {
+        if (fabs((grads[i*(_n_eq+_n_ineq)+j] - grads_fd[i*(_n_eq+_n_ineq)+j])/grads[i*(_n_eq+_n_ineq)+j]) > tol) {
                 
                 std::cout
                 << " Mismatched sensitivity:  DV:  "  << i << "   "
