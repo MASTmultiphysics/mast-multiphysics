@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2015  Manav Bhatia
+ * Copyright (C) 2013-2016  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -24,7 +24,6 @@
 #include "boundary_condition/dirichlet_boundary_condition.h"
 
 // libMesh includes
-#include "libmesh/condensed_eigen_system.h"
 #include "libmesh/dof_map.h"
 #include "libmesh/dirichlet_boundaries.h"
 #include "libmesh/fe_interface.h"
@@ -210,10 +209,9 @@ MAST::PhysicsDisciplineBase::get_parameter(const Real* par) const {
 
 
 
-template <typename SysType>
 void
 MAST::PhysicsDisciplineBase::
-init_system_dirichlet_bc(SysType& sys) const {
+init_system_dirichlet_bc(libMesh::System& sys) const {
     
     
     // iterate over all the dirichlet boundary conditions and add them
@@ -227,10 +225,9 @@ init_system_dirichlet_bc(SysType& sys) const {
 
 
 
-template <typename SysType>
 void
 MAST::PhysicsDisciplineBase::
-clear_system_dirichlet_bc(SysType& sys) const {
+clear_system_dirichlet_bc(libMesh::System& sys) const {
     
     // iterate over all the dirichlet boundary conditions and add them
     // to the system
@@ -242,15 +239,17 @@ clear_system_dirichlet_bc(SysType& sys) const {
 
 
 
-namespace MAST {
-
-template <>
-void PhysicsDisciplineBase::
-init_system_dirichlet_bc<libMesh::CondensedEigenSystem>(libMesh::CondensedEigenSystem& sys) const {
+void
+MAST::PhysicsDisciplineBase::
+get_system_dirichlet_bc_dofs(libMesh::System& sys,
+                             std::set<unsigned int>& dof_ids) const {
+    
+    dof_ids.clear();
     
     // first prepare a map of boundary ids and the constrained vars on that
     // boundary
-    std::map<libMesh::boundary_id_type, std::vector<unsigned int> >  constrained_vars_map;
+    std::map<libMesh::boundary_id_type, std::vector<unsigned int> >
+    constrained_vars_map;
     
     // iterate over all the dirichlet boundary conditions and add them
     // to the system
@@ -279,13 +278,11 @@ init_system_dirichlet_bc<libMesh::CondensedEigenSystem>(libMesh::CondensedEigenS
     
     const libMesh::DofMap& dof_map = sys.get_dof_map();
     
-    // the constrained dofs needed for CondensedEigenSystem
-    std::set<unsigned int> dof_ids;
-    
     std::vector<libMesh::dof_id_type> dof_indices;
     
-    libMesh::MeshBase::const_element_iterator       el     = mesh.active_local_elements_begin();
-    const libMesh::MeshBase::const_element_iterator end_el = mesh.active_local_elements_end();
+    libMesh::MeshBase::const_element_iterator
+    el     = mesh.active_local_elements_begin(),
+    end_el = mesh.active_local_elements_end();
     
     for ( ; el != end_el; ++el) {
         const libMesh::Elem* elem = *el;
@@ -296,12 +293,15 @@ init_system_dirichlet_bc<libMesh::CondensedEigenSystem>(libMesh::CondensedEigenS
             if ((*el)->neighbor(s) == NULL &&
                 mesh.boundary_info->n_boundary_ids(elem, s)) {
                 
-                std::vector<libMesh::boundary_id_type> bc_ids = mesh.boundary_info->boundary_ids(elem, s);
+                std::vector<libMesh::boundary_id_type>
+                bc_ids = mesh.boundary_info->boundary_ids(elem, s);
                 
                 for (unsigned int i_bid=0; i_bid<bc_ids.size(); i_bid++)
                     if (constrained_vars_map.count(bc_ids[i_bid])) {
                         
-                        const std::vector<unsigned int>& vars = constrained_vars_map[bc_ids[i_bid]];
+                        const std::vector<unsigned int>&
+                        vars = constrained_vars_map[bc_ids[i_bid]];
+                        
                         // now iterate over each constrained variable for this boundary
                         // and collect its dofs
                         for (unsigned int i_var=0; i_var<vars.size(); i_var++) {
@@ -309,10 +309,13 @@ init_system_dirichlet_bc<libMesh::CondensedEigenSystem>(libMesh::CondensedEigenS
                             dof_indices.clear();
                             dof_map.dof_indices (*el, dof_indices, vars[i_var]);
                             
-                            // All boundary dofs are Dirichlet dofs in this case
+                            // all boundary dofs are Dirichlet dofs in this case
                             std::vector<unsigned int> side_dofs;
-                            libMesh::FEInterface::dofs_on_side(*el, dim, fe_type,
-                                                               s, side_dofs);
+                            libMesh::FEInterface::dofs_on_side(*el,
+                                                               dim,
+                                                               fe_type,
+                                                               s,
+                                                               side_dofs);
                             
                             for(unsigned int ii=0; ii<side_dofs.size(); ii++)
                                 dof_ids.insert(dof_indices[side_dofs[ii]]);
@@ -320,7 +323,7 @@ init_system_dirichlet_bc<libMesh::CondensedEigenSystem>(libMesh::CondensedEigenS
                     } // end of boundary loop
             } // end of side loop
     }// end of element loop
-
+    
     // also, it is likely that some of the bcs have been applied via the
     // DofMap API by specification of row constraints. In that case,
     // factor out the dofs that are not coupled to any other dofs
@@ -335,18 +338,6 @@ init_system_dirichlet_bc<libMesh::CondensedEigenSystem>(libMesh::CondensedEigenS
             dof_ids.insert(constraint_it->first);
     }
     
-    
-    // now that the dofs are available, tell the system to condense out
-    // the constrained dofs
-    sys.initialize_condensed_dofs(dof_ids);
-}
 }
 
-
-// explicit instantiations
-template void MAST::PhysicsDisciplineBase::
-init_system_dirichlet_bc<libMesh::System>(libMesh::System& sys) const;
-
-template void MAST::PhysicsDisciplineBase::
-clear_system_dirichlet_bc<libMesh::System>(libMesh::System& sys) const;
 

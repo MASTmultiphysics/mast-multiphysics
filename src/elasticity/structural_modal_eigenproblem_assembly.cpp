@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2015  Manav Bhatia
+ * Copyright (C) 2013-2016  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -22,6 +22,7 @@
 #include "elasticity/structural_element_base.h"
 #include "property_cards/element_property_card_base.h"
 #include "base/physics_discipline_base.h"
+#include "base/nonlinear_system.h"
 #include "numerics/utility.h"
 #include "base/system_initialization.h"
 
@@ -46,18 +47,19 @@ MAST::StructuralModalEigenproblemAssembly::
 
 
 void
-MAST::StructuralModalEigenproblemAssembly::assemble() {
+MAST::StructuralModalEigenproblemAssembly::
+eigenproblem_assemble(libMesh::SparseMatrix<Real> *A,
+                      libMesh::SparseMatrix<Real> *B)  {
     
-    libMesh::EigenSystem& eigen_sys =
-    dynamic_cast<libMesh::EigenSystem&>(_system->system());
+    MAST::NonlinearSystem& eigen_sys =
+    dynamic_cast<MAST::NonlinearSystem&>(_system->system());
     
     // zero the solution since it is not needed for eigenproblem
     eigen_sys.solution->zero();
     
-    libMesh::SparseMatrix<Real>&  matrix_A =
-    *(dynamic_cast<libMesh::EigenSystem&>(_system->system()).matrix_A);
-    libMesh::SparseMatrix<Real>&  matrix_B =
-    *(dynamic_cast<libMesh::EigenSystem&>(_system->system()).matrix_B);
+    libMesh::SparseMatrix<Real>
+    &matrix_A = *A,
+    &matrix_B = *B;
     
     matrix_A.zero();
     matrix_B.zero();

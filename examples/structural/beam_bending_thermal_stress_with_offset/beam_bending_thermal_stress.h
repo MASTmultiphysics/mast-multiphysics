@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2015  Manav Bhatia
+ * Copyright (C) 2013-2016  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -52,6 +52,7 @@ namespace MAST {
     class BoundaryConditionBase;
     class StressStrainOutputBase;
     class SectionOffset;
+    class Temperature;
     
     struct BeamBendingThermalStress {
         
@@ -114,7 +115,8 @@ namespace MAST {
         *_alpha,
         *_nu,
         *_temp,
-        *_zero;
+        *_zero,
+        *_load_param;
         
         MAST::ConstantFieldFunction
         *_thy_f,
@@ -123,9 +125,9 @@ namespace MAST {
         *_alpha_f,
         *_nu_f,
         *_hzoff_f,
-        *_temp_f,
         *_ref_temp_f;
 
+        MAST::Temperature *_temp_f;
         
         MAST::SectionOffset *_hyoff_f;
         

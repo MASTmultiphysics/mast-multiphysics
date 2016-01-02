@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2015  Manav Bhatia
+ * Copyright (C) 2013-2016  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -22,9 +22,7 @@
 
 // MAST includes
 #include "base/assembly_base.h"
-
-// libMesh includes
-#include "libmesh/eigen_system.h"
+#include "base/eigensystem_assembly.h"
 
 
 namespace MAST {
@@ -37,8 +35,8 @@ namespace MAST {
     
     class EigenproblemAssembly:
     public MAST::AssemblyBase,
-    public libMesh::System::Assembly,
-    public libMesh::EigenSystem::EigenproblemSensitivityAssembly {
+    public MAST::EigenSystemAssembly {
+        
     public:
         
         /*!
@@ -84,7 +82,9 @@ namespace MAST {
         /*!
          *    assembles the matrices for eigenproblem depending on the analysis type
          */
-        virtual void assemble();
+        virtual void
+        eigenproblem_assemble(libMesh::SparseMatrix<Real>* A,
+                              libMesh::SparseMatrix<Real>* B);
         
         /**
          * Assembly function.  This function will be called
@@ -97,10 +97,10 @@ namespace MAST {
          * finite differencing.
          */
         virtual bool
-        sensitivity_assemble (const libMesh::ParameterVector& parameters,
-                              const unsigned int i,
-                              libMesh::SparseMatrix<Real>* sensitivity_A,
-                              libMesh::SparseMatrix<Real>* sensitivity_B);
+        eigenproblem_sensitivity_assemble (const libMesh::ParameterVector& parameters,
+                                           const unsigned int i,
+                                           libMesh::SparseMatrix<Real>* sensitivity_A,
+                                           libMesh::SparseMatrix<Real>* sensitivity_B);
         
         
         /*!

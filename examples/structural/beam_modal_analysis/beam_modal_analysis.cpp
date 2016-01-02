@@ -5,6 +5,7 @@
 
 // MAST includes
 #include "examples/structural/beam_modal_analysis/beam_modal_analysis.h"
+#include "base/nonlinear_system.h"
 #include "elasticity/structural_system_initialization.h"
 #include "elasticity/structural_discipline.h"
 #include "elasticity/stress_output_base.h"
@@ -40,9 +41,8 @@ MAST::BeamModalAnalysis::BeamModalAnalysis() {
     _eq_sys    = new  libMesh::EquationSystems(*_mesh);
     
     // create the libmesh system
-    _sys       = &(_eq_sys->add_system<libMesh::CondensedEigenSystem>("structural"));
+    _sys       = &(_eq_sys->add_system<MAST::NonlinearSystem>("structural"));
     _sys->set_eigenproblem_type(libMesh::GHEP);
-    _sys->eigen_solver->set_position_of_spectrum(libMesh::LARGEST_MAGNITUDE);
     
     // FEType to initialize the system
     libMesh::FEType fetype (libMesh::FIRST, libMesh::LAGRANGE);
@@ -66,10 +66,12 @@ MAST::BeamModalAnalysis::BeamModalAnalysis() {
     _dirichlet_right->init(1, constrained_vars);
     _discipline->add_dirichlet_bc(0, *_dirichlet_left);
     _discipline->add_dirichlet_bc(1, *_dirichlet_right);
-    _discipline->init_system_dirichlet_bc(dynamic_cast<libMesh::System&>(*_sys));
+    _discipline->init_system_dirichlet_bc(*_sys);
     
     // initialize the equation system
     _eq_sys->init();
+    
+    _sys->eigen_solver->set_position_of_spectrum(libMesh::LARGEST_MAGNITUDE);
     
     // create the property functions and add them to the
     
@@ -171,6 +173,44 @@ MAST::BeamModalAnalysis::~BeamModalAnalysis() {
 
 
 
+MAST::Parameter*
+MAST::BeamModalAnalysis::get_parameter(const std::string &nm) {
+    
+    MAST::Parameter *rval = NULL;
+    
+    // look through the vector of parameters to see if the name is available
+    std::vector<MAST::Parameter*>::iterator
+    it   =  _params_for_sensitivity.begin(),
+    end  =  _params_for_sensitivity.end();
+    
+    bool
+    found = false;
+    
+    for ( ; it != end; it++) {
+        
+        if (nm == (*it)->name()) {
+            rval    = *it;
+            found   = true;
+        }
+    }
+    
+    // if the param was not found, then print the message
+    if (!found) {
+        std::cout
+        << std::endl
+        << "Parameter not found by name: " << nm << std::endl
+        << "Valid names are: "
+        << std::endl;
+        for (it = _params_for_sensitivity.begin(); it != end; it++)
+            std::cout << "   " << (*it)->name() << std::endl;
+        std::cout << std::endl;
+    }
+    
+    return rval;
+}
+
+
+
 const libMesh::NumericVector<Real>&
 MAST::BeamModalAnalysis::solve(bool if_write_output) {
     
@@ -178,14 +218,15 @@ MAST::BeamModalAnalysis::solve(bool if_write_output) {
     // create the nonlinear assembly object
     MAST::StructuralModalEigenproblemAssembly   assembly;
     assembly.set_exchange_A_and_B_matrices(true);
-    _discipline->init_system_dirichlet_bc(*_sys);
+    _sys->initialize_condensed_dofs(*_discipline);
+    
     const unsigned int n_eig = 4;
     _eq_sys->parameters.set<unsigned int>("eigenpairs")    = n_eig;
     _eq_sys->parameters.set<unsigned int>("basis vectors") = n_eig*3;
     
     
     assembly.attach_discipline_and_system(*_discipline, *_structural_sys);
-    _sys->solve();
+    _sys->eigenproblem_solve();
     assembly.clear_discipline_and_system();
     
     // Get the number of converged eigen pairs.
@@ -204,7 +245,7 @@ MAST::BeamModalAnalysis::solve(bool if_write_output) {
         << ".exo";
         
         // now write the eigenvlaues
-        std::pair<Real, Real> val = _sys->get_eigenpair(i);
+        std::pair<Real, Real> val = _sys->get_eigenpair(i, *_sys->solution);
         std::complex<Real> eigval = std::complex<Real>(val.first, val.second);
         eigval = 1./eigval;
         libMesh::out

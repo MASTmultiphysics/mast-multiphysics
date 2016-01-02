@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2015  Manav Bhatia
+ * Copyright (C) 2013-2016  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -190,16 +190,22 @@ namespace MAST {
         /*!
          *    initializes the system for dirichlet boundary conditions
          */
-        template <typename SysType>
-        void init_system_dirichlet_bc(SysType& sys) const;
+        void init_system_dirichlet_bc(libMesh::System& sys) const;
 
         
         /*!
          *    clears the system dirichlet boundary conditions
          */
-        template <typename SysType>
-        void clear_system_dirichlet_bc(SysType& sys) const;
+        void clear_system_dirichlet_bc(libMesh::System& sys) const;
 
+        
+        /*!
+         *   Prepares a list of the constrained dofs for system \p sys and 
+         *   returns in \p dof_ids.
+         */
+        void get_system_dirichlet_bc_dofs(libMesh::System& sys,
+                                          std::set<unsigned int>& dof_ids) const;
+        
         /*!
          *    sets the same property for all elements in the specified subdomain
          */

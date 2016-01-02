@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2015  Manav Bhatia
+ * Copyright (C) 2013-2016  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -19,6 +19,7 @@
 
 // MAST includes
 #include "base/eigenproblem_assembly.h"
+#include "base/nonlinear_system.h"
 #include "base/system_initialization.h"
 #include "base/elem_base.h"
 #include "base/physics_discipline_base.h"
@@ -59,10 +60,10 @@ attach_discipline_and_system(MAST::PhysicsDisciplineBase &discipline,
     _system     = &system;
     
     // now attach this to the system
-    libMesh::EigenSystem& eigen_sys =
-    dynamic_cast<libMesh::EigenSystem&>(system.system());
-    eigen_sys.attach_assemble_object(*this);
-    eigen_sys.attach_eigenproblem_sensitivity_assemble_object(*this);
+    MAST::NonlinearSystem& eigen_sys =
+    dynamic_cast<MAST::NonlinearSystem&>(system.system());
+    
+    eigen_sys.attach_eigenproblem_assemble_object(*this);
 }
 
 
@@ -74,11 +75,10 @@ clear_discipline_and_system( ) {
     
     if (_system && _discipline) {
 
-        libMesh::EigenSystem& eigen_sys =
-        dynamic_cast<libMesh::EigenSystem&>(_system->system());
+        MAST::NonlinearSystem& sys =
+        dynamic_cast<MAST::NonlinearSystem&>(_system->system());
         
-        eigen_sys.reset_assembly();
-        eigen_sys.reset_eigenproblem_sensitivity_assembly();
+        sys.reset_eigenproblem_assemble_object();
     }
     
     _discipline = NULL;
@@ -89,18 +89,16 @@ clear_discipline_and_system( ) {
 
 
 void
-MAST::EigenproblemAssembly::assemble() {
+MAST::EigenproblemAssembly::
+eigenproblem_assemble(libMesh::SparseMatrix<Real>* A,
+                      libMesh::SparseMatrix<Real>* B) {
     
-    libMesh::EigenSystem& eigen_sys =
-    dynamic_cast<libMesh::EigenSystem&>(_system->system());
+    MAST::NonlinearSystem& eigen_sys =
+    dynamic_cast<MAST::NonlinearSystem&>(_system->system());
     
-    // zero the solution since it is not needed for eigenproblem
-    eigen_sys.solution->zero();
-    
-    libMesh::SparseMatrix<Real>&  matrix_A =
-    *(dynamic_cast<libMesh::EigenSystem&>(_system->system()).matrix_A);
-    libMesh::SparseMatrix<Real>&  matrix_B =
-    *(dynamic_cast<libMesh::EigenSystem&>(_system->system()).matrix_B);
+    libMesh::SparseMatrix<Real>
+    &matrix_A = *A,
+    &matrix_B = *B;
     
     matrix_A.zero();
     matrix_B.zero();
@@ -173,21 +171,19 @@ MAST::EigenproblemAssembly::assemble() {
 
 bool
 MAST::EigenproblemAssembly::
-sensitivity_assemble(const libMesh::ParameterVector& parameters,
-                     const unsigned int i,
-                     libMesh::SparseMatrix<Real>* sensitivity_A,
-                     libMesh::SparseMatrix<Real>* sensitivity_B) {
+eigenproblem_sensitivity_assemble(const libMesh::ParameterVector& parameters,
+                                  const unsigned int i,
+                                  libMesh::SparseMatrix<Real>* sensitivity_A,
+                                  libMesh::SparseMatrix<Real>* sensitivity_B) {
     
-    libMesh::EigenSystem& eigen_sys =
-    dynamic_cast<libMesh::EigenSystem&>(_system->system());
-    
+    MAST::NonlinearSystem& eigen_sys =
+    dynamic_cast<MAST::NonlinearSystem&>(_system->system());
+
     // zero the solution since it is not needed for eigenproblem
     eigen_sys.solution->zero();
     
-    libMesh::SparseMatrix<Real>&  matrix_A =
-    *(dynamic_cast<libMesh::EigenSystem*>(_system)->matrix_A);
-    libMesh::SparseMatrix<Real>&  matrix_B =
-    *(dynamic_cast<libMesh::EigenSystem*>(_system)->matrix_B);
+    libMesh::SparseMatrix<Real>&  matrix_A = *sensitivity_A;
+    libMesh::SparseMatrix<Real>&  matrix_B = *sensitivity_B;
     
     matrix_A.zero();
     matrix_B.zero();

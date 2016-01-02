@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2015  Manav Bhatia
+ * Copyright (C) 2013-2016  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -33,7 +33,6 @@
 #include "libmesh/equation_systems.h"
 #include "libmesh/serial_mesh.h"
 #include "libmesh/mesh_generation.h"
-#include "libmesh/condensed_eigen_system.h"
 #include "libmesh/fe_type.h"
 #include "libmesh/dof_map.h"
 
@@ -50,6 +49,7 @@ namespace MAST {
     class Solid1DSectionElementPropertyCard;
     class DirichletBoundaryCondition;
     class BoundaryConditionBase;
+    class NonlinearSystem;
     
     
     struct BeamColumnBucklingAnalysis {
@@ -80,7 +80,7 @@ namespace MAST {
         libMesh::EquationSystems*      _eq_sys;
         
         // create the libmesh system
-        libMesh::CondensedEigenSystem*  _sys;
+        MAST::NonlinearSystem*         _sys;
         
         // initialize the system to the right set of variables
         MAST::StructuralSystemInitialization* _structural_sys;

@@ -5,6 +5,7 @@
 
 // MAST includes
 #include "examples/structural/buckling/beam_column_buckling.h"
+#include "base/nonlinear_system.h"
 #include "elasticity/structural_system_initialization.h"
 #include "elasticity/structural_discipline.h"
 #include "elasticity/stress_output_base.h"
@@ -40,9 +41,8 @@ MAST::BeamColumnBucklingAnalysis::BeamColumnBucklingAnalysis() {
     _eq_sys    = new  libMesh::EquationSystems(*_mesh);
     
     // create the libmesh system
-    _sys       = &(_eq_sys->add_system<libMesh::CondensedEigenSystem>("structural"));
+    _sys       = &(_eq_sys->add_system<MAST::NonlinearSystem>("structural"));
     _sys->set_eigenproblem_type(libMesh::GHEP);
-    _sys->eigen_solver->set_position_of_spectrum(libMesh::LARGEST_MAGNITUDE);
 
     // FEType to initialize the system
     libMesh::FEType fetype (libMesh::FIRST, libMesh::LAGRANGE);
@@ -66,11 +66,13 @@ MAST::BeamColumnBucklingAnalysis::BeamColumnBucklingAnalysis() {
     _dirichlet_right->init(1, constrained_vars);
     _discipline->add_dirichlet_bc(0, *_dirichlet_left);
     _discipline->add_dirichlet_bc(1, *_dirichlet_right);
-    _discipline->init_system_dirichlet_bc(dynamic_cast<libMesh::System&>(*_sys));
+    _discipline->init_system_dirichlet_bc(*_sys);
     
     // initialize the equation system
     _eq_sys->init();
     
+    _sys->eigen_solver->set_position_of_spectrum(libMesh::LARGEST_MAGNITUDE);
+
     // create the property functions and add them to the
     
     _thy             = new MAST::Parameter("thy", 0.06);
@@ -178,7 +180,8 @@ MAST::BeamColumnBucklingAnalysis::solve() {
     // create the nonlinear assembly object
     MAST::StructuralModalEigenproblemAssembly   assembly;
     assembly.set_exchange_A_and_B_matrices(true);
-    _discipline->init_system_dirichlet_bc(*_sys);
+    _sys->initialize_condensed_dofs(*_discipline);
+
     const unsigned int n_eig = 4;
     _eq_sys->parameters.set<unsigned int>("eigenpairs")    = n_eig;
     _eq_sys->parameters.set<unsigned int>("basis vectors") = n_eig*3;

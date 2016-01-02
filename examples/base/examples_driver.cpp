@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2015  Manav Bhatia
+ * Copyright (C) 2013-2016  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -65,10 +65,10 @@ void analysis(const std::string& case_name,
         MAST::Parameter* p = run_case.get_parameter(par_name);
         if (p) {
             
-            std::cout
-            << "Running sensitivity for case: " << case_name
-            << "  wrt  " << par_name << std::endl;
-            run_case.sensitivity_solve(*p, true);
+//            std::cout
+//            << "Running sensitivity for case: " << case_name
+//            << "  wrt  " << par_name << std::endl;
+//            run_case.sensitivity_solve(*p, true);
         }
     }
 
@@ -209,10 +209,8 @@ int main(int argc, char* const argv[]) {
     
     if (case_name == "bar_extension")
         analysis<MAST::BarExtension>(case_name, with_sens, par_name);
-    else if (case_name == "beam_modal_analysis") {
-        libmesh_error_msg("this case has a memory issue that we need to debug");
-        //analysis<MAST::BeamModalAnalysis>(case_name, with_sens, par_name);
-    }
+    else if (case_name == "beam_modal_analysis")
+        analysis<MAST::BeamModalAnalysis>(case_name, with_sens, par_name);
     else if (case_name == "beam_bending")
         analysis<MAST::BeamBending>(case_name, with_sens, par_name);
     else if (case_name == "beam_bending_with_offset")

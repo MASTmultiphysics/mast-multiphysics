@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2015  Manav Bhatia
+ * Copyright (C) 2013-2016  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -106,7 +106,7 @@ MAST::PlateBending::init(libMesh::ElemType e_type,
     _discipline->add_dirichlet_bc(1,  *_dirichlet_right);
     _discipline->add_dirichlet_bc(2,    *_dirichlet_top);
     _discipline->add_dirichlet_bc(3,   *_dirichlet_left);
-    _discipline->init_system_dirichlet_bc(dynamic_cast<libMesh::System&>(*_sys));
+    _discipline->init_system_dirichlet_bc(*_sys);
     
     // initialize the equation system
     _eq_sys->init();
