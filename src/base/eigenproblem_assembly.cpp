@@ -34,8 +34,7 @@
 
 
 MAST::EigenproblemAssembly::EigenproblemAssembly():
-MAST::AssemblyBase(),
-_if_exchange_A_and_B_matrices(false) {
+MAST::AssemblyBase() {
     
 }
 
@@ -149,17 +148,8 @@ eigenproblem_assemble(libMesh::SparseMatrix<Real>* A,
         eigen_sys.get_dof_map().constrain_element_matrix(A, dof_indices);
         eigen_sys.get_dof_map().constrain_element_matrix(B, dof_indices);
         
-        // add to the global matrices
-        if (_if_exchange_A_and_B_matrices)
-        {
-            matrix_A.add_matrix (B, dof_indices); // load dependent
-            matrix_B.add_matrix (A, dof_indices); // load independent
-        }
-        else
-        {
-            matrix_A.add_matrix (A, dof_indices); // load independent
-            matrix_B.add_matrix (B, dof_indices); // load dependent
-        }
+        matrix_A.add_matrix (A, dof_indices); // load independent
+        matrix_B.add_matrix (B, dof_indices); // load dependent
     }
     
     
@@ -249,17 +239,8 @@ eigenproblem_sensitivity_assemble(const libMesh::ParameterVector& parameters,
         eigen_sys.get_dof_map().constrain_element_matrix(A, dof_indices);
         eigen_sys.get_dof_map().constrain_element_matrix(B, dof_indices);
         
-        // add to the global matrices
-        if (_if_exchange_A_and_B_matrices)
-        {
-            matrix_A.add_matrix (B, dof_indices);
-            matrix_B.add_matrix (A, dof_indices);
-        }
-        else
-        {
-            matrix_A.add_matrix (A, dof_indices);
-            matrix_B.add_matrix (B, dof_indices);
-        }
+        matrix_A.add_matrix (A, dof_indices);
+        matrix_B.add_matrix (B, dof_indices);
     }
     
     return true;

@@ -72,6 +72,8 @@ MAST::BeamColumnBucklingAnalysis::BeamColumnBucklingAnalysis() {
     _eq_sys->init();
     
     _sys->eigen_solver->set_position_of_spectrum(libMesh::LARGEST_MAGNITUDE);
+    _sys->set_exchange_A_and_B(true);
+    _sys->set_n_requested_eigenvalues(4);
 
     // create the property functions and add them to the
     
@@ -179,7 +181,6 @@ MAST::BeamColumnBucklingAnalysis::solve() {
     
     // create the nonlinear assembly object
     MAST::StructuralModalEigenproblemAssembly   assembly;
-    assembly.set_exchange_A_and_B_matrices(true);
     _sys->initialize_condensed_dofs(*_discipline);
 
     const unsigned int n_eig = 4;
@@ -188,11 +189,14 @@ MAST::BeamColumnBucklingAnalysis::solve() {
     
     
     assembly.attach_discipline_and_system(*_discipline, *_structural_sys);
-    _sys->solve();
+    _sys->eigenproblem_solve();
     assembly.clear_discipline_and_system();
     
     // Get the number of converged eigen pairs.
-    unsigned int nconv = std::min(_sys->get_n_converged(), n_eig);
+    unsigned int
+    nconv = std::min(_sys->get_n_converged_eigenvalues(),
+                     _sys->get_n_requested_eigenvalues());
+    
     
     for (unsigned int i=0; i<nconv; i++)
     {
@@ -207,12 +211,14 @@ MAST::BeamColumnBucklingAnalysis::solve() {
         << ".exo";
         
         // now write the eigenvlaues
-        std::pair<Real, Real> val = _sys->get_eigenpair(i);
-        std::complex<Real> eigval = std::complex<Real>(val.first, val.second);
-        eigval = 1./eigval;
+        Real
+        re = 0.,
+        im = 0.;
+        _sys->get_eigenpair(i, re, im, *_sys->solution);
+
         libMesh::out
         << std::setw(35) << std::fixed << std::setprecision(15)
-        << eigval.real() << std::endl;
+        << re << std::endl;
         
         // We write the file in the ExodusII format.
         libMesh::ExodusII_IO(*_mesh).write_equation_systems(file_name.str(),

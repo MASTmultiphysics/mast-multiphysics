@@ -35,7 +35,6 @@
 #include "property_cards/solid_1d_section_element_property_card.h"
 #include "property_cards/isotropic_material_property_card.h"
 #include "boundary_condition/dirichlet_boundary_condition.h"
-#include "elasticity/structural_system.h"
 
 // libMesh includes
 #include "libmesh/mesh_generation.h"
@@ -45,68 +44,6 @@
 
 
 extern libMesh::LibMeshInit* __init;
-
-
-namespace MAST {
-    
-    class Temperature: public MAST::FieldFunction<Real> {
-    public:
-        Temperature(MAST::Parameter *load,
-                    const Real T0,
-                    const Real T1):
-        MAST::FieldFunction<Real>("temperature"),
-        _load(load),
-        _T0(T0),
-        _T1(T1) {
-            
-            _functions.insert(_load->master());
-        }
-        
-        Temperature(const MAST::Temperature &f):
-        MAST::FieldFunction<Real>(f),
-        _load(f._load) {
-            
-            _functions.insert(_load->master());
-        }
-        
-        /*!
-         *   @returns a clone of the function
-         */
-        virtual std::auto_ptr<MAST::FieldFunction<Real> > clone() const {
-            return std::auto_ptr<MAST::FieldFunction<Real> >
-            (new MAST::Temperature(*this));
-        }
-        
-        virtual ~Temperature() {
-
-        }
-        
-        virtual void operator() (const libMesh::Point& p,
-                                 const Real t,
-                                 Real& m) const {
-            Real
-            v = (*_load)();
-
-            m = _T0 + v * (_T1-_T0);
-        }
-        
-        virtual void derivative (const MAST::DerivativeType d,
-                                 const MAST::FunctionBase& f,
-                                 const libMesh::Point& p,
-                                 const Real t,
-                                 Real& m) const {
-
-            m = (_T1-_T0);
-        }
-        
-    protected:
-        
-        MAST::Parameter *_load;
-        
-        Real _T0, _T1;
-    };
-}
-
 
 
 MAST::BeamBendingThermalStress::BeamBendingThermalStress() {
@@ -126,9 +63,7 @@ MAST::BeamBendingThermalStress::BeamBendingThermalStress() {
     _eq_sys    = new  libMesh::EquationSystems(*_mesh);
     
     // create the libmesh system
-    MAST::StructuralSystem&
-    structural_sys = (_eq_sys->add_system<MAST::StructuralSystem>("structural"));
-    _sys       = &structural_sys;
+    _sys       = &(_eq_sys->add_system<libMesh::NonlinearImplicitSystem>("structural"));
     
     // FEType to initialize the system
     libMesh::FEType fetype (libMesh::FIRST, libMesh::LAGRANGE);
@@ -167,7 +102,7 @@ MAST::BeamBendingThermalStress::BeamBendingThermalStress() {
     _nu              = new MAST::Parameter("nu",           0.33);
     _zero            = new MAST::Parameter("zero",           0.);
     _temp            = new MAST::Parameter( "temperature",  60.);
-    _load_param      = new MAST::Parameter("load",           0.);
+    
     
     
     // prepare the vector of parameters with respect to which the sensitivity
@@ -186,13 +121,11 @@ MAST::BeamBendingThermalStress::BeamBendingThermalStress() {
     _alpha_f         = new MAST::ConstantFieldFunction("alpha_expansion", *_alpha);
     _nu_f            = new MAST::ConstantFieldFunction("nu",     *_nu);
     _hzoff_f         = new MAST::ConstantFieldFunction("hz_off", *_zero);
+    _temp_f          = new MAST::ConstantFieldFunction("temperature", *_temp);
     _ref_temp_f      = new MAST::ConstantFieldFunction("ref_temperature", *_zero);
     _hyoff_f         = new MAST::SectionOffset("hy_off",
                                                _thy_f->clone().release(),
                                                1.);
-    _temp_f          = new MAST::Temperature(_load_param, 0., (*_temp)());
-    structural_sys.set_load_parameter(*_load_param, 0., 1.);
-    _discipline->add_parameter(*_load_param);
     
     // initialize the load
     _T_load          = new MAST::BoundaryConditionBase(MAST::TEMPERATURE);
@@ -289,7 +222,6 @@ MAST::BeamBendingThermalStress::~BeamBendingThermalStress() {
     delete _alpha;
     delete _nu;
     delete _zero;
-    delete _load_param;
     delete _temp;
     
     

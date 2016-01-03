@@ -42,8 +42,11 @@ namespace MAST {
     
     
     /*!
-     *   This class implements a system for quasi-static analysis of
-     *   nonlinear structures.
+     *   This class implements a system for solution of nonlinear systems. 
+     *   The class also provides a mechanism to solve associated eigenproblems
+     *   \f$ {\bf A} {\bf x} = \lambda {\bf B} {\bf x} \f$. The user needs to 
+     *   provide an eigenproblem assembly class to assemble the A and B
+     *   matrices.
      */
     class NonlinearSystem:
     public libMesh::NonlinearImplicitSystem {
@@ -106,8 +109,14 @@ namespace MAST {
         assemble_eigensystem_sensitivity(const libMesh::ParameterVector& parameters,
                                          const unsigned int p);
         
-        /**
-         * Returns real and imaginary part of the ith eigenvalue.
+        
+        /*!
+         * @returns real and imaginary parts of the ith eigenvalue for the
+         * eigenproblem \f$ {\bf A} {\bf x} = \lambda {\bf B} {\bf x} \f$, and
+         * the associated eigenvector.
+         *
+         * The returned eigenvector will be scaled such that it has a unit 
+         * inner product with respect to the B matrix.
          *
          * Note that eigen problem type HEP or GHEP, \p vec_im must be NULL,
          * and for eigenproblem type NHEP or GNHEP, the real and imag
@@ -115,16 +124,39 @@ namespace MAST {
          * respectively. If \p vec_im is not provided, then only the real part
          * will be copied to \p vec_re.
          */
-        virtual std::pair<Real, Real>
+        virtual void
         get_eigenpair (unsigned int i,
+                       Real&  re,
+                       Real&  im,
                        libMesh::NumericVector<Real>& vec_re,
                        libMesh::NumericVector<Real>* vec_im = NULL);
+        
+        /*!
+         * sets the flag to exchange the A and B matrices for a generalized 
+         * eigenvalue problem. This is needed typically when the B matrix is
+         * not positive semi-definite.
+         */
+        void set_exchange_A_and_B (bool flag) {_exchange_A_and_B = flag;}
+
+        /**
+         * sets the number of eigenvalues requested
+         */
+        void set_n_requested_eigenvalues (unsigned int n)
+        { _n_requested_eigenpairs = n; };
+
         
         /**
          * @returns the number of converged eigenpairs.
          */
-        unsigned int get_n_converged () const {return _n_converged_eigenpairs;}
-        
+        unsigned int
+        get_n_converged_eigenvalues () const {return _n_converged_eigenpairs;}
+
+        /**
+         * @returns the number of requested eigenpairs.
+         */
+        unsigned int
+        get_n_requested_eigenvalues () const {return _n_requested_eigenpairs;}
+
         /**
          * @returns the number of eigen solver iterations.
          */
@@ -229,40 +261,50 @@ namespace MAST {
          * A private flag to indicate whether the condensed dofs
          * have been initialized.
          */
-        bool _condensed_dofs_initialized;
+        bool                               _condensed_dofs_initialized;
+        
+        /**
+         * The number of requested eigenpairs.
+         */
+        unsigned int                       _n_requested_eigenpairs;
+        
+        /*!
+         *  flag to exchange the A and B matrices in the eigenproblem solution
+         */
+        bool                               _exchange_A_and_B;
         
         /**
          * The number of converged eigenpairs.
          */
-        unsigned int _n_converged_eigenpairs;
+        unsigned int                       _n_converged_eigenpairs;
         
         /**
          * The number of iterations of the eigen solver algorithm.
          */
-        unsigned int _n_iterations;
+        unsigned int                       _n_iterations;
         
         /**
          * A boolean flag to indicate whether we are dealing with
          * a generalized eigenvalue problem.
          */
-        bool _is_generalized_eigenproblem;
+        bool                               _is_generalized_eigenproblem;
         
         /**
          * The type of the eigenvalue problem.
          */
-        libMesh::EigenProblemType _eigen_problem_type;
+        libMesh::EigenProblemType          _eigen_problem_type;
         
         /**
          * Object that assembles the sensitivity of eigen_system.
          */
-        MAST::EigenSystemAssembly * _eigenproblem_assemble_system_object;
+        MAST::EigenSystemAssembly *        _eigenproblem_assemble_system_object;
 
         /**
          * Vector storing the local dof indices that will not be condensed.
          * All dofs that are not in this vector will be eliminated from
          * the system when we perform a solve.
          */
-        std::vector<libMesh::dof_id_type> _local_non_condensed_dofs_vector;
+        std::vector<libMesh::dof_id_type>  _local_non_condensed_dofs_vector;
         
     };
 }

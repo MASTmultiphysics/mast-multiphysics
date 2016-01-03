@@ -32,9 +32,10 @@ MAST::BeamModalAnalysis::BeamModalAnalysis() {
     
     // create the mesh
     _mesh       = new libMesh::SerialMesh(__init->comm());
+    _length     = 10.;
     
     // initialize the mesh with one element
-    libMesh::MeshTools::Generation::build_line(*_mesh, 10, 0, 10);
+    libMesh::MeshTools::Generation::build_line(*_mesh, 50, 0, _length);
     _mesh->prepare_for_use();
     
     // create the equation system
@@ -72,11 +73,13 @@ MAST::BeamModalAnalysis::BeamModalAnalysis() {
     _eq_sys->init();
     
     _sys->eigen_solver->set_position_of_spectrum(libMesh::LARGEST_MAGNITUDE);
+    _sys->set_exchange_A_and_B(true);
+    _sys->set_n_requested_eigenvalues(3);
     
     // create the property functions and add them to the
     
     _thy             = new MAST::Parameter("thy", 0.06);
-    _thz             = new MAST::Parameter("thz", 0.02);
+    _thz             = new MAST::Parameter("thz", 1.00);
     _rho             = new MAST::Parameter("rho",2.8e3);
     _E               = new MAST::Parameter("E",  72.e9);
     _nu              = new MAST::Parameter("nu",  0.33);
@@ -217,23 +220,20 @@ MAST::BeamModalAnalysis::solve(bool if_write_output) {
     
     // create the nonlinear assembly object
     MAST::StructuralModalEigenproblemAssembly   assembly;
-    assembly.set_exchange_A_and_B_matrices(true);
     _sys->initialize_condensed_dofs(*_discipline);
-    
-    const unsigned int n_eig = 4;
-    _eq_sys->parameters.set<unsigned int>("eigenpairs")    = n_eig;
-    _eq_sys->parameters.set<unsigned int>("basis vectors") = n_eig*3;
-    
     
     assembly.attach_discipline_and_system(*_discipline, *_structural_sys);
     _sys->eigenproblem_solve();
     assembly.clear_discipline_and_system();
     
     // Get the number of converged eigen pairs.
-    unsigned int nconv = std::min(_sys->get_n_converged(), n_eig);
+    unsigned int
+    nconv = std::min(_sys->get_n_converged_eigenvalues(),
+                     _sys->get_n_requested_eigenvalues());
     
-    for (unsigned int i=0; i<nconv; i++)
-    {
+    
+    for (unsigned int i=0; i<nconv; i++) {
+        
         std::ostringstream file_name;
         
         // We write the file in the ExodusII format.
@@ -244,13 +244,15 @@ MAST::BeamModalAnalysis::solve(bool if_write_output) {
         << i
         << ".exo";
         
-        // now write the eigenvlaues
-        std::pair<Real, Real> val = _sys->get_eigenpair(i, *_sys->solution);
-        std::complex<Real> eigval = std::complex<Real>(val.first, val.second);
-        eigval = 1./eigval;
+        // now write the eigenvlau
+        Real
+        re = 0.,
+        im = 0.;
+        _sys->get_eigenpair(i, re, im, *_sys->solution);
+
         libMesh::out
         << std::setw(35) << std::fixed << std::setprecision(15)
-        << eigval.real() << std::endl;
+        << re << std::endl;
         
         if (if_write_output) {
             

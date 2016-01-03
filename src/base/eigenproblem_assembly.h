@@ -130,21 +130,6 @@ namespace MAST {
         base_sol(bool if_sens = false) const;
         
         
-        /*!
-         *   sets the flag for exchanging the A and B matrices for solution of
-         *   eigenvalue problem.
-         */
-        void set_exchange_A_and_B_matrices(bool val) {
-            _if_exchange_A_and_B_matrices = val;
-        }
-
-        
-        /*!
-         *   @returns true if the object was requested to exchange the
-         *   A and B matrices, false otherwise
-         */
-        bool if_exchange_A_and_B_matrices() const;
-        
     protected:
         
         /*!
@@ -166,13 +151,6 @@ namespace MAST {
         _elem_sensitivity_calculations(MAST::ElementBase& elem,
                                        RealMatrixX& mat_A,
                                        RealMatrixX& mat_B) = 0;
-        
-        /*!
-         *   whether or not the left and right matrices have been switched,
-         *   which is typically done to aid in calculation of smallest
-         *   eigenvalues
-         */
-        bool _if_exchange_A_and_B_matrices;
         
         /*!
          *   base solution about which this eigenproblem is defined. This

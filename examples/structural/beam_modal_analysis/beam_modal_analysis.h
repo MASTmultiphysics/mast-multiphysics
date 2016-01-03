@@ -94,6 +94,9 @@ namespace MAST {
         MAST::StructuralSystemInitialization* _structural_sys;
         MAST::StructuralDiscipline*           _discipline;
         
+        Real
+        _length;
+        
         // create the property functions and add them to the
         MAST::Parameter
         *_thy,

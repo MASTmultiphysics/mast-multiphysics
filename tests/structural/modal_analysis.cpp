@@ -33,9 +33,8 @@
 #include "property_cards/isotropic_material_property_card.h"
 #include "elasticity/structural_element_base.h"
 
-// libMesh includes
-#include "libmesh/numeric_vector.h"
-
+// MAST includes
+#include "base/nonlinear_system.h"
 
 
 BOOST_FIXTURE_TEST_SUITE  (Structural1DBeamModalAnalysis,
@@ -43,7 +42,44 @@ BOOST_FIXTURE_TEST_SUITE  (Structural1DBeamModalAnalysis,
 
 BOOST_AUTO_TEST_CASE   (BeamModalSolution) {
     
-    //this->solve();
+
+    const Real
+    tol      = 1.e-2;
+    
+    this->solve();
+    
+    // check the solution
+    // iterate over each node, and compare the nodal solution with the
+    // expected anlaytical value
+    Real
+    th_y        = (*_thy)(),
+    th_z        = (*_thz)(),
+    Izz         = pow(th_z,1)*pow(th_y,3)/12.,
+    A           = th_z*th_y,
+    rho         = (*_rho)(),
+    Eval        = (*_E)(),
+    pi          = acos(-1.),
+    analytical  = 0.,
+    re          = 0.,
+    im          = 0.;
+    
+    
+    // analytical solution to the natural frequency of simply supported problem
+    // is
+    //   lambda = omega^2 = (n pi/L)^4 EI/(rho A)
+    //
+    unsigned int
+    nconv = std::min(_sys->get_n_converged_eigenvalues(),
+                     _sys->get_n_requested_eigenvalues());
+
+    for (unsigned int i=0; i<nconv; i++) {
+        
+        analytical   = Eval*Izz/(rho*A) * pow((i+1)*pi/_length, 4);
+        _sys->get_eigenpair(i, re, im, *_sys->solution);
+        
+        // compare the eigenvalues
+        BOOST_CHECK(MAST::compare_value(analytical, re, tol));
+    }
 }
 
 
