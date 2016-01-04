@@ -51,6 +51,23 @@ namespace MAST {
         eigenproblem_assemble(libMesh::SparseMatrix<Real>* A,
                               libMesh::SparseMatrix<Real>* B);
         
+        /**
+         * Assembly function.  This function will be called
+         * to assemble the sensitivity of eigenproblem matrices.
+         * The method provides dA/dp_i and dB/dpi for \par i ^th parameter
+         * in the vector \par parameters.
+         *
+         * If the routine is not able to provide sensitivity for this parameter,
+         * then it should return false, and the system will attempt to use
+         * finite differencing.
+         */
+        virtual bool
+        eigenproblem_sensitivity_assemble (const libMesh::ParameterVector& parameters,
+                                           const unsigned int i,
+                                           libMesh::SparseMatrix<Real>* sensitivity_A,
+                                           libMesh::SparseMatrix<Real>* sensitivity_B);
+        
+
     protected:
         
         /*!

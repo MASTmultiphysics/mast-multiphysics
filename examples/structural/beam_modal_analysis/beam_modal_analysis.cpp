@@ -214,8 +214,9 @@ MAST::BeamModalAnalysis::get_parameter(const std::string &nm) {
 
 
 
-const libMesh::NumericVector<Real>&
-MAST::BeamModalAnalysis::solve(bool if_write_output) {
+void
+MAST::BeamModalAnalysis::solve(std::vector<Real>& eig,
+                               bool if_write_output) {
     
     
     // create the nonlinear assembly object
@@ -230,7 +231,7 @@ MAST::BeamModalAnalysis::solve(bool if_write_output) {
     unsigned int
     nconv = std::min(_sys->get_n_converged_eigenvalues(),
                      _sys->get_n_requested_eigenvalues());
-    
+    eig.resize(nconv);
     
     for (unsigned int i=0; i<nconv; i++) {
         
@@ -249,7 +250,8 @@ MAST::BeamModalAnalysis::solve(bool if_write_output) {
         re = 0.,
         im = 0.;
         _sys->get_eigenpair(i, re, im, *_sys->solution);
-
+        eig[i] = re;
+        
         libMesh::out
         << std::setw(35) << std::fixed << std::setprecision(15)
         << re << std::endl;
@@ -266,32 +268,35 @@ MAST::BeamModalAnalysis::solve(bool if_write_output) {
                                                                 *_eq_sys);
         }
     }
-    
-    
-    return *(_sys->solution);
 }
 
 
 
 
 
-const libMesh::NumericVector<Real>&
-MAST::BeamModalAnalysis::sensitivity_solve(MAST::Parameter& p) {
+void
+MAST::BeamModalAnalysis::sensitivity_solve(MAST::Parameter& p,
+                                           std::vector<Real>& eig) {
+
+    _discipline->add_parameter(p);
+
+    // Get the number of converged eigen pairs.
+    unsigned int
+    nconv = std::min(_sys->get_n_converged_eigenvalues(),
+                     _sys->get_n_requested_eigenvalues());
+    eig.resize(nconv);
+
+    libMesh::ParameterVector params;
+    params.resize(1);
+    params[0]  =  p.ptr();
+
+    // create the nonlinear assembly object
+    MAST::StructuralModalEigenproblemAssembly   assembly;
+    assembly.attach_discipline_and_system(*_discipline, *_structural_sys);
+    _sys->eigenproblem_sensitivity_solve(params, eig);
+    assembly.clear_discipline_and_system();
     
-    
-    //    // create the nonlinear assembly object
-    //    MAST::StructuralNonlinearAssembly   assembly;
-    //
-    //    // now solve the system
-    //    MAST::Driver::sensitivity_solution(*_discipline,
-    //                                       *_structural_sys,
-    //                                       assembly,
-    //                                       p);
-    //
-    //    // write the solution for visualization
-    //    //libMesh::ExodusII_IO(mesh).write_equation_systems("mesh.exo", eq_sys);
-    //
-    return _sys->get_sensitivity_solution(0);
+    _discipline->remove_parameter(p);
 }
 
 

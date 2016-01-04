@@ -135,6 +135,100 @@ eigenproblem_assemble(libMesh::SparseMatrix<Real> *A,
 
 
 
+
+
+bool
+MAST::StructuralModalEigenproblemAssembly::
+eigenproblem_sensitivity_assemble (const libMesh::ParameterVector& parameters,
+                                   const unsigned int i,
+                                   libMesh::SparseMatrix<Real>* sensitivity_A,
+                                   libMesh::SparseMatrix<Real>* sensitivity_B)  {
+    
+    MAST::NonlinearSystem& eigen_sys =
+    dynamic_cast<MAST::NonlinearSystem&>(_system->system());
+    
+    // zero the solution since it is not needed for eigenproblem
+    eigen_sys.solution->zero();
+    
+    libMesh::SparseMatrix<Real>
+    &matrix_A = *sensitivity_A,
+    &matrix_B = *sensitivity_B;
+    
+    matrix_A.zero();
+    matrix_B.zero();
+    
+    // iterate over each element, initialize it and get the relevant
+    // analysis quantities
+    RealVectorX sol, dummy;
+    RealMatrixX mat_A, mat_B;
+    std::vector<libMesh::dof_id_type> dof_indices;
+    const libMesh::DofMap& dof_map = eigen_sys.get_dof_map();
+    std::auto_ptr<MAST::ElementBase> physics_elem;
+    
+    libMesh::MeshBase::const_element_iterator       el     =
+    eigen_sys.get_mesh().active_local_elements_begin();
+    const libMesh::MeshBase::const_element_iterator end_el =
+    eigen_sys.get_mesh().active_local_elements_end();
+    
+    for ( ; el != end_el; ++el) {
+        
+        const libMesh::Elem* elem = *el;
+        
+        dof_map.dof_indices (elem, dof_indices);
+        
+        physics_elem.reset(_build_elem(*elem).release());
+        
+        // get the solution
+        unsigned int ndofs = (unsigned int)dof_indices.size();
+        sol.setZero(ndofs);
+        dummy.setZero(ndofs);
+        mat_A.setZero(ndofs, ndofs);
+        mat_B.setZero(ndofs, ndofs);
+        
+        // if the base solution is provided, then tell the element about it
+        if (_base_sol.get()) {
+            for (unsigned int i=0; i<dof_indices.size(); i++)
+                sol(i) = (*_base_sol)(dof_indices[i]);
+        }
+        
+        physics_elem->sensitivity_param = _discipline->get_parameter(&(parameters[i].get()));
+        physics_elem->set_solution(sol);
+        physics_elem->set_velocity(dummy);
+        physics_elem->set_acceleration(dummy);
+        
+        
+        // set the incompatible mode solution if required by the
+        // element
+        MAST::StructuralElementBase& p_elem =
+        dynamic_cast<MAST::StructuralElementBase&>(*physics_elem);
+        if (p_elem.if_incompatible_modes()) {
+            // check if the vector exists in the map
+            if (!_incompatible_sol.count(elem))
+                _incompatible_sol[elem] = RealVectorX::Zero(p_elem.incompatible_mode_size());
+            p_elem.set_incompatible_mode_solution(_incompatible_sol[elem]);
+        }
+        
+        _elem_sensitivity_calculations(*physics_elem, mat_A, mat_B);
+        
+        // copy to the libMesh matrix for further processing
+        DenseRealMatrix A, B;
+        MAST::copy(A, mat_A);
+        MAST::copy(B, mat_B);
+        
+        // constrain the element matrices.
+        eigen_sys.get_dof_map().constrain_element_matrix(A, dof_indices);
+        eigen_sys.get_dof_map().constrain_element_matrix(B, dof_indices);
+        
+        // add to the global matrices
+        matrix_A.add_matrix (A, dof_indices); // load independent
+        matrix_B.add_matrix (B, dof_indices); // load dependent
+    }
+    
+    return true;
+}
+
+
+
 std::auto_ptr<MAST::ElementBase>
 MAST::StructuralModalEigenproblemAssembly::_build_elem(const libMesh::Elem& elem) {
     
@@ -181,8 +275,21 @@ MAST::StructuralModalEigenproblemAssembly::
 _elem_sensitivity_calculations(MAST::ElementBase& elem,
                                RealMatrixX& mat_A,
                                RealMatrixX& mat_B) {
-    // to be implelmented
-    libmesh_error();
+    MAST::StructuralElementBase& e =
+    dynamic_cast<MAST::StructuralElementBase&>(elem);
+    
+    RealVectorX vec = RealVectorX::Zero(mat_A.rows()); // dummy vector
+    RealMatrixX mat = RealMatrixX::Zero(mat_A.rows(), mat_A.cols()); // dummy matrix
+    mat_A.setZero();
+    mat_B.setZero();
+    
+    // calculate the Jacobian components
+    e.internal_residual_sensitivity(true, vec, mat_A, true);
+    //    e.side_external_residual_sensitivity<Real>(true, vec, mat_A, _discipline->side_loads());
+    //    e.volume_external_residual_sensitivity<Real>(true, vec, mat_A, _discipline->volume_loads());
+    
+    // calculate the mass matrix components
+    e.inertial_residual_sensitivity(true, vec, mat_B, mat, mat_A);
 }
 
 

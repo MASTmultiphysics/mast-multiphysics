@@ -161,14 +161,14 @@ namespace MAST {
                                       bool if_sens = false);
 
         
-        /*!
-         *   This is used for cases where a linearized problem is solved
-         *   about a stationary base solution. This method stores
-         *   \p vec as the base solution, or its sensitivity if \p
-         *   if_sens is true.
-         */
-        virtual void set_base_solution(const RealVectorX& vec,
-                                       bool if_sens = false);
+//        /*!
+//         *   This is used for cases where a linearized problem is solved
+//         *   about a stationary base solution. This method stores
+//         *   \p vec as the base solution, or its sensitivity if \p
+//         *   if_sens is true.
+//         */
+//        virtual void set_base_solution(const RealVectorX& vec,
+//                                       bool if_sens = false);
         
         /*!
          *   Attaches the function that represents the system solution
@@ -325,16 +325,16 @@ namespace MAST {
         RealVectorX _accel_sens;
         
         
-        /*!
-         *   base solution about which a linearized solution is performed
-         */
-        RealVectorX _base_sol;
-        
-        
-        /*!
-         *   base solution sensitivity
-         */
-        RealVectorX _base_sol_sens;
+//        /*!
+//         *   base solution about which a linearized solution is performed
+//         */
+//        RealVectorX _base_sol;
+//        
+//        
+//        /*!
+//         *   base solution sensitivity
+//         */
+//        RealVectorX _base_sol_sens;
         
         
         /*!

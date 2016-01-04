@@ -96,14 +96,14 @@ MAST::ElementBase::set_acceleration(const RealVectorX &vec,
 
 
 
-void
-MAST::ElementBase::set_base_solution(const RealVectorX& vec,
-                                     bool if_sens) {
-    if (!if_sens)
-        _base_sol = vec;
-    else
-        _base_sol_sens = vec;
-}
+//void
+//MAST::ElementBase::set_base_solution(const RealVectorX& vec,
+//                                     bool if_sens) {
+//    if (!if_sens)
+//        _base_sol = vec;
+//    else
+//        _base_sol_sens = vec;
+//}
 
 
 

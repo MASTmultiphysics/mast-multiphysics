@@ -76,14 +76,14 @@ namespace MAST {
                                       bool if_sens = false);
 
         
-        /*!
-         *   This is used for cases where a linearized problem is solved
-         *   about a stationary base solution. This method stores
-         *   \p vec as the base solution, or its sensitivity if \p
-         *   if_sens is true.
-         */
-        virtual void set_base_solution(const RealVectorX& vec,
-                                       bool if_sens = false);
+//        /*!
+//         *   This is used for cases where a linearized problem is solved
+//         *   about a stationary base solution. This method stores
+//         *   \p vec as the base solution, or its sensitivity if \p
+//         *   if_sens is true.
+//         */
+//        virtual void set_base_solution(const RealVectorX& vec,
+//                                       bool if_sens = false);
 
         
         /*!
@@ -221,8 +221,9 @@ namespace MAST {
          */
         virtual bool inertial_residual_sensitivity (bool request_jacobian,
                                                     RealVectorX& f,
-                                                    RealMatrixX& jac)
-        { libmesh_assert(false);}
+                                                    RealMatrixX& jac_xddot,
+                                                    RealMatrixX& jac_xdot,
+                                                    RealMatrixX& jac);
         
         /*!
          *   sensitivity of the side external force contribution to system residual
@@ -559,16 +560,16 @@ namespace MAST {
         RealVectorX _local_accel_sens;
         
         
-        /*!
-         *   base solution about which a linearized solution is performed
-         */
-        RealVectorX _local_base_sol;
-        
-        
-        /*!
-         *   base solution sensitivity
-         */
-        RealVectorX _local_base_sol_sens;
+//        /*!
+//         *   base solution about which a linearized solution is performed
+//         */
+//        RealVectorX _local_base_sol;
+//        
+//        
+//        /*!
+//         *   base solution sensitivity
+//         */
+//        RealVectorX _local_base_sol_sens;
 
         /*!
          *   incompatible mode solution vector

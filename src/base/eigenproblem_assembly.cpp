@@ -215,7 +215,7 @@ eigenproblem_sensitivity_assemble(const libMesh::ParameterVector& parameters,
                 sol(i) = (*_base_sol)(dof_indices[i]);
         }
         
-        physics_elem->set_base_solution(sol);
+        physics_elem->set_solution(sol);
         
         // set the element's base solution sensitivity
         if (_base_sol_sensitivity.get()) {
@@ -223,7 +223,7 @@ eigenproblem_sensitivity_assemble(const libMesh::ParameterVector& parameters,
                 sol(i) = (*_base_sol_sensitivity)(dof_indices[i]);
         }
         
-        physics_elem->set_base_solution(sol, true);
+        physics_elem->set_solution(sol, true);
         
         // tell the element about the sensitivity parameter
         physics_elem->sensitivity_param = _discipline->get_parameter(&(parameters[i].get()));

@@ -69,16 +69,17 @@ namespace MAST {
          */
         MAST::Parameter* get_parameter(const std::string& nm);
 
+        
         /*!
          *  solves the system and returns the final solution
          */
-        const libMesh::NumericVector<Real>& solve(bool if_write_output = false);
+        void solve(std::vector<Real>& eig, bool if_write_output = false);
         
         
         /*!
          *  solves the sensitivity of system and returns the final solution
          */
-        const libMesh::NumericVector<Real>& sensitivity_solve(MAST::Parameter& p);
+        void sensitivity_solve(MAST::Parameter& p, std::vector<Real>& eig);
         
         
         // create the mesh

@@ -426,7 +426,7 @@ MAST::NonlinearSystem::get_eigenpair(unsigned int i,
             
             // inner product with respect to B matrix
             matrix_B->vector_mult(*tmp, vec_re);
-            
+
             Real
             v = tmp->dot(vec_re);
             
@@ -474,32 +474,43 @@ eigenproblem_sensitivity_solve (const libMesh::ParameterVector& parameters,
     std::vector<Real> denom(_n_converged_eigenpairs, 0.);
     sens.resize(_n_converged_eigenpairs*parameters.size(), 0.);
     
-    std::auto_ptr< libMesh::NumericVector<Real> >
-    x_right (this->solution->zero_clone().release()),
-    x_left  (this->solution->zero_clone().release()),
+    std::vector<libMesh::NumericVector<Real>*>
+    x_right (_n_converged_eigenpairs),
+    x_left  (_n_converged_eigenpairs);
+    
+    std::auto_ptr<libMesh::NumericVector<Real> >
     tmp     (this->solution->zero_clone().release());
+
+    std::vector<Real>
+    eig (_n_converged_eigenpairs);
     
     Real
     re  = 0.,
     im  = 0.;
     
+    
     for (unsigned int i=0; i<_n_converged_eigenpairs; i++) {
+
+        x_right[i] = (this->solution->zero_clone().release());
+        
         
         switch (_eigen_problem_type) {
                 
             case libMesh::HEP: {
                 // right and left eigenvectors are same
                 // imaginary part of eigenvector for real matrices is zero
-                this->get_eigenpair(i, re, im, *x_right, NULL);
-                denom[i] = x_right->dot(*x_right);               // x^H x
+                this->get_eigenpair(i, re, im, *x_right[i], NULL);
+                denom[i] = x_right[i]->dot(*x_right[i]);               // x^H x
+                eig[i]   = re;
             }
                 break;
                 
             case libMesh::GHEP: {
                 // imaginary part of eigenvector for real matrices is zero
-                this->get_eigenpair(i, re, im, *x_right, NULL);
-                matrix_B->vector_mult(*tmp, *x_right);
-                denom[i] = x_right->dot(*tmp);                  // x^H B x
+                this->get_eigenpair(i, re, im, *x_right[i], NULL);
+                matrix_B->vector_mult(*tmp, *x_right[i]);
+                denom[i] = x_right[i]->dot(*tmp);                  // x^H B x
+                eig[i]   = re;
             }
                 break;
                 
@@ -523,25 +534,24 @@ eigenproblem_sensitivity_solve (const libMesh::ParameterVector& parameters,
         for (unsigned int i=0; i<_n_converged_eigenpairs; i++) {
             
             num = p*_n_converged_eigenpairs+i;
+
             switch (_eigen_problem_type) {
                     
                 case libMesh::HEP: {
                     
-                    this->get_eigenpair(i, re, im, *x_right);
-                    matrix_A->vector_mult(*tmp, *x_right);
-                    sens[num] = x_right->dot(*tmp);                     // x^H A' x
-                    sens[num]-= re * x_right->dot(*x_right); // - lambda x^H x
+                    matrix_A->vector_mult(*tmp, *x_right[i]);
+                    sens[num] = x_right[i]->dot(*tmp);                  // x^H A' x
+                    sens[num]-= eig[i] * x_right[i]->dot(*x_right[i]);  // - lambda x^H x
                     sens[num] /= denom[i];                              // x^H x
                 }
                     break;
                     
                 case libMesh::GHEP: {
                     
-                    this->get_eigenpair(i, re, im, *x_right);
-                    matrix_A->vector_mult(*tmp, *x_right);
-                    sens[num] = x_right->dot(*tmp);                 // x^H A' x
-                    matrix_B->vector_mult(*tmp, *x_right);
-                    sens[num]-= re * x_right->dot(*tmp); // - lambda x^H B' x
+                    matrix_A->vector_mult(*tmp, *x_right[i]);
+                    sens[num] = x_right[i]->dot(*tmp);              // x^H A' x
+                    matrix_B->vector_mult(*tmp, *x_right[i]);
+                    sens[num]-= eig[i] * x_right[i]->dot(*tmp);     // - lambda x^H B' x
                     sens[num] /= denom[i];                          // x^H B x
                 }
                     break;
