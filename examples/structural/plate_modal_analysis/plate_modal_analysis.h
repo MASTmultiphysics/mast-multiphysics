@@ -17,8 +17,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#ifndef __mast_beam_modal_h__
-#define __mast_beam_modal_h__
+#ifndef __mast_plate_modal_analysis_h__
+#define __mast_plate_modal_analysis_h__
 
 
 // C++ includes
@@ -33,6 +33,7 @@
 #include "libmesh/equation_systems.h"
 #include "libmesh/serial_mesh.h"
 #include "libmesh/mesh_generation.h"
+#include "libmesh/nonlinear_implicit_system.h"
 #include "libmesh/fe_type.h"
 #include "libmesh/dof_map.h"
 
@@ -46,19 +47,25 @@ namespace MAST {
     class Parameter;
     class ConstantFieldFunction;
     class IsotropicMaterialPropertyCard;
-    class Solid1DSectionElementPropertyCard;
+    class Solid2DSectionElementPropertyCard;
     class DirichletBoundaryCondition;
     class BoundaryConditionBase;
     class NonlinearSystem;
     
     
-    struct BeamModalAnalysis {
+    struct PlateModalAnalysis {
         
         
-        BeamModalAnalysis();
+        PlateModalAnalysis();
         
         
-        ~BeamModalAnalysis();
+        ~PlateModalAnalysis();
+        
+
+        /*!
+         *   initializes the object for specified characteristics
+         */
+        void init(libMesh::ElemType e_type, bool if_vk);
         
         
         /*!
@@ -68,21 +75,30 @@ namespace MAST {
          *   of parameters.
          */
         MAST::Parameter* get_parameter(const std::string& nm);
-
         
         /*!
          *  solves the system and returns the final solution
          */
-        void solve(bool if_write_output = false,
-                   std::vector<Real>* eig = NULL);
+        void
+        solve(bool if_write_output = false,
+              std::vector<Real>* eig = NULL);
         
         
         /*!
          *  solves the sensitivity of system and returns the final solution
          */
-        void sensitivity_solve(MAST::Parameter& p, std::vector<Real>& eig);
+        void
+        sensitivity_solve(MAST::Parameter& p, std::vector<Real>& eig);
         
         
+        bool _initialized;
+        
+        // length of domain
+        Real _length;
+
+        // width of domain
+        Real _width;
+
         // create the mesh
         libMesh::SerialMesh*           _mesh;
         
@@ -90,44 +106,47 @@ namespace MAST {
         libMesh::EquationSystems*      _eq_sys;
         
         // create the libmesh system
-        MAST::NonlinearSystem*         _sys;
+        MAST::NonlinearSystem*  _sys;
         
         // initialize the system to the right set of variables
         MAST::StructuralSystemInitialization* _structural_sys;
         MAST::StructuralDiscipline*           _discipline;
         
-        Real
-        _length;
-        
         // create the property functions and add them to the
         MAST::Parameter
-        *_thy,
-        *_thz,
-        *_rho,
+        *_th,
         *_E,
         *_nu,
+        *_rho,
+        *_kappa,
         *_zero;
         
         MAST::ConstantFieldFunction
-        *_thy_f,
-        *_thz_f,
-        *_rho_f,
+        *_th_f,
         *_E_f,
         *_nu_f,
-        *_hyoff_f,
-        *_hzoff_f;
+        *_rho_f,
+        *_kappa_f,
+        *_hoff_f;
         
         // create the material property card
         MAST::IsotropicMaterialPropertyCard*     _m_card;
         
         // create the element property card
-        MAST::Solid1DSectionElementPropertyCard* _p_card;
+        MAST::Solid2DSectionElementPropertyCard* _p_card;
         
         // create the Dirichlet boundary condition on left edge
         MAST::DirichletBoundaryCondition*     _dirichlet_left;
         
         // create the Dirichlet boundary condition on right edge
         MAST::DirichletBoundaryCondition*     _dirichlet_right;
+
+        // create the Dirichlet boundary condition on bottom edge
+        MAST::DirichletBoundaryCondition*     _dirichlet_bottom;
+
+        // create the Dirichlet boundary condition on top edge
+        MAST::DirichletBoundaryCondition*     _dirichlet_top;
+
         
         // vector of parameters to evaluate sensitivity wrt
         std::vector<MAST::Parameter*> _params_for_sensitivity;
@@ -136,4 +155,5 @@ namespace MAST {
 
 
 
-#endif //  __mast_beam_modal_h__
+#endif //  __mast_plate_modal_analysis_h__
+

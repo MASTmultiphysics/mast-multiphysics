@@ -69,6 +69,25 @@ MAST::PhysicsDisciplineBase::add_dirichlet_bc(libMesh::boundary_id_type bid,
 
 
 void
+MAST::PhysicsDisciplineBase::
+constrain_subdomain_dofs_for_var(const libMesh::subdomain_id_type sid,
+                                 const unsigned int var) {
+
+    std::map<libMesh::subdomain_id_type, std::vector<unsigned int> >::iterator
+    it = _subdomain_var_constraint.find(sid);
+    
+    if (it == _subdomain_var_constraint.end()) {
+        it = _subdomain_var_constraint.insert
+        (std::pair<libMesh::subdomain_id_type, std::vector<unsigned int> >
+         (sid, std::vector<unsigned int>())).first;
+    }
+    
+    it->second.push_back(var);
+}
+
+
+
+void
 MAST::PhysicsDisciplineBase::add_volume_load(libMesh::subdomain_id_type sid,
                                              MAST::BoundaryConditionBase& load) {
     std::pair<MAST::VolumeBCMapType::iterator, MAST::VolumeBCMapType::iterator> it =
@@ -235,6 +254,7 @@ clear_system_dirichlet_bc(libMesh::System& sys) const {
     
     for ( ; it != _dirichlet_bc_map.end(); it++)
         sys.get_dof_map().remove_dirichlet_boundary(it->second->dirichlet_boundary());
+    
 }
 
 
@@ -278,14 +298,30 @@ get_system_dirichlet_bc_dofs(libMesh::System& sys,
     
     const libMesh::DofMap& dof_map = sys.get_dof_map();
     
-    std::vector<libMesh::dof_id_type> dof_indices;
-    
     libMesh::MeshBase::const_element_iterator
     el     = mesh.active_local_elements_begin(),
     end_el = mesh.active_local_elements_end();
     
     for ( ; el != end_el; ++el) {
         const libMesh::Elem* elem = *el;
+     
+        // check if the any subdomain variables have been constrained
+        std::map<libMesh::subdomain_id_type, std::vector<unsigned int> >::const_iterator
+        it = _subdomain_var_constraint.find(elem->subdomain_id());
+        
+        if (it != _subdomain_var_constraint.end()) {
+            // constrain all element dofs on this element that belong to this
+            // variable
+            for (unsigned int i=0; i<it->second.size(); i++) {
+                
+                std::vector<libMesh::dof_id_type> dof_indices;
+                dof_map.dof_indices (*el, dof_indices, it->second[i]);
+                
+                for(unsigned int ii=0; ii<dof_indices.size(); ii++)
+                    dof_ids.insert(dof_indices[ii]);
+            }
+        }
+        
         
         // boundary condition is applied only on sides with no neighbors
         // and if the side's boundary id has a boundary condition tag on it
@@ -306,7 +342,7 @@ get_system_dirichlet_bc_dofs(libMesh::System& sys,
                         // and collect its dofs
                         for (unsigned int i_var=0; i_var<vars.size(); i_var++) {
                             
-                            dof_indices.clear();
+                            std::vector<libMesh::dof_id_type> dof_indices;
                             dof_map.dof_indices (*el, dof_indices, vars[i_var]);
                             
                             // all boundary dofs are Dirichlet dofs in this case
@@ -337,7 +373,6 @@ get_system_dirichlet_bc_dofs(libMesh::System& sys,
         if (!constraint_it->second.size())
             dof_ids.insert(constraint_it->first);
     }
-    
 }
 
 

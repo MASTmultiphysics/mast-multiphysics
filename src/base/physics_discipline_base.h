@@ -188,6 +188,13 @@ namespace MAST {
         
         
         /*!
+         *    constrain dofs on a subdomain to zero
+         */
+        void constrain_subdomain_dofs_for_var(const libMesh::subdomain_id_type sid,
+                                              const unsigned int var);
+        
+        
+        /*!
          *    initializes the system for dirichlet boundary conditions
          */
         void init_system_dirichlet_bc(libMesh::System& sys) const;
@@ -266,6 +273,12 @@ namespace MAST {
          *   Dirichlet boundary condition map of boundary id and load
          */
         MAST::DirichletBCMapType _dirichlet_bc_map;
+        
+        
+        /*!
+         *   variables constrained on subdomain
+         */
+        std::map<libMesh::subdomain_id_type, std::vector<unsigned int> > _subdomain_var_constraint;
         
         /*!
          *   volume boundary condition map of boundary id and load

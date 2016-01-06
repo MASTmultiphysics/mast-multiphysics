@@ -20,6 +20,7 @@
 // MAST includes
 #include "examples/structural/bar_extension/bar_extension.h"
 #include "examples/structural/beam_modal_analysis/beam_modal_analysis.h"
+#include "examples/structural/beam_buckling_prestress/beam_column_buckling.h"
 #include "examples/structural/beam_bending/beam_bending.h"
 #include "examples/structural/beam_bending_with_offset/beam_bending_with_offset.h"
 #include "examples/structural/beam_bending_thermal_stress_with_offset/beam_bending_thermal_stress.h"
@@ -32,6 +33,8 @@
 #include "examples/structural/plate_bending/plate_bending.h"
 #include "examples/structural/plate_bending_section_offset/plate_bending_section_offset.h"
 #include "examples/structural/plate_bending_thermal_stress/plate_bending_thermal_stress.h"
+#include "examples/structural/plate_modal_analysis/plate_modal_analysis.h"
+#include "examples/structural/plate_buckling_prestress/plate_buckling_prestress.h"
 #include "examples/structural/plate_optimization/plate_optimization.h"
 #include "examples/structural/plate_optimization_single_stress_functional/plate_optimization_single_functional.h"
 #include "examples/structural/plate_optimization_section_offset/plate_section_offset_optimization.h"
@@ -92,10 +95,10 @@ void plate_analysis(const std::string& case_name,
         MAST::Parameter* p = run_case.get_parameter(par_name);
         if (p) {
             
-            std::cout
-            << "Running sensitivity for case: " << case_name
-            << "  wrt  " << par_name << std::endl;
-            run_case.sensitivity_solve(*p, true);
+//            std::cout
+//            << "Running sensitivity for case: " << case_name
+//            << "  wrt  " << par_name << std::endl;
+//            run_case.sensitivity_solve(*p, true);
         }
     }
     
@@ -211,6 +214,8 @@ int main(int argc, char* const argv[]) {
         analysis<MAST::BarExtension>(case_name, with_sens, par_name);
     else if (case_name == "beam_modal_analysis")
         analysis<MAST::BeamModalAnalysis>(case_name, with_sens, par_name);
+    else if (case_name == "beam_prestress_buckling_analysis")
+        analysis<MAST::BeamColumnBucklingAnalysis>(case_name, with_sens, par_name);
     else if (case_name == "beam_bending")
         analysis<MAST::BeamBending>(case_name, with_sens, par_name);
     else if (case_name == "beam_bending_with_offset")
@@ -232,6 +237,10 @@ int main(int argc, char* const argv[]) {
         analysis<MAST::MembraneExtensionUniaxial>(case_name, with_sens, par_name);
     else if (case_name == "membrane_extension_biaxial")
         analysis<MAST::MembraneExtensionBiaxial>(case_name, with_sens, par_name);
+    else if (case_name == "plate_modal_analysis")
+        plate_analysis<MAST::PlateModalAnalysis>(case_name, true, with_sens, par_name);
+    else if (case_name == "plate_prestress_buckling_analysis")
+        plate_analysis<MAST::PlateBucklingPrestress>(case_name, true, with_sens, par_name);
     else if (case_name == "plate_bending")
         plate_analysis<MAST::PlateBending>
         (case_name, if_nonlin, with_sens, par_name);
@@ -270,6 +279,8 @@ int main(int argc, char* const argv[]) {
         << "Possible values are:\n"
         << "  bar_extension \n"
         << "  beam_bending \n"
+        << "  beam_modal_analysis\n"
+        << "  beam_prestress_buckling_analysis\n"
         << "  beam_bending_with_offset \n"
         << "  beam_bending_thermal_stress \n"
         << "  beam_bending_optimization \n"
@@ -285,6 +296,8 @@ int main(int argc, char* const argv[]) {
         << "  plate_bending_single_functional_sizing_optimization \n"
         << "  plate_bending_section_offset_optimization \n"
         << "  plate_bending_thermal_stress_optimization \n"
+        << "  plate_modal_analysis\n"
+        << "  plate_prestress_buckling_analysis\n"
         << "  stiffened_plate_bending_thermal_stress_optimization \n"
         << "  topology_optimization_2D \n"
         << "*  The default for --with_sensitivity is: false.\n"

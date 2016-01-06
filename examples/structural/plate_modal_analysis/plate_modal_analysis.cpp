@@ -22,37 +22,57 @@
 
 
 // MAST includes
-#include "examples/structural/beam_modal_analysis/beam_modal_analysis.h"
-#include "base/nonlinear_system.h"
-#include "base/parameter.h"
-#include "base/constant_field_function.h"
+#include "examples/structural/plate_modal_analysis/plate_modal_analysis.h"
 #include "elasticity/structural_system_initialization.h"
-#include "elasticity/structural_discipline.h"
 #include "elasticity/structural_element_base.h"
 #include "elasticity/structural_modal_eigenproblem_assembly.h"
-#include "property_cards/solid_1d_section_element_property_card.h"
+#include "elasticity/structural_discipline.h"
+#include "base/parameter.h"
+#include "base/constant_field_function.h"
+#include "base/nonlinear_system.h"
+#include "property_cards/solid_2d_section_element_property_card.h"
 #include "property_cards/isotropic_material_property_card.h"
 #include "boundary_condition/dirichlet_boundary_condition.h"
-#include "driver/driver_base.h"
-
 
 // libMesh includes
 #include "libmesh/mesh_generation.h"
 #include "libmesh/exodusII_io.h"
 #include "libmesh/numeric_vector.h"
+#include "libmesh/parameter_vector.h"
+
 
 extern libMesh::LibMeshInit* __init;
 
 
-MAST::BeamModalAnalysis::BeamModalAnalysis() {
+MAST::PlateModalAnalysis::PlateModalAnalysis():
+_initialized(false) {
+    
+}
+
+
+
+void
+MAST::PlateModalAnalysis::init(libMesh::ElemType e_type,
+                               bool if_vk) {
+    
+    
+    libmesh_assert(!_initialized);
+    
+    
+    // length of domain
+    _length     = 0.50,
+    _width      = 0.25;
     
     
     // create the mesh
     _mesh       = new libMesh::SerialMesh(__init->comm());
-    _length     = 10.;
     
     // initialize the mesh with one element
-    libMesh::MeshTools::Generation::build_line(*_mesh, 50, 0, _length);
+    libMesh::MeshTools::Generation::build_square(*_mesh,
+                                                 16, 16,
+                                                 0, _length,
+                                                 0, _width,
+                                                 e_type);
     _mesh->prepare_for_use();
     
     // create the equation system
@@ -61,6 +81,7 @@ MAST::BeamModalAnalysis::BeamModalAnalysis() {
     // create the libmesh system
     _sys       = &(_eq_sys->add_system<MAST::NonlinearSystem>("structural"));
     _sys->set_eigenproblem_type(libMesh::GHEP);
+    
     
     // FEType to initialize the system
     libMesh::FEType fetype (libMesh::FIRST, libMesh::LAGRANGE);
@@ -73,17 +94,25 @@ MAST::BeamModalAnalysis::BeamModalAnalysis() {
     
     
     // create and add the boundary condition and loads
-    _dirichlet_left = new MAST::DirichletBoundaryCondition;
-    _dirichlet_right= new MAST::DirichletBoundaryCondition;
-    std::vector<unsigned int> constrained_vars(4);
+    _dirichlet_bottom = new MAST::DirichletBoundaryCondition;
+    _dirichlet_right  = new MAST::DirichletBoundaryCondition;
+    _dirichlet_top    = new MAST::DirichletBoundaryCondition;
+    _dirichlet_left   = new MAST::DirichletBoundaryCondition;
+    
+    std::vector<unsigned int> constrained_vars(3);
     constrained_vars[0] = 0;  // u
     constrained_vars[1] = 1;  // v
     constrained_vars[2] = 2;  // w
-    constrained_vars[3] = 3;  // tx
-    _dirichlet_left->init (0, constrained_vars);
-    _dirichlet_right->init(1, constrained_vars);
-    _discipline->add_dirichlet_bc(0, *_dirichlet_left);
-    _discipline->add_dirichlet_bc(1, *_dirichlet_right);
+    
+    _dirichlet_bottom->init (0, constrained_vars);
+    _dirichlet_right->init  (1, constrained_vars);
+    _dirichlet_top->init    (2, constrained_vars);
+    _dirichlet_left->init   (3, constrained_vars);
+    
+    _discipline->add_dirichlet_bc(0, *_dirichlet_bottom);
+    _discipline->add_dirichlet_bc(1,  *_dirichlet_right);
+    _discipline->add_dirichlet_bc(2,    *_dirichlet_top);
+    _discipline->add_dirichlet_bc(3,   *_dirichlet_left);
     _discipline->init_system_dirichlet_bc(*_sys);
     
     // initialize the equation system
@@ -93,14 +122,15 @@ MAST::BeamModalAnalysis::BeamModalAnalysis() {
     _sys->set_exchange_A_and_B(true);
     _sys->set_n_requested_eigenvalues(3);
     
+    
     // create the property functions and add them to the
     
-    _thy             = new MAST::Parameter("thy", 0.06);
-    _thz             = new MAST::Parameter("thz", 1.00);
-    _rho             = new MAST::Parameter("rho",2.8e3);
-    _E               = new MAST::Parameter("E",  72.e9);
-    _nu              = new MAST::Parameter("nu",  0.33);
-    _zero            = new MAST::Parameter("zero",  0.);
+    _th              = new MAST::Parameter("th",     0.006);
+    _E               = new MAST::Parameter("E",      72.e9);
+    _rho             = new MAST::Parameter("rho",    2.8e3);
+    _nu              = new MAST::Parameter("nu",      0.33);
+    _kappa           = new MAST::Parameter("kappa",  5./6.);
+    _zero            = new MAST::Parameter("zero",      0.);
     
     
     
@@ -108,47 +138,42 @@ MAST::BeamModalAnalysis::BeamModalAnalysis() {
     // needs to be benchmarked
     _params_for_sensitivity.push_back(_E);
     _params_for_sensitivity.push_back(_nu);
-    _params_for_sensitivity.push_back(_thy);
-    _params_for_sensitivity.push_back(_thz);
+    _params_for_sensitivity.push_back(_th);
     
     
     
-    _thy_f           = new MAST::ConstantFieldFunction("hy",     *_thy);
-    _thz_f           = new MAST::ConstantFieldFunction("hz",     *_thz);
-    _rho_f           = new MAST::ConstantFieldFunction("rho",    *_rho);
-    _E_f             = new MAST::ConstantFieldFunction("E",      *_E);
-    _nu_f            = new MAST::ConstantFieldFunction("nu",     *_nu);
-    _hyoff_f         = new MAST::ConstantFieldFunction("hy_off", *_zero);
-    _hzoff_f         = new MAST::ConstantFieldFunction("hz_off", *_zero);
+    _th_f            = new MAST::ConstantFieldFunction("h",           *_th);
+    _E_f             = new MAST::ConstantFieldFunction("E",            *_E);
+    _nu_f            = new MAST::ConstantFieldFunction("nu",          *_nu);
+    _rho_f           = new MAST::ConstantFieldFunction("rho",        *_rho);
+    _kappa_f         = new MAST::ConstantFieldFunction("kappa",    *_kappa);
+    _hoff_f          = new MAST::ConstantFieldFunction("off",       *_zero);
+    
     
     // create the material property card
     _m_card         = new MAST::IsotropicMaterialPropertyCard;
     
     // add the material properties to the card
-    _m_card->add(*_rho_f);
     _m_card->add(*_E_f);
     _m_card->add(*_nu_f);
+    _m_card->add(*_kappa_f);
+    _m_card->add(*_rho_f);
+    
     
     // create the element property card
-    _p_card         = new MAST::Solid1DSectionElementPropertyCard;
-    
-    // tell the card about the orientation
-    libMesh::Point orientation;
-    orientation(1) = 1.;
-    _p_card->y_vector() = orientation;
+    _p_card         = new MAST::Solid2DSectionElementPropertyCard;
     
     // add the section properties to the card
-    _p_card->add(*_thy_f);
-    _p_card->add(*_thz_f);
-    _p_card->add(*_hyoff_f);
-    _p_card->add(*_hzoff_f);
+    _p_card->add(*_th_f);
+    _p_card->add(*_hoff_f);
     
     // tell the section property about the material property
     _p_card->set_material(*_m_card);
-    
-    _p_card->init();
+    if (if_vk) _p_card->set_strain(MAST::VON_KARMAN_STRAIN);
     
     _discipline->set_property_for_subdomain(0, *_p_card);
+    
+    _initialized = true;
 }
 
 
@@ -157,44 +182,48 @@ MAST::BeamModalAnalysis::BeamModalAnalysis() {
 
 
 
-MAST::BeamModalAnalysis::~BeamModalAnalysis() {
+MAST::PlateModalAnalysis::~PlateModalAnalysis() {
     
-    delete _m_card;
-    delete _p_card;
-    
-    delete _dirichlet_left;
-    delete _dirichlet_right;
-    
-    delete _thy_f;
-    delete _thz_f;
-    delete _rho_f;
-    delete _E_f;
-    delete _nu_f;
-    delete _hyoff_f;
-    delete _hzoff_f;
-    
-    delete _thy;
-    delete _thz;
-    delete _rho;
-    delete _E;
-    delete _nu;
-    delete _zero;
-    
-    
-    
-    
-    delete _eq_sys;
-    delete _mesh;
-    
-    delete _discipline;
-    delete _structural_sys;
+    if (_initialized) {
+        
+        delete _m_card;
+        delete _p_card;
+        
+        delete _dirichlet_bottom;
+        delete _dirichlet_right;
+        delete _dirichlet_top;
+        delete _dirichlet_left;
+        
+        delete _th_f;
+        delete _E_f;
+        delete _nu_f;
+        delete _rho_f;
+        delete _kappa_f;
+        delete _hoff_f;
+        
+        delete _th;
+        delete _E;
+        delete _nu;
+        delete _rho;
+        delete _kappa;
+        delete _zero;
+        
+        
+        
+        delete _eq_sys;
+        delete _mesh;
+        
+        delete _discipline;
+        delete _structural_sys;
+    }
 }
-
 
 
 
 MAST::Parameter*
-MAST::BeamModalAnalysis::get_parameter(const std::string &nm) {
+MAST::PlateModalAnalysis::get_parameter(const std::string &nm) {
+    
+    libmesh_assert(_initialized);
     
     MAST::Parameter *rval = NULL;
     
@@ -231,9 +260,10 @@ MAST::BeamModalAnalysis::get_parameter(const std::string &nm) {
 
 
 
+
 void
-MAST::BeamModalAnalysis::solve(bool if_write_output,
-                               std::vector<Real>* eig) {
+MAST::PlateModalAnalysis::solve(bool if_write_output,
+                                std::vector<Real>* eig) {
     
     
     // create the nonlinear assembly object
@@ -269,7 +299,7 @@ MAST::BeamModalAnalysis::solve(bool if_write_output,
         im = 0.;
         _sys->get_eigenpair(i, re, im, *_sys->solution);
         if (eig)
-        (*eig)[i] = re;
+            (*eig)[i] = re;
         
         libMesh::out
         << std::setw(35) << std::fixed << std::setprecision(15)
@@ -281,7 +311,7 @@ MAST::BeamModalAnalysis::solve(bool if_write_output,
             << "Writing mode " << i << " to : "
             << file_name.str() << std::endl;
             
-
+            
             // We write the file in the ExodusII format.
             libMesh::ExodusII_IO(*_mesh).write_equation_systems(file_name.str(),
                                                                 *_eq_sys);
@@ -294,21 +324,21 @@ MAST::BeamModalAnalysis::solve(bool if_write_output,
 
 
 void
-MAST::BeamModalAnalysis::sensitivity_solve(MAST::Parameter& p,
-                                           std::vector<Real>& eig) {
-
+MAST::PlateModalAnalysis::sensitivity_solve(MAST::Parameter& p,
+                                            std::vector<Real>& eig) {
+    
     _discipline->add_parameter(p);
-
+    
     // Get the number of converged eigen pairs.
     unsigned int
     nconv = std::min(_sys->get_n_converged_eigenvalues(),
                      _sys->get_n_requested_eigenvalues());
     eig.resize(nconv);
-
+    
     libMesh::ParameterVector params;
     params.resize(1);
     params[0]  =  p.ptr();
-
+    
     // create the nonlinear assembly object
     MAST::StructuralModalEigenproblemAssembly   assembly;
     assembly.attach_discipline_and_system(*_discipline, *_structural_sys);
@@ -317,5 +347,6 @@ MAST::BeamModalAnalysis::sensitivity_solve(MAST::Parameter& p,
     
     _discipline->remove_parameter(p);
 }
+
 
 

@@ -49,7 +49,7 @@ BOOST_AUTO_TEST_CASE   (BeamModalSolution) {
     std::vector<Real>
     eig;
     
-    this->solve(eig);
+    this->solve(false, &eig);
     
     // check the solution
     // iterate over each node, and compare the nodal solution with the
@@ -62,9 +62,7 @@ BOOST_AUTO_TEST_CASE   (BeamModalSolution) {
     rho         = (*_rho)(),
     Eval        = (*_E)(),
     pi          = acos(-1.),
-    analytical  = 0.,
-    re          = 0.,
-    im          = 0.;
+    analytical  = 0.;
     
     
     // analytical solution to the natural frequency of simply supported problem
@@ -96,7 +94,7 @@ BOOST_AUTO_TEST_CASE    (BeamModalSolutionSensitivity) {
     eig_vec,
     deig_vec;
     
-    this->solve(eig_vec);
+    this->solve(false, &eig_vec);
 
     unsigned int
     nconv = std::min(_sys->get_n_converged_eigenvalues(),
@@ -130,7 +128,7 @@ BOOST_AUTO_TEST_CASE    (BeamModalSolutionSensitivity) {
         // calculate the analytical sensitivity
         // analysis is required at the baseline before sensitivity solution
         // and the solution has changed after the previous perturbed solution
-        this->solve(eig_vec);
+        this->solve(false, &eig_vec);
         std::vector<Real> deig_vec(nconv);
         this->sensitivity_solve(f, deig_vec);
         for (unsigned int i=0; i<nconv; i++) deig(i) = deig_vec[i];
@@ -143,7 +141,7 @@ BOOST_AUTO_TEST_CASE    (BeamModalSolutionSensitivity) {
         f()         += dp;
         
         // solve at the perturbed parameter value
-        this->solve(eig_vec);
+        this->solve(false, &eig_vec);
         for (unsigned int i=0; i<nconv; i++) deig_fd(i) = eig_vec[i];
 
         deig_fd -= eig;

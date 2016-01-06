@@ -637,7 +637,7 @@ MAST::StructuralElement2D::internal_residual (bool request_jacobian,
         if (_elem.dim() == 2) {
             // add small values to the diagonal of the theta_z dofs
             for (unsigned int i=0; i<n_phi; i++)
-                local_jac(5*n_phi+i, 5*n_phi+i) = -1.0e-8;
+                local_jac(5*n_phi+i, 5*n_phi+i) = 1.0e-8;
         }
         transform_matrix_to_global_system(local_jac, mat2_n2n2);
         jac += mat2_n2n2;

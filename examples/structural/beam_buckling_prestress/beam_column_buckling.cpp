@@ -22,14 +22,15 @@
 
 
 // MAST includes
-#include "examples/structural/beam_modal_analysis/beam_modal_analysis.h"
+#include "examples/structural/beam_buckling_prestress/beam_column_buckling.h"
 #include "base/nonlinear_system.h"
 #include "base/parameter.h"
 #include "base/constant_field_function.h"
 #include "elasticity/structural_system_initialization.h"
 #include "elasticity/structural_discipline.h"
-#include "elasticity/structural_element_base.h"
-#include "elasticity/structural_modal_eigenproblem_assembly.h"
+#include "elasticity/stress_output_base.h"
+#include "elasticity/structural_system.h"
+#include "elasticity/structural_buckling_eigenproblem_assembly.h"
 #include "property_cards/solid_1d_section_element_property_card.h"
 #include "property_cards/isotropic_material_property_card.h"
 #include "boundary_condition/dirichlet_boundary_condition.h"
@@ -44,7 +45,109 @@
 extern libMesh::LibMeshInit* __init;
 
 
-MAST::BeamModalAnalysis::BeamModalAnalysis() {
+/*!
+ *   class defines the prestress matrix
+ */
+namespace MAST {
+    
+    class PrestressMatrix:
+    public MAST::FieldFunction<RealMatrixX> {
+        
+    public:
+        
+        PrestressMatrix(const std::string& nm,
+                        const MAST::Parameter& s,
+                        const MAST::Parameter& p):
+        MAST::FieldFunction<RealMatrixX>(nm),
+        _stress(s),
+        _load_param(p) {
+            
+            _functions.insert(s.master());
+            _functions.insert(p.master());
+        }
+        
+        
+        PrestressMatrix(const MAST::PrestressMatrix& f):
+        MAST::FieldFunction<RealMatrixX>(f),
+        _stress(f._stress),
+        _load_param(f._load_param) {
+        
+            _functions.insert(_stress.master());
+            _functions.insert(_load_param.master());
+        }
+        
+        
+        virtual ~PrestressMatrix() { }
+        
+        /*!
+         *   @returns a clone of the function
+         */
+        virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> > clone() const {
+            
+            MAST::FieldFunction<RealMatrixX>* rval =
+            new MAST::PrestressMatrix(*this);
+            
+            return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >(rval);
+
+        }
+        
+        
+        /*!
+         *    calculates the value of the function at the specified point,
+         *    \par p, and time, \par t, and returns it in \p v.
+         */
+        virtual void operator() (const libMesh::Point& p,
+                                 const Real t,
+                                 RealMatrixX& v) const {
+            
+            v = RealMatrixX::Zero(3, 3);
+            v(0,0) = _stress() * _load_param();
+        }
+        
+        
+        /*!
+         *    calculates the value of the function at the specified point,
+         *    \par p, and time, \par t, and returns it in \p v.
+         */
+        virtual void derivative (const MAST::DerivativeType d,
+                                 const MAST::FunctionBase& f,
+                                 const libMesh::Point& p,
+                                 const Real t,
+                                 RealMatrixX& v) const {
+            
+            v = RealMatrixX::Zero(3,3);
+            Real dp = 0.;
+            
+            // if the sensitivity parameter is the load parameter itself,
+            // then the sensitivity parameter will be nonzero.
+            if (_load_param.depends_on(f)) dp = 1.;
+                
+            v(0,0) = _stress() * dp;
+        }
+        
+        
+        
+    protected:
+        
+        /*!
+         *   parameter which defines the stress value
+         */
+        const MAST::Parameter& _stress;
+
+        
+        /*!
+         *   parameter which defines the load multiplier
+         */
+        const MAST::Parameter& _load_param;
+        
+    };
+}
+
+
+
+
+
+MAST::BeamColumnBucklingAnalysis::BeamColumnBucklingAnalysis() {
     
     
     // create the mesh
@@ -91,35 +194,40 @@ MAST::BeamModalAnalysis::BeamModalAnalysis() {
     
     _sys->eigen_solver->set_position_of_spectrum(libMesh::LARGEST_MAGNITUDE);
     _sys->set_exchange_A_and_B(true);
-    _sys->set_n_requested_eigenvalues(3);
+    _sys->set_n_requested_eigenvalues(5);
     
     // create the property functions and add them to the
     
-    _thy             = new MAST::Parameter("thy", 0.06);
-    _thz             = new MAST::Parameter("thz", 1.00);
-    _rho             = new MAST::Parameter("rho",2.8e3);
-    _E               = new MAST::Parameter("E",  72.e9);
-    _nu              = new MAST::Parameter("nu",  0.33);
-    _zero            = new MAST::Parameter("zero",  0.);
+    _thy             = new MAST::Parameter("thy",    0.06);
+    _thz             = new MAST::Parameter("thz",    1.00);
+    _rho             = new MAST::Parameter("rho",   2.8e3);
+    _E               = new MAST::Parameter("E",     72.e9);
+    _nu              = new MAST::Parameter("nu",     0.33);
+    _stress          = new MAST::Parameter("sigma",-1.0e8); // compressive stress
+    _zero            = new MAST::Parameter("zero",     0.);
+    _load_param      = new MAST::Parameter("load",     0.);
     
     
     
     // prepare the vector of parameters with respect to which the sensitivity
     // needs to be benchmarked
-    _params_for_sensitivity.push_back(_E);
-    _params_for_sensitivity.push_back(_nu);
+    _params_for_sensitivity.push_back(  _E);
+    _params_for_sensitivity.push_back( _nu);
     _params_for_sensitivity.push_back(_thy);
     _params_for_sensitivity.push_back(_thz);
     
     
     
-    _thy_f           = new MAST::ConstantFieldFunction("hy",     *_thy);
-    _thz_f           = new MAST::ConstantFieldFunction("hz",     *_thz);
-    _rho_f           = new MAST::ConstantFieldFunction("rho",    *_rho);
-    _E_f             = new MAST::ConstantFieldFunction("E",      *_E);
-    _nu_f            = new MAST::ConstantFieldFunction("nu",     *_nu);
-    _hyoff_f         = new MAST::ConstantFieldFunction("hy_off", *_zero);
-    _hzoff_f         = new MAST::ConstantFieldFunction("hz_off", *_zero);
+    _thy_f           = new MAST::ConstantFieldFunction("hy",          *_thy);
+    _thz_f           = new MAST::ConstantFieldFunction("hz",          *_thz);
+    _rho_f           = new MAST::ConstantFieldFunction("rho",         *_rho);
+    _E_f             = new MAST::ConstantFieldFunction("E",             *_E);
+    _nu_f            = new MAST::ConstantFieldFunction("nu",           *_nu);
+    _hyoff_f         = new MAST::ConstantFieldFunction("hy_off",     *_zero);
+    _hzoff_f         = new MAST::ConstantFieldFunction("hz_off",     *_zero);
+    _sigma_f         = new MAST::PrestressMatrix      ("prestress",
+                                                       *_stress,
+                                                       *_load_param);
     
     // create the material property card
     _m_card         = new MAST::IsotropicMaterialPropertyCard;
@@ -142,9 +250,11 @@ MAST::BeamModalAnalysis::BeamModalAnalysis() {
     _p_card->add(*_thz_f);
     _p_card->add(*_hyoff_f);
     _p_card->add(*_hzoff_f);
+    _p_card->add(*_sigma_f);
     
     // tell the section property about the material property
     _p_card->set_material(*_m_card);
+    _p_card->set_strain(MAST::VON_KARMAN_STRAIN);
     
     _p_card->init();
     
@@ -157,7 +267,7 @@ MAST::BeamModalAnalysis::BeamModalAnalysis() {
 
 
 
-MAST::BeamModalAnalysis::~BeamModalAnalysis() {
+MAST::BeamColumnBucklingAnalysis::~BeamColumnBucklingAnalysis() {
     
     delete _m_card;
     delete _p_card;
@@ -172,6 +282,7 @@ MAST::BeamModalAnalysis::~BeamModalAnalysis() {
     delete _nu_f;
     delete _hyoff_f;
     delete _hzoff_f;
+    delete _sigma_f;
     
     delete _thy;
     delete _thz;
@@ -179,6 +290,8 @@ MAST::BeamModalAnalysis::~BeamModalAnalysis() {
     delete _E;
     delete _nu;
     delete _zero;
+    delete _stress;
+    delete _load_param;
     
     
     
@@ -194,7 +307,7 @@ MAST::BeamModalAnalysis::~BeamModalAnalysis() {
 
 
 MAST::Parameter*
-MAST::BeamModalAnalysis::get_parameter(const std::string &nm) {
+MAST::BeamColumnBucklingAnalysis::get_parameter(const std::string &nm) {
     
     MAST::Parameter *rval = NULL;
     
@@ -232,17 +345,24 @@ MAST::BeamModalAnalysis::get_parameter(const std::string &nm) {
 
 
 void
-MAST::BeamModalAnalysis::solve(bool if_write_output,
-                               std::vector<Real>* eig) {
+MAST::BeamColumnBucklingAnalysis::solve(bool if_write_output,
+                                        std::vector<Real>* eig) {
     
     
     // create the nonlinear assembly object
-    MAST::StructuralModalEigenproblemAssembly   assembly;
+    MAST::StructuralBucklingEigenproblemAssembly   assembly;
     _sys->initialize_condensed_dofs(*_discipline);
+    
+    _sys->solution->zero();
+    assembly.set_buckling_data(true,
+                               *_load_param,
+                               0., 1.,
+                               *_sys->solution,
+                               *_sys->solution);
     
     assembly.attach_discipline_and_system(*_discipline, *_structural_sys);
     _sys->eigenproblem_solve();
-    assembly.clear_discipline_and_system();
+    
     
     // Get the number of converged eigen pairs.
     unsigned int
@@ -268,8 +388,12 @@ MAST::BeamModalAnalysis::solve(bool if_write_output,
         re = 0.,
         im = 0.;
         _sys->get_eigenpair(i, re, im, *_sys->solution);
+        re = assembly.critical_point_estimate_from_eigenproblem(re);
+        
+        // convert from the eigenproblem to the location where instability
+        // occurs.
         if (eig)
-        (*eig)[i] = re;
+            (*eig)[i] = re;
         
         libMesh::out
         << std::setw(35) << std::fixed << std::setprecision(15)
@@ -281,12 +405,14 @@ MAST::BeamModalAnalysis::solve(bool if_write_output,
             << "Writing mode " << i << " to : "
             << file_name.str() << std::endl;
             
-
+            
             // We write the file in the ExodusII format.
             libMesh::ExodusII_IO(*_mesh).write_equation_systems(file_name.str(),
                                                                 *_eq_sys);
         }
     }
+    
+    assembly.clear_discipline_and_system();
 }
 
 
@@ -294,23 +420,23 @@ MAST::BeamModalAnalysis::solve(bool if_write_output,
 
 
 void
-MAST::BeamModalAnalysis::sensitivity_solve(MAST::Parameter& p,
-                                           std::vector<Real>& eig) {
-
+MAST::BeamColumnBucklingAnalysis::sensitivity_solve(MAST::Parameter& p,
+                                                    std::vector<Real>& eig) {
+    
     _discipline->add_parameter(p);
-
+    
     // Get the number of converged eigen pairs.
     unsigned int
     nconv = std::min(_sys->get_n_converged_eigenvalues(),
                      _sys->get_n_requested_eigenvalues());
     eig.resize(nconv);
-
+    
     libMesh::ParameterVector params;
     params.resize(1);
     params[0]  =  p.ptr();
-
+    
     // create the nonlinear assembly object
-    MAST::StructuralModalEigenproblemAssembly   assembly;
+    MAST::StructuralBucklingEigenproblemAssembly   assembly;
     assembly.attach_discipline_and_system(*_discipline, *_structural_sys);
     _sys->eigenproblem_sensitivity_solve(params, eig);
     assembly.clear_discipline_and_system();

@@ -50,7 +50,8 @@ namespace MAST {
     class DirichletBoundaryCondition;
     class BoundaryConditionBase;
     class NonlinearSystem;
-    
+    template <typename ValType> class FieldFunction;
+
     
     struct BeamColumnBucklingAnalysis {
         
@@ -62,15 +63,25 @@ namespace MAST {
         
         
         /*!
+         *   @returns a pointer to the parameter of the specified name.
+         *   If no parameter exists by the specified name, then a \p NULL
+         *   pointer is returned and a message is printed with a valid list
+         *   of parameters.
+         */
+        MAST::Parameter* get_parameter(const std::string& nm);
+        
+        
+        /*!
          *  solves the system and returns the final solution
          */
-        const libMesh::NumericVector<Real>& solve();
+        void solve(bool if_write_output = false,
+                   std::vector<Real>* eig = NULL);
         
         
         /*!
          *  solves the sensitivity of system and returns the final solution
          */
-        const libMesh::NumericVector<Real>& sensitivity_solve(MAST::Parameter& p);
+        void sensitivity_solve(MAST::Parameter& p, std::vector<Real>& eig);
         
         
         // create the mesh
@@ -86,6 +97,9 @@ namespace MAST {
         MAST::StructuralSystemInitialization* _structural_sys;
         MAST::StructuralDiscipline*           _discipline;
         
+        Real
+        _length;
+        
         // create the property functions and add them to the
         MAST::Parameter
         *_thy,
@@ -93,7 +107,9 @@ namespace MAST {
         *_rho,
         *_E,
         *_nu,
-        *_zero;
+        *_zero,
+        *_load_param,
+        *_stress;
         
         MAST::ConstantFieldFunction
         *_thy_f,
@@ -104,6 +120,9 @@ namespace MAST {
         *_hyoff_f,
         *_hzoff_f;
         
+        MAST::FieldFunction<RealMatrixX>
+        *_sigma_f;
+        
         // create the material property card
         MAST::IsotropicMaterialPropertyCard*     _m_card;
         
@@ -112,7 +131,7 @@ namespace MAST {
         
         // create the Dirichlet boundary condition on left edge
         MAST::DirichletBoundaryCondition*     _dirichlet_left;
-
+        
         // create the Dirichlet boundary condition on right edge
         MAST::DirichletBoundaryCondition*     _dirichlet_right;
         

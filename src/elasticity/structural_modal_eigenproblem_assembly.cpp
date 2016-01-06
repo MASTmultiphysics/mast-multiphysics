@@ -54,9 +54,6 @@ eigenproblem_assemble(libMesh::SparseMatrix<Real> *A,
     MAST::NonlinearSystem& eigen_sys =
     dynamic_cast<MAST::NonlinearSystem&>(_system->system());
     
-    // zero the solution since it is not needed for eigenproblem
-    eigen_sys.solution->zero();
-    
     libMesh::SparseMatrix<Real>
     &matrix_A = *A,
     &matrix_B = *B;
@@ -130,7 +127,9 @@ eigenproblem_assemble(libMesh::SparseMatrix<Real> *A,
         matrix_B.add_matrix (B, dof_indices); // load dependent
     }
     
-    
+    // finalize the data structures
+    A->close();
+    B->close();
 }
 
 
@@ -147,8 +146,6 @@ eigenproblem_sensitivity_assemble (const libMesh::ParameterVector& parameters,
     MAST::NonlinearSystem& eigen_sys =
     dynamic_cast<MAST::NonlinearSystem&>(_system->system());
     
-    // zero the solution since it is not needed for eigenproblem
-    eigen_sys.solution->zero();
     
     libMesh::SparseMatrix<Real>
     &matrix_A = *sensitivity_A,
@@ -224,6 +221,10 @@ eigenproblem_sensitivity_assemble (const libMesh::ParameterVector& parameters,
         matrix_B.add_matrix (B, dof_indices); // load dependent
     }
     
+    // finalize the data structures
+    sensitivity_A->close();
+    sensitivity_B->close();
+
     return true;
 }
 
