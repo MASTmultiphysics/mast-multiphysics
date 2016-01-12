@@ -41,6 +41,7 @@
 #include "examples/structural/plate_optimization_thermal_stress/plate_thermal_stress_optimization.h"
 #include "examples/structural/stiffened_plate_optimization_thermal_stress/stiffened_plate_thermal_stress_optimization.h"
 #include "examples/structural/topology_optim_2D/topology_optim_2D.h"
+#include "examples/structural/beam_piston_theory_flutter/beam_piston_theory_flutter.h"
 #include "optimization/npsol_optimization_interface.h"
 #include "optimization/dot_optimization_interface.h"
 
@@ -233,6 +234,8 @@ int main(int argc, char* const argv[]) {
     else if (case_name == "beam_bending_thermal_stress_optimization")
         optimization<MAST::BeamBendingThermalStressSizingOptimization>
         (case_name, verify_grads);
+    else if (case_name == "beam_piston_theory_flutter_analysis")
+        analysis<MAST::BeamPistonTheoryFlutterAnalysis>(case_name, with_sens, par_name);
     else if (case_name == "membrane_extension_uniaxial")
         analysis<MAST::MembraneExtensionUniaxial>(case_name, with_sens, par_name);
     else if (case_name == "membrane_extension_biaxial")
@@ -287,6 +290,7 @@ int main(int argc, char* const argv[]) {
         << "  beam_bending_single_functional_optimization \n"
         << "  beam_bending_section_offset_optimization \n"
         << "  beam_bending_thermal_stress_optimization \n"
+        << "  beam_piston_theory_flutter_analysis\n"
         << "  membrane_extension_uniaxial \n"
         << "  membrane_extension_biaxial \n"
         << "  plate_bending \n"

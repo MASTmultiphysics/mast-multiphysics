@@ -341,8 +341,7 @@ namespace MAST {
          *   specified normal velocity and the flow parameters
          */
         Real piston_theory_cp(const unsigned int order,
-                              const Real vel_normal,
-                              const Real a_inf,
+                              const Real vel_U,
                               const Real gamma,
                               const Real mach);
 
@@ -352,11 +351,10 @@ namespace MAST {
          *   @returns the derivative of piston theory cp value with respect 
          *   to the normal velocity. 
          */
-        Real piston_theory_dcp_dvn(const unsigned int order,
-                                   const Real vel_normal,
-                                   const Real a_inf,
-                                   const Real gamma,
-                                   const Real mach);
+        Real piston_theory_dcp_dv(const unsigned int order,
+                                  const Real vel_U,
+                                  const Real gamma,
+                                  const Real mach);
 
         
         /*!

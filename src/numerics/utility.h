@@ -169,7 +169,19 @@ namespace MAST {
             for (unsigned int j=0; j<n; j++)
                 m1(i,j) = m2(i,j);
     }
+
     
+
+    inline void
+    copy (RealMatrixX& m2, const DenseRealMatrix& m1) {
+        
+        const unsigned int m=(unsigned int)m1.m(), n=(unsigned int)m1.n();
+        m2.setZero(m, n);
+        for (unsigned int i=0; i<m; i++)
+            for (unsigned int j=0; j<n; j++)
+                m2(i,j) = m1(i,j);
+    }
+
     
     
     inline void

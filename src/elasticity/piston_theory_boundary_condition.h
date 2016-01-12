@@ -43,7 +43,7 @@ namespace MAST {
          */
         PistonTheoryBoundaryCondition(unsigned int order,
                                       Real mach,
-                                      Real a_inf,
+                                      Real U_inf,
                                       Real gamma,
                                       Real rho,
                                       const RealVectorX& vel_vec);
@@ -65,9 +65,16 @@ namespace MAST {
         
 
         /*!
-         *  @returns value of ambient speed of sound
+         *  @returns value of ambient flight speed
          */
-        Real a_inf() const;
+        Real U_inf() const;
+
+        
+        /*!
+         *  sets the velocity for analysis
+         */
+        void set_U_inf(Real U_inf);
+        
         
         /*!
          *  @returns the ambient density
@@ -92,31 +99,31 @@ namespace MAST {
         /*!
          *   Order of the boundary condition
          */
-        const unsigned int _order;
+        unsigned int _order;
         
         
         /*!
          *   Ambient flow property: Mach number
          */
-        const Real _mach;
+        Real _mach;
 
 
         /*!
          *   Ambient flow property: speed of sound
          */
-        const Real _a_inf;
+        Real _U_inf;
         
         
         /*!
          *   Ambient flow property: ratio of specific heat values at
          *   constant pressure and constant volume
          */
-        const Real _gamma;
+        Real _gamma;
         
         /*!
          *   Ambient flow property: density
          */
-        const Real _rho;
+        Real _rho;
 
         /*!
          *   Ambient flow velocity vector

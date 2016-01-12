@@ -17,21 +17,40 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+#ifndef __mast__flutter_root_crossover_base_h__
+#define __mast__flutter_root_crossover_base_h__
 
-// MAST includes
-#include "base/mast_data_types.h"
-#include "numerics/basis_matrix.h"
-
-template <typename T>
-MAST::BasisMatrix<T>::BasisMatrix(const libMesh::Parallel::Communicator &comm_in):
-libMesh::ShellMatrix<T>(comm_in)
-{ }
-
-template <typename T>
-MAST::BasisMatrix<T>::~BasisMatrix()
-{ }
+// C++ includes
+#include <ostream>
 
 
-// explicit instantiations
-template MAST::BasisMatrix<Real>::BasisMatrix(const libMesh::Parallel::Communicator &comm_in);
 
+namespace MAST {
+    
+    // Forward declerations
+    class FlutterSolutionBase;
+    class TimeDomainFlutterRootBase;
+    
+    
+    class FlutterRootCrossoverBase {
+        
+    public:
+        FlutterRootCrossoverBase():
+        crossover_solutions(NULL, NULL),
+        root_num(0),
+        root(NULL)
+        { }
+        
+        void print(std::ostream& output) const;
+        
+        std::pair<MAST::FlutterSolutionBase*, MAST::FlutterSolutionBase*>
+        crossover_solutions;
+        
+        unsigned int root_num;
+        
+        const MAST::TimeDomainFlutterRootBase* root;
+    };
+    
+}
+
+#endif // __mast__flutter_root_crossover_base_h__

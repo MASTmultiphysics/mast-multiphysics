@@ -1886,10 +1886,10 @@ piston_theory_residual(bool request_jacobian,
     
     const Real
     mach      =   piston_bc.mach(),
-    a_inf     =   piston_bc.a_inf(),
+    U_inf     =   piston_bc.U_inf(),
     gamma     =   piston_bc.gamma(),
     rho       =   piston_bc.rho(),
-    q_dyn     =   .5*rho*pow(mach*a_inf ,2);
+    q_dyn     =   .5*rho*U_inf * U_inf;
     
     const unsigned int
     order     =   piston_bc.order();
@@ -1913,15 +1913,17 @@ piston_theory_residual(bool request_jacobian,
     dwdx            = RealMatrixX::Zero(3,2),
     local_jac_xdot  = RealMatrixX::Zero(n2,n2),
     local_jac       = RealMatrixX::Zero(n2,n2),
-    mat_n2n2        = RealMatrixX::Zero(n2,n2);
+    mat_n2n2        = RealMatrixX::Zero(n2,n2),
+    mat_n1n2        = RealMatrixX::Zero(n1,n2),
+    mat_22          = RealMatrixX::Zero(2,2);
     
     // we need the velocity vector in the local coordinate system so that
     // the appropriate component of the w-derivative can be used
     vel_vec = this->local_elem().T_matrix().transpose() * piston_bc.vel_vec();
     
     Real
-    vel  = 0.,
-    cp   = 0.;
+    vel_U  = 0.,
+    cp     = 0.;
     
     for (unsigned int qp=0; qp<qpoint.size(); qp++)
     {
@@ -1938,7 +1940,7 @@ piston_theory_residual(bool request_jacobian,
         // is of interest in the local coordinate, since that is the only
         // component normal to the surface.
         Bmat_w.right_multiply(vec_n1, _local_vel);
-        vel        =  vec_n1(0);   // w_dot
+        vel_U        =  vec_n1(0)*(mach*mach-2.)/(mach*mach-1.)/U_inf;   // w_dot/U_inf
         
         
         // get the operators for dw/dx and dw/dy to calculate the
@@ -1951,10 +1953,10 @@ piston_theory_residual(bool request_jacobian,
                                                     dBmat);
         // the diagonal of dwdx matrix stores the
         for (unsigned int i=0; i<2; i++)
-            vel        +=  dwdx(i,i)*(a_inf*mach) * vel_vec(i);   // (dw/dx_i)*(a_inf*mach) . n_i
+            vel_U      +=  dwdx(i,i) * vel_vec(i);   // (dw/dx_i)*U_inf . n_i
         
         // calculate the cp value
-        cp = piston_theory_cp(order, vel, a_inf, gamma, mach);
+        cp = piston_theory_cp(order, vel_U, gamma, mach);
         
         // calculate force
         force(0) = cp * normal(2);
@@ -1968,15 +1970,27 @@ piston_theory_residual(bool request_jacobian,
         if (request_jacobian) {
             
             // we need the derivative of cp wrt normal velocity
-            cp  = piston_theory_dcp_dvn(order, vel, a_inf, gamma, mach);
+            cp  = piston_theory_dcp_dv(order, vel_U, gamma, mach);
             
             // calculate the component of Jacobian due to w-velocity
             Bmat_w.right_multiply_transpose(mat_n2n2, Bmat_w);
-            local_jac_xdot += (JxW[qp] * cp * normal(2)) * mat_n2n2;
+            local_jac_xdot += (JxW[qp] * cp * normal(2) *
+                               (mach*mach-2.)/(mach*mach-1.)/U_inf) * mat_n2n2;
 
             // now use calculate the component of Jacobian
-            Bmat_w.right_multiply_transpose(mat_n2n2, dBmat);  // v: B^T dB/dx
-            local_jac += (JxW[qp] * cp * a_inf*mach * normal(2)) * mat_n2n2;
+            // derivative wrt x
+            mat_22.setZero(2,2);
+            mat_22(0,0)  =  vel_vec(0);
+            dBmat.left_multiply(mat_n1n2, mat_22);
+            Bmat_w.right_multiply_transpose(mat_n2n2, mat_n1n2);  // v: B^T dB/dx
+            local_jac += (JxW[qp] * cp * normal(2)) * mat_n2n2;
+            
+            // derivative wrt y
+            mat_22.setZero(2,2);
+            mat_22(1,1)  =  vel_vec(1);
+            dBmat.left_multiply(mat_n1n2, mat_22);
+            Bmat_w.right_multiply_transpose(mat_n2n2, mat_n1n2);  // v: B^T dB/dy
+            local_jac += (JxW[qp] * cp * normal(2)) * mat_n2n2;
         }
     }
     

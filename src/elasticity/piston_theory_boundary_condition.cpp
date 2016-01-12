@@ -26,14 +26,14 @@
 MAST::PistonTheoryBoundaryCondition::
 PistonTheoryBoundaryCondition(unsigned int order,
                               Real mach,
-                              Real a_inf,
+                              Real U_inf,
                               Real gamma,
                               Real rho,
                               const RealVectorX& vel_vec):
 MAST::BoundaryConditionBase(MAST::PISTON_THEORY),
 _order(order),
 _mach(mach),
-_a_inf(a_inf),
+_U_inf(U_inf),
 _gamma(gamma),
 _rho(rho),
 _vel_vec(vel_vec) {
@@ -64,8 +64,16 @@ MAST::PistonTheoryBoundaryCondition::mach() const {
 
 
 Real
-MAST::PistonTheoryBoundaryCondition::a_inf() const {
-    return _a_inf;
+MAST::PistonTheoryBoundaryCondition::U_inf() const {
+    return _U_inf;
+}
+
+
+
+void
+MAST::PistonTheoryBoundaryCondition::set_U_inf(Real U_inf) {
+    
+    _U_inf = U_inf;
 }
 
 

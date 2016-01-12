@@ -32,7 +32,8 @@
 namespace MAST {
     
     template <typename T>
-    class BasisMatrix: public libMesh::ShellMatrix<T>
+    class BasisMatrix:
+    public libMesh::ShellMatrix<T>
     {
     public:
         BasisMatrix(const libMesh::Parallel::Communicator &comm_in);
@@ -44,8 +45,8 @@ namespace MAST {
          * @returns \p m, the row-dimension of the matrix where the marix is
          * \f$ M \times N \f$.
          */
-        virtual libMesh::numeric_index_type m () const
-        {
+        virtual libMesh::numeric_index_type m () const {
+            
             libmesh_assert(modes.size() > 0);
             return modes[0]->size();
         }
@@ -54,8 +55,8 @@ namespace MAST {
          * @returns \p n, the column-dimension of the matrix where the marix
          * is \f$ M \times N \f$.
          */
-        virtual libMesh::numeric_index_type n () const
-        {
+        virtual libMesh::numeric_index_type n () const {
+            
             libmesh_assert(modes.size() > 0);
             return modes.size();
         }
@@ -67,8 +68,8 @@ namespace MAST {
          */
         template <typename VecType>
         void vector_mult (libMesh::NumericVector<T>& dest,
-                          const VecType& arg) const
-        {
+                          const VecType& arg) const {
+            
             libmesh_assert(modes.size() > 0);
             libmesh_assert_equal_to(m(), dest.size());
             libmesh_assert_equal_to(n(), arg.size());
@@ -82,9 +83,10 @@ namespace MAST {
          * Multiplies the matrix with \p arg and stores the result in \p
          * dest.
          */
-        virtual void vector_mult (libMesh::NumericVector<T>& dest,
-                                  const libMesh::NumericVector<T>& arg) const
-        {
+        virtual void
+        vector_mult (libMesh::NumericVector<T>& dest,
+                     const libMesh::NumericVector<T>& arg) const {
+            
             // not defined for multiplcation with libMesh::NumericVector
             libmesh_assert(false);
         }
@@ -95,9 +97,10 @@ namespace MAST {
          * dest.
          */
         template <typename VecType>
-        void vector_mult_transpose (VecType& dest,
-                                    const libMesh::NumericVector<T>& arg) const
-        {
+        void
+        vector_mult_transpose (VecType& dest,
+                               const libMesh::NumericVector<T>& arg) const {
+            
             libmesh_assert(modes.size() > 0);
             libmesh_assert_equal_to(m(), arg.size());
             libmesh_assert_equal_to(n(), dest.size());
@@ -112,9 +115,10 @@ namespace MAST {
          * Multiplies the transpose of matrix with \p arg and stores the
          * result in \p dest.
          */
-        virtual void vector_mult_transpose (libMesh::NumericVector<T>& dest,
-                                            const libMesh::NumericVector<T>& arg) const
-        {
+        virtual void
+        vector_mult_transpose (libMesh::NumericVector<T>& dest,
+                               const libMesh::NumericVector<T>& arg) const {
+            
             // not defined for multiplcation with libMesh::NumericVector
             libmesh_assert(false);
         }
@@ -122,9 +126,10 @@ namespace MAST {
         /**
          * Multiplies the matrix with \p arg and adds the result to \p dest.
          */
-        virtual void vector_mult_add (libMesh::NumericVector<T>& dest,
-                                      const libMesh::NumericVector<T>& arg) const
-        {
+        virtual void
+        vector_mult_add (libMesh::NumericVector<T>& dest,
+                         const libMesh::NumericVector<T>& arg) const {
+            
             // not defined for multiplcation with libMesh::NumericVector
             libmesh_assert(false);
         }
@@ -133,8 +138,9 @@ namespace MAST {
         /**
          * Copies the diagonal part of the matrix into \p dest.
          */
-        virtual void get_diagonal (libMesh::NumericVector<T>& dest) const
-        {
+        virtual void
+        get_diagonal (libMesh::NumericVector<T>& dest) const {
+            
             // not defined for multiplcation with libMesh::NumericVector
             libmesh_assert(false);
         }
@@ -144,8 +150,9 @@ namespace MAST {
          *  Returns the vector that defines the \p i^th basis vector
          */
         
-        virtual libMesh::NumericVector<T>& basis(unsigned int i)
-        {
+        virtual libMesh::NumericVector<T>&
+        basis(unsigned int i) {
+            
             // not defined for multiplcation with libMesh::NumericVector
             libmesh_assert(modes.size() > 0);
             libmesh_assert_less(i, modes.size());

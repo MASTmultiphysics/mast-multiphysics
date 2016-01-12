@@ -2221,10 +2221,10 @@ piston_theory_residual(bool request_jacobian,
     
     const Real
     mach      =   piston_bc.mach(),
-    a_inf     =   piston_bc.a_inf(),
+    U_inf     =   piston_bc.U_inf(),
     gamma     =   piston_bc.gamma(),
     rho       =   piston_bc.rho(),
-    q_dyn     =   .5*rho*pow(mach*a_inf ,2);
+    q_dyn     =   .5*rho*pow(U_inf ,2);
     
     const unsigned int
     order     =   piston_bc.order();
@@ -2279,9 +2279,9 @@ piston_theory_residual(bool request_jacobian,
 
         // use the Bmat to calculate the velocity vector
         Bmat_v.right_multiply(vec_n1, _local_vel);
-        vel(1)     = vec_n1(0);   // v_dot
+        vel(1)     = vec_n1(0)*(mach*mach-2.)/(mach*mach-1.)/U_inf;   // v_dot/U_inf
         Bmat_w.right_multiply(vec_n1, _local_vel);
-        vel(2)     = vec_n1(1);   // w_dot
+        vel(2)     = vec_n1(1)*(mach*mach-2.)/(mach*mach-1.)/U_inf;   // w_dot/U_inf
         
         // get the operators for dv/dx and dw/dx. We will use the
         // von Karman strain operators for this
@@ -2294,14 +2294,14 @@ piston_theory_residual(bool request_jacobian,
                                               Bmat_dwdx);
         
         // add the normal velocity due to the deformation slope
-        vel(1)  += (mach*a_inf)*dvdx(0,0);  // this now is v_dot+dv/dx*(mach*a_inf)
-        vel(2)  += (mach*a_inf)*dwdx(0,0);  // this now is w_dot+dw/dx*(mach*a_inf)
+        vel(1)  += dvdx(0,0);  // this now is v_dot/U+dv/dx
+        vel(2)  += dwdx(0,0);  // this now is w_dot/U+dw/dx
         
         
         // now use this information to evaluate the normal cp due to
         // both the v and w motions
         for (unsigned int i=1; i<3; i++)
-            cp(i)  = piston_theory_cp(order, vel(i), a_inf, gamma, mach);
+            cp(i)  = piston_theory_cp(order, vel(i), gamma, mach);
         
         // calculate force and discrete vector for v-disp
         force.setZero();
@@ -2321,23 +2321,25 @@ piston_theory_residual(bool request_jacobian,
             
             // we need the derivative of cp wrt normal velocity
             for (unsigned int i=1; i<3; i++)
-                cp(i)  = piston_theory_dcp_dvn(order, vel(i), a_inf, gamma, mach);
+                cp(i)  = piston_theory_dcp_dv(order, vel(i), gamma, mach);
          
             // calculate the component of Jacobian due to v-velocity
             Bmat_v.right_multiply_transpose(mat_n2n2, Bmat_v);
-            local_jac_xdot += (JxW[qp] * cp(1) * normal(1)) * mat_n2n2;
+            local_jac_xdot += (JxW[qp] * cp(1) * normal(1) *
+                               (mach*mach-2.)/(mach*mach-1.)/U_inf) * mat_n2n2;
             
             // calculate the component of Jacobian due to w-velocity
             Bmat_w.right_multiply_transpose(mat_n2n2, Bmat_w);
-            local_jac_xdot += (JxW[qp] * cp(2) * normal(2)) * mat_n2n2;
+            local_jac_xdot += (JxW[qp] * cp(2) * normal(2)*
+                               (mach*mach-2.)/(mach*mach-1.)/U_inf) * mat_n2n2;
             
             
             // now use calculate the component of Jacobian due to deformation
             Bmat_v.right_multiply_transpose(mat_n2n2, Bmat_dvdx);  // v: B^T dB/dx
-            local_jac += (JxW[qp] * cp(1) * a_inf * mach * normal(1)) * mat_n2n2;
+            local_jac += (JxW[qp] * cp(1) * normal(1)) * mat_n2n2;
             
             Bmat_w.right_multiply_transpose(mat_n2n2, Bmat_dwdx);  // w: B^T dB/dx
-            local_jac += (JxW[qp] * cp(2) * a_inf * mach * normal(2)) * mat_n2n2;
+            local_jac += (JxW[qp] * cp(2) * normal(2)) * mat_n2n2;
         }
     }
     

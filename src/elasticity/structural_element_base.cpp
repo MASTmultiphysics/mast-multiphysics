@@ -1278,8 +1278,7 @@ MAST::build_structural_element(MAST::SystemInitialization& sys,
 
 Real
 MAST::StructuralElementBase::piston_theory_cp(const unsigned int order,
-                                              const Real vel_normal,
-                                              const Real a_inf,
+                                              const Real vel_U,
                                               const Real gamma,
                                               const Real mach) {
     
@@ -1288,12 +1287,12 @@ MAST::StructuralElementBase::piston_theory_cp(const unsigned int order,
     switch (order)
     {
         case 3:
-            cp  += (gamma+1.0)/12.0*pow(vel_normal/a_inf,3);
+            cp  += (gamma+1.0)/12.0*mach*mach*pow(vel_U,3);
         case 2:
-            cp  += (gamma+1.0)/4.0*pow(vel_normal/a_inf,2);
+            cp  += (gamma+1.0)/4.0*mach*pow(vel_U,2);
         case 1: {
-            cp  += vel_normal/a_inf;
-            cp  *= 2.0/pow(mach,2);
+            cp  += vel_U;
+            cp  *= 2.0/pow(mach*mach-1.,0.5);
         }
             break;
             
@@ -1309,23 +1308,22 @@ MAST::StructuralElementBase::piston_theory_cp(const unsigned int order,
 
 
 Real
-MAST::StructuralElementBase::piston_theory_dcp_dvn(const unsigned int order,
-                                                   const Real vel_normal,
-                                                   const Real a_inf,
-                                                   const Real gamma,
-                                                   const Real mach) {
+MAST::StructuralElementBase::piston_theory_dcp_dv(const unsigned int order,
+                                                  const Real vel_U,
+                                                  const Real gamma,
+                                                  const Real mach) {
     
     
     Real dcp_dvn     = 0.0;
     switch (order)
     {
         case 3:
-            dcp_dvn  += (gamma+1.0)/4.0*pow(vel_normal,2)/pow(a_inf,3);
+            dcp_dvn  += (gamma+1.0)/4.0*mach*mach*pow(vel_U,2);
         case 2:
-            dcp_dvn  += (gamma+1.0)/2.0*vel_normal/pow(a_inf,2);
+            dcp_dvn  += (gamma+1.0)/2.0*mach*vel_U;
         case 1: {
-            dcp_dvn  += 1./a_inf;
-            dcp_dvn  *= 2.0/pow(mach,2);
+            dcp_dvn  += 1.;
+            dcp_dvn  *= 2.0/pow(mach*mach-1.,.5);
         }
             break;
             
