@@ -106,8 +106,8 @@ MAST::BeamPistonTheoryFlutterAnalysis::BeamPistonTheoryFlutterAnalysis() {
     _nu              = new MAST::Parameter("nu",   0.33);
     _zero            = new MAST::Parameter("zero",   0.);
     _velocity        = new MAST::Parameter("V"   ,   0.);
-    _mach            = new MAST::Parameter("mach",   4.);
-    _rho_air         = new MAST::Parameter("rho" ,  1.1);
+    _mach            = new MAST::Parameter("mach",   3.);
+    _rho_air         = new MAST::Parameter("rho" , 1.05);
     _gamma_air       = new MAST::Parameter("gamma", 1.4);
     
     
@@ -169,7 +169,7 @@ MAST::BeamPistonTheoryFlutterAnalysis::BeamPistonTheoryFlutterAnalysis() {
                                                                vel);  // vel vector
     _piston_bc->add(*_velocity_f);
     _piston_bc->add(*_mach_f);
-    _piston_bc->add(*_rho_air);
+    _piston_bc->add(*_rho_air_f);
     _piston_bc->add(*_gamma_air_f);
     _discipline->add_volume_load(0, *_piston_bc);
     
