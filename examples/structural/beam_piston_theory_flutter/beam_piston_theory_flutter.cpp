@@ -33,6 +33,7 @@
 #include "elasticity/structural_fluid_interaction_assembly.h"
 #include "elasticity/piston_theory_boundary_condition.h"
 #include "aeroelasticity/time_domain_flutter_solver.h"
+#include "aeroelasticity/time_domain_flutter_root_base.h"
 #include "property_cards/solid_1d_section_element_property_card.h"
 #include "property_cards/isotropic_material_property_card.h"
 #include "boundary_condition/dirichlet_boundary_condition.h"
@@ -98,12 +99,16 @@ MAST::BeamPistonTheoryFlutterAnalysis::BeamPistonTheoryFlutterAnalysis() {
     
     // create the property functions and add them to the
     
-    _thy             = new MAST::Parameter("thy", 0.06);
-    _thz             = new MAST::Parameter("thz", 1.00);
-    _rho             = new MAST::Parameter("rho",2.8e3);
-    _E               = new MAST::Parameter("E",  72.e9);
-    _nu              = new MAST::Parameter("nu",  0.33);
-    _zero            = new MAST::Parameter("zero",  0.);
+    _thy             = new MAST::Parameter("thy",  0.06);
+    _thz             = new MAST::Parameter("thz",  1.00);
+    _rho             = new MAST::Parameter("rho", 2.8e3);
+    _E               = new MAST::Parameter("E",   72.e9);
+    _nu              = new MAST::Parameter("nu",   0.33);
+    _zero            = new MAST::Parameter("zero",   0.);
+    _velocity        = new MAST::Parameter("V"   ,   0.);
+    _mach            = new MAST::Parameter("mach",   4.);
+    _rho_air         = new MAST::Parameter("rho" ,  1.1);
+    _gamma_air       = new MAST::Parameter("gamma", 1.4);
     
     
     
@@ -116,13 +121,17 @@ MAST::BeamPistonTheoryFlutterAnalysis::BeamPistonTheoryFlutterAnalysis() {
     
     
     
-    _thy_f           = new MAST::ConstantFieldFunction("hy",     *_thy);
-    _thz_f           = new MAST::ConstantFieldFunction("hz",     *_thz);
-    _rho_f           = new MAST::ConstantFieldFunction("rho",    *_rho);
-    _E_f             = new MAST::ConstantFieldFunction("E",      *_E);
-    _nu_f            = new MAST::ConstantFieldFunction("nu",     *_nu);
-    _hyoff_f         = new MAST::ConstantFieldFunction("hy_off", *_zero);
-    _hzoff_f         = new MAST::ConstantFieldFunction("hz_off", *_zero);
+    _thy_f           = new MAST::ConstantFieldFunction("hy",          *_thy);
+    _thz_f           = new MAST::ConstantFieldFunction("hz",          *_thz);
+    _rho_f           = new MAST::ConstantFieldFunction("rho",         *_rho);
+    _E_f             = new MAST::ConstantFieldFunction("E",             *_E);
+    _nu_f            = new MAST::ConstantFieldFunction("nu",           *_nu);
+    _hyoff_f         = new MAST::ConstantFieldFunction("hy_off",     *_zero);
+    _hzoff_f         = new MAST::ConstantFieldFunction("hz_off",     *_zero);
+    _velocity_f      = new MAST::ConstantFieldFunction("V",      *_velocity);
+    _mach_f          = new MAST::ConstantFieldFunction("mach",       *_mach);
+    _rho_air_f       = new MAST::ConstantFieldFunction("rho",     *_rho_air);
+    _gamma_air_f     = new MAST::ConstantFieldFunction("gamma", *_gamma_air);
     
     // create the material property card
     _m_card          = new MAST::IsotropicMaterialPropertyCard;
@@ -156,14 +165,14 @@ MAST::BeamPistonTheoryFlutterAnalysis::BeamPistonTheoryFlutterAnalysis() {
     // now initialize the piston theory boundary conditions
     RealVectorX  vel = RealVectorX::Zero(3);
     vel(0)           = 1.;  // flow along the x-axis
-    _piston_bc       = new MAST::PistonTheoryBoundaryCondition(1,    // order
-                                                               3.,   // mach number
-                                                               0.,   // U_inf
-                                                               1.4,  // gamma
-                                                               1.05, // density
-                                                               vel);
+    _piston_bc       = new MAST::PistonTheoryBoundaryCondition(1,     // order
+                                                               vel);  // vel vector
+    _piston_bc->add(*_velocity_f);
+    _piston_bc->add(*_mach_f);
+    _piston_bc->add(*_rho_air);
+    _piston_bc->add(*_gamma_air_f);
     _discipline->add_volume_load(0, *_piston_bc);
-
+    
     
     // initialize the flutter solver
     _flutter_solver  = new MAST::TimeDomainFlutterSolver;
@@ -192,6 +201,11 @@ MAST::BeamPistonTheoryFlutterAnalysis::~BeamPistonTheoryFlutterAnalysis() {
     delete _nu_f;
     delete _hyoff_f;
     delete _hzoff_f;
+    delete _velocity_f;
+    delete _mach_f;
+    delete _rho_air_f;
+    delete _gamma_air_f;
+
     
     delete _thy;
     delete _thz;
@@ -199,6 +213,11 @@ MAST::BeamPistonTheoryFlutterAnalysis::~BeamPistonTheoryFlutterAnalysis() {
     delete _E;
     delete _nu;
     delete _zero;
+    delete _velocity;
+    delete _mach;
+    delete _rho_air;
+    delete _gamma_air;
+    
     
     // delete the basis vectors
     if (_basis.size())
@@ -257,13 +276,12 @@ MAST::BeamPistonTheoryFlutterAnalysis::get_parameter(const std::string &nm) {
 
 
 
-void
-MAST::BeamPistonTheoryFlutterAnalysis::solve(bool if_write_output,
-                                             std::vector<Real>* eig) {
+Real
+MAST::BeamPistonTheoryFlutterAnalysis::solve(bool if_write_output) {
     
     
     // set the velocity of piston theory to zero for modal analysis
-    _piston_bc->set_U_inf(0.);
+    (*_velocity) = 0.;
 
     // create the nonlinear assembly object
     MAST::StructuralModalEigenproblemAssembly   assembly;
@@ -277,8 +295,6 @@ MAST::BeamPistonTheoryFlutterAnalysis::solve(bool if_write_output,
     unsigned int
     nconv = std::min(_sys->get_n_converged_eigenvalues(),
                      _sys->get_n_requested_eigenvalues());
-    if (eig)
-        eig->resize(nconv);
     
     if (_basis.size() > 0)
         libmesh_assert(_basis.size() == nconv);
@@ -310,8 +326,6 @@ MAST::BeamPistonTheoryFlutterAnalysis::solve(bool if_write_output,
         re = 0.,
         im = 0.;
         _sys->get_eigenpair(i, re, im, *_basis[i]);
-        if (eig)
-            (*eig)[i] = re;
         
         libMesh::out
         << std::setw(35) << std::fixed << std::setprecision(15)
@@ -333,7 +347,8 @@ MAST::BeamPistonTheoryFlutterAnalysis::solve(bool if_write_output,
     // now initialize the flutter solver
     MAST::StructuralFluidInteractionAssembly fsi_assembly;
     fsi_assembly.attach_discipline_and_system(*_discipline, *_structural_sys);
-    _flutter_solver->initialize(fsi_assembly,
+    _flutter_solver->initialize(*_velocity,
+                                fsi_assembly,
                                 1.e3,        // lower V
                                 1200.,         // upper V
                                 10,           // number of divisions
@@ -341,39 +356,47 @@ MAST::BeamPistonTheoryFlutterAnalysis::solve(bool if_write_output,
     _flutter_solver->scan_for_roots();
     _flutter_solver->print_sorted_roots();
     _flutter_solver->print_crossover_points();
-    _flutter_solver->find_critical_root(1.e-3, 10);
+    std::pair<bool, MAST::TimeDomainFlutterRootBase*>
+    sol = _flutter_solver->find_critical_root(1.e-3, 10);
     _flutter_solver->print_sorted_roots();
     fsi_assembly.clear_discipline_and_system();
+    
+    // make sure solution was found
+    libmesh_assert(sol.first);
+    _flutter_root = sol.second;
+    
+    return _flutter_root->V;
 }
 
 
 
 
 
-void
+Real
 MAST::BeamPistonTheoryFlutterAnalysis::
-sensitivity_solve(MAST::Parameter& p,
-                  std::vector<Real>& eig) {
+sensitivity_solve(MAST::Parameter& p) {
     
+    // flutter solver will need velocity to be defined as a parameter for
+    // sensitivity analysis
+    _discipline->add_parameter(*_velocity);
     _discipline->add_parameter(p);
-    
-    // Get the number of converged eigen pairs.
-    unsigned int
-    nconv = std::min(_sys->get_n_converged_eigenvalues(),
-                     _sys->get_n_requested_eigenvalues());
-    eig.resize(nconv);
     
     libMesh::ParameterVector params;
     params.resize(1);
     params[0]  =  p.ptr();
     
-    // create the nonlinear assembly object
-    MAST::StructuralModalEigenproblemAssembly   assembly;
-    assembly.attach_discipline_and_system(*_discipline, *_structural_sys);
-    _sys->eigenproblem_sensitivity_solve(params, eig);
-    assembly.clear_discipline_and_system();
+    //Make sure that  a solution is available for sensitivity
     
+    
+    // initialize the flutter solver for sensitivity.
+    MAST::StructuralFluidInteractionAssembly fsi_assembly;
+    fsi_assembly.attach_discipline_and_system(*_discipline, *_structural_sys);
+    _flutter_solver->calculate_sensitivity(*_flutter_root, params, 0);
+    fsi_assembly.clear_discipline_and_system();
+
     _discipline->remove_parameter(p);
+    _discipline->remove_parameter(*_velocity);
+    return _flutter_root->V_sens;
 }
 
 

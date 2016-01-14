@@ -27,6 +27,7 @@
 #include "base/physics_discipline_base.h"
 #include "base/boundary_condition_base.h"
 #include "numerics/lapack_dggev_interface.h"
+#include "base/parameter.h"
 
 
 MAST::TimeDomainFlutterSolver::TimeDomainFlutterSolver() {
@@ -45,12 +46,15 @@ MAST::TimeDomainFlutterSolver::~TimeDomainFlutterSolver() {
 
 void
 MAST::TimeDomainFlutterSolver::
-initialize(MAST::StructuralFluidInteractionAssembly&   assembly,
+initialize(MAST::Parameter&                            velocity_param,
+           MAST::StructuralFluidInteractionAssembly&   assembly,
            Real                                         V_lower,
            Real                                         V_upper,
            unsigned int                                 n_V_divs,
            std::vector<libMesh::NumericVector<Real> *>& basis) {
+
     
+    _velocity_param = &velocity_param;
     _assembly       = &assembly;
     _basis_vectors  = &basis;
     _V_range.first  = V_lower;
@@ -128,7 +132,7 @@ MAST::TimeDomainFlutterSolver::get_root(const unsigned int n) const {
 
 
 
-std::pair<bool, const MAST::TimeDomainFlutterRootBase*>
+std::pair<bool, MAST::TimeDomainFlutterRootBase*>
 MAST::TimeDomainFlutterSolver::find_next_root(const Real g_tol,
                                               const unsigned int n_bisection_iters)
 {
@@ -161,7 +165,7 @@ MAST::TimeDomainFlutterSolver::find_next_root(const Real g_tol,
             std::pair<Real, MAST::FlutterRootCrossoverBase*>
             val(cross->root->V, cross);
             _flutter_crossovers.insert(val);
-            return std::pair<bool, const MAST::TimeDomainFlutterRootBase*> (true, cross->root);
+            return std::pair<bool, MAST::TimeDomainFlutterRootBase*> (true, cross->root);
         }
         
         it++;
@@ -173,7 +177,7 @@ MAST::TimeDomainFlutterSolver::find_next_root(const Real g_tol,
 
 
 
-std::pair<bool, const MAST::TimeDomainFlutterRootBase*>
+std::pair<bool,  MAST::TimeDomainFlutterRootBase*>
 MAST::TimeDomainFlutterSolver::find_critical_root(const Real g_tol,
                                                   const unsigned int n_bisection_iters)
 {
@@ -221,7 +225,7 @@ MAST::TimeDomainFlutterSolver::find_critical_root(const Real g_tol,
     }
     
     // if it gets here, then the root was successfully found
-    return std::pair<bool, const MAST::TimeDomainFlutterRootBase*> (true, it->second->root);
+    return std::pair<bool, MAST::TimeDomainFlutterRootBase*> (true, it->second->root);
 }
 
 
@@ -447,53 +451,16 @@ MAST::TimeDomainFlutterSolver::_analyze(const Real v_ref,
     << "Eigensolution" << std::endl
     << "   V_ref = " << std::setw(10) << v_ref << std::endl;
     
-    
-    RealMatrixX m, c, k;
+    RealMatrixX
+    A,
+    B;
     
     // initialize the matrices for the structure.
-    _initialize_matrices(v_ref, m, c, k);
-    
-    // now use the matrices to create the matrices for first-order model
-    // original equations are
-    //    M x_ddot + C x_dot + K x = q_dyn (A0 x + A1 x_dot)
-    //  defining x1 = x_dot, the first order governing equations become
-    //    [  I  0 ]   x_dot  =  [  0  I ]   x
-    //    [  0  M ]  x1_dot  =  [ K1  C1]  x1
-    //    with K1  = -K + q_dyn A0, and
-    //         C1  = -C + q_dyn A1.
-    //
-    //   Then, the eigenproblem is formulated as
-    //   A y = p B y, where
-    //   y  = {x^T x1^T}^T;
-    //   A  = [  0  I  ]
-    //        [-K1 -C1 ], and
-    //   B  = [  I  0 ]
-    //        [  0  M ].
-    //
-    
-    const unsigned int
-    nmodes =  (unsigned int)k.rows();
-
-    RealMatrixX
-    A      =  RealMatrixX::Zero(2*nmodes, 2*nmodes),
-    B      =  RealMatrixX::Zero(2*nmodes, 2*nmodes);
-
-    B.topLeftCorner(nmodes, nmodes)      = RealMatrixX::Identity(nmodes, nmodes);
-    B.bottomRightCorner(nmodes, nmodes)  = m;
-    
-    
-    A.topRightCorner(nmodes, nmodes)     = RealMatrixX::Identity(nmodes, nmodes);
-    A.bottomLeftCorner(nmodes, nmodes)   = -k;
-    A.bottomRightCorner(nmodes, nmodes)  = -c;
-    
+    _initialize_matrices(v_ref, A, B);
     
     MAST::LAPACK_DGGEV ges;
     ges.compute(A, B);
     ges.scale_eigenvectors_to_identity_innerproduct();
-    for (unsigned int i=0; i<nmodes*2; i++)
-        std::cout << ges.alphas()(i)/ges.betas()(i) << std::endl;
-    std::cout << std::endl;
-
     
     MAST::FlutterSolutionBase* root = new MAST::FlutterSolutionBase;
     root->init(*this, v_ref, ges);
@@ -513,51 +480,134 @@ MAST::TimeDomainFlutterSolver::_analyze(const Real v_ref,
 
 void
 MAST::TimeDomainFlutterSolver::_initialize_matrices(Real U_inf,
-                                                    RealMatrixX &m,
-                                                    RealMatrixX &c,
-                                                    RealMatrixX &k) {
+                                                    RealMatrixX &A,
+                                                    RealMatrixX &B) {
     
-    // get all the side and volume loads for this structure and set the velocity
-    // for the piston theory boundary conditions
+    // now use the matrices to create the matrices for first-order model
+    // original equations are
+    //    M x_ddot + C x_dot + K x = q_dyn (A0 x + A1 x_dot)
+    //  defining x1 = x_dot, the first order governing equations become
+    //    [  I  0 ]   x_dot  =  [  0  I ]   x
+    //    [  0  M ]  x1_dot  =  [ K1  C1]  x1
+    //    with K1  = -K + q_dyn A0, and
+    //         C1  = -C + q_dyn A1.
+    //
+    //   Then, the eigenproblem is formulated as
+    //   A y = p B y, where
+    //   y  = {x^T x1^T}^T;
+    //   A  = [  0  I  ]
+    //        [-K1 -C1 ], and
+    //   B  = [  I  0 ]
+    //        [  0  M ].
+    //
     
-    // firs the side BC
-    MAST::SideBCMapType& side_bc = _assembly->discipline().side_loads();
-    MAST::SideBCMapType::iterator
-    side_it  = side_bc.begin(),
-    side_end = side_bc.end();
-    
-    for ( ; side_it != side_end; side_it++)
-        if (side_it->second->type() == MAST::PISTON_THEORY)
-            dynamic_cast<MAST::PistonTheoryBoundaryCondition*>(side_it->second)->set_U_inf(U_inf);
+    const unsigned int n = (unsigned int)_basis_vectors->size();
 
-    // next, the volume BC
-    MAST::VolumeBCMapType& vol_bc = _assembly->discipline().volume_loads();
-    MAST::VolumeBCMapType::iterator
-    vol_it  = vol_bc.begin(),
-    vol_end = vol_bc.end();
+    RealMatrixX
+    m      =  RealMatrixX::Zero(n, n),
+    c      =  RealMatrixX::Zero(n, n),
+    k      =  RealMatrixX::Zero(n, n);
+
     
-    for ( ; vol_it != vol_end; vol_it++)
-        if (vol_it->second->type() == MAST::PISTON_THEORY)
-            dynamic_cast<MAST::PistonTheoryBoundaryCondition*>(vol_it->second)->set_U_inf(U_inf);
-
-
     // now prepare a map of the quantities and ask the assembly object to
     // calculate the quantities of interest.
     std::map<MAST::StructuralQuantityType, RealMatrixX*> qty_map;
     qty_map[MAST::MASS]       = &m;
     qty_map[MAST::DAMPING]    = &c;
     qty_map[MAST::STIFFNESS]  = &k;
+    
+    
+    // set the velocity value in the parameter that was provided
+    (*_velocity_param) = U_inf;
 
-    // zero the matrices to the size of the number of basis
+    _assembly->assemble_reduced_order_quantity(*_assembly->system().solution,
+                                               *_basis_vectors,
+                                               qty_map);
+    
+    
+    // put the matrices back in the system matrices
+    A.setZero(2*n, 2*n);
+    B.setZero(2*n, 2*n);
+    
+    
+    B.topLeftCorner(n, n)      = RealMatrixX::Identity(n,n );
+    B.bottomRightCorner(n, n)  = m;
+    
+    
+    A.topRightCorner(n, n)     = RealMatrixX::Identity(n, n);
+    A.bottomLeftCorner(n, n)   = -k;
+    A.bottomRightCorner(n, n)  = -c;
+}
+
+
+
+
+
+
+void
+MAST::TimeDomainFlutterSolver::
+_initialize_matrix_sensitivity_for_param(const libMesh::ParameterVector& params,
+                                         const unsigned int i,
+                                         Real U_inf,
+                                         RealMatrixX& A,
+                                         RealMatrixX& B) {
+    
+    // now use the matrices to create the matrices for first-order model
+    // original equations are
+    //    M x_ddot + C x_dot + K x = q_dyn (A0 x + A1 x_dot)
+    //  defining x1 = x_dot, the first order governing equations become
+    //    [  I  0 ]   x_dot  =  [  0  I ]   x
+    //    [  0  M ]  x1_dot  =  [ K1  C1]  x1
+    //    with K1  = -K + q_dyn A0, and
+    //         C1  = -C + q_dyn A1.
+    //
+    //   Then, the eigenproblem is formulated as
+    //   A y = p B y, where
+    //   y  = {x^T x1^T}^T;
+    //   A  = [  0  I  ]
+    //        [-K1 -C1 ], and
+    //   B  = [  I  0 ]
+    //        [  0  M ].
+    //
+    
     const unsigned int n = (unsigned int)_basis_vectors->size();
-    m.setZero(n,n);
-    c.setZero(n,n);
-    k.setZero(n,n);
+    
+    RealMatrixX
+    m      =  RealMatrixX::Zero(n, n),
+    c      =  RealMatrixX::Zero(n, n),
+    k      =  RealMatrixX::Zero(n, n);
+    
+    
+    // now prepare a map of the quantities and ask the assembly object to
+    // calculate the quantities of interest.
+    std::map<MAST::StructuralQuantityType, RealMatrixX*> qty_map;
+    qty_map[MAST::MASS]       = &m;
+    qty_map[MAST::DAMPING]    = &c;
+    qty_map[MAST::STIFFNESS]  = &k;
+    
+    
+    // set the velocity value in the parameter that was provided
+    (*_velocity_param) = U_inf;
     
     _assembly->assemble_reduced_order_quantity(*_assembly->system().solution,
                                                *_basis_vectors,
                                                qty_map);
+    
+    
+    // put the matrices back in the system matrices
+    A.setZero(2*n, 2*n);
+    B.setZero(2*n, 2*n);
+    
+    
+    B.topLeftCorner(n, n)      = RealMatrixX::Identity(n,n );
+    B.bottomRightCorner(n, n)  = m;
+    
+    
+    A.topRightCorner(n, n)     = RealMatrixX::Identity(n, n);
+    A.bottomLeftCorner(n, n)   = -k;
+    A.bottomRightCorner(n, n)  = -c;
 }
+
 
 
 
@@ -729,3 +779,93 @@ MAST::TimeDomainFlutterSolver::_identify_crossover_points() {
     }
 }
 
+
+
+
+void
+MAST::TimeDomainFlutterSolver::
+calculate_sensitivity(MAST::TimeDomainFlutterRootBase& root,
+                      const libMesh::ParameterVector& params,
+                      const unsigned int i) {
+    
+    
+    
+    libMesh::out
+    << " ====================================================" << std::endl
+    << "Flutter Sensitivity Solution" << std::endl
+    << "   V_ref = " << std::setw(10) << root.V << std::endl;
+    
+    Complex
+    eig              = root.root,
+    deig_dp          = 0.,
+    deig_dV          = 0.,
+    den              = 0.;
+    
+    // get the sensitivity of the matrices
+    RealMatrixX
+    mat_A,
+    mat_B,
+    mat_A_sens,
+    mat_B_sens;
+    
+    ComplexVectorX v;
+    
+    // initialize the baseline matrices
+    _initialize_matrices(root.V, mat_A, mat_B);
+    
+    // calculate the eigenproblem sensitivity
+    _initialize_matrix_sensitivity_for_param(params,
+                                             i,
+                                             root.V,
+                                             mat_A_sens,
+                                             mat_B_sens);
+    
+    // the eigenproblem is     y^T A x - lambda y^T B x = 0
+    // therefore, the denominator is obtained from the inner product of
+    // y^T B x
+    // sensitivity is
+    //   -dlambda/dp y^T B x = - y^T (dA/dp - lambda dB/dp)
+    // or
+    //   dlambda/dp = [y^T (dA/dp - lambda dB/dp)]/(y^T B x)
+    
+    // now calculate the numerator for sensitivity
+    // numerator =  ( dA/dp - lambda dB/dp)
+    den     = root.eig_vec_left.dot(mat_B*root.eig_vec_right);
+    deig_dp = root.eig_vec_left.dot((mat_A_sens.cast<Complex>() -
+                                    eig*mat_B_sens.cast<Complex>())*root.eig_vec_right)/den;
+    
+    
+    // next we need the sensitivity of eigenvalue wrt V
+    libMesh::ParameterVector param_V;
+    param_V.resize(1);
+    param_V[0]  =  _velocity_param->ptr();
+    
+    _initialize_matrix_sensitivity_for_param(params,
+                                             i,
+                                             root.V,
+                                             mat_A_sens,
+                                             mat_B_sens);
+    
+    // now calculate the quotient for sensitivity wrt k_red
+    // calculate numerator
+    deig_dV = root.eig_vec_left.dot((mat_A_sens.cast<Complex>() -
+                                     eig*mat_B_sens.cast<Complex>())*root.eig_vec_right)/den;
+    
+    // since the constraint that defines flutter speed is that damping = 0,
+    // Re(lambda) = 0, then the sensitivity of flutter speed is obtained
+    // from the total derivative of this constraint
+    //     d Re(lambda)/dp + d Re(lambda)/dV dV/dp = 0
+    // or, dV/dp = -[d Re(lambda)/dp] / [d Re(lambda)/dV]
+    // finally, the flutter speed sensitivity
+    root.V_sens     = - deig_dp.real() / deig_dV.real();
+    
+    // total sensitivity of the eigenvlaue
+    root.root_sens  = deig_dp + deig_dV * root.V_sens;
+    
+    root.has_sensitivity_data = true;
+
+    libMesh::out
+    << "Finished Flutter Sensitivity Solution" << std::endl
+    << " ====================================================" << std::endl;
+    
+}

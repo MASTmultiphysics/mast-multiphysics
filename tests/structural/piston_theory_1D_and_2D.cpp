@@ -144,7 +144,6 @@ check_piston_theory_jacobian (ValType& v) {
         jac_xdot_fd.col(i) = (res-res0)/delta;
     }
     
-    
     // now compare the matrices
     BOOST_CHECK(MAST::compare_matrix( jac_x_fd,   jac_x,    tol));
     BOOST_CHECK(MAST::compare_matrix(jac_xdot_fd, jac_xdot, tol));
@@ -152,6 +151,75 @@ check_piston_theory_jacobian (ValType& v) {
 
 
 BOOST_FIXTURE_TEST_SUITE  (Structural1DJacobianEvaluation, MAST::BuildStructural1DElem)
+
+
+BOOST_AUTO_TEST_CASE   (PistonTheoryPressure) {
+    
+    const Real
+    delta    = 1.e-5,
+    tol      = 1.e-3;
+
+    this->init(false, false);
+
+    // calculate the surface pressure and its sensitivity with respect to the
+    // relevant parameters
+    std::auto_ptr<MAST::PistonTheoryPressure>
+    pressure(_p_theory->get_pressure_function(*_dwdx_f, *_dwdt_f).release());
+    
+    // now get sensitivity wrt all parameters
+    std::vector<MAST::Parameter*> params(6);
+    params[0] = _velocity;
+    params[1] = _mach;
+    params[2] = _rho_air;
+    params[3] = _gamma_air;
+    params[4] = _dwdx;
+    params[5] = _dwdt;
+
+    // calculate the base pressure
+    Real
+    p0    = 0.,
+    dp    = 0.,
+    dp_fd = 0.,
+    v0    = 0.,
+    dv    = 0.;
+    
+    libMesh::Point pt;
+    
+    (*pressure)(pt, 0., p0);
+    
+    // now calculate sensitivity wrt the parameters
+    for (unsigned int i=0; i<params.size(); i++) {
+        
+        MAST::Parameter& f = *params[i];
+
+        // calculate the partial derivative
+        pressure->derivative(MAST::PARTIAL_DERIVATIVE,
+                             *params[i],
+                             pt,
+                             0.,
+                             dp);
+        
+        // now perturb the parameter and calculate the finite difference
+        // sensitivity of pressure.
+        v0           = f();
+        (fabs(v0) > 0)?  dv=delta*v0 : dv=delta;
+        f()         += dv;
+        
+        
+        (*pressure)(pt, 0., dp_fd);
+        
+        dp_fd -= p0;
+        dp_fd /= dv;
+
+        // reset the parameter value
+        f()        = v0;
+   
+        BOOST_TEST_MESSAGE("  ** dpress/dp (total) wrt : " << f.name() << " **");
+        BOOST_CHECK(MAST::compare_value( dp_fd,  dp, tol));
+    }
+}
+
+
 
 BOOST_AUTO_TEST_CASE   (PistonTheory1D) {
     

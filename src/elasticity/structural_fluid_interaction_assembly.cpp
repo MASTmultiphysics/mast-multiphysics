@@ -270,6 +270,129 @@ assemble_reduced_order_quantity
 
 
 
+
+void
+MAST::StructuralFluidInteractionAssembly::
+assemble_reduced_order_quantity
+(const libMesh::ParameterVector& parameters,
+ const unsigned int i,
+ const libMesh::NumericVector<Real>& X,
+ const libMesh::NumericVector<Real>& dX_dp,
+ std::vector<libMesh::NumericVector<Real>*>& basis,
+ std::map<MAST::StructuralQuantityType, RealMatrixX*>& mat_qty_map) {
+    
+    
+    libMesh::NonlinearImplicitSystem& nonlin_sys =
+    dynamic_cast<libMesh::NonlinearImplicitSystem&>(_system->system());
+    
+    // iterate over each element, initialize it and get the relevant
+    // analysis quantities
+    RealVectorX vec, sol, dsol;
+    RealMatrixX mat, basis_mat;
+    
+    std::vector<libMesh::dof_id_type> dof_indices;
+    const libMesh::DofMap& dof_map = _system->system().get_dof_map();
+    std::auto_ptr<MAST::ElementBase> physics_elem;
+    
+    std::auto_ptr<libMesh::NumericVector<Real> >
+    localized_solution,
+    localized_solution_sens;
+    
+    localized_solution.reset(_build_localized_vector(nonlin_sys,
+                                                     X).release());
+    localized_solution_sens.reset(_build_localized_vector(nonlin_sys,
+                                                          dX_dp).release());
+    
+    // also create localized solution vectos for the bassis vectors
+    const unsigned int
+    n_basis = (unsigned int)basis.size();
+    
+    std::vector<libMesh::NumericVector<Real>*> localized_basis(n_basis);
+    for (unsigned int i=0; i<n_basis; i++)
+        localized_basis[i] = _build_localized_vector(nonlin_sys, *basis[i]).release();
+    
+    
+    // if a solution function is attached, initialize it
+    if (_sol_function)
+        _sol_function->init_for_system_and_solution(*_system, X);
+    
+    
+    libMesh::MeshBase::const_element_iterator       el     =
+    nonlin_sys.get_mesh().active_local_elements_begin();
+    const libMesh::MeshBase::const_element_iterator end_el =
+    nonlin_sys.get_mesh().active_local_elements_end();
+    
+    
+    for ( ; el != end_el; ++el) {
+        
+        const libMesh::Elem* elem = *el;
+        
+        dof_map.dof_indices (elem, dof_indices);
+        
+        physics_elem.reset(_build_elem(*elem).release());
+        
+        // get the solution
+        unsigned int ndofs = (unsigned int)dof_indices.size();
+        sol.setZero(ndofs);
+        dsol.setZero(ndofs);
+        vec.setZero(ndofs);
+        mat.setZero(ndofs, ndofs);
+        basis_mat.setZero(ndofs, n_basis);
+        
+        for (unsigned int i=0; i<dof_indices.size(); i++) {
+            sol(i)  = (*localized_solution)(dof_indices[i]);
+            dsol(i) = (*localized_solution_sens)(dof_indices[i]);
+            for (unsigned int j=0; j<n_basis; j++)
+                basis_mat(i,j) = (*localized_basis[j])(dof_indices[i]);
+        }
+        
+        physics_elem->set_solution(sol);
+        physics_elem->set_solution(dsol, true);
+        physics_elem->set_velocity(vec);     // set to zero value
+        physics_elem->set_acceleration(vec); // set to zero value
+        
+        
+        if (_sol_function)
+            physics_elem->attach_active_solution_function(*_sol_function);
+        
+        // now iterative over all qty types in the map and assemble them
+        std::map<MAST::StructuralQuantityType, RealMatrixX*>::iterator
+        it   = mat_qty_map.begin(),
+        end  = mat_qty_map.end();
+        
+        for ( ; it != end; it++) {
+            
+            _qty_type = it->first;
+            _elem_sensitivity_calculations(*physics_elem, true, vec, mat);
+            
+            DenseRealMatrix m;
+            MAST::copy(m, mat);
+            nonlin_sys.get_dof_map().constrain_element_matrix(m, dof_indices);
+            MAST::copy(mat, m);
+            
+            // now add to the reduced order matrix
+            (*it->second) += basis_mat.transpose() * mat * basis_mat;
+        }
+        
+        physics_elem->detach_active_solution_function();
+        
+    }
+    
+    
+    // if a solution function is attached, clear it
+    if (_sol_function)
+        _sol_function->clear();
+    
+    
+    // delete the localized basis vectors
+    for (unsigned int i=0; i<basis.size(); i++)
+        delete localized_basis[i];
+}
+
+
+
+
+
 std::auto_ptr<MAST::ElementBase>
 MAST::StructuralFluidInteractionAssembly::_build_elem(const libMesh::Elem& elem) {
     

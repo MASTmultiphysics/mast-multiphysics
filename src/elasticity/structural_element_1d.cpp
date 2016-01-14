@@ -21,13 +21,16 @@
 #include "elasticity/structural_element_1d.h"
 #include "numerics/fem_operator_matrix.h"
 #include "mesh/local_elem_base.h"
-#include "base/system_initialization.h"
 #include "property_cards/element_property_card_1D.h"
 #include "property_cards/material_property_card_base.h"
-#include "base/boundary_condition_base.h"
 #include "elasticity/piston_theory_boundary_condition.h"
 #include "elasticity/stress_output_base.h"
 #include "elasticity/bending_operator.h"
+#include "base/system_initialization.h"
+#include "base/boundary_condition_base.h"
+#include "base/parameter.h"
+#include "base/constant_field_function.h"
+
 
 
 MAST::StructuralElement1D::StructuralElement1D(MAST::SystemInitialization& sys,
@@ -2219,16 +2222,19 @@ piston_theory_residual(bool request_jacobian,
     const MAST::PistonTheoryBoundaryCondition& piston_bc =
     dynamic_cast<MAST::PistonTheoryBoundaryCondition&>(bc);
     
-    const Real
-    mach      =   piston_bc.mach(),
-    U_inf     =   piston_bc.U_inf(),
-    gamma     =   piston_bc.gamma(),
-    rho       =   piston_bc.rho(),
-    q_dyn     =   .5*rho*pow(U_inf ,2);
+    // create the constant field functions to pass the dwdx and dwdt values
+    // to the piston theory pressure functions
+    MAST::Parameter
+    dwdx_p  ("dwdx", 0.),
+    dwdt_p  ("dwdt", 0.);
     
-    const unsigned int
-    order     =   piston_bc.order();
+    MAST::ConstantFieldFunction
+    dwdx_f  ("dwdx", dwdx_p),
+    dwdt_f  ("dwdx", dwdt_p);
     
+    std::auto_ptr<MAST::PistonTheoryPressure>
+    pressure(piston_bc.get_pressure_function(dwdx_f, dwdt_f).release());
+
     FEMOperatorMatrix
     Bmat_v,         // operator matrix for the v-displacement
     Bmat_w,         // operator matrix for the w-displacement
@@ -2245,10 +2251,11 @@ piston_theory_residual(bool request_jacobian,
     vec_n1   = RealVectorX::Zero(n1),
     vec_n2   = RealVectorX::Zero(n2),
     vel      = RealVectorX::Zero(3),
-    cp       = RealVectorX::Zero(3),
+    p_val    = RealVectorX::Zero(3),
     normal   = RealVectorX::Zero(3),
     dummy    = RealVectorX::Zero(2);
     
+    libMesh::Point pt;
 
     // direction of pressure assumed to be normal (along local z-axis)
     // to the element face for 2D and along local y-axis for 1D element.
@@ -2266,7 +2273,7 @@ piston_theory_residual(bool request_jacobian,
     for (unsigned int qp=0; qp<qpoint.size(); qp++)
     {
         
-        //_local_elem->global_coordinates_location(qpoint[qp], pt);
+        _local_elem->global_coordinates_location(qpoint[qp], pt);
         
         // now set the shape function values
         for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
@@ -2279,9 +2286,9 @@ piston_theory_residual(bool request_jacobian,
 
         // use the Bmat to calculate the velocity vector
         Bmat_v.right_multiply(vec_n1, _local_vel);
-        vel(1)     = vec_n1(0)*(mach*mach-2.)/(mach*mach-1.)/U_inf;   // v_dot/U_inf
+        vel(1)     = vec_n1(0);   // v_dot
         Bmat_w.right_multiply(vec_n1, _local_vel);
-        vel(2)     = vec_n1(1)*(mach*mach-2.)/(mach*mach-1.)/U_inf;   // w_dot/U_inf
+        vel(2)     = vec_n1(1);   // w_dot
         
         // get the operators for dv/dx and dw/dx. We will use the
         // von Karman strain operators for this
@@ -2293,25 +2300,28 @@ piston_theory_residual(bool request_jacobian,
                                               Bmat_dvdx,
                                               Bmat_dwdx);
         
-        // add the normal velocity due to the deformation slope
-        vel(1)  += dvdx(0,0);  // this now is v_dot/U+dv/dx
-        vel(2)  += dwdx(0,0);  // this now is w_dot/U+dw/dx
-        
         
         // now use this information to evaluate the normal cp due to
         // both the v and w motions
-        for (unsigned int i=1; i<3; i++)
-            cp(i)  = piston_theory_cp(order, vel(i), gamma, mach);
+        dwdx_p = dvdx(0,0);
+        dwdt_p = vel(1);
+        (*pressure)(pt, _time, p_val(1));
+
+        
+        dwdx_p = dwdx(0,0);
+        dwdt_p = vel(2);
+        (*pressure)(pt, _time, p_val(2));
+
         
         // calculate force and discrete vector for v-disp
         force.setZero();
-        force(0) = cp(1) * normal(1);
+        force(0) = p_val(1) * normal(1);
         Bmat_v.vector_mult_transpose(vec_n2, force);
         local_f += JxW[qp] * vec_n2;
 
         // now the w-disp
         force.setZero();
-        force(1) = cp(2) * normal(2);
+        force(1) = p_val(2) * normal(2);
         Bmat_v.vector_mult_transpose(vec_n2, force);
         local_f += JxW[qp] * vec_n2;
         
@@ -2320,41 +2330,48 @@ piston_theory_residual(bool request_jacobian,
         if (request_jacobian) {
             
             // we need the derivative of cp wrt normal velocity
-            for (unsigned int i=1; i<3; i++)
-                cp(i)  = piston_theory_dcp_dv(order, vel(i), gamma, mach);
-         
+            dwdx_p = dvdx(0,0);
+            dwdt_p = vel(1);
+            pressure->derivative(MAST::PARTIAL_DERIVATIVE, dwdt_p, pt, _time, p_val(1));
+            
             // calculate the component of Jacobian due to v-velocity
             Bmat_v.right_multiply_transpose(mat_n2n2, Bmat_v);
-            local_jac_xdot += (JxW[qp] * cp(1) * normal(1) *
-                               (mach*mach-2.)/(mach*mach-1.)/U_inf) * mat_n2n2;
-            
-            // calculate the component of Jacobian due to w-velocity
-            Bmat_w.right_multiply_transpose(mat_n2n2, Bmat_w);
-            local_jac_xdot += (JxW[qp] * cp(2) * normal(2)*
-                               (mach*mach-2.)/(mach*mach-1.)/U_inf) * mat_n2n2;
-            
-            
+            local_jac_xdot += JxW[qp] * p_val(1) * normal(1) * mat_n2n2;
+
+            // now wrt v
+            pressure->derivative(MAST::PARTIAL_DERIVATIVE, dwdx_p, pt, _time, p_val(1));
             // now use calculate the component of Jacobian due to deformation
             Bmat_v.right_multiply_transpose(mat_n2n2, Bmat_dvdx);  // v: B^T dB/dx
-            local_jac += (JxW[qp] * cp(1) * normal(1)) * mat_n2n2;
+            local_jac += (JxW[qp] * p_val(1) * normal(1)) * mat_n2n2;
             
+
+            dwdx_p = dwdx(0,0);
+            dwdt_p = vel(2);
+            pressure->derivative(MAST::PARTIAL_DERIVATIVE, dwdt_p, pt, _time, p_val(2));
+
+            // calculate the component of Jacobian due to w-velocity
+            Bmat_w.right_multiply_transpose(mat_n2n2, Bmat_w);
+            local_jac_xdot += JxW[qp] * p_val(2) * normal(2) * mat_n2n2;
+            
+            // now wrt w
+            pressure->derivative(MAST::PARTIAL_DERIVATIVE, dwdx_p, pt, _time, p_val(2));
             Bmat_w.right_multiply_transpose(mat_n2n2, Bmat_dwdx);  // w: B^T dB/dx
-            local_jac += (JxW[qp] * cp(2) * normal(2)) * mat_n2n2;
+            local_jac += (JxW[qp] * p_val(2) * normal(2)) * mat_n2n2;
         }
     }
     
     // now transform to the global system and add
     transform_vector_to_global_system(local_f, vec_n2);
-    f -= q_dyn * vec_n2;
+    f -= vec_n2;
     
     // if the Jacobian was requested, then transform it and add to the
     // global Jacobian
     if (request_jacobian) {
         transform_matrix_to_global_system(local_jac_xdot, mat_n2n2);
-        jac_xdot -= q_dyn * mat_n2n2;
+        jac_xdot -= mat_n2n2;
 
         transform_matrix_to_global_system(local_jac, mat_n2n2);
-        jac      -= q_dyn * mat_n2n2;
+        jac      -= mat_n2n2;
     }
     
     return (request_jacobian);

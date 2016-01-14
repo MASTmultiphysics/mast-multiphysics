@@ -83,6 +83,8 @@ MAST::StructuralBucklingEigenproblemAssembly::clear_discipline_and_system() {
     _lambda2                    = 0.;
     _sol1                       = NULL;
     _sol2                       = NULL;
+    
+    MAST::EigenproblemAssembly::clear_discipline_and_system();
 }
 
 
@@ -187,6 +189,7 @@ eigenproblem_assemble(libMesh::SparseMatrix<Real> *A,
         // set the incompatible mode solution if required by the
         // element
         if (p_elem.if_incompatible_modes()) {
+            
             libmesh_error(); // this needs to be carefully implemented
                              // check if the vector exists in the map
             if (!_incompatible_sol.count(elem))

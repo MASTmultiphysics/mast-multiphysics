@@ -48,11 +48,23 @@ _nu(NULL),
 _kappa(NULL),
 _hzoff(NULL),
 _zero(NULL),
+_velocity(NULL),
+_mach(NULL),
+_rho_air(NULL),
+_gamma_air(NULL),
+_dwdx(NULL),
+_dwdt(NULL),
 _thz_f(NULL),
 _E_f(NULL),
 _nu_f(NULL),
 _kappa_f(NULL),
 _hzoff_f(NULL),
+_velocity_f(NULL),
+_mach_f(NULL),
+_rho_air_f(NULL),
+_gamma_air_f(NULL),
+_dwdx_f(NULL),
+_dwdt_f(NULL),
 _m_card(NULL),
 _p_card(NULL),
 _p_theory(NULL) {
@@ -108,7 +120,12 @@ MAST::BuildStructural2DElem::init(bool if_link_offset_to_th,
     _hzoff           = new MAST::Parameter( "hzoff",      0.);
     _temp            = new MAST::Parameter("temp",       60.);
     _alpha           = new MAST::Parameter("alpha",   2.5e-5);
-    
+    _velocity        = new MAST::Parameter("V"   ,      200.);
+    _mach            = new MAST::Parameter("mach",        4.);
+    _rho_air         = new MAST::Parameter("rho" ,       1.1);
+    _gamma_air       = new MAST::Parameter("gamma",      1.4);
+    _dwdx            = new MAST::Parameter("dwdx",       2.5);
+    _dwdt            = new MAST::Parameter("dwdx",       4.5);
     
     
     // prepare the vector of parameters with respect to which the sensitivity
@@ -131,6 +148,12 @@ MAST::BuildStructural2DElem::init(bool if_link_offset_to_th,
         _hzoff_f         = new MAST::ConstantFieldFunction(  "off",   *_hzoff);
     else
         _hzoff_f         = new MAST::ConstantFieldFunction(  "off",   *_thz);
+    _velocity_f      = new MAST::ConstantFieldFunction("V",      *_velocity);
+    _mach_f          = new MAST::ConstantFieldFunction("mach",       *_mach);
+    _rho_air_f       = new MAST::ConstantFieldFunction("rho",     *_rho_air);
+    _gamma_air_f     = new MAST::ConstantFieldFunction("gamma", *_gamma_air);
+    _dwdx_f          = new MAST::ConstantFieldFunction("dwdx",       *_dwdx);
+    _dwdt_f          = new MAST::ConstantFieldFunction("dwdt",      *_dwdt);
     
     // create the material property card
     _m_card         = new MAST::IsotropicMaterialPropertyCard;
@@ -153,11 +176,6 @@ MAST::BuildStructural2DElem::init(bool if_link_offset_to_th,
     if (if_nonlinear) _p_card->set_strain(MAST::VON_KARMAN_STRAIN);
     
     const unsigned int order = 1;
-    Real
-    mach    = 3.,
-    a_inf   = 330.,
-    gamma   = 1.4,
-    rho     = 1.05;
     
     RealVectorX
     vel     = RealVectorX::Zero(3);
@@ -167,11 +185,11 @@ MAST::BuildStructural2DElem::init(bool if_link_offset_to_th,
     
     // create the boundary condition
     _p_theory       = new MAST::PistonTheoryBoundaryCondition(order,
-                                                              mach,
-                                                              a_inf,
-                                                              gamma,
-                                                              rho,
                                                               vel);
+    _p_theory->add(*_velocity_f);
+    _p_theory->add(*_mach_f);
+    _p_theory->add(*_rho_air_f);
+    _p_theory->add(*_gamma_air_f);
     
     
     _thermal_load   = new MAST::BoundaryConditionBase(MAST::TEMPERATURE);
@@ -200,6 +218,12 @@ MAST::BuildStructural2DElem::~BuildStructural2DElem() {
     delete _temp_f;
     delete _ref_temp_f;
     delete _alpha_f;
+    delete _velocity_f;
+    delete _mach_f;
+    delete _rho_air_f;
+    delete _gamma_air_f;
+    delete _dwdx_f;
+    delete _dwdt_f;
     
     delete _thz;
     delete _hzoff;
@@ -208,6 +232,12 @@ MAST::BuildStructural2DElem::~BuildStructural2DElem() {
     delete _zero;
     delete _temp;
     delete _alpha;
+    delete _velocity;
+    delete _mach;
+    delete _rho_air;
+    delete _gamma_air;
+    delete _dwdx;
+    delete _dwdt;
     
     
     

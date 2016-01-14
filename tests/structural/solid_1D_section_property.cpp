@@ -128,7 +128,7 @@ void  check_material_property (ValType& v) {
             
             // identify the perturbation in the parameter
             p0           = f();
-            (p0 > 0)?  dp=std::max(delta*p0, delta) : dp=delta;
+            (fabs(p0) > 0)?  dp=std::max(delta*p0, delta) : dp=delta;
             f()         += dp;
             
             (*mat_stiff)(pt, 0., dmat);

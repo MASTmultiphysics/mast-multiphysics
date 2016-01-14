@@ -48,7 +48,7 @@ namespace MAST {
         
         unsigned int root_num;
         
-        const MAST::TimeDomainFlutterRootBase* root;
+        MAST::TimeDomainFlutterRootBase* root;
     };
     
 }

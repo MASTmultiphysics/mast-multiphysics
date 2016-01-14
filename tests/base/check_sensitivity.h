@@ -143,7 +143,7 @@ namespace MAST {
             
             // identify the perturbation in the parameter
             p0           = f();
-            (p0 > 0)?  dp=delta*p0 : dp=delta;
+            (fabs(p0) > 0)?  dp=delta*p0 : dp=delta;
             f()         += dp;
             
             // solve at the perturbed parameter value

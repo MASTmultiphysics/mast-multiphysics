@@ -22,9 +22,68 @@
 
 // MAST includes
 #include "base/boundary_condition_base.h"
+#include "base/field_function_base.h"
 
 
 namespace MAST {
+    
+    // Forward declerations
+    class Parameter;
+    
+    // defines the function class the evaluates the pressure for calculation
+    // of surface loads. The deflection and velocity data is provided
+    // for calculation
+    class PistonTheoryPressure:
+    public MAST::FieldFunction<Real> {
+    
+    public:
+        
+        PistonTheoryPressure(unsigned int order,
+                             MAST::FieldFunction<Real> *V,
+                             MAST::FieldFunction<Real> *M,
+                             MAST::FieldFunction<Real> *rho,
+                             MAST::FieldFunction<Real> *gamma,
+                             MAST::FieldFunction<Real> *dwdx,
+                             MAST::FieldFunction<Real> *dwdt);
+        
+        
+        
+        PistonTheoryPressure(const MAST::PistonTheoryPressure &f);
+        
+
+        
+        /*!
+         *   @returns a clone of the function
+         */
+        virtual std::auto_ptr<MAST::FieldFunction<Real> > clone() const;
+        
+        
+        virtual ~PistonTheoryPressure();
+        
+        
+        virtual void operator() (const libMesh::Point& p,
+                                 const Real t,
+                                 Real& m) const;
+        
+        virtual void derivative (const MAST::DerivativeType d,
+                                 const MAST::FunctionBase& f,
+                                 const libMesh::Point& p,
+                                 const Real t,
+                                 Real& m) const;
+        
+    protected:
+        
+        const unsigned int  _order;
+        
+        MAST::FieldFunction<Real>
+        *_V_inf,
+        *_M_inf,
+        *_rho_inf,
+        *_gamma,
+        *_dwdx,
+        *_dwdt;
+    };
+    
     
     
     class PistonTheoryBoundaryCondition:
@@ -42,10 +101,6 @@ namespace MAST {
          *  \p vel_vec: velocity unit vector
          */
         PistonTheoryBoundaryCondition(unsigned int order,
-                                      Real mach,
-                                      Real U_inf,
-                                      Real gamma,
-                                      Real rho,
                                       const RealVectorX& vel_vec);
         
         
@@ -57,41 +112,19 @@ namespace MAST {
          */
         unsigned int order() const;
         
-
-        /*!
-         *  @returns value of ambient Mach number
-         */
-        Real mach() const;
-        
-
-        /*!
-         *  @returns value of ambient flight speed
-         */
-        Real U_inf() const;
-
-        
-        /*!
-         *  sets the velocity for analysis
-         */
-        void set_U_inf(Real U_inf);
-        
-        
-        /*!
-         *  @returns the ambient density
-         */
-        Real rho() const;
-        
-        /*!
-         *  @returns value of ambient ratio of specif heat values at
-         *  constant pressure and constant volume
-         */
-        Real gamma() const;
-
-
         /*!
          *  @returns velocity vector
          */
         const RealVectorX& vel_vec() const;
+        
+        
+        /*!
+         *   @returns a smart-pointer to the pressure function
+         */
+        std::auto_ptr<MAST::PistonTheoryPressure>
+        get_pressure_function(MAST::FieldFunction<Real>& dwdx,
+                              MAST::FieldFunction<Real>& dwdt) const;
+        
 
     protected:
         
@@ -102,29 +135,6 @@ namespace MAST {
         unsigned int _order;
         
         
-        /*!
-         *   Ambient flow property: Mach number
-         */
-        Real _mach;
-
-
-        /*!
-         *   Ambient flow property: speed of sound
-         */
-        Real _U_inf;
-        
-        
-        /*!
-         *   Ambient flow property: ratio of specific heat values at
-         *   constant pressure and constant volume
-         */
-        Real _gamma;
-        
-        /*!
-         *   Ambient flow property: density
-         */
-        Real _rho;
-
         /*!
          *   Ambient flow velocity vector
          */

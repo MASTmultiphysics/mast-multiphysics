@@ -333,7 +333,7 @@ MAST::NonlinearSystem::get_eigenpair(unsigned int i,
             im   = val.second;
         }
         else {
-            std::complex<Real> complex_val (val.first, val.second);
+            Complex complex_val (val.first, val.second);
             complex_val = 1./complex_val;
             re = complex_val.real();
             im = complex_val.imag();
@@ -374,7 +374,7 @@ MAST::NonlinearSystem::get_eigenpair(unsigned int i,
             im   = val.second;
         }
         else {
-            std::complex<Real> complex_val (val.first, val.second);
+            Complex complex_val (val.first, val.second);
             complex_val = 1./complex_val;
             re = complex_val.real();
             im = complex_val.imag();

@@ -89,7 +89,13 @@ namespace MAST {
         *_hzoff,
         *_zero,
         *_temp,
-        *_alpha;
+        *_alpha,
+        *_velocity,
+        *_mach,
+        *_rho_air,
+        *_gamma_air,
+        *_dwdx,
+        *_dwdt;
         
         MAST::ConstantFieldFunction
         *_thz_f,
@@ -99,7 +105,14 @@ namespace MAST {
         *_hzoff_f,
         *_temp_f,
         *_ref_temp_f,
-        *_alpha_f;
+        *_alpha_f,
+        *_velocity_f,
+        *_mach_f,
+        *_rho_air_f,
+        *_gamma_air_f,
+        *_dwdx_f,
+        *_dwdt_f;
+
         
         // create the material property card
         MAST::IsotropicMaterialPropertyCard*     _m_card;

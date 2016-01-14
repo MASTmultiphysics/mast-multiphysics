@@ -116,7 +116,7 @@ void check_internal_force_and_jacobian_sensitivity (ValType& v,
         
         // identify the perturbation in the parameter
         p0           = f();
-        (p0 > 0)?  dp=delta*p0 : dp=delta;
+        (fabs(p0) > 0)?  dp=delta*p0 : dp=delta;
         f()         += dp;
         
         dresdp_fd.setZero();

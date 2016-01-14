@@ -68,7 +68,8 @@ namespace MAST {
         /*!
          *    initializes the data structres for a flutter solution.
          */
-        void initialize(MAST::StructuralFluidInteractionAssembly&   assembly,
+        void initialize(MAST::Parameter&                            velocity_param,
+                        MAST::StructuralFluidInteractionAssembly&   assembly,
                         Real                                        V_lower,
                         Real                                        V_upper,
                         unsigned int                                n_V_divs,
@@ -109,7 +110,7 @@ namespace MAST {
          *   are sorted with increasing velocity, and this method will attempt to
          *   identify the next critical root in the order.
          */
-        virtual std::pair<bool, const MAST::TimeDomainFlutterRootBase*>
+        virtual std::pair<bool, MAST::TimeDomainFlutterRootBase*>
         find_next_root(const Real g_tol,
                        const unsigned int n_bisection_iters);
         
@@ -120,7 +121,7 @@ namespace MAST {
          *   lowest velocity crossover has been calculated. If not, then it
          *   attempts to find that root using an iterative approach
          */
-        virtual std::pair<bool, const MAST::TimeDomainFlutterRootBase*>
+        virtual std::pair<bool, MAST::TimeDomainFlutterRootBase*>
         find_critical_root(const Real g_tol,
                            const unsigned int n_bisection_iters);
         
@@ -132,10 +133,7 @@ namespace MAST {
          */
         virtual void calculate_sensitivity(MAST::TimeDomainFlutterRootBase& root,
                                            const libMesh::ParameterVector& params,
-                                           const unsigned int i) {
-            
-            libmesh_error(); // to be implemented
-        }
+                                           const unsigned int i);
         
         
         /*!
@@ -187,15 +185,23 @@ namespace MAST {
         /*!
          *    Assembles the reduced order system structural and aerodynmaic 
          *    matrices for specified flight velocity \par U_inf.
-         *
-         *    m  is the mass matrix,
-         *    k  is the stiffness matrix,
-         *    c  is the damping matrix,
          */
         void _initialize_matrices(Real U_inf,
-                                  RealMatrixX& m,
-                                  RealMatrixX& c,
-                                  RealMatrixX& k);
+                                  RealMatrixX& A,
+                                  RealMatrixX& B);
+
+        
+        /*!
+         *    Assembles the reduced order system structural and aerodynmaic
+         *    matrices for specified flight velocity \par U_inf.
+         */
+        void
+        _initialize_matrix_sensitivity_for_param(const libMesh::ParameterVector& params,
+                                                 const unsigned int i,
+                                                 Real U_inf,
+                                                 RealMatrixX& A,
+                                                 RealMatrixX& B);
+
         
         /*!
          *   identifies all cross-over and divergence points from analyzed
@@ -204,6 +210,13 @@ namespace MAST {
         virtual void _identify_crossover_points();
 
 
+        /*!
+         *  Parameter that define the velocity.
+         */
+        MAST::Parameter*                                _velocity_param;
+        
+        
+        
         /*!
          *   structural assembly that provides the assembly of the system
          *   matrices.
@@ -220,27 +233,27 @@ namespace MAST {
         /*!
          *   range of reference values within which to find flutter roots
          */
-        std::pair<Real, Real> _V_range;
+        std::pair<Real, Real>                           _V_range;
 
 
         /*!
          *    number of division in the reference value range for initial
          *    scanning
          */
-        unsigned int _n_V_divs;
+        unsigned int                                    _n_V_divs;
 
 
         
         /*!
          *    file to which the result will be written
          */
-        std::ofstream _output;
+        std::ofstream                                   _output;
         
         
         /*!
          *   map of velocity sorted flutter solutions
          */
-        std::map<Real, MAST::FlutterSolutionBase*> _flutter_solutions;
+        std::map<Real, MAST::FlutterSolutionBase*>      _flutter_solutions;
         
         /*!
          *   the map of flutter crossover points versus average velocity of the

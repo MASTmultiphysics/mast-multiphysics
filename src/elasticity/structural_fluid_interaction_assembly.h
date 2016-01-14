@@ -79,12 +79,28 @@ namespace MAST {
         
         /*!
          *   calculates the reduced order matrix given the basis provided in
-         *   the shell matrix. \par X is the steady state solution about which 
+         *   \par basis. \par X is the steady state solution about which
          *   the quantity is calculated.
          */
         virtual void
         assemble_reduced_order_quantity
         (const libMesh::NumericVector<Real>& X,
+         std::vector<libMesh::NumericVector<Real>*>& basis,
+         std::map<MAST::StructuralQuantityType, RealMatrixX*>& mat_qty_map);
+
+        
+        /*!
+         *   calculates the sensitivity of reduced order matrix given the basis 
+         *   provided in \par basis. \par X is the steady state solution about which
+         *   the quantity is calculated, and \par dX_dp is the sensitivity of 
+         *   \par X wrt the parameter identified as \par parameters[i]
+         */
+        virtual void
+        assemble_reduced_order_quantity
+        (const libMesh::ParameterVector& parameters,
+         const unsigned int i,
+         const libMesh::NumericVector<Real>& X,
+         const libMesh::NumericVector<Real>& dX_dp,
          std::vector<libMesh::NumericVector<Real>*>& basis,
          std::map<MAST::StructuralQuantityType, RealMatrixX*>& mat_qty_map);
 

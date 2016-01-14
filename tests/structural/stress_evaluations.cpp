@@ -345,7 +345,7 @@ void check_stress (ValType& v, const RealVectorX& x0) {
         // now the finite difference sensitivity
         // identify the perturbation in the parameter
         p0           = f();
-        (p0 > 0)?  dp=delta*p0 : dp=delta;
+        (fabs(p0) > 0)?  dp=delta*p0 : dp=delta;
         f()         += dp;
         
         // get the stress, strain and von Mises stress sensitivity
@@ -402,7 +402,7 @@ void check_stress (ValType& v, const RealVectorX& x0) {
             // sensitivity is linear in it. We really want delta and dp to be
             // small so that finite differencing can be accurately done
             p0           = f();
-            (p0 > 0)?  dp=std::max(delta*p0, delta) : dp=delta;
+            (fabs(p0) > 0)?  dp=std::max(delta*p0, delta) : dp=delta;
             // now, set the solution sensitivity for analytical sensitivity
             x            = RealVectorX::Zero(ndofs);
             x(j)         = delta/dp;

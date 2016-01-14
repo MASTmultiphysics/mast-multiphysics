@@ -109,6 +109,12 @@ MAST::BuildStructural1DElem::init(bool if_link_offset_to_th,
     _zero            = new MAST::Parameter("zero",       0.);
     _temp            = new MAST::Parameter("temp",      60.);
     _alpha           = new MAST::Parameter("alpha",  2.5e-5);
+    _velocity        = new MAST::Parameter("V"   ,      200.);
+    _mach            = new MAST::Parameter("mach",        4.);
+    _rho_air         = new MAST::Parameter("rho" ,       1.1);
+    _gamma_air       = new MAST::Parameter("gamma",      1.4);
+    _dwdx            = new MAST::Parameter("dwdx",       2.5);
+    _dwdt            = new MAST::Parameter("dwdx",       4.5);
     
     
 
@@ -138,7 +144,13 @@ MAST::BuildStructural1DElem::init(bool if_link_offset_to_th,
         _hyoff_f         = new MAST::ConstantFieldFunction("hy_off", *_thy);
         _hzoff_f         = new MAST::ConstantFieldFunction("hz_off", *_thz);
     }
-    
+    _velocity_f      = new MAST::ConstantFieldFunction("V",      *_velocity);
+    _mach_f          = new MAST::ConstantFieldFunction("mach",       *_mach);
+    _rho_air_f       = new MAST::ConstantFieldFunction("rho",     *_rho_air);
+    _gamma_air_f     = new MAST::ConstantFieldFunction("gamma", *_gamma_air);
+    _dwdx_f          = new MAST::ConstantFieldFunction("dwdx",       *_dwdx);
+    _dwdt_f          = new MAST::ConstantFieldFunction("dwdt",      *_dwdt);
+
     
     // create the material property card
     _m_card         = new MAST::IsotropicMaterialPropertyCard;
@@ -168,13 +180,6 @@ MAST::BuildStructural1DElem::init(bool if_link_offset_to_th,
     
     _p_card->init();
     
-    const unsigned int order = 1;
-    Real
-    mach    = 3.,
-    a_inf   = 330.,
-    gamma   = 1.4,
-    rho     = 1.05;
-    
     RealVectorX
     vel     = RealVectorX::Zero(3);
     
@@ -182,12 +187,13 @@ MAST::BuildStructural1DElem::init(bool if_link_offset_to_th,
     vel(0)  = 1.;
     
     // create the boundary condition
-    _p_theory       = new MAST::PistonTheoryBoundaryCondition(order,
-                                                              mach,
-                                                              a_inf,
-                                                              gamma,
-                                                              rho,
+    _p_theory       = new MAST::PistonTheoryBoundaryCondition(3,     // order
                                                               vel);
+    _p_theory->add(*_velocity_f);
+    _p_theory->add(*_mach_f);
+    _p_theory->add(*_rho_air_f);
+    _p_theory->add(*_gamma_air_f);
+    
     _thermal_load   = new MAST::BoundaryConditionBase(MAST::TEMPERATURE);
     _thermal_load->add(*_temp_f);
     _thermal_load->add(*_ref_temp_f);
@@ -216,6 +222,12 @@ MAST::BuildStructural1DElem::~BuildStructural1DElem() {
     delete _temp_f;
     delete _ref_temp_f;
     delete _alpha_f;
+    delete _velocity_f;
+    delete _mach_f;
+    delete _rho_air_f;
+    delete _gamma_air_f;
+    delete _dwdx_f;
+    delete _dwdt_f;
     
     delete _thy;
     delete _thz;
@@ -226,6 +238,12 @@ MAST::BuildStructural1DElem::~BuildStructural1DElem() {
     delete _zero;
     delete _temp;
     delete _alpha;
+    delete _velocity;
+    delete _mach;
+    delete _rho_air;
+    delete _gamma_air;
+    delete _dwdx;
+    delete _dwdt;
     
 
     delete _eq_sys;

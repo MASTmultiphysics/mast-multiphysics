@@ -51,6 +51,7 @@ namespace MAST {
     class BoundaryConditionBase;
     class NonlinearSystem;
     class TimeDomainFlutterSolver;
+    class TimeDomainFlutterRootBase;
     class PistonTheoryBoundaryCondition;
     
     
@@ -73,16 +74,16 @@ namespace MAST {
 
         
         /*!
-         *  solves the system and returns the final solution
+         *  solves the system and returns the flutter velocity
          */
-        void solve(bool if_write_output = false,
-                   std::vector<Real>* eig = NULL);
+        Real solve(bool if_write_output = false);
         
         
         /*!
-         *  solves the sensitivity of system and returns the final solution
+         *  solves the sensitivity of system and returns the sensitiivty of
+         *  flutter speed
          */
-        void sensitivity_solve(MAST::Parameter& p, std::vector<Real>& eig);
+        Real sensitivity_solve(MAST::Parameter& p);
         
         
         // create the mesh
@@ -108,7 +109,11 @@ namespace MAST {
         *_rho,
         *_E,
         *_nu,
-        *_zero;
+        *_zero,
+        *_velocity,
+        *_mach,
+        *_rho_air,
+        *_gamma_air;
         
         MAST::ConstantFieldFunction
         *_thy_f,
@@ -117,7 +122,11 @@ namespace MAST {
         *_E_f,
         *_nu_f,
         *_hyoff_f,
-        *_hzoff_f;
+        *_hzoff_f,
+        *_velocity_f,
+        *_mach_f,
+        *_rho_air_f,
+        *_gamma_air_f;
         
         /*!
          *   piston theory boundary condition for the whole domain
@@ -128,6 +137,11 @@ namespace MAST {
          *   piston theory boundary condition for the whole domain
          */
         MAST::TimeDomainFlutterSolver*           _flutter_solver;
+        
+        /*!
+         *   flutter root from the analysis
+         */
+        MAST::TimeDomainFlutterRootBase*         _flutter_root;
         
         // create the material property card
         MAST::IsotropicMaterialPropertyCard*     _m_card;

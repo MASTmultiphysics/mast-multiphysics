@@ -96,8 +96,8 @@ namespace MAST {
                                 const Real lambda2,
                                 libMesh::NumericVector<Real>& x1,
                                 libMesh::NumericVector<Real>& x2);
-        
 
+        
         /*!
          *   calculates the critical load factor based on the eigensolution
          */
@@ -190,6 +190,12 @@ namespace MAST {
          *   load factors.
          */
         libMesh::NumericVector<Real> *_sol1, *_sol2;
+        
+        
+        /*!
+         *   the equilibrium solution sensitivity
+         */
+        libMesh::NumericVector<Real> *_sol1_sens, *_sol2_sens;
     };
     
 }

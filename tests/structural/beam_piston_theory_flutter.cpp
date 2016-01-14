@@ -23,7 +23,7 @@
 
 
 // MAST includes
-#include "examples/structural/beam_buckling_prestress/beam_column_buckling.h"
+#include "examples/structural/beam_piston_theory_flutter/beam_piston_theory_flutter.h"
 #include "tests/base/test_comparisons.h"
 #include "elasticity/structural_system_initialization.h"
 #include "elasticity/structural_discipline.h"
@@ -37,10 +37,11 @@
 #include "base/nonlinear_system.h"
 
 
-BOOST_FIXTURE_TEST_SUITE  (Structural1DBeamBucklingAnalysis,
-                           MAST::BeamColumnBucklingAnalysis)
+BOOST_FIXTURE_TEST_SUITE  (Structural1DBeamPistonTheoryFlutterAnalysis,
+                           MAST::BeamPistonTheoryFlutterAnalysis)
 
-BOOST_AUTO_TEST_CASE   (BeamBucklingSolution) {
+/*
+BOOST_AUTO_TEST_CASE   (BeamPistonTheoryFlutterSolution) {
     
     
     const Real
@@ -59,7 +60,7 @@ BOOST_AUTO_TEST_CASE   (BeamBucklingSolution) {
     th_z        = (*_thz)(),
     Izz         = pow(th_z,1)*pow(th_y,3)/12.,
     A           = th_z*th_y,
-    sigma       = (*_stress)(),
+    rho         = (*_rho)(),
     Eval        = (*_E)(),
     pi          = acos(-1.),
     analytical  = 0.;
@@ -67,8 +68,7 @@ BOOST_AUTO_TEST_CASE   (BeamBucklingSolution) {
     
     // analytical solution to the natural frequency of simply supported problem
     // is
-    //   lambda = omega^2 = (n pi/L)^2 EI/(-sigma A),
-    // where sigma is compressive
+    //   lambda = omega^2 = (n pi/L)^4 EI/(rho A)
     //
     unsigned int
     nconv = std::min(_sys->get_n_converged_eigenvalues(),
@@ -76,40 +76,32 @@ BOOST_AUTO_TEST_CASE   (BeamBucklingSolution) {
     
     for (unsigned int i=0; i<nconv; i++) {
         
-        analytical   = Eval*Izz/(-sigma*A) * pow((i+1)*pi/_length, 2);
+        analytical   = Eval*Izz/(rho*A) * pow((i+1)*pi/_length, 4);
         
         // compare the eigenvalues
         BOOST_CHECK(MAST::compare_value(analytical, eig[i], tol));
     }
 }
+*/
 
 
-
-BOOST_AUTO_TEST_CASE    (BeamBucklingSolutionSensitivity) {
+BOOST_AUTO_TEST_CASE    (BeamPistonTheoryFlutterSolutionSensitivity) {
     
     const Real
     delta    = 1.e-5,
     tol      = 1.e-3;
     
+    Real
+    V0       = 0.,
+    dV       = 0.,
+    dV_fd    = 0.;
+    
+
     std::vector<Real>
     eig_vec,
     deig_vec;
     
-    this->solve(false, &eig_vec);
-    
-    unsigned int
-    nconv = std::min(_sys->get_n_converged_eigenvalues(),
-                     _sys->get_n_requested_eigenvalues());
-    
-    
-    // verify the sensitivity solution of this system
-    RealVectorX
-    eig     = RealVectorX::Zero(nconv),
-    deig    = RealVectorX::Zero(nconv),
-    deig_fd = RealVectorX::Zero(nconv);
-    
-    for (unsigned int i=0; i<nconv; i++) eig(i) = eig_vec[i];
-    
+    V0       = this->solve(false);
     
     // now iterate over all the parameters and calculate the analytical
     // sensitivity and compare with the numerical sensitivity
@@ -129,10 +121,8 @@ BOOST_AUTO_TEST_CASE    (BeamBucklingSolutionSensitivity) {
         // calculate the analytical sensitivity
         // analysis is required at the baseline before sensitivity solution
         // and the solution has changed after the previous perturbed solution
-        this->solve(false, &eig_vec);
-        std::vector<Real> deig_vec(nconv);
-        this->sensitivity_solve(f, deig_vec);
-        for (unsigned int i=0; i<nconv; i++) deig(i) = deig_vec[i];
+        this->solve(false);
+        dV = this->sensitivity_solve(f);
         
         // now calculate the finite difference sensitivity
         
@@ -142,18 +132,17 @@ BOOST_AUTO_TEST_CASE    (BeamBucklingSolutionSensitivity) {
         f()         += dp;
         
         // solve at the perturbed parameter value
-        this->solve(false, &eig_vec);
-        for (unsigned int i=0; i<nconv; i++) deig_fd(i) = eig_vec[i];
-        
-        deig_fd -= eig;
-        deig_fd /= dp;
+        dV_fd        = this->solve(false);
+
+        dV_fd       -= V0;
+        dV_fd       /= dp;
         
         // reset the parameter value
         f()        = p0;
         
         // now compare the eigenvalue sensitivity
-        BOOST_TEST_MESSAGE("  ** dlambda/dp (total) wrt : " << f.name() << " **");
-        BOOST_CHECK(MAST::compare_vector( deig_fd,  deig, tol));
+        BOOST_TEST_MESSAGE("  ** dV_F/dp (total) wrt : " << f.name() << " **");
+        BOOST_CHECK(MAST::compare_value( dV_fd,  dV, tol));
     }
 }
 
