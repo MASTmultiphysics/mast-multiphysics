@@ -66,20 +66,39 @@ namespace MAST {
         
         
         /*!
+         *    attaches the assembly object to this solver.
+         */
+        void attach_assembly(MAST::StructuralFluidInteractionAssembly&   assembly);
+        
+        
+        /*!
+         *   clears the solution and other data from this solver
+         */
+        void clear();
+
+        
+        /*!
+         *   clears the assembly object
+         */
+        virtual void clear_assembly_object();
+
+        
+        /*!
+         *   clears the solutions stored from a previous analysis.
+         */
+        virtual void clear_solutions();
+
+        
+        /*!
          *    initializes the data structres for a flutter solution.
          */
         void initialize(MAST::Parameter&                            velocity_param,
-                        MAST::StructuralFluidInteractionAssembly&   assembly,
                         Real                                        V_lower,
                         Real                                        V_upper,
                         unsigned int                                n_V_divs,
                         std::vector<libMesh::NumericVector<Real>*>& basis);
 
 
-        /*!
-         *   clears the solutions stored from a previous analysis.
-         */
-        virtual void clear_solutions();
         
         /*!
          *    finds the number of critical points already identified in the
@@ -129,11 +148,20 @@ namespace MAST {
         
         /*!
          *   Calculate the sensitivity of the flutter root with respect to the
-         *   \par i^th parameter in params
+         *   \par i^th parameter in params. If the base solution has a sensitivity
+         *   with respect to the parameter, then that should be provided 
+         *   through \par dXdp. The sensitivity solution also requires
+         *   sensitivity of the eigenvalue wrt velocity, which is 
+         *   defined as a parameter. Hence, the sensitivity of the 
+         *   static solution is also required wrt the velocity parameter. 
+         *   If \par dXdV is \par NULL, then zero value is assumed. 
          */
-        virtual void calculate_sensitivity(MAST::TimeDomainFlutterRootBase& root,
-                                           const libMesh::ParameterVector& params,
-                                           const unsigned int i);
+        virtual void
+        calculate_sensitivity(MAST::TimeDomainFlutterRootBase& root,
+                              const libMesh::ParameterVector& params,
+                              const unsigned int i,
+                              libMesh::NumericVector<Real>* dXdp = NULL,
+                              libMesh::NumericVector<Real>* dXdV = NULL);
         
         
         /*!
@@ -198,6 +226,7 @@ namespace MAST {
         void
         _initialize_matrix_sensitivity_for_param(const libMesh::ParameterVector& params,
                                                  const unsigned int i,
+                                                 const libMesh::NumericVector<Real>& dXdp,
                                                  Real U_inf,
                                                  RealMatrixX& A,
                                                  RealMatrixX& B);

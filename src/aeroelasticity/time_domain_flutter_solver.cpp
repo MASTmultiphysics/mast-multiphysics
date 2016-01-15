@@ -30,7 +30,12 @@
 #include "base/parameter.h"
 
 
-MAST::TimeDomainFlutterSolver::TimeDomainFlutterSolver() {
+MAST::TimeDomainFlutterSolver::TimeDomainFlutterSolver():
+_velocity_param(NULL),
+_assembly(NULL),
+_basis_vectors(NULL),
+_V_range(),
+_n_V_divs(0.) {
     
 }
 
@@ -38,7 +43,41 @@ MAST::TimeDomainFlutterSolver::TimeDomainFlutterSolver() {
 
 MAST::TimeDomainFlutterSolver::~TimeDomainFlutterSolver() {
     
+    this->clear();
+}
+
+
+
+
+void
+MAST::TimeDomainFlutterSolver::
+attach_assembly(MAST::StructuralFluidInteractionAssembly&   assembly) {
+    
+    // make sure that the assembly is not already set
+    libmesh_assert(!_assembly);
+    
+    _assembly = &assembly;
+}
+
+
+
+void
+MAST::TimeDomainFlutterSolver::clear_assembly_object() {
+    
+    _assembly = NULL;
+}
+
+
+
+void
+MAST::TimeDomainFlutterSolver::clear() {
+    
     this->clear_solutions();
+    _velocity_param   = NULL;
+    _assembly         = NULL;
+    _basis_vectors    = NULL;
+    _V_range          = std::pair<Real, Real>(0.,0.);
+    _n_V_divs         = 0;
 }
 
 
@@ -47,7 +86,6 @@ MAST::TimeDomainFlutterSolver::~TimeDomainFlutterSolver() {
 void
 MAST::TimeDomainFlutterSolver::
 initialize(MAST::Parameter&                            velocity_param,
-           MAST::StructuralFluidInteractionAssembly&   assembly,
            Real                                         V_lower,
            Real                                         V_upper,
            unsigned int                                 n_V_divs,
@@ -55,7 +93,6 @@ initialize(MAST::Parameter&                            velocity_param,
 
     
     _velocity_param = &velocity_param;
-    _assembly       = &assembly;
     _basis_vectors  = &basis;
     _V_range.first  = V_lower;
     _V_range.second = V_upper;
@@ -548,6 +585,7 @@ void
 MAST::TimeDomainFlutterSolver::
 _initialize_matrix_sensitivity_for_param(const libMesh::ParameterVector& params,
                                          const unsigned int i,
+                                         const libMesh::NumericVector<Real>& dXdp,
                                          Real U_inf,
                                          RealMatrixX& A,
                                          RealMatrixX& B) {
@@ -589,9 +627,13 @@ _initialize_matrix_sensitivity_for_param(const libMesh::ParameterVector& params,
     // set the velocity value in the parameter that was provided
     (*_velocity_param) = U_inf;
     
-    _assembly->assemble_reduced_order_quantity(*_assembly->system().solution,
-                                               *_basis_vectors,
-                                               qty_map);
+    _assembly->assemble_reduced_order_quantity_sensitivity
+    (params,
+     i,
+     *_assembly->system().solution,
+     dXdp,
+     *_basis_vectors,
+     qty_map);
     
     
     // put the matrices back in the system matrices
@@ -786,7 +828,9 @@ void
 MAST::TimeDomainFlutterSolver::
 calculate_sensitivity(MAST::TimeDomainFlutterRootBase& root,
                       const libMesh::ParameterVector& params,
-                      const unsigned int i) {
+                      const unsigned int i,
+                      libMesh::NumericVector<Real>* dXdp,
+                      libMesh::NumericVector<Real>* dXdV) {
     
     
     
@@ -813,12 +857,25 @@ calculate_sensitivity(MAST::TimeDomainFlutterRootBase& root,
     // initialize the baseline matrices
     _initialize_matrices(root.V, mat_A, mat_B);
     
+    // if the sensitivity of the solution was provided, then use that.
+    // otherwise pass a zero vector
+    libMesh::NumericVector<Real>* sol_sens = dXdp;
+    std::auto_ptr<libMesh::NumericVector<Real> > zero_sol_sens;
+    if (!dXdp) {
+        zero_sol_sens.reset(_assembly->system().solution->zero_clone().release());
+        sol_sens = zero_sol_sens.get();
+    }
+    else
+        sol_sens = dXdp;
+    
     // calculate the eigenproblem sensitivity
     _initialize_matrix_sensitivity_for_param(params,
                                              i,
+                                             *sol_sens,
                                              root.V,
                                              mat_A_sens,
                                              mat_B_sens);
+    
     
     // the eigenproblem is     y^T A x - lambda y^T B x = 0
     // therefore, the denominator is obtained from the inner product of
@@ -839,9 +896,19 @@ calculate_sensitivity(MAST::TimeDomainFlutterRootBase& root,
     libMesh::ParameterVector param_V;
     param_V.resize(1);
     param_V[0]  =  _velocity_param->ptr();
+
     
-    _initialize_matrix_sensitivity_for_param(params,
-                                             i,
+    // identify the sensitivity of solution to be used based on the
+    // function arguments
+    if (!dXdV) {
+        sol_sens = zero_sol_sens.get();
+    }
+    else
+        sol_sens = dXdV;
+    
+    _initialize_matrix_sensitivity_for_param(param_V,
+                                             0,
+                                             *sol_sens,
                                              root.V,
                                              mat_A_sens,
                                              mat_B_sens);

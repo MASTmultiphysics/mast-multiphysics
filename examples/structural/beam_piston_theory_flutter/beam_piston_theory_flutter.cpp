@@ -48,7 +48,8 @@
 extern libMesh::LibMeshInit* __init;
 
 
-MAST::BeamPistonTheoryFlutterAnalysis::BeamPistonTheoryFlutterAnalysis() {
+MAST::BeamPistonTheoryFlutterAnalysis::BeamPistonTheoryFlutterAnalysis():
+_flutter_root(NULL) {
     
     
     // create the mesh
@@ -279,6 +280,10 @@ MAST::BeamPistonTheoryFlutterAnalysis::get_parameter(const std::string &nm) {
 Real
 MAST::BeamPistonTheoryFlutterAnalysis::solve(bool if_write_output) {
     
+    // clear out the data structures of the flutter solver before
+    // this solution
+    _flutter_root = NULL;
+    _flutter_solver->clear();
     
     // set the velocity of piston theory to zero for modal analysis
     (*_velocity) = 0.;
@@ -346,9 +351,10 @@ MAST::BeamPistonTheoryFlutterAnalysis::solve(bool if_write_output) {
     
     // now initialize the flutter solver
     MAST::StructuralFluidInteractionAssembly fsi_assembly;
-    fsi_assembly.attach_discipline_and_system(*_discipline, *_structural_sys);
+    fsi_assembly.attach_discipline_and_system(*_discipline,
+                                              *_structural_sys);
+    _flutter_solver->attach_assembly(fsi_assembly);
     _flutter_solver->initialize(*_velocity,
-                                fsi_assembly,
                                 1.e3,        // lower V
                                 1200.,         // upper V
                                 10,           // number of divisions
@@ -360,7 +366,8 @@ MAST::BeamPistonTheoryFlutterAnalysis::solve(bool if_write_output) {
     sol = _flutter_solver->find_critical_root(1.e-3, 10);
     _flutter_solver->print_sorted_roots();
     fsi_assembly.clear_discipline_and_system();
-    
+    _flutter_solver->clear_assembly_object();
+
     // make sure solution was found
     libmesh_assert(sol.first);
     _flutter_root = sol.second;
@@ -376,6 +383,9 @@ Real
 MAST::BeamPistonTheoryFlutterAnalysis::
 sensitivity_solve(MAST::Parameter& p) {
     
+    //Make sure that  a solution is available for sensitivity
+    libmesh_assert(_flutter_root);
+    
     // flutter solver will need velocity to be defined as a parameter for
     // sensitivity analysis
     _discipline->add_parameter(*_velocity);
@@ -385,15 +395,14 @@ sensitivity_solve(MAST::Parameter& p) {
     params.resize(1);
     params[0]  =  p.ptr();
     
-    //Make sure that  a solution is available for sensitivity
-    
-    
     // initialize the flutter solver for sensitivity.
     MAST::StructuralFluidInteractionAssembly fsi_assembly;
     fsi_assembly.attach_discipline_and_system(*_discipline, *_structural_sys);
+    _flutter_solver->attach_assembly(fsi_assembly);
     _flutter_solver->calculate_sensitivity(*_flutter_root, params, 0);
     fsi_assembly.clear_discipline_and_system();
-
+    _flutter_solver->clear_assembly_object();
+    
     _discipline->remove_parameter(p);
     _discipline->remove_parameter(*_velocity);
     return _flutter_root->V_sens;

@@ -96,7 +96,7 @@ namespace MAST {
          *   \par X wrt the parameter identified as \par parameters[i]
          */
         virtual void
-        assemble_reduced_order_quantity
+        assemble_reduced_order_quantity_sensitivity
         (const libMesh::ParameterVector& parameters,
          const unsigned int i,
          const libMesh::NumericVector<Real>& X,

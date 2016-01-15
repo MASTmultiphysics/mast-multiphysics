@@ -35,7 +35,7 @@ namespace MAST {
     // for calculation
     class PistonTheoryPressure:
     public MAST::FieldFunction<Real> {
-    
+        
     public:
         
         PistonTheoryPressure(unsigned int order,
@@ -50,7 +50,7 @@ namespace MAST {
         
         PistonTheoryPressure(const MAST::PistonTheoryPressure &f);
         
-
+        
         
         /*!
          *   @returns a clone of the function
@@ -59,6 +59,121 @@ namespace MAST {
         
         
         virtual ~PistonTheoryPressure();
+        
+        
+        virtual void operator() (const libMesh::Point& p,
+                                 const Real t,
+                                 Real& m) const;
+        
+        virtual void derivative (const MAST::DerivativeType d,
+                                 const MAST::FunctionBase& f,
+                                 const libMesh::Point& p,
+                                 const Real t,
+                                 Real& m) const;
+        
+    protected:
+        
+        const unsigned int  _order;
+        
+        MAST::FieldFunction<Real>
+        *_V_inf,
+        *_M_inf,
+        *_rho_inf,
+        *_gamma,
+        *_dwdx,
+        *_dwdt;
+    };
+    
+    
+    
+    
+    
+    // defines the function class the evaluates the pressure for calculation
+    // of surface loads. The deflection and velocity data is provided
+    // for calculation
+    class PistonTheoryPressureXDerivative:
+    public MAST::FieldFunction<Real> {
+        
+    public:
+        
+        PistonTheoryPressureXDerivative(unsigned int order,
+                                        MAST::FieldFunction<Real> *V,
+                                        MAST::FieldFunction<Real> *M,
+                                        MAST::FieldFunction<Real> *rho,
+                                        MAST::FieldFunction<Real> *gamma,
+                                        MAST::FieldFunction<Real> *dwdx,
+                                        MAST::FieldFunction<Real> *dwdt);
+        
+        
+        
+        PistonTheoryPressureXDerivative(const MAST::PistonTheoryPressureXDerivative &f);
+        
+        
+        
+        /*!
+         *   @returns a clone of the function
+         */
+        virtual std::auto_ptr<MAST::FieldFunction<Real> > clone() const;
+        
+        
+        virtual ~PistonTheoryPressureXDerivative();
+        
+        
+        virtual void operator() (const libMesh::Point& p,
+                                 const Real t,
+                                 Real& m) const;
+        
+        virtual void derivative (const MAST::DerivativeType d,
+                                 const MAST::FunctionBase& f,
+                                 const libMesh::Point& p,
+                                 const Real t,
+                                 Real& m) const;
+        
+    protected:
+        
+        const unsigned int  _order;
+        
+        MAST::FieldFunction<Real>
+        *_V_inf,
+        *_M_inf,
+        *_rho_inf,
+        *_gamma,
+        *_dwdx,
+        *_dwdt;
+    };
+    
+    
+    
+    
+    // defines the function class the evaluates the pressure for calculation
+    // of surface loads. The deflection and velocity data is provided
+    // for calculation
+    class PistonTheoryPressureXdotDerivative:
+    public MAST::FieldFunction<Real> {
+        
+    public:
+        
+        PistonTheoryPressureXdotDerivative(unsigned int order,
+                                           MAST::FieldFunction<Real> *V,
+                                           MAST::FieldFunction<Real> *M,
+                                           MAST::FieldFunction<Real> *rho,
+                                           MAST::FieldFunction<Real> *gamma,
+                                           MAST::FieldFunction<Real> *dwdx,
+                                           MAST::FieldFunction<Real> *dwdt);
+        
+        
+        
+        PistonTheoryPressureXdotDerivative(const MAST::PistonTheoryPressureXdotDerivative &f);
+        
+        
+        
+        /*!
+         *   @returns a clone of the function
+         */
+        virtual std::auto_ptr<MAST::FieldFunction<Real> > clone() const;
+        
+        
+        virtual ~PistonTheoryPressureXdotDerivative();
         
         
         virtual void operator() (const libMesh::Point& p,
@@ -95,7 +210,7 @@ namespace MAST {
          *  Constructor for the Piston Theory boundary condition
          *  object. The arguments needed for initialization are
          *  \p order: order of piston theory, \p mach: mach number
-         *  \p a_inf: ambient speed of sound, \p gamma: ratio of 
+         *  \p a_inf: ambient speed of sound, \p gamma: ratio of
          *  specific heats at constant pressure and constant volume,
          *  \p rho: ambient density for calculation of dynamic pressure,
          *  \p vel_vec: velocity unit vector
@@ -105,7 +220,7 @@ namespace MAST {
         
         
         virtual ~PistonTheoryBoundaryCondition();
-
+        
         
         /*!
          *  @returns the order of piston theory to be used
@@ -121,14 +236,32 @@ namespace MAST {
         /*!
          *   @returns a smart-pointer to the pressure function
          */
-        std::auto_ptr<MAST::PistonTheoryPressure>
+        std::auto_ptr<MAST::FieldFunction<Real> >
         get_pressure_function(MAST::FieldFunction<Real>& dwdx,
                               MAST::FieldFunction<Real>& dwdt) const;
-        
 
+        
+        
+        /*!
+         *   @returns a smart-pointer to the pressure function
+         */
+        std::auto_ptr<MAST::FieldFunction<Real> >
+        get_dpdx_function(MAST::FieldFunction<Real>& dwdx,
+                          MAST::FieldFunction<Real>& dwdt) const;
+
+        
+        
+        /*!
+         *   @returns a smart-pointer to the pressure function
+         */
+        std::auto_ptr<MAST::FieldFunction<Real> >
+        get_dpdxdot_function(MAST::FieldFunction<Real>& dwdx,
+                             MAST::FieldFunction<Real>& dwdt) const;
+
+        
     protected:
         
-
+        
         /*!
          *   Order of the boundary condition
          */
@@ -139,7 +272,7 @@ namespace MAST {
          *   Ambient flow velocity vector
          */
         RealVectorX _vel_vec;
-
+        
     };
 }
 

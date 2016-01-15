@@ -25,6 +25,7 @@
 
 MAST::ElementBase::ElementBase(MAST::SystemInitialization& sys,
                                const libMesh::Elem& elem):
+sensitivity_param(NULL),
 _system(sys),
 _elem(elem),
 _active_sol_function(NULL),

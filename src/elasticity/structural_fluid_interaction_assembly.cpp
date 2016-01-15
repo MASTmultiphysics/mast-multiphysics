@@ -273,7 +273,7 @@ assemble_reduced_order_quantity
 
 void
 MAST::StructuralFluidInteractionAssembly::
-assemble_reduced_order_quantity
+assemble_reduced_order_quantity_sensitivity
 (const libMesh::ParameterVector& parameters,
  const unsigned int i,
  const libMesh::NumericVector<Real>& X,
@@ -346,6 +346,7 @@ assemble_reduced_order_quantity
                 basis_mat(i,j) = (*localized_basis[j])(dof_indices[i]);
         }
         
+        physics_elem->sensitivity_param  = _discipline->get_parameter(&(parameters[i].get()));
         physics_elem->set_solution(sol);
         physics_elem->set_solution(dsol, true);
         physics_elem->set_velocity(vec);     // set to zero value
@@ -364,7 +365,7 @@ assemble_reduced_order_quantity
             
             _qty_type = it->first;
             _elem_sensitivity_calculations(*physics_elem, true, vec, mat);
-            
+
             DenseRealMatrix m;
             MAST::copy(m, mat);
             nonlin_sys.get_dof_map().constrain_element_matrix(m, dof_indices);

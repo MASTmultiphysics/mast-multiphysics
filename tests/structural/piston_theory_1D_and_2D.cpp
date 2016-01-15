@@ -153,28 +153,14 @@ check_piston_theory_jacobian (ValType& v) {
 BOOST_FIXTURE_TEST_SUITE  (Structural1DJacobianEvaluation, MAST::BuildStructural1DElem)
 
 
-BOOST_AUTO_TEST_CASE   (PistonTheoryPressure) {
+void
+check_value_sensitivity(MAST::FieldFunction<Real>& func,
+                        std::vector<MAST::Parameter*>& params) {
     
     const Real
     delta    = 1.e-5,
     tol      = 1.e-3;
-
-    this->init(false, false);
-
-    // calculate the surface pressure and its sensitivity with respect to the
-    // relevant parameters
-    std::auto_ptr<MAST::PistonTheoryPressure>
-    pressure(_p_theory->get_pressure_function(*_dwdx_f, *_dwdt_f).release());
     
-    // now get sensitivity wrt all parameters
-    std::vector<MAST::Parameter*> params(6);
-    params[0] = _velocity;
-    params[1] = _mach;
-    params[2] = _rho_air;
-    params[3] = _gamma_air;
-    params[4] = _dwdx;
-    params[5] = _dwdt;
-
     // calculate the base pressure
     Real
     p0    = 0.,
@@ -185,19 +171,19 @@ BOOST_AUTO_TEST_CASE   (PistonTheoryPressure) {
     
     libMesh::Point pt;
     
-    (*pressure)(pt, 0., p0);
+    func(pt, 0., p0);
     
     // now calculate sensitivity wrt the parameters
     for (unsigned int i=0; i<params.size(); i++) {
         
         MAST::Parameter& f = *params[i];
-
+        
         // calculate the partial derivative
-        pressure->derivative(MAST::PARTIAL_DERIVATIVE,
-                             *params[i],
-                             pt,
-                             0.,
-                             dp);
+        func.derivative(MAST::PARTIAL_DERIVATIVE,
+                        *params[i],
+                        pt,
+                        0.,
+                        dp);
         
         // now perturb the parameter and calculate the finite difference
         // sensitivity of pressure.
@@ -206,17 +192,82 @@ BOOST_AUTO_TEST_CASE   (PistonTheoryPressure) {
         f()         += dv;
         
         
-        (*pressure)(pt, 0., dp_fd);
+        func(pt, 0., dp_fd);
         
         dp_fd -= p0;
         dp_fd /= dv;
-
+        
         // reset the parameter value
         f()        = v0;
-   
-        BOOST_TEST_MESSAGE("  ** dpress/dp (total) wrt : " << f.name() << " **");
+        
+        BOOST_TEST_MESSAGE("  ** dfunc/dp (total) wrt : " << f.name() << " **");
         BOOST_CHECK(MAST::compare_value( dp_fd,  dp, tol));
     }
+}
+
+
+BOOST_AUTO_TEST_CASE   (PistonTheoryPressure) {
+    
+    const Real
+    tol      = 1.e-2;
+
+    this->init(false, false);
+
+    // calculate the surface pressure and its sensitivity with respect to the
+    // relevant parameters
+    std::auto_ptr<MAST::FieldFunction<Real> >
+    pressure       (_p_theory->get_pressure_function(*_dwdx_f, *_dwdt_f).release()),
+    dpressure_dx   (_p_theory->get_dpdx_function    (*_dwdx_f, *_dwdt_f).release()),
+    dpressure_dxdot(_p_theory->get_dpdxdot_function (*_dwdx_f, *_dwdt_f).release());
+
+    
+    // first make sure that the sensitivity from pressure wrt x and xdot
+    // is the same as analysis from the other two respective functions
+    Real
+    dpdx1     = 0.,
+    dpdx2     = 0.,
+    dpdxdot1  = 0.,
+    dpdxdot2  = 0.;
+    
+    libMesh::Point pt;
+    
+    // first the sensitivity results
+    pressure->derivative(MAST::PARTIAL_DERIVATIVE, *_dwdx, pt, 0., dpdx1);
+    pressure->derivative(MAST::PARTIAL_DERIVATIVE, *_dwdt, pt, 0., dpdxdot1);
+
+    // next, the analysis from the derivative functions
+    (*dpressure_dx)   (pt, 0., dpdx2);
+    (*dpressure_dxdot)(pt, 0., dpdxdot2);
+    
+    BOOST_TEST_MESSAGE("  ***** dpress/dx (total)  **");
+    BOOST_CHECK(MAST::compare_value( dpdx1,  dpdx2, tol));
+
+    BOOST_TEST_MESSAGE("  ***** dpress/dxdot (total)  **");
+    BOOST_CHECK(MAST::compare_value( dpdxdot1,  dpdxdot2, tol));
+
+    
+    // now get sensitivity wrt all parameters
+    std::vector<MAST::Parameter*> params(4);
+    params[0] = _velocity;
+    params[1] = _mach;
+    params[2] = _rho_air;
+    params[3] = _gamma_air;
+
+    // sensitivity of these two functions is only wrt 4 params
+    BOOST_TEST_MESSAGE("  ***** dpress_dx/dp (total)  **");
+    check_value_sensitivity(*dpressure_dx,    params);
+    
+    BOOST_TEST_MESSAGE("  ***** dpress_dxdot/dp (total)  **");
+    check_value_sensitivity(*dpressure_dxdot, params);
+    
+
+    // now add the two parameters to check the sensitivity of the pressure
+    params.push_back(_dwdx);
+    params.push_back(_dwdt);
+
+    BOOST_TEST_MESSAGE("  ***** dpress/dp (total)  **");
+    check_value_sensitivity(*pressure,        params);
+    
 }
 
 
