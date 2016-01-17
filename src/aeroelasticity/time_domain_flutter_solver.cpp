@@ -735,8 +735,8 @@ MAST::TimeDomainFlutterSolver::_identify_crossover_points() {
              (fabs(sol_it->second->ref_val()) > tol ||
               fabs(sol_itp1->second->ref_val()) > tol) &&
              // both |g| < max_g
-             (fabs(sol_it->second->get_root(i).g) < max_allowable_g &&
-              fabs(sol_itp1->second->get_root(i).g) < max_allowable_g) &&
+             //(fabs(sol_it->second->get_root(i).g) < max_allowable_g &&
+             // fabs(sol_itp1->second->get_root(i).g) < max_allowable_g) &&
              // if the mode has been identified to be trailing along g =0,
              // neglect it
              !modes_to_neglect[i]);
@@ -791,8 +791,8 @@ MAST::TimeDomainFlutterSolver::_identify_crossover_points() {
          (fabs(sol_it->second->ref_val()) > tol ||
           fabs(sol_itp1->second->ref_val()) > tol) &&
          // both |g| < max_g
-         (fabs(sol_it->second->get_root(i).g) < max_allowable_g &&
-          fabs(sol_itp1->second->get_root(i).g) < max_allowable_g) &&
+         //(fabs(sol_it->second->get_root(i).g) < max_allowable_g &&
+         // fabs(sol_itp1->second->get_root(i).g) < max_allowable_g) &&
          // if the mode has been identified to be trailing along g =0,
          // neglect it
          !modes_to_neglect[i]);
@@ -800,8 +800,7 @@ MAST::TimeDomainFlutterSolver::_identify_crossover_points() {
         Real g_val = sol_it->second->get_root(i).g;
         
         if (if_process &&
-            g_val > 0 &&
-            g_val < max_allowable_g) {
+            g_val > 0 /*&& g_val < max_allowable_g*/) {
             
             MAST::FlutterRootCrossoverBase* cross =
             new MAST::FlutterRootCrossoverBase;

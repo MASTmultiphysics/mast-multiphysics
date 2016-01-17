@@ -39,6 +39,7 @@
 #include "examples/structural/plate_optimization_single_stress_functional/plate_optimization_single_functional.h"
 #include "examples/structural/plate_optimization_section_offset/plate_section_offset_optimization.h"
 #include "examples/structural/plate_optimization_thermal_stress/plate_thermal_stress_optimization.h"
+#include "examples/structural/plate_piston_theory_flutter/plate_piston_theory_flutter.h"
 #include "examples/structural/stiffened_plate_optimization_thermal_stress/stiffened_plate_thermal_stress_optimization.h"
 #include "examples/structural/topology_optim_2D/topology_optim_2D.h"
 #include "examples/structural/beam_piston_theory_flutter/beam_piston_theory_flutter.h"
@@ -265,6 +266,8 @@ int main(int argc, char* const argv[]) {
     else if (case_name == "plate_bending_thermal_stress_optimization")
         plate_optimization<MAST::PlateBendingThermalStressSizingOptimization>
         (case_name, verify_grads, if_nonlin);
+    else if (case_name == "plate_piston_theory_flutter_analysis")
+        plate_analysis<MAST::PlatePistonTheoryFlutterAnalysis>(case_name, false, with_sens, par_name);
     else if (case_name == "stiffened_plate_bending_thermal_stress_optimization")
         plate_optimization<MAST::StiffenedPlateBendingThermalStressSizingOptimization>
         (case_name, verify_grads, if_nonlin);
@@ -301,6 +304,7 @@ int main(int argc, char* const argv[]) {
         << "  plate_bending_section_offset_optimization \n"
         << "  plate_bending_thermal_stress_optimization \n"
         << "  plate_modal_analysis\n"
+        << "  plate_piston_theory_flutter_analysis\n"
         << "  plate_prestress_buckling_analysis\n"
         << "  stiffened_plate_bending_thermal_stress_optimization \n"
         << "  topology_optimization_2D \n"

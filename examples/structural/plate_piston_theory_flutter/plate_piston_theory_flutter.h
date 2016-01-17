@@ -51,6 +51,9 @@ namespace MAST {
     class DirichletBoundaryCondition;
     class BoundaryConditionBase;
     class NonlinearSystem;
+    class TimeDomainFlutterSolver;
+    class TimeDomainFlutterRootBase;
+    class PistonTheoryBoundaryCondition;
     
     
     struct PlatePistonTheoryFlutterAnalysis {
@@ -79,16 +82,13 @@ namespace MAST {
         /*!
          *  solves the system and returns the final solution
          */
-        void
-        solve(bool if_write_output = false,
-              std::vector<Real>* eig = NULL);
+        Real solve(bool if_write_output = false);
         
         
         /*!
          *  solves the sensitivity of system and returns the final solution
          */
-        void
-        sensitivity_solve(MAST::Parameter& p, std::vector<Real>& eig);
+        Real sensitivity_solve(MAST::Parameter& p);
         
         
         bool _initialized;
@@ -119,7 +119,11 @@ namespace MAST {
         *_nu,
         *_rho,
         *_kappa,
-        *_zero;
+        *_zero,
+        *_velocity,
+        *_mach,
+        *_rho_air,
+        *_gamma_air;
         
         MAST::ConstantFieldFunction
         *_th_f,
@@ -127,7 +131,28 @@ namespace MAST {
         *_nu_f,
         *_rho_f,
         *_kappa_f,
-        *_hoff_f;
+        *_hoff_f,
+        *_velocity_f,
+        *_mach_f,
+        *_rho_air_f,
+        *_gamma_air_f;
+
+        
+        /*!
+         *   piston theory boundary condition for the whole domain
+         */
+        MAST::PistonTheoryBoundaryCondition*     _piston_bc;
+        
+        /*!
+         *   piston theory boundary condition for the whole domain
+         */
+        MAST::TimeDomainFlutterSolver*           _flutter_solver;
+        
+        /*!
+         *   flutter root from the analysis
+         */
+        MAST::TimeDomainFlutterRootBase*         _flutter_root;
+        
         
         // create the material property card
         MAST::IsotropicMaterialPropertyCard*     _m_card;
@@ -150,6 +175,9 @@ namespace MAST {
         
         // vector of parameters to evaluate sensitivity wrt
         std::vector<MAST::Parameter*> _params_for_sensitivity;
+
+        // vector of basis vectors from modal analysis
+        std::vector<libMesh::NumericVector<Real>*> _basis;
     };
 }
 
