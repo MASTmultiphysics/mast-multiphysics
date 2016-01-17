@@ -399,36 +399,37 @@ MAST::PlatePistonTheoryFlutterAnalysis::solve(bool if_write_output) {
     libmesh_assert(sol.first);
     _flutter_root = sol.second;
 
-    // now write the flutter mode to an output file.
-    // Flutter mode Y = sum_i (X_i * (xi_re + xi_im)_i)
-    // using the right eigenvector of the system.
-    // where i is the structural mode
-    //
-    // The time domain simulation assumes the temporal solution to be
-    // X(t) = (Y_re + i Y_im) exp(p t)
-    //      = (Y_re + i Y_im) exp(p_re t) * (cos(p_im t) + i sin(p_im t))
-    //      = exp(p_re t) (Z_re + i Z_im ),
-    // where Z_re = Y_re cos(p_im t) - Y_im sin(p_im t), and
-    //       Z_im = Y_re sin(p_im t) + Y_im cos(p_im t).
-    //
-    // What is written are the real and imaginary parts of Y, i.e. Y_re and Y_im
-    // using the right eigenvector of the system
-    
-    // first the real part
-    _sys->solution->zero();
-    for (unsigned int i=0; i<_basis.size(); i++)
-        _sys->solution->add(sol.second->eig_vec_right(i).real(), *_basis[i]);
-    libMesh::ExodusII_IO(*_mesh).write_equation_systems("flutter_mode_real.exo",
-                                                        *_eq_sys);
-    
-    
-    // next, the imaginary part
-    _sys->solution->zero();
-    for (unsigned int i=0; i<_basis.size(); i++)
-        _sys->solution->add(sol.second->eig_vec_right(i).imag(), *_basis[i]);
-    libMesh::ExodusII_IO(*_mesh).write_equation_systems("flutter_mode_imag.exo",
-                                                        *_eq_sys);
-    
+    if (if_write_output) {
+        // now write the flutter mode to an output file.
+        // Flutter mode Y = sum_i (X_i * (xi_re + xi_im)_i)
+        // using the right eigenvector of the system.
+        // where i is the structural mode
+        //
+        // The time domain simulation assumes the temporal solution to be
+        // X(t) = (Y_re + i Y_im) exp(p t)
+        //      = (Y_re + i Y_im) exp(p_re t) * (cos(p_im t) + i sin(p_im t))
+        //      = exp(p_re t) (Z_re + i Z_im ),
+        // where Z_re = Y_re cos(p_im t) - Y_im sin(p_im t), and
+        //       Z_im = Y_re sin(p_im t) + Y_im cos(p_im t).
+        //
+        // What is written are the real and imaginary parts of Y, i.e. Y_re and Y_im
+        // using the right eigenvector of the system
+        
+        // first the real part
+        _sys->solution->zero();
+        for (unsigned int i=0; i<_basis.size(); i++)
+            _sys->solution->add(sol.second->eig_vec_right(i).real(), *_basis[i]);
+        libMesh::ExodusII_IO(*_mesh).write_equation_systems("flutter_mode_real.exo",
+                                                            *_eq_sys);
+        
+        
+        // next, the imaginary part
+        _sys->solution->zero();
+        for (unsigned int i=0; i<_basis.size(); i++)
+            _sys->solution->add(sol.second->eig_vec_right(i).imag(), *_basis[i]);
+        libMesh::ExodusII_IO(*_mesh).write_equation_systems("flutter_mode_imag.exo",
+                                                            *_eq_sys);
+    }
     
     return _flutter_root->V;
 }
