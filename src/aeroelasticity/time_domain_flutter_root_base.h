@@ -58,7 +58,7 @@ namespace MAST {
         
         bool has_sensitivity_data;
         
-        Real V, g, omega, V_sens;
+        Real V, omega, V_sens;
         
         Complex root, root_sens;
         

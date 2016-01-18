@@ -37,6 +37,84 @@ MAST::FlutterSolutionBase::~FlutterSolutionBase() {
 
 
 
+
+unsigned int
+MAST::FlutterSolutionBase::n_unstable_roots_in_upper_complex_half () const {
+
+    unsigned int n=0;
+    
+    // iterate over all the roots and find the ones with g >= 0
+    std::vector<MAST::TimeDomainFlutterRootBase*>::const_iterator
+    it   = _roots.begin(),
+    end  = _roots.end();
+    
+    for ( ; it != end; it++) {
+        // only look at upper half of the complex domain
+        if ((**it).root.imag() >= 0. &&
+            (**it).root.real() >= 0.)
+            n++;
+    }
+    
+    return n;
+}
+
+
+
+
+
+MAST::TimeDomainFlutterRootBase*
+MAST::FlutterSolutionBase::get_critical_root() {
+    
+    // If there is an unstable root, then find one with the lowest velocity
+    // and send it back.
+    //
+    // Otherwise, find the root that is closest to the g=0 condition
+
+    MAST::TimeDomainFlutterRootBase
+    *unstable  = NULL,
+    *max_g     = NULL;
+    
+    // iterate over all the roots and find the ones with g >= 0
+    std::vector<MAST::TimeDomainFlutterRootBase*>::const_iterator
+    it   = _roots.begin(),
+    end  = _roots.end();
+    
+    for ( ; it != end; it++) {
+        // only look at the upper half of the complex domain.
+        if ((**it).root.imag() >= 0.) {
+            
+            // look for the lowest g root
+            if (!max_g)
+                max_g = *it;
+            else if ((**it).root.real() >= max_g->root.real())
+                max_g = *it;
+            
+            // now look for the unstable root with lowest velocity
+            // only roots evaluated at V > 0 are considered, since in the absensce
+            // of aerodynamics and structural damping, the roots would all
+            // have zero damping.
+            
+            if ((**it).root.real() >= 0. &&
+                (**it).V            > 0.) {
+                
+                if (!unstable)
+                    unstable = *it;
+                else if ( (**it).V <= unstable->V )
+                    unstable = *it;
+            }
+        }
+        
+    }
+    
+    if (unstable)
+        return unstable;
+    else
+        return max_g;
+}
+
+
+
+
 void
 MAST::FlutterSolutionBase::sort(const MAST::FlutterSolutionBase& sol) {
     

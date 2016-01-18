@@ -369,6 +369,8 @@ MAST::PlatePistonTheoryFlutterAnalysis::solve(bool if_write_output) {
             << "Writing mode " << i << " to : "
             << file_name.str() << std::endl;
             
+            // copy the solution for output
+            (*_sys->solution) = *_basis[i];
             
             // We write the file in the ExodusII format.
             libMesh::ExodusII_IO(*_mesh).write_equation_systems(file_name.str(),
@@ -382,15 +384,15 @@ MAST::PlatePistonTheoryFlutterAnalysis::solve(bool if_write_output) {
                                               *_structural_sys);
     _flutter_solver->attach_assembly(fsi_assembly);
     _flutter_solver->initialize(*_velocity,
-                                8.5e3,        // lower V
-                                8.6e3,        // upper V
+                                0.0e3,        // lower V
+                                9.0e3,        // upper V
                                 10,           // number of divisions
                                 _basis);      // basis vectors
-    _flutter_solver->scan_for_roots();
-    _flutter_solver->print_sorted_roots();
-    _flutter_solver->print_crossover_points();
+//    _flutter_solver->scan_for_roots();
+//    _flutter_solver->print_sorted_roots();
+//    _flutter_solver->print_crossover_points();
     std::pair<bool, MAST::TimeDomainFlutterRootBase*>
-    sol = _flutter_solver->find_critical_root(1.e-3, 10);
+    sol = _flutter_solver->analyze_and_find_critical_root_without_tracking(1.e-3, 20);
     _flutter_solver->print_sorted_roots();
     fsi_assembly.clear_discipline_and_system();
     _flutter_solver->clear_assembly_object();

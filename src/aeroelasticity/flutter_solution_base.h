@@ -70,17 +70,32 @@ namespace MAST {
         unsigned int n_roots() const{
             return (unsigned int)_roots.size();
         }
+
         
         /*!
-         *    returns the root
+         *   number of unstable roots in this solution
          */
-        const MAST::TimeDomainFlutterRootBase& get_root(const unsigned int i) const {
+        unsigned int n_unstable_roots_in_upper_complex_half () const;
+
+        
+        /*!
+         *    @returns the critical root at the lowest velocity
+         */
+        MAST::TimeDomainFlutterRootBase* get_critical_root();
+
+        
+        /*!
+         *    @returns the root
+         */
+        const MAST::TimeDomainFlutterRootBase&
+        get_root(const unsigned int i) const {
+            
             libmesh_assert_less(i, _roots.size());
             return *_roots[i];
         }
         
         /*!
-         *    returns a non-const reference to the root
+         *    @returns a non-const reference to the root
          */
         MAST::TimeDomainFlutterRootBase& get_root(const unsigned int i) {
             libmesh_assert_less(i, _roots.size());

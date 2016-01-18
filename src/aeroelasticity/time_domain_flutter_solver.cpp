@@ -268,6 +268,164 @@ MAST::TimeDomainFlutterSolver::find_critical_root(const Real g_tol,
 
 
 
+
+std::pair<bool,  MAST::TimeDomainFlutterRootBase*>
+MAST::TimeDomainFlutterSolver::
+analyze_and_find_critical_root_without_tracking(const Real g_tol,
+                                                const unsigned int n_bisection_iters) {
+
+    // make sure that there are no solutions already stored
+    libmesh_assert(! _flutter_solutions.size());
+    libmesh_assert(!_flutter_crossovers.size());
+    
+    
+    //
+    // start with the previous velocity and increment till a single
+    // root cross-over is available. This is done without need for
+    // mode tracking. Presently, the algorithm expects that the number
+    // of unstable roots at the first velocity be zero.
+    //
+    Real
+    lower_V  = _V_range.first,
+    upper_V  = _V_range.second,
+    lower_g  = 0.,
+    upper_g  = 0.,
+    dV       =  (_V_range.second - _V_range.first)/_n_V_divs,
+    new_V    = 0.;
+    
+    const MAST::TimeDomainFlutterRootBase
+    *lower_root = NULL,
+    *upper_root = NULL;
+    
+    std::pair<unsigned int, unsigned int>
+    bracket_n_unstable_roots(0, 0);
+    
+    // first analyze at both the ends of the bracket
+    MAST::FlutterSolutionBase
+    *sol                            = _analyze(lower_V).release();
+    lower_root                      = sol->get_critical_root();
+    bracket_n_unstable_roots.first  = sol->n_unstable_roots_in_upper_complex_half();
+    sol->print(_output);
+
+    // presently the algorithm requires that the first velocity has no unstable
+    // roots
+    if (lower_V > 0)
+        libmesh_assert(!bracket_n_unstable_roots.first);
+    
+    // add the solution to this solver
+    bool if_success =
+    _flutter_solutions.insert(std::pair<Real, MAST::FlutterSolutionBase*>
+                              (lower_V, sol)).second;
+    
+    libmesh_assert(if_success);
+    
+
+    // now increment velocity till atleast one root is found to be critical
+    bool
+    cont  = true;
+
+    while (cont) {
+        
+        // add a new analysis point
+        upper_V                         = lower_V + dV;
+
+        sol                             = _analyze(upper_V, sol).release();
+        bracket_n_unstable_roots.second = sol->n_unstable_roots_in_upper_complex_half();
+        upper_root                      = sol->get_critical_root();
+        sol->print(_output);
+
+        // add the solution to this solver
+        if_success =
+        _flutter_solutions.insert(std::pair<Real, MAST::FlutterSolutionBase*>
+                                  (upper_V, sol)).second;
+        
+        libmesh_assert(if_success);
+
+        // check if any new roots were found
+        if (bracket_n_unstable_roots.second ||
+            upper_V >= _V_range.second) {
+            
+            // we have found a pair of roots that surround a cross-over point
+            cont = false;
+        }
+        else {
+            
+            // increment the velocity
+            lower_V                         = upper_V;
+            upper_V                        += dV;
+            bracket_n_unstable_roots.first  = bracket_n_unstable_roots.second;
+            bracket_n_unstable_roots.second = 0;
+            lower_root                      = upper_root;
+        }
+    }
+    
+    std::pair<bool, MAST::TimeDomainFlutterRootBase*> rval(false, NULL);
+    
+    // if no critical roots were found, the return with false
+    if (!bracket_n_unstable_roots.second)
+        return rval;
+    
+    // next, refine the bracket till a root is found till the desired accuracy
+    unsigned int n_iters = 0;
+    
+    while (n_iters < n_bisection_iters) {
+        
+        // get the damping values from the two critical roots
+        lower_g    =   lower_root->root.real();
+        upper_g    =   upper_root->root.real();
+        
+        new_V      = lower_V +
+        (upper_V-lower_V)/(upper_g-lower_g)*(0.-lower_g); // linear interpolation
+        
+        sol        = _analyze(new_V, sol).release();
+        sol->print(_output);
+        
+        // get the critical root from here
+        const MAST::TimeDomainFlutterRootBase* root = sol->get_critical_root();
+
+        // add the solution to this solver
+        if_success =
+        _flutter_solutions.insert(std::pair<Real, MAST::FlutterSolutionBase*>
+                                  (new_V, sol)).second;
+        
+        libmesh_assert(if_success);
+        
+        
+        // check if the new damping value
+        if (fabs(root->root.real()) <= g_tol) {
+            
+            rval.first  = true;
+            rval.second = sol->get_critical_root();
+            return  rval;
+        }
+        
+        // update the V value
+        if (root->root.real() < 0.) {
+            
+            lower_V    = new_V;
+            lower_g    = root->root.real();
+            lower_root = sol->get_critical_root();
+        }
+        else {
+            
+            upper_V    = new_V;
+            upper_g    = root->root.real();
+            upper_root = sol->get_critical_root();
+        }
+        
+        n_iters++;
+    }
+    
+    // return false, along with the latest sol
+    rval.first    = false;
+    rval.second   = sol->get_critical_root();
+    
+    return rval;
+}
+
+
+
+
 void
 MAST::TimeDomainFlutterSolver::scan_for_roots() {
     
@@ -419,9 +577,9 @@ _bisection_search(const std::pair<MAST::FlutterSolutionBase*,
     // k_val
     Real
     lower_V  = ref_sol_range.first->ref_val(),
-    lower_g  = ref_sol_range.first->get_root(root_num).g,
+    lower_g  = ref_sol_range.first->get_root(root_num).root.real(),
     upper_V  = ref_sol_range.second->ref_val(),
-    upper_g  = ref_sol_range.second->get_root(root_num).g,
+    upper_g  = ref_sol_range.second->get_root(root_num).root.real(),
     new_V    = 0.;
     unsigned int n_iters = 0;
     
@@ -447,7 +605,7 @@ _bisection_search(const std::pair<MAST::FlutterSolutionBase*,
         const MAST::TimeDomainFlutterRootBase& root = new_sol->get_root(root_num);
         
         // check if the new damping value
-        if (fabs(root.g) <= g_tol) {
+        if (fabs(root.root.real()) <= g_tol) {
             
             rval.first = true;
             rval.second = new_sol;
@@ -455,15 +613,15 @@ _bisection_search(const std::pair<MAST::FlutterSolutionBase*,
         }
         
         // update the V value
-        if (root.g < 0.) {
+        if (root.root.real() < 0.) {
             
             lower_V = new_V;
-            lower_g = root.g;
+            lower_g = root.root.real();
         }
         else {
             
             upper_V = new_V;
-            upper_g = root.g;
+            upper_g = root.root.real();
         }
         
         n_iters++;
@@ -663,7 +821,7 @@ MAST::TimeDomainFlutterSolver::_identify_crossover_points() {
     /////////////////////////////////////////////////////////////////////
     
     // if the initial scanning has not been done, then do it now
-    const Real tol = 1.0e-5, max_allowable_g = 100.;
+    const Real tol = 1.0e-5;
     
     const unsigned int nvals = _flutter_solutions.begin()->second->n_roots();
     // make sure that the solution has been generated
@@ -697,7 +855,7 @@ MAST::TimeDomainFlutterSolver::_identify_crossover_points() {
         
         for ( ; sol_it!=sol_end; sol_it++) {
             
-            g_val = fabs(sol_it->second->get_root(i).g);
+            g_val = fabs(sol_it->second->get_root(i).root.real());
             w_val = sol_it->second->get_root(i).root.imag();
             
             // maximum damping
@@ -735,8 +893,8 @@ MAST::TimeDomainFlutterSolver::_identify_crossover_points() {
              (fabs(sol_it->second->ref_val()) > tol ||
               fabs(sol_itp1->second->ref_val()) > tol) &&
              // both |g| < max_g
-             //(fabs(sol_it->second->get_root(i).g) < max_allowable_g &&
-             // fabs(sol_itp1->second->get_root(i).g) < max_allowable_g) &&
+             //(fabs(sol_it->second->get_root(i).root.real()) < max_allowable_g &&
+             // fabs(sol_itp1->second->get_root(i).root.real()) < max_allowable_g) &&
              // if the mode has been identified to be trailing along g =0,
              // neglect it
              !modes_to_neglect[i]);
@@ -749,8 +907,8 @@ MAST::TimeDomainFlutterSolver::_identify_crossover_points() {
                 *lower = sol_it->second,
                 *upper = sol_itp1->second;
                 
-                if ((lower->get_root(i).g <= 0.) &&
-                    (upper->get_root(i).g > 0.)) {
+                if ((lower->get_root(i).root.real() <= 0.) &&
+                    (upper->get_root(i).root.real() > 0.)) {
                     
                     MAST::FlutterRootCrossoverBase* cross =
                     new MAST::FlutterRootCrossoverBase;
@@ -761,8 +919,8 @@ MAST::TimeDomainFlutterSolver::_identify_crossover_points() {
                     val( lower->get_root(i).V, cross);
                     _flutter_crossovers.insert(val);
                 }
-                else if ((lower->get_root(i).g > 0.) &&
-                         (upper->get_root(i).g <= 0.)) {
+                else if ((lower->get_root(i).root.real() > 0.) &&
+                         (upper->get_root(i).root.real() <= 0.)) {
                     
                     MAST::FlutterRootCrossoverBase* cross =
                     new MAST::FlutterRootCrossoverBase;
@@ -791,13 +949,13 @@ MAST::TimeDomainFlutterSolver::_identify_crossover_points() {
          (fabs(sol_it->second->ref_val()) > tol ||
           fabs(sol_itp1->second->ref_val()) > tol) &&
          // both |g| < max_g
-         //(fabs(sol_it->second->get_root(i).g) < max_allowable_g &&
-         // fabs(sol_itp1->second->get_root(i).g) < max_allowable_g) &&
+         //(fabs(sol_it->second->get_root(i).root.real()) < max_allowable_g &&
+         // fabs(sol_itp1->second->get_root(i).root.real()) < max_allowable_g) &&
          // if the mode has been identified to be trailing along g =0,
          // neglect it
          !modes_to_neglect[i]);
         
-        Real g_val = sol_it->second->get_root(i).g;
+        Real g_val = sol_it->second->get_root(i).root.real();
         
         if (if_process &&
             g_val > 0 /*&& g_val < max_allowable_g*/) {

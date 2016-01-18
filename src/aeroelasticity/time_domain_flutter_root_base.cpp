@@ -25,7 +25,6 @@
 MAST::TimeDomainFlutterRootBase::TimeDomainFlutterRootBase():
 has_sensitivity_data  (false),
 V                     (0.),
-g                     (0.),
 omega                 (0.),
 V_sens                (0.),
 root                  (0.),
@@ -37,7 +36,6 @@ root_sens             (0.)
 MAST::TimeDomainFlutterRootBase::TimeDomainFlutterRootBase(const TimeDomainFlutterRootBase& f):
 has_sensitivity_data   (f.has_sensitivity_data),
 V                      (f.V),
-g                      (f.g),
 omega                  (f.omega),
 V_sens                 (f.V_sens),
 root                   (f.root),
@@ -54,7 +52,6 @@ MAST::TimeDomainFlutterRootBase::copy_root(const MAST::TimeDomainFlutterRootBase
     
     has_sensitivity_data   = f.has_sensitivity_data;
     V                      = f.V;
-    g                      = f.g;
     omega                  = f.omega;
     V_sens                 = f.V_sens;
     root                   = f.root;
@@ -77,7 +74,6 @@ MAST::TimeDomainFlutterRootBase::init(const Real v_ref_val,
     {
         root                = num/den;
         V                   = v_ref_val;
-        g                   = std::real(root);
         omega               = std::imag(root);
     }
     

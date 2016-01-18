@@ -144,6 +144,16 @@ namespace MAST {
         find_critical_root(const Real g_tol,
                            const unsigned int n_bisection_iters);
         
+
+        
+        /*!
+         *   This root starts with the lower velocity and increments the speed
+         *   till a single unstable root is identified.
+         */
+        virtual std::pair<bool, MAST::TimeDomainFlutterRootBase*>
+        analyze_and_find_critical_root_without_tracking(const Real g_tol,
+                                                        const unsigned int n_iters);
+        
         
         
         /*!
