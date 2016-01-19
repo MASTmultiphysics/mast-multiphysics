@@ -39,7 +39,7 @@ MAST::FlutterSolutionBase::~FlutterSolutionBase() {
 
 
 unsigned int
-MAST::FlutterSolutionBase::n_unstable_roots_in_upper_complex_half () const {
+MAST::FlutterSolutionBase::n_unstable_roots_in_upper_complex_half (Real tol) const {
 
     unsigned int n=0;
     
@@ -51,7 +51,7 @@ MAST::FlutterSolutionBase::n_unstable_roots_in_upper_complex_half () const {
     for ( ; it != end; it++) {
         // only look at upper half of the complex domain
         if ((**it).root.imag() >= 0. &&
-            (**it).root.real() >= 0.)
+            (**it).root.real() >= tol)
             n++;
     }
     

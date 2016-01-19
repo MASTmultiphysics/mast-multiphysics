@@ -73,9 +73,10 @@ namespace MAST {
 
         
         /*!
-         *   number of unstable roots in this solution
+         *   number of unstable roots in this solution. Only roots with damping 
+         *   greater than \par tol will be considered unstable.
          */
-        unsigned int n_unstable_roots_in_upper_complex_half () const;
+        unsigned int n_unstable_roots_in_upper_complex_half (Real tol) const;
 
         
         /*!

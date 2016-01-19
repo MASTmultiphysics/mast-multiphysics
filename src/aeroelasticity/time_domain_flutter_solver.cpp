@@ -304,7 +304,7 @@ analyze_and_find_critical_root_without_tracking(const Real g_tol,
     MAST::FlutterSolutionBase
     *sol                            = _analyze(lower_V).release();
     lower_root                      = sol->get_critical_root();
-    bracket_n_unstable_roots.first  = sol->n_unstable_roots_in_upper_complex_half();
+    bracket_n_unstable_roots.first  = sol->n_unstable_roots_in_upper_complex_half(g_tol);
     sol->print(_output);
 
     // presently the algorithm requires that the first velocity has no unstable
@@ -330,7 +330,7 @@ analyze_and_find_critical_root_without_tracking(const Real g_tol,
         upper_V                         = lower_V + dV;
 
         sol                             = _analyze(upper_V, sol).release();
-        bracket_n_unstable_roots.second = sol->n_unstable_roots_in_upper_complex_half();
+        bracket_n_unstable_roots.second = sol->n_unstable_roots_in_upper_complex_half(g_tol);
         upper_root                      = sol->get_critical_root();
         sol->print(_output);
 

@@ -144,7 +144,7 @@ MAST::PlatePistonTheoryFlutterAnalysis::init(libMesh::ElemType e_type,
     
     // prepare the vector of parameters with respect to which the sensitivity
     // needs to be benchmarked
-    _params_for_sensitivity.push_back(_E);
+    _params_for_sensitivity.push_back( _E);
     _params_for_sensitivity.push_back(_nu);
     _params_for_sensitivity.push_back(_th);
     
