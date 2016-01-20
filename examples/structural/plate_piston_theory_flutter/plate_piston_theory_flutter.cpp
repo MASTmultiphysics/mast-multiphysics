@@ -414,23 +414,51 @@ MAST::PlatePistonTheoryFlutterAnalysis::solve(bool if_write_output) {
         // where Z_re = Y_re cos(p_im t) - Y_im sin(p_im t), and
         //       Z_im = Y_re sin(p_im t) + Y_im cos(p_im t).
         //
-        // What is written are the real and imaginary parts of Y, i.e. Y_re and Y_im
-        // using the right eigenvector of the system
+        // We write the simulation of the mode over a period of oscillation
+        //
+        
+        
+        // first calculate the real and imaginary vectors
+        std::auto_ptr<libMesh::NumericVector<Real> >
+        re(_sys->solution->zero_clone().release()),
+        im(_sys->solution->zero_clone().release());
+        
         
         // first the real part
         _sys->solution->zero();
-        for (unsigned int i=0; i<_basis.size(); i++)
-            _sys->solution->add(sol.second->eig_vec_right(i).real(), *_basis[i]);
-        libMesh::ExodusII_IO(*_mesh).write_equation_systems("flutter_mode_real.exo",
-                                                            *_eq_sys);
+        for (unsigned int i=0; i<_basis.size(); i++) {
+            re->add(sol.second->eig_vec_right(i).real(), *_basis[i]);
+            im->add(sol.second->eig_vec_right(i).imag(), *_basis[i]);
+        }
+        re->close();
+        im->close();
+        
+        // now open the output processor for writing
+        libMesh::ExodusII_IO flutter_mode_output(*_mesh);
+        
+        // use N steps in a time-period
+        Real
+        t_sys = _sys->time,
+        pi    = acos(-1.);
+        unsigned int
+        N_divs = 100;
         
         
-        // next, the imaginary part
-        _sys->solution->zero();
-        for (unsigned int i=0; i<_basis.size(); i++)
-            _sys->solution->add(sol.second->eig_vec_right(i).imag(), *_basis[i]);
-        libMesh::ExodusII_IO(*_mesh).write_equation_systems("flutter_mode_imag.exo",
-                                                            *_eq_sys);
+        for (unsigned int i=0; i<=N_divs; i++) {
+            _sys->time   =  2.*pi*(i*1.)/(N_divs*1.);
+            
+            _sys->solution->zero();
+            _sys->solution->add( cos(_sys->time), *re);
+            _sys->solution->add(-sin(_sys->time), *im);
+            _sys->solution->close();
+            flutter_mode_output.write_timestep("flutter_mode.exo",
+                                               *_eq_sys,
+                                               i+1,
+                                               _sys->time);
+        }
+        
+        // reset the system time
+        _sys->time = t_sys;
     }
     
     return _flutter_root->V;
