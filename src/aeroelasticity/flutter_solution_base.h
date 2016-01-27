@@ -82,7 +82,7 @@ namespace MAST {
         /*!
          *    @returns the critical root at the lowest velocity
          */
-        MAST::TimeDomainFlutterRootBase* get_critical_root();
+        MAST::TimeDomainFlutterRootBase* get_critical_root(Real tol);
 
         
         /*!

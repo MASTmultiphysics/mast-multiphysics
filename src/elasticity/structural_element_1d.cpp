@@ -95,9 +95,9 @@ initialize_von_karman_strain_operator(const unsigned int qp,
     libmesh_assert_equal_to(Bmat_w_vk.n(), 6*n_phi);
     
     Real dv=0., dw=0.;
-    vk_strain.setConstant(0.);
-    vk_dvdxi_mat.setConstant(0.);
-    vk_dwdxi_mat.setConstant(0.);
+    vk_strain.setZero();
+    vk_dvdxi_mat.setZero();
+    vk_dwdxi_mat.setZero();
     
     RealVectorX phi_vec   = RealVectorX::Zero(n_phi);
     
@@ -133,8 +133,8 @@ initialize_von_karman_strain_operator_sensitivity(const unsigned int qp,
     libmesh_assert_equal_to(vk_dwdxi_mat_sens.cols(), 2);
     
     Real dv=0., dw=0.;
-    vk_dvdxi_mat_sens.setConstant(0.);
-    vk_dwdxi_mat_sens.setConstant(0.);
+    vk_dvdxi_mat_sens.setZero();
+    vk_dwdxi_mat_sens.setZero();
     
     RealVectorX phi_vec   = RealVectorX::Zero(n_phi);
     
@@ -818,17 +818,14 @@ internal_residual_jac_dot_state_sensitivity (RealMatrixX& jac) {
     vk_dvdxi_mat      = RealMatrixX::Zero(n1,n3),
     vk_dwdxi_mat      = RealMatrixX::Zero(n1,n3),
     stress            = RealMatrixX::Zero(2,2),
-    stress_l          = RealMatrixX::Zero(2,2),
     local_jac         = RealMatrixX::Zero(n2,n2);
     RealVectorX
     vec1_n1    = RealVectorX::Zero(n1),
     vec2_n1    = RealVectorX::Zero(n1),
     vec3_n2    = RealVectorX::Zero(n2),
     vec4_n3    = RealVectorX::Zero(n3),
-    vec5_n3    = RealVectorX::Zero(n3),
-    local_f    = RealVectorX::Zero(n2);
+    vec5_n3    = RealVectorX::Zero(n3);
 
-    local_f.setZero();
     local_jac.setZero();
 
 
@@ -873,7 +870,7 @@ internal_residual_jac_dot_state_sensitivity (RealMatrixX& jac) {
         stress(0,0)   = vec2_n1(0); // sigma_xx
         
         // get the bending strain operator
-        vec2_n1.setConstant(0.); // used to store vk strain, if applicable
+        vec2_n1.setZero(); // used to store vk strain, if applicable
         if (if_bending) {
             _bending_operator->initialize_bending_strain_operator(*_fe, qp, Bmat_bend);
             
@@ -897,7 +894,7 @@ internal_residual_jac_dot_state_sensitivity (RealMatrixX& jac) {
                                                                         vk_dvdxi_mat_sens,
                                                                         vk_dwdxi_mat_sens);
                 // sensitivity of von Karman strain
-                vec2_n1.setConstant(0.);
+                vec2_n1.setZero();
                 vec2_n1(0) = (vk_dvdxi_mat(0,0)*vk_dvdxi_mat_sens(0,0) +
                               vk_dwdxi_mat(0,0)*vk_dwdxi_mat_sens(0,0));
                 vec1_n1 = material_A_mat * vec2_n1;
@@ -906,7 +903,7 @@ internal_residual_jac_dot_state_sensitivity (RealMatrixX& jac) {
         }
         
         // copy the stress to use here.
-        vec1_n1.setConstant(0.);
+        vec1_n1.setZero();
         
         // now calculate the matrix
         // membrane - vk: v-displacement
@@ -1078,7 +1075,7 @@ _internal_residual_operation(bool if_bending,
     stress(0,1)   = vec2_n1(1); // temporary storage of the torsion force
     
     // get the bending strain operator
-    vec2_n1.setConstant(0.); // used to store vk strain, if applicable
+    vec2_n1.setZero(); // used to store vk strain, if applicable
     if (if_bending) {
         _bending_operator->initialize_bending_strain_operator(fe, qp, Bmat_bend);
         
@@ -1107,7 +1104,7 @@ _internal_residual_operation(bool if_bending,
     }
     
     // copy the stress to use here.
-    vec1_n1.setConstant(0.);
+    vec1_n1.setZero();
     vec1_n1(0)   = stress(0,0);
     vec1_n1(1)   = stress(0,1); // use the torsion strain from the temporary location
     stress(0, 1) = 0.;   // zero out the temporary value storing the torsion strain
@@ -1491,7 +1488,7 @@ MAST::StructuralElement1D::prestress_residual (bool request_jacobian,
         this->initialize_direct_strain_operator(qp, *_fe, Bmat_mem);
         
         // get the bending strain operator if needed
-        vec2_n1.setConstant(0.); // used to store vk strain, if applicable
+        vec2_n1.setZero(); // used to store vk strain, if applicable
         if (if_bending) {
             _bending_operator->initialize_bending_strain_operator(*_fe, qp, Bmat_bend);
             
@@ -1631,7 +1628,7 @@ MAST::StructuralElement1D::prestress_residual_sensitivity (bool request_jacobian
         this->initialize_direct_strain_operator(qp, *_fe, Bmat_mem);
         
         // get the bending strain operator if needed
-        vec2_n1.setConstant(0.); // used to store vk strain, if applicable
+        vec2_n1.setZero(); // used to store vk strain, if applicable
         if (if_bending) {
             _bending_operator->initialize_bending_strain_operator(*_fe, qp, Bmat_bend);
             

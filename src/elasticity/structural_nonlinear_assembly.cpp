@@ -118,7 +118,10 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
         for (unsigned int i=0; i<dof_indices.size(); i++)
             sol(i) = (*localized_solution)(dof_indices[i]);
         
-        physics_elem->set_solution(sol);
+        physics_elem->set_solution    (sol);
+        physics_elem->set_velocity    (vec); // set to zero vector for a quasi-steady analysis
+        physics_elem->set_acceleration(vec); // set to zero vector for a quasi-steady analysis
+        
         
         // set the incompatible mode solution if required by the
         // element

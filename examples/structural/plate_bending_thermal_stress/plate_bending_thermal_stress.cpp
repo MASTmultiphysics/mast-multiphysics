@@ -137,13 +137,13 @@ MAST::PlateBendingThermalStress::init(libMesh::ElemType e_type,
     _params_for_sensitivity.push_back(_alpha);
     
     
-    _th_f            = new MAST::ConstantFieldFunction("h",           *_th);
-    _E_f             = new MAST::ConstantFieldFunction("E",            *_E);
+    _th_f            = new MAST::ConstantFieldFunction("h",                  *_th);
+    _E_f             = new MAST::ConstantFieldFunction("E",                   *_E);
     _alpha_f         = new MAST::ConstantFieldFunction("alpha_expansion", *_alpha);
-    _kappa_f         = new MAST::ConstantFieldFunction("kappa",    *_kappa);
-    _nu_f            = new MAST::ConstantFieldFunction("nu",          *_nu);
-    _temp_f          = new MAST::ConstantFieldFunction("temperature", *_temp);
-    _ref_temp_f      = new MAST::ConstantFieldFunction("ref_temperature", *_zero);
+    _kappa_f         = new MAST::ConstantFieldFunction("kappa",           *_kappa);
+    _nu_f            = new MAST::ConstantFieldFunction("nu",                 *_nu);
+    _temp_f          = new MAST::ConstantFieldFunction("temperature",      *_temp);
+    _ref_temp_f      = new MAST::ConstantFieldFunction("ref_temperature",  *_zero);
     _hoff_f          = new MAST::SectionOffset("off",
                                                _th_f->clone().release(),
                                                1.);

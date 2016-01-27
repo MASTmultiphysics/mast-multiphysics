@@ -63,7 +63,7 @@ MAST::FlutterSolutionBase::n_unstable_roots_in_upper_complex_half (Real tol) con
 
 
 MAST::TimeDomainFlutterRootBase*
-MAST::FlutterSolutionBase::get_critical_root() {
+MAST::FlutterSolutionBase::get_critical_root(Real tol) {
     
     // If there is an unstable root, then find one with the lowest velocity
     // and send it back.
@@ -94,7 +94,7 @@ MAST::FlutterSolutionBase::get_critical_root() {
             // of aerodynamics and structural damping, the roots would all
             // have zero damping.
             
-            if ((**it).root.real() >= 0. &&
+            if ((**it).root.real() >= tol &&
                 (**it).V            > 0.) {
                 
                 if (!unstable)

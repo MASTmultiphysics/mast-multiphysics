@@ -83,9 +83,8 @@ namespace MAST {
          *   calculates d[J]/d{x} . d{x}/dp
          */
         virtual bool
-        internal_residual_jac_dot_state_sensitivity (RealMatrixX& jac) {
-            libmesh_assert(false); // to be implemented for 2D elements
-        }
+        internal_residual_jac_dot_state_sensitivity (RealMatrixX& jac);
+        
         
         /*!
          *    Calculates the internal residual vector and Jacobian due to

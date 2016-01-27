@@ -733,7 +733,7 @@ MAST::StiffenedPlateBendingThermalStressSizingOptimization::evaluate(const std::
         _sys->solve();
         _assembly->calculate_outputs(*(_sys->solution));
         _discipline->plot_stress_strain_data<libMesh::ExodusII_IO>("stress_out.exo");
-        out.write_timestep("out.exo", *_eq_sys, i+1, (i+1.)/n_steps);
+        out.write_timestep("out_animated.exo", *_eq_sys, i+1, (i+1.)/n_steps);
         this->clear_stresss();
     }
 
@@ -870,7 +870,7 @@ MAST::StiffenedPlateBendingThermalStressSizingOptimization::output(unsigned int 
     libMesh::ExodusII_IO(*_mesh).write_equation_systems("output.exo",
                                                         *_eq_sys,
                                                         &nm);
-    _discipline->plot_stress_strain_data<libMesh::ExodusII_IO>("stress_output.exo");
+    _discipline->plot_stress_strain_data<libMesh::ExodusII_IO>("stress_out.exo");
     
     MAST::FunctionEvaluation::output(iter, x, obj, fval, if_write_to_optim_file);
 }

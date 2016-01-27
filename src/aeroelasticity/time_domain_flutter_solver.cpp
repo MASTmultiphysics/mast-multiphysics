@@ -303,7 +303,7 @@ analyze_and_find_critical_root_without_tracking(const Real g_tol,
     // first analyze at both the ends of the bracket
     MAST::FlutterSolutionBase
     *sol                            = _analyze(lower_V).release();
-    lower_root                      = sol->get_critical_root();
+    lower_root                      = sol->get_critical_root(g_tol);
     bracket_n_unstable_roots.first  = sol->n_unstable_roots_in_upper_complex_half(g_tol);
     sol->print(_output);
 
@@ -331,7 +331,7 @@ analyze_and_find_critical_root_without_tracking(const Real g_tol,
 
         sol                             = _analyze(upper_V, sol).release();
         bracket_n_unstable_roots.second = sol->n_unstable_roots_in_upper_complex_half(g_tol);
-        upper_root                      = sol->get_critical_root();
+        upper_root                      = sol->get_critical_root(g_tol);
         sol->print(_output);
 
         // add the solution to this solver
@@ -374,14 +374,23 @@ analyze_and_find_critical_root_without_tracking(const Real g_tol,
         lower_g    =   lower_root->root.real();
         upper_g    =   upper_root->root.real();
         
-        new_V      = lower_V +
-        (upper_V-lower_V)/(upper_g-lower_g)*(0.-lower_g); // linear interpolation
+        // if the lower velocity is 0, then we calculate V using upper V
+        // as the reference.
+        //if (lower_V > 0.)
+        //    new_V      =
+        //    lower_V + (upper_V-lower_V)/(upper_g-lower_g)*(0.-lower_g);    // using lower V as reference
+        //else
+        // a dampig factor of 0.1 is added to slow down the reduction. This is
+        // done because the g value tends to increase very quickly after the
+        // collision of roots.
+        new_V      = upper_V +
+        0.1*(upper_V-lower_V)/(upper_g-lower_g)*(1.e-4-upper_g);  // using upper V as reference
         
         sol        = _analyze(new_V, sol).release();
         sol->print(_output);
         
         // get the critical root from here
-        const MAST::TimeDomainFlutterRootBase* root = sol->get_critical_root();
+        const MAST::TimeDomainFlutterRootBase* root = sol->get_critical_root(g_tol);
 
         // add the solution to this solver
         if_success =
@@ -392,10 +401,11 @@ analyze_and_find_critical_root_without_tracking(const Real g_tol,
         
         
         // check if the new damping value
-        if (fabs(root->root.real()) <= g_tol) {
+        if ((root->root.real() > 0.) &&  // only positively unstable roots will be used.
+            (root->root.real() <= g_tol)) {
             
             rval.first  = true;
-            rval.second = sol->get_critical_root();
+            rval.second = sol->get_critical_root(g_tol);
             return  rval;
         }
         
@@ -404,13 +414,13 @@ analyze_and_find_critical_root_without_tracking(const Real g_tol,
             
             lower_V    = new_V;
             lower_g    = root->root.real();
-            lower_root = sol->get_critical_root();
+            lower_root = sol->get_critical_root(g_tol);
         }
         else {
             
             upper_V    = new_V;
             upper_g    = root->root.real();
-            upper_root = sol->get_critical_root();
+            upper_root = sol->get_critical_root(g_tol);
         }
         
         n_iters++;
@@ -418,7 +428,7 @@ analyze_and_find_critical_root_without_tracking(const Real g_tol,
     
     // return false, along with the latest sol
     rval.first    = false;
-    rval.second   = sol->get_critical_root();
+    rval.second   = sol->get_critical_root(g_tol);
     
     return rval;
 }

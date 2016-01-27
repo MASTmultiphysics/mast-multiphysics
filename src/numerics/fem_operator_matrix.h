@@ -260,7 +260,7 @@ vector_mult(T& res, const T& v) const {
     libmesh_assert_equal_to(res.size(), _n_interpolated_vars);
     libmesh_assert_equal_to(v.size(), n());
     
-    res.setConstant(0.);
+    res.setZero();
     unsigned int index = 0;
     
     for (unsigned int i=0; i<_n_interpolated_vars; i++) // row
