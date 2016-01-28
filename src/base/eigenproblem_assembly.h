@@ -105,14 +105,13 @@ namespace MAST {
         
         /*!
          *   if the eigenproblem is defined about a non-zero base solution,
-         *   then this method will project \par sol using the system in
-         *   \par vars. The flag \par if_sens tells the method if \par sol
+         *   then this method provides the object with the base solution.
+         *   The flag \par if_sens tells the method if \par sol
          *   is the sensitivity of the base solution for the current parameter
          *   being solved for
          */
-        void project_base_solution(MAST::SystemInitialization& vars,
-                                   libMesh::NumericVector<Real>& sol,
-                                   bool if_sens = false);
+        void set_base_solution(libMesh::NumericVector<Real>& sol,
+                               bool if_sens = false);
         
         /*!
          *   @returns true if a nonzero base solution is used to linearize the
@@ -157,14 +156,14 @@ namespace MAST {
          *   vector stores the localized values necessary to perform element
          *   calculations.
          */
-        std::auto_ptr<libMesh::NumericVector<Real> > _base_sol;
+        libMesh::NumericVector<Real> * _base_sol;
         
         /*!
          *   sensitivity of base solution may be needed for sensitivity
          *   analysis. This vector stores the localized values necessary to
          *   perform element calculations.
          */
-        std::auto_ptr<libMesh::NumericVector<Real> > _base_sol_sensitivity;
+        libMesh::NumericVector<Real> * _base_sol_sensitivity;
         
     };
     

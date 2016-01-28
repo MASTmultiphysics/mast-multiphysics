@@ -34,7 +34,9 @@
 
 
 MAST::EigenproblemAssembly::EigenproblemAssembly():
-MAST::AssemblyBase() {
+MAST::AssemblyBase(),
+_base_sol(NULL),
+_base_sol_sensitivity(NULL) {
     
 }
 
@@ -80,8 +82,22 @@ clear_discipline_and_system( ) {
         sys.reset_eigenproblem_assemble_object();
     }
     
-    _discipline = NULL;
-    _system     = NULL;
+    _discipline           = NULL;
+    _system               = NULL;
+    _base_sol             = NULL;
+    _base_sol_sensitivity = NULL;
+}
+
+
+
+void
+MAST::EigenproblemAssembly::set_base_solution(libMesh::NumericVector<Real>& sol,
+                                              bool if_sens) {
+    
+    if (!if_sens)
+        _base_sol             = &sol;
+    else
+        _base_sol_sensitivity = &sol;
 }
 
 
@@ -101,6 +117,16 @@ eigenproblem_assemble(libMesh::SparseMatrix<Real>* A,
     
     matrix_A.zero();
     matrix_B.zero();
+    
+
+    // build localized solutions if needed
+    std::auto_ptr<libMesh::NumericVector<Real> >
+    localized_solution;
+    
+    if (_base_sol)
+        localized_solution.reset(_build_localized_vector(eigen_sys,
+                                                         *_base_sol).release());
+
     
     // iterate over each element, initialize it and get the relevant
     // analysis quantities
@@ -130,9 +156,9 @@ eigenproblem_assemble(libMesh::SparseMatrix<Real>* A,
         mat_B.setZero(ndofs, ndofs);
         
         // if the base solution is provided, then tell the element about it
-        if (_base_sol.get()) {
+        if (_base_sol) {
             for (unsigned int i=0; i<dof_indices.size(); i++)
-                sol(i) = (*_base_sol)(dof_indices[i]);
+                sol(i) = (*localized_solution)(dof_indices[i]);
         }
         
         physics_elem->set_solution(sol);
@@ -178,6 +204,22 @@ eigenproblem_sensitivity_assemble(const libMesh::ParameterVector& parameters,
     matrix_A.zero();
     matrix_B.zero();
     
+    // build localized solutions if needed
+    std::auto_ptr<libMesh::NumericVector<Real> >
+    localized_solution,
+    localized_solution_sens;
+    
+    if (_base_sol) {
+        localized_solution.reset(_build_localized_vector(eigen_sys,
+                                                         *_base_sol).release());
+        
+        // make sure that the sensitivity was also provided
+        libmesh_assert(_base_sol_sensitivity);
+        localized_solution_sens.reset(_build_localized_vector(eigen_sys,
+                                                              *_base_sol_sensitivity).release());
+    }
+    
+
     // iterate over each element, initialize it and get the relevant
     // analysis quantities
     RealVectorX sol;
@@ -206,21 +248,19 @@ eigenproblem_sensitivity_assemble(const libMesh::ParameterVector& parameters,
         mat_B.setZero(ndofs, ndofs);
         
         // if the base solution is provided, tell the element about it
-        if (_base_sol.get()) {
-            // make sure that the sensitivity is also provided
-            libmesh_assert(_base_sol_sensitivity.get());
+        if (_base_sol) {
             
             // set the element's base solution
             for (unsigned int i=0; i<dof_indices.size(); i++)
-                sol(i) = (*_base_sol)(dof_indices[i]);
+                sol(i) = (*localized_solution)(dof_indices[i]);
         }
         
         physics_elem->set_solution(sol);
         
         // set the element's base solution sensitivity
-        if (_base_sol_sensitivity.get()) {
+        if (_base_sol) {
             for (unsigned int i=0; i<dof_indices.size(); i++)
-                sol(i) = (*_base_sol_sensitivity)(dof_indices[i]);
+                sol(i) = (*localized_solution_sens)(dof_indices[i]);
         }
         
         physics_elem->set_solution(sol, true);

@@ -223,6 +223,8 @@ eigenproblem_sensitivity_assemble (const libMesh::ParameterVector& parameters,
                                    libMesh::SparseMatrix<Real>* sensitivity_A,
                                    libMesh::SparseMatrix<Real>* sensitivity_B)  {
     
+    libmesh_assert(false);  // to be implemented for this buckling sensitivity
+    
     MAST::NonlinearSystem& eigen_sys =
     dynamic_cast<MAST::NonlinearSystem&>(_system->system());
     
@@ -235,7 +237,16 @@ eigenproblem_sensitivity_assemble (const libMesh::ParameterVector& parameters,
     
     matrix_A.zero();
     matrix_B.zero();
+
     
+    // build localized solutions if needed
+    std::auto_ptr<libMesh::NumericVector<Real> >
+    localized_solution;
+    
+    if (_base_sol)
+        localized_solution.reset(_build_localized_vector(eigen_sys,
+                                                         *_base_sol).release());
+
     // iterate over each element, initialize it and get the relevant
     // analysis quantities
     RealVectorX sol, dummy;
@@ -265,9 +276,9 @@ eigenproblem_sensitivity_assemble (const libMesh::ParameterVector& parameters,
         mat_B.setZero(ndofs, ndofs);
         
         // if the base solution is provided, then tell the element about it
-        if (_base_sol.get()) {
+        if (_base_sol) {
             for (unsigned int i=0; i<dof_indices.size(); i++)
-                sol(i) = (*_base_sol)(dof_indices[i]);
+                sol(i) = (*localized_solution)(dof_indices[i]);
         }
         
         physics_elem->sensitivity_param = _discipline->get_parameter(&(parameters[i].get()));
