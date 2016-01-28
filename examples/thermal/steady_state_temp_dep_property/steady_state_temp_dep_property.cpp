@@ -228,7 +228,7 @@ int main_9(int argc, const char * argv[]) {
     
     // tell the conduction physics about the section properties
     heat_cond.set_property_for_subdomain(0, section_property);
-    
+    /*
     // create the nonlinear assembly object
     MAST::HeatConductionNonlinearAssembly   assembly;
     
@@ -238,7 +238,7 @@ int main_9(int argc, const char * argv[]) {
     
     // now solve the system
     MAST::Driver::nonlinear_solution(heat_cond, heat_cond_sys, assembly);
-    
+    */
     // write the solution for visualization
     libMesh::ExodusII_IO(mesh).write_equation_systems("mesh_nl.exo", eq_sys);
     

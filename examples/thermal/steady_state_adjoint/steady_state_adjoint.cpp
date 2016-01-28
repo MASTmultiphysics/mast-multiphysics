@@ -216,6 +216,7 @@ int main_8(int argc, const char * argv[]) {
     // tell the conduction physics about the section properties
     heat_cond.set_property_for_subdomain(0, section_property);
     
+    /*
     // create the nonlinear assembly object
     MAST::HeatConductionNonlinearAssembly   assembly;
     
@@ -235,7 +236,7 @@ int main_8(int argc, const char * argv[]) {
 
     // Calculate the adjoint solution
     MAST::Driver::adjoint_solution(heat_cond, heat_cond_sys, assembly, t_out);
-    
+    */
     // write the adjoint solution for visualization
     sys.solution->swap(sys.get_adjoint_solution());
     libMesh::ExodusII_IO(mesh).write_equation_systems("adjoint.exo", eq_sys);
