@@ -17,8 +17,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#ifndef __mast__small_disturbance_primitive_fluid_solution__
-#define __mast__small_disturbance_primitive_fluid_solution__
+#ifndef __mast__small_disturbance_primitive_fluid_solution_h__
+#define __mast__small_disturbance_primitive_fluid_solution_h__
 
 
 // MAST includes
@@ -88,4 +88,4 @@ namespace MAST {
 }
 
 
-#endif /* defined(__mast__small_disturbance_primitive_fluid_solution__) */
+#endif // __mast__small_disturbance_primitive_fluid_solution_h__

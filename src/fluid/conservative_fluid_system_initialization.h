@@ -17,10 +17,11 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#ifndef __mast__conservative_fluid_system_initialization__
-#define __mast__conservative_fluid_system_initialization__
+#ifndef __mast__conservative_fluid_system_initialization_h__
+#define __mast__conservative_fluid_system_initialization_h__
 
 // MAST includes
+#include "base/mast_data_types.h"
 #include "base/system_initialization.h"
 
 
@@ -37,11 +38,19 @@ namespace MAST {
         
         virtual ~ConservativeFluidSystemInitialization();
         
+
+        /*!
+         *    initializes the FE solution vector to the conservative 
+         *    solution provided in \par conservative_sol.
+         */
+        void initialize_solution(const RealVectorX& conservative_sol);
+        
+        
     protected:
         
     };
 }
 
-#endif /* defined(__mast__conservative_fluid_system_initialization__) */
+#endif  //__mast__conservative_fluid_system_initialization_h__
 
 

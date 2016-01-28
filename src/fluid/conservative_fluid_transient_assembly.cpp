@@ -19,6 +19,7 @@
 
 // MAST includes
 #include "fluid/conservative_fluid_transient_assembly.h"
+#include "fluid/conservative_fluid_discipline.h"
 #include "fluid/conservative_fluid_element_base.h"
 #include "property_cards/element_property_card_base.h"
 #include "base/physics_discipline_base.h"
@@ -84,8 +85,8 @@ std::auto_ptr<MAST::ElementBase>
 MAST::ConservativeFluidTransientAssembly::_build_elem(const libMesh::Elem& elem) {
     
     
-    const MAST::ElementPropertyCardBase& p =
-    dynamic_cast<const MAST::ElementPropertyCardBase&>(_discipline->get_property_card(elem));
+    const MAST::FlightCondition& p =
+    dynamic_cast<MAST::ConservativeFluidDiscipline*>(_discipline)->flight_condition();
     
     MAST::ElementBase* rval =
     new MAST::ConservativeFluidElementBase(*_system, elem, p);

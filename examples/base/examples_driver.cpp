@@ -47,6 +47,7 @@
 #include "examples/structural/beam_piston_theory_flutter/beam_piston_theory_flutter.h"
 #include "optimization/npsol_optimization_interface.h"
 #include "optimization/dot_optimization_interface.h"
+#include "examples/fluid/inviscid_analysis/inviscid_analysis.h"
 
 
 // libMesh includes
@@ -56,6 +57,7 @@
 
 libMesh::LibMeshInit     *__init         = NULL;
 MAST::FunctionEvaluation *__my_func_eval = NULL;
+
 
 
 
@@ -72,15 +74,65 @@ void analysis(const std::string& case_name,
         MAST::Parameter* p = run_case.get_parameter(par_name);
         if (p) {
             
-//            std::cout
-//            << "Running sensitivity for case: " << case_name
-//            << "  wrt  " << par_name << std::endl;
-//            run_case.sensitivity_solve(*p, true);
+            std::cout
+            << "Running sensitivity for case: " << case_name
+            << "  wrt  " << par_name << std::endl;
+            run_case.sensitivity_solve(*p, true);
         }
     }
 
 }
 
+
+
+template <typename ValType>
+void eigenvalue_analysis(const std::string& case_name,
+                         bool with_sens,
+                         std::string& par_name)  {
+    
+    ValType run_case;
+    
+    std::cout << "Running case: " << case_name << std::endl;
+    run_case.solve(true);
+    if (with_sens) {
+        MAST::Parameter* p = run_case.get_parameter(par_name);
+        if (p) {
+            
+            std::vector<Real> eig;
+            std::cout
+            << "Running sensitivity for case: " << case_name
+            << "  wrt  " << par_name << std::endl;
+            run_case.sensitivity_solve(*p, eig);
+        }
+    }
+    
+}
+
+
+
+
+template <typename ValType>
+void flutter_analysis(const std::string& case_name,
+                         bool with_sens,
+                         std::string& par_name)  {
+    
+    ValType run_case;
+    
+    std::cout << "Running case: " << case_name << std::endl;
+    run_case.solve(true);
+    if (with_sens) {
+        MAST::Parameter* p = run_case.get_parameter(par_name);
+        if (p) {
+            
+            std::vector<Real> eig;
+            std::cout
+            << "Running sensitivity for case: " << case_name
+            << "  wrt  " << par_name << std::endl;
+            run_case.sensitivity_solve(*p);
+        }
+    }
+    
+}
 
 
 
@@ -99,14 +151,89 @@ void plate_analysis(const std::string& case_name,
         MAST::Parameter* p = run_case.get_parameter(par_name);
         if (p) {
             
-//            std::cout
-//            << "Running sensitivity for case: " << case_name
-//            << "  wrt  " << par_name << std::endl;
-//            run_case.sensitivity_solve(*p, true);
+            std::cout
+            << "Running sensitivity for case: " << case_name
+            << "  wrt  " << par_name << std::endl;
+            run_case.sensitivity_solve(*p, true);
         }
     }
     
 }
+
+
+template <typename ValType>
+void plate_eigenvalue_analysis(const std::string& case_name,
+                    const bool nonlinear,
+                    bool with_sens,
+                    std::string& par_name)  {
+    
+    ValType run_case;
+    run_case.init(libMesh::QUAD4, nonlinear);
+    
+    std::cout << "Running case: " << case_name << std::endl;
+    run_case.solve(true);
+    if (with_sens) {
+        MAST::Parameter* p = run_case.get_parameter(par_name);
+        if (p) {
+            
+            std::vector<Real> eig;
+
+            std::cout
+            << "Running sensitivity for case: " << case_name
+            << "  wrt  " << par_name << std::endl;
+            run_case.sensitivity_solve(*p, eig);
+        }
+    }
+    
+}
+
+
+
+template <typename ValType>
+void plate_flutter_analysis(const std::string& case_name,
+                            const bool nonlinear,
+                            bool with_sens,
+                            std::string& par_name)  {
+    
+    ValType run_case;
+    run_case.init(libMesh::QUAD4, nonlinear);
+    
+    std::cout << "Running case: " << case_name << std::endl;
+    run_case.solve(true);
+    if (with_sens) {
+        MAST::Parameter* p = run_case.get_parameter(par_name);
+        if (p) {
+            
+            std::cout
+            << "Running sensitivity for case: " << case_name
+            << "  wrt  " << par_name << std::endl;
+            run_case.sensitivity_solve(*p);
+        }
+    }
+    
+}
+
+
+
+template <typename ValType>
+void fluid_analysis(const std::string& case_name)  {
+    
+    ValType run_case;
+    
+    std::cout << "Running case: " << case_name << std::endl;
+    run_case.solve(true);
+    /*if (with_sens) {
+        MAST::Parameter* p = run_case.get_parameter(par_name);
+        if (p) {
+            
+            std::cout
+            << "Running sensitivity for case: " << case_name
+            << "  wrt  " << par_name << std::endl;
+            run_case.sensitivity_solve(*p, true);
+        }
+    }*/
+}
+
 
 
 
@@ -217,9 +344,9 @@ int main(int argc, char* const argv[]) {
     if (case_name == "bar_extension")
         analysis<MAST::BarExtension>(case_name, with_sens, par_name);
     else if (case_name == "beam_modal_analysis")
-        analysis<MAST::BeamModalAnalysis>(case_name, with_sens, par_name);
+        eigenvalue_analysis<MAST::BeamModalAnalysis>(case_name, with_sens, par_name);
     else if (case_name == "beam_prestress_buckling_analysis")
-        analysis<MAST::BeamColumnBucklingAnalysis>(case_name, with_sens, par_name);
+        eigenvalue_analysis<MAST::BeamColumnBucklingAnalysis>(case_name, with_sens, par_name);
     else if (case_name == "beam_bending")
         analysis<MAST::BeamBending>(case_name, with_sens, par_name);
     else if (case_name == "beam_bending_with_offset")
@@ -238,15 +365,15 @@ int main(int argc, char* const argv[]) {
         optimization<MAST::BeamBendingThermalStressSizingOptimization>
         (case_name, verify_grads);
     else if (case_name == "beam_piston_theory_flutter_analysis")
-        analysis<MAST::BeamPistonTheoryFlutterAnalysis>(case_name, with_sens, par_name);
+        flutter_analysis<MAST::BeamPistonTheoryFlutterAnalysis>(case_name, with_sens, par_name);
     else if (case_name == "membrane_extension_uniaxial")
         analysis<MAST::MembraneExtensionUniaxial>(case_name, with_sens, par_name);
     else if (case_name == "membrane_extension_biaxial")
         analysis<MAST::MembraneExtensionBiaxial>(case_name, with_sens, par_name);
     else if (case_name == "plate_modal_analysis")
-        plate_analysis<MAST::PlateModalAnalysis>(case_name, true, with_sens, par_name);
+        plate_eigenvalue_analysis<MAST::PlateModalAnalysis>(case_name, true, with_sens, par_name);
     else if (case_name == "plate_prestress_buckling_analysis")
-        plate_analysis<MAST::PlateBucklingPrestress>(case_name, true, with_sens, par_name);
+        plate_eigenvalue_analysis<MAST::PlateBucklingPrestress>(case_name, true, with_sens, par_name);
     else if (case_name == "plate_bending")
         plate_analysis<MAST::PlateBending>
         (case_name, if_nonlin, with_sens, par_name);
@@ -256,8 +383,11 @@ int main(int argc, char* const argv[]) {
     else if (case_name == "plate_bending_thermal_stress")
         plate_analysis<MAST::PlateBendingThermalStress>
         (case_name, if_nonlin, with_sens, par_name);
+    else if (case_name == "plate_piston_theory_flutter_analysis")
+        plate_flutter_analysis<MAST::PlatePistonTheoryFlutterAnalysis>
+        (case_name, false, with_sens, par_name);
     else if (case_name == "plate_thermally_stressed_piston_theory_flutter_analysis")
-        plate_analysis<MAST::PlateThermallyStressedPistonTheoryFlutterAnalysis>
+        plate_flutter_analysis<MAST::PlateThermallyStressedPistonTheoryFlutterAnalysis>
         (case_name, if_nonlin, with_sens, par_name);
     else if (case_name == "plate_bending_sizing_optimization")
         plate_optimization<MAST::PlateBendingSizingOptimization>
@@ -271,9 +401,6 @@ int main(int argc, char* const argv[]) {
     else if (case_name == "plate_bending_thermal_stress_optimization")
         plate_optimization<MAST::PlateBendingThermalStressSizingOptimization>
         (case_name, verify_grads, if_nonlin);
-    else if (case_name == "plate_piston_theory_flutter_analysis")
-        plate_analysis<MAST::PlatePistonTheoryFlutterAnalysis>
-        (case_name, false, with_sens, par_name);
     else if (case_name == "stiffened_plate_bending_thermal_stress_optimization")
         plate_optimization<MAST::StiffenedPlateBendingThermalStressSizingOptimization>
         (case_name, verify_grads, if_nonlin);
@@ -283,6 +410,8 @@ int main(int argc, char* const argv[]) {
     else if (case_name == "topology_optimization_2D")
         plate_optimization<MAST::TopologyOptimization2D>
         (case_name, verify_grads, if_nonlin);
+    else if (case_name == "inviscid_analysis")
+        fluid_analysis<MAST::InviscidAnalysis>(case_name);
     else {
         std::cout
         << "Please run the driver with the name of example specified as: \n"
@@ -291,7 +420,10 @@ int main(int argc, char* const argv[]) {
         << "   verify_grads=<true/false>"
         << "   with_sensitivity=<true/false>"
         << "   param=<name>\n\n"
-        << "Possible values are:\n"
+        << "Possible values are:\n\n\n"
+        << "**********************************\n"
+        << "*********   STRUCTURAL   *********\n"
+        << "**********************************\n"
         << "  bar_extension \n"
         << "  beam_bending \n"
         << "  beam_modal_analysis\n"
@@ -323,6 +455,11 @@ int main(int argc, char* const argv[]) {
         << "*  param is used to specify the parameter name for which sensitivity is desired.\n"
         << "*  nonlinear is used to turn on/off nonlinear stiffening in the problem.\n"
         << "*  verify_grads=true will also verify the gradients of the optimization problem before calling the optimizer.\n"
+        << "\n\n\n"
+        << "**********************************\n"
+        << "***********   FLUID   ************\n"
+        << "**********************************\n"
+        << "  inviscid_analysis \n"
         << std::endl;
     }
     

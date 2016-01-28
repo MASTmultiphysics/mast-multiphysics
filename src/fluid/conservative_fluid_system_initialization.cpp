@@ -22,6 +22,10 @@
 #include "fluid/conservative_fluid_system_initialization.h"
 
 
+// libMesh includes
+#include "libmesh/function_base.h"
+
+
 MAST::ConservativeFluidSystemInitialization::
 ConservativeFluidSystemInitialization(libMesh::System& sys,
                                       const std::string& prefix,
@@ -49,11 +53,65 @@ MAST::SystemInitialization(sys, prefix) {
 
     
     nm = prefix + "_rhoe";
-    _vars[dim+2] = sys.add_variable(nm, fe_type);
+    _vars[dim+1] = sys.add_variable(nm, fe_type);
 }
+
 
 
 MAST::ConservativeFluidSystemInitialization::
 ~ConservativeFluidSystemInitialization() {
     
 }
+
+
+
+
+void
+MAST::ConservativeFluidSystemInitialization::
+initialize_solution(const RealVectorX& conservative_sol) {
+    
+    // make sure that the dimension of the sol vector matches the dimension
+    // specified for this system
+    libmesh_assert_equal_to(conservative_sol.size(), _vars.size());
+    
+    // now create a function and use it for initialization
+    class SolutionFunction:
+    public libMesh::FunctionBase<Real> {
+    public:
+        SolutionFunction(const RealVectorX& s):
+        libMesh::FunctionBase<Real>() {
+            _sol.resize((unsigned int)s.size());
+            for (unsigned int i=0; i<s.size(); i++) _sol(i) = s(i);
+        }
+
+        
+        SolutionFunction(const DenseRealVector& sol):
+        libMesh::FunctionBase<Real>(),
+        _sol(sol) { }
+        
+        virtual libMesh::UniquePtr<FunctionBase<Real> > clone () const {
+            FunctionBase<Real> *rval = new SolutionFunction(_sol);
+            return libMesh::UniquePtr<FunctionBase<Real> >(rval);
+        }
+
+        // this should not get called
+        virtual Real operator()
+        (const libMesh::Point& p, const Real time) {libmesh_assert(false);}
+        
+        virtual void
+        operator() (const libMesh::Point& p,
+                    const Real time,
+                    libMesh::DenseVector<Real>& output) {
+            output = _sol;
+        }
+    protected:
+        DenseRealVector _sol;
+    };
+    
+    SolutionFunction sol_func(conservative_sol);
+
+    _system.project_solution(&sol_func);
+}
+
+
+

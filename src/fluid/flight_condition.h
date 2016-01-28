@@ -17,20 +17,21 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#ifndef mast_fluid_condition_h
-#define mast_fluid_condition_h
+#ifndef __mast_fluid_condition_h__
+#define __mast_fluid_condition_h__
 
 // MAST includes
 #include "base/mast_data_types.h"
 #include "fluid/gas_property.h"
+
 
 // Eigen includes
 #include "Eigen/Core"
 
 namespace MAST {
     
-    class FlightCondition
-    {
+    class FlightCondition {
+        
     public:
         FlightCondition():
         ref_chord(0.),
@@ -206,4 +207,5 @@ namespace MAST {
     
 }
 
-#endif
+#endif // __mast_fluid_condition_h__
+

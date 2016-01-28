@@ -35,6 +35,40 @@
 
 
 
+MAST::FluidElemBase::FluidElemBase(const unsigned int d,
+                                   const MAST::FlightCondition& f):
+_if_viscous(false),
+_include_pressure_switch(false),
+//surface_motion(NULL),
+flight_condition(&f),
+dim(d),
+_dissipation_scaling(1.) {
+    
+    
+    // prepare the variable vector
+    _active_primitive_vars.push_back(RHO_PRIM);
+    _active_primitive_vars.push_back(VEL1);
+    _active_conservative_vars.push_back(RHO_CONS);
+    _active_conservative_vars.push_back(RHOVEL1);
+    
+    if (dim > 1)
+    {
+        _active_primitive_vars.push_back(VEL2);
+        _active_conservative_vars.push_back(RHOVEL2);
+    }
+    
+    if (dim > 2)
+    {
+        _active_primitive_vars.push_back(VEL3);
+        _active_conservative_vars.push_back(RHOVEL3);
+    }
+    _active_primitive_vars.push_back(TEMP);
+    _active_conservative_vars.push_back(ETOT);
+    
+}
+
+
+
 
 MAST::FluidElemBase::~FluidElemBase() {
     
@@ -43,10 +77,9 @@ MAST::FluidElemBase::~FluidElemBase() {
 
 
 
-void
-MAST::FluidElemBase::init_data () {
-    
-    
+//void
+//MAST::FluidElemBase::init_data () {
+//    
 //    // check if the simulation is viscous or inviscid
 //    _include_pressure_switch =
 //    _infile("include_pressure_switch", true);
@@ -153,26 +186,7 @@ MAST::FluidElemBase::init_data () {
 //    }
 //    
 //    
-    // prepare the variable vector
-    _active_primitive_vars.push_back(RHO_PRIM);
-    _active_primitive_vars.push_back(VEL1);
-    _active_conservative_vars.push_back(RHO_CONS);
-    _active_conservative_vars.push_back(RHOVEL1);
-    
-    if (dim > 1)
-    {
-        _active_primitive_vars.push_back(VEL2);
-        _active_conservative_vars.push_back(RHOVEL2);
-    }
-    
-    if (dim > 2)
-    {
-        _active_primitive_vars.push_back(VEL3);
-        _active_conservative_vars.push_back(RHOVEL3);
-    }
-    _active_primitive_vars.push_back(TEMP);
-    _active_conservative_vars.push_back(ETOT);
-}
+//}
 
 
 
@@ -1707,7 +1721,7 @@ calculate_barth_tau_matrix (const unsigned int qp,
             (sol, nvec, eig_val, l_eig_vec, l_eig_vec_inv_tr);
             
             for (unsigned int i_var=0; i_var<n1; i_var++)
-                l_eig_vec_inv_tr.col(i_var) *= fabs(eig_val(i_var, i_var)); // L^-T [omaga]
+                l_eig_vec_inv_tr.col(i_var) *= fabs(eig_val(i_var)); // L^-T [omaga]
             
             l_eig_vec_inv_tr *= l_eig_vec.transpose(); // A = L^-T [omaga] L^T
             

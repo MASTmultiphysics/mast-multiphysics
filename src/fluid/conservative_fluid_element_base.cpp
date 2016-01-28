@@ -29,10 +29,9 @@
 MAST::ConservativeFluidElementBase::
 ConservativeFluidElementBase(MAST::SystemInitialization& sys,
                              const libMesh::Elem& elem,
-                             const MAST::ElementPropertyCardBase& p):
-MAST::FluidElemBase(),
-MAST::ElementBase(sys, elem),
-_property(p) {
+                             const MAST::FlightCondition& f):
+MAST::FluidElemBase(elem.dim(), f),
+MAST::ElementBase(sys, elem) {
     
     // initialize the finite element data structures
     _init_fe_and_qrule(elem, &_fe, &_qrule);
@@ -64,14 +63,14 @@ MAST::ConservativeFluidElementBase::internal_residual (bool request_jacobian,
     mat2_n1n1       = RealMatrixX::Zero(   n1,    n1),
     mat3_n1n2       = RealMatrixX::Zero(   n1,    n2),
     mat4_n2n2       = RealMatrixX::Zero(   n2,    n2),
-    AiBi_adv        = RealMatrixX::Zero(   n1,    n1),
+    AiBi_adv        = RealMatrixX::Zero(   n1,    n2),
     A_sens          = RealMatrixX::Zero(   n1,    n2),
     LS              = RealMatrixX::Zero(   n1,    n2),
-    LS_sens         = RealMatrixX::Zero(   n1,    n2);
+    LS_sens         = RealMatrixX::Zero(   n2,    n2);
     
     RealVectorX
     vec1_n1  = RealVectorX::Zero(n1),
-    vec2_n1  = RealVectorX::Zero(n2),
+    vec2_n1  = RealVectorX::Zero(n1),
     vec3_n2  = RealVectorX::Zero(n2),
     dc       = RealVectorX::Zero(dim);
     
@@ -119,8 +118,8 @@ MAST::ConservativeFluidElementBase::internal_residual (bool request_jacobian,
             calculate_advection_flux_jacobian_sensitivity_for_conservative_variable
             (i_dim, primitive_sol, Ai_sens[i_dim]);
             
-            dBmat[i_dim].left_multiply(mat1_n1n1, Ai_adv[i_dim]);
-            AiBi_adv += mat1_n1n1;
+            dBmat[i_dim].left_multiply(mat3_n1n2, Ai_adv[i_dim]);
+            AiBi_adv += mat3_n1n2;
         }
         
         // intrinsic time operator for this quadrature point
@@ -172,7 +171,7 @@ MAST::ConservativeFluidElementBase::internal_residual (bool request_jacobian,
             for (unsigned int i_dim=0; i_dim<dim; i_dim++) {
                 // flux term
                 Bmat.left_multiply(mat3_n1n2, Ai_adv[i_dim]);                        // A_i B
-                dBmat[i_dim].left_multiply_transpose(mat4_n2n2, mat3_n1n2);          // dB_i^T A_i B
+                dBmat[i_dim].right_multiply_transpose(mat4_n2n2, mat3_n1n2);          // dB_i^T A_i B
                 jac -= JxW[qp]*mat4_n2n2;
                 
                 // sensitivity of Ai_Bi with respect to U:   [dAi/dUj.Bi.U  ...  dAi/dUn.Bi.U]
@@ -184,19 +183,17 @@ MAST::ConservativeFluidElementBase::internal_residual (bool request_jacobian,
                         A_sens.col(nphi*i_cvar+i_phi) += phi[i_phi][qp] *vec1_n1; // assuming that all variables have same n_phi
                 }
                 
-                
-                // stabilization term
-                dBmat[i_dim].left_multiply(mat3_n1n2, mat1_n1n1);               // A_i dB_i
-                jac  += JxW[qp] * LS * mat3_n1n2;
-                
                 // discontinuity capturing term
                 dBmat[i_dim].right_multiply_transpose(mat4_n2n2,
                                                       dBmat[i_dim]);            // dB_i^T dc dB_i
-                jac += JxW[qp] * dc * mat4_n2n2;
+                jac += JxW[qp] * dc(i_dim) * mat4_n2n2;
             }
             
+            // stabilization term
+            jac  += JxW[qp] * LS.transpose() * AiBi_adv;                    // A_i dB_i
+
             // linearization of the Jacobian terms
-            jac += JxW[qp] * LS * A_sens; // LS^T tau d^2F^adv_i / dx dU  (Ai sensitivity)
+            jac += JxW[qp] * LS.transpose() * A_sens; // LS^T tau d^2F^adv_i / dx dU  (Ai sensitivity)
                                           // linearization of the LS terms
             jac += JxW[qp] * LS_sens;
             
@@ -226,10 +223,11 @@ MAST::ConservativeFluidElementBase::velocity_residual (bool request_jacobian,
     mat1_n1n1        = RealMatrixX::Zero(n1, n1),
     mat2_n1n2        = RealMatrixX::Zero(n1, n2),
     mat3_n2n2        = RealMatrixX::Zero(n2, n2),
-    AiBi_adv         = RealMatrixX::Zero(n1, n1),
+    mat4_n2n1        = RealMatrixX::Zero(n2, n1),
+    AiBi_adv         = RealMatrixX::Zero(n1, n2),
     A_sens           = RealMatrixX::Zero(n1, n2),
     LS               = RealMatrixX::Zero(n1, n2),
-    LS_sens          = RealMatrixX::Zero(n1, n2);
+    LS_sens          = RealMatrixX::Zero(n2, n2);
     RealVectorX
     vec1_n1          = RealVectorX::Zero(n1),
     vec2_n1          = RealVectorX::Zero(n1),
@@ -275,8 +273,8 @@ MAST::ConservativeFluidElementBase::velocity_residual (bool request_jacobian,
         for (unsigned int i_dim=0; i_dim<dim; i_dim++) {
             calculate_advection_flux_jacobian(i_dim, primitive_sol, Ai_adv[i_dim]);
             
-            dBmat[i_dim].left_multiply(mat1_n1n1, Ai_adv[i_dim]);
-            AiBi_adv += mat1_n1n1;
+            dBmat[i_dim].left_multiply(mat2_n1n2, Ai_adv[i_dim]);
+            AiBi_adv += mat2_n1n2;
         }
         
         // intrinsic time operator for this quadrature point
@@ -308,7 +306,8 @@ MAST::ConservativeFluidElementBase::velocity_residual (bool request_jacobian,
             
             // contribution from the stabilization term
             // next, evaluate the contribution from the stabilization term
-            Bmat.left_multiply_transpose(mat3_n2n2, LS);     // LS^T B
+            mat4_n2n1   = LS.transpose();
+            Bmat.left_multiply(mat3_n2n2, mat4_n2n1);     // LS^T B
             jac += JxW[qp]*mat3_n2n2;
         }
     }
@@ -524,7 +523,7 @@ symmetry_surface_residual(bool request_jacobian,
     // prepare the side finite element
     libMesh::FEBase *fe_ptr    = NULL;
     libMesh::QBase  *qrule_ptr = NULL;
-    _get_side_fe_and_qrule(get_elem_for_quadrature(), s, &fe_ptr, &qrule_ptr, false);
+    _get_side_fe_and_qrule(_elem, s, &fe_ptr, &qrule_ptr, false);
     std::auto_ptr<libMesh::FEBase> fe(fe_ptr);
     std::auto_ptr<libMesh::QBase>  qrule(qrule_ptr);
     
@@ -634,7 +633,7 @@ slip_wall_surface_residual(bool request_jacobian,
     // prepare the side finite element
     libMesh::FEBase *fe_ptr    = NULL;
     libMesh::QBase  *qrule_ptr = NULL;
-    _get_side_fe_and_qrule(get_elem_for_quadrature(), s, &fe_ptr, &qrule_ptr, false);
+    _get_side_fe_and_qrule(_elem, s, &fe_ptr, &qrule_ptr, false);
     std::auto_ptr<libMesh::FEBase> fe(fe_ptr);
     std::auto_ptr<libMesh::QBase>  qrule(qrule_ptr);
     
@@ -777,7 +776,7 @@ far_field_surface_residual(bool request_jacobian,
     // prepare the side finite element
     libMesh::FEBase *fe_ptr    = NULL;
     libMesh::QBase  *qrule_ptr = NULL;
-    _get_side_fe_and_qrule(get_elem_for_quadrature(), s, &fe_ptr, &qrule_ptr, false);
+    _get_side_fe_and_qrule(_elem, s, &fe_ptr, &qrule_ptr, false);
     std::auto_ptr<libMesh::FEBase> fe(fe_ptr);
     std::auto_ptr<libMesh::QBase>  qrule(qrule_ptr);
     
@@ -839,7 +838,7 @@ far_field_surface_residual(bool request_jacobian,
         mat1_n1n1 = leig_vec_inv_tr;
         for (unsigned int j=0; j<n1; j++)
             if (eig_val(j) < 0)
-                mat1_n1n1.col(j) *= eig_val(j, j); // L^-T [omaga]_{-}
+                mat1_n1n1.col(j) *= eig_val(j); // L^-T [omaga]_{-}
             else
                 mat1_n1n1.col(j) *= 0.0;
         

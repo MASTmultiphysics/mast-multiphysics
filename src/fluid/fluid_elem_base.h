@@ -76,20 +76,11 @@ namespace MAST {
         /*!
          *   Constructor
          */
-        FluidElemBase():
-        _if_viscous(false),
-        _include_pressure_switch(false),
-        //surface_motion(NULL),
-        flight_condition(NULL),
-        dim(0),
-        _dissipation_scaling(1.)
-        { }
+        FluidElemBase(const unsigned int dimension,
+                      const MAST::FlightCondition& f);
         
 
         virtual ~FluidElemBase();
-        
-        
-        void init_data();
         
         
         void get_infinity_vars( RealVectorX& vars_inf ) const;
@@ -101,7 +92,7 @@ namespace MAST {
          */
         //MAST::SurfaceMotionBase* surface_motion;
         
-        MAST::FlightCondition* flight_condition;
+        const MAST::FlightCondition* flight_condition;
         
         unsigned int dim;
         

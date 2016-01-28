@@ -47,17 +47,17 @@ namespace MAST {
         
         ConservativeFluidElementBase(MAST::SystemInitialization& sys,
                                      const libMesh::Elem& elem,
-                                     const MAST::ElementPropertyCardBase& p);
+                                     const MAST::FlightCondition& f);
         
         virtual ~ConservativeFluidElementBase();
         
         /*!
          *   returns a constant reference to the finite element object
          */
-        const MAST::ElementPropertyCardBase&
-        elem_property()  {
-            return _property;
-        }
+        //const MAST::ElementPropertyCardBase&
+        //elem_property()  {
+        //    return _property;
+        //}
         
         
         /*!
@@ -224,7 +224,7 @@ namespace MAST {
         /*!
          *   element property
          */
-        const MAST::ElementPropertyCardBase& _property;
+        //const MAST::ElementPropertyCardBase& _property;
         
     };
 }
