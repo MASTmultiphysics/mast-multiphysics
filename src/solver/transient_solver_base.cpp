@@ -384,8 +384,8 @@ MAST::TransientSolverBase::advance_time_step() {
     // velocity routines,
     
     // finally, update the system time
-    _system->time += dt;
-    _first_step    = false;
+    _system->time     += dt;
+    _first_step        = false;
 }
 
 

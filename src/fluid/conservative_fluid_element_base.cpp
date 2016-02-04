@@ -176,21 +176,20 @@ MAST::ConservativeFluidElementBase::internal_residual (bool request_jacobian,
                 
                 // sensitivity of Ai_Bi with respect to U:   [dAi/dUj.Bi.U  ...  dAi/dUn.Bi.U]
                 dBmat[i_dim].vector_mult(vec1_n1, _sol);
-                for (unsigned int i_cvar=0; i_cvar<n1; i_cvar++)
-                {
-                    vec1_n1 = Ai_sens[i_dim][i_cvar] * vec2_n1;
+                for (unsigned int i_cvar=0; i_cvar<n1; i_cvar++) {
+                    
+                    vec2_n1 = Ai_sens[i_dim][i_cvar] * vec1_n1;
                     for (unsigned int i_phi=0; i_phi<nphi; i_phi++)
-                        A_sens.col(nphi*i_cvar+i_phi) += phi[i_phi][qp] *vec1_n1; // assuming that all variables have same n_phi
+                        A_sens.col(nphi*i_cvar+i_phi) += phi[i_phi][qp] *vec2_n1; // assuming that all variables have same n_phi
                 }
                 
                 // discontinuity capturing term
-                dBmat[i_dim].right_multiply_transpose(mat4_n2n2,
-                                                      dBmat[i_dim]);            // dB_i^T dc dB_i
+                dBmat[i_dim].right_multiply_transpose(mat4_n2n2, dBmat[i_dim]);   // dB_i^T dc dB_i
                 jac += JxW[qp] * dc(i_dim) * mat4_n2n2;
             }
             
             // stabilization term
-            jac  += JxW[qp] * LS.transpose() * AiBi_adv;                    // A_i dB_i
+            jac  += JxW[qp] * LS.transpose() * AiBi_adv;                          // A_i dB_i
 
             // linearization of the Jacobian terms
             jac += JxW[qp] * LS.transpose() * A_sens; // LS^T tau d^2F^adv_i / dx dU  (Ai sensitivity)
@@ -292,7 +291,7 @@ MAST::ConservativeFluidElementBase::velocity_residual (bool request_jacobian,
         
         // now evaluate the Jacobian due to the velocity term
         Bmat.right_multiply(vec1_n1, _vel);                                     //  B * U_dot
-        Bmat.vector_mult_transpose(vec3_n2, vec1_n1);                           //  B^T * B * T_dot
+        Bmat.vector_mult_transpose(vec3_n2, vec1_n1);                           //  B^T * B * U_dot
         f += JxW[qp] * vec3_n2;
         
         // next, evaluate the contribution from the stabilization term
@@ -308,7 +307,7 @@ MAST::ConservativeFluidElementBase::velocity_residual (bool request_jacobian,
             // next, evaluate the contribution from the stabilization term
             mat4_n2n1   = LS.transpose();
             Bmat.left_multiply(mat3_n2n2, mat4_n2n1);     // LS^T B
-            jac += JxW[qp]*mat3_n2n2;
+            jac_xdot += JxW[qp]*mat3_n2n2;
         }
     }
     

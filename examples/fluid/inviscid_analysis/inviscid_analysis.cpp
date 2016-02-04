@@ -60,17 +60,6 @@ MAST::InviscidAnalysis::InviscidAnalysis() {
                                                                          dim);
     
     
-//    // add the Dirichlet boundary condition on left boundary
-//    MAST::DirichletBoundaryCondition   dirichlet;
-//    dirichlet.init(0, fluid_sys.vars());
-//    
-//    // add the boundary condition to the physics
-//    fluid_discipline.add_dirichlet_bc(0, dirichlet);
-//    
-//    // tell the system about the constraints. This needs to happen
-//    // before the equation system initialization
-//    fluid_discipline.init_system_dirichlet_bc(sys);
-    
     // initialize the equation system for analysis
     _eq_sys->init();
     
@@ -204,7 +193,7 @@ MAST::InviscidAnalysis::solve(bool if_write_output) {
     // time solver parameters
     unsigned int t_step  = 0;
     unsigned int n_steps = 100;
-    solver.dt            = 1.0e1;
+    solver.dt            = 1.0e-3;
     solver.beta          = 1.0;
     
     // loop over time steps
