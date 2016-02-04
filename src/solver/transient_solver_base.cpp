@@ -69,8 +69,7 @@ MAST::TransientSolverBase::set_assembly(MAST::TransientAssembly& assembly) {
             _acceleration[i] = _system->solution->zero_clone().release();
     }
     
-    // now localize the vectors
-    // add the vectors
+    // now, add the vectors
     std::string nm;
     for (unsigned int i=0; i<n_iters; i++) {
         std::ostringstream iter;
@@ -240,7 +239,10 @@ _localize_solutions(const libMesh::NumericVector<Real>& current_sol) {
         ///////////////////////////////////////////
         // localize the solution
         ///////////////////////////////////////////
-        if (i == 0) {
+        if ((i == 0) ||                  // for the solution
+            (_first_step && (i==1))) {   // of if we are setting the prev sol
+                                         // for the very first iteration, which
+                                         // assumes zero velocity
             // update both the localized and system stored solution
             _system->get_vector(nm) = current_sol;
             _system->get_vector(nm).close();
@@ -301,6 +303,9 @@ _localize_solutions(const libMesh::NumericVector<Real>& current_sol) {
         }
         
     }
+    
+    if (_first_step)
+        _first_step = false;
 }
 
 

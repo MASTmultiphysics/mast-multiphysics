@@ -77,6 +77,12 @@ MAST::InviscidAnalysis::InviscidAnalysis() {
     
     // initialize the flow conditions
     GetPot infile("input.in");
+    
+    // time step control
+    _max_time_steps    =   infile("max_time_steps", 1000);
+    _time_step_size    =   infile("initial_dt",    1.e-2);
+    
+    
     _flight_cond    =  new MAST::FlightCondition;
     for (unsigned int i=0; i<3; i++) {
         
@@ -192,17 +198,26 @@ MAST::InviscidAnalysis::solve(bool if_write_output) {
     
     // time solver parameters
     unsigned int t_step  = 0;
-    unsigned int n_steps = 100;
-    solver.dt            = 1.0e-3;
+    Real            tval = 0.;
+    solver.dt            = _time_step_size;
     solver.beta          = 1.0;
     
+    
+    if (if_write_output)
+        std::cout << "Writing output to : output.exo" << std::endl;
+
+    
     // loop over time steps
-    while (t_step < n_steps) {
+    while (t_step < _max_time_steps) {
         
+        std::cout
+        << "Time step: " << t_step
+        << " :  t = " << tval
+        << " :  xdot-L2 = " << solver.velocity().l2_norm()
+        << std::endl;
+
         // write the time-step
         if (if_write_output) {
-            
-            std::cout << "Writing output to : output.exo" << std::endl;
             
             exodus_writer.write_timestep("output.exo",
                                          *_eq_sys,
@@ -212,8 +227,11 @@ MAST::InviscidAnalysis::solve(bool if_write_output) {
         
         solver.solve();
         
+        //_sys->solution->print();
+        
         solver.advance_time_step();
         
+        tval  += solver.dt;
         t_step++;
     }
     

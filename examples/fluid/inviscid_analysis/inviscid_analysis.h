@@ -83,6 +83,10 @@ namespace MAST {
         sensitivity_solve(MAST::Parameter& p,
                           bool if_write_output = false);
         
+        // parameters to control the time step size
+        unsigned int _max_time_steps;
+        Real         _time_step_size;
+        
         
         // create the mesh
         libMesh::ParallelMesh*           _mesh;
