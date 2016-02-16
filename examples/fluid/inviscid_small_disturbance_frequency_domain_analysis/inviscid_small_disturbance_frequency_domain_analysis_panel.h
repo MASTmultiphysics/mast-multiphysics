@@ -17,8 +17,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#ifndef __mast_inviscid_analysis_h__
-#define __mast_inviscid_analysis_h__
+#ifndef __mast_inviscid_small_disturbance_frequency_domain_analysis_h__
+#define __mast_inviscid_small_disturbance_frequency_domain_analysis_h__
 
 
 // C++ includes
@@ -50,6 +50,8 @@ namespace MAST {
     class ConstantFieldFunction;
     class BoundaryConditionBase;
     class FlightCondition;
+    class FrequencyFunction;
+    class RigidSurfaceMotion;
     
 
     /*!
@@ -60,13 +62,13 @@ namespace MAST {
      *   -snes_type newtonls -snes_max_it 1 -snes_linesearch_type bt -snes_linesearch_max_it 2
      *   -snes_ls_view -snes_monitor -snes_log
      */
-    struct InviscidAnalysis {
+    struct InviscidSmallDisturbanceFrequencyDomainAnalysis {
         
         
-        InviscidAnalysis();
+        InviscidSmallDisturbanceFrequencyDomainAnalysis();
         
         
-        ~InviscidAnalysis();
+        ~InviscidSmallDisturbanceFrequencyDomainAnalysis();
         
         
         /*!
@@ -92,8 +94,7 @@ namespace MAST {
                           bool if_write_output = false);
         
         // parameters to control the time step size
-        unsigned int _max_time_steps;
-        Real         _time_step_size;
+        unsigned int _max_complex_iters;
         
         
         // create the mesh
@@ -112,11 +113,34 @@ namespace MAST {
         // flight condition
         MAST::FlightCondition*          _flight_cond;
 
+        // boundary condition
         MAST::BoundaryConditionBase
-        *_far_field,
-        *_slip_wall;
+        *_far_field;
+
+        /*!
+         *   surface rigid motion
+         */
+        MAST::RigidSurfaceMotion
+        *_motion;
+
+        // parameters used in the system
+        MAST::Parameter
+        *_omega,
+        *_velocity,
+        *_b_ref;
 
         
+        MAST::ConstantFieldFunction
+        *_omega_f,
+        *_velocity_f,
+        *_b_ref_f;
+        
+        
+        /*!
+         *   frequency object
+         */
+        MAST::FrequencyFunction        *_freq_function;
+
         // vector of parameters to evaluate sensitivity wrt
         std::vector<MAST::Parameter*> _params_for_sensitivity;
     };
@@ -124,4 +148,4 @@ namespace MAST {
 
 
 
-#endif //  __mast_inviscid_analysis_h__
+#endif //  __mast_inviscid_small_disturbance_frequency_domain_analysis_h__

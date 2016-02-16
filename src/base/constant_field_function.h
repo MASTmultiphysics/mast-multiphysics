@@ -53,6 +53,23 @@ namespace MAST {
          *    calculates the value of the function at the specified point,
          *    \par p, and time, \par t, and returns it in \p v.
          */
+        virtual void operator() (Real& v) const;
+        
+        
+        /*!
+         *    calculates the value of the function at the specified point,
+         *    \par p, and time, \par t, and returns it in \p v.
+         */
+        virtual void derivative (const MAST::DerivativeType d,
+                                 const MAST::FunctionBase& f,
+                                 Real& v) const;
+
+        
+        
+        /*!
+         *    calculates the value of the function at the specified point,
+         *    \par p, and time, \par t, and returns it in \p v.
+         */
         virtual void operator() (const libMesh::Point& p,
                                  const Real t,
                                  Real& v) const;

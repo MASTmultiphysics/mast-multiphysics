@@ -48,7 +48,7 @@ namespace MAST {
         
         Real c_pressure(const Real p0, const Real q0) const;
         
-        void get_uvec(DenseRealVector& u) const;
+        void get_uvec(RealVectorX& u) const;
         
         RealVectorX primitive_sol;
         

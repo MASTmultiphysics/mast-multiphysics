@@ -51,14 +51,6 @@ namespace MAST {
         
         virtual ~ConservativeFluidElementBase();
         
-        /*!
-         *   returns a constant reference to the finite element object
-         */
-        //const MAST::ElementPropertyCardBase&
-        //elem_property()  {
-        //    return _property;
-        //}
-        
         
         /*!
          *   internal force contribution to system residual
@@ -220,11 +212,6 @@ namespace MAST {
                                                const unsigned int dim,
                                                const libMesh::FEBase& fe,
                                                std::vector<MAST::FEMOperatorMatrix>& dBmat);
-        
-        /*!
-         *   element property
-         */
-        //const MAST::ElementPropertyCardBase& _property;
         
     };
 }

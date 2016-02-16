@@ -34,6 +34,11 @@ namespace MAST {
         
     public:
         FlightCondition():
+        body_roll_axis(RealVectorX::Zero(3)),
+        body_pitch_axis(RealVectorX::Zero(3)),
+        body_yaw_axis(RealVectorX::Zero(3)),
+        body_euler_angles(RealVectorX::Zero(3)),
+        body_angular_rates(RealVectorX::Zero(3)),
         ref_chord(0.),
         altitude(0.)
         {}

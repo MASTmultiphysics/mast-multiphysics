@@ -73,6 +73,15 @@ MAST::ElementBase::set_solution(const RealVectorX &vec,
 
 
 void
+MAST::ElementBase::set_complex_solution(const ComplexVectorX &vec) {
+    
+    _complex_sol = vec;
+}
+
+
+
+
+void
 MAST::ElementBase::set_velocity(const RealVectorX &vec,
                                 bool if_sens) {
     

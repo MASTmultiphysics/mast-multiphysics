@@ -59,12 +59,36 @@ namespace MAST {
         virtual std::auto_ptr<MAST::FieldFunction<ValType> > clone() const= 0;
         
         /*!
+         *    calculates the value of the function and returns it in \p v.
+         */
+        virtual void operator() (ValType& v) const {
+            
+            libmesh_error(); // must be implemented in derived class
+        }
+        
+        
+        /*!
+         *    calculates the value of the function derivative and
+         *    returns it in \p v.
+         */
+        virtual void derivative (const MAST::DerivativeType d,
+                                 const MAST::FunctionBase& f,
+                                 ValType& v) const {
+            
+            libmesh_error(); // must be implemented in derived class
+        }
+
+        
+        /*!
          *    calculates the value of the function at the specified point,
          *    \par p, and time, \par t, and returns it in \p v.
          */
         virtual void operator() (const libMesh::Point& p,
                                  const Real t,
-                                 ValType& v) const = 0;
+                                 ValType& v) const {
+            
+            libmesh_error(); // must be implemented in derived class
+        }
         
         
         /*!
@@ -75,7 +99,10 @@ namespace MAST {
                                  const MAST::FunctionBase& f,
                                  const libMesh::Point& p,
                                  const Real t,
-                                 ValType& v) const = 0;
+                                 ValType& v) const {
+            
+            libmesh_error(); // must be implemented in derived class
+        }
         
         
         /*!

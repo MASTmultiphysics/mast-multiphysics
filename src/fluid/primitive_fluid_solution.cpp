@@ -124,9 +124,10 @@ MAST::PrimitiveSolution::c_pressure(const Real p0,
 
 
 void
-MAST::PrimitiveSolution::get_uvec(DenseRealVector &u) const
+MAST::PrimitiveSolution::get_uvec(RealVectorX &u) const
 {
-    u.zero();
+    u.setZero();
+    
     switch (dimension) {
         case 3:
             u(2) = u3;

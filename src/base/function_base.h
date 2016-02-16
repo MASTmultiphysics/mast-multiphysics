@@ -84,16 +84,7 @@ namespace MAST
             else             // this is the master
                 return this;
         }
-        
-        /*!
-         *   @returns \p true if this is a field function, and \p false
-         *   otherwise
-         */
-        bool is_field_function() const {
-            
-            return _is_field_func;
-        }
-        
+                
         
         /*!
          *  returns true if the function depends on the provided value

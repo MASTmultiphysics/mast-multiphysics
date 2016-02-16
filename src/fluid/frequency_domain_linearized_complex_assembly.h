@@ -17,37 +17,52 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#ifndef __mast__conservative_fluid_transient_assembly_h__
-#define __mast__conservative_fluid_transient_assembly_h__
+#ifndef __mast__frequency_domain_linearized_complex_assembly_h__
+#define __mast__frequency_domain_linearized_complex_assembly_h__
 
 // MAST includes
-#include "base/transient_assembly.h"
+#include "base/complex_assembly_base.h"
 
 
 
 namespace MAST {
     
     
-    class ConservativeFluidTransientAssembly:
-    public MAST::TransientAssembly {
+    // Forward declerations
+    class FunctionBase;
+    class FrequencyFunction;
+    
+    
+    class FrequencyDomainLinearizedComplexAssembly:
+    public MAST::ComplexAssemblyBase {
+        
     public:
         
         /*!
-         *   constructor associates this assembly object with the system
+         *   default constructor
          */
-        ConservativeFluidTransientAssembly();
+        FrequencyDomainLinearizedComplexAssembly();
         
         
         /*!
-         *   destructor resets the association of this assembly object with
-         *   the system
+         *   destructor
          */
-        virtual ~ConservativeFluidTransientAssembly();
+        virtual ~FrequencyDomainLinearizedComplexAssembly();
         
-        //**************************************************************
-        //these methods are provided for use by the solvers
-        //**************************************************************
+
+        /*!
+         *    sets the frequency function for analysis
+         */
+        void set_frequency_function(MAST::FrequencyFunction& f);
         
+        
+        /*!
+         *   clears association with a system to this discipline, and vice-a-versa
+         */
+        virtual void clear_discipline_and_system( );
+
+        
+    protected:
         
         /*!
          *   performs the element calculations over \par elem, and returns
@@ -57,50 +72,33 @@ namespace MAST {
          */
         virtual void _elem_calculations(MAST::ElementBase& elem,
                                         bool if_jac,
-                                        RealVectorX& f_m,
-                                        RealVectorX& f_x,
-                                        RealMatrixX& f_m_jac_x_dot,
-                                        RealMatrixX& f_m_jac,
-                                        RealMatrixX& f_x_jac);
-        
-        /*!
-         *   This call for second order ode should not be used for this
-         *   transient assembly
-         */
-        virtual void _elem_calculations(MAST::ElementBase& elem,
-                                        bool if_jac,
-                                        RealVectorX& f_m,
-                                        RealVectorX& f_x,
-                                        RealMatrixX& f_m_jac_xddot,
-                                        RealMatrixX& f_m_jac_xdot,
-                                        RealMatrixX& f_m_jac,
-                                        RealMatrixX& f_x_jac_xdot,
-                                        RealMatrixX& f_x_jac) {
-            libmesh_error();
-        }
+                                        ComplexVectorX& vec,
+                                        ComplexMatrixX& mat);
         
         /*!
          *   performs the element sensitivity calculations over \par elem,
          *   and returns the element residual sensitivity in \par vec .
          */
         virtual void _elem_sensitivity_calculations(MAST::ElementBase& elem,
-                                                    RealVectorX& vec);
-        
-        
-    protected:
-        
-        
+                                                    bool if_jac,
+                                                    ComplexVectorX& vec,
+                                                    ComplexMatrixX& mat);
+
         /*!
          *   @returns a smart-pointer to a newly created element for
          *   calculation of element quantities.
          */
         virtual std::auto_ptr<MAST::ElementBase>
         _build_elem(const libMesh::Elem& elem);
+
+        
+        /*!
+         *   frequency function used to define the oscillatory frequency
+         */
+        MAST::FrequencyFunction*  _frequency;
         
     };
-    
-    
 }
 
-#endif // __mast__conservative_fluid_transient_assembly_h__
 
+#endif // __mast__frequency_domain_linearized_complex_assembly_h__

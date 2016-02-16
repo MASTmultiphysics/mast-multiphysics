@@ -57,7 +57,7 @@ namespace MAST {
      *    parameter.
      *
      *    - Eigenvalue Analysis
-     *    \f[ \lambda A(X,p) = B(X,p) \f]
+     *    \f[ A(X,p) = \lambda  B(X,p) \f]
      *    An eigenvalue analysis requires the coefficent matrices \f$A(X,p)\f$
      *    and \f$B(X,p)\f$. For cases where the eigenvalue problem is defined
      *    using small disturbances about a steady-state solution, the base
@@ -65,7 +65,7 @@ namespace MAST {
      *    provided to the element.
      *
      *    - Transient Analysis for first order systems
-     *    \f[ m(\dot{X}, X, p) = f(X,p) \f]
+     *    \f[ f_m(\dot{X}, X, p) + f(X,p) = 0 \f]
      *
      */
     class ElementBase {
@@ -143,7 +143,14 @@ namespace MAST {
          */
         virtual void set_solution(const RealVectorX& vec,
                                   bool if_sens = false);
+
         
+        /*!
+         *   This provides the complex solution for frequecy-domain analysis.
+         *   stores \p vec as solution for element level calculations.
+         */
+        virtual void set_complex_solution(const ComplexVectorX& vec);
+
         
         /*!
          *    stores \p vec as velocity for element level calculations,
@@ -160,15 +167,6 @@ namespace MAST {
         virtual void set_acceleration(const RealVectorX& vec,
                                       bool if_sens = false);
 
-        
-//        /*!
-//         *   This is used for cases where a linearized problem is solved
-//         *   about a stationary base solution. This method stores
-//         *   \p vec as the base solution, or its sensitivity if \p
-//         *   if_sens is true.
-//         */
-//        virtual void set_base_solution(const RealVectorX& vec,
-//                                       bool if_sens = false);
         
         /*!
          *   Attaches the function that represents the system solution
@@ -299,7 +297,13 @@ namespace MAST {
          *   local solution sensitivity
          */
         RealVectorX _sol_sens;
+
         
+        /*!
+         *   local solution used for frequency domain analysis
+         */
+        ComplexVectorX _complex_sol;
+
         
         /*!
          *   local velocity
@@ -323,18 +327,6 @@ namespace MAST {
          *   local acceleration
          */
         RealVectorX _accel_sens;
-        
-        
-//        /*!
-//         *   base solution about which a linearized solution is performed
-//         */
-//        RealVectorX _base_sol;
-//        
-//        
-//        /*!
-//         *   base solution sensitivity
-//         */
-//        RealVectorX _base_sol_sens;
         
         
         /*!

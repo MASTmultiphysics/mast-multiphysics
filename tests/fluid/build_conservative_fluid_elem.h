@@ -17,8 +17,9 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#ifndef __mast_inviscid_analysis_h__
-#define __mast_inviscid_analysis_h__
+
+#ifndef __mast_build_conservative_fluid_elem_h__
+#define __mast_build_conservative_fluid_elem_h__
 
 
 // C++ includes
@@ -50,50 +51,17 @@ namespace MAST {
     class ConstantFieldFunction;
     class BoundaryConditionBase;
     class FlightCondition;
+    class FrequencyFunction;
+    class RigidSurfaceMotion;
     
-
-    /*!
-     *   call with the following command line arguments
-     *
-     *   run_case=inviscid_analysis
-     *   -ksp_type preonly -pc_type lu   
-     *   -snes_type newtonls -snes_max_it 1 -snes_linesearch_type bt -snes_linesearch_max_it 2
-     *   -snes_ls_view -snes_monitor -snes_log
-     */
-    struct InviscidAnalysis {
+    
+    struct BuildConservativeFluidElem {
         
         
-        InviscidAnalysis();
+        BuildConservativeFluidElem();
         
         
-        ~InviscidAnalysis();
-        
-        
-        /*!
-         *   @returns a pointer to the parameter of the specified name.
-         *   If no parameter exists by the specified name, then a \p NULL
-         *   pointer is returned and a message is printed with a valid list
-         *   of parameters.
-         */
-        MAST::Parameter* get_parameter(const std::string& nm);
-        
-        /*!
-         *  solves the system and returns the final solution
-         */
-        const libMesh::NumericVector<Real>&
-        solve(bool if_write_output = false);
-        
-        
-        /*!
-         *  solves the sensitivity of system and returns the final solution
-         */
-        const libMesh::NumericVector<Real>&
-        sensitivity_solve(MAST::Parameter& p,
-                          bool if_write_output = false);
-        
-        // parameters to control the time step size
-        unsigned int _max_time_steps;
-        Real         _time_step_size;
+        ~BuildConservativeFluidElem();
         
         
         // create the mesh
@@ -108,20 +76,45 @@ namespace MAST {
         // initialize the system to the right set of variables
         MAST::ConservativeFluidSystemInitialization* _fluid_sys;
         MAST::ConservativeFluidDiscipline*           _discipline;
-
+        
         // flight condition
         MAST::FlightCondition*          _flight_cond;
-
-        MAST::BoundaryConditionBase
-        *_far_field,
-        *_slip_wall;
-
         
-        // vector of parameters to evaluate sensitivity wrt
-        std::vector<MAST::Parameter*> _params_for_sensitivity;
+        
+        RealVectorX _base_sol;
+        
+        // boundary condition
+        MAST::BoundaryConditionBase
+        *_far_field;
+        
+        /*!
+         *   surface rigid motion
+         */
+        MAST::RigidSurfaceMotion
+        *_motion;
+        
+        // parameters used in the system
+        MAST::Parameter
+        *_omega,
+        *_velocity,
+        *_b_ref;
+        
+        
+        MAST::ConstantFieldFunction
+        *_omega_f,
+        *_velocity_f,
+        *_b_ref_f;
+        
+        
+        /*!
+         *   frequency object
+         */
+        MAST::FrequencyFunction        *_freq_function;
     };
 }
 
 
 
-#endif //  __mast_inviscid_analysis_h__
+
+#endif // __mast_build_conservative_fluid_elem_h__
+
