@@ -633,13 +633,7 @@ residual_and_jacobian_blocked (const libMesh::NumericVector<Real>& X,
     
     std::auto_ptr<libMesh::NumericVector<Real> >
     localized_base_solution,
-    localized_complex_sol(X.zero_clone().release());
-    
-    
-    // localize the base solution, if it was provided
-    if (_base_sol)
-        localized_base_solution.reset(_build_localized_vector(nonlin_sys,
-                                                              *_base_sol).release());
+    localized_complex_sol(libMesh::NumericVector<Real>::build(nonlin_sys.comm()).release());
     
     // prepare a send list for localization of the complex solution
     std::vector<libMesh::dof_id_type>
@@ -649,8 +643,21 @@ residual_and_jacobian_blocked (const libMesh::NumericVector<Real>& X,
         complex_send_list[2*i  ] = 2*send_list[i];
         complex_send_list[2*i+1] = 2*send_list[i]+1;
     }
-    
+
+    localized_complex_sol->init(2*nonlin_sys.n_dofs(),
+                                2*nonlin_sys.n_local_dofs(),
+                                complex_send_list,
+                                false,
+                                libMesh::GHOSTED);
     X.localize(*localized_complex_sol, complex_send_list);
+
+    
+    // localize the base solution, if it was provided
+    if (_base_sol)
+        localized_base_solution.reset(_build_localized_vector(nonlin_sys,
+                                                              *_base_sol).release());
+    
+    
 
     // if a solution function is attached, initialize it
     //if (_sol_function)
