@@ -39,6 +39,7 @@ MAST::NonlinearSystem::NonlinearSystem(libMesh::EquationSystems& es,
                                        const std::string& name,
                                        const unsigned int number):
 libMesh::NonlinearImplicitSystem(es, name, number),
+_initialize_B_matrix                  (false),
 matrix_A                              (NULL),
 matrix_B                              (NULL),
 condensed_matrix_A                    (NULL),
@@ -71,7 +72,7 @@ MAST::NonlinearSystem::clear() {
     
     // delete the matricies
     delete matrix_A;
-    delete matrix_B;
+    if (matrix_B) delete matrix_B;
     
     // NULL-out the matricies.
     matrix_A = NULL;
@@ -116,7 +117,7 @@ MAST::NonlinearSystem::init_data () {
     matrix_A->init();
     matrix_A->zero();
     
-    if (_is_generalized_eigenproblem) {
+    if (_is_generalized_eigenproblem || _initialize_B_matrix) {
         
         matrix_B = libMesh::SparseMatrix<Real>::build(this->comm()).release();
         dof_map.attach_matrix(*matrix_B);
@@ -142,7 +143,7 @@ void MAST::NonlinearSystem::reinit () {
     // Clear the matrices
     matrix_A->clear();
     
-    if (_is_generalized_eigenproblem)
+    if (_is_generalized_eigenproblem || _initialize_B_matrix)
         matrix_B->clear();
     
     libMesh::DofMap& dof_map = this->get_dof_map();
@@ -158,7 +159,7 @@ void MAST::NonlinearSystem::reinit () {
     matrix_A->init();
     matrix_A->zero();
     
-    if (_is_generalized_eigenproblem)
+    if (_is_generalized_eigenproblem || _initialize_B_matrix)
     {
         matrix_B->init();
         matrix_B->zero();
@@ -344,8 +345,6 @@ MAST::NonlinearSystem::get_eigenpair(unsigned int i,
         // If we reach here, then there should be some non-condensed dofs
         libmesh_assert(!_local_non_condensed_dofs_vector.empty());
         
-        // This function assumes that condensed_solve has just been called.
-        // If this is not the case, then we will trip an asset in get_eigenpair
         std::auto_ptr< libMesh::NumericVector<Real> >
         temp_re(libMesh::NumericVector<Real>::build(this->comm()).release()),
         temp_im;
@@ -629,7 +628,9 @@ initialize_condensed_dofs(MAST::PhysicsDisciplineBase& physics) {
     
     // First, put all local dofs into non_dirichlet_dofs_set and
     std::set<unsigned int> local_non_condensed_dofs_set;
-    for(unsigned int i=this->get_dof_map().first_dof(); i<this->get_dof_map().end_dof(); i++)
+    for(unsigned int i=this->get_dof_map().first_dof();
+        i<this->get_dof_map().end_dof();
+        i++)
         local_non_condensed_dofs_set.insert(i);
     
     // Now erase the condensed dofs
@@ -646,7 +647,8 @@ initialize_condensed_dofs(MAST::PhysicsDisciplineBase& physics) {
             local_non_condensed_dofs_set.erase(condensed_dof_index);
     }
     
-    // Finally, move local_non_condensed_dofs_set over to a vector for convenience in solve()
+    // Finally, move local_non_condensed_dofs_set over to a vector for
+    // convenience in solve()
     iter     = local_non_condensed_dofs_set.begin();
     iter_end = local_non_condensed_dofs_set.end();
     

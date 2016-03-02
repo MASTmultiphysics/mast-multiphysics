@@ -28,6 +28,7 @@
 #include "elasticity/structural_nonlinear_assembly.h"
 #include "elasticity/structural_discipline.h"
 #include "elasticity/stress_output_base.h"
+#include "elasticity/structural_near_null_vector_space.h"
 #include "base/parameter.h"
 #include "base/constant_field_function.h"
 #include "property_cards/solid_2d_section_element_property_card.h"
@@ -39,6 +40,8 @@
 #include "libmesh/exodusII_io.h"
 #include "libmesh/numeric_vector.h"
 #include "libmesh/parameter_vector.h"
+#include "libmesh/diff_solver.h"
+#include "libmesh/nonlinear_solver.h"
 
 
 extern libMesh::LibMeshInit* __init;
@@ -65,7 +68,7 @@ MAST::PlateBending::init(libMesh::ElemType e_type,
     
     
     // create the mesh
-    _mesh       = new libMesh::SerialMesh(__init->comm());
+    _mesh       = new libMesh::ParallelMesh(__init->comm());
     
     // initialize the mesh with one element
     libMesh::MeshTools::Generation::build_square(*_mesh,
@@ -337,6 +340,10 @@ MAST::PlateBending::solve(bool if_write_output) {
     // zero the solution before solving
     nonlin_sys.solution->zero();
     this->clear_stresss();
+
+    MAST::StructuralNearNullVectorSpace nsp;
+    nonlin_sys.nonlinear_solver->nearnullspace_object = &nsp;
+    
     
     // now iterate over the load steps
     for (unsigned int i=0; i<n_steps; i++) {

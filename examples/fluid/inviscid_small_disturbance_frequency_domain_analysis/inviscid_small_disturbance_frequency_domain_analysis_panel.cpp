@@ -24,6 +24,7 @@
 
 // MAST includes
 #include "examples/fluid/inviscid_small_disturbance_frequency_domain_analysis/inviscid_small_disturbance_frequency_domain_analysis_panel.h"
+#include "base/nonlinear_system.h"
 #include "fluid/conservative_fluid_system_initialization.h"
 #include "fluid/conservative_fluid_discipline.h"
 #include "fluid/frequency_domain_linearized_complex_assembly.h"
@@ -38,7 +39,6 @@
 
 // libMesh includes
 #include "libmesh/mesh_generation.h"
-#include "libmesh/gmsh_io.h"
 #include "libmesh/exodusII_io.h"
 #include "libmesh/numeric_vector.h"
 #include "libmesh/parameter_vector.h"
@@ -60,13 +60,14 @@ MAST::InviscidSmallDisturbanceFrequencyDomainAnalysis::InviscidSmallDisturbanceF
     _eq_sys            = new libMesh::EquationSystems(*_mesh);
     
     // add the system to be used for analysis
-    _sys = &(_eq_sys->add_system<libMesh::NonlinearImplicitSystem>("fluid"));
+    _sys = &(_eq_sys->add_system<MAST::NonlinearSystem>("fluid"));
+    _sys->set_init_B_matrix();
     
     // initialize the mesh
     unsigned int
     dim       = 2;
     
-    libMesh::GmshIO(*_mesh).read("/Users/manav/Documents/acads/Projects/gmsh_models/naca0012/naca0012_mesh0.msh");
+    libMesh::ExodusII_IO(*_mesh).read("/Users/manav/Documents/acads/Projects/gmsh_models/naca0012/naca0012_mesh0.exo");
     _mesh->prepare_for_use();
     _mesh->print_info();
     
@@ -125,7 +126,7 @@ MAST::InviscidSmallDisturbanceFrequencyDomainAnalysis::InviscidSmallDisturbanceF
     _discipline->set_flight_condition(*_flight_cond);
     
     // define parameters
-    _omega             = new MAST::Parameter("omega",      50.);
+    _omega             = new MAST::Parameter("omega",      0000.);
     _velocity          = new MAST::Parameter("velocity",  _flight_cond->velocity_magnitude);
     _b_ref             = new MAST::Parameter("b_ref",       1.);
 
@@ -264,7 +265,7 @@ solve(bool if_write_output) {
     assembly.set_frequency_function(*_freq_function);
     
     solver.max_iters   =  _max_complex_iters;
-    solver.solve();
+    solver.solve_block_matrix();
 
     if (if_write_output) {
 

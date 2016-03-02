@@ -34,6 +34,8 @@
 #include "libmesh/sparse_matrix.h"
 #include "libmesh/dof_map.h"
 #include "libmesh/parameter_vector.h"
+#include "libmesh/petsc_vector.h"
+#include "libmesh/petsc_matrix.h"
 
 
 
@@ -372,20 +374,23 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
         
         // extract the real or the imaginary part of the matrix/vector
         //  The complex system of equations
-        //     (J_R + i J_I) (x_R + i x_I) - (f_R + i f_I) = 0
+        //     (J_R + i J_I) (x_R + i x_I) + (r_R + i r_I) = 0
         //  is rewritten as
-        //     [ J_R   -J_I] {x_R}  -  {f_R}  = {0}
-        //     [ J_I    J_R] {x_I}  -  {f_I}  = {0}
+        //     [ J_R   -J_I] {x_R}  +  {r_R}  = {0}
+        //     [ J_I    J_R] {x_I}  +  {r_I}  = {0}
         //
+        mat_re = mat.imag();
         if (_if_assemble_real) {
             
-            if (R) vec_re  =  vec.real();
+            // correction for the real residual
+            if (R) vec_re  =  vec.real() + mat_re * delta_sol.imag();;
             if (J) mat_re  =  mat.real();
         }
         else {
             
+            // correction for the imaginary residual
+            if (R) vec_re  =  vec.imag() - mat_re * delta_sol.real();
             // the imaginary residual also uses the real part of the Jacobian
-            if (R) vec_re  =  vec.imag();
             if (J) mat_re  =  mat.real();
         }
         
@@ -417,6 +422,353 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
     if (R) R->close();
     if (J) J->close();
 }
+
+
+
+
+
+
+
+
+
+void
+MAST::ComplexAssemblyBase::
+residual_and_jacobian_field_split (const libMesh::NumericVector<Real>& X_R,
+                                   const libMesh::NumericVector<Real>& X_I,
+                                   libMesh::NumericVector<Real>& R_R,
+                                   libMesh::NumericVector<Real>& R_I,
+                                   libMesh::SparseMatrix<Real>&  J_R,
+                                   libMesh::SparseMatrix<Real>&  J_I,
+                                   libMesh::NonlinearImplicitSystem& S) {
+    
+    libMesh::NonlinearImplicitSystem& nonlin_sys =
+    dynamic_cast<libMesh::NonlinearImplicitSystem&>(_system->system());
+    
+    // make sure that the system for which this object was created,
+    // and the system passed through the function call are the same
+    libmesh_assert_equal_to(&S, &(nonlin_sys));
+    
+    R_R.zero();
+    R_I.zero();
+    J_R.zero();
+    J_I.zero();
+    
+    // iterate over each element, initialize it and get the relevant
+    // analysis quantities
+    RealVectorX    sol, vec_re;
+    RealMatrixX    mat_re;
+    ComplexVectorX delta_sol, vec;
+    ComplexMatrixX mat;
+    
+    std::vector<libMesh::dof_id_type> dof_indices;
+    const libMesh::DofMap& dof_map = _system->system().get_dof_map();
+    std::auto_ptr<MAST::ElementBase> physics_elem;
+    
+    std::auto_ptr<libMesh::NumericVector<Real> >
+    localized_base_solution,
+    localized_real_solution,
+    localized_imag_solution;
+    
+    
+    // localize the base solution, if it was provided
+    if (_base_sol)
+        localized_base_solution.reset(_build_localized_vector(nonlin_sys,
+                                                              *_base_sol).release());
+    
+    
+    // localize sol to real vector
+    localized_real_solution.reset(_build_localized_vector(nonlin_sys,
+                                                              X_R).release());
+    // localize sol to imag vector
+    localized_imag_solution.reset(_build_localized_vector(nonlin_sys,
+                                                              X_I).release());
+    
+    
+    // if a solution function is attached, initialize it
+    //if (_sol_function)
+    //    _sol_function->init_for_system_and_solution(*_system, X);
+    
+    
+    libMesh::MeshBase::const_element_iterator       el     =
+    nonlin_sys.get_mesh().active_local_elements_begin();
+    const libMesh::MeshBase::const_element_iterator end_el =
+    nonlin_sys.get_mesh().active_local_elements_end();
+    
+    
+    for ( ; el != end_el; ++el) {
+        
+        const libMesh::Elem* elem = *el;
+        
+        dof_map.dof_indices (elem, dof_indices);
+        
+        physics_elem.reset(_build_elem(*elem).release());
+        
+        // get the solution
+        unsigned int ndofs = (unsigned int)dof_indices.size();
+        sol.setZero(ndofs);
+        delta_sol.setZero(ndofs);
+        vec.setZero(ndofs);
+        mat.setZero(ndofs, ndofs);
+        
+        // first set the velocity to be zero
+        physics_elem->set_velocity(sol);
+        
+        // next, set the base solution, if provided
+        if (_base_sol)
+            for (unsigned int i=0; i<dof_indices.size(); i++)
+                sol(i) = (*localized_base_solution)(dof_indices[i]);
+        
+        physics_elem->set_solution(sol);
+        
+        // set the value of the small-disturbance solution
+        for (unsigned int i=0; i<dof_indices.size(); i++)
+            delta_sol(i) = Complex((*localized_real_solution)(dof_indices[i]),
+                                   (*localized_imag_solution)(dof_indices[i]));
+        
+        physics_elem->set_complex_solution(delta_sol);
+        
+        
+        if (_sol_function)
+            physics_elem->attach_active_solution_function(*_sol_function);
+        
+        
+        // perform the element level calculations
+        _elem_calculations(*physics_elem,
+                           true,
+                           vec,
+                           mat);
+        
+        vec *= -1.;
+        
+        //physics_elem->detach_active_solution_function();
+        
+        // extract the real or the imaginary part of the matrix/vector
+        //  The complex system of equations
+        //     (J_R + i J_I) (x_R + i x_I) + (r_R + i r_I) = 0
+        //  is rewritten as
+        //     [ J_R   -J_I] {x_R}  +  {r_R}  = {0}
+        //     [ J_I    J_R] {x_I}  +  {r_I}  = {0}
+        //
+        DenseRealVector v;
+        DenseRealMatrix m;
+
+        // copy the real part of the residual and Jacobian
+        MAST::copy(v, vec.real());
+        MAST::copy(m, mat.real());
+        
+        nonlin_sys.get_dof_map().constrain_element_matrix_and_vector(m, v, dof_indices);
+        R_R.add_vector(v, dof_indices);
+        J_R.add_matrix(m, dof_indices);
+
+        
+        // copy the imag part of the residual and Jacobian
+        v.zero();
+        m.zero();
+        MAST::copy(v, vec.imag());
+        MAST::copy(m, mat.imag());
+        
+        nonlin_sys.get_dof_map().constrain_element_matrix_and_vector(m, v, dof_indices);
+        R_I.add_vector(v, dof_indices);
+        J_I.add_matrix(m, dof_indices);
+    }
+    
+    
+    // if a solution function is attached, clear it
+    //if (_sol_function)
+    //    _sol_function->clear();
+    
+    R_R.close();
+    R_I.close();
+    J_R.close();
+    J_I.close();
+    
+    std::cout << "R_R: " << R_R.l2_norm() << "   R_I: " << R_I.l2_norm() << std::endl;
+}
+
+
+
+
+
+
+
+void
+MAST::ComplexAssemblyBase::
+residual_and_jacobian_blocked (const libMesh::NumericVector<Real>& X,
+                               libMesh::NumericVector<Real>& R,
+                               libMesh::SparseMatrix<Real>&  J,
+                               libMesh::NonlinearImplicitSystem& S) {
+    
+    libMesh::NonlinearImplicitSystem& nonlin_sys =
+    dynamic_cast<libMesh::NonlinearImplicitSystem&>(_system->system());
+    
+    // make sure that the system for which this object was created,
+    // and the system passed through the function call are the same
+    libmesh_assert_equal_to(&S, &(nonlin_sys));
+    
+    R.zero();
+    J.zero();
+    
+    // iterate over each element, initialize it and get the relevant
+    // analysis quantities
+    RealVectorX
+    sol;
+    ComplexVectorX
+    delta_sol,
+    vec;
+    ComplexMatrixX
+    mat;
+
+    // get the petsc vector and matrix objects
+    Mat
+    jac_bmat = dynamic_cast<libMesh::PetscMatrix<Real>&>(J).mat();
+    
+    PetscInt ierr;
+    
+    std::vector<libMesh::dof_id_type> dof_indices;
+    const libMesh::DofMap& dof_map = _system->system().get_dof_map();
+    const std::vector<libMesh::dof_id_type>&
+    send_list = nonlin_sys.get_dof_map().get_send_list();
+    
+    std::auto_ptr<MAST::ElementBase> physics_elem;
+    
+    std::auto_ptr<libMesh::NumericVector<Real> >
+    localized_base_solution,
+    localized_complex_sol(X.zero_clone().release());
+    
+    
+    // localize the base solution, if it was provided
+    if (_base_sol)
+        localized_base_solution.reset(_build_localized_vector(nonlin_sys,
+                                                              *_base_sol).release());
+    
+    // prepare a send list for localization of the complex solution
+    std::vector<libMesh::dof_id_type>
+    complex_send_list(2*send_list.size());
+    
+    for (unsigned int i=0; i<send_list.size(); i++) {
+        complex_send_list[2*i  ] = 2*send_list[i];
+        complex_send_list[2*i+1] = 2*send_list[i]+1;
+    }
+    
+    X.localize(*localized_complex_sol, complex_send_list);
+
+    // if a solution function is attached, initialize it
+    //if (_sol_function)
+    //    _sol_function->init_for_system_and_solution(*_system, X);
+    
+    
+    libMesh::MeshBase::const_element_iterator       el     =
+    nonlin_sys.get_mesh().active_local_elements_begin();
+    const libMesh::MeshBase::const_element_iterator end_el =
+    nonlin_sys.get_mesh().active_local_elements_end();
+    
+    
+    for ( ; el != end_el; ++el) {
+        
+        const libMesh::Elem* elem = *el;
+        
+        dof_map.dof_indices (elem, dof_indices);
+        
+        physics_elem.reset(_build_elem(*elem).release());
+        
+        // get the solution
+        unsigned int ndofs = (unsigned int)dof_indices.size();
+        sol.setZero(ndofs);
+        delta_sol.setZero(ndofs);
+        vec.setZero(ndofs);
+        mat.setZero(ndofs, ndofs);
+        
+        // first set the velocity to be zero
+        physics_elem->set_velocity(sol);
+        
+        // next, set the base solution, if provided
+        if (_base_sol)
+            for (unsigned int i=0; i<dof_indices.size(); i++)
+                sol(i) = (*localized_base_solution)(dof_indices[i]);
+        
+        physics_elem->set_solution(sol);
+        
+        // set the value of the small-disturbance solution
+        for (unsigned int i=0; i<dof_indices.size(); i++) {
+            
+            // get the complex block for this dof
+            delta_sol(i) = Complex((*localized_complex_sol)(2*dof_indices[i]),
+                                   (*localized_complex_sol)(2*dof_indices[i]+1));
+        }
+        
+        physics_elem->set_complex_solution(delta_sol);
+        
+        
+        if (_sol_function)
+            physics_elem->attach_active_solution_function(*_sol_function);
+        
+        
+        // perform the element level calculations
+        _elem_calculations(*physics_elem,
+                           true,
+                           vec,
+                           mat);
+        
+        vec *= -1.;
+        
+        //physics_elem->detach_active_solution_function();
+        
+        // extract the real or the imaginary part of the matrix/vector
+        //  The complex system of equations
+        //     (J_R + i J_I) (x_R + i x_I) + (r_R + i r_I) = 0
+        //  is rewritten as
+        //     [ J_R   -J_I] {x_R}  +  {r_R}  = {0}
+        //     [ J_I    J_R] {x_I}  +  {r_I}  = {0}
+        //
+        DenseRealVector v_R, v_I;
+        DenseRealMatrix m_R, m_I1, m_I2;
+        std::vector<Real> vals(4);
+        
+        // copy the real part of the residual and Jacobian
+        MAST::copy( m_R, mat.real());
+        MAST::copy(m_I1, mat.imag()); m_I1 *= -1.;   // this is the -J_I component
+        MAST::copy(m_I2, mat.imag());                // this is the J_I component
+        MAST::copy( v_R, vec.real());
+        MAST::copy( v_I, vec.imag());
+        nonlin_sys.get_dof_map().constrain_element_matrix(m_R,  dof_indices);
+        nonlin_sys.get_dof_map().constrain_element_matrix(m_I1, dof_indices);
+        nonlin_sys.get_dof_map().constrain_element_matrix(m_I2, dof_indices);
+        nonlin_sys.get_dof_map().constrain_element_vector(v_R,  dof_indices);
+        nonlin_sys.get_dof_map().constrain_element_vector(v_I,  dof_indices);
+        
+        
+        for (unsigned int i=0; i<dof_indices.size(); i++) {
+         
+            R.add(2*dof_indices[i],     v_R(i));
+            R.add(2*dof_indices[i]+1,   v_I(i));
+            
+            for (unsigned int j=0; j<dof_indices.size(); j++) {
+                vals[0] = m_R (i,j);
+                vals[1] = m_I1(i,j);
+                vals[2] = m_I2(i,j);
+                vals[3] = m_R (i,j);
+            ierr = MatSetValuesBlocked(jac_bmat,
+                                       1, (PetscInt*)&dof_indices[i],
+                                       1, (PetscInt*)&dof_indices[j],
+                                       &vals[0],
+                                       ADD_VALUES);
+            }
+        }
+    }
+    
+    
+    // if a solution function is attached, clear it
+    //if (_sol_function)
+    //    _sol_function->clear();
+    
+    R.close();
+    J.close();
+    
+    std::cout << "R: " << R.l2_norm() << std::endl;
+}
+
+
+
 
 
 

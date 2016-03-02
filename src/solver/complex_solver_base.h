@@ -71,7 +71,19 @@ namespace MAST {
          *  solves the complex system of equations
          */
         virtual void solve();
+
         
+        /*!
+         *  solves the complex system of equations using PCFieldSplit
+         */
+        virtual void solve_pc_fieldsplit();
+
+        
+        /*!
+         *  solves the complex system of equations using block matrices
+         */
+        virtual void solve_block_matrix();
+
         
         /*!
          *  @returns a reference to the real part of the solution

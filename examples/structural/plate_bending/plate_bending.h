@@ -31,7 +31,7 @@
 // libMesh includes
 #include "libmesh/libmesh.h"
 #include "libmesh/equation_systems.h"
-#include "libmesh/serial_mesh.h"
+#include "libmesh/parallel_mesh.h"
 #include "libmesh/mesh_generation.h"
 #include "libmesh/nonlinear_implicit_system.h"
 #include "libmesh/fe_type.h"
@@ -106,7 +106,7 @@ namespace MAST {
         Real _width;
 
         // create the mesh
-        libMesh::SerialMesh*           _mesh;
+        libMesh::ParallelMesh*           _mesh;
         
         // create the equation system
         libMesh::EquationSystems*      _eq_sys;

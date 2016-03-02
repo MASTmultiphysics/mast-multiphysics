@@ -35,7 +35,6 @@
 #include "libmesh/equation_systems.h"
 #include "libmesh/parallel_mesh.h"
 #include "libmesh/mesh_generation.h"
-#include "libmesh/nonlinear_implicit_system.h"
 #include "libmesh/fe_type.h"
 #include "libmesh/dof_map.h"
 
@@ -52,6 +51,7 @@ namespace MAST {
     class FlightCondition;
     class FrequencyFunction;
     class RigidSurfaceMotion;
+    class NonlinearSystem;
     
 
     /*!
@@ -104,7 +104,7 @@ namespace MAST {
         libMesh::EquationSystems*      _eq_sys;
         
         // create the libmesh system
-        libMesh::NonlinearImplicitSystem*  _sys;
+        MAST::NonlinearSystem*         _sys;
         
         // initialize the system to the right set of variables
         MAST::ConservativeFluidSystemInitialization* _fluid_sys;

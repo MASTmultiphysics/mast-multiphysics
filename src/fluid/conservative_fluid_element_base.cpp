@@ -584,7 +584,7 @@ symmetry_surface_residual(bool request_jacobian,
              mat1_n1n1);
             
             Bmat.left_multiply(mat2_n1n2, mat1_n1n1);
-            Bmat.left_multiply_transpose(mat3_n2n2, mat2_n1n2);
+            Bmat.right_multiply_transpose(mat3_n2n2, mat2_n1n2);
             jac += JxW[qp] * mat3_n2n2;
         }
     }

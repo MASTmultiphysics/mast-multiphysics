@@ -65,6 +65,15 @@ namespace MAST {
         
         
         /*!
+         *    flag to also initialize the B matrix. Must be called before
+         *    EquationsSystems::init(). This is false by default.
+         */
+        void set_init_B_matrix() {
+            _initialize_B_matrix = true;
+        }
+        
+        
+        /*!
          * Clear all the data structures associated with
          * the system.
          */
@@ -255,6 +264,13 @@ namespace MAST {
          */
         void set_n_iterations (unsigned int its)
         { _n_iterations = its;}
+        
+        
+        /*!
+         *   initialize the B matrix in addition to A, which might be needed
+         *   for solution of complex system of equations using PC field split
+         */
+        bool _initialize_B_matrix;
         
         
         /**

@@ -6,6 +6,7 @@
 
 // MAST includes
 #include "examples/fluid/inviscid_analysis/inviscid_analysis.h"
+#include "examples/fluid/meshing/panel_mesh_2D.h"
 #include "fluid/conservative_fluid_system_initialization.h"
 #include "fluid/conservative_fluid_discipline.h"
 #include "fluid/conservative_fluid_transient_assembly.h"
@@ -17,14 +18,13 @@
 
 // libMesh includes
 #include "libmesh/mesh_generation.h"
-#include "libmesh/gmsh_io.h"
 #include "libmesh/exodusII_io.h"
 #include "libmesh/numeric_vector.h"
 #include "libmesh/parameter_vector.h"
 #include "libmesh/getpot.h"
+#include "libmesh/string_to_enum.h"
+#include "libmesh/elem.h"
 
-
-// MAST includes
 
 
 extern libMesh::LibMeshInit* __init;
@@ -41,22 +41,142 @@ MAST::InviscidAnalysis::InviscidAnalysis() {
     // add the system to be used for analysis
     _sys = &(_eq_sys->add_system<libMesh::NonlinearImplicitSystem>("fluid"));
     
-    // initialize the mesh
-    unsigned int
-    dim       = 2;
+    
+    // initialize the flow conditions
+    GetPot infile("input.in");
 
-    libMesh::GmshIO(*_mesh).read("/Users/manav/Documents/acads/Projects/gmsh_models/naca0012/naca0012_mesh0.msh");
+    
+    const unsigned int
+    dim                 = 2,
+    nx_divs             = infile("nx_divs",          3),
+    ny_divs             = infile("ny_divs",          1),
+    //nz_divs             = infile("nz_divs",          0),
+    n_max_bumps_x       = infile("n_max_bumps_x",    1),
+    //n_max_bumps_y       = infile("n_max_bumps_y",    1),
+    panel_bc_id         = infile("panel_bc_id",     10),
+    symmetry_bc_id      = infile("symmetry_bc_id",  11);
+    
+    const bool
+    if_cos_bump         = infile("if_cos_bump",  false);
+
+    const Real
+    t_by_c              = infile("t_by_c",         0.3);
+    
+    libMesh::ElemType
+    elem_type           =
+    libMesh::Utility::string_to_enum<libMesh::ElemType>(infile("elem_type", "QUAD4"));
+
+    libMesh::FEFamily
+    fe_type             =
+    libMesh::Utility::string_to_enum<libMesh::FEFamily>(infile("fe_family", "LAGRANGE"));
+
+    libMesh::Order
+    fe_order            =
+    libMesh::Utility::string_to_enum<libMesh::Order>(infile("fe_order", "FIRST"));
+    
+    std::vector<Real>
+    x_div_loc        (nx_divs+1),
+    x_relative_dx    (nx_divs+1),
+    y_div_loc        (ny_divs+1),
+    y_relative_dx    (ny_divs+1);
+    //z_div_loc        (nz_divs+1),
+    //z_relative_dx    (nz_divs+1);
+    
+    std::vector<unsigned int>
+    x_divs           (nx_divs),
+    y_divs           (ny_divs);
+    //z_divs           (nz_divs);
+    
+    std::auto_ptr<MeshInitializer::CoordinateDivisions>
+    x_coord_divs    (new MeshInitializer::CoordinateDivisions),
+    y_coord_divs    (new MeshInitializer::CoordinateDivisions);
+    //z_coord_divs    (new MeshInitializer::CoordinateDivisions);
+    
+    std::vector<MeshInitializer::CoordinateDivisions*>
+    divs(dim);
+    
+    
+    // now read in the values: x-coord
+    if (nx_divs > 0) {
+        
+        for (unsigned int i_div=0; i_div<nx_divs+1; i_div++) {
+            
+            x_div_loc[i_div]        = infile("x_div_loc",   0., i_div);
+            x_relative_dx[i_div]    = infile( "x_rel_dx",   0., i_div);
+            
+            if (i_div < nx_divs) //  this is only till nx_divs
+                x_divs[i_div]       = infile( "x_div_nelem", 0, i_div);
+        }
+        
+        divs[0] = x_coord_divs.get();
+        x_coord_divs->init(nx_divs, x_div_loc, x_relative_dx, x_divs);
+    }
+    
+    
+    // now read in the values: y-coord
+    if ((dim > 1) && (ny_divs > 0)) {
+        
+        for (unsigned int i_div=0; i_div<ny_divs+1; i_div++) {
+            
+            y_div_loc[i_div]     = infile("y_div_loc", 0., i_div);
+            y_relative_dx[i_div] = infile( "y_rel_dx", 0., i_div);
+            
+            if (i_div < ny_divs) //  this is only till ny_divs
+                y_divs[i_div]    = infile( "y_div_nelem",  0, i_div);
+        }
+        
+        divs[1] = y_coord_divs.get();
+        y_coord_divs->init(ny_divs, y_div_loc, y_relative_dx, y_divs);
+    }
+    
+    
+    /*// now read in the values: z-coord
+    if ((dim == 3) && (nz_divs > 0)) {
+        
+        for (unsigned int i_div=0; i_div<nz_divs+1; i_div++) {
+            
+            z_div_loc[i_div]     = infile("z_div_loc", 0., i_div);
+            z_relative_dx[i_div] = infile( "z_rel_dx", 0., i_div);
+            
+            if (i_div < nz_divs) //  this is only till nz_divs
+                z_divs[i_div]    = infile( "z_div_nelem", 0, i_div);
+        }
+        
+        divs[2] = z_coord_divs.get();
+        z_coord_divs->init(nz_divs, z_div_loc, z_relative_dx, z_divs);
+    }*/
+    
+
+
+    // initialize the mesh
+    //if (dim == 2)
+    MAST::PanelMesh2D().init(t_by_c,
+                             if_cos_bump,
+                             n_max_bumps_x,
+                             panel_bc_id,
+                             symmetry_bc_id,
+                             divs,
+                             *_mesh,
+                             elem_type);
+    /*else if (dim == 3)
+        MAST::PanelMesh3D().init(t_by_c,
+                                 if_cos_bump,
+                                 n_max_bumps_x,
+                                 n_max_bumps_y,
+                                 panel_bc_id,
+                                 symmetry_bc_id,
+                                 divs,
+                                 *_mesh,
+                                 elem_type);*/
+    
+    
     _mesh->prepare_for_use();
     _mesh->print_info();
-    
-    // variable type
-    libMesh::FEType fe_type(libMesh::FIRST,
-                            libMesh::LAGRANGE);
     
     _discipline        = new MAST::ConservativeFluidDiscipline(*_eq_sys);
     _fluid_sys         = new MAST::ConservativeFluidSystemInitialization(*_sys,
                                                                          _sys->name(),
-                                                                         fe_type,
+                                                                         libMesh::FEType(fe_order, fe_type),
                                                                          dim);
     
     
@@ -67,17 +187,25 @@ MAST::InviscidAnalysis::InviscidAnalysis() {
     _eq_sys->print_info();
     
     // create the oundary conditions for slip-wall and far-field
-    _far_field    = new MAST::BoundaryConditionBase(MAST::FAR_FIELD),
-    _slip_wall     = new MAST::BoundaryConditionBase(MAST::SLIP_WALL);
+    _far_field    = new MAST::BoundaryConditionBase(    MAST::FAR_FIELD),
+    _slip_wall    = new MAST::BoundaryConditionBase(    MAST::SLIP_WALL);
+    _symm_wall    = new MAST::BoundaryConditionBase(MAST::SYMMETRY_WALL);
+    
     
     // tell the physics about these conditions
-    _discipline->add_side_load(0, *_slip_wall);
-    _discipline->add_side_load(1, *_far_field);
-    
-    
-    // initialize the flow conditions
-    GetPot infile("input.in");
-    
+    _discipline->add_side_load(    panel_bc_id, *_slip_wall);
+    _discipline->add_side_load( symmetry_bc_id, *_symm_wall);
+    // all boundaries except the bottom are far-field
+    if (dim == 2)
+        for (unsigned int i=1; i<=3; i++)
+            _discipline->add_side_load(              i, *_far_field);
+    else if (dim == 3)
+        for (unsigned int i=1; i<=5; i++)
+            _discipline->add_side_load(              i, *_far_field);
+    else
+        libmesh_error();
+        
+        
     // time step control
     _max_time_steps    =   infile("max_time_steps", 1000);
     _time_step_size    =   infile("initial_dt",    1.e-2);
@@ -206,7 +334,6 @@ MAST::InviscidAnalysis::solve(bool if_write_output) {
     if (if_write_output)
         std::cout << "Writing output to : output.exo" << std::endl;
 
-    
     // loop over time steps
     while (t_step < _max_time_steps) {
         
@@ -218,7 +345,7 @@ MAST::InviscidAnalysis::solve(bool if_write_output) {
 
         // write the time-step
         if (if_write_output) {
-            
+
             exodus_writer.write_timestep("output.exo",
                                          *_eq_sys,
                                          t_step+1,
@@ -226,8 +353,6 @@ MAST::InviscidAnalysis::solve(bool if_write_output) {
         }
         
         solver.solve();
-        
-        //_sys->solution->print();
         
         solver.advance_time_step();
         

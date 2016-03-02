@@ -141,6 +141,21 @@ namespace MAST {
                                libMesh::SparseMatrix<Real>*  J,
                                libMesh::NonlinearImplicitSystem& S);
         
+        void
+        residual_and_jacobian_field_split (const libMesh::NumericVector<Real>& X_R,
+                                           const libMesh::NumericVector<Real>& X_I,
+                                           libMesh::NumericVector<Real>& R_R,
+                                           libMesh::NumericVector<Real>& R_I,
+                                           libMesh::SparseMatrix<Real>&  J_R,
+                                           libMesh::SparseMatrix<Real>&  J_I,
+                                           libMesh::NonlinearImplicitSystem& S);
+
+        void
+        residual_and_jacobian_blocked (const libMesh::NumericVector<Real>& X,
+                                       libMesh::NumericVector<Real>& R,
+                                       libMesh::SparseMatrix<Real>&  J,
+                                       libMesh::NonlinearImplicitSystem& S);
+
         /**
          * Assembly function.  This function will be called
          * to assemble the RHS of the sensitivity equations (which is -1 times

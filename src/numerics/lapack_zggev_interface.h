@@ -22,7 +22,7 @@
 
 
 // MAST includes
-#include "base/mAST_data_types.h"
+#include "base/mast_data_types.h"
 
 
 extern "C" {

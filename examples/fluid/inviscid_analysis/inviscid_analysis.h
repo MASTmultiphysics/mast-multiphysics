@@ -99,6 +99,7 @@ namespace MAST {
         // create the mesh
         libMesh::ParallelMesh*           _mesh;
         
+        
         // create the equation system
         libMesh::EquationSystems*      _eq_sys;
         
@@ -114,7 +115,8 @@ namespace MAST {
 
         MAST::BoundaryConditionBase
         *_far_field,
-        *_slip_wall;
+        *_slip_wall,
+        *_symm_wall;
 
         
         // vector of parameters to evaluate sensitivity wrt
