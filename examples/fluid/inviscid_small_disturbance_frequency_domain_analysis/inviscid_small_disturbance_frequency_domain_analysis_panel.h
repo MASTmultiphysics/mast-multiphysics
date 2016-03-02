@@ -92,10 +92,7 @@ namespace MAST {
         const libMesh::NumericVector<Real>&
         sensitivity_solve(MAST::Parameter& p,
                           bool if_write_output = false);
-        
-        // parameters to control the time step size
-        unsigned int _max_complex_iters;
-        
+                
         
         // create the mesh
         libMesh::ParallelMesh*           _mesh;
@@ -115,7 +112,8 @@ namespace MAST {
 
         // boundary condition
         MAST::BoundaryConditionBase
-        *_far_field;
+        *_far_field,
+        *_symm_wall;
 
         /*!
          *   surface rigid motion

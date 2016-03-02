@@ -24,6 +24,7 @@
 
 // MAST includes
 #include "examples/fluid/inviscid_small_disturbance_frequency_domain_analysis/inviscid_small_disturbance_frequency_domain_analysis_panel.h"
+#include "examples/fluid/meshing/panel_mesh_2D.h"
 #include "base/nonlinear_system.h"
 #include "fluid/conservative_fluid_system_initialization.h"
 #include "fluid/conservative_fluid_discipline.h"
@@ -43,6 +44,7 @@
 #include "libmesh/numeric_vector.h"
 #include "libmesh/parameter_vector.h"
 #include "libmesh/getpot.h"
+#include "libmesh/string_to_enum.h"
 
 
 // MAST includes
@@ -63,22 +65,98 @@ MAST::InviscidSmallDisturbanceFrequencyDomainAnalysis::InviscidSmallDisturbanceF
     _sys = &(_eq_sys->add_system<MAST::NonlinearSystem>("fluid"));
     _sys->set_init_B_matrix();
     
+    // initialize the flow conditions
+    GetPot infile("input.in");
+    
+    
+    const unsigned int
+    dim                 = 2,
+    nx_divs             = infile("nx_divs",          3),
+    ny_divs             = infile("ny_divs",          1),
+    n_max_bumps_x       = infile("n_max_bumps_x",    1),
+    panel_bc_id         = infile("panel_bc_id",     10),
+    symmetry_bc_id      = infile("symmetry_bc_id",  11);
+    
+    libMesh::ElemType
+    elem_type           =
+    libMesh::Utility::string_to_enum<libMesh::ElemType>(infile("elem_type", "QUAD4"));
+    
+    libMesh::FEFamily
+    fe_type             =
+    libMesh::Utility::string_to_enum<libMesh::FEFamily>(infile("fe_family", "LAGRANGE"));
+    
+    libMesh::Order
+    fe_order            =
+    libMesh::Utility::string_to_enum<libMesh::Order>(infile("fe_order", "FIRST"));
+    
+    std::vector<Real>
+    x_div_loc        (nx_divs+1),
+    x_relative_dx    (nx_divs+1),
+    y_div_loc        (ny_divs+1),
+    y_relative_dx    (ny_divs+1);
+    
+    std::vector<unsigned int>
+    x_divs           (nx_divs),
+    y_divs           (ny_divs);
+    
+    std::auto_ptr<MeshInitializer::CoordinateDivisions>
+    x_coord_divs    (new MeshInitializer::CoordinateDivisions),
+    y_coord_divs    (new MeshInitializer::CoordinateDivisions);
+    
+    std::vector<MeshInitializer::CoordinateDivisions*>
+    divs(dim);
+    
+    
+    // now read in the values: x-coord
+    if (nx_divs > 0) {
+        
+        for (unsigned int i_div=0; i_div<nx_divs+1; i_div++) {
+            
+            x_div_loc[i_div]        = infile("x_div_loc",   0., i_div);
+            x_relative_dx[i_div]    = infile( "x_rel_dx",   0., i_div);
+            
+            if (i_div < nx_divs) //  this is only till nx_divs
+                x_divs[i_div]       = infile( "x_div_nelem", 0, i_div);
+        }
+        
+        divs[0] = x_coord_divs.get();
+        x_coord_divs->init(nx_divs, x_div_loc, x_relative_dx, x_divs);
+    }
+    
+    
+    // now read in the values: y-coord
+    if ((dim > 1) && (ny_divs > 0)) {
+        
+        for (unsigned int i_div=0; i_div<ny_divs+1; i_div++) {
+            
+            y_div_loc[i_div]     = infile("y_div_loc", 0., i_div);
+            y_relative_dx[i_div] = infile( "y_rel_dx", 0., i_div);
+            
+            if (i_div < ny_divs) //  this is only till ny_divs
+                y_divs[i_div]    = infile( "y_div_nelem",  0, i_div);
+        }
+        
+        divs[1] = y_coord_divs.get();
+        y_coord_divs->init(ny_divs, y_div_loc, y_relative_dx, y_divs);
+    }
+    
+    
+    
+    
     // initialize the mesh
-    unsigned int
-    dim       = 2;
-    
-    libMesh::ExodusII_IO(*_mesh).read("/Users/manav/Documents/acads/Projects/gmsh_models/naca0012/naca0012_mesh0.exo");
-    _mesh->prepare_for_use();
-    _mesh->print_info();
-    
-    // variable type
-    libMesh::FEType fe_type(libMesh::FIRST,
-                            libMesh::LAGRANGE);
+    MAST::PanelMesh2D().init(0.,               // t/c
+                             false,            // if cos bump
+                             0,                // n max bumps
+                             panel_bc_id,
+                             symmetry_bc_id,
+                             divs,
+                             *_mesh,
+                             elem_type);
     
     _discipline        = new MAST::ConservativeFluidDiscipline(*_eq_sys);
     _fluid_sys         = new MAST::ConservativeFluidSystemInitialization(*_sys,
                                                                          _sys->name(),
-                                                                         fe_type,
+                                                                         libMesh::FEType(fe_order, fe_type),
                                                                          dim);
     
     
@@ -90,18 +168,8 @@ MAST::InviscidSmallDisturbanceFrequencyDomainAnalysis::InviscidSmallDisturbanceF
     
     // create the oundary conditions for slip-wall and far-field
     _far_field     = new MAST::BoundaryConditionBase(MAST::FAR_FIELD),
-    
-    // tell the physics about these conditions
-    _discipline->add_side_load(1, *_far_field);
-    
-    
-    // initialize the flow conditions
-    GetPot infile("input.in");
-    
-    // time step control
-    _max_complex_iters    =   infile("max_complex_iters", 10);
-    
-    
+    _symm_wall     = new MAST::BoundaryConditionBase(MAST::SYMMETRY_WALL);
+
     _flight_cond    =  new MAST::FlightCondition;
     for (unsigned int i=0; i<3; i++) {
         
@@ -126,7 +194,7 @@ MAST::InviscidSmallDisturbanceFrequencyDomainAnalysis::InviscidSmallDisturbanceF
     _discipline->set_flight_condition(*_flight_cond);
     
     // define parameters
-    _omega             = new MAST::Parameter("omega",      0000.);
+    _omega             = new MAST::Parameter("omega",     100.);
     _velocity          = new MAST::Parameter("velocity",  _flight_cond->velocity_magnitude);
     _b_ref             = new MAST::Parameter("b_ref",       1.);
 
@@ -148,11 +216,17 @@ MAST::InviscidSmallDisturbanceFrequencyDomainAnalysis::InviscidSmallDisturbanceF
                   _flight_cond->body_yaw_axis,     // plunge vector
                   _flight_cond->body_pitch_axis,   // pitch axis
                   RealVectorX::Zero(3),            // hinge location
-                  0.,                              // plunge amplitude
-                  1.,                              // pitch amplitude
+                  1.,                              // plunge amplitude
+                  0.,                              // pitch amplitude
                   0.);                             // pitch phase lead
 
-    _discipline->add_side_load(0, *_motion);
+    // tell the physics about boundary conditions
+    _discipline->add_side_load(    panel_bc_id,    *_motion);
+    _discipline->add_side_load( symmetry_bc_id, *_symm_wall);
+    // all boundaries except the bottom are far-field
+    for (unsigned int i=1; i<=3; i++)
+        _discipline->add_side_load(              i, *_far_field);
+
 }
 
 
@@ -170,6 +244,7 @@ MAST::InviscidSmallDisturbanceFrequencyDomainAnalysis::
     delete _fluid_sys;
     
     delete _far_field;
+    delete _symm_wall;
     
     delete _flight_cond;
     
@@ -264,7 +339,6 @@ solve(bool if_write_output) {
     assembly.set_base_solution(base_sol);
     assembly.set_frequency_function(*_freq_function);
     
-    solver.max_iters   =  _max_complex_iters;
     solver.solve_block_matrix();
 
     if (if_write_output) {

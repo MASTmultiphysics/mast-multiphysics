@@ -196,14 +196,14 @@ MAST::InviscidAnalysis::InviscidAnalysis() {
     _discipline->add_side_load(    panel_bc_id, *_slip_wall);
     _discipline->add_side_load( symmetry_bc_id, *_symm_wall);
     // all boundaries except the bottom are far-field
-    if (dim == 2)
-        for (unsigned int i=1; i<=3; i++)
-            _discipline->add_side_load(              i, *_far_field);
-    else if (dim == 3)
-        for (unsigned int i=1; i<=5; i++)
-            _discipline->add_side_load(              i, *_far_field);
-    else
-        libmesh_error();
+    //if (dim == 2)
+    for (unsigned int i=1; i<=3; i++)
+        _discipline->add_side_load(              i, *_far_field);
+    //else if (dim == 3)
+    //    for (unsigned int i=1; i<=5; i++)
+    //        _discipline->add_side_load(              i, *_far_field);
+    //else
+    //    libmesh_error();
         
         
     // time step control
@@ -250,6 +250,7 @@ MAST::InviscidAnalysis::~InviscidAnalysis() {
     
     delete _far_field;
     delete _slip_wall;
+    delete _symm_wall;
     
     delete _flight_cond;
 }
