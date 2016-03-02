@@ -5,20 +5,23 @@ DEPENDENCY LIST
 MAST depends on the following libraries:
 
 -- PETSc (http://www.mcs.anl.gov/petsc/)
+   MAST has been tested with PETSc version 3.6.3, and is not presently
+   compatible with version 3.6.3.  
 
 -- SLEPc (http://slepc.upv.es)
    This builds on top of PETSc and provides the eigensolvers. The
-   version numbers are in sync with that of PETSc.
+   version numbers are in sync with that of PETSc, so a 3.6.2 version
+   of this library should be used.  
 
 -- libMesh (http://libmesh.github.io)
-   The specific version of libMesh that MAST has been tested with is
-   892b71d3b0e0179045cfdddfd659445fcad34001. Several additional
+   The specific commit form libMesh that MAST uses is:
+   9f177aa11d3a57068c1e26f341aac481f4273156. Several additional
    modifications to libMesh are needed, and can be found in the file
    contrib/libmesh_patches. The following commands will provide access
    to the commit and apply the patch:
       $> git clone git://github.com/libMesh/libmesh.git
       $> cd libmesh
-      $> git reset --hard 892b71d3b0e0179045cfdddfd659445fcad34001
+      $> git reset --hard 9f177aa11d3a57068c1e26f341aac481f4273156
       $> patch -p1 < MAST_DIR/contrib/libmesh_patch
 
 -- MPI
@@ -72,11 +75,11 @@ above.
 locally. Please change the options to suit your local system. Note
 that shared library is being build. 
 
-PETSC_DIR=/Users/manav/Documents/codes/numerical_lib/petsc/petsc_with_external_libs\
-SLEPC_DIR=/Users/manav/Documents/codes/numerical_lib/slepc/petsc_with_external_libs\
+PETSC_DIR=/Users/manav/Documents/codes/numerical_lib/petsc/\
+SLEPC_DIR=/Users/manav/Documents/codes/numerical_lib/slepc/\
 FC=mpif90-openmpi-mp F77=mpif90-openmpi-mp  CC=mpicc-openmpi-mp\
 CXX=mpicxx-openmpi-mp ./configure\
---prefix=${PWD}/../ --enable-mpi --enable-unique-id\
+--prefix=${PWD}/../ --enable-mpi --disable-unique-id\
 --enable-dependency-tracking --enable-fortran --enable-shared\
 --enable-exceptions --disable-openmp --disable-default-comm-world\
 --enable-tracefiles  --enable-amr  --enable-vsmoother\
@@ -98,8 +101,8 @@ command. Please modify it based on your local system
 configuration. You can use -DCMAKE_BUILD_TYPE=Debug to build the debug  
 version. 
 
-cmake ../ -Dlibmesh_dir=~/Documents/codes/libmesh/real \
--Dpetsc_dir=~/Documents/codes/numerical_lib/petsc/petsc_with_external_libs \
+cmake ../ -Dlibmesh_dir=~/Documents/codes/libmesh \
+-Dpetsc_dir=~/Documents/codes/numerical_lib/petsc \
 -Dboost_include_dir=/opt/local/include \
 -Dmpi_include_dir=/opt/local/include/openmpi-mp \
 -Dmpi_lib_dir=/opt/local/lib/openmpi-mp -Dlapack_lib_dir=/usr/lib \
@@ -113,7 +116,8 @@ cmake ../ -Dlibmesh_dir=~/Documents/codes/libmesh/real \
 -Dfortran_lib_file=libgfortran.3.dylib \
 -Dfortran_lib_dir=/opt/local/lib/libgcc \
 -Dboost_test_lib=boost_unit_test_framework-mt \
--DCMAKE_Fortran_COMPILER=mpif90-openmpi-mp -DCMAKE_BUILD_TYPE=Release 
+-DCMAKE_Fortran_COMPILER=mpif90 -DCMAKE_BUILD_TYPE=Release \
+-DCMAKE_CXX_FLAGS=-std=c++11
 
 Note: CMAKE_BUILD_TYPE=Release builds an optimized version, while
 CMAKE_BUILD_TYPE=Debug builds the debug version of the code. 
@@ -122,20 +126,7 @@ CMAKE_BUILD_TYPE=Debug builds the debug version of the code.
      $> make mast
 
 10.  Build one of the examples using. 
-     $> make fluid_analysis
+     $> make example_driver
 
-11.  The following examples can be build:
-     gaussian_bump_convergence
-     panel_flutter_convergence
-     beam_flutter_sizing
-     stiffened_panel_sizing
-     structural_eigensolution
-     fluid_analysis
-
-
-
-
-
-
-
-
+11.  Get instructions to run example by call it
+     $> ./example_driver

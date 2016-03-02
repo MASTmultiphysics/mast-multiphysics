@@ -119,8 +119,8 @@ set_property (TARGET mast APPEND
 file (GLOB_RECURSE example_driver_source_files
 #     	../examples/thermal/*.cpp
 #	../examples/thermal/*.cpp
-#	../examples/fluid/*.cpp 
-#	../examples/fluid/*.h
+	../examples/fluid/*.cpp 
+	../examples/fluid/*.h
 	../examples/structural/*.cpp
 	../examples/structural/*.cpp
 	../examples/base/*.cpp) 
@@ -154,6 +154,10 @@ file (GLOB_RECURSE mast_test_source_files
 	../examples/structural/plate_optimization/plate_optimization_base.cpp
 	../examples/structural/plate_bending_section_offset/*.cpp
 	../examples/structural/plate_bending_thermal_stress/*.cpp
+	../examples/structural/plate_modal_analysis/*.cpp
+	../examples/structural/beam_buckling_prestress/*.cpp
+	../examples/structural/beam_piston_theory_flutter/*.cpp
+	../examples/structural/plate_piston_theory_flutter/*.cpp
 	../tests/*.cpp 
 	../tests/*.h)
 add_executable (mast_tests ${mast_test_source_files})
