@@ -615,13 +615,8 @@ _initialize_matrix_sensitivity_for_param(const libMesh::ParameterVector& params,
 void
 MAST::UGFlutterSolver::_identify_crossover_points() {
     
-    /////////////////////////////////////////////////////////////////////
-    // only non-negative frequencies (>=0) are used, since a time-domain
-    // solver provides complex-conjugate roots.
-    /////////////////////////////////////////////////////////////////////
-    
     // if the initial scanning has not been done, then do it now
-    const Real tol = 1.0e-5;
+    const Real tol = 1.0e-5, max_allowable_g = 0.75;
     
     const unsigned int nvals = _flutter_solutions.begin()->second->n_roots();
     // make sure that the solution has been generated
@@ -641,75 +636,87 @@ MAST::UGFlutterSolver::_identify_crossover_points() {
     // look for the max g val for a mode, which will indicate if the
     // mode is undamped or not
     for (unsigned int i=0; i<nvals; i++) {
-        
         std::map<Real, MAST::FlutterSolutionBase*>::const_iterator
         sol_it    = _flutter_solutions.begin(),
         sol_end   = _flutter_solutions.end();
-        
-        Real
-        max_g_val = 0.,
-        max_w_val = -1.e100,
-        g_val = 0.,
-        w_val = 0.;
-        
-        
+        Real max_g_val = 0., val = 0.;
         for ( ; sol_it!=sol_end; sol_it++) {
-            
-            g_val = fabs(sol_it->second->get_root(i).root.real());
-            w_val = sol_it->second->get_root(i).root.imag();
-            
-            // maximum damping
-            if (g_val > max_g_val)
-                max_g_val = g_val;
-            
-            if (w_val > max_w_val)
-                max_w_val = w_val;
+            val = fabs(sol_it->second->get_root(i).g);
+            if (val > max_g_val)
+                max_g_val = val;
         }
-        
         // check the maximum damping seen for this mode
-        if (max_g_val < tol || max_w_val < 0.)
+        if (max_g_val < tol)
             modes_to_neglect[i] = true;
     }
     
-    // now look for oscillatory roots crossover points in increasing
-    // order of V
-    for (unsigned int i=0; i<nvals; i++) {
-        
+    // identify the flutter cross-overs. For this, move from
+    // higher k to lower k, and handle the k=0 cases separately
+    {
         std::map<Real, MAST::FlutterSolutionBase*>::const_iterator
-        sol_it      = _flutter_solutions.begin(), // first of the pair
-        sol_itp1    = _flutter_solutions.begin(), // first of the pair
-        sol_end     = _flutter_solutions.end();
-        
+        sol_it    = _flutter_solutions.begin(), // first of the pair
+        sol_end   = _flutter_solutions.end();
         if (sol_it == sol_end)
             return;
         
-        sol_itp1++; // increment for the next pair of results
+        // check if k=0 exists, and identify
+        if (fabs(sol_it->second->ref_val()) < tol) { // k = 0
+            
+            // k=0 makes sense only for divergence roots. Do not use them
+            // for crossover points if a finite damping was seen. Hence,
+            // do nothing here, and move to the next iterator
+            for (unsigned int i=0; i<nvals; i++) {
+                if (!sol_it->second->get_root(i).if_nonphysical_root &&
+                    fabs(sol_it->second->get_root(i).g) < tol) {
+                    MAST::FlutterRootCrossoverBase* cross =
+                    new MAST::UGFlutterRootCrossover;
+                    cross->crossover_solutions.first = sol_it->second;
+                    cross->crossover_solutions.second = sol_it->second;
+                    cross->root = &sol_it->second->get_root(i);
+                    cross->root_num = i;
+                    std::pair<Real, MAST::FlutterRootCrossoverBase*>
+                    val( cross->root->V, cross);
+                    _flutter_crossovers.insert(val);
+                }
+            }
+        }
+    }
+    
+    // now look for oscillatory roots crossover points in decreasing
+    // order of k_red
+    for (unsigned int i=0; i<nvals; i++) {
+        std::map<Real, MAST::FlutterSolutionBase*>::const_reverse_iterator
+        sol_rit      = _flutter_solutions.rbegin(), // first of the pair
+        sol_ritp1    = _flutter_solutions.rbegin(), // first of the pair
+        sol_rend     = _flutter_solutions.rend();
+        if (sol_rit == sol_rend)
+            return;
+        
+        sol_ritp1++; // increment for the next pair of results
         bool if_process = false;
         
-        while (sol_itp1 != sol_end) {
-            
+        while (sol_ritp1 != sol_rend) {
             if_process =
-            (// atleast one |g| > tol
-             (fabs(sol_it->second->ref_val()) > tol ||
-              fabs(sol_itp1->second->ref_val()) > tol) &&
+            (// both should be valid roots
+             (!sol_rit->second->get_root(i).if_nonphysical_root &&
+              !sol_ritp1->second->get_root(i).if_nonphysical_root) &&
+             // atleast one |g| > tol
+             (fabs(sol_rit->second->ref_val()) > tol ||
+              fabs(sol_ritp1->second->ref_val()) > tol) &&
              // both |g| < max_g
-             //(fabs(sol_it->second->get_root(i).root.real()) < max_allowable_g &&
-             // fabs(sol_itp1->second->get_root(i).root.real()) < max_allowable_g) &&
+             (fabs(sol_rit->second->get_root(i).g) < max_allowable_g &&
+              fabs(sol_ritp1->second->get_root(i).g) < max_allowable_g) &&
              // if the mode has been identified to be trailing along g =0,
              // neglect it
              !modes_to_neglect[i]);
             
-            
-            if (if_process) {
+            // do not use k_red = 0, or if the root is invalid
+            if (if_process) { // look for the flutter roots
+                MAST::FlutterSolutionBase *lower = sol_rit->second,
+                *upper = sol_ritp1->second;
                 
-                // look for the flutter roots
-                MAST::FlutterSolutionBase
-                *lower = sol_it->second,
-                *upper = sol_itp1->second;
-                
-                if ((lower->get_root(i).root.real() <= 0.) &&
-                    (upper->get_root(i).root.real() > 0.)) {
-                    
+                if ((lower->get_root(i).g <= 0.) &&
+                    (upper->get_root(i).g > 0.)) {
                     MAST::FlutterRootCrossoverBase* cross =
                     new MAST::UGFlutterRootCrossover;
                     cross->crossover_solutions.first  = lower; // -ve g
@@ -719,9 +726,8 @@ MAST::UGFlutterSolver::_identify_crossover_points() {
                     val( lower->get_root(i).V, cross);
                     _flutter_crossovers.insert(val);
                 }
-                else if ((lower->get_root(i).root.real() > 0.) &&
-                         (upper->get_root(i).root.real() <= 0.)) {
-                    
+                else if ((lower->get_root(i).g > 0.) &&
+                         (upper->get_root(i).g <= 0.)) {
                     MAST::FlutterRootCrossoverBase* cross =
                     new MAST::UGFlutterRootCrossover;
                     cross->crossover_solutions.first  = upper; // -ve g
@@ -734,32 +740,34 @@ MAST::UGFlutterSolver::_identify_crossover_points() {
             }
             
             // increment the pointers for next pair of roots
-            sol_it++;
-            sol_itp1++;
+            sol_rit++;
+            sol_ritp1++;
         }
         
         // now check to see if the root started out as critical at
-        // the lowest V value.
-        sol_it     = _flutter_solutions.begin();
-        sol_itp1   = _flutter_solutions.begin();
-        sol_itp1++;
+        // the highest k value.
+        sol_rit    = _flutter_solutions.rbegin();
+        sol_ritp1   = _flutter_solutions.rbegin();
+        sol_ritp1++;
         
         if_process =
-        (// atleast one |g| > tol
-         (fabs(sol_it->second->ref_val()) > tol ||
-          fabs(sol_itp1->second->ref_val()) > tol) &&
+        (// both should be valid roots
+         (!sol_rit->second->get_root(i).if_nonphysical_root &&
+          !sol_ritp1->second->get_root(i).if_nonphysical_root) &&
+         // atleast one |g| > tol
+         (fabs(sol_rit->second->ref_val()) > tol ||
+          fabs(sol_ritp1->second->ref_val()) > tol) &&
          // both |g| < max_g
-         //(fabs(sol_it->second->get_root(i).root.real()) < max_allowable_g &&
-         // fabs(sol_itp1->second->get_root(i).root.real()) < max_allowable_g) &&
+         (fabs(sol_rit->second->get_root(i).g) < max_allowable_g &&
+          fabs(sol_ritp1->second->get_root(i).g) < max_allowable_g) &&
          // if the mode has been identified to be trailing along g =0,
          // neglect it
          !modes_to_neglect[i]);
         
-        Real g_val = sol_it->second->get_root(i).root.real();
-        
+        Real g_val = sol_rit->second->get_root(i).g;
         if (if_process &&
-            g_val > 0 /*&& g_val < max_allowable_g*/) {
-            
+            g_val > 0 &&
+            g_val < max_allowable_g) {
             MAST::FlutterRootCrossoverBase* cross =
             new MAST::UGFlutterRootCrossover;
             // here, both roots for crossover are set to be the same
@@ -767,11 +775,11 @@ MAST::UGFlutterSolver::_identify_crossover_points() {
             // it needs a bracket to begin with.
             // However, the Newton search should be able to find the
             // critical root location.
-            cross->crossover_solutions.first  = sol_it->second;
-            cross->crossover_solutions.second = sol_it->second;
+            cross->crossover_solutions.first  = sol_rit->second;
+            cross->crossover_solutions.second = sol_rit->second;
             cross->root_num = i;
             std::pair<Real, MAST::FlutterRootCrossoverBase*>
-            val( sol_it->second->get_root(i).V, cross);
+            val( sol_rit->second->get_root(i).V, cross);
             _flutter_crossovers.insert(val);
         }
         

@@ -37,6 +37,7 @@
 #include "base/boundary_condition_base.h"
 #include "boundary_condition/flexible_surface_motion.h"
 #include "aeroelasticity/frequency_function.h"
+#include "aeroelasticity/ug_flutter_root.h"
 #include "elasticity/structural_system_initialization.h"
 #include "elasticity/structural_discipline.h"
 #include "elasticity/structural_element_base.h"
@@ -217,6 +218,7 @@ MAST::BeamEulerFSIFlutterAnalysis::BeamEulerFSIFlutterAnalysis() {
                                                      *_omega_f,
                                                      *_velocity_f,
                                                      *_b_ref_f);
+    _freq_function->if_nondimensional(true);
     
     // tell the physics about boundary conditions
     _fluid_discipline->add_side_load(    panel_bc_id, *_slip_wall);
@@ -616,9 +618,9 @@ MAST::BeamEulerFSIFlutterAnalysis::solve(bool if_write_output) {
     _flutter_solver->initialize(*_omega,
                                 *_b_ref,
                                  _flight_cond->rho(),
-                                1.e-3,        // lower kr
-                                1.e0,         // upper kr
-                                10,           // number of divisions
+                                0.,        // lower kr
+                                1.,         // upper kr
+                                1,           // number of divisions
                                 _basis);      // basis vectors
     
     
@@ -639,11 +641,152 @@ MAST::BeamEulerFSIFlutterAnalysis::solve(bool if_write_output) {
     libmesh_assert(sol.first);
     _flutter_root = sol.second;
 
+    
+    if (if_write_output) {
+        
+        
+        // now write the flutter mode to an output file.
+        // Flutter mode Y = sum_i (X_i * (xi_re + xi_im)_i)
+        // using the right eigenvector of the system.
+        // where i is the structural mode
+        //
+        // The time domain simulation assumes the temporal solution to be
+        // X(t) = (Y_re + i Y_im) exp(p t)
+        //      = (Y_re + i Y_im) exp(p_re t) * (cos(p_im t) + i sin(p_im t))
+        //      = exp(p_re t) (Z_re + i Z_im ),
+        // where Z_re = Y_re cos(p_im t) - Y_im sin(p_im t), and
+        //       Z_im = Y_re sin(p_im t) + Y_im cos(p_im t).
+        //
+        // We write the simulation of the mode over a period of oscillation
+        //
+        
+        // first write the structural mode
+        {
+            // first calculate the real and imaginary vectors
+            std::auto_ptr<libMesh::NumericVector<Real> >
+            re(_structural_sys->solution->zero_clone().release()),
+            im(_structural_sys->solution->zero_clone().release());
+            
+            
+            // first the real part
+            _structural_sys->solution->zero();
+            for (unsigned int i=0; i<_basis.size(); i++) {
+                re->add(sol.second->eig_vec_right(i).real(), *_basis[i]);
+                im->add(sol.second->eig_vec_right(i).imag(), *_basis[i]);
+            }
+            re->close();
+            im->close();
+            
+            // now open the output processor for writing
+            libMesh::ExodusII_IO flutter_mode_output(*_structural_mesh);
+            
+            // use N steps in a time-period
+            Real
+            t_sys = _structural_sys->time,
+            pi    = acos(-1.);
+            unsigned int
+            N_divs = 100;
+            
+            
+            for (unsigned int i=0; i<=N_divs; i++) {
+                _structural_sys->time   =  2.*pi*(i*1.)/(N_divs*1.);
+                
+                _structural_sys->solution->zero();
+                _structural_sys->solution->add( cos(_structural_sys->time), *re);
+                _structural_sys->solution->add(-sin(_structural_sys->time), *im);
+                _structural_sys->solution->close();
+                flutter_mode_output.write_timestep("structural_flutter_mode.exo",
+                                                   *_structural_eq_sys,
+                                                   i+1,
+                                                   _structural_sys->time);
+            }
+            
+            // reset the system time
+            _structural_sys->time = t_sys;
+        }
+        
+        
+        
+        // next write the fluid mode
+        {
+            // first calculate the fluid basis
+            std::vector<libMesh::NumericVector<Real>*>
+            fluid_basis_re(_basis.size()),
+            fluid_basis_im(_basis.size());
+            for (unsigned int i=0; i<_basis.size(); i++) {
+                
+                // solve the fluid system for the given structural mode and
+                // the frequency of the flutter root
+                _motion_function->init(*_freq_function, *_basis[i]);
+                solver.solve_block_matrix();
+                
+                fluid_basis_re[i] = solver.real_solution().clone().release();
+                fluid_basis_im[i] = solver.imag_solution().clone().release();
+            }
+            
+            
+            // first calculate the real and imaginary vectors
+            std::auto_ptr<libMesh::NumericVector<Real> >
+            re(_fluid_sys->solution->zero_clone().release()),
+            im(_fluid_sys->solution->zero_clone().release());
+            
+            
+            // first the real part
+            _fluid_sys->solution->zero();
+            for (unsigned int i=0; i<_basis.size(); i++) {
+                
+                re->add( sol.second->eig_vec_right(i).real(), *fluid_basis_re[i]);
+                re->add(-sol.second->eig_vec_right(i).imag(), *fluid_basis_im[i]);
+                
+                im->add(sol.second->eig_vec_right(i).imag(), *fluid_basis_re[i]);
+                im->add(sol.second->eig_vec_right(i).real(), *fluid_basis_im[i]);
+            }
+            re->close();
+            im->close();
+            
+            // now open the output processor for writing
+            libMesh::ExodusII_IO flutter_mode_output(*_fluid_mesh);
+            
+            // use N steps in a time-period
+            Real
+            t_sys = _fluid_sys->time,
+            pi    = acos(-1.);
+            unsigned int
+            N_divs = 100;
+            
+            
+            for (unsigned int i=0; i<=N_divs; i++) {
+                _fluid_sys->time   =  2.*pi*(i*1.)/(N_divs*1.);
+                
+                _fluid_sys->solution->zero();
+                _fluid_sys->solution->add( cos(_fluid_sys->time), *re);
+                _fluid_sys->solution->add(-sin(_fluid_sys->time), *im);
+                _fluid_sys->solution->close();
+                flutter_mode_output.write_timestep("fluid_flutter_mode.exo",
+                                                   *_fluid_eq_sys,
+                                                   i+1,
+                                                   _fluid_sys->time);
+            }
+            
+            // reset the system time
+            _fluid_sys->time = t_sys;
+            
+            // now delete the solution
+            for (unsigned int i=0; i<_basis.size(); i++) {
+                delete fluid_basis_re[i];
+                delete fluid_basis_im[i];
+            }
+        }
+    }
+    
+
+    
+    
     assembly.clear_discipline_and_system();
     _fluid_sys->remove_vector("fluid_base_solution");
     
     
-    return 0.;
+    return _flutter_root->V;
 }
 
 

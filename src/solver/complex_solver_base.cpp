@@ -470,6 +470,9 @@ MAST::ComplexSolverBase::solve_block_matrix()  {
         sol_I.set(i, (*sol)(2*i+1));
     }
     
+    sol_R.close();
+    sol_I.close();
+    
     STOP_LOG("complex_solve()", "PetscComplexSolve");
 }
 

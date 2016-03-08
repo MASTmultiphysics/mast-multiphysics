@@ -85,7 +85,7 @@ eigenproblem_assemble(libMesh::SparseMatrix<Real> *A,
     for ( ; el != end_el; ++el) {
         
         const libMesh::Elem* elem = *el;
-        
+
         dof_map.dof_indices (elem, dof_indices);
         
         physics_elem.reset(_build_elem(*elem).release());
