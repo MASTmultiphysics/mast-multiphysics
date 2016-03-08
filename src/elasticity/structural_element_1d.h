@@ -210,6 +210,35 @@ namespace MAST {
                               is not defined for 1D element side.");
         }
 
+
+        /*!
+         *    Calculates the force vector and Jacobian due to small
+         *    perturbation surface pressure.
+         */
+        virtual bool
+        small_disturbance_surface_pressure_residual(bool request_jacobian,
+                                                    ComplexVectorX& f,
+                                                    ComplexMatrixX& jac,
+                                                    const unsigned int side,
+                                                    MAST::BoundaryConditionBase& bc) {
+            libmesh_error(); // to be implemented
+        }
+        
+        
+        
+        /*!
+         *    Calculates the sensitivity of force vector and Jacobian due to small
+         *     is applicable for perturbation surface pressure.
+         */
+        virtual bool
+        small_disturbance_surface_pressure_residual_sensitivity(bool request_jacobian,
+                                                                ComplexVectorX& f,
+                                                                ComplexMatrixX& jac,
+                                                                const unsigned int side,
+                                                                MAST::BoundaryConditionBase& bc) {
+            libmesh_error(); // to be implemented
+        }
+        
         
         /*!
          *    Calculates the stress tensor. If derivative and sensitivity 

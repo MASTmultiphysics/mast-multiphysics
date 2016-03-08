@@ -74,7 +74,7 @@ namespace MAST {
     class StiffenedPlateWeight;
     class NonlinearSystem;
     class TimeDomainFlutterSolver;
-    class TimeDomainFlutterRootBase;
+    class TimeDomainFlutterRoot;
     class PistonTheoryBoundaryCondition;
     class StructuralModalEigenproblemAssembly;
     class StructuralFluidInteractionAssembly;

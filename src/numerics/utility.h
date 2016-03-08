@@ -192,7 +192,19 @@ namespace MAST {
         for (unsigned int i=0; i<m; i++)
             v1(i) = v2(i);
     }
+
     
+    inline void
+    copy (RealVectorX& v1, const DenseRealVector& v2) {
+        
+        const unsigned int m=(unsigned int)v2.size();
+        
+        v1 = RealVectorX::Zero(m);
+        
+        for (unsigned int i=0; i<m; i++)
+            v1(i) = v2(i);
+    }
+
 
 }
 

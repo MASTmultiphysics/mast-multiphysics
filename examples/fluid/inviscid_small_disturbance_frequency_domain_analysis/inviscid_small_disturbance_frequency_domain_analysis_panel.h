@@ -113,7 +113,8 @@ namespace MAST {
         // boundary condition
         MAST::BoundaryConditionBase
         *_far_field,
-        *_symm_wall;
+        *_symm_wall,
+        *_slip_wall;
 
         /*!
          *   surface rigid motion

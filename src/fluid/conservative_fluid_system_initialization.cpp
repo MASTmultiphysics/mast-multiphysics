@@ -31,7 +31,8 @@ ConservativeFluidSystemInitialization(libMesh::System& sys,
                                       const std::string& prefix,
                                       const libMesh::FEType& fe_type,
                                       const unsigned int dim):
-MAST::SystemInitialization(sys, prefix) {
+MAST::SystemInitialization(sys, prefix),
+_dim(dim) {
     
     _vars.resize(dim+2);
     

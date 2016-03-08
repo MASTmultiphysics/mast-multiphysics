@@ -33,7 +33,8 @@ namespace MAST {
     enum StructuralQuantityType {
         MASS,                    // mass matrix
         DAMPING,                 // velocity proportional term
-        STIFFNESS                // tangent stiffess matrix
+        STIFFNESS,               // tangent stiffess matrix
+        FORCE                    // force vector
     };
     
     
@@ -59,8 +60,8 @@ namespace MAST {
          *   tells the object about the quantity to be assembled in the 
          *   matrix
          */
-        inline
-        void set_quantity_to_assemble(MAST::StructuralQuantityType qty) {
+        inline void
+        set_quantity_to_assemble(MAST::StructuralQuantityType qty) {
             
             _qty_type = qty;
         }
@@ -87,6 +88,8 @@ namespace MAST {
         (const libMesh::NumericVector<Real>& X,
          std::vector<libMesh::NumericVector<Real>*>& basis,
          std::map<MAST::StructuralQuantityType, RealMatrixX*>& mat_qty_map);
+
+        
 
         
         /*!
@@ -126,6 +129,18 @@ namespace MAST {
                                         bool if_jac,
                                         RealVectorX& vec,
                                         RealMatrixX& mat);
+
+        
+        /*!
+         *   performs the frequency domain element aerodynamic force
+         *   calculations over \par elem, and returns
+         *   the element vector quantity in
+         *   \par vec, respectively.
+         */
+        virtual void _elem_aerodynamic_force_calculations(MAST::ElementBase& elem,
+                                                          ComplexVectorX& vec);
+
+        
         
         /*!
          *   performs the element sensitivity calculations over \par elem,

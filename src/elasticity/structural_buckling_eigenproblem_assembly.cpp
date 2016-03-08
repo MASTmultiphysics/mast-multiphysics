@@ -354,16 +354,16 @@ _elem_calculations(MAST::ElementBase& elem,
     // calculate the Jacobian components
     e.internal_residual(true, vec, mat_A, false);
     e.prestress_residual(true, vec, mat_A);
-    e.side_external_residual<Real>(true,
-                                   vec,
-                                   dummy,
-                                   mat_A,
-                                   _discipline->side_loads());
-    e.volume_external_residual<Real>(true,
-                                     vec,
-                                     dummy,
-                                     mat_A,
-                                     _discipline->volume_loads());
+    e.side_external_residual(true,
+                             vec,
+                             dummy,
+                             mat_A,
+                             _discipline->side_loads());
+    e.volume_external_residual(true,
+                               vec,
+                               dummy,
+                               mat_A,
+                               _discipline->volume_loads());
 }
 
 
@@ -387,16 +387,16 @@ _elem_sensitivity_calculations(MAST::ElementBase& elem,
     // calculate the Jacobian components
     e.internal_residual_sensitivity(true, vec, mat_A, false);
     e.prestress_residual_sensitivity(true, vec, mat_A);
-    e.side_external_residual_sensitivity<Real>(true,
-                                               vec,
-                                               dummy,
-                                               mat_A,
-                                               _discipline->side_loads());
-    e.volume_external_residual_sensitivity<Real>(true,
-                                                 vec,
-                                                 dummy,
-                                                 mat_A,
-                                                 _discipline->volume_loads());
+    e.side_external_residual_sensitivity(true,
+                                         vec,
+                                         dummy,
+                                         mat_A,
+                                         _discipline->side_loads());
+    e.volume_external_residual_sensitivity(true,
+                                           vec,
+                                           dummy,
+                                           mat_A,
+                                           _discipline->volume_loads());
 }
 
 

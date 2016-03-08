@@ -2598,3 +2598,108 @@ piston_theory_residual_sensitivity(bool request_jacobian,
 
 
 
+
+
+/*bool
+MAST::StructuralElement1D::
+small_disturbance_surface_pressure_residual(bool request_jacobian,
+                                            ComplexVectorX &f,
+                                            ComplexMatrixX &jac,
+                                            const unsigned int side,
+                                            MAST::BoundaryConditionBase& bc) {
+    
+    libmesh_assert(!follower_forces); // not implemented yet for follower forces
+    libmesh_assert_equal_to(bc.type(), MAST::SMALL_DISTURBANCE_MOTION);
+    
+    
+    MAST::FieldFunction<Real>&
+    press_fn  = bc.get<MAST::FieldFunction<Real> >          ("pressure");
+    MAST::FieldFunction<Complex>&
+    dpress_fn = bc.get<MAST::FieldFunction<Complex> >       ("dpressure");
+    MAST::FieldFunction<ComplexVectorX>&
+    dn_rot_fn = bc.get<MAST::FieldFunction<ComplexVectorX> >("dnormal");
+    
+    
+    libMesh::FEBase *fe_ptr    = NULL;
+    libMesh::QBase  *qrule_ptr = NULL;
+    _get_side_fe_and_qrule(get_elem_for_quadrature(),
+                           side,
+                           &fe_ptr,
+                           &qrule_ptr,
+                           false);
+    std::auto_ptr<libMesh::FEBase> fe(fe_ptr);
+    std::auto_ptr<libMesh::QBase>  qrule(qrule_ptr);
+    
+    
+    // Physical location of the quadrature points
+    const std::vector<Real> &JxW                    = fe->get_JxW();
+    const std::vector<libMesh::Point>& qpoint       = fe->get_xyz();
+    const std::vector<std::vector<Real> >& phi      = fe->get_phi();
+    const std::vector<libMesh::Point>& face_normals = fe->get_normals();
+    
+    const unsigned int
+    n_phi = (unsigned int)phi.size(),
+    n1    = 3,
+    n2    = 6*n_phi;
+    
+    RealVectorX phi_vec   = RealVectorX::Zero(n_phi);
+    ComplexVectorX
+    dn_rot  = ComplexVectorX::Zero(3),
+    force   = ComplexVectorX::Zero(2*n1),
+    local_f = ComplexVectorX::Zero(n2),
+    vec_n2  = ComplexVectorX::Zero(n2);
+    
+    
+    FEMOperatorMatrix Bmat;
+    libMesh::Point    pt;
+    Real              press;
+    Complex           dpress;
+    
+    for (unsigned int qp=0; qp<qpoint.size(); qp++) {
+        
+        _local_elem->global_coordinates_location(qpoint[qp], pt);
+        
+        // now set the shape function values
+        for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
+            phi_vec(i_nd) = phi[i_nd][qp];
+        
+        Bmat.reinit(2*n1, phi_vec);
+        
+        // get pressure and deformation information
+        press_fn (pt, _time,  press);
+        dpress_fn(pt, _time, dpress);
+        dn_rot_fn(pt, _time, dn_rot);
+        
+        //            press = 0.;
+        //            dpress = Complex(2./4.*std::real(dn_rot(0)),  2./4./.1*std::imag(utrans(1)));
+        //            libMesh::out << q_point[qp](0)
+        //            << "  " << std::real(utrans(1))
+        //            << "  " << std::imag(utrans(1))
+        //            << "  " << std::real(dn_rot(0))
+        //            << "  " << std::imag(dn_rot(0))
+        //            << "  " << std::real(press)
+        //            << "  " << std::imag(press)
+        //            << "  " << std::real(dpress)
+        //            << "  " << std::imag(dpress) << std::endl;
+        
+        // calculate force
+        for (unsigned int i_dim=0; i_dim<n1; i_dim++)
+            force(i_dim) =  ( press * dn_rot(i_dim) + // steady pressure
+                             dpress * face_normals[qp](i_dim)); // unsteady pressure
+        
+        
+        Bmat.vector_mult_transpose(vec_n2, force);
+        
+        local_f -= JxW[qp] * vec_n2;
+    }
+    
+    // now transform to the global system and add
+    transform_vector_to_global_system(local_f, vec_n2);
+    f  += vec_n2;
+    
+    
+    return (request_jacobian);
+}
+*/
+
+

@@ -21,7 +21,7 @@
 #define __mast_surface_motion_base_h__
 
 // MAST includes
-#include "base/boundary_condition_base.h"
+#include "base/field_function_base.h"
 
 // libMesh includes
 #include "libmesh/point.h"
@@ -31,7 +31,7 @@ namespace MAST {
     
     
     class SurfaceMotionBase:
-    public MAST::BoundaryConditionBase {
+    public MAST::FieldFunction<Real> {
 
         
     public:
@@ -41,6 +41,15 @@ namespace MAST {
         
         virtual ~SurfaceMotionBase();
         
+        /*!
+         *   @returns a clone of the function
+         */
+        virtual std::auto_ptr<MAST::FieldFunction<Real> >
+        clone() const {
+            
+            libmesh_error(); // must be implemented in derived class
+        }
+
         
         /*!
          *   provides a function for the definition of surface displacement,

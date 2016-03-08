@@ -33,11 +33,10 @@
 #include "elasticity/structural_fluid_interaction_assembly.h"
 #include "elasticity/piston_theory_boundary_condition.h"
 #include "aeroelasticity/time_domain_flutter_solver.h"
-#include "aeroelasticity/time_domain_flutter_root_base.h"
+#include "aeroelasticity/flutter_root_base.h"
 #include "property_cards/solid_1d_section_element_property_card.h"
 #include "property_cards/isotropic_material_property_card.h"
 #include "boundary_condition/dirichlet_boundary_condition.h"
-#include "driver/driver_base.h"
 
 
 // libMesh includes
@@ -361,11 +360,9 @@ MAST::BeamPistonTheoryFlutterAnalysis::solve(bool if_write_output) {
                                 1200.,         // upper V
                                 10,           // number of divisions
                                 _basis);      // basis vectors
-//    _flutter_solver->scan_for_roots();
-//    _flutter_solver->print_sorted_roots();
-//    _flutter_solver->print_crossover_points();
-    std::pair<bool, MAST::TimeDomainFlutterRootBase*>
-    sol = _flutter_solver->analyze_and_find_critical_root_without_tracking(1.e-3, 10);
+
+    std::pair<bool, MAST::FlutterRootBase*>
+    sol = _flutter_solver->analyze_and_find_critical_root_without_tracking(1.e-1, 20);
     _flutter_solver->print_sorted_roots();
     fsi_assembly.clear_discipline_and_system();
     _flutter_solver->clear_assembly_object();

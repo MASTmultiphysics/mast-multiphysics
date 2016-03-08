@@ -51,7 +51,7 @@ namespace MAST {
     class BoundaryConditionBase;
     class NonlinearSystem;
     class TimeDomainFlutterSolver;
-    class TimeDomainFlutterRootBase;
+    class FlutterRootBase;
     class PistonTheoryBoundaryCondition;
     
     
@@ -141,7 +141,7 @@ namespace MAST {
         /*!
          *   flutter root from the analysis
          */
-        MAST::TimeDomainFlutterRootBase*         _flutter_root;
+        MAST::FlutterRootBase*         _flutter_root;
         
 
         // create the material property card

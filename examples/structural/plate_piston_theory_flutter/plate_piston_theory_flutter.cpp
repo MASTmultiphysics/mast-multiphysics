@@ -33,7 +33,7 @@
 #include "elasticity/structural_fluid_interaction_assembly.h"
 #include "elasticity/piston_theory_boundary_condition.h"
 #include "aeroelasticity/time_domain_flutter_solver.h"
-#include "aeroelasticity/time_domain_flutter_root_base.h"
+#include "aeroelasticity/flutter_root_base.h"
 #include "property_cards/solid_2d_section_element_property_card.h"
 #include "property_cards/isotropic_material_property_card.h"
 #include "boundary_condition/dirichlet_boundary_condition.h"
@@ -391,7 +391,7 @@ MAST::PlatePistonTheoryFlutterAnalysis::solve(bool if_write_output) {
 //    _flutter_solver->scan_for_roots();
 //    _flutter_solver->print_sorted_roots();
 //    _flutter_solver->print_crossover_points();
-    std::pair<bool, MAST::TimeDomainFlutterRootBase*>
+    std::pair<bool, MAST::FlutterRootBase*>
     sol = _flutter_solver->analyze_and_find_critical_root_without_tracking(1.e-3, 20);
     _flutter_solver->print_sorted_roots();
     fsi_assembly.clear_discipline_and_system();

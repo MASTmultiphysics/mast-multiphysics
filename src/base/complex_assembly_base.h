@@ -127,8 +127,15 @@ namespace MAST {
          *   its sensitivity when \par if_sens is true) about which
          *   the Eigen problem was linearized.
          */
-        const libMesh::NumericVector<Real>&
-        base_sol(bool if_sens = false) const;
+        const libMesh::NumericVector<Real>& base_sol(bool if_sens = false) const;
+        
+        
+        /*!
+         *   @returns a non-const reference to the base solution (or
+         *   its sensitivity when \par if_sens is true) about which
+         *   the Eigen problem was linearized.
+         */
+        libMesh::NumericVector<Real>& base_sol(bool if_sens = false);
 
         
         /*!

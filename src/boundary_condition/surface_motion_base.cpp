@@ -23,7 +23,7 @@
 
 
 MAST::SurfaceMotionBase::SurfaceMotionBase():
-MAST::BoundaryConditionBase(MAST::SLIP_WALL) {
+MAST::FieldFunction<Real>("motion") {
 
 }
 

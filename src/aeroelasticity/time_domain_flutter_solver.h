@@ -20,30 +20,16 @@
 #ifndef __mast__time_domain_flutter_solver_h__
 #define __mast__time_domain_flutter_solver_h__
 
-// C++ includes
-#include <fstream>
-#include <iomanip>
-
 
 // MAST includes
-#include "base/mast_data_types.h"
+#include "aeroelasticity/flutter_solver_base.h"
 
-
-// libMesh includes
-#include "libmesh/parameter_vector.h"
-#include "libmesh/numeric_vector.h"
 
 
 namespace MAST {
     
     // Forward declerations
-    class Parameter;
-    class FlutterModel;
-    class TimeDomainFlutterRootBase;
-    class FlutterSolutionBase;
-    class FlutterRootCrossoverBase;
-    class StructuralFluidInteractionAssembly;
-    template <typename ValType> class BasisMatrix;
+    class TimeDomainFlutterSolution;
     
     
     /*!
@@ -51,7 +37,8 @@ namespace MAST {
      *   problem, for example a flutter solver where flight speed is the 
      *   primary parameter.
      */
-    class TimeDomainFlutterSolver {
+    class TimeDomainFlutterSolver:
+    public MAST::FlutterSolverBase {
       
     public:
         
@@ -66,21 +53,9 @@ namespace MAST {
         
         
         /*!
-         *    attaches the assembly object to this solver.
-         */
-        void attach_assembly(MAST::StructuralFluidInteractionAssembly&   assembly);
-        
-        
-        /*!
          *   clears the solution and other data from this solver
          */
-        void clear();
-
-        
-        /*!
-         *   clears the assembly object
-         */
-        virtual void clear_assembly_object();
+        virtual void clear();
 
         
         /*!
@@ -111,15 +86,8 @@ namespace MAST {
          *   returns the \par n th root in terms of ascending velocity that is
          *   found by the solver
          */
-        const MAST::TimeDomainFlutterRootBase& get_root(const unsigned int n) const;
+        const MAST::FlutterRootBase& get_root(const unsigned int n) const;
         
-        
-        
-        void set_output_file(std::string& nm) {
-            
-            _output.close();
-            _output.open(nm.c_str(), std::ofstream::out);
-        }
         
         
         /*!
@@ -129,7 +97,7 @@ namespace MAST {
          *   are sorted with increasing velocity, and this method will attempt to
          *   identify the next critical root in the order.
          */
-        virtual std::pair<bool, MAST::TimeDomainFlutterRootBase*>
+        virtual std::pair<bool, MAST::FlutterRootBase*>
         find_next_root(const Real g_tol,
                        const unsigned int n_bisection_iters);
         
@@ -140,7 +108,7 @@ namespace MAST {
          *   lowest velocity crossover has been calculated. If not, then it
          *   attempts to find that root using an iterative approach
          */
-        virtual std::pair<bool, MAST::TimeDomainFlutterRootBase*>
+        virtual std::pair<bool, MAST::FlutterRootBase*>
         find_critical_root(const Real g_tol,
                            const unsigned int n_bisection_iters);
         
@@ -150,7 +118,7 @@ namespace MAST {
          *   This root starts with the lower velocity and increments the speed
          *   till a single unstable root is identified.
          */
-        virtual std::pair<bool, MAST::TimeDomainFlutterRootBase*>
+        virtual std::pair<bool, MAST::FlutterRootBase*>
         analyze_and_find_critical_root_without_tracking(const Real g_tol,
                                                         const unsigned int n_iters);
         
@@ -167,7 +135,7 @@ namespace MAST {
          *   If \par dXdV is \par NULL, then zero value is assumed. 
          */
         virtual void
-        calculate_sensitivity(MAST::TimeDomainFlutterRootBase& root,
+        calculate_sensitivity(MAST::FlutterRootBase& root,
                               const libMesh::ParameterVector& params,
                               const unsigned int i,
                               libMesh::NumericVector<Real>* dXdp = NULL,
@@ -177,14 +145,14 @@ namespace MAST {
         /*!
          *   Prints the sorted roots to the \par output
          */
-        void print_sorted_roots(std::ostream* output = NULL);
+        virtual void print_sorted_roots(std::ostream* output = NULL);
         
         
         /*!
          *   Prints the crossover points output. If no pointer to output is given
          *   then the output defined by set_output_file() is used.
          */
-        void print_crossover_points(std::ostream* output = NULL);
+        virtual void print_crossover_points(std::ostream* output = NULL);
         
         
         /*!
@@ -203,7 +171,7 @@ namespace MAST {
          *   sort the roots based on the provided solution pointer. If the
          *   pointer is NULL, then no sorting is performed
          */
-        virtual std::auto_ptr<MAST::FlutterSolutionBase>
+        virtual std::auto_ptr<MAST::TimeDomainFlutterSolution>
         _analyze(const Real v_ref,
                  const MAST::FlutterSolutionBase* prev_sol=NULL);
         
@@ -255,20 +223,6 @@ namespace MAST {
         MAST::Parameter*                                _velocity_param;
         
         
-        
-        /*!
-         *   structural assembly that provides the assembly of the system
-         *   matrices.
-         */
-        MAST::StructuralFluidInteractionAssembly*       _assembly;
-        
-        
-        /*!
-         *   basis vector used to define the reduced order model
-         */
-        std::vector<libMesh::NumericVector<Real>*>*     _basis_vectors;
-        
-        
         /*!
          *   range of reference values within which to find flutter roots
          */
@@ -281,13 +235,6 @@ namespace MAST {
          */
         unsigned int                                    _n_V_divs;
 
-
-        
-        /*!
-         *    file to which the result will be written
-         */
-        std::ofstream                                   _output;
-        
         
         /*!
          *   map of velocity sorted flutter solutions

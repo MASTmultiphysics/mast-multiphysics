@@ -18,41 +18,19 @@
  */
 
 
-// C++ includes
-#include <iomanip>
-
 
 // MAST includes
 #include "aeroelasticity/flutter_root_crossover_base.h"
-#include "aeroelasticity/time_domain_flutter_root_base.h"
-#include "aeroelasticity/flutter_solution_base.h"
 
 
 
-void
-MAST::FlutterRootCrossoverBase::print(std::ostream &output) const {
+MAST::FlutterRootCrossoverBase::FlutterRootCrossoverBase():
+crossover_solutions(NULL, NULL),
+root_num(0),
+root(NULL)
+{ }
+
+
+MAST::FlutterRootCrossoverBase::~FlutterRootCrossoverBase() {
     
-    const MAST::TimeDomainFlutterRootBase
-    &lower = crossover_solutions.first->get_root(root_num),
-    &upper = crossover_solutions.second->get_root(root_num);
-    
-    output
-    << " Lower Root: " << std::endl
-    << "    V : " << std::setw(15) << lower.V << std::endl
-    << "   Re : " << std::setw(15) << std::real(lower.root) << std::endl
-    << "   Im : " << std::setw(15) << std::imag(lower.omega) << std::endl
-    << " Upper Root: " << std::endl
-    << "    V : " << std::setw(15) << upper.V << std::endl
-    << "   Re : " << std::setw(15) << std::real(upper.root) << std::endl
-    << "   Im : " << std::setw(15) << std::imag(upper.root) << std::endl;
-    
-    if (root)
-        output
-        << "Critical Root: " << std::endl
-        << "    V : " << std::setw(15) << root->V << std::endl
-        << "   Re : " << std::setw(15) << std::real(root->root) << std::endl
-        << "   Im : " << std::setw(15) << std::imag(root->root) << std::endl;
-    else
-        output << "Critical root not yet calculated." << std::endl;
 }
-

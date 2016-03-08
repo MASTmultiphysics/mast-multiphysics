@@ -147,14 +147,26 @@ namespace MAST {
          *   residual due to xdot will be returned in \p jac_xdot and the 
          *   Jacobian due to x is returned in jac.
          */
-        template <typename ValType>
         bool side_external_residual (bool request_jacobian,
                                      RealVectorX& f,
                                      RealMatrixX& jac_xdot,
                                      RealMatrixX& jac,
                                      std::multimap<libMesh::boundary_id_type, MAST::BoundaryConditionBase*>& bc);
 
+
+        /*!
+         *   Calculates the external force due to frequency domain
+         *   side external force contribution to system residual. This primarily
+         *   handles the boundary conditions. If requested, the
+         *   Jacobian due to x is returned in jac.
+         */
+        bool
+        side_frequency_domain_external_residual (bool request_jacobian,
+                                                 ComplexVectorX& f,
+                                                 ComplexMatrixX& jac,
+                                                 std::multimap<libMesh::boundary_id_type, MAST::BoundaryConditionBase*>& bc);
         
+
         /*!
          *   evaluates an output quantity requested in the map over the 
          *   boundary of the element that may coincide with the boundary 
@@ -182,12 +194,24 @@ namespace MAST {
          *   returned in \p jac_xdot and the Jacobian due to x is
          *   returned in jac.
          */
-        template <typename ValType>
         bool volume_external_residual (bool request_jacobian,
                                        RealVectorX& f,
                                        RealMatrixX& jac_xdot,
                                        RealMatrixX& jac,
                                        std::multimap<libMesh::subdomain_id_type, MAST::BoundaryConditionBase*>& bc);
+
+        
+        /*!
+         *   Calculates the frequency domain  volume external force contribution
+         *   to system residual. If requested, the Jacobian due to x is
+         *   returned in jac.
+         */
+        bool
+        volume_frequency_domain_external_residual (bool request_jacobian,
+                                                   ComplexVectorX& f,
+                                                   ComplexMatrixX& jac,
+                                                   std::multimap<libMesh::subdomain_id_type, MAST::BoundaryConditionBase*>& bc);
+
         
         /*!
          *   evaluates an output quantity requested in the map over the
@@ -228,7 +252,6 @@ namespace MAST {
         /*!
          *   sensitivity of the side external force contribution to system residual
          */
-        template <typename ValType>
         bool side_external_residual_sensitivity (bool request_jacobian,
                                                  RealVectorX& f,
                                                  RealMatrixX& jac_xdot,
@@ -245,7 +268,6 @@ namespace MAST {
         /*!
          *   sensitivity of the volume external force contribution to system residual
          */
-        template <typename ValType>
         bool volume_external_residual_sensitivity (bool request_jacobian,
                                                    RealVectorX& f,
                                                    RealMatrixX& jac_xdot,
@@ -416,13 +438,12 @@ namespace MAST {
          *    Calculates the force vector and Jacobian due to small
          *    perturbation surface pressure.
          */
-        template <typename ValType>
-        bool
+        virtual bool
         small_disturbance_surface_pressure_residual(bool request_jacobian,
-                                                    RealVectorX& f,
-                                                    RealMatrixX& jac,
+                                                    ComplexVectorX& f,
+                                                    ComplexMatrixX& jac,
                                                     const unsigned int side,
-                                                    MAST::BoundaryConditionBase& bc);
+                                                    MAST::BoundaryConditionBase& bc) = 0;
         
         
         /*!
@@ -430,11 +451,10 @@ namespace MAST {
          *    applied on the entire element domain. This is applicable for
          *    only 1D and 2D elements.
          */
-        template <typename ValType>
-        bool
+        virtual bool
         small_disturbance_surface_pressure_residual(bool request_jacobian,
-                                                    RealVectorX& f,
-                                                    RealMatrixX& jac,
+                                                    ComplexVectorX& f,
+                                                    ComplexMatrixX& jac,
                                                     MAST::BoundaryConditionBase& bc);
         
         
@@ -442,13 +462,12 @@ namespace MAST {
          *    Calculates the sensitivity of force vector and Jacobian due to small
          *     is applicable for perturbation surface pressure.
          */
-        template <typename ValType>
-        bool
+        virtual bool
         small_disturbance_surface_pressure_residual_sensitivity(bool request_jacobian,
-                                                                RealVectorX& f,
-                                                                RealMatrixX& jac,
+                                                                ComplexVectorX& f,
+                                                                ComplexMatrixX& jac,
                                                                 const unsigned int side,
-                                                                MAST::BoundaryConditionBase& bc);
+                                                                MAST::BoundaryConditionBase& bc) = 0;
         
         
         /*!
@@ -456,12 +475,14 @@ namespace MAST {
          *    to surface pressure applied on the entire element domain. This
          *    is applicable for only 1D and 2D elements.
          */
-        template <typename ValType>
-        bool
+        virtual bool
         small_disturbance_surface_pressure_residual_sensitivity(bool request_jacobian,
-                                                                RealVectorX& f,
-                                                                RealMatrixX& jac,
-                                                                MAST::BoundaryConditionBase& bc);
+                                                                ComplexVectorX& f,
+                                                                ComplexMatrixX& jac,
+                                                                MAST::BoundaryConditionBase& bc) {
+            
+            libmesh_error(); // to be implemented
+        }
         
         
         /*!

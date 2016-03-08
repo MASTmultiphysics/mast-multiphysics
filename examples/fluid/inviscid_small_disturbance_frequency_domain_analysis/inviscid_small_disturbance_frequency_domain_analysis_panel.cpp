@@ -47,8 +47,6 @@
 #include "libmesh/string_to_enum.h"
 
 
-// MAST includes
-
 
 extern libMesh::LibMeshInit* __init;
 
@@ -169,6 +167,7 @@ MAST::InviscidSmallDisturbanceFrequencyDomainAnalysis::InviscidSmallDisturbanceF
     // create the oundary conditions for slip-wall and far-field
     _far_field     = new MAST::BoundaryConditionBase(MAST::FAR_FIELD),
     _symm_wall     = new MAST::BoundaryConditionBase(MAST::SYMMETRY_WALL);
+    _slip_wall     = new MAST::BoundaryConditionBase(MAST::SLIP_WALL);
 
     _flight_cond    =  new MAST::FlightCondition;
     for (unsigned int i=0; i<3; i++) {
@@ -221,12 +220,12 @@ MAST::InviscidSmallDisturbanceFrequencyDomainAnalysis::InviscidSmallDisturbanceF
                   0.);                             // pitch phase lead
 
     // tell the physics about boundary conditions
-    _discipline->add_side_load(    panel_bc_id,    *_motion);
+    _slip_wall->add(*_motion);
+    _discipline->add_side_load(    panel_bc_id, *_slip_wall);
     _discipline->add_side_load( symmetry_bc_id, *_symm_wall);
     // all boundaries except the bottom are far-field
     for (unsigned int i=1; i<=3; i++)
         _discipline->add_side_load(              i, *_far_field);
-
 }
 
 
@@ -245,6 +244,7 @@ MAST::InviscidSmallDisturbanceFrequencyDomainAnalysis::
     
     delete _far_field;
     delete _symm_wall;
+    delete _slip_wall;
     
     delete _flight_cond;
     
@@ -329,7 +329,7 @@ solve(bool if_write_output) {
     // create the nonlinear assembly object
     MAST::FrequencyDomainLinearizedComplexAssembly   assembly;
     
-    // Transient solver for time integration
+    // complex solver for solution of small-disturbance system of eqs.
     MAST::ComplexSolverBase                          solver;
     
     // now solve the system
@@ -342,25 +342,83 @@ solve(bool if_write_output) {
     solver.solve_block_matrix();
 
     if (if_write_output) {
-
+        
+        libMesh::NumericVector<Real>
+        &real_sol = solver.real_solution(),
+        &imag_sol = solver.imag_solution();
+        
+        
         // first, write the real part
         std::cout
         << "Writing real output to : real_output.exo" << std::endl;
         
-        _sys->solution->swap(solver.real_solution());
+        _sys->solution->swap(real_sol);
         libMesh::ExodusII_IO(*_mesh).write_equation_systems("real_output.exo",
                                                             *_eq_sys);
-        _sys->solution->swap(solver.real_solution());
+        _sys->solution->swap(real_sol);
         
         
         // next, write the imag part
         std::cout
         << "Writing imag output to : imag_output.exo" << std::endl;
         
-        _sys->solution->swap(solver.imag_solution());
+        _sys->solution->swap(imag_sol);
         libMesh::ExodusII_IO(*_mesh).write_equation_systems("imag_output.exo",
                                                             *_eq_sys);
-        _sys->solution->swap(solver.imag_solution());
+        _sys->solution->swap(imag_sol);
+        
+        
+        // now write the mode to an output file.
+        // mode Y = sum_i (X_i * (xi_re + xi_im)_i)
+        // using the right eigenvector of the system.
+        // where i is the structural mode
+        //
+        // The time domain simulation assumes the temporal solution to be
+        // X(t) = (Y_re + i Y_im) exp(p t)
+        //      = (Y_re + i Y_im) exp(p_re t) * (cos(p_im t) + i sin(p_im t))
+        //      = exp(p_re t) (Z_re + i Z_im ),
+        // where Z_re = Y_re cos(p_im t) - Y_im sin(p_im t), and
+        //       Z_im = Y_re sin(p_im t) + Y_im cos(p_im t).
+        //
+        // We write the simulation of the mode over a period of oscillation
+        //
+        
+        
+        // first calculate the real and imaginary vectors
+        std::auto_ptr<libMesh::NumericVector<Real> >
+        re(_sys->solution->zero_clone().release()),
+        im(_sys->solution->zero_clone().release());
+        
+        
+        // first the real part
+        _sys->solution->zero();
+        
+        // now open the output processor for writing
+        libMesh::ExodusII_IO flutter_mode_output(*_mesh);
+        
+        // use N steps in a time-period
+        Real
+        t_sys = _sys->time,
+        pi    = acos(-1.);
+        unsigned int
+        N_divs = 100;
+        
+        
+        for (unsigned int i=0; i<=N_divs; i++) {
+            _sys->time   =  2.*pi*(i*1.)/(N_divs*1.);
+            
+            _sys->solution->zero();
+            _sys->solution->add( cos(_sys->time), real_sol);
+            _sys->solution->add(-sin(_sys->time), imag_sol);
+            _sys->solution->close();
+            flutter_mode_output.write_timestep("complex_sol_transient.exo",
+                                               *_eq_sys,
+                                               i+1,
+                                               _sys->time);
+        }
+        
+        // reset the system time
+        _sys->time = t_sys;
     }
     
 

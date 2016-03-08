@@ -19,9 +19,9 @@
 
 // MAST includes
 #include "aeroelasticity/time_domain_flutter_solver.h"
-#include "aeroelasticity/flutter_solution_base.h"
-#include "aeroelasticity/time_domain_flutter_root_base.h"
-#include "aeroelasticity/flutter_root_crossover_base.h"
+#include "aeroelasticity/time_domain_flutter_solution.h"
+#include "aeroelasticity/time_domain_flutter_root.h"
+#include "aeroelasticity/time_domain_flutter_root_crossover.h"
 #include "elasticity/structural_fluid_interaction_assembly.h"
 #include "elasticity/piston_theory_boundary_condition.h"
 #include "base/physics_discipline_base.h"
@@ -31,9 +31,8 @@
 
 
 MAST::TimeDomainFlutterSolver::TimeDomainFlutterSolver():
+MAST::FlutterSolverBase(),
 _velocity_param(NULL),
-_assembly(NULL),
-_basis_vectors(NULL),
 _V_range(),
 _n_V_divs(0.) {
     
@@ -48,36 +47,16 @@ MAST::TimeDomainFlutterSolver::~TimeDomainFlutterSolver() {
 
 
 
-
-void
-MAST::TimeDomainFlutterSolver::
-attach_assembly(MAST::StructuralFluidInteractionAssembly&   assembly) {
-    
-    // make sure that the assembly is not already set
-    libmesh_assert(!_assembly);
-    
-    _assembly = &assembly;
-}
-
-
-
-void
-MAST::TimeDomainFlutterSolver::clear_assembly_object() {
-    
-    _assembly = NULL;
-}
-
-
-
 void
 MAST::TimeDomainFlutterSolver::clear() {
     
     this->clear_solutions();
+    
     _velocity_param   = NULL;
-    _assembly         = NULL;
-    _basis_vectors    = NULL;
     _V_range          = std::pair<Real, Real>(0.,0.);
     _n_V_divs         = 0;
+    
+    MAST::FlutterSolverBase::clear();
 }
 
 
@@ -85,18 +64,18 @@ MAST::TimeDomainFlutterSolver::clear() {
 
 void
 MAST::TimeDomainFlutterSolver::
-initialize(MAST::Parameter&                            velocity_param,
+initialize(MAST::Parameter&                             velocity_param,
            Real                                         V_lower,
            Real                                         V_upper,
            unsigned int                                 n_V_divs,
            std::vector<libMesh::NumericVector<Real> *>& basis) {
 
-    
     _velocity_param = &velocity_param;
-    _basis_vectors  = &basis;
     _V_range.first  = V_lower;
     _V_range.second = V_upper;
     _n_V_divs       = n_V_divs;
+    
+    MAST::FlutterSolverBase::initialize(basis);
 }
 
 
@@ -143,7 +122,7 @@ MAST::TimeDomainFlutterSolver::n_roots_found() const {
 
 
 
-const MAST::TimeDomainFlutterRootBase&
+const MAST::FlutterRootBase&
 MAST::TimeDomainFlutterSolver::get_root(const unsigned int n) const {
     
     libmesh_assert(n < n_roots_found());
@@ -169,7 +148,7 @@ MAST::TimeDomainFlutterSolver::get_root(const unsigned int n) const {
 
 
 
-std::pair<bool, MAST::TimeDomainFlutterRootBase*>
+std::pair<bool, MAST::FlutterRootBase*>
 MAST::TimeDomainFlutterSolver::find_next_root(const Real g_tol,
                                               const unsigned int n_bisection_iters)
 {
@@ -202,19 +181,19 @@ MAST::TimeDomainFlutterSolver::find_next_root(const Real g_tol,
             std::pair<Real, MAST::FlutterRootCrossoverBase*>
             val(cross->root->V, cross);
             _flutter_crossovers.insert(val);
-            return std::pair<bool, MAST::TimeDomainFlutterRootBase*> (true, cross->root);
+            return std::pair<bool, MAST::FlutterRootBase*> (true, cross->root);
         }
         
         it++;
     }
     
     // if it gets here, no new root was found
-    return std::pair<bool, MAST::TimeDomainFlutterRootBase*> (false, NULL);
+    return std::pair<bool, MAST::FlutterRootBase*> (false, NULL);
 }
 
 
 
-std::pair<bool,  MAST::TimeDomainFlutterRootBase*>
+std::pair<bool,  MAST::FlutterRootBase*>
 MAST::TimeDomainFlutterSolver::find_critical_root(const Real g_tol,
                                                   const unsigned int n_bisection_iters)
 {
@@ -224,7 +203,7 @@ MAST::TimeDomainFlutterSolver::find_critical_root(const Real g_tol,
     it = _flutter_crossovers.begin(), end = _flutter_crossovers.end();
     
     if (it == end) // no potential cross-over points were identified
-        return std::pair<bool, MAST::TimeDomainFlutterRootBase*> (false, NULL);
+        return std::pair<bool, MAST::FlutterRootBase*> (false, NULL);
     
     // it is possible that once the root has been found, its velocity end up
     // putting it at a higher velocity in the map, so we need to check if
@@ -262,14 +241,14 @@ MAST::TimeDomainFlutterSolver::find_critical_root(const Real g_tol,
     }
     
     // if it gets here, then the root was successfully found
-    return std::pair<bool, MAST::TimeDomainFlutterRootBase*> (true, it->second->root);
+    return std::pair<bool, MAST::FlutterRootBase*> (true, it->second->root);
 }
 
 
 
 
 
-std::pair<bool,  MAST::TimeDomainFlutterRootBase*>
+std::pair<bool,  MAST::FlutterRootBase*>
 MAST::TimeDomainFlutterSolver::
 analyze_and_find_critical_root_without_tracking(const Real g_tol,
                                                 const unsigned int n_bisection_iters) {
@@ -293,7 +272,7 @@ analyze_and_find_critical_root_without_tracking(const Real g_tol,
     dV       =  (_V_range.second - _V_range.first)/_n_V_divs,
     new_V    = 0.;
     
-    const MAST::TimeDomainFlutterRootBase
+    const MAST::FlutterRootBase
     *lower_root = NULL,
     *upper_root = NULL;
     
@@ -301,7 +280,7 @@ analyze_and_find_critical_root_without_tracking(const Real g_tol,
     bracket_n_unstable_roots(0, 0);
     
     // first analyze at both the ends of the bracket
-    MAST::FlutterSolutionBase
+    MAST::TimeDomainFlutterSolution
     *sol                            = _analyze(lower_V).release();
     lower_root                      = sol->get_critical_root(g_tol);
     bracket_n_unstable_roots.first  = sol->n_unstable_roots_in_upper_complex_half(g_tol);
@@ -359,7 +338,7 @@ analyze_and_find_critical_root_without_tracking(const Real g_tol,
         }
     }
     
-    std::pair<bool, MAST::TimeDomainFlutterRootBase*> rval(false, NULL);
+    std::pair<bool, MAST::FlutterRootBase*> rval(false, NULL);
     
     // if no critical roots were found, the return with false
     if (!bracket_n_unstable_roots.second)
@@ -390,7 +369,7 @@ analyze_and_find_critical_root_without_tracking(const Real g_tol,
         sol->print(_output);
         
         // get the critical root from here
-        const MAST::TimeDomainFlutterRootBase* root = sol->get_critical_root(g_tol);
+        const MAST::FlutterRootBase* root = sol->get_critical_root(g_tol);
 
         // add the solution to this solver
         if_success =
@@ -455,8 +434,8 @@ MAST::TimeDomainFlutterSolver::scan_for_roots() {
         MAST::FlutterSolutionBase* prev_sol = NULL;
         for (unsigned int i=0; i<_n_V_divs+1; i++) {
             current_V = V_vals[i];
-            std::auto_ptr<MAST::FlutterSolutionBase> sol =
-            _analyze(current_V, prev_sol);
+            std::auto_ptr<MAST::TimeDomainFlutterSolution>
+            sol = _analyze(current_V, prev_sol);
             
             prev_sol = sol.get();
             
@@ -509,7 +488,7 @@ MAST::TimeDomainFlutterSolver::print_sorted_roots(std::ostream* output)
         // write the data from all solutions
         for ( ; sol_it != sol_end; sol_it++)
         {
-            const MAST::TimeDomainFlutterRootBase& root =
+            const MAST::FlutterRootBase& root =
             sol_it->second->get_root(i);
             
             *output
@@ -529,7 +508,7 @@ MAST::TimeDomainFlutterSolver::print_sorted_roots(std::ostream* output)
     << "n critical roots identified: " << nroots << std::endl;
     for (unsigned int i=0; i<nroots; i++)
     {
-        const MAST::TimeDomainFlutterRootBase& root = this->get_root(i);
+        const MAST::FlutterRootBase& root = this->get_root(i);
         *output
         << "** Root : " << std::setw(5) << i << " **" << std::endl
         << "V      = " << std::setw(15) << std::setprecision(15) << root.V << std::endl
@@ -612,7 +591,7 @@ _bisection_search(const std::pair<MAST::FlutterSolutionBase*,
         
         libmesh_assert(if_success);
         
-        const MAST::TimeDomainFlutterRootBase& root = new_sol->get_root(root_num);
+        const MAST::FlutterRootBase& root = new_sol->get_root(root_num);
         
         // check if the new damping value
         if (fabs(root.root.real()) <= g_tol) {
@@ -647,7 +626,7 @@ _bisection_search(const std::pair<MAST::FlutterSolutionBase*,
 
 
 
-std::auto_ptr<MAST::FlutterSolutionBase>
+std::auto_ptr<MAST::TimeDomainFlutterSolution>
 MAST::TimeDomainFlutterSolver::_analyze(const Real v_ref,
                                        const MAST::FlutterSolutionBase* prev_sol) {
     
@@ -667,7 +646,7 @@ MAST::TimeDomainFlutterSolver::_analyze(const Real v_ref,
     ges.compute(A, B);
     ges.scale_eigenvectors_to_identity_innerproduct();
     
-    MAST::FlutterSolutionBase* root = new MAST::FlutterSolutionBase;
+    MAST::TimeDomainFlutterSolution* root = new MAST::TimeDomainFlutterSolution;
     root->init(*this, v_ref, ges);
     if (prev_sol)
         root->sort(*prev_sol);
@@ -677,7 +656,7 @@ MAST::TimeDomainFlutterSolver::_analyze(const Real v_ref,
     << " ====================================================" << std::endl;
     
     
-    return std::auto_ptr<MAST::FlutterSolutionBase> (root);
+    return std::auto_ptr<MAST::TimeDomainFlutterSolution> (root);
 }
 
 
@@ -688,7 +667,7 @@ MAST::TimeDomainFlutterSolver::_initialize_matrices(Real U_inf,
                                                     RealMatrixX &A,
                                                     RealMatrixX &B) {
     
-    // now use the matrices to create the matrices for first-order model
+    // now create the matrices for first-order model
     // original equations are
     //    M x_ddot + C x_dot + K x = q_dyn (A0 x + A1 x_dot)
     //  defining x1 = x_dot, the first order governing equations become
@@ -758,7 +737,7 @@ _initialize_matrix_sensitivity_for_param(const libMesh::ParameterVector& params,
                                          RealMatrixX& A,
                                          RealMatrixX& B) {
     
-    // now use the matrices to create the matrices for first-order model
+    // now create the matrices for first-order model
     // original equations are
     //    M x_ddot + C x_dot + K x = q_dyn (A0 x + A1 x_dot)
     //  defining x1 = x_dot, the first order governing equations become
@@ -921,7 +900,7 @@ MAST::TimeDomainFlutterSolver::_identify_crossover_points() {
                     (upper->get_root(i).root.real() > 0.)) {
                     
                     MAST::FlutterRootCrossoverBase* cross =
-                    new MAST::FlutterRootCrossoverBase;
+                    new MAST::TimeDomainFlutterRootCrossover;
                     cross->crossover_solutions.first  = lower; // -ve g
                     cross->crossover_solutions.second = upper; // +ve g
                     cross->root_num = i;
@@ -933,7 +912,7 @@ MAST::TimeDomainFlutterSolver::_identify_crossover_points() {
                          (upper->get_root(i).root.real() <= 0.)) {
                     
                     MAST::FlutterRootCrossoverBase* cross =
-                    new MAST::FlutterRootCrossoverBase;
+                    new MAST::TimeDomainFlutterRootCrossover;
                     cross->crossover_solutions.first  = upper; // -ve g
                     cross->crossover_solutions.second = lower; // +ve g
                     cross->root_num = i;
@@ -971,7 +950,7 @@ MAST::TimeDomainFlutterSolver::_identify_crossover_points() {
             g_val > 0 /*&& g_val < max_allowable_g*/) {
             
             MAST::FlutterRootCrossoverBase* cross =
-            new MAST::FlutterRootCrossoverBase;
+            new MAST::TimeDomainFlutterRootCrossover;
             // here, both roots for crossover are set to be the same
             // note that this will not work with bisection search, since
             // it needs a bracket to begin with.
@@ -993,7 +972,7 @@ MAST::TimeDomainFlutterSolver::_identify_crossover_points() {
 
 void
 MAST::TimeDomainFlutterSolver::
-calculate_sensitivity(MAST::TimeDomainFlutterRootBase& root,
+calculate_sensitivity(MAST::FlutterRootBase& root,
                       const libMesh::ParameterVector& params,
                       const unsigned int i,
                       libMesh::NumericVector<Real>* dXdp,

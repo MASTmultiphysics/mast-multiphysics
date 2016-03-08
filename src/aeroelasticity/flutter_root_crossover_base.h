@@ -29,26 +29,24 @@ namespace MAST {
     
     // Forward declerations
     class FlutterSolutionBase;
-    class TimeDomainFlutterRootBase;
+    class FlutterRootBase;
     
     
     class FlutterRootCrossoverBase {
         
     public:
-        FlutterRootCrossoverBase():
-        crossover_solutions(NULL, NULL),
-        root_num(0),
-        root(NULL)
-        { }
+        FlutterRootCrossoverBase();
         
-        void print(std::ostream& output) const;
+        virtual ~FlutterRootCrossoverBase();
+        
+        virtual void print(std::ostream& output) const = 0;
         
         std::pair<MAST::FlutterSolutionBase*, MAST::FlutterSolutionBase*>
         crossover_solutions;
         
         unsigned int root_num;
         
-        MAST::TimeDomainFlutterRootBase* root;
+        MAST::FlutterRootBase* root;
     };
     
 }

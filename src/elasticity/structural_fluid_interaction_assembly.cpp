@@ -270,7 +270,6 @@ assemble_reduced_order_quantity
 
 
 
-
 void
 MAST::StructuralFluidInteractionAssembly::
 assemble_reduced_order_quantity_sensitivity
@@ -438,16 +437,16 @@ _elem_calculations(MAST::ElementBase& elem,
         case MAST::DAMPING: {
             
             e.inertial_residual(true, vec, dummy, mat, dummy);
-            e.side_external_residual<Real>(true,
-                                           vec,
-                                           mat,
-                                           dummy,
-                                           _discipline->side_loads());
-            e.volume_external_residual<Real>(true,
-                                             vec,
-                                             mat,
-                                             dummy,
-                                             _discipline->volume_loads());
+            e.side_external_residual(true,
+                                     vec,
+                                     mat,
+                                     dummy,
+                                     _discipline->side_loads());
+            e.volume_external_residual(true,
+                                       vec,
+                                       mat,
+                                       dummy,
+                                       _discipline->volume_loads());
         }
             break;
 
@@ -457,16 +456,16 @@ _elem_calculations(MAST::ElementBase& elem,
             
             e.internal_residual(true, vec, mat, false);
             e.inertial_residual(true, vec, dummy, dummy, mat);
-            e.side_external_residual<Real>(true,
-                                           vec,
-                                           dummy,
-                                           mat,
-                                           _discipline->side_loads());
-            e.volume_external_residual<Real>(true,
-                                             vec,
-                                             dummy,
-                                             mat,
-                                             _discipline->volume_loads());
+            e.side_external_residual(true,
+                                     vec,
+                                     dummy,
+                                     mat,
+                                     _discipline->side_loads());
+            e.volume_external_residual(true,
+                                       vec,
+                                       dummy,
+                                       mat,
+                                       _discipline->volume_loads());
         }
             break;
             
@@ -475,6 +474,33 @@ _elem_calculations(MAST::ElementBase& elem,
     }
 
     
+}
+
+
+
+
+
+
+void
+MAST::StructuralFluidInteractionAssembly::
+_elem_aerodynamic_force_calculations(MAST::ElementBase& elem,
+                                     ComplexVectorX& vec) {
+    
+    MAST::StructuralElementBase& e =
+    dynamic_cast<MAST::StructuralElementBase&>(elem);
+    
+    ComplexMatrixX
+    dummy = ComplexMatrixX::Zero(vec.size(), vec.size());
+    vec.setZero();
+    
+    e.side_frequency_domain_external_residual(false,
+                                              vec,
+                                              dummy,
+                                              _discipline->side_loads());
+    e.volume_frequency_domain_external_residual(false,
+                                                vec,
+                                                dummy,
+                                                _discipline->volume_loads());
 }
 
 
@@ -507,16 +533,16 @@ _elem_sensitivity_calculations(MAST::ElementBase& elem,
         case MAST::DAMPING: {
             
             e.inertial_residual_sensitivity(true, vec, dummy, mat, dummy);
-            e.side_external_residual_sensitivity<Real>(true,
-                                                       vec,
-                                                       mat,
-                                                       dummy,
-                                                       _discipline->side_loads());
-            e.volume_external_residual_sensitivity<Real>(true,
-                                                         vec,
-                                                         mat,
-                                                         dummy,
-                                                         _discipline->volume_loads());
+            e.side_external_residual_sensitivity(true,
+                                                 vec,
+                                                 mat,
+                                                 dummy,
+                                                 _discipline->side_loads());
+            e.volume_external_residual_sensitivity(true,
+                                                   vec,
+                                                   mat,
+                                                   dummy,
+                                                   _discipline->volume_loads());
         }
             break;
             
@@ -525,16 +551,16 @@ _elem_sensitivity_calculations(MAST::ElementBase& elem,
             
             e.internal_residual_sensitivity(true, vec, mat, false);
             e.inertial_residual_sensitivity(true, vec, dummy, dummy, mat);
-            e.side_external_residual_sensitivity<Real>(true,
-                                                       vec,
-                                                       dummy,
-                                                       mat,
-                                                       _discipline->side_loads());
-            e.volume_external_residual_sensitivity<Real>(true,
-                                                         vec,
-                                                         dummy,
-                                                         mat,
-                                                         _discipline->volume_loads());
+            e.side_external_residual_sensitivity(true,
+                                                 vec,
+                                                 dummy,
+                                                 mat,
+                                                 _discipline->side_loads());
+            e.volume_external_residual_sensitivity(true,
+                                                   vec,
+                                                   dummy,
+                                                   mat,
+                                                   _discipline->volume_loads());
         }
             break;
         

@@ -46,8 +46,22 @@ namespace MAST {
         void initialize_solution(const RealVectorX& conservative_sol);
         
         
+        /*!
+         *    @returns spatial dimensions of analysis
+         */
+        inline unsigned int dim() {
+            
+            return _dim;
+        }
+        
+        
     protected:
         
+        
+        /*!
+         *   spatial dimensions of analysis
+         */
+        const unsigned int _dim;
     };
 }
 

@@ -31,9 +31,8 @@
 namespace MAST {
     
     // Forward declerations
-    class TimeDomainFlutterSolver;
-    class TimeDomainFlutterRootBase;
-    class LAPACK_DGGEV;
+    class FlutterSolverBase;
+    class FlutterRootBase;
     
     
     class FlutterSolutionBase {
@@ -47,14 +46,6 @@ namespace MAST {
          *    delete the flutter root objects
          */
         virtual ~FlutterSolutionBase();
-
-
-        /*!
-         *   initializes the root
-         */
-        void init (const MAST::TimeDomainFlutterSolver& solver,
-                   const Real v_ref,
-                   const MAST::LAPACK_DGGEV& eig_sol);
 
         
         /*!
@@ -70,38 +61,29 @@ namespace MAST {
         unsigned int n_roots() const{
             return (unsigned int)_roots.size();
         }
-
         
-        /*!
-         *   number of unstable roots in this solution. Only roots with damping 
-         *   greater than \par tol will be considered unstable.
-         */
-        unsigned int n_unstable_roots_in_upper_complex_half (Real tol) const;
-
-        
-        /*!
-         *    @returns the critical root at the lowest velocity
-         */
-        MAST::TimeDomainFlutterRootBase* get_critical_root(Real tol);
-
         
         /*!
          *    @returns the root
          */
-        const MAST::TimeDomainFlutterRootBase&
+        const MAST::FlutterRootBase&
         get_root(const unsigned int i) const {
             
             libmesh_assert_less(i, _roots.size());
             return *_roots[i];
         }
         
+        
         /*!
          *    @returns a non-const reference to the root
          */
-        MAST::TimeDomainFlutterRootBase& get_root(const unsigned int i) {
+        MAST::FlutterRootBase&
+        get_root(const unsigned int i) {
+            
             libmesh_assert_less(i, _roots.size());
             return *_roots[i];
         }
+        
         
         /*!
          *    sort this root with respect to the given solution from a previous
@@ -110,18 +92,21 @@ namespace MAST {
          *    dot product of modal participation vector are considered to be
          *    similar.
          */
-        void sort(const MAST::FlutterSolutionBase& sol);
+        virtual void sort(const MAST::FlutterSolutionBase& sol) = 0;
+        
         
         /*!
          *
          */
         void swap_root(MAST::FlutterSolutionBase& sol,
                        unsigned int root_num);
+                
         
         /*!
          *    prints the data and modes from this solution
          */
-        void print(std::ostream& output);
+        virtual void print(std::ostream& output) = 0;
+        
         
     protected:
         
@@ -133,12 +118,7 @@ namespace MAST {
          */
         Real _ref_val;
         
-        /*!
-         *    Matrix used for scaling of eigenvectors, and sorting of roots
-         */
-        RealMatrixX _Amat, _Bmat;
-        
-        std::vector<MAST::TimeDomainFlutterRootBase*> _roots;
+        std::vector<MAST::FlutterRootBase*> _roots;
     };
 
 }

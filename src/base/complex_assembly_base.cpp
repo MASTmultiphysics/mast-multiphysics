@@ -124,6 +124,31 @@ MAST::ComplexAssemblyBase::set_base_solution(libMesh::NumericVector<Real>& sol,
 
 
 
+
+const libMesh::NumericVector<Real>&
+MAST::ComplexAssemblyBase::base_sol(bool if_sens) const {
+    
+    if (!if_sens)
+        return *_base_sol;
+    else
+        return *_base_sol_sensitivity;
+}
+
+
+
+
+libMesh::NumericVector<Real>&
+MAST::ComplexAssemblyBase::base_sol(bool if_sens) {
+    
+    if (!if_sens)
+        return *_base_sol;
+    else
+        return *_base_sol_sensitivity;
+}
+
+
+
+
 Real
 MAST::ComplexAssemblyBase::residual_l2_norm() {
     

@@ -348,7 +348,7 @@ slip_wall_surface_residual(bool request_jacobian,
     
     // get the surface motion object from the boundary condition object
     MAST::SurfaceMotionBase&
-    motion = dynamic_cast<MAST::SurfaceMotionBase&>(p);
+    motion = dynamic_cast<MAST::SurfaceMotionBase&>(p.get<MAST::FieldFunction<Real> >("motion"));
 
     
     (*freq)(omega);

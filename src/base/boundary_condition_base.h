@@ -31,8 +31,6 @@ namespace MAST {
         SURFACE_PRESSURE,
         POINT_LOAD,
         POINT_MOMENT,
-        SMALL_DISTURBANCE_DISPLACEMENT, // displacement perturbations
-        SMALL_DISTURBANCE_PRESSURE,     // pressure perturbations about steady values
         SMALL_DISTURBANCE_MOTION,       // pressure and motion perturbations about steady state values
         PISTON_THEORY,
         DIRICHLET,

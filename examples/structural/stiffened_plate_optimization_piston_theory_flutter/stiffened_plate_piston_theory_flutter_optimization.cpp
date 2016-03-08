@@ -34,7 +34,7 @@
 #include "elasticity/structural_modal_eigenproblem_assembly.h"
 #include "elasticity/structural_fluid_interaction_assembly.h"
 #include "aeroelasticity/time_domain_flutter_solver.h"
-#include "aeroelasticity/time_domain_flutter_root_base.h"
+#include "aeroelasticity/time_domain_flutter_root.h"
 
 
 // libMesh includes
@@ -883,7 +883,7 @@ evaluate(const std::vector<Real>& dvars,
                                 2*_V0_flutter,        // upper V
                                 _n_V_divs_flutter,    // number of divisions
                                 _basis);              // basis vectors
-    std::pair<bool, MAST::TimeDomainFlutterRootBase*>
+    std::pair<bool, MAST::FlutterRootBase*>
     sol = _flutter_solver->analyze_and_find_critical_root_without_tracking(1.e-3, 20);
     _flutter_solver->print_sorted_roots();
     _fsi_assembly->clear_discipline_and_system();

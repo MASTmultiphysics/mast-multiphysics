@@ -60,7 +60,17 @@ namespace MAST {
          */
         void set_assembly(MAST::ComplexAssemblyBase& assembly);
         
+        
+        /*!
+         *   @returns a reference to the assembly object
+         */
+        inline
+        MAST::ComplexAssemblyBase& get_assembly() {
+            
+            return *_assembly;
+        }
 
+        
         /*!
          *  clears the assembly
          */

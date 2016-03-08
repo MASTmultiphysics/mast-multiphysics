@@ -49,6 +49,7 @@
 #include "optimization/dot_optimization_interface.h"
 #include "examples/fluid/inviscid_analysis/inviscid_analysis.h"
 #include "examples/fluid/inviscid_small_disturbance_frequency_domain_analysis/inviscid_small_disturbance_frequency_domain_analysis_panel.h"
+#include "examples/fsi/beam_flutter_solution/beam_euler_fsi_flutter_solution.h"
 
 
 // libMesh includes
@@ -415,6 +416,8 @@ int main(int argc, char* const argv[]) {
         fluid_analysis<MAST::InviscidAnalysis>(case_name);
     else if (case_name == "inviscid_small_disturbance_frequency_domain_analysis")
         fluid_analysis<MAST::InviscidSmallDisturbanceFrequencyDomainAnalysis>(case_name);
+    else if (case_name == "beam_fsi_flutter_analysis")
+        fluid_analysis<MAST::BeamEulerFSIFlutterAnalysis>(case_name);
     else {
         std::cout
         << "Please run the driver with the name of example specified as: \n"
@@ -464,6 +467,12 @@ int main(int argc, char* const argv[]) {
         << "**********************************\n"
         << "  inviscid_analysis \n"
         << "  inviscid_small_disturbance_frequency_domain_analysis\n"
+        << "\n\n\n"
+        << "**********************************\n"
+        << "***********   FSI     ************\n"
+        << "**********************************\n"
+        << "  beam_fsi_flutter_analysis \n"
+        << "\n\n\n"
         << std::endl;
     }
     
