@@ -121,6 +121,8 @@ file (GLOB_RECURSE example_driver_source_files
 #	../examples/thermal/*.cpp
 	../examples/fluid/*.cpp 
 	../examples/fluid/*.h
+	../examples/fsi/*.cpp
+	../examples/fsi/*.h
 	../examples/structural/*.cpp
 	../examples/structural/*.cpp
 	../examples/base/*.cpp) 
