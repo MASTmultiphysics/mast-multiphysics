@@ -1073,17 +1073,6 @@ small_disturbance_surface_pressure_residual(bool request_jacobian,
         press_fn.freq_domain_pressure(pt, true, press, dpress);
         //dn_rot_fn.freq_domain_motion(pt, normal, w, dn_rot);
         
-        /*libMesh::out << std::setw(15) << pt(0)
-        << std::setw(15) << std::real(press)
-        << std::setw(15) << std::imag(press)
-        << std::setw(15) << std::real(dpress)
-        << std::setw(15) << std::imag(dpress)
-        << std::setw(15) << std::real(utrans(1))
-        << std::setw(15) << std::imag(utrans(1))
-        << std::setw(15) << std::real(dn_rot(0))
-        << std::setw(15) << std::imag(dn_rot(0)) << std::endl;*/
-
-        
         // calculate force
         for (unsigned int i_dim=0; i_dim<n1; i_dim++)
             force(i_dim) = ( press * dn_rot(i_dim) + // steady pressure

@@ -76,13 +76,13 @@ MAST::FrequencyFunction::operator() (Real& v) const {
     
     _omega(v);
     
-    if (_if_red_freq) {
+    /*if (_if_red_freq) {
         
         _b_ref   (b);
         _velocity(V);
         
         v *= b/V;
-    }
+    }*/
 }
 
 
@@ -98,14 +98,14 @@ MAST::FrequencyFunction::derivative (const MAST::DerivativeType d,
     _omega(w);  _omega.derivative(d, f, dw);
     v     = dw;
     
-    if (_if_red_freq) {
+    /*if (_if_red_freq) {
         
         _b_ref     (b);  _b_ref.derivative   (d, f,   db);
         _velocity(vel);  _velocity.derivative(d, f, dvel);
         
         v *= b/vel;
         v += w * (db/vel - b/vel/vel*dvel);
-    }
+    }*/
 }
 
 

@@ -264,23 +264,20 @@ MAST::UGFlutterSolver::scan_for_roots() {
     if (!_flutter_solutions.size()) {
         // march from the upper limit to the lower to find the roots
         Real
-        current_kr = _kr_range.first,
-        delta_kr   = (_kr_range.second - _kr_range.first)/_n_kr_divs;
+        current_kr  = _kr_range.second,
+        delta_kr    = (_kr_range.second - _kr_range.first)/_n_kr_divs;
         
-        std::vector<Real>
-        kr_vals(_n_kr_divs+1);
-        
-        
+        std::vector<Real> k_vals(_n_kr_divs+1);
         for (unsigned int i=0; i<_n_kr_divs+1; i++) {
-            kr_vals[i] = current_kr;
-            current_kr += delta_kr;
+            k_vals[i]      = current_kr;
+            current_kr    -= delta_kr;
         }
-        
-        kr_vals[_n_kr_divs] = _kr_range.second; // to get around finite-precision arithmetic
+        k_vals[_n_kr_divs] = _kr_range.first; // to get around finite-precision arithmetic
         
         MAST::FlutterSolutionBase* prev_sol = NULL;
-        for (unsigned int i=0; i<_n_kr_divs+1; i++) {
-            current_kr    = kr_vals[i];
+        for (unsigned int i=0; i< _n_kr_divs+1; i++) {
+            
+            current_kr = k_vals[i];
             std::auto_ptr<MAST::FlutterSolutionBase> sol =
             _analyze(current_kr, prev_sol);
             
@@ -358,9 +355,10 @@ MAST::UGFlutterSolver::print_sorted_roots(std::ostream* output)
         const MAST::FlutterRootBase& root = this->get_root(i);
         *output
         << "** Root : " << std::setw(5) << i << " **" << std::endl
+        << "kr     = " << std::setw(15) << std::setprecision(15) << root.kr << std::endl
         << "V      = " << std::setw(15) << std::setprecision(15) << root.V << std::endl
-        << "g      = " << std::setw(15) << std::real(root.root) << std::endl
-        << "omega  = " << std::setw(15) << std::imag(root.root) << std::endl
+        << "g      = " << std::setw(15) << root.g << std::endl
+        << "omega  = " << std::setw(15) << root.omega << std::endl
         << std::setprecision(prec) // set the precision to the default value
         << "Modal Participation : " << std::endl ;
         for (unsigned int j=0; j<nvals; j++)
@@ -410,10 +408,10 @@ _bisection_search(const std::pair<MAST::FlutterSolutionBase*,
     // assumes that the upper k_val has +ve g val and lower k_val has -ve
     // k_val
     Real
-    lower_kr = ref_sol_range.first->ref_val(),
-    lower_g  = ref_sol_range.first->get_root(root_num).root.real(),
-    upper_kr = ref_sol_range.second->ref_val(),
-    upper_g  = ref_sol_range.second->get_root(root_num).root.real(),
+    lower_kr = ref_sol_range.first->get_root(root_num).kr,
+    lower_g  = ref_sol_range.first->get_root(root_num).g,
+    upper_kr = ref_sol_range.second->get_root(root_num).kr,
+    upper_g  = ref_sol_range.second->get_root(root_num).g,
     new_kr   = 0.;
     unsigned int n_iters = 0;
     
@@ -548,7 +546,7 @@ MAST::UGFlutterSolver::_initialize_matrices(Real kr,
                                                   a);
     
     
-    A    = pow(kr/(*_bref_param)(),2) * m.cast<Complex>() +  (_rho/2.) * a;
+    A    = pow(kr/(*_bref_param)(),2) * m.cast<Complex>() -  (_rho/2.) * a;
     B    = k.cast<Complex>();
 }
 
@@ -604,7 +602,7 @@ _initialize_matrix_sensitivity_for_param(const libMesh::ParameterVector& params,
     
     
     // put the matrices back in the system matrices
-    A    = pow(kr/(*_bref_param)(),2) * m.cast<Complex>() +  (_rho/2.) * a;
+    A    = pow(kr/(*_bref_param)(),2) * m.cast<Complex>() -  (_rho/2.) * a;
     B    = k.cast<Complex>();
 }
 

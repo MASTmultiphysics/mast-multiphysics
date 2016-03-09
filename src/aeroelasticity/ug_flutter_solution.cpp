@@ -104,6 +104,7 @@ MAST::UGFlutterSolution::sort(const MAST::FlutterSolutionBase& sol)
         Complex val = 0.;
         unsigned int max_val_root = nvals+1;
         for (unsigned int j=i; j<nvals; j++) {
+            
             val = r.eig_vec_left.dot(_Bmat*_roots[j]->eig_vec_right);
             //_roots[j]->modal_participation.dot(r.modal_participation);
             // scale by the eigenvalue separation with the assumption that
@@ -121,22 +122,6 @@ MAST::UGFlutterSolution::sort(const MAST::FlutterSolutionBase& sol)
         // now we should have the one with highest dot product
         std::swap(_roots[i], _roots[max_val_root]);
     }
-}
-
-
-
-
-
-void
-MAST::UGFlutterSolution::mark_inconsistent_roots_as_nonphysical(const Real ref_val,
-                                                                  const Real tol) {
-    // iterate over the roots and identify the roots where the reference value
-    // differs from the calculated value by more than the tolerance
-    
-    for (unsigned int i=0; i<_roots.size(); i++)
-        if (!_roots[i]->if_nonphysical_root &&
-            fabs(_roots[i]->V - ref_val) > tol)
-            _roots[i]->if_nonphysical_root = true;
 }
 
 

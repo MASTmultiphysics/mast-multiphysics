@@ -163,7 +163,7 @@ freq_domain_pressure(const libMesh::Point& p,
     if (if_cp) {
         
         press     = p_sol.c_pressure(_flt_cond.p0(),
-                                  _flt_cond.q0());
+                                     _flt_cond.q0());
         dpress    = delta_p_sol.c_pressure(_flt_cond.q0());
     }
     else {
@@ -172,8 +172,4 @@ freq_domain_pressure(const libMesh::Point& p,
         dpress    =  delta_p_sol.dp;
     }
 }
-
-
-
-
 

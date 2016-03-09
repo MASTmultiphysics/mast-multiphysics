@@ -254,6 +254,11 @@ MAST::BeamEulerFSIFlutterAnalysis::BeamEulerFSIFlutterAnalysis() {
     divs[0] = x_coord_divs.get();
     x_coord_divs->init(1, x_div_loc, x_relative_dx, x_divs);
 
+    
+    // setup length for use in setup of flutter solver
+    _length = x_div_loc[1]-x_div_loc[0];
+    (*_b_ref) = _length;
+    
     MeshInitializer().init(divs, *_structural_mesh, libMesh::EDGE2);
 
     // create the equation system
@@ -617,15 +622,16 @@ MAST::BeamEulerFSIFlutterAnalysis::solve(bool if_write_output) {
     _flutter_solver->attach_assembly(fsi_assembly);
     _flutter_solver->initialize(*_omega,
                                 *_b_ref,
-                                 _flight_cond->rho(),
-                                0.,        // lower kr
-                                1.,         // upper kr
-                                1,           // number of divisions
+                                _flight_cond->rho(),
+                                0.05,         // lower kr
+                                0.75,         // upper kr
+                                10,           // number of divisions
                                 _basis);      // basis vectors
     
     
     // find the roots for the specified divisions
     _flutter_solver->scan_for_roots();
+    _flutter_solver->print_crossover_points();
     
     // now ask the flutter solver to return the critical flutter root,
     // which is the flutter cross-over point at the lowest velocity

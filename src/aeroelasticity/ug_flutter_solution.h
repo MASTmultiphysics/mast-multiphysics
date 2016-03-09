@@ -58,13 +58,6 @@ namespace MAST {
         
         
         /*!
-         *
-         */
-        void mark_inconsistent_roots_as_nonphysical(const Real ref_val,
-                                                    const Real tol);
-
-        
-        /*!
          *    sort this root with respect to the given solution from a previous
          *    eigen solution. This method relies on the modal participation.
          *    Flutter roots from previous and current solutions with highest
