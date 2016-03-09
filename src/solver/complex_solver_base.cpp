@@ -407,6 +407,12 @@ MAST::ComplexSolverBase::solve_block_matrix()  {
     ierr = MatSetOption(mat,
                         MAT_NEW_NONZERO_ALLOCATION_ERR,
                         PETSC_TRUE);                            CHKERRABORT(sys.comm().get(), ierr);
+    
+    if (libMesh::on_command_line("--solver_system_names")) {
+        
+        std::string nm = _assembly->system().name() + "_";
+        MatSetOptionsPrefix(mat, nm.c_str());
+    }
     ierr = MatSetFromOptions(mat);                              CHKERRABORT(sys.comm().get(), ierr);
 
     
@@ -437,6 +443,13 @@ MAST::ComplexSolverBase::solve_block_matrix()  {
     
     // setup the KSP
     ierr = KSPCreate(sys.comm().get(), &ksp); CHKERRABORT(sys.comm().get(), ierr);
+
+    if (libMesh::on_command_line("--solver_system_names")) {
+        
+        std::string nm = _assembly->system().name() + "_complex_";
+        KSPSetOptionsPrefix(ksp, nm.c_str());
+    }
+    
     ierr = KSPSetOperators(ksp, mat, mat);    CHKERRABORT(sys.comm().get(), ierr);
     ierr = KSPSetFromOptions(ksp);            CHKERRABORT(sys.comm().get(), ierr);
     
@@ -472,7 +485,12 @@ MAST::ComplexSolverBase::solve_block_matrix()  {
     
     sol_R.close();
     sol_I.close();
-    
+
+    ierr = KSPDestroy(&ksp);                  CHKERRABORT(sys.comm().get(), ierr);
+    ierr = MatDestroy(&mat);                  CHKERRABORT(sys.comm().get(), ierr);
+    ierr = VecDestroy(&res_vec);              CHKERRABORT(sys.comm().get(), ierr);
+    ierr = VecDestroy(&sol_vec);              CHKERRABORT(sys.comm().get(), ierr);
+
     STOP_LOG("complex_solve()", "PetscComplexSolve");
 }
 

@@ -33,6 +33,7 @@
 #include "libmesh/sparse_matrix.h"
 #include "libmesh/eigen_solver.h"
 #include "libmesh/dof_map.h"
+#include "libmesh/slepc_eigen_solver.h"
 
 
 MAST::NonlinearSystem::NonlinearSystem(libMesh::EquationSystems& es,
@@ -129,6 +130,12 @@ MAST::NonlinearSystem::init_data () {
     this->condensed_matrix_B.reset(libMesh::SparseMatrix<Real>::build(this->comm()).release());
     
     eigen_solver.reset(libMesh::EigenSolver<Real>::build(this->comm()).release());
+    if (libMesh::on_command_line("--solver_system_names")) {
+        
+        EPS eps =  dynamic_cast<libMesh::SlepcEigenSolver<Real>*>(eigen_solver.get())->eps();
+        std::string nm = this->name() + "_";
+        EPSSetOptionsPrefix(eps, nm.c_str());
+    }
     eigen_solver->set_eigenproblem_type(_eigen_problem_type);
     
 }

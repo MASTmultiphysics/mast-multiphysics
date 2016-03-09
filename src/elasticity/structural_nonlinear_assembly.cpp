@@ -585,6 +585,11 @@ attach_discipline_and_system(MAST::PhysicsDisciplineBase& discipline,
     libMesh::PetscNonlinearSolver<Real> &petsc_nonlinear_solver =
     *(dynamic_cast<libMesh::PetscNonlinearSolver<Real>*>
       (dynamic_cast<libMesh::NonlinearImplicitSystem&>(system.system()).nonlinear_solver.get()));
+
+
+    // initialize the solver before getting the snes object
+    if (libMesh::on_command_line("--solver_system_names"))
+        petsc_nonlinear_solver.init((system.system().name()+"_").c_str());
     
     // get the SNES object
     SNES snes = petsc_nonlinear_solver.snes();
