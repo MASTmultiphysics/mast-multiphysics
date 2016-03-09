@@ -36,6 +36,7 @@ separate_arguments (blas_lib_file)
 set (lapack_lib_dir    "lapack-lib-dir" CACHE STRING "Directory containing LAPACK library")
 set (blas_lib_dir      "blas-lib-dir" CACHE STRING "Directory containing BLAS library")
 set (petsc_dir         "petsc-dir" CACHE STRING "Directory containing PETSc installation")
+set (slepc_dir         "slepc-dir" CACHE STRING "Directory containing PETSc installation")
 set (CMAKE_Fortran_COMPILER "fortran-compiler" CACHE STRING "Fortran compiler")
 
 #set (EXTRA_LIBS ${EXTRA_LIBS} MathFunctions)
@@ -56,6 +57,7 @@ find_library (mesh_dbg mesh_dbg ${libmesh_dir}/lib)
 find_library (mesh_opt mesh_opt ${libmesh_dir}/lib)
 
 find_library (petsc_lib petsc ${petsc_dir}/lib)
+find_library (slepc_lib slepc ${slepc_dir}/lib)
 
 find_library (mpicxx_lib    mpi_cxx              ${mpi_lib_dir})
 find_library (mpi_lib       mpi                  ${mpi_lib_dir})
@@ -95,6 +97,7 @@ target_link_libraries (mast
 		      debug ${mesh_dbg}
 		      optimized ${mesh_opt}
 		      ${petsc_lib}
+		      ${slepc_lib}
 		      ${lapack_lib}
 		      ${blas_lib}
 		      #${vtk_lib}
@@ -112,6 +115,9 @@ set_property (TARGET mast APPEND
 set_property (TARGET mast APPEND 
 	     PROPERTY INCLUDE_DIRECTORIES 
 	     ${petsc_dir}/include) 
+set_property (TARGET mast APPEND 
+	     PROPERTY INCLUDE_DIRECTORIES 
+	     ${slepc_dir}/include) 
 
 #
 #  tell cmake to link example driver with mast library

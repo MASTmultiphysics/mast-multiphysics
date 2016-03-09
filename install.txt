@@ -5,8 +5,7 @@ DEPENDENCY LIST
 MAST depends on the following libraries:
 
 -- PETSc (http://www.mcs.anl.gov/petsc/)
-   MAST has been tested with PETSc version 3.6.3, and is not presently
-   compatible with version 3.6.3.  
+   MAST has been tested with PETSc version 3.6.3.
 
 -- SLEPc (http://slepc.upv.es)
    This builds on top of PETSc and provides the eigensolvers. The
@@ -103,6 +102,7 @@ version.
 
 cmake ../ -Dlibmesh_dir=~/Documents/codes/libmesh \
 -Dpetsc_dir=~/Documents/codes/numerical_lib/petsc \
+-Dslepc_dir=~/Documents/codes/numerical_lib/slepc \
 -Dboost_include_dir=/opt/local/include \
 -Dmpi_include_dir=/opt/local/include/openmpi-mp \
 -Dmpi_lib_dir=/opt/local/lib/openmpi-mp -Dlapack_lib_dir=/usr/lib \
