@@ -387,40 +387,66 @@ MAST::ComplexSolverBase::solve_block_matrix()  {
     m_l  = n_l;
 
     const std::vector<libMesh::dof_id_type>
-    & n_nz = dof_map.get_n_nz(),
-    & n_oz = dof_map.get_n_oz();
+    & n_nz       = dof_map.get_n_nz(),
+    & n_oz       = dof_map.get_n_oz();
+    
+    std::vector<libMesh::dof_id_type>
+    complex_n_nz (2*n_nz.size()),
+    complex_n_oz (2*n_oz.size());
 
+    // create the n_nz and n_oz for the complex matrix without block format
+    for (unsigned int i=0; i<n_nz.size(); i++) {
+        
+        complex_n_nz[2*i]   = 2*n_nz[i];
+        complex_n_nz[2*i+1] = 2*n_nz[i];
+    }
+    
+    for (unsigned int i=0; i<n_oz.size(); i++) {
+        
+        complex_n_oz[2*i]   = 2*n_oz[i];
+        complex_n_oz[2*i+1] = 2*n_oz[i];
+    }
+
+    
     
     // create the matrix
     PetscErrorCode   ierr;
     Mat              mat;
 
-    ierr = MatCreate(sys.comm().get(), &mat);                   CHKERRABORT(sys.comm().get(), ierr);
-    ierr = MatSetSizes(mat, 2*m_l, 2*n_l, 2*my_m, 2*my_n);      CHKERRABORT(sys.comm().get(), ierr);
-    ierr = MatSetType(mat, MATBAIJ);                            CHKERRABORT(sys.comm().get(), ierr);
-    ierr = MatSetBlockSize(mat, 2);                             CHKERRABORT(sys.comm().get(), ierr);
+    ierr = MatCreate(sys.comm().get(), &mat);                      CHKERRABORT(sys.comm().get(), ierr);
+    ierr = MatSetSizes(mat, 2*m_l, 2*n_l, 2*my_m, 2*my_n);         CHKERRABORT(sys.comm().get(), ierr);
+    ierr = MatSetType(mat, MATAIJ);                                CHKERRABORT(sys.comm().get(), ierr);
+    ierr = MatSetBlockSize(mat, 2);                                CHKERRABORT(sys.comm().get(), ierr);
+    ierr = MatSeqAIJSetPreallocation(mat,
+                                     2*my_m,
+                                     (PetscInt*)&complex_n_nz[0]); CHKERRABORT(sys.comm().get(), ierr);
+    ierr = MatMPIAIJSetPreallocation(mat,
+                                     0,
+                                     (PetscInt*)&complex_n_nz[0],
+                                     0,
+                                     (PetscInt*)&complex_n_oz[0]); CHKERRABORT(sys.comm().get(), ierr);
     ierr = MatSeqBAIJSetPreallocation (mat, 2,
-                                       0, (PetscInt*)&n_nz[0]); CHKERRABORT(sys.comm().get(), ierr);
+                                       0, (PetscInt*)&n_nz[0]);    CHKERRABORT(sys.comm().get(), ierr);
     ierr = MatMPIBAIJSetPreallocation (mat, 2,
                                        0, (PetscInt*)&n_nz[0],
-                                       0, (PetscInt*)&n_oz[0]); CHKERRABORT(sys.comm().get(), ierr);
+                                       0, (PetscInt*)&n_oz[0]);    CHKERRABORT(sys.comm().get(), ierr);
     ierr = MatSetOption(mat,
                         MAT_NEW_NONZERO_ALLOCATION_ERR,
-                        PETSC_TRUE);                            CHKERRABORT(sys.comm().get(), ierr);
+                        PETSC_TRUE);                               CHKERRABORT(sys.comm().get(), ierr);
     
     if (libMesh::on_command_line("--solver_system_names")) {
         
         std::string nm = _assembly->system().name() + "_";
         MatSetOptionsPrefix(mat, nm.c_str());
     }
-    ierr = MatSetFromOptions(mat);                              CHKERRABORT(sys.comm().get(), ierr);
+    ierr = MatSetFromOptions(mat);                                 CHKERRABORT(sys.comm().get(), ierr);
 
     
     // now create the vectors
     Vec              res_vec, sol_vec;
     
-    ierr = MatCreateVecs(mat, &res_vec, PETSC_NULL);            CHKERRABORT(sys.comm().get(), ierr);
-    ierr = MatCreateVecs(mat, &sol_vec, PETSC_NULL);            CHKERRABORT(sys.comm().get(), ierr);
+    ierr = MatCreateVecs(mat, &res_vec, PETSC_NULL);               CHKERRABORT(sys.comm().get(), ierr);
+    ierr = MatCreateVecs(mat, &sol_vec, PETSC_NULL);               CHKERRABORT(sys.comm().get(), ierr);
 
     
     std::auto_ptr<libMesh::SparseMatrix<Real> >
