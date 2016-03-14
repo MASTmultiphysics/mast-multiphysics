@@ -217,6 +217,9 @@ assemble_generalized_aerodynamic_force_matrix(const libMesh::NumericVector<Real>
     // delete the localized basis vectors
     for (unsigned int i=0; i<basis.size(); i++)
         delete localized_basis[i];
+    
+    // sum the matrix and provide it to each processor
+    MAST::parallel_sum(_system->system().comm(), mat);
 }
 
 

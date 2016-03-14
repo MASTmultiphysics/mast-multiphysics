@@ -19,7 +19,7 @@
 
 // C++ includes
 #include <iostream>
-
+#include <ostream>
 
 
 // MAST includes
@@ -43,6 +43,7 @@
 #include "elasticity/structural_element_base.h"
 #include "elasticity/structural_modal_eigenproblem_assembly.h"
 #include "elasticity/fsi_generalized_aero_force_assembly.h"
+#include "elasticity/structural_near_null_vector_space.h"
 #include "property_cards/solid_1d_section_element_property_card.h"
 #include "property_cards/isotropic_material_property_card.h"
 #include "boundary_condition/dirichlet_boundary_condition.h"
@@ -56,24 +57,83 @@
 #include "libmesh/parameter_vector.h"
 #include "libmesh/getpot.h"
 #include "libmesh/string_to_enum.h"
-
-
-// MAST includes
+#include "libmesh/centroid_partitioner.h"
+#include "libmesh/nonlinear_solver.h"
 
 
 extern libMesh::LibMeshInit* __init;
 
 
 
-MAST::BeamEulerFSIFlutterAnalysis::BeamEulerFSIFlutterAnalysis() {
+
+MAST::BeamEulerFSIFlutterAnalysis::BeamEulerFSIFlutterAnalysis():
+_structural_mesh(NULL),
+_fluid_mesh(NULL),
+_structural_eq_sys(NULL),
+_fluid_eq_sys(NULL),
+_structural_sys(NULL),
+_fluid_sys(NULL),
+//_structural_comm(NULL),
+_structural_sys_init(NULL),
+_structural_discipline(NULL),
+_fluid_sys_init(NULL),
+_fluid_discipline(NULL),
+_flight_cond(NULL),
+_far_field(NULL),
+_symm_wall(NULL),
+_slip_wall(NULL),
+_pressure(NULL),
+_motion_function(NULL),
+_small_dist_pressure_function(NULL),
+_omega(NULL),
+_velocity(NULL),
+_b_ref(NULL),
+_omega_f(NULL),
+_velocity_f(NULL),
+_b_ref_f(NULL),
+_freq_function(NULL),
+_length(0.),
+_thy(NULL),
+_thz(NULL),
+_rho(NULL),
+_E(NULL),
+_nu(NULL),
+_zero(NULL),
+_mach(NULL),
+_rho_air(NULL),
+_gamma_air(NULL),
+_thy_f(NULL),
+_thz_f(NULL),
+_rho_f(NULL),
+_E_f(NULL),
+_nu_f(NULL),
+_hyoff_f(NULL),
+_hzoff_f(NULL),
+_mach_f(NULL),
+_rho_air_f(NULL),
+_gamma_air_f(NULL),
+_flutter_solver(NULL),
+_flutter_root(NULL),
+_m_card(NULL),
+_p_card(NULL),
+_dirichlet_left(NULL),
+_dirichlet_right(NULL) {
     
     //////////////////////////////////////////////////////////////////////
     //    SETUP THE FLUID DATA
     //////////////////////////////////////////////////////////////////////
 
     // initialize the libMesh object
-    _fluid_mesh              = new libMesh::ParallelMesh(__init->comm());
+    _fluid_mesh              = new libMesh::SerialMesh(__init->comm()),
     _fluid_eq_sys            = new libMesh::EquationSystems(*_fluid_mesh);
+    
+
+    // tell the mesh to use the centroid partitioner with the
+    // Y-coordinate as the means for sorting. This assumes that the lowest
+    // layer of elements that interface with the panel are on rank 0.
+    _fluid_mesh->partitioner().reset(new libMesh::CentroidPartitioner
+                                     (libMesh::CentroidPartitioner::Y));
+    
     
     // add the system to be used for analysis
     _fluid_sys = &(_fluid_eq_sys->add_system<MAST::NonlinearSystem>("fluid"));
@@ -227,6 +287,9 @@ MAST::BeamEulerFSIFlutterAnalysis::BeamEulerFSIFlutterAnalysis() {
     for (unsigned int i=1; i<=3; i++)
         _fluid_discipline->add_side_load(              i, *_far_field);
     
+    _small_dist_pressure_function =
+    new MAST::SmallDisturbancePressureFunction(*_fluid_sys_init, *_flight_cond);
+
     
     
     //////////////////////////////////////////////////////////////////////
@@ -369,19 +432,15 @@ MAST::BeamEulerFSIFlutterAnalysis::BeamEulerFSIFlutterAnalysis() {
     
     // pressure boundary condition for the beam
     _pressure    =  new MAST::BoundaryConditionBase(MAST::SMALL_DISTURBANCE_MOTION);
-    _small_dist_pressure_function =
-    new MAST::SmallDisturbancePressureFunction(*_fluid_sys_init, *_flight_cond);
-    
     _pressure->add(*_small_dist_pressure_function);
     _pressure->add(*_motion_function);
     _structural_discipline->add_volume_load(0, *_pressure);
 
     
     _flutter_solver  = new MAST::UGFlutterSolver;
-    std::string nm("flutter_output.txt");
-    _flutter_solver->set_output_file(nm);
-    
-
+    std::ostringstream oss;
+    oss << "flutter_output_" << __init->comm().rank() << ".txt";
+    _flutter_solver->set_output_file(oss.str());
 }
 
 
@@ -392,19 +451,14 @@ MAST::BeamEulerFSIFlutterAnalysis::BeamEulerFSIFlutterAnalysis() {
 MAST::BeamEulerFSIFlutterAnalysis::~BeamEulerFSIFlutterAnalysis() {
     
     delete _fluid_eq_sys;
-    delete _structural_eq_sys;
     delete _fluid_mesh;
-    delete _structural_mesh;
     
     delete _fluid_discipline;
-    delete _structural_discipline;
     delete _fluid_sys_init;
-    delete _structural_sys_init;
     
     delete _far_field;
     delete _symm_wall;
     delete _slip_wall;
-    delete _pressure;
     
     delete _flight_cond;
     
@@ -421,6 +475,15 @@ MAST::BeamEulerFSIFlutterAnalysis::~BeamEulerFSIFlutterAnalysis() {
     delete _motion_function;
     delete _small_dist_pressure_function;
     
+    
+    
+    delete _structural_eq_sys;
+    delete _structural_mesh;
+    
+    
+    delete _structural_discipline;
+    delete _structural_sys_init;
+    delete _pressure;
     delete _m_card;
     delete _p_card;
     
@@ -453,8 +516,8 @@ MAST::BeamEulerFSIFlutterAnalysis::~BeamEulerFSIFlutterAnalysis() {
     // delete the basis vectors
     if (_basis.size())
         for (unsigned int i=0; i<_basis.size(); i++)
-            delete _basis[i];
-
+            if (_basis[i]) delete _basis[i];
+    
     
     delete _flutter_solver;
 
@@ -507,6 +570,46 @@ MAST::BeamEulerFSIFlutterAnalysis::get_parameter(const std::string &nm) {
 Real
 MAST::BeamEulerFSIFlutterAnalysis::solve(bool if_write_output) {
     
+    
+    /////////////////////////////////////////////////////////////////
+    //  INITIALIZE FLUID SOLUTION
+    /////////////////////////////////////////////////////////////////
+    // the modal and flutter problems are solved on rank 0, while
+    // the fluid solution is setup on the global communicator
+    
+    // initialize the solution
+    RealVectorX s = RealVectorX::Zero(4);
+    s(0) = _flight_cond->rho();
+    s(1) = _flight_cond->rho_u1();
+    s(2) = _flight_cond->rho_u2();
+    //s(3) = _flight_cond->rho_u3();
+    s(3) = _flight_cond->rho_e();
+    
+    // create the vector for storing the base solution.
+    // we will swap this out with the system solution, initialize and
+    // then swap it back.
+    libMesh::NumericVector<Real>& base_sol =
+    _fluid_sys->add_vector("fluid_base_solution");
+    _fluid_sys->solution->swap(base_sol);
+    _fluid_sys_init->initialize_solution(s);
+    _fluid_sys->solution->swap(base_sol);
+    
+    // create the nonlinear assembly object
+    MAST::FrequencyDomainLinearizedComplexAssembly   assembly;
+    
+    // Transient solver for time integration
+    MAST::ComplexSolverBase                          solver;
+    
+    // now solve the system
+    assembly.attach_discipline_and_system(*_fluid_discipline,
+                                          solver,
+                                          *_fluid_sys_init);
+    assembly.set_base_solution(base_sol);
+    assembly.set_frequency_function(*_freq_function);
+    
+    
+    
+    
     ////////////////////////////////////////////////////////////
     // STRUCTURAL MODAL EIGENSOLUTION
     ////////////////////////////////////////////////////////////
@@ -517,6 +620,11 @@ MAST::BeamEulerFSIFlutterAnalysis::solve(bool if_write_output) {
     
     modal_assembly.attach_discipline_and_system(*_structural_discipline,
                                                 *_structural_sys_init);
+    
+    
+    MAST::StructuralNearNullVectorSpace nsp;
+    _structural_sys->nonlinear_solver->nearnullspace_object = &nsp;
+
     _structural_sys->eigenproblem_solve();
     modal_assembly.clear_discipline_and_system();
     
@@ -573,42 +681,8 @@ MAST::BeamEulerFSIFlutterAnalysis::solve(bool if_write_output) {
             _structural_sys->solution->swap(*_basis[i]);
         }
     }
-    
-    
-    /////////////////////////////////////////////////////////////////
-    //  INITIALIZE FLUID SOLUTION
-    /////////////////////////////////////////////////////////////////
-    
-    // initialize the solution
-    RealVectorX s = RealVectorX::Zero(4);
-    s(0) = _flight_cond->rho();
-    s(1) = _flight_cond->rho_u1();
-    s(2) = _flight_cond->rho_u2();
-    //s(3) = _flight_cond->rho_u3();
-    s(3) = _flight_cond->rho_e();
-    
-    // create the vector for storing the base solution.
-    // we will swap this out with the system solution, initialize and
-    // then swap it back.
-    libMesh::NumericVector<Real>& base_sol =
-    _fluid_sys->add_vector("fluid_base_solution");
-    _fluid_sys->solution->swap(base_sol);
-    _fluid_sys_init->initialize_solution(s);
-    _fluid_sys->solution->swap(base_sol);
-    
-    // create the nonlinear assembly object
-    MAST::FrequencyDomainLinearizedComplexAssembly   assembly;
-    
-    // Transient solver for time integration
-    MAST::ComplexSolverBase                          solver;
-    
-    // now solve the system
-    assembly.attach_discipline_and_system(*_fluid_discipline,
-                                          solver,
-                                          *_fluid_sys_init);
-    assembly.set_base_solution(base_sol);
-    assembly.set_frequency_function(*_freq_function);
-    
+
+
     ///////////////////////////////////////////////////////////////////
     // FLUTTER SOLUTION
     ///////////////////////////////////////////////////////////////////

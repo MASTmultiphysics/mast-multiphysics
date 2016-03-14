@@ -19,7 +19,7 @@
 
 // C++ includes
 #include <iostream>
-
+#include <ostream>
 
 
 // MAST includes
@@ -43,6 +43,7 @@
 #include "elasticity/structural_element_base.h"
 #include "elasticity/structural_modal_eigenproblem_assembly.h"
 #include "elasticity/fsi_generalized_aero_force_assembly.h"
+#include "elasticity/structural_near_null_vector_space.h"
 #include "property_cards/solid_2d_section_element_property_card.h"
 #include "property_cards/isotropic_material_property_card.h"
 #include "boundary_condition/dirichlet_boundary_condition.h"
@@ -56,9 +57,8 @@
 #include "libmesh/parameter_vector.h"
 #include "libmesh/getpot.h"
 #include "libmesh/string_to_enum.h"
-
-
-// MAST includes
+#include "libmesh/centroid_partitioner.h"
+#include "libmesh/nonlinear_solver.h"
 
 
 extern libMesh::LibMeshInit* __init;
@@ -72,8 +72,16 @@ MAST::PlateEulerFSIFlutterAnalysis::PlateEulerFSIFlutterAnalysis() {
     //////////////////////////////////////////////////////////////////////
 
     // initialize the libMesh object
-    _fluid_mesh              = new libMesh::ParallelMesh(__init->comm());
+    _fluid_mesh              = new libMesh::SerialMesh(__init->comm());
     _fluid_eq_sys            = new libMesh::EquationSystems(*_fluid_mesh);
+    
+    
+    // tell the mesh to use the centroid partitioner with the
+    // Z-coordinate as the means for sorting. This assumes that the lowest
+    // layer of elements that interface with the panel are on rank 0.
+    _fluid_mesh->partitioner().reset(new libMesh::CentroidPartitioner
+                                     (libMesh::CentroidPartitioner::Z));
+
     
     // add the system to be used for analysis
     _fluid_sys = &(_fluid_eq_sys->add_system<MAST::NonlinearSystem>("fluid"));
@@ -380,8 +388,9 @@ MAST::PlateEulerFSIFlutterAnalysis::PlateEulerFSIFlutterAnalysis() {
 
     
     _flutter_solver  = new MAST::UGFlutterSolver;
-    std::string nm("flutter_output.txt");
-    _flutter_solver->set_output_file(nm);
+    std::ostringstream oss;
+    oss << "flutter_output_" << __init->comm().rank() << ".txt";
+    _flutter_solver->set_output_file(oss.str());
     
 
 }
@@ -520,6 +529,10 @@ MAST::PlateEulerFSIFlutterAnalysis::solve(bool if_write_output) {
     
     modal_assembly.attach_discipline_and_system(*_structural_discipline,
                                                 *_structural_sys_init);
+
+    MAST::StructuralNearNullVectorSpace nsp;
+    _structural_sys->nonlinear_solver->nearnullspace_object = &nsp;
+
     _structural_sys->eigenproblem_solve();
     modal_assembly.clear_discipline_and_system();
     

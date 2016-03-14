@@ -97,7 +97,7 @@ namespace MAST {
         
         
         // create the fluid mesh
-        libMesh::ParallelMesh*                   _fluid_mesh;
+        libMesh::SerialMesh*                     _fluid_mesh;
         
         
         // create the equation system

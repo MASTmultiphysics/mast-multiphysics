@@ -264,6 +264,14 @@ assemble_reduced_order_quantity
     for (unsigned int i=0; i<basis.size(); i++)
         delete localized_basis[i];
 
+    // sum the matrix and provide it to each processor
+    std::map<MAST::StructuralQuantityType, RealMatrixX*>::iterator
+    it  = mat_qty_map.begin(),
+    end = mat_qty_map.end();
+    
+    
+    for ( ; it != end; it++)
+        MAST::parallel_sum(_system->system().comm(), *(it->second));
 }
 
 
@@ -387,6 +395,15 @@ assemble_reduced_order_quantity_sensitivity
     // delete the localized basis vectors
     for (unsigned int i=0; i<basis.size(); i++)
         delete localized_basis[i];
+    
+    // sum the matrix and provide it to each processor
+    std::map<MAST::StructuralQuantityType, RealMatrixX*>::iterator
+    it  = mat_qty_map.begin(),
+    end = mat_qty_map.end();
+    
+    
+    for ( ; it != end; it++)
+        MAST::parallel_sum(_system->system().comm(), *(it->second));
 }
 
 

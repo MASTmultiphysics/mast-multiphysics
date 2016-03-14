@@ -86,7 +86,7 @@ namespace MAST {
 
         
         
-        void set_output_file(std::string& nm) {
+        void set_output_file(const std::string& nm) {
             
             _output.close();
             _output.open(nm.c_str(), std::ofstream::out);

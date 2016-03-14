@@ -24,6 +24,9 @@
 // MAST includes
 #include "base/mast_data_types.h"
 
+// libMesh includes
+#include "libmesh/parallel.h"
+
 
 namespace MAST {
     
@@ -206,6 +209,49 @@ namespace MAST {
     }
 
 
+    
+    inline void
+    parallel_sum (const libMesh::Parallel::Communicator& c,
+                  RealMatrixX& mat) {
+        
+        const unsigned int
+        m =  (unsigned int)mat.rows(),
+        n =  (unsigned int)mat.cols();
+    
+        std::vector<Real> vals(m*n);
+        for (unsigned int i=0; i<m; i++)
+            for (unsigned int j=0; j<n; j++)
+                vals[m*j+i] = mat(i,j);
+        
+        c.sum(vals);
+        
+        for (unsigned int i=0; i<m; i++)
+            for (unsigned int j=0; j<n; j++)
+                mat(i,j) = vals[m*j+i];
+    }
+
+    
+    
+    inline void
+    parallel_sum (const libMesh::Parallel::Communicator& c,
+                  ComplexMatrixX& mat) {
+        
+        const unsigned int
+        m =  (unsigned int)mat.rows(),
+        n =  (unsigned int)mat.cols();
+        
+        std::vector<Complex> vals(m*n);
+        for (unsigned int i=0; i<m; i++)
+            for (unsigned int j=0; j<n; j++)
+                vals[m*j+i] = mat(i,j);
+        
+        c.sum(vals);
+        
+        for (unsigned int i=0; i<m; i++)
+            for (unsigned int j=0; j<n; j++)
+                mat(i,j) = vals[m*j+i];
+        
+    }
 }
 
 
