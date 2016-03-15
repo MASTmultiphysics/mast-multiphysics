@@ -145,14 +145,14 @@ namespace MAST {
         /*!
          *   Prints the sorted roots to the \par output
          */
-        virtual void print_sorted_roots(std::ostream* output = NULL);
+        virtual void print_sorted_roots();
         
         
         /*!
          *   Prints the crossover points output. If no pointer to output is given
          *   then the output defined by set_output_file() is used.
          */
-        virtual void print_crossover_points(std::ostream* output = NULL);
+        virtual void print_crossover_points();
         
         
         /*!

@@ -65,7 +65,61 @@ extern libMesh::LibMeshInit* __init;
 
 
 
-MAST::PlateEulerFSIFlutterAnalysis::PlateEulerFSIFlutterAnalysis() {
+MAST::PlateEulerFSIFlutterAnalysis::PlateEulerFSIFlutterAnalysis():
+_structural_mesh(NULL),
+_fluid_mesh(NULL),
+_structural_eq_sys(NULL),
+_fluid_eq_sys(NULL),
+_structural_sys(NULL),
+_fluid_sys(NULL),
+_structural_sys_init(NULL),
+_structural_discipline(NULL),
+_fluid_sys_init(NULL),
+_fluid_discipline(NULL),
+_flight_cond(NULL),
+_far_field(NULL),
+_symm_wall(NULL),
+_slip_wall(NULL),
+_pressure(NULL),
+_motion_function(NULL),
+_small_dist_pressure_function(NULL),
+_omega(NULL),
+_velocity(NULL),
+_b_ref(NULL),
+_omega_f(NULL),
+_velocity_f(NULL),
+_b_ref_f(NULL),
+_freq_function(NULL),
+_length(0.),
+_k_lower(0.),
+_k_upper(0.),
+_n_k_divs(0),
+_th(NULL),
+_rho(NULL),
+_E(NULL),
+_nu(NULL),
+_kappa(NULL),
+_zero(NULL),
+_mach(NULL),
+_rho_air(NULL),
+_gamma_air(NULL),
+_th_f(NULL),
+_rho_f(NULL),
+_E_f(NULL),
+_nu_f(NULL),
+_kappa_f(NULL),
+_hoff_f(NULL),
+_mach_f(NULL),
+_rho_air_f(NULL),
+_gamma_air_f(NULL),
+_flutter_solver(NULL),
+_flutter_root(NULL),
+_m_card(NULL),
+_p_card(NULL),
+_dirichlet_left(NULL),
+_dirichlet_right(NULL),
+_dirichlet_bottom(NULL),
+_dirichlet_top(NULL) {
     
     //////////////////////////////////////////////////////////////////////
     //    SETUP THE FLUID DATA
@@ -213,9 +267,9 @@ MAST::PlateEulerFSIFlutterAnalysis::PlateEulerFSIFlutterAnalysis() {
     _fluid_discipline->set_flight_condition(*_flight_cond);
     
     // define parameters
-    _omega             = new MAST::Parameter("omega",     100.);
+    _omega             = new MAST::Parameter("omega",       0.);
     _velocity          = new MAST::Parameter("velocity",  _flight_cond->velocity_magnitude);
-    _b_ref             = new MAST::Parameter("b_ref",       1.);
+    _b_ref             = new MAST::Parameter("b_ref",       0.);
     
     
     // now define the constant field functions based on this
@@ -322,12 +376,12 @@ MAST::PlateEulerFSIFlutterAnalysis::PlateEulerFSIFlutterAnalysis() {
 
     _structural_sys->eigen_solver->set_position_of_spectrum(libMesh::LARGEST_MAGNITUDE);
     _structural_sys->set_exchange_A_and_B(true);
-    _structural_sys->set_n_requested_eigenvalues(3);
+    _structural_sys->set_n_requested_eigenvalues(16);
     
     // create the property functions and add them to the
     
-    _th              = new MAST::Parameter("th",   0.06);
-    _rho             = new MAST::Parameter("rho", 2.8e3);
+    _th              = new MAST::Parameter("th", 0.0015);
+    _rho             = new MAST::Parameter("rho", 2.7e3);
     _E               = new MAST::Parameter("E",   72.e9);
     _nu              = new MAST::Parameter("nu",   0.33);
     _kappa           = new MAST::Parameter("kappa",  5./6.);
@@ -382,6 +436,10 @@ MAST::PlateEulerFSIFlutterAnalysis::PlateEulerFSIFlutterAnalysis() {
     _small_dist_pressure_function =
     new MAST::SmallDisturbancePressureFunction(*_fluid_sys_init, *_flight_cond);
     
+    _k_upper            = infile("k_upper",  0.75);
+    _k_lower            = infile("k_lower",  0.05);
+    _n_k_divs           = infile("n_k_divs",   10);
+
     _pressure->add(*_small_dist_pressure_function);
     _pressure->add(*_motion_function);
     _structural_discipline->add_volume_load(0, *_pressure);
@@ -390,9 +448,8 @@ MAST::PlateEulerFSIFlutterAnalysis::PlateEulerFSIFlutterAnalysis() {
     _flutter_solver  = new MAST::UGFlutterSolver;
     std::ostringstream oss;
     oss << "flutter_output_" << __init->comm().rank() << ".txt";
-    _flutter_solver->set_output_file(oss.str());
-    
-
+    if (__init->comm().rank() == 0)
+        _flutter_solver->set_output_file(oss.str());
 }
 
 
@@ -639,10 +696,10 @@ MAST::PlateEulerFSIFlutterAnalysis::solve(bool if_write_output) {
     _flutter_solver->initialize(*_omega,
                                 *_b_ref,
                                 _flight_cond->rho(),
-                                0.05,         // lower kr
-                                0.75,         // upper kr
-                                10,           // number of divisions
-                                _basis);      // basis vectors
+                                _k_lower,            // lower kr
+                                _k_upper,            // upper kr
+                                _n_k_divs,           // number of divisions
+                                _basis);             // basis vectors
     
     
     // find the roots for the specified divisions
@@ -652,7 +709,7 @@ MAST::PlateEulerFSIFlutterAnalysis::solve(bool if_write_output) {
     // now ask the flutter solver to return the critical flutter root,
     // which is the flutter cross-over point at the lowest velocity
     std::pair<bool, MAST::FlutterRootBase*>
-    sol = _flutter_solver->find_critical_root(1.e-1, 20);
+    sol = _flutter_solver->find_critical_root(1.e-4, 20);
     
     
     _flutter_solver->print_sorted_roots();

@@ -36,8 +36,8 @@ MAST::FlutterSolverBase(),
 _kr_param(NULL),
 _bref_param(NULL),
 _kr_range(),
-_n_kr_divs(0.)
- {
+_n_kr_divs(0.),
+_include_highest_kr_unstable(false) {
     
 }
 
@@ -283,7 +283,8 @@ MAST::UGFlutterSolver::scan_for_roots() {
             
             prev_sol = sol.get();
             
-            sol->print(_output);
+            if (_output)
+                sol->print(*_output);
             
             // add the solution to this solver
             bool if_success =
@@ -302,10 +303,12 @@ MAST::UGFlutterSolver::scan_for_roots() {
 
 
 void
-MAST::UGFlutterSolver::print_sorted_roots(std::ostream* output)
+MAST::UGFlutterSolver::print_sorted_roots()
 {
-    if (!output)
-        output = &_output;
+    
+    // write only if the output was set
+    if (!_output)
+        return;
     
     std::map<Real, MAST::FlutterSolutionBase*>::const_iterator
     sol_it = _flutter_solutions.begin(),
@@ -319,7 +322,7 @@ MAST::UGFlutterSolver::print_sorted_roots(std::ostream* output)
     for (unsigned int i=0; i<nvals; i++)
     {
         // print the headers
-        *output
+        *_output
         << "** Root # "
         << std::setw(5) << i << " **" << std::endl
         << std::setw(15) << "kr"
@@ -335,25 +338,25 @@ MAST::UGFlutterSolver::print_sorted_roots(std::ostream* output)
             const MAST::FlutterRootBase& root =
             sol_it->second->get_root(i);
             
-            *output
+            *_output
             << std::setw(15) << root.kr
             << std::setw(15) << root.g
             << std::setw(15) << root.V << std::endl;
         }
-        *output << std::endl << std::endl;
+        *_output << std::endl << std::endl;
     }
     
     
     // write the roots identified using iterative search technique
-    std::streamsize prec = output->precision();
+    std::streamsize prec = _output->precision();
     
     unsigned int nroots = this->n_roots_found();
-    *output << std::endl
+    *_output << std::endl
     << "n critical roots identified: " << nroots << std::endl;
     for (unsigned int i=0; i<nroots; i++)
     {
         const MAST::FlutterRootBase& root = this->get_root(i);
-        *output
+        *_output
         << "** Root : " << std::setw(5) << i << " **" << std::endl
         << "kr     = " << std::setw(15) << std::setprecision(15) << root.kr << std::endl
         << "V      = " << std::setw(15) << std::setprecision(15) << root.V << std::endl
@@ -362,22 +365,23 @@ MAST::UGFlutterSolver::print_sorted_roots(std::ostream* output)
         << std::setprecision(prec) // set the precision to the default value
         << "Modal Participation : " << std::endl ;
         for (unsigned int j=0; j<nvals; j++)
-            *output
+            *_output
             << "(" << std::setw(5) << j << "): "
             << std::setw(10) << root.modal_participation(j)
             << std::setw(3)  << " ";
-        *output << std::endl << std::endl;
+        *_output << std::endl << std::endl;
     }
 }
 
 
 void
-MAST::UGFlutterSolver::print_crossover_points(std::ostream* output)
+MAST::UGFlutterSolver::print_crossover_points()
 {
-    if (!output)
-        output = &_output;
+    // print only if the output was set
+    if (!_output)
+        return;
     
-    *output << "n crossover points found: "
+    *_output << "n crossover points found: "
     << std::setw(5) << _flutter_crossovers.size() << std::endl;
     
     std::multimap<Real, MAST::FlutterRootCrossoverBase*>::const_iterator
@@ -386,9 +390,9 @@ MAST::UGFlutterSolver::print_crossover_points(std::ostream* output)
     unsigned int i=0;
     
     for ( ; it != end; it++) {
-        *output << "** Point : " << std::setw(5) << i << " **" << std::endl;
-        it->second->print(*output);
-        *output << std::endl;
+        *_output << "** Point : " << std::setw(5) << i << " **" << std::endl;
+        it->second->print(*_output);
+        *_output << std::endl;
         i++;
     }
 }
@@ -420,12 +424,19 @@ _bisection_search(const std::pair<MAST::FlutterSolutionBase*,
     
     while (n_iters < max_iters) {
         
+        std::cout
+        << upper_kr << "  "
+        << upper_g << "  " << std::endl
+        << lower_kr << "  "
+        << lower_g << "  " << std::endl;
+        
         new_kr    = lower_kr +
         (upper_kr-lower_kr)/(upper_g-lower_g)*(0.-lower_g); // linear interpolation
         
         new_sol  = _analyze(new_kr, ref_sol_range.first).release();
         
-        new_sol->print(_output);
+        if (_output)
+            new_sol->print(*_output);
         
         // add the solution to this solver
         bool if_success =
@@ -765,7 +776,8 @@ MAST::UGFlutterSolver::_identify_crossover_points() {
         Real g_val = sol_rit->second->get_root(i).g;
         if (if_process &&
             g_val > 0 &&
-            g_val < max_allowable_g) {
+            g_val < max_allowable_g &&
+            _include_highest_kr_unstable) {
             MAST::FlutterRootCrossoverBase* cross =
             new MAST::UGFlutterRootCrossover;
             // here, both roots for crossover are set to be the same

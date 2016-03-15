@@ -32,7 +32,8 @@
 
 MAST::FlutterSolverBase::FlutterSolverBase():
 _assembly(NULL),
-_basis_vectors(NULL) {
+_basis_vectors(NULL),
+_output(NULL) {
     
 }
 
@@ -42,6 +43,8 @@ MAST::FlutterSolverBase::~FlutterSolverBase() {
     
     _assembly         = NULL;
     _basis_vectors    = NULL;
+    if (_output)
+        delete _output;
 }
 
 
@@ -65,6 +68,10 @@ MAST::FlutterSolverBase::clear() {
     
     _assembly         = NULL;
     _basis_vectors    = NULL;
+    if (_output) {
+        delete _output;
+        _output = NULL;
+    }
 }
 
 

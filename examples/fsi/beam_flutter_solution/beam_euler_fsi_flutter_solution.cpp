@@ -73,7 +73,6 @@ _structural_eq_sys(NULL),
 _fluid_eq_sys(NULL),
 _structural_sys(NULL),
 _fluid_sys(NULL),
-//_structural_comm(NULL),
 _structural_sys_init(NULL),
 _structural_discipline(NULL),
 _fluid_sys_init(NULL),
@@ -93,6 +92,9 @@ _velocity_f(NULL),
 _b_ref_f(NULL),
 _freq_function(NULL),
 _length(0.),
+_k_lower(0.),
+_k_upper(0.),
+_n_k_divs(0),
 _thy(NULL),
 _thz(NULL),
 _rho(NULL),
@@ -124,7 +126,7 @@ _dirichlet_right(NULL) {
     //////////////////////////////////////////////////////////////////////
 
     // initialize the libMesh object
-    _fluid_mesh              = new libMesh::SerialMesh(__init->comm()),
+    _fluid_mesh              = new libMesh::SerialMesh(__init->comm());
     _fluid_eq_sys            = new libMesh::EquationSystems(*_fluid_mesh);
     
 
@@ -263,7 +265,7 @@ _dirichlet_right(NULL) {
     _fluid_discipline->set_flight_condition(*_flight_cond);
     
     // define parameters
-    _omega             = new MAST::Parameter("omega",     100.);
+    _omega             = new MAST::Parameter("omega",       0.);
     _velocity          = new MAST::Parameter("velocity",  _flight_cond->velocity_magnitude);
     _b_ref             = new MAST::Parameter("b_ref",       1.);
     
@@ -290,6 +292,10 @@ _dirichlet_right(NULL) {
     _small_dist_pressure_function =
     new MAST::SmallDisturbancePressureFunction(*_fluid_sys_init, *_flight_cond);
 
+    
+    _k_upper            = infile("k_upper",  0.75);
+    _k_lower            = infile("k_lower",  0.05);
+    _n_k_divs           = infile("n_k_divs",   10);
     
     
     //////////////////////////////////////////////////////////////////////
@@ -365,19 +371,19 @@ _dirichlet_right(NULL) {
 
     _structural_sys->eigen_solver->set_position_of_spectrum(libMesh::LARGEST_MAGNITUDE);
     _structural_sys->set_exchange_A_and_B(true);
-    _structural_sys->set_n_requested_eigenvalues(3);
+    _structural_sys->set_n_requested_eigenvalues(10);
     
     // create the property functions and add them to the
     
-    _thy             = new MAST::Parameter("thy",  0.06);
-    _thz             = new MAST::Parameter("thz",  1.00);
-    _rho             = new MAST::Parameter("rho", 2.8e3);
-    _E               = new MAST::Parameter("E",   72.e9);
-    _nu              = new MAST::Parameter("nu",   0.33);
-    _zero            = new MAST::Parameter("zero",   0.);
-    _mach            = new MAST::Parameter("mach",   3.);
-    _rho_air         = new MAST::Parameter("rho" , 1.05);
-    _gamma_air       = new MAST::Parameter("gamma", 1.4);
+    _thy             = new MAST::Parameter("thy",  0.0015);
+    _thz             = new MAST::Parameter("thz",    1.00);
+    _rho             = new MAST::Parameter("rho",   2.7e3);
+    _E               = new MAST::Parameter("E",     72.e9);
+    _nu              = new MAST::Parameter("nu",     0.33);
+    _zero            = new MAST::Parameter("zero",     0.);
+    _mach            = new MAST::Parameter("mach",     3.);
+    _rho_air         = new MAST::Parameter("rho" ,   1.05);
+    _gamma_air       = new MAST::Parameter("gamma",   1.4);
     
     
     
@@ -440,7 +446,8 @@ _dirichlet_right(NULL) {
     _flutter_solver  = new MAST::UGFlutterSolver;
     std::ostringstream oss;
     oss << "flutter_output_" << __init->comm().rank() << ".txt";
-    _flutter_solver->set_output_file(oss.str());
+    if (__init->comm().rank() == 0)
+        _flutter_solver->set_output_file(oss.str());
 }
 
 
@@ -697,10 +704,10 @@ MAST::BeamEulerFSIFlutterAnalysis::solve(bool if_write_output) {
     _flutter_solver->initialize(*_omega,
                                 *_b_ref,
                                 _flight_cond->rho(),
-                                0.05,         // lower kr
-                                0.75,         // upper kr
-                                10,           // number of divisions
-                                _basis);      // basis vectors
+                                _k_lower,         // lower kr
+                                _k_upper,         // upper kr
+                                _n_k_divs,        // number of divisions
+                                _basis);          // basis vectors
     
     
     // find the roots for the specified divisions
@@ -710,7 +717,7 @@ MAST::BeamEulerFSIFlutterAnalysis::solve(bool if_write_output) {
     // now ask the flutter solver to return the critical flutter root,
     // which is the flutter cross-over point at the lowest velocity
     std::pair<bool, MAST::FlutterRootBase*>
-    sol = _flutter_solver->find_critical_root(1.e-1, 20);
+    sol = _flutter_solver->find_critical_root(1.e-4, 20);
     
     
     _flutter_solver->print_sorted_roots();

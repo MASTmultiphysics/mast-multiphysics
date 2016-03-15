@@ -131,14 +131,14 @@ namespace MAST {
         /*!
          *   Prints the sorted roots to the \par output
          */
-        virtual void print_sorted_roots(std::ostream* output = NULL);
+        virtual void print_sorted_roots();
         
         
         /*!
          *   Prints the crossover points output. If no pointer to output is given
          *   then the output defined by set_output_file() is used.
          */
-        virtual void print_crossover_points(std::ostream* output = NULL);
+        virtual void print_crossover_points();
         
         
         /*!
@@ -238,6 +238,13 @@ namespace MAST {
          *   map of kr sorted flutter solutions
          */
         std::map<Real, MAST::FlutterSolutionBase*>      _flutter_solutions;
+
+        
+        /*!
+         *   flag allows check to see if the root started out as critical at
+         *   the highest k value.
+         */
+        bool _include_highest_kr_unstable;
         
         /*!
          *   the map of flutter crossover points versus average kr of the

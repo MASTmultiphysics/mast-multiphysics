@@ -284,7 +284,8 @@ analyze_and_find_critical_root_without_tracking(const Real g_tol,
     *sol                            = _analyze(lower_V).release();
     lower_root                      = sol->get_critical_root(g_tol);
     bracket_n_unstable_roots.first  = sol->n_unstable_roots_in_upper_complex_half(g_tol);
-    sol->print(_output);
+    if (_output)
+        sol->print(*_output);
 
     // presently the algorithm requires that the first velocity has no unstable
     // roots
@@ -311,7 +312,8 @@ analyze_and_find_critical_root_without_tracking(const Real g_tol,
         sol                             = _analyze(upper_V, sol).release();
         bracket_n_unstable_roots.second = sol->n_unstable_roots_in_upper_complex_half(g_tol);
         upper_root                      = sol->get_critical_root(g_tol);
-        sol->print(_output);
+        if (_output)
+            sol->print(*_output);
 
         // add the solution to this solver
         if_success =
@@ -366,7 +368,8 @@ analyze_and_find_critical_root_without_tracking(const Real g_tol,
         0.1*(upper_V-lower_V)/(upper_g-lower_g)*(1.e-4-upper_g);  // using upper V as reference
         
         sol        = _analyze(new_V, sol).release();
-        sol->print(_output);
+        if (_output)
+            sol->print(*_output);
         
         // get the critical root from here
         const MAST::FlutterRootBase* root = sol->get_critical_root(g_tol);
@@ -439,7 +442,8 @@ MAST::TimeDomainFlutterSolver::scan_for_roots() {
             
             prev_sol = sol.get();
             
-            sol->print(_output);
+            if (_output)
+                sol->print(*_output);
             
             // add the solution to this solver
             bool if_success =
@@ -458,10 +462,11 @@ MAST::TimeDomainFlutterSolver::scan_for_roots() {
 
 
 void
-MAST::TimeDomainFlutterSolver::print_sorted_roots(std::ostream* output)
-{
-    if (!output)
-        output = &_output;
+MAST::TimeDomainFlutterSolver::print_sorted_roots() {
+    
+    // write only if the output is set
+    if (!_output)
+        return;
     
     std::map<Real, MAST::FlutterSolutionBase*>::const_iterator
     sol_it = _flutter_solutions.begin(),
@@ -475,7 +480,7 @@ MAST::TimeDomainFlutterSolver::print_sorted_roots(std::ostream* output)
     for (unsigned int i=0; i<nvals; i++)
     {
         // print the headers
-        *output
+        *_output
         << "** Root # "
         << std::setw(5) << i << " **" << std::endl
         << std::setw(15) << "V_ref"
@@ -491,25 +496,25 @@ MAST::TimeDomainFlutterSolver::print_sorted_roots(std::ostream* output)
             const MAST::FlutterRootBase& root =
             sol_it->second->get_root(i);
             
-            *output
+            *_output
             << std::setw(15) << root.V
             << std::setw(15) << std::real(root.root)
             << std::setw(15) << std::imag(root.root) << std::endl;
         }
-        *output << std::endl << std::endl;
+        *_output << std::endl << std::endl;
     }
     
     
     // write the roots identified using iterative search technique
-    std::streamsize prec = output->precision();
+    std::streamsize prec = _output->precision();
     
     unsigned int nroots = this->n_roots_found();
-    *output << std::endl
+    *_output << std::endl
     << "n critical roots identified: " << nroots << std::endl;
     for (unsigned int i=0; i<nroots; i++)
     {
         const MAST::FlutterRootBase& root = this->get_root(i);
-        *output
+        *_output
         << "** Root : " << std::setw(5) << i << " **" << std::endl
         << "V      = " << std::setw(15) << std::setprecision(15) << root.V << std::endl
         << "g      = " << std::setw(15) << std::real(root.root) << std::endl
@@ -517,11 +522,11 @@ MAST::TimeDomainFlutterSolver::print_sorted_roots(std::ostream* output)
         << std::setprecision(prec) // set the precision to the default value
         << "Modal Participation : " << std::endl ;
         for (unsigned int j=0; j<nvals; j++)
-            *output
+            *_output
             << "(" << std::setw(5) << j << "): "
             << std::setw(10) << root.modal_participation(j)
             << std::setw(3)  << " ";
-        *output << std::endl << std::endl;
+        *_output << std::endl << std::endl;
     }
     
     
@@ -529,12 +534,13 @@ MAST::TimeDomainFlutterSolver::print_sorted_roots(std::ostream* output)
 
 
 void
-MAST::TimeDomainFlutterSolver::print_crossover_points(std::ostream* output)
-{
-    if (!output)
-        output = &_output;
+MAST::TimeDomainFlutterSolver::print_crossover_points() {
     
-    *output << "n crossover points found: "
+    // print only if the output was specified
+    if (!_output)
+        return;
+    
+    *_output << "n crossover points found: "
     << std::setw(5) << _flutter_crossovers.size() << std::endl;
     
     std::multimap<Real, MAST::FlutterRootCrossoverBase*>::const_iterator
@@ -543,9 +549,9 @@ MAST::TimeDomainFlutterSolver::print_crossover_points(std::ostream* output)
     unsigned int i=0;
     
     for ( ; it != end; it++) {
-        *output << "** Point : " << std::setw(5) << i << " **" << std::endl;
-        it->second->print(*output);
-        *output << std::endl;
+        *_output << "** Point : " << std::setw(5) << i << " **" << std::endl;
+        it->second->print(*_output);
+        *_output << std::endl;
         i++;
     }
 }
@@ -582,7 +588,8 @@ _bisection_search(const std::pair<MAST::FlutterSolutionBase*,
         
         new_sol  = _analyze(new_V, ref_sol_range.first).release();
         
-        new_sol->print(_output);
+        if (_output)
+            new_sol->print(*_output);
         
         // add the solution to this solver
         bool if_success =

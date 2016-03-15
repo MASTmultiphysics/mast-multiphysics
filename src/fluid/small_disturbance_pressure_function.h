@@ -88,7 +88,10 @@ namespace MAST {
         /*!
          *   mesh function that interpolates the solution
          */
-        std::auto_ptr<libMesh::MeshFunction> _function;
+        std::auto_ptr<libMesh::MeshFunction>
+        _sol_function,
+        _dsol_re_function,
+        _dsol_im_function;
         
         /*!
          *   steady part of solution

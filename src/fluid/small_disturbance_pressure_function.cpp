@@ -63,29 +63,14 @@ init(libMesh::NumericVector<Real>& steady_sol,
     // first initialize the solution to the given vector
     // steady state solution
     _sol.reset(libMesh::NumericVector<Real>::build(sys.comm()).release());
-    //_sol->init(sys.n_dofs(),
-    //           sys.n_local_dofs(),
-    //           sys.get_dof_map().get_send_list(),
-    //           false,
-    //           libMesh::GHOSTED);
     _sol->init(steady_sol.size(), true, libMesh::SERIAL);
     
     // solution real part
     _dsol_real.reset(libMesh::NumericVector<Real>::build(sys.comm()).release());
-    //_dsol_real->init(sys.n_dofs(),
-    //                 sys.n_local_dofs(),
-    //                 sys.get_dof_map().get_send_list(),
-    //                 false,
-    //                 libMesh::GHOSTED);
     _dsol_real->init(steady_sol.size(), true, libMesh::SERIAL);
     
     // solution complex part
     _dsol_imag.reset(libMesh::NumericVector<Real>::build(sys.comm()).release());
-    //_dsol_imag->init(sys.n_dofs(),
-    //                sys.n_local_dofs(),
-    //                 sys.get_dof_map().get_send_list(),
-    //                 false,
-    //                 libMesh::GHOSTED);
     _dsol_imag->init(steady_sol.size(), true, libMesh::SERIAL);
 
     
@@ -96,11 +81,26 @@ init(libMesh::NumericVector<Real>& steady_sol,
     
     
     // if the mesh function has not been created so far, initialize it
-    _function.reset(new libMesh::MeshFunction(_system.system().get_equation_systems(),
-                                              *_sol,
-                                              _system.system().get_dof_map(),
-                                              _system.vars()));
-    _function->init();
+    _sol_function.reset(new libMesh::MeshFunction(_system.system().get_equation_systems(),
+                                                  *_sol,
+                                                  _system.system().get_dof_map(),
+                                                  _system.vars()));
+    _sol_function->init();
+
+
+    _dsol_re_function.reset(new libMesh::MeshFunction(_system.system().get_equation_systems(),
+                                                      *_dsol_real,
+                                                      _system.system().get_dof_map(),
+                                                      _system.vars()));
+    _dsol_re_function->init();
+
+    
+    _dsol_im_function.reset(new libMesh::MeshFunction(_system.system().get_equation_systems(),
+                                                      *_dsol_imag,
+                                                      _system.system().get_dof_map(),
+                                                      _system.vars()));
+    _dsol_im_function->init();
+
 }
 
 
@@ -115,7 +115,7 @@ freq_domain_pressure(const libMesh::Point& p,
                      Complex& dpress) {
     
     
-    libmesh_assert(_function.get()); // should be initialized before this call
+    libmesh_assert(_sol_function.get()); // should be initialized before this call
     
     press  = 0.;
     dpress = 0.;
@@ -132,23 +132,19 @@ freq_domain_pressure(const libMesh::Point& p,
     
     
     // first copy the real and imaginary solutions
-    _sol->swap(*_dsol_real);
-    (*_function)(p, 0., v);
-    _sol->swap(*_dsol_real);
+    (*_dsol_re_function)(p, 0., v);
     MAST::copy(sol, v);
     dsol.real() = sol;
     
     
     // now the imaginary part
-    _sol->swap(*_dsol_imag);
-    (*_function)(p, 0., v);
-    _sol->swap(*_dsol_imag);
+    (*_dsol_im_function)(p, 0., v);
     MAST::copy(sol, v);
     dsol.imag() = sol;
     
     
     // now the steady state function itself
-    (*_function)(p, 0., v);
+    (*_sol_function)(p, 0., v);
     MAST::copy(sol, v);
     
     

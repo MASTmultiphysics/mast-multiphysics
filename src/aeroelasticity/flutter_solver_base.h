@@ -88,22 +88,25 @@ namespace MAST {
         
         void set_output_file(const std::string& nm) {
             
-            _output.close();
-            _output.open(nm.c_str(), std::ofstream::out);
+            if (!_output)
+                _output = new std::ofstream;
+            
+            _output->close();
+            _output->open(nm.c_str(), std::ofstream::out);
         }
         
         
         /*!
          *   Prints the sorted roots to the \par output
          */
-        virtual void print_sorted_roots(std::ostream* output = NULL) = 0;
+        virtual void print_sorted_roots() = 0;
         
         
         /*!
          *   Prints the crossover points output. If no pointer to output is given
          *   then the output defined by set_output_file() is used.
          */
-        virtual void print_crossover_points(std::ostream* output = NULL) = 0;
+        virtual void print_crossover_points() = 0;
         
         
         
@@ -126,7 +129,7 @@ namespace MAST {
         /*!
          *    file to which the result will be written
          */
-        std::ofstream                                   _output;
+        std::ofstream*                                  _output;
         
     };
 }

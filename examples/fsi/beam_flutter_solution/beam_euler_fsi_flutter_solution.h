@@ -170,7 +170,14 @@ namespace MAST {
         
         
         Real
-        _length;
+        _length,
+        _k_lower,
+        _k_upper;
+        
+        
+        unsigned int
+        _n_k_divs;
+        
         
         // create the property functions and add them to the
         MAST::Parameter
