@@ -20,6 +20,9 @@
 #ifndef __mast__ug_flutter_solver_h__
 #define __mast__ug_flutter_solver_h__
 
+// C++ includes
+#include <memory>
+
 
 // MAST includes
 #include "aeroelasticity/flutter_solver_base.h"

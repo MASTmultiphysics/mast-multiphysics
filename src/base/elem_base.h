@@ -22,6 +22,7 @@
 
 // C++ includes
 #include <map>
+#include <memory>
 
 // MAST includes
 #include "base/mast_data_types.h"

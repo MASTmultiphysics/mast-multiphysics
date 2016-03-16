@@ -22,6 +22,7 @@
 
 // C++ includes
 #include <map>
+#include <memory>
 
 
 // MAST includes

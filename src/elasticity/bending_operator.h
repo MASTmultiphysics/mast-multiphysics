@@ -20,6 +20,9 @@
 #ifndef __mast__bending_operator__
 #define __mast__bending_operator__
 
+// C++ includes
+#include <memory>
+
 // MAST includes
 #include "base/mast_data_types.h"
 
