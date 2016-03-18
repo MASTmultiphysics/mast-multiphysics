@@ -36,6 +36,7 @@
 #include "libmesh/mesh_generation.h"
 #include "libmesh/fe_type.h"
 #include "libmesh/dof_map.h"
+#include "libmesh/parallel.h"
 
 
 
@@ -92,12 +93,16 @@ namespace MAST {
         Real sensitivity_solve(MAST::Parameter& p);
         
         
+        //  structural communicator
+        libMesh::Parallel::Communicator*        _structural_comm;
+        
+        
         // create the structural mesh
         libMesh::SerialMesh*                     _structural_mesh;
         
         
         // create the fluid mesh
-        libMesh::SerialMesh*                     _fluid_mesh;
+        libMesh::ParallelMesh*                     _fluid_mesh;
         
         
         // create the equation system
