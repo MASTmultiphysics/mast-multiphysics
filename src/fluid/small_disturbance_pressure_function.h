@@ -54,9 +54,9 @@ namespace MAST {
         /*!
          *   initiate the mesh function for this solution
          */
-        void init(libMesh::NumericVector<Real>& steady_sol,
-                  libMesh::NumericVector<Real>& small_dist_sol_real,
-                  libMesh::NumericVector<Real>& small_dist_sol_imag);
+        void init(const libMesh::NumericVector<Real>& steady_sol,
+                  const libMesh::NumericVector<Real>& small_dist_sol_real,
+                  const libMesh::NumericVector<Real>& small_dist_sol_imag);
         
         
         /*!

@@ -91,13 +91,35 @@ clear_discipline_and_system( ) {
 
 
 void
-MAST::EigenproblemAssembly::set_base_solution(libMesh::NumericVector<Real>& sol,
+MAST::EigenproblemAssembly::set_base_solution(const libMesh::NumericVector<Real>& sol,
                                               bool if_sens) {
     
-    if (!if_sens)
+    if (!if_sens) {
+        
+        // make sure the pointer has been cleared
+        libmesh_assert(!_base_sol);
+        
         _base_sol             = &sol;
-    else
+    }
+    else {
+        
+        // make sure the pointer has been cleared
+        libmesh_assert(!_base_sol_sensitivity);
+
         _base_sol_sensitivity = &sol;
+    }
+}
+
+
+
+
+void
+MAST::EigenproblemAssembly::clear_base_solution(bool if_sens) {
+    
+    if (!if_sens)
+        _base_sol             = NULL;
+    else
+        _base_sol_sensitivity = NULL;
 }
 
 
@@ -171,8 +193,8 @@ eigenproblem_assemble(libMesh::SparseMatrix<Real>* A,
         MAST::copy(B, mat_B);
 
         // constrain the element matrices.
-        eigen_sys.get_dof_map().constrain_element_matrix(A, dof_indices);
-        eigen_sys.get_dof_map().constrain_element_matrix(B, dof_indices);
+        dof_map.constrain_element_matrix(A, dof_indices);
+        dof_map.constrain_element_matrix(B, dof_indices);
         
         matrix_A.add_matrix (A, dof_indices); // load independent
         matrix_B.add_matrix (B, dof_indices); // load dependent
@@ -276,8 +298,8 @@ eigenproblem_sensitivity_assemble(const libMesh::ParameterVector& parameters,
         MAST::copy(B, mat_B);
         
         // constrain the element matrices.
-        eigen_sys.get_dof_map().constrain_element_matrix(A, dof_indices);
-        eigen_sys.get_dof_map().constrain_element_matrix(B, dof_indices);
+        dof_map.constrain_element_matrix(A, dof_indices);
+        dof_map.constrain_element_matrix(B, dof_indices);
         
         matrix_A.add_matrix (A, dof_indices);
         matrix_B.add_matrix (B, dof_indices);

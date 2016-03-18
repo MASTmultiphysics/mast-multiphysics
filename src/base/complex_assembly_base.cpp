@@ -113,13 +113,35 @@ clear_discipline_and_system( ) {
 
 
 void
-MAST::ComplexAssemblyBase::set_base_solution(libMesh::NumericVector<Real>& sol,
+MAST::ComplexAssemblyBase::set_base_solution(const libMesh::NumericVector<Real>& sol,
                                              bool if_sens) {
     
-    if (!if_sens)
+    if (!if_sens) {
+        
+        // make sure that the pointer has been cleared
+        libmesh_assert(!_base_sol);
+        
         _base_sol             = &sol;
-    else
+    }
+    else {
+        
+        // make sure that the pointer has been cleared
+        libmesh_assert(!_base_sol_sensitivity);
+
         _base_sol_sensitivity = &sol;
+    }
+}
+
+
+
+
+void
+MAST::ComplexAssemblyBase::clear_base_solution(bool if_sens) {
+    
+    if (!if_sens)
+        _base_sol             = NULL;
+    else
+        _base_sol_sensitivity = NULL;
 }
 
 
@@ -134,17 +156,6 @@ MAST::ComplexAssemblyBase::base_sol(bool if_sens) const {
         return *_base_sol_sensitivity;
 }
 
-
-
-
-libMesh::NumericVector<Real>&
-MAST::ComplexAssemblyBase::base_sol(bool if_sens) {
-    
-    if (!if_sens)
-        return *_base_sol;
-    else
-        return *_base_sol_sensitivity;
-}
 
 
 
@@ -248,14 +259,14 @@ MAST::ComplexAssemblyBase::residual_l2_norm() {
         vec_re  =  vec.real();
         DenseRealVector v;
         MAST::copy(v, vec_re);
-        nonlin_sys.get_dof_map().constrain_element_vector(v, dof_indices);
+        dof_map.constrain_element_vector(v, dof_indices);
         residual_re->add_vector(v, dof_indices);
         
         // now add to the imaginary part of the residual
         vec_re  =  vec.imag();
         v.zero();
         MAST::copy(v, vec_re);
-        nonlin_sys.get_dof_map().constrain_element_vector(v, dof_indices);
+        dof_map.constrain_element_vector(v, dof_indices);
         residual_im->add_vector(v, dof_indices);
     }
     
@@ -428,11 +439,11 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
         // constrain the quantities to account for hanging dofs,
         // Dirichlet constraints, etc.
         if (R && J)
-            nonlin_sys.get_dof_map().constrain_element_matrix_and_vector(m, v, dof_indices);
+            dof_map.constrain_element_matrix_and_vector(m, v, dof_indices);
         else if (R)
-            nonlin_sys.get_dof_map().constrain_element_vector(v, dof_indices);
+            dof_map.constrain_element_vector(v, dof_indices);
         else
-            nonlin_sys.get_dof_map().constrain_element_matrix(m, dof_indices);
+            dof_map.constrain_element_matrix(m, dof_indices);
         
         // add to the global matrices
         if (R) R->add_vector(v, dof_indices);
@@ -581,7 +592,7 @@ residual_and_jacobian_field_split (const libMesh::NumericVector<Real>& X_R,
         MAST::copy(v, vec.real());
         MAST::copy(m, mat.real());
         
-        nonlin_sys.get_dof_map().constrain_element_matrix_and_vector(m, v, dof_indices);
+        dof_map.constrain_element_matrix_and_vector(m, v, dof_indices);
         R_R.add_vector(v, dof_indices);
         J_R.add_matrix(m, dof_indices);
 
@@ -592,7 +603,7 @@ residual_and_jacobian_field_split (const libMesh::NumericVector<Real>& X_R,
         MAST::copy(v, vec.imag());
         MAST::copy(m, mat.imag());
         
-        nonlin_sys.get_dof_map().constrain_element_matrix_and_vector(m, v, dof_indices);
+        dof_map.constrain_element_matrix_and_vector(m, v, dof_indices);
         R_I.add_vector(v, dof_indices);
         J_I.add_matrix(m, dof_indices);
     }
@@ -762,11 +773,11 @@ residual_and_jacobian_blocked (const libMesh::NumericVector<Real>& X,
         MAST::copy(m_I2, mat.imag());                // this is the J_I component
         MAST::copy( v_R, vec.real());
         MAST::copy( v_I, vec.imag());
-        nonlin_sys.get_dof_map().constrain_element_matrix(m_R,  dof_indices);
-        nonlin_sys.get_dof_map().constrain_element_matrix(m_I1, dof_indices);
-        nonlin_sys.get_dof_map().constrain_element_matrix(m_I2, dof_indices);
-        nonlin_sys.get_dof_map().constrain_element_vector(v_R,  dof_indices);
-        nonlin_sys.get_dof_map().constrain_element_vector(v_I,  dof_indices);
+        dof_map.constrain_element_matrix(m_R,  dof_indices);
+        dof_map.constrain_element_matrix(m_I1, dof_indices);
+        dof_map.constrain_element_matrix(m_I2, dof_indices);
+        dof_map.constrain_element_vector(v_R,  dof_indices);
+        dof_map.constrain_element_vector(v_I,  dof_indices);
         
         
         for (unsigned int i=0; i<dof_indices.size(); i++) {
@@ -922,7 +933,7 @@ sensitivity_assemble (const libMesh::ParameterVector& parameters,
         
         // constrain the quantities to account for hanging dofs,
         // Dirichlet constraints, etc.
-        nonlin_sys.get_dof_map().constrain_element_vector(v, dof_indices);
+        dof_map.constrain_element_vector(v, dof_indices);
         
         // add to the global matrices
         sensitivity_rhs.add_vector(v, dof_indices);

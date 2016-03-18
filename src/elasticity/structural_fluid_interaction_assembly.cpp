@@ -42,7 +42,9 @@
 
 MAST::StructuralFluidInteractionAssembly::
 StructuralFluidInteractionAssembly():
-MAST::NonlinearImplicitAssembly() {
+MAST::NonlinearImplicitAssembly(),
+_base_sol(NULL),
+_base_sol_sensitivity(NULL) {
     
 }
 
@@ -52,6 +54,50 @@ MAST::StructuralFluidInteractionAssembly::
 ~StructuralFluidInteractionAssembly() {
     
 }
+
+
+void
+MAST::StructuralFluidInteractionAssembly::
+clear_discipline_and_system( ) {
+
+    _base_sol             = NULL;
+    _base_sol_sensitivity = NULL;
+    
+    MAST::NonlinearImplicitAssembly::clear_discipline_and_system();
+}
+
+
+
+
+void
+MAST::StructuralFluidInteractionAssembly::set_base_solution(const libMesh::NumericVector<Real>& sol,
+                                                            bool if_sens) {
+    
+    if (!if_sens) {
+        
+        // make sure that the pointer has been cleared
+        libmesh_assert(!_base_sol);
+        _base_sol             = &sol;
+    }
+    else {
+
+        libmesh_assert(!_base_sol_sensitivity);
+        _base_sol_sensitivity = &sol;
+    }
+}
+
+
+
+
+void
+MAST::StructuralFluidInteractionAssembly::clear_base_solution(bool if_sens) {
+    
+    if (!if_sens)
+        _base_sol             = NULL;
+    else
+        _base_sol_sensitivity = NULL;
+}
+
 
 
 
@@ -137,11 +183,11 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
         // constrain the quantities to account for hanging dofs,
         // Dirichlet constraints, etc.
         if (R && J)
-            nonlin_sys.get_dof_map().constrain_element_matrix_and_vector(m, v, dof_indices);
+            dof_map.constrain_element_matrix_and_vector(m, v, dof_indices);
         else if (R)
-            nonlin_sys.get_dof_map().constrain_element_vector(v, dof_indices);
+            dof_map.constrain_element_vector(v, dof_indices);
         else
-            nonlin_sys.get_dof_map().constrain_element_matrix(m, dof_indices);
+            dof_map.constrain_element_matrix(m, dof_indices);
         
         // add to the global matrices
         if (R) R->add_vector(v, dof_indices);
@@ -162,8 +208,7 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
 void
 MAST::StructuralFluidInteractionAssembly::
 assemble_reduced_order_quantity
-(const libMesh::NumericVector<Real>& X,
- std::vector<libMesh::NumericVector<Real>*>& basis,
+(std::vector<libMesh::NumericVector<Real>*>& basis,
  std::map<MAST::StructuralQuantityType, RealMatrixX*>& mat_qty_map) {
     
     libMesh::NonlinearImplicitSystem& nonlin_sys =
@@ -179,8 +224,9 @@ assemble_reduced_order_quantity
     std::auto_ptr<MAST::ElementBase> physics_elem;
     
     std::auto_ptr<libMesh::NumericVector<Real> > localized_solution;
-    localized_solution.reset(_build_localized_vector(nonlin_sys,
-                                                     X).release());
+    if (_base_sol)
+        localized_solution.reset(_build_localized_vector(nonlin_sys,
+                                                         *_base_sol).release());
     
     // also create localized solution vectos for the bassis vectors
     const unsigned int
@@ -192,8 +238,8 @@ assemble_reduced_order_quantity
     
     
     // if a solution function is attached, initialize it
-    if (_sol_function)
-        _sol_function->init_for_system_and_solution(*_system, X);
+    if (_sol_function && _base_sol)
+        _sol_function->init_for_system_and_solution(*_system, *_base_sol);
     
     
     libMesh::MeshBase::const_element_iterator       el     =
@@ -218,7 +264,11 @@ assemble_reduced_order_quantity
         basis_mat.setZero(ndofs, n_basis);
         
         for (unsigned int i=0; i<dof_indices.size(); i++) {
-            sol(i) = (*localized_solution)(dof_indices[i]);
+            
+            if (_base_sol)
+                sol(i) = (*localized_solution)(dof_indices[i]);
+            
+            
             for (unsigned int j=0; j<n_basis; j++)
                 basis_mat(i,j) = (*localized_basis[j])(dof_indices[i]);
         }
@@ -243,7 +293,7 @@ assemble_reduced_order_quantity
             
             DenseRealMatrix m;
             MAST::copy(m, mat);
-            nonlin_sys.get_dof_map().constrain_element_matrix(m, dof_indices);
+            dof_map.constrain_element_matrix(m, dof_indices);
             MAST::copy(mat, m);
             
             // now add to the reduced order matrix
@@ -283,8 +333,6 @@ MAST::StructuralFluidInteractionAssembly::
 assemble_reduced_order_quantity_sensitivity
 (const libMesh::ParameterVector& parameters,
  const unsigned int i,
- const libMesh::NumericVector<Real>& X,
- const libMesh::NumericVector<Real>& dX_dp,
  std::vector<libMesh::NumericVector<Real>*>& basis,
  std::map<MAST::StructuralQuantityType, RealMatrixX*>& mat_qty_map) {
     
@@ -305,10 +353,16 @@ assemble_reduced_order_quantity_sensitivity
     localized_solution,
     localized_solution_sens;
     
-    localized_solution.reset(_build_localized_vector(nonlin_sys,
-                                                     X).release());
-    localized_solution_sens.reset(_build_localized_vector(nonlin_sys,
-                                                          dX_dp).release());
+    if (_base_sol) {
+        
+        // make sure that the solution sensitivity is provided
+        libmesh_assert(_base_sol_sensitivity);
+        
+        localized_solution.reset(_build_localized_vector(nonlin_sys,
+                                                         *_base_sol).release());
+        localized_solution_sens.reset(_build_localized_vector(nonlin_sys,
+                                                              *_base_sol_sensitivity).release());
+    }
     
     // also create localized solution vectos for the bassis vectors
     const unsigned int
@@ -320,8 +374,8 @@ assemble_reduced_order_quantity_sensitivity
     
     
     // if a solution function is attached, initialize it
-    if (_sol_function)
-        _sol_function->init_for_system_and_solution(*_system, X);
+    if (_sol_function && _base_sol)
+        _sol_function->init_for_system_and_solution(*_system, *_base_sol);
     
     
     libMesh::MeshBase::const_element_iterator       el     =
@@ -375,7 +429,7 @@ assemble_reduced_order_quantity_sensitivity
 
             DenseRealMatrix m;
             MAST::copy(m, mat);
-            nonlin_sys.get_dof_map().constrain_element_matrix(m, dof_indices);
+            dof_map.constrain_element_matrix(m, dof_indices);
             MAST::copy(mat, m);
             
             // now add to the reduced order matrix

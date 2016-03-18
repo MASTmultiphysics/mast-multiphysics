@@ -548,13 +548,10 @@ MAST::UGFlutterSolver::_initialize_matrices(Real kr,
     // set the velocity value in the parameter that was provided
     (*_kr_param) = kr;
     
-    _assembly->assemble_reduced_order_quantity(*_assembly->system().solution,
-                                               *_basis_vectors,
-                                               qty_map);
+    _assembly->assemble_reduced_order_quantity(*_basis_vectors, qty_map);
+    
     dynamic_cast<MAST::FSIGeneralizedAeroForceAssembly*>(_assembly)->
-    assemble_generalized_aerodynamic_force_matrix(*_assembly->system().solution,
-                                                  *_basis_vectors,
-                                                  a);
+    assemble_generalized_aerodynamic_force_matrix(*_basis_vectors, a);
     
     
     A    = pow(kr/(*_bref_param)(),2) * m.cast<Complex>() -  (_rho/2.) * a;
@@ -603,13 +600,10 @@ _initialize_matrix_sensitivity_for_param(const libMesh::ParameterVector& params,
     // set the velocity value in the parameter that was provided
     (*_kr_param) = kr;
     
+    _assembly->set_base_solution(dXdp, true);
     _assembly->assemble_reduced_order_quantity_sensitivity
-    (params,
-     i,
-     *_assembly->system().solution,
-     dXdp,
-     *_basis_vectors,
-     qty_map);
+    (params, i, *_basis_vectors, qty_map);
+    _assembly->clear_base_solution(true);
     
     
     // put the matrices back in the system matrices

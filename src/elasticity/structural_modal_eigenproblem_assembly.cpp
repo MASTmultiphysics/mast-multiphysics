@@ -127,8 +127,8 @@ eigenproblem_assemble(libMesh::SparseMatrix<Real> *A,
         MAST::copy(B, mat_B);
         
         // constrain the element matrices.
-        eigen_sys.get_dof_map().constrain_element_matrix(A, dof_indices);
-        eigen_sys.get_dof_map().constrain_element_matrix(B, dof_indices);
+        dof_map.constrain_element_matrix(A, dof_indices);
+        dof_map.constrain_element_matrix(B, dof_indices);
         
         // add to the global matrices
         matrix_A.add_matrix (A, dof_indices); // load independent
@@ -242,8 +242,8 @@ eigenproblem_sensitivity_assemble (const libMesh::ParameterVector& parameters,
         MAST::copy(B, mat_B);
         
         // constrain the element matrices.
-        eigen_sys.get_dof_map().constrain_element_matrix(A, dof_indices);
-        eigen_sys.get_dof_map().constrain_element_matrix(B, dof_indices);
+        dof_map.constrain_element_matrix(A, dof_indices);
+        dof_map.constrain_element_matrix(B, dof_indices);
         
         // add to the global matrices
         matrix_A.add_matrix (A, dof_indices); // load independent

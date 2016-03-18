@@ -110,8 +110,17 @@ namespace MAST {
          *   is the sensitivity of the base solution for the current parameter
          *   being solved for
          */
-        void set_base_solution(libMesh::NumericVector<Real>& sol,
+        void set_base_solution(const libMesh::NumericVector<Real>& sol,
                                bool if_sens = false);
+
+        
+        /*!
+         *   Clears the pointer to the solution.
+         *   The flag \par if_sens tells the method to clear the pointer 
+         *   the solution sensitivity vector.
+         */
+        void clear_base_solution(bool if_sens = false);
+
         
         /*!
          *   @returns true if a nonzero base solution is used to linearize the
@@ -164,14 +173,14 @@ namespace MAST {
          *   vector stores the localized values necessary to perform element
          *   calculations.
          */
-        libMesh::NumericVector<Real> * _base_sol;
+        const libMesh::NumericVector<Real> * _base_sol;
         
         /*!
          *   sensitivity of base solution may be needed for sensitivity
          *   analysis. This vector stores the localized values necessary to
          *   perform element calculations.
          */
-        libMesh::NumericVector<Real> * _base_sol_sensitivity;
+        const libMesh::NumericVector<Real> * _base_sol_sensitivity;
         
     };
     

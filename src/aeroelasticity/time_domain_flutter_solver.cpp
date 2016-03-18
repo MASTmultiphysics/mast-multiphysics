@@ -711,8 +711,7 @@ MAST::TimeDomainFlutterSolver::_initialize_matrices(Real U_inf,
     // set the velocity value in the parameter that was provided
     (*_velocity_param) = U_inf;
 
-    _assembly->assemble_reduced_order_quantity(*_assembly->system().solution,
-                                               *_basis_vectors,
+    _assembly->assemble_reduced_order_quantity(*_basis_vectors,
                                                qty_map);
     
     
@@ -781,13 +780,10 @@ _initialize_matrix_sensitivity_for_param(const libMesh::ParameterVector& params,
     // set the velocity value in the parameter that was provided
     (*_velocity_param) = U_inf;
     
+    _assembly->set_base_solution(dXdp, true);
     _assembly->assemble_reduced_order_quantity_sensitivity
-    (params,
-     i,
-     *_assembly->system().solution,
-     dXdp,
-     *_basis_vectors,
-     qty_map);
+    (params, i, *_basis_vectors, qty_map);
+    _assembly->clear_base_solution(true);
     
     
     // put the matrices back in the system matrices

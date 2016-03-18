@@ -54,13 +54,29 @@ namespace MAST {
         
         
         /*!
-         *    initializes for the given fluid and structural components
+         *    initializes for the given fluid and structural components. The
+         *    structural and fluid communicator objects should provide valid 
+         *    MPI communicators on ranks that store the respective 
+         *    disciplinary data structures. \par complex_solver and
+         *    \par pressure_function should be non-null pointers only on nodes
+         *    with a valid fluid communicator. \par motion_func should be
+         *   a non-null pointer only when structural_comm is a valid 
+         *   communicator.
          */
-        void init(MAST::FrequencyFunction& freq,
-                  MAST::ComplexSolverBase& complex_solver,
-                  MAST::SmallDisturbancePressureFunction& pressure_func,
-                  MAST::FlexibleSurfaceMotion& motion_func);
+        void init(MAST::FrequencyFunction&                freq,
+                  libMesh::Parallel::Communicator&        structural_comm,
+                  libMesh::Parallel::Communicator&        fluid_comm,
+                  MAST::ComplexSolverBase*                complex_solver,
+                  MAST::SmallDisturbancePressureFunction* pressure_func,
+                  MAST::FlexibleSurfaceMotion*            motion_func);
         
+        
+        /*!
+         *   clears association with a system to this discipline, and vice-a-versa
+         */
+        virtual void
+        clear_discipline_and_system( );
+
         
         /*!
          *   calculates the reduced order matrix given the basis provided in
@@ -69,9 +85,14 @@ namespace MAST {
          */
         virtual void
         assemble_generalized_aerodynamic_force_matrix
-        (const libMesh::NumericVector<Real>& X,
-         std::vector<libMesh::NumericVector<Real>*>& basis,
+        (std::vector<libMesh::NumericVector<Real>*>& basis,
          ComplexMatrixX& mat);
+        
+
+        virtual void
+        assemble_reduced_order_quantity
+        (std::vector<libMesh::NumericVector<Real>*>& basis,
+         std::map<MAST::StructuralQuantityType, RealMatrixX*>& mat_qty_map);
         
         
     protected:
@@ -81,6 +102,18 @@ namespace MAST {
          *   frequency function
          */
         MAST::FrequencyFunction                      *_freq;
+
+        
+        /*!
+         *   communicator for structural model
+         */
+        libMesh::Parallel::Communicator             *_structural_comm;
+
+        
+        /*!
+         *   communicator for fluid model
+         */
+        libMesh::Parallel::Communicator             *_fluid_comm;
 
         
         /*!

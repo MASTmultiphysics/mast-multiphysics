@@ -155,11 +155,11 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
         // constrain the quantities to account for hanging dofs,
         // Dirichlet constraints, etc.
         if (R && J)
-            nonlin_sys.get_dof_map().constrain_element_matrix_and_vector(m, v, dof_indices);
+            dof_map.constrain_element_matrix_and_vector(m, v, dof_indices);
         else if (R)
-            nonlin_sys.get_dof_map().constrain_element_vector(v, dof_indices);
+            dof_map.constrain_element_vector(v, dof_indices);
         else
-            nonlin_sys.get_dof_map().constrain_element_matrix(m, dof_indices);
+            dof_map.constrain_element_matrix(m, dof_indices);
         
         // add to the global matrices
         if (R) R->add_vector(v, dof_indices);

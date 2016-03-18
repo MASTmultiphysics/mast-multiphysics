@@ -57,6 +57,13 @@ namespace MAST {
         
                 
         /*!
+         *   clears association with a system to this discipline, and vice-a-versa
+         */
+        virtual void
+        clear_discipline_and_system( );
+
+        
+        /*!
          *   tells the object about the quantity to be assembled in the 
          *   matrix
          */
@@ -79,14 +86,47 @@ namespace MAST {
         
         
         /*!
+         *   if the eigenproblem is defined about a non-zero base solution,
+         *   then this method provides the object with the base solution.
+         *   The flag \par if_sens tells the method if \par sol
+         *   is the sensitivity of the base solution for the current parameter
+         *   being solved for
+         */
+        void set_base_solution(const libMesh::NumericVector<Real>& sol,
+                               bool if_sens = false);
+
+        
+        /*!
+         *   Clears the pointer to base solution.
+         *   The flag \par if_sens tells the method to clear the pointer to the
+         *   sensitivity vector instead.
+         */
+        void clear_base_solution(bool if_sens = false);
+
+        /*!
+         *   @returns true if a nonzero base solution is used to linearize the
+         *   Eigen problem, false otherwise
+         */
+        bool if_linearized_about_nonzero_solution() const;
+        
+        
+        /*!
+         *   @returns a const reference to the base solution (or
+         *   its sensitivity when \par if_sens is true) about which
+         *   the Eigen problem was linearized.
+         */
+        const libMesh::NumericVector<Real>&
+        base_sol(bool if_sens = false) const;
+        
+        
+        /*!
          *   calculates the reduced order matrix given the basis provided in
          *   \par basis. \par X is the steady state solution about which
          *   the quantity is calculated.
          */
         virtual void
         assemble_reduced_order_quantity
-        (const libMesh::NumericVector<Real>& X,
-         std::vector<libMesh::NumericVector<Real>*>& basis,
+        (std::vector<libMesh::NumericVector<Real>*>& basis,
          std::map<MAST::StructuralQuantityType, RealMatrixX*>& mat_qty_map);
 
         
@@ -102,8 +142,6 @@ namespace MAST {
         assemble_reduced_order_quantity_sensitivity
         (const libMesh::ParameterVector& parameters,
          const unsigned int i,
-         const libMesh::NumericVector<Real>& X,
-         const libMesh::NumericVector<Real>& dX_dp,
          std::vector<libMesh::NumericVector<Real>*>& basis,
          std::map<MAST::StructuralQuantityType, RealMatrixX*>& mat_qty_map);
 
@@ -157,6 +195,19 @@ namespace MAST {
          */
         MAST::StructuralQuantityType _qty_type;
         
+        /*!
+         *   base solution about which this eigenproblem is defined. This
+         *   vector stores the localized values necessary to perform element
+         *   calculations.
+         */
+        const libMesh::NumericVector<Real> * _base_sol;
+        
+        /*!
+         *   sensitivity of base solution may be needed for sensitivity
+         *   analysis. This vector stores the localized values necessary to
+         *   perform element calculations.
+         */
+        const libMesh::NumericVector<Real> * _base_sol_sensitivity;
     };
 }
 
