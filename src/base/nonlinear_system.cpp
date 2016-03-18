@@ -61,6 +61,7 @@ _eigenproblem_assemble_system_object  (NULL) {
 
 MAST::NonlinearSystem::~NonlinearSystem() {
     
+    this->clear();
 }
 
 

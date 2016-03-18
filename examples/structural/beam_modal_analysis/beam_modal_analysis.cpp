@@ -235,7 +235,6 @@ void
 MAST::BeamModalAnalysis::solve(bool if_write_output,
                                std::vector<Real>* eig) {
     
-    
     // create the nonlinear assembly object
     MAST::StructuralModalEigenproblemAssembly   assembly;
     _sys->initialize_condensed_dofs(*_discipline);

@@ -376,7 +376,7 @@ _dirichlet_top(NULL) {
 
     _structural_sys->eigen_solver->set_position_of_spectrum(libMesh::LARGEST_MAGNITUDE);
     _structural_sys->set_exchange_A_and_B(true);
-    _structural_sys->set_n_requested_eigenvalues(16);
+    _structural_sys->set_n_requested_eigenvalues(infile("n_modes", 16));
     
     // create the property functions and add them to the
     
