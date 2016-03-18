@@ -63,16 +63,31 @@ init(const libMesh::NumericVector<Real>& steady_sol,
     // first initialize the solution to the given vector
     // steady state solution
     _sol.reset(libMesh::NumericVector<Real>::build(sys.comm()).release());
-    _sol->init(steady_sol.size(), true, libMesh::SERIAL);
+    _sol->init(sys.n_dofs(),
+               sys.n_local_dofs(),
+               sys.get_dof_map().get_send_list(),
+               false,
+               libMesh::GHOSTED);
+    //_sol->init(steady_sol.size(), true, libMesh::SERIAL);
     
     // solution real part
     _dsol_real.reset(libMesh::NumericVector<Real>::build(sys.comm()).release());
-    _dsol_real->init(steady_sol.size(), true, libMesh::SERIAL);
+    _dsol_real->init(sys.n_dofs(),
+                     sys.n_local_dofs(),
+                     sys.get_dof_map().get_send_list(),
+                     false,
+                     libMesh::GHOSTED);
+    //_dsol_real->init(steady_sol.size(), true, libMesh::SERIAL);
     
     // solution complex part
     _dsol_imag.reset(libMesh::NumericVector<Real>::build(sys.comm()).release());
-    _dsol_imag->init(steady_sol.size(), true, libMesh::SERIAL);
-
+    _dsol_imag->init(sys.n_dofs(),
+                     sys.n_local_dofs(),
+                     sys.get_dof_map().get_send_list(),
+                     false,
+                     libMesh::GHOSTED);
+    //_dsol_imag->init(steady_sol.size(), true, libMesh::SERIAL);
+    
     
     // now localize the give solution to this objects's vector
     steady_sol.localize(*_sol);
