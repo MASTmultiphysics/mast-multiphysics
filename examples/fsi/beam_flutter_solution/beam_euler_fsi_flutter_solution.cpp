@@ -495,14 +495,17 @@ MAST::BeamEulerFSIFlutterAnalysis::~BeamEulerFSIFlutterAnalysis() {
     
     
     if (_structural_comm->get() != MPI_COMM_NULL) {
+        
         delete _motion_function;
+        delete _pressure;
+        
         delete _structural_eq_sys;
         delete _structural_mesh;
         
         
         delete _structural_discipline;
         delete _structural_sys_init;
-        delete _pressure;
+        
         delete _m_card;
         delete _p_card;
         
@@ -715,9 +718,9 @@ MAST::BeamEulerFSIFlutterAnalysis::solve(bool if_write_output) {
     }
     
     fsi_assembly.init(*_freq_function,
-                      *_structural_comm,
-                      __init->comm(),
-                      &solver,
+                      *_structural_comm,             // structural comm
+                      __init->comm(),                // fluid comm
+                      &solver,                       // fluid complex solver
                       _small_dist_pressure_function,
                       _motion_function);
     _flutter_solver->attach_assembly(fsi_assembly);
@@ -819,7 +822,7 @@ MAST::BeamEulerFSIFlutterAnalysis::solve(bool if_write_output) {
         {
             // get the size of basis from the structural node
             unsigned int
-            n_basis = 0;
+            n_basis = (unsigned int)_basis.size();
             _fluid_sys->comm().broadcast(n_basis);
             
             // first calculate the fluid basis
