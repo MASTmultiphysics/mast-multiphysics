@@ -163,6 +163,8 @@ MAST::ComplexAssemblyBase::base_sol(bool if_sens) const {
 Real
 MAST::ComplexAssemblyBase::residual_l2_norm() {
     
+    START_LOG("complex_solve()", "Residual-L2");
+
     libMesh::NonlinearImplicitSystem& nonlin_sys =
     dynamic_cast<libMesh::NonlinearImplicitSystem&>(_system->system());
     
@@ -283,6 +285,8 @@ MAST::ComplexAssemblyBase::residual_l2_norm() {
     l2_real =  residual_re->l2_norm(),
     l2_imag =  residual_im->l2_norm();
     
+    STOP_LOG("complex_solve()", "Residual-L2");
+
     return sqrt(pow(l2_real,2) + pow(l2_imag,2));
 }
 
@@ -633,6 +637,8 @@ residual_and_jacobian_blocked (const libMesh::NumericVector<Real>& X,
                                libMesh::NumericVector<Real>& R,
                                libMesh::SparseMatrix<Real>&  J,
                                libMesh::NonlinearImplicitSystem& S) {
+
+    START_LOG("residual_and_jacobian()", "ComplexSolve");
     
     libMesh::NonlinearImplicitSystem& nonlin_sys =
     dynamic_cast<libMesh::NonlinearImplicitSystem&>(_system->system());
@@ -808,6 +814,7 @@ residual_and_jacobian_blocked (const libMesh::NumericVector<Real>& X,
     J.close();
     
     std::cout << "R: " << R.l2_norm() << std::endl;
+    STOP_LOG("residual_and_jacobian()", "ComplexSolve");
 }
 
 

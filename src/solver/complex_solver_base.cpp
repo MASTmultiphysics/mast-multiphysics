@@ -372,7 +372,7 @@ MAST::ComplexSolverBase::solve_pc_fieldsplit() {
 void
 MAST::ComplexSolverBase::solve_block_matrix()  {
     
-    START_LOG("complex_solve()", "PetscComplexSolve");
+    START_LOG("solve_block_matrix()", "ComplexSolve");
 
     // get reference to the system
     MAST::NonlinearSystem& sys =
@@ -485,14 +485,18 @@ MAST::ComplexSolverBase::solve_block_matrix()  {
     
     
     
+    START_LOG("KSPSolve", "ComplexSolve");
+
     // now solve
     ierr = KSPSolve(ksp, res_vec, sol_vec);
 
+    STOP_LOG("KSPSolve", "ComplexSolve");
+
     // evaluate the residual again
-    _assembly->residual_and_jacobian_blocked(*sol,
-                                             *res,
-                                             *jac_mat,
-                                             sys);
+    //_assembly->residual_and_jacobian_blocked(*sol,
+    //                                         *res,
+    //                                         *jac_mat,
+    //                                         sys);
     
     
     // copy the solution to separate real and imaginary vectors
@@ -517,7 +521,7 @@ MAST::ComplexSolverBase::solve_block_matrix()  {
     ierr = VecDestroy(&res_vec);              CHKERRABORT(sys.comm().get(), ierr);
     ierr = VecDestroy(&sol_vec);              CHKERRABORT(sys.comm().get(), ierr);
 
-    STOP_LOG("complex_solve()", "PetscComplexSolve");
+    STOP_LOG("solve_block_matrix()", "ComplexSolve");
 }
 
 

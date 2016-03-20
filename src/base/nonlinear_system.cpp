@@ -73,7 +73,7 @@ MAST::NonlinearSystem::clear() {
     
     
     // delete the matricies
-    delete matrix_A;
+    if (matrix_A) delete matrix_A;
     if (matrix_B) delete matrix_B;
     
     // NULL-out the matricies.

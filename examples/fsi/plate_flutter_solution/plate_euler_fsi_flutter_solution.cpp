@@ -151,7 +151,8 @@ _dirichlet_top(NULL) {
     const unsigned int
     dim                 = 3,
     nx_divs             = 3,
-    ny_divs             = 1,
+    ny_divs             = 3,
+    nz_divs             = 1,
     panel_bc_id         = 10,
     symmetry_bc_id      = 11;
     
@@ -171,15 +172,19 @@ _dirichlet_top(NULL) {
     x_div_loc        (nx_divs+1),
     x_relative_dx    (nx_divs+1),
     y_div_loc        (ny_divs+1),
-    y_relative_dx    (ny_divs+1);
+    y_relative_dx    (ny_divs+1),
+    z_div_loc        (nz_divs+1),
+    z_relative_dx    (nz_divs+1);
     
     std::vector<unsigned int>
     x_divs           (nx_divs),
-    y_divs           (ny_divs);
+    y_divs           (ny_divs),
+    z_divs           (nz_divs);
     
     std::auto_ptr<MeshInitializer::CoordinateDivisions>
     x_coord_divs    (new MeshInitializer::CoordinateDivisions),
-    y_coord_divs    (new MeshInitializer::CoordinateDivisions);
+    y_coord_divs    (new MeshInitializer::CoordinateDivisions),
+    z_coord_divs    (new MeshInitializer::CoordinateDivisions);
     
     std::vector<MeshInitializer::CoordinateDivisions*>
     divs(dim);
@@ -196,7 +201,6 @@ _dirichlet_top(NULL) {
     }
     
     divs[0] = x_coord_divs.get();
-    divs[1] = x_coord_divs.get(); // use the same divisions for x and y axis
     x_coord_divs->init(nx_divs, x_div_loc, x_relative_dx, x_divs);
     
     
@@ -210,10 +214,22 @@ _dirichlet_top(NULL) {
             y_divs[i_div]    = infile( "y_div_nelem",  0, i_div);
     }
     
-    divs[2] = y_coord_divs.get();
+    divs[1] = y_coord_divs.get();
     y_coord_divs->init(ny_divs, y_div_loc, y_relative_dx, y_divs);
     
     
+    // now read in the values: z-coord
+    for (unsigned int i_div=0; i_div<nz_divs+1; i_div++) {
+        
+        z_div_loc[i_div]     = infile("z_div_loc", 0., i_div);
+        z_relative_dx[i_div] = infile( "z_rel_dx", 0., i_div);
+        
+        if (i_div < nz_divs) //  this is only till ny_divs
+            z_divs[i_div]    = infile( "z_div_nelem",  0, i_div);
+    }
+    
+    divs[2] = z_coord_divs.get();
+    z_coord_divs->init(nz_divs, z_div_loc, z_relative_dx, z_divs);
     
     
     // initialize the mesh
@@ -226,6 +242,7 @@ _dirichlet_top(NULL) {
                              divs,
                              *_fluid_mesh,
                              elem_type);
+    _fluid_mesh->prepare_for_use();
     
     _fluid_discipline   = new MAST::ConservativeFluidDiscipline(*_fluid_eq_sys);
     _fluid_sys_init     = new MAST::ConservativeFluidSystemInitialization(*_fluid_sys,
@@ -315,11 +332,15 @@ _dirichlet_top(NULL) {
     
 
     x_div_loc.resize     (2);
+    y_div_loc.resize     (2);
     x_relative_dx.resize (2);
+    y_relative_dx.resize (2);
     x_divs.resize        (1);
+    y_divs.resize        (1);
     divs.resize          (2);
     
     x_coord_divs.reset   (new MeshInitializer::CoordinateDivisions);
+    y_coord_divs.reset   (new MeshInitializer::CoordinateDivisions);
     
     
     // now read in the values: x-coord
@@ -331,9 +352,20 @@ _dirichlet_top(NULL) {
     x_divs[0]       = infile( "x_div_nelem", 0, 1);
     
     divs[0] = x_coord_divs.get();
-    divs[1] = x_coord_divs.get();    // use the same divisions for x and y coords
     x_coord_divs->init(1, x_div_loc, x_relative_dx, x_divs);
+
     
+    // now read in the values: y-coord
+    for (unsigned int i_div=0; i_div<2; i_div++) {
+        
+        y_div_loc[i_div]        = infile("y_div_loc",   0., i_div+1);
+        y_relative_dx[i_div]    = infile( "y_rel_dx",   0., i_div+1);
+    }
+    y_divs[0]       = infile( "y_div_nelem", 0, 1);
+    
+    divs[1] = y_coord_divs.get();
+    y_coord_divs->init(1, x_div_loc, x_relative_dx, x_divs);
+
     
     // setup length for use in setup of flutter solver
     _length = x_div_loc[1]-x_div_loc[0];
@@ -346,6 +378,8 @@ _dirichlet_top(NULL) {
         
         MeshInitializer().init(divs, *_structural_mesh, libMesh::QUAD4);
         
+        _structural_mesh->prepare_for_use();
+        _structural_mesh->write("str.e");
         
         // create the equation system
         _structural_eq_sys    = new  libMesh::EquationSystems(*_structural_mesh);
