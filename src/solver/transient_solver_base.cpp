@@ -212,10 +212,6 @@ build_local_quantities(const libMesh::NumericVector<Real>& current_sol,
     const std::vector<libMesh::dof_id_type>&
     send_list = _system->get_dof_map().get_send_list();
     
-    // create a local vector for use
-    std::auto_ptr<libMesh::NumericVector<Real> >
-    local_vec(_system->solution->zero_clone().release());
-
     for ( unsigned int i=0; i<=this->ode_order(); i++) {
         
         sol[i] = libMesh::NumericVector<Real>::build(_system->comm()).release();
@@ -236,18 +232,23 @@ build_local_quantities(const libMesh::NumericVector<Real>& current_sol,
 
             case 1: {
                 
+                // update the current local velocity vector
+                libMesh::NumericVector<Real>& vel = this->velocity();
 
                 // calculate the velocity and localize it
-                _update_velocity(*local_vec, current_sol);
-                local_vec->localize(*sol[i], send_list);
+                _update_velocity(vel, current_sol);
+                vel.localize(*sol[i], send_list);
             }
                 break;
 
             case 2: {
                 
+                // update the current local acceleration vector
+                libMesh::NumericVector<Real>& acc = this->acceleration();
+
                 // calculate the acceleration and localize it
-                _update_acceleration(*local_vec, current_sol);
-                local_vec->localize(*sol[i], send_list);
+                _update_acceleration(acc, current_sol);
+                acc.localize(*sol[i], send_list);
             }
                 break;
 

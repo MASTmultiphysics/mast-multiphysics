@@ -262,7 +262,6 @@ MAST::InviscidAnalysis::solve(bool if_write_output) {
     s(0) = _flight_cond->rho();
     s(1) = _flight_cond->rho_u1();
     s(2) = _flight_cond->rho_u2();
-    //s(3) = _flight_cond->rho_u3();
     s(3) = _flight_cond->rho_e();
     _fluid_sys->initialize_solution(s);
     
@@ -285,22 +284,59 @@ MAST::InviscidAnalysis::solve(bool if_write_output) {
     libMesh::ExodusII_IO exodus_writer(*_mesh);
     
     // time solver parameters
-    unsigned int t_step  = 0;
-    Real            tval = 0.;
+    unsigned int
+    t_step            = 0,
+    n_iters_change_dt = 4,
+    iter_count_dt     = 0;
+    
+    Real
+    tval       = 0.,
+    vel_0      = 0.,
+    vel_1      = 1.e+12,
+    p          = 0.5,
+    factor     = 0.,
+    min_factor = 1.5;
+    
     solver.dt            = _time_step_size;
     solver.beta          = 1.0;
+    
+    // set the previous state to be same as the current state to account for
+    // zero velocity as the initial condition
+    solver.solution(1).zero();
+    solver.solution(1).add(1., solver.solution());
+    solver.solution(1).close();
     
     
     if (if_write_output)
         std::cout << "Writing output to : output.exo" << std::endl;
 
     // loop over time steps
-    while (t_step < _max_time_steps) {
+    while ((t_step <= _max_time_steps) &&
+           (vel_1  >=  1.e-8)) {
         
-        std::cout
+        // change dt if the iteration count has increased to threshold
+        if (iter_count_dt == n_iters_change_dt) {
+            
+            libMesh::out
+            << "Changing dt:  old dt = " << solver.dt
+            << "    new dt = ";
+            
+            factor        = std::pow(vel_0/vel_1, p);
+            factor        = std::max(factor, min_factor);
+            solver.dt    *= factor;
+            
+            libMesh::out << solver.dt << std::endl;
+            
+            iter_count_dt = 0;
+            vel_0         = vel_1;
+        }
+        else
+            iter_count_dt++;
+        
+        libMesh::out
         << "Time step: " << t_step
         << " :  t = " << tval
-        << " :  xdot-L2 = " << solver.velocity().l2_norm()
+        << " :  xdot-L2 = " << vel_1
         << std::endl;
 
         // write the time-step
@@ -315,7 +351,11 @@ MAST::InviscidAnalysis::solve(bool if_write_output) {
         solver.solve();
         
         solver.advance_time_step();
-        
+
+        // get the velocity L2 norm
+        vel_1 = solver.velocity().l2_norm();
+        if (t_step == 0) vel_0 = vel_1;
+
         tval  += solver.dt;
         t_step++;
     }
