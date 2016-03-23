@@ -123,14 +123,14 @@ set_property (TARGET mast APPEND
 #  tell cmake to link example driver with mast library
 #
 file (GLOB_RECURSE example_driver_source_files
-#     	../examples/thermal/*.cpp
-#	../examples/thermal/*.cpp
+     	../examples/thermal/*.cpp
+	../examples/thermal/*.h
 	../examples/fluid/*.cpp 
 	../examples/fluid/*.h
 	../examples/fsi/*.cpp
 	../examples/fsi/*.h
 	../examples/structural/*.cpp
-	../examples/structural/*.cpp
+	../examples/structural/*.h
 	../examples/base/*.cpp) 
 add_executable (example_driver ${example_driver_source_files})
 
@@ -144,10 +144,10 @@ set_property (TARGET example_driver APPEND
 #  tell cmake to link the tests
 #
 file (GLOB_RECURSE mast_test_source_files 
-#     	../examples/thermal/*.cpp
-#	../examples/thermal/*.cpp
-#	../examples/fluid/*.cpp 
-#	../examples/fluid/*.h
+     	../examples/thermal/*.cpp
+	../examples/thermal/*.h
+	../examples/fluid/*.cpp 
+	../examples/fluid/*.h
 	../examples/base/multilinear_interpolation.cpp
 	../examples/structural/bar_extension/*.cpp
 	../examples/structural/beam_bending/*.cpp
