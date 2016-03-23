@@ -129,13 +129,18 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
     const libMesh::DofMap& dof_map = transient_sys.get_dof_map();
     std::auto_ptr<MAST::ElementBase> physics_elem;
     
+
+    // stores the localized solution, velocity, acceleration, etc. vectors.
+    // These pointers will have to be deleted
+    std::vector<libMesh::NumericVector<Real>*>
+    local_qtys;
     
     // if a solution function is attached, initialize it
     if (_sol_function)
         _sol_function->init_for_system_and_solution(*_system, X);
 
     // ask the solver to localize the relevant solutions
-    _transient_solver->_localize_solutions(X);
+    _transient_solver->build_local_quantities(X, local_qtys);
     
     libMesh::MeshBase::const_element_iterator       el     =
     transient_sys.get_mesh().active_local_elements_begin();
@@ -156,6 +161,7 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
         mat.setZero(ndofs, ndofs);
         
         _transient_solver->_set_element_data(dof_indices,
+                                             local_qtys,
                                              *physics_elem);
         
         if (_sol_function)
@@ -188,6 +194,10 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
         if (R) R->add_vector(v, dof_indices);
         if (J) J->add_matrix(m, dof_indices);
     }
+    
+    // delete pointers to the local solutions
+    for (unsigned int i=0; i<local_qtys.size(); i++)
+        delete local_qtys[i];
     
     // if a solution function is attached, clear it
     if (_sol_function)

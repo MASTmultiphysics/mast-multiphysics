@@ -105,18 +105,22 @@ namespace MAST {
         /*!
          *    provides the element with the transient data for calculations
          */
-        virtual void _set_element_data(std::vector<libMesh::dof_id_type>& dof_indices,
-                                       MAST::ElementBase& elem);
+        virtual void
+        _set_element_data(const std::vector<libMesh::dof_id_type>& dof_indices,
+                          const std::vector<libMesh::NumericVector<Real>*>& sols,
+                          MAST::ElementBase& elem);
 
         /*!
          *    update the transient velocity based on the current solution
          */
-        virtual void _update_velocity(libMesh::NumericVector<Real>& vec);
+        virtual void _update_velocity(libMesh::NumericVector<Real>& vel,
+                                      const libMesh::NumericVector<Real>& sol);
         
         /*!
          *    update the transient acceleration based on the current solution
          */
-        virtual void _update_acceleration(libMesh::NumericVector<Real>& vec) {
+        virtual void _update_acceleration(libMesh::NumericVector<Real>& acc,
+                                          const libMesh::NumericVector<Real>& sol) {
             // should not get here for first order ode
             libmesh_error();
         }

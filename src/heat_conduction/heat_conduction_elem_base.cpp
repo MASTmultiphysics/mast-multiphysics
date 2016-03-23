@@ -621,7 +621,7 @@ surface_flux_residual(bool request_jacobian,
         // get the value of flux = q_i . n_i
         func(pt, _time, flux);
         
-        f   +=  JxW[qp] * phi_vec * flux;
+        f   -=  JxW[qp] * phi_vec * flux;
     }
     
     // calculation of the load vector is independent of solution
@@ -664,7 +664,7 @@ surface_flux_residual(bool request_jacobian,
         // get the value of flux = q_i . n_i
         func(pt, _time, flux);
         
-        f   +=  JxW[qp] * phi_vec * flux;
+        f   -=  JxW[qp] * phi_vec * flux;
     }
     
     // calculation of the load vector is independent of solution
@@ -750,13 +750,13 @@ surface_convection_residual(bool request_jacobian,
         // normal flux is given as:
         // qi_ni = h_coeff * (T - T_amb)
         //
-        f   += JxW[qp] * phi_vec * h_coeff * (temp - amb_temp);
+        f   -= JxW[qp] * phi_vec * h_coeff * (temp - amb_temp);
         
         if (request_jacobian) {
             
             Bmat.reinit(1, phi_vec);
             Bmat.right_multiply_transpose(mat, Bmat);
-            jac += JxW[qp] * mat * h_coeff;
+            jac -= JxW[qp] * mat * h_coeff;
         }
     }
     
@@ -808,13 +808,13 @@ surface_convection_residual(bool request_jacobian,
         // normal flux is given as:
         // qi_ni = h_coeff * (T - T_amb)
         //
-        f   += JxW[qp] * phi_vec * h_coeff * (temp - amb_temp);
+        f   -= JxW[qp] * phi_vec * h_coeff * (temp - amb_temp);
         
         if (request_jacobian) {
             
             Bmat.reinit(1, phi_vec);
             Bmat.right_multiply_transpose(mat, Bmat);
-            jac += JxW[qp] * mat * h_coeff;
+            jac -= JxW[qp] * mat * h_coeff;
         }
     }
     
@@ -905,14 +905,14 @@ surface_radiation_residual(bool request_jacobian,
         emissivity(pt, _time, emiss);
         temp  = phi_vec.dot(_sol);
         
-        f   += JxW[qp] * phi_vec * sbc * emiss *
+        f   -= JxW[qp] * phi_vec * sbc * emiss *
         (pow(temp-zero_ref, 4.) - pow(amb_temp-zero_ref, 4.));
         
         if (request_jacobian) {
             
             Bmat.reinit(1, phi_vec);
             Bmat.right_multiply_transpose(mat, Bmat);
-            jac +=  JxW[qp] * mat * sbc * emiss * 4. * pow(temp-zero_ref, 3.);
+            jac -=  JxW[qp] * mat * sbc * emiss * 4. * pow(temp-zero_ref, 3.);
         }
     }
     
@@ -967,14 +967,14 @@ surface_radiation_residual(bool request_jacobian,
         emissivity(pt, _time, emiss);
         temp  = phi_vec.dot(_sol);
         
-        f   += JxW[qp] * phi_vec * sbc * emiss *
+        f   -= JxW[qp] * phi_vec * sbc * emiss *
         (pow(temp-zero_ref, 4.) - pow(amb_temp-zero_ref, 4.));
         
         if (request_jacobian) {
             
             Bmat.reinit(1, phi_vec);
             Bmat.right_multiply_transpose(mat, Bmat);
-            jac +=  JxW[qp] * mat * sbc * emiss * 4. * pow(temp-zero_ref, 3.);
+            jac -=  JxW[qp] * mat * sbc * emiss * 4. * pow(temp-zero_ref, 3.);
         }
     }
     
@@ -1021,6 +1021,37 @@ volume_heat_source_residual(bool request_jacobian,
                             RealMatrixX& jac,
                             MAST::BoundaryConditionBase& p) {
     
+    
+    
+    // get the function from this boundary condition
+    const MAST::FieldFunction<Real>& func =
+    p.get<MAST::FieldFunction<Real> >("heat_source");
+    
+    
+    const std::vector<Real> &JxW                 = _fe->get_JxW();
+    const std::vector<libMesh::Point>& qpoint    = _fe->get_xyz();
+    const std::vector<std::vector<Real> >& phi   = _fe->get_phi();
+    const unsigned int n_phi                     = (unsigned int)phi.size();
+    
+    RealVectorX phi_vec  = RealVectorX::Zero(n_phi);
+    libMesh::Point pt;
+    Real  source;
+    
+    for (unsigned int qp=0; qp<qpoint.size(); qp++) {
+        
+        _local_elem->global_coordinates_location (qpoint[qp], pt);
+        
+        // now set the shape function values
+        for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
+            phi_vec(i_nd) = phi[i_nd][qp];
+        
+        // get the value of heat source
+        func(pt, _time, source);
+        
+        f   -=  JxW[qp] * phi_vec * source;
+    }
+    
+    // calculation of the load vector is independent of solution
     return false;
 }
 

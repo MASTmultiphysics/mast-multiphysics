@@ -81,17 +81,19 @@ _elem_calculations(MAST::ElementBase& elem,
 void
 MAST::HeatConductionNonlinearAssembly::
 _elem_sensitivity_calculations(MAST::ElementBase& elem,
-                               RealVectorX& vec) {
+                               bool if_jac,
+                               RealVectorX& vec,
+                               RealMatrixX& mat) {
     
     MAST::HeatConductionElementBase& e =
     dynamic_cast<MAST::HeatConductionElementBase&>(elem);
     
     vec.setZero();
-    RealMatrixX mat; // dummy matrix
+    mat.setZero();
     
-    e.internal_residual_sensitivity(false, vec, mat);
-    e.side_external_residual_sensitivity(false, vec, mat, _discipline->side_loads());
-    e.volume_external_residual_sensitivity(false, vec, mat, _discipline->volume_loads());
+    e.internal_residual_sensitivity(if_jac, vec, mat);
+    e.side_external_residual_sensitivity(if_jac, vec, mat, _discipline->side_loads());
+    e.volume_external_residual_sensitivity(if_jac, vec, mat, _discipline->volume_loads());
 }
 
 

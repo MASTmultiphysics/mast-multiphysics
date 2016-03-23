@@ -63,34 +63,34 @@ namespace MAST {
         virtual int ode_order() const = 0;
         
         /*!
-         *    @returns a const reference to the localized solution from 
+         *    @returns a reference to the localized solution from
          *    iteration number = current - prev_iter. So, \par prev_iter = 0
          *    gives the current solution estimate. Note that \par prev_iter
          *    cannot be greater than the total number of iterations that this
          *    solver stores solutions for.
          */
-        const libMesh::NumericVector<Real>&
+        libMesh::NumericVector<Real>&
         solution(unsigned int prev_iter = 0) const;
         
         /*!
-         *    @returns a const reference to the localized velocity from
+         *    @returns a reference to the localized velocity from
          *    iteration number = current - prev_iter. So, \par prev_iter = 0
          *    gives the current velocity estimate. Note that \par prev_iter
          *    cannot be greater than the total number of iterations that this
          *    solver stores solutions for.
          */
-        const libMesh::NumericVector<Real>&
+        libMesh::NumericVector<Real>&
         velocity(unsigned int prev_iter = 0) const;
 
         
         /*!
-         *    @returns a const reference to the localized acceleration from
+         *    @returns a reference to the localized acceleration from
          *    iteration number = current - prev_iter. So, \par prev_iter = 0
          *    gives the current acceleration estimate. Note that \par prev_iter
          *    cannot be greater than the total number of iterations that this
          *    solver stores solutions for.
          */
-        const libMesh::NumericVector<Real>&
+        libMesh::NumericVector<Real>&
         acceleration(unsigned int prev_iter = 0) const;
 
         
@@ -116,6 +116,14 @@ namespace MAST {
 
         
         /*!
+         *    localizes the relevant solutions for system assembly. The
+         *    calling function has to delete the pointers to these vectors
+         */
+        virtual void
+        build_local_quantities(const libMesh::NumericVector<Real>& current_sol,
+                               std::vector<libMesh::NumericVector<Real>*>& qtys);
+
+        /*!
          *    TransientAssembly needs to be able to call the assembly routines
          *    of this class.
          */
@@ -134,27 +142,26 @@ namespace MAST {
          *    are to be stored.
          */
         virtual unsigned int _n_iters_to_store() const = 0;
-
-        /*!
-         *    localizes the relevant solutions for system assembly.
-         */
-        virtual void _localize_solutions(const libMesh::NumericVector<Real>& current_sol);
         
         /*!
          *    provides the element with the transient data for calculations
          */
-        virtual void _set_element_data(std::vector<libMesh::dof_id_type>& dof_indices,
-                                       MAST::ElementBase& elem) = 0;
+        virtual void
+        _set_element_data(const std::vector<libMesh::dof_id_type>& dof_indices,
+                          const std::vector<libMesh::NumericVector<Real>*>& sols,
+                          MAST::ElementBase& elem) = 0;
         
         /*!
          *    update the transient velocity based on the current solution
          */
-        virtual void _update_velocity(libMesh::NumericVector<Real>& vec) = 0;
+        virtual void _update_velocity(libMesh::NumericVector<Real>& vel,
+                                      const libMesh::NumericVector<Real>& sol) = 0;
         
         /*!
          *    update the transient acceleration based on the current solution
          */
-        virtual void _update_acceleration(libMesh::NumericVector<Real>& vec) = 0;
+        virtual void _update_acceleration(libMesh::NumericVector<Real>& acc,
+                                          const libMesh::NumericVector<Real>& sol) = 0;
         
         /*!
          *   performs the element calculations over \par elem, and returns
@@ -189,26 +196,6 @@ namespace MAST {
          *   calculating the solution
          */
         libMesh::NonlinearImplicitSystem* _system;
-        
-        /*!
-         *   localized solution vector from previous time step needed for
-         *   element calculations on local processor
-         */
-        std::vector<libMesh::NumericVector<Real>*> _solution;
-        
-        
-        /*!
-         *   localized velocity vector needed for element calculations
-         *   on local processor
-         */
-        std::vector<libMesh::NumericVector<Real>*> _velocity;
-
-        /*!
-         *   localized acceleration vector needed for element calculations
-         *   on local processor
-         */
-        std::vector<libMesh::NumericVector<Real>*> _acceleration;
-
     };
 
 }

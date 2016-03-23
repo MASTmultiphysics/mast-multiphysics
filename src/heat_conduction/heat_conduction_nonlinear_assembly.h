@@ -71,7 +71,9 @@ namespace MAST {
          *   and returns the element residual sensitivity in \par vec .
          */
         virtual void _elem_sensitivity_calculations(MAST::ElementBase& elem,
-                                                    RealVectorX& vec);
+                                                    bool if_jac,
+                                                    RealVectorX& vec,
+                                                    RealMatrixX& mat);
     };
 }
 

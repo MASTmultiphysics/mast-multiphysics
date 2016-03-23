@@ -50,9 +50,7 @@ MAST::InviscidAnalysis::InviscidAnalysis() {
     dim                 = 2,
     nx_divs             = infile("nx_divs",          3),
     ny_divs             = infile("ny_divs",          1),
-    //nz_divs             = infile("nz_divs",          0),
     n_max_bumps_x       = infile("n_max_bumps_x",    1),
-    //n_max_bumps_y       = infile("n_max_bumps_y",    1),
     panel_bc_id         = infile("panel_bc_id",     10),
     symmetry_bc_id      = infile("symmetry_bc_id",  11);
     
@@ -79,8 +77,6 @@ MAST::InviscidAnalysis::InviscidAnalysis() {
     x_relative_dx    (nx_divs+1),
     y_div_loc        (ny_divs+1),
     y_relative_dx    (ny_divs+1);
-    //z_div_loc        (nz_divs+1),
-    //z_relative_dx    (nz_divs+1);
     
     std::vector<unsigned int>
     x_divs           (nx_divs),
@@ -90,7 +86,6 @@ MAST::InviscidAnalysis::InviscidAnalysis() {
     std::auto_ptr<MeshInitializer::CoordinateDivisions>
     x_coord_divs    (new MeshInitializer::CoordinateDivisions),
     y_coord_divs    (new MeshInitializer::CoordinateDivisions);
-    //z_coord_divs    (new MeshInitializer::CoordinateDivisions);
     
     std::vector<MeshInitializer::CoordinateDivisions*>
     divs(dim);
@@ -129,27 +124,9 @@ MAST::InviscidAnalysis::InviscidAnalysis() {
         y_coord_divs->init(ny_divs, y_div_loc, y_relative_dx, y_divs);
     }
     
-    
-    /*// now read in the values: z-coord
-    if ((dim == 3) && (nz_divs > 0)) {
-        
-        for (unsigned int i_div=0; i_div<nz_divs+1; i_div++) {
-            
-            z_div_loc[i_div]     = infile("z_div_loc", 0., i_div);
-            z_relative_dx[i_div] = infile( "z_rel_dx", 0., i_div);
-            
-            if (i_div < nz_divs) //  this is only till nz_divs
-                z_divs[i_div]    = infile( "z_div_nelem", 0, i_div);
-        }
-        
-        divs[2] = z_coord_divs.get();
-        z_coord_divs->init(nz_divs, z_div_loc, z_relative_dx, z_divs);
-    }*/
-    
 
 
     // initialize the mesh
-    //if (dim == 2)
     MAST::PanelMesh2D().init(t_by_c,
                              if_cos_bump,
                              n_max_bumps_x,
@@ -158,19 +135,7 @@ MAST::InviscidAnalysis::InviscidAnalysis() {
                              divs,
                              *_mesh,
                              elem_type);
-    /*else if (dim == 3)
-        MAST::PanelMesh3D().init(t_by_c,
-                                 if_cos_bump,
-                                 n_max_bumps_x,
-                                 n_max_bumps_y,
-                                 panel_bc_id,
-                                 symmetry_bc_id,
-                                 divs,
-                                 *_mesh,
-                                 elem_type);*/
     
-    
-    _mesh->prepare_for_use();
     _mesh->print_info();
     
     _discipline        = new MAST::ConservativeFluidDiscipline(*_eq_sys);
@@ -196,15 +161,9 @@ MAST::InviscidAnalysis::InviscidAnalysis() {
     _discipline->add_side_load(    panel_bc_id, *_slip_wall);
     _discipline->add_side_load( symmetry_bc_id, *_symm_wall);
     // all boundaries except the bottom are far-field
-    //if (dim == 2)
     for (unsigned int i=1; i<=3; i++)
         _discipline->add_side_load(              i, *_far_field);
-    //else if (dim == 3)
-    //    for (unsigned int i=1; i<=5; i++)
-    //        _discipline->add_side_load(              i, *_far_field);
-    //else
-    //    libmesh_error();
-        
+    
         
     // time step control
     _max_time_steps    =   infile("max_time_steps", 1000);

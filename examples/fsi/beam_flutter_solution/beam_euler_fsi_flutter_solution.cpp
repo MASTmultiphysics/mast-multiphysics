@@ -224,8 +224,6 @@ _dirichlet_right(NULL) {
                              *_fluid_mesh,
                              elem_type);
     
-    _fluid_mesh->prepare_for_use();
-    
     _fluid_discipline   = new MAST::ConservativeFluidDiscipline(*_fluid_eq_sys);
     _fluid_sys_init     = new MAST::ConservativeFluidSystemInitialization(*_fluid_sys,
                                                                           _fluid_sys->name(),
@@ -343,8 +341,6 @@ _dirichlet_right(NULL) {
         
         
         MeshInitializer().init(divs, *_structural_mesh, libMesh::EDGE2);
-        
-        _structural_mesh->prepare_for_use();
         
         // create the equation system
         _structural_eq_sys    = new  libMesh::EquationSystems(*_structural_mesh);

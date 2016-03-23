@@ -242,7 +242,6 @@ _dirichlet_top(NULL) {
                              divs,
                              *_fluid_mesh,
                              elem_type);
-    _fluid_mesh->prepare_for_use();
     
     _fluid_discipline   = new MAST::ConservativeFluidDiscipline(*_fluid_eq_sys);
     _fluid_sys_init     = new MAST::ConservativeFluidSystemInitialization(*_fluid_sys,
@@ -364,7 +363,7 @@ _dirichlet_top(NULL) {
     y_divs[0]       = infile( "y_div_nelem", 0, 1);
     
     divs[1] = y_coord_divs.get();
-    y_coord_divs->init(1, x_div_loc, x_relative_dx, x_divs);
+    y_coord_divs->init(1, y_div_loc, y_relative_dx, y_divs);
 
     
     // setup length for use in setup of flutter solver
@@ -377,9 +376,6 @@ _dirichlet_top(NULL) {
         _structural_mesh       = new libMesh::SerialMesh(*_structural_comm);
         
         MeshInitializer().init(divs, *_structural_mesh, libMesh::QUAD4);
-        
-        _structural_mesh->prepare_for_use();
-        _structural_mesh->write("str.e");
         
         // create the equation system
         _structural_eq_sys    = new  libMesh::EquationSystems(*_structural_mesh);

@@ -79,11 +79,12 @@ MAST::PanelMesh3D::process_mesh( ) {
             libMesh::AutoPtr<libMesh::Elem> side_elem ((*e_it)->side(i_side).release());
             std::vector<bool> side_on_panel(side_elem->n_nodes()),
             side_on_slip_wall(side_elem->n_nodes());
-            std::fill(side_on_panel.begin(), side_on_panel.end(), false);
+            
+            std::fill(    side_on_panel.begin(),     side_on_panel.end(), false);
             std::fill(side_on_slip_wall.begin(), side_on_slip_wall.end(), false);
             
-            for (unsigned int i_node=0; i_node<side_elem->n_nodes(); i_node++)
-            {
+            for (unsigned int i_node=0; i_node<side_elem->n_nodes(); i_node++) {
+            
                 const libMesh::Node& n = *(side_elem->get_node(i_node));
                 if ((n(2)==_z0) && //bottom face
                     (n(0) >= _x0-1.0e-6) && (n(0) <= _x1+1.0e-6) && // x-coord
