@@ -47,9 +47,9 @@
 #include "examples/structural/beam_piston_theory_flutter/beam_piston_theory_flutter.h"
 #include "optimization/npsol_optimization_interface.h"
 #include "optimization/dot_optimization_interface.h"
-#include "examples/fluid/inviscid_analysis/inviscid_analysis.h"
+#include "examples/fluid/panel_inviscid_analysis_2D/panel_inviscid_analysis_2d.h"
 #include "examples/fluid/panel_inviscid_analysis_3D_half_domain/panel_inviscid_analysis_3D_half_domain.h"
-#include "examples/fluid/inviscid_small_disturbance_frequency_domain_analysis/inviscid_small_disturbance_frequency_domain_analysis_panel.h"
+#include "examples/fluid/panel_small_disturbance_frequency_domain_analysis_2D/panel_small_disturbance_frequency_domain_analysis_2d.h"
 #include "examples/fsi/beam_flutter_solution/beam_euler_fsi_flutter_solution.h"
 #include "examples/fsi/plate_flutter_solution/plate_euler_fsi_flutter_solution.h"
 #include "examples/fsi/plate_flutter_solution_half_domain/plate_euler_fsi_half_domain_flutter_solution.h"
@@ -417,12 +417,12 @@ int main(int argc, char* const argv[]) {
     else if (case_name == "topology_optimization_2D")
         plate_optimization<MAST::TopologyOptimization2D>
         (case_name, verify_grads, if_nonlin);
-    else if (case_name == "inviscid_analysis")
-        fluid_analysis<MAST::InviscidAnalysis>(case_name);
+    else if (case_name == "panel_inviscid_analysis_2d")
+        fluid_analysis<MAST::PanelInviscidAnalysis2D>(case_name);
     else if (case_name == "panel_inviscid_analysis_3d_half_domain")
         fluid_analysis<MAST::PanelInviscidAnalysis3DHalfDomain>(case_name);
-    else if (case_name == "inviscid_small_disturbance_frequency_domain_analysis")
-        fluid_analysis<MAST::InviscidSmallDisturbanceFrequencyDomainAnalysis>(case_name);
+    else if (case_name == "panel_inviscid_small_disturbance_frequency_domain_analysis_2d")
+        fluid_analysis<MAST::PanelInviscidSmallDisturbanceFrequencyDomain2DAnalysis>(case_name);
     else if (case_name == "beam_fsi_flutter_analysis")
         fluid_analysis<MAST::BeamEulerFSIFlutterAnalysis>(case_name);
     else if (case_name == "plate_fsi_flutter_analysis")
@@ -480,9 +480,9 @@ int main(int argc, char* const argv[]) {
         << "**********************************\n"
         << "***********   FLUID   ************\n"
         << "**********************************\n"
-        << "  inviscid_analysis \n"
+        << "  panel_inviscid_analysis_2d \n"
         << "  panel_inviscid_analysis_3d_half_domain \n"
-        << "  inviscid_small_disturbance_frequency_domain_analysis\n"
+        << "  panel_inviscid_small_disturbance_frequency_domain_analysis_2d\n"
         << "\n\n\n"
         << "**********************************\n"
         << "***********   CONDUCTION   *******\n"

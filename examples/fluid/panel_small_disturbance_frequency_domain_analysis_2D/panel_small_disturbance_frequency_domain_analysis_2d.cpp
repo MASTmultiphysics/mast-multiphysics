@@ -23,7 +23,7 @@
 
 
 // MAST includes
-#include "examples/fluid/inviscid_small_disturbance_frequency_domain_analysis/inviscid_small_disturbance_frequency_domain_analysis_panel.h"
+#include "examples/fluid/panel_small_disturbance_frequency_domain_analysis_2D/panel_small_disturbance_frequency_domain_analysis_2d.h"
 #include "examples/fluid/meshing/panel_mesh_2D.h"
 #include "base/nonlinear_system.h"
 #include "fluid/conservative_fluid_system_initialization.h"
@@ -52,7 +52,8 @@ extern libMesh::LibMeshInit* __init;
 
 
 
-MAST::InviscidSmallDisturbanceFrequencyDomainAnalysis::InviscidSmallDisturbanceFrequencyDomainAnalysis() {
+MAST::PanelInviscidSmallDisturbanceFrequencyDomain2DAnalysis::
+PanelInviscidSmallDisturbanceFrequencyDomain2DAnalysis() {
     
     
     // initialize the libMesh object
@@ -69,11 +70,10 @@ MAST::InviscidSmallDisturbanceFrequencyDomainAnalysis::InviscidSmallDisturbanceF
     
     const unsigned int
     dim                 = 2,
-    nx_divs             = infile("nx_divs",          3),
-    ny_divs             = infile("ny_divs",          1),
-    n_max_bumps_x       = infile("n_max_bumps_x",    1),
-    panel_bc_id         = infile("panel_bc_id",     10),
-    symmetry_bc_id      = infile("symmetry_bc_id",  11);
+    nx_divs             = 3,
+    ny_divs             = 1,
+    panel_bc_id         = 10,
+    symmetry_bc_id      = 11;
     
     libMesh::ElemType
     elem_type           =
@@ -168,7 +168,7 @@ MAST::InviscidSmallDisturbanceFrequencyDomainAnalysis::InviscidSmallDisturbanceF
     _far_field     = new MAST::BoundaryConditionBase(MAST::FAR_FIELD),
     _symm_wall     = new MAST::BoundaryConditionBase(MAST::SYMMETRY_WALL);
     _slip_wall     = new MAST::BoundaryConditionBase(MAST::SLIP_WALL);
-
+    
     _flight_cond    =  new MAST::FlightCondition;
     for (unsigned int i=0; i<3; i++) {
         
@@ -196,7 +196,7 @@ MAST::InviscidSmallDisturbanceFrequencyDomainAnalysis::InviscidSmallDisturbanceF
     _omega             = new MAST::Parameter("omega",     100.);
     _velocity          = new MAST::Parameter("velocity",  _flight_cond->velocity_magnitude);
     _b_ref             = new MAST::Parameter("b_ref",       1.);
-
+    
     
     // now define the constant field functions based on this
     _omega_f           = new MAST::ConstantFieldFunction("omega",       *_omega);
@@ -218,7 +218,7 @@ MAST::InviscidSmallDisturbanceFrequencyDomainAnalysis::InviscidSmallDisturbanceF
                   1.,                              // plunge amplitude
                   0.,                              // pitch amplitude
                   0.);                             // pitch phase lead
-
+    
     // tell the physics about boundary conditions
     _slip_wall->add(*_motion);
     _discipline->add_side_load(    panel_bc_id, *_slip_wall);
@@ -233,8 +233,8 @@ MAST::InviscidSmallDisturbanceFrequencyDomainAnalysis::InviscidSmallDisturbanceF
 
 
 
-MAST::InviscidSmallDisturbanceFrequencyDomainAnalysis::
-~InviscidSmallDisturbanceFrequencyDomainAnalysis() {
+MAST::PanelInviscidSmallDisturbanceFrequencyDomain2DAnalysis::
+~PanelInviscidSmallDisturbanceFrequencyDomain2DAnalysis() {
     
     delete _eq_sys;
     delete _mesh;
@@ -251,7 +251,7 @@ MAST::InviscidSmallDisturbanceFrequencyDomainAnalysis::
     delete _omega;
     delete _velocity;
     delete _b_ref;
-
+    
     delete _omega_f;
     delete _velocity_f;
     delete _b_ref_f;
@@ -266,7 +266,8 @@ MAST::InviscidSmallDisturbanceFrequencyDomainAnalysis::
 
 
 MAST::Parameter*
-MAST::InviscidSmallDisturbanceFrequencyDomainAnalysis::get_parameter(const std::string &nm) {
+MAST::PanelInviscidSmallDisturbanceFrequencyDomain2DAnalysis::
+get_parameter(const std::string &nm) {
     
     MAST::Parameter *rval = NULL;
     
@@ -306,7 +307,7 @@ MAST::InviscidSmallDisturbanceFrequencyDomainAnalysis::get_parameter(const std::
 
 
 const libMesh::NumericVector<Real>&
-MAST::InviscidSmallDisturbanceFrequencyDomainAnalysis::
+MAST::PanelInviscidSmallDisturbanceFrequencyDomain2DAnalysis::
 solve(bool if_write_output) {
     
     // initialize the solution
@@ -314,7 +315,6 @@ solve(bool if_write_output) {
     s(0) = _flight_cond->rho();
     s(1) = _flight_cond->rho_u1();
     s(2) = _flight_cond->rho_u2();
-    //s(3) = _flight_cond->rho_u3();
     s(3) = _flight_cond->rho_e();
     
     // create the vector for storing the base solution.
@@ -340,7 +340,7 @@ solve(bool if_write_output) {
     assembly.set_frequency_function(*_freq_function);
     
     solver.solve_block_matrix();
-
+    
     if (if_write_output) {
         
         libMesh::NumericVector<Real>
@@ -405,6 +405,7 @@ solve(bool if_write_output) {
         
         
         for (unsigned int i=0; i<=N_divs; i++) {
+            
             _sys->time   =  2.*pi*(i*1.)/(N_divs*1.);
             
             _sys->solution->zero();
@@ -421,7 +422,7 @@ solve(bool if_write_output) {
         _sys->time = t_sys;
     }
     
-
+    
     assembly.clear_discipline_and_system();
     _sys->remove_vector("fluid_base_solution");
     
@@ -433,7 +434,7 @@ solve(bool if_write_output) {
 
 
 const libMesh::NumericVector<Real>&
-MAST::InviscidSmallDisturbanceFrequencyDomainAnalysis::
+MAST::PanelInviscidSmallDisturbanceFrequencyDomain2DAnalysis::
 sensitivity_solve(MAST::Parameter& p, bool if_write_output) {
     
     /*_discipline->add_parameter(p);

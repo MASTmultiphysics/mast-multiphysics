@@ -5,7 +5,7 @@
 
 
 // MAST includes
-#include "examples/fluid/inviscid_analysis/inviscid_analysis.h"
+#include "examples/fluid/panel_inviscid_analysis_2D/panel_inviscid_analysis_2d.h"
 #include "examples/fluid/meshing/panel_mesh_2D.h"
 #include "fluid/conservative_fluid_system_initialization.h"
 #include "fluid/conservative_fluid_discipline.h"
@@ -31,7 +31,7 @@ extern libMesh::LibMeshInit* __init;
 
 
 
-MAST::InviscidAnalysis::InviscidAnalysis() {
+MAST::PanelInviscidAnalysis2D::PanelInviscidAnalysis2D() {
 
 
     // initialize the libMesh object
@@ -199,7 +199,7 @@ MAST::InviscidAnalysis::InviscidAnalysis() {
 
 
 
-MAST::InviscidAnalysis::~InviscidAnalysis() {
+MAST::PanelInviscidAnalysis2D::~PanelInviscidAnalysis2D() {
     
     delete _eq_sys;
     delete _mesh;
@@ -217,7 +217,7 @@ MAST::InviscidAnalysis::~InviscidAnalysis() {
 
 
 MAST::Parameter*
-MAST::InviscidAnalysis::get_parameter(const std::string &nm) {
+MAST::PanelInviscidAnalysis2D::get_parameter(const std::string &nm) {
     
     MAST::Parameter *rval = NULL;
     
@@ -255,7 +255,7 @@ MAST::InviscidAnalysis::get_parameter(const std::string &nm) {
 
 
 const libMesh::NumericVector<Real>&
-MAST::InviscidAnalysis::solve(bool if_write_output) {
+MAST::PanelInviscidAnalysis2D::solve(bool if_write_output) {
     
     // initialize the solution
     RealVectorX s = RealVectorX::Zero(4);
@@ -370,7 +370,7 @@ MAST::InviscidAnalysis::solve(bool if_write_output) {
 
 
 const libMesh::NumericVector<Real>&
-MAST::InviscidAnalysis::sensitivity_solve(MAST::Parameter& p,
+MAST::PanelInviscidAnalysis2D::sensitivity_solve(MAST::Parameter& p,
                                           bool if_write_output) {
     
     /*_discipline->add_parameter(p);

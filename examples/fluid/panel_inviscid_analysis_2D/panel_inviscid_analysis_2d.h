@@ -17,8 +17,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#ifndef __mast_inviscid_analysis_h__
-#define __mast_inviscid_analysis_h__
+#ifndef __mast_panel_inviscid_analysis_2d_h__
+#define __mast_panel_inviscid_analysis_2d_h__
 
 
 // C++ includes
@@ -60,13 +60,13 @@ namespace MAST {
      *   -snes_type newtonls -snes_max_it 1 -snes_linesearch_type bt -snes_linesearch_max_it 2
      *   -snes_ls_view -snes_monitor -snes_log
      */
-    struct InviscidAnalysis {
+    struct PanelInviscidAnalysis2D {
         
         
-        InviscidAnalysis();
+        PanelInviscidAnalysis2D();
         
         
-        ~InviscidAnalysis();
+        ~PanelInviscidAnalysis2D();
         
         
         /*!
@@ -126,4 +126,4 @@ namespace MAST {
 
 
 
-#endif //  __mast_inviscid_analysis_h__
+#endif //  __mast_panel_inviscid_analysis_2d_h__
