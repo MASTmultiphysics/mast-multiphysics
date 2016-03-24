@@ -22,6 +22,7 @@
 #include "examples/structural/beam_modal_analysis/beam_modal_analysis.h"
 #include "examples/structural/beam_buckling_prestress/beam_column_buckling.h"
 #include "examples/structural/beam_bending/beam_bending.h"
+#include "examples/structural/beam_oscillating_load/beam_oscillating_load.h"
 #include "examples/structural/beam_bending_with_offset/beam_bending_with_offset.h"
 #include "examples/structural/beam_bending_thermal_stress_with_offset/beam_bending_thermal_stress.h"
 #include "examples/structural/beam_optimization/beam_optimization.h"
@@ -358,6 +359,8 @@ int main(int argc, char* const argv[]) {
         eigenvalue_analysis<MAST::BeamColumnBucklingAnalysis>(case_name, with_sens, par_name);
     else if (case_name == "beam_bending")
         analysis<MAST::BeamBending>(case_name, with_sens, par_name);
+    else if (case_name == "beam_oscillating_load")
+        analysis<MAST::BeamOscillatingLoad>(case_name, with_sens, par_name);
     else if (case_name == "beam_bending_with_offset")
         analysis<MAST::BeamBendingWithOffset>(case_name, with_sens, par_name);
     else if (case_name == "beam_bending_thermal_stress")
@@ -453,6 +456,7 @@ int main(int argc, char* const argv[]) {
         << "**********************************\n"
         << "  bar_extension \n"
         << "  beam_bending \n"
+        << "  beam_oscillating_load \n"
         << "  beam_modal_analysis\n"
         << "  beam_prestress_buckling_analysis\n"
         << "  beam_bending_with_offset \n"

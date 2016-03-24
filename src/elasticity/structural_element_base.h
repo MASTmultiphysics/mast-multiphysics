@@ -129,8 +129,11 @@ namespace MAST {
         virtual bool damping_residual (bool request_jacobian,
                                        RealVectorX& f,
                                        RealMatrixX& jac_xdot,
-                                       RealMatrixX& jac)
-        { libmesh_assert(false);}
+                                       RealMatrixX& jac) {
+            
+            // to be implemented nothing is done yet
+            return false;
+        }
         
         /*!
          *   inertial force contribution to system residual

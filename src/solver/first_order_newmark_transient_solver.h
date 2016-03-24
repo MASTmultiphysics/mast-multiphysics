@@ -50,12 +50,10 @@ namespace MAST {
      *    Both f_m and f_x can be functions of x_dot and x. Then, the
      *    Jacobian is
      *    \f{eqnarray*}{
-     *    dr/dx &=& beta*dt [df_m/dx + df_x/dx +\\
+     *    dr/dx &=& [df_m/dx + df_x/dx +\\
      *       &&          df_m/dx_dot dx_dot/dx + df_x/dx_dot dx_dot/dx]\\
-     *       &=& beta*dt [(df_m/dx + df_x/dx) +\\
-     *       &&           (df_m/dx_dot + df_x/dx_dot) (1/beta/dt)]\\
-     *       &=& beta*dt (df_m/dx + df_x/dx) +\\
-     *       &&          (df_m/dx_dot + df_x/dx_dot)
+     *       &=& [(df_m/dx + df_x/dx) +\\
+     *       &&           (df_m/dx_dot + df_x/dx_dot) (1/beta/dt)]
      *    }
      *   Note that this form of equations makes it a good candidate for
      *   use as implicit solver, ie, for a nonzero beta.

@@ -28,8 +28,8 @@
 
 MAST::SecondOrderNewmarkTransientSolver::SecondOrderNewmarkTransientSolver():
 MAST::TransientSolverBase(),
-beta(0.5),
-gamma(0.25)
+beta(0.25),
+gamma(0.5)
 { }
 
 
@@ -62,9 +62,12 @@ MAST::SecondOrderNewmarkTransientSolver::advance_time_step() {
 
 void
 MAST::SecondOrderNewmarkTransientSolver::
-_set_element_data(std::vector<libMesh::dof_id_type>& dof_indices,
+_set_element_data(const std::vector<libMesh::dof_id_type>& dof_indices,
+                  const std::vector<libMesh::NumericVector<Real>*>& sols,
                   MAST::ElementBase &elem){
     
+    libmesh_assert_equal_to(sols.size(), 3);
+
     const unsigned int n_dofs = (unsigned int)dof_indices.size();
     
     // get the current state and velocity estimates
@@ -72,30 +75,21 @@ _set_element_data(std::vector<libMesh::dof_id_type>& dof_indices,
     RealVectorX
     sol          = RealVectorX::Zero(n_dofs),
     vel          = RealVectorX::Zero(n_dofs),
-    accel        = RealVectorX::Zero(n_dofs),
-    prev_sol     = RealVectorX::Zero(n_dofs),
-    prev_vel     = RealVectorX::Zero(n_dofs),
-    prev_accel   = RealVectorX::Zero(n_dofs);
+    accel        = RealVectorX::Zero(n_dofs);
     
     
     // get the references to current and previous sol and velocity
     const libMesh::NumericVector<Real>
-    &sol_global     =   solution(0),
-    &old_sol_global =   solution(1),
-    &old_vel_global =   velocity(1),
-    &old_acc_global =   acceleration(1);
+    &sol_global     =   *sols[0],
+    &vel_global     =   *sols[1],
+    &acc_global     =   *sols[2];
     
     for (unsigned int i=0; i<n_dofs; i++) {
+        
         sol(i)          = sol_global(dof_indices[i]);
-        prev_sol(i)     = old_sol_global(dof_indices[i]);
-        prev_vel(i)     = old_vel_global(dof_indices[i]);
-        prev_accel(i)   = old_acc_global(dof_indices[i]);
+        vel(i)          = vel_global(dof_indices[i]);
+        accel(i)        = acc_global(dof_indices[i]);
     }
-    
-    
-    
-    accel = (sol-prev_sol - dt*prev_vel - (0.5-beta)*dt*dt*prev_accel)/(beta*dt*dt);
-    vel   = (prev_vel + (1.-gamma)*dt*prev_accel + gamma*dt*accel);
     
     elem.set_solution(sol);
     elem.set_velocity(vel);
@@ -107,24 +101,21 @@ _set_element_data(std::vector<libMesh::dof_id_type>& dof_indices,
 
 void
 MAST::SecondOrderNewmarkTransientSolver::
-_update_velocity(libMesh::NumericVector<Real>& vec) {
+_update_velocity(libMesh::NumericVector<Real>& vec,
+                 const libMesh::NumericVector<Real>& sol) {
     
     const libMesh::NumericVector<Real>
-    &sol      = _system->get_vector("transient_solution_0"),
-    &prev_sol = _system->get_vector("transient_solution_1"),
-    &prev_vel = _system->get_vector("transient_velocity_1"),
-    &prev_acc = _system->get_vector("transient_acceleration_1");
+    &prev_sol = this->solution(1),
+    &prev_vel = this->velocity(1),
+    &prev_acc = this->acceleration(1);
 
     // first calculate the acceleration
-    vec = sol;
-    vec.add(-1., prev_sol);
-    vec.add( dt, prev_vel);
-    vec.add(-(.5-beta)*dt*dt, prev_acc);
-    vec.scale(gamma/(beta*dt));
-    // now add the rest of the terms
-    vec.add(1., prev_vel);
-    vec.add((1.-gamma)*dt, prev_acc);
-
+    vec.zero();
+    vec.add(                   1.,      sol);
+    vec.add(                  -1., prev_sol);
+    vec.scale(gamma/beta/dt);
+    vec.add(        1.-gamma/beta, prev_vel);
+    vec.add((1.-gamma/2./beta)*dt, prev_acc);
     vec.close();
 }
 
@@ -133,20 +124,21 @@ _update_velocity(libMesh::NumericVector<Real>& vec) {
 
 void
 MAST::SecondOrderNewmarkTransientSolver::
-_update_acceleration(libMesh::NumericVector<Real>& vec) {
+_update_acceleration(libMesh::NumericVector<Real>& vec,
+                     const libMesh::NumericVector<Real>& sol) {
     
     const libMesh::NumericVector<Real>
-    &sol      = _system->get_vector("transient_solution_0"),
-    &prev_sol = _system->get_vector("transient_solution_1"),
-    &prev_vel = _system->get_vector("transient_velocity_1"),
-    &prev_acc = _system->get_vector("transient_acceleration_1");
+    &prev_sol = this->solution(1),
+    &prev_vel = this->velocity(1),
+    &prev_acc = this->acceleration(1);
     
-    vec = sol;
-    vec.add(-1., prev_sol);
-    vec.add( dt, prev_vel);
-    vec.add(-(.5-beta)*dt*dt, prev_acc);
-    vec.scale(1./(beta*dt*dt));
-    
+    // first calculate the acceleration
+    vec.zero();
+    vec.add(             1,       sol);
+    vec.add(            -1., prev_sol);
+    vec.scale(1./beta/dt/dt);
+    vec.add(    -1./beta/dt, prev_vel);
+    vec.add(-(.5-beta)/beta, prev_acc);
     vec.close();
 }
 
@@ -189,38 +181,40 @@ _elem_calculations(MAST::ElementBase& elem,
     
     //
     //  The residual here is modeled as
-    // r = beta*dt(f_m + f_x )= 0
+    // r = (f_m + f_x )= 0
     // where, (for example)
     // f_m = int_Omega phi u_dot   [typical mass vector in conduction, for example]
     // f_x = int_Omega phi_i u_i - int_Gamma phi q_n [typical conductance and heat flux combination, for example]
     //
     // This method assumes
-    //     x     = x0 + (1-beta) dt x0_dot + beta dt x_dot
-    // or, x_dot = (x-x0)/beta/dt - (1-beta)/beta x0_dot
-    // Note that the residual expression multiplies the expression by beta*dt
-    // for convenience in the following expressions
+    //     x      = x0 + dt x0_dot + (1/2-beta) dt^2 x0_ddot + beta dt^2 x1_ddot
+    // or, x_ddot = (x-x0)/beta/dt^2 - 1/beta/dt x0_dot - (1/2-beta)/beta x0_ddot
+    //
+    //     x_dot  = x0_dot + (1-gamma) dt x0_ddot + gamma dt x1_ddot
+    // or, x_dot  = x0_dot + (1-gamma) dt x0_ddot +
+    //              gamma dt [(x-x0)/beta/dt^2 - 1/beta/dt x0_dot - (1/2-beta)/beta x0_ddot]
+    //            = x0_dot + (1-gamma) dt x0_ddot +
+    //              gamma/beta/dt (x-x0) - gamma/beta x0_dot - gamma (1/2-beta)/beta dt x0_ddot
+    //            = gamma/beta/dt (x-x0) + (1 - gamma/beta) x0_dot + (1 - gamma/2/beta) dt x0_ddot
     //
     // Both f_m and f_x can be functions of x_dot and x. Then, the
     // Jacobian is
-    // dr/dx = beta*dt [df_m/dx + df_x/dx +
-    //                 df_m/dx_dot dx_dot/dx + df_x/dx_dot dx_dot/dx]
-    //       = beta*dt [(df_m/dx + df_x/dx) +
-    //                  (df_m/dx_dot + df_x/dx_dot) (1/beta/dt)]
-    //       = beta*dt (df_m/dx + df_x/dx) +
-    //                 (df_m/dx_dot + df_x/dx_dot)
-    // Note that this form of equations makes it a good candidate for
-    // use as implicit solver, ie, for a nonzero beta.
+    // dr/dx = df_m/dx + df_x/dx +
+    //         df_m/dx_dot dx_dot/dx + df_x/dx_dot dx_dot/dx
+    //       = (df_m/dx + df_x/dx) +
+    //         (df_m/dx_dot + df_x/dx_dot) (gamma/beta/dt) +
+    //         df_m/dx_ddot (1/beta/dt/dt) +
     //
     
     
     // system residual
-    vec  = beta*dt*dt*(f_m + f_x);
+    vec  = (f_m + f_x);
     
     // system Jacobian
     if (if_jac)
-        mat = f_m_jac_xddot +
-        gamma*dt*    (f_m_jac_xdot+f_x_jac_xdot) +
-        beta*dt*dt*  (f_m_jac + f_x_jac);
+        mat = ((1./beta/dt/dt) *  f_m_jac_xddot +
+               (gamma/beta/dt)* (f_m_jac_xdot+f_x_jac_xdot) +
+               (f_m_jac + f_x_jac));
 }
 
 

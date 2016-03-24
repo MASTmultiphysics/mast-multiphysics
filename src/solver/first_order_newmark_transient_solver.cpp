@@ -65,6 +65,8 @@ _set_element_data(const std::vector<libMesh::dof_id_type>& dof_indices,
                   const std::vector<libMesh::NumericVector<Real>*>& sols,
                   MAST::ElementBase &elem){
     
+    libmesh_assert_equal_to(sols.size(), 2);
+    
     const unsigned int n_dofs = (unsigned int)dof_indices.size();
     
     // get the current state and velocity estimates
