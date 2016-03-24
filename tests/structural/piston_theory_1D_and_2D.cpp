@@ -95,11 +95,11 @@ check_piston_theory_jacobian (ValType& v) {
     
     // get the base residual vector and the Jacobians for numerical comparisons
     // later.
-    e->volume_external_residual<Real>(true,
-                                      res0,
-                                      jac_xdot,
-                                      jac_x,
-                                      v._discipline->volume_loads());
+    e->volume_external_residual(true,
+                                res0,
+                                jac_xdot,
+                                jac_x,
+                                v._discipline->volume_loads());
     
     for (unsigned int i=0; i<ndofs; i++) {
                 
@@ -113,11 +113,11 @@ check_piston_theory_jacobian (ValType& v) {
         
         // get the new residual
         res.setZero();
-        e->volume_external_residual<Real>(false,
-                                          res,
-                                          dummy,
-                                          dummy,
-                                          v._discipline->volume_loads());
+        e->volume_external_residual(false,
+                                    res,
+                                    dummy,
+                                    dummy,
+                                    v._discipline->volume_loads());
         
         // set the i^th column of the finite-differenced Jacobian
         jac_x_fd.col(i) = (res-res0)/delta;
@@ -134,11 +134,11 @@ check_piston_theory_jacobian (ValType& v) {
         
         // get the new residual
         res.setZero();
-        e->volume_external_residual<Real>(false,
-                                          res,
-                                          dummy,
-                                          dummy,
-                                          v._discipline->volume_loads());
+        e->volume_external_residual(false,
+                                    res,
+                                    dummy,
+                                    dummy,
+                                    v._discipline->volume_loads());
         
         // set the i^th column of the finite-differenced Jacobian
         jac_xdot_fd.col(i) = (res-res0)/delta;

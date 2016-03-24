@@ -111,11 +111,11 @@ check_thermal_residual_force_jacobian (ValType& v,
     
     // get the base residual vector and the Jacobians for numerical comparisons
     // later.
-    e->volume_external_residual<Real>(true,
-                                      res0,
-                                      jac_xdot,
-                                      jac_x,
-                                      v._discipline->volume_loads());
+    e->volume_external_residual(true,
+                                res0,
+                                jac_xdot,
+                                jac_x,
+                                v._discipline->volume_loads());
     
     for (unsigned int i=0; i<ndofs; i++) {
         
@@ -129,11 +129,11 @@ check_thermal_residual_force_jacobian (ValType& v,
         
         // get the new residual
         res.setZero();
-        e->volume_external_residual<Real>(false,
-                                          res,
-                                          dummy,
-                                          dummy,
-                                          v._discipline->volume_loads());
+        e->volume_external_residual(false,
+                                    res,
+                                    dummy,
+                                    dummy,
+                                    v._discipline->volume_loads());
         
         // set the i^th column of the finite-differenced Jacobian
         jac_x_fd.col(i) = (res-res0)/delta;
@@ -150,11 +150,11 @@ check_thermal_residual_force_jacobian (ValType& v,
         
         // get the new residual
         res.setZero();
-        e->volume_external_residual<Real>(false,
-                                          res,
-                                          dummy,
-                                          dummy,
-                                          v._discipline->volume_loads());
+        e->volume_external_residual(false,
+                                    res,
+                                    dummy,
+                                    dummy,
+                                    v._discipline->volume_loads());
         
         // set the i^th column of the finite-differenced Jacobian
         jac_xdot_fd.col(i) = (res-res0)/delta;
@@ -225,11 +225,11 @@ void check_thermal_force_and_jacobian_sensitivity (ValType& v,
     e->set_solution(x);
     // get the base residual vector and the Jacobians for numerical comparisons
     // later.
-    e->volume_external_residual<Real>(true,
-                                      res0,
-                                      dummy,
-                                      jac0,
-                                      v._discipline->volume_loads());
+    e->volume_external_residual(true,
+                                res0,
+                                dummy,
+                                jac0,
+                                v._discipline->volume_loads());
 
     
     for (unsigned int i=0; i<v._params_for_sensitivity.size(); i++) {
@@ -243,11 +243,11 @@ void check_thermal_force_and_jacobian_sensitivity (ValType& v,
         // later.
         dresdp.setZero();
         djacdp.setZero();
-        e->volume_external_residual_sensitivity<Real>(true,
-                                                      dresdp,
-                                                      dummy,
-                                                      djacdp,
-                                                      v._discipline->volume_loads());
+        e->volume_external_residual_sensitivity(true,
+                                                dresdp,
+                                                dummy,
+                                                djacdp,
+                                                v._discipline->volume_loads());
         
         // reset the sensitivity parameter
         e->sensitivity_param  = NULL;
@@ -261,11 +261,11 @@ void check_thermal_force_and_jacobian_sensitivity (ValType& v,
         
         dresdp_fd.setZero();
         djacdp_fd.setZero();
-        e->volume_external_residual<Real>(true,
-                                          dresdp_fd,
-                                          dummy,
-                                          djacdp_fd,
-                                          v._discipline->volume_loads());
+        e->volume_external_residual(true,
+                                    dresdp_fd,
+                                    dummy,
+                                    djacdp_fd,
+                                    v._discipline->volume_loads());
         // reset the parameter value
         f()        = p0;
         

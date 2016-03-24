@@ -327,7 +327,7 @@ check_moving_wall_jacobian(MAST::BuildConservativeFluidElem& v,
     
     MAST::SideBCMapType bc_map;
     bc_map.insert(std::pair<libMesh::boundary_id_type, MAST::BoundaryConditionBase*>
-                  (0, v._motion));
+                  (0, v._slip_wall));
     
     // set velocity to be zero
     elem->set_velocity(x_base);

@@ -79,7 +79,8 @@ MAST::BuildConservativeFluidElem::BuildConservativeFluidElem() {
     _eq_sys->init();
     
     // create the oundary conditions for slip-wall and far-field
-    _far_field     = new MAST::BoundaryConditionBase(MAST::FAR_FIELD),
+    _far_field     = new MAST::BoundaryConditionBase(MAST::FAR_FIELD);
+    _slip_wall     = new MAST::BoundaryConditionBase(MAST::SLIP_WALL);
     
     // tell the physics about these conditions
     _discipline->add_side_load(1, *_far_field);
@@ -133,7 +134,8 @@ MAST::BuildConservativeFluidElem::BuildConservativeFluidElem() {
                   1.,                              // pitch amplitude
                   0.);                             // pitch phase lead
     
-    _discipline->add_side_load(0, *_motion);
+    _slip_wall->add(*_motion);
+    _discipline->add_side_load(0, *_slip_wall);
     
     
     // initialize the solution
@@ -161,6 +163,7 @@ MAST::BuildConservativeFluidElem::~BuildConservativeFluidElem() {
     delete _fluid_sys;
     
     delete _far_field;
+    delete _slip_wall;
     
     delete _flight_cond;
     
