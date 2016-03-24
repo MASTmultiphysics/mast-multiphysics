@@ -50,6 +50,7 @@
 #include "examples/fluid/panel_inviscid_analysis_2D/panel_inviscid_analysis_2d.h"
 #include "examples/fluid/panel_inviscid_analysis_3D_half_domain/panel_inviscid_analysis_3D_half_domain.h"
 #include "examples/fluid/panel_small_disturbance_frequency_domain_analysis_2D/panel_small_disturbance_frequency_domain_analysis_2d.h"
+#include "examples/fluid/panel_small_disturbance_frequency_domain_3D/panel_small_disturbance_frequency_domain_inviscid_analysis_3D.h"
 #include "examples/fluid/panel_small_disturbance_frequency_domain_3D_half_domain/panel_small_disturbance_frequency_domain_inviscid_analysis_3D_half_domain.h"
 #include "examples/fsi/beam_flutter_solution/beam_euler_fsi_flutter_solution.h"
 #include "examples/fsi/plate_flutter_solution/plate_euler_fsi_flutter_solution.h"
@@ -424,6 +425,8 @@ int main(int argc, char* const argv[]) {
         fluid_analysis<MAST::PanelInviscidAnalysis3DHalfDomain>(case_name);
     else if (case_name == "panel_inviscid_small_disturbance_frequency_domain_analysis_2d")
         fluid_analysis<MAST::PanelInviscidSmallDisturbanceFrequencyDomain2DAnalysis>(case_name);
+    else if (case_name == "panel_inviscid_small_disturbance_frequency_domain_analysis_3d")
+        fluid_analysis<MAST::PanelSmallDisturbanceFrequencyDomainInviscidAnalysis3D>(case_name);
     else if (case_name == "panel_inviscid_small_disturbance_frequency_domain_analysis_3d_half_domain")
         fluid_analysis<MAST::PanelSmallDisturbanceFrequencyDomainInviscidAnalysis3DHalfDomain>(case_name);
     else if (case_name == "beam_fsi_flutter_analysis")
@@ -486,6 +489,7 @@ int main(int argc, char* const argv[]) {
         << "  panel_inviscid_analysis_2d \n"
         << "  panel_inviscid_analysis_3d_half_domain \n"
         << "  panel_inviscid_small_disturbance_frequency_domain_analysis_2d\n"
+        << "  panel_inviscid_small_disturbance_frequency_domain_analysis_3d\n"
         << "  panel_inviscid_small_disturbance_frequency_domain_analysis_3d_half_domain\n"
         << "\n\n\n"
         << "**********************************\n"

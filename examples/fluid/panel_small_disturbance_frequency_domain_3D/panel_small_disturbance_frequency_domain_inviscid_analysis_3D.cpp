@@ -23,16 +23,20 @@
 
 
 // MAST includes
-#include "examples/fluid/panel_inviscid_analysis_3D_half_domain/panel_inviscid_analysis_3D_half_domain.h"
-#include "examples/fluid/meshing/panel_mesh_3D_half_domain.h"
+#include "examples/fluid/panel_small_disturbance_frequency_domain_3D/panel_small_disturbance_frequency_domain_inviscid_analysis_3D.h"
+#include "examples/fluid/meshing/panel_mesh_3D.h"
 #include "fluid/conservative_fluid_system_initialization.h"
 #include "fluid/conservative_fluid_discipline.h"
-#include "fluid/conservative_fluid_transient_assembly.h"
+#include "fluid/frequency_domain_linearized_complex_assembly.h"
+#include "solver/complex_solver_base.h"
 #include "solver/first_order_newmark_transient_solver.h"
 #include "fluid/flight_condition.h"
 #include "base/parameter.h"
 #include "base/constant_field_function.h"
 #include "boundary_condition/dirichlet_boundary_condition.h"
+#include "boundary_condition/rigid_surface_motion.h"
+#include "aeroelasticity/frequency_function.h"
+#include "base/nonlinear_system.h"
 
 // libMesh includes
 #include "libmesh/mesh_generation.h"
@@ -49,7 +53,7 @@ extern libMesh::LibMeshInit* __init;
 
 
 
-MAST::PanelInviscidAnalysis3DHalfDomain::PanelInviscidAnalysis3DHalfDomain() {
+MAST::PanelSmallDisturbanceFrequencyDomainInviscidAnalysis3D::PanelSmallDisturbanceFrequencyDomainInviscidAnalysis3D() {
 
 
     // initialize the libMesh object
@@ -57,7 +61,7 @@ MAST::PanelInviscidAnalysis3DHalfDomain::PanelInviscidAnalysis3DHalfDomain() {
     _eq_sys            = new libMesh::EquationSystems(*_mesh);
     
     // add the system to be used for analysis
-    _sys = &(_eq_sys->add_system<libMesh::NonlinearImplicitSystem>("fluid"));
+    _sys = &(_eq_sys->add_system<MAST::NonlinearSystem>("fluid"));
     
     
     // initialize the flow conditions
@@ -67,27 +71,19 @@ MAST::PanelInviscidAnalysis3DHalfDomain::PanelInviscidAnalysis3DHalfDomain() {
     const unsigned int
     dim                 = 3,
     nx_divs             = 3,
-    ny_divs             = 2,
+    ny_divs             = 3,
     nz_divs             = 1,
     panel_bc_id         = 10,
-    symmetry_bc_id      = 11,
-    n_max_bumps_x       = infile("n_max_bumps_x",    1),
-    n_max_bumps_y       = infile("n_max_bumps_y",    1);
-    
-    const bool
-    if_cos_bump         = infile("if_cos_bump",  false);
-
-    const Real
-    t_by_c              = infile("t_by_c",         0.05);
+    symmetry_bc_id      = 11;
     
     libMesh::ElemType
     elem_type           =
     libMesh::Utility::string_to_enum<libMesh::ElemType>(infile("elem_type", "HEX8"));
-
+    
     libMesh::FEFamily
     fe_type             =
     libMesh::Utility::string_to_enum<libMesh::FEFamily>(infile("fe_family", "LAGRANGE"));
-
+    
     libMesh::Order
     fe_order            =
     libMesh::Utility::string_to_enum<libMesh::Order>(infile("fe_order", "FIRST"));
@@ -129,24 +125,14 @@ MAST::PanelInviscidAnalysis3DHalfDomain::PanelInviscidAnalysis3DHalfDomain() {
     
     
     // now read in the values: y-coord
-    const Real
-    y0  = infile("y_div_loc", 0., 1),
-    y1  = infile("y_div_loc", 0., 2),
-    dy0 = infile("y_rel_dx",  0., 1),
-    dy1 = infile("y_rel_dx",  0., 2);
-    
-    y_div_loc[0]         = 0.5*(y0+y1);
-    y_div_loc[1]         = y1;
-    y_div_loc[2]         = infile("y_div_loc", 0., 3);
-    
-    y_relative_dx[0] = .5*(dy0+dy1);
-    y_relative_dx[1] = dy1;
-    y_relative_dx[2] = infile( "y_rel_dx", 0., 3);
-    
-    // halve the num y-divs for panel
-    y_divs[0]    = infile( "y_div_nelem",  0, 1)/2;
-    y_divs[1]    = infile( "y_div_nelem",  0, 2);
-    
+    for (unsigned int i_div=0; i_div<ny_divs+1; i_div++) {
+        
+        y_div_loc[i_div]     = infile("y_div_loc", 0., i_div);
+        y_relative_dx[i_div] = infile( "y_rel_dx", 0., i_div);
+        
+        if (i_div < ny_divs) //  this is only till ny_divs
+            y_divs[i_div]    = infile( "y_div_nelem",  0, i_div);
+    }
     
     divs[1] = y_coord_divs.get();
     y_coord_divs->init(ny_divs, y_div_loc, y_relative_dx, y_divs);
@@ -167,15 +153,15 @@ MAST::PanelInviscidAnalysis3DHalfDomain::PanelInviscidAnalysis3DHalfDomain() {
     
     
     // initialize the mesh
-    MAST::PanelMesh3DHalfDomain().init(t_by_c,               // t/c
-                                       if_cos_bump,          // if cos bump
-                                       n_max_bumps_x,        // n max bumps in x
-                                       n_max_bumps_y,        // n max bumps in y
-                                       panel_bc_id,
-                                       symmetry_bc_id,
-                                       divs,
-                                       *_mesh,
-                                       elem_type);
+    MAST::PanelMesh3D().init(0.,               // t/c
+                             false,            // if cos bump
+                             0,                // n max bumps in x
+                             0,                // n max bumps in y
+                             panel_bc_id,
+                             symmetry_bc_id,
+                             divs,
+                             *_mesh,
+                             elem_type);
     
     
     
@@ -199,21 +185,6 @@ MAST::PanelInviscidAnalysis3DHalfDomain::PanelInviscidAnalysis3DHalfDomain() {
     _slip_wall    = new MAST::BoundaryConditionBase(    MAST::SLIP_WALL);
     _symm_wall    = new MAST::BoundaryConditionBase(MAST::SYMMETRY_WALL);
     
-    
-    // tell the physics about these conditions
-    _discipline->add_side_load(              1, *_symm_wall);
-    _discipline->add_side_load(    panel_bc_id, *_slip_wall);
-    _discipline->add_side_load( symmetry_bc_id, *_symm_wall);
-    // all boundaries except the bottom are far-field
-    //if (dim == 2)
-    for (unsigned int i=2; i<=5; i++)
-        _discipline->add_side_load(              i, *_far_field);
-    
-    // time step control
-    _max_time_steps    =   infile("max_time_steps", 1000);
-    _time_step_size    =   infile("initial_dt",    1.e-2);
-    
-    
     _flight_cond    =  new MAST::FlightCondition;
     for (unsigned int i=0; i<3; i++) {
         
@@ -236,6 +207,45 @@ MAST::PanelInviscidAnalysis3DHalfDomain::PanelInviscidAnalysis3DHalfDomain() {
     
     // tell the discipline about the fluid values
     _discipline->set_flight_condition(*_flight_cond);
+
+
+    // define parameters
+    _omega             = new MAST::Parameter("omega",     100.);
+    _velocity          = new MAST::Parameter("velocity",  _flight_cond->velocity_magnitude);
+    _b_ref             = new MAST::Parameter("b_ref",       1.);
+    
+    
+    // now define the constant field functions based on this
+    _omega_f           = new MAST::ConstantFieldFunction("omega",       *_omega);
+    _velocity_f        = new MAST::ConstantFieldFunction("velocity", *_velocity);
+    _b_ref_f           = new MAST::ConstantFieldFunction("b_ref",       *_b_ref);
+    
+    // initialize the frequency function
+    _freq_function     = new MAST::FrequencyFunction("freq",
+                                                     *_omega_f,
+                                                     *_velocity_f,
+                                                     *_b_ref_f);
+    
+    // initialize the motion object
+    _motion            = new MAST::RigidSurfaceMotion;
+    _motion->init(*_freq_function,                 // frequency function
+                  _flight_cond->body_yaw_axis,     // plunge vector
+                  _flight_cond->body_pitch_axis,   // pitch axis
+                  RealVectorX::Zero(3),            // hinge location
+                  1.,                              // plunge amplitude
+                  0.,                              // pitch amplitude
+                  0.);                             // pitch phase lead
+
+    // tell the physics about these conditions
+    _slip_wall->add(*_motion);
+    _discipline->add_side_load(              1, *_symm_wall);
+    _discipline->add_side_load(    panel_bc_id, *_slip_wall);
+    _discipline->add_side_load( symmetry_bc_id, *_symm_wall);
+    // all boundaries except the bottom are far-field
+    for (unsigned int i=2; i<=5; i++)
+        _discipline->add_side_load(              i, *_far_field);
+    
+
 }
 
 
@@ -243,7 +253,8 @@ MAST::PanelInviscidAnalysis3DHalfDomain::PanelInviscidAnalysis3DHalfDomain() {
 
 
 
-MAST::PanelInviscidAnalysis3DHalfDomain::~PanelInviscidAnalysis3DHalfDomain() {
+MAST::PanelSmallDisturbanceFrequencyDomainInviscidAnalysis3D::
+~PanelSmallDisturbanceFrequencyDomainInviscidAnalysis3D() {
     
     delete _eq_sys;
     delete _mesh;
@@ -256,12 +267,24 @@ MAST::PanelInviscidAnalysis3DHalfDomain::~PanelInviscidAnalysis3DHalfDomain() {
     delete _symm_wall;
     
     delete _flight_cond;
+    
+    delete _omega;
+    delete _velocity;
+    delete _b_ref;
+    
+    delete _omega_f;
+    delete _velocity_f;
+    delete _b_ref_f;
+    
+    delete _freq_function;
+    
+    delete _motion;
 }
 
 
 
 MAST::Parameter*
-MAST::PanelInviscidAnalysis3DHalfDomain::get_parameter(const std::string &nm) {
+MAST::PanelSmallDisturbanceFrequencyDomainInviscidAnalysis3D::get_parameter(const std::string &nm) {
     
     MAST::Parameter *rval = NULL;
     
@@ -299,7 +322,7 @@ MAST::PanelInviscidAnalysis3DHalfDomain::get_parameter(const std::string &nm) {
 
 
 const libMesh::NumericVector<Real>&
-MAST::PanelInviscidAnalysis3DHalfDomain::solve(bool if_write_output) {
+MAST::PanelSmallDisturbanceFrequencyDomainInviscidAnalysis3D::solve(bool if_write_output) {
     
     // initialize the solution
     RealVectorX s = RealVectorX::Zero(5);
@@ -311,101 +334,114 @@ MAST::PanelInviscidAnalysis3DHalfDomain::solve(bool if_write_output) {
     _fluid_sys->initialize_solution(s);
     
     
-    // create the nonlinear assembly object
-    MAST::ConservativeFluidTransientAssembly   assembly;
+    // create the vector for storing the base solution.
+    // we will swap this out with the system solution, initialize and
+    // then swap it back.
+    libMesh::NumericVector<Real>& base_sol =
+    _sys->add_vector("fluid_base_solution");
+    _sys->solution->swap(base_sol);
+    _fluid_sys->initialize_solution(s);
+    _sys->solution->swap(base_sol);
     
-    // Transient solver for time integration
-    MAST::FirstOrderNewmarkTransientSolver  solver;
+    // create the nonlinear assembly object
+    MAST::FrequencyDomainLinearizedComplexAssembly   assembly;
+    
+    // complex solver for solution of small-disturbance system of eqs.
+    MAST::ComplexSolverBase                          solver;
     
     // now solve the system
     assembly.attach_discipline_and_system(*_discipline,
                                           solver,
                                           *_fluid_sys);
+    assembly.set_base_solution(base_sol);
+    assembly.set_frequency_function(*_freq_function);
     
-    libMesh::NonlinearImplicitSystem&      nonlin_sys   =
-    dynamic_cast<libMesh::NonlinearImplicitSystem&>(_fluid_sys->system());
-
+    solver.solve_block_matrix();
     
-    // file to write the solution for visualization
-    libMesh::Nemesis_IO exodus_writer(*_mesh);
-    
-    // time solver parameters
-    unsigned int
-    t_step            = 0,
-    n_iters_change_dt = 4,
-    iter_count_dt     = 0;
-    
-    Real
-    tval       = 0.,
-    vel_0      = 0.,
-    vel_1      = 1.e+12,
-    p          = 0.5,
-    factor     = 0.,
-    min_factor = 1.5;
-    
-    solver.dt            = _time_step_size;
-    solver.beta          = 1.0;
-    
-    // set the previous state to be same as the current state to account for
-    // zero velocity as the initial condition
-    solver.solution(1).zero();
-    solver.solution(1).add(1., solver.solution());
-    solver.solution(1).close();
-    
-    if (if_write_output)
-        std::cout << "Writing output to : output.exo" << std::endl;
-
-    // loop over time steps
-    while ((t_step <= _max_time_steps) &&
-           (vel_1  >=  1.e-8)) {
+    if (if_write_output) {
         
-        // change dt if the iteration count has increased to threshold
-        if (iter_count_dt == n_iters_change_dt) {
+        libMesh::NumericVector<Real>
+        &real_sol = solver.real_solution(),
+        &imag_sol = solver.imag_solution();
+        
+        
+        // first, write the real part
+        std::cout
+        << "Writing real output to : real_output.exo" << std::endl;
+        
+        _sys->solution->swap(real_sol);
+        libMesh::Nemesis_IO(*_mesh).write_equation_systems("real_output.exo",
+                                                            *_eq_sys);
+        _sys->solution->swap(real_sol);
+        
+        
+        // next, write the imag part
+        std::cout
+        << "Writing imag output to : imag_output.exo" << std::endl;
+        
+        _sys->solution->swap(imag_sol);
+        libMesh::Nemesis_IO(*_mesh).write_equation_systems("imag_output.exo",
+                                                            *_eq_sys);
+        _sys->solution->swap(imag_sol);
+        
+        
+        // now write the mode to an output file.
+        // mode Y = sum_i (X_i * (xi_re + xi_im)_i)
+        // using the right eigenvector of the system.
+        // where i is the structural mode
+        //
+        // The time domain simulation assumes the temporal solution to be
+        // X(t) = (Y_re + i Y_im) exp(p t)
+        //      = (Y_re + i Y_im) exp(p_re t) * (cos(p_im t) + i sin(p_im t))
+        //      = exp(p_re t) (Z_re + i Z_im ),
+        // where Z_re = Y_re cos(p_im t) - Y_im sin(p_im t), and
+        //       Z_im = Y_re sin(p_im t) + Y_im cos(p_im t).
+        //
+        // We write the simulation of the mode over a period of oscillation
+        //
+        
+        
+        // first calculate the real and imaginary vectors
+        std::auto_ptr<libMesh::NumericVector<Real> >
+        re(_sys->solution->zero_clone().release()),
+        im(_sys->solution->zero_clone().release());
+        
+        
+        // first the real part
+        _sys->solution->zero();
+        
+        // now open the output processor for writing
+        libMesh::Nemesis_IO flutter_mode_output(*_mesh);
+        
+        // use N steps in a time-period
+        Real
+        t_sys = _sys->time,
+        pi    = acos(-1.);
+        unsigned int
+        N_divs = 100;
+        
+        
+        for (unsigned int i=0; i<=N_divs; i++) {
             
-            libMesh::out
-            << "Changing dt:  old dt = " << solver.dt
-            << "    new dt = ";
+            _sys->time   =  2.*pi*(i*1.)/(N_divs*1.);
             
-            factor        = std::pow(vel_0/vel_1, p);
-            factor        = std::max(factor, min_factor);
-            solver.dt    *= factor;
-            
-            libMesh::out << solver.dt << std::endl;
-            
-            iter_count_dt = 0;
-            vel_0         = vel_1;
+            _sys->solution->zero();
+            _sys->solution->add( cos(_sys->time), real_sol);
+            _sys->solution->add(-sin(_sys->time), imag_sol);
+            _sys->solution->close();
+            flutter_mode_output.write_timestep("complex_sol_transient.exo",
+                                               *_eq_sys,
+                                               i+1,
+                                               _sys->time);
         }
-        else
-            iter_count_dt++;
         
-        libMesh::out
-        << "Time step: " << t_step
-        << " :  t = " << tval
-        << " :  xdot-L2 = " << vel_1
-        << std::endl;
-        
-        // write the time-step
-        if (if_write_output) {
-            
-            exodus_writer.write_timestep("output.exo",
-                                         *_eq_sys,
-                                         t_step+1,
-                                         nonlin_sys.time);
-        }
-        
-        solver.solve();
-        
-        solver.advance_time_step();
-        
-        // get the velocity L2 norm
-        vel_1 = solver.velocity().l2_norm();
-        if (t_step == 0) vel_0 = vel_1;
-        
-        tval  += solver.dt;
-        t_step++;
+        // reset the system time
+        _sys->time = t_sys;
     }
     
+    
     assembly.clear_discipline_and_system();
+    _sys->remove_vector("fluid_base_solution");
 
     return *(_sys->solution);
 }
@@ -415,7 +451,7 @@ MAST::PanelInviscidAnalysis3DHalfDomain::solve(bool if_write_output) {
 
 
 const libMesh::NumericVector<Real>&
-MAST::PanelInviscidAnalysis3DHalfDomain::sensitivity_solve(MAST::Parameter& p,
+MAST::PanelSmallDisturbanceFrequencyDomainInviscidAnalysis3D::sensitivity_solve(MAST::Parameter& p,
                                           bool if_write_output) {
     
     /*_discipline->add_parameter(p);
