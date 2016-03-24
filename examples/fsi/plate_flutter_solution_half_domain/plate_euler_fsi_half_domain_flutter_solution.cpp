@@ -23,8 +23,8 @@
 
 
 // MAST includes
-#include "examples/fsi/plate_flutter_solution/plate_euler_fsi_flutter_solution.h"
-#include "examples/fluid/meshing/panel_mesh_3D.h"
+#include "examples/fsi/plate_flutter_solution_half_domain/plate_euler_fsi_half_domain_flutter_solution.h"
+#include "examples/fluid/meshing/panel_mesh_3D_half_domain.h"
 #include "base/nonlinear_system.h"
 #include "fluid/conservative_fluid_system_initialization.h"
 #include "fluid/conservative_fluid_discipline.h"
@@ -66,7 +66,7 @@ extern libMesh::LibMeshInit* __init;
 
 
 
-MAST::PlateEulerFSIFlutterAnalysis::PlateEulerFSIFlutterAnalysis():
+MAST::PlateEulerFSIHalfDomainFlutterAnalysis::PlateEulerFSIHalfDomainFlutterAnalysis():
 _structural_comm(NULL),
 _structural_mesh(NULL),
 _fluid_mesh(NULL),
@@ -151,7 +151,7 @@ _dirichlet_top(NULL) {
     const unsigned int
     dim                 = 3,
     nx_divs             = 3,
-    ny_divs             = 3,
+    ny_divs             = 2,
     nz_divs             = 1,
     panel_bc_id         = 10,
     symmetry_bc_id      = 11;
@@ -205,15 +205,25 @@ _dirichlet_top(NULL) {
     
     
     // now read in the values: y-coord
-    for (unsigned int i_div=0; i_div<ny_divs+1; i_div++) {
-        
-        y_div_loc[i_div]     = infile("y_div_loc", 0., i_div);
-        y_relative_dx[i_div] = infile( "y_rel_dx", 0., i_div);
-        
-        if (i_div < ny_divs) //  this is only till ny_divs
-            y_divs[i_div]    = infile( "y_div_nelem",  0, i_div);
-    }
+    const Real
+    y0  = infile("y_div_loc", 0., 1),
+    y1  = infile("y_div_loc", 0., 2),
+    dy0 = infile("y_rel_dx",  0., 1),
+    dy1 = infile("y_rel_dx",  0., 2);
     
+    y_div_loc[0]         = 0.5*(y0+y1);
+    y_div_loc[1]         = y1;
+    y_div_loc[2]         = infile("y_div_loc", 0., 3);
+    
+    y_relative_dx[0] = .5*(dy0+dy1);
+    y_relative_dx[1] = dy1;
+    y_relative_dx[2] = infile( "y_rel_dx", 0., 3);
+    
+    // halve the num y-divs for panel
+    y_divs[0]    = infile( "y_div_nelem",  0, 1)/2;
+    y_divs[1]    = infile( "y_div_nelem",  0, 2);
+    
+
     divs[1] = y_coord_divs.get();
     y_coord_divs->init(ny_divs, y_div_loc, y_relative_dx, y_divs);
     
@@ -233,16 +243,15 @@ _dirichlet_top(NULL) {
     
     
     // initialize the mesh
-    MAST::PanelMesh3D().init(0.,               // t/c
-                             false,            // if cos bump
-                             0,                // n max bumps in x
-                             0,                // n max bumps in y
-                             panel_bc_id,
-                             symmetry_bc_id,
-                             divs,
-                             *_fluid_mesh,
-                             elem_type);
-    _fluid_mesh->prepare_for_use();
+    MAST::PanelMesh3DHalfDomain().init(0.,               // t/c
+                                       false,            // if cos bump
+                                       0,                // n max bumps in x
+                                       0,                // n max bumps in y
+                                       panel_bc_id,
+                                       symmetry_bc_id,
+                                       divs,
+                                       *_fluid_mesh,
+                                       elem_type);
     
     _fluid_discipline   = new MAST::ConservativeFluidDiscipline(*_fluid_eq_sys);
     _fluid_sys_init     = new MAST::ConservativeFluidSystemInitialization(*_fluid_sys,
@@ -304,10 +313,11 @@ _dirichlet_top(NULL) {
     _freq_function->if_nondimensional(true);
     
     // tell the physics about boundary conditions
+    _fluid_discipline->add_side_load(              1, *_symm_wall);
     _fluid_discipline->add_side_load(    panel_bc_id, *_slip_wall);
     _fluid_discipline->add_side_load( symmetry_bc_id, *_symm_wall);
     // all boundaries except the bottom are far-field
-    for (unsigned int i=1; i<=5; i++)
+    for (unsigned int i=2; i<=5; i++)
         _fluid_discipline->add_side_load(              i, *_far_field);
     
     _small_dist_pressure_function =
@@ -356,15 +366,15 @@ _dirichlet_top(NULL) {
 
     
     // now read in the values: y-coord
-    for (unsigned int i_div=0; i_div<2; i_div++) {
-        
-        y_div_loc[i_div]        = infile("y_div_loc",   0., i_div+1);
-        y_relative_dx[i_div]    = infile( "y_rel_dx",   0., i_div+1);
-    }
-    y_divs[0]       = infile( "y_div_nelem", 0, 1);
+    y_div_loc[0]        = 0.5*(y0+y1);
+    y_div_loc[1]        = y1;
+    y_relative_dx[0]    = 0.5*(dy0+dy1);
+    y_relative_dx[1]    = dy1;
+    
+    y_divs[0]       = infile( "y_div_nelem", 0, 1)/2;
     
     divs[1] = y_coord_divs.get();
-    y_coord_divs->init(1, x_div_loc, x_relative_dx, x_divs);
+    y_coord_divs->init(1, y_div_loc, y_relative_dx, y_divs);
 
     
     // setup length for use in setup of flutter solver
@@ -377,10 +387,7 @@ _dirichlet_top(NULL) {
         _structural_mesh       = new libMesh::SerialMesh(*_structural_comm);
         
         MeshInitializer().init(divs, *_structural_mesh, libMesh::QUAD4);
-        
-        _structural_mesh->prepare_for_use();
-        _structural_mesh->write("str.e");
-        
+                
         // create the equation system
         _structural_eq_sys    = new  libMesh::EquationSystems(*_structural_mesh);
         
@@ -403,15 +410,24 @@ _dirichlet_top(NULL) {
         _dirichlet_right  = new MAST::DirichletBoundaryCondition;
         _dirichlet_top    = new MAST::DirichletBoundaryCondition;
         _dirichlet_bottom = new MAST::DirichletBoundaryCondition;
-        std::vector<unsigned int> constrained_vars(4);
-        constrained_vars[0] = 0;  // u
-        constrained_vars[1] = 1;  // v
-        constrained_vars[2] = 2;  // w
-        constrained_vars[3] = 5;  // tz
-        _dirichlet_left->init  (0, constrained_vars);
-        _dirichlet_right->init (1, constrained_vars);
-        _dirichlet_top->init   (2, constrained_vars);
-        _dirichlet_bottom->init(3, constrained_vars);
+        std::vector<unsigned int>
+        ss_vars(4),      // simply supported
+        symm_vars(4);    // symmetry about x-y plane
+        
+        ss_vars[0] = 0;  // u
+        ss_vars[1] = 1;  // v
+        ss_vars[2] = 2;  // w
+        ss_vars[3] = 5;  // tz
+        
+        symm_vars[0] = 0; // u
+        symm_vars[1] = 1; // v
+        symm_vars[2] = 3; // tx
+        symm_vars[3] = 5; // tz
+        
+        _dirichlet_left->init  (0, symm_vars);
+        _dirichlet_right->init (1,   ss_vars);
+        _dirichlet_top->init   (2,   ss_vars);
+        _dirichlet_bottom->init(3,   ss_vars);
         
         _structural_discipline->add_dirichlet_bc(0, *_dirichlet_left);
         _structural_discipline->add_dirichlet_bc(1, *_dirichlet_right);
@@ -505,7 +521,7 @@ _dirichlet_top(NULL) {
 
 
 
-MAST::PlateEulerFSIFlutterAnalysis::~PlateEulerFSIFlutterAnalysis() {
+MAST::PlateEulerFSIHalfDomainFlutterAnalysis::~PlateEulerFSIHalfDomainFlutterAnalysis() {
     
     delete _fluid_eq_sys;
     delete _fluid_mesh;
@@ -587,7 +603,7 @@ MAST::PlateEulerFSIFlutterAnalysis::~PlateEulerFSIFlutterAnalysis() {
 
 
 MAST::Parameter*
-MAST::PlateEulerFSIFlutterAnalysis::get_parameter(const std::string &nm) {
+MAST::PlateEulerFSIHalfDomainFlutterAnalysis::get_parameter(const std::string &nm) {
     
     MAST::Parameter *rval = NULL;
     
@@ -627,7 +643,7 @@ MAST::PlateEulerFSIFlutterAnalysis::get_parameter(const std::string &nm) {
 
 
 Real
-MAST::PlateEulerFSIFlutterAnalysis::solve(bool if_write_output) {
+MAST::PlateEulerFSIHalfDomainFlutterAnalysis::solve(bool if_write_output) {
     
     /////////////////////////////////////////////////////////////////
     //  INITIALIZE FLUID SOLUTION
@@ -947,7 +963,7 @@ MAST::PlateEulerFSIFlutterAnalysis::solve(bool if_write_output) {
 
 
 Real
-MAST::PlateEulerFSIFlutterAnalysis::sensitivity_solve(MAST::Parameter& p) {
+MAST::PlateEulerFSIHalfDomainFlutterAnalysis::sensitivity_solve(MAST::Parameter& p) {
     
     /*_discipline->add_parameter(p);
      

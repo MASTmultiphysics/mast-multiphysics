@@ -17,8 +17,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#ifndef __mast_plate_euler_fsi_flutter_h__
-#define __mast_plate_euler_fsi_flutter_h__
+#ifndef __mast_plate_euler_fsi_half_domain_flutter_h__
+#define __mast_plate_euler_fsi_half_domain_flutter_h__
 
 
 // C++ includes
@@ -61,13 +61,13 @@ namespace MAST {
     class SmallDisturbancePressureFunction;
     
     
-    struct PlateEulerFSIFlutterAnalysis {
+    struct PlateEulerFSIHalfDomainFlutterAnalysis {
         
         
-        PlateEulerFSIFlutterAnalysis();
+        PlateEulerFSIHalfDomainFlutterAnalysis();
         
         
-        ~PlateEulerFSIFlutterAnalysis();
+        ~PlateEulerFSIHalfDomainFlutterAnalysis();
         
         
         /*!
@@ -243,5 +243,5 @@ namespace MAST {
 
 
 
-#endif //  __mast_plate_euler_fsi_flutter_h__
+#endif //  __mast_plate_euler_fsi_half_domain_flutter_h__
 
