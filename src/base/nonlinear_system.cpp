@@ -482,8 +482,8 @@ eigenproblem_sensitivity_solve (const libMesh::ParameterVector& parameters,
     sens.resize(_n_converged_eigenpairs*parameters.size(), 0.);
     
     std::vector<libMesh::NumericVector<Real>*>
-    x_right (_n_converged_eigenpairs),
-    x_left  (_n_converged_eigenpairs);
+    x_right (_n_converged_eigenpairs);
+    //x_left  (_n_converged_eigenpairs);
     
     std::auto_ptr<libMesh::NumericVector<Real> >
     tmp     (this->solution->zero_clone().release());
@@ -570,6 +570,10 @@ eigenproblem_sensitivity_solve (const libMesh::ParameterVector& parameters,
             }
         }
     }
+    
+    // now delete the x_right vectors
+    for (unsigned int i=0; i<x_right.size(); i++)
+        delete x_right[i];
 }
 
 

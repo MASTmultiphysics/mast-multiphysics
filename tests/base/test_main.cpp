@@ -33,7 +33,7 @@
 #include "libmesh/libmesh.h"
 
 
-std::auto_ptr<libMesh::LibMeshInit>  __init;
+libMesh::LibMeshInit*  __init;
 
 
 struct GlobalTestFixture {
@@ -41,12 +41,13 @@ struct GlobalTestFixture {
     GlobalTestFixture() {
         
         // create the libMeshInit function
-        __init.reset(new libMesh::LibMeshInit(boost::unit_test::framework::master_test_suite().argc,
-                                             boost::unit_test::framework::master_test_suite().argv));
+        __init = new libMesh::LibMeshInit(boost::unit_test::framework::master_test_suite().argc,
+                                          boost::unit_test::framework::master_test_suite().argv);
     }
     
     ~GlobalTestFixture() {
         
+        delete __init;
     }
     
 };
