@@ -456,10 +456,6 @@ _dirichlet_right(NULL) {
     }
     
     _flutter_solver  = new MAST::UGFlutterSolver;
-    std::ostringstream oss;
-    oss << "flutter_output_" << __init->comm().rank() << ".txt";
-    if (__init->comm().rank() == 0)
-        _flutter_solver->set_output_file(oss.str());
 }
 
 
@@ -604,7 +600,6 @@ MAST::BeamEulerFSIFlutterAnalysis::solve(bool if_write_output) {
     s(0) = _flight_cond->rho();
     s(1) = _flight_cond->rho_u1();
     s(2) = _flight_cond->rho_u2();
-    //s(3) = _flight_cond->rho_u3();
     s(3) = _flight_cond->rho_e();
     
     // create the vector for storing the base solution.
@@ -710,13 +705,21 @@ MAST::BeamEulerFSIFlutterAnalysis::solve(bool if_write_output) {
     ///////////////////////////////////////////////////////////////////
     // FLUTTER SOLUTION
     ///////////////////////////////////////////////////////////////////
+    // clear flutter solver and set the output file
+    _flutter_solver->clear();
+
     MAST::FSIGeneralizedAeroForceAssembly fsi_assembly;
     if (_structural_comm->get() != MPI_COMM_NULL) {
         
         fsi_assembly.attach_discipline_and_system(*_structural_discipline,
                                                   *_structural_sys_init);
+
+        std::ostringstream oss;
+        oss << "flutter_output_" << __init->comm().rank() << ".txt";
+        _flutter_solver->set_output_file(oss.str());
     }
     
+
     fsi_assembly.init(*_freq_function,
                       *_structural_comm,             // structural comm
                       __init->comm(),                // fluid comm

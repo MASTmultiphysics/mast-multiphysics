@@ -218,6 +218,7 @@ eigenproblem_sensitivity_assemble (const libMesh::ParameterVector& parameters,
         
         // set the element's base solution sensitivity
         if (_base_sol) {
+            
             for (unsigned int i=0; i<dof_indices.size(); i++)
                 sol(i) = (*localized_solution_sens)(dof_indices[i]);
         }

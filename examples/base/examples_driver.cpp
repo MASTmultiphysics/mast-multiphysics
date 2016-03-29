@@ -29,6 +29,8 @@
 #include "examples/structural/beam_optimization_single_stress_functional/beam_optimization.h"
 #include "examples/structural/beam_optimization_section_offset/beam_optimization_section_offset.h"
 #include "examples/structural/beam_optimization_thermal_stress/beam_optimization_thermal_stress.h"
+#include "examples/structural/beam_piston_theory_flutter/beam_piston_theory_flutter.h"
+#include "examples/structural/beam_piston_theory_time_accurate/beam_piston_theory_time_accurate.h"
 #include "examples/structural/membrane_extension_uniaxial_stress/membrane_extension_uniaxial.h"
 #include "examples/structural/membrane_extension_biaxial_stress/membrane_extension_biaxial.h"
 #include "examples/structural/plate_bending/plate_bending.h"
@@ -46,7 +48,6 @@
 #include "examples/structural/stiffened_plate_optimization_thermal_stress/stiffened_plate_thermal_stress_optimization.h"
 #include "examples/structural/stiffened_plate_optimization_piston_theory_flutter/stiffened_plate_piston_theory_flutter_optimization.h"
 #include "examples/structural/topology_optim_2D/topology_optim_2D.h"
-#include "examples/structural/beam_piston_theory_flutter/beam_piston_theory_flutter.h"
 #include "optimization/npsol_optimization_interface.h"
 #include "optimization/dot_optimization_interface.h"
 #include "examples/fluid/panel_inviscid_analysis_2D/panel_inviscid_analysis_2d.h"
@@ -379,6 +380,8 @@ int main(int argc, char* const argv[]) {
         (case_name, verify_grads);
     else if (case_name == "beam_piston_theory_flutter_analysis")
         flutter_analysis<MAST::BeamPistonTheoryFlutterAnalysis>(case_name, with_sens, par_name);
+    else if (case_name == "beam_piston_theory_time_accurate_analysis")
+        flutter_analysis<MAST::BeamPistonTheoryTimeAccurateAnalysis>(case_name, with_sens, par_name);
     else if (case_name == "membrane_extension_uniaxial")
         analysis<MAST::MembraneExtensionUniaxial>(case_name, with_sens, par_name);
     else if (case_name == "membrane_extension_biaxial")
@@ -470,6 +473,7 @@ int main(int argc, char* const argv[]) {
         << "  beam_bending_section_offset_optimization \n"
         << "  beam_bending_thermal_stress_optimization \n"
         << "  beam_piston_theory_flutter_analysis\n"
+        << "  beam_piston_theory_time_accurate_analysis\n"
         << "  membrane_extension_uniaxial \n"
         << "  membrane_extension_biaxial \n"
         << "  plate_bending \n"

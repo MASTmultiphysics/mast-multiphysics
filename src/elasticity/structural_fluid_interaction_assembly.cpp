@@ -401,8 +401,13 @@ assemble_reduced_order_quantity_sensitivity
         basis_mat.setZero(ndofs, n_basis);
         
         for (unsigned int i=0; i<dof_indices.size(); i++) {
-            sol(i)  = (*localized_solution)(dof_indices[i]);
-            dsol(i) = (*localized_solution_sens)(dof_indices[i]);
+            
+            if (_base_sol) {
+                
+                sol(i)  = (*localized_solution)(dof_indices[i]);
+                dsol(i) = (*localized_solution_sens)(dof_indices[i]);
+            }
+            
             for (unsigned int j=0; j<n_basis; j++)
                 basis_mat(i,j) = (*localized_basis[j])(dof_indices[i]);
         }

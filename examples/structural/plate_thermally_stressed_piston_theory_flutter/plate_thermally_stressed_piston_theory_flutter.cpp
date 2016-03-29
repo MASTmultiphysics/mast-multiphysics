@@ -140,11 +140,11 @@ init(libMesh::ElemType e_type, bool if_vk) {
     _alpha           = new MAST::Parameter("alpha",      2.5e-5);
     _kappa           = new MAST::Parameter("kappa",       5./6.);
     _zero            = new MAST::Parameter("zero",           0.);
-    _velocity        = new MAST::Parameter("V"   ,        8000.);
+    _velocity        = new MAST::Parameter("V"   ,         000.);
     _mach            = new MAST::Parameter("mach",           3.);
     _rho_air         = new MAST::Parameter("rho" ,         1.05);
     _gamma_air       = new MAST::Parameter("gamma",         1.4);
-    _temp            = new MAST::Parameter("temperature",   90.);
+    _temp            = new MAST::Parameter("temperature",   60.);
     
     
     
@@ -394,7 +394,9 @@ get_parameter(const std::string &nm) {
 
 Real
 MAST::PlateThermallyStressedPistonTheoryFlutterAnalysis::
-solve(bool if_write_output) {
+solve(bool if_write_output,
+      const Real tol,
+      const unsigned int max_bisection_iters) {
     
     libmesh_assert(_initialized);
     
@@ -454,7 +456,9 @@ solve(bool if_write_output) {
         _discipline->plot_stress_strain_data<libMesh::ExodusII_IO>("stress_output.exo");
     }
     
-    return 0.;
+    // copy the base solution for later use
+    _sys->add_vector("base_solution") = *_sys->solution;
+    
     
     ///////////////////////////////////////////////////////////////
     // next, solve the modal eigenvalue problem
@@ -463,13 +467,15 @@ solve(bool if_write_output) {
     // this solution
     _flutter_root = NULL;
     _flutter_solver->clear();
+    std::string nm("flutter_output.txt");
+    _flutter_solver->set_output_file(nm);
     
-    // set the velocity of piston theory to zero for modal analysis
-    (*_velocity) = 0.;
-
     // create the nonlinear assembly object
     MAST::StructuralModalEigenproblemAssembly   modal_assembly;
     _sys->initialize_condensed_dofs(*_discipline);
+    
+    // set the basis solution about which the structure will be initialized
+    modal_assembly.set_base_solution(_sys->get_vector("base_solution"));
     
     modal_assembly.attach_discipline_and_system(*_discipline, *_structural_sys);
     _sys->eigenproblem_solve();
@@ -520,12 +526,17 @@ solve(bool if_write_output) {
             << "Writing mode " << i << " to : "
             << file_name.str() << std::endl;
             
-            // copy the solution for output
-            (*_sys->solution) = *_basis[i];
+            // swap the solution for output
+            _sys->solution->swap(*_basis[i]);
             
             // We write the file in the ExodusII format.
+            std::set<std::string> sys_to_write;
+            sys_to_write.insert(_sys->name());
             libMesh::ExodusII_IO(*_mesh).write_equation_systems(file_name.str(),
-                                                                *_eq_sys);
+                                                                *_eq_sys,
+                                                                &sys_to_write);
+            // we will now swap this back
+            _sys->solution->swap(*_basis[i]);
         }
     }
     
@@ -533,17 +544,21 @@ solve(bool if_write_output) {
     MAST::StructuralFluidInteractionAssembly fsi_assembly;
     fsi_assembly.attach_discipline_and_system(*_discipline,
                                               *_structural_sys);
+    
+    // set the base solution about which the linearized stability solution
+    // is performed
+    fsi_assembly.set_base_solution(_sys->get_vector("base_solution"));
+    
+    // attach the assembly function to the flutter solver
     _flutter_solver->attach_assembly(fsi_assembly);
     _flutter_solver->initialize(*_velocity,
                                 0.0e3,        // lower V
-                                9.0e3,        // upper V
+                                20.0e3,        // upper V
                                 10,           // number of divisions
                                 _basis);      // basis vectors
-//    _flutter_solver->scan_for_roots();
-//    _flutter_solver->print_sorted_roots();
-//    _flutter_solver->print_crossover_points();
+    
     std::pair<bool, MAST::FlutterRootBase*>
-    sol = _flutter_solver->analyze_and_find_critical_root_without_tracking(1.e-3, 20);
+    sol = _flutter_solver->analyze_and_find_critical_root_without_tracking(tol, max_bisection_iters);
     _flutter_solver->print_sorted_roots();
     fsi_assembly.clear_discipline_and_system();
     _flutter_solver->clear_assembly_object();

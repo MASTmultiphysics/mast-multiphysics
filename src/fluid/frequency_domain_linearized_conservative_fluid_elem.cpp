@@ -170,7 +170,6 @@ side_external_residual (bool request_jacobian,
     
     // for each boundary id, check if any of the sides on the element
     // has the associated boundary
-    bool calculate_jac = false;
     
     for (unsigned short int n=0; n<_elem.n_sides(); n++) {
         
@@ -201,14 +200,12 @@ side_external_residual (bool request_jacobian,
                         // We always need the Jacobian, since it is used to
                         // calculate the residual
                         
-                        calculate_jac =
-                        (calculate_jac ||
                          MAST::ConservativeFluidElementBase::
                          symmetry_surface_residual(true,
                                                    local_f,
                                                    f_jac_x,
                                                    n,
-                                                   *it.first->second));
+                                                   *it.first->second);
                         
                         // multiply jacobian with the nondimensionalizing
                         // factor (V/b for flutter analysis)
@@ -220,15 +217,13 @@ side_external_residual (bool request_jacobian,
                         
                     case MAST::SLIP_WALL: {
                         
-                        calculate_jac =
-                        (calculate_jac ||
-                         // this calculates the Jacobian and residual contribution
-                         // including the nondimensionalizing factor.
-                         this->slip_wall_surface_residual(request_jacobian,
-                                                          f,
-                                                          jac,
-                                                          n,
-                                                          *it.first->second));
+                        // this calculates the Jacobian and residual contribution
+                        // including the nondimensionalizing factor.
+                        this->slip_wall_surface_residual(request_jacobian,
+                                                         f,
+                                                         jac,
+                                                         n,
+                                                         *it.first->second);
                     }
                         break;
                         
@@ -240,14 +235,12 @@ side_external_residual (bool request_jacobian,
                         // We always need the Jacobian, since it is used to
                         // calculate the residual
 
-                        calculate_jac =
-                        (calculate_jac ||
-                         MAST::ConservativeFluidElementBase::
-                         far_field_surface_residual(true,
-                                                    local_f,
-                                                    f_jac_x,
-                                                    n,
-                                                    *it.first->second));
+                        MAST::ConservativeFluidElementBase::
+                        far_field_surface_residual(true,
+                                                   local_f,
+                                                   f_jac_x,
+                                                   n,
+                                                   *it.first->second);
                         
                         // multiply jacobian with the nondimensionalizing
                         // factor (V/b for flutter analysis)
@@ -272,7 +265,7 @@ side_external_residual (bool request_jacobian,
     }
     
     
-    return (request_jacobian && calculate_jac);
+    return request_jacobian;
 }
 
 

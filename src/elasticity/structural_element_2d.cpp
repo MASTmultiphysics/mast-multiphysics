@@ -1383,7 +1383,7 @@ MAST::StructuralElement2D::prestress_residual (bool request_jacobian,
     }
     
     // only the nonlinear strain returns a Jacobian for prestressing
-    return (request_jacobian && if_vk);
+    return (request_jacobian);
 }
 
 
@@ -1511,7 +1511,7 @@ MAST::StructuralElement2D::prestress_residual_sensitivity (bool request_jacobian
     }
     
     // only the nonlinear strain returns a Jacobian for prestressing
-    return (request_jacobian && if_vk);
+    return (request_jacobian);
 }
 
 
@@ -1821,7 +1821,7 @@ MAST::StructuralElement2D::thermal_residual (bool request_jacobian,
     }
     
     // Jacobian contribution from von Karman strain
-    return request_jacobian && if_vk;
+    return request_jacobian;
 }
 
 
@@ -1977,7 +1977,7 @@ thermal_residual_sensitivity (bool request_jacobian,
     }
     
     // Jacobian contribution from von Karman strain
-    return request_jacobian && if_vk;
+    return request_jacobian;
 }
 
 
@@ -2191,7 +2191,6 @@ piston_theory_residual(bool request_jacobian,
         transform_matrix_to_global_system(local_jac, mat_n2n2);
         jac      -= mat_n2n2;
     }
-
     
     return request_jacobian;
 }

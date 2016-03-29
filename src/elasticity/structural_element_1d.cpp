@@ -1552,7 +1552,7 @@ MAST::StructuralElement1D::prestress_residual (bool request_jacobian,
     }
     
     // only the nonlinear strain returns a Jacobian for prestressing
-    return (request_jacobian && if_vk);
+    return (request_jacobian);
 }
 
 
@@ -1692,7 +1692,7 @@ MAST::StructuralElement1D::prestress_residual_sensitivity (bool request_jacobian
     }
     
     // only the nonlinear strain returns a Jacobian for prestressing
-    return (request_jacobian && if_vk);
+    return (request_jacobian);
 }
 
 
@@ -2025,7 +2025,7 @@ MAST::StructuralElement1D::thermal_residual (bool request_jacobian,
     }
     
     // Jacobian contribution from von Karman strain
-    return request_jacobian && if_vk;
+    return request_jacobian;
 }
 
 
@@ -2184,7 +2184,7 @@ MAST::StructuralElement1D::thermal_residual_sensitivity (bool request_jacobian,
     }
     
     // Jacobian contribution from von Karman strain
-    return request_jacobian && if_vk;
+    return request_jacobian;
 }
 
 

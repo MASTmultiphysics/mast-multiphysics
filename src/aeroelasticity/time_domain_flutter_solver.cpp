@@ -365,7 +365,7 @@ analyze_and_find_critical_root_without_tracking(const Real g_tol,
         // done because the g value tends to increase very quickly after the
         // collision of roots.
         new_V      = upper_V +
-        0.1*(upper_V-lower_V)/(upper_g-lower_g)*(1.e-4-upper_g);  // using upper V as reference
+        0.3*(upper_V-lower_V)/(upper_g-lower_g)*(1.e-4-upper_g);  // using upper V as reference
         
         sol        = _analyze(new_V, sol).release();
         if (_output)
@@ -382,7 +382,7 @@ analyze_and_find_critical_root_without_tracking(const Real g_tol,
         libmesh_assert(if_success);
         
         
-        // check if the new damping value
+        // check the new damping value
         if ((root->root.real() > 0.) &&  // only positively unstable roots will be used.
             (root->root.real() <= g_tol)) {
             

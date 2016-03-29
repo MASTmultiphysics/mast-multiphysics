@@ -17,8 +17,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#ifndef __mast_beam_piston_theory_flutter_h__
-#define __mast_beam_piston_theory_flutter_h__
+#ifndef __mast_beam_piston_theory_time_accurate_analysis_h__
+#define __mast_beam_piston_theory_time_accurate_analysis_h__
 
 
 // C++ includes
@@ -33,6 +33,7 @@
 #include "libmesh/equation_systems.h"
 #include "libmesh/serial_mesh.h"
 #include "libmesh/mesh_generation.h"
+#include "libmesh/nonlinear_implicit_system.h"
 #include "libmesh/fe_type.h"
 #include "libmesh/dof_map.h"
 
@@ -49,19 +50,17 @@ namespace MAST {
     class Solid1DSectionElementPropertyCard;
     class DirichletBoundaryCondition;
     class BoundaryConditionBase;
-    class NonlinearSystem;
-    class TimeDomainFlutterSolver;
-    class FlutterRootBase;
+    class StressStrainOutputBase;
     class PistonTheoryBoundaryCondition;
     
     
-    struct BeamPistonTheoryFlutterAnalysis {
+    struct BeamPistonTheoryTimeAccurateAnalysis {
         
         
-        BeamPistonTheoryFlutterAnalysis();
+        BeamPistonTheoryTimeAccurateAnalysis();
         
         
-        ~BeamPistonTheoryFlutterAnalysis();
+        ~BeamPistonTheoryTimeAccurateAnalysis();
         
         
         /*!
@@ -71,58 +70,63 @@ namespace MAST {
          *   of parameters.
          */
         MAST::Parameter* get_parameter(const std::string& nm);
+        
+        /*!
+         *  solves the system and returns the final solution
+         */
+        const libMesh::NumericVector<Real>&
+        solve(bool if_write_output = false);
+        
+        
+        /*!
+         *  solves the sensitivity of system and returns the final solution
+         */
+        const libMesh::NumericVector<Real>&
+        sensitivity_solve(MAST::Parameter& p,
+                          bool if_write_output = false);
+        
+        
+        /*!
+         *   clears the stress data structures for a followup analysis
+         */
+        void clear_stresss();
+        
+        // length of domain
+        Real _length;
 
-        
-        /*!
-         *  solves the system and returns the flutter velocity
-         */
-        Real solve(bool if_write_output = false,
-                   const Real tol = 1.e-1,
-                   const unsigned int max_bisection_iters = 20);
-        
-        
-        /*!
-         *  solves the sensitivity of system and returns the sensitiivty of
-         *  flutter speed
-         */
-        Real sensitivity_solve(MAST::Parameter& p);
-        
-        
         // create the mesh
-        libMesh::SerialMesh*                     _mesh;
+        libMesh::SerialMesh*           _mesh;
         
         // create the equation system
-        libMesh::EquationSystems*                _eq_sys;
+        libMesh::EquationSystems*      _eq_sys;
         
         // create the libmesh system
-        MAST::NonlinearSystem*                   _sys;
+        libMesh::NonlinearImplicitSystem*  _sys;
         
         // initialize the system to the right set of variables
-        MAST::StructuralSystemInitialization*    _structural_sys;
-        MAST::StructuralDiscipline*              _discipline;
-        
-        Real
-        _length;
+        MAST::StructuralSystemInitialization* _structural_sys;
+        MAST::StructuralDiscipline*           _discipline;
         
         // create the property functions and add them to the
         MAST::Parameter
         *_thy,
         *_thz,
-        *_rho,
         *_E,
         *_nu,
+        *_rho,
         *_zero,
         *_velocity,
         *_mach,
         *_rho_air,
         *_gamma_air;
         
+        
         MAST::ConstantFieldFunction
         *_thy_f,
         *_thz_f,
-        *_rho_f,
         *_E_f,
         *_nu_f,
+        *_rho_f,
         *_hyoff_f,
         *_hzoff_f,
         *_velocity_f,
@@ -130,22 +134,12 @@ namespace MAST {
         *_rho_air_f,
         *_gamma_air_f;
         
+        
         /*!
          *   piston theory boundary condition for the whole domain
          */
         MAST::PistonTheoryBoundaryCondition*     _piston_bc;
-
-        /*!
-         *   piston theory boundary condition for the whole domain
-         */
-        MAST::TimeDomainFlutterSolver*           _flutter_solver;
         
-        /*!
-         *   flutter root from the analysis
-         */
-        MAST::FlutterRootBase*         _flutter_root;
-        
-
         // create the material property card
         MAST::IsotropicMaterialPropertyCard*     _m_card;
         
@@ -153,20 +147,22 @@ namespace MAST {
         MAST::Solid1DSectionElementPropertyCard* _p_card;
         
         // create the Dirichlet boundary condition on left edge
-        MAST::DirichletBoundaryCondition*        _dirichlet_left;
+        MAST::DirichletBoundaryCondition*     _dirichlet_left;
         
         // create the Dirichlet boundary condition on right edge
-        MAST::DirichletBoundaryCondition*        _dirichlet_right;
+        MAST::DirichletBoundaryCondition*     _dirichlet_right;
+        
+        // create the pressure boundary condition
+        MAST::BoundaryConditionBase*             _p_load;
         
         // vector of parameters to evaluate sensitivity wrt
-        std::vector<MAST::Parameter*>            _params_for_sensitivity;
+        std::vector<MAST::Parameter*> _params_for_sensitivity;
         
-        // vector of basis vectors from modal analysis
-        std::vector<libMesh::NumericVector<Real>*> _basis;
+        // output quantity objects to evaluate stress
+        std::vector<MAST::StressStrainOutputBase*>  _outputs;
     };
 }
 
 
 
-#endif //  __mast_beam_piston_theory_flutter_h__
-
+#endif //  __mast_beam_piston_theory_time_accurate_analysis_h__

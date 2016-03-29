@@ -334,7 +334,6 @@ side_external_residual (bool request_jacobian,
     
     // for each boundary id, check if any of the sides on the element
     // has the associated boundary
-    bool calculate_jac = false;
     
     for (unsigned short int n=0; n<_elem.n_sides(); n++) {
         
@@ -358,27 +357,24 @@ side_external_residual (bool request_jacobian,
                 // apply all the types of loading
                 switch (it.first->second->type()) {
                     case MAST::SYMMETRY_WALL:
-                        calculate_jac = (calculate_jac ||
-                                         symmetry_surface_residual(request_jacobian,
-                                                                   f, jac,
-                                                                   n,
-                                                                   *it.first->second));
+                        symmetry_surface_residual(request_jacobian,
+                                                  f, jac,
+                                                  n,
+                                                  *it.first->second);
                         break;
                         
                     case MAST::SLIP_WALL:
-                        calculate_jac = (calculate_jac ||
-                                         slip_wall_surface_residual(request_jacobian,
-                                                                    f, jac,
-                                                                    n,
-                                                                    *it.first->second));
+                        slip_wall_surface_residual(request_jacobian,
+                                                   f, jac,
+                                                   n,
+                                                   *it.first->second);
                         break;
                         
                     case MAST::FAR_FIELD:
-                        calculate_jac = (calculate_jac ||
-                                         far_field_surface_residual(request_jacobian,
-                                                                    f, jac,
-                                                                    n,
-                                                                    *it.first->second));
+                        far_field_surface_residual(request_jacobian,
+                                                   f, jac,
+                                                   n,
+                                                   *it.first->second);
                         break;
                         
                     case MAST::DIRICHLET:
@@ -393,7 +389,7 @@ side_external_residual (bool request_jacobian,
             }
         }
     }
-    return (request_jacobian && calculate_jac);
+    return request_jacobian;
 }
 
 
@@ -417,7 +413,6 @@ side_external_residual_sensitivity (bool request_jacobian,
     
     // for each boundary id, check if any of the sides on the element
     // has the associated boundary
-    bool calculate_jac = false;
     
     for (unsigned short int n=0; n<_elem.n_sides(); n++) {
         
@@ -441,27 +436,24 @@ side_external_residual_sensitivity (bool request_jacobian,
                 // apply all the types of loading
                 switch (it.first->second->type()) {
                     case MAST::SYMMETRY_WALL:
-                        calculate_jac = (calculate_jac ||
-                                         symmetry_surface_residual_sensitivity(request_jacobian,
-                                                                               f, jac,
-                                                                               n,
-                                                                               *it.first->second));
+                        symmetry_surface_residual_sensitivity(request_jacobian,
+                                                              f, jac,
+                                                              n,
+                                                              *it.first->second);
                         break;
                         
                     case MAST::SLIP_WALL:
-                        calculate_jac = (calculate_jac ||
-                                         slip_wall_surface_residual_sensitivity(request_jacobian,
-                                                                                f, jac,
-                                                                                n,
-                                                                                *it.first->second));
+                        slip_wall_surface_residual_sensitivity(request_jacobian,
+                                                               f, jac,
+                                                               n,
+                                                               *it.first->second);
                         break;
                         
                     case MAST::FAR_FIELD:
-                        calculate_jac = (calculate_jac ||
-                                         far_field_surface_residual_sensitivity(request_jacobian,
-                                                                                f, jac,
-                                                                                n,
-                                                                                *it.first->second));
+                        far_field_surface_residual_sensitivity(request_jacobian,
+                                                               f, jac,
+                                                               n,
+                                                               *it.first->second);
                         break;
                         
                     case MAST::DIRICHLET:
@@ -476,7 +468,7 @@ side_external_residual_sensitivity (bool request_jacobian,
             }
         }
     }
-    return (request_jacobian && calculate_jac);
+    return request_jacobian;
 }
 
 

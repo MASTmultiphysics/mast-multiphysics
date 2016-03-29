@@ -741,11 +741,15 @@ MAST::PlateEulerFSIFlutterAnalysis::solve(bool if_write_output) {
     // FLUTTER SOLUTION
     ///////////////////////////////////////////////////////////////////
     MAST::FSIGeneralizedAeroForceAssembly fsi_assembly;
+    _flutter_solver->clear();
     
     if (_structural_comm->get() != MPI_COMM_NULL) {
 
-    fsi_assembly.attach_discipline_and_system(*_structural_discipline,
-                                              *_structural_sys_init);
+        fsi_assembly.attach_discipline_and_system(*_structural_discipline,
+                                                  *_structural_sys_init);
+        std::ostringstream oss;
+        oss << "flutter_output_" << __init->comm().rank() << ".txt";
+        _flutter_solver->set_output_file(oss.str());
     }
     
     fsi_assembly.init(*_freq_function,

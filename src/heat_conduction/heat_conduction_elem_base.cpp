@@ -278,7 +278,6 @@ side_external_residual (bool request_jacobian,
     
     // for each boundary id, check if any of the sides on the element
     // has the associated boundary
-    bool calculate_jac = false;
     
     for (unsigned short int n=0; n<_elem.n_sides(); n++) {
         
@@ -302,27 +301,24 @@ side_external_residual (bool request_jacobian,
                 // apply all the types of loading
                 switch (it.first->second->type()) {
                     case MAST::HEAT_FLUX:
-                        calculate_jac = (calculate_jac ||
-                                         surface_flux_residual(request_jacobian,
-                                                               f, jac,
-                                                               n,
-                                                               *it.first->second));
+                        surface_flux_residual(request_jacobian,
+                                              f, jac,
+                                              n,
+                                              *it.first->second);
                         break;
                         
                     case MAST::CONVECTION_HEAT_FLUX:
-                        calculate_jac = (calculate_jac ||
-                                         surface_convection_residual(request_jacobian,
-                                                                     f, jac,
-                                                                     n,
-                                                                     *it.first->second));
+                        surface_convection_residual(request_jacobian,
+                                                    f, jac,
+                                                    n,
+                                                    *it.first->second);
                         break;
                         
                     case MAST::SURFACE_RADIATION_HEAT_FLUX:
-                        calculate_jac = (calculate_jac ||
-                                         surface_radiation_residual(request_jacobian,
-                                                                    f, jac,
-                                                                    n,
-                                                                    *it.first->second));
+                        surface_radiation_residual(request_jacobian,
+                                                   f, jac,
+                                                   n,
+                                                   *it.first->second);
                         break;
                         
                     case MAST::DIRICHLET:
@@ -337,7 +333,7 @@ side_external_residual (bool request_jacobian,
             }
         }
     }
-    return (request_jacobian && calculate_jac);
+    return request_jacobian;
 }
 
 
@@ -358,7 +354,6 @@ volume_external_residual (bool request_jacobian,
     
     // for each boundary id, check if any of the sides on the element
     // has the associated boundary
-    bool calculate_jac = false;
     
     libMesh::subdomain_id_type sid = _elem.subdomain_id();
     // find the loads on this boundary and evaluate the f and jac
@@ -369,30 +364,26 @@ volume_external_residual (bool request_jacobian,
         switch (it.first->second->type()) {
                 
             case MAST::HEAT_FLUX:
-                calculate_jac = (calculate_jac ||
-                                 surface_flux_residual(request_jacobian,
-                                                       f, jac,
-                                                       *it.first->second));
+                surface_flux_residual(request_jacobian,
+                                      f, jac,
+                                      *it.first->second);
                 break;
             case MAST::CONVECTION_HEAT_FLUX:
-                calculate_jac = (calculate_jac ||
-                                 surface_convection_residual(request_jacobian,
-                                                             f, jac,
-                                                             *it.first->second));
+                surface_convection_residual(request_jacobian,
+                                            f, jac,
+                                            *it.first->second);
                 break;
                 
             case MAST::SURFACE_RADIATION_HEAT_FLUX:
-                calculate_jac = (calculate_jac ||
-                                 surface_radiation_residual(request_jacobian,
-                                                            f, jac,
-                                                            *it.first->second));
+                surface_radiation_residual(request_jacobian,
+                                           f, jac,
+                                           *it.first->second);
                 break;
                 
             case MAST::HEAT_SOURCE:
-                calculate_jac = (calculate_jac ||
-                                 volume_heat_source_residual(request_jacobian,
-                                                             f, jac,
-                                                             *it.first->second));
+                volume_heat_source_residual(request_jacobian,
+                                            f, jac,
+                                            *it.first->second);
                 break;
                 
             default:
@@ -402,7 +393,7 @@ volume_external_residual (bool request_jacobian,
         }
     }
     
-    return (request_jacobian && calculate_jac);
+    return request_jacobian;
 }
 
 
@@ -424,7 +415,6 @@ side_external_residual_sensitivity (bool request_jacobian,
     
     // for each boundary id, check if any of the sides on the element
     // has the associated boundary
-    bool calculate_jac = false;
     
     for (unsigned short int n=0; n<_elem.n_sides(); n++) {
         
@@ -448,27 +438,24 @@ side_external_residual_sensitivity (bool request_jacobian,
                 // apply all the types of loading
                 switch (it.first->second->type()) {
                     case MAST::HEAT_FLUX:
-                        calculate_jac = (calculate_jac ||
-                                         surface_flux_residual_sensitivity(request_jacobian,
-                                                                           f, jac,
-                                                                           n,
-                                                                           *it.first->second));
+                        surface_flux_residual_sensitivity(request_jacobian,
+                                                          f, jac,
+                                                          n,
+                                                          *it.first->second);
                         break;
                         
                     case MAST::CONVECTION_HEAT_FLUX:
-                        calculate_jac = (calculate_jac ||
-                                         surface_convection_residual_sensitivity(request_jacobian,
-                                                                                 f, jac,
-                                                                                 n,
-                                                                                 *it.first->second));
+                        surface_convection_residual_sensitivity(request_jacobian,
+                                                                f, jac,
+                                                                n,
+                                                                *it.first->second);
                         break;
                         
                     case MAST::SURFACE_RADIATION_HEAT_FLUX:
-                        calculate_jac = (calculate_jac ||
-                                         surface_radiation_residual_sensitivity(request_jacobian,
-                                                                                f, jac,
-                                                                                n,
-                                                                                *it.first->second));
+                        surface_radiation_residual_sensitivity(request_jacobian,
+                                                               f, jac,
+                                                               n,
+                                                               *it.first->second);
                         break;
                         
                     case MAST::DIRICHLET:
@@ -483,7 +470,7 @@ side_external_residual_sensitivity (bool request_jacobian,
             }
         }
     }
-    return (request_jacobian && calculate_jac);
+    return request_jacobian;
 }
 
 
@@ -503,7 +490,6 @@ volume_external_residual_sensitivity (bool request_jacobian,
     
     // for each boundary id, check if any of the sides on the element
     // has the associated boundary
-    bool calculate_jac = false;
     
     libMesh::subdomain_id_type sid = _elem.subdomain_id();
     // find the loads on this boundary and evaluate the f and jac
@@ -514,30 +500,27 @@ volume_external_residual_sensitivity (bool request_jacobian,
         switch (it.first->second->type()) {
                 
             case MAST::HEAT_FLUX:
-                calculate_jac = (calculate_jac ||
-                                 surface_flux_residual_sensitivity(request_jacobian,
-                                                                   f, jac,
-                                                                   *it.first->second));
+                surface_flux_residual_sensitivity(request_jacobian,
+                                                  f, jac,
+                                                  *it.first->second);
                 break;
+
             case MAST::CONVECTION_HEAT_FLUX:
-                calculate_jac = (calculate_jac ||
-                                 surface_convection_residual_sensitivity(request_jacobian,
-                                                                         f, jac,
-                                                                         *it.first->second));
+                surface_convection_residual_sensitivity(request_jacobian,
+                                                        f, jac,
+                                                        *it.first->second);
                 break;
                 
             case MAST::SURFACE_RADIATION_HEAT_FLUX:
-                calculate_jac = (calculate_jac ||
-                                 surface_radiation_residual_sensitivity(request_jacobian,
-                                                                        f, jac,
-                                                                        *it.first->second));
+                surface_radiation_residual_sensitivity(request_jacobian,
+                                                       f, jac,
+                                                       *it.first->second);
                 break;
                 
             case MAST::HEAT_SOURCE:
-                calculate_jac = (calculate_jac ||
-                                 volume_heat_source_residual_sensitivity(request_jacobian,
-                                                                         f, jac,
-                                                                         *it.first->second));
+                volume_heat_source_residual_sensitivity(request_jacobian,
+                                                        f, jac,
+                                                        *it.first->second);
                 break;
                 
             default:
@@ -547,7 +530,7 @@ volume_external_residual_sensitivity (bool request_jacobian,
         }
     }
     
-    return (request_jacobian && calculate_jac);
+    return request_jacobian;
 }
 
 

@@ -121,7 +121,7 @@ BOOST_AUTO_TEST_CASE    (BeamPistonTheoryFlutterSolutionSensitivity) {
         // calculate the analytical sensitivity
         // analysis is required at the baseline before sensitivity solution
         // and the solution has changed after the previous perturbed solution
-        this->solve(false);
+        this->solve(false, 1.e-4, 100);
         dV = this->sensitivity_solve(f);
         
         // now calculate the finite difference sensitivity

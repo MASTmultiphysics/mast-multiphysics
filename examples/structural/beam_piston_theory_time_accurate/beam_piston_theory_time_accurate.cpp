@@ -22,11 +22,12 @@
 
 
 // MAST includes
-#include "examples/structural/beam_oscillating_load/beam_oscillating_load.h"
+#include "examples/structural/beam_piston_theory_time_accurate/beam_piston_theory_time_accurate.h"
 #include "elasticity/structural_system_initialization.h"
 #include "elasticity/structural_element_base.h"
 #include "elasticity/structural_transient_assembly.h"
 #include "elasticity/structural_discipline.h"
+#include "elasticity/piston_theory_boundary_condition.h"
 #include "elasticity/stress_output_base.h"
 #include "solver/second_order_newmark_transient_solver.h"
 #include "base/parameter.h"
@@ -34,6 +35,7 @@
 #include "property_cards/solid_1d_section_element_property_card.h"
 #include "property_cards/isotropic_material_property_card.h"
 #include "boundary_condition/dirichlet_boundary_condition.h"
+
 
 // libMesh includes
 #include "libmesh/mesh_generation.h"
@@ -45,98 +47,9 @@
 extern libMesh::LibMeshInit* __init;
 
 
-namespace MAST {
-
-    // this is a function definition for the oscillating pressure
-    class OscillatingDistributedLoad:
-    public MAST::FieldFunction<Real> {
-        
-    public:
-        
-        /*!
-         *   \par p is the distributed load and \par f is the circular frequency
-         */
-        OscillatingDistributedLoad(MAST::Parameter& p,
-                                   MAST::Parameter& f):
-        MAST::FieldFunction<Real>("pressure"),
-        _p(p),
-        _f(f) {
-         
-            _functions.insert(p.master());
-            _functions.insert(f.master());
-        }
-        
-        virtual ~OscillatingDistributedLoad() { }
-        
-
-        OscillatingDistributedLoad(const MAST::OscillatingDistributedLoad& f):
-        MAST::FieldFunction<Real>(f),
-        _p(f._p),
-        _f(f._f) {
-            
-            _functions.insert(_p.master());
-            _functions.insert(_f.master());
-        }
-        
-        /*!
-         *   @returns a clone of the function
-         */
-        virtual std::auto_ptr<MAST::FieldFunction<Real> > clone() const {
-            
-            MAST::FieldFunction<Real>* rval =
-            new MAST::OscillatingDistributedLoad(*this);
-            
-            return std::auto_ptr<MAST::FieldFunction<Real> >(rval);
-            
-        }
-        
-        
-        /*!
-         *    calculates the value of the function at the specified point,
-         *    \par p, and time, \par t, and returns it in \p v.
-         */
-        virtual void operator() (const libMesh::Point& p,
-                                 const Real t,
-                                 Real& v) const {
-            
-            v = _p() * sin(_f()*t);
-        }
-        
-        
-        /*!
-         *    calculates the value of the function at the specified point,
-         *    \par p, and time, \par t, and returns it in \p v.
-         */
-        virtual void derivative (const MAST::DerivativeType d,
-                                 const MAST::FunctionBase& f,
-                                 const libMesh::Point& p,
-                                 const Real t,
-                                 Real& v) const {
-            
-            Real
-            dp = 0.,
-            df = 0.;
-            
-            // if the sensitivity parameter is the load parameter itself,
-            // then the sensitivity parameter will be nonzero.
-            if (_p.depends_on(f)) dp = 1.;
-            if (_f.depends_on(f)) df = 1.;
-            
-            v = dp * sin(_f()*t) + _p() * _f() * df * cos(_f() * t);
-        }
-        
-    protected:
-        
-        MAST::Parameter& _p;
-        
-        MAST::Parameter& _f;
-        
-    };
-}
 
 
-
-MAST::BeamOscillatingLoad::BeamOscillatingLoad() {
+MAST::BeamPistonTheoryTimeAccurateAnalysis::BeamPistonTheoryTimeAccurateAnalysis() {
     
     // length of domain
     _length     = 10.;
@@ -185,8 +98,10 @@ MAST::BeamOscillatingLoad::BeamOscillatingLoad() {
     _nu              = new MAST::Parameter("nu",      0.33);
     _rho             = new MAST::Parameter("rho",   2700.0);
     _zero            = new MAST::Parameter("zero",      0.);
-    _press           = new MAST::Parameter( "p",      2.e4);
-    _freq            = new MAST::Parameter("omega",   1.e2);
+    _velocity        = new MAST::Parameter("V"   ,    800.);
+    _mach            = new MAST::Parameter("mach",      3.);
+    _rho_air         = new MAST::Parameter("rho" ,    1.05);
+    _gamma_air       = new MAST::Parameter("gamma",    1.4);
     
     
     // prepare the vector of parameters with respect to which the sensitivity
@@ -198,20 +113,29 @@ MAST::BeamOscillatingLoad::BeamOscillatingLoad() {
     
     
     
-    _thy_f           = new MAST::ConstantFieldFunction("hy",      *_thy);
-    _thz_f           = new MAST::ConstantFieldFunction("hz",      *_thz);
-    _E_f             = new MAST::ConstantFieldFunction("E",         *_E);
-    _nu_f            = new MAST::ConstantFieldFunction("nu",       *_nu);
-    _rho_f           = new MAST::ConstantFieldFunction("rho",     *_rho);
-    _hyoff_f         = new MAST::ConstantFieldFunction("hy_off", *_zero);
-    _hzoff_f         = new MAST::ConstantFieldFunction("hz_off", *_zero);
+    _thy_f           = new MAST::ConstantFieldFunction("hy",          *_thy);
+    _thz_f           = new MAST::ConstantFieldFunction("hz",          *_thz);
+    _E_f             = new MAST::ConstantFieldFunction("E",             *_E);
+    _nu_f            = new MAST::ConstantFieldFunction("nu",           *_nu);
+    _rho_f           = new MAST::ConstantFieldFunction("rho",         *_rho);
+    _hyoff_f         = new MAST::ConstantFieldFunction("hy_off",     *_zero);
+    _hzoff_f         = new MAST::ConstantFieldFunction("hz_off",     *_zero);
+    _velocity_f      = new MAST::ConstantFieldFunction("V",      *_velocity);
+    _mach_f          = new MAST::ConstantFieldFunction("mach",       *_mach);
+    _rho_air_f       = new MAST::ConstantFieldFunction("rho",     *_rho_air);
+    _gamma_air_f     = new MAST::ConstantFieldFunction("gamma", *_gamma_air);
 
-    _press_f         = new MAST::OscillatingDistributedLoad(*_press, *_freq);
     
-    // initialize the load
-    _p_load          = new MAST::BoundaryConditionBase(MAST::SURFACE_PRESSURE);
-    _p_load->add(*_press_f);
-    _discipline->add_volume_load(0, *_p_load);
+    // now initialize the piston theory boundary conditions
+    RealVectorX  vel = RealVectorX::Zero(3);
+    vel(0)           = 1.;  // flow along the x-axis
+    _piston_bc       = new MAST::PistonTheoryBoundaryCondition(1,     // order
+                                                               vel);  // vel vector
+    _piston_bc->add(*_velocity_f);
+    _piston_bc->add(*_mach_f);
+    _piston_bc->add(*_rho_air_f);
+    _piston_bc->add(*_gamma_air_f);
+    _discipline->add_volume_load(0, *_piston_bc);
     
     // create the material property card
     _m_card         = new MAST::IsotropicMaterialPropertyCard;
@@ -276,7 +200,7 @@ MAST::BeamOscillatingLoad::BeamOscillatingLoad() {
 
 
 
-MAST::BeamOscillatingLoad::~BeamOscillatingLoad() {
+MAST::BeamPistonTheoryTimeAccurateAnalysis::~BeamPistonTheoryTimeAccurateAnalysis() {
     
     delete _m_card;
     delete _p_card;
@@ -292,7 +216,10 @@ MAST::BeamOscillatingLoad::~BeamOscillatingLoad() {
     delete _rho_f;
     delete _hyoff_f;
     delete _hzoff_f;
-    delete _press_f;
+    delete _velocity_f;
+    delete _mach_f;
+    delete _rho_air_f;
+    delete _gamma_air_f;
     
     delete _thy;
     delete _thz;
@@ -300,8 +227,10 @@ MAST::BeamOscillatingLoad::~BeamOscillatingLoad() {
     delete _nu;
     delete _rho;
     delete _zero;
-    delete _press;
-    delete _freq;
+    delete _velocity;
+    delete _mach;
+    delete _rho_air;
+    delete _gamma_air;
     
     
     
@@ -310,7 +239,9 @@ MAST::BeamOscillatingLoad::~BeamOscillatingLoad() {
     
     delete _discipline;
     delete _structural_sys;
-    
+
+    delete _piston_bc;
+
     // iterate over the output quantities and delete them
     std::vector<MAST::StressStrainOutputBase*>::iterator
     it   =   _outputs.begin(),
@@ -325,7 +256,7 @@ MAST::BeamOscillatingLoad::~BeamOscillatingLoad() {
 
 
 MAST::Parameter*
-MAST::BeamOscillatingLoad::get_parameter(const std::string &nm) {
+MAST::BeamPistonTheoryTimeAccurateAnalysis::get_parameter(const std::string &nm) {
     
     MAST::Parameter *rval = NULL;
     
@@ -363,7 +294,7 @@ MAST::BeamOscillatingLoad::get_parameter(const std::string &nm) {
 
 
 const libMesh::NumericVector<Real>&
-MAST::BeamOscillatingLoad::solve(bool if_write_output) {
+MAST::BeamPistonTheoryTimeAccurateAnalysis::solve(bool if_write_output) {
     
 
     // create the nonlinear assembly object
@@ -380,7 +311,7 @@ MAST::BeamOscillatingLoad::solve(bool if_write_output) {
     dynamic_cast<libMesh::NonlinearImplicitSystem&>(assembly.system());
     
     // zero the solution before solving
-    nonlin_sys.solution->zero();
+    *nonlin_sys.solution = 1.e-4;
     this->clear_stresss();
     
 
@@ -390,17 +321,13 @@ MAST::BeamOscillatingLoad::solve(bool if_write_output) {
     
     // time solver parameters
     Real
-    tval     = 0.,
-    pi       = acos(-1.),
-    t_period = 1./((*_freq)()/2./pi);
+    tval     = 0.;
     
     unsigned int
     t_step            = 0,
-    n_steps_per_cycle = 20,
-    n_cycles          = 40,
-    n_steps           = n_steps_per_cycle*n_cycles;
+    n_steps           = 1000;
 
-    solver.dt         = t_period/n_steps_per_cycle;
+    solver.dt         = 1.0e-3;
     
     
     
@@ -448,7 +375,7 @@ MAST::BeamOscillatingLoad::solve(bool if_write_output) {
 
 
 const libMesh::NumericVector<Real>&
-MAST::BeamOscillatingLoad::sensitivity_solve(MAST::Parameter& p,
+MAST::BeamPistonTheoryTimeAccurateAnalysis::sensitivity_solve(MAST::Parameter& p,
                                      bool if_write_output) {
     
     _discipline->add_parameter(p);
@@ -509,7 +436,7 @@ MAST::BeamOscillatingLoad::sensitivity_solve(MAST::Parameter& p,
 
 
 void
-MAST::BeamOscillatingLoad::clear_stresss() {
+MAST::BeamPistonTheoryTimeAccurateAnalysis::clear_stresss() {
     
     // iterate over the output quantities and delete them
     std::vector<MAST::StressStrainOutputBase*>::iterator

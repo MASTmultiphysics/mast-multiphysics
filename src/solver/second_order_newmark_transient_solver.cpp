@@ -179,6 +179,17 @@ _elem_calculations(MAST::ElementBase& elem,
                                   f_x_jac_xdot,  // Jac of forcing vector wrt x_dot
                                   f_x_jac);      // Jac of forcing vector wrt x
     
+    // N-R solver: r(x) = 0, and provides estimates for x (current solution)
+    // in an iterative fashion.
+    // Newmark solver uses x and evaluates x_ddot and x_dot (acc and vel at
+    // current x).
+    //
+    // N-R requires   r(x) and dr/dx   (residual and Jacobian)
+    // N-R asks Newmark to provide these quantities
+    //
+    // Newmark asks elements (which provide physics) for contributions to
+    // f_m and f_x (using the current estimates of x_ddot, x_dot, x)
+    //
     //
     //  The residual here is modeled as
     // r = (f_m + f_x )= 0
@@ -187,10 +198,10 @@ _elem_calculations(MAST::ElementBase& elem,
     // f_x = int_Omega phi_i u_i - int_Gamma phi q_n [typical conductance and heat flux combination, for example]
     //
     // This method assumes
-    //     x      = x0 + dt x0_dot + (1/2-beta) dt^2 x0_ddot + beta dt^2 x1_ddot
+    //     x      = x0 + dt x0_dot + (1/2-beta) dt^2 x0_ddot + beta dt^2 x_ddot
     // or, x_ddot = (x-x0)/beta/dt^2 - 1/beta/dt x0_dot - (1/2-beta)/beta x0_ddot
     //
-    //     x_dot  = x0_dot + (1-gamma) dt x0_ddot + gamma dt x1_ddot
+    //     x_dot  = x0_dot + (1-gamma) dt x0_ddot + gamma dt x_ddot
     // or, x_dot  = x0_dot + (1-gamma) dt x0_ddot +
     //              gamma dt [(x-x0)/beta/dt^2 - 1/beta/dt x0_dot - (1/2-beta)/beta x0_ddot]
     //            = x0_dot + (1-gamma) dt x0_ddot +

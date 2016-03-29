@@ -562,26 +562,23 @@ volume_external_residual (bool request_jacobian,
         switch (it.first->second->type()) {
                 
             case MAST::SURFACE_PRESSURE:
-                calculate_jac = (calculate_jac ||
-                                 surface_pressure_residual(request_jacobian,
-                                                           f, jac,
-                                                           *it.first->second));
+                surface_pressure_residual(request_jacobian,
+                                          f, jac,
+                                          *it.first->second);
                 break;
 
             case MAST::PISTON_THEORY:
-                calculate_jac = (calculate_jac ||
-                                 piston_theory_residual(request_jacobian,
-                                                        f,
-                                                        jac_xdot,
-                                                        jac,
-                                                        *it.first->second));
+                piston_theory_residual(request_jacobian,
+                                       f,
+                                       jac_xdot,
+                                       jac,
+                                       *it.first->second);
                 break;
 
             case MAST::TEMPERATURE:
-                calculate_jac = (calculate_jac ||
-                                 thermal_residual(request_jacobian,
-                                                  f, jac,
-                                                  *it.first->second));
+                thermal_residual(request_jacobian,
+                                 f, jac,
+                                 *it.first->second);
                 break;
                 
 

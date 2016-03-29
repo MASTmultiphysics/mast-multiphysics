@@ -306,12 +306,16 @@ MAST::PlatePistonTheoryFlutterAnalysis::get_parameter(const std::string &nm) {
 
 
 Real
-MAST::PlatePistonTheoryFlutterAnalysis::solve(bool if_write_output) {
+MAST::PlatePistonTheoryFlutterAnalysis::solve(bool if_write_output,
+                                              const Real tol,
+                                              const unsigned int max_bisection_iters) {
     
     // clear out the data structures of the flutter solver before
     // this solution
     _flutter_root = NULL;
     _flutter_solver->clear();
+    std::string nm("flutter_output.txt");
+    _flutter_solver->set_output_file(nm);
     
     // set the velocity of piston theory to zero for modal analysis
     (*_velocity) = 0.;
@@ -388,11 +392,9 @@ MAST::PlatePistonTheoryFlutterAnalysis::solve(bool if_write_output) {
                                 9.0e3,        // upper V
                                 10,           // number of divisions
                                 _basis);      // basis vectors
-//    _flutter_solver->scan_for_roots();
-//    _flutter_solver->print_sorted_roots();
-//    _flutter_solver->print_crossover_points();
+
     std::pair<bool, MAST::FlutterRootBase*>
-    sol = _flutter_solver->analyze_and_find_critical_root_without_tracking(1.e-3, 20);
+    sol = _flutter_solver->analyze_and_find_critical_root_without_tracking(tol, max_bisection_iters);
     _flutter_solver->print_sorted_roots();
     fsi_assembly.clear_discipline_and_system();
     _flutter_solver->clear_assembly_object();
