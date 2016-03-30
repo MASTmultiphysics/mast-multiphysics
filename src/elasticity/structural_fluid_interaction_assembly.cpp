@@ -227,7 +227,6 @@ assemble_reduced_order_quantity
     if (_base_sol)
         localized_solution.reset(_build_localized_vector(nonlin_sys,
                                                          *_base_sol).release());
-    
     // also create localized solution vectos for the bassis vectors
     const unsigned int
     n_basis = (unsigned int)basis.size();

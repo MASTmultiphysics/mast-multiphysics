@@ -62,9 +62,44 @@ namespace MAST {
         
         
         /*!
+         *   abstract class defines the interface to provide the steady-state
+         *   solution
+         */
+        class SteadySolver {
+        public:
+            
+            
+            SteadySolver() {}
+            
+            virtual ~SteadySolver() {}
+            
+            /*!
+             *  solves for the steady state solution, and @returns
+             *  a const-reference to the solution.
+             */
+            virtual const libMesh::NumericVector<Real>&
+            solve() = 0;
+            
+            
+            /*!
+             * @returns  a const-reference to the solution.
+             */
+            virtual const libMesh::NumericVector<Real>&
+            solution() = 0;
+            
+        };
+
+        
+        /*!
          *    attaches the assembly object to this solver.
          */
         void attach_assembly(MAST::StructuralFluidInteractionAssembly&   assembly);
+        
+        
+        /*!
+         *    attaches the steady solution object
+         */
+        void attach_steady_solver(MAST::FlutterSolverBase::SteadySolver& solver);
         
         
         /*!
@@ -109,7 +144,6 @@ namespace MAST {
         virtual void print_crossover_points() = 0;
         
         
-        
     protected:
         
         
@@ -130,6 +164,12 @@ namespace MAST {
          *    file to which the result will be written
          */
         std::ofstream*                                  _output;
+        
+        
+        /*!
+         *    object provides the steady state solution.
+         */
+        MAST::FlutterSolverBase::SteadySolver* _steady_solver;
         
     };
 }

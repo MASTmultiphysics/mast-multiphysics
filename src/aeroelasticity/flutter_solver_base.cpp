@@ -33,7 +33,8 @@
 MAST::FlutterSolverBase::FlutterSolverBase():
 _assembly(NULL),
 _basis_vectors(NULL),
-_output(NULL) {
+_output(NULL),
+_steady_solver(NULL) {
     
 }
 
@@ -77,9 +78,18 @@ MAST::FlutterSolverBase::clear() {
 
 
 void
+MAST::FlutterSolverBase::attach_steady_solver(MAST::FlutterSolverBase::SteadySolver &solver) {
+    
+    _steady_solver = &solver;
+}
+
+
+
+void
 MAST::FlutterSolverBase::clear_assembly_object() {
     
-    _assembly = NULL;
+    _assembly      = NULL;
+    _steady_solver = NULL;
 }
 
 

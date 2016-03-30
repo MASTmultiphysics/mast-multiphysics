@@ -140,7 +140,7 @@ init(libMesh::ElemType e_type, bool if_vk) {
     _alpha           = new MAST::Parameter("alpha",      2.5e-5);
     _kappa           = new MAST::Parameter("kappa",       5./6.);
     _zero            = new MAST::Parameter("zero",           0.);
-    _velocity        = new MAST::Parameter("V"   ,         000.);
+    _velocity        = new MAST::Parameter("V"   ,        8253.19);
     _mach            = new MAST::Parameter("mach",           3.);
     _rho_air         = new MAST::Parameter("rho" ,         1.05);
     _gamma_air       = new MAST::Parameter("gamma",         1.4);
@@ -391,6 +391,164 @@ get_parameter(const std::string &nm) {
 
 
 
+// define the class to provide the interface for nonlinear steady-state
+// solution that can be used by the flutter solver to solve for different
+// flight velocities
+namespace MAST {
+    
+    class SteadySolverInterface:
+    public MAST::FlutterSolverBase::SteadySolver {
+      
+    public:
+        SteadySolverInterface(MAST::PlateThermallyStressedPistonTheoryFlutterAnalysis& obj,
+                              bool if_output):
+        MAST::FlutterSolverBase::SteadySolver(),
+        _obj(obj),
+        _if_write_output(if_output),
+        _n_steps(25),
+        _if_only_aero_load_steps(false) {
+            
+            _obj._sys->add_vector("base_solution");
+        }
+        
+        virtual ~SteadySolverInterface() {
+        
+            _obj._sys->remove_vector("base_solution");
+        }
+        
+        
+        /*!
+         *  solves for the steady state solution, and @returns
+         *  a const-reference to the solution.
+         */
+        virtual const libMesh::NumericVector<Real>&
+        solve() {
+            
+            libMesh::NumericVector<Real>& sol = _obj._sys->get_vector("base_solution");
+            *_obj._sys->solution = sol;
+            
+            // now do the solve
+            libmesh_assert(_obj._initialized);
+            
+            bool if_vk = (_obj._p_card->strain_type() == MAST::VON_KARMAN_STRAIN);
+            
+            ///////////////////////////////////////////////////////////////
+            // first, solve the quasi-steady problem
+            ///////////////////////////////////////////////////////////////
+            // set the number of load steps
+            unsigned int
+            n_steps = 1;
+            if (if_vk) n_steps = _n_steps;
+            
+            Real
+            T0      = (*_obj._temp)(),
+            V0      = (*_obj._velocity)();
+            
+            // create the nonlinear assembly object
+            MAST::StructuralNonlinearAssembly   nonlin_assembly;
+            
+            nonlin_assembly.attach_discipline_and_system(*_obj._discipline,
+                                                         *_obj._structural_sys);
+            
+            libMesh::NonlinearImplicitSystem&      nonlin_sys   =
+            dynamic_cast<libMesh::NonlinearImplicitSystem&>(nonlin_assembly.system());
+            
+            // zero the solution before solving
+            _obj.clear_stresss();
+            
+            // now iterate over the load steps
+            for (unsigned int i=0; i<n_steps; i++) {
+                std::cout
+                << "Load step: " << i << std::endl;
+
+                // modify aero component
+                (*_obj._velocity)()  =  V0*(i+1.)/(1.*n_steps);
+                
+                // modify the thermal load if specified by the user
+                if (!_if_only_aero_load_steps)
+                    (*_obj._temp)()      =  T0*(i+1.)/(1.*n_steps);
+                nonlin_sys.solve();
+            }
+            
+            // evaluate the outputs
+            //nonlin_assembly.calculate_outputs(*(_obj._sys->solution));
+            
+            nonlin_assembly.clear_discipline_and_system();
+            
+            if (_if_write_output) {
+                
+                std::cout << "Writing output to : output.exo" << std::endl;
+                
+                std::set<std::string> sys_to_write;
+                sys_to_write.insert(_obj._sys->name());
+                
+                // write the solution for visualization
+                libMesh::ExodusII_IO(*_obj._mesh).write_equation_systems("output.exo",
+                                                                         *_obj._eq_sys,
+                                                                         &sys_to_write);
+                
+                //  _obj._discipline->plot_stress_strain_data<libMesh::ExodusII_IO>("stress_output.exo");
+            }
+            
+            
+            // copy the solution to the base solution vector
+            sol = *_obj._sys->solution;
+            
+            return sol;
+        }
+        
+        
+        /*!
+         *   sets the number of steps to be used for nonlinaer steady analysis.
+         *   The default is 25 for noninear and 1 for linear.
+         */
+        void set_n_load_steps(unsigned int n) {
+            _n_steps = n;
+        }
+        
+        
+        /*!
+         *   Tells the solver to increment only the aero loads during the 
+         *   nonlinear stepping. \p false by default.
+         */
+        void set_modify_only_aero_load(bool f) {
+            _if_only_aero_load_steps = f;
+        }
+
+        
+        /*!
+         * @returns  a const-reference to the solution.
+         */
+        virtual const libMesh::NumericVector<Real>&
+        solution() { return _obj._sys->get_vector("base_solution"); }
+
+        
+    protected:
+        
+        /*!
+         *   pointer to the object that hold all the solution data
+         */
+        MAST::PlateThermallyStressedPistonTheoryFlutterAnalysis& _obj;
+        
+        /*!
+         *   flag to toggle output
+         */
+        bool _if_write_output;
+        
+        /*!
+         *   number of nonliear load increment steps
+         */
+        unsigned int _n_steps;
+        
+        /*!
+         *   only aero load is modified during nonlinear iterations
+         */
+        bool _if_only_aero_load_steps;
+        
+    };
+}
+
+
 
 Real
 MAST::PlateThermallyStressedPistonTheoryFlutterAnalysis::
@@ -398,66 +556,16 @@ solve(bool if_write_output,
       const Real tol,
       const unsigned int max_bisection_iters) {
     
-    libmesh_assert(_initialized);
     
-    bool if_vk = (_p_card->strain_type() == MAST::VON_KARMAN_STRAIN);
-
-    ///////////////////////////////////////////////////////////////
-    // first, solve the quasi-steady problem
-    ///////////////////////////////////////////////////////////////
-    // set the number of load steps
-    unsigned int
-    n_steps = 1;
-    if (if_vk) n_steps = 25;
-    
-    Real
-    T0      = (*_temp)(),
-    V0      = (*_velocity)();
-
-    // create the nonlinear assembly object
-    MAST::StructuralNonlinearAssembly   nonlin_assembly;
-    
-    nonlin_assembly.attach_discipline_and_system(*_discipline, *_structural_sys);
-    
-    libMesh::NonlinearImplicitSystem&      nonlin_sys   =
-    dynamic_cast<libMesh::NonlinearImplicitSystem&>(nonlin_assembly.system());
-    
-    // zero the solution before solving
-    nonlin_sys.solution->zero();
-    this->clear_stresss();
-    
-    // now iterate over the load steps
-    for (unsigned int i=0; i<n_steps; i++) {
-        std::cout
-        << "Load step: " << i << std::endl;
-        
-        (*_temp)()      =  T0*(i+1.)/(1.*n_steps);
-        (*_velocity)()  =  V0*(i+1.)/(1.*n_steps);
-        nonlin_sys.solve();
-    }
-    
-    // evaluate the outputs
-    nonlin_assembly.calculate_outputs(*(_sys->solution));
-    
-    nonlin_assembly.clear_discipline_and_system();
-    
-    if (if_write_output) {
-        
-        std::cout << "Writing output to : output.exo" << std::endl;
-        
-        std::set<std::string> sys_to_write;
-        sys_to_write.insert(_sys->name());
-        
-        // write the solution for visualization
-        libMesh::ExodusII_IO(*_mesh).write_equation_systems("output.exo",
-                                                            *_eq_sys,
-                                                            &sys_to_write);
-        
-        _discipline->plot_stress_strain_data<libMesh::ExodusII_IO>("stress_output.exo");
-    }
-    
-    // copy the base solution for later use
-    _sys->add_vector("base_solution") = *_sys->solution;
+    MAST::SteadySolverInterface steady_solve(*this, if_write_output);
+    // solve for the steady state at zero velocity
+    (*_velocity) = 0.;
+    steady_solve.solve();
+    // now that we have the solution under the influence of thermal loads,
+    // we will use a small number of load steps to get to the steady-state
+    // solution
+    steady_solve.set_n_load_steps(4);
+    steady_solve.set_modify_only_aero_load(true);
     
     
     ///////////////////////////////////////////////////////////////
@@ -475,7 +583,7 @@ solve(bool if_write_output,
     _sys->initialize_condensed_dofs(*_discipline);
     
     // set the basis solution about which the structure will be initialized
-    modal_assembly.set_base_solution(_sys->get_vector("base_solution"));
+    modal_assembly.set_base_solution(steady_solve.solution());
     
     modal_assembly.attach_discipline_and_system(*_discipline, *_structural_sys);
     _sys->eigenproblem_solve();
@@ -541,13 +649,16 @@ solve(bool if_write_output,
     }
     
     // now initialize the flutter solver
+    _flutter_solver->attach_steady_solver(steady_solve);
+    
+    // initialize the assembly object for the flutter solver
     MAST::StructuralFluidInteractionAssembly fsi_assembly;
     fsi_assembly.attach_discipline_and_system(*_discipline,
                                               *_structural_sys);
     
     // set the base solution about which the linearized stability solution
     // is performed
-    fsi_assembly.set_base_solution(_sys->get_vector("base_solution"));
+    fsi_assembly.set_base_solution(steady_solve.solution());
     
     // attach the assembly function to the flutter solver
     _flutter_solver->attach_assembly(fsi_assembly);

@@ -691,6 +691,21 @@ MAST::TimeDomainFlutterSolver::_initialize_matrices(Real U_inf,
     //   B  = [  I  0 ]
     //        [  0  M ].
     //
+
+    
+    // set the velocity value in the parameter that was provided
+    (*_velocity_param) = U_inf;
+    
+
+    // if the steady solver object is provided, then solve for the
+    // steady state using this velocity
+    if (_steady_solver) {
+        libMesh::out
+        << "***  Performing Steady State Solve ***" << std::endl;
+        
+        _steady_solver->solve();
+    }
+    
     
     const unsigned int n = (unsigned int)_basis_vectors->size();
 
@@ -708,9 +723,6 @@ MAST::TimeDomainFlutterSolver::_initialize_matrices(Real U_inf,
     qty_map[MAST::STIFFNESS]  = &k;
     
     
-    // set the velocity value in the parameter that was provided
-    (*_velocity_param) = U_inf;
-
     _assembly->assemble_reduced_order_quantity(*_basis_vectors,
                                                qty_map);
     
