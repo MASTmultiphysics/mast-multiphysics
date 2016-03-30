@@ -315,14 +315,14 @@ MAST::PanelSmallDisturbanceFrequencyDomainInviscidAnalysis3DHalfDomain::get_para
     
     // if the param was not found, then print the message
     if (!found) {
-        std::cout
+        libMesh::out
         << std::endl
         << "Parameter not found by name: " << nm << std::endl
         << "Valid names are: "
         << std::endl;
         for (it = _params_for_sensitivity.begin(); it != end; it++)
-            std::cout << "   " << (*it)->name() << std::endl;
-        std::cout << std::endl;
+            libMesh::out << "   " << (*it)->name() << std::endl;
+        libMesh::out << std::endl;
     }
     
     return rval;
@@ -375,7 +375,7 @@ MAST::PanelSmallDisturbanceFrequencyDomainInviscidAnalysis3DHalfDomain::solve(bo
         
         
         // first, write the real part
-        std::cout
+        libMesh::out
         << "Writing real output to : real_output.exo" << std::endl;
         
         _sys->solution->swap(real_sol);
@@ -385,7 +385,7 @@ MAST::PanelSmallDisturbanceFrequencyDomainInviscidAnalysis3DHalfDomain::solve(bo
         
         
         // next, write the imag part
-        std::cout
+        libMesh::out
         << "Writing imag output to : imag_output.exo" << std::endl;
         
         _sys->solution->swap(imag_sol);
@@ -499,7 +499,7 @@ MAST::PanelSmallDisturbanceFrequencyDomainInviscidAnalysis3DHalfDomain::sensitiv
         oss1 << "output_" << p.name() << ".exo";
         oss2 << "output_" << p.name() << ".exo";
         
-        std::cout
+        libMesh::out
         << "Writing sensitivity output to : " << oss1.str()
         << "  and stress/strain sensitivity to : " << oss2.str()
         << std::endl;

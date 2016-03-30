@@ -790,7 +790,7 @@ evaluate(const std::vector<Real>& dvars,
     libMesh::ExodusII_IO out(*_mesh);
     // now iterate over the load steps
     for (unsigned int i=0; i<n_steps; i++) {
-        std::cout
+        libMesh::out
         << "Load step: " << i << std::endl;
         
         (*_temp)()  =  T0*(i+1.)/(1.*n_steps);
@@ -857,7 +857,7 @@ evaluate(const std::vector<Real>& dvars,
             << i
             << ".exo";
             
-            std::cout
+            libMesh::out
             << "Writing mode " << i << " to : "
             << file_name.str() << std::endl;
             

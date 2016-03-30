@@ -397,14 +397,14 @@ MAST::PlateOscillatingLoad::get_parameter(const std::string &nm) {
     
     // if the param was not found, then print the message
     if (!found) {
-        std::cout
+        libMesh::out
         << std::endl
         << "Parameter not found by name: " << nm << std::endl
         << "Valid names are: "
         << std::endl;
         for (it = _params_for_sensitivity.begin(); it != end; it++)
-            std::cout << "   " << (*it)->name() << std::endl;
-        std::cout << std::endl;
+            libMesh::out << "   " << (*it)->name() << std::endl;
+        libMesh::out << std::endl;
     }
     
     return rval;
@@ -460,12 +460,12 @@ MAST::PlateOscillatingLoad::solve(bool if_write_output) {
     
     
     if (if_write_output)
-        std::cout << "Writing output to : output.exo" << std::endl;
+        libMesh::out << "Writing output to : output.exo" << std::endl;
     
     // loop over time steps
     while (t_step < n_steps) {
         
-        std::cout
+        libMesh::out
         << "Time step: " << t_step
         << " :  t = " << tval
         << " :  xdot-L2 = " << solver.velocity().l2_norm()
@@ -544,7 +544,7 @@ MAST::PlateOscillatingLoad::sensitivity_solve(MAST::Parameter& p,
         oss1 << "output_" << p.name() << ".exo";
         oss2 << "output_" << p.name() << ".exo";
         
-        std::cout
+        libMesh::out
         << "Writing sensitivity output to : " << oss1.str()
         << "  and stress/strain sensitivity to : " << oss2.str()
         << std::endl;

@@ -48,7 +48,7 @@ stress_strain_transformation_matrix(const RealMatrixX& T,
             // the first three columns of the matrix
             mat(i,j)   =
             T(ids[j].first, ids[i].first) * T(ids[j].second, ids[i].second);
-            //            std::cout
+            //            libMesh::out
             //            << "( " << i << ", " << j << " ): "
             //            << ids[j].first+1 << ids[i].first+1 << " x "
             //            << ids[j].second+1 << ids[i].second+1 << std::endl;
@@ -58,7 +58,7 @@ stress_strain_transformation_matrix(const RealMatrixX& T,
             T(ids[j+3].first, ids[i].first)  * T(ids[j+3].second, ids[i].second) +
             T(ids[j+3].first, ids[i].second) * T(ids[j+3].second, ids[i].first);
             
-            //            std::cout
+            //            libMesh::out
             //            << "( " << i << ", " << j+3 << " ): "
             //            << ids[j+3].first+1 << ids[i].first+1  << " x "
             //            <<  ids[j+3].second+1 << ids[i].second+1

@@ -424,7 +424,7 @@ _bisection_search(const std::pair<MAST::FlutterSolutionBase*,
     
     while (n_iters < max_iters) {
         
-        std::cout
+        libMesh::out
         << upper_kr << "  "
         << upper_g << "  " << std::endl
         << lower_kr << "  "

@@ -404,7 +404,6 @@ side_external_residual(bool request_jacobian,
     
     // for each boundary id, check if any of the sides on the element
     // has the associated boundary
-    bool calculate_jac = false;
     
     for (unsigned short int n=0; n<_elem.n_sides(); n++) {
         
@@ -428,22 +427,20 @@ side_external_residual(bool request_jacobian,
                 // apply all the types of loading
                 switch (it.first->second->type()) {
                     case MAST::SURFACE_PRESSURE:
-                        calculate_jac = (calculate_jac ||
-                                         surface_pressure_residual(request_jacobian,
-                                                                   f, jac,
-                                                                   n,
-                                                                   *it.first->second));
+                        surface_pressure_residual(request_jacobian,
+                                                  f, jac,
+                                                  n,
+                                                  *it.first->second);
                         break;
 
                         
                     case MAST::PISTON_THEORY:
-                        calculate_jac = (calculate_jac ||
-                                         piston_theory_residual(request_jacobian,
-                                                                f,
-                                                                jac_xdot,
-                                                                jac,
-                                                                n,
-                                                                *it.first->second));
+                        piston_theory_residual(request_jacobian,
+                                               f,
+                                               jac_xdot,
+                                               jac,
+                                               n,
+                                               *it.first->second);
                         break;
 
                         
@@ -460,7 +457,7 @@ side_external_residual(bool request_jacobian,
             }
         }
     }
-    return (request_jacobian && calculate_jac);
+    return request_jacobian;
 }
 
 
@@ -483,7 +480,6 @@ side_frequency_domain_external_residual(bool request_jacobian,
     
     // for each boundary id, check if any of the sides on the element
     // has the associated boundary
-    bool calculate_jac = false;
     
     for (unsigned short int n=0; n<_elem.n_sides(); n++) {
         
@@ -509,12 +505,10 @@ side_frequency_domain_external_residual(bool request_jacobian,
 
                     case MAST::SMALL_DISTURBANCE_MOTION:
                         
-                        calculate_jac = (calculate_jac ||
-                                         small_disturbance_surface_pressure_residual
-                                         (request_jacobian,
-                                          f, jac,
-                                          n,
-                                          *it.first->second));
+                        small_disturbance_surface_pressure_residual(request_jacobian,
+                                                                    f, jac,
+                                                                    n,
+                                                                    *it.first->second);
                         break;
                         
                         
@@ -531,7 +525,7 @@ side_frequency_domain_external_residual(bool request_jacobian,
             }
         }
     }
-    return (request_jacobian && calculate_jac);
+    return request_jacobian;
 }
 
 
@@ -551,7 +545,6 @@ volume_external_residual (bool request_jacobian,
     
     // for each boundary id, check if any of the sides on the element
     // has the associated boundary
-    bool calculate_jac = false;
     
     libMesh::subdomain_id_type sid = _elem.subdomain_id();
     // find the loads on this boundary and evaluate the f and jac
@@ -593,7 +586,7 @@ volume_external_residual (bool request_jacobian,
         }
     }
     
-    return (request_jacobian && calculate_jac);
+    return request_jacobian;
 }
 
 
@@ -612,7 +605,6 @@ volume_frequency_domain_external_residual (bool request_jacobian,
     
     // for each boundary id, check if any of the sides on the element
     // has the associated boundary
-    bool calculate_jac = false;
     
     libMesh::subdomain_id_type sid = _elem.subdomain_id();
     // find the loads on this boundary and evaluate the f and jac
@@ -624,11 +616,9 @@ volume_frequency_domain_external_residual (bool request_jacobian,
                 
             case MAST::SMALL_DISTURBANCE_MOTION:
                 
-                calculate_jac = (calculate_jac ||
-                                 small_disturbance_surface_pressure_residual
-                                 (request_jacobian,
-                                  f, jac,
-                                  *it.first->second));
+                small_disturbance_surface_pressure_residual(request_jacobian,
+                                                            f, jac,
+                                                            *it.first->second);
                 break;
                 
             case MAST::SURFACE_PRESSURE:
@@ -641,7 +631,7 @@ volume_frequency_domain_external_residual (bool request_jacobian,
         }
     }
     
-    return (request_jacobian && calculate_jac);
+    return request_jacobian;
 }
 
 
@@ -667,7 +657,6 @@ side_external_residual_sensitivity(bool request_jacobian,
     
     // for each boundary id, check if any of the sides on the element
     // has the associated boundary
-    bool calculate_jac = false;
     
     for (unsigned short int n=0; n<_elem.n_sides(); n++) {
         
@@ -691,22 +680,20 @@ side_external_residual_sensitivity(bool request_jacobian,
                 // apply all the types of loading
                 switch (it.first->second->type()) {
                     case MAST::SURFACE_PRESSURE:
-                        calculate_jac = (calculate_jac ||
-                                         surface_pressure_residual_sensitivity(request_jacobian,
-                                                                               f, jac,
-                                                                               n,
-                                                                               *it.first->second));
+                        surface_pressure_residual_sensitivity(request_jacobian,
+                                                              f, jac,
+                                                              n,
+                                                              *it.first->second);
                         break;
                         
                         
                     case MAST::PISTON_THEORY:
-                        calculate_jac = (calculate_jac ||
-                                         piston_theory_residual_sensitivity(request_jacobian,
-                                                                            f,
-                                                                            jac_xdot,
-                                                                            jac,
-                                                                            n,
-                                                                            *it.first->second));
+                        piston_theory_residual_sensitivity(request_jacobian,
+                                                           f,
+                                                           jac_xdot,
+                                                           jac,
+                                                           n,
+                                                           *it.first->second);
                         break;
                         
                         
@@ -723,7 +710,7 @@ side_external_residual_sensitivity(bool request_jacobian,
             }
         }
     }
-    return (request_jacobian && calculate_jac);
+    return request_jacobian;
 }
 
 
@@ -742,7 +729,6 @@ volume_external_residual_sensitivity (bool request_jacobian,
     
     // for each boundary id, check if any of the sides on the element
     // has the associated boundary
-    bool calculate_jac = false;
     
     libMesh::subdomain_id_type sid = _elem.subdomain_id();
     // find the loads on this boundary and evaluate the f and jac
@@ -753,26 +739,23 @@ volume_external_residual_sensitivity (bool request_jacobian,
         switch (it.first->second->type()) {
                 
             case MAST::SURFACE_PRESSURE:
-                calculate_jac = (calculate_jac ||
-                                 surface_pressure_residual_sensitivity(request_jacobian,
-                                                                       f, jac,
-                                                                       *it.first->second));
+                surface_pressure_residual_sensitivity(request_jacobian,
+                                                      f, jac,
+                                                      *it.first->second);
                 break;
                 
             case MAST::PISTON_THEORY:
-                calculate_jac = (calculate_jac ||
-                                 piston_theory_residual_sensitivity(request_jacobian,
-                                                                    f,
-                                                                    jac_xdot,
-                                                                    jac,
-                                                                    *it.first->second));
+                piston_theory_residual_sensitivity(request_jacobian,
+                                                   f,
+                                                   jac_xdot,
+                                                   jac,
+                                                   *it.first->second);
                 break;
                 
             case MAST::TEMPERATURE:
-                calculate_jac = (calculate_jac ||
-                                 thermal_residual_sensitivity(request_jacobian,
-                                                              f, jac,
-                                                              *it.first->second));
+                thermal_residual_sensitivity(request_jacobian,
+                                             f, jac,
+                                             *it.first->second);
                 break;
                 
             case MAST::SMALL_DISTURBANCE_MOTION:
@@ -783,7 +766,7 @@ volume_external_residual_sensitivity (bool request_jacobian,
         }
     }
     
-    return (request_jacobian && calculate_jac);
+    return request_jacobian;
 }
 
 
@@ -803,7 +786,6 @@ MAST::StructuralElementBase::volume_output_quantity
     std::multimap<libMesh::subdomain_id_type, MAST::OutputFunctionBase*>::const_iterator> it;
     
     // for each subdomain id, check if the element has this domain id
-    bool calculate_derivative = false;
     
     libMesh::subdomain_id_type sid = _elem.subdomain_id();
     // find the loads on this boundary and evaluate the f and jac
@@ -821,10 +803,9 @@ MAST::StructuralElementBase::volume_output_quantity
                     // look through the discipline to see if there are
                     // any thermal stress conditions defined for this
                     // element.
-                    calculate_derivative = (calculate_derivative ||
-                                            calculate_stress(request_derivative,
-                                                             request_sensitivity,
-                                                             *it.first->second));
+                    calculate_stress(request_derivative,
+                                     request_sensitivity,
+                                     *it.first->second);
                 }
             }
                 break;
@@ -841,9 +822,7 @@ MAST::StructuralElementBase::volume_output_quantity
         }
     }
     
-    return ((request_derivative || request_sensitivity) && calculate_derivative);
-
-    return false;
+    return (request_derivative || request_sensitivity);
 }
 
 

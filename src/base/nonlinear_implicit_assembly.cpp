@@ -124,7 +124,7 @@ _check_element_numerical_jacobian(MAST::ElementBase& e,
     }
     
     // write the numerical and analytical jacobians
-    std::cout
+    libMesh::out
     << "Analytical Jacobian: " << std::endl
     << jac0
     << std::endl << std::endl

@@ -221,7 +221,7 @@ MAST::FunctionEvaluation::verify_gradients(const std::vector<Real>& dvars) {
     
     
     // compare the values
-    std::cout
+    libMesh::out
     << " *** Objective function gradients: analytical vs numerical"
     << std::endl;
     
@@ -229,7 +229,7 @@ MAST::FunctionEvaluation::verify_gradients(const std::vector<Real>& dvars) {
     
     for (unsigned int i=0; i<_n_vars; i++)
         if (fabs((obj_grad[i] - obj_grad_fd[i])/obj_grad[i]) > tol) {
-            std::cout
+            libMesh::out
             << " Mismatched sensitivity: DV:  "  << i << "   "
             << obj_grad[i] << "    " << obj_grad_fd[i] << std::endl;
             accurate_sens = false;
@@ -237,16 +237,16 @@ MAST::FunctionEvaluation::verify_gradients(const std::vector<Real>& dvars) {
     
     
     
-    std::cout
+    libMesh::out
     << " *** Constraint function gradients: analytical vs numerical"
     << std::endl;
     
     for (unsigned int j=0; j<_n_eq+_n_ineq; j++) {
-        std::cout << "  Constraint: " << j << std::endl;
+        libMesh::out << "  Constraint: " << j << std::endl;
         for (unsigned int i=0; i<_n_vars; i++)
         if (fabs((grads[i*(_n_eq+_n_ineq)+j] - grads_fd[i*(_n_eq+_n_ineq)+j])/grads[i*(_n_eq+_n_ineq)+j]) > tol) {
                 
-                std::cout
+                libMesh::out
                 << " Mismatched sensitivity:  DV:  "  << i << "   "
                 << grads[i*(_n_eq+_n_ineq)+j] << "    "
                 << grads_fd[i*(_n_eq+_n_ineq)+j] << std::endl;
@@ -256,7 +256,7 @@ MAST::FunctionEvaluation::verify_gradients(const std::vector<Real>& dvars) {
     
     // print the message that all sensitivity data satisfied limits.
     if (accurate_sens)
-        std::cout
+        libMesh::out
         << "Verify gradients: all gradients satisfied relative tol: " << tol
         << "  with delta:  " << delta
         << std::endl;

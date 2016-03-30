@@ -622,7 +622,7 @@ residual_and_jacobian_field_split (const libMesh::NumericVector<Real>& X_R,
     J_R.close();
     J_I.close();
     
-    std::cout << "R_R: " << R_R.l2_norm() << "   R_I: " << R_I.l2_norm() << std::endl;
+    libMesh::out << "R_R: " << R_R.l2_norm() << "   R_I: " << R_I.l2_norm() << std::endl;
 }
 
 
@@ -813,7 +813,7 @@ residual_and_jacobian_blocked (const libMesh::NumericVector<Real>& X,
     R.close();
     J.close();
     
-    std::cout << "R: " << R.l2_norm() << std::endl;
+    libMesh::out << "R: " << R.l2_norm() << std::endl;
     STOP_LOG("residual_and_jacobian()", "ComplexSolve");
 }
 

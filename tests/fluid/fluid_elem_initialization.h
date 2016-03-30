@@ -103,7 +103,7 @@
 //                if (!boost::test_tools::check_is_close(m0(i,j),
 //                                                       m(i,j),
 //                                                       boost::test_tools::percent_tolerance(tol))) {
-//                    std::cout
+//                    libMesh::out
 //                    << "Failed comparison at (i,j) = ("
 //                    << i << ", " << j << ") : "
 //                    << "expected: " << m0(i,j) << "  , "

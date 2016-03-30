@@ -559,7 +559,7 @@ evaluate(const std::vector<Real>& dvars,
     
     // now iterate over the load steps
     for (unsigned int i=0; i<n_steps; i++) {
-        std::cout
+        libMesh::out
         << "Load step: " << i << std::endl;
         
         (*_press)()  =  p0*(i+1.)/(1.*n_steps);

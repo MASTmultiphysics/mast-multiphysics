@@ -232,7 +232,7 @@ int main_8(int argc, const char * argv[]) {
     
     // Evaluate the output
     MAST::Driver::output_evaluation(heat_cond, heat_cond_sys, t_out);
-    std::cout << "Output Function: " << sys.qoi[0] << std::endl;
+    libMesh::out << "Output Function: " << sys.qoi[0] << std::endl;
 
     // Calculate the adjoint solution
     MAST::Driver::adjoint_solution(heat_cond, heat_cond_sys, assembly, t_out);

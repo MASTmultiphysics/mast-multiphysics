@@ -140,7 +140,7 @@ init(libMesh::ElemType e_type, bool if_vk) {
     _alpha           = new MAST::Parameter("alpha",      2.5e-5);
     _kappa           = new MAST::Parameter("kappa",       5./6.);
     _zero            = new MAST::Parameter("zero",           0.);
-    _velocity        = new MAST::Parameter("V"   ,        8253.19);
+    _velocity        = new MAST::Parameter("V"   ,           0.);
     _mach            = new MAST::Parameter("mach",           3.);
     _rho_air         = new MAST::Parameter("rho" ,         1.05);
     _gamma_air       = new MAST::Parameter("gamma",         1.4);
@@ -376,14 +376,14 @@ get_parameter(const std::string &nm) {
     
     // if the param was not found, then print the message
     if (!found) {
-        std::cout
+        libMesh::out
         << std::endl
         << "Parameter not found by name: " << nm << std::endl
         << "Valid names are: "
         << std::endl;
         for (it = _params_for_sensitivity.begin(); it != end; it++)
-            std::cout << "   " << (*it)->name() << std::endl;
-        std::cout << std::endl;
+            libMesh::out << "   " << (*it)->name() << std::endl;
+        libMesh::out << std::endl;
     }
     
     return rval;
@@ -401,19 +401,22 @@ namespace MAST {
       
     public:
         SteadySolverInterface(MAST::PlateThermallyStressedPistonTheoryFlutterAnalysis& obj,
-                              bool if_output):
+                              bool if_output,
+                              bool if_clear_vector_on_exit):
         MAST::FlutterSolverBase::SteadySolver(),
         _obj(obj),
         _if_write_output(if_output),
         _n_steps(25),
-        _if_only_aero_load_steps(false) {
+        _if_only_aero_load_steps(false),
+        _if_clear_vector_on_exit(if_clear_vector_on_exit) {
             
             _obj._sys->add_vector("base_solution");
         }
         
         virtual ~SteadySolverInterface() {
-        
-            _obj._sys->remove_vector("base_solution");
+
+            if (_if_clear_vector_on_exit)
+                _obj._sys->remove_vector("base_solution");
         }
         
         
@@ -458,7 +461,7 @@ namespace MAST {
             
             // now iterate over the load steps
             for (unsigned int i=0; i<n_steps; i++) {
-                std::cout
+                libMesh::out
                 << "Load step: " << i << std::endl;
 
                 // modify aero component
@@ -477,7 +480,7 @@ namespace MAST {
             
             if (_if_write_output) {
                 
-                std::cout << "Writing output to : output.exo" << std::endl;
+                libMesh::out << "Writing output to : output.exo" << std::endl;
                 
                 std::set<std::string> sys_to_write;
                 sys_to_write.insert(_obj._sys->name());
@@ -545,6 +548,12 @@ namespace MAST {
          */
         bool _if_only_aero_load_steps;
         
+        
+        /*!
+         *   deletes the solution vector from system when the class is
+         *   destructed unless this flag is false.
+         */
+        bool _if_clear_vector_on_exit;
     };
 }
 
@@ -557,7 +566,8 @@ solve(bool if_write_output,
       const unsigned int max_bisection_iters) {
     
     
-    MAST::SteadySolverInterface steady_solve(*this, if_write_output);
+    MAST::SteadySolverInterface steady_solve(*this, if_write_output, false);
+    
     // solve for the steady state at zero velocity
     (*_velocity) = 0.;
     steady_solve.solve();
@@ -630,7 +640,7 @@ solve(bool if_write_output,
         
         if (if_write_output) {
             
-            std::cout
+            libMesh::out
             << "Writing mode " << i << " to : "
             << file_name.str() << std::endl;
             
@@ -663,8 +673,8 @@ solve(bool if_write_output,
     // attach the assembly function to the flutter solver
     _flutter_solver->attach_assembly(fsi_assembly);
     _flutter_solver->initialize(*_velocity,
-                                0.0e3,        // lower V
-                                20.0e3,        // upper V
+                                8000,        // lower V
+                                9000.,        // upper V
                                 10,           // number of divisions
                                 _basis);      // basis vectors
     
@@ -747,30 +757,124 @@ solve(bool if_write_output,
 
 Real
 MAST::PlateThermallyStressedPistonTheoryFlutterAnalysis::
-sensitivity_solve(MAST::Parameter& p) {
+sensitivity_solve(MAST::Parameter& p,
+                  bool if_write_output) {
     
     //Make sure that  a solution is available for sensitivity
     libmesh_assert(_flutter_root);
+    
+    ////////////////////////////////////////////////////////////////////////
+    // get sensitivity of the steady-state solution with respect to velocity
+    // and the specified parameter
+    ////////////////////////////////////////////////////////////////////////
+    
+    libmesh_assert(_initialized);
+    
+    this->clear_stresss();
+    
+    // create the nonlinear assembly object
+    MAST::StructuralNonlinearAssembly   assembly;
+    
+    assembly.attach_discipline_and_system(*_discipline, *_structural_sys);
+    
+    libMesh::NonlinearImplicitSystem&      nonlin_sys   =
+    dynamic_cast<libMesh::NonlinearImplicitSystem&>(assembly.system());
+    
+    libMesh::ParameterVector params;
+    params.resize(1);
+    
+    
+    // first, sensitivity wrt parameter p
+    libMesh::out
+    << "**** Steady-state sensitivity wrt param: " << p.name() << "  ****"
+    << std::endl;
+    params[0]  =  p.ptr();
+    _discipline->add_parameter(p);
+    libMesh::NumericVector<Real>& dXdp = nonlin_sys.add_sensitivity_solution(0);
+    dXdp.zero();
+    nonlin_sys.sensitivity_solve(params);
+    _discipline->remove_parameter(p);
+
+    
+    // next, sensitivity wrt flight velocity
+    libMesh::out
+    << "**** Steady-state sensitivity wrt param: " << _velocity->name() << "  ****"
+    << std::endl;
+    params[0] = _velocity->ptr();
+    _discipline->add_parameter(*_velocity);
+    libMesh::NumericVector<Real>& dXdV = nonlin_sys.add_sensitivity_solution(1);
+    dXdV.zero();
+    nonlin_sys.sensitivity_solve(params);
+    _discipline->remove_parameter(*_velocity);
+    
+
+    // evaluate sensitivity of the outputs
+    //assembly.calculate_output_sensitivity(params,
+    //                                      true,    // true for total sensitivity
+    //                                      *(_sys->solution));
+    
+    
+    assembly.clear_discipline_and_system();
+    
+    // write the solution for visualization
+    if (if_write_output) {
+        
+        std::ostringstream oss1, oss2;
+        oss1 << "output_" << p.name() << ".exo";
+        oss2 << "output_" << _velocity->name() << ".exo";
+        
+        libMesh::out
+        << "Writing parameter sensitivity output to : " << oss1.str()
+        << "  and velocity sensitivity to : " << oss2.str()
+        << std::endl;
+        
+        // write the solution for visualization
+        std::set<std::string> sys_to_write;
+        sys_to_write.insert(_sys->name());
+
+        // write the sensitivity wrt p
+        _sys->solution->swap(dXdp);
+        libMesh::ExodusII_IO(*_mesh).write_equation_systems(oss1.str(),
+                                                            *_eq_sys,
+                                                            &sys_to_write);
+        _sys->solution->swap(dXdp);
+
+        // write the sensitivity wrt V
+        _sys->solution->swap(dXdV);
+        libMesh::ExodusII_IO(*_mesh).write_equation_systems(oss1.str(),
+                                                            *_eq_sys,
+                                                            &sys_to_write);
+        _sys->solution->swap(dXdV);
+    }
+    
+    
+    ////////////////////////////////////////////////////////////////////////
+    // now use this information to calculate the sensitivity of the flutter
+    // speed.
+    ////////////////////////////////////////////////////////////////////////
     
     // flutter solver will need velocity to be defined as a parameter for
     // sensitivity analysis
     _discipline->add_parameter(*_velocity);
     _discipline->add_parameter(p);
     
-    libMesh::ParameterVector params;
     params.resize(1);
     params[0]  =  p.ptr();
-    
+
     // initialize the flutter solver for sensitivity.
     MAST::StructuralFluidInteractionAssembly fsi_assembly;
+    fsi_assembly.set_base_solution(_sys->get_vector("base_solution"));
     fsi_assembly.attach_discipline_and_system(*_discipline, *_structural_sys);
     _flutter_solver->attach_assembly(fsi_assembly);
-    _flutter_solver->calculate_sensitivity(*_flutter_root, params, 0);
+    _flutter_solver->calculate_sensitivity(*_flutter_root, params, 0,
+                                           &dXdp,
+                                           &dXdV);
     fsi_assembly.clear_discipline_and_system();
     _flutter_solver->clear_assembly_object();
     
     _discipline->remove_parameter(p);
     _discipline->remove_parameter(*_velocity);
+    libMesh::out << "sens of V_F for param " << p.name() << " = " << _flutter_root->V_sens << std::endl;
     return _flutter_root->V_sens;
 }
 

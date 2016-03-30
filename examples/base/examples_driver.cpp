@@ -80,13 +80,13 @@ void analysis(const std::string& case_name,
     
     ValType run_case;
     
-    std::cout << "Running case: " << case_name << std::endl;
+    libMesh::out << "Running case: " << case_name << std::endl;
     run_case.solve(true);
     if (with_sens) {
         MAST::Parameter* p = run_case.get_parameter(par_name);
         if (p) {
             
-            std::cout
+            libMesh::out
             << "Running sensitivity for case: " << case_name
             << "  wrt  " << par_name << std::endl;
             run_case.sensitivity_solve(*p, true);
@@ -104,14 +104,14 @@ void eigenvalue_analysis(const std::string& case_name,
     
     ValType run_case;
     
-    std::cout << "Running case: " << case_name << std::endl;
+    libMesh::out << "Running case: " << case_name << std::endl;
     run_case.solve(true);
     if (with_sens) {
         MAST::Parameter* p = run_case.get_parameter(par_name);
         if (p) {
             
             std::vector<Real> eig;
-            std::cout
+            libMesh::out
             << "Running sensitivity for case: " << case_name
             << "  wrt  " << par_name << std::endl;
             run_case.sensitivity_solve(*p, eig);
@@ -130,14 +130,14 @@ void flutter_analysis(const std::string& case_name,
     
     ValType run_case;
     
-    std::cout << "Running case: " << case_name << std::endl;
+    libMesh::out << "Running case: " << case_name << std::endl;
     run_case.solve(true);
     if (with_sens) {
         MAST::Parameter* p = run_case.get_parameter(par_name);
         if (p) {
             
             std::vector<Real> eig;
-            std::cout
+            libMesh::out
             << "Running sensitivity for case: " << case_name
             << "  wrt  " << par_name << std::endl;
             run_case.sensitivity_solve(*p);
@@ -157,13 +157,13 @@ void plate_analysis(const std::string& case_name,
     ValType run_case;
     run_case.init(libMesh::QUAD4, nonlinear);
     
-    std::cout << "Running case: " << case_name << std::endl;
+    libMesh::out << "Running case: " << case_name << std::endl;
     run_case.solve(true);
     if (with_sens) {
         MAST::Parameter* p = run_case.get_parameter(par_name);
         if (p) {
             
-            std::cout
+            libMesh::out
             << "Running sensitivity for case: " << case_name
             << "  wrt  " << par_name << std::endl;
             run_case.sensitivity_solve(*p, true);
@@ -182,7 +182,7 @@ void plate_eigenvalue_analysis(const std::string& case_name,
     ValType run_case;
     run_case.init(libMesh::QUAD4, nonlinear);
     
-    std::cout << "Running case: " << case_name << std::endl;
+    libMesh::out << "Running case: " << case_name << std::endl;
     run_case.solve(true);
     if (with_sens) {
         MAST::Parameter* p = run_case.get_parameter(par_name);
@@ -190,7 +190,7 @@ void plate_eigenvalue_analysis(const std::string& case_name,
             
             std::vector<Real> eig;
 
-            std::cout
+            libMesh::out
             << "Running sensitivity for case: " << case_name
             << "  wrt  " << par_name << std::endl;
             run_case.sensitivity_solve(*p, eig);
@@ -210,13 +210,13 @@ void plate_flutter_analysis(const std::string& case_name,
     ValType run_case;
     run_case.init(libMesh::QUAD4, nonlinear);
     
-    std::cout << "Running case: " << case_name << std::endl;
+    libMesh::out << "Running case: " << case_name << std::endl;
     run_case.solve(true);
     if (with_sens) {
         MAST::Parameter* p = run_case.get_parameter(par_name);
         if (p) {
             
-            std::cout
+            libMesh::out
             << "Running sensitivity for case: " << case_name
             << "  wrt  " << par_name << std::endl;
             run_case.sensitivity_solve(*p);
@@ -232,13 +232,13 @@ void fluid_analysis(const std::string& case_name)  {
     
     ValType run_case;
     
-    std::cout << "Running case: " << case_name << std::endl;
+    libMesh::out << "Running case: " << case_name << std::endl;
     run_case.solve(true);
     /*if (with_sens) {
         MAST::Parameter* p = run_case.get_parameter(par_name);
         if (p) {
             
-            std::cout
+            libMesh::out
             << "Running sensitivity for case: " << case_name
             << "  wrt  " << par_name << std::endl;
             run_case.sensitivity_solve(*p, true);
@@ -253,7 +253,7 @@ template <typename ValType>
 void optimization(const std::string& case_name, bool verify_grads)  {
 
     
-    std::cout
+    libMesh::out
     << case_name << std::endl
     << "  input.in should be provided in the working directory with"
     << " desired parameter values."
@@ -275,9 +275,9 @@ void optimization(const std::string& case_name, bool verify_grads)  {
     if (verify_grads) {
         std::vector<Real> dvals(func_eval.n_vars());
         std::fill(dvals.begin(), dvals.end(), 0.05);
-        std::cout << "******* Begin: Verifying gradients ***********" << std::endl;
+        libMesh::out << "******* Begin: Verifying gradients ***********" << std::endl;
         func_eval.verify_gradients(dvals);
-        std::cout << "******* End: Verifying gradients ***********" << std::endl;
+        libMesh::out << "******* End: Verifying gradients ***********" << std::endl;
     }
 
     // attach and optimize
@@ -296,7 +296,7 @@ void plate_optimization(const std::string& case_name,
                         bool nonlinear)  {
     
     
-    std::cout
+    libMesh::out
     << case_name << std::endl
     << "  input.in should be provided in the working directory with"
     << " desired parameter values."
@@ -319,9 +319,9 @@ void plate_optimization(const std::string& case_name,
     if (verify_grads) {
         std::vector<Real> dvals(func_eval.n_vars());
         std::fill(dvals.begin(), dvals.end(), 0.05);
-        std::cout << "******* Begin: Verifying gradients ***********" << std::endl;
+        libMesh::out << "******* Begin: Verifying gradients ***********" << std::endl;
         func_eval.verify_gradients(dvals);
-        std::cout << "******* End: Verifying gradients ***********" << std::endl;
+        libMesh::out << "******* End: Verifying gradients ***********" << std::endl;
     }
     
     // attach and optimize
@@ -450,7 +450,7 @@ int main(int argc, char* const argv[]) {
     else if (case_name == "bar_transient_conduction")
         analysis<MAST::BarTransient>(case_name, with_sens, par_name);
     else {
-        std::cout
+        libMesh::out
         << "Please run the driver with the name of example specified as: \n"
         << "   run_case=<name>"
         << "   nonlinear=<true/false>"
@@ -491,10 +491,10 @@ int main(int argc, char* const argv[]) {
         << "  stiffened_plate_bending_thermal_stress_optimization \n"
         << "  stiffened_plate_piston_theory_optimization \n"
         << "  topology_optimization_2D \n"
-        << "*  The default for --with_sensitivity is: false.\n"
+        << "*  The default for with_sensitivity is: false.\n"
         << "*  param is used to specify the parameter name for which sensitivity is desired.\n"
         << "*  nonlinear is used to turn on/off nonlinear stiffening in the problem.\n"
-        << "*  verify_grads=true will also verify the gradients of the optimization problem before calling the optimizer.\n"
+        << "*  verify_grads=true will verify the gradients of the optimization problem before calling the optimizer.\n"
         << "\n\n\n"
         << "**********************************\n"
         << "***********   FLUID   ************\n"

@@ -79,7 +79,7 @@ namespace MAST {
              */
             virtual const libMesh::NumericVector<Real>&
             solve() = 0;
-            
+
             
             /*!
              * @returns  a const-reference to the solution.

@@ -365,7 +365,7 @@ analyze_and_find_critical_root_without_tracking(const Real g_tol,
         // done because the g value tends to increase very quickly after the
         // collision of roots.
         new_V      = upper_V +
-        0.3*(upper_V-lower_V)/(upper_g-lower_g)*(1.e-4-upper_g);  // using upper V as reference
+        0.5*(upper_V-lower_V)/(upper_g-lower_g)*(1.e-4-upper_g);  // using upper V as reference
         
         sol        = _analyze(new_V, sol).release();
         if (_output)
@@ -1052,7 +1052,6 @@ calculate_sensitivity(MAST::FlutterRootBase& root,
     deig_dp = root.eig_vec_left.dot((mat_A_sens.cast<Complex>() -
                                     eig*mat_B_sens.cast<Complex>())*root.eig_vec_right)/den;
     
-    
     // next we need the sensitivity of eigenvalue wrt V
     libMesh::ParameterVector param_V;
     param_V.resize(1);
@@ -1073,8 +1072,9 @@ calculate_sensitivity(MAST::FlutterRootBase& root,
                                              root.V,
                                              mat_A_sens,
                                              mat_B_sens);
+
     
-    // now calculate the quotient for sensitivity wrt k_red
+    // now calculate the quotient for sensitivity wrt V
     // calculate numerator
     deig_dV = root.eig_vec_left.dot((mat_A_sens.cast<Complex>() -
                                      eig*mat_B_sens.cast<Complex>())*root.eig_vec_right)/den;

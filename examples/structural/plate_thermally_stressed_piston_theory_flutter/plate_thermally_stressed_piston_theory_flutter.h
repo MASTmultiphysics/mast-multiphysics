@@ -92,7 +92,8 @@ namespace MAST {
         /*!
          *  solves the sensitivity of system and returns the final solution
          */
-        Real sensitivity_solve(MAST::Parameter& p);
+        Real sensitivity_solve(MAST::Parameter& p,
+                               bool if_write_output = false);
         
         
         /*!
