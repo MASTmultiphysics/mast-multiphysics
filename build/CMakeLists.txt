@@ -163,9 +163,11 @@ file (GLOB_RECURSE mast_test_source_files
 	../examples/structural/plate_bending_section_offset/*.cpp
 	../examples/structural/plate_bending_thermal_stress/*.cpp
 	../examples/structural/plate_modal_analysis/*.cpp
+	../examples/structural/plate_thermally_stressed_modal_analysis/*.cpp
 	../examples/structural/beam_buckling_prestress/*.cpp
 	../examples/structural/beam_piston_theory_flutter/*.cpp
 	../examples/structural/plate_piston_theory_flutter/*.cpp
+	../examples/structural/plate_thermally_stressed_piston_theory_flutter/*.cpp
 	../tests/*.cpp 
 	../tests/*.h)
 add_executable (mast_tests ${mast_test_source_files})
