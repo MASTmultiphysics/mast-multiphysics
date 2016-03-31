@@ -625,6 +625,12 @@ _elem_sensitivity_calculations(MAST::ElementBase& elem,
         case MAST::STIFFNESS: {
             
             e.internal_residual_sensitivity(true, vec, mat, false);
+            
+            // if the linearization is about a base state, then the sensitivity of
+            // the base state will influence the sensitivity of the Jacobian
+            if (_base_sol)
+                e.internal_residual_jac_dot_state_sensitivity(mat);
+
             e.inertial_residual_sensitivity(true, vec, dummy, dummy, mat);
             e.side_external_residual_sensitivity(true,
                                                  vec,

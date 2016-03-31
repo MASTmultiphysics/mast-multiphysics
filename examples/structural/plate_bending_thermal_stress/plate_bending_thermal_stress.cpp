@@ -388,7 +388,7 @@ MAST::PlateBendingThermalStress::solve(bool if_write_output) {
 
 const libMesh::NumericVector<Real>&
 MAST::PlateBendingThermalStress::sensitivity_solve(MAST::Parameter& p,
-                                     bool if_write_output) {
+                                                   bool if_write_output) {
     
     libmesh_assert(_initialized);
 

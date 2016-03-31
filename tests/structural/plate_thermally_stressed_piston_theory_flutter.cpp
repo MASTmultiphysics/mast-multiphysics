@@ -23,7 +23,7 @@
 
 
 // MAST includes
-#include "examples/structural/plate_piston_theory_flutter/plate_piston_theory_flutter.h"
+#include "examples/structural/plate_thermally_stressed_piston_theory_flutter/plate_thermally_stressed_piston_theory_flutter.h"
 #include "tests/base/test_comparisons.h"
 #include "elasticity/structural_system_initialization.h"
 #include "elasticity/structural_discipline.h"
@@ -35,8 +35,8 @@
 #include "base/nonlinear_system.h"
 
 
-BOOST_FIXTURE_TEST_SUITE  (Structural2DPlatePistonTheoryFlutterAnalysis,
-                           MAST::PlatePistonTheoryFlutterAnalysis)
+BOOST_FIXTURE_TEST_SUITE  (Structural2DPlateThermallyStressedPistonTheoryFlutterAnalysis,
+                           MAST::PlateThermallyStressedPistonTheoryFlutterAnalysis)
 
 /*
  BOOST_AUTO_TEST_CASE   (PlatePistonTheoryFlutterSolution) {
@@ -85,11 +85,11 @@ BOOST_FIXTURE_TEST_SUITE  (Structural2DPlatePistonTheoryFlutterAnalysis,
  */
 
 
-BOOST_AUTO_TEST_CASE    (PlatePistonTheoryFlutterSolutionSensitivity) {
+BOOST_AUTO_TEST_CASE    (PlateThermallyStressedPistonTheoryFlutterSolutionSensitivity) {
     
     // initialize plate object
-    this->init(libMesh::QUAD4, false);
-
+    this->init(libMesh::QUAD4, true);
+    
     const Real
     delta    = 1.e-5,
     tol      = 1.e-3;
@@ -145,6 +145,7 @@ BOOST_AUTO_TEST_CASE    (PlatePistonTheoryFlutterSolutionSensitivity) {
         
         // now compare the eigenvalue sensitivity
         BOOST_TEST_MESSAGE("  ** dV_F/dp (total) wrt : " << f.name() << " **");
+        std::cout << dV_fd << "  " << dV << std::endl;
         BOOST_CHECK(MAST::compare_value( dV_fd,  dV, tol));
     }
 }

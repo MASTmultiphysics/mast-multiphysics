@@ -268,8 +268,6 @@ init(libMesh::ElemType e_type, bool if_vk) {
     
     // initialize the flutter solver
     _flutter_solver  = new MAST::TimeDomainFlutterSolver;
-    std::string nm("flutter_output.txt");
-    _flutter_solver->set_output_file(nm);
 
     _initialized = true;
 }
@@ -586,7 +584,8 @@ solve(bool if_write_output,
     _flutter_root = NULL;
     _flutter_solver->clear();
     std::string nm("flutter_output.txt");
-    _flutter_solver->set_output_file(nm);
+    if (__init->comm().rank() == 0)
+        _flutter_solver->set_output_file(nm);
     
     // create the nonlinear assembly object
     MAST::StructuralModalEigenproblemAssembly   modal_assembly;
@@ -673,10 +672,10 @@ solve(bool if_write_output,
     // attach the assembly function to the flutter solver
     _flutter_solver->attach_assembly(fsi_assembly);
     _flutter_solver->initialize(*_velocity,
-                                8000,        // lower V
-                                9000.,        // upper V
-                                10,           // number of divisions
-                                _basis);      // basis vectors
+                                0.,             // lower V
+                                1.e4,           // upper V
+                                10,             // number of divisions
+                                _basis);        // basis vectors
     
     std::pair<bool, MAST::FlutterRootBase*>
     sol = _flutter_solver->analyze_and_find_critical_root_without_tracking(tol, max_bisection_iters);
@@ -790,9 +789,13 @@ sensitivity_solve(MAST::Parameter& p,
     << std::endl;
     params[0]  =  p.ptr();
     _discipline->add_parameter(p);
-    libMesh::NumericVector<Real>& dXdp = nonlin_sys.add_sensitivity_solution(0);
-    dXdp.zero();
+    libMesh::NumericVector<Real>& dXdp = nonlin_sys.add_vector("sol_param_sens");
     nonlin_sys.sensitivity_solve(params);
+    
+    // libMesh will provide the sensitivity solution of the ith param in
+    // the ith sensitivity solution vector. Hence, we get that solution vector
+    // and copy it to dXdp.
+    dXdp = nonlin_sys.get_sensitivity_solution(0);
     _discipline->remove_parameter(p);
 
     
@@ -802,9 +805,11 @@ sensitivity_solve(MAST::Parameter& p,
     << std::endl;
     params[0] = _velocity->ptr();
     _discipline->add_parameter(*_velocity);
-    libMesh::NumericVector<Real>& dXdV = nonlin_sys.add_sensitivity_solution(1);
-    dXdV.zero();
+    libMesh::NumericVector<Real>& dXdV = nonlin_sys.add_vector("sol_V_sens");
     nonlin_sys.sensitivity_solve(params);
+    
+    // copy the sensitivity solution for later use.
+    dXdV = nonlin_sys.get_sensitivity_solution(0);
     _discipline->remove_parameter(*_velocity);
     
 

@@ -284,7 +284,8 @@ MAST::BeamPistonTheoryFlutterAnalysis::solve(bool if_write_output,
     _flutter_root = NULL;
     _flutter_solver->clear();
     std::string nm("flutter_output.txt");
-    _flutter_solver->set_output_file(nm);
+    if (__init->comm().rank() == 0)
+        _flutter_solver->set_output_file(nm);
 
     
     // set the velocity of piston theory to zero for modal analysis

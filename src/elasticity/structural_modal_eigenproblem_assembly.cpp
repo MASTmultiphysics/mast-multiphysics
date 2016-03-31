@@ -207,6 +207,7 @@ eigenproblem_sensitivity_assemble (const libMesh::ParameterVector& parameters,
         
         // if the base solution is provided, then tell the element about it
         if (_base_sol) {
+            
             for (unsigned int i=0; i<dof_indices.size(); i++)
                 sol(i) = (*localized_solution)(dof_indices[i]);
         }
@@ -291,8 +292,8 @@ _elem_calculations(MAST::ElementBase& elem,
     
     // calculate the Jacobian components
     e.internal_residual(true, vec, mat_A, true);
-//    e.side_external_residual<Real>(true, vec, mat_A, _discipline->side_loads());
-//    e.volume_external_residual<Real>(true, vec, mat_A, _discipline->volume_loads());
+    e.side_external_residual(true, vec, mat, mat_A, _discipline->side_loads());
+    e.volume_external_residual(true, vec, mat, mat_A, _discipline->volume_loads());
     
     // calculate the mass matrix components
     e.inertial_residual(true, vec, mat_B, mat, mat_A);
@@ -316,11 +317,16 @@ _elem_sensitivity_calculations(MAST::ElementBase& elem,
     
     // calculate the Jacobian components
     e.internal_residual_sensitivity(true, vec, mat_A, true);
-    //    e.side_external_residual_sensitivity<Real>(true, vec, mat_A, _discipline->side_loads());
-    //    e.volume_external_residual_sensitivity<Real>(true, vec, mat_A, _discipline->volume_loads());
+    e.side_external_residual_sensitivity(true, vec, mat, mat_A, _discipline->side_loads());
+    e.volume_external_residual_sensitivity(true, vec, mat, mat_A, _discipline->volume_loads());
     
     // calculate the mass matrix components
     e.inertial_residual_sensitivity(true, vec, mat_B, mat, mat_A);
+    
+    // if the linearization is about a base state, then the sensitivity of
+    // the base state will influence the sensitivity of the Jacobian
+    if (_base_sol)
+        e.internal_residual_jac_dot_state_sensitivity(mat_A);
 }
 
 

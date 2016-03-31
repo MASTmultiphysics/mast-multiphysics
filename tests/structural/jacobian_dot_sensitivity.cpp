@@ -55,7 +55,7 @@ void check_internal_force_jacobian_sensitivity (ValType& v,
                                                 const RealVectorX& sol) {
     
     const Real
-    delta    = 1.e-4,
+    delta    = 1.e-8,
     tol      = 1.e-2;
     
     // get reference to the element in this mesh

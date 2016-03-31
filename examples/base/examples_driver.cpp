@@ -38,6 +38,7 @@
 #include "examples/structural/plate_bending_section_offset/plate_bending_section_offset.h"
 #include "examples/structural/plate_bending_thermal_stress/plate_bending_thermal_stress.h"
 #include "examples/structural/plate_modal_analysis/plate_modal_analysis.h"
+#include "examples/structural/plate_thermally_stressed_modal_analysis/plate_thermally_stressed_modal_analysis.h"
 #include "examples/structural/plate_buckling_prestress/plate_buckling_prestress.h"
 #include "examples/structural/plate_piston_theory_flutter/plate_piston_theory_flutter.h"
 #include "examples/structural/plate_thermally_stressed_piston_theory_flutter/plate_thermally_stressed_piston_theory_flutter.h"
@@ -387,7 +388,9 @@ int main(int argc, char* const argv[]) {
     else if (case_name == "membrane_extension_biaxial")
         analysis<MAST::MembraneExtensionBiaxial>(case_name, with_sens, par_name);
     else if (case_name == "plate_modal_analysis")
-        plate_eigenvalue_analysis<MAST::PlateModalAnalysis>(case_name, true, with_sens, par_name);
+        plate_eigenvalue_analysis<MAST::PlateModalAnalysis>(case_name, if_nonlin, with_sens, par_name);
+    else if (case_name == "plate_thermally_stressed_modal_analysis")
+        plate_eigenvalue_analysis<MAST::PlateThermallyStressedModalAnalysis>(case_name, if_nonlin, with_sens, par_name);
     else if (case_name == "plate_prestress_buckling_analysis")
         plate_eigenvalue_analysis<MAST::PlateBucklingPrestress>(case_name, true, with_sens, par_name);
     else if (case_name == "plate_bending")
@@ -485,6 +488,7 @@ int main(int argc, char* const argv[]) {
         << "  plate_bending_section_offset_optimization \n"
         << "  plate_bending_thermal_stress_optimization \n"
         << "  plate_modal_analysis\n"
+        << "  plate_thermally_stressed_modal_analysis\n"
         << "  plate_piston_theory_flutter_analysis\n"
         << "  plate_thermally_stressed_piston_theory_flutter_analysis\n"
         << "  plate_prestress_buckling_analysis\n"

@@ -17,8 +17,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#ifndef __mast_plate_modal_analysis_h__
-#define __mast_plate_modal_analysis_h__
+#ifndef __mast_plate_thermally_stressed_modal_analysis_h__
+#define __mast_plate_thermally_stressed_modal_analysis_h__
 
 
 // C++ includes
@@ -50,17 +50,18 @@ namespace MAST {
     class DirichletBoundaryCondition;
     class BoundaryConditionBase;
     class NonlinearSystem;
+    class SectionOffset;
     
     
-    struct PlateModalAnalysis {
+    struct PlateThermallyStressedModalAnalysis {
         
         
-        PlateModalAnalysis();
+        PlateThermallyStressedModalAnalysis();
         
         
-        ~PlateModalAnalysis();
+        ~PlateThermallyStressedModalAnalysis();
         
-
+        
         /*!
          *   initializes the object for specified characteristics
          */
@@ -94,10 +95,10 @@ namespace MAST {
         
         // length of domain
         Real _length;
-
+        
         // width of domain
         Real _width;
-
+        
         // create the mesh
         libMesh::SerialMesh*           _mesh;
         
@@ -115,18 +116,29 @@ namespace MAST {
         MAST::Parameter
         *_th,
         *_E,
+        *_alpha,
         *_nu,
         *_rho,
         *_kappa,
+        *_temp,
         *_zero;
         
         MAST::ConstantFieldFunction
         *_th_f,
         *_E_f,
+        *_alpha_f,
         *_nu_f,
         *_rho_f,
         *_kappa_f,
-        *_hoff_f;
+        *_temp_f,
+        *_ref_temp_f;
+
+ 
+        // Section offset
+        MAST::SectionOffset*                      _hoff_f;
+
+        // create the temperature load
+        MAST::BoundaryConditionBase*             _T_load;
         
         // create the material property card
         MAST::IsotropicMaterialPropertyCard*     _m_card;
@@ -139,14 +151,13 @@ namespace MAST {
         
         // create the Dirichlet boundary condition on right edge
         MAST::DirichletBoundaryCondition*     _dirichlet_right;
-
+        
         // create the Dirichlet boundary condition on bottom edge
         MAST::DirichletBoundaryCondition*     _dirichlet_bottom;
-
+        
         // create the Dirichlet boundary condition on top edge
         MAST::DirichletBoundaryCondition*     _dirichlet_top;
-
-        
+                
         // vector of parameters to evaluate sensitivity wrt
         std::vector<MAST::Parameter*> _params_for_sensitivity;
     };
@@ -154,5 +165,5 @@ namespace MAST {
 
 
 
-#endif //  __mast_plate_modal_analysis_h__
+#endif //  __mast_plate_thermally_stressed_modal_analysis_h__
 

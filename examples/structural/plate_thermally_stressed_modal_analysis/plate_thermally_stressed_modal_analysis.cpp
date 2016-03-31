@@ -22,7 +22,8 @@
 
 
 // MAST includes
-#include "examples/structural/plate_piston_theory_flutter/plate_piston_theory_flutter.h"
+#include "examples/structural/plate_thermally_stressed_modal_analysis/plate_thermally_stressed_modal_analysis.h"
+#include "examples/base/multilinear_interpolation.h"
 #include "base/nonlinear_system.h"
 #include "base/parameter.h"
 #include "base/constant_field_function.h"
@@ -32,6 +33,8 @@
 #include "elasticity/structural_modal_eigenproblem_assembly.h"
 #include "elasticity/structural_fluid_interaction_assembly.h"
 #include "elasticity/piston_theory_boundary_condition.h"
+#include "elasticity/stress_output_base.h"
+#include "elasticity/structural_nonlinear_assembly.h"
 #include "aeroelasticity/time_domain_flutter_solver.h"
 #include "aeroelasticity/flutter_root_base.h"
 #include "property_cards/solid_2d_section_element_property_card.h"
@@ -48,7 +51,8 @@
 extern libMesh::LibMeshInit* __init;
 
 
-MAST::PlatePistonTheoryFlutterAnalysis::PlatePistonTheoryFlutterAnalysis():
+MAST::PlateThermallyStressedModalAnalysis::
+PlateThermallyStressedModalAnalysis():
 _initialized(false) {
     
 }
@@ -56,8 +60,8 @@ _initialized(false) {
 
 
 void
-MAST::PlatePistonTheoryFlutterAnalysis::init(libMesh::ElemType e_type,
-                                             bool if_vk) {
+MAST::PlateThermallyStressedModalAnalysis::
+init(libMesh::ElemType e_type, bool if_vk) {
     
     
     libmesh_assert(!_initialized);
@@ -129,16 +133,14 @@ MAST::PlatePistonTheoryFlutterAnalysis::init(libMesh::ElemType e_type,
     
     // create the property functions and add them to the
     
-    _th              = new MAST::Parameter("th",     0.006);
-    _E               = new MAST::Parameter("E",      72.e9);
-    _rho             = new MAST::Parameter("rho",    2.8e3);
-    _nu              = new MAST::Parameter("nu",      0.33);
-    _kappa           = new MAST::Parameter("kappa",  5./6.);
-    _zero            = new MAST::Parameter("zero",      0.);
-    _velocity        = new MAST::Parameter("V"   ,      0.);
-    _mach            = new MAST::Parameter("mach",      3.);
-    _rho_air         = new MAST::Parameter("rho" ,    1.05);
-    _gamma_air       = new MAST::Parameter("gamma",    1.4);
+    _th              = new MAST::Parameter("th",          0.006);
+    _E               = new MAST::Parameter("E",           72.e9);
+    _rho             = new MAST::Parameter("rho",         2.8e3);
+    _nu              = new MAST::Parameter("nu",           0.33);
+    _alpha           = new MAST::Parameter("alpha",      2.5e-5);
+    _kappa           = new MAST::Parameter("kappa",       5./6.);
+    _zero            = new MAST::Parameter("zero",           0.);
+    _temp            = new MAST::Parameter("temperature",   60.);
     
     
     
@@ -154,14 +156,21 @@ MAST::PlatePistonTheoryFlutterAnalysis::init(libMesh::ElemType e_type,
     _E_f             = new MAST::ConstantFieldFunction("E",            *_E);
     _nu_f            = new MAST::ConstantFieldFunction("nu",          *_nu);
     _rho_f           = new MAST::ConstantFieldFunction("rho",        *_rho);
+    _alpha_f         = new MAST::ConstantFieldFunction("alpha_expansion", *_alpha);
     _kappa_f         = new MAST::ConstantFieldFunction("kappa",    *_kappa);
-    _hoff_f          = new MAST::ConstantFieldFunction("off",       *_zero);
-    _velocity_f      = new MAST::ConstantFieldFunction("V",      *_velocity);
-    _mach_f          = new MAST::ConstantFieldFunction("mach",       *_mach);
-    _rho_air_f       = new MAST::ConstantFieldFunction("rho",     *_rho_air);
-    _gamma_air_f     = new MAST::ConstantFieldFunction("gamma", *_gamma_air);
+    _temp_f          = new MAST::ConstantFieldFunction("temperature", *_temp);
+    _ref_temp_f      = new MAST::ConstantFieldFunction("ref_temperature", *_zero);
+    _hoff_f          = new MAST::SectionOffset("off",
+                                               _th_f->clone().release(),
+                                               1.);
 
     
+    // initialize the load
+    _T_load          = new MAST::BoundaryConditionBase(MAST::TEMPERATURE);
+    _T_load->add(*_temp_f);
+    _T_load->add(*_ref_temp_f);
+    _discipline->add_volume_load(0, *_T_load);
+
     // create the material property card
     _m_card         = new MAST::IsotropicMaterialPropertyCard;
     
@@ -169,6 +178,7 @@ MAST::PlatePistonTheoryFlutterAnalysis::init(libMesh::ElemType e_type,
     _m_card->add(*_E_f);
     _m_card->add(*_nu_f);
     _m_card->add(*_kappa_f);
+    _m_card->add(*_alpha_f);
     _m_card->add(*_rho_f);
     
     
@@ -184,21 +194,6 @@ MAST::PlatePistonTheoryFlutterAnalysis::init(libMesh::ElemType e_type,
     if (if_vk) _p_card->set_strain(MAST::VON_KARMAN_STRAIN);
     
     _discipline->set_property_for_subdomain(0, *_p_card);
-    
-    // now initialize the piston theory boundary conditions
-    RealVectorX  vel = RealVectorX::Zero(3);
-    vel(0)           = 1.;  // flow along the x-axis
-    _piston_bc       = new MAST::PistonTheoryBoundaryCondition(1,     // order
-                                                               vel);  // vel vector
-    _piston_bc->add(*_velocity_f);
-    _piston_bc->add(*_mach_f);
-    _piston_bc->add(*_rho_air_f);
-    _piston_bc->add(*_gamma_air_f);
-    _discipline->add_volume_load(0, *_piston_bc);
-    
-    
-    // initialize the flutter solver
-    _flutter_solver  = new MAST::TimeDomainFlutterSolver;
 
     _initialized = true;
 }
@@ -209,7 +204,8 @@ MAST::PlatePistonTheoryFlutterAnalysis::init(libMesh::ElemType e_type,
 
 
 
-MAST::PlatePistonTheoryFlutterAnalysis::~PlatePistonTheoryFlutterAnalysis() {
+MAST::PlateThermallyStressedModalAnalysis::
+~PlateThermallyStressedModalAnalysis() {
     
     if (_initialized) {
         
@@ -225,45 +221,34 @@ MAST::PlatePistonTheoryFlutterAnalysis::~PlatePistonTheoryFlutterAnalysis() {
         delete _E_f;
         delete _nu_f;
         delete _rho_f;
+        delete _alpha_f;
         delete _kappa_f;
         delete _hoff_f;
-        delete _velocity_f;
-        delete _mach_f;
-        delete _rho_air_f;
-        delete _gamma_air_f;
-        
+        delete _temp_f;
+        delete _ref_temp_f;
+
         delete _th;
         delete _E;
         delete _nu;
         delete _rho;
+        delete _alpha;
         delete _kappa;
         delete _zero;
-        delete _velocity;
-        delete _mach;
-        delete _rho_air;
-        delete _gamma_air;
-        
-        // delete the basis vectors
-        if (_basis.size())
-            for (unsigned int i=0; i<_basis.size(); i++)
-                delete _basis[i];
-        
-        
+        delete _temp;
+                
         delete _eq_sys;
         delete _mesh;
         
         delete _discipline;
         delete _structural_sys;
-
-        delete _flutter_solver;
-        delete _piston_bc;
     }
 }
 
 
 
 MAST::Parameter*
-MAST::PlatePistonTheoryFlutterAnalysis::get_parameter(const std::string &nm) {
+MAST::PlateThermallyStressedModalAnalysis::
+get_parameter(const std::string &nm) {
     
     libmesh_assert(_initialized);
     
@@ -302,49 +287,85 @@ MAST::PlatePistonTheoryFlutterAnalysis::get_parameter(const std::string &nm) {
 
 
 
-
-Real
-MAST::PlatePistonTheoryFlutterAnalysis::solve(bool if_write_output,
-                                              const Real tol,
-                                              const unsigned int max_bisection_iters) {
+void
+MAST::PlateThermallyStressedModalAnalysis::solve(bool if_write_output,
+                                                 std::vector<Real>* eig) {
     
-    // clear out the data structures of the flutter solver before
-    // this solution
-    _flutter_root = NULL;
-    _flutter_solver->clear();
-    std::string nm("flutter_output.txt");
-    if (__init->comm().rank() == 0)
-        _flutter_solver->set_output_file(nm);
+    libmesh_assert(_initialized);
     
-    // set the velocity of piston theory to zero for modal analysis
-    (*_velocity) = 0.;
-
+    bool if_vk = (_p_card->strain_type() == MAST::VON_KARMAN_STRAIN);
+    
+    ///////////////////////////////////////////////////////////////////
+    // solve for the static deformation
+    //////////////////////////////////////////////////////////////////
+    
+    // set the number of load steps
+    unsigned int
+    n_steps = 1;
+    if (if_vk) n_steps = 25;
+    
+    Real
+    T0      = (*_temp)();
+    
     // create the nonlinear assembly object
-    MAST::StructuralModalEigenproblemAssembly   assembly;
-    _sys->initialize_condensed_dofs(*_discipline);
+    MAST::StructuralNonlinearAssembly   assembly;
     
     assembly.attach_discipline_and_system(*_discipline, *_structural_sys);
-    _sys->eigenproblem_solve();
+    
+    // zero the solution before solving
+    _sys->solution->zero();
+    
+    // now iterate over the load steps
+    for (unsigned int i=0; i<n_steps; i++) {
+        libMesh::out
+        << "Load step: " << i << std::endl;
+        
+        (*_temp)()  =  T0*(i+1.)/(1.*n_steps);
+        _sys->solve();
+    }
+    
+    // evaluate the outputs
+    assembly.calculate_outputs(*(_sys->solution));
+    
     assembly.clear_discipline_and_system();
+    
+    if (if_write_output) {
+        
+        libMesh::out << "Writing output to : output.exo" << std::endl;
+        
+        // write the solution for visualization
+        libMesh::ExodusII_IO(*_mesh).write_equation_systems("output.exo",
+                                                            *_eq_sys);
+        
+        _discipline->plot_stress_strain_data<libMesh::ExodusII_IO>("stress_output.exo");
+    }
+
+    //  store the base solution
+    libMesh::NumericVector<Real>& base_sol = _sys->add_vector("base_solution");
+    base_sol = *_sys->solution;
+    
+    
+    ///////////////////////////////////////////////////////////////////
+    // solve for the natural frequencies
+    //////////////////////////////////////////////////////////////////
+    
+    // create the nonlinear assembly object
+    MAST::StructuralModalEigenproblemAssembly   modal_assembly;
+    modal_assembly.set_base_solution(base_sol);
+    _sys->initialize_condensed_dofs(*_discipline);
+    
+    modal_assembly.attach_discipline_and_system(*_discipline, *_structural_sys);
+    _sys->eigenproblem_solve();
+    modal_assembly.clear_discipline_and_system();
     
     // Get the number of converged eigen pairs.
     unsigned int
     nconv = std::min(_sys->get_n_converged_eigenvalues(),
                      _sys->get_n_requested_eigenvalues());
-    if (_basis.size() > 0)
-        libmesh_assert(_basis.size() == nconv);
-    else {
-        _basis.resize(nconv);
-        for (unsigned int i=0; i<_basis.size(); i++)
-            _basis[i] = NULL;
-    }
-    
+    if (eig)
+        eig->resize(nconv);
     
     for (unsigned int i=0; i<nconv; i++) {
-        
-        // create a vector to store the basis
-        if (_basis[i] == NULL)
-            _basis[i] = _sys->solution->zero_clone().release();
         
         std::ostringstream file_name;
         
@@ -360,7 +381,9 @@ MAST::PlatePistonTheoryFlutterAnalysis::solve(bool if_write_output,
         Real
         re = 0.,
         im = 0.;
-        _sys->get_eigenpair(i, re, im, *_basis[i]);
+        _sys->get_eigenpair(i, re, im, *_sys->solution);
+        if (eig)
+            (*eig)[i] = re;
         
         libMesh::out
         << std::setw(35) << std::fixed << std::setprecision(15)
@@ -372,131 +395,78 @@ MAST::PlatePistonTheoryFlutterAnalysis::solve(bool if_write_output,
             << "Writing mode " << i << " to : "
             << file_name.str() << std::endl;
             
-            // copy the solution for output
-            (*_sys->solution) = *_basis[i];
             
             // We write the file in the ExodusII format.
             libMesh::ExodusII_IO(*_mesh).write_equation_systems(file_name.str(),
                                                                 *_eq_sys);
         }
     }
-    
-    // now initialize the flutter solver
-    MAST::StructuralFluidInteractionAssembly fsi_assembly;
-    fsi_assembly.attach_discipline_and_system(*_discipline,
-                                              *_structural_sys);
-    _flutter_solver->attach_assembly(fsi_assembly);
-    _flutter_solver->initialize(*_velocity,
-                                0.,           // lower V
-                                1.e4,         // upper V
-                                10,           // number of divisions
-                                _basis);      // basis vectors
-
-    std::pair<bool, MAST::FlutterRootBase*>
-    sol = _flutter_solver->analyze_and_find_critical_root_without_tracking(tol, max_bisection_iters);
-    _flutter_solver->print_sorted_roots();
-    fsi_assembly.clear_discipline_and_system();
-    _flutter_solver->clear_assembly_object();
-    
-    // make sure solution was found
-    libmesh_assert(sol.first);
-    _flutter_root = sol.second;
-
-    if (if_write_output) {
-        // now write the flutter mode to an output file.
-        // Flutter mode Y = sum_i (X_i * (xi_re + xi_im)_i)
-        // using the right eigenvector of the system.
-        // where i is the structural mode
-        //
-        // The time domain simulation assumes the temporal solution to be
-        // X(t) = (Y_re + i Y_im) exp(p t)
-        //      = (Y_re + i Y_im) exp(p_re t) * (cos(p_im t) + i sin(p_im t))
-        //      = exp(p_re t) (Z_re + i Z_im ),
-        // where Z_re = Y_re cos(p_im t) - Y_im sin(p_im t), and
-        //       Z_im = Y_re sin(p_im t) + Y_im cos(p_im t).
-        //
-        // We write the simulation of the mode over a period of oscillation
-        //
-        
-        
-        // first calculate the real and imaginary vectors
-        std::auto_ptr<libMesh::NumericVector<Real> >
-        re(_sys->solution->zero_clone().release()),
-        im(_sys->solution->zero_clone().release());
-        
-        
-        // first the real part
-        _sys->solution->zero();
-        for (unsigned int i=0; i<_basis.size(); i++) {
-            re->add(sol.second->eig_vec_right(i).real(), *_basis[i]);
-            im->add(sol.second->eig_vec_right(i).imag(), *_basis[i]);
-        }
-        re->close();
-        im->close();
-        
-        // now open the output processor for writing
-        libMesh::ExodusII_IO flutter_mode_output(*_mesh);
-        
-        // use N steps in a time-period
-        Real
-        t_sys = _sys->time,
-        pi    = acos(-1.);
-        unsigned int
-        N_divs = 100;
-        
-        
-        for (unsigned int i=0; i<=N_divs; i++) {
-            _sys->time   =  2.*pi*(i*1.)/(N_divs*1.);
-            
-            _sys->solution->zero();
-            _sys->solution->add( cos(_sys->time), *re);
-            _sys->solution->add(-sin(_sys->time), *im);
-            _sys->solution->close();
-            flutter_mode_output.write_timestep("flutter_mode.exo",
-                                               *_eq_sys,
-                                               i+1,
-                                               _sys->time);
-        }
-        
-        // reset the system time
-        _sys->time = t_sys;
-    }
-    
-    return _flutter_root->V;
 }
 
 
 
 
 
-Real
-MAST::PlatePistonTheoryFlutterAnalysis::sensitivity_solve(MAST::Parameter& p) {
+void
+MAST::PlateThermallyStressedModalAnalysis::sensitivity_solve(MAST::Parameter& p,
+                                                             std::vector<Real>& eig) {
     
-    //Make sure that  a solution is available for sensitivity
-    libmesh_assert(_flutter_root);
+    libmesh_assert(_initialized);
     
-    // flutter solver will need velocity to be defined as a parameter for
-    // sensitivity analysis
-    _discipline->add_parameter(*_velocity);
+    ////////////////////////////////////////////////////////////////
+    //   static solution sensitivity
+    ////////////////////////////////////////////////////////////////
+    libMesh::NumericVector<Real>
+    &base_sol      = _sys->get_vector("base_solution"),
+    &base_sol_sens = _sys->add_sensitivity_solution(0);
+    
     _discipline->add_parameter(p);
+    
+    // create the nonlinear assembly object
+    MAST::StructuralNonlinearAssembly   assembly;
+    
+    assembly.attach_discipline_and_system(*_discipline, *_structural_sys);
     
     libMesh::ParameterVector params;
     params.resize(1);
     params[0]  =  p.ptr();
     
-    // initialize the flutter solver for sensitivity.
-    MAST::StructuralFluidInteractionAssembly fsi_assembly;
-    fsi_assembly.attach_discipline_and_system(*_discipline, *_structural_sys);
-    _flutter_solver->attach_assembly(fsi_assembly);
-    _flutter_solver->calculate_sensitivity(*_flutter_root, params, 0);
-    fsi_assembly.clear_discipline_and_system();
-    _flutter_solver->clear_assembly_object();
+    // zero the solution before solving
+    *_sys->solution = base_sol;
+    base_sol_sens.zero();
+    
+    _sys->sensitivity_solve(params);
+    
+    // evaluate sensitivity of the outputs
+    assembly.calculate_output_sensitivity(params,
+                                          true,    // true for total sensitivity
+                                          *(_sys->solution));
+    
+    
+    assembly.clear_discipline_and_system();
+
+    
+    ////////////////////////////////////////////////////////////////
+    //   modal eigenproblem sensitivity
+    ////////////////////////////////////////////////////////////////
+    // Get the number of converged eigen pairs.
+    unsigned int
+    nconv = std::min(_sys->get_n_converged_eigenvalues(),
+                     _sys->get_n_requested_eigenvalues());
+    eig.resize(nconv);
+    
+    // create the nonlinear assembly object
+    MAST::StructuralModalEigenproblemAssembly   modal_assembly;
+    modal_assembly.set_base_solution(base_sol);
+    modal_assembly.set_base_solution(base_sol_sens, true);
+    
+    modal_assembly.attach_discipline_and_system(*_discipline, *_structural_sys);
+    _sys->eigenproblem_sensitivity_solve(params, eig);
+    modal_assembly.clear_discipline_and_system();
     
     _discipline->remove_parameter(p);
-    _discipline->remove_parameter(*_velocity);
-    libMesh::out << "sens of V_F for param " << p.name() << " = " << _flutter_root->V_sens << std::endl;
-    return _flutter_root->V_sens;
 }
+
 
 
 

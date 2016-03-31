@@ -440,7 +440,8 @@ init(GetPot& infile,
     // flutter solver
     _flutter_solver  = new MAST::TimeDomainFlutterSolver;
     std::string nm("flutter_output.txt");
-    _flutter_solver->set_output_file(nm);
+    if (__init->comm().rank() == 0)
+        _flutter_solver->set_output_file(nm);
 
     
     // now add the property cards for each stiffener

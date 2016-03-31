@@ -23,7 +23,7 @@
 
 
 // MAST includes
-#include "examples/structural/plate_piston_theory_flutter/plate_piston_theory_flutter.h"
+#include "examples/structural/plate_thermally_stressed_modal_analysis/plate_thermally_stressed_modal_analysis.h"
 #include "tests/base/test_comparisons.h"
 #include "elasticity/structural_system_initialization.h"
 #include "elasticity/structural_discipline.h"
@@ -35,76 +35,39 @@
 #include "base/nonlinear_system.h"
 
 
-BOOST_FIXTURE_TEST_SUITE  (Structural2DPlatePistonTheoryFlutterAnalysis,
-                           MAST::PlatePistonTheoryFlutterAnalysis)
-
-/*
- BOOST_AUTO_TEST_CASE   (PlatePistonTheoryFlutterSolution) {
- 
- // initialize plate object
- this->init(libMesh::QUAD4, false);
- 
- const Real
- tol      = 1.e-2;
- 
- std::vector<Real>
- eig;
- 
- this->solve(false, &eig);
- 
- // check the solution
- // iterate over each node, and compare the nodal solution with the
- // expected anlaytical value
- Real
- th_y        = (*_thy)(),
- th_z        = (*_thz)(),
- Izz         = pow(th_z,1)*pow(th_y,3)/12.,
- A           = th_z*th_y,
- rho         = (*_rho)(),
- Eval        = (*_E)(),
- pi          = acos(-1.),
- analytical  = 0.;
- 
- 
- // analytical solution to the natural frequency of simply supported problem
- // is
- //   lambda = omega^2 = (n pi/L)^4 EI/(rho A)
- //
- unsigned int
- nconv = std::min(_sys->get_n_converged_eigenvalues(),
- _sys->get_n_requested_eigenvalues());
- 
- for (unsigned int i=0; i<nconv; i++) {
- 
- analytical   = Eval*Izz/(rho*A) * pow((i+1)*pi/_length, 4);
- 
- // compare the eigenvalues
- BOOST_CHECK(MAST::compare_value(analytical, eig[i], tol));
- }
- }
- */
+BOOST_FIXTURE_TEST_SUITE  (StructuralPlateThermallyStressedModalAnalysis,
+                           MAST::PlateThermallyStressedModalAnalysis)
 
 
-BOOST_AUTO_TEST_CASE    (PlatePistonTheoryFlutterSolutionSensitivity) {
+
+BOOST_AUTO_TEST_CASE    (PlateThermallyStressedModalSolutionSensitivity) {
     
-    // initialize plate object
-    this->init(libMesh::QUAD4, false);
-
+    // initialize plate object. Initialize with nonlinear strain
+    this->init(libMesh::QUAD4, true);
+    
     const Real
-    delta    = 1.e-5,
+    delta    = 1.e-6,
     tol      = 1.e-3;
-    
-    Real
-    V0       = 0.,
-    dV       = 0.,
-    dV_fd    = 0.;
-    
     
     std::vector<Real>
     eig_vec,
     deig_vec;
     
-    V0       = this->solve(false);
+    this->solve(false, &eig_vec);
+    
+    unsigned int
+    nconv = std::min(_sys->get_n_converged_eigenvalues(),
+                     _sys->get_n_requested_eigenvalues());
+    
+    
+    // verify the sensitivity solution of this system
+    RealVectorX
+    eig     = RealVectorX::Zero(nconv),
+    deig    = RealVectorX::Zero(nconv),
+    deig_fd = RealVectorX::Zero(nconv);
+    
+    for (unsigned int i=0; i<nconv; i++) eig(i) = eig_vec[i];
+    
     
     // now iterate over all the parameters and calculate the analytical
     // sensitivity and compare with the numerical sensitivity
@@ -124,8 +87,10 @@ BOOST_AUTO_TEST_CASE    (PlatePistonTheoryFlutterSolutionSensitivity) {
         // calculate the analytical sensitivity
         // analysis is required at the baseline before sensitivity solution
         // and the solution has changed after the previous perturbed solution
-        this->solve(false, 1.0e-4, 100);
-        dV = this->sensitivity_solve(f);
+        this->solve(false, &eig_vec);
+        std::vector<Real> deig_vec(nconv);
+        this->sensitivity_solve(f, deig_vec);
+        for (unsigned int i=0; i<nconv; i++) deig(i) = deig_vec[i];
         
         // now calculate the finite difference sensitivity
         
@@ -135,17 +100,20 @@ BOOST_AUTO_TEST_CASE    (PlatePistonTheoryFlutterSolutionSensitivity) {
         f()         += dp;
         
         // solve at the perturbed parameter value
-        dV_fd        = this->solve(false);
+        this->solve(false, &eig_vec);
+        for (unsigned int i=0; i<nconv; i++) deig_fd(i) = eig_vec[i];
         
-        dV_fd       -= V0;
-        dV_fd       /= dp;
+        deig_fd -= eig;
+        deig_fd /= dp;
         
         // reset the parameter value
         f()        = p0;
         
         // now compare the eigenvalue sensitivity
-        BOOST_TEST_MESSAGE("  ** dV_F/dp (total) wrt : " << f.name() << " **");
-        BOOST_CHECK(MAST::compare_value( dV_fd,  dV, tol));
+        BOOST_TEST_MESSAGE("  ** dlambda/dp (total) wrt : " << f.name() << " **");
+        for (unsigned int i=0; i<deig.size(); i++)
+            std::cout << deig_fd(i) << "   " << deig(i) << std::endl;
+        BOOST_CHECK(MAST::compare_vector( deig_fd,  deig, tol));
     }
 }
 
