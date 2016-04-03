@@ -76,7 +76,7 @@ namespace MAST {
     public MAST::FunctionEvaluation {
         
         
-        PlateBendingSectionOffsetSizingOptimization(std::ostream& output);
+        PlateBendingSectionOffsetSizingOptimization();
         
         
         ~PlateBendingSectionOffsetSizingOptimization();

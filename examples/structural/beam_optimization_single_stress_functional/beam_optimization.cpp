@@ -42,9 +42,8 @@ libMesh::LibMeshInit     *__init;
 
 
 MAST::BeamBendingSingleFunctionalSizingOptimization::
-BeamBendingSingleFunctionalSizingOptimization(GetPot& infile,
-                              std::ostream& output):
-MAST::FunctionEvaluation(output),
+BeamBendingSingleFunctionalSizingOptimization(GetPot& infile):
+MAST::FunctionEvaluation(),
 _n_elems(0),
 _n_stations(0) {
 

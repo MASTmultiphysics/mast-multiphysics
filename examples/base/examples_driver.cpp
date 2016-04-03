@@ -271,7 +271,9 @@ void optimization(const std::string& case_name, bool verify_grads)  {
     MAST::GCMMAOptimizationInterface optimizer;
     
     // create and attach sizing optimization object
-    ValType func_eval(infile, output);
+    ValType func_eval(infile);
+    if (__init->comm().rank() == 0)
+        func_eval.set_output_file("optimization_output.txt");
     __my_func_eval = &func_eval;
 
     if (verify_grads) {
@@ -314,7 +316,9 @@ void plate_optimization(const std::string& case_name,
     MAST::GCMMAOptimizationInterface optimizer;
     
     // create and attach sizing optimization object
-    ValType func_eval(output);
+    ValType func_eval;
+    if (__init->comm().rank() == 0)
+        func_eval.set_output_file("optimization_output.txt");
     __my_func_eval = &func_eval;
     func_eval.init(infile, libMesh::QUAD4, nonlinear);
     

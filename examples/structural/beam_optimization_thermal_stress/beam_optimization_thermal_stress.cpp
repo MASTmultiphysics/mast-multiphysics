@@ -43,9 +43,8 @@ libMesh::LibMeshInit     *__init;
 
 
 MAST::BeamBendingThermalStressSizingOptimization::
-BeamBendingThermalStressSizingOptimization(GetPot& infile,
-                                           std::ostream& output):
-MAST::FunctionEvaluation(output),
+BeamBendingThermalStressSizingOptimization(GetPot& infile):
+MAST::FunctionEvaluation(),
 _n_elems(0),
 _n_stations(0) {
 

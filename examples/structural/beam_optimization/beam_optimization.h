@@ -76,8 +76,7 @@ namespace MAST {
     public MAST::FunctionEvaluation {
         
         
-        BeamBendingSizingOptimization(GetPot& infile,
-                                      std::ostream& output);
+        BeamBendingSizingOptimization(GetPot& infile);
         
         
         ~BeamBendingSizingOptimization();

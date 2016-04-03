@@ -169,8 +169,8 @@ stiffened_plate_optim_con(int*    mode,
 
 
 MAST::StiffenedPlateBendingSizingOptimization::
-StiffenedPlateBendingSizingOptimization(std::ostream& output):
-MAST::FunctionEvaluation(output),
+StiffenedPlateBendingSizingOptimization():
+MAST::FunctionEvaluation(),
 _initialized(false),
 _n_divs_x(0),
 _n_divs_y(0),

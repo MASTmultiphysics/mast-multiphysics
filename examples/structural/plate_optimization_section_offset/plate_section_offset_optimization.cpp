@@ -169,8 +169,8 @@ plate_section_offset_optim_con(int*    mode,
 
 
 MAST::PlateBendingSectionOffsetSizingOptimization::
-PlateBendingSectionOffsetSizingOptimization(std::ostream& output):
-MAST::FunctionEvaluation(output),
+PlateBendingSectionOffsetSizingOptimization():
+MAST::FunctionEvaluation(),
 _initialized(false),
 _n_divs_x(0),
 _n_divs_y(0),

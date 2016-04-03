@@ -116,6 +116,10 @@ init(libMesh::ElemType e_type, bool if_vk) {
     _dirichlet_right->init  (1, constrained_vars);
     _dirichlet_top->init    (2, constrained_vars);
     _dirichlet_left->init   (3, constrained_vars);
+//    _dirichlet_bottom->init (0, _structural_sys->vars());
+//    _dirichlet_right->init  (1, _structural_sys->vars());
+//    _dirichlet_top->init    (2, _structural_sys->vars());
+//    _dirichlet_left->init   (3, _structural_sys->vars());
     
     _discipline->add_dirichlet_bc(0, *_dirichlet_bottom);
     _discipline->add_dirichlet_bc(1,  *_dirichlet_right);
@@ -128,7 +132,7 @@ init(libMesh::ElemType e_type, bool if_vk) {
     
     _sys->eigen_solver->set_position_of_spectrum(libMesh::LARGEST_MAGNITUDE);
     _sys->set_exchange_A_and_B(true);
-    _sys->set_n_requested_eigenvalues(10);
+    _sys->set_n_requested_eigenvalues(20);
     
     
     // create the property functions and add them to the
@@ -140,7 +144,7 @@ init(libMesh::ElemType e_type, bool if_vk) {
     _alpha           = new MAST::Parameter("alpha",      2.5e-5);
     _kappa           = new MAST::Parameter("kappa",       5./6.);
     _zero            = new MAST::Parameter("zero",           0.);
-    _temp            = new MAST::Parameter("temperature",   60.);
+    _temp            = new MAST::Parameter("temperature",  400.);
     
     
     
@@ -302,28 +306,31 @@ MAST::PlateThermallyStressedModalAnalysis::solve(bool if_write_output,
     // set the number of load steps
     unsigned int
     n_steps = 1;
-    if (if_vk) n_steps = 25;
+    if (if_vk) n_steps = 80;
     
     Real
     T0      = (*_temp)();
     
+    std::ofstream freq;
+    freq.open("freq.txt", std::ofstream::out);
+    
     // create the nonlinear assembly object
     MAST::StructuralNonlinearAssembly   assembly;
     
-    assembly.attach_discipline_and_system(*_discipline, *_structural_sys);
     
     // zero the solution before solving
     _sys->solution->zero();
     
     // now iterate over the load steps
-    for (unsigned int i=0; i<n_steps; i++) {
+    for (unsigned int i_step=0; i_step<n_steps; i_step++) {
         libMesh::out
-        << "Load step: " << i << std::endl;
+        << "Load step: " << i_step << std::endl;
         
-        (*_temp)()  =  T0*(i+1.)/(1.*n_steps);
+        (*_temp)()  =  T0*(i_step+1.)/(1.*n_steps);
+        assembly.attach_discipline_and_system(*_discipline, *_structural_sys);
         _sys->solve();
-    }
-    
+        //}
+        freq << std::endl << i_step << "   " << std::setw(35) << std::fixed << std::setprecision(15) << (*_temp)() << "  ";
     // evaluate the outputs
     assembly.calculate_outputs(*(_sys->solution));
     
@@ -334,8 +341,10 @@ MAST::PlateThermallyStressedModalAnalysis::solve(bool if_write_output,
         libMesh::out << "Writing output to : output.exo" << std::endl;
         
         // write the solution for visualization
+        std::set<std::string> names; names.insert(_sys->name());
         libMesh::ExodusII_IO(*_mesh).write_equation_systems("output.exo",
-                                                            *_eq_sys);
+                                                            *_eq_sys,
+                                                            &names);
         
         _discipline->plot_stress_strain_data<libMesh::ExodusII_IO>("stress_output.exo");
     }
@@ -370,7 +379,8 @@ MAST::PlateThermallyStressedModalAnalysis::solve(bool if_write_output,
         std::ostringstream file_name;
         
         // We write the file in the ExodusII format.
-        file_name << "out_"
+        file_name << "out_step_"
+        << i_step << "_mode_"
         << std::setw(3)
         << std::setfill('0')
         << std::right
@@ -381,25 +391,30 @@ MAST::PlateThermallyStressedModalAnalysis::solve(bool if_write_output,
         Real
         re = 0.,
         im = 0.;
-        _sys->get_eigenpair(i, re, im, *_sys->solution);
+        _sys->get_eigenpair(i, re, im, base_sol);
         if (eig)
             (*eig)[i] = re;
         
         libMesh::out
         << std::setw(35) << std::fixed << std::setprecision(15)
         << re << std::endl;
-        
+
+        freq << std::setw(35) << std::fixed << std::setprecision(15) << re;
+
         if (if_write_output) {
             
-            libMesh::out
+           /* libMesh::out
             << "Writing mode " << i << " to : "
-            << file_name.str() << std::endl;
+            << file_name.str() << std::endl;*/
             
             
             // We write the file in the ExodusII format.
+            base_sol.swap(*_sys->solution);
             libMesh::ExodusII_IO(*_mesh).write_equation_systems(file_name.str(),
                                                                 *_eq_sys);
+            base_sol.swap(*_sys->solution);
         }
+    }
     }
 }
 

@@ -109,26 +109,26 @@ MAST::FunctionEvaluation::output(unsigned int iter, const std::vector<Real> &x,
     {
         // write header for the first iteration
         if (iter == 0) {
-            _output << std::setw(10) << "Iter";
+            *_output << std::setw(10) << "Iter";
             for (unsigned int i=0; i < x.size(); i++) {
                 std::stringstream x; x << "x_" << i;
-                _output << std::setw(20) << x.str();
+                *_output << std::setw(20) << x.str();
             }
-            _output << std::setw(20) << "Obj";
+            *_output << std::setw(20) << "Obj";
             for (unsigned int i=0; i<fval.size(); i++) {
                 std::stringstream f; f << "f_" << i;
-                _output << std::setw(20) << f.str();
+                *_output << std::setw(20) << f.str();
             }
-            _output << std::endl;
+            *_output << std::endl;
         }
         
-        _output << std::setw(10) << iter;
+        *_output << std::setw(10) << iter;
         for (unsigned int i=0; i < x.size(); i++)
-            _output << std::setw(20) << x[i];
-        _output << std::setw(20) << obj;
+            *_output << std::setw(20) << x[i];
+        *_output << std::setw(20) << obj;
         for (unsigned int i=0; i < fval.size(); i++)
-            _output << std::setw(20) << fval[i];
-        _output << std::endl;
+            *_output << std::setw(20) << fval[i];
+        *_output << std::endl;
     }
 }
 

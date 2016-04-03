@@ -76,7 +76,7 @@ namespace MAST {
     public MAST::FunctionEvaluation {
         
         
-        PlateBendingSingleStressFunctionalSizingOptimization(std::ostream& output);
+        PlateBendingSingleStressFunctionalSizingOptimization();
         
         
         ~PlateBendingSingleStressFunctionalSizingOptimization();

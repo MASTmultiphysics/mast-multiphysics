@@ -169,8 +169,8 @@ plate_optim_con(int*    mode,
 
 
 MAST::PlateBendingSizingOptimization::
-PlateBendingSizingOptimization(std::ostream& output):
-MAST::FunctionEvaluation(output),
+PlateBendingSizingOptimization():
+MAST::FunctionEvaluation(),
 _initialized(false),
 _n_divs_x(0),
 _n_divs_y(0),

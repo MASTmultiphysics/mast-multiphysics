@@ -43,9 +43,8 @@ libMesh::LibMeshInit     *__init;
 
 
 MAST::BeamBendingSectionOffsetSizingOptimization::
-BeamBendingSectionOffsetSizingOptimization(GetPot& infile,
-                              std::ostream& output):
-MAST::FunctionEvaluation(output),
+BeamBendingSectionOffsetSizingOptimization(GetPot& infile):
+MAST::FunctionEvaluation(),
 _n_elems(0),
 _n_stations(0) {
 

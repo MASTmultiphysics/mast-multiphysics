@@ -79,7 +79,7 @@ namespace MAST {
     public MAST::FunctionEvaluation {
         
         
-        StiffenedPlateBendingThermalStressSizingOptimization(std::ostream& output);
+        StiffenedPlateBendingThermalStressSizingOptimization();
         
         
         ~StiffenedPlateBendingThermalStressSizingOptimization();

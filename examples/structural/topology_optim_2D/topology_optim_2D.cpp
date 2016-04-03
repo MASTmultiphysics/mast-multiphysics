@@ -241,8 +241,8 @@ MAST::YoungsModulus::derivative(const MAST::DerivativeType d,
 
 
 MAST::TopologyOptimization2D::
-TopologyOptimization2D(std::ostream& output):
-MAST::FunctionEvaluation(output),
+TopologyOptimization2D():
+MAST::FunctionEvaluation(),
 _initialized(false),
 _penalty(0.),
 _volume_fraction(0.),

@@ -33,6 +33,7 @@
 #include "elasticity/piston_theory_boundary_condition.h"
 #include "elasticity/structural_modal_eigenproblem_assembly.h"
 #include "elasticity/structural_fluid_interaction_assembly.h"
+#include "elasticity/structural_near_null_vector_space.h"
 #include "aeroelasticity/time_domain_flutter_solver.h"
 #include "aeroelasticity/time_domain_flutter_root.h"
 
@@ -43,6 +44,7 @@
 #include "libmesh/numeric_vector.h"
 #include "libmesh/getpot.h"
 #include "libmesh/string_to_enum.h"
+#include "libmesh/nonlinear_solver.h"
 
 extern
 libMesh::LibMeshInit     *__init;
@@ -176,8 +178,8 @@ stiffened_plate_thermally_stressed_piston_theory_flutter_optim_con(int*    mode,
 
 
 MAST::StiffenedPlateThermallyStressedPistonTheorySizingOptimization::
-StiffenedPlateThermallyStressedPistonTheorySizingOptimization(std::ostream& output):
-MAST::FunctionEvaluation(output),
+StiffenedPlateThermallyStressedPistonTheorySizingOptimization():
+MAST::FunctionEvaluation(),
 _initialized(false),
 _n_divs_x(0),
 _n_divs_between_stiff(0),
@@ -555,6 +557,12 @@ init(GetPot& infile,
         _discipline->set_property_for_subdomain(i+1, *_p_card_stiff[i]);
     }
     
+    // initialize the null space object and assign it to the structural
+    // module
+    _nsp = new MAST::StructuralNearNullVectorSpace;
+    _sys->nonlinear_solver->nearnullspace_object = _nsp;
+
+    
     
     // create the output objects, one for each element
     libMesh::MeshBase::const_element_iterator
@@ -930,7 +938,6 @@ evaluate(const std::vector<Real>& dvars,
          std::vector<bool>& eval_grads,
          std::vector<Real>& grads) {
     
-    
     libmesh_assert_equal_to(dvars.size(), _n_vars);
     
     // set the parameter values equal to the DV value
@@ -1047,8 +1054,11 @@ evaluate(const std::vector<Real>& dvars,
             (*_sys->solution) = *_basis[i];
             
             // We write the file in the ExodusII format.
+            std::set<std::string> nm;
+            nm.insert(_sys->name());
             libMesh::ExodusII_IO(*_mesh).write_equation_systems(file_name.str(),
-                                                                *_eq_sys);
+                                                                *_eq_sys,
+                                                                &nm);
         }
     }
     
@@ -1091,13 +1101,12 @@ evaluate(const std::vector<Real>& dvars,
         
         libMesh::out << "Writing output to : output.exo" << std::endl;
         
-        std::set<std::string> sys_to_write;
-        sys_to_write.insert(_sys->name());
-        
+        std::set<std::string> nm;
+        nm.insert(_sys->name());
         // write the solution for visualization
         libMesh::ExodusII_IO(*_mesh).write_equation_systems("output.exo",
                                                             *_eq_sys,
-                                                            &sys_to_write);
+                                                            &nm);
         
         _discipline->plot_stress_strain_data<libMesh::ExodusII_IO>("stress_output.exo");
     }

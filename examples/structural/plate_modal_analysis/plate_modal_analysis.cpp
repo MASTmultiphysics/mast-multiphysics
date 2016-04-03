@@ -313,8 +313,11 @@ MAST::PlateModalAnalysis::solve(bool if_write_output,
             
             
             // We write the file in the ExodusII format.
+            std::set<std::string> nm;
+            nm.insert(_sys->name());
             libMesh::ExodusII_IO(*_mesh).write_equation_systems(file_name.str(),
-                                                                *_eq_sys);
+                                                                *_eq_sys,
+                                                                &nm);
         }
     }
 }

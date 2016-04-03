@@ -113,7 +113,7 @@ namespace MAST {
     public MAST::FunctionEvaluation {
         
         
-        TopologyOptimization2D(std::ostream& output);
+        TopologyOptimization2D();
         
         
         ~TopologyOptimization2D();

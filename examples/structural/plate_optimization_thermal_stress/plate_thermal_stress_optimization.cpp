@@ -171,8 +171,8 @@ plate_thermal_stress_optim_con(int*    mode,
 
 
 MAST::PlateBendingThermalStressSizingOptimization::
-PlateBendingThermalStressSizingOptimization(std::ostream& output):
-MAST::FunctionEvaluation(output),
+PlateBendingThermalStressSizingOptimization():
+MAST::FunctionEvaluation(),
 _initialized(false),
 _n_divs_x(0),
 _n_divs_y(0),

@@ -79,13 +79,14 @@ namespace MAST {
     class StructuralModalEigenproblemAssembly;
     class StructuralFluidInteractionAssembly;
     class NonlinearSystem;
+    class StructuralNearNullVectorSpace;
     
     
     struct StiffenedPlateThermallyStressedPistonTheorySizingOptimization:
     public MAST::FunctionEvaluation {
         
         
-        StiffenedPlateThermallyStressedPistonTheorySizingOptimization(std::ostream& output);
+        StiffenedPlateThermallyStressedPistonTheorySizingOptimization();
         
         
         ~StiffenedPlateThermallyStressedPistonTheorySizingOptimization();
@@ -184,6 +185,9 @@ namespace MAST {
         // initialize the system to the right set of variables
         MAST::StructuralSystemInitialization*      _structural_sys;
         MAST::StructuralDiscipline*                _discipline;
+        
+        MAST::StructuralNearNullVectorSpace*       _nsp;
+
         
         // nonlinear assembly object
         MAST::StructuralNonlinearAssembly         *_nonlinear_assembly;

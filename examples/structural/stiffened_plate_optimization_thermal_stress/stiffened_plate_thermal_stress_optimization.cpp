@@ -169,8 +169,8 @@ stiffened_plate_thermal_stress_optim_con(int*    mode,
 
 
 MAST::StiffenedPlateBendingThermalStressSizingOptimization::
-StiffenedPlateBendingThermalStressSizingOptimization(std::ostream& output):
-MAST::FunctionEvaluation(output),
+StiffenedPlateBendingThermalStressSizingOptimization():
+MAST::FunctionEvaluation(),
 _initialized(false),
 _n_divs_x(0),
 _n_divs_between_stiff(0),

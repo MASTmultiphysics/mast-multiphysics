@@ -38,14 +38,14 @@ namespace MAST {
         
     public:
         
-        FunctionEvaluation(std::ostream& tab_output):
+        FunctionEvaluation():
         _n_vars(0),
         _n_eq(0),
         _n_ineq(0),
         _max_iters(0),
         _n_rel_change_iters(5),
         _tol(1.0e-6),
-        _output(tab_output)
+        _output(NULL)
         { }
         
         virtual ~FunctionEvaluation() { }
@@ -96,6 +96,16 @@ namespace MAST {
                               std::vector<Real>& fvals,
                               std::vector<bool>& eval_grads,
                               std::vector<Real>& grads) = 0;
+        
+        void set_output_file(const std::string& nm) {
+            
+            if (!_output)
+                _output = new std::ofstream;
+            
+            _output->close();
+            _output->open(nm.c_str(), std::ofstream::out);
+        }
+
         
         virtual void output(unsigned int iter,
                             const std::vector<Real>& x,
@@ -169,7 +179,7 @@ namespace MAST {
         
         Real _tol;
         
-        std::ostream& _output;
+        std::ofstream* _output;
     };
 
 

@@ -85,7 +85,7 @@ namespace MAST {
     public MAST::FunctionEvaluation {
         
         
-        StiffenedPlatePistonTheorySizingOptimization(std::ostream& output);
+        StiffenedPlatePistonTheorySizingOptimization();
         
         
         ~StiffenedPlatePistonTheorySizingOptimization();

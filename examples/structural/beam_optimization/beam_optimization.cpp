@@ -168,9 +168,8 @@ beam_optim_con(int*    mode,
 
 
 MAST::BeamBendingSizingOptimization::
-BeamBendingSizingOptimization(GetPot& infile,
-                              std::ostream& output):
-MAST::FunctionEvaluation(output),
+BeamBendingSizingOptimization(GetPot& infile):
+MAST::FunctionEvaluation(),
 _n_elems(0),
 _n_stations(0) {
     
