@@ -521,7 +521,7 @@ namespace MAST {
          * @returns  a const-reference to the solution.
          */
         virtual const libMesh::NumericVector<Real>&
-        solution() { return _obj._sys->get_vector("base_solution"); }
+        solution() const { return _obj._sys->get_vector("base_solution"); }
 
         
     protected:

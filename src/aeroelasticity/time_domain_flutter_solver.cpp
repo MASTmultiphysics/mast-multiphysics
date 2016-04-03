@@ -704,6 +704,7 @@ MAST::TimeDomainFlutterSolver::_initialize_matrices(Real U_inf,
         << "***  Performing Steady State Solve ***" << std::endl;
         
         _steady_solver->solve();
+        _assembly->reattach_to_system();
     }
     
     

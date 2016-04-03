@@ -60,6 +60,15 @@ namespace MAST {
         
         
         /*!
+         *   Reattaches to the same system that was attached earlier.
+         *
+         *   This cannot be called if the clear_discipline_and_system() method
+         *   has been called.
+         */
+        virtual void
+        reattach_to_system();
+
+        /*!
          *   clears association with a system to this discipline, and vice-a-versa
          */
         virtual void

@@ -79,6 +79,20 @@ attach_discipline_and_system(MAST::PhysicsDisciplineBase& discipline,
 
 
 
+void
+MAST::TransientAssembly::reattach_to_system() {
+    
+    libmesh_assert(_system);
+    
+    // now attach this to the system
+    libMesh::NonlinearImplicitSystem& transient_sys =
+    dynamic_cast<libMesh::NonlinearImplicitSystem&>(_system->system());
+    
+    transient_sys.nonlinear_solver->residual_and_jacobian_object = this;
+    transient_sys.attach_sensitivity_assemble_object(*this);
+}
+
+
 
 void
 MAST::TransientAssembly::

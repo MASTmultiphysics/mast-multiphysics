@@ -85,7 +85,7 @@ namespace MAST {
              * @returns  a const-reference to the solution.
              */
             virtual const libMesh::NumericVector<Real>&
-            solution() = 0;
+            solution() const = 0;
             
         };
 

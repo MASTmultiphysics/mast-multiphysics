@@ -70,6 +70,19 @@ attach_discipline_and_system(MAST::PhysicsDisciplineBase &discipline,
 
 
 
+void
+MAST::NonlinearImplicitAssembly::reattach_to_system() {
+
+    libmesh_assert(_system);
+    
+    libMesh::NonlinearImplicitSystem& nonlin_sys =
+    dynamic_cast<libMesh::NonlinearImplicitSystem&>(_system->system());
+    
+    nonlin_sys.nonlinear_solver->residual_and_jacobian_object = this;
+    nonlin_sys.attach_sensitivity_assemble_object(*this);
+}
+
+
 
 void
 MAST::NonlinearImplicitAssembly::

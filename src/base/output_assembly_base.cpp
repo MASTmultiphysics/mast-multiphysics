@@ -60,6 +60,19 @@ attach_discipline_and_system(MAST::PhysicsDisciplineBase &discipline,
 
 
 
+void
+MAST::OutputAssemblyBase::reattach_to_system() {
+    
+    libmesh_assert(_system);
+
+    // now attach this to the system
+    libMesh::System& sys = _system->system();
+    sys.attach_QOI_object(*this);
+    sys.attach_QOI_derivative_object(*this);
+    sys.attach_QOI_parameter_sensitivity_object(*this);
+}
+
+
 
 void
 MAST::OutputAssemblyBase::

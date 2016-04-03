@@ -55,7 +55,26 @@ namespace MAST {
          */
         virtual ~StructuralFluidInteractionAssembly();
         
-                
+
+        /*!
+         *   attaches a system to this discipline, and vice-a-versa
+         */
+        virtual void
+        attach_discipline_and_system(MAST::PhysicsDisciplineBase& discipline,
+                                     MAST::SystemInitialization& system);
+        
+    
+        /*!
+         *   Reattaches to the same system that was attached earlier.
+         *
+         *   This cannot be called if the clear_discipline_and_system() method
+         *   has been called.
+         */
+        inline virtual void
+        reattach_to_system() {
+            // nothing to be done here.
+        }
+
         /*!
          *   clears association with a system to this discipline, and vice-a-versa
          */

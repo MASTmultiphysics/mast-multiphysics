@@ -70,6 +70,22 @@ attach_discipline_and_system(MAST::PhysicsDisciplineBase &discipline,
 
 
 
+
+void
+MAST::EigenproblemAssembly::reattach_to_system() {
+    
+    libmesh_assert(_discipline);
+    libmesh_assert(_system);
+    
+    // now attach this to the system
+    MAST::NonlinearSystem& eigen_sys =
+    dynamic_cast<MAST::NonlinearSystem&>(_system->system());
+    
+    eigen_sys.attach_eigenproblem_assemble_object(*this);
+}
+
+
+
 void
 MAST::EigenproblemAssembly::
 clear_discipline_and_system( ) {
