@@ -70,30 +70,34 @@ MAST::ComplexSolverBase::clear_assembly() {
 
 
 libMesh::NumericVector<Real>&
-MAST::ComplexSolverBase::real_solution() {
+MAST::ComplexSolverBase::real_solution(bool if_sens) {
     
     libMesh::System& sys = _assembly->system();
     
     std::string nm;
     nm = sys.name();
     nm += "real_sol";
+    if (if_sens)
+        nm += "_sens";
     
     if (!sys.have_vector(nm))
         sys.add_vector(nm);
-
+    
     return sys.get_vector(nm);
 }
 
 
 
 const libMesh::NumericVector<Real>&
-MAST::ComplexSolverBase::real_solution() const {
+MAST::ComplexSolverBase::real_solution(bool if_sens) const {
     
     libMesh::System& sys = _assembly->system();
-
+    
     std::string nm;
     nm = sys.name();
     nm += "real_sol";
+    if (if_sens)
+        nm += "_sens";
     
     if (!sys.have_vector(nm))
         sys.add_vector(nm);
@@ -103,13 +107,15 @@ MAST::ComplexSolverBase::real_solution() const {
 
 
 libMesh::NumericVector<Real>&
-MAST::ComplexSolverBase::imag_solution() {
+MAST::ComplexSolverBase::imag_solution(bool if_sens) {
     
     libMesh::System& sys = _assembly->system();
-
+    
     std::string nm;
     nm = sys.name();
     nm += "imag_sol";
+    if (if_sens)
+        nm += "_sens";
     
     if (!sys.have_vector(nm))
         sys.add_vector(nm);
@@ -119,13 +125,15 @@ MAST::ComplexSolverBase::imag_solution() {
 
 
 const libMesh::NumericVector<Real>&
-MAST::ComplexSolverBase::imag_solution() const {
+MAST::ComplexSolverBase::imag_solution(bool if_sens) const {
     
     libMesh::System& sys = _assembly->system();
-
+    
     std::string nm;
     nm = sys.name();
     nm += "imag_sol";
+    if (if_sens)
+        nm += "_sens";
     
     if (!sys.have_vector(nm))
         sys.add_vector(nm);
@@ -161,13 +169,13 @@ MAST::ComplexSolverBase::solve() {
     iters   = 0;
     
     libMesh::System& sys = _assembly->system();
-
+    
     
     while (if_cont) {
         
         // tell the assembly object to now assemble
         if (if_re) {
-
+            
             // swap the solution with the real part
             *(sys.solution) =  this->real_solution();
             _assembly->set_assemble_real_part();
@@ -227,7 +235,7 @@ void
 MAST::ComplexSolverBase::solve_pc_fieldsplit() {
     
     START_LOG("complex_solve()", "PetscFieldSplitSolver");
-
+    
     // get reference to the system
     MAST::NonlinearSystem& sys =
     dynamic_cast<MAST::NonlinearSystem&>(_assembly->system());
@@ -249,8 +257,8 @@ MAST::ComplexSolverBase::solve_pc_fieldsplit() {
                          &sub_mats[0],
                          &mat);
     CHKERRABORT(sys.comm().get(), ierr);
-
-
+    
+    
     // get the IS belonging to each block
     ierr  =    MatNestGetISs(mat, &is[0], NULL); CHKERRABORT(sys.comm().get(), ierr);
     
@@ -264,13 +272,13 @@ MAST::ComplexSolverBase::solve_pc_fieldsplit() {
     
     // setup vector for solution
     ierr  =   VecDuplicate(res, &sol);                             CHKERRABORT(sys.comm().get(), ierr);
-
+    
     
     
     // get the residual subvectors
     ierr = VecGetSubVector(res, is[0], &res_vec_R);                CHKERRABORT(sys.comm().get(), ierr);
     ierr = VecGetSubVector(res, is[1], &res_vec_I);                CHKERRABORT(sys.comm().get(), ierr);
-
+    
     // get the solution subvectors
     ierr = VecGetSubVector(sol, is[0], &sol_vec_R);                CHKERRABORT(sys.comm().get(), ierr);
     ierr = VecGetSubVector(sol, is[1], &sol_vec_I);                CHKERRABORT(sys.comm().get(), ierr);
@@ -296,7 +304,7 @@ MAST::ComplexSolverBase::solve_pc_fieldsplit() {
                                                  *sys.matrix,    // J_R
                                                  *sys.matrix_B,  // J_I
                                                  sys);
-
+    
     // restore the subvectors
     //ierr = VecRestoreSubVector(res, is[0], &res_vec_R); CHKERRABORT(sys.comm().get(), ierr);
     //ierr = VecRestoreSubVector(res, is[1], &res_vec_I); CHKERRABORT(sys.comm().get(), ierr);
@@ -322,7 +330,7 @@ MAST::ComplexSolverBase::solve_pc_fieldsplit() {
     ierr = KSPCreate(sys.comm().get(), &ksp); CHKERRABORT(sys.comm().get(), ierr);
     ierr = KSPSetOperators(ksp, mat, mat);    CHKERRABORT(sys.comm().get(), ierr);
     ierr = KSPSetFromOptions(ksp);            CHKERRABORT(sys.comm().get(), ierr);
-
+    
     // setup the PC
     ierr = KSPGetPC(ksp, &pc);                CHKERRABORT(sys.comm().get(), ierr);
     ierr = PCFieldSplitSetIS(pc, NULL, is[0]);CHKERRABORT(sys.comm().get(), ierr);
@@ -343,12 +351,12 @@ MAST::ComplexSolverBase::solve_pc_fieldsplit() {
                                                  *sys.matrix,    // J_R
                                                  *sys.matrix_B,  // J_I
                                                  sys);
-
+    
     // copy solutions for output
     /*this->real_solution() = *sol_R;
-    this->imag_solution() = *sol_I;
-    this->real_solution().close();
-    this->imag_solution().close();*/
+     this->imag_solution() = *sol_I;
+     this->real_solution().close();
+     this->imag_solution().close();*/
     
     
     // restore the subvectors
@@ -356,7 +364,7 @@ MAST::ComplexSolverBase::solve_pc_fieldsplit() {
     ierr = VecRestoreSubVector(res, is[1], &res_vec_I); CHKERRABORT(sys.comm().get(), ierr);
     ierr = VecRestoreSubVector(sol, is[0], &sol_vec_R); CHKERRABORT(sys.comm().get(), ierr);
     ierr = VecRestoreSubVector(sol, is[1], &sol_vec_I); CHKERRABORT(sys.comm().get(), ierr);
-
+    
     
     // destroy the objects
     ierr = KSPDestroy(&ksp);
@@ -370,14 +378,14 @@ MAST::ComplexSolverBase::solve_pc_fieldsplit() {
 
 
 void
-MAST::ComplexSolverBase::solve_block_matrix()  {
+MAST::ComplexSolverBase::solve_block_matrix(MAST::Parameter* p)  {
     
     START_LOG("solve_block_matrix()", "ComplexSolve");
-
+    
     // get reference to the system
     MAST::NonlinearSystem& sys =
     dynamic_cast<MAST::NonlinearSystem&>(_assembly->system());
-
+    
     libMesh::DofMap& dof_map = sys.get_dof_map();
     
     const PetscInt
@@ -385,7 +393,7 @@ MAST::ComplexSolverBase::solve_block_matrix()  {
     my_n = my_m,
     n_l  = dof_map.n_dofs_on_processor(sys.processor_id()),
     m_l  = n_l;
-
+    
     const std::vector<libMesh::dof_id_type>
     & n_nz       = dof_map.get_n_nz(),
     & n_oz       = dof_map.get_n_oz();
@@ -393,7 +401,7 @@ MAST::ComplexSolverBase::solve_block_matrix()  {
     std::vector<libMesh::dof_id_type>
     complex_n_nz (2*n_nz.size()),
     complex_n_oz (2*n_oz.size());
-
+    
     // create the n_nz and n_oz for the complex matrix without block format
     for (unsigned int i=0; i<n_nz.size(); i++) {
         
@@ -406,13 +414,13 @@ MAST::ComplexSolverBase::solve_block_matrix()  {
         complex_n_oz[2*i]   = 2*n_oz[i];
         complex_n_oz[2*i+1] = 2*n_oz[i];
     }
-
+    
     
     
     // create the matrix
     PetscErrorCode   ierr;
     Mat              mat;
-
+    
     ierr = MatCreate(sys.comm().get(), &mat);                      CHKERRABORT(sys.comm().get(), ierr);
     ierr = MatSetSizes(mat, 2*m_l, 2*n_l, 2*my_m, 2*my_n);         CHKERRABORT(sys.comm().get(), ierr);
     ierr = MatSetType(mat, MATAIJ);                                CHKERRABORT(sys.comm().get(), ierr);
@@ -440,36 +448,61 @@ MAST::ComplexSolverBase::solve_block_matrix()  {
         MatSetOptionsPrefix(mat, nm.c_str());
     }
     ierr = MatSetFromOptions(mat);                                 CHKERRABORT(sys.comm().get(), ierr);
-
+    
     
     // now create the vectors
     Vec              res_vec, sol_vec;
     
     ierr = MatCreateVecs(mat, &res_vec, PETSC_NULL);               CHKERRABORT(sys.comm().get(), ierr);
     ierr = MatCreateVecs(mat, &sol_vec, PETSC_NULL);               CHKERRABORT(sys.comm().get(), ierr);
-
+    
     
     std::auto_ptr<libMesh::SparseMatrix<Real> >
     jac_mat(new libMesh::PetscMatrix<Real>(mat, sys.comm()));
-
+    
     std::auto_ptr<libMesh::NumericVector<Real> >
     res(new libMesh::PetscVector<Real>(res_vec, sys.comm())),
     sol(new libMesh::PetscVector<Real>(sol_vec, sys.comm()));
+    
+    
+    // if sensitivity analysis is requested, then set the complex solution in
+    // the solution vector
+    if (p) {
+        
+        // copy the solution to separate real and imaginary vectors
+        libMesh::NumericVector<Real>
+        &sol_R = this->real_solution(),
+        &sol_I = this->imag_solution();
+        
+        unsigned int
+        first = sol_R.first_local_index(),
+        last  = sol_I.last_local_index();
+        
+        for (unsigned int i=first; i<last; i++) {
+            
+            sol->set(  2*i, sol_R(i));
+            sol->set(2*i+1, sol_I(i));
+        }
+        
+        sol->close();
+    }
+    
     
     // assemble the matrix
     _assembly->residual_and_jacobian_blocked(*sol,
                                              *res,
                                              *jac_mat,
-                                             sys);
+                                             sys,
+                                             p);
     
-
+    
     // now initialize the KSP and ask for solution.
     KSP        ksp;
     PC         pc;
     
     // setup the KSP
     ierr = KSPCreate(sys.comm().get(), &ksp); CHKERRABORT(sys.comm().get(), ierr);
-
+    
     if (libMesh::on_command_line("--solver_system_names")) {
         
         std::string nm = _assembly->system().name() + "_complex_";
@@ -484,14 +517,13 @@ MAST::ComplexSolverBase::solve_block_matrix()  {
     ierr = PCSetFromOptions(pc);              CHKERRABORT(sys.comm().get(), ierr);
     
     
-    
     START_LOG("KSPSolve", "ComplexSolve");
-
+    
     // now solve
     ierr = KSPSolve(ksp, res_vec, sol_vec);
 
     STOP_LOG("KSPSolve", "ComplexSolve");
-
+    
     // evaluate the residual again
     //_assembly->residual_and_jacobian_blocked(*sol,
     //                                         *res,
@@ -501,8 +533,8 @@ MAST::ComplexSolverBase::solve_block_matrix()  {
     
     // copy the solution to separate real and imaginary vectors
     libMesh::NumericVector<Real>
-    &sol_R = this->real_solution(),
-    &sol_I = this->imag_solution();
+    &sol_R = this->real_solution(p != NULL),
+    &sol_I = this->imag_solution(p != NULL);
     
     unsigned int
     first = sol_R.first_local_index(),
@@ -515,12 +547,12 @@ MAST::ComplexSolverBase::solve_block_matrix()  {
     
     sol_R.close();
     sol_I.close();
-
+    
     ierr = KSPDestroy(&ksp);                  CHKERRABORT(sys.comm().get(), ierr);
     ierr = MatDestroy(&mat);                  CHKERRABORT(sys.comm().get(), ierr);
     ierr = VecDestroy(&res_vec);              CHKERRABORT(sys.comm().get(), ierr);
     ierr = VecDestroy(&sol_vec);              CHKERRABORT(sys.comm().get(), ierr);
-
+    
     STOP_LOG("solve_block_matrix()", "ComplexSolve");
 }
 

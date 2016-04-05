@@ -97,7 +97,15 @@ _elem_sensitivity_calculations(MAST::ElementBase& elem,
                                ComplexMatrixX& mat) {
     
     
+    MAST::FrequencyDomainLinearizedConservativeFluidElem& e =
+    dynamic_cast<MAST::FrequencyDomainLinearizedConservativeFluidElem&>(elem);
     
+    vec.setZero();
+    mat.setZero();
+    
+    // assembly of the flux terms
+    e.internal_residual_sensitivity(if_jac, vec, mat);
+    e.side_external_residual_sensitivity(if_jac, vec, mat, _discipline->side_loads());
 }
 
 

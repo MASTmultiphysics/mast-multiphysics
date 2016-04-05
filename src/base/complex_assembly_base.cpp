@@ -26,6 +26,7 @@
 #include "numerics/utility.h"
 #include "base/mesh_field_function.h"
 #include "solver/complex_solver_base.h"
+#include "base/parameter.h"
 
 
 // libMesh includes
@@ -650,7 +651,8 @@ MAST::ComplexAssemblyBase::
 residual_and_jacobian_blocked (const libMesh::NumericVector<Real>& X,
                                libMesh::NumericVector<Real>& R,
                                libMesh::SparseMatrix<Real>&  J,
-                               libMesh::NonlinearImplicitSystem& S) {
+                               libMesh::NonlinearImplicitSystem& S,
+                               MAST::Parameter* p) {
 
     START_LOG("residual_and_jacobian()", "ComplexSolve");
     
@@ -672,7 +674,8 @@ residual_and_jacobian_blocked (const libMesh::NumericVector<Real>& X,
     delta_sol,
     vec;
     ComplexMatrixX
-    mat;
+    mat,
+    dummy;
 
     // get the petsc vector and matrix objects
     Mat
@@ -706,7 +709,6 @@ residual_and_jacobian_blocked (const libMesh::NumericVector<Real>& X,
                                 false,
                                 libMesh::GHOSTED);
     X.localize(*localized_complex_sol, complex_send_list);
-
     
     // localize the base solution, if it was provided
     if (_base_sol)
@@ -767,10 +769,19 @@ residual_and_jacobian_blocked (const libMesh::NumericVector<Real>& X,
         
         
         // perform the element level calculations
-        _elem_calculations(*physics_elem,
-                           true,
-                           vec,
-                           mat);
+        _elem_calculations(*physics_elem, true, vec, mat);
+        
+        // if sensitivity was requested, then ask the element for sensitivity
+        // of the residual
+        if (p) {
+            
+            physics_elem->sensitivity_param = p;
+            // set the sensitivity of complex sol to zero
+            delta_sol.setZero();
+            physics_elem->set_complex_solution(delta_sol, true);
+            vec.setZero();
+            _elem_sensitivity_calculations(*physics_elem, false, vec, dummy);
+        }
         
         vec *= -1.;
         
@@ -841,130 +852,8 @@ MAST::ComplexAssemblyBase::
 sensitivity_assemble (const libMesh::ParameterVector& parameters,
                       const unsigned int i,
                       libMesh::NumericVector<Real>& sensitivity_rhs) {
-    
-    libMesh::NonlinearImplicitSystem& nonlin_sys =
-    dynamic_cast<libMesh::NonlinearImplicitSystem&>(_system->system());
-    
-    sensitivity_rhs.zero();
-    
-    // iterate over each element, initialize it and get the relevant
-    // analysis quantities
-    RealVectorX    sol, vec_re;
-    ComplexVectorX vec, delta_sol;
-    ComplexMatrixX mat;
-    
-    std::vector<libMesh::dof_id_type> dof_indices;
-    const libMesh::DofMap& dof_map = nonlin_sys.get_dof_map();
-    std::auto_ptr<MAST::ElementBase> physics_elem;
-    
-    std::auto_ptr<libMesh::NumericVector<Real> >
-    localized_base_solution,
-    localized_base_solution_sens,
-    localized_real_solution,
-    localized_imag_solution;
-    
-    
-    // localize the base solution, if it was provided
-    if (_base_sol)
-        localized_base_solution.reset(_build_localized_vector(nonlin_sys,
-                                                              *_base_sol).release());
-    if (_base_sol_sensitivity)
-        localized_base_solution.reset(_build_localized_vector(nonlin_sys,
-                                                              *_base_sol_sensitivity).release());
-    
-    
-    // localize sol to real vector
-    localized_real_solution.reset(_build_localized_vector
-                                  (nonlin_sys,
-                                   _complex_solver->real_solution()).release());
-    // localize sol to imag vector
-    localized_imag_solution.reset(_build_localized_vector
-                                  (nonlin_sys,
-                                   _complex_solver->imag_solution()).release());
 
+    libmesh_error(); // not implemented. Call the blocked assembly instead.
     
-    // if a solution function is attached, initialize it
-    if (_sol_function)
-        _sol_function->init_for_system_and_solution(*_system, *nonlin_sys.solution);
-    
-    libMesh::MeshBase::const_element_iterator       el     =
-    nonlin_sys.get_mesh().active_local_elements_begin();
-    const libMesh::MeshBase::const_element_iterator end_el =
-    nonlin_sys.get_mesh().active_local_elements_end();
-    
-    for ( ; el != end_el; ++el) {
-        
-        const libMesh::Elem* elem = *el;
-        
-        dof_map.dof_indices (elem, dof_indices);
-        
-        physics_elem.reset(_build_elem(*elem).release());
-        
-        // get the solution
-        unsigned int ndofs = (unsigned int)dof_indices.size();
-        sol.setZero(ndofs);
-        delta_sol.setZero(ndofs);
-        vec.setZero(ndofs);
-        mat.setZero(ndofs, ndofs);
-        
-        // set the value of the base solution, if provided
-        if (_base_sol)
-            for (unsigned int i=0; i<dof_indices.size(); i++)
-                sol(i) = (*localized_base_solution)(dof_indices[i]);
-        physics_elem->set_solution(sol);
-        
-        // set value of the base solution sensitivity
-        if (_base_sol_sensitivity)
-            for (unsigned int i=0; i<dof_indices.size(); i++)
-                sol(i) = (*localized_base_solution_sens)(dof_indices[i]);
-        physics_elem->set_solution(sol, true);
-        
-        
-        // set the value of the small-disturbance solution
-        for (unsigned int i=0; i<dof_indices.size(); i++)
-            delta_sol(i) = Complex((*localized_real_solution)(dof_indices[i]),
-                                   (*localized_imag_solution)(dof_indices[i]));
-        
-        physics_elem->set_complex_solution(delta_sol);
-        
-        physics_elem->sensitivity_param = _discipline->get_parameter(&(parameters[i].get()));
-        
-        if (_sol_function)
-            physics_elem->attach_active_solution_function(*_sol_function);
-        
-        // perform the element level calculations
-        _elem_sensitivity_calculations(*physics_elem, false, vec, mat);
-        
-        // the sensitivity method provides sensitivity of the residual.
-        // Hence, this is multiplied with -1 to make it the RHS of the
-        // sensitivity equations.
-        vec *= -1.;
-        
-        physics_elem->detach_active_solution_function();
-        
-        // extract the real or the imaginary part of the matrix/vector
-        if (_if_assemble_real)
-            vec_re  =  vec.real();
-        else
-            vec_re  =  vec.imag();
-
-        // copy to the libMesh matrix for further processing
-        DenseRealVector v;
-        MAST::copy(v, vec_re);
-        
-        // constrain the quantities to account for hanging dofs,
-        // Dirichlet constraints, etc.
-        dof_map.constrain_element_vector(v, dof_indices);
-        
-        // add to the global matrices
-        sensitivity_rhs.add_vector(v, dof_indices);
-    }
-    
-    // if a solution function is attached, initialize it
-    if (_sol_function)
-        _sol_function->clear();
-    
-    sensitivity_rhs.close();
-    
-    return true;
+    return false;
 }

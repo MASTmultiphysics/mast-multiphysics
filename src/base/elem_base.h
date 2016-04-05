@@ -147,10 +147,12 @@ namespace MAST {
 
         
         /*!
-         *   This provides the complex solution for frequecy-domain analysis.
+         *   This provides the complex solution (or its sensitivity if 
+         *   \p if_sens is true.) for frequecy-domain analysis.
          *   stores \p vec as solution for element level calculations.
          */
-        virtual void set_complex_solution(const ComplexVectorX& vec);
+        virtual void set_complex_solution(const ComplexVectorX& vec,
+                                          bool if_sens = false);
 
         
         /*!
@@ -306,6 +308,11 @@ namespace MAST {
         ComplexVectorX _complex_sol;
 
         
+        /*!
+         *   local solution used for frequency domain analysis
+         */
+        ComplexVectorX _complex_sol_sens;
+
         /*!
          *   local velocity
          */

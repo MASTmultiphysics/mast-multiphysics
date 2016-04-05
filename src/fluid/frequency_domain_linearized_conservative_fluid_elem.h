@@ -54,6 +54,16 @@ namespace MAST {
                            ComplexVectorX& f,
                            ComplexMatrixX& jac);
 
+        /*!
+         *   sensitivity of internal force contribution to system residual. 
+         *   If \par request_jacobian is true, then the sensitivity of 
+         *   Jacobian is retured in \par jac.
+         */
+        virtual bool
+        internal_residual_sensitivity (bool request_jacobian,
+                                       ComplexVectorX& f,
+                                       ComplexMatrixX& jac);
+
         
         /*!
          *   side external force contribution to system residual
@@ -65,6 +75,17 @@ namespace MAST {
                                 std::multimap<libMesh::boundary_id_type, MAST::BoundaryConditionBase*>& bc);
 
         
+        /*!
+         *   sensitivity of internal force contribution to system residual.
+         *   If \par request_jacobian is true, then the sensitivity of
+         *   Jacobian is retured in \par jac.
+         */
+        virtual bool
+        side_external_residual_sensitivity (bool request_jacobian,
+                                            ComplexVectorX& f,
+                                            ComplexMatrixX& jac,
+                                            std::multimap<libMesh::boundary_id_type, MAST::BoundaryConditionBase*>& bc);
+
         
         /*!
          *  frequency function that provides the frequency for computations.
@@ -76,14 +97,28 @@ namespace MAST {
 
         
         /*!
-         *
+         *    residual of the slip wall that may be oscillating.
          */
-        virtual bool slip_wall_surface_residual(bool request_jacobian,
-                                                ComplexVectorX& f,
-                                                ComplexMatrixX& jac,
-                                                const unsigned int s,
-                                                MAST::BoundaryConditionBase& p);
+        virtual bool
+        slip_wall_surface_residual(bool request_jacobian,
+                                   ComplexVectorX& f,
+                                   ComplexMatrixX& jac,
+                                   const unsigned int s,
+                                   MAST::BoundaryConditionBase& p);
+
         
+        /*!
+         *    sensitivity of residual of the slip wall that may be oscillating.
+         *    If \par request_jacobian is true, then the sensitivity of the 
+         *    Jacobian is returned in \par jac.
+         */
+        virtual bool
+        slip_wall_surface_residual_sensitivity(bool request_jacobian,
+                                               ComplexVectorX& f,
+                                               ComplexMatrixX& jac,
+                                               const unsigned int s,
+                                               MAST::BoundaryConditionBase& p);
+
     };
 }
 

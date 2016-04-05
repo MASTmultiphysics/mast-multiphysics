@@ -447,4 +447,278 @@ BOOST_AUTO_TEST_CASE   (MovingWallJacobianNonZeroFreq) {
     check_moving_wall_jacobian(*this, 200.);
 }
 
+
+
+BOOST_AUTO_TEST_CASE   (InternalForceFreqSens) {
+    
+    // set the frequency value to some arbitrary value
+    *_omega = 100.;
+    
+    // make sure there is only one element in the mesh.
+    libmesh_assert_equal_to(_mesh->n_elem(), 1);
+    libMesh::Elem& e = **_mesh->local_elements_begin();
+    
+    const MAST::FlightCondition& p =
+    dynamic_cast<MAST::ConservativeFluidDiscipline*>(_discipline)->flight_condition();
+    
+    std::auto_ptr<MAST::FrequencyDomainLinearizedConservativeFluidElem>
+    elem(new MAST::FrequencyDomainLinearizedConservativeFluidElem(*_fluid_sys, e, p));
+    elem->freq                = _freq_function;
+    elem->sensitivity_param   = _omega;
+    
+    
+    const Real
+    delta    = 1.e-5,
+    tol      = 1.e-2;
+    
+    const Complex
+    iota(0., 1.);
+    
+    
+    // number of dofs in this element
+    const unsigned int ndofs = 16;
+    
+    // now get the residual and Jacobian evaluations
+    RealVectorX
+    x_base      =RealVectorX::Zero(ndofs);
+    
+    ComplexVectorX
+    x           = ComplexVectorX::Zero(ndofs),
+    res0        = ComplexVectorX::Zero(ndofs),
+    res_sens    = ComplexVectorX::Zero(ndofs),
+    res_sens_fd = ComplexVectorX::Zero(ndofs);
+    
+    ComplexMatrixX
+    jac_x       = ComplexMatrixX::Zero(ndofs, ndofs),
+    jac_x_fd    = ComplexMatrixX::Zero(ndofs, ndofs),
+    dummy;
+    
+    
+    
+    // set velocity to be zero
+    elem->set_velocity(x_base);
+    
+    // initialize the base solution vector. The 2D elem has 4 variables
+    for (unsigned int i=0; i<4; i++) {
+        for (unsigned int j=0; j<4; j++) {
+            x_base(i*4+j) = _base_sol(i);
+        }
+    }
+    elem->set_solution(x_base);
+    
+    
+    // both x and x0 are zero at this point.
+    // tell the element about the solution and velocity
+    elem->set_complex_solution(x);
+    elem->set_complex_solution(x, true);
+    
+    // get the base residual vector and the Jacobians for numerical comparisons
+    // later.
+    elem->internal_residual(true, res0, jac_x);
+    
+    // calculate the sensitivity of the residual
+    elem->internal_residual_sensitivity(false, res_sens, dummy);
+    
+    // now perturb the frequency parameter
+    *_omega = ((1. + delta) * (*_omega)());
+    
+    elem->internal_residual(false, res_sens_fd, dummy);
+    res_sens_fd -= res0;
+    res_sens_fd /= delta;
+
+    // now compare the two sensitivity vectors
+    BOOST_TEST_MESSAGE("** Checking Real Part of Internal Residual Sensitivity **");
+    BOOST_CHECK(MAST::compare_vector(  res_sens_fd.real(),  res_sens.real(),  tol));
+    
+    BOOST_TEST_MESSAGE("** Checking Real Part of Internal Residual Sensitivity **");
+    BOOST_CHECK(MAST::compare_vector(  res_sens_fd.real(),  res_sens.real(),  tol));
+}
+
+BOOST_AUTO_TEST_CASE   (FarFieldResidualFreqSens) {
+    
+    // set the frequency value to some arbitrary value
+    *_omega = 100.;
+    
+    
+    MAST::SideBCMapType bc_map;
+    bc_map.insert(std::pair<libMesh::boundary_id_type, MAST::BoundaryConditionBase*>
+                  (0, _far_field));
+    
+    
+    // make sure there is only one element in the mesh.
+    libmesh_assert_equal_to(_mesh->n_elem(), 1);
+    libMesh::Elem& e = **_mesh->local_elements_begin();
+    
+    const MAST::FlightCondition& p =
+    dynamic_cast<MAST::ConservativeFluidDiscipline*>(_discipline)->flight_condition();
+    
+    std::auto_ptr<MAST::FrequencyDomainLinearizedConservativeFluidElem>
+    elem(new MAST::FrequencyDomainLinearizedConservativeFluidElem(*_fluid_sys, e, p));
+    elem->freq                = _freq_function;
+    elem->sensitivity_param   = _omega;
+    
+    
+    const Real
+    delta    = 1.e-5,
+    tol      = 1.e-2;
+    
+    const Complex
+    iota(0., 1.);
+    
+    
+    // number of dofs in this element
+    const unsigned int ndofs = 16;
+    
+    // now get the residual and Jacobian evaluations
+    RealVectorX
+    x_base      =RealVectorX::Zero(ndofs);
+    
+    ComplexVectorX
+    x           = ComplexVectorX::Zero(ndofs),
+    res0        = ComplexVectorX::Zero(ndofs),
+    res_sens    = ComplexVectorX::Zero(ndofs),
+    res_sens_fd = ComplexVectorX::Zero(ndofs);
+    
+    ComplexMatrixX
+    jac_x       = ComplexMatrixX::Zero(ndofs, ndofs),
+    jac_x_fd    = ComplexMatrixX::Zero(ndofs, ndofs),
+    dummy;
+    
+    
+    
+    // set velocity to be zero
+    elem->set_velocity(x_base);
+    
+    // initialize the base solution vector. The 2D elem has 4 variables
+    for (unsigned int i=0; i<4; i++) {
+        for (unsigned int j=0; j<4; j++) {
+            x_base(i*4+j) = _base_sol(i);
+        }
+    }
+    elem->set_solution(x_base);
+    
+    
+    // both x and x0 are zero at this point.
+    // tell the element about the solution and velocity
+    elem->set_complex_solution(x);
+    elem->set_complex_solution(x, true);
+    
+    // get the base residual vector and the Jacobians for numerical comparisons
+    // later.
+    elem->side_external_residual(true, res0, jac_x, bc_map);
+    
+    // calculate the sensitivity of the residual
+    elem->side_external_residual_sensitivity(false, res_sens, dummy, bc_map);
+    
+    // now perturb the frequency parameter
+    *_omega = ((1. + delta) * (*_omega)());
+    
+    elem->side_external_residual(false, res_sens_fd, dummy, bc_map);
+    res_sens_fd -= res0;
+    res_sens_fd /= delta;
+
+    // now compare the two sensitivity vectors
+    BOOST_TEST_MESSAGE("** Checking Real Part of Internal Residual Sensitivity **");
+    BOOST_CHECK(MAST::compare_vector(  res_sens_fd.real(),  res_sens.real(),  tol));
+    
+    BOOST_TEST_MESSAGE("** Checking Real Part of Internal Residual Sensitivity **");
+    BOOST_CHECK(MAST::compare_vector(  res_sens_fd.real(),  res_sens.real(),  tol));
+}
+
+
+BOOST_AUTO_TEST_CASE   (MovingWallResidualFreqSens) {
+    
+    // set the frequency value to some arbitrary value
+    *_omega = 100.;
+    
+    
+    MAST::SideBCMapType bc_map;
+    bc_map.insert(std::pair<libMesh::boundary_id_type, MAST::BoundaryConditionBase*>
+                  (0, _slip_wall));
+
+    
+    // make sure there is only one element in the mesh.
+    libmesh_assert_equal_to(_mesh->n_elem(), 1);
+    libMesh::Elem& e = **_mesh->local_elements_begin();
+    
+    const MAST::FlightCondition& p =
+    dynamic_cast<MAST::ConservativeFluidDiscipline*>(_discipline)->flight_condition();
+    
+    std::auto_ptr<MAST::FrequencyDomainLinearizedConservativeFluidElem>
+    elem(new MAST::FrequencyDomainLinearizedConservativeFluidElem(*_fluid_sys, e, p));
+    elem->freq                = _freq_function;
+    elem->sensitivity_param   = _omega;
+    
+    
+    const Real
+    delta    = 1.e-5,
+    tol      = 1.e-2;
+    
+    const Complex
+    iota(0., 1.);
+    
+    
+    // number of dofs in this element
+    const unsigned int ndofs = 16;
+    
+    // now get the residual and Jacobian evaluations
+    RealVectorX
+    x_base      =RealVectorX::Zero(ndofs);
+    
+    ComplexVectorX
+    x           = ComplexVectorX::Zero(ndofs),
+    res0        = ComplexVectorX::Zero(ndofs),
+    res_sens    = ComplexVectorX::Zero(ndofs),
+    res_sens_fd = ComplexVectorX::Zero(ndofs);
+    
+    ComplexMatrixX
+    jac_x       = ComplexMatrixX::Zero(ndofs, ndofs),
+    jac_x_fd    = ComplexMatrixX::Zero(ndofs, ndofs),
+    dummy;
+    
+    
+    
+    // set velocity to be zero
+    elem->set_velocity(x_base);
+    
+    // initialize the base solution vector. The 2D elem has 4 variables
+    for (unsigned int i=0; i<4; i++) {
+        for (unsigned int j=0; j<4; j++) {
+            x_base(i*4+j) = _base_sol(i);
+        }
+    }
+    elem->set_solution(x_base);
+    
+    
+    // both x and x0 are zero at this point.
+    // tell the element about the solution and velocity
+    elem->set_complex_solution(x);
+    elem->set_complex_solution(x, true);
+    
+    // get the base residual vector and the Jacobians for numerical comparisons
+    // later.
+    elem->side_external_residual(true, res0, jac_x, bc_map);
+    
+    // calculate the sensitivity of the residual
+    elem->side_external_residual_sensitivity(false, res_sens, dummy, bc_map);
+    
+    // now perturb the frequency parameter
+    *_omega = ((1. + delta) * (*_omega)());
+    
+    elem->side_external_residual(false, res_sens_fd, dummy, bc_map);
+    res_sens_fd -= res0;
+    res_sens_fd /= delta;
+    
+    // now compare the two sensitivity vectors
+    BOOST_TEST_MESSAGE("** Checking Real Part of Internal Residual Sensitivity **");
+    BOOST_CHECK(MAST::compare_vector(  res_sens_fd.real(),  res_sens.real(),  tol));
+    
+    BOOST_TEST_MESSAGE("** Checking Real Part of Internal Residual Sensitivity **");
+    BOOST_CHECK(MAST::compare_vector(  res_sens_fd.real(),  res_sens.real(),  tol));
+}
+
+
 BOOST_AUTO_TEST_SUITE_END()
+
+
+

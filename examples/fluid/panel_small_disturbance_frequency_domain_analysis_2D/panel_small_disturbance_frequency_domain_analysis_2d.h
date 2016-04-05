@@ -82,14 +82,14 @@ namespace MAST {
         /*!
          *  solves the system and returns the final solution
          */
-        const libMesh::NumericVector<Real>&
+        void
         solve(bool if_write_output = false);
         
         
         /*!
          *  solves the sensitivity of system and returns the final solution
          */
-        const libMesh::NumericVector<Real>&
+        void
         sensitivity_solve(MAST::Parameter& p,
                           bool if_write_output = false);
                 

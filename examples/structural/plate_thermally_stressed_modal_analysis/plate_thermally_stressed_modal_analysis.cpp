@@ -166,7 +166,7 @@ init(libMesh::ElemType e_type, bool if_vk) {
     _ref_temp_f      = new MAST::ConstantFieldFunction("ref_temperature", *_zero);
     _hoff_f          = new MAST::SectionOffset("off",
                                                _th_f->clone().release(),
-                                               1.);
+                                               0.);
 
     
     // initialize the load
@@ -410,8 +410,10 @@ MAST::PlateThermallyStressedModalAnalysis::solve(bool if_write_output,
             
             // We write the file in the ExodusII format.
             base_sol.swap(*_sys->solution);
+            std::set<std::string> names; names.insert(_sys->name());
             libMesh::ExodusII_IO(*_mesh).write_equation_systems(file_name.str(),
-                                                                *_eq_sys);
+                                                                *_eq_sys,
+                                                                &names);
             base_sol.swap(*_sys->solution);
         }
     }

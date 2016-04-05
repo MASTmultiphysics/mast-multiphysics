@@ -33,6 +33,7 @@ namespace MAST {
     
     // Forward declerations
     class ComplexSolverBase;
+    class Parameter;
     
     
     class ComplexAssemblyBase:
@@ -167,11 +168,20 @@ namespace MAST {
                                            libMesh::SparseMatrix<Real>&  J_I,
                                            libMesh::NonlinearImplicitSystem& S);
 
+        /*!
+         *   Assembles the residual and Jacobian of the N complex system of equations
+         *   split into 2N real system of equations. The solution vector \par X
+         *   is the current complex solution with the real and imaginary parts 
+         *   of each element stored as adjacent entries. Likewise, the Jaacobian
+         *   matrix has a 2x2 block storage. If \par p is provided, then \par R
+         *   will return the sensitivity of the residual vector.
+         */
         void
         residual_and_jacobian_blocked (const libMesh::NumericVector<Real>& X,
                                        libMesh::NumericVector<Real>& R,
                                        libMesh::SparseMatrix<Real>&  J,
-                                       libMesh::NonlinearImplicitSystem& S);
+                                       libMesh::NonlinearImplicitSystem& S,
+                                       MAST::Parameter* p = NULL);
 
         /**
          * Assembly function.  This function will be called

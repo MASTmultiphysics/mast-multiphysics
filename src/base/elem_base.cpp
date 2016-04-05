@@ -73,9 +73,14 @@ MAST::ElementBase::set_solution(const RealVectorX &vec,
 
 
 void
-MAST::ElementBase::set_complex_solution(const ComplexVectorX &vec) {
+MAST::ElementBase::set_complex_solution(const ComplexVectorX &vec,
+                                        bool if_sens) {
     
-    _complex_sol = vec;
+    if (!if_sens)
+        _complex_sol = vec;
+    else
+        _complex_sol_sens = vec;
+    
 }
 
 

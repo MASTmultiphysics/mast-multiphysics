@@ -33,7 +33,7 @@ namespace MAST {
     // Forward declerations
     class ComplexAssemblyBase;
     class ElementBase;
-    
+    class Parameter;
     
     /*!
      *   uses a Gauss-Siedel method to solve the complex system of equations
@@ -90,33 +90,48 @@ namespace MAST {
 
         
         /*!
-         *  solves the complex system of equations using block matrices
+         *  solves the complex system of equations using block matrices. If 
+         *  no argument is specified for \par p, then the system is solved. 
+         *  Otherwise, the sensitivity of the system is solved with respect
+         *  to the parameter p
          */
-        virtual void solve_block_matrix();
+        virtual void solve_block_matrix(MAST::Parameter* p = NULL);
 
         
         /*!
-         *  @returns a reference to the real part of the solution
+         *  @returns a reference to the real part of the solution. If 
+         *  \par if_sens is true, the the sensitivity vector is returned. Note,
+         *  that the sensitivity can be requested only after a sensitivity 
+         *  solve.
          */
-        libMesh::NumericVector<Real>& real_solution();
+        libMesh::NumericVector<Real>& real_solution(bool if_sens=false);
         
         
         /*!
-         *  @returns a constant reference to the real part of the solution
+         *  @returns a constant reference to the real part of the solution. If
+         *  \par if_sens is true, the the sensitivity vector is returned. Note,
+         *  that the sensitivity can be requested only after a sensitivity
+         *  solve.
          */
-        const libMesh::NumericVector<Real>& real_solution() const;
+        const libMesh::NumericVector<Real>& real_solution(bool if_sens=false) const;
         
         
         /*!
-         *  @returns a reference to the imaginary part of the solution
+         *  @returns a reference to the imaginary part of the solution. If
+         *  \par if_sens is true, the the sensitivity vector is returned. Note,
+         *  that the sensitivity can be requested only after a sensitivity
+         *  solve.
          */
-        libMesh::NumericVector<Real>& imag_solution();
+        libMesh::NumericVector<Real>& imag_solution(bool if_sens=false);
 
         
         /*!
-         *  @returns a constant reference to the imaginary part of the solution
+         *  @returns a constant reference to the imaginary part of the solution.
+         *  If \par if_sens is true, the the sensitivity vector is returned.
+         *  Note, that the sensitivity can be requested only after a sensitivity
+         *  solve.
          */
-        const libMesh::NumericVector<Real>& imag_solution() const;
+        const libMesh::NumericVector<Real>& imag_solution(bool if_sens=false) const;
 
 
         Real tol;

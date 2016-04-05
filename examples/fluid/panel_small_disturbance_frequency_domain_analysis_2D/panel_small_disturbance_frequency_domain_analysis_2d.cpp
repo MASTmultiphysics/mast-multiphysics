@@ -203,6 +203,10 @@ PanelInviscidSmallDisturbanceFrequencyDomain2DAnalysis() {
     _velocity_f        = new MAST::ConstantFieldFunction("velocity", *_velocity);
     _b_ref_f           = new MAST::ConstantFieldFunction("b_ref",       *_b_ref);
     
+    
+    // populate the vector of parameters for sensitivity analysis
+    _params_for_sensitivity.push_back(_omega);
+    
     // initialize the frequency function
     _freq_function     = new MAST::FrequencyFunction("freq",
                                                      *_omega_f,
@@ -306,7 +310,7 @@ get_parameter(const std::string &nm) {
 
 
 
-const libMesh::NumericVector<Real>&
+void
 MAST::PanelInviscidSmallDisturbanceFrequencyDomain2DAnalysis::
 solve(bool if_write_output) {
     
@@ -424,71 +428,85 @@ solve(bool if_write_output) {
     
     
     assembly.clear_discipline_and_system();
-    _sys->remove_vector("fluid_base_solution");
     
-    return *(_sys->solution);
 }
 
 
 
 
 
-const libMesh::NumericVector<Real>&
+void
 MAST::PanelInviscidSmallDisturbanceFrequencyDomain2DAnalysis::
 sensitivity_solve(MAST::Parameter& p, bool if_write_output) {
     
-    /*_discipline->add_parameter(p);
-     
-     // create the nonlinear assembly object
-     MAST::StructuralNonlinearAssembly   assembly;
-     
-     assembly.attach_discipline_and_system(*_discipline, *_structural_sys);
-     
-     libMesh::NonlinearImplicitSystem&      nonlin_sys   =
-     dynamic_cast<libMesh::NonlinearImplicitSystem&>(assembly.system());
-     
-     libMesh::ParameterVector params;
-     params.resize(1);
-     params[0]  =  p.ptr();
-     
-     // zero the solution before solving
-     nonlin_sys.add_sensitivity_solution(0).zero();
-     this->clear_stresss();
-     
-     nonlin_sys.sensitivity_solve(params);
-     
-     // evaluate sensitivity of the outputs
-     assembly.calculate_output_sensitivity(params,
-     true,    // true for total sensitivity
-     *(_sys->solution));
-     
-     
-     assembly.clear_discipline_and_system();
-     _discipline->remove_parameter(p);
-     
-     // write the solution for visualization
-     if (if_write_output) {
-     
-     std::ostringstream oss1, oss2;
-     oss1 << "output_" << p.name() << ".exo";
-     oss2 << "output_" << p.name() << ".exo";
-     
-     libMesh::out
-     << "Writing sensitivity output to : " << oss1.str()
-     << "  and stress/strain sensitivity to : " << oss2.str()
-     << std::endl;
-     
-     
-     _sys->solution->swap(_sys->get_sensitivity_solution(0));
-     
-     // write the solution for visualization
-     libMesh::ExodusII_IO(*_mesh).write_equation_systems(oss1.str(),
-     *_eq_sys);
-     _discipline->plot_stress_strain_data<libMesh::ExodusII_IO>(oss2.str(), &p);
-     
-     _sys->solution->swap(_sys->get_sensitivity_solution(0));
-     }
-     */
-    return _sys->get_sensitivity_solution(0);
+    // initialize the solution
+    RealVectorX s = RealVectorX::Zero(4);
+    s(0) = _flight_cond->rho();
+    s(1) = _flight_cond->rho_u1();
+    s(2) = _flight_cond->rho_u2();
+    s(3) = _flight_cond->rho_e();
+    
+    // create the vector for storing the base solution.
+    // we will swap this out with the system solution, initialize and
+    // then swap it back.
+    libMesh::NumericVector<Real>& base_sol =
+    _sys->add_vector("fluid_base_solution");
+    _sys->solution->swap(base_sol);
+    _fluid_sys->initialize_solution(s);
+    _sys->solution->swap(base_sol);
+    
+
+    // tell the discipline about the parameter with respect to this
+    // sensitivity will be calculated
+    _discipline->add_parameter(p);
+    
+    // create the nonlinear assembly object
+    MAST::FrequencyDomainLinearizedComplexAssembly   assembly;
+    
+    // complex solver for solution of small-disturbance system of eqs.
+    MAST::ComplexSolverBase                          solver;
+    
+    // now solve the system
+    assembly.attach_discipline_and_system(*_discipline,
+                                          solver,
+                                          *_fluid_sys);
+    assembly.set_base_solution(base_sol);
+    assembly.set_frequency_function(*_freq_function);
+    
+    solver.solve_block_matrix(&p);
+    
+    if (if_write_output) {
+        
+        libMesh::NumericVector<Real>
+        &real_sol = solver.real_solution(true),
+        &imag_sol = solver.imag_solution(true);
+        
+        
+        // first, write the real part
+        libMesh::out
+        << "Writing real-sensitivity output to : real_sens_output.exo" << std::endl;
+        
+        _sys->solution->swap(real_sol);
+        libMesh::ExodusII_IO(*_mesh).write_equation_systems("real_sens_output.exo",
+                                                            *_eq_sys);
+        _sys->solution->swap(real_sol);
+        
+        
+        // next, write the imag part
+        libMesh::out
+        << "Writing imag-sensitivity output to : imag_sens_output.exo" << std::endl;
+        
+        _sys->solution->swap(imag_sol);
+        libMesh::ExodusII_IO(*_mesh).write_equation_systems("imag_sens_output.exo",
+                                                            *_eq_sys);
+        _sys->solution->swap(imag_sol);
+    }
+    
+    
+    assembly.clear_discipline_and_system();
+    _sys->remove_vector("fluid_base_solution");
+    _discipline->remove_parameter(p);
+
+    
 }
 
