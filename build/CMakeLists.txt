@@ -148,6 +148,8 @@ file (GLOB_RECURSE mast_test_source_files
 	../examples/thermal/*.h
 	../examples/fluid/*.cpp 
 	../examples/fluid/*.h
+	../examples/fsi/*.cpp
+	../examples/fsi/*.h
 	../examples/base/multilinear_interpolation.cpp
 	../examples/structural/bar_extension/*.cpp
 	../examples/structural/beam_bending/*.cpp
