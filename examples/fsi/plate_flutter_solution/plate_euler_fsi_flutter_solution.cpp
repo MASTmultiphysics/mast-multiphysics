@@ -621,9 +621,10 @@ MAST::PlateEulerFSIFlutterAnalysis::get_parameter(const std::string &nm) {
 
 
 
-
 Real
-MAST::PlateEulerFSIFlutterAnalysis::solve(bool if_write_output) {
+MAST::PlateEulerFSIFlutterAnalysis::solve(bool if_write_output,
+                                          const Real tol,
+                                          const unsigned int max_bisection_iters) {
     
     /////////////////////////////////////////////////////////////////
     //  INITIALIZE FLUID SOLUTION
@@ -775,7 +776,7 @@ MAST::PlateEulerFSIFlutterAnalysis::solve(bool if_write_output) {
     // now ask the flutter solver to return the critical flutter root,
     // which is the flutter cross-over point at the lowest velocity
     std::pair<bool, MAST::FlutterRootBase*>
-    sol = _flutter_solver->find_critical_root(1.e-4, 20);
+    sol = _flutter_solver->find_critical_root(tol, max_bisection_iters);
     
     
     _flutter_solver->print_sorted_roots();
@@ -936,7 +937,6 @@ MAST::PlateEulerFSIFlutterAnalysis::solve(bool if_write_output) {
     
     
     assembly.clear_discipline_and_system();
-    _fluid_sys->remove_vector("fluid_base_solution");
     
     
     return _flutter_root->V;

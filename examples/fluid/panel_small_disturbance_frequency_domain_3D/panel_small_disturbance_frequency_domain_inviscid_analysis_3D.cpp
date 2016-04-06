@@ -441,7 +441,6 @@ MAST::PanelSmallDisturbanceFrequencyDomainInviscidAnalysis3D::solve(bool if_writ
     
     
     assembly.clear_discipline_and_system();
-    _sys->remove_vector("fluid_base_solution");
 
     return *(_sys->solution);
 }

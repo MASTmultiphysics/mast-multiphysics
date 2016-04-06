@@ -164,7 +164,8 @@ MAST::FSIGeneralizedAeroForceAssembly::clear_discipline_and_system() {
 void
 MAST::FSIGeneralizedAeroForceAssembly::
 assemble_generalized_aerodynamic_force_matrix(std::vector<libMesh::NumericVector<Real>*>& basis,
-                                              ComplexMatrixX& mat) {
+                                              ComplexMatrixX& mat,
+                                              MAST::Parameter* p) {
     
     // make sure the data provided is sane
     libmesh_assert(_structural_comm);
@@ -248,13 +249,13 @@ assemble_generalized_aerodynamic_force_matrix(std::vector<libMesh::NumericVector
         
         
         // solve the complex smamll-disturbance fluid-equations
-        _fluid_complex_solver->solve_block_matrix();
+        _fluid_complex_solver->solve_block_matrix(p);
         
         
         // use this solution to initialize the structural boundary conditions
         _pressure_function->init(_fluid_complex_solver->get_assembly().base_sol(),
-                                 _fluid_complex_solver->real_solution(),
-                                 _fluid_complex_solver->imag_solution());
+                                 _fluid_complex_solver->real_solution(p != NULL),
+                                 _fluid_complex_solver->imag_solution(p != NULL));
         
         
         if (if_structural) {
@@ -345,6 +346,7 @@ assemble_generalized_aerodynamic_force_matrix(std::vector<libMesh::NumericVector
     // this assumes that the structural comm is a subset of fluid comm
     MAST::parallel_sum(*_fluid_comm, mat);
 }
+
 
 
 
@@ -472,6 +474,186 @@ assemble_reduced_order_quantity
                 
                 _qty_type = it->first;
                 _elem_calculations(*physics_elem, true, vec, mat);
+                
+                DenseRealMatrix m;
+                MAST::copy(m, mat);
+                dof_map.constrain_element_matrix(m, dof_indices);
+                MAST::copy(mat, m);
+                
+                // now add to the reduced order matrix
+                (*it->second) += basis_mat.transpose() * mat * basis_mat;
+            }
+            
+            physics_elem->detach_active_solution_function();
+            
+        }
+        
+        
+        // if a solution function is attached, clear it
+        if (_sol_function)
+            _sol_function->clear();
+        
+        
+        // delete the localized basis vectors
+        for (unsigned int i=0; i<basis.size(); i++)
+            delete localized_basis[i];
+    }
+    
+    // sum the matrix and provide it to each processor
+    it  = mat_qty_map.begin();
+    end = mat_qty_map.end();
+    
+    for ( ; it != end; it++)
+        // this assumes that the structural comm is a subset of fluid comm
+        MAST::parallel_sum(*_fluid_comm, *(it->second));
+}
+
+
+
+
+
+void
+MAST::FSIGeneralizedAeroForceAssembly::
+assemble_reduced_order_quantity_sensitivity
+(const libMesh::ParameterVector& parameters,
+ const unsigned int i,
+ std::vector<libMesh::NumericVector<Real>*>& basis,
+ std::map<MAST::StructuralQuantityType, RealMatrixX*>& mat_qty_map) {
+    
+    // make sure the data provided is sane
+    libmesh_assert(_structural_comm);
+    libmesh_assert(_fluid_comm);
+    
+    const bool
+    if_structural =  _structural_comm->get() != MPI_COMM_NULL;
+    
+    unsigned int
+    n_basis = (unsigned int)basis.size();
+    
+    
+    // the structural comm should have the same basis
+    if (if_structural)
+        _structural_comm->verify(n_basis);
+    else {
+        
+        // basis size should be zero on ranks where structural comm is not valid
+        libmesh_assert(!n_basis);
+    }
+    
+    // tell all processors about the basis size
+    _fluid_comm->broadcast(n_basis);
+    
+    // initialize the quantities to zero matrices
+    std::map<MAST::StructuralQuantityType, RealMatrixX*>::iterator
+    it  = mat_qty_map.begin(),
+    end = mat_qty_map.end();
+    
+    for ( ; it != end; it++)
+        *it->second = RealMatrixX::Zero(n_basis, n_basis);
+    
+    
+    
+    if (if_structural) {
+        
+        libmesh_assert(_motion);
+        libmesh_assert(_discipline);
+        libmesh_assert(_system);
+        
+        
+        // make sure that a valid basis is provided on the structural comm
+        libmesh_assert(n_basis);
+        
+        // iterate over each element, initialize it and get the relevant
+        // analysis quantities
+        RealVectorX vec, sol, dsol;
+        RealMatrixX mat, basis_mat;
+        
+        std::vector<libMesh::dof_id_type> dof_indices;
+        const libMesh::DofMap& dof_map = _system->system().get_dof_map();
+        std::auto_ptr<MAST::ElementBase> physics_elem;
+        
+        std::auto_ptr<libMesh::NumericVector<Real> >
+        localized_solution,
+        localized_solution_sens;
+        
+        if (_base_sol) {
+            
+            // make sure that the solution sensitivity is provided
+            libmesh_assert(_base_sol_sensitivity);
+
+            localized_solution.reset(_build_localized_vector(_system->system(),
+                                                             *_base_sol).release());
+            localized_solution_sens.reset(_build_localized_vector(_system->system(),
+                                                                  *_base_sol_sensitivity).release());
+
+        }
+        
+        // also create localized solution vectos for the bassis vectors
+        
+        
+        std::vector<libMesh::NumericVector<Real>*> localized_basis(n_basis);
+        for (unsigned int i=0; i<n_basis; i++)
+            localized_basis[i] = _build_localized_vector(_system->system(),
+                                                         *basis[i]).release();
+        
+        
+        // if a solution function is attached, initialize it
+        if (_sol_function && _base_sol)
+            _sol_function->init_for_system_and_solution(*_system, *_base_sol);
+        
+        
+        libMesh::MeshBase::const_element_iterator       el     =
+        _system->system().get_mesh().active_local_elements_begin();
+        const libMesh::MeshBase::const_element_iterator end_el =
+        _system->system().get_mesh().active_local_elements_end();
+        
+        for ( ; el != end_el; ++el) {
+            
+            const libMesh::Elem* elem = *el;
+            
+            dof_map.dof_indices (elem, dof_indices);
+            
+            physics_elem.reset(_build_elem(*elem).release());
+            
+            // get the solution
+            unsigned int ndofs = (unsigned int)dof_indices.size();
+            sol.setZero(ndofs);
+            dsol.setZero(ndofs);
+            vec.setZero(ndofs);
+            mat.setZero(ndofs, ndofs);
+            basis_mat.setZero(ndofs, n_basis);
+            
+            for (unsigned int i=0; i<dof_indices.size(); i++) {
+                
+                if (_base_sol) {
+                    
+                    sol(i)  = (*localized_solution)(dof_indices[i]);
+                    dsol(i) = (*localized_solution_sens)(dof_indices[i]);
+                }
+                
+                for (unsigned int j=0; j<n_basis; j++)
+                    basis_mat(i,j) = (*localized_basis[j])(dof_indices[i]);
+            }
+            
+            physics_elem->sensitivity_param  = _discipline->get_parameter(&(parameters[i].get()));
+            physics_elem->set_solution(sol);
+            physics_elem->set_solution(dsol, true);
+            physics_elem->set_velocity(vec);     // set to zero value
+            physics_elem->set_acceleration(vec); // set to zero value
+            
+            
+            if (_sol_function)
+                physics_elem->attach_active_solution_function(*_sol_function);
+            
+            // now iterative over all qty types in the map and assemble them
+            std::map<MAST::StructuralQuantityType, RealMatrixX*>::iterator
+            it   = mat_qty_map.begin(),
+            end  = mat_qty_map.end();
+            
+            for ( ; it != end; it++) {
+                
+                _qty_type = it->first;
+                _elem_sensitivity_calculations(*physics_elem, true, vec, mat);
                 
                 DenseRealMatrix m;
                 MAST::copy(m, mat);

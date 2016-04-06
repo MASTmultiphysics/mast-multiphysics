@@ -128,7 +128,7 @@ namespace MAST {
                               const libMesh::ParameterVector& params,
                               const unsigned int i,
                               libMesh::NumericVector<Real>* dXdp = NULL,
-                              libMesh::NumericVector<Real>* dXdV = NULL);
+                              libMesh::NumericVector<Real>* dXdkr = NULL);
         
         
         /*!
@@ -194,10 +194,19 @@ namespace MAST {
         _initialize_matrix_sensitivity_for_param(const libMesh::ParameterVector& params,
                                                  const unsigned int i,
                                                  const libMesh::NumericVector<Real>& dXdp,
-                                                 Real U_inf,
+                                                 Real kr,
                                                  ComplexMatrixX& A,
                                                  ComplexMatrixX& B);
+
         
+        /*!
+         *    Assembles the sensitivity of matrices wrt kr
+         */
+        void
+        _initialize_matrix_sensitivity_for_kr(Real kr,
+                                              ComplexMatrixX& A,
+                                              ComplexMatrixX& B);
+
         
         /*!
          *   identifies all cross-over and divergence points from analyzed

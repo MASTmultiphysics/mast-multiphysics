@@ -698,10 +698,10 @@ side_external_residual_sensitivity(bool request_jacobian,
                         
                         
                     case MAST::DIRICHLET:
+                    case MAST::SMALL_DISTURBANCE_MOTION:
                         // nothing to be done here
                         break;
                         
-                    case MAST::SMALL_DISTURBANCE_MOTION:
                     default:
                         // not implemented yet
                         libmesh_error();
@@ -759,6 +759,9 @@ volume_external_residual_sensitivity (bool request_jacobian,
                 break;
                 
             case MAST::SMALL_DISTURBANCE_MOTION:
+                // nothing to be done here
+                break;
+                
             default:
                 // not implemented yet
                 libmesh_error();

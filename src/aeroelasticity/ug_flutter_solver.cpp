@@ -572,8 +572,6 @@ _initialize_matrix_sensitivity_for_param(const libMesh::ParameterVector& params,
                                          ComplexMatrixX& A,
                                          ComplexMatrixX& B) {
     
-    libmesh_assert(false);
-    
     // the UG method equations are
     //
     // ((kr/b)^2 M + rho/2 A(kr))q = lambda K q
@@ -600,15 +598,65 @@ _initialize_matrix_sensitivity_for_param(const libMesh::ParameterVector& params,
     // set the velocity value in the parameter that was provided
     (*_kr_param) = kr;
     
-    _assembly->set_base_solution(dXdp, true);
-    _assembly->assemble_reduced_order_quantity_sensitivity
-    (params, i, *_basis_vectors, qty_map);
-    _assembly->clear_base_solution(true);
+    _assembly->assemble_reduced_order_quantity_sensitivity(params,
+                                                           i,
+                                                           *_basis_vectors,
+                                                           qty_map);
+
+    // currently, sensitivity of generalized aero matrix is available only
+    // for freq (ie non-structural parameters). Once the dependence on
+    // base sol sensitivity is introduced, this will change.
+    //dynamic_cast<MAST::FSIGeneralizedAeroForceAssembly*>(_assembly)->
+    //assemble_generalized_aerodynamic_force_matrix(*_basis_vectors, a);
     
-    
-    // put the matrices back in the system matrices
     A    = pow(kr/(*_bref_param)(),2) * m.cast<Complex>() -  (_rho/2.) * a;
     B    = k.cast<Complex>();
+}
+
+
+
+
+
+
+void
+MAST::UGFlutterSolver::
+_initialize_matrix_sensitivity_for_kr(Real kr,
+                                      ComplexMatrixX& A,
+                                      ComplexMatrixX& B) {
+    
+    // the UG method equations are
+    //
+    // ((kr/b)^2 M + rho/2 A(kr))q = lambda K q
+    // where M and K are the structural reduced-order mass and stiffness
+    // matrices, and A(kr) is the generalized aerodynamic force matrix.
+    //
+    
+    const unsigned int n = (unsigned int)_basis_vectors->size();
+    
+    RealMatrixX
+    m      =  RealMatrixX::Zero(n, n);
+    
+    ComplexMatrixX
+    a      =  ComplexMatrixX::Zero(n, n);
+    
+    // now prepare a map of the quantities and ask the assembly object to
+    // calculate the quantities of interest.
+    std::map<MAST::StructuralQuantityType, RealMatrixX*> qty_map;
+    qty_map[MAST::MASS]       = &m;
+    
+    
+    // set the velocity value in the parameter that was provided
+    (*_kr_param) = kr;
+    
+    _assembly->assemble_reduced_order_quantity(*_basis_vectors,
+                                               qty_map);
+    
+    dynamic_cast<MAST::FSIGeneralizedAeroForceAssembly*>(_assembly)->
+    assemble_generalized_aerodynamic_force_matrix(*_basis_vectors, a, _kr_param);
+    
+    
+    A    = 2.*kr*pow((*_bref_param)(),-2) * m.cast<Complex>() -  (_rho/2.) * a;
+    B    = ComplexMatrixX::Zero(n, n);
 }
 
 
@@ -799,20 +847,27 @@ calculate_sensitivity(MAST::FlutterRootBase& root,
                       const libMesh::ParameterVector& params,
                       const unsigned int i,
                       libMesh::NumericVector<Real>* dXdp,
-                      libMesh::NumericVector<Real>* dXdV) {
+                      libMesh::NumericVector<Real>* dXdkr) {
     
     
     
     libMesh::out
     << " ====================================================" << std::endl
-    << "Flutter Sensitivity Solution" << std::endl
+    << "UG Sensitivity Solution" << std::endl
+    << "   k_red = " << std::setw(10) << root.kr << std::endl
     << "   V_ref = " << std::setw(10) << root.V << std::endl;
     
     Complex
     eig              = root.root,
     deig_dp          = 0.,
-    deig_dV          = 0.,
+    deig_dkr         = 0.,
     den              = 0.;
+    
+    Real
+    dkr_dp           = 0.,
+    dg_dp            = 0.,
+    dg_dkr           = 0.;
+
     
     // get the sensitivity of the matrices
     ComplexMatrixX
@@ -824,7 +879,7 @@ calculate_sensitivity(MAST::FlutterRootBase& root,
     ComplexVectorX v;
     
     // initialize the baseline matrices
-    _initialize_matrices(root.V, mat_A, mat_B);
+    _initialize_matrices(root.kr, mat_A, mat_B);
     
     // if the sensitivity of the solution was provided, then use that.
     // otherwise pass a zero vector
@@ -841,7 +896,7 @@ calculate_sensitivity(MAST::FlutterRootBase& root,
     _initialize_matrix_sensitivity_for_param(params,
                                              i,
                                              *sol_sens,
-                                             root.V,
+                                             root.kr,
                                              mat_A_sens,
                                              mat_B_sens);
     
@@ -860,44 +915,47 @@ calculate_sensitivity(MAST::FlutterRootBase& root,
     deig_dp = root.eig_vec_left.dot((mat_A_sens.cast<Complex>() -
                                      eig*mat_B_sens.cast<Complex>())*root.eig_vec_right)/den;
     
-    
-    // next we need the sensitivity of eigenvalue wrt V
-    libMesh::ParameterVector param_V;
-    param_V.resize(1);
-    param_V[0]  =  _kr_param->ptr();
-    
-    
+    // next we need the sensitivity of eigenvalue wrt kr
     // identify the sensitivity of solution to be used based on the
     // function arguments
-    if (!dXdV) {
-        sol_sens = zero_sol_sens.get();
-    }
-    else
-        sol_sens = dXdV;
+    sol_sens = zero_sol_sens.get();
     
-    _initialize_matrix_sensitivity_for_param(param_V,
-                                             0,
-                                             *sol_sens,
-                                             root.V,
-                                             mat_A_sens,
-                                             mat_B_sens);
+    _initialize_matrix_sensitivity_for_kr(root.kr,
+                                          mat_A_sens,
+                                          mat_B_sens);
     
     // now calculate the quotient for sensitivity wrt k_red
     // calculate numerator
-    deig_dV = root.eig_vec_left.dot((mat_A_sens.cast<Complex>() -
+    deig_dkr = root.eig_vec_left.dot((mat_A_sens.cast<Complex>() -
                                      eig*mat_B_sens.cast<Complex>())*root.eig_vec_right)/den;
     
+    // using this, the following quantities are caluclated
+    // since eig = lambda =  (1+ig)/V^2.
+    // V =  (1/re(eig))^(-1/2)
+    // g =  im(eig)/re(eig)
+    //
+    // Therefore, the sensitivity of g and V are
+    // dV/dp =  -1/2 (1/re(eig))^(-3/2) deig_re/dp
+    // dg/dp =  deig_im/dp / re(eig) - im(eig)/re(eig)^2 deig_re/dp
+
+    dg_dp  =
+    deig_dp.imag()/eig.real()  - eig.imag()/pow(eig.real(),2) * deig_dp.real();
+    dg_dkr =
+    deig_dkr.imag()/eig.real() - eig.imag()/pow(eig.real(),2) * deig_dkr.real();
+    
+
     // since the constraint that defines flutter speed is that damping = 0,
-    // Re(lambda) = 0, then the sensitivity of flutter speed is obtained
-    // from the total derivative of this constraint
-    //     d Re(lambda)/dp + d Re(lambda)/dV dV/dp = 0
-    // or, dV/dp = -[d Re(lambda)/dp] / [d Re(lambda)/dV]
-    // finally, the flutter speed sensitivity
-    root.V_sens     = - deig_dp.real() / deig_dV.real();
+    //      g(p, kr) = 0,
+    // then the total derivative of this constraint is
+    //      dg/dp + dg/dkr dkr/dp = 0
+    // or,  dkr/dp = -dg/dp / dg/dkr
+    dkr_dp       = -dg_dp / dg_dkr;
+    root.kr_sens = dkr_dp;
     
-    // total sensitivity of the eigenvlaue
-    root.root_sens  = deig_dp + deig_dV * root.V_sens;
-    
+    // Using this, the sensitivity of flutter speed if calculated as
+    // dV/dp = dV/dp + dV/dkr dkr/dp
+    root.root_sens            = deig_dp + deig_dkr * dkr_dp;
+    root.V_sens               = -.5*root.root_sens.real()/pow(eig.real(), 1.5);
     root.has_sensitivity_data = true;
     
     libMesh::out

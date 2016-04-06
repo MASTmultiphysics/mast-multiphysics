@@ -586,7 +586,9 @@ MAST::BeamEulerFSIFlutterAnalysis::get_parameter(const std::string &nm) {
 
 
 Real
-MAST::BeamEulerFSIFlutterAnalysis::solve(bool if_write_output) {
+MAST::BeamEulerFSIFlutterAnalysis::solve(bool if_write_output,
+                                         const Real tol,
+                                         const unsigned int max_bisection_iters) {
     
     
     /////////////////////////////////////////////////////////////////
@@ -743,7 +745,7 @@ MAST::BeamEulerFSIFlutterAnalysis::solve(bool if_write_output) {
     // now ask the flutter solver to return the critical flutter root,
     // which is the flutter cross-over point at the lowest velocity
     std::pair<bool, MAST::FlutterRootBase*>
-    sol = _flutter_solver->find_critical_root(1.e-4, 20);
+    sol = _flutter_solver->find_critical_root(tol, max_bisection_iters);
     
     
     _flutter_solver->print_sorted_roots();
@@ -904,8 +906,6 @@ MAST::BeamEulerFSIFlutterAnalysis::solve(bool if_write_output) {
     
     
     assembly.clear_discipline_and_system();
-    _fluid_sys->remove_vector("fluid_base_solution");
-    
     
     return _flutter_root->V;
 }
@@ -917,58 +917,78 @@ MAST::BeamEulerFSIFlutterAnalysis::solve(bool if_write_output) {
 Real
 MAST::BeamEulerFSIFlutterAnalysis::sensitivity_solve(MAST::Parameter& p) {
     
-    /*_discipline->add_parameter(p);
-     
-     // create the nonlinear assembly object
-     MAST::StructuralNonlinearAssembly   assembly;
-     
-     assembly.attach_discipline_and_system(*_discipline, *_structural_sys);
-     
-     libMesh::NonlinearImplicitSystem&      nonlin_sys   =
-     dynamic_cast<libMesh::NonlinearImplicitSystem&>(assembly.system());
-     
-     libMesh::ParameterVector params;
-     params.resize(1);
-     params[0]  =  p.ptr();
-     
-     // zero the solution before solving
-     nonlin_sys.add_sensitivity_solution(0).zero();
-     this->clear_stresss();
-     
-     nonlin_sys.sensitivity_solve(params);
-     
-     // evaluate sensitivity of the outputs
-     assembly.calculate_output_sensitivity(params,
-     true,    // true for total sensitivity
-     *(_sys->solution));
-     
-     
-     assembly.clear_discipline_and_system();
-     _discipline->remove_parameter(p);
-     
-     // write the solution for visualization
-     if (if_write_output) {
-     
-     std::ostringstream oss1, oss2;
-     oss1 << "output_" << p.name() << ".exo";
-     oss2 << "output_" << p.name() << ".exo";
-     
-     libMesh::out
-     << "Writing sensitivity output to : " << oss1.str()
-     << "  and stress/strain sensitivity to : " << oss2.str()
-     << std::endl;
-     
-     
-     _sys->solution->swap(_sys->get_sensitivity_solution(0));
-     
-     // write the solution for visualization
-     libMesh::ExodusII_IO(*_mesh).write_equation_systems(oss1.str(),
-     *_eq_sys);
-     _discipline->plot_stress_strain_data<libMesh::ExodusII_IO>(oss2.str(), &p);
-     
-     _sys->solution->swap(_sys->get_sensitivity_solution(0));
-     }
-     */
-    return 0.;
+    //Make sure that  a solution is available for sensitivity
+    libmesh_assert(_flutter_root);
+
+    /////////////////////////////////////////////////////////////////
+    //  INITIALIZE FLUID ASSEMBLY/SOLVER OBJECTS
+    /////////////////////////////////////////////////////////////////
+    libMesh::NumericVector<Real>& base_sol =
+    _fluid_sys->get_vector("fluid_base_solution");
+    
+    // create the nonlinear assembly object
+    MAST::FrequencyDomainLinearizedComplexAssembly   assembly;
+    
+    // Transient solver for time integration
+    MAST::ComplexSolverBase                          solver;
+    
+    // now solve the system
+    assembly.attach_discipline_and_system(*_fluid_discipline,
+                                          solver,
+                                          *_fluid_sys_init);
+    assembly.set_base_solution(base_sol);
+    assembly.set_frequency_function(*_freq_function);
+
+
+    // it is assumed that the modal basis is available from the flutter solution
+    
+    
+    ///////////////////////////////////////////////////////////////////
+    // FLUTTER SOLUTION SENSITIVITY
+    ///////////////////////////////////////////////////////////////////
+    // clear flutter solver and set the output file
+    
+    MAST::FSIGeneralizedAeroForceAssembly fsi_assembly;
+    if (_structural_comm->get() != MPI_COMM_NULL) {
+        
+        fsi_assembly.attach_discipline_and_system(*_structural_discipline,
+                                                  *_structural_sys_init);
+        
+        std::ostringstream oss;
+        oss << "flutter_output_" << __init->comm().rank() << ".txt";
+        _flutter_solver->set_output_file(oss.str());
+    }
+    
+    
+    fsi_assembly.init(*_freq_function,
+                      *_structural_comm,             // structural comm
+                      __init->comm(),                // fluid comm
+                      &solver,                       // fluid complex solver
+                      _small_dist_pressure_function,
+                      _motion_function);
+    _flutter_solver->attach_assembly(fsi_assembly);
+
+    // flutter solver will need velocity to be defined as a parameter for
+    // sensitivity analysis
+    _structural_discipline->add_parameter(p);
+    _fluid_discipline->add_parameter(*_omega);
+    
+    libMesh::ParameterVector params;
+    params.resize(1);
+    params[0]  =  p.ptr();
+    
+    // calculate the sensitivity
+    _flutter_solver->calculate_sensitivity(*_flutter_root, params, 0);
+
+    
+    // clean up before exiting
+    fsi_assembly.clear_discipline_and_system();
+    _flutter_solver->clear_assembly_object();
+    _structural_discipline->remove_parameter(p);
+    _fluid_discipline->remove_parameter(*_omega);
+    
+    
+    
+    return _flutter_root->V_sens;
 }
 

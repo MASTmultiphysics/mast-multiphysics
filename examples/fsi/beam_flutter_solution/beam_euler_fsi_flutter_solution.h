@@ -83,7 +83,9 @@ namespace MAST {
         /*!
          *  solves the system and returns the flutter velocity
          */
-        Real solve(bool if_write_output = false);
+        Real solve(bool if_write_output = false,
+                   const Real tol = 1.e-1,
+                   const unsigned int max_bisection_iters = 20);
         
         
         /*!

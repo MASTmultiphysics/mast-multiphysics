@@ -440,20 +440,8 @@ MAST::PanelInviscidSmallDisturbanceFrequencyDomain2DAnalysis::
 sensitivity_solve(MAST::Parameter& p, bool if_write_output) {
     
     // initialize the solution
-    RealVectorX s = RealVectorX::Zero(4);
-    s(0) = _flight_cond->rho();
-    s(1) = _flight_cond->rho_u1();
-    s(2) = _flight_cond->rho_u2();
-    s(3) = _flight_cond->rho_e();
-    
-    // create the vector for storing the base solution.
-    // we will swap this out with the system solution, initialize and
-    // then swap it back.
     libMesh::NumericVector<Real>& base_sol =
     _sys->add_vector("fluid_base_solution");
-    _sys->solution->swap(base_sol);
-    _fluid_sys->initialize_solution(s);
-    _sys->solution->swap(base_sol);
     
 
     // tell the discipline about the parameter with respect to this
@@ -504,7 +492,6 @@ sensitivity_solve(MAST::Parameter& p, bool if_write_output) {
     
     
     assembly.clear_discipline_and_system();
-    _sys->remove_vector("fluid_base_solution");
     _discipline->remove_parameter(p);
 
     
