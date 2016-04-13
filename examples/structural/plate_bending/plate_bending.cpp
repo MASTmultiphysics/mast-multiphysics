@@ -63,8 +63,8 @@ MAST::PlateBending::init(libMesh::ElemType e_type,
 
     
     // length of domain
-    _length     = 0.50,
-    _width      = 0.25;
+    _length     = 0.3,
+    _width      = 0.3;
     
     
     // create the mesh
@@ -116,12 +116,12 @@ MAST::PlateBending::init(libMesh::ElemType e_type,
     
     // create the property functions and add them to the
     
-    _th              = new MAST::Parameter("th", 0.006);
+    _th              = new MAST::Parameter("th",  0.01);
     _E               = new MAST::Parameter("E",  72.e9);
-    _nu              = new MAST::Parameter("nu",  0.33);
+    _nu              = new MAST::Parameter("nu",   0.3);
     _kappa           = new MAST::Parameter("kappa",  5./6.);
     _zero            = new MAST::Parameter("zero",  0.);
-    _press           = new MAST::Parameter( "p",  2.e6);
+    _press           = new MAST::Parameter( "p",  3.e7);
     
     
     
@@ -324,7 +324,7 @@ MAST::PlateBending::solve(bool if_write_output) {
     // set the number of load steps
     unsigned int
     n_steps = 1;
-    if (if_vk) n_steps = 10;
+    if (if_vk) n_steps = 50;
 
     Real
     p0      = (*_press)();
@@ -340,35 +340,42 @@ MAST::PlateBending::solve(bool if_write_output) {
     // zero the solution before solving
     nonlin_sys.solution->zero();
     this->clear_stresss();
-
+    
     MAST::StructuralNearNullVectorSpace nsp;
     nonlin_sys.nonlinear_solver->nearnullspace_object = &nsp;
     
     
+    libMesh::ExodusII_IO exodus_writer(*_mesh);
+    
     // now iterate over the load steps
     for (unsigned int i=0; i<n_steps; i++) {
-        libMesh::out
-        << "Load step: " << i << std::endl;
         
         (*_press)()  =  p0*(i+1.)/(1.*n_steps);
-        nonlin_sys.solve();
-    }
-    
-    // evaluate the outputs
-    assembly.calculate_outputs(*(_sys->solution));
 
-    assembly.clear_discipline_and_system();
-    
-    if (if_write_output) {
+        libMesh::out
+        << "Load step: " << i << "  : p = " << (*_press)() << std::endl;
+
+        nonlin_sys.solve();
         
-        libMesh::out << "Writing output to : output.exo" << std::endl;
+        // evaluate the outputs
+        this->clear_stresss();
+        assembly.calculate_outputs(*(_sys->solution));
         
-        // write the solution for visualization
-        libMesh::ExodusII_IO(*_mesh).write_equation_systems("output.exo",
-                                                            *_eq_sys);
         
-        _discipline->plot_stress_strain_data<libMesh::ExodusII_IO>("stress_output.exo");
+        if (if_write_output) {
+            
+            libMesh::out << "Writing output to : output.exo" << std::endl;
+            
+            // write the solution for visualization
+            exodus_writer.write_timestep("output.exo",
+                                         *_eq_sys,
+                                         i+1,
+                                         (1.*i)/(1.*(n_steps-1)));
+            
+            _discipline->plot_stress_strain_data<libMesh::ExodusII_IO>("stress_output.exo");
+        }
     }
+    assembly.clear_discipline_and_system();
     
     return *(_sys->solution);
 }

@@ -147,8 +147,10 @@ namespace MAST {
 
 
 
-MAST::BeamColumnBucklingAnalysis::BeamColumnBucklingAnalysis() {
+MAST::BeamColumnBucklingAnalysis::BeamColumnBucklingAnalysis(bool if_nonlin) {
     
+
+    libmesh_assert(!if_nonlin);
     
     // create the mesh
     _mesh       = new libMesh::SerialMesh(__init->comm());

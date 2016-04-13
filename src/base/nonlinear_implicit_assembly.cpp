@@ -103,6 +103,66 @@ clear_discipline_and_system( ) {
 
 
 
+namespace MAST {
+
+    bool
+    is_numerical_zero(const Real v, const Real eps) {
+        
+        return fabs(v) <= eps;
+    }
+    
+    
+    bool
+    compare(const Real v1, const Real v2, const Real tol) {
+        
+        const Real
+        eps      = 1.0e-7;
+        
+        bool rval = false;
+        
+        // check to see if the values are both small enough
+        // to be zero
+        if (MAST::is_numerical_zero(v1, eps) &&
+            MAST::is_numerical_zero(v2, eps))
+            rval = true;
+        // check to see if the absolute difference is small enough
+        else if (MAST::is_numerical_zero(v1-v2, eps))
+            rval = true;
+        // check to see if the relative difference is small enough
+        else if (fabs(v1) > 0)
+            rval = fabs((v1-v2)/v1) <= tol;
+        
+        return rval;
+    }
+    
+    bool
+    compare_matrix(const RealMatrixX& m0, const RealMatrixX& m, const Real tol) {
+        
+        unsigned int
+        m0_rows = (unsigned int) m0.rows(),
+        m0_cols = (unsigned int) m0.cols();
+        libmesh_assert_equal_to(m0_rows,  m.rows());
+        libmesh_assert_equal_to(m0_cols,  m.cols());
+        
+        
+        bool pass = true;
+        for (unsigned int i=0; i<m0_rows; i++) {
+            for (unsigned int j=0; j<m0_cols; j++)
+                if (!MAST::compare(m0(i,j), m(i,j), tol)) {
+                    libMesh::out << "Failed comparison at (i,j) = ("
+                    << i << ", " << j << ") : "
+                    << "expected: " << m0(i,j) << "  , "
+                    << "computed: " << m(i,j) << " : "
+                    << "diff: " << m0(i,j) - m(i,j) << " , "
+                    << "tol: " << tol << std::endl;
+                    pass = false;
+                }
+        }
+        
+        return pass;
+    }
+}
+
 void
 MAST::NonlinearImplicitAssembly::
 _check_element_numerical_jacobian(MAST::ElementBase& e,
@@ -125,7 +185,7 @@ _check_element_numerical_jacobian(MAST::ElementBase& e,
 
     e.set_solution(sol);
     _elem_calculations(e, true, res0, jac0);
-    Real delta = 1.0e-5;
+    Real delta = 1.0e-8;
     
     for (unsigned int i=0; i<sol.size(); i++) {
         dsol = sol;
@@ -145,6 +205,9 @@ _check_element_numerical_jacobian(MAST::ElementBase& e,
     << jac
     << std::endl << std::endl;
     
+    MAST::compare_matrix(jac, jac0, 1.0e-5);
+    // set the original solution vector for the element
+    e.set_solution(sol);
 }
 
 

@@ -55,7 +55,7 @@ namespace MAST {
     struct BeamModalAnalysis {
         
         
-        BeamModalAnalysis();
+        BeamModalAnalysis(bool if_nonlin);
         
         
         ~BeamModalAnalysis();

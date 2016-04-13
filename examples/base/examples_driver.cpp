@@ -19,6 +19,7 @@
 
 // MAST includes
 #include "examples/structural/bar_extension/bar_extension.h"
+#include "examples/structural/beam_thermally_stressed_modal_analysis/beam_thermally_stressed_modal_analysis.h"
 #include "examples/structural/beam_modal_analysis/beam_modal_analysis.h"
 #include "examples/structural/beam_buckling_prestress/beam_column_buckling.h"
 #include "examples/structural/beam_bending/beam_bending.h"
@@ -101,10 +102,11 @@ void analysis(const std::string& case_name,
 
 template <typename ValType>
 void eigenvalue_analysis(const std::string& case_name,
+                         bool if_nonlin,
                          bool with_sens,
                          std::string& par_name)  {
     
-    ValType run_case;
+    ValType run_case(if_nonlin);
     
     libMesh::out << "Running case: " << case_name << std::endl;
     run_case.solve(true);
@@ -362,9 +364,11 @@ int main(int argc, char* const argv[]) {
     if (case_name == "bar_extension")
         analysis<MAST::BarExtension>(case_name, with_sens, par_name);
     else if (case_name == "beam_modal_analysis")
-        eigenvalue_analysis<MAST::BeamModalAnalysis>(case_name, with_sens, par_name);
+        eigenvalue_analysis<MAST::BeamModalAnalysis>(case_name, false, with_sens, par_name);
+    else if (case_name == "beam_thermally_stressed_modal_analysis")
+        eigenvalue_analysis<MAST::BeamThermallyStressedModalAnalysis>(case_name, if_nonlin, with_sens, par_name);
     else if (case_name == "beam_prestress_buckling_analysis")
-        eigenvalue_analysis<MAST::BeamColumnBucklingAnalysis>(case_name, with_sens, par_name);
+        eigenvalue_analysis<MAST::BeamColumnBucklingAnalysis>(case_name, false, with_sens, par_name);
     else if (case_name == "beam_bending")
         analysis<MAST::BeamBending>(case_name, with_sens, par_name);
     else if (case_name == "beam_oscillating_load")
@@ -476,6 +480,7 @@ int main(int argc, char* const argv[]) {
         << "  beam_bending \n"
         << "  beam_oscillating_load \n"
         << "  beam_modal_analysis\n"
+        << "  beam_thermally_stressed_modal_analysis\n"
         << "  beam_prestress_buckling_analysis\n"
         << "  beam_bending_with_offset \n"
         << "  beam_bending_thermal_stress \n"

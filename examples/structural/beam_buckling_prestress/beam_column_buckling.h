@@ -56,7 +56,7 @@ namespace MAST {
     struct BeamColumnBucklingAnalysis {
         
         
-        BeamColumnBucklingAnalysis();
+        BeamColumnBucklingAnalysis(bool if_nonlin);
         
         
         ~BeamColumnBucklingAnalysis();

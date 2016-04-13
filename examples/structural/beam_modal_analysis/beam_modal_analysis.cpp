@@ -44,7 +44,9 @@
 extern libMesh::LibMeshInit* __init;
 
 
-MAST::BeamModalAnalysis::BeamModalAnalysis() {
+MAST::BeamModalAnalysis::BeamModalAnalysis(bool if_nonlin) {
+    
+    libmesh_assert(!if_nonlin); // this case does not handle nonlinearity
     
     
     // create the mesh

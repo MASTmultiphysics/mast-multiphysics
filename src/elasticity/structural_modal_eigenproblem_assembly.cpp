@@ -291,7 +291,7 @@ _elem_calculations(MAST::ElementBase& elem,
     mat_B.setZero();
     
     // calculate the Jacobian components
-    e.internal_residual(true, vec, mat_A, true);
+    e.internal_residual(true, vec, mat_A, false);
     e.side_external_residual(true, vec, mat, mat_A, _discipline->side_loads());
     e.volume_external_residual(true, vec, mat, mat_A, _discipline->volume_loads());
     
@@ -316,7 +316,7 @@ _elem_sensitivity_calculations(MAST::ElementBase& elem,
     mat_B.setZero();
     
     // calculate the Jacobian components
-    e.internal_residual_sensitivity(true, vec, mat_A, true);
+    e.internal_residual_sensitivity(true, vec, mat_A, false);
     e.side_external_residual_sensitivity(true, vec, mat, mat_A, _discipline->side_loads());
     e.volume_external_residual_sensitivity(true, vec, mat, mat_A, _discipline->volume_loads());
     
