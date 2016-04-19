@@ -121,7 +121,8 @@ namespace MAST {
         *_rho,
         *_kappa,
         *_temp,
-        *_zero;
+        *_zero,
+        *_press;
         
         MAST::ConstantFieldFunction
         *_th_f,
@@ -131,7 +132,8 @@ namespace MAST {
         *_rho_f,
         *_kappa_f,
         *_temp_f,
-        *_ref_temp_f;
+        *_ref_temp_f,
+        *_press_f;
 
  
         // Section offset
@@ -139,6 +141,7 @@ namespace MAST {
 
         // create the temperature load
         MAST::BoundaryConditionBase*             _T_load;
+        MAST::BoundaryConditionBase*             _p_load;
         
         // create the material property card
         MAST::IsotropicMaterialPropertyCard*     _m_card;

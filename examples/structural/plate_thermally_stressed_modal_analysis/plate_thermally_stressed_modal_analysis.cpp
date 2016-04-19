@@ -31,8 +31,6 @@
 #include "elasticity/structural_discipline.h"
 #include "elasticity/structural_element_base.h"
 #include "elasticity/structural_modal_eigenproblem_assembly.h"
-#include "elasticity/structural_fluid_interaction_assembly.h"
-#include "elasticity/piston_theory_boundary_condition.h"
 #include "elasticity/stress_output_base.h"
 #include "elasticity/structural_nonlinear_assembly.h"
 #include "aeroelasticity/time_domain_flutter_solver.h"
@@ -137,15 +135,16 @@ init(libMesh::ElemType e_type, bool if_vk) {
     
     // create the property functions and add them to the
     
-    _th              = new MAST::Parameter("th",          0.006);
-    _E               = new MAST::Parameter("E",           72.e9);
-    _rho             = new MAST::Parameter("rho",         2.8e3);
-    _nu              = new MAST::Parameter("nu",           0.33);
-    _alpha           = new MAST::Parameter("alpha",      2.5e-5);
-    _kappa           = new MAST::Parameter("kappa",       5./6.);
-    _zero            = new MAST::Parameter("zero",           0.);
-    _temp            = new MAST::Parameter("temperature",  400.);
-    
+    _th              = new MAST::Parameter("th",            0.006);
+    _E               = new MAST::Parameter("E",             72.e9);
+    _rho             = new MAST::Parameter("rho",           2.8e3);
+    _nu              = new MAST::Parameter("nu",             0.33);
+    _alpha           = new MAST::Parameter("alpha",        2.5e-5);
+    _kappa           = new MAST::Parameter("kappa",         5./6.);
+    _zero            = new MAST::Parameter("zero",             0.);
+    _temp            = new MAST::Parameter("temperature",    300.);
+    _press           = new MAST::Parameter( "p",               0.);
+
     
     
     // prepare the vector of parameters with respect to which the sensitivity
@@ -167,7 +166,11 @@ init(libMesh::ElemType e_type, bool if_vk) {
     _hoff_f          = new MAST::SectionOffset("off",
                                                _th_f->clone().release(),
                                                0.);
+    _press_f         = new MAST::ConstantFieldFunction("pressure", *_press);
 
+    _p_load          = new MAST::BoundaryConditionBase(MAST::SURFACE_PRESSURE);
+    _p_load->add(*_press_f);
+    _discipline->add_volume_load(0, *_p_load);
     
     // initialize the load
     _T_load          = new MAST::BoundaryConditionBase(MAST::TEMPERATURE);
@@ -239,7 +242,11 @@ MAST::PlateThermallyStressedModalAnalysis::
         delete _kappa;
         delete _zero;
         delete _temp;
-                
+        
+        delete _p_load;
+        delete _press;
+        delete _press_f;
+        
         delete _eq_sys;
         delete _mesh;
         
@@ -305,10 +312,12 @@ MAST::PlateThermallyStressedModalAnalysis::solve(bool if_write_output,
     
     // set the number of load steps
     unsigned int
-    n_steps = 1;
+    n_steps   = 1,
+    n_perturb = 0;
     if (if_vk) n_steps = 80;
     
     Real
+    p0      = (*_press)(),
     T0      = (*_temp)();
     
     std::ofstream freq;
@@ -317,16 +326,20 @@ MAST::PlateThermallyStressedModalAnalysis::solve(bool if_write_output,
     // create the nonlinear assembly object
     MAST::StructuralNonlinearAssembly   assembly;
     
+    libMesh::ExodusII_IO exodus_writer(*_mesh);
     
     // zero the solution before solving
     _sys->solution->zero();
     
     // now iterate over the load steps
     for (unsigned int i_step=0; i_step<n_steps; i_step++) {
-        libMesh::out
-        << "Load step: " << i_step << std::endl;
         
-        (*_temp)()  =  T0*(i_step+1.)/(1.*n_steps);
+        (*_temp)()   =  T0*(i_step+1.)/(1.*n_steps);
+        (*_press)()  =  p0*(i_step+1.)/(1.*n_steps);
+
+        libMesh::out
+        << "Load step: " << i_step << "  Temp = " << (*_temp)() << "  p: " << (*_press)()  << std::endl;
+        
         assembly.attach_discipline_and_system(*_discipline, *_structural_sys);
         _sys->solve();
         //}
@@ -341,10 +354,14 @@ MAST::PlateThermallyStressedModalAnalysis::solve(bool if_write_output,
         libMesh::out << "Writing output to : output.exo" << std::endl;
         
         // write the solution for visualization
-        std::set<std::string> names; names.insert(_sys->name());
+        /*std::set<std::string> names; names.insert(_sys->name());
         libMesh::ExodusII_IO(*_mesh).write_equation_systems("output.exo",
                                                             *_eq_sys,
-                                                            &names);
+                                                            &names);*/
+        exodus_writer.write_timestep("output.exo",
+                                     *_eq_sys,
+                                     i_step+1,
+                                     (1.*i_step)/(1.*(n_steps-1)));
         
         _discipline->plot_stress_strain_data<libMesh::ExodusII_IO>("stress_output.exo");
     }
@@ -401,6 +418,14 @@ MAST::PlateThermallyStressedModalAnalysis::solve(bool if_write_output,
 
         freq << std::setw(35) << std::fixed << std::setprecision(15) << re;
 
+        // if any of the eigenvalues is negative, then use the mode of the
+        // smallest eigenvalue to perturb the deformation shape
+        if (re < 0. && n_perturb == 0) {
+            *_sys->solution = base_sol;
+            _sys->solution->scale(1./_sys->solution->linfty_norm()*1.e-1);
+            n_perturb++;
+        }
+        
         if (if_write_output) {
             
            /* libMesh::out
@@ -428,6 +453,7 @@ void
 MAST::PlateThermallyStressedModalAnalysis::sensitivity_solve(MAST::Parameter& p,
                                                              std::vector<Real>& eig) {
     
+    libmesh_assert(false); // to be implemented
     libmesh_assert(_initialized);
     
     ////////////////////////////////////////////////////////////////
