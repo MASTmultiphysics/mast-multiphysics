@@ -20,11 +20,12 @@
 
 // MAST includes
 #include "boundary_condition/rigid_surface_motion.h"
+#include "aeroelasticity/frequency_function.h"
 
 
 
-MAST::RigidSurfaceMotion::RigidSurfaceMotion():
-MAST::SurfaceMotionBase(),
+MAST::RigidSurfaceMotion::RigidSurfaceMotion(const std::string& nm):
+MAST::SurfaceMotionBase(nm),
 _freq(NULL),
 _plunge_amplitude(0.),
 _pitch_amplitude(0.),
@@ -60,6 +61,49 @@ MAST::RigidSurfaceMotion::init(MAST::FrequencyFunction& freq,
     _pitch_amplitude  = pitch_amplitude;
     _pitch_phase      = pitch_phase;
 }
+
+
+
+void
+MAST::RigidSurfaceMotion::time_domain_motion(const Real t,
+                                             const libMesh::Point& p,
+                                             const libMesh::Point& n,
+                                             RealVectorX& wdot,
+                                             RealVectorX& dn_rot) {
+    
+    wdot.setZero();
+    dn_rot.setZero();
+    
+    RealVector3
+    r     = RealVector3::Zero(3),
+    rot   = RealVector3::Zero(3);
+    
+    Real
+    freq  = 0.;
+
+    // get the value of frequency
+    (*_freq)(freq);
+    
+    // include pitch-based displacement
+    if (fabs(_pitch_amplitude) > 0.) {
+        
+        // normal distance from pitching axis to the given point
+        for (unsigned int i=0; i<3; i++) r(i) = p(i);
+        r      -= _hinge_location;
+        
+        rot     = _pitch_axis.cross(r);  // omega x r
+        wdot    = rot * _pitch_amplitude * freq * cos(freq*t + _pitch_phase);
+        
+        for (unsigned int i=0; i<3; i++) r(i) = n(i);
+        rot     = _pitch_axis.cross(r);  // omega x r
+        dn_rot  = rot * _pitch_amplitude * sin(freq*t + _pitch_phase);
+    }
+    
+    // add the plunge-based displacement
+    if (fabs(_plunge_amplitude) > 0.)
+        wdot   += _plunge_vector * _plunge_amplitude * freq * cos(freq*t);
+}
+
 
 
 

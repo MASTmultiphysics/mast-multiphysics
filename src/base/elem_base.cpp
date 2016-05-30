@@ -167,6 +167,7 @@ MAST::ElementBase::_init_fe_and_qrule(const libMesh::Elem& e,
     // Create an adequate quadrature rule
     (*fe) = libMesh::FEBase::build(e.dim(), fe_type).release();
     (*fe)->get_phi();
+    (*fe)->get_xyz();
     (*fe)->get_JxW();
     (*fe)->get_dphi();
     (*fe)->get_dphidxi();
@@ -205,6 +206,7 @@ MAST::ElementBase::_get_side_fe_and_qrule(const libMesh::Elem& e,
                                             _system.system().extra_quadrature_order).release();  // system extra quadrature
     (*fe)->attach_quadrature_rule(*qrule);
     (*fe)->get_phi();
+    (*fe)->get_xyz();
     (*fe)->get_JxW();
     if (if_calculate_dphi)
         (*fe)->get_dphi();

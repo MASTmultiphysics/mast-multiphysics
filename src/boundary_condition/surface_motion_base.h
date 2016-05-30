@@ -36,7 +36,7 @@ namespace MAST {
         
     public:
         
-        SurfaceMotionBase();
+        SurfaceMotionBase(const std::string& nm);
         
         
         virtual ~SurfaceMotionBase();
@@ -52,7 +52,19 @@ namespace MAST {
 
         
         /*!
-         *   provides a function for the definition of surface displacement,
+         *  provides the value of surface velocity, deformation, and 
+         *  change in surface normal at the specified time and spatial location
+         */
+        virtual void
+        time_domain_motion(const Real t,
+                           const libMesh::Point& p,
+                           const libMesh::Point& n,
+                           RealVectorX& wdot,
+                           RealVectorX& dn_rot) = 0;
+        
+        
+        /*!
+         *   provides the value of surface displacement,
          *   \par w, and rotation of the surface normal in \par dn_rot
          */
         virtual void

@@ -59,6 +59,8 @@
 #include "examples/fluid/panel_small_disturbance_frequency_domain_3D/panel_small_disturbance_frequency_domain_inviscid_analysis_3D.h"
 #include "examples/fluid/panel_small_disturbance_frequency_domain_3D_half_domain/panel_small_disturbance_frequency_domain_inviscid_analysis_3D_half_domain.h"
 #include "examples/fsi/beam_flutter_solution/beam_euler_fsi_flutter_solution.h"
+#include "examples/fsi/beam_flutter_nonuniform_aero_base_solution/beam_euler_fsi_flutter_nonuniform_aero_base_solution.h"
+#include "examples/fsi/beam_flutter_optimization/beam_flutter_optimization.h"
 #include "examples/fsi/plate_flutter_solution/plate_euler_fsi_flutter_solution.h"
 #include "examples/fsi/plate_flutter_solution_half_domain/plate_euler_fsi_half_domain_flutter_solution.h"
 #include "examples/thermal/bar_transient/bar_transient.h"
@@ -322,7 +324,7 @@ void plate_optimization(const std::string& case_name,
     if (__init->comm().rank() == 0)
         func_eval.set_output_file("optimization_output.txt");
     __my_func_eval = &func_eval;
-    func_eval.init(infile, libMesh::QUAD4, nonlinear);
+    func_eval.init(infile, libMesh::TRI3, nonlinear);
     
     if (verify_grads) {
         std::vector<Real> dvals(func_eval.n_vars());
@@ -456,6 +458,10 @@ int main(int argc, char* const argv[]) {
         fluid_analysis<MAST::PanelSmallDisturbanceFrequencyDomainInviscidAnalysis3DHalfDomain>(case_name);
     else if (case_name == "beam_fsi_flutter_analysis")
         fluid_analysis<MAST::BeamEulerFSIFlutterAnalysis>(case_name);
+    else if (case_name == "beam_fsi_nonuniform_aero_base_flutter_analysis")
+        fluid_analysis<MAST::BeamEulerFSIFlutterNonuniformAeroBaseAnalysis>(case_name);
+    else if (case_name == "beam_fsi_flutter_optimization")
+        optimization<MAST::BeamFSIFlutterSizingOptimization>(case_name, verify_grads);
     else if (case_name == "plate_fsi_flutter_analysis")
         fluid_analysis<MAST::PlateEulerFSIFlutterAnalysis>(case_name);
     else if (case_name == "plate_fsi_half_domain_flutter_analysis")
@@ -533,6 +539,8 @@ int main(int argc, char* const argv[]) {
         << "***********   FSI     ************\n"
         << "**********************************\n"
         << "  beam_fsi_flutter_analysis \n"
+        << "  beam_fsi_nonuniform_aero_base_flutter_analysis\n"
+        << "  beam_fsi_flutter_optimization \n"
         << "  plate_fsi_flutter_analysis \n"
         << "  plate_fsi_half_domain_flutter_analysis \n"
         << "\n\n\n"

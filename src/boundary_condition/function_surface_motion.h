@@ -18,77 +18,67 @@
  */
 
 
-#ifndef __mast__flexible_surface_motion_h__
-#define __mast__flexible_surface_motion_h__
+#ifndef __mast__function_surface_motion_h__
+#define __mast__function_surface_motion_h__
 
 
 // MAST includes
 #include "boundary_condition/surface_motion_base.h"
 
 
-// libMesh includes
-#include "libmesh/system.h"
-#include "libmesh/mesh_function.h"
-
 
 namespace MAST {
     
     // Forward declerations
     class FrequencyFunction;
-    class SystemInitialization;
+    class DisplacementFunctionBase;
     
-    
-    class FlexibleSurfaceMotion:
+    /*!
+     *   This class provides the surface motion at a given point and time
+     *   through a user defined displacement function and frequency.
+     */
+    class FunctionSurfaceMotion:
     public MAST::SurfaceMotionBase {
         
     public:
         
-        FlexibleSurfaceMotion(const std::string& nm,
-                              MAST::SystemInitialization& sys);
+        FunctionSurfaceMotion(const std::string&            nm);
         
         
-        virtual ~FlexibleSurfaceMotion();
+        virtual ~FunctionSurfaceMotion();
         
         
         /*!
          *   initiate the motion object with oscillation data.
-         *   \par pitch_phase is the phase angle by which pitch leads
-         *   plunge.
          */
-        void init(MAST::FrequencyFunction& freq,
-                  libMesh::NumericVector<Real>& sol);
-
+        void init(MAST::FrequencyFunction&           freq,
+                  MAST::DisplacementFunctionBase&    w);
+        
         
         /*!
          *  provides the value of surface velocity, deformation, and
          *  change in surface normal at the specified time and spatial location
          */
         virtual void
-        time_domain_motion(const Real t,
-                           const libMesh::Point& p,
-                           const libMesh::Point& n,
-                           RealVectorX& wdot,
-                           RealVectorX& dn_rot);
-
+        time_domain_motion(const Real               t,
+                           const libMesh::Point&    p,
+                           const libMesh::Point&    n,
+                           RealVectorX&             wdot,
+                           RealVectorX&             dn_rot);
+        
         /*!
          *   provides a function for the definition of surface displacement,
          *   \par w, and rotation of the surface normal in \par dn_rot
          */
         virtual void
-        freq_domain_motion(const libMesh::Point& p,
-                           const libMesh::Point& n,
-                           ComplexVectorX& w,
-                           ComplexVectorX& dn_rot);
+        freq_domain_motion(const libMesh::Point&    p,
+                           const libMesh::Point&    n,
+                           ComplexVectorX&          w,
+                           ComplexVectorX&          dn_rot);
         
-    
+        
     protected:
         
-        
-        /*!
-         *   system associated with the mesh and solution vector
-         */
-        MAST::SystemInitialization&         _system;
-
         
         /*!
          *   frequency of oscillation
@@ -97,16 +87,12 @@ namespace MAST {
         
         
         /*!
-         *   mesh function that interpolates the solution
+         *   function that defines the displacement at a given time
          */
-        std::auto_ptr<libMesh::MeshFunction> _function;
+        MAST::DisplacementFunctionBase       *_w;
         
-        /*!
-         *    numeric vector that stores the solution
-         */
-        std::auto_ptr<libMesh::NumericVector<Real> > _sol;
     };
 }
 
 
-#endif // __mast__flexible_surface_motion_h__
+#endif // __mast__function_surface_motion_h__

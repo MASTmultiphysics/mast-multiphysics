@@ -24,6 +24,7 @@
 #include "base/boundary_condition_base.h"
 #include "numerics/fem_operator_matrix.h"
 #include "base/system_initialization.h"
+#include "boundary_condition/surface_motion_base.h"
 
 
 MAST::ConservativeFluidElementBase::
@@ -630,7 +631,8 @@ slip_wall_surface_residual(bool request_jacobian,
     
     const std::vector<Real> &JxW                 = fe->get_JxW();
     const std::vector<libMesh::Point>& normals   = fe->get_normals();
-    
+    const std::vector<libMesh::Point>& qpoint    = fe->get_xyz();
+
     const unsigned int
     dim    = _elem.dim(),
     n1     = dim+2,
@@ -640,12 +642,20 @@ slip_wall_surface_residual(bool request_jacobian,
     vec1_n1   = RealVectorX::Zero(n1),
     vec2_n2   = RealVectorX::Zero(n2),
     flux      = RealVectorX::Zero(n1),
-    dnormal   = RealVectorX::Zero(dim);
+    dnormal   = RealVectorX::Zero(dim),
+    uvec      = RealVectorX::Zero(3),
+    ni        = RealVectorX::Zero(3),
+    dwdot_i   = RealVectorX::Zero(3),
+    dni       = RealVectorX::Zero(3);
     
     RealMatrixX
     mat1_n1n1  = RealMatrixX::Zero( n1, n1),
     mat2_n1n2  = RealMatrixX::Zero( n1, n2),
     mat3_n2n2  = RealMatrixX::Zero( n2, n2);
+    
+    Real
+    ui_ni = 0.;
+
     
     libMesh::Point pt;
     MAST::FEMOperatorMatrix Bmat;
@@ -654,7 +664,13 @@ slip_wall_surface_residual(bool request_jacobian,
     MAST::PrimitiveSolution      primitive_sol;
     
     
-    Real ui_ni = 0.;
+    // get the surface motion object from the boundary condition object
+    MAST::SurfaceMotionBase*
+    motion = nullptr;
+    
+    if (p.contains("motion"))
+        motion = dynamic_cast<MAST::SurfaceMotionBase*>(&p.get<MAST::FieldFunction<Real> >("motion"));
+
     
     for (unsigned int qp=0; qp<JxW.size(); qp++)
     {
@@ -670,49 +686,40 @@ slip_wall_surface_residual(bool request_jacobian,
                            flight_condition->gas_property.cv,
                            if_viscous());
         
-        //        // copy the surface normal
-        //        for (unsigned int i_dim=0; i_dim<dim; i_dim++)
-        //            local_normal(i_dim) = face_normals[qp](i_dim);
-        //
-        //        // now check if the surface deformation is defined and
-        //        // needs to be applied through transpiration boundary
-        //        // condition
-        //        ui_ni = 0.;
-        //        primitive_sol.get_uvec(uvec);
-        //
-        //        if (surface_motion) // get the surface motion data
-        //        {
-        //            surface_motion->surface_velocity(this->time,
-        //                                             qpoint[qp],
-        //                                             face_normals[qp],
-        //                                             surface_def,
-        //                                             surface_vel,
-        //                                             dnormal);
-        //
-        //            // update the normal with the deformation
-        //            // this defines the normal of the surface that has been
-        //            // deformed, although the geometry of the flow mesh does
-        //            // not conform to that deformation
-        //            local_normal.add(1., dnormal);
-        //
-        //            //    ui * (ni + dni) = wi_dot * (ni + dni)
-        //            // => ui * ni = wi_dot * (ni + dni) - ui * dni
-        //
-        //            // now initialize the surface velocity
-        //            // note that the perturbed local normal is used here
-        //            // since it resembles the normal of the surface that
-        //            // has undergone a static deformation, even though the
-        //            // surface_vel might be identically zero for a static
-        //            // body.
-        //            ui_ni  = surface_vel.dot(local_normal);
-        //            ui_ni -= uvec.dot(dnormal);
-        //        }
+        ////////////////////////////////////////////////////////////
+        //   Calculation of the surface velocity term.
+        //        vi (ni + dni)  =  wdot_i (ni + dni)
+        //  or    vi ni = wdot_i (ni + dni) - vi dni
+        ////////////////////////////////////////////////////////////
+        
+        
+        // copy the surface normal
+        for (unsigned int i_dim=0; i_dim<dim; i_dim++)
+            ni(i_dim) = normals[qp](i_dim);
+        
+        
+        // now check if the surface deformation is defined and
+        // needs to be applied through transpiration boundary
+        // condition
+
+        primitive_sol.get_uvec(uvec);
+
+        if (motion) { // get the surface motion data
+            
+            motion->time_domain_motion(_time,
+                                       qpoint[qp],
+                                       normals[qp],
+                                       dwdot_i,
+                                       dni);
+
+            ui_ni  = dwdot_i.dot(ni+dni) - uvec.dot(dni);
+        }
+        
         
         flux.setZero();
-        flux += ui_ni * vec1_n1;
-        flux(n1-1) += primitive_sol.p*ui_ni;
-        for (unsigned int i_dim=0; i_dim<dim; i_dim++)
-            flux(i_dim+1) += primitive_sol.p * normals[qp](i_dim);
+        flux                 += ui_ni * vec1_n1;           // vi ni cons_flux
+        flux(n1-1)           += ui_ni * primitive_sol.p;   // vi ni {0, 0, 0, 0, p}
+        flux.segment(1,dim)  += primitive_sol.p * ni.segment(0,dim);      // p * ni for the momentum eqs.
         
         Bmat.vector_mult_transpose(vec2_n2, flux);
         f += JxW[qp] * vec2_n2;
@@ -723,7 +730,7 @@ slip_wall_surface_residual(bool request_jacobian,
             (primitive_sol,
              ui_ni,
              normals[qp],
-             dnormal,
+             dni,
              mat1_n1n1);
             
             Bmat.left_multiply(mat2_n1n2, mat1_n1n1);

@@ -215,12 +215,12 @@ namespace MAST {
         /**
          * The (condensed) system matrix for standard eigenvalue problems.
          */
-        std::auto_ptr<libMesh::SparseMatrix<Real> > condensed_matrix_A;
+        //std::auto_ptr<libMesh::SparseMatrix<Real> > condensed_matrix_A;
         
         /**
          * A second (condensed) system matrix for generalized eigenvalue problems.
          */
-        std::auto_ptr<libMesh::SparseMatrix<Real> > condensed_matrix_B;
+        //std::auto_ptr<libMesh::SparseMatrix<Real> > condensed_matrix_B;
         
         
         /**

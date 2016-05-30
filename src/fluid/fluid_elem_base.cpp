@@ -1430,8 +1430,20 @@ calculate_advection_flux_jacobian_for_moving_solid_wall_boundary
  const RealVectorX& dnormal,
  RealMatrixX& mat) {
     
+    // the solid wall boundary flux is defined as
+    //     fn     = ui_ni (U_c + {0,0,0,0,p}^T) + {0, p n_hat, 0}
+    // then,
+    //     dfn/dU = ui_ni (I + {0,0,0,0,dp/dU}^T) +
+    //               dui_ni/dU (U_c + {0,0,0,0,p}^T) +
+    //               {0, dp/dU n1, dp/dU n2, dp/dU n3, 0}
+    //
+    // and using  ui_ni = wdot (ni + dni) - ui dni
+    //      dui_ni/dU = dni (dui/dU)
+    //
+    // the first and third terms of dfn/dU are calculated first.
+    // the last section calculates the contribution of the second term
+    // dfn/dU
     
-    // calculate Ai = d F_adv / d x_i, where F_adv is the Euler advection flux vector
     
     const unsigned int n1 = 2 + dim;
     
@@ -1450,55 +1462,72 @@ calculate_advection_flux_jacobian_for_moving_solid_wall_boundary
     {
         case 3:
         {
-            mat(1, 3) = -R/cv*nvec(0)*u3;
+            mat(1, 3)        = -R/cv*nvec(0)*u3;         //               dp/dU n1
             
-            mat(2, 3) = -R/cv*nvec(1)*u3;
+            mat(2, 3)        = -R/cv*nvec(1)*u3;         //               dp/dU n2
             
-            mat(3, 0) = nvec(2)*R/cv*k;
-            mat(3, 1) = -R/cv*nvec(2)*u1;
-            mat(3, 2) = -R/cv*nvec(2)*u2;
-            mat(3, 3) = ui_ni-R/cv*nvec(2)*u3;
-            mat(3, n1-1) = R/cv*nvec(2);
+            mat(3, 0)        =  nvec(2)*R/cv*k;          //               dp/dU n3
+            mat(3, 1)        = -R/cv*nvec(2)*u1;         //               dp/dU n3
+            mat(3, 2)        = -R/cv*nvec(2)*u2;         //               dp/dU n3
+            mat(3, 3)        =  ui_ni-R/cv*nvec(2)*u3;   // ui_ni dU/dU + dp/dU n3
+            mat(3, n1-1)     =  R/cv*nvec(2);            //               dp/dU n3
             
-            mat(n1-1, 3) = -ui_ni*R/cv*u3;
+            mat(n1-1, 3)     = -ui_ni*R/cv*u3;           // ui_ni dp/dU
         }
             
         case 2:
         {
-            mat(1, 2) = -R/cv*nvec(0)*u2;
+            mat(1, 2)        = -R/cv*nvec(0)*u2;         //               dp/dU n1
             
-            mat(2, 0) = nvec(1)*R/cv*k;
-            mat(2, 1) = -R/cv*nvec(1)*u1;
-            mat(2, 2) = ui_ni-R/cv*nvec(1)*u2;
-            mat(2, n1-1) = R/cv*nvec(1);
+            mat(2, 0)        =  nvec(1)*R/cv*k;          //               dp/dU n2
+            mat(2, 1)        = -R/cv*nvec(1)*u1;         //               dp/dU n2
+            mat(2, 2)        =  ui_ni-R/cv*nvec(1)*u2;   // ui_ni dU/dU + dp/dU n2
+            mat(2, n1-1)     =  R/cv*nvec(1);            //               dp/dU n2
             
-            mat(n1-1, 2) = -ui_ni*R/cv*u2;
+            mat(n1-1, 2)     = -ui_ni*R/cv*u2;           // ui_ni dp/dU
         }
             
         case 1:
         {
-            mat(0, 0) = ui_ni;
+            mat(0, 0)        =  ui_ni;                   // ui_ni dU/dU
             
-            mat(1, 0) = nvec(0)*R/cv*k;
-            mat(1, 1) = ui_ni-R/cv*nvec(0)*u1;
-            mat(1, n1-1) = R/cv*nvec(0);
+            mat(1, 0)        =  nvec(0)*R/cv*k;          //               dp/dU n1
+            mat(1, 1)        =  ui_ni-R/cv*nvec(0)*u1;   // ui_ni dU/dU + dp/dU n1
+            mat(1, n1-1)     =  R/cv*nvec(0);            //               dp/dU n1
             
-            mat(n1-1, 0) = ui_ni*R/cv*k;
-            mat(n1-1, 1) =  -ui_ni*R/cv*u1;
-            mat(n1-1, n1-1) = ui_ni*(1.+R/cv);
+            mat(n1-1, 0)     =  ui_ni*R/cv*k;            // ui_ni dp/dU
+            mat(n1-1, 1)     = -ui_ni*R/cv*u1;           // ui_ni dp/dU
+            mat(n1-1, n1-1)  =  ui_ni*(1.+R/cv);         // ui_ni dp/dU
         }
             break;
     }
     
     
+    //
+    // this calculates the Jacobian contribution from
+    // -dni (dui/dU) (U_c + {0,0,0,0,p}^T)
+    //
+    //
+    // note that
+    //     ui * ni = wi_dot * (ni + dni) - (ui * dni)
+    // hence,
+    //     d (ui * ni)/d U = - d ui / dU * dni
+    //
+    // from primitive flux Jacobian,
+    //     du1/dU  =  1/rho {-u1, 1, 0, 0, 0}
+    //     du2/dU  =  1/rho {-u2, 0, 1, 0, 0}
+    //     du3/dU  =  1/rho {-u3, 0, 0, 1, 0}
+    //
+    // Hence,
+    //    dni dui/dU = 1/rho{-dn1 u1 - dn2 u2 - dn3 u3, dn1, dn2 dn3, 0}
+    //
+    //  and
+    //    (U_c + {0,0,0,0,p}^T) dni dui/dU =
+    // {rho, rho u1, rho u2, rho u3, rho E + p}^T . 1/rho{-dn1 u1 - dn2 u2 - dn3 u3, dn1, dn2 dn3, 0}
+    //    = {1, u1, u2, u3, E+p/rho} {-dn1 u1 - dn2 u2 - dn3 u3, dn1, dn2 dn3, 0}
+    //
     if (dnormal.norm() > 0.)
     {
-        //
-        // note that
-        // ui * ni = wi_dot * (ni + dni) - (ui * dni)
-        // hence,
-        // d (ui * ni)/d U = - d ui / dU * dni
-        //
         RealVectorX
         duini_dU          = RealVectorX::Zero(n1),
         tmp               = RealVectorX::Zero(n1);
@@ -1506,23 +1535,23 @@ calculate_advection_flux_jacobian_for_moving_solid_wall_boundary
         // initialze the Jacobian of ui_ni wrt sol variables
         tmp(0)    = 1.;
         tmp(n1-1) = e+p/rho;
-        for (unsigned int i_dim=0; i_dim<dim; i_dim++)
-        {
+        for (unsigned int i_dim=0; i_dim<dim; i_dim++) {
+            
             switch (i_dim) {
-                case 0:
-                {
+                case 0: {
+                    
                     duini_dU(0) -=  u1 * dnormal(0);
                     tmp(1)       =  u1;
                 }
                     break;
-                case 1:
-                {
+                case 1: {
+                    
                     duini_dU(0) -=  u2 * dnormal(1);
                     tmp(2)       =  u2;
                 }
                     break;
-                case 2:
-                {
+                case 2: {
+                    
                     duini_dU(0) -=  u3 * dnormal(2);
                     tmp(3)       =  u3;
                 }

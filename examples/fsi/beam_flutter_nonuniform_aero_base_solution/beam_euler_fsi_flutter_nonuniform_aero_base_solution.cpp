@@ -23,11 +23,13 @@
 
 
 // MAST includes
-#include "examples/fsi/beam_flutter_solution/beam_euler_fsi_flutter_solution.h"
+#include "examples/fsi/beam_flutter_nonuniform_aero_base_solution/beam_euler_fsi_flutter_nonuniform_aero_base_solution.h"
 #include "examples/fluid/meshing/panel_mesh_2D.h"
 #include "base/nonlinear_system.h"
 #include "fluid/conservative_fluid_system_initialization.h"
 #include "fluid/conservative_fluid_discipline.h"
+#include "fluid/conservative_fluid_transient_assembly.h"
+#include "solver/first_order_newmark_transient_solver.h"
 #include "fluid/frequency_domain_linearized_complex_assembly.h"
 #include "fluid/small_disturbance_pressure_function.h"
 #include "solver/complex_solver_base.h"
@@ -36,6 +38,7 @@
 #include "base/constant_field_function.h"
 #include "base/boundary_condition_base.h"
 #include "boundary_condition/flexible_surface_motion.h"
+#include "boundary_condition/function_surface_motion.h"
 #include "aeroelasticity/frequency_function.h"
 #include "aeroelasticity/ug_flutter_root.h"
 #include "elasticity/structural_system_initialization.h"
@@ -48,6 +51,7 @@
 #include "property_cards/isotropic_material_property_card.h"
 #include "boundary_condition/dirichlet_boundary_condition.h"
 #include "aeroelasticity/ug_flutter_solver.h"
+#include "aeroelasticity/displacement_function_base.h"
 
 
 // libMesh includes
@@ -64,63 +68,131 @@
 extern libMesh::LibMeshInit* __init;
 
 
+namespace MAST {
+    class PanelShape:
+    public MAST::DisplacementFunctionBase {
+        
+    public:
+        
+        PanelShape(Real                n_sin_index,
+                   Real                t_by_c,
+                   Real                length):
+        MAST::DisplacementFunctionBase("panel_shape"),
+        _n          (n_sin_index),
+        _t_by_c     (t_by_c),
+        _length     (length),
+        _pi         (acos(-1.)) { }
+        
+        
+        virtual ~PanelShape()   { }
+        
+        
+        virtual void operator ()(const libMesh::Point& p,
+                                 const Real t,
+                                 RealVectorX& w) const {
+            
+            w.setZero();
+            w(1) = .5*_t_by_c* sin(_n*_pi*p(0)/_length);
+        }
+
+        
+        virtual void dwdx(const libMesh::Point& p,
+                          const Real t,
+                          RealVectorX& w) const {
+            
+            w.setZero();
+            w(1) = .5*_t_by_c*_n*_pi/_length * cos(_n*_pi*p(0)/_length);
+        }
+
+        
+        virtual void dwdy(const libMesh::Point& p,
+                          const Real t,
+                          RealVectorX& w) const {
+            
+            w.setZero();
+        }
+
+        
+        virtual void dwdz(const libMesh::Point& p,
+                          const Real t,
+                          RealVectorX& w) const {
+            
+            w.setZero();
+        }
+
+        
+    protected:
+        
+        unsigned int _n;
+        Real         _length;
+        Real         _t_by_c;
+        Real         _pi;
+    };
+    
+}
 
 
-MAST::BeamEulerFSIFlutterAnalysis::BeamEulerFSIFlutterAnalysis():
-_structural_comm(NULL),
-_structural_mesh(NULL),
-_fluid_mesh(NULL),
-_structural_eq_sys(NULL),
-_fluid_eq_sys(NULL),
-_structural_sys(NULL),
-_fluid_sys(NULL),
-_structural_sys_init(NULL),
-_structural_discipline(NULL),
-_fluid_sys_init(NULL),
-_fluid_discipline(NULL),
-_flight_cond(NULL),
-_far_field(NULL),
-_symm_wall(NULL),
-_slip_wall(NULL),
-_pressure(NULL),
-_motion_function(NULL),
-_small_dist_pressure_function(NULL),
-_omega(NULL),
-_velocity(NULL),
-_b_ref(NULL),
-_omega_f(NULL),
-_velocity_f(NULL),
-_b_ref_f(NULL),
-_freq_function(NULL),
-_length(0.),
-_k_lower(0.),
-_k_upper(0.),
-_n_k_divs(0),
-_thy(NULL),
-_thz(NULL),
-_rho(NULL),
-_E(NULL),
-_nu(NULL),
-_zero(NULL),
-_mach(NULL),
-_rho_air(NULL),
-_gamma_air(NULL),
-_thy_f(NULL),
-_thz_f(NULL),
-_rho_f(NULL),
-_E_f(NULL),
-_nu_f(NULL),
-_hyoff_f(NULL),
-_hzoff_f(NULL),
-_mach_f(NULL),
-_rho_air_f(NULL),
-_gamma_air_f(NULL),
-_flutter_solver(NULL),
-_flutter_root(NULL),
-_m_card(NULL),
-_p_card(NULL),
-_dirichlet_left(NULL),
-_dirichlet_right(NULL) {
+
+
+MAST::BeamEulerFSIFlutterNonuniformAeroBaseAnalysis::
+BeamEulerFSIFlutterNonuniformAeroBaseAnalysis():
+_structural_comm                        (nullptr),
+_structural_mesh                        (nullptr),
+_fluid_mesh                             (nullptr),
+_structural_eq_sys                      (nullptr),
+_fluid_eq_sys                           (nullptr),
+_structural_sys                         (nullptr),
+_fluid_sys                              (nullptr),
+_structural_sys_init                    (nullptr),
+_structural_discipline                  (nullptr),
+_fluid_sys_init                         (nullptr),
+_fluid_discipline                       (nullptr),
+_flight_cond                            (nullptr),
+_far_field                              (nullptr),
+_symm_wall                              (nullptr),
+_slip_wall                              (nullptr),
+_pressure                               (nullptr),
+_panel_shape                            (nullptr),
+_steady_motion_function                 (nullptr),
+_unsteady_motion_function               (nullptr),
+_small_dist_pressure_function           (nullptr),
+_omega                                  (nullptr),
+_velocity                               (nullptr),
+_b_ref                                  (nullptr),
+_omega_f                                (nullptr),
+_velocity_f                             (nullptr),
+_b_ref_f                                (nullptr),
+_zero_freq_func                         (nullptr),
+_freq_function                          (nullptr),
+_length                                 (0.),
+_k_lower                                (0.),
+_k_upper                                (0.),
+_n_k_divs                               (0),
+_thy                                    (nullptr),
+_thz                                    (nullptr),
+_rho                                    (nullptr),
+_E                                      (nullptr),
+_nu                                     (nullptr),
+_zero                                   (nullptr),
+_mach                                   (nullptr),
+_rho_air                                (nullptr),
+_gamma_air                              (nullptr),
+_thy_f                                  (nullptr),
+_thz_f                                  (nullptr),
+_rho_f                                  (nullptr),
+_E_f                                    (nullptr),
+_nu_f                                   (nullptr),
+_hyoff_f                                (nullptr),
+_hzoff_f                                (nullptr),
+_mach_f                                 (nullptr),
+_rho_air_f                              (nullptr),
+_gamma_air_f                            (nullptr),
+_flutter_solver                         (nullptr),
+_flutter_root                           (nullptr),
+_m_card                                 (nullptr),
+_p_card                                 (nullptr),
+_dirichlet_left                         (nullptr),
+_dirichlet_right                        (nullptr) {
     
     //////////////////////////////////////////////////////////////////////
     //    SETUP THE FLUID DATA
@@ -149,10 +221,15 @@ _dirichlet_right(NULL) {
     
     const unsigned int
     dim                 = 2,
+    n_sin_index         = infile("n_sin_index", 1),
     nx_divs             = 3,
     ny_divs             = 1,
     panel_bc_id         = 10,
     symmetry_bc_id      = 11;
+    
+    Real
+    t_c                 = infile("t_by_c", 0.01);
+    
     
     libMesh::ElemType
     elem_type           =
@@ -267,6 +344,7 @@ _dirichlet_right(NULL) {
     
     // define parameters
     _omega             = new MAST::Parameter("omega",       0.);
+    _zero_omega        = new MAST::Parameter("omega",       0.);
     _velocity          = new MAST::Parameter("velocity",  _flight_cond->velocity_magnitude);
     _b_ref             = new MAST::Parameter("b_ref",       1.);
     
@@ -275,13 +353,20 @@ _dirichlet_right(NULL) {
     _omega_f           = new MAST::ConstantFieldFunction("omega",       *_omega);
     _velocity_f        = new MAST::ConstantFieldFunction("velocity", *_velocity);
     _b_ref_f           = new MAST::ConstantFieldFunction("b_ref",       *_b_ref);
+    _zero_omega_f      = new MAST::ConstantFieldFunction("omega",  *_zero_omega);
     
     // initialize the frequency function
+    _zero_freq_func    = new MAST::FrequencyFunction("freq",
+                                                     *_zero_omega_f,
+                                                     *_velocity_f,
+                                                     *_b_ref_f);
+    
     _freq_function     = new MAST::FrequencyFunction("freq",
                                                      *_omega_f,
                                                      *_velocity_f,
                                                      *_b_ref_f);
     _freq_function->if_nondimensional(true);
+    
     
     // tell the physics about boundary conditions
     _fluid_discipline->add_side_load(    panel_bc_id, *_slip_wall);
@@ -377,9 +462,18 @@ _dirichlet_right(NULL) {
         _structural_eq_sys->init();
         
         // initialize the motion object
-        _motion_function   = new MAST::FlexibleSurfaceMotion("small_disturbance_motion",
-                                                             *_structural_sys_init);
-        _slip_wall->add(*_motion_function);
+        _panel_shape                = new MAST::PanelShape(n_sin_index,
+                                                           t_c,
+                                                           _length);
+        _steady_motion_function     = new MAST::FunctionSurfaceMotion("motion");
+        _unsteady_motion_function   = new MAST::FlexibleSurfaceMotion("small_disturbance_motion",
+                                                                      *_structural_sys_init);
+        _slip_wall->add(*_steady_motion_function);
+        _slip_wall->add(*_unsteady_motion_function);
+
+        // initialize the steady motion function object
+        _steady_motion_function->init(*_zero_freq_func, *_panel_shape);
+        
         
         
         _structural_sys->eigen_solver->set_position_of_spectrum(libMesh::LARGEST_MAGNITUDE);
@@ -452,7 +546,7 @@ _dirichlet_right(NULL) {
         // pressure boundary condition for the beam
         _pressure    =  new MAST::BoundaryConditionBase(MAST::SMALL_DISTURBANCE_MOTION);
         _pressure->add(*_small_dist_pressure_function);
-        _pressure->add(*_motion_function);
+        _pressure->add(*_unsteady_motion_function);
         _structural_discipline->add_volume_load(0, *_pressure);
     }
     
@@ -464,7 +558,8 @@ _dirichlet_right(NULL) {
 
 
 
-MAST::BeamEulerFSIFlutterAnalysis::~BeamEulerFSIFlutterAnalysis() {
+MAST::BeamEulerFSIFlutterNonuniformAeroBaseAnalysis::
+~BeamEulerFSIFlutterNonuniformAeroBaseAnalysis() {
     
     delete _fluid_eq_sys;
     delete _fluid_mesh;
@@ -479,21 +574,26 @@ MAST::BeamEulerFSIFlutterAnalysis::~BeamEulerFSIFlutterAnalysis() {
     delete _flight_cond;
     
     delete _omega;
+    delete _zero_omega;
     delete _velocity;
     delete _b_ref;
     
     delete _omega_f;
+    delete _zero_omega_f;
     delete _velocity_f;
     delete _b_ref_f;
     
+    delete _zero_freq_func;
     delete _freq_function;
-    
+
     delete _small_dist_pressure_function;
     
     
     if (_structural_comm->get() != MPI_COMM_NULL) {
         
-        delete _motion_function;
+        delete _panel_shape;
+        delete _steady_motion_function;
+        delete _unsteady_motion_function;
         delete _pressure;
         
         delete _structural_eq_sys;
@@ -547,9 +647,10 @@ MAST::BeamEulerFSIFlutterAnalysis::~BeamEulerFSIFlutterAnalysis() {
 
 
 MAST::Parameter*
-MAST::BeamEulerFSIFlutterAnalysis::get_parameter(const std::string &nm) {
+MAST::BeamEulerFSIFlutterNonuniformAeroBaseAnalysis::
+get_parameter(const std::string &nm) {
     
-    MAST::Parameter *rval = NULL;
+    MAST::Parameter *rval = nullptr;
     
     // look through the vector of parameters to see if the name is available
     std::vector<MAST::Parameter*>::iterator
@@ -587,9 +688,10 @@ MAST::BeamEulerFSIFlutterAnalysis::get_parameter(const std::string &nm) {
 
 
 Real
-MAST::BeamEulerFSIFlutterAnalysis::solve(bool if_write_output,
-                                         const Real tol,
-                                         const unsigned int max_bisection_iters) {
+MAST::BeamEulerFSIFlutterNonuniformAeroBaseAnalysis::
+solve(bool if_write_output,
+      const Real tol,
+      const unsigned int max_bisection_iters) {
     
     
     /////////////////////////////////////////////////////////////////
@@ -612,20 +714,127 @@ MAST::BeamEulerFSIFlutterAnalysis::solve(bool if_write_output,
     _fluid_sys->add_vector("fluid_base_solution");
     _fluid_sys->solution->swap(base_sol);
     _fluid_sys_init->initialize_solution(s);
+    
+    /////////////////////////////////////////////////////////////////
+    // Fluid steady-state solution
+    /////////////////////////////////////////////////////////////////
+    
+    // create the nonlinear assembly object
+    MAST::ConservativeFluidTransientAssembly   steady_fluid_assembly;
+    
+    // Transient solver for time integration
+    MAST::FirstOrderNewmarkTransientSolver     transient_fluid_solver;
+    
+    // now solve the system
+    steady_fluid_assembly.attach_discipline_and_system(*_fluid_discipline,
+                                                       transient_fluid_solver,
+                                                       *_fluid_sys_init);
+    
+    libMesh::NonlinearImplicitSystem&      nonlin_sys   =
+    dynamic_cast<libMesh::NonlinearImplicitSystem&>(_fluid_sys->system());
+    
+    
+    // file to write the solution for visualization
+    libMesh::ExodusII_IO exodus_writer(*_fluid_mesh);
+    
+    // time solver parameters
+    unsigned int
+    t_step            = 0,
+    n_iters_change_dt = 4,
+    iter_count_dt     = 0,
+    max_time_steps    = 1e4;
+    
+    Real
+    tval           = 0.,
+    vel_0          = 0.,
+    vel_1          = 1.e+12,
+    p              = 0.5,
+    factor         = 0.,
+    min_factor     = 1.5,
+    time_step_size = 1.e-6;
+    
+    transient_fluid_solver.dt         = time_step_size;
+    transient_fluid_solver.beta       = 1.0;
+    
+    // set the previous state to be same as the current state to account for
+    // zero velocity as the initial condition
+    transient_fluid_solver.solution(1).zero();
+    transient_fluid_solver.solution(1).add(1., transient_fluid_solver.solution());
+    transient_fluid_solver.solution(1).close();
+    
+    
+    if (if_write_output)
+        libMesh::out << "Writing output to : output.exo" << std::endl;
+    
+    // loop over time steps
+    while ((t_step <= max_time_steps) &&
+           (vel_1  >=  1.e-8)) {
+        
+        // change dt if the iteration count has increased to threshold
+        if (iter_count_dt == n_iters_change_dt) {
+            
+            libMesh::out
+            << "Changing dt:  old dt = " << transient_fluid_solver.dt
+            << "    new dt = ";
+            
+            factor                        = std::pow(vel_0/vel_1, p);
+            factor                        = std::max(factor, min_factor);
+            transient_fluid_solver.dt    *= factor;
+            
+            libMesh::out << transient_fluid_solver.dt << std::endl;
+            
+            iter_count_dt = 0;
+            vel_0         = vel_1;
+        }
+        else
+            iter_count_dt++;
+        
+        libMesh::out
+        << "Time step: " << t_step
+        << " :  t = " << tval
+        << " :  xdot-L2 = " << vel_1
+        << std::endl;
+        
+        // write the time-step
+        if (if_write_output) {
+            
+            exodus_writer.write_timestep("output.exo",
+                                         *_fluid_eq_sys,
+                                         t_step+1,
+                                         nonlin_sys.time);
+        }
+        
+        transient_fluid_solver.solve();
+        
+        transient_fluid_solver.advance_time_step();
+        
+        // get the velocity L2 norm
+        vel_1 = transient_fluid_solver.velocity().l2_norm();
+        if (t_step == 0) vel_0 = vel_1;
+        
+        tval  += transient_fluid_solver.dt;
+        t_step++;
+    }
+    
+    steady_fluid_assembly.clear_discipline_and_system();
+
+    
+    
+    // swap back the calculate solution so that we store it for later use.
     _fluid_sys->solution->swap(base_sol);
     
     // create the nonlinear assembly object
-    MAST::FrequencyDomainLinearizedComplexAssembly   assembly;
+    MAST::FrequencyDomainLinearizedComplexAssembly   complex_fluid_assembly;
     
     // solver for complex solution
-    MAST::ComplexSolverBase                          solver;
+    MAST::ComplexSolverBase                          complex_fluid_solver;
     
     // now setup the assembly object
-    assembly.attach_discipline_and_system(*_fluid_discipline,
-                                          solver,
+    complex_fluid_assembly.attach_discipline_and_system(*_fluid_discipline,
+                                          complex_fluid_solver,
                                           *_fluid_sys_init);
-    assembly.set_base_solution(base_sol);
-    assembly.set_frequency_function(*_freq_function);
+    complex_fluid_assembly.set_base_solution(base_sol);
+    complex_fluid_assembly.set_frequency_function(*_freq_function);
     
     
     
@@ -660,13 +869,13 @@ MAST::BeamEulerFSIFlutterAnalysis::solve(bool if_write_output,
         else {
             _basis.resize(nconv);
             for (unsigned int i=0; i<_basis.size(); i++)
-                _basis[i] = NULL;
+                _basis[i] = nullptr;
         }
         
         for (unsigned int i=0; i<nconv; i++) {
             
             // create a vector to store the basis
-            if (_basis[i] == NULL)
+            if (_basis[i] == nullptr)
                 _basis[i] = _structural_sys->solution->zero_clone().release();
             
             std::ostringstream file_name;
@@ -726,9 +935,9 @@ MAST::BeamEulerFSIFlutterAnalysis::solve(bool if_write_output,
     fsi_assembly.init(*_freq_function,
                       *_structural_comm,             // structural comm
                       __init->comm(),                // fluid comm
-                      &solver,                       // fluid complex solver
+                      &complex_fluid_solver,         // fluid complex solver
                       _small_dist_pressure_function,
-                      _motion_function);
+                      _unsteady_motion_function);
     _flutter_solver->attach_assembly(fsi_assembly);
     _flutter_solver->initialize(*_omega,
                                 *_b_ref,
@@ -840,12 +1049,12 @@ MAST::BeamEulerFSIFlutterAnalysis::solve(bool if_write_output,
                 // solve the fluid system for the given structural mode and
                 // the frequency of the flutter root
                 if (_structural_comm->get() != MPI_COMM_NULL)
-                    _motion_function->init(*_freq_function, *_basis[i]);
+                    _unsteady_motion_function->init(*_freq_function, *_basis[i]);
                 
-                solver.solve_block_matrix();
+                complex_fluid_solver.solve_block_matrix();
                 
-                fluid_basis_re[i] = solver.real_solution().clone().release();
-                fluid_basis_im[i] = solver.imag_solution().clone().release();
+                fluid_basis_re[i] = complex_fluid_solver.real_solution().clone().release();
+                fluid_basis_im[i] = complex_fluid_solver.imag_solution().clone().release();
             }
             
             
@@ -906,7 +1115,7 @@ MAST::BeamEulerFSIFlutterAnalysis::solve(bool if_write_output,
 
     
     
-    assembly.clear_discipline_and_system();
+    complex_fluid_assembly.clear_discipline_and_system();
     
     return _flutter_root->V;
 }
@@ -916,7 +1125,10 @@ MAST::BeamEulerFSIFlutterAnalysis::solve(bool if_write_output,
 
 
 Real
-MAST::BeamEulerFSIFlutterAnalysis::sensitivity_solve(MAST::Parameter& p) {
+MAST::BeamEulerFSIFlutterNonuniformAeroBaseAnalysis::
+sensitivity_solve(MAST::Parameter& p) {
+    
+    libmesh_assert(false);
     
     //Make sure that  a solution is available for sensitivity
     libmesh_assert(_flutter_root);
@@ -966,7 +1178,7 @@ MAST::BeamEulerFSIFlutterAnalysis::sensitivity_solve(MAST::Parameter& p) {
                       __init->comm(),                // fluid comm
                       &solver,                       // fluid complex solver
                       _small_dist_pressure_function,
-                      _motion_function);
+                      _unsteady_motion_function);
     _flutter_solver->attach_assembly(fsi_assembly);
 
     // flutter solver will need velocity to be defined as a parameter for

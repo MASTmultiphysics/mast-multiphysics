@@ -420,7 +420,8 @@ _dirichlet_top(NULL) {
         _structural_eq_sys->init();
         
         // initialize the motion object
-        _motion_function   = new MAST::FlexibleSurfaceMotion(*_structural_sys_init);
+        _motion_function   = new MAST::FlexibleSurfaceMotion("small_disturbance_motion",
+                                                             *_structural_sys_init);
         _slip_wall->add(*_motion_function);
         
         

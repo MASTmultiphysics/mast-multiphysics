@@ -1007,7 +1007,7 @@ small_disturbance_surface_pressure_residual(bool request_jacobian,
     MAST::SmallDisturbancePressure&
     press_fn  = bc.get<MAST::SmallDisturbancePressure>("pressure");
     MAST::SurfaceMotionBase&
-    dn_rot_fn = bc.get<MAST::SurfaceMotionBase>       ("motion");
+    dn_rot_fn = bc.get<MAST::SurfaceMotionBase>       ("small_disturbance_motion");
     
     
     const std::vector<Real> &JxW                 = _fe->get_JxW();

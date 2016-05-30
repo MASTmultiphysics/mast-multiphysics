@@ -446,6 +446,7 @@ const libMesh::NumericVector<Real>&
 MAST::BeamThermallyStressedModalAnalysis::sensitivity_solve(MAST::Parameter& p,
                                                             std::vector<Real>& eig) {
     
+    libmesh_assert(false); // to be implemented
     _discipline->add_parameter(p);
     
     // create the nonlinear assembly object

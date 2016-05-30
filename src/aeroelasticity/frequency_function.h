@@ -30,7 +30,7 @@ namespace MAST {
     class Parameter;
     
     class FrequencyFunction:
-    MAST::FieldFunction<Real> {
+    public MAST::FieldFunction<Real> {
     
     public:
         

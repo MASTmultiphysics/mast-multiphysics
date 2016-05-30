@@ -22,8 +22,8 @@
 #include "boundary_condition/surface_motion_base.h"
 
 
-MAST::SurfaceMotionBase::SurfaceMotionBase():
-MAST::FieldFunction<Real>("motion") {
+MAST::SurfaceMotionBase::SurfaceMotionBase(const std::string& nm):
+MAST::FieldFunction<Real>(nm) {
 
 }
 

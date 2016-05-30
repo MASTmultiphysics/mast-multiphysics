@@ -43,8 +43,8 @@ libMesh::NonlinearImplicitSystem(es, name, number),
 _initialize_B_matrix                  (false),
 matrix_A                              (NULL),
 matrix_B                              (NULL),
-condensed_matrix_A                    (NULL),
-condensed_matrix_B                    (NULL),
+//condensed_matrix_A                    (NULL),
+//condensed_matrix_B                    (NULL),
 eigen_solver                          (NULL),
 _condensed_dofs_initialized           (false),
 _exchange_A_and_B                     (false),
@@ -126,9 +126,6 @@ MAST::NonlinearSystem::init_data () {
         matrix_B->init();
         matrix_B->zero();
     }
-    
-    this->condensed_matrix_A.reset(libMesh::SparseMatrix<Real>::build(this->comm()).release());
-    this->condensed_matrix_B.reset(libMesh::SparseMatrix<Real>::build(this->comm()).release());
     
     eigen_solver.reset(libMesh::EigenSolver<Real>::build(this->comm()).release());
     if (libMesh::on_command_line("--solver_system_names")) {
@@ -255,10 +252,15 @@ MAST::NonlinearSystem::eigenproblem_solve() {
         // If we reach here, then there should be some non-condensed dofs
         libmesh_assert(!_local_non_condensed_dofs_vector.empty());
         
+        std::auto_ptr<libMesh::SparseMatrix<Real> >
+        condensed_matrix_A(libMesh::SparseMatrix<Real>::build(this->comm()).release()),
+        condensed_matrix_B(libMesh::SparseMatrix<Real>::build(this->comm()).release());
+
         // Now condense the matrices
         matrix_A->create_submatrix(*condensed_matrix_A,
                                    _local_non_condensed_dofs_vector,
                                    _local_non_condensed_dofs_vector);
+        
         
         if (generalized()) {
             

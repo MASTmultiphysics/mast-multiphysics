@@ -534,12 +534,14 @@ slip_wall_surface_residual(bool request_jacobian,
     RealVectorX
     vec1_n1    = RealVectorX::Zero(n1),
     uvec       = RealVectorX::Zero(3),
+    dwdot_i    = RealVectorX::Zero(3),
     ni         = RealVectorX::Zero(3),
     dni        = RealVectorX::Zero(3);
 
     ComplexVectorX
     Dw_i       = ComplexVectorX::Zero(3),
     Dni        = ComplexVectorX::Zero(3),
+    Duvec      = ComplexVectorX::Zero(3),
     vec2_n1    = ComplexVectorX::Zero(n1),
     vec2_n2    = ComplexVectorX::Zero(n2),
     flux       = ComplexVectorX::Zero(n1);
@@ -562,14 +564,22 @@ slip_wall_surface_residual(bool request_jacobian,
     Dvi_ni_freq_dep     = 0.;
     
     Real
-    dvi_ni              = 0.,
     omega               = 0.,
-    b_V                 = 0.;
+    b_V                 = 0.,
+    ui_ni_steady        = 0.;
 
     
     // get the surface motion object from the boundary condition object
-    MAST::SurfaceMotionBase&
-    motion = dynamic_cast<MAST::SurfaceMotionBase&>(p.get<MAST::FieldFunction<Real> >("motion"));
+    MAST::SurfaceMotionBase
+    *base_motion  = nullptr,
+    *small_motion = nullptr;
+    
+    if (p.contains("motion"))
+        base_motion = dynamic_cast<MAST::SurfaceMotionBase*>(&p.get<MAST::FieldFunction<Real> >("motion"));
+
+    // the boundary condition object must specify a function for
+    // small-disturbance motion
+    small_motion = dynamic_cast<MAST::SurfaceMotionBase*>(&p.get<MAST::FieldFunction<Real> >("small_disturbance_motion"));
 
     
     (*freq)(omega);
@@ -601,12 +611,18 @@ slip_wall_surface_residual(bool request_jacobian,
         //        vi (ni + dni)  =  wdot_i (ni + dni)
         //  or    vi ni = wdot_i (ni + dni) - vi dni
         //
-        //    The first order perturbation, D(.), of this is used here
-        //        Dvi (ni + dni) + vi (Dni + Ddni) =
-        //               Dwdot_i (ni + dni) + wdot_i (Dni + Ddni)
-        //  or    Dvi ni = Dwdot_i (ni + dni) + (wdot_i - vi) Dni
-        //
-        //     Here, Dvi dni and Ddni are neglected.
+        //    The first order perturbation, D(.), of this is
+        //        (vi + Dvi) (ni + dni + Dni) =
+        //          (wdot_i + Dwdot_i) (ni + dni + Dni)
+        //  or    Dvi ni = Dwdot_i (ni + dni + Dni) +
+        //                  wdot_i (ni + dni + Dni) -
+        //                  vi (ni + dni + Dni) -
+        //                  Dvi (dni + Dni)
+        //     Neglecting HOT, this becomes
+        //        Dvi ni = Dwdot_i (ni + dni) +
+        //                  wdot_i (ni + dni + Dni) -
+        //                  vi (ni + dni + Dni) -
+        //                  Dvi dni
         //
         ////////////////////////////////////////////////////////////
         
@@ -618,18 +634,38 @@ slip_wall_surface_residual(bool request_jacobian,
         // needs to be applied through transpiration boundary
         // condition
         primitive_sol.get_uvec(uvec);
-        
-        motion.freq_domain_motion(qpoint[qp], normals[qp], Dw_i, Dni);
-        
-        Dvi_ni_freq_dep   = Dw_i.dot(ni) * iota * omega;
-        Dvi_ni_freq_indep = - uvec.dot(Dni);
+        sd_primitive_sol.get_duvec(Duvec);
         
         flux.setZero();
+        
+        //////////////////////////////////////////////////////////////
+        // contribution from the base-flow boundary condition
+        //////////////////////////////////////////////////////////////
+        if (base_motion) {
+            
+            base_motion->time_domain_motion(_time, qpoint[qp], normals[qp], dwdot_i, dni);
+            ui_ni_steady  =  dwdot_i.dot(ni+dni) - uvec.dot(dni);
+
+            flux         += ui_ni_steady * b_V * vec2_n1;               // vi_ni  dcons_flux
+            flux(n1-1)   += ui_ni_steady * b_V * sd_primitive_sol.dp;   // vi_ni {0,0,0,0,Dp}
+        }
+        
+        //////////////////////////////////////////////////////////////
+        // contribution from the small-disturbance boundary condition
+        //////////////////////////////////////////////////////////////
+        small_motion->freq_domain_motion(qpoint[qp], normals[qp], Dw_i, Dni);
+        
+        Dvi_ni_freq_dep   = Dw_i.dot(ni+dni) * iota * omega;
+        Dvi_ni_freq_indep = (dwdot_i.cast<Complex>().dot(ni.cast<Complex>()+
+                                         dni.cast<Complex>()+Dni) -
+                             uvec.cast<Complex>().dot(ni.cast<Complex>()+dni.cast<Complex>()+Dni) -
+                             Duvec.dot(dni));
+        
+        
         flux             += (Dvi_ni_freq_indep * b_V +
                              Dvi_ni_freq_dep) * vec1_n1;              // Dvi_ni cons_flux
         flux(n1-1)       += (Dvi_ni_freq_indep * b_V +
                              Dvi_ni_freq_dep) * primitive_sol.p;      // Dvi_ni {0,0,0,0,p}
-        
         
         // ni Dp  (only for the momentun eq)
         flux.segment(1, dim) += ((sd_primitive_sol.dp * b_V) *
@@ -643,7 +679,11 @@ slip_wall_surface_residual(bool request_jacobian,
             // the Jacobian contribution comes only from the dp term in the
             // residual
             this->calculate_advection_flux_jacobian_for_moving_solid_wall_boundary
-            (primitive_sol, 0., normals[qp], dni, mat1_n1n1);
+            (primitive_sol,
+             ui_ni_steady,
+             normals[qp],
+             dni,
+             mat1_n1n1);
             
             Bmat.left_multiply(mat2_n1n2, mat1_n1n1);
             Bmat.right_multiply_transpose(mat3_n2n2, mat2_n1n2);
@@ -720,7 +760,6 @@ slip_wall_surface_residual_sensitivity(bool request_jacobian,
     Dvi_ni_freq_dep     = 0.;
     
     Real
-    dvi_ni              = 0.,
     omega               = 0.,
     domega              = 0.,
     b_V                 = 0.;
