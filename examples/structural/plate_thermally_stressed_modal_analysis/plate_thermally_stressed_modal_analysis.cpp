@@ -336,112 +336,109 @@ MAST::PlateThermallyStressedModalAnalysis::solve(bool if_write_output,
         
         (*_temp)()   =  T0*(i_step+1.)/(1.*n_steps);
         (*_press)()  =  p0*(i_step+1.)/(1.*n_steps);
-
+        
         libMesh::out
         << "Load step: " << i_step << "  Temp = " << (*_temp)() << "  p: " << (*_press)()  << std::endl;
         
         assembly.attach_discipline_and_system(*_discipline, *_structural_sys);
         _sys->solve();
-        //}
+        
         freq << std::endl << i_step << "   " << std::setw(35) << std::fixed << std::setprecision(15) << (*_temp)() << "  ";
-    // evaluate the outputs
-    assembly.calculate_outputs(*(_sys->solution));
-    
-    assembly.clear_discipline_and_system();
-    
-    if (if_write_output) {
         
-        libMesh::out << "Writing output to : output.exo" << std::endl;
+        // evaluate the outputs
+        assembly.calculate_outputs(*(_sys->solution));
         
-        // write the solution for visualization
-        /*std::set<std::string> names; names.insert(_sys->name());
-        libMesh::ExodusII_IO(*_mesh).write_equation_systems("output.exo",
-                                                            *_eq_sys,
-                                                            &names);*/
-        exodus_writer.write_timestep("output.exo",
-                                     *_eq_sys,
-                                     i_step+1,
-                                     (1.*i_step)/(1.*(n_steps-1)));
-        
-        _discipline->plot_stress_strain_data<libMesh::ExodusII_IO>("stress_output.exo");
-    }
-
-    //  store the base solution
-    libMesh::NumericVector<Real>& base_sol = _sys->add_vector("base_solution");
-    base_sol = *_sys->solution;
-    
-    
-    ///////////////////////////////////////////////////////////////////
-    // solve for the natural frequencies
-    //////////////////////////////////////////////////////////////////
-    
-    // create the nonlinear assembly object
-    MAST::StructuralModalEigenproblemAssembly   modal_assembly;
-    modal_assembly.set_base_solution(base_sol);
-    _sys->initialize_condensed_dofs(*_discipline);
-    
-    modal_assembly.attach_discipline_and_system(*_discipline, *_structural_sys);
-    _sys->eigenproblem_solve();
-    modal_assembly.clear_discipline_and_system();
-    
-    // Get the number of converged eigen pairs.
-    unsigned int
-    nconv = std::min(_sys->get_n_converged_eigenvalues(),
-                     _sys->get_n_requested_eigenvalues());
-    if (eig)
-        eig->resize(nconv);
-    
-    for (unsigned int i=0; i<nconv; i++) {
-        
-        std::ostringstream file_name;
-        
-        // We write the file in the ExodusII format.
-        file_name << "out_step_"
-        << i_step << "_mode_"
-        << std::setw(3)
-        << std::setfill('0')
-        << std::right
-        << i
-        << ".exo";
-        
-        // now write the eigenvalue
-        Real
-        re = 0.,
-        im = 0.;
-        _sys->get_eigenpair(i, re, im, base_sol);
-        if (eig)
-            (*eig)[i] = re;
-        
-        libMesh::out
-        << std::setw(35) << std::fixed << std::setprecision(15)
-        << re << std::endl;
-
-        freq << std::setw(35) << std::fixed << std::setprecision(15) << re;
-
-        // if any of the eigenvalues is negative, then use the mode of the
-        // smallest eigenvalue to perturb the deformation shape
-        if (re < 0. && n_perturb == 0) {
-            *_sys->solution = base_sol;
-            _sys->solution->scale(1./_sys->solution->linfty_norm()*1.e-1);
-            n_perturb++;
-        }
+        assembly.clear_discipline_and_system();
         
         if (if_write_output) {
             
-           /* libMesh::out
-            << "Writing mode " << i << " to : "
-            << file_name.str() << std::endl;*/
+            libMesh::out << "Writing output to : output.exo" << std::endl;
             
+            // write the solution for visualization
+            exodus_writer.write_timestep("output.exo",
+                                         *_eq_sys,
+                                         i_step+1,
+                                         (1.*i_step)/(1.*(n_steps-1)));
+            
+            _discipline->plot_stress_strain_data<libMesh::ExodusII_IO>("stress_output.exo");
+        }
+        
+        //  store the base solution
+        libMesh::NumericVector<Real>& base_sol = _sys->add_vector("base_solution");
+        base_sol = *_sys->solution;
+        
+        
+        ///////////////////////////////////////////////////////////////////
+        // solve for the natural frequencies
+        //////////////////////////////////////////////////////////////////
+        
+        // create the nonlinear assembly object
+        MAST::StructuralModalEigenproblemAssembly   modal_assembly;
+        modal_assembly.set_base_solution(base_sol);
+        _sys->initialize_condensed_dofs(*_discipline);
+        
+        modal_assembly.attach_discipline_and_system(*_discipline, *_structural_sys);
+        _sys->eigenproblem_solve();
+        modal_assembly.clear_discipline_and_system();
+        
+        // Get the number of converged eigen pairs.
+        unsigned int
+        nconv = std::min(_sys->get_n_converged_eigenvalues(),
+                         _sys->get_n_requested_eigenvalues());
+        if (eig)
+            eig->resize(nconv);
+        
+        for (unsigned int i=0; i<nconv; i++) {
+            
+            std::ostringstream file_name;
             
             // We write the file in the ExodusII format.
-            base_sol.swap(*_sys->solution);
-            std::set<std::string> names; names.insert(_sys->name());
-            libMesh::ExodusII_IO(*_mesh).write_equation_systems(file_name.str(),
-                                                                *_eq_sys,
-                                                                &names);
-            base_sol.swap(*_sys->solution);
+            file_name << "out_step_"
+            << i_step << "_mode_"
+            << std::setw(3)
+            << std::setfill('0')
+            << std::right
+            << i
+            << ".exo";
+            
+            // now write the eigenvalue
+            Real
+            re = 0.,
+            im = 0.;
+            _sys->get_eigenpair(i, re, im, base_sol);
+            if (eig)
+                (*eig)[i] = re;
+            
+            libMesh::out
+            << std::setw(35) << std::fixed << std::setprecision(15)
+            << re << std::endl;
+            
+            freq << std::setw(35) << std::fixed << std::setprecision(15) << re;
+            
+            // if any of the eigenvalues is negative, then use the mode of the
+            // smallest eigenvalue to perturb the deformation shape
+            if (re < 0. && n_perturb == 0) {
+                *_sys->solution = base_sol;
+                _sys->solution->scale(1./_sys->solution->linfty_norm()*1.e-1);
+                n_perturb++;
+            }
+            
+            if (if_write_output) {
+                
+                /* libMesh::out
+                 << "Writing mode " << i << " to : "
+                 << file_name.str() << std::endl;*/
+                
+                
+                // We write the file in the ExodusII format.
+                base_sol.swap(*_sys->solution);
+                std::set<std::string> names; names.insert(_sys->name());
+                libMesh::ExodusII_IO(*_mesh).write_equation_systems(file_name.str(),
+                                                                    *_eq_sys,
+                                                                    &names);
+                base_sol.swap(*_sys->solution);
+            }
         }
-    }
     }
 }
 
