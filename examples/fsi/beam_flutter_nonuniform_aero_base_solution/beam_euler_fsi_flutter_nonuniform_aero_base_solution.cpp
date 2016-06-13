@@ -768,7 +768,7 @@ solve(bool if_write_output,
     
     // loop over time steps
     while ((t_step <= max_time_steps) &&
-           (vel_1  >=  1.e-8)) {
+           (vel_1  >=  1.e-2)) {
         
         // change dt if the iteration count has increased to threshold
         if (iter_count_dt == n_iters_change_dt) {
