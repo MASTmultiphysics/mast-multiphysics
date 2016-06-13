@@ -160,6 +160,7 @@ calculate_transverse_shear_residual(bool request_jacobian,
     fe->attach_quadrature_rule(qrule.get());
     fe->get_phi();
     fe->get_JxW();
+    fe->get_xyz();
     fe->get_dphi();
     
     fe->reinit(&_elem);
