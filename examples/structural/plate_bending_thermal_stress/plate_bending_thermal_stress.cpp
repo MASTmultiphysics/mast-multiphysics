@@ -145,7 +145,7 @@ MAST::PlateBendingThermalStress::init(libMesh::ElemType e_type,
     _temp_f          = new MAST::ConstantFieldFunction("temperature",      *_temp);
     _ref_temp_f      = new MAST::ConstantFieldFunction("ref_temperature",  *_zero);
     _hoff_f          = new MAST::SectionOffset("off",
-                                               _th_f->clone().release(),
+                                               *_th_f,
                                                1.);
     
     // initialize the load

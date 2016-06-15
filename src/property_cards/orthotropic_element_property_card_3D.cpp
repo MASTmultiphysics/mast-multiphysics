@@ -32,30 +32,10 @@ namespace MAST {
         class StiffnessMatrix:
         public MAST::FieldFunction<RealMatrixX> {
         public:
-            StiffnessMatrix(MAST::FieldFunction<RealMatrixX> *mat,
-                            MAST::CoordinateBase *orient);
+            StiffnessMatrix(const MAST::FieldFunction<RealMatrixX>& mat,
+                            const MAST::CoordinateBase& orient);
             
-            StiffnessMatrix(const MAST::OrthotropicProperty3D::StiffnessMatrix& f):
-            MAST::FieldFunction<RealMatrixX>(f),
-            _material_stiffness(f._material_stiffness->clone().release()),
-            _orient(dynamic_cast<MAST::CoordinateBase*>(f._orient->clone().release())) {
-                
-                _functions.insert(_material_stiffness->master());
-                _functions.insert(_orient->master());
-            }
-            
-            /*!
-             *   @returns a clone of the functiofn
-             */
-            virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> > clone() const {
-                return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
-                (new MAST::OrthotropicProperty3D::StiffnessMatrix(*this));
-            }
-            
-            virtual ~StiffnessMatrix() {
-                delete _material_stiffness;
-                delete _orient;
-            }
+            virtual ~StiffnessMatrix() { }
             
             virtual void operator() (const libMesh::Point& p,
                                      const Real t,
@@ -70,9 +50,9 @@ namespace MAST {
             
         protected:
             
-            MAST::FieldFunction<RealMatrixX> *_material_stiffness;
+            const MAST::FieldFunction<RealMatrixX>& _material_stiffness;
             
-            MAST::CoordinateBase *_orient;
+            const MAST::CoordinateBase& _orient;
         };
         
         
@@ -80,23 +60,9 @@ namespace MAST {
         
         class InertiaMatrix: public MAST::FieldFunction<RealMatrixX> {
         public:
-            InertiaMatrix(MAST::FieldFunction<RealMatrixX> *mat);
+            InertiaMatrix(const MAST::FieldFunction<RealMatrixX>& mat);
             
-            InertiaMatrix(const MAST::OrthotropicProperty3D::InertiaMatrix& f):
-            MAST::FieldFunction<RealMatrixX>(f),
-            _material_inertia(f._material_inertia->clone().release()) {
-                _functions.insert(_material_inertia->master());
-            }
-            
-            /*!
-             *   @returns a clone of the function
-             */
-            virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> > clone() const {
-                return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
-                (new MAST::OrthotropicProperty3D::InertiaMatrix(*this));
-            }
-            
-            virtual ~InertiaMatrix() { delete _material_inertia;}
+            virtual ~InertiaMatrix() { }
             
             virtual void operator() (const libMesh::Point& p,
                                      const Real t,
@@ -110,7 +76,7 @@ namespace MAST {
             
         protected:
             
-            MAST::FieldFunction<RealMatrixX> *_material_inertia;
+            const MAST::FieldFunction<RealMatrixX>& _material_inertia;
         };
         
         
@@ -118,35 +84,11 @@ namespace MAST {
         
         class ThermalExpansionMatrix: public MAST::FieldFunction<RealMatrixX> {
         public:
-            ThermalExpansionMatrix(MAST::FieldFunction<RealMatrixX> *mat_stiff,
-                                   MAST::FieldFunction<RealMatrixX> *mat_expansion,
-                                   MAST::CoordinateBase *orient);
+            ThermalExpansionMatrix(const MAST::FieldFunction<RealMatrixX>& mat_stiff,
+                                   const MAST::FieldFunction<RealMatrixX>& mat_expansion,
+                                   const MAST::CoordinateBase& orient);
             
-            ThermalExpansionMatrix(const MAST::OrthotropicProperty3D::
-                                   ThermalExpansionMatrix& f):
-            MAST::FieldFunction<RealMatrixX>(f),
-            _material_stiffness(f._material_stiffness->clone().release()),
-            _material_expansion(f._material_expansion->clone().release()),
-            _orient(dynamic_cast<MAST::CoordinateBase*>(f._orient->clone().release())) {
-                
-                _functions.insert(_material_stiffness->master());
-                _functions.insert(_material_expansion->master());
-                _functions.insert(_orient->master());
-            }
-            
-            /*!
-             *   @returns a clone of the function
-             */
-            virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> > clone() const {
-                return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
-                (new MAST::OrthotropicProperty3D::ThermalExpansionMatrix(*this));
-            }
-            
-            virtual ~ThermalExpansionMatrix() {
-                delete _material_stiffness;
-                delete _material_expansion;
-                delete _orient;
-            }
+            virtual ~ThermalExpansionMatrix() { }
             
             virtual void operator() (const libMesh::Point& p,
                                      const Real t,
@@ -160,9 +102,9 @@ namespace MAST {
             
         protected:
             
-            MAST::FieldFunction<RealMatrixX> *_material_stiffness;
-            MAST::FieldFunction<RealMatrixX> *_material_expansion;
-            MAST::CoordinateBase *_orient;
+            const MAST::FieldFunction<RealMatrixX>& _material_stiffness;
+            const MAST::FieldFunction<RealMatrixX>& _material_expansion;
+            const MAST::CoordinateBase& _orient;
         };
         
         
@@ -171,29 +113,10 @@ namespace MAST {
         class PrestressAMatrix:
         public MAST::FieldFunction<RealMatrixX> {
         public:
-            PrestressAMatrix(MAST::FieldFunction<RealMatrixX> *prestress,
-                             MAST::CoordinateBase *orient);
+            PrestressAMatrix(const MAST::FieldFunction<RealMatrixX>& prestress,
+                             const MAST::CoordinateBase& orient);
             
-            PrestressAMatrix(const MAST::OrthotropicProperty3D::PrestressAMatrix& f):
-            MAST::FieldFunction<RealMatrixX>(f),
-            _prestress(f._prestress->clone().release()),
-            _orient(dynamic_cast<MAST::CoordinateBase*>(f._orient->clone().release())){
-                _functions.insert(_prestress->master());
-                _functions.insert(_orient->master());
-            }
-            
-            /*!
-             *   @returns a clone of the function
-             */
-            virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> > clone() const {
-                return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
-                (new MAST::OrthotropicProperty3D::PrestressAMatrix(*this));
-            }
-            
-            virtual ~PrestressAMatrix() {
-                delete _prestress;
-                delete _orient;
-            }
+            virtual ~PrestressAMatrix() { }
             
             virtual void operator() (const libMesh::Point& p,
                                      const Real t,
@@ -210,8 +133,8 @@ namespace MAST {
             
         protected:
             
-            MAST::FieldFunction<RealMatrixX> *_prestress;
-            MAST::CoordinateBase *_orient;
+            const MAST::FieldFunction<RealMatrixX>& _prestress;
+            const MAST::CoordinateBase& _orient;
         };
         
         
@@ -221,16 +144,8 @@ namespace MAST {
             
         public:
             
-            ThermalConductanceMatrix(MAST::FieldFunction<RealMatrixX> *mat_cond,
-                                     MAST::CoordinateBase *orient);
-            
-            ThermalConductanceMatrix(const MAST::OrthotropicProperty3D::ThermalConductanceMatrix &f);
-            
-            
-            /*!
-             *   @returns a clone of the function
-             */
-            virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> > clone() const;
+            ThermalConductanceMatrix(const MAST::FieldFunction<RealMatrixX>& mat_cond,
+                                     const MAST::CoordinateBase& orient);
             
             virtual ~ThermalConductanceMatrix();
             
@@ -247,9 +162,9 @@ namespace MAST {
             
         protected:
             
-            MAST::FieldFunction<RealMatrixX>* _mat_cond;
+            const MAST::FieldFunction<RealMatrixX>& _mat_cond;
             
-            MAST::CoordinateBase* _orient;
+            const MAST::CoordinateBase& _orient;
         };
         
         
@@ -260,15 +175,7 @@ namespace MAST {
             
         public:
             
-            ThermalCapacitanceMatrix(MAST::FieldFunction<RealMatrixX> *mat_cond);
-            
-            ThermalCapacitanceMatrix(const MAST::OrthotropicProperty3D::ThermalCapacitanceMatrix &f);
-            
-            
-            /*!
-             *   @returns a clone of the function
-             */
-            virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> > clone() const;
+            ThermalCapacitanceMatrix(const MAST::FieldFunction<RealMatrixX>& mat_cond);
             
             virtual ~ThermalCapacitanceMatrix();
             
@@ -285,7 +192,7 @@ namespace MAST {
             
         protected:
             
-            MAST::FieldFunction<RealMatrixX>* _mat_cap;
+            const MAST::FieldFunction<RealMatrixX>& _mat_cap;
         };
         
     }
@@ -302,14 +209,14 @@ MAST::OrthotropicElementPropertyCard3D::depends_on(const MAST::FunctionBase& f) 
 
 
 MAST::OrthotropicProperty3D::StiffnessMatrix::
-StiffnessMatrix(MAST::FieldFunction<RealMatrixX> *mat,
-                MAST::CoordinateBase *orient):
+StiffnessMatrix(const MAST::FieldFunction<RealMatrixX>& mat,
+                const MAST::CoordinateBase& orient):
 MAST::FieldFunction<RealMatrixX> ("StiffnessMatrix3D"),
 _material_stiffness(mat),
 _orient(orient) {
     
-    _functions.insert(mat->master());
-    _functions.insert(orient->master());
+    _functions.insert(mat.master());
+    _functions.insert(orient.master());
 }
 
 
@@ -322,9 +229,9 @@ StiffnessMatrix::operator() (const libMesh::Point& p,
     A    = RealMatrixX::Zero(3, 3),
     Tinv = RealMatrixX::Zero(6, 6);
     
-    (*_material_stiffness) (p, t, m);
-    (*_orient)             (p, t, A);
-    _orient->stress_strain_transformation_matrix(A.transpose(), Tinv);
+    _material_stiffness (p, t, m);
+    _orient             (p, t, A);
+    _orient.stress_strain_transformation_matrix(A.transpose(), Tinv);
     
     //    vk'  = vj ej.ek' = vj Ajk = A^T v
     //    v = A vk'
@@ -360,14 +267,14 @@ StiffnessMatrix::derivative (const MAST::DerivativeType d,
     Tinv = RealMatrixX::Zero(6, 6),
     dTinv= RealMatrixX::Zero(6, 6);
     
-    (*_material_stiffness) (p, t, m);
-    _material_stiffness->derivative(d, f, p, t, dm);
-    (*_orient)             (p, t, A);
-    _orient->stress_strain_transformation_matrix(A.transpose(), Tinv);
-    _orient->derivative    (d, f, p, t, dA);
-    _orient->stress_strain_transformation_matrix_sens(A.transpose(),
-                                                      dA.transpose(),
-                                                      dTinv);
+    _material_stiffness (p, t, m);
+    _material_stiffness.derivative(d, f, p, t, dm);
+    _orient             (p, t, A);
+    _orient.stress_strain_transformation_matrix(A.transpose(), Tinv);
+    _orient.derivative    (d, f, p, t, dA);
+    _orient.stress_strain_transformation_matrix_sens(A.transpose(),
+                                                     dA.transpose(),
+                                                     dTinv);
     
     m =
     dTinv *  m *  Tinv.transpose() +
@@ -379,10 +286,10 @@ StiffnessMatrix::derivative (const MAST::DerivativeType d,
 
 
 MAST::OrthotropicProperty3D::
-InertiaMatrix::InertiaMatrix(MAST::FieldFunction<RealMatrixX> *mat):
+InertiaMatrix::InertiaMatrix(const MAST::FieldFunction<RealMatrixX>& mat):
 MAST::FieldFunction<RealMatrixX>("InertiaMatrix3D"),
 _material_inertia(mat) {
-    _functions.insert(mat->master());
+    _functions.insert(mat.master());
 }
 
 
@@ -393,7 +300,7 @@ InertiaMatrix::operator() (const libMesh::Point& p,
                            const Real t,
                            RealMatrixX& m) const {
     // this only returns the material inertia
-    (*_material_inertia)(p, t, m);
+    _material_inertia(p, t, m);
 }
 
 
@@ -407,24 +314,24 @@ InertiaMatrix::derivative (const MAST::DerivativeType d,
                            const Real t,
                            RealMatrixX& m) const {
     
-    _material_inertia->derivative(d, f, p, t, m);
+    _material_inertia.derivative(d, f, p, t, m);
 }
 
 
 
 
 MAST::OrthotropicProperty3D::ThermalExpansionMatrix::
-ThermalExpansionMatrix(MAST::FieldFunction<RealMatrixX> *mat_stiff,
-                       MAST::FieldFunction<RealMatrixX> *mat_expansion,
-                       MAST::CoordinateBase *orient):
+ThermalExpansionMatrix(const MAST::FieldFunction<RealMatrixX>& mat_stiff,
+                       const MAST::FieldFunction<RealMatrixX>& mat_expansion,
+                       const MAST::CoordinateBase& orient):
 MAST::FieldFunction<RealMatrixX>("ThermalExpansionMatrix3D"),
 _material_stiffness(mat_stiff),
 _material_expansion(mat_expansion),
 _orient(orient) {
     
-    _functions.insert(mat_stiff->master());
-    _functions.insert(mat_expansion->master());
-    _functions.insert(orient->master());
+    _functions.insert(mat_stiff.master());
+    _functions.insert(mat_expansion.master());
+    _functions.insert(orient.master());
 }
 
 
@@ -440,10 +347,10 @@ ThermalExpansionMatrix::operator() (const libMesh::Point& p,
     A    = RealMatrixX::Zero(3, 3),
     Tinv = RealMatrixX::Zero(6, 6);
     
-    (*_material_stiffness) (p, t, m);
-    (*_material_expansion)(p, t, mat);
-    (*_orient)             (p, t, A);
-    _orient->stress_strain_transformation_matrix(A.transpose(), Tinv);
+    _material_stiffness  (p, t, m);
+    _material_expansion  (p, t, mat);
+    _orient              (p, t, A);
+    _orient.stress_strain_transformation_matrix(A.transpose(), Tinv);
     
     //    epsilon' = T^{-T} epsilon
     //    epsilon  = T^T epsilon'
@@ -478,14 +385,14 @@ ThermalExpansionMatrix::derivative (const MAST::DerivativeType d,
     Tinv = RealMatrixX::Zero(6, 6),
     dTinv= RealMatrixX::Zero(6, 6);
     
-    (*_material_stiffness) (p, t, m);
-    _material_stiffness->derivative(d, f, p, t, dm);
-    (*_material_expansion)(p, t, mat);
-    _material_expansion->derivative(d, f, p, t, dmat);
-    (*_orient)             (p, t, A);
-    _orient->stress_strain_transformation_matrix(A.transpose(), Tinv);
-    _orient->derivative    (d, f, p, t, dA);
-    _orient->stress_strain_transformation_matrix_sens(A.transpose(),
+    _material_stiffness  (p, t, m);
+    _material_stiffness.derivative(d, f, p, t, dm);
+    _material_expansion (p, t, mat);
+    _material_expansion.derivative(d, f, p, t, dmat);
+    _orient              (p, t, A);
+    _orient.stress_strain_transformation_matrix(A.transpose(), Tinv);
+    _orient.derivative    (d, f, p, t, dA);
+    _orient.stress_strain_transformation_matrix_sens(A.transpose(),
                                                       dA.transpose(),
                                                       dTinv);
     
@@ -499,13 +406,13 @@ ThermalExpansionMatrix::derivative (const MAST::DerivativeType d,
 
 
 MAST::OrthotropicProperty3D::PrestressAMatrix::
-PrestressAMatrix(MAST::FieldFunction<RealMatrixX> *prestress,
-                 MAST::CoordinateBase *orient):
+PrestressAMatrix(const MAST::FieldFunction<RealMatrixX>& prestress,
+                 const MAST::CoordinateBase& orient):
 MAST::FieldFunction<RealMatrixX>("PrestressAMatrix3D"),
 _prestress(prestress),
 _orient(orient) {
-    _functions.insert(prestress->master());
-    _functions.insert(orient->master());
+    _functions.insert(prestress.master());
+    _functions.insert(orient.master());
 }
 
 
@@ -516,7 +423,7 @@ MAST::OrthotropicProperty3D::
 PrestressAMatrix::operator() (const libMesh::Point& p,
                               const Real t,
                               RealMatrixX& m) const {
-    (*_prestress)(p, t, m);
+    _prestress (p, t, m);
     libmesh_error();
 }
 
@@ -532,53 +439,26 @@ PrestressAMatrix::derivative (const MAST::DerivativeType d,
                               const libMesh::Point& p,
                               const Real t,
                               RealMatrixX& m) const {
-    _prestress->derivative(d, f, p, t, m);
+    _prestress.derivative(d, f, p, t, m);
 }
 
 
 
 MAST::OrthotropicProperty3D::ThermalConductanceMatrix::
-ThermalConductanceMatrix(MAST::FieldFunction<RealMatrixX> *mat_cond,
-                         MAST::CoordinateBase *orient):
+ThermalConductanceMatrix(const MAST::FieldFunction<RealMatrixX>& mat_cond,
+                         const MAST::CoordinateBase& orient):
 MAST::FieldFunction<RealMatrixX>("ThermalConductanceMatrix"),
 _mat_cond(mat_cond),
 _orient(orient) {
     
-    _functions.insert(mat_cond->master());
-    _functions.insert(orient->master());
+    _functions.insert(mat_cond.master());
+    _functions.insert(orient.master());
 }
-
-
-MAST::OrthotropicProperty3D::ThermalConductanceMatrix::
-ThermalConductanceMatrix(const MAST::OrthotropicProperty3D::ThermalConductanceMatrix &f):
-MAST::FieldFunction<RealMatrixX>(f),
-_mat_cond(f._mat_cond->clone().release()),
-_orient(dynamic_cast<MAST::CoordinateBase*>(f._orient->clone().release())) {
-    
-    _functions.insert(_mat_cond->master());
-    _functions.insert(_orient->master());
-}
-
-
-
-std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
-MAST::OrthotropicProperty3D::ThermalConductanceMatrix::clone() const {
-    
-    MAST::FieldFunction<RealMatrixX>* rval =
-    new MAST::OrthotropicProperty3D::ThermalConductanceMatrix(*this);
-    
-    return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >(rval);
-}
-
 
 
 
 MAST::OrthotropicProperty3D::ThermalConductanceMatrix::
-~ThermalConductanceMatrix() {
-    
-    delete _mat_cond;
-    delete _orient;
-}
+~ThermalConductanceMatrix() { }
 
 
 void
@@ -590,8 +470,8 @@ operator() (const libMesh::Point& p,
     RealMatrixX
     A    = RealMatrixX::Zero(3, 3);
     
-    (*_mat_cond)(p, t, m);
-    (*_orient)  (p, t, A);
+    _mat_cond (p, t, m);
+    _orient   (p, t, A);
 
     m = A.transpose() * m * A;
 }
@@ -610,10 +490,10 @@ MAST::OrthotropicProperty3D::ThermalConductanceMatrix::derivative (const MAST::D
     A     = RealMatrixX::Zero(3, 3),
     dA    = RealMatrixX::Zero(3, 3);
     
-    (*_mat_cond)   (p, t, m);
-    (*_orient)     (p, t, A);
-    _mat_cond->derivative(d, f, p, t, dm);
-    _orient->derivative  (d, f, p, t, dA);
+    _mat_cond    (p, t, m);
+    _orient      (p, t, A);
+    _mat_cond.derivative(d, f, p, t, dm);
+    _orient.derivative  (d, f, p, t, dA);
     
     m =
     dA.transpose() *  m * A +
@@ -627,41 +507,17 @@ MAST::OrthotropicProperty3D::ThermalConductanceMatrix::derivative (const MAST::D
 
 
 MAST::OrthotropicProperty3D::ThermalCapacitanceMatrix::
-ThermalCapacitanceMatrix(MAST::FieldFunction<RealMatrixX> *mat_cap):
+ThermalCapacitanceMatrix(const MAST::FieldFunction<RealMatrixX>& mat_cap):
 MAST::FieldFunction<RealMatrixX>("ThermalCapacitanceMatrix"),
 _mat_cap(mat_cap) {
     
-    _functions.insert(mat_cap->master());
+    _functions.insert(mat_cap.master());
 }
-
-
-MAST::OrthotropicProperty3D::ThermalCapacitanceMatrix::
-ThermalCapacitanceMatrix(const MAST::OrthotropicProperty3D::ThermalCapacitanceMatrix &f):
-MAST::FieldFunction<RealMatrixX>(f),
-_mat_cap(f._mat_cap->clone().release()) {
-    
-    _functions.insert(_mat_cap->master());
-}
-
-
-
-std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
-MAST::OrthotropicProperty3D::ThermalCapacitanceMatrix::clone() const {
-    
-    MAST::FieldFunction<RealMatrixX>* rval =
-    new MAST::OrthotropicProperty3D::ThermalCapacitanceMatrix(*this);
-    
-    return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >(rval);
-}
-
 
 
 
 MAST::OrthotropicProperty3D::ThermalCapacitanceMatrix::
-~ThermalCapacitanceMatrix() {
-    
-    delete _mat_cap;
-}
+~ThermalCapacitanceMatrix() { }
 
 
 void
@@ -670,7 +526,7 @@ operator() (const libMesh::Point& p,
             const Real t,
             RealMatrixX& m) const {
     
-    (*_mat_cap)(p, t, m);
+    _mat_cap(p, t, m);
 }
 
 
@@ -681,16 +537,13 @@ MAST::OrthotropicProperty3D::ThermalCapacitanceMatrix::derivative (const MAST::D
                                                                           const libMesh::Point& p,
                                                                           const Real t,
                                                                           RealMatrixX& m) const {
-    _mat_cap->derivative(d, f, p, t, m);
+    _mat_cap.derivative(d, f, p, t, m);
 }
 
 
 
 MAST::OrthotropicElementPropertyCard3D::
-~OrthotropicElementPropertyCard3D() {
-    
-    if (_orient) delete _orient;
-}
+~OrthotropicElementPropertyCard3D() { }
 
 
 
@@ -698,7 +551,7 @@ void
 MAST::OrthotropicElementPropertyCard3D::
 set_orientation(const MAST::CoordinateBase& orient) {
     
-    _orient = dynamic_cast<MAST::CoordinateBase*>(orient.clone().release());
+    _orient = &orient;
 }
 
 
@@ -708,8 +561,7 @@ stiffness_A_matrix(const MAST::ElementBase& e) const {
     
     MAST::FieldFunction<RealMatrixX>* rval =
     new MAST::OrthotropicProperty3D::StiffnessMatrix
-    (_material->stiffness_matrix(3).release(),
-     dynamic_cast<MAST::CoordinateBase*>(_orient->clone().release()));
+    (_material->stiffness_matrix(3), *_orient);
     
     return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >(rval);
 }
@@ -755,7 +607,7 @@ inertia_matrix(const MAST::ElementBase& e) const {
     
     MAST::FieldFunction<RealMatrixX>* rval =
     new MAST::OrthotropicProperty3D::InertiaMatrix
-    (_material->inertia_matrix(3).release());
+    (_material->inertia_matrix(3));
     
     return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >(rval);
 }
@@ -768,9 +620,9 @@ thermal_expansion_A_matrix(const MAST::ElementBase& e) const {
     
     MAST::FieldFunction<RealMatrixX>* rval =
     new MAST::OrthotropicProperty3D::ThermalExpansionMatrix
-    (_material->stiffness_matrix(3).release(),
-     _material->thermal_expansion_matrix(3).release(),
-     dynamic_cast<MAST::CoordinateBase*>(_orient->clone().release()));
+    (_material->stiffness_matrix(3),
+     _material->thermal_expansion_matrix(3),
+     *_orient);
     
     return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >(rval);
 }
@@ -798,7 +650,7 @@ transverse_shear_stiffness_matrix(const MAST::ElementBase& e) const {
 
 std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::OrthotropicElementPropertyCard3D::
-prestress_A_matrix(const MAST::ElementBase& e) const {
+prestress_A_matrix( MAST::ElementBase& e) const {
     
     libmesh_assert(false);
     
@@ -808,7 +660,7 @@ prestress_A_matrix(const MAST::ElementBase& e) const {
 
 std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::OrthotropicElementPropertyCard3D::
-prestress_B_matrix(const MAST::ElementBase& e) const {
+prestress_B_matrix( MAST::ElementBase& e) const {
     
     libmesh_assert(false);
     
@@ -822,8 +674,7 @@ thermal_conductance_matrix(const MAST::ElementBase& e) const {
     
     MAST::FieldFunction<RealMatrixX>* rval =
     new MAST::OrthotropicProperty3D::ThermalConductanceMatrix
-    (_material->conductance_matrix(3).release(),
-     dynamic_cast<MAST::CoordinateBase*>(_orient->clone().release()));
+    (_material->conductance_matrix(3), *_orient);
     
     return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >(rval);
 }
@@ -835,7 +686,7 @@ thermal_capacitance_matrix(const MAST::ElementBase& e) const {
     
     MAST::FieldFunction<RealMatrixX>* rval =
     new MAST::OrthotropicProperty3D::ThermalCapacitanceMatrix
-    (_material->capacitance_matrix(3).release());
+    (_material->capacitance_matrix(3));
     
     return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >(rval);
 }

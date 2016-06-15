@@ -429,7 +429,7 @@ init(GetPot& infile,
     _thz_stiff_f     = new MAST::ConstantFieldFunction("hz",          *_thz_stiff);
     _thzoff_stiff_f  = new MAST::ConstantFieldFunction("hz_off",           *_zero);
     _hoff_plate_f    = new MAST::SectionOffset("off",
-                                               _th_plate_f->clone().release(),
+                                               *_th_plate_f,
                                                0.);
     _velocity_f      = new MAST::ConstantFieldFunction("V",      *_velocity);
     _mach_f          = new MAST::ConstantFieldFunction("mach",       *_mach);
@@ -533,7 +533,7 @@ init(GetPot& infile,
         // now create the h_y function and give it to the property card
         _thy_stiff_f[i]   = new MAST::MultilinearInterpolation("hy", th_station_vals);
         _hyoff_stiff_f[i] = new MAST::SectionOffset("hy_off",
-                                                    _thy_stiff_f[i]->clone().release(),
+                                                    *_thy_stiff_f[i],
                                                     1.);
         
         
@@ -976,12 +976,12 @@ evaluate(const std::vector<Real>& dvars,
     //////////////////////////////////////////////////////////////////////
     _sys->solution->zero();
     this->clear_stresss();
-    
+    /*
     MAST::StiffenedPlateSteadySolverInterface steady_solve(*this,
                                                            if_write_output,
                                                            false,
                                                            _n_load_steps);
-
+     
     // solve for the steady state at zero velocity
     (*_velocity) = 0.;
     steady_solve.solve();
@@ -995,14 +995,14 @@ evaluate(const std::vector<Real>& dvars,
     // we will use a small number of load steps to get to the steady-state
     // solution
     steady_solve.set_n_load_steps(4);
-    steady_solve.set_modify_only_aero_load(true);
+    steady_solve.set_modify_only_aero_load(true);*/
     
     
     //////////////////////////////////////////////////////////////////////
     // perform the modal and flutter analysis
     //////////////////////////////////////////////////////////////////////
     _modal_assembly->attach_discipline_and_system(*_discipline, *_structural_sys);
-    _modal_assembly->set_base_solution(steady_solve.solution());
+    //_modal_assembly->set_base_solution(steady_solve.solution());
     _sys->eigenproblem_solve();
     _modal_assembly->clear_discipline_and_system();
     
@@ -1068,10 +1068,10 @@ evaluate(const std::vector<Real>& dvars,
     //////////////////////////////////////////////////////////////////////
     _fsi_assembly->attach_discipline_and_system(*_discipline,
                                                 *_structural_sys);
-    _fsi_assembly->set_base_solution(steady_solve.solution());
+    //_fsi_assembly->set_base_solution(steady_solve.solution());
     _flutter_solver->clear_solutions();
     _flutter_solver->attach_assembly(*_fsi_assembly);
-    _flutter_solver->attach_steady_solver(steady_solve);
+    //_flutter_solver->attach_steady_solver(steady_solve);
     _flutter_solver->initialize(*_velocity,
                                 0.0e3,                // lower V
                                 2*_V0_flutter,        // upper V
@@ -1086,13 +1086,13 @@ evaluate(const std::vector<Real>& dvars,
     // if the flutter root was not found, then we will use the steady sol wo
     // aero as the base solution for all the following computations
     if (!sol.first) {
-        steady_solve.solution() = steady_sol_wo_aero;
-        *_sys->solution         = steady_sol_wo_aero;
+        //steady_solve.solution() = steady_sol_wo_aero;
+        //*_sys->solution         = steady_sol_wo_aero;
     }
     
     // now calculate the stress output based on the velocity output
     _nonlinear_assembly->attach_discipline_and_system(*_discipline, *_structural_sys);
-    _nonlinear_assembly->calculate_outputs(steady_solve.solution());
+    //_nonlinear_assembly->calculate_outputs(steady_solve.solution());
     _nonlinear_assembly->clear_discipline_and_system();
     
 
@@ -1252,7 +1252,7 @@ evaluate(const std::vector<Real>& dvars,
             params[0] = _velocity->ptr();
             _nonlinear_assembly->attach_discipline_and_system(*_discipline,
                                                               *_structural_sys);
-            *_sys->solution = steady_solve.solution();
+            //*_sys->solution = steady_solve.solution();
             _sys->sensitivity_solve(params);
             dXdV = _sys->get_sensitivity_solution(0);
             _nonlinear_assembly->clear_discipline_and_system();

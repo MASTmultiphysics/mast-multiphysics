@@ -171,7 +171,7 @@ topology_optim_2D_optim_con(int*    mode,
 
 
 MAST::YoungsModulus::YoungsModulus(const std::string& nm,
-                                   MAST::FieldFunction<Real> *rho,
+                                   MAST::FieldFunction<Real> &rho,
                                    const Real base_modulus,
                                    const Real penalty):
 MAST::FieldFunction<Real>(nm),
@@ -179,33 +179,13 @@ _rho(rho),
 _base_modulus(base_modulus),
 _penalty(penalty)  {
     
-    _functions.insert(rho->master());
-}
-
-
-MAST::YoungsModulus::YoungsModulus(const MAST::YoungsModulus& o):
-MAST::FieldFunction<Real>(o),
-_rho(o._rho->clone().release()),
-_base_modulus(o._base_modulus),
-_penalty(o._penalty) {
-    
-    _functions.insert(_rho->master());
-}
-
-
-
-
-std::auto_ptr<MAST::FieldFunction<Real> >
-MAST::YoungsModulus::clone() const {
-    
-    return std::auto_ptr<MAST::FieldFunction<Real> >
-    (new MAST::YoungsModulus(*this));
+    _functions.insert(rho.master());
 }
 
 
 
 MAST::YoungsModulus::~YoungsModulus() {
-    delete _rho;
+
 }
 
 
@@ -215,7 +195,7 @@ MAST::YoungsModulus::operator() (const libMesh::Point& p,
                                  Real t,
                                  Real& v) const {
     
-    (*_rho)(p, t, v);
+    _rho(p, t, v);
     v = _base_modulus*pow(v, _penalty);
 }
 
@@ -229,8 +209,8 @@ MAST::YoungsModulus::derivative(const MAST::DerivativeType d,
     Real
     r = 0., dr = 0.;
     
-    (*_rho)(p, t, r);
-    _rho->derivative(d, f, p, t, dr);
+    _rho(p, t, r);
+    _rho.derivative(d, f, p, t, dr);
     v = _base_modulus*pow(r, _penalty-1.)*_penalty*dr;
 }
 
@@ -388,7 +368,8 @@ MAST::TopologyOptimization2D::init(GetPot& infile,
         MAST::ConstantFieldFunction*
         rho_f  = new MAST::ConstantFieldFunction("rho", *rho);
         MAST::YoungsModulus*
-        E_f    = new MAST::YoungsModulus("E", rho_f->clone().release(),
+        E_f    = new MAST::YoungsModulus("E",
+                                         *rho_f,
                                          70.e9,
                                          _penalty);
         

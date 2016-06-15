@@ -47,17 +47,7 @@ namespace MAST {
          *   Constructor requires the mesh and the
          */
         StiffenedPlateWeight(MAST::PhysicsDisciplineBase& discipline);
-        
-        /*!
-         *  copy constructor
-         */
-        StiffenedPlateWeight(const MAST::StiffenedPlateWeight& w);
-        
-        /*!
-         *  @returns a new object as a clone, encapsulated in a smart-pointer
-         */
-        virtual std::auto_ptr<MAST::FieldFunction<Real> > clone() const;
-        
+                
         /*!
          *  virtual destructor
          */

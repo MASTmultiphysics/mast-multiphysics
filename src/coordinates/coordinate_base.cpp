@@ -31,7 +31,7 @@ MAST::FieldFunction<RealMatrixX>(nm) {
 void
 MAST::CoordinateBase::
 stress_strain_transformation_matrix(const RealMatrixX& T,
-                                    RealMatrixX &mat) {
+                                    RealMatrixX &mat) const {
     
     mat.setZero(6,6);
     
@@ -73,7 +73,7 @@ void
 MAST::CoordinateBase::
 stress_strain_transformation_matrix_sens(const RealMatrixX& T,
                                          const RealMatrixX& dT,
-                                         RealMatrixX &mat) {
+                                         RealMatrixX &mat) const {
     
     mat.setZero(6,6);
     

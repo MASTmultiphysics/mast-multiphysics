@@ -32,22 +32,6 @@ _discipline(discipline)
 
 
 
-MAST::BeamWeight::BeamWeight(const MAST::BeamWeight& w):
-MAST::FieldFunction<Real>(w),
-_discipline(w._discipline)
-{ }
-
-
-
-std::auto_ptr<MAST::FieldFunction<Real> >
-MAST::BeamWeight::clone() const {
-    
-    return std::auto_ptr<MAST::FieldFunction<Real> >
-    (new MAST::BeamWeight(*this));
-}
-
-
-
 MAST::BeamWeight::~BeamWeight() { }
 
 

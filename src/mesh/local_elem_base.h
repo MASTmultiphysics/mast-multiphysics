@@ -44,7 +44,8 @@ namespace MAST {
     public:
         LocalElemBase(const libMesh::Elem& elem):
         _elem(elem),
-        _local_elem(NULL)
+        _local_elem(nullptr),
+        _T_mat_function(nullptr)
         { }
         
         
@@ -81,8 +82,8 @@ namespace MAST {
          *    returns the transformation matrix for this element. This is used
          *    to map the coordinates from local to global coordinate system
          */
-        std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
-        T_matrix_function() const;
+        const MAST::FieldFunction<RealMatrixX>&
+        T_matrix_function();
         
         
         /*!
@@ -155,7 +156,7 @@ namespace MAST {
         RealMatrixX _T_mat;
 
         
-        std::auto_ptr<MAST::FieldFunction<RealMatrixX> > _T_mat_function;
+        MAST::FieldFunction<RealMatrixX>* _T_mat_function;
     };
 
 
@@ -172,13 +173,8 @@ namespace MAST {
         
         TransformMatrixFunction(const RealMatrixX& Tmat);
         
-        TransformMatrixFunction(const MAST::TransformMatrixFunction& f);
-        
         virtual ~TransformMatrixFunction() {}
         
-        std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
-        clone() const;
-
         virtual void operator() (const libMesh::Point& p,
                                  const Real t,
                                  RealMatrixX& v) const;

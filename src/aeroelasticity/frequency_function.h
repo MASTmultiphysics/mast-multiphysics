@@ -43,14 +43,6 @@ namespace MAST {
         virtual ~FrequencyFunction();
         
         
-        FrequencyFunction(const MAST::FrequencyFunction& f);
-        
-        /*!
-         *   @returns a clone of the function
-         */
-        virtual std::auto_ptr<MAST::FieldFunction<Real> > clone() const;
-        
-
         /*!
          *   @returns the flag for whether or not the frequency has been
          *   nondimensionalized: omega b/V

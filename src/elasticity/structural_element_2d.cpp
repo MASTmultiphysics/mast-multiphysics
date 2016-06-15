@@ -279,7 +279,7 @@ MAST::StructuralElement2D::calculate_stress(bool request_derivative,
     
     // TODO: remove this const-cast, which may need change in API of
     // material card
-    std::auto_ptr<MAST::FieldFunction<RealMatrixX > >
+    const MAST::FieldFunction<RealMatrixX >&
     mat_stiff  =
     const_cast<MAST::MaterialPropertyCardBase&>(_property.get_material()).
     stiffness_matrix(2);
@@ -324,7 +324,7 @@ MAST::StructuralElement2D::calculate_stress(bool request_derivative,
         _local_elem->global_coordinates_location(xyz[qp], p);
         
         // get the material matrix
-        (*mat_stiff)(p, _time, material_mat);
+        mat_stiff(p, _time, material_mat);
         
         this->initialize_direct_strain_operator(qp, *fe, Bmat_mem);
         
@@ -491,11 +491,11 @@ MAST::StructuralElement2D::calculate_stress(bool request_derivative,
                 dstress_dp  =  material_mat * dstrain_dp;
 
                 // get the material matrix sensitivity
-                mat_stiff->derivative(MAST::PARTIAL_DERIVATIVE,
-                                      *sensitivity_param,
-                                      p,
-                                      _time,
-                                      material_mat);
+                mat_stiff.derivative(MAST::PARTIAL_DERIVATIVE,
+                                     *sensitivity_param,
+                                     p,
+                                     _time,
+                                     material_mat);
                 
                 // partial sensitivity of strain is zero unless it is a
                 // shape parameter.
@@ -1554,8 +1554,8 @@ surface_pressure_residual(bool request_jacobian,
     bc.get<MAST::FieldFunction<Real> >("pressure");
     
     // get the thickness function to calculate the force
-    std::auto_ptr<MAST::FieldFunction<Real> > t_func =
-    _property.get<MAST::FieldFunction<Real> >("h").clone();
+    const MAST::FieldFunction<Real>& t_func =
+    _property.get<MAST::FieldFunction<Real> >("h");
     
     FEMOperatorMatrix Bmat;
     Real
@@ -1581,7 +1581,7 @@ surface_pressure_residual(bool request_jacobian,
         
         // get pressure and thickness values
         p_func(pt, _time, press);
-        (*t_func)(pt, _time, t_val);
+        t_func(pt, _time, t_val);
         
         // calculate force
         for (unsigned int i_dim=0; i_dim<n1; i_dim++)
@@ -1640,8 +1640,8 @@ surface_pressure_residual_sensitivity(bool request_jacobian,
     bc.get<MAST::FieldFunction<Real> >("pressure");
 
     // get the thickness function to calculate the force
-    std::auto_ptr<MAST::FieldFunction<Real> > t_func =
-    _property.get<MAST::FieldFunction<Real> >("h").clone();
+    const MAST::FieldFunction<Real>& t_func =
+    _property.get<MAST::FieldFunction<Real> >("h");
 
     
     FEMOperatorMatrix Bmat;
@@ -1675,12 +1675,12 @@ surface_pressure_residual_sensitivity(bool request_jacobian,
                           pt,
                           _time,
                           dpress);
-        (*t_func)(pt, _time, t_val);
-        t_func->derivative(MAST::PARTIAL_DERIVATIVE,
-                           *sensitivity_param,
-                           pt,
-                           _time,
-                           dt_val);
+        t_func(pt, _time, t_val);
+        t_func.derivative(MAST::PARTIAL_DERIVATIVE,
+                          *sensitivity_param,
+                          pt,
+                          _time,
+                          dt_val);
         
         // calculate force
         for (unsigned int i_dim=0; i_dim<n1; i_dim++)

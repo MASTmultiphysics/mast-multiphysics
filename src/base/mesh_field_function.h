@@ -50,12 +50,6 @@ namespace MAST {
          */
         MeshFieldFunction(const std::string& nm);
         
-
-        /*!
-         *   copy constructor
-         */
-        MeshFieldFunction(const MAST::MeshFieldFunction<ValType>& f);
-
         
         /*!
          *   destructor
@@ -63,11 +57,6 @@ namespace MAST {
         ~MeshFieldFunction();
 
        
-        /*!
-         *   @returns a clone of the function
-         */
-        virtual std::auto_ptr<MAST::FieldFunction<ValType> > clone() const;
-        
         /*!
          *    calculates the value of the function at the specified point,
          *    \par p, and time, \par t, and returns it in \p v.

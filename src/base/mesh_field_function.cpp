@@ -38,22 +38,6 @@ _mesh_function(NULL)
 
 
 
-template <typename ValType>
-MAST::MeshFieldFunction<ValType>::
-MeshFieldFunction(const MAST::MeshFieldFunction<ValType>& f):
-MAST::FieldFunction<ValType>(f),
-_system(NULL),
-_sol(NULL),
-_mesh_function(NULL) {
-    
-    // a cloned function still works with the master function's
-    // solution and mesh funciton data structures
-    // this is not thread-safe.
-    
-}
-
-
-
 
 template <typename ValType>
 MAST::MeshFieldFunction<ValType>::~MeshFieldFunction() {
@@ -63,16 +47,6 @@ MAST::MeshFieldFunction<ValType>::~MeshFieldFunction() {
 
 
 
-
-template <typename ValType>
-std::auto_ptr<MAST::FieldFunction<ValType> >
-MAST::MeshFieldFunction<ValType>::clone() const {
-    
-    MAST::MeshFieldFunction<ValType>* rval =
-    new MAST::MeshFieldFunction<ValType>(*this);
-    
-    return std::auto_ptr<MAST::FieldFunction<ValType> >(rval);
-}
 
 
 

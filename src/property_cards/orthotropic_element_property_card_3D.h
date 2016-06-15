@@ -139,10 +139,10 @@ namespace MAST
         transverse_shear_stiffness_matrix(const MAST::ElementBase& e) const;
         
         virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
-        prestress_A_matrix(const MAST::ElementBase& e) const;
+        prestress_A_matrix( MAST::ElementBase& e) const;
         
         virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
-        prestress_B_matrix(const MAST::ElementBase& e) const;
+        prestress_B_matrix( MAST::ElementBase& e) const;
         
         virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
         thermal_conductance_matrix(const MAST::ElementBase& e) const;
@@ -160,7 +160,7 @@ namespace MAST
         /*!
          *    coordinate system to define orientation
          */
-        MAST::CoordinateBase *_orient;
+        const MAST::CoordinateBase *_orient;
     };
 }
 

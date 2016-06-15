@@ -105,10 +105,10 @@ namespace MAST {
         transverse_shear_stiffness_matrix(const MAST::ElementBase& e);
         
         virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
-        prestress_A_matrix(const MAST::ElementBase& e);
+        prestress_A_matrix( MAST::ElementBase& e);
         
         virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
-        prestress_B_matrix(const MAST::ElementBase& e);
+        prestress_B_matrix( MAST::ElementBase& e);
 
         
     protected:

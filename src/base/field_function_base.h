@@ -49,15 +49,6 @@ namespace MAST {
         { }
 
         
-        FieldFunction(const MAST::FieldFunction<ValType>& f):
-        MAST::FunctionBase(f)
-        { }
-        
-        /*!
-         *   @returns a clone of the function
-         */
-        virtual std::auto_ptr<MAST::FieldFunction<ValType> > clone() const= 0;
-        
         /*!
          *    calculates the value of the function and returns it in \p v.
          */

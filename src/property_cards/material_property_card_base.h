@@ -44,26 +44,26 @@ namespace MAST
         
         virtual ~MaterialPropertyCardBase() {}
         
-        virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+        virtual const MAST::FieldFunction<RealMatrixX>&
         stiffness_matrix(const unsigned int dim,
                          const bool plane_stress = true) = 0;
 
-        virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+        virtual const MAST::FieldFunction<RealMatrixX>&
         damping_matrix(const unsigned int dim) = 0;
         
-        virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+        virtual const MAST::FieldFunction<RealMatrixX>&
         inertia_matrix(const unsigned int dim) = 0;
 
-        virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+        virtual const MAST::FieldFunction<RealMatrixX>&
         thermal_expansion_matrix(const unsigned int dim) = 0;
 
-        virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+        virtual const MAST::FieldFunction<RealMatrixX>&
         transverse_shear_stiffness_matrix() = 0;
         
-        virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+        virtual const MAST::FieldFunction<RealMatrixX>&
         capacitance_matrix(const unsigned int dim) = 0;
 
-        virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+        virtual const MAST::FieldFunction<RealMatrixX>&
         conductance_matrix(const unsigned int dim) = 0;
 
     protected:

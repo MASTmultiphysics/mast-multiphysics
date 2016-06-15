@@ -39,24 +39,6 @@ MAST::ConstantFieldFunction::~ConstantFieldFunction() {
 
 
 
-MAST::ConstantFieldFunction::ConstantFieldFunction(const MAST::ConstantFieldFunction& f):
-MAST::FieldFunction<Real>(f),
-_p(f._p) {
-    
-    _functions.insert(f.master());
-}
-
-
-
-std::auto_ptr<MAST::FieldFunction<Real> >
-MAST::ConstantFieldFunction::clone() const {
-    MAST::FieldFunction<Real>* rval =
-    new MAST::ConstantFieldFunction(*this);
-    
-    return std::auto_ptr<MAST::FieldFunction<Real> >(rval);
-}
-
-
 
 void
 MAST::ConstantFieldFunction::operator() (Real& v) const {

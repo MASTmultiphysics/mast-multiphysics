@@ -182,9 +182,7 @@ _n_stations(0) {
     _rho_f           = new MAST::ConstantFieldFunction("rho",        *_rho);
     _hzoff_f         = new MAST::ConstantFieldFunction("hz_off",    *_zero);
     _press_f         = new MAST::ConstantFieldFunction("pressure", *_press);
-    _hyoff_f         = new MAST::SectionOffset( "hy_off",
-                                               _thy_f->clone().release(),
-                                               1.);
+    _hyoff_f         = new MAST::SectionOffset( "hy_off", *_thy_f, 1.);
     
     // initialize the load
     _p_load          = new MAST::BoundaryConditionBase(MAST::SURFACE_PRESSURE);

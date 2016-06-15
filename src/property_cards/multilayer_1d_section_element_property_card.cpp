@@ -31,34 +31,13 @@ namespace MAST {
         public:
             LayerOffset(const Real base,
                         unsigned int layer_num,
-                        std::vector<MAST::FieldFunction<Real>*>& layer_hz):
+                        const std::vector<const MAST::FieldFunction<Real>*>& layer_hz):
             MAST::FieldFunction<Real>("hz_offset"),
             _base(base),
             _layer_num(layer_num),
             _layer_hz(layer_hz) {
                 for (unsigned int i=0; i < _layer_hz.size(); i++)
                     _functions.insert(_layer_hz[i]->master());
-            }
-            
-            LayerOffset(const MAST::Multilayer1DSectionProperty::LayerOffset &f):
-            MAST::FieldFunction<Real>(f),
-            _base(f._base),
-            _layer_num(f._layer_num)
-            {
-                // initialize the vector
-                _layer_hz.resize(f._layer_hz.size());
-                for (unsigned int i=0; i < _layer_hz.size(); i++) {
-                    _layer_hz[i] = f._layer_hz[i]->clone().release();
-                    _functions.insert(_layer_hz[i]->master());
-                }
-            }
-            
-            /*!
-             *   @returns a clone of the function
-             */
-            virtual std::auto_ptr<MAST::FieldFunction<Real> > clone() const {
-                return std::auto_ptr<MAST::FieldFunction<Real> >
-                (new MAST::Multilayer1DSectionProperty::LayerOffset(*this));
             }
             
             virtual ~LayerOffset() {
@@ -114,7 +93,7 @@ namespace MAST {
             
             const Real _base;
             const unsigned int _layer_num;
-            std::vector<MAST::FieldFunction<Real>*> _layer_hz;
+            const std::vector<const MAST::FieldFunction<Real>*> _layer_hz;
         };
         
         
@@ -129,24 +108,6 @@ namespace MAST {
                 for (unsigned int i=0; i < _layer_mats.size(); i++) {
                     _functions.insert(_layer_mats[i]->master());
                 }
-            }
-            
-            Matrix(const MAST::Multilayer1DSectionProperty::Matrix &f):
-            MAST::FieldFunction<RealMatrixX>(f) {
-                // initialize the vector
-                _layer_mats.resize(f._layer_mats.size());
-                for (unsigned int i=0; i < _layer_mats.size(); i++) {
-                    _layer_mats[i] = f._layer_mats[i]->clone().release();
-                    _functions.insert(_layer_mats[i]->master());
-                }
-            }
-            
-            /*!
-             *   @returns a clone of the function
-             */
-            virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> > clone() const {
-                return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
-                (new MAST::Multilayer1DSectionProperty::Matrix(*this));
             }
             
             virtual ~Matrix() {
@@ -227,10 +188,10 @@ set_layers(const Real base,
     for (unsigned int i=0; i<n_layers; i++) {
         
         // offsets to be provided as functions to each layer
-        std::vector<MAST::FieldFunction<Real>*> layer_hz(n_layers);
+        std::vector<const MAST::FieldFunction<Real>*> layer_hz(n_layers);
         for (unsigned int j=0; j<n_layers; j++)
             layer_hz[j] =
-            _layers[j]->get<MAST::FieldFunction<Real> >("hz").clone().release();
+            &(_layers[j]->get<MAST::FieldFunction<Real> >("hz"));
         
         // create the offset function
         _layer_offsets[i] =
@@ -436,7 +397,7 @@ transverse_shear_stiffness_matrix(const MAST::ElementBase& e) {
 
 std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::Multilayer1DSectionElementPropertyCard::
-prestress_A_matrix(const MAST::ElementBase& e) {
+prestress_A_matrix( MAST::ElementBase& e) {
     
     // prepare vector of matrix functions from each layer
     std::vector<MAST::FieldFunction<RealMatrixX>*> layer_mats(_layers.size());
@@ -455,7 +416,7 @@ prestress_A_matrix(const MAST::ElementBase& e) {
 
 std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::Multilayer1DSectionElementPropertyCard::
-prestress_B_matrix(const MAST::ElementBase& e) {
+prestress_B_matrix( MAST::ElementBase& e) {
     
     // prepare vector of matrix functions from each layer
     std::vector<MAST::FieldFunction<RealMatrixX>*> layer_mats(_layers.size());

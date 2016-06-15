@@ -25,12 +25,12 @@
 
 MAST::PistonTheoryPressure::
 PistonTheoryPressure(unsigned int order,
-                     MAST::FieldFunction<Real> *V,
-                     MAST::FieldFunction<Real> *M,
-                     MAST::FieldFunction<Real> *rho,
-                     MAST::FieldFunction<Real> *gamma,
-                     MAST::FieldFunction<Real> *dwdx,
-                     MAST::FieldFunction<Real> *dwdt):
+                     const MAST::FieldFunction<Real>& V,
+                     const MAST::FieldFunction<Real>& M,
+                     const MAST::FieldFunction<Real>& rho,
+                     const MAST::FieldFunction<Real>& gamma,
+                     const MAST::FieldFunction<Real>& dwdx,
+                     const MAST::FieldFunction<Real>& dwdt):
 MAST::FieldFunction<Real>("pressure"),
 _order(order),
 _V_inf(V),
@@ -40,55 +40,18 @@ _gamma(gamma),
 _dwdx(dwdx),
 _dwdt(dwdt) {
     
-    _functions.insert(_V_inf->master());
-    _functions.insert(_M_inf->master());
-    _functions.insert(_rho_inf->master());
-    _functions.insert(_gamma->master());
-    _functions.insert(_dwdx->master());
-    _functions.insert(_dwdt->master());
-}
-
-
-
-MAST::PistonTheoryPressure::
-PistonTheoryPressure(const MAST::PistonTheoryPressure &f):
-MAST::FieldFunction<Real>(f),
-_order(f._order),
-_V_inf(f._V_inf->clone().release()),
-_M_inf(f._M_inf->clone().release()),
-_rho_inf(f._rho_inf->clone().release()),
-_gamma(f._gamma->clone().release()),
-_dwdx(f._dwdx->clone().release()),
-_dwdt(f._dwdt->clone().release()) {
-    
-    libmesh_assert_less_equal(_order, 3);
-    _functions.insert(_V_inf->master());
-    _functions.insert(_M_inf->master());
-    _functions.insert(_rho_inf->master());
-    _functions.insert(_gamma->master());
-    _functions.insert(_dwdx->master());
-    _functions.insert(_dwdt->master());
+    _functions.insert(_V_inf.master());
+    _functions.insert(_M_inf.master());
+    _functions.insert(_rho_inf.master());
+    _functions.insert(_gamma.master());
+    _functions.insert(_dwdx.master());
+    _functions.insert(_dwdt.master());
 }
 
 
 
 
-std::auto_ptr<MAST::FieldFunction<Real> >
-MAST::PistonTheoryPressure::clone() const {
-    
-    return std::auto_ptr<MAST::FieldFunction<Real> >
-    (new MAST::PistonTheoryPressure(*this));
-}
-
-
-
-MAST::PistonTheoryPressure::~PistonTheoryPressure() {
-    
-    delete _V_inf;
-    delete _M_inf;
-    delete _rho_inf;
-    delete _gamma;
-}
+MAST::PistonTheoryPressure::~PistonTheoryPressure() { }
 
 
 
@@ -98,12 +61,12 @@ MAST::PistonTheoryPressure::operator() (const libMesh::Point& p,
                                         Real& m) const {
     
     Real V, M, rho, gamma, dwdx, dwdt;
-    (*_V_inf)   (p, t,     V);
-    (*_M_inf)   (p, t,     M);
-    (*_rho_inf) (p, t,   rho);
-    (*_gamma)   (p, t, gamma);
-    (*_dwdx)    (p, t,  dwdx);
-    (*_dwdt)    (p, t,  dwdt);
+    _V_inf   (p, t,     V);
+    _M_inf   (p, t,     M);
+    _rho_inf (p, t,   rho);
+    _gamma   (p, t, gamma);
+    _dwdx    (p, t,  dwdx);
+    _dwdt    (p, t,  dwdt);
     
     
     Real
@@ -135,12 +98,12 @@ MAST::PistonTheoryPressure::derivative (const MAST::DerivativeType d,
                                         Real& m) const {
     
     Real V, M, rho, gamma, dwdx, dwdt, dV, dM, drho, dgamma, ddwdx, ddwdt;
-    (*_V_inf)   (p, t,     V);  _V_inf->derivative   (d, f, p, t,     dV);
-    (*_M_inf)   (p, t,     M);  _M_inf->derivative   (d, f, p, t,     dM);
-    (*_rho_inf) (p, t,   rho);  _rho_inf->derivative (d, f, p, t,   drho);
-    (*_gamma)   (p, t, gamma);  _gamma->derivative   (d, f, p, t, dgamma);
-    (*_dwdx)    (p, t,  dwdx);  _dwdx->derivative    (d, f, p, t, ddwdx);
-    (*_dwdt)    (p, t,  dwdt);  _dwdt->derivative    (d, f, p, t, ddwdt);
+    _V_inf   (p, t,     V);  _V_inf.derivative   (d, f, p, t,     dV);
+    _M_inf   (p, t,     M);  _M_inf.derivative   (d, f, p, t,     dM);
+    _rho_inf (p, t,   rho);  _rho_inf.derivative (d, f, p, t,   drho);
+    _gamma   (p, t, gamma);  _gamma.derivative   (d, f, p, t, dgamma);
+    _dwdx    (p, t,  dwdx);  _dwdx.derivative    (d, f, p, t, ddwdx);
+    _dwdt    (p, t,  dwdt);  _dwdt.derivative    (d, f, p, t, ddwdt);
     
     Real
     Mf      = (M*M-2)/(M*M-1),
@@ -210,12 +173,12 @@ MAST::PistonTheoryPressure::derivative (const MAST::DerivativeType d,
 
 MAST::PistonTheoryPressureXDerivative::
 PistonTheoryPressureXDerivative(unsigned int order,
-                                MAST::FieldFunction<Real> *V,
-                                MAST::FieldFunction<Real> *M,
-                                MAST::FieldFunction<Real> *rho,
-                                MAST::FieldFunction<Real> *gamma,
-                                MAST::FieldFunction<Real> *dwdx,
-                                MAST::FieldFunction<Real> *dwdt):
+                                const MAST::FieldFunction<Real>& V,
+                                const MAST::FieldFunction<Real>& M,
+                                const MAST::FieldFunction<Real>& rho,
+                                const MAST::FieldFunction<Real>& gamma,
+                                const MAST::FieldFunction<Real>& dwdx,
+                                const MAST::FieldFunction<Real>& dwdt):
 MAST::FieldFunction<Real>("pressure"),
 _order(order),
 _V_inf(V),
@@ -225,55 +188,19 @@ _gamma(gamma),
 _dwdx(dwdx),
 _dwdt(dwdt) {
     
-    _functions.insert(_V_inf->master());
-    _functions.insert(_M_inf->master());
-    _functions.insert(_rho_inf->master());
-    _functions.insert(_gamma->master());
-    _functions.insert(_dwdx->master());
-    _functions.insert(_dwdt->master());
-}
-
-
-
-MAST::PistonTheoryPressureXDerivative::
-PistonTheoryPressureXDerivative(const MAST::PistonTheoryPressureXDerivative &f):
-MAST::FieldFunction<Real>(f),
-_order(f._order),
-_V_inf(f._V_inf->clone().release()),
-_M_inf(f._M_inf->clone().release()),
-_rho_inf(f._rho_inf->clone().release()),
-_gamma(f._gamma->clone().release()),
-_dwdx(f._dwdx->clone().release()),
-_dwdt(f._dwdt->clone().release()) {
-    
-    libmesh_assert_less_equal(_order, 3);
-    _functions.insert(_V_inf->master());
-    _functions.insert(_M_inf->master());
-    _functions.insert(_rho_inf->master());
-    _functions.insert(_gamma->master());
-    _functions.insert(_dwdx->master());
-    _functions.insert(_dwdt->master());
+    _functions.insert(_V_inf.master());
+    _functions.insert(_M_inf.master());
+    _functions.insert(_rho_inf.master());
+    _functions.insert(_gamma.master());
+    _functions.insert(_dwdx.master());
+    _functions.insert(_dwdt.master());
 }
 
 
 
 
-std::auto_ptr<MAST::FieldFunction<Real> >
-MAST::PistonTheoryPressureXDerivative::clone() const {
-    
-    return std::auto_ptr<MAST::FieldFunction<Real> >
-    (new MAST::PistonTheoryPressureXDerivative(*this));
-}
 
-
-
-MAST::PistonTheoryPressureXDerivative::~PistonTheoryPressureXDerivative() {
-    
-    delete _V_inf;
-    delete _M_inf;
-    delete _rho_inf;
-    delete _gamma;
-}
+MAST::PistonTheoryPressureXDerivative::~PistonTheoryPressureXDerivative() { }
 
 
 
@@ -283,12 +210,12 @@ MAST::PistonTheoryPressureXDerivative::operator() (const libMesh::Point& p,
                                                    Real& m) const {
     
     Real V, M, rho, gamma, dwdx, dwdt;
-    (*_V_inf)   (p, t,     V);
-    (*_M_inf)   (p, t,     M);
-    (*_rho_inf) (p, t,   rho);
-    (*_gamma)   (p, t, gamma);
-    (*_dwdx)    (p, t,  dwdx);
-    (*_dwdt)    (p, t,  dwdt);
+    _V_inf    (p, t,     V);
+    _M_inf    (p, t,     M);
+    _rho_inf  (p, t,   rho);
+    _gamma    (p, t, gamma);
+    _dwdx     (p, t,  dwdx);
+    _dwdt     (p, t,  dwdt);
     
     
     Real
@@ -338,12 +265,12 @@ MAST::PistonTheoryPressureXDerivative::derivative (const MAST::DerivativeType d,
                                                    Real& m) const {
     
     Real V, M, rho, gamma, dwdx, dwdt, dV, dM, drho, dgamma;
-    (*_V_inf)   (p, t,     V);  _V_inf->derivative   (d, f, p, t,     dV);
-    (*_M_inf)   (p, t,     M);  _M_inf->derivative   (d, f, p, t,     dM);
-    (*_rho_inf) (p, t,   rho);  _rho_inf->derivative (d, f, p, t,   drho);
-    (*_gamma)   (p, t, gamma);  _gamma->derivative   (d, f, p, t, dgamma);
-    (*_dwdx)    (p, t,  dwdx);
-    (*_dwdt)    (p, t,  dwdt);
+    _V_inf    (p, t,     V);  _V_inf.derivative   (d, f, p, t,     dV);
+    _M_inf    (p, t,     M);  _M_inf.derivative   (d, f, p, t,     dM);
+    _rho_inf  (p, t,   rho);  _rho_inf.derivative (d, f, p, t,   drho);
+    _gamma    (p, t, gamma);  _gamma.derivative   (d, f, p, t, dgamma);
+    _dwdx     (p, t,  dwdx);
+    _dwdt     (p, t,  dwdt);
     
     Real
     Mf      = (M*M-2)/(M*M-1),
@@ -411,12 +338,12 @@ MAST::PistonTheoryPressureXDerivative::derivative (const MAST::DerivativeType d,
 
 MAST::PistonTheoryPressureXdotDerivative::
 PistonTheoryPressureXdotDerivative(unsigned int order,
-                                   MAST::FieldFunction<Real> *V,
-                                   MAST::FieldFunction<Real> *M,
-                                   MAST::FieldFunction<Real> *rho,
-                                   MAST::FieldFunction<Real> *gamma,
-                                   MAST::FieldFunction<Real> *dwdx,
-                                   MAST::FieldFunction<Real> *dwdt):
+                                   const MAST::FieldFunction<Real>& V,
+                                   const MAST::FieldFunction<Real>& M,
+                                   const MAST::FieldFunction<Real>& rho,
+                                   const MAST::FieldFunction<Real>& gamma,
+                                   const MAST::FieldFunction<Real>& dwdx,
+                                   const MAST::FieldFunction<Real>& dwdt):
 MAST::FieldFunction<Real>("pressure"),
 _order(order),
 _V_inf(V),
@@ -426,55 +353,18 @@ _gamma(gamma),
 _dwdx(dwdx),
 _dwdt(dwdt) {
     
-    _functions.insert(_V_inf->master());
-    _functions.insert(_M_inf->master());
-    _functions.insert(_rho_inf->master());
-    _functions.insert(_gamma->master());
-    _functions.insert(_dwdx->master());
-    _functions.insert(_dwdt->master());
-}
-
-
-
-MAST::PistonTheoryPressureXdotDerivative::
-PistonTheoryPressureXdotDerivative(const MAST::PistonTheoryPressureXdotDerivative &f):
-MAST::FieldFunction<Real>(f),
-_order(f._order),
-_V_inf(f._V_inf->clone().release()),
-_M_inf(f._M_inf->clone().release()),
-_rho_inf(f._rho_inf->clone().release()),
-_gamma(f._gamma->clone().release()),
-_dwdx(f._dwdx->clone().release()),
-_dwdt(f._dwdt->clone().release()) {
-    
-    libmesh_assert_less_equal(_order, 3);
-    _functions.insert(_V_inf->master());
-    _functions.insert(_M_inf->master());
-    _functions.insert(_rho_inf->master());
-    _functions.insert(_gamma->master());
-    _functions.insert(_dwdx->master());
-    _functions.insert(_dwdt->master());
+    _functions.insert(_V_inf.master());
+    _functions.insert(_M_inf.master());
+    _functions.insert(_rho_inf.master());
+    _functions.insert(_gamma.master());
+    _functions.insert(_dwdx.master());
+    _functions.insert(_dwdt.master());
 }
 
 
 
 
-std::auto_ptr<MAST::FieldFunction<Real> >
-MAST::PistonTheoryPressureXdotDerivative::clone() const {
-    
-    return std::auto_ptr<MAST::FieldFunction<Real> >
-    (new MAST::PistonTheoryPressureXdotDerivative(*this));
-}
-
-
-
-MAST::PistonTheoryPressureXdotDerivative::~PistonTheoryPressureXdotDerivative() {
-    
-    delete _V_inf;
-    delete _M_inf;
-    delete _rho_inf;
-    delete _gamma;
-}
+MAST::PistonTheoryPressureXdotDerivative::~PistonTheoryPressureXdotDerivative() { }
 
 
 
@@ -484,12 +374,12 @@ MAST::PistonTheoryPressureXdotDerivative::operator() (const libMesh::Point& p,
                                                       Real& m) const {
     
     Real V, M, rho, gamma, dwdx, dwdt;
-    (*_V_inf)   (p, t,     V);
-    (*_M_inf)   (p, t,     M);
-    (*_rho_inf) (p, t,   rho);
-    (*_gamma)   (p, t, gamma);
-    (*_dwdx)    (p, t,  dwdx);
-    (*_dwdt)    (p, t,  dwdt);
+    _V_inf    (p, t,     V);
+    _M_inf    (p, t,     M);
+    _rho_inf  (p, t,   rho);
+    _gamma    (p, t, gamma);
+    _dwdx     (p, t,  dwdx);
+    _dwdt     (p, t,  dwdt);
     
     
     Real
@@ -537,12 +427,12 @@ MAST::PistonTheoryPressureXdotDerivative::derivative (const MAST::DerivativeType
                                                       Real& m) const {
     
     Real V, M, rho, gamma, dwdx, dwdt, dV, dM, drho, dgamma;
-    (*_V_inf)   (p, t,     V);  _V_inf->derivative   (d, f, p, t,     dV);
-    (*_M_inf)   (p, t,     M);  _M_inf->derivative   (d, f, p, t,     dM);
-    (*_rho_inf) (p, t,   rho);  _rho_inf->derivative (d, f, p, t,   drho);
-    (*_gamma)   (p, t, gamma);  _gamma->derivative   (d, f, p, t, dgamma);
-    (*_dwdx)    (p, t,  dwdx);
-    (*_dwdt)    (p, t,  dwdt);
+    _V_inf   (p, t,     V);  _V_inf.derivative   (d, f, p, t,     dV);
+    _M_inf   (p, t,     M);  _M_inf.derivative   (d, f, p, t,     dM);
+    _rho_inf (p, t,   rho);  _rho_inf.derivative (d, f, p, t,   drho);
+    _gamma   (p, t, gamma);  _gamma.derivative   (d, f, p, t, dgamma);
+    _dwdx    (p, t,  dwdx);
+    _dwdt    (p, t,  dwdt);
     
     Real
     Mf        = (M*M-2)/(M*M-1),
@@ -647,18 +537,18 @@ MAST::PistonTheoryBoundaryCondition::vel_vec() const {
 
 std::auto_ptr<MAST::FieldFunction<Real> >
 MAST::PistonTheoryBoundaryCondition::
-get_pressure_function(MAST::FieldFunction<Real>& dwdx,
-                      MAST::FieldFunction<Real>& dwdt) const {
+get_pressure_function(const MAST::FieldFunction<Real>& dwdx,
+                      const MAST::FieldFunction<Real>& dwdt) const {
     
     MAST::PistonTheoryPressure
     *rval = new MAST::PistonTheoryPressure
     (_order,
-     this->get<MAST::FieldFunction<Real> >("V").clone().release(),
-     this->get<MAST::FieldFunction<Real> >("mach").clone().release(),
-     this->get<MAST::FieldFunction<Real> >("rho").clone().release(),
-     this->get<MAST::FieldFunction<Real> >("gamma").clone().release(),
-     dwdx.clone().release(),
-     dwdt.clone().release());
+     this->get<MAST::FieldFunction<Real> >("V"),
+     this->get<MAST::FieldFunction<Real> >("mach"),
+     this->get<MAST::FieldFunction<Real> >("rho"),
+     this->get<MAST::FieldFunction<Real> >("gamma"),
+     dwdx,
+     dwdt);
     
     return std::auto_ptr<MAST::FieldFunction<Real> >(rval);
 }
@@ -668,18 +558,18 @@ get_pressure_function(MAST::FieldFunction<Real>& dwdx,
 
 std::auto_ptr<MAST::FieldFunction<Real> >
 MAST::PistonTheoryBoundaryCondition::
-get_dpdx_function(MAST::FieldFunction<Real>& dwdx,
-                  MAST::FieldFunction<Real>& dwdt) const {
+get_dpdx_function(const MAST::FieldFunction<Real>& dwdx,
+                  const MAST::FieldFunction<Real>& dwdt) const {
     
     MAST::PistonTheoryPressureXDerivative
     *rval = new MAST::PistonTheoryPressureXDerivative
     (_order,
-     this->get<MAST::FieldFunction<Real> >("V").clone().release(),
-     this->get<MAST::FieldFunction<Real> >("mach").clone().release(),
-     this->get<MAST::FieldFunction<Real> >("rho").clone().release(),
-     this->get<MAST::FieldFunction<Real> >("gamma").clone().release(),
-     dwdx.clone().release(),
-     dwdt.clone().release());
+     this->get<MAST::FieldFunction<Real> >("V"),
+     this->get<MAST::FieldFunction<Real> >("mach"),
+     this->get<MAST::FieldFunction<Real> >("rho"),
+     this->get<MAST::FieldFunction<Real> >("gamma"),
+     dwdx,
+     dwdt);
     
     return std::auto_ptr<MAST::FieldFunction<Real> >(rval);
 }
@@ -689,18 +579,18 @@ get_dpdx_function(MAST::FieldFunction<Real>& dwdx,
 
 std::auto_ptr<MAST::FieldFunction<Real> >
 MAST::PistonTheoryBoundaryCondition::
-get_dpdxdot_function(MAST::FieldFunction<Real>& dwdx,
-                     MAST::FieldFunction<Real>& dwdt) const {
+get_dpdxdot_function(const MAST::FieldFunction<Real>& dwdx,
+                     const MAST::FieldFunction<Real>& dwdt) const {
     
     MAST::PistonTheoryPressureXdotDerivative
     *rval = new MAST::PistonTheoryPressureXdotDerivative
     (_order,
-     this->get<MAST::FieldFunction<Real> >("V").clone().release(),
-     this->get<MAST::FieldFunction<Real> >("mach").clone().release(),
-     this->get<MAST::FieldFunction<Real> >("rho").clone().release(),
-     this->get<MAST::FieldFunction<Real> >("gamma").clone().release(),
-     dwdx.clone().release(),
-     dwdt.clone().release());
+     this->get<MAST::FieldFunction<Real> >("V"),
+     this->get<MAST::FieldFunction<Real> >("mach"),
+     this->get<MAST::FieldFunction<Real> >("rho"),
+     this->get<MAST::FieldFunction<Real> >("gamma"),
+     dwdx,
+     dwdt);
     
     return std::auto_ptr<MAST::FieldFunction<Real> >(rval);
 }

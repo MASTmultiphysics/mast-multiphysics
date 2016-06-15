@@ -383,7 +383,7 @@ init(GetPot& infile,
     _thz_stiff_f     = new MAST::ConstantFieldFunction("hz",          *_thz_stiff);
     _thzoff_stiff_f  = new MAST::ConstantFieldFunction("hz_off",           *_zero);
     _hoff_plate_f    = new MAST::SectionOffset("off",
-                                               _th_plate_f->clone().release(),
+                                               *_th_plate_f,
                                                0.);
     _velocity_f      = new MAST::ConstantFieldFunction("V",      *_velocity);
     _mach_f          = new MAST::ConstantFieldFunction("mach",       *_mach);
@@ -494,7 +494,7 @@ init(GetPot& infile,
         // now create the h_y function and give it to the property card
         _thy_stiff_f[i]   = new MAST::MultilinearInterpolation("hy", th_station_vals);
         _hyoff_stiff_f[i] = new MAST::SectionOffset("hy_off",
-                                                    _thy_stiff_f[i]->clone().release(),
+                                                    *_thy_stiff_f[i],
                                                     1.);
         
         

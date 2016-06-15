@@ -68,28 +68,6 @@ namespace MAST {
         
         virtual ~OscillatingDistributedLoad() { }
         
-
-        OscillatingDistributedLoad(const MAST::OscillatingDistributedLoad& f):
-        MAST::FieldFunction<Real>(f),
-        _p(f._p),
-        _f(f._f) {
-            
-            _functions.insert(_p.master());
-            _functions.insert(_f.master());
-        }
-        
-        /*!
-         *   @returns a clone of the function
-         */
-        virtual std::auto_ptr<MAST::FieldFunction<Real> > clone() const {
-            
-            MAST::FieldFunction<Real>* rval =
-            new MAST::OscillatingDistributedLoad(*this);
-            
-            return std::auto_ptr<MAST::FieldFunction<Real> >(rval);
-            
-        }
-        
         
         /*!
          *    calculates the value of the function at the specified point,

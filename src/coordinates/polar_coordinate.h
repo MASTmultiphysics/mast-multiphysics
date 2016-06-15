@@ -37,19 +37,10 @@ namespace MAST {
         
     public:
         PolarCoordinate(const std::string& nm,
-                        MAST::FieldFunction<Real>* theta);
+                        MAST::FieldFunction<Real>& theta);
         
         virtual ~PolarCoordinate();
         
-        /*!
-         *  Copy contructor
-         */
-        PolarCoordinate(const MAST::PolarCoordinate& c);
-        
-        /*!
-         *   @returns a clone of the function
-         */
-        virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> > clone() const;
         
         /*!
          *    calculates the value of the function at the specified point,
@@ -73,7 +64,7 @@ namespace MAST {
         
     protected:
         
-        MAST::FieldFunction<Real>* _theta;
+        MAST::FieldFunction<Real>& _theta;
     };
 }
 

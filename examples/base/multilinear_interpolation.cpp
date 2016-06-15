@@ -42,30 +42,6 @@ _values(values) {
 
 
 
-MAST::MultilinearInterpolation::
-MultilinearInterpolation(const MAST::MultilinearInterpolation& o):
-MAST::FieldFunction<Real>(o),
-_values(o._values) {
-    std::map<Real, MAST::FieldFunction<Real>*>::iterator
-    it = _values.begin(), end = _values.end();
-    
-    // tell the function that it is dependent on the provided functions
-    for ( ; it != end; it++)
-        _functions.insert(it->second->master());
-}
-
-
-
-
-std::auto_ptr<MAST::FieldFunction<Real> >
-MAST::MultilinearInterpolation::clone() const {
-    
-    return std::auto_ptr<MAST::FieldFunction<Real> >
-    (new MAST::MultilinearInterpolation(*this));
-}
-
-
-
 
 MAST::MultilinearInterpolation::~MultilinearInterpolation() {
     
@@ -171,39 +147,18 @@ MAST::MultilinearInterpolation::derivative(const MAST::DerivativeType d,
 
 
 MAST::SectionOffset::SectionOffset(const std::string& nm,
-                                   MAST::FieldFunction<Real> *thickness,
+                                   const MAST::FieldFunction<Real> &thickness,
                                    const Real scale):
 MAST::FieldFunction<Real>(nm),
 _dim(thickness),
 _scale(scale) {
     
-    _functions.insert(thickness->master());
-}
-
-
-MAST::SectionOffset::SectionOffset(const MAST::SectionOffset& o):
-MAST::FieldFunction<Real>(o),
-_dim(o._dim->clone().release()),
-_scale(o._scale) {
-    
-    _functions.insert(_dim->master());
+    _functions.insert(thickness.master());
 }
 
 
 
-
-std::auto_ptr<MAST::FieldFunction<Real> >
-MAST::SectionOffset::clone() const {
-    
-    return std::auto_ptr<MAST::FieldFunction<Real> >
-    (new MAST::SectionOffset(*this));
-}
-
-
-
-MAST::SectionOffset::~SectionOffset() {
-    delete _dim;
-}
+MAST::SectionOffset::~SectionOffset() { }
 
 
 
@@ -212,7 +167,7 @@ MAST::SectionOffset::operator() (const libMesh::Point& p,
                                  Real t,
                                  Real& v) const {
     
-    (*_dim)(p, t, v);
+    _dim(p, t, v);
     v *= 0.5*_scale;
 }
 
@@ -223,7 +178,7 @@ MAST::SectionOffset::derivative(const MAST::DerivativeType d,
                                 const libMesh::Point& p,
                                 Real t,
                                 Real& v) const {
-    _dim->derivative(d, f, p, t, v);
+    _dim.derivative(d, f, p, t, v);
     v *= 0.5*_scale;
 }
 

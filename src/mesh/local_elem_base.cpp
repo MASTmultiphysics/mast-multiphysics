@@ -24,18 +24,19 @@
 
 
 MAST::LocalElemBase::~LocalElemBase() {
-
+    
+    if (_T_mat_function) delete _T_mat_function;
 }
 
 
 
-std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
-MAST::LocalElemBase::T_matrix_function() const {
+const MAST::FieldFunction<RealMatrixX>&
+MAST::LocalElemBase::T_matrix_function() {
 
-    MAST::FieldFunction<RealMatrixX>* rval =
-    new MAST::TransformMatrixFunction(_T_mat);
+    if (!_T_mat_function)
+        _T_mat_function = new MAST::TransformMatrixFunction(_T_mat);
         
-    return std::auto_ptr<MAST::FieldFunction<RealMatrixX> > (rval);
+    return *_T_mat_function;
 }
 
 
@@ -83,25 +84,6 @@ TransformMatrixFunction(const RealMatrixX& Tmat):
 MAST::FieldFunction<RealMatrixX>("T_function"),
 _Tmat(Tmat) {
     
-}
-
-
-
-MAST::TransformMatrixFunction::
-TransformMatrixFunction(const MAST::TransformMatrixFunction& f):
-MAST::FieldFunction<RealMatrixX>(f),
-_Tmat(f._Tmat) {
-    
-}
-
-
-
-std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
-MAST::TransformMatrixFunction::clone() const {
-    MAST::FieldFunction<RealMatrixX> *rval =
-    new MAST::TransformMatrixFunction(*this);
-    
-    return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >(rval);
 }
 
 

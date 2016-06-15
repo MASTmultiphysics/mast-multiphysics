@@ -31,42 +31,23 @@ namespace MAST {
         
         class Area: public MAST::FieldFunction<Real> {
         public:
-            Area(MAST::FieldFunction<Real> *hy,
-                 MAST::FieldFunction<Real>* hz):
+            Area(const MAST::FieldFunction<Real>& hy,
+                 const MAST::FieldFunction<Real>&  hz):
             MAST::FieldFunction<Real>("Area"),
             _hy(hy),
             _hz(hz) {
-                _functions.insert(hy->master());
-                _functions.insert(hz->master());
+                _functions.insert(hy.master());
+                _functions.insert(hz.master());
             }
             
-            Area(const MAST::Solid1DSectionProperty::Area &f):
-            MAST::FieldFunction<Real>(f),
-            _hy(f._hy->clone().release()),
-            _hz(f._hz->clone().release()) {
-                _functions.insert(_hy->master());
-                _functions.insert(_hz->master());
-            }
-            
-            /*!
-             *   @returns a clone of the function
-             */
-            virtual std::auto_ptr<MAST::FieldFunction<Real> > clone() const {
-                return std::auto_ptr<MAST::FieldFunction<Real> >
-                (new MAST::Solid1DSectionProperty::Area(*this));
-            }
-            
-            virtual ~Area() {
-                delete _hy;
-                delete _hz;
-            }
+            virtual ~Area() { }
             
             virtual void operator() (const libMesh::Point& p,
                                      const Real t,
                                      Real& m) const {
                 Real hy, hz;
-                (*_hy)(p, t, hy);
-                (*_hz)(p, t, hz);
+                _hy(p, t, hy);
+                _hz(p, t, hz);
                 
                 m = hy*hz;
             }
@@ -77,57 +58,39 @@ namespace MAST {
                                      const Real t,
                                      Real& m) const {
                 Real hy, hz, dhy, dhz;
-                (*_hy)(p, t, hy); _hy->derivative(d, f, p, t, dhy);
-                (*_hz)(p, t, hz); _hz->derivative(d, f, p, t, dhz);
+                _hy(p, t, hy); _hy.derivative(d, f, p, t, dhy);
+                _hz(p, t, hz); _hz.derivative(d, f, p, t, dhz);
                 
                 m = dhy*hz + hy*dhz;
             }
             
         protected:
             
-            MAST::FieldFunction<Real> *_hy, *_hz;
+            const MAST::FieldFunction<Real>& _hy, &_hz;
         };
         
         
         
         class TorsionalConstant: public MAST::FieldFunction<Real> {
         public:
-            TorsionalConstant(MAST::FieldFunction<Real> *hy,
-                              MAST::FieldFunction<Real>* hz):
+            TorsionalConstant(const MAST::FieldFunction<Real>& hy,
+                              const MAST::FieldFunction<Real>&  hz):
             MAST::FieldFunction<Real>("TorsionalConstant"),
             _hy(hy),
             _hz(hz) {
-                _functions.insert(hy->master());
-                _functions.insert(hz->master());
+                _functions.insert(hy.master());
+                _functions.insert(hz.master());
             }
             
-            TorsionalConstant(const MAST::Solid1DSectionProperty::TorsionalConstant &f):
-            MAST::FieldFunction<Real>(f),
-            _hy(f._hy->clone().release()),
-            _hz(f._hz->clone().release()) {
-                _functions.insert(_hy->master());
-                _functions.insert(_hz->master());
-            }
             
-            /*!
-             *   @returns a clone of the function
-             */
-            virtual std::auto_ptr<MAST::FieldFunction<Real> > clone() const {
-                return std::auto_ptr<MAST::FieldFunction<Real> >
-                (new MAST::Solid1DSectionProperty::TorsionalConstant(*this));
-            }
-            
-            virtual ~TorsionalConstant() {
-                delete _hy;
-                delete _hz;
-            }
+            virtual ~TorsionalConstant() { }
             
             virtual void operator() (const libMesh::Point& p,
                                      const Real t,
                                      Real& m) const {
                 Real hy, hz, a, b;
-                (*_hy)(p, t, hy);
-                (*_hz)(p, t, hz);
+                _hy(p, t, hy);
+                _hz(p, t, hz);
                 
                 
                 // shorter side is b, and longer side is a
@@ -150,8 +113,8 @@ namespace MAST {
                                      const Real t,
                                      Real& m) const {
                 Real hy, hz, dhy, dhz, a, b, da, db;
-                (*_hy)(p, t, hy); _hy->derivative(d, f, p, t, dhy);
-                (*_hz)(p, t, hz); _hz->derivative(d, f, p, t, dhz);
+                _hy(p, t, hy); _hy.derivative(d, f, p, t, dhy);
+                _hz(p, t, hz); _hz.derivative(d, f, p, t, dhz);
                 
                 // shorter side is b, and longer side is a
                 if (hy > hz) {
@@ -174,63 +137,38 @@ namespace MAST {
             
         protected:
             
-            MAST::FieldFunction<Real> *_hy, *_hz;
+            const MAST::FieldFunction<Real>& _hy, &_hz;
         };
         
         
         
         class PolarInertia: public MAST::FieldFunction<Real> {
         public:
-            PolarInertia(MAST::FieldFunction<Real> *hy,
-                         MAST::FieldFunction<Real>* hz,
-                         MAST::FieldFunction<Real>* hy_offset,
-                         MAST::FieldFunction<Real>* hz_offset):
+            PolarInertia(const MAST::FieldFunction<Real>& hy,
+                         const MAST::FieldFunction<Real>&  hz,
+                         const MAST::FieldFunction<Real>&  hy_offset,
+                         const MAST::FieldFunction<Real>&  hz_offset):
             MAST::FieldFunction<Real>("PolarInertia"),
             _hy(hy),
             _hz(hz),
             _hy_offset(hy_offset),
             _hz_offset(hz_offset) {
-                _functions.insert(hy->master());
-                _functions.insert(hz->master());
-                _functions.insert(hy_offset->master());
-                _functions.insert(hz_offset->master());
+                _functions.insert(hy.master());
+                _functions.insert(hz.master());
+                _functions.insert(hy_offset.master());
+                _functions.insert(hz_offset.master());
             }
             
-            PolarInertia(const MAST::Solid1DSectionProperty::PolarInertia &f):
-            MAST::FieldFunction<Real>(f),
-            _hy(f._hy->clone().release()),
-            _hz(f._hz->clone().release()),
-            _hy_offset(f._hy_offset->clone().release()),
-            _hz_offset(f._hz_offset->clone().release()) {
-                _functions.insert(_hy->master());
-                _functions.insert(_hz->master());
-                _functions.insert(_hy_offset->master());
-                _functions.insert(_hz_offset->master());
-            }
-            
-            /*!
-             *   @returns a clone of the function
-             */
-            virtual std::auto_ptr<MAST::FieldFunction<Real> > clone() const {
-                return std::auto_ptr<MAST::FieldFunction<Real> >
-                (new MAST::Solid1DSectionProperty::PolarInertia(*this));
-            }
-            
-            virtual ~PolarInertia() {
-                delete _hy;
-                delete _hz;
-                delete _hy_offset;
-                delete _hz_offset;
-            }
+            virtual ~PolarInertia() { }
             
             virtual void operator() (const libMesh::Point& p,
                                      const Real t,
                                      Real& m) const {
                 Real hy, hz, offy, offz;
-                (*_hy)(p, t, hy);
-                (*_hz)(p, t, hz);
-                (*_hy_offset)(p, t, offy);
-                (*_hz_offset)(p, t, offz);
+                _hy(p, t, hy);
+                _hz(p, t, hz);
+                _hy_offset(p, t, offy);
+                _hz_offset(p, t, offz);
                 
                 m = hy*hz*((pow(hy,2) + pow(hz,2))/12. +
                            pow(offy,2) + pow(offz,2));
@@ -242,10 +180,10 @@ namespace MAST {
                                      const Real t,
                                      Real& m) const {
                 Real hy, hz, dhy, dhz, offy, offz, doffy, doffz;
-                (*_hy)        (p, t, hy);           _hy->derivative(d, f, p, t, dhy);
-                (*_hz)        (p, t, hz);           _hz->derivative(d, f, p, t, dhz);
-                (*_hy_offset) (p, t, offy);  _hy_offset->derivative(d, f, p, t, doffy);
-                (*_hz_offset) (p, t, offz);  _hz_offset->derivative(d, f, p, t, doffz);
+                _hy        (p, t, hy);           _hy.derivative(d, f, p, t, dhy);
+                _hz        (p, t, hz);           _hz.derivative(d, f, p, t, dhz);
+                _hy_offset (p, t, offy);  _hy_offset.derivative(d, f, p, t, doffy);
+                _hz_offset (p, t, offz);  _hz_offset.derivative(d, f, p, t, doffz);
                 
                 
                 m =
@@ -257,7 +195,7 @@ namespace MAST {
             
         protected:
             
-            MAST::FieldFunction<Real> *_hy, *_hz, *_hy_offset, *_hz_offset;
+            const MAST::FieldFunction<Real>& _hy, &_hz, &_hy_offset, &_hz_offset;
         };
         
         
@@ -268,49 +206,28 @@ namespace MAST {
          */
         class AreaYMoment: public MAST::FieldFunction<Real> {
         public:
-            AreaYMoment(MAST::FieldFunction<Real>* hy,
-                        MAST::FieldFunction<Real>* hz,
-                        MAST::FieldFunction<Real>* hz_offset):
+            AreaYMoment(const MAST::FieldFunction<Real>&  hy,
+                        const MAST::FieldFunction<Real>&  hz,
+                        const MAST::FieldFunction<Real>&  hz_offset):
             MAST::FieldFunction<Real>("AreaYMoment"),
             _hy(hy),
             _hz(hz),
             _hz_offset(hz_offset) {
-                _functions.insert(hy->master());
-                _functions.insert(hz->master());
-                _functions.insert(hz_offset->master());
+                _functions.insert(hy.master());
+                _functions.insert(hz.master());
+                _functions.insert(hz_offset.master());
             }
             
-            AreaYMoment(const MAST::Solid1DSectionProperty::AreaYMoment &f):
-            MAST::FieldFunction<Real>(f),
-            _hy(f._hy->clone().release()),
-            _hz(f._hz->clone().release()),
-            _hz_offset(f._hz_offset->clone().release()) {
-                _functions.insert(_hy->master());
-                _functions.insert(_hz->master());
-                _functions.insert(_hz_offset->master());
-            }
             
-            /*!
-             *   @returns a clone of the function
-             */
-            virtual std::auto_ptr<MAST::FieldFunction<Real> > clone() const {
-                return std::auto_ptr<MAST::FieldFunction<Real> >
-                (new MAST::Solid1DSectionProperty::AreaYMoment(*this));
-            }
-            
-            virtual ~AreaYMoment() {
-                delete _hy;
-                delete _hz;
-                delete _hz_offset;
-            }
+            virtual ~AreaYMoment() { }
             
             virtual void operator() (const libMesh::Point& p,
                                      const Real t,
                                      Real& m) const {
                 Real hy, hz, off;
-                (*_hy)(p, t, hy);
-                (*_hz)(p, t, hz);
-                (*_hz_offset)(p, t, off);
+                _hy(p, t, hy);
+                _hz(p, t, hz);
+                _hz_offset(p, t, off);
                 
                 m = hy*hz*off;
             }
@@ -322,16 +239,16 @@ namespace MAST {
                                      const Real t,
                                      Real& m) const {
                 Real hy, hz, off, dhy, dhz, doff;
-                (*_hy)        (p, t, hy);         _hy->derivative(d, f, p, t, dhy);
-                (*_hz)        (p, t, hz);         _hz->derivative(d, f, p, t, dhz);
-                (*_hz_offset) (p, t, off); _hz_offset->derivative(d, f, p, t, doff);
+                _hy        (p, t, hy);         _hy.derivative(d, f, p, t, dhy);
+                _hz        (p, t, hz);         _hz.derivative(d, f, p, t, dhz);
+                _hz_offset (p, t, off); _hz_offset.derivative(d, f, p, t, doff);
                 
                 m = dhy*hz*off + hy*dhz*off + hy*hz*doff;
             }
             
         protected:
             
-            MAST::FieldFunction<Real> *_hy, *_hz, *_hz_offset;
+            const MAST::FieldFunction<Real>& _hy, &_hz, &_hz_offset;
         };
         
         
@@ -342,49 +259,27 @@ namespace MAST {
          */
         class AreaZMoment: public MAST::FieldFunction<Real> {
         public:
-            AreaZMoment(MAST::FieldFunction<Real>* hy,
-                        MAST::FieldFunction<Real>* hz,
-                        MAST::FieldFunction<Real>* hy_offset):
+            AreaZMoment(const MAST::FieldFunction<Real>&  hy,
+                        const MAST::FieldFunction<Real>&  hz,
+                        const MAST::FieldFunction<Real>&  hy_offset):
             MAST::FieldFunction<Real>("AreaZMoment"),
             _hy(hy),
             _hz(hz),
             _hy_offset(hy_offset) {
-                _functions.insert(hy->master());
-                _functions.insert(hz->master());
-                _functions.insert(hy_offset->master());
+                _functions.insert(hy.master());
+                _functions.insert(hz.master());
+                _functions.insert(hy_offset.master());
             }
             
-            AreaZMoment(const MAST::Solid1DSectionProperty::AreaZMoment &f):
-            MAST::FieldFunction<Real>(f),
-            _hy(f._hy->clone().release()),
-            _hz(f._hz->clone().release()),
-            _hy_offset(f._hy_offset->clone().release()) {
-                _functions.insert(_hy->master());
-                _functions.insert(_hz->master());
-                _functions.insert(_hy_offset->master());
-            }
-            
-            /*!
-             *   @returns a clone of the function
-             */
-            virtual std::auto_ptr<MAST::FieldFunction<Real> > clone() const {
-                return std::auto_ptr<MAST::FieldFunction<Real> >
-                (new MAST::Solid1DSectionProperty::AreaZMoment(*this));
-            }
-            
-            virtual ~AreaZMoment() {
-                delete _hy;
-                delete _hz;
-                delete _hy_offset;
-            }
+            virtual ~AreaZMoment() { }
             
             virtual void operator() (const libMesh::Point& p,
                                      const Real t,
                                      Real& m) const {
                 Real hy, hz, off;
-                (*_hy)(p, t, hy);
-                (*_hz)(p, t, hz);
-                (*_hy_offset)(p, t, off);
+                _hy(p, t, hy);
+                _hz(p, t, hz);
+                _hy_offset(p, t, off);
                 
                 m = hy*hz*off;
             }
@@ -396,16 +291,16 @@ namespace MAST {
                                      const Real t,
                                      Real& m) const {
                 Real hy, hz, off, dhy, dhz, doff;
-                (*_hy)(p, t, hy); _hy->derivative(d, f, p, t, dhy);
-                (*_hz)(p, t, hz); _hz->derivative(d, f, p, t, dhz);
-                (*_hy_offset)(p, t, off); _hy_offset->derivative(d, f, p, t, doff);
+                _hy(p, t, hy); _hy.derivative(d, f, p, t, dhy);
+                _hz(p, t, hz); _hz.derivative(d, f, p, t, dhz);
+                _hy_offset(p, t, off); _hy_offset.derivative(d, f, p, t, doff);
                 
                 m = dhy*hz*off + hy*dhz*off + hy*hz*doff;
             }
             
         protected:
             
-            MAST::FieldFunction<Real> *_hy, *_hz, *_hy_offset;
+            const MAST::FieldFunction<Real>& _hy, &_hz, &_hy_offset;
         };
         
         
@@ -421,57 +316,32 @@ namespace MAST {
          */
         class AreaInertiaMatrix: public MAST::FieldFunction<RealMatrixX> {
         public:
-            AreaInertiaMatrix(MAST::FieldFunction<Real>* hy,
-                              MAST::FieldFunction<Real>* hz,
-                              MAST::FieldFunction<Real>* hy_offset,
-                              MAST::FieldFunction<Real>* hz_offset):
+            AreaInertiaMatrix(const MAST::FieldFunction<Real>&  hy,
+                              const MAST::FieldFunction<Real>&  hz,
+                              const MAST::FieldFunction<Real>&  hy_offset,
+                              const MAST::FieldFunction<Real>&  hz_offset):
             MAST::FieldFunction<RealMatrixX>("AreaInertiaMatrix"),
             _hy(hy),
             _hz(hz),
             _hy_offset(hy_offset),
             _hz_offset(hz_offset) {
-                _functions.insert(hy->master());
-                _functions.insert(hz->master());
-                _functions.insert(hy_offset->master());
-                _functions.insert(hz_offset->master());
+                _functions.insert(hy.master());
+                _functions.insert(hz.master());
+                _functions.insert(hy_offset.master());
+                _functions.insert(hz_offset.master());
             }
             
-            AreaInertiaMatrix(const MAST::Solid1DSectionProperty::AreaInertiaMatrix &f):
-            MAST::FieldFunction<RealMatrixX>(f),
-            _hy(f._hy->clone().release()),
-            _hz(f._hz->clone().release()),
-            _hy_offset(f._hy_offset->clone().release()),
-            _hz_offset(f._hz_offset->clone().release()) {
-                _functions.insert(_hy->master());
-                _functions.insert(_hz->master());
-                _functions.insert(_hy_offset->master());
-                _functions.insert(_hz_offset->master());
-            }
-            
-            /*!
-             *   @returns a clone of the function
-             */
-            virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> > clone() const {
-                return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
-                (new MAST::Solid1DSectionProperty::AreaInertiaMatrix(*this));
-            }
-            
-            virtual ~AreaInertiaMatrix() {
-                delete _hy;
-                delete _hz;
-                delete _hy_offset;
-                delete _hz_offset;
-            }
+            virtual ~AreaInertiaMatrix() { }
             
             virtual void operator() (const libMesh::Point& p,
                                      const Real t,
                                      RealMatrixX& m) const {
                 Real hy, hz, offy, offz;
                 m = RealMatrixX::Zero(2,2);
-                (*_hy)(p, t, hy);
-                (*_hz)(p, t, hz);
-                (*_hy_offset)(p, t, offy);
-                (*_hz_offset)(p, t, offz);
+                _hy(p, t, hy);
+                _hz(p, t, hz);
+                _hy_offset(p, t, offy);
+                _hz_offset(p, t, offz);
                 
                 m(0,0) = hz*pow(hy,3)/12. + hy*hz*pow(offy,2) ; // Izz for v-bending
                 m(0,1) = hy*hz*offy*offz;
@@ -487,10 +357,10 @@ namespace MAST {
                                      RealMatrixX& m) const {
                 Real hy, hz, offy, offz, dhy, dhz, doffy, doffz;
                 m = RealMatrixX::Zero(2,2);
-                (*_hy)(p, t, hy); _hy->derivative(d, f, p, t, dhy);
-                (*_hz)(p, t, hz); _hz->derivative(d, f, p, t, dhz);
-                (*_hy_offset)(p, t, offy); _hy_offset->derivative(d, f, p, t, doffy);
-                (*_hz_offset)(p, t, offz); _hz_offset->derivative(d, f, p, t, doffz);
+                _hy(p, t, hy); _hy.derivative(d, f, p, t, dhy);
+                _hz(p, t, hz); _hz.derivative(d, f, p, t, dhz);
+                _hy_offset(p, t, offy); _hy_offset.derivative(d, f, p, t, doffy);
+                _hz_offset(p, t, offz); _hz_offset.derivative(d, f, p, t, doffz);
                 
                 
                 m(0,0) = dhz*pow(hy,3)/12. + hz*pow(hy,2)/4.*dhy +
@@ -504,39 +374,17 @@ namespace MAST {
             
         protected:
             
-            MAST::FieldFunction<Real> *_hy, *_hz, *_hy_offset, *_hz_offset;
+            const MAST::FieldFunction<Real>& _hy, &_hz, &_hy_offset, &_hz_offset;
         };
         
         
         class ExtensionStiffnessMatrix: public MAST::FieldFunction<RealMatrixX> {
         public:
-            ExtensionStiffnessMatrix(MAST::FieldFunction<RealMatrixX> *mat,
-                                     MAST::FieldFunction<Real>* A,
-                                     MAST::FieldFunction<Real>* J);
+            ExtensionStiffnessMatrix(const MAST::FieldFunction<RealMatrixX>& mat,
+                                     const MAST::FieldFunction<Real>&  A,
+                                     const MAST::FieldFunction<Real>&  J);
             
-            ExtensionStiffnessMatrix(const MAST::Solid1DSectionProperty::ExtensionStiffnessMatrix &f):
-            MAST::FieldFunction<RealMatrixX>(f),
-            _material_stiffness(f._material_stiffness->clone().release()),
-            _A(f._A->clone().release()),
-            _J(f._J->clone().release()) {
-                _functions.insert(_material_stiffness->master());
-                _functions.insert(_A->master());
-                _functions.insert(_J->master());
-            }
-            
-            /*!
-             *   @returns a clone of the function
-             */
-            virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> > clone() const {
-                return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
-                (new MAST::Solid1DSectionProperty::ExtensionStiffnessMatrix(*this));
-            }
-            
-            virtual ~ExtensionStiffnessMatrix() {
-                delete _material_stiffness;
-                delete _A;
-                delete _J;
-            }
+            virtual ~ExtensionStiffnessMatrix() { }
             
             virtual void operator() (const libMesh::Point& p,
                                      const Real t,
@@ -552,41 +400,19 @@ namespace MAST {
             
         protected:
             
-            MAST::FieldFunction<RealMatrixX> *_material_stiffness;
-            MAST::FieldFunction<Real> *_A, *_J;
+            const MAST::FieldFunction<RealMatrixX>& _material_stiffness;
+            const MAST::FieldFunction<Real>& _A, &_J;
         };
         
         
         
         class ExtensionBendingStiffnessMatrix: public MAST::FieldFunction<RealMatrixX> {
         public:
-            ExtensionBendingStiffnessMatrix(MAST::FieldFunction<RealMatrixX> *mat,
-                                            MAST::FieldFunction<Real>* A_y_moment,
-                                            MAST::FieldFunction<Real>* A_z_moment);
+            ExtensionBendingStiffnessMatrix(const MAST::FieldFunction<RealMatrixX>& mat,
+                                            const MAST::FieldFunction<Real>&  A_y_moment,
+                                            const MAST::FieldFunction<Real>&  A_z_moment);
             
-            ExtensionBendingStiffnessMatrix(const MAST::Solid1DSectionProperty::ExtensionBendingStiffnessMatrix &f):
-            MAST::FieldFunction<RealMatrixX>(f),
-            _material_stiffness(f._material_stiffness->clone().release()),
-            _A_y_moment(f._A_y_moment->clone().release()),
-            _A_z_moment(f._A_z_moment->clone().release()) {
-                _functions.insert(_material_stiffness->master());
-                _functions.insert(_A_y_moment->master());
-                _functions.insert(_A_z_moment->master());
-            }
-            
-            /*!
-             *   @returns a clone of the function
-             */
-            virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> > clone() const {
-                return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
-                (new MAST::Solid1DSectionProperty::ExtensionBendingStiffnessMatrix(*this));
-            }
-            
-            virtual ~ExtensionBendingStiffnessMatrix() {
-                delete _material_stiffness;
-                delete _A_y_moment;
-                delete _A_z_moment;
-            }
+            virtual ~ExtensionBendingStiffnessMatrix() { }
             
             virtual void operator() (const libMesh::Point& p,
                                      const Real t,
@@ -602,36 +428,17 @@ namespace MAST {
             
         protected:
             
-            MAST::FieldFunction<RealMatrixX> *_material_stiffness;
-            MAST::FieldFunction<Real> *_A_y_moment, *_A_z_moment;
+            const MAST::FieldFunction<RealMatrixX>& _material_stiffness;
+            const MAST::FieldFunction<Real>& _A_y_moment, &_A_z_moment;
         };
         
         
         class BendingStiffnessMatrix: public MAST::FieldFunction<RealMatrixX> {
         public:
-            BendingStiffnessMatrix(MAST::FieldFunction<RealMatrixX> *mat,
-                                   MAST::FieldFunction<RealMatrixX> *I);
+            BendingStiffnessMatrix(const MAST::FieldFunction<RealMatrixX>& mat,
+                                   const MAST::FieldFunction<RealMatrixX>& I);
             
-            BendingStiffnessMatrix(const MAST::Solid1DSectionProperty::BendingStiffnessMatrix &f):
-            MAST::FieldFunction<RealMatrixX>(f),
-            _material_stiffness(f._material_stiffness->clone().release()),
-            _I(f._I->clone().release()) {
-                _functions.insert(_material_stiffness->master());
-                _functions.insert(_I->master());
-            }
-            
-            /*!
-             *   @returns a clone of the function
-             */
-            virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> > clone() const {
-                return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
-                (new MAST::Solid1DSectionProperty::BendingStiffnessMatrix(*this));
-            }
-            
-            virtual ~BendingStiffnessMatrix() {
-                delete _material_stiffness;
-                delete _I;
-            }
+            virtual ~BendingStiffnessMatrix() { }
             
             virtual void operator() (const libMesh::Point& p,
                                      const Real t,
@@ -647,50 +454,30 @@ namespace MAST {
             
         protected:
             
-            MAST::FieldFunction<RealMatrixX> *_material_stiffness;
-            MAST::FieldFunction<RealMatrixX> *_I;
+            const MAST::FieldFunction<RealMatrixX>& _material_stiffness;
+            const MAST::FieldFunction<RealMatrixX>& _I;
         };
         
         
         class TransverseStiffnessMatrix: public MAST::FieldFunction<RealMatrixX> {
         public:
-            TransverseStiffnessMatrix(MAST::FieldFunction<RealMatrixX> *mat,
-                                      MAST::FieldFunction<Real>* A):
+            TransverseStiffnessMatrix(const MAST::FieldFunction<RealMatrixX>& mat,
+                                      const MAST::FieldFunction<Real>&  A):
             MAST::FieldFunction<RealMatrixX>("TransverseStiffnessMatrix1D"),
             _material_stiffness(mat),
             _A(A) {
-                _functions.insert(mat->master());
-                _functions.insert(A->master());
+                _functions.insert(mat.master());
+                _functions.insert(A.master());
             }
             
-            
-            TransverseStiffnessMatrix(const MAST::Solid1DSectionProperty::TransverseStiffnessMatrix &f):
-            MAST::FieldFunction<RealMatrixX>(f),
-            _material_stiffness(f._material_stiffness->clone().release()),
-            _A(f._A->clone().release()) {
-                _functions.insert(_material_stiffness->master());
-                _functions.insert(_A->master());
-            }
-            
-            /*!
-             *   @returns a clone of the function
-             */
-            virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> > clone() const {
-                return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
-                (new MAST::Solid1DSectionProperty::TransverseStiffnessMatrix(*this));
-            }
-            
-            virtual ~TransverseStiffnessMatrix() {
-                delete _material_stiffness;
-                delete _A;
-            }
+            virtual ~TransverseStiffnessMatrix() { }
             
             virtual void operator() (const libMesh::Point& p,
                                      const Real t,
                                      RealMatrixX& m) const {
                 Real A;
-                (*_A)(p, t, A);
-                (*_material_stiffness)(p, t, m);
+                _A(p, t, A);
+                _material_stiffness(p, t, m);
                 m *= A;
             }
             
@@ -701,8 +488,8 @@ namespace MAST {
                                      RealMatrixX& m) const {
                 RealMatrixX dm;
                 Real A, dA;
-                (*_A)                  (p, t, A);                  _A->derivative(d, f, p, t, dA);
-                (*_material_stiffness) (p, t, m); _material_stiffness->derivative(d, f, p, t, dm);
+                _A                  (p, t, A);                  _A.derivative(d, f, p, t, dA);
+                _material_stiffness (p, t, m); _material_stiffness.derivative(d, f, p, t, dm);
                 
                 m *= dA;
                 m += A*dm;
@@ -710,52 +497,21 @@ namespace MAST {
             
         protected:
             
-            MAST::FieldFunction<RealMatrixX> *_material_stiffness;
-            MAST::FieldFunction<Real> *_A;
+            const MAST::FieldFunction<RealMatrixX>& _material_stiffness;
+            const MAST::FieldFunction<Real>& _A;
         };
         
         
         class InertiaMatrix: public MAST::FieldFunction<RealMatrixX> {
         public:
-            InertiaMatrix(MAST::FieldFunction<Real>* rho,
-                          MAST::FieldFunction<Real>* A,
-                          MAST::FieldFunction<Real>* A_y_moment,
-                          MAST::FieldFunction<Real>* A_z_moment,
-                          MAST::FieldFunction<Real>* Ip,
-                          MAST::FieldFunction<RealMatrixX>* I);
+            InertiaMatrix(const MAST::FieldFunction<Real>&  rho,
+                          const MAST::FieldFunction<Real>&  A,
+                          const MAST::FieldFunction<Real>&  A_y_moment,
+                          const MAST::FieldFunction<Real>&  A_z_moment,
+                          const MAST::FieldFunction<Real>&  Ip,
+                          const MAST::FieldFunction<RealMatrixX>& I);
             
-            InertiaMatrix(const MAST::Solid1DSectionProperty::InertiaMatrix &f):
-            MAST::FieldFunction<RealMatrixX>(f),
-            _rho(f._rho->clone().release()),
-            _A(f._A->clone().release()),
-            _A_y_moment(f._A_y_moment->clone().release()),
-            _A_z_moment(f._A_z_moment->clone().release()),
-            _Ip(f._Ip->clone().release()),
-            _I(f._I->clone().release()) {
-                _functions.insert(_rho->master());
-                _functions.insert(_A->master());
-                _functions.insert(_A_y_moment->master());
-                _functions.insert(_A_z_moment->master());
-                _functions.insert(_Ip->master());
-                _functions.insert(_I->master());
-            }
-            
-            /*!
-             *   @returns a clone of the function
-             */
-            virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> > clone() const {
-                return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
-                (new MAST::Solid1DSectionProperty::InertiaMatrix(*this));
-            }
-            
-            virtual ~InertiaMatrix() {
-                delete _rho;
-                delete _A;
-                delete _A_y_moment;
-                delete _A_z_moment;
-                delete _Ip;
-                delete _I;
-            }
+            virtual ~InertiaMatrix() { }
             
             virtual void operator() (const libMesh::Point& p,
                                      const Real t,
@@ -771,41 +527,19 @@ namespace MAST {
             
         protected:
             
-            MAST::FieldFunction<Real> *_rho, *_A, *_A_y_moment, *_A_z_moment, *_Ip;
-            MAST::FieldFunction<RealMatrixX> *_I;
+            const MAST::FieldFunction<Real>& _rho, &_A, &_A_y_moment, &_A_z_moment, &_Ip;
+            const MAST::FieldFunction<RealMatrixX>& _I;
         };
         
         
         
         class ThermalExpansionAMatrix: public MAST::FieldFunction<RealMatrixX> {
         public:
-            ThermalExpansionAMatrix(MAST::FieldFunction<RealMatrixX> *mat_stiff,
-                                    MAST::FieldFunction<RealMatrixX> *mat_expansion,
-                                    MAST::FieldFunction<Real> *A);
+            ThermalExpansionAMatrix(const MAST::FieldFunction<RealMatrixX>& mat_stiff,
+                                    const MAST::FieldFunction<RealMatrixX>& mat_expansion,
+                                    const MAST::FieldFunction<Real>& A);
             
-            ThermalExpansionAMatrix(const MAST::Solid1DSectionProperty::ThermalExpansionAMatrix &f):
-            MAST::FieldFunction<RealMatrixX>(f),
-            _material_stiffness(f._material_stiffness->clone().release()),
-            _material_expansion(f._material_expansion->clone().release()),
-            _A(f._A->clone().release()) {
-                _functions.insert(_material_stiffness->master());
-                _functions.insert(_material_expansion->master());
-                _functions.insert(_A->master());
-            }
-            
-            /*!
-             *   @returns a clone of the function
-             */
-            virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> > clone() const {
-                return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
-                (new MAST::Solid1DSectionProperty::ThermalExpansionAMatrix(*this));
-            }
-            
-            virtual ~ThermalExpansionAMatrix() {
-                delete _material_stiffness;
-                delete _material_expansion;
-                delete _A;
-            }
+            virtual ~ThermalExpansionAMatrix() { }
             
             virtual void operator() (const libMesh::Point& p,
                                      const Real t,
@@ -821,46 +555,21 @@ namespace MAST {
             
         protected:
             
-            MAST::FieldFunction<RealMatrixX> *_material_stiffness;
-            MAST::FieldFunction<RealMatrixX> *_material_expansion;
-            MAST::FieldFunction<Real> *_A;
+            const MAST::FieldFunction<RealMatrixX>& _material_stiffness;
+            const MAST::FieldFunction<RealMatrixX>& _material_expansion;
+            const MAST::FieldFunction<Real>& _A;
         };
         
         
         
         class ThermalExpansionBMatrix: public MAST::FieldFunction<RealMatrixX> {
         public:
-            ThermalExpansionBMatrix(MAST::FieldFunction<RealMatrixX> *mat_stiff,
-                                    MAST::FieldFunction<RealMatrixX> *mat_expansion,
-                                    MAST::FieldFunction<Real> *A_y_moment,
-                                    MAST::FieldFunction<Real> *A_z_moment);
+            ThermalExpansionBMatrix(const MAST::FieldFunction<RealMatrixX>& mat_stiff,
+                                    const MAST::FieldFunction<RealMatrixX>& mat_expansion,
+                                    const MAST::FieldFunction<Real>& A_y_moment,
+                                    const MAST::FieldFunction<Real>& A_z_moment);
             
-            ThermalExpansionBMatrix(const MAST::Solid1DSectionProperty::ThermalExpansionBMatrix &f):
-            MAST::FieldFunction<RealMatrixX>(f),
-            _material_stiffness(f._material_stiffness->clone().release()),
-            _material_expansion(f._material_expansion->clone().release()),
-            _A_y_moment(f._A_y_moment->clone().release()),
-            _A_z_moment(f._A_z_moment->clone().release()) {
-                _functions.insert(_material_stiffness->master());
-                _functions.insert(_material_expansion->master());
-                _functions.insert(_A_y_moment->master());
-                _functions.insert(_A_z_moment->master());
-            }
-            
-            /*!
-             *   @returns a clone of the function
-             */
-            virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> > clone() const {
-                return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
-                (new MAST::Solid1DSectionProperty::ThermalExpansionBMatrix(*this));
-            }
-            
-            virtual ~ThermalExpansionBMatrix() {
-                delete _material_stiffness;
-                delete _material_expansion;
-                delete _A_y_moment;
-                delete _A_z_moment;
-            }
+            virtual ~ThermalExpansionBMatrix() { }
             
             virtual void operator() (const libMesh::Point& p,
                                      const Real t,
@@ -876,9 +585,9 @@ namespace MAST {
             
         protected:
             
-            MAST::FieldFunction<RealMatrixX> *_material_stiffness;
-            MAST::FieldFunction<RealMatrixX> *_material_expansion;
-            MAST::FieldFunction<Real> *_A_y_moment, *_A_z_moment;
+            const MAST::FieldFunction<RealMatrixX>& _material_stiffness;
+            const MAST::FieldFunction<RealMatrixX>& _material_expansion;
+            const MAST::FieldFunction<Real>& _A_y_moment, &_A_z_moment;
         };
         
         
@@ -887,33 +596,11 @@ namespace MAST {
         class PrestressAMatrix:
         public MAST::FieldFunction<RealMatrixX> {
         public:
-            PrestressAMatrix(MAST::FieldFunction<RealMatrixX> *prestress,
-                             MAST::FieldFunction<RealMatrixX> *T,
-                             MAST::FieldFunction<Real> *A);
+            PrestressAMatrix(const MAST::FieldFunction<RealMatrixX>& prestress,
+                             const MAST::FieldFunction<RealMatrixX>& T,
+                             const MAST::FieldFunction<Real>& A);
             
-            PrestressAMatrix(const MAST::Solid1DSectionProperty::PrestressAMatrix &f):
-            MAST::FieldFunction<RealMatrixX>(f),
-            _prestress(f._prestress->clone().release()),
-            _T(f._T->clone().release()),
-            _A(f._A->clone().release()) {
-                _functions.insert(_prestress->master());
-                _functions.insert(_T->master());
-                _functions.insert(_A->master());
-            }
-            
-            /*!
-             *   @returns a clone of the function
-             */
-            virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> > clone() const {
-                return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
-                (new MAST::Solid1DSectionProperty::PrestressAMatrix(*this));
-            }
-            
-            virtual ~PrestressAMatrix() {
-                delete _prestress;
-                delete _T;
-                delete _A;
-            }
+            virtual ~PrestressAMatrix() { }
             
             virtual void operator() (const libMesh::Point& p,
                                      const Real t,
@@ -931,8 +618,8 @@ namespace MAST {
             
         protected:
             
-            MAST::FieldFunction<RealMatrixX> *_prestress, *_T;
-            MAST::FieldFunction<Real> *_A;
+            const MAST::FieldFunction<RealMatrixX>& _prestress, &_T;
+            const MAST::FieldFunction<Real>& _A;
         };
         
         
@@ -940,37 +627,12 @@ namespace MAST {
         class PrestressBMatrix:
         public MAST::FieldFunction<RealMatrixX> {
         public:
-            PrestressBMatrix(MAST::FieldFunction<RealMatrixX> *prestress,
-                             MAST::FieldFunction<RealMatrixX> *T,
-                             MAST::FieldFunction<Real> *A_y_moment,
-                             MAST::FieldFunction<Real> *A_z_moment);
+            PrestressBMatrix(const MAST::FieldFunction<RealMatrixX>& prestress,
+                             const MAST::FieldFunction<RealMatrixX>& T,
+                             const MAST::FieldFunction<Real>& A_y_moment,
+                             const MAST::FieldFunction<Real>& A_z_moment);
             
-            PrestressBMatrix(const MAST::Solid1DSectionProperty::PrestressBMatrix &f):
-            MAST::FieldFunction<RealMatrixX>(f),
-            _prestress(f._prestress->clone().release()),
-            _T(f._T->clone().release()),
-            _A_y_moment(f._A_y_moment->clone().release()),
-            _A_z_moment(f._A_z_moment->clone().release()) {
-                _functions.insert(_prestress->master());
-                _functions.insert(_T->master());
-                _functions.insert(_A_y_moment->master());
-                _functions.insert(_A_z_moment->master());
-            }
-            
-            /*!
-             *   @returns a clone of the function
-             */
-            virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> > clone() const {
-                return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
-                (new MAST::Solid1DSectionProperty::PrestressBMatrix(*this));
-            }
-            
-            virtual ~PrestressBMatrix() {
-                delete _prestress;
-                delete _T;
-                delete _A_y_moment;
-                delete _A_z_moment;
-            }
+            virtual ~PrestressBMatrix() { }
             
             virtual void operator() (const libMesh::Point& p,
                                      const Real t,
@@ -988,8 +650,8 @@ namespace MAST {
             
         protected:
             
-            MAST::FieldFunction<RealMatrixX> *_prestress, *_T;
-            MAST::FieldFunction<Real> *_A_y_moment, *_A_z_moment;
+            const MAST::FieldFunction<RealMatrixX>& _prestress, &_T;
+            const MAST::FieldFunction<Real>& _A_y_moment, &_A_z_moment;
         };
         
         
@@ -1000,16 +662,8 @@ namespace MAST {
             
         public:
             
-            ThermalConductanceMatrix(MAST::FieldFunction<RealMatrixX> *mat_cond,
-                                     MAST::FieldFunction<Real> *A);
-            
-            ThermalConductanceMatrix(const MAST::Solid1DSectionProperty::ThermalConductanceMatrix &f);
-            
-            
-            /*!
-             *   @returns a clone of the function
-             */
-            virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> > clone() const;
+            ThermalConductanceMatrix(const MAST::FieldFunction<RealMatrixX>& mat_cond,
+                                     const MAST::FieldFunction<Real>& A);
             
             virtual ~ThermalConductanceMatrix();
             
@@ -1027,9 +681,9 @@ namespace MAST {
             
         protected:
             
-            MAST::FieldFunction<RealMatrixX>* _mat_cond;
+            const MAST::FieldFunction<RealMatrixX>& _mat_cond;
             
-            MAST::FieldFunction<Real>* _A;
+            const MAST::FieldFunction<Real>&  _A;
         };
         
         
@@ -1040,16 +694,8 @@ namespace MAST {
             
         public:
             
-            ThermalCapacitanceMatrix(MAST::FieldFunction<RealMatrixX> *mat_cond,
-                                     MAST::FieldFunction<Real> *h);
-            
-            ThermalCapacitanceMatrix(const MAST::Solid1DSectionProperty::ThermalCapacitanceMatrix &f);
-            
-            
-            /*!
-             *   @returns a clone of the function
-             */
-            virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> > clone() const;
+            ThermalCapacitanceMatrix(const MAST::FieldFunction<RealMatrixX>& mat_cond,
+                                     const MAST::FieldFunction<Real>& h);
             
             virtual ~ThermalCapacitanceMatrix();
             
@@ -1067,9 +713,9 @@ namespace MAST {
             
         protected:
             
-            MAST::FieldFunction<RealMatrixX>* _mat_cap;
+            const MAST::FieldFunction<RealMatrixX>& _mat_cap;
             
-            MAST::FieldFunction<Real>* _h;
+            const MAST::FieldFunction<Real>&  _h;
         };
     }
     
@@ -1079,16 +725,16 @@ namespace MAST {
 
 MAST::Solid1DSectionProperty::
 ExtensionStiffnessMatrix::
-ExtensionStiffnessMatrix(MAST::FieldFunction<RealMatrixX> *mat,
-                         MAST::FieldFunction<Real> *A,
-                         MAST::FieldFunction<Real> *J):
+ExtensionStiffnessMatrix(const MAST::FieldFunction<RealMatrixX>& mat,
+                         const MAST::FieldFunction<Real>& A,
+                         const MAST::FieldFunction<Real>& J):
 MAST::FieldFunction<RealMatrixX> ("ExtensionStiffnessMatrix1D"),
 _material_stiffness(mat),
 _A(A),
 _J(J) {
-    _functions.insert(mat->master());
-    _functions.insert(A->master());
-    _functions.insert(J->master());
+    _functions.insert(mat.master());
+    _functions.insert(A.master());
+    _functions.insert(J.master());
 }
 
 
@@ -1102,9 +748,9 @@ ExtensionStiffnessMatrix::operator() (const libMesh::Point& p,
                                       RealMatrixX& m) const {
     // [C]*h
     Real A, J;
-    (*_A)(p, t, A);
-    (*_J)(p, t, J);
-    (*_material_stiffness)(p, t, m);
+    _A(p, t, A);
+    _J(p, t, J);
+    _material_stiffness(p, t, m);
     m.row(0) *= A;
     m.row(1) *= J;
 }
@@ -1122,9 +768,9 @@ ExtensionStiffnessMatrix::derivative (const MAST::DerivativeType d,
     RealMatrixX dm;
     m = RealMatrixX::Zero(2,2);
     Real A, J, dA, dJ;
-    (*_A)(p, t, A); _A->derivative(d, f, p, t, dA);
-    (*_J)(p, t, J); _J->derivative(d, f, p, t, dJ);
-    (*_material_stiffness)(p, t, m); _material_stiffness->derivative(d, f, p, t, dm);
+    _A(p, t, A); _A.derivative(d, f, p, t, dA);
+    _J(p, t, J); _J.derivative(d, f, p, t, dJ);
+    _material_stiffness(p, t, m); _material_stiffness.derivative(d, f, p, t, dm);
     
     // [C]*dh
     m.row(0) *= dA;
@@ -1142,16 +788,16 @@ ExtensionStiffnessMatrix::derivative (const MAST::DerivativeType d,
 
 
 MAST::Solid1DSectionProperty::ExtensionBendingStiffnessMatrix::
-ExtensionBendingStiffnessMatrix(MAST::FieldFunction<RealMatrixX> *mat,
-                                MAST::FieldFunction<Real> *A_y_moment,
-                                MAST::FieldFunction<Real> *A_z_moment):
+ExtensionBendingStiffnessMatrix(const MAST::FieldFunction<RealMatrixX>& mat,
+                                const MAST::FieldFunction<Real>& A_y_moment,
+                                const MAST::FieldFunction<Real>& A_z_moment):
 MAST::FieldFunction<RealMatrixX> ("ExtensionBendingStiffnessMatrix1D"),
 _material_stiffness(mat),
 _A_y_moment(A_y_moment),
 _A_z_moment(A_z_moment) {
-    _functions.insert(mat->master());
-    _functions.insert(A_y_moment->master());
-    _functions.insert(A_z_moment->master());
+    _functions.insert(mat.master());
+    _functions.insert(A_y_moment.master());
+    _functions.insert(A_z_moment.master());
 }
 
 
@@ -1162,9 +808,9 @@ ExtensionBendingStiffnessMatrix::operator() (const libMesh::Point& p,
                                              const Real t,
                                              RealMatrixX& m) const {
     Real Ay, Az;
-    (*_A_y_moment)(p, t, Ay);
-    (*_A_z_moment)(p, t, Az);
-    (*_material_stiffness)(p, t, m);
+    _A_y_moment(p, t, Ay);
+    _A_z_moment(p, t, Az);
+    _material_stiffness(p, t, m);
     
     m(0,1)    = m(0,0)*Ay;  // coupling of u and w bending (== theta_y)
     m(0,0)   *= Az;        // coupling of u and v bending (== theta_z)
@@ -1185,9 +831,9 @@ ExtensionBendingStiffnessMatrix::derivative (const MAST::DerivativeType d,
                                              RealMatrixX& m) const {
     RealMatrixX dm;
     Real Ay, Az, dAy, dAz;
-    (*_A_y_moment)(p, t, Ay); _A_y_moment->derivative(d, f, p, t, dAy);
-    (*_A_z_moment)(p, t, Az); _A_z_moment->derivative(d, f, p, t, dAz);
-    (*_material_stiffness)(p, t, m); _material_stiffness->derivative(d, f, p, t, dm);
+    _A_y_moment(p, t, Ay); _A_y_moment.derivative(d, f, p, t, dAy);
+    _A_z_moment(p, t, Az); _A_z_moment.derivative(d, f, p, t, dAz);
+    _material_stiffness(p, t, m); _material_stiffness.derivative(d, f, p, t, dm);
     
     m(0,1)    = m(0,0)*dAy;  // coupling of u and w bending (== theta_y)
     m(0,0)   *= dAz;        // coupling of u and v bending (== theta_z)
@@ -1203,13 +849,13 @@ ExtensionBendingStiffnessMatrix::derivative (const MAST::DerivativeType d,
 
 
 MAST::Solid1DSectionProperty::BendingStiffnessMatrix::
-BendingStiffnessMatrix(MAST::FieldFunction<RealMatrixX> *mat,
-                       MAST::FieldFunction<RealMatrixX> *I):
+BendingStiffnessMatrix(const MAST::FieldFunction<RealMatrixX>& mat,
+                       const MAST::FieldFunction<RealMatrixX>& I):
 MAST::FieldFunction<RealMatrixX> ("BendingStiffnessMatrix1D"),
 _material_stiffness(mat),
 _I(I) {
-    _functions.insert(mat->master());
-    _functions.insert(I->master());
+    _functions.insert(mat.master());
+    _functions.insert(I.master());
 }
 
 
@@ -1220,8 +866,8 @@ BendingStiffnessMatrix::operator() (const libMesh::Point& p,
                                     const Real t,
                                     RealMatrixX& m) const {
     RealMatrixX mat;
-    (*_I)(p, t, m);
-    (*_material_stiffness)(p, t, mat);
+    _I(p, t, m);
+    _material_stiffness(p, t, mat);
     
     // E*I
     m *= mat(0,0); // scale the inertia matrix with modulus of elasticity
@@ -1242,8 +888,8 @@ BendingStiffnessMatrix::derivative (const MAST::DerivativeType d,
                                     const Real t,
                                     RealMatrixX& m) const {
     RealMatrixX mat, dmat, dm;
-    (*_I)(p, t, m); _I->derivative(d, f, p, t, dm);
-    (*_material_stiffness)(p, t, mat); _material_stiffness->derivative(d, f, p, t, dmat);
+    _I(p, t, m); _I.derivative(d, f, p, t, dm);
+    _material_stiffness(p, t, mat); _material_stiffness.derivative(d, f, p, t, dmat);
     
     // dE*I
     m *= dmat(0,0); // scale the inertia matrix with modulus of elasticity
@@ -1257,12 +903,12 @@ BendingStiffnessMatrix::derivative (const MAST::DerivativeType d,
 
 
 MAST::Solid1DSectionProperty::InertiaMatrix::
-InertiaMatrix(MAST::FieldFunction<Real> *rho,
-              MAST::FieldFunction<Real> *A,
-              MAST::FieldFunction<Real> *A_y_moment,
-              MAST::FieldFunction<Real> *A_z_moment,
-              MAST::FieldFunction<Real> *Ip,
-              MAST::FieldFunction<RealMatrixX> *I):
+InertiaMatrix(const MAST::FieldFunction<Real>& rho,
+              const MAST::FieldFunction<Real>& A,
+              const MAST::FieldFunction<Real>& A_y_moment,
+              const MAST::FieldFunction<Real>& A_z_moment,
+              const MAST::FieldFunction<Real>& Ip,
+              const MAST::FieldFunction<RealMatrixX>& I):
 MAST::FieldFunction<RealMatrixX>("InertiaMatrix1D"),
 _rho(rho),
 _A(A),
@@ -1270,12 +916,12 @@ _A_y_moment(A_y_moment),
 _A_z_moment(A_z_moment),
 _Ip(Ip),
 _I(I) {
-    _functions.insert(_rho->master());
-    _functions.insert(_A->master());
-    _functions.insert(_A_y_moment->master());
-    _functions.insert(_A_z_moment->master());
-    _functions.insert(_Ip->master());
-    _functions.insert(_I->master());
+    _functions.insert(_rho.master());
+    _functions.insert(_A.master());
+    _functions.insert(_A_y_moment.master());
+    _functions.insert(_A_z_moment.master());
+    _functions.insert(_Ip.master());
+    _functions.insert(_I.master());
 }
 
 
@@ -1289,12 +935,12 @@ InertiaMatrix::operator() (const libMesh::Point& p,
     m = RealMatrixX::Zero(6, 6);
     RealMatrixX I;
     Real rho, A, Ay, Az, Ip;
-    (*_rho)(p, t, rho);
-    (*_A)(p, t, A);
-    (*_A_y_moment)(p, t, Ay);
-    (*_A_z_moment)(p, t, Az);
-    (*_Ip)(p, t, Ip);
-    (*_I)(p, t, I);
+    _rho(p, t, rho);
+    _A(p, t, A);
+    _A_y_moment(p, t, Ay);
+    _A_z_moment(p, t, Az);
+    _Ip(p, t, Ip);
+    _I(p, t, I);
     
     // translation velocities
     m(0,0) = A; m(1,1) = A; m(2,2) = A;
@@ -1336,12 +982,12 @@ InertiaMatrix::derivative (const MAST::DerivativeType d,
     m = RealMatrixX::Zero(6, 6); dm = RealMatrixX::Zero(6, 6);
     RealMatrixX I, dI;
     Real rho, A, Ay, Az, Ip, drho, dA, dAy, dAz, dIp;
-    (*_rho)(p, t, rho); _rho->derivative(d, f, p, t, drho);
-    (*_A)(p, t, A); _A->derivative(d, f, p, t, dA);
-    (*_A_y_moment)(p, t, Ay); _A_y_moment->derivative(d, f, p, t, dAy);
-    (*_A_z_moment)(p, t, Az); _A_z_moment->derivative(d, f, p, t, dAz);
-    (*_Ip)(p, t, Ip); _Ip->derivative(d, f, p, t, dIp);
-    (*_I)(p, t, I); _I->derivative(d, f, p, t, dI);
+    _rho(p, t, rho); _rho.derivative(d, f, p, t, drho);
+    _A(p, t, A); _A.derivative(d, f, p, t, dA);
+    _A_y_moment(p, t, Ay); _A_y_moment.derivative(d, f, p, t, dAy);
+    _A_z_moment(p, t, Az); _A_z_moment.derivative(d, f, p, t, dAz);
+    _Ip(p, t, Ip); _Ip.derivative(d, f, p, t, dIp);
+    _I(p, t, I); _I.derivative(d, f, p, t, dI);
     
     // translation velocities
     m(0,0) = A;  m(1,1) = A;  m(2,2) = A;
@@ -1378,16 +1024,16 @@ InertiaMatrix::derivative (const MAST::DerivativeType d,
 
 
 MAST::Solid1DSectionProperty::ThermalExpansionAMatrix::
-ThermalExpansionAMatrix(MAST::FieldFunction<RealMatrixX> *mat_stiff,
-                        MAST::FieldFunction<RealMatrixX> *mat_expansion,
-                        MAST::FieldFunction<Real> *A):
+ThermalExpansionAMatrix(const MAST::FieldFunction<RealMatrixX>& mat_stiff,
+                        const MAST::FieldFunction<RealMatrixX>& mat_expansion,
+                        const MAST::FieldFunction<Real>& A):
 MAST::FieldFunction<RealMatrixX>("ThermalExpansionAMatrix1D"),
 _material_stiffness(mat_stiff),
 _material_expansion(mat_expansion),
 _A(A) {
-    _functions.insert(mat_stiff->master());
-    _functions.insert(mat_expansion->master());
-    _functions.insert(_A->master());
+    _functions.insert(mat_stiff.master());
+    _functions.insert(mat_expansion.master());
+    _functions.insert(_A.master());
 }
 
 
@@ -1400,9 +1046,9 @@ ThermalExpansionAMatrix::operator() (const libMesh::Point& p,
                                      RealMatrixX& m) const {
     Real A;
     RealMatrixX at;
-    (*_A)(p, t, A);
-    (*_material_stiffness)(p, t, m);
-    (*_material_expansion)(p, t, at);
+    _A(p, t, A);
+    _material_stiffness(p, t, m);
+    _material_expansion(p, t, at);
     
     m *= at;
     m *= A;
@@ -1421,9 +1067,9 @@ ThermalExpansionAMatrix::derivative (const MAST::DerivativeType d,
                                      RealMatrixX& m) const {
     Real A, dA;
     RealMatrixX m1, at, dat, dm;
-    (*_A)(p, t, A); _A->derivative(d, f, p, t, dA);
-    (*_material_stiffness)(p, t, m1); _material_stiffness->derivative(d, f, p, t, dm);
-    (*_material_expansion)(p, t, at); _material_expansion->derivative(d, f, p, t, dat);
+    _A(p, t, A); _A.derivative(d, f, p, t, dA);
+    _material_stiffness(p, t, m1); _material_stiffness.derivative(d, f, p, t, dm);
+    _material_expansion(p, t, at); _material_expansion.derivative(d, f, p, t, dat);
     
     m=m1;
     
@@ -1441,19 +1087,19 @@ ThermalExpansionAMatrix::derivative (const MAST::DerivativeType d,
 
 
 MAST::Solid1DSectionProperty::ThermalExpansionBMatrix::
-ThermalExpansionBMatrix(MAST::FieldFunction<RealMatrixX> *mat_stiff,
-                        MAST::FieldFunction<RealMatrixX> *mat_expansion,
-                        MAST::FieldFunction<Real> *A_y_moment,
-                        MAST::FieldFunction<Real> *A_z_moment):
+ThermalExpansionBMatrix(const MAST::FieldFunction<RealMatrixX>& mat_stiff,
+                        const MAST::FieldFunction<RealMatrixX>& mat_expansion,
+                        const MAST::FieldFunction<Real>& A_y_moment,
+                        const MAST::FieldFunction<Real>& A_z_moment):
 MAST::FieldFunction<RealMatrixX>("ThermalExpansionBMatrix1D"),
 _material_stiffness(mat_stiff),
 _material_expansion(mat_expansion),
 _A_y_moment(A_y_moment),
 _A_z_moment(A_z_moment) {
-    _functions.insert(mat_stiff->master());
-    _functions.insert(mat_expansion->master());
-    _functions.insert(_A_y_moment->master());
-    _functions.insert(_A_z_moment->master());
+    _functions.insert(mat_stiff.master());
+    _functions.insert(mat_expansion.master());
+    _functions.insert(_A_y_moment.master());
+    _functions.insert(_A_z_moment.master());
 }
 
 
@@ -1466,10 +1112,10 @@ ThermalExpansionBMatrix::operator() (const libMesh::Point& p,
                                      RealMatrixX& m) const {
     Real Ay, Az;
     RealMatrixX at;
-    (*_A_y_moment)(p, t, Ay);
-    (*_A_z_moment)(p, t, Az);
-    (*_material_stiffness)(p, t, m);
-    (*_material_expansion)(p, t, at);
+    _A_y_moment(p, t, Ay);
+    _A_z_moment(p, t, Az);
+    _material_stiffness(p, t, m);
+    _material_expansion(p, t, at);
     
     m *= at;
     m(1,0)  = Ay * m(0,0); // for w-displacement, area moment about Y-axis
@@ -1490,10 +1136,10 @@ ThermalExpansionBMatrix::derivative (const MAST::DerivativeType d,
                                      RealMatrixX& m) const {
     Real Ay, Az, dAy, dAz;
     RealMatrixX at, dat, m1, dm;
-    (*_A_y_moment)(p, t, Ay); _A_y_moment->derivative(d, f, p, t, dAy);
-    (*_A_z_moment)(p, t, Az); _A_z_moment->derivative(d, f, p, t, dAz);
-    (*_material_stiffness)(p, t, m1); _material_stiffness->derivative(d, f, p, t, dm);
-    (*_material_expansion)(p, t, at); _material_expansion->derivative(d, f, p, t, dat);
+    _A_y_moment(p, t, Ay); _A_y_moment.derivative(d, f, p, t, dAy);
+    _A_z_moment(p, t, Az); _A_z_moment.derivative(d, f, p, t, dAz);
+    _material_stiffness(p, t, m1); _material_stiffness.derivative(d, f, p, t, dm);
+    _material_expansion(p, t, at); _material_expansion.derivative(d, f, p, t, dat);
     
     m = m1;
     m *= at;
@@ -1513,16 +1159,16 @@ ThermalExpansionBMatrix::derivative (const MAST::DerivativeType d,
 
 
 MAST::Solid1DSectionProperty::PrestressAMatrix::
-PrestressAMatrix(MAST::FieldFunction<RealMatrixX> *prestress,
-                 MAST::FieldFunction<RealMatrixX> *T,
-                 MAST::FieldFunction<Real> *A):
+PrestressAMatrix(const MAST::FieldFunction<RealMatrixX>& prestress,
+                 const MAST::FieldFunction<RealMatrixX>& T,
+                 const MAST::FieldFunction<Real>& A):
 MAST::FieldFunction<RealMatrixX>("PrestressAMatrix1D"),
 _prestress(prestress),
 _T(T),
 _A(A) {
-    _functions.insert(prestress->master());
-    _functions.insert(T->master());
-    _functions.insert(A->master());
+    _functions.insert(prestress.master());
+    _functions.insert(T.master());
+    _functions.insert(A.master());
 }
 
 
@@ -1536,9 +1182,9 @@ PrestressAMatrix::operator() (const libMesh::Point& p,
     RealMatrixX s, T;
     m = RealMatrixX::Zero(2, 2);
     Real A;
-    (*_A)(p, t, A);
-    (*_prestress)(p, t, s);
-    (*_T)(p, t, T);
+    _A(p, t, A);
+    _prestress(p, t, s);
+    _T(p, t, T);
     
     // convert the stress to the local coordinate
     s *= T;
@@ -1561,9 +1207,9 @@ PrestressAMatrix::derivative (const MAST::DerivativeType d,
     RealMatrixX s, ds, T, dT;
     m = RealMatrixX::Zero(2, 2);
     Real A, dA;
-    (*_A)(p, t, A); _A->derivative(d, f, p, t, dA);
-    (*_prestress)(p, t, s); _prestress->derivative(d, f, p, t, ds);
-    (*_T)(p, t, T); _T->derivative(d, f, p, t, dT);
+    _A(p, t, A); _A.derivative(d, f, p, t, dA);
+    _prestress(p, t, s); _prestress.derivative(d, f, p, t, ds);
+    _T(p, t, T); _T.derivative(d, f, p, t, dT);
     
     // convert the stress to the local coordinate
     s *= T;
@@ -1584,19 +1230,19 @@ PrestressAMatrix::derivative (const MAST::DerivativeType d,
 
 
 MAST::Solid1DSectionProperty::PrestressBMatrix::
-PrestressBMatrix(MAST::FieldFunction<RealMatrixX> *prestress,
-                 MAST::FieldFunction<RealMatrixX> *T,
-                 MAST::FieldFunction<Real> *A_y_moment,
-                 MAST::FieldFunction<Real> *A_z_moment):
+PrestressBMatrix(const MAST::FieldFunction<RealMatrixX>& prestress,
+                 const MAST::FieldFunction<RealMatrixX>& T,
+                 const MAST::FieldFunction<Real>& A_y_moment,
+                 const MAST::FieldFunction<Real>& A_z_moment):
 MAST::FieldFunction<RealMatrixX>("PrestressBMatrix1D"),
 _prestress(prestress),
 _T(T),
 _A_y_moment(A_y_moment),
 _A_z_moment(A_z_moment) {
-    _functions.insert(prestress->master());
-    _functions.insert(T->master());
-    _functions.insert(A_y_moment->master());
-    _functions.insert(A_z_moment->master());
+    _functions.insert(prestress.master());
+    _functions.insert(T.master());
+    _functions.insert(A_y_moment.master());
+    _functions.insert(A_z_moment.master());
 }
 
 
@@ -1610,10 +1256,10 @@ PrestressBMatrix::operator() (const libMesh::Point& p,
     RealMatrixX s, T;
     m = RealMatrixX::Zero(2, 2);
     Real Ay, Az;
-    (*_A_y_moment)(p, t, Ay);
-    (*_A_z_moment)(p, t, Az);
-    (*_prestress)(p, t, s);
-    (*_T)(p, t, T);
+    _A_y_moment(p, t, Ay);
+    _A_z_moment(p, t, Az);
+    _prestress(p, t, s);
+    _T(p, t, T);
     
     // convert the stress to the local coordinate
     s = T.transpose() * s * T;
@@ -1638,10 +1284,10 @@ PrestressBMatrix::derivative (const MAST::DerivativeType d,
     RealMatrixX s, ds, T, dT;
     m = RealMatrixX::Zero(2, 2);
     Real Ay, Az, dAy, dAz;
-    (*_A_y_moment)(p, t, Ay); _A_y_moment->derivative(d, f, p, t, dAy);
-    (*_A_z_moment)(p, t, Az); _A_z_moment->derivative(d, f, p, t, dAz);
-    (*_prestress)(p, t, s); _prestress->derivative(d, f, p, t, ds);
-    (*_T)(p, t, T); _T->derivative(d, f, p, t, dT);
+    _A_y_moment(p, t, Ay); _A_y_moment.derivative(d, f, p, t, dAy);
+    _A_z_moment(p, t, Az); _A_z_moment.derivative(d, f, p, t, dAz);
+    _prestress(p, t, s); _prestress.derivative(d, f, p, t, ds);
+    _T(p, t, T); _T.derivative(d, f, p, t, dT);
     
     // convert the stress to the local coordinate
     s = T.transpose() * s * T;
@@ -1663,45 +1309,18 @@ PrestressBMatrix::derivative (const MAST::DerivativeType d,
 
 
 MAST::Solid1DSectionProperty::ThermalConductanceMatrix::
-ThermalConductanceMatrix(MAST::FieldFunction<RealMatrixX> *mat_cond,
-                         MAST::FieldFunction<Real> *A):
+ThermalConductanceMatrix(const MAST::FieldFunction<RealMatrixX>& mat_cond,
+                         const MAST::FieldFunction<Real>& A):
 MAST::FieldFunction<RealMatrixX>("ThermalConductanceMatrix"),
 _mat_cond(mat_cond),
 _A(A) {
-    _functions.insert(mat_cond->master());
-    _functions.insert(A->master());
+    _functions.insert(mat_cond.master());
+    _functions.insert(A.master());
 }
 
 
 MAST::Solid1DSectionProperty::ThermalConductanceMatrix::
-ThermalConductanceMatrix(const MAST::Solid1DSectionProperty::ThermalConductanceMatrix &f):
-MAST::FieldFunction<RealMatrixX>(f),
-_mat_cond(f._mat_cond->clone().release()),
-_A(f._A->clone().release()) {
-    _functions.insert(_mat_cond->master());
-    _functions.insert(_A->master());
-}
-
-
-
-std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
-MAST::Solid1DSectionProperty::ThermalConductanceMatrix::clone() const {
-    
-    MAST::FieldFunction<RealMatrixX>* rval =
-    new MAST::Solid1DSectionProperty::ThermalConductanceMatrix(*this);
-    
-    return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >(rval);
-}
-
-
-
-
-MAST::Solid1DSectionProperty::ThermalConductanceMatrix::
-~ThermalConductanceMatrix() {
-    
-    delete _mat_cond;
-    delete _A;
-}
+~ThermalConductanceMatrix() { }
 
 
 void
@@ -1712,8 +1331,8 @@ operator() (const libMesh::Point& p,
     
     m = RealMatrixX::Zero(1, 1);
     Real A;
-    (*_mat_cond)(p, t, m);
-    (*_A)(p, t, A);
+    _mat_cond(p, t, m);
+    _A(p, t, A);
     
     m *= A;
 }
@@ -1729,10 +1348,10 @@ MAST::Solid1DSectionProperty::ThermalConductanceMatrix::derivative (const MAST::
     m = RealMatrixX::Zero(1, 1);
     RealMatrixX dm;
     Real A, dA;
-    (*_mat_cond)(p, t, m);
-    _mat_cond->derivative(d, f, p, t, dm);
-    (*_A)(p, t, A);
-    _A->derivative(d, f, p, t, dA);
+    _mat_cond(p, t, m);
+    _mat_cond.derivative(d, f, p, t, dm);
+    _A(p, t, A);
+    _A.derivative(d, f, p, t, dA);
     
     m *= dA;
     m += dm*A;
@@ -1742,45 +1361,20 @@ MAST::Solid1DSectionProperty::ThermalConductanceMatrix::derivative (const MAST::
 
 
 MAST::Solid1DSectionProperty::ThermalCapacitanceMatrix::
-ThermalCapacitanceMatrix(MAST::FieldFunction<RealMatrixX> *mat_cap,
-                         MAST::FieldFunction<Real> *h):
+ThermalCapacitanceMatrix(const MAST::FieldFunction<RealMatrixX>& mat_cap,
+                         const MAST::FieldFunction<Real>& h):
 MAST::FieldFunction<RealMatrixX>("ThermalCapacitanceMatrix"),
 _mat_cap(mat_cap),
 _h(h) {
-    _functions.insert(mat_cap->master());
-    _functions.insert(h->master());
-}
-
-
-MAST::Solid1DSectionProperty::ThermalCapacitanceMatrix::
-ThermalCapacitanceMatrix(const MAST::Solid1DSectionProperty::ThermalCapacitanceMatrix &f):
-MAST::FieldFunction<RealMatrixX>(f),
-_mat_cap(f._mat_cap->clone().release()),
-_h(f._h->clone().release()) {
-    _functions.insert(_mat_cap->master());
-    _functions.insert(_h->master());
-}
-
-
-
-std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
-MAST::Solid1DSectionProperty::ThermalCapacitanceMatrix::clone() const {
-    
-    MAST::FieldFunction<RealMatrixX>* rval =
-    new MAST::Solid1DSectionProperty::ThermalCapacitanceMatrix(*this);
-    
-    return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >(rval);
+    _functions.insert(mat_cap.master());
+    _functions.insert(h.master());
 }
 
 
 
 
 MAST::Solid1DSectionProperty::ThermalCapacitanceMatrix::
-~ThermalCapacitanceMatrix() {
-    
-    delete _mat_cap;
-    delete _h;
-}
+~ThermalCapacitanceMatrix() { }
 
 
 void
@@ -1791,8 +1385,8 @@ operator() (const libMesh::Point& p,
     
     m = RealMatrixX::Zero(1, 1);
     Real h;
-    (*_mat_cap)(p, t, m);
-    (*_h)(p, t, h);
+    _mat_cap(p, t, m);
+    _h(p, t, h);
     
     m *= h;
 }
@@ -1808,10 +1402,10 @@ MAST::Solid1DSectionProperty::ThermalCapacitanceMatrix::derivative (const MAST::
     m = RealMatrixX::Zero(1, 1);
     RealMatrixX dm;
     Real h, dh;
-    (*_mat_cap)(p, t, m);
-    _mat_cap->derivative(d, f, p, t, dm);
-    (*_h)(p, t, h);
-    _h->derivative(d, f, p, t, dh);
+    _mat_cap(p, t, m);
+    _mat_cap.derivative(d, f, p, t, dm);
+    _h(p, t, h);
+    _h.derivative(d, f, p, t, dh);
     
     m *= dh;
     m += dm*h;
@@ -1943,24 +1537,24 @@ MAST::Solid1DSectionElementPropertyCard::init() {
     &hy_off =  this->get<MAST::FieldFunction<Real> >("hy_off"),
     &hz_off =  this->get<MAST::FieldFunction<Real> >("hz_off");
     
-    _A.reset(new MAST::Solid1DSectionProperty::Area(hy.clone().release(),
-                                                    hz.clone().release()));
-    _Ay.reset(new MAST::Solid1DSectionProperty::AreaYMoment(hy.clone().release(),
-                                                            hz.clone().release(),
-                                                            hz_off.clone().release()));
-    _Az.reset(new MAST::Solid1DSectionProperty::AreaZMoment(hy.clone().release(),
-                                                            hz.clone().release(),
-                                                            hy_off.clone().release()));
-    _J.reset(new MAST::Solid1DSectionProperty::TorsionalConstant(hy.clone().release(),
-                                                                 hz.clone().release()));
-    _Ip.reset(new MAST::Solid1DSectionProperty::PolarInertia(hy.clone().release(),
-                                                             hz.clone().release(),
-                                                             hy_off.clone().release(),
-                                                             hz_off.clone().release()));
-    _AI.reset(new MAST::Solid1DSectionProperty::AreaInertiaMatrix(hy.clone().release(),
-                                                                  hz.clone().release(),
-                                                                  hy_off.clone().release(),
-                                                                  hz_off.clone().release()));
+    _A.reset(new MAST::Solid1DSectionProperty::Area(hy,
+                                                    hz));
+    _Ay.reset(new MAST::Solid1DSectionProperty::AreaYMoment(hy,
+                                                            hz,
+                                                            hz_off));
+    _Az.reset(new MAST::Solid1DSectionProperty::AreaZMoment(hy,
+                                                            hz,
+                                                            hy_off));
+    _J.reset(new MAST::Solid1DSectionProperty::TorsionalConstant(hy,
+                                                                 hz));
+    _Ip.reset(new MAST::Solid1DSectionProperty::PolarInertia(hy,
+                                                             hz,
+                                                             hy_off,
+                                                             hz_off));
+    _AI.reset(new MAST::Solid1DSectionProperty::AreaInertiaMatrix(hy,
+                                                                  hz,
+                                                                  hy_off,
+                                                                  hz_off));
     
     _initialized = true;
 }
@@ -1975,9 +1569,7 @@ stiffness_A_matrix(const MAST::ElementBase& e) const {
     
     MAST::FieldFunction<RealMatrixX>* rval =
     new MAST::Solid1DSectionProperty::ExtensionStiffnessMatrix
-    (_material->stiffness_matrix(1).release(),
-     _A->clone().release(),
-     _J->clone().release());
+    (_material->stiffness_matrix(1), *_A, *_J);
     
     return std::auto_ptr<MAST::FieldFunction<RealMatrixX> > (rval);
 }
@@ -1992,9 +1584,7 @@ stiffness_B_matrix(const MAST::ElementBase& e) const {
 
     MAST::FieldFunction<RealMatrixX>* rval =
     new MAST::Solid1DSectionProperty::ExtensionBendingStiffnessMatrix
-    (_material->stiffness_matrix(1).release(),
-     _Ay->clone().release(),
-     _Az->clone().release());
+    (_material->stiffness_matrix(1), *_Ay, *_Az);
     
     return std::auto_ptr<MAST::FieldFunction<RealMatrixX> > (rval);
 }
@@ -2009,8 +1599,7 @@ stiffness_D_matrix(const MAST::ElementBase& e) const {
     
     MAST::FieldFunction<RealMatrixX>* rval =
     new MAST::Solid1DSectionProperty::BendingStiffnessMatrix
-    (_material->stiffness_matrix(1).release(),
-     _AI->clone().release());
+    (_material->stiffness_matrix(1), *_AI);
     
     return std::auto_ptr<MAST::FieldFunction<RealMatrixX> > (rval);
 }
@@ -2036,12 +1625,12 @@ inertia_matrix(const MAST::ElementBase& e) const {
     
     MAST::FieldFunction<RealMatrixX>* rval =
     new MAST::Solid1DSectionProperty::InertiaMatrix
-    (_material->get<FieldFunction<Real> >("rho").clone().release(),
-     _A->clone().release(),
-     _Ay->clone().release(),
-     _Az->clone().release(),
-     _Ip->clone().release(),
-     _AI->clone().release());
+    (_material->get<FieldFunction<Real> >("rho"),
+     *_A,
+     *_Ay,
+     *_Az,
+     *_Ip,
+     *_AI);
     
     return std::auto_ptr<MAST::FieldFunction<RealMatrixX> > (rval);
 }
@@ -2057,9 +1646,9 @@ thermal_expansion_A_matrix(const MAST::ElementBase& e) const {
 
     MAST::FieldFunction<RealMatrixX>* rval =
     new MAST::Solid1DSectionProperty::ThermalExpansionAMatrix
-    (_material->stiffness_matrix(1).release(),
-     _material->thermal_expansion_matrix(1).release(),
-     _A->clone().release());
+    (_material->stiffness_matrix(1),
+     _material->thermal_expansion_matrix(1),
+     *_A);
     
     return std::auto_ptr<MAST::FieldFunction<RealMatrixX> > (rval);
 }
@@ -2076,10 +1665,10 @@ thermal_expansion_B_matrix(const MAST::ElementBase& e) const {
 
     MAST::FieldFunction<RealMatrixX>* rval =
     new MAST::Solid1DSectionProperty::ThermalExpansionBMatrix
-    (_material->stiffness_matrix(1).release(),
-     _material->thermal_expansion_matrix(1).release(),
-     _Ay->clone().release(),
-     _Az->clone().release());
+    (_material->stiffness_matrix(1),
+     _material->thermal_expansion_matrix(1),
+     *_Ay,
+     *_Az);
     
     return std::auto_ptr<MAST::FieldFunction<RealMatrixX> > (rval);
 }
@@ -2095,8 +1684,8 @@ transverse_shear_stiffness_matrix(const MAST::ElementBase& e) const {
 
     MAST::FieldFunction<RealMatrixX>* rval =
     new MAST::Solid1DSectionProperty::TransverseStiffnessMatrix
-    (_material->transverse_shear_stiffness_matrix().release(),
-     _A->clone().release());
+    (_material->transverse_shear_stiffness_matrix(),
+     *_A);
     
     return std::auto_ptr<MAST::FieldFunction<RealMatrixX> > (rval);
 }
@@ -2104,16 +1693,16 @@ transverse_shear_stiffness_matrix(const MAST::ElementBase& e) const {
 
 std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::Solid1DSectionElementPropertyCard::
-prestress_A_matrix(const MAST::ElementBase& e) const {
+prestress_A_matrix(MAST::ElementBase& e) const {
     
     // make sure that the init method has been called on the card
     libmesh_assert(_initialized);
 
     MAST::FieldFunction<RealMatrixX>* rval =
     new MAST::Solid1DSectionProperty::PrestressAMatrix
-    (this->get<MAST::FieldFunction<RealMatrixX> >("prestress").clone().release(),
-     e.local_elem().T_matrix_function().release(),
-     _A->clone().release());
+    (this->get<MAST::FieldFunction<RealMatrixX> >("prestress"),
+     e.local_elem().T_matrix_function(),
+     *_A);
     
     return std::auto_ptr<MAST::FieldFunction<RealMatrixX> > (rval);
 }
@@ -2121,17 +1710,17 @@ prestress_A_matrix(const MAST::ElementBase& e) const {
 
 std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::Solid1DSectionElementPropertyCard::
-prestress_B_matrix(const MAST::ElementBase& e) const {
+prestress_B_matrix(MAST::ElementBase& e) const {
     
     // make sure that the init method has been called on the card
     libmesh_assert(_initialized);
 
     MAST::FieldFunction<RealMatrixX>* rval =
     new MAST::Solid1DSectionProperty::PrestressBMatrix
-    (this->get<MAST::FieldFunction<RealMatrixX> >("prestress").clone().release(),
-     e.local_elem().T_matrix_function().release(),
-     _Ay->clone().release(),
-     _Az->clone().release());
+    (this->get<MAST::FieldFunction<RealMatrixX> >("prestress"),
+     e.local_elem().T_matrix_function(),
+     *_Ay,
+     *_Az);
     
     return std::auto_ptr<MAST::FieldFunction<RealMatrixX> > (rval);
 }
@@ -2147,8 +1736,8 @@ thermal_conductance_matrix(const MAST::ElementBase& e) const {
     
     MAST::FieldFunction<RealMatrixX>* rval =
     new MAST::Solid1DSectionProperty::ThermalConductanceMatrix
-    (_material->conductance_matrix(1).release(),
-     _A->clone().release());
+    (_material->conductance_matrix(1),
+     *_A);
     
     return std::auto_ptr<MAST::FieldFunction<RealMatrixX> > (rval);
 }
@@ -2164,8 +1753,8 @@ thermal_capacitance_matrix(const MAST::ElementBase& e) const {
     
     MAST::FieldFunction<RealMatrixX>* rval =
     new MAST::Solid1DSectionProperty::ThermalCapacitanceMatrix
-    (_material->capacitance_matrix(1).release(),
-     _A->clone().release());
+    (_material->capacitance_matrix(1),
+     *_A);
     
     return std::auto_ptr<MAST::FieldFunction<RealMatrixX> > (rval);
 }

@@ -46,27 +46,9 @@ public:
     
     }
     
-    ConductanceTempDep(const ConductanceTempDep& f):
-    MAST::FieldFunction<Real>(f),
-    _k0(f._k0),
-    _k1(f._k1),
-    _temp(f._temp) {
-    
-    }
-    
+
     virtual ~ConductanceTempDep() {
         
-    }
-    
-
-    /*!
-     *   @returns a clone of the function
-     */
-    virtual std::auto_ptr<MAST::FieldFunction<Real> > clone() const {
-        MAST::FieldFunction<Real>* rval =
-        new ConductanceTempDep(*this);
-        
-        return std::auto_ptr<MAST::FieldFunction<Real> >(rval);
     }
     
     

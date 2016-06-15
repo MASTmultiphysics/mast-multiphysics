@@ -48,12 +48,12 @@ namespace MAST {
          *   and not the engineering strain.
          */
         void stress_strain_transformation_matrix(const RealMatrixX& T,
-                                                 RealMatrixX& mat);
+                                                 RealMatrixX& mat) const;
         
 
         void stress_strain_transformation_matrix_sens(const RealMatrixX& T,
                                                       const RealMatrixX& dT,
-                                                      RealMatrixX& mat);
+                                                      RealMatrixX& mat) const;
     protected:
         
     };

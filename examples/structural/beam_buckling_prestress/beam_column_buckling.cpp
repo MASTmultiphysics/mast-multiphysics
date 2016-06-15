@@ -65,31 +65,9 @@ namespace MAST {
             _functions.insert(s.master());
             _functions.insert(p.master());
         }
-        
-        
-        PrestressMatrix(const MAST::PrestressMatrix& f):
-        MAST::FieldFunction<RealMatrixX>(f),
-        _stress(f._stress),
-        _load_param(f._load_param) {
-        
-            _functions.insert(_stress.master());
-            _functions.insert(_load_param.master());
-        }
-        
+                
         
         virtual ~PrestressMatrix() { }
-        
-        /*!
-         *   @returns a clone of the function
-         */
-        virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> > clone() const {
-            
-            MAST::FieldFunction<RealMatrixX>* rval =
-            new MAST::PrestressMatrix(*this);
-            
-            return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >(rval);
-
-        }
         
         
         /*!

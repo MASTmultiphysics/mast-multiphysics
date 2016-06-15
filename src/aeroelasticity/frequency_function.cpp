@@ -38,33 +38,9 @@ _b_ref(b_ref) {
 }
 
 
-MAST::FrequencyFunction::FrequencyFunction(const MAST::FrequencyFunction& f):
-MAST::FieldFunction<Real>(f),
-_if_red_freq(f._if_red_freq),
-_omega(f._omega),
-_velocity(f._velocity),
-_b_ref(f._b_ref) {
-    
-    _functions.insert(_omega.master());
-    _functions.insert(_velocity.master());
-    _functions.insert(_b_ref.master());
-}
-
 
 MAST::FrequencyFunction::~FrequencyFunction() {
     
-}
-
-
-
-
-
-std::auto_ptr<MAST::FieldFunction<Real> >
-MAST::FrequencyFunction::clone() const {
-    
-    MAST::FrequencyFunction* rval = new MAST::FrequencyFunction(*this);
-    
-    return std::auto_ptr<MAST::FieldFunction<Real> >(rval);
 }
 
 

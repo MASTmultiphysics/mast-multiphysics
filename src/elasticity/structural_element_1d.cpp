@@ -268,10 +268,9 @@ MAST::StructuralElement1D::calculate_stress(bool request_derivative,
 
     // TODO: remove this const-cast, which may need change in API of
     // material card
-    std::auto_ptr<MAST::FieldFunction<RealMatrixX > >
+    const MAST::FieldFunction<RealMatrixX >&
     mat_stiff  =
-    const_cast<MAST::MaterialPropertyCardBase&>(_property.get_material()).
-    stiffness_matrix(1);
+    const_cast<MAST::MaterialPropertyCardBase&>(_property.get_material()).stiffness_matrix(1);
 
     // get the thickness values for the bending strain calculation
     const MAST::FieldFunction<Real>
@@ -318,7 +317,7 @@ MAST::StructuralElement1D::calculate_stress(bool request_derivative,
         _local_elem->global_coordinates_location(xyz[qp], p);
         
         // get the material matrix
-        (*mat_stiff)(p, _time, material_mat);
+        mat_stiff(p, _time, material_mat);
         
         this->initialize_direct_strain_operator(qp, *fe, Bmat_mem);
         
@@ -489,11 +488,11 @@ MAST::StructuralElement1D::calculate_stress(bool request_derivative,
                 dstress_dp  =  material_mat * dstrain_dp;
 
                 // get the material matrix sensitivity
-                mat_stiff->derivative(MAST::PARTIAL_DERIVATIVE,
-                                        *sensitivity_param,
-                                        p,
-                                        _time,
-                                        material_mat);
+                mat_stiff.derivative(MAST::PARTIAL_DERIVATIVE,
+                                     *sensitivity_param,
+                                     p,
+                                     _time,
+                                     material_mat);
 
                 // partial sensitivity of strain is zero unless it is a
                 // shape parameter.

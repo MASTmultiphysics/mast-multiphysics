@@ -48,16 +48,6 @@ namespace MAST {
         PlateWeight(MAST::PhysicsDisciplineBase& discipline);
         
         /*!
-         *  copy constructor
-         */
-        PlateWeight(const MAST::PlateWeight& w);
-        
-        /*!
-         *  @returns a new object as a clone, encapsulated in a smart-pointer
-         */
-        virtual std::auto_ptr<MAST::FieldFunction<Real> > clone() const;
-        
-        /*!
          *  virtual destructor
          */
         virtual ~PlateWeight();

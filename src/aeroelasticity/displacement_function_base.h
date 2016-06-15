@@ -41,10 +41,6 @@ namespace MAST {
         virtual ~DisplacementFunctionBase() { }
         
         
-        virtual std::auto_ptr<MAST::FieldFunction<RealVectorX> > clone() const {
-            libmesh_assert(false);
-        }
-        
         /*!
          *    calculates the value of the displacement derivative wrt x.
          */

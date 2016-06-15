@@ -41,15 +41,6 @@ namespace MAST {
         
         virtual ~SurfaceMotionBase();
         
-        /*!
-         *   @returns a clone of the function
-         */
-        virtual std::auto_ptr<MAST::FieldFunction<Real> >
-        clone() const {
-            
-            libmesh_error(); // must be implemented in derived class
-        }
-
         
         /*!
          *  provides the value of surface velocity, deformation, and 

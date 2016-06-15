@@ -39,24 +39,12 @@ namespace MAST {
     public:
         
         PistonTheoryPressure(unsigned int order,
-                             MAST::FieldFunction<Real> *V,
-                             MAST::FieldFunction<Real> *M,
-                             MAST::FieldFunction<Real> *rho,
-                             MAST::FieldFunction<Real> *gamma,
-                             MAST::FieldFunction<Real> *dwdx,
-                             MAST::FieldFunction<Real> *dwdt);
-        
-        
-        
-        PistonTheoryPressure(const MAST::PistonTheoryPressure &f);
-        
-        
-        
-        /*!
-         *   @returns a clone of the function
-         */
-        virtual std::auto_ptr<MAST::FieldFunction<Real> > clone() const;
-        
+                             const MAST::FieldFunction<Real>& V,
+                             const MAST::FieldFunction<Real>& M,
+                             const MAST::FieldFunction<Real>& rho,
+                             const MAST::FieldFunction<Real>& gamma,
+                             const MAST::FieldFunction<Real>& dwdx,
+                             const MAST::FieldFunction<Real>& dwdt);
         
         virtual ~PistonTheoryPressure();
         
@@ -75,13 +63,13 @@ namespace MAST {
         
         const unsigned int  _order;
         
-        MAST::FieldFunction<Real>
-        *_V_inf,
-        *_M_inf,
-        *_rho_inf,
-        *_gamma,
-        *_dwdx,
-        *_dwdt;
+        const MAST::FieldFunction<Real>
+        &_V_inf,
+        &_M_inf,
+        &_rho_inf,
+        &_gamma,
+        &_dwdx,
+        &_dwdt;
     };
     
     
@@ -97,23 +85,12 @@ namespace MAST {
     public:
         
         PistonTheoryPressureXDerivative(unsigned int order,
-                                        MAST::FieldFunction<Real> *V,
-                                        MAST::FieldFunction<Real> *M,
-                                        MAST::FieldFunction<Real> *rho,
-                                        MAST::FieldFunction<Real> *gamma,
-                                        MAST::FieldFunction<Real> *dwdx,
-                                        MAST::FieldFunction<Real> *dwdt);
-        
-        
-        
-        PistonTheoryPressureXDerivative(const MAST::PistonTheoryPressureXDerivative &f);
-        
-        
-        
-        /*!
-         *   @returns a clone of the function
-         */
-        virtual std::auto_ptr<MAST::FieldFunction<Real> > clone() const;
+                                        const MAST::FieldFunction<Real>& V,
+                                        const MAST::FieldFunction<Real>& M,
+                                        const MAST::FieldFunction<Real>& rho,
+                                        const MAST::FieldFunction<Real>& gamma,
+                                        const MAST::FieldFunction<Real>& dwdx,
+                                        const MAST::FieldFunction<Real>& dwdt);
         
         
         virtual ~PistonTheoryPressureXDerivative();
@@ -133,13 +110,13 @@ namespace MAST {
         
         const unsigned int  _order;
         
-        MAST::FieldFunction<Real>
-        *_V_inf,
-        *_M_inf,
-        *_rho_inf,
-        *_gamma,
-        *_dwdx,
-        *_dwdt;
+        const MAST::FieldFunction<Real>
+        &_V_inf,
+        &_M_inf,
+        &_rho_inf,
+        &_gamma,
+        &_dwdx,
+        &_dwdt;
     };
     
     
@@ -154,23 +131,12 @@ namespace MAST {
     public:
         
         PistonTheoryPressureXdotDerivative(unsigned int order,
-                                           MAST::FieldFunction<Real> *V,
-                                           MAST::FieldFunction<Real> *M,
-                                           MAST::FieldFunction<Real> *rho,
-                                           MAST::FieldFunction<Real> *gamma,
-                                           MAST::FieldFunction<Real> *dwdx,
-                                           MAST::FieldFunction<Real> *dwdt);
-        
-        
-        
-        PistonTheoryPressureXdotDerivative(const MAST::PistonTheoryPressureXdotDerivative &f);
-        
-        
-        
-        /*!
-         *   @returns a clone of the function
-         */
-        virtual std::auto_ptr<MAST::FieldFunction<Real> > clone() const;
+                                           const MAST::FieldFunction<Real>& V,
+                                           const MAST::FieldFunction<Real>& M,
+                                           const MAST::FieldFunction<Real>& rho,
+                                           const MAST::FieldFunction<Real>& gamma,
+                                           const MAST::FieldFunction<Real>& dwdx,
+                                           const MAST::FieldFunction<Real>& dwdt);
         
         
         virtual ~PistonTheoryPressureXdotDerivative();
@@ -190,13 +156,13 @@ namespace MAST {
         
         const unsigned int  _order;
         
-        MAST::FieldFunction<Real>
-        *_V_inf,
-        *_M_inf,
-        *_rho_inf,
-        *_gamma,
-        *_dwdx,
-        *_dwdt;
+        const MAST::FieldFunction<Real>
+        &_V_inf,
+        &_M_inf,
+        &_rho_inf,
+        &_gamma,
+        &_dwdx,
+        &_dwdt;
     };
     
     
@@ -237,8 +203,8 @@ namespace MAST {
          *   @returns a smart-pointer to the pressure function
          */
         std::auto_ptr<MAST::FieldFunction<Real> >
-        get_pressure_function(MAST::FieldFunction<Real>& dwdx,
-                              MAST::FieldFunction<Real>& dwdt) const;
+        get_pressure_function(const MAST::FieldFunction<Real>& dwdx,
+                              const MAST::FieldFunction<Real>& dwdt) const;
 
         
         
@@ -246,8 +212,8 @@ namespace MAST {
          *   @returns a smart-pointer to the pressure function
          */
         std::auto_ptr<MAST::FieldFunction<Real> >
-        get_dpdx_function(MAST::FieldFunction<Real>& dwdx,
-                          MAST::FieldFunction<Real>& dwdt) const;
+        get_dpdx_function(const MAST::FieldFunction<Real>& dwdx,
+                          const MAST::FieldFunction<Real>& dwdt) const;
 
         
         
@@ -255,8 +221,8 @@ namespace MAST {
          *   @returns a smart-pointer to the pressure function
          */
         std::auto_ptr<MAST::FieldFunction<Real> >
-        get_dpdxdot_function(MAST::FieldFunction<Real>& dwdx,
-                             MAST::FieldFunction<Real>& dwdt) const;
+        get_dpdxdot_function(const MAST::FieldFunction<Real>& dwdx,
+                             const MAST::FieldFunction<Real>& dwdt) const;
 
         
     protected:

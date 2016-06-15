@@ -104,6 +104,16 @@ namespace MAST {
         
         
         /*!
+         *   @returns a non-constant reference to the element in the local
+         *   coordinate. This is needed for 1D or 2D elements that live
+         *   in a 3D space.
+         */
+        MAST::LocalElemBase& local_elem() {
+            return *_local_elem;
+        }
+
+        
+        /*!
          *   @returns a constant reference to the element in the local
          *   coordinate. This is needed for 1D or 2D elements that live
          *   in a 3D space.

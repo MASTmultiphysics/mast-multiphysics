@@ -77,19 +77,15 @@ namespace MAST {
     class YoungsModulus: public MAST::FieldFunction<Real> {
     public:
         YoungsModulus(const std::string& nm,
-                      MAST::FieldFunction<Real> *rho,
+                      MAST::FieldFunction<Real> &rho,
                       const Real base_modulus,
                       const Real penalty);
-        
-        YoungsModulus(const MAST::YoungsModulus& o);
-        
-        virtual std::auto_ptr<MAST::FieldFunction<Real> > clone() const;
-        
+                
         virtual ~YoungsModulus();
         
     protected:
         
-        MAST::FieldFunction<Real> *_rho;
+        MAST::FieldFunction<Real> &_rho;
         
         Real _base_modulus;
         

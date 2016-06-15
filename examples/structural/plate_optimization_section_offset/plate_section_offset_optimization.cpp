@@ -341,7 +341,7 @@ init(GetPot& infile,
     _rho_f           = new MAST::ConstantFieldFunction("rho",        *_rho);
     _press_f         = new MAST::ConstantFieldFunction("pressure", *_press);
     _hoff_f          = new MAST::SectionOffset("off",
-                                               _th_f->clone().release(),
+                                               *_th_f,
                                                1.);
     
     

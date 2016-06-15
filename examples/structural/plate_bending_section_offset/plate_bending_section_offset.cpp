@@ -136,7 +136,7 @@ MAST::PlateBendingWithOffset::init(libMesh::ElemType e_type,
     _kappa_f         = new MAST::ConstantFieldFunction("kappa",    *_kappa);
     _press_f         = new MAST::ConstantFieldFunction("pressure", *_press);
     _hoff_f          = new MAST::SectionOffset("off",
-                                               _th_f->clone().release(),
+                                               *_th_f,
                                                1.);
     
     // initialize the load

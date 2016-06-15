@@ -45,16 +45,6 @@ namespace MAST {
         
         
         /*!
-         *   @returns a clone of the function
-         */
-        virtual std::auto_ptr<MAST::FieldFunction<Real> >
-        clone() const {
-            
-            libmesh_error(); // must be implemented in derived class
-        }
-
-        
-        /*!
          *   provides a function for the definition of surface displacement,
          *   \par w, and rotation of the surface normal in \par dn_rot
          */

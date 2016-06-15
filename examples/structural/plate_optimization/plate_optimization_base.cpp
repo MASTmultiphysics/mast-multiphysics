@@ -33,22 +33,6 @@ _discipline(discipline)
 
 
 
-MAST::PlateWeight::PlateWeight(const MAST::PlateWeight& w):
-MAST::FieldFunction<Real>(w),
-_discipline(w._discipline)
-{ }
-
-
-
-std::auto_ptr<MAST::FieldFunction<Real> >
-MAST::PlateWeight::clone() const {
-    
-    return std::auto_ptr<MAST::FieldFunction<Real> >
-    (new MAST::PlateWeight(*this));
-}
-
-
-
 MAST::PlateWeight::~PlateWeight() { }
 
 

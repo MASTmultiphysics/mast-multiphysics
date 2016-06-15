@@ -43,11 +43,6 @@ namespace MAST {
         MultilinearInterpolation(const std::string& nm,
                                  std::map<Real, MAST::FieldFunction<Real>*>& values);
         
-        MultilinearInterpolation(const MAST::MultilinearInterpolation& o);
-        
-        
-        virtual std::auto_ptr<MAST::FieldFunction<Real> > clone() const;
-        
         
         virtual ~MultilinearInterpolation();
         
@@ -75,18 +70,14 @@ namespace MAST {
     class SectionOffset: public MAST::FieldFunction<Real> {
     public:
         SectionOffset(const std::string& nm,
-                      MAST::FieldFunction<Real> *thickness,
+                      const MAST::FieldFunction<Real> &thickness,
                       const Real scale);
-        
-        SectionOffset(const MAST::SectionOffset& o);
-        
-        virtual std::auto_ptr<MAST::FieldFunction<Real> > clone() const;
         
         virtual ~SectionOffset();
         
     protected:
         
-        MAST::FieldFunction<Real> *_dim;
+        const MAST::FieldFunction<Real> &_dim;
         
         Real _scale;
         

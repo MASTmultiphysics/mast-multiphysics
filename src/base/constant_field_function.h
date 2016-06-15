@@ -36,18 +36,10 @@ namespace MAST {
         
         ConstantFieldFunction(const std::string& nm,
                               const MAST::Parameter& p);
-
         
-        ConstantFieldFunction(const MAST::ConstantFieldFunction& f);
-
         
         virtual ~ConstantFieldFunction();
 
-        /*!
-         *   @returns a clone of the function
-         */
-        virtual std::auto_ptr<MAST::FieldFunction<Real> > clone() const;
-        
         
         /*!
          *    calculates the value of the function at the specified point,

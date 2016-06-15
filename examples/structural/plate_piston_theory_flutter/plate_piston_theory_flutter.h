@@ -84,7 +84,7 @@ namespace MAST {
          */
         Real solve(bool if_write_output = false,
                    const Real tol = 1.e-1,
-                   const unsigned int max_bisection_iters = 20);
+                   const unsigned int max_bisection_iters = 30);
         
         
         /*!

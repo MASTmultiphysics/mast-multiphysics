@@ -48,16 +48,6 @@ namespace MAST {
         BeamWeight(MAST::PhysicsDisciplineBase& discipline);
         
         /*!
-         *  copy constructor
-         */
-        BeamWeight(const MAST::BeamWeight& w);
-        
-        /*!
-         *  @returns a new object as a clone, encapsulated in a smart-pointer
-         */
-        virtual std::auto_ptr<MAST::FieldFunction<Real> > clone() const;
-        
-        /*!
          *  virtual destructor
          */
         virtual ~BeamWeight();

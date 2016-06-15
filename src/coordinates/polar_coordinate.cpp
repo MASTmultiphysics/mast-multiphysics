@@ -22,33 +22,15 @@
 
 
 MAST::PolarCoordinate::PolarCoordinate(const std::string& nm,
-                                       MAST::FieldFunction<Real>* theta):
+                                       MAST::FieldFunction<Real>& theta):
 MAST::CoordinateBase(nm),
 _theta(theta) {
     
-    _functions.insert(theta->master());
+    _functions.insert(theta.master());
 }
 
 
-MAST::PolarCoordinate::~PolarCoordinate() {
-    delete _theta;
-}
-
-
-
-MAST::PolarCoordinate::PolarCoordinate(const MAST::PolarCoordinate& c):
-MAST::CoordinateBase(c),
-_theta(c._theta->clone().release()) {
-    _functions.insert(_theta->master());
-}
-
-
-
-std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
-MAST::PolarCoordinate::clone() const {
-    return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
-    (new MAST::PolarCoordinate(*this));
-}
+MAST::PolarCoordinate::~PolarCoordinate() { }
 
 
 
@@ -58,7 +40,7 @@ MAST::PolarCoordinate::operator() (const libMesh::Point& p,
                                    RealMatrixX& v) const {
     v.setZero(3,3);
     Real theta;
-    (*_theta)  (p,t,theta);
+    _theta(p,t,theta);
     v(0,0) = cos(theta);
     v(1,0) = sin(theta);
     
@@ -78,8 +60,8 @@ MAST::PolarCoordinate::derivative (const MAST::DerivativeType d,
                                    RealMatrixX& v) const {
     v.setZero(3,3);
     Real theta, dtheta;
-    (*_theta)  (p,t,theta);
-    _theta->derivative(d,f,p,t,dtheta);
+    _theta(p,t,theta);
+    _theta.derivative(d,f,p,t,dtheta);
     
     v(0,0) = -sin(theta)*dtheta;
     v(1,0) =  cos(theta)*dtheta;

@@ -32,37 +32,50 @@ namespace MAST {
         
     public:
         
-        OrthotropicMaterialPropertyCard():
-        MAST::MaterialPropertyCardBase ()
-        { }
+        OrthotropicMaterialPropertyCard();
         
-        virtual ~OrthotropicMaterialPropertyCard() {}
+        virtual ~OrthotropicMaterialPropertyCard();
         
-        
-        virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+        virtual const MAST::FieldFunction<RealMatrixX>&
         stiffness_matrix(const unsigned int dim,
                          const bool plane_stress = true);
         
-        virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+        virtual const MAST::FieldFunction<RealMatrixX>&
         damping_matrix(const unsigned int dim);
         
-        virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+        virtual const MAST::FieldFunction<RealMatrixX>&
         inertia_matrix(const unsigned int dim);
         
-        virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+        virtual const MAST::FieldFunction<RealMatrixX>&
         thermal_expansion_matrix(const unsigned int dim);
         
-        virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+        virtual const MAST::FieldFunction<RealMatrixX>&
         transverse_shear_stiffness_matrix();
         
-        virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+        virtual const MAST::FieldFunction<RealMatrixX>&
         capacitance_matrix(const unsigned int dim);
         
-        virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+        virtual const MAST::FieldFunction<RealMatrixX>&
         conductance_matrix(const unsigned int dim);
         
     protected:
         
+        MAST::FieldFunction<RealMatrixX>
+        *_stiff_mat_1d,
+        *_stiff_mat_2d,
+        *_stiff_mat_3d,
+        *_damp_mat,
+        *_inertia_mat_3d,
+        *_thermal_exp_mat_1d,
+        *_thermal_exp_mat_2d,
+        *_thermal_exp_mat_3d,
+        *_transverse_shear_mat,
+        *_thermal_capacitance_mat_1d,
+        *_thermal_capacitance_mat_2d,
+        *_thermal_capacitance_mat_3d,
+        *_thermal_conductance_mat_1d,
+        *_thermal_conductance_mat_2d,
+        *_thermal_conductance_mat_3d;
     };
     
 }

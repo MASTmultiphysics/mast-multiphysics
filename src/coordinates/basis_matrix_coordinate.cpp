@@ -22,11 +22,11 @@
 
 
 MAST::BasisMatrixCoordinate::BasisMatrixCoordinate(const std::string& nm,
-                                                   MAST::FieldFunction<RealMatrixX>* basis):
+                                                   MAST::FieldFunction<RealMatrixX>& basis):
 MAST::CoordinateBase(nm),
 _basis(basis) {
     
-    _functions.insert(basis->master());
+    _functions.insert(basis.master());
 }
 
 
@@ -34,28 +34,8 @@ _basis(basis) {
 
 MAST::BasisMatrixCoordinate::~BasisMatrixCoordinate() {
     
-    delete _basis;
 }
 
-
-
-
-MAST::BasisMatrixCoordinate::BasisMatrixCoordinate(const MAST::BasisMatrixCoordinate& c):
-MAST::CoordinateBase(c),
-_basis(c._basis->clone().release()) {
-    
-    _functions.insert(_basis->master());
-}
-
-
-
-
-std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
-MAST::BasisMatrixCoordinate::clone() const {
-    
-    return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
-    (new MAST::BasisMatrixCoordinate(*this));
-}
 
 
 
@@ -65,7 +45,7 @@ MAST::BasisMatrixCoordinate::operator() (const libMesh::Point& p,
                                          const Real t,
                                          RealMatrixX& v) const {
     
-    (*_basis)(p, t, v);
+    _basis(p, t, v);
 }
 
 
@@ -78,7 +58,7 @@ MAST::BasisMatrixCoordinate::derivative (const MAST::DerivativeType d,
                                          const Real t,
                                          RealMatrixX& v) const {
     
-    _basis->derivative(d, f, p, t, v);
+    _basis.derivative(d, f, p, t, v);
 }
 
 

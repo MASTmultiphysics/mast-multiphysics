@@ -31,30 +31,10 @@ namespace MAST {
         public MAST::FieldFunction<RealMatrixX> {
         public:
             
-            StiffnessMatrix1D( MAST::FieldFunction<Real>* E,
-                              MAST::FieldFunction<Real>* nu);
+            StiffnessMatrix1D(const MAST::FieldFunction<Real>& E,
+                              const MAST::FieldFunction<Real>& nu);
             
-            StiffnessMatrix1D(const MAST::IsotropicMaterialProperty::StiffnessMatrix1D& f):
-            MAST::FieldFunction<RealMatrixX>(f),
-            _E(f._E->clone().release()),
-            _nu(f._nu->clone().release()){
-                _functions.insert(_E->master());
-                _functions.insert(_nu->master());
-            }
-            
-            /*!
-             *   @returns a clone of the function
-             */
-            virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
-            clone() const {
-                return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
-                (new MAST::IsotropicMaterialProperty::StiffnessMatrix1D(*this));
-            }
-            
-            virtual ~StiffnessMatrix1D() {
-                delete _E;
-                delete _nu;
-            }
+            virtual ~StiffnessMatrix1D() { }
             
             virtual void operator() (const libMesh::Point& p,
                                      const Real t,
@@ -68,41 +48,20 @@ namespace MAST {
             
         protected:
             
-            MAST::FieldFunction<Real>* _E;
-            MAST::FieldFunction<Real>* _nu;
+            const MAST::FieldFunction<Real>& _E;
+            const MAST::FieldFunction<Real>& _nu;
         };
         
         
         
         class TransverseShearStiffnessMatrix: public MAST::FieldFunction<RealMatrixX> {
         public:
-            TransverseShearStiffnessMatrix( MAST::FieldFunction<Real>* E,
-                                           MAST::FieldFunction<Real>* nu,
-                                           MAST::FieldFunction<Real>* kappa);
+            TransverseShearStiffnessMatrix(const MAST::FieldFunction<Real>& E,
+                                           const MAST::FieldFunction<Real>& nu,
+                                           const MAST::FieldFunction<Real>& kappa);
             
-            TransverseShearStiffnessMatrix(const MAST::IsotropicMaterialProperty::TransverseShearStiffnessMatrix& f):
-            MAST::FieldFunction<RealMatrixX>(f),
-            _E(f._E->clone().release()),
-            _nu(f._nu->clone().release()),
-            _kappa(f._kappa->clone().release()) {
-                _functions.insert(_E->master());
-                _functions.insert(_nu->master());
-                _functions.insert(_kappa->master());
-            }
             
-            /*!
-             *   @returns a clone of the function
-             */
-            virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> > clone() const  {
-                return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
-                (new MAST::IsotropicMaterialProperty::TransverseShearStiffnessMatrix(*this));
-            }
-            
-            virtual ~TransverseShearStiffnessMatrix() {
-                delete _E;
-                delete _nu;
-                delete _kappa;
-            }
+            virtual ~TransverseShearStiffnessMatrix() { }
             
             virtual void operator() (const libMesh::Point& p,
                                      const Real t,
@@ -116,39 +75,20 @@ namespace MAST {
             
         protected:
             
-            MAST::FieldFunction<Real>* _E;
-            MAST::FieldFunction<Real>* _nu;
-            MAST::FieldFunction<Real>* _kappa;
+            const MAST::FieldFunction<Real>& _E;
+            const MAST::FieldFunction<Real>& _nu;
+            const MAST::FieldFunction<Real>& _kappa;
         };
         
         
         class StiffnessMatrix2D: public MAST::FieldFunction<RealMatrixX> {
         public:
-            StiffnessMatrix2D(MAST::FieldFunction<Real>* E,
-                              MAST::FieldFunction<Real>* nu,
+            StiffnessMatrix2D(const MAST::FieldFunction<Real>& E,
+                              const MAST::FieldFunction<Real>& nu,
                               bool plane_stress);
             
-            StiffnessMatrix2D(const MAST::IsotropicMaterialProperty::StiffnessMatrix2D& f):
-            MAST::FieldFunction<RealMatrixX>(f),
-            _E(f._E->clone().release()),
-            _nu(f._nu->clone().release()),
-            _plane_stress(f._plane_stress) {
-                _functions.insert(_E->master());
-                _functions.insert(_nu->master());
-            }
             
-            /*!
-             *   @returns a clone of the function
-             */
-            virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> > clone() const {
-                return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
-                (new MAST::IsotropicMaterialProperty::StiffnessMatrix2D(*this));
-            }
-            
-            virtual ~StiffnessMatrix2D() {
-                delete _E;
-                delete _nu;
-            }
+            virtual ~StiffnessMatrix2D() { }
             
             
             virtual void operator() (const libMesh::Point& p,
@@ -163,8 +103,8 @@ namespace MAST {
             
         protected:
             
-            MAST::FieldFunction<Real>* _E;
-            MAST::FieldFunction<Real>* _nu;
+            const MAST::FieldFunction<Real>& _E;
+            const MAST::FieldFunction<Real>& _nu;
             bool _plane_stress;
         };
         
@@ -172,29 +112,10 @@ namespace MAST {
         
         class StiffnessMatrix3D: public MAST::FieldFunction<RealMatrixX> {
         public:
-            StiffnessMatrix3D(MAST::FieldFunction<Real>* E,
-                              MAST::FieldFunction<Real>* nu);
+            StiffnessMatrix3D(const MAST::FieldFunction<Real>& E,
+                              const MAST::FieldFunction<Real>& nu);
             
-            StiffnessMatrix3D(const MAST::IsotropicMaterialProperty::StiffnessMatrix3D &f):
-            MAST::FieldFunction<RealMatrixX>(f),
-            _E(f._E->clone().release()),
-            _nu(f._nu->clone().release()) {
-                _functions.insert(_E->master());
-                _functions.insert(_nu->master());
-            }
-            
-            /*!
-             *   @returns a clone of the function
-             */
-            virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> > clone() const {
-                return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
-                (new MAST::IsotropicMaterialProperty::StiffnessMatrix3D(*this));
-            }
-            
-            virtual ~StiffnessMatrix3D() {
-                delete _E;
-                delete _nu;
-            }
+            virtual ~StiffnessMatrix3D() { }
             
             virtual void operator() (const libMesh::Point& p,
                                      const Real t,
@@ -208,33 +129,18 @@ namespace MAST {
             
         protected:
             
-            MAST::FieldFunction<Real>* _E;
-            MAST::FieldFunction<Real>* _nu;
+            const MAST::FieldFunction<Real>& _E;
+            const MAST::FieldFunction<Real>& _nu;
         };
         
         
         
         class InertiaMatrix3D: public MAST::FieldFunction<RealMatrixX> {
         public:
-            InertiaMatrix3D(MAST::FieldFunction<Real>* rho);
+            InertiaMatrix3D(const MAST::FieldFunction<Real>& rho);
             
-            InertiaMatrix3D(const MAST::IsotropicMaterialProperty::InertiaMatrix3D &f):
-            MAST::FieldFunction<RealMatrixX>(f),
-            _rho(f._rho->clone().release()) {
-                _functions.insert(_rho->master());
-            }
-            
-            /*!
-             *   @returns a clone of the function
-             */
-            virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> > clone() const {
-                return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
-                (new MAST::IsotropicMaterialProperty::InertiaMatrix3D(*this));
-            }
-            
-            virtual ~InertiaMatrix3D() {
-                delete _rho;
-            }
+
+            virtual ~InertiaMatrix3D() { }
             
             virtual void operator() (const libMesh::Point& p,
                                      const Real t,
@@ -248,7 +154,7 @@ namespace MAST {
             
         protected:
             
-            MAST::FieldFunction<Real> *_rho;
+            const MAST::FieldFunction<Real>& _rho;
             
         };
 
@@ -258,31 +164,15 @@ namespace MAST {
         public:
             
             ThermalExpansionMatrix(unsigned int dim,
-                                   MAST::FieldFunction<Real>* alpha):
+                                   const MAST::FieldFunction<Real>& alpha):
             MAST::FieldFunction<RealMatrixX>("ThermalExpansionMatrix"),
             _dim(dim),
             _alpha(alpha) {
-                _functions.insert(_alpha->master());
+                _functions.insert(_alpha.master());
             }
             
-            ThermalExpansionMatrix(const MAST::IsotropicMaterialProperty::ThermalExpansionMatrix& f):
-            MAST::FieldFunction<RealMatrixX>(f),
-            _dim(f._dim),
-            _alpha(f._alpha->clone().release()) {
-                _functions.insert(_alpha->master());
-            }
-            
-            /*!
-             *   @returns a clone of the function
-             */
-            virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> > clone() const {
-                return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
-                (new MAST::IsotropicMaterialProperty::ThermalExpansionMatrix(*this));
-            }
-            
-            virtual ~ThermalExpansionMatrix() {
-                delete _alpha;
-            }
+
+            virtual ~ThermalExpansionMatrix() { }
             
             virtual void operator() (const libMesh::Point& p,
                                      const Real t,
@@ -298,7 +188,7 @@ namespace MAST {
             
             const unsigned int _dim;
             
-            MAST::FieldFunction<Real>* _alpha;
+            const MAST::FieldFunction<Real>& _alpha;
         };
         
         
@@ -309,31 +199,15 @@ namespace MAST {
         public:
             
             ThermalConductanceMatrix(unsigned int dim,
-                              MAST::FieldFunction<Real>* k):
+                              MAST::FieldFunction<Real>& k):
             MAST::FieldFunction<RealMatrixX>("ThermalConductanceMatrix"),
             _dim(dim),
             _k(k) {
-                _functions.insert(_k->master());
+                _functions.insert(_k.master());
             }
             
-            ThermalConductanceMatrix(const MAST::IsotropicMaterialProperty::ThermalConductanceMatrix& f):
-            MAST::FieldFunction<RealMatrixX>(f),
-            _dim(f._dim),
-            _k(f._k->clone().release()) {
-                _functions.insert(_k->master());
-            }
             
-            /*!
-             *   @returns a clone of the function
-             */
-            virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> > clone() const {
-                return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
-                (new MAST::IsotropicMaterialProperty::ThermalConductanceMatrix(*this));
-            }
-            
-            virtual ~ThermalConductanceMatrix() {
-                delete _k;
-            }
+            virtual ~ThermalConductanceMatrix() { }
             
             virtual void operator() (const libMesh::Point& p,
                                      const Real t,
@@ -349,7 +223,7 @@ namespace MAST {
             
             const unsigned int _dim;
             
-            MAST::FieldFunction<Real>* _k;
+            const MAST::FieldFunction<Real>& _k;
         };
 
         
@@ -359,40 +233,19 @@ namespace MAST {
         public:
             
             ThermalCapacitanceMatrix(unsigned int dim,
-                                     MAST::FieldFunction<Real>* rho,
-                                     MAST::FieldFunction<Real>* cp):
+                                     const MAST::FieldFunction<Real>& rho,
+                                     const MAST::FieldFunction<Real>& cp):
             MAST::FieldFunction<RealMatrixX>("ThermalCapacitanceMatrix"),
             _dim(dim),
             _rho(rho),
             _cp(cp) {
                 
-                _functions.insert(_rho->master());
-                _functions.insert(_cp->master());
+                _functions.insert(_rho.master());
+                _functions.insert(_cp.master());
             }
             
-            ThermalCapacitanceMatrix(const MAST::IsotropicMaterialProperty::ThermalCapacitanceMatrix& f):
-            MAST::FieldFunction<RealMatrixX>(f),
-            _dim(f._dim),
-            _rho(f._rho->clone().release()),
-            _cp(f._cp->clone().release()) {
-                
-                _functions.insert(_rho->master());
-                _functions.insert(_cp->master());
-            }
             
-            /*!
-             *   @returns a clone of the function
-             */
-            virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> > clone() const {
-                return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
-                (new MAST::IsotropicMaterialProperty::ThermalCapacitanceMatrix(*this));
-            }
-            
-            virtual ~ThermalCapacitanceMatrix() {
-                
-                delete _rho;
-                delete _cp;
-            }
+            virtual ~ThermalCapacitanceMatrix() { }
             
             virtual void operator() (const libMesh::Point& p,
                                      const Real t,
@@ -408,9 +261,9 @@ namespace MAST {
             
             const unsigned int _dim;
             
-            MAST::FieldFunction<Real>* _rho;
+            const MAST::FieldFunction<Real>& _rho;
 
-            MAST::FieldFunction<Real>* _cp;
+            const MAST::FieldFunction<Real>& _cp;
         };
 
         
@@ -420,14 +273,14 @@ namespace MAST {
 
 
 MAST::IsotropicMaterialProperty::
-StiffnessMatrix1D::StiffnessMatrix1D(MAST::FieldFunction<Real>* E,
-                                     MAST::FieldFunction<Real>* nu ):
+StiffnessMatrix1D::StiffnessMatrix1D(const MAST::FieldFunction<Real>& E,
+                                     const MAST::FieldFunction<Real>& nu ):
 MAST::FieldFunction<RealMatrixX>("StiffnessMatrix1D"),
 _E(E),
 _nu(nu)
 {
-    _functions.insert(E->master());
-    _functions.insert(nu->master());
+    _functions.insert(E.master());
+    _functions.insert(nu.master());
 }
 
 
@@ -440,7 +293,7 @@ StiffnessMatrix1D::operator() (const libMesh::Point& p,
                                RealMatrixX& m) const {
     m  = RealMatrixX::Zero(2,2);
     Real E, nu, G;
-    (*_E)(p, t, E); (*_nu)(p, t, nu);
+    _E(p, t, E); _nu(p, t, nu);
     G = E/2./(1.+nu);
     m(0,0) = E;
     m(1,1) = G;
@@ -459,8 +312,8 @@ StiffnessMatrix1D::derivative(const MAST::DerivativeType d,
     RealMatrixX dm;
     m = RealMatrixX::Zero(2,2); dm = RealMatrixX::Zero(2,2);
     Real E, nu, dEdf, dnudf;
-    (*_E)(p, t, E);     _E->derivative(d, f, p, t, dEdf);
-    (*_nu)(p, t, nu);  _nu->derivative(d, f, p, t, dnudf);
+    _E(p, t, E);     _E.derivative(d, f, p, t, dEdf);
+    _nu(p, t, nu);  _nu.derivative(d, f, p, t, dnudf);
     
     // parM/parE * parE/parf
     dm(0,0) = 1.;
@@ -476,17 +329,18 @@ StiffnessMatrix1D::derivative(const MAST::DerivativeType d,
 
 
 MAST::IsotropicMaterialProperty::
-TransverseShearStiffnessMatrix::TransverseShearStiffnessMatrix(MAST::FieldFunction<Real> * E,
-                                                               MAST::FieldFunction<Real> * nu,
-                                                               MAST::FieldFunction<Real> * kappa):
+TransverseShearStiffnessMatrix::
+TransverseShearStiffnessMatrix(const MAST::FieldFunction<Real>& E,
+                               const MAST::FieldFunction<Real>& nu,
+                               const MAST::FieldFunction<Real>& kappa):
 MAST::FieldFunction<RealMatrixX>("TransverseShearStiffnessMatrix"),
 _E(E),
 _nu(nu),
 _kappa(kappa)
 {
-    _functions.insert(E->master());
-    _functions.insert(nu->master());
-    _functions.insert(kappa->master());
+    _functions.insert(E.master());
+    _functions.insert(nu.master());
+    _functions.insert(kappa.master());
 }
 
 
@@ -498,7 +352,7 @@ TransverseShearStiffnessMatrix::operator() (const libMesh::Point& p,
                                             RealMatrixX& m) const {
     m = RealMatrixX::Zero(2,2);
     Real E, nu, kappa, G;
-    (*_E)(p, t, E); (*_nu)(p, t, nu); (*_kappa)(p, t, kappa);
+    _E(p, t, E); _nu(p, t, nu); _kappa(p, t, kappa);
     G = E/2./(1.+nu);
     m(0,0) = G*kappa;
     m(1,1) = m(0,0);
@@ -516,9 +370,9 @@ TransverseShearStiffnessMatrix::derivative(const MAST::DerivativeType d,
     RealMatrixX dm;
     m = RealMatrixX::Zero(2,2); dm = RealMatrixX::Zero(2, 2);
     Real E, nu, kappa, dEdf, dnudf, dkappadf, G;
-    (*_E)    (p, t, E);         _E->derivative(d, f, p, t, dEdf);
-    (*_nu)   (p, t, nu);       _nu->derivative(d, f, p, t, dnudf);
-    (*_kappa)(p, t, kappa); _kappa->derivative(d, f, p, t, dkappadf);
+    _E    (p, t, E);         _E.derivative(d, f, p, t, dEdf);
+    _nu   (p, t, nu);       _nu.derivative(d, f, p, t, dnudf);
+    _kappa(p, t, kappa); _kappa.derivative(d, f, p, t, dkappadf);
     G = E/2./(1.+nu);
     
     
@@ -543,16 +397,16 @@ TransverseShearStiffnessMatrix::derivative(const MAST::DerivativeType d,
 
 
 MAST::IsotropicMaterialProperty::
-StiffnessMatrix2D::StiffnessMatrix2D(MAST::FieldFunction<Real> * E,
-                                     MAST::FieldFunction<Real> * nu ,
+StiffnessMatrix2D::StiffnessMatrix2D(const MAST::FieldFunction<Real>& E,
+                                     const MAST::FieldFunction<Real>& nu ,
                                      bool plane_stress ):
 MAST::FieldFunction<RealMatrixX>("StiffnessMatrix2D"),
 _E(E),
 _nu(nu),
-_plane_stress(plane_stress)
-{
-    _functions.insert(E->master());
-    _functions.insert(nu->master());
+_plane_stress(plane_stress) {
+    
+    _functions.insert(E.master());
+    _functions.insert(nu.master());
 }
 
 
@@ -566,7 +420,7 @@ StiffnessMatrix2D::operator() (const libMesh::Point& p,
     libmesh_assert(_plane_stress); // currently only implemented for plane stress
     m = RealMatrixX::Zero(3,3);
     Real E, nu;
-    (*_E)(p, t, E); (*_nu)(p, t, nu);
+    _E(p, t, E); _nu(p, t, nu);
     for (unsigned int i=0; i<2; i++) {
         for (unsigned int j=0; j<2; j++)
             if (i == j) // diagonal: direct stress
@@ -591,8 +445,8 @@ StiffnessMatrix2D::derivative (const MAST::DerivativeType d,
     RealMatrixX dm;
     m = RealMatrixX::Zero(3,3); dm = RealMatrixX::Zero(3, 3);
     Real E, nu, dEdf, dnudf;
-    (*_E)  (p, t, E);   _E->derivative(d, f, p, t, dEdf);
-    (*_nu) (p, t, nu); _nu->derivative(d, f, p, t, dnudf);
+    _E  (p, t, E);   _E.derivative(d, f, p, t, dEdf);
+    _nu (p, t, nu); _nu.derivative(d, f, p, t, dnudf);
     
     // parM/parE * parE/parf
     for (unsigned int i=0; i<2; i++) {
@@ -620,14 +474,14 @@ StiffnessMatrix2D::derivative (const MAST::DerivativeType d,
 
 
 MAST::IsotropicMaterialProperty::
-StiffnessMatrix3D::StiffnessMatrix3D(MAST::FieldFunction<Real> * E,
-                                     MAST::FieldFunction<Real> * nu):
+StiffnessMatrix3D::StiffnessMatrix3D(const MAST::FieldFunction<Real>& E,
+                                     const MAST::FieldFunction<Real>& nu):
 MAST::FieldFunction<RealMatrixX>("StiffnessMatrix3D"),
 _E(E),
-_nu(nu)
-{
-    _functions.insert(E->master());
-    _functions.insert(nu->master());
+_nu(nu) {
+    
+    _functions.insert(E.master());
+    _functions.insert(nu.master());
 }
 
 
@@ -641,7 +495,7 @@ StiffnessMatrix3D::operator() (const libMesh::Point& p,
                                RealMatrixX& m) const {
     m = RealMatrixX::Zero(6,6);
     Real E, nu;
-    (*_E)(p, t, E); (*_nu)(p, t, nu);
+    _E(p, t, E); _nu(p, t, nu);
     for (unsigned int i=0; i<3; i++) {
         for (unsigned int j=0; j<3; j++)
             if (i == j) // diagonal: direct stress
@@ -665,8 +519,8 @@ StiffnessMatrix3D::derivative (const MAST::DerivativeType d,
     RealMatrixX dm;
     m = RealMatrixX::Zero(6,6); dm = RealMatrixX::Zero(6,6);
     Real E, nu, dEdf, dnudf;
-    (*_E)  (p, t, E);   _E->derivative(d, f, p, t, dEdf);
-    (*_nu) (p, t, nu); _nu->derivative(d, f, p, t, dnudf);
+    _E  (p, t, E);   _E.derivative(d, f, p, t, dEdf);
+    _nu (p, t, nu); _nu.derivative(d, f, p, t, dnudf);
     
     // parM/parE * parE/parf
     for (unsigned int i=0; i<3; i++) {
@@ -695,11 +549,11 @@ StiffnessMatrix3D::derivative (const MAST::DerivativeType d,
 
 
 MAST::IsotropicMaterialProperty::
-InertiaMatrix3D::InertiaMatrix3D(MAST::FieldFunction<Real> * rho):
+InertiaMatrix3D::InertiaMatrix3D(const MAST::FieldFunction<Real>& rho):
 MAST::FieldFunction<RealMatrixX>("InertiaMatrix3D"),
 _rho(rho) {
     
-    _functions.insert(rho->master());
+    _functions.insert(rho.master());
 }
 
 
@@ -710,7 +564,7 @@ InertiaMatrix3D::operator() (const libMesh::Point& p,
                              RealMatrixX& m) const {
     m  = RealMatrixX::Zero(3,3);
     Real rho;
-    (*_rho)(p, t, rho);
+    _rho(p, t, rho);
     m(0,0) = rho;
     m(1,1) = rho;
     m(2,2) = rho;
@@ -728,7 +582,7 @@ InertiaMatrix3D::derivative(const MAST::DerivativeType d,
     
     m  = RealMatrixX::Zero(3,3);
     Real rho;
-    _rho->derivative(d, f, p, t, rho);
+    _rho.derivative(d, f, p, t, rho);
     m(0,0) = rho;
     m(1,1) = rho;
     m(2,2) = rho;
@@ -743,7 +597,7 @@ operator() (const libMesh::Point& p,
             RealMatrixX& m) const {
     
     Real alpha;
-    (*_alpha)(p, t, alpha);
+    _alpha(p, t, alpha);
     switch (_dim) {
         case 1:
             m = RealMatrixX::Zero(2,1);
@@ -776,7 +630,7 @@ derivative (const MAST::DerivativeType d,
     
     
     Real alpha;
-    _alpha->derivative(d, f, p, t, alpha);
+    _alpha.derivative(d, f, p, t, alpha);
     switch (_dim) {
         case 1:
             m = RealMatrixX::Zero(2,1);
@@ -807,8 +661,8 @@ operator() (const libMesh::Point& p,
             RealMatrixX& m) const {
     
     Real cp, rho;
-    (*_cp)  (p, t, cp);
-    (*_rho) (p, t, rho);
+    _cp  (p, t, cp);
+    _rho (p, t, rho);
     
     m.setZero(1,1);
     
@@ -829,8 +683,8 @@ derivative (const MAST::DerivativeType d,
     
     
     Real cp, dcp, rho, drho;
-    (*_cp)  (p, t, cp);    _cp->derivative(d, f, p, t, dcp);
-    (*_rho) (p, t, rho);  _rho->derivative(d, f, p, t, drho);
+    _cp  (p, t, cp);    _cp.derivative(d, f, p, t, dcp);
+    _rho (p, t, rho);  _rho.derivative(d, f, p, t, drho);
     
     m.setZero(1,1);
     
@@ -847,7 +701,7 @@ operator() (const libMesh::Point& p,
             RealMatrixX& m) const {
     
     Real k;
-    (*_k)  (p, t, k);
+    _k  (p, t, k);
     
     m.setIdentity(_dim, _dim);
     
@@ -868,7 +722,7 @@ derivative (const MAST::DerivativeType d,
     
     
     Real k;
-    _k->derivative(d, f, p, t, k);
+    _k.derivative(d, f, p, t, k);
     
     m.setIdentity(_dim, _dim);
     
@@ -879,66 +733,123 @@ derivative (const MAST::DerivativeType d,
 
 
 
-std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+MAST::IsotropicMaterialPropertyCard::IsotropicMaterialPropertyCard():
+MAST::MaterialPropertyCardBase (),
+_stiff_mat_1d                  (nullptr),
+_stiff_mat_2d                  (nullptr),
+_stiff_mat_3d                  (nullptr),
+_damp_mat                      (nullptr),
+_inertia_mat_3d                (nullptr),
+_thermal_exp_mat_1d            (nullptr),
+_thermal_exp_mat_2d            (nullptr),
+_thermal_exp_mat_3d            (nullptr),
+_transverse_shear_mat          (nullptr),
+_thermal_capacitance_mat_1d    (nullptr),
+_thermal_capacitance_mat_2d    (nullptr),
+_thermal_capacitance_mat_3d    (nullptr),
+_thermal_conductance_mat_1d    (nullptr),
+_thermal_conductance_mat_2d    (nullptr),
+_thermal_conductance_mat_3d    (nullptr)
+{ }
+
+
+
+MAST::IsotropicMaterialPropertyCard::~IsotropicMaterialPropertyCard() {
+    
+    if (_stiff_mat_1d)                delete _stiff_mat_1d;
+    if (_stiff_mat_2d)                delete _stiff_mat_2d;
+    if (_stiff_mat_3d)                delete _stiff_mat_3d;
+    
+    if (_damp_mat)                    delete _damp_mat;
+    if (_inertia_mat_3d)              delete _inertia_mat_3d;
+    if (_thermal_exp_mat_1d)          delete _thermal_exp_mat_1d;
+    if (_thermal_exp_mat_2d)          delete _thermal_exp_mat_2d;
+    if (_thermal_exp_mat_3d)          delete _thermal_exp_mat_3d;
+    if (_transverse_shear_mat)        delete _transverse_shear_mat;
+    
+    if (_thermal_capacitance_mat_1d)  delete _thermal_capacitance_mat_1d;
+    if (_thermal_capacitance_mat_2d)  delete _thermal_capacitance_mat_2d;
+    if (_thermal_capacitance_mat_3d)  delete _thermal_capacitance_mat_3d;
+    
+    if (_thermal_conductance_mat_1d)  delete _thermal_conductance_mat_1d;
+    if (_thermal_conductance_mat_2d)  delete _thermal_conductance_mat_2d;
+    if (_thermal_conductance_mat_3d)  delete _thermal_conductance_mat_3d;
+}
+
+
+const MAST::FieldFunction<RealMatrixX>&
 MAST::IsotropicMaterialPropertyCard::stiffness_matrix(const unsigned int dim,
                                                       const bool plane_stress) {
     
     MAST::FieldFunction<RealMatrixX> *rval = NULL;
     
     switch (dim) {
-        case 1:
-            rval = new MAST::IsotropicMaterialProperty::StiffnessMatrix1D
-            (this->get<MAST::FieldFunction<Real> >("E").clone().release(),
-             this->get<MAST::FieldFunction<Real> >("nu").clone().release());
+        case 1: {
+            
+            if (!_stiff_mat_1d)
+                _stiff_mat_1d = new MAST::IsotropicMaterialProperty::StiffnessMatrix1D
+                (this->get<MAST::FieldFunction<Real> >("E"),
+                 this->get<MAST::FieldFunction<Real> >("nu"));
+            return *_stiff_mat_1d;
+        }
             break;
             
-        case 2:
-            rval = new MAST::IsotropicMaterialProperty::StiffnessMatrix2D
-            (this->get<MAST::FieldFunction<Real> >("E").clone().release(),
-             this->get<MAST::FieldFunction<Real> >("nu").clone().release(),
+        case 2: {
+            
+            if (!_stiff_mat_2d)
+                _stiff_mat_2d = new MAST::IsotropicMaterialProperty::StiffnessMatrix2D
+                (this->get<MAST::FieldFunction<Real> >("E"),
+                 this->get<MAST::FieldFunction<Real> >("nu"),
              plane_stress);
+            
+            return *_stiff_mat_2d;
+        }
             break;
             
-        case 3:
-            rval = new MAST::IsotropicMaterialProperty::StiffnessMatrix3D
-            (this->get<MAST::FieldFunction<Real> >("E").clone().release(),
-             this->get<MAST::FieldFunction<Real> >("nu").clone().release());
+        case 3: {
+            
+            if (!_stiff_mat_3d)
+                _stiff_mat_3d = new MAST::IsotropicMaterialProperty::StiffnessMatrix3D
+                (this->get<MAST::FieldFunction<Real> >("E"),
+                 this->get<MAST::FieldFunction<Real> >("nu"));
+            
+            return *_stiff_mat_3d;
+        }
             break;
             
         default:
             // should not get here
             libmesh_error();
     }
-    
-    return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >(rval);
 }
 
 
 
 
-std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+const MAST::FieldFunction<RealMatrixX>&
 MAST::IsotropicMaterialPropertyCard::damping_matrix(const unsigned int dim) {
     
-    MAST::FieldFunction<RealMatrixX> *rval = NULL;
-    
     // make sure that this is not null
-    libmesh_assert(rval);
+    libmesh_assert(false);
     
-    return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >(rval);
+    return *_damp_mat;
 }
 
 
 
 
-std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+const MAST::FieldFunction<RealMatrixX>&
 MAST::IsotropicMaterialPropertyCard::inertia_matrix(const unsigned int dim) {
     
-    MAST::FieldFunction<RealMatrixX> *rval = NULL;
-    
     switch (dim) {
-        case 3:
-            rval = new MAST::IsotropicMaterialProperty::InertiaMatrix3D
-            (this->get<MAST::FieldFunction<Real> >("rho").clone().release());
+        case 3: {
+            
+            if (!_inertia_mat_3d)
+                _inertia_mat_3d = new MAST::IsotropicMaterialProperty::InertiaMatrix3D
+                (this->get<MAST::FieldFunction<Real> >("rho"));
+            
+            return *_inertia_mat_3d;
+        }
             break;
             
         case 1:
@@ -949,66 +860,175 @@ MAST::IsotropicMaterialPropertyCard::inertia_matrix(const unsigned int dim) {
             libmesh_error();
             
     }
-    
-    return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >(rval);
 }
 
 
 
 
-std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+const MAST::FieldFunction<RealMatrixX>&
 MAST::IsotropicMaterialPropertyCard::thermal_expansion_matrix(const unsigned int dim) {
+
+    switch (dim) {
+        case 3: {
+            
+            if (!_thermal_exp_mat_3d)
+                _thermal_exp_mat_3d =
+                new MAST::IsotropicMaterialProperty::ThermalExpansionMatrix
+                (dim,
+                 this->get<MAST::FieldFunction<Real> >("alpha_expansion"));
+            
+            return *_thermal_exp_mat_3d;
+        }
+            break;
+            
+            
+        case 2: {
+            
+            if (!_thermal_exp_mat_2d)
+                _thermal_exp_mat_2d =
+                new MAST::IsotropicMaterialProperty::ThermalExpansionMatrix
+                (dim,
+                 this->get<MAST::FieldFunction<Real> >("alpha_expansion"));
+            
+            return *_thermal_exp_mat_2d;
+        }
+            break;
+
+            
+        case 1: {
+            
+            if (!_thermal_exp_mat_1d)
+                _thermal_exp_mat_1d =
+                new MAST::IsotropicMaterialProperty::ThermalExpansionMatrix
+                (dim,
+                 this->get<MAST::FieldFunction<Real> >("alpha_expansion"));
+            
+            return *_thermal_exp_mat_1d;
+        }
+            break;
+
+ 
+        default:
+            libmesh_error();
+    }
+
     
-    MAST::FieldFunction<RealMatrixX> *rval =
-    new MAST::IsotropicMaterialProperty::ThermalExpansionMatrix
-    (dim,
-     this->get<MAST::FieldFunction<Real> >("alpha_expansion").clone().release());
-    
-    return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >(rval);
 }
 
 
 
 
-std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+const MAST::FieldFunction<RealMatrixX>&
 MAST::IsotropicMaterialPropertyCard::transverse_shear_stiffness_matrix() {
     
-    MAST::FieldFunction<RealMatrixX> *rval =
-    new MAST::IsotropicMaterialProperty::TransverseShearStiffnessMatrix
-    (this->get<MAST::FieldFunction<Real> >("E").clone().release(),
-     this->get<MAST::FieldFunction<Real> >("nu").clone().release(),
-     this->get<MAST::FieldFunction<Real> >("kappa").clone().release());
+    if (!_transverse_shear_mat)
+        _transverse_shear_mat =
+        new MAST::IsotropicMaterialProperty::TransverseShearStiffnessMatrix
+        (this->get<MAST::FieldFunction<Real> >("E"),
+         this->get<MAST::FieldFunction<Real> >("nu"),
+         this->get<MAST::FieldFunction<Real> >("kappa"));
     
-    return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >(rval);
+    return *_transverse_shear_mat;
 }
 
 
 
-std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+const MAST::FieldFunction<RealMatrixX>&
 MAST::IsotropicMaterialPropertyCard::capacitance_matrix(const unsigned int dim) {
     
-    MAST::FieldFunction<RealMatrixX> *rval =
-    new MAST::IsotropicMaterialProperty::ThermalCapacitanceMatrix
-    (dim,
-     this->get<MAST::FieldFunction<Real> >("rho").clone().release(),
-     this->get<MAST::FieldFunction<Real> >("cp").clone().release());
-    
-    return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >(rval);
+    switch (dim) {
+            
+        case 1: {
+            
+            if (!_thermal_capacitance_mat_1d)
+                new MAST::IsotropicMaterialProperty::ThermalCapacitanceMatrix
+                (dim,
+                 this->get<MAST::FieldFunction<Real> >("rho"),
+                 this->get<MAST::FieldFunction<Real> >("cp"));
+            
+            return *_thermal_capacitance_mat_1d;
+        }
+            break;
+
+            
+        case 2: {
+            
+            if (!_thermal_capacitance_mat_2d)
+                new MAST::IsotropicMaterialProperty::ThermalCapacitanceMatrix
+                (dim,
+                 this->get<MAST::FieldFunction<Real> >("rho"),
+                 this->get<MAST::FieldFunction<Real> >("cp"));
+            
+            return *_thermal_capacitance_mat_2d;
+        }
+            break;
+
+            
+        case 3: {
+            
+            if (!_thermal_capacitance_mat_3d)
+                new MAST::IsotropicMaterialProperty::ThermalCapacitanceMatrix
+                (dim,
+                 this->get<MAST::FieldFunction<Real> >("rho"),
+                 this->get<MAST::FieldFunction<Real> >("cp"));
+            
+            return *_thermal_capacitance_mat_3d;
+        }
+            break;
+
+            
+        default:
+            // should not get here
+            libmesh_error();
+    }
 }
 
 
 
 
 
-std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+const MAST::FieldFunction<RealMatrixX>&
 MAST::IsotropicMaterialPropertyCard::conductance_matrix(const unsigned int dim) {
     
-    MAST::FieldFunction<RealMatrixX> *rval =
-    new MAST::IsotropicMaterialProperty::ThermalConductanceMatrix
-    (dim,
-     this->get<MAST::FieldFunction<Real> >("k_th").clone().release());
-    
-    return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >(rval);
+    switch (dim) {
+            
+        case 1: {
+            
+            if (!_thermal_conductance_mat_1d)
+                new MAST::IsotropicMaterialProperty::ThermalConductanceMatrix
+                (dim, this->get<MAST::FieldFunction<Real> >("k_th"));
+            
+            return *_thermal_conductance_mat_1d;
+        }
+            break;
+            
+            
+        case 2: {
+            
+            if (!_thermal_conductance_mat_2d)
+                new MAST::IsotropicMaterialProperty::ThermalConductanceMatrix
+                (dim, this->get<MAST::FieldFunction<Real> >("k_th"));
+            
+            return *_thermal_conductance_mat_2d;
+        }
+            break;
+            
+            
+        case 3: {
+            
+            if (!_thermal_conductance_mat_3d)
+                new MAST::IsotropicMaterialProperty::ThermalConductanceMatrix
+                (dim, this->get<MAST::FieldFunction<Real> >("k_th"));
+            
+            return *_thermal_conductance_mat_3d;
+        }
+            break;
+            
+            
+        default:
+            // should not get here
+            libmesh_error();
+    }
 }
 
 

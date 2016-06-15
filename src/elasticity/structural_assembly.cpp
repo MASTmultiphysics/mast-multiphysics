@@ -62,7 +62,7 @@ MAST::_snes_structural_nonlinear_assembly_monitor_function(SNES snes,
         // attach the vector to a NumericVector object
         std::auto_ptr<libMesh::NumericVector<Real> >
         vec(new libMesh::PetscVector<Real>(dx, sys.comm())),
-        vec_scaled(vec->clone().release());
+        vec_scaled(vec);
         
         // the solution update provided by SNES is -ve of the dX
         // hence, scale the vector by -1

@@ -38,19 +38,9 @@ namespace MAST {
         
     public:
         BasisMatrixCoordinate(const std::string& nm,
-                              MAST::FieldFunction<RealMatrixX>* basis);
+                              MAST::FieldFunction<RealMatrixX>& basis);
         
         virtual ~BasisMatrixCoordinate();
-        
-        /*!
-         *  Copy contructor
-         */
-        BasisMatrixCoordinate(const MAST::BasisMatrixCoordinate& c);
-        
-        /*!
-         *   @returns a clone of the function
-         */
-        virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> > clone() const;
         
         /*!
          *    calculates the value of the function at the specified point,
@@ -74,7 +64,7 @@ namespace MAST {
         
     protected:
         
-        MAST::FieldFunction<RealMatrixX>* _basis;
+        MAST::FieldFunction<RealMatrixX>& _basis;
         
     };
 }
