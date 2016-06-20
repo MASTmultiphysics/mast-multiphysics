@@ -1125,6 +1125,7 @@ MAST::OrthotropicMaterialPropertyCard::capacitance_matrix(const unsigned int dim
         case 1: {
             
             if (!_thermal_capacitance_mat_1d)
+                _thermal_capacitance_mat_1d =
                 new MAST::OrthotropicMaterialProperty::ThermalCapacitanceMatrix
                 (dim,
                  this->get<MAST::FieldFunction<Real> >("rho"),
@@ -1138,6 +1139,7 @@ MAST::OrthotropicMaterialPropertyCard::capacitance_matrix(const unsigned int dim
         case 2: {
             
             if (!_thermal_capacitance_mat_2d)
+                _thermal_capacitance_mat_2d =
                 new MAST::OrthotropicMaterialProperty::ThermalCapacitanceMatrix
                 (dim,
                  this->get<MAST::FieldFunction<Real> >("rho"),
@@ -1151,6 +1153,7 @@ MAST::OrthotropicMaterialPropertyCard::capacitance_matrix(const unsigned int dim
         case 3: {
             
             if (!_thermal_capacitance_mat_3d)
+                _thermal_capacitance_mat_3d =
                 new MAST::OrthotropicMaterialProperty::ThermalCapacitanceMatrix
                 (dim,
                  this->get<MAST::FieldFunction<Real> >("rho"),
@@ -1179,6 +1182,7 @@ MAST::OrthotropicMaterialPropertyCard::conductance_matrix(const unsigned int dim
         case 1: {
             
             if (!_thermal_conductance_mat_1d)
+                _thermal_conductance_mat_1d =
                 new MAST::OrthotropicMaterialProperty::ThermalConductanceMatrix
                 (this->get<MAST::FieldFunction<Real> >("k11_th"));
             
@@ -1190,6 +1194,7 @@ MAST::OrthotropicMaterialPropertyCard::conductance_matrix(const unsigned int dim
         case 2: {
             
             if (!_thermal_conductance_mat_2d)
+                _thermal_conductance_mat_2d =
                 new MAST::OrthotropicMaterialProperty::ThermalConductanceMatrix
                 (this->get<MAST::FieldFunction<Real> >("k11_th"),
                  this->get<MAST::FieldFunction<Real> >("k22_th"));
@@ -1202,6 +1207,7 @@ MAST::OrthotropicMaterialPropertyCard::conductance_matrix(const unsigned int dim
         case 3: {
             
             if (!_thermal_conductance_mat_3d)
+                _thermal_conductance_mat_3d =
                 new MAST::OrthotropicMaterialProperty::ThermalConductanceMatrix
                 (this->get<MAST::FieldFunction<Real> >("k11_th"),
                  this->get<MAST::FieldFunction<Real> >("k22_th"),

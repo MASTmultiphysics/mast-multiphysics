@@ -178,54 +178,77 @@ _elem_calculations(MAST::ElementBase& elem,
                                   f_m_jac,       // Jac of mass wrt x
                                   f_x_jac_xdot,  // Jac of forcing vector wrt x_dot
                                   f_x_jac);      // Jac of forcing vector wrt x
+
     
-    // N-R solver: r(x) = 0, and provides estimates for x (current solution)
-    // in an iterative fashion.
-    // Newmark solver uses x and evaluates x_ddot and x_dot (acc and vel at
-    // current x).
-    //
-    // N-R requires   r(x) and dr/dx   (residual and Jacobian)
-    // N-R asks Newmark to provide these quantities
-    //
-    // Newmark asks elements (which provide physics) for contributions to
-    // f_m and f_x (using the current estimates of x_ddot, x_dot, x)
-    //
-    //
-    //  The residual here is modeled as
-    // r = (f_m + f_x )= 0
-    // where, (for example)
-    // f_m = int_Omega phi u_dot   [typical mass vector in conduction, for example]
-    // f_x = int_Omega phi_i u_i - int_Gamma phi q_n [typical conductance and heat flux combination, for example]
-    //
-    // This method assumes
-    //     x      = x0 + dt x0_dot + (1/2-beta) dt^2 x0_ddot + beta dt^2 x_ddot
-    // or, x_ddot = (x-x0)/beta/dt^2 - 1/beta/dt x0_dot - (1/2-beta)/beta x0_ddot
-    //
-    //     x_dot  = x0_dot + (1-gamma) dt x0_ddot + gamma dt x_ddot
-    // or, x_dot  = x0_dot + (1-gamma) dt x0_ddot +
-    //              gamma dt [(x-x0)/beta/dt^2 - 1/beta/dt x0_dot - (1/2-beta)/beta x0_ddot]
-    //            = x0_dot + (1-gamma) dt x0_ddot +
-    //              gamma/beta/dt (x-x0) - gamma/beta x0_dot - gamma (1/2-beta)/beta dt x0_ddot
-    //            = gamma/beta/dt (x-x0) + (1 - gamma/beta) x0_dot + (1 - gamma/2/beta) dt x0_ddot
-    //
-    // Both f_m and f_x can be functions of x_dot and x. Then, the
-    // Jacobian is
-    // dr/dx = df_m/dx + df_x/dx +
-    //         df_m/dx_dot dx_dot/dx + df_x/dx_dot dx_dot/dx
-    //       = (df_m/dx + df_x/dx) +
-    //         (df_m/dx_dot + df_x/dx_dot) (gamma/beta/dt) +
-    //         df_m/dx_ddot (1/beta/dt/dt) +
-    //
+    if (_if_highest_derivative_solution) {
     
-    
-    // system residual
-    vec  = (f_m + f_x);
-    
-    // system Jacobian
-    if (if_jac)
-        mat = ((1./beta/dt/dt) *  f_m_jac_xddot +
-               (gamma/beta/dt)* (f_m_jac_xdot+f_x_jac_xdot) +
-               (f_m_jac + f_x_jac));
+        //
+        //  The residual here is modeled as
+        // r(x, xdot, xddot) = f_m(x, xdot, xddot) + f_x(x, xdot)= 0
+        //
+        //  then, given x = x0, and xdot = xdot0, the residual can be used to
+        //  evaluate xddot at the same time step as
+        //
+        //  r(x0, xdot0, xddot) + dr/dxddot dxddot = 0
+        //
+        
+        // system residual
+        vec  = (f_m + f_x);
+        
+        // system Jacobian
+        if (if_jac)
+            mat = f_m_jac_xddot;
+    }
+    else {
+        
+        // N-R solver: r(x) = 0, and provides estimates for x (current solution)
+        // in an iterative fashion.
+        // Newmark solver uses x and evaluates x_ddot and x_dot (acc and vel at
+        // current x).
+        //
+        // N-R requires   r(x) and dr/dx   (residual and Jacobian)
+        // N-R asks Newmark to provide these quantities
+        //
+        // Newmark asks elements (which provide physics) for contributions to
+        // f_m and f_x (using the current estimates of x_ddot, x_dot, x)
+        //
+        //
+        //  The residual here is modeled as
+        // r = (f_m + f_x )= 0
+        // where, (for example)
+        // f_m = int_Omega phi u_dot   [typical mass vector in conduction, for example]
+        // f_x = int_Omega phi_i u_i - int_Gamma phi q_n [typical conductance and heat flux combination, for example]
+        //
+        // This method assumes
+        //     x      = x0 + dt x0_dot + (1/2-beta) dt^2 x0_ddot + beta dt^2 x_ddot
+        // or, x_ddot = (x-x0)/beta/dt^2 - 1/beta/dt x0_dot - (1/2-beta)/beta x0_ddot
+        //
+        //     x_dot  = x0_dot + (1-gamma) dt x0_ddot + gamma dt x_ddot
+        // or, x_dot  = x0_dot + (1-gamma) dt x0_ddot +
+        //              gamma dt [(x-x0)/beta/dt^2 - 1/beta/dt x0_dot - (1/2-beta)/beta x0_ddot]
+        //            = x0_dot + (1-gamma) dt x0_ddot +
+        //              gamma/beta/dt (x-x0) - gamma/beta x0_dot - gamma (1/2-beta)/beta dt x0_ddot
+        //            = gamma/beta/dt (x-x0) + (1 - gamma/beta) x0_dot + (1 - gamma/2/beta) dt x0_ddot
+        //
+        // Both f_m and f_x can be functions of x_dot and x. Then, the
+        // Jacobian is
+        // dr/dx = df_m/dx + df_x/dx +
+        //         df_m/dx_dot dx_dot/dx + df_x/dx_dot dx_dot/dx
+        //       = (df_m/dx + df_x/dx) +
+        //         (df_m/dx_dot + df_x/dx_dot) (gamma/beta/dt) +
+        //         df_m/dx_ddot (1/beta/dt/dt) +
+        //
+        
+        
+        // system residual
+        vec  = (f_m + f_x);
+        
+        // system Jacobian
+        if (if_jac)
+            mat = ((1./beta/dt/dt) *  f_m_jac_xddot +
+                   (gamma/beta/dt)* (f_m_jac_xdot+f_x_jac_xdot) +
+                   (f_m_jac + f_x_jac));
+    }
 }
 
 

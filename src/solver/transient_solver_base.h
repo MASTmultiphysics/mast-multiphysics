@@ -101,6 +101,13 @@ namespace MAST {
         
         
         /*!
+         *    Initializes the highest derivative solution using the current 
+         *    solutions and its low order time derivatives.
+         */
+        void solve_highest_derivative();
+
+        
+        /*!
          *   This should be called before the first time step. All state vectors
          *   from the current and the previous time steps are set equal to
          *   \par val. This is useful for system with scalar unknowns.
@@ -196,6 +203,14 @@ namespace MAST {
          *   calculating the solution
          */
         libMesh::NonlinearImplicitSystem* _system;
+        
+        
+        /*!
+         *    flag if the current procedure is to evaluate the highest ode
+         *    derivative solution, or to evaluate solution at current time step.
+         */
+        bool   _if_highest_derivative_solution;
+
     };
 
 }

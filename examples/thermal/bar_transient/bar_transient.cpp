@@ -264,6 +264,11 @@ MAST::BarTransient::solve(bool if_write_output) {
     if (if_write_output)
         libMesh::out << "Writing output to : output.exo" << std::endl;
     
+    // ask the solver to update the initial condition for d(Temp)/dt
+    // This is recommended only for the initial time step, since the time
+    // integration scheme updates the velocity at each subsequent iterate
+    solver.solve_highest_derivative();
+    
     // loop over time steps
     while (t_step < 5) {
         

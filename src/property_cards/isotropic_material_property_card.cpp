@@ -941,6 +941,7 @@ MAST::IsotropicMaterialPropertyCard::capacitance_matrix(const unsigned int dim) 
         case 1: {
             
             if (!_thermal_capacitance_mat_1d)
+                _thermal_capacitance_mat_1d =
                 new MAST::IsotropicMaterialProperty::ThermalCapacitanceMatrix
                 (dim,
                  this->get<MAST::FieldFunction<Real> >("rho"),
@@ -954,6 +955,7 @@ MAST::IsotropicMaterialPropertyCard::capacitance_matrix(const unsigned int dim) 
         case 2: {
             
             if (!_thermal_capacitance_mat_2d)
+                _thermal_capacitance_mat_2d =
                 new MAST::IsotropicMaterialProperty::ThermalCapacitanceMatrix
                 (dim,
                  this->get<MAST::FieldFunction<Real> >("rho"),
@@ -967,6 +969,7 @@ MAST::IsotropicMaterialPropertyCard::capacitance_matrix(const unsigned int dim) 
         case 3: {
             
             if (!_thermal_capacitance_mat_3d)
+                _thermal_capacitance_mat_3d =
                 new MAST::IsotropicMaterialProperty::ThermalCapacitanceMatrix
                 (dim,
                  this->get<MAST::FieldFunction<Real> >("rho"),
@@ -995,6 +998,7 @@ MAST::IsotropicMaterialPropertyCard::conductance_matrix(const unsigned int dim) 
         case 1: {
             
             if (!_thermal_conductance_mat_1d)
+                _thermal_conductance_mat_1d =
                 new MAST::IsotropicMaterialProperty::ThermalConductanceMatrix
                 (dim, this->get<MAST::FieldFunction<Real> >("k_th"));
             
@@ -1006,6 +1010,7 @@ MAST::IsotropicMaterialPropertyCard::conductance_matrix(const unsigned int dim) 
         case 2: {
             
             if (!_thermal_conductance_mat_2d)
+                _thermal_conductance_mat_2d =
                 new MAST::IsotropicMaterialProperty::ThermalConductanceMatrix
                 (dim, this->get<MAST::FieldFunction<Real> >("k_th"));
             
@@ -1017,6 +1022,7 @@ MAST::IsotropicMaterialPropertyCard::conductance_matrix(const unsigned int dim) 
         case 3: {
             
             if (!_thermal_conductance_mat_3d)
+                _thermal_conductance_mat_3d =
                 new MAST::IsotropicMaterialProperty::ThermalConductanceMatrix
                 (dim, this->get<MAST::FieldFunction<Real> >("k_th"));
             

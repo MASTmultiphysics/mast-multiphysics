@@ -147,36 +147,57 @@ _elem_calculations(MAST::ElementBase& elem,
                                   f_m_jac,       // Jac of mass wrt x
                                   f_x_jac);      // Jac of forcing vector wrt x
 
-    //
-    //  The residual here is modeled as
-    // r = (f_m + f_x )= 0
-    // where, (for example)
-    // f_m = int_Omega phi u_dot   [typical mass vector in conduction, for example]
-    // f_x = int_Omega phi_i u_i - int_Gamma phi q_n [typical conductance and heat flux combination, for example]
-    //
-    // This method assumes
-    //     x     = x0 + (1-beta) dt x0_dot + beta dt x_dot
-    // or, x_dot = (x-x0)/beta/dt - (1-beta)/beta x0_dot
-    //
-    // Both f_m and f_x can be functions of x_dot and x. Then, the
-    // Jacobian is
-    // dr/dx =[df_m/dx + df_x/dx +
-    //         df_m/dx_dot dx_dot/dx + df_x/dx_dot dx_dot/dx]
-    //       = [(df_m/dx + df_x/dx) +
-    //          (df_m/dx_dot + df_x/dx_dot) (1/beta/dt)]
-    //       = (df_m/dx + df_x/dx) +
-    //         1/(beta*dt)(df_m/dx_dot + df_x/dx_dot)
-    // Note that this form of equations makes it a good candidate for
-    // use as implicit solver, ie, for a nonzero beta.
-    //
-    
-    
-    // system residual
-    vec  = (f_m + f_x);
-    
-    // system Jacobian
-    if (if_jac)
-        mat = (1./beta/dt)*f_m_jac_xdot + (f_m_jac + f_x_jac);
+    if (_if_highest_derivative_solution) {
+        
+        //
+        //  The residual here is modeled as
+        // r(x, xdot) = f_m(x, xdot) + f_x(x, xdot)= 0
+        //
+        //  then, given x = x0, the residual can be used to evaluate xdot0 at
+        //  the same time step as
+        //
+        //  r(x0, xdot) + dr/dxdot dxdot = 0
+        //
+        
+        // system residual
+        vec  = (f_m + f_x);
+        
+        // system Jacobian
+        if (if_jac)
+            mat = f_m_jac_xdot;
+    }
+    else {
+        //
+        //  The residual here is modeled as
+        // r = (f_m + f_x )= 0
+        // where, (for example)
+        // f_m = int_Omega phi u_dot   [typical mass vector in conduction, for example]
+        // f_x = int_Omega phi_i u_i - int_Gamma phi q_n [typical conductance and heat flux combination, for example]
+        //
+        // This method assumes
+        //     x     = x0 + (1-beta) dt x0_dot + beta dt x_dot
+        // or, x_dot = (x-x0)/beta/dt - (1-beta)/beta x0_dot
+        //
+        // Both f_m and f_x can be functions of x_dot and x. Then, the
+        // Jacobian is
+        // dr/dx =[df_m/dx + df_x/dx +
+        //         df_m/dx_dot dx_dot/dx + df_x/dx_dot dx_dot/dx]
+        //       = [(df_m/dx + df_x/dx) +
+        //          (df_m/dx_dot + df_x/dx_dot) (1/beta/dt)]
+        //       = (df_m/dx + df_x/dx) +
+        //         1/(beta*dt)(df_m/dx_dot + df_x/dx_dot)
+        // Note that this form of equations makes it a good candidate for
+        // use as implicit solver, ie, for a nonzero beta.
+        //
+        
+        
+        // system residual
+        vec  = (f_m + f_x);
+        
+        // system Jacobian
+        if (if_jac)
+            mat = (1./beta/dt)*f_m_jac_xdot + (f_m_jac + f_x_jac);
+    }
 }
 
 

@@ -24,6 +24,8 @@
 // libMesh includes
 #include "libmesh/numeric_vector.h"
 #include "libmesh/dof_map.h"
+#include "libmesh/sparse_matrix.h"
+#include "libmesh/linear_solver.h"
 
 
 
@@ -198,6 +200,53 @@ MAST::TransientSolverBase::acceleration(unsigned int prev_iter) const {
 
 
 
+
+void
+MAST::TransientSolverBase::solve_highest_derivative() {
+    
+
+    // tell the solver that the current solution being obtained is for the
+    // highest time derivative
+    _if_highest_derivative_solution = true;
+    
+    // Build the residual and Jacobian
+    _system->assembly(true, true);
+
+    // reset the solution flag
+    _if_highest_derivative_solution = false;
+    
+    // The sensitivity problem is linear
+    libMesh::LinearSolver<Real> * linear_solver = _system->get_linear_solver();
+    
+    std::pair<unsigned int, Real>
+    solver_params = _system->get_linear_solve_parameters();
+    
+    // Solve the linear system.
+    libMesh::SparseMatrix<Real> *
+    pc = _system->request_matrix("Preconditioner");
+    
+    std::auto_ptr<libMesh::NumericVector<Real> >
+    dvel(velocity().zero_clone().release());
+    
+    std::pair<unsigned int, Real>
+    rval = linear_solver->solve (*_system->matrix, pc,
+                                 *dvel,
+                                 *_system->rhs,
+                                 solver_params.second,
+                                 solver_params.first);
+    velocity().add(-1, *dvel);
+    
+    // The linear solver may not have fit our constraints exactly
+#ifdef LIBMESH_ENABLE_CONSTRAINTS
+    _system->get_dof_map().enforce_constraints_exactly
+    (*_system, &velocity(), /* homogeneous = */ true);
+#endif
+    
+    _system->release_linear_solver(linear_solver);
+}
+
+
+
 void
 MAST::TransientSolverBase::
 build_local_quantities(const libMesh::NumericVector<Real>& current_sol,
@@ -212,7 +261,12 @@ build_local_quantities(const libMesh::NumericVector<Real>& current_sol,
     const std::vector<libMesh::dof_id_type>&
     send_list = _system->get_dof_map().get_send_list();
     
-    for ( unsigned int i=0; i<=this->ode_order(); i++) {
+    
+    const unsigned int
+    order = this->ode_order();
+
+    
+    for ( unsigned int i=0; i<=order; i++) {
         
         sol[i] = libMesh::NumericVector<Real>::build(_system->comm()).release();
         sol[i]->init(_system->n_dofs(),
@@ -225,18 +279,37 @@ build_local_quantities(const libMesh::NumericVector<Real>& current_sol,
                 
             case 0: {
                 
-                // copy the solution to this
-                current_sol.localize(*sol[i], send_list);
+                if (_if_highest_derivative_solution)
+                    // if the highest derivative is being solved for,
+                    // then current_sol estimates that vector, and the
+                    // solution remains fixed.
+                    solution().localize(*sol[i], send_list);
+                else
+                    // copy the solution to this
+                    current_sol.localize(*sol[i], send_list);
+                
             }
                 break;
 
             case 1: {
                 
                 // update the current local velocity vector
-                libMesh::NumericVector<Real>& vel = this->velocity();
+                libMesh::NumericVector<Real>&
+                vel = this->velocity();
 
-                // calculate the velocity and localize it
-                _update_velocity(vel, current_sol);
+                if (_if_highest_derivative_solution) {
+                    
+                    if  (order == 1)
+                        // if the first order time derivative is being solved for,
+                        // the current sol is the estimate of the velocity
+                        // otherwise, use the velocity to update the higher
+                        // derivatives
+                        vel = current_sol;
+                }
+                else
+                    // calculate the velocity and localize it
+                    _update_velocity(vel, current_sol);
+                
                 vel.localize(*sol[i], send_list);
             }
                 break;
@@ -244,10 +317,20 @@ build_local_quantities(const libMesh::NumericVector<Real>& current_sol,
             case 2: {
                 
                 // update the current local acceleration vector
-                libMesh::NumericVector<Real>& acc = this->acceleration();
-
-                // calculate the acceleration and localize it
-                _update_acceleration(acc, current_sol);
+                libMesh::NumericVector<Real>&
+                acc = this->acceleration();
+                
+                if (_if_highest_derivative_solution) {
+                    
+                    if  (order == 2)
+                        // if the second order time derivative is being solved
+                        // for, the current sol is the estimate of the accel.
+                        acc = current_sol;
+                }
+                else
+                    // calculate the acceleration and localize it
+                    _update_acceleration(acc, current_sol);
+                
                 acc.localize(*sol[i], send_list);
             }
                 break;

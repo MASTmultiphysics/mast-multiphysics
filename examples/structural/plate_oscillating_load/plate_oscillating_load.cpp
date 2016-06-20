@@ -436,7 +436,12 @@ MAST::PlateOscillatingLoad::solve(bool if_write_output) {
     solver.dt         = t_period/n_steps_per_cycle;
     
     
-    
+    // ask the solver to update the initial condition for d2(X)/dt2
+    // This is recommended only for the initial time step, since the time
+    // integration scheme updates the velocity and acceleration at
+    // each subsequent iterate
+    solver.solve_highest_derivative();
+
     if (if_write_output)
         libMesh::out << "Writing output to : output.exo" << std::endl;
     
