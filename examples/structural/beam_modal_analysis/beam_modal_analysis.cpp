@@ -44,8 +44,17 @@
 extern libMesh::LibMeshInit* __init;
 
 
-MAST::BeamModalAnalysis::BeamModalAnalysis(bool if_nonlin) {
+MAST::BeamModalAnalysis::BeamModalAnalysis():
+_initialized(false) {
     
+}
+
+
+void
+MAST::BeamModalAnalysis::init(libMesh::ElemType etype,
+                              bool if_nonlin) {
+
+    libmesh_assert(!_initialized);
     libmesh_assert(!if_nonlin); // this case does not handle nonlinearity
     
     
@@ -54,7 +63,7 @@ MAST::BeamModalAnalysis::BeamModalAnalysis(bool if_nonlin) {
     _length     = 10.;
     
     // initialize the mesh with one element
-    libMesh::MeshTools::Generation::build_line(*_mesh, 50, 0, _length);
+    libMesh::MeshTools::Generation::build_line(*_mesh, 50, 0, _length, etype);
     _mesh->prepare_for_use();
     
     // create the equation system
@@ -151,6 +160,8 @@ MAST::BeamModalAnalysis::BeamModalAnalysis(bool if_nonlin) {
     _p_card->init();
     
     _discipline->set_property_for_subdomain(0, *_p_card);
+    
+    _initialized = true;
 }
 
 
@@ -161,6 +172,9 @@ MAST::BeamModalAnalysis::BeamModalAnalysis(bool if_nonlin) {
 
 MAST::BeamModalAnalysis::~BeamModalAnalysis() {
     
+    if (!_initialized)
+        return;
+        
     delete _m_card;
     delete _p_card;
     
@@ -237,6 +251,8 @@ void
 MAST::BeamModalAnalysis::solve(bool if_write_output,
                                std::vector<Real>* eig) {
     
+    libmesh_assert(_initialized);
+
     // create the nonlinear assembly object
     MAST::StructuralModalEigenproblemAssembly   assembly;
     _sys->initialize_condensed_dofs(*_discipline);
@@ -297,6 +313,7 @@ MAST::BeamModalAnalysis::solve(bool if_write_output,
 void
 MAST::BeamModalAnalysis::sensitivity_solve(MAST::Parameter& p,
                                            std::vector<Real>& eig) {
+    libmesh_assert(_initialized);
 
     _discipline->add_parameter(p);
 

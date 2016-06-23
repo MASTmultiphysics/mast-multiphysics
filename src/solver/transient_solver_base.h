@@ -101,18 +101,14 @@ namespace MAST {
         
         
         /*!
-         *    Initializes the highest derivative solution using the current 
-         *    solutions and its low order time derivatives.
+         *    To be used only for initial conditions.
+         *    Initializes the highest derivative solution using the solution 
+         *    and its low order time derivatives at the specified time step.
+         *    Then advances the time step so that the solver is ready for 
+         *    time integration.
          */
-        void solve_highest_derivative();
+        void solve_highest_derivative_and_advance_time_step();
 
-        
-        /*!
-         *   This should be called before the first time step. All state vectors
-         *   from the current and the previous time steps are set equal to
-         *   \par val. This is useful for system with scalar unknowns.
-         */
-        virtual void set_initial_condition(Real val);
 
         
         /*!

@@ -48,8 +48,16 @@ extern libMesh::LibMeshInit* __init;
 
 
 MAST::BeamPistonTheoryFlutterAnalysis::BeamPistonTheoryFlutterAnalysis():
-_flutter_root(NULL) {
+_initialized(false),
+_flutter_root(NULL) { }
+
+
+
+void
+MAST::BeamPistonTheoryFlutterAnalysis::init(libMesh::ElemType etype,
+                                            bool if_nonlin) {
     
+    libmesh_assert(!_initialized);
     
     // create the mesh
     _mesh       = new libMesh::SerialMesh(__init->comm());
@@ -176,6 +184,8 @@ _flutter_root(NULL) {
     
     // initialize the flutter solver
     _flutter_solver  = new MAST::TimeDomainFlutterSolver;
+    
+    _initialized = true;
 }
 
 
@@ -185,6 +195,9 @@ _flutter_root(NULL) {
 
 
 MAST::BeamPistonTheoryFlutterAnalysis::~BeamPistonTheoryFlutterAnalysis() {
+    
+    if (!_initialized)
+        return;
     
     delete _m_card;
     delete _p_card;
@@ -278,6 +291,8 @@ Real
 MAST::BeamPistonTheoryFlutterAnalysis::solve(bool if_write_output,
                                              const Real tol,
                                              const unsigned int max_bisection_iters) {
+    
+    libmesh_assert(_initialized);
     
     // clear out the data structures of the flutter solver before
     // this solution
@@ -447,6 +462,8 @@ MAST::BeamPistonTheoryFlutterAnalysis::solve(bool if_write_output,
 Real
 MAST::BeamPistonTheoryFlutterAnalysis::
 sensitivity_solve(MAST::Parameter& p) {
+    
+    libmesh_assert(_initialized);
     
     //Make sure that  a solution is available for sensitivity
     libmesh_assert(_flutter_root);

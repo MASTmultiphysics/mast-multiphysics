@@ -76,10 +76,19 @@ namespace MAST {
     public MAST::FunctionEvaluation {
         
         
-        BeamBendingSizingOptimization(GetPot& infile);
+        BeamBendingSizingOptimization();
         
         
         ~BeamBendingSizingOptimization();
+        
+        
+        /*!
+         *   initializes the object for specified characteristics
+         */
+        void init(GetPot& infile,
+                  libMesh::ElemType etype,
+                  bool if_nonlin);
+
         
         /*!
          *   initialize the design variables values and bounds
@@ -129,6 +138,8 @@ namespace MAST {
          */
         void clear_stresss();
         
+        
+        bool _initialized;
         
         // length of domain
         Real _length;

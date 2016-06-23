@@ -35,6 +35,7 @@ BOOST_AUTO_TEST_CASE   (BeamBendingSolution) {
     const Real
     tol      = 1.e-2;
 
+    this->init(libMesh::EDGE2, false);
     this->solve();
     
     // check the solution
@@ -136,6 +137,7 @@ BOOST_AUTO_TEST_CASE   (BeamBendingSolution) {
 BOOST_AUTO_TEST_CASE   (BeamBendingSensitivity) {
     
     
+    this->init(libMesh::EDGE2, false);
     MAST::check_sensitivity(*this);
 }
 

@@ -40,6 +40,7 @@ BOOST_AUTO_TEST_CASE   (BarExtensionSolution) {
     const Real
     tol      = 1.e-2;
 
+    this->init(libMesh::EDGE2, false);
     this->solve();
 
     // check the solution
@@ -88,6 +89,7 @@ BOOST_AUTO_TEST_CASE   (BarExtensionSolution) {
 
 BOOST_AUTO_TEST_CASE   (BarExtensionSensitivity) {
     
+    this->init(libMesh::EDGE2, false);
     MAST::check_sensitivity(*this);
 }
 

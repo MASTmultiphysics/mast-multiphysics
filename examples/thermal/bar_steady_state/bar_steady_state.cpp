@@ -43,8 +43,14 @@
 extern libMesh::LibMeshInit* __init;
 
 
-MAST::BarSteadyState::BarSteadyState() {
+MAST::BarSteadyState::BarSteadyState():
+_initialized(false) { }
+
+
+void
+MAST::BarSteadyState::init(libMesh::ElemType etype, bool if_nonlin) {
     
+    libmesh_assert(!_initialized);
     
     // create the mesh
     _mesh       = new libMesh::SerialMesh(__init->comm());
@@ -145,6 +151,8 @@ MAST::BarSteadyState::BarSteadyState() {
     _p_card->init();
         
     _discipline->set_property_for_subdomain(0, *_p_card);
+    
+    _initialized = true;
 }
 
 
@@ -154,6 +162,9 @@ MAST::BarSteadyState::BarSteadyState() {
 
 
 MAST::BarSteadyState::~BarSteadyState() {
+    
+    if (!_initialized)
+        return;
     
     delete _m_card;
     delete _p_card;
@@ -232,7 +243,8 @@ MAST::BarSteadyState::get_parameter(const std::string &nm) {
 const libMesh::NumericVector<Real>&
 MAST::BarSteadyState::solve(bool if_write_output) {
     
-
+    libmesh_assert(_initialized);
+    
     // create the nonlinear assembly object
     MAST::HeatConductionNonlinearAssembly   assembly;
     
@@ -267,6 +279,8 @@ MAST::BarSteadyState::solve(bool if_write_output) {
 const libMesh::NumericVector<Real>&
 MAST::BarSteadyState::sensitivity_solve(MAST::Parameter& p,
                                       bool if_write_output) {
+    
+    libmesh_assert(_initialized);
     
     _discipline->add_parameter(p);
     

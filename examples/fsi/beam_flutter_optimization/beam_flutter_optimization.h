@@ -89,10 +89,14 @@ namespace MAST {
     public MAST::FunctionEvaluation {
         
         
-        BeamFSIFlutterSizingOptimization(GetPot& infile);
+        BeamFSIFlutterSizingOptimization();
         
         
         ~BeamFSIFlutterSizingOptimization();
+        
+        
+        void init(GetPot &infile, libMesh::ElemType etype, bool if_nonlin);
+
         
         /*!
          *   initialize the design variables values and bounds
@@ -136,6 +140,8 @@ namespace MAST {
         virtual MAST::FunctionEvaluation::funcon
         get_constraint_evaluation_function();
         
+        
+        bool _initialized;
         
         // length of domain
         Real

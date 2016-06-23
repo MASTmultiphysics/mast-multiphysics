@@ -7,7 +7,7 @@
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
  *
- * This library is distributed in the hope that it will be useful,
+3 * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
@@ -181,6 +181,7 @@ MAST::StiffenedPlateThermallyStressedPistonTheorySizingOptimization::
 StiffenedPlateThermallyStressedPistonTheorySizingOptimization():
 MAST::FunctionEvaluation(),
 _initialized(false),
+_n_eig(0),
 _n_divs_x(0),
 _n_divs_between_stiff(0),
 _n_stiff(0),
@@ -246,6 +247,9 @@ init(GetPot& infile,
     
     libmesh_assert(!_initialized);
     
+    // number of eigenvalues
+    _n_eig = 20;
+    
     // number of elements
     _n_divs_x                = infile("n_divs_x",             40);
     _n_divs_between_stiff    = infile("n_divs_between_stiff", 10);
@@ -269,7 +273,7 @@ init(GetPot& infile,
     // now setup the optimization data
     _n_vars                = _n_dv_stations_x + _n_dv_stations_x * _n_stiff; // for thickness variable
     _n_eq                  = 0;
-    _n_ineq                = 1 + _n_elems; // flutter constraint + one element stress functional per elem
+    _n_ineq                = _n_eig + 1 + _n_elems; // constraint that each eigenvalue > 0 flutter constraint + one element stress functional per elem
     _max_iters             = 1000;
     
     
@@ -344,7 +348,7 @@ init(GetPot& infile,
     _sys->initialize_condensed_dofs(*_discipline);
     _sys->eigen_solver->set_position_of_spectrum(libMesh::LARGEST_MAGNITUDE);
     _sys->set_exchange_A_and_B(true);
-    _sys->set_n_requested_eigenvalues(20);
+    _sys->set_n_requested_eigenvalues(_n_eig);
     
     // initialize the dv vector data
     const Real
@@ -938,6 +942,7 @@ evaluate(const std::vector<Real>& dvars,
          std::vector<bool>& eval_grads,
          std::vector<Real>& grads) {
     
+    libmesh_assert(_initialized);
     libmesh_assert_equal_to(dvars.size(), _n_vars);
     
     // set the parameter values equal to the DV value
@@ -976,12 +981,12 @@ evaluate(const std::vector<Real>& dvars,
     //////////////////////////////////////////////////////////////////////
     _sys->solution->zero();
     this->clear_stresss();
-    /*
+    
     MAST::StiffenedPlateSteadySolverInterface steady_solve(*this,
                                                            if_write_output,
                                                            false,
                                                            _n_load_steps);
-     
+
     // solve for the steady state at zero velocity
     (*_velocity) = 0.;
     steady_solve.solve();
@@ -995,14 +1000,14 @@ evaluate(const std::vector<Real>& dvars,
     // we will use a small number of load steps to get to the steady-state
     // solution
     steady_solve.set_n_load_steps(4);
-    steady_solve.set_modify_only_aero_load(true);*/
+    steady_solve.set_modify_only_aero_load(true);
     
     
     //////////////////////////////////////////////////////////////////////
     // perform the modal and flutter analysis
     //////////////////////////////////////////////////////////////////////
     _modal_assembly->attach_discipline_and_system(*_discipline, *_structural_sys);
-    //_modal_assembly->set_base_solution(steady_solve.solution());
+    _modal_assembly->set_base_solution(steady_solve.solution());
     _sys->eigenproblem_solve();
     _modal_assembly->clear_discipline_and_system();
     
@@ -1016,6 +1021,12 @@ evaluate(const std::vector<Real>& dvars,
         for (unsigned int i=0; i<_basis.size(); i++)
             _basis[i] = NULL;
     }
+    
+    
+    // vector of eigenvalues
+    std::vector<Real> eig_vals(nconv);
+    
+    bool if_all_eig_positive = true;
     
     
     for (unsigned int i=0; i<nconv; i++) {
@@ -1033,6 +1044,9 @@ evaluate(const std::vector<Real>& dvars,
         libMesh::out
         << std::setw(35) << std::fixed << std::setprecision(15)
         << re << std::endl;
+        
+        eig_vals[i]          = re;
+        if_all_eig_positive  = (if_all_eig_positive & (re>0.))?true:false;
         
         if (if_write_output) {
             
@@ -1066,112 +1080,117 @@ evaluate(const std::vector<Real>& dvars,
     //////////////////////////////////////////////////////////////////////
     // perform the flutter analysis
     //////////////////////////////////////////////////////////////////////
-    _fsi_assembly->attach_discipline_and_system(*_discipline,
-                                                *_structural_sys);
-    //_fsi_assembly->set_base_solution(steady_solve.solution());
-    _flutter_solver->clear_solutions();
-    _flutter_solver->attach_assembly(*_fsi_assembly);
-    //_flutter_solver->attach_steady_solver(steady_solve);
-    _flutter_solver->initialize(*_velocity,
-                                0.0e3,                // lower V
-                                2*_V0_flutter,        // upper V
-                                _n_V_divs_flutter,    // number of divisions
-                                _basis);              // basis vectors
-    std::pair<bool, MAST::FlutterRootBase*>
-    sol = _flutter_solver->analyze_and_find_critical_root_without_tracking(1.e-3, 20);
-    _flutter_solver->print_sorted_roots();
-    _fsi_assembly->clear_discipline_and_system();
-    _flutter_solver->clear_assembly_object();
-
-    // if the flutter root was not found, then we will use the steady sol wo
-    // aero as the base solution for all the following computations
-    if (!sol.first) {
-        //steady_solve.solution() = steady_sol_wo_aero;
-        //*_sys->solution         = steady_sol_wo_aero;
-    }
+    std::pair<bool, MAST::FlutterRootBase*> sol(false, nullptr);
     
-    // now calculate the stress output based on the velocity output
-    _nonlinear_assembly->attach_discipline_and_system(*_discipline, *_structural_sys);
-    //_nonlinear_assembly->calculate_outputs(steady_solve.solution());
-    _nonlinear_assembly->clear_discipline_and_system();
-    
-
-    
-    if (if_write_output) {
+    // perform flutter analysis only if all modal eigenvalues are positive
+    if (if_all_eig_positive) {
         
-        libMesh::out << "Writing output to : output.exo" << std::endl;
+        _fsi_assembly->attach_discipline_and_system(*_discipline,
+                                                    *_structural_sys);
+        _fsi_assembly->set_base_solution(steady_solve.solution());
+        _flutter_solver->clear_solutions();
+        _flutter_solver->attach_assembly(*_fsi_assembly);
+        _flutter_solver->attach_steady_solver(steady_solve);
+        _flutter_solver->initialize(*_velocity,
+                                    0.0e3,                // lower V
+                                    2*_V0_flutter,        // upper V
+                                    _n_V_divs_flutter,    // number of divisions
+                                    _basis);              // basis vectors
         
-        std::set<std::string> nm;
-        nm.insert(_sys->name());
-        // write the solution for visualization
-        libMesh::ExodusII_IO(*_mesh).write_equation_systems("output.exo",
-                                                            *_eq_sys,
-                                                            &nm);
+        sol = _flutter_solver->analyze_and_find_critical_root_without_tracking(1.e-3, 20);
+        _flutter_solver->print_sorted_roots();
+        _fsi_assembly->clear_discipline_and_system();
+        _flutter_solver->clear_assembly_object();
         
-        _discipline->plot_stress_strain_data<libMesh::ExodusII_IO>("stress_output.exo");
-    }
-    
-
-    
-    
-    if (sol.second && if_write_output) {
-        // now write the flutter mode to an output file.
-        // Flutter mode Y = sum_i (X_i * (xi_re + xi_im)_i)
-        // using the right eigenvector of the system.
-        // where i is the structural mode
-        //
-        // The time domain simulation assumes the temporal solution to be
-        // X(t) = (Y_re + i Y_im) exp(p t)
-        //      = (Y_re + i Y_im) exp(p_re t) * (cos(p_im t) + i sin(p_im t))
-        //      = exp(p_re t) (Z_re + i Z_im ),
-        // where Z_re = Y_re cos(p_im t) - Y_im sin(p_im t), and
-        //       Z_im = Y_re sin(p_im t) + Y_im cos(p_im t).
-        //
-        // We write the simulation of the mode over a period of oscillation
-        //
-        
-        
-        // first calculate the real and imaginary vectors
-        std::auto_ptr<libMesh::NumericVector<Real> >
-        re(_sys->solution->zero_clone().release()),
-        im(_sys->solution->zero_clone().release());
-        
-        
-        // first the real part
-        _sys->solution->zero();
-        for (unsigned int i=0; i<_basis.size(); i++) {
-            re->add(sol.second->eig_vec_right(i).real(), *_basis[i]);
-            im->add(sol.second->eig_vec_right(i).imag(), *_basis[i]);
+        // if the flutter root was not found, then we will use the steady sol wo
+        // aero as the base solution for all the following computations
+        if (!sol.first) {
+            steady_solve.solution() = steady_sol_wo_aero;
+            *_sys->solution         = steady_sol_wo_aero;
         }
-        re->close();
-        im->close();
         
-        // now open the output processor for writing
-        libMesh::ExodusII_IO flutter_mode_output(*_mesh);
-        
-        // use N steps in a time-period
-        Real
-        t_sys = _sys->time,
-        pi    = acos(-1.);
-        unsigned int
-        N_divs = 100;
+        // now calculate the stress output based on the velocity output
+        _nonlinear_assembly->attach_discipline_and_system(*_discipline, *_structural_sys);
+        _nonlinear_assembly->calculate_outputs(steady_solve.solution());
+        _nonlinear_assembly->clear_discipline_and_system();
         
         
-        for (unsigned int i=0; i<=N_divs; i++) {
-            _sys->time   =  2.*pi*(i*1.)/(N_divs*1.);
+        if (if_write_output) {
             
-            _sys->solution->zero();
-            _sys->solution->add( cos(_sys->time), *re);
-            _sys->solution->add(-sin(_sys->time), *im);
-            _sys->solution->close();
-            flutter_mode_output.write_timestep("flutter_mode.exo",
-                                               *_eq_sys,
-                                               i+1,
-                                               _sys->time);
+            libMesh::out << "Writing output to : output.exo" << std::endl;
+            
+            std::set<std::string> nm;
+            nm.insert(_sys->name());
+            // write the solution for visualization
+            libMesh::ExodusII_IO(*_mesh).write_equation_systems("output.exo",
+                                                                *_eq_sys,
+                                                                &nm);
+            
+            _discipline->plot_stress_strain_data<libMesh::ExodusII_IO>("stress_output.exo");
         }
         
-        // reset the system time
-        _sys->time = t_sys;
+        
+        
+        
+        if (sol.second && if_write_output) {
+            // now write the flutter mode to an output file.
+            // Flutter mode Y = sum_i (X_i * (xi_re + xi_im)_i)
+            // using the right eigenvector of the system.
+            // where i is the structural mode
+            //
+            // The time domain simulation assumes the temporal solution to be
+            // X(t) = (Y_re + i Y_im) exp(p t)
+            //      = (Y_re + i Y_im) exp(p_re t) * (cos(p_im t) + i sin(p_im t))
+            //      = exp(p_re t) (Z_re + i Z_im ),
+            // where Z_re = Y_re cos(p_im t) - Y_im sin(p_im t), and
+            //       Z_im = Y_re sin(p_im t) + Y_im cos(p_im t).
+            //
+            // We write the simulation of the mode over a period of oscillation
+            //
+            
+            
+            // first calculate the real and imaginary vectors
+            std::auto_ptr<libMesh::NumericVector<Real> >
+            re(_sys->solution->zero_clone().release()),
+            im(_sys->solution->zero_clone().release());
+            
+            
+            // first the real part
+            _sys->solution->zero();
+            for (unsigned int i=0; i<_basis.size(); i++) {
+                re->add(sol.second->eig_vec_right(i).real(), *_basis[i]);
+                im->add(sol.second->eig_vec_right(i).imag(), *_basis[i]);
+            }
+            re->close();
+            im->close();
+            
+            // now open the output processor for writing
+            libMesh::ExodusII_IO flutter_mode_output(*_mesh);
+            
+            // use N steps in a time-period
+            Real
+            t_sys = _sys->time,
+            pi    = acos(-1.);
+            unsigned int
+            N_divs = 100;
+            
+            
+            for (unsigned int i=0; i<=N_divs; i++) {
+                _sys->time   =  2.*pi*(i*1.)/(N_divs*1.);
+                
+                _sys->solution->zero();
+                _sys->solution->add( cos(_sys->time), *re);
+                _sys->solution->add(-sin(_sys->time), *im);
+                _sys->solution->close();
+                flutter_mode_output.write_timestep("flutter_mode.exo",
+                                                   *_eq_sys,
+                                                   i+1,
+                                                   _sys->time);
+            }
+            
+            // reset the system time
+            _sys->time = t_sys;
+        }
     }
     
     //////////////////////////////////////////////////////////////////////
@@ -1190,21 +1209,27 @@ evaluate(const std::vector<Real>& dvars,
     obj = wt;
     
     
+    // set the eigenvalue constraints  -eig <= 0. scale
+    // by an arbitrary 1/1.e7 factor
+    for (unsigned int i=0; i<nconv; i++)
+        fvals[i] = -eig_vals[i]/1.e7;
+    
     // copy the element von Mises stress values as the functions
     for (unsigned int i=0; i<_n_elems; i++)
-        fvals[1+i] =  -1. +
+        fvals[_n_eig+1+i] =  -1. +
         _outputs[i]->von_Mises_p_norm_functional_for_all_elems(pval)/_stress_limit;
-    
     
     // copy the flutter velocity to the constraint vector
     //     Vf        >= V0
     // or, V0/Vf     <= 1
     // or, V0/Vf - 1 <= 0
     //
-    if (sol.second)
-        fvals[0]  =  _V0_flutter/sol.second->V - 1.;
+    if (!if_all_eig_positive)
+        fvals[_n_eig+0]  =  100.;
+    else if (sol.second)
+        fvals[_n_eig+0]  =  _V0_flutter/sol.second->V - 1.;
     else
-        fvals[0]  =  -100.;
+        fvals[_n_eig+0]  =  -100.;
     
     //////////////////////////////////////////////////////////////////
     //   evaluate sensitivity if needed
@@ -1243,6 +1268,9 @@ evaluate(const std::vector<Real>& dvars,
 
         libMesh::ParameterVector params;
         params.resize(1);
+        
+        // copy the solution to be used for sensitivity
+        *_sys->solution = steady_solve.solution();
 
         // first do sensitivity analysis wrt velocity, which is necessary for
         // flutter sensitivity.
@@ -1252,7 +1280,6 @@ evaluate(const std::vector<Real>& dvars,
             params[0] = _velocity->ptr();
             _nonlinear_assembly->attach_discipline_and_system(*_discipline,
                                                               *_structural_sys);
-            //*_sys->solution = steady_solve.solution();
             _sys->sensitivity_solve(params);
             dXdV = _sys->get_sensitivity_solution(0);
             _nonlinear_assembly->clear_discipline_and_system();
@@ -1285,18 +1312,34 @@ evaluate(const std::vector<Real>& dvars,
 
             // copy the sensitivity values in the output
             for (unsigned int j=0; j<_n_elems; j++)
-                grads[(i*_n_ineq) + (j+1)] = _dv_scaling[i]/_stress_limit *
+                grads[(i*_n_ineq) + (j+_n_eig+1)] = _dv_scaling[i]/_stress_limit *
                 _outputs[j]->von_Mises_p_norm_functional_sensitivity_for_all_elems
                 (pval, _problem_parameters[i]);
             
+
+            // calculate the sensitivity of the eigenvalues
+            std::vector<Real> eig_sens(nconv);
+            _modal_assembly->set_base_solution(steady_solve.solution());
+            _modal_assembly->set_base_solution(dXdp, true);
+            _modal_assembly->attach_discipline_and_system(*_discipline, *_structural_sys);
+            _sys->eigenproblem_sensitivity_solve(params, eig_sens);
+            _modal_assembly->clear_discipline_and_system();
             
-            // sensitivity of flutter velocity
-            if (sol.first) {
+            for (unsigned int j=0; j<nconv; j++)
+                grads[(i*_n_ineq) + j] = -_dv_scaling[i]*eig_sens[j]/1.e7;
+            
+            
+
+            // if all eigenvalues are positive, calculate at the sensitivity of
+            // flutter velocity
+            if (if_all_eig_positive && sol.first) {
                 //
                 //           g = V0/Vf - 1 <= 0
                 //   Hence, sensitivity is
                 //   -V0/Vf^2  dVf
                 //
+                _fsi_assembly->set_base_solution(steady_solve.solution());
+                _fsi_assembly->set_base_solution(dXdp, true);
                 _fsi_assembly->attach_discipline_and_system(*_discipline, *_structural_sys);
                 _flutter_solver->attach_assembly(*_fsi_assembly);
                 _flutter_solver->calculate_sensitivity(*sol.second,
@@ -1307,19 +1350,15 @@ evaluate(const std::vector<Real>& dvars,
                 _fsi_assembly->clear_discipline_and_system();
                 _flutter_solver->clear_assembly_object();
                 
-                grads[(i*_n_ineq) + 0]  =  -(_dv_scaling[i] *
-                                             _V0_flutter/pow(sol.second->V, 2) *
-                                             sol.second->V_sens);
+                grads[(i*_n_ineq) + (_n_eig+0)]  =  -(_dv_scaling[i] *
+                                                      _V0_flutter/pow(sol.second->V, 2) *
+                                                      sol.second->V_sens);
             }
             else
                 // if no root was found, then set the sensitivity to a zero value
-                grads[(i*_n_ineq) + 0]  =  0.;
+                grads[(i*_n_ineq) + (_n_eig+0)]  =  0.;
         }
     }
-    
-    
-    // write the evaluation output
-    //this->output(0, dvars, obj, fvals, false);
 }
 
 

@@ -125,9 +125,19 @@ namespace MAST {
 
 
 
-MAST::BeamColumnBucklingAnalysis::BeamColumnBucklingAnalysis(bool if_nonlin) {
+MAST::BeamColumnBucklingAnalysis::BeamColumnBucklingAnalysis():
+_initialized(false) {
+    
+}
+
+
+
+void
+MAST::BeamColumnBucklingAnalysis::init(libMesh::ElemType etype,
+                                       bool if_nonlin) {
     
 
+    libmesh_assert(!_initialized);
     libmesh_assert(!if_nonlin);
     
     // create the mesh
@@ -135,7 +145,7 @@ MAST::BeamColumnBucklingAnalysis::BeamColumnBucklingAnalysis(bool if_nonlin) {
     _length     = 10.;
     
     // initialize the mesh with one element
-    libMesh::MeshTools::Generation::build_line(*_mesh, 50, 0, _length);
+    libMesh::MeshTools::Generation::build_line(*_mesh, 50, 0, _length, etype);
     _mesh->prepare_for_use();
     
     // create the equation system
@@ -239,6 +249,8 @@ MAST::BeamColumnBucklingAnalysis::BeamColumnBucklingAnalysis(bool if_nonlin) {
     _p_card->init();
     
     _discipline->set_property_for_subdomain(0, *_p_card);
+    
+    _initialized = true;
 }
 
 
@@ -248,6 +260,9 @@ MAST::BeamColumnBucklingAnalysis::BeamColumnBucklingAnalysis(bool if_nonlin) {
 
 
 MAST::BeamColumnBucklingAnalysis::~BeamColumnBucklingAnalysis() {
+    
+    if (!_initialized)
+        return;
     
     delete _m_card;
     delete _p_card;
@@ -328,6 +343,7 @@ void
 MAST::BeamColumnBucklingAnalysis::solve(bool if_write_output,
                                         std::vector<Real>* eig) {
     
+    libmesh_assert(_initialized);
     
     // create the nonlinear assembly object
     MAST::StructuralBucklingEigenproblemAssembly   assembly;
@@ -403,6 +419,8 @@ void
 MAST::BeamColumnBucklingAnalysis::sensitivity_solve(MAST::Parameter& p,
                                                     std::vector<Real>& eig) {
     
+    libmesh_assert(_initialized);
+
     libmesh_error(); // to be implemented
     _discipline->add_parameter(p);
     

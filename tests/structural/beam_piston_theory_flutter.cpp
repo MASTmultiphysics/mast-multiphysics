@@ -94,6 +94,7 @@ BOOST_AUTO_TEST_CASE    (BeamPistonTheoryFlutterSolutionSensitivity) {
     dV       = 0.,
     dV_fd    = 0.;
     
+    this->init(libMesh::EDGE2, false);
 
     std::vector<Real>
     eig_vec,

@@ -42,8 +42,8 @@ MAST::TimeDomainFlutterRoot::init(const Real v_ref_val,
                                   const ComplexVectorX& evec_right,
                                   const ComplexVectorX& evec_left) {
     
-    if (std::abs(den) > 0.)
-    {
+    if (std::abs(den) > 0.) {
+        
         root                = num/den;
         V                   = v_ref_val;
         omega               = std::imag(root);

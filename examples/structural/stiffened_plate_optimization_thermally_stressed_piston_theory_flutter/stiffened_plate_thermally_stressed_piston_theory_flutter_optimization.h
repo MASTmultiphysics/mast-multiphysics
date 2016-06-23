@@ -164,6 +164,7 @@ namespace MAST {
 
         // number of elements and number of stations at which DVs are defined
         unsigned int
+        _n_eig,
         _n_divs_x,
         _n_divs_between_stiff,
         _n_stiff, // assumed along x-axis with equidistance spacing

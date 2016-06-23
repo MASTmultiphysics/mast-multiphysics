@@ -440,7 +440,7 @@ MAST::PlateOscillatingLoad::solve(bool if_write_output) {
     // This is recommended only for the initial time step, since the time
     // integration scheme updates the velocity and acceleration at
     // each subsequent iterate
-    solver.solve_highest_derivative();
+    solver.solve_highest_derivative_and_advance_time_step();
 
     if (if_write_output)
         libMesh::out << "Writing output to : output.exo" << std::endl;

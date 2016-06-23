@@ -125,7 +125,7 @@ MAST::BuildConservativeFluidElem::BuildConservativeFluidElem() {
                                                      *_b_ref_f);
     
     // initialize the motion object
-    _motion            = new MAST::RigidSurfaceMotion;
+    _motion            = new MAST::RigidSurfaceMotion("small_disturbance_motion");
     _motion->init(*_freq_function,                 // frequency function
                   _flight_cond->body_yaw_axis,     // plunge vector
                   _flight_cond->body_pitch_axis,   // pitch axis

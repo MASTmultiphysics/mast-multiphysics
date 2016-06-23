@@ -114,8 +114,19 @@ namespace MAST {
 
 
 
-MAST::BeamOscillatingLoad::BeamOscillatingLoad() {
+MAST::BeamOscillatingLoad::BeamOscillatingLoad():
+_initialized(false) {
     
+}
+
+
+void
+MAST::BeamOscillatingLoad::init(libMesh::ElemType etype,
+                                bool if_nonlin) {
+    
+        
+    libmesh_assert(!_initialized);
+
     // length of domain
     _length     = 10.;
     
@@ -246,6 +257,8 @@ MAST::BeamOscillatingLoad::BeamOscillatingLoad() {
         
         _discipline->add_volume_output((*e_it)->subdomain_id(), *output);
     }
+    
+    _initialized = true;
 }
 
 
@@ -255,6 +268,9 @@ MAST::BeamOscillatingLoad::BeamOscillatingLoad() {
 
 
 MAST::BeamOscillatingLoad::~BeamOscillatingLoad() {
+    
+    if (!_initialized)
+        return;
     
     delete _m_card;
     delete _p_card;
@@ -343,7 +359,8 @@ MAST::BeamOscillatingLoad::get_parameter(const std::string &nm) {
 const libMesh::NumericVector<Real>&
 MAST::BeamOscillatingLoad::solve(bool if_write_output) {
     
-
+    libmesh_assert(_initialized);
+    
     // create the nonlinear assembly object
     MAST::StructuralTransientAssembly   assembly;
     
@@ -385,7 +402,7 @@ MAST::BeamOscillatingLoad::solve(bool if_write_output) {
     // This is recommended only for the initial time step, since the time
     // integration scheme updates the velocity and acceleration at
     // each subsequent iterate
-    solver.solve_highest_derivative();
+    solver.solve_highest_derivative_and_advance_time_step();
     
     if (if_write_output)
         libMesh::out << "Writing output to : output.exo" << std::endl;
@@ -434,6 +451,8 @@ const libMesh::NumericVector<Real>&
 MAST::BeamOscillatingLoad::sensitivity_solve(MAST::Parameter& p,
                                      bool if_write_output) {
     
+    libmesh_assert(_initialized);
+
     _discipline->add_parameter(p);
     
     // create the nonlinear assembly object

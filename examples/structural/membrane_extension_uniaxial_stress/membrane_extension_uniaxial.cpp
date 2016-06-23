@@ -44,11 +44,16 @@
 extern libMesh::LibMeshInit* __init;
 
 
-MAST::MembraneExtensionUniaxial::MembraneExtensionUniaxial() {
-    
-    libMesh::ElemType
-    e_type       = libMesh::QUAD4;
+MAST::MembraneExtensionUniaxial::MembraneExtensionUniaxial():
+_initialized(false) { }
 
+
+void
+MAST::MembraneExtensionUniaxial::init(libMesh::ElemType etype,
+                                      bool if_nonlin) {
+
+    libmesh_assert(!_initialized);
+    
     // length of domain
     _length     = 0.50,
     _width      = 0.25;
@@ -62,7 +67,7 @@ MAST::MembraneExtensionUniaxial::MembraneExtensionUniaxial() {
                                                  16, 16,
                                                  0, _length,
                                                  0, _width,
-                                                 e_type);
+                                                 etype);
     _mesh->prepare_for_use();
     
     // create the equation system
@@ -166,9 +171,9 @@ MAST::MembraneExtensionUniaxial::MembraneExtensionUniaxial() {
     // points where stress is evaluated
     std::vector<libMesh::Point> pts;
 
-    if (e_type == libMesh::QUAD4 ||
-        e_type == libMesh::QUAD8 ||
-        e_type == libMesh::QUAD9) {
+    if (etype == libMesh::QUAD4 ||
+        etype == libMesh::QUAD8 ||
+        etype == libMesh::QUAD9) {
         
         pts.push_back(libMesh::Point(-1/sqrt(3), -1/sqrt(3), 1.)); // upper skin
         pts.push_back(libMesh::Point(-1/sqrt(3), -1/sqrt(3),-1.)); // lower skin
@@ -179,8 +184,8 @@ MAST::MembraneExtensionUniaxial::MembraneExtensionUniaxial() {
         pts.push_back(libMesh::Point(-1/sqrt(3),  1/sqrt(3), 1.)); // upper skin
         pts.push_back(libMesh::Point(-1/sqrt(3),  1/sqrt(3),-1.)); // lower skin
     }
-    else if (e_type == libMesh::TRI3 ||
-             e_type == libMesh::TRI6) {
+    else if (etype == libMesh::TRI3 ||
+             etype == libMesh::TRI6) {
         
         pts.push_back(libMesh::Point(1./3., 1./3., 1.)); // upper skin
         pts.push_back(libMesh::Point(1./3., 1./3.,-1.)); // lower skin
@@ -205,6 +210,8 @@ MAST::MembraneExtensionUniaxial::MembraneExtensionUniaxial() {
         
         _discipline->add_volume_output((*e_it)->subdomain_id(), *output);
     }
+    
+    _initialized = true;
 }
 
 
@@ -214,6 +221,9 @@ MAST::MembraneExtensionUniaxial::MembraneExtensionUniaxial() {
 
 
 MAST::MembraneExtensionUniaxial::~MembraneExtensionUniaxial() {
+    
+    if (!_initialized)
+        return;
     
     delete _m_card;
     delete _p_card;
@@ -298,7 +308,8 @@ MAST::MembraneExtensionUniaxial::get_parameter(const std::string &nm) {
 const libMesh::NumericVector<Real>&
 MAST::MembraneExtensionUniaxial::solve(bool if_write_output) {
     
-
+    libmesh_assert(_initialized);
+    
     // create the nonlinear assembly object
     MAST::StructuralNonlinearAssembly   assembly;
     
@@ -339,6 +350,8 @@ MAST::MembraneExtensionUniaxial::solve(bool if_write_output) {
 const libMesh::NumericVector<Real>&
 MAST::MembraneExtensionUniaxial::sensitivity_solve(MAST::Parameter& p,
                                      bool if_write_output) {
+    
+    libmesh_assert(_initialized);
     
     _discipline->add_parameter(p);
     

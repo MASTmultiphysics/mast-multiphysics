@@ -46,7 +46,16 @@
 extern libMesh::LibMeshInit* __init;
 
 
-MAST::BeamBendingWithOffset::BeamBendingWithOffset() {
+MAST::BeamBendingWithOffset::BeamBendingWithOffset():
+_initialized(false) {
+    
+}
+
+
+void
+MAST::BeamBendingWithOffset::init(libMesh::ElemType etype, bool if_nonlin) {
+    
+    libmesh_assert(!_initialized);
     
     // length of domain
     _length     = 10.;
@@ -174,6 +183,8 @@ MAST::BeamBendingWithOffset::BeamBendingWithOffset() {
         
         _discipline->add_volume_output((*e_it)->subdomain_id(), *output);
     }
+    
+    _initialized = true;
 }
 
 
@@ -183,6 +194,9 @@ MAST::BeamBendingWithOffset::BeamBendingWithOffset() {
 
 
 MAST::BeamBendingWithOffset::~BeamBendingWithOffset() {
+    
+    if (!_initialized)
+        return;
     
     delete _m_card;
     delete _p_card;
@@ -269,6 +283,7 @@ MAST::BeamBendingWithOffset::get_parameter(const std::string &nm) {
 const libMesh::NumericVector<Real>&
 MAST::BeamBendingWithOffset::solve(bool if_write_output) {
     
+    libmesh_assert(_initialized);
 
     // create the nonlinear assembly object
     MAST::StructuralNonlinearAssembly   assembly;
@@ -310,6 +325,8 @@ MAST::BeamBendingWithOffset::solve(bool if_write_output) {
 const libMesh::NumericVector<Real>&
 MAST::BeamBendingWithOffset::sensitivity_solve(MAST::Parameter& p,
                                                bool if_write_output) {
+    
+    libmesh_assert(_initialized);
     
     _discipline->add_parameter(p);
     

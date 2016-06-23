@@ -45,8 +45,14 @@
 extern libMesh::LibMeshInit* __init;
 
 
-MAST::BarTransient::BarTransient() {
+MAST::BarTransient::BarTransient():
+_initialized(false)  { }
+
+
+void
+MAST::BarTransient::init(libMesh::ElemType etype, bool if_nonlin) {
     
+    libmesh_assert(!_initialized);
     
     // create the mesh
     _mesh       = new libMesh::SerialMesh(__init->comm());
@@ -147,6 +153,8 @@ MAST::BarTransient::BarTransient() {
     _p_card->init();
         
     _discipline->set_property_for_subdomain(0, *_p_card);
+    
+    _initialized = true;
 }
 
 
@@ -156,6 +164,9 @@ MAST::BarTransient::BarTransient() {
 
 
 MAST::BarTransient::~BarTransient() {
+
+    if (!_initialized)
+        return;
     
     delete _m_card;
     delete _p_card;
@@ -234,6 +245,7 @@ MAST::BarTransient::get_parameter(const std::string &nm) {
 const libMesh::NumericVector<Real>&
 MAST::BarTransient::solve(bool if_write_output) {
     
+    libmesh_assert(_initialized);
 
     // create the nonlinear assembly object
     MAST::HeatConductionTransientAssembly   assembly;
@@ -265,9 +277,7 @@ MAST::BarTransient::solve(bool if_write_output) {
         libMesh::out << "Writing output to : output.exo" << std::endl;
     
     // ask the solver to update the initial condition for d(Temp)/dt
-    // This is recommended only for the initial time step, since the time
-    // integration scheme updates the velocity at each subsequent iterate
-    solver.solve_highest_derivative();
+    solver.solve_highest_derivative_and_advance_time_step();
     
     // loop over time steps
     while (t_step < 5) {
@@ -277,7 +287,7 @@ MAST::BarTransient::solve(bool if_write_output) {
         << " :  t = " << tval
         << " :  xdot-L2 = " << solver.velocity().l2_norm()
         << std::endl;
-        
+
         // write the time-step
         if (if_write_output) {
             
@@ -307,6 +317,8 @@ MAST::BarTransient::solve(bool if_write_output) {
 const libMesh::NumericVector<Real>&
 MAST::BarTransient::sensitivity_solve(MAST::Parameter& p,
                                       bool if_write_output) {
+    
+    libmesh_assert(_initialized);
     
     _discipline->add_parameter(p);
     

@@ -56,11 +56,17 @@ namespace MAST {
     struct BeamColumnBucklingAnalysis {
         
         
-        BeamColumnBucklingAnalysis(bool if_nonlin);
+        BeamColumnBucklingAnalysis();
         
         
         ~BeamColumnBucklingAnalysis();
         
+        
+        /*!
+         *   initializes the object for specified characteristics
+         */
+        void init(libMesh::ElemType etype, bool if_nonlin);
+
         
         /*!
          *   @returns a pointer to the parameter of the specified name.
@@ -83,6 +89,8 @@ namespace MAST {
          */
         void sensitivity_solve(MAST::Parameter& p, std::vector<Real>& eig);
         
+        
+        bool _initialized;
         
         // create the mesh
         libMesh::SerialMesh*           _mesh;

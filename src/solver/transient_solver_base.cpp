@@ -31,7 +31,7 @@
 
 MAST::TransientSolverBase::TransientSolverBase():
 dt(0.),
-_first_step(false),
+_first_step(true),
 _assembly(NULL),
 _system(NULL) {
 
@@ -202,9 +202,10 @@ MAST::TransientSolverBase::acceleration(unsigned int prev_iter) const {
 
 
 void
-MAST::TransientSolverBase::solve_highest_derivative() {
+MAST::TransientSolverBase::solve_highest_derivative_and_advance_time_step() {
     
-
+    libmesh_assert(_first_step);
+    
     // tell the solver that the current solution being obtained is for the
     // highest time derivative
     _if_highest_derivative_solution = true;
@@ -226,23 +227,64 @@ MAST::TransientSolverBase::solve_highest_derivative() {
     pc = _system->request_matrix("Preconditioner");
     
     std::auto_ptr<libMesh::NumericVector<Real> >
-    dvel(velocity().zero_clone().release());
-    
+    dvec(velocity().zero_clone().release());
+
     std::pair<unsigned int, Real>
     rval = linear_solver->solve (*_system->matrix, pc,
-                                 *dvel,
+                                 *dvec,
                                  *_system->rhs,
                                  solver_params.second,
                                  solver_params.first);
-    velocity().add(-1, *dvel);
+
+    libMesh::NumericVector<Real> *vec = nullptr;
+    
+    switch (this->ode_order()) {
+            
+        case 1:
+            vec = &velocity();
+            break;
+            
+        case 2:
+            vec = &acceleration();
+            break;
+            
+        default:
+            // higher than 2 derivative not implemented yet.
+            libmesh_error();
+    }
+    
+    vec->add(-1., *dvec);
     
     // The linear solver may not have fit our constraints exactly
 #ifdef LIBMESH_ENABLE_CONSTRAINTS
     _system->get_dof_map().enforce_constraints_exactly
-    (*_system, &velocity(), /* homogeneous = */ true);
+    (*_system, vec, /* homogeneous = */ true);
 #endif
     
     _system->release_linear_solver(linear_solver);
+    
+    // next, move all the solutions and velocities into older
+    // time step locations
+    for (unsigned int i=_n_iters_to_store()-1; i>0; i--) {
+        this->solution(i).zero();
+        this->solution(i).add(1., this->solution(i-1));
+        this->solution(i).close();
+        
+        this->velocity(i).zero();
+        this->velocity(i).add(1., this->velocity(i-1));
+        this->velocity(i).close();
+        
+        if (this->ode_order() > 1) {
+            
+            this->acceleration(i).zero();
+            this->acceleration(i).add(1., this->acceleration(i-1));
+            this->acceleration(i).close();
+        }
+    }
+    
+    // finally, update the system time
+    _system->time     += dt;
+    _first_step        = false;
 }
 
 
@@ -261,12 +303,8 @@ build_local_quantities(const libMesh::NumericVector<Real>& current_sol,
     const std::vector<libMesh::dof_id_type>&
     send_list = _system->get_dof_map().get_send_list();
     
-    
-    const unsigned int
-    order = this->ode_order();
 
-    
-    for ( unsigned int i=0; i<=order; i++) {
+    for ( unsigned int i=0; i<=this->ode_order(); i++) {
         
         sol[i] = libMesh::NumericVector<Real>::build(_system->comm()).release();
         sol[i]->init(_system->n_dofs(),
@@ -279,34 +317,20 @@ build_local_quantities(const libMesh::NumericVector<Real>& current_sol,
                 
             case 0: {
                 
-                if (_if_highest_derivative_solution)
-                    // if the highest derivative is being solved for,
-                    // then current_sol estimates that vector, and the
-                    // solution remains fixed.
-                    solution().localize(*sol[i], send_list);
-                else
+                if (!_if_highest_derivative_solution)
                     // copy the solution to this
                     current_sol.localize(*sol[i], send_list);
-                
+                else
+                    solution().localize(*sol[i], send_list);
             }
                 break;
 
             case 1: {
                 
                 // update the current local velocity vector
-                libMesh::NumericVector<Real>&
-                vel = this->velocity();
+                libMesh::NumericVector<Real>& vel = this->velocity();
 
-                if (_if_highest_derivative_solution) {
-                    
-                    if  (order == 1)
-                        // if the first order time derivative is being solved for,
-                        // the current sol is the estimate of the velocity
-                        // otherwise, use the velocity to update the higher
-                        // derivatives
-                        vel = current_sol;
-                }
-                else
+                if (!_if_highest_derivative_solution)
                     // calculate the velocity and localize it
                     _update_velocity(vel, current_sol);
                 
@@ -317,17 +341,9 @@ build_local_quantities(const libMesh::NumericVector<Real>& current_sol,
             case 2: {
                 
                 // update the current local acceleration vector
-                libMesh::NumericVector<Real>&
-                acc = this->acceleration();
+                libMesh::NumericVector<Real>& acc = this->acceleration();
                 
-                if (_if_highest_derivative_solution) {
-                    
-                    if  (order == 2)
-                        // if the second order time derivative is being solved
-                        // for, the current sol is the estimate of the accel.
-                        acc = current_sol;
-                }
-                else
+                if (!_if_highest_derivative_solution)
                     // calculate the acceleration and localize it
                     _update_acceleration(acc, current_sol);
                 
@@ -346,32 +362,11 @@ build_local_quantities(const libMesh::NumericVector<Real>& current_sol,
 
 
 void
-MAST::TransientSolverBase::set_initial_condition(Real val) {
-    
-    libmesh_assert(_system);
-    libmesh_assert(_first_step);
-    
-    std::string nm;
-    for (unsigned int i=0; i<_n_iters_to_store(); i++) {
-        std::ostringstream oss;
-        oss << i;
-        nm = "transient_solution_" + oss.str();
-        libMesh::NumericVector<Real> & sol =  _system->get_vector(nm);
-        sol = val;
-        sol.close();
-    }
-
-    _system->solution->operator=(val);
-    _system->solution->close();
-}
-
-
-void
 MAST::TransientSolverBase::advance_time_step() {
-
 
     // first ask the solver to update the acceleration vector
     _update_velocity(this->velocity(), *_system->solution);
+
     if (this->ode_order() > 1)
         _update_acceleration(this->acceleration(), *_system->solution);
 

@@ -43,11 +43,21 @@ libMesh::LibMeshInit     *__init;
 
 
 MAST::BeamBendingSectionOffsetSizingOptimization::
-BeamBendingSectionOffsetSizingOptimization(GetPot& infile):
+BeamBendingSectionOffsetSizingOptimization():
 MAST::FunctionEvaluation(),
+_initialized(false),
 _n_elems(0),
-_n_stations(0) {
+_n_stations(0) { }
 
+
+
+void
+MAST::BeamBendingSectionOffsetSizingOptimization::init(GetPot &infile,
+                                                       libMesh::ElemType etype,
+                                                       bool if_nonlin) {
+
+    libmesh_assert(!_initialized);
+    
     // number of elements
     _n_elems    = infile("n_elems", 20);
     
@@ -239,12 +249,17 @@ _n_stations(0) {
     
     // create the function to calculate weight
     _weight = new MAST::BeamWeight(*_discipline);
+    
+    _initialized = true;
 }
 
 
 
 
 MAST::BeamBendingSectionOffsetSizingOptimization::~BeamBendingSectionOffsetSizingOptimization() {
+    
+    if (!_initialized)
+        return;
     
     delete _m_card;
     delete _p_card;
@@ -325,6 +340,7 @@ MAST::BeamBendingSectionOffsetSizingOptimization::evaluate(const std::vector<Rea
                                               std::vector<Real>& grads) {
     
     
+    libmesh_assert(_initialized);
     libmesh_assert_equal_to(dvars.size(), _n_vars);
     
     // set the parameter values equal to the DV value

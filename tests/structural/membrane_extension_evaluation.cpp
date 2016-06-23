@@ -163,6 +163,7 @@ BOOST_AUTO_TEST_CASE   (MembraneExtensionUniaxialSolution) {
     const Real
     tol      = 1.e-2;
 
+    this->init(libMesh::QUAD4, false);
     this->solve();
     
     // check the solution

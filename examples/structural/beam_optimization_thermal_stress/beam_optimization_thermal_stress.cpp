@@ -43,11 +43,20 @@ libMesh::LibMeshInit     *__init;
 
 
 MAST::BeamBendingThermalStressSizingOptimization::
-BeamBendingThermalStressSizingOptimization(GetPot& infile):
+BeamBendingThermalStressSizingOptimization():
 MAST::FunctionEvaluation(),
+_initialized(false),
 _n_elems(0),
-_n_stations(0) {
+_n_stations(0) { }
 
+
+void
+MAST::BeamBendingThermalStressSizingOptimization::init(GetPot &infile,
+                                                       libMesh::ElemType etype,
+                                                       bool if_nonlin) {
+
+    libmesh_assert(!_initialized);
+    
     // number of elements
     _n_elems    = infile("n_elems", 20);
     
@@ -261,6 +270,8 @@ _n_stations(0) {
     
     // create the function to calculate weight
     _weight = new MAST::BeamWeight(*_discipline);
+    
+    _initialized = true;
 }
 
 
@@ -268,6 +279,9 @@ _n_stations(0) {
 
 MAST::BeamBendingThermalStressSizingOptimization::
 ~BeamBendingThermalStressSizingOptimization() {
+    
+    if (!_initialized)
+        return;
     
     delete _m_card;
     delete _p_card;
@@ -362,7 +376,7 @@ MAST::BeamBendingThermalStressSizingOptimization
            std::vector<bool>& eval_grads,
            std::vector<Real>& grads) {
     
-    
+    libmesh_assert(_initialized);
     libmesh_assert_equal_to(dvars.size(), _n_vars);
     
     // set the parameter values equal to the DV value

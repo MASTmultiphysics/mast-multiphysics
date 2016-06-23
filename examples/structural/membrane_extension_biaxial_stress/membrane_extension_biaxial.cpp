@@ -44,7 +44,14 @@
 extern libMesh::LibMeshInit* __init;
 
 
-MAST::MembraneExtensionBiaxial::MembraneExtensionBiaxial() {
+MAST::MembraneExtensionBiaxial::MembraneExtensionBiaxial():
+_initialized(false) { }
+
+
+void
+MAST::MembraneExtensionBiaxial::init(libMesh::ElemType etype, bool if_nonlin) {
+
+    libmesh_assert(!_initialized);
     
     libMesh::ElemType
     e_type       = libMesh::QUAD4;
@@ -190,6 +197,8 @@ MAST::MembraneExtensionBiaxial::MembraneExtensionBiaxial() {
         
         _discipline->add_volume_output((*e_it)->subdomain_id(), *output);
     }
+    
+    _initialized = true;
 }
 
 
@@ -199,6 +208,9 @@ MAST::MembraneExtensionBiaxial::MembraneExtensionBiaxial() {
 
 
 MAST::MembraneExtensionBiaxial::~MembraneExtensionBiaxial() {
+    
+    if (!_initialized)
+        return;
     
     delete _m_card;
     delete _p_card;
@@ -282,7 +294,8 @@ MAST::MembraneExtensionBiaxial::get_parameter(const std::string &nm) {
 const libMesh::NumericVector<Real>&
 MAST::MembraneExtensionBiaxial::solve(bool if_write_output) {
     
-
+    libmesh_assert(_initialized);
+    
     // create the nonlinear assembly object
     MAST::StructuralNonlinearAssembly   assembly;
     
@@ -323,6 +336,8 @@ MAST::MembraneExtensionBiaxial::solve(bool if_write_output) {
 const libMesh::NumericVector<Real>&
 MAST::MembraneExtensionBiaxial::sensitivity_solve(MAST::Parameter& p,
                                      bool if_write_output) {
+    
+    libmesh_assert(_initialized);
     
     _discipline->add_parameter(p);
     

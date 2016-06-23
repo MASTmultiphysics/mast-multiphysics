@@ -40,6 +40,7 @@ BOOST_FIXTURE_TEST_SUITE  (Structural1DBeamBucklingAnalysis,
 
 BOOST_AUTO_TEST_CASE   (BeamBucklingSolution) {
     
+    this->init(libMesh::EDGE2, false);
     
     const Real
     tol      = 1.e-2;

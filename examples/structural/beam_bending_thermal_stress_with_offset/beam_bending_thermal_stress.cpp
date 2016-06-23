@@ -46,7 +46,18 @@
 extern libMesh::LibMeshInit* __init;
 
 
-MAST::BeamBendingThermalStress::BeamBendingThermalStress() {
+MAST::BeamBendingThermalStress::BeamBendingThermalStress():
+_initialized(false) {
+    
+}
+
+
+void
+MAST::BeamBendingThermalStress::init(libMesh::ElemType etype,
+                                     bool if_nonlin) {
+    
+    
+    libmesh_assert(!_initialized);
     
     // length of domain
     _length     = 10.;
@@ -56,7 +67,7 @@ MAST::BeamBendingThermalStress::BeamBendingThermalStress() {
     _mesh       = new libMesh::SerialMesh(__init->comm());
     
     // initialize the mesh with one element
-    libMesh::MeshTools::Generation::build_line(*_mesh, 4, 0, _length);
+    libMesh::MeshTools::Generation::build_line(*_mesh, 4, 0, _length, etype);
     _mesh->prepare_for_use();
     
     // create the equation system
@@ -187,6 +198,8 @@ MAST::BeamBendingThermalStress::BeamBendingThermalStress() {
         
         _discipline->add_volume_output((*e_it)->subdomain_id(), *output);
     }
+    
+    _initialized = true;
 }
 
 
@@ -197,6 +210,9 @@ MAST::BeamBendingThermalStress::BeamBendingThermalStress() {
 
 MAST::BeamBendingThermalStress::~BeamBendingThermalStress() {
     
+    if (!_initialized)
+        return;
+
     delete _m_card;
     delete _p_card;
     
@@ -283,6 +299,7 @@ MAST::BeamBendingThermalStress::get_parameter(const std::string &nm) {
 const libMesh::NumericVector<Real>&
 MAST::BeamBendingThermalStress::solve(bool if_write_output) {
     
+    libmesh_assert(_initialized);
 
     // create the nonlinear assembly object
     MAST::StructuralNonlinearAssembly   assembly;
@@ -324,6 +341,9 @@ MAST::BeamBendingThermalStress::solve(bool if_write_output) {
 const libMesh::NumericVector<Real>&
 MAST::BeamBendingThermalStress::sensitivity_solve(MAST::Parameter& p,
                                                bool if_write_output) {
+    
+    
+    libmesh_assert(_initialized);
     
     _discipline->add_parameter(p);
     

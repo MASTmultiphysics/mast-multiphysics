@@ -76,12 +76,15 @@ namespace MAST {
     public MAST::FunctionEvaluation {
         
         
-        BeamBendingThermalStressSizingOptimization(GetPot& infile);
+        BeamBendingThermalStressSizingOptimization();
         
         
         ~BeamBendingThermalStressSizingOptimization();
         
-        /*!
+
+        void init(GetPot &infile, libMesh::ElemType etype, bool if_nonlin);
+
+            /*!
          *   initialize the design variables values and bounds
          */
         virtual void init_dvar(std::vector<Real>& x,
@@ -115,6 +118,7 @@ namespace MAST {
          */
         void clear_stresss();
         
+        bool _initialized;
         
         // length of domain
         Real _length;

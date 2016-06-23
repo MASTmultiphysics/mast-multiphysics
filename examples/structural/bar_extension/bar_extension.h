@@ -61,6 +61,13 @@ namespace MAST {
         
         
         ~BarExtension();
+
+        
+        /*!
+         *   initializes the object for specified characteristics
+         */
+        void init(libMesh::ElemType etype, bool if_nonlin);
+        
         
 
         /*!
@@ -91,6 +98,7 @@ namespace MAST {
          */
         void clear_stresss();
         
+        bool _initialized;
         
         // create the mesh
         libMesh::SerialMesh*           _mesh;

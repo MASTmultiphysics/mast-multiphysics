@@ -52,7 +52,7 @@ MAST::TimeDomainFlutterSolver::clear() {
     
     this->clear_solutions();
     
-    _velocity_param   = NULL;
+    _velocity_param   = nullptr;
     _V_range          = std::pair<Real, Real>(0.,0.);
     _n_V_divs         = 0;
     

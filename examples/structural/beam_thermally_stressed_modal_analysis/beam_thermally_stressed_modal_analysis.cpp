@@ -47,7 +47,20 @@
 extern libMesh::LibMeshInit* __init;
 
 
-MAST::BeamThermallyStressedModalAnalysis::BeamThermallyStressedModalAnalysis(bool if_nonlin) {
+MAST::BeamThermallyStressedModalAnalysis::
+BeamThermallyStressedModalAnalysis():
+_initialized(false) {
+    
+}
+
+
+
+void
+MAST::BeamThermallyStressedModalAnalysis::init(libMesh::ElemType etype,
+                                               bool if_nonlin) {
+    
+    
+    libmesh_assert(!_initialized);
     
     // length of domain
     _length     = 100.;
@@ -57,7 +70,7 @@ MAST::BeamThermallyStressedModalAnalysis::BeamThermallyStressedModalAnalysis(boo
     _mesh       = new libMesh::SerialMesh(__init->comm());
     
     // initialize the mesh with one element
-    libMesh::MeshTools::Generation::build_line(*_mesh, 20, 0, _length);
+    libMesh::MeshTools::Generation::build_line(*_mesh, 20, 0, _length, etype);
     _mesh->prepare_for_use();
     
     // create the equation system
@@ -196,6 +209,8 @@ MAST::BeamThermallyStressedModalAnalysis::BeamThermallyStressedModalAnalysis(boo
         
         _discipline->add_volume_output((*e_it)->subdomain_id(), *output);
     }
+    
+    _initialized = true;
 }
 
 
@@ -205,6 +220,9 @@ MAST::BeamThermallyStressedModalAnalysis::BeamThermallyStressedModalAnalysis(boo
 
 
 MAST::BeamThermallyStressedModalAnalysis::~BeamThermallyStressedModalAnalysis() {
+    
+    if (!_initialized)
+        return;
     
     delete _m_card;
     delete _p_card;
@@ -298,6 +316,8 @@ const libMesh::NumericVector<Real>&
 MAST::BeamThermallyStressedModalAnalysis::solve(bool if_write_output,
                                                 std::vector<Real>* eig) {
     
+    
+    libmesh_assert(_initialized);
     
     bool if_vk = (_p_card->strain_type() == MAST::VON_KARMAN_STRAIN);
     
@@ -446,8 +466,13 @@ const libMesh::NumericVector<Real>&
 MAST::BeamThermallyStressedModalAnalysis::sensitivity_solve(MAST::Parameter& p,
                                                             std::vector<Real>& eig) {
     
-    libmesh_assert(false); // to be implemented
+    libmesh_assert(_initialized);
+
     _discipline->add_parameter(p);
+    
+    ///////////////////////////////////////////////////////////////////
+    // sensitivity of the static solution
+    ///////////////////////////////////////////////////////////////////
     
     // create the nonlinear assembly object
     MAST::StructuralNonlinearAssembly   assembly;
@@ -474,10 +499,26 @@ MAST::BeamThermallyStressedModalAnalysis::sensitivity_solve(MAST::Parameter& p,
     
     
     assembly.clear_discipline_and_system();
+    
+
+    ///////////////////////////////////////////////////////////////////
+    // sensitivity of the eigenvalues
+    ///////////////////////////////////////////////////////////////////
+    
+    unsigned int
+    nconv = std::min(_sys->get_n_converged_eigenvalues(),
+                     _sys->get_n_requested_eigenvalues());
+    eig.resize(nconv);
+    
+    MAST::StructuralModalEigenproblemAssembly   modal_assembly;
+    modal_assembly.set_base_solution(_sys->get_vector("base_solution"));
+    modal_assembly.set_base_solution(_sys->get_sensitivity_solution(0), true);
+    
+    modal_assembly.attach_discipline_and_system(*_discipline, *_structural_sys);
+    _sys->eigenproblem_sensitivity_solve(params, eig);
+    modal_assembly.clear_discipline_and_system();
+    
     _discipline->remove_parameter(p);
-    
-    // write the solution for visualization
-    
     return _sys->get_sensitivity_solution(0);
 }
 

@@ -49,7 +49,15 @@ extern libMesh::LibMeshInit* __init;
 
 
 
-MAST::BeamPistonTheoryTimeAccurateAnalysis::BeamPistonTheoryTimeAccurateAnalysis() {
+MAST::BeamPistonTheoryTimeAccurateAnalysis::BeamPistonTheoryTimeAccurateAnalysis():
+_initialized(false) { }
+    
+
+void
+MAST::BeamPistonTheoryTimeAccurateAnalysis::init(libMesh::ElemType etype,
+                                                 bool if_nonlin) {
+    
+    libmesh_assert(!_initialized);
     
     // length of domain
     _length     = 10.;
@@ -192,6 +200,8 @@ MAST::BeamPistonTheoryTimeAccurateAnalysis::BeamPistonTheoryTimeAccurateAnalysis
         
         _discipline->add_volume_output((*e_it)->subdomain_id(), *output);
     }
+    
+    _initialized = true;
 }
 
 
@@ -202,6 +212,9 @@ MAST::BeamPistonTheoryTimeAccurateAnalysis::BeamPistonTheoryTimeAccurateAnalysis
 
 MAST::BeamPistonTheoryTimeAccurateAnalysis::~BeamPistonTheoryTimeAccurateAnalysis() {
     
+    if (!_initialized)
+        return;
+        
     delete _m_card;
     delete _p_card;
     
@@ -296,7 +309,8 @@ MAST::BeamPistonTheoryTimeAccurateAnalysis::get_parameter(const std::string &nm)
 const libMesh::NumericVector<Real>&
 MAST::BeamPistonTheoryTimeAccurateAnalysis::solve(bool if_write_output) {
     
-
+    libmesh_assert(_initialized);
+        
     // create the nonlinear assembly object
     MAST::StructuralTransientAssembly   assembly;
     
@@ -378,6 +392,8 @@ const libMesh::NumericVector<Real>&
 MAST::BeamPistonTheoryTimeAccurateAnalysis::sensitivity_solve(MAST::Parameter& p,
                                      bool if_write_output) {
     
+    libmesh_assert(_initialized);
+
     _discipline->add_parameter(p);
     
     // create the nonlinear assembly object

@@ -184,8 +184,9 @@ beam_euler_flutter_optim_con(int*    mode,
 
 
 MAST::BeamFSIFlutterSizingOptimization::
-BeamFSIFlutterSizingOptimization(GetPot& infile):
+BeamFSIFlutterSizingOptimization():
 MAST::FunctionEvaluation(),
+_initialized                            (false),
 _length                                 (0.),
 _k_lower                                (0.),
 _k_upper                                (0.),
@@ -239,7 +240,15 @@ _weight                                 (nullptr),
 _m_card                                 (nullptr),
 _p_card                                 (nullptr),
 _dirichlet_left                         (nullptr),
-_dirichlet_right                        (nullptr) {
+_dirichlet_right                        (nullptr) { }
+
+
+void
+MAST::BeamFSIFlutterSizingOptimization::init(GetPot &infile,
+                                             libMesh::ElemType etype,
+                                             bool if_nonlin) {
+    
+    libmesh_assert(!_initialized);
     
     // number of elements
     _n_elems    = infile("n_elems",   20);
@@ -685,12 +694,18 @@ _dirichlet_right                        (nullptr) {
         oss << "flutter_output_" << __init->comm().rank() << ".txt";
         _flutter_solver->set_output_file(oss.str());
     }
+    
+    _initialized = true;
 }
 
 
 
 
 MAST::BeamFSIFlutterSizingOptimization::~BeamFSIFlutterSizingOptimization() {
+
+    if (!_initialized)
+        return;
+
     
     delete _fluid_eq_sys;
     delete _fluid_mesh;
@@ -809,7 +824,7 @@ MAST::BeamFSIFlutterSizingOptimization::evaluate(const std::vector<Real>& dvars,
                                                  std::vector<bool>& eval_grads,
                                                  std::vector<Real>& grads) {
     
-    
+    libmesh_assert(_initialized);
     libmesh_assert_equal_to(dvars.size(), _n_vars);
     
     // set the parameter values equal to the DV value

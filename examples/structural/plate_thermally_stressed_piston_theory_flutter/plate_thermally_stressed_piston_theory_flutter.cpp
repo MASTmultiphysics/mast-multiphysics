@@ -77,7 +77,7 @@ init(libMesh::ElemType e_type, bool if_vk) {
     
     // initialize the mesh with one element
     libMesh::MeshTools::Generation::build_square(*_mesh,
-                                                 32, 32,
+                                                 8, 8,
                                                  0, _length,
                                                  0, _width,
                                                  e_type);

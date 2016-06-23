@@ -65,6 +65,12 @@ namespace MAST {
         
         
         /*!
+         *   initializes the object for specified characteristics
+         */
+        void init(libMesh::ElemType etype, bool if_nonlin);
+
+        
+        /*!
          *   @returns a pointer to the parameter of the specified name.
          *   If no parameter exists by the specified name, then a \p NULL
          *   pointer is returned and a message is printed with a valid list
@@ -87,6 +93,8 @@ namespace MAST {
          */
         Real sensitivity_solve(MAST::Parameter& p);
         
+        
+        bool _initialized;
         
         // create the mesh
         libMesh::SerialMesh*                     _mesh;

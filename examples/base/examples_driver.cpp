@@ -77,13 +77,15 @@ MAST::FunctionEvaluation *__my_func_eval = NULL;
 
 
 
-
 template <typename ValType>
 void analysis(const std::string& case_name,
+              const libMesh::ElemType etype,
+              const bool nonlinear,
               bool with_sens,
               std::string& par_name)  {
     
     ValType run_case;
+    run_case.init(etype, nonlinear);
     
     libMesh::out << "Running case: " << case_name << std::endl;
     run_case.solve(true);
@@ -97,18 +99,20 @@ void analysis(const std::string& case_name,
             run_case.sensitivity_solve(*p, true);
         }
     }
-
+    
 }
 
 
 
 template <typename ValType>
 void eigenvalue_analysis(const std::string& case_name,
+                         const libMesh::ElemType etype,
                          bool if_nonlin,
                          bool with_sens,
                          std::string& par_name)  {
     
-    ValType run_case(if_nonlin);
+    ValType run_case;
+    run_case.init(etype, if_nonlin);
     
     libMesh::out << "Running case: " << case_name << std::endl;
     run_case.solve(true);
@@ -131,10 +135,13 @@ void eigenvalue_analysis(const std::string& case_name,
 
 template <typename ValType>
 void flutter_analysis(const std::string& case_name,
-                         bool with_sens,
-                         std::string& par_name)  {
+                      libMesh::ElemType etype,
+                      const bool nonlinear,
+                      bool with_sens,
+                      std::string& par_name)  {
     
     ValType run_case;
+    run_case.init(etype, nonlinear);
     
     libMesh::out << "Running case: " << case_name << std::endl;
     run_case.solve(true);
@@ -143,85 +150,6 @@ void flutter_analysis(const std::string& case_name,
         if (p) {
             
             std::vector<Real> eig;
-            libMesh::out
-            << "Running sensitivity for case: " << case_name
-            << "  wrt  " << par_name << std::endl;
-            run_case.sensitivity_solve(*p);
-        }
-    }
-    
-}
-
-
-
-template <typename ValType>
-void plate_analysis(const std::string& case_name,
-                    const bool nonlinear,
-                    bool with_sens,
-                    std::string& par_name)  {
-    
-    ValType run_case;
-    run_case.init(libMesh::QUAD4, nonlinear);
-    
-    libMesh::out << "Running case: " << case_name << std::endl;
-    run_case.solve(true);
-    if (with_sens) {
-        MAST::Parameter* p = run_case.get_parameter(par_name);
-        if (p) {
-            
-            libMesh::out
-            << "Running sensitivity for case: " << case_name
-            << "  wrt  " << par_name << std::endl;
-            run_case.sensitivity_solve(*p, true);
-        }
-    }
-    
-}
-
-
-template <typename ValType>
-void plate_eigenvalue_analysis(const std::string& case_name,
-                    const bool nonlinear,
-                    bool with_sens,
-                    std::string& par_name)  {
-    
-    ValType run_case;
-    run_case.init(libMesh::QUAD4, nonlinear);
-    
-    libMesh::out << "Running case: " << case_name << std::endl;
-    run_case.solve(true);
-    if (with_sens) {
-        MAST::Parameter* p = run_case.get_parameter(par_name);
-        if (p) {
-            
-            std::vector<Real> eig;
-
-            libMesh::out
-            << "Running sensitivity for case: " << case_name
-            << "  wrt  " << par_name << std::endl;
-            run_case.sensitivity_solve(*p, eig);
-        }
-    }
-    
-}
-
-
-
-template <typename ValType>
-void plate_flutter_analysis(const std::string& case_name,
-                            const bool nonlinear,
-                            bool with_sens,
-                            std::string& par_name)  {
-    
-    ValType run_case;
-    run_case.init(libMesh::QUAD4, nonlinear);
-    
-    libMesh::out << "Running case: " << case_name << std::endl;
-    run_case.solve(true);
-    if (with_sens) {
-        MAST::Parameter* p = run_case.get_parameter(par_name);
-        if (p) {
-            
             libMesh::out
             << "Running sensitivity for case: " << case_name
             << "  wrt  " << par_name << std::endl;
@@ -241,67 +169,25 @@ void fluid_analysis(const std::string& case_name)  {
     libMesh::out << "Running case: " << case_name << std::endl;
     run_case.solve(true);
     /*if (with_sens) {
-        MAST::Parameter* p = run_case.get_parameter(par_name);
-        if (p) {
-            
-            libMesh::out
-            << "Running sensitivity for case: " << case_name
-            << "  wrt  " << par_name << std::endl;
-            run_case.sensitivity_solve(*p, true);
-        }
-    }*/
+     MAST::Parameter* p = run_case.get_parameter(par_name);
+     if (p) {
+     
+     libMesh::out
+     << "Running sensitivity for case: " << case_name
+     << "  wrt  " << par_name << std::endl;
+     run_case.sensitivity_solve(*p, true);
+     }
+     }*/
 }
 
 
 
 
 template <typename ValType>
-void optimization(const std::string& case_name, bool verify_grads)  {
-
-    
-    libMesh::out
-    << case_name << std::endl
-    << "  input.in should be provided in the working directory with"
-    << " desired parameter values."
-    << "  In absence of a parameter value, its default value will be used."
-    << std::endl
-    << "  Output per iteration is written to optimization_output.txt."
-    << std::endl;
-    
-    GetPot infile("input.in");
-    std::ofstream output;
-    output.open("optimization_output.txt", std::ofstream::out);
-    
-    MAST::GCMMAOptimizationInterface optimizer;
-    
-    // create and attach sizing optimization object
-    ValType func_eval(infile);
-    if (__init->comm().rank() == 0)
-        func_eval.set_output_file("optimization_output.txt");
-    __my_func_eval = &func_eval;
-
-    if (verify_grads) {
-        std::vector<Real> dvals(func_eval.n_vars());
-        std::fill(dvals.begin(), dvals.end(), 0.05);
-        libMesh::out << "******* Begin: Verifying gradients ***********" << std::endl;
-        func_eval.verify_gradients(dvals);
-        libMesh::out << "******* End: Verifying gradients ***********" << std::endl;
-    }
-
-    // attach and optimize
-    optimizer.attach_function_evaluation_object(func_eval);
-    optimizer.optimize();
-    
-    output.close();
-}
-
-
-
-
-template <typename ValType>
-void plate_optimization(const std::string& case_name,
-                        bool verify_grads,
-                        bool nonlinear)  {
+void optimization(const std::string& case_name,
+                  libMesh::ElemType etype,
+                  bool verify_grads,
+                  bool nonlinear)  {
     
     
     libMesh::out
@@ -324,7 +210,7 @@ void plate_optimization(const std::string& case_name,
     if (__init->comm().rank() == 0)
         func_eval.set_output_file("optimization_output.txt");
     __my_func_eval = &func_eval;
-    func_eval.init(infile, libMesh::TRI3, nonlinear);
+    func_eval.init(infile, etype, nonlinear);
     
     if (verify_grads) {
         std::vector<Real> dvals(func_eval.n_vars());
@@ -345,7 +231,7 @@ void plate_optimization(const std::string& case_name,
 
 
 int main(int argc, char* const argv[]) {
-
+    
     libMesh::LibMeshInit init(argc, argv);
     __init  = &init;
     
@@ -361,91 +247,200 @@ int main(int argc, char* const argv[]) {
     if_nonlin    = command_line("nonlinear",           false),
     verify_grads = command_line("verify_grads",        false);
     
-
     
     if (case_name == "bar_extension")
-        analysis<MAST::BarExtension>(case_name, with_sens, par_name);
+        analysis<MAST::BarExtension>(case_name,
+                                     libMesh::EDGE2,
+                                     if_nonlin,
+                                     with_sens,
+                                     par_name);
     else if (case_name == "beam_modal_analysis")
-        eigenvalue_analysis<MAST::BeamModalAnalysis>(case_name, false, with_sens, par_name);
+        eigenvalue_analysis<MAST::BeamModalAnalysis>(case_name,
+                                                     libMesh::EDGE2,
+                                                     false,
+                                                     with_sens,
+                                                     par_name);
     else if (case_name == "beam_thermally_stressed_modal_analysis")
-        eigenvalue_analysis<MAST::BeamThermallyStressedModalAnalysis>(case_name, if_nonlin, with_sens, par_name);
+        eigenvalue_analysis<MAST::BeamThermallyStressedModalAnalysis>(case_name,
+                                                                      libMesh::EDGE2,
+                                                                      if_nonlin,
+                                                                      with_sens,
+                                                                      par_name);
     else if (case_name == "beam_prestress_buckling_analysis")
-        eigenvalue_analysis<MAST::BeamColumnBucklingAnalysis>(case_name, false, with_sens, par_name);
+        eigenvalue_analysis<MAST::BeamColumnBucklingAnalysis>(case_name,
+                                                              libMesh::EDGE2,
+                                                              false,
+                                                              with_sens,
+                                                              par_name);
     else if (case_name == "beam_bending")
-        analysis<MAST::BeamBending>(case_name, with_sens, par_name);
+        analysis<MAST::BeamBending>(case_name,
+                                    libMesh::EDGE2,
+                                    if_nonlin,
+                                    with_sens,
+                                    par_name);
     else if (case_name == "beam_oscillating_load")
-        analysis<MAST::BeamOscillatingLoad>(case_name, with_sens, par_name);
+        analysis<MAST::BeamOscillatingLoad>(case_name,
+                                            libMesh::EDGE2,
+                                            if_nonlin,
+                                            with_sens,
+                                            par_name);
     else if (case_name == "beam_bending_with_offset")
-        analysis<MAST::BeamBendingWithOffset>(case_name, with_sens, par_name);
+        analysis<MAST::BeamBendingWithOffset>(case_name,
+                                              libMesh::EDGE2,
+                                              if_nonlin,
+                                              with_sens,
+                                              par_name);
     else if (case_name == "beam_bending_thermal_stress")
-        analysis<MAST::BeamBendingThermalStress>(case_name, with_sens, par_name);
+        analysis<MAST::BeamBendingThermalStress>(case_name,
+                                                 libMesh::EDGE2,
+                                                 if_nonlin,
+                                                 with_sens,
+                                                 par_name);
     else if (case_name == "beam_bending_optimization")
-        optimization<MAST::BeamBendingSizingOptimization>(case_name, verify_grads);
+        optimization<MAST::BeamBendingSizingOptimization>(case_name,
+                                                          libMesh::EDGE2,
+                                                          if_nonlin,
+                                                          verify_grads);
     else if (case_name == "beam_bending_single_functional_optimization")
         optimization<MAST::BeamBendingSingleFunctionalSizingOptimization>
-        (case_name, verify_grads);
+        (case_name,
+         libMesh::EDGE2,
+         if_nonlin,
+         verify_grads);
     else if (case_name == "beam_bending_section_offset_optimization")
         optimization<MAST::BeamBendingSectionOffsetSizingOptimization>
-        (case_name, verify_grads);
+        (case_name,
+         libMesh::EDGE2,
+         if_nonlin,
+         verify_grads);
     else if (case_name == "beam_bending_thermal_stress_optimization")
         optimization<MAST::BeamBendingThermalStressSizingOptimization>
-        (case_name, verify_grads);
+        (case_name,
+         libMesh::EDGE2,
+         if_nonlin,
+         verify_grads);
     else if (case_name == "beam_piston_theory_flutter_analysis")
-        flutter_analysis<MAST::BeamPistonTheoryFlutterAnalysis>(case_name, with_sens, par_name);
+        flutter_analysis<MAST::BeamPistonTheoryFlutterAnalysis>(case_name,
+                                                                libMesh::EDGE2,
+                                                                if_nonlin,
+                                                                with_sens,
+                                                                par_name);
     else if (case_name == "beam_piston_theory_time_accurate_analysis")
-        flutter_analysis<MAST::BeamPistonTheoryTimeAccurateAnalysis>(case_name, with_sens, par_name);
+        flutter_analysis<MAST::BeamPistonTheoryTimeAccurateAnalysis>(case_name,
+                                                                     libMesh::EDGE2,
+                                                                     if_nonlin,
+                                                                     with_sens,
+                                                                     par_name);
     else if (case_name == "membrane_extension_uniaxial")
-        analysis<MAST::MembraneExtensionUniaxial>(case_name, with_sens, par_name);
+        analysis<MAST::MembraneExtensionUniaxial>(case_name,
+                                                  libMesh::EDGE2,
+                                                  if_nonlin,
+                                                  with_sens,
+                                                  par_name);
     else if (case_name == "membrane_extension_biaxial")
-        analysis<MAST::MembraneExtensionBiaxial>(case_name, with_sens, par_name);
+        analysis<MAST::MembraneExtensionBiaxial>(case_name,
+                                                 libMesh::EDGE2,
+                                                 if_nonlin,
+                                                 with_sens,
+                                                 par_name);
     else if (case_name == "plate_modal_analysis")
-        plate_eigenvalue_analysis<MAST::PlateModalAnalysis>(case_name, if_nonlin, with_sens, par_name);
+        eigenvalue_analysis<MAST::PlateModalAnalysis>(case_name,
+                                                      libMesh::QUAD4,
+                                                      if_nonlin,
+                                                      with_sens,
+                                                      par_name);
     else if (case_name == "plate_thermally_stressed_modal_analysis")
-        plate_eigenvalue_analysis<MAST::PlateThermallyStressedModalAnalysis>(case_name, if_nonlin, with_sens, par_name);
+        eigenvalue_analysis<MAST::PlateThermallyStressedModalAnalysis>(case_name,
+                                                                       libMesh::QUAD4,
+                                                                       if_nonlin,
+                                                                       with_sens,
+                                                                       par_name);
     else if (case_name == "plate_prestress_buckling_analysis")
-        plate_eigenvalue_analysis<MAST::PlateBucklingPrestress>(case_name, true, with_sens, par_name);
+        eigenvalue_analysis<MAST::PlateBucklingPrestress>(case_name,
+                                                          libMesh::QUAD4,
+                                                          true,
+                                                          with_sens,
+                                                          par_name);
     else if (case_name == "plate_bending")
-        plate_analysis<MAST::PlateBending>
-        (case_name, if_nonlin, with_sens, par_name);
+        analysis<MAST::PlateBending>(case_name,
+                                     libMesh::QUAD4,
+                                     if_nonlin,
+                                     with_sens,
+                                     par_name);
     else if (case_name == "plate_oscillating_load")
-        plate_analysis<MAST::PlateOscillatingLoad>
-        (case_name, if_nonlin, with_sens, par_name);
+        analysis<MAST::PlateOscillatingLoad>(case_name,
+                                             libMesh::QUAD4,
+                                             if_nonlin,
+                                             with_sens,
+                                             par_name);
     else if (case_name == "plate_bending_section_offset")
-        plate_analysis<MAST::PlateBendingWithOffset>
-        (case_name, if_nonlin, with_sens, par_name);
+        analysis<MAST::PlateBendingWithOffset>(case_name,
+                                               libMesh::QUAD4,
+                                               if_nonlin,
+                                               with_sens,
+                                               par_name);
     else if (case_name == "plate_bending_thermal_stress")
-        plate_analysis<MAST::PlateBendingThermalStress>
-        (case_name, if_nonlin, with_sens, par_name);
+        analysis<MAST::PlateBendingThermalStress>(case_name,
+                                                  libMesh::QUAD4,
+                                                  if_nonlin,
+                                                  with_sens,
+                                                  par_name);
     else if (case_name == "plate_piston_theory_flutter_analysis")
-        plate_flutter_analysis<MAST::PlatePistonTheoryFlutterAnalysis>
-        (case_name, false, with_sens, par_name);
+        flutter_analysis<MAST::PlatePistonTheoryFlutterAnalysis>(case_name,
+                                                                 libMesh::QUAD4,
+                                                                 false,
+                                                                 with_sens,
+                                                                 par_name);
     else if (case_name == "plate_thermally_stressed_piston_theory_flutter_analysis")
-        plate_flutter_analysis<MAST::PlateThermallyStressedPistonTheoryFlutterAnalysis>
-        (case_name, if_nonlin, with_sens, par_name);
+        flutter_analysis<MAST::PlateThermallyStressedPistonTheoryFlutterAnalysis>
+        (case_name,
+         libMesh::QUAD4,
+         if_nonlin,
+         with_sens,
+         par_name);
     else if (case_name == "plate_bending_sizing_optimization")
-        plate_optimization<MAST::PlateBendingSizingOptimization>
-        (case_name, verify_grads, if_nonlin);
+        optimization<MAST::PlateBendingSizingOptimization>(case_name,
+                                                           libMesh::QUAD4,
+                                                           verify_grads,
+                                                           if_nonlin);
     else if (case_name == "plate_bending_single_functional_sizing_optimization")
-        plate_optimization<MAST::PlateBendingSingleStressFunctionalSizingOptimization>
-        (case_name, verify_grads, if_nonlin);
+        optimization<MAST::PlateBendingSingleStressFunctionalSizingOptimization>
+        (case_name,
+         libMesh::QUAD4,
+         verify_grads,
+         if_nonlin);
     else if (case_name == "plate_bending_section_offset_optimization")
-        plate_optimization<MAST::PlateBendingSectionOffsetSizingOptimization>
-        (case_name, verify_grads, if_nonlin);
+        optimization<MAST::PlateBendingSectionOffsetSizingOptimization>(case_name,
+                                                                        libMesh::QUAD4,
+                                                                        verify_grads,
+                                                                        if_nonlin);
     else if (case_name == "plate_bending_thermal_stress_optimization")
-        plate_optimization<MAST::PlateBendingThermalStressSizingOptimization>
-        (case_name, verify_grads, if_nonlin);
+        optimization<MAST::PlateBendingThermalStressSizingOptimization>(case_name,
+                                                                        libMesh::QUAD4,
+                                                                        verify_grads,
+                                                                        if_nonlin);
     else if (case_name == "stiffened_plate_bending_thermal_stress_optimization")
-        plate_optimization<MAST::StiffenedPlateBendingThermalStressSizingOptimization>
-        (case_name, verify_grads, if_nonlin);
+        optimization<MAST::StiffenedPlateBendingThermalStressSizingOptimization>
+        (case_name,
+         libMesh::QUAD4,
+         verify_grads,
+         if_nonlin);
     else if (case_name == "stiffened_plate_piston_theory_optimization")
-        plate_optimization<MAST::StiffenedPlatePistonTheorySizingOptimization>
-        (case_name, verify_grads, if_nonlin);
+        optimization<MAST::StiffenedPlatePistonTheorySizingOptimization>(case_name,
+                                                                         libMesh::QUAD4,
+                                                                         verify_grads,
+                                                                         if_nonlin);
     else if (case_name == "stiffened_plate_thermally_stressed_piston_theory_optimization")
-        plate_optimization<MAST::StiffenedPlateThermallyStressedPistonTheorySizingOptimization>
-        (case_name, verify_grads, if_nonlin);
+        optimization<MAST::StiffenedPlateThermallyStressedPistonTheorySizingOptimization>
+        (case_name,
+         libMesh::QUAD4,
+         verify_grads,
+         if_nonlin);
     else if (case_name == "topology_optimization_2D")
-        plate_optimization<MAST::TopologyOptimization2D>
-        (case_name, verify_grads, if_nonlin);
+        optimization<MAST::TopologyOptimization2D>(case_name,
+                                                   libMesh::QUAD4,
+                                                   verify_grads,
+                                                   if_nonlin);
     else if (case_name == "panel_inviscid_analysis_2d")
         fluid_analysis<MAST::PanelInviscidAnalysis2D>(case_name);
     else if (case_name == "panel_inviscid_analysis_3d_half_domain")
@@ -461,15 +456,26 @@ int main(int argc, char* const argv[]) {
     else if (case_name == "beam_fsi_nonuniform_aero_base_flutter_analysis")
         fluid_analysis<MAST::BeamEulerFSIFlutterNonuniformAeroBaseAnalysis>(case_name);
     else if (case_name == "beam_fsi_flutter_optimization")
-        optimization<MAST::BeamFSIFlutterSizingOptimization>(case_name, verify_grads);
+        optimization<MAST::BeamFSIFlutterSizingOptimization>(case_name,
+                                                             libMesh::EDGE2,
+                                                             verify_grads,
+                                                             if_nonlin);
     else if (case_name == "plate_fsi_flutter_analysis")
         fluid_analysis<MAST::PlateEulerFSIFlutterAnalysis>(case_name);
     else if (case_name == "plate_fsi_half_domain_flutter_analysis")
         fluid_analysis<MAST::PlateEulerFSIHalfDomainFlutterAnalysis>(case_name);
     else if (case_name == "bar_steady_state_conduction")
-        analysis<MAST::BarSteadyState>(case_name, with_sens, par_name);
+        analysis<MAST::BarSteadyState>(case_name,
+                                       libMesh::EDGE2,
+                                       if_nonlin,
+                                       with_sens,
+                                       par_name);
     else if (case_name == "bar_transient_conduction")
-        analysis<MAST::BarTransient>(case_name, with_sens, par_name);
+        analysis<MAST::BarTransient>(case_name,
+                                     libMesh::EDGE2,
+                                     if_nonlin,
+                                     with_sens,
+                                     par_name);
     else {
         libMesh::out
         << "Please run the driver with the name of example specified as: \n"

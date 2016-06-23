@@ -40,6 +40,7 @@ BOOST_FIXTURE_TEST_SUITE  (Structural1DBeamModalAnalysis,
 
 BOOST_AUTO_TEST_CASE   (BeamModalSolution) {
     
+    this->init(libMesh::EDGE2, false);
 
     const Real
     tol      = 1.e-2;

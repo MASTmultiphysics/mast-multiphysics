@@ -62,6 +62,11 @@ namespace MAST {
         
         ~BeamPistonTheoryTimeAccurateAnalysis();
         
+        /*!
+         *   initializes the object for specified characteristics
+         */
+        void init(libMesh::ElemType etype, bool if_nonlin);
+
         
         /*!
          *   @returns a pointer to the parameter of the specified name.
@@ -90,6 +95,8 @@ namespace MAST {
          *   clears the stress data structures for a followup analysis
          */
         void clear_stresss();
+        
+        bool _initialized;
         
         // length of domain
         Real _length;
