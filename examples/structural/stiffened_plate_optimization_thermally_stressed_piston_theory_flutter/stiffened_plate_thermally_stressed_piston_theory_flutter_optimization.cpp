@@ -981,14 +981,18 @@ evaluate(const std::vector<Real>& dvars,
     //////////////////////////////////////////////////////////////////////
     _sys->solution->zero();
     this->clear_stresss();
+    // solve for the steady state at zero velocity
+    (*_velocity) = 0.;
     
+    
+    //////////////////////////////////////////////////////////////////////
+    // steady state solution
+    //////////////////////////////////////////////////////////////////////
     MAST::StiffenedPlateSteadySolverInterface steady_solve(*this,
                                                            if_write_output,
                                                            false,
                                                            _n_load_steps);
 
-    // solve for the steady state at zero velocity
-    (*_velocity) = 0.;
     steady_solve.solve();
     // use this solution as the base solution later if no flutter is found.
     libMesh::NumericVector<Real>&

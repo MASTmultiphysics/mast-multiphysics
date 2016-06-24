@@ -213,8 +213,11 @@ void optimization(const std::string& case_name,
     func_eval.init(infile, etype, nonlinear);
     
     if (verify_grads) {
-        std::vector<Real> dvals(func_eval.n_vars());
-        std::fill(dvals.begin(), dvals.end(), 0.05);
+        std::vector<Real>
+        dvals(func_eval.n_vars()),
+        dummy(func_eval.n_vars());
+        func_eval.init_dvar(dvals, dummy, dummy);
+
         libMesh::out << "******* Begin: Verifying gradients ***********" << std::endl;
         func_eval.verify_gradients(dvals);
         libMesh::out << "******* End: Verifying gradients ***********" << std::endl;

@@ -24,6 +24,7 @@
 #include "examples/structural/stiffened_plate_optimization_piston_theory_flutter/stiffened_plate_piston_theory_flutter_optimization.h"
 #include "examples/structural/stiffened_plate_optimization/stiffened_plate_optimization_base.h"
 #include "examples/structural/beam_bending/beam_bending.h"
+#include "examples/base/plot_results.h"
 #include "driver/driver_base.h"
 #include "base/nonlinear_system.h"
 #include "elasticity/stress_output_base.h"
@@ -770,43 +771,8 @@ evaluate(const std::vector<Real>& dvars,
     //////////////////////////////////////////////////////////////////////
     _sys->solution->zero();
     this->clear_stresss();
-    
-    
-    /*
-    //////////////////////////////////////////////////////////////////////
-    // now solve using appropriate number of load steps this load step
-    //////////////////////////////////////////////////////////////////////
-    bool if_vk = (_p_card_plate->strain_type() == MAST::VON_KARMAN_STRAIN);
-    
-     _nonlinear_assembly->attach_discipline_and_system(*_discipline, *_structural_sys);
-
-    // set the number of load steps
-    unsigned int
-    n_steps = 1;
-    if (if_vk) n_steps = _n_load_steps;
-    
-    Real
-    T0      = (*_temp)();
-    
-    libMesh::ExodusII_IO out(*_mesh);
-    // now iterate over the load steps
-    for (unsigned int i=0; i<n_steps; i++) {
-        libMesh::out
-        << "Load step: " << i << std::endl;
-        
-        (*_temp)()  =  T0*(i+1.)/(1.*n_steps);
-        _sys->solve();
-        _assembly->calculate_outputs(*(_sys->solution));
-        _discipline->plot_stress_strain_data<libMesh::ExodusII_IO>("stress_out.exo");
-        out.write_timestep("out.exo", *_eq_sys, i+1, (i+1.)/n_steps);
-        this->clear_stresss();
-    }
-    
-    // calculate the stresses
-    _nonlinear_assembly->calculate_outputs(*(_sys->solution));
-    _nonlinear_assembly->clear_discipline_and_system();
-    */
-    
+    // set the velocity to zero for the analysis
+    (*_velocity) = 0.;
     
     //////////////////////////////////////////////////////////////////////
     // perform the modal and flutter analysis
@@ -870,6 +836,8 @@ evaluate(const std::vector<Real>& dvars,
                                                                 *_eq_sys);
         }
     }
+    // solution needs to be zeroed
+    _sys->solution->zero();
     
     
     //////////////////////////////////////////////////////////////////////
@@ -890,65 +858,11 @@ evaluate(const std::vector<Real>& dvars,
     _fsi_assembly->clear_discipline_and_system();
     _flutter_solver->clear_assembly_object();
     
-    if (sol.second && if_write_output) {
-        // now write the flutter mode to an output file.
-        // Flutter mode Y = sum_i (X_i * (xi_re + xi_im)_i)
-        // using the right eigenvector of the system.
-        // where i is the structural mode
-        //
-        // The time domain simulation assumes the temporal solution to be
-        // X(t) = (Y_re + i Y_im) exp(p t)
-        //      = (Y_re + i Y_im) exp(p_re t) * (cos(p_im t) + i sin(p_im t))
-        //      = exp(p_re t) (Z_re + i Z_im ),
-        // where Z_re = Y_re cos(p_im t) - Y_im sin(p_im t), and
-        //       Z_im = Y_re sin(p_im t) + Y_im cos(p_im t).
-        //
-        // We write the simulation of the mode over a period of oscillation
-        //
-        
-        
-        // first calculate the real and imaginary vectors
-        std::auto_ptr<libMesh::NumericVector<Real> >
-        re(_sys->solution->zero_clone().release()),
-        im(_sys->solution->zero_clone().release());
-        
-        
-        // first the real part
-        _sys->solution->zero();
-        for (unsigned int i=0; i<_basis.size(); i++) {
-            re->add(sol.second->eig_vec_right(i).real(), *_basis[i]);
-            im->add(sol.second->eig_vec_right(i).imag(), *_basis[i]);
-        }
-        re->close();
-        im->close();
-        
-        // now open the output processor for writing
-        libMesh::ExodusII_IO flutter_mode_output(*_mesh);
-        
-        // use N steps in a time-period
-        Real
-        t_sys = _sys->time,
-        pi    = acos(-1.);
-        unsigned int
-        N_divs = 100;
-        
-        
-        for (unsigned int i=0; i<=N_divs; i++) {
-            _sys->time   =  2.*pi*(i*1.)/(N_divs*1.);
-            
-            _sys->solution->zero();
-            _sys->solution->add( cos(_sys->time), *re);
-            _sys->solution->add(-sin(_sys->time), *im);
-            _sys->solution->close();
-            flutter_mode_output.write_timestep("flutter_mode.exo",
-                                               *_eq_sys,
-                                               i+1,
-                                               _sys->time);
-        }
-        
-        // reset the system time
-        _sys->time = t_sys;
-    }
+    if (sol.second && if_write_output)
+        MAST::plot_structural_flutter_solution("flutter_mode.exo",
+                                               *_sys,
+                                               sol.second->eig_vec_right,
+                                               _basis);
     
     //////////////////////////////////////////////////////////////////////
     // get the objective and constraints
