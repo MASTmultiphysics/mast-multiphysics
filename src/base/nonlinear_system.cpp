@@ -480,25 +480,28 @@ eigenproblem_sensitivity_solve (const libMesh::ParameterVector& parameters,
     //
     //    the denominator remain constant for all sensitivity calculations.
     //
-    std::vector<Real> denom(_n_converged_eigenpairs, 0.);
-    sens.resize(_n_converged_eigenpairs*parameters.size(), 0.);
+    const unsigned int
+    nconv = std::min(_n_requested_eigenpairs, _n_converged_eigenpairs);
+    std::vector<Real>
+    denom(nconv, 0.);
+    sens.resize(nconv*parameters.size(), 0.);
     
     std::vector<libMesh::NumericVector<Real>*>
-    x_right (_n_converged_eigenpairs);
+    x_right (nconv);
     //x_left  (_n_converged_eigenpairs);
     
     std::auto_ptr<libMesh::NumericVector<Real> >
     tmp     (this->solution->zero_clone().release());
 
     std::vector<Real>
-    eig (_n_converged_eigenpairs);
+    eig (nconv);
     
     Real
     re  = 0.,
     im  = 0.;
     
     
-    for (unsigned int i=0; i<_n_converged_eigenpairs; i++) {
+    for (unsigned int i=0; i<nconv; i++) {
 
         x_right[i] = (this->solution->zero_clone().release());
         
@@ -536,13 +539,12 @@ eigenproblem_sensitivity_solve (const libMesh::ParameterVector& parameters,
     for (unsigned int p=0; p<parameters.size(); p++) {
         
         // calculate sensitivity of matrix quantities
-        this->solution->zero();
         this->assemble_eigensystem_sensitivity(parameters, p);
         
         // now calculate sensitivity of each eigenvalue for the parameter
-        for (unsigned int i=0; i<_n_converged_eigenpairs; i++) {
+        for (unsigned int i=0; i<nconv; i++) {
             
-            num = p*_n_converged_eigenpairs+i;
+            num = p*nconv+i;
 
             switch (_eigen_problem_type) {
                     

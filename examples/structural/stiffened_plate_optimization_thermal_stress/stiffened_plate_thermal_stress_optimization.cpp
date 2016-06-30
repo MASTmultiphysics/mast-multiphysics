@@ -531,6 +531,7 @@ init(GetPot& infile,
         e_set.insert(*e_it);
         output->set_elements_in_domain(e_set);
         output->set_points_for_evaluation(pts);
+        output->set_volume_loads(_discipline->volume_loads());
         _outputs.push_back(output);
         
         _discipline->add_volume_output((*e_it)->subdomain_id(), *output);
@@ -743,14 +744,6 @@ MAST::StiffenedPlateBendingThermalStressSizingOptimization::evaluate(const std::
     //////////////////////////////////////////////////////////////////////
     // get the objective and constraints
     //////////////////////////////////////////////////////////////////////
-    
-    // now get the displacement constraint
-    //pt(0) = 3.;
-    //DenseRealVector disp_vec;
-    //(*_disp_function)(pt, 0., disp_vec);
-    // reference displacement value
-    // w < w0 => w/w0 < 1. => w/w0 - 1. < 0
-    //disp = disp_vec(0);
     
     // set the function and objective values
     obj = wt;

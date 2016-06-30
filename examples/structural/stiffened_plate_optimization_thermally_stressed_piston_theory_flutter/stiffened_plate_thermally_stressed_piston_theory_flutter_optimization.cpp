@@ -7,7 +7,7 @@
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
  *
-3 * This library is distributed in the hope that it will be useful,
+ * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
@@ -388,7 +388,7 @@ init(GetPot& infile,
         new MAST::Parameter(oss.str(), infile("thickness", 0.002));
         
         MAST::ConstantFieldFunction* h_f =
-        new MAST::ConstantFieldFunction("h", *h);
+        new MAST::ConstantFieldFunction(oss.str(), *h);
         
         // add this to the thickness map
         th_station_vals.insert(std::pair<Real, MAST::FieldFunction<Real>*>
@@ -510,7 +510,7 @@ init(GetPot& infile,
         // field function
         for (unsigned int j=0; j<_n_dv_stations_x; j++) {
             std::ostringstream oss;
-            oss << "h_y_" << j;
+            oss << "h_y_" << j << "_stiff_" << i;
             
             // now we need a parameter that defines the thickness at the
             // specified station and a constant function that defines the
@@ -519,7 +519,7 @@ init(GetPot& infile,
             new MAST::Parameter(oss.str(), infile("thickness", 0.002));
             
             MAST::ConstantFieldFunction* h_y_f =
-            new MAST::ConstantFieldFunction("hy", *h_y);
+            new MAST::ConstantFieldFunction(oss.str(), *h_y);
             
             // add this to the thickness map
             th_station_vals.insert(std::pair<Real, MAST::FieldFunction<Real>*>
@@ -621,6 +621,7 @@ init(GetPot& infile,
         e_set.insert(*e_it);
         output->set_elements_in_domain(e_set);
         output->set_points_for_evaluation(pts);
+        output->set_volume_loads(_discipline->volume_loads());
         _outputs.push_back(output);
         
         _discipline->add_volume_output((*e_it)->subdomain_id(), *output);
@@ -714,6 +715,8 @@ MAST::StiffenedPlateThermallyStressedPistonTheorySizingOptimization::
         
         delete _flutter_solver;
         delete _piston_bc;
+        
+        delete _nsp;
         
         
         // iterate over the output quantities and delete them
@@ -1010,8 +1013,12 @@ evaluate(const std::vector<Real>& dvars,
     //////////////////////////////////////////////////////////////////////
     // perform the modal and flutter analysis
     //////////////////////////////////////////////////////////////////////
+    // modal analysis is about the base state exclusing aerodynamic loads.
+    // So, they will act as generalized coordinates that will not provide
+    // diagonal reduced order mass/stiffness operator. The eigenvalues
+    // will also be independent of velocity.
     _modal_assembly->attach_discipline_and_system(*_discipline, *_structural_sys);
-    _modal_assembly->set_base_solution(steady_solve.solution());
+    _modal_assembly->set_base_solution(steady_sol_wo_aero);
     _sys->eigenproblem_solve();
     _modal_assembly->clear_discipline_and_system();
     
@@ -1089,6 +1096,13 @@ evaluate(const std::vector<Real>& dvars,
     // perform flutter analysis only if all modal eigenvalues are positive
     if (if_all_eig_positive) {
         
+        // the flutter solver calculates the stability eigenvalues about
+        // an equilibrium state that includes the aerodynamic loads. The
+        // stability analysis starts with V=0, which corresponds to the
+        // equilibrium state calculated for the thermal loads. However,
+        // a new equilibrium state is calculated for each velocity. So,
+        // the flutter root, if found will depend on the equilibrium state
+        // which, in turn, depends on the velocity.
         _fsi_assembly->attach_discipline_and_system(*_discipline,
                                                     *_structural_sys);
         _fsi_assembly->set_base_solution(steady_solve.solution());
@@ -1106,12 +1120,19 @@ evaluate(const std::vector<Real>& dvars,
         _fsi_assembly->clear_discipline_and_system();
         _flutter_solver->clear_assembly_object();
         
+    
         // if the flutter root was not found, then we will use the steady sol wo
         // aero as the base solution for all the following computations
+        // Otherwise, the equilibrium state is dependent on the velocity.
         if (!sol.first) {
+            
+            // velocity should be set to zero for all residual calculations
+            (*_velocity) = 0.;
             steady_solve.solution() = steady_sol_wo_aero;
             *_sys->solution         = steady_sol_wo_aero;
         }
+        
+
         
         // now calculate the stress output based on the velocity output
         _nonlinear_assembly->attach_discipline_and_system(*_discipline, *_structural_sys);
@@ -1196,18 +1217,14 @@ evaluate(const std::vector<Real>& dvars,
             _sys->time = t_sys;
         }
     }
+    else
+        libMesh::out
+        << "** Negative frequency: skipping flutter analysis **"
+        << std::endl;
     
     //////////////////////////////////////////////////////////////////////
     // get the objective and constraints
     //////////////////////////////////////////////////////////////////////
-    
-    // now get the displacement constraint
-    //pt(0) = 3.;
-    //DenseRealVector disp_vec;
-    //(*_disp_function)(pt, 0., disp_vec);
-    // reference displacement value
-    // w < w0 => w/w0 < 1. => w/w0 - 1. < 0
-    //disp = disp_vec(0);
     
     // set the function and objective values
     obj = wt;
@@ -1274,11 +1291,15 @@ evaluate(const std::vector<Real>& dvars,
         params.resize(1);
         
         // copy the solution to be used for sensitivity
+        // If a flutter solution was found, then this depends on velocity.
+        // Otherwise, it is independent of velocity
         *_sys->solution = steady_solve.solution();
 
         // first do sensitivity analysis wrt velocity, which is necessary for
         // flutter sensitivity.
         libMesh::NumericVector<Real>& dXdV = _sys->add_vector("sol_V_sens");
+        std::vector<Real> dsigma_dV(_n_elems, 0.);
+        
         if (sol.first) {
             
             params[0] = _velocity->ptr();
@@ -1286,6 +1307,17 @@ evaluate(const std::vector<Real>& dvars,
                                                               *_structural_sys);
             _sys->sensitivity_solve(params);
             dXdV = _sys->get_sensitivity_solution(0);
+            
+            // This accounts for the dependence of equilibrium state on velocity
+            // dsigma/dp   =  par sigma/par p + par sigma/ par V dV/dp
+            this->clear_stresss();
+            _nonlinear_assembly->calculate_output_sensitivity(params,
+                                                              true,
+                                                              *(_sys->solution));
+            for (unsigned int j=0; j<_n_elems; j++)
+                dsigma_dV[j] = _outputs[j]->von_Mises_p_norm_functional_sensitivity_for_all_elems
+                (pval, _velocity);
+            
             _nonlinear_assembly->clear_discipline_and_system();
         }
         else
@@ -1314,26 +1346,17 @@ evaluate(const std::vector<Real>& dvars,
             
             _nonlinear_assembly->clear_discipline_and_system();
 
-            // copy the sensitivity values in the output
+            // copy the sensitivity values in the output. This accounts for the
+            // sensitivity of state wrt parameter. However, if a flutter root
+            // was found, the state depends on velocity, which depends on the
+            // parameter. Hence, the total sensitivity of stress constraint
+            // would need to include the latter component, which was added
+            // above.
             for (unsigned int j=0; j<_n_elems; j++)
                 grads[(i*_n_ineq) + (j+_n_eig+1)] = _dv_scaling[i]/_stress_limit *
                 _outputs[j]->von_Mises_p_norm_functional_sensitivity_for_all_elems
                 (pval, _problem_parameters[i]);
             
-
-            // calculate the sensitivity of the eigenvalues
-            std::vector<Real> eig_sens(nconv);
-            _modal_assembly->set_base_solution(steady_solve.solution());
-            _modal_assembly->set_base_solution(dXdp, true);
-            _modal_assembly->attach_discipline_and_system(*_discipline, *_structural_sys);
-            _sys->eigenproblem_sensitivity_solve(params, eig_sens);
-            _modal_assembly->clear_discipline_and_system();
-            
-            for (unsigned int j=0; j<nconv; j++)
-                grads[(i*_n_ineq) + j] = -_dv_scaling[i]*eig_sens[j]/1.e7;
-            
-            
-
             // if all eigenvalues are positive, calculate at the sensitivity of
             // flutter velocity
             if (if_all_eig_positive && sol.first) {
@@ -1357,10 +1380,47 @@ evaluate(const std::vector<Real>& dvars,
                 grads[(i*_n_ineq) + (_n_eig+0)]  =  -(_dv_scaling[i] *
                                                       _V0_flutter/pow(sol.second->V, 2) *
                                                       sol.second->V_sens);
+                
+                // add the partial derivative of stress due to velocity sensitivity
+                for (unsigned int j=0; j<_n_elems; j++)
+                    grads[(i*_n_ineq) + (j+_n_eig+1)] += _dv_scaling[i]/_stress_limit *
+                    dsigma_dV[j] * sol.second->V_sens;
+                
+                // The natural frequencies were calculated about a base solution
+                // that did not include the aerodynamic loads. Hence, we will
+                // use a different base soltuion here that what was used for
+                // flutter solution. However, a new sensitivity solution is required
+                // for this state, since the previous dXdp was calculated for
+                // X including aero loads.
+                dXdp.zero();
+                
+                // sensitivity analysis
+                (*_velocity) = 0.;
+                *_sys->solution = steady_sol_wo_aero;
+                _nonlinear_assembly->attach_discipline_and_system(*_discipline,
+                                                                  *_structural_sys);
+                _sys->sensitivity_solve(params);
+                
+                _nonlinear_assembly->clear_discipline_and_system();
             }
             else
                 // if no root was found, then set the sensitivity to a zero value
                 grads[(i*_n_ineq) + (_n_eig+0)]  =  0.;
+            
+            
+            // calculate the sensitivity of the eigenvalues
+            std::vector<Real> eig_sens(nconv);
+            _modal_assembly->set_base_solution(steady_sol_wo_aero);
+            _modal_assembly->set_base_solution(dXdp, true);
+            _modal_assembly->attach_discipline_and_system(*_discipline, *_structural_sys);
+            // this should not be necessary, but currently the eigenproblem sensitivity
+            // depends on availability of matrices before sensitivity
+            _sys->assemble_eigensystem();
+            _sys->eigenproblem_sensitivity_solve(params, eig_sens);
+            _modal_assembly->clear_discipline_and_system();
+            
+            for (unsigned int j=0; j<nconv; j++)
+                grads[(i*_n_ineq) + j] = -_dv_scaling[i]*eig_sens[j]/1.e7;
         }
     }
 }

@@ -73,7 +73,7 @@ MAST::PlatePistonTheoryFlutterAnalysis::init(libMesh::ElemType e_type,
     
     // initialize the mesh with one element
     libMesh::MeshTools::Generation::build_square(*_mesh,
-                                                 8, 8,
+                                                 32, 32,
                                                  0, _length,
                                                  0, _width,
                                                  e_type);

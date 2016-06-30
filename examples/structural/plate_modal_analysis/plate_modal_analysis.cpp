@@ -60,8 +60,8 @@ MAST::PlateModalAnalysis::init(libMesh::ElemType e_type,
     
     
     // length of domain
-    _length     = 0.50,
-    _width      = 0.25;
+    _length     = 0.30,
+    _width      = 0.30;
     
     
     // create the mesh
@@ -69,7 +69,7 @@ MAST::PlateModalAnalysis::init(libMesh::ElemType e_type,
     
     // initialize the mesh with one element
     libMesh::MeshTools::Generation::build_square(*_mesh,
-                                                 16, 16,
+                                                 32, 32,
                                                  0, _length,
                                                  0, _width,
                                                  e_type);
@@ -126,9 +126,9 @@ MAST::PlateModalAnalysis::init(libMesh::ElemType e_type,
     // create the property functions and add them to the
     
     _th              = new MAST::Parameter("th",     0.006);
-    _E               = new MAST::Parameter("E",      72.e9);
+    _E               = new MAST::Parameter("E",      70.e9);
     _rho             = new MAST::Parameter("rho",    2.8e3);
-    _nu              = new MAST::Parameter("nu",      0.33);
+    _nu              = new MAST::Parameter("nu",      0.30);
     _kappa           = new MAST::Parameter("kappa",  5./6.);
     _zero            = new MAST::Parameter("zero",      0.);
     
@@ -347,6 +347,9 @@ MAST::PlateModalAnalysis::sensitivity_solve(MAST::Parameter& p,
     assembly.attach_discipline_and_system(*_discipline, *_structural_sys);
     _sys->eigenproblem_sensitivity_solve(params, eig);
     assembly.clear_discipline_and_system();
+    
+    for (unsigned int i=0; i<eig.size(); i++)
+        std::cout << eig[i] << std::endl;
     
     _discipline->remove_parameter(p);
 }

@@ -75,7 +75,7 @@ init(libMesh::ElemType e_type, bool if_vk) {
     
     // initialize the mesh with one element
     libMesh::MeshTools::Generation::build_square(*_mesh,
-                                                 8, 8,
+                                                 32, 32,
                                                  0, _length,
                                                  0, _width,
                                                  e_type);
@@ -417,6 +417,10 @@ MAST::PlateThermallyStressedModalAnalysis::solve(bool if_write_output,
         // if any of the eigenvalues is negative, then use the mode of the
         // smallest eigenvalue to perturb the deformation shape
         if (re < 0. && n_perturb == 0) {
+            libMesh::out
+            << "** Negative Frequency: Perturbing panel in first mode. **"
+            << std::endl;
+            
             *_sys->solution = base_sol;
             _sys->solution->scale(1./_sys->solution->linfty_norm()*1.e-1);
             n_perturb++;

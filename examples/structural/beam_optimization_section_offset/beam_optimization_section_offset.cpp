@@ -384,14 +384,6 @@ MAST::BeamBendingSectionOffsetSizingOptimization::evaluate(const std::vector<Rea
     // get the objective and constraints
     //////////////////////////////////////////////////////////////////////
 
-    // now get the displacement constraint
-    //pt(0) = 3.;
-    //DenseRealVector disp_vec;
-    //(*_disp_function)(pt, 0., disp_vec);
-    // reference displacement value
-    // w < w0 => w/w0 < 1. => w/w0 - 1. < 0
-    //disp = disp_vec(0);
-    
     // set the function and objective values
     obj = wt;
     

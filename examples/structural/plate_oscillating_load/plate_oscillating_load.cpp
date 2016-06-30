@@ -285,6 +285,7 @@ MAST::PlateOscillatingLoad::init(libMesh::ElemType e_type,
         e_set.insert(*e_it);
         output->set_elements_in_domain(e_set);
         output->set_points_for_evaluation(pts);
+        output->set_volume_loads(_discipline->volume_loads());
         _outputs.push_back(output);
         
         _discipline->add_volume_output((*e_it)->subdomain_id(), *output);

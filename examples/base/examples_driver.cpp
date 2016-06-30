@@ -222,10 +222,12 @@ void optimization(const std::string& case_name,
         func_eval.verify_gradients(dvals);
         libMesh::out << "******* End: Verifying gradients ***********" << std::endl;
     }
-    
-    // attach and optimize
-    optimizer.attach_function_evaluation_object(func_eval);
-    optimizer.optimize();
+    else {
+
+        // attach and optimize
+        optimizer.attach_function_evaluation_object(func_eval);
+        optimizer.optimize();
+    }
     
     output.close();
 }
