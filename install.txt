@@ -20,7 +20,7 @@ MAST depends on the following libraries:
    to the commit and apply the patch:
       $> git clone git://github.com/libMesh/libmesh.git
       $> cd libmesh
-      $> git reset --hard 9f177aa11d3a57068c1e26f341aac481f4273156
+      $> git reset --hard ead2942519ec7b76cb5fc029dee1004866de1559 
       $> patch -p1 < MAST_DIR/contrib/libmesh_patch
 
 -- MPI
