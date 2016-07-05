@@ -1119,108 +1119,108 @@ evaluate(const std::vector<Real>& dvars,
         _flutter_solver->print_sorted_roots();
         _fsi_assembly->clear_discipline_and_system();
         _flutter_solver->clear_assembly_object();
-        
-    
-        // if the flutter root was not found, then we will use the steady sol wo
-        // aero as the base solution for all the following computations
-        // Otherwise, the equilibrium state is dependent on the velocity.
-        if (!sol.first) {
-            
-            // velocity should be set to zero for all residual calculations
-            (*_velocity) = 0.;
-            steady_solve.solution() = steady_sol_wo_aero;
-            *_sys->solution         = steady_sol_wo_aero;
-        }
-        
-
-        
-        // now calculate the stress output based on the velocity output
-        _nonlinear_assembly->attach_discipline_and_system(*_discipline, *_structural_sys);
-        _nonlinear_assembly->calculate_outputs(steady_solve.solution());
-        _nonlinear_assembly->clear_discipline_and_system();
-        
-        
-        if (if_write_output) {
-            
-            libMesh::out << "Writing output to : output.exo" << std::endl;
-            
-            std::set<std::string> nm;
-            nm.insert(_sys->name());
-            // write the solution for visualization
-            libMesh::ExodusII_IO(*_mesh).write_equation_systems("output.exo",
-                                                                *_eq_sys,
-                                                                &nm);
-            
-            _discipline->plot_stress_strain_data<libMesh::ExodusII_IO>("stress_output.exo");
-        }
-        
-        
-        
-        
-        if (sol.second && if_write_output) {
-            // now write the flutter mode to an output file.
-            // Flutter mode Y = sum_i (X_i * (xi_re + xi_im)_i)
-            // using the right eigenvector of the system.
-            // where i is the structural mode
-            //
-            // The time domain simulation assumes the temporal solution to be
-            // X(t) = (Y_re + i Y_im) exp(p t)
-            //      = (Y_re + i Y_im) exp(p_re t) * (cos(p_im t) + i sin(p_im t))
-            //      = exp(p_re t) (Z_re + i Z_im ),
-            // where Z_re = Y_re cos(p_im t) - Y_im sin(p_im t), and
-            //       Z_im = Y_re sin(p_im t) + Y_im cos(p_im t).
-            //
-            // We write the simulation of the mode over a period of oscillation
-            //
-            
-            
-            // first calculate the real and imaginary vectors
-            std::auto_ptr<libMesh::NumericVector<Real> >
-            re(_sys->solution->zero_clone().release()),
-            im(_sys->solution->zero_clone().release());
-            
-            
-            // first the real part
-            _sys->solution->zero();
-            for (unsigned int i=0; i<_basis.size(); i++) {
-                re->add(sol.second->eig_vec_right(i).real(), *_basis[i]);
-                im->add(sol.second->eig_vec_right(i).imag(), *_basis[i]);
-            }
-            re->close();
-            im->close();
-            
-            // now open the output processor for writing
-            libMesh::ExodusII_IO flutter_mode_output(*_mesh);
-            
-            // use N steps in a time-period
-            Real
-            t_sys = _sys->time,
-            pi    = acos(-1.);
-            unsigned int
-            N_divs = 100;
-            
-            
-            for (unsigned int i=0; i<=N_divs; i++) {
-                _sys->time   =  2.*pi*(i*1.)/(N_divs*1.);
-                
-                _sys->solution->zero();
-                _sys->solution->add( cos(_sys->time), *re);
-                _sys->solution->add(-sin(_sys->time), *im);
-                _sys->solution->close();
-                flutter_mode_output.write_timestep("flutter_mode.exo",
-                                                   *_eq_sys,
-                                                   i+1,
-                                                   _sys->time);
-            }
-            
-            // reset the system time
-            _sys->time = t_sys;
-        }
     }
     else
         libMesh::out
         << "** Negative frequency: skipping flutter analysis **"
         << std::endl;
+    
+    
+    // if the flutter root was not found, then we will use the steady sol wo
+    // aero as the base solution for all the following computations
+    // Otherwise, the equilibrium state is dependent on the velocity.
+    if (!sol.second) {
+        
+        // velocity should be set to zero for all residual calculations
+        (*_velocity) = 0.;
+        steady_solve.solution() = steady_sol_wo_aero;
+        *_sys->solution         = steady_sol_wo_aero;
+    }
+    
+    
+    
+    // now calculate the stress output based on the velocity output
+    _nonlinear_assembly->attach_discipline_and_system(*_discipline, *_structural_sys);
+    _nonlinear_assembly->calculate_outputs(steady_solve.solution());
+    _nonlinear_assembly->clear_discipline_and_system();
+    
+    
+    if (if_write_output) {
+        
+        libMesh::out << "Writing output to : output.exo" << std::endl;
+        
+        std::set<std::string> nm;
+        nm.insert(_sys->name());
+        // write the solution for visualization
+        libMesh::ExodusII_IO(*_mesh).write_equation_systems("output.exo",
+                                                            *_eq_sys,
+                                                            &nm);
+        
+        _discipline->plot_stress_strain_data<libMesh::ExodusII_IO>("stress_output.exo");
+    }
+    
+    
+    
+    
+    if (sol.second && if_write_output) {
+        // now write the flutter mode to an output file.
+        // Flutter mode Y = sum_i (X_i * (xi_re + xi_im)_i)
+        // using the right eigenvector of the system.
+        // where i is the structural mode
+        //
+        // The time domain simulation assumes the temporal solution to be
+        // X(t) = (Y_re + i Y_im) exp(p t)
+        //      = (Y_re + i Y_im) exp(p_re t) * (cos(p_im t) + i sin(p_im t))
+        //      = exp(p_re t) (Z_re + i Z_im ),
+        // where Z_re = Y_re cos(p_im t) - Y_im sin(p_im t), and
+        //       Z_im = Y_re sin(p_im t) + Y_im cos(p_im t).
+        //
+        // We write the simulation of the mode over a period of oscillation
+        //
+        
+        
+        // first calculate the real and imaginary vectors
+        std::auto_ptr<libMesh::NumericVector<Real> >
+        re(_sys->solution->zero_clone().release()),
+        im(_sys->solution->zero_clone().release());
+        
+        
+        // first the real part
+        _sys->solution->zero();
+        for (unsigned int i=0; i<_basis.size(); i++) {
+            re->add(sol.second->eig_vec_right(i).real(), *_basis[i]);
+            im->add(sol.second->eig_vec_right(i).imag(), *_basis[i]);
+        }
+        re->close();
+        im->close();
+        
+        // now open the output processor for writing
+        libMesh::ExodusII_IO flutter_mode_output(*_mesh);
+        
+        // use N steps in a time-period
+        Real
+        t_sys = _sys->time,
+        pi    = acos(-1.);
+        unsigned int
+        N_divs = 100;
+        
+        
+        for (unsigned int i=0; i<=N_divs; i++) {
+            _sys->time   =  2.*pi*(i*1.)/(N_divs*1.);
+            
+            _sys->solution->zero();
+            _sys->solution->add( cos(_sys->time), *re);
+            _sys->solution->add(-sin(_sys->time), *im);
+            _sys->solution->close();
+            flutter_mode_output.write_timestep("flutter_mode.exo",
+                                               *_eq_sys,
+                                               i+1,
+                                               _sys->time);
+        }
+        
+        // reset the system time
+        _sys->time = t_sys;
+    }
     
     //////////////////////////////////////////////////////////////////////
     // get the objective and constraints
@@ -1300,7 +1300,7 @@ evaluate(const std::vector<Real>& dvars,
         libMesh::NumericVector<Real>& dXdV = _sys->add_vector("sol_V_sens");
         std::vector<Real> dsigma_dV(_n_elems, 0.);
         
-        if (sol.first) {
+        if (sol.second) {
             
             params[0] = _velocity->ptr();
             _nonlinear_assembly->attach_discipline_and_system(*_discipline,
@@ -1329,6 +1329,11 @@ evaluate(const std::vector<Real>& dvars,
             
             params[0]  = _problem_parameters[i]->ptr();
             
+            // copy the solution to be used for sensitivity
+            // If a flutter solution was found, then this depends on velocity.
+            // Otherwise, it is independent of velocity
+            *_sys->solution = steady_solve.solution();
+
             // iterate over each dv and calculate the sensitivity
             libMesh::NumericVector<Real>& dXdp = _sys->add_sensitivity_solution(0);
             dXdp.zero();
@@ -1359,7 +1364,7 @@ evaluate(const std::vector<Real>& dvars,
             
             // if all eigenvalues are positive, calculate at the sensitivity of
             // flutter velocity
-            if (if_all_eig_positive && sol.first) {
+            if (if_all_eig_positive && sol.second) {
                 //
                 //           g = V0/Vf - 1 <= 0
                 //   Hence, sensitivity is

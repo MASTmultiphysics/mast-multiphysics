@@ -242,18 +242,21 @@ MAST::FunctionEvaluation::verify_gradients(const std::vector<Real>& dvars) {
     << std::endl;
     
     for (unsigned int j=0; j<_n_eq+_n_ineq; j++) {
+        
         libMesh::out << "  Constraint: " << j << std::endl;
-        for (unsigned int i=0; i<_n_vars; i++)
-        if (fabs((grads[i*(_n_eq+_n_ineq)+j] - grads_fd[i*(_n_eq+_n_ineq)+j])/grads[i*(_n_eq+_n_ineq)+j]) > tol) {
-                
-                libMesh::out
-                << " Mismatched sensitivity:  DV:  "  << i << "   "
-                << grads[i*(_n_eq+_n_ineq)+j] << "    "
-                << grads_fd[i*(_n_eq+_n_ineq)+j] << std::endl;
+        for (unsigned int i=0; i<_n_vars; i++) {
+            libMesh::out
+            << " DV:  "  << i << "   "
+            << grads[i*(_n_eq+_n_ineq)+j] << "    "
+            << grads_fd[i*(_n_eq+_n_ineq)+j];
+            if (fabs((grads[i*(_n_eq+_n_ineq)+j] - grads_fd[i*(_n_eq+_n_ineq)+j])/grads[i*(_n_eq+_n_ineq)+j]) > tol) {
+                libMesh::out << "    Mismatched sensitivity" << std::endl;
                 accurate_sens = false;
             }
+            else
+                libMesh::out << std::endl;
+        }
     }
-    
     // print the message that all sensitivity data satisfied limits.
     if (accurate_sens)
         libMesh::out
