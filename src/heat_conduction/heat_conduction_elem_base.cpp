@@ -604,7 +604,7 @@ surface_flux_residual(bool request_jacobian,
         // get the value of flux = q_i . n_i
         func(pt, _time, flux);
         
-        f   -=  JxW[qp] * phi_vec * flux;
+        f   +=  JxW[qp] * phi_vec * flux;
     }
     
     // calculation of the load vector is independent of solution
@@ -647,7 +647,7 @@ surface_flux_residual(bool request_jacobian,
         // get the value of flux = q_i . n_i
         func(pt, _time, flux);
         
-        f   -=  JxW[qp] * phi_vec * flux;
+        f   +=  JxW[qp] * phi_vec * flux;
     }
     
     // calculation of the load vector is independent of solution
@@ -733,13 +733,13 @@ surface_convection_residual(bool request_jacobian,
         // normal flux is given as:
         // qi_ni = h_coeff * (T - T_amb)
         //
-        f   -= JxW[qp] * phi_vec * h_coeff * (temp - amb_temp);
+        f   += JxW[qp] * phi_vec * h_coeff * (temp - amb_temp);
         
         if (request_jacobian) {
             
             Bmat.reinit(1, phi_vec);
             Bmat.right_multiply_transpose(mat, Bmat);
-            jac -= JxW[qp] * mat * h_coeff;
+            jac += JxW[qp] * mat * h_coeff;
         }
     }
     
@@ -791,13 +791,13 @@ surface_convection_residual(bool request_jacobian,
         // normal flux is given as:
         // qi_ni = h_coeff * (T - T_amb)
         //
-        f   -= JxW[qp] * phi_vec * h_coeff * (temp - amb_temp);
+        f   += JxW[qp] * phi_vec * h_coeff * (temp - amb_temp);
         
         if (request_jacobian) {
             
             Bmat.reinit(1, phi_vec);
             Bmat.right_multiply_transpose(mat, Bmat);
-            jac -= JxW[qp] * mat * h_coeff;
+            jac += JxW[qp] * mat * h_coeff;
         }
     }
     
@@ -888,14 +888,14 @@ surface_radiation_residual(bool request_jacobian,
         emissivity(pt, _time, emiss);
         temp  = phi_vec.dot(_sol);
         
-        f   -= JxW[qp] * phi_vec * sbc * emiss *
+        f   += JxW[qp] * phi_vec * sbc * emiss *
         (pow(temp-zero_ref, 4.) - pow(amb_temp-zero_ref, 4.));
         
         if (request_jacobian) {
             
             Bmat.reinit(1, phi_vec);
             Bmat.right_multiply_transpose(mat, Bmat);
-            jac -=  JxW[qp] * mat * sbc * emiss * 4. * pow(temp-zero_ref, 3.);
+            jac +=  JxW[qp] * mat * sbc * emiss * 4. * pow(temp-zero_ref, 3.);
         }
     }
     
@@ -950,14 +950,14 @@ surface_radiation_residual(bool request_jacobian,
         emissivity(pt, _time, emiss);
         temp  = phi_vec.dot(_sol);
         
-        f   -= JxW[qp] * phi_vec * sbc * emiss *
+        f   += JxW[qp] * phi_vec * sbc * emiss *
         (pow(temp-zero_ref, 4.) - pow(amb_temp-zero_ref, 4.));
         
         if (request_jacobian) {
             
             Bmat.reinit(1, phi_vec);
             Bmat.right_multiply_transpose(mat, Bmat);
-            jac -=  JxW[qp] * mat * sbc * emiss * 4. * pow(temp-zero_ref, 3.);
+            jac +=  JxW[qp] * mat * sbc * emiss * 4. * pow(temp-zero_ref, 3.);
         }
     }
     
