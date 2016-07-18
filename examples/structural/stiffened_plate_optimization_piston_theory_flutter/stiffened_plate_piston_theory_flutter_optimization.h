@@ -204,7 +204,7 @@ namespace MAST {
         *_kappa,
         *_rho,
         *_temp,
-        *_thz_stiff,
+        //*_thz_stiff,
         *_zero,
         *_velocity,
         *_mach,
@@ -218,7 +218,7 @@ namespace MAST {
         *_kappa_f,
         *_rho_f,
         *_temp_f,
-        *_thz_stiff_f,
+        //*_thz_stiff_f,
         *_thzoff_stiff_f,
         *_ref_temp_f,
         *_velocity_f,
@@ -280,12 +280,14 @@ namespace MAST {
         // stationwise parameter definitions
         std::vector<MAST::Parameter*>
         _th_station_parameters_plate,
-        _th_station_parameters_stiff; // N_stiff*N_stations params
+        _thy_station_parameters_stiff,
+        _thz_station_parameters_stiff; // N_stiff*N_stations params
         
         // stationwise function objects for thickness
         std::vector<MAST::ConstantFieldFunction*>
         _th_station_functions_plate,
-        _th_station_functions_stiff; // N_stiff*N_stations functions
+        _thy_station_functions_stiff,
+        _thz_station_functions_stiff; // N_stiff*N_stations functions
         
         /*!
          *   interpolates thickness between stations
@@ -296,6 +298,12 @@ namespace MAST {
          *   interpolates thickness between stations
          */
         std::vector<MAST::MultilinearInterpolation*> _thy_stiff_f; // one per stiffener
+
+        
+        /*!
+         *   interpolates thickness between stations
+         */
+        std::vector<MAST::MultilinearInterpolation*> _thz_stiff_f; // one per stiffener
 
         
         /*!

@@ -222,7 +222,7 @@ init(GetPot& infile,
     
     
     // now setup the optimization data
-    _n_vars                = _n_dv_stations_x + _n_dv_stations_x * _n_stiff; // for thickness variable
+    _n_vars                = _n_dv_stations_x + 2*_n_dv_stations_x * _n_stiff; // for thickness variable
     _n_eq                  = 0;
     _n_ineq                = 1;// flutter constraint // + _n_elems;   // one element stress functional per elem
     _max_iters             = 1000;
@@ -326,7 +326,9 @@ init(GetPot& infile,
     _th_station_parameters_plate.resize(_n_dv_stations_x);
     _th_station_functions_plate.resize(_n_dv_stations_x);
     
-    std::map<Real, MAST::FieldFunction<Real>*> th_station_vals;
+    std::map<Real, MAST::FieldFunction<Real>*>
+    thy_station_vals,
+    thz_station_vals;
     
     for (unsigned int i=0; i<_n_dv_stations_x; i++) {
         std::ostringstream oss;
@@ -342,7 +344,7 @@ init(GetPot& infile,
         new MAST::ConstantFieldFunction("h", *h);
         
         // add this to the thickness map
-        th_station_vals.insert(std::pair<Real, MAST::FieldFunction<Real>*>
+        thy_station_vals.insert(std::pair<Real, MAST::FieldFunction<Real>*>
                                (i*dx, h_f));
         
         // add the function to the parameter set
@@ -355,7 +357,8 @@ init(GetPot& infile,
     }
     
     // now create the h_y function and give it to the property card
-    _th_plate_f.reset(new MAST::MultilinearInterpolation("h", th_station_vals));
+    _th_plate_f.reset(new MAST::MultilinearInterpolation("h", thy_station_vals));
+    thy_station_vals.clear();
     
     
     // create the property functions and add them to the card
@@ -367,7 +370,6 @@ init(GetPot& infile,
     _rho             = new MAST::Parameter( "rho", infile("rho",      2700.0));
     _zero            = new MAST::Parameter("zero",                         0.);
     _temp            = new MAST::Parameter( "temperature",infile("temp", 60.));
-    _thz_stiff       = new MAST::Parameter( "thz", infile("thz",        0.01)); // currently, an arbitrary thickness
     _velocity        = new MAST::Parameter("V"   ,                         0.);
     _mach            = new MAST::Parameter("mach", infile("mach",        4.5));
     _rho_air         = new MAST::Parameter("rho" , infile("rho_f",      1.05));
@@ -381,7 +383,6 @@ init(GetPot& infile,
     _rho_f           = new MAST::ConstantFieldFunction("rho",               *_rho);
     _temp_f          = new MAST::ConstantFieldFunction("temperature",      *_temp);
     _ref_temp_f      = new MAST::ConstantFieldFunction("ref_temperature",  *_zero);
-    _thz_stiff_f     = new MAST::ConstantFieldFunction("hz",          *_thz_stiff);
     _thzoff_stiff_f  = new MAST::ConstantFieldFunction("hz_off",           *_zero);
     _hoff_plate_f    = new MAST::SectionOffset("off",
                                                *_th_plate_f,
@@ -454,46 +455,61 @@ init(GetPot& infile,
     _p_card_stiff.resize(_n_stiff);
     
     // thickness per stiffener station
-    _th_station_parameters_stiff.resize(_n_dv_stations_x*_n_stiff);
-    _th_station_functions_stiff.resize(_n_dv_stations_x*_n_stiff);
+    _thy_station_parameters_stiff.resize(_n_dv_stations_x*_n_stiff);
+    _thz_station_parameters_stiff.resize(_n_dv_stations_x*_n_stiff);
+    _thy_station_functions_stiff.resize(_n_dv_stations_x*_n_stiff);
+    _thz_station_functions_stiff.resize(_n_dv_stations_x*_n_stiff);
     _thy_stiff_f.resize(_n_stiff);
+    _thz_stiff_f.resize(_n_stiff);
     _hyoff_stiff_f.resize(_n_stiff);
     
     for (unsigned int i=0; i<_n_stiff; i++) {
         
         // this map is used to store the thickness parameter along length
-        th_station_vals.clear();
+        thy_station_vals.clear();
+        thz_station_vals.clear();
         
         // first define the thickness station parameters and the thickness
         // field function
         for (unsigned int j=0; j<_n_dv_stations_x; j++) {
-            std::ostringstream oss;
-            oss << "h_y_" << j;
+            std::ostringstream ossy, ossz;
+            ossy << "h_y_" << j;
+            ossz << "h_z_" << j;
             
             // now we need a parameter that defines the thickness at the
             // specified station and a constant function that defines the
             // field function at that location.
-            MAST::Parameter* h_y               =
-            new MAST::Parameter(oss.str(), infile("thickness", 0.002));
+            MAST::Parameter
+            *h_y  = new MAST::Parameter(ossy.str(), infile("thickness", 0.002)),
+            *h_z  = new MAST::Parameter(ossz.str(), infile("thickness", 0.002));
             
-            MAST::ConstantFieldFunction* h_y_f =
-            new MAST::ConstantFieldFunction("hy", *h_y);
+            MAST::ConstantFieldFunction
+            *h_y_f = new MAST::ConstantFieldFunction("hy", *h_y),
+            *h_z_f = new MAST::ConstantFieldFunction("hy", *h_z);
             
             // add this to the thickness map
-            th_station_vals.insert(std::pair<Real, MAST::FieldFunction<Real>*>
-                                   (j*dx, h_y_f));
+            thy_station_vals.insert(std::pair<Real, MAST::FieldFunction<Real>*>
+                                    (j*dx, h_y_f));
+            thz_station_vals.insert(std::pair<Real, MAST::FieldFunction<Real>*>
+                                    (j*dx, h_z_f));
             
             // add the function to the parameter set
-            _th_station_parameters_stiff[i*_n_dv_stations_x+j]          = h_y;
-            _th_station_functions_stiff [i*_n_dv_stations_x+j]          = h_y_f;
-            
+            _thy_station_parameters_stiff[i*_n_dv_stations_x+j]          = h_y;
+            _thy_station_functions_stiff [i*_n_dv_stations_x+j]          = h_y_f;
+
+            _thz_station_parameters_stiff[i*_n_dv_stations_x+j]          = h_z;
+            _thz_station_functions_stiff [i*_n_dv_stations_x+j]          = h_z_f;
+
             // tell the assembly system about the sensitvity parameter
             _discipline->add_parameter(*h_y);
-            _problem_parameters[(i+1)*_n_dv_stations_x+j] = h_y;
+            _discipline->add_parameter(*h_z);
+            _problem_parameters[(2*i+1)*_n_dv_stations_x+j] = h_y;
+            _problem_parameters[(2*i+2)*_n_dv_stations_x+j] = h_z;
         }
         
         // now create the h_y function and give it to the property card
-        _thy_stiff_f[i]   = new MAST::MultilinearInterpolation("hy", th_station_vals);
+        _thy_stiff_f[i]   = new MAST::MultilinearInterpolation("hy", thy_station_vals);
+        _thz_stiff_f[i]   = new MAST::MultilinearInterpolation("hz", thz_station_vals);
         _hyoff_stiff_f[i] = new MAST::SectionOffset("hy_off",
                                                     *_thy_stiff_f[i],
                                                     1.);
@@ -504,7 +520,7 @@ init(GetPot& infile,
         
         // add the section properties to the card
         _p_card_stiff[i]->add(*_thy_stiff_f[i]);
-        _p_card_stiff[i]->add(*_thz_stiff_f);
+        _p_card_stiff[i]->add(*_thz_stiff_f[i]);
         _p_card_stiff[i]->add(*_hyoff_stiff_f[i]);
         _p_card_stiff[i]->add(*_thzoff_stiff_f);
         _p_card_stiff[i]->y_vector() = orientation;
@@ -617,10 +633,10 @@ MAST::StiffenedPlatePistonTheorySizingOptimization::
         delete _hoff_plate_f;
         delete _temp_f;
         delete _ref_temp_f;
-        delete _thz_stiff_f;
         delete _thzoff_stiff_f;
         for (unsigned int i=0; i<_n_stiff; i++) delete _hyoff_stiff_f[i];
         for (unsigned int i=0; i<_n_stiff; i++) delete _thy_stiff_f[i];
+        for (unsigned int i=0; i<_n_stiff; i++) delete _thz_stiff_f[i];
         delete _velocity_f;
         delete _mach_f;
         delete _rho_air_f;
@@ -634,7 +650,6 @@ MAST::StiffenedPlatePistonTheorySizingOptimization::
         delete _rho;
         delete _zero;
         delete _temp;
-        delete _thz_stiff;
         delete _velocity;
         delete _mach;
         delete _rho_air;
@@ -684,11 +699,18 @@ MAST::StiffenedPlatePistonTheorySizingOptimization::
         
         {
             std::vector<MAST::ConstantFieldFunction*>::iterator
-            it  = _th_station_functions_stiff.begin(),
-            end = _th_station_functions_stiff.end();
+            it  = _thy_station_functions_stiff.begin(),
+            end = _thy_station_functions_stiff.end();
             for (; it != end; it++)  delete *it;
         }
-        
+
+        {
+            std::vector<MAST::ConstantFieldFunction*>::iterator
+            it  = _thz_station_functions_stiff.begin(),
+            end = _thz_station_functions_stiff.end();
+            for (; it != end; it++)  delete *it;
+        }
+
         
         // delete the h_y station parameters
         {
@@ -701,8 +723,15 @@ MAST::StiffenedPlatePistonTheorySizingOptimization::
         
         {
             std::vector<MAST::Parameter*>::iterator
-            it  = _th_station_parameters_stiff.begin(),
-            end = _th_station_parameters_stiff.end();
+            it  = _thy_station_parameters_stiff.begin(),
+            end = _thy_station_parameters_stiff.end();
+            for (; it != end; it++)  delete *it;
+        }
+
+        {
+            std::vector<MAST::Parameter*>::iterator
+            it  = _thz_station_parameters_stiff.begin(),
+            end = _thz_station_parameters_stiff.end();
             for (; it != end; it++)  delete *it;
         }
     }
