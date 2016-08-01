@@ -879,7 +879,8 @@ namespace MAST {
             
             Real
             T0      = (*_obj._temp)(),
-            V0      = (*_obj._velocity)();
+            V0      = (*_obj._velocity)(),
+            p0      = (*_obj._p_cav)();
             
             // zero the solution before solving
             _obj.clear_stresss();
@@ -889,15 +890,24 @@ namespace MAST {
             
             // now iterate over the load steps
             for (unsigned int i=0; i<n_steps; i++) {
-                libMesh::out
-                << "Load step: " << i << std::endl;
                 
                 // modify aero component
                 (*_obj._velocity)()  =  V0*(i+1.)/(1.*n_steps);
                 
                 // modify the thermal load if specified by the user
-                if (!_if_only_aero_load_steps)
+                if (!_if_only_aero_load_steps) {
+                    
                     (*_obj._temp)()      =  T0*(i+1.)/(1.*n_steps);
+                    (*_obj._temp)()      =  p0*(i+1.)/(1.*n_steps);
+                    
+                }
+
+                libMesh::out
+                << "Load step: " << i
+                << "  : T = " << T0
+                << "  : p = " << p0
+                << std::endl;
+
                 _obj._sys->solve();
             }
             
