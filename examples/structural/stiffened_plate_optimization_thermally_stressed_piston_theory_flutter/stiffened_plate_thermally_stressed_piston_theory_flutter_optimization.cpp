@@ -904,8 +904,8 @@ namespace MAST {
 
                 libMesh::out
                 << "Load step: " << i
-                << "  : T = " << T0
-                << "  : p = " << p0
+                << "  : T = " << (*_obj._temp)()
+                << "  : p = " << (*_obj._temp)()
                 << std::endl;
 
                 _obj._sys->solve();
