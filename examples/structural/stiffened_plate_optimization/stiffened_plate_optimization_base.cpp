@@ -228,7 +228,18 @@ MAST::StiffenedPanelMesh::init(const unsigned int n_stiff,
                                const Real width,
                                libMesh::MeshBase& mesh,
                                libMesh::ElemType t,
-                               bool beam_stiffeners) {
+                               bool beam_stiffeners,
+                               const unsigned int n_z_divs_stiff,
+                               const Real h_stiff) {
+    
+    // shell modeling of stiffeners should be accompanied by additional data
+    // modeling the stiffeners
+    if (!beam_stiffeners) {
+        
+        libmesh_assert(n_z_divs_stiff);
+        libmesh_assert(h_stiff);
+    }
+    
     
     mesh.set_mesh_dimension(2);
     
@@ -274,11 +285,19 @@ MAST::StiffenedPanelMesh::init(const unsigned int n_stiff,
         
         libMesh::SerialMesh stiff(mesh.comm());
         
-        libMesh::MeshTools::Generation::build_line(stiff,
-                                                   n_x_divs,
-                                                   0.,
-                                                   length,
-                                                   stiff_t);
+        if (beam_stiffeners)
+            libMesh::MeshTools::Generation::build_line(stiff,
+                                                       n_x_divs,
+                                                       0.,
+                                                       length,
+                                                       stiff_t);
+        else
+            libMesh::MeshTools::Generation::build_square(stiff,
+                                                         n_x_divs,
+                                                         n_z_divs_stiff,
+                                                         0., length,
+                                                         0., h_stiff,
+                                                         stiff_t);
         
         // add the elements and nodes to the panel mesh
         // the y-coordinate for this mesh will be the x-coordinate
@@ -327,19 +346,25 @@ MAST::StiffenedPanelMesh::_combine_mesh(libMesh::MeshBase& panel,
         new_elem->subdomain_id() = sid;
         
         // add boundary condition tags for the panel boundary
-        if (c == MAST::StiffenedPanelMesh::PANEL)
-            for (unsigned short int n=0; n<old_elem->n_sides(); n++)
+        for (unsigned short int n=0; n<old_elem->n_sides(); n++) {
+            
+            if (component_binfo.n_boundary_ids(old_elem, n)) {
                 
-                if (component_binfo.n_boundary_ids(old_elem, n)) {
-                    
-                    // add the boundary tags to the panel mesh
-                    std::vector<libMesh::boundary_id_type> bc_ids =
-                    component_binfo.boundary_ids(old_elem, n);
-                    
-                    for ( unsigned int bid=0; bid < bc_ids.size(); bid++)
+                // add the boundary tags to the panel mesh
+                std::vector<libMesh::boundary_id_type> bc_ids =
+                component_binfo.boundary_ids(old_elem, n);
+                
+                for ( unsigned int bid=0; bid < bc_ids.size(); bid++) {
+                    if (c == MAST::StiffenedPanelMesh::PANEL)
                         panel_binfo.add_side(new_elem, n, bc_ids[bid]);
+                    else if (c == MAST::StiffenedPanelMesh::STIFFENER_X &
+                             bc_ids[bid] != 0 &
+                             bc_ids[bid] != 2 )
+                        panel_binfo.add_side(new_elem, n, bc_ids[bid]+4);
                 }
-        
+            }
+        }
+
         
         for (unsigned int n=0; n<old_elem->n_nodes(); n++) {
             old_node = old_elem->get_node(n);

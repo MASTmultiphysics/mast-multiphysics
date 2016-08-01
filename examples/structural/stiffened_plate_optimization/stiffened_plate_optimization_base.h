@@ -102,7 +102,9 @@ namespace MAST {
                    const Real width,
                    libMesh::MeshBase& mesh,
                    libMesh::ElemType t,
-                   bool beam_stiffeners);
+                   bool beam_stiffeners,
+                   const unsigned int n_z_divs_stiff = 0,
+                   const Real h_stiff = 0.);
         
     protected:
         

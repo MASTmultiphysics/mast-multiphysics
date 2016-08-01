@@ -284,7 +284,7 @@ const libMesh::NumericVector<Real>&
 MAST::BeamBending::solve(bool if_write_output) {
     
 
-    libmesh_assert(!_initialized);
+    libmesh_assert(_initialized);
     
     // create the nonlinear assembly object
     MAST::StructuralNonlinearAssembly   assembly;

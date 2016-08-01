@@ -512,7 +512,7 @@ init(GetPot& infile,
         _thz_stiff_f[i]   = new MAST::MultilinearInterpolation("hz", thz_station_vals);
         _hyoff_stiff_f[i] = new MAST::SectionOffset("hy_off",
                                                     *_thy_stiff_f[i],
-                                                    1.);
+                                                    -1.);
         
         
         _p_card_stiff[i]  = new MAST::Solid1DSectionElementPropertyCard;

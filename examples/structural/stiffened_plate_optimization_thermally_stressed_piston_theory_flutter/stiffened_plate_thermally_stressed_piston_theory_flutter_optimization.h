@@ -210,6 +210,7 @@ namespace MAST {
         *_rho,
         *_temp,
         *_zero,
+        *_p_cav,
         *_velocity,
         *_mach,
         *_rho_air,
@@ -224,6 +225,7 @@ namespace MAST {
         *_temp_f,
         *_thzoff_stiff_f,
         *_ref_temp_f,
+        *_p_cav_f,
         *_velocity_f,
         *_mach_f,
         *_rho_air_f,
@@ -263,7 +265,9 @@ namespace MAST {
         MAST::DirichletBoundaryCondition*               _dirichlet_top;
         
         // create the temperature load
-        MAST::BoundaryConditionBase*                    _T_load;
+        MAST::BoundaryConditionBase
+        *_T_load,
+        *_p_load;
         
         /*!
          *   piston theory boundary condition for the whole domain

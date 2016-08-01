@@ -329,10 +329,15 @@ init(GetPot& infile,
     _dirichlet_top    = new MAST::DirichletBoundaryCondition;
     _dirichlet_left   = new MAST::DirichletBoundaryCondition;
     
-    _dirichlet_bottom->init (0, constrained_vars);
-    _dirichlet_right->init  (1, constrained_vars);
-    _dirichlet_top->init    (2, constrained_vars);
-    _dirichlet_left->init   (3, constrained_vars);
+    //_dirichlet_bottom->init (0, constrained_vars);
+    //_dirichlet_right->init  (1, constrained_vars);
+    //_dirichlet_top->init    (2, constrained_vars);
+    //_dirichlet_left->init   (3, constrained_vars);
+    
+    _dirichlet_bottom->init (0, _structural_sys->vars());
+    _dirichlet_right->init  (1, _structural_sys->vars());
+    _dirichlet_top->init    (2, _structural_sys->vars());
+    _dirichlet_left->init   (3, _structural_sys->vars());
     
     _discipline->add_dirichlet_bc(0, *_dirichlet_bottom);
     _discipline->add_dirichlet_bc(1,  *_dirichlet_right);
@@ -417,6 +422,7 @@ init(GetPot& infile,
     _rho             = new MAST::Parameter( "rho", infile("rho",      2700.0));
     _zero            = new MAST::Parameter("zero",                         0.);
     _temp            = new MAST::Parameter( "temperature",infile("temp", 60.));
+    _p_cav           = new MAST::Parameter("p_cav",infile("p_cav",        0.));
     _velocity        = new MAST::Parameter("V"   ,                         0.);
     _mach            = new MAST::Parameter("mach", infile("mach",        4.5));
     _rho_air         = new MAST::Parameter("rho" , infile("rho_f",      1.05));
@@ -429,6 +435,7 @@ init(GetPot& infile,
     _alpha_f         = new MAST::ConstantFieldFunction("alpha_expansion", *_alpha);
     _rho_f           = new MAST::ConstantFieldFunction("rho",               *_rho);
     _temp_f          = new MAST::ConstantFieldFunction("temperature",      *_temp);
+    _p_cav_f         = new MAST::ConstantFieldFunction("pressure",        *_p_cav);
     _ref_temp_f      = new MAST::ConstantFieldFunction("ref_temperature",  *_zero);
     _thzoff_stiff_f  = new MAST::ConstantFieldFunction("hz_off",           *_zero);
     _hoff_plate_f    = new MAST::SectionOffset("off",
@@ -440,7 +447,7 @@ init(GetPot& infile,
     _gamma_air_f     = new MAST::ConstantFieldFunction("gamma", *_gamma_air);
     
     // velocity constraint for flutter analysis
-    _V0_flutter      =  infile("V_flutter",     410.);
+    _V0_flutter      =  infile("V0_flutter",     410.);
     _n_V_divs_flutter=  infile("n_V_divs",        10);
     
     // initialize the load
@@ -450,6 +457,12 @@ init(GetPot& infile,
     _discipline->add_volume_load(0, *_T_load);          // for the panel
     for (unsigned int i=0; i<_n_stiff; i++)
         _discipline->add_volume_load(i+1, *_T_load);    // for the stiffeners
+
+    // pressure load
+    _p_load          = new MAST::BoundaryConditionBase(MAST::SURFACE_PRESSURE);
+    _p_load->add(*_p_cav_f);
+    _discipline->add_volume_load(0, *_p_load);          // for the panel
+
     
     // create the material property card
     _m_card         = new MAST::IsotropicMaterialPropertyCard;
@@ -552,7 +565,7 @@ init(GetPot& infile,
         _thz_stiff_f[i]   = new MAST::MultilinearInterpolation("hz", thz_station_vals);
         _hyoff_stiff_f[i] = new MAST::SectionOffset("hy_off",
                                                     *_thy_stiff_f[i],
-                                                    1.);
+                                                    -1.);
         
         _p_card_stiff[i]  = new MAST::Solid1DSectionElementPropertyCard;
         
@@ -672,6 +685,8 @@ MAST::StiffenedPlateThermallyStressedPistonTheorySizingOptimization::
         for (unsigned int i=0; i<_n_stiff; i++) delete _p_card_stiff[i];
         
         delete _T_load;
+        delete _p_load;
+        
         delete _dirichlet_bottom;
         delete _dirichlet_right;
         delete _dirichlet_top;
@@ -684,6 +699,7 @@ MAST::StiffenedPlateThermallyStressedPistonTheorySizingOptimization::
         delete _rho_f;
         delete _hoff_plate_f;
         delete _temp_f;
+        delete _p_cav_f;
         delete _ref_temp_f;
         delete _thzoff_stiff_f;
         for (unsigned int i=0; i<_n_stiff; i++) delete _hyoff_stiff_f[i];
@@ -702,6 +718,7 @@ MAST::StiffenedPlateThermallyStressedPistonTheorySizingOptimization::
         delete _rho;
         delete _zero;
         delete _temp;
+        delete _p_cav;
         delete _velocity;
         delete _mach;
         delete _rho_air;
