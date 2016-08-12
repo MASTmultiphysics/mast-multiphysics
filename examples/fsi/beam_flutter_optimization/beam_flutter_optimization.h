@@ -83,13 +83,16 @@ namespace MAST {
     class FSIGeneralizedAeroForceAssembly;
     class FrequencyDomainLinearizedComplexAssembly;
     class ComplexSolverBase;
+    class GAFDatabase;
+    class AugmentGhostElementSendListObj;
 
     
     struct BeamFSIFlutterSizingOptimization:
     public MAST::FunctionEvaluation {
         
         
-        BeamFSIFlutterSizingOptimization();
+        BeamFSIFlutterSizingOptimization
+        (const libMesh::Parallel::Communicator& comm);
         
         
         ~BeamFSIFlutterSizingOptimization();
@@ -143,7 +146,6 @@ namespace MAST {
         
         bool _initialized;
         
-        // length of domain
         Real
         _length,
         _k_lower,
@@ -155,10 +157,7 @@ namespace MAST {
         _n_elems,
         _n_stations,
         _n_k_divs;
-        
-        //  structural communicator
-        libMesh::Parallel::Communicator*        _structural_comm;
-        
+
         
         // create the structural mesh
         libMesh::SerialMesh*                     _structural_mesh;
@@ -197,11 +196,6 @@ namespace MAST {
         // modal assembly object
         MAST::StructuralModalEigenproblemAssembly *_modal_assembly;
 
-        
-        // FSI assembly object
-        MAST::FSIGeneralizedAeroForceAssembly     *_fsi_assembly;
-
-        
         // flight condition
         MAST::FlightCondition*                       _flight_cond;
         
@@ -246,13 +240,19 @@ namespace MAST {
         *_freq_function;
 
         /*!
-         *   piston theory boundary condition for the whole domain
+         *   flutter solver
          */
         MAST::UGFlutterSolver*                   _flutter_solver;
         
         // vector of basis vectors from modal analysis
         std::vector<libMesh::NumericVector<Real>*>     _basis;
 
+        
+        // map of reduced order matrices corresponding to the basis, stored
+        // for multiple reduced frequency values. Linear interpolation
+        // is used for evaluation
+        MAST::GAFDatabase*   _gaf_database;
+        
         // create the property functions and add them to the
         MAST::Parameter
         *_thz,
@@ -287,6 +287,8 @@ namespace MAST {
         // create the Dirichlet boundary condition on right edge
         MAST::DirichletBoundaryCondition*               _dirichlet_right;
         
+        // object to augment the send list of ghosted fluid elements
+        MAST::AugmentGhostElementSendListObj*    _augment_send_list_obj;
 
         // stationwise parameter definitions
         std::vector<MAST::Parameter*>                   _thy_station_parameters;

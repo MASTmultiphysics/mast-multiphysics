@@ -178,8 +178,9 @@ stiffened_plate_thermally_stressed_piston_theory_flutter_optim_con(int*    mode,
 
 
 MAST::StiffenedPlateThermallyStressedPistonTheorySizingOptimization::
-StiffenedPlateThermallyStressedPistonTheorySizingOptimization():
-MAST::FunctionEvaluation(),
+StiffenedPlateThermallyStressedPistonTheorySizingOptimization
+(const libMesh::Parallel::Communicator& comm):
+MAST::FunctionEvaluation(comm),
 _initialized(false),
 _n_eig(0),
 _n_divs_x(0),
@@ -296,7 +297,6 @@ init(GetPot& infile,
                     *_mesh,
                     e_type,
                     true);
-    _mesh->prepare_for_use();
     
     // create the equation system
     _eq_sys    = new  libMesh::EquationSystems(*_mesh);
@@ -596,9 +596,9 @@ init(GetPot& infile,
     
     // create the output objects, one for each element
     libMesh::MeshBase::const_element_iterator
-    e_it    = _mesh->elements_begin(),
-    e_end   = _mesh->elements_end();
-    
+    e_it    = _mesh->local_elements_begin(),
+    e_end   = _mesh->local_elements_end();
+
     // points where stress is evaluated
     std::vector<libMesh::Point> pts;
     
@@ -652,6 +652,10 @@ init(GetPot& infile,
         
         _discipline->add_volume_output((*e_it)->subdomain_id(), *output);
     }
+    
+    // make sure that the number of output objects here is the same as the
+    // number of local elems in the mesh
+    libmesh_assert_equal_to(_outputs.size(), _mesh->n_local_elem());
     
     // create the assembly object
     _nonlinear_assembly = new MAST::StructuralNonlinearAssembly;
@@ -887,6 +891,7 @@ namespace MAST {
             
             _obj._nonlinear_assembly->attach_discipline_and_system(*_obj._discipline,
                                                                    *_obj._structural_sys);
+            libMesh::ExodusII_IO writer(_obj._sys->get_mesh());
             
             // now iterate over the load steps
             for (unsigned int i=0; i<n_steps; i++) {
@@ -898,17 +903,23 @@ namespace MAST {
                 if (!_if_only_aero_load_steps) {
                     
                     (*_obj._temp)()      =  T0*(i+1.)/(1.*n_steps);
-                    (*_obj._temp)()      =  p0*(i+1.)/(1.*n_steps);
-                    
+                    (*_obj._p_cav)()     =  p0*(i+1.)/(1.*n_steps);
                 }
 
                 libMesh::out
                 << "Load step: " << i
                 << "  : T = " << (*_obj._temp)()
-                << "  : p = " << (*_obj._temp)()
+                << "  : p = " << (*_obj._p_cav)()
+                << "  : V = " << (*_obj._velocity)()
                 << std::endl;
 
                 _obj._sys->solve();
+                _obj._discipline->plot_stress_strain_data<libMesh::ExodusII_IO>("stress_output.exo");
+                writer.write_timestep("output_all_steps.exo",
+                                      *_obj._eq_sys,
+                                      i+1,
+                                      (i+1)/(1.*n_steps));
+                
             }
             
             // copy the solution to the base solution vector
@@ -1001,14 +1012,29 @@ evaluate(const std::vector<Real>& dvars,
     libmesh_assert(_initialized);
     libmesh_assert_equal_to(dvars.size(), _n_vars);
     
+    // while this function tries to ensure that the gradient and function values
+    // returned to the optimizer on all ranks is the same, we may run the
+    // possibility of slight differences in the input DVs due to unforeseen
+    // reasons. Hence, we will borrow the DV values from rank 0, just to
+    // make sure that all processors are evaluating the functions at the
+    // same exact values.
+    std::vector<Real>
+    my_dvars(dvars.begin(), dvars.end());
+    __init->comm().broadcast(my_dvars);
+    
+    
     // set the parameter values equal to the DV value
     // first the plate thickness values
     for (unsigned int i=0; i<_n_vars; i++)
-        (*_problem_parameters[i]) = dvars[i]*_dv_scaling[i];
+        (*_problem_parameters[i]) = my_dvars[i]*_dv_scaling[i];
     
     
     // DO NOT zero out the gradient vector, since GCMMA needs it for the
     // subproblem solution
+    // zero the function evaluations
+    std::fill(fvals.begin(), fvals.end(), 0.);
+    
+
     
     libMesh::Point pt; // dummy point object
     
@@ -1110,7 +1136,7 @@ evaluate(const std::vector<Real>& dvars,
         << re << std::endl;
         
         eig_vals[i]          = re;
-        if_all_eig_positive  = (if_all_eig_positive & (re>0.))?true:false;
+        if_all_eig_positive  = (if_all_eig_positive && (re>0.))?true:false;
         
         if (if_write_output) {
             
@@ -1282,16 +1308,42 @@ evaluate(const std::vector<Real>& dvars,
     // set the function and objective values
     obj = wt;
     
+    // parallel sum of the weight
+    this->comm().sum(obj);
+    
     
     // set the eigenvalue constraints  -eig <= 0. scale
     // by an arbitrary 1/1.e7 factor
     for (unsigned int i=0; i<nconv; i++)
         fvals[i] = -eig_vals[i]/1.e7;
     
+    
+    // we need to make sure that the stress functional in a parallel environment
+    // correspond to unique spots in the constraint function vector. Below,
+    // the output functionals are created for each local element. These will
+    // be mapped to unique spots by identifying the number of elements on each
+    // subdomain
+    std::vector<unsigned int>
+    beginning_elem_id(__init->comm().size(), 0);
+    for (unsigned int i=1; i<__init->comm().size(); i++)
+        beginning_elem_id[i] = _mesh->n_elem_on_proc(i-1);
+    
+    // now use this info to identify the beginning elem id
+    for (unsigned int i=2; i<__init->comm().size(); i++)
+        beginning_elem_id[i] += beginning_elem_id[i-1];
+
+    const unsigned int
+    my_id0 = beginning_elem_id[__init->comm().rank()];
+    
     // copy the element von Mises stress values as the functions
-    for (unsigned int i=0; i<_n_elems; i++)
-        fvals[_n_eig+1+i] =  -1. +
+    for (unsigned int i=0; i<_outputs.size(); i++)
+        fvals[_n_eig+1+i+my_id0] =  -1. +
         _outputs[i]->von_Mises_p_norm_functional_for_all_elems(pval)/_stress_limit;
+    
+    // now sum the value of the stress constraints, so that all ranks
+    // have the same values
+    for (unsigned int i=0; i<_n_elems; i++)
+        this->comm().sum(fvals[_n_eig+1+i]);
     
     // copy the flutter velocity to the constraint vector
     //     Vf        >= V0
@@ -1324,6 +1376,9 @@ evaluate(const std::vector<Real>& dvars,
                                 w_sens);
             obj_grad[i] = w_sens*_dv_scaling[i];
         }
+        
+        // parallel sum
+        this->comm().sum(obj_grad);
     }
     
     
@@ -1334,6 +1389,9 @@ evaluate(const std::vector<Real>& dvars,
         if_sens = (if_sens || eval_grads[i]);
     
     if (if_sens) {
+        
+        // first initialize the gradient vector to zero
+        std::fill(grads.begin(), grads.end(), 0.);
         
         //////////////////////////////////////////////////////////////////
         // indices used by GCMMA follow this rule:
@@ -1351,7 +1409,7 @@ evaluate(const std::vector<Real>& dvars,
         // first do sensitivity analysis wrt velocity, which is necessary for
         // flutter sensitivity.
         libMesh::NumericVector<Real>& dXdV = _sys->add_vector("sol_V_sens");
-        std::vector<Real> dsigma_dV(_n_elems, 0.);
+        std::vector<Real> dsigma_dV(_outputs.size(), 0.);
         
         if (sol.second) {
             
@@ -1367,7 +1425,7 @@ evaluate(const std::vector<Real>& dvars,
             _nonlinear_assembly->calculate_output_sensitivity(params,
                                                               true,
                                                               *(_sys->solution));
-            for (unsigned int j=0; j<_n_elems; j++)
+            for (unsigned int j=0; j<_outputs.size(); j++)
                 dsigma_dV[j] = _outputs[j]->von_Mises_p_norm_functional_sensitivity_for_all_elems
                 (pval, _velocity);
             
@@ -1410,8 +1468,8 @@ evaluate(const std::vector<Real>& dvars,
             // parameter. Hence, the total sensitivity of stress constraint
             // would need to include the latter component, which was added
             // above.
-            for (unsigned int j=0; j<_n_elems; j++)
-                grads[(i*_n_ineq) + (j+_n_eig+1)] = _dv_scaling[i]/_stress_limit *
+            for (unsigned int j=0; j<_outputs.size(); j++)
+                grads[(i*_n_ineq) + (j+_n_eig+1+my_id0)] = _dv_scaling[i]/_stress_limit *
                 _outputs[j]->von_Mises_p_norm_functional_sensitivity_for_all_elems
                 (pval, _problem_parameters[i]);
             
@@ -1440,8 +1498,8 @@ evaluate(const std::vector<Real>& dvars,
                                                       sol.second->V_sens);
                 
                 // add the partial derivative of stress due to velocity sensitivity
-                for (unsigned int j=0; j<_n_elems; j++)
-                    grads[(i*_n_ineq) + (j+_n_eig+1)] += _dv_scaling[i]/_stress_limit *
+                for (unsigned int j=0; j<_outputs.size(); j++)
+                    grads[(i*_n_ineq) + (j+_n_eig+1+my_id0)] += _dv_scaling[i]/_stress_limit *
                     dsigma_dV[j] * sol.second->V_sens;
                 
                 // The natural frequencies were calculated about a base solution
@@ -1464,6 +1522,12 @@ evaluate(const std::vector<Real>& dvars,
             else
                 // if no root was found, then set the sensitivity to a zero value
                 grads[(i*_n_ineq) + (_n_eig+0)]  =  0.;
+            
+            
+            // now, sum the sensitivity of the stress function gradients
+            // so that all processors have the same values
+            for (unsigned int j=0; j<_n_elems; j++)
+                __init->comm().sum(grads[(i*_n_ineq) + (j+_n_eig+1)]);
             
             
             // calculate the sensitivity of the eigenvalues

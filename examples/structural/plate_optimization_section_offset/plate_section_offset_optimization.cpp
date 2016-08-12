@@ -169,8 +169,9 @@ plate_section_offset_optim_con(int*    mode,
 
 
 MAST::PlateBendingSectionOffsetSizingOptimization::
-PlateBendingSectionOffsetSizingOptimization():
-MAST::FunctionEvaluation(),
+PlateBendingSectionOffsetSizingOptimization
+(const libMesh::Parallel::Communicator& comm):
+MAST::FunctionEvaluation(comm),
 _initialized(false),
 _n_divs_x(0),
 _n_divs_y(0),
@@ -222,7 +223,6 @@ init(GetPot& infile,
                                                  0, _length,
                                                  0, _width,
                                                  e_type);
-    _mesh->prepare_for_use();
     
     // create the equation system
     _eq_sys    = new  libMesh::EquationSystems(*_mesh);

@@ -109,7 +109,7 @@ namespace MAST {
     public MAST::FunctionEvaluation {
         
         
-        TopologyOptimization2D();
+        TopologyOptimization2D(const libMesh::Parallel::Communicator& comm);
         
         
         ~TopologyOptimization2D();

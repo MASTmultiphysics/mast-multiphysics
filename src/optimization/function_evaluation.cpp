@@ -103,7 +103,8 @@ MAST::FunctionEvaluation::output(unsigned int iter, const std::vector<Real> &x,
     
     
     // the next section writes to the optimization file.
-    if (!if_write_to_optim_file)
+    if (!if_write_to_optim_file ||
+        !_output)  // or if the output has not been specified
         return;
     
     {

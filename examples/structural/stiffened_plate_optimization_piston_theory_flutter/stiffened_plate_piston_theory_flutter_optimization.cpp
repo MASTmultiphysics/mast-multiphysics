@@ -177,8 +177,9 @@ stiffened_plate_piston_theory_flutter_optim_con(int*    mode,
 
 
 MAST::StiffenedPlatePistonTheorySizingOptimization::
-StiffenedPlatePistonTheorySizingOptimization():
-MAST::FunctionEvaluation(),
+StiffenedPlatePistonTheorySizingOptimization
+(const libMesh::Parallel::Communicator& comm):
+MAST::FunctionEvaluation(comm),
 _initialized(false),
 _n_divs_x(0),
 _n_divs_between_stiff(0),
@@ -249,7 +250,6 @@ init(GetPot& infile,
                     *_mesh,
                     e_type,
                     true);
-    _mesh->prepare_for_use();
     
     // create the equation system
     _eq_sys    = new  libMesh::EquationSystems(*_mesh);

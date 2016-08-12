@@ -32,13 +32,19 @@
 #include "base/mast_data_types.h"
 
 
+// libMesh includes
+#include "libmesh/parallel_object.h"
+
+
 namespace MAST {
     
-    class FunctionEvaluation {
+    class FunctionEvaluation:
+    public libMesh::ParallelObject {
         
     public:
         
-        FunctionEvaluation():
+        FunctionEvaluation(const libMesh::Parallel::Communicator& comm_in):
+        libMesh::ParallelObject(comm_in),
         _n_vars(0),
         _n_eq(0),
         _n_ineq(0),
@@ -97,6 +103,16 @@ namespace MAST {
                               std::vector<bool>& eval_grads,
                               std::vector<Real>& grads) = 0;
         
+        
+        /*!
+         *   sets the output file and the function evaluation will 
+         *   write the optimization iterates to this file. If this is not called
+         *   no file will be created. The user may choose to set different 
+         *   file names on different ranks on the communicator, or set the 
+         *   output only on one of the ranks. Specifying the same filename 
+         *   on multiple ranks will lead to undefined behavior since all ranks
+         *   will try to write to the same file.
+         */
         void set_output_file(const std::string& nm) {
             
             if (!_output)
@@ -107,6 +123,10 @@ namespace MAST {
         }
 
         
+        /*!
+         *   outputs the the current iterate to libMesh::out, and to the 
+         *   output file if it was set for this rank.
+         */
         virtual void output(unsigned int iter,
                             const std::vector<Real>& x,
                             Real obj,

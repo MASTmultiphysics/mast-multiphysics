@@ -86,7 +86,8 @@ namespace MAST {
     public MAST::FunctionEvaluation {
         
         
-        StiffenedPlateThermallyStressedPistonTheorySizingOptimization();
+        StiffenedPlateThermallyStressedPistonTheorySizingOptimization
+        (const libMesh::Parallel::Communicator& comm);
         
         
         ~StiffenedPlateThermallyStressedPistonTheorySizingOptimization();

@@ -76,7 +76,8 @@ namespace MAST {
     public MAST::FunctionEvaluation {
         
         
-        PlateBendingSectionOffsetSizingOptimization();
+        PlateBendingSectionOffsetSizingOptimization
+        (const libMesh::Parallel::Communicator& comm);
         
         
         ~PlateBendingSectionOffsetSizingOptimization();

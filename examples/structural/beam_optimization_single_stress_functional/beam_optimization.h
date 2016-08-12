@@ -76,7 +76,8 @@ namespace MAST {
     public MAST::FunctionEvaluation {
         
         
-        BeamBendingSingleFunctionalSizingOptimization();
+        BeamBendingSingleFunctionalSizingOptimization
+        (const libMesh::Parallel::Communicator& comm);
         
         
         ~BeamBendingSingleFunctionalSizingOptimization();

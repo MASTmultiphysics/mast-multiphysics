@@ -64,8 +64,6 @@ namespace MAST {
          *   communicator.
          */
         void init(MAST::FrequencyFunction&                freq,
-                  libMesh::Parallel::Communicator&        structural_comm,
-                  libMesh::Parallel::Communicator&        fluid_comm,
                   MAST::ComplexSolverBase*                complex_solver,
                   MAST::SmallDisturbancePressureFunction* pressure_func,
                   MAST::FlexibleSurfaceMotion*            motion_func);
@@ -124,22 +122,9 @@ namespace MAST {
 
         
         /*!
-         *   communicator for structural model
-         */
-        libMesh::Parallel::Communicator             *_structural_comm;
-
-        
-        /*!
-         *   communicator for fluid model
-         */
-        libMesh::Parallel::Communicator             *_fluid_comm;
-
-        
-        /*!
          *   complex solver
          */
         MAST::ComplexSolverBase                      *_fluid_complex_solver;
-        
 
         
         /*!

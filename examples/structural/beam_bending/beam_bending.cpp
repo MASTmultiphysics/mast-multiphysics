@@ -65,7 +65,6 @@ MAST::BeamBending::init(libMesh::ElemType etype, bool if_nonlin) {
     
     // initialize the mesh with one element
     libMesh::MeshTools::Generation::build_line(*_mesh, 5, 0, _length);
-    _mesh->prepare_for_use();
     
     // create the equation system
     _eq_sys    = new  libMesh::EquationSystems(*_mesh);

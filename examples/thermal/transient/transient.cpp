@@ -51,8 +51,7 @@
 //                                               0., width,
 //                                               0., height,
 //                                               0., depth);
-//    mesh.prepare_for_use();
-//    
+//
 //    // variable type
 //    libMesh::FEType fe_type(libMesh::FIRST,
 //                            libMesh::LAGRANGE);

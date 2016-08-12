@@ -135,7 +135,6 @@ int main_8(int argc, const char * argv[]) {
                                                  nx, ny,
                                                  0., width,
                                                  0., height);
-    mesh.prepare_for_use();
     
     // variable type
     libMesh::FEType fe_type(libMesh::FIRST,

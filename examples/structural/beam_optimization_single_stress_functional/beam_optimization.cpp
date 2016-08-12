@@ -42,8 +42,9 @@ libMesh::LibMeshInit     *__init;
 
 
 MAST::BeamBendingSingleFunctionalSizingOptimization::
-BeamBendingSingleFunctionalSizingOptimization():
-MAST::FunctionEvaluation(),
+BeamBendingSingleFunctionalSizingOptimization
+(const libMesh::Parallel::Communicator& comm):
+MAST::FunctionEvaluation(comm),
 _initialized(false),
 _n_elems(0),
 _n_stations(0) { }
@@ -83,7 +84,6 @@ MAST::BeamBendingSingleFunctionalSizingOptimization::init(GetPot &infile,
     
     // initialize the mesh with one element
     libMesh::MeshTools::Generation::build_line(*_mesh, _n_elems, 0, _length);
-    _mesh->prepare_for_use();
     
     // create the equation system
     _eq_sys    = new  libMesh::EquationSystems(*_mesh);

@@ -76,7 +76,6 @@ int main_1(int argc, const char * argv[]) {
                                                0.,  1.,
                                                -.5, .5,
                                                -.5, .5);
-    mesh.prepare_for_use();
     
     // modify the mesh to a circular arc of 45 degrees
     const Real

@@ -63,7 +63,6 @@ MAST::BarExtension::init(libMesh::ElemType etype,
     
     // initialize the mesh with one element
     libMesh::MeshTools::Generation::build_line(*_mesh, 10, 0, 10);
-    _mesh->prepare_for_use();
     
     // create the equation system
     _eq_sys    = new  libMesh::EquationSystems(*_mesh);

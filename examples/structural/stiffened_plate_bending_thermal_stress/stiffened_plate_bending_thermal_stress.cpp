@@ -80,7 +80,6 @@ MAST::StiffenedPlateBendingThermalStress::init(libMesh::ElemType e_type,
                     false,
                     10,
                     0.01);
-    _mesh->prepare_for_use();
     
     // create the equation system
     _eq_sys    = new  libMesh::EquationSystems(*_mesh);

@@ -35,6 +35,7 @@
 #include "examples/structural/membrane_extension_uniaxial_stress/membrane_extension_uniaxial.h"
 #include "examples/structural/membrane_extension_biaxial_stress/membrane_extension_biaxial.h"
 #include "examples/structural/plate_bending/plate_bending.h"
+#include "examples/structural/stiffened_plate_bending_thermal_stress/stiffened_plate_bending_thermal_stress.h"
 #include "examples/structural/plate_oscillating_load/plate_oscillating_load.h"
 #include "examples/structural/plate_bending_section_offset/plate_bending_section_offset.h"
 #include "examples/structural/plate_bending_thermal_stress/plate_bending_thermal_stress.h"
@@ -63,6 +64,7 @@
 #include "examples/fsi/beam_flutter_optimization/beam_flutter_optimization.h"
 #include "examples/fsi/plate_flutter_solution/plate_euler_fsi_flutter_solution.h"
 #include "examples/fsi/plate_flutter_solution_half_domain/plate_euler_fsi_half_domain_flutter_solution.h"
+#include "examples/fsi/beam_fsi_solution/beam_euler_fsi_solution.h"
 #include "examples/thermal/bar_transient/bar_transient.h"
 #include "examples/thermal/bar_steady_state/bar_steady_state.h"
 
@@ -206,7 +208,7 @@ void optimization(const std::string& case_name,
     MAST::GCMMAOptimizationInterface optimizer;
     
     // create and attach sizing optimization object
-    ValType func_eval;
+    ValType func_eval(__init->comm());
     if (__init->comm().rank() == 0)
         func_eval.set_output_file("optimization_output.txt");
     __my_func_eval = &func_eval;
@@ -385,11 +387,17 @@ int main(int argc, char* const argv[]) {
                                                with_sens,
                                                par_name);
     else if (case_name == "plate_bending_thermal_stress")
-        analysis<MAST::PlateBendingThermalStress>(case_name,
-                                                  libMesh::QUAD4,
-                                                  if_nonlin,
-                                                  with_sens,
-                                                  par_name);
+        analysis<MAST::StiffenedPlateBendingThermalStress>(case_name,
+                                                           libMesh::QUAD4,
+                                                           if_nonlin,
+                                                           with_sens,
+                                                           par_name);
+    else if (case_name == "stiffened_plate_bending_thermal_stress")
+        analysis<MAST::StiffenedPlateBendingThermalStress>(case_name,
+                                                           libMesh::QUAD4,
+                                                           if_nonlin,
+                                                           with_sens,
+                                                           par_name);
     else if (case_name == "plate_piston_theory_flutter_analysis")
         flutter_analysis<MAST::PlatePistonTheoryFlutterAnalysis>(case_name,
                                                                  libMesh::QUAD4,
@@ -456,6 +464,8 @@ int main(int argc, char* const argv[]) {
         fluid_analysis<MAST::PanelSmallDisturbanceFrequencyDomainInviscidAnalysis3D>(case_name);
     else if (case_name == "panel_inviscid_small_disturbance_frequency_domain_analysis_3d_half_domain")
         fluid_analysis<MAST::PanelSmallDisturbanceFrequencyDomainInviscidAnalysis3DHalfDomain>(case_name);
+    else if (case_name == "beam_fsi_analysis")
+        fluid_analysis<MAST::BeamEulerFSIAnalysis>(case_name);
     else if (case_name == "beam_fsi_flutter_analysis")
         fluid_analysis<MAST::BeamEulerFSIFlutterAnalysis>(case_name);
     else if (case_name == "beam_fsi_nonuniform_aero_base_flutter_analysis")
@@ -513,6 +523,7 @@ int main(int argc, char* const argv[]) {
         << "  plate_oscillating_load \n"
         << "  plate_bending_section_offset \n"
         << "  plate_bending_thermal_stress \n"
+        << "  stiffened_plate_bending_thermal_stress \n"
         << "  plate_bending_sizing_optimization \n"
         << "  plate_bending_single_functional_sizing_optimization \n"
         << "  plate_bending_section_offset_optimization \n"
@@ -549,6 +560,7 @@ int main(int argc, char* const argv[]) {
         << "**********************************\n"
         << "***********   FSI     ************\n"
         << "**********************************\n"
+        << "  beam_fsi_analysis \n"
         << "  beam_fsi_flutter_analysis \n"
         << "  beam_fsi_nonuniform_aero_base_flutter_analysis\n"
         << "  beam_fsi_flutter_optimization \n"

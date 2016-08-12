@@ -59,7 +59,8 @@ namespace MAST {
     class FrequencyFunction;
     class FlexibleSurfaceMotion;
     class SmallDisturbancePressureFunction;
-    
+    class AugmentGhostElementSendListObj;
+
     
     struct PlateEulerFSIHalfDomainFlutterAnalysis {
         
@@ -92,10 +93,6 @@ namespace MAST {
          *  flutter speed
          */
         Real sensitivity_solve(MAST::Parameter& p);
-        
-        
-        // structural communicator
-        libMesh::Parallel::Communicator*         _structural_comm;
         
         
         // create the structural mesh
@@ -234,6 +231,9 @@ namespace MAST {
         
         // create the Dirichlet boundary condition on top edge
         MAST::DirichletBoundaryCondition*     _dirichlet_top;
+
+        // object to augment the send list of ghosted fluid elements
+        MAST::AugmentGhostElementSendListObj*    _augment_send_list_obj;
 
         // vector of parameters to evaluate sensitivity wrt
         std::vector<MAST::Parameter*>           _params_for_sensitivity;

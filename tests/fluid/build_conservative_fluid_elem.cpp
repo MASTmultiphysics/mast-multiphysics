@@ -62,7 +62,6 @@ MAST::BuildConservativeFluidElem::BuildConservativeFluidElem() {
     dim       = 2;
 
     libMesh::MeshTools::Generation::build_square(*_mesh, 1, 1);
-    _mesh->prepare_for_use();
     
     // variable type
     libMesh::FEType fe_type(libMesh::FIRST,

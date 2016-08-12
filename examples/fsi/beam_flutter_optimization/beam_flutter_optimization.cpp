@@ -19,6 +19,7 @@
 
 // C++ includes
 #include <iostream>
+#include <map>
 
 // MAST includes
 #include "examples/fsi/beam_flutter_optimization/beam_flutter_optimization.h"
@@ -41,6 +42,7 @@
 #include "boundary_condition/flexible_surface_motion.h"
 #include "elasticity/fsi_generalized_aero_force_assembly.h"
 #include "aeroelasticity/flutter_root_base.h"
+#include "examples/base/augment_ghost_elem_send_list.h"
 
 
 // libMesh includes
@@ -182,10 +184,133 @@ beam_euler_flutter_optim_con(int*    mode,
 }
 
 
+namespace MAST{
+    
+    class GAFDatabase:
+    public MAST::FSIGeneralizedAeroForceAssembly {
+        
+    public:
+        
+        GAFDatabase(const unsigned int n_modes):
+        MAST::FSIGeneralizedAeroForceAssembly(),
+        _if_evaluate(true),
+        _n_modes(n_modes) { }
+        
+        ~GAFDatabase() { }
+        
+        
+        void
+        set_evaluate_mode(bool f) {
+            
+            _if_evaluate = f;
+        }
+        
+        ComplexMatrixX&
+        add_kr_mat(const Real kr,
+                   const ComplexMatrixX& mat,
+                   const bool if_kr_sens) {
+            
+            libmesh_assert_equal_to(mat.rows(), _n_modes);
+            libmesh_assert_equal_to(mat.cols(), _n_modes);
+            
+            if (!if_kr_sens) {
+                
+                _kr_to_gaf_map[kr] = mat;
+                return _kr_to_gaf_map[kr];
+            }
+            else {
+                
+                _kr_to_gaf_kr_sens_map[kr] = mat;
+                return _kr_to_gaf_kr_sens_map[kr];
+            }
+        }
+        
+        ComplexMatrixX
+        get_kr_mat(const Real kr,
+                   const std::map<Real, ComplexMatrixX>& data) {
+            
+            //
+            // the following is used for calculation of the return value
+            //   f(x) is defined for x for each x0 < x < x1
+            //   if   x <= x0,      f(x) = f(x0)
+            //   if   x0 < x < x1,  f(x) is interpolated
+            //   if   x >= x1,      f(x) = f(x1)
+            //
+            
+            ComplexMatrixX
+            mat = ComplexMatrixX::Zero(_n_modes, _n_modes);
+            
+            std::map<Real, ComplexMatrixX>::const_iterator
+            it1, it2;
+            std::map<Real, ComplexMatrixX>::const_reverse_iterator
+            rit  = data.rbegin();
+            it1  = data.begin();
+            
+            // check the lower bound
+            if (kr <=  it1->first) {
+                mat = it1->second;
+            }
+            // check the upper bound
+            else if (kr >=  rit->first) {
+                mat = rit->second;
+            }
+            else {
+                // if it gets here, the ordinate is in between the provided range
+                it2 = data.lower_bound(kr);
+                // this cannot be the first element of the map
+                libmesh_assert(it2 != data.begin());
+                // it2 provides the upper bound. The lower bound is provided by the
+                // preceding iterator
+                it1 = it2--;
+                // now interpolate
+                mat =  it1->second +
+                (kr - it1->first)/(it2->first - it1->first) *
+                (it2->second - it1->second);
+            }
+            
+            return mat;
+        }
+        
+
+        virtual void
+        assemble_generalized_aerodynamic_force_matrix
+        (std::vector<libMesh::NumericVector<Real>*>& basis,
+         ComplexMatrixX& mat,
+         MAST::Parameter* p = nullptr) {
+
+            if (_if_evaluate) {
+                
+                MAST::FSIGeneralizedAeroForceAssembly::
+                assemble_generalized_aerodynamic_force_matrix(basis, mat, p);
+            }
+            else {
+                
+                Real kr = 0.;
+                (*_freq)(kr);
+                if (!p)
+                    mat = this->get_kr_mat(kr, _kr_to_gaf_map);
+                else
+                    mat = this->get_kr_mat(kr, _kr_to_gaf_kr_sens_map);
+            }
+        }
+        
+
+        
+    protected:
+        
+        bool                                _if_evaluate;
+        unsigned int                        _n_modes;
+        std::map<Real, ComplexMatrixX>      _kr_to_gaf_map;
+        std::map<Real, ComplexMatrixX>      _kr_to_gaf_kr_sens_map;
+    };
+}
+
+
+
 
 MAST::BeamFSIFlutterSizingOptimization::
-BeamFSIFlutterSizingOptimization():
-MAST::FunctionEvaluation(),
+BeamFSIFlutterSizingOptimization(const libMesh::Parallel::Communicator& comm):
+MAST::FunctionEvaluation(comm),
 _initialized                            (false),
 _length                                 (0.),
 _k_lower                                (0.),
@@ -194,7 +319,6 @@ _V0_flutter                             (0.),
 _n_elems                                (0),
 _n_stations                             (0),
 _n_k_divs                               (0.),
-_structural_comm                        (nullptr),
 _structural_mesh                        (nullptr),
 _fluid_mesh                             (nullptr),
 _structural_eq_sys                      (nullptr),
@@ -208,7 +332,6 @@ _fluid_discipline                       (nullptr),
 _frequency_domain_fluid_assembly        (nullptr),
 _complex_solver                         (nullptr),
 _modal_assembly                         (nullptr),
-_fsi_assembly                           (nullptr),
 _flight_cond                            (nullptr),
 _far_field                              (nullptr),
 _symm_wall                              (nullptr),
@@ -223,6 +346,7 @@ _omega_f                                (nullptr),
 _velocity_f                             (nullptr),
 _b_ref_f                                (nullptr),
 _flutter_solver                         (nullptr),
+_gaf_database                           (nullptr),
 _thz                                    (nullptr),
 _E                                      (nullptr),
 _nu                                     (nullptr),
@@ -240,7 +364,9 @@ _weight                                 (nullptr),
 _m_card                                 (nullptr),
 _p_card                                 (nullptr),
 _dirichlet_left                         (nullptr),
-_dirichlet_right                        (nullptr) { }
+_dirichlet_right                        (nullptr),
+_augment_send_list_obj                  (nullptr)
+ { }
 
 
 void
@@ -269,7 +395,7 @@ MAST::BeamFSIFlutterSizingOptimization::init(GetPot &infile,
     _length                = infile("length", 10.);
     
     
-    _V0_flutter            =  infile("V_flutter",     410.);
+    _V0_flutter            =  infile("V0_flutter",     410.);
 
     
     //////////////////////////////////////////////////////////////////////
@@ -376,6 +502,9 @@ MAST::BeamFSIFlutterSizingOptimization::init(GetPot &infile,
                                                                           dim);
     
     
+    _augment_send_list_obj = new MAST::AugmentGhostElementSendListObj(*_fluid_sys);
+    _fluid_sys->get_dof_map().attach_extra_send_list_object(*_augment_send_list_obj);
+    
     // initialize the equation system for analysis
     _fluid_eq_sys->init();
     
@@ -397,13 +526,13 @@ MAST::BeamFSIFlutterSizingOptimization::init(GetPot &infile,
         _flight_cond->body_angular_rates(i) = infile("body_angular_rates", 0., i);
     }
     
-    _flight_cond->ref_chord       = infile("ref_c",    1.);
-    _flight_cond->altitude        = infile( "alt",     0.);
-    _flight_cond->mach            = infile("mach",     .5);
-    _flight_cond->gas_property.cp = infile(  "cp",  1003.);
-    _flight_cond->gas_property.cv = infile(  "cv",   716.);
-    _flight_cond->gas_property.T  = infile("temp",   300.);
-    _flight_cond->gas_property.rho= infile( "rho",   1.05);
+    _flight_cond->ref_chord       = infile("ref_c",      1.);
+    _flight_cond->altitude        = infile( "alt",       0.);
+    _flight_cond->mach            = infile("mach",       .5);
+    _flight_cond->gas_property.cp = infile(  "cp",    1003.);
+    _flight_cond->gas_property.cv = infile(  "cv",     716.);
+    _flight_cond->gas_property.T  = infile("temp",     300.);
+    _flight_cond->gas_property.rho= infile( "rho_f",   1.05);
     
     _flight_cond->init();
     
@@ -485,13 +614,6 @@ MAST::BeamFSIFlutterSizingOptimization::init(GetPot &infile,
     //    SETUP THE STRUCTURAL DATA
     //////////////////////////////////////////////////////////////////////
     
-    // create a communicator for the structural model on rank 0
-    _structural_comm = new libMesh::Parallel::Communicator;
-    if (__init->comm().rank() == 0)
-        __init->comm().split(0, 0, *_structural_comm);
-    else
-        __init->comm().split(MPI_UNDEFINED, MPI_UNDEFINED, *_structural_comm);
-    
     x_div_loc.resize     (2);
     x_relative_dx.resize (2);
     x_divs.resize        (1);
@@ -516,184 +638,278 @@ MAST::BeamFSIFlutterSizingOptimization::init(GetPot &infile,
     _length = x_div_loc[1]-x_div_loc[0];
     (*_b_ref) = _length;
     
-    if (_structural_comm->get() != MPI_COMM_NULL){
+    // initialize the dv vector data
+    const Real
+    th_l                   = infile("thickness_lower", 0.0001),
+    th_u                   = infile("thickness_upper", 0.01),
+    th                     = infile("thickness", 0.0015),
+    dx                     = _length/(_n_stations-1);
+    
+    _dv_init.resize    (_n_vars);
+    _dv_scaling.resize (_n_vars);
+    _dv_low.resize     (_n_vars);
+    
+    // design variables for the thickness values
+    for (unsigned int i=0; i<_n_vars; i++) {
         
-        
-        // initialize the dv vector data
-        const Real
-        th_l                   = infile("thickness_lower", 0.001),
-        th_u                   = infile("thickness_upper", 0.2),
-        th                     = infile("thickness", 0.01),
-        dx                     = _length/(_n_stations-1);
-        
-        _dv_init.resize    (_n_vars);
-        _dv_scaling.resize (_n_vars);
-        _dv_low.resize     (_n_vars);
-        
-        // design variables for the thickness values
-        for (unsigned int i=0; i<_n_vars; i++) {
-            
-            _dv_init[i]    =  infile("dv_init", th/th_u, i);
-            _dv_low[i]     = th_l/th_u;
-            _dv_scaling[i] =      th_u;
-        }
-        
-        
-        // create the mesh
-        _structural_mesh       = new libMesh::SerialMesh(*_structural_comm);
-        
-        
-        MeshInitializer().init(divs, *_structural_mesh, libMesh::EDGE2);
-        
-        // create the equation system
-        _structural_eq_sys    = new  libMesh::EquationSystems(*_structural_mesh);
-        
-        // create the libmesh system
-        _structural_sys       = &(_structural_eq_sys->add_system<MAST::NonlinearSystem>("structural"));
-        _structural_sys->set_eigenproblem_type(libMesh::GHEP);
-        
-        // FEType to initialize the system
-        libMesh::FEType fetype (libMesh::FIRST, libMesh::LAGRANGE);
-        
-        // initialize the system to the right set of variables
-        _structural_sys_init  = new MAST::StructuralSystemInitialization(*_structural_sys,
-                                                                         _structural_sys->name(),
-                                                                         fetype);
-        _structural_discipline = new MAST::StructuralDiscipline(*_structural_eq_sys);
-        
-        // create and add the boundary condition and loads
-        _dirichlet_left = new MAST::DirichletBoundaryCondition;
-        _dirichlet_right= new MAST::DirichletBoundaryCondition;
-        std::vector<unsigned int> constrained_vars(4);
-        constrained_vars[0] = 0;  // u
-        constrained_vars[1] = 1;  // v
-        constrained_vars[2] = 2;  // w
-        constrained_vars[3] = 3;  // tx
-        _dirichlet_left->init (0, constrained_vars);
-        _dirichlet_right->init(1, constrained_vars);
-        _structural_discipline->add_dirichlet_bc(0, *_dirichlet_left);
-        _structural_discipline->add_dirichlet_bc(1, *_dirichlet_right);
-        _structural_discipline->init_system_dirichlet_bc(*_structural_sys);
-        
-        // initialize the equation system
-        _structural_eq_sys->init();
-        
-        // initialize the motion object
-        _motion_function   = new MAST::FlexibleSurfaceMotion("small_disturbance_motion",
-                                                             *_structural_sys_init);
-        _slip_wall->add(*_motion_function);
-        
-        
-        _structural_sys->eigen_solver->set_position_of_spectrum(libMesh::LARGEST_MAGNITUDE);
-        _structural_sys->set_exchange_A_and_B(true);
-        _structural_sys->set_n_requested_eigenvalues(infile("n_modes", 10));
-
-        
-        // create the thickness variables
-        _thy_station_parameters.resize(_n_vars);
-        _thy_station_functions.resize(_n_vars);
-        
-        std::map<Real, MAST::FieldFunction<Real>*> thy_station_vals;
-        
-        for (unsigned int i=0; i<_n_stations; i++) {
-            std::ostringstream oss;
-            oss << "h_y_" << i;
-            
-            // now we need a parameter that defines the thickness at the
-            // specified station and a constant function that defines the
-            // field function at that location.
-            MAST::Parameter* h_y               =
-            new MAST::Parameter(oss.str(), infile("thickness", 0.002));
-            
-            MAST::ConstantFieldFunction* h_y_f =
-            new MAST::ConstantFieldFunction("hy", *h_y);
-            
-            // add this to the thickness map
-            thy_station_vals.insert(std::pair<Real, MAST::FieldFunction<Real>*>
-                                    (i*dx, h_y_f));
-            
-            // add the function to the parameter set
-            _thy_station_parameters[i]          = h_y;
-            _thy_station_functions[i]           = h_y_f;
-            
-            // tell the assembly system about the sensitvity parameter
-            _structural_discipline->add_parameter(*h_y);
-        }
-        
-        // now create the h_y function and give it to the property card
-        _thy_f.reset(new MAST::MultilinearInterpolation("hy", thy_station_vals));
-        
-        
-        // create the property functions and add them to the
-        
-        _thz             = new MAST::Parameter("thz",    1.00);
-        _rho             = new MAST::Parameter("rho",   2.7e3);
-        _E               = new MAST::Parameter("E",     72.e9);
-        _nu              = new MAST::Parameter("nu",     0.33);
-        _zero            = new MAST::Parameter("zero",     0.);
-        
-        _thz_f           = new MAST::ConstantFieldFunction("hz",          *_thz);
-        _rho_f           = new MAST::ConstantFieldFunction("rho",         *_rho);
-        _E_f             = new MAST::ConstantFieldFunction("E",             *_E);
-        _nu_f            = new MAST::ConstantFieldFunction("nu",           *_nu);
-        _hyoff_f         = new MAST::ConstantFieldFunction("hy_off",     *_zero);
-        _hzoff_f         = new MAST::ConstantFieldFunction("hz_off",     *_zero);
-        
-        // create the material property card
-        _m_card          = new MAST::IsotropicMaterialPropertyCard;
-        
-        // add the material properties to the card
-        _m_card->add(*_rho_f);
-        _m_card->add(*_E_f);
-        _m_card->add(*_nu_f);
-        
-        // create the element property card
-        _p_card          = new MAST::Solid1DSectionElementPropertyCard;
-        
-        // tell the card about the orientation
-        libMesh::Point orientation;
-        orientation(1) = 1.;
-        _p_card->y_vector() = orientation;
-        
-        // add the section properties to the card
-        _p_card->add(*_thy_f);
-        _p_card->add(*_thz_f);
-        _p_card->add(*_hyoff_f);
-        _p_card->add(*_hzoff_f);
-        
-        // tell the section property about the material property
-        _p_card->set_material(*_m_card);
-        
-        _p_card->init();
-        
-        _structural_discipline->set_property_for_subdomain(0, *_p_card);
-
-        
-        
-        // pressure boundary condition for the beam
-        _pressure    =  new MAST::BoundaryConditionBase(MAST::SMALL_DISTURBANCE_MOTION);
-        _pressure->add(*_small_dist_pressure_function);
-        _pressure->add(*_motion_function);
-        _structural_discipline->add_volume_load(0, *_pressure);
-        
-        // modal assembly object for the natural modes eigen-analysis
-        _modal_assembly = new MAST::StructuralModalEigenproblemAssembly;
-
-        
-        // create the function to calculate weight
-        _weight = new MAST::BeamWeight(*_structural_discipline);
+        _dv_init[i]    =  infile("dv_init", th/th_u, i);
+        _dv_low[i]     = th_l/th_u;
+        _dv_scaling[i] =      th_u;
     }
+    
+    // create the mesh
+    _structural_mesh       = new libMesh::SerialMesh(__init->comm());
+    
+    MeshInitializer().init(divs, *_structural_mesh, libMesh::EDGE2);
+    
+    // create the equation system
+    _structural_eq_sys    = new  libMesh::EquationSystems(*_structural_mesh);
+    
+    // create the libmesh system
+    _structural_sys       = &(_structural_eq_sys->add_system<MAST::NonlinearSystem>("structural"));
+    _structural_sys->set_eigenproblem_type(libMesh::GHEP);
+    
+    // FEType to initialize the system
+    libMesh::FEType fetype (libMesh::FIRST, libMesh::LAGRANGE);
+    
+    // initialize the system to the right set of variables
+    _structural_sys_init  = new MAST::StructuralSystemInitialization(*_structural_sys,
+                                                                     _structural_sys->name(),
+                                                                     fetype);
+    _structural_discipline = new MAST::StructuralDiscipline(*_structural_eq_sys);
+    
+    // create and add the boundary condition and loads
+    _dirichlet_left = new MAST::DirichletBoundaryCondition;
+    _dirichlet_right= new MAST::DirichletBoundaryCondition;
+    std::vector<unsigned int> constrained_vars(4);
+    constrained_vars[0] = 0;  // u
+    constrained_vars[1] = 1;  // v
+    constrained_vars[2] = 2;  // w
+    constrained_vars[3] = 3;  // tx
+    _dirichlet_left->init (0, constrained_vars);
+    _dirichlet_right->init(1, constrained_vars);
+    _structural_discipline->add_dirichlet_bc(0, *_dirichlet_left);
+    _structural_discipline->add_dirichlet_bc(1, *_dirichlet_right);
+    _structural_discipline->init_system_dirichlet_bc(*_structural_sys);
+    
+    // initialize the equation system
+    _structural_eq_sys->init();
+    
+    // initialize the motion object
+    _motion_function   = new MAST::FlexibleSurfaceMotion("small_disturbance_motion",
+                                                         *_structural_sys_init);
+    _slip_wall->add(*_motion_function);
+    
+    
+    _structural_sys->eigen_solver->set_position_of_spectrum(libMesh::LARGEST_MAGNITUDE);
+    _structural_sys->set_exchange_A_and_B(true);
+    _structural_sys->set_n_requested_eigenvalues(infile("n_modes", 30));
+    
+    
+    // create the thickness variables
+    _thy_station_parameters.resize(_n_vars);
+    _thy_station_functions.resize(_n_vars);
+    
+    std::map<Real, MAST::FieldFunction<Real>*> thy_station_vals;
+    
+    for (unsigned int i=0; i<_n_stations; i++) {
+        std::ostringstream oss;
+        oss << "h_y_" << i;
+        
+        // now we need a parameter that defines the thickness at the
+        // specified station and a constant function that defines the
+        // field function at that location.
+        MAST::Parameter* h_y               =
+        new MAST::Parameter(oss.str(), infile("thickness", 0.0015));
+        
+        MAST::ConstantFieldFunction* h_y_f =
+        new MAST::ConstantFieldFunction("hy", *h_y);
+        
+        // add this to the thickness map
+        thy_station_vals.insert(std::pair<Real, MAST::FieldFunction<Real>*>
+                                (i*dx, h_y_f));
+        
+        // add the function to the parameter set
+        _thy_station_parameters[i]          = h_y;
+        _thy_station_functions[i]           = h_y_f;
+        
+        // tell the assembly system about the sensitvity parameter
+        _structural_discipline->add_parameter(*h_y);
+    }
+    
+    // now create the h_y function and give it to the property card
+    _thy_f.reset(new MAST::MultilinearInterpolation("hy", thy_station_vals));
+    
+    
+    // create the property functions and add them to the
+    
+    _thz             = new MAST::Parameter("thz",                   1.00);
+    _rho             = new MAST::Parameter("rho",   infile("rho", 2.7e3));
+    _E               = new MAST::Parameter("E",     infile(  "E", 72.e9));
+    _nu              = new MAST::Parameter("nu",    infile( "nu",  0.33));
+    _zero            = new MAST::Parameter("zero",     0.);
+    
+    _thz_f           = new MAST::ConstantFieldFunction("hz",          *_thz);
+    _rho_f           = new MAST::ConstantFieldFunction("rho",         *_rho);
+    _E_f             = new MAST::ConstantFieldFunction("E",             *_E);
+    _nu_f            = new MAST::ConstantFieldFunction("nu",           *_nu);
+    _hyoff_f         = new MAST::ConstantFieldFunction("hy_off",     *_zero);
+    _hzoff_f         = new MAST::ConstantFieldFunction("hz_off",     *_zero);
+    
+    // create the material property card
+    _m_card          = new MAST::IsotropicMaterialPropertyCard;
+    
+    // add the material properties to the card
+    _m_card->add(*_rho_f);
+    _m_card->add(*_E_f);
+    _m_card->add(*_nu_f);
+    
+    // create the element property card
+    _p_card          = new MAST::Solid1DSectionElementPropertyCard;
+    
+    // tell the card about the orientation
+    libMesh::Point orientation;
+    orientation(1) = 1.;
+    _p_card->y_vector() = orientation;
+    
+    // add the section properties to the card
+    _p_card->add(*_thy_f);
+    _p_card->add(*_thz_f);
+    _p_card->add(*_hyoff_f);
+    _p_card->add(*_hzoff_f);
+    
+    // tell the section property about the material property
+    _p_card->set_material(*_m_card);
+    
+    _p_card->init();
+    
+    _structural_discipline->set_property_for_subdomain(0, *_p_card);
+    
+    
+    
+    // pressure boundary condition for the beam
+    _pressure    =  new MAST::BoundaryConditionBase(MAST::SMALL_DISTURBANCE_MOTION);
+    _pressure->add(*_small_dist_pressure_function);
+    _pressure->add(*_motion_function);
+    _structural_discipline->add_volume_load(0, *_pressure);
+    
+    // modal assembly object for the natural modes eigen-analysis
+    _modal_assembly = new MAST::StructuralModalEigenproblemAssembly;
+    
+    
+    // create the function to calculate weight
+    _weight = new MAST::BeamWeight(*_structural_discipline);
     
     _flutter_solver  = new MAST::UGFlutterSolver;
-    _fsi_assembly    = new MAST::FSIGeneralizedAeroForceAssembly ;
     
-    // set the output file name only on the first processor
-    if (_structural_comm->get() != MPI_COMM_NULL) {
-        
-        std::ostringstream oss;
-        oss << "flutter_output_" << __init->comm().rank() << ".txt";
-        _flutter_solver->set_output_file(oss.str());
+    ////////////////////////////////////////////////////////////
+    // STRUCTURAL MODAL EIGENSOLUTION
+    ////////////////////////////////////////////////////////////
+    
+    // create the nonlinear assembly object
+    _structural_sys->initialize_condensed_dofs(*_structural_discipline);
+    
+    _modal_assembly->attach_discipline_and_system(*_structural_discipline,
+                                                  *_structural_sys_init);
+    
+    
+    _structural_sys->eigenproblem_solve();
+    _modal_assembly->clear_discipline_and_system();
+    
+    // Get the number of converged eigen pairs.
+    unsigned int
+    nconv = std::min(_structural_sys->get_n_converged_eigenvalues(),
+                     _structural_sys->get_n_requested_eigenvalues());
+    
+    if (_basis.size() > 0)
+        libmesh_assert(_basis.size() == nconv);
+    else {
+        _basis.resize(nconv);
+        for (unsigned int i=0; i<_basis.size(); i++)
+            _basis[i] = NULL;
     }
+    
+    for (unsigned int i=0; i<nconv; i++) {
+        
+        // create a vector to store the basis
+        if (_basis[i] == NULL)
+            _basis[i] = _structural_sys->solution->zero_clone().release();
+        
+        std::ostringstream file_name;
+        
+        // get the eigenvalue and eigenvector
+        Real
+        re = 0.,
+        im = 0.;
+        _structural_sys->get_eigenpair(i, re, im, *_basis[i]);
+        
+        libMesh::out
+        << std::setw(35) << std::fixed << std::setprecision(15)
+        << re << std::endl;
+    }
+
+
+    //////////////////////////////////////////////////////////////////////
+    //    CALCULATE AND STORE THE GAFs
+    //////////////////////////////////////////////////////////////////////
+    // initialize the GAF interpolation assembly object
+    _gaf_database = new  MAST::GAFDatabase(_basis.size());
+
+    _gaf_database->attach_discipline_and_system(*_structural_discipline,
+                                                *_structural_sys_init);
+    
+    
+    _gaf_database->init(*_freq_function,
+                        _complex_solver,               // fluid complex solver
+                        _small_dist_pressure_function,
+                        _motion_function);
+    
+    _gaf_database->set_evaluate_mode(true);
+
+    libMesh::out
+    << "Building GAF database..." << std::endl;
+
+    // now iterate over the reduced frequencies and calculate the GAF matrices
+    for (unsigned int i=0; i<=_n_k_divs; i++) {
+        
+        Real
+        kval = _k_upper + (_k_lower-_k_upper)*(1.*i)/(1.*_n_k_divs);
+
+        libMesh::out << " ***********   kr = " << kval
+        << "  ***********" << std::endl;
+        
+        
+        // initialize reduced frequency
+        (*_omega) = kval;
+        
+        // first the GAF values, then the sensitivity values
+        {
+            ComplexMatrixX&
+            mat = _gaf_database->add_kr_mat(kval,
+                                            ComplexMatrixX::Zero(_basis.size(),
+                                                                 _basis.size()),
+                                            false);
+            
+            _gaf_database->assemble_generalized_aerodynamic_force_matrix(_basis, mat);
+        }
+        
+        // now the sensitivity
+        {
+            ComplexMatrixX&
+            mat = _gaf_database->add_kr_mat(kval,
+                                            ComplexMatrixX::Zero(_basis.size(),
+                                                                 _basis.size()),
+                                            true);
+            
+            _gaf_database->assemble_generalized_aerodynamic_force_matrix(_basis,
+                                                                         mat,
+                                                                         _omega);
+        }
+    }
+    
+    _gaf_database->clear_discipline_and_system();
+    _frequency_domain_fluid_assembly->clear_discipline_and_system();
+    _gaf_database->set_evaluate_mode(false);
     
     _initialized = true;
 }
@@ -734,70 +950,65 @@ MAST::BeamFSIFlutterSizingOptimization::~BeamFSIFlutterSizingOptimization() {
     
     delete _small_dist_pressure_function;
     
-    delete _fsi_assembly;
+    delete _motion_function;
+    delete _pressure;
     
-    if (_structural_comm->get() != MPI_COMM_NULL) {
-        
-        delete _motion_function;
-        delete _pressure;
-        
-        delete _structural_eq_sys;
-        delete _structural_mesh;
-        
-        delete _modal_assembly;
-        
-        delete _structural_discipline;
-        delete _structural_sys_init;
-        
-        delete _m_card;
-        delete _p_card;
-        
-        delete _dirichlet_left;
-        delete _dirichlet_right;
-        
-        delete _thz_f;
-        delete _rho_f;
-        delete _E_f;
-        delete _nu_f;
-        delete _hyoff_f;
-        delete _hzoff_f;
-        
-        
-        delete _thz;
-        delete _rho;
-        delete _E;
-        delete _nu;
-        delete _zero;
-        
-        
-        // delete the basis vectors
-        if (_basis.size())
-            for (unsigned int i=0; i<_basis.size(); i++)
-                if (_basis[i]) delete _basis[i];
-        
-        // delete the h_y station functions
-        {
-            std::vector<MAST::ConstantFieldFunction*>::iterator
-            it  = _thy_station_functions.begin(),
-            end = _thy_station_functions.end();
-            for (; it != end; it++)  delete *it;
-        }
-        
-        
-        // delete the h_y station parameters
-        {
-            std::vector<MAST::Parameter*>::iterator
-            it  = _thy_station_parameters.begin(),
-            end = _thy_station_parameters.end();
-            for (; it != end; it++)  delete *it;
-        }
-        
-        delete _weight;
-        
+    delete _structural_eq_sys;
+    delete _structural_mesh;
+    
+    delete _modal_assembly;
+    
+    delete _structural_discipline;
+    delete _structural_sys_init;
+    
+    delete _m_card;
+    delete _p_card;
+    
+    delete _dirichlet_left;
+    delete _dirichlet_right;
+    
+    delete _thz_f;
+    delete _rho_f;
+    delete _E_f;
+    delete _nu_f;
+    delete _hyoff_f;
+    delete _hzoff_f;
+    
+    
+    delete _thz;
+    delete _rho;
+    delete _E;
+    delete _nu;
+    delete _zero;
+    
+    
+    // delete the basis vectors
+    if (_basis.size())
+        for (unsigned int i=0; i<_basis.size(); i++)
+            if (_basis[i]) delete _basis[i];
+    
+    // delete the h_y station functions
+    {
+        std::vector<MAST::ConstantFieldFunction*>::iterator
+        it  = _thy_station_functions.begin(),
+        end = _thy_station_functions.end();
+        for (; it != end; it++)  delete *it;
     }
     
+    
+    // delete the h_y station parameters
+    {
+        std::vector<MAST::Parameter*>::iterator
+        it  = _thy_station_parameters.begin(),
+        end = _thy_station_parameters.end();
+        for (; it != end; it++)  delete *it;
+    }
+    
+    delete _weight;
+    
     delete _flutter_solver;
-    delete _structural_comm;
+    delete _gaf_database;
+    delete _augment_send_list_obj;
 }
 
 
@@ -827,9 +1038,6 @@ MAST::BeamFSIFlutterSizingOptimization::evaluate(const std::vector<Real>& dvars,
     libmesh_assert(_initialized);
     libmesh_assert_equal_to(dvars.size(), _n_vars);
     
-    // set the parameter values equal to the DV value
-    for (unsigned int i=0; i<_n_vars; i++)
-        (*_thy_station_parameters[i]) = dvars[i]*_dv_scaling[i];
     
     // DO NOT zero out the gradient vector, since GCMMA needs it for the
     // subproblem solution
@@ -845,79 +1053,47 @@ MAST::BeamFSIFlutterSizingOptimization::evaluate(const std::vector<Real>& dvars,
     pval    = 2.;
     
     
+    // set the parameter values equal to the DV value
+    for (unsigned int i=0; i<_n_vars; i++)
+        (*_thy_station_parameters[i]) = dvars[i]*_dv_scaling[i];
+    
+    for (unsigned int i=0; i<_n_vars; i++)
+        libMesh::out
+        << "th     [ " << std::setw(10) << i << " ] = "
+        << std::setw(20) << (*_thy_station_parameters[i])() << std::endl;
+    
     // calculate weight
     (*_weight)(pt, 0., wt);
-    
-    
-    ////////////////////////////////////////////////////////////
-    // STRUCTURAL MODAL EIGENSOLUTION
-    ////////////////////////////////////////////////////////////
-    
-    if (_structural_comm->get() != MPI_COMM_NULL) {
-        
-        // create the nonlinear assembly object
-        _structural_sys->initialize_condensed_dofs(*_structural_discipline);
-        
-        _modal_assembly->attach_discipline_and_system(*_structural_discipline,
-                                                    *_structural_sys_init);
-        
-        
-        _structural_sys->eigenproblem_solve();
-        _modal_assembly->clear_discipline_and_system();
-        
-        // Get the number of converged eigen pairs.
-        unsigned int
-        nconv = std::min(_structural_sys->get_n_converged_eigenvalues(),
-                         _structural_sys->get_n_requested_eigenvalues());
-        
-        if (_basis.size() > 0)
-            libmesh_assert(_basis.size() == nconv);
-        else {
-            _basis.resize(nconv);
-            for (unsigned int i=0; i<_basis.size(); i++)
-                _basis[i] = NULL;
-        }
-        
-        for (unsigned int i=0; i<nconv; i++) {
-            
-            // create a vector to store the basis
-            if (_basis[i] == NULL)
-                _basis[i] = _structural_sys->solution->zero_clone().release();
-            
-            std::ostringstream file_name;
-            
-            // get the eigenvalue and eigenvector
-            Real
-            re = 0.,
-            im = 0.;
-            _structural_sys->get_eigenpair(i, re, im, *_basis[i]);
-            
-            libMesh::out
-            << std::setw(35) << std::fixed << std::setprecision(15)
-            << re << std::endl;
-        }
-    }
-    
-    
-    
+
+
+
     ///////////////////////////////////////////////////////////////////
     // FLUTTER SOLUTION
     ///////////////////////////////////////////////////////////////////
     // clear flutter solver and set the output file
     _flutter_solver->clear();
     
-    if (_structural_comm->get() != MPI_COMM_NULL)
-        _fsi_assembly->attach_discipline_and_system(*_structural_discipline,
-                                                  *_structural_sys_init);
+    std::ostringstream oss;
+    oss << "flutter_output_" << __init->comm().rank() << ".txt";
+    _flutter_solver->set_output_file(oss.str());
     
+    _gaf_database->attach_discipline_and_system(*_structural_discipline,
+                                                *_structural_sys_init);
     
-    _fsi_assembly->init(*_freq_function,
-                        *_structural_comm,             // structural comm
-                        __init->comm(),                // fluid comm
+    libMesh::NumericVector<Real>&
+    base_sol = _fluid_sys->get_vector("fluid_base_solution");
+    _frequency_domain_fluid_assembly->attach_discipline_and_system(*_fluid_discipline,
+                                                                   *_complex_solver,
+                                                                   *_fluid_sys_init);
+    _frequency_domain_fluid_assembly->set_base_solution(base_sol);
+    _frequency_domain_fluid_assembly->set_frequency_function(*_freq_function);
+    
+
+    _gaf_database->init(*_freq_function,
                         _complex_solver,                       // fluid complex solver
                         _small_dist_pressure_function,
                         _motion_function);
-    _flutter_solver->attach_assembly(*_fsi_assembly);
+    _flutter_solver->attach_assembly(*_gaf_database);
     _flutter_solver->initialize(*_omega,
                                 *_b_ref,
                                 _flight_cond->rho(),
@@ -934,7 +1110,7 @@ MAST::BeamFSIFlutterSizingOptimization::evaluate(const std::vector<Real>& dvars,
     // now ask the flutter solver to return the critical flutter root,
     // which is the flutter cross-over point at the lowest velocity
     Real
-    tol                 = 1.0e-3;
+    tol                 = 1.0e-6;
     unsigned int
     max_bisection_iters = 10;
     
@@ -943,12 +1119,8 @@ MAST::BeamFSIFlutterSizingOptimization::evaluate(const std::vector<Real>& dvars,
     
     
     _flutter_solver->print_sorted_roots();
-    _fsi_assembly->clear_discipline_and_system();
+    _gaf_database->clear_discipline_and_system();
     _flutter_solver->clear_assembly_object();
-    
-    // make sure solution was found
-    libmesh_assert(sol.first);
-
     _frequency_domain_fluid_assembly->clear_discipline_and_system();
 
     // copy the flutter velocity to the contraint vector
@@ -961,6 +1133,9 @@ MAST::BeamFSIFlutterSizingOptimization::evaluate(const std::vector<Real>& dvars,
     else
         fvals[0]  =  -100.;
 
+    // tell all ranks about the constraint function values
+    this->comm().broadcast(fvals);
+
     
     //////////////////////////////////////////////////////////////////////
     // get the objective and constraints
@@ -969,6 +1144,8 @@ MAST::BeamFSIFlutterSizingOptimization::evaluate(const std::vector<Real>& dvars,
     // set the function and objective values
     obj = wt;
 
+    // tell all ranks about the obj function
+    this->comm().sum(obj);
     
     //////////////////////////////////////////////////////////////////
     //   evaluate sensitivity if needed
@@ -978,6 +1155,7 @@ MAST::BeamFSIFlutterSizingOptimization::evaluate(const std::vector<Real>& dvars,
     if (eval_obj_grad) {
         
         Real w_sens = 0.;
+        std::fill(obj_grad.begin(), obj_grad.end(), 0.);
         
         // set gradient of weight
         for (unsigned int i=0; i<_n_vars; i++) {
@@ -988,9 +1166,12 @@ MAST::BeamFSIFlutterSizingOptimization::evaluate(const std::vector<Real>& dvars,
                                 w_sens);
             obj_grad[i] = w_sens*_dv_scaling[i];
         }
-        
+
+        // tell all processors about the sens values
+        this->comm().sum(obj_grad);
     }
-    
+
+
     
     // now check if the sensitivity of constraint function is requested
     bool if_sens = false;
@@ -1009,26 +1190,53 @@ MAST::BeamFSIFlutterSizingOptimization::evaluate(const std::vector<Real>& dvars,
         for (unsigned int i=0; i<_n_vars; i++) {
             
             libMesh::ParameterVector params;
+            
             params.resize(1);
             params[0]  = _thy_station_parameters[i]->ptr();
             
-            if (_structural_comm->get() != MPI_COMM_NULL)
-                _fsi_assembly->attach_discipline_and_system(*_structural_discipline,
+            // calculate sensitivity only if the flutter root was found
+            // else, set it to zero
+            if (sol.second) {
+                
+                _gaf_database->attach_discipline_and_system(*_structural_discipline,
                                                             *_structural_sys_init);
-            _flutter_solver->attach_assembly(*_fsi_assembly);
-            _flutter_solver->calculate_sensitivity(*sol.second, params, 0);
-            _flutter_solver->clear_assembly_object();
-            _fsi_assembly->clear_discipline_and_system();
+                
+                _frequency_domain_fluid_assembly->attach_discipline_and_system(*_fluid_discipline,
+                                                                               *_complex_solver,
+                                                                               *_fluid_sys_init);
+                _frequency_domain_fluid_assembly->set_base_solution(base_sol);
+                _frequency_domain_fluid_assembly->set_frequency_function(*_freq_function);
+                
+                _gaf_database->init(*_freq_function,
+                                    _complex_solver,                       // fluid complex solver
+                                    _small_dist_pressure_function,
+                                    _motion_function);
+                _flutter_solver->attach_assembly(*_gaf_database);
+                _flutter_solver->initialize(*_omega,
+                                            *_b_ref,
+                                            _flight_cond->rho(),
+                                            _k_lower,         // lower kr
+                                            _k_upper,         // upper kr
+                                            _n_k_divs,        // number of divisions
+                                            _basis);          // basis vectors
 
-            // copy the sensitivity values in the output
-            grads[i] = -_dv_scaling[i] *
-            _V0_flutter / pow(sol.second->V,2) * sol.second->V_sens;
+                _flutter_solver->calculate_sensitivity(*sol.second, params, 0);
+
+                _gaf_database->clear_discipline_and_system();
+                _flutter_solver->clear_assembly_object();
+                _frequency_domain_fluid_assembly->clear_discipline_and_system();
+
+                // copy the sensitivity values in the output
+                grads[i] = -_dv_scaling[i] *
+                _V0_flutter / pow(sol.second->V,2) * sol.second->V_sens;
+            }
+            else
+                grads[i] = 0.;
         }
+        
+        // tell all ranks about the gradients
+        this->comm().broadcast(grads);
     }
-    
-    
-    // write the evaluation output
-    this->output(0, dvars, obj, fvals, false);
 }
 
 

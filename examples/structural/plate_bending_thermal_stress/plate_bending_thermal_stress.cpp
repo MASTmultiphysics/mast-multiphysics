@@ -72,7 +72,6 @@ MAST::PlateBendingThermalStress::init(libMesh::ElemType e_type,
                                                  0, _length,
                                                  0, _width,
                                                  e_type);
-    _mesh->prepare_for_use();
     
     // create the equation system
     _eq_sys    = new  libMesh::EquationSystems(*_mesh);

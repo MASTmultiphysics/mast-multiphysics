@@ -63,14 +63,7 @@ MAST::FlexibleSurfaceMotion::init(MAST::FrequencyFunction& freq,
 
     // first initialize the solution to the given vector
     _sol.reset(libMesh::NumericVector<Real>::build(sys.comm()).release());
-    _sol->init(sys.n_dofs(),
-               sys.n_local_dofs(),
-               sys.get_dof_map().get_send_list(),
-               false,
-               libMesh::GHOSTED);
-    //_sol->init(sol.size(), true, libMesh::SERIAL);
-    
-    // now localize the give solution to this objects's vector
+    _sol->init(sol.size(), true, libMesh::SERIAL);
     sol.localize(*_sol);
     
     // if the mesh function has not been created so far, initialize it

@@ -21,6 +21,9 @@
 // MAST includes
 #include "examples/fluid/meshing/panel_mesh_3D_half_domain.h"
 
+// libMesh includes
+#include "libmesh/mesh_serializer.h"
+#include "libmesh/parallel_mesh.h"
 
 
 void
@@ -72,61 +75,73 @@ MAST::PanelMesh3DHalfDomain::process_mesh( ) {
     // the application of boudnary conditions is contingent upon the panel surface
     // points lying on the y = _y0, and the mesh movement ends up altering that
     
-    //march over all the elmeents and tag the sides that all lie on the panel suface
-    libMesh::MeshBase::element_iterator e_it = _mesh->elements_begin();
+    // check if the mesh is parallel
+    const bool
+    parallel_mesh = !_mesh->is_serial();
     
-    for ( ; e_it != _mesh->elements_end(); e_it++)
     {
-        // iterate over the sides of each element and check if all
-        // nodes satisfy the requirement
+        libMesh::MeshSerializer serializer(*_mesh);
         
-        for (unsigned int i_side=0; i_side<(*e_it)->n_sides(); i_side++)
+        
+        //march over all the elmeents and tag the sides that all lie on the panel suface
+        libMesh::MeshBase::element_iterator e_it = _mesh->elements_begin();
+        
+        for ( ; e_it != _mesh->elements_end(); e_it++)
         {
-            libMesh::AutoPtr<libMesh::Elem> side_elem ((*e_it)->side(i_side).release());
-            std::vector<bool> side_on_panel(side_elem->n_nodes()),
-            side_on_slip_wall(side_elem->n_nodes());
+            // iterate over the sides of each element and check if all
+            // nodes satisfy the requirement
             
-            std::fill(    side_on_panel.begin(),     side_on_panel.end(), false);
-            std::fill(side_on_slip_wall.begin(), side_on_slip_wall.end(), false);
-            
-            for (unsigned int i_node=0; i_node<side_elem->n_nodes(); i_node++) {
-            
-                const libMesh::Node& n = *(side_elem->get_node(i_node));
-                if (n(2)==_z0) { //bottom face
+            for (unsigned int i_side=0; i_side<(*e_it)->n_sides(); i_side++)
+            {
+                libMesh::AutoPtr<libMesh::Elem> side_elem ((*e_it)->side(i_side).release());
+                std::vector<bool> side_on_panel(side_elem->n_nodes()),
+                side_on_slip_wall(side_elem->n_nodes());
+                
+                std::fill(    side_on_panel.begin(),     side_on_panel.end(), false);
+                std::fill(side_on_slip_wall.begin(), side_on_slip_wall.end(), false);
+                
+                for (unsigned int i_node=0; i_node<side_elem->n_nodes(); i_node++) {
                     
-                    if ((n(2)==_z0) && //bottom face
-                        (n(0) >= _x0-1.0e-6) && (n(0) <= _x1+1.0e-6) && // x-coord
-                        (n(1) >= _y0-1.0e-6) && (n(1) <= _y1+1.0e-6))
-                        side_on_panel[i_node] = true;
-                    
-                    if ((n(2)==_z0) &&
-                        ((n(0) <= _x0+1.0e-6) || (n(0) >= _x1-1.0e-6) || // x-coord
-                         (n(1) <= _y0+1.0e-6) || (n(1) >= _y1-1.0e-6)))
-                        side_on_slip_wall[i_node] = true;
+                    const libMesh::Node& n = *(side_elem->get_node(i_node));
+                    if (n(2)==_z0) { //bottom face
+                        
+                        if ((n(2)==_z0) && //bottom face
+                            (n(0) >= _x0-1.0e-6) && (n(0) <= _x1+1.0e-6) && // x-coord
+                            (n(1) >= _y0-1.0e-6) && (n(1) <= _y1+1.0e-6))
+                            side_on_panel[i_node] = true;
+                        
+                        if ((n(2)==_z0) &&
+                            ((n(0) <= _x0+1.0e-6) || (n(0) >= _x1-1.0e-6) || // x-coord
+                             (n(1) <= _y0+1.0e-6) || (n(1) >= _y1-1.0e-6)))
+                            side_on_slip_wall[i_node] = true;
+                    }
                 }
+                
+                // check for side on panel
+                bool if_apply_bc = true;
+                for (unsigned int i_node=0; i_node<side_elem->n_nodes(); i_node++)
+                    if_apply_bc = side_on_panel[i_node] && if_apply_bc;
+                if (if_apply_bc) {
+                    _mesh->boundary_info->add_side(*e_it, i_side, _panel_bc_id);
+                    if (parallel_mesh)
+                        dynamic_cast<libMesh::DistributedMesh*>(_mesh)->add_extra_ghost_elem(*e_it);
+                }
+                
+                // now check for the slip wall
+                if_apply_bc = true;
+                for (unsigned int i_node=0; i_node<side_elem->n_nodes(); i_node++)
+                    if_apply_bc = side_on_slip_wall[i_node] && if_apply_bc;
+                if (if_apply_bc)
+                    _mesh->boundary_info->add_side(*e_it, i_side, _symmetry_bc_id);
             }
-            
-            // check for side on panel
-            bool if_apply_bc = true;
-            for (unsigned int i_node=0; i_node<side_elem->n_nodes(); i_node++)
-                if_apply_bc = side_on_panel[i_node] && if_apply_bc;
-            if (if_apply_bc)
-                _mesh->boundary_info->add_side(*e_it, i_side, _panel_bc_id);
-            
-            // now check for the slip wall
-            if_apply_bc = true;
-            for (unsigned int i_node=0; i_node<side_elem->n_nodes(); i_node++)
-                if_apply_bc = side_on_slip_wall[i_node] && if_apply_bc;
-            if (if_apply_bc)
-                _mesh->boundary_info->add_side(*e_it, i_side, _symmetry_bc_id);
         }
+        
+        // set the boudnary id names
+        _mesh->boundary_info->sideset_name(_panel_bc_id) = "Panel";
+        _mesh->boundary_info->sideset_name(_symmetry_bc_id) = "Symmetry";
+        
     }
-    
-    // set the boudnary id names
-    _mesh->boundary_info->sideset_name(_panel_bc_id) = "Panel";
-    _mesh->boundary_info->sideset_name(_symmetry_bc_id) = "Symmetry";
-    
-    
+        
     // now move the mesh points
     libMesh::MeshBase::node_iterator   n_it  = _mesh->nodes_begin();
     const libMesh::MeshBase::node_iterator n_end = _mesh->nodes_end();

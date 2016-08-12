@@ -68,7 +68,6 @@ MAST::MembraneExtensionUniaxial::init(libMesh::ElemType etype,
                                                  0, _length,
                                                  0, _width,
                                                  etype);
-    _mesh->prepare_for_use();
     
     // create the equation system
     _eq_sys    = new  libMesh::EquationSystems(*_mesh);

@@ -52,6 +52,7 @@
 #include "boundary_condition/dirichlet_boundary_condition.h"
 #include "aeroelasticity/ug_flutter_solver.h"
 #include "aeroelasticity/displacement_function_base.h"
+#include "examples/base/augment_ghost_elem_send_list.h"
 
 
 // libMesh includes
@@ -136,7 +137,6 @@ namespace MAST {
 
 MAST::BeamEulerFSIFlutterNonuniformAeroBaseAnalysis::
 BeamEulerFSIFlutterNonuniformAeroBaseAnalysis():
-_structural_comm                        (nullptr),
 _structural_mesh                        (nullptr),
 _fluid_mesh                             (nullptr),
 _structural_eq_sys                      (nullptr),
@@ -192,7 +192,8 @@ _flutter_root                           (nullptr),
 _m_card                                 (nullptr),
 _p_card                                 (nullptr),
 _dirichlet_left                         (nullptr),
-_dirichlet_right                        (nullptr) {
+_dirichlet_right                        (nullptr),
+_augment_send_list_obj                  (nullptr) {
     
     //////////////////////////////////////////////////////////////////////
     //    SETUP THE FLUID DATA
@@ -307,6 +308,8 @@ _dirichlet_right                        (nullptr) {
                                                                           libMesh::FEType(fe_order, fe_type),
                                                                           dim);
     
+    _augment_send_list_obj = new MAST::AugmentGhostElementSendListObj(*_fluid_sys);
+    _fluid_sys->get_dof_map().attach_extra_send_list_object(*_augment_send_list_obj);
     
     // initialize the equation system for analysis
     _fluid_eq_sys->init();
@@ -387,13 +390,6 @@ _dirichlet_right                        (nullptr) {
     //////////////////////////////////////////////////////////////////////
     //    SETUP THE STRUCTURAL DATA
     //////////////////////////////////////////////////////////////////////
-
-    // create a communicator for the structural model on rank 0
-    _structural_comm = new libMesh::Parallel::Communicator;
-    if (__init->comm().rank() == 0)
-        __init->comm().split(0, 0, *_structural_comm);
-    else
-        __init->comm().split(MPI_UNDEFINED, MPI_UNDEFINED, *_structural_comm);
     
     x_div_loc.resize     (2);
     x_relative_dx.resize (2);
@@ -418,138 +414,135 @@ _dirichlet_right                        (nullptr) {
     // setup length for use in setup of flutter solver
     _length = x_div_loc[1]-x_div_loc[0];
     (*_b_ref) = _length;
-
-    if (_structural_comm->get() != MPI_COMM_NULL){
-        
-        // create the mesh
-        _structural_mesh       = new libMesh::SerialMesh(*_structural_comm);
-        
-        
-        MeshInitializer().init(divs, *_structural_mesh, libMesh::EDGE2);
-        
-        // create the equation system
-        _structural_eq_sys    = new  libMesh::EquationSystems(*_structural_mesh);
-        
-        // create the libmesh system
-        _structural_sys       = &(_structural_eq_sys->add_system<MAST::NonlinearSystem>("structural"));
-        _structural_sys->set_eigenproblem_type(libMesh::GHEP);
-        
-        // FEType to initialize the system
-        libMesh::FEType fetype (libMesh::FIRST, libMesh::LAGRANGE);
-        
-        // initialize the system to the right set of variables
-        _structural_sys_init  = new MAST::StructuralSystemInitialization(*_structural_sys,
-                                                                         _structural_sys->name(),
-                                                                         fetype);
-        _structural_discipline = new MAST::StructuralDiscipline(*_structural_eq_sys);
-        
-        
-        // create and add the boundary condition and loads
-        _dirichlet_left = new MAST::DirichletBoundaryCondition;
-        _dirichlet_right= new MAST::DirichletBoundaryCondition;
-        std::vector<unsigned int> constrained_vars(4);
-        constrained_vars[0] = 0;  // u
-        constrained_vars[1] = 1;  // v
-        constrained_vars[2] = 2;  // w
-        constrained_vars[3] = 3;  // tx
-        _dirichlet_left->init (0, constrained_vars);
-        _dirichlet_right->init(1, constrained_vars);
-        _structural_discipline->add_dirichlet_bc(0, *_dirichlet_left);
-        _structural_discipline->add_dirichlet_bc(1, *_dirichlet_right);
-        _structural_discipline->init_system_dirichlet_bc(*_structural_sys);
-        
-        // initialize the equation system
-        _structural_eq_sys->init();
-        
-        // initialize the motion object
-        _panel_shape                = new MAST::PanelShape(n_sin_index,
-                                                           t_c,
-                                                           _length);
-        _steady_motion_function     = new MAST::FunctionSurfaceMotion("motion");
-        _unsteady_motion_function   = new MAST::FlexibleSurfaceMotion("small_disturbance_motion",
-                                                                      *_structural_sys_init);
-        _slip_wall->add(*_steady_motion_function);
-        _slip_wall->add(*_unsteady_motion_function);
-
-        // initialize the steady motion function object
-        _steady_motion_function->init(*_zero_freq_func, *_panel_shape);
-        
-        
-        
-        _structural_sys->eigen_solver->set_position_of_spectrum(libMesh::LARGEST_MAGNITUDE);
-        _structural_sys->set_exchange_A_and_B(true);
-        _structural_sys->set_n_requested_eigenvalues(infile("n_modes", 10));
-        
-        // create the property functions and add them to the
-        
-        _thy             = new MAST::Parameter("thy",  0.0015);
-        _thz             = new MAST::Parameter("thz",    1.00);
-        _rho             = new MAST::Parameter("rho",   2.7e3);
-        _E               = new MAST::Parameter("E",     72.e9);
-        _nu              = new MAST::Parameter("nu",     0.33);
-        _zero            = new MAST::Parameter("zero",     0.);
-        _mach            = new MAST::Parameter("mach",     3.);
-        _rho_air         = new MAST::Parameter("rho" ,   1.05);
-        _gamma_air       = new MAST::Parameter("gamma",   1.4);
-        
-        
-        
-        // prepare the vector of parameters with respect to which the sensitivity
-        // needs to be benchmarked
-        _params_for_sensitivity.push_back(_E);
-        _params_for_sensitivity.push_back(_nu);
-        _params_for_sensitivity.push_back(_thy);
-        _params_for_sensitivity.push_back(_thz);
-        
-        
-        
-        _thy_f           = new MAST::ConstantFieldFunction("hy",          *_thy);
-        _thz_f           = new MAST::ConstantFieldFunction("hz",          *_thz);
-        _rho_f           = new MAST::ConstantFieldFunction("rho",         *_rho);
-        _E_f             = new MAST::ConstantFieldFunction("E",             *_E);
-        _nu_f            = new MAST::ConstantFieldFunction("nu",           *_nu);
-        _hyoff_f         = new MAST::ConstantFieldFunction("hy_off",     *_zero);
-        _hzoff_f         = new MAST::ConstantFieldFunction("hz_off",     *_zero);
-        _mach_f          = new MAST::ConstantFieldFunction("mach",       *_mach);
-        _rho_air_f       = new MAST::ConstantFieldFunction("rho",     *_rho_air);
-        _gamma_air_f     = new MAST::ConstantFieldFunction("gamma", *_gamma_air);
-        
-        // create the material property card
-        _m_card          = new MAST::IsotropicMaterialPropertyCard;
-        
-        // add the material properties to the card
-        _m_card->add(*_rho_f);
-        _m_card->add(*_E_f);
-        _m_card->add(*_nu_f);
-        
-        // create the element property card
-        _p_card          = new MAST::Solid1DSectionElementPropertyCard;
-        
-        // tell the card about the orientation
-        libMesh::Point orientation;
-        orientation(1) = 1.;
-        _p_card->y_vector() = orientation;
-        
-        // add the section properties to the card
-        _p_card->add(*_thy_f);
-        _p_card->add(*_thz_f);
-        _p_card->add(*_hyoff_f);
-        _p_card->add(*_hzoff_f);
-        
-        // tell the section property about the material property
-        _p_card->set_material(*_m_card);
-        
-        _p_card->init();
-        
-        _structural_discipline->set_property_for_subdomain(0, *_p_card);
-        
-        // pressure boundary condition for the beam
-        _pressure    =  new MAST::BoundaryConditionBase(MAST::SMALL_DISTURBANCE_MOTION);
-        _pressure->add(*_small_dist_pressure_function);
-        _pressure->add(*_unsteady_motion_function);
-        _structural_discipline->add_volume_load(0, *_pressure);
-    }
     
+    // create the mesh
+    _structural_mesh       = new libMesh::SerialMesh(__init->comm());
+    
+    
+    MeshInitializer().init(divs, *_structural_mesh, libMesh::EDGE2);
+    
+    // create the equation system
+    _structural_eq_sys    = new  libMesh::EquationSystems(*_structural_mesh);
+    
+    // create the libmesh system
+    _structural_sys       = &(_structural_eq_sys->add_system<MAST::NonlinearSystem>("structural"));
+    _structural_sys->set_eigenproblem_type(libMesh::GHEP);
+    
+    // FEType to initialize the system
+    libMesh::FEType fetype (libMesh::FIRST, libMesh::LAGRANGE);
+    
+    // initialize the system to the right set of variables
+    _structural_sys_init  = new MAST::StructuralSystemInitialization(*_structural_sys,
+                                                                     _structural_sys->name(),
+                                                                     fetype);
+    _structural_discipline = new MAST::StructuralDiscipline(*_structural_eq_sys);
+    
+    
+    // create and add the boundary condition and loads
+    _dirichlet_left = new MAST::DirichletBoundaryCondition;
+    _dirichlet_right= new MAST::DirichletBoundaryCondition;
+    std::vector<unsigned int> constrained_vars(4);
+    constrained_vars[0] = 0;  // u
+    constrained_vars[1] = 1;  // v
+    constrained_vars[2] = 2;  // w
+    constrained_vars[3] = 3;  // tx
+    _dirichlet_left->init (0, constrained_vars);
+    _dirichlet_right->init(1, constrained_vars);
+    _structural_discipline->add_dirichlet_bc(0, *_dirichlet_left);
+    _structural_discipline->add_dirichlet_bc(1, *_dirichlet_right);
+    _structural_discipline->init_system_dirichlet_bc(*_structural_sys);
+    
+    // initialize the equation system
+    _structural_eq_sys->init();
+    
+    // initialize the motion object
+    _panel_shape                = new MAST::PanelShape(n_sin_index,
+                                                       t_c,
+                                                       _length);
+    _steady_motion_function     = new MAST::FunctionSurfaceMotion("motion");
+    _unsteady_motion_function   = new MAST::FlexibleSurfaceMotion("small_disturbance_motion",
+                                                                  *_structural_sys_init);
+    _slip_wall->add(*_steady_motion_function);
+    _slip_wall->add(*_unsteady_motion_function);
+    
+    // initialize the steady motion function object
+    _steady_motion_function->init(*_zero_freq_func, *_panel_shape);
+    
+    
+    
+    _structural_sys->eigen_solver->set_position_of_spectrum(libMesh::LARGEST_MAGNITUDE);
+    _structural_sys->set_exchange_A_and_B(true);
+    _structural_sys->set_n_requested_eigenvalues(infile("n_modes", 10));
+    
+    // create the property functions and add them to the
+    
+    _thy             = new MAST::Parameter("thy",  0.0015);
+    _thz             = new MAST::Parameter("thz",    1.00);
+    _rho             = new MAST::Parameter("rho",   2.7e3);
+    _E               = new MAST::Parameter("E",     72.e9);
+    _nu              = new MAST::Parameter("nu",     0.33);
+    _zero            = new MAST::Parameter("zero",     0.);
+    _mach            = new MAST::Parameter("mach",     3.);
+    _rho_air         = new MAST::Parameter("rho" ,   1.05);
+    _gamma_air       = new MAST::Parameter("gamma",   1.4);
+    
+    
+    
+    // prepare the vector of parameters with respect to which the sensitivity
+    // needs to be benchmarked
+    _params_for_sensitivity.push_back(_E);
+    _params_for_sensitivity.push_back(_nu);
+    _params_for_sensitivity.push_back(_thy);
+    _params_for_sensitivity.push_back(_thz);
+    
+    
+    
+    _thy_f           = new MAST::ConstantFieldFunction("hy",          *_thy);
+    _thz_f           = new MAST::ConstantFieldFunction("hz",          *_thz);
+    _rho_f           = new MAST::ConstantFieldFunction("rho",         *_rho);
+    _E_f             = new MAST::ConstantFieldFunction("E",             *_E);
+    _nu_f            = new MAST::ConstantFieldFunction("nu",           *_nu);
+    _hyoff_f         = new MAST::ConstantFieldFunction("hy_off",     *_zero);
+    _hzoff_f         = new MAST::ConstantFieldFunction("hz_off",     *_zero);
+    _mach_f          = new MAST::ConstantFieldFunction("mach",       *_mach);
+    _rho_air_f       = new MAST::ConstantFieldFunction("rho",     *_rho_air);
+    _gamma_air_f     = new MAST::ConstantFieldFunction("gamma", *_gamma_air);
+    
+    // create the material property card
+    _m_card          = new MAST::IsotropicMaterialPropertyCard;
+    
+    // add the material properties to the card
+    _m_card->add(*_rho_f);
+    _m_card->add(*_E_f);
+    _m_card->add(*_nu_f);
+    
+    // create the element property card
+    _p_card          = new MAST::Solid1DSectionElementPropertyCard;
+    
+    // tell the card about the orientation
+    libMesh::Point orientation;
+    orientation(1) = 1.;
+    _p_card->y_vector() = orientation;
+    
+    // add the section properties to the card
+    _p_card->add(*_thy_f);
+    _p_card->add(*_thz_f);
+    _p_card->add(*_hyoff_f);
+    _p_card->add(*_hzoff_f);
+    
+    // tell the section property about the material property
+    _p_card->set_material(*_m_card);
+    
+    _p_card->init();
+    
+    _structural_discipline->set_property_for_subdomain(0, *_p_card);
+    
+    // pressure boundary condition for the beam
+    _pressure    =  new MAST::BoundaryConditionBase(MAST::SMALL_DISTURBANCE_MOTION);
+    _pressure->add(*_small_dist_pressure_function);
+    _pressure->add(*_unsteady_motion_function);
+    _structural_discipline->add_volume_load(0, *_pressure);
+
     _flutter_solver  = new MAST::UGFlutterSolver;
 }
 
@@ -588,58 +581,54 @@ MAST::BeamEulerFSIFlutterNonuniformAeroBaseAnalysis::
 
     delete _small_dist_pressure_function;
     
+    delete _panel_shape;
+    delete _steady_motion_function;
+    delete _unsteady_motion_function;
+    delete _pressure;
     
-    if (_structural_comm->get() != MPI_COMM_NULL) {
-        
-        delete _panel_shape;
-        delete _steady_motion_function;
-        delete _unsteady_motion_function;
-        delete _pressure;
-        
-        delete _structural_eq_sys;
-        delete _structural_mesh;
-        
-        
-        delete _structural_discipline;
-        delete _structural_sys_init;
-        
-        delete _m_card;
-        delete _p_card;
-        
-        delete _dirichlet_left;
-        delete _dirichlet_right;
-        
-        delete _thy_f;
-        delete _thz_f;
-        delete _rho_f;
-        delete _E_f;
-        delete _nu_f;
-        delete _hyoff_f;
-        delete _hzoff_f;
-        delete _mach_f;
-        delete _rho_air_f;
-        delete _gamma_air_f;
-        
-        
-        delete _thy;
-        delete _thz;
-        delete _rho;
-        delete _E;
-        delete _nu;
-        delete _zero;
-        delete _mach;
-        delete _rho_air;
-        delete _gamma_air;
-        
-        
-        // delete the basis vectors
-        if (_basis.size())
-            for (unsigned int i=0; i<_basis.size(); i++)
-                if (_basis[i]) delete _basis[i];
-    }
+    delete _structural_eq_sys;
+    delete _structural_mesh;
     
+    
+    delete _structural_discipline;
+    delete _structural_sys_init;
+    
+    delete _m_card;
+    delete _p_card;
+    
+    delete _dirichlet_left;
+    delete _dirichlet_right;
+    
+    delete _thy_f;
+    delete _thz_f;
+    delete _rho_f;
+    delete _E_f;
+    delete _nu_f;
+    delete _hyoff_f;
+    delete _hzoff_f;
+    delete _mach_f;
+    delete _rho_air_f;
+    delete _gamma_air_f;
+    
+    
+    delete _thy;
+    delete _thz;
+    delete _rho;
+    delete _E;
+    delete _nu;
+    delete _zero;
+    delete _mach;
+    delete _rho_air;
+    delete _gamma_air;
+    
+    
+    // delete the basis vectors
+    if (_basis.size())
+        for (unsigned int i=0; i<_basis.size(); i++)
+            if (_basis[i]) delete _basis[i];
+
     delete _flutter_solver;
-    delete _structural_comm;
+    delete _augment_send_list_obj;
 }
 
 
@@ -843,74 +832,71 @@ solve(bool if_write_output,
     // STRUCTURAL MODAL EIGENSOLUTION
     ////////////////////////////////////////////////////////////
     
-    if (_structural_comm->get() != MPI_COMM_NULL) {
+    // create the nonlinear assembly object
+    MAST::StructuralModalEigenproblemAssembly   modal_assembly;
+    _structural_sys->initialize_condensed_dofs(*_structural_discipline);
+    
+    modal_assembly.attach_discipline_and_system(*_structural_discipline,
+                                                *_structural_sys_init);
+    
+    
+    MAST::StructuralNearNullVectorSpace nsp;
+    _structural_sys->nonlinear_solver->nearnullspace_object = &nsp;
+    
+    _structural_sys->eigenproblem_solve();
+    modal_assembly.clear_discipline_and_system();
+    
+    // Get the number of converged eigen pairs.
+    unsigned int
+    nconv = std::min(_structural_sys->get_n_converged_eigenvalues(),
+                     _structural_sys->get_n_requested_eigenvalues());
+    
+    if (_basis.size() > 0)
+        libmesh_assert(_basis.size() == nconv);
+    else {
+        _basis.resize(nconv);
+        for (unsigned int i=0; i<_basis.size(); i++)
+            _basis[i] = nullptr;
+    }
+    
+    for (unsigned int i=0; i<nconv; i++) {
         
-        // create the nonlinear assembly object
-        MAST::StructuralModalEigenproblemAssembly   modal_assembly;
-        _structural_sys->initialize_condensed_dofs(*_structural_discipline);
+        // create a vector to store the basis
+        if (_basis[i] == nullptr)
+            _basis[i] = _structural_sys->solution->zero_clone().release();
         
-        modal_assembly.attach_discipline_and_system(*_structural_discipline,
-                                                    *_structural_sys_init);
+        std::ostringstream file_name;
         
+        // We write the file in the ExodusII format.
+        file_name << "out_"
+        << std::setw(3)
+        << std::setfill('0')
+        << std::right
+        << i
+        << ".exo";
         
-        MAST::StructuralNearNullVectorSpace nsp;
-        _structural_sys->nonlinear_solver->nearnullspace_object = &nsp;
+        // now write the eigenvalue
+        Real
+        re = 0.,
+        im = 0.;
+        _structural_sys->get_eigenpair(i, re, im, *_basis[i]);
         
-        _structural_sys->eigenproblem_solve();
-        modal_assembly.clear_discipline_and_system();
+        libMesh::out
+        << std::setw(35) << std::fixed << std::setprecision(15)
+        << re << std::endl;
         
-        // Get the number of converged eigen pairs.
-        unsigned int
-        nconv = std::min(_structural_sys->get_n_converged_eigenvalues(),
-                         _structural_sys->get_n_requested_eigenvalues());
-        
-        if (_basis.size() > 0)
-            libmesh_assert(_basis.size() == nconv);
-        else {
-            _basis.resize(nconv);
-            for (unsigned int i=0; i<_basis.size(); i++)
-                _basis[i] = nullptr;
-        }
-        
-        for (unsigned int i=0; i<nconv; i++) {
-            
-            // create a vector to store the basis
-            if (_basis[i] == nullptr)
-                _basis[i] = _structural_sys->solution->zero_clone().release();
-            
-            std::ostringstream file_name;
-            
-            // We write the file in the ExodusII format.
-            file_name << "out_"
-            << std::setw(3)
-            << std::setfill('0')
-            << std::right
-            << i
-            << ".exo";
-            
-            // now write the eigenvalue
-            Real
-            re = 0.,
-            im = 0.;
-            _structural_sys->get_eigenpair(i, re, im, *_basis[i]);
+        if (if_write_output) {
             
             libMesh::out
-            << std::setw(35) << std::fixed << std::setprecision(15)
-            << re << std::endl;
+            << "Writing mode " << i << " to : "
+            << file_name.str() << std::endl;
             
-            if (if_write_output) {
-                
-                libMesh::out
-                << "Writing mode " << i << " to : "
-                << file_name.str() << std::endl;
-                
-                // We write the file in the ExodusII format.
-                // copy the solution for output
-                _structural_sys->solution->swap(*_basis[i]);
-                libMesh::ExodusII_IO(*_structural_mesh).write_equation_systems(file_name.str(),
-                                                                               *_structural_eq_sys);
-                _structural_sys->solution->swap(*_basis[i]);
-            }
+            // We write the file in the ExodusII format.
+            // copy the solution for output
+            _structural_sys->solution->swap(*_basis[i]);
+            libMesh::ExodusII_IO(*_structural_mesh).write_equation_systems(file_name.str(),
+                                                                           *_structural_eq_sys);
+            _structural_sys->solution->swap(*_basis[i]);
         }
     }
 
@@ -921,20 +907,15 @@ solve(bool if_write_output,
     _flutter_solver->clear();
 
     MAST::FSIGeneralizedAeroForceAssembly fsi_assembly;
-    if (_structural_comm->get() != MPI_COMM_NULL) {
-        
-        fsi_assembly.attach_discipline_and_system(*_structural_discipline,
-                                                  *_structural_sys_init);
-
-        std::ostringstream oss;
-        oss << "flutter_output_" << __init->comm().rank() << ".txt";
-        _flutter_solver->set_output_file(oss.str());
-    }
+    fsi_assembly.attach_discipline_and_system(*_structural_discipline,
+                                              *_structural_sys_init);
+    
+    std::ostringstream oss;
+    oss << "flutter_output_" << __init->comm().rank() << ".txt";
+    _flutter_solver->set_output_file(oss.str());
     
 
     fsi_assembly.init(*_freq_function,
-                      *_structural_comm,             // structural comm
-                      __init->comm(),                // fluid comm
                       &complex_fluid_solver,         // fluid complex solver
                       _small_dist_pressure_function,
                       _unsteady_motion_function);
@@ -986,46 +967,43 @@ solve(bool if_write_output,
         //
         
         // first write the structural mode
-        if (_structural_comm->get() != MPI_COMM_NULL) {
+        // first calculate the real and imaginary vectors
+        std::auto_ptr<libMesh::NumericVector<Real> >
+        re(_structural_sys->solution->zero_clone().release()),
+        im(_structural_sys->solution->zero_clone().release());
+        
+        
+        // first the real part
+        _structural_sys->solution->zero();
+        for (unsigned int i=0; i<_basis.size(); i++) {
+            re->add(sol.second->eig_vec_right(i).real(), *_basis[i]);
+            im->add(sol.second->eig_vec_right(i).imag(), *_basis[i]);
+        }
+        re->close();
+        im->close();
+        
+        // now open the output processor for writing
+        libMesh::ExodusII_IO flutter_mode_output(*_structural_mesh);
+        
+        // use N steps in a time-period
+        Real
+        t_sys = _structural_sys->time,
+        pi    = acos(-1.);
+        unsigned int
+        N_divs = 100;
+        
+        
+        for (unsigned int i=0; i<=N_divs; i++) {
+            _structural_sys->time   =  2.*pi*(i*1.)/(N_divs*1.);
             
-            // first calculate the real and imaginary vectors
-            std::auto_ptr<libMesh::NumericVector<Real> >
-            re(_structural_sys->solution->zero_clone().release()),
-            im(_structural_sys->solution->zero_clone().release());
-            
-            
-            // first the real part
             _structural_sys->solution->zero();
-            for (unsigned int i=0; i<_basis.size(); i++) {
-                re->add(sol.second->eig_vec_right(i).real(), *_basis[i]);
-                im->add(sol.second->eig_vec_right(i).imag(), *_basis[i]);
-            }
-            re->close();
-            im->close();
-            
-            // now open the output processor for writing
-            libMesh::ExodusII_IO flutter_mode_output(*_structural_mesh);
-            
-            // use N steps in a time-period
-            Real
-            t_sys = _structural_sys->time,
-            pi    = acos(-1.);
-            unsigned int
-            N_divs = 100;
-            
-            
-            for (unsigned int i=0; i<=N_divs; i++) {
-                _structural_sys->time   =  2.*pi*(i*1.)/(N_divs*1.);
-                
-                _structural_sys->solution->zero();
-                _structural_sys->solution->add( cos(_structural_sys->time), *re);
-                _structural_sys->solution->add(-sin(_structural_sys->time), *im);
-                _structural_sys->solution->close();
-                flutter_mode_output.write_timestep("structural_flutter_mode.exo",
-                                                   *_structural_eq_sys,
-                                                   i+1,
-                                                   _structural_sys->time);
-            }
+            _structural_sys->solution->add( cos(_structural_sys->time), *re);
+            _structural_sys->solution->add(-sin(_structural_sys->time), *im);
+            _structural_sys->solution->close();
+            flutter_mode_output.write_timestep("structural_flutter_mode.exo",
+                                               *_structural_eq_sys,
+                                               i+1,
+                                               _structural_sys->time);
             
             // reset the system time
             _structural_sys->time = t_sys;
@@ -1048,8 +1026,7 @@ solve(bool if_write_output,
                 
                 // solve the fluid system for the given structural mode and
                 // the frequency of the flutter root
-                if (_structural_comm->get() != MPI_COMM_NULL)
-                    _unsteady_motion_function->init(*_freq_function, *_basis[i]);
+                _unsteady_motion_function->init(*_freq_function, *_basis[i]);
                 
                 complex_fluid_solver.solve_block_matrix();
                 
@@ -1162,20 +1139,16 @@ sensitivity_solve(MAST::Parameter& p) {
     // clear flutter solver and set the output file
     
     MAST::FSIGeneralizedAeroForceAssembly fsi_assembly;
-    if (_structural_comm->get() != MPI_COMM_NULL) {
-        
-        fsi_assembly.attach_discipline_and_system(*_structural_discipline,
-                                                  *_structural_sys_init);
-        
-        std::ostringstream oss;
-        oss << "flutter_output_" << __init->comm().rank() << ".txt";
-        _flutter_solver->set_output_file(oss.str());
-    }
+    
+    fsi_assembly.attach_discipline_and_system(*_structural_discipline,
+                                              *_structural_sys_init);
+    
+    std::ostringstream oss;
+    oss << "flutter_output_" << __init->comm().rank() << ".txt";
+    _flutter_solver->set_output_file(oss.str());
     
     
     fsi_assembly.init(*_freq_function,
-                      *_structural_comm,             // structural comm
-                      __init->comm(),                // fluid comm
                       &solver,                       // fluid complex solver
                       _small_dist_pressure_function,
                       _unsteady_motion_function);

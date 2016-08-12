@@ -79,7 +79,8 @@ namespace MAST {
     public MAST::FunctionEvaluation {
         
         
-        StiffenedPlateBendingThermalStressSizingOptimization();
+        StiffenedPlateBendingThermalStressSizingOptimization
+        (const libMesh::Parallel::Communicator& comms);
         
         
         ~StiffenedPlateBendingThermalStressSizingOptimization();

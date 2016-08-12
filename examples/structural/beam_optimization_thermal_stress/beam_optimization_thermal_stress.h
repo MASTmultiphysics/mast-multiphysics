@@ -76,7 +76,8 @@ namespace MAST {
     public MAST::FunctionEvaluation {
         
         
-        BeamBendingThermalStressSizingOptimization();
+        BeamBendingThermalStressSizingOptimization
+        (const libMesh::Parallel::Communicator& comm);
         
         
         ~BeamBendingThermalStressSizingOptimization();

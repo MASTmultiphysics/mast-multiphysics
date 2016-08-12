@@ -221,8 +221,8 @@ MAST::YoungsModulus::derivative(const MAST::DerivativeType d,
 
 
 MAST::TopologyOptimization2D::
-TopologyOptimization2D():
-MAST::FunctionEvaluation(),
+TopologyOptimization2D(const libMesh::Parallel::Communicator& comm):
+MAST::FunctionEvaluation(comm),
 _initialized(false),
 _penalty(0.),
 _volume_fraction(0.),
@@ -273,7 +273,6 @@ MAST::TopologyOptimization2D::init(GetPot& infile,
                                                  0, _length,
                                                  0, _width,
                                                  e_type);
-    _mesh->prepare_for_use();
     
     // create the equation system
     _eq_sys    = new  libMesh::EquationSystems(*_mesh);
