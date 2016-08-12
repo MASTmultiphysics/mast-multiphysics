@@ -57,7 +57,6 @@
 #include "libmesh/parameter_vector.h"
 #include "libmesh/getpot.h"
 #include "libmesh/string_to_enum.h"
-#include "libmesh/centroid_partitioner.h"
 #include "libmesh/nonlinear_solver.h"
 #include "libmesh/dof_map.h"
 

@@ -59,7 +59,6 @@
 #include "libmesh/parameter_vector.h"
 #include "libmesh/getpot.h"
 #include "libmesh/string_to_enum.h"
-#include "libmesh/centroid_partitioner.h"
 #include "libmesh/nonlinear_solver.h"
 
 
@@ -133,14 +132,7 @@ _augment_send_list_obj                 (nullptr) {
     _fluid_mesh              = new libMesh::ParallelMesh(__init->comm());
     _fluid_eq_sys            = new libMesh::EquationSystems(*_fluid_mesh);
     
-    
-    // tell the mesh to use the centroid partitioner with the
-    // Z-coordinate as the means for sorting. This assumes that the lowest
-    // layer of elements that interface with the panel are on rank 0.
-    _fluid_mesh->partitioner().reset(new libMesh::CentroidPartitioner
-                                     (libMesh::CentroidPartitioner::Z));
-
-    
+        
     // add the system to be used for analysis
     _fluid_sys = &(_fluid_eq_sys->add_system<MAST::NonlinearSystem>("fluid"));
     _fluid_sys->set_init_B_matrix();

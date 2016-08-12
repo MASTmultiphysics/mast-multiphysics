@@ -52,7 +52,6 @@
 #include "libmesh/numeric_vector.h"
 #include "libmesh/getpot.h"
 #include "libmesh/string_to_enum.h"
-#include "libmesh/centroid_partitioner.h"
 #include "libmesh/getpot.h"
 
 
@@ -405,13 +404,6 @@ MAST::BeamFSIFlutterSizingOptimization::init(GetPot &infile,
     // initialize the libMesh object
     _fluid_mesh              = new libMesh::ParallelMesh(__init->comm());
     _fluid_eq_sys            = new libMesh::EquationSystems(*_fluid_mesh);
-    
-    
-    // tell the mesh to use the centroid partitioner with the
-    // Y-coordinate as the means for sorting. This assumes that the lowest
-    // layer of elements that interface with the panel are on rank 0.
-    _fluid_mesh->partitioner().reset(new libMesh::CentroidPartitioner
-                                     (libMesh::CentroidPartitioner::Y));
     
     
     // add the system to be used for analysis
