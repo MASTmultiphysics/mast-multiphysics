@@ -309,6 +309,7 @@ MAST::StiffenedPanelMesh::init(const unsigned int n_stiff,
                       i+1);
     }
     
+    mesh.prepare_for_use();
 }
 
 

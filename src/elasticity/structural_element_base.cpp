@@ -621,9 +621,12 @@ volume_frequency_domain_external_residual (bool request_jacobian,
                                                             *it.first->second);
                 break;
                 
-            case MAST::SURFACE_PRESSURE:
-            case MAST::PISTON_THEORY:
             case MAST::TEMPERATURE:
+            case MAST::SURFACE_PRESSURE:
+                // nothing to be done here
+                break;
+                
+            case MAST::PISTON_THEORY:
             default:
                 // not implemented yet
                 libmesh_error();

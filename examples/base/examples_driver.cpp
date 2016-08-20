@@ -63,6 +63,8 @@
 #include "examples/fsi/beam_flutter_nonuniform_aero_base_solution/beam_euler_fsi_flutter_nonuniform_aero_base_solution.h"
 #include "examples/fsi/beam_flutter_optimization/beam_flutter_optimization.h"
 #include "examples/fsi/plate_flutter_solution/plate_euler_fsi_flutter_solution.h"
+#include "examples/fsi/plate_flutter_optimization/plate_flutter_optimization.h"
+#include "examples/fsi/stiffened_plate_thermally_stressed_flutter_optimization/stiffened_plate_thermally_stressed_flutter_optimization.h"
 #include "examples/fsi/plate_flutter_solution_half_domain/plate_euler_fsi_half_domain_flutter_solution.h"
 #include "examples/fsi/beam_fsi_solution/beam_euler_fsi_solution.h"
 #include "examples/thermal/bar_transient/bar_transient.h"
@@ -479,6 +481,17 @@ int main(int argc, char* const argv[]) {
         fluid_analysis<MAST::PlateEulerFSIFlutterAnalysis>(case_name);
     else if (case_name == "plate_fsi_half_domain_flutter_analysis")
         fluid_analysis<MAST::PlateEulerFSIHalfDomainFlutterAnalysis>(case_name);
+    else if (case_name == "plate_fsi_flutter_optimization")
+        optimization<MAST::PlateFSIFlutterSizingOptimization>(case_name,
+                                                              libMesh::QUAD4,
+                                                              verify_grads,
+                                                              if_nonlin);
+    else if (case_name == "stiffened_plate_fsi_thermally_stressed_flutter_optimization")
+        optimization<MAST::StiffenedPlateThermallyStressedFSIFlutterSizingOptimization>
+        (case_name,
+         libMesh::QUAD4,
+         verify_grads,
+         if_nonlin);
     else if (case_name == "bar_steady_state_conduction")
         analysis<MAST::BarSteadyState>(case_name,
                                        libMesh::EDGE2,
@@ -566,6 +579,8 @@ int main(int argc, char* const argv[]) {
         << "  beam_fsi_flutter_optimization \n"
         << "  plate_fsi_flutter_analysis \n"
         << "  plate_fsi_half_domain_flutter_analysis \n"
+        << "  plate_fsi_flutter_optimization \n"
+        << "  stiffened_plate_fsi_thermally_stressed_flutter_optimization \n"
         << "\n\n\n"
         << std::endl;
     }
