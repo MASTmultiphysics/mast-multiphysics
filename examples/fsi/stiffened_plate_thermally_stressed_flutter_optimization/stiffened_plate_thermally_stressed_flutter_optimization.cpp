@@ -19,10 +19,11 @@
 
 // C++ includes
 #include <iostream>
-#include <map>
+
 
 // MAST includes
 #include "examples/fsi/stiffened_plate_thermally_stressed_flutter_optimization/stiffened_plate_thermally_stressed_flutter_optimization.h"
+#include "examples/fsi/base/gaf_database.h"
 #include "driver/driver_base.h"
 #include "optimization/optimization_interface.h"
 #include "optimization/function_evaluation.h"
@@ -188,129 +189,6 @@ stiffened_plate_euler_flutter_optim_con(int*    mode,
     
     
 }
-
-
-namespace MAST{
-    
-    class GAFDatabase:
-    public MAST::FSIGeneralizedAeroForceAssembly {
-        
-    public:
-        
-        GAFDatabase(const unsigned int n_modes):
-        MAST::FSIGeneralizedAeroForceAssembly(),
-        _if_evaluate(true),
-        _n_modes(n_modes) { }
-        
-        ~GAFDatabase() { }
-        
-        
-        void
-        set_evaluate_mode(bool f) {
-            
-            _if_evaluate = f;
-        }
-        
-        ComplexMatrixX&
-        add_kr_mat(const Real kr,
-                   const ComplexMatrixX& mat,
-                   const bool if_kr_sens) {
-            
-            libmesh_assert_equal_to(mat.rows(), _n_modes);
-            libmesh_assert_equal_to(mat.cols(), _n_modes);
-            
-            if (!if_kr_sens) {
-                
-                _kr_to_gaf_map[kr] = mat;
-                return _kr_to_gaf_map[kr];
-            }
-            else {
-                
-                _kr_to_gaf_kr_sens_map[kr] = mat;
-                return _kr_to_gaf_kr_sens_map[kr];
-            }
-        }
-        
-        ComplexMatrixX
-        get_kr_mat(const Real kr,
-                   const std::map<Real, ComplexMatrixX>& data) {
-            
-            //
-            // the following is used for calculation of the return value
-            //   f(x) is defined for x for each x0 < x < x1
-            //   if   x <= x0,      f(x) = f(x0)
-            //   if   x0 < x < x1,  f(x) is interpolated
-            //   if   x >= x1,      f(x) = f(x1)
-            //
-            
-            ComplexMatrixX
-            mat = ComplexMatrixX::Zero(_n_modes, _n_modes);
-            
-            std::map<Real, ComplexMatrixX>::const_iterator
-            it1, it2;
-            std::map<Real, ComplexMatrixX>::const_reverse_iterator
-            rit  = data.rbegin();
-            it1  = data.begin();
-            
-            // check the lower bound
-            if (kr <=  it1->first) {
-                mat = it1->second;
-            }
-            // check the upper bound
-            else if (kr >=  rit->first) {
-                mat = rit->second;
-            }
-            else {
-                // if it gets here, the ordinate is in between the provided range
-                it2 = data.lower_bound(kr);
-                // this cannot be the first element of the map
-                libmesh_assert(it2 != data.begin());
-                // it2 provides the upper bound. The lower bound is provided by the
-                // preceding iterator
-                it1 = it2--;
-                // now interpolate
-                mat =  it1->second +
-                (kr - it1->first)/(it2->first - it1->first) *
-                (it2->second - it1->second);
-            }
-            
-            return mat;
-        }
-        
-
-        virtual void
-        assemble_generalized_aerodynamic_force_matrix
-        (std::vector<libMesh::NumericVector<Real>*>& basis,
-         ComplexMatrixX& mat,
-         MAST::Parameter* p = nullptr) {
-
-            if (_if_evaluate) {
-                
-                MAST::FSIGeneralizedAeroForceAssembly::
-                assemble_generalized_aerodynamic_force_matrix(basis, mat, p);
-            }
-            else {
-                
-                Real kr = 0.;
-                (*_freq)(kr);
-                if (!p)
-                    mat = this->get_kr_mat(kr, _kr_to_gaf_map);
-                else
-                    mat = this->get_kr_mat(kr, _kr_to_gaf_kr_sens_map);
-            }
-        }
-        
-
-        
-    protected:
-        
-        bool                                _if_evaluate;
-        unsigned int                        _n_modes;
-        std::map<Real, ComplexMatrixX>      _kr_to_gaf_map;
-        std::map<Real, ComplexMatrixX>      _kr_to_gaf_kr_sens_map;
-    };
-}
-
 
 
 
@@ -1119,62 +997,70 @@ init(GetPot &infile,
     //////////////////////////////////////////////////////////////////////
     // initialize the GAF interpolation assembly object
     _gaf_database = new  MAST::GAFDatabase(_basis.size());
-
-    _gaf_database->attach_discipline_and_system(*_structural_discipline,
-                                                *_structural_sys_init);
+    bool
+    calculate_gafs = infile("calculate_gafs", true);
     
-    
-    _gaf_database->init(*_freq_function,
-                        _complex_solver,               // fluid complex solver
-                        _small_dist_pressure_function,
-                        _motion_function);
-    
-    _gaf_database->set_evaluate_mode(true);
-
-    libMesh::out
-    << "Building GAF database..." << std::endl;
-
-    // now iterate over the reduced frequencies and calculate the GAF matrices
-    for (unsigned int i=0; i<=_n_k_divs; i++) {
+    if (calculate_gafs) {
         
-        Real
-        kval = _k_upper + (_k_lower-_k_upper)*(1.*i)/(1.*_n_k_divs);
-
-        libMesh::out << " ***********   kr = " << kval
-        << "  ***********" << std::endl;
+        _gaf_database->attach_discipline_and_system(*_structural_discipline,
+                                                    *_structural_sys_init);
         
         
-        // initialize reduced frequency
-        (*_omega) = kval;
+        _gaf_database->init(*_freq_function,
+                            _complex_solver,               // fluid complex solver
+                            _small_dist_pressure_function,
+                            _motion_function);
         
-        // first the GAF values, then the sensitivity values
-        {
-            ComplexMatrixX&
-            mat = _gaf_database->add_kr_mat(kval,
-                                            ComplexMatrixX::Zero(_basis.size(),
-                                                                 _basis.size()),
-                                            false);
+        _gaf_database->set_evaluate_mode(true);
+        
+        libMesh::out
+        << "Building GAF database..." << std::endl;
+        
+        // now iterate over the reduced frequencies and calculate the GAF matrices
+        for (unsigned int i=0; i<=_n_k_divs; i++) {
             
-            _gaf_database->assemble_generalized_aerodynamic_force_matrix(_basis, mat);
+            Real
+            kval = _k_upper + (_k_lower-_k_upper)*(1.*i)/(1.*_n_k_divs);
+            
+            libMesh::out << " ***********   kr = " << kval
+            << "  ***********" << std::endl;
+            
+            
+            // initialize reduced frequency
+            (*_omega) = kval;
+            
+            // first the GAF values, then the sensitivity values
+            {
+                ComplexMatrixX&
+                mat = _gaf_database->add_kr_mat(kval,
+                                                ComplexMatrixX::Zero(_basis.size(),
+                                                                     _basis.size()),
+                                                false);
+                
+                _gaf_database->assemble_generalized_aerodynamic_force_matrix(_basis, mat);
+            }
+            
+            // now the sensitivity
+            {
+                ComplexMatrixX&
+                mat = _gaf_database->add_kr_mat(kval,
+                                                ComplexMatrixX::Zero(_basis.size(),
+                                                                     _basis.size()),
+                                                true);
+                
+                _gaf_database->assemble_generalized_aerodynamic_force_matrix(_basis,
+                                                                             mat,
+                                                                             _omega);
+            }
         }
         
-        // now the sensitivity
-        {
-            ComplexMatrixX&
-            mat = _gaf_database->add_kr_mat(kval,
-                                            ComplexMatrixX::Zero(_basis.size(),
-                                                                 _basis.size()),
-                                            true);
-            
-            _gaf_database->assemble_generalized_aerodynamic_force_matrix(_basis,
-                                                                         mat,
-                                                                         _omega);
-        }
+        _gaf_database->clear_discipline_and_system();
+        _frequency_domain_fluid_assembly->clear_discipline_and_system();
+        _gaf_database->set_evaluate_mode(false);
+        _gaf_database->write_gaf_file("gaf_database.txt", _basis);
     }
-    
-    _gaf_database->clear_discipline_and_system();
-    _frequency_domain_fluid_assembly->clear_discipline_and_system();
-    _gaf_database->set_evaluate_mode(false);
+    else
+        _gaf_database->read_gaf_file("gaf_database.txt", _basis);
     
     _initialized = true;
 }
