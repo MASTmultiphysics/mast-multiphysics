@@ -846,15 +846,18 @@ namespace MAST {
         _if_write_output(if_output),
         _n_steps(n_steps),
         _if_only_aero_load_steps(false),
-        _if_clear_vector_on_exit(if_clear_vector_on_exit) {
+        _if_clear_vector_on_exit(if_clear_vector_on_exit),
+        inc (0) {
             
             _obj._sys->add_vector("base_solution");
+            writer = new libMesh::ExodusII_IO(_obj._sys->get_mesh());
         }
         
         virtual ~StiffenedPlateSteadySolverInterface() {
             
             if (_if_clear_vector_on_exit)
                 _obj._sys->remove_vector("base_solution");
+            delete writer;
         }
         
         
@@ -891,7 +894,6 @@ namespace MAST {
             
             _obj._nonlinear_assembly->attach_discipline_and_system(*_obj._discipline,
                                                                    *_obj._structural_sys);
-            libMesh::ExodusII_IO writer(_obj._sys->get_mesh());
             
             // now iterate over the load steps
             for (unsigned int i=0; i<n_steps; i++) {
@@ -915,10 +917,11 @@ namespace MAST {
 
                 _obj._sys->solve();
                 _obj._discipline->plot_stress_strain_data<libMesh::ExodusII_IO>("stress_output.exo");
-                writer.write_timestep("output_all_steps.exo",
-                                      *_obj._eq_sys,
-                                      i+1,
-                                      (i+1)/(1.*n_steps));
+                writer->write_timestep("output_all_steps.exo",
+                                       *_obj._eq_sys,
+                                       inc+1,
+                                       inc+1);
+                inc++;
                 
             }
             
@@ -992,6 +995,8 @@ namespace MAST {
          *   destructed unless this flag is false.
          */
         bool _if_clear_vector_on_exit;
+        libMesh::ExodusII_IO* writer;
+        unsigned int inc;
     };
 }
 
@@ -1085,7 +1090,7 @@ evaluate(const std::vector<Real>& dvars,
     // now that we have the solution under the influence of thermal loads,
     // we will use a small number of load steps to get to the steady-state
     // solution
-    steady_solve.set_n_load_steps(10);
+    steady_solve.set_n_load_steps(50);
     steady_solve.set_modify_only_aero_load(true);
     
     
@@ -1304,6 +1309,8 @@ evaluate(const std::vector<Real>& dvars,
     //////////////////////////////////////////////////////////////////////
     // get the objective and constraints
     //////////////////////////////////////////////////////////////////////
+    
+    libmesh_error();
     
     // set the function and objective values
     obj = wt;

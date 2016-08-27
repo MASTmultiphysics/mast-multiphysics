@@ -214,8 +214,8 @@ MAST::GAFDatabase::read_gaf_file(const std::string& nm,
     }
     
     
-    // now write the modes
-    {
+    // now read the modes
+    /*{
         std::vector<Real> mode_vec(n_vec_dofs, 0.);
         
         for (unsigned int i=0; i<_n_modes; i++) {
@@ -230,8 +230,9 @@ MAST::GAFDatabase::read_gaf_file(const std::string& nm,
             
             vec = mode_vec;
         }
-    }
+    }*/
     
+    this->set_evaluate_mode(false);
     libMesh::out
     << "   Done! " << std::endl;
 }

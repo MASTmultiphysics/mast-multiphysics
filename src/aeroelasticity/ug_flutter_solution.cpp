@@ -26,7 +26,7 @@
 // MAST includes
 #include "aeroelasticity/ug_flutter_solution.h"
 #include "aeroelasticity/ug_flutter_root.h"
-#include "numerics/lapack_zggev_interface.h"
+#include "numerics/lapack_zggev_base.h"
 
 
 MAST::UGFlutterSolution::UGFlutterSolution():
@@ -45,7 +45,7 @@ void
 MAST::UGFlutterSolution::init (const MAST::UGFlutterSolver& solver,
                                const Real kr_ref,
                                const Real b_ref,
-                               const MAST::LAPACK_ZGGEV& eig_sol) {
+                               const MAST::LAPACK_ZGGEV_Base& eig_sol) {
     
     // make sure that it hasn't already been initialized
     libmesh_assert(!_roots.size());
@@ -102,7 +102,7 @@ MAST::UGFlutterSolution::sort(const MAST::FlutterSolutionBase& sol)
         const MAST::FlutterRootBase& r = sol.get_root(i);
         Real max_val = 0.;
         Complex val = 0.;
-        unsigned int max_val_root = nvals+1;
+        unsigned int max_val_root = nvals-1;
         for (unsigned int j=i; j<nvals; j++) {
             
             val = r.eig_vec_left.dot(_Bmat*_roots[j]->eig_vec_right);

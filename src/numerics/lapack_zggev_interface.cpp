@@ -23,8 +23,8 @@
 
 
 void
-MAST::LAPACK_ZGGEV::compute(ComplexMatrixX &A,
-                            ComplexMatrixX &B,
+MAST::LAPACK_ZGGEV::compute(const ComplexMatrixX &A,
+                            const ComplexMatrixX &B,
                             bool computeEigenvectors) {
     
     libmesh_assert(A.cols() == A.rows() &&
@@ -33,6 +33,10 @@ MAST::LAPACK_ZGGEV::compute(ComplexMatrixX &A,
     
     _A = A;
     _B = B;
+    
+    ComplexMatrixX
+    Amat = _A,
+    Bmat = _B;
     
     int n = (int)A.cols();
     
@@ -45,18 +49,29 @@ MAST::LAPACK_ZGGEV::compute(ComplexMatrixX &A,
         VR.setZero(n, n);
     }
     
-    int lwork=16*n, l_rwork=8*n; info_val=-1;
+    int
+    lwork=16*n,
+    l_rwork=8*n;
+    info_val=-1;
     
-    alpha.setZero(n); beta.setZero(n);
-    ComplexVectorX work; work.setZero(lwork);
-    RealVectorX rwork; rwork.setZero(l_rwork);
+    alpha.setZero(n);
+    beta.setZero(n);
+    ComplexVectorX
+    work  = ComplexVectorX::Zero(lwork);
+    RealVectorX
+    rwork = RealVectorX::Zero(l_rwork);
     
-    Complex *a_vals = A.data(),  *b_vals = B.data(),
-    *alpha_v = alpha.data(), *beta_v = beta.data(),
-    *VL_v = VL.data(), *VR_v = VR.data(),
-    *work_v = work.data();
+    Complex
+    *a_vals     = Amat.data(),
+    *b_vals     = Bmat.data(),
+    *alpha_v    = alpha.data(),
+    *beta_v     = beta.data(),
+    *VL_v       = VL.data(),
+    *VR_v       = VR.data(),
+    *work_v     = work.data();
     
-    Real *rwork_v = rwork.data();
+    Real
+    *rwork_v    = rwork.data();
     
     
     zggev_(&L, &R, &n,
@@ -68,6 +83,10 @@ MAST::LAPACK_ZGGEV::compute(ComplexMatrixX &A,
            &(rwork_v[0]),
            &info_val);
     
+    if (info_val  != 0)
+        libMesh::out
+        << "Warning!!  ZGGEV returned with nonzero info = "
+        << info_val << std::endl;
 }
 
 

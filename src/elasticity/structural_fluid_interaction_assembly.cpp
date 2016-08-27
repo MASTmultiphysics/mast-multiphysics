@@ -142,6 +142,17 @@ assemble_reduced_order_quantity
     libMesh::NonlinearImplicitSystem& nonlin_sys =
     dynamic_cast<libMesh::NonlinearImplicitSystem&>(_system->system());
     
+    unsigned int
+    n_basis = (unsigned int)basis.size();
+
+    // initialize the quantities to zero matrices
+    std::map<MAST::StructuralQuantityType, RealMatrixX*>::iterator
+    it  = mat_qty_map.begin(),
+    end = mat_qty_map.end();
+    
+    for ( ; it != end; it++)
+        *it->second = RealMatrixX::Zero(n_basis, n_basis);
+
     // iterate over each element, initialize it and get the relevant
     // analysis quantities
     RealVectorX vec, sol;
@@ -155,10 +166,8 @@ assemble_reduced_order_quantity
     if (_base_sol)
         localized_solution.reset(_build_localized_vector(nonlin_sys,
                                                          *_base_sol).release());
-    // also create localized solution vectos for the bassis vectors
-    const unsigned int
-    n_basis = (unsigned int)basis.size();
     
+    // also create localized solution vectos for the bassis vectors
     std::vector<libMesh::NumericVector<Real>*> localized_basis(n_basis);
     for (unsigned int i=0; i<n_basis; i++)
         localized_basis[i] = _build_localized_vector(nonlin_sys, *basis[i]).release();
@@ -209,7 +218,6 @@ assemble_reduced_order_quantity
             physics_elem->attach_active_solution_function(*_sol_function);
         
         // now iterative over all qty types in the map and assemble them
-        std::map<MAST::StructuralQuantityType, RealMatrixX*>::iterator
         it   = mat_qty_map.begin(),
         end  = mat_qty_map.end();
         
@@ -242,7 +250,6 @@ assemble_reduced_order_quantity
         delete localized_basis[i];
 
     // sum the matrix and provide it to each processor
-    std::map<MAST::StructuralQuantityType, RealMatrixX*>::iterator
     it  = mat_qty_map.begin(),
     end = mat_qty_map.end();
     
@@ -267,6 +274,18 @@ assemble_reduced_order_quantity_sensitivity
     libMesh::NonlinearImplicitSystem& nonlin_sys =
     dynamic_cast<libMesh::NonlinearImplicitSystem&>(_system->system());
     
+    unsigned int
+    n_basis = (unsigned int)basis.size();
+    
+    
+    // initialize the quantities to zero matrices
+    std::map<MAST::StructuralQuantityType, RealMatrixX*>::iterator
+    it  = mat_qty_map.begin(),
+    end = mat_qty_map.end();
+    
+    for ( ; it != end; it++)
+        *it->second = RealMatrixX::Zero(n_basis, n_basis);
+
     // iterate over each element, initialize it and get the relevant
     // analysis quantities
     RealVectorX vec, sol, dsol;
@@ -292,9 +311,6 @@ assemble_reduced_order_quantity_sensitivity
     }
     
     // also create localized solution vectos for the bassis vectors
-    const unsigned int
-    n_basis = (unsigned int)basis.size();
-    
     std::vector<libMesh::NumericVector<Real>*> localized_basis(n_basis);
     for (unsigned int i=0; i<n_basis; i++)
         localized_basis[i] = _build_localized_vector(nonlin_sys, *basis[i]).release();
@@ -350,7 +366,6 @@ assemble_reduced_order_quantity_sensitivity
             physics_elem->attach_active_solution_function(*_sol_function);
         
         // now iterative over all qty types in the map and assemble them
-        std::map<MAST::StructuralQuantityType, RealMatrixX*>::iterator
         it   = mat_qty_map.begin(),
         end  = mat_qty_map.end();
         
@@ -383,7 +398,6 @@ assemble_reduced_order_quantity_sensitivity
         delete localized_basis[i];
     
     // sum the matrix and provide it to each processor
-    std::map<MAST::StructuralQuantityType, RealMatrixX*>::iterator
     it  = mat_qty_map.begin(),
     end = mat_qty_map.end();
     

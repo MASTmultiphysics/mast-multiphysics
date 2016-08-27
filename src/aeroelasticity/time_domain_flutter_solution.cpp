@@ -175,7 +175,7 @@ MAST::TimeDomainFlutterSolution::sort(const MAST::FlutterSolutionBase& sol) {
         const MAST::FlutterRootBase& r = sol.get_root(i);
         Real max_val = 0.;
         Complex val = 0.;
-        unsigned int max_val_root = nvals+1;
+        unsigned int max_val_root = nvals-1;
         for (unsigned int j=i; j<nvals; j++) {
             
             // use a combination of both the eigenvectors from both

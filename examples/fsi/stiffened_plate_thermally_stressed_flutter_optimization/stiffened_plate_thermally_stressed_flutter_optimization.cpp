@@ -520,14 +520,6 @@ init(GetPot &infile,
     // solver for complex solution
     _complex_solver                  = new MAST::ComplexSolverBase;
     
-    // now setup the assembly object
-    _frequency_domain_fluid_assembly->attach_discipline_and_system(*_fluid_discipline,
-                                                                   *_complex_solver,
-                                                                   *_fluid_sys_init);
-    _frequency_domain_fluid_assembly->set_base_solution(base_sol);
-    _frequency_domain_fluid_assembly->set_frequency_function(*_freq_function);
-
-    
     
     //////////////////////////////////////////////////////////////////////
     //    SETUP THE STRUCTURAL DATA
@@ -603,7 +595,7 @@ init(GetPot &infile,
                     _length,
                     _width,
                     *_structural_mesh,
-                    libMesh::QUAD4,
+                    libMesh::TRI3,
                     true);
     
     
@@ -633,7 +625,7 @@ init(GetPot &infile,
     constrained_vars[0] = 0;  // u
     constrained_vars[1] = 1;  // v
     constrained_vars[2] = 2;  // w
-    constrained_vars[3] = 3;  // tz
+    constrained_vars[3] = 5;  // tz
     /*_dirichlet_left->init  (0, constrained_vars);
     _dirichlet_right->init (1, constrained_vars);
     _dirichlet_top->init   (2, constrained_vars);
@@ -775,7 +767,7 @@ init(GetPot &infile,
         for (unsigned int j=0; j<_n_dv_stations_x; j++) {
             std::ostringstream ossy, ossz;
             ossy << "h_y_" << j << "_stiff_" << i;
-            ossz << "h_y_" << j << "_stiff_" << i;
+            ossz << "h_z_" << j << "_stiff_" << i;
             
             // now we need a parameter that defines the thickness at the
             // specified station and a constant function that defines the
@@ -942,6 +934,12 @@ init(GetPot &infile,
     // STRUCTURAL MODAL EIGENSOLUTION
     ////////////////////////////////////////////////////////////
     
+    libMesh::out << "DVs used for basis generation..." << std::endl;
+    for (unsigned int i=0; i<_n_vars; i++)
+        libMesh::out
+        << "th     [ " << std::setw(10) << i << " ] = "
+        << std::setw(20) << (*_problem_parameters[i])() << std::endl;
+
     // create the nonlinear assembly object
     _structural_sys->initialize_condensed_dofs(*_structural_discipline);
     
@@ -1001,6 +999,14 @@ init(GetPot &infile,
     calculate_gafs = infile("calculate_gafs", true);
     
     if (calculate_gafs) {
+        
+        // now setup the assembly object
+        _frequency_domain_fluid_assembly->attach_discipline_and_system(*_fluid_discipline,
+                                                                       *_complex_solver,
+                                                                       *_fluid_sys_init);
+        _frequency_domain_fluid_assembly->set_base_solution(base_sol);
+        _frequency_domain_fluid_assembly->set_frequency_function(*_freq_function);
+
         
         _gaf_database->attach_discipline_and_system(*_structural_discipline,
                                                     *_structural_sys_init);

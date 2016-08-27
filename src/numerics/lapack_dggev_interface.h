@@ -189,7 +189,8 @@ namespace MAST {
          *    computes the eigensolution for A x = \lambda B x. A & B will be
          *    overwritten
          */
-        void compute(RealMatrixX& A, RealMatrixX& B,
+        void compute(const RealMatrixX& A,
+                     const RealMatrixX& B,
                      bool computeEigenvectors = true);
         
         ComputationInfo info() const;

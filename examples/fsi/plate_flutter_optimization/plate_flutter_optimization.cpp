@@ -594,7 +594,7 @@ MAST::PlateFSIFlutterSizingOptimization::init(GetPot &infile,
     constrained_vars[0] = 0;  // u
     constrained_vars[1] = 1;  // v
     constrained_vars[2] = 2;  // w
-    constrained_vars[3] = 3;  // tz
+    constrained_vars[3] = 5;  // tz
     _dirichlet_left->init  (0, constrained_vars);
     _dirichlet_right->init (1, constrained_vars);
     _dirichlet_top->init   (2, constrained_vars);

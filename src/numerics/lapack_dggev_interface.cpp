@@ -23,8 +23,8 @@
 
 
 void
-MAST::LAPACK_DGGEV::compute(RealMatrixX &A,
-                            RealMatrixX &B,
+MAST::LAPACK_DGGEV::compute(const RealMatrixX &A,
+                            const RealMatrixX &B,
                             bool computeEigenvectors) {
     
     libmesh_assert(A.cols() == A.rows() &&
@@ -33,6 +33,10 @@ MAST::LAPACK_DGGEV::compute(RealMatrixX &A,
     
     _A = A;
     _B = B;
+    
+    RealMatrixX
+    Amat = A,
+    Bmat = B;
     
     int n = (int)A.cols();
     
@@ -71,8 +75,8 @@ MAST::LAPACK_DGGEV::compute(RealMatrixX &A,
     vecr.setZero(n,n);
     
     Real
-    *a_vals    = A.data(),
-    *b_vals    = B.data(),
+    *a_vals    = Amat.data(),
+    *b_vals    = Bmat.data(),
     *alpha_r_v = aval_r.data(),
     *alpha_i_v = aval_i.data(),
     *beta_v    = bval.data(),
@@ -136,6 +140,11 @@ MAST::LAPACK_DGGEV::compute(RealMatrixX &A,
             n_located++;
         }
     }
+    
+    if (info_val  != 0)
+        libMesh::out
+        << "Warning!!  DGGEV returned with nonzero info = "
+        << info_val << std::endl;
 }
 
 

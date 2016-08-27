@@ -32,7 +32,7 @@ namespace MAST {
     
     // Forward declerations
     class UGFlutterSolver;
-    class LAPACK_ZGGEV;
+    class LAPACK_ZGGEV_Base;
     
     
     class UGFlutterSolution:
@@ -54,7 +54,7 @@ namespace MAST {
         void init (const MAST::UGFlutterSolver& solver,
                    const Real v_ref,
                    const Real b_ref,
-                   const MAST::LAPACK_ZGGEV& eig_sol);
+                   const MAST::LAPACK_ZGGEV_Base& eig_sol);
         
         
         /*!
