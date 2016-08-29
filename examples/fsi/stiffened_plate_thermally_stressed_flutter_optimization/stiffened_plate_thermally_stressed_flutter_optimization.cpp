@@ -595,7 +595,7 @@ init(GetPot &infile,
                     _length,
                     _width,
                     *_structural_mesh,
-                    libMesh::TRI3,
+                    libMesh::QUAD4,
                     true);
     
     
