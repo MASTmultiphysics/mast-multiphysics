@@ -265,7 +265,9 @@ namespace MAST {
         MAST::UGFlutterSolver*                   _flutter_solver;
         
         // vector of basis vectors from modal analysis
-        std::vector<libMesh::NumericVector<Real>*>     _basis;
+        std::vector<libMesh::NumericVector<Real>*>
+        _aero_basis,
+        _structural_basis;
 
         
         // map of reduced order matrices corresponding to the basis, stored

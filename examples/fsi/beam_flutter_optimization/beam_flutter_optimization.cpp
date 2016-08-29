@@ -946,7 +946,8 @@ MAST::BeamFSIFlutterSizingOptimization::evaluate(const std::vector<Real>& dvars,
     
     std::ostringstream oss;
     oss << "flutter_output_" << __init->comm().rank() << ".txt";
-    _flutter_solver->set_output_file(oss.str());
+    if (__init->comm().rank() == 0)
+        _flutter_solver->set_output_file(oss.str());
     
     _gaf_database->attach_discipline_and_system(*_structural_discipline,
                                                 *_structural_sys_init);

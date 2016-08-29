@@ -962,19 +962,19 @@ init(GetPot &infile,
     nconv = std::min(_structural_sys->get_n_converged_eigenvalues(),
                      _structural_sys->get_n_requested_eigenvalues());
     
-    if (_basis.size() > 0)
-        libmesh_assert(_basis.size() == nconv);
+    if (_aero_basis.size() > 0)
+        libmesh_assert(_aero_basis.size() == nconv);
     else {
-        _basis.resize(nconv);
-        for (unsigned int i=0; i<_basis.size(); i++)
-            _basis[i] = NULL;
+        _aero_basis.resize(nconv);
+        for (unsigned int i=0; i<_aero_basis.size(); i++)
+            _aero_basis[i] = NULL;
     }
     
     for (unsigned int i=0; i<nconv; i++) {
         
         // create a vector to store the basis
-        if (_basis[i] == NULL)
-            _basis[i] = _structural_sys->solution->zero_clone().release();
+        if (_aero_basis[i] == NULL)
+            _aero_basis[i] = _structural_sys->solution->zero_clone().release();
         
         std::ostringstream file_name;
         
@@ -982,7 +982,7 @@ init(GetPot &infile,
         Real
         re = 0.,
         im = 0.;
-        _structural_sys->get_eigenpair(i, re, im, *_basis[i]);
+        _structural_sys->get_eigenpair(i, re, im, *_aero_basis[i]);
         
         libMesh::out
         << std::setw(35) << std::fixed << std::setprecision(15)
@@ -994,8 +994,9 @@ init(GetPot &infile,
     //    CALCULATE AND STORE THE GAFs
     //////////////////////////////////////////////////////////////////////
     // initialize the GAF interpolation assembly object
-    _gaf_database = new  MAST::GAFDatabase(_basis.size());
-    bool
+    _gaf_database = new  MAST::GAFDatabase(_aero_basis.size());
+    _gaf_database->set_evaluate_mode(true);
+    /*bool
     calculate_gafs = infile("calculate_gafs", true);
     
     if (calculate_gafs) {
@@ -1039,22 +1040,22 @@ init(GetPot &infile,
             {
                 ComplexMatrixX&
                 mat = _gaf_database->add_kr_mat(kval,
-                                                ComplexMatrixX::Zero(_basis.size(),
-                                                                     _basis.size()),
+                                                ComplexMatrixX::Zero(_aero_basis.size(),
+                                                                     _aero_basis.size()),
                                                 false);
                 
-                _gaf_database->assemble_generalized_aerodynamic_force_matrix(_basis, mat);
+                _gaf_database->assemble_generalized_aerodynamic_force_matrix(_aero_basis, mat);
             }
             
             // now the sensitivity
             {
                 ComplexMatrixX&
                 mat = _gaf_database->add_kr_mat(kval,
-                                                ComplexMatrixX::Zero(_basis.size(),
-                                                                     _basis.size()),
+                                                ComplexMatrixX::Zero(_aero_basis.size(),
+                                                                     _aero_basis.size()),
                                                 true);
                 
-                _gaf_database->assemble_generalized_aerodynamic_force_matrix(_basis,
+                _gaf_database->assemble_generalized_aerodynamic_force_matrix(_aero_basis,
                                                                              mat,
                                                                              _omega);
             }
@@ -1063,10 +1064,10 @@ init(GetPot &infile,
         _gaf_database->clear_discipline_and_system();
         _frequency_domain_fluid_assembly->clear_discipline_and_system();
         _gaf_database->set_evaluate_mode(false);
-        _gaf_database->write_gaf_file("gaf_database.txt", _basis);
+        _gaf_database->write_gaf_file("gaf_database.txt", _aero_basis);
     }
     else
-        _gaf_database->read_gaf_file("gaf_database.txt", _basis);
+        _gaf_database->read_gaf_file("gaf_database.txt", _aero_basis);*/
     
     _initialized = true;
 }
@@ -1158,9 +1159,12 @@ MAST::StiffenedPlateThermallyStressedFSIFlutterSizingOptimization::~StiffenedPla
     
     
     // delete the basis vectors
-    if (_basis.size())
-        for (unsigned int i=0; i<_basis.size(); i++)
-            if (_basis[i]) delete _basis[i];
+    if (_aero_basis.size())
+        for (unsigned int i=0; i<_aero_basis.size(); i++)
+            if (_aero_basis[i]) delete _aero_basis[i];
+    if (_structural_basis.size())
+        for (unsigned int i=0; i<_structural_basis.size(); i++)
+            if (_structural_basis[i]) delete _structural_basis[i];
     
     // delete the h_y station functions
     {
@@ -1469,23 +1473,36 @@ evaluate(const std::vector<Real>& dvars,
     nconv = std::min(_structural_sys->get_n_converged_eigenvalues(),
                      _structural_sys->get_n_requested_eigenvalues());
     
-    
+    if (_structural_basis.size() > 0)
+        libmesh_assert(_structural_basis.size() == nconv);
+    else {
+        _structural_basis.resize(nconv);
+        for (unsigned int i=0; i<_structural_basis.size(); i++)
+            _structural_basis[i] = NULL;
+    }
+
     // vector of eigenvalues
     std::vector<Real> eig_vals(nconv);
     
     bool if_all_eig_positive = true;
     
-    std::auto_ptr<libMesh::NumericVector<Real> >
-    mode_vec(_structural_sys->solution->zero_clone().release());
+    libMesh::ExodusII_IO
+    *mode_writer = nullptr;
     
+    if (if_write_output)
+        mode_writer = new libMesh::ExodusII_IO (*_structural_mesh);
     
     for (unsigned int i=0; i<nconv; i++) {
         
+        // create a vector to store the basis
+        if (_structural_basis[i] == NULL)
+            _structural_basis[i] = _structural_sys->solution->zero_clone().release();
+
         // now write the eigenvalue
         Real
         re = 0.,
         im = 0.;
-        _structural_sys->get_eigenpair(i, re, im, *mode_vec);
+        _structural_sys->get_eigenpair(i, re, im, *_structural_basis[i]);
         
         libMesh::out
         << std::setw(35) << std::fixed << std::setprecision(15)
@@ -1496,30 +1513,11 @@ evaluate(const std::vector<Real>& dvars,
         
         if (if_write_output) {
             
-            std::ostringstream file_name;
-            
-            // We write the file in the ExodusII format.
-            file_name << "out_"
-            << std::setw(3)
-            << std::setfill('0')
-            << std::right
-            << i
-            << ".exo";
-            
-            libMesh::out
-            << "Writing mode " << i << " to : "
-            << file_name.str() << std::endl;
-            
             // copy the solution for output
-            (*_structural_sys->solution) = *mode_vec;
+            (*_structural_sys->solution) = *_structural_basis[i];
             
             // We write the file in the ExodusII format.
-            std::set<std::string> nm;
-            nm.insert(_structural_sys->name());
-            libMesh::ExodusII_IO(*_structural_mesh).write_equation_systems
-            (file_name.str(),
-             *_structural_eq_sys,
-             &nm);
+            mode_writer->write_timestep("modes.exo", *_structural_eq_sys, i+1, i);
         }
     }
 
@@ -1538,7 +1536,8 @@ evaluate(const std::vector<Real>& dvars,
         
         std::ostringstream oss;
         oss << "flutter_output_" << __init->comm().rank() << ".txt";
-        _flutter_solver->set_output_file(oss.str());
+        if (__init->comm().rank() == 0)
+            _flutter_solver->set_output_file(oss.str());
         
         _gaf_database->attach_discipline_and_system(*_structural_discipline,
                                                     *_structural_sys_init);
@@ -1563,7 +1562,7 @@ evaluate(const std::vector<Real>& dvars,
                                     _k_lower,         // lower kr
                                     _k_upper,         // upper kr
                                     _n_k_divs,        // number of divisions
-                                    _basis);          // basis vectors
+                                    _structural_basis);          // basis vectors
         
         
         // find the roots for the specified divisions
@@ -1593,6 +1592,66 @@ evaluate(const std::vector<Real>& dvars,
     _structural_nonlinear_assembly->clear_discipline_and_system();
 
     
+    if (sol.second && if_write_output) {
+        // now write the flutter mode to an output file.
+        // Flutter mode Y = sum_i (X_i * (xi_re + xi_im)_i)
+        // using the right eigenvector of the system.
+        // where i is the structural mode
+        //
+        // The time domain simulation assumes the temporal solution to be
+        // X(t) = (Y_re + i Y_im) exp(p t)
+        //      = (Y_re + i Y_im) exp(p_re t) * (cos(p_im t) + i sin(p_im t))
+        //      = exp(p_re t) (Z_re + i Z_im ),
+        // where Z_re = Y_re cos(p_im t) - Y_im sin(p_im t), and
+        //       Z_im = Y_re sin(p_im t) + Y_im cos(p_im t).
+        //
+        // We write the simulation of the mode over a period of oscillation
+        //
+        
+        
+        // first calculate the real and imaginary vectors
+        std::auto_ptr<libMesh::NumericVector<Real> >
+        re(_structural_sys->solution->zero_clone().release()),
+        im(_structural_sys->solution->zero_clone().release());
+        
+        
+        // first the real part
+        _structural_sys->solution->zero();
+        for (unsigned int i=0; i<_structural_basis.size(); i++) {
+            re->add(sol.second->eig_vec_right(i).real(), *_structural_basis[i]);
+            im->add(sol.second->eig_vec_right(i).imag(), *_structural_basis[i]);
+        }
+        re->close();
+        im->close();
+        
+        // now open the output processor for writing
+        libMesh::ExodusII_IO flutter_mode_output(*_structural_mesh);
+        
+        // use N steps in a time-period
+        Real
+        t_sys = _structural_sys->time,
+        pi    = acos(-1.);
+        unsigned int
+        N_divs = 100;
+        
+        
+        for (unsigned int i=0; i<=N_divs; i++) {
+            _structural_sys->time   =  2.*pi*(i*1.)/(N_divs*1.);
+            
+            _structural_sys->solution->zero();
+            _structural_sys->solution->add( cos(_structural_sys->time), *re);
+            _structural_sys->solution->add(-sin(_structural_sys->time), *im);
+            _structural_sys->solution->close();
+            flutter_mode_output.write_timestep("flutter_mode.exo",
+                                               *_structural_eq_sys,
+                                               i+1,
+                                               _structural_sys->time);
+        }
+        
+        // reset the system time
+        _structural_sys->time = t_sys;
+    }
+
     
     //////////////////////////////////////////////////////////////////////
     // get the objective and constraints
@@ -1764,7 +1823,7 @@ evaluate(const std::vector<Real>& dvars,
                                             _k_lower,         // lower kr
                                             _k_upper,         // upper kr
                                             _n_k_divs,        // number of divisions
-                                            _basis);          // basis vectors
+                                            _structural_basis);          // basis vectors
 
                 _flutter_solver->calculate_sensitivity(*sol.second,
                                                        params,

@@ -726,7 +726,8 @@ MAST::PlateEulerFSIFlutterAnalysis::solve(bool if_write_output,
                                               *_structural_sys_init);
     std::ostringstream oss;
     oss << "flutter_output_" << __init->comm().rank() << ".txt";
-    _flutter_solver->set_output_file(oss.str());
+    if (__init->comm().rank() == 0)
+        _flutter_solver->set_output_file(oss.str());
     
     fsi_assembly.init(*_freq_function,
                       &solver,                       // fluid complex solver
