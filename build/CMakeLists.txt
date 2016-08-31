@@ -139,6 +139,12 @@ target_link_libraries (example_driver
 set_property (TARGET example_driver APPEND 
 	     PROPERTY INCLUDE_DIRECTORIES 
 	     ${libmesh_dir}/include) 
+set_property (TARGET example_driver APPEND 
+	     PROPERTY INCLUDE_DIRECTORIES 
+	     ${petsc_dir}/include) 
+set_property (TARGET example_driver APPEND 
+	     PROPERTY INCLUDE_DIRECTORIES 
+	     ${slepc_dir}/include) 
 
 #
 #  tell cmake to link the tests
