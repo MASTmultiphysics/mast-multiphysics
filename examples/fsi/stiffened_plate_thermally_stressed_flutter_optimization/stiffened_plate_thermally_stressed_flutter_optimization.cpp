@@ -1298,7 +1298,11 @@ namespace MAST {
             _obj._structural_nonlinear_assembly->attach_discipline_and_system
             (*_obj._structural_discipline,
              *_obj._structural_sys_init);
-            libMesh::ExodusII_IO writer(_obj._structural_sys->get_mesh());
+            libMesh::ExodusII_IO *
+            writer = nullptr;
+            
+            if (_if_write_output)
+                writer = new libMesh::ExodusII_IO (_obj._structural_sys->get_mesh());
             
             // now iterate over the load steps
             for (unsigned int i=0; i<n_steps; i++) {
@@ -1314,12 +1318,15 @@ namespace MAST {
                 << std::endl;
                 
                 _obj._structural_sys->solve();
-                _obj._structural_discipline->plot_stress_strain_data<libMesh::ExodusII_IO>("stress_output.exo");
-                writer.write_timestep("output_all_steps.exo",
-                                      *_obj._structural_eq_sys,
-                                      i+1,
-                                      (i+1)/(1.*n_steps));
                 
+                if (_if_write_output) {
+                    
+                    _obj._structural_discipline->plot_stress_strain_data<libMesh::ExodusII_IO>("stress_output.exo");
+                    writer->write_timestep("output_all_steps.exo",
+                                           *_obj._structural_eq_sys,
+                                           i+1,
+                                           (i+1)/(1.*n_steps));
+                }
             }
             
             // copy the solution to the base solution vector
