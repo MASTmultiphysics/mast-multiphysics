@@ -26,7 +26,7 @@
 MAST::GCMMAOptimizationInterface::GCMMAOptimizationInterface():
 MAST::OptimizationInterface() {
     
-#if MAST_ENABLE_GCMMA == 1
+#if MAST_ENABLE_GCMMA == 0
     libmesh_error_msg("MAST configured without GCMMA support.");
 #endif
 }
