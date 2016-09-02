@@ -6,9 +6,6 @@ set (MAST_VERSION_MINOR 9)
 
 cmake_minimum_required(VERSION 2.8)
 
-MESSAGE (STATUS "aa" ${PROJECT_SOURCE_DIR})
-
-
 # flags for optional compilation of packages
 option (ENABLE_GCMMA "Build with GCMMA interface" OFF)
 option (ENABLE_DOT   "Build with DOT interface"   OFF)
