@@ -641,21 +641,17 @@ MAST::BeamEulerFSIFlutterAnalysis::solve(bool if_write_output,
             _basis[i] = NULL;
     }
     
+    libMesh::ExodusII_IO*
+    writer = nullptr;
+    
+    if (if_write_output)
+        writer = new libMesh::ExodusII_IO(*_structural_mesh);
+
     for (unsigned int i=0; i<nconv; i++) {
         
         // create a vector to store the basis
         if (_basis[i] == NULL)
             _basis[i] = _structural_sys->solution->zero_clone().release();
-        
-        std::ostringstream file_name;
-        
-        // We write the file in the ExodusII format.
-        file_name << "out_"
-        << std::setw(3)
-        << std::setfill('0')
-        << std::right
-        << i
-        << ".exo";
         
         // now write the eigenvalue
         Real
@@ -669,15 +665,12 @@ MAST::BeamEulerFSIFlutterAnalysis::solve(bool if_write_output,
         
         if (if_write_output) {
             
-            libMesh::out
-            << "Writing mode " << i << " to : "
-            << file_name.str() << std::endl;
-            
             // We write the file in the ExodusII format.
             // copy the solution for output
             _structural_sys->solution->swap(*_basis[i]);
-            libMesh::ExodusII_IO(*_structural_mesh).write_equation_systems(file_name.str(),
-                                                                           *_structural_eq_sys);
+            writer->write_timestep("modes.exo",
+                                   *_structural_eq_sys,
+                                   i+1, i);
             _structural_sys->solution->swap(*_basis[i]);
         }
     }

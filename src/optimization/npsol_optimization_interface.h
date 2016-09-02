@@ -33,8 +33,7 @@ namespace MAST {
         
         NPSOLOptimizationInterface();
         
-        virtual ~NPSOLOptimizationInterface()
-        { }
+        virtual ~NPSOLOptimizationInterface() { }
         
         virtual void optimize();
         

@@ -69,8 +69,7 @@ namespace MAST {
         
     public:
         
-        GCMMAOptimizationInterface()
-        { }
+        GCMMAOptimizationInterface();
         
         virtual ~GCMMAOptimizationInterface()
         { }

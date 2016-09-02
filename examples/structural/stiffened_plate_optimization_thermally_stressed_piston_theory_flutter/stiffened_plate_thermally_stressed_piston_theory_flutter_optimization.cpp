@@ -1123,7 +1123,12 @@ evaluate(const std::vector<Real>& dvars,
     
     bool if_all_eig_positive = true;
     
+    libMesh::ExodusII_IO*
+    writer = nullptr;
     
+    if (if_write_output)
+        writer = new libMesh::ExodusII_IO(*_mesh);
+
     for (unsigned int i=0; i<nconv; i++) {
         
         // create a vector to store the basis
@@ -1145,29 +1150,15 @@ evaluate(const std::vector<Real>& dvars,
         
         if (if_write_output) {
             
-            std::ostringstream file_name;
-            
-            // We write the file in the ExodusII format.
-            file_name << "out_"
-            << std::setw(3)
-            << std::setfill('0')
-            << std::right
-            << i
-            << ".exo";
-            
-            libMesh::out
-            << "Writing mode " << i << " to : "
-            << file_name.str() << std::endl;
-            
             // copy the solution for output
             (*_sys->solution) = *_basis[i];
             
             // We write the file in the ExodusII format.
             std::set<std::string> nm;
             nm.insert(_sys->name());
-            libMesh::ExodusII_IO(*_mesh).write_equation_systems(file_name.str(),
-                                                                *_eq_sys,
-                                                                &nm);
+            writer->write_timestep("modes.exo",
+                                   *_eq_sys,
+                                   i+1, i);
         }
     }
     
@@ -1309,8 +1300,6 @@ evaluate(const std::vector<Real>& dvars,
     //////////////////////////////////////////////////////////////////////
     // get the objective and constraints
     //////////////////////////////////////////////////////////////////////
-    
-    libmesh_error();
     
     // set the function and objective values
     obj = wt;

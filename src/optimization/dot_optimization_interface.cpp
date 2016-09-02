@@ -20,11 +20,23 @@
 // MAST includes
 #include "optimization/dot_optimization_interface.h"
 #include "optimization/function_evaluation.h"
+#include "base/mast_config.h"
+
+
+MAST::DOTOptimizationInterface::DOTOptimizationInterface():
+MAST::OptimizationInterface() {
+    
+#ifdef MAST_ENABLE_DOT 0
+    libmesh_error_msg("MAST configured without DOT support.");
+#endif
+}
+
 
 
 void
 MAST::DOTOptimizationInterface::optimize() {
     
+#ifdef MAST_ENABLE_DOT 1
     int
     INFO    = 0,
     METHOD  = 0,      //  METHOD == 0 or 1 means MMFD for constrained
@@ -145,4 +157,5 @@ MAST::DOTOptimizationInterface::optimize() {
         
         ITER = ITER + 1;
     }
+#endif  // MAST_ENABLE_DOT 1
 }

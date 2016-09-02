@@ -372,17 +372,13 @@ MAST::PlateBucklingPrestress::solve(bool if_write_output,
     if (eig)
         eig->resize(nconv);
     
+    libMesh::ExodusII_IO*
+    writer = nullptr;
+    
+    if (if_write_output)
+        writer = new libMesh::ExodusII_IO(*_mesh);
+
     for (unsigned int i=0; i<nconv; i++) {
-        
-        std::ostringstream file_name;
-        
-        // We write the file in the ExodusII format.
-        file_name << "out_"
-        << std::setw(3)
-        << std::setfill('0')
-        << std::right
-        << i
-        << ".exo";
         
         // now write the eigenvalue
         Real
@@ -402,14 +398,10 @@ MAST::PlateBucklingPrestress::solve(bool if_write_output,
         
         if (if_write_output) {
             
-            libMesh::out
-            << "Writing mode " << i << " to : "
-            << file_name.str() << std::endl;
-            
-            
             // We write the file in the ExodusII format.
-            libMesh::ExodusII_IO(*_mesh).write_equation_systems(file_name.str(),
-                                                                *_eq_sys);
+            writer->write_timestep("modes.exo",
+                                   *_eq_sys,
+                                   i+1, i);
         }
     }
     

@@ -50,8 +50,7 @@ namespace MAST {
         
     public:
         
-        DOTOptimizationInterface()
-        { }
+        DOTOptimizationInterface();
         
         virtual ~DOTOptimizationInterface()
         { }

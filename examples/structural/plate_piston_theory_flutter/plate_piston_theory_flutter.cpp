@@ -338,22 +338,17 @@ MAST::PlatePistonTheoryFlutterAnalysis::solve(bool if_write_output,
             _basis[i] = NULL;
     }
     
+    libMesh::ExodusII_IO*
+    writer = nullptr;
     
+    if (if_write_output)
+        writer = new libMesh::ExodusII_IO(*_mesh);
+
     for (unsigned int i=0; i<nconv; i++) {
         
         // create a vector to store the basis
         if (_basis[i] == NULL)
             _basis[i] = _sys->solution->zero_clone().release();
-        
-        std::ostringstream file_name;
-        
-        // We write the file in the ExodusII format.
-        file_name << "out_"
-        << std::setw(3)
-        << std::setfill('0')
-        << std::right
-        << i
-        << ".exo";
         
         // now write the eigenvalue
         Real
@@ -367,16 +362,13 @@ MAST::PlatePistonTheoryFlutterAnalysis::solve(bool if_write_output,
         
         if (if_write_output) {
             
-            libMesh::out
-            << "Writing mode " << i << " to : "
-            << file_name.str() << std::endl;
-            
             // copy the solution for output
             (*_sys->solution) = *_basis[i];
             
             // We write the file in the ExodusII format.
-            libMesh::ExodusII_IO(*_mesh).write_equation_systems(file_name.str(),
-                                                                *_eq_sys);
+            writer->write_timestep("modes.exo",
+                                   *_eq_sys,
+                                   i+1, i);
         }
     }
     

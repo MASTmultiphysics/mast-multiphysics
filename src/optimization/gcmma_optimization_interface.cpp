@@ -20,10 +20,20 @@
 // MAST includes
 #include "optimization/gcmma_optimization_interface.h"
 #include "optimization/function_evaluation.h"
+#include "base/mast_config.h"
 
+
+MAST::GCMMAOptimizationInterface::GCMMAOptimizationInterface():
+MAST::OptimizationInterface() {
+    
+#ifdef MAST_ENABLE_GCMMA 0
+    libmesh_error_msg("MAST configured without GCMMA support.");
+#endif
+}
 
 void
 MAST::GCMMAOptimizationInterface::optimize() {
+#ifdef MAST_ENABLE_GCMMA 1
     
     int
     N                  = _feval->n_vars(),
@@ -245,4 +255,6 @@ MAST::GCMMAOptimizationInterface::optimize() {
         }
         
     }//100  CONTINUE
+    
+#endif //MAST_ENABLE_GCMMA 1
 }
