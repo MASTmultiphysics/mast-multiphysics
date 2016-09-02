@@ -74,7 +74,7 @@ MAST::OptimizationInterface(),
 _funobj(NULL),
 _funcon(NULL) {
     
-#ifdef MAST_ENABLE_NPSOL 0
+#if MAST_ENABLE_NPSOL == 0
     libmesh_error_msg("MAST configured without NPSOL support.");
 #endif
 }
@@ -85,7 +85,7 @@ void
 MAST::NPSOLOptimizationInterface::
 attach_function_evaluation_object (MAST::FunctionEvaluation& feval) {
     
-#ifdef MAST_ENABLE_NPSOL 1
+#if MAST_ENABLE_NPSOL == 1
     MAST::OptimizationInterface::attach_function_evaluation_object(feval);
     
     // make sure that these pointers haven't already been provided
@@ -102,7 +102,7 @@ attach_function_evaluation_object (MAST::FunctionEvaluation& feval) {
 void
 MAST::NPSOLOptimizationInterface::optimize() {
     
-#ifdef MAST_ENABLE_NPSOL 1
+#if MAST_ENABLE_NPSOL == 1
     // make sure that functions have been provided
     libmesh_assert(_funobj);
     libmesh_assert(_funcon);

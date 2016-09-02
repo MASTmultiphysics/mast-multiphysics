@@ -71,6 +71,7 @@ set (CMAKE_Fortran_COMPILER "fortran-compiler" CACHE STRING "Fortran compiler")
 include_directories (${PROJECT_SOURCE_DIR}/../src
                      ${PROJECT_SOURCE_DIR}/../examples
          		     ${PROJECT_SOURCE_DIR}/../tests
+                     ${PROJECT_SOURCE_DIR}/../
 		             ${boost_include_dir})
 
 include_directories (SYSTEM ${mpi_include_dir})

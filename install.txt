@@ -14,13 +14,13 @@ MAST depends on the following libraries:
 
 -- libMesh (http://libmesh.github.io)
    The specific commit form libMesh that MAST uses is:
-   9f177aa11d3a57068c1e26f341aac481f4273156. Several additional
+   4c1399739d49910647b934c8a2f6e534fda95799. Several additional
    modifications to libMesh are needed, and can be found in the file
    contrib/libmesh_patches. The following commands will provide access
    to the commit and apply the patch:
       $> git clone git://github.com/libMesh/libmesh.git
       $> cd libmesh
-      $> git reset --hard ead2942519ec7b76cb5fc029dee1004866de1559 
+      $> git reset --hard 4c1399739d49910647b934c8a2f6e534fda95799
       $> patch -p1 < MAST_DIR/contrib/libmesh_patch
 
 -- MPI
@@ -117,10 +117,16 @@ cmake ../ -Dlibmesh_dir=~/Documents/codes/libmesh \
 -Dfortran_lib_dir=/opt/local/lib/libgcc \
 -Dboost_test_lib=boost_unit_test_framework-mt \
 -DCMAKE_Fortran_COMPILER=mpif90 -DCMAKE_BUILD_TYPE=Release \
--DCMAKE_CXX_FLAGS=-std=c++11
+-DCMAKE_CXX_FLAGS=-std=c++11 \
+-DENABLE_GCMMA=ON \
+-DENABLE_DOT=ON \
+-DENABLE_NPSOL=ON 
 
 Note: CMAKE_BUILD_TYPE=Release builds an optimized version, while
 CMAKE_BUILD_TYPE=Debug builds the debug version of the code. 
+
+Note: GCMMA, DOT, NPSOL can be disabled by providing OFF as the compilation option
+above. 
 
 9.  Build the library using
      $> make mast
