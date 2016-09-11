@@ -71,8 +71,8 @@ extern "C" {
 
 MAST::NPSOLOptimizationInterface::NPSOLOptimizationInterface():
 MAST::OptimizationInterface(),
-_funobj(NULL),
-_funcon(NULL) {
+_funobj(nullptr),
+_funcon(nullptr) {
     
 #if MAST_ENABLE_NPSOL == 0
     libmesh_error_msg("MAST configured without NPSOL support.");
@@ -89,8 +89,8 @@ attach_function_evaluation_object (MAST::FunctionEvaluation& feval) {
     MAST::OptimizationInterface::attach_function_evaluation_object(feval);
     
     // make sure that these pointers haven't already been provided
-    libmesh_assert(_funobj == NULL);
-    libmesh_assert(_funcon == NULL);
+    libmesh_assert(_funobj == nullptr);
+    libmesh_assert(_funcon == nullptr);
     
     _funobj = feval.get_objective_evaluation_function();
     _funcon = feval.get_constraint_evaluation_function();

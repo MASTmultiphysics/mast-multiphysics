@@ -116,8 +116,8 @@ MAST::TimeDomainFlutterSolution::get_critical_root(Real tol) {
     // Otherwise, find the root that is closest to the g=0 condition
     
     MAST::FlutterRootBase
-    *unstable  = NULL,
-    *max_g     = NULL;
+    *unstable  = nullptr,
+    *max_g     = nullptr;
     
     // iterate over all the roots and find the ones with g >= 0
     std::vector<MAST::FlutterRootBase*>::const_iterator

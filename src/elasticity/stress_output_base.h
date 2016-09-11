@@ -268,7 +268,7 @@ namespace MAST {
         
         /*!
          *   @returns the thermal load for this element, if present in the
-         *   the volume loads. A \p NULL pointer is returned if no load is 
+         *   the volume loads. A \p nullptr pointer is returned if no load is 
          *   present.
          */
         MAST::BoundaryConditionBase*

@@ -56,7 +56,7 @@ namespace MAST {
          */
         void init(const libMesh::boundary_id_type bid,
                   const std::vector<unsigned int>& constrained_vars,
-                  MAST::FieldFunction<Real>* f = NULL);
+                  MAST::FieldFunction<Real>* f = nullptr);
         
         
         /*!

@@ -37,8 +37,8 @@ namespace MAST
     public:
         OrthotropicElementPropertyCard3D():
         MAST::ElementPropertyCardBase(),
-        _material(NULL),
-        _orient(NULL)
+        _material(nullptr),
+        _orient(nullptr)
         { }
         
         /*!

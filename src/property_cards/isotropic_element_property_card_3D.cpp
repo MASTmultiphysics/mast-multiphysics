@@ -450,7 +450,7 @@ stiffness_B_matrix(const MAST::ElementBase& e) const {
     
     libmesh_assert(false);
     
-    return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >(NULL);
+    return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >(nullptr);
 }
 
 
@@ -462,7 +462,7 @@ stiffness_D_matrix(const MAST::ElementBase& e) const {
     
     libmesh_assert(false);
     
-    return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >(NULL);
+    return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >(nullptr);
 }
 
 
@@ -473,7 +473,7 @@ damping_matrix(const MAST::ElementBase& e) const {
     
     libmesh_assert(false);
     
-    return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >(NULL);
+    return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >(nullptr);
 }
 
 
@@ -519,7 +519,7 @@ transverse_shear_stiffness_matrix(const MAST::ElementBase& e) const {
     
     libmesh_assert(false);
     
-    return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >(NULL);
+    return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >(nullptr);
 }
 
 
@@ -529,7 +529,7 @@ prestress_A_matrix( MAST::ElementBase& e) const {
     
     libmesh_assert(false);
     
-    return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >(NULL);
+    return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >(nullptr);
 }
 
 
@@ -539,7 +539,7 @@ prestress_B_matrix( MAST::ElementBase& e) const {
     
     libmesh_assert(false);
     
-    return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >(NULL);
+    return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >(nullptr);
 }
 
 

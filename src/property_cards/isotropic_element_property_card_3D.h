@@ -34,7 +34,7 @@ namespace MAST
     public:
         IsotropicElementPropertyCard3D():
         MAST::ElementPropertyCardBase(),
-        _material(NULL)
+        _material(nullptr)
         { }
         
         /*!

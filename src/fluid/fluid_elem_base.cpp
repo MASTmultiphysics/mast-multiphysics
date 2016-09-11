@@ -39,7 +39,7 @@ MAST::FluidElemBase::FluidElemBase(const unsigned int d,
                                    const MAST::FlightCondition& f):
 _if_viscous(false),
 _include_pressure_switch(false),
-//surface_motion(NULL),
+//surface_motion(nullptr),
 flight_condition(&f),
 dim(d),
 _dissipation_scaling(1.) {

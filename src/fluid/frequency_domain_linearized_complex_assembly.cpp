@@ -30,7 +30,7 @@
 MAST::FrequencyDomainLinearizedComplexAssembly::
 FrequencyDomainLinearizedComplexAssembly():
 MAST::ComplexAssemblyBase(),
-_frequency(NULL) {
+_frequency(nullptr) {
     
 }
 
@@ -61,7 +61,7 @@ set_frequency_function(MAST::FrequencyFunction& f) {
 void
 MAST::FrequencyDomainLinearizedComplexAssembly::clear_discipline_and_system() {
 
-    _frequency = NULL;
+    _frequency = nullptr;
     
     // call the parent's function
     MAST::ComplexAssemblyBase::clear_discipline_and_system();

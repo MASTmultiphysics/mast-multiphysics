@@ -37,7 +37,7 @@
 MAST::StructuralDiscipline::
 StructuralDiscipline(libMesh::EquationSystems& eq_sys):
 MAST::PhysicsDisciplineBase(eq_sys),
-_stress_output_sys(NULL) {
+_stress_output_sys(nullptr) {
 
     _stress_output_sys  =
     &(eq_sys.add_system<libMesh::ExplicitSystem>("StressOutput"));
@@ -87,7 +87,7 @@ get_max_stress_strain_values(const std::vector<MAST::StressStrainOutputBase::Dat
     // if there is only one data point, the simply copy the value to the output
     // routines
     if (data.size() == 1) {
-        if (p == NULL) {
+        if (p == nullptr) {
             max_strain  = data[0]->strain();
             max_stress  = data[0]->stress();
             max_vm      = data[0]->von_Mises_stress();

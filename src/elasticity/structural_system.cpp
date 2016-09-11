@@ -40,7 +40,7 @@ MAST::NonlinearSystem(es, name, number),
 _iter(0),
 _beta(0.),
 _dl(0.),
-_load_param(NULL),
+_load_param(nullptr),
 _min_p(0.),
 _max_p(0.) {
     
@@ -72,7 +72,7 @@ MAST::StructuralSystem::set_load_parameter(MAST::Parameter &param,
 void
 MAST::StructuralSystem::clear() {
     
-    _load_param = NULL;
+    _load_param = nullptr;
     _beta       = 0.;
     _dl         = 0.;
     

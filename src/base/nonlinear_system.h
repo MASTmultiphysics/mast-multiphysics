@@ -127,7 +127,7 @@ namespace MAST {
          * The returned eigenvector will be scaled such that it has a unit 
          * inner product with respect to the B matrix.
          *
-         * Note that eigen problem type HEP or GHEP, \p vec_im must be NULL,
+         * Note that eigen problem type HEP or GHEP, \p vec_im must be nullptr,
          * and for eigenproblem type NHEP or GNHEP, the real and imag
          * parts of the eigenvector are copied to \p vec_re and \p vec_im,
          * respectively. If \p vec_im is not provided, then only the real part
@@ -138,7 +138,7 @@ namespace MAST {
                        Real&  re,
                        Real&  im,
                        libMesh::NumericVector<Real>& vec_re,
-                       libMesh::NumericVector<Real>* vec_im = NULL);
+                       libMesh::NumericVector<Real>* vec_im = nullptr);
         
         /*!
          * sets the flag to exchange the A and B matrices for a generalized 

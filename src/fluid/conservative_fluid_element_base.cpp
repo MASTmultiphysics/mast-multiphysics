@@ -513,8 +513,8 @@ symmetry_surface_residual(bool request_jacobian,
                           MAST::BoundaryConditionBase& p) {
     
     // prepare the side finite element
-    libMesh::FEBase *fe_ptr    = NULL;
-    libMesh::QBase  *qrule_ptr = NULL;
+    libMesh::FEBase *fe_ptr    = nullptr;
+    libMesh::QBase  *qrule_ptr = nullptr;
     _get_side_fe_and_qrule(_elem, s, &fe_ptr, &qrule_ptr, false);
     std::auto_ptr<libMesh::FEBase> fe(fe_ptr);
     std::auto_ptr<libMesh::QBase>  qrule(qrule_ptr);
@@ -623,8 +623,8 @@ slip_wall_surface_residual(bool request_jacobian,
     // qi ni = 0       (since heat flux occurs only on no-slip wall and far-field bc)
     
     // prepare the side finite element
-    libMesh::FEBase *fe_ptr    = NULL;
-    libMesh::QBase  *qrule_ptr = NULL;
+    libMesh::FEBase *fe_ptr    = nullptr;
+    libMesh::QBase  *qrule_ptr = nullptr;
     _get_side_fe_and_qrule(_elem, s, &fe_ptr, &qrule_ptr, false);
     std::auto_ptr<libMesh::FEBase> fe(fe_ptr);
     std::auto_ptr<libMesh::QBase>  qrule(qrule_ptr);
@@ -772,8 +772,8 @@ far_field_surface_residual(bool request_jacobian,
     // -- f_diff_i ni  = f_diff                         (evaluation of diffusion flux based on domain solution)
 
     // prepare the side finite element
-    libMesh::FEBase *fe_ptr    = NULL;
-    libMesh::QBase  *qrule_ptr = NULL;
+    libMesh::FEBase *fe_ptr    = nullptr;
+    libMesh::QBase  *qrule_ptr = nullptr;
     _get_side_fe_and_qrule(_elem, s, &fe_ptr, &qrule_ptr, false);
     std::auto_ptr<libMesh::FEBase> fe(fe_ptr);
     std::auto_ptr<libMesh::QBase>  qrule(qrule_ptr);

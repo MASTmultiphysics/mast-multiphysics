@@ -241,7 +241,7 @@ dvon_Mises_stress_dp(const MAST::FunctionBase* f) const {
 
 MAST::StressStrainOutputBase::StressStrainOutputBase():
 MAST::OutputFunctionBase(MAST::STRAIN_STRESS_TENSOR),
-_vol_loads(NULL) {
+_vol_loads(nullptr) {
     
 }
 
@@ -280,7 +280,7 @@ MAST::StressStrainOutputBase::clear(bool clear_elem_subset) {
     
     if (clear_elem_subset) {
         _elem_subset.clear();
-        _vol_loads = NULL;
+        _vol_loads = nullptr;
     }
     
 }
@@ -432,7 +432,7 @@ MAST::StressStrainOutputBase::set_volume_loads(MAST::VolumeBCMapType& vol_loads)
 MAST::BoundaryConditionBase*
 MAST::StressStrainOutputBase::get_thermal_load_for_elem(const libMesh::Elem& elem) {
 
-    MAST::BoundaryConditionBase *rval = NULL;
+    MAST::BoundaryConditionBase *rval = nullptr;
     
     if (_vol_loads) {
         

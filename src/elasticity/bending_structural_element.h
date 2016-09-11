@@ -78,7 +78,7 @@ namespace MAST {
                            libMesh::FEBase **fe,
                            libMesh::QBase  **qrule,
                            MAST::BendingOperator **bend,
-                           const std::vector<libMesh::Point>* pts = NULL);
+                           const std::vector<libMesh::Point>* pts = nullptr);
         
         /*!
          *    bending operator used for this elmeent

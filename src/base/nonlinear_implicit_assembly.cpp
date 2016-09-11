@@ -93,12 +93,12 @@ clear_discipline_and_system( ) {
         libMesh::NonlinearImplicitSystem& nonlin_sys =
         dynamic_cast<libMesh::NonlinearImplicitSystem&>(_system->system());
         
-        nonlin_sys.nonlinear_solver->residual_and_jacobian_object = NULL;
+        nonlin_sys.nonlinear_solver->residual_and_jacobian_object = nullptr;
         nonlin_sys.reset_sensitivity_assembly();
     }
     
-    _discipline = NULL;
-    _system     = NULL;
+    _discipline = nullptr;
+    _system     = nullptr;
 }
 
 
@@ -280,7 +280,7 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
         
         // perform the element level calculations
         _elem_calculations(*physics_elem,
-                           J!=NULL?true:false,
+                           J!=nullptr?true:false,
                            vec, mat);
         
         physics_elem->detach_active_solution_function();

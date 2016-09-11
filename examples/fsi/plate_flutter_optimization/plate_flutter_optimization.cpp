@@ -730,13 +730,13 @@ MAST::PlateFSIFlutterSizingOptimization::init(GetPot &infile,
     else {
         _basis.resize(nconv);
         for (unsigned int i=0; i<_basis.size(); i++)
-            _basis[i] = NULL;
+            _basis[i] = nullptr;
     }
     
     for (unsigned int i=0; i<nconv; i++) {
         
         // create a vector to store the basis
-        if (_basis[i] == NULL)
+        if (_basis[i] == nullptr)
             _basis[i] = _structural_sys->solution->zero_clone().release();
         
         std::ostringstream file_name;

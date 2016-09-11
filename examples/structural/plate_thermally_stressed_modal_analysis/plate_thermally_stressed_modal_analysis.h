@@ -70,7 +70,7 @@ namespace MAST {
         
         /*!
          *   @returns a pointer to the parameter of the specified name.
-         *   If no parameter exists by the specified name, then a \p NULL
+         *   If no parameter exists by the specified name, then a \p nullptr
          *   pointer is returned and a message is printed with a valid list
          *   of parameters.
          */
@@ -81,7 +81,7 @@ namespace MAST {
          */
         void
         solve(bool if_write_output = false,
-              std::vector<Real>* eig = NULL);
+              std::vector<Real>* eig = nullptr);
         
         
         /*!

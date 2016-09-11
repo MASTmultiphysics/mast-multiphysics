@@ -41,8 +41,8 @@ namespace MAST
         DKTBendingOperator(MAST::StructuralElementBase& elem,
                            const std::vector<libMesh::Point>& pts):
         MAST::BendingOperator2D(elem),
-        _fe(NULL),
-        _tri6(NULL),
+        _fe(nullptr),
+        _tri6(nullptr),
         _nodes(3)
         {
             libmesh_assert(_elem.type() == libMesh::TRI3);

@@ -27,7 +27,7 @@
 MAST::ConservativeFluidDiscipline::
 ConservativeFluidDiscipline(libMesh::EquationSystems& eq_sys):
 MAST::PhysicsDisciplineBase(eq_sys),
-_flight_cond(NULL)
+_flight_cond(nullptr)
 { }
 
 
@@ -61,5 +61,5 @@ void
 MAST::ConservativeFluidDiscipline::clear_flight_condition() {
     
     // clears the pointer
-    _flight_cond = NULL;
+    _flight_cond = nullptr;
  }

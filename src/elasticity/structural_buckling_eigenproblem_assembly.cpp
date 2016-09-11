@@ -38,11 +38,11 @@ MAST::StructuralBucklingEigenproblemAssembly::
 StructuralBucklingEigenproblemAssembly():
 MAST::EigenproblemAssembly(),
 _use_linearized_formulation(true),
-_load_param(NULL),
+_load_param(nullptr),
 _lambda1(0.),
 _lambda2(0.),
-_sol1(NULL),
-_sol2(NULL) {
+_sol1(nullptr),
+_sol2(nullptr) {
     
 }
 
@@ -78,11 +78,11 @@ void
 MAST::StructuralBucklingEigenproblemAssembly::clear_discipline_and_system() {
 
     _use_linearized_formulation = true;
-    _load_param                 = NULL;
+    _load_param                 = nullptr;
     _lambda1                    = 0.;
     _lambda2                    = 0.;
-    _sol1                       = NULL;
-    _sol2                       = NULL;
+    _sol1                       = nullptr;
+    _sol2                       = nullptr;
     
     MAST::EigenproblemAssembly::clear_discipline_and_system();
 }

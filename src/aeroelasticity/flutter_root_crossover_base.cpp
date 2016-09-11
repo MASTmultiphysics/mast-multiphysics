@@ -25,9 +25,9 @@
 
 
 MAST::FlutterRootCrossoverBase::FlutterRootCrossoverBase():
-crossover_solutions(NULL, NULL),
+crossover_solutions(nullptr, nullptr),
 root_num(0),
-root(NULL)
+root(nullptr)
 { }
 
 

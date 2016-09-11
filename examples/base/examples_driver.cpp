@@ -76,8 +76,8 @@
 #include "libmesh/getpot.h"
 
 
-libMesh::LibMeshInit     *__init         = NULL;
-MAST::FunctionEvaluation *__my_func_eval = NULL;
+libMesh::LibMeshInit     *__init         = nullptr;
+MAST::FunctionEvaluation *__my_func_eval = nullptr;
 
 
 

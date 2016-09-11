@@ -43,8 +43,8 @@
 MAST::StructuralFluidInteractionAssembly::
 StructuralFluidInteractionAssembly():
 MAST::NonlinearImplicitAssembly(),
-_base_sol(NULL),
-_base_sol_sensitivity(NULL) {
+_base_sol(nullptr),
+_base_sol_sensitivity(nullptr) {
     
 }
 
@@ -79,8 +79,8 @@ void
 MAST::StructuralFluidInteractionAssembly::
 clear_discipline_and_system( ) {
 
-    _base_sol             = NULL;
-    _base_sol_sensitivity = NULL;
+    _base_sol             = nullptr;
+    _base_sol_sensitivity = nullptr;
     
     MAST::NonlinearImplicitAssembly::clear_discipline_and_system();
 }
@@ -112,9 +112,9 @@ void
 MAST::StructuralFluidInteractionAssembly::clear_base_solution(bool if_sens) {
     
     if (!if_sens)
-        _base_sol             = NULL;
+        _base_sol             = nullptr;
     else
-        _base_sol_sensitivity = NULL;
+        _base_sol_sensitivity = nullptr;
 }
 
 

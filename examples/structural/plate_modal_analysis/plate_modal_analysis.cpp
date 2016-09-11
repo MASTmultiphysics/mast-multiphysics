@@ -224,7 +224,7 @@ MAST::PlateModalAnalysis::get_parameter(const std::string &nm) {
     
     libmesh_assert(_initialized);
     
-    MAST::Parameter *rval = NULL;
+    MAST::Parameter *rval = nullptr;
     
     // look through the vector of parameters to see if the name is available
     std::vector<MAST::Parameter*>::iterator
@@ -279,18 +279,15 @@ MAST::PlateModalAnalysis::solve(bool if_write_output,
                      _sys->get_n_requested_eigenvalues());
     if (eig)
         eig->resize(nconv);
+
+    libMesh::ExodusII_IO*
+    writer = nullptr;
+    
+    if (if_write_output)
+        writer = new libMesh::ExodusII_IO(*_mesh);
+    
     
     for (unsigned int i=0; i<nconv; i++) {
-        
-        std::ostringstream file_name;
-        
-        // We write the file in the ExodusII format.
-        file_name << "out_"
-        << std::setw(3)
-        << std::setfill('0')
-        << std::right
-        << i
-        << ".exo";
         
         // now write the eigenvalue
         Real
@@ -306,17 +303,10 @@ MAST::PlateModalAnalysis::solve(bool if_write_output,
         
         if (if_write_output) {
             
-            libMesh::out
-            << "Writing mode " << i << " to : "
-            << file_name.str() << std::endl;
-            
-            
             // We write the file in the ExodusII format.
-            std::set<std::string> nm;
-            nm.insert(_sys->name());
-            libMesh::ExodusII_IO(*_mesh).write_equation_systems(file_name.str(),
-                                                                *_eq_sys,
-                                                                &nm);
+            writer->write_timestep("modes.exo",
+                                   *_eq_sys,
+                                   i+1, i);
         }
     }
 }

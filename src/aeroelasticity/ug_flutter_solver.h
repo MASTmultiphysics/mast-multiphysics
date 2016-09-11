@@ -121,14 +121,14 @@ namespace MAST {
          *   sensitivity of the eigenvalue wrt velocity, which is
          *   defined as a parameter. Hence, the sensitivity of the
          *   static solution is also required wrt the velocity parameter.
-         *   If \par dXdV is \par NULL, then zero value is assumed.
+         *   If \par dXdV is \par nullptr, then zero value is assumed.
          */
         virtual void
         calculate_sensitivity(MAST::FlutterRootBase& root,
                               const libMesh::ParameterVector& params,
                               const unsigned int i,
-                              libMesh::NumericVector<Real>* dXdp = NULL,
-                              libMesh::NumericVector<Real>* dXdkr = NULL);
+                              libMesh::NumericVector<Real>* dXdp = nullptr,
+                              libMesh::NumericVector<Real>* dXdkr = nullptr);
         
         
         /*!
@@ -158,11 +158,11 @@ namespace MAST {
         /*!
          *   performs an eigensolution at the specified reference value, and
          *   sort the roots based on the provided solution pointer. If the
-         *   pointer is NULL, then no sorting is performed
+         *   pointer is nullptr, then no sorting is performed
          */
         virtual std::auto_ptr<MAST::FlutterSolutionBase>
         _analyze(const Real kr_ref,
-                 const MAST::FlutterSolutionBase* prev_sol=NULL);
+                 const MAST::FlutterSolutionBase* prev_sol=nullptr);
         
         
         

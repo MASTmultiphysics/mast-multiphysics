@@ -191,48 +191,48 @@ _n_elems_per_stiff(0),
 _n_elems(0),
 _n_dv_stations_x(0),
 _n_load_steps(0),
-_mesh(NULL),
-_eq_sys(NULL),
-_sys(NULL),
-_structural_sys(NULL),
-_discipline(NULL),
-_nonlinear_assembly(NULL),
-_modal_assembly(NULL),
-_fsi_assembly(NULL),
-_E(NULL),
-_alpha(NULL),
-_nu(NULL),
-_kappa(NULL),
-_rho(NULL),
-_temp(NULL),
-_zero(NULL),
-_velocity(NULL),
-_mach(NULL),
-_rho_air(NULL),
-_gamma_air(NULL),
-_E_f(NULL),
-_nu_f(NULL),
-_alpha_f(NULL),
-_kappa_f(NULL),
-_rho_f(NULL),
-_temp_f(NULL),
-_thzoff_stiff_f(NULL),
-_ref_temp_f(NULL),
-_velocity_f(NULL),
-_mach_f(NULL),
-_rho_air_f(NULL),
-_gamma_air_f(NULL),
-_hoff_plate_f(NULL),
-_weight(NULL),
-_m_card(NULL),
-_p_card_plate(NULL),
-_dirichlet_left(NULL),
-_dirichlet_right(NULL),
-_dirichlet_bottom(NULL),
-_dirichlet_top(NULL),
-_T_load(NULL),
-_piston_bc(NULL),
-_flutter_solver(NULL)
+_mesh(nullptr),
+_eq_sys(nullptr),
+_sys(nullptr),
+_structural_sys(nullptr),
+_discipline(nullptr),
+_nonlinear_assembly(nullptr),
+_modal_assembly(nullptr),
+_fsi_assembly(nullptr),
+_E(nullptr),
+_alpha(nullptr),
+_nu(nullptr),
+_kappa(nullptr),
+_rho(nullptr),
+_temp(nullptr),
+_zero(nullptr),
+_velocity(nullptr),
+_mach(nullptr),
+_rho_air(nullptr),
+_gamma_air(nullptr),
+_E_f(nullptr),
+_nu_f(nullptr),
+_alpha_f(nullptr),
+_kappa_f(nullptr),
+_rho_f(nullptr),
+_temp_f(nullptr),
+_thzoff_stiff_f(nullptr),
+_ref_temp_f(nullptr),
+_velocity_f(nullptr),
+_mach_f(nullptr),
+_rho_air_f(nullptr),
+_gamma_air_f(nullptr),
+_hoff_plate_f(nullptr),
+_weight(nullptr),
+_m_card(nullptr),
+_p_card_plate(nullptr),
+_dirichlet_left(nullptr),
+_dirichlet_right(nullptr),
+_dirichlet_bottom(nullptr),
+_dirichlet_top(nullptr),
+_T_load(nullptr),
+_piston_bc(nullptr),
+_flutter_solver(nullptr)
 { }
 
 
@@ -916,7 +916,6 @@ namespace MAST {
                 << std::endl;
 
                 _obj._sys->solve();
-                _obj._discipline->plot_stress_strain_data<libMesh::ExodusII_IO>("stress_output.exo");
                 writer->write_timestep("output_all_steps.exo",
                                        *_obj._eq_sys,
                                        inc+1,
@@ -1114,7 +1113,7 @@ evaluate(const std::vector<Real>& dvars,
     else {
         _basis.resize(nconv);
         for (unsigned int i=0; i<_basis.size(); i++)
-            _basis[i] = NULL;
+            _basis[i] = nullptr;
     }
     
     
@@ -1132,7 +1131,7 @@ evaluate(const std::vector<Real>& dvars,
     for (unsigned int i=0; i<nconv; i++) {
         
         // create a vector to store the basis
-        if (_basis[i] == NULL)
+        if (_basis[i] == nullptr)
             _basis[i] = _sys->solution->zero_clone().release();
         
         // now write the eigenvalue

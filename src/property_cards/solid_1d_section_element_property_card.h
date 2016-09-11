@@ -35,7 +35,7 @@ namespace MAST {
         Solid1DSectionElementPropertyCard():
         MAST::ElementPropertyCard1D(),
         _initialized(false),
-        _material(NULL)
+        _material(nullptr)
         { }
         
         

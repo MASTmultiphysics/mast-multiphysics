@@ -31,9 +31,9 @@ MeshFieldFunction(const std::string& nm):
 MAST::FieldFunction<ValType>(nm),
 _use_qp_sol(false),
 _qp_sol(),
-_system(NULL),
-_sol(NULL),
-_mesh_function(NULL)
+_system(nullptr),
+_sol(nullptr),
+_mesh_function(nullptr)
 { }
 
 
@@ -163,12 +163,12 @@ MAST::MeshFieldFunction<ValType>::clear() {
     // associated vector, and clear the associated system
     if (_mesh_function) {
         delete _mesh_function;
-        _mesh_function = NULL;
+        _mesh_function = nullptr;
         
         delete _sol;
-        _sol = NULL;
+        _sol = nullptr;
         
-        _system = NULL;
+        _system = nullptr;
     }
     
     // clear flags for quadrature point solution

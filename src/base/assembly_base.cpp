@@ -32,9 +32,9 @@
 
 
 MAST::AssemblyBase::AssemblyBase():
-_discipline(NULL),
-_system(NULL),
-_sol_function(NULL) {
+_discipline(nullptr),
+_system(nullptr),
+_sol_function(nullptr) {
     
 }
 
@@ -125,7 +125,7 @@ MAST::AssemblyBase::attach_solution_function(MAST::MeshFieldFunction<RealVectorX
 
 void
 MAST::AssemblyBase::detach_solution_function() {
-    _sol_function = NULL;
+    _sol_function = nullptr;
 }
 
 

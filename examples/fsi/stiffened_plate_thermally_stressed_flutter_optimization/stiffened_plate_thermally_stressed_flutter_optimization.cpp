@@ -967,13 +967,13 @@ init(GetPot &infile,
     else {
         _aero_basis.resize(nconv);
         for (unsigned int i=0; i<_aero_basis.size(); i++)
-            _aero_basis[i] = NULL;
+            _aero_basis[i] = nullptr;
     }
     
     for (unsigned int i=0; i<nconv; i++) {
         
         // create a vector to store the basis
-        if (_aero_basis[i] == NULL)
+        if (_aero_basis[i] == nullptr)
             _aero_basis[i] = _structural_sys->solution->zero_clone().release();
         
         std::ostringstream file_name;
@@ -1321,7 +1321,6 @@ namespace MAST {
                 
                 if (_if_write_output) {
                     
-                    _obj._structural_discipline->plot_stress_strain_data<libMesh::ExodusII_IO>("stress_output.exo");
                     writer->write_timestep("output_all_steps.exo",
                                            *_obj._structural_eq_sys,
                                            i+1,
@@ -1485,7 +1484,7 @@ evaluate(const std::vector<Real>& dvars,
     else {
         _structural_basis.resize(nconv);
         for (unsigned int i=0; i<_structural_basis.size(); i++)
-            _structural_basis[i] = NULL;
+            _structural_basis[i] = nullptr;
     }
 
     // vector of eigenvalues
@@ -1502,7 +1501,7 @@ evaluate(const std::vector<Real>& dvars,
     for (unsigned int i=0; i<nconv; i++) {
         
         // create a vector to store the basis
-        if (_structural_basis[i] == NULL)
+        if (_structural_basis[i] == nullptr)
             _structural_basis[i] = _structural_sys->solution->zero_clone().release();
 
         // now write the eigenvalue

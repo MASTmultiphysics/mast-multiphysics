@@ -31,7 +31,7 @@ namespace MAST {
     public:
         Solid2DSectionElementPropertyCard():
         MAST::ElementPropertyCard2D(),
-        _material(NULL)
+        _material(nullptr)
         { }
         
         /*!

@@ -31,10 +31,10 @@
 
 
 MAST::FlutterSolverBase::FlutterSolverBase():
-_assembly(NULL),
-_basis_vectors(NULL),
-_output(NULL),
-_steady_solver(NULL) {
+_assembly(nullptr),
+_basis_vectors(nullptr),
+_output(nullptr),
+_steady_solver(nullptr) {
     
 }
 
@@ -42,8 +42,8 @@ _steady_solver(NULL) {
 
 MAST::FlutterSolverBase::~FlutterSolverBase() {
     
-    _assembly         = NULL;
-    _basis_vectors    = NULL;
+    _assembly         = nullptr;
+    _basis_vectors    = nullptr;
     if (_output)
         delete _output;
 }
@@ -67,11 +67,11 @@ attach_assembly(MAST::StructuralFluidInteractionAssembly&   assembly) {
 void
 MAST::FlutterSolverBase::clear() {
     
-    _assembly         = NULL;
-    _basis_vectors    = NULL;
+    _assembly         = nullptr;
+    _basis_vectors    = nullptr;
     if (_output) {
         delete _output;
-        _output = NULL;
+        _output = nullptr;
     }
 }
 
@@ -88,8 +88,8 @@ MAST::FlutterSolverBase::attach_steady_solver(MAST::FlutterSolverBase::SteadySol
 void
 MAST::FlutterSolverBase::clear_assembly_object() {
     
-    _assembly      = NULL;
-    _steady_solver = NULL;
+    _assembly      = nullptr;
+    _steady_solver = nullptr;
 }
 
 

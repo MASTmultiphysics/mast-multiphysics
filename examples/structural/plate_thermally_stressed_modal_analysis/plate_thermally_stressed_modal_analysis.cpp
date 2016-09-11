@@ -262,7 +262,7 @@ get_parameter(const std::string &nm) {
     
     libmesh_assert(_initialized);
     
-    MAST::Parameter *rval = NULL;
+    MAST::Parameter *rval = nullptr;
     
     // look through the vector of parameters to see if the name is available
     std::vector<MAST::Parameter*>::iterator
@@ -359,7 +359,6 @@ MAST::PlateThermallyStressedModalAnalysis::solve(bool if_write_output,
                                          i_step+1,
                                          (1.*i_step)/(1.*(n_steps-1)));
             
-            _discipline->plot_stress_strain_data<libMesh::ExodusII_IO>("stress_output.exo");
         }
     }
 

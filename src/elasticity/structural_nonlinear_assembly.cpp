@@ -139,7 +139,7 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
         
         // perform the element level calculations
         _elem_calculations(*physics_elem,
-                           J!=NULL?true:false,
+                           J!=nullptr?true:false,
                            vec, mat);
         
         physics_elem->detach_active_solution_function();

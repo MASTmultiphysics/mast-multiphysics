@@ -50,7 +50,7 @@ void MAST::SmallPerturbationPrimitiveSolution<ValType>::zero() {
     dk            = 0.;
     dentropy      = 0.;
     dmach         = 0.;
-    primitive_sol = NULL;
+    primitive_sol = nullptr;
 }
 
 

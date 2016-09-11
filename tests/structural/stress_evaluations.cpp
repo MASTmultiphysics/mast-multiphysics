@@ -433,7 +433,7 @@ void check_stress (ValType& v, const RealVectorX& x0) {
             f()         += dp;
             
             // remove the sensitivity association
-            e->sensitivity_param  = NULL;
+            e->sensitivity_param  = nullptr;
 
             // first perturb the solution for fd sensitivity
             x       = x0;

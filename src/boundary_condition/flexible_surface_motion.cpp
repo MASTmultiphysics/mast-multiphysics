@@ -33,7 +33,7 @@ MAST::FlexibleSurfaceMotion::FlexibleSurfaceMotion(const std::string& nm,
                                                    MAST::SystemInitialization& sys):
 MAST::SurfaceMotionBase(nm),
 _system(sys),
-_freq(NULL) {
+_freq(nullptr) {
     
 }
 

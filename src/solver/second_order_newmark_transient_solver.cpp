@@ -42,7 +42,7 @@ void
 MAST::SecondOrderNewmarkTransientSolver::solve() {
     
     // make sure that the system has been specified
-    libmesh_assert_msg(_system, "System pointer is NULL.");
+    libmesh_assert_msg(_system, "System pointer is nullptr.");
     
     // ask the Newton solver to solve for the system solution
     _system->solve();

@@ -266,7 +266,7 @@ MAST::PlatePistonTheoryFlutterAnalysis::get_parameter(const std::string &nm) {
     
     libmesh_assert(_initialized);
     
-    MAST::Parameter *rval = NULL;
+    MAST::Parameter *rval = nullptr;
     
     // look through the vector of parameters to see if the name is available
     std::vector<MAST::Parameter*>::iterator
@@ -309,7 +309,7 @@ MAST::PlatePistonTheoryFlutterAnalysis::solve(bool if_write_output,
     
     // clear out the data structures of the flutter solver before
     // this solution
-    _flutter_root = NULL;
+    _flutter_root = nullptr;
     _flutter_solver->clear();
     std::string nm("flutter_output.txt");
     if (__init->comm().rank() == 0)
@@ -335,7 +335,7 @@ MAST::PlatePistonTheoryFlutterAnalysis::solve(bool if_write_output,
     else {
         _basis.resize(nconv);
         for (unsigned int i=0; i<_basis.size(); i++)
-            _basis[i] = NULL;
+            _basis[i] = nullptr;
     }
     
     libMesh::ExodusII_IO*
@@ -347,7 +347,7 @@ MAST::PlatePistonTheoryFlutterAnalysis::solve(bool if_write_output,
     for (unsigned int i=0; i<nconv; i++) {
         
         // create a vector to store the basis
-        if (_basis[i] == NULL)
+        if (_basis[i] == nullptr)
             _basis[i] = _sys->solution->zero_clone().release();
         
         // now write the eigenvalue

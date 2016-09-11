@@ -326,7 +326,7 @@ get_system_dirichlet_bc_dofs(libMesh::System& sys,
         // boundary condition is applied only on sides with no neighbors
         // and if the side's boundary id has a boundary condition tag on it
         for (unsigned int s=0; s<elem->n_sides(); s++)
-            if ((*el)->neighbor(s) == NULL &&
+            if ((*el)->neighbor(s) == nullptr &&
                 mesh.boundary_info->n_boundary_ids(elem, s)) {
                 
                 std::vector<libMesh::boundary_id_type>

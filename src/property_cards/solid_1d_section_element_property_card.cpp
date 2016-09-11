@@ -1611,7 +1611,7 @@ damping_matrix(const MAST::ElementBase& e) const {
     
     libmesh_error();
     
-    return std::auto_ptr<MAST::FieldFunction<RealMatrixX> > (NULL);
+    return std::auto_ptr<MAST::FieldFunction<RealMatrixX> > (nullptr);
 }
 
 

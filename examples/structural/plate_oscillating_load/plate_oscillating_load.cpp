@@ -355,7 +355,7 @@ MAST::PlateOscillatingLoad::get_parameter(const std::string &nm) {
     
     libmesh_assert(_initialized);
     
-    MAST::Parameter *rval = NULL;
+    MAST::Parameter *rval = nullptr;
     
     // look through the vector of parameters to see if the name is available
     std::vector<MAST::Parameter*>::iterator
@@ -457,15 +457,11 @@ MAST::PlateOscillatingLoad::solve(bool if_write_output) {
         // write the time-step
         if (if_write_output) {
             
-            // evaluate the outputs
-            //assembly.calculate_outputs(*(_sys->solution));
-            
             exodus_writer.write_timestep("output.exo",
                                          *_eq_sys,
                                          t_step+1,
                                          nonlin_sys.time);
             
-            //_discipline->plot_stress_strain_data<libMesh::ExodusII_IO>("stress_output.exo");
         }
         
         solver.solve();

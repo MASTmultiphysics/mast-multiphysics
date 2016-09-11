@@ -286,7 +286,7 @@ MAST::PanelSmallDisturbanceFrequencyDomainInviscidAnalysis3D::
 MAST::Parameter*
 MAST::PanelSmallDisturbanceFrequencyDomainInviscidAnalysis3D::get_parameter(const std::string &nm) {
     
-    MAST::Parameter *rval = NULL;
+    MAST::Parameter *rval = nullptr;
     
     // look through the vector of parameters to see if the name is available
     std::vector<MAST::Parameter*>::iterator

@@ -35,8 +35,8 @@
 
 MAST::EigenproblemAssembly::EigenproblemAssembly():
 MAST::AssemblyBase(),
-_base_sol(NULL),
-_base_sol_sensitivity(NULL) {
+_base_sol(nullptr),
+_base_sol_sensitivity(nullptr) {
     
 }
 
@@ -98,10 +98,10 @@ clear_discipline_and_system( ) {
         sys.reset_eigenproblem_assemble_object();
     }
     
-    _discipline           = NULL;
-    _system               = NULL;
-    _base_sol             = NULL;
-    _base_sol_sensitivity = NULL;
+    _discipline           = nullptr;
+    _system               = nullptr;
+    _base_sol             = nullptr;
+    _base_sol_sensitivity = nullptr;
 }
 
 
@@ -133,9 +133,9 @@ void
 MAST::EigenproblemAssembly::clear_base_solution(bool if_sens) {
     
     if (!if_sens)
-        _base_sol             = NULL;
+        _base_sol             = nullptr;
     else
-        _base_sol_sensitivity = NULL;
+        _base_sol_sensitivity = nullptr;
 }
 
 

@@ -51,7 +51,7 @@ namespace MAST {
         _max_iters(0),
         _n_rel_change_iters(5),
         _tol(1.0e-6),
-        _output(NULL)
+        _output(nullptr)
         { }
         
         virtual ~FunctionEvaluation() { }
@@ -157,7 +157,7 @@ namespace MAST {
             // should not get here, if the derived method implements its
             // specialized method
             libmesh_assert(false);
-            return NULL;
+            return nullptr;
         }
 
         
@@ -180,7 +180,7 @@ namespace MAST {
             // should not get here, if the derived method implements its
             // specialized method
             libmesh_assert(false);
-            return NULL;
+            return nullptr;
         }
 
         

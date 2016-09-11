@@ -37,7 +37,7 @@
 
 
 MAST::ComplexSolverBase::ComplexSolverBase():
-_assembly(NULL),
+_assembly(nullptr),
 tol(1.0e-3),
 max_iters(20) {
     
@@ -63,7 +63,7 @@ MAST::ComplexSolverBase::set_assembly(MAST::ComplexAssemblyBase& assembly) {
 void
 MAST::ComplexSolverBase::clear_assembly() {
     
-    _assembly = NULL;
+    _assembly = nullptr;
 }
 
 
@@ -252,15 +252,15 @@ MAST::ComplexSolverBase::solve_pc_fieldsplit() {
     sub_mats[3] = dynamic_cast<libMesh::PetscMatrix<Real>*>(sys.matrix)->mat();   // real
     
     ierr = MatCreateNest(_assembly->system().comm().get(),
-                         2, NULL,
-                         2, NULL,
+                         2, nullptr,
+                         2, nullptr,
                          &sub_mats[0],
                          &mat);
     CHKERRABORT(sys.comm().get(), ierr);
     
     
     // get the IS belonging to each block
-    ierr  =    MatNestGetISs(mat, &is[0], NULL); CHKERRABORT(sys.comm().get(), ierr);
+    ierr  =    MatNestGetISs(mat, &is[0], nullptr); CHKERRABORT(sys.comm().get(), ierr);
     
     
     
@@ -333,8 +333,8 @@ MAST::ComplexSolverBase::solve_pc_fieldsplit() {
     
     // setup the PC
     ierr = KSPGetPC(ksp, &pc);                CHKERRABORT(sys.comm().get(), ierr);
-    ierr = PCFieldSplitSetIS(pc, NULL, is[0]);CHKERRABORT(sys.comm().get(), ierr);
-    ierr = PCFieldSplitSetIS(pc, NULL, is[1]);CHKERRABORT(sys.comm().get(), ierr);
+    ierr = PCFieldSplitSetIS(pc, nullptr, is[0]);CHKERRABORT(sys.comm().get(), ierr);
+    ierr = PCFieldSplitSetIS(pc, nullptr, is[1]);CHKERRABORT(sys.comm().get(), ierr);
     ierr = PCSetFromOptions(pc);              CHKERRABORT(sys.comm().get(), ierr);
     
     
@@ -533,12 +533,12 @@ MAST::ComplexSolverBase::solve_block_matrix(MAST::Parameter* p)  {
     
     // copy the solution to separate real and imaginary vectors
     libMesh::NumericVector<Real>
-    &sol_R = this->real_solution(p != NULL),
-    &sol_I = this->imag_solution(p != NULL);
+    &sol_R = this->real_solution(p != nullptr),
+    &sol_I = this->imag_solution(p != nullptr);
     
     unsigned int
     first = sol_R.first_local_index(),
-    last  = sol_I.last_local_index();
+    last  = sol_R.last_local_index();
     
     for (unsigned int i=first; i<last; i++) {
         sol_R.set(i, (*sol)(  2*i));

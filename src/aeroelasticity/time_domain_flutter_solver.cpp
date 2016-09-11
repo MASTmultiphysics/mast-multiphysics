@@ -32,7 +32,7 @@
 
 MAST::TimeDomainFlutterSolver::TimeDomainFlutterSolver():
 MAST::FlutterSolverBase(),
-_velocity_param(NULL),
+_velocity_param(nullptr),
 _V_range(),
 _n_V_divs(0.) {
     
@@ -188,7 +188,7 @@ MAST::TimeDomainFlutterSolver::find_next_root(const Real g_tol,
     }
     
     // if it gets here, no new root was found
-    return std::pair<bool, MAST::FlutterRootBase*> (false, NULL);
+    return std::pair<bool, MAST::FlutterRootBase*> (false, nullptr);
 }
 
 
@@ -203,7 +203,7 @@ MAST::TimeDomainFlutterSolver::find_critical_root(const Real g_tol,
     it = _flutter_crossovers.begin(), end = _flutter_crossovers.end();
     
     if (it == end) // no potential cross-over points were identified
-        return std::pair<bool, MAST::FlutterRootBase*> (false, NULL);
+        return std::pair<bool, MAST::FlutterRootBase*> (false, nullptr);
     
     // it is possible that once the root has been found, its velocity end up
     // putting it at a higher velocity in the map, so we need to check if
@@ -273,8 +273,8 @@ analyze_and_find_critical_root_without_tracking(const Real g_tol,
     new_V    = 0.;
     
     const MAST::FlutterRootBase
-    *lower_root = NULL,
-    *upper_root = NULL;
+    *lower_root = nullptr,
+    *upper_root = nullptr;
     
     std::pair<unsigned int, unsigned int>
     bracket_n_unstable_roots(0, 0);
@@ -340,7 +340,7 @@ analyze_and_find_critical_root_without_tracking(const Real g_tol,
         }
     }
     
-    std::pair<bool, MAST::FlutterRootBase*> rval(false, NULL);
+    std::pair<bool, MAST::FlutterRootBase*> rval(false, nullptr);
     
     // if no critical roots were found, the return with false
     if (!bracket_n_unstable_roots.second)
@@ -434,7 +434,7 @@ MAST::TimeDomainFlutterSolver::scan_for_roots() {
         }
         V_vals[_n_V_divs] = _V_range.second; // to get around finite-precision arithmetic
         
-        MAST::FlutterSolutionBase* prev_sol = NULL;
+        MAST::FlutterSolutionBase* prev_sol = nullptr;
         for (unsigned int i=0; i<_n_V_divs+1; i++) {
             current_V = V_vals[i];
             std::auto_ptr<MAST::TimeDomainFlutterSolution>
@@ -578,8 +578,8 @@ _bisection_search(const std::pair<MAST::FlutterSolutionBase*,
     new_V    = 0.;
     unsigned int n_iters = 0;
     
-    MAST::FlutterSolutionBase* new_sol = NULL;
-    std::pair<bool, MAST::FlutterSolutionBase*> rval(false, NULL);
+    MAST::FlutterSolutionBase* new_sol = nullptr;
+    std::pair<bool, MAST::FlutterSolutionBase*> rval(false, nullptr);
     
     while (n_iters < max_iters) {
         

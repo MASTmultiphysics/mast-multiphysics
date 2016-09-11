@@ -181,7 +181,7 @@ namespace MAST {
                                        libMesh::NumericVector<Real>& R,
                                        libMesh::SparseMatrix<Real>&  J,
                                        libMesh::NonlinearImplicitSystem& S,
-                                       MAST::Parameter* p = NULL);
+                                       MAST::Parameter* p = nullptr);
 
         /**
          * Assembly function.  This function will be called

@@ -129,8 +129,8 @@ namespace MAST {
         _calculate_compliance (const libMesh::NumericVector<Real>& X,
                                libMesh::NonlinearImplicitSystem& S,
                                MAST::RealOutputFunction& output,
-                               const MAST::FunctionBase* f = NULL,
-                               const libMesh::NumericVector<Real>* dX = NULL);
+                               const MAST::FunctionBase* f = nullptr,
+                               const libMesh::NumericVector<Real>* dX = nullptr);
         
         
 

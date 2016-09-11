@@ -36,10 +36,9 @@
 
 
 
-MAST::TransientAssembly::
-TransientAssembly():
-MAST::AssemblyBase(),
-_transient_solver(NULL) {
+MAST::TransientAssembly::TransientAssembly():
+MAST::NonlinearImplicitAssembly(),
+_transient_solver(nullptr) {
 
 }
 
@@ -103,16 +102,16 @@ clear_discipline_and_system( ) {
         libMesh::NonlinearImplicitSystem& transient_sys =
         dynamic_cast<libMesh::NonlinearImplicitSystem&>(_system->system());
         
-        transient_sys.nonlinear_solver->residual_and_jacobian_object = NULL;
+        transient_sys.nonlinear_solver->residual_and_jacobian_object = nullptr;
         transient_sys.reset_sensitivity_assembly();
     }
     
     // clear the association of this assembly object to the solver
     _transient_solver->clear_assembly();
     
-    _discipline       = NULL;
-    _transient_solver = NULL;
-    _system           = NULL;
+    _discipline       = nullptr;
+    _transient_solver = nullptr;
+    _system           = nullptr;
 }
 
 
@@ -184,7 +183,7 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
         // perform the element level calculations
         _transient_solver->_elem_calculations(*physics_elem,
                                               dof_indices,
-                                              J!=NULL?true:false,
+                                              J!=nullptr?true:false,
                                               vec, mat);
         
         // copy to the libMesh matrix for further processing

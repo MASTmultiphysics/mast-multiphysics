@@ -44,9 +44,9 @@ MAST::ComplexAssemblyBase::
 ComplexAssemblyBase():
 MAST::AssemblyBase(),
 _if_assemble_real(true),
-_complex_solver(NULL),
-_base_sol(NULL),
-_base_sol_sensitivity(NULL) {
+_complex_solver(nullptr),
+_base_sol(nullptr),
+_base_sol_sensitivity(nullptr) {
     
 }
 
@@ -72,8 +72,8 @@ attach_discipline_and_system(MAST::PhysicsDisciplineBase &discipline,
     _complex_solver       = &solver;
     _discipline           = &discipline;
     _system               = &system;
-    _base_sol             = NULL;
-    _base_sol_sensitivity = NULL;
+    _base_sol             = nullptr;
+    _base_sol_sensitivity = nullptr;
     
     libMesh::NonlinearImplicitSystem& nonlin_sys =
     dynamic_cast<libMesh::NonlinearImplicitSystem&>(system.system());
@@ -110,18 +110,18 @@ clear_discipline_and_system( ) {
         libMesh::NonlinearImplicitSystem& nonlin_sys =
         dynamic_cast<libMesh::NonlinearImplicitSystem&>(_system->system());
         
-        nonlin_sys.nonlinear_solver->residual_and_jacobian_object = NULL;
+        nonlin_sys.nonlinear_solver->residual_and_jacobian_object = nullptr;
         nonlin_sys.reset_sensitivity_assembly();
     }
     
     _complex_solver->clear_assembly();
     
     _if_assemble_real     = true;
-    _complex_solver       = NULL;
-    _discipline           = NULL;
-    _system               = NULL;
-    _base_sol             = NULL;
-    _base_sol_sensitivity = NULL;
+    _complex_solver       = nullptr;
+    _discipline           = nullptr;
+    _system               = nullptr;
+    _base_sol             = nullptr;
+    _base_sol_sensitivity = nullptr;
 }
 
 
@@ -154,9 +154,9 @@ void
 MAST::ComplexAssemblyBase::clear_base_solution(bool if_sens) {
     
     if (!if_sens)
-        _base_sol             = NULL;
+        _base_sol             = nullptr;
     else
-        _base_sol_sensitivity = NULL;
+        _base_sol_sensitivity = nullptr;
 }
 
 
@@ -422,7 +422,7 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
         
         // perform the element level calculations
         _elem_calculations(*physics_elem,
-                           J!=NULL?true:false,
+                           J!=nullptr?true:false,
                            vec, mat);
         
         physics_elem->detach_active_solution_function();

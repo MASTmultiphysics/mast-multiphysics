@@ -781,7 +781,7 @@ const MAST::FieldFunction<RealMatrixX>&
 MAST::IsotropicMaterialPropertyCard::stiffness_matrix(const unsigned int dim,
                                                       const bool plane_stress) {
     
-    MAST::FieldFunction<RealMatrixX> *rval = NULL;
+    MAST::FieldFunction<RealMatrixX> *rval = nullptr;
     
     switch (dim) {
         case 1: {

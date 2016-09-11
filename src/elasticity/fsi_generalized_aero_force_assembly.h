@@ -85,7 +85,7 @@ namespace MAST {
         assemble_generalized_aerodynamic_force_matrix
         (std::vector<libMesh::NumericVector<Real>*>& basis,
          ComplexMatrixX& mat,
-         MAST::Parameter* p = NULL);
+         MAST::Parameter* p = nullptr);
         
     protected:
         

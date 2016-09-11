@@ -110,7 +110,7 @@ void check_internal_force_and_jacobian_sensitivity (ValType& v,
         e->internal_residual_sensitivity(true, dresdp, djacdp, false);
         
         // reset the sensitivity parameter
-        e->sensitivity_param  = NULL;
+        e->sensitivity_param  = nullptr;
         
         // now calculate the finite difference sensitivity
         

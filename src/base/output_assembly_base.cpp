@@ -86,8 +86,8 @@ clear_discipline_and_system() {
         sys.reset_QOI_parameter_sensitivity();
     }
     
-    _discipline = NULL;
-    _system     = NULL;
+    _discipline = nullptr;
+    _system     = nullptr;
 }
 
 

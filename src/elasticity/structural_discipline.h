@@ -52,7 +52,7 @@ namespace MAST {
          */
         template <typename ValType>
         void plot_stress_strain_data(const std::string& file_nm,
-                                     const MAST::Parameter* p = NULL) const;
+                                     const MAST::Parameter* p = nullptr) const;
 
         
         

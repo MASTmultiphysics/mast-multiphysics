@@ -32,8 +32,8 @@
 MAST::TransientSolverBase::TransientSolverBase():
 dt(0.),
 _first_step(true),
-_assembly(NULL),
-_system(NULL) {
+_assembly(nullptr),
+_system(nullptr) {
 
 }
 
@@ -131,8 +131,8 @@ MAST::TransientSolverBase::clear_assembly() {
         }
     }
     
-    _assembly   = NULL;
-    _system     = NULL;
+    _assembly   = nullptr;
+    _system     = nullptr;
     _first_step = true;
 }
 

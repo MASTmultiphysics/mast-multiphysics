@@ -43,9 +43,9 @@ MAST::StructuralElementBase::StructuralElementBase(MAST::SystemInitialization& s
 MAST::ElementBase(sys, elem),
 follower_forces(false),
 _property(p),
-_incompatible_sol(NULL) {
+_incompatible_sol(nullptr) {
     
-    MAST::LocalElemBase* rval = NULL;
+    MAST::LocalElemBase* rval = nullptr;
     
     switch (elem.dim()) {
         case 1: {

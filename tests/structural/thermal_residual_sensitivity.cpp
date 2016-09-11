@@ -250,7 +250,7 @@ void check_thermal_force_and_jacobian_sensitivity (ValType& v,
                                                 v._discipline->volume_loads());
         
         // reset the sensitivity parameter
-        e->sensitivity_param  = NULL;
+        e->sensitivity_param  = nullptr;
         
         // now calculate the finite difference sensitivity
         

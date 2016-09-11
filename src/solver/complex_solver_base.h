@@ -95,7 +95,7 @@ namespace MAST {
          *  Otherwise, the sensitivity of the system is solved with respect
          *  to the parameter p
          */
-        virtual void solve_block_matrix(MAST::Parameter* p = NULL);
+        virtual void solve_block_matrix(MAST::Parameter* p = nullptr);
 
         
         /*!

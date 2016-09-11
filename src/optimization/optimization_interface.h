@@ -37,7 +37,7 @@ namespace MAST {
     public:
      
         OptimizationInterface():
-        _feval(NULL)
+        _feval(nullptr)
         { }
         
         virtual ~OptimizationInterface()

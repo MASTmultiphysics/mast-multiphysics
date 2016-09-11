@@ -48,7 +48,7 @@ namespace MAST {
     public:
         
         MeshInitializer():
-        _mesh(NULL)
+        _mesh(nullptr)
         { }
         
         virtual ~MeshInitializer()

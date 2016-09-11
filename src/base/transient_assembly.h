@@ -21,10 +21,7 @@
 #define __mast__transient_assembly__
 
 // MAST includes
-#include "base/assembly_base.h"
-
-// libMesh includes
-#include "libmesh/nonlinear_implicit_system.h"
+#include "base/nonlinear_implicit_assembly.h"
 
 
 
@@ -35,9 +32,7 @@ namespace MAST {
     
     
     class TransientAssembly:
-    public MAST::AssemblyBase,
-    public libMesh::NonlinearImplicitSystem::ComputeResidualandJacobian,
-    public libMesh::System::SensitivityAssembly {
+    public MAST::NonlinearImplicitAssembly {
     public:
         
         /*!
@@ -176,6 +171,32 @@ namespace MAST {
         
         
     protected:
+
+        /*!
+         *   performs the element calculations over \par elem, and returns
+         *   the element vector and matrix quantities in \par mat and
+         *   \par vec, respectively. \par if_jac tells the method to also
+         *   assemble the Jacobian, in addition to the residual vector.
+         */
+        virtual void _elem_calculations(MAST::ElementBase& elem,
+                                        bool if_jac,
+                                        RealVectorX& vec,
+                                        RealMatrixX& mat) {
+            
+            libmesh_error_msg("Error! Invalid function call for TransientSystemAssembly.");
+        }
+        
+        /*!
+         *   performs the element sensitivity calculations over \par elem,
+         *   and returns the element residual sensitivity in \par vec .
+         */
+        virtual void _elem_sensitivity_calculations(MAST::ElementBase& elem,
+                                                    bool if_jac,
+                                                    RealVectorX& vec,
+                                                    RealMatrixX& mat) {
+            
+            libmesh_error_msg("Error! Invalid function call for TransientSystemAssembly.");
+        }
 
         /*!
          *   Pointer to a transient solver object that combines the

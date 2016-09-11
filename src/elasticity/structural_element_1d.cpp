@@ -162,9 +162,9 @@ MAST::StructuralElement1D::calculate_stress(bool request_derivative,
     
     std::vector<libMesh::Point> qp_loc;
 
-    libMesh::FEBase         *fe_ptr     = NULL;
-    libMesh::QBase          *qrule_ptr  = NULL;
-    MAST::BendingOperator   *bend_ptr   = NULL;
+    libMesh::FEBase         *fe_ptr     = nullptr;
+    libMesh::QBase          *qrule_ptr  = nullptr;
+    MAST::BendingOperator   *bend_ptr   = nullptr;
     
     switch (mode) {
         case MAST::CENTROID: {
@@ -293,9 +293,9 @@ MAST::StructuralElement1D::calculate_stress(bool request_derivative,
     stress_output.get_thermal_load_for_elem(_elem);
 
     const MAST::FieldFunction<Real>
-    *temp_func     = NULL,
-    *ref_temp_func = NULL,
-    *alpha_func    = NULL;
+    *temp_func     = nullptr,
+    *ref_temp_func = nullptr,
+    *alpha_func    = nullptr;
 
     // get pointers to the temperature, if thermal load is specified
     if (thermal_load) {
@@ -626,7 +626,7 @@ MAST::StructuralElement1D::internal_residual (bool request_jacobian,
         _bending_operator->calculate_transverse_shear_residual(request_jacobian,
                                                                local_f,
                                                                local_jac,
-                                                               NULL);
+                                                               nullptr);
     
     
     // now transform to the global coorodinate system
@@ -1708,8 +1708,8 @@ surface_pressure_residual(bool request_jacobian,
     libmesh_assert(!follower_forces); // not implemented yet for follower forces
     
     // prepare the side finite element
-    libMesh::FEBase *fe_ptr    = NULL;
-    libMesh::QBase  *qrule_ptr = NULL;
+    libMesh::FEBase *fe_ptr    = nullptr;
+    libMesh::QBase  *qrule_ptr = nullptr;
     _get_side_fe_and_qrule(get_elem_for_quadrature(),
                            side,
                            &fe_ptr,
@@ -1797,8 +1797,8 @@ surface_pressure_residual_sensitivity(bool request_jacobian,
     libmesh_assert(!follower_forces); // not implemented yet for follower forces
     
     // prepare the side finite element
-    libMesh::FEBase *fe_ptr    = NULL;
-    libMesh::QBase  *qrule_ptr = NULL;
+    libMesh::FEBase *fe_ptr    = nullptr;
+    libMesh::QBase  *qrule_ptr = nullptr;
     _get_side_fe_and_qrule(get_elem_for_quadrature(),
                            side,
                            &fe_ptr,
@@ -2619,8 +2619,8 @@ small_disturbance_surface_pressure_residual(bool request_jacobian,
     dn_rot_fn = bc.get<MAST::FieldFunction<ComplexVectorX> >("dnormal");
     
     
-    libMesh::FEBase *fe_ptr    = NULL;
-    libMesh::QBase  *qrule_ptr = NULL;
+    libMesh::FEBase *fe_ptr    = nullptr;
+    libMesh::QBase  *qrule_ptr = nullptr;
     _get_side_fe_and_qrule(get_elem_for_quadrature(),
                            side,
                            &fe_ptr,

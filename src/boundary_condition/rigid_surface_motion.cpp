@@ -26,7 +26,7 @@
 
 MAST::RigidSurfaceMotion::RigidSurfaceMotion(const std::string& nm):
 MAST::SurfaceMotionBase(nm),
-_freq(NULL),
+_freq(nullptr),
 _plunge_amplitude(0.),
 _pitch_amplitude(0.),
 _pitch_phase(0.) {

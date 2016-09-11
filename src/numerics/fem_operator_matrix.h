@@ -150,7 +150,7 @@ namespace MAST {
         /*!
          *    stores the shape function values that defines the coupling
          *    of i_th interpolated var and j_th discrete var. Stored in
-         *    column major format. NULL, if values are zero, otherwise the
+         *    column major format. nullptr, if values are zero, otherwise the
          *    value is set in the vector.
          */
         std::vector<RealVectorX*>  _var_shape_functions;
@@ -168,12 +168,12 @@ MAST::FEMOperatorMatrix::clear() {
     _n_discrete_vars     = 0;
     _n_dofs_per_var      = 0;
     
-    // iterate over the shape function entries and delete the non-NULL values
+    // iterate over the shape function entries and delete the non-nullptr values
     std::vector<RealVectorX*>::iterator it = _var_shape_functions.begin(),
     end = _var_shape_functions.end();
     
     for ( ; it!=end; it++)
-        if ( *it != NULL)
+        if ( *it != nullptr)
             delete *it;
     
     _var_shape_functions.clear();
@@ -195,7 +195,7 @@ reinit(unsigned int n_interpolated_vars,
     _n_dofs_per_var = n_discrete_dofs_per_var;
     _var_shape_functions.resize(_n_interpolated_vars*_n_discrete_vars);
     for (unsigned int i=0; i<_var_shape_functions.size(); i++)
-        _var_shape_functions[i] = NULL;
+        _var_shape_functions[i] = nullptr;
 }
 
 
@@ -266,7 +266,7 @@ vector_mult(T& res, const T& v) const {
     for (unsigned int i=0; i<_n_interpolated_vars; i++) // row
         for (unsigned int j=0; j<_n_discrete_vars; j++) { // column
             index = j*_n_interpolated_vars+i;
-            if (_var_shape_functions[index]) // check if this is non-NULL
+            if (_var_shape_functions[index]) // check if this is non-nullptr
                 for (unsigned int k=0; k<_n_dofs_per_var; k++)
                     res(i) +=
                     (*_var_shape_functions[index])(k) * v(j*_n_dofs_per_var+k);
@@ -289,7 +289,7 @@ vector_mult_transpose(T& res, const T& v) const {
     for (unsigned int i=0; i<_n_interpolated_vars; i++) // row
         for (unsigned int j=0; j<_n_discrete_vars; j++) { // column
             index = j*_n_interpolated_vars+i;
-            if (_var_shape_functions[index]) // check if this is non-NULL
+            if (_var_shape_functions[index]) // check if this is non-nullptr
                 for (unsigned int k=0; k<_n_dofs_per_var; k++)
                     res(j*_n_dofs_per_var+k) +=
                     (*_var_shape_functions[index])(k) * v(i);
@@ -314,7 +314,7 @@ right_multiply(T& r, const T& m) const {
     for (unsigned int i=0; i<_n_interpolated_vars; i++) // row
         for (unsigned int j=0; j<_n_discrete_vars; j++) { // column of operator
             index = j*_n_interpolated_vars+i;
-            if (_var_shape_functions[index]) { // check if this is non-NULL
+            if (_var_shape_functions[index]) { // check if this is non-nullptr
                 for (unsigned int l=0; l<m.cols(); l++) // column of matrix
                     for (unsigned int k=0; k<_n_dofs_per_var; k++)
                         r(i,l) +=
@@ -342,7 +342,7 @@ right_multiply_transpose(T& r, const T& m) const {
     for (unsigned int i=0; i<_n_interpolated_vars; i++) // row
         for (unsigned int j=0; j<_n_discrete_vars; j++) { // column of operator
             index = j*_n_interpolated_vars+i;
-            if (_var_shape_functions[index]) { // check if this is non-NULL
+            if (_var_shape_functions[index]) { // check if this is non-nullptr
                 for (unsigned int l=0; l<m.cols(); l++) // column of matrix
                     for (unsigned int k=0; k<_n_dofs_per_var; k++)
                         r(j*_n_dofs_per_var+k,l) +=
@@ -402,7 +402,7 @@ left_multiply(T& r, const T& m) const {
     for (unsigned int i=0; i<_n_interpolated_vars; i++) // row
         for (unsigned int j=0; j<_n_discrete_vars; j++) { // column of operator
             index = j*_n_interpolated_vars+i;
-            if (_var_shape_functions[index]) { // check if this is non-NULL
+            if (_var_shape_functions[index]) { // check if this is non-nullptr
                 for (unsigned int l=0; l<m.rows(); l++) // rows of matrix
                     for (unsigned int k=0; k<_n_dofs_per_var; k++)
                         r(l,j*_n_dofs_per_var+k) +=
@@ -429,7 +429,7 @@ left_multiply_transpose(T& r, const T& m) const {
     for (unsigned int i=0; i<_n_interpolated_vars; i++) // row
         for (unsigned int j=0; j<_n_discrete_vars; j++) { // column of operator
             index = j*_n_interpolated_vars+i;
-            if (_var_shape_functions[index]) { // check if this is non-NULL
+            if (_var_shape_functions[index]) { // check if this is non-nullptr
                 for (unsigned int l=0; l<m.rows(); l++) // column of matrix
                     for (unsigned int k=0; k<_n_dofs_per_var; k++)
                         r(l,i) +=

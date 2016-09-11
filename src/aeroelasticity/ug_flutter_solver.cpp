@@ -33,8 +33,8 @@
 
 MAST::UGFlutterSolver::UGFlutterSolver():
 MAST::FlutterSolverBase(),
-_kr_param(NULL),
-_bref_param(NULL),
+_kr_param(nullptr),
+_bref_param(nullptr),
 _kr_range(),
 _n_kr_divs(0.),
 _include_highest_kr_unstable(false) {
@@ -56,8 +56,8 @@ MAST::UGFlutterSolver::clear() {
     
     this->clear_solutions();
     
-    _kr_param          = NULL;
-    _bref_param        = NULL;
+    _kr_param          = nullptr;
+    _bref_param        = nullptr;
     _kr_range          = std::pair<Real, Real>(0.,0.);
     _n_kr_divs         = 0;
     
@@ -198,7 +198,7 @@ MAST::UGFlutterSolver::find_next_root(const Real g_tol,
     }
     
     // if it gets here, no new root was found
-    return std::pair<bool, MAST::FlutterRootBase*> (false, NULL);
+    return std::pair<bool, MAST::FlutterRootBase*> (false, nullptr);
 }
 
 
@@ -213,7 +213,7 @@ MAST::UGFlutterSolver::find_critical_root(const Real g_tol,
     it = _flutter_crossovers.begin(), end = _flutter_crossovers.end();
     
     if (it == end) // no potential cross-over points were identified
-        return std::pair<bool, MAST::FlutterRootBase*> (false, NULL);
+        return std::pair<bool, MAST::FlutterRootBase*> (false, nullptr);
     
     // it is possible that once the root has been found, its velocity end up
     // putting it at a higher velocity in the map, so we need to check if
@@ -274,7 +274,7 @@ MAST::UGFlutterSolver::scan_for_roots() {
         }
         k_vals[_n_kr_divs] = _kr_range.first; // to get around finite-precision arithmetic
         
-        MAST::FlutterSolutionBase* prev_sol = NULL;
+        MAST::FlutterSolutionBase* prev_sol = nullptr;
         for (unsigned int i=0; i< _n_kr_divs+1; i++) {
             
             current_kr = k_vals[i];
@@ -419,8 +419,8 @@ _bisection_search(const std::pair<MAST::FlutterSolutionBase*,
     new_kr   = 0.;
     unsigned int n_iters = 0;
     
-    MAST::FlutterSolutionBase* new_sol = NULL;
-    std::pair<bool, MAST::FlutterSolutionBase*> rval(false, NULL);
+    MAST::FlutterSolutionBase* new_sol = nullptr;
+    std::pair<bool, MAST::FlutterSolutionBase*> rval(false, nullptr);
     
     while (n_iters < max_iters) {
         

@@ -585,8 +585,8 @@ surface_pressure_residual(bool request_jacobian,
     libmesh_assert(!follower_forces); // not implemented yet for follower forces
     
     // prepare the side finite element
-    libMesh::FEBase *fe_ptr    = NULL;
-    libMesh::QBase  *qrule_ptr = NULL;
+    libMesh::FEBase *fe_ptr    = nullptr;
+    libMesh::QBase  *qrule_ptr = nullptr;
     _get_side_fe_and_qrule(get_elem_for_quadrature(),
                            side,
                            &fe_ptr,
@@ -662,8 +662,8 @@ surface_pressure_residual_sensitivity(bool request_jacobian,
     libmesh_assert(!follower_forces); // not implemented yet for follower forces
     
     // prepare the side finite element
-    libMesh::FEBase *fe_ptr    = NULL;
-    libMesh::QBase  *qrule_ptr = NULL;
+    libMesh::FEBase *fe_ptr    = nullptr;
+    libMesh::QBase  *qrule_ptr = nullptr;
     _get_side_fe_and_qrule(get_elem_for_quadrature(),
                            side,
                            &fe_ptr,
@@ -941,8 +941,8 @@ MAST::StructuralElement3D::calculate_stress(bool request_derivative,
 
     std::vector<libMesh::Point> qp_loc;
     
-    libMesh::FEBase         *fe_ptr     = NULL;
-    libMesh::QBase          *qrule_ptr  = NULL;
+    libMesh::FEBase         *fe_ptr     = nullptr;
+    libMesh::QBase          *qrule_ptr  = nullptr;
 
     switch (mode) {
         case MAST::CENTROID: {

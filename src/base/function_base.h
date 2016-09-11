@@ -50,7 +50,7 @@ namespace MAST
                      const bool is_field_func):
         _name(nm),
         _is_field_func(is_field_func),
-        _master(NULL)
+        _master(nullptr)
         { }
 
         
@@ -129,7 +129,7 @@ namespace MAST
         bool _is_field_func;
         
         /*!
-         *    pointer to the master function that this is a copy of. A NULL
+         *    pointer to the master function that this is a copy of. A nullptr
          *    pointer implies that this is the master function
          */
         const MAST::FunctionBase* _master;

@@ -31,7 +31,7 @@ MAST::DirichletBoundaryCondition::init(const libMesh::boundary_id_type bid,
                                        MAST::FieldFunction<Real>* f) {
     
     // should not have been initialized if this is called
-    libmesh_assert(_dirichlet_boundary.get() == NULL);
+    libmesh_assert(_dirichlet_boundary.get() == nullptr);
     
     std::set<libMesh::boundary_id_type> bid_set;
     bid_set.insert(bid);

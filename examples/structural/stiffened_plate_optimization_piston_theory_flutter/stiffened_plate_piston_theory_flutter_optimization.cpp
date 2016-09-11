@@ -822,7 +822,7 @@ evaluate(const std::vector<Real>& dvars,
     else {
         _basis.resize(nconv);
         for (unsigned int i=0; i<_basis.size(); i++)
-            _basis[i] = NULL;
+            _basis[i] = nullptr;
     }
     
     libMesh::ExodusII_IO*
@@ -834,7 +834,7 @@ evaluate(const std::vector<Real>& dvars,
     for (unsigned int i=0; i<nconv; i++) {
         
         // create a vector to store the basis
-        if (_basis[i] == NULL)
+        if (_basis[i] == nullptr)
             _basis[i] = _sys->solution->zero_clone().release();
         
         // now write the eigenvalue

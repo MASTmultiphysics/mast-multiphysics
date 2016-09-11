@@ -40,7 +40,7 @@ HeatConductionElementBase(MAST::SystemInitialization& sys,
 MAST::ElementBase(sys, elem),
 _property(p) {
 
-    MAST::LocalElemBase* rval = NULL;
+    MAST::LocalElemBase* rval = nullptr;
     
     switch (elem.dim()) {
         case 1: {
@@ -572,8 +572,8 @@ surface_flux_residual(bool request_jacobian,
                       MAST::BoundaryConditionBase& p) {
     
     // prepare the side finite element
-    libMesh::FEBase *fe_ptr    = NULL;
-    libMesh::QBase  *qrule_ptr = NULL;
+    libMesh::FEBase *fe_ptr    = nullptr;
+    libMesh::QBase  *qrule_ptr = nullptr;
     _get_side_fe_and_qrule(get_elem_for_quadrature(), s, &fe_ptr, &qrule_ptr, false);
     std::auto_ptr<libMesh::FEBase> fe(fe_ptr);
     std::auto_ptr<libMesh::QBase>  qrule(qrule_ptr);
@@ -693,8 +693,8 @@ surface_convection_residual(bool request_jacobian,
                             MAST::BoundaryConditionBase& p) {
     
     // prepare the side finite element
-    libMesh::FEBase *fe_ptr    = NULL;
-    libMesh::QBase  *qrule_ptr = NULL;
+    libMesh::FEBase *fe_ptr    = nullptr;
+    libMesh::QBase  *qrule_ptr = nullptr;
     _get_side_fe_and_qrule(get_elem_for_quadrature(), s, &fe_ptr, &qrule_ptr, false);
     std::auto_ptr<libMesh::FEBase> fe(fe_ptr);
     std::auto_ptr<libMesh::QBase>  qrule(qrule_ptr);
@@ -845,8 +845,8 @@ surface_radiation_residual(bool request_jacobian,
                            MAST::BoundaryConditionBase& p) {
     
     // prepare the side finite element
-    libMesh::FEBase *fe_ptr    = NULL;
-    libMesh::QBase  *qrule_ptr = NULL;
+    libMesh::FEBase *fe_ptr    = nullptr;
+    libMesh::QBase  *qrule_ptr = nullptr;
     _get_side_fe_and_qrule(get_elem_for_quadrature(), s, &fe_ptr, &qrule_ptr, false);
     std::auto_ptr<libMesh::FEBase> fe(fe_ptr);
     std::auto_ptr<libMesh::QBase>  qrule(qrule_ptr);

@@ -587,7 +587,7 @@ MAST::PlateEulerFSIHalfDomainFlutterAnalysis::~PlateEulerFSIHalfDomainFlutterAna
 MAST::Parameter*
 MAST::PlateEulerFSIHalfDomainFlutterAnalysis::get_parameter(const std::string &nm) {
     
-    MAST::Parameter *rval = NULL;
+    MAST::Parameter *rval = nullptr;
     
     // look through the vector of parameters to see if the name is available
     std::vector<MAST::Parameter*>::iterator
@@ -694,7 +694,7 @@ MAST::PlateEulerFSIHalfDomainFlutterAnalysis::solve(bool if_write_output,
     else {
         _basis.resize(nconv);
         for (unsigned int i=0; i<_basis.size(); i++)
-            _basis[i] = NULL;
+            _basis[i] = nullptr;
     }
     
     libMesh::ExodusII_IO*
@@ -706,7 +706,7 @@ MAST::PlateEulerFSIHalfDomainFlutterAnalysis::solve(bool if_write_output,
     for (unsigned int i=0; i<nconv; i++) {
         
         // create a vector to store the basis
-        if (_basis[i] == NULL)
+        if (_basis[i] == nullptr)
             _basis[i] = _structural_sys->solution->zero_clone().release();
         
         // now write the eigenvalue

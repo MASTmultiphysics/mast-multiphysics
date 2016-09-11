@@ -25,13 +25,13 @@
 
 MAST::ElementBase::ElementBase(MAST::SystemInitialization& sys,
                                const libMesh::Elem& elem):
-sensitivity_param(NULL),
+sensitivity_param(nullptr),
 _system(sys),
 _elem(elem),
-_active_sol_function(NULL),
+_active_sol_function(nullptr),
 _time(_system.system().time),
-_fe(NULL),
-_qrule(NULL) {
+_fe(nullptr),
+_qrule(nullptr) {
     
 }
 
@@ -144,7 +144,7 @@ MAST::ElementBase::attach_active_solution_function(MAST::FunctionBase &f) {
 void
 MAST::ElementBase::detach_active_solution_function() {
     
-    _active_sol_function = NULL;
+    _active_sol_function = nullptr;
 }
 
 
@@ -174,7 +174,7 @@ MAST::ElementBase::_init_fe_and_qrule(const libMesh::Elem& e,
     (*fe)->get_dphideta();
     (*fe)->get_dphidzeta();
     
-    if (pts == NULL) {
+    if (pts == nullptr) {
         (*qrule) = fe_type.default_quadrature_rule(e.dim(),
                                                 _system.system().extra_quadrature_order).release();  // system extra quadrature
         (*fe)->attach_quadrature_rule(*qrule);

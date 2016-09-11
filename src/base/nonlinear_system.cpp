@@ -41,11 +41,11 @@ MAST::NonlinearSystem::NonlinearSystem(libMesh::EquationSystems& es,
                                        const unsigned int number):
 libMesh::NonlinearImplicitSystem(es, name, number),
 _initialize_B_matrix                  (false),
-matrix_A                              (NULL),
-matrix_B                              (NULL),
-//condensed_matrix_A                    (NULL),
-//condensed_matrix_B                    (NULL),
-eigen_solver                          (NULL),
+matrix_A                              (nullptr),
+matrix_B                              (nullptr),
+//condensed_matrix_A                    (nullptr),
+//condensed_matrix_B                    (nullptr),
+eigen_solver                          (nullptr),
 _condensed_dofs_initialized           (false),
 _exchange_A_and_B                     (false),
 _n_requested_eigenpairs               (0),
@@ -53,7 +53,7 @@ _n_converged_eigenpairs               (0),
 _n_iterations                         (0),
 _is_generalized_eigenproblem          (false),
 _eigen_problem_type                   (libMesh::NHEP),
-_eigenproblem_assemble_system_object  (NULL) {
+_eigenproblem_assemble_system_object  (nullptr) {
     
 }
 
@@ -76,9 +76,9 @@ MAST::NonlinearSystem::clear() {
     if (matrix_A) delete matrix_A;
     if (matrix_B) delete matrix_B;
     
-    // NULL-out the matricies.
-    matrix_A = NULL;
-    matrix_B = NULL;
+    // nullptr-out the matricies.
+    matrix_A = nullptr;
+    matrix_B = nullptr;
     
     // clear the solver
     eigen_solver->clear();
@@ -203,8 +203,8 @@ MAST::NonlinearSystem::eigenproblem_solve() {
     std::pair<unsigned int, unsigned int> solve_data;
     
     libMesh::SparseMatrix<Real>
-    *eig_A  = NULL,
-    *eig_B  = NULL;
+    *eig_A  = nullptr,
+    *eig_B  = nullptr;
     
     // assemble the matrices
     this->assemble_eigensystem();
@@ -329,7 +329,7 @@ MAST::NonlinearSystem::get_eigenpair(unsigned int i,
     // imaginary component is needed only when the problem is non-Hermitian
     if (_eigen_problem_type == libMesh::HEP ||
         _eigen_problem_type == libMesh::GHEP)
-        libmesh_assert (vec_im == NULL);
+        libmesh_assert (vec_im == nullptr);
     
     
     // If we haven't initialized any condensed dofs,
@@ -511,7 +511,7 @@ eigenproblem_sensitivity_solve (const libMesh::ParameterVector& parameters,
             case libMesh::HEP: {
                 // right and left eigenvectors are same
                 // imaginary part of eigenvector for real matrices is zero
-                this->get_eigenpair(i, re, im, *x_right[i], NULL);
+                this->get_eigenpair(i, re, im, *x_right[i], nullptr);
                 denom[i] = x_right[i]->dot(*x_right[i]);               // x^H x
                 eig[i]   = re;
             }
@@ -519,7 +519,7 @@ eigenproblem_sensitivity_solve (const libMesh::ParameterVector& parameters,
                 
             case libMesh::GHEP: {
                 // imaginary part of eigenvector for real matrices is zero
-                this->get_eigenpair(i, re, im, *x_right[i], NULL);
+                this->get_eigenpair(i, re, im, *x_right[i], nullptr);
                 matrix_B->vector_mult(*tmp, *x_right[i]);
                 denom[i] = x_right[i]->dot(*tmp);                  // x^H B x
                 eig[i]   = re;
@@ -626,7 +626,7 @@ attach_eigenproblem_assemble_object(MAST::EigenSystemAssembly& assemble) {
 void
 MAST::NonlinearSystem::reset_eigenproblem_assemble_object () {
     
-    _eigenproblem_assemble_system_object   = NULL;
+    _eigenproblem_assemble_system_object   = nullptr;
 }
 
 

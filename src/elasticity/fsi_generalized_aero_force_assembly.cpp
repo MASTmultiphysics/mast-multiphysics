@@ -47,10 +47,10 @@
 
 MAST::FSIGeneralizedAeroForceAssembly::FSIGeneralizedAeroForceAssembly():
 MAST::StructuralFluidInteractionAssembly(),
-_freq(NULL),
-_fluid_complex_solver(NULL),
-_pressure_function(NULL),
-_motion(NULL)
+_freq(nullptr),
+_fluid_complex_solver(nullptr),
+_pressure_function(nullptr),
+_motion(nullptr)
 { }
 
 
@@ -95,10 +95,10 @@ init(MAST::FrequencyFunction&                freq,
 void
 MAST::FSIGeneralizedAeroForceAssembly::clear_discipline_and_system() {
     
-    _freq                  = NULL;
-    _motion                = NULL;
-    _pressure_function     = NULL;
-    _fluid_complex_solver  = NULL;
+    _freq                  = nullptr;
+    _motion                = nullptr;
+    _pressure_function     = nullptr;
+    _fluid_complex_solver  = nullptr;
     
     MAST::StructuralFluidInteractionAssembly::clear_discipline_and_system();
 }
@@ -160,8 +160,8 @@ assemble_generalized_aerodynamic_force_matrix(std::vector<libMesh::NumericVector
         
         // use this solution to initialize the structural boundary conditions
         _pressure_function->init(_fluid_complex_solver->get_assembly().base_sol(),
-                                 _fluid_complex_solver->real_solution(p != NULL),
-                                 _fluid_complex_solver->imag_solution(p != NULL));
+                                 _fluid_complex_solver->real_solution(p != nullptr),
+                                 _fluid_complex_solver->imag_solution(p != nullptr));
         
         
         const libMesh::DofMap& dof_map = _system->system().get_dof_map();
