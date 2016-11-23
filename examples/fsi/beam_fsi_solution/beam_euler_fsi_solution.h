@@ -59,7 +59,7 @@ namespace MAST {
     class FlexibleSurfaceMotion;
     class SmallDisturbancePressureFunction;
     class MultiphysicsNonlinearSolverBase;
-    
+    class FSIBoundaryConditionUpdates;
     
     struct BeamEulerFSIAnalysis {
         
@@ -72,7 +72,7 @@ namespace MAST {
         
         /*!
          *   @returns a pointer to the parameter of the specified name.
-         *   If no parameter exists by the specified name, then a \p NULL
+         *   If no parameter exists by the specified name, then a \p nullptr
          *   pointer is returned and a message is printed with a valid list
          *   of parameters.
          */
@@ -92,10 +92,6 @@ namespace MAST {
          *  flutter speed
          */
         Real sensitivity_solve(MAST::Parameter& p);
-        
-        
-        //  structural communicator
-        libMesh::Parallel::Communicator*        _structural_comm;
         
         
         // create the structural mesh
@@ -222,11 +218,11 @@ namespace MAST {
         // create the Dirichlet boundary condition on right edge
         MAST::DirichletBoundaryCondition*        _dirichlet_right;
         
+        // updates the boundary condition objects with the current solution
+        MAST::FSIBoundaryConditionUpdates*      _bc_updates;
+        
         // vector of parameters to evaluate sensitivity wrt
         std::vector<MAST::Parameter*>           _params_for_sensitivity;
-        
-        // vector of basis vectors from modal analysis
-        std::vector<libMesh::NumericVector<Real>*> _basis;
     };
 }
 
