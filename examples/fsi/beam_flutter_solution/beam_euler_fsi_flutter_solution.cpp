@@ -64,7 +64,8 @@
 extern libMesh::LibMeshInit* __init;
 
 
-MAST::BeamEulerFSIFlutterAnalysis::BeamEulerFSIFlutterAnalysis():
+MAST::BeamEulerFSIFlutterAnalysis::BeamEulerFSIFlutterAnalysis(unsigned int order_increment,
+                                                               unsigned int n_refine):
 _structural_mesh                       (nullptr),
 _fluid_mesh                            (nullptr),
 _structural_eq_sys                     (nullptr),
@@ -98,6 +99,7 @@ _thz                                   (nullptr),
 _rho                                   (nullptr),
 _E                                     (nullptr),
 _nu                                    (nullptr),
+_kappa                                 (nullptr),
 _zero                                  (nullptr),
 _mach                                  (nullptr),
 _rho_air                               (nullptr),
@@ -107,6 +109,7 @@ _thz_f                                 (nullptr),
 _rho_f                                 (nullptr),
 _E_f                                   (nullptr),
 _nu_f                                  (nullptr),
+_kappa_f                               (nullptr),
 _hyoff_f                               (nullptr),
 _hzoff_f                               (nullptr),
 _mach_f                                (nullptr),
@@ -143,18 +146,30 @@ _augment_send_list_obj                 (nullptr) {
     ny_divs             = 1,
     panel_bc_id         = 10,
     symmetry_bc_id      = 11;
+
+    std::string
+    etype;
     
     libMesh::ElemType
     elem_type           =
     libMesh::Utility::string_to_enum<libMesh::ElemType>(infile("elem_type", "QUAD4"));
     
     libMesh::FEFamily
-    fe_type             =
-    libMesh::Utility::string_to_enum<libMesh::FEFamily>(infile("fe_family", "LAGRANGE"));
+    fe_family           =
+    libMesh::Utility::string_to_enum<libMesh::FEFamily>(infile("fe_family", "SZABAB"));
     
     libMesh::Order
     fe_order            =
     libMesh::Utility::string_to_enum<libMesh::Order>(infile("fe_order", "FIRST"));
+
+    // change these types depending on the order
+    if (order_increment > 0) {
+        
+        elem_type = libMesh::QUAD9;
+        fe_family = libMesh::SZABAB;
+        fe_order  = static_cast<libMesh::Order>(fe_order + order_increment);
+    }
+    
     
     std::vector<Real>
     x_div_loc        (nx_divs+1),
@@ -181,7 +196,7 @@ _augment_send_list_obj                 (nullptr) {
         x_relative_dx[i_div]    = infile( "x_rel_dx",   0., i_div);
         
         if (i_div < nx_divs) //  this is only till nx_divs
-            x_divs[i_div]       = infile( "x_div_nelem", 0, i_div);
+            x_divs[i_div]       = pow(2, n_refine)*infile( "x_div_nelem", 0, i_div);
     }
     
     divs[0] = x_coord_divs.get();
@@ -195,7 +210,7 @@ _augment_send_list_obj                 (nullptr) {
         y_relative_dx[i_div] = infile( "y_rel_dx", 0., i_div);
         
         if (i_div < ny_divs) //  this is only till ny_divs
-            y_divs[i_div]    = infile( "y_div_nelem",  0, i_div);
+            y_divs[i_div]    = pow(2, n_refine)*infile( "y_div_nelem",  0, i_div);
     }
     
     divs[1] = y_coord_divs.get();
@@ -217,7 +232,7 @@ _augment_send_list_obj                 (nullptr) {
     _fluid_discipline   = new MAST::ConservativeFluidDiscipline(*_fluid_eq_sys);
     _fluid_sys_init     = new MAST::ConservativeFluidSystemInitialization(*_fluid_sys,
                                                                           _fluid_sys->name(),
-                                                                          libMesh::FEType(fe_order, fe_type),
+                                                                          libMesh::FEType(fe_order, fe_family),
                                                                           dim);
     _augment_send_list_obj = new MAST::AugmentGhostElementSendListObj(*_fluid_sys);
     
@@ -227,6 +242,7 @@ _augment_send_list_obj                 (nullptr) {
     _fluid_eq_sys->init();
     
     // print the information
+    _fluid_mesh->print_info();
     _fluid_eq_sys->print_info();
     
     // create the oundary conditions for slip-wall and far-field
@@ -309,7 +325,7 @@ _augment_send_list_obj                 (nullptr) {
         x_div_loc[i_div]        = infile("x_div_loc",   0., i_div+1);
         x_relative_dx[i_div]    = infile( "x_rel_dx",   0., i_div+1);
     }
-    x_divs[0]       = infile( "x_div_nelem", 0, 1);
+    x_divs[0]       = pow(2, n_refine)*infile( "x_div_nelem", 0, 1);
     
     divs[0] = x_coord_divs.get();
     x_coord_divs->init(1, x_div_loc, x_relative_dx, x_divs);
@@ -322,9 +338,15 @@ _augment_send_list_obj                 (nullptr) {
     // create the mesh
     _structural_mesh       = new libMesh::SerialMesh(__init->comm());
     
+
+    // change these types depending on the order
+    if (order_increment > 0)
+        elem_type = libMesh::EDGE3;
+    else
+        elem_type = libMesh::EDGE2;
     
-    MeshInitializer().init(divs, *_structural_mesh, libMesh::EDGE2);
-    
+    MeshInitializer().init(divs, *_structural_mesh, elem_type);
+
     // create the equation system
     _structural_eq_sys    = new  libMesh::EquationSystems(*_structural_mesh);
     
@@ -332,13 +354,12 @@ _augment_send_list_obj                 (nullptr) {
     _structural_sys       = &(_structural_eq_sys->add_system<MAST::NonlinearSystem>("structural"));
     _structural_sys->set_eigenproblem_type(libMesh::GHEP);
     
-    // FEType to initialize the system
-    libMesh::FEType fetype (libMesh::FIRST, libMesh::LAGRANGE);
+
     
     // initialize the system to the right set of variables
     _structural_sys_init  = new MAST::StructuralSystemInitialization(*_structural_sys,
                                                                      _structural_sys->name(),
-                                                                     fetype);
+                                                                     libMesh::FEType(fe_order, fe_family));
     _structural_discipline = new MAST::StructuralDiscipline(*_structural_eq_sys);
     
     
@@ -358,6 +379,8 @@ _augment_send_list_obj                 (nullptr) {
     
     // initialize the equation system
     _structural_eq_sys->init();
+    _structural_mesh->print_info();
+    _structural_eq_sys->print_info();
     
     // initialize the motion object
     _motion_function   = new MAST::FlexibleSurfaceMotion("small_disturbance_motion",
@@ -376,6 +399,7 @@ _augment_send_list_obj                 (nullptr) {
     _rho             = new MAST::Parameter("rho",   2.7e3);
     _E               = new MAST::Parameter("E",     72.e9);
     _nu              = new MAST::Parameter("nu",     0.33);
+    _kappa           = new MAST::Parameter("kappa", 5./6.);
     _zero            = new MAST::Parameter("zero",     0.);
     _mach            = new MAST::Parameter("mach",     3.);
     _rho_air         = new MAST::Parameter("rho" ,   1.05);
@@ -397,6 +421,7 @@ _augment_send_list_obj                 (nullptr) {
     _rho_f           = new MAST::ConstantFieldFunction("rho",         *_rho);
     _E_f             = new MAST::ConstantFieldFunction("E",             *_E);
     _nu_f            = new MAST::ConstantFieldFunction("nu",           *_nu);
+    _kappa_f         = new MAST::ConstantFieldFunction("kappa",     *_kappa);
     _hyoff_f         = new MAST::ConstantFieldFunction("hy_off",     *_zero);
     _hzoff_f         = new MAST::ConstantFieldFunction("hz_off",     *_zero);
     _mach_f          = new MAST::ConstantFieldFunction("mach",       *_mach);
@@ -410,9 +435,11 @@ _augment_send_list_obj                 (nullptr) {
     _m_card->add(*_rho_f);
     _m_card->add(*_E_f);
     _m_card->add(*_nu_f);
+    _m_card->add(*_kappa_f);
     
     // create the element property card
     _p_card          = new MAST::Solid1DSectionElementPropertyCard;
+    _p_card->set_bending_model(MAST::TIMOSHENKO);
     
     // tell the card about the orientation
     libMesh::Point orientation;
@@ -494,6 +521,7 @@ MAST::BeamEulerFSIFlutterAnalysis::~BeamEulerFSIFlutterAnalysis() {
     delete _rho_f;
     delete _E_f;
     delete _nu_f;
+    delete _kappa_f;
     delete _hyoff_f;
     delete _hzoff_f;
     delete _mach_f;
@@ -506,6 +534,7 @@ MAST::BeamEulerFSIFlutterAnalysis::~BeamEulerFSIFlutterAnalysis() {
     delete _rho;
     delete _E;
     delete _nu;
+    delete _kappa;
     delete _zero;
     delete _mach;
     delete _rho_air;
@@ -724,7 +753,7 @@ MAST::BeamEulerFSIFlutterAnalysis::solve(bool if_write_output,
     _flutter_root = sol.second;
 
     
-    if (if_write_output) {
+    if (sol.first && if_write_output) {
         
         
         // now write the flutter mode to an output file.
@@ -869,7 +898,10 @@ MAST::BeamEulerFSIFlutterAnalysis::solve(bool if_write_output,
     
     assembly.clear_discipline_and_system();
     
-    return _flutter_root->V;
+    if (sol.first)
+        return _flutter_root->V;
+    else
+        return 0.;
 }
 
 

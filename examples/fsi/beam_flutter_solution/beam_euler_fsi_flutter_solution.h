@@ -66,7 +66,8 @@ namespace MAST {
     struct BeamEulerFSIFlutterAnalysis {
         
         
-        BeamEulerFSIFlutterAnalysis();
+        BeamEulerFSIFlutterAnalysis(unsigned int order_increment = 0,
+                                    unsigned int n_refine = 0);
         
         
         ~BeamEulerFSIFlutterAnalysis();
@@ -190,6 +191,7 @@ namespace MAST {
         *_rho,
         *_E,
         *_nu,
+        *_kappa,
         *_zero,
         *_mach,
         *_rho_air,
@@ -201,6 +203,7 @@ namespace MAST {
         *_rho_f,
         *_E_f,
         *_nu_f,
+        *_kappa_f,
         *_hyoff_f,
         *_hzoff_f,
         *_mach_f,

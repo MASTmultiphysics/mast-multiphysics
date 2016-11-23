@@ -124,6 +124,7 @@ namespace MAST {
         *_kappa,
         *_nu,
         *_temp,
+        *_press,
         *_zero;
         
         MAST::ConstantFieldFunction
@@ -134,6 +135,7 @@ namespace MAST {
         *_nu_f,
         *_temp_f,
         *_ref_temp_f,
+        *_press_f,
         *_hoff_stiff_f;
         
         // Section offset
@@ -166,7 +168,7 @@ namespace MAST {
         MAST::DirichletBoundaryCondition*     _dirichlet_stiff_right;
         
         // create the temperature load
-        MAST::BoundaryConditionBase*             _T_load;
+        MAST::BoundaryConditionBase*             _T_load, *_p_load;
         
         // vector of parameters to evaluate sensitivity wrt
         std::vector<MAST::Parameter*> _params_for_sensitivity;

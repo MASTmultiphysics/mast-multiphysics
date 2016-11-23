@@ -60,6 +60,7 @@
 #include "examples/fluid/panel_small_disturbance_frequency_domain_3D/panel_small_disturbance_frequency_domain_inviscid_analysis_3D.h"
 #include "examples/fluid/panel_small_disturbance_frequency_domain_3D_half_domain/panel_small_disturbance_frequency_domain_inviscid_analysis_3D_half_domain.h"
 #include "examples/fsi/beam_flutter_solution/beam_euler_fsi_flutter_solution.h"
+#include "examples/fsi/beam_fsi_flutter_high_order_convergence/beam_fsi_high_order_convergence.h"
 #include "examples/fsi/beam_flutter_nonuniform_aero_base_solution/beam_euler_fsi_flutter_nonuniform_aero_base_solution.h"
 #include "examples/fsi/beam_flutter_optimization/beam_flutter_optimization.h"
 #include "examples/fsi/plate_flutter_solution/plate_euler_fsi_flutter_solution.h"
@@ -470,6 +471,8 @@ int main(int argc, char* const argv[]) {
         fluid_analysis<MAST::BeamEulerFSIAnalysis>(case_name);
     else if (case_name == "beam_fsi_flutter_analysis")
         fluid_analysis<MAST::BeamEulerFSIFlutterAnalysis>(case_name);
+    else if (case_name == "beam_fsi_ho_convergence")
+        fluid_analysis<MAST::BeamFSIFlutterHighOrderConvergence>(case_name);
     else if (case_name == "beam_fsi_nonuniform_aero_base_flutter_analysis")
         fluid_analysis<MAST::BeamEulerFSIFlutterNonuniformAeroBaseAnalysis>(case_name);
     else if (case_name == "beam_fsi_flutter_optimization")
@@ -575,6 +578,7 @@ int main(int argc, char* const argv[]) {
         << "**********************************\n"
         << "  beam_fsi_analysis \n"
         << "  beam_fsi_flutter_analysis \n"
+        << "  beam_fsi_ho_convergence \n"
         << "  beam_fsi_nonuniform_aero_base_flutter_analysis\n"
         << "  beam_fsi_flutter_optimization \n"
         << "  plate_fsi_flutter_analysis \n"

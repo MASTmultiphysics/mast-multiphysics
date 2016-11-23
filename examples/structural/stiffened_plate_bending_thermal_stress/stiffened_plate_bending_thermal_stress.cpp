@@ -81,6 +81,22 @@ MAST::StiffenedPlateBendingThermalStress::init(libMesh::ElemType e_type,
                     10,
                     0.01);
     
+    
+    /*MAST::HatStiffenedPanelMesh panel_mesh;
+    panel_mesh.init(n_stiff,
+                    40,       // n_x_divs
+                    20,       // n_y_divs_on_stiffeners
+                    10,       // n_y_divs_between_stiffeners
+                    _length,
+                    _width,
+                    0.00,     // skin_dip_amplitude_by_panel_w,
+                    -0.01,    // hat_dip_amplitude_by_panel_w,
+                    .2,       // stiff_w_by_panel_w
+                    .5,       // hat_w_by_stiff_w
+                    .05,      // hat_h_by_panel_w
+                    *_mesh,
+                    e_type);*/
+    
     // create the equation system
     _eq_sys    = new  libMesh::EquationSystems(*_mesh);
     
@@ -148,7 +164,7 @@ MAST::StiffenedPlateBendingThermalStress::init(libMesh::ElemType e_type,
     _nu              = new MAST::Parameter("nu",           0.33);
     _zero            = new MAST::Parameter("zero",           0.);
     _temp            = new MAST::Parameter( "temperature",  90.);
-    
+    _press           = new MAST::Parameter("press",       -3.e2);
     
     
     // prepare the vector of parameters with respect to which the sensitivity
@@ -166,6 +182,7 @@ MAST::StiffenedPlateBendingThermalStress::init(libMesh::ElemType e_type,
     _nu_f            = new MAST::ConstantFieldFunction("nu",                 *_nu);
     _temp_f          = new MAST::ConstantFieldFunction("temperature",      *_temp);
     _ref_temp_f      = new MAST::ConstantFieldFunction("ref_temperature",  *_zero);
+    _press_f         = new MAST::ConstantFieldFunction("pressure",        *_press);
     _hoff_stiff_f    = new MAST::ConstantFieldFunction("off",              *_zero);
     _hoff_plate_f    = new MAST::SectionOffset("off",
                                                *_th_f,
@@ -173,8 +190,11 @@ MAST::StiffenedPlateBendingThermalStress::init(libMesh::ElemType e_type,
     
     // initialize the load
     _T_load          = new MAST::BoundaryConditionBase(MAST::TEMPERATURE);
+    _p_load          = new MAST::BoundaryConditionBase(MAST::SURFACE_PRESSURE);
     _T_load->add(*_temp_f);
     _T_load->add(*_ref_temp_f);
+    _p_load->add(*_press_f);
+    _discipline->add_volume_load(0, *_p_load);
     for (unsigned int i=0; i<=n_stiff; i++)
         _discipline->add_volume_load(i, *_T_load);
     
@@ -280,6 +300,7 @@ MAST::StiffenedPlateBendingThermalStress::~StiffenedPlateBendingThermalStress() 
         delete _p_card_stiff;
         
         delete _T_load;
+        delete _p_load;
         delete _dirichlet_bottom;
         delete _dirichlet_right;
         delete _dirichlet_top;
@@ -296,6 +317,7 @@ MAST::StiffenedPlateBendingThermalStress::~StiffenedPlateBendingThermalStress() 
         delete _hoff_stiff_f;
         delete _temp_f;
         delete _ref_temp_f;
+        delete _press_f;
         
         delete _th;
         delete _E;
@@ -304,7 +326,7 @@ MAST::StiffenedPlateBendingThermalStress::~StiffenedPlateBendingThermalStress() 
         delete _nu;
         delete _zero;
         delete _temp;
-        
+        delete _press;
         
         
         delete _eq_sys;

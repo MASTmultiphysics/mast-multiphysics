@@ -396,7 +396,13 @@ MAST::StructuralElement3D::internal_residual(bool request_jacobian,
             jac.topLeftCorner(n2, n2) += JxW[qp] * mat2_n2n2;
         }
     }
- 
+    
+    // if jacobian is requested, add a small diagonal value for the
+    // rotational dofs
+    if (request_jacobian)
+        jac.bottomRightCorner(n2, n2) += RealMatrixX::Identity(n2, n2) *
+        1.0e-20 * jac.diagonal().maxCoeff();
+
     // correction to the residual from incompatible mode
     f.topRows(n2) -= K_ualpha * (K_alphaalpha * f_alpha);
     

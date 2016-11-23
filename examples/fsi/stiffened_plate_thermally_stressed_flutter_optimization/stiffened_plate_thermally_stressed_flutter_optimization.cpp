@@ -449,7 +449,7 @@ init(GetPot &infile,
     _flight_cond->mach            = infile("mach",       .5);
     _flight_cond->gas_property.cp = infile(  "cp",    1003.);
     _flight_cond->gas_property.cv = infile(  "cv",     716.);
-    _flight_cond->gas_property.T  = infile("temp",     300.);
+    _flight_cond->gas_property.T  = infile("temp_f",   300.);
     _flight_cond->gas_property.rho= infile( "rho_f",   1.05);
     
     _flight_cond->init();
@@ -1597,7 +1597,11 @@ evaluate(const std::vector<Real>& dvars,
     _structural_nonlinear_assembly->calculate_outputs(steady_solve.solution());
     _structural_nonlinear_assembly->clear_discipline_and_system();
 
-    
+     if (if_write_output) {
+     
+     _structural_discipline->plot_stress_strain_data<libMesh::ExodusII_IO>("stress_output.exo");
+     }
+
     if (sol.second && if_write_output) {
         // now write the flutter mode to an output file.
         // Flutter mode Y = sum_i (X_i * (xi_re + xi_im)_i)

@@ -423,7 +423,15 @@ MAST::ComplexSolverBase::solve_block_matrix(MAST::Parameter* p)  {
     
     ierr = MatCreate(sys.comm().get(), &mat);                      CHKERRABORT(sys.comm().get(), ierr);
     ierr = MatSetSizes(mat, 2*m_l, 2*n_l, 2*my_m, 2*my_n);         CHKERRABORT(sys.comm().get(), ierr);
-    ierr = MatSetType(mat, MATAIJ);                                CHKERRABORT(sys.comm().get(), ierr);
+
+    if (libMesh::on_command_line("--solver_system_names")) {
+        
+        std::string nm = _assembly->system().name() + "_complex_";
+        MatSetOptionsPrefix(mat, nm.c_str());
+    }
+    ierr = MatSetFromOptions(mat);                                 CHKERRABORT(sys.comm().get(), ierr);
+    
+    //ierr = MatSetType(mat, MATBAIJ);                                CHKERRABORT(sys.comm().get(), ierr);
     ierr = MatSetBlockSize(mat, 2);                                CHKERRABORT(sys.comm().get(), ierr);
     ierr = MatSeqAIJSetPreallocation(mat,
                                      2*my_m,
@@ -441,13 +449,6 @@ MAST::ComplexSolverBase::solve_block_matrix(MAST::Parameter* p)  {
     ierr = MatSetOption(mat,
                         MAT_NEW_NONZERO_ALLOCATION_ERR,
                         PETSC_TRUE);                               CHKERRABORT(sys.comm().get(), ierr);
-    
-    if (libMesh::on_command_line("--solver_system_names")) {
-        
-        std::string nm = _assembly->system().name() + "_";
-        MatSetOptionsPrefix(mat, nm.c_str());
-    }
-    ierr = MatSetFromOptions(mat);                                 CHKERRABORT(sys.comm().get(), ierr);
     
     
     // now create the vectors
