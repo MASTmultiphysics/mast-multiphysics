@@ -24,6 +24,13 @@
 #include <vector>
 #include <string>
 
+// MAST includes
+#include "base/mast_data_types.h"
+
+// libMesh includes
+#include "libmesh/parallel_object.h"
+#include "libmesh/numeric_vector.h"
+
 // PETSc includes
 #include <petscmat.h>
 
@@ -34,14 +41,16 @@ namespace MAST {
     class NonlinearImplicitAssembly;
     
     
-    class MultiphysicsNonlinearSolverBase {
+    class MultiphysicsNonlinearSolverBase:
+    public libMesh::ParallelObject {
         
     public:
         
         /*!
          *   default constructor
          */
-        MultiphysicsNonlinearSolverBase(const std::string& nm,
+        MultiphysicsNonlinearSolverBase(const libMesh::Parallel::Communicator& comm_in,
+                                        const std::string& nm,
                                         unsigned int n);
         
 
@@ -87,15 +96,6 @@ namespace MAST {
         
 
         /*!
-         *   @returns the MPI communicator context for the global system
-         */
-        MPI_Comm comm() {
-            
-            return _g_comm;
-        }
-        
-
-        /*!
          *   @returns a reference to the petsc index sets
          */
         std::vector<IS>& index_sets() {
@@ -119,30 +119,57 @@ namespace MAST {
         void solve();
         
 
+        /*!
+         *    This class provides the interface that, if provided, will 
+         *    be called to update any data structures before computation of
+         *    residual/Jacobian at an iterate.
+         */
+        class PreResidualUpdate {
+            
+        public:
+            
+            virtual ~PreResidualUpdate() {}
+            
+            /*!
+             *    \p sol_vecs is the vector containing the solution for each 
+             *    in this multiphysics solution
+             */
+            virtual void
+            update_at_solution(std::vector<libMesh::NumericVector<Real>*>&  sol_vecs) = 0;
+            
+        };
+
+        
+        MAST::MultiphysicsNonlinearSolverBase::PreResidualUpdate*
+        get_pre_residual_update_object() {
+            
+            return _update;
+        }
         
     protected:
         
-        
+
         /*!
          *  name of this multiphysics solution
          */
         const std::string  _name;
         
-        
         /*!
          *   number of disciplines
          */
         const unsigned int _n_disciplines;
-        
+
+        /*!
+         *    object, if provided, is called to initialize the system data
+         *    before computation of residual/Jacobian at an iterate
+         */
+        MAST::MultiphysicsNonlinearSolverBase::PreResidualUpdate  *_update;
         
         /*!
          *   vector of assembly objects for each discipline in this 
          *   multiphysics system
          */
         std::vector<MAST::NonlinearImplicitAssembly*>  _discipline_assembly;
-
-        MPI_Group        _g_union;
-        MPI_Comm         _g_comm;
         
         std::vector<IS>  _is;
         std::vector<Mat> _sub_mats; // row-major ordering

@@ -1,5 +1,5 @@
 diff --git a/include/mesh/exodusII_io.h b/include/mesh/exodusII_io.h
-index a60d8de..fae2e3e 100644
+index c5c5df4..f0cf0c3 100644
 --- a/include/mesh/exodusII_io.h
 +++ b/include/mesh/exodusII_io.h
 @@ -75,7 +75,8 @@ public:
@@ -13,10 +13,10 @@ index a60d8de..fae2e3e 100644
     * This method implements writing a mesh to a specified file.
     */
 diff --git a/include/solvers/eigen_solver.h b/include/solvers/eigen_solver.h
-index dc378b3..f1d2b8e 100644
+index f29b9c1..2f164eb 100644
 --- a/include/solvers/eigen_solver.h
 +++ b/include/solvers/eigen_solver.h
-@@ -200,7 +200,8 @@ public:
+@@ -203,7 +203,8 @@ public:
     * and copies the \ ith eigen vector to the solution vector.
     */
    virtual std::pair<Real, Real> get_eigenpair (dof_id_type i,
@@ -27,7 +27,7 @@ index dc378b3..f1d2b8e 100644
    /**
     * Returns the \p ith eigenvalue (real and imaginary part).
 diff --git a/include/solvers/slepc_eigen_solver.h b/include/solvers/slepc_eigen_solver.h
-index 85d69b1..b35bcb1 100644
+index 285cba2..a3c27ea 100644
 --- a/include/solvers/slepc_eigen_solver.h
 +++ b/include/solvers/slepc_eigen_solver.h
 @@ -185,7 +185,8 @@ public:
@@ -41,10 +41,10 @@ index 85d69b1..b35bcb1 100644
    /**
     * Same as above, but does not copy the eigenvector.
 diff --git a/include/systems/implicit_system.h b/include/systems/implicit_system.h
-index 1e1f759..251f7a8 100644
+index dc4ac63..03b7717 100644
 --- a/include/systems/implicit_system.h
 +++ b/include/systems/implicit_system.h
-@@ -153,6 +153,33 @@ public:
+@@ -163,6 +163,33 @@ public:
     * @e Can be overloaded in derived classes.
     */
    virtual void assemble_residual_derivatives (const ParameterVector & parameters) libmesh_override;
@@ -78,21 +78,8 @@ index 1e1f759..251f7a8 100644
  
    /**
     * Assembles & solves the linear system(s) (dR/du)*u_p = -dR/dp, for
-diff --git a/include/systems/nonlinear_implicit_system.h b/include/systems/nonlinear_implicit_system.h
-index 9737910..8648301 100644
---- a/include/systems/nonlinear_implicit_system.h
-+++ b/include/systems/nonlinear_implicit_system.h
-@@ -145,7 +145,7 @@ public:
-      * It must be implemented by the user in a derived class.
-      */
-     virtual void operator()(std::vector<NumericVector<Number> *> & sp,
--                            sys_type & s);
-+                            sys_type & s) = 0;
-   };
- 
-   /**
 diff --git a/include/systems/system.h b/include/systems/system.h
-index 8734b90..38b49d2 100644
+index 72f106d..b18f309 100644
 --- a/include/systems/system.h
 +++ b/include/systems/system.h
 @@ -134,6 +134,35 @@ public:
@@ -415,10 +402,10 @@ index 8734b90..38b49d2 100644
  
  inline
 diff --git a/src/base/dof_map_constraints.C b/src/base/dof_map_constraints.C
-index cc26afd..0331bb1 100644
+index a20de59..ab0d63d 100644
 --- a/src/base/dof_map_constraints.C
 +++ b/src/base/dof_map_constraints.C
-@@ -2593,7 +2593,7 @@ void DofMap::build_constraint_matrix_and_vector (DenseMatrix<Number> & C,
+@@ -2594,7 +2594,7 @@ void DofMap::build_constraint_matrix_and_vector (DenseMatrix<Number> & C,
          {
            // If x = Cy + h and y = Dz + g
            // Then x = (CD)z + (Cg + h)
@@ -428,7 +415,7 @@ index cc26afd..0331bb1 100644
            C.right_multiply(Cnew);
          }
 diff --git a/src/mesh/exodusII_io.C b/src/mesh/exodusII_io.C
-index 69a7449..02d2a14 100644
+index d22b686..7c0174f 100644
 --- a/src/mesh/exodusII_io.C
 +++ b/src/mesh/exodusII_io.C
 @@ -34,6 +34,10 @@
@@ -442,7 +429,7 @@ index 69a7449..02d2a14 100644
  
  namespace libMesh
  {
-@@ -389,6 +393,474 @@ void ExodusII_IO::read (const std::string & fname)
+@@ -388,6 +392,474 @@ void ExodusII_IO::read (const std::string & fname)
  }
  
  
@@ -918,10 +905,10 @@ index 69a7449..02d2a14 100644
  void ExodusII_IO::verbose (bool set_verbosity)
  {
 diff --git a/src/solvers/slepc_eigen_solver.C b/src/solvers/slepc_eigen_solver.C
-index 07dc1ad..392946a 100644
+index 8791805..17095bd 100644
 --- a/src/solvers/slepc_eigen_solver.C
 +++ b/src/solvers/slepc_eigen_solver.C
-@@ -655,32 +655,53 @@ void SlepcEigenSolver<T>:: set_slepc_position_of_spectrum()
+@@ -709,38 +709,57 @@ void SlepcEigenSolver<T>:: set_slepc_position_of_spectrum()
  
  template <typename T>
  std::pair<Real, Real> SlepcEigenSolver<T>::get_eigenpair(dof_id_type i,
@@ -932,68 +919,80 @@ index 07dc1ad..392946a 100644
 -  PetscErrorCode ierr=0;
 -
 -  PetscReal re, im;
-+    // make sure that for non-Hermitian problems with real matrices
-+    // a vector is provided for imaginary part.
-+#ifdef LIBMESH_USE_COMPLEX_NUMBERS
-+    libmesh_assert(eig_vec_im == NULL);
-+#else
-+        if (this->eigen_problem_type() == HEP ||
-+                     this->eigen_problem_type() == GHEP)
-+                libmesh_assert(eig_vec_im == NULL);
-+#endif
- 
+-
 -  // Make sure the NumericVector passed in is really a PetscVector
--  PetscVector<T> * solution = cast_ptr<PetscVector<T> *>(&solution_in);
-+    PetscErrorCode ierr=0;
- 
+-  PetscVector<T> * solution = dynamic_cast<PetscVector<T> *>(&solution_in);
+-
+-  if (!solution)
+-    libmesh_error_msg("Error getting eigenvector: input vector must be a PetscVector.");
+-
 -  // real and imaginary part of the ith eigenvalue.
 -  PetscScalar kr, ki;
-+    PetscReal re, im;
- 
+-
 -  solution->close();
-+    // Make sure the NumericVector passed in is really a PetscVector
-+    PetscVector<T>* v_re = cast_ptr<PetscVector<T>*>(&eig_vec);
-+    PetscVector<T>* v_im = NULL;
- 
+-
 -  ierr = EPSGetEigenpair(_eps, i, &kr, &ki, solution->vec(), PETSC_NULL);
 -  LIBMESH_CHKERR(ierr);
-+    // real and imaginary part of the ith eigenvalue.
-+    PetscScalar kr, ki;
- 
-+    eig_vec.close();
-+    if (eig_vec_im)
-+        {
-+                eig_vec_im = libmesh_cast_ptr<PetscVector<T>*>(eig_vec_im);
-+                eig_vec_im->close();
-+        
-+                // now get the eigenvector
-+                ierr = EPSGetEigenpair(_eps, i, &kr, &ki, v_re->vec(), v_im->vec());
-+            }
-+    else
-+            ierr = EPSGetEigenpair(_eps, i, &kr, &ki, v_re->vec(), PETSC_NULL);
-+
-+    LIBMESH_CHKERR(ierr);
-+    
+-
++    // make sure that for non-Hermitian problems with real matrices
++    // a vector is provided for imaginary part.
  #ifdef LIBMESH_USE_COMPLEX_NUMBERS
 -  re = PetscRealPart(kr);
 -  im = PetscImaginaryPart(kr);
-+    re = PetscRealPart(kr);
-+    im = PetscImaginaryPart(kr);
++    libmesh_assert(eig_vec_im == NULL);
  #else
 -  re = kr;
 -  im = ki;
-+        re = kr;
-+    im = ki;
++    if (this->eigen_problem_type() == HEP ||
++        this->eigen_problem_type() == GHEP)
++        libmesh_assert(eig_vec_im == NULL);
  #endif
 -
 -  return std::make_pair(re, im);
++    
++    PetscErrorCode ierr=0;
++    
++    PetscReal re, im;
++    
++    // Make sure the NumericVector passed in is really a PetscVector
++    PetscVector<T>* v_re = cast_ptr<PetscVector<T>*>(&eig_vec);
++    PetscVector<T>* v_im = NULL;
++    
++    // real and imaginary part of the ith eigenvalue.
++    PetscScalar kr, ki;
++    
++    eig_vec.close();
++    if (eig_vec_im)
++    {
++        eig_vec_im = libmesh_cast_ptr<PetscVector<T>*>(eig_vec_im);
++        eig_vec_im->close();
++        
++        // now get the eigenvector
++        ierr = EPSGetEigenpair(_eps, i, &kr, &ki, v_re->vec(), v_im->vec());
++    }
++    else
++        ierr = EPSGetEigenpair(_eps, i, &kr, &ki, v_re->vec(), PETSC_NULL);
++    
++    LIBMESH_CHKERR(ierr);
++    
++#ifdef LIBMESH_USE_COMPLEX_NUMBERS
++    re = PetscRealPart(kr);
++    im = PetscImaginaryPart(kr);
++#else
++    re = kr;
++    im = ki;
++#endif
 +    
 +    return std::make_pair(re, im);
  }
  
  
++
+ template <typename T>
+ std::pair<Real, Real> SlepcEigenSolver<T>::get_eigenvalue(dof_id_type i)
+ {
 diff --git a/src/systems/implicit_system.C b/src/systems/implicit_system.C
-index 0cd8bcd..78891e3 100644
+index 82510a7..a070202 100644
 --- a/src/systems/implicit_system.C
 +++ b/src/systems/implicit_system.C
 @@ -316,7 +316,12 @@ ImplicitSystem::sensitivity_solve (const ParameterVector & parameters)
@@ -1118,7 +1117,7 @@ index 0cd8bcd..78891e3 100644
                                                             const ParameterVector & parameters_in,
                                                             const ParameterVector & vector,
 diff --git a/src/systems/system.C b/src/systems/system.C
-index 693670f..10a9484 100644
+index d34484c..31be685 100644
 --- a/src/systems/system.C
 +++ b/src/systems/system.C
 @@ -69,13 +69,17 @@ System::System (EquationSystems & es,
@@ -1136,7 +1135,7 @@ index 693670f..10a9484 100644
    _qoi_evaluate_derivative_object   (libmesh_nullptr),
 +  _qoi_evaluate_parameter_sensitivity_function (nullptr),
 +  _qoi_evaluate_parameter_sensitivity_object   (nullptr),
-   _dof_map                          (new DofMap(number_in, *this)),
+   _dof_map                          (new DofMap(number_in, es.get_mesh())),
    _equation_systems                 (es),
    _mesh                             (es.get_mesh()),
 @@ -1838,8 +1842,57 @@ void System::attach_assemble_object (System::Assembly & assemble_in)

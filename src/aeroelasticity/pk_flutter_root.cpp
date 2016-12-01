@@ -21,7 +21,7 @@
 // MAST includes
 #include "aeroelasticity/pk_flutter_root.h"
 
-/*
+
 MAST::PKFlutterRoot::PKFlutterRoot():
 MAST::FlutterRootBase()
 { }
@@ -89,6 +89,6 @@ MAST::PKFlutterRoot::init(const Real k_red_val,
 //    return similar;
 //}
 
-*/
+
 
 

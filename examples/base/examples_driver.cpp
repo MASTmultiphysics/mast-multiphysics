@@ -55,6 +55,7 @@
 #include "optimization/npsol_optimization_interface.h"
 #include "optimization/dot_optimization_interface.h"
 #include "examples/fluid/panel_inviscid_analysis_2D/panel_inviscid_analysis_2d.h"
+#include "examples/fluid/ramp_laminar_analysis_2D/ramp_viscous_analysis_2d.h"
 #include "examples/fluid/panel_inviscid_analysis_3D_half_domain/panel_inviscid_analysis_3D_half_domain.h"
 #include "examples/fluid/panel_small_disturbance_frequency_domain_analysis_2D/panel_small_disturbance_frequency_domain_analysis_2d.h"
 #include "examples/fluid/panel_small_disturbance_frequency_domain_3D/panel_small_disturbance_frequency_domain_inviscid_analysis_3D.h"
@@ -459,6 +460,8 @@ int main(int argc, char* const argv[]) {
                                                    if_nonlin);
     else if (case_name == "panel_inviscid_analysis_2d")
         fluid_analysis<MAST::PanelInviscidAnalysis2D>(case_name);
+    else if (case_name == "ramp_laminar_analysis_2d")
+        fluid_analysis<MAST::RampLaminarAnalysis2D>(case_name);
     else if (case_name == "panel_inviscid_analysis_3d_half_domain")
         fluid_analysis<MAST::PanelInviscidAnalysis3DHalfDomain>(case_name);
     else if (case_name == "panel_inviscid_small_disturbance_frequency_domain_analysis_2d")
@@ -562,6 +565,7 @@ int main(int argc, char* const argv[]) {
         << "***********   FLUID   ************\n"
         << "**********************************\n"
         << "  panel_inviscid_analysis_2d \n"
+        << "  ramp_laminar_analysis_2d \n"
         << "  panel_inviscid_analysis_3d_half_domain \n"
         << "  panel_inviscid_small_disturbance_frequency_domain_analysis_2d\n"
         << "  panel_inviscid_small_disturbance_frequency_domain_analysis_3d\n"

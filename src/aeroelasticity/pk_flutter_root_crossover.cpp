@@ -19,7 +19,7 @@
 
 // C++ includes
 #include <iomanip>
-/*
+
 // MAST includes
 #include "aeroelasticity/pk_flutter_root_crossover.h"
 #include "aeroelasticity/flutter_root_base.h"
@@ -61,4 +61,3 @@ MAST::PKFlutterRootCrossover::print(std::ostream &output) const {
     else
         output << "Critical root not yet calculated." << std::endl;
 }
-*/

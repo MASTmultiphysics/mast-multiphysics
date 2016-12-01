@@ -349,18 +349,7 @@ namespace MAST {
          const ValType& lin_sol,
          RealMatrixX &mat);
         
-        
-        
-        void calculate_advection_flux_spatial_derivative
-        (const unsigned int i, RealVectorX* flux,
-         RealMatrixX* dflux_dU);
-        
-        
-        
-        void calculate_diffusive_flux_jacobian(unsigned int div_coord,
-                                               unsigned int flux_coord,
-                                               RealMatrixX& mat);
-        
+            
         
         bool calculate_barth_tau_matrix(const unsigned int qp,
                                         const libMesh::FEBase& fe,

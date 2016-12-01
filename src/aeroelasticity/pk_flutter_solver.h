@@ -54,10 +54,16 @@ namespace MAST {
         /*!
          *    initializes the data structres for a flutter solution.
          */
-        void initialize(MAST::Parameter&                            velocity_param,
-                        Real                                        V_lower,
-                        Real                                        V_upper,
-                        unsigned int                                n_V_divs,
+        void initialize(MAST::Parameter&                             V_param,
+                        MAST::Parameter&                             kr_param,
+                        MAST::Parameter&                             bref_param,
+                        Real                                         rho,
+                        Real                                         V_lower,
+                        Real                                         V_upper,
+                        unsigned int                                 n_V_divs,
+                        Real                                         kr_lower,
+                        Real                                         kr_upper,
+                        unsigned int                                 n_kr_divs,
                         std::vector<libMesh::NumericVector<Real>*>& basis);
 
 
@@ -73,8 +79,43 @@ namespace MAST {
          *   found by the solver
          */
         const MAST::FlutterRootBase& get_root(const unsigned int n) const;
+        
+        
+        /*!
+         *   Looks through the list of flutter cross-over points and iteratively
+         *   zooms in to find the cross-over point. This should be called only
+         *   after scan_for_roots() has been called. Potential cross-over points
+         *   are sorted with increasing velocity, and this method will attempt to
+         *   identify the next critical root in the order.
+         */
+        virtual std::pair<bool, MAST::FlutterRootBase*>
+        find_next_root(const Real g_tol,
+                       const unsigned int n_bisection_iters);
+        
+        
+        
+        /*!
+         *   This method checks if the flutter root corresponding to the
+         *   lowest velocity crossover has been calculated. If not, then it
+         *   attempts to find that root using an iterative approach
+         */
+        virtual std::pair<bool, MAST::FlutterRootBase*>
+        find_critical_root(const Real g_tol,
+                           const unsigned int n_bisection_iters);
 
         
+        /*!
+         *   Prints the sorted roots to the \par output
+         */
+        virtual void print_sorted_roots();
+        
+        
+        /*!
+         *   Prints the crossover points output. If no pointer to output is given
+         *   then the output defined by set_output_file() is used.
+         */
+        virtual void print_crossover_points();
+
         /*!
          *   Scans for flutter roots in the analyzed points, and identified the
          *   divergence (if k_red = 0. is specified) and flutter crossover points.
@@ -120,13 +161,13 @@ namespace MAST {
         /*!
          *   performs an eigensolution at the specified reduced frequency, and
          *   sort the roots based on the provided solution pointer. If the
-         *   pointer is NULL, then no sorting is performed
+         *   pointer is nullptr, then no sorting is performed
          *   solve the eigenproblem  \f\[ L x = lambda R x \f\]
          */
         virtual std::auto_ptr<MAST::FlutterSolutionBase>
         _analyze(const Real k_red,
                  const Real v_ref,
-                 const MAST::FlutterSolutionBase* prev_sol=NULL);
+                 const MAST::FlutterSolutionBase* prev_sol=nullptr);
         
         
         
@@ -148,8 +189,8 @@ namespace MAST {
         void
         _initialize_matrix_sensitivity_for_param(const libMesh::ParameterVector& params,
                                                  const unsigned int i,
-                                                 const libMesh::NumericVector<Real>& dXdp,
-                                                 Real U_inf,
+                                                 const Real k_red,
+                                                 const Real U_inf,
                                                  ComplexMatrixX& L,  // stiff, aero, damp
                                                  ComplexMatrixX& R); // mass
 
@@ -170,6 +211,11 @@ namespace MAST {
          */
         MAST::Parameter*                                _kred_param;
         
+        /*!
+         *    flight density
+         */
+        Real                                            _rho;
+
         /*!
          *    reference chord
          */

@@ -162,6 +162,17 @@ namespace MAST {
                                                 RealMatrixX& jac,
                                                 const unsigned int s,
                                                 MAST::BoundaryConditionBase& p);
+
+        
+        /*!
+         *
+         */
+        virtual bool noslip_wall_surface_residual(bool request_jacobian,
+                                                  RealVectorX& f,
+                                                  RealMatrixX& jac,
+                                                  const unsigned int s,
+                                                  MAST::BoundaryConditionBase& p);
+
         
         /*!
          *

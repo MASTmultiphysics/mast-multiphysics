@@ -67,13 +67,18 @@ MAST::ConservativeFluidElementBase::internal_residual (bool request_jacobian,
     AiBi_adv        = RealMatrixX::Zero(   n1,    n2),
     A_sens          = RealMatrixX::Zero(   n1,    n2),
     LS              = RealMatrixX::Zero(   n1,    n2),
-    LS_sens         = RealMatrixX::Zero(   n2,    n2);
+    LS_sens         = RealMatrixX::Zero(   n2,    n2),
+    stress          = RealMatrixX::Zero(  dim,   dim),
+    dprim_dcons     = RealMatrixX::Zero(   n1,    n1),
+    dcons_dprim     = RealMatrixX::Zero(   n1,    n1);
     
     RealVectorX
-    vec1_n1  = RealVectorX::Zero(n1),
-    vec2_n1  = RealVectorX::Zero(n1),
-    vec3_n2  = RealVectorX::Zero(n2),
-    dc       = RealVectorX::Zero(dim);
+    vec1_n1   = RealVectorX::Zero(n1),
+    vec2_n1   = RealVectorX::Zero(n1),
+    vec3_n2   = RealVectorX::Zero(n2),
+    dc        = RealVectorX::Zero(dim),
+    temp_grad = RealVectorX::Zero(dim);
+
     
     std::vector<RealMatrixX>
     Ai_adv  (dim);
@@ -112,6 +117,19 @@ MAST::ConservativeFluidElementBase::internal_residual (bool request_jacobian,
         
         // initialize the FEM derivative operator
         _initialize_fem_gradient_operator(qp, dim, *_fe, dBmat);
+        
+        if (if_viscous()) {
+            
+            calculate_conservative_variable_jacobian(primitive_sol,
+                                                     dcons_dprim,
+                                                     dprim_dcons);
+            calculate_diffusion_tensors(_sol,
+                                        dBmat,
+                                        dprim_dcons,
+                                        primitive_sol,
+                                        stress,
+                                        temp_grad);
+        }
         
         AiBi_adv.setZero();
         for (unsigned int i_dim=0; i_dim<dim; i_dim++) {
@@ -153,6 +171,18 @@ MAST::ConservativeFluidElementBase::internal_residual (bool request_jacobian,
             dBmat[i_dim].vector_mult_transpose(vec3_n2, vec1_n1);
             f -= JxW[qp] * vec3_n2;
             
+            // diffusive flux
+            if (if_viscous()) {
+                
+                calculate_diffusion_flux(i_dim,
+                                         primitive_sol,
+                                         stress,
+                                         temp_grad,
+                                         vec1_n1);
+                dBmat[i_dim].vector_mult_transpose(vec3_n2, vec1_n1);
+                f += JxW[qp] * vec3_n2;
+            }
+
             // solution derivative in i^th direction
             // use this to calculate the discontinuity capturing term
             dBmat[i_dim].vector_mult(vec1_n1, _sol);
@@ -182,6 +212,22 @@ MAST::ConservativeFluidElementBase::internal_residual (bool request_jacobian,
                     vec2_n1 = Ai_sens[i_dim][i_cvar] * vec1_n1;
                     for (unsigned int i_phi=0; i_phi<nphi; i_phi++)
                         A_sens.col(nphi*i_cvar+i_phi) += phi[i_phi][qp] *vec2_n1; // assuming that all variables have same n_phi
+                }
+                
+                // viscous flux Jacobian
+                if (if_viscous()) {
+                    
+                    for (unsigned int j_dim=0; j_dim<dim; j_dim++) {
+                        
+                        calculate_diffusion_flux_jacobian(i_dim,
+                                                          j_dim,
+                                                          primitive_sol,
+                                                          mat1_n1n1);
+                        
+                        dBmat[j_dim].left_multiply(mat3_n1n2, mat1_n1n1);                     // Kij dB_j
+                        dBmat[i_dim].right_multiply_transpose(mat4_n2n2, mat3_n1n2);          // dB_i^T Kij dB_j
+                        jac += JxW[qp]*mat4_n2n2;
+                    }
                 }
                 
                 // discontinuity capturing term
@@ -370,7 +416,14 @@ side_external_residual (bool request_jacobian,
                                                    n,
                                                    *it.first->second);
                         break;
-                        
+
+                    case MAST::NO_SLIP_WALL:
+                        noslip_wall_surface_residual(request_jacobian,
+                                                     f, jac,
+                                                     n,
+                                                     *it.first->second);
+                        break;
+
                     case MAST::FAR_FIELD:
                         far_field_surface_residual(request_jacobian,
                                                    f, jac,
@@ -739,6 +792,191 @@ slip_wall_surface_residual(bool request_jacobian,
         }
     }
 
+    
+    return false;
+}
+
+
+
+
+
+bool
+MAST::ConservativeFluidElementBase::
+noslip_wall_surface_residual(bool request_jacobian,
+                             RealVectorX& f,
+                             RealMatrixX& jac,
+                             const unsigned int s,
+                             MAST::BoundaryConditionBase& p) {
+    
+    // inviscid boundary condition without any diffusive component
+    // conditions enforced are
+    // vi ni = wi_dot (ni + dni) - ui dni   (moving slip wall with deformation)
+    // tau_ij nj = 0   (because velocity gradient at wall = 0)
+    // qi ni = 0       (since heat flux occurs only on no-slip wall and far-field bc)
+    
+    // prepare the side finite element
+    libMesh::FEBase *fe_ptr    = nullptr;
+    libMesh::QBase  *qrule_ptr = nullptr;
+    _get_side_fe_and_qrule(_elem, s, &fe_ptr, &qrule_ptr, true);
+    std::auto_ptr<libMesh::FEBase> fe(fe_ptr);
+    std::auto_ptr<libMesh::QBase>  qrule(qrule_ptr);
+    
+    const std::vector<Real> &JxW                 = fe->get_JxW();
+    const std::vector<libMesh::Point>& normals   = fe->get_normals();
+    const std::vector<libMesh::Point>& qpoint    = fe->get_xyz();
+    
+    const unsigned int
+    dim    = _elem.dim(),
+    n1     = dim+2,
+    n2     = _fe->n_shape_functions()*n1;
+    
+    RealVectorX
+    vec1_n1   = RealVectorX::Zero(n1),
+    vec2_n2   = RealVectorX::Zero(n2),
+    flux      = RealVectorX::Zero(n1),
+    dnormal   = RealVectorX::Zero(dim),
+    uvec      = RealVectorX::Zero(3),
+    ni        = RealVectorX::Zero(3),
+    dwdot_i   = RealVectorX::Zero(3),
+    dni       = RealVectorX::Zero(3),
+    temp_grad = RealVectorX::Zero(dim);
+    
+    RealMatrixX
+    mat1_n1n1       = RealMatrixX::Zero( n1, n1),
+    mat2_n1n2       = RealMatrixX::Zero( n1, n2),
+    mat3_n2n2       = RealMatrixX::Zero( n2, n2),
+    stress          = RealMatrixX::Zero(  dim,   dim),
+    dprim_dcons     = RealMatrixX::Zero(   n1,    n1),
+    dcons_dprim     = RealMatrixX::Zero(   n1,    n1);
+    
+    Real
+    ui_ni = 0.;
+    
+    
+    libMesh::Point pt;
+    MAST::FEMOperatorMatrix Bmat;
+    std::vector<MAST::FEMOperatorMatrix> dBmat(dim);
+    
+    // create objects to calculate the primitive solution, flux, and Jacobian
+    MAST::PrimitiveSolution      primitive_sol;
+    
+    
+    // get the surface motion object from the boundary condition object
+    MAST::SurfaceMotionBase*
+    motion = nullptr;
+    
+    if (p.contains("motion"))
+        motion = dynamic_cast<MAST::SurfaceMotionBase*>(&p.get<MAST::FieldFunction<Real> >("motion"));
+    
+
+    for (unsigned int qp=0; qp<JxW.size(); qp++)
+    {
+        // initialize the Bmat operator for this term
+        _initialize_fem_interpolation_operator(qp, dim, *fe, Bmat);
+        _initialize_fem_gradient_operator(qp, dim, *fe, dBmat);
+        
+        Bmat.right_multiply(vec1_n1, _sol);
+        
+        // initialize the primitive solution
+        primitive_sol.zero();
+        primitive_sol.init(dim,
+                           vec1_n1,
+                           flight_condition->gas_property.cp,
+                           flight_condition->gas_property.cv,
+                           if_viscous());
+
+        // copy the surface normal
+        for (unsigned int i_dim=0; i_dim<dim; i_dim++)
+            ni(i_dim) = normals[qp](i_dim);
+        
+
+        /*////////////////////////////////////////////////////////////
+        //   Calculation of the surface velocity term.
+        //        vi (ni + dni)  =  wdot_i (ni + dni)
+        //  or    vi ni = wdot_i (ni + dni) - vi dni
+        ////////////////////////////////////////////////////////////
+        
+        // now check if the surface deformation is defined and
+        // needs to be applied through transpiration boundary
+        // condition
+        
+        primitive_sol.get_uvec(uvec);
+        
+        if (motion) { // get the surface motion data
+            
+            motion->time_domain_motion(_time,
+                                       qpoint[qp],
+                                       normals[qp],
+                                       dwdot_i,
+                                       dni);
+            
+            ui_ni  = dwdot_i.dot(ni+dni) - uvec.dot(dni);
+        }*/
+        
+        
+        flux.setZero();
+        
+        // convective flux terms
+        flux                 += ui_ni * vec1_n1;           // vi ni cons_flux
+        flux(n1-1)           += ui_ni * primitive_sol.p;   // vi ni {0, 0, 0, 0, p}
+        flux.segment(1,dim)  += primitive_sol.p * ni.segment(0,dim);      // p * ni for the momentum eqs.
+        
+        // now, add the viscous flux terms
+        calculate_conservative_variable_jacobian(primitive_sol,
+                                                 dcons_dprim,
+                                                 dprim_dcons);
+        calculate_diffusion_tensors(_sol,
+                                    dBmat,
+                                    dprim_dcons,
+                                    primitive_sol,
+                                    stress,
+                                    temp_grad);
+
+        temp_grad.setZero(); // assuming adiabatic for now
+        
+        for (unsigned int i_dim=0; i_dim<dim; i_dim++) {
+            
+            calculate_diffusion_flux(i_dim,
+                                     primitive_sol,
+                                     stress,
+                                     temp_grad,
+                                     vec1_n1);
+            //flux -= ni(i_dim) * vec1_n1;
+        }
+        
+        
+        Bmat.vector_mult_transpose(vec2_n2, flux);
+        f += JxW[qp] * vec2_n2;
+
+        if ( true) { //request_jacobian ) {
+            
+            this->calculate_advection_flux_jacobian_for_moving_solid_wall_boundary
+            (primitive_sol,
+             ui_ni,
+             normals[qp],
+             dni,
+             mat1_n1n1);
+            
+            Bmat.left_multiply(mat2_n1n2, mat1_n1n1);
+            Bmat.right_multiply_transpose(mat3_n2n2, mat2_n1n2);
+            jac += JxW[qp] * mat3_n2n2;
+            
+            for (unsigned int i_dim=0; i_dim<dim; i_dim++) {
+                
+                for (unsigned int j_dim=0; j_dim<dim; j_dim++) {
+                    
+                    calculate_diffusion_flux_jacobian(i_dim,
+                                                      j_dim,
+                                                      primitive_sol,
+                                                      mat1_n1n1);
+                    
+                    dBmat[j_dim].left_multiply(mat2_n1n2, mat1_n1n1);                     // Kij dB_j
+                    dBmat[i_dim].right_multiply_transpose(mat3_n2n2, mat2_n1n2);          // dB_i^T Kij dB_j
+                                                                                          //jac -= JxW[qp]*mat3_n2n2;
+                }
+            }
+        }
+    }
     
     return false;
 }

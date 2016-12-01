@@ -57,6 +57,23 @@ namespace MAST {
                            const RealMatrixX& kmat,
                            const MAST::LAPACK_ZGGEV& eig_sol);
 
+        /*!
+         *    sort this root with respect to the given solution from a previous
+         *    eigen solution. This method relies on the modal participation.
+         *    Flutter roots from previous and current solutions with highest
+         *    dot product of modal participation vector are considered to be
+         *    similar.
+         */
+        virtual void sort(const MAST::FlutterSolutionBase& sol);
+        
+        
+        
+        /*!
+         *    prints the data and modes from this solution
+         */
+        virtual void print(std::ostream& output);
+
+        
     protected:
         
         /*!
@@ -68,6 +85,11 @@ namespace MAST {
          *   structural stiffness matrix
          */
         RealMatrixX _stiff_mat;
+
+        /*!
+         *    Matrix used for scaling of eigenvectors, and sorting of roots
+         */
+        ComplexMatrixX _Amat, _Bmat;
 
     };
 }

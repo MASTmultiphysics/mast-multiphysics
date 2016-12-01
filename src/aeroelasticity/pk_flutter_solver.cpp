@@ -17,12 +17,15 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-/*
+
 // MAST includes
 #include "aeroelasticity/pk_flutter_solver.h"
 #include "aeroelasticity/pk_flutter_solution.h"
 #include "aeroelasticity/pk_flutter_root.h"
 #include "aeroelasticity/pk_flutter_root_crossover.h"
+#include "elasticity/fsi_generalized_aero_force_assembly.h"
+#include "numerics/lapack_zggev_interface.h"
+#include "base/parameter.h"
 
 
 MAST::PKFlutterSolver::PKFlutterSolver():
@@ -60,6 +63,39 @@ MAST::PKFlutterSolver::clear() {
     
     MAST::FlutterSolverBase::clear();
 }
+
+
+
+void
+MAST::PKFlutterSolver::
+initialize(MAST::Parameter&                             V_param,
+           MAST::Parameter&                             kr_param,
+           MAST::Parameter&                             bref_param,
+           Real                                         rho,
+           Real                                         V_lower,
+           Real                                         V_upper,
+           unsigned int                                 n_V_divs,
+           Real                                         kr_lower,
+           Real                                         kr_upper,
+           unsigned int                                 n_kr_divs,
+           std::vector<libMesh::NumericVector<Real>*>& basis) {
+    
+    
+    _velocity_param     = &V_param;
+    _kred_param         = &kr_param;
+    _bref_param         = &bref_param;
+    _rho                = rho;
+    _V_range.first      = V_lower;
+    _V_range.second     = V_upper;
+    _n_V_divs           = n_V_divs;
+    _kr_range.first     = kr_lower;
+    _kr_range.second    = kr_upper;
+    _n_k_red_divs       = n_kr_divs;
+    
+    MAST::FlutterSolverBase::initialize(basis);
+
+}
+
 
 
 
@@ -138,7 +174,7 @@ MAST::PKFlutterSolver::scan_for_roots() {
             }
             v_ref_vals[_n_V_divs] = _V_range.second; // to get around finite-precision arithmetic
             
-            MAST::FlutterSolutionBase* prev_sol = NULL;
+            MAST::FlutterSolutionBase* prev_sol = nullptr;
             
             //
             // inner loop is on reduced frequencies
@@ -173,8 +209,106 @@ MAST::PKFlutterSolver::scan_for_roots() {
 
 
 
+void
+MAST::PKFlutterSolver::print_sorted_roots()
+{
+    
+    // write only if the output was set
+    if (!_output)
+        return;
+    
+    std::map<Real, MAST::FlutterSolutionBase*>::const_iterator
+    sol_it = _flutter_solutions.begin(),
+    sol_end = _flutter_solutions.end();
+    libmesh_assert(sol_it != sol_end); // solutions should have been evaluated
+    
+    unsigned int nvals = sol_it->second->n_roots();
+    libmesh_assert(nvals); // should not be zero
+    
+    // each root is written separately one after another
+    for (unsigned int i=0; i<nvals; i++)
+    {
+        // print the headers
+        *_output
+        << "** Root # "
+        << std::setw(5) << i << " **" << std::endl
+        << std::setw(15) << "kr"
+        << std::setw(15) << "g"
+        << std::setw(15) << "V" << std::endl;
+        
+        // update the iterator for this analysis
+        sol_it = _flutter_solutions.begin();
+        
+        // write the data from all solutions
+        for ( ; sol_it != sol_end; sol_it++)
+        {
+            const MAST::FlutterRootBase& root =
+            sol_it->second->get_root(i);
+            
+            *_output
+            << std::setw(15) << root.kr
+            << std::setw(15) << root.g
+            << std::setw(15) << root.V << std::endl;
+        }
+        *_output << std::endl << std::endl;
+    }
+    
+    
+    // write the roots identified using iterative search technique
+    std::streamsize prec = _output->precision();
+    
+    unsigned int nroots = this->n_roots_found();
+    *_output << std::endl
+    << "n critical roots identified: " << nroots << std::endl;
+    for (unsigned int i=0; i<nroots; i++)
+    {
+        const MAST::FlutterRootBase& root = this->get_root(i);
+        *_output
+        << "** Root : " << std::setw(5) << i << " **" << std::endl
+        << "kr     = " << std::setw(15) << std::setprecision(15) << root.kr << std::endl
+        << "V      = " << std::setw(15) << std::setprecision(15) << root.V << std::endl
+        << "g      = " << std::setw(15) << root.g << std::endl
+        << "omega  = " << std::setw(15) << root.omega << std::endl
+        << std::setprecision(prec) // set the precision to the default value
+        << "Modal Participation : " << std::endl ;
+        for (unsigned int j=0; j<nvals; j++)
+            *_output
+            << "(" << std::setw(5) << j << "): "
+            << std::setw(10) << root.modal_participation(j)
+            << std::setw(3)  << " ";
+        *_output << std::endl << std::endl;
+    }
+}
+
+
+void
+MAST::PKFlutterSolver::print_crossover_points()
+{
+    // print only if the output was set
+    if (!_output)
+        return;
+    
+    *_output << "n crossover points found: "
+    << std::setw(5) << _flutter_crossovers.size() << std::endl;
+    
+    std::multimap<Real, MAST::FlutterRootCrossoverBase*>::const_iterator
+    it = _flutter_crossovers.begin(), end = _flutter_crossovers.end();
+    
+    unsigned int i=0;
+    
+    for ( ; it != end; it++) {
+        *_output << "** Point : " << std::setw(5) << i << " **" << std::endl;
+        it->second->print(*_output);
+        *_output << std::endl;
+        i++;
+    }
+}
+
+
+
+
 std::pair<bool, MAST::FlutterSolutionBase*>
-MAST::PKFlutterSolver::bisection_search(const std::pair<MAST::FlutterSolutionBase*,
+MAST::PKFlutterSolver::_bisection_search(const std::pair<MAST::FlutterSolutionBase*,
                                         MAST::FlutterSolutionBase*>& ref_sol_range,
                                         const unsigned int root_num,
                                         const Real g_tol,
@@ -183,10 +317,10 @@ MAST::PKFlutterSolver::bisection_search(const std::pair<MAST::FlutterSolutionBas
     // assumes that the upper k_val has +ve g val and lower k_val has -ve
     // k_val
     Real
-    lower_k = ref_sol_range.first->get_root(root_num).k_red,
+    lower_k = ref_sol_range.first->get_root(root_num).kr,
     lower_v = ref_sol_range.first->get_root(root_num).V,
     lower_g = ref_sol_range.first->get_root(root_num).g,
-    upper_k = ref_sol_range.second->get_root(root_num).k_red,
+    upper_k = ref_sol_range.second->get_root(root_num).kr,
     upper_v = ref_sol_range.second->get_root(root_num).V,
     upper_g = ref_sol_range.second->get_root(root_num).g,
     new_k   = lower_k + (upper_k-lower_k)/(upper_g-lower_g)*(0.-lower_g),
@@ -194,17 +328,18 @@ MAST::PKFlutterSolver::bisection_search(const std::pair<MAST::FlutterSolutionBas
     unsigned int n_iters = 0;
     
     std::auto_ptr<MAST::FlutterSolutionBase> new_sol;
-    std::pair<bool, MAST::FlutterSolutionBase*> rval(false, NULL);
+    std::pair<bool, MAST::FlutterSolutionBase*> rval(false, nullptr);
     
     while (n_iters < max_iters) {
         
         new_v = lower_v + (upper_v-lower_v)/(upper_g-lower_g)*(0.-lower_g); // linear interpolation
         
-        new_sol.reset(analyze(new_k,
-                              new_v,
-                              ref_sol_range.first).release());
+        new_sol.reset(_analyze(new_k,
+                               new_v,
+                               ref_sol_range.first).release());
         
-        new_sol->print(_output);
+        if (_output)
+            new_sol->print(*_output);
         
         // add the solution to this solver
         _insert_new_solution(new_k, new_sol.release());
@@ -219,7 +354,7 @@ MAST::PKFlutterSolver::bisection_search(const std::pair<MAST::FlutterSolutionBas
         
         // use the estimated flutter velocity to get the next
         // V_ref value for aerodynamic matrices.
-        new_k = root.k_red;
+        new_k = root.kr;
         
         // check if the new damping value
         if (fabs(root.g) <= g_tol) {
@@ -248,15 +383,139 @@ MAST::PKFlutterSolver::bisection_search(const std::pair<MAST::FlutterSolutionBas
 
 
 
-std::pair<bool, MAST::FlutterSolutionBase*>
-MAST::PKFlutterSolver::newton_search(const MAST::FlutterSolutionBase& init_sol,
+
+const MAST::FlutterRootBase&
+MAST::PKFlutterSolver::get_root(const unsigned int n) const {
+    
+    libmesh_assert(n < n_roots_found());
+    
+    std::map<Real, MAST::FlutterRootCrossoverBase*>::const_iterator
+    it = _flutter_crossovers.begin(),
+    end = _flutter_crossovers.end();
+    
+    unsigned int root_num = 0;
+    for ( ; it!=end; it++) {
+        if (it->second->root) { // a valid root pointer has been assigned
+            if (root_num == n)  // root num matches the one being requested
+                return *(it->second->root);
+            else
+                root_num++;
+        }
+    }
+    
+    libmesh_assert(false); // should not get here
+}
+
+
+
+std::pair<bool, MAST::FlutterRootBase*>
+MAST::PKFlutterSolver::find_next_root(const Real g_tol,
+                                      const unsigned int n_bisection_iters)
+{
+    // iterate over the cross-over points and calculate the next that has
+    // not been evaluated
+    std::map<Real, MAST::FlutterRootCrossoverBase*>::iterator
+    it = _flutter_crossovers.begin(), end = _flutter_crossovers.end();
+    while ( it != end)
+    {
+        MAST::FlutterRootCrossoverBase* cross = it->second;
+        
+        if (!cross->root) {
+            const unsigned int root_num = cross->root_num;
+            std::pair<bool, MAST::FlutterSolutionBase*> sol;
+            // first try the Newton search. If that fails, then
+            // try the bisection search
+            /*sol = newton_search(*cross->crossover_solutions.second,
+             root_num,
+             g_tol,
+             n_bisection_iters);
+             if (!sol.first)*/
+            sol =   _bisection_search(cross->crossover_solutions,
+                                      root_num, g_tol, n_bisection_iters);
+            
+            cross->root = &(sol.second->get_root(root_num));
+            
+            // now, remove this entry from the _flutter_crossover points and
+            // reinsert it with the actual critical velocity
+            _flutter_crossovers.erase(it);
+            std::pair<Real, MAST::FlutterRootCrossoverBase*>
+            val(cross->root->V, cross);
+            _flutter_crossovers.insert(val);
+            return std::pair<bool, MAST::FlutterRootBase*> (true, cross->root);
+        }
+        
+        it++;
+    }
+    
+    // if it gets here, no new root was found
+    return std::pair<bool, MAST::FlutterRootBase*> (false, nullptr);
+}
+
+
+
+std::pair<bool,  MAST::FlutterRootBase*>
+MAST::PKFlutterSolver::find_critical_root(const Real g_tol,
+                                          const unsigned int n_bisection_iters)
+{
+    // iterate over the cross-over points and calculate the next that has
+    // not been evaluated
+    std::map<Real, MAST::FlutterRootCrossoverBase*>::iterator
+    it = _flutter_crossovers.begin(), end = _flutter_crossovers.end();
+    
+    if (it == end) // no potential cross-over points were identified
+        return std::pair<bool, MAST::FlutterRootBase*> (false, nullptr);
+    
+    // it is possible that once the root has been found, its velocity end up
+    // putting it at a higher velocity in the map, so we need to check if
+    // the critical root has changed
+    while (!it->second->root)
+    {
+        MAST::FlutterRootCrossoverBase* cross = it->second;
+        
+        if (!cross->root) {
+            
+            const unsigned int root_num = cross->root_num;
+            std::pair<bool, MAST::FlutterSolutionBase*> sol;
+            // first try the Newton search. If that fails, then
+            // try the bisection search
+            /*sol = newton_search(*cross->crossover_solutions.second,
+             root_num,
+             g_tol,
+             n_bisection_iters);
+             if (!sol.first)*/
+            sol =   _bisection_search(cross->crossover_solutions,
+                                      root_num, g_tol, n_bisection_iters);
+            
+            cross->root = &(sol.second->get_root(root_num));
+            
+            // now, remove this entry from the _flutter_crossover points and
+            // reinsert it with the actual critical velocity
+            _flutter_crossovers.erase(it);
+            std::pair<Real, MAST::FlutterRootCrossoverBase*>
+            val(cross->root->V, cross);
+            _flutter_crossovers.insert(val);
+        }
+        
+        // update the iterator to make sure that this is updated
+        it = _flutter_crossovers.begin(); end = _flutter_crossovers.end();
+    }
+    
+    // if it gets here, then the root was successfully found
+    return std::pair<bool, MAST::FlutterRootBase*> (true, it->second->root);
+}
+
+
+
+
+/*std::pair<bool, MAST::FlutterSolutionBase*>
+MAST::PKFlutterSolver::_newton_search(const MAST::FlutterSolutionBase& init_sol,
                                      const unsigned int root_num,
                                      const Real tol,
                                      const unsigned int max_iters) {
     
     libmesh_error(); // to be implemented
     
-    std::pair<bool, MAST::FlutterSolutionBase*> rval(false, NULL);
+    std::pair<bool, MAST::FlutterSolutionBase*> rval(false, nullptr);
     // assumes that the upper k_val has +ve g val and lower k_val has -ve
     // k_val
     Real k_red, v_ref;
@@ -396,7 +655,7 @@ MAST::PKFlutterSolver::newton_search(const MAST::FlutterSolutionBase& init_sol,
     
     return rval;
 }
-
+*/
 
 
 void
@@ -431,9 +690,9 @@ MAST::PKFlutterSolver::_insert_new_solution(const Real k_red,
         for (unsigned int i=0; i<sol->n_roots(); i++) {
             old_root  = &(it->second->get_root(i));
             new_root  = &(sol->get_root(i));
-            k_ref_old = old_root->k_red_ref;
-            dk_old    = fabs(fabs(old_root->k_red) - k_ref_old);
-            dk_new    = fabs(fabs(new_root->k_red) - k_red);
+            k_ref_old = old_root->kr;
+            dk_old    = fabs(fabs(old_root->kr) - k_ref_old);
+            dk_new    = fabs(fabs(new_root->kr) - k_red);
             
             if (dk_new < dk_old)
                 old_root->copy_root(*new_root);
@@ -505,7 +764,7 @@ void MAST::PKFlutterSolver::_identify_crossover_points()
                 if (!sol_it->second->get_root(i).if_nonphysical_root &&
                     fabs(sol_it->second->get_root(i).g) < tol) {
                     MAST::FlutterRootCrossoverBase* cross =
-                    new MAST::FlutterRootCrossoverBase;
+                    new MAST::PKFlutterRootCrossover;
                     cross->crossover_solutions.first = sol_it->second;
                     cross->crossover_solutions.second = sol_it->second;
                     cross->root = &sol_it->second->get_root(i);
@@ -546,7 +805,7 @@ void MAST::PKFlutterSolver::_identify_crossover_points()
                 if ((lower->get_root(i).g <= 0.) &&
                     (upper->get_root(i).g > 0.)) {
                     MAST::FlutterRootCrossoverBase* cross =
-                    new MAST::FlutterRootCrossoverBase;
+                    new MAST::PKFlutterRootCrossover;
                     cross->crossover_solutions.first  = lower; // -ve g
                     cross->crossover_solutions.second = upper; // +ve g
                     cross->root_num = i;
@@ -557,7 +816,7 @@ void MAST::PKFlutterSolver::_identify_crossover_points()
                 else if ((lower->get_root(i).g > 0.) &&
                          (upper->get_root(i).g <= 0.)) {
                     MAST::FlutterRootCrossoverBase* cross =
-                    new MAST::FlutterRootCrossoverBase;
+                    new MAST::PKFlutterRootCrossover;
                     cross->crossover_solutions.first  = upper; // -ve g
                     cross->crossover_solutions.second = lower; // +ve g
                     cross->root_num = i;
@@ -577,9 +836,9 @@ void MAST::PKFlutterSolver::_identify_crossover_points()
 
 
 std::auto_ptr<MAST::FlutterSolutionBase>
-MAST::PKFlutterSolver::analyze(const Real k_red,
-                               const Real v_ref,
-                               const MAST::FlutterSolutionBase* prev_sol) {
+MAST::PKFlutterSolver::_analyze(const Real k_red,
+                                const Real v_ref,
+                                const MAST::FlutterSolutionBase* prev_sol) {
     // solve the eigenproblem  L x = lambda R x
     ComplexMatrixX R, L;
     RealMatrixX stiff;
@@ -590,7 +849,7 @@ MAST::PKFlutterSolver::analyze(const Real k_red,
     << "   k_red = " << std::setw(10) << k_red << std::endl
     << "   V_ref = " << std::setw(10) << v_ref << std::endl;
     
-    initialize_matrices(k_red, v_ref, L, R, stiff);
+    _initialize_matrices(k_red, v_ref, L, R, stiff);
     LAPACK_ZGGEV ges;
     ges.compute(L, R);
     ges.scale_eigenvectors_to_identity_innerproduct();
@@ -598,7 +857,7 @@ MAST::PKFlutterSolver::analyze(const Real k_red,
     MAST::PKFlutterSolution* root = new MAST::PKFlutterSolution;
     root->init(*this,
                k_red, v_ref,
-               flight_condition->ref_chord,
+               (*_bref_param)(),
                stiff, ges);
     if (prev_sol)
         root->sort(*prev_sol);
@@ -618,13 +877,12 @@ void
 MAST::PKFlutterSolver::calculate_sensitivity(MAST::FlutterRootBase& root,
                                              const libMesh::ParameterVector& params,
                                              const unsigned int i) {
-    // make sure that the aero_structural_model is a valid pointer
-    libmesh_assert(aero_structural_model);
-    
+
+    /*
     libMesh::out
     << " ====================================================" << std::endl
     << "PK Sensitivity Solution" << std::endl
-    << "   k_red = " << std::setw(10) << root.k_red << std::endl
+    << "   k_red = " << std::setw(10) << root.kr << std::endl
     << "   V_ref = " << std::setw(10) << root.V << std::endl;
     
     Complex eig = root.root, sens = 0., k_sens = 0., den = 0.;
@@ -637,14 +895,14 @@ MAST::PKFlutterSolver::calculate_sensitivity(MAST::FlutterRootBase& root,
     RealMatrixX stiff;
     
     // initialize the baseline matrices
-    initialize_matrices(root.k_red_ref, root.V_ref, mat_A, mat_B, stiff);
+    _initialize_matrices(root.kr, root.V, mat_A, mat_B, stiff);
     
     // calculate the eigenproblem sensitivity
-    initialize_matrix_sensitivity_for_param(params, i,
-                                            root.k_red_ref,
-                                            root.V_ref,
-                                            mat_A_sens,
-                                            mat_B_sens);
+    _initialize_matrix_sensitivity_for_param(params, i,
+                                             root.kr,
+                                             root.V,
+                                             mat_A_sens,
+                                             mat_B_sens);
     
     // the eigenproblem is     A x - lambda B x = 0
     // therefore, the denominator is obtained from the inner product of
@@ -669,10 +927,10 @@ MAST::PKFlutterSolver::calculate_sensitivity(MAST::FlutterRootBase& root,
     
     // next we need the sensitivity of k_red before we can calculate
     // the sensitivity of flutter eigenvalue
-    initialize_matrix_sensitivity_for_reduced_freq(root.k_red_ref,
-                                                   root.V_ref,
-                                                   mat_A_sens,
-                                                   mat_B_sens);
+    _initialize_matrix_sensitivity_for_reduced_freq(root.kr,
+                                                    root.V,
+                                                    mat_A_sens,
+                                                    mat_B_sens);
     
     // now calculate the quotient for sensitivity wrt k_red
     // calculate numerator
@@ -702,219 +960,76 @@ MAST::PKFlutterSolver::calculate_sensitivity(MAST::FlutterRootBase& root,
     libMesh::out
     << "Finished PK Sensitivity Solution" << std::endl
     << " ====================================================" << std::endl;
-    
+ */
 }
 
 
 
 
 void
-MAST::PKFlutterSolver::initialize_matrices(const Real k_red,
-                                           const Real v_ref,
-                                           ComplexMatrixX& L, // stiff, aero, damp
-                                           ComplexMatrixX& R, // mass
-                                           RealMatrixX& stiff)// stiffness
+MAST::PKFlutterSolver::_initialize_matrices(const Real k_red,
+                                            const Real v_ref,
+                                            ComplexMatrixX& A, // stiff, aero, damp
+                                            ComplexMatrixX& B, // mass
+                                            RealMatrixX& stiff)// stiffness
 {
+    // the PK method equations are
+    //
+    //   p [ I  0 ] {  X } =  [ 0      I ] {  X }
+    //     [ 0  M ] { pX }    [-K-qA   -C] { pX }
+    // where M and K are the structural reduced-order mass and stiffness
+    // matrices, and A(kr) is the generalized aerodynamic force matrix.
+    //
+
     
-    bool has_matrix = false;
-    RealMatrixX mat_r;
-    ComplexMatrixX mat_c;
+    const unsigned int n = (unsigned int)_basis_vectors->size();
+
+    RealMatrixX
+    m      =  RealMatrixX::Zero(n, n),
+    k      =  RealMatrixX::Zero(n, n);
     
-    const unsigned int n_dofs = aero_structural_model->n_dofs();
-    L.setZero(2*n_dofs, 2*n_dofs);
-    R.setZero(2*n_dofs, 2*n_dofs);
+    ComplexMatrixX
+    a      =  ComplexMatrixX::Zero(n, n);
+
     
+    // now prepare a map of the quantities and ask the assembly object to
+    // calculate the quantities of interest.
+    std::map<MAST::StructuralQuantityType, RealMatrixX*> qty_map;
+    qty_map[MAST::MASS]       = &m;
+    qty_map[MAST::STIFFNESS]  = &k;
+
     
-    // stiffness matrix
-    has_matrix = aero_structural_model->get_structural_stiffness_matrix(stiff);
-    libmesh_assert(has_matrix);
+    // set the velocity value in the parameter that was provided
+    (*_kred_param)      = k_red;
+    (*_velocity_param)  = v_ref;
     
-    for (unsigned int i=0; i<n_dofs; i++) {
-        L(i,n_dofs+i) = 1.;
-        R(i,i) = 1.;
-        for (unsigned int j=0; j<n_dofs; j++)
-            L(n_dofs+i,j) = -stiff(i,j);
-    }
+    _assembly->assemble_reduced_order_quantity(*_basis_vectors, qty_map);
+
+    dynamic_cast<MAST::FSIGeneralizedAeroForceAssembly*>(_assembly)->
+    assemble_generalized_aerodynamic_force_matrix(*_basis_vectors, a);
+
+
+    A.topRightCorner    (n, n)    =  ComplexMatrixX::Identity(n, n);
+    A.bottomLeftCorner  (n, n)    = -k.cast<Complex>() - _rho/2.*v_ref*v_ref*a;
+    B.topLeftCorner     (n, n)    = ComplexMatrixX::Identity(n, n);
+    B.bottomRightCorner (n, n)    = m.cast<Complex>();
     
-    // damping matrix
-    has_matrix = aero_structural_model->get_structural_damping_matrix(mat_r);
-    
-    if (has_matrix) {
-        for (unsigned int i=0; i<n_dofs; i++)
-            for (unsigned int j=0; j<n_dofs; j++)
-                L(n_dofs+i,n_dofs+j) = -mat_r(i,j);
-    }
-    
-    
-    // mass matrix
-    has_matrix = aero_structural_model->get_structural_mass_matrix(mat_r);
-    libmesh_assert(has_matrix);
-    
-    for (unsigned int i=0; i<n_dofs; i++)
-        for (unsigned int j=0; j<n_dofs; j++)
-            R(n_dofs+i,n_dofs+j) = mat_r(i,j);
-    
-    // aerodynamic operator matrix
-    has_matrix =
-    aero_structural_model->get_aero_operator_matrix(k_red, v_ref, mat_c);
-    libmesh_assert(has_matrix);
-    
-    for (unsigned int i=0; i<n_dofs; i++)
-        for (unsigned int j=0; j<n_dofs; j++)
-            L(n_dofs+i,j) +=
-            0.5 * flight_condition->gas_property.rho * pow(v_ref,2) *
-            mat_c(i,j);
 }
 
 
 
 void
 MAST::PKFlutterSolver::
-initialize_matrix_sensitivity_for_param(const libMesh::ParameterVector& params,
-                                        unsigned int p,
-                                        const Real k_red,
-                                        const Real v_ref,
-                                        ComplexMatrixX& L,   // stiff, aero, damp
-                                        ComplexMatrixX& R) { // mass
+_initialize_matrix_sensitivity_for_param(const libMesh::ParameterVector& params,
+                                         unsigned int p,
+                                         const Real k_red,
+                                         const Real v_ref,
+                                         ComplexMatrixX& L,   // stiff, aero, damp
+                                         ComplexMatrixX& R) { // mass
     
-    bool has_matrix = false;
-    RealMatrixX mat_r;
-    ComplexMatrixX mat_c;
-    
-    const unsigned int n_dofs = aero_structural_model->n_dofs();
-    L.setZero(2*n_dofs, 2*n_dofs);
-    R.setZero(2*n_dofs, 2*n_dofs);
-    
-    
-    // mass matrix sensitivity
-    has_matrix =
-    aero_structural_model->get_structural_stiffness_matrix_sensitivity(params,
-                                                                       p,
-                                                                       mat_r);
-    libmesh_assert(has_matrix);
-    
-    for (unsigned int i=0; i<n_dofs; i++) {
-        L(i,n_dofs+i) = 1.;
-        R(i,i) = 1.;
-        for (unsigned int j=0; j<n_dofs; j++)
-            L(n_dofs+i,j) = -mat_r(i,j);
-    }
-    
-    
-    // mass matrix sensitivity
-    has_matrix =
-    aero_structural_model->get_structural_damping_matrix_sensitivity(params,
-                                                                     p,
-                                                                     mat_r);
-    
-    if (has_matrix) {
-        for (unsigned int i=0; i<n_dofs; i++)
-            for (unsigned int j=0; j<n_dofs; j++)
-                L(n_dofs+i,n_dofs+j) = -mat_r(i,j);
-    }
-    
-    
-    // mass matrix sensitivity
-    has_matrix =
-    aero_structural_model->get_structural_mass_matrix_sensitivity(params,
-                                                                  p,
-                                                                  mat_r);
-    libmesh_assert(has_matrix);
-    
-    for (unsigned int i=0; i<n_dofs; i++)
-        for (unsigned int j=0; j<n_dofs; j++)
-            R(n_dofs+i,n_dofs+j) = mat_r(i,j);
-    
-    
-    // aerodynamic operator matrix sensitivity
-    has_matrix =
-    aero_structural_model->get_aero_operator_matrix_sensitivity(params,
-                                                                p,
-                                                                k_red, v_ref,
-                                                                mat_c);
-    libmesh_assert(has_matrix);
-    
-    for (unsigned int i=0; i<n_dofs; i++)
-        for (unsigned int j=0; j<n_dofs; j++)
-            L(n_dofs+i,j) +=
-            0.5 * flight_condition->gas_property.rho * pow(v_ref,2) *
-            mat_c(i,j);
-    
+
+    libmesh_error(); // to be implemented
 }
 
 
 
-
-void
-MAST::PKFlutterSolver::
-initialize_matrix_sensitivity_for_reduced_freq(const Real k_red,
-                                               const Real v_ref,
-                                               ComplexMatrixX& L,   // stiff, aero, damp
-                                               ComplexMatrixX& R) { // mass
-    bool has_matrix = false;
-    RealMatrixX mat_r;
-    ComplexMatrixX mat_c;
-    
-    const unsigned int n_dofs = aero_structural_model->n_dofs();
-    
-    L.setZero(2*n_dofs, 2*n_dofs);
-    R.setZero(2*n_dofs, 2*n_dofs);
-    
-    // aerodynamic operator matrix sensitivity
-    has_matrix =
-    aero_structural_model->get_aero_operator_matrix_sensitivity_for_reduced_freq(k_red,
-                                                                                 v_ref,
-                                                                                 mat_c);
-    libmesh_assert(has_matrix);
-    
-    for (unsigned int i=0; i<n_dofs; i++)
-        for (unsigned int j=0; j<n_dofs; j++)
-            L(n_dofs+i,j) +=
-            0.5 * flight_condition->gas_property.rho * pow(v_ref,2) *
-            mat_c(i,j);
-}
-
-
-
-void
-MAST::PKFlutterSolver::
-initialize_matrix_sensitivity_for_V_ref(const Real k_red,
-                                        const Real v_ref,
-                                        ComplexMatrixX& L,   // stiff, aero, damp
-                                        ComplexMatrixX& R) { // mass
-    bool has_matrix = false;
-    RealMatrixX mat_r;
-    ComplexMatrixX mat_c;
-    
-    const unsigned int n_dofs = aero_structural_model->n_dofs();
-    
-    L.setZero(2*n_dofs, 2*n_dofs);
-    R.setZero(2*n_dofs, 2*n_dofs);
-    
-    // aerodynamic operator matrix
-    has_matrix =
-    aero_structural_model->get_aero_operator_matrix(k_red, v_ref, mat_c);
-    libmesh_assert(has_matrix);
-    
-    for (unsigned int i=0; i<n_dofs; i++)
-        for (unsigned int j=0; j<n_dofs; j++)
-            L(n_dofs+i,j) +=
-            flight_condition->gas_property.rho * v_ref * mat_c(i,j);
-    
-    
-    // aerodynamic operator matrix sensitivity
-    has_matrix =
-    aero_structural_model->get_aero_operator_matrix_sensitivity_for_V_ref(k_red,
-                                                                          v_ref,
-                                                                          mat_c);
-    libmesh_assert(has_matrix);
-    
-    for (unsigned int i=0; i<n_dofs; i++)
-        for (unsigned int j=0; j<n_dofs; j++)
-            L(n_dofs+i,j) +=
-            0.5 * flight_condition->gas_property.rho * pow(v_ref,2) *
-            mat_c(i,j);
-}
-
-
-*/

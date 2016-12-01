@@ -39,7 +39,6 @@ MAST::FluidElemBase::FluidElemBase(const unsigned int d,
                                    const MAST::FlightCondition& f):
 _if_viscous(false),
 _include_pressure_switch(false),
-//surface_motion(nullptr),
 flight_condition(&f),
 dim(d),
 _dissipation_scaling(1.) {
@@ -74,119 +73,6 @@ MAST::FluidElemBase::~FluidElemBase() {
     
     
 }
-
-
-
-//void
-//MAST::FluidElemBase::init_data () {
-//    
-//    // check if the simulation is viscous or inviscid
-//    _include_pressure_switch =
-//    _infile("include_pressure_switch", true);
-//    _dissipation_scaling = _infile("dissipation_scaling", 1.0);
-//    
-//    // read the boundary conditions
-//    unsigned int n_bc, bc_id;
-//    // first the inviscid conditions
-//    // slip wall bc
-//    n_bc = _infile("n_slip_wall_bc", 0);
-//    if (n_bc > 0)
-//    {
-//        for (unsigned int i_bc=0; i_bc<n_bc; i_bc++)
-//        {
-//            bc_id = _infile("slip_wall_bc", 0, i_bc);
-//            _boundary_condition.insert
-//            (std::multimap<unsigned int, FluidBoundaryConditionType>::value_type
-//             (bc_id, SLIP_WALL));
-//        }
-//    }
-//    
-//    
-//    // symmetry wall bc
-//    n_bc = _infile("n_symmetry_wall_bc", 0);
-//    if (n_bc > 0)
-//    {
-//        for (unsigned int i_bc=0; i_bc<n_bc; i_bc++)
-//        {
-//            bc_id = _infile("symmetry_wall_bc", 0, i_bc);
-//            _boundary_condition.insert
-//            (std::multimap<unsigned int, FluidBoundaryConditionType>::value_type
-//             (bc_id, SYMMETRY_WALL));
-//        }
-//    }
-//    
-//    
-//    // far field bc
-//    n_bc = _infile("n_far_field_bc", 0);
-//    if (n_bc > 0)
-//    {
-//        for (unsigned int i_bc=0; i_bc<n_bc; i_bc++)
-//        {
-//            bc_id = _infile("far_field_bc", 0, i_bc);
-//            _boundary_condition.insert
-//            (std::multimap<unsigned int, FluidBoundaryConditionType>::value_type
-//             (bc_id, FAR_FIELD));
-//        }
-//    }
-//    
-//    // exhaust bc
-//    n_bc = _infile("n_exhaust_bc", 0);
-//    if (n_bc > 0)
-//    {
-//        for (unsigned int i_bc=0; i_bc<n_bc; i_bc++)
-//        {
-//            bc_id = _infile("exhaust_bc", 0, i_bc);
-//            _boundary_condition.insert
-//            (std::multimap<unsigned int, FluidBoundaryConditionType>::value_type
-//             (bc_id, EXHAUST));
-//        }
-//    }
-//    
-//    // now the viscous boundary conditions
-//    if (_if_viscous)
-//    {
-//        // no-slip wall
-//        n_bc = _infile("n_no_slip_bc", 0);
-//        if (n_bc > 0)
-//        {
-//            for (unsigned int i_bc=0; i_bc<n_bc; i_bc++)
-//            {
-//                bc_id = _infile("no_slip_bc", 0, i_bc);
-//                _boundary_condition.insert
-//                (std::multimap<unsigned int, FluidBoundaryConditionType>::value_type
-//                 (bc_id, NO_SLIP_WALL));
-//            }
-//        }
-//        
-//        // isothermal bc
-//        n_bc = _infile("n_isothermal_bc", 0);
-//        if (n_bc > 0)
-//        {
-//            for (unsigned int i_bc=0; i_bc<n_bc; i_bc++)
-//            {
-//                bc_id = _infile("isothermal_bc", 0, i_bc);
-//                _boundary_condition.insert
-//                (std::multimap<unsigned int, FluidBoundaryConditionType>::value_type
-//                 (bc_id, ISOTHERMAL));
-//            }
-//        }
-//        
-//        // adiabatic wall
-//        n_bc = _infile("n_adiabatic_bc", 0);
-//        if (n_bc > 0)
-//        {
-//            for (unsigned int i_bc=0; i_bc<n_bc; i_bc++)
-//            {
-//                bc_id = _infile("adiabatic_bc", 0, i_bc);
-//                _boundary_condition.insert
-//                (std::multimap<unsigned int, FluidBoundaryConditionType>::value_type
-//                 (bc_id, ADIABATIC));
-//            }
-//        }
-//    }
-//    
-//    
-//}
 
 
 
@@ -350,14 +236,14 @@ MAST::FluidElemBase::calculate_diffusion_flux(const unsigned int calculate_dim,
     flux.setZero();
     
     // the momentum flux is obtained from the stress tensor
-    for (unsigned int i_dim=0; i_dim<dim; i_dim++)
-    {
+    for (unsigned int i_dim=0; i_dim<dim; i_dim++) {
+        
         flux(1+i_dim) = stress_tensor(calculate_dim, i_dim); // tau_ij
         
-        flux(n1-1) =
-        (sol.k_thermal * temp_gradient(i_dim) +
-         uvec(i_dim) * stress_tensor(calculate_dim, i_dim));
+        flux(n1-1) += uvec(i_dim) * stress_tensor(calculate_dim, i_dim); // u_j tau_ij
     }
+
+    flux(n1-1) += sol.k_thermal * temp_gradient(calculate_dim);
 }
 
 
@@ -381,13 +267,13 @@ calculate_diffusion_tensors(const RealVectorX& elem_sol,
     stress_tensor.setZero();
     temp_gradient.setZero();
     
-    for (unsigned int i_dim=0; i_dim<dim; i_dim++)
-    {
+    for (unsigned int i_dim=0; i_dim<dim; i_dim++) {
+        
         dB_mat[i_dim].vector_mult(dcons_dx, elem_sol); // dUcons/dx_i
         dprim_dx = dprim_dcons * dcons_dx; // dUprim/dx_i
         
-        for (unsigned int j_dim=0; j_dim<dim; j_dim++)
-        {
+        for (unsigned int j_dim=0; j_dim<dim; j_dim++) {
+            
             stress_tensor(i_dim, j_dim) += psol.mu * dprim_dx(j_dim+1); // mu * duj/dxi
             stress_tensor(j_dim, i_dim) += psol.mu * dprim_dx(j_dim+1); // mu * dui/dxj
             

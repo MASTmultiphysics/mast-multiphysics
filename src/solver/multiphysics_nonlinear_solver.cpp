@@ -80,16 +80,25 @@ __mast_multiphysics_petsc_snes_residual (SNES snes, Vec x, Vec r, void * ctx)
     libmesh_assert(r);
     libmesh_assert(ctx);
     
-    // No way to safety-check this cast, since we got a void *...
     MAST::MultiphysicsNonlinearSolverBase * solver =
     static_cast<MAST::MultiphysicsNonlinearSolverBase*> (ctx);
+
+    const unsigned int
+    nd = solver->n_disciplines();
     
-    // global communicator context
-    MPI_Comm g_comm = solver->comm();
-    libMesh::Parallel::Communicator comm(g_comm);
+    std::vector<Vec>
+    sol(nd),
+    res(nd);
+
+    std::vector<libMesh::NumericVector<Real>*>
+    sys_sols(nd, nullptr),
+    sys_res (nd, nullptr);
     
-    // iterate over each system and evaluate the residual
-    for (unsigned int i=0; i< solver->n_disciplines(); i++) {
+
+    //////////////////////////////////////////////////////////////////
+    // get the subvectors for each discipline
+    //////////////////////////////////////////////////////////////////
+    for (unsigned int i=0; i< nd; i++) {
         
         // system for this discipline
         libMesh::NonlinearImplicitSystem&
@@ -98,40 +107,83 @@ __mast_multiphysics_petsc_snes_residual (SNES snes, Vec x, Vec r, void * ctx)
         
         // get the IS for this system
         IS sys_is = solver->index_sets()[i];
-        Vec sol, res;
         
         // extract the subvector for this system
-        ierr = VecGetSubVector(x, sys_is, &sol);      CHKERRABORT(g_comm, ierr);
-        ierr = VecGetSubVector(r, sys_is, &res);      CHKERRABORT(g_comm, ierr);
+        ierr = VecGetSubVector(x, sys_is, &sol[i]);      CHKERRABORT(solver->comm().get(), ierr);
+        ierr = VecGetSubVector(r, sys_is, &res[i]);      CHKERRABORT(solver->comm().get(), ierr);
         
-        std::auto_ptr<libMesh::NumericVector<Real> >
-        sol_vec(new libMesh::PetscVector<Real>(sol, sys.comm())),
-        res_vec(new libMesh::PetscVector<Real>(res, sys.comm()));
+        sys_sols[i] = new libMesh::PetscVector<Real>(sol[i], sys.comm()),
+        sys_res[i]  = new libMesh::PetscVector<Real>(res[i], sys.comm());
+    }
+
+    //////////////////////////////////////////////////////////////////
+    // initialize the data structures before calculation of residuals
+    //////////////////////////////////////////////////////////////////
+    if (solver->get_pre_residual_update_object())
+        solver->get_pre_residual_update_object()->update_at_solution(sys_sols);
+    
+    //////////////////////////////////////////////////////////////////
+    // calculate the residuals
+    //////////////////////////////////////////////////////////////////
+    std::vector<Real>
+    l2_norms(nd, 0.);
+    
+    Real
+    global_l2 = 0.;
+
+    for (unsigned int i=0; i< nd; i++) {
         
-        // Use the system's update() to get a good local version of the
-        // parallel solution.  This operation does not modify the incoming
-        // "x" vector, it only localizes information from "x" into
-        // sys.current_local_solution.
-        //X_global.swap(X_sys);
-        //sys.update();
-        //X_global.swap(X_sys);
+        // system for this discipline
+        libMesh::NonlinearImplicitSystem&
+        sys = dynamic_cast<libMesh::NonlinearImplicitSystem&>
+        (solver->get_system_assembly(i).system());
         
-        // Enforce constraints (if any) exactly on the
-        // current_local_solution.  This is the solution vector that is
-        // actually used in the computation of the residual below, and is
-        // not locked by debug-enabled PETSc the way that "x" is.
-        //sys.get_dof_map().enforce_constraints_exactly(sys, sys.current_local_solution.get());
-        
-        solver->get_system_assembly(i).residual_and_jacobian (*sol_vec,
-                                                              res_vec.get(),
+        solver->get_system_assembly(i).residual_and_jacobian (*sys_sols[i],
+                                                              sys_res[i],
                                                               nullptr,
                                                               sys);
         
-        res_vec->close();
+        if (i == 0)
+            sys_res[0]->operator=(0.01);
+        sys_res[i]->close();
+        
+        // now calculate the norms
+        l2_norms[i]  = sys_res[i]->l2_norm();
+        global_l2   += pow(l2_norms[i], 2);
+    }
+    
+    global_l2 = pow(global_l2, 0.5);
+    
+    // write the global and component-wise l2 norms of the residual
+    libMesh::out
+    << "|| R ||_2 = " << global_l2 << "  : || R_i ||_2 = ( ";
+    for (unsigned int i=0; i<nd; i++) {
+        libMesh::out << l2_norms[i];
+        if (i < nd-1)
+            libMesh::out << " , ";
+    }
+    libMesh::out << " )" << std::endl;
+    
+    //////////////////////////////////////////////////////////////////
+    // resotre the subvectors
+    //////////////////////////////////////////////////////////////////
+    for (unsigned int i=0; i< nd; i++) {
+        
+        // system for this discipline
+        libMesh::NonlinearImplicitSystem&
+        sys = dynamic_cast<libMesh::NonlinearImplicitSystem&>
+        (solver->get_system_assembly(i).system());
+        
+        // get the IS for this system
+        IS sys_is = solver->index_sets()[i];
+
+        // delete the NumericVector wrappers
+        delete sys_sols[i];
+        delete sys_res[i];
         
         // now restore the subvectors
-        ierr = VecRestoreSubVector(x, sys_is, &sol);  CHKERRABORT(g_comm, ierr);
-        ierr = VecRestoreSubVector(r, sys_is, &res);  CHKERRABORT(g_comm, ierr);
+        ierr = VecRestoreSubVector(x, sys_is, &sol[i]);  CHKERRABORT(solver->comm().get(), ierr);
+        ierr = VecRestoreSubVector(r, sys_is, &res[i]);  CHKERRABORT(solver->comm().get(), ierr);
     }
     
     return ierr;
@@ -144,6 +196,7 @@ __mast_multiphysics_petsc_snes_residual (SNES snes, Vec x, Vec r, void * ctx)
 PetscErrorCode
 __mast_multiphysics_petsc_snes_jacobian(SNES snes, Vec x, Mat jac, Mat pc, void * ctx)
 {
+    
     LOG_SCOPE("jacobian()", "PetscMultiphysicsNonlinearSolver");
     
     PetscErrorCode ierr=0;
@@ -152,17 +205,25 @@ __mast_multiphysics_petsc_snes_jacobian(SNES snes, Vec x, Mat jac, Mat pc, void 
     libmesh_assert(jac);
     libmesh_assert(pc);
     libmesh_assert(ctx);
+
     
-    // No way to safety-check this cast, since we got a void *...
     MAST::MultiphysicsNonlinearSolverBase * solver =
     static_cast<MAST::MultiphysicsNonlinearSolverBase*> (ctx);
     
-    // global communicator context
-    MPI_Comm g_comm = solver->comm();
-    libMesh::Parallel::Communicator comm(g_comm);
+    const unsigned int
+    nd = solver->n_disciplines();
     
-    // iterate over each system and evaluate the residual
-    for (unsigned int i=0; i< solver->n_disciplines(); i++) {
+    std::vector<Vec>
+    sol(nd);
+    
+    std::vector<libMesh::NumericVector<Real>*>
+    sys_sols(nd, nullptr);
+    
+    
+    //////////////////////////////////////////////////////////////////
+    // get the subvectors for each discipline
+    //////////////////////////////////////////////////////////////////
+    for (unsigned int i=0; i< nd; i++) {
         
         // system for this discipline
         libMesh::NonlinearImplicitSystem&
@@ -171,14 +232,29 @@ __mast_multiphysics_petsc_snes_jacobian(SNES snes, Vec x, Mat jac, Mat pc, void 
         
         // get the IS for this system
         IS sys_is = solver->index_sets()[i];
-        Vec sol;
-        
         
         // extract the subvector for this system
-        ierr = VecGetSubVector(x, sys_is, &sol);      CHKERRABORT(g_comm, ierr);
+        ierr = VecGetSubVector(x, sys_is, &sol[i]);      CHKERRABORT(solver->comm().get(), ierr);
         
-        std::auto_ptr<libMesh::NumericVector<Real> >
-        sol_vec(new libMesh::PetscVector<Real>(sol, sys.comm()));
+        sys_sols[i] = new libMesh::PetscVector<Real>(sol[i], sys.comm());
+    }
+    
+    
+    //////////////////////////////////////////////////////////////////
+    // initialize the data structures before calculation of residuals
+    //////////////////////////////////////////////////////////////////
+    if (solver->get_pre_residual_update_object())
+        solver->get_pre_residual_update_object()->update_at_solution(sys_sols);
+    
+    //////////////////////////////////////////////////////////////////
+    // calculate the residuals
+    //////////////////////////////////////////////////////////////////
+    for (unsigned int i=0; i< nd; i++) {
+        
+        // system for this discipline
+        libMesh::NonlinearImplicitSystem&
+        sys = dynamic_cast<libMesh::NonlinearImplicitSystem&>
+        (solver->get_system_assembly(i).system());
         
         // Use the system's update() to get a good local version of the
         // parallel solution.  This operation does not modify the incoming
@@ -193,22 +269,39 @@ __mast_multiphysics_petsc_snes_jacobian(SNES snes, Vec x, Mat jac, Mat pc, void 
         // actually used in the computation of the residual below, and is
         // not locked by debug-enabled PETSc the way that "x" is.
         //sys.get_dof_map().enforce_constraints_exactly(sys, sys.current_local_solution.get());
-
+        
         //PetscMatrix<Number> PC(pc, sys.comm());
         //PC.attach_dof_map(sys.get_dof_map());
         //PC.close();
-        
-        solver->get_system_assembly(i).residual_and_jacobian (*sol_vec,
+
+        solver->get_system_assembly(i).residual_and_jacobian (*sys_sols[i],
                                                               nullptr,
                                                               sys.matrix,
                                                               sys);
         
         sys.matrix->close();
+    }
+
+    //////////////////////////////////////////////////////////////////
+    // resotre the subvectors
+    //////////////////////////////////////////////////////////////////
+    for (unsigned int i=0; i< nd; i++) {
+        
+        // system for this discipline
+        libMesh::NonlinearImplicitSystem&
+        sys = dynamic_cast<libMesh::NonlinearImplicitSystem&>
+        (solver->get_system_assembly(i).system());
+        
+        // get the IS for this system
+        IS sys_is = solver->index_sets()[i];
+        
+        // delete the NumericVector wrappers
+        delete sys_sols[i];
         
         // now restore the subvectors
-        ierr = VecRestoreSubVector(x, sys_is, &sol);  CHKERRABORT(g_comm, ierr);
+        ierr = VecRestoreSubVector(x, sys_is, &sol[i]);  CHKERRABORT(solver->comm().get(), ierr);
     }
-    
+
     return ierr;
 }
 
@@ -217,14 +310,17 @@ __mast_multiphysics_petsc_snes_jacobian(SNES snes, Vec x, Mat jac, Mat pc, void 
 
 
 MAST::MultiphysicsNonlinearSolverBase::
-MultiphysicsNonlinearSolverBase(const std::string& nm,
+MultiphysicsNonlinearSolverBase(const libMesh::Parallel::Communicator& comm_in,
+                                const std::string& nm,
                                 unsigned int n):
-_name(nm),
-_n_disciplines(n),
-_discipline_assembly(n, nullptr),
-_is(_n_disciplines, PETSC_NULL),
-_sub_mats(_n_disciplines*_n_disciplines, PETSC_NULL),
-_n_dofs(0) {
+libMesh::ParallelObject       (comm_in),
+_name                         (nm),
+_n_disciplines                (n),
+_update                       (nullptr),
+_discipline_assembly          (n, nullptr),
+_is                           (_n_disciplines, PETSC_NULL),
+_sub_mats                     (_n_disciplines*_n_disciplines, PETSC_NULL),
+_n_dofs                       (0) {
     
 }
 
@@ -275,33 +371,10 @@ MAST::MultiphysicsNonlinearSolverBase::solve() {
     
     
     // make sure that all systems have been specified
-    bool p = false;
+    bool p = true;
     for (unsigned int i=0; i<_n_disciplines; i++)
-        p = _discipline_assembly[i] != nullptr;
+        p = ((_discipline_assembly[i] != nullptr) && p);
     libmesh_assert(p);
-    
-    //////////////////////////////////////////////////////////////////////
-    // create a global communicator spanning all disciplines, which will be
-    // used for the snes context
-    //////////////////////////////////////////////////////////////////////
-    
-    MPI_Comm_group(_discipline_assembly[0]->system().comm().get(), &_g_union);
-    for (unsigned int i=1; i<_n_disciplines; i++) {
-        
-        MPI_Group  g1, g2;
-        
-        MPI_Comm_group(_discipline_assembly[i]->system().comm().get(), &g1);
-        MPI_Group_union(g1, _g_union, &g2);
-        MPI_Group_free(&g1);
-        MPI_Group_free(&_g_union);
-        _g_union = g2;
-    }
-    
-    // g_union should now have the union of all groups over all disciplines.
-    // Use it to create a new communicator for the snes context
-    MPI_Comm_create_group(MPI_COMM_WORLD, _g_union, 0, &_g_comm);
-
-    
     
     
     //////////////////////////////////////////////////////////////////////
@@ -316,15 +389,16 @@ MAST::MultiphysicsNonlinearSolverBase::solve() {
     
     // all diagonal blocks use the system matrcices, while shell matrices
     // are created for the off-diagonal terms.
-    for (unsigned int i=0; i<_n_disciplines; i++)
-        for (unsigned int j=0; j<_n_disciplines; j++) {
-    
+    for (unsigned int i=0; i<_n_disciplines; i++) {
+        
         libMesh::NonlinearImplicitSystem& sys =
         dynamic_cast<libMesh::NonlinearImplicitSystem&>(_discipline_assembly[i]->system());
         
         // add the number of dofs in this system to the global count
         _n_dofs   +=  sys.n_dofs();
         
+        for (unsigned int j=0; j<_n_disciplines; j++) {
+            
             if (i==j) {
                 
                 // the diagonal matrix
@@ -343,14 +417,14 @@ MAST::MultiphysicsNonlinearSolverBase::solve() {
                 mat_j_n_l  = sys_j.get_dof_map().n_dofs_on_processor(sys.processor_id());
                 
                 // the off-diagonal matrix
-                ierr = MatCreateShell(_g_comm,
+                ierr = MatCreateShell(this->comm().get(),
                                       mat_i_n_l,
                                       mat_j_n_l,
                                       mat_i_m,
-                                      mat_j_n_l,
+                                      mat_j_m,
                                       PETSC_NULL,
                                       &_sub_mats[i*_n_disciplines+j]);
-                CHKERRABORT(_g_comm, ierr);
+                CHKERRABORT(this->comm().get(), ierr);
                 
                 // initialize the context and tell the matrix about it
                 mat_ctx[i*_n_disciplines+j].i      = i;
@@ -359,46 +433,45 @@ MAST::MultiphysicsNonlinearSolverBase::solve() {
                 
                 ierr = MatShellSetContext(_sub_mats[i*_n_disciplines+j],
                                           &mat_ctx[i*_n_disciplines+j]);
-                CHKERRABORT(_g_comm, ierr);
+                CHKERRABORT(this->comm().get(), ierr);
                 
                 // set the mat-vec multiplication operation for this
                 // shell matrix
                 ierr = MatShellSetOperation(_sub_mats[i*_n_disciplines+j],
                                             MATOP_MULT,
                                             (void(*)(void))__mast_multiphysics_petsc_mat_mult);
-                CHKERRABORT(_g_comm, ierr);
+                CHKERRABORT(this->comm().get(), ierr);
             }
+        }
     }
-
     
-    ierr = MatCreateNest(_g_comm,
+    
+    ierr = MatCreateNest(this->comm().get(),
                          _n_disciplines, PETSC_NULL,
                          _n_disciplines, PETSC_NULL,
                          &_sub_mats[0],
                          &_mat);
-    CHKERRABORT(_g_comm, ierr);
+    CHKERRABORT(this->comm().get(), ierr);
     
     if (sys_name) {
         
         nm = this->name() + "_";
         MatSetOptionsPrefix(_mat, nm.c_str());
     }
-    ierr = MatSetFromOptions(_mat);                    CHKERRABORT(_g_comm, ierr);
-    
+    ierr = MatSetFromOptions(_mat);
+    CHKERRABORT(this->comm().get(), ierr);
     
     // get the IS belonging to each block
-    ierr  =    MatNestGetISs(_mat, &_is[0], PETSC_NULL);CHKERRABORT(_g_comm, ierr);
-    
-    
-    
+    ierr  =    MatNestGetISs(_mat, &_is[0], PETSC_NULL);
+    CHKERRABORT(this->comm().get(), ierr);
     
     //////////////////////////////////////////////////////////////////////
     // setup the vector for solution
     //////////////////////////////////////////////////////////////////////
-    ierr = VecCreate(_g_comm, &_sol);                   CHKERRABORT(_g_comm, ierr);
-    ierr = VecSetSizes(_sol, PETSC_DECIDE, _n_dofs);    CHKERRABORT(_g_comm, ierr);
-    ierr = VecSetType(_sol, VECMPI);                   CHKERRABORT(_g_comm, ierr);
-    ierr = VecDuplicate(_sol, &_res);                   CHKERRABORT(_g_comm, ierr);
+    ierr = VecCreate(this->comm().get(), &_sol);        CHKERRABORT(this->comm().get(), ierr);
+    ierr = VecSetSizes(_sol, PETSC_DECIDE, _n_dofs);    CHKERRABORT(this->comm().get(), ierr);
+    ierr = VecSetType(_sol, VECMPI);                    CHKERRABORT(this->comm().get(), ierr);
+    ierr = VecDuplicate(_sol, &_res);                   CHKERRABORT(this->comm().get(), ierr);
     
     
     //////////////////////////////////////////////////////////////////////
@@ -406,15 +479,44 @@ MAST::MultiphysicsNonlinearSolverBase::solve() {
     // as the initial solution for the coupled system
     //////////////////////////////////////////////////////////////////////
     for (unsigned int i=0; i<_n_disciplines; i++) {
+
+        // solution from the provided system
+        libMesh::NumericVector<Real>
+        &sys_sol = *_discipline_assembly[i]->system().solution;
         
+        // limiting indices for the system, and multiphysics assembly. Should
+        // be the same
+        int
+        multiphysics_first = 0,
+        multiphysics_last  = 0,
+        first              = sys_sol.first_local_index(),
+        last               = sys_sol.last_local_index();
         
+        // get the subvector corresponding to the the discipline
+        Vec sub_vec;
+
+        ierr = VecGetSubVector(_sol, _is[i], &sub_vec);  CHKERRABORT(this->comm().get(), ierr);
+        ierr = VecGetOwnershipRange(sub_vec,
+                                    &multiphysics_first,
+                                    &multiphysics_last); CHKERRABORT(this->comm().get(), ierr);
+        
+        // the first and last indices must match between the two representations
+        libmesh_assert_equal_to(multiphysics_first, first);
+        libmesh_assert_equal_to( multiphysics_last,  last);
+        
+        std::auto_ptr<libMesh::NumericVector<Real> >
+        multiphysics_sol(new libMesh::PetscVector<Real>(sub_vec, this->comm()));
+        
+        for (unsigned int i=first; i<last; i++)
+            multiphysics_sol->set(i, sys_sol(i));
+        
+        ierr = VecRestoreSubVector(_sol, _is[i], &sub_vec);  CHKERRABORT(this->comm().get(), ierr);
     }
-    
-    
-    ierr = MatAssemblyBegin(_mat, MAT_FINAL_ASSEMBLY);  CHKERRABORT(_g_comm, ierr);
-    ierr = MatAssemblyEnd(_mat, MAT_FINAL_ASSEMBLY);    CHKERRABORT(_g_comm, ierr);
-    ierr = VecAssemblyBegin(_res);                      CHKERRABORT(_g_comm, ierr);
-    ierr = VecAssemblyEnd(_res);                        CHKERRABORT(_g_comm, ierr);
+        
+    ierr = MatAssemblyBegin(_mat, MAT_FINAL_ASSEMBLY);  CHKERRABORT(this->comm().get(), ierr);
+    ierr = MatAssemblyEnd(_mat, MAT_FINAL_ASSEMBLY);    CHKERRABORT(this->comm().get(), ierr);
+    ierr = VecAssemblyBegin(_res);                      CHKERRABORT(this->comm().get(), ierr);
+    ierr = VecAssemblyEnd(_res);                        CHKERRABORT(this->comm().get(), ierr);
     
     
     
@@ -424,10 +526,10 @@ MAST::MultiphysicsNonlinearSolverBase::solve() {
     SNES           snes;
     KSP            ksp;
     PC             pc;
-
+    
     
     // setup the solver context
-    ierr = SNESCreate(_g_comm, &snes);                 CHKERRABORT(_g_comm, ierr);
+    ierr = SNESCreate(this->comm().get(), &snes);      CHKERRABORT(this->comm().get(), ierr);
     
     // tell the solver where to store the Jacobian and how to calculate it
     ierr = SNESSetFunction (snes,
@@ -446,30 +548,30 @@ MAST::MultiphysicsNonlinearSolverBase::solve() {
         nm = this->name() + "_";
         SNESSetOptionsPrefix(snes, nm.c_str());
     }
-    ierr = SNESSetFromOptions(snes);                  CHKERRABORT(_g_comm, ierr);
-
+    ierr = SNESSetFromOptions(snes);                  CHKERRABORT(this->comm().get(), ierr);
+    
     
     
     // setup the ksp
-    ierr = SNESGetKSP (snes, &ksp);                   CHKERRABORT(_g_comm, ierr);
-    ierr = KSPSetFromOptions(ksp);                    CHKERRABORT(_g_comm, ierr);
-
-
+    ierr = SNESGetKSP (snes, &ksp);                   CHKERRABORT(this->comm().get(), ierr);
+    ierr = KSPSetFromOptions(ksp);                    CHKERRABORT(this->comm().get(), ierr);
+    
+    
     
     // setup the pc
-    ierr = KSPGetPC(ksp, &pc);                        CHKERRABORT(_g_comm, ierr);
+    ierr = KSPGetPC(ksp, &pc);                        CHKERRABORT(this->comm().get(), ierr);
     
     for (unsigned int i=0; i<_n_disciplines; i++) {
         
         if (sys_name) {
             
             nm = _discipline_assembly[i]->system().name();
-            ierr = PCFieldSplitSetIS(pc, nm.c_str(), _is[i]); CHKERRABORT(_g_comm, ierr);
+            ierr = PCFieldSplitSetIS(pc, nm.c_str(), _is[i]); CHKERRABORT(this->comm().get(), ierr);
         }
         else
-            ierr = PCFieldSplitSetIS(pc, NULL, _is[i]);CHKERRABORT(_g_comm, ierr);
+            ierr = PCFieldSplitSetIS(pc, nullptr, _is[i]);CHKERRABORT(this->comm().get(), ierr);
     }
-    ierr = PCSetFromOptions(pc);                      CHKERRABORT(_g_comm, ierr);
+    ierr = PCSetFromOptions(pc);                      CHKERRABORT(this->comm().get(), ierr);
     
     //////////////////////////////////////////////////////////////////////
     // now, solve
@@ -482,22 +584,58 @@ MAST::MultiphysicsNonlinearSolverBase::solve() {
     STOP_LOG("SNESSolve", this->name()+"_MultiphysicsSolve");
     
     
+    //////////////////////////////////////////////////////////////////////
+    // now copy the solution back to the system solution vector
+    //////////////////////////////////////////////////////////////////////
+    for (unsigned int i=0; i<_n_disciplines; i++) {
+        
+        // solution from the provided system
+        libMesh::NumericVector<Real>
+        &sys_sol = *_discipline_assembly[i]->system().solution;
+        
+        // limiting indices for the system, and multiphysics assembly. Should
+        // be the same
+        int
+        multiphysics_first = 0,
+        multiphysics_last  = 0,
+        first              = sys_sol.first_local_index(),
+        last               = sys_sol.last_local_index();
+        
+        // get the subvector corresponding to the the discipline
+        Vec sub_vec;
+        
+        ierr = VecGetSubVector(_sol, _is[i], &sub_vec);  CHKERRABORT(this->comm().get(), ierr);
+        ierr = VecGetOwnershipRange(sub_vec,
+                                    &multiphysics_first,
+                                    &multiphysics_last); CHKERRABORT(this->comm().get(), ierr);
+        
+        // the first and last indices must match between the two representations
+        libmesh_assert_equal_to(multiphysics_first, first);
+        libmesh_assert_equal_to( multiphysics_last,  last);
+        
+        std::auto_ptr<libMesh::NumericVector<Real> >
+        multiphysics_sol(new libMesh::PetscVector<Real>(sub_vec, this->comm()));
+        
+        for (unsigned int i=first; i<last; i++)
+            sys_sol.set(i, (*multiphysics_sol)(i));
+
+        ierr = VecRestoreSubVector(_sol, _is[i], &sub_vec);  CHKERRABORT(this->comm().get(), ierr);
+    }
+
+    
+    
     // destroy the Petsc contexts
-    ierr = SNESDestroy(&snes);                        CHKERRABORT(_g_comm, ierr);
+    ierr = SNESDestroy(&snes);                        CHKERRABORT(this->comm().get(), ierr);
     for (unsigned int i=0; i<_n_disciplines; i++)
         for (unsigned int j=0; j<_n_disciplines; j++)
             if (i != j) {
                 ierr = MatDestroy(&_sub_mats[i*_n_disciplines+j]);
-                CHKERRABORT(_g_comm, ierr);
+                CHKERRABORT(this->comm().get(), ierr);
             }
     
-    ierr = MatDestroy(&_mat);                          CHKERRABORT(_g_comm, ierr);
-    ierr = VecDestroy(&_sol);                          CHKERRABORT(_g_comm, ierr);
-    ierr = VecDestroy(&_res);                          CHKERRABORT(_g_comm, ierr);
+    ierr = MatDestroy(&_mat);                          CHKERRABORT(this->comm().get(), ierr);
+    ierr = VecDestroy(&_sol);                          CHKERRABORT(this->comm().get(), ierr);
+    ierr = VecDestroy(&_res);                          CHKERRABORT(this->comm().get(), ierr);
     
-    
-    // destroy the MPI contexts
-    MPI_Group_free(&_g_union);
-    MPI_Comm_free(&_g_comm);
 }
 
