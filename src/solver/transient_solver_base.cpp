@@ -33,7 +33,8 @@ MAST::TransientSolverBase::TransientSolverBase():
 dt(0.),
 _first_step(true),
 _assembly(nullptr),
-_system(nullptr) {
+_system(nullptr),
+_if_highest_derivative_solution(false) {
 
 }
 
