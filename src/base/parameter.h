@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2016  Manav Bhatia
+ * Copyright (C) 2013-2017  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -51,7 +51,7 @@ namespace MAST {
         ~Parameter() {
             // since the master function owns the pointer, it should not be deleted
             // if the function is not a master function.
-            if (this == this->master())
+            if (this == this)
                 delete _val;
         }
         
@@ -85,7 +85,7 @@ namespace MAST {
          *  @returns  \p true only if the given function is this.
          */
         virtual bool depends_on(const MAST::FunctionBase& f) const {
-            if (f.master() == this->master())
+            if (&f == this)
                 return true;
             else
                 return false;

@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2016  Manav Bhatia
+ * Copyright (C) 2013-2017  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -40,8 +40,7 @@ namespace MAST {
                                      const Real t,
                                      RealMatrixX& m) const;
             
-            virtual void derivative(const MAST::DerivativeType d,
-                                    const MAST::FunctionBase& f,
+            virtual void derivative(   const MAST::FunctionBase& f,
                                     const libMesh::Point& p,
                                     const Real t,
                                     RealMatrixX& m) const;
@@ -67,8 +66,7 @@ namespace MAST {
                                      const Real t,
                                      RealMatrixX& m) const;
             
-            virtual void derivative(const MAST::DerivativeType d,
-                                    const MAST::FunctionBase& f,
+            virtual void derivative(   const MAST::FunctionBase& f,
                                     const libMesh::Point& p,
                                     const Real t,
                                     RealMatrixX& m) const;
@@ -95,8 +93,7 @@ namespace MAST {
                                      const Real t,
                                      RealMatrixX& m) const;
             
-            virtual void derivative(const MAST::DerivativeType d,
-                                    const MAST::FunctionBase& f,
+            virtual void derivative(   const MAST::FunctionBase& f,
                                     const libMesh::Point& p,
                                     const Real t,
                                     RealMatrixX& m) const;
@@ -121,8 +118,7 @@ namespace MAST {
                                      const Real t,
                                      RealMatrixX& m) const;
             
-            virtual void derivative(const MAST::DerivativeType d,
-                                    const MAST::FunctionBase& f,
+            virtual void derivative(   const MAST::FunctionBase& f,
                                     const libMesh::Point& p,
                                     const Real t,
                                     RealMatrixX& m) const;
@@ -146,8 +142,7 @@ namespace MAST {
                                      const Real t,
                                      RealMatrixX& m) const;
             
-            virtual void derivative(const MAST::DerivativeType d,
-                                    const MAST::FunctionBase& f,
+            virtual void derivative(   const MAST::FunctionBase& f,
                                     const libMesh::Point& p,
                                     const Real t,
                                     RealMatrixX& m) const;
@@ -168,7 +163,7 @@ namespace MAST {
             MAST::FieldFunction<RealMatrixX>("ThermalExpansionMatrix"),
             _dim(dim),
             _alpha(alpha) {
-                _functions.insert(_alpha.master());
+                _functions.insert(&_alpha);
             }
             
 
@@ -178,8 +173,7 @@ namespace MAST {
                                      const Real t,
                                      RealMatrixX& m) const;
             
-            virtual void derivative(const MAST::DerivativeType d,
-                                    const MAST::FunctionBase& f,
+            virtual void derivative(   const MAST::FunctionBase& f,
                                     const libMesh::Point& p,
                                     const Real t,
                                     RealMatrixX& m) const;
@@ -203,7 +197,7 @@ namespace MAST {
             MAST::FieldFunction<RealMatrixX>("ThermalConductanceMatrix"),
             _dim(dim),
             _k(k) {
-                _functions.insert(_k.master());
+                _functions.insert(&_k);
             }
             
             
@@ -213,8 +207,7 @@ namespace MAST {
                                      const Real t,
                                      RealMatrixX& m) const;
             
-            virtual void derivative(const MAST::DerivativeType d,
-                                    const MAST::FunctionBase& f,
+            virtual void derivative(   const MAST::FunctionBase& f,
                                     const libMesh::Point& p,
                                     const Real t,
                                     RealMatrixX& m) const;
@@ -240,8 +233,8 @@ namespace MAST {
             _rho(rho),
             _cp(cp) {
                 
-                _functions.insert(_rho.master());
-                _functions.insert(_cp.master());
+                _functions.insert(&_rho);
+                _functions.insert(&_cp);
             }
             
             
@@ -251,8 +244,7 @@ namespace MAST {
                                      const Real t,
                                      RealMatrixX& m) const;
             
-            virtual void derivative(const MAST::DerivativeType d,
-                                    const MAST::FunctionBase& f,
+            virtual void derivative(   const MAST::FunctionBase& f,
                                     const libMesh::Point& p,
                                     const Real t,
                                     RealMatrixX& m) const;
@@ -279,8 +271,8 @@ MAST::FieldFunction<RealMatrixX>("StiffnessMatrix1D"),
 _E(E),
 _nu(nu)
 {
-    _functions.insert(E.master());
-    _functions.insert(nu.master());
+    _functions.insert(&E);
+    _functions.insert(&nu);
 }
 
 
@@ -302,8 +294,7 @@ StiffnessMatrix1D::operator() (const libMesh::Point& p,
 
 void
 MAST::IsotropicMaterialProperty::
-StiffnessMatrix1D::derivative(const MAST::DerivativeType d,
-                              const MAST::FunctionBase &f,
+StiffnessMatrix1D::derivative( const MAST::FunctionBase &f,
                               const libMesh::Point &p,
                               const Real t,
                               RealMatrixX &m) const {
@@ -312,8 +303,8 @@ StiffnessMatrix1D::derivative(const MAST::DerivativeType d,
     RealMatrixX dm;
     m = RealMatrixX::Zero(2,2); dm = RealMatrixX::Zero(2,2);
     Real E, nu, dEdf, dnudf;
-    _E(p, t, E);     _E.derivative(d, f, p, t, dEdf);
-    _nu(p, t, nu);  _nu.derivative(d, f, p, t, dnudf);
+    _E(p, t, E);     _E.derivative( f, p, t, dEdf);
+    _nu(p, t, nu);  _nu.derivative( f, p, t, dnudf);
     
     // parM/parE * parE/parf
     dm(0,0) = 1.;
@@ -338,9 +329,9 @@ _E(E),
 _nu(nu),
 _kappa(kappa)
 {
-    _functions.insert(E.master());
-    _functions.insert(nu.master());
-    _functions.insert(kappa.master());
+    _functions.insert(&E);
+    _functions.insert(&nu);
+    _functions.insert(&kappa);
 }
 
 
@@ -362,17 +353,16 @@ TransverseShearStiffnessMatrix::operator() (const libMesh::Point& p,
 
 void
 MAST::IsotropicMaterialProperty::
-TransverseShearStiffnessMatrix::derivative(const MAST::DerivativeType d,
-                                           const MAST::FunctionBase& f,
+TransverseShearStiffnessMatrix::derivative(          const MAST::FunctionBase& f,
                                            const libMesh::Point& p,
                                            const Real t,
                                            RealMatrixX& m) const {
     RealMatrixX dm;
     m = RealMatrixX::Zero(2,2); dm = RealMatrixX::Zero(2, 2);
     Real E, nu, kappa, dEdf, dnudf, dkappadf, G;
-    _E    (p, t, E);         _E.derivative(d, f, p, t, dEdf);
-    _nu   (p, t, nu);       _nu.derivative(d, f, p, t, dnudf);
-    _kappa(p, t, kappa); _kappa.derivative(d, f, p, t, dkappadf);
+    _E    (p, t, E);         _E.derivative( f, p, t, dEdf);
+    _nu   (p, t, nu);       _nu.derivative( f, p, t, dnudf);
+    _kappa(p, t, kappa); _kappa.derivative( f, p, t, dkappadf);
     G = E/2./(1.+nu);
     
     
@@ -405,8 +395,8 @@ _E(E),
 _nu(nu),
 _plane_stress(plane_stress) {
     
-    _functions.insert(E.master());
-    _functions.insert(nu.master());
+    _functions.insert(&E);
+    _functions.insert(&nu);
 }
 
 
@@ -436,8 +426,7 @@ StiffnessMatrix2D::operator() (const libMesh::Point& p,
 
 void
 MAST::IsotropicMaterialProperty::
-StiffnessMatrix2D::derivative (const MAST::DerivativeType d,
-                               const MAST::FunctionBase& f,
+StiffnessMatrix2D::derivative (  const MAST::FunctionBase& f,
                                const libMesh::Point& p,
                                const Real t,
                                RealMatrixX& m) const {
@@ -445,8 +434,8 @@ StiffnessMatrix2D::derivative (const MAST::DerivativeType d,
     RealMatrixX dm;
     m = RealMatrixX::Zero(3,3); dm = RealMatrixX::Zero(3, 3);
     Real E, nu, dEdf, dnudf;
-    _E  (p, t, E);   _E.derivative(d, f, p, t, dEdf);
-    _nu (p, t, nu); _nu.derivative(d, f, p, t, dnudf);
+    _E  (p, t, E);   _E.derivative( f, p, t, dEdf);
+    _nu (p, t, nu); _nu.derivative( f, p, t, dnudf);
     
     // parM/parE * parE/parf
     for (unsigned int i=0; i<2; i++) {
@@ -480,8 +469,8 @@ MAST::FieldFunction<RealMatrixX>("StiffnessMatrix3D"),
 _E(E),
 _nu(nu) {
     
-    _functions.insert(E.master());
-    _functions.insert(nu.master());
+    _functions.insert(&E);
+    _functions.insert(&nu);
 }
 
 
@@ -511,16 +500,15 @@ StiffnessMatrix3D::operator() (const libMesh::Point& p,
 
 void
 MAST::IsotropicMaterialProperty::
-StiffnessMatrix3D::derivative (const MAST::DerivativeType d,
-                               const MAST::FunctionBase& f,
+StiffnessMatrix3D::derivative (  const MAST::FunctionBase& f,
                                const libMesh::Point& p,
                                const Real t,
                                RealMatrixX& m) const {
     RealMatrixX dm;
     m = RealMatrixX::Zero(6,6); dm = RealMatrixX::Zero(6,6);
     Real E, nu, dEdf, dnudf;
-    _E  (p, t, E);   _E.derivative(d, f, p, t, dEdf);
-    _nu (p, t, nu); _nu.derivative(d, f, p, t, dnudf);
+    _E  (p, t, E);   _E.derivative( f, p, t, dEdf);
+    _nu (p, t, nu); _nu.derivative( f, p, t, dnudf);
     
     // parM/parE * parE/parf
     for (unsigned int i=0; i<3; i++) {
@@ -553,7 +541,7 @@ InertiaMatrix3D::InertiaMatrix3D(const MAST::FieldFunction<Real>& rho):
 MAST::FieldFunction<RealMatrixX>("InertiaMatrix3D"),
 _rho(rho) {
     
-    _functions.insert(rho.master());
+    _functions.insert(&rho);
 }
 
 
@@ -573,7 +561,7 @@ InertiaMatrix3D::operator() (const libMesh::Point& p,
 
 void
 MAST::IsotropicMaterialProperty::
-InertiaMatrix3D::derivative(const MAST::DerivativeType d,
+InertiaMatrix3D::derivative(
                             const MAST::FunctionBase &f,
                             const libMesh::Point &p,
                             const Real t,
@@ -582,7 +570,7 @@ InertiaMatrix3D::derivative(const MAST::DerivativeType d,
     
     m  = RealMatrixX::Zero(3,3);
     Real rho;
-    _rho.derivative(d, f, p, t, rho);
+    _rho.derivative( f, p, t, rho);
     m(0,0) = rho;
     m(1,1) = rho;
     m(2,2) = rho;
@@ -622,15 +610,14 @@ operator() (const libMesh::Point& p,
 
 void
 MAST::IsotropicMaterialProperty::ThermalExpansionMatrix::
-derivative (const MAST::DerivativeType d,
-            const MAST::FunctionBase& f,
+derivative (const MAST::FunctionBase& f,
             const libMesh::Point& p,
             const Real t,
             RealMatrixX& m) const {
     
     
     Real alpha;
-    _alpha.derivative(d, f, p, t, alpha);
+    _alpha.derivative( f, p, t, alpha);
     switch (_dim) {
         case 1:
             m = RealMatrixX::Zero(2,1);
@@ -675,16 +662,15 @@ operator() (const libMesh::Point& p,
 
 void
 MAST::IsotropicMaterialProperty::ThermalCapacitanceMatrix::
-derivative (const MAST::DerivativeType d,
-            const MAST::FunctionBase& f,
+derivative (const MAST::FunctionBase& f,
             const libMesh::Point& p,
             const Real t,
             RealMatrixX& m) const {
     
     
     Real cp, dcp, rho, drho;
-    _cp  (p, t, cp);    _cp.derivative(d, f, p, t, dcp);
-    _rho (p, t, rho);  _rho.derivative(d, f, p, t, drho);
+    _cp  (p, t, cp);    _cp.derivative( f, p, t, dcp);
+    _rho (p, t, rho);  _rho.derivative( f, p, t, drho);
     
     m.setZero(1,1);
     
@@ -714,15 +700,14 @@ operator() (const libMesh::Point& p,
 
 void
 MAST::IsotropicMaterialProperty::ThermalConductanceMatrix::
-derivative (const MAST::DerivativeType d,
-            const MAST::FunctionBase& f,
+derivative (const MAST::FunctionBase& f,
             const libMesh::Point& p,
             const Real t,
             RealMatrixX& m) const {
     
     
     Real k;
-    _k.derivative(d, f, p, t, k);
+    _k.derivative( f, p, t, k);
     
     m.setIdentity(_dim, _dim);
     

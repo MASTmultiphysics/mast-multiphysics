@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2016  Manav Bhatia
+ * Copyright (C) 2013-2017  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -32,8 +32,6 @@
 #include "numerics/fem_operator_matrix.h"
 #include "numerics/utility.h"
 #include "elasticity/stress_output_base.h"
-#include "boundary_condition/small_disturbance_pressure.h"
-#include "boundary_condition/surface_motion_base.h"
 
 
 
@@ -111,6 +109,36 @@ MAST::StructuralElementBase::set_solution(const RealVectorX& vec,
 
 
 void
+MAST::StructuralElementBase::set_perturbed_solution(const RealVectorX& vec,
+                                                    bool if_sens) {
+    
+    // convert the vector to the local element coordinate system
+    if (!if_sens) {
+        if (_elem.dim() == 3)
+            _local_delta_sol = vec;
+        else {
+            _local_delta_sol = RealVectorX::Zero(vec.size());
+            this->transform_vector_to_local_system(vec, _local_delta_sol);
+        }
+    }
+    else {
+        
+        // set the element solution sensitivity.
+        if (_elem.dim() == 3)
+            _local_delta_sol_sens = vec;
+        else {
+            _local_delta_sol_sens = RealVectorX::Zero(vec.size());
+            this->transform_vector_to_local_system(vec, _local_delta_sol_sens);
+        }
+    }
+    
+    MAST::ElementBase::set_perturbed_solution(vec, if_sens);
+}
+
+
+
+
+void
 MAST::StructuralElementBase::set_velocity(const RealVectorX& vec,
                                           bool if_sens) {
     
@@ -133,6 +161,33 @@ MAST::StructuralElementBase::set_velocity(const RealVectorX& vec,
     }
 
     MAST::ElementBase::set_velocity(vec, if_sens);
+}
+
+
+
+void
+MAST::StructuralElementBase::set_perturbed_velocity(const RealVectorX& vec,
+                                                    bool if_sens) {
+    
+    if (!if_sens) {
+        if (_elem.dim() == 3)
+            _local_delta_vel = vec;
+        else {
+            _local_delta_vel = RealVectorX::Zero(vec.size());
+            this->transform_vector_to_local_system(vec, _local_delta_vel);
+        }
+    }
+    else {
+        
+        if (_elem.dim() == 3)
+            _local_delta_vel_sens = vec;
+        else {
+            _local_delta_vel_sens = RealVectorX::Zero(vec.size());
+            this->transform_vector_to_local_system(vec, _local_delta_vel_sens);
+        }
+    }
+    
+    MAST::ElementBase::set_perturbed_velocity(vec, if_sens);
 }
 
 
@@ -162,6 +217,67 @@ MAST::StructuralElementBase::set_acceleration(const RealVectorX& vec,
     MAST::ElementBase::set_acceleration(vec, if_sens);
 }
 
+
+
+void
+MAST::StructuralElementBase::set_perturbed_acceleration(const RealVectorX& vec,
+                                                        bool if_sens) {
+    
+    if (!if_sens) {
+        if (_elem.dim() == 3)
+            _local_delta_accel = vec;
+        else {
+            _local_delta_accel = RealVectorX::Zero(vec.size());
+            this->transform_vector_to_local_system(vec, _local_delta_accel);
+        }
+    }
+    else {
+        
+        if (_elem.dim() == 3)
+            _local_delta_accel_sens = vec;
+        else {
+            _local_delta_accel_sens = RealVectorX::Zero(vec.size());
+            this->transform_vector_to_local_system(vec, _local_delta_accel_sens);
+        }
+    }
+    
+    MAST::ElementBase::set_perturbed_acceleration(vec, if_sens);
+}
+
+
+
+bool
+MAST::StructuralElementBase::linearized_internal_residual (bool request_jacobian,
+                                                           RealVectorX& f,
+                                                           RealMatrixX& jac) {
+    
+    
+    // It is assumed that the structural elements implement the Jacobians.
+    // Hence, the residual for the linearized problem will be calculated
+    // using the Jacobian.
+
+    const std::vector<std::vector<Real> >& phi = _fe->get_phi();
+    
+    const unsigned int
+    n_phi    = (unsigned int)phi.size(),
+    n2       =6*n_phi;
+
+    RealVectorX
+    v = RealVectorX::Zero(n2);
+    
+    RealMatrixX
+    m = RealMatrixX::Zero(n2, n2);
+    
+    
+    this->internal_residual(true, v, m);
+    
+    f += m * _local_delta_sol;
+    
+    if (request_jacobian)
+        jac += m;
+    
+    return request_jacobian;
+}
 
 
 
@@ -272,6 +388,49 @@ MAST::StructuralElementBase::inertial_residual (bool request_jacobian,
 
 
 
+bool
+MAST::StructuralElementBase::
+linearized_inertial_residual (bool request_jacobian,
+                              RealVectorX& f,
+                              RealMatrixX& jac_xddot,
+                              RealMatrixX& jac_xdot,
+                              RealMatrixX& jac) {
+    
+    // It is assumed that the structural elements implement the Jacobians.
+    // Hence, the residual for the linearized problem will be calculated
+    // using the Jacobian.
+    
+    const std::vector<std::vector<Real> >& phi = _fe->get_phi();
+    
+    const unsigned int
+    n_phi    = (unsigned int)phi.size(),
+    n2       =6*n_phi;
+    
+    RealVectorX
+    v = RealVectorX::Zero(n2);
+    
+    RealMatrixX
+    m_xddot = RealMatrixX::Zero(n2, n2),
+    m_xdot  = RealMatrixX::Zero(n2, n2),
+    m_x     = RealMatrixX::Zero(n2, n2);
+    
+    
+    this->inertial_residual(true, v, m_xddot, m_xdot, m_x);
+    
+    f += (m_xddot * _local_delta_accel +
+          m_xdot  * _local_delta_vel   +
+          m_x     * _local_delta_sol);
+    
+    if (request_jacobian) {
+        
+        jac_xddot += m_xddot;
+        jac_xdot  +=  m_xdot;
+        jac       +=     m_x;
+    }
+    
+    return request_jacobian;
+}
+
 
 
 
@@ -314,8 +473,7 @@ MAST::StructuralElementBase::inertial_residual_sensitivity (bool request_jacobia
         // as an approximation, get matrix at the first quadrature point
         _local_elem->global_coordinates_location(xyz[0], p);
         
-        mat_inertia->derivative(MAST::PARTIAL_DERIVATIVE,
-                                *this->sensitivity_param,
+        mat_inertia->derivative(*this->sensitivity_param,
                                 p, _time, material_mat);
         
         Real vol = 0.;
@@ -337,8 +495,7 @@ MAST::StructuralElementBase::inertial_residual_sensitivity (bool request_jacobia
             
             _local_elem->global_coordinates_location(xyz[0], p);
             
-            mat_inertia->derivative(MAST::PARTIAL_DERIVATIVE,
-                                    *this->sensitivity_param,
+            mat_inertia->derivative(    *this->sensitivity_param,
                                     p, _time, material_mat);
             
             // now set the shape function values
@@ -444,7 +601,6 @@ side_external_residual(bool request_jacobian,
                         break;
 
                         
-                    case MAST::SMALL_DISTURBANCE_MOTION:
                     case MAST::DIRICHLET:
                         // nothing to be done here
                         break;
@@ -462,14 +618,72 @@ side_external_residual(bool request_jacobian,
 
 
 
+bool
+MAST::StructuralElementBase::
+linearized_side_external_residual
+(bool request_jacobian,
+ RealVectorX& f,
+ RealMatrixX& jac_xdot,
+ RealMatrixX& jac,
+ std::multimap<libMesh::boundary_id_type, MAST::BoundaryConditionBase*>& bc) {
+
+    typedef std::multimap<libMesh::boundary_id_type, MAST::BoundaryConditionBase*> maptype;
+    
+    // iterate over the boundary ids given in the provided force map
+    std::pair<maptype::const_iterator, maptype::const_iterator> it;
+    
+    const libMesh::BoundaryInfo& binfo = *_system.system().get_mesh().boundary_info;
+    
+    // for each boundary id, check if any of the sides on the element
+    // has the associated boundary
+    
+    for (unsigned short int n=0; n<_elem.n_sides(); n++) {
+        
+        // if no boundary ids have been specified for the side, then
+        // move to the next side.
+        if (!binfo.n_boundary_ids(&_elem, n))
+            continue;
+        
+        // check to see if any of the specified boundary ids has a boundary
+        // condition associated with them
+        std::vector<libMesh::boundary_id_type> bc_ids = binfo.boundary_ids(&_elem, n);
+        std::vector<libMesh::boundary_id_type>::const_iterator bc_it = bc_ids.begin();
+        
+        for ( ; bc_it != bc_ids.end(); bc_it++) {
+            
+            // find the loads on this boundary and evaluate the f and jac
+            it = bc.equal_range(*bc_it);
+            
+            for ( ; it.first != it.second; it.first++) {
+                
+                // apply all the types of loading
+                switch (it.first->second->type()) {
+                    case MAST::DIRICHLET:
+                        // nothing to be done here
+                        break;
+                        
+                    case MAST::SURFACE_PRESSURE:
+                    case MAST::PISTON_THEORY:
+                    default:
+                        // not implemented yet
+                        libmesh_error();
+                        break;
+                }
+            }
+        }
+    }
+    return request_jacobian;
+}
+
 
 
 bool
 MAST::StructuralElementBase::
-side_frequency_domain_external_residual(bool request_jacobian,
-                                        ComplexVectorX& f,
-                                        ComplexMatrixX& jac,
-                                        std::multimap<libMesh::boundary_id_type, MAST::BoundaryConditionBase*>& bc) {
+linearized_frequency_domain_side_external_residual
+(bool request_jacobian,
+ ComplexVectorX& f,
+ ComplexMatrixX& jac,
+ std::multimap<libMesh::boundary_id_type, MAST::BoundaryConditionBase*>& bc) {
     
     typedef std::multimap<libMesh::boundary_id_type, MAST::BoundaryConditionBase*> maptype;
     
@@ -503,12 +717,13 @@ side_frequency_domain_external_residual(bool request_jacobian,
                 // apply all the types of loading
                 switch (it.first->second->type()) {
 
-                    case MAST::SMALL_DISTURBANCE_MOTION:
+                    case MAST::SURFACE_PRESSURE:
                         
-                        small_disturbance_surface_pressure_residual(request_jacobian,
-                                                                    f, jac,
-                                                                    n,
-                                                                    *it.first->second);
+                        linearized_frequency_domain_surface_pressure_residual
+                        (request_jacobian,
+                         f, jac,
+                         n,
+                         *it.first->second);
                         break;
                         
                         
@@ -516,7 +731,6 @@ side_frequency_domain_external_residual(bool request_jacobian,
                         // nothing to be done here
                         break;
                         
-                    case MAST::SURFACE_PRESSURE:
                     default:
                         // not implemented yet
                         libmesh_error();
@@ -575,10 +789,6 @@ volume_external_residual (bool request_jacobian,
                 break;
                 
 
-            case MAST::SMALL_DISTURBANCE_MOTION:
-                // nothing to be done here for now
-                break;
-                
             default:
                 // not implemented yet
                 libmesh_error();
@@ -594,10 +804,11 @@ volume_external_residual (bool request_jacobian,
 
 bool
 MAST::StructuralElementBase::
-volume_frequency_domain_external_residual (bool request_jacobian,
-                                           ComplexVectorX& f,
-                                           ComplexMatrixX& jac,
-                                           std::multimap<libMesh::subdomain_id_type, MAST::BoundaryConditionBase*>& bc) {
+linearized_volume_external_residual (bool request_jacobian,
+                                     RealVectorX& f,
+                                     RealMatrixX& jac_xdot,
+                                     RealMatrixX& jac,
+                                     std::multimap<libMesh::subdomain_id_type, MAST::BoundaryConditionBase*>& bc) {
     
     // iterate over the boundary ids given in the provided force map
     std::pair<std::multimap<libMesh::subdomain_id_type, MAST::BoundaryConditionBase*>::const_iterator,
@@ -614,17 +825,60 @@ volume_frequency_domain_external_residual (bool request_jacobian,
         // apply all the types of loading
         switch (it.first->second->type()) {
                 
-            case MAST::SMALL_DISTURBANCE_MOTION:
+            case MAST::SURFACE_PRESSURE:
+                linearized_surface_pressure_residual(request_jacobian,
+                                                     f, jac,
+                                                     *it.first->second);
+                break;
                 
-                small_disturbance_surface_pressure_residual(request_jacobian,
-                                                            f, jac,
-                                                            *it.first->second);
+                
+            case MAST::PISTON_THEORY:
+            case MAST::TEMPERATURE:
+            default:
+                // not implemented yet
+                libmesh_error();
+                break;
+        }
+    }
+    
+    return request_jacobian;
+}
+
+
+
+
+bool
+MAST::StructuralElementBase::
+linearized_frequency_domain_volume_external_residual
+(bool request_jacobian,
+ ComplexVectorX& f,
+ ComplexMatrixX& jac,
+ std::multimap<libMesh::subdomain_id_type, MAST::BoundaryConditionBase*>& bc) {
+    
+    // iterate over the boundary ids given in the provided force map
+    std::pair<std::multimap<libMesh::subdomain_id_type, MAST::BoundaryConditionBase*>::const_iterator,
+    std::multimap<libMesh::subdomain_id_type, MAST::BoundaryConditionBase*>::const_iterator> it;
+    
+    // for each boundary id, check if any of the sides on the element
+    // has the associated boundary
+    
+    libMesh::subdomain_id_type sid = _elem.subdomain_id();
+    // find the loads on this boundary and evaluate the f and jac
+    it =bc.equal_range(sid);
+    
+    for ( ; it.first != it.second; it.first++) {
+        // apply all the types of loading
+        switch (it.first->second->type()) {
+                
+            case MAST::SURFACE_PRESSURE:
+                
+                linearized_frequency_domain_surface_pressure_residual
+                (request_jacobian,
+                 f, jac,
+                 *it.first->second);
                 break;
                 
             case MAST::TEMPERATURE:
-            case MAST::SURFACE_PRESSURE:
-                // nothing to be done here
-                break;
                 
             case MAST::PISTON_THEORY:
             default:
@@ -701,7 +955,6 @@ side_external_residual_sensitivity(bool request_jacobian,
                         
                         
                     case MAST::DIRICHLET:
-                    case MAST::SMALL_DISTURBANCE_MOTION:
                         // nothing to be done here
                         break;
                         
@@ -759,10 +1012,6 @@ volume_external_residual_sensitivity (bool request_jacobian,
                 thermal_residual_sensitivity(request_jacobian,
                                              f, jac,
                                              *it.first->second);
-                break;
-                
-            case MAST::SMALL_DISTURBANCE_MOTION:
-                // nothing to be done here
                 break;
                 
             default:
@@ -968,8 +1217,7 @@ surface_pressure_residual_sensitivity(bool request_jacobian,
         Bmat.reinit(2*n1, phi_vec);
         
         // get pressure value
-        func.derivative(MAST::TOTAL_DERIVATIVE,
-                        *sensitivity_param,
+        func.derivative(*sensitivity_param,
                         pt,
                         _time,
                         press);
@@ -998,19 +1246,99 @@ surface_pressure_residual_sensitivity(bool request_jacobian,
 
 bool
 MAST::StructuralElementBase::
-small_disturbance_surface_pressure_residual(bool request_jacobian,
-                                            ComplexVectorX &f,
-                                            ComplexMatrixX &jac,
-                                            MAST::BoundaryConditionBase& bc) {
+linearized_surface_pressure_residual(bool request_jacobian,
+                                     RealVectorX &f,
+                                     RealMatrixX &jac,
+                                     MAST::BoundaryConditionBase& bc) {
     
     libmesh_assert(_elem.dim() < 3); // only applicable for lower dimensional elements.
     libmesh_assert(!follower_forces); // not implemented yet for follower forces
-    libmesh_assert_equal_to(bc.type(), MAST::SMALL_DISTURBANCE_MOTION);
+    libmesh_assert_equal_to(bc.type(), MAST::SURFACE_PRESSURE);
     
-    MAST::SmallDisturbancePressure&
-    press_fn  = bc.get<MAST::SmallDisturbancePressure>("pressure");
-    MAST::SurfaceMotionBase&
-    dn_rot_fn = bc.get<MAST::SurfaceMotionBase>       ("small_disturbance_motion");
+    MAST::FieldFunction<Real>&
+    press_fn  = bc.get<MAST::FieldFunction<Real> >("pressure");
+    
+    
+    const std::vector<Real> &JxW                 = _fe->get_JxW();
+    const std::vector<libMesh::Point>& qpoint    = _fe->get_xyz();
+    const std::vector<std::vector<Real> >& phi   = _fe->get_phi();
+    const unsigned int
+    n_phi = (unsigned int)phi.size(),
+    n1    = 3,
+    n2    = 6*n_phi;
+    
+    // normal for face integration
+    libMesh::Point normal;
+    // direction of pressure assumed to be normal (along local z-axis)
+    // to the element face for 2D and along local y-axis for 1D element.
+    normal(_elem.dim()) = -1.;
+    
+    RealVectorX
+    phi_vec = RealVectorX::Zero(n_phi),
+    w       = RealVectorX::Zero(3),
+    dn_rot  = RealVectorX::Zero(3),
+    force   = RealVectorX::Zero(2*n1),
+    local_f = RealVectorX::Zero(n2),
+    vec_n2  = RealVectorX::Zero(n2);
+    
+    FEMOperatorMatrix Bmat;
+    libMesh::Point    pt;
+    Real
+    press   = 0.,
+    dpress  = 0.;
+    
+    
+    for (unsigned int qp=0; qp<qpoint.size(); qp++)
+    {
+        _local_elem->global_coordinates_location(qpoint[qp], pt);
+        
+        // now set the shape function values
+        for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
+            phi_vec(i_nd) = phi[i_nd][qp];
+        
+        Bmat.reinit(2*n1, phi_vec);
+        
+        // get pressure and deformation information
+        press_fn             (pt, _time,  press);
+        press_fn.perturbation(pt, _time, dpress);
+        
+        // calculate force
+        for (unsigned int i_dim=0; i_dim<n1; i_dim++)
+            force(i_dim) = ( press * dn_rot(i_dim) + // steady pressure
+                            dpress * normal(i_dim)); // unsteady pressure
+        
+        Bmat.vector_mult_transpose(vec_n2, force);
+        
+        local_f += JxW[qp] * vec_n2;
+    }
+    
+    // now transform to the global system and add
+    transform_vector_to_global_system(local_f, vec_n2);
+    f -= vec_n2;
+    
+    
+    return (request_jacobian);
+}
+
+
+
+
+bool
+MAST::StructuralElementBase::
+linearized_frequency_domain_surface_pressure_residual
+(bool request_jacobian,
+ ComplexVectorX &f,
+ ComplexMatrixX &jac,
+ MAST::BoundaryConditionBase& bc) {
+    
+    libmesh_assert(_elem.dim() < 3); // only applicable for lower dimensional elements.
+    libmesh_assert(!follower_forces); // not implemented yet for follower forces
+    libmesh_assert_equal_to(bc.type(), MAST::SURFACE_PRESSURE);
+    
+    MAST::FieldFunction<Real>&
+    press_fn   = bc.get<MAST::FieldFunction<Real> >("pressure");
+    MAST::FieldFunction<Complex>&
+    dpress_fn  = bc.get<MAST::FieldFunction<Complex> >("frequency_domain_pressure");
     
     
     const std::vector<Real> &JxW                 = _fe->get_JxW();
@@ -1037,8 +1365,8 @@ small_disturbance_surface_pressure_residual(bool request_jacobian,
     
     FEMOperatorMatrix Bmat;
     libMesh::Point    pt;
-    Real              press;
-    Complex           dpress;
+    Real              press  = 0.;
+    Complex           dpress = 0.;
     
     
     for (unsigned int qp=0; qp<qpoint.size(); qp++)
@@ -1052,7 +1380,8 @@ small_disturbance_surface_pressure_residual(bool request_jacobian,
         Bmat.reinit(2*n1, phi_vec);
         
         // get pressure and deformation information
-        press_fn.freq_domain_pressure(pt, true, press, dpress);
+        press_fn (pt, _time,  press);
+        dpress_fn(pt, _time, dpress);
         //dn_rot_fn.freq_domain_motion(pt, normal, w, dn_rot);
         
         // calculate force

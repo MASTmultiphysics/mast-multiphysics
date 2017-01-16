@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2016  Manav Bhatia
+ * Copyright (C) 2013-2017  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -22,7 +22,6 @@
 
 // MAST includes
 #include "examples/structural/topology_optim_2D/topology_optim_2D.h"
-#include "driver/driver_base.h"
 #include "elasticity/stress_output_base.h"
 #include "optimization/optimization_interface.h"
 #include "optimization/function_evaluation.h"
@@ -179,7 +178,7 @@ _rho(rho),
 _base_modulus(base_modulus),
 _penalty(penalty)  {
     
-    _functions.insert(rho.master());
+    _functions.insert(&rho);
 }
 
 
@@ -201,8 +200,7 @@ MAST::YoungsModulus::operator() (const libMesh::Point& p,
 
 
 void
-MAST::YoungsModulus::derivative(const MAST::DerivativeType d,
-                                const MAST::FunctionBase& f,
+MAST::YoungsModulus::derivative(   const MAST::FunctionBase& f,
                                 const libMesh::Point& p,
                                 Real t,
                                 Real& v) const {
@@ -210,7 +208,7 @@ MAST::YoungsModulus::derivative(const MAST::DerivativeType d,
     r = 0., dr = 0.;
     
     _rho(p, t, r);
-    _rho.derivative(d, f, p, t, dr);
+    _rho.derivative( f, p, t, dr);
     v = _base_modulus*pow(r, _penalty-1.)*_penalty*dr;
 }
 

@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2016  Manav Bhatia
+ * Copyright (C) 2013-2017  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -112,7 +112,7 @@ MAST::AssemblyBase::_build_localized_vector(const libMesh::System& sys,
 
 
 void
-MAST::AssemblyBase::attach_solution_function(MAST::MeshFieldFunction<RealVectorX>& f){
+MAST::AssemblyBase::attach_solution_function(MAST::MeshFieldFunction& f){
     
     // make sure that no prior association is specified
     libmesh_assert(!_sol_function);
@@ -151,7 +151,7 @@ MAST::AssemblyBase::calculate_outputs(const libMesh::NumericVector<Real>& X) {
     
     // if a solution function is attached, initialize it
     if (_sol_function)
-        _sol_function->init_for_system_and_solution(*_system, X);
+        _sol_function->init(X);
     
     
     libMesh::MeshBase::const_element_iterator       el     =
@@ -225,7 +225,7 @@ calculate_output_sensitivity(libMesh::ParameterVector &params,
     
     // if a solution function is attached, initialize it
     if (_sol_function)
-        _sol_function->init_for_system_and_solution(*_system, X);
+        _sol_function->init( X);
     
     // iterate over the parameters
     for ( unsigned int i=0; i<params.size(); i++) {

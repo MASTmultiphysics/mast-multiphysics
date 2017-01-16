@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2016  Manav Bhatia
+ * Copyright (C) 2013-2017  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -98,7 +98,6 @@ _set_element_data(const std::vector<libMesh::dof_id_type>& dof_indices,
 
 
 
-
 void
 MAST::SecondOrderNewmarkTransientSolver::
 _update_velocity(libMesh::NumericVector<Real>& vec,
@@ -145,6 +144,34 @@ _update_acceleration(libMesh::NumericVector<Real>& vec,
 
 
 
+void
+MAST::SecondOrderNewmarkTransientSolver::
+_update_delta_velocity(libMesh::NumericVector<Real>& vec,
+                       const libMesh::NumericVector<Real>& sol) {
+    
+    // first calculate the acceleration
+    vec.zero();
+    vec.add( gamma/beta/dt,      sol);
+    vec.close();
+}
+
+
+
+
+void
+MAST::SecondOrderNewmarkTransientSolver::
+_update_delta_acceleration(libMesh::NumericVector<Real>& vec,
+                           const libMesh::NumericVector<Real>& sol) {
+    
+    // first calculate the acceleration
+    vec.zero();
+    vec.add(  1./beta/dt/dt,       sol);
+    vec.close();
+}
+
+
+
+
 
 void
 MAST::SecondOrderNewmarkTransientSolver::
@@ -153,7 +180,7 @@ _elem_calculations(MAST::ElementBase& elem,
                    bool if_jac,
                    RealVectorX& vec,
                    RealMatrixX& mat) {
-    // make sure that the assembly object is provides
+    // make sure that the assembly object is provided
     libmesh_assert(_assembly);
     unsigned int n_dofs = (unsigned int)dof_indices.size();
     
@@ -255,8 +282,22 @@ _elem_calculations(MAST::ElementBase& elem,
 
 void
 MAST::SecondOrderNewmarkTransientSolver::
+_elem_linearized_jacobian_solution_product(MAST::ElementBase& elem,
+                                           const std::vector<libMesh::dof_id_type>& dof_indices,
+                                           RealVectorX& vec) {
+    
+    // to be implemented
+    libmesh_error();
+}
+
+
+
+void
+MAST::SecondOrderNewmarkTransientSolver::
 _elem_sensitivity_calculations(MAST::ElementBase& elem,
                                const std::vector<libMesh::dof_id_type>& dof_indices,
                                RealVectorX& vec) {
-    
+
+    // to be implemented
+    libmesh_error();
 }

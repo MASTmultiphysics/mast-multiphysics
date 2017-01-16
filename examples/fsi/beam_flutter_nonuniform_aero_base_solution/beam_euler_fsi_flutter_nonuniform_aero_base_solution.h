@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2016  Manav Bhatia
+ * Copyright (C) 2013-2017  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -58,9 +58,12 @@ namespace MAST {
     class FlutterRootBase;
     class FlightCondition;
     class FrequencyFunction;
-    class FunctionSurfaceMotion;
-    class FlexibleSurfaceMotion;
-    class SmallDisturbancePressureFunction;
+    template <typename ValType> class FieldFunction;
+    template <typename ValType> class NormalRotationFunctionBase;
+    class ComplexMeshFieldFunction;
+    class ComplexNormalRotationMeshFunction;
+    class PressureFunction;
+    class FrequencyDomainPressureFunction;
     class DisplacementFunctionBase;
     class AugmentGhostElementSendListObj;
 
@@ -143,26 +146,22 @@ namespace MAST {
         
         MAST::DisplacementFunctionBase
         *_panel_shape;
+        
 
-        /*!
-         *   surface motion for steady analysis
-         */
-        MAST::FunctionSurfaceMotion
-        *_steady_motion_function;
-        
-        
         /*!
          *   surface motion for flutter analysis
          */
-        MAST::FlexibleSurfaceMotion
-        *_unsteady_motion_function;
+        MAST::FieldFunction<RealVectorX>            *_vel;
+        MAST::NormalRotationFunctionBase<RealVectorX>   *_steady_normal_rot;
+        MAST::ComplexMeshFieldFunction              *_displ;
+        MAST::ComplexNormalRotationMeshFunction     *_normal_rot;
         
         
         /*!
          *   surface pressure
          */
-        MAST::SmallDisturbancePressureFunction
-        *_small_dist_pressure_function;
+        MAST::PressureFunction                *_pressure_function;
+        MAST::FrequencyDomainPressureFunction *_freq_domain_pressure_function;
         
         
         // parameters used in the system

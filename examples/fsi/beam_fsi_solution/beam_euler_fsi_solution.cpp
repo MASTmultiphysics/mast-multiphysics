@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2016  Manav Bhatia
+ * Copyright (C) 2013-2017  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -29,19 +29,19 @@
 #include "fluid/conservative_fluid_system_initialization.h"
 #include "fluid/conservative_fluid_discipline.h"
 #include "fluid/conservative_fluid_transient_assembly.h"
-#include "fluid/small_disturbance_pressure_function.h"
+#include "fluid/pressure_function.h"
 #include "fluid/flight_condition.h"
 #include "base/parameter.h"
 #include "base/constant_field_function.h"
 #include "base/boundary_condition_base.h"
-#include "boundary_condition/flexible_surface_motion.h"
-#include "aeroelasticity/frequency_function.h"
+#include "base/complex_mesh_field_function.h"
+#include "elasticity/complex_normal_rotation_mesh_function.h"
 #include "elasticity/structural_system_initialization.h"
 #include "elasticity/structural_discipline.h"
 #include "elasticity/structural_element_base.h"
 #include "elasticity/structural_nonlinear_assembly.h"
-#include "elasticity/fsi_generalized_aero_force_assembly.h"
 #include "elasticity/structural_near_null_vector_space.h"
+#include "elasticity/normal_rotation_mesh_function.h"
 #include "property_cards/solid_1d_section_element_property_card.h"
 #include "property_cards/isotropic_material_property_card.h"
 #include "boundary_condition/dirichlet_boundary_condition.h"
@@ -70,14 +70,14 @@ namespace MAST {
     public:
         FSIBoundaryConditionUpdates(MAST::SystemInitialization&             structural_sys,
                                     MAST::SystemInitialization&             fluid_sys,
-                                    MAST::FlexibleSurfaceMotion&            motion,
-                                    MAST::BoundaryConditionBase&            press,
-                                    MAST::SmallDisturbancePressureFunction& dpress):
+                                    MAST::MeshFieldFunction&                vel,
+                                    MAST::MeshFieldFunction&                displ,
+                                    MAST::PressureFunction&                 press):
         _structural_sys   (structural_sys),
         _fluid_sys        (fluid_sys),
-        _motion           (motion),
-        _press            (press),
-        _dpress           (dpress)
+        _vel              (vel),
+        _displ            (displ),
+        _press            (press)
         { }
         
         virtual ~FSIBoundaryConditionUpdates() { }
@@ -85,6 +85,8 @@ namespace MAST {
         virtual void
         update_at_solution(std::vector<libMesh::NumericVector<Real>*>&  sol_vecs) {
 
+            libmesh_error(); // setup velocity update
+            
             // make sure that the solutions are appropriately sized
             libMesh::NumericVector<Real>
             &fluid_sol      = *sol_vecs[0],
@@ -100,15 +102,17 @@ namespace MAST {
             libmesh_assert_equal_to(structural_sol.local_size(),
                                     _structural_sys.system().n_local_dofs());
 
-            //_motion.init(structural_sol);
-            //_press.init(fluid_sol);
+            _displ.init      (structural_sol);
+            _press.init      (fluid_sol);
         }
 
         
         virtual void
-        update_at_solution_sensitivity(std::vector<libMesh::NumericVector<Real>*>&   sol_vecs,
-                                       std::vector<libMesh::NumericVector<Real>*>&  dsol_vecs) {
+        update_at_perturbed_solution(std::vector<libMesh::NumericVector<Real>*>&   sol_vecs,
+                                     std::vector<libMesh::NumericVector<Real>*>&  dsol_vecs) {
             
+            libmesh_error(); // setup velocity update
+
             // make sure that the solutions are appropriately sized
             libMesh::NumericVector<Real>
             &fluid_sol           = * sol_vecs[0],
@@ -134,8 +138,9 @@ namespace MAST {
             libmesh_assert_equal_to(structural_sol_sens.local_size(),
                                     _structural_sys.system().n_local_dofs());
             
-            //_motion.init(structural_sol);
-            //_press.init(fluid_sol, fluid_sol_sens);
+            //_displ.init(structural_sol);
+            //_normal_rot.init(structural_sol);
+            _press.init(fluid_sol, &fluid_sol_sens);
         }
 
         
@@ -143,9 +148,9 @@ namespace MAST {
         
         MAST::SystemInitialization  &           _structural_sys;
         MAST::SystemInitialization  &           _fluid_sys;
-        MAST::FlexibleSurfaceMotion &           _motion;
-        MAST::BoundaryConditionBase &           _press;
-        MAST::SmallDisturbancePressureFunction& _dpress;
+        MAST::MeshFieldFunction     &           _vel;
+        MAST::MeshFieldFunction     &           _displ;
+        MAST::PressureFunction      &           _press;
     };
 }
 
@@ -166,19 +171,12 @@ _far_field                          (nullptr),
 _symm_wall                          (nullptr),
 _slip_wall                          (nullptr),
 _pressure                           (nullptr),
-_motion_function                    (nullptr),
-_small_dist_pressure_function       (nullptr),
-_omega                              (nullptr),
+_displ                              (nullptr),
+_normal_rot                         (nullptr),
+_pressure_function                  (nullptr),
 _velocity                           (nullptr),
-_b_ref                              (nullptr),
-_omega_f                            (nullptr),
 _velocity_f                         (nullptr),
-_b_ref_f                            (nullptr),
-_freq_function                      (nullptr),
 _length                             (0.),
-_k_lower                            (0.),
-_k_upper                            (0.),
-_n_k_divs                           (0),
 _thy                                (nullptr),
 _thz                                (nullptr),
 _rho                                (nullptr),
@@ -341,22 +339,11 @@ _bc_updates                         (nullptr) {
     _fluid_discipline->set_flight_condition(*_flight_cond);
     
     // define parameters
-    _omega             = new MAST::Parameter("omega",       0.);
     _velocity          = new MAST::Parameter("velocity",  _flight_cond->velocity_magnitude);
-    _b_ref             = new MAST::Parameter("b_ref",       1.);
     
     
     // now define the constant field functions based on this
-    _omega_f           = new MAST::ConstantFieldFunction("omega",       *_omega);
     _velocity_f        = new MAST::ConstantFieldFunction("velocity", *_velocity);
-    _b_ref_f           = new MAST::ConstantFieldFunction("b_ref",       *_b_ref);
-    
-    // initialize the frequency function
-    _freq_function     = new MAST::FrequencyFunction("freq",
-                                                     *_omega_f,
-                                                     *_velocity_f,
-                                                     *_b_ref_f);
-    _freq_function->if_nondimensional(true);
     
     // tell the physics about boundary conditions
     _fluid_discipline->add_side_load(    panel_bc_id, *_slip_wall);
@@ -365,15 +352,10 @@ _bc_updates                         (nullptr) {
     for (unsigned int i=1; i<=3; i++)
         _fluid_discipline->add_side_load(              i, *_far_field);
     
-    _small_dist_pressure_function =
-    new MAST::SmallDisturbancePressureFunction(*_fluid_sys_init, *_flight_cond);
+    _pressure_function =
+    new MAST::PressureFunction(*_fluid_sys_init, *_flight_cond);
     
-    
-    _k_upper            = infile("k_upper",  0.75);
-    _k_lower            = infile("k_lower",  0.05);
-    _n_k_divs           = infile("n_k_divs",   10);
-    
-    
+        
     //////////////////////////////////////////////////////////////////////
     //    SETUP THE STRUCTURAL DATA
     //////////////////////////////////////////////////////////////////////
@@ -400,7 +382,6 @@ _bc_updates                         (nullptr) {
     
     // setup length for use in setup of flutter solver
     _length = x_div_loc[1]-x_div_loc[0];
-    (*_b_ref) = _length;
     
     // create the mesh
     _structural_mesh       = new libMesh::SerialMesh(__init->comm());
@@ -443,9 +424,14 @@ _bc_updates                         (nullptr) {
     _structural_eq_sys->init();
     
     // initialize the motion object
-    _motion_function   = new MAST::FlexibleSurfaceMotion("small_disturbance_motion",
-                                                         *_structural_sys_init);
-    _slip_wall->add(*_motion_function);
+    _vel          = new MAST::MeshFieldFunction(*_structural_sys_init,
+                                                "velocity");
+    _displ        = new MAST::MeshFieldFunction(*_structural_sys_init,
+                                                "displacement");
+    _normal_rot   = new MAST::NormalRotationMeshFunction("frequency_domain_normal_rotation",
+                                                         *_displ);
+    _slip_wall->add(*_vel);
+    _slip_wall->add(*_normal_rot);
     
     
     _structural_sys->eigen_solver->set_position_of_spectrum(libMesh::LARGEST_MAGNITUDE);
@@ -516,12 +502,11 @@ _bc_updates                         (nullptr) {
     _structural_discipline->set_property_for_subdomain(0, *_p_card);
     
     // pressure boundary condition for the beam
-    _pressure    =  new MAST::BoundaryConditionBase(MAST::SMALL_DISTURBANCE_MOTION);
-    _pressure->add(*_small_dist_pressure_function);
-    _pressure->add(*_motion_function);
+    _pressure    =  new MAST::BoundaryConditionBase(MAST::SURFACE_PRESSURE);
+    _pressure->add(*_pressure_function);
     _structural_discipline->add_volume_load(0, *_pressure);
+
     
-    //_bc_updates = ;
 }
 
 
@@ -543,20 +528,14 @@ MAST::BeamEulerFSIAnalysis::~BeamEulerFSIAnalysis() {
     
     delete _flight_cond;
     
-    delete _omega;
     delete _velocity;
-    delete _b_ref;
     
-    delete _omega_f;
     delete _velocity_f;
-    delete _b_ref_f;
     
-    delete _freq_function;
+    delete _pressure_function;    
     
-    delete _small_dist_pressure_function;
-    
-    
-    delete _motion_function;
+    delete _displ;
+    delete _normal_rot;
     delete _pressure;
     
     delete _structural_eq_sys;
@@ -669,6 +648,30 @@ MAST::BeamEulerFSIAnalysis::solve(bool if_write_output,
     fluid_assembly.attach_discipline_and_system(*_fluid_discipline,
                                                 transient_solver,
                                                 *_fluid_sys_init);
+
+    // time solver parameters
+    unsigned int
+    t_step            = 0,
+    n_iters_change_dt = 4,
+    iter_count_dt     = 0;
+    
+    Real
+    tval       = 0.,
+    vel_0      = 0.,
+    vel_1      = 1.e+12,
+    p          = 0.5,
+    factor     = 0.,
+    min_factor = 1.5;
+    
+    transient_solver.dt            = 1.e-4;
+    transient_solver.beta          = 1.0;
+    
+    // set the previous state to be same as the current state to account for
+    // zero velocity as the initial condition
+    transient_solver.solution(1).zero();
+    transient_solver.solution(1).add(1., transient_solver.solution());
+    transient_solver.solution(1).close();
+    
     
     MAST::StructuralNonlinearAssembly   structural_assembly;
     
@@ -681,9 +684,17 @@ MAST::BeamEulerFSIAnalysis::solve(bool if_write_output,
     ///////////////////////////////////////////////////////////////////
     // FSI SOLUTION
     ///////////////////////////////////////////////////////////////////
-    // clear flutter solver and set the output file
-    MAST::MultiphysicsNonlinearSolverBase fsi_solver(__init->comm(), "fsi", 2);
     
+    MAST::FSIBoundaryConditionUpdates bc_updates(*_structural_sys_init,
+                                                 *_fluid_sys_init,
+                                                 *_vel,
+                                                 *_displ,
+                                                 *_pressure_function);
+    
+    MAST::MultiphysicsNonlinearSolverBase fsi_solver(__init->comm(), "fsi", 2);
+
+    
+    fsi_solver.set_pre_residual_update_object(bc_updates);
     fsi_solver.set_system_assembly(0,      fluid_assembly);
     fsi_solver.set_system_assembly(1, structural_assembly);
     

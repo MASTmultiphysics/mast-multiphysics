@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2016  Manav Bhatia
+ * Copyright (C) 2013-2017  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -36,7 +36,7 @@ namespace MAST{
     
     // Forward decleraitons
     class Parameter;
-    
+    class FrequencyFunction;
     
     class GAFDatabase:
     public MAST::FSIGeneralizedAeroForceAssembly {
@@ -46,6 +46,13 @@ namespace MAST{
         GAFDatabase(const unsigned int n_modes);
         
         ~GAFDatabase() { }
+        
+        void init(MAST::FrequencyFunction*                        freq,
+                  MAST::ComplexSolverBase*                complex_solver,
+                  MAST::PressureFunction*                 pressure_func,
+                  MAST::FrequencyDomainPressureFunction*  freq_pressure_func,
+                  MAST::ComplexMeshFieldFunction*         displ_func);
+
         
         void
         set_evaluate_mode(bool f);
@@ -81,7 +88,8 @@ namespace MAST{
         
         
     protected:
-        
+
+        MAST::FrequencyFunction*                    _freq;
         bool                                _if_evaluate;
         unsigned int                        _n_modes;
         std::map<Real, ComplexMatrixX>      _kr_to_gaf_map;

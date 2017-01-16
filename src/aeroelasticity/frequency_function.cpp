@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2016  Manav Bhatia
+ * Copyright (C) 2013-2017  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -32,9 +32,9 @@ _omega(omega),
 _velocity(velocity),
 _b_ref(b_ref) {
     
-    _functions.insert(_omega.master());
-    _functions.insert(_velocity.master());
-    _functions.insert(_b_ref.master());
+    _functions.insert(&_omega);
+    _functions.insert(&_velocity);
+    _functions.insert(&_b_ref);
 }
 
 
@@ -65,19 +65,18 @@ MAST::FrequencyFunction::operator() (Real& v) const {
 
 
 void
-MAST::FrequencyFunction::derivative (const MAST::DerivativeType d,
-                                     const MAST::FunctionBase& f,
+MAST::FrequencyFunction::derivative (    const MAST::FunctionBase& f,
                                      Real& v) const {
     
     Real w, b, vel, dw, db, dvel;
     
-    _omega(w);  _omega.derivative(d, f, dw);
+    _omega(w);  _omega.derivative( f, dw);
     v     = dw;
     
     /*if (_if_red_freq) {
         
         _b_ref     (b);  _b_ref.derivative   (d, f,   db);
-        _velocity(vel);  _velocity.derivative(d, f, dvel);
+        _velocity(vel);  _velocity.derivative( f, dvel);
         
         v *= b/vel;
         v += w * (db/vel - b/vel/vel*dvel);

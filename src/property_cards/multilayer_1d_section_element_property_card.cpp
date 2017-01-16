@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2016  Manav Bhatia
+ * Copyright (C) 2013-2017  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -37,7 +37,7 @@ namespace MAST {
             _layer_num(layer_num),
             _layer_hz(layer_hz) {
                 for (unsigned int i=0; i < _layer_hz.size(); i++)
-                    _functions.insert(_layer_hz[i]->master());
+                    _functions.insert(_layer_hz[i]);
             }
             
             virtual ~LayerOffset() {
@@ -67,24 +67,23 @@ namespace MAST {
             }
             
             
-            virtual void derivative (const MAST::DerivativeType d,
-                                     const MAST::FunctionBase& f,
+            virtual void derivative (    const MAST::FunctionBase& f,
                                 const libMesh::Point& p,
                                 const Real t,
                                 Real& m) const {
                 Real val = 0.;
                 m = 0.;
                 for (unsigned int i=0; i<_layer_num; i++) {
-                    _layer_hz[i]->derivative(d, f, p, t, val);
+                    _layer_hz[i]->derivative( f, p, t, val);
                     m += val; // currently the offset is chosen from h=0;
                 }
                 // finally, add half of the current layer thickness
-                _layer_hz[_layer_num]->derivative(d, f, p, t, val);
+                _layer_hz[_layer_num]->derivative( f, p, t, val);
                 m += 0.5*val;
                 
                 // now add the base offset
                 for (unsigned int i=0; i<_layer_hz.size(); i++) {
-                    _layer_hz[i]->derivative(d, f, p, t, val);
+                    _layer_hz[i]->derivative( f, p, t, val);
                     m -= 0.5*(1.+_base)*val; // currently the offset is chosen from h=0;
                 }
             }
@@ -106,7 +105,7 @@ namespace MAST {
             MAST::FieldFunction<RealMatrixX>("Matrix1D"),
             _layer_mats(layer_mats) {
                 for (unsigned int i=0; i < _layer_mats.size(); i++) {
-                    _functions.insert(_layer_mats[i]->master());
+                    _functions.insert(_layer_mats[i]);
                 }
             }
             
@@ -133,15 +132,14 @@ namespace MAST {
             }
             
             
-            virtual void derivative (const MAST::DerivativeType d,
-                                     const MAST::FunctionBase& f,
+            virtual void derivative (    const MAST::FunctionBase& f,
                                 const libMesh::Point& p,
                                 const Real t,
                                 RealMatrixX& m) const {
                 // add the values of each matrix to get the integrated value
                 RealMatrixX mi;
                 for (unsigned int i=0; i<_layer_mats.size(); i++) {
-                    _layer_mats[i]->derivative(d, f, p, t, mi);
+                    _layer_mats[i]->derivative( f, p, t, mi);
                     // use the size of the layer matrix to resize the output
                     // all other layers should return the same sized matrices
                     if (i==0)

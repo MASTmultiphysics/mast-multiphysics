@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2016  Manav Bhatia
+ * Copyright (C) 2013-2017  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -77,8 +77,7 @@ namespace MAST {
          *   evaluates the sensitivity of structural mass with respect
          *   to the design variable.
          */
-        virtual void derivative(const MAST::DerivativeType d,
-                                const MAST::FunctionBase& f,
+        virtual void derivative(   const MAST::FunctionBase& f,
                                 const libMesh::Point& p,
                                 Real t,
                                 Real& v) const ;

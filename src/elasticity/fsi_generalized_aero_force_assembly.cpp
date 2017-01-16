@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2016  Manav Bhatia
+ * Copyright (C) 2013-2017  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -23,8 +23,9 @@
 #include "elasticity/structural_element_base.h"
 #include "elasticity/structural_assembly.h"
 #include "solver/complex_solver_base.h"
-#include "boundary_condition/flexible_surface_motion.h"
-#include "fluid/small_disturbance_pressure_function.h"
+#include "base/complex_mesh_field_function.h"
+#include "fluid/pressure_function.h"
+#include "fluid/frequency_domain_pressure_function.h"
 #include "base/complex_assembly_base.h"
 #include "base/physics_discipline_base.h"
 #include "base/system_initialization.h"
@@ -47,10 +48,10 @@
 
 MAST::FSIGeneralizedAeroForceAssembly::FSIGeneralizedAeroForceAssembly():
 MAST::StructuralFluidInteractionAssembly(),
-_freq(nullptr),
-_fluid_complex_solver(nullptr),
-_pressure_function(nullptr),
-_motion(nullptr)
+_fluid_complex_solver           (nullptr),
+_pressure_function              (nullptr),
+_freq_domain_pressure_function  (nullptr),
+_displ                          (nullptr)
 { }
 
 
@@ -68,25 +69,21 @@ MAST::FSIGeneralizedAeroForceAssembly::~FSIGeneralizedAeroForceAssembly() {
 
 void
 MAST::FSIGeneralizedAeroForceAssembly::
-init(MAST::FrequencyFunction&                freq,
-     MAST::ComplexSolverBase*                complex_solver,
-     MAST::SmallDisturbancePressureFunction* pressure_func,
-     MAST::FlexibleSurfaceMotion*            motion_func) {
+init(MAST::ComplexSolverBase*                complex_solver,
+     MAST::PressureFunction*                 pressure_func,
+     MAST::FrequencyDomainPressureFunction*  freq_pressure_func,
+     MAST::ComplexMeshFieldFunction*                displ_func) {
     
     
-    // make sure that this has not been already set
-    libmesh_assert(!_freq);
-
     // make sure the pointer is provided
-    libmesh_assert(motion_func);
+    libmesh_assert(displ_func);
     libmesh_assert(complex_solver);
     libmesh_assert(pressure_func);
     
-    _freq                    = &freq;
-    
-    _motion                  = motion_func;
-    _fluid_complex_solver    = complex_solver;
-    _pressure_function       = pressure_func;
+    _displ                          = displ_func;
+    _fluid_complex_solver           = complex_solver;
+    _pressure_function              = pressure_func;
+    _freq_domain_pressure_function  = freq_pressure_func;
 }
 
 
@@ -95,10 +92,10 @@ init(MAST::FrequencyFunction&                freq,
 void
 MAST::FSIGeneralizedAeroForceAssembly::clear_discipline_and_system() {
     
-    _freq                  = nullptr;
-    _motion                = nullptr;
-    _pressure_function     = nullptr;
-    _fluid_complex_solver  = nullptr;
+    _displ                             = nullptr;
+    _pressure_function                 = nullptr;
+    _freq_domain_pressure_function     = nullptr;
+    _fluid_complex_solver              = nullptr;
     
     MAST::StructuralFluidInteractionAssembly::clear_discipline_and_system();
 }
@@ -107,12 +104,13 @@ MAST::FSIGeneralizedAeroForceAssembly::clear_discipline_and_system() {
 
 void
 MAST::FSIGeneralizedAeroForceAssembly::
-assemble_generalized_aerodynamic_force_matrix(std::vector<libMesh::NumericVector<Real>*>& basis,
-                                              ComplexMatrixX& mat,
-                                              MAST::Parameter* p) {
+assemble_generalized_aerodynamic_force_matrix
+(std::vector<libMesh::NumericVector<Real>*>& basis,
+ ComplexMatrixX& mat,
+ MAST::Parameter* p) {
     
     // make sure the data provided is sane
-    libmesh_assert(_motion);
+    libmesh_assert(_displ);
     
     
     // also create localized solution vectos for the bassis vectors
@@ -131,7 +129,9 @@ assemble_generalized_aerodynamic_force_matrix(std::vector<libMesh::NumericVector
     std::vector<libMesh::dof_id_type> dof_indices;
     std::auto_ptr<MAST::ElementBase> physics_elem;
     
-    std::auto_ptr<libMesh::NumericVector<Real> > localized_solution;
+    std::auto_ptr<libMesh::NumericVector<Real> >
+    localized_solution,
+    localized_zero;
     std::vector<libMesh::NumericVector<Real>*> localized_basis(n_basis);
 
     if (_base_sol)
@@ -141,10 +141,13 @@ assemble_generalized_aerodynamic_force_matrix(std::vector<libMesh::NumericVector
     for (unsigned int i=0; i<n_basis; i++)
         localized_basis[i] = _build_localized_vector(_system->system(), *basis[i]).release();
     
+    //create a zero-clone copy for the imaginary component of the solution
+    localized_zero.reset(localized_solution->zero_clone().release());
+    
     
     // if a solution function is attached, initialize it
     if (_sol_function && _base_sol)
-        _sol_function->init_for_system_and_solution(*_system, *_base_sol);
+        _sol_function->init( *_base_sol);
     
     
     // iterate over each structural mode to calculate the
@@ -152,17 +155,21 @@ assemble_generalized_aerodynamic_force_matrix(std::vector<libMesh::NumericVector
     for (unsigned int i=0; i<n_basis; i++) {
         
         // set up the fluid flexible-surface boundary condition for this mode
-        _motion->init(*_freq, *localized_basis[i]);
+        _displ->init     (*localized_basis[i], *localized_zero);
         
         
         // solve the complex smamll-disturbance fluid-equations
         _fluid_complex_solver->solve_block_matrix(p);
         
         // use this solution to initialize the structural boundary conditions
-        _pressure_function->init(_fluid_complex_solver->get_assembly().base_sol(),
-                                 _fluid_complex_solver->real_solution(p != nullptr),
-                                 _fluid_complex_solver->imag_solution(p != nullptr));
+        _pressure_function->init(_fluid_complex_solver->get_assembly().base_sol());
         
+        // use this solution to initialize the structural boundary conditions
+        _freq_domain_pressure_function->init
+        (_fluid_complex_solver->get_assembly().base_sol(),
+         _fluid_complex_solver->real_solution(p != nullptr),
+         _fluid_complex_solver->imag_solution(p != nullptr));
+
         
         const libMesh::DofMap& dof_map = _system->system().get_dof_map();
         

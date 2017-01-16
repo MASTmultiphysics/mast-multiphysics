@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2016  Manav Bhatia
+ * Copyright (C) 2013-2017  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -24,7 +24,6 @@
 #include "examples/structural/stiffened_plate_optimization_thermally_stressed_piston_theory_flutter/stiffened_plate_thermally_stressed_piston_theory_flutter_optimization.h"
 #include "examples/structural/stiffened_plate_optimization/stiffened_plate_optimization_base.h"
 #include "examples/structural/beam_bending/beam_bending.h"
-#include "driver/driver_base.h"
 #include "base/nonlinear_system.h"
 #include "elasticity/stress_output_base.h"
 #include "optimization/optimization_interface.h"
@@ -1364,8 +1363,7 @@ evaluate(const std::vector<Real>& dvars,
         // set gradient of weight
         for (unsigned int i=0; i<_n_vars; i++) {
             
-            _weight->derivative(MAST::PARTIAL_DERIVATIVE,
-                                *_problem_parameters[i],
+            _weight->derivative(*_problem_parameters[i],
                                 pt,
                                 0.,
                                 w_sens);

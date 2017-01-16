@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2016  Manav Bhatia
+ * Copyright (C) 2013-2017  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -61,7 +61,7 @@ _elem_calculations(MAST::ElementBase& elem,
     f_x_jac.setZero();
     
     // assembly of the flux terms
-    e.internal_residual(if_jac, f_x, f_x_jac, false);
+    e.internal_residual(if_jac, f_x, f_x_jac);
     e.side_external_residual(if_jac,
                              f_x,
                              f_m_jac_xdot,
@@ -104,7 +104,7 @@ _elem_calculations(MAST::ElementBase& elem,
     f_x_jac.setZero();
     
     // assembly of the flux terms
-    e.internal_residual(if_jac, f_x, f_x_jac, false);
+    e.internal_residual(if_jac, f_x, f_x_jac);
     e.damping_residual(if_jac, f_x, f_x_jac_xdot, f_x_jac);
     e.side_external_residual(if_jac,
                              f_x,
@@ -125,10 +125,25 @@ _elem_calculations(MAST::ElementBase& elem,
 
 void
 MAST::StructuralTransientAssembly::
+_linearized_jacobian_solution_product(MAST::ElementBase& elem,
+                                      RealVectorX& f_m_x_dx,
+                                      RealVectorX& f_m_xdot_dxdot,
+                                      RealVectorX& f_m_xddot_dxddot,
+                                      RealVectorX& f_x_x_dx,
+                                      RealVectorX& f_x_xdot_dxdot) {
+    
+    libmesh_error(); // to be implemented
+}
+
+
+
+
+void
+MAST::StructuralTransientAssembly::
 _elem_sensitivity_calculations(MAST::ElementBase& elem,
                                RealVectorX& vec) {
     
-    
+    libmesh_error(); // to be implemented
     
 }
 

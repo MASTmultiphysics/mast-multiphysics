@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2016  Manav Bhatia
+ * Copyright (C) 2013-2017  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -83,6 +83,21 @@ namespace MAST {
                                libMesh::SparseMatrix<Real>*  J,
                                libMesh::NonlinearImplicitSystem& S);
         
+        
+        /*!
+         *    calculates the project of the Jacobian and a perturbation in solution 
+         *    vector \f$ [J] \{\Delta X\}  \f$. For a single discipline system the
+         *    solution vector and linearized solution provided here are used. For
+         *    a multiphysics system, the user must ensure that all relevant 
+         *    multidisciplinary data-structures are initialized before calling 
+         *    this method.
+         */
+        virtual void
+        linearized_jacobian_solution_product(const libMesh::NumericVector<Real>& X,
+                                             const libMesh::NumericVector<Real>& dX,
+                                             libMesh::NumericVector<Real>& JdX,
+                                             libMesh::NonlinearImplicitSystem& S);
+        
         /**
          * Assembly function.  This function will be called
          * to assemble the RHS of the sensitivity equations (which is -1 times
@@ -111,7 +126,20 @@ namespace MAST {
                                         bool if_jac,
                                         RealVectorX& vec,
                                         RealMatrixX& mat) = 0;
+
         
+        /*!
+         *   performs the element calculations over \par elem, and returns
+         *   the element vector quantity in \par vec. The vector quantity only
+         *   include the \f$ [J] \{dX\} f$ components, so the inherited classes
+         *   must ensure that no component of constant forces (traction/body
+         *   forces/etc.) are added to this vector.
+         */
+        virtual void
+        _elem_linearized_jacobian_solution_product(MAST::ElementBase& elem,
+                                                   RealVectorX& vec);
+        
+
         /*!
          *   performs the element sensitivity calculations over \par elem,
          *   and returns the element residual sensitivity in \par vec .

@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2016  Manav Bhatia
+ * Copyright (C) 2013-2017  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -58,7 +58,15 @@ namespace MAST {
          */
         virtual void set_solution(const RealVectorX& vec,
                                   bool if_sens = false);
+
         
+        /*!
+         *   stores \p vec as perturbed solution for element level
+         *   calculations, or its sensitivity if \p if_sens is true.
+         */
+        virtual void set_perturbed_solution(const RealVectorX& vec,
+                                            bool if_sens = false);
+
         
         /*!
          *    stores \p vec as velocity for element level calculations,
@@ -67,23 +75,28 @@ namespace MAST {
         virtual void set_velocity(const RealVectorX& vec,
                                   bool if_sens = false);
 
+        /*!
+         *    stores \p vec as perturbed velocity for element level
+         *    calculations, or its sensitivity if \p if_sens is true.
+         */
+        virtual void set_perturbed_velocity(const RealVectorX& vec,
+                                            bool if_sens = false);
+
         
         /*!
-         *    stores \p vec as acceleration for element level calculations,
-         *    or its sensitivity if \p if_sens is true.
+         *    stores \p vec as acceleration for element level
+         *    calculations, or its sensitivity if \p if_sens is true.
          */
         virtual void set_acceleration(const RealVectorX& vec,
                                       bool if_sens = false);
 
         
-//        /*!
-//         *   This is used for cases where a linearized problem is solved
-//         *   about a stationary base solution. This method stores
-//         *   \p vec as the base solution, or its sensitivity if \p
-//         *   if_sens is true.
-//         */
-//        virtual void set_base_solution(const RealVectorX& vec,
-//                                       bool if_sens = false);
+        /*!
+         *    stores \p vec as perturbed acceleration for element level
+         *    calculations, or its sensitivity if \p if_sens is true.
+         */
+        virtual void set_perturbed_acceleration(const RealVectorX& vec,
+                                                bool if_sens = false);
 
         
         /*!
@@ -112,8 +125,17 @@ namespace MAST {
          */
         virtual bool internal_residual (bool request_jacobian,
                                         RealVectorX& f,
-                                        RealMatrixX& jac,
-                                        bool if_ignore_ho_jac) = 0;
+                                        RealMatrixX& jac) = 0;
+
+        /*!
+         *   internal force contribution to system residual of the linearized
+         *   problem
+         */
+        virtual bool
+        linearized_internal_residual (bool request_jacobian,
+                                      RealVectorX& f,
+                                      RealMatrixX& jac);
+
         
         /*!
          *   calculates d[J]/d{x} . d{x}/dp
@@ -143,6 +165,17 @@ namespace MAST {
                                         RealMatrixX& jac_xddot,
                                         RealMatrixX& jac_xdot,
                                         RealMatrixX& jac);
+
+        /*!
+         *   inertial force contribution to system residual of linerized 
+         *   problem
+         */
+        virtual bool linearized_inertial_residual (bool request_jacobian,
+                                                   RealVectorX& f,
+                                                   RealMatrixX& jac_xddot,
+                                                   RealMatrixX& jac_xdot,
+                                                   RealMatrixX& jac);
+
         
         /*!
          *   side external force contribution to system residual. This primarily
@@ -156,6 +189,21 @@ namespace MAST {
                                      RealMatrixX& jac,
                                      std::multimap<libMesh::boundary_id_type, MAST::BoundaryConditionBase*>& bc);
 
+        /*!
+         *   side external force contribution to system residual. This primarily
+         *   handles the boundary conditions. If requested, the Jacobians of the
+         *   residual due to xdot will be returned in \p jac_xdot and the
+         *   Jacobian due to x is returned in jac.
+         */
+        bool
+        linearized_side_external_residual
+        (bool request_jacobian,
+         RealVectorX& f,
+         RealMatrixX& jac_xdot,
+         RealMatrixX& jac,
+         std::multimap<libMesh::boundary_id_type, MAST::BoundaryConditionBase*>& bc);
+        
+        
 
         /*!
          *   Calculates the external force due to frequency domain
@@ -164,10 +212,11 @@ namespace MAST {
          *   Jacobian due to x is returned in jac.
          */
         bool
-        side_frequency_domain_external_residual (bool request_jacobian,
-                                                 ComplexVectorX& f,
-                                                 ComplexMatrixX& jac,
-                                                 std::multimap<libMesh::boundary_id_type, MAST::BoundaryConditionBase*>& bc);
+        linearized_frequency_domain_side_external_residual
+        (bool request_jacobian,
+         ComplexVectorX& f,
+         ComplexMatrixX& jac,
+         std::multimap<libMesh::boundary_id_type, MAST::BoundaryConditionBase*>& bc);
         
 
         /*!
@@ -203,6 +252,20 @@ namespace MAST {
                                        RealMatrixX& jac,
                                        std::multimap<libMesh::subdomain_id_type, MAST::BoundaryConditionBase*>& bc);
 
+        /*!
+         *   volume external force contribution to system residual. If
+         *   requested, the Jacobians of the residual due to xdot will be
+         *   returned in \p jac_xdot and the Jacobian due to x is
+         *   returned in jac.
+         */
+        bool
+        linearized_volume_external_residual
+        (bool request_jacobian,
+         RealVectorX& f,
+         RealMatrixX& jac_xdot,
+         RealMatrixX& jac,
+         std::multimap<libMesh::subdomain_id_type, MAST::BoundaryConditionBase*>& bc);
+
         
         /*!
          *   Calculates the frequency domain  volume external force contribution
@@ -210,11 +273,12 @@ namespace MAST {
          *   returned in jac.
          */
         bool
-        volume_frequency_domain_external_residual (bool request_jacobian,
-                                                   ComplexVectorX& f,
-                                                   ComplexMatrixX& jac,
-                                                   std::multimap<libMesh::subdomain_id_type, MAST::BoundaryConditionBase*>& bc);
-
+        linearized_frequency_domain_volume_external_residual
+        (bool request_jacobian,
+         ComplexVectorX& f,
+         ComplexMatrixX& jac,
+         std::multimap<libMesh::subdomain_id_type, MAST::BoundaryConditionBase*>& bc);
+        
         
         /*!
          *   evaluates an output quantity requested in the map over the
@@ -232,8 +296,7 @@ namespace MAST {
          */
         virtual bool internal_residual_sensitivity (bool request_jacobian,
                                                     RealVectorX& f,
-                                                    RealMatrixX& jac,
-                                                    bool if_ignore_ho_jac) = 0;
+                                                    RealMatrixX& jac) = 0;
 
         /*!
          *   sensitivity of the damping force contribution to system residual
@@ -359,7 +422,18 @@ namespace MAST {
                                   RealVectorX& f,
                                   RealMatrixX& jac,
                                   MAST::BoundaryConditionBase& bc);
-        
+
+        /*!
+         *    Calculates the force vector and Jacobian due to surface pressure
+         *    applied on the entire element domain. This is applicable for
+         *    only 1D and 2D elements.
+         */
+        virtual bool
+        linearized_surface_pressure_residual(bool request_jacobian,
+                                             RealVectorX& f,
+                                             RealMatrixX& jac,
+                                             MAST::BoundaryConditionBase& bc);
+
         
         /*!
          *   @returns the piston theory cp value based on the 
@@ -442,23 +516,28 @@ namespace MAST {
          *    perturbation surface pressure.
          */
         virtual bool
-        small_disturbance_surface_pressure_residual(bool request_jacobian,
-                                                    ComplexVectorX& f,
-                                                    ComplexMatrixX& jac,
-                                                    const unsigned int side,
-                                                    MAST::BoundaryConditionBase& bc) = 0;
+        linearized_frequency_domain_surface_pressure_residual
+        (bool request_jacobian,
+         ComplexVectorX& f,
+         ComplexMatrixX& jac,
+         const unsigned int side,
+         MAST::BoundaryConditionBase& bc) = 0;
         
         
         /*!
          *    Calculates the force vector and Jacobian due to surface pressure
          *    applied on the entire element domain. This is applicable for
-         *    only 1D and 2D elements.
+         *    only 1D and 2D elements. The implementation can be used as 
+         *    the evaluation of \f$ df(x_s, x_f)/dx_f dx_f \f$, or the 
+         *    contribution of the off-diagonal Jacobian times fluid solution 
+         *    perturbation.
          */
         virtual bool
-        small_disturbance_surface_pressure_residual(bool request_jacobian,
-                                                    ComplexVectorX& f,
-                                                    ComplexMatrixX& jac,
-                                                    MAST::BoundaryConditionBase& bc);
+        linearized_frequency_domain_surface_pressure_residual
+        (bool request_jacobian,
+         ComplexVectorX& f,
+         ComplexMatrixX& jac,
+         MAST::BoundaryConditionBase& bc);
         
         
         /*!
@@ -466,11 +545,12 @@ namespace MAST {
          *     is applicable for perturbation surface pressure.
          */
         virtual bool
-        small_disturbance_surface_pressure_residual_sensitivity(bool request_jacobian,
-                                                                ComplexVectorX& f,
-                                                                ComplexMatrixX& jac,
-                                                                const unsigned int side,
-                                                                MAST::BoundaryConditionBase& bc) = 0;
+        linearized_frequency_domain_surface_pressure_residual_sensitivity
+        (bool request_jacobian,
+         ComplexVectorX& f,
+         ComplexMatrixX& jac,
+         const unsigned int side,
+         MAST::BoundaryConditionBase& bc) = 0;
         
         
         /*!
@@ -479,10 +559,11 @@ namespace MAST {
          *    is applicable for only 1D and 2D elements.
          */
         virtual bool
-        small_disturbance_surface_pressure_residual_sensitivity(bool request_jacobian,
-                                                                ComplexVectorX& f,
-                                                                ComplexMatrixX& jac,
-                                                                MAST::BoundaryConditionBase& bc) {
+        linearized_frequency_domain_surface_pressure_residual_sensitivity
+        (bool request_jacobian,
+         ComplexVectorX& f,
+         ComplexMatrixX& jac,
+         MAST::BoundaryConditionBase& bc) {
             
             libmesh_error(); // to be implemented
         }
@@ -550,49 +631,74 @@ namespace MAST {
          *   local solution
          */
         RealVectorX _local_sol;
-        
+
+
+        /*!
+         *   local perturbed solution
+         */
+        RealVectorX _local_delta_sol;
+
         
         /*!
          *   local solution sensitivity
          */
         RealVectorX _local_sol_sens;
-        
+
+
+        /*!
+         *   local perturbed solution sensitivity
+         */
+        RealVectorX _local_delta_sol_sens;
+
         
         /*!
          *   local velocity
          */
         RealVectorX _local_vel;
-        
+
         
         /*!
-         *   local velocity
+         *   local perturbed velocity
+         */
+        RealVectorX _local_delta_vel;
+
+        
+        /*!
+         *   local velocity sensitivity
          */
         RealVectorX _local_vel_sens;
+
         
+        /*!
+         *   local perturbed velocity  sensitivity
+         */
+        RealVectorX _local_delta_vel_sens;
+
         
         /*!
          *   local acceleration
          */
         RealVectorX _local_accel;
-        
+
         
         /*!
-         *   local acceleration
+         *   local perturbed acceleration
+         */
+        RealVectorX _local_delta_accel;
+
+        
+        /*!
+         *   local acceleration sensitivity
          */
         RealVectorX _local_accel_sens;
-        
-        
-//        /*!
-//         *   base solution about which a linearized solution is performed
-//         */
-//        RealVectorX _local_base_sol;
-//        
-//        
-//        /*!
-//         *   base solution sensitivity
-//         */
-//        RealVectorX _local_base_sol_sens;
 
+        
+        /*!
+         *   local perturbed acceleration sensitivity
+         */
+        RealVectorX _local_delta_accel_sens;
+
+        
         /*!
          *   incompatible mode solution vector
          */

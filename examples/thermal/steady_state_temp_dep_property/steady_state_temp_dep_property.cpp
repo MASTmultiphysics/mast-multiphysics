@@ -14,7 +14,6 @@
 #include "property_cards/isotropic_material_property_card.h"
 #include "property_cards/solid_2d_section_element_property_card.h"
 #include "base/mesh_field_function.h"
-#include "driver/driver_base.h"
 
 
 // libMesh includes
@@ -77,8 +76,7 @@ public:
      *    calculates the value of the function at the specified point,
      *    \par p, and time, \par t, and returns it in \p v.
      */
-    virtual void derivative (const MAST::DerivativeType d,
-                             const MAST::FunctionBase& f,
+    virtual void derivative (const MAST::FunctionBase& f,
                              const libMesh::Point& p,
                              const Real t,
                              Real& v) const {
@@ -87,7 +85,6 @@ public:
         // partial sense
         
         if (&f == &_temp) {
-            libmesh_assert(d == MAST::PARTIAL_DERIVATIVE);
             v = _k1();
         }
         else
@@ -180,7 +177,7 @@ int main_9(int argc, const char * argv[]) {
     
     // temperature function that would provide the solution for temperature
     // dependent material property
-    MAST::MeshFieldFunction<RealVectorX> temp_sol("temperature");
+    MAST::MeshFieldFunction temp_sol(heat_cond_sys, "temperature");
     
     // now define the thermal conductance.
     // the connection between the property and solution is defined
@@ -209,7 +206,7 @@ int main_9(int argc, const char * argv[]) {
     
     // tell the conduction physics about the section properties
     heat_cond.set_property_for_subdomain(0, section_property);
-    /*
+    
     // create the nonlinear assembly object
     MAST::HeatConductionNonlinearAssembly   assembly;
     
@@ -217,9 +214,18 @@ int main_9(int argc, const char * argv[]) {
     // solution function before each residual and Jacobian evaluation
     assembly.attach_solution_function(temp_sol);
     
-    // now solve the system
-    MAST::Driver::nonlinear_solution(heat_cond, heat_cond_sys, assembly);
-    */
+    assembly.attach_discipline_and_system(heat_cond, heat_cond_sys);
+    
+    libMesh::NonlinearImplicitSystem&      nonlin_sys   =
+    dynamic_cast<libMesh::NonlinearImplicitSystem&>(assembly.system());
+    
+    // zero the solution before solving
+    nonlin_sys.solution->zero();
+    
+    nonlin_sys.solve();
+    
+    assembly.clear_discipline_and_system();
+    
     // write the solution for visualization
     libMesh::ExodusII_IO(mesh).write_equation_systems("mesh_nl.exo", eq_sys);
     

@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2016  Manav Bhatia
+ * Copyright (C) 2013-2017  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -29,7 +29,7 @@ ConstantFieldFunction(const std::string& nm,
 MAST::FieldFunction<Real>(nm),
 _p(p) {
     
-    _functions.insert(p.master());
+    _functions.insert(&p);
 }
 
 
@@ -50,8 +50,7 @@ MAST::ConstantFieldFunction::operator() (Real& v) const {
 
 
 void
-MAST::ConstantFieldFunction::derivative (const MAST::DerivativeType d,
-                                         const MAST::FunctionBase& f,
+MAST::ConstantFieldFunction::derivative (        const MAST::FunctionBase& f,
                                          Real& v) const {
     
     v = _p.depends_on(f)?1:0;
@@ -71,8 +70,7 @@ MAST::ConstantFieldFunction::operator() (const libMesh::Point& p,
 
 
 void
-MAST::ConstantFieldFunction::derivative (const MAST::DerivativeType d,
-                                         const MAST::FunctionBase& f,
+MAST::ConstantFieldFunction::derivative (        const MAST::FunctionBase& f,
                                          const libMesh::Point& p,
                                          const Real t,
                                          Real& v) const {

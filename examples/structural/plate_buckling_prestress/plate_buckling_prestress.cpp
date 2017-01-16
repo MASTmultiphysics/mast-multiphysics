@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2016  Manav Bhatia
+ * Copyright (C) 2013-2017  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -64,8 +64,8 @@ namespace MAST {
         _stress(s),
         _load_param(p) {
             
-            _functions.insert(s.master());
-            _functions.insert(p.master());
+            _functions.insert(&s);
+            _functions.insert(&p);
         }
         
         
@@ -89,8 +89,7 @@ namespace MAST {
          *    calculates the value of the function at the specified point,
          *    \par p, and time, \par t, and returns it in \p v.
          */
-        virtual void derivative (const MAST::DerivativeType d,
-                                 const MAST::FunctionBase& f,
+        virtual void derivative (const MAST::FunctionBase& f,
                                  const libMesh::Point& p,
                                  const Real t,
                                  RealMatrixX& v) const {

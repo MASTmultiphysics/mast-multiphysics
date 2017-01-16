@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2016  Manav Bhatia
+ * Copyright (C) 2013-2017  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -24,10 +24,10 @@
 // MAST includes
 #include "tests/fluid/build_conservative_fluid_elem.h"
 #include "tests/base/test_comparisons.h"
+#include "examples/base/rigid_surface_motion.h"
 #include "fluid/frequency_domain_linearized_conservative_fluid_elem.h"
 #include "fluid/conservative_fluid_discipline.h"
 #include "fluid/conservative_fluid_system_initialization.h"
-#include "boundary_condition/rigid_surface_motion.h"
 #include "base/parameter.h"
 
 // libMesh includes

@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2016  Manav Bhatia
+ * Copyright (C) 2013-2017  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -93,8 +93,9 @@ namespace MAST {
          *   system assembly
          */
         MAST::NonlinearImplicitAssembly& get_system_assembly(unsigned int i);
-        
 
+        
+        
         /*!
          *   @returns a reference to the petsc index sets
          */
@@ -137,9 +138,34 @@ namespace MAST {
             virtual void
             update_at_solution(std::vector<libMesh::NumericVector<Real>*>&  sol_vecs) = 0;
             
+            /*!
+             *    \p sol_vecs is the vector containing the solution for each
+             *    in this multiphysics solution, and \p dsol_vecs is the
+             *    vector of perturbed solutions.
+             */
+            virtual void
+            update_at_perturbed_solution
+            (std::vector<libMesh::NumericVector<Real>*>&   sol_vecs,
+             std::vector<libMesh::NumericVector<Real>*>&  dsol_vecs) = 0;
+            
         };
 
         
+
+        /*!
+         *   assigns the update object to this solver
+         */
+        void
+        set_pre_residual_update_object
+        (MAST::MultiphysicsNonlinearSolverBase::PreResidualUpdate& update) {
+            
+            _update = &update;
+        }
+
+        
+        /*!
+         *   returns a pointer to the update object
+         */
         MAST::MultiphysicsNonlinearSolverBase::PreResidualUpdate*
         get_pre_residual_update_object() {
             
@@ -170,7 +196,7 @@ namespace MAST {
          *   multiphysics system
          */
         std::vector<MAST::NonlinearImplicitAssembly*>  _discipline_assembly;
-        
+
         std::vector<IS>  _is;
         std::vector<Mat> _sub_mats; // row-major ordering
         unsigned int     _n_dofs;

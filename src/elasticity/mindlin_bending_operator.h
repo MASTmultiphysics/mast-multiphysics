@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2016  Manav Bhatia
+ * Copyright (C) 2013-2017  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -206,8 +206,7 @@ calculate_transverse_shear_residual(bool request_jacobian,
                          _structural_elem.system().time,
                          material_trans_shear_mat);
         else
-            mat_stiff->derivative(MAST::PARTIAL_DERIVATIVE,
-                                  *sens_param,
+            mat_stiff->derivative(  *sens_param,
                                   p,
                                   _structural_elem.system().time,
                                   material_trans_shear_mat);

@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2016  Manav Bhatia
+ * Copyright (C) 2013-2017  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -36,8 +36,8 @@ namespace MAST {
             MAST::FieldFunction<Real>("Area"),
             _hy(hy),
             _hz(hz) {
-                _functions.insert(hy.master());
-                _functions.insert(hz.master());
+                _functions.insert(&hy);
+                _functions.insert(&hz);
             }
             
             virtual ~Area() { }
@@ -52,14 +52,13 @@ namespace MAST {
                 m = hy*hz;
             }
             
-            virtual void derivative (const MAST::DerivativeType d,
-                                     const MAST::FunctionBase& f,
+            virtual void derivative (    const MAST::FunctionBase& f,
                                      const libMesh::Point& p,
                                      const Real t,
                                      Real& m) const {
                 Real hy, hz, dhy, dhz;
-                _hy(p, t, hy); _hy.derivative(d, f, p, t, dhy);
-                _hz(p, t, hz); _hz.derivative(d, f, p, t, dhz);
+                _hy(p, t, hy); _hy.derivative( f, p, t, dhy);
+                _hz(p, t, hz); _hz.derivative( f, p, t, dhz);
                 
                 m = dhy*hz + hy*dhz;
             }
@@ -78,8 +77,8 @@ namespace MAST {
             MAST::FieldFunction<Real>("TorsionalConstant"),
             _hy(hy),
             _hz(hz) {
-                _functions.insert(hy.master());
-                _functions.insert(hz.master());
+                _functions.insert(&hy);
+                _functions.insert(&hz);
             }
             
             
@@ -107,14 +106,13 @@ namespace MAST {
             }
             
             
-            virtual void derivative (const MAST::DerivativeType d,
-                                     const MAST::FunctionBase& f,
+            virtual void derivative (    const MAST::FunctionBase& f,
                                      const libMesh::Point& p,
                                      const Real t,
                                      Real& m) const {
                 Real hy, hz, dhy, dhz, a, b, da, db;
-                _hy(p, t, hy); _hy.derivative(d, f, p, t, dhy);
-                _hz(p, t, hz); _hz.derivative(d, f, p, t, dhz);
+                _hy(p, t, hy); _hy.derivative( f, p, t, dhy);
+                _hz(p, t, hz); _hz.derivative( f, p, t, dhz);
                 
                 // shorter side is b, and longer side is a
                 if (hy > hz) {
@@ -153,10 +151,10 @@ namespace MAST {
             _hz(hz),
             _hy_offset(hy_offset),
             _hz_offset(hz_offset) {
-                _functions.insert(hy.master());
-                _functions.insert(hz.master());
-                _functions.insert(hy_offset.master());
-                _functions.insert(hz_offset.master());
+                _functions.insert(&hy);
+                _functions.insert(&hz);
+                _functions.insert(&hy_offset);
+                _functions.insert(&hz_offset);
             }
             
             virtual ~PolarInertia() { }
@@ -174,16 +172,15 @@ namespace MAST {
                            pow(offy,2) + pow(offz,2));
             }
             
-            virtual void derivative (const MAST::DerivativeType d,
-                                     const MAST::FunctionBase& f,
+            virtual void derivative (    const MAST::FunctionBase& f,
                                      const libMesh::Point& p,
                                      const Real t,
                                      Real& m) const {
                 Real hy, hz, dhy, dhz, offy, offz, doffy, doffz;
-                _hy        (p, t, hy);           _hy.derivative(d, f, p, t, dhy);
-                _hz        (p, t, hz);           _hz.derivative(d, f, p, t, dhz);
-                _hy_offset (p, t, offy);  _hy_offset.derivative(d, f, p, t, doffy);
-                _hz_offset (p, t, offz);  _hz_offset.derivative(d, f, p, t, doffz);
+                _hy        (p, t, hy);           _hy.derivative( f, p, t, dhy);
+                _hz        (p, t, hz);           _hz.derivative( f, p, t, dhz);
+                _hy_offset (p, t, offy);  _hy_offset.derivative( f, p, t, doffy);
+                _hz_offset (p, t, offz);  _hz_offset.derivative( f, p, t, doffz);
                 
                 
                 m =
@@ -213,9 +210,9 @@ namespace MAST {
             _hy(hy),
             _hz(hz),
             _hz_offset(hz_offset) {
-                _functions.insert(hy.master());
-                _functions.insert(hz.master());
-                _functions.insert(hz_offset.master());
+                _functions.insert(&hy);
+                _functions.insert(&hz);
+                _functions.insert(&hz_offset);
             }
             
             
@@ -233,15 +230,14 @@ namespace MAST {
             }
             
             
-            virtual void derivative (const MAST::DerivativeType d,
-                                     const MAST::FunctionBase& f,
+            virtual void derivative (    const MAST::FunctionBase& f,
                                      const libMesh::Point& p,
                                      const Real t,
                                      Real& m) const {
                 Real hy, hz, off, dhy, dhz, doff;
-                _hy        (p, t, hy);         _hy.derivative(d, f, p, t, dhy);
-                _hz        (p, t, hz);         _hz.derivative(d, f, p, t, dhz);
-                _hz_offset (p, t, off); _hz_offset.derivative(d, f, p, t, doff);
+                _hy        (p, t, hy);         _hy.derivative( f, p, t, dhy);
+                _hz        (p, t, hz);         _hz.derivative( f, p, t, dhz);
+                _hz_offset (p, t, off); _hz_offset.derivative( f, p, t, doff);
                 
                 m = dhy*hz*off + hy*dhz*off + hy*hz*doff;
             }
@@ -266,9 +262,9 @@ namespace MAST {
             _hy(hy),
             _hz(hz),
             _hy_offset(hy_offset) {
-                _functions.insert(hy.master());
-                _functions.insert(hz.master());
-                _functions.insert(hy_offset.master());
+                _functions.insert(&hy);
+                _functions.insert(&hz);
+                _functions.insert(&hy_offset);
             }
             
             virtual ~AreaZMoment() { }
@@ -285,15 +281,14 @@ namespace MAST {
             }
             
             
-            virtual void derivative (const MAST::DerivativeType d,
-                                     const MAST::FunctionBase& f,
+            virtual void derivative (    const MAST::FunctionBase& f,
                                      const libMesh::Point& p,
                                      const Real t,
                                      Real& m) const {
                 Real hy, hz, off, dhy, dhz, doff;
-                _hy(p, t, hy); _hy.derivative(d, f, p, t, dhy);
-                _hz(p, t, hz); _hz.derivative(d, f, p, t, dhz);
-                _hy_offset(p, t, off); _hy_offset.derivative(d, f, p, t, doff);
+                _hy(p, t, hy); _hy.derivative( f, p, t, dhy);
+                _hz(p, t, hz); _hz.derivative( f, p, t, dhz);
+                _hy_offset(p, t, off); _hy_offset.derivative( f, p, t, doff);
                 
                 m = dhy*hz*off + hy*dhz*off + hy*hz*doff;
             }
@@ -325,10 +320,10 @@ namespace MAST {
             _hz(hz),
             _hy_offset(hy_offset),
             _hz_offset(hz_offset) {
-                _functions.insert(hy.master());
-                _functions.insert(hz.master());
-                _functions.insert(hy_offset.master());
-                _functions.insert(hz_offset.master());
+                _functions.insert(&hy);
+                _functions.insert(&hz);
+                _functions.insert(&hy_offset);
+                _functions.insert(&hz_offset);
             }
             
             virtual ~AreaInertiaMatrix() { }
@@ -350,17 +345,16 @@ namespace MAST {
             }
             
             
-            virtual void derivative (const MAST::DerivativeType d,
-                                     const MAST::FunctionBase& f,
+            virtual void derivative (    const MAST::FunctionBase& f,
                                      const libMesh::Point& p,
                                      const Real t,
                                      RealMatrixX& m) const {
                 Real hy, hz, offy, offz, dhy, dhz, doffy, doffz;
                 m = RealMatrixX::Zero(2,2);
-                _hy(p, t, hy); _hy.derivative(d, f, p, t, dhy);
-                _hz(p, t, hz); _hz.derivative(d, f, p, t, dhz);
-                _hy_offset(p, t, offy); _hy_offset.derivative(d, f, p, t, doffy);
-                _hz_offset(p, t, offz); _hz_offset.derivative(d, f, p, t, doffz);
+                _hy(p, t, hy); _hy.derivative( f, p, t, dhy);
+                _hz(p, t, hz); _hz.derivative( f, p, t, dhz);
+                _hy_offset(p, t, offy); _hy_offset.derivative( f, p, t, doffy);
+                _hz_offset(p, t, offz); _hz_offset.derivative( f, p, t, doffz);
                 
                 
                 m(0,0) = dhz*pow(hy,3)/12. + hz*pow(hy,2)/4.*dhy +
@@ -392,8 +386,7 @@ namespace MAST {
             
             
             
-            virtual void derivative (const MAST::DerivativeType d,
-                                     const MAST::FunctionBase& f,
+            virtual void derivative (    const MAST::FunctionBase& f,
                                      const libMesh::Point& p,
                                      const Real t,
                                      RealMatrixX& m) const;
@@ -420,8 +413,7 @@ namespace MAST {
             
             
             
-            virtual void derivative (const MAST::DerivativeType d,
-                                     const MAST::FunctionBase& f,
+            virtual void derivative (    const MAST::FunctionBase& f,
                                      const libMesh::Point& p,
                                      const Real t,
                                      RealMatrixX& m) const;
@@ -446,8 +438,7 @@ namespace MAST {
             
             
             
-            virtual void derivative (const MAST::DerivativeType d,
-                                     const MAST::FunctionBase& f,
+            virtual void derivative (    const MAST::FunctionBase& f,
                                      const libMesh::Point& p,
                                      const Real t,
                                      RealMatrixX& m) const;
@@ -466,8 +457,8 @@ namespace MAST {
             MAST::FieldFunction<RealMatrixX>("TransverseStiffnessMatrix1D"),
             _material_stiffness(mat),
             _A(A) {
-                _functions.insert(mat.master());
-                _functions.insert(A.master());
+                _functions.insert(&mat);
+                _functions.insert(&A);
             }
             
             virtual ~TransverseStiffnessMatrix() { }
@@ -481,15 +472,14 @@ namespace MAST {
                 m *= A;
             }
             
-            virtual void derivative (const MAST::DerivativeType d,
-                                     const MAST::FunctionBase& f,
+            virtual void derivative (    const MAST::FunctionBase& f,
                                      const libMesh::Point& p,
                                      const Real t,
                                      RealMatrixX& m) const {
                 RealMatrixX dm;
                 Real A, dA;
-                _A                  (p, t, A);                  _A.derivative(d, f, p, t, dA);
-                _material_stiffness (p, t, m); _material_stiffness.derivative(d, f, p, t, dm);
+                _A                  (p, t, A);                  _A.derivative( f, p, t, dA);
+                _material_stiffness (p, t, m); _material_stiffness.derivative( f, p, t, dm);
                 
                 m *= dA;
                 m += A*dm;
@@ -519,8 +509,7 @@ namespace MAST {
             
             
             
-            virtual void derivative (const MAST::DerivativeType d,
-                                     const MAST::FunctionBase& f,
+            virtual void derivative (    const MAST::FunctionBase& f,
                                      const libMesh::Point& p,
                                      const Real t,
                                      RealMatrixX& m) const;
@@ -547,8 +536,7 @@ namespace MAST {
             
             
             
-            virtual void derivative (const MAST::DerivativeType d,
-                                     const MAST::FunctionBase& f,
+            virtual void derivative (    const MAST::FunctionBase& f,
                                      const libMesh::Point& p,
                                      const Real t,
                                      RealMatrixX& m) const;
@@ -577,8 +565,7 @@ namespace MAST {
             
             
             
-            virtual void derivative (const MAST::DerivativeType d,
-                                     const MAST::FunctionBase& f,
+            virtual void derivative (    const MAST::FunctionBase& f,
                                      const libMesh::Point& p,
                                      const Real t,
                                      RealMatrixX& m) const;
@@ -608,8 +595,7 @@ namespace MAST {
             
             
             
-            virtual void derivative (const MAST::DerivativeType d,
-                                     const MAST::FunctionBase& f,
+            virtual void derivative (    const MAST::FunctionBase& f,
                                      const libMesh::Point& p,
                                      const Real t,
                                      RealMatrixX& m) const;
@@ -640,8 +626,7 @@ namespace MAST {
             
             
             
-            virtual void derivative (const MAST::DerivativeType d,
-                                     const MAST::FunctionBase& f,
+            virtual void derivative (    const MAST::FunctionBase& f,
                                      const libMesh::Point& p,
                                      const Real t,
                                      RealMatrixX& m) const;
@@ -673,8 +658,7 @@ namespace MAST {
             
             
             
-            virtual void derivative (const MAST::DerivativeType d,
-                                     const MAST::FunctionBase& f,
+            virtual void derivative (    const MAST::FunctionBase& f,
                                      const libMesh::Point& p,
                                      const Real t,
                                      RealMatrixX& m) const;
@@ -705,8 +689,7 @@ namespace MAST {
             
             
             
-            virtual void derivative (const MAST::DerivativeType d,
-                                     const MAST::FunctionBase& f,
+            virtual void derivative (    const MAST::FunctionBase& f,
                                      const libMesh::Point& p,
                                      const Real t,
                                      RealMatrixX& m) const;
@@ -732,9 +715,9 @@ MAST::FieldFunction<RealMatrixX> ("ExtensionStiffnessMatrix1D"),
 _material_stiffness(mat),
 _A(A),
 _J(J) {
-    _functions.insert(mat.master());
-    _functions.insert(A.master());
-    _functions.insert(J.master());
+    _functions.insert(&mat);
+    _functions.insert(&A);
+    _functions.insert(&J);
 }
 
 
@@ -760,17 +743,16 @@ ExtensionStiffnessMatrix::operator() (const libMesh::Point& p,
 
 void
 MAST::Solid1DSectionProperty::
-ExtensionStiffnessMatrix::derivative (const MAST::DerivativeType d,
-                                      const MAST::FunctionBase& f,
+ExtensionStiffnessMatrix::derivative (     const MAST::FunctionBase& f,
                                       const libMesh::Point& p,
                                       const Real t,
                                       RealMatrixX& m) const {
     RealMatrixX dm;
     m = RealMatrixX::Zero(2,2);
     Real A, J, dA, dJ;
-    _A(p, t, A); _A.derivative(d, f, p, t, dA);
-    _J(p, t, J); _J.derivative(d, f, p, t, dJ);
-    _material_stiffness(p, t, m); _material_stiffness.derivative(d, f, p, t, dm);
+    _A(p, t, A); _A.derivative( f, p, t, dA);
+    _J(p, t, J); _J.derivative( f, p, t, dJ);
+    _material_stiffness(p, t, m); _material_stiffness.derivative( f, p, t, dm);
     
     // [C]*dh
     m.row(0) *= dA;
@@ -795,9 +777,9 @@ MAST::FieldFunction<RealMatrixX> ("ExtensionBendingStiffnessMatrix1D"),
 _material_stiffness(mat),
 _A_y_moment(A_y_moment),
 _A_z_moment(A_z_moment) {
-    _functions.insert(mat.master());
-    _functions.insert(A_y_moment.master());
-    _functions.insert(A_z_moment.master());
+    _functions.insert(&mat);
+    _functions.insert(&A_y_moment);
+    _functions.insert(&A_z_moment);
 }
 
 
@@ -824,16 +806,15 @@ ExtensionBendingStiffnessMatrix::operator() (const libMesh::Point& p,
 
 void
 MAST::Solid1DSectionProperty::
-ExtensionBendingStiffnessMatrix::derivative (const MAST::DerivativeType d,
-                                             const MAST::FunctionBase& f,
+ExtensionBendingStiffnessMatrix::derivative (            const MAST::FunctionBase& f,
                                              const libMesh::Point& p,
                                              const Real t,
                                              RealMatrixX& m) const {
     RealMatrixX dm;
     Real Ay, Az, dAy, dAz;
-    _A_y_moment(p, t, Ay); _A_y_moment.derivative(d, f, p, t, dAy);
-    _A_z_moment(p, t, Az); _A_z_moment.derivative(d, f, p, t, dAz);
-    _material_stiffness(p, t, m); _material_stiffness.derivative(d, f, p, t, dm);
+    _A_y_moment(p, t, Ay); _A_y_moment.derivative( f, p, t, dAy);
+    _A_z_moment(p, t, Az); _A_z_moment.derivative( f, p, t, dAz);
+    _material_stiffness(p, t, m); _material_stiffness.derivative( f, p, t, dm);
     
     m(0,1)    = m(0,0)*dAy;  // coupling of u and w bending (== theta_y)
     m(0,0)   *= dAz;        // coupling of u and v bending (== theta_z)
@@ -854,8 +835,8 @@ BendingStiffnessMatrix(const MAST::FieldFunction<RealMatrixX>& mat,
 MAST::FieldFunction<RealMatrixX> ("BendingStiffnessMatrix1D"),
 _material_stiffness(mat),
 _I(I) {
-    _functions.insert(mat.master());
-    _functions.insert(I.master());
+    _functions.insert(&mat);
+    _functions.insert(&I);
 }
 
 
@@ -882,14 +863,13 @@ BendingStiffnessMatrix::operator() (const libMesh::Point& p,
 
 void
 MAST::Solid1DSectionProperty::
-BendingStiffnessMatrix::derivative (const MAST::DerivativeType d,
-                                    const MAST::FunctionBase& f,
+BendingStiffnessMatrix::derivative (   const MAST::FunctionBase& f,
                                     const libMesh::Point& p,
                                     const Real t,
                                     RealMatrixX& m) const {
     RealMatrixX mat, dmat, dm;
-    _I(p, t, m); _I.derivative(d, f, p, t, dm);
-    _material_stiffness(p, t, mat); _material_stiffness.derivative(d, f, p, t, dmat);
+    _I(p, t, m); _I.derivative( f, p, t, dm);
+    _material_stiffness(p, t, mat); _material_stiffness.derivative( f, p, t, dmat);
     
     // dE*I
     m *= dmat(0,0); // scale the inertia matrix with modulus of elasticity
@@ -916,12 +896,12 @@ _A_y_moment(A_y_moment),
 _A_z_moment(A_z_moment),
 _Ip(Ip),
 _I(I) {
-    _functions.insert(_rho.master());
-    _functions.insert(_A.master());
-    _functions.insert(_A_y_moment.master());
-    _functions.insert(_A_z_moment.master());
-    _functions.insert(_Ip.master());
-    _functions.insert(_I.master());
+    _functions.insert(&_rho);
+    _functions.insert(&_A);
+    _functions.insert(&_A_y_moment);
+    _functions.insert(&_A_z_moment);
+    _functions.insert(&_Ip);
+    _functions.insert(&_I);
 }
 
 
@@ -973,8 +953,7 @@ InertiaMatrix::operator() (const libMesh::Point& p,
 
 void
 MAST::Solid1DSectionProperty::
-InertiaMatrix::derivative (const MAST::DerivativeType d,
-                           const MAST::FunctionBase& f,
+InertiaMatrix::derivative (               const MAST::FunctionBase& f,
                            const libMesh::Point& p,
                            const Real t,
                            RealMatrixX& m) const {
@@ -982,12 +961,12 @@ InertiaMatrix::derivative (const MAST::DerivativeType d,
     m = RealMatrixX::Zero(6, 6); dm = RealMatrixX::Zero(6, 6);
     RealMatrixX I, dI;
     Real rho, A, Ay, Az, Ip, drho, dA, dAy, dAz, dIp;
-    _rho(p, t, rho); _rho.derivative(d, f, p, t, drho);
-    _A(p, t, A); _A.derivative(d, f, p, t, dA);
-    _A_y_moment(p, t, Ay); _A_y_moment.derivative(d, f, p, t, dAy);
-    _A_z_moment(p, t, Az); _A_z_moment.derivative(d, f, p, t, dAz);
-    _Ip(p, t, Ip); _Ip.derivative(d, f, p, t, dIp);
-    _I(p, t, I); _I.derivative(d, f, p, t, dI);
+    _rho(p, t, rho); _rho.derivative( f, p, t, drho);
+    _A(p, t, A); _A.derivative( f, p, t, dA);
+    _A_y_moment(p, t, Ay); _A_y_moment.derivative( f, p, t, dAy);
+    _A_z_moment(p, t, Az); _A_z_moment.derivative( f, p, t, dAz);
+    _Ip(p, t, Ip); _Ip.derivative( f, p, t, dIp);
+    _I(p, t, I); _I.derivative( f, p, t, dI);
     
     // translation velocities
     m(0,0) = A;  m(1,1) = A;  m(2,2) = A;
@@ -1031,9 +1010,9 @@ MAST::FieldFunction<RealMatrixX>("ThermalExpansionAMatrix1D"),
 _material_stiffness(mat_stiff),
 _material_expansion(mat_expansion),
 _A(A) {
-    _functions.insert(mat_stiff.master());
-    _functions.insert(mat_expansion.master());
-    _functions.insert(_A.master());
+    _functions.insert(&mat_stiff);
+    _functions.insert(&mat_expansion);
+    _functions.insert(&_A);
 }
 
 
@@ -1060,16 +1039,15 @@ ThermalExpansionAMatrix::operator() (const libMesh::Point& p,
 
 void
 MAST::Solid1DSectionProperty::
-ThermalExpansionAMatrix::derivative (const MAST::DerivativeType d,
-                                     const MAST::FunctionBase& f,
+ThermalExpansionAMatrix::derivative (    const MAST::FunctionBase& f,
                                      const libMesh::Point& p,
                                      const Real t,
                                      RealMatrixX& m) const {
     Real A, dA;
     RealMatrixX m1, at, dat, dm;
-    _A(p, t, A); _A.derivative(d, f, p, t, dA);
-    _material_stiffness(p, t, m1); _material_stiffness.derivative(d, f, p, t, dm);
-    _material_expansion(p, t, at); _material_expansion.derivative(d, f, p, t, dat);
+    _A(p, t, A); _A.derivative( f, p, t, dA);
+    _material_stiffness(p, t, m1); _material_stiffness.derivative( f, p, t, dm);
+    _material_expansion(p, t, at); _material_expansion.derivative( f, p, t, dat);
     
     m=m1;
     
@@ -1096,10 +1074,10 @@ _material_stiffness(mat_stiff),
 _material_expansion(mat_expansion),
 _A_y_moment(A_y_moment),
 _A_z_moment(A_z_moment) {
-    _functions.insert(mat_stiff.master());
-    _functions.insert(mat_expansion.master());
-    _functions.insert(_A_y_moment.master());
-    _functions.insert(_A_z_moment.master());
+    _functions.insert(&mat_stiff);
+    _functions.insert(&mat_expansion);
+    _functions.insert(&_A_y_moment);
+    _functions.insert(&_A_z_moment);
 }
 
 
@@ -1129,17 +1107,16 @@ ThermalExpansionBMatrix::operator() (const libMesh::Point& p,
 
 void
 MAST::Solid1DSectionProperty::
-ThermalExpansionBMatrix::derivative (const MAST::DerivativeType d,
-                                     const MAST::FunctionBase& f,
+ThermalExpansionBMatrix::derivative (    const MAST::FunctionBase& f,
                                      const libMesh::Point& p,
                                      const Real t,
                                      RealMatrixX& m) const {
     Real Ay, Az, dAy, dAz;
     RealMatrixX at, dat, m1, dm;
-    _A_y_moment(p, t, Ay); _A_y_moment.derivative(d, f, p, t, dAy);
-    _A_z_moment(p, t, Az); _A_z_moment.derivative(d, f, p, t, dAz);
-    _material_stiffness(p, t, m1); _material_stiffness.derivative(d, f, p, t, dm);
-    _material_expansion(p, t, at); _material_expansion.derivative(d, f, p, t, dat);
+    _A_y_moment(p, t, Ay); _A_y_moment.derivative( f, p, t, dAy);
+    _A_z_moment(p, t, Az); _A_z_moment.derivative( f, p, t, dAz);
+    _material_stiffness(p, t, m1); _material_stiffness.derivative( f, p, t, dm);
+    _material_expansion(p, t, at); _material_expansion.derivative( f, p, t, dat);
     
     m = m1;
     m *= at;
@@ -1166,9 +1143,9 @@ MAST::FieldFunction<RealMatrixX>("PrestressAMatrix1D"),
 _prestress(prestress),
 _T(T),
 _A(A) {
-    _functions.insert(prestress.master());
-    _functions.insert(T.master());
-    _functions.insert(A.master());
+    _functions.insert(&prestress);
+    _functions.insert(&T);
+    _functions.insert(&A);
 }
 
 
@@ -1199,17 +1176,16 @@ PrestressAMatrix::operator() (const libMesh::Point& p,
 
 void
 MAST::Solid1DSectionProperty::
-PrestressAMatrix::derivative (const MAST::DerivativeType d,
-                              const MAST::FunctionBase& f,
+PrestressAMatrix::derivative ( const MAST::FunctionBase& f,
                               const libMesh::Point& p,
                               const Real t,
                               RealMatrixX& m) const {
     RealMatrixX s, ds, T, dT;
     m = RealMatrixX::Zero(2, 2);
     Real A, dA;
-    _A(p, t, A); _A.derivative(d, f, p, t, dA);
-    _prestress(p, t, s); _prestress.derivative(d, f, p, t, ds);
-    _T(p, t, T); _T.derivative(d, f, p, t, dT);
+    _A(p, t, A); _A.derivative( f, p, t, dA);
+    _prestress(p, t, s); _prestress.derivative( f, p, t, ds);
+    _T(p, t, T); _T.derivative( f, p, t, dT);
     
     // convert the stress to the local coordinate
     s *= T;
@@ -1239,10 +1215,10 @@ _prestress(prestress),
 _T(T),
 _A_y_moment(A_y_moment),
 _A_z_moment(A_z_moment) {
-    _functions.insert(prestress.master());
-    _functions.insert(T.master());
-    _functions.insert(A_y_moment.master());
-    _functions.insert(A_z_moment.master());
+    _functions.insert(&prestress);
+    _functions.insert(&T);
+    _functions.insert(&A_y_moment);
+    _functions.insert(&A_z_moment);
 }
 
 
@@ -1276,18 +1252,17 @@ PrestressBMatrix::operator() (const libMesh::Point& p,
 
 void
 MAST::Solid1DSectionProperty::
-PrestressBMatrix::derivative (const MAST::DerivativeType d,
-                              const MAST::FunctionBase& f,
+PrestressBMatrix::derivative ( const MAST::FunctionBase& f,
                               const libMesh::Point& p,
                               const Real t,
                               RealMatrixX& m) const {
     RealMatrixX s, ds, T, dT;
     m = RealMatrixX::Zero(2, 2);
     Real Ay, Az, dAy, dAz;
-    _A_y_moment(p, t, Ay); _A_y_moment.derivative(d, f, p, t, dAy);
-    _A_z_moment(p, t, Az); _A_z_moment.derivative(d, f, p, t, dAz);
-    _prestress(p, t, s); _prestress.derivative(d, f, p, t, ds);
-    _T(p, t, T); _T.derivative(d, f, p, t, dT);
+    _A_y_moment(p, t, Ay); _A_y_moment.derivative( f, p, t, dAy);
+    _A_z_moment(p, t, Az); _A_z_moment.derivative( f, p, t, dAz);
+    _prestress(p, t, s); _prestress.derivative( f, p, t, ds);
+    _T(p, t, T); _T.derivative( f, p, t, dT);
     
     // convert the stress to the local coordinate
     s = T.transpose() * s * T;
@@ -1314,8 +1289,8 @@ ThermalConductanceMatrix(const MAST::FieldFunction<RealMatrixX>& mat_cond,
 MAST::FieldFunction<RealMatrixX>("ThermalConductanceMatrix"),
 _mat_cond(mat_cond),
 _A(A) {
-    _functions.insert(mat_cond.master());
-    _functions.insert(A.master());
+    _functions.insert(&mat_cond);
+    _functions.insert(&A);
 }
 
 
@@ -1340,8 +1315,7 @@ operator() (const libMesh::Point& p,
 
 
 void
-MAST::Solid1DSectionProperty::ThermalConductanceMatrix::derivative (const MAST::DerivativeType d,
-                                                                    const MAST::FunctionBase& f,
+MAST::Solid1DSectionProperty::ThermalConductanceMatrix::derivative (                                   const MAST::FunctionBase& f,
                                                                     const libMesh::Point& p,
                                                                     const Real t,
                                                                     RealMatrixX& m) const {
@@ -1349,9 +1323,9 @@ MAST::Solid1DSectionProperty::ThermalConductanceMatrix::derivative (const MAST::
     RealMatrixX dm;
     Real A, dA;
     _mat_cond(p, t, m);
-    _mat_cond.derivative(d, f, p, t, dm);
+    _mat_cond.derivative( f, p, t, dm);
     _A(p, t, A);
-    _A.derivative(d, f, p, t, dA);
+    _A.derivative( f, p, t, dA);
     
     m *= dA;
     m += dm*A;
@@ -1366,8 +1340,8 @@ ThermalCapacitanceMatrix(const MAST::FieldFunction<RealMatrixX>& mat_cap,
 MAST::FieldFunction<RealMatrixX>("ThermalCapacitanceMatrix"),
 _mat_cap(mat_cap),
 _h(h) {
-    _functions.insert(mat_cap.master());
-    _functions.insert(h.master());
+    _functions.insert(&mat_cap);
+    _functions.insert(&h);
 }
 
 
@@ -1394,8 +1368,7 @@ operator() (const libMesh::Point& p,
 
 
 void
-MAST::Solid1DSectionProperty::ThermalCapacitanceMatrix::derivative (const MAST::DerivativeType d,
-                                                                    const MAST::FunctionBase& f,
+MAST::Solid1DSectionProperty::ThermalCapacitanceMatrix::derivative (                                   const MAST::FunctionBase& f,
                                                                     const libMesh::Point& p,
                                                                     const Real t,
                                                                     RealMatrixX& m) const {
@@ -1403,9 +1376,9 @@ MAST::Solid1DSectionProperty::ThermalCapacitanceMatrix::derivative (const MAST::
     RealMatrixX dm;
     Real h, dh;
     _mat_cap(p, t, m);
-    _mat_cap.derivative(d, f, p, t, dm);
+    _mat_cap.derivative( f, p, t, dm);
     _h(p, t, h);
-    _h.derivative(d, f, p, t, dh);
+    _h.derivative( f, p, t, dh);
     
     m *= dh;
     m += dm*h;

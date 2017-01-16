@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2016  Manav Bhatia
+ * Copyright (C) 2013-2017  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -26,7 +26,7 @@
 #include "base/boundary_condition_base.h"
 #include "base/system_initialization.h"
 #include "aeroelasticity/frequency_function.h"
-#include "boundary_condition/surface_motion_base.h"
+#include "elasticity/normal_rotation_function_base.h"
 
 
 
@@ -185,7 +185,7 @@ internal_residual_sensitivity (bool request_jacobian,
     b_V     = 0.;
     
     (*freq)(omega);
-    freq->derivative(MAST::PARTIAL_DERIVATIVE, *this->sensitivity_param, domega);
+    freq->derivative(*this->sensitivity_param, domega);
     freq->nondimensionalizing_factor(b_V);
     
     
@@ -536,7 +536,8 @@ slip_wall_surface_residual(bool request_jacobian,
     uvec       = RealVectorX::Zero(3),
     dwdot_i    = RealVectorX::Zero(3),
     ni         = RealVectorX::Zero(3),
-    dni        = RealVectorX::Zero(3);
+    dni        = RealVectorX::Zero(3),
+    tmp        = RealVectorX::Zero(6);
 
     ComplexVectorX
     Dw_i       = ComplexVectorX::Zero(3),
@@ -544,7 +545,8 @@ slip_wall_surface_residual(bool request_jacobian,
     Duvec      = ComplexVectorX::Zero(3),
     vec2_n1    = ComplexVectorX::Zero(n1),
     vec2_n2    = ComplexVectorX::Zero(n2),
-    flux       = ComplexVectorX::Zero(n1);
+    flux       = ComplexVectorX::Zero(n1),
+    tmp_c      = ComplexVectorX::Zero(6);
 
     RealMatrixX
     mat1_n1n1  = RealMatrixX::Zero( n1, n1),
@@ -570,16 +572,39 @@ slip_wall_surface_residual(bool request_jacobian,
 
     
     // get the surface motion object from the boundary condition object
-    MAST::SurfaceMotionBase
-    *base_motion  = nullptr,
-    *small_motion = nullptr;
-    
-    if (p.contains("motion"))
-        base_motion = dynamic_cast<MAST::SurfaceMotionBase*>(&p.get<MAST::FieldFunction<Real> >("motion"));
+    MAST::FieldFunction<RealVectorX>
+    *displ   = nullptr;
+    MAST::NormalRotationFunctionBase<RealVectorX>
+    *n_rot = nullptr;
 
-    // the boundary condition object must specify a function for
-    // small-disturbance motion
-    small_motion = dynamic_cast<MAST::SurfaceMotionBase*>(&p.get<MAST::FieldFunction<Real> >("small_disturbance_motion"));
+    MAST::FieldFunction<ComplexVectorX>
+    *displ_perturb   = nullptr;
+    MAST::NormalRotationFunctionBase<ComplexVectorX>
+    *n_rot_perturb = nullptr;
+
+    if (p.contains("displacement")) {
+        
+        displ = &p.get<MAST::FieldFunction<RealVectorX> >("displacement");
+        // if displ is provided then n_rot must also be provided
+        libmesh_assert(p.contains("normal_rotation"));
+        
+        MAST::FieldFunction<RealVectorX>&
+        tmp = p.get<MAST::FieldFunction<RealVectorX> >("normal_rotation");
+        n_rot = dynamic_cast<MAST::NormalRotationFunctionBase<RealVectorX>*>(&tmp);
+    }
+
+    if (p.contains("frequency_domain_displacement")) {
+        
+        displ_perturb = &p.get<MAST::FieldFunction<ComplexVectorX> >("frequency_domain_displacement");
+        // if displ is provided then n_rot must also be provided
+        libmesh_assert(p.contains("frequency_domain_normal_rotation"));
+        
+        MAST::FieldFunction<ComplexVectorX>&
+        tmp = p.get<MAST::FieldFunction<ComplexVectorX> >("frequency_domain_normal_rotation");
+        n_rot_perturb = dynamic_cast<MAST::NormalRotationFunctionBase<ComplexVectorX>*>(&tmp);
+    }
+
+    
 
     
     (*freq)(omega);
@@ -641,20 +666,28 @@ slip_wall_surface_residual(bool request_jacobian,
         //////////////////////////////////////////////////////////////
         // contribution from the base-flow boundary condition
         //////////////////////////////////////////////////////////////
-        if (base_motion) {
+        if (displ) {
             
-            base_motion->time_domain_motion(_time, qpoint[qp], normals[qp], dwdot_i, dni);
+            (*displ)(qpoint[qp], _time, tmp);
+            dwdot_i = tmp.topRows(3);
+            (*n_rot)(qpoint[qp], normals[qp], _time, dni);
+
             ui_ni_steady  =  dwdot_i.dot(ni+dni) - uvec.dot(dni);
 
             flux         += ui_ni_steady * b_V * vec2_n1;               // vi_ni  dcons_flux
             flux(n1-1)   += ui_ni_steady * b_V * sd_primitive_sol.dp;   // vi_ni {0,0,0,0,Dp}
         }
         
-        //////////////////////////////////////////////////////////////
-        // contribution from the small-disturbance boundary condition
-        //////////////////////////////////////////////////////////////
-        small_motion->freq_domain_motion(qpoint[qp], normals[qp], Dw_i, Dni);
-        
+        if (displ_perturb) {
+            
+            //////////////////////////////////////////////////////////////
+            // contribution from the small-disturbance boundary condition
+            //////////////////////////////////////////////////////////////
+            displ_perturb->perturbation(qpoint[qp], _time, tmp_c);
+            Dw_i = tmp_c.topRows(3);
+            n_rot_perturb->perturbation(qpoint[qp], normals[qp], _time, Dni);
+        }
+    
         Dvi_ni_freq_dep   = Dw_i.dot(ni+dni) * iota * omega;
         Dvi_ni_freq_indep = (dwdot_i.cast<Complex>().dot(ni.cast<Complex>()+
                                          dni.cast<Complex>()+Dni) -
@@ -734,14 +767,16 @@ slip_wall_surface_residual_sensitivity(bool request_jacobian,
     uvec       = RealVectorX::Zero(3),
     ni         = RealVectorX::Zero(3),
     dni        = RealVectorX::Zero(3),
-    dwdot_i    = RealVectorX::Zero(3);
+    dwdot_i    = RealVectorX::Zero(3),
+    tmp        = RealVectorX::Zero(6);
     
     ComplexVectorX
-    Dw_i       = ComplexVectorX::Zero(3),
-    Dni        = ComplexVectorX::Zero(3),
     vec2_n1    = ComplexVectorX::Zero(n1),
     vec2_n2    = ComplexVectorX::Zero(n2),
-    flux       = ComplexVectorX::Zero(n1);
+    flux       = ComplexVectorX::Zero(n1),
+    tmp_c      = ComplexVectorX::Zero(6),
+    Dw_i       = ComplexVectorX::Zero(3),
+    Dni        = ComplexVectorX::Zero(3);
     
     RealMatrixX
     mat1_n1n1  = RealMatrixX::Zero( n1, n1),
@@ -767,20 +802,43 @@ slip_wall_surface_residual_sensitivity(bool request_jacobian,
     
     
     // get the surface motion object from the boundary condition object
-    MAST::SurfaceMotionBase
-    *base_motion  = nullptr,
-    *small_motion = nullptr;
+    MAST::FieldFunction<RealVectorX>
+    *displ   = nullptr;
+    MAST::NormalRotationFunctionBase<RealVectorX>
+    *n_rot = nullptr;
     
-    if (p.contains("motion"))
-        base_motion = dynamic_cast<MAST::SurfaceMotionBase*>(&p.get<MAST::FieldFunction<Real> >("motion"));
+    MAST::FieldFunction<ComplexVectorX>
+    *displ_perturb   = nullptr;
+    MAST::NormalRotationFunctionBase<ComplexVectorX>
+    *n_rot_perturb = nullptr;
     
-    // the boundary condition object must specify a function for
-    // small-disturbance motion
-    small_motion = dynamic_cast<MAST::SurfaceMotionBase*>(&p.get<MAST::FieldFunction<Real> >("small_disturbance_motion"));
     
+    if (p.contains("displacement")) {
+        
+        displ = &p.get<MAST::FieldFunction<RealVectorX> >("displacement");
+
+        libmesh_assert( p.contains("normal_rotation"));
+        
+        MAST::FieldFunction<RealVectorX>&
+        tmp = p.get<MAST::FieldFunction<RealVectorX> >("normal_rotation");
+        n_rot = dynamic_cast<MAST::NormalRotationFunctionBase<RealVectorX>*>(&tmp);
+    }
+    
+
+    if (p.contains("frequency_domain_displacement")) {
+        
+        displ_perturb = &p.get<MAST::FieldFunction<ComplexVectorX> >("frequency_domain_displacement");
+        
+        libmesh_assert( p.contains("frequency_domain_normal_rotation"));
+        
+        MAST::FieldFunction<ComplexVectorX>&
+        tmp = p.get<MAST::FieldFunction<ComplexVectorX> >("frequency_domain_normal_rotation");
+        n_rot_perturb = dynamic_cast<MAST::NormalRotationFunctionBase<ComplexVectorX>*>(&tmp);
+    }
+
     
     (*freq)(omega);
-    freq->derivative(MAST::PARTIAL_DERIVATIVE, *this->sensitivity_param, domega);
+    freq->derivative(*this->sensitivity_param, domega);
     freq->nondimensionalizing_factor(b_V);
     
     
@@ -833,16 +891,25 @@ slip_wall_surface_residual_sensitivity(bool request_jacobian,
         // condition
         primitive_sol.get_uvec(uvec);
         
-        //////////////////////////////////////////////////////////////
-        // contribution from the base-flow boundary condition
-        //////////////////////////////////////////////////////////////
-        if (base_motion)
-            base_motion->time_domain_motion(_time, qpoint[qp], normals[qp], dwdot_i, dni);
+        if (displ) {
+            //////////////////////////////////////////////////////////////
+            // contribution from the base-flow boundary condition
+            //////////////////////////////////////////////////////////////
+            (*displ)  (qpoint[qp], _time, tmp);
+            dwdot_i = tmp.topRows(3);
+            (*n_rot)(qpoint[qp], normals[qp], _time, dni);
+        }
         
-        //////////////////////////////////////////////////////////////
-        // contribution from the small-disturbance boundary condition
-        //////////////////////////////////////////////////////////////
-        small_motion->freq_domain_motion(qpoint[qp], normals[qp], Dw_i, Dni);
+        if (displ_perturb) {
+            
+            //////////////////////////////////////////////////////////////
+            // contribution from the small-disturbance boundary condition
+            //////////////////////////////////////////////////////////////
+            (*displ_perturb)(qpoint[qp], _time, tmp_c);
+            Dw_i = tmp_c.topRows(3);
+            (*n_rot_perturb)(qpoint[qp], normals[qp], _time, Dni);
+        }
+        
         
         Dvi_ni_freq_dep   = Dw_i.dot(ni+dni) * iota * domega;
         

@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2016  Manav Bhatia
+ * Copyright (C) 2013-2017  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -132,8 +132,7 @@ MAST::StiffenedPlateWeight::operator() (const libMesh::Point& p,
 
 
 void
-MAST::StiffenedPlateWeight::derivative(const MAST::DerivativeType d,
-                                       const MAST::FunctionBase& f,
+MAST::StiffenedPlateWeight::derivative(      const MAST::FunctionBase& f,
                                        const libMesh::Point& p,
                                        Real t,
                                        Real& v) const {
@@ -182,8 +181,8 @@ MAST::StiffenedPlateWeight::derivative(const MAST::DerivativeType d,
                 
                 th  ( elem_p, 0., h);
                 rhof( elem_p, 0., rho);
-                th.derivative  (d, f, elem_p, 0.,   dh);
-                rhof.derivative(d, f, elem_p, 0., drho);
+                th.derivative  ( f, elem_p, 0.,   dh);
+                rhof.derivative( f, elem_p, 0., drho);
                 v += e->volume() * (dh * rho + h * drho);
             }
                 break;
@@ -206,9 +205,9 @@ MAST::StiffenedPlateWeight::derivative(const MAST::DerivativeType d,
                 elem_p = e->centroid();
                 
                 area(elem_p, 0., h);
-                area.derivative(d, f, elem_p, 0., dh);
+                area.derivative( f, elem_p, 0., dh);
                 rhof(elem_p, 0., rho);
-                rhof.derivative(d, f, elem_p, 0., drho);
+                rhof.derivative( f, elem_p, 0., drho);
                 v += e->volume() * (dh * rho + h * drho);
             }
                 break;

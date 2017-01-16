@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2016  Manav Bhatia
+ * Copyright (C) 2013-2017  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -30,10 +30,10 @@ namespace MAST {
     
     // forward declerations
     class ComplexSolverBase;
-    class SmallDisturbancePressureFunction;
-    class FlexibleSurfaceMotion;
+    class PressureFunction;
+    class FrequencyDomainPressureFunction;
+    class ComplexMeshFieldFunction;
     class StructuralFluidInteractionAssembly;
-    class FrequencyFunction;
     class Parameter;
     
     class FSIGeneralizedAeroForceAssembly:
@@ -63,10 +63,10 @@ namespace MAST {
          *   a non-null pointer only when structural_comm is a valid 
          *   communicator.
          */
-        void init(MAST::FrequencyFunction&                freq,
-                  MAST::ComplexSolverBase*                complex_solver,
-                  MAST::SmallDisturbancePressureFunction* pressure_func,
-                  MAST::FlexibleSurfaceMotion*            motion_func);
+        void init(MAST::ComplexSolverBase*                complex_solver,
+                  MAST::PressureFunction*                 pressure_func,
+                  MAST::FrequencyDomainPressureFunction*  freq_pressure_func,
+                  MAST::ComplexMeshFieldFunction*         displ_func);
         
         
         /*!
@@ -89,13 +89,6 @@ namespace MAST {
         
     protected:
         
-        
-        /*!
-         *   frequency function
-         */
-        MAST::FrequencyFunction                      *_freq;
-
-        
         /*!
          *   complex solver
          */
@@ -103,16 +96,23 @@ namespace MAST {
 
         
         /*!
+         *  pressure function boundary condition for structures
+         */
+        MAST::PressureFunction                      *_pressure_function;
+
+        
+        /*!
          *  small disturbance pressure function boundary condition for
          *  structures
          */
-        MAST::SmallDisturbancePressureFunction       *_pressure_function;
+        MAST::FrequencyDomainPressureFunction       *_freq_domain_pressure_function;
         
         
         /*!
          *   flexible surface motion for fluid and structure
          */
-        MAST::FlexibleSurfaceMotion                  *_motion;
+        MAST::ComplexMeshFieldFunction
+        *_displ;
     };
 }
 

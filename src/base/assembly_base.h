@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2016  Manav Bhatia
+ * Copyright (C) 2013-2017  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -40,7 +40,7 @@ namespace MAST {
     class SystemInitialization;
     class ElementBase;
     class OutputFunctionBase;
-    template <typename ValType> class MeshFieldFunction;
+    class MeshFieldFunction;
     
     class AssemblyBase {
     public:
@@ -111,7 +111,7 @@ namespace MAST {
          *   tells the assembly object that this function is will
          *   need to be initialized before each residual evaluation
          */
-        void attach_solution_function(MAST::MeshFieldFunction<RealVectorX>& f);
+        void attach_solution_function(MAST::MeshFieldFunction& f);
 
         
         /*!
@@ -194,7 +194,7 @@ namespace MAST {
         /*!
          *   system solution that will be initialized before each solution
          */
-        MAST::MeshFieldFunction<RealVectorX>* _sol_function;
+        MAST::MeshFieldFunction* _sol_function;
     };
         
 }

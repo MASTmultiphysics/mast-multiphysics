@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2016  Manav Bhatia
+ * Copyright (C) 2013-2017  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -24,7 +24,7 @@
 #include "base/boundary_condition_base.h"
 #include "numerics/fem_operator_matrix.h"
 #include "base/system_initialization.h"
-#include "boundary_condition/surface_motion_base.h"
+#include "elasticity/normal_rotation_function_base.h"
 
 
 MAST::ConservativeFluidElementBase::
@@ -698,6 +698,7 @@ slip_wall_surface_residual(bool request_jacobian,
     dnormal   = RealVectorX::Zero(dim),
     uvec      = RealVectorX::Zero(3),
     ni        = RealVectorX::Zero(3),
+    vel_fe    = RealVectorX::Zero(6),
     dwdot_i   = RealVectorX::Zero(3),
     dni       = RealVectorX::Zero(3);
     
@@ -718,12 +719,22 @@ slip_wall_surface_residual(bool request_jacobian,
     
     
     // get the surface motion object from the boundary condition object
-    MAST::SurfaceMotionBase*
-    motion = nullptr;
+    MAST::FieldFunction<RealVectorX>
+    *vel   = nullptr;
+    MAST::NormalRotationFunctionBase<RealVectorX>
+    *n_rot = nullptr;
     
-    if (p.contains("motion"))
-        motion = dynamic_cast<MAST::SurfaceMotionBase*>(&p.get<MAST::FieldFunction<Real> >("motion"));
+    if (p.contains("velocity"))
+        vel = &p.get<MAST::FieldFunction<RealVectorX> >("velocity");
+    if (p.contains("normal_rotation")) {
+        
+        MAST::FieldFunction<RealVectorX>&
+        tmp = p.get<MAST::FieldFunction<RealVectorX> >("normal_rotation");
+        n_rot = dynamic_cast<MAST::NormalRotationFunctionBase<RealVectorX>*>(&tmp);
+    }
 
+    // if displ is provided then n_rot must also be provided
+    if (vel) libmesh_assert(n_rot);
     
     for (unsigned int qp=0; qp<JxW.size(); qp++)
     {
@@ -757,14 +768,18 @@ slip_wall_surface_residual(bool request_jacobian,
 
         primitive_sol.get_uvec(uvec);
 
-        if (motion) { // get the surface motion data
+        if (vel) { // get the surface motion data
             
-            motion->time_domain_motion(_time,
-                                       qpoint[qp],
-                                       normals[qp],
-                                       dwdot_i,
-                                       dni);
+            (*vel)(qpoint[qp],
+                   _time,
+                   vel_fe);
+            dwdot_i = vel_fe.topRows(3);
+            (*n_rot)(qpoint[qp],
+                     normals[qp],
+                     _time,
+                     dni);
 
+            
             ui_ni  = dwdot_i.dot(ni+dni) - uvec.dot(dni);
         }
         
@@ -862,13 +877,21 @@ noslip_wall_surface_residual(bool request_jacobian,
     
     
     // get the surface motion object from the boundary condition object
-    MAST::SurfaceMotionBase*
-    motion = nullptr;
+    MAST::FieldFunction<RealVectorX>
+    *vel   = nullptr;
+    MAST::NormalRotationFunctionBase<RealVectorX>
+    *n_rot = nullptr;
     
-    if (p.contains("motion"))
-        motion = dynamic_cast<MAST::SurfaceMotionBase*>(&p.get<MAST::FieldFunction<Real> >("motion"));
-    
+    if (p.contains("velocity"))
+        vel = &p.get<MAST::FieldFunction<RealVectorX> >("velocity");
+    if (p.contains("normal_rotation")) {
+        
+        MAST::FieldFunction<RealVectorX>&
+        tmp = p.get<MAST::FieldFunction<RealVectorX> >("normal_rotation");
+        n_rot = dynamic_cast<MAST::NormalRotationFunctionBase<RealVectorX>*>(&tmp);
+    }
 
+    
     for (unsigned int qp=0; qp<JxW.size(); qp++)
     {
         // initialize the Bmat operator for this term

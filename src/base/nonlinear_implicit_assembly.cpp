@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2016  Manav Bhatia
+ * Copyright (C) 2013-2017  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -245,7 +245,7 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
     
     // if a solution function is attached, initialize it
     if (_sol_function)
-        _sol_function->init_for_system_and_solution(*_system, X);
+        _sol_function->init( X);
     
     
     libMesh::MeshBase::const_element_iterator       el     =
@@ -318,6 +318,118 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
 
 
 
+
+void
+MAST::NonlinearImplicitAssembly::
+linearized_jacobian_solution_product (const libMesh::NumericVector<Real>& X,
+                                      const libMesh::NumericVector<Real>& dX,
+                                      libMesh::NumericVector<Real>& JdX,
+                                      libMesh::NonlinearImplicitSystem& S) {
+    
+    libMesh::NonlinearImplicitSystem& nonlin_sys =
+    dynamic_cast<libMesh::NonlinearImplicitSystem&>(_system->system());
+    
+    // make sure that the system for which this object was created,
+    // and the system passed through the function call are the same
+    libmesh_assert_equal_to(&S, &(nonlin_sys));
+    
+    // iterate over each element, initialize it and get the relevant
+    // analysis quantities
+    RealVectorX vec, sol, dsol;
+    RealMatrixX mat;
+    
+    std::vector<libMesh::dof_id_type> dof_indices;
+    const libMesh::DofMap& dof_map = _system->system().get_dof_map();
+    std::auto_ptr<MAST::ElementBase> physics_elem;
+    
+    std::auto_ptr<libMesh::NumericVector<Real> >
+    localized_solution,
+    localized_perturbed_solution;
+    
+    localized_solution.reset(_build_localized_vector(nonlin_sys,
+                                                     X).release());
+    localized_perturbed_solution.reset(_build_localized_vector(nonlin_sys,
+                                                               dX).release());
+    
+    
+    // if a solution function is attached, initialize it
+    if (_sol_function)
+        _sol_function->init( X);
+    
+    
+    libMesh::MeshBase::const_element_iterator       el     =
+    nonlin_sys.get_mesh().active_local_elements_begin();
+    const libMesh::MeshBase::const_element_iterator end_el =
+    nonlin_sys.get_mesh().active_local_elements_end();
+    
+    
+    for ( ; el != end_el; ++el) {
+        
+        const libMesh::Elem* elem = *el;
+        
+        dof_map.dof_indices (elem, dof_indices);
+        
+        physics_elem.reset(_build_elem(*elem).release());
+        
+        // get the solution
+        unsigned int ndofs = (unsigned int)dof_indices.size();
+        sol.setZero(ndofs);
+        dsol.setZero(ndofs);
+        vec.setZero(ndofs);
+        mat.setZero(ndofs, ndofs);
+        
+        for (unsigned int i=0; i<dof_indices.size(); i++) {
+            sol (i) = (*localized_solution)          (dof_indices[i]);
+            dsol(i) = (*localized_perturbed_solution)(dof_indices[i]);
+        }
+        
+        physics_elem->set_solution(sol);
+        physics_elem->set_perturbed_solution(dsol);
+        
+        if (_sol_function)
+            physics_elem->attach_active_solution_function(*_sol_function);
+        
+        //_check_element_numerical_jacobian(*physics_elem, sol);
+        
+        // perform the element level calculations
+        _elem_linearized_jacobian_solution_product(*physics_elem,
+                                                   vec);
+        
+        physics_elem->detach_active_solution_function();
+        
+        // copy to the libMesh matrix for further processing
+        DenseRealVector v;
+        MAST::copy(v, vec);
+        
+        // constrain the quantities to account for hanging dofs,
+        // Dirichlet constraints, etc.
+        dof_map.constrain_element_vector(v, dof_indices);
+        
+        // add to the global matrices
+        JdX.add_vector(v, dof_indices);
+    }
+    
+    
+    // if a solution function is attached, clear it
+    if (_sol_function)
+        _sol_function->clear();
+    
+    JdX.close();
+}
+
+
+
+void
+MAST::NonlinearImplicitAssembly::
+_elem_linearized_jacobian_solution_product(MAST::ElementBase& elem,
+                                           RealVectorX& vec) {
+    
+    // must be implemented in inherited class
+    libmesh_error();
+}
+
+
+
 bool
 MAST::NonlinearImplicitAssembly::
 sensitivity_assemble (const libMesh::ParameterVector& parameters,
@@ -344,7 +456,7 @@ sensitivity_assemble (const libMesh::ParameterVector& parameters,
     
     // if a solution function is attached, initialize it
     if (_sol_function)
-        _sol_function->init_for_system_and_solution(*_system, *nonlin_sys.solution);
+        _sol_function->init( *nonlin_sys.solution);
     
     libMesh::MeshBase::const_element_iterator       el     =
     nonlin_sys.get_mesh().active_local_elements_begin();

@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2016  Manav Bhatia
+ * Copyright (C) 2013-2017  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -95,6 +95,7 @@ _set_element_data(const std::vector<libMesh::dof_id_type>& dof_indices,
 
 
 
+
 void
 MAST::FirstOrderNewmarkTransientSolver::
 _update_velocity(libMesh::NumericVector<Real>&       vec,
@@ -116,6 +117,18 @@ _update_velocity(libMesh::NumericVector<Real>&       vec,
 
 
 
+void
+MAST::FirstOrderNewmarkTransientSolver::
+_update_delta_velocity(libMesh::NumericVector<Real>&       vec,
+                       const libMesh::NumericVector<Real>& sol) {
+    
+    vec.zero();
+    vec.add( 1./beta/dt,      sol);
+    vec.close();
+}
+
+
+
 
 
 void
@@ -125,7 +138,7 @@ _elem_calculations(MAST::ElementBase& elem,
                    bool if_jac,
                    RealVectorX& vec,
                    RealMatrixX& mat) {
-    // make sure that the assembly object is provides
+    // make sure that the assembly object is provided
     libmesh_assert(_assembly);
     unsigned int n_dofs = (unsigned int)dof_indices.size();
 
@@ -204,8 +217,61 @@ _elem_calculations(MAST::ElementBase& elem,
 
 void
 MAST::FirstOrderNewmarkTransientSolver::
+_elem_linearized_jacobian_solution_product(MAST::ElementBase& elem,
+                                           const std::vector<libMesh::dof_id_type>& dof_indices,
+                                           RealVectorX& vec) {
+
+    // make sure that the assembly object is provided
+    libmesh_assert(_assembly);
+    unsigned int n_dofs = (unsigned int)dof_indices.size();
+    
+    RealVectorX
+    f_m_x_dx         = RealVectorX::Zero(n_dofs),
+    f_m_xdot_dxdot   = RealVectorX::Zero(n_dofs),
+    f_x_x_dx         = RealVectorX::Zero(n_dofs);
+    
+    // perform the element assembly
+    _assembly->_linearized_jacobian_solution_product(elem,
+                                                     f_m_x_dx,           // mass jac times dx
+                                                     f_m_xdot_dxdot,     // mass vel jac times dx
+                                                     f_x_x_dx);          // forcing jac times dx
+    
+    //
+    //  The residual here is modeled as
+    // r = (f_m + f_x )= 0
+    // where, (for example)
+    // f_m = int_Omega phi u_dot   [typical mass vector in conduction, for example]
+    // f_x = int_Omega phi_i u_i - int_Gamma phi q_n [typical conductance and heat flux combination, for example]
+    //
+    // This method assumes
+    //     x     = x0 + (1-beta) dt x0_dot + beta dt x_dot
+    // or, x_dot = (x-x0)/beta/dt - (1-beta)/beta x0_dot
+    //
+    // Both f_m and f_x can be functions of x_dot and x. Then, the
+    // Jacobian is
+    // dr/dx =[df_m/dx + df_x/dx +
+    //         df_m/dx_dot dx_dot/dx + df_x/dx_dot dx_dot/dx]
+    //       = [(df_m/dx + df_x/dx) +
+    //          (df_m/dx_dot + df_x/dx_dot) (1/beta/dt)]
+    //       = (df_m/dx + df_x/dx) +
+    //         1/(beta*dt)(df_m/dx_dot + df_x/dx_dot)
+    // Note that this form of equations makes it a good candidate for
+    // use as implicit solver, ie, for a nonzero beta.
+    //
+    
+    // system residual
+    vec  = (f_m_x_dx + f_m_xdot_dxdot + f_x_x_dx);
+}
+
+
+
+
+void
+MAST::FirstOrderNewmarkTransientSolver::
 _elem_sensitivity_calculations(MAST::ElementBase& elem,
                                const std::vector<libMesh::dof_id_type>& dof_indices,
                                RealVectorX& vec) {
     
+    // to be implemented
+    libmesh_error();
 }

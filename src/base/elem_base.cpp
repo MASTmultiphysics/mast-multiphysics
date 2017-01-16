@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2016  Manav Bhatia
+ * Copyright (C) 2013-2017  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -73,6 +73,18 @@ MAST::ElementBase::set_solution(const RealVectorX &vec,
 
 
 void
+MAST::ElementBase::set_perturbed_solution(const RealVectorX &vec,
+                                          bool if_sens) {
+    
+    if (!if_sens)
+        _delta_sol = vec;
+    else
+        _delta_sol_sens = vec;
+    
+}
+
+
+void
 MAST::ElementBase::set_complex_solution(const ComplexVectorX &vec,
                                         bool if_sens) {
     
@@ -99,6 +111,18 @@ MAST::ElementBase::set_velocity(const RealVectorX &vec,
 
 
 void
+MAST::ElementBase::set_perturbed_velocity(const RealVectorX &vec,
+                                          bool if_sens) {
+    
+    if (!if_sens)
+        _delta_vel = vec;
+    else
+        _delta_vel_sens = vec;
+}
+
+
+
+void
 MAST::ElementBase::set_acceleration(const RealVectorX &vec,
                                     bool if_sens) {
     
@@ -110,15 +134,15 @@ MAST::ElementBase::set_acceleration(const RealVectorX &vec,
 
 
 
-
-//void
-//MAST::ElementBase::set_base_solution(const RealVectorX& vec,
-//                                     bool if_sens) {
-//    if (!if_sens)
-//        _base_sol = vec;
-//    else
-//        _base_sol_sens = vec;
-//}
+void
+MAST::ElementBase::set_perturbed_acceleration(const RealVectorX &vec,
+                                              bool if_sens) {
+    
+    if (!if_sens)
+        _delta_accel      = vec;
+    else
+        _delta_accel_sens = vec;
+}
 
 
 

@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2016  Manav Bhatia
+ * Copyright (C) 2013-2017  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -40,12 +40,12 @@ _gamma(gamma),
 _dwdx(dwdx),
 _dwdt(dwdt) {
     
-    _functions.insert(_V_inf.master());
-    _functions.insert(_M_inf.master());
-    _functions.insert(_rho_inf.master());
-    _functions.insert(_gamma.master());
-    _functions.insert(_dwdx.master());
-    _functions.insert(_dwdt.master());
+    _functions.insert(&_V_inf);
+    _functions.insert(&_M_inf);
+    _functions.insert(&_rho_inf);
+    _functions.insert(&_gamma);
+    _functions.insert(&_dwdx);
+    _functions.insert(&_dwdt);
 }
 
 
@@ -91,19 +91,18 @@ MAST::PistonTheoryPressure::operator() (const libMesh::Point& p,
 
 
 void
-MAST::PistonTheoryPressure::derivative (const MAST::DerivativeType d,
-                                        const MAST::FunctionBase& f,
+MAST::PistonTheoryPressure::derivative (       const MAST::FunctionBase& f,
                                         const libMesh::Point& p,
                                         const Real t,
                                         Real& m) const {
     
     Real V, M, rho, gamma, dwdx, dwdt, dV, dM, drho, dgamma, ddwdx, ddwdt;
-    _V_inf   (p, t,     V);  _V_inf.derivative   (d, f, p, t,     dV);
-    _M_inf   (p, t,     M);  _M_inf.derivative   (d, f, p, t,     dM);
-    _rho_inf (p, t,   rho);  _rho_inf.derivative (d, f, p, t,   drho);
-    _gamma   (p, t, gamma);  _gamma.derivative   (d, f, p, t, dgamma);
-    _dwdx    (p, t,  dwdx);  _dwdx.derivative    (d, f, p, t, ddwdx);
-    _dwdt    (p, t,  dwdt);  _dwdt.derivative    (d, f, p, t, ddwdt);
+    _V_inf   (p, t,     V);  _V_inf.derivative   (f, p, t,     dV);
+    _M_inf   (p, t,     M);  _M_inf.derivative   (f, p, t,     dM);
+    _rho_inf (p, t,   rho);  _rho_inf.derivative (f, p, t,   drho);
+    _gamma   (p, t, gamma);  _gamma.derivative   (f, p, t, dgamma);
+    _dwdx    (p, t,  dwdx);  _dwdx.derivative    (f, p, t, ddwdx);
+    _dwdt    (p, t,  dwdt);  _dwdt.derivative    (f, p, t, ddwdt);
     
     Real
     Mf      = (M*M-2)/(M*M-1),
@@ -188,12 +187,12 @@ _gamma(gamma),
 _dwdx(dwdx),
 _dwdt(dwdt) {
     
-    _functions.insert(_V_inf.master());
-    _functions.insert(_M_inf.master());
-    _functions.insert(_rho_inf.master());
-    _functions.insert(_gamma.master());
-    _functions.insert(_dwdx.master());
-    _functions.insert(_dwdt.master());
+    _functions.insert(&_V_inf);
+    _functions.insert(&_M_inf);
+    _functions.insert(&_rho_inf);
+    _functions.insert(&_gamma);
+    _functions.insert(&_dwdx);
+    _functions.insert(&_dwdt);
 }
 
 
@@ -258,17 +257,16 @@ MAST::PistonTheoryPressureXDerivative::operator() (const libMesh::Point& p,
 
 
 void
-MAST::PistonTheoryPressureXDerivative::derivative (const MAST::DerivativeType d,
-                                                   const MAST::FunctionBase& f,
+MAST::PistonTheoryPressureXDerivative::derivative (                  const MAST::FunctionBase& f,
                                                    const libMesh::Point& p,
                                                    const Real t,
                                                    Real& m) const {
     
     Real V, M, rho, gamma, dwdx, dwdt, dV, dM, drho, dgamma;
-    _V_inf    (p, t,     V);  _V_inf.derivative   (d, f, p, t,     dV);
-    _M_inf    (p, t,     M);  _M_inf.derivative   (d, f, p, t,     dM);
-    _rho_inf  (p, t,   rho);  _rho_inf.derivative (d, f, p, t,   drho);
-    _gamma    (p, t, gamma);  _gamma.derivative   (d, f, p, t, dgamma);
+    _V_inf    (p, t,     V);  _V_inf.derivative   (f, p, t,     dV);
+    _M_inf    (p, t,     M);  _M_inf.derivative   (f, p, t,     dM);
+    _rho_inf  (p, t,   rho);  _rho_inf.derivative (f, p, t,   drho);
+    _gamma    (p, t, gamma);  _gamma.derivative   (f, p, t, dgamma);
     _dwdx     (p, t,  dwdx);
     _dwdt     (p, t,  dwdt);
     
@@ -353,12 +351,12 @@ _gamma(gamma),
 _dwdx(dwdx),
 _dwdt(dwdt) {
     
-    _functions.insert(_V_inf.master());
-    _functions.insert(_M_inf.master());
-    _functions.insert(_rho_inf.master());
-    _functions.insert(_gamma.master());
-    _functions.insert(_dwdx.master());
-    _functions.insert(_dwdt.master());
+    _functions.insert(&_V_inf);
+    _functions.insert(&_M_inf);
+    _functions.insert(&_rho_inf);
+    _functions.insert(&_gamma);
+    _functions.insert(&_dwdx);
+    _functions.insert(&_dwdt);
 }
 
 
@@ -420,17 +418,16 @@ MAST::PistonTheoryPressureXdotDerivative::operator() (const libMesh::Point& p,
 
 
 void
-MAST::PistonTheoryPressureXdotDerivative::derivative (const MAST::DerivativeType d,
-                                                      const MAST::FunctionBase& f,
+MAST::PistonTheoryPressureXdotDerivative::derivative (                     const MAST::FunctionBase& f,
                                                       const libMesh::Point& p,
                                                       const Real t,
                                                       Real& m) const {
     
     Real V, M, rho, gamma, dwdx, dwdt, dV, dM, drho, dgamma;
-    _V_inf   (p, t,     V);  _V_inf.derivative   (d, f, p, t,     dV);
-    _M_inf   (p, t,     M);  _M_inf.derivative   (d, f, p, t,     dM);
-    _rho_inf (p, t,   rho);  _rho_inf.derivative (d, f, p, t,   drho);
-    _gamma   (p, t, gamma);  _gamma.derivative   (d, f, p, t, dgamma);
+    _V_inf   (p, t,     V);  _V_inf.derivative   (f, p, t,     dV);
+    _M_inf   (p, t,     M);  _M_inf.derivative   (f, p, t,     dM);
+    _rho_inf (p, t,   rho);  _rho_inf.derivative (f, p, t,   drho);
+    _gamma   (p, t, gamma);  _gamma.derivative   (f, p, t, dgamma);
     _dwdx    (p, t,  dwdx);
     _dwdt    (p, t,  dwdt);
     

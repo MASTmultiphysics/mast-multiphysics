@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2016  Manav Bhatia
+ * Copyright (C) 2013-2017  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -58,8 +58,7 @@ namespace MAST {
          */
         virtual bool internal_residual(bool request_jacobian,
                                        RealVectorX& f,
-                                       RealMatrixX& jac,
-                                       bool if_ignore_ho_jac);
+                                       RealMatrixX& jac);
         
         
         /*!
@@ -68,8 +67,7 @@ namespace MAST {
          */
         virtual bool internal_residual_sensitivity(bool request_jacobian,
                                                    RealVectorX& f,
-                                                   RealMatrixX& jac,
-                                                   bool if_ignore_ho_jac);
+                                                   RealMatrixX& jac);
         
         /*!
          *   calculates d[J]/d{x} . d{x}/dp
@@ -226,11 +224,13 @@ namespace MAST {
          *    perturbation surface pressure.
          */
         virtual bool
-        small_disturbance_surface_pressure_residual(bool request_jacobian,
-                                                    ComplexVectorX& f,
-                                                    ComplexMatrixX& jac,
-                                                    const unsigned int side,
-                                                    MAST::BoundaryConditionBase& bc) {
+        linearized_frequency_domain_surface_pressure_residual
+        (bool request_jacobian,
+         ComplexVectorX& f,
+         ComplexMatrixX& jac,
+         const unsigned int side,
+         MAST::BoundaryConditionBase& bc) {
+            
             libmesh_error(); // to be implemented
             return false;
         }
@@ -242,11 +242,13 @@ namespace MAST {
          *     is applicable for perturbation surface pressure.
          */
         virtual bool
-        small_disturbance_surface_pressure_residual_sensitivity(bool request_jacobian,
-                                                                ComplexVectorX& f,
-                                                                ComplexMatrixX& jac,
-                                                                const unsigned int side,
-                                                                MAST::BoundaryConditionBase& bc) {
+        linearized_frequency_domain_surface_pressure_residual_sensitivity
+        (bool request_jacobian,
+         ComplexVectorX& f,
+         ComplexMatrixX& jac,
+         const unsigned int side,
+         MAST::BoundaryConditionBase& bc) {
+            
             libmesh_error(); // to be implemented
             return false;
         }

@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2016  Manav Bhatia
+ * Copyright (C) 2013-2017  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -36,7 +36,7 @@ _values(values) {
     
     // tell the function that it is dependent on the provided functions
     for ( ; it != end; it++)
-        _functions.insert(it->second->master());
+        _functions.insert(it->second);
 }
 
 
@@ -97,8 +97,7 @@ MAST::MultilinearInterpolation::operator() (const libMesh::Point& p,
 
 
 void
-MAST::MultilinearInterpolation::derivative(const MAST::DerivativeType d,
-                                           const MAST::FunctionBase& f,
+MAST::MultilinearInterpolation::derivative(          const MAST::FunctionBase& f,
                                            const libMesh::Point& p,
                                            Real t,
                                            Real& v) const {
@@ -134,8 +133,8 @@ MAST::MultilinearInterpolation::derivative(const MAST::DerivativeType d,
         // preceding iterator
         it1 = it2--;
         Real f0 = 0., f1 = 0.;
-        it1->second->derivative(d, f, p, t, f0);
-        it2->second->derivative(d, f, p, t, f1);
+        it1->second->derivative( f, p, t, f0);
+        it2->second->derivative( f, p, t, f1);
         // now interpolate
         v =  (f0 +
               (p(0) - it1->first)/(it2->first - it1->first) *
@@ -153,7 +152,7 @@ MAST::FieldFunction<Real>(nm),
 _dim(thickness),
 _scale(scale) {
     
-    _functions.insert(thickness.master());
+    _functions.insert(&thickness);
 }
 
 
@@ -173,12 +172,11 @@ MAST::SectionOffset::operator() (const libMesh::Point& p,
 
 
 void
-MAST::SectionOffset::derivative(const MAST::DerivativeType d,
-                                const MAST::FunctionBase& f,
+MAST::SectionOffset::derivative(   const MAST::FunctionBase& f,
                                 const libMesh::Point& p,
                                 Real t,
                                 Real& v) const {
-    _dim.derivative(d, f, p, t, v);
+    _dim.derivative( f, p, t, v);
     v *= 0.5*_scale;
 }
 

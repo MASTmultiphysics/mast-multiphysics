@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2016  Manav Bhatia
+ * Copyright (C) 2013-2017  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -34,6 +34,22 @@ MAST::GAFDatabase::GAFDatabase(const unsigned int n_modes):
 MAST::FSIGeneralizedAeroForceAssembly(),
 _if_evaluate(true),
 _n_modes(n_modes) { }
+
+
+
+void
+MAST::GAFDatabase::init(MAST::FrequencyFunction*                        freq,
+                        MAST::ComplexSolverBase*                complex_solver,
+                        MAST::PressureFunction*                 pressure_func,
+                        MAST::FrequencyDomainPressureFunction*  freq_pressure_func,
+                        MAST::ComplexMeshFieldFunction*         displ_func) {
+    
+    _freq = freq;
+    MAST::FSIGeneralizedAeroForceAssembly::init(complex_solver,
+                                                pressure_func,
+                                                freq_pressure_func,
+                                                displ_func);
+}
 
 
 

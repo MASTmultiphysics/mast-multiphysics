@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2016  Manav Bhatia
+ * Copyright (C) 2013-2017  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -91,8 +91,7 @@ MAST::PlateWeight::operator() (const libMesh::Point& p,
 
 
 void
-MAST::PlateWeight::derivative(const MAST::DerivativeType d,
-                              const MAST::FunctionBase& f,
+MAST::PlateWeight::derivative( const MAST::FunctionBase& f,
                               const libMesh::Point& p,
                               Real t,
                               Real& v) const {
@@ -141,8 +140,8 @@ MAST::PlateWeight::derivative(const MAST::DerivativeType d,
         // use three point trapezoidal rule to calculate the integral
         th  ( elem_p, 0., h);
         rhof( elem_p, 0., rho);
-        th.derivative  (d, f, elem_p, 0.,   dh);
-        rhof.derivative(d, f, elem_p, 0., drho);
+        th.derivative  ( f, elem_p, 0.,   dh);
+        rhof.derivative( f, elem_p, 0., drho);
         v += e->volume() * (dh * rho + h * drho);
         
     }

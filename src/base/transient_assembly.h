@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2016  Manav Bhatia
+ * Copyright (C) 2013-2017  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -56,7 +56,7 @@ namespace MAST {
             
             libmesh_error_msg("Error! Invalid function call for TransientSystemAssembly.");
         }
-
+        
         /*!
          *   attaches a system to this discipline, and vice-a-versa
          */
@@ -75,13 +75,13 @@ namespace MAST {
         virtual void
         reattach_to_system();
         
-
+        
         /*!
          *   clears association with a system to this discipline, and vice-a-versa
          */
         virtual void
         clear_discipline_and_system();
-
+        
         
         /*!
          *    function that assembles the matrices and vectors quantities for
@@ -92,6 +92,20 @@ namespace MAST {
                                libMesh::NumericVector<Real>* R,
                                libMesh::SparseMatrix<Real>*  J,
                                libMesh::NonlinearImplicitSystem& S);
+        
+        /*!
+         *    calculates the project of the Jacobian and a perturbation in solution
+         *    vector \f$ [J] \{\Delta X\}  \f$. For a single discipline system the
+         *    solution vector and linearized solution provided here are used. For
+         *    a multiphysics system, the user must ensure that all relevant
+         *    multidisciplinary data-structures are initialized before calling
+         *    this method.
+         */
+        virtual void
+        linearized_jacobian_solution_product(const libMesh::NumericVector<Real>& X,
+                                             const libMesh::NumericVector<Real>& dX,
+                                             libMesh::NumericVector<Real>& JdX,
+                                             libMesh::NonlinearImplicitSystem& S);
         
         /**
          * Assembly function.  This function will be called
@@ -116,7 +130,7 @@ namespace MAST {
         
         
         /*!
-         *   performs the element calculations over \par elem, for a 
+         *   performs the element calculations over \par elem, for a
          *   system of the form
          *   \f[ f_m(x,\dot{x}) + f_x(x) = 0 \f].
          *   \param f_x     = \f$ f(x) \f$
@@ -135,7 +149,8 @@ namespace MAST {
                                         RealMatrixX& f_m_jac_xdot,
                                         RealMatrixX& f_m_jac,
                                         RealMatrixX& f_x_jac) = 0;
-
+        
+        
         
         /*!
          *   performs the element calculations over \par elem, for a
@@ -161,7 +176,41 @@ namespace MAST {
                                         RealMatrixX& f_m_jac,
                                         RealMatrixX& f_x_jac_xdot,
                                         RealMatrixX& f_x_jac) = 0;
-
+        
+        /*!
+         *   Calculates the product of Jacobian-solution, and Jacobian-velocity
+         *   over the element for a system of the form
+         *   \f[ f_m(x,\dot{x}) + f_x(x) = 0 \f].
+         *   \param f_x_x_dx          = \f$ df(x)/dx \cdot dx \f$
+         *   \param f_m_x_dx          =  \f$ df_m(x,\dot{x})/dx \cdot dx \f$
+         *   \param f_m_xdot_dxdot    =  \f$ df_m(x,\dot{x})/d\dot{x} \cdot d{\dot x} \f$
+         */
+        virtual void
+        _linearized_jacobian_solution_product(MAST::ElementBase& elem,
+                                              RealVectorX& f_m_x_dx,
+                                              RealVectorX& f_m_xdot_dxdot,
+                                              RealVectorX& f_x_x_dx) = 0;
+        
+        
+        /*!
+         *   Calculates the product of Jacobian-solution, and Jacobian-velocity
+         *   over the element for a system of the form
+         *   \f[ f_m(x,\ddot{x}, \dot{x}) + f_x(x, \dot{x}) = 0 \f].
+         *   \param f_x_x_dx           = \f$ f(x,\dot{x})  \f$
+         *   \param f_x_xdot_dxdot     = \f$ f(x,\dot{x})  \f$
+         *   \param f_m_x_dx           =  \f$ f_m(x,\dot{x}) \f$
+         *   \param f_m_xdot_dxdot     =  \f$ f_m(x,\dot{x}) \f$
+         *   \param f_m_xddot_dxddot   =  \f$ f_m(x,\dot{x}) \f$
+         */
+        virtual void
+        _linearized_jacobian_solution_product(MAST::ElementBase& elem,
+                                              RealVectorX& f_m_x_dx,
+                                              RealVectorX& f_m_xdot_dxdot,
+                                              RealVectorX& f_m_xddot_dxddot,
+                                              RealVectorX& f_x_x_dx,
+                                              RealVectorX& f_x_xdot_dxdot) = 0;
+        
+        
         /*!
          *   performs the element sensitivity calculations over \par elem,
          *   and returns the element residual sensitivity in \par vec .
@@ -171,7 +220,7 @@ namespace MAST {
         
         
     protected:
-
+        
         /*!
          *   performs the element calculations over \par elem, and returns
          *   the element vector and matrix quantities in \par mat and
@@ -197,7 +246,7 @@ namespace MAST {
             
             libmesh_error_msg("Error! Invalid function call for TransientSystemAssembly.");
         }
-
+        
         /*!
          *   Pointer to a transient solver object that combines the
          *   element transient data appropriately for the nonlinear solver.

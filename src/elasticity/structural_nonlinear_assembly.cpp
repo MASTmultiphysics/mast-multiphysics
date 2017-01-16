@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2016  Manav Bhatia
+ * Copyright (C) 2013-2017  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -88,7 +88,7 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
     
     // if a solution function is attached, initialize it
     if (_sol_function)
-        _sol_function->init_for_system_and_solution(*_system, X);
+        _sol_function->init( X);
     
     
     libMesh::MeshBase::const_element_iterator       el     =
@@ -205,7 +205,7 @@ sensitivity_assemble (const libMesh::ParameterVector& parameters,
     
     // if a solution function is attached, initialize it
     if (_sol_function)
-        _sol_function->init_for_system_and_solution(*_system, *nonlin_sys.solution);
+        _sol_function->init( *nonlin_sys.solution);
     
     libMesh::MeshBase::const_element_iterator       el     =
     nonlin_sys.get_mesh().active_local_elements_begin();
@@ -314,7 +314,7 @@ update_incompatible_solution(libMesh::NumericVector<Real>& X,
     
     // if a solution function is attached, initialize it
     if (_sol_function)
-        _sol_function->init_for_system_and_solution(*_system, X);
+        _sol_function->init( X);
     
     
     libMesh::MeshBase::const_element_iterator       el     =
@@ -504,7 +504,7 @@ _calculate_compliance (const libMesh::NumericVector<Real>& X,
     
     // if a solution function is attached, initialize it
     if (_sol_function)
-        _sol_function->init_for_system_and_solution(*_system, X);
+        _sol_function->init( X);
     
     
     libMesh::MeshBase::const_element_iterator       el     =
@@ -627,7 +627,7 @@ _elem_calculations(MAST::ElementBase& elem,
     RealMatrixX
     dummy = RealMatrixX::Zero(mat.rows(), mat.cols());
     
-    e.internal_residual(if_jac, vec, mat, false);
+    e.internal_residual(if_jac, vec, mat);
     e.side_external_residual(if_jac,
                              vec,
                              dummy,
@@ -638,6 +638,21 @@ _elem_calculations(MAST::ElementBase& elem,
                                dummy,
                                mat,
                                _discipline->volume_loads());
+}
+
+
+
+void
+MAST::StructuralNonlinearAssembly::
+_elem_linearized_jacobian_solution_product(MAST::ElementBase& elem,
+                                           RealVectorX& vec) {
+    
+    MAST::StructuralElementBase& e =
+    dynamic_cast<MAST::StructuralElementBase&>(elem);
+    
+    vec.setZero();
+
+    libmesh_error(); // to be implemented
 }
 
 
@@ -658,7 +673,7 @@ _elem_sensitivity_calculations(MAST::ElementBase& elem,
     RealMatrixX
     dummy = RealMatrixX::Zero(vec.size(), vec.size());
     
-    e.internal_residual_sensitivity(if_jac, vec, mat, false);
+    e.internal_residual_sensitivity(if_jac, vec, mat);
     e.side_external_residual_sensitivity(if_jac,
                                          vec,
                                          dummy,

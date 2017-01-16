@@ -13,7 +13,6 @@
 #include "boundary_condition/dirichlet_boundary_condition.h"
 #include "property_cards/isotropic_material_property_card.h"
 #include "property_cards/solid_2d_section_element_property_card.h"
-#include "driver/driver_base.h"
 
 
 // libMesh includes
@@ -121,13 +120,22 @@ int main_7(int argc, const char * argv[]) {
     
     // tell the conduction physics about the section properties
     heat_cond.set_property_for_subdomain(0, section_property);
-    /*
+
     // create the nonlinear assembly object
     MAST::HeatConductionNonlinearAssembly   assembly;
     
-    // now solve the system
-    MAST::Driver::nonlinear_solution(heat_cond, heat_cond_sys, assembly);
-     */
+    assembly.attach_discipline_and_system(heat_cond, heat_cond_sys);
+    
+    libMesh::NonlinearImplicitSystem&      nonlin_sys   =
+    dynamic_cast<libMesh::NonlinearImplicitSystem&>(assembly.system());
+    
+    // zero the solution before solving
+    nonlin_sys.solution->zero();
+    
+    nonlin_sys.solve();
+    
+    assembly.clear_discipline_and_system();
+
     // write the solution for visualization
     libMesh::ExodusII_IO(mesh).write_equation_systems("mesh.exo", eq_sys);
     

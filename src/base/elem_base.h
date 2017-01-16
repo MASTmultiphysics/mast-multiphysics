@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2016  Manav Bhatia
+ * Copyright (C) 2013-2017  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -157,6 +157,15 @@ namespace MAST {
 
         
         /*!
+         *   This provides the perturbed solution (or its sensitivity if
+         *   \p if_sens is true.) for linearized analysis.
+         *   stores \p vec as solution for element level calculations.
+         */
+        virtual void set_perturbed_solution(const RealVectorX& vec,
+                                            bool if_sens = false);
+
+        
+        /*!
          *   This provides the complex solution (or its sensitivity if 
          *   \p if_sens is true.) for frequecy-domain analysis.
          *   stores \p vec as solution for element level calculations.
@@ -174,12 +183,30 @@ namespace MAST {
 
         
         /*!
+         *    stores \p vec as perturbed velocity for element level
+         *    calculations, or its sensitivity if \p if_sens is true.
+         */
+        virtual void set_perturbed_velocity(const RealVectorX& vec,
+                                            bool if_sens = false);
+
+        
+        
+        /*!
          *    stores \p vec as acceleration for element level calculations,
          *    or its sensitivity if \p if_sens is true.
          */
         virtual void set_acceleration(const RealVectorX& vec,
                                       bool if_sens = false);
 
+        
+        /*!
+         *    stores \p vec as perturbed acceleration for element level
+         *    calculations, or its sensitivity if \p if_sens is true.
+         */
+        virtual void set_perturbed_acceleration(const RealVectorX& vec,
+                                                bool if_sens = false);
+
+    
         
         /*!
          *   Attaches the function that represents the system solution
@@ -323,6 +350,18 @@ namespace MAST {
          */
         ComplexVectorX _complex_sol_sens;
 
+        
+        /*!
+         *   local solution used for linearized analysis
+         */
+        RealVectorX _delta_sol;
+        
+        
+        /*!
+         *   local solution used for linearized analysis
+         */
+        RealVectorX _delta_sol_sens;
+
         /*!
          *   local velocity
          */
@@ -336,16 +375,40 @@ namespace MAST {
 
         
         /*!
+         *   local velocity
+         */
+        RealVectorX _delta_vel;
+        
+        
+        /*!
+         *   local velocity
+         */
+        RealVectorX _delta_vel_sens;
+
+        
+        /*!
          *   local acceleration
          */
         RealVectorX _accel;
-        
+
         
         /*!
          *   local acceleration
          */
         RealVectorX _accel_sens;
+
         
+        /*!
+         *   local acceleration
+         */
+        RealVectorX _delta_accel;
+        
+        
+        /*!
+         *   local acceleration
+         */
+        RealVectorX _delta_accel_sens;
+
         
         /*!
          *   element finite element for computations

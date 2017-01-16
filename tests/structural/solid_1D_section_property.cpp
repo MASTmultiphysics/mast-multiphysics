@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2016  Manav Bhatia
+ * Copyright (C) 2013-2017  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -120,8 +120,7 @@ void  check_material_property (ValType& v) {
             MAST::Parameter& f = *v._params_for_sensitivity[i];
             
             // get the analytical sensitivity
-            mat_stiff->derivative(MAST::PARTIAL_DERIVATIVE,
-                                  f,
+            mat_stiff->derivative(  f,
                                   pt,
                                   0,
                                   dmatdp);

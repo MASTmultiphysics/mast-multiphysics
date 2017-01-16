@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2016  Manav Bhatia
+ * Copyright (C) 2013-2017  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -26,7 +26,7 @@ MAST::PolarCoordinate::PolarCoordinate(const std::string& nm,
 MAST::CoordinateBase(nm),
 _theta(theta) {
     
-    _functions.insert(theta.master());
+    _functions.insert(&theta);
 }
 
 
@@ -53,15 +53,14 @@ MAST::PolarCoordinate::operator() (const libMesh::Point& p,
 
 
 void
-MAST::PolarCoordinate::derivative (const MAST::DerivativeType d,
-                                   const MAST::FunctionBase& f,
+MAST::PolarCoordinate::derivative (  const MAST::FunctionBase& f,
                                    const libMesh::Point& p,
                                    const Real t,
                                    RealMatrixX& v) const {
     v.setZero(3,3);
     Real theta, dtheta;
     _theta(p,t,theta);
-    _theta.derivative(d,f,p,t,dtheta);
+    _theta.derivative(f,p,t,dtheta);
     
     v(0,0) = -sin(theta)*dtheta;
     v(1,0) =  cos(theta)*dtheta;

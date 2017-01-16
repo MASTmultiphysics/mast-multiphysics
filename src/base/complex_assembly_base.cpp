@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2016  Manav Bhatia
+ * Copyright (C) 2013-2017  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -220,7 +220,7 @@ MAST::ComplexAssemblyBase::residual_l2_norm() {
     
     // if a solution function is attached, initialize it
     //if (_sol_function)
-    //    _sol_function->init_for_system_and_solution(*_system, X);
+    //    _sol_function->init( X);
     
     
     libMesh::MeshBase::const_element_iterator       el     =
@@ -374,7 +374,7 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
     
     // if a solution function is attached, initialize it
     if (_sol_function)
-        _sol_function->init_for_system_and_solution(*_system, X);
+        _sol_function->init( X);
     
     
     libMesh::MeshBase::const_element_iterator       el     =
@@ -541,7 +541,7 @@ residual_and_jacobian_field_split (const libMesh::NumericVector<Real>& X_R,
     
     // if a solution function is attached, initialize it
     //if (_sol_function)
-    //    _sol_function->init_for_system_and_solution(*_system, X);
+    //    _sol_function->init( X);
     
     
     libMesh::MeshBase::const_element_iterator       el     =
@@ -719,7 +719,7 @@ residual_and_jacobian_blocked (const libMesh::NumericVector<Real>& X,
 
     // if a solution function is attached, initialize it
     //if (_sol_function)
-    //    _sol_function->init_for_system_and_solution(*_system, X);
+    //    _sol_function->init( X);
     
     
     libMesh::MeshBase::const_element_iterator       el     =

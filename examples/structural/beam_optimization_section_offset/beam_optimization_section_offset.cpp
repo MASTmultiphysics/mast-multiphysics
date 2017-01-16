@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2016  Manav Bhatia
+ * Copyright (C) 2013-2017  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -22,7 +22,6 @@
 
 // MAST includes
 #include "examples/structural/beam_optimization_section_offset/beam_optimization_section_offset.h"
-#include "driver/driver_base.h"
 #include "elasticity/stress_output_base.h"
 #include "optimization/optimization_interface.h"
 #include "optimization/function_evaluation.h"
@@ -404,8 +403,7 @@ MAST::BeamBendingSectionOffsetSizingOptimization::evaluate(const std::vector<Rea
         
         // set gradient of weight
         for (unsigned int i=0; i<_n_vars; i++) {
-            _weight->derivative(MAST::PARTIAL_DERIVATIVE,
-                                *_thy_station_parameters[i],
+            _weight->derivative(*_thy_station_parameters[i],
                                 pt,
                                 0.,
                                 w_sens);

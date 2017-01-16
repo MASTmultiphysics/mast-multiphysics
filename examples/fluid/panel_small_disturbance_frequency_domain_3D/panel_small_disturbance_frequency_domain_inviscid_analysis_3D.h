@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2016  Manav Bhatia
+ * Copyright (C) 2013-2017  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -53,7 +53,9 @@ namespace MAST {
     class FrequencyFunction;
     class RigidSurfaceMotion;
     class NonlinearSystem;
-
+    class RigidSurfaceDisplacement;
+    class RigidSurfaceNormalRotation;
+    
 
     /*!
      *   call with the following command line arguments
@@ -122,6 +124,12 @@ namespace MAST {
          */
         MAST::RigidSurfaceMotion
         *_motion;
+        MAST::RigidSurfaceDisplacement
+        *_displacement;
+        MAST::RigidSurfaceNormalRotation
+        *_normal_rot;
+        
+        
         
         // parameters used in the system
         MAST::Parameter

@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2016  Manav Bhatia
+ * Copyright (C) 2013-2017  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -25,6 +25,7 @@
 // MAST includes
 #include "examples/fluid/panel_small_disturbance_frequency_domain_analysis_2D/panel_small_disturbance_frequency_domain_analysis_2d.h"
 #include "examples/fluid/meshing/panel_mesh_2D.h"
+#include "examples/base/rigid_surface_motion.h"
 #include "base/nonlinear_system.h"
 #include "fluid/conservative_fluid_system_initialization.h"
 #include "fluid/conservative_fluid_discipline.h"
@@ -34,7 +35,6 @@
 #include "base/parameter.h"
 #include "base/constant_field_function.h"
 #include "base/boundary_condition_base.h"
-#include "boundary_condition/rigid_surface_motion.h"
 #include "aeroelasticity/frequency_function.h"
 
 
@@ -49,6 +49,7 @@
 
 
 extern libMesh::LibMeshInit* __init;
+
 
 
 
@@ -214,7 +215,7 @@ PanelInviscidSmallDisturbanceFrequencyDomain2DAnalysis() {
                                                      *_b_ref_f);
     
     // initialize the motion object
-    _motion            = new MAST::RigidSurfaceMotion("small_disturbance_motion");
+    _motion            = new MAST::RigidSurfaceMotion;
     _motion->init(*_freq_function,                 // frequency function
                   _flight_cond->body_yaw_axis,     // plunge vector
                   _flight_cond->body_pitch_axis,   // pitch axis
@@ -223,8 +224,12 @@ PanelInviscidSmallDisturbanceFrequencyDomain2DAnalysis() {
                   0.,                              // pitch amplitude
                   0.);                             // pitch phase lead
     
-    // tell the physics about boundary conditions
-    _slip_wall->add(*_motion);
+    _displacement = new MAST::RigidSurfaceDisplacement(*_motion);
+    _normal_rot   = new MAST::RigidSurfaceNormalRotation(*_motion);
+    
+    // tell the physics about these conditions
+    _slip_wall->add(*_displacement);
+    _slip_wall->add(*_normal_rot);
     _discipline->add_side_load(    panel_bc_id, *_slip_wall);
     _discipline->add_side_load( symmetry_bc_id, *_symm_wall);
     // all boundaries except the bottom are far-field
@@ -263,6 +268,8 @@ MAST::PanelInviscidSmallDisturbanceFrequencyDomain2DAnalysis::
     delete _freq_function;
     
     delete _motion;
+    delete _displacement;
+    delete _normal_rot;
 }
 
 

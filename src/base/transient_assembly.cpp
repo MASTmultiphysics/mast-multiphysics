@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2016  Manav Bhatia
+ * Copyright (C) 2013-2017  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -142,7 +142,7 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
     const libMesh::DofMap& dof_map = transient_sys.get_dof_map();
     std::auto_ptr<MAST::ElementBase> physics_elem;
     
-
+    
     // stores the localized solution, velocity, acceleration, etc. vectors.
     // These pointers will have to be deleted
     std::vector<libMesh::NumericVector<Real>*>
@@ -150,8 +150,8 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
     
     // if a solution function is attached, initialize it
     if (_sol_function)
-        _sol_function->init_for_system_and_solution(*_system, X);
-
+        _sol_function->init( X);
+    
     // ask the solver to localize the relevant solutions
     _transient_solver->build_local_quantities(X, local_qtys);
     
@@ -179,7 +179,7 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
         
         if (_sol_function)
             physics_elem->attach_active_solution_function(*_sol_function);
-
+        
         // perform the element level calculations
         _transient_solver->_elem_calculations(*physics_elem,
                                               dof_indices,
@@ -193,7 +193,7 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
             MAST::copy(v, vec);
         if (J)
             MAST::copy(m, mat);
-
+        
         // constrain the quantities to account for hanging dofs,
         // Dirichlet constraints, etc.
         if (R && J)
@@ -215,9 +215,112 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
     // if a solution function is attached, clear it
     if (_sol_function)
         _sol_function->clear();
-
+    
     if (R) R->close();
     if (J) J->close();
+}
+
+
+
+
+void
+MAST::TransientAssembly::
+linearized_jacobian_solution_product (const libMesh::NumericVector<Real>& X,
+                                      const libMesh::NumericVector<Real>& dX,
+                                      libMesh::NumericVector<Real>& JdX,
+                                      libMesh::NonlinearImplicitSystem& S) {
+    
+    libMesh::NonlinearImplicitSystem& transient_sys =
+    dynamic_cast<libMesh::NonlinearImplicitSystem&>(_system->system());
+    
+    // make sure that the system for which this object was created,
+    // and the system passed through the function call are the same
+    libmesh_assert_equal_to(&S, &transient_sys);
+    
+    JdX.zero();
+    
+    // iterate over each element, initialize it and get the relevant
+    // analysis quantities
+    RealVectorX dsol, vec;
+    
+    std::vector<libMesh::dof_id_type> dof_indices;
+    const libMesh::DofMap& dof_map = transient_sys.get_dof_map();
+    std::auto_ptr<MAST::ElementBase> physics_elem;
+    
+    std::auto_ptr<libMesh::NumericVector<Real> >
+    localized_perturbed_solution;
+    
+    localized_perturbed_solution.reset(_build_localized_vector(transient_sys,
+                                                               dX).release());
+
+    // stores the localized solution, velocity, acceleration, etc. vectors.
+    // These pointers will have to be deleted
+    std::vector<libMesh::NumericVector<Real>*>
+    local_qtys;
+    
+    // if a solution function is attached, initialize it
+    if (_sol_function)
+        _sol_function->init( X);
+
+    // ask the solver to localize the relevant solutions
+    _transient_solver->build_local_quantities(X, local_qtys);
+    
+    libMesh::MeshBase::const_element_iterator       el     =
+    transient_sys.get_mesh().active_local_elements_begin();
+    const libMesh::MeshBase::const_element_iterator end_el =
+    transient_sys.get_mesh().active_local_elements_end();
+    
+    for ( ; el != end_el; ++el) {
+        
+        const libMesh::Elem* elem = *el;
+        
+        dof_map.dof_indices (elem, dof_indices);
+        
+        physics_elem.reset(_build_elem(*elem).release());
+        
+        // get the solution
+        unsigned int ndofs = (unsigned int)dof_indices.size();
+        dsol.setZero(ndofs);
+        vec.setZero(ndofs);
+
+        for (unsigned int i=0; i<dof_indices.size(); i++)
+            dsol(i) = (*localized_perturbed_solution)(dof_indices[i]);
+
+        
+        _transient_solver->_set_element_data(dof_indices,
+                                             local_qtys,
+                                             *physics_elem);
+        physics_elem->set_perturbed_solution(dsol);
+        
+        if (_sol_function)
+            physics_elem->attach_active_solution_function(*_sol_function);
+
+        // perform the element level calculations
+        _transient_solver->_elem_linearized_jacobian_solution_product(*physics_elem,
+                                                                      dof_indices,
+                                                                      vec);
+        
+        // copy to the libMesh matrix for further processing
+        DenseRealVector v;
+        MAST::copy(v, vec);
+
+        // constrain the quantities to account for hanging dofs,
+        // Dirichlet constraints, etc.
+        dof_map.constrain_element_vector(v, dof_indices);
+        
+        // add to the global matrices
+        JdX.add_vector(v, dof_indices);
+    }
+    
+    // delete pointers to the local solutions
+    for (unsigned int i=0; i<local_qtys.size(); i++)
+        delete local_qtys[i];
+    
+    // if a solution function is attached, clear it
+    if (_sol_function)
+        _sol_function->clear();
+
+    JdX.close();
 }
 
 
@@ -257,7 +360,7 @@ sensitivity_assemble (const libMesh::ParameterVector& parameters,
 
     // if a solution function is attached, initialize it
     if (_sol_function)
-        _sol_function->init_for_system_and_solution(*_system, solution);
+        _sol_function->init( solution);
     
     libMesh::MeshBase::const_element_iterator       el     =
     transient_sys.get_mesh().active_local_elements_begin();

@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2016  Manav Bhatia
+ * Copyright (C) 2013-2017  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -98,8 +98,7 @@ MAST::TransformMatrixFunction::operator() (const libMesh::Point& p,
 
 
 void
-MAST::TransformMatrixFunction::derivative (const MAST::DerivativeType d,
-                                           const MAST::FunctionBase& f,
+MAST::TransformMatrixFunction::derivative (          const MAST::FunctionBase& f,
                                            const libMesh::Point& p,
                                            const Real t,
                                            RealMatrixX& v) const {

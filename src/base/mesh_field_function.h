@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2016  Manav Bhatia
+ * Copyright (C) 2013-2017  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -40,21 +40,21 @@ namespace MAST {
      *    This provides a wrapper FieldFunction compatible class that
      *    interpolates the solution using libMesh's MeshFunction class.
      */
-    template <typename ValType>
     class MeshFieldFunction:
-    public MAST::FieldFunction<ValType> {
+    public MAST::FieldFunction<RealVectorX> {
         
     public:
         /*!
          *   constructor
          */
-        MeshFieldFunction(const std::string& nm);
+        MeshFieldFunction(MAST::SystemInitialization& sys,
+                          const std::string& nm);
         
         
         /*!
          *   destructor
          */
-        ~MeshFieldFunction();
+        virtual ~MeshFieldFunction();
 
        
         /*!
@@ -63,26 +63,56 @@ namespace MAST {
          */
         virtual void operator() (const libMesh::Point& p,
                                  const Real t,
-                                 ValType& v) const;
+                                 RealVectorX& v) const;
         
+        
+        /*!
+         *    calculates the value of perturbation in the function at
+         *    the specified point, \par p, and time, \par t, and returns it
+         *    in \p v.
+         */
+        virtual void perturbation (const libMesh::Point& p,
+                                   const Real t,
+                                   RealVectorX& v) const;
+
         
         /*!
          *    calculates the value of the function at the specified point,
          *    \par p, and time, \par t, and returns it in \p v.
          */
-        virtual void derivative (const MAST::DerivativeType d,
-                                 const MAST::FunctionBase& f,
+        virtual void derivative (const MAST::FunctionBase& f,
                                  const libMesh::Point& p,
                                  const Real t,
-                                 ValType& v) const;
+                                 RealVectorX& v) const;
         
         
         /*!
          *   initializes the data structures to perform the interpolation 
-         *   function on the given \par system and \par sol.
+         *   function of \par sol. If \p dsol is provided, then it is used
+         *   as the perturbation of \p sol.
          */
-        void init_for_system_and_solution(MAST::SystemInitialization& sys,
-                                          const libMesh::NumericVector<Real>& sol);
+        void init(const libMesh::NumericVector<Real>& sol,
+                  const libMesh::NumericVector<Real>* dsol = nullptr);
+
+        
+        /*!
+         *    @returns a reference to the libMesh mesh function
+         */
+        libMesh::MeshFunction& get_function() {
+            
+            libmesh_assert(_function);
+            return *_function;
+        }
+
+        /*!
+         *    @returns a reference to the libMesh mesh function for the 
+         *    perturbation in solution
+         */
+        libMesh::MeshFunction& get_perturbed_function() {
+            
+            libmesh_assert(_perturbed_function);
+            return *_perturbed_function;
+        }
 
         
         /*!
@@ -129,12 +159,12 @@ namespace MAST {
         /*!
          *   current solution that is going to be interpolated
          */
-        libMesh::NumericVector<Real>* _sol;
+        libMesh::NumericVector<Real> *_sol, *_dsol;
         
         /*!
          *   the MeshFunction object that performs the interpolation
          */
-        libMesh::FunctionBase<Real>* _mesh_function;
+        libMesh::MeshFunction *_function, *_perturbed_function;
     };
 }
 

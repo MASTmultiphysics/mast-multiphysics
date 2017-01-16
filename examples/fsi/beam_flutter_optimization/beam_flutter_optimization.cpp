@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2016  Manav Bhatia
+ * Copyright (C) 2013-2017  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -24,7 +24,6 @@
 // MAST includes
 #include "examples/fsi/beam_flutter_optimization/beam_flutter_optimization.h"
 #include "examples/fsi/base/gaf_database.h"
-#include "driver/driver_base.h"
 #include "optimization/optimization_interface.h"
 #include "optimization/function_evaluation.h"
 #include "elasticity/structural_modal_eigenproblem_assembly.h"
@@ -35,12 +34,14 @@
 #include "fluid/conservative_fluid_discipline.h"
 #include "fluid/conservative_fluid_system_initialization.h"
 #include "fluid/flight_condition.h"
-#include "fluid/small_disturbance_pressure_function.h"
+#include "fluid/pressure_function.h"
+#include "fluid/frequency_domain_pressure_function.h"
 #include "fluid/frequency_domain_linearized_complex_assembly.h"
 #include "solver/complex_solver_base.h"
 #include "aeroelasticity/frequency_function.h"
 #include "aeroelasticity/ug_flutter_solver.h"
-#include "boundary_condition/flexible_surface_motion.h"
+#include "base/complex_mesh_field_function.h"
+#include "elasticity/complex_normal_rotation_mesh_function.h"
 #include "elasticity/fsi_generalized_aero_force_assembly.h"
 #include "aeroelasticity/flutter_root_base.h"
 #include "examples/base/augment_ghost_elem_send_list.h"
@@ -215,8 +216,10 @@ _far_field                              (nullptr),
 _symm_wall                              (nullptr),
 _slip_wall                              (nullptr),
 _pressure                               (nullptr),
-_motion_function                        (nullptr),
-_small_dist_pressure_function           (nullptr),
+_displ                                  (nullptr),
+_normal_rot                             (nullptr),
+_pressure_function                      (nullptr),
+_freq_domain_pressure_function          (nullptr),
 _omega                                  (nullptr),
 _velocity                               (nullptr),
 _b_ref                                  (nullptr),
@@ -435,10 +438,14 @@ MAST::BeamFSIFlutterSizingOptimization::init(GetPot &infile,
     for (unsigned int i=1; i<=3; i++)
         _fluid_discipline->add_side_load(              i, *_far_field);
     
-    _small_dist_pressure_function =
-    new MAST::SmallDisturbancePressureFunction(*_fluid_sys_init, *_flight_cond);
+    _pressure_function =
+    new MAST::PressureFunction(*_fluid_sys_init, *_flight_cond);
+    _freq_domain_pressure_function =
+    new MAST::FrequencyDomainPressureFunction(*_fluid_sys_init, *_flight_cond);
     
-    
+    _pressure_function->set_calculate_cp(true);
+    _freq_domain_pressure_function->set_calculate_cp(true);
+
     _k_upper            = infile("k_upper",  0.75);
     _k_lower            = infile("k_lower",  0.05);
     _n_k_divs           = infile("n_k_divs",   10);
@@ -567,9 +574,12 @@ MAST::BeamFSIFlutterSizingOptimization::init(GetPot &infile,
     _structural_eq_sys->init();
     
     // initialize the motion object
-    _motion_function   = new MAST::FlexibleSurfaceMotion("small_disturbance_motion",
-                                                         *_structural_sys_init);
-    _slip_wall->add(*_motion_function);
+    _displ        = new MAST::ComplexMeshFieldFunction(*_structural_sys_init,
+                                                       "frequency_domain_displacement");
+    _normal_rot   = new MAST::ComplexNormalRotationMeshFunction("frequency_domain_normal_rotation",
+                                                                *_displ);
+    _slip_wall->add(*_displ);
+    _slip_wall->add(*_normal_rot);
     
     
     _structural_sys->eigen_solver->set_position_of_spectrum(libMesh::LARGEST_MAGNITUDE);
@@ -659,9 +669,9 @@ MAST::BeamFSIFlutterSizingOptimization::init(GetPot &infile,
     
     
     // pressure boundary condition for the beam
-    _pressure    =  new MAST::BoundaryConditionBase(MAST::SMALL_DISTURBANCE_MOTION);
-    _pressure->add(*_small_dist_pressure_function);
-    _pressure->add(*_motion_function);
+    _pressure    =  new MAST::BoundaryConditionBase(MAST::SURFACE_PRESSURE);
+    _pressure->add(*_pressure_function);
+    _pressure->add(*_freq_domain_pressure_function);
     _structural_discipline->add_volume_load(0, *_pressure);
     
     // modal assembly object for the natural modes eigen-analysis
@@ -730,10 +740,11 @@ MAST::BeamFSIFlutterSizingOptimization::init(GetPot &infile,
                                                 *_structural_sys_init);
     
     
-    _gaf_database->init(*_freq_function,
+    _gaf_database->init(_freq_function,
                         _complex_solver,               // fluid complex solver
-                        _small_dist_pressure_function,
-                        _motion_function);
+                        _pressure_function,
+                        _freq_domain_pressure_function,
+                        _displ);
     
     _gaf_database->set_evaluate_mode(true);
 
@@ -819,9 +830,11 @@ MAST::BeamFSIFlutterSizingOptimization::~BeamFSIFlutterSizingOptimization() {
     
     delete _freq_function;
     
-    delete _small_dist_pressure_function;
+    delete _pressure_function;
+    delete _freq_domain_pressure_function;
     
-    delete _motion_function;
+    delete _displ;
+    delete _normal_rot;
     delete _pressure;
     
     delete _structural_eq_sys;
@@ -961,10 +974,11 @@ MAST::BeamFSIFlutterSizingOptimization::evaluate(const std::vector<Real>& dvars,
     _frequency_domain_fluid_assembly->set_frequency_function(*_freq_function);
     
 
-    _gaf_database->init(*_freq_function,
+    _gaf_database->init(_freq_function,
                         _complex_solver,                       // fluid complex solver
-                        _small_dist_pressure_function,
-                        _motion_function);
+                        _pressure_function,
+                        _freq_domain_pressure_function,
+                        _displ);
     _flutter_solver->attach_assembly(*_gaf_database);
     _flutter_solver->initialize(*_omega,
                                 *_b_ref,
@@ -1031,8 +1045,7 @@ MAST::BeamFSIFlutterSizingOptimization::evaluate(const std::vector<Real>& dvars,
         
         // set gradient of weight
         for (unsigned int i=0; i<_n_vars; i++) {
-            _weight->derivative(MAST::PARTIAL_DERIVATIVE,
-                                *_thy_station_parameters[i],
+            _weight->derivative(*_thy_station_parameters[i],
                                 pt,
                                 0.,
                                 w_sens);
@@ -1079,10 +1092,11 @@ MAST::BeamFSIFlutterSizingOptimization::evaluate(const std::vector<Real>& dvars,
                 _frequency_domain_fluid_assembly->set_base_solution(base_sol);
                 _frequency_domain_fluid_assembly->set_frequency_function(*_freq_function);
                 
-                _gaf_database->init(*_freq_function,
+                _gaf_database->init(_freq_function,
                                     _complex_solver,                       // fluid complex solver
-                                    _small_dist_pressure_function,
-                                    _motion_function);
+                                    _pressure_function,
+                                    _freq_domain_pressure_function,
+                                    _displ);
                 _flutter_solver->attach_assembly(*_gaf_database);
                 _flutter_solver->initialize(*_omega,
                                             *_b_ref,

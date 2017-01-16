@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2016  Manav Bhatia
+ * Copyright (C) 2013-2017  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -26,7 +26,7 @@ MAST::BasisMatrixCoordinate::BasisMatrixCoordinate(const std::string& nm,
 MAST::CoordinateBase(nm),
 _basis(basis) {
     
-    _functions.insert(basis.master());
+    _functions.insert(&basis);
 }
 
 
@@ -52,13 +52,12 @@ MAST::BasisMatrixCoordinate::operator() (const libMesh::Point& p,
 
 
 void
-MAST::BasisMatrixCoordinate::derivative (const MAST::DerivativeType d,
-                                         const MAST::FunctionBase& f,
+MAST::BasisMatrixCoordinate::derivative (        const MAST::FunctionBase& f,
                                          const libMesh::Point& p,
                                          const Real t,
                                          RealMatrixX& v) const {
     
-    _basis.derivative(d, f, p, t, v);
+    _basis.derivative( f, p, t, v);
 }
 
 

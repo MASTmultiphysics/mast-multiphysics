@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2016  Manav Bhatia
+ * Copyright (C) 2013-2017  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -29,13 +29,15 @@
 #include "fluid/conservative_fluid_system_initialization.h"
 #include "fluid/conservative_fluid_discipline.h"
 #include "fluid/frequency_domain_linearized_complex_assembly.h"
-#include "fluid/small_disturbance_pressure_function.h"
+#include "fluid/pressure_function.h"
+#include "fluid/frequency_domain_pressure_function.h"
 #include "solver/complex_solver_base.h"
 #include "fluid/flight_condition.h"
 #include "base/parameter.h"
 #include "base/constant_field_function.h"
 #include "base/boundary_condition_base.h"
-#include "boundary_condition/flexible_surface_motion.h"
+#include "base/complex_mesh_field_function.h"
+#include "elasticity/complex_normal_rotation_mesh_function.h"
 #include "aeroelasticity/frequency_function.h"
 #include "aeroelasticity/ug_flutter_root.h"
 #include "elasticity/structural_system_initialization.h"
@@ -82,8 +84,10 @@ _far_field                             (nullptr),
 _symm_wall                             (nullptr),
 _slip_wall                             (nullptr),
 _pressure                              (nullptr),
-_motion_function                       (nullptr),
-_small_dist_pressure_function          (nullptr),
+_displ                                 (nullptr),
+_normal_rot                            (nullptr),
+_pressure_function                     (nullptr),
+_freq_domain_pressure_function         (nullptr),
 _omega                                 (nullptr),
 _velocity                              (nullptr),
 _b_ref                                 (nullptr),
@@ -316,9 +320,14 @@ _augment_send_list_obj                 (nullptr) {
     for (unsigned int i=2; i<=5; i++)
         _fluid_discipline->add_side_load(              i, *_far_field);
     
-    _small_dist_pressure_function =
-    new MAST::SmallDisturbancePressureFunction(*_fluid_sys_init, *_flight_cond);
+    _pressure_function =
+    new MAST::PressureFunction(*_fluid_sys_init, *_flight_cond);
+    _freq_domain_pressure_function =
+    new MAST::FrequencyDomainPressureFunction(*_fluid_sys_init, *_flight_cond);
     
+    _pressure_function->set_calculate_cp(true);
+    _freq_domain_pressure_function->set_calculate_cp(true);
+
     _k_upper            = infile("k_upper",  0.75);
     _k_lower            = infile("k_lower",  0.05);
     _n_k_divs           = infile("n_k_divs",   10);
@@ -425,9 +434,12 @@ _augment_send_list_obj                 (nullptr) {
     _structural_eq_sys->init();
     
     // initialize the motion object
-    _motion_function   = new MAST::FlexibleSurfaceMotion("small_disturbance_motion",
-                                                         *_structural_sys_init);
-    _slip_wall->add(*_motion_function);
+    _displ        = new MAST::ComplexMeshFieldFunction(*_structural_sys_init,
+                                                       "frequency_domain_displacement");
+    _normal_rot   = new MAST::ComplexNormalRotationMeshFunction("frequency_domain_normal_rotation",
+                                                                *_displ);
+    _slip_wall->add(*_displ);
+    _slip_wall->add(*_normal_rot);
     
     
     _structural_sys->eigen_solver->set_position_of_spectrum(libMesh::LARGEST_MAGNITUDE);
@@ -488,10 +500,10 @@ _augment_send_list_obj                 (nullptr) {
     _structural_discipline->set_property_for_subdomain(0, *_p_card);
     
     // pressure boundary condition for the beam
-    _pressure    =  new MAST::BoundaryConditionBase(MAST::SMALL_DISTURBANCE_MOTION);
+    _pressure    =  new MAST::BoundaryConditionBase(MAST::SURFACE_PRESSURE);
     
-    _pressure->add(*_small_dist_pressure_function);
-    _pressure->add(*_motion_function);
+    _pressure->add(*_pressure_function);
+    _pressure->add(*_freq_domain_pressure_function);
     _structural_discipline->add_volume_load(0, *_pressure);
 
     _flutter_solver  = new MAST::UGFlutterSolver;
@@ -530,9 +542,11 @@ MAST::PlateEulerFSIHalfDomainFlutterAnalysis::~PlateEulerFSIHalfDomainFlutterAna
     
     delete _freq_function;
     
-    delete _small_dist_pressure_function;
+    delete _pressure_function;
+    delete _freq_domain_pressure_function;
     
-    delete _motion_function;
+    delete _displ;
+    delete _normal_rot;
     delete _pressure;
     
     delete _structural_eq_sys;
@@ -740,10 +754,10 @@ MAST::PlateEulerFSIHalfDomainFlutterAnalysis::solve(bool if_write_output,
     fsi_assembly.attach_discipline_and_system(*_structural_discipline,
                                               *_structural_sys_init);
     
-    fsi_assembly.init(*_freq_function,
-                      &solver,                       // fluid complex solver
-                      _small_dist_pressure_function,
-                      _motion_function);
+    fsi_assembly.init(&solver,                       // fluid complex solver
+                      _pressure_function,
+                      _freq_domain_pressure_function,
+                      _displ);
     _flutter_solver->attach_assembly(fsi_assembly);
     _flutter_solver->initialize(*_omega,
                                 *_b_ref,
@@ -846,11 +860,14 @@ MAST::PlateEulerFSIHalfDomainFlutterAnalysis::solve(bool if_write_output,
             std::vector<libMesh::NumericVector<Real>*>
             fluid_basis_re(n_basis),
             fluid_basis_im(n_basis);
+            std::auto_ptr<libMesh::NumericVector<Real> >
+            zero(solver.real_solution().zero_clone().release());
+            
             for (unsigned int i=0; i<n_basis; i++) {
                 
                 // solve the fluid system for the given structural mode and
                 // the frequency of the flutter root
-                _motion_function->init(*_freq_function, *_basis[i]);
+                _displ->init         (*_basis[i], *zero);
                     
                 solver.solve_block_matrix();
                 

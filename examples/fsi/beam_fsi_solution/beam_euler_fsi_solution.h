@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2016  Manav Bhatia
+ * Copyright (C) 2013-2017  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -56,8 +56,10 @@ namespace MAST {
     class NonlinearSystem;
     class FlightCondition;
     class FrequencyFunction;
-    class FlexibleSurfaceMotion;
-    class SmallDisturbancePressureFunction;
+    class MeshFieldFunction;
+    class NormalRotationMeshFunction;
+    class PressureFunction;
+    class FrequencyDomainPressureFunction;
     class MultiphysicsNonlinearSolverBase;
     class FSIBoundaryConditionUpdates;
     
@@ -138,47 +140,29 @@ namespace MAST {
         
         
         /*!
-         *   surface rigid motion
+         *   surface motion
          */
-        MAST::FlexibleSurfaceMotion
-        *_motion_function;
+        MAST::MeshFieldFunction                    *_displ, *_vel;
+        MAST::NormalRotationMeshFunction           *_normal_rot;
         
         
         /*!
          *   surface pressure
          */
-        MAST::SmallDisturbancePressureFunction
-        *_small_dist_pressure_function;
+        MAST::PressureFunction                *_pressure_function;
         
         
         // parameters used in the system
         MAST::Parameter
-        *_omega,
-        *_velocity,
-        *_b_ref;
+        *_velocity;
         
         
         MAST::ConstantFieldFunction
-        *_omega_f,
-        *_velocity_f,
-        *_b_ref_f;
-        
-        
-        /*!
-         *   frequency object
-         */
-        MAST::FrequencyFunction
-        *_freq_function;
+        *_velocity_f;
         
         
         Real
-        _length,
-        _k_lower,
-        _k_upper;
-        
-        
-        unsigned int
-        _n_k_divs;
+        _length;
         
         
         // create the property functions and add them to the

@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2016  Manav Bhatia
+ * Copyright (C) 2013-2017  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -114,7 +114,7 @@ MAST::HeatConductionElementBase::internal_residual (bool request_jacobian,
         Bmat.right_multiply(vec1, _sol);
 
         if (_active_sol_function)
-            dynamic_cast<MAST::MeshFieldFunction<RealVectorX>*>
+            dynamic_cast<MAST::MeshFieldFunction*>
             (_active_sol_function)->set_element_quadrature_point_solution(vec1);
 
         _local_elem->global_coordinates_location(xyz[qp], p);
@@ -154,8 +154,7 @@ MAST::HeatConductionElementBase::internal_residual (bool request_jacobian,
             // Jacobian contribution from int_omega dB_dxi dT_dxj dk_ij/dT B
             if (_active_sol_function) {
                 // get derivative of the conductance matrix wrt temperature
-                conductance->derivative(MAST::PARTIAL_DERIVATIVE,
-                                        *_active_sol_function,
+                conductance->derivative(        *_active_sol_function,
                                         p,
                                         _time, dmaterial_mat);
                 
@@ -175,7 +174,7 @@ MAST::HeatConductionElementBase::internal_residual (bool request_jacobian,
     }
     
     if (_active_sol_function)
-        dynamic_cast<MAST::MeshFieldFunction<RealVectorX>*>
+        dynamic_cast<MAST::MeshFieldFunction*>
         (_active_sol_function)->clear_element_quadrature_point_solution();
 
     return request_jacobian;
@@ -217,7 +216,7 @@ MAST::HeatConductionElementBase::velocity_residual (bool request_jacobian,
         Bmat.right_multiply(vec1, _sol);               //  B * T
         
         if (_active_sol_function)
-            dynamic_cast<MAST::MeshFieldFunction<RealVectorX>*>
+            dynamic_cast<MAST::MeshFieldFunction*>
             (_active_sol_function)->set_element_quadrature_point_solution(vec1);
 
         _local_elem->global_coordinates_location(xyz[qp], p);
@@ -237,8 +236,7 @@ MAST::HeatConductionElementBase::velocity_residual (bool request_jacobian,
             // Jacobian contribution from int_omega B T d(rho*cp)/dT B
             if (_active_sol_function) {
                 // get derivative of the conductance matrix wrt temperature
-                capacitance->derivative(MAST::PARTIAL_DERIVATIVE,
-                                        *_active_sol_function,
+                capacitance->derivative(        *_active_sol_function,
                                         p,
                                         _time, material_mat);
                 
@@ -253,7 +251,7 @@ MAST::HeatConductionElementBase::velocity_residual (bool request_jacobian,
     
     
     if (_active_sol_function)
-        dynamic_cast<MAST::MeshFieldFunction<RealVectorX>*>
+        dynamic_cast<MAST::MeshFieldFunction*>
         (_active_sol_function)->clear_element_quadrature_point_solution();
 
     return request_jacobian;

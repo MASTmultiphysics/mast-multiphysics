@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2016  Manav Bhatia
+ * Copyright (C) 2013-2017  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -175,7 +175,7 @@ assemble_reduced_order_quantity
     
     // if a solution function is attached, initialize it
     if (_sol_function && _base_sol)
-        _sol_function->init_for_system_and_solution(*_system, *_base_sol);
+        _sol_function->init( *_base_sol);
     
     
     libMesh::MeshBase::const_element_iterator       el     =
@@ -318,7 +318,7 @@ assemble_reduced_order_quantity_sensitivity
     
     // if a solution function is attached, initialize it
     if (_sol_function && _base_sol)
-        _sol_function->init_for_system_and_solution(*_system, *_base_sol);
+        _sol_function->init( *_base_sol);
     
     
     libMesh::MeshBase::const_element_iterator       el     =
@@ -471,7 +471,7 @@ _elem_calculations(MAST::ElementBase& elem,
 
             // create
             
-            e.internal_residual(true, vec, mat, false);
+            e.internal_residual(true, vec, mat);
             e.inertial_residual(true, vec, dummy, dummy, mat);
             e.side_external_residual(true,
                                      vec,
@@ -510,14 +510,14 @@ _elem_aerodynamic_force_calculations(MAST::ElementBase& elem,
     dummy = ComplexMatrixX::Zero(vec.size(), vec.size());
     vec.setZero();
     
-    e.side_frequency_domain_external_residual(false,
-                                              vec,
-                                              dummy,
-                                              _discipline->side_loads());
-    e.volume_frequency_domain_external_residual(false,
-                                                vec,
-                                                dummy,
-                                                _discipline->volume_loads());
+    e.linearized_frequency_domain_side_external_residual(false,
+                                                         vec,
+                                                         dummy,
+                                                         _discipline->side_loads());
+    e.linearized_frequency_domain_volume_external_residual(false,
+                                                           vec,
+                                                           dummy,
+                                                           _discipline->volume_loads());
 }
 
 
@@ -566,7 +566,7 @@ _elem_sensitivity_calculations(MAST::ElementBase& elem,
             
         case MAST::STIFFNESS: {
             
-            e.internal_residual_sensitivity(true, vec, mat, false);
+            e.internal_residual_sensitivity(true, vec, mat);
             
             // if the linearization is about a base state, then the sensitivity of
             // the base state will influence the sensitivity of the Jacobian

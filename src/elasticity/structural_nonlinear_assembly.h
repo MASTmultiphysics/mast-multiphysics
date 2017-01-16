@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2016  Manav Bhatia
+ * Copyright (C) 2013-2017  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -152,6 +152,17 @@ namespace MAST {
                                         RealVectorX& vec,
                                         RealMatrixX& mat);
         
+        /*!
+         *   performs the element calculations over \par elem, and returns
+         *   the element vector quantity in \par vec. The vector quantity only
+         *   include the \f$ [J] \{dX\} f$ components, so the inherited classes
+         *   must ensure that no component of constant forces (traction/body
+         *   forces/etc.) are added to this vector.
+         */
+        virtual void
+        _elem_linearized_jacobian_solution_product(MAST::ElementBase& elem,
+                                                   RealVectorX& vec);
+
         /*!
          *   performs the element sensitivity calculations over \par elem,
          *   and returns the element residual sensitivity in \par vec .

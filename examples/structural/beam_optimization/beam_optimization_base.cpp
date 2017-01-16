@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2016  Manav Bhatia
+ * Copyright (C) 2013-2017  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -101,8 +101,7 @@ MAST::BeamWeight::operator() (const libMesh::Point& p,
 
 
 void
-MAST::BeamWeight::derivative(const MAST::DerivativeType d,
-                             const MAST::FunctionBase& f,
+MAST::BeamWeight::derivative(const MAST::FunctionBase& f,
                              const libMesh::Point& p,
                              Real t,
                              Real& v) const {
@@ -157,9 +156,9 @@ MAST::BeamWeight::derivative(const MAST::DerivativeType d,
         for (unsigned int i=0; i<n_sec; i++) {
             elem_p(0) = x0 + dx*(i+0.5);
             area(elem_p, 0., h);
-            area.derivative(d, f, elem_p, 0., dh);
+            area.derivative( f, elem_p, 0., dh);
             rhof(elem_p, 0., rho);
-            rhof.derivative(d, f, elem_p, 0., drho);
+            rhof.derivative( f, elem_p, 0., drho);
             v += (dh * rho + h * drho) * dx;
         }
         

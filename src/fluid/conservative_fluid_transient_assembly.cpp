@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2016  Manav Bhatia
+ * Copyright (C) 2013-2017  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -72,10 +72,31 @@ _elem_calculations(MAST::ElementBase& elem,
 
 void
 MAST::ConservativeFluidTransientAssembly::
+_linearized_jacobian_solution_product(MAST::ElementBase& elem,
+                                      RealVectorX& f_m_x_dx,
+                                      RealVectorX& f_m_xdot_dxdot,
+                                      RealVectorX& f_x_x_dx) {
+    
+    MAST::ConservativeFluidElementBase& e =
+    dynamic_cast<MAST::ConservativeFluidElementBase&>(elem);
+    
+    f_m_x_dx.setZero();
+    f_m_xdot_dxdot.setZero();
+    f_x_x_dx.setZero();
+    
+
+    libmesh_error(); // to be implemented
+}
+
+
+
+
+void
+MAST::ConservativeFluidTransientAssembly::
 _elem_sensitivity_calculations(MAST::ElementBase& elem,
                                RealVectorX& vec) {
     
-    
+    libmesh_error(); // to be implemented
     
 }
 

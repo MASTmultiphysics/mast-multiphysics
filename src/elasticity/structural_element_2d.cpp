@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2016  Manav Bhatia
+ * Copyright (C) 2013-2017  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -449,14 +449,11 @@ MAST::StructuralElement2D::calculate_stress(bool request_derivative,
                 // if thermal load was specified, then set the thermal strain
                 // component of the total strain
                 if (thermal_load) {
-                    temp_func->derivative(MAST::PARTIAL_DERIVATIVE,
-                                          *sensitivity_param,
+                    temp_func->derivative(          *sensitivity_param,
                                           p, _time, dtemp);
-                    ref_temp_func->derivative(MAST::PARTIAL_DERIVATIVE,
-                                              *sensitivity_param,
+                    ref_temp_func->derivative(              *sensitivity_param,
                                               p, _time, dref_t);
-                    alpha_func->derivative(MAST::PARTIAL_DERIVATIVE,
-                                           *sensitivity_param,
+                    alpha_func->derivative(           *sensitivity_param,
                                            p, _time, dalpha);
                     dstrain_dp(0)  -=  alpha*(dtemp-dref_t) - dalpha*(temp-ref_t); // epsilon-xx
                     dstrain_dp(1)  -=  alpha*(dtemp-dref_t) - dalpha*(temp-ref_t); // epsilon-yy
@@ -467,11 +464,9 @@ MAST::StructuralElement2D::calculate_stress(bool request_derivative,
                 if (if_bending) {
                     
                     // add to this the bending strain
-                    h.derivative    (MAST::PARTIAL_DERIVATIVE,
-                                     *sensitivity_param,
+                    h.derivative    (     *sensitivity_param,
                                      p, _time,     z);
-                    h_off.derivative(MAST::PARTIAL_DERIVATIVE,
-                                     *sensitivity_param,
+                    h_off.derivative(     *sensitivity_param,
                                      p, _time, z_off);
                     // TODO: this assumes isotropic section. Multilayered sections need
                     // special considerations
@@ -491,8 +486,7 @@ MAST::StructuralElement2D::calculate_stress(bool request_derivative,
                 dstress_dp  =  material_mat * dstrain_dp;
 
                 // get the material matrix sensitivity
-                mat_stiff.derivative(MAST::PARTIAL_DERIVATIVE,
-                                     *sensitivity_param,
+                mat_stiff.derivative(     *sensitivity_param,
                                      p,
                                      _time,
                                      material_mat);
@@ -542,8 +536,7 @@ MAST::StructuralElement2D::calculate_stress(bool request_derivative,
 bool
 MAST::StructuralElement2D::internal_residual (bool request_jacobian,
                                               RealVectorX& f,
-                                              RealMatrixX& jac,
-                                              bool if_ignore_ho_jac)
+                                              RealMatrixX& jac)
 {
     const std::vector<Real>& JxW           = _fe->get_JxW();
     const std::vector<libMesh::Point>& xyz = _fe->get_xyz();
@@ -609,7 +602,7 @@ MAST::StructuralElement2D::internal_residual (bool request_jacobian,
         
         // now calculte the quantity for these matrices
         _internal_residual_operation(if_bending, if_vk, n2, qp, *_fe, JxW,
-                                     request_jacobian, if_ignore_ho_jac,
+                                     request_jacobian,
                                      local_f, local_jac,
                                      Bmat_mem, Bmat_bend, Bmat_vk,
                                      stress, stress_l, vk_dwdxi_mat, material_A_mat,
@@ -656,8 +649,7 @@ MAST::StructuralElement2D::internal_residual (bool request_jacobian,
 bool
 MAST::StructuralElement2D::internal_residual_sensitivity (bool request_jacobian,
                                                           RealVectorX& f,
-                                                          RealMatrixX& jac,
-                                                          bool if_ignore_ho_jac)
+                                                          RealMatrixX& jac)
 {
     // this should be true if the function is called
     libmesh_assert(this->sensitivity_param);
@@ -726,22 +718,19 @@ MAST::StructuralElement2D::internal_residual_sensitivity (bool request_jacobian,
         this->local_elem().global_coordinates_location(xyz[qp], p);
         
         // get the material matrix
-        mat_stiff_A->derivative(MAST::PARTIAL_DERIVATIVE,
-                                *this->sensitivity_param,
+        mat_stiff_A->derivative(*this->sensitivity_param,
                                 p,
                                 _time,
                                 material_A_mat);
         
         if (if_bending) {
             
-            mat_stiff_B->derivative(MAST::PARTIAL_DERIVATIVE,
-                                    *this->sensitivity_param,
+            mat_stiff_B->derivative(    *this->sensitivity_param,
                                     p,
                                     _time,
                                     material_B_mat);
             
-            mat_stiff_D->derivative(MAST::PARTIAL_DERIVATIVE,
-                                    *this->sensitivity_param,
+            mat_stiff_D->derivative(    *this->sensitivity_param,
                                     p,
                                     _time,
                                     material_D_mat);
@@ -750,7 +739,7 @@ MAST::StructuralElement2D::internal_residual_sensitivity (bool request_jacobian,
         // now calculte the quantity for these matrices
         // this accounts for the sensitivity of the material property matrices
         _internal_residual_operation(if_bending, if_vk, n2, qp, *_fe, JxW,
-                                     request_jacobian, if_ignore_ho_jac,
+                                     request_jacobian,
                                      local_f, local_jac,
                                      Bmat_mem, Bmat_bend, Bmat_vk,
                                      stress, stress_l, vk_dwdxi_mat, material_A_mat,
@@ -763,7 +752,7 @@ MAST::StructuralElement2D::internal_residual_sensitivity (bool request_jacobian,
         // static solution. This is needed only for cases that require linearized
         // geometric stiffness matrix, for example in buckling or natural frequency
         // analysis
-        if (if_bending && if_vk && if_ignore_ho_jac && request_jacobian) {
+        /*if (if_bending && if_vk && if_ignore_ho_jac && request_jacobian) {
             (*mat_stiff_A)(p, _time, material_A_mat);
             (*mat_stiff_B)(p, _time, material_B_mat);
             
@@ -771,7 +760,7 @@ MAST::StructuralElement2D::internal_residual_sensitivity (bool request_jacobian,
             (n2, qp, *_fe, JxW, local_jac, Bmat_mem, Bmat_bend, Bmat_vk, stress_l,
              vk_dwdxi_mat, material_A_mat, material_B_mat, vec1_n1,
              vec2_n1, mat1_n1n2, mat2_n2n2, mat3);
-        }
+        }*/
     }
     
     // now calculate the transverse shear contribution if appropriate for the
@@ -970,7 +959,6 @@ MAST::StructuralElement2D::_internal_residual_operation
  const libMesh::FEBase& fe,
  const std::vector<Real>& JxW,
  bool request_jacobian,
- bool if_ignore_ho_jac,
  RealVectorX& local_f,
  RealMatrixX& local_jac,
  FEMOperatorMatrix& Bmat_mem,
@@ -1103,14 +1091,14 @@ MAST::StructuralElement2D::_internal_residual_operation
                 // example for linearized buckling analysis, then the linear
                 // stress combined with the variation of the von Karman strain
                 // is included. Otherwise, all terms are included
-                if (if_ignore_ho_jac) {
+                /*if (if_ignore_ho_jac) {
                     // vk - vk: first order term
                     mat3 = RealMatrixX::Zero(2, n2);
                     Bmat_vk.left_multiply(mat3, stress_l);
                     Bmat_vk.right_multiply_transpose(mat2_n2n2, mat3);
                     local_jac += JxW[qp] * mat2_n2n2;
                 }
-                else {
+                else*/ {
                     // vk - vk
                     mat3 = RealMatrixX::Zero(2, n2);
                     Bmat_vk.left_multiply(mat3, stress);
@@ -1445,13 +1433,11 @@ MAST::StructuralElement2D::prestress_residual_sensitivity (bool request_jacobian
         
         this->local_elem().global_coordinates_location(xyz[qp], p);
         
-        prestress_A->derivative(MAST::PARTIAL_DERIVATIVE,
-                                *this->sensitivity_param,
+        prestress_A->derivative(*this->sensitivity_param,
                                 p,
                                 _time,
                                 prestress_mat_A);
-        prestress_B->derivative(MAST::PARTIAL_DERIVATIVE,
-                                *this->sensitivity_param,
+        prestress_B->derivative(*this->sensitivity_param,
                                 p,
                                 _time,
                                 prestress_mat_B);
@@ -1670,14 +1656,12 @@ surface_pressure_residual_sensitivity(bool request_jacobian,
         
         // get pressure and thickness values and their sensitivities
         p_func(pt, _time, press);
-        p_func.derivative(MAST::TOTAL_DERIVATIVE,
-                          *sensitivity_param,
+        p_func.derivative(*sensitivity_param,
                           pt,
                           _time,
                           dpress);
         t_func(pt, _time, t_val);
-        t_func.derivative(MAST::PARTIAL_DERIVATIVE,
-                          *sensitivity_param,
+        t_func.derivative(*sensitivity_param,
                           pt,
                           _time,
                           dt_val);
@@ -1889,13 +1873,11 @@ thermal_residual_sensitivity (bool request_jacobian,
         // this is moved inside the domain since
         (*expansion_A)(pt, _time, material_exp_A_mat);
         (*expansion_B)(pt, _time, material_exp_B_mat);
-        expansion_A->derivative(MAST::PARTIAL_DERIVATIVE,
-                                *this->sensitivity_param,
+        expansion_A->derivative(*this->sensitivity_param,
                                 pt,
                                 _time,
                                 material_exp_A_mat_sens);
-        expansion_B->derivative(MAST::PARTIAL_DERIVATIVE,
-                                *this->sensitivity_param,
+        expansion_B->derivative(*this->sensitivity_param,
                                 pt,
                                 _time,
                                 material_exp_B_mat_sens);
@@ -1907,8 +1889,7 @@ thermal_residual_sensitivity (bool request_jacobian,
         
         // get the temperature function
         temp_func(pt, _time, t);
-        temp_func.derivative(MAST::PARTIAL_DERIVATIVE,
-                             *this->sensitivity_param,
+        temp_func.derivative(*this->sensitivity_param,
                              pt,
                              _time,
                              t_sens);
@@ -2318,8 +2299,7 @@ piston_theory_residual_sensitivity(bool request_jacobian,
         // calculate the pressure value
         dwdx_p = dwdx_val;
         dwdt_p = dwdt_val;
-        pressure->derivative(MAST::PARTIAL_DERIVATIVE,
-                             *this->sensitivity_param,
+        pressure->derivative(*this->sensitivity_param,
                              pt,
                              _time,
                              p_val);
@@ -2336,8 +2316,7 @@ piston_theory_residual_sensitivity(bool request_jacobian,
         if (request_jacobian) {
             
             // we need the derivative of cp wrt normal velocity
-            dpressure_dxdot->derivative(MAST::PARTIAL_DERIVATIVE,
-                                        *this->sensitivity_param,
+            dpressure_dxdot->derivative(        *this->sensitivity_param,
                                         pt,
                                         _time,
                                         p_val);
@@ -2347,8 +2326,7 @@ piston_theory_residual_sensitivity(bool request_jacobian,
             local_jac_xdot += (JxW[qp] * p_val * normal(2)) * mat_n2n2;
             
             // now calculate the component of Jacobian
-            dpressure_dx->derivative(MAST::PARTIAL_DERIVATIVE,
-                                     *this->sensitivity_param,
+            dpressure_dx->derivative(     *this->sensitivity_param,
                                      pt,
                                      _time,
                                      p_val);

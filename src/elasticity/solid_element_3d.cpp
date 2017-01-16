@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2016  Manav Bhatia
+ * Copyright (C) 2013-2017  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -129,8 +129,7 @@ MAST::StructuralElement3D::inertial_residual (bool request_jacobian,
 bool
 MAST::StructuralElement3D::internal_residual(bool request_jacobian,
                                              RealVectorX& f,
-                                             RealMatrixX& jac,
-                                             bool if_ignore_ho_jac) {
+                                             RealMatrixX& jac) {
     
     const std::vector<Real>& JxW            = _fe->get_JxW();
     const std::vector<libMesh::Point>& xyz  = _fe->get_xyz();
@@ -550,8 +549,7 @@ update_incompatible_mode_solution(const RealVectorX& dsol) {
 bool
 MAST::StructuralElement3D::internal_residual_sensitivity(bool request_jacobian,
                                                          RealVectorX& f,
-                                                         RealMatrixX& jac,
-                                                         bool if_ignore_ho_jac) {
+                                                         RealMatrixX& jac) {
     
     return request_jacobian;
 }
@@ -714,8 +712,7 @@ surface_pressure_residual_sensitivity(bool request_jacobian,
         Bmat.reinit(2*n1, phi_vec);
         
         // get pressure value
-        func.derivative(MAST::TOTAL_DERIVATIVE,
-                        *sensitivity_param,
+        func.derivative(*sensitivity_param,
                         pt,
                         _time,
                         press);
