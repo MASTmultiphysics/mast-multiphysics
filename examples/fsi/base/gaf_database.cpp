@@ -89,7 +89,7 @@ MAST::GAFDatabase::write_gaf_file(const std::string& nm,
         << n_vec_dofs << std::endl
         << n_kr       << std::endl;
         
-        out.precision(std::numeric_limits<Real>::max_digits10);
+	//out.precision(std::numeric_limits<Real>::max_digits10);
         
         // write the GAFs at each kr first
         {

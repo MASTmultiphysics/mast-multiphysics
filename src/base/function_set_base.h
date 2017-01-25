@@ -23,6 +23,7 @@
 
 // C++ includes
 #include <vector>
+#include <map>
 
 // MAST includes
 #include "base/function_base.h"

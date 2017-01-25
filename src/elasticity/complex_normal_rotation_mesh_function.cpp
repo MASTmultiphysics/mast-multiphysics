@@ -41,8 +41,8 @@ MAST::ComplexNormalRotationMeshFunction::operator()(const libMesh::Point& p,
     dn_rot.setZero();
     
     libMesh::MeshFunction
-    &function_re = _func.get_function().first,
-    &function_im = _func.get_function().second;
+    &function_re = *_func.get_function().first,
+    &function_im = *_func.get_function().second;
     
     // translation is obtained by direct interpolation of the u,v,w vars
     
@@ -93,8 +93,8 @@ MAST::ComplexNormalRotationMeshFunction::perturbation(const libMesh::Point& p,
     dn_rot.setZero();
     
     libMesh::MeshFunction
-    &perturbed_function_re = _func.get_perturbed_function().first,
-    &perturbed_function_im = _func.get_perturbed_function().second;
+    &perturbed_function_re = *_func.get_perturbed_function().first,
+    &perturbed_function_im = *_func.get_perturbed_function().second;
     
     // translation is obtained by direct interpolation of the u,v,w vars
     

@@ -78,26 +78,26 @@ namespace MAST {
         /*!
          *    @returns a reference to the libMesh mesh function
          */
-        std::pair<libMesh::MeshFunction&, libMesh::MeshFunction&>
+        std::pair<libMesh::MeshFunction*, libMesh::MeshFunction*>
         get_function() {
             
             libmesh_assert(_function_re);
             
-            return std::pair<libMesh::MeshFunction&, libMesh::MeshFunction&>
-            (*_function_re, *_function_im);
+            return std::pair<libMesh::MeshFunction*, libMesh::MeshFunction*>
+            (_function_re, _function_im);
         }
         
         /*!
          *    @returns a reference to the libMesh mesh function for the
          *    perturbation in solution
          */
-        std::pair<libMesh::MeshFunction&, libMesh::MeshFunction&>
+        std::pair<libMesh::MeshFunction*, libMesh::MeshFunction*>
         get_perturbed_function() {
             
             libmesh_assert(_perturbed_function_re);
             
-            return std::pair<libMesh::MeshFunction&, libMesh::MeshFunction&>
-            (*_perturbed_function_re, *_perturbed_function_im);
+            return std::pair<libMesh::MeshFunction*, libMesh::MeshFunction*>
+            (_perturbed_function_re, _perturbed_function_im);
         }
         
         

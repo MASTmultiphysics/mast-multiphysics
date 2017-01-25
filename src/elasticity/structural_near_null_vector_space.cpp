@@ -39,10 +39,10 @@ namespace MAST {
         }
         
         
-        virtual libMesh::UniquePtr<FunctionBase<Real> > clone () const {
+      virtual libMesh::UniquePtr<libMesh::FunctionBase<Real> > clone () const {
             
-            FunctionBase<Real> *rval = new MAST::StructuralModes(_mode);
-            return libMesh::UniquePtr<FunctionBase<Real> >(rval);
+	libMesh::FunctionBase<Real> *rval = new MAST::StructuralModes(_mode);
+	return libMesh::UniquePtr<libMesh::FunctionBase<Real> >(rval);
         }
         
         // this should not get called
