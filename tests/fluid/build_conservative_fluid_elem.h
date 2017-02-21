@@ -53,7 +53,9 @@ namespace MAST {
     class FlightCondition;
     class FrequencyFunction;
     class RigidSurfaceMotion;
-    
+    class RigidSurfaceDisplacement;
+    class RigidSurfaceNormalRotation;
+
     
     struct BuildConservativeFluidElem {
         
@@ -71,7 +73,7 @@ namespace MAST {
         libMesh::EquationSystems*      _eq_sys;
         
         // create the libmesh system
-        libMesh::NonlinearImplicitSystem*  _sys;
+        MAST::NonlinearSystem*  _sys;
         
         // initialize the system to the right set of variables
         MAST::ConservativeFluidSystemInitialization* _fluid_sys;
@@ -93,6 +95,10 @@ namespace MAST {
          */
         MAST::RigidSurfaceMotion
         *_motion;
+        MAST::RigidSurfaceDisplacement
+        *_displacement;
+        MAST::RigidSurfaceNormalRotation
+        *_normal_rot;
         
         // parameters used in the system
         MAST::Parameter

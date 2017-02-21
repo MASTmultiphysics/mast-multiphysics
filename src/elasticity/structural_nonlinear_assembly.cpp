@@ -28,6 +28,7 @@
 #include "base/mesh_field_function.h"
 #include "numerics/utility.h"
 #include "base/real_output_function.h"
+#include "base/nonlinear_system.h"
 
 
 // libMesh includes
@@ -62,8 +63,7 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
                        libMesh::SparseMatrix<Real>*  J,
                        libMesh::NonlinearImplicitSystem& S) {
     
-    libMesh::NonlinearImplicitSystem& nonlin_sys =
-    dynamic_cast<libMesh::NonlinearImplicitSystem&>(_system->system());
+    MAST::NonlinearSystem& nonlin_sys = _system->system();
     
     // make sure that the system for which this object was created,
     // and the system passed through the function call are the same
@@ -78,7 +78,7 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
     RealMatrixX mat;
     
     std::vector<libMesh::dof_id_type> dof_indices;
-    const libMesh::DofMap& dof_map = _system->system().get_dof_map();
+    const libMesh::DofMap& dof_map = nonlin_sys.get_dof_map();
     std::auto_ptr<MAST::ElementBase> physics_elem;
     
     std::auto_ptr<libMesh::NumericVector<Real> > localized_solution;
@@ -185,8 +185,7 @@ sensitivity_assemble (const libMesh::ParameterVector& parameters,
                       const unsigned int i,
                       libMesh::NumericVector<Real>& sensitivity_rhs) {
     
-    libMesh::NonlinearImplicitSystem& nonlin_sys =
-    dynamic_cast<libMesh::NonlinearImplicitSystem&>(_system->system());
+    MAST::NonlinearSystem& nonlin_sys = _system->system();
     
     sensitivity_rhs.zero();
     
@@ -293,8 +292,7 @@ update_incompatible_solution(libMesh::NumericVector<Real>& X,
     // iterate over each element and ask the 3D elements to update
     // their local solutions
     
-    libMesh::NonlinearImplicitSystem& nonlin_sys =
-    dynamic_cast<libMesh::NonlinearImplicitSystem&>(_system->system());
+    MAST::NonlinearSystem& nonlin_sys = _system->system();
     
     
     // iterate over each element, initialize it and get the relevant
@@ -383,8 +381,7 @@ calculate_outputs(const libMesh::NumericVector<Real>& X) {
     for ( ; it != end; it++)
         if (it->second->type() == MAST::STRUCTURAL_COMPLIANCE) {
             
-            libMesh::NonlinearImplicitSystem& sys =
-            dynamic_cast<libMesh::NonlinearImplicitSystem&>(_system->system());
+            MAST::NonlinearSystem& sys = _system->system();
             
             MAST::RealOutputFunction& output =
             dynamic_cast<MAST::RealOutputFunction&>(*it->second);
@@ -421,8 +418,7 @@ calculate_output_sensitivity(libMesh::ParameterVector& params,
     for ( ; it != end; it++)
         if (it->second->type() == MAST::STRUCTURAL_COMPLIANCE) {
             
-            libMesh::NonlinearImplicitSystem& sys =
-            dynamic_cast<libMesh::NonlinearImplicitSystem&>(_system->system());
+            MAST::NonlinearSystem& sys = _system->system();
             
             MAST::RealOutputFunction& output =
             dynamic_cast<MAST::RealOutputFunction&>(*it->second);
@@ -475,8 +471,7 @@ _calculate_compliance (const libMesh::NumericVector<Real>& X,
                        const libMesh::NumericVector<Real>* dX) {
 
 
-    libMesh::NonlinearImplicitSystem& nonlin_sys =
-    dynamic_cast<libMesh::NonlinearImplicitSystem&>(_system->system());
+    MAST::NonlinearSystem& nonlin_sys = _system->system();
     
     // make sure that the system for which this object was created,
     // and the system passed through the function call are the same
@@ -647,12 +642,25 @@ MAST::StructuralNonlinearAssembly::
 _elem_linearized_jacobian_solution_product(MAST::ElementBase& elem,
                                            RealVectorX& vec) {
     
+
     MAST::StructuralElementBase& e =
     dynamic_cast<MAST::StructuralElementBase&>(elem);
     
     vec.setZero();
-
-    libmesh_error(); // to be implemented
+    RealMatrixX
+    mat = RealMatrixX::Zero(vec.size(), vec.size());
+    
+    e.linearized_internal_residual(false, vec, mat);
+    e.linearized_side_external_residual(false,
+                                        vec,
+                                        mat,
+                                        mat,
+                                        _discipline->side_loads());
+    e.linearized_volume_external_residual(false,
+                                          vec,
+                                          mat,
+                                          mat,
+                                          _discipline->volume_loads());
 }
 
 
@@ -704,7 +712,7 @@ attach_discipline_and_system(MAST::PhysicsDisciplineBase& discipline,
     
     libMesh::PetscNonlinearSolver<Real> &petsc_nonlinear_solver =
     *(dynamic_cast<libMesh::PetscNonlinearSolver<Real>*>
-      (dynamic_cast<libMesh::NonlinearImplicitSystem&>(system.system()).nonlinear_solver.get()));
+      (dynamic_cast<MAST::NonlinearSystem&>(system.system()).nonlinear_solver.get()));
 
 
     // initialize the solver before getting the snes object
@@ -732,7 +740,7 @@ clear_discipline_and_system( ) {
     // next, remove the monitor function from the snes object
     libMesh::PetscNonlinearSolver<Real> &petsc_nonlinear_solver =
     *(dynamic_cast<libMesh::PetscNonlinearSolver<Real>*>
-      (dynamic_cast<libMesh::NonlinearImplicitSystem&>(_system->system()).nonlinear_solver.get()));
+      (dynamic_cast<MAST::NonlinearSystem&>(_system->system()).nonlinear_solver.get()));
     
     // get the SNES object
     SNES snes = petsc_nonlinear_solver.snes();

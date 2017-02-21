@@ -51,6 +51,7 @@
 #include "property_cards/solid_2d_section_element_property_card.h"
 #include "property_cards/isotropic_material_property_card.h"
 #include "elasticity/structural_near_null_vector_space.h"
+#include "solver/slepc_eigen_solver.h"
 
 
 // libMesh includes

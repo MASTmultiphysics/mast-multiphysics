@@ -24,16 +24,17 @@
 #include "base/nonlinear_system.h"
 #include "base/physics_discipline_base.h"
 #include "base/eigensystem_assembly.h"
+#include "base/nonlinear_implicit_assembly.h"
 #include "base/parameter.h"
+#include "solver/slepc_eigen_solver.h"
 
 // libMesh includes
 #include "libmesh/numeric_vector.h"
 #include "libmesh/parameter_vector.h"
 #include "libmesh/equation_systems.h"
 #include "libmesh/sparse_matrix.h"
-#include "libmesh/eigen_solver.h"
 #include "libmesh/dof_map.h"
-#include "libmesh/slepc_eigen_solver.h"
+#include "libmesh/nonlinear_solver.h"
 
 
 MAST::NonlinearSystem::NonlinearSystem(libMesh::EquationSystems& es,
@@ -127,10 +128,10 @@ MAST::NonlinearSystem::init_data () {
         matrix_B->zero();
     }
     
-    eigen_solver.reset(libMesh::EigenSolver<Real>::build(this->comm()).release());
+    eigen_solver.reset(new MAST::SlepcEigenSolver(this->comm()));
     if (libMesh::on_command_line("--solver_system_names")) {
         
-        EPS eps =  dynamic_cast<libMesh::SlepcEigenSolver<Real>*>(eigen_solver.get())->eps();
+        EPS eps =  eigen_solver.get()->eps();
         std::string nm = this->name() + "_";
         EPSSetOptionsPrefix(eps, nm.c_str());
     }
@@ -677,4 +678,31 @@ initialize_condensed_dofs(MAST::PhysicsDisciplineBase& physics) {
 }
 
 
+
+void
+MAST::NonlinearSystem::assemble_residual_derivatives
+(const libMesh::ParameterVector & parameters) {
+
+    // this assumes that the residual and jacobian object of the
+    // nonlinear implicit system is the assembly object implemented in MAST,
+    // which also implements the assembly for sensitivity of residual.
+    
+    MAST::NonlinearImplicitAssembly& assembly =
+    dynamic_cast<MAST::NonlinearImplicitAssembly&>
+    (*this->nonlinear_solver->residual_and_jacobian_object);
+    
+    assembly.sensitivity_assemble(parameters, 0, this->add_sensitivity_rhs());
+}
+
+
+
+
+void
+MAST::NonlinearSystem::
+assemble_qoi_derivative (const libMesh::QoISet & qoi_indices,
+                         bool include_liftfunc,
+                         bool apply_constraints) {
+    
+    libmesh_error();
+}
 

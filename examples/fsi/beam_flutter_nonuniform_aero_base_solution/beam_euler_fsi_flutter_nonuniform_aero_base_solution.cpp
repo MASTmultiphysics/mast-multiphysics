@@ -54,6 +54,7 @@
 #include "boundary_condition/dirichlet_boundary_condition.h"
 #include "aeroelasticity/ug_flutter_solver.h"
 #include "examples/base/augment_ghost_elem_send_list.h"
+#include "solver/slepc_eigen_solver.h"
 
 
 // libMesh includes
@@ -761,8 +762,8 @@ solve(bool if_write_output,
                                                        transient_fluid_solver,
                                                        *_fluid_sys_init);
     
-    libMesh::NonlinearImplicitSystem&      nonlin_sys   =
-    dynamic_cast<libMesh::NonlinearImplicitSystem&>(_fluid_sys->system());
+    MAST::NonlinearSystem&  nonlin_sys   =
+    dynamic_cast<MAST::NonlinearSystem&>(_fluid_sys->system());
     
     
     // file to write the solution for visualization

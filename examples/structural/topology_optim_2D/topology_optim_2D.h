@@ -190,7 +190,7 @@ namespace MAST {
         libMesh::EquationSystems*      _eq_sys;
         
         // create the libmesh system
-        libMesh::NonlinearImplicitSystem*  _sys;
+        MAST::NonlinearSystem*  _sys;
         
         // system to plot the density variable over the mesh
         libMesh::ExplicitSystem*           _rho_sys;

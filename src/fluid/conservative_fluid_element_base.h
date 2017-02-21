@@ -62,6 +62,16 @@ namespace MAST {
         
         
         /*!
+         *   internal force contribution to system residual of the linearized 
+         *   problem.
+         */
+        virtual bool
+        linearized_internal_residual (bool request_jacobian,
+                                      RealVectorX& f,
+                                      RealMatrixX& jac);
+
+        
+        /*!
          *   inertial force contribution to system residual
          */
         virtual bool
@@ -69,7 +79,17 @@ namespace MAST {
                            RealVectorX& f,
                            RealMatrixX& jac_xdot,
                            RealMatrixX& jac);
-        
+
+        /*!
+         *   inertial force contribution to system residual of the linearized
+         *   problem
+         */
+        virtual bool
+        linearized_velocity_residual (bool request_jacobian,
+                                      RealVectorX& f,
+                                      RealMatrixX& jac_xdot,
+                                      RealMatrixX& jac);
+
         /*!
          *   side external force contribution to system residual
          */
@@ -78,7 +98,17 @@ namespace MAST {
                                 RealVectorX& f,
                                 RealMatrixX& jac,
                                 std::multimap<libMesh::boundary_id_type, MAST::BoundaryConditionBase*>& bc);
+
         
+        /*!
+         *   side external force contribution to system residual
+         */
+        bool
+        linearized_side_external_residual (bool request_jacobian,
+                                           RealVectorX& f,
+                                           RealMatrixX& jac,
+                                           std::multimap<libMesh::boundary_id_type, MAST::BoundaryConditionBase*>& bc);
+
         /*!
          *   sensitivity of the internal force contribution to system residual
          */
@@ -112,10 +142,7 @@ namespace MAST {
         virtual bool
         volume_output_quantity (bool request_derivative,
                                 bool request_sensitivity,
-                                std::multimap<libMesh::subdomain_id_type, MAST::OutputFunctionBase*>& output) {
-            
-            libmesh_error(); // to be implemented
-        }
+                                std::multimap<libMesh::subdomain_id_type, MAST::OutputFunctionBase*>& output);
         
         
         /*!
@@ -126,10 +153,8 @@ namespace MAST {
          */
         virtual bool
         side_output_quantity (bool request_derivative,
-                              std::multimap<libMesh::boundary_id_type, MAST::OutputFunctionBase*>& output) {
-            
-            libmesh_error(); // to be implemented
-        }
+                              bool request_sensitivity,
+                              std::multimap<libMesh::boundary_id_type, MAST::OutputFunctionBase*>& output);
 
         
     protected:
@@ -162,6 +187,17 @@ namespace MAST {
                                                 RealMatrixX& jac,
                                                 const unsigned int s,
                                                 MAST::BoundaryConditionBase& p);
+
+        
+        /*!
+         *
+         */
+        virtual bool
+        linearized_slip_wall_surface_residual(bool request_jacobian,
+                                              RealVectorX& f,
+                                              RealMatrixX& jac,
+                                              const unsigned int s,
+                                              MAST::BoundaryConditionBase& p);
 
         
         /*!
@@ -200,6 +236,15 @@ namespace MAST {
                                                             RealMatrixX& jac,
                                                             const unsigned int s,
                                                             MAST::BoundaryConditionBase& p);
+        
+        
+        /*!
+         *   calculates the surface integrated force vector
+         */
+        void _calculate_surface_integrated_load(bool request_derivative,
+                                                bool request_sensitivity,
+                                                const unsigned int s,
+                                                MAST::OutputFunctionBase& output);
         
 
         /*!

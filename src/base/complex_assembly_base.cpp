@@ -27,6 +27,7 @@
 #include "base/mesh_field_function.h"
 #include "solver/complex_solver_base.h"
 #include "base/parameter.h"
+#include "base/nonlinear_system.h"
 
 
 // libMesh includes
@@ -75,13 +76,9 @@ attach_discipline_and_system(MAST::PhysicsDisciplineBase &discipline,
     _base_sol             = nullptr;
     _base_sol_sensitivity = nullptr;
     
-    libMesh::NonlinearImplicitSystem& nonlin_sys =
-    dynamic_cast<libMesh::NonlinearImplicitSystem&>(system.system());
-    
     _complex_solver->set_assembly(*this);
     
-    nonlin_sys.nonlinear_solver->residual_and_jacobian_object = this;
-    nonlin_sys.attach_sensitivity_assemble_object(*this);
+    _system->system().nonlinear_solver->residual_and_jacobian_object = this;
 }
 
 
@@ -92,11 +89,7 @@ MAST::ComplexAssemblyBase::reattach_to_system() {
     libmesh_assert(_discipline);
     libmesh_assert(_system);
     
-    libMesh::NonlinearImplicitSystem& nonlin_sys =
-    dynamic_cast<libMesh::NonlinearImplicitSystem&>(_system->system());
-    
-    nonlin_sys.nonlinear_solver->residual_and_jacobian_object = this;
-    nonlin_sys.attach_sensitivity_assemble_object(*this);
+    _system->system().nonlinear_solver->residual_and_jacobian_object = this;
 }
 
 
@@ -107,11 +100,8 @@ clear_discipline_and_system( ) {
     
     if (_system && _discipline) {
         
-        libMesh::NonlinearImplicitSystem& nonlin_sys =
-        dynamic_cast<libMesh::NonlinearImplicitSystem&>(_system->system());
-        
-        nonlin_sys.nonlinear_solver->residual_and_jacobian_object = nullptr;
-        nonlin_sys.reset_sensitivity_assembly();
+        _system->system().nonlinear_solver->residual_and_jacobian_object =
+        nullptr;
     }
     
     _complex_solver->clear_assembly();
@@ -180,8 +170,7 @@ MAST::ComplexAssemblyBase::residual_l2_norm() {
     
     START_LOG("complex_solve()", "Residual-L2");
 
-    libMesh::NonlinearImplicitSystem& nonlin_sys =
-    dynamic_cast<libMesh::NonlinearImplicitSystem&>(_system->system());
+    MAST::NonlinearSystem& nonlin_sys = _system->system();
     
     // iterate over each element, initialize it and get the relevant
     // analysis quantities
@@ -198,7 +187,7 @@ MAST::ComplexAssemblyBase::residual_l2_norm() {
     mat;
     
     std::vector<libMesh::dof_id_type> dof_indices;
-    const libMesh::DofMap& dof_map = _system->system().get_dof_map();
+    const libMesh::DofMap& dof_map = nonlin_sys.get_dof_map();
     std::auto_ptr<MAST::ElementBase> physics_elem;
     
     std::auto_ptr<libMesh::NumericVector<Real> >
@@ -316,8 +305,7 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
                        libMesh::SparseMatrix<Real>*  J,
                        libMesh::NonlinearImplicitSystem& S) {
     
-    libMesh::NonlinearImplicitSystem& nonlin_sys =
-    dynamic_cast<libMesh::NonlinearImplicitSystem&>(_system->system());
+    MAST::NonlinearSystem& nonlin_sys = _system->system();
     
     // make sure that the system for which this object was created,
     // and the system passed through the function call are the same
@@ -496,8 +484,7 @@ residual_and_jacobian_field_split (const libMesh::NumericVector<Real>& X_R,
                                    libMesh::SparseMatrix<Real>&  J_I,
                                    libMesh::NonlinearImplicitSystem& S) {
     
-    libMesh::NonlinearImplicitSystem& nonlin_sys =
-    dynamic_cast<libMesh::NonlinearImplicitSystem&>(_system->system());
+    MAST::NonlinearSystem& nonlin_sys = _system->system();
     
     // make sure that the system for which this object was created,
     // and the system passed through the function call are the same
@@ -656,8 +643,7 @@ residual_and_jacobian_blocked (const libMesh::NumericVector<Real>& X,
 
     START_LOG("residual_and_jacobian()", "ComplexSolve");
     
-    libMesh::NonlinearImplicitSystem& nonlin_sys =
-    dynamic_cast<libMesh::NonlinearImplicitSystem&>(_system->system());
+    MAST::NonlinearSystem& nonlin_sys = _system->system();
     
     // make sure that the system for which this object was created,
     // and the system passed through the function call are the same
@@ -684,7 +670,7 @@ residual_and_jacobian_blocked (const libMesh::NumericVector<Real>& X,
     PetscInt ierr;
     
     std::vector<libMesh::dof_id_type> dof_indices;
-    const libMesh::DofMap& dof_map = _system->system().get_dof_map();
+    const libMesh::DofMap& dof_map = nonlin_sys.get_dof_map();
     const std::vector<libMesh::dof_id_type>&
     send_list = nonlin_sys.get_dof_map().get_send_list();
     

@@ -29,6 +29,7 @@
 #include "base/boundary_condition_base.h"
 #include "numerics/lapack_zggev_interface.h"
 #include "base/parameter.h"
+#include "base/nonlinear_system.h"
 
 
 MAST::UGFlutterSolver::UGFlutterSolver():

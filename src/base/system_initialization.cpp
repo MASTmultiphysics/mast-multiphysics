@@ -19,12 +19,13 @@
 
 // MAST includes
 #include "base/system_initialization.h"
+#include "base/nonlinear_system.h"
 
 // libMesh includes
 #include "libmesh/mesh_base.h"
 
 
-MAST::SystemInitialization::SystemInitialization (libMesh::System& sys,
+MAST::SystemInitialization::SystemInitialization (MAST::NonlinearSystem& sys,
                                                   const std::string& prefix):
 _system(sys),
 _prefix(prefix) {
@@ -38,3 +39,19 @@ _prefix(prefix) {
 MAST::SystemInitialization::~SystemInitialization()
 { }
 
+
+
+
+unsigned int
+MAST::SystemInitialization::n_vars() const {
+    return _system.n_vars();
+}
+
+
+
+
+const libMesh::FEType&
+MAST::SystemInitialization::fetype(unsigned int i) const {
+    
+    return _system.variable_type(i);
+}

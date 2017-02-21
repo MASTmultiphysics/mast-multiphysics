@@ -53,7 +53,7 @@ namespace MAST {
     typedef std::map<libMesh::boundary_id_type, MAST::DirichletBoundaryCondition*>  DirichletBCMapType;
     typedef std::set<MAST::PointLoadCondition*> PointLoadSetType;
     typedef std::multimap<libMesh::subdomain_id_type, MAST::OutputFunctionBase*> VolumeOutputMapType;
-    
+    typedef std::multimap<libMesh::boundary_id_type, MAST::OutputFunctionBase*> SideOutputMapType;
     
     class PhysicsDisciplineBase {
     public:
@@ -161,6 +161,23 @@ namespace MAST {
         MAST::VolumeOutputMapType& volume_output() {
             
             return _vol_output_map;
+        }
+
+        
+        /*!
+         *    @returns a const reference to the side outputs
+         */
+        const MAST::SideOutputMapType& side_output() const{
+            return _side_output_map;
+        }
+        
+        
+        /*!
+         *    @returns a  reference to the side outputs
+         */
+        MAST::SideOutputMapType& side_output() {
+            
+            return _side_output_map;
         }
 
         
@@ -294,6 +311,11 @@ namespace MAST {
          *   volume output functions
          */
         MAST::VolumeOutputMapType _vol_output_map;
+
+        /*!
+         *   side output functions
+         */
+        MAST::SideOutputMapType _side_output_map;
     };
     
 }

@@ -21,6 +21,8 @@
 #include "solver/first_order_newmark_transient_solver.h"
 #include "base/transient_assembly.h"
 #include "base/elem_base.h"
+#include "base/nonlinear_system.h"
+
 
 // libMesh includes
 #include "libmesh/numeric_vector.h"
@@ -90,6 +92,41 @@ _set_element_data(const std::vector<libMesh::dof_id_type>& dof_indices,
     
     elem.set_solution(sol);
     elem.set_velocity(vel);
+}
+
+
+
+void
+MAST::FirstOrderNewmarkTransientSolver::
+_set_element_perturbed_data(const std::vector<libMesh::dof_id_type>& dof_indices,
+                            const std::vector<libMesh::NumericVector<Real>*>& sols,
+                            MAST::ElementBase &elem){
+    
+    libmesh_assert_equal_to(sols.size(), 2);
+    
+    const unsigned int n_dofs = (unsigned int)dof_indices.size();
+    
+    // get the current state and velocity estimates
+    // also get the current discrete velocity replacement
+    RealVectorX
+    sol          = RealVectorX::Zero(n_dofs),
+    vel          = RealVectorX::Zero(n_dofs);
+    
+    
+    const libMesh::NumericVector<Real>
+    &sol_global = *sols[0],
+    &vel_global = *sols[1];
+    
+    // get the references to current and previous sol and velocity
+    
+    for (unsigned int i=0; i<n_dofs; i++) {
+        
+        sol(i)          = sol_global(dof_indices[i]);
+        vel(i)          = vel_global(dof_indices[i]);
+    }
+    
+    elem.set_perturbed_solution(sol);
+    elem.set_perturbed_velocity(vel);
 }
 
 
@@ -225,42 +262,8 @@ _elem_linearized_jacobian_solution_product(MAST::ElementBase& elem,
     libmesh_assert(_assembly);
     unsigned int n_dofs = (unsigned int)dof_indices.size();
     
-    RealVectorX
-    f_m_x_dx         = RealVectorX::Zero(n_dofs),
-    f_m_xdot_dxdot   = RealVectorX::Zero(n_dofs),
-    f_x_x_dx         = RealVectorX::Zero(n_dofs);
-    
     // perform the element assembly
-    _assembly->_linearized_jacobian_solution_product(elem,
-                                                     f_m_x_dx,           // mass jac times dx
-                                                     f_m_xdot_dxdot,     // mass vel jac times dx
-                                                     f_x_x_dx);          // forcing jac times dx
-    
-    //
-    //  The residual here is modeled as
-    // r = (f_m + f_x )= 0
-    // where, (for example)
-    // f_m = int_Omega phi u_dot   [typical mass vector in conduction, for example]
-    // f_x = int_Omega phi_i u_i - int_Gamma phi q_n [typical conductance and heat flux combination, for example]
-    //
-    // This method assumes
-    //     x     = x0 + (1-beta) dt x0_dot + beta dt x_dot
-    // or, x_dot = (x-x0)/beta/dt - (1-beta)/beta x0_dot
-    //
-    // Both f_m and f_x can be functions of x_dot and x. Then, the
-    // Jacobian is
-    // dr/dx =[df_m/dx + df_x/dx +
-    //         df_m/dx_dot dx_dot/dx + df_x/dx_dot dx_dot/dx]
-    //       = [(df_m/dx + df_x/dx) +
-    //          (df_m/dx_dot + df_x/dx_dot) (1/beta/dt)]
-    //       = (df_m/dx + df_x/dx) +
-    //         1/(beta*dt)(df_m/dx_dot + df_x/dx_dot)
-    // Note that this form of equations makes it a good candidate for
-    // use as implicit solver, ie, for a nonzero beta.
-    //
-    
-    // system residual
-    vec  = (f_m_x_dx + f_m_xdot_dxdot + f_x_x_dx);
+    _assembly->_linearized_jacobian_solution_product(elem, vec);
 }
 
 

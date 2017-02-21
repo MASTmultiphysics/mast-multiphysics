@@ -45,6 +45,7 @@
 #include "elasticity/fsi_generalized_aero_force_assembly.h"
 #include "aeroelasticity/flutter_root_base.h"
 #include "examples/base/augment_ghost_elem_send_list.h"
+#include "solver/slepc_eigen_solver.h"
 
 
 // libMesh includes

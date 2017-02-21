@@ -20,6 +20,7 @@
 // MAST includes
 #include "base/mesh_field_function.h"
 #include "base/system_initialization.h"
+#include "base/nonlinear_system.h"
 
 // libMesh includes
 #include "libmesh/dof_map.h"
@@ -33,7 +34,9 @@ _use_qp_sol(false),
 _qp_sol(),
 _system(&sys),
 _sol(nullptr),
-_function(nullptr)
+_dsol(nullptr),
+_function(nullptr),
+_perturbed_function(nullptr)
 { }
 
 
@@ -55,22 +58,18 @@ MAST::MeshFieldFunction::operator() (const libMesh::Point& p,
                                      const Real t,
                                      RealVectorX& v) const {
     
-    // get the pointer to the mesh function from the master
-    const MAST::MeshFieldFunction* master =
-    dynamic_cast<const MAST::MeshFieldFunction*>(this);
-    
     // if the element has provided a quadrature point solution,
     // then use it
-    if (master->_use_qp_sol) {
-        v = master->_qp_sol;
+    if (_use_qp_sol) {
+        v = _qp_sol;
         return;
     }
     
     // make sure that the object was initialized
-    libmesh_assert(master->_function);
+    libmesh_assert(_function);
     
     DenseRealVector v1;
-    (*master->_function)(p, t, v1);
+    (*_function)(p, t, v1);
     
     // make sure that the mesh function was able to find the element
     // and a solution
@@ -94,16 +93,16 @@ MAST::MeshFieldFunction::perturbation(const libMesh::Point& p,
     
     // if the element has provided a quadrature point solution,
     // then use it
-    if (master->_use_qp_sol) {
-        v = master->_qp_sol;
+    if (_use_qp_sol) {
+        v = _qp_sol;
         return;
     }
     
     // make sure that the object was initialized
-    libmesh_assert(master->_perturbed_function);
+    libmesh_assert(_perturbed_function);
     
     DenseRealVector v1;
-    (*master->_perturbed_function)(p, t, v1);
+    (*_perturbed_function)(p, t, v1);
     
     // make sure that the mesh function was able to find the element
     // and a solution
@@ -137,55 +136,51 @@ MAST::MeshFieldFunction::
 init(const libMesh::NumericVector<Real>& sol,
      const libMesh::NumericVector<Real>* dsol) {
     
-    // this is to be done for the master only
-    const MAST::MeshFieldFunction* master_const =
-    dynamic_cast<const MAST::MeshFieldFunction*>(this);
-    MAST::MeshFieldFunction* master =
-    const_cast<MAST::MeshFieldFunction*>(master_const);
-    
     
     // first make sure that the object is not already initialized
-    libmesh_assert(!master->_function);
+    libmesh_assert(!_function);
     
-    libMesh::System& system = _system->system();
+    MAST::NonlinearSystem& system = _system->system();
     
     // next, clone this solution and localize to the sendlist
-    master->_sol = libMesh::NumericVector<Real>::build(system.comm()).release();
+    _sol = libMesh::NumericVector<Real>::build(system.comm()).release();
 
     const std::vector<libMesh::dof_id_type>& send_list =
     system.get_dof_map().get_send_list();
     
     // initialize and then localize the vector with the provided solution
-    master->_sol->init(system.n_dofs(),
+    _sol->init(system.n_dofs(),
                        system.n_local_dofs(),
                        send_list,
                        false,
                        libMesh::GHOSTED);
-    sol.localize(*master->_sol, send_list);
+    sol.localize(*_sol, send_list);
     
     // finally, create the mesh interpolation function
-    master->_function = new libMesh::MeshFunction(system.get_equation_systems(),
-                                                       *master->_sol,
+    _function = new libMesh::MeshFunction(system.get_equation_systems(),
+                                                       *_sol,
                                                        system.get_dof_map(),
                                                        _system->vars());
-    master->_function->init();
+    _function->init();
     
     if (dsol) {
 
-        master->_dsol->init(system.n_dofs(),
+        _dsol = libMesh::NumericVector<Real>::build(system.comm()).release();
+
+        _dsol->init(system.n_dofs(),
                             system.n_local_dofs(),
                             send_list,
                             false,
                             libMesh::GHOSTED);
-        dsol->localize(*master->_dsol, send_list);
+        dsol->localize(*_dsol, send_list);
         
         // finally, create the mesh interpolation function
-        master->_perturbed_function =
+        _perturbed_function =
         new libMesh::MeshFunction(system.get_equation_systems(),
-                                  *master->_dsol,
+                                  *_dsol,
                                   system.get_dof_map(),
                                   _system->vars());
-        master->_perturbed_function->init();
+        _perturbed_function->init();
 
     }
 }
@@ -196,10 +191,6 @@ init(const libMesh::NumericVector<Real>& sol,
 void
 MAST::MeshFieldFunction::clear() {
     
-    //only the master function will call this on itself
-    if (this != this)
-        return;
-    
     // if a pointer has been attached, then delete it and the
     // associated vector, and clear the associated system
     if (_function) {
@@ -208,8 +199,6 @@ MAST::MeshFieldFunction::clear() {
         
         delete _sol;
         _sol = nullptr;
-        
-        _system = nullptr;
     }
 
     if (_perturbed_function) {
@@ -238,8 +227,8 @@ set_element_quadrature_point_solution(RealVectorX& sol) {
     MAST::MeshFieldFunction* master =
     const_cast<MAST::MeshFieldFunction*>(master_const);
 
-    master->_use_qp_sol = true;
-    master->_qp_sol     = sol;
+    _use_qp_sol = true;
+    _qp_sol     = sol;
 }
 
 
@@ -254,7 +243,7 @@ clear_element_quadrature_point_solution() {
     MAST::MeshFieldFunction* master =
     const_cast<MAST::MeshFieldFunction*>(master_const);
     
-    master->_use_qp_sol = false;
-    master->_qp_sol.setZero();
+    _use_qp_sol = false;
+    _qp_sol.setZero();
 }
 

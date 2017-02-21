@@ -26,11 +26,14 @@
 
 namespace MAST {
     
+    // Forward declerations
+    class NonlinearSystem;
+    
     class StructuralSystemInitialization:
     public MAST::SystemInitialization  {
         
     public:
-        StructuralSystemInitialization(libMesh::System& sys,
+        StructuralSystemInitialization(MAST::NonlinearSystem& sys,
                                        const std::string& prefix,
                                        const libMesh::FEType& fe_type);
         

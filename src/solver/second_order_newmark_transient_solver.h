@@ -86,6 +86,16 @@ namespace MAST {
                                        MAST::ElementBase& elem);
 
         /*!
+         *    provides the element with the transient data for calculations
+         */
+        virtual void
+        _set_element_perturbed_data
+        (const std::vector<libMesh::dof_id_type>& dof_indices,
+         const std::vector<libMesh::NumericVector<Real>*>& sols,
+         MAST::ElementBase& elem);
+
+        
+        /*!
          *    update the transient velocity based on the current solution
          */
         virtual void _update_velocity(libMesh::NumericVector<Real>& vec,

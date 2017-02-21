@@ -51,6 +51,8 @@
 #include "boundary_condition/dirichlet_boundary_condition.h"
 #include "aeroelasticity/ug_flutter_solver.h"
 #include "examples/base/augment_ghost_elem_send_list.h"
+#include "solver/slepc_eigen_solver.h"
+
 
 // libMesh includes
 #include "libmesh/mesh_generation.h"

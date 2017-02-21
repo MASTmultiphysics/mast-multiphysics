@@ -20,6 +20,7 @@
 // MAST includes
 #include "base/complex_mesh_field_function.h"
 #include "base/system_initialization.h"
+#include "base/nonlinear_system.h"
 
 // libMesh includes
 #include "libmesh/dof_map.h"
@@ -61,7 +62,7 @@ init(const libMesh::NumericVector<Real>& sol_re,
     // first make sure that the object is not already initialized
     libmesh_assert(!_function_re);
     
-    libMesh::System& system = _system->system();
+    MAST::NonlinearSystem& system = _system->system();
     
     // next, clone this solution and localize to the sendlist
     _sol_re = libMesh::NumericVector<Real>::build(system.comm()).release();
@@ -111,7 +112,7 @@ init_perturbation(const libMesh::NumericVector<Real>& sol_re,
     // first make sure that the object is not already initialized
     libmesh_assert(!_perturbed_function_re);
     
-    libMesh::System& system = _system->system();
+    MAST::NonlinearSystem& system = _system->system();
     
     // next, clone this solution and localize to the sendlist
     _perturbed_sol_re = libMesh::NumericVector<Real>::build(system.comm()).release();
@@ -210,10 +211,6 @@ MAST::ComplexMeshFieldFunction::perturbation(const libMesh::Point& p,
 
 void
 MAST::ComplexMeshFieldFunction::clear() {
-    
-    //only the master function will call this on itself
-    if (this != this)
-        return;
     
     // if a pointer has been attached, then delete it and the
     // associated vector, and clear the associated system

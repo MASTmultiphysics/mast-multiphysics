@@ -35,6 +35,7 @@
 #include "elasticity/structural_near_null_vector_space.h"
 #include "aeroelasticity/time_domain_flutter_solver.h"
 #include "aeroelasticity/time_domain_flutter_root.h"
+#include "solver/slepc_eigen_solver.h"
 
 
 // libMesh includes

@@ -103,7 +103,7 @@ void check_internal_force_jacobian_sensitivity (ValType& v,
     e->set_solution(x);
     
     // first the baseline Jacobian
-    e->internal_residual(true, res, jac0, false);
+    e->internal_residual(true, res, jac0);
     
     // now check the sensitivity result using finite differencing
     for (unsigned int i=0; i<ndofs; i++) {
@@ -127,7 +127,7 @@ void check_internal_force_jacobian_sensitivity (ValType& v,
         
         // get the new residual
         jac_sens_fd.setZero();
-        e->internal_residual(true, res, jac_sens_fd, false);
+        e->internal_residual(true, res, jac_sens_fd);
         
         // set the i^th column of the finite-differenced Jacobian
         jac_sens_fd -=  jac0;

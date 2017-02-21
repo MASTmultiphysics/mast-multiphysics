@@ -179,8 +179,7 @@ check_value_sensitivity(MAST::FieldFunction<Real>& func,
         MAST::Parameter& f = *params[i];
         
         // calculate the partial derivative
-        func.derivative(MAST::PARTIAL_DERIVATIVE,
-                        *params[i],
+        func.derivative(*params[i],
                         pt,
                         0.,
                         dp);
@@ -232,8 +231,8 @@ BOOST_AUTO_TEST_CASE   (PistonTheoryPressure) {
     libMesh::Point pt;
     
     // first the sensitivity results
-    pressure->derivative(MAST::PARTIAL_DERIVATIVE, *_dwdx, pt, 0., dpdx1);
-    pressure->derivative(MAST::PARTIAL_DERIVATIVE, *_dwdt, pt, 0., dpdxdot1);
+    pressure->derivative(*_dwdx, pt, 0., dpdx1);
+    pressure->derivative(*_dwdt, pt, 0., dpdxdot1);
 
     // next, the analysis from the derivative functions
     (*dpressure_dx)   (pt, 0., dpdx2);

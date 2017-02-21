@@ -37,6 +37,7 @@ namespace MAST {
     
     // Forward declerations
     class Parameter;
+    class SlepcEigenSolver;
     class EigenSystemAssembly;
     class PhysicsDisciplineBase;
     
@@ -86,6 +87,27 @@ namespace MAST {
          */
         virtual void reinit () libmesh_override;
         
+        
+        /**
+         *   calculates and stores the sensitivity RHS in System::add_sensitivity_rhs(0).
+         *   This assumes that \p parameters is of size 1. For solving sensitivity
+         *   wrt multiple parameters, the user should call this method multiple 
+         *   times with the parameter vector modified.
+         *   The RHS is \f$ - \frac{\partial R(U,p)}{\partial p}\f$
+         */
+        virtual void
+        assemble_residual_derivatives
+        (const libMesh::ParameterVector & parameters) override;
+        
+        
+        /**
+         * Calls user qoi derivative function.
+         */
+        virtual void
+        assemble_qoi_derivative (const libMesh::QoISet & qoi_indices = libMesh::QoISet(),
+                                 bool include_liftfunc = true,
+                                 bool apply_constraints = true) libmesh_override;
+
         
         /**
          * Assembles & solves the eigen system.
@@ -212,22 +234,12 @@ namespace MAST {
          */
         libMesh::SparseMatrix<Real> *matrix_B;
         
-        /**
-         * The (condensed) system matrix for standard eigenvalue problems.
-         */
-        //std::auto_ptr<libMesh::SparseMatrix<Real> > condensed_matrix_A;
-        
-        /**
-         * A second (condensed) system matrix for generalized eigenvalue problems.
-         */
-        //std::auto_ptr<libMesh::SparseMatrix<Real> > condensed_matrix_B;
-        
         
         /**
          * The EigenSolver, definig which interface, i.e solver
          * package to use.
          */
-        std::auto_ptr<libMesh::EigenSolver<Real> > eigen_solver;
+        std::auto_ptr<MAST::SlepcEigenSolver> eigen_solver;
         
         /**
          * Loop over the dofs on each processor to initialize the list

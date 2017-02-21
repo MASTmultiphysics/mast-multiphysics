@@ -56,6 +56,7 @@ namespace MAST {
     class NonlinearSystem;
     class FlightCondition;
     class FrequencyFunction;
+    template <typename ValType> class FieldFunction;
     class MeshFieldFunction;
     class NormalRotationMeshFunction;
     class PressureFunction;
@@ -95,6 +96,9 @@ namespace MAST {
          */
         Real sensitivity_solve(MAST::Parameter& p);
         
+        // parameters to control the time step size
+        unsigned int _max_time_steps;
+        Real         _time_step_size;
         
         // create the structural mesh
         libMesh::SerialMesh*                     _structural_mesh;
@@ -142,7 +146,8 @@ namespace MAST {
         /*!
          *   surface motion
          */
-        MAST::MeshFieldFunction                    *_displ, *_vel;
+        MAST::MeshFieldFunction                    *_vel;
+        MAST::MeshFieldFunction                    *_displ;
         MAST::NormalRotationMeshFunction           *_normal_rot;
         
         

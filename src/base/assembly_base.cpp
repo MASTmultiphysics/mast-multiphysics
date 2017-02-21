@@ -23,6 +23,7 @@
 #include "base/mesh_field_function.h"
 #include "base/elem_base.h"
 #include "base/physics_discipline_base.h"
+#include "base/nonlinear_system.h"
 
 
 // libMesh includes
@@ -68,7 +69,7 @@ MAST::AssemblyBase::discipline() {
 
 
 
-const libMesh::System&
+const MAST::NonlinearSystem&
 MAST::AssemblyBase::system() const {
     
     libmesh_assert_msg(_discipline,
@@ -77,7 +78,7 @@ MAST::AssemblyBase::system() const {
 }
 
 
-libMesh::System&
+MAST::NonlinearSystem&
 MAST::AssemblyBase::system() {
     
     libmesh_assert_msg(_discipline,
@@ -134,7 +135,7 @@ void
 MAST::AssemblyBase::calculate_outputs(const libMesh::NumericVector<Real>& X) {
     
     
-    libMesh::System& sys = _system->system();
+    MAST::NonlinearSystem& sys = _system->system();
     
     // iterate over each element, initialize it and get the relevant
     // analysis quantities
@@ -142,7 +143,7 @@ MAST::AssemblyBase::calculate_outputs(const libMesh::NumericVector<Real>& X) {
     RealMatrixX mat;
     
     std::vector<libMesh::dof_id_type> dof_indices;
-    const libMesh::DofMap& dof_map = _system->system().get_dof_map();
+    const libMesh::DofMap& dof_map = sys.get_dof_map();
     std::auto_ptr<MAST::ElementBase> physics_elem;
     
     std::auto_ptr<libMesh::NumericVector<Real> > localized_solution;
@@ -183,7 +184,9 @@ MAST::AssemblyBase::calculate_outputs(const libMesh::NumericVector<Real>& X) {
             physics_elem->attach_active_solution_function(*_sol_function);
         
         // perform the element level calculations
-        _elem_outputs(*physics_elem, _discipline->volume_output());
+        _elem_outputs(*physics_elem,
+                      _discipline->volume_output(),
+                      _discipline->side_output());
         
         physics_elem->detach_active_solution_function();
     }
@@ -205,7 +208,7 @@ calculate_output_sensitivity(libMesh::ParameterVector &params,
                              const libMesh::NumericVector<Real> &X) {
     
     
-    libMesh::System& sys = _system->system();
+    MAST::NonlinearSystem& sys = _system->system();
     
     // iterate over each element, initialize it and get the relevant
     // analysis quantities
@@ -213,7 +216,7 @@ calculate_output_sensitivity(libMesh::ParameterVector &params,
     RealMatrixX mat;
     
     std::vector<libMesh::dof_id_type> dof_indices;
-    const libMesh::DofMap& dof_map = _system->system().get_dof_map();
+    const libMesh::DofMap& dof_map = sys.get_dof_map();
     std::auto_ptr<MAST::ElementBase> physics_elem;
     
     std::auto_ptr<libMesh::NumericVector<Real> >
@@ -257,7 +260,8 @@ calculate_output_sensitivity(libMesh::ParameterVector &params,
             mat.setZero(ndofs, ndofs);
 
             // tell the element about the sensitivity paramete
-            physics_elem->sensitivity_param = _discipline->get_parameter(&(params[i].get()));
+            physics_elem->sensitivity_param =
+            _discipline->get_parameter(&(params[i].get()));
             
             // get the solution
             for (unsigned int i=0; i<dof_indices.size(); i++)
@@ -279,7 +283,8 @@ calculate_output_sensitivity(libMesh::ParameterVector &params,
             
             // perform the element level calculations
             _elem_output_sensitivity(*physics_elem,
-                                     _discipline->volume_output());
+                                     _discipline->volume_output(),
+                                     _discipline->side_output());
             
             physics_elem->detach_active_solution_function();
         }
@@ -297,11 +302,13 @@ calculate_output_sensitivity(libMesh::ParameterVector &params,
 void
 MAST::AssemblyBase::
 _elem_outputs(MAST::ElementBase &elem,
-              std::multimap<libMesh::subdomain_id_type,MAST::OutputFunctionBase *> &vol_output) {
+              std::multimap<libMesh::subdomain_id_type,MAST::OutputFunctionBase *> &vol_output,
+              std::multimap<libMesh::boundary_id_type,MAST::OutputFunctionBase *> &side_output) {
     
     
     // ask the element to provide the outputs
     elem.volume_output_quantity(false, false, vol_output);
+    elem.side_output_quantity(false, false,  side_output);
 }
 
 
@@ -310,13 +317,17 @@ _elem_outputs(MAST::ElementBase &elem,
 void
 MAST::AssemblyBase::
 _elem_output_sensitivity(MAST::ElementBase &elem,
-                         std::multimap<libMesh::subdomain_id_type, MAST::OutputFunctionBase *> &vol_output) {
+                         std::multimap<libMesh::subdomain_id_type, MAST::OutputFunctionBase *> &vol_output,
+                         std::multimap<libMesh::boundary_id_type,MAST::OutputFunctionBase *> &side_output) {
     
     
     // ask the element to provide the outputs
     elem.volume_output_quantity(false,  // false for adjoints
                                 true,   // true for sensitivity
                                 vol_output);
+    elem.side_output_quantity(false,  // false for adjoints
+                              true,   // true for sensitivity
+                              side_output);
 }
 
 

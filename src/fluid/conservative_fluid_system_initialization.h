@@ -31,7 +31,7 @@ namespace MAST {
     public MAST::SystemInitialization  {
         
     public:
-        ConservativeFluidSystemInitialization(libMesh::System& sys,
+        ConservativeFluidSystemInitialization(MAST::NonlinearSystem& sys,
                                               const std::string& prefix,
                                               const libMesh::FEType& fe_type,
                                               const unsigned int dim);

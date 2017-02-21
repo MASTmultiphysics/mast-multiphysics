@@ -27,6 +27,7 @@
 #include "optimization/function_evaluation.h"
 #include "elasticity/structural_nonlinear_assembly.h"
 #include "base/real_output_function.h"
+#include "base/nonlinear_system.h"
 
 
 // libMesh includes
@@ -271,12 +272,12 @@ MAST::TopologyOptimization2D::init(GetPot& infile,
                                                  0, _length,
                                                  0, _width,
                                                  e_type);
-    
+    _mesh->write("mesh.exo");
     // create the equation system
     _eq_sys    = new  libMesh::EquationSystems(*_mesh);
     
     // create the libmesh system
-    _sys       = &(_eq_sys->add_system<libMesh::NonlinearImplicitSystem>("structural"));
+    _sys       = &(_eq_sys->add_system<MAST::NonlinearSystem>("structural"));
     _rho_sys   = &(_eq_sys->add_system<libMesh::ExplicitSystem>("density_vars"));
     
     // FEType to initialize the system

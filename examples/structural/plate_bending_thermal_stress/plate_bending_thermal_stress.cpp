@@ -35,6 +35,8 @@
 #include "property_cards/solid_2d_section_element_property_card.h"
 #include "property_cards/isotropic_material_property_card.h"
 #include "boundary_condition/dirichlet_boundary_condition.h"
+#include "base/nonlinear_system.h"
+
 
 // libMesh includes
 #include "libmesh/mesh_generation.h"
@@ -77,7 +79,7 @@ MAST::PlateBendingThermalStress::init(libMesh::ElemType e_type,
     _eq_sys    = new  libMesh::EquationSystems(*_mesh);
     
     // create the libmesh system
-    _sys       = &(_eq_sys->add_system<libMesh::NonlinearImplicitSystem>("structural"));
+    _sys       = &(_eq_sys->add_system<MAST::NonlinearSystem>("structural"));
     
     // FEType to initialize the system
     libMesh::FEType fetype (libMesh::FIRST, libMesh::LAGRANGE);
@@ -347,8 +349,7 @@ MAST::PlateBendingThermalStress::solve(bool if_write_output) {
     
     assembly.attach_discipline_and_system(*_discipline, *_structural_sys);
     
-    libMesh::NonlinearImplicitSystem&      nonlin_sys   =
-    dynamic_cast<libMesh::NonlinearImplicitSystem&>(assembly.system());
+    MAST::NonlinearSystem& nonlin_sys = assembly.system();
     
     // zero the solution before solving
     nonlin_sys.solution->zero();
@@ -399,8 +400,7 @@ MAST::PlateBendingThermalStress::sensitivity_solve(MAST::Parameter& p,
     
     assembly.attach_discipline_and_system(*_discipline, *_structural_sys);
 
-    libMesh::NonlinearImplicitSystem&      nonlin_sys   =
-    dynamic_cast<libMesh::NonlinearImplicitSystem&>(assembly.system());
+    MAST::NonlinearSystem& nonlin_sys = assembly.system();
 
     libMesh::ParameterVector params;
     params.resize(1);

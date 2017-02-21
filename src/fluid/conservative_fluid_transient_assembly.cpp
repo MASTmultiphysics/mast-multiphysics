@@ -73,19 +73,25 @@ _elem_calculations(MAST::ElementBase& elem,
 void
 MAST::ConservativeFluidTransientAssembly::
 _linearized_jacobian_solution_product(MAST::ElementBase& elem,
-                                      RealVectorX& f_m_x_dx,
-                                      RealVectorX& f_m_xdot_dxdot,
-                                      RealVectorX& f_x_x_dx) {
+                                      RealVectorX& f) {
     
     MAST::ConservativeFluidElementBase& e =
     dynamic_cast<MAST::ConservativeFluidElementBase&>(elem);
     
-    f_m_x_dx.setZero();
-    f_m_xdot_dxdot.setZero();
-    f_x_x_dx.setZero();
+    const unsigned int
+    n = f.size();
     
-
-    libmesh_error(); // to be implemented
+    RealMatrixX
+    dummy = RealMatrixX::Zero(n, n);
+    
+    f.setZero();
+    
+    
+    e.linearized_internal_residual(false, f, dummy);
+    e.linearized_side_external_residual(false, f, dummy, _discipline->side_loads());
+    
+    // velocity term
+    e.linearized_velocity_residual(false, f, dummy, dummy);
 }
 
 

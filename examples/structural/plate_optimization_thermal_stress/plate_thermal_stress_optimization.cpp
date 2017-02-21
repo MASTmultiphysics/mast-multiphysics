@@ -28,6 +28,7 @@
 #include "optimization/optimization_interface.h"
 #include "optimization/function_evaluation.h"
 #include "elasticity/structural_nonlinear_assembly.h"
+#include "base/nonlinear_system.h"
 
 // libMesh includes
 #include "libmesh/parallel_mesh.h"
@@ -228,7 +229,7 @@ init(GetPot& infile,
     _eq_sys    = new  libMesh::EquationSystems(*_mesh);
     
     // create the libmesh system
-    _sys       = &(_eq_sys->add_system<libMesh::NonlinearImplicitSystem>("structural"));
+    _sys       = &(_eq_sys->add_system<MAST::NonlinearSystem>("structural"));
     
     // FEType to initialize the system
     libMesh::FEType fetype (libMesh::FIRST, libMesh::LAGRANGE);

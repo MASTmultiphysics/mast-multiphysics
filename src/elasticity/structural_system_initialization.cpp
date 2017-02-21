@@ -20,10 +20,12 @@
 
 // MAST includes
 #include "elasticity/structural_system_initialization.h"
+#include "base/nonlinear_system.h"
+
 
 
 MAST::StructuralSystemInitialization::
-StructuralSystemInitialization(libMesh::System& sys,
+StructuralSystemInitialization(MAST::NonlinearSystem& sys,
                                const std::string& prefix,
                                const libMesh::FEType& fe_type):
 MAST::SystemInitialization(sys, prefix) {

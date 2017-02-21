@@ -33,6 +33,8 @@
 #include "base/parameter.h"
 #include "base/constant_field_function.h"
 #include "boundary_condition/dirichlet_boundary_condition.h"
+#include "base/nonlinear_system.h"
+
 
 // libMesh includes
 #include "libmesh/mesh_generation.h"
@@ -57,7 +59,7 @@ MAST::RampLaminarAnalysis2D::RampLaminarAnalysis2D() {
     _eq_sys            = new libMesh::EquationSystems(*_mesh);
     
     // add the system to be used for analysis
-    _sys = &(_eq_sys->add_system<libMesh::NonlinearImplicitSystem>("fluid"));
+    _sys = &(_eq_sys->add_system<MAST::NonlinearSystem>("fluid"));
     
     
     // initialize the flow conditions
@@ -295,8 +297,8 @@ MAST::RampLaminarAnalysis2D::solve(bool if_write_output) {
                                           solver,
                                           *_fluid_sys);
     
-    libMesh::NonlinearImplicitSystem&      nonlin_sys   =
-    dynamic_cast<libMesh::NonlinearImplicitSystem&>(_fluid_sys->system());
+    MAST::NonlinearSystem&  nonlin_sys   =
+    dynamic_cast<MAST::NonlinearSystem&>(_fluid_sys->system());
 
     
     // file to write the solution for visualization
@@ -399,8 +401,7 @@ MAST::RampLaminarAnalysis2D::sensitivity_solve(MAST::Parameter& p,
     
     assembly.attach_discipline_and_system(*_discipline, *_structural_sys);
     
-    libMesh::NonlinearImplicitSystem&      nonlin_sys   =
-    dynamic_cast<libMesh::NonlinearImplicitSystem&>(assembly.system());
+    MAST::NonlinearSystem& nonlin_sys = assembly.system();
     
     libMesh::ParameterVector params;
     params.resize(1);

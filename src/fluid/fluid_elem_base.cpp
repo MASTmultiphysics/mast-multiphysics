@@ -1309,6 +1309,44 @@ calculate_advection_left_eigenvector_and_inverse_for_normal
 
 void
 MAST::FluidElemBase::
+calculate_pressure_derivative_wrt_conservative_variables(const MAST::PrimitiveSolution& sol,
+                                                         RealVectorX& dpdX) {
+    
+    const unsigned int n1 = 2 + dim;
+    
+    dpdX.setZero();
+    const Real rho = sol.rho,
+    u1 = sol.u1,
+    u2 = sol.u2,
+    u3 = sol.u3,
+    k = sol.k,
+    R = flight_condition->gas_property.R,
+    cv= flight_condition->gas_property.cv,
+    e = sol.e_tot,
+    p = sol.p;
+    
+    switch (dim)
+    {
+        case 3:
+            dpdX(3)        = -R/cv*u3;
+            
+        case 2:
+            dpdX(2)        = -R/cv*u2;
+            
+        case 1: {
+            
+            dpdX(0)        =  R/cv*k;
+            dpdX(1)        = -R/cv*u1;
+            dpdX(n1-1)     =  R/cv;
+        }
+    }
+}
+
+
+
+
+void
+MAST::FluidElemBase::
 calculate_advection_flux_jacobian_for_moving_solid_wall_boundary
 (const MAST::PrimitiveSolution& sol,
  const Real ui_ni,

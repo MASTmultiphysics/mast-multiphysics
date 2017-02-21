@@ -51,7 +51,8 @@ namespace MAST {
     class Solid1DSectionElementPropertyCard;
     class DirichletBoundaryCondition;
     class BoundaryConditionBase;
-    
+    class NonlinearSystem;
+
     
     struct BarSteadyState {
         
@@ -98,7 +99,7 @@ namespace MAST {
         libMesh::EquationSystems*      _eq_sys;
         
         // create the libmesh system
-        libMesh::NonlinearImplicitSystem*  _sys;
+        MAST::NonlinearSystem*  _sys;
         
         // initialize the system to the right set of variables
         MAST::HeatConductionSystemInitialization* _thermal_sys;

@@ -55,7 +55,7 @@ MAST::BuildConservativeFluidElem::BuildConservativeFluidElem() {
     _eq_sys            = new libMesh::EquationSystems(*_mesh);
     
     // add the system to be used for analysis
-    _sys = &(_eq_sys->add_system<libMesh::NonlinearImplicitSystem>("fluid"));
+    _sys = &(_eq_sys->add_system<MAST::NonlinearSystem>("fluid"));
     
     // initialize the mesh
     unsigned int
@@ -124,7 +124,7 @@ MAST::BuildConservativeFluidElem::BuildConservativeFluidElem() {
                                                      *_b_ref_f);
     
     // initialize the motion object
-    _motion            = new MAST::RigidSurfaceMotion("small_disturbance_motion");
+    _motion            = new MAST::RigidSurfaceMotion;
     _motion->init(*_freq_function,                 // frequency function
                   _flight_cond->body_yaw_axis,     // plunge vector
                   _flight_cond->body_pitch_axis,   // pitch axis
@@ -132,8 +132,11 @@ MAST::BuildConservativeFluidElem::BuildConservativeFluidElem() {
                   0.,                              // plunge amplitude
                   1.,                              // pitch amplitude
                   0.);                             // pitch phase lead
-    
-    _slip_wall->add(*_motion);
+    _displacement = new MAST::RigidSurfaceDisplacement(*_motion);
+    _normal_rot   = new MAST::RigidSurfaceNormalRotation(*_motion);
+
+    _slip_wall->add(*_displacement);
+    _slip_wall->add(*_normal_rot);
     _discipline->add_side_load(0, *_slip_wall);
     
     
@@ -177,6 +180,8 @@ MAST::BuildConservativeFluidElem::~BuildConservativeFluidElem() {
     delete _freq_function;
     
     delete _motion;
+    delete _displacement;
+    delete _normal_rot;
 }
 
 

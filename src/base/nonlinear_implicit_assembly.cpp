@@ -24,7 +24,7 @@
 #include "base/physics_discipline_base.h"
 #include "numerics/utility.h"
 #include "base/mesh_field_function.h"
-
+#include "base/nonlinear_system.h"
 
 // libMesh includes
 #include "libmesh/nonlinear_solver.h"
@@ -61,11 +61,7 @@ attach_discipline_and_system(MAST::PhysicsDisciplineBase &discipline,
     _discipline = &discipline;
     _system     = &system;
     
-    libMesh::NonlinearImplicitSystem& nonlin_sys =
-    dynamic_cast<libMesh::NonlinearImplicitSystem&>(system.system());
-    
-    nonlin_sys.nonlinear_solver->residual_and_jacobian_object = this;
-    nonlin_sys.attach_sensitivity_assemble_object(*this);
+    _system->system().nonlinear_solver->residual_and_jacobian_object = this;
 }
 
 
@@ -75,11 +71,7 @@ MAST::NonlinearImplicitAssembly::reattach_to_system() {
 
     libmesh_assert(_system);
     
-    libMesh::NonlinearImplicitSystem& nonlin_sys =
-    dynamic_cast<libMesh::NonlinearImplicitSystem&>(_system->system());
-    
-    nonlin_sys.nonlinear_solver->residual_and_jacobian_object = this;
-    nonlin_sys.attach_sensitivity_assemble_object(*this);
+    _system->system().nonlinear_solver->residual_and_jacobian_object = this;
 }
 
 
@@ -90,11 +82,7 @@ clear_discipline_and_system( ) {
     
     if (_system && _discipline) {
 
-        libMesh::NonlinearImplicitSystem& nonlin_sys =
-        dynamic_cast<libMesh::NonlinearImplicitSystem&>(_system->system());
-        
-        nonlin_sys.nonlinear_solver->residual_and_jacobian_object = nullptr;
-        nonlin_sys.reset_sensitivity_assembly();
+        _system->system().nonlinear_solver->residual_and_jacobian_object = nullptr;
     }
     
     _discipline = nullptr;
@@ -219,8 +207,7 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
                        libMesh::SparseMatrix<Real>*  J,
                        libMesh::NonlinearImplicitSystem& S) {
     
-    libMesh::NonlinearImplicitSystem& nonlin_sys =
-    dynamic_cast<libMesh::NonlinearImplicitSystem&>(_system->system());
+    MAST::NonlinearSystem& nonlin_sys = _system->system();
     
     // make sure that the system for which this object was created,
     // and the system passed through the function call are the same
@@ -326,8 +313,10 @@ linearized_jacobian_solution_product (const libMesh::NumericVector<Real>& X,
                                       libMesh::NumericVector<Real>& JdX,
                                       libMesh::NonlinearImplicitSystem& S) {
     
-    libMesh::NonlinearImplicitSystem& nonlin_sys =
-    dynamic_cast<libMesh::NonlinearImplicitSystem&>(_system->system());
+    // zero the solution vector
+    JdX.zero();
+    
+    MAST::NonlinearSystem& nonlin_sys = _system->system();
     
     // make sure that the system for which this object was created,
     // and the system passed through the function call are the same
@@ -436,8 +425,7 @@ sensitivity_assemble (const libMesh::ParameterVector& parameters,
                       const unsigned int i,
                       libMesh::NumericVector<Real>& sensitivity_rhs) {
     
-    libMesh::NonlinearImplicitSystem& nonlin_sys =
-    dynamic_cast<libMesh::NonlinearImplicitSystem&>(_system->system());
+    MAST::NonlinearSystem& nonlin_sys = _system->system();
     
     sensitivity_rhs.zero();
     

@@ -173,7 +173,7 @@ MAST::StructuralSystem::solve() {
         // delta_x1 = x - x0
         //       dx = delta_x1 - delta_x0
         // where delta_x0 is the delta_x at the end of the previous iterate
-        libMesh::NonlinearImplicitSystem::solve();
+        MAST::NonlinearSystem::solve();
         
         // if the total load steps have been taken to the max load, then
         // quit
@@ -194,7 +194,7 @@ MAST::StructuralSystem::solve() {
         libMesh::ParameterVector parameters;
         parameters.resize(1);
         parameters[0]  = _load_param->ptr();
-        libMesh::NonlinearImplicitSystem::sensitivity_solve(parameters);
+        MAST::NonlinearSystem::sensitivity_solve(parameters);
         *dx_load = this->get_sensitivity_solution();
         
         // now, calculate the load update using the constraint definition.

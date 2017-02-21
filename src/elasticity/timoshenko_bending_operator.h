@@ -25,6 +25,8 @@
 #include "property_cards/element_property_card_base.h"
 #include "numerics/fem_operator_matrix.h"
 #include "mesh/local_elem_base.h"
+#include "base/nonlinear_system.h"
+
 
 // libMesh includes
 #include "libmesh/fe.h"

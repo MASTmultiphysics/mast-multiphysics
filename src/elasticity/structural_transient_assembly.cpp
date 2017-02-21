@@ -126,11 +126,7 @@ _elem_calculations(MAST::ElementBase& elem,
 void
 MAST::StructuralTransientAssembly::
 _linearized_jacobian_solution_product(MAST::ElementBase& elem,
-                                      RealVectorX& f_m_x_dx,
-                                      RealVectorX& f_m_xdot_dxdot,
-                                      RealVectorX& f_m_xddot_dxddot,
-                                      RealVectorX& f_x_x_dx,
-                                      RealVectorX& f_x_xdot_dxdot) {
+                                      RealVectorX& f) {
     
     libmesh_error(); // to be implemented
 }

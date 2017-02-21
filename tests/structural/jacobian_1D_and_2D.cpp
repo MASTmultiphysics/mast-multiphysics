@@ -102,7 +102,7 @@ void check_internal_force_jacobian (ValType& v,
     
     // get the base residual vector and the Jacobians for numerical comparisons
     // later.
-    e->internal_residual(true, res0, jac_x, false);
+    e->internal_residual(true, res0, jac_x);
     
     
     for (unsigned int i=0; i<ndofs; i++) {
@@ -116,7 +116,7 @@ void check_internal_force_jacobian (ValType& v,
         
         // get the new residual
         res.setZero();
-        e->internal_residual(false, res, dummy, false);
+        e->internal_residual(false, res, dummy);
         
         // set the i^th column of the finite-differenced Jacobian
         jac_x_fd.col(i) = (res-res0)/delta;

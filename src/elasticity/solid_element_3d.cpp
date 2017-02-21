@@ -25,6 +25,7 @@
 #include "base/boundary_condition_base.h"
 #include "base/system_initialization.h"
 #include "elasticity/stress_output_base.h"
+#include "base/nonlinear_system.h"
 
 
 MAST::StructuralElement3D::

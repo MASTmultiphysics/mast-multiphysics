@@ -42,6 +42,7 @@ namespace MAST {
     class SystemInitialization;
     class LocalElemBase;
     class OutputFunctionBase;
+    class NonlinearSystem;
     
     /*!
      *    This is the base class for elements that implement calculation of
@@ -92,7 +93,7 @@ namespace MAST {
         /*!
          *   @returns a reference to the libMesh::System object
          */
-        libMesh::System& system();
+        MAST::NonlinearSystem& system();
         
         
         /*!
@@ -257,6 +258,7 @@ namespace MAST {
          */
         virtual bool
         side_output_quantity (bool request_derivative,
+                              bool request_sensitivity,
                               std::multimap<libMesh::boundary_id_type, MAST::OutputFunctionBase*>& output) = 0;
 
     

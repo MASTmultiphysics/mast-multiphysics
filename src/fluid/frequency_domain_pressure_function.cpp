@@ -25,6 +25,7 @@
 #include "fluid/primitive_fluid_solution.h"
 #include "fluid/small_disturbance_primitive_fluid_solution.h"
 #include "fluid/flight_condition.h"
+#include "base/nonlinear_system.h"
 
 
 // libMesh includes
@@ -59,7 +60,7 @@ init(const libMesh::NumericVector<Real>& steady_sol,
      const libMesh::NumericVector<Real>& small_dist_sol_real,
      const libMesh::NumericVector<Real>& small_dist_sol_imag) {
     
-    libMesh::System& sys = _system.system();
+    MAST::NonlinearSystem& sys = _system.system();
     
     // first initialize the solution to the given vector
     // steady state solution
@@ -82,23 +83,23 @@ init(const libMesh::NumericVector<Real>& steady_sol,
     
     
     // if the mesh function has not been created so far, initialize it
-    _sol_function.reset(new libMesh::MeshFunction(_system.system().get_equation_systems(),
+    _sol_function.reset(new libMesh::MeshFunction(sys.get_equation_systems(),
                                                   *_sol,
-                                                  _system.system().get_dof_map(),
+                                                  sys.get_dof_map(),
                                                   _system.vars()));
     _sol_function->init();
 
 
-    _dsol_re_function.reset(new libMesh::MeshFunction(_system.system().get_equation_systems(),
+    _dsol_re_function.reset(new libMesh::MeshFunction(sys.get_equation_systems(),
                                                       *_dsol_real,
-                                                      _system.system().get_dof_map(),
+                                                      sys.get_dof_map(),
                                                       _system.vars()));
     _dsol_re_function->init();
 
     
-    _dsol_im_function.reset(new libMesh::MeshFunction(_system.system().get_equation_systems(),
+    _dsol_im_function.reset(new libMesh::MeshFunction(sys.get_equation_systems(),
                                                       *_dsol_imag,
-                                                      _system.system().get_dof_map(),
+                                                      sys.get_dof_map(),
                                                       _system.vars()));
     _dsol_im_function->init();
 

@@ -83,37 +83,13 @@ namespace MAST {
          *   Calculates the product of Jacobian-solution, and Jacobian-velocity
          *   over the element for a system of the form
          *   \f[ f_m(x,\dot{x}) + f_x(x) = 0 \f].
-         *   \param f_x_x_dx          = \f$ df(x)/dx \cdot dx \f$
-         *   \param f_m_x_dx          =  \f$ df_m(x,\dot{x})/dx \cdot dx \f$
-         *   \param f_m_xdot_dxdot    =  \f$ df_m(x,\dot{x})/d\dot{x} \cdot d{\dot x} \f$
+         *   \param f    = \f$ df(x)/dx \cdot dx +
+         *    df_m(x,\dot{x})/dx \cdot dx +
+         *    df_m(x,\dot{x})/d\dot{x} \cdot d{\dot x} \f$
          */
         virtual void
         _linearized_jacobian_solution_product(MAST::ElementBase& elem,
-                                              RealVectorX& f_m_x_dx,
-                                              RealVectorX& f_m_xdot_dxdot,
-                                              RealVectorX& f_x_x_dx);
-        
-        
-        /*!
-         *   Calculates the product of Jacobian-solution, and Jacobian-velocity
-         *   over the element for a system of the form
-         *   \f[ f_m(x,\ddot{x}, \dot{x}) + f_x(x, \dot{x}) = 0 \f].
-         *   \param f_x_x_dx           = \f$ f(x,\dot{x})  \f$
-         *   \param f_x_xdot_dxdot     = \f$ f(x,\dot{x})  \f$
-         *   \param f_m_x_dx           =  \f$ f_m(x,\dot{x}) \f$
-         *   \param f_m_xdot_dxdot     =  \f$ f_m(x,\dot{x}) \f$
-         *   \param f_m_xddot_dxddot   =  \f$ f_m(x,\dot{x}) \f$
-         */
-        virtual void
-        _linearized_jacobian_solution_product(MAST::ElementBase& elem,
-                                              RealVectorX& f_m_x_dx,
-                                              RealVectorX& f_m_xdot_dxdot,
-                                              RealVectorX& f_m_xddot_dxddot,
-                                              RealVectorX& f_x_x_dx,
-                                              RealVectorX& f_x_xdot_dxdot) {
-            
-            libmesh_error(); // shoudl not get here.
-        }
+                                              RealVectorX& f);
 
         /*!
          *   performs the element sensitivity calculations over \par elem,

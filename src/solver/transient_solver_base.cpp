@@ -20,6 +20,8 @@
 // MAST includes
 #include "solver/transient_solver_base.h"
 #include "base/transient_assembly.h"
+#include "base/nonlinear_system.h"
+
 
 // libMesh includes
 #include "libmesh/numeric_vector.h"
@@ -54,7 +56,7 @@ MAST::TransientSolverBase::set_assembly(MAST::TransientAssembly& assembly) {
     this->clear_assembly();
     
     _assembly = &assembly;
-    _system   = dynamic_cast<libMesh::NonlinearImplicitSystem*>(&assembly.system());
+    _system   = &assembly.system();
     
     // number of time steps to store
     unsigned int n_iters = _n_iters_to_store();
@@ -298,6 +300,9 @@ build_local_quantities(const libMesh::NumericVector<Real>& current_sol,
     // make sure that the system has been specified
     libmesh_assert(_system);
 
+    // make sure there are no solutions in sol
+    libmesh_assert(!sol.size());
+
     // resize the vector to store the quantities
     sol.resize(this->ode_order()+1);
     
@@ -359,6 +364,85 @@ build_local_quantities(const libMesh::NumericVector<Real>& current_sol,
         }
     }
 }
+
+
+
+
+void
+MAST::TransientSolverBase::
+build_perturbed_local_quantities(const libMesh::NumericVector<Real>& current_dsol,
+                                 std::vector<libMesh::NumericVector<Real>*>& sol) {
+    
+    // make sure that the system has been specified
+    libmesh_assert(_system);
+
+    // make sure there are no solutions in sol
+    libmesh_assert(!sol.size());
+    
+    // resize the vector to store the quantities
+    sol.resize(this->ode_order()+1);
+    
+    const std::vector<libMesh::dof_id_type>&
+    send_list = _system->get_dof_map().get_send_list();
+    
+    
+    for ( unsigned int i=0; i<=this->ode_order(); i++) {
+        
+        sol[i] = libMesh::NumericVector<Real>::build(_system->comm()).release();
+        sol[i]->init(_system->n_dofs(),
+                     _system->n_local_dofs(),
+                     send_list,
+                     false,
+                     libMesh::GHOSTED);
+        
+        switch (i) {
+                
+            case 0: {
+                
+                current_dsol.localize(*sol[i], send_list);
+                if (_if_highest_derivative_solution)
+                    // only the highest derivative is perturbed since
+                    // all lower derivative quantities are known
+                    sol[i]->zero();
+            }
+                break;
+                
+            case 1: {
+                
+                if (ode_order() == 1 && _if_highest_derivative_solution)
+                    // the provided solution is the current velocity increment
+                    current_dsol.localize(*sol[i]);
+                else {
+                    
+                    _update_delta_velocity(*sol[i], current_dsol);
+                    if (_if_highest_derivative_solution)
+                        sol[i]->zero();
+                }
+            }
+                break;
+                
+            case 2: {
+                
+                if (ode_order() == 2 && _if_highest_derivative_solution)
+                    // the provided solution is the current velocity increment
+                    current_dsol.localize(*sol[i]);
+                else {
+                    
+                    _update_delta_acceleration(*sol[i], current_dsol);
+                    if (_if_highest_derivative_solution)
+                        sol[i]->zero();
+                }
+            }
+                break;
+                
+            default:
+                // should not get here
+                libmesh_error();
+                break;
+        }
+    }
+}
+
 
 
 

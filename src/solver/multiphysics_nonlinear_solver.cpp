@@ -22,9 +22,9 @@
 #include "solver/multiphysics_nonlinear_solver.h"
 #include "base/nonlinear_implicit_assembly.h"
 #include "base/system_initialization.h"
+#include "base/nonlinear_system.h"
 
 // libMesh includes
-#include "libmesh/nonlinear_implicit_system.h"
 #include "libmesh/dof_map.h"
 #include "libmesh/petsc_matrix.h"
 #include "libmesh/petsc_vector.h"
@@ -62,6 +62,7 @@ __mast_multiphysics_petsc_mat_mult(Mat mat,Vec dx,Vec y) {
     __mast_multiphysics_petsc_shell_context
     *mat_ctx = static_cast<__mast_multiphysics_petsc_shell_context*> (ctx);
 
+
     MAST::MultiphysicsNonlinearSolverBase
     *solver = mat_ctx->solver;
     
@@ -88,9 +89,7 @@ __mast_multiphysics_petsc_mat_mult(Mat mat,Vec dx,Vec y) {
     for (unsigned int i=0; i< nd; i++) {
         
         // system for this discipline
-        libMesh::NonlinearImplicitSystem&
-        sys = dynamic_cast<libMesh::NonlinearImplicitSystem&>
-        (solver->get_system_assembly(i).system());
+        MAST::NonlinearSystem& sys = solver->get_system_assembly(i).system();
         
         // get the IS for this system
         IS sys_is = solver->index_sets()[i];
@@ -101,8 +100,16 @@ __mast_multiphysics_petsc_mat_mult(Mat mat,Vec dx,Vec y) {
         // use the nonlinear sol of all disciplines, by the perturbed sol of only
         // one should be nonzero.
         sys_sols[i]   = new libMesh::PetscVector<Real>( sol[i], sys.comm());
-        if (i == mat_ctx->j)
+        if (i == mat_ctx->j) {
             sys_dsols[i]  = new libMesh::PetscVector<Real>(dx, sys.comm());
+            
+            // Enforce constraints (if any) exactly on the
+            // current_local_solution.  This is the solution vector that is
+            // actually used in the computation of the residual below, and is
+            // not locked by debug-enabled PETSc the way that "x" is.
+            sys.get_dof_map().enforce_constraints_exactly(sys, sys_dsols[i],
+                                                          true /* homogeneous = true */);
+        }
         else
             sys_dsols[i]  = sys_sols[i]->zero_clone().release();
     }
@@ -119,12 +126,10 @@ __mast_multiphysics_petsc_mat_mult(Mat mat,Vec dx,Vec y) {
     //////////////////////////////////////////////////////////////////
     
     std::auto_ptr<libMesh::NumericVector<Real> >
-    res(sys_sols[mat_ctx->i]->zero_clone().release());
+    res(new libMesh::PetscVector<Real>(y, solver->comm()));
     
     // system for this discipline
-    libMesh::NonlinearImplicitSystem&
-    sys = dynamic_cast<libMesh::NonlinearImplicitSystem&>
-    (solver->get_system_assembly(mat_ctx->i).system());
+    MAST::NonlinearSystem& sys = solver->get_system_assembly(mat_ctx->i).system();
 
     solver->get_system_assembly(mat_ctx->i).linearized_jacobian_solution_product
     (*sys_sols [mat_ctx->i],
@@ -134,16 +139,13 @@ __mast_multiphysics_petsc_mat_mult(Mat mat,Vec dx,Vec y) {
     
     res->close();
     
-    
     //////////////////////////////////////////////////////////////////
     // resotre the subvectors
     //////////////////////////////////////////////////////////////////
     for (unsigned int i=0; i< nd; i++) {
         
         // system for this discipline
-        libMesh::NonlinearImplicitSystem&
-        sys = dynamic_cast<libMesh::NonlinearImplicitSystem&>
-        (solver->get_system_assembly(i).system());
+        MAST::NonlinearSystem& sys = solver->get_system_assembly(i).system();
         
         // get the IS for this system
         IS sys_is = solver->index_sets()[i];
@@ -194,9 +196,7 @@ __mast_multiphysics_petsc_snes_residual (SNES snes, Vec x, Vec r, void * ctx) {
     for (unsigned int i=0; i< nd; i++) {
         
         // system for this discipline
-        libMesh::NonlinearImplicitSystem&
-        sys = dynamic_cast<libMesh::NonlinearImplicitSystem&>
-        (solver->get_system_assembly(i).system());
+        MAST::NonlinearSystem& sys = solver->get_system_assembly(i).system();
         
         // get the IS for this system
         IS sys_is = solver->index_sets()[i];
@@ -207,6 +207,12 @@ __mast_multiphysics_petsc_snes_residual (SNES snes, Vec x, Vec r, void * ctx) {
         
         sys_sols[i] = new libMesh::PetscVector<Real>(sol[i], sys.comm()),
         sys_res[i]  = new libMesh::PetscVector<Real>(res[i], sys.comm());
+
+        // Enforce constraints (if any) exactly on the
+        // current_local_solution.  This is the solution vector that is
+        // actually used in the computation of the residual below, and is
+        // not locked by debug-enabled PETSc the way that "x" is.
+        sys.get_dof_map().enforce_constraints_exactly(sys, sys_sols[i]);
     }
 
     //////////////////////////////////////////////////////////////////
@@ -227,9 +233,7 @@ __mast_multiphysics_petsc_snes_residual (SNES snes, Vec x, Vec r, void * ctx) {
     for (unsigned int i=0; i< nd; i++) {
         
         // system for this discipline
-        libMesh::NonlinearImplicitSystem&
-        sys = dynamic_cast<libMesh::NonlinearImplicitSystem&>
-        (solver->get_system_assembly(i).system());
+        MAST::NonlinearSystem& sys = solver->get_system_assembly(i).system();
         
         solver->get_system_assembly(i).residual_and_jacobian (*sys_sols[i],
                                                               sys_res[i],
@@ -261,9 +265,7 @@ __mast_multiphysics_petsc_snes_residual (SNES snes, Vec x, Vec r, void * ctx) {
     for (unsigned int i=0; i< nd; i++) {
         
         // system for this discipline
-        libMesh::NonlinearImplicitSystem&
-        sys = dynamic_cast<libMesh::NonlinearImplicitSystem&>
-        (solver->get_system_assembly(i).system());
+        MAST::NonlinearSystem& sys = solver->get_system_assembly(i).system();
         
         // get the IS for this system
         IS sys_is = solver->index_sets()[i];
@@ -287,7 +289,6 @@ __mast_multiphysics_petsc_snes_residual (SNES snes, Vec x, Vec r, void * ctx) {
 PetscErrorCode
 __mast_multiphysics_petsc_snes_jacobian(SNES snes, Vec x, Mat jac, Mat pc, void * ctx)
 {
-    
     LOG_SCOPE("jacobian()", "PetscMultiphysicsNonlinearSolver");
     
     PetscErrorCode ierr=0;
@@ -317,9 +318,7 @@ __mast_multiphysics_petsc_snes_jacobian(SNES snes, Vec x, Mat jac, Mat pc, void 
     for (unsigned int i=0; i< nd; i++) {
         
         // system for this discipline
-        libMesh::NonlinearImplicitSystem&
-        sys = dynamic_cast<libMesh::NonlinearImplicitSystem&>
-        (solver->get_system_assembly(i).system());
+        MAST::NonlinearSystem& sys = solver->get_system_assembly(i).system();
         
         // get the IS for this system
         IS sys_is = solver->index_sets()[i];
@@ -328,6 +327,13 @@ __mast_multiphysics_petsc_snes_jacobian(SNES snes, Vec x, Mat jac, Mat pc, void 
         ierr = VecGetSubVector(x, sys_is, &sol[i]);      CHKERRABORT(solver->comm().get(), ierr);
         
         sys_sols[i] = new libMesh::PetscVector<Real>(sol[i], sys.comm());
+
+        
+        // Enforce constraints (if any) exactly on the
+        // current_local_solution.  This is the solution vector that is
+        // actually used in the computation of the residual below, and is
+        // not locked by debug-enabled PETSc the way that "x" is.
+        sys.get_dof_map().enforce_constraints_exactly(sys, sys_sols[i]);
     }
     
     
@@ -343,23 +349,7 @@ __mast_multiphysics_petsc_snes_jacobian(SNES snes, Vec x, Mat jac, Mat pc, void 
     for (unsigned int i=0; i< nd; i++) {
         
         // system for this discipline
-        libMesh::NonlinearImplicitSystem&
-        sys = dynamic_cast<libMesh::NonlinearImplicitSystem&>
-        (solver->get_system_assembly(i).system());
-        
-        // Use the system's update() to get a good local version of the
-        // parallel solution.  This operation does not modify the incoming
-        // "x" vector, it only localizes information from "x" into
-        // sys.current_local_solution.
-        //X_global.swap(X_sys);
-        //sys.update();
-        //X_global.swap(X_sys);
-        
-        // Enforce constraints (if any) exactly on the
-        // current_local_solution.  This is the solution vector that is
-        // actually used in the computation of the residual below, and is
-        // not locked by debug-enabled PETSc the way that "x" is.
-        //sys.get_dof_map().enforce_constraints_exactly(sys, sys.current_local_solution.get());
+        MAST::NonlinearSystem& sys = solver->get_system_assembly(i).system();
         
         //PetscMatrix<Number> PC(pc, sys.comm());
         //PC.attach_dof_map(sys.get_dof_map());
@@ -379,9 +369,7 @@ __mast_multiphysics_petsc_snes_jacobian(SNES snes, Vec x, Mat jac, Mat pc, void 
     for (unsigned int i=0; i< nd; i++) {
         
         // system for this discipline
-        libMesh::NonlinearImplicitSystem&
-        sys = dynamic_cast<libMesh::NonlinearImplicitSystem&>
-        (solver->get_system_assembly(i).system());
+        MAST::NonlinearSystem& sys = solver->get_system_assembly(i).system();
         
         // get the IS for this system
         IS sys_is = solver->index_sets()[i];
@@ -393,6 +381,12 @@ __mast_multiphysics_petsc_snes_jacobian(SNES snes, Vec x, Mat jac, Mat pc, void 
         ierr = VecRestoreSubVector(x, sys_is, &sol[i]);  CHKERRABORT(solver->comm().get(), ierr);
     }
 
+    
+    // call assembly of the global matrix
+    ierr = MatAssemblyBegin(jac, MAT_FINAL_ASSEMBLY);  CHKERRABORT(solver->comm().get(), ierr);
+    ierr = MatAssemblyEnd(jac, MAT_FINAL_ASSEMBLY);    CHKERRABORT(solver->comm().get(), ierr);
+    
+    
     return ierr;
 }
 
@@ -489,10 +483,10 @@ MAST::MultiphysicsNonlinearSolverBase::solve() {
     
     // all diagonal blocks use the system matrcices, while shell matrices
     // are created for the off-diagonal terms.
+    _n_dofs = 0.;
     for (unsigned int i=0; i<_n_disciplines; i++) {
         
-        libMesh::NonlinearImplicitSystem& sys =
-        dynamic_cast<libMesh::NonlinearImplicitSystem&>(_discipline_assembly[i]->system());
+        MAST::NonlinearSystem& sys = _discipline_assembly[i]->system();
         
         // add the number of dofs in this system to the global count
         _n_dofs   +=  sys.n_dofs();
@@ -507,8 +501,7 @@ MAST::MultiphysicsNonlinearSolverBase::solve() {
             }
             else {
                 
-                libMesh::System&
-                sys_j = _discipline_assembly[j]->system();
+                MAST::NonlinearSystem& sys_j = _discipline_assembly[j]->system();
                 
                 PetscInt
                 mat_i_m    = sys.get_dof_map().n_dofs(),
@@ -553,7 +546,15 @@ MAST::MultiphysicsNonlinearSolverBase::solve() {
                          &_sub_mats[0],
                          &_mat);
     CHKERRABORT(this->comm().get(), ierr);
-    
+
+    // we need to turn off MULT_TRANSPOSE operator for the global matrix
+    // since that is not implemented for the shell matrices pushes PETSc 3.7.4
+    // to produce an error about it.
+    ierr = MatShellSetOperation(_mat,
+                                MATOP_MULT_TRANSPOSE,
+                                PETSC_NULL);
+    CHKERRABORT(this->comm().get(), ierr);
+
     if (sys_name) {
         
         nm = this->name() + "_";
@@ -574,6 +575,14 @@ MAST::MultiphysicsNonlinearSolverBase::solve() {
     ierr = VecSetType(_sol, VECMPI);                    CHKERRABORT(this->comm().get(), ierr);
     ierr = VecDuplicate(_sol, &_res);                   CHKERRABORT(this->comm().get(), ierr);
     
+    ierr = MatShellSetOperation(_mat,
+                                MATOP_MULT_TRANSPOSE_ADD,
+                                PETSC_NULL);
+    CHKERRABORT(this->comm().get(), ierr);
+    ierr = MatShellSetOperation(_mat,
+                                MATOP_TRANSPOSE,
+                                PETSC_NULL);
+    CHKERRABORT(this->comm().get(), ierr);
     
     //////////////////////////////////////////////////////////////////////
     // now initialize the vector from the system solutions, which will serve
@@ -644,13 +653,13 @@ MAST::MultiphysicsNonlinearSolverBase::solve() {
         nm = this->name() + "_";
         SNESSetOptionsPrefix(snes, nm.c_str());
     }
-    ierr = SNESSetFromOptions(snes);                  CHKERRABORT(this->comm().get(), ierr);
     
     
     
     // setup the ksp
     ierr = SNESGetKSP (snes, &ksp);                   CHKERRABORT(this->comm().get(), ierr);
-    ierr = KSPSetFromOptions(ksp);                    CHKERRABORT(this->comm().get(), ierr);
+    //ierr = KSPSetFromOptions(ksp);                    CHKERRABORT(this->comm().get(), ierr);
+    ierr = SNESSetFromOptions(snes);                  CHKERRABORT(this->comm().get(), ierr);
     
     
     
@@ -667,7 +676,10 @@ MAST::MultiphysicsNonlinearSolverBase::solve() {
         else
             ierr = PCFieldSplitSetIS(pc, nullptr, _is[i]);CHKERRABORT(this->comm().get(), ierr);
     }
-    ierr = PCSetFromOptions(pc);                      CHKERRABORT(this->comm().get(), ierr);
+    
+
+    //ierr = SNESSetSolution(snes, _sol);
+    //this->verify_gateaux_derivatives(snes);
     
     //////////////////////////////////////////////////////////////////////
     // now, solve
@@ -734,4 +746,142 @@ MAST::MultiphysicsNonlinearSolverBase::solve() {
     ierr = VecDestroy(&_res);                          CHKERRABORT(this->comm().get(), ierr);
     
 }
+
+
+
+
+void
+MAST::MultiphysicsNonlinearSolverBase::verify_gateaux_derivatives(SNES snes) {
+    
+    PetscErrorCode ierr=0;
+
+    // create vectors for the sol, dsol, and res of the global and
+    // disciplinary systems
+    std::auto_ptr<libMesh::NumericVector<Real> >
+    global_sol  (new libMesh::PetscVector<Real>(_sol, this->comm())),
+    global_res  (new libMesh::PetscVector<Real>(_res, this->comm())),
+    global_res0 (global_sol->zero_clone().release());
+    
+    // first calculate the baseline residual for the global solution vector
+    __mast_multiphysics_petsc_snes_residual(snes,
+                                            _sol,
+                                            dynamic_cast<libMesh::PetscVector<Real>*>(global_res0.get())->vec(),
+                                            this);
+    
+    // value of perturbation used
+    const Real
+    delta = 1.0e-4;
+    
+    // now, iterate over each dof on the disciplines, and calculate the
+    // Gateaux derivative
+    for (unsigned int i=0; i<_n_disciplines; i++) {
+        
+        // system for this discipline
+        MAST::NonlinearSystem& sys_i = this->get_system_assembly(i).system();
+        
+        // get the IS for this system
+        IS sys_is_i = this->index_sets()[i];
+        
+        // verify the derivative wrt dofs from other disciplines
+        for (unsigned int j=0; j<_n_disciplines; j++) {
+
+            if (i != j) {
+                
+                IS sys_is_j = this->index_sets()[j];
+                
+                // system for this discipline
+                MAST::NonlinearSystem& sys_j = this->get_system_assembly(j).system();
+                
+                std::auto_ptr<libMesh::NumericVector<Real> >
+                dsol_j     (sys_j.solution->zero_clone().release()),
+                dJac_ij_dXj(sys_i.solution->zero_clone().release());
+                
+                for (unsigned int k=0; k<sys_j.n_dofs(); k++) {
+                    
+                    dsol_j->zero();
+                    dsol_j->add(k, delta);
+                    dsol_j->close();
+                    
+                    Vec
+                    vecx = dynamic_cast<libMesh::PetscVector<Real>*>(dsol_j.get())->vec(),
+                    vecy = dynamic_cast<libMesh::PetscVector<Real>*>(dJac_ij_dXj.get())->vec();
+                    
+                    __mast_multiphysics_petsc_mat_mult(_sub_mats[i*_n_disciplines+j], vecx, vecy);
+
+                    // now perform the same calculation with the finite differencing
+                    // using residual calculation
+                    // extract the subvector for this system
+                    Vec
+                    res_i,
+                    sol_j;
+                    ierr = VecGetSubVector(_sol, sys_is_j, &sol_j);      CHKERRABORT(this->comm().get(), ierr);
+                    
+                    Real
+                    old_val = 0.;
+                    
+                    // create a vector for modification of the ith value of this solution
+                    {
+                        libMesh::PetscVector<Real> v(sol_j, this->comm());
+                        
+                        // perturb the solution vector
+                        old_val = v.el(k);
+                        v.add(k, delta);
+                        v.close();
+                    }
+                    
+                    ierr = VecRestoreSubVector( _sol, sys_is_j, &sol_j);      CHKERRABORT(this->comm().get(), ierr);
+                    
+                    // now calculate the residual
+                    __mast_multiphysics_petsc_snes_residual(snes,
+                                                            _sol,
+                                                            _res,
+                                                            this);
+
+                    // reset the global solution vector
+                    ierr = VecGetSubVector(_sol, sys_is_j, &sol_j);      CHKERRABORT(this->comm().get(), ierr);
+                    
+                    // create a vector for modification of the ith value of this solution
+                    {
+                        libMesh::PetscVector<Real> v(sol_j, this->comm());
+                        
+                        // perturb the solution vector
+                        v.set(k, old_val);
+                        v.close();
+                    }
+                    
+                    ierr = VecRestoreSubVector( _sol, sys_is_j, &sol_j);      CHKERRABORT(this->comm().get(), ierr);
+                    
+                    global_res->close();
+                    global_res->add(-1., *global_res0);
+                    global_res->close();
+                    
+
+                    // get the finite differenced residual
+                    ierr = VecGetSubVector(_res, sys_is_i, &res_i);      CHKERRABORT(this->comm().get(), ierr);
+                    
+                    // create a vector for comparison
+                    {
+                        libMesh::PetscVector<Real> v(res_i, this->comm());
+                        for (unsigned int l=0; l<sys_i.n_dofs(); l++) {
+                            
+                            if (dJac_ij_dXj->el(l) != v.el(l))
+                                libMesh::out
+                                << k << "   "
+                                << l << "   "
+                                << dJac_ij_dXj->el(l) << "   "
+                                << v.el(l) << std::endl;
+                        }
+                        
+                        libMesh::out << std::endl;
+                    }
+                    
+                    ierr = VecRestoreSubVector( _res, sys_is_i, &res_i);      CHKERRABORT(this->comm().get(), ierr);
+
+                }
+            }
+        }
+    }
+}
+
+
 

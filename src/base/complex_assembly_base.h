@@ -38,8 +38,7 @@ namespace MAST {
     
     class ComplexAssemblyBase:
     public MAST::AssemblyBase,
-    public libMesh::NonlinearImplicitSystem::ComputeResidualandJacobian,
-    public libMesh::System::SensitivityAssembly {
+    public libMesh::NonlinearImplicitSystem::ComputeResidualandJacobian {
     public:
         
         /*!

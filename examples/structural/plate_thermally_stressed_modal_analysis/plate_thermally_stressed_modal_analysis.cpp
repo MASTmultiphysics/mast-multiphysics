@@ -38,6 +38,8 @@
 #include "property_cards/solid_2d_section_element_property_card.h"
 #include "property_cards/isotropic_material_property_card.h"
 #include "boundary_condition/dirichlet_boundary_condition.h"
+#include "solver/slepc_eigen_solver.h"
+
 
 // libMesh includes
 #include "libmesh/mesh_generation.h"

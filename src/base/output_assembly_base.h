@@ -28,33 +28,12 @@ namespace MAST {
     
     
     class OutputAssemblyBase:
-    public MAST::AssemblyBase,
-    public libMesh::System::QOI,
-    public libMesh::System::QOIDerivative,
-    public libMesh::System::QOIParameterSensitivity {
+    public MAST::AssemblyBase {
     
     public:
         OutputAssemblyBase();
         
         virtual ~OutputAssemblyBase();
-        
-        /*!
-         *   attaches a system to this discipline, and vice-a-versa
-         */
-        virtual void
-        attach_discipline_and_system(MAST::PhysicsDisciplineBase& discipline,
-                                     MAST::SystemInitialization& system) ;
-        
-        
-        
-        /*!
-         *   Reattaches to the same system that was attached earlier.
-         *
-         *   This cannot be called if the clear_discipline_and_system() method
-         *   has been called.
-         */
-        virtual void
-        reattach_to_system();
         
 
         /*!

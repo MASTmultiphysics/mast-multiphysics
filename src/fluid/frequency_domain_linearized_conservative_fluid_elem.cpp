@@ -27,6 +27,7 @@
 #include "base/system_initialization.h"
 #include "aeroelasticity/frequency_function.h"
 #include "elasticity/normal_rotation_function_base.h"
+#include "base/nonlinear_system.h"
 
 
 

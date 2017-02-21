@@ -31,6 +31,7 @@
 #include "mesh/local_2d_elem.h"
 #include "mesh/local_3d_elem.h"
 #include "base/mesh_field_function.h"
+#include "base/nonlinear_system.h"
 
 
 MAST::HeatConductionElementBase::
@@ -1047,6 +1048,37 @@ volume_heat_source_residual_sensitivity(bool request_jacobian,
     
     return false;
 }
+
+
+
+bool
+MAST::HeatConductionElementBase::volume_output_quantity
+(bool request_derivative,
+ bool request_sensitivity,
+ std::multimap<libMesh::subdomain_id_type, MAST::OutputFunctionBase*>& output) {
+    
+    
+    // there are currently no output quantities defined for heat conduction
+    // elements
+    
+    return (request_derivative || request_sensitivity);
+}
+
+
+
+
+bool
+MAST::HeatConductionElementBase::
+side_output_quantity (bool request_derivative,
+                      bool request_sensitivity,
+                      std::multimap<libMesh::boundary_id_type, MAST::OutputFunctionBase*>& output) {
+    
+    // there are currently no output quantities defined for heat conduction
+    // elements
+    
+    return (request_derivative || request_sensitivity);
+}
+
 
 
 

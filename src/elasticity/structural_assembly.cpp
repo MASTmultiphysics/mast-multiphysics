@@ -24,11 +24,11 @@
 #include "base/physics_discipline_base.h"
 #include "base/system_initialization.h"
 #include "boundary_condition/point_load_condition.h"
+#include "base/nonlinear_system.h"
 
 
 // libMesh includes
 #include "libmesh/petsc_vector.h"
-#include "libmesh/implicit_system.h"
 #include "libmesh/dof_map.h"
 
 
@@ -43,7 +43,7 @@ MAST::_snes_structural_nonlinear_assembly_monitor_function(SNES snes,
     (MAST::StructuralNonlinearAssembly*)ctx;
     
     // system for which this is being processed
-    libMesh::System& sys = assembly->system();
+    MAST::NonlinearSystem& sys = assembly->system();
     
     
     // if this is the first iteration, create a vector in system
@@ -105,8 +105,8 @@ _assemble_point_loads(MAST::PhysicsDisciplineBase& discipline,
                       libMesh::NumericVector<Real>& res) {
     
     // get a reference to the system, mesh and dof map
-    libMesh::System& sys     = system.system();
-    libMesh::DofMap& dof_map = sys.get_dof_map();
+    MAST::NonlinearSystem& sys     = system.system();
+    libMesh::DofMap& dof_map       = sys.get_dof_map();
     
     // get a reference to the set of loads
     const MAST::PointLoadSetType& point_loads = discipline.point_loads();

@@ -21,6 +21,7 @@
 #include "base/elem_base.h"
 #include "base/system_initialization.h"
 #include "mesh/local_elem_base.h"
+#include "base/nonlinear_system.h"
 
 
 MAST::ElementBase::ElementBase(MAST::SystemInitialization& sys,
@@ -43,7 +44,7 @@ MAST::ElementBase::~ElementBase() {
 }
 
 
-libMesh::System&
+MAST::NonlinearSystem&
 MAST::ElementBase::system() {
     return _system.system();
 }

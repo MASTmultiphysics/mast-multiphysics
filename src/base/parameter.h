@@ -49,10 +49,8 @@ namespace MAST {
         
 
         ~Parameter() {
-            // since the master function owns the pointer, it should not be deleted
-            // if the function is not a master function.
-            if (this == this)
-                delete _val;
+
+            delete _val;
         }
         
         

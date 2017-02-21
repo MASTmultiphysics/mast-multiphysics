@@ -227,10 +227,8 @@ namespace MAST {
          */
         virtual bool
         side_output_quantity (bool request_derivative,
-                              std::multimap<libMesh::boundary_id_type, MAST::OutputFunctionBase*>& output) {
-            
-            libmesh_error(); // to be implemented
-        }
+                              bool request_sensitivity,
+                              std::multimap<libMesh::boundary_id_type, MAST::OutputFunctionBase*>& output);
         
         
         /*!

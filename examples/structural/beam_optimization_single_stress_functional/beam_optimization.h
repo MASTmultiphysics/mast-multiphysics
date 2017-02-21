@@ -146,7 +146,7 @@ namespace MAST {
         libMesh::EquationSystems*      _eq_sys;
         
         // create the libmesh system
-        libMesh::NonlinearImplicitSystem*  _sys;
+        MAST::NonlinearSystem*  _sys;
         
         // initialize the system to the right set of variables
         MAST::StructuralSystemInitialization* _structural_sys;

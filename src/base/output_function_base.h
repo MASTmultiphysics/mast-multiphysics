@@ -36,7 +36,8 @@ namespace MAST {
     enum OutputQuantityType {
         
         STRAIN_STRESS_TENSOR,
-        STRUCTURAL_COMPLIANCE
+        STRUCTURAL_COMPLIANCE,
+        SURFACE_INTEGRATED_LIFT
     };
     
     

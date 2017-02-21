@@ -33,6 +33,7 @@
 
 // PETSc includes
 #include <petscmat.h>
+#include <petscsnes.h>
 
 
 namespace MAST {
@@ -133,15 +134,15 @@ namespace MAST {
             
             /*!
              *    \p sol_vecs is the vector containing the solution for each 
-             *    in this multiphysics solution
+             *    discipline in this multiphysics solution
              */
             virtual void
             update_at_solution(std::vector<libMesh::NumericVector<Real>*>&  sol_vecs) = 0;
             
             /*!
              *    \p sol_vecs is the vector containing the solution for each
-             *    in this multiphysics solution, and \p dsol_vecs is the
-             *    vector of perturbed solutions.
+             *    discipline in this multiphysics solution, and \p dsol_vecs is
+             *    the vector of perturbed solutions.
              */
             virtual void
             update_at_perturbed_solution
@@ -171,6 +172,10 @@ namespace MAST {
             
             return _update;
         }
+
+        
+        void verify_gateaux_derivatives(SNES snes);
+        
         
     protected:
         

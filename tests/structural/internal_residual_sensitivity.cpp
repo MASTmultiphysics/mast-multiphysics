@@ -93,7 +93,7 @@ void check_internal_force_and_jacobian_sensitivity (ValType& v,
     
     // tell the element about the solution
     e->set_solution(x);
-    e->internal_residual(true, res0, jac0, false);
+    e->internal_residual(true, res0, jac0);
     
     
     for (unsigned int i=0; i<v._params_for_sensitivity.size(); i++) {
@@ -107,7 +107,7 @@ void check_internal_force_and_jacobian_sensitivity (ValType& v,
         // later.
         dresdp.setZero();
         djacdp.setZero();
-        e->internal_residual_sensitivity(true, dresdp, djacdp, false);
+        e->internal_residual_sensitivity(true, dresdp, djacdp);
         
         // reset the sensitivity parameter
         e->sensitivity_param  = nullptr;
@@ -121,7 +121,7 @@ void check_internal_force_and_jacobian_sensitivity (ValType& v,
         
         dresdp_fd.setZero();
         djacdp_fd.setZero();
-        e->internal_residual(true, dresdp_fd, djacdp_fd, false);
+        e->internal_residual(true, dresdp_fd, djacdp_fd);
         
         // reset the parameter value
         f()        = p0;

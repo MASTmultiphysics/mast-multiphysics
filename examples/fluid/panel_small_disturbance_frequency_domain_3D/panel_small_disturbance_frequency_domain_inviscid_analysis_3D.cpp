@@ -466,8 +466,7 @@ MAST::PanelSmallDisturbanceFrequencyDomainInviscidAnalysis3D::sensitivity_solve(
     
     assembly.attach_discipline_and_system(*_discipline, *_structural_sys);
     
-    libMesh::NonlinearImplicitSystem&      nonlin_sys   =
-    dynamic_cast<libMesh::NonlinearImplicitSystem&>(assembly.system());
+    MAST::NonlinearSystem& nonlin_sys = assembly.system();
     
     libMesh::ParameterVector params;
     params.resize(1);

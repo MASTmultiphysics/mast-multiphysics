@@ -26,11 +26,15 @@
 
 namespace MAST {
     
+    // Forward declerations
+    class NonlinearSystem;
+    
+    
     class HeatConductionSystemInitialization:
     public MAST::SystemInitialization  {
         
     public:
-        HeatConductionSystemInitialization(libMesh::System& sys,
+        HeatConductionSystemInitialization(MAST::NonlinearSystem& sys,
                                            const std::string& prefix,
                                            const libMesh::FEType& fe_type);
         

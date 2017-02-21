@@ -32,7 +32,6 @@
 // libMesh includes
 #include "libmesh/system.h"
 
-
 namespace MAST {
     
     // Forward declerations
@@ -41,6 +40,7 @@ namespace MAST {
     class ElementBase;
     class OutputFunctionBase;
     class MeshFieldFunction;
+    class NonlinearSystem;
     
     class AssemblyBase {
     public:
@@ -98,13 +98,13 @@ namespace MAST {
          *   @returns a const reference to the libMesh::System object
          *   associated with this object
          */
-        const libMesh::System& system() const;
+        const MAST::NonlinearSystem& system() const;
         
         /*!
          *   @returns a non-const reference to the libMesh::System object
          *   associated with this object
          */
-        libMesh::System& system();
+        MAST::NonlinearSystem& system();
         
 
         /*!
@@ -136,7 +136,7 @@ namespace MAST {
          *   In this case, the method will look for the sensitivity solution for 
          *   the i^th parameter in get_sensitivity_solution() of the associated
          *   libMesh::System object. If the parameter \par if_total_sensitivity
-         *   if \p false, then the method will calculate the sensitivity 
+         *   if \p false, then the method will calculate the sensitivity
          *   assuming the sensitivity of solution is zero. This can be used for
          *   adjoint sensitivity analysis.
          */
@@ -170,7 +170,8 @@ namespace MAST {
          */
         virtual void
         _elem_outputs(MAST::ElementBase& elem,
-                      std::multimap<libMesh::subdomain_id_type, MAST::OutputFunctionBase*>& vol_output);
+                      std::multimap<libMesh::subdomain_id_type, MAST::OutputFunctionBase *> &vol_output,
+                      std::multimap<libMesh::boundary_id_type,MAST::OutputFunctionBase *> &side_output);
 
         
         /*!
@@ -178,7 +179,8 @@ namespace MAST {
          */
         virtual void
         _elem_output_sensitivity(MAST::ElementBase& elem,
-                                 std::multimap<libMesh::subdomain_id_type, MAST::OutputFunctionBase*>& vol_output);
+                                 std::multimap<libMesh::subdomain_id_type, MAST::OutputFunctionBase *> &vol_output,
+                                 std::multimap<libMesh::boundary_id_type,MAST::OutputFunctionBase *> &side_output);
 
         /*!
          *   PhysicsDisciplineBase object for which this class is assembling

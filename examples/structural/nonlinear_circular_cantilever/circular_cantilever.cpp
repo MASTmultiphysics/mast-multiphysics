@@ -13,6 +13,7 @@
 #include "boundary_condition/dirichlet_boundary_condition.h"
 #include "property_cards/isotropic_material_property_card.h"
 #include "property_cards/isotropic_element_property_card_3D.h"
+#include "base/nonlinear_system.h"
 
 
 // libMesh includes
@@ -28,7 +29,7 @@ class StructuralSystemInitializationUVW:
 public MAST::SystemInitialization  {
     
 public:
-    StructuralSystemInitializationUVW(libMesh::System& sys,
+    StructuralSystemInitializationUVW(MAST::NonlinearSystem& sys,
                                       const std::string& prefix,
                                       const libMesh::FEType& fe_type):
     MAST::SystemInitialization(sys, prefix) {
@@ -61,8 +62,7 @@ int main_1(int argc, const char * argv[]) {
     libMesh::EquationSystems          eq_sys(mesh);
     
     // add the system to be used for analysis
-    libMesh::System& sys =
-    eq_sys.add_system<libMesh::NonlinearImplicitSystem>("structural");
+    MAST::NonlinearSystem& sys = eq_sys.add_system<MAST::NonlinearSystem>("structural");
     
     // initialize the mesh
     const unsigned int
@@ -186,8 +186,8 @@ int main_1(int argc, const char * argv[]) {
         
         assembly.attach_discipline_and_system(structural_discipline, structural_sys);
         
-        libMesh::NonlinearImplicitSystem&      nonlin_sys   =
-        dynamic_cast<libMesh::NonlinearImplicitSystem&>(assembly.system());
+        MAST::NonlinearSystem&  nonlin_sys   =
+        assembly.system();
         
         nonlin_sys.solve();
         

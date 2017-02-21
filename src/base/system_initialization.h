@@ -22,13 +22,17 @@
 
 // C++ includes
 #include <memory>
-
+#include <vector>
 
 // libMesh includes
-#include "libmesh/system.h"
+#include "libmesh/fe_type.h"
 
 
 namespace MAST {
+
+    // Forward declerations
+    class NonlinearSystem;
+    
     
     class SystemInitialization {
     public:
@@ -37,7 +41,7 @@ namespace MAST {
          *   of \par order and \par family. Uses \par prefix for
          *   all variables name.
          */
-        SystemInitialization (libMesh::System& sys,
+        SystemInitialization (MAST::NonlinearSystem& sys,
                               const std::string& prefix);
         
         /*!
@@ -49,25 +53,20 @@ namespace MAST {
         /*!
          *   @returns the number of variables in this system
          */
-        unsigned int n_vars() const {
-            return _system.n_vars();
-        }
+        unsigned int n_vars() const;
         
         /*!
          *   @returns the FEType object for variable \par i,
          *   that defines the finite element family and order.
          */
-        const libMesh::FEType&
-        fetype(unsigned int i) const {
-            return _system.variable_type(i);
-        }
+        const libMesh::FEType& fetype(unsigned int i) const;
         
         
         /*!
          *  @returns a reference to the system for which the variables
          *  are initialized.
          */
-        libMesh::System& system() {
+        MAST::NonlinearSystem& system() {
             return _system;
         }
         
@@ -75,7 +74,7 @@ namespace MAST {
          *  @returns a constant reference to the system for which the variables
          *  are initialized.
          */
-        const libMesh::System& system() const {
+        const MAST::NonlinearSystem& system() const {
             return _system;
         }
         
@@ -94,16 +93,9 @@ namespace MAST {
             return _prefix;
         }
         
-        
-//        /*!
-//         *   @returns a smart-pointer to the solution function of this system.
-//         */
-//        std::auto_ptr<MAST::FieldFunction<RealVectorX> >
-//        solution_function();
-        
     protected:
         
-        libMesh::System& _system;
+        MAST::NonlinearSystem& _system;
         
         std::vector<unsigned int> _vars;
         

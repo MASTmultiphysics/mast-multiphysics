@@ -72,7 +72,7 @@ MAST::ComplexSolverBase::clear_assembly() {
 libMesh::NumericVector<Real>&
 MAST::ComplexSolverBase::real_solution(bool if_sens) {
     
-    libMesh::System& sys = _assembly->system();
+    MAST::NonlinearSystem& sys = _assembly->system();
     
     std::string nm;
     nm = sys.name();
@@ -91,7 +91,7 @@ MAST::ComplexSolverBase::real_solution(bool if_sens) {
 const libMesh::NumericVector<Real>&
 MAST::ComplexSolverBase::real_solution(bool if_sens) const {
     
-    libMesh::System& sys = _assembly->system();
+    MAST::NonlinearSystem& sys = _assembly->system();
     
     std::string nm;
     nm = sys.name();
@@ -109,7 +109,7 @@ MAST::ComplexSolverBase::real_solution(bool if_sens) const {
 libMesh::NumericVector<Real>&
 MAST::ComplexSolverBase::imag_solution(bool if_sens) {
     
-    libMesh::System& sys = _assembly->system();
+    MAST::NonlinearSystem& sys = _assembly->system();
     
     std::string nm;
     nm = sys.name();
@@ -127,7 +127,7 @@ MAST::ComplexSolverBase::imag_solution(bool if_sens) {
 const libMesh::NumericVector<Real>&
 MAST::ComplexSolverBase::imag_solution(bool if_sens) const {
     
-    libMesh::System& sys = _assembly->system();
+    MAST::NonlinearSystem& sys = _assembly->system();
     
     std::string nm;
     nm = sys.name();
@@ -168,7 +168,7 @@ MAST::ComplexSolverBase::solve() {
     unsigned int
     iters   = 0;
     
-    libMesh::System& sys = _assembly->system();
+    MAST::NonlinearSystem& sys = _assembly->system();
     
     
     while (if_cont) {

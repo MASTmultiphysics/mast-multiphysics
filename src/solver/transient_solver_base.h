@@ -24,8 +24,9 @@
 // MAST includes
 #include "base/mast_data_types.h"
 
+
 // libMesh includes
-#include "libmesh/nonlinear_implicit_system.h"
+#include "libmesh/numeric_vector.h"
 
 
 namespace MAST {
@@ -33,6 +34,8 @@ namespace MAST {
     // Forward declerations
     class TransientAssembly;
     class ElementBase;
+    class NonlinearSystem;
+    
     
     class TransientSolverBase {
     public:
@@ -127,6 +130,19 @@ namespace MAST {
                                std::vector<libMesh::NumericVector<Real>*>& qtys);
 
         /*!
+         *    localizes the relevant perturbations in solutions for system
+         *    assembly. 
+         *    \param current_sol  the perturbation in current displacement 
+         *    \f$ \Delta X \f$
+         *    \param qtys upon returning, this vector is populated such that the
+         *    ith element of the vector is \f$ (d (d^iX/dt^i)/ dX) dX \Delta X$
+         */
+        virtual void
+        build_perturbed_local_quantities
+        (const libMesh::NumericVector<Real>& current_sol,
+         std::vector<libMesh::NumericVector<Real>*>& qtys);
+
+        /*!
          *    TransientAssembly needs to be able to call the assembly routines
          *    of this class.
          */
@@ -153,6 +169,15 @@ namespace MAST {
         _set_element_data(const std::vector<libMesh::dof_id_type>& dof_indices,
                           const std::vector<libMesh::NumericVector<Real>*>& sols,
                           MAST::ElementBase& elem) = 0;
+
+        /*!
+         *    provides the element with the transient data for calculations
+         */
+        virtual void
+        _set_element_perturbed_data
+        (const std::vector<libMesh::dof_id_type>& dof_indices,
+         const std::vector<libMesh::NumericVector<Real>*>& sols,
+         MAST::ElementBase& elem) = 0;
 
         
         /*!
@@ -230,7 +255,7 @@ namespace MAST {
          *   NonlinearImplicitSystem for which this object is
          *   calculating the solution
          */
-        libMesh::NonlinearImplicitSystem* _system;
+        MAST::NonlinearSystem* _system;
         
         
         /*!

@@ -32,6 +32,7 @@
 #include "numerics/fem_operator_matrix.h"
 #include "numerics/utility.h"
 #include "elasticity/stress_output_base.h"
+#include "base/nonlinear_system.h"
 
 
 
@@ -1081,6 +1082,19 @@ MAST::StructuralElementBase::volume_output_quantity
 }
 
 
+
+
+bool
+MAST::StructuralElementBase::
+side_output_quantity (bool request_derivative,
+                      bool request_sensitivity,
+                      std::multimap<libMesh::boundary_id_type, MAST::OutputFunctionBase*>& output) {
+    
+    // there are currently no side output quantities defined for structural
+    // applications.
+    
+    return (request_derivative || request_sensitivity);
+}
 
 
 

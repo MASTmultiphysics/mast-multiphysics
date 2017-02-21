@@ -25,6 +25,7 @@
 #include "fluid/primitive_fluid_solution.h"
 #include "fluid/small_disturbance_primitive_fluid_solution.h"
 #include "fluid/flight_condition.h"
+#include "base/nonlinear_system.h"
 
 
 // libMesh includes
@@ -35,7 +36,7 @@
 
 MAST::PressureFunction::
 PressureFunction(MAST::SystemInitialization& sys,
-                                MAST::FlightCondition&      flt):
+                 MAST::FlightCondition&      flt):
 MAST::FieldFunction<Real>("pressure"),
 _if_cp    (false),
 _system   (sys),
@@ -58,7 +59,7 @@ MAST::PressureFunction::
 init(const libMesh::NumericVector<Real>& steady_sol,
      const libMesh::NumericVector<Real>* small_dist_sol) {
     
-    libMesh::System& sys = _system.system();
+    MAST::NonlinearSystem& sys = _system.system();
     
     // first initialize the solution to the given vector
     // steady state solution
@@ -70,9 +71,9 @@ init(const libMesh::NumericVector<Real>& steady_sol,
     
     
     // if the mesh function has not been created so far, initialize it
-    _sol_function.reset(new libMesh::MeshFunction(_system.system().get_equation_systems(),
+    _sol_function.reset(new libMesh::MeshFunction(sys.get_equation_systems(),
                                                   *_sol,
-                                                  _system.system().get_dof_map(),
+                                                  sys.get_dof_map(),
                                                   _system.vars()));
     _sol_function->init();
     
@@ -85,9 +86,9 @@ init(const libMesh::NumericVector<Real>& steady_sol,
         
         small_dist_sol->localize(*_dsol);
         
-        _dsol_function.reset(new libMesh::MeshFunction(_system.system().get_equation_systems(),
+        _dsol_function.reset(new libMesh::MeshFunction(sys.get_equation_systems(),
                                                        *_dsol,
-                                                       _system.system().get_dof_map(),
+                                                       sys.get_dof_map(),
                                                        _system.vars()));
         _dsol_function->init();
     }
@@ -140,7 +141,7 @@ operator() (const libMesh::Point& p,
     if (_if_cp)
         press     = p_sol.c_pressure(_flt_cond.p0(), _flt_cond.q0());
     else
-        press     =  p_sol.p;
+        press     =  p_sol.p - 116235.00000000003*.9;
 }
 
 

@@ -25,7 +25,7 @@
 #include "solver/transient_solver_base.h"
 #include "numerics/utility.h"
 #include "base/mesh_field_function.h"
-
+#include "base/nonlinear_system.h"
 
 // libMesh includes
 #include "libmesh/nonlinear_solver.h"
@@ -65,15 +65,10 @@ attach_discipline_and_system(MAST::PhysicsDisciplineBase& discipline,
     _transient_solver  = &solver;
     _system            = &sys;
     
-    // now attach this to the system
-    libMesh::NonlinearImplicitSystem& transient_sys =
-    dynamic_cast<libMesh::NonlinearImplicitSystem&>(_system->system());
-
     // attach this assembly object to the transient solver
     solver.set_assembly(*this);
     
-    transient_sys.nonlinear_solver->residual_and_jacobian_object = this;
-    transient_sys.attach_sensitivity_assemble_object(*this);
+    _system->system().nonlinear_solver->residual_and_jacobian_object = this;
 }
 
 
@@ -83,12 +78,7 @@ MAST::TransientAssembly::reattach_to_system() {
     
     libmesh_assert(_system);
     
-    // now attach this to the system
-    libMesh::NonlinearImplicitSystem& transient_sys =
-    dynamic_cast<libMesh::NonlinearImplicitSystem&>(_system->system());
-    
-    transient_sys.nonlinear_solver->residual_and_jacobian_object = this;
-    transient_sys.attach_sensitivity_assemble_object(*this);
+    _system->system().nonlinear_solver->residual_and_jacobian_object = this;
 }
 
 
@@ -99,11 +89,7 @@ clear_discipline_and_system( ) {
     
     if (_system && _discipline) {
 
-        libMesh::NonlinearImplicitSystem& transient_sys =
-        dynamic_cast<libMesh::NonlinearImplicitSystem&>(_system->system());
-        
-        transient_sys.nonlinear_solver->residual_and_jacobian_object = nullptr;
-        transient_sys.reset_sensitivity_assembly();
+        _system->system().nonlinear_solver->residual_and_jacobian_object = nullptr;
     }
     
     // clear the association of this assembly object to the solver
@@ -123,8 +109,7 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
                        libMesh::SparseMatrix<Real>*  J,
                        libMesh::NonlinearImplicitSystem& S) {
     
-    libMesh::NonlinearImplicitSystem& transient_sys =
-    dynamic_cast<libMesh::NonlinearImplicitSystem&>(_system->system());
+    MAST::NonlinearSystem& transient_sys = _system->system();
     
     // make sure that the system for which this object was created,
     // and the system passed through the function call are the same
@@ -230,8 +215,7 @@ linearized_jacobian_solution_product (const libMesh::NumericVector<Real>& X,
                                       libMesh::NumericVector<Real>& JdX,
                                       libMesh::NonlinearImplicitSystem& S) {
     
-    libMesh::NonlinearImplicitSystem& transient_sys =
-    dynamic_cast<libMesh::NonlinearImplicitSystem&>(_system->system());
+    MAST::NonlinearSystem& transient_sys = _system->system();
     
     // make sure that the system for which this object was created,
     // and the system passed through the function call are the same
@@ -241,22 +225,17 @@ linearized_jacobian_solution_product (const libMesh::NumericVector<Real>& X,
     
     // iterate over each element, initialize it and get the relevant
     // analysis quantities
-    RealVectorX dsol, vec;
+    RealVectorX vec;
     
     std::vector<libMesh::dof_id_type> dof_indices;
     const libMesh::DofMap& dof_map = transient_sys.get_dof_map();
     std::auto_ptr<MAST::ElementBase> physics_elem;
     
-    std::auto_ptr<libMesh::NumericVector<Real> >
-    localized_perturbed_solution;
-    
-    localized_perturbed_solution.reset(_build_localized_vector(transient_sys,
-                                                               dX).release());
-
     // stores the localized solution, velocity, acceleration, etc. vectors.
     // These pointers will have to be deleted
     std::vector<libMesh::NumericVector<Real>*>
-    local_qtys;
+    local_qtys,
+    local_perturbed_qtys;
     
     // if a solution function is attached, initialize it
     if (_sol_function)
@@ -264,6 +243,7 @@ linearized_jacobian_solution_product (const libMesh::NumericVector<Real>& X,
 
     // ask the solver to localize the relevant solutions
     _transient_solver->build_local_quantities(X, local_qtys);
+    _transient_solver->build_perturbed_local_quantities(dX, local_perturbed_qtys);
     
     libMesh::MeshBase::const_element_iterator       el     =
     transient_sys.get_mesh().active_local_elements_begin();
@@ -280,17 +260,15 @@ linearized_jacobian_solution_product (const libMesh::NumericVector<Real>& X,
         
         // get the solution
         unsigned int ndofs = (unsigned int)dof_indices.size();
-        dsol.setZero(ndofs);
         vec.setZero(ndofs);
-
-        for (unsigned int i=0; i<dof_indices.size(); i++)
-            dsol(i) = (*localized_perturbed_solution)(dof_indices[i]);
 
         
         _transient_solver->_set_element_data(dof_indices,
                                              local_qtys,
                                              *physics_elem);
-        physics_elem->set_perturbed_solution(dsol);
+        _transient_solver->_set_element_perturbed_data(dof_indices,
+                                                       local_perturbed_qtys,
+                                                       *physics_elem);
         
         if (_sol_function)
             physics_elem->attach_active_solution_function(*_sol_function);
@@ -313,8 +291,11 @@ linearized_jacobian_solution_product (const libMesh::NumericVector<Real>& X,
     }
     
     // delete pointers to the local solutions
-    for (unsigned int i=0; i<local_qtys.size(); i++)
+    for (unsigned int i=0; i<local_qtys.size(); i++) {
+        
         delete local_qtys[i];
+        delete local_perturbed_qtys[i];
+    }
     
     // if a solution function is attached, clear it
     if (_sol_function)
@@ -331,8 +312,7 @@ sensitivity_assemble (const libMesh::ParameterVector& parameters,
                       const unsigned int i,
                       libMesh::NumericVector<Real>& sensitivity_rhs) {
 
-    libMesh::NonlinearImplicitSystem& transient_sys =
-    dynamic_cast<libMesh::NonlinearImplicitSystem&>(_system->system());
+    MAST::NonlinearSystem& transient_sys = _system->system();
     
     sensitivity_rhs.zero();
     

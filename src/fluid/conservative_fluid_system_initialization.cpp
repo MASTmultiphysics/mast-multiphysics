@@ -20,6 +20,7 @@
 
 // MAST includes
 #include "fluid/conservative_fluid_system_initialization.h"
+#include "base/nonlinear_system.h"
 
 
 // libMesh includes
@@ -27,7 +28,7 @@
 
 
 MAST::ConservativeFluidSystemInitialization::
-ConservativeFluidSystemInitialization(libMesh::System& sys,
+ConservativeFluidSystemInitialization(MAST::NonlinearSystem& sys,
                                       const std::string& prefix,
                                       const libMesh::FEType& fe_type,
                                       const unsigned int dim):

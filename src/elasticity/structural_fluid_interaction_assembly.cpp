@@ -28,6 +28,7 @@
 #include "base/mesh_field_function.h"
 #include "numerics/utility.h"
 #include "base/real_output_function.h"
+#include "base/nonlinear_system.h"
 
 
 // libMesh includes
@@ -139,8 +140,7 @@ assemble_reduced_order_quantity
 (std::vector<libMesh::NumericVector<Real>*>& basis,
  std::map<MAST::StructuralQuantityType, RealMatrixX*>& mat_qty_map) {
     
-    libMesh::NonlinearImplicitSystem& nonlin_sys =
-    dynamic_cast<libMesh::NonlinearImplicitSystem&>(_system->system());
+    MAST::NonlinearSystem& nonlin_sys = _system->system();
     
     unsigned int
     n_basis = (unsigned int)basis.size();
@@ -159,7 +159,7 @@ assemble_reduced_order_quantity
     RealMatrixX mat, basis_mat;
     
     std::vector<libMesh::dof_id_type> dof_indices;
-    const libMesh::DofMap& dof_map = _system->system().get_dof_map();
+    const libMesh::DofMap& dof_map = nonlin_sys.get_dof_map();
     std::auto_ptr<MAST::ElementBase> physics_elem;
     
     std::auto_ptr<libMesh::NumericVector<Real> > localized_solution;
@@ -271,8 +271,7 @@ assemble_reduced_order_quantity_sensitivity
  std::map<MAST::StructuralQuantityType, RealMatrixX*>& mat_qty_map) {
     
     
-    libMesh::NonlinearImplicitSystem& nonlin_sys =
-    dynamic_cast<libMesh::NonlinearImplicitSystem&>(_system->system());
+    MAST::NonlinearSystem& nonlin_sys = _system->system();
     
     unsigned int
     n_basis = (unsigned int)basis.size();

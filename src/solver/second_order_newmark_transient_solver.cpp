@@ -21,6 +21,8 @@
 #include "solver/second_order_newmark_transient_solver.h"
 #include "base/transient_assembly.h"
 #include "base/elem_base.h"
+#include "base/nonlinear_system.h"
+
 
 // libMesh includes
 #include "libmesh/numeric_vector.h"
@@ -95,6 +97,46 @@ _set_element_data(const std::vector<libMesh::dof_id_type>& dof_indices,
     elem.set_velocity(vel);
     elem.set_acceleration(accel);
 }
+
+
+
+
+void
+MAST::SecondOrderNewmarkTransientSolver::
+_set_element_perturbed_data(const std::vector<libMesh::dof_id_type>& dof_indices,
+                            const std::vector<libMesh::NumericVector<Real>*>& sols,
+                            MAST::ElementBase &elem){
+    
+    libmesh_assert_equal_to(sols.size(), 3);
+    
+    const unsigned int n_dofs = (unsigned int)dof_indices.size();
+    
+    // get the current state and velocity estimates
+    // also get the current discrete velocity replacement
+    RealVectorX
+    sol          = RealVectorX::Zero(n_dofs),
+    vel          = RealVectorX::Zero(n_dofs),
+    accel        = RealVectorX::Zero(n_dofs);
+    
+    
+    // get the references to current and previous sol and velocity
+    const libMesh::NumericVector<Real>
+    &sol_global     =   *sols[0],
+    &vel_global     =   *sols[1],
+    &acc_global     =   *sols[2];
+    
+    for (unsigned int i=0; i<n_dofs; i++) {
+        
+        sol(i)          = sol_global(dof_indices[i]);
+        vel(i)          = vel_global(dof_indices[i]);
+        accel(i)        = acc_global(dof_indices[i]);
+    }
+    
+    elem.set_perturbed_solution(sol);
+    elem.set_perturbed_velocity(vel);
+    elem.set_perturbed_acceleration(accel);
+}
+
 
 
 

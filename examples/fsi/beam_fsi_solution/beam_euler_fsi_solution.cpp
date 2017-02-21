@@ -47,6 +47,7 @@
 #include "boundary_condition/dirichlet_boundary_condition.h"
 #include "solver/first_order_newmark_transient_solver.h"
 #include "solver/multiphysics_nonlinear_solver.h"
+#include "solver/slepc_eigen_solver.h"
 
 
 // libMesh includes
@@ -63,7 +64,7 @@ extern libMesh::LibMeshInit* __init;
 
 
 namespace MAST {
-
+    
     class FSIBoundaryConditionUpdates:
     public MAST::MultiphysicsNonlinearSolverBase::PreResidualUpdate {
         
@@ -85,8 +86,6 @@ namespace MAST {
         virtual void
         update_at_solution(std::vector<libMesh::NumericVector<Real>*>&  sol_vecs) {
 
-            libmesh_error(); // setup velocity update
-            
             // make sure that the solutions are appropriately sized
             libMesh::NumericVector<Real>
             &fluid_sol      = *sol_vecs[0],
@@ -102,8 +101,22 @@ namespace MAST {
             libmesh_assert_equal_to(structural_sol.local_size(),
                                     _structural_sys.system().n_local_dofs());
 
+            // clear the data structures before initializing
+            //_vel.clear();
+            _displ.clear();
+            
+            //_vel.init        (structural_vel);
             _displ.init      (structural_sol);
             _press.init      (fluid_sol);
+            
+//            libMesh::out
+//            << "Fluid Sol:" << std::endl;
+//            fluid_sol.print();
+//            
+//            libMesh::out
+//            << "Structural Sol:" << std::endl;
+//            structural_sol.print();
+            
         }
 
         
@@ -111,8 +124,6 @@ namespace MAST {
         update_at_perturbed_solution(std::vector<libMesh::NumericVector<Real>*>&   sol_vecs,
                                      std::vector<libMesh::NumericVector<Real>*>&  dsol_vecs) {
             
-            libmesh_error(); // setup velocity update
-
             // make sure that the solutions are appropriately sized
             libMesh::NumericVector<Real>
             &fluid_sol           = * sol_vecs[0],
@@ -138,9 +149,21 @@ namespace MAST {
             libmesh_assert_equal_to(structural_sol_sens.local_size(),
                                     _structural_sys.system().n_local_dofs());
             
-            //_displ.init(structural_sol);
-            //_normal_rot.init(structural_sol);
-            _press.init(fluid_sol, &fluid_sol_sens);
+            // clear the data structure before initialization
+            //_vel.clear();
+            _displ.clear();
+            
+            //_vel.init(structural_vel);
+            _displ.init(structural_sol, &structural_sol_sens);
+            _press.init(     fluid_sol,      &fluid_sol_sens);
+            
+//            libMesh::out
+//            << "Fluid Sol (inside perturb):" << std::endl;
+//            fluid_sol.print();
+//            
+//            libMesh::out
+//            << "Structural Sol (inside perturb):" << std::endl;
+//            structural_sol.print();
         }
 
         
@@ -156,6 +179,8 @@ namespace MAST {
 
 
 MAST::BeamEulerFSIAnalysis::BeamEulerFSIAnalysis():
+_max_time_steps                     (0),
+_time_step_size                     (0.),
 _structural_mesh                    (nullptr),
 _fluid_mesh                         (nullptr),
 _structural_eq_sys                  (nullptr),
@@ -314,6 +339,9 @@ _bc_updates                         (nullptr) {
     _far_field     = new MAST::BoundaryConditionBase(MAST::FAR_FIELD),
     _symm_wall     = new MAST::BoundaryConditionBase(MAST::SYMMETRY_WALL);
     _slip_wall     = new MAST::BoundaryConditionBase(MAST::SLIP_WALL);
+
+    _max_time_steps    =   infile("max_time_steps", 1000);
+    _time_step_size    =   infile("initial_dt",    1.e-2);
     
     _flight_cond    =  new MAST::FlightCondition;
     for (unsigned int i=0; i<3; i++) {
@@ -428,9 +456,9 @@ _bc_updates                         (nullptr) {
                                                 "velocity");
     _displ        = new MAST::MeshFieldFunction(*_structural_sys_init,
                                                 "displacement");
-    _normal_rot   = new MAST::NormalRotationMeshFunction("frequency_domain_normal_rotation",
+    _normal_rot   = new MAST::NormalRotationMeshFunction("normal_rotation",
                                                          *_displ);
-    _slip_wall->add(*_vel);
+    //_slip_wall->add(*_vel);
     _slip_wall->add(*_normal_rot);
     
     
@@ -496,6 +524,7 @@ _bc_updates                         (nullptr) {
     
     // tell the section property about the material property
     _p_card->set_material(*_m_card);
+    _p_card->set_strain(MAST::VON_KARMAN_STRAIN);
     
     _p_card->init();
     
@@ -534,6 +563,7 @@ MAST::BeamEulerFSIAnalysis::~BeamEulerFSIAnalysis() {
     
     delete _pressure_function;    
     
+    delete _vel;
     delete _displ;
     delete _normal_rot;
     delete _pressure;
@@ -642,12 +672,15 @@ MAST::BeamEulerFSIAnalysis::solve(bool if_write_output,
     
     // create the nonlinear assembly object
     MAST::ConservativeFluidTransientAssembly        fluid_assembly;
-    MAST::FirstOrderNewmarkTransientSolver          transient_solver;
+    MAST::FirstOrderNewmarkTransientSolver          fluid_transient_solver;
     
     // now setup the assembly object
     fluid_assembly.attach_discipline_and_system(*_fluid_discipline,
-                                                transient_solver,
+                                                fluid_transient_solver,
                                                 *_fluid_sys_init);
+
+    libMesh::ExodusII_IO fluid_exodus_writer(*_fluid_mesh);
+    libMesh::ExodusII_IO structural_exodus_writer(*_structural_mesh);
 
     // time solver parameters
     unsigned int
@@ -663,14 +696,14 @@ MAST::BeamEulerFSIAnalysis::solve(bool if_write_output,
     factor     = 0.,
     min_factor = 1.5;
     
-    transient_solver.dt            = 1.e-4;
-    transient_solver.beta          = 1.0;
+    fluid_transient_solver.dt            = _time_step_size;
+    fluid_transient_solver.beta          = 1.0;
     
     // set the previous state to be same as the current state to account for
     // zero velocity as the initial condition
-    transient_solver.solution(1).zero();
-    transient_solver.solution(1).add(1., transient_solver.solution());
-    transient_solver.solution(1).close();
+    fluid_transient_solver.solution(1).zero();
+    fluid_transient_solver.solution(1).add(1., fluid_transient_solver.solution());
+    fluid_transient_solver.solution(1).close();
     
     
     MAST::StructuralNonlinearAssembly   structural_assembly;
@@ -698,7 +731,54 @@ MAST::BeamEulerFSIAnalysis::solve(bool if_write_output,
     fsi_solver.set_system_assembly(0,      fluid_assembly);
     fsi_solver.set_system_assembly(1, structural_assembly);
     
-    fsi_solver.solve();
+    while ((t_step <= _max_time_steps) && (vel_1  >=  1.e-8)) {
+
+        // change dt if the iteration count has increased to threshold
+        if (iter_count_dt == n_iters_change_dt) {
+            
+            libMesh::out
+            << "Changing dt:  old dt = " << fluid_transient_solver.dt
+            << "    new dt = ";
+            
+            factor                        = std::pow(vel_0/vel_1, p);
+            factor                        = std::max(factor, min_factor);
+            fluid_transient_solver.dt    *= factor;
+            
+            libMesh::out << fluid_transient_solver.dt << std::endl;
+            
+            iter_count_dt = 0;
+            vel_0         = vel_1;
+        }
+        else
+            iter_count_dt++;
+
+        libMesh::out
+        << "Time step: " << t_step
+        << " :  t = " << tval
+        << " :  xdot-L2 = " << vel_1
+        << std::endl;
+
+        fluid_exodus_writer.write_timestep("fluid_output.exo",
+                                           *_fluid_eq_sys,
+                                           t_step+1,
+                                           _fluid_sys->time);
+        structural_exodus_writer.write_timestep("structural_output.exo",
+                                                *_structural_eq_sys,
+                                                t_step+1,
+                                                _structural_sys->time);
+
+        fsi_solver.solve();
+
+        fluid_transient_solver.advance_time_step();
+        _structural_sys->time = _fluid_sys->time;
+    
+        // get the velocity L2 norm
+        vel_1 = fluid_transient_solver.velocity().l2_norm();
+        if (t_step == 0) vel_0 = vel_1;
+        
+        tval  += fluid_transient_solver.dt;
+        t_step++;
+    }
     
     fluid_assembly.clear_discipline_and_system();
     structural_assembly.clear_discipline_and_system();

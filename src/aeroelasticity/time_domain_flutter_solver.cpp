@@ -28,6 +28,7 @@
 #include "base/boundary_condition_base.h"
 #include "numerics/lapack_dggev_interface.h"
 #include "base/parameter.h"
+#include "base/nonlinear_system.h"
 
 
 MAST::TimeDomainFlutterSolver::TimeDomainFlutterSolver():

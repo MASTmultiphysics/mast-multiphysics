@@ -32,6 +32,7 @@
 #include "base/mesh_field_function.h"
 #include "property_cards/element_property_card_base.h"
 #include "numerics/utility.h"
+#include "base/nonlinear_system.h"
 
 
 // libMesh includes

@@ -280,6 +280,12 @@ namespace MAST {
                                                  RealMatrixX& dVdU);
         
         
+
+        void
+        calculate_pressure_derivative_wrt_conservative_variables(const MAST::PrimitiveSolution& sol,
+                                                                 RealVectorX& dpdX);
+        
+        
         void
         calculate_advection_flux_jacobian_for_moving_solid_wall_boundary(const MAST::PrimitiveSolution& sol,
                                                                          const Real ui_ni,

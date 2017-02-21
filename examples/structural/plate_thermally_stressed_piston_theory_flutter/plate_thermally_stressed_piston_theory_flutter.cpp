@@ -40,6 +40,7 @@
 #include "property_cards/solid_2d_section_element_property_card.h"
 #include "property_cards/isotropic_material_property_card.h"
 #include "boundary_condition/dirichlet_boundary_condition.h"
+#include "solver/slepc_eigen_solver.h"
 
 // libMesh includes
 #include "libmesh/mesh_generation.h"
@@ -450,8 +451,8 @@ namespace MAST {
             nonlin_assembly.attach_discipline_and_system(*_obj._discipline,
                                                          *_obj._structural_sys);
             
-            libMesh::NonlinearImplicitSystem&      nonlin_sys   =
-            dynamic_cast<libMesh::NonlinearImplicitSystem&>(nonlin_assembly.system());
+            MAST::NonlinearSystem&  nonlin_sys   =
+            dynamic_cast<MAST::NonlinearSystem&>(nonlin_assembly.system());
             
             // zero the solution before solving
             _obj.clear_stresss();
@@ -763,8 +764,7 @@ sensitivity_solve(MAST::Parameter& p,
     
     assembly.attach_discipline_and_system(*_discipline, *_structural_sys);
     
-    libMesh::NonlinearImplicitSystem&      nonlin_sys   =
-    dynamic_cast<libMesh::NonlinearImplicitSystem&>(assembly.system());
+    MAST::NonlinearSystem& nonlin_sys = assembly.system();
     
     libMesh::ParameterVector params;
     params.resize(1);

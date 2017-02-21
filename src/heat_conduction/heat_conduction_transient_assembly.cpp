@@ -73,9 +73,7 @@ _elem_calculations(MAST::ElementBase& elem,
 void
 MAST::HeatConductionTransientAssembly::
 _linearized_jacobian_solution_product(MAST::ElementBase& elem,
-                                      RealVectorX& f_m_x_dx,
-                                      RealVectorX& f_m_xdot_dxdot,
-                                      RealVectorX& f_x_x_dx) {
+                                      RealVectorX& f) {
     
     libmesh_error(); // to be implemented
 }
