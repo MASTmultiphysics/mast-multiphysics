@@ -111,8 +111,7 @@ namespace MAST {
         /*!
          *   flexible surface motion for fluid and structure
          */
-        MAST::ComplexMeshFieldFunction
-        *_displ;
+        MAST::ComplexMeshFieldFunction             *_complex_displ;
     };
 }
 

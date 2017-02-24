@@ -52,7 +52,7 @@ MAST::StructuralFluidInteractionAssembly(),
 _fluid_complex_solver           (nullptr),
 _pressure_function              (nullptr),
 _freq_domain_pressure_function  (nullptr),
-_displ                          (nullptr)
+_complex_displ                  (nullptr)
 { }
 
 
@@ -81,7 +81,7 @@ init(MAST::ComplexSolverBase*                complex_solver,
     libmesh_assert(complex_solver);
     libmesh_assert(pressure_func);
     
-    _displ                          = displ_func;
+    _complex_displ                  = displ_func;
     _fluid_complex_solver           = complex_solver;
     _pressure_function              = pressure_func;
     _freq_domain_pressure_function  = freq_pressure_func;
@@ -93,7 +93,7 @@ init(MAST::ComplexSolverBase*                complex_solver,
 void
 MAST::FSIGeneralizedAeroForceAssembly::clear_discipline_and_system() {
     
-    _displ                             = nullptr;
+    _complex_displ                     = nullptr;
     _pressure_function                 = nullptr;
     _freq_domain_pressure_function     = nullptr;
     _fluid_complex_solver              = nullptr;
@@ -111,7 +111,7 @@ assemble_generalized_aerodynamic_force_matrix
  MAST::Parameter* p) {
     
     // make sure the data provided is sane
-    libmesh_assert(_displ);
+    libmesh_assert(_complex_displ);
     
     
     // also create localized solution vectos for the bassis vectors
@@ -143,7 +143,7 @@ assemble_generalized_aerodynamic_force_matrix
         localized_basis[i] = _build_localized_vector(_system->system(), *basis[i]).release();
     
     //create a zero-clone copy for the imaginary component of the solution
-    localized_zero.reset(localized_solution->zero_clone().release());
+    localized_zero.reset(localized_basis[0]->zero_clone().release());
     
     
     // if a solution function is attached, initialize it
@@ -156,7 +156,8 @@ assemble_generalized_aerodynamic_force_matrix
     for (unsigned int i=0; i<n_basis; i++) {
         
         // set up the fluid flexible-surface boundary condition for this mode
-        _displ->init     (*localized_basis[i], *localized_zero);
+        _complex_displ->clear();
+        _complex_displ->init(*localized_basis[i], *localized_zero);
         
         
         // solve the complex smamll-disturbance fluid-equations

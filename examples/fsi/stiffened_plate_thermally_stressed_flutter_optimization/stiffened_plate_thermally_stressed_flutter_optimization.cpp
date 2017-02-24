@@ -1837,7 +1837,8 @@ evaluate(const std::vector<Real>& dvars,
                                                                                *_fluid_sys_init);
                 _frequency_domain_fluid_assembly->set_base_solution(base_sol);
                 _frequency_domain_fluid_assembly->set_frequency_function(*_freq_function);
-                
+                _pressure_function->init(base_sol);
+
                 _gaf_database->init(_freq_function,
                                     _complex_solver,                       // fluid complex solver
                                     _pressure_function,

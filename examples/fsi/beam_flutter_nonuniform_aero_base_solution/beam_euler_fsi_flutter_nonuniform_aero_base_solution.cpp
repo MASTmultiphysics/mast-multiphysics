@@ -746,6 +746,7 @@ solve(bool if_write_output,
     _fluid_sys->add_vector("fluid_base_solution");
     _fluid_sys->solution->swap(base_sol);
     _fluid_sys_init->initialize_solution(s);
+    _pressure_function->init(base_sol);
     
     /////////////////////////////////////////////////////////////////
     // Fluid steady-state solution
@@ -1062,12 +1063,13 @@ solve(bool if_write_output,
             fluid_basis_im(n_basis);
             
             std::auto_ptr<libMesh::NumericVector<Real> >
-            zero(complex_fluid_solver.real_solution().zero_clone().release());
+            zero(_structural_sys->solution->zero_clone().release());
             
             for (unsigned int i=0; i<n_basis; i++) {
                 
                 // solve the fluid system for the given structural mode and
                 // the frequency of the flutter root
+                _displ->clear();
                 _displ->init      (*_basis[i], *zero);
                 
                 complex_fluid_solver.solve_block_matrix();

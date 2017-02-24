@@ -655,7 +655,8 @@ MAST::PlateEulerFSIFlutterAnalysis::solve(bool if_write_output,
                                           *_fluid_sys_init);
     assembly.set_base_solution(base_sol);
     assembly.set_frequency_function(*_freq_function);
-    
+    _pressure_function->init(base_sol);
+
 
     
     
@@ -846,12 +847,13 @@ MAST::PlateEulerFSIFlutterAnalysis::solve(bool if_write_output,
             fluid_basis_im(n_basis);
             
             std::auto_ptr<libMesh::NumericVector<Real> >
-            zero(solver.real_solution().zero_clone().release());
+            zero(_structural_sys->solution->zero_clone().release());
             
             for (unsigned int i=0; i<n_basis; i++) {
                 
                 // solve the fluid system for the given structural mode and
                 // the frequency of the flutter root
+                _displ->clear();
                 _displ->init         (*_basis[i], *zero);
                     
                 solver.solve_block_matrix();

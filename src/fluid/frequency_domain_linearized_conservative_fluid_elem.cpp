@@ -684,9 +684,9 @@ slip_wall_surface_residual(bool request_jacobian,
             //////////////////////////////////////////////////////////////
             // contribution from the small-disturbance boundary condition
             //////////////////////////////////////////////////////////////
-            displ_perturb->perturbation(qpoint[qp], _time, tmp_c);
+            (*displ_perturb)(qpoint[qp], _time, tmp_c);
             Dw_i = tmp_c.topRows(3);
-            n_rot_perturb->perturbation(qpoint[qp], normals[qp], _time, Dni);
+            (*n_rot_perturb)(qpoint[qp], normals[qp], _time, Dni);
         }
     
         Dvi_ni_freq_dep   = Dw_i.dot(ni+dni) * iota * omega;

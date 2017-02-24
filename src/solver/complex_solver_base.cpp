@@ -548,6 +548,7 @@ MAST::ComplexSolverBase::solve_block_matrix(MAST::Parameter* p)  {
     
     sol_R.close();
     sol_I.close();
+    sol->close();
     
     ierr = KSPDestroy(&ksp);                  CHKERRABORT(sys.comm().get(), ierr);
     ierr = MatDestroy(&mat);                  CHKERRABORT(sys.comm().get(), ierr);

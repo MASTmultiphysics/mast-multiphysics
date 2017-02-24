@@ -238,9 +238,6 @@ MAST::ComplexMeshFieldFunction::clear() {
         _perturbed_sol_re = nullptr;
         _perturbed_sol_im = nullptr;
     }
-    
-    
-    _system     = nullptr;
 }
 
 

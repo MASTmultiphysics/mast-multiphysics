@@ -407,7 +407,7 @@ _augment_send_list_obj                 (nullptr) {
     
     // create the property functions and add them to the
     
-    _thy             = new MAST::Parameter("thy",  0.0015);
+    _thy             = new MAST::Parameter("thy",    0.01);
     _thz             = new MAST::Parameter("thz",    1.00);
     _rho             = new MAST::Parameter("rho",   2.7e3);
     _E               = new MAST::Parameter("E",     72.e9);
@@ -650,7 +650,8 @@ MAST::BeamEulerFSIFlutterAnalysis::solve(bool if_write_output,
                                           *_fluid_sys_init);
     assembly.set_base_solution(base_sol);
     assembly.set_frequency_function(*_freq_function);
-    
+    _pressure_function->init(base_sol);
+
     
     
     
@@ -843,12 +844,13 @@ MAST::BeamEulerFSIFlutterAnalysis::solve(bool if_write_output,
             fluid_basis_im(n_basis);
             
             std::auto_ptr<libMesh::NumericVector<Real> >
-            zero(solver.real_solution().zero_clone().release());
+            zero(_structural_sys->solution->zero_clone().release());
             
             for (unsigned int i=0; i<n_basis; i++) {
                 
                 // solve the fluid system for the given structural mode and
                 // the frequency of the flutter root
+                _displ->clear();
                 _displ->init         (*_basis[i], *zero);
                 
                 solver.solve_block_matrix();
