@@ -72,7 +72,7 @@ init(const libMesh::NumericVector<Real>& sol_re,
     system.get_dof_map().get_send_list();
     
     // initialize and then localize the vector with the provided solution
-    _sol_re->init(system.n_dofs(),
+    /*_sol_re->init(system.n_dofs(),
                   system.n_local_dofs(),
                   send_list,
                   false,
@@ -84,8 +84,13 @@ init(const libMesh::NumericVector<Real>& sol_re,
                   send_list,
                   false,
                   libMesh::GHOSTED);
-    sol_im.localize(*_sol_im, send_list);
-    
+    sol_im.localize(*_sol_im, send_list);*/
+
+    _sol_re->init(sol_re.size(), true, libMesh::SERIAL);
+    sol_re.localize(*_sol_re);
+    _sol_im->init(sol_im.size(), true, libMesh::SERIAL);
+    sol_im.localize(*_sol_im);
+
     
     // finally, create the mesh interpolation function
     _function_re = new libMesh::MeshFunction(system.get_equation_systems(),
@@ -122,7 +127,7 @@ init_perturbation(const libMesh::NumericVector<Real>& sol_re,
     system.get_dof_map().get_send_list();
     
     // initialize and then localize the vector with the provided solution
-    _perturbed_sol_re->init(system.n_dofs(),
+    /*_perturbed_sol_re->init(system.n_dofs(),
                             system.n_local_dofs(),
                             send_list,
                             false,
@@ -134,7 +139,11 @@ init_perturbation(const libMesh::NumericVector<Real>& sol_re,
                             send_list,
                             false,
                             libMesh::GHOSTED);
-    sol_im.localize(*_perturbed_sol_im, send_list);
+    sol_im.localize(*_perturbed_sol_im, send_list);*/
+    _perturbed_sol_re->init(sol_re.size(), true, libMesh::SERIAL);
+    sol_re.localize(*_perturbed_sol_re);
+    _perturbed_sol_im->init(sol_im.size(), true, libMesh::SERIAL);
+    sol_im.localize(*_perturbed_sol_im);
     
     
     // finally, create the mesh interpolation function

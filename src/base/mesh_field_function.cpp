@@ -149,12 +149,14 @@ init(const libMesh::NumericVector<Real>& sol,
     system.get_dof_map().get_send_list();
     
     // initialize and then localize the vector with the provided solution
-    _sol->init(system.n_dofs(),
+    /*_sol->init(system.n_dofs(),
                        system.n_local_dofs(),
                        send_list,
                        false,
                        libMesh::GHOSTED);
-    sol.localize(*_sol, send_list);
+    sol.localize(*_sol, send_list);*/
+    _sol->init(sol.size(), true, libMesh::SERIAL);
+    sol.localize(*_sol);
     
     // finally, create the mesh interpolation function
     _function = new libMesh::MeshFunction(system.get_equation_systems(),
