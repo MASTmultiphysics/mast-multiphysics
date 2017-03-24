@@ -54,7 +54,8 @@ _n_converged_eigenpairs               (0),
 _n_iterations                         (0),
 _is_generalized_eigenproblem          (false),
 _eigen_problem_type                   (libMesh::NHEP),
-_eigenproblem_assemble_system_object  (nullptr) {
+_eigenproblem_assemble_system_object  (nullptr),
+_output                               (nullptr) {
     
 }
 
@@ -696,6 +697,19 @@ MAST::NonlinearSystem::assemble_residual_derivatives
 
 
 
+void
+MAST::NonlinearSystem::adjoint_solve(MAST::OutputAssemblyBase &output) {
+    
+    libmesh_assert(!_output);
+    
+    _output = &output;
+    
+    libMesh::NonlinearImplicitSystem::adjoint_solve();
+    
+    _output = nullptr;
+}
+
+
 
 void
 MAST::NonlinearSystem::
@@ -703,6 +717,9 @@ assemble_qoi_derivative (const libMesh::QoISet & qoi_indices,
                          bool include_liftfunc,
                          bool apply_constraints) {
     
-    libmesh_error();
+    // make sure the output object has been set
+    libmesh_assert(_output);
+    
+    
 }
 

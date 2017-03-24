@@ -40,6 +40,7 @@ namespace MAST {
     class SlepcEigenSolver;
     class EigenSystemAssembly;
     class PhysicsDisciplineBase;
+    class OutputAssemblyBase;
     
     
     /*!
@@ -108,6 +109,12 @@ namespace MAST {
                                  bool include_liftfunc = true,
                                  bool apply_constraints = true) libmesh_override;
 
+        
+        /*!
+         *   solves the adjoint problem for the provided output function
+         */
+        void adjoint_solve(MAST::OutputAssemblyBase& output);
+        
         
         /**
          * Assembles & solves the eigen system.
@@ -327,6 +334,12 @@ namespace MAST {
          */
         MAST::EigenSystemAssembly *        _eigenproblem_assemble_system_object;
 
+        /*!
+         *    OutputAssemblyBase object for which the adjoint calculation
+         *    is being solved
+         */
+        MAST::OutputAssemblyBase*       _output;
+        
         /**
          * Vector storing the local dof indices that will not be condensed.
          * All dofs that are not in this vector will be eliminated from
