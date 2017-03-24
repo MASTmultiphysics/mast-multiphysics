@@ -23,6 +23,7 @@
 
 // MAST includes
 #include "examples/structural/stiffened_plate_bending_thermal_stress/stiffened_plate_bending_thermal_stress.h"
+#include "examples/structural/base/blade_stiffened_panel_mesh.h"
 #include "examples/base/multilinear_interpolation.h"
 #include "examples/structural/plate_optimization/plate_optimization_base.h"
 #include "examples/structural/stiffened_plate_optimization/stiffened_plate_optimization_base.h"

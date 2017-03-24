@@ -23,6 +23,7 @@
 
 // MAST includes
 #include "examples/fsi/stiffened_plate_thermally_stressed_flutter_optimization/stiffened_plate_thermally_stressed_flutter_optimization.h"
+#include "examples/structural/base/blade_stiffened_panel_mesh.h"
 #include "examples/fsi/base/gaf_database.h"
 #include "optimization/optimization_interface.h"
 #include "optimization/function_evaluation.h"

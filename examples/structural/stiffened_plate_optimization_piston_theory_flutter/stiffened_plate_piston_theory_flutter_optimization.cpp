@@ -22,6 +22,7 @@
 
 // MAST includes
 #include "examples/structural/stiffened_plate_optimization_piston_theory_flutter/stiffened_plate_piston_theory_flutter_optimization.h"
+#include "examples/structural/base/blade_stiffened_panel_mesh.h"
 #include "examples/structural/stiffened_plate_optimization/stiffened_plate_optimization_base.h"
 #include "examples/structural/beam_bending/beam_bending.h"
 #include "examples/base/plot_results.h"
