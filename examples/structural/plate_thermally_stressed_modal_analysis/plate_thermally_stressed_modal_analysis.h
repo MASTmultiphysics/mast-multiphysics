@@ -99,6 +99,9 @@ namespace MAST {
         // width of domain
         Real _width;
         
+        // n load steps
+        unsigned int _n_steps;
+        
         // create the mesh
         libMesh::SerialMesh*           _mesh;
         
@@ -160,7 +163,13 @@ namespace MAST {
         
         // create the Dirichlet boundary condition on top edge
         MAST::DirichletBoundaryCondition*     _dirichlet_top;
-                
+        
+        // create the Dirichlet boundary condition on stiffener edges
+        MAST::DirichletBoundaryCondition*     _dirichlet_stiff_left;
+        
+        // create the Dirichlet boundary condition on stiffener edges
+        MAST::DirichletBoundaryCondition*     _dirichlet_stiff_right;
+
         // vector of parameters to evaluate sensitivity wrt
         std::vector<MAST::Parameter*> _params_for_sensitivity;
     };

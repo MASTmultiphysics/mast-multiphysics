@@ -207,6 +207,7 @@ MAST::RampLaminarAnalysis2D::RampLaminarAnalysis2D() {
     _flight_cond->gas_property.cv = infile(  "cv",   716.);
     _flight_cond->gas_property.T  = infile("temp",   300.);
     _flight_cond->gas_property.rho= infile( "rho",   1.05);
+    _flight_cond->gas_property.if_viscous= infile( "if_viscous",   true);
     
     _flight_cond->init();
     

@@ -40,6 +40,7 @@ namespace MAST {
         cv(0.),
         R(0.),
         a(0.),
+        if_viscous(false),
         Pr(0.),
         k_thermal(0.),
         mu(0.),
@@ -68,6 +69,8 @@ namespace MAST {
          *   Property values for ideal gas
          */
         Real rho, T, pressure, gamma, cp, cv, R, a;
+
+        Real if_viscous;
         
         /*!
          *   Properties for viscous analysis

@@ -37,7 +37,7 @@
 
 MAST::FluidElemBase::FluidElemBase(const unsigned int d,
                                    const MAST::FlightCondition& f):
-_if_viscous(false),
+_if_viscous(f.gas_property.if_viscous),
 _include_pressure_switch(false),
 flight_condition(&f),
 dim(d),
