@@ -159,10 +159,7 @@ namespace MAST {
         
         // create the Dirichlet boundary condition on right edge
         MAST::DirichletBoundaryCondition*     _dirichlet_right;
-        
-        // create the pressure boundary condition
-        MAST::BoundaryConditionBase*             _p_load;
-        
+                
         // vector of parameters to evaluate sensitivity wrt
         std::vector<MAST::Parameter*> _params_for_sensitivity;
         

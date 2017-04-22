@@ -98,6 +98,35 @@ namespace MAST {
 
         
         /*!
+         *    update the transient velocity based on the current solution
+         */
+        virtual void update_velocity(libMesh::NumericVector<Real>& vel,
+                                     const libMesh::NumericVector<Real>& sol) = 0;
+        
+        /*!
+         *    update the transient acceleration based on the current solution
+         */
+        virtual void update_acceleration(libMesh::NumericVector<Real>& acc,
+                                         const libMesh::NumericVector<Real>& sol) = 0;
+        
+        
+        /*!
+         *    update the perturbation in transient velocity based on the
+         *    current perturbed solution
+         */
+        virtual void
+        update_delta_velocity(libMesh::NumericVector<Real>& vel,
+                              const libMesh::NumericVector<Real>& sol) = 0;
+        
+        /*!
+         *    update the perturbation in transient acceleration based on the
+         *    current perturbed solution
+         */
+        virtual void
+        update_delta_acceleration(libMesh::NumericVector<Real>& acc,
+                                  const libMesh::NumericVector<Real>& sol) = 0;
+
+        /*!
          *   solves the current time step for solution and velocity
          */
         virtual void solve() = 0;
@@ -178,36 +207,6 @@ namespace MAST {
         (const std::vector<libMesh::dof_id_type>& dof_indices,
          const std::vector<libMesh::NumericVector<Real>*>& sols,
          MAST::ElementBase& elem) = 0;
-
-        
-        /*!
-         *    update the transient velocity based on the current solution
-         */
-        virtual void _update_velocity(libMesh::NumericVector<Real>& vel,
-                                      const libMesh::NumericVector<Real>& sol) = 0;
-        
-        /*!
-         *    update the transient acceleration based on the current solution
-         */
-        virtual void _update_acceleration(libMesh::NumericVector<Real>& acc,
-                                          const libMesh::NumericVector<Real>& sol) = 0;
-
-        
-        /*!
-         *    update the perturbation in transient velocity based on the 
-         *    current perturbed solution
-         */
-        virtual void
-        _update_delta_velocity(libMesh::NumericVector<Real>& vel,
-                               const libMesh::NumericVector<Real>& sol) = 0;
-        
-        /*!
-         *    update the perturbation in transient acceleration based on the
-         *    current perturbed solution
-         */
-        virtual void
-        _update_delta_acceleration(libMesh::NumericVector<Real>& acc,
-                                   const libMesh::NumericVector<Real>& sol) = 0;
 
         
         /*!

@@ -79,7 +79,7 @@ _linearized_jacobian_solution_product(MAST::ElementBase& elem,
     dynamic_cast<MAST::ConservativeFluidElementBase&>(elem);
     
     const unsigned int
-    n = f.size();
+    n = (unsigned int) f.size();
     
     RealMatrixX
     dummy = RealMatrixX::Zero(n, n);

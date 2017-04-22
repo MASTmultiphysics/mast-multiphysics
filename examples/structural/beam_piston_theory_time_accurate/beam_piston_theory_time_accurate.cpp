@@ -219,7 +219,6 @@ MAST::BeamPistonTheoryTimeAccurateAnalysis::~BeamPistonTheoryTimeAccurateAnalysi
     delete _m_card;
     delete _p_card;
     
-    delete _p_load;
     delete _dirichlet_left;
     delete _dirichlet_right;
     

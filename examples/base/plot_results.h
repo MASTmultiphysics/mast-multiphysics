@@ -32,16 +32,26 @@
 
 
 namespace MAST {
+    
+    // forward declerations
+    class ComplexMeshFieldFunction;
+    class ComplexSolverBase;
 
     void
     plot_structural_flutter_solution(const std::string& nm,
                                      libMesh::System& sys,
                                      const ComplexVectorX& eig_vec,
                                      const std::vector<libMesh::NumericVector<Real>*>& basis);
-    
-    
+
     void
-    plot_structural_modal_vectors();
+    plot_fluid_flutter_solution(const std::string&                      nm,
+                                libMesh::System&            structural_sys,
+                                libMesh::System&                 fluid_sys,
+                                MAST::ComplexMeshFieldFunction&      displ,
+                                MAST::ComplexSolverBase&            solver,
+                                const ComplexVectorX&               eig_vec,
+                                const std::vector<libMesh::NumericVector<Real>*>& structural_basis);
+
 }
 
 

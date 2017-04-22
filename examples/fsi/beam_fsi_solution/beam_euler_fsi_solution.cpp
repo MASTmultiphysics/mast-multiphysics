@@ -39,15 +39,17 @@
 #include "elasticity/structural_system_initialization.h"
 #include "elasticity/structural_discipline.h"
 #include "elasticity/structural_element_base.h"
-#include "elasticity/structural_nonlinear_assembly.h"
+#include "elasticity/structural_transient_assembly.h"
 #include "elasticity/structural_near_null_vector_space.h"
 #include "elasticity/normal_rotation_mesh_function.h"
 #include "property_cards/solid_1d_section_element_property_card.h"
 #include "property_cards/isotropic_material_property_card.h"
 #include "boundary_condition/dirichlet_boundary_condition.h"
 #include "solver/first_order_newmark_transient_solver.h"
+#include "solver/second_order_newmark_transient_solver.h"
 #include "solver/multiphysics_nonlinear_solver.h"
 #include "solver/slepc_eigen_solver.h"
+#include "examples/base/augment_ghost_elem_send_list.h"
 
 
 // libMesh includes
@@ -71,14 +73,18 @@ namespace MAST {
     public:
         FSIBoundaryConditionUpdates(MAST::SystemInitialization&             structural_sys,
                                     MAST::SystemInitialization&             fluid_sys,
+                                    MAST::TransientSolverBase&              str_transient_solver,
+                                    MAST::TransientSolverBase&              fluid_transient_solver,
                                     MAST::MeshFieldFunction&                vel,
                                     MAST::MeshFieldFunction&                displ,
                                     MAST::PressureFunction&                 press):
-        _structural_sys   (structural_sys),
-        _fluid_sys        (fluid_sys),
-        _vel              (vel),
-        _displ            (displ),
-        _press            (press)
+        _structural_sys         (structural_sys),
+        _fluid_sys              (fluid_sys),
+        _str_transient_solver   (str_transient_solver),
+        _fluid_transient_solver (fluid_transient_solver),
+        _vel                    (vel),
+        _displ                  (displ),
+        _press                  (press)
         { }
         
         virtual ~FSIBoundaryConditionUpdates() { }
@@ -101,21 +107,20 @@ namespace MAST {
             libmesh_assert_equal_to(structural_sol.local_size(),
                                     _structural_sys.system().n_local_dofs());
 
+            // ask the structural transient solver to update the velocity
+            std::auto_ptr<libMesh::NumericVector<Real> >
+            structural_vel(structural_sol.zero_clone().release());
+            
+            _str_transient_solver.update_velocity(*structural_vel,
+                                                  structural_sol);
+            
             // clear the data structures before initializing
-            //_vel.clear();
+            _vel.clear();
             _displ.clear();
             
-            //_vel.init        (structural_vel);
+            _vel.init        (*structural_vel);
             _displ.init      (structural_sol);
             _press.init      (fluid_sol);
-            
-//            libMesh::out
-//            << "Fluid Sol:" << std::endl;
-//            fluid_sol.print();
-//            
-//            libMesh::out
-//            << "Structural Sol:" << std::endl;
-//            structural_sol.print();
             
         }
 
@@ -149,21 +154,24 @@ namespace MAST {
             libmesh_assert_equal_to(structural_sol_sens.local_size(),
                                     _structural_sys.system().n_local_dofs());
             
+            // ask the structural transient solver to update the velocity
+            std::auto_ptr<libMesh::NumericVector<Real> >
+            structural_vel(structural_sol.zero_clone().release()),
+            structural_vel_sens(structural_sol.zero_clone().release());
+            
+            _str_transient_solver.update_velocity(*structural_vel,
+                                                  structural_sol);
+            _str_transient_solver.update_delta_velocity(*structural_vel_sens,
+                                                        structural_sol_sens);
+
+            
             // clear the data structure before initialization
-            //_vel.clear();
+            _vel.clear();
             _displ.clear();
             
-            //_vel.init(structural_vel);
+            _vel.init  (*structural_vel, structural_vel_sens.get());
             _displ.init(structural_sol, &structural_sol_sens);
             _press.init(     fluid_sol,      &fluid_sol_sens);
-            
-//            libMesh::out
-//            << "Fluid Sol (inside perturb):" << std::endl;
-//            fluid_sol.print();
-//            
-//            libMesh::out
-//            << "Structural Sol (inside perturb):" << std::endl;
-//            structural_sol.print();
         }
 
         
@@ -171,6 +179,8 @@ namespace MAST {
         
         MAST::SystemInitialization  &           _structural_sys;
         MAST::SystemInitialization  &           _fluid_sys;
+        MAST::TransientSolverBase   &           _str_transient_solver;
+        MAST::TransientSolverBase   &           _fluid_transient_solver;
         MAST::MeshFieldFunction     &           _vel;
         MAST::MeshFieldFunction     &           _displ;
         MAST::PressureFunction      &           _press;
@@ -240,6 +250,9 @@ _bc_updates                         (nullptr) {
     _fluid_sys = &(_fluid_eq_sys->add_system<MAST::NonlinearSystem>("fluid"));
     _fluid_sys->set_init_B_matrix();
     
+    _augment_send_list_obj = new MAST::AugmentGhostElementSendListObj(*_fluid_sys);
+    _fluid_sys->get_dof_map().attach_extra_send_list_object(*_augment_send_list_obj);
+
     
     // initialize the flow conditions
     GetPot infile("input.in");
@@ -382,6 +395,8 @@ _bc_updates                         (nullptr) {
     
     _pressure_function =
     new MAST::PressureFunction(*_fluid_sys_init, *_flight_cond);
+    _pressure_function->use_reference_pressure(0.9*_flight_cond->p0());
+
     
         
     //////////////////////////////////////////////////////////////////////
@@ -458,7 +473,7 @@ _bc_updates                         (nullptr) {
                                                 "displacement");
     _normal_rot   = new MAST::NormalRotationMeshFunction("normal_rotation",
                                                          *_displ);
-    //_slip_wall->add(*_vel);
+    _slip_wall->add(*_vel);
     _slip_wall->add(*_normal_rot);
     
     
@@ -475,7 +490,7 @@ _bc_updates                         (nullptr) {
     _nu              = new MAST::Parameter("nu",     0.33);
     _zero            = new MAST::Parameter("zero",     0.);
     _mach            = new MAST::Parameter("mach",     3.);
-    _rho_air         = new MAST::Parameter("rho" ,   1.05);
+    _rho_air         = new MAST::Parameter("rho"   , 1.05);
     _gamma_air       = new MAST::Parameter("gamma",   1.4);
     
     
@@ -604,6 +619,7 @@ MAST::BeamEulerFSIAnalysis::~BeamEulerFSIAnalysis() {
     delete _gamma_air;
     
     delete _bc_updates;
+    delete _augment_send_list_obj;
 }
 
 
@@ -706,11 +722,18 @@ MAST::BeamEulerFSIAnalysis::solve(bool if_write_output,
     fluid_transient_solver.solution(1).close();
     
     
-    MAST::StructuralNonlinearAssembly   structural_assembly;
+    // create the nonlinear assembly object for the structural solver
+    MAST::StructuralTransientAssembly       structural_assembly;
+    MAST::SecondOrderNewmarkTransientSolver structural_transient_solver;
+    
+    structural_transient_solver.dt       = _time_step_size;
+    
     
     // create the nonlinear assembly object
     structural_assembly.attach_discipline_and_system(*_structural_discipline,
+                                                     structural_transient_solver,
                                                      *_structural_sys_init);
+
     MAST::StructuralNearNullVectorSpace nsp;
     _structural_sys->nonlinear_solver->nearnullspace_object = &nsp;
     
@@ -720,6 +743,8 @@ MAST::BeamEulerFSIAnalysis::solve(bool if_write_output,
     
     MAST::FSIBoundaryConditionUpdates bc_updates(*_structural_sys_init,
                                                  *_fluid_sys_init,
+                                                 structural_transient_solver,
+                                                 fluid_transient_solver,
                                                  *_vel,
                                                  *_displ,
                                                  *_pressure_function);
@@ -742,7 +767,8 @@ MAST::BeamEulerFSIAnalysis::solve(bool if_write_output,
             
             factor                        = std::pow(vel_0/vel_1, p);
             factor                        = std::max(factor, min_factor);
-            fluid_transient_solver.dt    *= factor;
+            //fluid_transient_solver.dt    *= factor;
+            structural_transient_solver.dt= fluid_transient_solver.dt;
             
             libMesh::out << fluid_transient_solver.dt << std::endl;
             
@@ -770,6 +796,7 @@ MAST::BeamEulerFSIAnalysis::solve(bool if_write_output,
         fsi_solver.solve();
 
         fluid_transient_solver.advance_time_step();
+        structural_transient_solver.advance_time_step();
         _structural_sys->time = _fluid_sys->time;
     
         // get the velocity L2 norm
@@ -778,6 +805,7 @@ MAST::BeamEulerFSIAnalysis::solve(bool if_write_output,
         
         tval  += fluid_transient_solver.dt;
         t_step++;
+        _pressure_function->use_reference_pressure(_flight_cond->p0());
     }
     
     fluid_assembly.clear_discipline_and_system();

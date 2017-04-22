@@ -142,8 +142,8 @@ _set_element_perturbed_data(const std::vector<libMesh::dof_id_type>& dof_indices
 
 void
 MAST::SecondOrderNewmarkTransientSolver::
-_update_velocity(libMesh::NumericVector<Real>& vec,
-                 const libMesh::NumericVector<Real>& sol) {
+update_velocity(libMesh::NumericVector<Real>& vec,
+                const libMesh::NumericVector<Real>& sol) {
     
     const libMesh::NumericVector<Real>
     &prev_sol = this->solution(1),
@@ -165,8 +165,8 @@ _update_velocity(libMesh::NumericVector<Real>& vec,
 
 void
 MAST::SecondOrderNewmarkTransientSolver::
-_update_acceleration(libMesh::NumericVector<Real>& vec,
-                     const libMesh::NumericVector<Real>& sol) {
+update_acceleration(libMesh::NumericVector<Real>& vec,
+                    const libMesh::NumericVector<Real>& sol) {
     
     const libMesh::NumericVector<Real>
     &prev_sol = this->solution(1),
@@ -188,8 +188,8 @@ _update_acceleration(libMesh::NumericVector<Real>& vec,
 
 void
 MAST::SecondOrderNewmarkTransientSolver::
-_update_delta_velocity(libMesh::NumericVector<Real>& vec,
-                       const libMesh::NumericVector<Real>& sol) {
+update_delta_velocity(libMesh::NumericVector<Real>& vec,
+                      const libMesh::NumericVector<Real>& sol) {
     
     // first calculate the acceleration
     vec.zero();
@@ -202,8 +202,8 @@ _update_delta_velocity(libMesh::NumericVector<Real>& vec,
 
 void
 MAST::SecondOrderNewmarkTransientSolver::
-_update_delta_acceleration(libMesh::NumericVector<Real>& vec,
-                           const libMesh::NumericVector<Real>& sol) {
+update_delta_acceleration(libMesh::NumericVector<Real>& vec,
+                          const libMesh::NumericVector<Real>& sol) {
     
     // first calculate the acceleration
     vec.zero();
@@ -328,8 +328,11 @@ _elem_linearized_jacobian_solution_product(MAST::ElementBase& elem,
                                            const std::vector<libMesh::dof_id_type>& dof_indices,
                                            RealVectorX& vec) {
     
-    // to be implemented
-    libmesh_error();
+    // make sure that the assembly object is provided
+    libmesh_assert(_assembly);
+    
+    // perform the element assembly
+    _assembly->_linearized_jacobian_solution_product(elem, vec);
 }
 
 

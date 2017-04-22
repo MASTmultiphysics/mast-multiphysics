@@ -58,7 +58,19 @@ namespace MAST {
             
             _if_cp = if_cp;
         }
-        
+
+
+        /*!
+         *   sets the mode of the pressure value return
+         */
+        void use_reference_pressure(Real ref_press) {
+            
+            // only if cp is not being used
+            libmesh_assert(!_if_cp);
+            
+            _ref_pressure = ref_press;
+        }
+
         
         /*!
          *   initiate the mesh function for this solution
@@ -93,6 +105,12 @@ namespace MAST {
          *    true.
          */
         bool _if_cp;
+
+        /*!
+         *    the function will return pressure differential with respect to
+         *    reference pressue defined in the flight condition object.
+         */
+        Real _ref_pressure;
         
         /*!
          *   system associated with the mesh and solution vector

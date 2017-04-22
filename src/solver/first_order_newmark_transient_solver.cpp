@@ -135,7 +135,7 @@ _set_element_perturbed_data(const std::vector<libMesh::dof_id_type>& dof_indices
 
 void
 MAST::FirstOrderNewmarkTransientSolver::
-_update_velocity(libMesh::NumericVector<Real>&       vec,
+update_velocity(libMesh::NumericVector<Real>&       vec,
                  const libMesh::NumericVector<Real>& sol) {
     
     const libMesh::NumericVector<Real>
@@ -156,7 +156,7 @@ _update_velocity(libMesh::NumericVector<Real>&       vec,
 
 void
 MAST::FirstOrderNewmarkTransientSolver::
-_update_delta_velocity(libMesh::NumericVector<Real>&       vec,
+update_delta_velocity(libMesh::NumericVector<Real>&       vec,
                        const libMesh::NumericVector<Real>& sol) {
     
     vec.zero();
@@ -260,7 +260,6 @@ _elem_linearized_jacobian_solution_product(MAST::ElementBase& elem,
 
     // make sure that the assembly object is provided
     libmesh_assert(_assembly);
-    unsigned int n_dofs = (unsigned int)dof_indices.size();
     
     // perform the element assembly
     _assembly->_linearized_jacobian_solution_product(elem, vec);

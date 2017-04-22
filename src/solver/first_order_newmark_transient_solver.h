@@ -90,6 +90,40 @@ namespace MAST {
          */
         virtual void advance_time_step();
         
+        /*!
+         *    update the transient velocity based on the current solution
+         */
+        virtual void update_velocity(libMesh::NumericVector<Real>& vel,
+                                     const libMesh::NumericVector<Real>& sol);
+        
+        /*!
+         *    update the transient acceleration based on the current solution
+         */
+        virtual void update_acceleration(libMesh::NumericVector<Real>& acc,
+                                         const libMesh::NumericVector<Real>& sol) {
+            // should not get here for first order ode
+            libmesh_error();
+        }
+        
+        /*!
+         *    update the perturbation in transient velocity based on the
+         *    current perturbed solution
+         */
+        virtual void
+        update_delta_velocity(libMesh::NumericVector<Real>& vel,
+                              const libMesh::NumericVector<Real>& sol);
+        
+        /*!
+         *    update the perturbation in transient acceleration based on the
+         *    current perturbed solution
+         */
+        virtual void
+        update_delta_acceleration(libMesh::NumericVector<Real>& acc,
+                                  const libMesh::NumericVector<Real>& sol) {
+            // should not get here for first order ode
+            libmesh_error();
+        }
+
     protected:
         
         /*!
@@ -117,39 +151,6 @@ namespace MAST {
          const std::vector<libMesh::NumericVector<Real>*>& sols,
          MAST::ElementBase& elem);
 
-        /*!
-         *    update the transient velocity based on the current solution
-         */
-        virtual void _update_velocity(libMesh::NumericVector<Real>& vel,
-                                      const libMesh::NumericVector<Real>& sol);
-        
-        /*!
-         *    update the transient acceleration based on the current solution
-         */
-        virtual void _update_acceleration(libMesh::NumericVector<Real>& acc,
-                                          const libMesh::NumericVector<Real>& sol) {
-            // should not get here for first order ode
-            libmesh_error();
-        }
-
-        /*!
-         *    update the perturbation in transient velocity based on the
-         *    current perturbed solution
-         */
-        virtual void
-        _update_delta_velocity(libMesh::NumericVector<Real>& vel,
-                               const libMesh::NumericVector<Real>& sol);
-        
-        /*!
-         *    update the perturbation in transient acceleration based on the
-         *    current perturbed solution
-         */
-        virtual void
-        _update_delta_acceleration(libMesh::NumericVector<Real>& acc,
-                                   const libMesh::NumericVector<Real>& sol) {
-            // should not get here for first order ode
-            libmesh_error();
-        }
         
         /*!
          *   performs the element calculations over \par elem, and returns

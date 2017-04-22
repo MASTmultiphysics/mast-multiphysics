@@ -1137,6 +1137,8 @@ linearized_slip_wall_surface_residual(bool request_jacobian,
         //                  wdot_i (ni + dni + Dni) -
         //                  vi (ni + dni + Dni) -
         //                  Dvi dni
+        //               = Dwdot_i (ni + dni) +
+        //                 wdot_i Dni - vi Dni - Dvi dni
         //
         ////////////////////////////////////////////////////////////
         
@@ -1179,8 +1181,8 @@ linearized_slip_wall_surface_residual(bool request_jacobian,
         
         // perturbed quantity contribution to the flux
         Dvi_ni            = (Dw_i.dot(ni+dni) +
-                             dwdot_i.dot(ni+dni+Dni) -
-                             uvec.dot(ni+dni+Dni) -
+                             dwdot_i.dot(Dni) -
+                             uvec.dot(Dni) -
                              Duvec.dot(dni));
         flux             += Dvi_ni * vec1_n1;              // Dvi_ni cons_flux
         flux(n1-1)       += Dvi_ni * primitive_sol.p;      // Dvi_ni {0,0,0,0,p}

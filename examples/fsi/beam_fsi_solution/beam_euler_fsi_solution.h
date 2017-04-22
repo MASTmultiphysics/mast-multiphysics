@@ -63,6 +63,7 @@ namespace MAST {
     class FrequencyDomainPressureFunction;
     class MultiphysicsNonlinearSolverBase;
     class FSIBoundaryConditionUpdates;
+    class AugmentGhostElementSendListObj;
     
     struct BeamEulerFSIAnalysis {
         
@@ -207,6 +208,9 @@ namespace MAST {
         // create the Dirichlet boundary condition on right edge
         MAST::DirichletBoundaryCondition*        _dirichlet_right;
         
+        // object to augment the send list of ghosted fluid elements
+        MAST::AugmentGhostElementSendListObj*    _augment_send_list_obj;
+
         // updates the boundary condition objects with the current solution
         MAST::FSIBoundaryConditionUpdates*      _bc_updates;
         

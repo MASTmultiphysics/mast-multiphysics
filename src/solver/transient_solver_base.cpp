@@ -338,7 +338,7 @@ build_local_quantities(const libMesh::NumericVector<Real>& current_sol,
 
                 if (!_if_highest_derivative_solution)
                     // calculate the velocity and localize it
-                    _update_velocity(vel, current_sol);
+                    update_velocity(vel, current_sol);
                 
                 vel.localize(*sol[i], send_list);
             }
@@ -351,7 +351,7 @@ build_local_quantities(const libMesh::NumericVector<Real>& current_sol,
                 
                 if (!_if_highest_derivative_solution)
                     // calculate the acceleration and localize it
-                    _update_acceleration(acc, current_sol);
+                    update_acceleration(acc, current_sol);
                 
                 acc.localize(*sol[i], send_list);
             }
@@ -414,7 +414,7 @@ build_perturbed_local_quantities(const libMesh::NumericVector<Real>& current_dso
                     current_dsol.localize(*sol[i]);
                 else {
                     
-                    _update_delta_velocity(*sol[i], current_dsol);
+                    update_delta_velocity(*sol[i], current_dsol);
                     if (_if_highest_derivative_solution)
                         sol[i]->zero();
                 }
@@ -428,7 +428,7 @@ build_perturbed_local_quantities(const libMesh::NumericVector<Real>& current_dso
                     current_dsol.localize(*sol[i]);
                 else {
                     
-                    _update_delta_acceleration(*sol[i], current_dsol);
+                    update_delta_acceleration(*sol[i], current_dsol);
                     if (_if_highest_derivative_solution)
                         sol[i]->zero();
                 }
@@ -449,11 +449,11 @@ build_perturbed_local_quantities(const libMesh::NumericVector<Real>& current_dso
 void
 MAST::TransientSolverBase::advance_time_step() {
 
-    // first ask the solver to update the acceleration vector
-    _update_velocity(this->velocity(), *_system->solution);
+    // first ask the solver to update the velocity and acceleration vector
+    update_velocity(this->velocity(), *_system->solution);
 
     if (this->ode_order() > 1)
-        _update_acceleration(this->acceleration(), *_system->solution);
+        update_acceleration(this->acceleration(), *_system->solution);
 
     // next, move all the solutions and velocities into older
     // time step locations

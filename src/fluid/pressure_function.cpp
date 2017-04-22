@@ -38,9 +38,10 @@ MAST::PressureFunction::
 PressureFunction(MAST::SystemInitialization& sys,
                  MAST::FlightCondition&      flt):
 MAST::FieldFunction<Real>("pressure"),
-_if_cp    (false),
-_system   (sys),
-_flt_cond (flt) {
+_if_cp            (false),
+_ref_pressure     (0.),
+_system           (sys),
+_flt_cond         (flt) {
     
 }
 
@@ -140,8 +141,9 @@ operator() (const libMesh::Point& p,
     
     if (_if_cp)
         press     = p_sol.c_pressure(_flt_cond.p0(), _flt_cond.q0());
-    else
-        press     =  p_sol.p - 116235.00000000003*.9;
+    else {
+        press     =  p_sol.p - _ref_pressure;
+    }
 }
 
 

@@ -128,7 +128,33 @@ MAST::StructuralTransientAssembly::
 _linearized_jacobian_solution_product(MAST::ElementBase& elem,
                                       RealVectorX& f) {
     
-    libmesh_error(); // to be implemented
+    MAST::StructuralElementBase& e =
+    dynamic_cast<MAST::StructuralElementBase&>(elem);
+    
+    const unsigned int
+    n = (unsigned int) f.size();
+    
+    RealMatrixX
+    dummy = RealMatrixX::Zero(n, n);
+    
+    f.setZero();
+
+    // assembly of the flux terms
+    e.linearized_internal_residual(false, f, dummy);
+    //e.linearized_damping_residual(false, f, dummy, dummy);
+    e.linearized_side_external_residual(false,
+                                        f,
+                                        dummy,
+                                        dummy,
+                                        _discipline->side_loads());
+    e.linearized_volume_external_residual(false,
+                                          f,
+                                          dummy,
+                                          dummy,
+                                          _discipline->volume_loads());
+    
+    //assembly of the capacitance term
+    e.linearized_inertial_residual(false, f, dummy, dummy, dummy);
 }
 
 

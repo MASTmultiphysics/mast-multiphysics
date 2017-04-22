@@ -38,6 +38,7 @@
 #include "property_cards/isotropic_material_property_card.h"
 #include "boundary_condition/dirichlet_boundary_condition.h"
 #include "solver/slepc_eigen_solver.h"
+#include "examples/base/plot_results.h"
 
 
 // libMesh includes
@@ -383,64 +384,12 @@ MAST::BeamPistonTheoryFlutterAnalysis::solve(bool if_write_output,
     _flutter_root = sol.second;
     
     
-    if (if_write_output) {
-        // now write the flutter mode to an output file.
-        // Flutter mode Y = sum_i (X_i * (xi_re + xi_im)_i)
-        // using the right eigenvector of the system.
-        // where i is the structural mode
-        //
-        // The time domain simulation assumes the temporal solution to be
-        // X(t) = (Y_re + i Y_im) exp(p t)
-        //      = (Y_re + i Y_im) exp(p_re t) * (cos(p_im t) + i sin(p_im t))
-        //      = exp(p_re t) (Z_re + i Z_im ),
-        // where Z_re = Y_re cos(p_im t) - Y_im sin(p_im t), and
-        //       Z_im = Y_re sin(p_im t) + Y_im cos(p_im t).
-        //
-        // We write the simulation of the mode over a period of oscillation
-        //
+    if (sol.first && if_write_output) {
         
-        
-        // first calculate the real and imaginary vectors
-        std::auto_ptr<libMesh::NumericVector<Real> >
-        re(_sys->solution->zero_clone().release()),
-        im(_sys->solution->zero_clone().release());
-        
-        
-        // first the real part
-        _sys->solution->zero();
-        for (unsigned int i=0; i<_basis.size(); i++) {
-            re->add(sol.second->eig_vec_right(i).real(), *_basis[i]);
-            im->add(sol.second->eig_vec_right(i).imag(), *_basis[i]);
-        }
-        re->close();
-        im->close();
-
-        // now open the output processor for writing
-        libMesh::ExodusII_IO flutter_mode_output(*_mesh);
-
-        // use N steps in a time-period
-        Real
-        t_sys = _sys->time,
-        pi    = acos(-1.);
-        unsigned int
-        N_divs = 100;
-        
-        
-        for (unsigned int i=0; i<=N_divs; i++) {
-            _sys->time   =  2.*pi*(i*1.)/(N_divs*1.);
-            
-            _sys->solution->zero();
-            _sys->solution->add( cos(_sys->time), *re);
-            _sys->solution->add(-sin(_sys->time), *im);
-            _sys->solution->close();
-            flutter_mode_output.write_timestep("flutter_mode.exo",
-                                               *_eq_sys,
-                                               i+1,
-                                               _sys->time);
-        }
-        
-        // reset the system time
-        _sys->time = t_sys;
+        MAST::plot_structural_flutter_solution("structural_flutter_mode.exo",
+                                               *_sys,
+                                               sol.second->eig_vec_right,
+                                               _basis);
     }
     
     
