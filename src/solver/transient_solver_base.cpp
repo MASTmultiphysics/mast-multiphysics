@@ -386,6 +386,9 @@ build_perturbed_local_quantities(const libMesh::NumericVector<Real>& current_dso
     send_list = _system->get_dof_map().get_send_list();
     
     
+    std::auto_ptr<libMesh::NumericVector<Real> >
+    tmp(this->solution().zero_clone().release());
+    
     for ( unsigned int i=0; i<=this->ode_order(); i++) {
         
         sol[i] = libMesh::NumericVector<Real>::build(_system->comm()).release();
@@ -411,12 +414,12 @@ build_perturbed_local_quantities(const libMesh::NumericVector<Real>& current_dso
                 
                 if (ode_order() == 1 && _if_highest_derivative_solution)
                     // the provided solution is the current velocity increment
-                    current_dsol.localize(*sol[i]);
+                    current_dsol.localize(*sol[i], send_list);
+                else if (_if_highest_derivative_solution)
+                    sol[i]->zero();
                 else {
-                    
-                    update_delta_velocity(*sol[i], current_dsol);
-                    if (_if_highest_derivative_solution)
-                        sol[i]->zero();
+                    update_delta_velocity(*tmp, current_dsol);
+                    tmp->localize(*sol[i], send_list);
                 }
             }
                 break;
@@ -425,12 +428,12 @@ build_perturbed_local_quantities(const libMesh::NumericVector<Real>& current_dso
                 
                 if (ode_order() == 2 && _if_highest_derivative_solution)
                     // the provided solution is the current velocity increment
-                    current_dsol.localize(*sol[i]);
+                    current_dsol.localize(*sol[i], send_list);
+                else if (_if_highest_derivative_solution)
+                    sol[i]->zero();
                 else {
-                    
-                    update_delta_acceleration(*sol[i], current_dsol);
-                    if (_if_highest_derivative_solution)
-                        sol[i]->zero();
+                    update_delta_acceleration(*tmp, current_dsol);
+                    tmp->localize(*sol[i], send_list);
                 }
             }
                 break;

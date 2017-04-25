@@ -263,10 +263,7 @@ __mast_multiphysics_petsc_snes_residual (SNES snes, Vec x, Vec r, void * ctx) {
     // resotre the subvectors
     //////////////////////////////////////////////////////////////////
     for (unsigned int i=0; i< nd; i++) {
-        
-        // system for this discipline
-        MAST::NonlinearSystem& sys = solver->get_system_assembly(i).system();
-        
+                
         // get the IS for this system
         IS sys_is = solver->index_sets()[i];
 
@@ -367,9 +364,6 @@ __mast_multiphysics_petsc_snes_jacobian(SNES snes, Vec x, Mat jac, Mat pc, void 
     // resotre the subvectors
     //////////////////////////////////////////////////////////////////
     for (unsigned int i=0; i< nd; i++) {
-        
-        // system for this discipline
-        MAST::NonlinearSystem& sys = solver->get_system_assembly(i).system();
         
         // get the IS for this system
         IS sys_is = solver->index_sets()[i];
@@ -477,6 +471,7 @@ MAST::MultiphysicsNonlinearSolverBase::solve() {
     //////////////////////////////////////////////////////////////////////
     const bool       sys_name = libMesh::on_command_line("--solver_system_names");
     std::string      nm;
+    unsigned int     n_local_dofs = 0;
     std::vector<__mast_multiphysics_petsc_shell_context>
     mat_ctx(_n_disciplines*_n_disciplines);
     
@@ -489,7 +484,8 @@ MAST::MultiphysicsNonlinearSolverBase::solve() {
         MAST::NonlinearSystem& sys = _discipline_assembly[i]->system();
         
         // add the number of dofs in this system to the global count
-        _n_dofs   +=  sys.n_dofs();
+        _n_dofs      +=  sys.n_dofs();
+        n_local_dofs +=  sys.n_local_dofs();
         
         for (unsigned int j=0; j<_n_disciplines; j++) {
             
@@ -571,7 +567,7 @@ MAST::MultiphysicsNonlinearSolverBase::solve() {
     // setup the vector for solution
     //////////////////////////////////////////////////////////////////////
     ierr = VecCreate(this->comm().get(), &_sol);        CHKERRABORT(this->comm().get(), ierr);
-    ierr = VecSetSizes(_sol, PETSC_DECIDE, _n_dofs);    CHKERRABORT(this->comm().get(), ierr);
+    ierr = VecSetSizes(_sol, n_local_dofs, _n_dofs);    CHKERRABORT(this->comm().get(), ierr);
     ierr = VecSetType(_sol, VECMPI);                    CHKERRABORT(this->comm().get(), ierr);
     ierr = VecDuplicate(_sol, &_res);                   CHKERRABORT(this->comm().get(), ierr);
     
@@ -658,7 +654,6 @@ MAST::MultiphysicsNonlinearSolverBase::solve() {
     
     // setup the ksp
     ierr = SNESGetKSP (snes, &ksp);                   CHKERRABORT(this->comm().get(), ierr);
-    //ierr = KSPSetFromOptions(ksp);                    CHKERRABORT(this->comm().get(), ierr);
     ierr = SNESSetFromOptions(snes);                  CHKERRABORT(this->comm().get(), ierr);
     
     

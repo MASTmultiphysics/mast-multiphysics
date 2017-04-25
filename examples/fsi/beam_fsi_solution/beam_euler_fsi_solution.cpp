@@ -344,10 +344,7 @@ _bc_updates                         (nullptr) {
     
     // initialize the equation system for analysis
     _fluid_eq_sys->init();
-    
-    // print the information
-    _fluid_eq_sys->print_info();
-    
+        
     // create the oundary conditions for slip-wall and far-field
     _far_field     = new MAST::BoundaryConditionBase(MAST::FAR_FIELD),
     _symm_wall     = new MAST::BoundaryConditionBase(MAST::SYMMETRY_WALL);
@@ -550,7 +547,8 @@ _bc_updates                         (nullptr) {
     _pressure->add(*_pressure_function);
     _structural_discipline->add_volume_load(0, *_pressure);
 
-    
+    _fluid_eq_sys->print_info();
+    _structural_eq_sys->print_info();
 }
 
 

@@ -169,12 +169,15 @@ init(const libMesh::NumericVector<Real>& sol,
 
         _dsol = libMesh::NumericVector<Real>::build(system.comm()).release();
 
-        _dsol->init(system.n_dofs(),
+        /*_dsol->init(system.n_dofs(),
                             system.n_local_dofs(),
                             send_list,
                             false,
                             libMesh::GHOSTED);
-        dsol->localize(*_dsol, send_list);
+         dsol->localize(*_dsol, send_list);*/
+        _dsol->init(dsol->size(), true, libMesh::SERIAL);
+        dsol->localize(*_sol);
+        
         
         // finally, create the mesh interpolation function
         _perturbed_function =
