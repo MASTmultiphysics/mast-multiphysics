@@ -28,13 +28,14 @@
 
 // MAST includes
 #include "base/mast_data_types.h"
+#include "optimization/function_evaluation.h"
 
 // libMesh includes
 #include "libmesh/libmesh.h"
 
 
-libMesh::LibMeshInit*  __init;
-
+libMesh::LibMeshInit     *__init         = nullptr;
+MAST::FunctionEvaluation *__my_func_eval = nullptr;
 
 struct GlobalTestFixture {
     

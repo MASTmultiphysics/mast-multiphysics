@@ -47,7 +47,7 @@ namespace MAST {
     class Solid2DSectionElementPropertyCard;
     class PistonTheoryBoundaryCondition;
     class BoundaryConditionBase;
-    
+    class NonlinearSystem;
     
     struct BuildStructural2DElem {
         

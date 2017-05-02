@@ -25,6 +25,7 @@
 // MAST includes
 #include "examples/structural/bar_extension/bar_extension.h"
 #include "tests/base/check_sensitivity.h"
+#include "base/nonlinear_system.h"
 
 
 

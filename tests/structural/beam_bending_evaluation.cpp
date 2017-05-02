@@ -25,6 +25,7 @@
 // MAST includes
 #include "examples/structural/beam_bending/beam_bending.h"
 #include "tests/base/check_sensitivity.h"
+#include "base/nonlinear_system.h"
 
 
 BOOST_FIXTURE_TEST_SUITE  (Structural1DBeamBending,

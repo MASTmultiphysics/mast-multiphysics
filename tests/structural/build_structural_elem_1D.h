@@ -30,7 +30,6 @@
 #include "libmesh/equation_systems.h"
 #include "libmesh/serial_mesh.h"
 #include "libmesh/mesh_generation.h"
-#include "libmesh/nonlinear_implicit_system.h"
 #include "libmesh/fe_type.h"
 #include "libmesh/dof_map.h"
 
@@ -47,7 +46,8 @@ namespace MAST {
     class Solid1DSectionElementPropertyCard;
     class PistonTheoryBoundaryCondition;
     class BoundaryConditionBase;
-    
+    class NonlinearSystem;
+
     
     struct BuildStructural1DElem {
 

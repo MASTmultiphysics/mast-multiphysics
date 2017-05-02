@@ -47,6 +47,7 @@ endif()
 
 
 set (libmesh_dir       "libmesh-dir" CACHE STRING "Directory containing libMesh header and library")
+set (eigen_include_dir "eigen-include-dir" CACHE STRING "Directory containing eigen header files")
 set (boost_include_dir "boost-include-dir" CACHE STRING "Directory containing boost header files")
 set (boost_test_lib    "boost-unit-test-lib" CACHE STRING "BOOST unit test library")
 set (boost_lib_dir     "boost-lib-dir" CACHE STRING "Directory containing boost unit test library files")
@@ -69,6 +70,7 @@ include_directories (${PROJECT_SOURCE_DIR}/../src
                      ${PROJECT_SOURCE_DIR}/../examples
          		     ${PROJECT_SOURCE_DIR}/../tests
                      ${PROJECT_SOURCE_DIR}/../
+                             ${eigen_include_dir}
 		             ${boost_include_dir})
 
 include_directories (SYSTEM ${mpi_include_dir})
@@ -162,6 +164,7 @@ file (GLOB_RECURSE mast_test_source_files
       ${PROJECT_SOURCE_DIR}/../examples/*.h
       ${PROJECT_SOURCE_DIR}/../tests/*.cpp
       ${PROJECT_SOURCE_DIR}/../tests/*.h)
+list (REMOVE_ITEM mast_test_source_files ${PROJECT_SOURCE_DIR}/../examples/base/examples_driver.cpp)
 add_executable (mast_tests ${mast_test_source_files})
 
 target_link_libraries (mast_tests
@@ -171,4 +174,11 @@ set_property (TARGET mast_tests APPEND
 	          PROPERTY INCLUDE_DIRECTORIES
 	          ${libmesh_dir}/include
 	          ${})
+set_property (TARGET mast_tests APPEND 
+              PROPERTY INCLUDE_DIRECTORIES
+              ${petsc_dir}/include)
+set_property (TARGET mast_tests APPEND 
+              PROPERTY INCLUDE_DIRECTORIES
+              ${slepc_dir}/include)
+
 

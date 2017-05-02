@@ -26,6 +26,7 @@
 #include "examples/structural/membrane_extension_uniaxial_stress/membrane_extension_uniaxial.h"
 #include "examples/structural/membrane_extension_biaxial_stress/membrane_extension_biaxial.h"
 #include "tests/base/check_sensitivity.h"
+#include "base/nonlinear_system.h"
 
 
 

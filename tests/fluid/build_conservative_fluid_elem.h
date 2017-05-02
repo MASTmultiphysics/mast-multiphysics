@@ -36,7 +36,6 @@
 #include "libmesh/equation_systems.h"
 #include "libmesh/parallel_mesh.h"
 #include "libmesh/mesh_generation.h"
-#include "libmesh/nonlinear_implicit_system.h"
 #include "libmesh/fe_type.h"
 #include "libmesh/dof_map.h"
 
@@ -55,7 +54,8 @@ namespace MAST {
     class RigidSurfaceMotion;
     class RigidSurfaceDisplacement;
     class RigidSurfaceNormalRotation;
-
+    class NonlinearSystem;
+    
     
     struct BuildConservativeFluidElem {
         

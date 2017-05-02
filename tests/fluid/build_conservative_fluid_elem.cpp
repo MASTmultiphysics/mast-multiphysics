@@ -35,6 +35,7 @@
 #include "base/boundary_condition_base.h"
 #include "aeroelasticity/frequency_function.h"
 #include "fluid/frequency_domain_linearized_conservative_fluid_elem.h"
+#include "base/nonlinear_system.h"
 
 // libMesh includes
 #include "libmesh/mesh_generation.h"

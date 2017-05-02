@@ -35,6 +35,7 @@
 #include "base/constant_field_function.h"
 #include "property_cards/isotropic_material_property_card.h"
 #include "elasticity/structural_element_base.h"
+#include "base/nonlinear_system.h"
 
 
 // libMesh includes
