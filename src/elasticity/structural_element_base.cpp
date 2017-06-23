@@ -832,9 +832,24 @@ linearized_volume_external_residual (bool request_jacobian,
                                                      *it.first->second);
                 break;
                 
+            case MAST::TEMPERATURE: {
+                
+                const unsigned int
+                n = (unsigned int) f.size();
+                
+                RealVectorX
+                local_f  =  RealVectorX::Zero(n);
+                RealMatrixX
+                mat      =  RealMatrixX::Zero(n, n);
+                
+                // this accounts for the perturbation of displacement.
+                // Perturbation in temperature is not currently handled
+                thermal_residual(true, local_f, mat, *it.first->second);
+                f  +=  mat*_delta_sol;
+            }
+                break;
                 
             case MAST::PISTON_THEORY:
-            case MAST::TEMPERATURE:
             default:
                 // not implemented yet
                 libmesh_error();

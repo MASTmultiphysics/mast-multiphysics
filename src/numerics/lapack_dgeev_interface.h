@@ -126,20 +126,20 @@ extern "C" {
      *                have converged.
      *  =====================================================================
      */
-    extern int dgeev_(char*    jobvl,
-                      char*    jobvr,
-                      int*     n,
-                      double*  a,
-                      int*     lda,
-                      double*  w_r,
-                      double*  w_i,
-                      double*  vl,
-                      int*     ldvl,
-                      double*  vr,
-                      int*     ldvr,
-                      double*  work,
-                      int*     lwork,
-                      int*     info);
+    extern void dgeev_(const char*    jobvl,
+                       const char*    jobvr,
+                       int*     n,
+                       double*  a,
+                       int*     lda,
+                       double*  w_r,
+                       double*  w_i,
+                       double*  vl,
+                       int*     ldvl,
+                       double*  vr,
+                       int*     ldvr,
+                       double*  work,
+                       int*     lwork,
+                       int*     info);
     
 }
 

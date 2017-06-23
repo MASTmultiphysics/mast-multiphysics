@@ -124,7 +124,7 @@ MAST::PKFlutterSolver::clear_solutions() {
 unsigned int
 MAST::PKFlutterSolver::n_roots_found() const {
     
-    std::map<Real, MAST::FlutterRootCrossoverBase*>::const_iterator
+    std::multimap<Real, MAST::FlutterRootCrossoverBase*>::const_iterator
     it = _flutter_crossovers.begin(),
     end = _flutter_crossovers.end();
     
@@ -389,7 +389,7 @@ MAST::PKFlutterSolver::get_root(const unsigned int n) const {
     
     libmesh_assert(n < n_roots_found());
     
-    std::map<Real, MAST::FlutterRootCrossoverBase*>::const_iterator
+    std::multimap<Real, MAST::FlutterRootCrossoverBase*>::const_iterator
     it = _flutter_crossovers.begin(),
     end = _flutter_crossovers.end();
     
@@ -414,7 +414,7 @@ MAST::PKFlutterSolver::find_next_root(const Real g_tol,
 {
     // iterate over the cross-over points and calculate the next that has
     // not been evaluated
-    std::map<Real, MAST::FlutterRootCrossoverBase*>::iterator
+    std::multimap<Real, MAST::FlutterRootCrossoverBase*>::iterator
     it = _flutter_crossovers.begin(), end = _flutter_crossovers.end();
     while ( it != end)
     {
@@ -459,7 +459,7 @@ MAST::PKFlutterSolver::find_critical_root(const Real g_tol,
 {
     // iterate over the cross-over points and calculate the next that has
     // not been evaluated
-    std::map<Real, MAST::FlutterRootCrossoverBase*>::iterator
+    std::multimap<Real, MAST::FlutterRootCrossoverBase*>::iterator
     it = _flutter_crossovers.begin(), end = _flutter_crossovers.end();
     
     if (it == end) // no potential cross-over points were identified

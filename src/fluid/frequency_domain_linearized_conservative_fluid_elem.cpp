@@ -574,21 +574,20 @@ slip_wall_surface_residual(bool request_jacobian,
     
     // get the surface motion object from the boundary condition object
     MAST::FieldFunction<RealVectorX>
-    *displ   = nullptr;
+    *vel   = nullptr;
     MAST::NormalRotationFunctionBase<RealVectorX>
     *n_rot = nullptr;
 
     MAST::FieldFunction<ComplexVectorX>
-    *displ_perturb   = nullptr;
+    *displ_perturb = nullptr;
     MAST::NormalRotationFunctionBase<ComplexVectorX>
     *n_rot_perturb = nullptr;
 
-    if (p.contains("displacement")) {
-        
-        displ = &p.get<MAST::FieldFunction<RealVectorX> >("displacement");
-        // if displ is provided then n_rot must also be provided
-        libmesh_assert(p.contains("normal_rotation"));
-        
+    if (p.contains("velocity"))
+        vel = &p.get<MAST::FieldFunction<RealVectorX> >("velocity");
+    
+    if (p.contains("normal_rotation")) {
+
         MAST::FieldFunction<RealVectorX>&
         tmp = p.get<MAST::FieldFunction<RealVectorX> >("normal_rotation");
         n_rot = dynamic_cast<MAST::NormalRotationFunctionBase<RealVectorX>*>(&tmp);
@@ -649,6 +648,8 @@ slip_wall_surface_residual(bool request_jacobian,
         //                  wdot_i (ni + dni + Dni) -
         //                  vi (ni + dni + Dni) -
         //                  Dvi dni
+        //               = Dwdot_i (ni + dni) +
+        //                 wdot_i Dni - vi Dni - Dvi dni
         //
         ////////////////////////////////////////////////////////////
         
@@ -667,17 +668,19 @@ slip_wall_surface_residual(bool request_jacobian,
         //////////////////////////////////////////////////////////////
         // contribution from the base-flow boundary condition
         //////////////////////////////////////////////////////////////
-        if (displ) {
+        if (vel) {
             
-            (*displ)(qpoint[qp], _time, tmp);
+            (*vel)(qpoint[qp], _time, tmp);
             dwdot_i = tmp.topRows(3);
+        }
+        
+        if (n_rot)
             (*n_rot)(qpoint[qp], normals[qp], _time, dni);
 
-            ui_ni_steady  =  dwdot_i.dot(ni+dni) - uvec.dot(dni);
-
-            flux         += ui_ni_steady * b_V * vec2_n1;               // vi_ni  dcons_flux
-            flux(n1-1)   += ui_ni_steady * b_V * sd_primitive_sol.dp;   // vi_ni {0,0,0,0,Dp}
-        }
+        ui_ni_steady  =  dwdot_i.dot(ni+dni) - uvec.dot(dni);
+        
+        flux         += ui_ni_steady * b_V * vec2_n1;               // vi_ni  dcons_flux
+        flux(n1-1)   += ui_ni_steady * b_V * sd_primitive_sol.dp;   // vi_ni {0,0,0,0,Dp}
         
         if (displ_perturb) {
             
@@ -691,8 +694,8 @@ slip_wall_surface_residual(bool request_jacobian,
     
         Dvi_ni_freq_dep   = Dw_i.dot(ni+dni) * iota * omega;
         Dvi_ni_freq_indep = (dwdot_i.cast<Complex>().dot(ni.cast<Complex>()+
-                                         dni.cast<Complex>()+Dni) -
-                             uvec.cast<Complex>().dot(ni.cast<Complex>()+dni.cast<Complex>()+Dni) -
+                                                         dni.cast<Complex>()) -
+                             uvec.cast<Complex>().dot(Dni) -
                              Duvec.dot(dni));
         
         
