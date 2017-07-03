@@ -51,7 +51,7 @@ MAST::ComplexNormalRotationMeshFunction::operator()(const libMesh::Point& p,
     v_im;
     
     function_re(p, 0., v_re);
-    function_re(p, 0., v_im);
+    function_im(p, 0., v_im);
     
     
     // perturbation of the normal requires calculation of the curl of

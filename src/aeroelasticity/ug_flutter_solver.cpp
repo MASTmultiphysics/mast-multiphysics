@@ -554,8 +554,17 @@ MAST::UGFlutterSolver::_initialize_matrices(Real kr,
     dynamic_cast<MAST::FSIGeneralizedAeroForceAssembly*>(_assembly)->
     assemble_generalized_aerodynamic_force_matrix(*_basis_vectors, a);
     
+ 
+    // scale the force vector by -1 since MAST calculates all quantities
+    // for a R(X)=0 equation so that matrix/vector quantity is assumed
+    // to be on the left of the equality. This is not consistent with
+    // the expectation of a flutter solver, which expects the force
+    // vector to be defined on the RHS. Hence, we multiply the quantity
+    // here to maintain consistency.
+    a  *= -1.;
+
     
-    A    = pow(kr/(*_bref_param)(),2) * m.cast<Complex>() -  (_rho/2.) * a;
+    A    = pow(kr/(*_bref_param)(),2) * m.cast<Complex>() + (_rho/2.) * a;
     B    = k.cast<Complex>();
 }
 
@@ -610,7 +619,16 @@ _initialize_matrix_sensitivity_for_param(const libMesh::ParameterVector& params,
     //dynamic_cast<MAST::FSIGeneralizedAeroForceAssembly*>(_assembly)->
     //assemble_generalized_aerodynamic_force_matrix(*_basis_vectors, a);
     
-    A    = pow(kr/(*_bref_param)(),2) * m.cast<Complex>() -  (_rho/2.) * a;
+    
+    // scale the force vector by -1 since MAST calculates all quantities
+    // for a R(X)=0 equation so that matrix/vector quantity is assumed
+    // to be on the left of the equality. This is not consistent with
+    // the expectation of a flutter solver, which expects the force
+    // vector to be defined on the RHS. Hence, we multiply the quantity
+    // here to maintain consistency.
+    a  *= -1.;
+    
+    A    = pow(kr/(*_bref_param)(),2) * m.cast<Complex>() +  (_rho/2.) * a;
     B    = k.cast<Complex>();
 }
 
@@ -655,8 +673,16 @@ _initialize_matrix_sensitivity_for_kr(Real kr,
     dynamic_cast<MAST::FSIGeneralizedAeroForceAssembly*>(_assembly)->
     assemble_generalized_aerodynamic_force_matrix(*_basis_vectors, a, _kr_param);
     
+    // scale the force vector by -1 since MAST calculates all quantities
+    // for a R(X)=0 equation so that matrix/vector quantity is assumed
+    // to be on the left of the equality. This is not consistent with
+    // the expectation of a flutter solver, which expects the force
+    // vector to be defined on the RHS. Hence, we multiply the quantity
+    // here to maintain consistency.
+    a  *= -1.;
+
     
-    A    = 2.*kr*pow((*_bref_param)(),-2) * m.cast<Complex>() -  (_rho/2.) * a;
+    A    = 2.*kr*pow((*_bref_param)(),-2) * m.cast<Complex>() +  (_rho/2.) * a;
     B    = ComplexMatrixX::Zero(n, n);
 }
 

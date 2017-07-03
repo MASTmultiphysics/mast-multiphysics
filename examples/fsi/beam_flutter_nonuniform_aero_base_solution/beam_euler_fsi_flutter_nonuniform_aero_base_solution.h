@@ -143,10 +143,6 @@ namespace MAST {
         *_slip_wall,
         *_pressure;
         
-        
-        MAST::DisplacementFunctionBase
-        *_panel_shape;
-        
 
         /*!
          *   surface motion for flutter analysis

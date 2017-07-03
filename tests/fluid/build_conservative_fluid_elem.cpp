@@ -147,7 +147,6 @@ MAST::BuildConservativeFluidElem::BuildConservativeFluidElem() {
     _base_sol(0) = _flight_cond->rho();
     _base_sol(1) = _flight_cond->rho_u1();
     _base_sol(2) = _flight_cond->rho_u2();
-    //s(3) = _flight_cond->rho_u3();
     _base_sol(3) = _flight_cond->rho_e();
 
 }

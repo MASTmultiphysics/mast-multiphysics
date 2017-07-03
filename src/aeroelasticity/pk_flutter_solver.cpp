@@ -1008,9 +1008,16 @@ MAST::PKFlutterSolver::_initialize_matrices(const Real k_red,
     dynamic_cast<MAST::FSIGeneralizedAeroForceAssembly*>(_assembly)->
     assemble_generalized_aerodynamic_force_matrix(*_basis_vectors, a);
 
+    // scale the force vector by -1 since MAST calculates all quantities
+    // for a R(X)=0 equation so that matrix/vector quantity is assumed
+    // to be on the left of the equality. This is not consistent with
+    // the expectation of a flutter solver, which expects the force
+    // vector to be defined on the RHS. Hence, we multiply the quantity
+    // here to maintain consistency.
+    a  *= -1.;
 
     A.topRightCorner    (n, n)    =  ComplexMatrixX::Identity(n, n);
-    A.bottomLeftCorner  (n, n)    = -k.cast<Complex>() - _rho/2.*v_ref*v_ref*a;
+    A.bottomLeftCorner  (n, n)    = -k.cast<Complex>() + _rho/2.*v_ref*v_ref*a;
     B.topLeftCorner     (n, n)    = ComplexMatrixX::Identity(n, n);
     B.bottomRightCorner (n, n)    = m.cast<Complex>();
     

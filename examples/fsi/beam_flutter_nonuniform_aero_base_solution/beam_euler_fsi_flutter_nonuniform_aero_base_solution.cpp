@@ -144,7 +144,7 @@ namespace MAST {
             rot    = RealVectorX::Zero(3);
             
             //w(1) = .5*_t_by_c* sin(_n*_pi*p(0)/_length);
-            dwdx(0) = .5*_t_by_c*_n*_pi/_length * cos(_n*_pi*p(0)/_length);
+            dwdx(1) = .5*_t_by_c*_n*_pi/_length * cos(_n*_pi*p(0)/_length);
                         
             // now prepare the rotation vector
             rot(0) = dwdy(2) - dwdz(1); // dwz/dy - dwy/dz
@@ -198,7 +198,6 @@ _far_field                              (nullptr),
 _symm_wall                              (nullptr),
 _slip_wall                              (nullptr),
 _pressure                               (nullptr),
-_panel_shape                            (nullptr),
 _displ                                  (nullptr),
 _vel                                    (nullptr),
 _normal_rot                             (nullptr),
@@ -509,6 +508,8 @@ _augment_send_list_obj                  (nullptr) {
     _normal_rot   = new MAST::ComplexNormalRotationMeshFunction("frequency_domain_normal_rotation",
                                                                 *_displ);
     _slip_wall->add(*_vel);
+    _slip_wall->add(*_steady_normal_rot);
+    _slip_wall->add(*_displ);
     _slip_wall->add(*_normal_rot);
     
     
@@ -624,7 +625,6 @@ MAST::BeamEulerFSIFlutterNonuniformAeroBaseAnalysis::
     delete _pressure_function;
     delete _freq_domain_pressure_function;
     
-    delete _panel_shape;
     delete _vel;
     delete _displ;
     delete _normal_rot;
@@ -747,7 +747,6 @@ solve(bool if_write_output,
     _fluid_sys->add_vector("fluid_base_solution");
     _fluid_sys->solution->swap(base_sol);
     _fluid_sys_init->initialize_solution(s);
-    _pressure_function->init(base_sol);
     
     /////////////////////////////////////////////////////////////////
     // Fluid steady-state solution
@@ -870,6 +869,7 @@ solve(bool if_write_output,
     complex_fluid_assembly.set_base_solution(base_sol);
     complex_fluid_assembly.set_frequency_function(*_freq_function);
     
+    _pressure_function->init(base_sol);
     
     
     

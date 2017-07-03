@@ -693,8 +693,7 @@ slip_wall_surface_residual(bool request_jacobian,
         }
     
         Dvi_ni_freq_dep   = Dw_i.dot(ni+dni) * iota * omega;
-        Dvi_ni_freq_indep = (dwdot_i.cast<Complex>().dot(ni.cast<Complex>()+
-                                                         dni.cast<Complex>()) -
+        Dvi_ni_freq_indep = (dwdot_i.cast<Complex>().dot(Dni) -
                              uvec.cast<Complex>().dot(Dni) -
                              Duvec.dot(dni));
         
