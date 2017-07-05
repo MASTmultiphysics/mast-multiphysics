@@ -104,8 +104,9 @@ cmake ../ -Dlibmesh_dir=~/Documents/codes/libmesh \
 -Dpetsc_dir=~/Documents/codes/numerical_lib/petsc \
 -Dslepc_dir=~/Documents/codes/numerical_lib/slepc \
 -Dboost_include_dir=/opt/local/include \
--Dmpi_include_dir=/opt/local/include/openmpi-mp \
--Dmpi_lib_dir=/opt/local/lib/openmpi-mp -Dlapack_lib_dir=/usr/lib \
+-Dmpi_include_dir=/opt/local/include/openmpi-clang38 \
+-Dmpi_lib_dir=/opt/local/lib/openmpi-clang38 \
+-Dlapack_lib_dir=/usr/lib \
 -Dblas_lib_dir=/usr/lib -Dboost_lib_dir=/opt/local/lib \
 -Dgcmma_lib_file=gcmma \
 -Dgcmma_lib_dir=~/Documents/codes/numerical_lib/gcmma/build \
@@ -116,11 +117,17 @@ cmake ../ -Dlibmesh_dir=~/Documents/codes/libmesh \
 -Dfortran_lib_file=libgfortran.3.dylib \
 -Dfortran_lib_dir=/opt/local/lib/libgcc \
 -Dboost_test_lib=boost_unit_test_framework-mt \
--DCMAKE_Fortran_COMPILER=mpif90 -DCMAKE_BUILD_TYPE=Release \
+-DCMAKE_Fortran_COMPILER=mpif90-openmpi-clang38 \
+-DCMAKE_BUILD_TYPE=Release \
 -DCMAKE_CXX_FLAGS=-std=c++11 \
 -DENABLE_GCMMA=ON \
 -DENABLE_DOT=ON \
--DENABLE_NPSOL=ON 
+-DENABLE_CYTHON=ON \
+-Dpython_include_dir=/opt/local/Library/Frameworks/Python.framework/Versions/3.6/include/python3.6m \
+-Dpython_lib_dir=/opt/local/Library/Frameworks/Python.framework/Versions/3.6/lib \
+-Dpython_lib_file=libpython3.6.dylib \
+-Dpython_include_dir=/opt/local/Library/Frameworks/Python.framework/Versions/3.6/include/python3.6m \
+-DCYTHON=/opt/local/bin/cython
 
 Note: CMAKE_BUILD_TYPE=Release builds an optimized version, while
 CMAKE_BUILD_TYPE=Debug builds the debug version of the code. 

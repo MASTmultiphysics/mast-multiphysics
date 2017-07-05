@@ -70,7 +70,7 @@
 #include "examples/fsi/stiffened_plate_thermally_stressed_flutter_optimization/stiffened_plate_thermally_stressed_flutter_optimization.h"
 #include "examples/fsi/plate_flutter_solution_half_domain/plate_euler_fsi_half_domain_flutter_solution.h"
 #include "examples/fsi/beam_fsi_solution/beam_euler_fsi_solution.h"
-#include "examples/fsi/beam_aerothermoelastic_flutter_solution/beam_aerothermoelastic_flutter_solution.h"
+//#include "examples/fsi/beam_aerothermoelastic_flutter_solution/beam_aerothermoelastic_flutter_solution.h"
 #include "examples/thermal/bar_transient/bar_transient.h"
 #include "examples/thermal/bar_steady_state/bar_steady_state.h"
 
@@ -486,8 +486,8 @@ int main(int argc, char* const argv[]) {
         fluid_analysis<MAST::BeamFSIFlutterHighOrderConvergence>(case_name);
     else if (case_name == "beam_fsi_nonuniform_aero_base_flutter_analysis")
         fluid_analysis<MAST::BeamEulerFSIFlutterNonuniformAeroBaseAnalysis>(case_name);
-    else if (case_name == "beam_aerothermoelastic_flutter_analysis")
-        fluid_analysis<MAST::BeamAerothermoelasticFlutterSolution>(case_name);
+//    else if (case_name == "beam_aerothermoelastic_flutter_analysis")
+//        fluid_analysis<MAST::BeamAerothermoelasticFlutterSolution>(case_name);
     else if (case_name == "beam_fsi_flutter_optimization")
         optimization<MAST::BeamFSIFlutterSizingOptimization>(case_name,
                                                              libMesh::EDGE2,
