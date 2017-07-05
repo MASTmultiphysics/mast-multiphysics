@@ -41,6 +41,7 @@
 #include "examples/structural/plate_bending_thermal_stress/plate_bending_thermal_stress.h"
 #include "examples/structural/plate_modal_analysis/plate_modal_analysis.h"
 #include "examples/structural/plate_thermally_stressed_modal_analysis/plate_thermally_stressed_modal_analysis.h"
+#include "examples/structural/nastran_model_analysis/nastran_model_analysis.h"
 #include "examples/structural/plate_buckling_prestress/plate_buckling_prestress.h"
 #include "examples/structural/plate_piston_theory_flutter/plate_piston_theory_flutter.h"
 #include "examples/structural/plate_thermally_stressed_piston_theory_flutter/plate_thermally_stressed_piston_theory_flutter.h"
@@ -69,6 +70,7 @@
 #include "examples/fsi/stiffened_plate_thermally_stressed_flutter_optimization/stiffened_plate_thermally_stressed_flutter_optimization.h"
 #include "examples/fsi/plate_flutter_solution_half_domain/plate_euler_fsi_half_domain_flutter_solution.h"
 #include "examples/fsi/beam_fsi_solution/beam_euler_fsi_solution.h"
+#include "examples/fsi/beam_aerothermoelastic_flutter_solution/beam_aerothermoelastic_flutter_solution.h"
 #include "examples/thermal/bar_transient/bar_transient.h"
 #include "examples/thermal/bar_steady_state/bar_steady_state.h"
 
@@ -415,6 +417,12 @@ int main(int argc, char* const argv[]) {
          if_nonlin,
          with_sens,
          par_name);
+    else if (case_name == "nastran_model_analysis")
+        analysis<MAST::NastranModelAnalysis>(case_name,
+                                             libMesh::INVALID_ELEM,
+                                             if_nonlin,
+                                             with_sens,
+                                             par_name);
     else if (case_name == "plate_bending_sizing_optimization")
         optimization<MAST::PlateBendingSizingOptimization>(case_name,
                                                            libMesh::QUAD4,
@@ -478,6 +486,8 @@ int main(int argc, char* const argv[]) {
         fluid_analysis<MAST::BeamFSIFlutterHighOrderConvergence>(case_name);
     else if (case_name == "beam_fsi_nonuniform_aero_base_flutter_analysis")
         fluid_analysis<MAST::BeamEulerFSIFlutterNonuniformAeroBaseAnalysis>(case_name);
+    else if (case_name == "beam_aerothermoelastic_flutter_analysis")
+        fluid_analysis<MAST::BeamAerothermoelasticFlutterSolution>(case_name);
     else if (case_name == "beam_fsi_flutter_optimization")
         optimization<MAST::BeamFSIFlutterSizingOptimization>(case_name,
                                                              libMesh::EDGE2,
@@ -552,6 +562,7 @@ int main(int argc, char* const argv[]) {
         << "  plate_piston_theory_flutter_analysis\n"
         << "  plate_thermally_stressed_piston_theory_flutter_analysis\n"
         << "  plate_prestress_buckling_analysis\n"
+        << "  nastran_model_analysis\n"
         << "  stiffened_plate_bending_thermal_stress_optimization \n"
         << "  stiffened_plate_piston_theory_optimization \n"
         << "  stiffened_plate_thermally_stressed_piston_theory_optimization \n"
@@ -584,6 +595,7 @@ int main(int argc, char* const argv[]) {
         << "  beam_fsi_flutter_analysis \n"
         << "  beam_fsi_ho_convergence \n"
         << "  beam_fsi_nonuniform_aero_base_flutter_analysis\n"
+        << "  beam_aerothermoelastic_flutter_analysis \n"
         << "  beam_fsi_flutter_optimization \n"
         << "  plate_fsi_flutter_analysis \n"
         << "  plate_fsi_half_domain_flutter_analysis \n"
