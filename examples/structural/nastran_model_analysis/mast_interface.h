@@ -21,8 +21,14 @@
 #define __mast_model_interface_h__
 
 // C++ includes
+#include <iostream>
 #include <map>
 #include <string>
+#include <vector>
+#include <boost/bimap.hpp>
+
+// MAST includes
+#include "base/mast_data_types.h"
 
 
 // libMesh includes
@@ -43,7 +49,7 @@ namespace MAST {
     class NonlinearSystem;
     class SystemInitialization;
     class PhysicsDisciplineBase;
-    
+
 
     /*!
      *    This class defines an interface to conveniently create and store 
@@ -57,10 +63,75 @@ namespace MAST {
     class Model {
         
     public:
+
+        struct SubCase {
+            SubCase(unsigned int s,
+                    unsigned int l,
+                    unsigned int b):
+            sid  (s),
+            load (l),
+            spc  (b) {}
+
+            SubCase(const MAST::Model::SubCase& sub):
+            sid  (sub.sid),
+            load (sub.load),
+            spc  (sub.spc) {}
+
+            unsigned int
+            sid,
+            load,
+            spc;
+        };
+
+        struct SPC {
+            SPC(unsigned int n,
+                unsigned int c,
+                Real         v):
+            node    (n),
+            comp    (c),
+            val     (v) {}
+            
+            SPC(const MAST::Model::SPC& spc):
+            node  (spc.node),
+            comp  (spc.comp),
+            val   (spc.val) {}
+            
+            unsigned int
+            node,
+            comp,
+            val;
+        };
+
+        struct Force {
+            Force(unsigned int n,
+                  Real         fx,
+                  Real         fy,
+                  Real         fz):
+            node    (n),
+            f_x     (fx),
+            f_y     (fy),
+            f_z     (fz)    {}
+            
+            Force(const MAST::Model::Force& force):
+            node  (force.node),
+            f_x   (force.f_x),
+            f_y   (force.f_y),
+            f_z   (force.f_z) {}
+            
+            unsigned int
+            node,
+            f_x,
+            f_y,
+            f_z;
+        };
+
         
-        Model(libMesh::LibMeshInit& init);
+        Model(libMesh::LibMeshInit& init, const std::string& nm);
         
         ~Model();
+        
+        void
+        set_sol(unsigned int sol) {_sol = sol;}
         
         void
         add_node(int n_id, double x, double y, double z);
@@ -76,6 +147,27 @@ namespace MAST {
 
         void
         add_2d_section_property(int p_id, int m_id, double t);
+
+        void
+        add_subcase(int sid, int load_set, int spc);
+
+        void
+        add_spc(int node, int component, Real val);
+
+        void
+        add_force(int node, Real fx, Real fy, Real fz);
+
+        
+        
+        const std::string&           file_path()       {return _file;}
+        
+        unsigned int                 get_sol()         {return _sol;}
+        
+        unsigned int                 n_subcases()      {return (unsigned int)_subcases.size();}
+
+        const std::vector<MAST::Model::SubCase>&  get_subcases() const {return _subcases;}
+        
+        const MAST::Model::SubCase&  get_subcase(unsigned int i) const;
         
         libMesh::MeshBase&           get_mesh()        { return *_mesh; }
         
@@ -86,16 +178,41 @@ namespace MAST {
         MAST::SystemInitialization&  get_system_init() { return *_sys_init; }
         
         MAST::PhysicsDisciplineBase& get_discipline()  { return *_discipline; }
+        
+        std::vector<MAST::Model::SPC>& get_spcs()      { return _spcs;}
+        
+        boost::bimap<unsigned int, libMesh::Node*>&
+        get_node_id_map() {return _node_id_map;}
 
         void
         initialize_after_mesh();
         
+        
+        void
+        clear_loads();
+        
+        void
+        print(std::ostream& o);
+        
     protected:
+        
+        /*!
+         *   name of file
+         */
+        std::string         _file;
+        
         
         /*!
          *  mesh data structure
          */
         libMesh::SerialMesh  *_mesh;
+        
+        
+        /*!
+         *  solution type in the file
+         */
+        unsigned int            _sol;
+        
         
         /*!
          *   equation systems
@@ -120,12 +237,12 @@ namespace MAST {
         /*!
          *  map of node IDs to pointers
          */
-        std::map<unsigned int, libMesh::Node*> _node_id_map;
+        boost::bimap<unsigned int, libMesh::Node*> _node_id_map;
         
         /*!
          *  map of elem IDs to pointers
          */
-        std::map<unsigned int, libMesh::Elem*> _elem_id_map;
+        boost::bimap<unsigned int, libMesh::Elem*> _elem_id_map;
 
         
         /*!
@@ -148,7 +265,20 @@ namespace MAST {
          */
         std::map<unsigned int, MAST::ElementPropertyCardBase*> _elem_property_map;
 
-        
+        /*!
+         *  vector of subcases to be solved
+         */
+        std::vector<MAST::Model::SubCase>  _subcases;
+
+        /*!
+         *  vector of subcases to be solved
+         */
+        std::vector<MAST::Model::SPC>     _spcs;
+
+        /*!
+         *  vector of subcases to be solved
+         */
+        std::vector<MAST::Model::Force>   _forces;
     };
 }
 

@@ -84,6 +84,28 @@ namespace MAST {
     protected:
 
         /*!
+         *   solves the current subcase for which BC and loads have been
+         *   imported into the model
+         */
+        void _solve_subcase();
+
+        /*!
+         *   initializes the dof constraints
+         */
+        void _initialize_dof_constraints();
+
+        
+        /*!
+         *   linear static analysis
+         */
+        void _linear_static_solve();
+
+        /*!
+         *   modal analysis
+         */
+        void _normal_modes_solve();
+        
+        /*!
          *   FEM model
          */
         MAST::Model* _model;

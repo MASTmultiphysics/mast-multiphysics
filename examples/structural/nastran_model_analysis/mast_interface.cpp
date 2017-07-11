@@ -20,7 +20,7 @@
 
 // C++ includes
 #include <iostream>
-
+#include <iomanip>
 
 //MAST includes
 #include "examples/structural/nastran_model_analysis/mast_interface.h"
@@ -32,9 +32,15 @@
 #include "elasticity/structural_discipline.h"
 #include "elasticity/structural_system_initialization.h"
 
+// libMesh includes
+#include "libmesh/string_to_enum.h"
 
-MAST::Model::Model(libMesh::LibMeshInit& init):
-_mesh(new libMesh::SerialMesh(init.comm())) {
+
+MAST::Model::Model(libMesh::LibMeshInit& init,
+                   const std::string& nm):
+_file(nm),
+_mesh(new libMesh::SerialMesh(init.comm()))
+ {
 
     MAST::Parameter *z = new MAST::Parameter("zero",  0.);
     _param_map["zero"] = z;
@@ -44,8 +50,6 @@ _mesh(new libMesh::SerialMesh(init.comm())) {
 
 MAST::Model::~Model() {
     
-    delete _mesh;
-
     {
         std::map<std::string, MAST::Parameter*>::iterator
         it  = _param_map.begin(),
@@ -84,9 +88,11 @@ MAST::Model::~Model() {
     }
     
 
+    delete _eq_sys;
+    delete _mesh;
+
     delete _discipline;
     delete _sys_init;
-    delete _eq_sys;
 }
 
 
@@ -96,14 +102,18 @@ void
 MAST::Model::add_node(int i, double x, double y, double z) {
 
     // make sure this does not already exist
-    libmesh_assert(!_node_id_map.count(i));
+    libmesh_assert(!_node_id_map.left.count(i));
     
     // create the node
     libMesh::Node
     *n = _mesh->add_point(libMesh::Point(x, y, z));
     
     // add node to the map
-    _node_id_map[i] = n;
+    bool
+    success = _node_id_map.insert(boost::bimap<unsigned int, libMesh::Node*>::value_type(i, n)).second;
+    
+    // make sure that this was inserted successfully
+    libmesh_assert(success);
 }
 
 
@@ -111,23 +121,31 @@ void
 MAST::Model::add_edge2(int e_id, int p_id, int n1, int n2) {
 
     // make sure this does not already exist
-    libmesh_assert(!_elem_id_map.count(e_id));
+    libmesh_assert(!_elem_id_map.left.count(e_id));
     
     // create the element
     libMesh::Elem* e = libMesh::Elem::build(libMesh::EDGE2).release();
     e->subdomain_id() = p_id;
     
     // make sure that the nodes are contained in the map
-    libmesh_assert(_node_id_map.count(n1));
-    libmesh_assert(_node_id_map.count(n2));
+    libmesh_assert(_node_id_map.left.count(n1));
+    libmesh_assert(_node_id_map.left.count(n2));
     
-    e->set_node(0) = _node_id_map[n1];
-    e->set_node(1) = _node_id_map[n2];
+    libMesh::Node
+    *node1 = _node_id_map.left.find(n1)->second,
+    *node2 = _node_id_map.left.find(n2)->second;
+    
+    e->set_node(0) = node1;
+    e->set_node(1) = node2;
     
     _mesh->add_elem(e);
     
     // add this elem to the map
-    _elem_id_map[e_id] = e;
+    bool
+    success = _elem_id_map.insert(boost::bimap<unsigned int, libMesh::Elem*>::value_type(e_id, e)).second;
+
+    // make sure that this was inserted successfully
+    libmesh_assert(success);
 }
 
 
@@ -138,27 +156,37 @@ MAST::Model::add_quad4(int e_id, int p_id,
                        int n3, int n4) {
 
     // make sure this does not already exist
-    libmesh_assert(!_elem_id_map.count(e_id));
+    libmesh_assert(!_elem_id_map.left.count(e_id));
     
     // create the element
     libMesh::Elem* e = libMesh::Elem::build(libMesh::QUAD4).release();
     e->subdomain_id() = p_id;
     
     // make sure that the nodes are contained in the map
-    libmesh_assert(_node_id_map.count(n1));
-    libmesh_assert(_node_id_map.count(n2));
-    libmesh_assert(_node_id_map.count(n3));
-    libmesh_assert(_node_id_map.count(n4));
+    libmesh_assert(_node_id_map.left.count(n1));
+    libmesh_assert(_node_id_map.left.count(n2));
+    libmesh_assert(_node_id_map.left.count(n3));
+    libmesh_assert(_node_id_map.left.count(n4));
     
-    e->set_node(0) = _node_id_map[n1];
-    e->set_node(1) = _node_id_map[n2];
-    e->set_node(2) = _node_id_map[n3];
-    e->set_node(3) = _node_id_map[n4];
+    libMesh::Node
+    *node1 = _node_id_map.left.find(n1)->second,
+    *node2 = _node_id_map.left.find(n2)->second,
+    *node3 = _node_id_map.left.find(n3)->second,
+    *node4 = _node_id_map.left.find(n4)->second;
+    
+    e->set_node(0) = node1;
+    e->set_node(1) = node2;
+    e->set_node(2) = node3;
+    e->set_node(3) = node4;
     
     _mesh->add_elem(e);
     
     // add this elem to the map
-    _elem_id_map[e_id] = e;
+    bool
+    success = _elem_id_map.insert(boost::bimap<unsigned int, libMesh::Elem*>::value_type(e_id, e)).second;
+    
+    // make sure that this was inserted successfully
+    libmesh_assert(success);
 }
 
 
@@ -315,6 +343,7 @@ MAST::Model::initialize_after_mesh() {
     _discipline  = new MAST::StructuralDiscipline(*_eq_sys);
     
     // initialize the equation system
+    
     _eq_sys->init();
     
     // set the property card data
@@ -325,4 +354,194 @@ MAST::Model::initialize_after_mesh() {
     for ( ; it != end; it++)
         _discipline->set_property_for_subdomain(it->first, *it->second);
 }
+
+
+
+
+void
+MAST::Model::add_subcase(int sid, int load_set, int spc) {
+    
+    _subcases.push_back(MAST::Model::SubCase(sid, load_set, spc));
+}
+
+
+
+const MAST::Model::SubCase&
+MAST::Model::get_subcase(unsigned int i) const {
+
+    libmesh_assert_less(i, _subcases.size());
+    return _subcases[i];
+}
+
+
+
+void
+MAST::Model::clear_loads() {
+    
+    this->_spcs.clear();
+}
+
+
+
+void
+MAST::Model::add_spc(int node, int component, Real val) {
+
+    this->_spcs.push_back(MAST::Model::SPC(node, component, val));
+}
+
+
+void
+MAST::Model::add_force(int node, Real fx, Real fy, Real fz) {
+
+    this->_forces.push_back(MAST::Model::Force(node, fx, fy, fz));
+}
+
+
+
+void
+MAST::Model::print(std::ostream& o) {
+    
+    // print the subcases
+    {
+        o
+        << "------------------------------------ " << std::endl
+        << "----------- SUBCASES --------------- " << std::endl
+        << "------------------------------------ " << std::endl;
+        std::vector<MAST::Model::SubCase>::const_iterator
+        it  = _subcases.begin(),
+        end = _subcases.end();
+        
+        for ( ; it != end; it++) {
+            
+            const MAST::Model::SubCase&
+            s = *it;
+            
+            o
+            << "------- SUBCASE: " << s.sid << "  --------------- " << std::endl
+            << "LOAD : " << s.load << std::endl
+            << "SPC  : " << s.spc << std::endl;
+        }
+    }
+    
+    
+    // print the nodes
+    {
+        o
+        << "------------------------------------ " << std::endl
+        << "-------------- NODES --------------- " << std::endl
+        << "------------------------------------ " << std::endl
+        << std::setw(10) << "ID"
+        << std::setw(30) << "X-location"
+        << std::setw(30) << "Y-location"
+        << std::setw(30) << "Z-location" << std::endl;
+        boost::bimap<unsigned int, libMesh::Node*>::left_map::const_iterator
+        it  = _node_id_map.left.begin(),
+        end = _node_id_map.left.end();
+        for ( ; it != end; it++) {
+            
+            unsigned int
+            i = it->first;
+            
+            const libMesh::Node&
+            n = *it->second;
+            
+            o
+            << std::setw(10) << i
+            << std::setw(30) << n(0)
+            << std::setw(30) << n(1)
+            << std::setw(30) << n(2) << std::endl;
+        }
+    }
+    
+    // print the elements
+    {
+        o
+        << "------------------------------------ " << std::endl
+        << "----------- ELEMENTS --------------- " << std::endl
+        << "------------------------------------ " << std::endl
+        << std::setw(10) << "ID"
+        << std::setw(10) << "TYPE"
+        << std::setw(10) << "NODES..." << std::endl;
+
+        
+        boost::bimap<unsigned int, libMesh::Elem*>::left_map::const_iterator
+        it  = _elem_id_map.left.begin(),
+        end = _elem_id_map.left.end();
+        for ( ; it != end; it++) {
+            
+            unsigned int
+            i = it->first;
+            
+            const libMesh::Elem&
+            e = *it->second;
+            
+            std::string
+            t = libMesh::Utility::enum_to_string(e.type());
+            
+            o
+            << std::setw(10) << i
+            << std::setw(10) << t;
+            for (unsigned int i=0; i<e.n_nodes(); i++) {
+                
+                libMesh::Node
+                *node = const_cast<libMesh::Node*>(e.node_ptr(i));
+                unsigned int
+                n     = _node_id_map.right.find(node)->second;
+                o << std::setw(10) << n;
+            }
+            o << std::endl;
+            
+        }
+    }
+    
+    
+    // print the SBCs
+    {
+        o
+        << "------------------------------------ " << std::endl
+        << "---------------- SBC --------------- " << std::endl
+        << "------------------------------------ " << std::endl
+        << std::setw(10) << "NODE"
+        << std::setw(10) << "COMP"
+        << std::setw(10) << "VALUE" << std::endl;
+
+        std::vector<MAST::Model::SPC>::const_iterator
+        it  = _spcs.begin(),
+        end = _spcs.end();
+        for ( ; it != end; it++) {
+            
+            o
+            << std::setw(10) << it->node
+            << std::setw(10) << it->comp
+            << std::setw(10) << it->val << std::endl;
+        }
+    }
+
+    
+    // print the Forces
+    {
+        o
+        << "------------------------------------ " << std::endl
+        << "-------------- FORCE --------------- " << std::endl
+        << "------------------------------------ " << std::endl
+        << std::setw(10) << "NODE"
+        << std::setw(30) << "FX"
+        << std::setw(30) << "FY"
+        << std::setw(30) << "FZ" << std::endl;
+        
+        std::vector<MAST::Model::Force>::const_iterator
+        it  = _forces.begin(),
+        end = _forces.end();
+        for ( ; it != end; it++) {
+            
+            o
+            << std::setw(10) << it->node
+            << std::setw(30) << it->f_x
+            << std::setw(30) << it->f_y
+            << std::setw(30) << it->f_z << std::endl;
+        }
+    }
+
+}
+
 
