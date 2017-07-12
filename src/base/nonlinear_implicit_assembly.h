@@ -34,6 +34,23 @@ namespace MAST {
     public libMesh::NonlinearImplicitSystem::ComputeResidualandJacobian {
     public:
         
+        
+        /*!
+         *    user-provided object to perform actions
+         *    after assembly and before returning to the solver. Use 
+         *    \p set_post_assembly_object to provide a pointer to the object.
+         */
+        class PostAssemblyOperation{
+            
+        public:
+            PostAssemblyOperation() {}
+            virtual ~PostAssemblyOperation() {}
+            virtual void post_assembly(const libMesh::NumericVector<Real>& X,
+                                       libMesh::NumericVector<Real>* R,
+                                       libMesh::SparseMatrix<Real>*  J,
+                                       libMesh::NonlinearImplicitSystem& S) = 0;
+        };
+
         /*!
          *   constructor associates this assembly object with the system
          */
@@ -71,6 +88,15 @@ namespace MAST {
         virtual void
         clear_discipline_and_system( );
 
+        
+        /*!
+         *    sets the PostAssemblyOperation object for use after assembly. 
+         *    Note that calling \p clear_discipline_and_system() will 
+         *    clear this pointer and the user will have to call this function 
+         *    again.
+         */
+        void
+        set_post_assembly_operation(MAST::NonlinearImplicitAssembly::PostAssemblyOperation& post);
         
         /*!
          *    function that assembles the matrices and vectors quantities for
@@ -155,6 +181,14 @@ namespace MAST {
          */
         void _check_element_numerical_jacobian(MAST::ElementBase& e,
                                                RealVectorX& sol);
+        
+        
+        
+        /*!
+         *    this object, if non-NULL is user-provided to perform actions
+         *    after assembly and before returning to the solver
+         */
+        MAST::NonlinearImplicitAssembly::PostAssemblyOperation* _post_assembly;
 
     };
 }

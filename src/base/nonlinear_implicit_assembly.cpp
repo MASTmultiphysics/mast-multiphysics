@@ -37,7 +37,8 @@
 
 MAST::NonlinearImplicitAssembly::
 NonlinearImplicitAssembly():
-MAST::AssemblyBase() {
+MAST::AssemblyBase(),
+_post_assembly(nullptr) {
     
 }
 
@@ -85,8 +86,17 @@ clear_discipline_and_system( ) {
         _system->system().nonlinear_solver->residual_and_jacobian_object = nullptr;
     }
     
-    _discipline = nullptr;
-    _system     = nullptr;
+    _discipline    = nullptr;
+    _system        = nullptr;
+    _post_assembly = nullptr;
+}
+
+
+void
+MAST::NonlinearImplicitAssembly::
+set_post_assembly_operation(MAST::NonlinearImplicitAssembly::PostAssemblyOperation& post) {
+    
+    _post_assembly = &post;
 }
 
 
@@ -293,6 +303,10 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
         if (R) R->add_vector(v, dof_indices);
         if (J) J->add_matrix(m, dof_indices);
     }
+    
+    // call the post assembly object, if provided by user
+    if (_post_assembly)
+        _post_assembly->post_assembly(X, R, J, S);
     
 
     // if a solution function is attached, clear it

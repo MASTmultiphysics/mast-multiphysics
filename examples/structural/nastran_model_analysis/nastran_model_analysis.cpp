@@ -31,11 +31,13 @@ extern "C" {
 #include "examples/structural/nastran_model_analysis/mast_interface.h"
 #include "base/nonlinear_system.h"
 #include "solver/slepc_eigen_solver.h"
+#include "elasticity/structural_nonlinear_assembly.h"
 #include "elasticity/structural_modal_eigenproblem_assembly.h"
 
 // libMesh includes
 #include "libmesh/exodusII_io.h"
 #include "libmesh/dof_map.h"
+#include "libmesh/numeric_vector.h"
 
 
 extern libMesh::LibMeshInit* __init;
@@ -105,6 +107,8 @@ MAST::NastranModelAnalysis::get_parameter(const std::string& nm) {
     
     MAST::Parameter* p;
     
+    libmesh_assert(false); // to be implemented
+    
     return p;
 }
 
@@ -146,6 +150,8 @@ const libMesh::NumericVector<Real>&
 MAST::NastranModelAnalysis::sensitivity_solve(MAST::Parameter& p,
                                               bool if_write_output) {
     
+    libmesh_assert(false); // to be implemented
+    
     libMesh::NumericVector<Real> *v = nullptr;
     
     return *v;
@@ -162,8 +168,8 @@ MAST::NastranModelAnalysis::_solve_subcase() {
     
     switch (_model->get_sol()) {
         case 101:
-            //_linear_static_solve();
-            //break;
+            _linear_static_solve();
+            break;
             
         case 103:
             _normal_modes_solve();
@@ -222,8 +228,31 @@ MAST::NastranModelAnalysis::_initialize_dof_constraints() {
 void
 MAST::NastranModelAnalysis::_linear_static_solve() {
     
-    // to be implemented
-    libmesh_assert(false);
+    libMesh::MeshBase           &mesh       = _model->get_mesh();
+    libMesh::EquationSystems    &eq_sys     = _model->get_eq_sys();
+    MAST::NonlinearSystem       &sys        = _model->get_system();
+    MAST::SystemInitialization  &sys_init   = _model->get_system_init();
+    MAST::PhysicsDisciplineBase &discipline = _model->get_discipline();
+    
+    
+    // create the nonlinear assembly object
+    MAST::StructuralNonlinearAssembly   assembly;
+    
+    assembly.attach_discipline_and_system(discipline, sys_init);
+    
+    // zero the solution before solving
+    sys.solution->zero();
+    
+    sys.solve();
+    
+    // evaluate the outputs
+    assembly.calculate_outputs(*(sys.solution));
+    
+    assembly.clear_discipline_and_system();
+    
+    // write the solution for visualization
+    libMesh::ExodusII_IO(mesh).write_equation_systems("output.exo",
+                                                      eq_sys);
 }
 
 
