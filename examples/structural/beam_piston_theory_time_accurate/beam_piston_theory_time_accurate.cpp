@@ -361,13 +361,11 @@ MAST::BeamPistonTheoryTimeAccurateAnalysis::solve(bool if_write_output) {
             
             // evaluate the outputs
             //assembly.calculate_outputs(*(_sys->solution));
-            
+            //_discipline->update_stress_strain_data();
             exodus_writer.write_timestep("output.exo",
                                          *_eq_sys,
                                          t_step+1,
                                          nonlin_sys.time);
-            
-            //_discipline->plot_stress_strain_data<libMesh::ExodusII_IO>("stress_output.exo");
         }
         
         solver.solve();
@@ -437,9 +435,9 @@ MAST::BeamPistonTheoryTimeAccurateAnalysis::sensitivity_solve(MAST::Parameter& p
         _sys->solution->swap(_sys->get_sensitivity_solution(0));
         
         // write the solution for visualization
+        _discipline->update_stress_strain_data( &p);
         libMesh::ExodusII_IO(*_mesh).write_equation_systems(oss1.str(),
                                                             *_eq_sys);
-        _discipline->plot_stress_strain_data<libMesh::ExodusII_IO>(oss2.str(), &p);
 
         _sys->solution->swap(_sys->get_sensitivity_solution(0));
     }

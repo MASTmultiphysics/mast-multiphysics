@@ -181,6 +181,8 @@ namespace MAST {
         
         std::vector<MAST::Model::SPC>& get_spcs()      { return _spcs;}
         
+        std::vector<MAST::Model::Force>& get_forces()  { return _forces;}
+        
         boost::bimap<unsigned int, libMesh::Node*>&
         get_node_id_map() {return _node_id_map;}
 

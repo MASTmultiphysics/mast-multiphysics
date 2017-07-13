@@ -56,7 +56,7 @@ namespace MAST {
         
         ~NastranModelAnalysis();
         
-        
+                
         /*!
          *   initializes the object for specified characteristics
          */

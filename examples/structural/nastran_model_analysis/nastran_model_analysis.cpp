@@ -33,6 +33,8 @@ extern "C" {
 #include "solver/slepc_eigen_solver.h"
 #include "elasticity/structural_nonlinear_assembly.h"
 #include "elasticity/structural_modal_eigenproblem_assembly.h"
+#include "elasticity/stress_output_base.h"
+#include "elasticity/structural_discipline.h"
 
 // libMesh includes
 #include "libmesh/exodusII_io.h"
@@ -224,6 +226,80 @@ MAST::NastranModelAnalysis::_initialize_dof_constraints() {
 
 
 
+namespace MAST {
+    
+    class NastranLinearAnalysisPostAssembly:
+    public MAST::NonlinearImplicitAssembly::PostAssemblyOperation {
+      
+    public:
+        NastranLinearAnalysisPostAssembly(MAST::Model& model):
+        MAST::NonlinearImplicitAssembly::PostAssemblyOperation::
+        PostAssemblyOperation(),
+        _model(model) {}
+        
+        virtual ~NastranLinearAnalysisPostAssembly() {}
+        
+        virtual void post_assembly(const libMesh::NumericVector<Real>& X,
+                                   libMesh::NumericVector<Real>* R,
+                                   libMesh::SparseMatrix<Real>*  J,
+                                   libMesh::NonlinearImplicitSystem& S) {
+            
+            
+            // add the point loads to the RHS
+            if (!R) return;
+            
+            std::vector<MAST::Model::Force>
+            &forces = _model.get_forces();
+
+            boost::bimap<unsigned int, libMesh::Node*>
+            &node_id_map = _model.get_node_id_map();
+            
+            libMesh::DofMap
+            &dof_map = _model.get_system().get_dof_map();
+
+            // iterate over all the SPCs and tell the dof map about the constraints
+            std::vector<MAST::Model::Force>::const_iterator
+            force_it  = forces.begin(),
+            force_end = forces.end();
+            
+            std::vector<libMesh::dof_id_type> di;
+            
+            for ( ; force_it != force_end; force_it++) {
+                
+                // get the node pointer from the map
+                const libMesh::Node*
+                node    = node_id_map.left.find(force_it->node)->second;
+                
+                // get dof number from the node
+                di.clear();
+                dof_map.dof_indices(node, di, 0);      // x-component
+                libmesh_assert_equal_to(di.size(), 1);
+                R->add(di[0], force_it->f_x);
+                
+                di.clear();
+                dof_map.dof_indices(node, di, 1);      // y-component
+                libmesh_assert_equal_to(di.size(), 1);
+                R->add(di[0], force_it->f_y);
+                
+                di.clear();
+                dof_map.dof_indices(node, di, 2);      // z-component
+                libmesh_assert_equal_to(di.size(), 1);
+                R->add(di[0], force_it->f_z);
+            }
+
+            R->close();
+        }
+
+    protected:
+        
+        MAST::Model& _model;
+        
+    };
+    
+}
+
+
+
 
 void
 MAST::NastranModelAnalysis::_linear_static_solve() {
@@ -232,13 +308,16 @@ MAST::NastranModelAnalysis::_linear_static_solve() {
     libMesh::EquationSystems    &eq_sys     = _model->get_eq_sys();
     MAST::NonlinearSystem       &sys        = _model->get_system();
     MAST::SystemInitialization  &sys_init   = _model->get_system_init();
-    MAST::PhysicsDisciplineBase &discipline = _model->get_discipline();
+    MAST::StructuralDiscipline
+    &discipline = dynamic_cast<MAST::StructuralDiscipline&>(_model->get_discipline());
     
     
     // create the nonlinear assembly object
-    MAST::StructuralNonlinearAssembly   assembly;
+    MAST::StructuralNonlinearAssembly           assembly;
+    MAST::NastranLinearAnalysisPostAssembly     post_assembly(*_model);
     
     assembly.attach_discipline_and_system(discipline, sys_init);
+    assembly.set_post_assembly_operation(post_assembly);
     
     // zero the solution before solving
     sys.solution->zero();
@@ -246,13 +325,78 @@ MAST::NastranModelAnalysis::_linear_static_solve() {
     sys.solve();
     
     // evaluate the outputs
+
+    // first, need to tell the discipline about the outputs to be calculated
+    // create the output objects, one for each element
+    libMesh::MeshBase::const_element_iterator
+    e_it    = mesh.elements_begin(),
+    e_end   = mesh.elements_end();
+    
+    
+    std::vector<MAST::StressStrainOutputBase*>  outputs;
+    for ( ; e_it != e_end; e_it++) {
+
+        libMesh::ElemType
+        e_type = (*e_it)->type();
+        
+        // points where stress is evaluated
+        std::vector<libMesh::Point> pts;
+        if (e_type == libMesh::QUAD4 ||
+            e_type == libMesh::QUAD8 ||
+            e_type == libMesh::QUAD9) {
+            
+            pts.push_back(libMesh::Point(-1/sqrt(3), -1/sqrt(3), 1.)); // upper skin
+            pts.push_back(libMesh::Point(-1/sqrt(3), -1/sqrt(3),-1.)); // lower skin
+            pts.push_back(libMesh::Point( 1/sqrt(3), -1/sqrt(3), 1.)); // upper skin
+            pts.push_back(libMesh::Point( 1/sqrt(3), -1/sqrt(3),-1.)); // lower skin
+            pts.push_back(libMesh::Point( 1/sqrt(3),  1/sqrt(3), 1.)); // upper skin
+            pts.push_back(libMesh::Point( 1/sqrt(3),  1/sqrt(3),-1.)); // lower skin
+            pts.push_back(libMesh::Point(-1/sqrt(3),  1/sqrt(3), 1.)); // upper skin
+            pts.push_back(libMesh::Point(-1/sqrt(3),  1/sqrt(3),-1.)); // lower skin
+        }
+        else if (e_type == libMesh::TRI3 ||
+                 e_type == libMesh::TRI6) {
+            
+            pts.push_back(libMesh::Point(1./3., 1./3., 1.)); // upper skin
+            pts.push_back(libMesh::Point(1./3., 1./3.,-1.)); // lower skin
+            pts.push_back(libMesh::Point(2./3., 1./3., 1.)); // upper skin
+            pts.push_back(libMesh::Point(2./3., 1./3.,-1.)); // lower skin
+            pts.push_back(libMesh::Point(1./3., 2./3., 1.)); // upper skin
+            pts.push_back(libMesh::Point(1./3., 2./3.,-1.)); // lower skin
+        }
+        else
+            libmesh_assert(false); // should not get here
+
+        
+        MAST::StressStrainOutputBase * output = new MAST::StressStrainOutputBase;
+        
+        // tell the object to evaluate the data for this object only
+        std::set<const libMesh::Elem*> e_set;
+        e_set.insert(*e_it);
+        output->set_elements_in_domain(e_set);
+        output->set_points_for_evaluation(pts);
+        outputs.push_back(output);
+        
+        discipline.add_volume_output((*e_it)->subdomain_id(), *output);
+    }
+
     assembly.calculate_outputs(*(sys.solution));
+    
+    // write the solution for visualization
+    libMesh::ExodusII_IO sol_output(mesh);
+    discipline.update_stress_strain_data();
+    sol_output.write_equation_systems("output.exo", eq_sys);
     
     assembly.clear_discipline_and_system();
     
-    // write the solution for visualization
-    libMesh::ExodusII_IO(mesh).write_equation_systems("output.exo",
-                                                      eq_sys);
+    //  now delete the output objects
+    std::vector<MAST::StressStrainOutputBase*>::iterator
+    output_it  = outputs.begin(),
+    output_end = outputs.end();
+    
+    for ( ; output_it != output_end; output_it++)
+        delete *output_it;
+    
 }
 
 
