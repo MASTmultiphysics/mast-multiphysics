@@ -13,15 +13,7 @@ MAST depends on the following libraries:
    of this library should be used.  
 
 -- libMesh (http://libmesh.github.io)
-   The specific commit form libMesh that MAST uses is:
-   90816dfa4f8d5e255d2b2b76a5475000611fb1e8. Several additional
-   modifications to libMesh are needed, and can be found in the file
-   contrib/libmesh_patches. The following commands will provide access
-   to the commit and apply the patch:
       $> git clone git://github.com/libMesh/libmesh.git
-      $> cd libmesh
-      $> git reset --hard 90816dfa4f8d5e255d2b2b76a5475000611fb1e8
-      $> patch -p1 < MAST_DIR/contrib/libmesh_patch
 
 -- MPI
 
