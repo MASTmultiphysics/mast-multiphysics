@@ -84,7 +84,7 @@ namespace MAST {
         
         
         /*!
-         *    calculates the project of the Jacobian and a perturbation in solution 
+         *    calculates the product of the Jacobian and a perturbation in solution 
          *    vector \f$ [J] \{\Delta X\}  \f$. For a single discipline system the
          *    solution vector and linearized solution provided here are used. For
          *    a multiphysics system, the user must ensure that all relevant 
@@ -96,6 +96,17 @@ namespace MAST {
                                              const libMesh::NumericVector<Real>& dX,
                                              libMesh::NumericVector<Real>& JdX,
                                              libMesh::NonlinearImplicitSystem& S);
+
+
+        /*!
+         *    calculates \f$ d ([J] \{\Delta X\})/ dX  \f$.
+         */
+        virtual void
+        second_derivative_dot_solution_assembly(const libMesh::NumericVector<Real>& X,
+                                                const libMesh::NumericVector<Real>& dX,
+                                                libMesh::SparseMatrix<Real>& d_JdX_dX,
+                                                libMesh::NonlinearImplicitSystem& S);
+
         
         /**
          * Assembly function.  This function will be called
@@ -149,6 +160,15 @@ namespace MAST {
                                                     RealMatrixX& mat) = 0;
         
         
+        /*!
+         *   calculates \f$ d ([J] \{\Delta X\})/ dX  \f$ over \par elem,
+         *   and returns the matrix in \par vec .
+         */
+        virtual void
+        _elem_second_derivative_dot_solution_assembly(MAST::ElementBase& elem,
+                                                      RealMatrixX& mat) = 0;
+        
+
         /*!
          *    a helper function to evaluate the numerical Jacobian 
          *    and compare it with the analytical Jacobian.

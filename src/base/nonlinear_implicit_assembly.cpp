@@ -410,6 +410,105 @@ linearized_jacobian_solution_product (const libMesh::NumericVector<Real>& X,
 
 void
 MAST::NonlinearImplicitAssembly::
+second_derivative_dot_solution_assembly (const libMesh::NumericVector<Real>& X,
+                                         const libMesh::NumericVector<Real>& dX,
+                                         libMesh::SparseMatrix<Real>& d_JdX_dX,
+                                         libMesh::NonlinearImplicitSystem& S) {
+    
+    // zero the matrix
+    d_JdX_dX.zero();
+    
+    MAST::NonlinearSystem& nonlin_sys = _system->system();
+    
+    // make sure that the system for which this object was created,
+    // and the system passed through the function call are the same
+    libmesh_assert_equal_to(&S, &(nonlin_sys));
+    
+    // iterate over each element, initialize it and get the relevant
+    // analysis quantities
+    RealVectorX sol, dsol;
+    RealMatrixX mat;
+    
+    std::vector<libMesh::dof_id_type> dof_indices;
+    const libMesh::DofMap& dof_map = _system->system().get_dof_map();
+    std::auto_ptr<MAST::ElementBase> physics_elem;
+    
+    std::auto_ptr<libMesh::NumericVector<Real> >
+    localized_solution,
+    localized_perturbed_solution;
+    
+    localized_solution.reset(_build_localized_vector(nonlin_sys,
+                                                     X).release());
+    localized_perturbed_solution.reset(_build_localized_vector(nonlin_sys,
+                                                               dX).release());
+    
+    
+    // if a solution function is attached, initialize it
+    if (_sol_function)
+        _sol_function->init( X);
+    
+    
+    libMesh::MeshBase::const_element_iterator       el     =
+    nonlin_sys.get_mesh().active_local_elements_begin();
+    const libMesh::MeshBase::const_element_iterator end_el =
+    nonlin_sys.get_mesh().active_local_elements_end();
+    
+    
+    for ( ; el != end_el; ++el) {
+        
+        const libMesh::Elem* elem = *el;
+        
+        dof_map.dof_indices (elem, dof_indices);
+        
+        physics_elem.reset(_build_elem(*elem).release());
+        
+        // get the solution
+        unsigned int ndofs = (unsigned int)dof_indices.size();
+        sol.setZero(ndofs);
+        dsol.setZero(ndofs);
+        mat.setZero(ndofs, ndofs);
+        
+        for (unsigned int i=0; i<dof_indices.size(); i++) {
+            sol (i) = (*localized_solution)          (dof_indices[i]);
+            dsol(i) = (*localized_perturbed_solution)(dof_indices[i]);
+        }
+        
+        physics_elem->set_solution(sol);
+        physics_elem->set_solution(dsol, true);
+        
+        if (_sol_function)
+            physics_elem->attach_active_solution_function(*_sol_function);
+        
+        // perform the element level calculations
+        _elem_second_derivative_dot_solution_assembly(*physics_elem, mat);
+        
+        physics_elem->detach_active_solution_function();
+        
+        // copy to the libMesh matrix for further processing
+        DenseRealMatrix m;
+        MAST::copy(m, mat);
+        
+        // constrain the quantities to account for hanging dofs,
+        // Dirichlet constraints, etc.
+        dof_map.constrain_element_matrix(m, dof_indices);
+        
+        // add to the global matrices
+        d_JdX_dX.add_matrix(m, dof_indices);
+    }
+    
+    
+    // if a solution function is attached, clear it
+    if (_sol_function)
+        _sol_function->clear();
+    
+    d_JdX_dX.close();
+}
+
+
+
+
+void
+MAST::NonlinearImplicitAssembly::
 _elem_linearized_jacobian_solution_product(MAST::ElementBase& elem,
                                            RealVectorX& vec) {
     

@@ -97,3 +97,13 @@ _elem_sensitivity_calculations(MAST::ElementBase& elem,
 }
 
 
+
+void
+MAST::HeatConductionNonlinearAssembly::
+_elem_second_derivative_dot_solution_assembly(MAST::ElementBase& elem,
+                                              RealMatrixX& m) {
+    
+    libmesh_error(); // to be implemented
+}
+
+

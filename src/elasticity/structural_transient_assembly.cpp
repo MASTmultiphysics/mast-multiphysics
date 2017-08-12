@@ -171,6 +171,16 @@ _elem_sensitivity_calculations(MAST::ElementBase& elem,
 
 
 
+void
+MAST::StructuralTransientAssembly::
+_elem_second_derivative_dot_solution_assembly(MAST::ElementBase& elem,
+                                              RealMatrixX& m) {
+    
+    libmesh_error(); // to be implemented
+}
+
+
+
 std::auto_ptr<MAST::ElementBase>
 MAST::StructuralTransientAssembly::_build_elem(const libMesh::Elem& elem) {
     

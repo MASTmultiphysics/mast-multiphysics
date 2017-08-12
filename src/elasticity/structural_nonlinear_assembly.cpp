@@ -696,6 +696,19 @@ _elem_sensitivity_calculations(MAST::ElementBase& elem,
 
 
 
+void
+MAST::StructuralNonlinearAssembly::
+_elem_second_derivative_dot_solution_assembly(MAST::ElementBase& elem,
+                                              RealMatrixX& m) {
+    MAST::StructuralElementBase& e =
+    dynamic_cast<MAST::StructuralElementBase&>(elem);
+    m.setZero();
+
+    e.internal_residual_jac_dot_state_sensitivity(m);
+}
+
+
+
 
 void
 MAST::StructuralNonlinearAssembly::

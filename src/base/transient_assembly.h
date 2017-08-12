@@ -94,7 +94,7 @@ namespace MAST {
                                libMesh::NonlinearImplicitSystem& S);
         
         /*!
-         *    calculates the project of the Jacobian and a perturbation in solution
+         *    calculates the product of the Jacobian and a perturbation in solution
          *    vector \f$ [J] \{\Delta X\}  \f$. For a single discipline system the
          *    solution vector and linearized solution provided here are used. For
          *    a multiphysics system, the user must ensure that all relevant

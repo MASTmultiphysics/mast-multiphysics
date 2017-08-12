@@ -98,7 +98,14 @@ namespace MAST {
         virtual void _elem_sensitivity_calculations(MAST::ElementBase& elem,
                                                     RealVectorX& vec);
         
-        
+        /*!
+         *   calculates \f$ d ([J] \{\Delta X\})/ dX  \f$ over \par elem,
+         *   and returns the matrix in \par vec .
+         */
+        virtual void
+        _elem_second_derivative_dot_solution_assembly(MAST::ElementBase& elem,
+                                                      RealMatrixX& mat);
+
     protected:
         
         

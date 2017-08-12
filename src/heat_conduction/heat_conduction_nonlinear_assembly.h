@@ -74,6 +74,14 @@ namespace MAST {
                                                     bool if_jac,
                                                     RealVectorX& vec,
                                                     RealMatrixX& mat);
+
+        /*!
+         *   calculates \f$ d ([J] \{\Delta X\})/ dX  \f$ over \par elem,
+         *   and returns the matrix in \par vec .
+         */
+        virtual void
+        _elem_second_derivative_dot_solution_assembly(MAST::ElementBase& elem,
+                                                      RealMatrixX& mat);
     };
 }
 
