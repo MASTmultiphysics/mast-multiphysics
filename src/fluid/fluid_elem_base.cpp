@@ -1362,7 +1362,7 @@ calculate_advection_flux_jacobian_for_moving_solid_wall_boundary
     //               {0, dp/dU n1, dp/dU n2, dp/dU n3, 0}
     //
     // and using  ui_ni = wdot (ni + dni) - ui dni
-    //      dui_ni/dU = dni (dui/dU)
+    //      dui_ni/dU = - dni (dui/dU)
     //
     // the first and third terms of dfn/dU are calculated first.
     // the last section calculates the contribution of the second term
@@ -1437,7 +1437,7 @@ calculate_advection_flux_jacobian_for_moving_solid_wall_boundary
     // hence,
     //     d (ui * ni)/d U = - d ui / dU * dni
     //
-    // from primitive flux Jacobian,
+    // from primitive variable Jacobian,
     //     du1/dU  =  1/rho {-u1, 1, 0, 0, 0}
     //     du2/dU  =  1/rho {-u2, 0, 1, 0, 0}
     //     du3/dU  =  1/rho {-u3, 0, 0, 1, 0}
