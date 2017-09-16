@@ -23,22 +23,22 @@
 
 
 // MAST includes
-#include "examples/fsi/beam_flutter_solution/beam_euler_fsi_flutter_solution.h"
-#include "examples/fluid/meshing/panel_mesh_2D.h"
+#include "examples/fsi/beam_flag_flutter_solution/beam_flag_euler_fsi_flutter_solution.h"
+#include "examples/fluid/meshing/flag_mesh_2D.h"
 #include "examples/fsi/beam_flutter_solution/constrain_beam_dofs.h"
 #include "base/nonlinear_system.h"
 #include "fluid/conservative_fluid_system_initialization.h"
 #include "fluid/conservative_fluid_discipline.h"
 #include "fluid/frequency_domain_linearized_complex_assembly.h"
-#include "fluid/pressure_function.h"
-#include "fluid/frequency_domain_pressure_function.h"
+#include "examples/fsi/beam_flag_flutter_solution/beam_flag_pressure_function.h"
+#include "examples/fsi/beam_flag_flutter_solution/beam_flag_frequency_domain_pressure_function.h"
 #include "solver/complex_solver_base.h"
 #include "fluid/flight_condition.h"
 #include "base/parameter.h"
 #include "base/constant_field_function.h"
 #include "base/boundary_condition_base.h"
-#include "base/complex_mesh_field_function.h"
-#include "elasticity/complex_normal_rotation_mesh_function.h"
+#include "examples/fsi/beam_flag_flutter_solution/beam_flag_frequency_domain_displacement.h"
+#include "examples/fsi/beam_flag_flutter_solution/beam_flag_frequency_domain_normal_rotation.h"
 #include "aeroelasticity/frequency_function.h"
 #include "aeroelasticity/ug_flutter_root.h"
 #include "elasticity/structural_system_initialization.h"
@@ -70,8 +70,9 @@
 extern libMesh::LibMeshInit* __init;
 
 
-MAST::BeamEulerFSIFlutterAnalysis::BeamEulerFSIFlutterAnalysis(unsigned int order_increment,
-                                                               unsigned int n_refine):
+MAST::BeamFlagEulerFSIFlutterAnalysis::
+BeamFlagEulerFSIFlutterAnalysis(unsigned int order_increment,
+                                unsigned int n_refine):
 _structural_mesh                       (nullptr),
 _fluid_mesh                            (nullptr),
 _structural_eq_sys                     (nullptr),
@@ -84,7 +85,6 @@ _fluid_sys_init                        (nullptr),
 _fluid_discipline                      (nullptr),
 _flight_cond                           (nullptr),
 _far_field                             (nullptr),
-_symm_wall                             (nullptr),
 _slip_wall                             (nullptr),
 _pressure                              (nullptr),
 _displ                                 (nullptr),
@@ -128,14 +128,13 @@ _flutter_root                          (nullptr),
 _m_card                                (nullptr),
 _p_card                                (nullptr),
 _dirichlet_left                        (nullptr),
-_dirichlet_right                       (nullptr),
 _augment_send_list_obj                 (nullptr),
 _constraint_beam_dofs                  (nullptr) {
     
     //////////////////////////////////////////////////////////////////////
     //    SETUP THE FLUID DATA
     //////////////////////////////////////////////////////////////////////
-
+    
     // initialize the libMesh object
     _fluid_mesh              = new libMesh::ParallelMesh(__init->comm());
     _fluid_eq_sys            = new libMesh::EquationSystems(*_fluid_mesh);
@@ -152,10 +151,12 @@ _constraint_beam_dofs                  (nullptr) {
     const unsigned int
     dim                 = 2,
     nx_divs             = 3,
-    ny_divs             = 1,
-    panel_bc_id         = 10,
-    symmetry_bc_id      = 11;
-
+    ny_divs             = 3,
+    panel_bc_id         = 10;
+    
+    Real
+    thickness           = 0.;
+    
     std::string
     etype;
     
@@ -170,7 +171,7 @@ _constraint_beam_dofs                  (nullptr) {
     libMesh::Order
     fe_order            =
     libMesh::Utility::string_to_enum<libMesh::Order>(infile("fe_order", "FIRST"));
-
+    
     // change these types depending on the order
     if (order_increment > 0) {
         
@@ -229,14 +230,14 @@ _constraint_beam_dofs                  (nullptr) {
     
     
     // initialize the mesh
-    MAST::PanelMesh2D().init(0.,               // t/c
-                             false,            // if cos bump
-                             0,                // n max bumps
-                             panel_bc_id,
-                             symmetry_bc_id,
-                             divs,
-                             *_fluid_mesh,
-                             elem_type);
+    MAST::FlagMesh2D
+    flag_mesh  = MAST::FlagMesh2D();
+    flag_mesh.init(panel_bc_id,
+                   divs,
+                   *_fluid_mesh,
+                   elem_type);
+    thickness  = flag_mesh.thickness();
+    
     
     _fluid_discipline   = new MAST::ConservativeFluidDiscipline(*_fluid_eq_sys);
     _fluid_sys_init     = new MAST::ConservativeFluidSystemInitialization(*_fluid_sys,
@@ -256,7 +257,6 @@ _constraint_beam_dofs                  (nullptr) {
     
     // create the oundary conditions for slip-wall and far-field
     _far_field     = new MAST::BoundaryConditionBase(MAST::FAR_FIELD),
-    _symm_wall     = new MAST::BoundaryConditionBase(MAST::SYMMETRY_WALL);
     _slip_wall     = new MAST::BoundaryConditionBase(MAST::SLIP_WALL);
     
     _flight_cond    =  new MAST::FlightCondition;
@@ -302,19 +302,22 @@ _constraint_beam_dofs                  (nullptr) {
     
     // tell the physics about boundary conditions
     _fluid_discipline->add_side_load(    panel_bc_id, *_slip_wall);
-    _fluid_discipline->add_side_load( symmetry_bc_id, *_symm_wall);
     // all boundaries except the bottom are far-field
     for (unsigned int i=1; i<=3; i++)
         _fluid_discipline->add_side_load(              i, *_far_field);
     
     _pressure_function =
-    new MAST::PressureFunction(*_fluid_sys_init, *_flight_cond);
+    new MAST::BeamFlagPressureFunction(*_fluid_sys_init,
+                                       *_flight_cond,
+                                       thickness);
     _freq_domain_pressure_function =
-    new MAST::FrequencyDomainPressureFunction(*_fluid_sys_init, *_flight_cond);
-
+    new MAST::BeamFlagFrequencyDomainPressureFunction(*_fluid_sys_init,
+                                                      *_flight_cond,
+                                                      thickness);
+    
     _pressure_function->set_calculate_cp(true);
     _freq_domain_pressure_function->set_calculate_cp(true);
-
+    
     _k_upper            = infile("k_upper",  0.75);
     _k_lower            = infile("k_lower",  0.05);
     _n_k_divs           = infile("n_k_divs",   10);
@@ -351,7 +354,7 @@ _constraint_beam_dofs                  (nullptr) {
     // create the mesh
     _structural_mesh       = new libMesh::SerialMesh(__init->comm());
     
-
+    
     // change these types depending on the order
     if (order_increment > 0)
         elem_type = libMesh::EDGE3;
@@ -359,7 +362,7 @@ _constraint_beam_dofs                  (nullptr) {
         elem_type = libMesh::EDGE2;
     
     MeshInitializer().init(divs, *_structural_mesh, elem_type);
-
+    
     // create the equation system
     _structural_eq_sys    = new  libMesh::EquationSystems(*_structural_mesh);
     
@@ -367,7 +370,7 @@ _constraint_beam_dofs                  (nullptr) {
     _structural_sys       = &(_structural_eq_sys->add_system<MAST::NonlinearSystem>("structural"));
     _structural_sys->set_eigenproblem_type(libMesh::GHEP);
     
-
+    
     
     // initialize the system to the right set of variables
     _structural_sys_init  = new MAST::StructuralSystemInitialization(*_structural_sys,
@@ -378,30 +381,22 @@ _constraint_beam_dofs                  (nullptr) {
     
     // create and add the boundary condition and loads
     _dirichlet_left = new MAST::DirichletBoundaryCondition;
-    _dirichlet_right= new MAST::DirichletBoundaryCondition;
-    std::vector<unsigned int> constrained_vars(4);
-    constrained_vars[0] = 0;  // u
-    constrained_vars[1] = 1;  // v
-    constrained_vars[2] = 2;  // w
-    constrained_vars[3] = 3;  // tx
-    _dirichlet_left->init (0, constrained_vars);
-    _dirichlet_right->init(1, constrained_vars);
+    _dirichlet_left->init (0, _structural_sys_init->vars());
     _structural_discipline->add_dirichlet_bc(0, *_dirichlet_left);
-    _structural_discipline->add_dirichlet_bc(1, *_dirichlet_right);
     _structural_discipline->init_system_dirichlet_bc(*_structural_sys);
     _constraint_beam_dofs = new MAST::ConstrainBeamDofs(*_structural_sys);
     _structural_sys->attach_constraint_object(*_constraint_beam_dofs);
-    
+
     // initialize the equation system
     _structural_eq_sys->init();
     _structural_mesh->print_info();
     _structural_eq_sys->print_info();
     
     // initialize the motion object
-    _displ        = new MAST::ComplexMeshFieldFunction(*_structural_sys_init,
-                                                       "frequency_domain_displacement");
-    _normal_rot   = new MAST::ComplexNormalRotationMeshFunction("frequency_domain_normal_rotation",
-                                                                *_displ);
+    _displ        = new MAST::BeamFlagFrequencyDomainDisplacement(*_structural_sys_init,
+                                                                  "frequency_domain_displacement");
+    _normal_rot   = new MAST::BeamFlagFrequencyDomainNormalRotation("frequency_domain_normal_rotation",
+                                                                    *_displ);
     _slip_wall->add(*_displ);
     _slip_wall->add(*_normal_rot);
     
@@ -457,7 +452,7 @@ _constraint_beam_dofs                  (nullptr) {
     
     // create the element property card
     _p_card          = new MAST::Solid1DSectionElementPropertyCard;
-    _p_card->set_bending_model(MAST::TIMOSHENKO);
+    //_p_card->set_bending_model(MAST::TIMOSHENKO);
     
     // tell the card about the orientation
     libMesh::Point orientation;
@@ -491,7 +486,7 @@ _constraint_beam_dofs                  (nullptr) {
 
 
 
-MAST::BeamEulerFSIFlutterAnalysis::~BeamEulerFSIFlutterAnalysis() {
+MAST::BeamFlagEulerFSIFlutterAnalysis::~BeamFlagEulerFSIFlutterAnalysis() {
     
     delete _fluid_eq_sys;
     delete _fluid_mesh;
@@ -500,7 +495,6 @@ MAST::BeamEulerFSIFlutterAnalysis::~BeamEulerFSIFlutterAnalysis() {
     delete _fluid_sys_init;
     
     delete _far_field;
-    delete _symm_wall;
     delete _slip_wall;
     
     delete _flight_cond;
@@ -526,6 +520,7 @@ MAST::BeamEulerFSIFlutterAnalysis::~BeamEulerFSIFlutterAnalysis() {
     delete _structural_eq_sys;
     delete _structural_mesh;
     delete _constraint_beam_dofs;
+
     
     delete _structural_discipline;
     delete _structural_sys_init;
@@ -534,7 +529,6 @@ MAST::BeamEulerFSIFlutterAnalysis::~BeamEulerFSIFlutterAnalysis() {
     delete _p_card;
     
     delete _dirichlet_left;
-    delete _dirichlet_right;
     
     delete _thy_f;
     delete _thz_f;
@@ -576,7 +570,7 @@ MAST::BeamEulerFSIFlutterAnalysis::~BeamEulerFSIFlutterAnalysis() {
 
 
 MAST::Parameter*
-MAST::BeamEulerFSIFlutterAnalysis::get_parameter(const std::string &nm) {
+MAST::BeamFlagEulerFSIFlutterAnalysis::get_parameter(const std::string &nm) {
     
     MAST::Parameter *rval = nullptr;
     
@@ -616,9 +610,9 @@ MAST::BeamEulerFSIFlutterAnalysis::get_parameter(const std::string &nm) {
 
 
 Real
-MAST::BeamEulerFSIFlutterAnalysis::solve(bool if_write_output,
-                                         const Real tol,
-                                         const unsigned int max_bisection_iters) {
+MAST::BeamFlagEulerFSIFlutterAnalysis::solve(bool if_write_output,
+                                             const Real tol,
+                                             const unsigned int max_bisection_iters) {
     
     
     /////////////////////////////////////////////////////////////////
@@ -656,7 +650,7 @@ MAST::BeamEulerFSIFlutterAnalysis::solve(bool if_write_output,
     assembly.set_base_solution(base_sol);
     assembly.set_frequency_function(*_freq_function);
     _pressure_function->init(base_sol);
-
+    
     
     
     
@@ -696,7 +690,7 @@ MAST::BeamEulerFSIFlutterAnalysis::solve(bool if_write_output,
     
     if (if_write_output)
         writer = new libMesh::ExodusII_IO(*_structural_mesh);
-
+    
     for (unsigned int i=0; i<nconv; i++) {
         
         // create a vector to store the basis
@@ -724,13 +718,13 @@ MAST::BeamEulerFSIFlutterAnalysis::solve(bool if_write_output,
             _structural_sys->solution->swap(*_basis[i]);
         }
     }
-
+    
     ///////////////////////////////////////////////////////////////////
     // FLUTTER SOLUTION
     ///////////////////////////////////////////////////////////////////
     // clear flutter solver and set the output file
     _flutter_solver->clear();
-
+    
     MAST::FSIGeneralizedAeroForceAssembly fsi_assembly;
     fsi_assembly.attach_discipline_and_system(*_structural_discipline,
                                               *_structural_sys_init);
@@ -740,7 +734,7 @@ MAST::BeamEulerFSIFlutterAnalysis::solve(bool if_write_output,
     if (__init->comm().rank() == 0)
         _flutter_solver->set_output_file(oss.str());
     
-
+    
     fsi_assembly.init(&solver,                       // fluid complex solver
                       _pressure_function,
                       _freq_domain_pressure_function,
@@ -772,7 +766,7 @@ MAST::BeamEulerFSIFlutterAnalysis::solve(bool if_write_output,
     // make sure solution was found
     libmesh_assert(sol.first);
     _flutter_root = sol.second;
-
+    
     
     if (sol.first && if_write_output) {
         
@@ -789,7 +783,7 @@ MAST::BeamEulerFSIFlutterAnalysis::solve(bool if_write_output,
                                           _basis);
     }
     
-
+    
     
     
     assembly.clear_discipline_and_system();
@@ -805,11 +799,11 @@ MAST::BeamEulerFSIFlutterAnalysis::solve(bool if_write_output,
 
 
 Real
-MAST::BeamEulerFSIFlutterAnalysis::sensitivity_solve(MAST::Parameter& p) {
+MAST::BeamFlagEulerFSIFlutterAnalysis::sensitivity_solve(MAST::Parameter& p) {
     
     //Make sure that  a solution is available for sensitivity
     libmesh_assert(_flutter_root);
-
+    
     /////////////////////////////////////////////////////////////////
     //  INITIALIZE FLUID ASSEMBLY/SOLVER OBJECTS
     /////////////////////////////////////////////////////////////////
@@ -828,8 +822,8 @@ MAST::BeamEulerFSIFlutterAnalysis::sensitivity_solve(MAST::Parameter& p) {
                                           *_fluid_sys_init);
     assembly.set_base_solution(base_sol);
     assembly.set_frequency_function(*_freq_function);
-
-
+    
+    
     // it is assumed that the modal basis is available from the flutter solution
     
     
@@ -853,7 +847,7 @@ MAST::BeamEulerFSIFlutterAnalysis::sensitivity_solve(MAST::Parameter& p) {
                       _freq_domain_pressure_function,
                       _displ);
     _flutter_solver->attach_assembly(fsi_assembly);
-
+    
     // flutter solver will need velocity to be defined as a parameter for
     // sensitivity analysis
     _structural_discipline->add_parameter(p);
@@ -865,7 +859,7 @@ MAST::BeamEulerFSIFlutterAnalysis::sensitivity_solve(MAST::Parameter& p) {
     
     // calculate the sensitivity
     _flutter_solver->calculate_sensitivity(*_flutter_root, params, 0);
-
+    
     
     // clean up before exiting
     fsi_assembly.clear_discipline_and_system();

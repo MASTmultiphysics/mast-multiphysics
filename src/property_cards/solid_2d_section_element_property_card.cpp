@@ -561,11 +561,7 @@ InertiaMatrix::operator() (const libMesh::Point& p,
     m(1,3) = -off*h; m(3,1) = m(1,3);      // extension-bending coupling
     m(3,3) = pow(h,3)/12. + h*pow(off,2);  // rotary inertia
     m(4,4) = pow(h,3)/12. + h*pow(off,2);  // rotary inertia
-    m(5,5) = pow(h,3)/12.*1.0e-12; // neglect the rotary inertia wrt theta_z
-    
-    // reduce the rotation inertia component
-    for (unsigned int i=0; i<2; i++)
-        m(i+3,i+3) *= 1.0e-16;
+    m(5,5) = pow(h,3)/12.*1.0e-6; // neglect the rotary inertia wrt theta_z
     
     m *= rho;
 }
@@ -593,11 +589,7 @@ InertiaMatrix::derivative (               const MAST::FunctionBase& f,
     m(1,3) = -doff*h-off*dhdf; m(3,1) = m(1,3);      // extension-bending coupling
     m(3,3) = drhodf*pow(h,3)/12.+rho*pow(h,2)/4.*dhdf;  // rotary inertia
     m(4,4) = drhodf*pow(h,3)/12.+rho*pow(h,2)/4.*dhdf;  // rotary inertia
-    m(5,5) = (drhodf*pow(h,3)/12.+rho*pow(h,2)/4.*dhdf)*1.0e-12; // neglect the rotary inertia wrt theta_z
-    
-    // reduce the rotation inertia component
-    for (unsigned int i=0; i<2; i++)
-        m(i+3,i+3) *= 1.0e-16;
+    m(5,5) = (drhodf*pow(h,3)/12.+rho*pow(h,2)/4.*dhdf)*1.0e-6; // neglect the rotary inertia wrt theta_z
 }
 
 

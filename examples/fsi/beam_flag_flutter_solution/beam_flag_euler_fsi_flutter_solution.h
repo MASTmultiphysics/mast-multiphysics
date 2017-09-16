@@ -17,8 +17,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#ifndef __mast_beam_euler_fsi_flutter_h__
-#define __mast_beam_euler_fsi_flutter_h__
+#ifndef __mast_beam_flag_euler_fsi_flutter_h__
+#define __mast_beam_flag_euler_fsi_flutter_h__
 
 
 // C++ includes
@@ -64,16 +64,16 @@ namespace MAST {
     class FrequencyDomainPressureFunction;
     class AugmentGhostElementSendListObj;
     class ConstrainBeamDofs;
+
     
-    
-    struct BeamEulerFSIFlutterAnalysis {
+    struct BeamFlagEulerFSIFlutterAnalysis {
         
         
-        BeamEulerFSIFlutterAnalysis(unsigned int order_increment = 0,
+        BeamFlagEulerFSIFlutterAnalysis(unsigned int order_increment = 0,
                                     unsigned int n_refine = 0);
         
         
-        ~BeamEulerFSIFlutterAnalysis();
+        ~BeamFlagEulerFSIFlutterAnalysis();
         
         
         /*!
@@ -138,7 +138,6 @@ namespace MAST {
         // boundary condition
         MAST::BoundaryConditionBase
         *_far_field,
-        *_symm_wall,
         *_slip_wall,
         *_pressure;
         
@@ -233,9 +232,6 @@ namespace MAST {
         // create the Dirichlet boundary condition on left edge
         MAST::DirichletBoundaryCondition*        _dirichlet_left;
         
-        // create the Dirichlet boundary condition on right edge
-        MAST::DirichletBoundaryCondition*        _dirichlet_right;
-
         // object to augment the send list of ghosted fluid elements
         MAST::AugmentGhostElementSendListObj*    _augment_send_list_obj;
         
@@ -252,5 +248,5 @@ namespace MAST {
 
 
 
-#endif //  __mast_beam_euler_fsi_flutter_h__
+#endif //  __mast_beam_flag_euler_fsi_flutter_h__
 
