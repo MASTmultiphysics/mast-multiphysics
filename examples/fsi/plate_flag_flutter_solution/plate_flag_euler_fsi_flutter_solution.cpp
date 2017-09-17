@@ -305,8 +305,8 @@ _augment_send_list_obj                 (nullptr) {
     
     // tell the physics about boundary conditions
     _fluid_discipline->add_side_load(    panel_bc_id, *_slip_wall);
-    // all boundaries except the bottom are far-field
-    for (unsigned int i=1; i<=5; i++)
+    // all boundaries are far-field
+    for (unsigned int i=0; i<=5; i++)
         _fluid_discipline->add_side_load(              i, *_far_field);
     
     _pressure_function =
