@@ -66,6 +66,7 @@
 #include "examples/fsi/beam_flutter_nonuniform_aero_base_solution/beam_euler_fsi_flutter_nonuniform_aero_base_solution.h"
 #include "examples/fsi/beam_flutter_optimization/beam_flutter_optimization.h"
 #include "examples/fsi/plate_flutter_solution/plate_euler_fsi_flutter_solution.h"
+#include "examples/fsi/plate_flag_flutter_solution/plate_flag_euler_fsi_flutter_solution.h"
 #include "examples/fsi/plate_flutter_optimization/plate_flutter_optimization.h"
 #include "examples/fsi/stiffened_plate_thermally_stressed_flutter_optimization/stiffened_plate_thermally_stressed_flutter_optimization.h"
 #include "examples/fsi/plate_flutter_solution_half_domain/plate_euler_fsi_half_domain_flutter_solution.h"
@@ -491,6 +492,8 @@ int main(int argc, char* const argv[]) {
                                                              if_nonlin);
     else if (case_name == "plate_fsi_flutter_analysis")
         fluid_analysis<MAST::PlateEulerFSIFlutterAnalysis>(case_name);
+    else if (case_name == "plate_flag_fsi_flutter_analysis")
+        fluid_analysis<MAST::PlateFlagEulerFSIFlutterAnalysis>(case_name);
     else if (case_name == "plate_fsi_half_domain_flutter_analysis")
         fluid_analysis<MAST::PlateEulerFSIHalfDomainFlutterAnalysis>(case_name);
     else if (case_name == "plate_fsi_flutter_optimization")
@@ -594,6 +597,7 @@ int main(int argc, char* const argv[]) {
         << "  beam_aerothermoelastic_flutter_analysis \n"
         << "  beam_fsi_flutter_optimization \n"
         << "  plate_fsi_flutter_analysis \n"
+        << "  plate_flag_fsi_flutter_analysis \n"
         << "  plate_fsi_half_domain_flutter_analysis \n"
         << "  plate_fsi_flutter_optimization \n"
         << "  stiffened_plate_fsi_thermally_stressed_flutter_optimization \n"
