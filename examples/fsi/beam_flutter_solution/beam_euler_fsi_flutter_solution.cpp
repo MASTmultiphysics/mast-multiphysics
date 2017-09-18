@@ -412,7 +412,7 @@ _constraint_beam_dofs                  (nullptr) {
     
     // create the property functions and add them to the
     
-    _thy             = new MAST::Parameter("thy",    0.01);
+    _thy             = new MAST::Parameter("thy",  0.0015);
     _thz             = new MAST::Parameter("thz",    1.00);
     _rho             = new MAST::Parameter("rho",   2.7e3);
     _E               = new MAST::Parameter("E",     72.e9);
