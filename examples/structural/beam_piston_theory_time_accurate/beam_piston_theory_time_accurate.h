@@ -119,9 +119,11 @@ namespace MAST {
         MAST::Parameter
         *_thy,
         *_thz,
+        *_alpha,
         *_E,
         *_nu,
         *_rho,
+        *_temp,
         *_zero,
         *_velocity,
         *_mach,
@@ -132,11 +134,14 @@ namespace MAST {
         MAST::ConstantFieldFunction
         *_thy_f,
         *_thz_f,
+        *_alpha_f,
         *_E_f,
         *_nu_f,
         *_rho_f,
         *_hyoff_f,
         *_hzoff_f,
+        *_temp_f,
+        *_ref_temp_f,
         *_velocity_f,
         *_mach_f,
         *_rho_air_f,
@@ -159,7 +164,9 @@ namespace MAST {
         
         // create the Dirichlet boundary condition on right edge
         MAST::DirichletBoundaryCondition*     _dirichlet_right;
-                
+
+        MAST::BoundaryConditionBase*             _T_load;
+
         // vector of parameters to evaluate sensitivity wrt
         std::vector<MAST::Parameter*> _params_for_sensitivity;
         
