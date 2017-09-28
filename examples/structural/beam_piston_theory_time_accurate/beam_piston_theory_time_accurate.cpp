@@ -19,6 +19,7 @@
 
 // C++ includes
 #include <iostream>
+#include <fstream>
 
 
 // MAST includes
@@ -103,8 +104,10 @@ MAST::BeamPistonTheoryTimeAccurateAnalysis::init(libMesh::ElemType etype,
     _thy             = new MAST::Parameter("thy",     0.06);
     _thz             = new MAST::Parameter("thz",     0.02);
     _E               = new MAST::Parameter("E",      72.e9);
+    _alpha           = new MAST::Parameter("alpha",      17.3e-6);
     _nu              = new MAST::Parameter("nu",      0.33);
     _rho             = new MAST::Parameter("rho",   2700.0);
+    _temp            = new MAST::Parameter("temperature", 50.);
     _zero            = new MAST::Parameter("zero",      0.);
     _velocity        = new MAST::Parameter("V"   ,    800.);
     _mach            = new MAST::Parameter("mach",      3.);
@@ -128,6 +131,9 @@ MAST::BeamPistonTheoryTimeAccurateAnalysis::init(libMesh::ElemType etype,
     _rho_f           = new MAST::ConstantFieldFunction("rho",         *_rho);
     _hyoff_f         = new MAST::ConstantFieldFunction("hy_off",     *_zero);
     _hzoff_f         = new MAST::ConstantFieldFunction("hz_off",     *_zero);
+    _alpha_f         = new MAST::ConstantFieldFunction("alpha_expansion", *_alpha);
+    _temp_f          = new MAST::ConstantFieldFunction("temperature", *_temp);
+    _ref_temp_f      = new MAST::ConstantFieldFunction("ref_temperature", *_zero);
     _velocity_f      = new MAST::ConstantFieldFunction("V",      *_velocity);
     _mach_f          = new MAST::ConstantFieldFunction("mach",       *_mach);
     _rho_air_f       = new MAST::ConstantFieldFunction("rho",     *_rho_air);
@@ -144,7 +150,13 @@ MAST::BeamPistonTheoryTimeAccurateAnalysis::init(libMesh::ElemType etype,
     _piston_bc->add(*_rho_air_f);
     _piston_bc->add(*_gamma_air_f);
     _discipline->add_volume_load(0, *_piston_bc);
-    
+
+    // initialize the load
+    _T_load          = new MAST::BoundaryConditionBase(MAST::TEMPERATURE);
+    _T_load->add(*_temp_f);
+    _T_load->add(*_ref_temp_f);
+    _discipline->add_volume_load(0, *_T_load);
+
     // create the material property card
     _m_card         = new MAST::IsotropicMaterialPropertyCard;
     
@@ -152,7 +164,8 @@ MAST::BeamPistonTheoryTimeAccurateAnalysis::init(libMesh::ElemType etype,
     _m_card->add(  *_E_f);
     _m_card->add( *_nu_f);
     _m_card->add(*_rho_f);
-    
+    _m_card->add(*_alpha_f);
+
     // create the element property card
     _p_card         = new MAST::Solid1DSectionElementPropertyCard;
     
@@ -169,6 +182,7 @@ MAST::BeamPistonTheoryTimeAccurateAnalysis::init(libMesh::ElemType etype,
     
     // tell the section property about the material property
     _p_card->set_material(*_m_card);
+    if (if_nonlin) _p_card->set_strain(MAST::VON_KARMAN_STRAIN);
     
     _p_card->init();
         
@@ -219,6 +233,7 @@ MAST::BeamPistonTheoryTimeAccurateAnalysis::~BeamPistonTheoryTimeAccurateAnalysi
     delete _m_card;
     delete _p_card;
     
+    delete _T_load;
     delete _dirichlet_left;
     delete _dirichlet_right;
     
@@ -229,6 +244,9 @@ MAST::BeamPistonTheoryTimeAccurateAnalysis::~BeamPistonTheoryTimeAccurateAnalysi
     delete _rho_f;
     delete _hyoff_f;
     delete _hzoff_f;
+    delete _alpha_f;
+    delete _temp_f;
+    delete _ref_temp_f;
     delete _velocity_f;
     delete _mach_f;
     delete _rho_air_f;
@@ -239,6 +257,8 @@ MAST::BeamPistonTheoryTimeAccurateAnalysis::~BeamPistonTheoryTimeAccurateAnalysi
     delete _E;
     delete _nu;
     delete _rho;
+    delete _alpha;
+    delete _temp;
     delete _zero;
     delete _velocity;
     delete _mach;
@@ -323,8 +343,34 @@ MAST::BeamPistonTheoryTimeAccurateAnalysis::solve(bool if_write_output) {
     
     MAST::NonlinearSystem& nonlin_sys = assembly.system();
     
-    // zero the solution before solving
-    *nonlin_sys.solution = 1.e-4;
+    // initialize the solution before solving
+    libMesh::MeshBase::node_iterator
+    n_id  = _mesh->nodes_begin(),
+    n_end = _mesh->nodes_end();
+    unsigned int
+    dof = 0;
+    Real
+    x  = 0.,
+    pi = acos(-1.);
+    
+    libMesh::Node* out_n = nullptr;
+    
+    for ( ; n_id != n_end; n_id++) {
+        
+        libMesh::Node& n = **n_id;
+        x = n(0);
+        if (!out_n && x>7.5)
+            out_n = &n;
+            
+        // set v
+        dof = n.dof_number(_sys->number(), 1, 0);
+        nonlin_sys.solution->set(dof, 0.1*sin(pi*x/_length));
+        // set theta_z
+        dof = n.dof_number(_sys->number(), 5, 0);
+        nonlin_sys.solution->set(dof, 0.1*pi/_length*cos(pi*x/_length));
+        nonlin_sys.solution->close();
+    }
+    
     this->clear_stresss();
     
 
@@ -346,6 +392,12 @@ MAST::BeamPistonTheoryTimeAccurateAnalysis::solve(bool if_write_output) {
     
     if (if_write_output)
         libMesh::out << "Writing output to : output.exo" << std::endl;
+
+    solver.solve_highest_derivative_and_advance_time_step();
+    
+    std::ofstream o;
+    o.open("plot.txt", std::ofstream::out);
+    dof = out_n->dof_number(_sys->number(), 1, 0);
     
     // loop over time steps
     while (t_step < n_steps) {
@@ -368,6 +420,10 @@ MAST::BeamPistonTheoryTimeAccurateAnalysis::solve(bool if_write_output) {
                                          nonlin_sys.time);
             
             //_discipline->plot_stress_strain_data<libMesh::ExodusII_IO>("stress_output.exo");
+            o
+            << solver.solution()(dof) << "  "
+            << solver.velocity()(dof) << std::endl;
+            
         }
         
         solver.solve();
@@ -380,6 +436,7 @@ MAST::BeamPistonTheoryTimeAccurateAnalysis::solve(bool if_write_output) {
     
     assembly.clear_discipline_and_system();
     
+    o.close();
     return *(_sys->solution);
 }
 

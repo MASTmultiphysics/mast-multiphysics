@@ -238,7 +238,7 @@ MAST::FluidElemBase::calculate_diffusion_flux(const unsigned int calculate_dim,
     // the momentum flux is obtained from the stress tensor
     for (unsigned int i_dim=0; i_dim<dim; i_dim++) {
         
-        flux(1+i_dim) = stress_tensor(calculate_dim, i_dim); // tau_ij
+        flux(1+i_dim) += stress_tensor(calculate_dim, i_dim); // tau_ij
         
         flux(n1-1) += uvec(i_dim) * stress_tensor(calculate_dim, i_dim); // u_j tau_ij
     }

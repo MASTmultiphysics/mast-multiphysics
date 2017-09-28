@@ -1701,7 +1701,7 @@ _calculate_surface_integrated_load(bool request_derivative,
         
 
         // calculate the derivative, if requested
-        if (request_sensitivity) {
+        if (request_derivative) {
             
             calculate_pressure_derivative_wrt_conservative_variables
             (primitive_sol, vec1_n1);
