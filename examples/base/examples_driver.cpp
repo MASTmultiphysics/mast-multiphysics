@@ -393,11 +393,11 @@ int main(int argc, char* const argv[]) {
                                                with_sens,
                                                par_name);
     else if (case_name == "plate_bending_thermal_stress")
-        analysis<MAST::StiffenedPlateBendingThermalStress>(case_name,
-                                                           libMesh::QUAD4,
-                                                           if_nonlin,
-                                                           with_sens,
-                                                           par_name);
+        analysis<MAST::PlateBendingThermalStress>(case_name,
+                                                  libMesh::QUAD4,
+                                                  if_nonlin,
+                                                  with_sens,
+                                                  par_name);
     else if (case_name == "stiffened_plate_bending_thermal_stress")
         analysis<MAST::StiffenedPlateBendingThermalStress>(case_name,
                                                            libMesh::QUAD4,

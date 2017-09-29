@@ -51,6 +51,7 @@ namespace MAST {
     class BoundaryConditionBase;
     class NonlinearSystem;
     class SectionOffset;
+    class StressStrainOutputBase;
     
     
     struct PlateThermallyStressedModalAnalysis {
@@ -90,7 +91,11 @@ namespace MAST {
         void
         sensitivity_solve(MAST::Parameter& p, std::vector<Real>& eig);
         
-        
+        /*!
+         *   clears the stress data structures for a followup analysis
+         */
+        void clear_stresss();
+
         bool _initialized;
         
         // length of domain
@@ -172,6 +177,9 @@ namespace MAST {
 
         // vector of parameters to evaluate sensitivity wrt
         std::vector<MAST::Parameter*> _params_for_sensitivity;
+
+        // output quantity objects to evaluate stress
+        std::vector<MAST::StressStrainOutputBase*>  _outputs;
     };
 }
 

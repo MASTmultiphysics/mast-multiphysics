@@ -254,6 +254,58 @@ init(libMesh::ElemType e_type, bool if_vk) {
     for (unsigned int i=0; i<n_stiff+1; i++)
         _discipline->set_property_for_subdomain(i, *_p_card);
 
+    
+    
+    // create the output objects, one for each element
+    libMesh::MeshBase::const_element_iterator
+    e_it    = _mesh->elements_begin(),
+    e_end   = _mesh->elements_end();
+    
+    // points where stress is evaluated
+    std::vector<libMesh::Point> pts;
+    
+    if (e_type == libMesh::QUAD4 ||
+        e_type == libMesh::QUAD8 ||
+        e_type == libMesh::QUAD9) {
+        
+        pts.push_back(libMesh::Point(-1/sqrt(3), -1/sqrt(3), 1.)); // upper skin
+        pts.push_back(libMesh::Point(-1/sqrt(3), -1/sqrt(3),-1.)); // lower skin
+        pts.push_back(libMesh::Point( 1/sqrt(3), -1/sqrt(3), 1.)); // upper skin
+        pts.push_back(libMesh::Point( 1/sqrt(3), -1/sqrt(3),-1.)); // lower skin
+        pts.push_back(libMesh::Point( 1/sqrt(3),  1/sqrt(3), 1.)); // upper skin
+        pts.push_back(libMesh::Point( 1/sqrt(3),  1/sqrt(3),-1.)); // lower skin
+        pts.push_back(libMesh::Point(-1/sqrt(3),  1/sqrt(3), 1.)); // upper skin
+        pts.push_back(libMesh::Point(-1/sqrt(3),  1/sqrt(3),-1.)); // lower skin
+    }
+    else if (e_type == libMesh::TRI3 ||
+             e_type == libMesh::TRI6) {
+        
+        pts.push_back(libMesh::Point(1./3., 1./3., 1.)); // upper skin
+        pts.push_back(libMesh::Point(1./3., 1./3.,-1.)); // lower skin
+        pts.push_back(libMesh::Point(2./3., 1./3., 1.)); // upper skin
+        pts.push_back(libMesh::Point(2./3., 1./3.,-1.)); // lower skin
+        pts.push_back(libMesh::Point(1./3., 2./3., 1.)); // upper skin
+        pts.push_back(libMesh::Point(1./3., 2./3.,-1.)); // lower skin
+    }
+    else
+        libmesh_assert(false); // should not get here
+    
+    for ( ; e_it != e_end; e_it++) {
+        
+        MAST::StressStrainOutputBase * output = new MAST::StressStrainOutputBase;
+        
+        // tell the object to evaluate the data for this object only
+        std::set<const libMesh::Elem*> e_set;
+        e_set.insert(*e_it);
+        output->set_elements_in_domain(e_set);
+        output->set_points_for_evaluation(pts);
+        output->set_volume_loads(_discipline->volume_loads());
+        _outputs.push_back(output);
+        
+        _discipline->add_volume_output((*e_it)->subdomain_id(), *output);
+    }
+
+    
     _initialized = true;
 }
 
@@ -307,6 +359,16 @@ MAST::PlateThermallyStressedModalAnalysis::
         
         delete _discipline;
         delete _structural_sys;
+        
+        // iterate over the output quantities and delete them
+        std::vector<MAST::StressStrainOutputBase*>::iterator
+        it   =   _outputs.begin(),
+        end  =   _outputs.end();
+        
+        for ( ; it != end; it++)
+            delete *it;
+        
+        _outputs.clear();
     }
 }
 
@@ -431,6 +493,7 @@ MAST::PlateThermallyStressedModalAnalysis::solve(bool if_write_output,
         << std::setw(35) << std::fixed << std::setprecision(15) << (*_press)();
         
         // evaluate the outputs
+        this->clear_stresss();
         assembly.calculate_outputs(*(_sys->solution));
         
         assembly.clear_discipline_and_system();
@@ -440,6 +503,7 @@ MAST::PlateThermallyStressedModalAnalysis::solve(bool if_write_output,
             libMesh::out << "Writing output to : output.exo" << std::endl;
             
             // write the solution for visualization
+            _discipline->update_stress_strain_data();
             exodus_writer.write_timestep("output.exo",
                                          *_eq_sys,
                                          i_step+1,
@@ -591,4 +655,18 @@ MAST::PlateThermallyStressedModalAnalysis::sensitivity_solve(MAST::Parameter& p,
 
 
 
+
+void
+MAST::PlateThermallyStressedModalAnalysis::clear_stresss() {
+    
+    libmesh_assert(_initialized);
+    
+    // iterate over the output quantities and delete them
+    std::vector<MAST::StressStrainOutputBase*>::iterator
+    it   =   _outputs.begin(),
+    end  =   _outputs.end();
+    
+    for ( ; it != end; it++)
+        (*it)->clear(false);
+}
 
