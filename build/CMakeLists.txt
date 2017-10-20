@@ -9,8 +9,8 @@ cmake_minimum_required(VERSION 2.8)
 # flags for optional compilation of packages
 option (ENABLE_GCMMA "Build with GCMMA interface" OFF)
 option (ENABLE_DOT   "Build with DOT interface"   OFF)
-option (ENABLE_NPSOL "Build with NPSOL interface" OFF)
-
+option (ENABLE_NPSOL  "Build with NPSOL interface" OFF)
+option (ENABLE_CYTHON  "Build with CYTHON interface" OFF)
 
 #set default values
 set (MAST_ENABLE_GCMMA 0)

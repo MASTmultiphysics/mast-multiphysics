@@ -17,6 +17,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+#if MAST_ENABLE_CYTHON == 1
+
 extern "C" {
 #include "Python.h"
 }
@@ -456,4 +458,5 @@ MAST::NastranModelAnalysis::_normal_modes_solve() {
 }
 
 
+#endif // MAST_ENABLE_CYTHON
 

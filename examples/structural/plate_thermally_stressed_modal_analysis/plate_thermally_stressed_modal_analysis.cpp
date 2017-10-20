@@ -105,8 +105,8 @@ init(libMesh::ElemType e_type, bool if_vk) {
                         10,       // n_y_divs_between_stiffeners
                         _length,
                         _width,
-                        0.00,     // skin_dip_amplitude_by_panel_w,
-                        -0.00,    // hat_dip_amplitude_by_panel_w,
+                        infile("skin_dip_h_by_w",0.00),     // skin_dip_amplitude_by_panel_w,
+                        infile("hat_dip_h_by_w",-0.00),    // hat_dip_amplitude_by_panel_w,
                         .2,       // stiff_w_by_panel_w
                         .5,       // hat_w_by_stiff_w
                         .05,      // hat_h_by_panel_w
@@ -479,8 +479,8 @@ MAST::PlateThermallyStressedModalAnalysis::solve(bool if_write_output,
     for (int i_step=0; i_step<n_steps; i_step++) {
         
         (*_temp)()   =  T0*(i_step+1.)/(1.*n_steps);
-        (*_press)()  =  p0*(i_step+1.)/(1.*n_steps);
-        
+        (*_press)()  =  p0;
+ 
         libMesh::out
         << "Load step: " << i_step << "  Temp = " << (*_temp)() << "  p: " << (*_press)()  << std::endl;
         

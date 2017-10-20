@@ -417,12 +417,20 @@ int main(int argc, char* const argv[]) {
          if_nonlin,
          with_sens,
          par_name);
-    else if (case_name == "nastran_model_analysis")
+    else if (case_name == "nastran_model_analysis") {
+#if MAST_ENABLE_CYTHON == 1
         analysis<MAST::NastranModelAnalysis>(case_name,
                                              libMesh::INVALID_ELEM,
                                              if_nonlin,
                                              with_sens,
                                              par_name);
+#else
+	libMesh::out 
+	<< "MAST not configured with Cython. Working with NASTRAN files requires Pynastran and Cython."
+	<< std::endl;
+	libmesh_error();
+#endif
+}
     else if (case_name == "plate_bending_sizing_optimization")
         optimization<MAST::PlateBendingSizingOptimization>(case_name,
                                                            libMesh::QUAD4,
