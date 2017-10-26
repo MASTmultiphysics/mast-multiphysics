@@ -1,0 +1,7 @@
+# CMake build files.
+build/dbg/
+build/opt/
+
+# CLion IDE files.
+.idea/
+cmake-build-debug/
