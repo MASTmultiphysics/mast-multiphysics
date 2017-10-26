@@ -325,10 +325,10 @@ MAST::BeamBendingThermalStress::solve(bool if_write_output) {
         libMesh::out << "Writing output to : output.exo" << std::endl;
         
         // write the solution for visualization
+        _discipline->update_stress_strain_data();
         libMesh::ExodusII_IO(*_mesh).write_equation_systems("output.exo",
                                                             *_eq_sys);
         
-        _discipline->plot_stress_strain_data<libMesh::ExodusII_IO>("stress_output.exo");
     }
     
     return *(_sys->solution);
@@ -389,9 +389,9 @@ MAST::BeamBendingThermalStress::sensitivity_solve(MAST::Parameter& p,
         _sys->solution->swap(_sys->get_sensitivity_solution(0));
         
         // write the solution for visualization
+        _discipline->update_stress_strain_data(&p);
         libMesh::ExodusII_IO(*_mesh).write_equation_systems(oss1.str(),
                                                             *_eq_sys);
-        _discipline->plot_stress_strain_data<libMesh::ExodusII_IO>(oss2.str(), &p);
 
         _sys->solution->swap(_sys->get_sensitivity_solution(0));
     }
