@@ -9,14 +9,14 @@ cmake_minimum_required(VERSION 2.8)
 # flags for optional compilation of packages
 option (ENABLE_GCMMA "Build with GCMMA interface" OFF)
 option (ENABLE_DOT   "Build with DOT interface"   OFF)
-option (ENABLE_NPSOL "Build with NPSOL interface" OFF)
-
+option (ENABLE_NPSOL  "Build with NPSOL interface" OFF)
+option (ENABLE_CYTHON  "Build with CYTHON interface" OFF)
 
 #set default values
 set (MAST_ENABLE_GCMMA 0)
 set (MAST_ENABLE_DOT   0)
 set (MAST_ENABLE_NPSOL 0)
-
+set (MAST_ENABLE_CYTHON 0)
 
 # look for gcmma library
 
@@ -43,6 +43,16 @@ if (ENABLE_NPSOL)
    set (npsol_lib_file    "npsol-lib-file" CACHE STRING "NPSOL optimization library")
    set (npsol_lib_dir     "npsol-lib-dir" CACHE STRING "Directory containing NPSOL optimization library")
    find_library (npsol_lib   ${npsol_lib_file}    ${npsol_lib_dir})
+endif()
+
+
+#look for cython and python
+if (ENABLE_CYTHON)
+   set (CYTHON            "cython-compiler" CACHE STRING "Cython executable")
+   set (python_include_dir  "python-include-dir" CACHE STRING "Directory containing python include files")
+   set (python_lib_file     "python-lib-file" CACHE STRING "Python library to link against")
+   set (python_lib_dir      "python-lib-dir" CACHE STRING "Directory containing python library")
+   find_library (python_lib   ${python_lib_file}    ${python_lib_dir})
 endif()
 
 
@@ -140,12 +150,37 @@ set_property (TARGET mast APPEND
 ####################################################################
 #  tell cmake to link example driver with mast library
 ####################################################################
+
+#add the cython compilation
+if (ENABLE_CYTHON)
+   add_custom_command( OUTPUT 
+                     ${PROJECT_SOURCE_DIR}/../examples/structural/nastran_model_analysis/pynastran.h 
+  		     ${PROJECT_SOURCE_DIR}/../examples/structural/nastran_model_analysis/pynastran.cpp
+                     COMMAND ${CYTHON} --capi-reexport-cincludes --cplus ${PROJECT_SOURCE_DIR}/../examples/structural/nastran_model_analysis/pynastran.pyx  -o ${PROJECT_SOURCE_DIR}/../examples/structural/nastran_model_analysis/pynastran.cpp
+                     DEPENDS 
+		     ${PROJECT_SOURCE_DIR}/../examples/structural/nastran_model_analysis/pynastran.pyx 
+		     ${PROJECT_SOURCE_DIR}/../examples/structural/nastran_model_analysis/mast_interface.pxd
+		     IMPLICIT_DEPENDS
+		     CXX ${PROJECT_SOURCE_DIR}/../examples/structural/nastran_model_analysis/mast_interface.h
+		     CXX ${PROJECT_SOURCE_DIR}/../examples/structural/nastran_model_analysis/mast_interface.cpp 
+              	     )    
+
+   set_source_files_properties(${PROJECT_SOURCE_DIR}/../examples/structural/nastran_model_analysis/pynastran.h
+			       ${PROJECT_SOURCE_DIR}/../examples/structural/nastran_model_analysis/pynastran.cpp
+                               PROPERTIES GENERATED TRUE ) 
+
+   set (pynastran_cpp_file ${PROJECT_SOURCE_DIR}/../examples/structural/nastran_model_analysis/pynastran.cpp)
+endif()
+
+
 file (GLOB_RECURSE example_driver_source_files
       ${PROJECT_SOURCE_DIR}/../examples/*.cpp
       ${PROJECT_SOURCE_DIR}/../examples/*.h)
-add_executable (example_driver ${example_driver_source_files})
+add_executable (example_driver ${example_driver_source_files} ${pynastran_cpp_file})
 
-target_link_libraries (example_driver   mast)
+target_link_libraries (example_driver   
+		       mast
+		       ${python_lib})
 set_property (TARGET example_driver APPEND 
               PROPERTY INCLUDE_DIRECTORIES
 	          ${libmesh_dir}/include)
@@ -155,6 +190,9 @@ set_property (TARGET example_driver APPEND
 set_property (TARGET example_driver APPEND 
               PROPERTY INCLUDE_DIRECTORIES
               ${slepc_dir}/include)
+set_property (TARGET example_driver APPEND 
+              PROPERTY INCLUDE_DIRECTORIES
+              ${python_include_dir})
 
 ####################################################################
 #  tell cmake to link the tests
