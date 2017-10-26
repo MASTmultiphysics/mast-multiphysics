@@ -178,10 +178,9 @@ namespace MAST {
         *_rho,
         *_E,
         *_nu,
-        *_zero,
-        *_mach,
-        *_rho_air,
-        *_gamma_air;
+        *_alpha,
+        *_temp,
+        *_zero;
         
         MAST::ConstantFieldFunction
         *_thy_f,
@@ -189,11 +188,11 @@ namespace MAST {
         *_rho_f,
         *_E_f,
         *_nu_f,
+        *_alpha_f,
+        *_temp_f,
+        *_ref_temp_f,
         *_hyoff_f,
-        *_hzoff_f,
-        *_mach_f,
-        *_rho_air_f,
-        *_gamma_air_f;
+        *_hzoff_f;
         
         
         // create the material property card
@@ -208,6 +207,9 @@ namespace MAST {
         // create the Dirichlet boundary condition on right edge
         MAST::DirichletBoundaryCondition*        _dirichlet_right;
         
+        // create the temperature load
+        MAST::BoundaryConditionBase*             _T_load;
+
         // object to augment the send list of ghosted fluid elements
         MAST::AugmentGhostElementSendListObj*    _augment_send_list_obj;
 
