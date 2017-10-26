@@ -127,12 +127,8 @@ get_max_stress_strain_values(const std::vector<MAST::StressStrainOutputBase::Dat
 }
 
 
-template <typename ValType>
 void MAST::StructuralDiscipline::
-plot_stress_strain_data(const std::string& file_nm,
-                        const MAST::Parameter* p) const {
-    
-    libMesh::MeshBase& mesh =  _eq_systems.get_mesh();
+update_stress_strain_data(const MAST::Parameter* p) const {
     
     // iterate over the data in the output map and write it
     MAST::VolumeOutputMapType::const_iterator
@@ -205,16 +201,6 @@ plot_stress_strain_data(const std::string& file_nm,
     
     _stress_output_sys->solution->close();
     
-    // now output
-    std::set<std::string> nm;
-    nm.insert(_stress_output_sys->name());
-    ValType(mesh).write_equation_systems(file_nm, _eq_systems, &nm);
 }
 
-
-
-// explicit instantiation
-template void MAST::StructuralDiscipline::
-plot_stress_strain_data<libMesh::ExodusII_IO>(const std::string&     file_nm,
-                                              const MAST::Parameter* p) const;
 

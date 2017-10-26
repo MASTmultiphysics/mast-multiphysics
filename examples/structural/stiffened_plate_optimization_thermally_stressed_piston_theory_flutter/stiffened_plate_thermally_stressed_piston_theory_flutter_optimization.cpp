@@ -1231,7 +1231,7 @@ evaluate(const std::vector<Real>& dvars,
                                                             *_eq_sys,
                                                             &nm);
         
-        _discipline->plot_stress_strain_data<libMesh::ExodusII_IO>("stress_output.exo");
+        _discipline->update_stress_strain_data();
     }
     
     
@@ -1528,12 +1528,9 @@ output(unsigned int iter,
     
     
     // write the solution for visualization
-    std::set<std::string> nm;
-    nm.insert(_sys->name());
+    _discipline->update_stress_strain_data();
     libMesh::ExodusII_IO(*_mesh).write_equation_systems("output.exo",
-                                                        *_eq_sys,
-                                                        &nm);
-    _discipline->plot_stress_strain_data<libMesh::ExodusII_IO>("stress_output.exo");
+                                                        *_eq_sys);
     
     MAST::FunctionEvaluation::output(iter, x, obj, fval, if_write_to_optim_file);
 }

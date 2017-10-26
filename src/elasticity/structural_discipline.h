@@ -45,14 +45,12 @@ namespace MAST {
         
         
         /*!
-         *   outputs the stresses and strains to the output processor. Only
-         *   the maximum values out of each element are plotted. If the
+         *   updates the stresses and strains to the system. Only
+         *   the maximum values out of each element are updated. If the
          *   parameter \par p is provided, then the sensitivity with respect 
-         *   the parameter is plotted.
+         *   the parameter is used.
          */
-        template <typename ValType>
-        void plot_stress_strain_data(const std::string& file_nm,
-                                     const MAST::Parameter* p = nullptr) const;
+        void update_stress_strain_data(const MAST::Parameter* p = nullptr) const;
 
         
         

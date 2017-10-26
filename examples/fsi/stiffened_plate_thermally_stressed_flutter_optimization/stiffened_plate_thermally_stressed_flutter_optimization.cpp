@@ -1616,10 +1616,10 @@ evaluate(const std::vector<Real>& dvars,
     _structural_nonlinear_assembly->calculate_outputs(steady_solve.solution());
     _structural_nonlinear_assembly->clear_discipline_and_system();
 
-     if (if_write_output) {
+    //if (if_write_output) {
      
-     _structural_discipline->plot_stress_strain_data<libMesh::ExodusII_IO>("stress_output.exo");
-     }
+    // _structural_discipline->update_stress_strain_data();
+    //}
 
     if (sol.second && if_write_output) {
         

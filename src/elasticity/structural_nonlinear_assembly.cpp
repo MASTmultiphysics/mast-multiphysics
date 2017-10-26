@@ -167,6 +167,10 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
     }
     
     
+    // call the post assembly object, if provided by user
+    if (_post_assembly)
+        _post_assembly->post_assembly(X, R, J, S);
+
     // if a solution function is attached, clear it
     if (_sol_function)
         _sol_function->clear();
