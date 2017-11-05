@@ -33,7 +33,8 @@ namespace MAST {
     public:
         
         BeamFlagFrequencyDomainNormalRotation(const std::string& nm,
-                                              MAST::ComplexMeshFieldFunction& func);
+                                              MAST::ComplexMeshFieldFunction& func,
+                                              const std::vector<Real>& midplane);
         
         
         virtual ~BeamFlagFrequencyDomainNormalRotation() { }
@@ -51,6 +52,15 @@ namespace MAST {
         
     protected:
         
+        /*!
+         *   @returns the y coordinate of the nearest midplane for this point
+         */
+        Real _nearest_midplane_y_coord(const libMesh::Point& p) const;
+        
+        /*!
+         *   vector of midplane coordinates
+         */
+        std::vector<Real>   _mid_coords;
     };
 }
 

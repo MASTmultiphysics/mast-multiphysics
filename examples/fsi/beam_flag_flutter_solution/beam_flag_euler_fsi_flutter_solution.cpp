@@ -150,11 +150,13 @@ _constraint_beam_dofs                  (nullptr) {
     
     const unsigned int
     dim                 = 2,
-    nx_divs             = 3,
-    ny_divs             = 3,
-    panel_bc_id         = 10;
+    nx_divs             = infile("nx_divs", 0),
+    ny_divs             = infile("ny_divs", 0),
+    panel_bc_id         = 10,
+    n_flags             = infile("n_flags", 0);
     
     Real
+    tol                 = 1.e-6,
     thickness           = 0.;
     
     std::string
@@ -231,13 +233,19 @@ _constraint_beam_dofs                  (nullptr) {
     
     // initialize the mesh
     MAST::FlagMesh2D
-    flag_mesh  = MAST::FlagMesh2D();
-    flag_mesh.init(panel_bc_id,
-                   divs,
-                   *_fluid_mesh,
-                   elem_type);
-    thickness  = flag_mesh.thickness();
+    flag_mesh  = MAST::FlagMesh2D(n_flags,
+                                  panel_bc_id,
+                                  divs);
+    flag_mesh.init_fluid_mesh(*_fluid_mesh, elem_type);
     
+    // get the thickness and make sure that all flags are the same thickness
+    thickness           = flag_mesh.thickness(0);
+    
+    for (unsigned int i=0; i<n_flags; i++) {
+     
+        libmesh_assert_less_equal(std::abs(thickness-flag_mesh.thickness(i)),
+                                  tol);
+    }
     
     _fluid_discipline   = new MAST::ConservativeFluidDiscipline(*_fluid_eq_sys);
     _fluid_sys_init     = new MAST::ConservativeFluidSystemInitialization(*_fluid_sys,
@@ -327,28 +335,8 @@ _constraint_beam_dofs                  (nullptr) {
     //    SETUP THE STRUCTURAL DATA
     //////////////////////////////////////////////////////////////////////
     
-    x_div_loc.resize     (2);
-    x_relative_dx.resize (2);
-    x_divs.resize        (1);
-    divs.resize          (1);
-    
-    x_coord_divs.reset   (new MeshInitializer::CoordinateDivisions);
-    
-    
-    // now read in the values: x-coord
-    for (unsigned int i_div=0; i_div<2; i_div++) {
-        
-        x_div_loc[i_div]        = infile("x_div_loc",   0., i_div+1);
-        x_relative_dx[i_div]    = infile( "x_rel_dx",   0., i_div+1);
-    }
-    x_divs[0]       = pow(2, n_refine)*infile( "x_div_nelem", 0, 1);
-    
-    divs[0] = x_coord_divs.get();
-    x_coord_divs->init(1, x_div_loc, x_relative_dx, x_divs);
-    
-    
     // setup length for use in setup of flutter solver
-    _length = x_div_loc[1]-x_div_loc[0];
+    _length = x_div_loc[2]-x_div_loc[1];
     (*_b_ref) = _length;
     
     // create the mesh
@@ -361,7 +349,7 @@ _constraint_beam_dofs                  (nullptr) {
     else
         elem_type = libMesh::EDGE2;
     
-    MeshInitializer().init(divs, *_structural_mesh, elem_type);
+    flag_mesh.init_structural_mesh(*_structural_mesh, elem_type);
     
     // create the equation system
     _structural_eq_sys    = new  libMesh::EquationSystems(*_structural_mesh);
@@ -393,30 +381,34 @@ _constraint_beam_dofs                  (nullptr) {
     _structural_eq_sys->print_info();
     
     // initialize the motion object
-    _displ        = new MAST::BeamFlagFrequencyDomainDisplacement(*_structural_sys_init,
-                                                                  "frequency_domain_displacement");
-    _normal_rot   = new MAST::BeamFlagFrequencyDomainNormalRotation("frequency_domain_normal_rotation",
-                                                                    *_displ);
+    _displ        =
+    new MAST::BeamFlagFrequencyDomainDisplacement(*_structural_sys_init,
+                                                  "frequency_domain_displacement",
+                                                  flag_mesh.midplane_coordinates());
+    _normal_rot   =
+    new MAST::BeamFlagFrequencyDomainNormalRotation("frequency_domain_normal_rotation",
+                                                    *_displ,
+                                                    flag_mesh.midplane_coordinates());
     _slip_wall->add(*_displ);
     _slip_wall->add(*_normal_rot);
     
     
     _structural_sys->eigen_solver->set_position_of_spectrum(libMesh::LARGEST_MAGNITUDE);
     _structural_sys->set_exchange_A_and_B(true);
-    _structural_sys->set_n_requested_eigenvalues(infile("n_modes", 10));
+    _structural_sys->set_n_requested_eigenvalues(infile("n_modes", 20));
     
     // create the property functions and add them to the
     
-    _thy             = new MAST::Parameter("thy",    0.01);
-    _thz             = new MAST::Parameter("thz",    1.00);
-    _rho             = new MAST::Parameter("rho",   2.7e3);
-    _E               = new MAST::Parameter("E",     72.e9);
-    _nu              = new MAST::Parameter("nu",     0.33);
-    _kappa           = new MAST::Parameter("kappa", 5./6.);
-    _zero            = new MAST::Parameter("zero",     0.);
-    _mach            = new MAST::Parameter("mach",     3.);
-    _rho_air         = new MAST::Parameter("rho" ,   1.05);
-    _gamma_air       = new MAST::Parameter("gamma",   1.4);
+    _thy             = new MAST::Parameter("thy", thickness);
+    _thz             = new MAST::Parameter("thz",      1.00);
+    _rho             = new MAST::Parameter("rho",     2.7e3);
+    _E               = new MAST::Parameter("E",       72.e9);
+    _nu              = new MAST::Parameter("nu",       0.33);
+    _kappa           = new MAST::Parameter("kappa",   5./6.);
+    _zero            = new MAST::Parameter("zero",       0.);
+    _mach            = new MAST::Parameter("mach",       3.);
+    _rho_air         = new MAST::Parameter("rho" ,     1.05);
+    _gamma_air       = new MAST::Parameter("gamma",     1.4);
     
     
     

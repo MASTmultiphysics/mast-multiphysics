@@ -114,7 +114,7 @@ namespace MAST {
             
             
             /*!
-             *   returns number of division along this coordinate
+             *   @returns number of division along this coordinate
              */
             unsigned int n_divs() const {
                 libmesh_assert(_n_divs > 0);
@@ -122,16 +122,27 @@ namespace MAST {
             }
             
             /*!
-             *   returns location of division point \par i
+             *   @returns location of division point \par i
              */
             Real div_location(unsigned int i) const {
                 libmesh_assert(_n_divs > 0);
                 libmesh_assert(i <= _n_divs);
                 return _div_locations[i];
             }
+
             
             /*!
-             *   returns number of elements in division \par i
+             *   @returns relative mesh size at point \par i
+             */
+            Real relative_mesh_size(unsigned int i) const {
+                libmesh_assert(_n_divs > 0);
+                libmesh_assert(i <= _n_divs);
+                return _relative_mesh_size_at_div[i];
+            }
+
+            
+            /*!
+             *   @returns number of elements in division \par i
              */
             Real n_elements_in_div(unsigned int i) const {
                 libmesh_assert(_n_divs > 0);
@@ -141,7 +152,7 @@ namespace MAST {
             
             
             /*!
-             *    returns the length of the mesh along this coordinate
+             *    @returns the length of the mesh along this coordinate
              */
             Real length() const {
                 libmesh_assert( _n_divs > 0);
@@ -150,7 +161,7 @@ namespace MAST {
             
             
             /*!
-             *    returns the length of the mesh along this coordinate
+             *    @returns the length of the mesh along this coordinate
              */
             unsigned int total_elem_divs() const {
                 libmesh_assert( _n_divs > 0);
@@ -162,7 +173,7 @@ namespace MAST {
             }
             
             /*!
-             *   returns the location of the specified node
+             *   @returns the location of the specified node
              */
             Real operator() (const Real eta) {
                 libmesh_assert ((eta >= 0.) && (eta <= 1.));

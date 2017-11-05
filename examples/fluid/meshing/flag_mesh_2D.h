@@ -20,6 +20,9 @@
 #ifndef __mast__flag_mesh_2D_h__
 #define __mast__flag_mesh_2D_h__
 
+// C++ includes
+#include <vector>
+
 // MAST includes
 #include "examples/fluid/meshing/mesh_initializer.h"
 
@@ -34,39 +37,71 @@ namespace MAST {
     class FlagMesh2D: public MAST::MeshInitializer
     {
     public:
-        FlagMesh2D():
-        _flag_th(0.),
-        _x_in(0.), _x_out(0.),
-        _x_le(0.),  _x_te(0.),
-        _y_lo(0.),  _y_up(0.),
-        _panel_bc_id (0)
-        { }
+        FlagMesh2D(const unsigned int n_flags,
+                   const unsigned int panel_bc_id,
+                   const std::vector<MeshInitializer::CoordinateDivisions*>& divs);
+
+
+        /*!
+         *   @returns a reference to the vector of mid-plane coordinate of
+         *   all flags
+         */
+        const std::vector<Real>& midplane_coordinates() const {return _flag_center;}
+
         
-        
-        Real thickness() const {return _flag_th;}
+        /*!
+         *   @returns the mid-plane coordinate of i^th flag
+         */
+        Real midplane(unsigned int i) const {return _flag_center[i];}
+
+
+        /*!
+         *   @returns the thickness of i^th flag
+         */
+        Real thickness(unsigned int i) const {return _flag_th[i];}
         
         /*!
          *   initializes the object with the division for each dimension.
          */
         virtual void
-        init (const unsigned int panel_bc_id,
-              const std::vector<MeshInitializer::CoordinateDivisions*>& divs,
-              libMesh::UnstructuredMesh& mesh, libMesh::ElemType t);
+        init_fluid_mesh (libMesh::UnstructuredMesh& mesh,
+                         libMesh::ElemType t);
+
         
+        /*!
+         *   initializes the structural mesh consistent with the fluid mesh
+         */
+        virtual void
+        init_structural_mesh (libMesh::UnstructuredMesh& mesh,
+                              libMesh::ElemType t);
+
     protected:
         
         virtual void process_mesh( );
         
-        /*!
-         *   dimensions used to create mesh
-         */
-        Real _flag_th;
+        libMesh::Elem*
+        copy_elem(libMesh::Elem& e,
+                  std::map<libMesh::Node*, libMesh::Node*>& added_nodes);
         
+        /*!
+         *   thickness of flag
+         */
+        std::vector<Real> _flag_th;
+
+        /*!
+         *   centerline of flag
+         */
+        std::vector<Real> _flag_center;
+
         Real _x_in, _x_out, _x_le, _x_te;
         
         Real _y_lo, _y_up;
+
+        unsigned int _n_flags;
         
         unsigned int _panel_bc_id;
+
+        const std::vector<MeshInitializer::CoordinateDivisions*>& _divs;
     };
     
 }
