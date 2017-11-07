@@ -20,6 +20,9 @@
 #ifndef __mast__beam_flag_frequency_domain_displacement__
 #define __mast__beam_flag_frequency_domain_displacement__
 
+// C++ includes
+#include <vector>
+
 // MAST includes
 #include "base/complex_mesh_field_function.h"
 
@@ -40,7 +43,8 @@ namespace MAST {
          *   constructor
          */
         BeamFlagFrequencyDomainDisplacement(MAST::SystemInitialization& sys,
-                                            const std::string& nm);
+                                            const std::string& nm,
+                                            const std::vector<Real>& midplane);
         
         
         /*!
@@ -60,7 +64,16 @@ namespace MAST {
         
         
     protected:
+
+        /*!
+         *   @returns the y coordinate of the nearest midplane for this point
+         */
+        Real _nearest_midplane_y_coord(const libMesh::Point& p) const;
         
+        /*!
+         *   vector of midplane coordinates
+         */
+        std::vector<Real>   _mid_coords;
     };
 }
 

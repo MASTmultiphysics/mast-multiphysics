@@ -217,24 +217,24 @@ _thz                                (nullptr),
 _rho                                (nullptr),
 _E                                  (nullptr),
 _nu                                 (nullptr),
+_alpha                              (nullptr),
+_temp                               (nullptr),
 _zero                               (nullptr),
-_mach                               (nullptr),
-_rho_air                            (nullptr),
-_gamma_air                          (nullptr),
 _thy_f                              (nullptr),
 _thz_f                              (nullptr),
 _rho_f                              (nullptr),
 _E_f                                (nullptr),
 _nu_f                               (nullptr),
+_alpha_f                            (nullptr),
+_temp_f                             (nullptr),
+_ref_temp_f                         (nullptr),
 _hyoff_f                            (nullptr),
 _hzoff_f                            (nullptr),
-_mach_f                             (nullptr),
-_rho_air_f                          (nullptr),
-_gamma_air_f                        (nullptr),
 _m_card                             (nullptr),
 _p_card                             (nullptr),
 _dirichlet_left                     (nullptr),
 _dirichlet_right                    (nullptr),
+_T_load                             (nullptr),
 _bc_updates                         (nullptr) {
     
     //////////////////////////////////////////////////////////////////////
@@ -486,9 +486,8 @@ _bc_updates                         (nullptr) {
     _E               = new MAST::Parameter("E",     72.e9);
     _nu              = new MAST::Parameter("nu",     0.33);
     _zero            = new MAST::Parameter("zero",     0.);
-    _mach            = new MAST::Parameter("mach",     3.);
-    _rho_air         = new MAST::Parameter("rho"   , 1.05);
-    _gamma_air       = new MAST::Parameter("gamma",   1.4);
+    _alpha           = new MAST::Parameter("alpha",      2.5e-5);
+    _temp            = new MAST::Parameter( "temperature",   10.);
     
     
     
@@ -508,10 +507,10 @@ _bc_updates                         (nullptr) {
     _nu_f            = new MAST::ConstantFieldFunction("nu",           *_nu);
     _hyoff_f         = new MAST::ConstantFieldFunction("hy_off",     *_zero);
     _hzoff_f         = new MAST::ConstantFieldFunction("hz_off",     *_zero);
-    _mach_f          = new MAST::ConstantFieldFunction("mach",       *_mach);
-    _rho_air_f       = new MAST::ConstantFieldFunction("rho",     *_rho_air);
-    _gamma_air_f     = new MAST::ConstantFieldFunction("gamma", *_gamma_air);
-    
+    _alpha_f         = new MAST::ConstantFieldFunction("alpha_expansion", *_alpha);
+    _temp_f          = new MAST::ConstantFieldFunction("temperature", *_temp);
+    _ref_temp_f      = new MAST::ConstantFieldFunction("ref_temperature", *_zero);
+
     // create the material property card
     _m_card          = new MAST::IsotropicMaterialPropertyCard;
     
@@ -519,6 +518,7 @@ _bc_updates                         (nullptr) {
     _m_card->add(*_rho_f);
     _m_card->add(*_E_f);
     _m_card->add(*_nu_f);
+    _m_card->add(*_alpha_f);
     
     // create the element property card
     _p_card          = new MAST::Solid1DSectionElementPropertyCard;
@@ -542,6 +542,12 @@ _bc_updates                         (nullptr) {
     
     _structural_discipline->set_property_for_subdomain(0, *_p_card);
     
+    // initialize the load
+    _T_load          = new MAST::BoundaryConditionBase(MAST::TEMPERATURE);
+    _T_load->add(*_temp_f);
+    _T_load->add(*_ref_temp_f);
+    _structural_discipline->add_volume_load(0, *_T_load);
+
     // pressure boundary condition for the beam
     _pressure    =  new MAST::BoundaryConditionBase(MAST::SURFACE_PRESSURE);
     _pressure->add(*_pressure_function);
@@ -574,7 +580,8 @@ MAST::BeamEulerFSIAnalysis::~BeamEulerFSIAnalysis() {
     
     delete _velocity_f;
     
-    delete _pressure_function;    
+    delete _pressure_function;
+    delete _T_load;
     
     delete _vel;
     delete _displ;
@@ -599,11 +606,11 @@ MAST::BeamEulerFSIAnalysis::~BeamEulerFSIAnalysis() {
     delete _rho_f;
     delete _E_f;
     delete _nu_f;
+    delete _alpha_f;
+    delete _temp_f;
+    delete _ref_temp_f;
     delete _hyoff_f;
     delete _hzoff_f;
-    delete _mach_f;
-    delete _rho_air_f;
-    delete _gamma_air_f;
     
     
     delete _thy;
@@ -611,10 +618,9 @@ MAST::BeamEulerFSIAnalysis::~BeamEulerFSIAnalysis() {
     delete _rho;
     delete _E;
     delete _nu;
+    delete _alpha;
+    delete _temp;
     delete _zero;
-    delete _mach;
-    delete _rho_air;
-    delete _gamma_air;
     
     delete _bc_updates;
     delete _augment_send_list_obj;

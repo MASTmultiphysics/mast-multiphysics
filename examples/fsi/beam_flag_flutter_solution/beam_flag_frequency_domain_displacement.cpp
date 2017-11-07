@@ -29,8 +29,10 @@
 
 MAST::BeamFlagFrequencyDomainDisplacement::
 BeamFlagFrequencyDomainDisplacement(MAST::SystemInitialization& sys,
-                                    const std::string& nm):
-MAST::ComplexMeshFieldFunction(sys, nm)
+                                    const std::string& nm,
+                                    const std::vector<Real>& midplane):
+MAST::ComplexMeshFieldFunction(sys, nm),
+_mid_coords(midplane)
 { }
 
 
@@ -53,7 +55,7 @@ MAST::BeamFlagFrequencyDomainDisplacement::operator() (const libMesh::Point& p,
     
     libMesh::Point
     pt    = p;
-    pt(1) = 0;   // since the beam is assumed to be at y=0
+    pt(1) = _nearest_midplane_y_coord(p);
     
     DenseRealVector v_re, v_im;
     (*_function_re)(pt, t, v_re);
@@ -83,7 +85,7 @@ MAST::BeamFlagFrequencyDomainDisplacement::perturbation(const libMesh::Point& p,
     
     libMesh::Point
     pt    = p;
-    pt(1) = 0;   // since the beam is assumed to be at y=0
+    pt(1) = _nearest_midplane_y_coord(p);
 
     DenseRealVector v_re, v_im;
     (*_perturbed_function_re)(pt, t, v_re);
@@ -99,5 +101,27 @@ MAST::BeamFlagFrequencyDomainDisplacement::perturbation(const libMesh::Point& p,
         v(i) = std::complex<Real>(v_re(i), v_im(i));
 }
 
+
+
+
+Real
+MAST::BeamFlagFrequencyDomainDisplacement::
+_nearest_midplane_y_coord(const libMesh::Point& p) const {
+    
+    Real
+    val   =  _mid_coords[0],
+    diff  =  std::abs(p(1)-val); // start with the first difference
+    
+    for (unsigned int i=1; i<_mid_coords.size(); i++) {
+        
+        if (std::abs(p(1)-_mid_coords[i]) < diff) {
+            
+            val  = _mid_coords[i];
+            diff = std::abs(p(1) - val);
+        }
+    }
+    
+    return val;
+}
 
 

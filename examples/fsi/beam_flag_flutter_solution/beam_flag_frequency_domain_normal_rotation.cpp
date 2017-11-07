@@ -24,8 +24,10 @@
 
 MAST::BeamFlagFrequencyDomainNormalRotation::
 BeamFlagFrequencyDomainNormalRotation(const std::string& nm,
-                                      MAST::ComplexMeshFieldFunction& func):
-MAST::ComplexNormalRotationMeshFunction(nm, func)
+                                      MAST::ComplexMeshFieldFunction& func,
+                                      const std::vector<Real>& midplane):
+MAST::ComplexNormalRotationMeshFunction(nm, func),
+_mid_coords(midplane)
 { }
 
 
@@ -38,7 +40,7 @@ MAST::BeamFlagFrequencyDomainNormalRotation::operator()(const libMesh::Point& p,
     
     libMesh::Point
     pt = p;
-    pt(1) = 0.;  // since the beam is assumed to be at y=0
+    pt(1) = _nearest_midplane_y_coord(p);
     
     dn_rot.setZero();
     
@@ -93,7 +95,7 @@ MAST::BeamFlagFrequencyDomainNormalRotation::perturbation(const libMesh::Point& 
     
     libMesh::Point
     pt = p;
-    pt(1) = 0.;  // since the beam is assumed to be at y=0
+    pt(1) = _nearest_midplane_y_coord(p);
 
     dn_rot.setZero();
     
@@ -137,4 +139,24 @@ MAST::BeamFlagFrequencyDomainNormalRotation::perturbation(const libMesh::Point& 
 }
 
 
+
+Real
+MAST::BeamFlagFrequencyDomainNormalRotation::
+_nearest_midplane_y_coord(const libMesh::Point& p) const {
+    
+    Real
+    val   =  _mid_coords[0],
+    diff  =  std::abs(p(1)-val); // start with the first difference
+    
+    for (unsigned int i=1; i<_mid_coords.size(); i++) {
+        
+        if (std::abs(p(1)-_mid_coords[i]) < diff) {
+            
+            val  = _mid_coords[i];
+            diff = std::abs(p(1) - val);
+        }
+    }
+    
+    return val;
+}
 
