@@ -63,6 +63,7 @@ set (boost_test_lib    "boost-unit-test-lib" CACHE STRING "BOOST unit test libra
 set (boost_lib_dir     "boost-lib-dir" CACHE STRING "Directory containing boost unit test library files")
 set (mpi_include_dir   "mpi-include-dir" CACHE STRING "Directory containing MPI header files")
 set (mpi_lib_dir       "mpi-lib-dir" CACHE STRING "Directory containing MPI library files")
+set (mpicxx_lib_file   "mpi_cxx" CACHE STRING "Root filename of MPI C++ library. eg. if file is libmpicxx.so, this string is mpicxx")
 set (fortran_lib_file  "fortran-lib-file" CACHE STRING "fortran library")
 set (fortran_lib_dir   "fortran-lib-dir" CACHE STRING "Directory containing fortran library")
 set (lapack_lib_file   "lapack" CACHE STRING "LAPACK library")
@@ -92,7 +93,7 @@ find_library (mesh_opt mesh_opt ${libmesh_dir}/lib)
 find_library (petsc_lib petsc ${petsc_dir}/lib)
 find_library (slepc_lib slepc ${slepc_dir}/lib)
 
-find_library (mpicxx_lib    mpi_cxx              ${mpi_lib_dir})
+find_library (mpicxx_lib    ${mpicxx_lib_file}   ${mpi_lib_dir})
 find_library (mpi_lib       mpi                  ${mpi_lib_dir})
 
 find_library (boost_unit_test_lib   ${boost_test_lib}    ${boost_lib_dir})
