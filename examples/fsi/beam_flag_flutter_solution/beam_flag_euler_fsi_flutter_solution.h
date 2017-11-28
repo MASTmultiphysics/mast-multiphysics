@@ -194,10 +194,7 @@ namespace MAST {
         *_E,
         *_nu,
         *_kappa,
-        *_zero,
-        *_mach,
-        *_rho_air,
-        *_gamma_air;
+        *_zero;
         
         MAST::ConstantFieldFunction
         *_thy_f,
@@ -207,10 +204,7 @@ namespace MAST {
         *_nu_f,
         *_kappa_f,
         *_hyoff_f,
-        *_hzoff_f,
-        *_mach_f,
-        *_rho_air_f,
-        *_gamma_air_f;
+        *_hzoff_f;
         
         /*!
          *   piston theory boundary condition for the whole domain

@@ -109,9 +109,6 @@ _E                                     (nullptr),
 _nu                                    (nullptr),
 _kappa                                 (nullptr),
 _zero                                  (nullptr),
-_mach                                  (nullptr),
-_rho_air                               (nullptr),
-_gamma_air                             (nullptr),
 _thy_f                                 (nullptr),
 _thz_f                                 (nullptr),
 _rho_f                                 (nullptr),
@@ -120,9 +117,6 @@ _nu_f                                  (nullptr),
 _kappa_f                               (nullptr),
 _hyoff_f                               (nullptr),
 _hzoff_f                               (nullptr),
-_mach_f                                (nullptr),
-_rho_air_f                             (nullptr),
-_gamma_air_f                           (nullptr),
 _flutter_solver                        (nullptr),
 _flutter_root                          (nullptr),
 _m_card                                (nullptr),
@@ -399,16 +393,13 @@ _constraint_beam_dofs                  (nullptr) {
     
     // create the property functions and add them to the
     
-    _thy             = new MAST::Parameter("thy", thickness);
-    _thz             = new MAST::Parameter("thz",      1.00);
-    _rho             = new MAST::Parameter("rho",     2.7e3);
-    _E               = new MAST::Parameter("E",       72.e9);
-    _nu              = new MAST::Parameter("nu",       0.33);
+    _thy             = new MAST::Parameter("thy",              thickness);
+    _thz             = new MAST::Parameter("thz",                   1.00);
+    _rho             = new MAST::Parameter("rho", infile("rho_s", 2.7e3));
+    _E               = new MAST::Parameter("E",   infile("E_s",   72.e9));
+    _nu              = new MAST::Parameter("nu",  infile("nu_s",   0.33));
     _kappa           = new MAST::Parameter("kappa",   5./6.);
     _zero            = new MAST::Parameter("zero",       0.);
-    _mach            = new MAST::Parameter("mach",       3.);
-    _rho_air         = new MAST::Parameter("rho" ,     1.05);
-    _gamma_air       = new MAST::Parameter("gamma",     1.4);
     
     
     
@@ -429,9 +420,6 @@ _constraint_beam_dofs                  (nullptr) {
     _kappa_f         = new MAST::ConstantFieldFunction("kappa",     *_kappa);
     _hyoff_f         = new MAST::ConstantFieldFunction("hy_off",     *_zero);
     _hzoff_f         = new MAST::ConstantFieldFunction("hz_off",     *_zero);
-    _mach_f          = new MAST::ConstantFieldFunction("mach",       *_mach);
-    _rho_air_f       = new MAST::ConstantFieldFunction("rho",     *_rho_air);
-    _gamma_air_f     = new MAST::ConstantFieldFunction("gamma", *_gamma_air);
     
     // create the material property card
     _m_card          = new MAST::IsotropicMaterialPropertyCard;
@@ -530,9 +518,6 @@ MAST::BeamFlagEulerFSIFlutterAnalysis::~BeamFlagEulerFSIFlutterAnalysis() {
     delete _kappa_f;
     delete _hyoff_f;
     delete _hzoff_f;
-    delete _mach_f;
-    delete _rho_air_f;
-    delete _gamma_air_f;
     
     
     delete _thy;
@@ -542,9 +527,6 @@ MAST::BeamFlagEulerFSIFlutterAnalysis::~BeamFlagEulerFSIFlutterAnalysis() {
     delete _nu;
     delete _kappa;
     delete _zero;
-    delete _mach;
-    delete _rho_air;
-    delete _gamma_air;
     
     
     // delete the basis vectors
