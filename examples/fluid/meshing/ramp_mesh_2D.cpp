@@ -76,7 +76,7 @@ MAST::RampMesh2D::process_mesh( ) {
             
             for (unsigned int i_side=0; i_side<(*e_it)->n_sides(); i_side++)
             {
-                libMesh::AutoPtr<libMesh::Elem> side_elem ((*e_it)->side(i_side).release());
+                libMesh::UniquePtr<libMesh::Elem> side_elem ((*e_it)->side(i_side).release());
                 std::vector<bool> side_on_ramp(side_elem->n_nodes()),
                 side_on_slip_wall(side_elem->n_nodes());
                 std::fill(side_on_ramp.begin(), side_on_ramp.end(), false);

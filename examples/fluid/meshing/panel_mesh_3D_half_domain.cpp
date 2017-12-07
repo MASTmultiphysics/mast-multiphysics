@@ -93,7 +93,7 @@ MAST::PanelMesh3DHalfDomain::process_mesh( ) {
             
             for (unsigned int i_side=0; i_side<(*e_it)->n_sides(); i_side++)
             {
-                libMesh::AutoPtr<libMesh::Elem> side_elem ((*e_it)->side(i_side).release());
+                libMesh::UniquePtr<libMesh::Elem> side_elem ((*e_it)->side(i_side).release());
                 std::vector<bool> side_on_panel(side_elem->n_nodes()),
                 side_on_slip_wall(side_elem->n_nodes());
                 
