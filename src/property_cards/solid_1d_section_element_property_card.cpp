@@ -935,7 +935,7 @@ InertiaMatrix::operator() (const libMesh::Point& p,
     // bending rotation inertia
     for (unsigned int i=0; i<2; i++)
         for (unsigned int j=0; j<2; j++)
-            m(4+i,4+j) = I(i,j)*1.e-8;
+            m(4+i,4+j) = I(i,j)*1.e-6;
     
     m *= rho;
 }
@@ -981,8 +981,8 @@ InertiaMatrix::derivative (               const MAST::FunctionBase& f,
     // bending rotation inertia
     for (unsigned int i=0; i<2; i++)
         for (unsigned int j=0; j<2; j++) {
-            m(4+i,4+j) = I(i,j)*1.e-8;
-            dm(4+i,4+j) = dI(i,j)*1.e-8;
+            m(4+i,4+j) = I(i,j)*1.e-6;
+            dm(4+i,4+j) = dI(i,j)*1.e-6;
         }
     
     m *= drho;
