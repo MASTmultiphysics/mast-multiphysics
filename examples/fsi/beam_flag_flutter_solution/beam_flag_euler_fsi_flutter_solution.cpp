@@ -149,6 +149,11 @@ _constraint_beam_dofs                  (nullptr) {
     panel_bc_id         = 10,
     n_flags             = infile("n_flags", 0);
     
+    const bool
+    bottom_slip_wall = infile("if_bottom_slip_wall", false),
+    top_slip_wall    = infile(   "if_top_slip_wall", false);
+    
+    
     Real
     tol                 = 1.e-6,
     thickness           = 0.;
@@ -304,9 +309,20 @@ _constraint_beam_dofs                  (nullptr) {
     
     // tell the physics about boundary conditions
     _fluid_discipline->add_side_load(    panel_bc_id, *_slip_wall);
-    // all boundaries are far-field
-    for (unsigned int i=0; i<=3; i++)
-        _fluid_discipline->add_side_load(              i, *_far_field);
+    // left and right boundaries are far-field
+    _fluid_discipline->add_side_load(              1, *_far_field); // right
+    _fluid_discipline->add_side_load(              3, *_far_field); // left
+    
+    // upper and lower boundary types are identified from the input file
+    if (bottom_slip_wall)
+        _fluid_discipline->add_side_load(              0, *_symm_wall); // bottom
+    else
+        _fluid_discipline->add_side_load(              0, *_far_field); // bottom
+    
+    if (top_slip_wall)
+        _fluid_discipline->add_side_load(              2, *_symm_wall); // top
+    else
+        _fluid_discipline->add_side_load(              2, *_far_field); // top
     
     _pressure_function =
     new MAST::BeamFlagPressureFunction(*_fluid_sys_init,
@@ -476,6 +492,7 @@ MAST::BeamFlagEulerFSIFlutterAnalysis::~BeamFlagEulerFSIFlutterAnalysis() {
     
     delete _far_field;
     delete _slip_wall;
+    delete _symm_wall;
     
     delete _flight_cond;
     
