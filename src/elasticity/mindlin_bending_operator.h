@@ -26,6 +26,7 @@
 #include "numerics/fem_operator_matrix.h"
 #include "mesh/local_elem_base.h"
 #include "base/nonlinear_system.h"
+#include "mesh/fe_base.h"
 
 // libMesh includes
 #include "libmesh/fe.h"
@@ -61,7 +62,7 @@ namespace MAST {
          *   the ElementPropertyCard2D.
          */
         virtual void
-        initialize_bending_strain_operator (const libMesh::FEBase& fe,
+        initialize_bending_strain_operator (const MAST::FEBase& fe,
                                             const unsigned int qp,
                                             MAST::FEMOperatorMatrix& Bmat);
         
@@ -70,7 +71,7 @@ namespace MAST {
          * point and z-location.
          */
         void
-        initialize_bending_strain_operator_for_z(const libMesh::FEBase& fe,
+        initialize_bending_strain_operator_for_z(const MAST::FEBase& fe,
                                                  const unsigned int qp,
                                                  const Real z,
                                                  MAST::FEMOperatorMatrix& Bmat_bend);
@@ -97,7 +98,7 @@ namespace MAST {
 
 inline void
 MAST::MindlinBendingOperator::
-initialize_bending_strain_operator(const libMesh::FEBase& fe,
+initialize_bending_strain_operator(const MAST::FEBase& fe,
                                    const unsigned int qp,
                                    MAST::FEMOperatorMatrix& Bmat_bend) {
     
@@ -108,7 +109,7 @@ initialize_bending_strain_operator(const libMesh::FEBase& fe,
 
 inline void
 MAST::MindlinBendingOperator::
-initialize_bending_strain_operator_for_z(const libMesh::FEBase& fe,
+initialize_bending_strain_operator_for_z(const MAST::FEBase& fe,
                                          const unsigned int qp,
                                          const Real z,
                                          MAST::FEMOperatorMatrix& Bmat_bend) {
@@ -153,8 +154,8 @@ calculate_transverse_shear_residual(bool request_jacobian,
     // make an fe and quadrature object for the requested order for integrating
     // transverse shear
     
-    std::auto_ptr<libMesh::FEBase> fe;
-    std::auto_ptr<libMesh::QBase> qrule;
+    std::unique_ptr<libMesh::FEBase> fe;
+    std::unique_ptr<libMesh::QBase> qrule;
     libMesh::FEType fe_type = _structural_elem.fe().get_fe_type();
     
     fe.reset(libMesh::FEBase::build(_elem.dim(), fe_type).release());
@@ -193,7 +194,7 @@ calculate_transverse_shear_residual(bool request_jacobian,
     FEMOperatorMatrix Bmat_trans;
     Bmat_trans.reinit(2, 6, n_phi); // only two shear stresses
     
-    std::auto_ptr<MAST::FieldFunction<RealMatrixX > >
+    std::unique_ptr<MAST::FieldFunction<RealMatrixX > >
     mat_stiff = property.transverse_shear_stiffness_matrix(_structural_elem);
     
     libMesh::Point p;

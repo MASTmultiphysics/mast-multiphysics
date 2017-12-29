@@ -181,7 +181,7 @@ _elem_second_derivative_dot_solution_assembly(MAST::ElementBase& elem,
 
 
 
-std::auto_ptr<MAST::ElementBase>
+std::unique_ptr<MAST::ElementBase>
 MAST::StructuralTransientAssembly::_build_elem(const libMesh::Elem& elem) {
     
     
@@ -189,7 +189,7 @@ MAST::StructuralTransientAssembly::_build_elem(const libMesh::Elem& elem) {
     dynamic_cast<const MAST::ElementPropertyCardBase&>(_discipline->get_property_card(elem));
     
     MAST::ElementBase* rval =
-    MAST::build_structural_element(*_system, elem, p).release();
+    MAST::build_structural_element(*_system, *this, elem, p).release();
     
-    return std::auto_ptr<MAST::ElementBase>(rval);
+    return std::unique_ptr<MAST::ElementBase>(rval);
 }

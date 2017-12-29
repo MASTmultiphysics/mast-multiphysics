@@ -46,6 +46,7 @@ namespace MAST {
          *   Constructor.
          */
         StructuralElementBase(MAST::SystemInitialization& sys,
+                              MAST::AssemblyBase& assembly,
                               const libMesh::Elem& elem,
                               const MAST::ElementPropertyCardBase& p);
         
@@ -708,8 +709,9 @@ namespace MAST {
     /*!
      *    builds the structural element for the specified element type
      */
-    std::auto_ptr<MAST::StructuralElementBase>
+    std::unique_ptr<MAST::StructuralElementBase>
     build_structural_element(MAST::SystemInitialization& sys,
+                             MAST::AssemblyBase& assembly,
                              const libMesh::Elem& elem,
                              const MAST::ElementPropertyCardBase& p);
 }

@@ -532,7 +532,7 @@ MAST::PistonTheoryBoundaryCondition::vel_vec() const {
 
 
 
-std::auto_ptr<MAST::FieldFunction<Real> >
+std::unique_ptr<MAST::FieldFunction<Real> >
 MAST::PistonTheoryBoundaryCondition::
 get_pressure_function(const MAST::FieldFunction<Real>& dwdx,
                       const MAST::FieldFunction<Real>& dwdt) const {
@@ -547,13 +547,13 @@ get_pressure_function(const MAST::FieldFunction<Real>& dwdx,
      dwdx,
      dwdt);
     
-    return std::auto_ptr<MAST::FieldFunction<Real> >(rval);
+    return std::unique_ptr<MAST::FieldFunction<Real> >(rval);
 }
 
 
 
 
-std::auto_ptr<MAST::FieldFunction<Real> >
+std::unique_ptr<MAST::FieldFunction<Real> >
 MAST::PistonTheoryBoundaryCondition::
 get_dpdx_function(const MAST::FieldFunction<Real>& dwdx,
                   const MAST::FieldFunction<Real>& dwdt) const {
@@ -568,13 +568,13 @@ get_dpdx_function(const MAST::FieldFunction<Real>& dwdx,
      dwdx,
      dwdt);
     
-    return std::auto_ptr<MAST::FieldFunction<Real> >(rval);
+    return std::unique_ptr<MAST::FieldFunction<Real> >(rval);
 }
 
 
 
 
-std::auto_ptr<MAST::FieldFunction<Real> >
+std::unique_ptr<MAST::FieldFunction<Real> >
 MAST::PistonTheoryBoundaryCondition::
 get_dpdxdot_function(const MAST::FieldFunction<Real>& dwdx,
                      const MAST::FieldFunction<Real>& dwdt) const {
@@ -589,7 +589,7 @@ get_dpdxdot_function(const MAST::FieldFunction<Real>& dwdx,
      dwdx,
      dwdt);
     
-    return std::auto_ptr<MAST::FieldFunction<Real> >(rval);
+    return std::unique_ptr<MAST::FieldFunction<Real> >(rval);
 }
 
 

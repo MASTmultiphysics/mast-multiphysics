@@ -30,8 +30,6 @@
 // libMesh includes
 #include "libmesh/elem.h"
 #include "libmesh/system.h"
-#include "libmesh/fe_base.h"
-#include "libmesh/quadrature.h"
 
 
 
@@ -43,6 +41,8 @@ namespace MAST {
     class LocalElemBase;
     class OutputFunctionBase;
     class NonlinearSystem;
+    class FEBase;
+    class AssemblyBase;
     
     /*!
      *    This is the base class for elements that implement calculation of
@@ -81,7 +81,8 @@ namespace MAST {
          *   performed.
          */
         ElementBase(MAST::SystemInitialization& sys,
-                    const libMesh::Elem& elem);
+                    MAST::AssemblyBase&         assembly,
+                    const libMesh::Elem&        elem);
         
         
         /*!
@@ -124,20 +125,11 @@ namespace MAST {
         }
         
         
-        
-        /*!
-         *   @returns a constant reference to the volume quadrature rule
-         */
-        libMesh::QBase& quadrature_rule()  {
-            return *_qrule;
-        }
-        
-        
-        
+
         /*!
          *   @returns a constant reference to the finite element object
          */
-        libMesh::FEBase& fe()  {
+        MAST::FEBase& fe()  {
             return *_fe;
         }
         
@@ -266,40 +258,14 @@ namespace MAST {
         
         
         /*!
-         *   Initializes the quadrature and finite element for element volume
-         *   integration.
-         *   \param e libMesh::Elem for which the finite element is initialized.
-         *   \param pts the points at which the element should be initialized. If nullptr, 
-         *    the points specified by quadrature rule will be used.
-         */
-        virtual void
-        _init_fe_and_qrule(const libMesh::Elem& e,
-                           libMesh::FEBase **fe,
-                           libMesh::QBase **qrule,
-                           const std::vector<libMesh::Point>* pts = nullptr);
-        
-        
-        /*!
-         *   @returns the quadrature and finite element for element side
-         *   integration. These are raw pointers created using new. The
-         *   pointers must be deleted at the end of scope. The last argument
-         *   \p if_calculate_dphi tell the function to request the 
-         *   \p fe object to also initialize the calculation of shape function
-         *   derivatives 
-         */
-        virtual void
-        _get_side_fe_and_qrule(const libMesh::Elem& e,
-                               unsigned int s,
-                               libMesh::FEBase **fe,
-                               libMesh::QBase **qrule,
-                               bool if_calculate_dphi);
-        
-        
-        /*!
          *   SystemInitialization object associated with this element
          */
         MAST::SystemInitialization& _system;
         
+        /*!
+         *    Assembly object
+         */
+        MAST::AssemblyBase& _assembly;
         
         /*!
          *   geometric element for which the computations are performed
@@ -320,7 +286,7 @@ namespace MAST {
          *   local element to support the presence of 1D and 2D elements
          *   in 3D space
          */
-        std::auto_ptr<MAST::LocalElemBase> _local_elem;
+        std::unique_ptr<MAST::LocalElemBase> _local_elem;
         
         
         /*!
@@ -415,13 +381,7 @@ namespace MAST {
         /*!
          *   element finite element for computations
          */
-        libMesh::FEBase *_fe;
-        
-        
-        /*!
-         *   element quadrature rule for computations
-         */
-        libMesh::QBase *_qrule;
+        MAST::FEBase *_fe;
     };
 }
 

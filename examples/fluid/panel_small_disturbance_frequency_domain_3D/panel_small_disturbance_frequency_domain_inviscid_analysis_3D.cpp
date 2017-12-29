@@ -101,7 +101,7 @@ MAST::PanelSmallDisturbanceFrequencyDomainInviscidAnalysis3D::PanelSmallDisturba
     y_divs           (ny_divs),
     z_divs           (nz_divs);
     
-    std::auto_ptr<MeshInitializer::CoordinateDivisions>
+    std::unique_ptr<MeshInitializer::CoordinateDivisions>
     x_coord_divs    (new MeshInitializer::CoordinateDivisions),
     y_coord_divs    (new MeshInitializer::CoordinateDivisions),
     z_coord_divs    (new MeshInitializer::CoordinateDivisions);
@@ -408,7 +408,7 @@ MAST::PanelSmallDisturbanceFrequencyDomainInviscidAnalysis3D::solve(bool if_writ
         
         
         // first calculate the real and imaginary vectors
-        std::auto_ptr<libMesh::NumericVector<Real> >
+        std::unique_ptr<libMesh::NumericVector<Real> >
         re(_sys->solution->zero_clone().release()),
         im(_sys->solution->zero_clone().release());
         

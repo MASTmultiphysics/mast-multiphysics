@@ -100,7 +100,7 @@ namespace MAST {
         /*!
          *   mesh function that interpolates the solution
          */
-        std::auto_ptr<libMesh::MeshFunction>
+        std::unique_ptr<libMesh::MeshFunction>
         _sol_function,
         _dsol_re_function,
         _dsol_im_function;
@@ -108,17 +108,17 @@ namespace MAST {
         /*!
          *   steady part of solution
          */
-        std::auto_ptr<libMesh::NumericVector<Real> > _sol;
+        std::unique_ptr<libMesh::NumericVector<Real> > _sol;
 
         /*!
          *   real part of small-disturbance solution
          */
-        std::auto_ptr<libMesh::NumericVector<Real> > _dsol_real;
+        std::unique_ptr<libMesh::NumericVector<Real> > _dsol_real;
 
         /*!
          *   imag part of small-disturbance solution
          */
-        std::auto_ptr<libMesh::NumericVector<Real> > _dsol_imag;
+        std::unique_ptr<libMesh::NumericVector<Real> > _dsol_imag;
 
     };
 }

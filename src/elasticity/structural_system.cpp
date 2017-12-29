@@ -144,7 +144,7 @@ MAST::StructuralSystem::solve() {
     _dl = 1.;
     
     // these vectors will be used for solution updates here
-    std::auto_ptr<libMesh::NumericVector<Real> >
+    std::unique_ptr<libMesh::NumericVector<Real> >
     x_old        (this->solution->zero_clone().release()),  // to store solution after previous iteration
     delta_x0     (this->solution->zero_clone().release()),  // displacement update for this load step
     dx           (this->solution->zero_clone().release()),  // updates to delta_x

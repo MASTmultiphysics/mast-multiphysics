@@ -46,6 +46,7 @@ namespace MAST {
     public:
         
         ConservativeFluidElementBase(MAST::SystemInitialization& sys,
+                                     MAST::AssemblyBase& assembly,
                                      const libMesh::Elem& elem,
                                      const MAST::FlightCondition& f);
         
@@ -251,7 +252,7 @@ namespace MAST {
          */
         void _initialize_fem_interpolation_operator(const unsigned int qp,
                                                     const unsigned int dim,
-                                                    const libMesh::FEBase& fe,
+                                                    const MAST::FEBase& fe,
                                                     MAST::FEMOperatorMatrix& Bmat);
         
         
@@ -266,7 +267,7 @@ namespace MAST {
          */
         void _initialize_fem_gradient_operator(const unsigned int qp,
                                                const unsigned int dim,
-                                               const libMesh::FEBase& fe,
+                                               const MAST::FEBase& fe,
                                                std::vector<MAST::FEMOperatorMatrix>& dBmat);
         
     };

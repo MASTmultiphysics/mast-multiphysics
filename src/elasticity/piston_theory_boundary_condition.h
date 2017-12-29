@@ -199,7 +199,7 @@ namespace MAST {
         /*!
          *   @returns a smart-pointer to the pressure function
          */
-        std::auto_ptr<MAST::FieldFunction<Real> >
+        std::unique_ptr<MAST::FieldFunction<Real> >
         get_pressure_function(const MAST::FieldFunction<Real>& dwdx,
                               const MAST::FieldFunction<Real>& dwdt) const;
 
@@ -208,7 +208,7 @@ namespace MAST {
         /*!
          *   @returns a smart-pointer to the pressure function
          */
-        std::auto_ptr<MAST::FieldFunction<Real> >
+        std::unique_ptr<MAST::FieldFunction<Real> >
         get_dpdx_function(const MAST::FieldFunction<Real>& dwdx,
                           const MAST::FieldFunction<Real>& dwdt) const;
 
@@ -217,7 +217,7 @@ namespace MAST {
         /*!
          *   @returns a smart-pointer to the pressure function
          */
-        std::auto_ptr<MAST::FieldFunction<Real> >
+        std::unique_ptr<MAST::FieldFunction<Real> >
         get_dpdxdot_function(const MAST::FieldFunction<Real>& dwdx,
                              const MAST::FieldFunction<Real>& dwdt) const;
 

@@ -62,7 +62,7 @@ eigenproblem_assemble(libMesh::SparseMatrix<Real> *A,
     matrix_B.zero();
     
     // build localized solutions if needed
-    std::auto_ptr<libMesh::NumericVector<Real> >
+    std::unique_ptr<libMesh::NumericVector<Real> >
     localized_solution;
     
     if (_base_sol)
@@ -75,7 +75,7 @@ eigenproblem_assemble(libMesh::SparseMatrix<Real> *A,
     RealMatrixX mat_A, mat_B;
     std::vector<libMesh::dof_id_type> dof_indices;
     const libMesh::DofMap& dof_map = eigen_sys.get_dof_map();
-    std::auto_ptr<MAST::ElementBase> physics_elem;
+    std::unique_ptr<MAST::ElementBase> physics_elem;
     
     libMesh::MeshBase::const_element_iterator       el     =
     eigen_sys.get_mesh().active_local_elements_begin();
@@ -163,7 +163,7 @@ eigenproblem_sensitivity_assemble (const libMesh::ParameterVector& parameters,
     matrix_B.zero();
     
     // build localized solutions if needed
-    std::auto_ptr<libMesh::NumericVector<Real> >
+    std::unique_ptr<libMesh::NumericVector<Real> >
     localized_solution,
     localized_solution_sens;
     
@@ -183,7 +183,7 @@ eigenproblem_sensitivity_assemble (const libMesh::ParameterVector& parameters,
     RealMatrixX mat_A, mat_B;
     std::vector<libMesh::dof_id_type> dof_indices;
     const libMesh::DofMap& dof_map = eigen_sys.get_dof_map();
-    std::auto_ptr<MAST::ElementBase> physics_elem;
+    std::unique_ptr<MAST::ElementBase> physics_elem;
     
     libMesh::MeshBase::const_element_iterator       el     =
     eigen_sys.get_mesh().active_local_elements_begin();
@@ -261,7 +261,7 @@ eigenproblem_sensitivity_assemble (const libMesh::ParameterVector& parameters,
 
 
 
-std::auto_ptr<MAST::ElementBase>
+std::unique_ptr<MAST::ElementBase>
 MAST::StructuralModalEigenproblemAssembly::_build_elem(const libMesh::Elem& elem) {
     
     
@@ -269,9 +269,9 @@ MAST::StructuralModalEigenproblemAssembly::_build_elem(const libMesh::Elem& elem
     dynamic_cast<const MAST::ElementPropertyCardBase&>(_discipline->get_property_card(elem));
     
     MAST::ElementBase* rval =
-    MAST::build_structural_element(*_system, elem, p).release();
+    MAST::build_structural_element(*_system, *this, elem, p).release();
     
-    return std::auto_ptr<MAST::ElementBase>(rval);
+    return std::unique_ptr<MAST::ElementBase>(rval);
 }
 
 

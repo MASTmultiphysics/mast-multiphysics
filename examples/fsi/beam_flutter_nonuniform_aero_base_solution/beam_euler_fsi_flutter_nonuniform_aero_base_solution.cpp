@@ -293,7 +293,7 @@ _augment_send_list_obj                  (nullptr) {
     x_divs           (nx_divs),
     y_divs           (ny_divs);
     
-    std::auto_ptr<MAST::MeshInitializer::CoordinateDivisions>
+    std::unique_ptr<MAST::MeshInitializer::CoordinateDivisions>
     x_coord_divs    (new MAST::MeshInitializer::CoordinateDivisions),
     y_coord_divs    (new MAST::MeshInitializer::CoordinateDivisions);
     

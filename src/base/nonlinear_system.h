@@ -246,7 +246,7 @@ namespace MAST {
          * The EigenSolver, definig which interface, i.e solver
          * package to use.
          */
-        std::auto_ptr<MAST::SlepcEigenSolver> eigen_solver;
+        std::unique_ptr<MAST::SlepcEigenSolver> eigen_solver;
         
         /**
          * Loop over the dofs on each processor to initialize the list

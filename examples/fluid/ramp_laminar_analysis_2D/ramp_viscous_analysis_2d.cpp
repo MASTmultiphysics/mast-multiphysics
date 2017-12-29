@@ -96,7 +96,7 @@ MAST::RampLaminarAnalysis2D::RampLaminarAnalysis2D() {
     x_divs           (nx_divs),
     y_divs           (ny_divs);
     
-    std::auto_ptr<MeshInitializer::CoordinateDivisions>
+    std::unique_ptr<MeshInitializer::CoordinateDivisions>
     x_coord_divs    (new MeshInitializer::CoordinateDivisions),
     y_coord_divs    (new MeshInitializer::CoordinateDivisions);
     

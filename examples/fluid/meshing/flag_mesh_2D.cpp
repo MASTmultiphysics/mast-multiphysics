@@ -207,7 +207,7 @@ MAST::FlagMesh2D::init_structural_mesh (libMesh::UnstructuredMesh& mesh,
     std::vector<unsigned int>
     x_divs           (1);
     
-    std::auto_ptr<MAST::MeshInitializer::CoordinateDivisions>
+    std::unique_ptr<MAST::MeshInitializer::CoordinateDivisions>
     x_coord_divs    (new MAST::MeshInitializer::CoordinateDivisions);
     
     std::vector<MAST::MeshInitializer::CoordinateDivisions*>

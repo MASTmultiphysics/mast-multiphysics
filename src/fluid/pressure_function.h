@@ -127,19 +127,19 @@ namespace MAST {
         /*!
          *   mesh function that interpolates the solution
          */
-        std::auto_ptr<libMesh::MeshFunction>
+        std::unique_ptr<libMesh::MeshFunction>
         _sol_function,
         _dsol_function;
         
         /*!
          *   steady part of solution
          */
-        std::auto_ptr<libMesh::NumericVector<Real> > _sol;
+        std::unique_ptr<libMesh::NumericVector<Real> > _sol;
         
         /*!
          *   small-disturbance solution
          */
-        std::auto_ptr<libMesh::NumericVector<Real> > _dsol;
+        std::unique_ptr<libMesh::NumericVector<Real> > _dsol;
     };
 }
 

@@ -440,7 +440,7 @@ MAST::TimeDomainFlutterSolver::scan_for_roots() {
         MAST::FlutterSolutionBase* prev_sol = nullptr;
         for (unsigned int i=0; i<_n_V_divs+1; i++) {
             current_V = V_vals[i];
-            std::auto_ptr<MAST::TimeDomainFlutterSolution>
+            std::unique_ptr<MAST::TimeDomainFlutterSolution>
             sol = _analyze(current_V, prev_sol);
             
             prev_sol = sol.get();
@@ -636,7 +636,7 @@ _bisection_search(const std::pair<MAST::FlutterSolutionBase*,
 
 
 
-std::auto_ptr<MAST::TimeDomainFlutterSolution>
+std::unique_ptr<MAST::TimeDomainFlutterSolution>
 MAST::TimeDomainFlutterSolver::_analyze(const Real v_ref,
                                        const MAST::FlutterSolutionBase* prev_sol) {
     
@@ -666,7 +666,7 @@ MAST::TimeDomainFlutterSolver::_analyze(const Real v_ref,
     << " ====================================================" << std::endl;
     
     
-    return std::auto_ptr<MAST::TimeDomainFlutterSolution> (root);
+    return std::unique_ptr<MAST::TimeDomainFlutterSolution> (root);
 }
 
 
@@ -1025,7 +1025,7 @@ calculate_sensitivity(MAST::FlutterRootBase& root,
     // if the sensitivity of the solution was provided, then use that.
     // otherwise pass a zero vector
     libMesh::NumericVector<Real>* sol_sens = dXdp;
-    std::auto_ptr<libMesh::NumericVector<Real> > zero_sol_sens;
+    std::unique_ptr<libMesh::NumericVector<Real> > zero_sol_sens;
     if (!dXdp) {
         zero_sol_sens.reset(_assembly->system().solution->zero_clone().release());
         sol_sens = zero_sol_sens.get();

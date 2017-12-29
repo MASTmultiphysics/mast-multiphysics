@@ -1523,7 +1523,7 @@ MAST::Solid1DSectionElementPropertyCard::init() {
 }
 
 
-std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::Solid1DSectionElementPropertyCard::
 stiffness_A_matrix(const MAST::ElementBase& e) const {
     
@@ -1534,11 +1534,11 @@ stiffness_A_matrix(const MAST::ElementBase& e) const {
     new MAST::Solid1DSectionProperty::ExtensionStiffnessMatrix
     (_material->stiffness_matrix(1), *_A, *_J);
     
-    return std::auto_ptr<MAST::FieldFunction<RealMatrixX> > (rval);
+    return std::unique_ptr<MAST::FieldFunction<RealMatrixX> > (rval);
 }
 
 
-std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::Solid1DSectionElementPropertyCard::
 stiffness_B_matrix(const MAST::ElementBase& e) const {
     
@@ -1549,11 +1549,11 @@ stiffness_B_matrix(const MAST::ElementBase& e) const {
     new MAST::Solid1DSectionProperty::ExtensionBendingStiffnessMatrix
     (_material->stiffness_matrix(1), *_Ay, *_Az);
     
-    return std::auto_ptr<MAST::FieldFunction<RealMatrixX> > (rval);
+    return std::unique_ptr<MAST::FieldFunction<RealMatrixX> > (rval);
 }
 
 
-std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::Solid1DSectionElementPropertyCard::
 stiffness_D_matrix(const MAST::ElementBase& e) const {
     
@@ -1564,22 +1564,22 @@ stiffness_D_matrix(const MAST::ElementBase& e) const {
     new MAST::Solid1DSectionProperty::BendingStiffnessMatrix
     (_material->stiffness_matrix(1), *_AI);
     
-    return std::auto_ptr<MAST::FieldFunction<RealMatrixX> > (rval);
+    return std::unique_ptr<MAST::FieldFunction<RealMatrixX> > (rval);
 }
 
 
-std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::Solid1DSectionElementPropertyCard::
 damping_matrix(const MAST::ElementBase& e) const {
     
     libmesh_error();
     
-    return std::auto_ptr<MAST::FieldFunction<RealMatrixX> > (nullptr);
+    return std::unique_ptr<MAST::FieldFunction<RealMatrixX> > (nullptr);
 }
 
 
 
-std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::Solid1DSectionElementPropertyCard::
 inertia_matrix(const MAST::ElementBase& e) const {
     
@@ -1595,12 +1595,12 @@ inertia_matrix(const MAST::ElementBase& e) const {
      *_Ip,
      *_AI);
     
-    return std::auto_ptr<MAST::FieldFunction<RealMatrixX> > (rval);
+    return std::unique_ptr<MAST::FieldFunction<RealMatrixX> > (rval);
 }
 
 
 
-std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::Solid1DSectionElementPropertyCard::
 thermal_expansion_A_matrix(const MAST::ElementBase& e) const {
     
@@ -1613,12 +1613,12 @@ thermal_expansion_A_matrix(const MAST::ElementBase& e) const {
      _material->thermal_expansion_matrix(1),
      *_A);
     
-    return std::auto_ptr<MAST::FieldFunction<RealMatrixX> > (rval);
+    return std::unique_ptr<MAST::FieldFunction<RealMatrixX> > (rval);
 }
 
 
 
-std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::Solid1DSectionElementPropertyCard::
 thermal_expansion_B_matrix(const MAST::ElementBase& e) const {
     
@@ -1633,11 +1633,11 @@ thermal_expansion_B_matrix(const MAST::ElementBase& e) const {
      *_Ay,
      *_Az);
     
-    return std::auto_ptr<MAST::FieldFunction<RealMatrixX> > (rval);
+    return std::unique_ptr<MAST::FieldFunction<RealMatrixX> > (rval);
 }
 
 
-std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::Solid1DSectionElementPropertyCard::
 transverse_shear_stiffness_matrix(const MAST::ElementBase& e) const {
     
@@ -1650,11 +1650,11 @@ transverse_shear_stiffness_matrix(const MAST::ElementBase& e) const {
     (_material->transverse_shear_stiffness_matrix(),
      *_A);
     
-    return std::auto_ptr<MAST::FieldFunction<RealMatrixX> > (rval);
+    return std::unique_ptr<MAST::FieldFunction<RealMatrixX> > (rval);
 }
 
 
-std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::Solid1DSectionElementPropertyCard::
 prestress_A_matrix(MAST::ElementBase& e) const {
     
@@ -1667,11 +1667,11 @@ prestress_A_matrix(MAST::ElementBase& e) const {
      e.local_elem().T_matrix_function(),
      *_A);
     
-    return std::auto_ptr<MAST::FieldFunction<RealMatrixX> > (rval);
+    return std::unique_ptr<MAST::FieldFunction<RealMatrixX> > (rval);
 }
 
 
-std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::Solid1DSectionElementPropertyCard::
 prestress_B_matrix(MAST::ElementBase& e) const {
     
@@ -1685,12 +1685,12 @@ prestress_B_matrix(MAST::ElementBase& e) const {
      *_Ay,
      *_Az);
     
-    return std::auto_ptr<MAST::FieldFunction<RealMatrixX> > (rval);
+    return std::unique_ptr<MAST::FieldFunction<RealMatrixX> > (rval);
 }
 
 
 
-std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::Solid1DSectionElementPropertyCard::
 thermal_conductance_matrix(const MAST::ElementBase& e) const {
     
@@ -1702,12 +1702,12 @@ thermal_conductance_matrix(const MAST::ElementBase& e) const {
     (_material->conductance_matrix(1),
      *_A);
     
-    return std::auto_ptr<MAST::FieldFunction<RealMatrixX> > (rval);
+    return std::unique_ptr<MAST::FieldFunction<RealMatrixX> > (rval);
 }
 
 
 
-std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::Solid1DSectionElementPropertyCard::
 thermal_capacitance_matrix(const MAST::ElementBase& e) const {
     
@@ -1719,7 +1719,7 @@ thermal_capacitance_matrix(const MAST::ElementBase& e) const {
     (_material->capacitance_matrix(1),
      *_A);
     
-    return std::auto_ptr<MAST::FieldFunction<RealMatrixX> > (rval);
+    return std::unique_ptr<MAST::FieldFunction<RealMatrixX> > (rval);
 }
 
 

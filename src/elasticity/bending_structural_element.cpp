@@ -25,9 +25,10 @@
 
 MAST::BendingStructuralElem::
 BendingStructuralElem(MAST::SystemInitialization& sys,
+                      MAST::AssemblyBase& assembly,
                       const libMesh::Elem& elem,
                       const MAST::ElementPropertyCardBase& p):
-MAST::StructuralElementBase(sys, elem, p) {
+MAST::StructuralElementBase(sys, assembly, elem, p) {
     
 }
 
@@ -40,28 +41,3 @@ MAST::BendingStructuralElem::~BendingStructuralElem() {
 
 
 
-void
-MAST::BendingStructuralElem::
-_init_fe_operators(const libMesh::Elem& e,
-                   libMesh::FEBase **fe,
-                   libMesh::QBase  **qrule,
-                   MAST::BendingOperator **bend,
-                   const std::vector<libMesh::Point>* pts) {
-    
-    // first call the parent elements initialization routine
-    _init_fe_and_qrule(e, fe, qrule, pts);
-    
-    
-    // now, initialize the bending operator
-    MAST::BendingOperatorType bending_model =
-    _property.bending_model(e, (*fe)->get_fe_type());
-    
-    if (pts)
-        (*bend) = MAST::build_bending_operator(bending_model,
-                                               *this,
-                                               *pts).release();
-    else
-        (*bend) = MAST::build_bending_operator(bending_model,
-                                               *this,
-                                               (*qrule)->get_points()).release();
-}

@@ -254,7 +254,7 @@ MAST::NonlinearSystem::eigenproblem_solve() {
         // If we reach here, then there should be some non-condensed dofs
         libmesh_assert(!_local_non_condensed_dofs_vector.empty());
         
-        std::auto_ptr<libMesh::SparseMatrix<Real> >
+        std::unique_ptr<libMesh::SparseMatrix<Real> >
         condensed_matrix_A(libMesh::SparseMatrix<Real>::build(this->comm()).release()),
         condensed_matrix_B(libMesh::SparseMatrix<Real>::build(this->comm()).release());
 
@@ -357,7 +357,7 @@ MAST::NonlinearSystem::get_eigenpair(unsigned int i,
         // If we reach here, then there should be some non-condensed dofs
         libmesh_assert(!_local_non_condensed_dofs_vector.empty());
         
-        std::auto_ptr< libMesh::NumericVector<Real> >
+        std::unique_ptr< libMesh::NumericVector<Real> >
         temp_re(libMesh::NumericVector<Real>::build(this->comm()).release()),
         temp_im;
         
@@ -432,7 +432,7 @@ MAST::NonlinearSystem::get_eigenpair(unsigned int i,
             
         case libMesh::GHEP: {
             
-            std::auto_ptr<libMesh::NumericVector<Real> >
+            std::unique_ptr<libMesh::NumericVector<Real> >
             tmp(vec_re.zero_clone().release());
             
             // inner product with respect to B matrix
@@ -492,7 +492,7 @@ eigenproblem_sensitivity_solve (const libMesh::ParameterVector& parameters,
     x_right (nconv);
     //x_left  (_n_converged_eigenpairs);
     
-    std::auto_ptr<libMesh::NumericVector<Real> >
+    std::unique_ptr<libMesh::NumericVector<Real> >
     tmp     (this->solution->zero_clone().release());
 
     std::vector<Real>

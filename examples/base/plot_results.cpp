@@ -51,7 +51,7 @@ MAST::plot_structural_flutter_solution(const std::string& nm,
     
     
     // first calculate the real and imaginary vectors
-    std::auto_ptr<libMesh::NumericVector<Real> >
+    std::unique_ptr<libMesh::NumericVector<Real> >
     sol_copy(sys.solution->clone().release()),
     re(sys.solution->zero_clone().release()),
     im(sys.solution->zero_clone().release());
@@ -134,7 +134,7 @@ MAST::plot_fluid_flutter_solution(const std::string&                      nm,
         fluid_basis_re(n_basis),
         fluid_basis_im(n_basis);
         
-        std::auto_ptr<libMesh::NumericVector<Real> >
+        std::unique_ptr<libMesh::NumericVector<Real> >
         zero(structural_sys.solution->zero_clone().release());
         
         for (unsigned int i=0; i<n_basis; i++) {
@@ -152,7 +152,7 @@ MAST::plot_fluid_flutter_solution(const std::string&                      nm,
         
         
         // first calculate the real and imaginary vectors
-        std::auto_ptr<libMesh::NumericVector<Real> >
+        std::unique_ptr<libMesh::NumericVector<Real> >
         re(fluid_sys.solution->zero_clone().release()),
         im(fluid_sys.solution->zero_clone().release());
         

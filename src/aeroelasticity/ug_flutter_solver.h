@@ -160,7 +160,7 @@ namespace MAST {
          *   sort the roots based on the provided solution pointer. If the
          *   pointer is nullptr, then no sorting is performed
          */
-        virtual std::auto_ptr<MAST::FlutterSolutionBase>
+        virtual std::unique_ptr<MAST::FlutterSolutionBase>
         _analyze(const Real kr_ref,
                  const MAST::FlutterSolutionBase* prev_sol=nullptr);
         

@@ -30,16 +30,25 @@
 #include "base/boundary_condition_base.h"
 #include "base/parameter.h"
 #include "base/constant_field_function.h"
-
+#include "mesh/fe_base.h"
+#include "base/assembly_base.h"
 
 
 MAST::StructuralElement1D::StructuralElement1D(MAST::SystemInitialization& sys,
+                                               MAST::AssemblyBase& assembly,
                                                const libMesh::Elem& elem,
                                                const MAST::ElementPropertyCardBase& p):
-MAST::BendingStructuralElem(sys, elem, p) {
+MAST::BendingStructuralElem(sys, assembly, elem, p) {
     
     // now initialize the finite element data structures
-    _init_fe_operators(get_elem_for_quadrature(), &_fe, &_qrule, &_bending_operator);
+    _fe = assembly.build_fe().release();
+    _fe->init(get_elem_for_quadrature());
+    
+    MAST::BendingOperatorType bending_model =
+    _property.bending_model(get_elem_for_quadrature(), _fe->get_fe_type());
+    _bending_operator = MAST::build_bending_operator(bending_model,
+                                                     *this,
+                                                     _fe->get_qrule().get_points()).release();
 }
 
 
@@ -50,7 +59,7 @@ MAST::BendingStructuralElem(sys, elem, p) {
 void
 MAST::StructuralElement1D::
 initialize_direct_strain_operator(const unsigned int qp,
-                                  const libMesh::FEBase& fe,
+                                  const MAST::FEBase& fe,
                                   MAST::FEMOperatorMatrix& Bmat) {
     
     const std::vector<std::vector<libMesh::RealVectorValue> >& dphi = fe.get_dphi();
@@ -74,7 +83,7 @@ initialize_direct_strain_operator(const unsigned int qp,
 void
 MAST::StructuralElement1D::
 initialize_von_karman_strain_operator(const unsigned int qp,
-                                      const libMesh::FEBase& fe,
+                                      const MAST::FEBase& fe,
                                       RealVectorX& vk_strain,
                                       RealMatrixX& vk_dvdxi_mat,
                                       RealMatrixX& vk_dwdxi_mat,
@@ -120,7 +129,7 @@ initialize_von_karman_strain_operator(const unsigned int qp,
 void
 MAST::StructuralElement1D::
 initialize_von_karman_strain_operator_sensitivity(const unsigned int qp,
-                                                  const libMesh::FEBase& fe,
+                                                  const MAST::FEBase& fe,
                                                   RealMatrixX& vk_dvdxi_mat_sens,
                                                   RealMatrixX& vk_dwdxi_mat_sens) {
     
@@ -161,41 +170,30 @@ MAST::StructuralElement1D::calculate_stress(bool request_derivative,
     MAST::PointwiseOutputEvaluationMode mode = output.evaluation_mode();
     
     std::vector<libMesh::Point> qp_loc;
+    std::unique_ptr<MAST::FEBase>          fe(new MAST::FEBase(_system));
 
-    libMesh::FEBase         *fe_ptr     = nullptr;
-    libMesh::QBase          *qrule_ptr  = nullptr;
-    MAST::BendingOperator   *bend_ptr   = nullptr;
-    
     switch (mode) {
         case MAST::CENTROID: {
             qp_loc.resize(1);
             qp_loc[0] = libMesh::Point();
-            _init_fe_operators(get_elem_for_quadrature(),
-                               &fe_ptr,
-                               &qrule_ptr,
-                               &bend_ptr,
-                               &qp_loc);
+            fe->init(get_elem_for_quadrature(),
+                     &qp_loc);
         }
             break;
             
         case MAST::SPECIFIED_POINTS: {
             qp_loc = output.get_points_for_evaluation();
-            _init_fe_operators(get_elem_for_quadrature(),
-                               &fe_ptr,
-                               &qrule_ptr,
-                               &bend_ptr,
-                               &qp_loc);
+            fe->init(get_elem_for_quadrature(),
+                     &qp_loc);
         }
             break;
             
-        case MAST::ELEM_QP:
+        case MAST::ELEM_QP: {
             // this will initialize the FE object at the points specified
             // by the quadrature rule
-            _init_fe_operators(get_elem_for_quadrature(),
-                               &fe_ptr,
-                               &qrule_ptr,
-                               &bend_ptr);
-            qp_loc = qrule_ptr->get_points();
+            fe->init(get_elem_for_quadrature());
+            qp_loc = fe->get_qrule().get_points();
+        }
             break;
             
         default:
@@ -203,10 +201,16 @@ MAST::StructuralElement1D::calculate_stress(bool request_derivative,
             libmesh_error();
     }
 
-    std::auto_ptr<libMesh::FEBase>         fe(fe_ptr);
-    std::auto_ptr<libMesh::QBase>          qrule(qrule_ptr);
-    std::auto_ptr<MAST::BendingOperator1D>
-    bend(dynamic_cast<MAST::BendingOperator1D*>(bend_ptr));
+    MAST::BendingOperatorType bending_model =
+    _property.bending_model(get_elem_for_quadrature(), _fe->get_fe_type());
+    
+    MAST::BendingOperator*
+    b_ptr = MAST::build_bending_operator(bending_model,
+                                         *this,
+                                         qp_loc).release();
+    
+    std::unique_ptr<MAST::BendingOperator1D>
+    bend(dynamic_cast<MAST::BendingOperator1D*>(b_ptr));
 
     
     // now that the FE object has been initialized, evaluate the stress values
@@ -576,7 +580,7 @@ MAST::StructuralElement1D::internal_residual (bool request_jacobian,
     bool if_vk = (_property.strain_type() == MAST::VON_KARMAN_STRAIN),
     if_bending = (_property.bending_model(_elem, _fe->get_fe_type()) != MAST::NO_BENDING);
     
-    std::auto_ptr<MAST::FieldFunction<RealMatrixX > >
+    std::unique_ptr<MAST::FieldFunction<RealMatrixX > >
     mat_stiff_A  = _property.stiffness_A_matrix(*this),
     mat_stiff_B  = _property.stiffness_B_matrix(*this),
     mat_stiff_D  = _property.stiffness_D_matrix(*this);
@@ -699,7 +703,7 @@ MAST::StructuralElement1D::internal_residual_sensitivity (bool request_jacobian,
     bool if_vk = (_property.strain_type() == MAST::VON_KARMAN_STRAIN),
     if_bending = (_property.bending_model(_elem, _fe->get_fe_type()) != MAST::NO_BENDING);
     
-    std::auto_ptr<MAST::FieldFunction<RealMatrixX > >
+    std::unique_ptr<MAST::FieldFunction<RealMatrixX > >
     mat_stiff_A = _property.stiffness_A_matrix(*this),
     mat_stiff_B = _property.stiffness_B_matrix(*this),
     mat_stiff_D = _property.stiffness_D_matrix(*this);
@@ -827,7 +831,7 @@ internal_residual_jac_dot_state_sensitivity (RealMatrixX& jac) {
     if (!if_vk)
         return false;
     
-    std::auto_ptr<MAST::FieldFunction<RealMatrixX > >
+    std::unique_ptr<MAST::FieldFunction<RealMatrixX > >
     mat_stiff_A  = _property.stiffness_A_matrix(*this),
     mat_stiff_B  = _property.stiffness_B_matrix(*this),
     mat_stiff_D  = _property.stiffness_D_matrix(*this);
@@ -1021,7 +1025,7 @@ _internal_residual_operation(bool if_bending,
                              bool if_vk,
                              const unsigned int n2,
                              const unsigned int qp,
-                             const libMesh::FEBase& fe,
+                             const MAST::FEBase& fe,
                              const std::vector<Real>& JxW,
                              bool request_jacobian,
                              RealVectorX& local_f,
@@ -1274,7 +1278,7 @@ MAST::StructuralElement1D::
 _linearized_geometric_stiffness_sensitivity_with_static_solution
 (const unsigned int n2,
  const unsigned int qp,
- const libMesh::FEBase& fe,
+ const MAST::FEBase& fe,
  const std::vector<Real>& JxW,
  RealMatrixX& local_jac,
  MAST::FEMOperatorMatrix& Bmat_mem,
@@ -1454,7 +1458,7 @@ MAST::StructuralElement1D::prestress_residual (bool request_jacobian,
     bool if_vk = (_property.strain_type() == MAST::VON_KARMAN_STRAIN),
     if_bending = (_property.bending_model(_elem, _fe->get_fe_type()) != MAST::NO_BENDING);
     
-    std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+    std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
     prestress_A = _property.prestress_A_matrix(*this),
     prestress_B = _property.prestress_B_matrix(*this);
     
@@ -1590,7 +1594,7 @@ MAST::StructuralElement1D::prestress_residual_sensitivity (bool request_jacobian
     bool if_vk = (_property.strain_type() == MAST::VON_KARMAN_STRAIN),
     if_bending = (_property.bending_model(_elem, _fe->get_fe_type()) != MAST::NO_BENDING);
     
-    std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+    std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
     prestress_A = _property.prestress_A_matrix(*this),
     prestress_B = _property.prestress_B_matrix(*this);
     
@@ -1692,16 +1696,9 @@ surface_pressure_residual(bool request_jacobian,
     libmesh_assert(!follower_forces); // not implemented yet for follower forces
     
     // prepare the side finite element
-    libMesh::FEBase *fe_ptr    = nullptr;
-    libMesh::QBase  *qrule_ptr = nullptr;
-    _get_side_fe_and_qrule(get_elem_for_quadrature(),
-                           side,
-                           &fe_ptr,
-                           &qrule_ptr,
-                           false);
-    std::auto_ptr<libMesh::FEBase> fe(fe_ptr);
-    std::auto_ptr<libMesh::QBase>  qrule(qrule_ptr);
-    
+    std::unique_ptr<MAST::FEBase> fe(new MAST::FEBase(_system));
+    fe->init_for_side(_elem, side, false);
+
     const std::vector<Real> &JxW                    = fe->get_JxW();
     const std::vector<libMesh::Point>& qpoint       = fe->get_xyz();
     const std::vector<std::vector<Real> >& phi      = fe->get_phi();
@@ -1781,16 +1778,9 @@ surface_pressure_residual_sensitivity(bool request_jacobian,
     libmesh_assert(!follower_forces); // not implemented yet for follower forces
     
     // prepare the side finite element
-    libMesh::FEBase *fe_ptr    = nullptr;
-    libMesh::QBase  *qrule_ptr = nullptr;
-    _get_side_fe_and_qrule(get_elem_for_quadrature(),
-                           side,
-                           &fe_ptr,
-                           &qrule_ptr,
-                           false);
-    std::auto_ptr<libMesh::FEBase> fe(fe_ptr);
-    std::auto_ptr<libMesh::QBase>  qrule(qrule_ptr);
-    
+    std::unique_ptr<MAST::FEBase> fe(new MAST::FEBase(_system));
+    fe->init_for_side(_elem, side, false);
+
     const std::vector<Real> &JxW                    = fe->get_JxW();
     const std::vector<libMesh::Point>& qpoint       = fe->get_xyz();
     const std::vector<std::vector<Real> >& phi      = fe->get_phi();
@@ -1917,7 +1907,7 @@ MAST::StructuralElement1D::thermal_residual (bool request_jacobian,
     bool if_vk = (_property.strain_type() == MAST::VON_KARMAN_STRAIN),
     if_bending = (_property.bending_model(_elem, _fe->get_fe_type()) != MAST::NO_BENDING);
     
-    std::auto_ptr<MAST::FieldFunction<RealMatrixX > >
+    std::unique_ptr<MAST::FieldFunction<RealMatrixX > >
     expansion_A = _property.thermal_expansion_A_matrix(*this),
     expansion_B = _property.thermal_expansion_B_matrix(*this);
     
@@ -2059,7 +2049,7 @@ MAST::StructuralElement1D::thermal_residual_sensitivity (bool request_jacobian,
     bool if_vk = (_property.strain_type() == MAST::VON_KARMAN_STRAIN),
     if_bending = (_property.bending_model(_elem, _fe->get_fe_type()) != MAST::NO_BENDING);
     
-    std::auto_ptr<MAST::FieldFunction<RealMatrixX > >
+    std::unique_ptr<MAST::FieldFunction<RealMatrixX > >
     expansion_A = _property.thermal_expansion_A_matrix(*this),
     expansion_B = _property.thermal_expansion_B_matrix(*this);
     
@@ -2207,7 +2197,7 @@ piston_theory_residual(bool request_jacobian,
     dwdx_f  ("dwdx", dwdx_p),
     dwdt_f  ("dwdx", dwdt_p);
     
-    std::auto_ptr<MAST::FieldFunction<Real> >
+    std::unique_ptr<MAST::FieldFunction<Real> >
     pressure        (piston_bc.get_pressure_function(dwdx_f, dwdt_f).release()),
     dpressure_dx    (piston_bc.get_dpdx_function    (dwdx_f, dwdt_f).release()),
     dpressure_dxdot (piston_bc.get_dpdxdot_function (dwdx_f, dwdt_f).release());
@@ -2400,7 +2390,7 @@ piston_theory_residual_sensitivity(bool request_jacobian,
     dwdx_f  ("dwdx", dwdx_p),
     dwdt_f  ("dwdx", dwdt_p);
     
-    std::auto_ptr<MAST::FieldFunction<Real> >
+    std::unique_ptr<MAST::FieldFunction<Real> >
     pressure        (piston_bc.get_pressure_function(dwdx_f, dwdt_f).release()),
     dpressure_dx    (piston_bc.get_dpdx_function    (dwdx_f, dwdt_f).release()),
     dpressure_dxdot (piston_bc.get_dpdxdot_function (dwdx_f, dwdt_f).release());
@@ -2600,8 +2590,8 @@ linearized_frequency_domain_surface_pressure_residual
                            &fe_ptr,
                            &qrule_ptr,
                            false);
-    std::auto_ptr<libMesh::FEBase> fe(fe_ptr);
-    std::auto_ptr<libMesh::QBase>  qrule(qrule_ptr);
+    std::unique_ptr<libMesh::FEBase> fe(fe_ptr);
+    std::unique_ptr<libMesh::QBase>  qrule(qrule_ptr);
     
     
     // Physical location of the quadrature points

@@ -68,7 +68,7 @@ check_thermal_residual_force_jacobian (ValType& v,
     const libMesh::Elem& elem = **(v._mesh->local_elements_begin());
     
     // now create the structural element
-    std::auto_ptr<MAST::StructuralElementBase>
+    std::unique_ptr<MAST::StructuralElementBase>
     e(MAST::build_structural_element(*v._structural_sys,
                                      elem,
                                      *v._p_card).release());
@@ -189,7 +189,7 @@ void check_thermal_force_and_jacobian_sensitivity (ValType& v,
     const libMesh::Elem& elem = **(v._mesh->local_elements_begin());
     
     // now create the structural element
-    std::auto_ptr<MAST::StructuralElementBase>
+    std::unique_ptr<MAST::StructuralElementBase>
     e(MAST::build_structural_element(*v._structural_sys,
                                      elem,
                                      *v._p_card).release());

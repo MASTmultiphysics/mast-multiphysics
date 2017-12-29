@@ -172,7 +172,7 @@ namespace MAST {
          *   @returns a smart-pointer to a newly created element for
          *   calculation of element quantities.
          */
-        virtual std::auto_ptr<MAST::ElementBase>
+        virtual std::unique_ptr<MAST::ElementBase>
         _build_elem(const libMesh::Elem& elem);
         
         

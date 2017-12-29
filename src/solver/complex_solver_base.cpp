@@ -285,7 +285,7 @@ MAST::ComplexSolverBase::solve_pc_fieldsplit() {
     
     
     // clone vectors for use as system RHS
-    std::auto_ptr<libMesh::NumericVector<Real> >
+    std::unique_ptr<libMesh::NumericVector<Real> >
     res_R(new libMesh::PetscVector<Real>(res_vec_R, sys.comm())),
     res_I(new libMesh::PetscVector<Real>(res_vec_I, sys.comm())),
     sol_R(new libMesh::PetscVector<Real>(sol_vec_R, sys.comm())),
@@ -458,10 +458,10 @@ MAST::ComplexSolverBase::solve_block_matrix(MAST::Parameter* p)  {
     ierr = MatCreateVecs(mat, &sol_vec, PETSC_NULL);               CHKERRABORT(sys.comm().get(), ierr);
     
     
-    std::auto_ptr<libMesh::SparseMatrix<Real> >
+    std::unique_ptr<libMesh::SparseMatrix<Real> >
     jac_mat(new libMesh::PetscMatrix<Real>(mat, sys.comm()));
     
-    std::auto_ptr<libMesh::NumericVector<Real> >
+    std::unique_ptr<libMesh::NumericVector<Real> >
     res(new libMesh::PetscVector<Real>(res_vec, sys.comm())),
     sol(new libMesh::PetscVector<Real>(sol_vec, sys.comm()));
     

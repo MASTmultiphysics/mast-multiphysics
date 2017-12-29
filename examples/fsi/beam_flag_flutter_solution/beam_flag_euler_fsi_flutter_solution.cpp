@@ -192,7 +192,7 @@ _constraint_beam_dofs                  (nullptr) {
     x_divs           (nx_divs),
     y_divs           (ny_divs);
     
-    std::auto_ptr<MAST::MeshInitializer::CoordinateDivisions>
+    std::unique_ptr<MAST::MeshInitializer::CoordinateDivisions>
     x_coord_divs    (new MAST::MeshInitializer::CoordinateDivisions),
     y_coord_divs    (new MAST::MeshInitializer::CoordinateDivisions);
     
@@ -265,6 +265,7 @@ _constraint_beam_dofs                  (nullptr) {
     // create the oundary conditions for slip-wall and far-field
     _far_field     = new MAST::BoundaryConditionBase(MAST::FAR_FIELD),
     _slip_wall     = new MAST::BoundaryConditionBase(MAST::SLIP_WALL);
+    _symm_wall     = new MAST::BoundaryConditionBase(MAST::SYMMETRY_WALL);
     
     _flight_cond    =  new MAST::FlightCondition;
     for (unsigned int i=0; i<3; i++) {

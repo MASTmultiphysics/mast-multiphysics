@@ -45,42 +45,42 @@ namespace MAST {
         virtual ~Solid1DSectionElementPropertyCard() { }
         
         
-        virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+        virtual std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
         stiffness_A_matrix(const MAST::ElementBase& e) const;
         
-        virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+        virtual std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
         stiffness_B_matrix(const MAST::ElementBase& e) const;
         
-        virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+        virtual std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
         stiffness_D_matrix(const MAST::ElementBase& e) const;
         
-        virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+        virtual std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
         damping_matrix(const MAST::ElementBase& e) const;
         
-        virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+        virtual std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
         inertia_matrix(const MAST::ElementBase& e) const;
         
-        virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+        virtual std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
         thermal_expansion_A_matrix(const MAST::ElementBase& e) const;
         
-        virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+        virtual std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
         thermal_expansion_B_matrix(const MAST::ElementBase& e) const;
         
-        virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+        virtual std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
         transverse_shear_stiffness_matrix(const MAST::ElementBase& e) const;
         
-        virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+        virtual std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
         prestress_A_matrix(MAST::ElementBase& e) const;
         
-        virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+        virtual std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
         prestress_B_matrix(MAST::ElementBase& e) const;
 
         
-        virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+        virtual std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
         thermal_conductance_matrix(const MAST::ElementBase& e) const;
         
 
-        virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+        virtual std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
         thermal_capacitance_matrix(const MAST::ElementBase& e) const;
 
         
@@ -195,33 +195,33 @@ namespace MAST {
          */
         MAST::MaterialPropertyCardBase *_material;
         
-        std::auto_ptr<MAST::FieldFunction<Real> > _A;
+        std::unique_ptr<MAST::FieldFunction<Real> > _A;
         
-        std::auto_ptr<MAST::FieldFunction<Real> > _J;
+        std::unique_ptr<MAST::FieldFunction<Real> > _J;
 
-        std::auto_ptr<MAST::FieldFunction<Real> > _Ip;
+        std::unique_ptr<MAST::FieldFunction<Real> > _Ip;
 
-        std::auto_ptr<MAST::FieldFunction<Real> > _Ay;
+        std::unique_ptr<MAST::FieldFunction<Real> > _Ay;
         
-        std::auto_ptr<MAST::FieldFunction<Real> > _Az;
+        std::unique_ptr<MAST::FieldFunction<Real> > _Az;
         
-        std::auto_ptr<MAST::FieldFunction<RealMatrixX> > _AI;
+        std::unique_ptr<MAST::FieldFunction<RealMatrixX> > _AI;
         
-        std::auto_ptr<MAST::FieldFunction<RealMatrixX> > _stiff_A;
+        std::unique_ptr<MAST::FieldFunction<RealMatrixX> > _stiff_A;
 
-        std::auto_ptr<MAST::FieldFunction<RealMatrixX> > _stiff_B;
+        std::unique_ptr<MAST::FieldFunction<RealMatrixX> > _stiff_B;
 
-        std::auto_ptr<MAST::FieldFunction<RealMatrixX> > _stiff_D;
+        std::unique_ptr<MAST::FieldFunction<RealMatrixX> > _stiff_D;
 
-        std::auto_ptr<MAST::FieldFunction<RealMatrixX> > _damp;
+        std::unique_ptr<MAST::FieldFunction<RealMatrixX> > _damp;
 
-        std::auto_ptr<MAST::FieldFunction<RealMatrixX> > _inertia;
+        std::unique_ptr<MAST::FieldFunction<RealMatrixX> > _inertia;
 
-        std::auto_ptr<MAST::FieldFunction<RealMatrixX> > _thermal_A;
+        std::unique_ptr<MAST::FieldFunction<RealMatrixX> > _thermal_A;
 
-        std::auto_ptr<MAST::FieldFunction<RealMatrixX> > _thermal_B;
+        std::unique_ptr<MAST::FieldFunction<RealMatrixX> > _thermal_B;
 
-        std::auto_ptr<MAST::FieldFunction<RealMatrixX> > _transverse_shear;
+        std::unique_ptr<MAST::FieldFunction<RealMatrixX> > _transverse_shear;
 
     };
     

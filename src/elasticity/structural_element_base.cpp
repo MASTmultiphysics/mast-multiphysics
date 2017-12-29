@@ -33,13 +33,14 @@
 #include "numerics/utility.h"
 #include "elasticity/stress_output_base.h"
 #include "base/nonlinear_system.h"
-
+#include "mesh/fe_base.h"
 
 
 MAST::StructuralElementBase::StructuralElementBase(MAST::SystemInitialization& sys,
+                                                   MAST::AssemblyBase& assembly,
                                                    const libMesh::Elem& elem,
                                                    const MAST::ElementPropertyCardBase& p):
-MAST::ElementBase(sys, elem),
+MAST::ElementBase(sys, assembly, elem),
 follower_forces(false),
 _property(p),
 _incompatible_sol(nullptr) {
@@ -310,7 +311,7 @@ MAST::StructuralElementBase::inertial_residual (bool request_jacobian,
     vec2_n2    = RealVectorX::Zero(n2),
     local_f    = RealVectorX::Zero(n2);
     
-    std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+    std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
     mat_inertia  = _property.inertia_matrix(*this);
     
     libMesh::Point p;
@@ -463,7 +464,7 @@ MAST::StructuralElementBase::inertial_residual_sensitivity (bool request_jacobia
     vec2_n2    = RealVectorX::Zero(n2),
     local_f    = RealVectorX::Zero(n2);
     
-    std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+    std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
     mat_inertia  = _property.inertia_matrix(*this);
     
     libMesh::Point p;
@@ -1527,24 +1528,25 @@ transform_vector_to_global_system(const ValType& local_vec,
 
 
 
-std::auto_ptr<MAST::StructuralElementBase>
+std::unique_ptr<MAST::StructuralElementBase>
 MAST::build_structural_element(MAST::SystemInitialization& sys,
+                               MAST::AssemblyBase& assembly,
                                const libMesh::Elem& elem,
                                const MAST::ElementPropertyCardBase& p) {
     
-    std::auto_ptr<MAST::StructuralElementBase> e;
+    std::unique_ptr<MAST::StructuralElementBase> e;
     
     switch (elem.dim()) {
         case 1:
-            e.reset(new MAST::StructuralElement1D(sys, elem, p));
+            e.reset(new MAST::StructuralElement1D(sys, assembly, elem, p));
             break;
             
         case 2:
-            e.reset(new MAST::StructuralElement2D(sys, elem, p));
+            e.reset(new MAST::StructuralElement2D(sys, assembly, elem, p));
             break;
             
         case 3:
-            e.reset(new MAST::StructuralElement3D(sys, elem, p));
+            e.reset(new MAST::StructuralElement3D(sys, assembly, elem, p));
             break;
             
         default:

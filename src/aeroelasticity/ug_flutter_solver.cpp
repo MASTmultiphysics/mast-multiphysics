@@ -279,7 +279,7 @@ MAST::UGFlutterSolver::scan_for_roots() {
         for (unsigned int i=0; i< _n_kr_divs+1; i++) {
             
             current_kr = k_vals[i];
-            std::auto_ptr<MAST::FlutterSolutionBase> sol =
+            std::unique_ptr<MAST::FlutterSolutionBase> sol =
             _analyze(current_kr, prev_sol);
             
             prev_sol = sol.get();
@@ -482,7 +482,7 @@ _bisection_search(const std::pair<MAST::FlutterSolutionBase*,
 
 
 
-std::auto_ptr<MAST::FlutterSolutionBase>
+std::unique_ptr<MAST::FlutterSolutionBase>
 MAST::UGFlutterSolver::_analyze(const Real kr_ref,
                                 const MAST::FlutterSolutionBase* prev_sol) {
     
@@ -512,7 +512,7 @@ MAST::UGFlutterSolver::_analyze(const Real kr_ref,
     << " ====================================================" << std::endl;
     
     
-    return std::auto_ptr<MAST::FlutterSolutionBase> (root);
+    return std::unique_ptr<MAST::FlutterSolutionBase> (root);
 }
 
 
@@ -911,7 +911,7 @@ calculate_sensitivity(MAST::FlutterRootBase& root,
     // if the sensitivity of the solution was provided, then use that.
     // otherwise pass a zero vector
     libMesh::NumericVector<Real>* sol_sens = dXdp;
-    std::auto_ptr<libMesh::NumericVector<Real> > zero_sol_sens;
+    std::unique_ptr<libMesh::NumericVector<Real> > zero_sol_sens;
     if (!dXdp) {
         zero_sol_sens.reset(_assembly->system().solution->zero_clone().release());
         sol_sens = zero_sol_sens.get();

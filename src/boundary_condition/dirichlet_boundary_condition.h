@@ -70,7 +70,7 @@ namespace MAST {
         /*!
          *    Dirichlet boundary function for this boundary
          */
-        std::auto_ptr<libMesh::DirichletBoundary> _dirichlet_boundary;
+        std::unique_ptr<libMesh::DirichletBoundary> _dirichlet_boundary;
     };
 }
 

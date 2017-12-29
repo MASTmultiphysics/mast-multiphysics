@@ -160,9 +160,9 @@ assemble_reduced_order_quantity
     
     std::vector<libMesh::dof_id_type> dof_indices;
     const libMesh::DofMap& dof_map = nonlin_sys.get_dof_map();
-    std::auto_ptr<MAST::ElementBase> physics_elem;
+    std::unique_ptr<MAST::ElementBase> physics_elem;
     
-    std::auto_ptr<libMesh::NumericVector<Real> > localized_solution;
+    std::unique_ptr<libMesh::NumericVector<Real> > localized_solution;
     if (_base_sol)
         localized_solution.reset(_build_localized_vector(nonlin_sys,
                                                          *_base_sol).release());
@@ -292,9 +292,9 @@ assemble_reduced_order_quantity_sensitivity
     
     std::vector<libMesh::dof_id_type> dof_indices;
     const libMesh::DofMap& dof_map = _system->system().get_dof_map();
-    std::auto_ptr<MAST::ElementBase> physics_elem;
+    std::unique_ptr<MAST::ElementBase> physics_elem;
     
-    std::auto_ptr<libMesh::NumericVector<Real> >
+    std::unique_ptr<libMesh::NumericVector<Real> >
     localized_solution,
     localized_solution_sens;
     
@@ -409,7 +409,7 @@ assemble_reduced_order_quantity_sensitivity
 
 
 
-std::auto_ptr<MAST::ElementBase>
+std::unique_ptr<MAST::ElementBase>
 MAST::StructuralFluidInteractionAssembly::_build_elem(const libMesh::Elem& elem) {
     
     
@@ -417,9 +417,9 @@ MAST::StructuralFluidInteractionAssembly::_build_elem(const libMesh::Elem& elem)
     dynamic_cast<const MAST::ElementPropertyCardBase&>(_discipline->get_property_card(elem));
     
     MAST::ElementBase* rval =
-    MAST::build_structural_element(*_system, elem, p).release();
+    MAST::build_structural_element(*_system, *this, elem, p).release();
     
-    return std::auto_ptr<MAST::ElementBase>(rval);
+    return std::unique_ptr<MAST::ElementBase>(rval);
 }
 
 

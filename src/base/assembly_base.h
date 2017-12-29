@@ -41,6 +41,7 @@ namespace MAST {
     class OutputFunctionBase;
     class MeshFieldFunction;
     class NonlinearSystem;
+    class FEBase;
     
     class AssemblyBase {
     public:
@@ -145,13 +146,23 @@ namespace MAST {
                                           const libMesh::NumericVector<Real>& X);
 
         
+        /*!
+         *   @returns a MAST::FEBase object for calculation of finite element
+         *   quantities. For all standard applications this is a wrapper
+         *   around the libMesh::FEBase class, which is specialized for
+         *   cut-cell applications where a sub-finite element is created
+         *   for element integration.
+         */
+        virtual std::unique_ptr<MAST::FEBase>
+        build_fe();
+        
     protected:
         
         /*!
          *   @returns a smart-pointer to a newly created element for
          *   calculation of element quantities.
          */
-        virtual std::auto_ptr<MAST::ElementBase>
+        virtual std::unique_ptr<MAST::ElementBase>
         _build_elem(const libMesh::Elem& elem) = 0;
         
         /*!
@@ -159,7 +170,7 @@ namespace MAST {
          *   stores all values necessary for calculation of the
          *   element quantities
          */
-        std::auto_ptr<libMesh::NumericVector<Real> >
+        std::unique_ptr<libMesh::NumericVector<Real> >
         _build_localized_vector(const libMesh::System& sys,
                                 const libMesh::NumericVector<Real>& global);
         

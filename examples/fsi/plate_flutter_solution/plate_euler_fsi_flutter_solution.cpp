@@ -180,7 +180,7 @@ _augment_send_list_obj                 (nullptr) {
     y_divs           (ny_divs),
     z_divs           (nz_divs);
     
-    std::auto_ptr<MeshInitializer::CoordinateDivisions>
+    std::unique_ptr<MeshInitializer::CoordinateDivisions>
     x_coord_divs    (new MeshInitializer::CoordinateDivisions),
     y_coord_divs    (new MeshInitializer::CoordinateDivisions),
     z_coord_divs    (new MeshInitializer::CoordinateDivisions);

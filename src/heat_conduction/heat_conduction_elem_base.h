@@ -58,6 +58,7 @@ namespace MAST {
          *   Constructor
          */
         HeatConductionElementBase(MAST::SystemInitialization& sys,
+                                  MAST::AssemblyBase& assembly,
                                   const libMesh::Elem& elem,
                                   const MAST::ElementPropertyCardBase& p);
         
@@ -328,7 +329,7 @@ namespace MAST {
          *    \end{array} \right] \f]
          */
         void _initialize_mass_fem_operator(const unsigned int qp,
-                                           const libMesh::FEBase& fe,
+                                           const MAST::FEBase& fe,
                                            MAST::FEMOperatorMatrix& Bmat);
 
         
@@ -343,7 +344,7 @@ namespace MAST {
          */
         void _initialize_fem_gradient_operator(const unsigned int qp,
                                                const unsigned int dim,
-                                               const libMesh::FEBase& fe,
+                                               const MAST::FEBase& fe,
                                                std::vector<MAST::FEMOperatorMatrix>& dBmat);
 
         /*!

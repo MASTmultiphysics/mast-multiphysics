@@ -26,17 +26,20 @@
 #include "base/system_initialization.h"
 #include "elasticity/stress_output_base.h"
 #include "base/nonlinear_system.h"
+#include "mesh/fe_base.h"
+#include "base/assembly_base.h"
 
 
 MAST::StructuralElement3D::
 StructuralElement3D(MAST::SystemInitialization& sys,
-                    const libMesh::Elem& elem,
+                    MAST::AssemblyBase& assembly,
+                   const libMesh::Elem& elem,
                     const MAST::ElementPropertyCardBase& p):
-MAST::StructuralElementBase(sys, elem, p) {
+MAST::StructuralElementBase(sys, assembly, elem, p) {
     
     // now initialize the finite element data structures
-    _init_fe_and_qrule(get_elem_for_quadrature(), &_fe, &_qrule);
-    
+    _fe = assembly.build_fe().release();
+    _fe->init(get_elem_for_quadrature());
 }
 
 
@@ -65,7 +68,7 @@ MAST::StructuralElement3D::inertial_residual (bool request_jacobian,
     vec1_n1    = RealVectorX::Zero(n1),
     vec2_n2    = RealVectorX::Zero(n2);
     
-    std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+    std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
     mat_inertia  = _property.inertia_matrix(*this);
     
     libMesh::Point p;
@@ -169,7 +172,7 @@ MAST::StructuralElement3D::internal_residual(bool request_jacobian,
     // copy the values from the global to the local element
     local_disp.topRows(n2) = _local_sol.topRows(n2);
     
-    std::auto_ptr<MAST::FieldFunction<RealMatrixX> > mat_stiff =
+    std::unique_ptr<MAST::FieldFunction<RealMatrixX> > mat_stiff =
     _property.stiffness_A_matrix(*this);
     
     libMesh::Point p;
@@ -454,7 +457,7 @@ update_incompatible_mode_solution(const RealVectorX& dsol) {
     // copy the values from the global to the local element
     local_disp.topRows(n2) = _local_sol.topRows(n2);
     
-    std::auto_ptr<MAST::FieldFunction<RealMatrixX> > mat_stiff =
+    std::unique_ptr<MAST::FieldFunction<RealMatrixX> > mat_stiff =
     _property.stiffness_A_matrix(*this);
     
     libMesh::Point p;
@@ -590,16 +593,11 @@ surface_pressure_residual(bool request_jacobian,
     libmesh_assert(!follower_forces); // not implemented yet for follower forces
     
     // prepare the side finite element
-    libMesh::FEBase *fe_ptr    = nullptr;
-    libMesh::QBase  *qrule_ptr = nullptr;
-    _get_side_fe_and_qrule(get_elem_for_quadrature(),
-                           side,
-                           &fe_ptr,
-                           &qrule_ptr,
-                           false);
-    std::auto_ptr<libMesh::FEBase> fe(fe_ptr);
-    std::auto_ptr<libMesh::QBase>  qrule(qrule_ptr);
-    
+    std::unique_ptr<MAST::FEBase> fe(new MAST::FEBase(_system));
+    fe->init_for_side(get_elem_for_quadrature(),
+                      side,
+                      false);
+
     const std::vector<Real> &JxW                    = fe->get_JxW();
     const std::vector<libMesh::Point>& qpoint       = fe->get_xyz();
     const std::vector<std::vector<Real> >& phi      = fe->get_phi();
@@ -667,16 +665,11 @@ surface_pressure_residual_sensitivity(bool request_jacobian,
     libmesh_assert(!follower_forces); // not implemented yet for follower forces
     
     // prepare the side finite element
-    libMesh::FEBase *fe_ptr    = nullptr;
-    libMesh::QBase  *qrule_ptr = nullptr;
-    _get_side_fe_and_qrule(get_elem_for_quadrature(),
-                           side,
-                           &fe_ptr,
-                           &qrule_ptr,
-                           false);
-    std::auto_ptr<libMesh::FEBase> fe(fe_ptr);
-    std::auto_ptr<libMesh::QBase>  qrule(qrule_ptr);
-    
+    std::unique_ptr<MAST::FEBase> fe(new MAST::FEBase(_system));
+    fe->init_for_side(get_elem_for_quadrature(),
+                      side,
+                      false);
+
     const std::vector<Real> &JxW                    = fe->get_JxW();
     const std::vector<libMesh::Point>& qpoint       = fe->get_xyz();
     const std::vector<std::vector<Real> >& phi      = fe->get_phi();
@@ -795,7 +788,7 @@ MAST::StructuralElement3D::thermal_residual(bool request_jacobian,
     Bmat_nl_v.reinit(3, 3, _elem.n_nodes());
     Bmat_nl_w.reinit(3, 3, _elem.n_nodes());
 
-    std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+    std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
     mat = _property.thermal_expansion_A_matrix(*this);
     
     const MAST::FieldFunction<Real>
@@ -944,29 +937,28 @@ MAST::StructuralElement3D::calculate_stress(bool request_derivative,
     MAST::PointwiseOutputEvaluationMode mode = output.evaluation_mode();
 
     std::vector<libMesh::Point> qp_loc;
-    
-    libMesh::FEBase         *fe_ptr     = nullptr;
-    libMesh::QBase          *qrule_ptr  = nullptr;
+    std::unique_ptr<MAST::FEBase>         fe(new MAST::FEBase(_system));
 
     switch (mode) {
         case MAST::CENTROID: {
             qp_loc.resize(1);
             qp_loc[0] = libMesh::Point();
-            _init_fe_and_qrule(get_elem_for_quadrature(), &fe_ptr, &qrule_ptr, &qp_loc);
+            fe->init(get_elem_for_quadrature(), &qp_loc);
         }
             break;
             
         case MAST::SPECIFIED_POINTS: {
             qp_loc = output.get_points_for_evaluation();
-            _init_fe_and_qrule(get_elem_for_quadrature(), &fe_ptr, &qrule_ptr, &qp_loc);
+            fe->init(get_elem_for_quadrature(), &qp_loc);
         }
             break;
          
-        case MAST::ELEM_QP:
+        case MAST::ELEM_QP: {
             // this will initialize the FE object at the points specified
             // by the quadrature rule
-            _init_fe_and_qrule(get_elem_for_quadrature(), &fe_ptr, &qrule_ptr);
-            qp_loc = qrule_ptr->get_points();
+            fe->init(get_elem_for_quadrature());
+            qp_loc = fe->get_qrule().get_points();
+        }
             break;
             
         default:
@@ -974,8 +966,6 @@ MAST::StructuralElement3D::calculate_stress(bool request_derivative,
             libmesh_error();
     }
     
-    std::auto_ptr<libMesh::FEBase>         fe(fe_ptr);
-    std::auto_ptr<libMesh::QBase>          qrule(qrule_ptr);
 
     // now that the FE object has been initialized, evaluate the stress values
     
@@ -1004,7 +994,7 @@ MAST::StructuralElement3D::calculate_stress(bool request_derivative,
     // copy the values from the global to the local element
     local_disp.topRows(n2) = _local_sol.topRows(n2);
     
-    std::auto_ptr<MAST::FieldFunction<RealMatrixX> > mat_stiff =
+    std::unique_ptr<MAST::FieldFunction<RealMatrixX> > mat_stiff =
     _property.stiffness_A_matrix(*this);
     
     libMesh::Point p;
@@ -1084,7 +1074,7 @@ MAST::StructuralElement3D::calculate_stress(bool request_derivative,
 
 void
 MAST::StructuralElement3D::initialize_strain_operator (const unsigned int qp,
-                                                       const libMesh::FEBase& fe,
+                                                       const MAST::FEBase& fe,
                                                        FEMOperatorMatrix& Bmat) {
     
     const std::vector<std::vector<libMesh::RealVectorValue> >&
@@ -1121,7 +1111,7 @@ MAST::StructuralElement3D::initialize_strain_operator (const unsigned int qp,
 void
 MAST::StructuralElement3D::
 initialize_green_lagrange_strain_operator(const unsigned int qp,
-                                          const libMesh::FEBase& fe,
+                                          const MAST::FEBase& fe,
                                           const RealVectorX& local_disp,
                                           RealVectorX& epsilon,
                                           RealMatrixX& mat_x,
@@ -1269,14 +1259,14 @@ initialize_green_lagrange_strain_operator(const unsigned int qp,
 void
 MAST::StructuralElement3D::
 initialize_incompatible_strain_operator(const unsigned int qp,
-                                        const libMesh::FEBase& fe,
+                                        const MAST::FEBase& fe,
                                         FEMOperatorMatrix& Bmat,
                                         RealMatrixX& G_mat) {
     
     RealVectorX phi_vec = RealVectorX::Zero(1);
     
     // get the location of element coordinates
-    const std::vector<libMesh::Point>& q_point = _qrule->get_points();
+    const std::vector<libMesh::Point>& q_point = fe.get_qrule().get_points();
     const Real
     xi  = q_point[qp](0),
     eta = q_point[qp](1),
@@ -1402,7 +1392,7 @@ MAST::StructuralElement3D::_init_incompatible_fe_mapping( const libMesh::Elem& e
         libmesh_assert(fe_type == _system.system().variable_type(i));
     
     // Create an adequate quadrature rule
-    std::auto_ptr<libMesh::FEBase> fe(libMesh::FEBase::build(e.dim(), fe_type).release());
+    std::unique_ptr<libMesh::FEBase> fe(libMesh::FEBase::build(e.dim(), fe_type).release());
     const std::vector<libMesh::Point> pts(1); // initializes point to (0,0,0)
     
     fe->get_dphidxi();

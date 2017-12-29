@@ -174,7 +174,7 @@ namespace MAST {
          *   sort the roots based on the provided solution pointer. If the
          *   pointer is nullptr, then no sorting is performed
          */
-        virtual std::auto_ptr<MAST::TimeDomainFlutterSolution>
+        virtual std::unique_ptr<MAST::TimeDomainFlutterSolution>
         _analyze(const Real v_ref,
                  const MAST::FlutterSolutionBase* prev_sol=nullptr);
         

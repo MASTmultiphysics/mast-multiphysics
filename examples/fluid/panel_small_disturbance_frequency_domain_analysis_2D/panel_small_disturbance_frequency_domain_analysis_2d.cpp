@@ -98,7 +98,7 @@ PanelInviscidSmallDisturbanceFrequencyDomain2DAnalysis() {
     x_divs           (nx_divs),
     y_divs           (ny_divs);
     
-    std::auto_ptr<MeshInitializer::CoordinateDivisions>
+    std::unique_ptr<MeshInitializer::CoordinateDivisions>
     x_coord_divs    (new MeshInitializer::CoordinateDivisions),
     y_coord_divs    (new MeshInitializer::CoordinateDivisions);
     
@@ -396,7 +396,7 @@ solve(bool if_write_output) {
         
         
         // first calculate the real and imaginary vectors
-        std::auto_ptr<libMesh::NumericVector<Real> >
+        std::unique_ptr<libMesh::NumericVector<Real> >
         re(_sys->solution->zero_clone().release()),
         im(_sys->solution->zero_clone().release());
         

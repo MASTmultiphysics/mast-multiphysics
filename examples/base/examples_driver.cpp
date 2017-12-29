@@ -35,6 +35,7 @@
 #include "examples/structural/membrane_extension_uniaxial_stress/membrane_extension_uniaxial.h"
 #include "examples/structural/membrane_extension_biaxial_stress/membrane_extension_biaxial.h"
 #include "examples/structural/plate_bending/plate_bending.h"
+#include "examples/structural/plate_bending_level_set/plate_bending_level_set.h"
 #include "examples/structural/stiffened_plate_bending_thermal_stress/stiffened_plate_bending_thermal_stress.h"
 #include "examples/structural/plate_oscillating_load/plate_oscillating_load.h"
 #include "examples/structural/plate_bending_section_offset/plate_bending_section_offset.h"
@@ -382,6 +383,12 @@ int main(int argc, char* const argv[]) {
                                      if_nonlin,
                                      with_sens,
                                      par_name);
+    else if (case_name == "plate_bending_level_set")
+        analysis<MAST::PlateBendingLevelSet>(case_name,
+                                             libMesh::QUAD4,
+                                             if_nonlin,
+                                             with_sens,
+                                             par_name);
     else if (case_name == "plate_oscillating_load")
         analysis<MAST::PlateOscillatingLoad>(case_name,
                                              libMesh::QUAD4,
@@ -563,6 +570,7 @@ int main(int argc, char* const argv[]) {
         << "  membrane_extension_uniaxial \n"
         << "  membrane_extension_biaxial \n"
         << "  plate_bending \n"
+        << "  plate_bending_level_set \n"
         << "  plate_oscillating_load \n"
         << "  plate_bending_section_offset \n"
         << "  plate_bending_thermal_stress \n"

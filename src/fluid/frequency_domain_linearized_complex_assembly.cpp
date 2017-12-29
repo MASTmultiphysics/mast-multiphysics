@@ -110,7 +110,7 @@ _elem_sensitivity_calculations(MAST::ElementBase& elem,
 
 
 
-std::auto_ptr<MAST::ElementBase>
+std::unique_ptr<MAST::ElementBase>
 MAST::FrequencyDomainLinearizedComplexAssembly::_build_elem(const libMesh::Elem& elem) {
     
     
@@ -118,9 +118,9 @@ MAST::FrequencyDomainLinearizedComplexAssembly::_build_elem(const libMesh::Elem&
     dynamic_cast<MAST::ConservativeFluidDiscipline*>(_discipline)->flight_condition();
     
     MAST::FrequencyDomainLinearizedConservativeFluidElem* rval =
-    new MAST::FrequencyDomainLinearizedConservativeFluidElem(*_system, elem, p);
+    new MAST::FrequencyDomainLinearizedConservativeFluidElem(*_system, *this, elem, p);
     rval->freq   = _frequency;
     
-    return std::auto_ptr<MAST::ElementBase>(rval);
+    return std::unique_ptr<MAST::ElementBase>(rval);
 }
 

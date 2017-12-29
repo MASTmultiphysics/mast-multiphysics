@@ -80,34 +80,34 @@ namespace MAST {
         
         
         
-        virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+        virtual std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
         stiffness_A_matrix(const MAST::ElementBase& e);
         
-        virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+        virtual std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
         stiffness_B_matrix(const MAST::ElementBase& e);
         
-        virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+        virtual std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
         stiffness_D_matrix(const MAST::ElementBase& e);
         
-        virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+        virtual std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
         damping_matrix(const MAST::ElementBase& e);
         
-        virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+        virtual std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
         inertia_matrix(const MAST::ElementBase& e);
         
-        virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+        virtual std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
         thermal_expansion_A_matrix(const MAST::ElementBase& e);
         
-        virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+        virtual std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
         thermal_expansion_B_matrix(const MAST::ElementBase& e);
         
-        virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+        virtual std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
         transverse_shear_stiffness_matrix(const MAST::ElementBase& e);
         
-        virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+        virtual std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
         prestress_A_matrix( MAST::ElementBase& e);
         
-        virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+        virtual std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
         prestress_B_matrix( MAST::ElementBase& e);
 
         

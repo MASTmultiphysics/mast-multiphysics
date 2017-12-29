@@ -233,9 +233,9 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
     
     std::vector<libMesh::dof_id_type> dof_indices;
     const libMesh::DofMap& dof_map = _system->system().get_dof_map();
-    std::auto_ptr<MAST::ElementBase> physics_elem;
+    std::unique_ptr<MAST::ElementBase> physics_elem;
     
-    std::auto_ptr<libMesh::NumericVector<Real> > localized_solution;
+    std::unique_ptr<libMesh::NumericVector<Real> > localized_solution;
     localized_solution.reset(_build_localized_vector(nonlin_sys,
                                                      X).release());
     
@@ -343,9 +343,9 @@ linearized_jacobian_solution_product (const libMesh::NumericVector<Real>& X,
     
     std::vector<libMesh::dof_id_type> dof_indices;
     const libMesh::DofMap& dof_map = _system->system().get_dof_map();
-    std::auto_ptr<MAST::ElementBase> physics_elem;
+    std::unique_ptr<MAST::ElementBase> physics_elem;
     
-    std::auto_ptr<libMesh::NumericVector<Real> >
+    std::unique_ptr<libMesh::NumericVector<Real> >
     localized_solution,
     localized_perturbed_solution;
     
@@ -445,9 +445,9 @@ second_derivative_dot_solution_assembly (const libMesh::NumericVector<Real>& X,
     
     std::vector<libMesh::dof_id_type> dof_indices;
     const libMesh::DofMap& dof_map = _system->system().get_dof_map();
-    std::auto_ptr<MAST::ElementBase> physics_elem;
+    std::unique_ptr<MAST::ElementBase> physics_elem;
     
-    std::auto_ptr<libMesh::NumericVector<Real> >
+    std::unique_ptr<libMesh::NumericVector<Real> >
     localized_solution,
     localized_perturbed_solution;
     
@@ -549,9 +549,9 @@ sensitivity_assemble (const libMesh::ParameterVector& parameters,
     
     std::vector<libMesh::dof_id_type> dof_indices;
     const libMesh::DofMap& dof_map = nonlin_sys.get_dof_map();
-    std::auto_ptr<MAST::ElementBase> physics_elem;
+    std::unique_ptr<MAST::ElementBase> physics_elem;
     
-    std::auto_ptr<libMesh::NumericVector<Real> > localized_solution;
+    std::unique_ptr<libMesh::NumericVector<Real> > localized_solution;
     localized_solution.reset(_build_localized_vector(nonlin_sys,
                                                      *nonlin_sys.solution).release());
     

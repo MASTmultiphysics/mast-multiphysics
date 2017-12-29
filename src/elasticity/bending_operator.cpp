@@ -42,12 +42,12 @@ MAST::BendingOperator::~BendingOperator()
 
 
 
-std::auto_ptr<MAST::BendingOperator>
+std::unique_ptr<MAST::BendingOperator>
 MAST::build_bending_operator(MAST::BendingOperatorType type,
                              MAST::StructuralElementBase& elem,
                              const std::vector<libMesh::Point>& pts) {
     
-    std::auto_ptr<MAST::BendingOperator> rval;
+    std::unique_ptr<MAST::BendingOperator> rval;
     
     switch (type) {
         case MAST::BERNOULLI:

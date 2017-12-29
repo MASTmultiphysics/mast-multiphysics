@@ -22,7 +22,7 @@
 
 // MAST includes
 #include "elasticity/bending_operator.h"
-
+#include "mesh/fe_base.h"
 
 // libMesh includes
 #include "libmesh/elem.h"
@@ -109,7 +109,7 @@ namespace MAST
          *   the ElementPropertyCard2D.
          */
         virtual void
-        initialize_bending_strain_operator (const libMesh::FEBase& fe,
+        initialize_bending_strain_operator (const MAST::FEBase& fe,
                                             const unsigned int qp,
                                             FEMOperatorMatrix& Bmat);
         
@@ -118,7 +118,7 @@ namespace MAST
          * point and z-location.
          */
         void
-        initialize_bending_strain_operator_for_z(const libMesh::FEBase& fe,
+        initialize_bending_strain_operator_for_z(const MAST::FEBase& fe,
                                                  const unsigned int qp,
                                                  const Real z,
                                                  FEMOperatorMatrix& Bmat_bend);
@@ -166,7 +166,7 @@ namespace MAST
 inline
 void
 MAST::DKTBendingOperator::
-initialize_bending_strain_operator (const libMesh::FEBase& fe,
+initialize_bending_strain_operator (const MAST::FEBase& fe,
                                     const unsigned int qp,
                                     FEMOperatorMatrix& Bmat) {
     
@@ -178,7 +178,7 @@ initialize_bending_strain_operator (const libMesh::FEBase& fe,
 inline
 void
 MAST::DKTBendingOperator::
-initialize_bending_strain_operator_for_z (const libMesh::FEBase& fe,
+initialize_bending_strain_operator_for_z (const MAST::FEBase& fe,
                                           const unsigned int qp,
                                           const Real z,
                                           FEMOperatorMatrix& Bmat) {

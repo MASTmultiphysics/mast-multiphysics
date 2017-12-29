@@ -24,6 +24,7 @@
 #include "base/elem_base.h"
 #include "base/physics_discipline_base.h"
 #include "base/nonlinear_system.h"
+#include "mesh/fe_base.h"
 
 
 // libMesh includes
@@ -89,7 +90,7 @@ MAST::AssemblyBase::system() {
 
 
 
-std::auto_ptr<libMesh::NumericVector<Real> >
+std::unique_ptr<libMesh::NumericVector<Real> >
 MAST::AssemblyBase::_build_localized_vector(const libMesh::System& sys,
                                             const libMesh::NumericVector<Real>& global) {
     
@@ -106,7 +107,7 @@ MAST::AssemblyBase::_build_localized_vector(const libMesh::System& sys,
                 libMesh::GHOSTED);
     global.localize(*local, send_list);
     
-    return std::auto_ptr<libMesh::NumericVector<Real> >(local);
+    return std::unique_ptr<libMesh::NumericVector<Real> >(local);
 }
 
 
@@ -144,9 +145,9 @@ MAST::AssemblyBase::calculate_outputs(const libMesh::NumericVector<Real>& X) {
     
     std::vector<libMesh::dof_id_type> dof_indices;
     const libMesh::DofMap& dof_map = sys.get_dof_map();
-    std::auto_ptr<MAST::ElementBase> physics_elem;
+    std::unique_ptr<MAST::ElementBase> physics_elem;
     
-    std::auto_ptr<libMesh::NumericVector<Real> > localized_solution;
+    std::unique_ptr<libMesh::NumericVector<Real> > localized_solution;
     localized_solution.reset(_build_localized_vector(sys, X).release());
     
     
@@ -217,9 +218,9 @@ calculate_output_sensitivity(libMesh::ParameterVector &params,
     
     std::vector<libMesh::dof_id_type> dof_indices;
     const libMesh::DofMap& dof_map = sys.get_dof_map();
-    std::auto_ptr<MAST::ElementBase> physics_elem;
+    std::unique_ptr<MAST::ElementBase> physics_elem;
     
-    std::auto_ptr<libMesh::NumericVector<Real> >
+    std::unique_ptr<libMesh::NumericVector<Real> >
     localized_solution,
     localized_solution_sensitivity;
     
@@ -296,6 +297,16 @@ calculate_output_sensitivity(libMesh::ParameterVector &params,
         _sol_function->clear();
 }
 
+
+
+std::unique_ptr<MAST::FEBase>
+MAST::AssemblyBase::build_fe() {
+    
+    std::unique_ptr<MAST::FEBase>
+    fe(new MAST::FEBase(*_system));
+    
+    return fe;
+}
 
 
 

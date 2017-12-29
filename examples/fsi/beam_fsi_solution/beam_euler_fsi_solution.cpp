@@ -108,7 +108,7 @@ namespace MAST {
                                     _structural_sys.system().n_local_dofs());
 
             // ask the structural transient solver to update the velocity
-            std::auto_ptr<libMesh::NumericVector<Real> >
+            std::unique_ptr<libMesh::NumericVector<Real> >
             structural_vel(structural_sol.zero_clone().release());
             
             _str_transient_solver.update_velocity(*structural_vel,
@@ -155,7 +155,7 @@ namespace MAST {
                                     _structural_sys.system().n_local_dofs());
             
             // ask the structural transient solver to update the velocity
-            std::auto_ptr<libMesh::NumericVector<Real> >
+            std::unique_ptr<libMesh::NumericVector<Real> >
             structural_vel(structural_sol.zero_clone().release()),
             structural_vel_sens(structural_sol.zero_clone().release());
             
@@ -287,7 +287,7 @@ _bc_updates                         (nullptr) {
     x_divs           (nx_divs),
     y_divs           (ny_divs);
     
-    std::auto_ptr<MAST::MeshInitializer::CoordinateDivisions>
+    std::unique_ptr<MAST::MeshInitializer::CoordinateDivisions>
     x_coord_divs    (new MAST::MeshInitializer::CoordinateDivisions),
     y_coord_divs    (new MAST::MeshInitializer::CoordinateDivisions);
     

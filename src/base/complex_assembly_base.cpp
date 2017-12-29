@@ -188,9 +188,9 @@ MAST::ComplexAssemblyBase::residual_l2_norm() {
     
     std::vector<libMesh::dof_id_type> dof_indices;
     const libMesh::DofMap& dof_map = nonlin_sys.get_dof_map();
-    std::auto_ptr<MAST::ElementBase> physics_elem;
+    std::unique_ptr<MAST::ElementBase> physics_elem;
     
-    std::auto_ptr<libMesh::NumericVector<Real> >
+    std::unique_ptr<libMesh::NumericVector<Real> >
     residual_re(nonlin_sys.solution->zero_clone().release()),
     residual_im(nonlin_sys.solution->zero_clone().release()),
     localized_base_solution,
@@ -323,9 +323,9 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
     
     std::vector<libMesh::dof_id_type> dof_indices;
     const libMesh::DofMap& dof_map = _system->system().get_dof_map();
-    std::auto_ptr<MAST::ElementBase> physics_elem;
+    std::unique_ptr<MAST::ElementBase> physics_elem;
     
-    std::auto_ptr<libMesh::NumericVector<Real> >
+    std::unique_ptr<libMesh::NumericVector<Real> >
     localized_base_solution,
     localized_real_solution,
     localized_imag_solution;
@@ -504,9 +504,9 @@ residual_and_jacobian_field_split (const libMesh::NumericVector<Real>& X_R,
     
     std::vector<libMesh::dof_id_type> dof_indices;
     const libMesh::DofMap& dof_map = _system->system().get_dof_map();
-    std::auto_ptr<MAST::ElementBase> physics_elem;
+    std::unique_ptr<MAST::ElementBase> physics_elem;
     
-    std::auto_ptr<libMesh::NumericVector<Real> >
+    std::unique_ptr<libMesh::NumericVector<Real> >
     localized_base_solution,
     localized_real_solution,
     localized_imag_solution;
@@ -674,9 +674,9 @@ residual_and_jacobian_blocked (const libMesh::NumericVector<Real>& X,
     const std::vector<libMesh::dof_id_type>&
     send_list = nonlin_sys.get_dof_map().get_send_list();
     
-    std::auto_ptr<MAST::ElementBase> physics_elem;
+    std::unique_ptr<MAST::ElementBase> physics_elem;
     
-    std::auto_ptr<libMesh::NumericVector<Real> >
+    std::unique_ptr<libMesh::NumericVector<Real> >
     localized_base_solution,
     localized_complex_sol(libMesh::NumericVector<Real>::build(nonlin_sys.comm()).release());
     

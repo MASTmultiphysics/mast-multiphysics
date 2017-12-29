@@ -24,6 +24,7 @@
 // MAST includes
 #include "elasticity/bending_operator.h"
 #include "numerics/fem_operator_matrix.h"
+#include "mesh/fe_base.h"
 
 // libMesh includes
 #include "libmesh/point.h"
@@ -56,7 +57,7 @@ namespace MAST {
          *   the ElementPropertyCard1D.
          */
         virtual void
-        initialize_bending_strain_operator (const libMesh::FEBase& fe,
+        initialize_bending_strain_operator (const MAST::FEBase& fe,
                                             const unsigned int qp,
                                             MAST::FEMOperatorMatrix& Bmat);
         
@@ -65,7 +66,7 @@ namespace MAST {
          * point and y,z-location.
          */
         void
-        initialize_bending_strain_operator_for_yz(const libMesh::FEBase& fe,
+        initialize_bending_strain_operator_for_yz(const MAST::FEBase& fe,
                                                   const unsigned int qp,
                                                   const Real y,
                                                   const Real z,
@@ -89,7 +90,7 @@ namespace MAST {
 
 inline void
 MAST::BernoulliBendingOperator::
-initialize_bending_strain_operator (const libMesh::FEBase& fe,
+initialize_bending_strain_operator (const MAST::FEBase& fe,
                                     const unsigned int qp,
                                     MAST::FEMOperatorMatrix& Bmat) {
     
@@ -100,7 +101,7 @@ initialize_bending_strain_operator (const libMesh::FEBase& fe,
 
 inline void
 MAST::BernoulliBendingOperator::
-initialize_bending_strain_operator_for_yz (const libMesh::FEBase& fe,
+initialize_bending_strain_operator_for_yz (const MAST::FEBase& fe,
                                            const unsigned int qp,
                                            const Real y,
                                            const Real z,

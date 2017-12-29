@@ -164,7 +164,7 @@ namespace MAST {
          *   pointer is nullptr, then no sorting is performed
          *   solve the eigenproblem  \f\[ L x = lambda R x \f\]
          */
-        virtual std::auto_ptr<MAST::FlutterSolutionBase>
+        virtual std::unique_ptr<MAST::FlutterSolutionBase>
         _analyze(const Real k_red,
                  const Real v_ref,
                  const MAST::FlutterSolutionBase* prev_sol=nullptr);

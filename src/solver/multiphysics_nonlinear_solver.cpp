@@ -125,7 +125,7 @@ __mast_multiphysics_petsc_mat_mult(Mat mat,Vec dx,Vec y) {
     // calculate the matrix-vector product
     //////////////////////////////////////////////////////////////////
     
-    std::auto_ptr<libMesh::NumericVector<Real> >
+    std::unique_ptr<libMesh::NumericVector<Real> >
     res(new libMesh::PetscVector<Real>(y, solver->comm()));
     
     // system for this discipline
@@ -610,7 +610,7 @@ MAST::MultiphysicsNonlinearSolverBase::solve() {
         libmesh_assert_equal_to(multiphysics_first, first);
         libmesh_assert_equal_to( multiphysics_last,  last);
         
-        std::auto_ptr<libMesh::NumericVector<Real> >
+        std::unique_ptr<libMesh::NumericVector<Real> >
         multiphysics_sol(new libMesh::PetscVector<Real>(sub_vec, this->comm()));
         
         for (unsigned int i=first; i<last; i++)
@@ -716,7 +716,7 @@ MAST::MultiphysicsNonlinearSolverBase::solve() {
         libmesh_assert_equal_to(multiphysics_first, first);
         libmesh_assert_equal_to( multiphysics_last,  last);
         
-        std::auto_ptr<libMesh::NumericVector<Real> >
+        std::unique_ptr<libMesh::NumericVector<Real> >
         multiphysics_sol(new libMesh::PetscVector<Real>(sub_vec, this->comm()));
         
         for (unsigned int i=first; i<last; i++)
@@ -752,7 +752,7 @@ MAST::MultiphysicsNonlinearSolverBase::verify_gateaux_derivatives(SNES snes) {
 
     // create vectors for the sol, dsol, and res of the global and
     // disciplinary systems
-    std::auto_ptr<libMesh::NumericVector<Real> >
+    std::unique_ptr<libMesh::NumericVector<Real> >
     global_sol  (new libMesh::PetscVector<Real>(_sol, this->comm())),
     global_res  (new libMesh::PetscVector<Real>(_res, this->comm())),
     global_res0 (global_sol->zero_clone().release());
@@ -787,7 +787,7 @@ MAST::MultiphysicsNonlinearSolverBase::verify_gateaux_derivatives(SNES snes) {
                 // system for this discipline
                 MAST::NonlinearSystem& sys_j = this->get_system_assembly(j).system();
                 
-                std::auto_ptr<libMesh::NumericVector<Real> >
+                std::unique_ptr<libMesh::NumericVector<Real> >
                 dsol_j     (sys_j.solution->zero_clone().release()),
                 dJac_ij_dXj(sys_i.solution->zero_clone().release());
                 

@@ -40,6 +40,7 @@ namespace MAST {
     class FunctionBase;
     class SensitivityParameters;
     class FEMOperatorMatrix;
+    class FEBase;
     
     
     enum BendingOperatorType {
@@ -68,7 +69,7 @@ namespace MAST {
          *   initialze the bending strain operator for the specified quadrature point
          */
         virtual void
-        initialize_bending_strain_operator (const libMesh::FEBase& fe,
+        initialize_bending_strain_operator (const MAST::FEBase& fe,
                                             const unsigned int qp,
                                             MAST::FEMOperatorMatrix& Bmat) = 0;
         
@@ -113,7 +114,7 @@ namespace MAST {
          *   initialze the bending strain operator for the specified quadrature point
          */
         virtual void
-        initialize_bending_strain_operator_for_yz (const libMesh::FEBase& fe,
+        initialize_bending_strain_operator_for_yz (const MAST::FEBase& fe,
                                                    const unsigned int qp,
                                                    const Real y,
                                                    const Real z,
@@ -135,7 +136,7 @@ namespace MAST {
          *   initialze the bending strain operator for the specified quadrature point
          */
         virtual void
-        initialize_bending_strain_operator_for_z (const libMesh::FEBase& fe,
+        initialize_bending_strain_operator_for_z (const MAST::FEBase& fe,
                                                   const unsigned int qp,
                                                   const Real z,
                                                   MAST::FEMOperatorMatrix& Bmat) = 0;
@@ -146,7 +147,7 @@ namespace MAST {
     /*!
      *   builds a bending operator and returns it in a smart-pointer
      */
-    std::auto_ptr<MAST::BendingOperator>
+    std::unique_ptr<MAST::BendingOperator>
     build_bending_operator(MAST::BendingOperatorType type,
                            MAST::StructuralElementBase& elem,
                            const std::vector<libMesh::Point>& pts);

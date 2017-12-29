@@ -117,7 +117,7 @@ _elem_second_derivative_dot_solution_assembly(MAST::ElementBase& elem,
 }
 
 
-std::auto_ptr<MAST::ElementBase>
+std::unique_ptr<MAST::ElementBase>
 MAST::ConservativeFluidTransientAssembly::_build_elem(const libMesh::Elem& elem) {
     
     
@@ -125,8 +125,8 @@ MAST::ConservativeFluidTransientAssembly::_build_elem(const libMesh::Elem& elem)
     dynamic_cast<MAST::ConservativeFluidDiscipline*>(_discipline)->flight_condition();
     
     MAST::ElementBase* rval =
-    new MAST::ConservativeFluidElementBase(*_system, elem, p);
+    new MAST::ConservativeFluidElementBase(*_system, *this, elem, p);
     
-    return std::auto_ptr<MAST::ElementBase>(rval);
+    return std::unique_ptr<MAST::ElementBase>(rval);
 }
 

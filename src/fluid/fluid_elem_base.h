@@ -40,6 +40,7 @@ namespace MAST {
     class FlightCondition;
     class PrimitiveSolution;
     template <typename ValType> class SmallPerturbationPrimitiveSolution;
+    class FEBase;
     
     /*!
      *   enumeration of the primitive fluid variables
@@ -101,14 +102,14 @@ namespace MAST {
         }
         
         void calculate_dxidX (const unsigned int qp,
-                              const libMesh::FEBase& fe,
+                              const MAST::FEBase& fe,
                               RealMatrixX& dxi_dX,
                               RealMatrixX& dX_dxi);
         
         
         void
         update_solution_at_quadrature_point(const unsigned int qp,
-                                            const libMesh::FEBase& fe,
+                                            const MAST::FEBase& fe,
                                             const RealVectorX& elem_solution,
                                             RealVectorX& conservative_sol,
                                             MAST::PrimitiveSolution& primitive_sol,
@@ -358,20 +359,20 @@ namespace MAST {
             
         
         bool calculate_barth_tau_matrix(const unsigned int qp,
-                                        const libMesh::FEBase& fe,
+                                        const MAST::FEBase& fe,
                                         const MAST::PrimitiveSolution& sol,
                                         RealMatrixX& tau,
                                         std::vector<RealMatrixX >& tau_sens);
         
         bool calculate_aliabadi_tau_matrix(const unsigned int qp,
-                                           const libMesh::FEBase& fe,
+                                           const MAST::FEBase& fe,
                                            const MAST::PrimitiveSolution& sol,
                                            RealMatrixX& tau,
                                            std::vector<RealMatrixX >& tau_sens);
         
         void calculate_hartmann_discontinuity_operator
         (const unsigned int qp,
-         const libMesh::FEBase& fe,
+         const MAST::FEBase& fe,
          const MAST::PrimitiveSolution& sol,
          const RealVectorX& elem_solution,
          const std::vector<MAST::FEMOperatorMatrix>& dB_mat,
@@ -381,7 +382,7 @@ namespace MAST {
         
         void calculate_aliabadi_discontinuity_operator
         (const unsigned int qp,
-         const libMesh::FEBase& fe,
+         const MAST::FEBase& fe,
          const MAST::PrimitiveSolution& sol,
          const RealVectorX& elem_solution,
          const std::vector<MAST::FEMOperatorMatrix>& dB_mat,
@@ -392,7 +393,7 @@ namespace MAST {
         template <typename ValType>
         void calculate_small_disturbance_aliabadi_discontinuity_operator
         (const unsigned int qp,
-         const libMesh::FEBase& fe,
+         const MAST::FEBase& fe,
          const MAST::PrimitiveSolution& sol,
          const MAST::SmallPerturbationPrimitiveSolution<ValType>& dsol,
          const RealVectorX& elem_solution,
@@ -403,7 +404,7 @@ namespace MAST {
         
         void calculate_differential_operator_matrix
         (const unsigned int qp,
-         const libMesh::FEBase& fe,
+         const MAST::FEBase& fe,
          const RealVectorX& elem_solution,
          const MAST::PrimitiveSolution& sol,
          const MAST::FEMOperatorMatrix& B_mat,

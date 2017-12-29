@@ -28,14 +28,16 @@
 #include "aeroelasticity/frequency_function.h"
 #include "elasticity/normal_rotation_function_base.h"
 #include "base/nonlinear_system.h"
+#include "mesh/fe_base.h"
 
 
 
 MAST::FrequencyDomainLinearizedConservativeFluidElem::
 FrequencyDomainLinearizedConservativeFluidElem(MAST::SystemInitialization& sys,
+                                               MAST::AssemblyBase& assembly,
                                                const libMesh::Elem& elem,
                                                const MAST::FlightCondition& f):
-MAST::ConservativeFluidElementBase(sys, elem, f),
+MAST::ConservativeFluidElementBase(sys, assembly, elem, f),
 freq(nullptr) {
     
     
@@ -517,12 +519,9 @@ slip_wall_surface_residual(bool request_jacobian,
     // qi ni = 0       (since heat flux occurs only on no-slip wall and far-field bc)
     
     // prepare the side finite element
-    libMesh::FEBase *fe_ptr    = nullptr;
-    libMesh::QBase  *qrule_ptr = nullptr;
-    _get_side_fe_and_qrule(_elem, s, &fe_ptr, &qrule_ptr, false);
-    std::auto_ptr<libMesh::FEBase> fe(fe_ptr);
-    std::auto_ptr<libMesh::QBase>  qrule(qrule_ptr);
-    
+    std::unique_ptr<MAST::FEBase> fe(new MAST::FEBase(_system));
+    fe->init_for_side(_elem, s, false);
+
     const std::vector<Real> &JxW                 = fe->get_JxW();
     const std::vector<libMesh::Point>& normals   = fe->get_normals();
     const std::vector<libMesh::Point>& qpoint    = fe->get_xyz();
@@ -750,12 +749,9 @@ slip_wall_surface_residual_sensitivity(bool request_jacobian,
     // qi ni = 0       (since heat flux occurs only on no-slip wall and far-field bc)
     
     // prepare the side finite element
-    libMesh::FEBase *fe_ptr    = nullptr;
-    libMesh::QBase  *qrule_ptr = nullptr;
-    _get_side_fe_and_qrule(_elem, s, &fe_ptr, &qrule_ptr, false);
-    std::auto_ptr<libMesh::FEBase> fe(fe_ptr);
-    std::auto_ptr<libMesh::QBase>  qrule(qrule_ptr);
-    
+    std::unique_ptr<MAST::FEBase> fe(new MAST::FEBase(_system));
+    fe->init_for_side(_elem, s, false);
+
     const std::vector<Real> &JxW                 = fe->get_JxW();
     const std::vector<libMesh::Point>& normals   = fe->get_normals();
     const std::vector<libMesh::Point>& qpoint    = fe->get_xyz();

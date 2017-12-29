@@ -128,9 +128,9 @@ assemble_generalized_aerodynamic_force_matrix
     mat.setZero(n_basis, n_basis);
 
     std::vector<libMesh::dof_id_type> dof_indices;
-    std::auto_ptr<MAST::ElementBase> physics_elem;
+    std::unique_ptr<MAST::ElementBase> physics_elem;
     
-    std::auto_ptr<libMesh::NumericVector<Real> >
+    std::unique_ptr<libMesh::NumericVector<Real> >
     localized_solution,
     localized_zero;
     std::vector<libMesh::NumericVector<Real>*> localized_basis(n_basis);

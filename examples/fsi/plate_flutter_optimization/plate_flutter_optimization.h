@@ -307,7 +307,7 @@ namespace MAST {
         /*!
          *   interpolates thickness between stations
          */
-        std::auto_ptr<MAST::MultilinearInterpolation>   _th_f;
+        std::unique_ptr<MAST::MultilinearInterpolation>   _th_f;
         
 
         /*!

@@ -125,7 +125,7 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
     
     std::vector<libMesh::dof_id_type> dof_indices;
     const libMesh::DofMap& dof_map = transient_sys.get_dof_map();
-    std::auto_ptr<MAST::ElementBase> physics_elem;
+    std::unique_ptr<MAST::ElementBase> physics_elem;
     
     
     // stores the localized solution, velocity, acceleration, etc. vectors.
@@ -229,7 +229,7 @@ linearized_jacobian_solution_product (const libMesh::NumericVector<Real>& X,
     
     std::vector<libMesh::dof_id_type> dof_indices;
     const libMesh::DofMap& dof_map = transient_sys.get_dof_map();
-    std::auto_ptr<MAST::ElementBase> physics_elem;
+    std::unique_ptr<MAST::ElementBase> physics_elem;
     
     // stores the localized solution, velocity, acceleration, etc. vectors.
     // These pointers will have to be deleted
@@ -323,10 +323,10 @@ sensitivity_assemble (const libMesh::ParameterVector& parameters,
     
     std::vector<libMesh::dof_id_type> dof_indices;
     const libMesh::DofMap& dof_map = transient_sys.get_dof_map();
-    std::auto_ptr<MAST::ElementBase> physics_elem;
+    std::unique_ptr<MAST::ElementBase> physics_elem;
     
     // localize the solution and velocity for element assembly
-    std::auto_ptr<libMesh::NumericVector<Real> >
+    std::unique_ptr<libMesh::NumericVector<Real> >
     localized_solution(_build_localized_vector(transient_sys,
                                                _transient_solver->solution(0)).release()),
     localized_velocity(_build_localized_vector(transient_sys,
