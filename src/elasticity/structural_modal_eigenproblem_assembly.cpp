@@ -25,6 +25,7 @@
 #include "base/nonlinear_system.h"
 #include "numerics/utility.h"
 #include "base/system_initialization.h"
+#include "mesh/fe_base.h"
 
 // libMesh includes
 #include "libmesh/numeric_vector.h"
@@ -259,6 +260,16 @@ eigenproblem_sensitivity_assemble (const libMesh::ParameterVector& parameters,
     return true;
 }
 
+
+std::unique_ptr<MAST::FEBase>
+MAST::StructuralModalEigenproblemAssembly::build_fe(const libMesh::Elem& elem) {
+    
+    
+    const MAST::ElementPropertyCardBase& p =
+    dynamic_cast<const MAST::ElementPropertyCardBase&>(_discipline->get_property_card(elem));
+    
+    return std::unique_ptr<MAST::FEBase>(MAST::build_structural_fe(*_system, elem, p));
+}
 
 
 std::unique_ptr<MAST::ElementBase>

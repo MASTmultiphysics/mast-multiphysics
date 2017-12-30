@@ -38,8 +38,8 @@ StructuralElement3D(MAST::SystemInitialization& sys,
 MAST::StructuralElementBase(sys, assembly, elem, p) {
     
     // now initialize the finite element data structures
-    _fe = assembly.build_fe().release();
-    _fe->init(get_elem_for_quadrature());
+    _fe = assembly.build_fe(_elem).release();
+    _fe->init(_elem);
 }
 
 
@@ -71,15 +71,11 @@ MAST::StructuralElement3D::inertial_residual (bool request_jacobian,
     std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
     mat_inertia  = _property.inertia_matrix(*this);
     
-    libMesh::Point p;
     MAST::FEMOperatorMatrix Bmat;
     
     if (_property.if_diagonal_mass_matrix()) {
         
-        // as an approximation, get matrix at the first quadrature point
-        _local_elem->global_coordinates_location(xyz[0], p);
-        
-        (*mat_inertia)(p, _time, material_mat);
+        (*mat_inertia)(xyz[0], _time, material_mat);
         
         Real vol = 0.;
         const unsigned int nshp = _fe->n_shape_functions();
@@ -98,9 +94,7 @@ MAST::StructuralElement3D::inertial_residual (bool request_jacobian,
         
         for (unsigned int qp=0; qp<JxW.size(); qp++) {
             
-            _local_elem->global_coordinates_location(xyz[0], p);
-            
-            (*mat_inertia)(p, _time, material_mat);
+            (*mat_inertia)(xyz[0], _time, material_mat);
             
             // now set the shape function values
             for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
@@ -175,7 +169,6 @@ MAST::StructuralElement3D::internal_residual(bool request_jacobian,
     std::unique_ptr<MAST::FieldFunction<RealMatrixX> > mat_stiff =
     _property.stiffness_A_matrix(*this);
     
-    libMesh::Point p;
     MAST::FEMOperatorMatrix
     Bmat_lin,
     Bmat_nl_x,
@@ -202,10 +195,8 @@ MAST::StructuralElement3D::internal_residual(bool request_jacobian,
     // first for loop to evaluate alpha
     for (unsigned int qp=0; qp<JxW.size(); qp++) {
         
-        _local_elem->global_coordinates_location(xyz[qp], p);
-        
         // get the material matrix
-        (*mat_stiff)(p, _time, material_mat);
+        (*mat_stiff)(xyz[qp], _time, material_mat);
         
         this->initialize_green_lagrange_strain_operator(qp,
                                                         *_fe,
@@ -261,10 +252,8 @@ MAST::StructuralElement3D::internal_residual(bool request_jacobian,
     // second for loop to calculate the residual and stiffness contributions
     for (unsigned int qp=0; qp<JxW.size(); qp++) {
         
-        _local_elem->global_coordinates_location(xyz[qp], p);
-        
         // get the material matrix
-        (*mat_stiff)(p, _time, material_mat);
+        (*mat_stiff)(xyz[qp], _time, material_mat);
         
         this->initialize_green_lagrange_strain_operator(qp,
                                                         *_fe,
@@ -460,7 +449,6 @@ update_incompatible_mode_solution(const RealVectorX& dsol) {
     std::unique_ptr<MAST::FieldFunction<RealMatrixX> > mat_stiff =
     _property.stiffness_A_matrix(*this);
     
-    libMesh::Point p;
     MAST::FEMOperatorMatrix
     Bmat_lin,
     Bmat_nl_x,
@@ -488,10 +476,8 @@ update_incompatible_mode_solution(const RealVectorX& dsol) {
     // first for loop to evaluate alpha
     for (unsigned int qp=0; qp<JxW.size(); qp++) {
         
-        _local_elem->global_coordinates_location(xyz[qp], p);
-        
         // get the material matrix
-        (*mat_stiff)(p, _time, material_mat);
+        (*mat_stiff)(xyz[qp], _time, material_mat);
         
         this->initialize_green_lagrange_strain_operator(qp,
                                                         *_fe,
@@ -593,10 +579,8 @@ surface_pressure_residual(bool request_jacobian,
     libmesh_assert(!follower_forces); // not implemented yet for follower forces
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(new MAST::FEBase(_system));
-    fe->init_for_side(get_elem_for_quadrature(),
-                      side,
-                      false);
+    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem));
+    fe->init_for_side(_elem, side, false);
 
     const std::vector<Real> &JxW                    = fe->get_JxW();
     const std::vector<libMesh::Point>& qpoint       = fe->get_xyz();
@@ -615,7 +599,6 @@ surface_pressure_residual(bool request_jacobian,
     
     FEMOperatorMatrix Bmat;
     Real press;
-    libMesh::Point pt;
     
     RealVectorX
     phi_vec     = RealVectorX::Zero(n_phi),
@@ -625,8 +608,6 @@ surface_pressure_residual(bool request_jacobian,
     
     for (unsigned int qp=0; qp<qpoint.size(); qp++) {
         
-        _local_elem->global_coordinates_location(qpoint[qp], pt);
-        
         // now set the shape function values
         for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
             phi_vec(i_nd) = phi[i_nd][qp];
@@ -634,7 +615,7 @@ surface_pressure_residual(bool request_jacobian,
         Bmat.reinit(2*n1, phi_vec);
         
         // get pressure value
-        func(pt, _time, press);
+        func(qpoint[qp], _time, press);
         
         // calculate force
         for (unsigned int i_dim=0; i_dim<n1; i_dim++)
@@ -665,10 +646,8 @@ surface_pressure_residual_sensitivity(bool request_jacobian,
     libmesh_assert(!follower_forces); // not implemented yet for follower forces
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(new MAST::FEBase(_system));
-    fe->init_for_side(get_elem_for_quadrature(),
-                      side,
-                      false);
+    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem));
+    fe->init_for_side(_elem, side, false);
 
     const std::vector<Real> &JxW                    = fe->get_JxW();
     const std::vector<libMesh::Point>& qpoint       = fe->get_xyz();
@@ -687,7 +666,6 @@ surface_pressure_residual_sensitivity(bool request_jacobian,
     
     FEMOperatorMatrix Bmat;
     Real press;
-    libMesh::Point pt;
     
     RealVectorX
     phi_vec     = RealVectorX::Zero(n_phi),
@@ -697,8 +675,6 @@ surface_pressure_residual_sensitivity(bool request_jacobian,
     
     for (unsigned int qp=0; qp<qpoint.size(); qp++) {
         
-        _local_elem->global_coordinates_location(qpoint[qp], pt);
-        
         // now set the shape function values
         for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
             phi_vec(i_nd) = phi[i_nd][qp];
@@ -707,7 +683,7 @@ surface_pressure_residual_sensitivity(bool request_jacobian,
         
         // get pressure value
         func.derivative(*sensitivity_param,
-                        pt,
+                        qpoint[qp],
                         _time,
                         press);
         
@@ -720,14 +696,7 @@ surface_pressure_residual_sensitivity(bool request_jacobian,
         local_f += JxW[qp] * vec_n2;
     }
     
-    // now transform to the global system and add
-    if (_elem.dim() < 3) {
-        transform_vector_to_global_system(local_f, vec_n2);
-        f -= vec_n2;
-    }
-    else
-        f -= local_f;
-    
+    f -= local_f;
     
     return (request_jacobian);
 }
@@ -769,8 +738,6 @@ MAST::StructuralElement3D::thermal_residual(bool request_jacobian,
     // copy the values from the global to the local element
     local_disp.topRows(n2) = _local_sol.topRows(n2);
     
-    libMesh::Point p;
-
     MAST::FEMOperatorMatrix
     Bmat_lin,
     Bmat_nl_x,
@@ -799,11 +766,9 @@ MAST::StructuralElement3D::thermal_residual(bool request_jacobian,
     
     for (unsigned int qp=0; qp<JxW.size(); qp++) {
         
-        _local_elem->global_coordinates_location(xyz[qp], p);
-        
-        (*mat)       (p, _time, material_exp_A_mat);
-        temp_func    (p, _time, t);
-        ref_temp_func(p, _time, t0);
+        (*mat)       (xyz[qp], _time, material_exp_A_mat);
+        temp_func    (xyz[qp], _time, t);
+        ref_temp_func(xyz[qp], _time, t0);
         delta_t(0) = t-t0;
         
         vec1_n1 = material_exp_A_mat * delta_t; // [C]{alpha (T - T0)}
@@ -936,27 +901,27 @@ MAST::StructuralElement3D::calculate_stress(bool request_derivative,
     // the stress evaluations need to be peformed
     MAST::PointwiseOutputEvaluationMode mode = output.evaluation_mode();
 
-    std::vector<libMesh::Point> qp_loc;
-    std::unique_ptr<MAST::FEBase>         fe(new MAST::FEBase(_system));
+    std::vector<libMesh::Point>    qp_loc;
+    std::unique_ptr<MAST::FEBase>  fe(_assembly.build_fe(_elem));
 
     switch (mode) {
         case MAST::CENTROID: {
             qp_loc.resize(1);
             qp_loc[0] = libMesh::Point();
-            fe->init(get_elem_for_quadrature(), &qp_loc);
+            fe->init(_elem, &qp_loc);
         }
             break;
             
         case MAST::SPECIFIED_POINTS: {
             qp_loc = output.get_points_for_evaluation();
-            fe->init(get_elem_for_quadrature(), &qp_loc);
+            fe->init(_elem, &qp_loc);
         }
             break;
          
         case MAST::ELEM_QP: {
             // this will initialize the FE object at the points specified
             // by the quadrature rule
-            fe->init(get_elem_for_quadrature());
+            fe->init(_elem);
             qp_loc = fe->get_qrule().get_points();
         }
             break;
@@ -997,7 +962,6 @@ MAST::StructuralElement3D::calculate_stress(bool request_derivative,
     std::unique_ptr<MAST::FieldFunction<RealMatrixX> > mat_stiff =
     _property.stiffness_A_matrix(*this);
     
-    libMesh::Point p;
     MAST::FEMOperatorMatrix
     Bmat_lin,
     Bmat_nl_x,
@@ -1028,10 +992,8 @@ MAST::StructuralElement3D::calculate_stress(bool request_derivative,
     // second for loop to calculate the residual and stiffness contributions
     for (unsigned int qp=0; qp<qp_loc.size(); qp++) {
         
-        _local_elem->global_coordinates_location(xyz[qp], p);
-        
         // get the material matrix
-        (*mat_stiff)(p, _time, material_mat);
+        (*mat_stiff)(xyz[qp], _time, material_mat);
         
         this->initialize_green_lagrange_strain_operator(qp,
                                                         *fe,

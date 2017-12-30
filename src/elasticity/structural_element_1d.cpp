@@ -30,7 +30,7 @@
 #include "base/boundary_condition_base.h"
 #include "base/parameter.h"
 #include "base/constant_field_function.h"
-#include "mesh/fe_base.h"
+#include "mesh/local_elem_fe.h"
 #include "base/assembly_base.h"
 
 
@@ -41,11 +41,12 @@ MAST::StructuralElement1D::StructuralElement1D(MAST::SystemInitialization& sys,
 MAST::BendingStructuralElem(sys, assembly, elem, p) {
     
     // now initialize the finite element data structures
-    _fe = assembly.build_fe().release();
-    _fe->init(get_elem_for_quadrature());
+    _fe            = assembly.build_fe(_elem).release();
+    _fe->init(_elem);
+    _Tmat          = dynamic_cast<MAST::LocalElemFE*>(_fe)->local_elem().T_matrix();
     
     MAST::BendingOperatorType bending_model =
-    _property.bending_model(get_elem_for_quadrature(), _fe->get_fe_type());
+    _property.bending_model(_elem, _fe->get_fe_type());
     _bending_operator = MAST::build_bending_operator(bending_model,
                                                      *this,
                                                      _fe->get_qrule().get_points()).release();
@@ -169,29 +170,27 @@ MAST::StructuralElement1D::calculate_stress(bool request_derivative,
     // the stress evaluations need to be peformed
     MAST::PointwiseOutputEvaluationMode mode = output.evaluation_mode();
     
-    std::vector<libMesh::Point> qp_loc;
-    std::unique_ptr<MAST::FEBase>          fe(new MAST::FEBase(_system));
+    std::vector<libMesh::Point>     qp_loc;
+    std::unique_ptr<MAST::FEBase>   fe(_assembly.build_fe(_elem));
 
     switch (mode) {
         case MAST::CENTROID: {
             qp_loc.resize(1);
             qp_loc[0] = libMesh::Point();
-            fe->init(get_elem_for_quadrature(),
-                     &qp_loc);
+            fe->init(_elem, &qp_loc);
         }
             break;
             
         case MAST::SPECIFIED_POINTS: {
             qp_loc = output.get_points_for_evaluation();
-            fe->init(get_elem_for_quadrature(),
-                     &qp_loc);
+            fe->init(_elem, &qp_loc);
         }
             break;
             
         case MAST::ELEM_QP: {
             // this will initialize the FE object at the points specified
             // by the quadrature rule
-            fe->init(get_elem_for_quadrature());
+            fe->init(_elem);
             qp_loc = fe->get_qrule().get_points();
         }
             break;
@@ -202,7 +201,7 @@ MAST::StructuralElement1D::calculate_stress(bool request_derivative,
     }
 
     MAST::BendingOperatorType bending_model =
-    _property.bending_model(get_elem_for_quadrature(), _fe->get_fe_type());
+    _property.bending_model(_elem, _fe->get_fe_type());
     
     MAST::BendingOperator*
     b_ptr = MAST::build_bending_operator(bending_model,
@@ -257,8 +256,6 @@ MAST::StructuralElement1D::calculate_stress(bool request_derivative,
     dstrain_dp  = RealVectorX::Zero(n1),
     dstress_dp  = RealVectorX::Zero(n1);
 
-    
-    libMesh::Point p;
     MAST::FEMOperatorMatrix
     Bmat_mem,
     Bmat_bend,
@@ -318,10 +315,8 @@ MAST::StructuralElement1D::calculate_stress(bool request_derivative,
     // second for loop to calculate the residual and stiffness contributions
     for (unsigned int qp=0; qp<qp_loc.size(); qp++) {
         
-        _local_elem->global_coordinates_location(xyz[qp], p);
-        
         // get the material matrix
-        mat_stiff(p, _time, material_mat);
+        mat_stiff(xyz[qp], _time, material_mat);
         
         this->initialize_direct_strain_operator(qp, *fe, Bmat_mem);
         
@@ -331,9 +326,9 @@ MAST::StructuralElement1D::calculate_stress(bool request_derivative,
         // if thermal load was specified, then set the thermal strain
         // component of the total strain
         if (thermal_load) {
-            (*temp_func)    (p, _time, temp);
-            (*ref_temp_func)(p, _time, ref_t);
-            (*alpha_func)   (p, _time, alpha);
+            (*temp_func)    (xyz[qp], _time, temp);
+            (*ref_temp_func)(xyz[qp], _time, ref_t);
+            (*alpha_func)   (xyz[qp], _time, alpha);
             strain(0)  -=  alpha*(temp-ref_t);
         }
 
@@ -353,10 +348,10 @@ MAST::StructuralElement1D::calculate_stress(bool request_derivative,
             }
             
             // add to this the bending strain
-            hy    (p, _time,     y);
-            hz    (p, _time,     z);
-            hy_off(p, _time, y_off);
-            hz_off(p, _time, z_off);
+            hy    (xyz[qp], _time,     y);
+            hz    (xyz[qp], _time,     z);
+            hy_off(xyz[qp], _time, y_off);
+            hz_off(xyz[qp], _time, z_off);
 
             // TODO: this assumes isotropic section. Multilayered sections need
             // special considerations
@@ -446,12 +441,12 @@ MAST::StructuralElement1D::calculate_stress(bool request_derivative,
                 // if thermal load was specified, then set the thermal strain
                 // component of the total strain
                 if (thermal_load) {
-                    temp_func->derivative(          *sensitivity_param,
-                                          p, _time, dtemp);
-                    ref_temp_func->derivative(              *sensitivity_param,
-                                              p, _time, dref_t);
-                    alpha_func->derivative(           *sensitivity_param,
-                                           p, _time, dalpha);
+                    temp_func->derivative(*sensitivity_param,
+                                          xyz[qp], _time, dtemp);
+                    ref_temp_func->derivative(*sensitivity_param,
+                                              xyz[qp], _time, dref_t);
+                    alpha_func->derivative(*sensitivity_param,
+                                           xyz[qp], _time, dalpha);
                     dstrain_dp(0)  -=  alpha*(dtemp-dref_t) - dalpha*(temp-ref_t);
                 }
                 
@@ -459,14 +454,14 @@ MAST::StructuralElement1D::calculate_stress(bool request_derivative,
                 if (if_bending) {
                     
                     // add to this the bending strain
-                    hy.derivative(  *sensitivity_param,
-                                  p, _time, y);
-                    hz.derivative(  *sensitivity_param,
-                                  p, _time, z);
-                    hy_off.derivative(      *sensitivity_param,
-                                      p, _time, y_off);
-                    hz_off.derivative(      *sensitivity_param,
-                                      p, _time, z_off);
+                    hy.derivative(*sensitivity_param,
+                                  xyz[qp], _time, y);
+                    hz.derivative(*sensitivity_param,
+                                  xyz[qp], _time, z);
+                    hy_off.derivative(*sensitivity_param,
+                                      xyz[qp], _time, y_off);
+                    hz_off.derivative(*sensitivity_param,
+                                      xyz[qp], _time, z_off);
 
                     bend->initialize_bending_strain_operator_for_yz(*fe,
                                                                     qp,
@@ -485,8 +480,8 @@ MAST::StructuralElement1D::calculate_stress(bool request_derivative,
                 dstress_dp  =  material_mat * dstrain_dp;
 
                 // get the material matrix sensitivity
-                mat_stiff.derivative(     *sensitivity_param,
-                                     p,
+                mat_stiff.derivative(*sensitivity_param,
+                                     xyz[qp],
                                      _time,
                                      material_mat);
 
@@ -585,19 +580,14 @@ MAST::StructuralElement1D::internal_residual (bool request_jacobian,
     mat_stiff_B  = _property.stiffness_B_matrix(*this),
     mat_stiff_D  = _property.stiffness_D_matrix(*this);
     
-    
-    libMesh::Point p;
-    
     for (unsigned int qp=0; qp<JxW.size(); qp++) {
         
-        this->local_elem().global_coordinates_location(xyz[qp], p);
-        
         // get the material matrix
-        (*mat_stiff_A)(p, _time, material_A_mat);
+        (*mat_stiff_A)(xyz[qp], _time, material_A_mat);
         
         if (if_bending) {
-            (*mat_stiff_B)(p, _time, material_B_mat);
-            (*mat_stiff_D)(p, _time, material_D_mat);
+            (*mat_stiff_B)(xyz[qp], _time, material_B_mat);
+            (*mat_stiff_D)(xyz[qp], _time, material_D_mat);
         }
         
         // now calculte the quantity for these matrices
@@ -708,24 +698,20 @@ MAST::StructuralElement1D::internal_residual_sensitivity (bool request_jacobian,
     mat_stiff_B = _property.stiffness_B_matrix(*this),
     mat_stiff_D = _property.stiffness_D_matrix(*this);
     
-    libMesh::Point p;
-    
     // first calculate the sensitivity due to the parameter
     for (unsigned int qp=0; qp<JxW.size(); qp++) {
         
-        this->local_elem().global_coordinates_location(xyz[qp], p);
-        
         // get the material matrix
         mat_stiff_A->derivative(*this->sensitivity_param,
-                                p,
+                                xyz[qp],
                                 _time,
                                 material_A_mat);
         
         if (if_bending) {
-            mat_stiff_B->derivative(    *this->sensitivity_param,
-                                    p, _time, material_B_mat);
-            mat_stiff_D->derivative(    *this->sensitivity_param,
-                                    p, _time, material_D_mat);
+            mat_stiff_B->derivative(*this->sensitivity_param,
+                                    xyz[qp], _time, material_B_mat);
+            mat_stiff_D->derivative(*this->sensitivity_param,
+                                    xyz[qp], _time, material_D_mat);
         }
         
         // now calculte the quantity for these matrices
@@ -837,17 +823,13 @@ internal_residual_jac_dot_state_sensitivity (RealMatrixX& jac) {
     mat_stiff_D  = _property.stiffness_D_matrix(*this);
     
     
-    libMesh::Point p;
-    
     for (unsigned int qp=0; qp<JxW.size(); qp++) {
         
-        this->local_elem().global_coordinates_location(xyz[qp], p);
-        
         // get the material matrix
-        (*mat_stiff_A)(p, _time, material_A_mat);
+        (*mat_stiff_A)(xyz[qp], _time, material_A_mat);
         
-        (*mat_stiff_B)(p, _time, material_B_mat);
-        (*mat_stiff_D)(p, _time, material_D_mat);
+        (*mat_stiff_B)(xyz[qp], _time, material_B_mat);
+        (*mat_stiff_D)(xyz[qp], _time, material_D_mat);
         
         // now calculte the quantity for these matrices
         this->initialize_direct_strain_operator(qp, *_fe, Bmat_mem);
@@ -1462,15 +1444,11 @@ MAST::StructuralElement1D::prestress_residual (bool request_jacobian,
     prestress_A = _property.prestress_A_matrix(*this),
     prestress_B = _property.prestress_B_matrix(*this);
     
-    libMesh::Point p;
-    
     // now calculate the quantity
     for (unsigned int qp=0; qp<JxW.size(); qp++) {
         
-        this->local_elem().global_coordinates_location(xyz[qp], p);
-        
-        (*prestress_A)(p, _time, prestress_mat_A);
-        (*prestress_B)(p, _time, prestress_mat_B);
+        (*prestress_A)(xyz[qp], _time, prestress_mat_A);
+        (*prestress_B)(xyz[qp], _time, prestress_mat_B);
         _convert_prestress_A_mat_to_vector(prestress_mat_A, prestress_vec_A);
         _convert_prestress_B_mat_to_vector(prestress_mat_B, prestress_vec_B);
         
@@ -1598,17 +1576,13 @@ MAST::StructuralElement1D::prestress_residual_sensitivity (bool request_jacobian
     prestress_A = _property.prestress_A_matrix(*this),
     prestress_B = _property.prestress_B_matrix(*this);
     
-    libMesh::Point p;
-    
     // transform to the local coordinate system
     for (unsigned int qp=0; qp<JxW.size(); qp++) {
         
-        this->local_elem().global_coordinates_location(xyz[qp], p);
-        
         prestress_A->derivative(*this->sensitivity_param,
-                                p, _time, prestress_mat_A);
+                                xyz[qp], _time, prestress_mat_A);
         prestress_B->derivative(*this->sensitivity_param,
-                                p, _time, prestress_mat_B);
+                                xyz[qp], _time, prestress_mat_B);
         _convert_prestress_A_mat_to_vector(prestress_mat_A, prestress_vec_A);
         _convert_prestress_B_mat_to_vector(prestress_mat_B, prestress_vec_B);
         
@@ -1696,7 +1670,7 @@ surface_pressure_residual(bool request_jacobian,
     libmesh_assert(!follower_forces); // not implemented yet for follower forces
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(new MAST::FEBase(_system));
+    std::unique_ptr<MAST::LocalElemFE> fe(new MAST::LocalElemFE(_system));
     fe->init_for_side(_elem, side, false);
 
     const std::vector<Real> &JxW                    = fe->get_JxW();
@@ -1720,7 +1694,6 @@ surface_pressure_residual(bool request_jacobian,
     Real
     press   = 0.,
     A_val   = 0.;
-    libMesh::Point pt;
     
     RealVectorX
     phi_vec     = RealVectorX::Zero(n_phi),
@@ -1730,8 +1703,6 @@ surface_pressure_residual(bool request_jacobian,
     
     for (unsigned int qp=0; qp<qpoint.size(); qp++) {
         
-        _local_elem->global_coordinates_location(qpoint[qp], pt);
-        
         // now set the shape function values
         for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
             phi_vec(i_nd) = phi[i_nd][qp];
@@ -1739,8 +1710,8 @@ surface_pressure_residual(bool request_jacobian,
         Bmat.reinit(2*n1, phi_vec);
         
         // get pressure cross-sectional area value
-        p_func(pt, _time, press);
-        A_func(pt, _time, A_val);
+        p_func(qpoint[qp], _time, press);
+        A_func(qpoint[qp], _time, A_val);
         
         // calculate force
         for (unsigned int i_dim=0; i_dim<n1; i_dim++)
@@ -1778,7 +1749,7 @@ surface_pressure_residual_sensitivity(bool request_jacobian,
     libmesh_assert(!follower_forces); // not implemented yet for follower forces
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(new MAST::FEBase(_system));
+    std::unique_ptr<MAST::LocalElemFE> fe(new MAST::LocalElemFE(_system));
     fe->init_for_side(_elem, side, false);
 
     const std::vector<Real> &JxW                    = fe->get_JxW();
@@ -1804,7 +1775,6 @@ surface_pressure_residual_sensitivity(bool request_jacobian,
     dpress  =  0.,
     A_val   =  0.,
     dA_val  =  0.;
-    libMesh::Point pt;
     
     RealVectorX
     phi_vec     = RealVectorX::Zero(n_phi),
@@ -1814,8 +1784,6 @@ surface_pressure_residual_sensitivity(bool request_jacobian,
     
     for (unsigned int qp=0; qp<qpoint.size(); qp++) {
         
-        _local_elem->global_coordinates_location(qpoint[qp], pt);
-        
         // now set the shape function values
         for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
             phi_vec(i_nd) = phi[i_nd][qp];
@@ -1823,14 +1791,14 @@ surface_pressure_residual_sensitivity(bool request_jacobian,
         Bmat.reinit(2*n1, phi_vec);
         
         // get pressure and area values and their sensitivities
-        p_func(pt, _time, press);
+        p_func(qpoint[qp], _time, press);
         p_func.derivative(*sensitivity_param,
-                          pt,
+                          qpoint[qp],
                           _time,
                           dpress);
-        A_func(pt, _time, A_val);
+        A_func(qpoint[qp], _time, A_val);
         A_func.derivative(*sensitivity_param,
-                          pt,
+                          qpoint[qp],
                           _time,
                           dA_val);
         
@@ -1917,19 +1885,16 @@ MAST::StructuralElement1D::thermal_residual (bool request_jacobian,
     &ref_temp_func = bc.get<MAST::FieldFunction<Real> >("ref_temperature");
     
     Real t, t0;
-    libMesh::Point pt;
     
     for (unsigned int qp=0; qp<JxW.size(); qp++) {
         
-        this->local_elem().global_coordinates_location(xyz[qp], pt);
-        
         // get the material property
-        (*expansion_A)(pt, _time, material_exp_A_mat);
-        (*expansion_B)(pt, _time, material_exp_B_mat);
+        (*expansion_A)(xyz[qp], _time, material_exp_A_mat);
+        (*expansion_B)(xyz[qp], _time, material_exp_B_mat);
         
         // get the temperature function
-        temp_func    (pt, _time, t);
-        ref_temp_func(pt, _time, t0);
+        temp_func    (xyz[qp], _time, t);
+        ref_temp_func(xyz[qp], _time, t0);
         delta_t(0) = t-t0;
         
         vec1_n1 = material_exp_A_mat * delta_t; // [C]{alpha (T - T0)} (with membrane strain)
@@ -2059,25 +2024,22 @@ MAST::StructuralElement1D::thermal_residual_sensitivity (bool request_jacobian,
     &ref_temp_func = bc.get<MAST::FieldFunction<Real> >("ref_temperature");
     
     Real t, t0, t_sens;
-    libMesh::Point pt;
     
     for (unsigned int qp=0; qp<JxW.size(); qp++) {
         
-        this->local_elem().global_coordinates_location(xyz[qp], pt);
-        
         // get the material property
-        (*expansion_A)(pt, _time, material_exp_A_mat);
-        (*expansion_B)(pt, _time, material_exp_B_mat);
+        (*expansion_A)(xyz[qp], _time, material_exp_A_mat);
+        (*expansion_B)(xyz[qp], _time, material_exp_B_mat);
         expansion_A->derivative(*this->sensitivity_param,
-                                pt, _time, material_exp_A_mat_sens);
+                                xyz[qp], _time, material_exp_A_mat_sens);
         expansion_B->derivative(*this->sensitivity_param,
-                                pt, _time, material_exp_B_mat_sens);
+                                xyz[qp], _time, material_exp_B_mat_sens);
         
         // get the temperature function
-        temp_func(pt, _time, t);
+        temp_func(xyz[qp], _time, t);
         temp_func.derivative(*this->sensitivity_param,
-                             pt, _time, t_sens);
-        ref_temp_func(pt, _time, t0);
+                             xyz[qp], _time, t_sens);
+        ref_temp_func(xyz[qp], _time, t0);
         delta_t(0)      = t-t0;
         delta_t_sens(0) = t_sens;
         
@@ -2222,7 +2184,6 @@ piston_theory_residual(bool request_jacobian,
     normal   = RealVectorX::Zero(3),
     dummy    = RealVectorX::Zero(2);
     
-    libMesh::Point pt;
 
     // direction of pressure assumed to be normal (along local z-axis)
     // to the element face for 2D and along local y-axis for 1D element.
@@ -2239,8 +2200,6 @@ piston_theory_residual(bool request_jacobian,
     
     for (unsigned int qp=0; qp<qpoint.size(); qp++)
     {
-        
-        _local_elem->global_coordinates_location(qpoint[qp], pt);
         
         // now set the shape function values
         for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
@@ -2272,12 +2231,12 @@ piston_theory_residual(bool request_jacobian,
         // both the v and w motions
         dwdx_p = dvdx(0,0);
         dwdt_p = vel(1);
-        (*pressure)(pt, _time, p_val(1));
+        (*pressure)(qpoint[qp], _time, p_val(1));
 
         
         dwdx_p = dwdx(0,0);
         dwdt_p = vel(2);
-        (*pressure)(pt, _time, p_val(2));
+        (*pressure)(qpoint[qp], _time, p_val(2));
 
         
         // calculate force and discrete vector for v-disp
@@ -2299,14 +2258,14 @@ piston_theory_residual(bool request_jacobian,
             // we need the derivative of cp wrt normal velocity
             dwdx_p = dvdx(0,0);
             dwdt_p = vel(1);
-            (*dpressure_dxdot)(pt, _time, p_val(1));
+            (*dpressure_dxdot)(qpoint[qp], _time, p_val(1));
             
             // calculate the component of Jacobian due to v-velocity
             Bmat_v.right_multiply_transpose(mat_n2n2, Bmat_v);
             local_jac_xdot += JxW[qp] * p_val(1) * normal(1) * mat_n2n2;
 
             // now wrt v
-            (*dpressure_dx)(pt, _time, p_val(1));
+            (*dpressure_dx)(qpoint[qp], _time, p_val(1));
             // now use calculate the component of Jacobian due to deformation
             Bmat_v.right_multiply_transpose(mat_n2n2, Bmat_dvdx);  // v: B^T dB/dx
             local_jac += (JxW[qp] * p_val(1) * normal(1)) * mat_n2n2;
@@ -2314,14 +2273,14 @@ piston_theory_residual(bool request_jacobian,
 
             dwdx_p = dwdx(0,0);
             dwdt_p = vel(2);
-            (*dpressure_dxdot)(pt, _time, p_val(2));
+            (*dpressure_dxdot)(qpoint[qp], _time, p_val(2));
 
             // calculate the component of Jacobian due to w-velocity
             Bmat_w.right_multiply_transpose(mat_n2n2, Bmat_w);
             local_jac_xdot += JxW[qp] * p_val(2) * normal(2) * mat_n2n2;
             
             // now wrt w
-            (*dpressure_dx)(pt, _time, p_val(2));
+            (*dpressure_dx)(qpoint[qp], _time, p_val(2));
             Bmat_w.right_multiply_transpose(mat_n2n2, Bmat_dwdx);  // w: B^T dB/dx
             local_jac += (JxW[qp] * p_val(2) * normal(2)) * mat_n2n2;
         }
@@ -2415,7 +2374,6 @@ piston_theory_residual_sensitivity(bool request_jacobian,
     normal   = RealVectorX::Zero(3),
     dummy    = RealVectorX::Zero(2);
     
-    libMesh::Point pt;
     
     // direction of pressure assumed to be normal (along local z-axis)
     // to the element face for 2D and along local y-axis for 1D element.
@@ -2432,8 +2390,6 @@ piston_theory_residual_sensitivity(bool request_jacobian,
     
     for (unsigned int qp=0; qp<qpoint.size(); qp++)
     {
-        
-        _local_elem->global_coordinates_location(qpoint[qp], pt);
         
         // now set the shape function values
         for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
@@ -2466,7 +2422,7 @@ piston_theory_residual_sensitivity(bool request_jacobian,
         dwdx_p = dvdx(0,0);
         dwdt_p = vel(1);
         pressure->derivative(*this->sensitivity_param,
-                             pt,
+                             qpoint[qp],
                              _time,
                              p_val(1));
         
@@ -2474,7 +2430,7 @@ piston_theory_residual_sensitivity(bool request_jacobian,
         dwdx_p = dwdx(0,0);
         dwdt_p = vel(2);
         pressure->derivative(*this->sensitivity_param,
-                             pt,
+                             qpoint[qp],
                              _time,
                              p_val(2));
         
@@ -2498,8 +2454,8 @@ piston_theory_residual_sensitivity(bool request_jacobian,
             // we need the derivative of cp wrt normal velocity
             dwdx_p = dvdx(0,0);
             dwdt_p = vel(1);
-            dpressure_dxdot->derivative(        *this->sensitivity_param,
-                                        pt,
+            dpressure_dxdot->derivative(*this->sensitivity_param,
+                                        qpoint[qp],
                                         _time,
                                         p_val(1));
             
@@ -2508,8 +2464,8 @@ piston_theory_residual_sensitivity(bool request_jacobian,
             local_jac_xdot += JxW[qp] * p_val(1) * normal(1) * mat_n2n2;
             
             // now wrt v
-            dpressure_dx->derivative(     *this->sensitivity_param,
-                                     pt,
+            dpressure_dx->derivative(*this->sensitivity_param,
+                                     qpoint[qp],
                                      _time,
                                      p_val(1));
             
@@ -2520,8 +2476,8 @@ piston_theory_residual_sensitivity(bool request_jacobian,
             
             dwdx_p = dwdx(0,0);
             dwdt_p = vel(2);
-            dpressure_dxdot->derivative(        *this->sensitivity_param,
-                                        pt,
+            dpressure_dxdot->derivative(*this->sensitivity_param,
+                                        qpoint[qp],
                                         _time,
                                         p_val(2));
             
@@ -2530,8 +2486,8 @@ piston_theory_residual_sensitivity(bool request_jacobian,
             local_jac_xdot += JxW[qp] * p_val(2) * normal(2) * mat_n2n2;
             
             // now wrt w
-            dpressure_dx->derivative(     *this->sensitivity_param,
-                                     pt,
+            dpressure_dx->derivative(*this->sensitivity_param,
+                                     qpoint[qp],
                                      _time,
                                      p_val(2));
             Bmat_w.right_multiply_transpose(mat_n2n2, Bmat_dwdx);  // w: B^T dB/dx
@@ -2614,13 +2570,10 @@ linearized_frequency_domain_surface_pressure_residual
     
     
     FEMOperatorMatrix Bmat;
-    libMesh::Point    pt;
     Real              press;
     Complex           dpress;
     
     for (unsigned int qp=0; qp<qpoint.size(); qp++) {
-        
-        _local_elem->global_coordinates_location(qpoint[qp], pt);
         
         // now set the shape function values
         for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
@@ -2629,9 +2582,9 @@ linearized_frequency_domain_surface_pressure_residual
         Bmat.reinit(2*n1, phi_vec);
         
         // get pressure and deformation information
-        press_fn (pt, _time,  press);
-        dpress_fn(pt, _time, dpress);
-        dn_rot_fn(pt, _time, dn_rot);
+        press_fn (qpoint[qp], _time,  press);
+        dpress_fn(qpoint[qp], _time, dpress);
+        dn_rot_fn(qpoint[qp], _time, dn_rot);
         
         //            press = 0.;
         //            dpress = Complex(2./4.*std::real(dn_rot(0)),  2./4./.1*std::imag(utrans(1)));

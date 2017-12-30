@@ -257,6 +257,35 @@ MAST::LevelSetIntersection::_find_quad4_intersections
     libmesh_assert_equal_to(e.type(), libMesh::QUAD4);
     libmesh_assert(!_initialized);
     
+    // We create a vector storing the nondimensional locations of nodes
+    // on each side of the element. This is used later to identify the
+    // nondimensional location of all new nodes
+    std::vector<std::pair<libMesh::Point, libMesh::Point> >
+    side_nondim_points(4);
+    // side 0: eta =-1, xi=[-1, 1]
+    side_nondim_points[0] =
+    std::pair<libMesh::Point, libMesh::Point>
+    (libMesh::Point(-1, -1, 0.),
+     libMesh::Point(+1, -1, 0.));
+    side_nondim_points[1] =
+    std::pair<libMesh::Point, libMesh::Point>
+    (libMesh::Point(+1, -1, 0.),
+     libMesh::Point(+1, +1, 0.));
+    side_nondim_points[2] =
+    std::pair<libMesh::Point, libMesh::Point>
+    (libMesh::Point(+1, +1, 0.),
+     libMesh::Point(-1, +1, 0.));
+    side_nondim_points[3] =
+    std::pair<libMesh::Point, libMesh::Point>
+    (libMesh::Point(-1, +1, 0.),
+     libMesh::Point(-1, -1, 0.));
+
+    // populate the node to nondimensional coordinate map with the
+    // original nodes of the element
+    for (unsigned int i=0; i<4; i++)
+        _node_local_coords[e.node_ptr(i)] = side_nondim_points[i].first;
+    
+    
     const unsigned int
     n_nodes = 4;   // this is equal to n_sides for QUAD4
     
@@ -344,7 +373,9 @@ MAST::LevelSetIntersection::_find_quad4_intersections
     xi_ref   = 0.,
     xi_other = 0.;
     libMesh::Point
-    p;
+    p,
+    side_p0,
+    side_p1;
 
     // this should pass, but just to be sure, we will check.
     libmesh_assert_equal_to(_new_nodes.size(), 0);
@@ -360,6 +391,9 @@ MAST::LevelSetIntersection::_find_quad4_intersections
 	nd = new libMesh::Node(p);
 	nd->set_id(0);
     _new_nodes.push_back(nd);
+    side_p0 = side_nondim_points[ref_side].first;
+    side_p1 = side_nondim_points[ref_side].second;
+    _node_local_coords[nd] = side_p0 + xi_ref * (side_p1 - side_p0);
 
     // before we create the new elements, we will figure out
     // which portion of the side is on the positive or negative side of
@@ -383,6 +417,9 @@ MAST::LevelSetIntersection::_find_quad4_intersections
 	    nd = new libMesh::Node(p);
 	    nd->set_id(0);
         _new_nodes.push_back(nd);
+        side_p0 = side_nondim_points[(ref_side+2)%n_nodes].first;
+        side_p1 = side_nondim_points[(ref_side+2)%n_nodes].second;
+        _node_local_coords[nd] = side_p0 + xi_ref * (side_p1 - side_p0);
 
         libMesh::Elem
         *e_p = const_cast<libMesh::Elem*>(&e),
@@ -451,7 +488,10 @@ MAST::LevelSetIntersection::_find_quad4_intersections
 		nd = new libMesh::Node(p);
 	    nd->set_id(0);
         _new_nodes.push_back(nd);
-        
+        side_p0 = side_nondim_points[(ref_side+1)%n_nodes].first;
+        side_p1 = side_nondim_points[(ref_side+1)%n_nodes].second;
+        _node_local_coords[nd] = side_p0 + xi_ref * (side_p1 - side_p0);
+
 
         // create a new node on the opposite side, which will be used to create
         // the QUAD4 elements: second on ref_side+2
@@ -460,6 +500,9 @@ MAST::LevelSetIntersection::_find_quad4_intersections
 	    nd = new libMesh::Node(p);
 	    nd->set_id(0);
 	    _new_nodes.push_back(nd);
+        side_p0 = side_nondim_points[(ref_side+2)%n_nodes].first;
+        side_p1 = side_nondim_points[(ref_side+2)%n_nodes].second;
+        _node_local_coords[nd] = side_p1 + xi_ref * (side_p0 - side_p1);
 
         
         // the algorithm of identifying the ref_side always ensures that the
@@ -610,4 +653,18 @@ MAST::LevelSetIntersection::_find_intersection_on_straight_edge
     return xi;
 }
 
+
+const libMesh::Point&
+MAST::LevelSetIntersection::get_nondimensional_coordinate_for_node
+(const libMesh::Node& n) const {
+    
+    libmesh_assert(_initialized);
+    
+    std::map<const libMesh::Node*, libMesh::Point>::const_iterator
+    it = _node_local_coords.find(&n);
+    
+    libmesh_assert(it != _node_local_coords.end());
+    
+    return it->second;
+}
 

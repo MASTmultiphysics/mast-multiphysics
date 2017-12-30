@@ -25,6 +25,7 @@
 
 MAST::FEBase::FEBase(const MAST::SystemInitialization& sys):
 _sys        (sys),
+_extra_quadrature_order(0),
 _initialized(false),
 _fe         (nullptr),
 _qrule      (nullptr) {
@@ -39,6 +40,13 @@ MAST::FEBase::~FEBase() {
     
     if (_qrule)
         delete _qrule;
+}
+
+
+void
+MAST::FEBase::set_extra_quadrature_order(int n) {
+    
+    _extra_quadrature_order = n;
 }
 
 
@@ -70,7 +78,7 @@ MAST::FEBase::init(const libMesh::Elem& elem,
     if (pts == nullptr) {
         _qrule = fe_type.default_quadrature_rule
         (elem.dim(),
-         _sys.system().extra_quadrature_order).release();  // system extra quadrature
+         _sys.system().extra_quadrature_order+_extra_quadrature_order).release();  // system extra quadrature
         _fe->attach_quadrature_rule(_qrule);
         _fe->reinit(&elem);
     }
@@ -98,8 +106,9 @@ MAST::FEBase::init_for_side(const libMesh::Elem& elem,
     
     // Create an adequate quadrature rule
     _fe     = libMesh::FEBase::build(elem.dim(), fe_type).release();
-    _qrule  = fe_type.default_quadrature_rule(elem.dim()-1,
-                                               _sys.system().extra_quadrature_order).release();  // system extra quadrature
+    _qrule  = fe_type.default_quadrature_rule
+    (elem.dim()-1,
+     _sys.system().extra_quadrature_order+_extra_quadrature_order).release();  // system extra quadrature
     _fe->attach_quadrature_rule(_qrule);
     _fe->get_phi();
     _fe->get_xyz();

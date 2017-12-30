@@ -1661,11 +1661,13 @@ prestress_A_matrix(MAST::ElementBase& e) const {
     // make sure that the init method has been called on the card
     libmesh_assert(_initialized);
 
-    MAST::FieldFunction<RealMatrixX>* rval =
-    new MAST::Solid1DSectionProperty::PrestressAMatrix
-    (this->get<MAST::FieldFunction<RealMatrixX> >("prestress"),
-     e.local_elem().T_matrix_function(),
-     *_A);
+    MAST::FieldFunction<RealMatrixX>* rval;
+    // TODO: figure out the interface for prestress and T matrix
+    libmesh_assert(false);
+    // = new MAST::Solid1DSectionProperty::PrestressAMatrix
+    //(this->get<MAST::FieldFunction<RealMatrixX> >("prestress"),
+    // e.local_elem().T_matrix_function(),
+    // *_A);
     
     return std::unique_ptr<MAST::FieldFunction<RealMatrixX> > (rval);
 }
@@ -1678,12 +1680,14 @@ prestress_B_matrix(MAST::ElementBase& e) const {
     // make sure that the init method has been called on the card
     libmesh_assert(_initialized);
 
-    MAST::FieldFunction<RealMatrixX>* rval =
-    new MAST::Solid1DSectionProperty::PrestressBMatrix
-    (this->get<MAST::FieldFunction<RealMatrixX> >("prestress"),
-     e.local_elem().T_matrix_function(),
-     *_Ay,
-     *_Az);
+    MAST::FieldFunction<RealMatrixX>* rval;
+    // TODO: figure out the interface for prestress and T matrix
+    libmesh_assert(false);
+    // = new MAST::Solid1DSectionProperty::PrestressBMatrix
+    //(this->get<MAST::FieldFunction<RealMatrixX> >("prestress"),
+    // e.local_elem().T_matrix_function(),
+    // *_Ay,
+    // *_Az);
     
     return std::unique_ptr<MAST::FieldFunction<RealMatrixX> > (rval);
 }

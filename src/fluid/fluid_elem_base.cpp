@@ -2252,7 +2252,7 @@ calculate_differential_operator_matrix (const unsigned int qp,
     
     const std::vector<std::vector<Real> >& phi =
     fe.get_phi(); // assuming that all variables have the same interpolation
-    const unsigned int n_phi = phi.size();
+    const unsigned int n_phi = (unsigned int) phi.size();
     std::vector<RealMatrixX > tau_sens(n1);
     for (unsigned int i_cvar=0; i_cvar<n1; i_cvar++)
         tau_sens[i_cvar].setZero(n1, n1);

@@ -94,6 +94,21 @@ namespace MAST {
         /*!
          *   @returns a reference to the libMesh::System object
          */
+        MAST::SystemInitialization& system_initialization() {
+            return _system;
+        }
+
+        /*!
+         *   @returns a reference to the libMesh::System object
+         */
+        MAST::AssemblyBase& assembly() {
+            return _assembly;
+        }
+
+        
+        /*!
+         *   @returns a reference to the libMesh::System object
+         */
         MAST::NonlinearSystem& system();
         
         
@@ -105,27 +120,6 @@ namespace MAST {
         }
         
         
-        /*!
-         *   @returns a non-constant reference to the element in the local
-         *   coordinate. This is needed for 1D or 2D elements that live
-         *   in a 3D space.
-         */
-        MAST::LocalElemBase& local_elem() {
-            return *_local_elem;
-        }
-
-        
-        /*!
-         *   @returns a constant reference to the element in the local
-         *   coordinate. This is needed for 1D or 2D elements that live
-         *   in a 3D space.
-         */
-        const MAST::LocalElemBase& local_elem() const {
-            return *_local_elem;
-        }
-        
-        
-
         /*!
          *   @returns a constant reference to the finite element object
          */
@@ -219,17 +213,7 @@ namespace MAST {
          */
         const MAST::FunctionBase* sensitivity_param;
         
-        
-        /*!
-         *   @returns a constant reference to the geometric element used for
-         *   initialization of finite element quadrature and shape functions.
-         *   This is needed for cases where a 1D or 2D element might live in a
-         *   3D space, in which case the element returned will be one that
-         *   has been transformed to a local coordinate system. For a 3D element,
-         *   the method returns the element used to initialize this object.
-         */
-        const libMesh::Elem& get_elem_for_quadrature() const;
-        
+                
         /*!
          *   evaluates an output quantity requested in the map over the
          *   boundary of the element that may coincide with the boundary
@@ -272,7 +256,6 @@ namespace MAST {
          */
         const libMesh::Elem& _elem;
         
-        
         /*!
          *   pointer to the active solution mesh field function. If this 
          *   has been set, then some of the element properties are
@@ -280,13 +263,6 @@ namespace MAST {
          *   perform the necessary operations in calculation of the Jacobian
          */
         MAST::FunctionBase* _active_sol_function;
-        
-        
-        /*!
-         *   local element to support the presence of 1D and 2D elements
-         *   in 3D space
-         */
-        std::unique_ptr<MAST::LocalElemBase> _local_elem;
         
         
         /*!

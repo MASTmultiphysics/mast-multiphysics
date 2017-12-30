@@ -300,7 +300,7 @@ calculate_output_sensitivity(libMesh::ParameterVector &params,
 
 
 std::unique_ptr<MAST::FEBase>
-MAST::AssemblyBase::build_fe() {
+MAST::AssemblyBase::build_fe(const libMesh::Elem& elem) {
     
     std::unique_ptr<MAST::FEBase>
     fe(new MAST::FEBase(*_system));

@@ -26,13 +26,10 @@
 #include "base/boundary_condition_base.h"
 #include "property_cards/element_property_card_base.h"
 #include "property_cards/element_property_card_1D.h"
-#include "mesh/local_elem_base.h"
-#include "mesh/local_1d_elem.h"
-#include "mesh/local_2d_elem.h"
-#include "mesh/local_3d_elem.h"
 #include "base/mesh_field_function.h"
 #include "base/nonlinear_system.h"
-#include "mesh/fe_base.h"
+#include "mesh/local_elem_fe.h"
+#include "base/assembly_base.h"
 
 
 MAST::HeatConductionElementBase::
@@ -43,34 +40,9 @@ HeatConductionElementBase(MAST::SystemInitialization& sys,
 MAST::ElementBase(sys, assembly, elem),
 _property(p) {
 
-    MAST::LocalElemBase* rval = nullptr;
-    
-    switch (elem.dim()) {
-        case 1: {
-            const MAST::ElementPropertyCard1D& p_1d =
-            dynamic_cast<const MAST::ElementPropertyCard1D&>(p);
-            rval = new MAST::Local1DElem(elem, p_1d.y_vector());
-        }
-            break;
-            
-        case 2:
-            rval = new MAST::Local2DElem(elem);
-            break;
-            
-        case 3:
-            rval = new MAST::Local3DElem(elem);
-            break;
-            
-        default:
-            // should not get here.
-            libmesh_error();
-            break;
-    }
-    
-    _local_elem.reset(rval);
-    
     // now initialize the finite element data structures
-    _fe->init(get_elem_for_quadrature());
+    _fe = assembly.build_fe(_elem).release();
+    _fe->init(_elem);
 }
 
 
@@ -105,7 +77,6 @@ MAST::HeatConductionElementBase::internal_residual (bool request_jacobian,
     std::unique_ptr<MAST::FieldFunction<RealMatrixX> > conductance =
     _property.thermal_conductance_matrix(*this);
     
-    libMesh::Point p;
     std::vector<MAST::FEMOperatorMatrix> dBmat(dim);
     MAST::FEMOperatorMatrix Bmat; // for calculation of Jac when k is temp. dep.
 
@@ -119,10 +90,8 @@ MAST::HeatConductionElementBase::internal_residual (bool request_jacobian,
         if (_active_sol_function)
             dynamic_cast<MAST::MeshFieldFunction*>
             (_active_sol_function)->set_element_quadrature_point_solution(vec1);
-
-        _local_elem->global_coordinates_location(xyz[qp], p);
         
-        (*conductance)(p, _time, material_mat);
+        (*conductance)(xyz[qp], _time, material_mat);
 
         _initialize_fem_gradient_operator(qp, dim, *_fe, dBmat);
         
@@ -157,8 +126,8 @@ MAST::HeatConductionElementBase::internal_residual (bool request_jacobian,
             // Jacobian contribution from int_omega dB_dxi dT_dxj dk_ij/dT B
             if (_active_sol_function) {
                 // get derivative of the conductance matrix wrt temperature
-                conductance->derivative(        *_active_sol_function,
-                                        p,
+                conductance->derivative(*_active_sol_function,
+                                        xyz[qp],
                                         _time, dmaterial_mat);
                 
                 for (unsigned int j=0; j<dim; j++) {
@@ -211,8 +180,6 @@ MAST::HeatConductionElementBase::velocity_residual (bool request_jacobian,
     std::unique_ptr<MAST::FieldFunction<RealMatrixX> > capacitance =
     _property.thermal_capacitance_matrix(*this);
     
-    libMesh::Point p;
-    
     for (unsigned int qp=0; qp<JxW.size(); qp++) {
         
         _initialize_mass_fem_operator(qp, *_fe, Bmat);
@@ -221,10 +188,8 @@ MAST::HeatConductionElementBase::velocity_residual (bool request_jacobian,
         if (_active_sol_function)
             dynamic_cast<MAST::MeshFieldFunction*>
             (_active_sol_function)->set_element_quadrature_point_solution(vec1);
-
-        _local_elem->global_coordinates_location(xyz[qp], p);
         
-        (*capacitance)(p, _time, material_mat);
+        (*capacitance)(xyz[qp], _time, material_mat);
         
         Bmat.right_multiply(vec1, _vel);               //  B * T_dot
         Bmat.vector_mult_transpose(vec2_n2, vec1);     //  B^T * B * T_dot
@@ -239,8 +204,8 @@ MAST::HeatConductionElementBase::velocity_residual (bool request_jacobian,
             // Jacobian contribution from int_omega B T d(rho*cp)/dT B
             if (_active_sol_function) {
                 // get derivative of the conductance matrix wrt temperature
-                capacitance->derivative(        *_active_sol_function,
-                                        p,
+                capacitance->derivative(*_active_sol_function,
+                                        xyz[qp],
                                         _time, material_mat);
                 
                 if (material_mat(0,0) != 0.) { // no need to process for zero terms
@@ -573,8 +538,8 @@ surface_flux_residual(bool request_jacobian,
                       MAST::BoundaryConditionBase& p) {
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(new MAST::FEBase(_system));
-    fe->init_for_side(get_elem_for_quadrature(), s, false);
+    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem));
+    fe->init_for_side(_elem, s, false);
 
     
     // get the function from this boundary condition
@@ -588,19 +553,16 @@ surface_flux_residual(bool request_jacobian,
     const unsigned int n_phi                     = (unsigned int)phi.size();
     
     RealVectorX phi_vec  = RealVectorX::Zero(n_phi);
-    libMesh::Point pt;
     Real  flux;
     
     for (unsigned int qp=0; qp<qpoint.size(); qp++) {
-        
-        _local_elem->global_coordinates_location (qpoint[qp], pt);
         
         // now set the shape function values
         for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
             phi_vec(i_nd) = phi[i_nd][qp];
         
         // get the value of flux = q_i . n_i
-        func(pt, _time, flux);
+        func(qpoint[qp], _time, flux);
         
         f   +=  JxW[qp] * phi_vec * flux;
     }
@@ -631,19 +593,16 @@ surface_flux_residual(bool request_jacobian,
     const unsigned int n_phi                     = (unsigned int)phi.size();
     
     RealVectorX phi_vec  = RealVectorX::Zero(n_phi);
-    libMesh::Point pt;
     Real  flux;
     
     for (unsigned int qp=0; qp<qpoint.size(); qp++) {
-        
-        _local_elem->global_coordinates_location (qpoint[qp], pt);
         
         // now set the shape function values
         for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
             phi_vec(i_nd) = phi[i_nd][qp];
         
         // get the value of flux = q_i . n_i
-        func(pt, _time, flux);
+        func(qpoint[qp], _time, flux);
         
         f   +=  JxW[qp] * phi_vec * flux;
     }
@@ -691,8 +650,8 @@ surface_convection_residual(bool request_jacobian,
                             MAST::BoundaryConditionBase& p) {
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(new MAST::FEBase(_system));
-    fe->init_for_side(get_elem_for_quadrature(), s, false);
+    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem));
+    fe->init_for_side(_elem, s, false);
 
     // get the function from this boundary condition
     const MAST::FieldFunction<Real>
@@ -708,21 +667,18 @@ surface_convection_residual(bool request_jacobian,
     RealVectorX  phi_vec  = RealVectorX::Zero(n_phi);
     RealMatrixX  mat      = RealMatrixX::Zero(n_phi, n_phi);
     Real temp, amb_temp, h_coeff;
-    libMesh::Point pt;
     MAST::FEMOperatorMatrix Bmat;
     
     
     for (unsigned int qp=0; qp<qpoint.size(); qp++) {
-        
-        _local_elem->global_coordinates_location (qpoint[qp], pt);
         
         // now set the shape function values
         for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
             phi_vec(i_nd) = phi[i_nd][qp];
         
         // value of flux
-        coeff(pt, _time, h_coeff);
-        T_amb(pt, _time, amb_temp);
+        coeff(qpoint[qp], _time, h_coeff);
+        T_amb(qpoint[qp], _time, amb_temp);
         temp  = phi_vec.dot(_sol);
         
         // normal flux is given as:
@@ -766,21 +722,18 @@ surface_convection_residual(bool request_jacobian,
     RealVectorX  phi_vec  = RealVectorX::Zero(n_phi);
     RealMatrixX  mat      = RealMatrixX::Zero(n_phi, n_phi);
     Real temp, amb_temp, h_coeff;
-    libMesh::Point pt;
     MAST::FEMOperatorMatrix Bmat;
     
     
     for (unsigned int qp=0; qp<qpoint.size(); qp++) {
-        
-        _local_elem->global_coordinates_location (qpoint[qp], pt);
         
         // now set the shape function values
         for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
             phi_vec(i_nd) = phi[i_nd][qp];
         
         // value of flux
-        coeff(pt, _time, h_coeff);
-        T_amb(pt, _time, amb_temp);
+        coeff(qpoint[qp], _time, h_coeff);
+        T_amb(qpoint[qp], _time, amb_temp);
         temp  = phi_vec.dot(_sol);
         
         // normal flux is given as:
@@ -840,8 +793,8 @@ surface_radiation_residual(bool request_jacobian,
                            MAST::BoundaryConditionBase& p) {
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(new MAST::FEBase(_system));
-    fe->init_for_side(get_elem_for_quadrature(), s, false);
+    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem));
+    fe->init_for_side(_elem, s, false);
 
     // get the function from this boundary condition
     const MAST::FieldFunction<Real>
@@ -865,19 +818,16 @@ surface_radiation_residual(bool request_jacobian,
     amb_temp = T_amb(),
     zero_ref = T_ref_zero();
     Real temp, emiss;
-    libMesh::Point pt;
     MAST::FEMOperatorMatrix Bmat;
     
     for (unsigned int qp=0; qp<qpoint.size(); qp++) {
-        
-        _local_elem->global_coordinates_location (qpoint[qp], pt);
         
         // now set the shape function values
         for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
             phi_vec(i_nd) = phi[i_nd][qp];
         
         // value of flux
-        emissivity(pt, _time, emiss);
+        emissivity(qpoint[qp], _time, emiss);
         temp  = phi_vec.dot(_sol);
         
         f   += JxW[qp] * phi_vec * sbc * emiss *
@@ -927,19 +877,16 @@ surface_radiation_residual(bool request_jacobian,
     amb_temp = T_amb(),
     zero_ref = T_ref_zero();
     Real temp, emiss;
-    libMesh::Point pt;
     MAST::FEMOperatorMatrix Bmat;
     
     for (unsigned int qp=0; qp<qpoint.size(); qp++) {
-        
-        _local_elem->global_coordinates_location (qpoint[qp], pt);
         
         // now set the shape function values
         for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
             phi_vec(i_nd) = phi[i_nd][qp];
         
         // value of flux
-        emissivity(pt, _time, emiss);
+        emissivity(qpoint[qp], _time, emiss);
         temp  = phi_vec.dot(_sol);
         
         f   += JxW[qp] * phi_vec * sbc * emiss *
@@ -1009,19 +956,16 @@ volume_heat_source_residual(bool request_jacobian,
     const unsigned int n_phi                     = (unsigned int)phi.size();
     
     RealVectorX phi_vec  = RealVectorX::Zero(n_phi);
-    libMesh::Point pt;
     Real  source;
     
     for (unsigned int qp=0; qp<qpoint.size(); qp++) {
-        
-        _local_elem->global_coordinates_location (qpoint[qp], pt);
         
         // now set the shape function values
         for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
             phi_vec(i_nd) = phi[i_nd][qp];
         
         // get the value of heat source
-        func(pt, _time, source);
+        func(qpoint[qp], _time, source);
         
         f   -=  JxW[qp] * phi_vec * source;
     }
@@ -1119,6 +1063,45 @@ _initialize_fem_gradient_operator(const unsigned int qp,
             phi(i_nd) = dphi[i_nd][qp](i_dim);
         dBmat[i_dim].reinit(1, phi); //  dT/dx_i
     }
+}
+
+
+std::unique_ptr<MAST::FEBase>
+MAST::build_conduction_fe(MAST::SystemInitialization& sys,
+                          const libMesh::Elem& elem,
+                          const MAST::ElementPropertyCardBase& p) {
+    
+    std::unique_ptr<MAST::FEBase> rval;
+    
+    switch (elem.dim()) {
+            
+        case 1: {
+            
+            MAST::LocalElemFE
+            *fe = new MAST::LocalElemFE(sys);
+            fe->set_1d_y_vector
+            (dynamic_cast<const MAST::ElementPropertyCard1D&>(p).y_vector());
+            rval.reset(fe);
+        }
+            break;
+            
+        case 2: {
+            
+            rval.reset(new MAST::LocalElemFE(sys));
+        }
+            break;
+            
+        case 3: {
+            
+            rval.reset(new MAST::FEBase(sys));
+        }
+            break;
+            
+        default:
+            libmesh_error(); // should not get here.
+    }
+    
+    return rval;
 }
 
 

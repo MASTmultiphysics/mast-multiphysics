@@ -61,7 +61,6 @@ namespace MAST {
          */
         virtual void clear_discipline_and_system( );
 
-        
     protected:
         
         /*!

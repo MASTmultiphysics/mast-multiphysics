@@ -164,7 +164,13 @@ namespace MAST {
          std::vector<libMesh::NumericVector<Real>*>& basis,
          std::map<MAST::StructuralQuantityType, RealMatrixX*>& mat_qty_map);
 
-        
+        /*!
+         *   @returns a MAST::FEBase object for calculation of finite element
+         *   quantities. This creates LocalElemFE for 1D and 2D elements.
+         */
+        virtual std::unique_ptr<MAST::FEBase>
+        build_fe(const libMesh::Elem& e);
+
     protected:
         
         

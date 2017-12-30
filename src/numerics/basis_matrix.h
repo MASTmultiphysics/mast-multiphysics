@@ -58,7 +58,7 @@ namespace MAST {
         virtual libMesh::numeric_index_type n () const {
             
             libmesh_assert(modes.size() > 0);
-            return modes.size();
+            return (libMesh::numeric_index_type) modes.size();
         }
         
         

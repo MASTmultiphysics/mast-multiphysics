@@ -62,14 +62,15 @@ MAST::LocalElemBase::global_coordinates_location(const libMesh::Point& local,
 
 
 
+
 void
 MAST::LocalElemBase::global_coordinates_normal(const libMesh::Point& local,
-                                               RealVector3& global) const {
+                                               libMesh::Point& global) const {
     if (!_local_elem)
         for (unsigned int i=0; i<3; i++)
             global(i) = local(i);
     else {
-        global.setZero();
+        global.zero();
         
         // now calculate the global coordinates with respect to the origin
         for (unsigned int j=0; j<3; j++)
@@ -98,7 +99,7 @@ MAST::TransformMatrixFunction::operator() (const libMesh::Point& p,
 
 
 void
-MAST::TransformMatrixFunction::derivative (          const MAST::FunctionBase& f,
+MAST::TransformMatrixFunction::derivative (const MAST::FunctionBase& f,
                                            const libMesh::Point& p,
                                            const Real t,
                                            RealMatrixX& v) const {

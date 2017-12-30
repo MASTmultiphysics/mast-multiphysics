@@ -26,6 +26,7 @@
 #include "numerics/utility.h"
 #include "base/system_initialization.h"
 #include "base/parameter.h"
+#include "mesh/fe_base.h"
 
 // libMesh includes
 #include "libmesh/numeric_vector.h"
@@ -320,6 +321,17 @@ eigenproblem_sensitivity_assemble (const libMesh::ParameterVector& parameters,
 }
 
 
+std::unique_ptr<MAST::FEBase>
+MAST::StructuralBucklingEigenproblemAssembly::build_fe(const libMesh::Elem& elem) {
+    
+    
+    const MAST::ElementPropertyCardBase& p =
+    dynamic_cast<const MAST::ElementPropertyCardBase&>(_discipline->get_property_card(elem));
+    
+    return std::unique_ptr<MAST::FEBase>(MAST::build_structural_fe(*_system, elem, p));
+}
+
+
 
 std::unique_ptr<MAST::ElementBase>
 MAST::StructuralBucklingEigenproblemAssembly::_build_elem(const libMesh::Elem& elem) {
@@ -328,10 +340,8 @@ MAST::StructuralBucklingEigenproblemAssembly::_build_elem(const libMesh::Elem& e
     const MAST::ElementPropertyCardBase& p =
     dynamic_cast<const MAST::ElementPropertyCardBase&>(_discipline->get_property_card(elem));
     
-    MAST::ElementBase* rval =
-    MAST::build_structural_element(*_system, *this, elem, p).release();
-    
-    return std::unique_ptr<MAST::ElementBase>(rval);
+    return std::unique_ptr<MAST::ElementBase>(MAST::build_structural_element
+                                              (*_system, *this, elem, p));
 }
 
 

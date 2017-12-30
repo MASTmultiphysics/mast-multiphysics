@@ -29,6 +29,7 @@
 #include "numerics/utility.h"
 #include "base/real_output_function.h"
 #include "base/nonlinear_system.h"
+#include "mesh/fe_base.h"
 
 
 // libMesh includes
@@ -593,6 +594,16 @@ _calculate_compliance (const libMesh::NumericVector<Real>& X,
 }
 
 
+
+std::unique_ptr<MAST::FEBase>
+MAST::StructuralNonlinearAssembly::build_fe(const libMesh::Elem& elem) {
+    
+    
+    const MAST::ElementPropertyCardBase& p =
+    dynamic_cast<const MAST::ElementPropertyCardBase&>(_discipline->get_property_card(elem));
+    
+    return std::unique_ptr<MAST::FEBase>(MAST::build_structural_fe(*_system, elem, p));
+}
 
 
 std::unique_ptr<MAST::ElementBase>

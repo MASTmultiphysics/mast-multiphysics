@@ -26,14 +26,11 @@
 #include "base/boundary_condition_base.h"
 #include "property_cards/element_property_card_1D.h"
 #include "mesh/local_elem_base.h"
-#include "mesh/local_1d_elem.h"
-#include "mesh/local_2d_elem.h"
-#include "mesh/local_3d_elem.h"
 #include "numerics/fem_operator_matrix.h"
 #include "numerics/utility.h"
 #include "elasticity/stress_output_base.h"
 #include "base/nonlinear_system.h"
-#include "mesh/fe_base.h"
+#include "mesh/local_elem_fe.h"
 
 
 MAST::StructuralElementBase::StructuralElementBase(MAST::SystemInitialization& sys,
@@ -42,34 +39,8 @@ MAST::StructuralElementBase::StructuralElementBase(MAST::SystemInitialization& s
                                                    const MAST::ElementPropertyCardBase& p):
 MAST::ElementBase(sys, assembly, elem),
 follower_forces(false),
-_property(p),
+_property        (p),
 _incompatible_sol(nullptr) {
-    
-    MAST::LocalElemBase* rval = nullptr;
-    
-    switch (elem.dim()) {
-        case 1: {
-            const MAST::ElementPropertyCard1D& p_1d =
-            dynamic_cast<const MAST::ElementPropertyCard1D&>(p);
-            rval = new MAST::Local1DElem(elem, p_1d.y_vector());
-        }
-            break;
-            
-        case 2:
-            rval = new MAST::Local2DElem(elem);
-            break;
-            
-        case 3:
-            rval = new MAST::Local3DElem(elem);
-            break;
-            
-        default:
-            // should not get here.
-            libmesh_error();
-            break;
-    }
-    
-    _local_elem.reset(rval);
     
 }
 
@@ -314,15 +285,11 @@ MAST::StructuralElementBase::inertial_residual (bool request_jacobian,
     std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
     mat_inertia  = _property.inertia_matrix(*this);
     
-    libMesh::Point p;
     MAST::FEMOperatorMatrix Bmat;
     
     if (_property.if_diagonal_mass_matrix()) {
         
-        // as an approximation, get matrix at the first quadrature point
-        _local_elem->global_coordinates_location(xyz[0], p);
-        
-        (*mat_inertia)(p, _time, material_mat);
+        (*mat_inertia)(xyz[0], _time, material_mat);
         
         Real vol = 0.;
         const unsigned int nshp = _fe->n_shape_functions();
@@ -337,13 +304,10 @@ MAST::StructuralElementBase::inertial_residual (bool request_jacobian,
         local_f =  local_jac * _local_accel;
     }
     else {
-        libMesh::Point p;
         
         for (unsigned int qp=0; qp<JxW.size(); qp++) {
             
-            _local_elem->global_coordinates_location(xyz[0], p);
-            
-            (*mat_inertia)(p, _time, material_mat);
+            (*mat_inertia)(xyz[qp], _time, material_mat);
             
             // now set the shape function values
             for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
@@ -467,16 +431,13 @@ MAST::StructuralElementBase::inertial_residual_sensitivity (bool request_jacobia
     std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
     mat_inertia  = _property.inertia_matrix(*this);
     
-    libMesh::Point p;
     MAST::FEMOperatorMatrix Bmat;
     
     if (_property.if_diagonal_mass_matrix()) {
         
         // as an approximation, get matrix at the first quadrature point
-        _local_elem->global_coordinates_location(xyz[0], p);
-        
         mat_inertia->derivative(*this->sensitivity_param,
-                                p, _time, material_mat);
+                                xyz[0], _time, material_mat);
         
         Real vol = 0.;
         const unsigned int nshp = _fe->n_shape_functions();
@@ -491,14 +452,11 @@ MAST::StructuralElementBase::inertial_residual_sensitivity (bool request_jacobia
         local_f =  local_jac * _local_accel;
     }
     else {
-        libMesh::Point p;
         
         for (unsigned int qp=0; qp<JxW.size(); qp++) {
             
-            _local_elem->global_coordinates_location(xyz[0], p);
-            
-            mat_inertia->derivative(    *this->sensitivity_param,
-                                    p, _time, material_mat);
+            mat_inertia->derivative(   *this->sensitivity_param,
+                                    xyz[qp], _time, material_mat);
             
             // now set the shape function values
             for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
@@ -1148,7 +1106,6 @@ surface_pressure_residual(bool request_jacobian,
     
     Real press;
     FEMOperatorMatrix Bmat;
-    libMesh::Point pt;
     
     RealVectorX
     phi_vec  = RealVectorX::Zero(n_phi),
@@ -1157,10 +1114,7 @@ surface_pressure_residual(bool request_jacobian,
     vec_n2   = RealVectorX::Zero(n2);
     
     
-    for (unsigned int qp=0; qp<qpoint.size(); qp++)
-    {
-        
-        _local_elem->global_coordinates_location(qpoint[qp], pt);
+    for (unsigned int qp=0; qp<qpoint.size(); qp++) {
         
         // now set the shape function values
         for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
@@ -1169,7 +1123,7 @@ surface_pressure_residual(bool request_jacobian,
         Bmat.reinit(2*n1, phi_vec);
         
         // get pressure value
-        func(pt, _time, press);
+        func(qpoint[qp], _time, press);
         
         // calculate force
         for (unsigned int i_dim=0; i_dim<n1; i_dim++)
@@ -1226,7 +1180,6 @@ surface_pressure_residual_sensitivity(bool request_jacobian,
     
     Real press;
     FEMOperatorMatrix Bmat;
-    libMesh::Point pt;
     
     RealVectorX
     phi_vec  = RealVectorX::Zero(n_phi),
@@ -1235,10 +1188,7 @@ surface_pressure_residual_sensitivity(bool request_jacobian,
     vec_n2   = RealVectorX::Zero(n2);
     
     
-    for (unsigned int qp=0; qp<qpoint.size(); qp++)
-    {
-        
-        _local_elem->global_coordinates_location(qpoint[qp], pt);
+    for (unsigned int qp=0; qp<qpoint.size(); qp++) {
         
         // now set the shape function values
         for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
@@ -1248,7 +1198,7 @@ surface_pressure_residual_sensitivity(bool request_jacobian,
         
         // get pressure value
         func.derivative(*sensitivity_param,
-                        pt,
+                        qpoint[qp],
                         _time,
                         press);
         
@@ -1312,15 +1262,12 @@ linearized_surface_pressure_residual(bool request_jacobian,
     vec_n2  = RealVectorX::Zero(n2);
     
     FEMOperatorMatrix Bmat;
-    libMesh::Point    pt;
     Real
     press   = 0.,
     dpress  = 0.;
     
     
-    for (unsigned int qp=0; qp<qpoint.size(); qp++)
-    {
-        _local_elem->global_coordinates_location(qpoint[qp], pt);
+    for (unsigned int qp=0; qp<qpoint.size(); qp++) {
         
         // now set the shape function values
         for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
@@ -1329,8 +1276,8 @@ linearized_surface_pressure_residual(bool request_jacobian,
         Bmat.reinit(2*n1, phi_vec);
         
         // get pressure and deformation information
-        press_fn             (pt, _time,  press);
-        press_fn.perturbation(pt, _time, dpress);
+        press_fn             (qpoint[qp], _time,  press);
+        press_fn.perturbation(qpoint[qp], _time, dpress);
         
         // calculate force
         for (unsigned int i_dim=0; i_dim<n1; i_dim++)
@@ -1394,14 +1341,11 @@ linearized_frequency_domain_surface_pressure_residual
     vec_n2  = ComplexVectorX::Zero(n2);
     
     FEMOperatorMatrix Bmat;
-    libMesh::Point    pt;
     Real              press  = 0.;
     Complex           dpress = 0.;
     
     
-    for (unsigned int qp=0; qp<qpoint.size(); qp++)
-    {
-        _local_elem->global_coordinates_location(qpoint[qp], pt);
+    for (unsigned int qp=0; qp<qpoint.size(); qp++) {
         
         // now set the shape function values
         for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
@@ -1410,8 +1354,8 @@ linearized_frequency_domain_surface_pressure_residual
         Bmat.reinit(2*n1, phi_vec);
         
         // get pressure and deformation information
-        press_fn (pt, _time,  press);
-        dpress_fn(pt, _time, dpress);
+        press_fn (qpoint[qp], _time,  press);
+        dpress_fn(qpoint[qp], _time, dpress);
         //dn_rot_fn.freq_domain_motion(pt, normal, w, dn_rot);
         
         // calculate force
@@ -1443,6 +1387,8 @@ MAST::StructuralElementBase::
 transform_matrix_to_global_system(const ValType& local_mat,
                                   ValType& global_mat) const {
     
+    // make sure this is only called for 1D and 2D elements
+    libmesh_assert_less(_elem.dim(), 3);
     libmesh_assert_equal_to( local_mat.rows(),  local_mat.cols());
     libmesh_assert_equal_to(global_mat.rows(), global_mat.cols());
     libmesh_assert_equal_to( local_mat.rows(), global_mat.rows());
@@ -1454,7 +1400,7 @@ transform_matrix_to_global_system(const ValType& local_mat,
     mat.setZero();
     global_mat.setZero();
     
-    const RealMatrixX& Tmat = this->local_elem().T_matrix();
+    const RealMatrixX& Tmat = _Tmatrix();
     // now initialize the global T matrix
     for (unsigned int i=0; i<n_dofs; i++)
         for (unsigned int j=0; j<3; j++)
@@ -1475,6 +1421,8 @@ MAST::StructuralElementBase::
 transform_vector_to_local_system(const ValType& global_vec,
                                  ValType& local_vec) const {
     
+    // make sure this is only called for 1D and 2D elements
+    libmesh_assert_less(_elem.dim(), 3);
     libmesh_assert_equal_to( local_vec.size(),  global_vec.size());
     
     const unsigned int n_dofs = _fe->n_shape_functions();
@@ -1482,7 +1430,7 @@ transform_vector_to_local_system(const ValType& global_vec,
     
     local_vec.setZero();
 
-    const RealMatrixX& Tmat = this->local_elem().T_matrix();
+    const RealMatrixX& Tmat = _Tmatrix();
     // now initialize the global T matrix
     for (unsigned int i=0; i<n_dofs; i++)
         for (unsigned int j=0; j<3; j++)
@@ -1503,6 +1451,8 @@ MAST::StructuralElementBase::
 transform_vector_to_global_system(const ValType& local_vec,
                                   ValType& global_vec) const {
     
+    // make sure this is only called for 1D and 2D elements
+    libmesh_assert_less(_elem.dim(), 3);
     libmesh_assert_equal_to( local_vec.size(),  global_vec.size());
     
     const unsigned int n_dofs = _fe->n_shape_functions();
@@ -1511,7 +1461,7 @@ transform_vector_to_global_system(const ValType& local_vec,
 
     global_vec.setZero();
     
-    const RealMatrixX& Tmat = this->local_elem().T_matrix();
+    const RealMatrixX& Tmat = _Tmatrix();
     // now initialize the global T matrix
     for (unsigned int i=0; i<n_dofs; i++)
         for (unsigned int j=0; j<3; j++)
@@ -1556,6 +1506,46 @@ MAST::build_structural_element(MAST::SystemInitialization& sys,
     
     return e;
 }
+
+
+std::unique_ptr<MAST::FEBase>
+MAST::build_structural_fe(MAST::SystemInitialization& sys,
+                          const libMesh::Elem& elem,
+                          const MAST::ElementPropertyCardBase& p) {
+
+    std::unique_ptr<MAST::FEBase> rval;
+    
+    switch (elem.dim()) {
+            
+        case 1: {
+            
+            MAST::LocalElemFE
+            *fe = new MAST::LocalElemFE(sys);
+            fe->set_1d_y_vector
+            (dynamic_cast<const MAST::ElementPropertyCard1D&>(p).y_vector());
+            rval.reset(fe);
+        }
+            break;
+
+        case 2: {
+            
+            rval.reset(new MAST::LocalElemFE(sys));
+        }
+            break;
+
+        case 3: {
+            
+            rval.reset(new MAST::FEBase(sys));
+        }
+            break;
+            
+        default:
+            libmesh_error(); // should not get here.
+    }
+    
+    return rval;
+}
+
 
 
 

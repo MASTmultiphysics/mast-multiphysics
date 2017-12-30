@@ -44,11 +44,21 @@ namespace MAST {
         virtual ~FEBase();
         
         /*!
+         *   this is used, in addition to \p  libMesh::System::extra_quadrature_order
+         *   to set the quadrature rule.
+         */
+        void set_extra_quadrature_order(int n);
+        
+        /*!
          *   Initializes the quadrature and finite element for element volume
          *   integration.
-         *   \param elem libMesh::Elem for which the finite element is initialized.
-         *   \param pts the points at which the element should be initialized. If nullptr,
-         *    the points specified by quadrature rule will be used.
+         *   \param elem libMesh::Elem for which the finite element is
+         *   initialized. \param pts the points at which the element should
+         *   be initialized. If nullptr, the points specified by quadrature
+         *   used and the extra quadrature order specified in libMesh::System
+         *   is used. An additional change in quadrature order can be specified
+         *   using the method set_extra_quadrature_order(). This can be a
+         *   positive or negative value.
          */
         virtual void init(const libMesh::Elem& elem,
                           const std::vector<libMesh::Point>* pts = nullptr);
@@ -136,7 +146,7 @@ namespace MAST {
     protected:
         
         const MAST::SystemInitialization& _sys;
-        
+        unsigned int                      _extra_quadrature_order;
         bool                              _initialized;
         const libMesh::Elem*              _elem;
         libMesh::FEBase*                  _fe;

@@ -32,7 +32,7 @@ namespace MAST {
     
     // Forward declerations
     class ElementPropertyCardBase;
-    class LocalElemBase;
+    class LocalElemFE;
     class BoundaryConditionBase;
     class FEMOperatorMatrix;
     class OutputFunctionBase;
@@ -52,7 +52,7 @@ namespace MAST {
         
         virtual ~StructuralElementBase();
         
-        
+
         /*!
          *   stores \p vec as solution for element level calculations,
          *   or its sensitivity if \p if_sens is true.
@@ -619,6 +619,19 @@ namespace MAST {
                                       MAST::OutputFunctionBase& output) = 0;
 
         
+        /*!
+         *   @returns a constant reference to transformation matrix needed
+         *   for mapping of 1D and 2D matrices from coordinate system defined
+         *   in the local space to the global space. This is not relevant for
+         *   3D continuum elements and therefore is implemented only for
+         *   1D/2D elements.
+         */
+        virtual const RealMatrixX&
+        _Tmatrix() const {
+            
+            // should be implemented in 1D and 2D elements
+            libmesh_assert(false);
+        }
         
         /*!
          *   element property
@@ -714,6 +727,12 @@ namespace MAST {
                              MAST::AssemblyBase& assembly,
                              const libMesh::Elem& elem,
                              const MAST::ElementPropertyCardBase& p);
+    
+    std::unique_ptr<MAST::FEBase>
+    build_structural_fe(MAST::SystemInitialization& sys,
+                        const libMesh::Elem& elem,
+                        const MAST::ElementPropertyCardBase& p);
+
 }
 
 

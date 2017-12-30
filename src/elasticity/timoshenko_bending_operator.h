@@ -17,22 +17,16 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#ifndef mast_timoshenko_bending_operator_h
-#define mast_timoshenko_bending_operator_h
+#ifndef __mast_timoshenko_bending_operator_h__
+#define __mast_timoshenko_bending_operator_h__
 
 // MAST includes
 #include "elasticity/bending_operator.h"
 #include "property_cards/element_property_card_base.h"
 #include "numerics/fem_operator_matrix.h"
-#include "mesh/local_elem_base.h"
 #include "base/nonlinear_system.h"
 #include "mesh/fe_base.h"
 
-// libMesh includes
-#include "libmesh/fe.h"
-#include "libmesh/quadrature.h"
-#include "libmesh/dense_vector.h"
-#include "libmesh/dense_matrix.h"
 
 
 namespace MAST {
@@ -150,22 +144,11 @@ calculate_transverse_shear_residual(bool request_jacobian,
     // make an fe and quadrature object for the requested order for integrating
     // transverse shear
     
-    std::unique_ptr<libMesh::FEBase> fe;
-    std::unique_ptr<libMesh::QBase> qrule;
-    libMesh::FEType fe_type = _structural_elem.fe().get_fe_type();
-    
-    fe.reset(libMesh::FEBase::build(_elem.dim(), fe_type).release());
-    qrule.reset(fe_type.default_quadrature_rule
-                (_elem.dim(),
-                 property.extra_quadrature_order(_elem, fe->get_fe_type())
-                 - _shear_quadrature_reduction).release());
-    fe->attach_quadrature_rule(qrule.get());
-    fe->get_phi();
-    fe->get_JxW();
-    fe->get_xyz();
-    fe->get_dphi();
-    
-    fe->reinit(&_elem);
+    std::unique_ptr<MAST::FEBase>
+    fe(_structural_elem.assembly().build_fe(_elem));
+    fe->set_extra_quadrature_order(-_shear_quadrature_reduction);
+    fe->init(_elem);
+
     
     const std::vector<std::vector<libMesh::RealVectorValue> >& dphi = fe->get_dphi();
     const std::vector<std::vector<Real> >& phi = fe->get_phi();
@@ -191,19 +174,15 @@ calculate_transverse_shear_residual(bool request_jacobian,
     std::unique_ptr<MAST::FieldFunction<RealMatrixX > >
     mat_stiff = property.transverse_shear_stiffness_matrix(_structural_elem);
     
-    libMesh::Point p;
-    
     for (unsigned int qp=0; qp<JxW.size(); qp++) {
         
-        _structural_elem.local_elem().global_coordinates_location(xyz[qp], p);
-        
         if (!sens_param)
-            (*mat_stiff)(p,
+            (*mat_stiff)(xyz[qp],
                          _structural_elem.system().time,
                          material_trans_shear_mat);
         else
             mat_stiff->derivative(  *sens_param,
-                                  p,
+                                  xyz[qp],
                                   _structural_elem.system().time,
                                   material_trans_shear_mat);
         
@@ -236,4 +215,4 @@ calculate_transverse_shear_residual(bool request_jacobian,
 }
 
 
-#endif
+#endif // __mast_timoshenko_bending_operator_h__

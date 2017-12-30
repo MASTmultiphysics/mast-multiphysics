@@ -353,7 +353,12 @@ namespace MAST {
         const MAST::ElementPropertyCardBase& _property;
         
     };
-    
+
+    std::unique_ptr<MAST::FEBase>
+    build_conduction_fe(MAST::SystemInitialization& sys,
+                        const libMesh::Elem& elem,
+                        const MAST::ElementPropertyCardBase& p);
+
 }
 
 

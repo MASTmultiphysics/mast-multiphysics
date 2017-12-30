@@ -363,7 +363,7 @@ MAST::UGFlutterSolver::print_sorted_roots()
         << "V      = " << std::setw(15) << std::setprecision(15) << root.V << std::endl
         << "g      = " << std::setw(15) << root.g << std::endl
         << "omega  = " << std::setw(15) << root.omega << std::endl
-        << std::setprecision(prec) // set the precision to the default value
+        << std::setprecision((int) prec) // set the precision to the default value
         << "Modal Participation : " << std::endl ;
         for (unsigned int j=0; j<nvals; j++)
             *_output

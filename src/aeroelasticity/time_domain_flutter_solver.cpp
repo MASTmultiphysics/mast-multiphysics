@@ -522,7 +522,7 @@ MAST::TimeDomainFlutterSolver::print_sorted_roots() {
         << "V      = " << std::setw(15) << std::setprecision(15) << root.V << std::endl
         << "g      = " << std::setw(15) << std::real(root.root) << std::endl
         << "omega  = " << std::setw(15) << std::imag(root.root) << std::endl
-        << std::setprecision(prec) // set the precision to the default value
+        << std::setprecision((int) prec) // set the precision to the default value
         << "Modal Participation : " << std::endl ;
         for (unsigned int j=0; j<nvals; j++)
             *_output

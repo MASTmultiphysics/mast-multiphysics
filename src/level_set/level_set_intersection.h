@@ -37,7 +37,7 @@ namespace MAST {
         THROUGH_NODE,           // level set passes through node
         COLINEAR_EDGE,          // level set coliniear with edge of element
         ADJACENT_EDGES,         // level set passes through two adjacent edges
-        OPPOSITE_EDGES,          // level set passes through two opposite edges
+        OPPOSITE_EDGES,         // level set passes through two opposite edges
         NO_INTERSECTION
     };
     
@@ -75,6 +75,9 @@ namespace MAST {
         int
         get_side_on_interface(const libMesh::Elem& e);
         
+        const libMesh::Point&
+        get_nondimensional_coordinate_for_node(const libMesh::Node& n) const;
+        
     protected:
         
         
@@ -111,6 +114,7 @@ namespace MAST {
         
         std::vector<libMesh::Node*>                  _new_nodes;
         std::vector<libMesh::Elem*>                  _new_elems;
+        std::map<const libMesh::Node*, libMesh::Point> _node_local_coords;
     };
     
 }

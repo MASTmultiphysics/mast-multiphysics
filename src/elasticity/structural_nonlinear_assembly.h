@@ -115,6 +115,13 @@ namespace MAST {
                                           const libMesh::NumericVector<Real>& X);
 
         
+        /*!
+         *   @returns a MAST::FEBase object for calculation of finite element
+         *   quantities. This creates LocalElemFE for 1D and 2D elements.
+         */
+        virtual std::unique_ptr<MAST::FEBase>
+        build_fe(const libMesh::Elem& e);
+
     protected:
         
         /*!

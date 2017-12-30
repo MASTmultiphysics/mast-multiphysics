@@ -148,15 +148,6 @@ MAST::ElementBase::set_perturbed_acceleration(const RealVectorX &vec,
 
 
 
-
-const libMesh::Elem&
-MAST::ElementBase::get_elem_for_quadrature() const {
-    
-    return _local_elem->local_elem();
-}
-
-
-
 void
 MAST::ElementBase::attach_active_solution_function(MAST::FunctionBase &f) {
     

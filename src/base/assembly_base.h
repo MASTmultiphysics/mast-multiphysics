@@ -154,7 +154,7 @@ namespace MAST {
          *   for element integration.
          */
         virtual std::unique_ptr<MAST::FEBase>
-        build_fe();
+        build_fe(const libMesh::Elem& e);
         
     protected:
         

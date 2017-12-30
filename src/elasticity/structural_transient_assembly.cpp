@@ -23,6 +23,7 @@
 #include "elasticity/structural_element_base.h"
 #include "property_cards/element_property_card_base.h"
 #include "base/physics_discipline_base.h"
+#include "mesh/fe_base.h"
 
 
 MAST::StructuralTransientAssembly::
@@ -179,6 +180,17 @@ _elem_second_derivative_dot_solution_assembly(MAST::ElementBase& elem,
     libmesh_error(); // to be implemented
 }
 
+
+
+std::unique_ptr<MAST::FEBase>
+MAST::StructuralTransientAssembly::build_fe(const libMesh::Elem& elem) {
+    
+    
+    const MAST::ElementPropertyCardBase& p =
+    dynamic_cast<const MAST::ElementPropertyCardBase&>(_discipline->get_property_card(elem));
+    
+    return std::unique_ptr<MAST::FEBase>(MAST::build_structural_fe(*_system, elem, p));
+}
 
 
 std::unique_ptr<MAST::ElementBase>

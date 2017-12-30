@@ -109,7 +109,7 @@ namespace MAST {
          *   finite elements.
          */
         void global_coordinates_normal(const libMesh::Point& local,
-                                       RealVector3& global) const;
+                                       libMesh::Point& global) const;
 
 
         /*!

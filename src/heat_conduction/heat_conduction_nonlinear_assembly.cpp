@@ -23,7 +23,7 @@
 #include "heat_conduction/heat_conduction_elem_base.h"
 #include "property_cards/element_property_card_base.h"
 #include "base/physics_discipline_base.h"
-
+#include "mesh/fe_base.h"
 
 
 MAST::HeatConductionNonlinearAssembly::
@@ -39,6 +39,16 @@ MAST::HeatConductionNonlinearAssembly::
     
 }
 
+
+std::unique_ptr<MAST::FEBase>
+MAST::HeatConductionNonlinearAssembly::build_fe(const libMesh::Elem& elem) {
+    
+    
+    const MAST::ElementPropertyCardBase& p =
+    dynamic_cast<const MAST::ElementPropertyCardBase&>(_discipline->get_property_card(elem));
+    
+    return std::unique_ptr<MAST::FEBase>(MAST::build_conduction_fe(*_system, elem, p));
+}
 
 
 std::unique_ptr<MAST::ElementBase>
