@@ -268,7 +268,8 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
         for (unsigned int i=0; i<dof_indices.size(); i++)
             sol(i) = (*localized_solution)(dof_indices[i]);
         
-        physics_elem->set_solution(sol);
+        _set_elem_sol(*physics_elem, sol);
+        
         
         if (_sol_function)
             physics_elem->attach_active_solution_function(*_sol_function);
@@ -582,7 +583,7 @@ sensitivity_assemble (const libMesh::ParameterVector& parameters,
             sol(i) = (*localized_solution)(dof_indices[i]);
         
         physics_elem->sensitivity_param = _discipline->get_parameter(&(parameters[i].get()));
-        physics_elem->set_solution(sol);
+        _set_elem_sol(*physics_elem, sol);
         
         if (_sol_function)
             physics_elem->attach_active_solution_function(*_sol_function);
@@ -616,6 +617,14 @@ sensitivity_assemble (const libMesh::ParameterVector& parameters,
     sensitivity_rhs.close();
     
     return true;
+}
+
+
+void
+MAST::NonlinearImplicitAssembly::_set_elem_sol(MAST::ElementBase& elem,
+                                               const RealVectorX& sol) {
+    
+    elem.set_solution(sol);
 }
 
 

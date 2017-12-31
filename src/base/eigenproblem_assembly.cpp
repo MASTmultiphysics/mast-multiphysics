@@ -199,7 +199,7 @@ eigenproblem_assemble(libMesh::SparseMatrix<Real>* A,
                 sol(i) = (*localized_solution)(dof_indices[i]);
         }
         
-        physics_elem->set_solution(sol);
+        _set_elem_sol(*physics_elem, sol);
         
         _elem_calculations(*physics_elem, mat_A, mat_B);
 
@@ -216,7 +216,9 @@ eigenproblem_assemble(libMesh::SparseMatrix<Real>* A,
         matrix_B.add_matrix (B, dof_indices); // load dependent
     }
     
-    
+    // finalize the data structures
+    A->close();
+    B->close();
 }
 
 
@@ -294,7 +296,7 @@ eigenproblem_sensitivity_assemble(const libMesh::ParameterVector& parameters,
                 sol(i) = (*localized_solution)(dof_indices[i]);
         }
         
-        physics_elem->set_solution(sol);
+        _set_elem_sol(*physics_elem, sol);
         
         // set the element's base solution sensitivity
         if (_base_sol) {
@@ -303,8 +305,8 @@ eigenproblem_sensitivity_assemble(const libMesh::ParameterVector& parameters,
                 sol(i) = (*localized_solution_sens)(dof_indices[i]);
         }
         
-        physics_elem->set_solution(sol, true);
-        
+        _set_elem_sol_sens(*physics_elem, sol);
+
         // tell the element about the sensitivity parameter
         physics_elem->sensitivity_param = _discipline->get_parameter(&(parameters[i].get()));
         
@@ -323,6 +325,27 @@ eigenproblem_sensitivity_assemble(const libMesh::ParameterVector& parameters,
         matrix_B.add_matrix (B, dof_indices);
     }
     
+    // finalize the data structures
+    sensitivity_A->close();
+    sensitivity_B->close();
+    
     return true;
 }
+
+
+void
+MAST::EigenproblemAssembly::_set_elem_sol(MAST::ElementBase& elem,
+                                          const RealVectorX& sol) {
+    
+    elem.set_solution(sol);
+}
+
+
+void
+MAST::EigenproblemAssembly::_set_elem_sol_sens(MAST::ElementBase& elem,
+                                               const RealVectorX& sol) {
+    
+    elem.set_solution(sol, true);
+}
+
 

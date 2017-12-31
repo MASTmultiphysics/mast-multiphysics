@@ -57,236 +57,6 @@ MAST::StructuralNonlinearAssembly::
 
 
 
-void
-MAST::StructuralNonlinearAssembly::
-residual_and_jacobian (const libMesh::NumericVector<Real>& X,
-                       libMesh::NumericVector<Real>* R,
-                       libMesh::SparseMatrix<Real>*  J,
-                       libMesh::NonlinearImplicitSystem& S) {
-    
-    MAST::NonlinearSystem& nonlin_sys = _system->system();
-    
-    // make sure that the system for which this object was created,
-    // and the system passed through the function call are the same
-    libmesh_assert_equal_to(&S, &(nonlin_sys));
-    
-    if (R) R->zero();
-    if (J) J->zero();
-    
-    // iterate over each element, initialize it and get the relevant
-    // analysis quantities
-    RealVectorX vec, sol;
-    RealMatrixX mat;
-    
-    std::vector<libMesh::dof_id_type> dof_indices;
-    const libMesh::DofMap& dof_map = nonlin_sys.get_dof_map();
-    std::unique_ptr<MAST::ElementBase> physics_elem;
-    
-    std::unique_ptr<libMesh::NumericVector<Real> > localized_solution;
-    localized_solution.reset(_build_localized_vector(nonlin_sys,
-                                                     X).release());
-    
-    
-    // if a solution function is attached, initialize it
-    if (_sol_function)
-        _sol_function->init( X);
-    
-    
-    libMesh::MeshBase::const_element_iterator       el     =
-    nonlin_sys.get_mesh().active_local_elements_begin();
-    const libMesh::MeshBase::const_element_iterator end_el =
-    nonlin_sys.get_mesh().active_local_elements_end();
-    
-    
-    for ( ; el != end_el; ++el) {
-        
-        const libMesh::Elem* elem = *el;
-        
-        dof_map.dof_indices (elem, dof_indices);
-        
-        physics_elem.reset(_build_elem(*elem).release());
-
-        MAST::StructuralElementBase& p_elem =
-        dynamic_cast<MAST::StructuralElementBase&>(*physics_elem);
-
-        
-        // get the solution
-        unsigned int ndofs = (unsigned int)dof_indices.size();
-        sol.setZero(ndofs);
-        vec.setZero(ndofs);
-        mat.setZero(ndofs, ndofs);
-        
-        for (unsigned int i=0; i<dof_indices.size(); i++)
-            sol(i) = (*localized_solution)(dof_indices[i]);
-        
-        physics_elem->set_solution    (sol);
-        physics_elem->set_velocity    (vec); // set to zero vector for a quasi-steady analysis
-        physics_elem->set_acceleration(vec); // set to zero vector for a quasi-steady analysis
-        
-        
-        // set the incompatible mode solution if required by the
-        // element
-        if (p_elem.if_incompatible_modes()) {
-            // check if the vector exists in the map
-            if (!_incompatible_sol.count(elem))
-                _incompatible_sol[elem] = RealVectorX::Zero(p_elem.incompatible_mode_size());
-            p_elem.set_incompatible_mode_solution(_incompatible_sol[elem]);
-        }
-        
-        if (_sol_function)
-            physics_elem->attach_active_solution_function(*_sol_function);
-        
-        //_check_element_numerical_jacobian(*physics_elem, sol);
-        
-        // perform the element level calculations
-        _elem_calculations(*physics_elem,
-                           J!=nullptr?true:false,
-                           vec, mat);
-        
-        physics_elem->detach_active_solution_function();
-        
-        // copy to the libMesh matrix for further processing
-        DenseRealVector v;
-        DenseRealMatrix m;
-        if (R)
-            MAST::copy(v, vec);
-        if (J)
-            MAST::copy(m, mat);
-        
-        // constrain the quantities to account for hanging dofs,
-        // Dirichlet constraints, etc.
-        if (R && J)
-            dof_map.constrain_element_matrix_and_vector(m, v, dof_indices);
-        else if (R)
-            dof_map.constrain_element_vector(v, dof_indices);
-        else
-            dof_map.constrain_element_matrix(m, dof_indices);
-        
-        // add to the global matrices
-        if (R) R->add_vector(v, dof_indices);
-        if (J) J->add_matrix(m, dof_indices);
-    }
-    
-    
-    // call the post assembly object, if provided by user
-    if (_post_assembly)
-        _post_assembly->post_assembly(X, R, J, S);
-
-    // if a solution function is attached, clear it
-    if (_sol_function)
-        _sol_function->clear();
-    
-    if (R) R->close();
-    if (J) J->close();
-}
-
-
-
-
-
-bool
-MAST::StructuralNonlinearAssembly::
-sensitivity_assemble (const libMesh::ParameterVector& parameters,
-                      const unsigned int i,
-                      libMesh::NumericVector<Real>& sensitivity_rhs) {
-    
-    MAST::NonlinearSystem& nonlin_sys = _system->system();
-    
-    sensitivity_rhs.zero();
-    
-    // iterate over each element, initialize it and get the relevant
-    // analysis quantities
-    RealVectorX vec, sol;
-    RealMatrixX mat;
-    
-    std::vector<libMesh::dof_id_type> dof_indices;
-    const libMesh::DofMap& dof_map = nonlin_sys.get_dof_map();
-    std::unique_ptr<MAST::ElementBase> physics_elem;
-    
-    std::unique_ptr<libMesh::NumericVector<Real> > localized_solution;
-    localized_solution.reset(_build_localized_vector(nonlin_sys,
-                                                     *nonlin_sys.solution).release());
-    
-    // if a solution function is attached, initialize it
-    if (_sol_function)
-        _sol_function->init( *nonlin_sys.solution);
-    
-    libMesh::MeshBase::const_element_iterator       el     =
-    nonlin_sys.get_mesh().active_local_elements_begin();
-    const libMesh::MeshBase::const_element_iterator end_el =
-    nonlin_sys.get_mesh().active_local_elements_end();
-    
-    for ( ; el != end_el; ++el) {
-        
-        const libMesh::Elem* elem = *el;
-        
-        dof_map.dof_indices (elem, dof_indices);
-        
-        physics_elem.reset(_build_elem(*elem).release());
-        
-        MAST::StructuralElementBase& p_elem =
-        dynamic_cast<MAST::StructuralElementBase&>(*physics_elem);
-
-        // get the solution
-        unsigned int ndofs = (unsigned int)dof_indices.size();
-        sol.setZero(ndofs);
-        vec.setZero(ndofs);
-        mat.setZero(ndofs, ndofs);
-        
-        for (unsigned int i=0; i<dof_indices.size(); i++)
-            sol(i) = (*localized_solution)(dof_indices[i]);
-        
-        physics_elem->sensitivity_param = _discipline->get_parameter(&(parameters[i].get()));
-        physics_elem->set_solution    (sol);
-        physics_elem->set_velocity    (vec); // set to zero vector for a quasi-steady analysis
-        physics_elem->set_acceleration(vec); // set to zero vector for a quasi-steady analysis
-        
-        // set the incompatible mode solution if required by the
-        // element
-        if (p_elem.if_incompatible_modes()) {
-            // check if the vector exists in the map
-            if (!_incompatible_sol.count(elem))
-                _incompatible_sol[elem] = RealVectorX::Zero(p_elem.incompatible_mode_size());
-            p_elem.set_incompatible_mode_solution(_incompatible_sol[elem]);
-        }
-
-        if (_sol_function)
-            physics_elem->attach_active_solution_function(*_sol_function);
-        
-        // perform the element level calculations
-        _elem_sensitivity_calculations(*physics_elem, false, vec, mat);
-        
-        // the sensitivity method provides sensitivity of the residual.
-        // Hence, this is multiplied with -1 to make it the RHS of the
-        // sensitivity equations.
-        vec *= -1.;
-        
-        physics_elem->detach_active_solution_function();
-        
-        // copy to the libMesh matrix for further processing
-        DenseRealVector v;
-        MAST::copy(v, vec);
-        
-        // constrain the quantities to account for hanging dofs,
-        // Dirichlet constraints, etc.
-        dof_map.constrain_element_vector(v, dof_indices);
-        
-        // add to the global matrices
-        sensitivity_rhs.add_vector(v, dof_indices);
-    }
-    
-    // if a solution function is attached, initialize it
-    if (_sol_function)
-        _sol_function->clear();
-    
-    sensitivity_rhs.close();
-    
-    return true;
-}
-
-
-
-
 
 void
 MAST::StructuralNonlinearAssembly::StructuralNonlinearAssembly::
@@ -781,6 +551,36 @@ clear_discipline_and_system( ) {
     MAST::NonlinearImplicitAssembly::clear_discipline_and_system();
     
     
+}
+
+
+void
+MAST::StructuralNonlinearAssembly::_set_elem_sol(MAST::ElementBase& elem,
+                                               const RealVectorX& sol) {
+    
+    unsigned int
+    n = (unsigned int)sol.size();
+    
+    RealVectorX
+    zero = RealVectorX::Zero(n);
+    
+    elem.set_solution    (sol);
+    elem.set_velocity    (zero); // set to zero vector for a quasi-steady analysis
+    elem.set_acceleration(zero); // set to zero vector for a quasi-steady analysis
+
+    
+    // set the incompatible mode solution if required by the
+    // element
+    MAST::StructuralElementBase& s_elem =
+    dynamic_cast<MAST::StructuralElementBase&>(elem);
+
+    if (s_elem.if_incompatible_modes()) {
+        
+        // check if the vector exists in the map
+        if (!_incompatible_sol.count(&elem.elem()))
+            _incompatible_sol[&elem.elem()] = RealVectorX::Zero(s_elem.incompatible_mode_size());
+        s_elem.set_incompatible_mode_solution(_incompatible_sol[&elem.elem()]);
+    }
 }
 
 

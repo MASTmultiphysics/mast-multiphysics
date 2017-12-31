@@ -152,6 +152,13 @@ namespace MAST {
         
     protected:
         
+
+        /*!
+         *   sets the element solution(s) before calculations
+         */
+        virtual void _set_elem_sol(MAST::ElementBase& elem,
+                                   const RealVectorX& sol);
+        
         /*!
          *   performs the element calculations over \par elem, and returns
          *   the element vector and matrix quantities in \par mat and

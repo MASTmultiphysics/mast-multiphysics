@@ -158,6 +158,18 @@ namespace MAST {
     protected:
         
         /*!
+         *   sets the element solution(s) before calculations
+         */
+        virtual void _set_elem_sol(MAST::ElementBase& elem,
+                                   const RealVectorX& sol);
+
+        /*!
+         *   sets the element solution(s) before calculations
+         */
+        virtual void _set_elem_sol_sens(MAST::ElementBase& elem,
+                                        const RealVectorX& sol);
+
+        /*!
          *   performs the element calculations over \par elem, and returns
          *   the element matrices for the eigenproblem
          *   \f$ A x = \lambda B x \f$.
