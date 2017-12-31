@@ -51,6 +51,13 @@ void
 MAST::SubCellFE::init(const libMesh::Elem& elem,
                       const std::vector<libMesh::Point>* pts) {
 
+    // if there was no intersection, then move back to the parent class's
+    // method
+    if (!_intersection.if_intersection()) {
+        MAST::FEBase::init(elem, pts);
+        return;
+    }
+    
     libmesh_assert(!_initialized);
 
     const unsigned int
@@ -111,6 +118,15 @@ MAST::SubCellFE::init(const libMesh::Elem& elem,
     _subcell_fe = libMesh::FEBase::build(elem.dim(), fe_type).release();
     _subcell_fe->get_JxW();
 
+    _fe     = libMesh::FEBase::build(elem.dim(), fe_type).release();
+    _fe->get_phi();
+    _fe->get_xyz();
+    _fe->get_JxW();
+    _fe->get_dphi();
+    _fe->get_dphidxi();
+    _fe->get_dphideta();
+    _fe->get_dphidzeta();
+
     // now, we use the xyz points of this element, which should be the location
     // of the quadrature points in the parent element, since elem was in the
     // nondimensional coordinate system
@@ -130,7 +146,6 @@ MAST::SubCellFE::init(const libMesh::Elem& elem,
         _subcell_fe->reinit(&elem);
         
         // initialize parent FE using location of these points
-        _fe     = libMesh::FEBase::build(elem.dim(), fe_type).release();
         _fe->reinit(parent, &local_fe->get_xyz());
     }
     else
@@ -153,6 +168,27 @@ MAST::SubCellFE::init_for_side(const libMesh::Elem& elem,
                                unsigned int s,
                                bool if_calculate_dphi) {
     
+    // if there was no intersection, then move back to the parent class's
+    // method
+    if (!_intersection.if_intersection()) {
+        MAST::FEBase::init_for_side(elem, s, if_calculate_dphi);
+        return;
+    }
+
     // to be implemented
     libmesh_assert(false);
+}
+
+
+const
+std::vector<Real>&
+MAST::SubCellFE::get_JxW() const {
+    libmesh_assert(_initialized);
+    
+    // if there was no intersection, then move back to the parent class's
+    // method
+    if (!_intersection.if_intersection())
+        return MAST::FEBase::get_JxW();
+    else
+        return _subcell_fe->get_JxW();
 }

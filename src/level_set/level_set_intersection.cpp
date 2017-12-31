@@ -419,7 +419,7 @@ MAST::LevelSetIntersection::_find_quad4_intersections
         _new_nodes.push_back(nd);
         side_p0 = side_nondim_points[(ref_side+2)%n_nodes].first;
         side_p1 = side_nondim_points[(ref_side+2)%n_nodes].second;
-        _node_local_coords[nd] = side_p0 + xi_ref * (side_p1 - side_p0);
+        _node_local_coords[nd] = side_p0 + xi_other * (side_p1 - side_p0);
 
         libMesh::Elem
         *e_p = const_cast<libMesh::Elem*>(&e),
@@ -490,7 +490,7 @@ MAST::LevelSetIntersection::_find_quad4_intersections
         _new_nodes.push_back(nd);
         side_p0 = side_nondim_points[(ref_side+1)%n_nodes].first;
         side_p1 = side_nondim_points[(ref_side+1)%n_nodes].second;
-        _node_local_coords[nd] = side_p0 + xi_ref * (side_p1 - side_p0);
+        _node_local_coords[nd] = side_p0 + xi_other * (side_p1 - side_p0);
 
 
         // create a new node on the opposite side, which will be used to create

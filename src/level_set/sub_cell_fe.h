@@ -62,6 +62,9 @@ namespace MAST {
                                    unsigned int s,
                                    bool if_calculate_dphi);
 
+        virtual const std::vector<Real>&
+        get_JxW() const;
+
     protected:
 
       
