@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -19,7 +19,8 @@
 
 // MAST includes
 #include "solver/transient_solver_base.h"
-#include "base/transient_assembly.h"
+#include "base/transient_assembly_elem_operations.h"
+#include "base/assembly_base.h"
 #include "base/nonlinear_system.h"
 
 
@@ -32,11 +33,11 @@
 
 
 MAST::TransientSolverBase::TransientSolverBase():
-dt(0.),
-_first_step(true),
-_assembly(nullptr),
-_system(nullptr),
-_if_highest_derivative_solution(false) {
+dt                              (0.),
+_first_step                     (true),
+_assembly_ops                   (nullptr),
+_system                         (nullptr),
+_if_highest_derivative_solution (false) {
 
 }
 
@@ -44,19 +45,20 @@ _if_highest_derivative_solution(false) {
 
 
 MAST::TransientSolverBase::~TransientSolverBase() {
-    this->clear_assembly();
+    this->clear_assembly_ops();
 }
 
 
 
 void
-MAST::TransientSolverBase::set_assembly(MAST::TransientAssembly& assembly) {
+MAST::TransientSolverBase::
+set_assembly_ops(MAST::TransientAssemblyElemOperations &assembly_ops) {
     
     // make sure that the previous assembly association has been cleared
-    this->clear_assembly();
+    this->clear_assembly_ops();
     
-    _assembly = &assembly;
-    _system   = &assembly.system();
+    _assembly_ops = &assembly_ops;
+    _system       = &assembly_ops.get_assembly().system();
     
     // number of time steps to store
     unsigned int n_iters = _n_iters_to_store();
@@ -95,7 +97,7 @@ MAST::TransientSolverBase::set_assembly(MAST::TransientAssembly& assembly) {
 
 
 void
-MAST::TransientSolverBase::clear_assembly() {
+MAST::TransientSolverBase::clear_assembly_ops() {
     
     // if no system has been set so far, nothing needs to be done
     if (!_system)
@@ -134,9 +136,9 @@ MAST::TransientSolverBase::clear_assembly() {
         }
     }
     
-    _assembly   = nullptr;
-    _system     = nullptr;
-    _first_step = true;
+    _assembly_ops   = nullptr;
+    _system         = nullptr;
+    _first_step     = true;
 }
 
 

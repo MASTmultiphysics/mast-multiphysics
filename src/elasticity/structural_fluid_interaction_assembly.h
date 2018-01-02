@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -22,7 +22,8 @@
 
 
 // MAST includes
-#include "base/nonlinear_implicit_assembly.h"
+#include "base/assembly_base.h"
+#include "base/assembly_elem_operation.h"
 
 namespace MAST {
     
@@ -39,7 +40,8 @@ namespace MAST {
     
     
     class StructuralFluidInteractionAssembly:
-    public MAST::NonlinearImplicitAssembly {
+    public MAST::AssemblyBase,
+    public MAST::AssemblyElemOperations {
         
     public:
         
@@ -54,14 +56,6 @@ namespace MAST {
          *   the system
          */
         virtual ~StructuralFluidInteractionAssembly();
-        
-
-        /*!
-         *   attaches a system to this discipline, and vice-a-versa
-         */
-        virtual void
-        attach_discipline_and_system(MAST::PhysicsDisciplineBase& discipline,
-                                     MAST::SystemInitialization& system);
         
     
         /*!
@@ -92,18 +86,7 @@ namespace MAST {
             _qty_type = qty;
         }
         
-        
-        /*!
-         *    function that assembles the matrices and vectors quantities for
-         *    nonlinear solution
-         */
-        virtual void
-        residual_and_jacobian (const libMesh::NumericVector<Real>& X,
-                               libMesh::NumericVector<Real>* R,
-                               libMesh::SparseMatrix<Real>*  J,
-                               libMesh::NonlinearImplicitSystem& S);
-        
-        
+                
         /*!
          *   if the eigenproblem is defined about a non-zero base solution,
          *   then this method provides the object with the base solution.
@@ -171,15 +154,16 @@ namespace MAST {
         virtual std::unique_ptr<MAST::FEBase>
         build_fe(const libMesh::Elem& e);
 
-    protected:
-        
         
         /*!
          *   @returns a smart-pointer to a newly created element for
          *   calculation of element quantities.
          */
         virtual std::unique_ptr<MAST::ElementBase>
-        _build_elem(const libMesh::Elem& elem);
+        build_elem(const libMesh::Elem& elem);
+
+        
+    protected:
         
         
         /*!

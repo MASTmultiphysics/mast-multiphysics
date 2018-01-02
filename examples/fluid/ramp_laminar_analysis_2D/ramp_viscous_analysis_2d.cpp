@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -27,6 +27,7 @@
 #include "examples/fluid/meshing/ramp_mesh_2D.h"
 #include "fluid/conservative_fluid_system_initialization.h"
 #include "fluid/conservative_fluid_discipline.h"
+#include "base/transient_assembly.h"
 #include "fluid/conservative_fluid_transient_assembly.h"
 #include "solver/first_order_newmark_transient_solver.h"
 #include "fluid/flight_condition.h"
@@ -288,13 +289,15 @@ MAST::RampLaminarAnalysis2D::solve(bool if_write_output) {
     _fluid_sys->initialize_solution(s);
     
     // create the nonlinear assembly object
-    MAST::ConservativeFluidTransientAssembly   assembly;
+    MAST::TransientAssembly                                  assembly;
+    MAST::ConservativeFluidTransientAssemblyElemOperations   elem_ops;
     
     // Transient solver for time integration
     MAST::FirstOrderNewmarkTransientSolver  solver;
     
     // now solve the system
-    assembly.attach_discipline_and_system(*_discipline,
+    assembly.attach_discipline_and_system(elem_ops,
+                                          *_discipline,
                                           solver,
                                           *_fluid_sys);
     

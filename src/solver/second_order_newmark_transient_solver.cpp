@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -19,7 +19,7 @@
 
 // MAST includes
 #include "solver/second_order_newmark_transient_solver.h"
-#include "base/transient_assembly.h"
+#include "base/transient_assembly_elem_operations.h"
 #include "base/elem_base.h"
 #include "base/nonlinear_system.h"
 
@@ -64,9 +64,9 @@ MAST::SecondOrderNewmarkTransientSolver::advance_time_step() {
 
 void
 MAST::SecondOrderNewmarkTransientSolver::
-_set_element_data(const std::vector<libMesh::dof_id_type>& dof_indices,
-                  const std::vector<libMesh::NumericVector<Real>*>& sols,
-                  MAST::ElementBase &elem){
+set_element_data(const std::vector<libMesh::dof_id_type>& dof_indices,
+                 const std::vector<libMesh::NumericVector<Real>*>& sols,
+                 MAST::ElementBase &elem){
     
     libmesh_assert_equal_to(sols.size(), 3);
 
@@ -103,9 +103,9 @@ _set_element_data(const std::vector<libMesh::dof_id_type>& dof_indices,
 
 void
 MAST::SecondOrderNewmarkTransientSolver::
-_set_element_perturbed_data(const std::vector<libMesh::dof_id_type>& dof_indices,
-                            const std::vector<libMesh::NumericVector<Real>*>& sols,
-                            MAST::ElementBase &elem){
+set_element_perturbed_data(const std::vector<libMesh::dof_id_type>& dof_indices,
+                           const std::vector<libMesh::NumericVector<Real>*>& sols,
+                           MAST::ElementBase &elem){
     
     libmesh_assert_equal_to(sols.size(), 3);
     
@@ -217,14 +217,13 @@ update_delta_acceleration(libMesh::NumericVector<Real>& vec,
 
 void
 MAST::SecondOrderNewmarkTransientSolver::
-_elem_calculations(MAST::ElementBase& elem,
-                   const std::vector<libMesh::dof_id_type>& dof_indices,
+elem_calculations(MAST::ElementBase& elem,
                    bool if_jac,
                    RealVectorX& vec,
                    RealMatrixX& mat) {
     // make sure that the assembly object is provided
     libmesh_assert(_assembly);
-    unsigned int n_dofs = (unsigned int)dof_indices.size();
+    unsigned int n_dofs = (unsigned int)vec.size();
     
     RealVectorX
     f_x     = RealVectorX::Zero(n_dofs),
@@ -238,15 +237,15 @@ _elem_calculations(MAST::ElementBase& elem,
     f_x_jac          = RealMatrixX::Zero(n_dofs, n_dofs);
     
     // perform the element assembly
-    _assembly->_elem_calculations(elem,
-                                  if_jac,
-                                  f_m,           // mass vector
-                                  f_x,           // forcing vector
-                                  f_m_jac_xddot, // Jac of mass wrt x_dotdot
-                                  f_m_jac_xdot,  // Jac of mass wrt x_dot
-                                  f_m_jac,       // Jac of mass wrt x
-                                  f_x_jac_xdot,  // Jac of forcing vector wrt x_dot
-                                  f_x_jac);      // Jac of forcing vector wrt x
+    _assembly_ops->elem_calculations(elem,
+                                     if_jac,
+                                     f_m,           // mass vector
+                                     f_x,           // forcing vector
+                                     f_m_jac_xddot, // Jac of mass wrt x_dotdot
+                                     f_m_jac_xdot,  // Jac of mass wrt x_dot
+                                     f_m_jac,       // Jac of mass wrt x
+                                     f_x_jac_xdot,  // Jac of forcing vector wrt x_dot
+                                     f_x_jac);      // Jac of forcing vector wrt x
 
     
     if (_if_highest_derivative_solution) {
@@ -324,25 +323,25 @@ _elem_calculations(MAST::ElementBase& elem,
 
 void
 MAST::SecondOrderNewmarkTransientSolver::
-_elem_linearized_jacobian_solution_product(MAST::ElementBase& elem,
-                                           const std::vector<libMesh::dof_id_type>& dof_indices,
-                                           RealVectorX& vec) {
+elem_linearized_jacobian_solution_product(MAST::ElementBase& elem,
+                                          RealVectorX& vec) {
     
     // make sure that the assembly object is provided
-    libmesh_assert(_assembly);
+    libmesh_assert(_assembly_ops);
     
     // perform the element assembly
-    _assembly->_linearized_jacobian_solution_product(elem, vec);
+    _assembly_ops->linearized_jacobian_solution_product(elem, vec);
 }
+
 
 
 
 void
 MAST::SecondOrderNewmarkTransientSolver::
-_elem_sensitivity_calculations(MAST::ElementBase& elem,
-                               const std::vector<libMesh::dof_id_type>& dof_indices,
-                               RealVectorX& vec) {
-
+elem_sensitivity_calculations(MAST::ElementBase& elem,
+                              RealVectorX& vec) {
+    
     // to be implemented
     libmesh_error();
 }
+

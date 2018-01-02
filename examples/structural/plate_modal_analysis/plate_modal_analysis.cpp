@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -25,6 +25,7 @@
 #include "examples/structural/plate_modal_analysis/plate_modal_analysis.h"
 #include "elasticity/structural_system_initialization.h"
 #include "elasticity/structural_element_base.h"
+#include "base/eigenproblem_assembly.h"
 #include "elasticity/structural_modal_eigenproblem_assembly.h"
 #include "elasticity/structural_discipline.h"
 #include "base/parameter.h"
@@ -267,10 +268,13 @@ MAST::PlateModalAnalysis::solve(bool if_write_output,
     
     
     // create the nonlinear assembly object
-    MAST::StructuralModalEigenproblemAssembly   assembly;
+    MAST::EigenproblemAssembly                                assembly;
+    MAST::StructuralModalEigenproblemAssemblyElemOperations   elem_ops;
     _sys->initialize_condensed_dofs(*_discipline);
     
-    assembly.attach_discipline_and_system(*_discipline, *_structural_sys);
+    assembly.attach_discipline_and_system(elem_ops,
+                                          *_discipline,
+                                          *_structural_sys);
     _sys->eigenproblem_solve();
     assembly.clear_discipline_and_system();
     
@@ -333,8 +337,11 @@ MAST::PlateModalAnalysis::sensitivity_solve(MAST::Parameter& p,
     params[0]  =  p.ptr();
     
     // create the nonlinear assembly object
-    MAST::StructuralModalEigenproblemAssembly   assembly;
-    assembly.attach_discipline_and_system(*_discipline, *_structural_sys);
+    MAST::EigenproblemAssembly                                assembly;
+    MAST::StructuralModalEigenproblemAssemblyElemOperations   elem_ops;
+    assembly.attach_discipline_and_system(elem_ops,
+                                          *_discipline,
+                                          *_structural_sys);
     _sys->eigenproblem_sensitivity_solve(params, eig);
     assembly.clear_discipline_and_system();
     

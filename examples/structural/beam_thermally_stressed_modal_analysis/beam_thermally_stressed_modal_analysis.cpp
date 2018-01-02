@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -26,7 +26,9 @@
 #include "examples/structural/beam_thermally_stressed_modal_analysis/beam_thermally_stressed_modal_analysis.h"
 #include "elasticity/structural_system_initialization.h"
 #include "elasticity/structural_element_base.h"
+#include "base/nonlinear_implicit_assembly.h"
 #include "elasticity/structural_nonlinear_assembly.h"
+#include "base/eigenproblem_assembly.h"
 #include "elasticity/structural_modal_eigenproblem_assembly.h"
 #include "elasticity/structural_discipline.h"
 #include "elasticity/stress_output_base.h"
@@ -341,8 +343,9 @@ MAST::BeamThermallyStressedModalAnalysis::solve(bool if_write_output,
     freq.open("freq.txt", std::ofstream::out);
     
     // create the nonlinear assembly object
-    MAST::StructuralNonlinearAssembly   assembly;
-    
+    MAST::NonlinearImplicitAssembly                   assembly;
+    MAST::StructuralNonlinearAssemblyElemOperations   elem_ops;
+
     libMesh::ExodusII_IO exodus_writer(*_mesh);
     
     // zero the solution before solving
@@ -357,7 +360,9 @@ MAST::BeamThermallyStressedModalAnalysis::solve(bool if_write_output,
         libMesh::out
         << "Load step: " << i_step << "  Temp = " << (*_temp)() << "  p: " << (*_press)()  << std::endl;
         
-        assembly.attach_discipline_and_system(*_discipline, *_structural_sys);
+        assembly.attach_discipline_and_system(elem_ops,
+                                              *_discipline,
+                                              *_structural_sys);
         _sys->solve();
         //}
         freq << std::endl << i_step << "   " << std::setw(35) << std::fixed << std::setprecision(15) << (*_temp)() << "  ";
@@ -389,11 +394,14 @@ MAST::BeamThermallyStressedModalAnalysis::solve(bool if_write_output,
         //////////////////////////////////////////////////////////////////
         
         // create the nonlinear assembly object
-        MAST::StructuralModalEigenproblemAssembly   modal_assembly;
+        MAST::EigenproblemAssembly                                modal_assembly;
+        MAST::StructuralModalEigenproblemAssemblyElemOperations   modal_elem_ops;
         modal_assembly.set_base_solution(base_sol);
         _sys->initialize_condensed_dofs(*_discipline);
         
-        modal_assembly.attach_discipline_and_system(*_discipline, *_structural_sys);
+        modal_assembly.attach_discipline_and_system(modal_elem_ops,
+                                                    *_discipline,
+                                                    *_structural_sys);
         _sys->eigenproblem_solve();
         modal_assembly.clear_discipline_and_system();
         
@@ -477,9 +485,12 @@ MAST::BeamThermallyStressedModalAnalysis::sensitivity_solve(MAST::Parameter& p,
     ///////////////////////////////////////////////////////////////////
     
     // create the nonlinear assembly object
-    MAST::StructuralNonlinearAssembly   assembly;
-    
-    assembly.attach_discipline_and_system(*_discipline, *_structural_sys);
+    MAST::NonlinearImplicitAssembly                   assembly;
+    MAST::StructuralNonlinearAssemblyElemOperations   elem_ops;
+
+    assembly.attach_discipline_and_system(elem_ops,
+                                          *_discipline,
+                                          *_structural_sys);
     
     MAST::NonlinearSystem& nonlin_sys = assembly.system();
     
@@ -511,11 +522,14 @@ MAST::BeamThermallyStressedModalAnalysis::sensitivity_solve(MAST::Parameter& p,
                      _sys->get_n_requested_eigenvalues());
     eig.resize(nconv);
     
-    MAST::StructuralModalEigenproblemAssembly   modal_assembly;
+    MAST::EigenproblemAssembly                                modal_assembly;
+    MAST::StructuralModalEigenproblemAssemblyElemOperations   modal_elem_ops;
     modal_assembly.set_base_solution(_sys->get_vector("base_solution"));
     modal_assembly.set_base_solution(_sys->get_sensitivity_solution(0), true);
     
-    modal_assembly.attach_discipline_and_system(*_discipline, *_structural_sys);
+    modal_assembly.attach_discipline_and_system(modal_elem_ops,
+                                                *_discipline,
+                                                *_structural_sys);
     _sys->eigenproblem_sensitivity_solve(params, eig);
     modal_assembly.clear_discipline_and_system();
     

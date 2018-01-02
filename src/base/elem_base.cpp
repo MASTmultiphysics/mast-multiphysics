@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -26,15 +26,15 @@
 
 
 MAST::ElementBase::ElementBase(MAST::SystemInitialization& sys,
-                               MAST::AssemblyBase& assembly,
+                               MAST::AssemblyElemOperations& assembly_ops,
                                const libMesh::Elem& elem):
-sensitivity_param(nullptr),
-_system(sys),
-_assembly(assembly),
-_elem(elem),
-_active_sol_function(nullptr),
-_time(_system.system().time),
-_fe(nullptr) {
+sensitivity_param       (nullptr),
+_system                 (sys),
+_assembly_ops           (assembly_ops),
+_elem                   (elem),
+_active_sol_function    (nullptr),
+_time                   (_system.system().time),
+_fe                     (nullptr) {
     
 }
 

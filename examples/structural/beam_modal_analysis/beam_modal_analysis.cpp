@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -26,6 +26,7 @@
 #include "base/nonlinear_system.h"
 #include "base/parameter.h"
 #include "base/constant_field_function.h"
+#include "base/eigenproblem_assembly.h"
 #include "elasticity/structural_system_initialization.h"
 #include "elasticity/structural_discipline.h"
 #include "elasticity/structural_element_base.h"
@@ -39,6 +40,7 @@
 #include "libmesh/mesh_generation.h"
 #include "libmesh/exodusII_io.h"
 #include "libmesh/numeric_vector.h"
+#include "libmesh/parameter_vector.h"
 
 extern libMesh::LibMeshInit* __init;
 
@@ -252,10 +254,13 @@ MAST::BeamModalAnalysis::solve(bool if_write_output,
     libmesh_assert(_initialized);
 
     // create the nonlinear assembly object
-    MAST::StructuralModalEigenproblemAssembly   assembly;
+    MAST::EigenproblemAssembly                               assembly;
+    MAST::StructuralModalEigenproblemAssemblyElemOperations  elem_ops;
     _sys->initialize_condensed_dofs(*_discipline);
     
-    assembly.attach_discipline_and_system(*_discipline, *_structural_sys);
+    assembly.attach_discipline_and_system(elem_ops,
+                                          *_discipline,
+                                          *_structural_sys);
     _sys->eigenproblem_solve();
     assembly.clear_discipline_and_system();
     
@@ -318,8 +323,11 @@ MAST::BeamModalAnalysis::sensitivity_solve(MAST::Parameter& p,
     params[0]  =  p.ptr();
 
     // create the nonlinear assembly object
-    MAST::StructuralModalEigenproblemAssembly   assembly;
-    assembly.attach_discipline_and_system(*_discipline, *_structural_sys);
+    MAST::EigenproblemAssembly                               assembly;
+    MAST::StructuralModalEigenproblemAssemblyElemOperations  elem_ops;
+    assembly.attach_discipline_and_system(elem_ops,
+                                          *_discipline,
+                                          *_structural_sys);
     _sys->eigenproblem_sensitivity_solve(params, eig);
     assembly.clear_discipline_and_system();
     

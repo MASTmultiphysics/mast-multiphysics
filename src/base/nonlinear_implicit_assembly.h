@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -28,6 +28,10 @@
 
 
 namespace MAST {
+    
+    // Forward declerations
+    class NonlinearImplicitAssemblyElemOperations;
+    
     
     class NonlinearImplicitAssembly:
     public MAST::AssemblyBase,
@@ -68,7 +72,8 @@ namespace MAST {
          *   attaches a system to this discipline, and vice-a-versa
          */
         virtual void
-        attach_discipline_and_system(MAST::PhysicsDisciplineBase& discipline,
+        attach_discipline_and_system(MAST::NonlinearImplicitAssemblyElemOperations& elem_ops,
+                                     MAST::PhysicsDisciplineBase& discipline,
                                      MAST::SystemInitialization& system);
         
         
@@ -152,64 +157,12 @@ namespace MAST {
         
     protected:
         
-
         /*!
-         *   sets the element solution(s) before calculations
+         *    object to provide transient element operations
          */
-        virtual void _set_elem_sol(MAST::ElementBase& elem,
-                                   const RealVectorX& sol);
-        
-        /*!
-         *   performs the element calculations over \par elem, and returns
-         *   the element vector and matrix quantities in \par mat and
-         *   \par vec, respectively. \par if_jac tells the method to also
-         *   assemble the Jacobian, in addition to the residual vector.
-         */
-        virtual void _elem_calculations(MAST::ElementBase& elem,
-                                        bool if_jac,
-                                        RealVectorX& vec,
-                                        RealMatrixX& mat) = 0;
-
-        
-        /*!
-         *   performs the element calculations over \par elem, and returns
-         *   the element vector quantity in \par vec. The vector quantity only
-         *   include the \f$ [J] \{dX\} f$ components, so the inherited classes
-         *   must ensure that no component of constant forces (traction/body
-         *   forces/etc.) are added to this vector.
-         */
-        virtual void
-        _elem_linearized_jacobian_solution_product(MAST::ElementBase& elem,
-                                                   RealVectorX& vec);
+        MAST::NonlinearImplicitAssemblyElemOperations* _implicit_elem_ops;
         
 
-        /*!
-         *   performs the element sensitivity calculations over \par elem,
-         *   and returns the element residual sensitivity in \par vec .
-         */
-        virtual void _elem_sensitivity_calculations(MAST::ElementBase& elem,
-                                                    bool if_jac,
-                                                    RealVectorX& vec,
-                                                    RealMatrixX& mat) = 0;
-        
-        
-        /*!
-         *   calculates \f$ d ([J] \{\Delta X\})/ dX  \f$ over \par elem,
-         *   and returns the matrix in \par vec .
-         */
-        virtual void
-        _elem_second_derivative_dot_solution_assembly(MAST::ElementBase& elem,
-                                                      RealMatrixX& mat) = 0;
-        
-
-        /*!
-         *    a helper function to evaluate the numerical Jacobian 
-         *    and compare it with the analytical Jacobian.
-         */
-        void _check_element_numerical_jacobian(MAST::ElementBase& e,
-                                               RealVectorX& sol);
-        
-        
         
         /*!
          *    this object, if non-NULL is user-provided to perform actions

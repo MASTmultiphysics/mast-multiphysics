@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -69,14 +69,16 @@ namespace MAST {
     class DirichletBoundaryCondition;
     class BoundaryConditionBase;
     class StressStrainOutputBase;
-    class StructuralNonlinearAssembly;
+    class NonlinearImplicitAssembly;
+    class StructuralNonlinearAssemblyElemOperations;        
     class SectionOffset;
     class StiffenedPlateWeight;
     class NonlinearSystem;
     class TimeDomainFlutterSolver;
     class TimeDomainFlutterRoot;
     class PistonTheoryBoundaryCondition;
-    class StructuralModalEigenproblemAssembly;
+    class EigenproblemAssembly;
+    class StructuralModalEigenproblemAssemblyElemOperations;
     class StructuralFluidInteractionAssembly;
     class NonlinearSystem;
     class StructuralNearNullVectorSpace;
@@ -192,10 +194,12 @@ namespace MAST {
 
         
         // nonlinear assembly object
-        MAST::StructuralNonlinearAssembly         *_nonlinear_assembly;
+        MAST::NonlinearImplicitAssembly                   *_nonlinear_assembly;
+        MAST::StructuralNonlinearAssemblyElemOperations   *_nonlinear_elem_ops;
         
         // nonlinear assembly object
-        MAST::StructuralModalEigenproblemAssembly *_modal_assembly;
+        MAST::EigenproblemAssembly                              *_modal_assembly;
+        MAST::StructuralModalEigenproblemAssemblyElemOperations *_modal_elem_ops;
 
         
         // nonlinear assembly object

@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -69,7 +69,8 @@ namespace MAST {
     class DirichletBoundaryCondition;
     class BoundaryConditionBase;
     class StressStrainOutputBase;
-    class StructuralNonlinearAssembly;
+    class NonlinearImplicitAssembly;
+    class StructuralNonlinearAssemblyElemOperations;
     
     
     struct BeamBendingThermalStressSizingOptimization:
@@ -140,14 +141,15 @@ namespace MAST {
         libMesh::EquationSystems*      _eq_sys;
         
         // create the libmesh system
-        MAST::NonlinearSystem*  _sys;
+        MAST::NonlinearSystem*         _sys;
         
         // initialize the system to the right set of variables
         MAST::StructuralSystemInitialization* _structural_sys;
         MAST::StructuralDiscipline*           _discipline;
         
         // nonlinear assembly object
-        MAST::StructuralNonlinearAssembly *_assembly;
+        MAST::NonlinearImplicitAssembly                 *_assembly;
+        MAST::StructuralNonlinearAssemblyElemOperations *_elem_ops;
         
         // create the property functions and add them to the
         MAST::Parameter

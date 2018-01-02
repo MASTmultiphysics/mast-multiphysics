@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -26,6 +26,7 @@
 #include "examples/fsi/base/gaf_database.h"
 #include "optimization/optimization_interface.h"
 #include "optimization/function_evaluation.h"
+#include "base/eigenproblem_assembly.h"
 #include "elasticity/structural_modal_eigenproblem_assembly.h"
 #include "elasticity/stress_output_base.h"
 #include "base/nonlinear_system.h"
@@ -37,6 +38,7 @@
 #include "fluid/pressure_function.h"
 #include "fluid/frequency_domain_pressure_function.h"
 #include "fluid/frequency_domain_linearized_complex_assembly.h"
+#include "base/complex_assembly_base.h"
 #include "solver/complex_solver_base.h"
 #include "aeroelasticity/frequency_function.h"
 #include "aeroelasticity/ug_flutter_solver.h"
@@ -210,8 +212,10 @@ _structural_discipline                  (nullptr),
 _fluid_sys_init                         (nullptr),
 _fluid_discipline                       (nullptr),
 _frequency_domain_fluid_assembly        (nullptr),
+_frequency_domain_elem_ops              (nullptr),
 _complex_solver                         (nullptr),
 _modal_assembly                         (nullptr),
+_modal_elem_ops                         (nullptr),
 _flight_cond                            (nullptr),
 _far_field                              (nullptr),
 _symm_wall                              (nullptr),
@@ -475,17 +479,19 @@ MAST::BeamFSIFlutterSizingOptimization::init(GetPot &infile,
     _fluid_sys->solution->swap(base_sol);
     
     // create the nonlinear assembly object
-    _frequency_domain_fluid_assembly = new MAST::FrequencyDomainLinearizedComplexAssembly;
+    _frequency_domain_fluid_assembly  = new MAST::ComplexAssemblyBase;
+    _frequency_domain_elem_ops        = new MAST::FrequencyDomainLinearizedComplexAssemblyElemOperations;
     
     // solver for complex solution
     _complex_solver                  = new MAST::ComplexSolverBase;
     
     // now setup the assembly object
-    _frequency_domain_fluid_assembly->attach_discipline_and_system(*_fluid_discipline,
+    _frequency_domain_fluid_assembly->attach_discipline_and_system(*_frequency_domain_elem_ops,
+                                                                   *_fluid_discipline,
                                                                    *_complex_solver,
                                                                    *_fluid_sys_init);
     _frequency_domain_fluid_assembly->set_base_solution(base_sol);
-    _frequency_domain_fluid_assembly->set_frequency_function(*_freq_function);
+    _frequency_domain_elem_ops->set_frequency_function(*_freq_function);
 
     
     
@@ -676,8 +682,8 @@ MAST::BeamFSIFlutterSizingOptimization::init(GetPot &infile,
     _structural_discipline->add_volume_load(0, *_pressure);
     
     // modal assembly object for the natural modes eigen-analysis
-    _modal_assembly = new MAST::StructuralModalEigenproblemAssembly;
-    
+    _modal_assembly = new MAST::EigenproblemAssembly;
+    _modal_elem_ops = new MAST::StructuralModalEigenproblemAssemblyElemOperations;
     
     // create the function to calculate weight
     _weight = new MAST::BeamWeight(*_structural_discipline);
@@ -691,7 +697,8 @@ MAST::BeamFSIFlutterSizingOptimization::init(GetPot &infile,
     // create the nonlinear assembly object
     _structural_sys->initialize_condensed_dofs(*_structural_discipline);
     
-    _modal_assembly->attach_discipline_and_system(*_structural_discipline,
+    _modal_assembly->attach_discipline_and_system(*_modal_elem_ops,
+                                                  *_structural_discipline,
                                                   *_structural_sys_init);
     
     
@@ -735,9 +742,10 @@ MAST::BeamFSIFlutterSizingOptimization::init(GetPot &infile,
     //    CALCULATE AND STORE THE GAFs
     //////////////////////////////////////////////////////////////////////
     // initialize the GAF interpolation assembly object
-    _gaf_database = new  MAST::GAFDatabase(_basis.size());
+    _gaf_database = new  MAST::GAFDatabase((unsigned int)_basis.size());
 
-    _gaf_database->attach_discipline_and_system(*_structural_discipline,
+    _gaf_database->attach_discipline_and_system(*_gaf_database,
+                                                *_structural_discipline,
                                                 *_structural_sys_init);
     
     
@@ -813,6 +821,7 @@ MAST::BeamFSIFlutterSizingOptimization::~BeamFSIFlutterSizingOptimization() {
     delete _fluid_sys_init;
     
     delete _frequency_domain_fluid_assembly;
+    delete _frequency_domain_elem_ops;
     delete _complex_solver;
 
     delete _far_field;
@@ -842,6 +851,7 @@ MAST::BeamFSIFlutterSizingOptimization::~BeamFSIFlutterSizingOptimization() {
     delete _structural_mesh;
     
     delete _modal_assembly;
+    delete _modal_elem_ops;
     
     delete _structural_discipline;
     delete _structural_sys_init;
@@ -963,16 +973,18 @@ MAST::BeamFSIFlutterSizingOptimization::evaluate(const std::vector<Real>& dvars,
     if (__init->comm().rank() == 0)
         _flutter_solver->set_output_file(oss.str());
     
-    _gaf_database->attach_discipline_and_system(*_structural_discipline,
+    _gaf_database->attach_discipline_and_system(*_gaf_database,
+                                                *_structural_discipline,
                                                 *_structural_sys_init);
     
     libMesh::NumericVector<Real>&
     base_sol = _fluid_sys->get_vector("fluid_base_solution");
-    _frequency_domain_fluid_assembly->attach_discipline_and_system(*_fluid_discipline,
+    _frequency_domain_fluid_assembly->attach_discipline_and_system(*_frequency_domain_elem_ops,
+                                                                   *_fluid_discipline,
                                                                    *_complex_solver,
                                                                    *_fluid_sys_init);
     _frequency_domain_fluid_assembly->set_base_solution(base_sol);
-    _frequency_domain_fluid_assembly->set_frequency_function(*_freq_function);
+    _frequency_domain_elem_ops->set_frequency_function(*_freq_function);
     _pressure_function->init(base_sol);
 
 
@@ -1085,14 +1097,17 @@ MAST::BeamFSIFlutterSizingOptimization::evaluate(const std::vector<Real>& dvars,
             // else, set it to zero
             if (sol.second) {
                 
-                _gaf_database->attach_discipline_and_system(*_structural_discipline,
+                _gaf_database->attach_discipline_and_system(*_gaf_database,
+                                                            *_structural_discipline,
                                                             *_structural_sys_init);
                 
-                _frequency_domain_fluid_assembly->attach_discipline_and_system(*_fluid_discipline,
-                                                                               *_complex_solver,
-                                                                               *_fluid_sys_init);
+                _frequency_domain_fluid_assembly->attach_discipline_and_system
+                (*_frequency_domain_elem_ops,
+                 *_fluid_discipline,
+                 *_complex_solver,
+                 *_fluid_sys_init);
                 _frequency_domain_fluid_assembly->set_base_solution(base_sol);
-                _frequency_domain_fluid_assembly->set_frequency_function(*_freq_function);
+                _frequency_domain_elem_ops->set_frequency_function(*_freq_function);
                 
                 _gaf_database->init(_freq_function,
                                     _complex_solver,                       // fluid complex solver

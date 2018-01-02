@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -43,9 +43,10 @@
 
 MAST::StructuralFluidInteractionAssembly::
 StructuralFluidInteractionAssembly():
-MAST::NonlinearImplicitAssembly(),
-_base_sol(nullptr),
-_base_sol_sensitivity(nullptr) {
+MAST::AssemblyBase(),
+MAST::AssemblyElemOperations(),
+_base_sol             (nullptr),
+_base_sol_sensitivity (nullptr) {
     
 }
 
@@ -59,22 +60,6 @@ MAST::StructuralFluidInteractionAssembly::
 
 
 
-void
-MAST::StructuralFluidInteractionAssembly::
-attach_discipline_and_system(MAST::PhysicsDisciplineBase &discipline,
-                             MAST::SystemInitialization &system) {
-    
-    libmesh_assert_msg(!_discipline && !_system,
-                       "Error: Assembly should be cleared before attaching System.");
-    
-    _discipline = &discipline;
-    _system     = &system;
-
-    // this method does not provide residual assembly routines. Hence,
-    // nothing is done to attach itself to the system.
-}
-
-
 
 void
 MAST::StructuralFluidInteractionAssembly::
@@ -83,7 +68,7 @@ clear_discipline_and_system( ) {
     _base_sol             = nullptr;
     _base_sol_sensitivity = nullptr;
     
-    MAST::NonlinearImplicitAssembly::clear_discipline_and_system();
+    MAST::AssemblyBase::clear_discipline_and_system();
 }
 
 
@@ -123,19 +108,6 @@ MAST::StructuralFluidInteractionAssembly::clear_base_solution(bool if_sens) {
 
 void
 MAST::StructuralFluidInteractionAssembly::
-residual_and_jacobian (const libMesh::NumericVector<Real>& X,
-                       libMesh::NumericVector<Real>* R,
-                       libMesh::SparseMatrix<Real>*  J,
-                       libMesh::NonlinearImplicitSystem& S) {
-    
-    // this method should not be called for this class.
-    libmesh_error();
-}
-
-
-
-void
-MAST::StructuralFluidInteractionAssembly::
 assemble_reduced_order_quantity
 (std::vector<libMesh::NumericVector<Real>*>& basis,
  std::map<MAST::StructuralQuantityType, RealMatrixX*>& mat_qty_map) {
@@ -164,13 +136,13 @@ assemble_reduced_order_quantity
     
     std::unique_ptr<libMesh::NumericVector<Real> > localized_solution;
     if (_base_sol)
-        localized_solution.reset(_build_localized_vector(nonlin_sys,
+        localized_solution.reset(build_localized_vector(nonlin_sys,
                                                          *_base_sol).release());
     
     // also create localized solution vectos for the bassis vectors
     std::vector<libMesh::NumericVector<Real>*> localized_basis(n_basis);
     for (unsigned int i=0; i<n_basis; i++)
-        localized_basis[i] = _build_localized_vector(nonlin_sys, *basis[i]).release();
+        localized_basis[i] = build_localized_vector(nonlin_sys, *basis[i]).release();
     
     
     // if a solution function is attached, initialize it
@@ -190,7 +162,7 @@ assemble_reduced_order_quantity
         
         dof_map.dof_indices (elem, dof_indices);
         
-        physics_elem.reset(_build_elem(*elem).release());
+        physics_elem.reset(this->build_elem(*elem).release());
         
         // get the solution
         unsigned int ndofs = (unsigned int)dof_indices.size();
@@ -303,16 +275,16 @@ assemble_reduced_order_quantity_sensitivity
         // make sure that the solution sensitivity is provided
         libmesh_assert(_base_sol_sensitivity);
         
-        localized_solution.reset(_build_localized_vector(nonlin_sys,
+        localized_solution.reset(build_localized_vector(nonlin_sys,
                                                          *_base_sol).release());
-        localized_solution_sens.reset(_build_localized_vector(nonlin_sys,
+        localized_solution_sens.reset(build_localized_vector(nonlin_sys,
                                                               *_base_sol_sensitivity).release());
     }
     
     // also create localized solution vectos for the bassis vectors
     std::vector<libMesh::NumericVector<Real>*> localized_basis(n_basis);
     for (unsigned int i=0; i<n_basis; i++)
-        localized_basis[i] = _build_localized_vector(nonlin_sys, *basis[i]).release();
+        localized_basis[i] = build_localized_vector(nonlin_sys, *basis[i]).release();
     
     
     // if a solution function is attached, initialize it
@@ -332,7 +304,7 @@ assemble_reduced_order_quantity_sensitivity
         
         dof_map.dof_indices (elem, dof_indices);
         
-        physics_elem.reset(_build_elem(*elem).release());
+        physics_elem.reset(this->build_elem(*elem).release());
         
         // get the solution
         unsigned int ndofs = (unsigned int)dof_indices.size();
@@ -419,7 +391,7 @@ MAST::StructuralFluidInteractionAssembly::build_fe(const libMesh::Elem& elem) {
 
 
 std::unique_ptr<MAST::ElementBase>
-MAST::StructuralFluidInteractionAssembly::_build_elem(const libMesh::Elem& elem) {
+MAST::StructuralFluidInteractionAssembly::build_elem(const libMesh::Elem& elem) {
     
     
     const MAST::ElementPropertyCardBase& p =

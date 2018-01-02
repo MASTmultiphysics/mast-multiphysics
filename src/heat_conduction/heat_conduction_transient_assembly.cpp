@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -23,33 +23,34 @@
 #include "property_cards/element_property_card_base.h"
 #include "base/physics_discipline_base.h"
 #include "mesh/fe_base.h"
+#include "base/assembly_base.h"
 
 
-MAST::HeatConductionTransientAssembly::
-HeatConductionTransientAssembly():
-MAST::TransientAssembly() {
+MAST::HeatConductionTransientAssemblyElemOperations::
+HeatConductionTransientAssemblyElemOperations():
+MAST::TransientAssemblyElemOperations() {
     
 }
 
 
 
 
-MAST::HeatConductionTransientAssembly::
-~HeatConductionTransientAssembly() {
+MAST::HeatConductionTransientAssemblyElemOperations::
+~HeatConductionTransientAssemblyElemOperations() {
     
 }
 
 
 
 void
-MAST::HeatConductionTransientAssembly::
-_elem_calculations(MAST::ElementBase& elem,
-                   bool if_jac,
-                   RealVectorX& f_m,
-                   RealVectorX& f_x,
-                   RealMatrixX& f_m_jac_xdot,
-                   RealMatrixX& f_m_jac,
-                   RealMatrixX& f_x_jac) {
+MAST::HeatConductionTransientAssemblyElemOperations::
+elem_calculations(MAST::ElementBase& elem,
+                  bool if_jac,
+                  RealVectorX& f_m,
+                  RealVectorX& f_x,
+                  RealMatrixX& f_m_jac_xdot,
+                  RealMatrixX& f_m_jac,
+                  RealMatrixX& f_x_jac) {
     
     MAST::HeatConductionElementBase& e =
     dynamic_cast<MAST::HeatConductionElementBase&>(elem);
@@ -62,8 +63,8 @@ _elem_calculations(MAST::ElementBase& elem,
     
     // assembly of the flux terms
     e.internal_residual(if_jac, f_x, f_x_jac);
-    e.side_external_residual(if_jac, f_x, f_x_jac, _discipline->side_loads());
-    e.volume_external_residual(if_jac, f_x, f_x_jac, _discipline->volume_loads());
+    e.side_external_residual(if_jac, f_x, f_x_jac, _assembly->discipline().side_loads());
+    e.volume_external_residual(if_jac, f_x, f_x_jac, _assembly->discipline().volume_loads());
     
     //assembly of the capacitance term
     e.velocity_residual(if_jac, f_m, f_m_jac_xdot, f_m_jac);
@@ -72,9 +73,9 @@ _elem_calculations(MAST::ElementBase& elem,
 
 
 void
-MAST::HeatConductionTransientAssembly::
-_linearized_jacobian_solution_product(MAST::ElementBase& elem,
-                                      RealVectorX& f) {
+MAST::HeatConductionTransientAssemblyElemOperations::
+linearized_jacobian_solution_product(MAST::ElementBase& elem,
+                                     RealVectorX& f) {
     
     libmesh_error(); // to be implemented
 }
@@ -82,9 +83,9 @@ _linearized_jacobian_solution_product(MAST::ElementBase& elem,
 
 
 void
-MAST::HeatConductionTransientAssembly::
-_elem_sensitivity_calculations(MAST::ElementBase& elem,
-                               RealVectorX& vec) {
+MAST::HeatConductionTransientAssemblyElemOperations::
+elem_sensitivity_calculations(MAST::ElementBase& elem,
+                              RealVectorX& vec) {
     
     libmesh_error(); // to be implemented
     
@@ -92,34 +93,40 @@ _elem_sensitivity_calculations(MAST::ElementBase& elem,
 
 
 void
-MAST::HeatConductionTransientAssembly::
-_elem_second_derivative_dot_solution_assembly(MAST::ElementBase& elem,
-                                              RealMatrixX& m) {
+MAST::HeatConductionTransientAssemblyElemOperations::
+elem_second_derivative_dot_solution_assembly(MAST::ElementBase& elem,
+                                             RealMatrixX& m) {
     
     libmesh_error(); // to be implemented
 }
 
 
 std::unique_ptr<MAST::FEBase>
-MAST::HeatConductionTransientAssembly::build_fe(const libMesh::Elem& elem) {
+MAST::HeatConductionTransientAssemblyElemOperations::
+build_fe(const libMesh::Elem& elem) {
     
     
     const MAST::ElementPropertyCardBase& p =
-    dynamic_cast<const MAST::ElementPropertyCardBase&>(_discipline->get_property_card(elem));
+    dynamic_cast<const MAST::ElementPropertyCardBase&>
+    (_assembly->discipline().get_property_card(elem));
     
-    return std::unique_ptr<MAST::FEBase>(MAST::build_conduction_fe(*_system, elem, p));
+    return std::unique_ptr<MAST::FEBase>(MAST::build_conduction_fe
+                                         (_assembly->system_init(), elem, p));
 }
 
 
 std::unique_ptr<MAST::ElementBase>
-MAST::HeatConductionTransientAssembly::_build_elem(const libMesh::Elem& elem) {
+MAST::HeatConductionTransientAssemblyElemOperations::
+build_elem(const libMesh::Elem& elem) {
     
     
     const MAST::ElementPropertyCardBase& p =
-    dynamic_cast<const MAST::ElementPropertyCardBase&>(_discipline->get_property_card(elem));
+    dynamic_cast<const MAST::ElementPropertyCardBase&>
+    (_assembly->discipline().get_property_card(elem));
     
     MAST::ElementBase* rval =
-    new MAST::HeatConductionElementBase(*_system, *this, elem, p);
+    new MAST::HeatConductionElementBase
+    (_assembly->system_init(), *this, elem, p);
     
     return std::unique_ptr<MAST::ElementBase>(rval);
 }

@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -70,7 +70,8 @@ namespace MAST {
     class DirichletBoundaryCondition;
     class BoundaryConditionBase;
     class StressStrainOutputBase;
-    class StructuralNonlinearAssembly;
+    class NonlinearImplicitAssembly;
+    class StructuralNonlinearAssemblyElemOperations;        
     class SectionOffset;
     class StiffenedPlateWeight;
     
@@ -175,7 +176,8 @@ namespace MAST {
         MAST::StructuralDiscipline*           _discipline;
         
         // nonlinear assembly object
-        MAST::StructuralNonlinearAssembly *_assembly;
+        MAST::NonlinearImplicitAssembly                 *_assembly;
+        MAST::StructuralNonlinearAssemblyElemOperations *_elem_ops;
         
         // create the property functions and add them to the
         MAST::Parameter

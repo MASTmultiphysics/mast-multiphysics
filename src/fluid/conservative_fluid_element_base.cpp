@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -29,19 +29,19 @@
 #include "fluid/surface_integrated_pressure_output.h"
 #include "base/nonlinear_system.h"
 #include "mesh/fe_base.h"
-#include "base/assembly_base.h"
+#include "base/assembly_elem_operation.h"
 
 
 MAST::ConservativeFluidElementBase::
-ConservativeFluidElementBase(MAST::SystemInitialization& sys,
-                             MAST::AssemblyBase&  assembly,
-                             const libMesh::Elem& elem,
-                             const MAST::FlightCondition& f):
+ConservativeFluidElementBase(MAST::SystemInitialization&    sys,
+                             MAST::AssemblyElemOperations&  assembly_ops,
+                             const libMesh::Elem&           elem,
+                             const MAST::FlightCondition&   f):
 MAST::FluidElemBase(elem.dim(), f),
-MAST::ElementBase(sys, assembly, elem) {
+MAST::ElementBase(sys, assembly_ops, elem) {
     
     // initialize the finite element data structures
-    _fe = assembly.build_fe(_elem).release();
+    _fe = assembly_ops.build_fe(_elem).release();
     _fe->init(elem);
 }
 
@@ -782,7 +782,7 @@ symmetry_surface_residual(bool request_jacobian,
                           MAST::BoundaryConditionBase& p) {
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem));
+    std::unique_ptr<MAST::FEBase> fe(_assembly_ops.build_fe(_elem));
     fe->init_for_side(_elem, s, false);
 
     const std::vector<Real> &JxW                 = fe->get_JxW();
@@ -889,7 +889,7 @@ slip_wall_surface_residual(bool request_jacobian,
     // qi ni = 0       (since heat flux occurs only on no-slip wall and far-field bc)
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem));
+    std::unique_ptr<MAST::FEBase> fe(_assembly_ops.build_fe(_elem));
     fe->init_for_side(_elem, s, false);
 
     const std::vector<Real> &JxW                 = fe->get_JxW();
@@ -1034,7 +1034,7 @@ linearized_slip_wall_surface_residual(bool request_jacobian,
     // qi ni = 0       (since heat flux occurs only on no-slip wall and far-field bc)
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem));
+    std::unique_ptr<MAST::FEBase> fe(_assembly_ops.build_fe(_elem));
     fe->init_for_side(_elem, s, false);
 
     const std::vector<Real> &JxW                 = fe->get_JxW();
@@ -1227,7 +1227,7 @@ noslip_wall_surface_residual(bool request_jacobian,
     // qi ni = 0       (since heat flux occurs only on no-slip wall and far-field bc)
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem));
+    std::unique_ptr<MAST::FEBase> fe(_assembly_ops.build_fe(_elem));
     fe->init_for_side(_elem, s, true);
 
     const std::vector<Real> &JxW                 = fe->get_JxW();
@@ -1427,7 +1427,7 @@ far_field_surface_residual(bool request_jacobian,
     // -- f_diff_i ni  = f_diff                         (evaluation of diffusion flux based on domain solution)
 
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem));
+    std::unique_ptr<MAST::FEBase> fe(_assembly_ops.build_fe(_elem));
     fe->init_for_side(_elem, s, false);
 
     const std::vector<Real> &JxW                 = fe->get_JxW();
@@ -1640,7 +1640,7 @@ _calculate_surface_integrated_load(bool request_derivative,
                                    MAST::OutputFunctionBase& output) {
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem));
+    std::unique_ptr<MAST::FEBase> fe(_assembly_ops.build_fe(_elem));
     fe->init_for_side(_elem, s, false);
     
     const std::vector<Real> &JxW                 = fe->get_JxW();

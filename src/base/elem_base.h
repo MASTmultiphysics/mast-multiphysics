@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -37,6 +37,7 @@ namespace MAST {
     
     // Forward declerations
     class FunctionBase;
+    class AssemblyElemOperations;
     class SystemInitialization;
     class LocalElemBase;
     class OutputFunctionBase;
@@ -80,9 +81,9 @@ namespace MAST {
          *   \param elem libMesh::Elem object on which calculations will be
          *   performed.
          */
-        ElementBase(MAST::SystemInitialization& sys,
-                    MAST::AssemblyBase&         assembly,
-                    const libMesh::Elem&        elem);
+        ElementBase(MAST::SystemInitialization&     sys,
+                    MAST::AssemblyElemOperations&   assembly_ops,
+                    const libMesh::Elem&            elem);
         
         
         /*!
@@ -101,8 +102,8 @@ namespace MAST {
         /*!
          *   @returns a reference to the libMesh::System object
          */
-        MAST::AssemblyBase& assembly() {
-            return _assembly;
+        MAST::AssemblyElemOperations& assembly_ops() {
+            return _assembly_ops;
         }
 
         
@@ -249,7 +250,7 @@ namespace MAST {
         /*!
          *    Assembly object
          */
-        MAST::AssemblyBase& _assembly;
+        MAST::AssemblyElemOperations& _assembly_ops;
         
         /*!
          *   geometric element for which the computations are performed

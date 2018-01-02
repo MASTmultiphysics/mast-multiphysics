@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -29,19 +29,19 @@
 #include "base/mesh_field_function.h"
 #include "base/nonlinear_system.h"
 #include "mesh/local_elem_fe.h"
-#include "base/assembly_base.h"
+#include "base/assembly_elem_operation.h"
 
 
 MAST::HeatConductionElementBase::
-HeatConductionElementBase(MAST::SystemInitialization& sys,
-                          MAST::AssemblyBase& assembly,
-                          const libMesh::Elem& elem,
+HeatConductionElementBase(MAST::SystemInitialization&          sys,
+                          MAST::AssemblyElemOperations&        assembly_ops,
+                          const libMesh::Elem&                 elem,
                           const MAST::ElementPropertyCardBase& p):
-MAST::ElementBase(sys, assembly, elem),
+MAST::ElementBase(sys, assembly_ops, elem),
 _property(p) {
 
     // now initialize the finite element data structures
-    _fe = assembly.build_fe(_elem).release();
+    _fe = assembly_ops.build_fe(_elem).release();
     _fe->init(_elem);
 }
 
@@ -538,7 +538,7 @@ surface_flux_residual(bool request_jacobian,
                       MAST::BoundaryConditionBase& p) {
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem));
+    std::unique_ptr<MAST::FEBase> fe(_assembly_ops.build_fe(_elem));
     fe->init_for_side(_elem, s, false);
 
     
@@ -650,7 +650,7 @@ surface_convection_residual(bool request_jacobian,
                             MAST::BoundaryConditionBase& p) {
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem));
+    std::unique_ptr<MAST::FEBase> fe(_assembly_ops.build_fe(_elem));
     fe->init_for_side(_elem, s, false);
 
     // get the function from this boundary condition
@@ -793,7 +793,7 @@ surface_radiation_residual(bool request_jacobian,
                            MAST::BoundaryConditionBase& p) {
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem));
+    std::unique_ptr<MAST::FEBase> fe(_assembly_ops.build_fe(_elem));
     fe->init_for_side(_elem, s, false);
 
     // get the function from this boundary condition

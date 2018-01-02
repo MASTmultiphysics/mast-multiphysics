@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -41,6 +41,7 @@
 #include "libmesh/mesh_generation.h"
 #include "libmesh/exodusII_io.h"
 #include "libmesh/numeric_vector.h"
+#include "libmesh/parameter_vector.h"
 
 extern libMesh::LibMeshInit* __init;
 
@@ -354,7 +355,7 @@ MAST::BeamColumnBucklingAnalysis::solve(bool if_write_output,
                                *_sys->solution,
                                *_sys->solution);
     
-    assembly.attach_discipline_and_system(*_discipline, *_structural_sys);
+    assembly.attach_discipline_and_system(assembly, *_discipline, *_structural_sys);
     _sys->eigenproblem_solve();
     
     
@@ -426,7 +427,7 @@ MAST::BeamColumnBucklingAnalysis::sensitivity_solve(MAST::Parameter& p,
     
     // create the nonlinear assembly object
     MAST::StructuralBucklingEigenproblemAssembly   assembly;
-    assembly.attach_discipline_and_system(*_discipline, *_structural_sys);
+    assembly.attach_discipline_and_system(assembly, *_discipline, *_structural_sys);
     _sys->eigenproblem_sensitivity_solve(params, eig);
     assembly.clear_discipline_and_system();
     

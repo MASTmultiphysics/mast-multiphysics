@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -17,117 +17,54 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#ifndef __mast__structural_nonlinear_assembly__
-#define __mast__structural_nonlinear_assembly__
+#ifndef __mast__structural_nonlinear_assembly_elem_operations__
+#define __mast__structural_nonlinear_assembly_elem_operations__
 
 // MAST includes
-#include "base/nonlinear_implicit_assembly.h"
+#include "base/nonlinear_implicit_assembly_elem_operations.h"
 
 
 namespace MAST {
     
 
     // Forward declerations
-    class RealOutputFunction;
-    class FunctionBase;
+    class StructuralAssembly;
     
     
-    class StructuralNonlinearAssembly:
-    public MAST::NonlinearImplicitAssembly {
+    class StructuralNonlinearAssemblyElemOperations:
+    public MAST::NonlinearImplicitAssemblyElemOperations {
         
     public:
         
         /*!
          *   constructor associates this assembly object with the system
          */
-        StructuralNonlinearAssembly();
+        StructuralNonlinearAssemblyElemOperations();
         
         
         /*!
          *   destructor resets the association of this assembly object with
          *   the system
          */
-        virtual ~StructuralNonlinearAssembly();
+        virtual ~StructuralNonlinearAssemblyElemOperations();
         
+        /*!
+         *   attached the incompatible solution object
+         */
+        void attach_incompatible_solution_object(MAST::StructuralAssembly& str_assembly);
+        
+        
+        /*!
+         *   clear the incompatible solution object
+         */
+        void clear_incompatible_solution_object();
 
-        /*!
-         *   attaches a system to this discipline, and vice-a-versa
-         */
-        virtual void
-        attach_discipline_and_system(MAST::PhysicsDisciplineBase& discipline,
-                                     MAST::SystemInitialization& system);
-        
-        
-        /*!
-         *   clears association with a system to this discipline, and vice-a-versa
-         */
-        virtual void
-        clear_discipline_and_system( );
-        
-        
-        /*!
-         *   asks the system to update the nonlinear incompatible mode solution
-         */
-        void update_incompatible_solution(libMesh::NumericVector<Real>& X,
-                                          libMesh::NumericVector<Real>& dX);
- 
-        
-        /*!
-         *   Evaluates the volume and boundary outputs for the specified
-         *   solution. This reimplements the virtual method from the parent 
-         *   class to handle the structural compliance evaluation.
-         */
-        virtual void calculate_outputs(const libMesh::NumericVector<Real>& X);
 
-        
-        /*!
-         *   This reimplements the virtual method from the parent
-         *   class to handle the structural compliance evaluation.
-         */
-        void calculate_output_sensitivity(libMesh::ParameterVector& params,
-                                          const bool if_total_sensitivity,
-                                          const libMesh::NumericVector<Real>& X);
-
-        
-        /*!
-         *   @returns a MAST::FEBase object for calculation of finite element
-         *   quantities. This creates LocalElemFE for 1D and 2D elements.
-         */
-        virtual std::unique_ptr<MAST::FEBase>
-        build_fe(const libMesh::Elem& e);
-
-    protected:
-        
-        /*!
-         *  calculates the elastic compliance of the system \p S about the
-         *  solution defined by \p X. If sensitivity of the quantity is
-         *  desired with respect to a parameter, then the parameter can
-         *  be specified. If \p dX is provided, then the total sensitivity
-         *  is evaluated with respect to the parameter, otherwise the partial
-         *  derivative of the output quantity is evaluated.
-         */
-        virtual void
-        _calculate_compliance (const libMesh::NumericVector<Real>& X,
-                               libMesh::NonlinearImplicitSystem& S,
-                               MAST::RealOutputFunction& output,
-                               const MAST::FunctionBase* f = nullptr,
-                               const libMesh::NumericVector<Real>* dX = nullptr);
-        
-        
-
-        /*!
-         *   @returns a smart-pointer to a newly created element for
-         *   calculation of element quantities.
-         */
-        virtual std::unique_ptr<MAST::ElementBase>
-        _build_elem(const libMesh::Elem& elem);
-        
         /*!
          *   sets the element solution(s) before calculations
          */
-        virtual void _set_elem_sol(MAST::ElementBase& elem,
-                                   const RealVectorX& sol);
-
+        virtual void set_elem_sol(MAST::ElementBase& elem,
+                                  const RealVectorX& sol);
         
         /*!
          *   performs the element calculations over \par elem, and returns
@@ -135,10 +72,11 @@ namespace MAST {
          *   \par vec, respectively. \par if_jac tells the method to also
          *   assemble the Jacobian, in addition to the residual vector.
          */
-        virtual void _elem_calculations(MAST::ElementBase& elem,
-                                        bool if_jac,
-                                        RealVectorX& vec,
-                                        RealMatrixX& mat);
+        virtual void elem_calculations(MAST::ElementBase& elem,
+                                       bool if_jac,
+                                       RealVectorX& vec,
+                                       RealMatrixX& mat);
+        
         
         /*!
          *   performs the element calculations over \par elem, and returns
@@ -148,32 +86,82 @@ namespace MAST {
          *   forces/etc.) are added to this vector.
          */
         virtual void
-        _elem_linearized_jacobian_solution_product(MAST::ElementBase& elem,
-                                                   RealVectorX& vec);
-
+        elem_linearized_jacobian_solution_product(MAST::ElementBase& elem,
+                                                  RealVectorX& vec);
+        
+        
         /*!
          *   performs the element sensitivity calculations over \par elem,
          *   and returns the element residual sensitivity in \par vec .
          */
-        virtual void _elem_sensitivity_calculations(MAST::ElementBase& elem,
-                                                    bool if_jac,
-                                                    RealVectorX& vec,
-                                                    RealMatrixX& mat);
-
+        virtual void elem_sensitivity_calculations(MAST::ElementBase& elem,
+                                                   RealVectorX& vec);
+        
+        
         /*!
          *   calculates \f$ d ([J] \{\Delta X\})/ dX  \f$ over \par elem,
          *   and returns the matrix in \par vec .
          */
         virtual void
-        _elem_second_derivative_dot_solution_assembly(MAST::ElementBase& elem,
-                                                      RealMatrixX& mat);
+        elem_second_derivative_dot_solution_assembly(MAST::ElementBase& elem,
+                                                     RealMatrixX& mat);
 
+        
+        
         /*!
-         *   map of local incompatible mode solution per 3D elements
+         *   @returns a MAST::FEBase object for calculation of finite element
+         *   quantities. This creates LocalElemFE for 1D and 2D elements.
          */
-        std::map<const libMesh::Elem*, RealVectorX> _incompatible_sol;
+        virtual std::unique_ptr<MAST::FEBase>
+        build_fe(const libMesh::Elem& e);
+        
+        /*!
+         *   @returns a smart-pointer to a newly created element for
+         *   calculation of element quantities.
+         */
+        virtual std::unique_ptr<MAST::ElementBase>
+        build_elem(const libMesh::Elem& elem);
+
+//        /*!
+//         *   Evaluates the volume and boundary outputs for the specified
+//         *   solution. This reimplements the virtual method from the parent
+//         *   class to handle the structural compliance evaluation.
+//         */
+//        virtual void calculate_outputs(const libMesh::NumericVector<Real>& X);
+//
+//
+//        /*!
+//         *   This reimplements the virtual method from the parent
+//         *   class to handle the structural compliance evaluation.
+//         */
+//        void calculate_output_sensitivity(libMesh::ParameterVector& params,
+//                                          const bool if_total_sensitivity,
+//                                          const libMesh::NumericVector<Real>& X);
+//
+//
+//        /*!
+//         *  calculates the elastic compliance of the system \p S about the
+//         *  solution defined by \p X. If sensitivity of the quantity is
+//         *  desired with respect to a parameter, then the parameter can
+//         *  be specified. If \p dX is provided, then the total sensitivity
+//         *  is evaluated with respect to the parameter, otherwise the partial
+//         *  derivative of the output quantity is evaluated.
+//         */
+//        virtual void
+//        calculate_compliance (const libMesh::NumericVector<Real>& X,
+//                              libMesh::NonlinearImplicitSystem& S,
+//                              MAST::RealOutputFunction& output,
+//                              const MAST::FunctionBase* f = nullptr,
+//                              const libMesh::NumericVector<Real>* dX = nullptr);
+
+
+    protected:
+        
+        
+        MAST::StructuralAssembly* _incompatible_sol_assembly;
+        
     };
 }
 
 
-#endif // __mast__structural_nonlinear_assembly__
+#endif // __mast__structural_nonlinear_assembly_elem_operations__

@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -31,18 +31,18 @@
 #include "base/parameter.h"
 #include "base/constant_field_function.h"
 #include "mesh/local_elem_fe.h"
-#include "base/assembly_base.h"
+#include "base/assembly_elem_operation.h"
 
 
 MAST::StructuralElement2D::
 StructuralElement2D(MAST::SystemInitialization& sys,
-                    MAST::AssemblyBase& assembly,
+                    MAST::AssemblyElemOperations& assembly_ops,
                     const libMesh::Elem& elem,
                     const MAST::ElementPropertyCardBase& p):
-MAST::BendingStructuralElem(sys, assembly, elem, p) {
+MAST::BendingStructuralElem(sys, assembly_ops, elem, p) {
 
     // now initialize the finite element data structures
-    _fe            = assembly.build_fe(_elem).release();
+    _fe            = assembly_ops.build_fe(_elem).release();
     _fe->init(_elem);
     _Tmat          = dynamic_cast<MAST::LocalElemFE*>(_fe)->local_elem().T_matrix();
 

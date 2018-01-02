@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -26,6 +26,7 @@
 #include "examples/structural/beam_piston_theory_time_accurate/beam_piston_theory_time_accurate.h"
 #include "elasticity/structural_system_initialization.h"
 #include "elasticity/structural_element_base.h"
+#include "base/transient_assembly.h"
 #include "elasticity/structural_transient_assembly.h"
 #include "elasticity/structural_discipline.h"
 #include "elasticity/piston_theory_boundary_condition.h"
@@ -332,12 +333,14 @@ MAST::BeamPistonTheoryTimeAccurateAnalysis::solve(bool if_write_output) {
     libmesh_assert(_initialized);
         
     // create the nonlinear assembly object
-    MAST::StructuralTransientAssembly   assembly;
-    
+    MAST::TransientAssembly                           assembly;
+    MAST::StructuralTransientAssemblyElemOperations   elem_ops;
+
     // time solver
     MAST::SecondOrderNewmarkTransientSolver solver;
     
-    assembly.attach_discipline_and_system(*_discipline,
+    assembly.attach_discipline_and_system(elem_ops,
+                                          *_discipline,
                                           solver,
                                           *_structural_sys);
     
@@ -447,9 +450,16 @@ MAST::BeamPistonTheoryTimeAccurateAnalysis::sensitivity_solve(MAST::Parameter& p
     _discipline->add_parameter(p);
     
     // create the nonlinear assembly object
-    MAST::StructuralTransientAssembly   assembly;
+    MAST::TransientAssembly                           assembly;
+    MAST::StructuralTransientAssemblyElemOperations   elem_ops;
     
-    assembly.attach_discipline_and_system(*_discipline, *_structural_sys);
+    // time solver
+    MAST::SecondOrderNewmarkTransientSolver solver;
+    
+    assembly.attach_discipline_and_system(elem_ops,
+                                          *_discipline,
+                                          solver,
+                                          *_structural_sys);
 
     MAST::NonlinearSystem& nonlin_sys = assembly.system();
 

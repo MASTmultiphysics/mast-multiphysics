@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -34,8 +34,7 @@
 #include "base/parameter.h"
 #include "base/constant_field_function.h"
 #include "base/boundary_condition_base.h"
-#include "base/complex_mesh_field_function.h"
-#include "elasticity/complex_normal_rotation_mesh_function.h"
+#include "base/transient_assembly.h"
 #include "elasticity/structural_system_initialization.h"
 #include "elasticity/structural_discipline.h"
 #include "elasticity/structural_element_base.h"
@@ -691,11 +690,13 @@ MAST::BeamEulerFSIAnalysis::solve(bool if_write_output,
     _fluid_sys_init->initialize_solution(s);
     
     // create the nonlinear assembly object
-    MAST::ConservativeFluidTransientAssembly        fluid_assembly;
-    MAST::FirstOrderNewmarkTransientSolver          fluid_transient_solver;
+    MAST::TransientAssembly                                  fluid_assembly;
+    MAST::ConservativeFluidTransientAssemblyElemOperations   fluid_elem_ops;
+    MAST::FirstOrderNewmarkTransientSolver                   fluid_transient_solver;
     
     // now setup the assembly object
-    fluid_assembly.attach_discipline_and_system(*_fluid_discipline,
+    fluid_assembly.attach_discipline_and_system(fluid_elem_ops,
+                                                *_fluid_discipline,
                                                 fluid_transient_solver,
                                                 *_fluid_sys_init);
 
@@ -727,14 +728,16 @@ MAST::BeamEulerFSIAnalysis::solve(bool if_write_output,
     
     
     // create the nonlinear assembly object for the structural solver
-    MAST::StructuralTransientAssembly       structural_assembly;
-    MAST::SecondOrderNewmarkTransientSolver structural_transient_solver;
+    MAST::TransientAssembly                          structural_assembly;
+    MAST::StructuralTransientAssemblyElemOperations  structural_elem_ops;
+    MAST::SecondOrderNewmarkTransientSolver          structural_transient_solver;
     
     structural_transient_solver.dt       = _time_step_size;
     
     
     // create the nonlinear assembly object
-    structural_assembly.attach_discipline_and_system(*_structural_discipline,
+    structural_assembly.attach_discipline_and_system(structural_elem_ops,
+                                                     *_structural_discipline,
                                                      structural_transient_solver,
                                                      *_structural_sys_init);
 

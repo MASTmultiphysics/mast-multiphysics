@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -46,7 +46,7 @@ namespace MAST {
          *   Constructor.
          */
         StructuralElementBase(MAST::SystemInitialization& sys,
-                              MAST::AssemblyBase& assembly,
+                              MAST::AssemblyElemOperations& assembly,
                               const libMesh::Elem& elem,
                               const MAST::ElementPropertyCardBase& p);
         
@@ -724,7 +724,7 @@ namespace MAST {
      */
     std::unique_ptr<MAST::StructuralElementBase>
     build_structural_element(MAST::SystemInitialization& sys,
-                             MAST::AssemblyBase& assembly,
+                             MAST::AssemblyElemOperations& assembly,
                              const libMesh::Elem& elem,
                              const MAST::ElementPropertyCardBase& p);
     

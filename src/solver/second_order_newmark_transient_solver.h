@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -97,33 +97,24 @@ namespace MAST {
                                   const libMesh::NumericVector<Real>& sol);
 
     
-    protected:
-        
-        /*!
-         *    @returns the number of iterations for which solution and velocity
-         *    are to be stored.
-         */
-        virtual unsigned int _n_iters_to_store() const {
-            return 2;
-        }
-        
-        /*!
-         *    provides the element with the transient data for calculations
-         */
-        virtual void _set_element_data(const std::vector<libMesh::dof_id_type>& dof_indices,
-                                       const std::vector<libMesh::NumericVector<Real>*>& sols,
-                                       MAST::ElementBase& elem);
-
         /*!
          *    provides the element with the transient data for calculations
          */
         virtual void
-        _set_element_perturbed_data
+        set_element_data(const std::vector<libMesh::dof_id_type>& dof_indices,
+                         const std::vector<libMesh::NumericVector<Real>*>& sols,
+                         MAST::ElementBase& elem);
+        
+        /*!
+         *    provides the element with the transient data for calculations
+         */
+        virtual void
+        set_element_perturbed_data
         (const std::vector<libMesh::dof_id_type>& dof_indices,
          const std::vector<libMesh::NumericVector<Real>*>& sols,
          MAST::ElementBase& elem);
-
-
+        
+        
         /*!
          *   performs the element calculations over \par elem, and returns
          *   the element vector and matrix quantities in \par mat and
@@ -131,11 +122,10 @@ namespace MAST {
          *   assemble the Jacobian, in addition to the residual vector.
          */
         virtual void
-        _elem_calculations(MAST::ElementBase& elem,
-                           const std::vector<libMesh::dof_id_type>& dof_indices,
-                           bool if_jac,
-                           RealVectorX& vec,
-                           RealMatrixX& mat);
+        elem_calculations(MAST::ElementBase& elem,
+                          bool if_jac,
+                          RealVectorX& vec,
+                          RealMatrixX& mat);
         
         /*!
          *   performs the element calculations over \par elem, and returns
@@ -145,19 +135,36 @@ namespace MAST {
          *   forces/etc.) are added to this vector.
          */
         virtual void
-        _elem_linearized_jacobian_solution_product(MAST::ElementBase& elem,
-                                                   const std::vector<libMesh::dof_id_type>& dof_indices,
-                                                   RealVectorX& vec);
-
+        elem_linearized_jacobian_solution_product(MAST::ElementBase& elem,
+                                                  RealVectorX& vec);
         
         /*!
          *   performs the element sensitivity calculations over \par elem,
          *   and returns the element residual sensitivity in \par vec .
          */
         virtual void
-        _elem_sensitivity_calculations(MAST::ElementBase& elem,
-                                       const std::vector<libMesh::dof_id_type>& dof_indices,
-                                       RealVectorX& vec);
+        elem_sensitivity_calculations(MAST::ElementBase& elem,
+                                      RealVectorX& vec);
+        
+        /*!
+         *   calculates \f$ d ([J] \{\Delta X\})/ dX  \f$ over \par elem,
+         *   and returns the matrix in \par vec .
+         */
+        virtual void
+        elem_second_derivative_dot_solution_assembly(MAST::ElementBase& elem,
+                                                     RealMatrixX& mat) {
+            libmesh_assert(false); // to be implemented
+        }
+
+    protected:
+        
+        /*!
+         *    @returns the number of iterations for which solution and velocity
+         *    are to be stored.
+         */
+        virtual unsigned int _n_iters_to_store() const {
+            return 2;
+        }
     };
     
 }

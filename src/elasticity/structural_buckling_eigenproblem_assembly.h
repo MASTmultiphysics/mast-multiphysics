@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -23,7 +23,7 @@
 
 // MAST includes
 #include "base/eigenproblem_assembly.h"
-
+#include "base/eigenproblem_assembly_elem_operations.h"
 
 namespace MAST {
 
@@ -32,7 +32,8 @@ namespace MAST {
     
     
     class StructuralBucklingEigenproblemAssembly:
-    public MAST::EigenproblemAssembly {
+    public MAST::EigenproblemAssembly,
+    public MAST::EigenproblemAssemblyElemOperations {
     public:
         
         /*!
@@ -102,54 +103,34 @@ namespace MAST {
         build_fe(const libMesh::Elem& e);
 
 
-    protected:
-        
-        /*!
-         *   Sets element solution.
-         */
-        virtual void _set_elem_sol(MAST::ElementBase& elem,
-                                   const RealVectorX& sol);
-        
         /*!
          *   @returns a smart-pointer to a newly created element for
          *   calculation of element quantities.
          */
         virtual std::unique_ptr<MAST::ElementBase>
-        _build_elem(const libMesh::Elem& elem);
-        
-        /*!
-         *   performs the element calculations over \par elem, and returns
-         *   the element matrices for the eigenproblem
-         *   \f$ A x = \lambda B x \f$.
-         */
-        virtual void
-        _elem_calculations(MAST::ElementBase& elem,
-                           RealMatrixX& mat_A,
-                           RealMatrixX& mat_B) {
-            libmesh_error(); // should not get here.
-        }
-        
-        /*!
-         *   performs the element sensitivity calculations over \par elem,
-         *   and returns the element matrices for the eigenproblem
-         *   \f$ A x = \lambda B x \f$.
-         */
-        virtual void
-        _elem_sensitivity_calculations(MAST::ElementBase& elem,
-                                       RealMatrixX& mat_A,
-                                       RealMatrixX& mat_B) {
-            libmesh_error(); // should not get here.
-        }
+        build_elem(const libMesh::Elem& elem);
 
         
+        virtual void
+        set_elem_sol(MAST::ElementBase& elem,
+                     const RealVectorX& sol);
+        
+        /*!
+         *   sets the element solution(s) before calculations
+         */
+        virtual void
+        set_elem_sol_sens(MAST::ElementBase& elem,
+                          const RealVectorX& sol);
+        
         /*!
          *   performs the element calculations over \par elem, and returns
          *   the element matrices for the eigenproblem
          *   \f$ A x = \lambda B x \f$.
          */
         virtual void
-        _elem_calculations(MAST::ElementBase& elem,
-                           RealMatrixX& mat_A);
+        elem_calculations(MAST::ElementBase& elem,
+                          RealMatrixX& mat_A,
+                          RealMatrixX& mat_B);
         
         /*!
          *   performs the element sensitivity calculations over \par elem,
@@ -157,8 +138,12 @@ namespace MAST {
          *   \f$ A x = \lambda B x \f$.
          */
         virtual void
-        _elem_sensitivity_calculations(MAST::ElementBase& elem,
-                                       RealMatrixX& mat_A);
+        elem_sensitivity_calculations(MAST::ElementBase& elem,
+                                      bool base_sol,
+                                      RealMatrixX& mat_A,
+                                      RealMatrixX& mat_B);
+
+    protected:
         
         /*!
          *   map of local incompatible mode solution per 3D elements

@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -22,10 +22,14 @@
 
 // MAST includes
 #include "base/assembly_base.h"
-#include "base/eigensystem_assembly.h"
 
+// libMesh includes
+#include "libmesh/sparse_matrix.h"
 
 namespace MAST {
+    
+    // Forward declerations
+    class EigenproblemAssemblyElemOperations;
     
     
     /*!
@@ -34,8 +38,7 @@ namespace MAST {
      */
     
     class EigenproblemAssembly:
-    public MAST::AssemblyBase,
-    public MAST::EigenSystemAssembly {
+    public MAST::AssemblyBase {
         
     public:
         
@@ -55,7 +58,8 @@ namespace MAST {
          *   attaches a system to this discipline, and vice-a-versa
          */
         virtual void
-        attach_discipline_and_system(MAST::PhysicsDisciplineBase& discipline,
+        attach_discipline_and_system(MAST::EigenproblemAssemblyElemOperations& elem_ops,
+                                     MAST::PhysicsDisciplineBase& discipline,
                                      MAST::SystemInitialization& system);
         
         
@@ -158,37 +162,10 @@ namespace MAST {
     protected:
         
         /*!
-         *   sets the element solution(s) before calculations
+         *    object to provide transient element operations
          */
-        virtual void _set_elem_sol(MAST::ElementBase& elem,
-                                   const RealVectorX& sol);
+        MAST::EigenproblemAssemblyElemOperations* _eigenproblem_elem_ops;
 
-        /*!
-         *   sets the element solution(s) before calculations
-         */
-        virtual void _set_elem_sol_sens(MAST::ElementBase& elem,
-                                        const RealVectorX& sol);
-
-        /*!
-         *   performs the element calculations over \par elem, and returns
-         *   the element matrices for the eigenproblem
-         *   \f$ A x = \lambda B x \f$.
-         */
-        virtual void
-        _elem_calculations(MAST::ElementBase& elem,
-                           RealMatrixX& mat_A,
-                           RealMatrixX& mat_B) = 0;
-        
-        /*!
-         *   performs the element sensitivity calculations over \par elem,
-         *   and returns the element matrices for the eigenproblem
-         *   \f$ A x = \lambda B x \f$.
-         */
-        virtual void
-        _elem_sensitivity_calculations(MAST::ElementBase& elem,
-                                       RealMatrixX& mat_A,
-                                       RealMatrixX& mat_B) = 0;
-        
         /*!
          *   base solution about which this eigenproblem is defined. This
          *   vector stores the localized values necessary to perform element

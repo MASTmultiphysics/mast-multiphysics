@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -26,27 +26,28 @@
 
 namespace MAST {
     
-    
-    class OutputAssemblyBase:
-    public MAST::AssemblyBase {
-    
-    public:
-        OutputAssemblyBase();
-        
-        virtual ~OutputAssemblyBase();
-        
-
-        /*!
-         *   clears association with a system to this discipline, and vice-a-versa
-         */
-        virtual void
-        clear_discipline_and_system( );
-        
-        
-        
-    protected:
-        
-    };
+//    // Forward declerations
+//    
+//    class OutputAssemblyBase:
+//    public MAST::AssemblyBase {
+//    
+//    public:
+//        OutputAssemblyBase();
+//        
+//        virtual ~OutputAssemblyBase();
+//        
+//
+//        /*!
+//         *   clears association with a system to this discipline, and vice-a-versa
+//         */
+//        virtual void
+//        clear_discipline_and_system( );
+//        
+//        
+//        
+//    protected:
+//        
+//    };
 }
 
 

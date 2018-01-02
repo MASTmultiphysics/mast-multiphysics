@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -27,7 +27,7 @@
 #include "mesh/local_elem_base.h"
 #include "base/nonlinear_system.h"
 #include "mesh/fe_base.h"
-#include "base/assembly_base.h"
+#include "base/assembly_elem_operation.h"
 
 
 namespace MAST {
@@ -152,7 +152,7 @@ calculate_transverse_shear_residual(bool request_jacobian,
     // transverse shear
 
     std::unique_ptr<MAST::FEBase>
-    fe(_structural_elem.assembly().build_fe(_elem));
+    fe(_structural_elem.assembly_ops().build_fe(_elem));
     fe->set_extra_quadrature_order(-_shear_quadrature_reduction);
     fe->init(_elem);
     

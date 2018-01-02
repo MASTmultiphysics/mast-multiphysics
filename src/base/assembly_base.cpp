@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -25,6 +25,7 @@
 #include "base/physics_discipline_base.h"
 #include "base/nonlinear_system.h"
 #include "mesh/fe_base.h"
+#include "base/assembly_elem_operation.h"
 
 
 // libMesh includes
@@ -34,9 +35,11 @@
 
 
 MAST::AssemblyBase::AssemblyBase():
-_discipline(nullptr),
-_system(nullptr),
-_sol_function(nullptr) {
+_elem_ops         (nullptr),
+_discipline       (nullptr),
+_system           (nullptr),
+_sol_function     (nullptr),
+_solver_monitor   (nullptr) {
     
 }
 
@@ -88,10 +91,78 @@ MAST::AssemblyBase::system() {
 }
 
 
+MAST::AssemblyElemOperations&
+MAST::AssemblyBase::get_elem_ops() {
+    
+    libmesh_assert_msg(_elem_ops,
+                       "Error: Not yet initialized.");
+    return *_elem_ops;
+}
+
+
+MAST::SystemInitialization&
+MAST::AssemblyBase::system_init()  {
+    
+    libmesh_assert_msg(_system,
+                       "Error: System not yet attached to Assembly.");
+    return *_system;
+}
+
+
+void
+MAST::AssemblyBase::set_solver_monitor(MAST::AssemblyBase::SolverMonitor& monitor) {
+    
+    libmesh_assert(!_solver_monitor);
+    _solver_monitor = &monitor;
+}
+
+
+MAST::AssemblyBase::SolverMonitor*
+MAST::AssemblyBase::get_solver_monitor() {
+    
+    return _solver_monitor;
+}
+
+void
+MAST::AssemblyBase::clear_solver_monitor() {
+    
+    _solver_monitor = nullptr;
+}
+
+
+void
+MAST::AssemblyBase::
+attach_discipline_and_system(MAST::AssemblyElemOperations& elem_ops,
+                             MAST::PhysicsDisciplineBase &discipline,
+                             MAST::SystemInitialization &system) {
+    
+    libmesh_assert_msg(!_discipline && !_system && !_elem_ops,
+                       "Error: Assembly should be cleared before attaching System.");
+    
+    _elem_ops   = &elem_ops;
+    _discipline = &discipline;
+    _system     = &system;
+    
+    _elem_ops->set_assembly(*this);
+}
+
+
+
+void
+MAST::AssemblyBase::
+clear_discipline_and_system( ) {
+    
+    _elem_ops->clear_assembly();
+    
+    _elem_ops      = nullptr;
+    _discipline    = nullptr;
+    _system        = nullptr;
+}
+
 
 
 std::unique_ptr<libMesh::NumericVector<Real> >
-MAST::AssemblyBase::_build_localized_vector(const libMesh::System& sys,
+MAST::AssemblyBase::build_localized_vector(const libMesh::System& sys,
                                             const libMesh::NumericVector<Real>& global) {
     
     libMesh::NumericVector<Real>* local =
@@ -148,7 +219,7 @@ MAST::AssemblyBase::calculate_outputs(const libMesh::NumericVector<Real>& X) {
     std::unique_ptr<MAST::ElementBase> physics_elem;
     
     std::unique_ptr<libMesh::NumericVector<Real> > localized_solution;
-    localized_solution.reset(_build_localized_vector(sys, X).release());
+    localized_solution.reset(build_localized_vector(sys, X).release());
     
     
     // if a solution function is attached, initialize it
@@ -168,7 +239,7 @@ MAST::AssemblyBase::calculate_outputs(const libMesh::NumericVector<Real>& X) {
         
         dof_map.dof_indices (elem, dof_indices);
         
-        physics_elem.reset(_build_elem(*elem).release());
+        physics_elem.reset(_elem_ops->build_elem(*elem).release());
         
         // get the solution
         unsigned int ndofs = (unsigned int)dof_indices.size();
@@ -224,7 +295,7 @@ calculate_output_sensitivity(libMesh::ParameterVector &params,
     localized_solution,
     localized_solution_sensitivity;
     
-    localized_solution.reset(_build_localized_vector(sys, X).release());
+    localized_solution.reset(build_localized_vector(sys, X).release());
     
     
     // if a solution function is attached, initialize it
@@ -236,7 +307,7 @@ calculate_output_sensitivity(libMesh::ParameterVector &params,
         
         if (if_total_sensitivity)
             localized_solution_sensitivity.reset
-            (_build_localized_vector(sys,
+            (build_localized_vector(sys,
                                      sys.get_sensitivity_solution(i)).release());
     
         libMesh::MeshBase::const_element_iterator       el     =
@@ -251,7 +322,7 @@ calculate_output_sensitivity(libMesh::ParameterVector &params,
             
             dof_map.dof_indices (elem, dof_indices);
             
-            physics_elem.reset(_build_elem(*elem).release());
+            physics_elem.reset(_elem_ops->build_elem(*elem).release());
             
             // get the solution
             unsigned int ndofs = (unsigned int)dof_indices.size();
@@ -298,15 +369,6 @@ calculate_output_sensitivity(libMesh::ParameterVector &params,
 }
 
 
-
-std::unique_ptr<MAST::FEBase>
-MAST::AssemblyBase::build_fe(const libMesh::Elem& elem) {
-    
-    std::unique_ptr<MAST::FEBase>
-    fe(new MAST::FEBase(*_system));
-    
-    return fe;
-}
 
 
 

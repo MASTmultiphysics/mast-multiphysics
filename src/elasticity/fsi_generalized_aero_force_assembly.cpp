@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -136,11 +136,11 @@ assemble_generalized_aerodynamic_force_matrix
     std::vector<libMesh::NumericVector<Real>*> localized_basis(n_basis);
 
     if (_base_sol)
-        localized_solution.reset(_build_localized_vector(_system->system(),
+        localized_solution.reset(build_localized_vector(_system->system(),
                                                          *_base_sol).release());
     
     for (unsigned int i=0; i<n_basis; i++)
-        localized_basis[i] = _build_localized_vector(_system->system(), *basis[i]).release();
+        localized_basis[i] = build_localized_vector(_system->system(), *basis[i]).release();
     
     //create a zero-clone copy for the imaginary component of the solution
     localized_zero.reset(localized_basis[0]->zero_clone().release());
@@ -188,7 +188,7 @@ assemble_generalized_aerodynamic_force_matrix
             
             dof_map.dof_indices (elem, dof_indices);
             
-            physics_elem.reset(_build_elem(*elem).release());
+            physics_elem.reset(this->build_elem(*elem).release());
             
             // get the solution
             unsigned int ndofs = (unsigned int)dof_indices.size();

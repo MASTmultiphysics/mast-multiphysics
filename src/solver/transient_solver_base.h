@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -23,7 +23,7 @@
 
 // MAST includes
 #include "base/mast_data_types.h"
-
+#include "base/nonlinear_implicit_assembly_elem_operations.h"
 
 // libMesh includes
 #include "libmesh/numeric_vector.h"
@@ -32,27 +32,28 @@
 namespace MAST {
     
     // Forward declerations
-    class TransientAssembly;
+    class TransientAssemblyElemOperations;
     class ElementBase;
     class NonlinearSystem;
     
     
-    class TransientSolverBase {
+    class TransientSolverBase:
+    public MAST::NonlinearImplicitAssemblyElemOperations {
     public:
         TransientSolverBase();
         
         virtual ~TransientSolverBase();
 
         /*!
-         *   Attaches the assembly object that provides the x_dot, M and J
-         *   quantities for the element
+         *   Attaches the assembly elem operations object that provides the
+         *   x_dot, M and J quantities for the element
          */
-        void set_assembly(MAST::TransientAssembly& assembly);
+        void set_assembly_ops(MAST::TransientAssemblyElemOperations& assembly_ops);
 
         /*!
-         *   Clears the assembly object
+         *   Clears the assembly elem operations object
          */
-        void clear_assembly();
+        void clear_assembly_ops();
         
         /*!
          *   time step
@@ -171,13 +172,39 @@ namespace MAST {
         (const libMesh::NumericVector<Real>& current_sol,
          std::vector<libMesh::NumericVector<Real>*>& qtys);
 
-        /*!
-         *    TransientAssembly needs to be able to call the assembly routines
-         *    of this class.
-         */
-        friend class MAST::TransientAssembly;
 
+        /*!
+         *   sets the element solution(s) before calculations
+         */
+        virtual void set_elem_sol(MAST::ElementBase& elem,
+                                  const RealVectorX& sol) {
+            
+            // this should not be called for this class. 
+            libmesh_assert(false);
+        }
+
+        /*!
+         *    provides the element with the transient data for calculations
+         */
+        virtual void
+        set_element_data(const std::vector<libMesh::dof_id_type>& dof_indices,
+                          const std::vector<libMesh::NumericVector<Real>*>& sols,
+                          MAST::ElementBase& elem) = 0;
         
+        /*!
+         *    provides the element with the transient data for calculations
+         */
+        virtual void
+        set_element_perturbed_data
+        (const std::vector<libMesh::dof_id_type>& dof_indices,
+         const std::vector<libMesh::NumericVector<Real>*>& sols,
+         MAST::ElementBase& elem) = 0;
+        
+        virtual std::unique_ptr<MAST::ElementBase>
+        build_elem(const libMesh::Elem& elem) {
+            libmesh_assert(false); // should not get called.
+        }
+
     protected:
         
         /*!
@@ -191,64 +218,12 @@ namespace MAST {
          */
         virtual unsigned int _n_iters_to_store() const = 0;
         
-        /*!
-         *    provides the element with the transient data for calculations
-         */
-        virtual void
-        _set_element_data(const std::vector<libMesh::dof_id_type>& dof_indices,
-                          const std::vector<libMesh::NumericVector<Real>*>& sols,
-                          MAST::ElementBase& elem) = 0;
-
-        /*!
-         *    provides the element with the transient data for calculations
-         */
-        virtual void
-        _set_element_perturbed_data
-        (const std::vector<libMesh::dof_id_type>& dof_indices,
-         const std::vector<libMesh::NumericVector<Real>*>& sols,
-         MAST::ElementBase& elem) = 0;
-
-        
-        /*!
-         *   performs the element calculations over \par elem, and returns
-         *   the element vector and matrix quantities in \par mat and
-         *   \par vec, respectively. \par if_jac tells the method to also
-         *   assemble the Jacobian, in addition to the residual vector.
-         */
-        virtual void
-        _elem_calculations(MAST::ElementBase& elem,
-                           const std::vector<libMesh::dof_id_type>& dof_indices,
-                           bool if_jac,
-                           RealVectorX& vec,
-                           RealMatrixX& mat) = 0;
-        
-        /*!
-         *   performs the element calculations over \par elem, and returns
-         *   the element vector quantity in \par vec. The vector quantity only
-         *   include the \f$ [J] \{dX\} f$ components, so the inherited classes
-         *   must ensure that no component of constant forces (traction/body
-         *   forces/etc.) are added to this vector.
-         */
-        virtual void
-        _elem_linearized_jacobian_solution_product(MAST::ElementBase& elem,
-                                                   const std::vector<libMesh::dof_id_type>& dof_indices,
-                                                   RealVectorX& vec) = 0;
-
-        
-        /*!
-         *   performs the element sensitivity calculations over \par elem,
-         *   and returns the element residual sensitivity in \par vec .
-         */
-        virtual void
-        _elem_sensitivity_calculations(MAST::ElementBase& elem,
-                                       const std::vector<libMesh::dof_id_type>& dof_indices,
-                                       RealVectorX& vec) = 0;
         
         /*!
          *   Associated TransientAssembly object that provides the 
          *   element level quantities
          */
-        MAST::TransientAssembly* _assembly;
+        MAST::TransientAssemblyElemOperations* _assembly_ops;
         
         /*!
          *   NonlinearImplicitSystem for which this object is

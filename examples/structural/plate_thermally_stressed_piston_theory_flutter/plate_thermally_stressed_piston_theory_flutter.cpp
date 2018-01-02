@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -27,6 +27,8 @@
 #include "base/nonlinear_system.h"
 #include "base/parameter.h"
 #include "base/constant_field_function.h"
+#include "base/nonlinear_implicit_assembly.h"
+#include "base/eigenproblem_assembly.h"
 #include "elasticity/structural_system_initialization.h"
 #include "elasticity/structural_discipline.h"
 #include "elasticity/structural_element_base.h"
@@ -447,9 +449,11 @@ namespace MAST {
             V0      = (*_obj._velocity)();
             
             // create the nonlinear assembly object
-            MAST::StructuralNonlinearAssembly   nonlin_assembly;
+            MAST::NonlinearImplicitAssembly   nonlin_assembly;
+            MAST::StructuralNonlinearAssemblyElemOperations elem_ops;
             
-            nonlin_assembly.attach_discipline_and_system(*_obj._discipline,
+            nonlin_assembly.attach_discipline_and_system(elem_ops,
+                                                         *_obj._discipline,
                                                          *_obj._structural_sys);
             
             MAST::NonlinearSystem&  nonlin_sys   =
@@ -588,13 +592,16 @@ solve(bool if_write_output,
         _flutter_solver->set_output_file(nm);
     
     // create the nonlinear assembly object
-    MAST::StructuralModalEigenproblemAssembly   modal_assembly;
+    MAST::EigenproblemAssembly                                modal_assembly;
+    MAST::StructuralModalEigenproblemAssemblyElemOperations   modal_elem_ops;
     _sys->initialize_condensed_dofs(*_discipline);
     
     // set the basis solution about which the structure will be initialized
     modal_assembly.set_base_solution(steady_solve.solution());
     
-    modal_assembly.attach_discipline_and_system(*_discipline, *_structural_sys);
+    modal_assembly.attach_discipline_and_system(modal_elem_ops,
+                                                *_discipline,
+                                                *_structural_sys);
     _sys->eigenproblem_solve();
     modal_assembly.clear_discipline_and_system();
     
@@ -651,7 +658,8 @@ solve(bool if_write_output,
     
     // initialize the assembly object for the flutter solver
     MAST::StructuralFluidInteractionAssembly fsi_assembly;
-    fsi_assembly.attach_discipline_and_system(*_discipline,
+    fsi_assembly.attach_discipline_and_system(fsi_assembly,
+                                              *_discipline,
                                               *_structural_sys);
     
     // set the base solution about which the linearized stability solution
@@ -709,9 +717,12 @@ sensitivity_solve(MAST::Parameter& p,
     this->clear_stresss();
     
     // create the nonlinear assembly object
-    MAST::StructuralNonlinearAssembly   assembly;
+    MAST::NonlinearImplicitAssembly                   assembly;
+    MAST::StructuralNonlinearAssemblyElemOperations   elem_ops;
     
-    assembly.attach_discipline_and_system(*_discipline, *_structural_sys);
+    assembly.attach_discipline_and_system(elem_ops,
+                                          *_discipline,
+                                          *_structural_sys);
     
     MAST::NonlinearSystem& nonlin_sys = assembly.system();
     
@@ -805,7 +816,9 @@ sensitivity_solve(MAST::Parameter& p,
     // initialize the flutter solver for sensitivity.
     MAST::StructuralFluidInteractionAssembly fsi_assembly;
     fsi_assembly.set_base_solution(_sys->get_vector("base_solution"));
-    fsi_assembly.attach_discipline_and_system(*_discipline, *_structural_sys);
+    fsi_assembly.attach_discipline_and_system(fsi_assembly,
+                                              *_discipline,
+                                              *_structural_sys);
     _flutter_solver->attach_assembly(fsi_assembly);
     _flutter_solver->calculate_sensitivity(*_flutter_root, params, 0,
                                            &dXdp,

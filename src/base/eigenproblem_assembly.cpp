@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -24,6 +24,7 @@
 #include "base/elem_base.h"
 #include "base/physics_discipline_base.h"
 #include "numerics/utility.h"
+#include "base/eigenproblem_assembly_elem_operations.h"
 
 // libMesh includes
 #include "libmesh/numeric_vector.h"
@@ -35,8 +36,9 @@
 
 MAST::EigenproblemAssembly::EigenproblemAssembly():
 MAST::AssemblyBase(),
-_base_sol(nullptr),
-_base_sol_sensitivity(nullptr) {
+_eigenproblem_elem_ops   (nullptr),
+_base_sol                (nullptr),
+_base_sol_sensitivity    (nullptr) {
     
 }
 
@@ -51,14 +53,13 @@ MAST::EigenproblemAssembly::~EigenproblemAssembly() {
 
 void
 MAST::EigenproblemAssembly::
-attach_discipline_and_system(MAST::PhysicsDisciplineBase &discipline,
+attach_discipline_and_system(MAST::EigenproblemAssemblyElemOperations& elem_ops,
+                             MAST::PhysicsDisciplineBase &discipline,
                              MAST::SystemInitialization &system) {
     
-    libmesh_assert_msg(!_discipline && !_system,
-                       "Error: Assembly should be cleared before attaching System.");
-    
-    _discipline = &discipline;
-    _system     = &system;
+    MAST::AssemblyBase::attach_discipline_and_system(elem_ops, discipline, system);
+
+    _eigenproblem_elem_ops = &elem_ops;
     
     // now attach this to the system
     MAST::NonlinearSystem& eigen_sys =
@@ -98,10 +99,11 @@ clear_discipline_and_system( ) {
         sys.reset_eigenproblem_assemble_object();
     }
     
-    _discipline           = nullptr;
-    _system               = nullptr;
-    _base_sol             = nullptr;
-    _base_sol_sensitivity = nullptr;
+    _base_sol              = nullptr;
+    _base_sol_sensitivity  = nullptr;
+    _eigenproblem_elem_ops = nullptr;
+    
+    MAST::AssemblyBase::clear_discipline_and_system();
 }
 
 
@@ -162,7 +164,7 @@ eigenproblem_assemble(libMesh::SparseMatrix<Real>* A,
     localized_solution;
     
     if (_base_sol)
-        localized_solution.reset(_build_localized_vector(eigen_sys,
+        localized_solution.reset(build_localized_vector(eigen_sys,
                                                          *_base_sol).release());
 
     
@@ -185,7 +187,7 @@ eigenproblem_assemble(libMesh::SparseMatrix<Real>* A,
         
         dof_map.dof_indices (elem, dof_indices);
         
-        physics_elem.reset(_build_elem(*elem).release());
+        physics_elem.reset(_eigenproblem_elem_ops->build_elem(*elem).release());
         
         // get the solution
         unsigned int ndofs = (unsigned int)dof_indices.size();
@@ -199,9 +201,9 @@ eigenproblem_assemble(libMesh::SparseMatrix<Real>* A,
                 sol(i) = (*localized_solution)(dof_indices[i]);
         }
         
-        _set_elem_sol(*physics_elem, sol);
+        _eigenproblem_elem_ops->set_elem_sol(*physics_elem, sol);
         
-        _elem_calculations(*physics_elem, mat_A, mat_B);
+        _eigenproblem_elem_ops->elem_calculations(*physics_elem, mat_A, mat_B);
 
         // copy to the libMesh matrix for further processing
         DenseRealMatrix A, B;
@@ -251,12 +253,12 @@ eigenproblem_sensitivity_assemble(const libMesh::ParameterVector& parameters,
     
     if (_base_sol) {
         
-        localized_solution.reset(_build_localized_vector(eigen_sys,
+        localized_solution.reset(build_localized_vector(eigen_sys,
                                                          *_base_sol).release());
         
         // make sure that the sensitivity was also provided
         libmesh_assert(_base_sol_sensitivity);
-        localized_solution_sens.reset(_build_localized_vector(eigen_sys,
+        localized_solution_sens.reset(build_localized_vector(eigen_sys,
                                                               *_base_sol_sensitivity).release());
     }
     
@@ -280,7 +282,7 @@ eigenproblem_sensitivity_assemble(const libMesh::ParameterVector& parameters,
         
         dof_map.dof_indices (elem, dof_indices);
         
-        physics_elem.reset(_build_elem(*elem).release());
+        physics_elem.reset(_eigenproblem_elem_ops->build_elem(*elem).release());
         
         // get the solution
         unsigned int ndofs = (unsigned int)dof_indices.size();
@@ -296,7 +298,7 @@ eigenproblem_sensitivity_assemble(const libMesh::ParameterVector& parameters,
                 sol(i) = (*localized_solution)(dof_indices[i]);
         }
         
-        _set_elem_sol(*physics_elem, sol);
+        _eigenproblem_elem_ops->set_elem_sol(*physics_elem, sol);
         
         // set the element's base solution sensitivity
         if (_base_sol) {
@@ -305,12 +307,15 @@ eigenproblem_sensitivity_assemble(const libMesh::ParameterVector& parameters,
                 sol(i) = (*localized_solution_sens)(dof_indices[i]);
         }
         
-        _set_elem_sol_sens(*physics_elem, sol);
+        _eigenproblem_elem_ops->set_elem_sol_sens(*physics_elem, sol);
 
         // tell the element about the sensitivity parameter
         physics_elem->sensitivity_param = _discipline->get_parameter(&(parameters[i].get()));
         
-        _elem_sensitivity_calculations(*physics_elem, mat_A, mat_B);
+        _eigenproblem_elem_ops->elem_sensitivity_calculations(*physics_elem,
+                                                             _base_sol!=nullptr,
+                                                             mat_A,
+                                                             mat_B);
 
         // copy to the libMesh matrix for further processing
         DenseRealMatrix A, B;
@@ -332,20 +337,5 @@ eigenproblem_sensitivity_assemble(const libMesh::ParameterVector& parameters,
     return true;
 }
 
-
-void
-MAST::EigenproblemAssembly::_set_elem_sol(MAST::ElementBase& elem,
-                                          const RealVectorX& sol) {
-    
-    elem.set_solution(sol);
-}
-
-
-void
-MAST::EigenproblemAssembly::_set_elem_sol_sens(MAST::ElementBase& elem,
-                                               const RealVectorX& sol) {
-    
-    elem.set_solution(sol, true);
-}
 
 

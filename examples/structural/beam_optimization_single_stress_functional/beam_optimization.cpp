@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -25,6 +25,7 @@
 #include "elasticity/stress_output_base.h"
 #include "optimization/optimization_interface.h"
 #include "optimization/function_evaluation.h"
+#include "base/nonlinear_implicit_assembly.h"
 #include "elasticity/structural_nonlinear_assembly.h"
 #include "base/nonlinear_system.h"
 
@@ -242,9 +243,12 @@ MAST::BeamBendingSingleFunctionalSizingOptimization::init(GetPot &infile,
     _discipline->add_volume_output(0, *_outputs);
     
     // create the assembly object
-    _assembly = new MAST::StructuralNonlinearAssembly;
+    _assembly = new MAST::NonlinearImplicitAssembly;
+    _elem_ops = new MAST::StructuralNonlinearAssemblyElemOperations;
     
-    _assembly->attach_discipline_and_system(*_discipline, *_structural_sys);
+    _assembly->attach_discipline_and_system(*_elem_ops,
+                                            *_discipline,
+                                            *_structural_sys);
     
     
     // create the function to calculate weight
@@ -287,6 +291,7 @@ MAST::BeamBendingSingleFunctionalSizingOptimization::~BeamBendingSingleFunctiona
     
     _assembly->clear_discipline_and_system();
     delete _assembly;
+    delete _elem_ops;
 
     delete _eq_sys;
     delete _mesh;

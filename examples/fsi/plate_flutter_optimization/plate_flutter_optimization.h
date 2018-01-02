@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -71,7 +71,8 @@ namespace MAST {
     class Solid2DSectionElementPropertyCard;
     class DirichletBoundaryCondition;
     class BoundaryConditionBase;
-    class StructuralNonlinearAssembly;
+    class NonlinearImplicitAssembly;
+    class StructuralNonlinearAssemblyElemOperations;        
     class UGFlutterSolver;
     class FlutterRootBase;
     class FlightCondition;
@@ -81,9 +82,11 @@ namespace MAST {
     class PressureFunction;
     class FrequencyDomainPressureFunction;
     class NonlinearSystem;
-    class StructuralModalEigenproblemAssembly;
+    class EigenproblemAssembly;
+    class StructuralModalEigenproblemAssemblyElemOperations;
     class FSIGeneralizedAeroForceAssembly;
-    class FrequencyDomainLinearizedComplexAssembly;
+    class ComplexAssemblyBase;
+    class FrequencyDomainLinearizedComplexAssemblyElemOperations;
     class ComplexSolverBase;
     class GAFDatabase;
     class AugmentGhostElementSendListObj;
@@ -192,12 +195,15 @@ namespace MAST {
         
         
         // frequency domain assembly and solver objects
-        MAST::FrequencyDomainLinearizedComplexAssembly   *_frequency_domain_fluid_assembly;
+        MAST::ComplexAssemblyBase                        *_frequency_domain_fluid_assembly;
+        MAST::FrequencyDomainLinearizedComplexAssemblyElemOperations
+        *_frequency_domain_elem_ops;
     
         MAST::ComplexSolverBase                          *_complex_solver;
         
         // modal assembly object
-        MAST::StructuralModalEigenproblemAssembly *_modal_assembly;
+        MAST::EigenproblemAssembly                              *_modal_assembly;
+        MAST::StructuralModalEigenproblemAssemblyElemOperations *_modal_elem_ops;
 
         // flight condition
         MAST::FlightCondition*                       _flight_cond;

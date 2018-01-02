@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -22,22 +22,22 @@
 #include "elasticity/structural_element_base.h"
 #include "property_cards/element_property_card_base.h"
 #include "base/physics_discipline_base.h"
-#include "base/nonlinear_system.h"
-#include "numerics/utility.h"
 #include "base/system_initialization.h"
-#include "base/parameter.h"
 #include "mesh/fe_base.h"
+#include "base/assembly_base.h"
+#include "base/nonlinear_system.h"
+#include "base/parameter.h"
+#include "numerics/utility.h"
 
 // libMesh includes
-#include "libmesh/numeric_vector.h"
-#include "libmesh/sparse_matrix.h"
 #include "libmesh/dof_map.h"
-#include "libmesh/parameter_vector.h"
+#include "libmesh/numeric_vector.h"
 
 
 MAST::StructuralBucklingEigenproblemAssembly::
 StructuralBucklingEigenproblemAssembly():
 MAST::EigenproblemAssembly(),
+MAST::EigenproblemAssemblyElemOperations(),
 _use_linearized_formulation(true),
 _load_param(nullptr),
 _lambda1(0.),
@@ -103,9 +103,9 @@ eigenproblem_assemble(libMesh::SparseMatrix<Real> *A,
     localized_solution1,
     localized_solution2;
     
-    localized_solution1.reset(_build_localized_vector(eigen_sys,
+    localized_solution1.reset(build_localized_vector(eigen_sys,
                                                       *_sol1).release());
-    localized_solution2.reset(_build_localized_vector(eigen_sys,
+    localized_solution2.reset(build_localized_vector(eigen_sys,
                                                       *_sol2).release());
     
     libMesh::SparseMatrix<Real>
@@ -117,8 +117,8 @@ eigenproblem_assemble(libMesh::SparseMatrix<Real> *A,
     
     // iterate over each element, initialize it and get the relevant
     // analysis quantities
-    RealVectorX sol, dummy;
-    RealMatrixX mat_A, mat_B;
+    RealVectorX sol;
+    RealMatrixX dummy, mat_A, mat_B;
     std::vector<libMesh::dof_id_type> dof_indices;
     const libMesh::DofMap& dof_map = eigen_sys.get_dof_map();
     std::unique_ptr<MAST::ElementBase> physics_elem;
@@ -134,12 +134,12 @@ eigenproblem_assemble(libMesh::SparseMatrix<Real> *A,
         
         dof_map.dof_indices (elem, dof_indices);
         
-        physics_elem.reset(_build_elem(*elem).release());
+        physics_elem.reset(this->build_elem(*elem).release());
         
         // get the solution
         unsigned int ndofs = (unsigned int)dof_indices.size();
         sol.setZero(ndofs);
-        dummy.setZero(ndofs);
+        dummy.setZero(ndofs, ndofs);
         mat_A.setZero(ndofs, ndofs);
         mat_B.setZero(ndofs, ndofs);
         
@@ -167,7 +167,7 @@ eigenproblem_assemble(libMesh::SparseMatrix<Real> *A,
         }
 
         DenseRealMatrix AA, BB;
-        _elem_calculations(*physics_elem, mat_A);
+        this->elem_calculations(*physics_elem, mat_A, dummy);
         
         MAST::copy(AA, mat_A); // copy to the libMesh matrix for further processing
         dof_map.constrain_element_matrix(AA, dof_indices); // constrain the element matrices.
@@ -198,7 +198,7 @@ eigenproblem_assemble(libMesh::SparseMatrix<Real> *A,
             p_elem.set_incompatible_mode_solution(_incompatible_sol[elem]);
         }
 
-        _elem_calculations(*physics_elem, mat_B);
+        this->elem_calculations(*physics_elem, mat_B, dummy);
         mat_B  *= -1.;
         if (_use_linearized_formulation)
             mat_B  += mat_A;
@@ -222,30 +222,31 @@ MAST::StructuralBucklingEigenproblemAssembly::build_fe(const libMesh::Elem& elem
     
     
     const MAST::ElementPropertyCardBase& p =
-    dynamic_cast<const MAST::ElementPropertyCardBase&>(_discipline->get_property_card(elem));
+    dynamic_cast<const MAST::ElementPropertyCardBase&>(_assembly->discipline().get_property_card(elem));
     
-    return std::unique_ptr<MAST::FEBase>(MAST::build_structural_fe(*_system, elem, p));
+    return std::unique_ptr<MAST::FEBase>(MAST::build_structural_fe(_assembly->system_init(), elem, p));
 }
 
 
 
 std::unique_ptr<MAST::ElementBase>
-MAST::StructuralBucklingEigenproblemAssembly::_build_elem(const libMesh::Elem& elem) {
+MAST::StructuralBucklingEigenproblemAssembly::build_elem(const libMesh::Elem& elem) {
     
     
     const MAST::ElementPropertyCardBase& p =
-    dynamic_cast<const MAST::ElementPropertyCardBase&>(_discipline->get_property_card(elem));
+    dynamic_cast<const MAST::ElementPropertyCardBase&>(_assembly->discipline().get_property_card(elem));
     
     return std::unique_ptr<MAST::ElementBase>(MAST::build_structural_element
-                                              (*_system, *this, elem, p));
+                                              (_assembly->system_init(), *this, elem, p));
 }
 
 
 
 void
 MAST::StructuralBucklingEigenproblemAssembly::
-_elem_calculations(MAST::ElementBase& elem,
-                   RealMatrixX& mat_A) {
+elem_calculations(MAST::ElementBase& elem,
+                  RealMatrixX& mat_A,
+                  RealMatrixX& mat_B) {
     
     MAST::StructuralElementBase& e =
     dynamic_cast<MAST::StructuralElementBase&>(elem);
@@ -264,12 +265,12 @@ _elem_calculations(MAST::ElementBase& elem,
                              vec,
                              dummy,
                              mat_A,
-                             _discipline->side_loads());
+                             _assembly->discipline().side_loads());
     e.volume_external_residual(true,
                                vec,
                                dummy,
                                mat_A,
-                               _discipline->volume_loads());
+                               _assembly->discipline().volume_loads());
 }
 
 
@@ -277,8 +278,10 @@ _elem_calculations(MAST::ElementBase& elem,
 
 void
 MAST::StructuralBucklingEigenproblemAssembly::
-_elem_sensitivity_calculations(MAST::ElementBase& elem,
-                               RealMatrixX& mat_A) {
+elem_sensitivity_calculations(MAST::ElementBase& elem,
+                              bool base_sol,
+                              RealMatrixX& mat_A,
+                              RealMatrixX& mat_B) {
     
     MAST::StructuralElementBase& e =
     dynamic_cast<MAST::StructuralElementBase&>(elem);
@@ -297,12 +300,12 @@ _elem_sensitivity_calculations(MAST::ElementBase& elem,
                                          vec,
                                          dummy,
                                          mat_A,
-                                         _discipline->side_loads());
+                                         _assembly->discipline().side_loads());
     e.volume_external_residual_sensitivity(true,
                                            vec,
                                            dummy,
                                            mat_A,
-                                           _discipline->volume_loads());
+                                           _assembly->discipline().volume_loads());
 }
 
 
@@ -324,8 +327,8 @@ critical_point_estimate_from_eigenproblem(Real v) const {
 
 
 void
-MAST::StructuralBucklingEigenproblemAssembly::_set_elem_sol(MAST::ElementBase& elem,
-                                                            const RealVectorX& sol) {
+MAST::StructuralBucklingEigenproblemAssembly::set_elem_sol(MAST::ElementBase& elem,
+                                                           const RealVectorX& sol) {
     
     unsigned int
     n = (unsigned int)sol.size();
@@ -350,6 +353,21 @@ MAST::StructuralBucklingEigenproblemAssembly::_set_elem_sol(MAST::ElementBase& e
             _incompatible_sol[&elem.elem()] = RealVectorX::Zero(s_elem.incompatible_mode_size());
         s_elem.set_incompatible_mode_solution(_incompatible_sol[&elem.elem()]);
     }
+}
+
+
+
+void
+MAST::StructuralBucklingEigenproblemAssembly::set_elem_sol_sens(MAST::ElementBase& elem,
+                                                                const RealVectorX& sol) {
+    
+    unsigned int
+    n = (unsigned int)sol.size();
+    
+    RealVectorX
+    zero = RealVectorX::Zero(n);
+    
+    elem.set_solution    (sol, true);
 }
 
 

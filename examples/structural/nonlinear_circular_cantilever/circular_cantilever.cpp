@@ -6,6 +6,7 @@
 // MAST includes
 #include "elasticity/structural_discipline.h"
 #include "elasticity/structural_system_initialization.h"
+#include "base/nonlinear_implicit_assembly.h"
 #include "elasticity/structural_nonlinear_assembly.h"
 #include "base/physics_discipline_base.h"
 #include "base/parameter.h"
@@ -174,7 +175,8 @@ int main_1(int argc, const char * argv[]) {
     structural_discipline.set_property_for_subdomain(0, section_property);
     
     // create the nonlinear assembly object
-    MAST::StructuralNonlinearAssembly   assembly;
+    MAST::NonlinearImplicitAssembly                   assembly;
+    MAST::StructuralNonlinearAssemblyElemOperations   elem_ops;
 
     // write the solution for visualization
     libMesh::ExodusII_IO out(mesh);
@@ -184,7 +186,9 @@ int main_1(int argc, const char * argv[]) {
 
         p = 600.*(i+1)/n_load_steps;
         
-        assembly.attach_discipline_and_system(structural_discipline, structural_sys);
+        assembly.attach_discipline_and_system(elem_ops,
+                                              structural_discipline,
+                                              structural_sys);
         
         MAST::NonlinearSystem&  nonlin_sys   =
         assembly.system();

@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -34,6 +34,7 @@ namespace MAST {
     // Forward declerations
     class ComplexSolverBase;
     class Parameter;
+    class ComplexAssemblyElemOperations;
     
     
     class ComplexAssemblyBase:
@@ -78,22 +79,13 @@ namespace MAST {
          */
         Real residual_l2_norm();
         
-        /*!
-         *   attaches a system to this discipline, and vice-a-versa
-         */
-        virtual void
-        attach_discipline_and_system(MAST::PhysicsDisciplineBase& discipline,
-                                     MAST::SystemInitialization& system)  {
-            
-            libmesh_error_msg("Error! Invalid function call for ComplexAssemblyBase.");
-        }
-        
         
         /*!
          *   attaches a system to this discipline, and vice-a-versa
          */
         virtual void
-        attach_discipline_and_system(MAST::PhysicsDisciplineBase& discipline,
+        attach_discipline_and_system(MAST::ComplexAssemblyElemOperations& elem_ops,
+                                     MAST::PhysicsDisciplineBase& discipline,
                                      MAST::ComplexSolverBase& solver,
                                      MAST::SystemInitialization& sys);
 
@@ -200,26 +192,6 @@ namespace MAST {
         
     protected:
         
-        /*!
-         *   performs the element calculations over \par elem, and returns
-         *   the element vector and matrix quantities in \par mat and
-         *   \par vec, respectively. \par if_jac tells the method to also
-         *   assemble the Jacobian, in addition to the residual vector.
-         */
-        virtual void _elem_calculations(MAST::ElementBase& elem,
-                                        bool if_jac,
-                                        ComplexVectorX& vec,
-                                        ComplexMatrixX& mat) = 0;
-        
-        /*!
-         *   performs the element sensitivity calculations over \par elem,
-         *   and returns the element residual sensitivity in \par vec .
-         */
-        virtual void _elem_sensitivity_calculations(MAST::ElementBase& elem,
-                                                    bool if_jac,
-                                                    ComplexVectorX& vec,
-                                                    ComplexMatrixX& mat) = 0;
-        
                 
         /*!
          *   flag tells the solver of the current solution type being sought
@@ -227,6 +199,11 @@ namespace MAST {
         bool _if_assemble_real;
 
 
+        /*!
+         *   complex assembly element operation class
+         */
+        MAST::ComplexAssemblyElemOperations* _complex_elem_ops;
+        
         /*!
          *   pointer to complex solver
          */

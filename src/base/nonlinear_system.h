@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -38,7 +38,7 @@ namespace MAST {
     // Forward declerations
     class Parameter;
     class SlepcEigenSolver;
-    class EigenSystemAssembly;
+    class EigenproblemAssembly;
     class PhysicsDisciplineBase;
     class OutputAssemblyBase;
     
@@ -222,7 +222,7 @@ namespace MAST {
          * Register a user object to use in assembling the system matrix sensitivities
          */
         void
-        attach_eigenproblem_assemble_object(MAST::EigenSystemAssembly& assemble);
+        attach_eigenproblem_assemble_object(MAST::EigenproblemAssembly& assemble);
         
         
         /**
@@ -332,7 +332,7 @@ namespace MAST {
         /**
          * Object that assembles the sensitivity of eigen_system.
          */
-        MAST::EigenSystemAssembly *        _eigenproblem_assemble_system_object;
+        MAST::EigenproblemAssembly*        _eigenproblem_assemble_system_object;
 
         /*!
          *    OutputAssemblyBase object for which the adjoint calculation

@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -29,6 +29,7 @@
 #include "base/nonlinear_system.h"
 #include "fluid/conservative_fluid_system_initialization.h"
 #include "fluid/conservative_fluid_discipline.h"
+#include "base/complex_assembly_base.h"
 #include "fluid/frequency_domain_linearized_complex_assembly.h"
 #include "fluid/pressure_function.h"
 #include "fluid/frequency_domain_pressure_function.h"
@@ -44,6 +45,7 @@
 #include "elasticity/structural_system_initialization.h"
 #include "elasticity/structural_discipline.h"
 #include "elasticity/structural_element_base.h"
+#include "base/eigenproblem_assembly.h"
 #include "elasticity/structural_modal_eigenproblem_assembly.h"
 #include "elasticity/fsi_generalized_aero_force_assembly.h"
 #include "elasticity/structural_near_null_vector_space.h"
@@ -644,17 +646,20 @@ MAST::BeamEulerFSIFlutterAnalysis::solve(bool if_write_output,
     _fluid_sys->solution->swap(base_sol);
     
     // create the nonlinear assembly object
-    MAST::FrequencyDomainLinearizedComplexAssembly   assembly;
+    MAST::ComplexAssemblyBase                                      assembly;
+    MAST::FrequencyDomainLinearizedComplexAssemblyElemOperations   elem_ops;
+
     
     // solver for complex solution
     MAST::ComplexSolverBase                          solver;
     
     // now setup the assembly object
-    assembly.attach_discipline_and_system(*_fluid_discipline,
+    assembly.attach_discipline_and_system(elem_ops,
+                                          *_fluid_discipline,
                                           solver,
                                           *_fluid_sys_init);
     assembly.set_base_solution(base_sol);
-    assembly.set_frequency_function(*_freq_function);
+    elem_ops.set_frequency_function(*_freq_function);
     _pressure_function->init(base_sol);
 
     
@@ -665,10 +670,12 @@ MAST::BeamEulerFSIFlutterAnalysis::solve(bool if_write_output,
     ////////////////////////////////////////////////////////////
     
     // create the nonlinear assembly object
-    MAST::StructuralModalEigenproblemAssembly   modal_assembly;
+    MAST::EigenproblemAssembly                                modal_assembly;
+    MAST::StructuralModalEigenproblemAssemblyElemOperations   modal_elem_ops;
     _structural_sys->initialize_condensed_dofs(*_structural_discipline);
     
-    modal_assembly.attach_discipline_and_system(*_structural_discipline,
+    modal_assembly.attach_discipline_and_system(modal_elem_ops,
+                                                *_structural_discipline,
                                                 *_structural_sys_init);
     
     
@@ -732,7 +739,8 @@ MAST::BeamEulerFSIFlutterAnalysis::solve(bool if_write_output,
     _flutter_solver->clear();
 
     MAST::FSIGeneralizedAeroForceAssembly fsi_assembly;
-    fsi_assembly.attach_discipline_and_system(*_structural_discipline,
+    fsi_assembly.attach_discipline_and_system(fsi_assembly,
+                                              *_structural_discipline,
                                               *_structural_sys_init);
     
     std::ostringstream oss;
@@ -817,17 +825,19 @@ MAST::BeamEulerFSIFlutterAnalysis::sensitivity_solve(MAST::Parameter& p) {
     _fluid_sys->get_vector("fluid_base_solution");
     
     // create the nonlinear assembly object
-    MAST::FrequencyDomainLinearizedComplexAssembly   assembly;
+    MAST::ComplexAssemblyBase                                     assembly;
+    MAST::FrequencyDomainLinearizedComplexAssemblyElemOperations  elem_ops;
     
     // Transient solver for time integration
     MAST::ComplexSolverBase                          solver;
     
     // now solve the system
-    assembly.attach_discipline_and_system(*_fluid_discipline,
+    assembly.attach_discipline_and_system(elem_ops,
+                                          *_fluid_discipline,
                                           solver,
                                           *_fluid_sys_init);
     assembly.set_base_solution(base_sol);
-    assembly.set_frequency_function(*_freq_function);
+    elem_ops.set_frequency_function(*_freq_function);
 
 
     // it is assumed that the modal basis is available from the flutter solution
@@ -839,7 +849,8 @@ MAST::BeamEulerFSIFlutterAnalysis::sensitivity_solve(MAST::Parameter& p) {
     // clear flutter solver and set the output file
     
     MAST::FSIGeneralizedAeroForceAssembly fsi_assembly;
-    fsi_assembly.attach_discipline_and_system(*_structural_discipline,
+    fsi_assembly.attach_discipline_and_system(fsi_assembly,
+                                              *_structural_discipline,
                                               *_structural_sys_init);
     
     std::ostringstream oss;

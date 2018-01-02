@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -34,10 +34,10 @@
 
 
 MAST::StructuralElementBase::StructuralElementBase(MAST::SystemInitialization& sys,
-                                                   MAST::AssemblyBase& assembly,
+                                                   MAST::AssemblyElemOperations& assembly_ops,
                                                    const libMesh::Elem& elem,
                                                    const MAST::ElementPropertyCardBase& p):
-MAST::ElementBase(sys, assembly, elem),
+MAST::ElementBase(sys, assembly_ops, elem),
 follower_forces(false),
 _property        (p),
 _incompatible_sol(nullptr) {
@@ -1480,7 +1480,7 @@ transform_vector_to_global_system(const ValType& local_vec,
 
 std::unique_ptr<MAST::StructuralElementBase>
 MAST::build_structural_element(MAST::SystemInitialization& sys,
-                               MAST::AssemblyBase& assembly,
+                               MAST::AssemblyElemOperations& assembly_ops,
                                const libMesh::Elem& elem,
                                const MAST::ElementPropertyCardBase& p) {
     
@@ -1488,15 +1488,15 @@ MAST::build_structural_element(MAST::SystemInitialization& sys,
     
     switch (elem.dim()) {
         case 1:
-            e.reset(new MAST::StructuralElement1D(sys, assembly, elem, p));
+            e.reset(new MAST::StructuralElement1D(sys, assembly_ops, elem, p));
             break;
             
         case 2:
-            e.reset(new MAST::StructuralElement2D(sys, assembly, elem, p));
+            e.reset(new MAST::StructuralElement2D(sys, assembly_ops, elem, p));
             break;
             
         case 3:
-            e.reset(new MAST::StructuralElement3D(sys, assembly, elem, p));
+            e.reset(new MAST::StructuralElement3D(sys, assembly_ops, elem, p));
             break;
             
         default:

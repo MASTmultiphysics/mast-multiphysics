@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -28,6 +28,7 @@
 #include "solver/complex_solver_base.h"
 #include "base/parameter.h"
 #include "base/nonlinear_system.h"
+#include "base/complex_assembly_elem_operations.h"
 
 
 // libMesh includes
@@ -41,13 +42,13 @@
 
 
 
-MAST::ComplexAssemblyBase::
-ComplexAssemblyBase():
+MAST::ComplexAssemblyBase::ComplexAssemblyBase():
 MAST::AssemblyBase(),
-_if_assemble_real(true),
-_complex_solver(nullptr),
-_base_sol(nullptr),
-_base_sol_sensitivity(nullptr) {
+_if_assemble_real         (true),
+_complex_elem_ops         (nullptr),
+_complex_solver           (nullptr),
+_base_sol                 (nullptr),
+_base_sol_sensitivity     (nullptr) {
     
 }
 
@@ -62,19 +63,21 @@ MAST::ComplexAssemblyBase::~ComplexAssemblyBase() {
 
 void
 MAST::ComplexAssemblyBase::
-attach_discipline_and_system(MAST::PhysicsDisciplineBase &discipline,
+attach_discipline_and_system(MAST::ComplexAssemblyElemOperations& elem_ops,
+                             MAST::PhysicsDisciplineBase &discipline,
                              MAST::ComplexSolverBase& solver,
                              MAST::SystemInitialization &system) {
     
     libmesh_assert_msg(!_discipline && !_system,
                        "Error: Assembly should be cleared before attaching System.");
     
+    MAST::AssemblyBase::attach_discipline_and_system(elem_ops, discipline, system);
+    
     _if_assemble_real     = true;
     _complex_solver       = &solver;
-    _discipline           = &discipline;
-    _system               = &system;
     _base_sol             = nullptr;
     _base_sol_sensitivity = nullptr;
+    _complex_elem_ops     = &elem_ops;
     
     _complex_solver->set_assembly(*this);
     
@@ -108,10 +111,11 @@ clear_discipline_and_system( ) {
     
     _if_assemble_real     = true;
     _complex_solver       = nullptr;
-    _discipline           = nullptr;
-    _system               = nullptr;
     _base_sol             = nullptr;
     _base_sol_sensitivity = nullptr;
+    _complex_elem_ops     = nullptr;
+    
+    MAST::AssemblyBase::clear_discipline_and_system();
 }
 
 
@@ -194,16 +198,16 @@ MAST::ComplexAssemblyBase::residual_l2_norm() {
     residual_re(nonlin_sys.solution->zero_clone().release()),
     residual_im(nonlin_sys.solution->zero_clone().release()),
     localized_base_solution,
-    localized_real_solution(_build_localized_vector
+    localized_real_solution(build_localized_vector
                             (nonlin_sys,
                              _complex_solver->real_solution()).release()),
-    localized_imag_solution(_build_localized_vector
+    localized_imag_solution(build_localized_vector
                             (nonlin_sys,
                              _complex_solver->imag_solution()).release());
     
     
     if (_base_sol)
-        localized_base_solution.reset(_build_localized_vector(nonlin_sys,
+        localized_base_solution.reset(build_localized_vector(nonlin_sys,
                                                               *_base_sol).release());
 
     
@@ -224,7 +228,7 @@ MAST::ComplexAssemblyBase::residual_l2_norm() {
         
         dof_map.dof_indices (elem, dof_indices);
         
-        physics_elem.reset(_build_elem(*elem).release());
+        physics_elem.reset(_complex_elem_ops->build_elem(*elem).release());
         
         // get the solution
         unsigned int ndofs = (unsigned int)dof_indices.size();
@@ -255,9 +259,9 @@ MAST::ComplexAssemblyBase::residual_l2_norm() {
         
         
         // perform the element level calculations
-        _elem_calculations(*physics_elem,
-                           false,
-                           vec, mat);
+        _complex_elem_ops->elem_calculations(*physics_elem,
+                                            false,
+                                            vec, mat);
         
         physics_elem->detach_active_solution_function();
         
@@ -333,7 +337,7 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
     
     // localize the base solution, if it was provided
     if (_base_sol)
-        localized_base_solution.reset(_build_localized_vector(nonlin_sys,
+        localized_base_solution.reset(build_localized_vector(nonlin_sys,
                                                               *_base_sol).release());
     
     
@@ -341,21 +345,21 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
     if (_if_assemble_real) {
         
         // localize sol to real vector
-        localized_real_solution.reset(_build_localized_vector(nonlin_sys,
+        localized_real_solution.reset(build_localized_vector(nonlin_sys,
                                                               X).release());
         // localize sol to imag vector
-        localized_imag_solution.reset(_build_localized_vector
+        localized_imag_solution.reset(build_localized_vector
                                       (nonlin_sys,
                                        _complex_solver->imag_solution()).release());
     }
     else {
 
         // localize sol to real vector
-        localized_real_solution.reset(_build_localized_vector
+        localized_real_solution.reset(build_localized_vector
                                       (nonlin_sys,
                                        _complex_solver->real_solution()).release());
         // localize sol to imag vector
-        localized_imag_solution.reset(_build_localized_vector(nonlin_sys,
+        localized_imag_solution.reset(build_localized_vector(nonlin_sys,
                                                               X).release());
     }
     
@@ -377,7 +381,7 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
         
         dof_map.dof_indices (elem, dof_indices);
         
-        physics_elem.reset(_build_elem(*elem).release());
+        physics_elem.reset(_complex_elem_ops->build_elem(*elem).release());
         
         // get the solution
         unsigned int ndofs = (unsigned int)dof_indices.size();
@@ -409,9 +413,9 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
 
         
         // perform the element level calculations
-        _elem_calculations(*physics_elem,
-                           J!=nullptr?true:false,
-                           vec, mat);
+        _complex_elem_ops->elem_calculations(*physics_elem,
+                                            J!=nullptr?true:false,
+                                            vec, mat);
         
         physics_elem->detach_active_solution_function();
         
@@ -514,15 +518,15 @@ residual_and_jacobian_field_split (const libMesh::NumericVector<Real>& X_R,
     
     // localize the base solution, if it was provided
     if (_base_sol)
-        localized_base_solution.reset(_build_localized_vector(nonlin_sys,
+        localized_base_solution.reset(build_localized_vector(nonlin_sys,
                                                               *_base_sol).release());
     
     
     // localize sol to real vector
-    localized_real_solution.reset(_build_localized_vector(nonlin_sys,
+    localized_real_solution.reset(build_localized_vector(nonlin_sys,
                                                               X_R).release());
     // localize sol to imag vector
-    localized_imag_solution.reset(_build_localized_vector(nonlin_sys,
+    localized_imag_solution.reset(build_localized_vector(nonlin_sys,
                                                               X_I).release());
     
     
@@ -543,7 +547,7 @@ residual_and_jacobian_field_split (const libMesh::NumericVector<Real>& X_R,
         
         dof_map.dof_indices (elem, dof_indices);
         
-        physics_elem.reset(_build_elem(*elem).release());
+        physics_elem.reset(_complex_elem_ops->build_elem(*elem).release());
         
         // get the solution
         unsigned int ndofs = (unsigned int)dof_indices.size();
@@ -575,10 +579,10 @@ residual_and_jacobian_field_split (const libMesh::NumericVector<Real>& X_R,
         
         
         // perform the element level calculations
-        _elem_calculations(*physics_elem,
-                           true,
-                           vec,
-                           mat);
+        _complex_elem_ops->elem_calculations(*physics_elem,
+                                            true,
+                                            vec,
+                                            mat);
         
         vec *= -1.;
         
@@ -698,7 +702,7 @@ residual_and_jacobian_blocked (const libMesh::NumericVector<Real>& X,
     
     // localize the base solution, if it was provided
     if (_base_sol)
-        localized_base_solution.reset(_build_localized_vector(nonlin_sys,
+        localized_base_solution.reset(build_localized_vector(nonlin_sys,
                                                               *_base_sol).release());
     
     
@@ -720,7 +724,7 @@ residual_and_jacobian_blocked (const libMesh::NumericVector<Real>& X,
         
         dof_map.dof_indices (elem, dof_indices);
         
-        physics_elem.reset(_build_elem(*elem).release());
+        physics_elem.reset(_complex_elem_ops->build_elem(*elem).release());
         
         // get the solution
         unsigned int ndofs = (unsigned int)dof_indices.size();
@@ -755,7 +759,7 @@ residual_and_jacobian_blocked (const libMesh::NumericVector<Real>& X,
         
         
         // perform the element level calculations
-        _elem_calculations(*physics_elem, true, vec, mat);
+        _complex_elem_ops->elem_calculations(*physics_elem, true, vec, mat);
         
         // if sensitivity was requested, then ask the element for sensitivity
         // of the residual
@@ -766,7 +770,7 @@ residual_and_jacobian_blocked (const libMesh::NumericVector<Real>& X,
             delta_sol.setZero();
             physics_elem->set_complex_solution(delta_sol, true);
             vec.setZero();
-            _elem_sensitivity_calculations(*physics_elem, false, vec, dummy);
+            _complex_elem_ops->elem_sensitivity_calculations(*physics_elem, vec);
         }
         
         vec *= -1.;

@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -30,8 +30,10 @@
 #include "elasticity/stress_output_base.h"
 #include "optimization/optimization_interface.h"
 #include "optimization/function_evaluation.h"
+#include "base/nonlinear_implicit_assembly.h"
 #include "elasticity/structural_nonlinear_assembly.h"
 #include "elasticity/piston_theory_boundary_condition.h"
+#include "base/eigenproblem_assembly.h"
 #include "elasticity/structural_modal_eigenproblem_assembly.h"
 #include "elasticity/structural_fluid_interaction_assembly.h"
 #include "aeroelasticity/time_domain_flutter_solver.h"
@@ -597,8 +599,10 @@ init(GetPot& infile,
     }
     
     // create the assembly object
-    _nonlinear_assembly = new MAST::StructuralNonlinearAssembly;
-    _modal_assembly     = new MAST::StructuralModalEigenproblemAssembly;
+    _nonlinear_assembly = new MAST::NonlinearImplicitAssembly;
+    _nonlinear_elem_ops = new MAST::StructuralNonlinearAssemblyElemOperations;
+    _modal_assembly     = new MAST::EigenproblemAssembly;
+    _modal_elem_ops     = new MAST::StructuralModalEigenproblemAssemblyElemOperations;
     _fsi_assembly       = new MAST::StructuralFluidInteractionAssembly;
     
     
@@ -660,7 +664,9 @@ MAST::StiffenedPlatePistonTheorySizingOptimization::
         delete _weight;
         
         delete _nonlinear_assembly;
+        delete _nonlinear_elem_ops;
         delete _modal_assembly;
+        delete _modal_elem_ops;
         delete _fsi_assembly;
         
         // delete the basis vectors
@@ -808,7 +814,9 @@ evaluate(const std::vector<Real>& dvars,
     //////////////////////////////////////////////////////////////////////
     // perform the modal and flutter analysis
     //////////////////////////////////////////////////////////////////////
-    _modal_assembly->attach_discipline_and_system(*_discipline, *_structural_sys);
+    _modal_assembly->attach_discipline_and_system(*_modal_elem_ops,
+                                                  *_discipline,
+                                                  *_structural_sys);
     _sys->eigenproblem_solve();
     _modal_assembly->clear_discipline_and_system();
 
@@ -866,7 +874,8 @@ evaluate(const std::vector<Real>& dvars,
     //////////////////////////////////////////////////////////////////////
     // perform the flutter analysis
     //////////////////////////////////////////////////////////////////////
-    _fsi_assembly->attach_discipline_and_system(*_discipline,
+    _fsi_assembly->attach_discipline_and_system(*_fsi_assembly,
+                                                *_discipline,
                                                 *_structural_sys);
     _flutter_solver->clear_solutions();
     _flutter_solver->attach_assembly(*_fsi_assembly);
@@ -979,7 +988,9 @@ evaluate(const std::vector<Real>& dvars,
                 //   Hence, sensitivity is
                 //   -V0/Vf^2  dVf
                 //
-                _fsi_assembly->attach_discipline_and_system(*_discipline, *_structural_sys);
+                _fsi_assembly->attach_discipline_and_system(*_fsi_assembly,
+                                                            *_discipline,
+                                                            *_structural_sys);
                 _flutter_solver->attach_assembly(*_fsi_assembly);
                 _flutter_solver->calculate_sensitivity(*sol.second, params, 0);
                 _fsi_assembly->clear_discipline_and_system();

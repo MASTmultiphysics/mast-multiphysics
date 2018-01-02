@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -29,8 +29,10 @@
 #include "elasticity/stress_output_base.h"
 #include "optimization/optimization_interface.h"
 #include "optimization/function_evaluation.h"
+#include "base/nonlinear_implicit_assembly.h"
 #include "elasticity/structural_nonlinear_assembly.h"
 #include "elasticity/piston_theory_boundary_condition.h"
+#include "base/eigenproblem_assembly.h"
 #include "elasticity/structural_modal_eigenproblem_assembly.h"
 #include "elasticity/structural_fluid_interaction_assembly.h"
 #include "elasticity/structural_near_null_vector_space.h"
@@ -659,8 +661,10 @@ init(GetPot& infile,
     libmesh_assert_equal_to(_outputs.size(), _mesh->n_local_elem());
     
     // create the assembly object
-    _nonlinear_assembly = new MAST::StructuralNonlinearAssembly;
-    _modal_assembly     = new MAST::StructuralModalEigenproblemAssembly;
+    _nonlinear_assembly = new MAST::NonlinearImplicitAssembly;
+    _nonlinear_elem_ops = new MAST::StructuralNonlinearAssemblyElemOperations;
+    _modal_assembly     = new MAST::EigenproblemAssembly;
+    _modal_elem_ops     = new MAST::StructuralModalEigenproblemAssemblyElemOperations;
     _fsi_assembly       = new MAST::StructuralFluidInteractionAssembly;
     
     // flutter solver
@@ -733,7 +737,9 @@ MAST::StiffenedPlateThermallyStressedPistonTheorySizingOptimization::
         delete _weight;
         
         delete _nonlinear_assembly;
+        delete _nonlinear_elem_ops;
         delete _modal_assembly;
+        delete _modal_elem_ops;
         delete _fsi_assembly;
         
         // delete the basis vectors
@@ -893,7 +899,8 @@ namespace MAST {
             // zero the solution before solving
             _obj.clear_stresss();
             
-            _obj._nonlinear_assembly->attach_discipline_and_system(*_obj._discipline,
+            _obj._nonlinear_assembly->attach_discipline_and_system(*_obj._nonlinear_elem_ops,
+                                                                   *_obj._discipline,
                                                                    *_obj._structural_sys);
             
             // now iterate over the load steps
@@ -1101,7 +1108,9 @@ evaluate(const std::vector<Real>& dvars,
     // So, they will act as generalized coordinates that will not provide
     // diagonal reduced order mass/stiffness operator. The eigenvalues
     // will also be independent of velocity.
-    _modal_assembly->attach_discipline_and_system(*_discipline, *_structural_sys);
+    _modal_assembly->attach_discipline_and_system(*_modal_elem_ops,
+                                                  *_discipline,
+                                                  *_structural_sys);
     _modal_assembly->set_base_solution(steady_sol_wo_aero);
     _sys->eigenproblem_solve();
     _modal_assembly->clear_discipline_and_system();
@@ -1178,7 +1187,8 @@ evaluate(const std::vector<Real>& dvars,
         // a new equilibrium state is calculated for each velocity. So,
         // the flutter root, if found will depend on the equilibrium state
         // which, in turn, depends on the velocity.
-        _fsi_assembly->attach_discipline_and_system(*_discipline,
+        _fsi_assembly->attach_discipline_and_system(*_fsi_assembly,
+                                                    *_discipline,
                                                     *_structural_sys);
         _fsi_assembly->set_base_solution(steady_solve.solution());
         _flutter_solver->clear_solutions();
@@ -1215,7 +1225,9 @@ evaluate(const std::vector<Real>& dvars,
     
     
     // now calculate the stress output based on the velocity output
-    _nonlinear_assembly->attach_discipline_and_system(*_discipline, *_structural_sys);
+    _nonlinear_assembly->attach_discipline_and_system(*_nonlinear_elem_ops,
+                                                      *_discipline,
+                                                      *_structural_sys);
     _nonlinear_assembly->calculate_outputs(steady_solve.solution());
     _nonlinear_assembly->clear_discipline_and_system();
     
@@ -1357,7 +1369,8 @@ evaluate(const std::vector<Real>& dvars,
         if (sol.second) {
             
             params[0] = _velocity->ptr();
-            _nonlinear_assembly->attach_discipline_and_system(*_discipline,
+            _nonlinear_assembly->attach_discipline_and_system(*_nonlinear_elem_ops,
+                                                              *_discipline,
                                                               *_structural_sys);
             _sys->sensitivity_solve(params);
             dXdV = _sys->get_sensitivity_solution(0);
@@ -1394,7 +1407,8 @@ evaluate(const std::vector<Real>& dvars,
             this->clear_stresss();
             
             // sensitivity analysis
-            _nonlinear_assembly->attach_discipline_and_system(*_discipline,
+            _nonlinear_assembly->attach_discipline_and_system(*_nonlinear_elem_ops,
+                                                              *_discipline,
                                                               *_structural_sys);
             _sys->sensitivity_solve(params);
             
@@ -1426,7 +1440,9 @@ evaluate(const std::vector<Real>& dvars,
                 //
                 _fsi_assembly->set_base_solution(steady_solve.solution());
                 _fsi_assembly->set_base_solution(dXdp, true);
-                _fsi_assembly->attach_discipline_and_system(*_discipline, *_structural_sys);
+                _fsi_assembly->attach_discipline_and_system(*_fsi_assembly,
+                                                            *_discipline,
+                                                            *_structural_sys);
                 _flutter_solver->attach_assembly(*_fsi_assembly);
                 _flutter_solver->calculate_sensitivity(*sol.second,
                                                        params,
@@ -1456,7 +1472,8 @@ evaluate(const std::vector<Real>& dvars,
                 // sensitivity analysis
                 (*_velocity) = 0.;
                 *_sys->solution = steady_sol_wo_aero;
-                _nonlinear_assembly->attach_discipline_and_system(*_discipline,
+                _nonlinear_assembly->attach_discipline_and_system(*_nonlinear_elem_ops,
+                                                                  *_discipline,
                                                                   *_structural_sys);
                 _sys->sensitivity_solve(params);
                 
@@ -1477,7 +1494,9 @@ evaluate(const std::vector<Real>& dvars,
             std::vector<Real> eig_sens(nconv);
             _modal_assembly->set_base_solution(steady_sol_wo_aero);
             _modal_assembly->set_base_solution(dXdp, true);
-            _modal_assembly->attach_discipline_and_system(*_discipline, *_structural_sys);
+            _modal_assembly->attach_discipline_and_system(*_modal_elem_ops,
+                                                          *_discipline,
+                                                          *_structural_sys);
             // this should not be necessary, but currently the eigenproblem sensitivity
             // depends on availability of matrices before sensitivity
             _sys->assemble_eigensystem();

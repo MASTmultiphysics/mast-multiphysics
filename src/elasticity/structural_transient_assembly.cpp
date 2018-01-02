@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -23,34 +23,35 @@
 #include "elasticity/structural_element_base.h"
 #include "property_cards/element_property_card_base.h"
 #include "base/physics_discipline_base.h"
+#include "base/assembly_base.h"
 #include "mesh/fe_base.h"
 
 
-MAST::StructuralTransientAssembly::
-StructuralTransientAssembly():
-MAST::TransientAssembly() {
+MAST::StructuralTransientAssemblyElemOperations::
+StructuralTransientAssemblyElemOperations():
+MAST::TransientAssemblyElemOperations() {
     
 }
 
 
 
 
-MAST::StructuralTransientAssembly::
-~StructuralTransientAssembly() {
+MAST::StructuralTransientAssemblyElemOperations::
+~StructuralTransientAssemblyElemOperations() {
     
 }
 
 
 
 void
-MAST::StructuralTransientAssembly::
-_elem_calculations(MAST::ElementBase& elem,
-                   bool if_jac,
-                   RealVectorX& f_m,
-                   RealVectorX& f_x,
-                   RealMatrixX& f_m_jac_xdot,
-                   RealMatrixX& f_m_jac,
-                   RealMatrixX& f_x_jac) {
+MAST::StructuralTransientAssemblyElemOperations::
+elem_calculations(MAST::ElementBase& elem,
+                  bool if_jac,
+                  RealVectorX& f_m,
+                  RealVectorX& f_x,
+                  RealMatrixX& f_m_jac_xdot,
+                  RealMatrixX& f_m_jac,
+                  RealMatrixX& f_x_jac) {
     
     MAST::StructuralElementBase& e =
     dynamic_cast<MAST::StructuralElementBase&>(elem);
@@ -67,12 +68,12 @@ _elem_calculations(MAST::ElementBase& elem,
                              f_x,
                              f_m_jac_xdot,
                              f_x_jac,
-                             _discipline->side_loads());
+                             _assembly->discipline().side_loads());
     e.volume_external_residual(if_jac,
                                f_x,
                                f_m_jac_xdot,
                                f_x_jac,
-                               _discipline->volume_loads());
+                               _assembly->discipline().volume_loads());
     
     //assembly of the capacitance term
     e.damping_residual(if_jac, f_m, f_m_jac_xdot, f_m_jac);
@@ -82,16 +83,16 @@ _elem_calculations(MAST::ElementBase& elem,
 
 
 void
-MAST::StructuralTransientAssembly::
-_elem_calculations(MAST::ElementBase& elem,
-                   bool if_jac,
-                   RealVectorX& f_m,
-                   RealVectorX& f_x,
-                   RealMatrixX& f_m_jac_xddot,
-                   RealMatrixX& f_m_jac_xdot,
-                   RealMatrixX& f_m_jac,
-                   RealMatrixX& f_x_jac_xdot,
-                   RealMatrixX& f_x_jac) {
+MAST::StructuralTransientAssemblyElemOperations::
+elem_calculations(MAST::ElementBase& elem,
+                  bool if_jac,
+                  RealVectorX& f_m,
+                  RealVectorX& f_x,
+                  RealMatrixX& f_m_jac_xddot,
+                  RealMatrixX& f_m_jac_xdot,
+                  RealMatrixX& f_m_jac,
+                  RealMatrixX& f_x_jac_xdot,
+                  RealMatrixX& f_x_jac) {
     
     MAST::StructuralElementBase& e =
     dynamic_cast<MAST::StructuralElementBase&>(elem);
@@ -111,12 +112,12 @@ _elem_calculations(MAST::ElementBase& elem,
                              f_x,
                              f_m_jac_xdot,
                              f_x_jac,
-                             _discipline->side_loads());
+                             _assembly->discipline().side_loads());
     e.volume_external_residual(if_jac,
                                f_x,
                                f_m_jac_xdot,
                                f_x_jac,
-                               _discipline->volume_loads());
+                               _assembly->discipline().volume_loads());
     
     //assembly of the capacitance term
     e.inertial_residual(if_jac, f_m, f_m_jac_xddot, f_m_jac_xdot, f_m_jac);
@@ -125,9 +126,9 @@ _elem_calculations(MAST::ElementBase& elem,
 
 
 void
-MAST::StructuralTransientAssembly::
-_linearized_jacobian_solution_product(MAST::ElementBase& elem,
-                                      RealVectorX& f) {
+MAST::StructuralTransientAssemblyElemOperations::
+linearized_jacobian_solution_product(MAST::ElementBase& elem,
+                                     RealVectorX& f) {
     
     MAST::StructuralElementBase& e =
     dynamic_cast<MAST::StructuralElementBase&>(elem);
@@ -139,7 +140,7 @@ _linearized_jacobian_solution_product(MAST::ElementBase& elem,
     dummy = RealMatrixX::Zero(n, n);
     
     f.setZero();
-
+    
     // assembly of the flux terms
     e.linearized_internal_residual(false, f, dummy);
     //e.linearized_damping_residual(false, f, dummy, dummy);
@@ -147,12 +148,12 @@ _linearized_jacobian_solution_product(MAST::ElementBase& elem,
                                         f,
                                         dummy,
                                         dummy,
-                                        _discipline->side_loads());
+                                        _assembly->discipline().side_loads());
     e.linearized_volume_external_residual(false,
                                           f,
                                           dummy,
                                           dummy,
-                                          _discipline->volume_loads());
+                                          _assembly->discipline().volume_loads());
     
     //assembly of the capacitance term
     e.linearized_inertial_residual(false, f, dummy, dummy, dummy);
@@ -162,9 +163,9 @@ _linearized_jacobian_solution_product(MAST::ElementBase& elem,
 
 
 void
-MAST::StructuralTransientAssembly::
-_elem_sensitivity_calculations(MAST::ElementBase& elem,
-                               RealVectorX& vec) {
+MAST::StructuralTransientAssemblyElemOperations::
+elem_sensitivity_calculations(MAST::ElementBase& elem,
+                              RealVectorX& vec) {
     
     libmesh_error(); // to be implemented
     
@@ -173,9 +174,9 @@ _elem_sensitivity_calculations(MAST::ElementBase& elem,
 
 
 void
-MAST::StructuralTransientAssembly::
-_elem_second_derivative_dot_solution_assembly(MAST::ElementBase& elem,
-                                              RealMatrixX& m) {
+MAST::StructuralTransientAssemblyElemOperations::
+elem_second_derivative_dot_solution_assembly(MAST::ElementBase& elem,
+                                             RealMatrixX& m) {
     
     libmesh_error(); // to be implemented
 }
@@ -183,25 +184,29 @@ _elem_second_derivative_dot_solution_assembly(MAST::ElementBase& elem,
 
 
 std::unique_ptr<MAST::FEBase>
-MAST::StructuralTransientAssembly::build_fe(const libMesh::Elem& elem) {
+MAST::StructuralTransientAssemblyElemOperations::build_fe(const libMesh::Elem& elem) {
     
     
     const MAST::ElementPropertyCardBase& p =
-    dynamic_cast<const MAST::ElementPropertyCardBase&>(_discipline->get_property_card(elem));
+    dynamic_cast<const MAST::ElementPropertyCardBase&>
+    (_assembly->discipline().get_property_card(elem));
     
-    return std::unique_ptr<MAST::FEBase>(MAST::build_structural_fe(*_system, elem, p));
+    return std::unique_ptr<MAST::FEBase>
+    (MAST::build_structural_fe(_assembly->system_init(), elem, p));
 }
 
 
 std::unique_ptr<MAST::ElementBase>
-MAST::StructuralTransientAssembly::_build_elem(const libMesh::Elem& elem) {
+MAST::StructuralTransientAssemblyElemOperations::build_elem(const libMesh::Elem& elem) {
     
     
     const MAST::ElementPropertyCardBase& p =
-    dynamic_cast<const MAST::ElementPropertyCardBase&>(_discipline->get_property_card(elem));
+    dynamic_cast<const MAST::ElementPropertyCardBase&>
+    (_assembly->discipline().get_property_card(elem));
     
     MAST::ElementBase* rval =
-    MAST::build_structural_element(*_system, *this, elem, p).release();
+    MAST::build_structural_element(_assembly->system_init(), *this, elem, p).release();
     
     return std::unique_ptr<MAST::ElementBase>(rval);
 }
+

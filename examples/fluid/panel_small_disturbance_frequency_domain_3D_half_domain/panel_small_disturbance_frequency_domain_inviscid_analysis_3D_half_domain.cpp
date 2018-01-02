@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -28,6 +28,7 @@
 #include "examples/base/rigid_surface_motion.h"
 #include "fluid/conservative_fluid_system_initialization.h"
 #include "fluid/conservative_fluid_discipline.h"
+#include "base/complex_assembly_base.h"
 #include "fluid/frequency_domain_linearized_complex_assembly.h"
 #include "solver/complex_solver_base.h"
 #include "solver/first_order_newmark_transient_solver.h"
@@ -359,17 +360,19 @@ MAST::PanelSmallDisturbanceFrequencyDomainInviscidAnalysis3DHalfDomain::solve(bo
     _sys->solution->swap(base_sol);
     
     // create the nonlinear assembly object
-    MAST::FrequencyDomainLinearizedComplexAssembly   assembly;
+    MAST::ComplexAssemblyBase                                    assembly;
+    MAST::FrequencyDomainLinearizedComplexAssemblyElemOperations elem_ops;
     
     // complex solver for solution of small-disturbance system of eqs.
     MAST::ComplexSolverBase                          solver;
     
     // now solve the system
-    assembly.attach_discipline_and_system(*_discipline,
+    assembly.attach_discipline_and_system(elem_ops,
+                                          *_discipline,
                                           solver,
                                           *_fluid_sys);
     assembly.set_base_solution(base_sol);
-    assembly.set_frequency_function(*_freq_function);
+    elem_ops.set_frequency_function(*_freq_function);
     
     solver.solve_block_matrix();
     

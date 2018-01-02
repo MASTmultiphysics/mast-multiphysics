@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -20,46 +20,52 @@
 
 // MAST includes
 #include "heat_conduction/heat_conduction_nonlinear_assembly.h"
+#include "base/assembly_base.h"
 #include "heat_conduction/heat_conduction_elem_base.h"
 #include "property_cards/element_property_card_base.h"
 #include "base/physics_discipline_base.h"
 #include "mesh/fe_base.h"
 
 
-MAST::HeatConductionNonlinearAssembly::
-HeatConductionNonlinearAssembly():
-MAST::NonlinearImplicitAssembly() {
+MAST::HeatConductionNonlinearAssemblyElemOperations::
+HeatConductionNonlinearAssemblyElemOperations():
+MAST::NonlinearImplicitAssemblyElemOperations() {
     
 }
 
 
 
-MAST::HeatConductionNonlinearAssembly::
-~HeatConductionNonlinearAssembly() {
+MAST::HeatConductionNonlinearAssemblyElemOperations::
+~HeatConductionNonlinearAssemblyElemOperations() {
     
 }
 
 
 std::unique_ptr<MAST::FEBase>
-MAST::HeatConductionNonlinearAssembly::build_fe(const libMesh::Elem& elem) {
+MAST::HeatConductionNonlinearAssemblyElemOperations::
+build_fe(const libMesh::Elem& elem) {
     
     
     const MAST::ElementPropertyCardBase& p =
-    dynamic_cast<const MAST::ElementPropertyCardBase&>(_discipline->get_property_card(elem));
+    dynamic_cast<const MAST::ElementPropertyCardBase&>
+    (_assembly->discipline().get_property_card(elem));
     
-    return std::unique_ptr<MAST::FEBase>(MAST::build_conduction_fe(*_system, elem, p));
+    return std::unique_ptr<MAST::FEBase>
+    (MAST::build_conduction_fe(_assembly->system_init(), elem, p));
 }
 
 
 std::unique_ptr<MAST::ElementBase>
-MAST::HeatConductionNonlinearAssembly::_build_elem(const libMesh::Elem& elem) {
+MAST::HeatConductionNonlinearAssemblyElemOperations::
+build_elem(const libMesh::Elem& elem) {
 
     
     const MAST::ElementPropertyCardBase& p =
-    dynamic_cast<const MAST::ElementPropertyCardBase&>(_discipline->get_property_card(elem));
+    dynamic_cast<const MAST::ElementPropertyCardBase&>
+    (_assembly->discipline().get_property_card(elem));
     
     MAST::ElementBase* rval =
-    new MAST::HeatConductionElementBase(*_system, *this, elem, p);
+    new MAST::HeatConductionElementBase(_assembly->system_init(), *this, elem, p);
     
     return std::unique_ptr<MAST::ElementBase>(rval);
 }
@@ -68,11 +74,11 @@ MAST::HeatConductionNonlinearAssembly::_build_elem(const libMesh::Elem& elem) {
 
 
 void
-MAST::HeatConductionNonlinearAssembly::
-_elem_calculations(MAST::ElementBase& elem,
-                   bool if_jac,
-                   RealVectorX& vec,
-                   RealMatrixX& mat) {
+MAST::HeatConductionNonlinearAssemblyElemOperations::
+elem_calculations(MAST::ElementBase& elem,
+                  bool if_jac,
+                  RealVectorX& vec,
+                  RealMatrixX& mat) {
     
     MAST::HeatConductionElementBase& e =
     dynamic_cast<MAST::HeatConductionElementBase&>(elem);
@@ -81,37 +87,36 @@ _elem_calculations(MAST::ElementBase& elem,
     mat.setZero();
     
     e.internal_residual(if_jac, vec, mat);
-    e.side_external_residual(if_jac, vec, mat, _discipline->side_loads());
-    e.volume_external_residual(if_jac, vec, mat, _discipline->volume_loads());
+    e.side_external_residual(if_jac, vec, mat, _assembly->discipline().side_loads());
+    e.volume_external_residual(if_jac, vec, mat, _assembly->discipline().volume_loads());
 }
 
 
 
 
 void
-MAST::HeatConductionNonlinearAssembly::
-_elem_sensitivity_calculations(MAST::ElementBase& elem,
-                               bool if_jac,
-                               RealVectorX& vec,
-                               RealMatrixX& mat) {
+MAST::HeatConductionNonlinearAssemblyElemOperations::
+elem_sensitivity_calculations(MAST::ElementBase& elem,
+                              RealVectorX& vec) {
     
     MAST::HeatConductionElementBase& e =
     dynamic_cast<MAST::HeatConductionElementBase&>(elem);
     
     vec.setZero();
-    mat.setZero();
+    RealMatrixX
+    dummy = RealMatrixX::Zero(vec.size(), vec.size());
     
-    e.internal_residual_sensitivity(if_jac, vec, mat);
-    e.side_external_residual_sensitivity(if_jac, vec, mat, _discipline->side_loads());
-    e.volume_external_residual_sensitivity(if_jac, vec, mat, _discipline->volume_loads());
+    e.internal_residual_sensitivity(false, vec, dummy);
+    e.side_external_residual_sensitivity(false, vec, dummy, _assembly->discipline().side_loads());
+    e.volume_external_residual_sensitivity(false, vec, dummy, _assembly->discipline().volume_loads());
 }
 
 
 
 void
-MAST::HeatConductionNonlinearAssembly::
-_elem_second_derivative_dot_solution_assembly(MAST::ElementBase& elem,
-                                              RealMatrixX& m) {
+MAST::HeatConductionNonlinearAssemblyElemOperations::
+elem_second_derivative_dot_solution_assembly(MAST::ElementBase& elem,
+                                             RealMatrixX& m) {
     
     libmesh_error(); // to be implemented
 }

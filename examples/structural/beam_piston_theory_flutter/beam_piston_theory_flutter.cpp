@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -29,6 +29,7 @@
 #include "elasticity/structural_system_initialization.h"
 #include "elasticity/structural_discipline.h"
 #include "elasticity/structural_element_base.h"
+#include "base/eigenproblem_assembly.h"
 #include "elasticity/structural_modal_eigenproblem_assembly.h"
 #include "elasticity/structural_fluid_interaction_assembly.h"
 #include "elasticity/piston_theory_boundary_condition.h"
@@ -308,10 +309,13 @@ MAST::BeamPistonTheoryFlutterAnalysis::solve(bool if_write_output,
     (*_velocity) = 0.;
 
     // create the nonlinear assembly object
-    MAST::StructuralModalEigenproblemAssembly   assembly;
+    MAST::EigenproblemAssembly                                assembly;
+    MAST::StructuralModalEigenproblemAssemblyElemOperations   elem_ops;
     _sys->initialize_condensed_dofs(*_discipline);
     
-    assembly.attach_discipline_and_system(*_discipline, *_structural_sys);
+    assembly.attach_discipline_and_system(elem_ops,
+                                          *_discipline,
+                                          *_structural_sys);
     _sys->eigenproblem_solve();
     assembly.clear_discipline_and_system();
     
@@ -364,7 +368,8 @@ MAST::BeamPistonTheoryFlutterAnalysis::solve(bool if_write_output,
     
     // now initialize the flutter solver
     MAST::StructuralFluidInteractionAssembly fsi_assembly;
-    fsi_assembly.attach_discipline_and_system(*_discipline,
+    fsi_assembly.attach_discipline_and_system(fsi_assembly,
+                                              *_discipline,
                                               *_structural_sys);
     _flutter_solver->attach_assembly(fsi_assembly);
     _flutter_solver->initialize(*_velocity,
@@ -420,7 +425,9 @@ sensitivity_solve(MAST::Parameter& p) {
     
     // initialize the flutter solver for sensitivity.
     MAST::StructuralFluidInteractionAssembly fsi_assembly;
-    fsi_assembly.attach_discipline_and_system(*_discipline, *_structural_sys);
+    fsi_assembly.attach_discipline_and_system(fsi_assembly,
+                                              *_discipline,
+                                              *_structural_sys);
     _flutter_solver->attach_assembly(fsi_assembly);
     _flutter_solver->calculate_sensitivity(*_flutter_root, params, 0);
     fsi_assembly.clear_discipline_and_system();

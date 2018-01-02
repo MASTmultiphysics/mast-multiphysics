@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -29,16 +29,16 @@
 #include "elasticity/normal_rotation_function_base.h"
 #include "base/nonlinear_system.h"
 #include "mesh/fe_base.h"
-#include "base/assembly_base.h"
+#include "base/assembly_elem_operation.h"
 
 
 
 MAST::FrequencyDomainLinearizedConservativeFluidElem::
 FrequencyDomainLinearizedConservativeFluidElem(MAST::SystemInitialization& sys,
-                                               MAST::AssemblyBase& assembly,
+                                               MAST::AssemblyElemOperations& assembly_ops,
                                                const libMesh::Elem& elem,
                                                const MAST::FlightCondition& f):
-MAST::ConservativeFluidElementBase(sys, assembly, elem, f),
+MAST::ConservativeFluidElementBase(sys, assembly_ops, elem, f),
 freq(nullptr) {
     
     
@@ -520,7 +520,7 @@ slip_wall_surface_residual(bool request_jacobian,
     // qi ni = 0       (since heat flux occurs only on no-slip wall and far-field bc)
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem));
+    std::unique_ptr<MAST::FEBase> fe(_assembly_ops.build_fe(_elem));
     fe->init_for_side(_elem, s, false);
 
     const std::vector<Real> &JxW                 = fe->get_JxW();
@@ -750,7 +750,7 @@ slip_wall_surface_residual_sensitivity(bool request_jacobian,
     // qi ni = 0       (since heat flux occurs only on no-slip wall and far-field bc)
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem));
+    std::unique_ptr<MAST::FEBase> fe(_assembly_ops.build_fe(_elem));
     fe->init_for_side(_elem, s, false);
 
     const std::vector<Real> &JxW                 = fe->get_JxW();

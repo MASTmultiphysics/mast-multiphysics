@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -23,8 +23,8 @@
 // MAST includes
 #include "base/nonlinear_system.h"
 #include "base/physics_discipline_base.h"
-#include "base/eigensystem_assembly.h"
 #include "base/nonlinear_implicit_assembly.h"
+#include "base/eigenproblem_assembly.h"
 #include "base/parameter.h"
 #include "solver/slepc_eigen_solver.h"
 
@@ -615,7 +615,7 @@ assemble_eigensystem_sensitivity(const libMesh::ParameterVector& parameters,
 
 void
 MAST::NonlinearSystem::
-attach_eigenproblem_assemble_object(MAST::EigenSystemAssembly& assemble) {
+attach_eigenproblem_assemble_object(MAST::EigenproblemAssembly& assemble) {
     
     libmesh_assert(!_eigenproblem_assemble_system_object);
     

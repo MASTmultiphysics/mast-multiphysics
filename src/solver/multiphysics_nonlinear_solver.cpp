@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -20,7 +20,7 @@
 
 // MAST includes
 #include "solver/multiphysics_nonlinear_solver.h"
-#include "base/nonlinear_implicit_assembly.h"
+#include "base/transient_assembly.h"
 #include "base/system_initialization.h"
 #include "base/nonlinear_system.h"
 
@@ -417,7 +417,7 @@ MAST::MultiphysicsNonlinearSolverBase::~MultiphysicsNonlinearSolverBase() {
 void
 MAST::MultiphysicsNonlinearSolverBase::
 set_system_assembly(unsigned int i,
-                    MAST::NonlinearImplicitAssembly& assembly) {
+                    MAST::TransientAssembly& assembly) {
     
     // make sure that the index is within bounds
     libmesh_assert_less(i, _n_disciplines);
@@ -430,7 +430,7 @@ set_system_assembly(unsigned int i,
 
 
 
-MAST::NonlinearImplicitAssembly&
+MAST::TransientAssembly&
 MAST::MultiphysicsNonlinearSolverBase::
 get_system_assembly(unsigned int i) {
     
