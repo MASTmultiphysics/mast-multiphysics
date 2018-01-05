@@ -91,9 +91,9 @@ initialize_solution(const RealVectorX& conservative_sol) {
         libMesh::FunctionBase<Real>(),
         _sol(sol) { }
         
-      virtual libMesh::UniquePtr<libMesh::FunctionBase<Real> > clone () const {
+      virtual std::unique_ptr<libMesh::FunctionBase<Real> > clone () const {
 	libMesh::FunctionBase<Real> *rval = new SolutionFunction(_sol);
-            return libMesh::UniquePtr<libMesh::FunctionBase<Real> >(rval);
+            return std::unique_ptr<libMesh::FunctionBase<Real> >(rval);
         }
 
         // this should not get called

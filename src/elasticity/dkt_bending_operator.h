@@ -55,23 +55,23 @@ namespace MAST
             
             // first edge
             libMesh::Point p;
-            p = *_elem.get_node(0); p += *_elem.get_node(1); p*= 0.5;
+            p = *_elem.node_ptr(0); p += _elem.point(1); p*= 0.5;
             (*_nodes[0]) = p;
             _nodes[0]->set_id(3);
             
             // second edge
-            p = *_elem.get_node(1); p += *_elem.get_node(2); p*= 0.5;
+            p = *_elem.node_ptr(1); p += _elem.point(2); p*= 0.5;
             (*_nodes[1]) = p;
             _nodes[1]->set_id(4);
             
             // third edge
-            p = *_elem.get_node(2); p += *_elem.get_node(0); p*= 0.5;
+            p = *_elem.node_ptr(2); p += _elem.point(0); p*= 0.5;
             (*_nodes[2]) = p;
             _nodes[2]->set_id(5);
             
             // first three nodes are same as that of the original element
             for (unsigned int i=0; i<3; i++) {
-                _tri6->set_node(  i) = _elem.get_node(i);
+                _tri6->set_node(  i) = const_cast<libMesh::Node*>(_elem.node_ptr(i));
                 _tri6->set_node(i+3) = _nodes[i];
             }
             
@@ -261,10 +261,10 @@ inline
 Real
 MAST::DKTBendingOperator::_get_edge_length(unsigned int i, unsigned int j)
 {
-    libMesh::Point l = *_tri6->get_node(j);
-    l -= *_tri6->get_node(i);
+    libMesh::Point l = *_tri6->node_ptr(j);
+    l -= *_tri6->node_ptr(i);
     
-    return l.size();
+    return l.norm();
 }
 
 
@@ -280,25 +280,25 @@ MAST::DKTBendingOperator::_get_edge_normal_sine_cosine(unsigned int i,
     libMesh::Point vec0, vec1, vec2, vec3;
     
     // calculate the normal to the element
-    vec0 = *_elem.get_node(0);
-    vec1 = *_elem.get_node(1);
-    vec2 = *_elem.get_node(2);
+    vec0 = *_elem.node_ptr(0);
+    vec1 = *_elem.node_ptr(1);
+    vec2 = *_elem.node_ptr(2);
     
     vec1 -= vec0;
     vec2 -= vec0;
     vec3 = vec1.cross(vec2);
     // this is the unit vector normal to the plane of the triangle
     vec1 = vec3;
-    vec1 /= vec1.size();
+    vec1 /= vec1.norm();
     
     // cross product of the length vector with the surface normal will
     // give the needed vector
-    vec3 = *_elem.get_node(i);
-    vec2 = *_elem.get_node(j);
+    vec3 = *_elem.node_ptr(i);
+    vec2 = *_elem.node_ptr(j);
     
     vec2 -= vec3;
     vec3 = vec2.cross(vec1);
-    vec3 /= vec3.size();        // this is the unit vector needed
+    vec3 /= vec3.norm();        // this is the unit vector needed
     
     // cos of angle between this and the x-axis is simply the
     // 0th component of this vector

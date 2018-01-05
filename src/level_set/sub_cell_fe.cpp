@@ -53,7 +53,7 @@ MAST::SubCellFE::init(const libMesh::Elem& elem,
 
     // if there was no intersection, then move back to the parent class's
     // method
-    if (!_intersection.if_intersection()) {
+    if (!_intersection.if_intersection_through_elem()) {
         MAST::FEBase::init(elem, pts);
         return;
     }
@@ -147,12 +147,11 @@ MAST::SubCellFE::init(const libMesh::Elem& elem,
         
         // initialize parent FE using location of these points
         _fe->reinit(parent, &local_fe->get_xyz());
+        _qpoints = local_fe->get_xyz();
     }
     else
         libmesh_assert(false);
 
-
-    
     
     // now delete the node pointers
     for (unsigned int i=0; i<elem.n_nodes(); i++)
@@ -170,7 +169,7 @@ MAST::SubCellFE::init_for_side(const libMesh::Elem& elem,
     
     // if there was no intersection, then move back to the parent class's
     // method
-    if (!_intersection.if_intersection()) {
+    if (!_intersection.if_intersection_through_elem()) {
         MAST::FEBase::init_for_side(elem, s, if_calculate_dphi);
         return;
     }
@@ -187,8 +186,18 @@ MAST::SubCellFE::get_JxW() const {
     
     // if there was no intersection, then move back to the parent class's
     // method
-    if (!_intersection.if_intersection())
+    if (!_intersection.if_intersection_through_elem())
         return MAST::FEBase::get_JxW();
     else
         return _subcell_fe->get_JxW();
 }
+
+
+const std::vector<libMesh::Point>&
+MAST::SubCellFE::get_qpoints() const {
+    
+    libmesh_assert(_initialized);
+    return _qpoints;
+}
+
+

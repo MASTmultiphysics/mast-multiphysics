@@ -28,7 +28,7 @@
 #include "fluid/conservative_fluid_system_initialization.h"
 #include "fluid/conservative_fluid_discipline.h"
 #include "fluid/conservative_fluid_transient_assembly.h"
-#include "transient_assembly.h"
+#include "base/transient_assembly.h"
 #include "solver/first_order_newmark_transient_solver.h"
 #include "fluid/flight_condition.h"
 #include "base/parameter.h"

@@ -29,16 +29,42 @@
 
 
 MAST::LevelSetIntersection::LevelSetIntersection():
-_tol            (1.e-8),
-_max_iters      (10),
-_initialized    (false),
-_mode           (MAST::NO_INTERSECTION) {
+_tol                      (1.e-8),
+_max_iters                (10),
+_initialized              (false),
+_if_elem_on_positive_phi  (false),
+_mode                     (MAST::NO_INTERSECTION) {
     
 }
     
 
 MAST::LevelSetIntersection::~LevelSetIntersection() {
 
+    this->clear();
+}
+
+
+bool
+MAST::LevelSetIntersection::if_elem_on_positive_phi() const {
+    
+    libmesh_assert(_initialized);
+
+    return _if_elem_on_positive_phi;
+}
+
+
+void
+MAST::LevelSetIntersection::clear() {
+    
+    _tol                        = 1.e-8;
+    _max_iters                  = 10;
+    _initialized                = false;
+    _if_elem_on_positive_phi    = false;
+    _mode                       = MAST::NO_INTERSECTION;
+    _positive_phi_elems.clear();
+    _negative_phi_elems.clear();
+    _elem_sides_on_interface.clear();
+    _node_local_coords.clear();
     
     std::vector<libMesh::Elem*>::iterator
     e_it  = _new_elems.begin(),
@@ -46,16 +72,20 @@ MAST::LevelSetIntersection::~LevelSetIntersection() {
     
     for ( ; e_it != e_end; e_it++)
         delete *e_it;
-
+    
     
     std::vector<libMesh::Node*>::iterator
     n_it  = _new_nodes.begin(),
     n_end = _new_nodes.end();
-
+    
     for ( ; n_it != n_end; n_it++)
         delete *n_it;
+
+    _new_nodes.clear();
+    _new_elems.clear();
 }
-    
+
+
 void
 MAST::LevelSetIntersection::init(const MAST::FieldFunction<Real>& phi,
                                  const libMesh::Elem& e,
@@ -111,6 +141,7 @@ MAST::LevelSetIntersection::init(const MAST::FieldFunction<Real>& phi,
         
         _mode = MAST::NO_INTERSECTION;
         _positive_phi_elems.push_back(&e);
+        _if_elem_on_positive_phi = true;
         _initialized = true;
         return;
     }
@@ -119,6 +150,7 @@ MAST::LevelSetIntersection::init(const MAST::FieldFunction<Real>& phi,
         
         _mode = MAST::NO_INTERSECTION;
         _negative_phi_elems.push_back(&e);
+        _if_elem_on_positive_phi = false;
         _initialized = true;
         return;
     }
@@ -146,6 +178,9 @@ MAST::LevelSetIntersection::init(const MAST::FieldFunction<Real>& phi,
             _positive_phi_elems.push_back(&e);
         }
         
+        std::vector<std::pair<libMesh::Point, libMesh::Point> >
+        side_nondim_points;
+        _add_node_local_coords(e, side_nondim_points, _node_local_coords);
         _initialized = true;
         return;
     }
@@ -157,8 +192,8 @@ MAST::LevelSetIntersection::init(const MAST::FieldFunction<Real>& phi,
     //  Check to see if all nodes on an edge are on the level set
     for (unsigned int i=0; i<e.n_sides(); i++) {
         
-        std::unique_ptr<libMesh::Elem>
-        s(e.side(i).release());
+        std::unique_ptr<const libMesh::Elem>
+        s(e.side_ptr(i).release());
         
         unsigned int
         n_nodes_on_level_set = 0;
@@ -182,6 +217,9 @@ MAST::LevelSetIntersection::init(const MAST::FieldFunction<Real>& phi,
             else if (min_val < _tol)
                 _negative_phi_elems.push_back(&e);
             
+            std::vector<std::pair<libMesh::Point, libMesh::Point> >
+            side_nondim_points;
+            _add_node_local_coords(e, side_nondim_points, _node_local_coords);
             _elem_sides_on_interface[&e] = i;
             _initialized                 = true;
             return;
@@ -217,6 +255,14 @@ MAST::LevelSetIntersection::if_intersection() const {
 }
 
 
+bool
+MAST::LevelSetIntersection::if_intersection_through_elem() const {
+    
+    return ((_mode == MAST::OPPOSITE_EDGES) ||
+            (_mode == MAST::ADJACENT_EDGES));
+}
+
+
 
 const std::vector<const libMesh::Elem*>&
 MAST::LevelSetIntersection::get_sub_elems_positive_phi() const {
@@ -247,6 +293,52 @@ get_side_on_interface(const libMesh::Elem& e) {
 
 
 void
+MAST::LevelSetIntersection::_add_node_local_coords
+( const libMesh::Elem& e,
+ std::vector<std::pair<libMesh::Point, libMesh::Point> >& side_nondim_points,
+ std::map<const libMesh::Node*, libMesh::Point>& node_coord_map) {
+    
+    switch (e.type()) {
+
+        case libMesh::QUAD4: {
+            
+            // We create a vector storing the nondimensional locations of nodes
+            // on each side of the element. This is used later to identify the
+            // nondimensional location of all new nodes
+            side_nondim_points.resize(4);
+            // side 0: eta =-1, xi=[-1, 1]
+            side_nondim_points[0] =
+            std::pair<libMesh::Point, libMesh::Point>
+            (libMesh::Point(-1, -1, 0.),
+             libMesh::Point(+1, -1, 0.));
+            side_nondim_points[1] =
+            std::pair<libMesh::Point, libMesh::Point>
+            (libMesh::Point(+1, -1, 0.),
+             libMesh::Point(+1, +1, 0.));
+            side_nondim_points[2] =
+            std::pair<libMesh::Point, libMesh::Point>
+            (libMesh::Point(+1, +1, 0.),
+             libMesh::Point(-1, +1, 0.));
+            side_nondim_points[3] =
+            std::pair<libMesh::Point, libMesh::Point>
+            (libMesh::Point(-1, +1, 0.),
+             libMesh::Point(-1, -1, 0.));
+            
+            // populate the node to nondimensional coordinate map with the
+            // original nodes of the element
+            for (unsigned int i=0; i<4; i++)
+                node_coord_map[e.node_ptr(i)] = side_nondim_points[i].first;
+        }
+            break;
+            
+        default:
+            libmesh_assert(false); // not handled.
+    }
+    
+}
+
+
+void
 MAST::LevelSetIntersection::_find_quad4_intersections
 (const MAST::FieldFunction<Real>& phi,
  const libMesh::Elem& e,
@@ -257,34 +349,9 @@ MAST::LevelSetIntersection::_find_quad4_intersections
     libmesh_assert_equal_to(e.type(), libMesh::QUAD4);
     libmesh_assert(!_initialized);
     
-    // We create a vector storing the nondimensional locations of nodes
-    // on each side of the element. This is used later to identify the
-    // nondimensional location of all new nodes
     std::vector<std::pair<libMesh::Point, libMesh::Point> >
-    side_nondim_points(4);
-    // side 0: eta =-1, xi=[-1, 1]
-    side_nondim_points[0] =
-    std::pair<libMesh::Point, libMesh::Point>
-    (libMesh::Point(-1, -1, 0.),
-     libMesh::Point(+1, -1, 0.));
-    side_nondim_points[1] =
-    std::pair<libMesh::Point, libMesh::Point>
-    (libMesh::Point(+1, -1, 0.),
-     libMesh::Point(+1, +1, 0.));
-    side_nondim_points[2] =
-    std::pair<libMesh::Point, libMesh::Point>
-    (libMesh::Point(+1, +1, 0.),
-     libMesh::Point(-1, +1, 0.));
-    side_nondim_points[3] =
-    std::pair<libMesh::Point, libMesh::Point>
-    (libMesh::Point(-1, +1, 0.),
-     libMesh::Point(-1, -1, 0.));
-
-    // populate the node to nondimensional coordinate map with the
-    // original nodes of the element
-    for (unsigned int i=0; i<4; i++)
-        _node_local_coords[e.node_ptr(i)] = side_nondim_points[i].first;
-    
+    side_nondim_points;
+    _add_node_local_coords(e, side_nondim_points, _node_local_coords);
     
     const unsigned int
     n_nodes = 4;   // this is equal to n_sides for QUAD4
@@ -385,8 +452,8 @@ MAST::LevelSetIntersection::_find_quad4_intersections
     
     // create a new node at each intersection: first, on ref_side
     xi_ref = side_intersection[ref_side].second;
-    std::unique_ptr<libMesh::Elem>
-    s(e.side(ref_side).release());
+    std::unique_ptr<const libMesh::Elem>
+    s(e.side_ptr(ref_side).release());
     p  = s->point(0) + xi_ref * (s->point(1) - s->point(0));
 	nd = new libMesh::Node(p);
 	nd->set_id(0);
@@ -412,7 +479,7 @@ MAST::LevelSetIntersection::_find_quad4_intersections
         
         // create a new node at each intersection: next, on ref_side + 2
         xi_other = side_intersection[(ref_side+2)%n_nodes].second;
-        s.reset(e.side((ref_side+2)%n_nodes).release());
+        s.reset(e.side_ptr((ref_side+2)%n_nodes).release());
         p  = s->point(0) + xi_other * (s->point(1) - s->point(0));
 	    nd = new libMesh::Node(p);
 	    nd->set_id(0);
@@ -483,7 +550,7 @@ MAST::LevelSetIntersection::_find_quad4_intersections
         
         // create a new node at each intersection: second on ref_side+1
         xi_other = side_intersection[(ref_side+1)%n_nodes].second;
-        s.reset(e.side((ref_side+1)%n_nodes).release());
+        s.reset(e.side_ptr((ref_side+1)%n_nodes).release());
         p  = s->point(0) + xi_other * (s->point(1) - s->point(0));
 		nd = new libMesh::Node(p);
 	    nd->set_id(0);
@@ -495,7 +562,7 @@ MAST::LevelSetIntersection::_find_quad4_intersections
 
         // create a new node on the opposite side, which will be used to create
         // the QUAD4 elements: second on ref_side+2
-        s.reset(e.side((ref_side+2)%n_nodes).release());
+        s.reset(e.side_ptr((ref_side+2)%n_nodes).release());
         p  = s->point(1) + xi_ref * (s->point(0) - s->point(1));
 	    nd = new libMesh::Node(p);
 	    nd->set_id(0);

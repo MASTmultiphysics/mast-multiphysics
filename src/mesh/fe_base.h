@@ -140,6 +140,9 @@ namespace MAST {
         virtual const std::vector<libMesh::Point>&
         get_normals() const;
         
+        virtual const std::vector<libMesh::Point>&
+        get_qpoints() const;
+        
         virtual const libMesh::QBase&
         get_qrule() const;
         
@@ -151,6 +154,7 @@ namespace MAST {
         const libMesh::Elem*              _elem;
         libMesh::FEBase*                  _fe;
         libMesh::QBase*                   _qrule;
+        std::vector<libMesh::Point>       _qpoints;
     };
 }
 

@@ -128,7 +128,7 @@ build_elem(const libMesh::Elem& elem) {
     (_assembly->discipline()).flight_condition();
     
     MAST::ElementBase* rval =
-    new MAST::ConservativeFluidElementBase(_assembly->system_init(), *this, elem, p);
+    new MAST::ConservativeFluidElementBase(_assembly->system_init(), *_assembly, elem, p);
     
     return std::unique_ptr<MAST::ElementBase>(rval);
 }

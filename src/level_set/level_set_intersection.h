@@ -59,8 +59,30 @@ namespace MAST {
                   const libMesh::Elem& e,
                   const Real t);
 
+        /*!
+         *   clears the data structures
+         */
+        void clear();
+        
+        /*!
+         *   @returns \p true if the mode is something other than
+         *   NO_INTERSECTION.
+         */
         bool if_intersection() const;
         
+        /*!
+         *   @returns \p true if the mode is ADJACENT_EDGES or OPPOSITE_EDGES.
+         */
+        bool if_intersection_through_elem() const;
+
+        /*!
+         *   @returns true if the element is entirely on the positive side
+         *   of the level set without any intersection. This will return
+         *   \p true only if the mode is NO_INTERSECTION and all nodal phi
+         *   values are positive.
+         */
+        bool if_elem_on_positive_phi() const;
+
         const std::vector<const libMesh::Elem*>&
         get_sub_elems_positive_phi() const;
         
@@ -80,6 +102,11 @@ namespace MAST {
         
     protected:
         
+        
+        void _add_node_local_coords
+        ( const libMesh::Elem& e,
+         std::vector<std::pair<libMesh::Point, libMesh::Point> >& side_nondim_points,
+         std::map<const libMesh::Node*, libMesh::Point>& node_coord_map);
         
         void
         _find_quad4_intersections(const MAST::FieldFunction<Real>& phi,
@@ -103,6 +130,8 @@ namespace MAST {
         unsigned int                                 _max_iters;
         
         bool                                         _initialized;
+
+        bool                                         _if_elem_on_positive_phi;
         
         MAST::LevelSet2DIntersectionMode             _mode;
         

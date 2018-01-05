@@ -37,7 +37,6 @@ namespace MAST {
     
     // Forward declerations
     class FunctionBase;
-    class AssemblyElemOperations;
     class SystemInitialization;
     class LocalElemBase;
     class OutputFunctionBase;
@@ -82,7 +81,7 @@ namespace MAST {
          *   performed.
          */
         ElementBase(MAST::SystemInitialization&     sys,
-                    MAST::AssemblyElemOperations&   assembly_ops,
+                    MAST::AssemblyBase&             assembly,
                     const libMesh::Elem&            elem);
         
         
@@ -102,8 +101,8 @@ namespace MAST {
         /*!
          *   @returns a reference to the libMesh::System object
          */
-        MAST::AssemblyElemOperations& assembly_ops() {
-            return _assembly_ops;
+        MAST::AssemblyBase& assembly() {
+            return _assembly;
         }
 
         
@@ -250,7 +249,7 @@ namespace MAST {
         /*!
          *    Assembly object
          */
-        MAST::AssemblyElemOperations& _assembly_ops;
+        MAST::AssemblyBase&        _assembly;
         
         /*!
          *   geometric element for which the computations are performed

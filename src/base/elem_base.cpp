@@ -26,11 +26,11 @@
 
 
 MAST::ElementBase::ElementBase(MAST::SystemInitialization& sys,
-                               MAST::AssemblyElemOperations& assembly_ops,
+                               MAST::AssemblyBase& assembly,
                                const libMesh::Elem& elem):
 sensitivity_param       (nullptr),
 _system                 (sys),
-_assembly_ops           (assembly_ops),
+_assembly               (assembly),
 _elem                   (elem),
 _active_sol_function    (nullptr),
 _time                   (_system.system().time),

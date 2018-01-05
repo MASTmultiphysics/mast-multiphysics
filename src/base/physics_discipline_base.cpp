@@ -329,8 +329,8 @@ get_system_dirichlet_bc_dofs(libMesh::System& sys,
             if ((*el)->neighbor(s) == nullptr &&
                 mesh.boundary_info->n_boundary_ids(elem, s)) {
                 
-                std::vector<libMesh::boundary_id_type>
-                bc_ids = mesh.boundary_info->boundary_ids(elem, s);
+                std::vector<libMesh::boundary_id_type> bc_ids;
+                mesh.boundary_info->boundary_ids(elem, s, bc_ids);
                 
                 for (unsigned int i_bid=0; i_bid<bc_ids.size(); i_bid++)
                     if (constrained_vars_map.count(bc_ids[i_bid])) {

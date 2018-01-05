@@ -27,7 +27,7 @@
 #include "mesh/local_elem_base.h"
 #include "base/nonlinear_system.h"
 #include "mesh/fe_base.h"
-#include "base/assembly_elem_operation.h"
+#include "base/assembly_base.h"
 
 
 namespace MAST {
@@ -152,7 +152,7 @@ calculate_transverse_shear_residual(bool request_jacobian,
     // transverse shear
 
     std::unique_ptr<MAST::FEBase>
-    fe(_structural_elem.assembly_ops().build_fe(_elem));
+    fe(_structural_elem.assembly().build_fe(_elem));
     fe->set_extra_quadrature_order(-_shear_quadrature_reduction);
     fe->init(_elem);
     

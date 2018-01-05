@@ -56,7 +56,7 @@ MAST::LocalElemBase::global_coordinates_location(const libMesh::Point& local,
                 global(j) += _T_mat(j,k)*local(k);
         
         // shift to the global coordinate
-        global += (*_elem.get_node(0));
+        global += (*_elem.node_ptr(0));
     }
 }
 

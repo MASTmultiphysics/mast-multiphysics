@@ -51,7 +51,7 @@ MAST::Local1DElem::_create_local_elem() {
     // first node is the origin of the new cs
     // calculate the coordinate system for the plane of the element
     libMesh::Point v1, v2, v3, p;
-    v1 = *_elem.get_node(1); v1 -= *_elem.get_node(0); v1 /= v1.size(); // local x
+    v1 = *_elem.node_ptr(1); v1 -= *_elem.node_ptr(0); v1 /= v1.size(); // local x
     v2 = _local_y;                           // vector in local x-y plane
     v3 = v1.cross(v2);                       // local z
     libmesh_assert_greater(v3.size(), 0.);   // 0. implies x == y
@@ -64,7 +64,7 @@ MAST::Local1DElem::_create_local_elem() {
     _local_nodes.resize(_elem.n_nodes());
     for (unsigned int i=0; i<_elem.n_nodes(); i++) {
         _local_nodes[i] = new libMesh::Node;
-        _local_nodes[i]->set_id() = _elem.get_node(i)->id();
+        _local_nodes[i]->set_id() = _elem.node_ptr(i)->id();
         _local_elem->set_node(i) = _local_nodes[i];
     }
     
@@ -81,8 +81,8 @@ MAST::Local1DElem::_create_local_elem() {
     
     // now calculate the new coordinates with respect to the origin
     for (unsigned int i=0; i<_local_nodes.size(); i++) {
-        p = *_elem.get_node(i);
-        p -= *_elem.get_node(0); // local wrt origin
+        p = *_elem.node_ptr(i);
+        p -= *_elem.node_ptr(0); // local wrt origin
         for (unsigned int j=0; j<3; j++)
             for (unsigned int k=0; k<3; k++)
                 (*_local_nodes[i])(j) += _T_mat(k,j)*p(k);

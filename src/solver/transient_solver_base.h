@@ -205,6 +205,17 @@ namespace MAST {
             libmesh_assert(false); // should not get called.
         }
 
+        virtual bool
+        if_use_local_elem() const {
+            libmesh_assert(false); // should not get called.
+        }
+        
+        virtual void
+        set_local_fe_data(const libMesh::Elem& e,
+                          MAST::LocalElemFE& fe) const {
+            libmesh_assert(false); // should not get called.
+        }
+
     protected:
         
         /*!

@@ -22,9 +22,9 @@
 #include "elasticity/structural_nonlinear_assembly.h"
 #include "elasticity/structural_element_base.h"
 #include "elasticity/structural_assembly.h"
-#include "property_cards/element_property_card_base.h"
+#include "property_cards/element_property_card_1D.h"
 #include "base/physics_discipline_base.h"
-#include "mesh/fe_base.h"
+#include "mesh/local_elem_fe.h"
 
 
 
@@ -74,19 +74,6 @@ MAST::StructuralNonlinearAssemblyElemOperations::set_elem_sol(MAST::ElementBase&
 }
 
 
-std::unique_ptr<MAST::FEBase>
-MAST::StructuralNonlinearAssemblyElemOperations::
-build_fe(const libMesh::Elem& elem) {
-    
-    
-    const MAST::ElementPropertyCardBase& p =
-    dynamic_cast<const MAST::ElementPropertyCardBase&>
-    (_assembly->discipline().get_property_card(elem));
-    
-    return std::unique_ptr<MAST::FEBase>
-    (MAST::build_structural_fe(_assembly->system_init(), elem, p));
-}
-
 
 std::unique_ptr<MAST::ElementBase>
 MAST::StructuralNonlinearAssemblyElemOperations::
@@ -99,7 +86,7 @@ build_elem(const libMesh::Elem& elem) {
     
     MAST::ElementBase* rval =
     MAST::build_structural_element
-    (_assembly->system_init(), *this, elem, p).release();
+    (_assembly->system_init(), *_assembly, elem, p).release();
     
     return std::unique_ptr<MAST::ElementBase>(rval);
 }
@@ -430,6 +417,21 @@ elem_second_derivative_dot_solution_assembly(MAST::ElementBase& elem,
 //}
 
 
+
+void
+MAST::StructuralNonlinearAssemblyElemOperations::
+set_local_fe_data(const libMesh::Elem& e,
+                  MAST::LocalElemFE& fe) const {
+    
+    if (e.dim() == 1) {
+        
+        const MAST::ElementPropertyCard1D&
+        p_card = dynamic_cast<const MAST::ElementPropertyCard1D&>
+        (_assembly->discipline().get_property_card(e));
+        
+        fe.set_1d_y_vector(p_card.y_vector());
+    }
+}
 
 
 

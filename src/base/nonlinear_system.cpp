@@ -638,7 +638,10 @@ void
 MAST::NonlinearSystem::
 initialize_condensed_dofs(MAST::PhysicsDisciplineBase& physics) {
     
-    
+    // This has been adapted from
+    // libMesh::CondensedEigenSystem::initialize_condensed_dofs()
+    const libMesh::DofMap & dof_map = this->get_dof_map();
+
     std::set<unsigned int> global_dirichlet_dofs_set;
     
     physics.get_system_dirichlet_bc_dofs(*this, global_dirichlet_dofs_set);
@@ -649,7 +652,8 @@ initialize_condensed_dofs(MAST::PhysicsDisciplineBase& physics) {
     for(unsigned int i=this->get_dof_map().first_dof();
         i<this->get_dof_map().end_dof();
         i++)
-        local_non_condensed_dofs_set.insert(i);
+        if (!dof_map.is_constrained_dof(i))
+            local_non_condensed_dofs_set.insert(i);
     
     // Now erase the condensed dofs
     std::set<unsigned int>::iterator

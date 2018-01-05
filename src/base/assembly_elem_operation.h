@@ -30,6 +30,7 @@ namespace MAST {
     class FEBase;
     class ElementBase;
     class AssemblyBase;
+    class LocalElemFE;
     
     class AssemblyElemOperations {
         
@@ -56,22 +57,27 @@ namespace MAST {
 
         
         /*!
-         *   @returns a MAST::FEBase object for calculation of finite element
-         *   quantities. For all standard applications this is a wrapper
-         *   around the libMesh::FEBase class, which is specialized for
-         *   cut-cell applications where a sub-finite element is created
-         *   for element integration.
-         */
-        virtual std::unique_ptr<MAST::FEBase>
-        build_fe(const libMesh::Elem& e);
-        
-        
-        /*!
          *   @returns a smart-pointer to a newly created element for
          *   calculation of element quantities.
          */
         virtual std::unique_ptr<MAST::ElementBase>
         build_elem(const libMesh::Elem& elem) = 0;
+
+        
+        /*!
+         *   some simulations frequently deal with 1D/2D elements in 3D space,
+         *   which requires use of MAST::LocalElemFE.
+         */
+        virtual bool
+        if_use_local_elem() const = 0;
+
+        
+        /*!
+         *   sets additional data for local elem FE.
+         */
+        virtual void
+        set_local_fe_data(const libMesh::Elem& e,
+                          MAST::LocalElemFE& fe) const = 0;
 
     protected:
 

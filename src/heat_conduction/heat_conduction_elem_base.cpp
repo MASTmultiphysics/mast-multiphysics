@@ -29,19 +29,19 @@
 #include "base/mesh_field_function.h"
 #include "base/nonlinear_system.h"
 #include "mesh/local_elem_fe.h"
-#include "base/assembly_elem_operation.h"
+#include "base/assembly_base.h"
 
 
 MAST::HeatConductionElementBase::
 HeatConductionElementBase(MAST::SystemInitialization&          sys,
-                          MAST::AssemblyElemOperations&        assembly_ops,
+                          MAST::AssemblyBase&                  assembly,
                           const libMesh::Elem&                 elem,
                           const MAST::ElementPropertyCardBase& p):
-MAST::ElementBase(sys, assembly_ops, elem),
+MAST::ElementBase(sys, assembly, elem),
 _property(p) {
 
     // now initialize the finite element data structures
-    _fe = assembly_ops.build_fe(_elem).release();
+    _fe = assembly.build_fe(_elem).release();
     _fe->init(_elem);
 }
 
@@ -254,7 +254,8 @@ side_external_residual (bool request_jacobian,
         
         // check to see if any of the specified boundary ids has a boundary
         // condition associated with them
-        std::vector<libMesh::boundary_id_type> bc_ids = binfo.boundary_ids(&_elem, n);
+        std::vector<libMesh::boundary_id_type> bc_ids;
+        binfo.boundary_ids(&_elem, n, bc_ids);
         std::vector<libMesh::boundary_id_type>::const_iterator bc_it = bc_ids.begin();
         
         for ( ; bc_it != bc_ids.end(); bc_it++) {
@@ -391,7 +392,8 @@ side_external_residual_sensitivity (bool request_jacobian,
         
         // check to see if any of the specified boundary ids has a boundary
         // condition associated with them
-        std::vector<libMesh::boundary_id_type> bc_ids = binfo.boundary_ids(&_elem, n);
+        std::vector<libMesh::boundary_id_type> bc_ids;
+        binfo.boundary_ids(&_elem, n, bc_ids);
         std::vector<libMesh::boundary_id_type>::const_iterator bc_it = bc_ids.begin();
         
         for ( ; bc_it != bc_ids.end(); bc_it++) {
@@ -538,7 +540,7 @@ surface_flux_residual(bool request_jacobian,
                       MAST::BoundaryConditionBase& p) {
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_assembly_ops.build_fe(_elem));
+    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem));
     fe->init_for_side(_elem, s, false);
 
     
@@ -650,7 +652,7 @@ surface_convection_residual(bool request_jacobian,
                             MAST::BoundaryConditionBase& p) {
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_assembly_ops.build_fe(_elem));
+    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem));
     fe->init_for_side(_elem, s, false);
 
     // get the function from this boundary condition
@@ -793,7 +795,7 @@ surface_radiation_residual(bool request_jacobian,
                            MAST::BoundaryConditionBase& p) {
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_assembly_ops.build_fe(_elem));
+    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem));
     fe->init_for_side(_elem, s, false);
 
     // get the function from this boundary condition

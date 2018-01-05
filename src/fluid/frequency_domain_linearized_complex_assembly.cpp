@@ -117,7 +117,7 @@ build_elem(const libMesh::Elem& elem) {
     
     MAST::FrequencyDomainLinearizedConservativeFluidElem* rval =
     new MAST::FrequencyDomainLinearizedConservativeFluidElem
-    (_assembly->system_init(), *this, elem, p);
+    (_assembly->system_init(), *_assembly, elem, p);
     rval->freq   = _frequency;
     
     return std::unique_ptr<MAST::ElementBase>(rval);

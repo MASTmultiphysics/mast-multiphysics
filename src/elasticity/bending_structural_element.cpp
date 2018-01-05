@@ -25,10 +25,10 @@
 
 MAST::BendingStructuralElem::
 BendingStructuralElem(MAST::SystemInitialization& sys,
-                      MAST::AssemblyElemOperations& assembly_ops,
+                      MAST::AssemblyBase& assembly,
                       const libMesh::Elem& elem,
                       const MAST::ElementPropertyCardBase& p):
-MAST::StructuralElementBase(sys, assembly_ops, elem, p) {
+MAST::StructuralElementBase(sys, assembly, elem, p) {
     
 }
 

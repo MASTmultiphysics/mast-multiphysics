@@ -82,8 +82,10 @@ MAST::FEBase::init(const libMesh::Elem& elem,
         _fe->attach_quadrature_rule(_qrule);
         _fe->reinit(&elem);
     }
-    else
+    else {
         _fe->reinit(&elem, pts);
+        _qpoints = *pts;
+    }
 
     _initialized = true;
 }
@@ -91,8 +93,8 @@ MAST::FEBase::init(const libMesh::Elem& elem,
 
 void
 MAST::FEBase::init_for_side(const libMesh::Elem& elem,
-                   unsigned int s,
-                   bool if_calculate_dphi) {
+                            unsigned int s,
+                            bool if_calculate_dphi) {
 
     libmesh_assert(!_initialized);
 
@@ -295,6 +297,17 @@ MAST::FEBase::get_normals() const {
     
     libmesh_assert(_initialized);
     return _fe->get_normals();
+}
+
+
+const std::vector<libMesh::Point>&
+MAST::FEBase::get_qpoints() const {
+    
+    libmesh_assert(_initialized);
+    if (_qrule)  // qrule was used
+        return _qrule->get_points();
+    else         // points were specified
+        return _qpoints;
 }
 
 

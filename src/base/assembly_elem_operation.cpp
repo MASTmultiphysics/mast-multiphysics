@@ -61,16 +61,3 @@ MAST::AssemblyElemOperations::get_assembly() {
     return *_assembly;
 }
 
-
-std::unique_ptr<MAST::FEBase>
-MAST::AssemblyElemOperations::build_fe(const libMesh::Elem& elem) {
-    
-    // make sure that the assembly was set
-    libmesh_assert(_assembly);
-    
-    std::unique_ptr<MAST::FEBase>
-    fe(new MAST::FEBase(_assembly->system_init()));
-    
-    return fe;
-}
-

@@ -24,7 +24,7 @@
 #include "base/elem_base.h"
 #include "base/physics_discipline_base.h"
 #include "base/nonlinear_system.h"
-#include "mesh/fe_base.h"
+#include "mesh/local_elem_fe.h"
 #include "base/assembly_elem_operation.h"
 
 
@@ -200,6 +200,30 @@ void
 MAST::AssemblyBase::detach_solution_function() {
     _sol_function = nullptr;
 }
+
+
+
+std::unique_ptr<MAST::FEBase>
+MAST::AssemblyBase::build_fe(const libMesh::Elem& elem) {
+
+    std::unique_ptr<MAST::FEBase> fe;
+
+    if (_elem_ops->if_use_local_elem() &&
+        elem.dim() < 3) {
+        
+        MAST::LocalElemFE*
+        local_fe = new MAST::LocalElemFE(*_system);
+
+        fe.reset(local_fe);
+    }
+    else {
+        
+        fe.reset(new MAST::FEBase(*_system));
+    }
+    
+    return fe;
+}
+
 
 
 

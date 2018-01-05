@@ -93,7 +93,7 @@ MAST::PanelMesh3DHalfDomain::process_mesh( ) {
             
             for (unsigned int i_side=0; i_side<(*e_it)->n_sides(); i_side++)
             {
-                libMesh::UniquePtr<libMesh::Elem> side_elem ((*e_it)->side(i_side).release());
+                std::unique_ptr<const libMesh::Elem> side_elem ((*e_it)->side_ptr(i_side).release());
                 std::vector<bool> side_on_panel(side_elem->n_nodes()),
                 side_on_slip_wall(side_elem->n_nodes());
                 
@@ -102,7 +102,7 @@ MAST::PanelMesh3DHalfDomain::process_mesh( ) {
                 
                 for (unsigned int i_node=0; i_node<side_elem->n_nodes(); i_node++) {
                     
-                    const libMesh::Node& n = *(side_elem->get_node(i_node));
+                    const libMesh::Node& n = *(side_elem->node_ptr(i_node));
                     if (n(2)==_z0) { //bottom face
                         
                         if ((n(2)==_z0) && //bottom face

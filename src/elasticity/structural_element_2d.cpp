@@ -31,26 +31,26 @@
 #include "base/parameter.h"
 #include "base/constant_field_function.h"
 #include "mesh/local_elem_fe.h"
-#include "base/assembly_elem_operation.h"
+#include "base/assembly_base.h"
 
 
 MAST::StructuralElement2D::
 StructuralElement2D(MAST::SystemInitialization& sys,
-                    MAST::AssemblyElemOperations& assembly_ops,
+                    MAST::AssemblyBase& assembly,
                     const libMesh::Elem& elem,
                     const MAST::ElementPropertyCardBase& p):
-MAST::BendingStructuralElem(sys, assembly_ops, elem, p) {
+MAST::BendingStructuralElem(sys, assembly, elem, p) {
 
     // now initialize the finite element data structures
-    _fe            = assembly_ops.build_fe(_elem).release();
+    _fe            = assembly.build_fe(_elem).release();
     _fe->init(_elem);
-    _Tmat          = dynamic_cast<MAST::LocalElemFE*>(_fe)->local_elem().T_matrix();
+    _Tmat          = RealMatrixX::Identity(3,3); //dynamic_cast<MAST::LocalElemFE*>(_fe)->local_elem().T_matrix();
 
     MAST::BendingOperatorType bending_model =
     _property.bending_model(_elem, _fe->get_fe_type());
     _bending_operator = MAST::build_bending_operator(bending_model,
                                                      *this,
-                                                     _fe->get_qrule().get_points()).release();
+                                                     _fe->get_qpoints()).release();
 }
 
 
@@ -205,7 +205,7 @@ MAST::StructuralElement2D::calculate_stress(bool request_derivative,
             // this will initialize the FE object at the points specified
             // by the quadrature rule
             fe->init(_elem);
-            qp_loc = fe->get_qrule().get_points();
+            qp_loc = fe->get_qpoints();
         }
             break;
             

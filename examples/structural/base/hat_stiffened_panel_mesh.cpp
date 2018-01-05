@@ -328,8 +328,8 @@ MAST::HatStiffenedPanelMesh::_combine_mesh(libMesh::MeshBase& panel,
             if (component_binfo.n_boundary_ids(old_elem, n)) {
                 
                 // add the boundary tags to the panel mesh
-                std::vector<libMesh::boundary_id_type> bc_ids =
-                component_binfo.boundary_ids(old_elem, n);
+                std::vector<libMesh::boundary_id_type> bc_ids;
+                component_binfo.boundary_ids(old_elem, n, bc_ids);
                 
                 for ( unsigned int bid=0; bid < bc_ids.size(); bid++) {
                     if (c == MAST::HatStiffenedPanelMesh::PANEL)
@@ -344,7 +344,7 @@ MAST::HatStiffenedPanelMesh::_combine_mesh(libMesh::MeshBase& panel,
         
         
         for (unsigned int n=0; n<old_elem->n_nodes(); n++) {
-            old_node = old_elem->get_node(n);
+            old_node = old_elem->node_ptr(n);
             
             if (!old_to_new.count(old_node)) {
                 libMesh::Point p;

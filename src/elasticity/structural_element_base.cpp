@@ -34,10 +34,10 @@
 
 
 MAST::StructuralElementBase::StructuralElementBase(MAST::SystemInitialization& sys,
-                                                   MAST::AssemblyElemOperations& assembly_ops,
+                                                   MAST::AssemblyBase& assembly,
                                                    const libMesh::Elem& elem,
                                                    const MAST::ElementPropertyCardBase& p):
-MAST::ElementBase(sys, assembly_ops, elem),
+MAST::ElementBase(sys, assembly, elem),
 follower_forces(false),
 _property        (p),
 _incompatible_sol(nullptr) {
@@ -531,7 +531,8 @@ side_external_residual(bool request_jacobian,
         
         // check to see if any of the specified boundary ids has a boundary
         // condition associated with them
-        std::vector<libMesh::boundary_id_type> bc_ids = binfo.boundary_ids(&_elem, n);
+        std::vector<libMesh::boundary_id_type> bc_ids;
+        binfo.boundary_ids(&_elem, n, bc_ids);
         std::vector<libMesh::boundary_id_type>::const_iterator bc_it = bc_ids.begin();
         
         for ( ; bc_it != bc_ids.end(); bc_it++) {
@@ -606,7 +607,8 @@ linearized_side_external_residual
         
         // check to see if any of the specified boundary ids has a boundary
         // condition associated with them
-        std::vector<libMesh::boundary_id_type> bc_ids = binfo.boundary_ids(&_elem, n);
+        std::vector<libMesh::boundary_id_type> bc_ids;
+        binfo.boundary_ids(&_elem, n, bc_ids);
         std::vector<libMesh::boundary_id_type>::const_iterator bc_it = bc_ids.begin();
         
         for ( ; bc_it != bc_ids.end(); bc_it++) {
@@ -664,7 +666,8 @@ linearized_frequency_domain_side_external_residual
         
         // check to see if any of the specified boundary ids has a boundary
         // condition associated with them
-        std::vector<libMesh::boundary_id_type> bc_ids = binfo.boundary_ids(&_elem, n);
+        std::vector<libMesh::boundary_id_type> bc_ids;
+        binfo.boundary_ids(&_elem, n, bc_ids);
         std::vector<libMesh::boundary_id_type>::const_iterator bc_it = bc_ids.begin();
         
         for ( ; bc_it != bc_ids.end(); bc_it++) {
@@ -899,7 +902,8 @@ side_external_residual_sensitivity(bool request_jacobian,
         
         // check to see if any of the specified boundary ids has a boundary
         // condition associated with them
-        std::vector<libMesh::boundary_id_type> bc_ids = binfo.boundary_ids(&_elem, n);
+        std::vector<libMesh::boundary_id_type> bc_ids;
+        binfo.boundary_ids(&_elem, n, bc_ids);
         std::vector<libMesh::boundary_id_type>::const_iterator bc_it = bc_ids.begin();
         
         for ( ; bc_it != bc_ids.end(); bc_it++) {
@@ -1480,7 +1484,7 @@ transform_vector_to_global_system(const ValType& local_vec,
 
 std::unique_ptr<MAST::StructuralElementBase>
 MAST::build_structural_element(MAST::SystemInitialization& sys,
-                               MAST::AssemblyElemOperations& assembly_ops,
+                               MAST::AssemblyBase& assembly,
                                const libMesh::Elem& elem,
                                const MAST::ElementPropertyCardBase& p) {
     
@@ -1488,15 +1492,15 @@ MAST::build_structural_element(MAST::SystemInitialization& sys,
     
     switch (elem.dim()) {
         case 1:
-            e.reset(new MAST::StructuralElement1D(sys, assembly_ops, elem, p));
+            e.reset(new MAST::StructuralElement1D(sys, assembly, elem, p));
             break;
             
         case 2:
-            e.reset(new MAST::StructuralElement2D(sys, assembly_ops, elem, p));
+            e.reset(new MAST::StructuralElement2D(sys, assembly, elem, p));
             break;
             
         case 3:
-            e.reset(new MAST::StructuralElement3D(sys, assembly_ops, elem, p));
+            e.reset(new MAST::StructuralElement3D(sys, assembly, elem, p));
             break;
             
         default:

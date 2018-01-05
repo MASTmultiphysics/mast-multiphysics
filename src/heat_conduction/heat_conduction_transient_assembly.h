@@ -101,13 +101,6 @@ namespace MAST {
         virtual void
         elem_second_derivative_dot_solution_assembly(MAST::ElementBase& elem,
                                                      RealMatrixX& mat);
-        
-        /*!
-         *   @returns a MAST::FEBase object for calculation of finite element
-         *   quantities. This creates LocalElemFE for 1D and 2D elements.
-         */
-        virtual std::unique_ptr<MAST::FEBase>
-        build_fe(const libMesh::Elem& e);
 
         /*!
          *   @returns a smart-pointer to a newly created element for
@@ -115,6 +108,23 @@ namespace MAST {
          */
         virtual std::unique_ptr<MAST::ElementBase>
         build_elem(const libMesh::Elem& elem);
+
+        /*!
+         *   some simulations frequently deal with 1D/2D elements in 3D space,
+         *   which requires use of MAST::LocalElemFE.
+         */
+        virtual bool
+        if_use_local_elem() const {
+            
+            return true;
+        }
+
+        /*!
+         *   sets additional data for local elem FE.
+         */
+        virtual void
+        set_local_fe_data(const libMesh::Elem& e,
+                          MAST::LocalElemFE& fe) const;
 
     protected:
         

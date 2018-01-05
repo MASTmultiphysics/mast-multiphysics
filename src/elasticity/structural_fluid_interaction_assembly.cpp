@@ -22,14 +22,14 @@
 #include "elasticity/structural_fluid_interaction_assembly.h"
 #include "elasticity/structural_element_base.h"
 #include "elasticity/structural_assembly.h"
-#include "property_cards/element_property_card_base.h"
+#include "property_cards/element_property_card_1D.h"
 #include "base/physics_discipline_base.h"
 #include "base/system_initialization.h"
 #include "base/mesh_field_function.h"
 #include "numerics/utility.h"
 #include "base/real_output_function.h"
 #include "base/nonlinear_system.h"
-#include "mesh/fe_base.h"
+#include "mesh/local_elem_fe.h"
 
 // libMesh includes
 #include "libmesh/numeric_vector.h"
@@ -379,16 +379,6 @@ assemble_reduced_order_quantity_sensitivity
 
 
 
-std::unique_ptr<MAST::FEBase>
-MAST::StructuralFluidInteractionAssembly::build_fe(const libMesh::Elem& elem) {
-    
-    
-    const MAST::ElementPropertyCardBase& p =
-    dynamic_cast<const MAST::ElementPropertyCardBase&>(_discipline->get_property_card(elem));
-    
-    return std::unique_ptr<MAST::FEBase>(MAST::build_structural_fe(*_system, elem, p));
-}
-
 
 std::unique_ptr<MAST::ElementBase>
 MAST::StructuralFluidInteractionAssembly::build_elem(const libMesh::Elem& elem) {
@@ -403,6 +393,22 @@ MAST::StructuralFluidInteractionAssembly::build_elem(const libMesh::Elem& elem) 
     return std::unique_ptr<MAST::ElementBase>(rval);
 }
 
+
+
+void
+MAST::StructuralFluidInteractionAssembly::
+set_local_fe_data(const libMesh::Elem& e,
+                  MAST::LocalElemFE& fe) const {
+    
+    if (e.dim() == 1) {
+        
+        const MAST::ElementPropertyCard1D&
+        p_card = dynamic_cast<const MAST::ElementPropertyCard1D&>
+        (_assembly->discipline().get_property_card(e));
+        
+        fe.set_1d_y_vector(p_card.y_vector());
+    }
+}
 
 
 

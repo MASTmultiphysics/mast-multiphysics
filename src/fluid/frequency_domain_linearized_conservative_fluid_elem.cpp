@@ -29,16 +29,16 @@
 #include "elasticity/normal_rotation_function_base.h"
 #include "base/nonlinear_system.h"
 #include "mesh/fe_base.h"
-#include "base/assembly_elem_operation.h"
+#include "base/assembly_base.h"
 
 
 
 MAST::FrequencyDomainLinearizedConservativeFluidElem::
 FrequencyDomainLinearizedConservativeFluidElem(MAST::SystemInitialization& sys,
-                                               MAST::AssemblyElemOperations& assembly_ops,
+                                               MAST::AssemblyBase& assembly,
                                                const libMesh::Elem& elem,
                                                const MAST::FlightCondition& f):
-MAST::ConservativeFluidElementBase(sys, assembly_ops, elem, f),
+MAST::ConservativeFluidElementBase(sys, assembly, elem, f),
 freq(nullptr) {
     
     
@@ -272,7 +272,8 @@ side_external_residual (bool request_jacobian,
         
         // check to see if any of the specified boundary ids has a boundary
         // condition associated with them
-        std::vector<libMesh::boundary_id_type> bc_ids = binfo.boundary_ids(&_elem, n);
+        std::vector<libMesh::boundary_id_type> bc_ids;
+        binfo.boundary_ids(&_elem, n, bc_ids);
         std::vector<libMesh::boundary_id_type>::const_iterator bc_it = bc_ids.begin();
         
         for ( ; bc_it != bc_ids.end(); bc_it++) {
@@ -412,7 +413,8 @@ side_external_residual_sensitivity (bool request_jacobian,
         
         // check to see if any of the specified boundary ids has a boundary
         // condition associated with them
-        std::vector<libMesh::boundary_id_type> bc_ids = binfo.boundary_ids(&_elem, n);
+        std::vector<libMesh::boundary_id_type> bc_ids;
+        binfo.boundary_ids(&_elem, n, bc_ids);
         std::vector<libMesh::boundary_id_type>::const_iterator bc_it = bc_ids.begin();
         
         for ( ; bc_it != bc_ids.end(); bc_it++) {
@@ -520,7 +522,7 @@ slip_wall_surface_residual(bool request_jacobian,
     // qi ni = 0       (since heat flux occurs only on no-slip wall and far-field bc)
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_assembly_ops.build_fe(_elem));
+    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem));
     fe->init_for_side(_elem, s, false);
 
     const std::vector<Real> &JxW                 = fe->get_JxW();
@@ -750,7 +752,7 @@ slip_wall_surface_residual_sensitivity(bool request_jacobian,
     // qi ni = 0       (since heat flux occurs only on no-slip wall and far-field bc)
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_assembly_ops.build_fe(_elem));
+    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem));
     fe->init_for_side(_elem, s, false);
 
     const std::vector<Real> &JxW                 = fe->get_JxW();

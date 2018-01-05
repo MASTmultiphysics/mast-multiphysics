@@ -22,9 +22,9 @@
 #include "heat_conduction/heat_conduction_nonlinear_assembly.h"
 #include "base/assembly_base.h"
 #include "heat_conduction/heat_conduction_elem_base.h"
-#include "property_cards/element_property_card_base.h"
+#include "property_cards/element_property_card_1D.h"
 #include "base/physics_discipline_base.h"
-#include "mesh/fe_base.h"
+#include "mesh/local_elem_fe.h"
 
 
 MAST::HeatConductionNonlinearAssemblyElemOperations::
@@ -41,19 +41,6 @@ MAST::HeatConductionNonlinearAssemblyElemOperations::
 }
 
 
-std::unique_ptr<MAST::FEBase>
-MAST::HeatConductionNonlinearAssemblyElemOperations::
-build_fe(const libMesh::Elem& elem) {
-    
-    
-    const MAST::ElementPropertyCardBase& p =
-    dynamic_cast<const MAST::ElementPropertyCardBase&>
-    (_assembly->discipline().get_property_card(elem));
-    
-    return std::unique_ptr<MAST::FEBase>
-    (MAST::build_conduction_fe(_assembly->system_init(), elem, p));
-}
-
 
 std::unique_ptr<MAST::ElementBase>
 MAST::HeatConductionNonlinearAssemblyElemOperations::
@@ -65,7 +52,7 @@ build_elem(const libMesh::Elem& elem) {
     (_assembly->discipline().get_property_card(elem));
     
     MAST::ElementBase* rval =
-    new MAST::HeatConductionElementBase(_assembly->system_init(), *this, elem, p);
+    new MAST::HeatConductionElementBase(_assembly->system_init(), *_assembly, elem, p);
     
     return std::unique_ptr<MAST::ElementBase>(rval);
 }
@@ -122,3 +109,17 @@ elem_second_derivative_dot_solution_assembly(MAST::ElementBase& elem,
 }
 
 
+void
+MAST::HeatConductionNonlinearAssemblyElemOperations::
+set_local_fe_data(const libMesh::Elem& e,
+                  MAST::LocalElemFE& fe) const {
+    
+    if (e.dim() == 1) {
+        
+        const MAST::ElementPropertyCard1D&
+        p_card = dynamic_cast<const MAST::ElementPropertyCard1D&>
+        (_assembly->discipline().get_property_card(e));
+        
+        fe.set_1d_y_vector(p_card.y_vector());
+    }
+}

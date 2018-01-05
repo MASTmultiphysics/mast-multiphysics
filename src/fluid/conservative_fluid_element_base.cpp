@@ -29,19 +29,19 @@
 #include "fluid/surface_integrated_pressure_output.h"
 #include "base/nonlinear_system.h"
 #include "mesh/fe_base.h"
-#include "base/assembly_elem_operation.h"
+#include "base/assembly_base.h"
 
 
 MAST::ConservativeFluidElementBase::
 ConservativeFluidElementBase(MAST::SystemInitialization&    sys,
-                             MAST::AssemblyElemOperations&  assembly_ops,
+                             MAST::AssemblyBase&            assembly,
                              const libMesh::Elem&           elem,
                              const MAST::FlightCondition&   f):
 MAST::FluidElemBase(elem.dim(), f),
-MAST::ElementBase(sys, assembly_ops, elem) {
+MAST::ElementBase(sys, assembly, elem) {
     
     // initialize the finite element data structures
-    _fe = assembly_ops.build_fe(_elem).release();
+    _fe = assembly.build_fe(_elem).release();
     _fe->init(elem);
 }
 
@@ -474,7 +474,8 @@ side_external_residual (bool request_jacobian,
         
         // check to see if any of the specified boundary ids has a boundary
         // condition associated with them
-        std::vector<libMesh::boundary_id_type> bc_ids = binfo.boundary_ids(&_elem, n);
+        std::vector<libMesh::boundary_id_type> bc_ids;
+        binfo.boundary_ids(&_elem, n, bc_ids);
         std::vector<libMesh::boundary_id_type>::const_iterator bc_it = bc_ids.begin();
         
         for ( ; bc_it != bc_ids.end(); bc_it++) {
@@ -575,7 +576,8 @@ linearized_side_external_residual (bool request_jacobian,
         
         // check to see if any of the specified boundary ids has a boundary
         // condition associated with them
-        std::vector<libMesh::boundary_id_type> bc_ids = binfo.boundary_ids(&_elem, n);
+        std::vector<libMesh::boundary_id_type> bc_ids;
+        binfo.boundary_ids(&_elem, n, bc_ids);
         std::vector<libMesh::boundary_id_type>::const_iterator bc_it = bc_ids.begin();
         
         for ( ; bc_it != bc_ids.end(); bc_it++) {
@@ -693,7 +695,8 @@ side_external_residual_sensitivity (bool request_jacobian,
         
         // check to see if any of the specified boundary ids has a boundary
         // condition associated with them
-        std::vector<libMesh::boundary_id_type> bc_ids = binfo.boundary_ids(&_elem, n);
+        std::vector<libMesh::boundary_id_type> bc_ids;
+        binfo.boundary_ids(&_elem, n, bc_ids);
         std::vector<libMesh::boundary_id_type>::const_iterator bc_it = bc_ids.begin();
         
         for ( ; bc_it != bc_ids.end(); bc_it++) {
@@ -782,7 +785,7 @@ symmetry_surface_residual(bool request_jacobian,
                           MAST::BoundaryConditionBase& p) {
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_assembly_ops.build_fe(_elem));
+    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem));
     fe->init_for_side(_elem, s, false);
 
     const std::vector<Real> &JxW                 = fe->get_JxW();
@@ -889,7 +892,7 @@ slip_wall_surface_residual(bool request_jacobian,
     // qi ni = 0       (since heat flux occurs only on no-slip wall and far-field bc)
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_assembly_ops.build_fe(_elem));
+    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem));
     fe->init_for_side(_elem, s, false);
 
     const std::vector<Real> &JxW                 = fe->get_JxW();
@@ -1034,7 +1037,7 @@ linearized_slip_wall_surface_residual(bool request_jacobian,
     // qi ni = 0       (since heat flux occurs only on no-slip wall and far-field bc)
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_assembly_ops.build_fe(_elem));
+    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem));
     fe->init_for_side(_elem, s, false);
 
     const std::vector<Real> &JxW                 = fe->get_JxW();
@@ -1227,7 +1230,7 @@ noslip_wall_surface_residual(bool request_jacobian,
     // qi ni = 0       (since heat flux occurs only on no-slip wall and far-field bc)
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_assembly_ops.build_fe(_elem));
+    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem));
     fe->init_for_side(_elem, s, true);
 
     const std::vector<Real> &JxW                 = fe->get_JxW();
@@ -1427,7 +1430,7 @@ far_field_surface_residual(bool request_jacobian,
     // -- f_diff_i ni  = f_diff                         (evaluation of diffusion flux based on domain solution)
 
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_assembly_ops.build_fe(_elem));
+    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem));
     fe->init_for_side(_elem, s, false);
 
     const std::vector<Real> &JxW                 = fe->get_JxW();
@@ -1598,7 +1601,8 @@ side_output_quantity (bool request_derivative,
         
         // check to see if any of the specified boundary ids has a boundary
         // condition associated with them
-        std::vector<libMesh::boundary_id_type> bc_ids = binfo.boundary_ids(&_elem, n);
+        std::vector<libMesh::boundary_id_type> bc_ids;
+        binfo.boundary_ids(&_elem, n, bc_ids);
         std::vector<libMesh::boundary_id_type>::const_iterator bc_it = bc_ids.begin();
         
         for ( ; bc_it != bc_ids.end(); bc_it++) {
@@ -1640,7 +1644,7 @@ _calculate_surface_integrated_load(bool request_derivative,
                                    MAST::OutputFunctionBase& output) {
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_assembly_ops.build_fe(_elem));
+    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem));
     fe->init_for_side(_elem, s, false);
     
     const std::vector<Real> &JxW                 = fe->get_JxW();
