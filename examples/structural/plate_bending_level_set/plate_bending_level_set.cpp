@@ -19,6 +19,7 @@
 
 // C++ includes
 #include <iostream>
+#include <numeric>
 
 
 // MAST includes
@@ -36,7 +37,13 @@
 #include "property_cards/isotropic_material_property_card.h"
 #include "boundary_condition/dirichlet_boundary_condition.h"
 #include "base/nonlinear_system.h"
-
+#include "level_set/level_set_system_initialization.h"
+#include "level_set/level_set_discipline.h"
+#include "level_set/level_set_transient_assembly.h"
+#include "level_set/level_set_intersection.h"
+#include "level_set/sub_cell_fe.h"
+#include "base/transient_assembly.h"
+#include "solver/first_order_newmark_transient_solver.h"
 
 // libMesh includes
 #include "libmesh/mesh_generation.h"
@@ -87,16 +94,7 @@ protected:
     _rmax;
 };
 
-
-MAST::PlateBendingLevelSet::PlateBendingLevelSet():
-_initialized(false) {
-
-}
-
-#include "plplot/plplot.h"
-#include "level_set/level_set_intersection.h"
-#include "level_set/sub_cell_fe.h"
-#include <numeric>
+//#include "plplot/plplot.h"
 
 void plot_elem(const libMesh::Elem& e) {
     
@@ -112,7 +110,7 @@ void plot_elem(const libMesh::Elem& e) {
         y(i) = e.point(i%n)(1);
     }
     
-    plline(n+1, x.data(), y.data());
+    //plline(n+1, x.data(), y.data());
 }
 
 
@@ -132,8 +130,60 @@ void plot_points(const std::vector<libMesh::Point>& pts) {
     
     //char s[] = ".";
     //plstring(n, x.data(), y.data(), s);
-    plpoin(n, x.data(), y.data(), -1);
+    //plpoin(n, x.data(), y.data(), -1);
 }
+
+
+class Vel: public MAST::FieldFunction<RealVectorX> {
+public:
+    Vel(): MAST::FieldFunction<RealVectorX>("vel") {}
+    
+    virtual void operator() (const libMesh::Point& p,
+                             const Real t,
+                             RealVectorX& v) const {
+        
+        v.setZero();
+        v(0) = 1.; // constant x-velocity
+    }
+    
+protected:
+    
+};
+
+
+
+MAST::PlateBendingLevelSet::PlateBendingLevelSet():
+_initialized(false),
+_length(0.),
+_width(0.),
+_mesh(nullptr),
+_eq_sys(nullptr),
+_str_sys(nullptr),
+_phi_sys(nullptr),
+_structural_sys(nullptr),
+_phi_sys_init(nullptr),
+_str_discipline(nullptr),
+_phi_discipline(nullptr),
+_th(nullptr),
+_E(nullptr),
+_nu(nullptr),
+_kappa(nullptr),
+_press(nullptr),
+_zero(nullptr),
+_th_f(nullptr),
+_E_f(nullptr),
+_nu_f(nullptr),
+_kappa_f(nullptr),
+_hoff_f(nullptr),
+_press_f(nullptr),
+_phi_vel(nullptr),
+_m_card(nullptr),
+_p_card(nullptr),
+_dirichlet_left(nullptr),
+_dirichlet_right(nullptr),
+_dirichlet_bottom(nullptr),
+_dirichlet_top(nullptr),
+_p_load(nullptr) { }
 
 
 void
@@ -154,7 +204,7 @@ MAST::PlateBendingLevelSet::init(libMesh::ElemType e_type,
     
     // initialize the mesh with one element
     libMesh::MeshTools::Generation::build_square(*_mesh,
-                                                 120, 120,
+                                                 20, 20,
                                                  0, _length,
                                                  0, _width,
                                                  e_type);
@@ -163,20 +213,26 @@ MAST::PlateBendingLevelSet::init(libMesh::ElemType e_type,
     _eq_sys    = new  libMesh::EquationSystems(*_mesh);
     
     // create the libmesh system
-    _sys       = &(_eq_sys->add_system<MAST::NonlinearSystem>("structural"));
-    _phi_sys   = &(_eq_sys->add_system<libMesh::ExplicitSystem>("phi"));
+    _str_sys   = &(_eq_sys->add_system<MAST::NonlinearSystem>("structural"));
+    _phi_sys   = &(_eq_sys->add_system<MAST::NonlinearSystem>("level_set"));
     
     // FEType to initialize the system
     libMesh::FEType fetype (libMesh::FIRST, libMesh::LAGRANGE);
     
-    // initialize the system to the right set of variables
-    _structural_sys = new MAST::StructuralSystemInitialization(*_sys,
-                                                               _sys->name(),
+    // initialize the structural system pointers
+    _structural_sys = new MAST::StructuralSystemInitialization(*_str_sys,
+                                                               _str_sys->name(),
                                                                fetype);
-    _discipline     = new MAST::StructuralDiscipline(*_eq_sys);
+    _str_discipline = new MAST::StructuralDiscipline(*_eq_sys);
     
-    _phi_sys->add_variable("phi", fetype);
     
+    // initialize the level set pointers
+    _phi_vel        = new Vel;
+    _phi_sys_init   = new MAST::LevelSetSystemInitialization(*_phi_sys,
+                                                             _phi_sys->name(),
+                                                             fetype);
+    _phi_discipline = new MAST::LevelSetDiscipline(*_eq_sys, *_phi_vel);
+
     
 //    {
 //        Phi phi(_length, _width, _length*0.5*.1, _length*0.5*0.9);
@@ -281,11 +337,11 @@ MAST::PlateBendingLevelSet::init(libMesh::ElemType e_type,
     _dirichlet_top->init    (2, _structural_sys->vars());
     _dirichlet_left->init   (3, _structural_sys->vars());
     
-    _discipline->add_dirichlet_bc(0, *_dirichlet_bottom);
-    _discipline->add_dirichlet_bc(1,  *_dirichlet_right);
-    _discipline->add_dirichlet_bc(2,    *_dirichlet_top);
-    _discipline->add_dirichlet_bc(3,   *_dirichlet_left);
-    _discipline->init_system_dirichlet_bc(*_sys);
+    _str_discipline->add_dirichlet_bc(0, *_dirichlet_bottom);
+    _str_discipline->add_dirichlet_bc(1,  *_dirichlet_right);
+    _str_discipline->add_dirichlet_bc(2,    *_dirichlet_top);
+    _str_discipline->add_dirichlet_bc(3,   *_dirichlet_left);
+    _str_discipline->init_system_dirichlet_bc(*_str_sys);
     
     // initialize the equation system
     _eq_sys->init();
@@ -319,7 +375,7 @@ MAST::PlateBendingLevelSet::init(libMesh::ElemType e_type,
     // initialize the load
     _p_load          = new MAST::BoundaryConditionBase(MAST::SURFACE_PRESSURE);
     _p_load->add(*_press_f);
-    _discipline->add_volume_load(0, *_p_load);
+    _str_discipline->add_volume_load(0, *_p_load);
     
     // create the material property card
     _m_card         = new MAST::IsotropicMaterialPropertyCard;
@@ -341,7 +397,7 @@ MAST::PlateBendingLevelSet::init(libMesh::ElemType e_type,
     _p_card->set_bending_model(MAST::MINDLIN);
     if (if_vk) _p_card->set_strain(MAST::VON_KARMAN_STRAIN);
     
-    _discipline->set_property_for_subdomain(0, *_p_card);
+    _str_discipline->set_property_for_subdomain(0, *_p_card);
     
     
     // create the output objects, one for each element
@@ -386,10 +442,10 @@ MAST::PlateBendingLevelSet::init(libMesh::ElemType e_type,
         e_set.insert(*e_it);
         output->set_elements_in_domain(e_set);
         output->set_points_for_evaluation(pts);
-        output->set_volume_loads(_discipline->volume_loads());
+        output->set_volume_loads(_str_discipline->volume_loads());
         _outputs.push_back(output);
         
-        _discipline->add_volume_output((*e_it)->subdomain_id(), *output);
+        _str_discipline->add_volume_output((*e_it)->subdomain_id(), *output);
     }
     
     _initialized = true;
@@ -433,8 +489,11 @@ MAST::PlateBendingLevelSet::~PlateBendingLevelSet() {
         delete _eq_sys;
         delete _mesh;
         
-        delete _discipline;
+        delete _str_discipline;
         delete _structural_sys;
+        delete _phi_discipline;
+        delete _phi_sys_init;
+        delete _phi_vel;
         
         // iterate over the output quantities and delete them
         std::vector<MAST::StressStrainOutputBase*>::iterator
@@ -529,13 +588,96 @@ _project_phi(MAST::FieldFunction<Real>& phi,
 
 
 
+
 const libMesh::NumericVector<Real>&
 MAST::PlateBendingLevelSet::solve(bool if_write_output) {
     
     
     libmesh_assert(_initialized);
+   
+    class PhiWrapper: public MAST::FieldFunction<RealVectorX> {
+    public:
+        PhiWrapper(Phi& phi):
+        MAST::FieldFunction<RealVectorX>("phi"),
+        _phi(phi) {}
+        
+        virtual void operator()(const libMesh::Point& p,
+                                const Real t,
+                                RealVectorX& v) const {
+            Real val;
+            _phi(p, t, val);
+            v(0) = val;
+        }
+
+        Phi& _phi;
+    };
+
+    Phi phi(_length, _width, _length*0.5*.2, _length*0.5*0.9);
+    PhiWrapper phi_wrap(phi);
+
+    _phi_sys_init->initialize_solution(phi_wrap);
     
-    bool if_vk = (_p_card->strain_type() == MAST::VON_KARMAN_STRAIN);
+    // create the nonlinear assembly object
+    MAST::TransientAssembly                                  phi_assembly;
+    MAST::LevelSetTransientAssemblyElemOperations            level_set_elem_ops;
+
+    // Transient solver for time integration
+    MAST::FirstOrderNewmarkTransientSolver  phi_solver;
+    
+    // now solve the system
+    phi_assembly.attach_discipline_and_system(level_set_elem_ops,
+                                              *_phi_discipline,
+                                              phi_solver,
+                                              *_phi_sys_init);
+
+    // file to write the solution for visualization
+    libMesh::ExodusII_IO exodus_writer(*_mesh);
+    
+    // time solver parameters
+    unsigned int
+    t_step            = 0;
+    
+    phi_solver.dt            = 1.e-3;
+    phi_solver.beta          = 0.5;
+    
+    // set the previous state to be same as the current state to account for
+    // zero velocity as the initial condition
+    phi_solver.solution(1).zero();
+    phi_solver.solution(1).add(1., phi_solver.solution());
+    phi_solver.solution(1).close();
+    
+    
+    if (if_write_output)
+        libMesh::out << "Writing output to : output.exo" << std::endl;
+    
+    // loop over time steps
+    while (t_step <= 100) {
+        
+        libMesh::out
+        << "Time step: " << t_step
+        << " :  t = " << _phi_sys->time
+        << std::endl;
+        
+        // write the time-step
+        if (if_write_output) {
+            
+            exodus_writer.write_timestep("output.exo",
+                                         *_eq_sys,
+                                         t_step+1,
+                                         _phi_sys->time);
+        }
+        
+        phi_solver.solve();
+        
+        phi_solver.advance_time_step();
+        t_step++;
+    }
+    
+    phi_assembly.clear_discipline_and_system();
+
+    
+    
+    /*bool if_vk = (_p_card->strain_type() == MAST::VON_KARMAN_STRAIN);
     
     // set the number of load steps
     unsigned int
@@ -602,8 +744,9 @@ MAST::PlateBendingLevelSet::solve(bool if_write_output) {
         }
     }
     assembly.clear_discipline_and_system();
+    */
     
-    return *(_sys->solution);
+    return *(_str_sys->solution);
 }
 
 
@@ -616,7 +759,7 @@ MAST::PlateBendingLevelSet::sensitivity_solve(MAST::Parameter& p,
     
     libmesh_assert(_initialized);
     
-    _discipline->add_parameter(p);
+    _str_discipline->add_parameter(p);
 
     Phi phi(_length, _width, _length*0.5*.1, _length*0.5*0.9);
 
@@ -625,7 +768,7 @@ MAST::PlateBendingLevelSet::sensitivity_solve(MAST::Parameter& p,
     MAST::StructuralNonlinearAssemblyElemOperations   elem_ops;
     
     assembly.attach_discipline_and_system(elem_ops,
-                                          *_discipline,
+                                          *_str_discipline,
                                           *_structural_sys,
                                           phi);
 
@@ -644,11 +787,11 @@ MAST::PlateBendingLevelSet::sensitivity_solve(MAST::Parameter& p,
     // evaluate sensitivity of the outputs
     assembly.calculate_output_sensitivity(params,
                                           true,    // true for total sensitivity
-                                          *(_sys->solution));
+                                          *(_str_sys->solution));
     
     
     assembly.clear_discipline_and_system();
-    _discipline->remove_parameter(p);
+    _str_discipline->remove_parameter(p);
     
     // write the solution for visualization
     if (if_write_output) {
@@ -663,17 +806,17 @@ MAST::PlateBendingLevelSet::sensitivity_solve(MAST::Parameter& p,
         << std::endl;
         
         
-        _sys->solution->swap(_sys->get_sensitivity_solution(0));
+        _str_sys->solution->swap(_str_sys->get_sensitivity_solution(0));
         
         // write the solution for visualization
-        _discipline->update_stress_strain_data( &p);
+        _str_discipline->update_stress_strain_data( &p);
         libMesh::ExodusII_IO(*_mesh).write_equation_systems(oss1.str(),
                                                             *_eq_sys);
         
-        _sys->solution->swap(_sys->get_sensitivity_solution(0));
+        _str_sys->solution->swap(_str_sys->get_sensitivity_solution(0));
     }
     
-    return _sys->get_sensitivity_solution(0);
+    return _str_sys->get_sensitivity_solution(0);
 }
 
 

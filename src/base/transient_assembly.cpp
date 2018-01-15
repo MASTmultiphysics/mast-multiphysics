@@ -68,6 +68,7 @@ attach_discipline_and_system(MAST::TransientAssemblyElemOperations& elem_ops,
     
     // attach this assembly object to the transient solver
     solver.set_assembly(*this);
+    solver.set_assembly_ops(elem_ops);
     
     _system->system().nonlinear_solver->residual_and_jacobian_object = this;
 }

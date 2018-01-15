@@ -17,46 +17,54 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#ifndef __mast__conservative_fluid_system_initialization_h__
-#define __mast__conservative_fluid_system_initialization_h__
+#ifndef __mast__level_set_discipline__
+#define __mast__level_set_discipline__
 
 // MAST includes
-#include "base/system_initialization.h"
+#include "base/physics_discipline_base.h"
+
 
 
 namespace MAST {
     
-    class ConservativeFluidSystemInitialization:
-    public MAST::SystemInitialization  {
+    // Forward declerations
+    template <typename ValType> class FieldFunction;
+    
+    
+    class LevelSetDiscipline:
+    public MAST::PhysicsDisciplineBase {
+        
         
     public:
-        ConservativeFluidSystemInitialization(MAST::NonlinearSystem& sys,
-                                              const std::string& prefix,
-                                              const libMesh::FEType& fe_type,
-                                              const unsigned int dim);
         
-        virtual ~ConservativeFluidSystemInitialization();
+        // Constructor
+        LevelSetDiscipline(libMesh::EquationSystems& eq_sys,
+                           MAST::FieldFunction<RealVectorX>& vel);
         
         
         /*!
-         *    @returns spatial dimensions of analysis
+         *   virtual destructor
          */
-        inline unsigned int dim() {
-            
-            return _dim;
-        }
+        virtual ~LevelSetDiscipline();
+
         
+        /*!
+         *  @returns a reference to the velocity function for this level set
+         */
+        const MAST::FieldFunction<RealVectorX>&
+        get_velocity_function() const {
+            
+            return _vel;
+        }
         
     protected:
         
         
-        /*!
-         *   spatial dimensions of analysis
-         */
-        const unsigned int _dim;
+        MAST::FieldFunction<RealVectorX>& _vel;
+        
     };
 }
 
-#endif  //__mast__conservative_fluid_system_initialization_h__
 
+#endif // __mast__level_set_discipline__
 

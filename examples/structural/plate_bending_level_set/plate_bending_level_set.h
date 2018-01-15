@@ -44,6 +44,8 @@ namespace MAST {
     // Forward declerations
     class StructuralSystemInitialization;
     class StructuralDiscipline;
+    class LevelSetSystemInitialization;
+    class LevelSetDiscipline;
     class Parameter;
     class ConstantFieldFunction;
     class IsotropicMaterialPropertyCard;
@@ -52,6 +54,7 @@ namespace MAST {
     class BoundaryConditionBase;
     class StressStrainOutputBase;
     class NonlinearSystem;
+    template <typename ValType> class FieldFunction;
 
     
     struct PlateBendingLevelSet {
@@ -113,15 +116,15 @@ namespace MAST {
         libMesh::EquationSystems*      _eq_sys;
         
         // create the libmesh system
-        MAST::NonlinearSystem*  _sys;
-
-        // system to plot level set function
-        libMesh::ExplicitSystem* _phi_sys;
+        MAST::NonlinearSystem*  _str_sys;
+        MAST::NonlinearSystem*  _phi_sys;
         
         // initialize the system to the right set of variables
         MAST::StructuralSystemInitialization* _structural_sys;
-        MAST::StructuralDiscipline*           _discipline;
-        
+        MAST::LevelSetSystemInitialization*   _phi_sys_init;
+        MAST::StructuralDiscipline*           _str_discipline;
+        MAST::LevelSetDiscipline*             _phi_discipline;
+
         // create the property functions and add them to the
         MAST::Parameter
         *_th,
@@ -138,6 +141,8 @@ namespace MAST {
         *_kappa_f,
         *_hoff_f,
         *_press_f;
+        
+        MAST::FieldFunction<RealVectorX>*        _phi_vel;
         
         // create the material property card
         MAST::IsotropicMaterialPropertyCard*     _m_card;

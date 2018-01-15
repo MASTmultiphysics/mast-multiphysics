@@ -48,12 +48,12 @@ namespace MAST {
          *   Attaches the assembly elem operations object that provides the
          *   x_dot, M and J quantities for the element
          */
-        void set_assembly_ops(MAST::TransientAssemblyElemOperations& assembly_ops);
+        virtual void set_assembly_ops(MAST::TransientAssemblyElemOperations& assembly_ops);
 
         /*!
          *   Clears the assembly elem operations object
          */
-        void clear_assembly_ops();
+        virtual void clear_assembly_ops();
         
         /*!
          *   time step

@@ -24,6 +24,9 @@
 #include <memory>
 #include <vector>
 
+// MAST includes
+#include "base/mast_data_types.h"
+
 // libMesh includes
 #include "libmesh/fe_type.h"
 
@@ -32,6 +35,7 @@ namespace MAST {
 
     // Forward declerations
     class NonlinearSystem;
+    template <typename ValType> class FieldFunction;
     
     
     class SystemInitialization {
@@ -92,6 +96,20 @@ namespace MAST {
         const std::string& prefix() const {
             return _prefix;
         }
+        
+
+        /*!
+         *    initializes the FE solution vector to the constant
+         *    solution provided in \par sol.
+         */
+        void initialize_solution(const RealVectorX& sol);
+
+        /*!
+         *    initializes the FE solution vector to the function
+         *    solution provided in \par sol.
+         */
+        void initialize_solution(const MAST::FieldFunction<RealVectorX>& sol);
+
         
     protected:
         

@@ -39,7 +39,6 @@ namespace MAST {
     class FunctionBase;
     class FunctionSetBase;
     class ElementPropertyCardBase;
-    template <typename T> class ConstantFunction;
     class SystemInitialization;
     class Parameter;
     class PointLoadCondition;

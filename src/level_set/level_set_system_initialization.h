@@ -17,8 +17,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#ifndef __mast__conservative_fluid_system_initialization_h__
-#define __mast__conservative_fluid_system_initialization_h__
+#ifndef __mast__level_set_system_initialization__
+#define __mast__level_set_system_initialization__
 
 // MAST includes
 #include "base/system_initialization.h"
@@ -26,37 +26,24 @@
 
 namespace MAST {
     
-    class ConservativeFluidSystemInitialization:
+    // Forward declerations
+    class NonlinearSystem;
+    
+    
+    class LevelSetSystemInitialization:
     public MAST::SystemInitialization  {
         
     public:
-        ConservativeFluidSystemInitialization(MAST::NonlinearSystem& sys,
-                                              const std::string& prefix,
-                                              const libMesh::FEType& fe_type,
-                                              const unsigned int dim);
+        LevelSetSystemInitialization(MAST::NonlinearSystem& sys,
+                                     const std::string& prefix,
+                                     const libMesh::FEType& fe_type);
         
-        virtual ~ConservativeFluidSystemInitialization();
-        
-        
-        /*!
-         *    @returns spatial dimensions of analysis
-         */
-        inline unsigned int dim() {
-            
-            return _dim;
-        }
-        
+        virtual ~LevelSetSystemInitialization();
         
     protected:
         
-        
-        /*!
-         *   spatial dimensions of analysis
-         */
-        const unsigned int _dim;
     };
 }
 
-#endif  //__mast__conservative_fluid_system_initialization_h__
-
+#endif // __mast__level_set_system_initialization__
 
