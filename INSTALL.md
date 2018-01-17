@@ -1,6 +1,8 @@
 MAST INSTALLATION
 ===============================
 
+Please see [https://mastmultiphysics.github.io](https://mastmultiphysics.github.io) for additional documentation. 
+
 DEPENDENCY LIST
 -------------------------------
 MAST depends on the following libraries:
