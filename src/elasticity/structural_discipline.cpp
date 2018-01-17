@@ -155,46 +155,49 @@ update_stress_strain_data(const MAST::Parameter* p) const {
     
     
     for ( ; it != end; it++) {
-    
+        
         sid      = it->first;
         
         // get reference to the output object
-        const MAST::StressStrainOutputBase&
-        output   =  dynamic_cast<MAST::StressStrainOutputBase&>(*(it->second));
-        
-        // get the stress-strain data map from the object
-        const std::map<const libMesh::Elem*,
-        std::vector<MAST::StressStrainOutputBase::Data*> >& output_map =
-        output.get_stress_strain_data();
-        
-        // now iteragtove over all the elements and set the value in the
-        // new system used for output
-        std::map<const libMesh::Elem*,
-        std::vector<MAST::StressStrainOutputBase::Data*> >::const_iterator
-        e_it    =  output_map.begin(),
-        e_end   =  output_map.end();
-        
-        for ( ; e_it != e_end; e_it++) {
+        if (it->second->type() == MAST::STRAIN_STRESS_TENSOR) {
             
-            get_max_stress_strain_values(e_it->second,
-                                         max_strain_vals,
-                                         max_stress_vals,
-                                         max_vm_stress,
-                                         p);
+            const MAST::StressStrainOutputBase&
+            output   =  dynamic_cast<MAST::StressStrainOutputBase&>(*(it->second));
             
-            // set the values in the system
-            // stress value
-            dof_id     =   (e_it->first)->dof_number(sys_num, _stress_vars[12], 0);
-            _stress_output_sys->solution->set(dof_id, max_vm_stress);
+            // get the stress-strain data map from the object
+            const std::map<const libMesh::Elem*,
+            std::vector<MAST::StressStrainOutputBase::Data*> >& output_map =
+            output.get_stress_strain_data();
             
-            for (unsigned int i=0; i<6; i++) {
-                // strain value
-                dof_id     =   (e_it->first)->dof_number(sys_num, _stress_vars[i], 0);
-                _stress_output_sys->solution->set(dof_id, max_strain_vals(i));
+            // now iteragtove over all the elements and set the value in the
+            // new system used for output
+            std::map<const libMesh::Elem*,
+            std::vector<MAST::StressStrainOutputBase::Data*> >::const_iterator
+            e_it    =  output_map.begin(),
+            e_end   =  output_map.end();
+            
+            for ( ; e_it != e_end; e_it++) {
                 
+                get_max_stress_strain_values(e_it->second,
+                                             max_strain_vals,
+                                             max_stress_vals,
+                                             max_vm_stress,
+                                             p);
+                
+                // set the values in the system
                 // stress value
-                dof_id     =   (e_it->first)->dof_number(sys_num, _stress_vars[i+6], 0);
-                _stress_output_sys->solution->set(dof_id, max_stress_vals(i));
+                dof_id     =   (e_it->first)->dof_number(sys_num, _stress_vars[12], 0);
+                _stress_output_sys->solution->set(dof_id, max_vm_stress);
+                
+                for (unsigned int i=0; i<6; i++) {
+                    // strain value
+                    dof_id     =   (e_it->first)->dof_number(sys_num, _stress_vars[i], 0);
+                    _stress_output_sys->solution->set(dof_id, max_strain_vals(i));
+                    
+                    // stress value
+                    dof_id     =   (e_it->first)->dof_number(sys_num, _stress_vars[i+6], 0);
+                    _stress_output_sys->solution->set(dof_id, max_stress_vals(i));
+                }
             }
         }
     }

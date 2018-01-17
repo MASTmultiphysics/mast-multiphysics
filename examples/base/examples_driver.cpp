@@ -348,13 +348,13 @@ int main(int argc, char* const argv[]) {
                                                                      par_name);
     else if (case_name == "membrane_extension_uniaxial")
         analysis<MAST::MembraneExtensionUniaxial>(case_name,
-                                                  libMesh::EDGE2,
+                                                  libMesh::QUAD4,
                                                   if_nonlin,
                                                   with_sens,
                                                   par_name);
     else if (case_name == "membrane_extension_biaxial")
         analysis<MAST::MembraneExtensionBiaxial>(case_name,
-                                                 libMesh::EDGE2,
+                                                 libMesh::QUAD4,
                                                  if_nonlin,
                                                  with_sens,
                                                  par_name);
