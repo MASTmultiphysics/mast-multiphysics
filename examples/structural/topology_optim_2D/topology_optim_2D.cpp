@@ -605,6 +605,11 @@ MAST::TopologyOptimization2D::evaluate(const std::vector<Real>& dvars,
     vol       = 0.,
     total_vol = 0.;
     for (unsigned int i=0; i<_n_elems; i++) {
+        
+        // Note that the element volume should be the area times the thickness.
+        // libMesh::Elem::volume() returns the area for a 2D element. We are
+        // ignoring multiplying this with the section thickness since the
+        // thickness is constant everywhere and it will not affect the design.
         vol = _elems[i]->volume();
         fvals[0]  += dvars[i] * vol; // constraint:  xi vi - V <= 0
         total_vol += vol;
