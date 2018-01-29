@@ -17,38 +17,37 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#ifndef __mast__heat_conduction_discipline__
-#define __mast__heat_conduction_discipline__
+
+#ifndef __mast__structural_example_1d_h__
+#define __mast__structural_example_1d_h__
 
 // MAST includes
-#include "base/physics_discipline_base.h"
-
+#include "examples/structural/base/structural_example_base.h"
 
 
 namespace MAST {
     
-    
-    class HeatConductionDiscipline:
-    public MAST::PhysicsDisciplineBase {
-        
-
-    public:
-        
-        // Constructor
-        HeatConductionDiscipline(libMesh::EquationSystems& eq_sys);
-        
-        
-        /*!
-         *   virtual destructor
-         */
-        virtual ~HeatConductionDiscipline();
+    namespace Examples {
 
         
-    protected:
-        
-        
-    };
+        class StructuralExample1D:
+        public MAST::Examples::StructuralExampleBase {
+            
+        public:
+            
+            StructuralExample1D();
+            
+            virtual ~StructuralExample1D();
+            
+        protected:
+            
+            virtual void _init_mesh();
+            virtual void _init_dirichlet_conditions();
+            virtual void _init_section_property();
+            virtual void _init_section_property_with_offset();
+            virtual void _init_section_property_without_offset();
+        };
+    }
 }
 
-
-#endif // __mast__heat_conduction_discipline__
+#endif // __mast__structural_example_1d_h__

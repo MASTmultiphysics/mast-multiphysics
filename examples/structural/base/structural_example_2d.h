@@ -17,39 +17,37 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#ifndef __mast__output_assembly_base__
-#define __mast__output_assembly_base__
+#ifndef __mast__structural_example_2d_h__
+#define __mast__structural_example_2d_h__
 
 // MAST includes
-#include "base/assembly_base.h"
+#include "examples/structural/base/structural_example_base.h"
 
 
 namespace MAST {
     
-//    // Forward declerations
-//    
-//    class OutputAssemblyBase:
-//    public MAST::AssemblyBase {
-//    
-//    public:
-//        OutputAssemblyBase();
-//        
-//        virtual ~OutputAssemblyBase();
-//        
-//
-//        /*!
-//         *   clears association with a system to this discipline, and vice-a-versa
-//         */
-//        virtual void
-//        clear_discipline_and_system( );
-//        
-//        
-//        
-//    protected:
-//        
-//    };
+    namespace Examples {
+        
+        
+        class StructuralExample2D:
+        public MAST::Examples::StructuralExampleBase {
+            
+        public:
+            
+            StructuralExample2D();
+            
+            virtual ~StructuralExample2D();
+            
+        protected:
+            
+            virtual void _init_mesh();
+            virtual void _init_dirichlet_conditions();
+            virtual void _init_section_property();
+            virtual void _init_section_property_with_offset();
+            virtual void _init_section_property_without_offset();
+        };
+    }
 }
 
 
-#endif // __mast__output_assembly_base__
-
+#endif  // __mast__structural_example_2d_h__
