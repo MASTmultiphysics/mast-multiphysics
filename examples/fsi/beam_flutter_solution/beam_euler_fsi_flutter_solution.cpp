@@ -43,7 +43,6 @@
 #include "aeroelasticity/frequency_function.h"
 #include "aeroelasticity/ug_flutter_root.h"
 #include "elasticity/structural_system_initialization.h"
-#include "elasticity/structural_discipline.h"
 #include "elasticity/structural_element_base.h"
 #include "base/eigenproblem_assembly.h"
 #include "elasticity/structural_modal_eigenproblem_assembly.h"
@@ -375,7 +374,7 @@ _constraint_beam_dofs                  (nullptr) {
     _structural_sys_init  = new MAST::StructuralSystemInitialization(*_structural_sys,
                                                                      _structural_sys->name(),
                                                                      libMesh::FEType(fe_order, fe_family));
-    _structural_discipline = new MAST::StructuralDiscipline(*_structural_eq_sys);
+    _structural_discipline = new MAST::PhysicsDisciplineBase(*_structural_eq_sys);
     
     
     // create and add the boundary condition and loads
@@ -572,48 +571,6 @@ MAST::BeamEulerFSIFlutterAnalysis::~BeamEulerFSIFlutterAnalysis() {
     
     delete _augment_send_list_obj;
 }
-
-
-
-
-
-MAST::Parameter*
-MAST::BeamEulerFSIFlutterAnalysis::get_parameter(const std::string &nm) {
-    
-    MAST::Parameter *rval = nullptr;
-    
-    // look through the vector of parameters to see if the name is available
-    std::vector<MAST::Parameter*>::iterator
-    it   =  _params_for_sensitivity.begin(),
-    end  =  _params_for_sensitivity.end();
-    
-    bool
-    found = false;
-    
-    for ( ; it != end; it++) {
-        
-        if (nm == (*it)->name()) {
-            rval    = *it;
-            found   = true;
-        }
-    }
-    
-    // if the param was not found, then print the message
-    if (!found) {
-        libMesh::out
-        << std::endl
-        << "Parameter not found by name: " << nm << std::endl
-        << "Valid names are: "
-        << std::endl;
-        for (it = _params_for_sensitivity.begin(); it != end; it++)
-            libMesh::out << "   " << (*it)->name() << std::endl;
-        libMesh::out << std::endl;
-    }
-    
-    return rval;
-}
-
-
 
 
 

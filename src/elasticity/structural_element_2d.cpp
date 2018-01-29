@@ -178,40 +178,25 @@ initialize_von_karman_strain_operator_sensitivity(const unsigned int qp,
 bool
 MAST::StructuralElement2D::calculate_stress(bool request_derivative,
                                             bool request_sensitivity,
-                                            MAST::OutputFunctionBase& output) {
+                                            MAST::StressStrainOutputBase& output) {
     
-    // ask the output object about the quadrature points at which
-    // the stress evaluations need to be peformed
-    MAST::PointwiseOutputEvaluationMode mode = output.evaluation_mode();
-    
-    std::vector<libMesh::Point>         qp_loc;
-    std::unique_ptr<MAST::LocalElemFE>  fe(new MAST::LocalElemFE(_system));
+    std::unique_ptr<MAST::FEBase>   fe(_assembly.build_fe(_elem));
+    fe->init(_elem);
+    std::vector<libMesh::Point>
+    qp_loc_fe = fe->get_qpoints(),
+    qp_loc(qp_loc_fe.size()*2);
 
-    switch (mode) {
-        case MAST::CENTROID: {
-            qp_loc.resize(1);
-            qp_loc[0] = libMesh::Point();
-            fe->init(_elem, &qp_loc);
-        }
-            break;
-            
-        case MAST::SPECIFIED_POINTS: {
-            qp_loc = output.get_points_for_evaluation();
-            fe->init(_elem, &qp_loc);
-        }
-            break;
-            
-        case MAST::ELEM_QP: {
-            // this will initialize the FE object at the points specified
-            // by the quadrature rule
-            fe->init(_elem);
-            qp_loc = fe->get_qpoints();
-        }
-            break;
-            
-        default:
-            // should not get here
-            libmesh_error();
+    // we will evaluate the stress at upper and lower layers of element,
+    // so we will add two new points for each qp_loc.
+    // TODO: this will need to be moved to element property section card
+    // to handle composite elements at a later date
+    for (unsigned int i=0; i<qp_loc_fe.size(); i++) {
+        
+        qp_loc[i*2]      = qp_loc_fe[i];
+        qp_loc[i*2](2)   = +1.; // upper skin
+        
+        qp_loc[i*2+1]    = qp_loc_fe[i];
+        qp_loc[i*2+1](2) = -1.; // lower skin
     }
     
     MAST::BendingOperatorType bending_model =

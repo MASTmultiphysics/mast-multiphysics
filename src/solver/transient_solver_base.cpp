@@ -490,3 +490,11 @@ MAST::TransientSolverBase::advance_time_step() {
 
 
 
+void
+MAST::TransientSolverBase::clear_elem() {
+    
+    libmesh_assert(_assembly_ops);
+    _assembly_ops->clear_elem();
+}
+
+

@@ -277,47 +277,6 @@ MAST::PanelInviscidSmallDisturbanceFrequencyDomain2DAnalysis::
 
 
 
-MAST::Parameter*
-MAST::PanelInviscidSmallDisturbanceFrequencyDomain2DAnalysis::
-get_parameter(const std::string &nm) {
-    
-    MAST::Parameter *rval = nullptr;
-    
-    // look through the vector of parameters to see if the name is available
-    std::vector<MAST::Parameter*>::iterator
-    it   =  _params_for_sensitivity.begin(),
-    end  =  _params_for_sensitivity.end();
-    
-    bool
-    found = false;
-    
-    for ( ; it != end; it++) {
-        
-        if (nm == (*it)->name()) {
-            rval    = *it;
-            found   = true;
-        }
-    }
-    
-    // if the param was not found, then print the message
-    if (!found) {
-        libMesh::out
-        << std::endl
-        << "Parameter not found by name: " << nm << std::endl
-        << "Valid names are: "
-        << std::endl;
-        for (it = _params_for_sensitivity.begin(); it != end; it++)
-            libMesh::out << "   " << (*it)->name() << std::endl;
-        libMesh::out << std::endl;
-    }
-    
-    return rval;
-}
-
-
-
-
-
 void
 MAST::PanelInviscidSmallDisturbanceFrequencyDomain2DAnalysis::
 solve(bool if_write_output) {

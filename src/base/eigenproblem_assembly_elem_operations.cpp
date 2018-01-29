@@ -33,19 +33,4 @@ MAST::EigenproblemAssemblyElemOperations::~EigenproblemAssemblyElemOperations() 
 }
 
 
-void
-MAST::EigenproblemAssemblyElemOperations::
-set_elem_sol(MAST::ElementBase& elem,
-             const RealVectorX& sol) {
-    
-    elem.set_solution(sol);
-}
 
-
-void
-MAST::EigenproblemAssemblyElemOperations::
-set_elem_sol_sens(MAST::ElementBase& elem,
-                  const RealVectorX& sol) {
-    
-    elem.set_solution(sol, true);
-}

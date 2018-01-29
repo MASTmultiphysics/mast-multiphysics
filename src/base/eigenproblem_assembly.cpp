@@ -174,7 +174,7 @@ eigenproblem_assemble(libMesh::SparseMatrix<Real>* A,
     RealMatrixX mat_A, mat_B;
     std::vector<libMesh::dof_id_type> dof_indices;
     const libMesh::DofMap& dof_map = eigen_sys.get_dof_map();
-    std::unique_ptr<MAST::ElementBase> physics_elem;
+    
     
     libMesh::MeshBase::const_element_iterator       el     =
     eigen_sys.get_mesh().active_local_elements_begin();
@@ -187,7 +187,7 @@ eigenproblem_assemble(libMesh::SparseMatrix<Real>* A,
         
         dof_map.dof_indices (elem, dof_indices);
         
-        physics_elem.reset(_eigenproblem_elem_ops->build_elem(*elem).release());
+        _eigenproblem_elem_ops->init(*elem);
         
         // get the solution
         unsigned int ndofs = (unsigned int)dof_indices.size();
@@ -201,10 +201,12 @@ eigenproblem_assemble(libMesh::SparseMatrix<Real>* A,
                 sol(i) = (*localized_solution)(dof_indices[i]);
         }
         
-        _eigenproblem_elem_ops->set_elem_sol(*physics_elem, sol);
+        _eigenproblem_elem_ops->set_elem_solution(sol);
         
-        _eigenproblem_elem_ops->elem_calculations(*physics_elem, mat_A, mat_B);
+        _eigenproblem_elem_ops->elem_calculations(mat_A, mat_B);
 
+        _eigenproblem_elem_ops->clear_elem();
+        
         // copy to the libMesh matrix for further processing
         DenseRealMatrix A, B;
         MAST::copy(A, mat_A);
@@ -269,7 +271,7 @@ eigenproblem_sensitivity_assemble(const libMesh::ParameterVector& parameters,
     RealMatrixX mat_A, mat_B;
     std::vector<libMesh::dof_id_type> dof_indices;
     const libMesh::DofMap& dof_map = eigen_sys.get_dof_map();
-    std::unique_ptr<MAST::ElementBase> physics_elem;
+    
     
     libMesh::MeshBase::const_element_iterator       el     =
     eigen_sys.get_mesh().active_local_elements_begin();
@@ -282,7 +284,7 @@ eigenproblem_sensitivity_assemble(const libMesh::ParameterVector& parameters,
         
         dof_map.dof_indices (elem, dof_indices);
         
-        physics_elem.reset(_eigenproblem_elem_ops->build_elem(*elem).release());
+        _eigenproblem_elem_ops->init(*elem);
         
         // get the solution
         unsigned int ndofs = (unsigned int)dof_indices.size();
@@ -298,7 +300,7 @@ eigenproblem_sensitivity_assemble(const libMesh::ParameterVector& parameters,
                 sol(i) = (*localized_solution)(dof_indices[i]);
         }
         
-        _eigenproblem_elem_ops->set_elem_sol(*physics_elem, sol);
+        _eigenproblem_elem_ops->set_elem_solution(sol);
         
         // set the element's base solution sensitivity
         if (_base_sol) {
@@ -307,15 +309,15 @@ eigenproblem_sensitivity_assemble(const libMesh::ParameterVector& parameters,
                 sol(i) = (*localized_solution_sens)(dof_indices[i]);
         }
         
-        _eigenproblem_elem_ops->set_elem_sol_sens(*physics_elem, sol);
+        _eigenproblem_elem_ops->set_elem_solution_sensitivity(sol);
 
         // tell the element about the sensitivity parameter
-        physics_elem->sensitivity_param = _discipline->get_parameter(&(parameters[i].get()));
+        _eigenproblem_elem_ops->set_elem_sensitivity_parameter(*_discipline->get_parameter(&(parameters[i].get())));
         
-        _eigenproblem_elem_ops->elem_sensitivity_calculations(*physics_elem,
-                                                             _base_sol!=nullptr,
-                                                             mat_A,
-                                                             mat_B);
+        _eigenproblem_elem_ops->elem_sensitivity_calculations(_base_sol!=nullptr,
+                                                              mat_A,
+                                                              mat_B);
+        _eigenproblem_elem_ops->clear_elem();
 
         // copy to the libMesh matrix for further processing
         DenseRealMatrix A, B;

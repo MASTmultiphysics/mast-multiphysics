@@ -26,6 +26,7 @@
 #include "base/nonlinear_system.h"
 #include "mesh/local_elem_fe.h"
 #include "base/assembly_elem_operation.h"
+#include "base/output_assembly_elem_operations.h"
 
 
 // libMesh includes
@@ -162,8 +163,9 @@ clear_discipline_and_system( ) {
 
 
 std::unique_ptr<libMesh::NumericVector<Real> >
-MAST::AssemblyBase::build_localized_vector(const libMesh::System& sys,
-                                            const libMesh::NumericVector<Real>& global) {
+MAST::AssemblyBase::
+build_localized_vector(const libMesh::System& sys,
+                       const libMesh::NumericVector<Real>& global) const {
     
     libMesh::NumericVector<Real>* local =
     libMesh::NumericVector<Real>::build(sys.comm()).release();
@@ -213,7 +215,8 @@ MAST::AssemblyBase::build_fe(const libMesh::Elem& elem) {
         
         MAST::LocalElemFE*
         local_fe = new MAST::LocalElemFE(*_system);
-
+        _elem_ops->set_local_fe_data(*local_fe);
+        
         fe.reset(local_fe);
     }
     else {
@@ -228,10 +231,76 @@ MAST::AssemblyBase::build_fe(const libMesh::Elem& elem) {
 
 
 void
-MAST::AssemblyBase::calculate_outputs(const libMesh::NumericVector<Real>& X) {
+MAST::AssemblyBase::calculate_output(const libMesh::NumericVector<Real>& X,
+                                     MAST::OutputAssemblyElemOperations& output) {
     
     
-    MAST::NonlinearSystem& sys = _system->system();
+    MAST::NonlinearSystem& nonlin_sys = _system->system();
+    output.zero();
+    
+    // iterate over each element, initialize it and get the relevant
+    // analysis quantities
+    RealVectorX sol;
+    
+    std::vector<libMesh::dof_id_type> dof_indices;
+    const libMesh::DofMap& dof_map = _system->system().get_dof_map();
+    
+    std::unique_ptr<libMesh::NumericVector<Real> > localized_solution;
+    localized_solution.reset(build_localized_vector(nonlin_sys,
+                                                    X).release());
+    
+    
+    // if a solution function is attached, initialize it
+    //if (_sol_function)
+    //    _sol_function->init( X);
+    
+    libMesh::MeshBase::const_element_iterator       el     =
+    nonlin_sys.get_mesh().active_local_elements_begin();
+    const libMesh::MeshBase::const_element_iterator end_el =
+    nonlin_sys.get_mesh().active_local_elements_end();
+    
+
+    for ( ; el != end_el; ++el) {
+        
+        const libMesh::Elem* elem = *el;
+        
+        dof_map.dof_indices (elem, dof_indices);
+        
+        
+        // get the solution
+        unsigned int ndofs = (unsigned int)dof_indices.size();
+        sol.setZero(ndofs);
+        
+        for (unsigned int i=0; i<dof_indices.size(); i++)
+            sol(i) = (*localized_solution)(dof_indices[i]);
+        
+        
+        //if (_sol_function)
+        //    physics_elem->attach_active_solution_function(*_sol_function);
+        
+        
+        // perform the element level calculations
+        output.evaluate();
+        
+        //physics_elem->detach_active_solution_function();
+    }
+    
+    // if a solution function is attached, clear it
+    if (_sol_function)
+        _sol_function->clear();
+}
+
+
+
+
+void
+MAST::AssemblyBase::
+calculate_output_derivative(const libMesh::NumericVector<Real>& X,
+                            MAST::OutputAssemblyElemOperations& output,
+                            libMesh::NumericVector<Real>& dq_dX) {
+    
+    
+    MAST::NonlinearSystem& nonlin_sys = _system->system();
     
     // iterate over each element, initialize it and get the relevant
     // analysis quantities
@@ -239,22 +308,23 @@ MAST::AssemblyBase::calculate_outputs(const libMesh::NumericVector<Real>& X) {
     RealMatrixX mat;
     
     std::vector<libMesh::dof_id_type> dof_indices;
-    const libMesh::DofMap& dof_map = sys.get_dof_map();
-    std::unique_ptr<MAST::ElementBase> physics_elem;
+    const libMesh::DofMap& dof_map = _system->system().get_dof_map();
+    
     
     std::unique_ptr<libMesh::NumericVector<Real> > localized_solution;
-    localized_solution.reset(build_localized_vector(sys, X).release());
+    localized_solution.reset(build_localized_vector(nonlin_sys,
+                                                    X).release());
     
     
     // if a solution function is attached, initialize it
     if (_sol_function)
-        _sol_function->init(X);
+        _sol_function->init( X);
     
     
     libMesh::MeshBase::const_element_iterator       el     =
-    sys.get_mesh().active_local_elements_begin();
+    nonlin_sys.get_mesh().active_local_elements_begin();
     const libMesh::MeshBase::const_element_iterator end_el =
-    sys.get_mesh().active_local_elements_end();
+    nonlin_sys.get_mesh().active_local_elements_end();
     
     
     for ( ; el != end_el; ++el) {
@@ -263,7 +333,7 @@ MAST::AssemblyBase::calculate_outputs(const libMesh::NumericVector<Real>& X) {
         
         dof_map.dof_indices (elem, dof_indices);
         
-        physics_elem.reset(_elem_ops->build_elem(*elem).release());
+        output.init(*elem);
         
         // get the solution
         unsigned int ndofs = (unsigned int)dof_indices.size();
@@ -274,116 +344,18 @@ MAST::AssemblyBase::calculate_outputs(const libMesh::NumericVector<Real>& X) {
         for (unsigned int i=0; i<dof_indices.size(); i++)
             sol(i) = (*localized_solution)(dof_indices[i]);
         
-        physics_elem->set_solution(sol);
+        output.set_elem_solution(sol);
         
-        if (_sol_function)
-            physics_elem->attach_active_solution_function(*_sol_function);
+        
+//        if (_sol_function)
+//            physics_elem->attach_active_solution_function(*_sol_function);
+        
+        //_check_element_numerical_jacobian(*physics_elem, sol);
         
         // perform the element level calculations
-        _elem_outputs(*physics_elem,
-                      _discipline->volume_output(),
-                      _discipline->side_output());
+        output.evaluate_derivative();
         
-        physics_elem->detach_active_solution_function();
-    }
-    
-    
-    // if a solution function is attached, clear it
-    if (_sol_function)
-        _sol_function->clear();
-}
-
-
-
-
-
-void
-MAST::AssemblyBase::
-calculate_output_sensitivity(libMesh::ParameterVector &params,
-                             const bool if_total_sensitivity,
-                             const libMesh::NumericVector<Real> &X) {
-    
-    
-    MAST::NonlinearSystem& sys = _system->system();
-    
-    // iterate over each element, initialize it and get the relevant
-    // analysis quantities
-    RealVectorX vec, sol, sol_sens;
-    RealMatrixX mat;
-    
-    std::vector<libMesh::dof_id_type> dof_indices;
-    const libMesh::DofMap& dof_map = sys.get_dof_map();
-    std::unique_ptr<MAST::ElementBase> physics_elem;
-    
-    std::unique_ptr<libMesh::NumericVector<Real> >
-    localized_solution,
-    localized_solution_sensitivity;
-    
-    localized_solution.reset(build_localized_vector(sys, X).release());
-    
-    
-    // if a solution function is attached, initialize it
-    if (_sol_function)
-        _sol_function->init( X);
-    
-    // iterate over the parameters
-    for ( unsigned int i=0; i<params.size(); i++) {
-        
-        if (if_total_sensitivity)
-            localized_solution_sensitivity.reset
-            (build_localized_vector(sys,
-                                     sys.get_sensitivity_solution(i)).release());
-    
-        libMesh::MeshBase::const_element_iterator       el     =
-        sys.get_mesh().active_local_elements_begin();
-        const libMesh::MeshBase::const_element_iterator end_el =
-        sys.get_mesh().active_local_elements_end();
-        
-        
-        for ( ; el != end_el; ++el) {
-            
-            const libMesh::Elem* elem = *el;
-            
-            dof_map.dof_indices (elem, dof_indices);
-            
-            physics_elem.reset(_elem_ops->build_elem(*elem).release());
-            
-            // get the solution
-            unsigned int ndofs = (unsigned int)dof_indices.size();
-            sol.setZero(ndofs);
-            sol_sens.setZero(ndofs);
-            vec.setZero(ndofs);
-            mat.setZero(ndofs, ndofs);
-
-            // tell the element about the sensitivity paramete
-            physics_elem->sensitivity_param =
-            _discipline->get_parameter(&(params[i].get()));
-            
-            // get the solution
-            for (unsigned int i=0; i<dof_indices.size(); i++)
-                sol(i) = (*localized_solution)(dof_indices[i]);
-
-            // tell the element about the solution
-            physics_elem->set_solution(sol);
-
-            // get the solution sensitivity
-            if (if_total_sensitivity)
-                for (unsigned int i=0; i<dof_indices.size(); i++)
-                    sol_sens(i) = (*localized_solution_sensitivity)(dof_indices[i]);
-        
-            // tell the solution about the sensitivity
-            physics_elem->set_solution(sol_sens, true);
-
-            if (_sol_function)
-                physics_elem->attach_active_solution_function(*_sol_function);
-            
-            // perform the element level calculations
-            _elem_output_sensitivity(*physics_elem,
-                                     _discipline->volume_output(),
-                                     _discipline->side_output());
-            
-            physics_elem->detach_active_solution_function();
-        }
+//        physics_elem->detach_active_solution_function();
         
     }
     
@@ -393,39 +365,6 @@ calculate_output_sensitivity(libMesh::ParameterVector &params,
 }
 
 
-
-
-
-void
-MAST::AssemblyBase::
-_elem_outputs(MAST::ElementBase &elem,
-              std::multimap<libMesh::subdomain_id_type,MAST::OutputFunctionBase *> &vol_output,
-              std::multimap<libMesh::boundary_id_type,MAST::OutputFunctionBase *> &side_output) {
-    
-    
-    // ask the element to provide the outputs
-    elem.volume_output_quantity(false, false, vol_output);
-    elem.side_output_quantity(false, false,  side_output);
-}
-
-
-
-
-void
-MAST::AssemblyBase::
-_elem_output_sensitivity(MAST::ElementBase &elem,
-                         std::multimap<libMesh::subdomain_id_type, MAST::OutputFunctionBase *> &vol_output,
-                         std::multimap<libMesh::boundary_id_type,MAST::OutputFunctionBase *> &side_output) {
-    
-    
-    // ask the element to provide the outputs
-    elem.volume_output_quantity(false,  // false for adjoints
-                                true,   // true for sensitivity
-                                vol_output);
-    elem.side_output_quantity(false,  // false for adjoints
-                              true,   // true for sensitivity
-                              side_output);
-}
 
 
 

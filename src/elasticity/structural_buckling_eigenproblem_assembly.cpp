@@ -121,7 +121,7 @@ eigenproblem_assemble(libMesh::SparseMatrix<Real> *A,
     RealMatrixX dummy, mat_A, mat_B;
     std::vector<libMesh::dof_id_type> dof_indices;
     const libMesh::DofMap& dof_map = eigen_sys.get_dof_map();
-    std::unique_ptr<MAST::ElementBase> physics_elem;
+    
     
     libMesh::MeshBase::const_element_iterator       el     =
     eigen_sys.get_mesh().active_local_elements_begin();
@@ -134,7 +134,7 @@ eigenproblem_assemble(libMesh::SparseMatrix<Real> *A,
         
         dof_map.dof_indices (elem, dof_indices);
         
-        physics_elem.reset(this->build_elem(*elem).release());
+        this->init(*elem);
         
         // get the solution
         unsigned int ndofs = (unsigned int)dof_indices.size();
@@ -151,13 +151,14 @@ eigenproblem_assemble(libMesh::SparseMatrix<Real> *A,
         for (unsigned int i=0; i<dof_indices.size(); i++)
             sol(i) = (*localized_solution1)(dof_indices[i]);
     
-        physics_elem->set_solution(sol);
+        _elem_ops->set_elem_solution(sol);
         
         
         // set the incompatible mode solution if required by the
         // element
         MAST::StructuralElementBase& p_elem =
-        dynamic_cast<MAST::StructuralElementBase&>(*physics_elem);
+        dynamic_cast<MAST::StructuralElementBase&>(*_physics_elem);
+        
         if (p_elem.if_incompatible_modes()) {
             libmesh_error(); // this needs to be carefully implemented
             // check if the vector exists in the map
@@ -167,7 +168,7 @@ eigenproblem_assemble(libMesh::SparseMatrix<Real> *A,
         }
 
         DenseRealMatrix AA, BB;
-        this->elem_calculations(*physics_elem, mat_A, dummy);
+        this->elem_calculations(mat_A, dummy);
         
         MAST::copy(AA, mat_A); // copy to the libMesh matrix for further processing
         dof_map.constrain_element_matrix(AA, dof_indices); // constrain the element matrices.
@@ -184,7 +185,7 @@ eigenproblem_assemble(libMesh::SparseMatrix<Real> *A,
         for (unsigned int i=0; i<dof_indices.size(); i++)
             sol(i) = (*localized_solution2)(dof_indices[i]);
         
-        physics_elem->set_solution(sol);
+        _elem_ops->set_elem_solution(sol);
         
         
         // set the incompatible mode solution if required by the
@@ -198,7 +199,7 @@ eigenproblem_assemble(libMesh::SparseMatrix<Real> *A,
             p_elem.set_incompatible_mode_solution(_incompatible_sol[elem]);
         }
 
-        this->elem_calculations(*physics_elem, mat_B, dummy);
+        this->elem_calculations(mat_B, dummy);
         mat_B  *= -1.;
         if (_use_linearized_formulation)
             mat_B  += mat_A;
@@ -217,27 +218,27 @@ eigenproblem_assemble(libMesh::SparseMatrix<Real> *A,
 
 
 
-std::unique_ptr<MAST::ElementBase>
-MAST::StructuralBucklingEigenproblemAssembly::build_elem(const libMesh::Elem& elem) {
-    
+void
+MAST::StructuralBucklingEigenproblemAssembly::init(const libMesh::Elem& elem) {
+
+    libmesh_assert(!_physics_elem);
     
     const MAST::ElementPropertyCardBase& p =
     dynamic_cast<const MAST::ElementPropertyCardBase&>(_assembly->discipline().get_property_card(elem));
     
-    return std::unique_ptr<MAST::ElementBase>(MAST::build_structural_element
-                                              (_assembly->system_init(), *this, elem, p));
+    _physics_elem =
+    MAST::build_structural_element(_assembly->system_init(), *this, elem, p).release();
 }
 
 
 
 void
 MAST::StructuralBucklingEigenproblemAssembly::
-elem_calculations(MAST::ElementBase& elem,
-                  RealMatrixX& mat_A,
+elem_calculations(RealMatrixX& mat_A,
                   RealMatrixX& mat_B) {
     
     MAST::StructuralElementBase& e =
-    dynamic_cast<MAST::StructuralElementBase&>(elem);
+    dynamic_cast<MAST::StructuralElementBase&>(*_physics_elem);
     
     RealVectorX
     vec = RealVectorX::Zero(mat_A.rows()); // dummy vector
@@ -266,13 +267,12 @@ elem_calculations(MAST::ElementBase& elem,
 
 void
 MAST::StructuralBucklingEigenproblemAssembly::
-elem_sensitivity_calculations(MAST::ElementBase& elem,
-                              bool base_sol,
+elem_sensitivity_calculations(bool base_sol,
                               RealMatrixX& mat_A,
                               RealMatrixX& mat_B) {
     
     MAST::StructuralElementBase& e =
-    dynamic_cast<MAST::StructuralElementBase&>(elem);
+    dynamic_cast<MAST::StructuralElementBase&>(*_physics_elem);
     
     RealVectorX
     vec = RealVectorX::Zero(mat_A.rows()); // dummy vector
@@ -315,8 +315,7 @@ critical_point_estimate_from_eigenproblem(Real v) const {
 
 
 void
-MAST::StructuralBucklingEigenproblemAssembly::set_elem_sol(MAST::ElementBase& elem,
-                                                           const RealVectorX& sol) {
+MAST::StructuralBucklingEigenproblemAssembly::set_elem_solution(const RealVectorX& sol) {
     
     unsigned int
     n = (unsigned int)sol.size();
@@ -324,22 +323,22 @@ MAST::StructuralBucklingEigenproblemAssembly::set_elem_sol(MAST::ElementBase& el
     RealVectorX
     zero = RealVectorX::Zero(n);
     
-    elem.set_solution    (sol);
-    elem.set_velocity    (zero); // set to zero vector for a quasi-steady analysis
-    elem.set_acceleration(zero); // set to zero vector for a quasi-steady analysis
+    _physics_elem->set_solution    (sol);
     
     
     // set the incompatible mode solution if required by the
     // element
     MAST::StructuralElementBase& s_elem =
-    dynamic_cast<MAST::StructuralElementBase&>(elem);
+    dynamic_cast<MAST::StructuralElementBase&>(*_physics_elem);
     
     if (s_elem.if_incompatible_modes()) {
         
+        const libMesh::Elem& elem = _physics_elem->elem();
+        
         // check if the vector exists in the map
-        if (!_incompatible_sol.count(&elem.elem()))
-            _incompatible_sol[&elem.elem()] = RealVectorX::Zero(s_elem.incompatible_mode_size());
-        s_elem.set_incompatible_mode_solution(_incompatible_sol[&elem.elem()]);
+        if (!_incompatible_sol.count(&elem))
+            _incompatible_sol[&elem] = RealVectorX::Zero(s_elem.incompatible_mode_size());
+        s_elem.set_incompatible_mode_solution(_incompatible_sol[&elem]);
     }
 }
 
@@ -362,9 +361,12 @@ MAST::StructuralBucklingEigenproblemAssembly::set_elem_sol_sens(MAST::ElementBas
 
 void
 MAST::StructuralBucklingEigenproblemAssembly::
-set_local_fe_data(const libMesh::Elem& e,
-                  MAST::LocalElemFE& fe) const {
+set_local_fe_data(MAST::LocalElemFE& fe) const {
+
+    libmesh_assert(!_physics_elem);
     
+    const libMesh::Elem& e = _physics_elem->elem();
+
     if (e.dim() == 1) {
         
         const MAST::ElementPropertyCard1D&

@@ -20,13 +20,20 @@
 
 // MAST includes
 #include "base/transient_assembly_elem_operations.h"
+#include "base/elem_base.h"
+
 
 MAST::TransientAssemblyElemOperations::TransientAssemblyElemOperations():
 MAST::AssemblyElemOperations() {
     
 }
 
+
+
 MAST::TransientAssemblyElemOperations::~TransientAssemblyElemOperations() {
     
 }
+
+
+
 

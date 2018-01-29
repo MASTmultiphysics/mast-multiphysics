@@ -63,8 +63,7 @@ namespace MAST {
         /*!
          *   sets the element solution(s) before calculations
          */
-        virtual void set_elem_sol(MAST::ElementBase& elem,
-                                  const RealVectorX& sol);
+        virtual void set_elem_solution(const RealVectorX& sol);
         
         /*!
          *   performs the element calculations over \par elem, and returns
@@ -72,8 +71,7 @@ namespace MAST {
          *   \par vec, respectively. \par if_jac tells the method to also
          *   assemble the Jacobian, in addition to the residual vector.
          */
-        virtual void elem_calculations(MAST::ElementBase& elem,
-                                       bool if_jac,
+        virtual void elem_calculations(bool if_jac,
                                        RealVectorX& vec,
                                        RealMatrixX& mat);
         
@@ -86,16 +84,14 @@ namespace MAST {
          *   forces/etc.) are added to this vector.
          */
         virtual void
-        elem_linearized_jacobian_solution_product(MAST::ElementBase& elem,
-                                                  RealVectorX& vec);
+        elem_linearized_jacobian_solution_product(RealVectorX& vec);
         
         
         /*!
          *   performs the element sensitivity calculations over \par elem,
          *   and returns the element residual sensitivity in \par vec .
          */
-        virtual void elem_sensitivity_calculations(MAST::ElementBase& elem,
-                                                   RealVectorX& vec);
+        virtual void elem_sensitivity_calculations(RealVectorX& vec);
         
         
         /*!
@@ -103,16 +99,16 @@ namespace MAST {
          *   and returns the matrix in \par vec .
          */
         virtual void
-        elem_second_derivative_dot_solution_assembly(MAST::ElementBase& elem,
-                                                     RealMatrixX& mat);
+        elem_second_derivative_dot_solution_assembly(RealMatrixX& mat);
 
         
         /*!
-         *   @returns a smart-pointer to a newly created element for
-         *   calculation of element quantities.
+         *   initializes the object for the geometric element \p elem. This
+         *   expects the object to be in a cleared state, so the user should
+         *   call \p clear_elem() between successive initializations.
          */
-        virtual std::unique_ptr<MAST::ElementBase>
-        build_elem(const libMesh::Elem& elem);
+        virtual void
+        init(const libMesh::Elem& elem);
         
         /*!
          *   some simulations frequently deal with 1D/2D elements in 3D space,
@@ -128,43 +124,9 @@ namespace MAST {
          *   sets additional data for local elem FE.
          */
         virtual void
-        set_local_fe_data(const libMesh::Elem& e,
-                          MAST::LocalElemFE& fe) const;
+        set_local_fe_data(MAST::LocalElemFE& fe) const;
 
         
-//        /*!
-//         *   Evaluates the volume and boundary outputs for the specified
-//         *   solution. This reimplements the virtual method from the parent
-//         *   class to handle the structural compliance evaluation.
-//         */
-//        virtual void calculate_outputs(const libMesh::NumericVector<Real>& X);
-//
-//
-//        /*!
-//         *   This reimplements the virtual method from the parent
-//         *   class to handle the structural compliance evaluation.
-//         */
-//        void calculate_output_sensitivity(libMesh::ParameterVector& params,
-//                                          const bool if_total_sensitivity,
-//                                          const libMesh::NumericVector<Real>& X);
-//
-//
-//        /*!
-//         *  calculates the elastic compliance of the system \p S about the
-//         *  solution defined by \p X. If sensitivity of the quantity is
-//         *  desired with respect to a parameter, then the parameter can
-//         *  be specified. If \p dX is provided, then the total sensitivity
-//         *  is evaluated with respect to the parameter, otherwise the partial
-//         *  derivative of the output quantity is evaluated.
-//         */
-//        virtual void
-//        calculate_compliance (const libMesh::NumericVector<Real>& X,
-//                              libMesh::NonlinearImplicitSystem& S,
-//                              MAST::RealOutputFunction& output,
-//                              const MAST::FunctionBase* f = nullptr,
-//                              const libMesh::NumericVector<Real>* dX = nullptr);
-
-
     protected:
         
         

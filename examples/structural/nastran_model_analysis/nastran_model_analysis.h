@@ -40,7 +40,6 @@ namespace MAST {
     class Model;
     class Parameter;
     class StructuralSystemInitialization;
-    class StructuralDiscipline;
     class DirichletBoundaryCondition;
     class BoundaryConditionBase;
     class StressStrainOutputBase;

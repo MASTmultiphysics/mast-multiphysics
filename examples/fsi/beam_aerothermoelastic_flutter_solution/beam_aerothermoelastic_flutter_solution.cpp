@@ -38,7 +38,6 @@
 #include "elasticity/structural_modal_eigenproblem_assembly.h"
 #include "elasticity/structural_near_null_vector_space.h"
 #include "elasticity/structural_system_initialization.h"
-#include "elasticity/structural_discipline.h"
 #include "elasticity/fsi_generalized_aero_force_assembly.h"
 #include "elasticity/complex_normal_rotation_mesh_function.h"
 #include "solver/complex_solver_base.h"

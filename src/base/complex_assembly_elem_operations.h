@@ -33,15 +33,25 @@ namespace MAST {
         ComplexAssemblyElemOperations();
         
         virtual ~ComplexAssemblyElemOperations();
-      
+
+        /*!
+         *   sets the element complex solution
+         */
+        virtual void set_elem_complex_solution(const ComplexVectorX& sol);
+
+        /*!
+         *   sets the element complex solution
+         */
+        virtual void set_elem_complex_solution_sensitivity(const ComplexVectorX& sol);
+
+
         /*!
          *   performs the element calculations over \par elem, and returns
          *   the element vector and matrix quantities in \par mat and
          *   \par vec, respectively. \par if_jac tells the method to also
          *   assemble the Jacobian, in addition to the residual vector.
          */
-        virtual void elem_calculations(MAST::ElementBase& elem,
-                                       bool if_jac,
+        virtual void elem_calculations(bool if_jac,
                                        ComplexVectorX& vec,
                                        ComplexMatrixX& mat) = 0;
         
@@ -49,8 +59,7 @@ namespace MAST {
          *   performs the element sensitivity calculations over \par elem,
          *   and returns the element residual sensitivity in \par vec .
          */
-        virtual void elem_sensitivity_calculations(MAST::ElementBase& elem,
-                                                   ComplexVectorX& vec) = 0;
+        virtual void elem_sensitivity_calculations(ComplexVectorX& vec) = 0;
 
     protected:
         

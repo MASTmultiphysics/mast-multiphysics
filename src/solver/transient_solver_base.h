@@ -174,22 +174,11 @@ namespace MAST {
 
 
         /*!
-         *   sets the element solution(s) before calculations
-         */
-        virtual void set_elem_sol(MAST::ElementBase& elem,
-                                  const RealVectorX& sol) {
-            
-            // this should not be called for this class. 
-            libmesh_assert(false);
-        }
-
-        /*!
          *    provides the element with the transient data for calculations
          */
         virtual void
         set_element_data(const std::vector<libMesh::dof_id_type>& dof_indices,
-                          const std::vector<libMesh::NumericVector<Real>*>& sols,
-                          MAST::ElementBase& elem) = 0;
+                          const std::vector<libMesh::NumericVector<Real>*>& sols) = 0;
         
         /*!
          *    provides the element with the transient data for calculations
@@ -197,13 +186,14 @@ namespace MAST {
         virtual void
         set_element_perturbed_data
         (const std::vector<libMesh::dof_id_type>& dof_indices,
-         const std::vector<libMesh::NumericVector<Real>*>& sols,
-         MAST::ElementBase& elem) = 0;
+         const std::vector<libMesh::NumericVector<Real>*>& sols) = 0;
+
         
-        virtual std::unique_ptr<MAST::ElementBase>
-        build_elem(const libMesh::Elem& elem) {
-            libmesh_assert(false); // should not get called.
-        }
+        /*!
+         *   calls the method from TransientAssemblyElemOperations
+         */
+        virtual void clear_elem();
+        
 
         virtual bool
         if_use_local_elem() const {
@@ -211,8 +201,7 @@ namespace MAST {
         }
         
         virtual void
-        set_local_fe_data(const libMesh::Elem& e,
-                          MAST::LocalElemFE& fe) const {
+        set_local_fe_data(MAST::LocalElemFE& fe) const {
             libmesh_assert(false); // should not get called.
         }
 

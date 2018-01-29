@@ -39,7 +39,6 @@ namespace MAST {
     class FunctionBase;
     class SystemInitialization;
     class LocalElemBase;
-    class OutputFunctionBase;
     class NonlinearSystem;
     class FEBase;
     class AssemblyBase;
@@ -213,30 +212,6 @@ namespace MAST {
          */
         const MAST::FunctionBase* sensitivity_param;
         
-                
-        /*!
-         *   evaluates an output quantity requested in the map over the
-         *   boundary of the element that may coincide with the boundary
-         *   identified in the map. The derivative with respect to the
-         *   state variables is provided if \p request_derivative is true.
-         */
-        virtual bool
-        volume_output_quantity (bool request_derivative,
-                                bool request_sensitivity,
-                                std::multimap<libMesh::subdomain_id_type, MAST::OutputFunctionBase*>& output) = 0;
-        
-        
-        /*!
-         *   evaluates an output quantity requested in the map over the
-         *   boundary of the element that may coincide with the boundary
-         *   identified in the map. The derivative with respect to the
-         *   state variables is provided if \p request_derivative is true.
-         */
-        virtual bool
-        side_output_quantity (bool request_derivative,
-                              bool request_sensitivity,
-                              std::multimap<libMesh::boundary_id_type, MAST::OutputFunctionBase*>& output) = 0;
-
     
     protected:
         

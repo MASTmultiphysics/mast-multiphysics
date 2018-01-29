@@ -895,42 +895,12 @@ piston_theory_residual_sensitivity(bool request_jacobian,
 bool
 MAST::StructuralElement3D::calculate_stress(bool request_derivative,
                                             bool request_sensitivity,
-                                            MAST::OutputFunctionBase& output) {
+                                            MAST::StressStrainOutputBase& output) {
     
-    // ask the output object about the quadrature points at which
-    // the stress evaluations need to be peformed
-    MAST::PointwiseOutputEvaluationMode mode = output.evaluation_mode();
+    std::unique_ptr<MAST::FEBase>   fe(_assembly.build_fe(_elem));
+    fe->init(_elem);
+    std::vector<libMesh::Point>     qp_loc = fe->get_qpoints();
 
-    std::vector<libMesh::Point>    qp_loc;
-    std::unique_ptr<MAST::FEBase>  fe(_assembly.build_fe(_elem));
-
-    switch (mode) {
-        case MAST::CENTROID: {
-            qp_loc.resize(1);
-            qp_loc[0] = libMesh::Point();
-            fe->init(_elem, &qp_loc);
-        }
-            break;
-            
-        case MAST::SPECIFIED_POINTS: {
-            qp_loc = output.get_points_for_evaluation();
-            fe->init(_elem, &qp_loc);
-        }
-            break;
-         
-        case MAST::ELEM_QP: {
-            // this will initialize the FE object at the points specified
-            // by the quadrature rule
-            fe->init(_elem);
-            qp_loc = fe->get_qpoints();
-        }
-            break;
-            
-        default:
-            // should not get here
-            libmesh_error();
-    }
-    
 
     // now that the FE object has been initialized, evaluate the stress values
     

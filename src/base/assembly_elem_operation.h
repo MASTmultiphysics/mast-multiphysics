@@ -20,6 +20,9 @@
 #ifndef __mast_assembly_elem_operation_h__
 #define __mast_assembly_elem_operation_h__
 
+// MAST includes
+#include "base/mast_data_types.h"
+
 
 // libMesh includes
 #include "libmesh/elem.h"
@@ -31,6 +34,7 @@ namespace MAST {
     class ElementBase;
     class AssemblyBase;
     class LocalElemFE;
+    class FunctionBase;
     
     class AssemblyElemOperations {
         
@@ -55,15 +59,77 @@ namespace MAST {
          */
         void clear_assembly();
 
+        /*!
+         *   initializes the object for calculation of element quantities for
+         *   the specified \p elem.
+         */
+        virtual void
+        init(const libMesh::Elem& elem) = 0;
+
+        /*!
+         *   clears the element initialization
+         */
+        virtual void clear_elem();
+
+        /*!
+         *   @returns a reference to the physics element. The object must have
+         *   been initialized before this method is called.
+         */
+        MAST::ElementBase& get_physics_elem() {
+            
+            libmesh_assert(_physics_elem);
+            return *_physics_elem;
+        }
+         
         
         /*!
-         *   @returns a smart-pointer to a newly created element for
-         *   calculation of element quantities.
+         *   sets the element sensitivity parameter
          */
-        virtual std::unique_ptr<MAST::ElementBase>
-        build_elem(const libMesh::Elem& elem) = 0;
+        void set_elem_sensitivity_parameter(const MAST::FunctionBase& f);
+        
+        /*!
+         *   sets the element solution
+         */
+        virtual void
+        set_elem_solution(const RealVectorX& sol);
+
+        /*!
+         *   sets the element solution sensitivity
+         */
+        virtual void
+        set_elem_solution_sensitivity(const RealVectorX& sol);
+
+        /*!
+         *   sets the element perturbed solution
+         */
+        virtual void set_elem_perturbed_solution(const RealVectorX& sol);
 
         
+        /*!
+         *   sets the element velocity
+         */
+        virtual void set_elem_velocity(const RealVectorX& vel);
+
+        /*!
+         *   sets the element velocity sensitivity
+         */
+        virtual void set_elem_velocity_sensitivity(const RealVectorX& vel);
+
+        /*!
+         *   sets the element perturbed velocity
+         */
+        virtual void set_elem_perturbed_velocity(const RealVectorX& vel);
+
+        /*!
+         *   sets the element acceleration
+         */
+        virtual void set_elem_acceleration(const RealVectorX& accel);
+        
+        /*!
+         *   sets the element perturbed acceleration
+         */
+        virtual void set_elem_perturbed_acceleration(const RealVectorX& accel);
+
         /*!
          *   some simulations frequently deal with 1D/2D elements in 3D space,
          *   which requires use of MAST::LocalElemFE.
@@ -76,13 +142,14 @@ namespace MAST {
          *   sets additional data for local elem FE.
          */
         virtual void
-        set_local_fe_data(const libMesh::Elem& e,
-                          MAST::LocalElemFE& fe) const = 0;
+        set_local_fe_data(MAST::LocalElemFE& fe) const = 0;
 
     protected:
 
 
         MAST::AssemblyBase *_assembly;
+        
+        MAST::ElementBase *_physics_elem;
     };
 }
 

@@ -109,6 +109,14 @@ namespace MAST {
             return false;
         }
 
+        /*!
+         *    Calculates the stress tensor
+         */
+        virtual bool calculate_stress(bool request_derivative,
+                                      bool request_sensitivity,
+                                      MAST::StressStrainOutputBase& output);
+        
+        
     protected:
         
         
@@ -239,22 +247,6 @@ namespace MAST {
         
 
         
-        /*!
-         *    Calculates the stress tensor
-         */
-        virtual bool calculate_stress(bool request_derivative,
-                                      bool request_sensitivity,
-                                      MAST::OutputFunctionBase& output);
-        
-        
-        /*!
-         *    Calculates the stress tensor sensitivity
-         */
-        virtual bool calculate_stress_sensitivity(MAST::OutputFunctionBase& output) {
-            // to be implemented
-            libmesh_error();
-        }
-
         /*!
          *   initialize membrane strain operator matrix
          */

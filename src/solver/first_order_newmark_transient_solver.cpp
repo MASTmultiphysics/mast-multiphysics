@@ -64,8 +64,7 @@ MAST::FirstOrderNewmarkTransientSolver::advance_time_step() {
 void
 MAST::FirstOrderNewmarkTransientSolver::
 set_element_data(const std::vector<libMesh::dof_id_type>& dof_indices,
-                 const std::vector<libMesh::NumericVector<Real>*>& sols,
-                 MAST::ElementBase &elem){
+                 const std::vector<libMesh::NumericVector<Real>*>& sols) {
     
     libmesh_assert_equal_to(sols.size(), 2);
     
@@ -90,8 +89,8 @@ set_element_data(const std::vector<libMesh::dof_id_type>& dof_indices,
         vel(i)          = vel_global(dof_indices[i]);
     }
     
-    elem.set_solution(sol);
-    elem.set_velocity(vel);
+    _assembly_ops->set_elem_solution(sol);
+    _assembly_ops->set_elem_velocity(vel);
 }
 
 
@@ -99,8 +98,7 @@ set_element_data(const std::vector<libMesh::dof_id_type>& dof_indices,
 void
 MAST::FirstOrderNewmarkTransientSolver::
 set_element_perturbed_data(const std::vector<libMesh::dof_id_type>& dof_indices,
-                           const std::vector<libMesh::NumericVector<Real>*>& sols,
-                           MAST::ElementBase &elem){
+                           const std::vector<libMesh::NumericVector<Real>*>& sols){
     
     libmesh_assert_equal_to(sols.size(), 2);
     
@@ -125,8 +123,8 @@ set_element_perturbed_data(const std::vector<libMesh::dof_id_type>& dof_indices,
         vel(i)          = vel_global(dof_indices[i]);
     }
     
-    elem.set_perturbed_solution(sol);
-    elem.set_perturbed_velocity(vel);
+    _assembly_ops->set_elem_perturbed_solution(sol);
+    _assembly_ops->set_elem_perturbed_velocity(vel);
 }
 
 
@@ -136,7 +134,7 @@ set_element_perturbed_data(const std::vector<libMesh::dof_id_type>& dof_indices,
 void
 MAST::FirstOrderNewmarkTransientSolver::
 update_velocity(libMesh::NumericVector<Real>&       vec,
-                 const libMesh::NumericVector<Real>& sol) {
+                const libMesh::NumericVector<Real>& sol) {
     
     const libMesh::NumericVector<Real>
     &prev_sol = this->solution(1),
@@ -170,8 +168,7 @@ update_delta_velocity(libMesh::NumericVector<Real>&       vec,
 
 void
 MAST::FirstOrderNewmarkTransientSolver::
-elem_calculations(MAST::ElementBase& elem,
-                  bool if_jac,
+elem_calculations(bool if_jac,
                   RealVectorX& vec,
                   RealMatrixX& mat) {
     // make sure that the assembly object is provided
@@ -188,8 +185,7 @@ elem_calculations(MAST::ElementBase& elem,
     f_x_jac       = RealMatrixX::Zero(n_dofs, n_dofs);
     
     // perform the element assembly
-    _assembly_ops->elem_calculations(elem,
-                                     if_jac,
+    _assembly_ops->elem_calculations(if_jac,
                                      f_m,           // mass vector
                                      f_x,           // forcing vector
                                      f_m_jac_xdot,  // Jac of mass wrt x_dot
@@ -253,14 +249,13 @@ elem_calculations(MAST::ElementBase& elem,
 
 void
 MAST::FirstOrderNewmarkTransientSolver::
-elem_linearized_jacobian_solution_product(MAST::ElementBase& elem,
-                                          RealVectorX& vec) {
+elem_linearized_jacobian_solution_product(RealVectorX& vec) {
 
     // make sure that the assembly object is provided
     libmesh_assert(_assembly_ops);
     
     // perform the element assembly
-    _assembly_ops->linearized_jacobian_solution_product(elem, vec);
+    _assembly_ops->linearized_jacobian_solution_product(vec);
 }
 
 
@@ -268,8 +263,7 @@ elem_linearized_jacobian_solution_product(MAST::ElementBase& elem,
 
 void
 MAST::FirstOrderNewmarkTransientSolver::
-elem_sensitivity_calculations(MAST::ElementBase& elem,
-                              RealVectorX& vec) {
+elem_sensitivity_calculations(RealVectorX& vec) {
 
     // to be implemented
     libmesh_error();

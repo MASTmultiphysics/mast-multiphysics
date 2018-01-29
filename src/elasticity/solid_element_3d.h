@@ -261,7 +261,7 @@ namespace MAST {
          */
         virtual bool calculate_stress(bool request_derivative,
                                       bool request_sensitivity,
-                                      MAST::OutputFunctionBase& output);
+                                      MAST::StressStrainOutputBase& output);
         
         
         /*!

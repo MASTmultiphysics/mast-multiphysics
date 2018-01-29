@@ -35,11 +35,6 @@ namespace MAST {
         
         virtual ~NonlinearImplicitAssemblyElemOperations();
         
-        /*!
-         *   sets the element solution(s) before calculations
-         */
-        virtual void set_elem_sol(MAST::ElementBase& elem,
-                                  const RealVectorX& sol);
         
         /*!
          *   performs the element calculations over \par elem, and returns
@@ -47,8 +42,7 @@ namespace MAST {
          *   \par vec, respectively. \par if_jac tells the method to also
          *   assemble the Jacobian, in addition to the residual vector.
          */
-        virtual void elem_calculations(MAST::ElementBase& elem,
-                                       bool if_jac,
+        virtual void elem_calculations(bool if_jac,
                                        RealVectorX& vec,
                                        RealMatrixX& mat) = 0;
         
@@ -61,16 +55,14 @@ namespace MAST {
          *   forces/etc.) are added to this vector.
          */
         virtual void
-        elem_linearized_jacobian_solution_product(MAST::ElementBase& elem,
-                                                  RealVectorX& vec) = 0;
+        elem_linearized_jacobian_solution_product(RealVectorX& vec) = 0;
         
         
         /*!
          *   performs the element sensitivity calculations over \par elem,
          *   and returns the element residual sensitivity in \par vec .
          */
-        virtual void elem_sensitivity_calculations(MAST::ElementBase& elem,
-                                                   RealVectorX& vec) = 0;
+        virtual void elem_sensitivity_calculations(RealVectorX& vec) = 0;
         
         
         /*!
@@ -78,16 +70,14 @@ namespace MAST {
          *   and returns the matrix in \par vec .
          */
         virtual void
-        elem_second_derivative_dot_solution_assembly(MAST::ElementBase& elem,
-                                                     RealMatrixX& mat) = 0;
+        elem_second_derivative_dot_solution_assembly(RealMatrixX& mat) = 0;
         
         
         /*!
          *    a helper function to evaluate the numerical Jacobian
          *    and compare it with the analytical Jacobian.
          */
-        void check_element_numerical_jacobian(MAST::ElementBase& e,
-                                              RealVectorX& sol);
+        void check_element_numerical_jacobian(RealVectorX& sol);
 
     protected:
         

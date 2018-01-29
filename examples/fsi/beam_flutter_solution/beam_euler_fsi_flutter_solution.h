@@ -46,8 +46,8 @@ namespace MAST {
     class ConservativeFluidSystemInitialization;
     class ConservativeFluidDiscipline;
     class StructuralSystemInitialization;
-    class StructuralDiscipline;
     class Parameter;
+    class PhysicsDisciplineBase;
     class ConstantFieldFunction;
     class IsotropicMaterialPropertyCard;
     class Solid1DSectionElementPropertyCard;
@@ -64,6 +64,7 @@ namespace MAST {
     class FrequencyDomainPressureFunction;
     class AugmentGhostElementSendListObj;
     class ConstrainBeamDofs;
+    class PhysicsDisciplineBase;
     
     
     struct BeamEulerFSIFlutterAnalysis {
@@ -123,7 +124,7 @@ namespace MAST {
         
         // initialize the system to the right set of variables
         MAST::StructuralSystemInitialization*    _structural_sys_init;
-        MAST::StructuralDiscipline*              _structural_discipline;
+        MAST::PhysicsDisciplineBase*             _structural_discipline;
         
         
         // initialize the system to the right set of variables

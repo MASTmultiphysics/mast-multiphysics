@@ -20,7 +20,6 @@
 // MAST includes
 #include "base/transient_assembly.h"
 #include "base/system_initialization.h"
-#include "base/elem_base.h"
 #include "base/physics_discipline_base.h"
 #include "solver/transient_solver_base.h"
 #include "numerics/utility.h"
@@ -128,7 +127,7 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
     
     std::vector<libMesh::dof_id_type> dof_indices;
     const libMesh::DofMap& dof_map = transient_sys.get_dof_map();
-    std::unique_ptr<MAST::ElementBase> physics_elem;
+    
     
     
     // stores the localized solution, velocity, acceleration, etc. vectors.
@@ -154,7 +153,7 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
         
         dof_map.dof_indices (elem, dof_indices);
         
-        physics_elem.reset(_elem_ops->build_elem(*elem).release());
+        _elem_ops->init(*elem);
         
         // get the solution
         unsigned int ndofs = (unsigned int)dof_indices.size();
@@ -162,17 +161,16 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
         mat.setZero(ndofs, ndofs);
         
         _transient_solver->set_element_data(dof_indices,
-                                            local_qtys,
-                                            *physics_elem);
+                                            local_qtys);
         
-        if (_sol_function)
-            physics_elem->attach_active_solution_function(*_sol_function);
+//        if (_sol_function)
+//            physics_elem->attach_active_solution_function(*_sol_function);
         
         // perform the element level calculations
-        _transient_solver->elem_calculations(*physics_elem,
-                                             J!=nullptr?true:false,
+        _transient_solver->elem_calculations(J!=nullptr?true:false,
                                              vec, mat);
-        
+        _transient_solver->clear_elem();
+
         // copy to the libMesh matrix for further processing
         DenseRealVector v;
         DenseRealMatrix m;
@@ -231,7 +229,7 @@ linearized_jacobian_solution_product (const libMesh::NumericVector<Real>& X,
     
     std::vector<libMesh::dof_id_type> dof_indices;
     const libMesh::DofMap& dof_map = transient_sys.get_dof_map();
-    std::unique_ptr<MAST::ElementBase> physics_elem;
+    
     
     // stores the localized solution, velocity, acceleration, etc. vectors.
     // These pointers will have to be deleted
@@ -258,7 +256,7 @@ linearized_jacobian_solution_product (const libMesh::NumericVector<Real>& X,
         
         dof_map.dof_indices (elem, dof_indices);
         
-        physics_elem.reset(_elem_ops->build_elem(*elem).release());
+        _elem_ops->init(*elem);
         
         // get the solution
         unsigned int ndofs = (unsigned int)dof_indices.size();
@@ -266,18 +264,17 @@ linearized_jacobian_solution_product (const libMesh::NumericVector<Real>& X,
 
         
         _transient_solver->set_element_data(dof_indices,
-                                            local_qtys,
-                                            *physics_elem);
+                                            local_qtys);
         _transient_solver->set_element_perturbed_data(dof_indices,
-                                                      local_perturbed_qtys,
-                                                      *physics_elem);
+                                                      local_perturbed_qtys);
         
-        if (_sol_function)
-            physics_elem->attach_active_solution_function(*_sol_function);
+//        if (_sol_function)
+//            physics_elem->attach_active_solution_function(*_sol_function);
 
         // perform the element level calculations
-        _transient_solver->elem_linearized_jacobian_solution_product(*physics_elem,
-                                                                     vec);
+        _transient_solver->elem_linearized_jacobian_solution_product(vec);
+        
+        _transient_solver->clear_elem();
         
         // copy to the libMesh matrix for further processing
         DenseRealVector v;
@@ -312,92 +309,8 @@ MAST::TransientAssembly::
 sensitivity_assemble (const libMesh::ParameterVector& parameters,
                       const unsigned int i,
                       libMesh::NumericVector<Real>& sensitivity_rhs) {
-
-    MAST::NonlinearSystem& transient_sys = _system->system();
     
-    sensitivity_rhs.zero();
-    
-    // iterate over each element, initialize it and get the relevant
-    // analysis quantities
-    RealVectorX vec, sol, vel;
-    RealMatrixX mat;
-    
-    std::vector<libMesh::dof_id_type> dof_indices;
-    const libMesh::DofMap& dof_map = transient_sys.get_dof_map();
-    std::unique_ptr<MAST::ElementBase> physics_elem;
-    
-    // localize the solution and velocity for element assembly
-    std::unique_ptr<libMesh::NumericVector<Real> >
-    localized_solution(build_localized_vector(transient_sys,
-                                               _transient_solver->solution(0)).release()),
-    localized_velocity(build_localized_vector(transient_sys,
-                                               _transient_solver->velocity(0)).release());
-    
-    
-    // ask the solver to provide the velocity estimate
-    const libMesh::NumericVector<Real>
-    &solution = *localized_solution,
-    &velocity = *localized_velocity;
-
-    // if a solution function is attached, initialize it
-    if (_sol_function)
-        _sol_function->init( solution);
-    
-    libMesh::MeshBase::const_element_iterator       el     =
-    transient_sys.get_mesh().active_local_elements_begin();
-    const libMesh::MeshBase::const_element_iterator end_el =
-    transient_sys.get_mesh().active_local_elements_end();
-    
-    for ( ; el != end_el; ++el) {
-        
-        const libMesh::Elem* elem = *el;
-        
-        dof_map.dof_indices (elem, dof_indices);
-        
-        physics_elem.reset(_elem_ops->build_elem(*elem).release());
-        
-        // get the solution
-        unsigned int ndofs = (unsigned int)dof_indices.size();
-        sol.setZero(ndofs);
-        vel.setZero(ndofs);
-        vec.setZero(ndofs);
-        mat.setZero(ndofs, ndofs);
-        
-        for (unsigned int i=0; i<dof_indices.size(); i++) {
-            sol(i) = solution(dof_indices[i]);
-            vel(i) = velocity(dof_indices[i]);
-        }
-        
-        physics_elem->set_solution(sol);
-        physics_elem->set_velocity(vel);
-
-        if (_sol_function)
-            physics_elem->attach_active_solution_function(*_sol_function);
-
-        physics_elem->sensitivity_param = _discipline->get_parameter(&(parameters[i].get()));
-        physics_elem->set_solution(sol);
-        
-        // perform the element level calculations
-        _transient_solver->elem_sensitivity_calculations(*physics_elem, vec);
-        
-        DenseRealVector v;
-        MAST::copy(v, vec);
-        
-        // constrain the quantities to account for hanging dofs,
-        // Dirichlet constraints, etc.
-        dof_map.constrain_element_vector(v, dof_indices);
-        
-        // add to the global matrices
-        sensitivity_rhs.add_vector(v, dof_indices);
-    }
-    
-    
-    sensitivity_rhs.close();
-    
-    // if a solution function is attached, initialize it
-    if (_sol_function)
-        _sol_function->clear();
-
+    libmesh_error(); // to be implemented
     return true;
 }
 

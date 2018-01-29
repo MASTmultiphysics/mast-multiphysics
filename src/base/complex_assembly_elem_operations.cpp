@@ -19,6 +19,7 @@
 
 // MAST includes
 #include "base/complex_assembly_elem_operations.h"
+#include "base/elem_base.h"
 
 
 MAST::ComplexAssemblyElemOperations::ComplexAssemblyElemOperations():
@@ -30,5 +31,19 @@ MAST::AssemblyElemOperations() {
 
 MAST::ComplexAssemblyElemOperations::~ComplexAssemblyElemOperations() {
     
+}
+
+
+void
+MAST::ComplexAssemblyElemOperations::set_elem_complex_solution(const ComplexVectorX &sol) {
+    
+    _physics_elem->set_complex_solution(sol);
+}
+
+
+void
+MAST::ComplexAssemblyElemOperations::set_elem_complex_solution_sensitivity(const ComplexVectorX &sol) {
+    
+    _physics_elem->set_complex_solution(sol, true);
 }
 

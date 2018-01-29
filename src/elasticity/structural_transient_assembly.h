@@ -54,8 +54,7 @@ namespace MAST {
          *   This call for first order ode should not be used for this
          *   transient assembly
          */
-        virtual void elem_calculations(MAST::ElementBase& elem,
-                                       bool if_jac,
+        virtual void elem_calculations(bool if_jac,
                                        RealVectorX& f_m,
                                        RealVectorX& f_x,
                                        RealMatrixX& f_m_jac_x_dot,
@@ -68,8 +67,7 @@ namespace MAST {
          *   \par vec, respectively. \par if_jac tells the method to also
          *   assemble the Jacobian, in addition to the residual vector.
          */
-        virtual void elem_calculations(MAST::ElementBase& elem,
-                                       bool if_jac,
+        virtual void elem_calculations(bool if_jac,
                                        RealVectorX& f_m,
                                        RealVectorX& f_x,
                                        RealMatrixX& f_m_jac_xddot,
@@ -87,31 +85,29 @@ namespace MAST {
          *    df_m(x,\dot{x})/d\dot{x} \cdot d{\dot x} \f$
          */
         virtual void
-        linearized_jacobian_solution_product(MAST::ElementBase& elem,
-                                             RealVectorX& f);
+        linearized_jacobian_solution_product(RealVectorX& f);
 
         
         /*!
          *   performs the element sensitivity calculations over \par elem,
          *   and returns the element residual sensitivity in \par vec .
          */
-        virtual void elem_sensitivity_calculations(MAST::ElementBase& elem,
-                                                   RealVectorX& vec);
+        virtual void elem_sensitivity_calculations(RealVectorX& vec);
         
         /*!
          *   calculates \f$ d ([J] \{\Delta X\})/ dX  \f$ over \par elem,
          *   and returns the matrix in \par vec .
          */
         virtual void
-        elem_second_derivative_dot_solution_assembly(MAST::ElementBase& elem,
-                                                     RealMatrixX& mat);
+        elem_second_derivative_dot_solution_assembly(RealMatrixX& mat);
 
         /*!
-         *   @returns a smart-pointer to a newly created element for
-         *   calculation of element quantities.
+         *   initializes the object for the geometric element \p elem. This
+         *   expects the object to be in a cleared state, so the user should
+         *   call \p clear_elem() between successive initializations.
          */
-        virtual std::unique_ptr<MAST::ElementBase>
-        build_elem(const libMesh::Elem& elem);
+        virtual void
+        init(const libMesh::Elem& elem);
 
         
         /*!
@@ -128,8 +124,7 @@ namespace MAST {
          *   sets additional data for local elem FE.
          */
         virtual void
-        set_local_fe_data(const libMesh::Elem& e,
-                          MAST::LocalElemFE& fe) const;
+        set_local_fe_data(MAST::LocalElemFE& fe) const;
 
     protected:
         

@@ -34,19 +34,6 @@ namespace MAST {
         
         virtual ~EigenproblemAssemblyElemOperations();
         
-        /*!
-         *   sets the element solution(s) before calculations
-         */
-        virtual void
-        set_elem_sol(MAST::ElementBase& elem,
-                     const RealVectorX& sol) = 0;
-        
-        /*!
-         *   sets the element solution(s) before calculations
-         */
-        virtual void
-        set_elem_sol_sens(MAST::ElementBase& elem,
-                          const RealVectorX& sol) = 0;
         
         /*!
          *   performs the element calculations over \par elem, and returns
@@ -54,8 +41,7 @@ namespace MAST {
          *   \f$ A x = \lambda B x \f$.
          */
         virtual void
-        elem_calculations(MAST::ElementBase& elem,
-                          RealMatrixX& mat_A,
+        elem_calculations(RealMatrixX& mat_A,
                           RealMatrixX& mat_B) = 0;
         
         /*!
@@ -64,8 +50,7 @@ namespace MAST {
          *   \f$ A x = \lambda B x \f$.
          */
         virtual void
-        elem_sensitivity_calculations(MAST::ElementBase& elem,
-                                      bool base_sol,
+        elem_sensitivity_calculations(bool base_sol,
                                       RealMatrixX& mat_A,
                                       RealMatrixX& mat_B) = 0;
 

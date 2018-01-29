@@ -128,7 +128,7 @@ assemble_generalized_aerodynamic_force_matrix
     mat.setZero(n_basis, n_basis);
 
     std::vector<libMesh::dof_id_type> dof_indices;
-    std::unique_ptr<MAST::ElementBase> physics_elem;
+    
     
     std::unique_ptr<libMesh::NumericVector<Real> >
     localized_solution,
@@ -188,7 +188,7 @@ assemble_generalized_aerodynamic_force_matrix
             
             dof_map.dof_indices (elem, dof_indices);
             
-            physics_elem.reset(this->build_elem(*elem).release());
+            MAST::StructuralFluidInteractionAssembly::init(*elem);
             
             // get the solution
             unsigned int ndofs = (unsigned int)dof_indices.size();
@@ -206,16 +206,16 @@ assemble_generalized_aerodynamic_force_matrix
             }
             
             
-            physics_elem->set_solution(sol);
+            this->set_elem_solution(sol);
             sol.setZero();
-            physics_elem->set_velocity(sol);     // set to zero value
-            physics_elem->set_acceleration(sol); // set to zero value
+            this->set_elem_velocity(sol);     // set to zero value
+            this->set_elem_acceleration(sol); // set to zero value
             
             
-            if (_sol_function)
-                physics_elem->attach_active_solution_function(*_sol_function);
+//            if (_sol_function)
+//                physics_elem->attach_active_solution_function(*_sol_function);
             
-            _elem_aerodynamic_force_calculations(*physics_elem, vec);
+            _elem_aerodynamic_force_calculations(vec);
             
             DenseRealVector v1;
             RealVectorX     v2;
@@ -236,7 +236,7 @@ assemble_generalized_aerodynamic_force_matrix
             // i^th column of the generalized aerodynamic force matrix
             mat.col(i) += basis_mat.transpose() * vec;
             
-            physics_elem->detach_active_solution_function();
+//            physics_elem->detach_active_solution_function();
         }
     }
     

@@ -1561,87 +1561,13 @@ far_field_surface_residual_sensitivity(bool request_jacobian,
 
 
 
-bool
-MAST::ConservativeFluidElementBase::
-volume_output_quantity (bool request_derivative,
-                        bool request_sensitivity,
-                        std::multimap<libMesh::subdomain_id_type, MAST::OutputFunctionBase*>& output) {
-
-    // no volume outputs to be evaluated for fluid element
-    
-    return (request_derivative || request_sensitivity);
-}
-
-
-
-
-bool
-MAST::ConservativeFluidElementBase::
-side_output_quantity (bool request_derivative,
-                      bool request_sensitivity,
-                      std::multimap<libMesh::boundary_id_type, MAST::OutputFunctionBase*>& output) {
-    
-    
-    typedef std::multimap<libMesh::boundary_id_type, MAST::OutputFunctionBase*> maptype;
-    
-    // iterate over the boundary ids given in the provided force map
-    std::pair<maptype::const_iterator, maptype::const_iterator> it;
-    
-    const libMesh::BoundaryInfo& binfo = *_system.system().get_mesh().boundary_info;
-    
-    // for each boundary id, check if any of the sides on the element
-    // has the associated boundary
-    
-    for (unsigned short int n=0; n<_elem.n_sides(); n++) {
-        
-        // if no boundary ids have been specified for the side, then
-        // move to the next side.
-        if (!binfo.n_boundary_ids(&_elem, n))
-            continue;
-        
-        // check to see if any of the specified boundary ids has a boundary
-        // condition associated with them
-        std::vector<libMesh::boundary_id_type> bc_ids;
-        binfo.boundary_ids(&_elem, n, bc_ids);
-        std::vector<libMesh::boundary_id_type>::const_iterator bc_it = bc_ids.begin();
-        
-        for ( ; bc_it != bc_ids.end(); bc_it++) {
-            
-            // find the loads on this boundary and evaluate the f and jac
-            it = output.equal_range(*bc_it);
-            
-            for ( ; it.first != it.second; it.first++) {
-                
-                // apply all the types of loading
-                switch (it.first->second->type()) {
-                    case MAST::SURFACE_INTEGRATED_LIFT:
-                        _calculate_surface_integrated_load(request_derivative,
-                                                           request_sensitivity,
-                                                           n,
-                                                           *it.first->second);
-                        break;
-                        
-                    default:
-                        // should not get here
-                        libmesh_error();
-                        break;
-                }
-            }
-        }
-    }
-
-    return (request_derivative || request_sensitivity);
-}
-
-
-
 
 void
 MAST::ConservativeFluidElementBase::
 _calculate_surface_integrated_load(bool request_derivative,
                                    bool request_sensitivity,
                                    const unsigned int s,
-                                   MAST::OutputFunctionBase& output) {
+                                   MAST::OutputAssemblyElemOperations& output) {
     
     // prepare the side finite element
     std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem));

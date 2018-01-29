@@ -20,7 +20,12 @@
 
 // MAST includes
 #include "elasticity/stress_output_base.h"
+#include "elasticity/structural_element_base.h"
+#include "base/assembly_base.h"
+#include "base/physics_discipline_base.h"
 #include "base/boundary_condition_base.h"
+#include "property_cards/element_property_card_1D.h"
+#include "mesh/local_elem_fe.h"
 
 
 MAST::StressStrainOutputBase::Data::Data(const RealVectorX& stress,
@@ -240,8 +245,7 @@ dvon_Mises_stress_dp(const MAST::FunctionBase* f) const {
 
 
 MAST::StressStrainOutputBase::StressStrainOutputBase():
-MAST::OutputFunctionBase(MAST::STRAIN_STRESS_TENSOR),
-_vol_loads(nullptr) {
+MAST::OutputAssemblyElemOperations() {
     
 }
 
@@ -250,14 +254,104 @@ _vol_loads(nullptr) {
 
 MAST::StressStrainOutputBase::~StressStrainOutputBase() {
     
-    this->clear(true);
+    this->clear();
 }
 
 
 
 
 void
-MAST::StressStrainOutputBase::clear(bool clear_elem_subset) {
+MAST::StressStrainOutputBase::zero() {
+    
+}
+
+
+Real
+MAST::StressStrainOutputBase::output() {
+    
+    libmesh_error(); // to be implemented
+    return 0.;
+}
+
+
+Real
+MAST::StressStrainOutputBase::output_sensitivity(const MAST::FunctionBase& p) {
+    
+    libmesh_error(); // to be implemented
+    return 0.;
+}
+
+
+
+RealVectorX
+MAST::StressStrainOutputBase::output_derivative() {
+    
+    libmesh_error(); // to be implemented
+    return RealVectorX::Zero(1);
+}
+
+
+
+void
+MAST::StressStrainOutputBase::evaluate() {
+    
+}
+
+
+
+void
+MAST::StressStrainOutputBase::evaluate_sensitivity(const MAST::FunctionBase& p) {
+    
+    
+}
+
+
+
+void
+MAST::StressStrainOutputBase::evaluate_derivative() {
+    
+}
+
+
+
+void
+MAST::StressStrainOutputBase::init(const libMesh::Elem& elem) {
+    
+    libmesh_assert(!_physics_elem);
+    
+    const MAST::ElementPropertyCardBase& p =
+    dynamic_cast<const MAST::ElementPropertyCardBase&>
+    (_assembly->discipline().get_property_card(elem));
+    
+    _physics_elem =
+    MAST::build_structural_element
+    (_assembly->system_init(), *_assembly, elem, p).release();
+}
+
+
+
+
+void
+MAST::StressStrainOutputBase::set_local_fe_data(MAST::LocalElemFE& fe) const {
+
+    libmesh_assert(!_physics_elem);
+    
+    const libMesh::Elem& e = _physics_elem->elem();
+
+    if (e.dim() == 1) {
+        
+        const MAST::ElementPropertyCard1D&
+        p_card = dynamic_cast<const MAST::ElementPropertyCard1D&>
+        (_assembly->discipline().get_property_card(e));
+        
+        fe.set_1d_y_vector(p_card.y_vector());
+    }
+}
+
+
+
+void
+MAST::StressStrainOutputBase::clear() {
     
     std::map<const libMesh::Elem*, std::vector<MAST::StressStrainOutputBase::Data*> >::iterator
     map_it  =  _stress_data.begin(),
@@ -277,53 +371,55 @@ MAST::StressStrainOutputBase::clear(bool clear_elem_subset) {
     }
     
     _stress_data.clear();
-    
-    if (clear_elem_subset) {
-        _elem_subset.clear();
-        _vol_loads = nullptr;
-    }
-    
 }
 
 
 
 
-
-bool
-MAST::StressStrainOutputBase::
-evaluate_for_element(const libMesh::Elem& elem) const {
-
-    bool rval = false;
+void
+MAST::StressStrainOutputBase::calculate_for_element(const libMesh::Elem& elem,
+                                                    const RealVectorX& sol) {
     
-    if ((_elem_subset.size() && _elem_subset.count(&elem)) ||
-        (_elem_subset.size() == 0))
-        rval = true;
-    else
-        rval = false;
+    // create the element, set its solution and then ask it for
+    this->init(elem);
     
-    return rval;
+    // set the solution
+    this->set_elem_solution(sol);
+    
+    // ask for the values
+    dynamic_cast<MAST::StructuralElementBase*>
+    (_physics_elem)->calculate_stress(false,
+                                      false,
+                                      *this);
 }
 
 
 
 void
 MAST::StressStrainOutputBase::
-set_elements_in_domain(const std::set<const libMesh::Elem*>& elems) {
+calculate_sensitivity_for_element(const libMesh::Elem& elem,
+                                  const RealVectorX& sol,
+                                  const RealVectorX& dsol,
+                                  const MAST::FunctionBase& p) {
     
-    // make sure that the no data exists
-    libmesh_assert(_stress_data.size() == 0);
-    libmesh_assert(_elem_subset.size() == 0);
+    // create the element, set its solution and then ask it for
+    this->init(elem);
+    _physics_elem->sensitivity_param = &p;
     
-    _elem_subset = elems;
+    // set the solution
+    this->set_elem_solution(sol);
+    this->set_elem_solution_sensitivity(dsol);
+    
+    // ask for the values
+    dynamic_cast<MAST::StructuralElementBase*>
+    (_physics_elem)->calculate_stress(false,
+                                      true,
+                                      *this);
+    
+    _physics_elem->sensitivity_param = nullptr;
 }
 
 
-
-const std::set<const libMesh::Elem*>&
-MAST::StressStrainOutputBase::get_elem_subset() const {
-    
-    return _elem_subset;
-}
 
 
 
@@ -378,14 +474,6 @@ MAST::StressStrainOutputBase::get_stress_strain_data() const {
 
 unsigned int
 MAST::StressStrainOutputBase::
-n_elem_in_storage() const {
-    
-    return (unsigned int)_stress_data.size();
-}
-
-
-unsigned int
-MAST::StressStrainOutputBase::
 n_stress_strain_data_for_elem(const libMesh::Elem* e) const {
     
     unsigned int n = 0;
@@ -417,40 +505,35 @@ get_stress_strain_data_for_elem(const libMesh::Elem *e) const {
 
 
 
-void
-MAST::StressStrainOutputBase::set_volume_loads(MAST::VolumeBCMapType& vol_loads) {
-    
-    // make sure that no existing objects are related
-    libmesh_assert(!_vol_loads);
-    
-    _vol_loads  =  &vol_loads;
-    
-}
-
-
 
 MAST::BoundaryConditionBase*
 MAST::StressStrainOutputBase::get_thermal_load_for_elem(const libMesh::Elem& elem) {
 
     MAST::BoundaryConditionBase *rval = nullptr;
-    
-    if (_vol_loads) {
+ 
+    // this should only be called if the user has specified evaluation of
+    // stress for this
+    libmesh_assert(this->if_evaluate_for_element(elem));
         
-        std::pair<std::multimap<libMesh::subdomain_id_type, MAST::BoundaryConditionBase*>::const_iterator,
-        std::multimap<libMesh::subdomain_id_type, MAST::BoundaryConditionBase*>::const_iterator> it;
-        
-        it =  _vol_loads->equal_range(elem.subdomain_id());
 
-        for ( ; it.first != it.second; it.first++)
-            if (it.first->second->type() == MAST::TEMPERATURE) {
-                
-                // make sure that only one thermal load exists for an element
-                libmesh_assert(!rval);
-                
-                rval = it.first->second;
-            }
-    }
+    MAST::VolumeBCMapType&
+    vol_loads = _assembly->discipline().volume_loads();
     
+    std::pair<std::multimap<libMesh::subdomain_id_type, MAST::BoundaryConditionBase*>::const_iterator,
+    std::multimap<libMesh::subdomain_id_type, MAST::BoundaryConditionBase*>::const_iterator> it;
+    
+    it =  vol_loads.equal_range(elem.subdomain_id());
+    
+    // FIXME: that this assumes that only one temperature boundary condition
+    // is applied for an element.
+    for ( ; it.first != it.second; it.first++)
+        if (it.first->second->type() == MAST::TEMPERATURE) {
+            
+            // make sure that only one thermal load exists for an element
+            libmesh_assert(!rval);
+            
+            rval = it.first->second;
+        }
     
     return rval;
 }
@@ -675,3 +758,5 @@ von_Mises_p_norm_functional_state_derivartive_for_all_elems(const Real p) const 
     
     return 1./p * max_val / pow(JxW_val, 1./p) * pow(val, 1./p-1.) * dval;
 }
+
+

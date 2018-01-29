@@ -36,7 +36,6 @@ extern "C" {
 #include "elasticity/structural_nonlinear_assembly.h"
 #include "elasticity/structural_modal_eigenproblem_assembly.h"
 #include "elasticity/stress_output_base.h"
-#include "elasticity/structural_discipline.h"
 
 // libMesh includes
 #include "libmesh/exodusII_io.h"
@@ -310,8 +309,8 @@ MAST::NastranModelAnalysis::_linear_static_solve() {
     libMesh::EquationSystems    &eq_sys     = _model->get_eq_sys();
     MAST::NonlinearSystem       &sys        = _model->get_system();
     MAST::SystemInitialization  &sys_init   = _model->get_system_init();
-    MAST::StructuralDiscipline
-    &discipline = dynamic_cast<MAST::StructuralDiscipline&>(_model->get_discipline());
+    MAST::PhysicsDisciplineBase
+    &discipline = dynamic_cast<MAST::PhysicsDisciplineBase&>(_model->get_discipline());
     
     
     // create the nonlinear assembly object
@@ -334,54 +333,6 @@ MAST::NastranModelAnalysis::_linear_static_solve() {
     e_it    = mesh.elements_begin(),
     e_end   = mesh.elements_end();
     
-    
-    std::vector<MAST::StressStrainOutputBase*>  outputs;
-    for ( ; e_it != e_end; e_it++) {
-
-        libMesh::ElemType
-        e_type = (*e_it)->type();
-        
-        // points where stress is evaluated
-        std::vector<libMesh::Point> pts;
-        if (e_type == libMesh::QUAD4 ||
-            e_type == libMesh::QUAD8 ||
-            e_type == libMesh::QUAD9) {
-            
-            pts.push_back(libMesh::Point(-1/sqrt(3), -1/sqrt(3), 1.)); // upper skin
-            pts.push_back(libMesh::Point(-1/sqrt(3), -1/sqrt(3),-1.)); // lower skin
-            pts.push_back(libMesh::Point( 1/sqrt(3), -1/sqrt(3), 1.)); // upper skin
-            pts.push_back(libMesh::Point( 1/sqrt(3), -1/sqrt(3),-1.)); // lower skin
-            pts.push_back(libMesh::Point( 1/sqrt(3),  1/sqrt(3), 1.)); // upper skin
-            pts.push_back(libMesh::Point( 1/sqrt(3),  1/sqrt(3),-1.)); // lower skin
-            pts.push_back(libMesh::Point(-1/sqrt(3),  1/sqrt(3), 1.)); // upper skin
-            pts.push_back(libMesh::Point(-1/sqrt(3),  1/sqrt(3),-1.)); // lower skin
-        }
-        else if (e_type == libMesh::TRI3 ||
-                 e_type == libMesh::TRI6) {
-            
-            pts.push_back(libMesh::Point(1./3., 1./3., 1.)); // upper skin
-            pts.push_back(libMesh::Point(1./3., 1./3.,-1.)); // lower skin
-            pts.push_back(libMesh::Point(2./3., 1./3., 1.)); // upper skin
-            pts.push_back(libMesh::Point(2./3., 1./3.,-1.)); // lower skin
-            pts.push_back(libMesh::Point(1./3., 2./3., 1.)); // upper skin
-            pts.push_back(libMesh::Point(1./3., 2./3.,-1.)); // lower skin
-        }
-        else
-            libmesh_assert(false); // should not get here
-
-        
-        MAST::StressStrainOutputBase * output = new MAST::StressStrainOutputBase;
-        
-        // tell the object to evaluate the data for this object only
-        std::set<const libMesh::Elem*> e_set;
-        e_set.insert(*e_it);
-        output->set_elements_in_domain(e_set);
-        output->set_points_for_evaluation(pts);
-        outputs.push_back(output);
-        
-        discipline.add_volume_output((*e_it)->subdomain_id(), *output);
-    }
-
     assembly.calculate_outputs(*(sys.solution));
     
     // write the solution for visualization
@@ -390,15 +341,6 @@ MAST::NastranModelAnalysis::_linear_static_solve() {
     sol_output.write_equation_systems("output.exo", eq_sys);
     
     assembly.clear_discipline_and_system();
-    
-    //  now delete the output objects
-    std::vector<MAST::StressStrainOutputBase*>::iterator
-    output_it  = outputs.begin(),
-    output_end = outputs.end();
-    
-    for ( ; output_it != output_end; output_it++)
-        delete *output_it;
-    
 }
 
 

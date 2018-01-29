@@ -101,20 +101,6 @@ MAST::PhysicsDisciplineBase::add_volume_load(libMesh::subdomain_id_type sid,
 
 
 
-void
-MAST::PhysicsDisciplineBase::add_volume_output(libMesh::subdomain_id_type sid,
-                                               MAST::OutputFunctionBase& output) {
-    std::pair<MAST::VolumeOutputMapType::iterator,
-    MAST::VolumeOutputMapType::iterator> it =
-    _vol_output_map.equal_range(sid);
-    
-    for ( ; it.first != it.second; it.first++)
-        libmesh_assert(it.first->second != &output);
-    
-    _vol_output_map.insert(MAST::VolumeOutputMapType::value_type(sid, &output));
-}
-
-
 
 void
 MAST::PhysicsDisciplineBase::add_point_load(MAST::PointLoadCondition& load) {

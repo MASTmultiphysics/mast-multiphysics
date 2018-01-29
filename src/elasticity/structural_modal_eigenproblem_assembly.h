@@ -60,15 +60,13 @@ namespace MAST {
          *   sets the element solution(s) before calculations
          */
         virtual void
-        set_elem_sol(MAST::ElementBase& elem,
-                     const RealVectorX& sol);
+        set_elem_solution(const RealVectorX& sol);
 
         /*!
          *   sets the element solution sensitivity before calculations
          */
         virtual void
-        set_elem_sol_sens(MAST::ElementBase& elem,
-                          const RealVectorX& sol);
+        set_elem_solution_sensitivity(const RealVectorX& sol);
 
         /*!
          *   performs the element calculations over \par elem, and returns
@@ -76,8 +74,7 @@ namespace MAST {
          *   \f$ A x = \lambda B x \f$.
          */
         virtual void
-        elem_calculations(MAST::ElementBase& elem,
-                          RealMatrixX& mat_A,
+        elem_calculations(RealMatrixX& mat_A,
                           RealMatrixX& mat_B);
         
         /*!
@@ -86,17 +83,17 @@ namespace MAST {
          *   \f$ A x = \lambda B x \f$.
          */
         virtual void
-        elem_sensitivity_calculations(MAST::ElementBase& elem,
-                                      bool base_sol,
+        elem_sensitivity_calculations(bool base_sol,
                                       RealMatrixX& mat_A,
                                       RealMatrixX& mat_B);
 
         /*!
-         *   @returns a smart-pointer to a newly created element for
-         *   calculation of element quantities.
+         *   initializes the object for the geometric element \p elem. This
+         *   expects the object to be in a cleared state, so the user should
+         *   call \p clear_elem() between successive initializations.
          */
-        virtual std::unique_ptr<MAST::ElementBase>
-        build_elem(const libMesh::Elem& elem);
+        virtual void
+        init(const libMesh::Elem& elem);
 
         /*!
          *   some simulations frequently deal with 1D/2D elements in 3D space,
@@ -112,8 +109,7 @@ namespace MAST {
          *   sets additional data for local elem FE.
          */
         virtual void
-        set_local_fe_data(const libMesh::Elem& e,
-                          MAST::LocalElemFE& fe) const;
+        set_local_fe_data(MAST::LocalElemFE& fe) const;
 
     protected:
         

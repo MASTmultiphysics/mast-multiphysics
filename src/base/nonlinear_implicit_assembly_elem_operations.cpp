@@ -37,14 +37,6 @@ MAST::NonlinearImplicitAssemblyElemOperations::
 
 
 
-void
-MAST::NonlinearImplicitAssemblyElemOperations::set_elem_sol(MAST::ElementBase& elem,
-                                                            const RealVectorX& sol) {
-    
-    elem.set_solution(sol);
-}
-
-
 namespace MAST {
     
     bool
@@ -109,8 +101,7 @@ namespace MAST {
 
 void
 MAST::NonlinearImplicitAssemblyElemOperations::
-check_element_numerical_jacobian(MAST::ElementBase& e,
-                                 RealVectorX& sol) {
+check_element_numerical_jacobian(RealVectorX& sol) {
     RealVectorX
     dsol,
     res0,
@@ -127,16 +118,16 @@ check_element_numerical_jacobian(MAST::ElementBase& e,
     jac0.setZero(ndofs, ndofs);
     jac.setZero(ndofs, ndofs);
     
-    this->set_elem_sol(e, sol);
-    this->elem_calculations(e, true, res0, jac0);
+    this->set_elem_solution(sol);
+    this->elem_calculations(true, res0, jac0);
     Real delta = 1.0e-8;
     
     for (unsigned int i=0; i<sol.size(); i++) {
         dsol = sol;
         dsol(i) += delta;
         
-        e.set_solution(dsol);
-        this->elem_calculations(e, false, dres, dummy);
+        this->set_elem_solution(dsol);
+        this->elem_calculations(false, dres, dummy);
         jac.col(i) = (dres-res0)/delta;
     }
     
@@ -151,7 +142,7 @@ check_element_numerical_jacobian(MAST::ElementBase& e,
     
     MAST::compare_matrix(jac, jac0, 1.0e-5);
     // set the original solution vector for the element
-    e.set_solution(sol);
+    this->set_elem_solution(sol);
 }
 
 

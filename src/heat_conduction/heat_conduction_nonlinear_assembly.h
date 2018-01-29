@@ -52,8 +52,7 @@ namespace MAST {
          *   assemble the Jacobian, in addition to the residual vector.
          */
         virtual void
-        elem_calculations(MAST::ElementBase& elem,
-                          bool if_jac,
+        elem_calculations(bool if_jac,
                           RealVectorX& vec,
                           RealMatrixX& mat);
         
@@ -62,29 +61,28 @@ namespace MAST {
          *   and returns the element residual sensitivity in \par vec .
          */
         virtual void
-        elem_sensitivity_calculations(MAST::ElementBase& elem,
-                                      RealVectorX& vec);
+        elem_sensitivity_calculations(RealVectorX& vec);
         
         /*!
          *   calculates \f$ d ([J] \{\Delta X\})/ dX  \f$ over \par elem,
          *   and returns the matrix in \par vec .
          */
         virtual void
-        elem_second_derivative_dot_solution_assembly(MAST::ElementBase& elem,
-                                                      RealMatrixX& mat);
+        elem_second_derivative_dot_solution_assembly(RealMatrixX& mat);
 
         virtual void
-        elem_linearized_jacobian_solution_product(MAST::ElementBase& elem,
-                                                  RealVectorX& vec) {
+        elem_linearized_jacobian_solution_product(RealVectorX& vec) {
+            
             libmesh_assert(false); // not implemented yet.
         }
 
         /*!
-         *   @returns a smart-pointer to a newly created element for
-         *   calculation of element quantities.
+         *   initializes the object for the geometric element \p elem. This
+         *   expects the object to be in a cleared state, so the user should
+         *   call \p clear_elem() between successive initializations.
          */
-        virtual std::unique_ptr<MAST::ElementBase>
-        build_elem(const libMesh::Elem& elem);
+        virtual void
+        init(const libMesh::Elem& elem);
         
         /*!
          *   some simulations frequently deal with 1D/2D elements in 3D space,
@@ -100,8 +98,7 @@ namespace MAST {
          *   sets additional data for local elem FE.
          */
         virtual void
-        set_local_fe_data(const libMesh::Elem& e,
-                          MAST::LocalElemFE& fe) const;
+        set_local_fe_data(MAST::LocalElemFE& fe) const;
 
     protected:
         

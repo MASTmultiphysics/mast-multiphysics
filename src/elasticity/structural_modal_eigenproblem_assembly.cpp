@@ -45,8 +45,7 @@ MAST::StructuralModalEigenproblemAssemblyElemOperations::
 
 void
 MAST::StructuralModalEigenproblemAssemblyElemOperations::
-set_elem_sol(MAST::ElementBase& elem,
-             const RealVectorX& sol) {
+set_elem_solution(const RealVectorX& sol) {
     
     unsigned int
     n = (unsigned int)sol.size();
@@ -54,9 +53,9 @@ set_elem_sol(MAST::ElementBase& elem,
     RealVectorX
     zero = RealVectorX::Zero(n);
     
-    elem.set_solution    (sol);
-    elem.set_velocity    (zero); // set to zero vector for a quasi-steady analysis
-    elem.set_acceleration(zero); // set to zero vector for a quasi-steady analysis
+    _physics_elem->set_solution    (sol);
+    _physics_elem->set_velocity    (zero); // set to zero vector for a quasi-steady analysis
+    _physics_elem->set_acceleration(zero); // set to zero vector for a quasi-steady analysis
     
     
     if (_incompatible_sol_assembly) {
@@ -65,7 +64,7 @@ set_elem_sol(MAST::ElementBase& elem,
         // element
         
         MAST::StructuralElementBase& s_elem =
-        dynamic_cast<MAST::StructuralElementBase&>(elem);
+        dynamic_cast<MAST::StructuralElementBase&>(*_physics_elem);
         
         if (s_elem.if_incompatible_modes())
             _incompatible_sol_assembly->set_elem_incompatible_sol(s_elem);
@@ -77,8 +76,7 @@ set_elem_sol(MAST::ElementBase& elem,
 
 void
 MAST::StructuralModalEigenproblemAssemblyElemOperations::
-set_elem_sol_sens(MAST::ElementBase& elem,
-                  const RealVectorX& sol) {
+set_elem_solution_sensitivity(const RealVectorX& sol) {
     
     unsigned int
     n = (unsigned int)sol.size();
@@ -86,19 +84,20 @@ set_elem_sol_sens(MAST::ElementBase& elem,
     RealVectorX
     zero = RealVectorX::Zero(n);
     
-    elem.set_solution    (sol, true);
+    _physics_elem->set_solution    (sol, true);
 }
 
 
 
 void
 MAST::StructuralModalEigenproblemAssemblyElemOperations::
-elem_calculations(MAST::ElementBase& elem,
-                  RealMatrixX& mat_A,
+elem_calculations(RealMatrixX& mat_A,
                   RealMatrixX& mat_B) {
     
+    libmesh_assert(_physics_elem);
+    
     MAST::StructuralElementBase& e =
-    dynamic_cast<MAST::StructuralElementBase&>(elem);
+    dynamic_cast<MAST::StructuralElementBase&>(*_physics_elem);
     
     RealVectorX vec = RealVectorX::Zero(mat_A.rows()); // dummy vector
     RealMatrixX mat = RealMatrixX::Zero(mat_A.rows(), mat_A.cols()); // dummy matrix
@@ -119,12 +118,14 @@ elem_calculations(MAST::ElementBase& elem,
 
 void
 MAST::StructuralModalEigenproblemAssemblyElemOperations::
-elem_sensitivity_calculations(MAST::ElementBase& elem,
-                              bool base_sol,
+elem_sensitivity_calculations(bool base_sol,
                               RealMatrixX& mat_A,
                               RealMatrixX& mat_B) {
+    
+    libmesh_assert(_physics_elem);
+
     MAST::StructuralElementBase& e =
-    dynamic_cast<MAST::StructuralElementBase&>(elem);
+    dynamic_cast<MAST::StructuralElementBase&>(*_physics_elem);
     
     RealVectorX vec = RealVectorX::Zero(mat_A.rows()); // dummy vector
     RealMatrixX mat = RealMatrixX::Zero(mat_A.rows(), mat_A.cols()); // dummy matrix
@@ -147,25 +148,30 @@ elem_sensitivity_calculations(MAST::ElementBase& elem,
 
 
 
-std::unique_ptr<MAST::ElementBase>
+void
 MAST::StructuralModalEigenproblemAssemblyElemOperations::
-build_elem(const libMesh::Elem& elem) {
-    
+init(const libMesh::Elem& elem) {
+
+    libmesh_assert(!_physics_elem);
     
     const MAST::ElementPropertyCardBase& p =
     dynamic_cast<const MAST::ElementPropertyCardBase&>
     (_assembly->discipline().get_property_card(elem));
     
-    return MAST::build_structural_element(_assembly->system_init(), *_assembly, elem, p);
+    _physics_elem =
+    MAST::build_structural_element(_assembly->system_init(), *_assembly, elem, p).release();
 }
 
 
 
 void
 MAST::StructuralModalEigenproblemAssemblyElemOperations::
-set_local_fe_data(const libMesh::Elem& e,
-                  MAST::LocalElemFE& fe) const {
+set_local_fe_data(MAST::LocalElemFE& fe) const {
     
+    libmesh_assert(!_physics_elem);
+    
+    const libMesh::Elem& e = _physics_elem->elem();
+
     if (e.dim() == 1) {
         
         const MAST::ElementPropertyCard1D&

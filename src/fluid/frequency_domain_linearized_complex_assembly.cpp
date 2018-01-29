@@ -68,13 +68,14 @@ clear_frequency_function() {
 
 void
 MAST::FrequencyDomainLinearizedComplexAssemblyElemOperations::
-elem_calculations(MAST::ElementBase& elem,
-                  bool if_jac,
+elem_calculations(bool if_jac,
                   ComplexVectorX& vec,
                   ComplexMatrixX& mat) {
     
+    libmesh_assert(_physics_elem);
+
     MAST::FrequencyDomainLinearizedConservativeFluidElem& e =
-    dynamic_cast<MAST::FrequencyDomainLinearizedConservativeFluidElem&>(elem);
+    dynamic_cast<MAST::FrequencyDomainLinearizedConservativeFluidElem&>(*_physics_elem);
     
     vec.setZero();
     mat.setZero();
@@ -88,12 +89,12 @@ elem_calculations(MAST::ElementBase& elem,
 
 void
 MAST::FrequencyDomainLinearizedComplexAssemblyElemOperations::
-elem_sensitivity_calculations(MAST::ElementBase& elem,
-                              ComplexVectorX& vec) {
+elem_sensitivity_calculations(ComplexVectorX& vec) {
     
-    
+    libmesh_assert(_physics_elem);
+
     MAST::FrequencyDomainLinearizedConservativeFluidElem& e =
-    dynamic_cast<MAST::FrequencyDomainLinearizedConservativeFluidElem&>(elem);
+    dynamic_cast<MAST::FrequencyDomainLinearizedConservativeFluidElem&>(*_physics_elem);
     
     vec.setZero();
     ComplexMatrixX
@@ -106,20 +107,22 @@ elem_sensitivity_calculations(MAST::ElementBase& elem,
 
 
 
-std::unique_ptr<MAST::ElementBase>
+void
 MAST::FrequencyDomainLinearizedComplexAssemblyElemOperations::
-build_elem(const libMesh::Elem& elem) {
+init(const libMesh::Elem& elem) {
     
+    libmesh_assert(!_physics_elem);
     
     const MAST::FlightCondition& p =
     dynamic_cast<MAST::ConservativeFluidDiscipline&>
     (_assembly->discipline()).flight_condition();
     
-    MAST::FrequencyDomainLinearizedConservativeFluidElem* rval =
+    FrequencyDomainLinearizedConservativeFluidElem
+    *freq_elem =
     new MAST::FrequencyDomainLinearizedConservativeFluidElem
     (_assembly->system_init(), *_assembly, elem, p);
-    rval->freq   = _frequency;
+    freq_elem->freq   = _frequency;
     
-    return std::unique_ptr<MAST::ElementBase>(rval);
+    _physics_elem = freq_elem;
 }
 

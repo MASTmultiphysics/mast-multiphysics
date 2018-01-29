@@ -17,49 +17,34 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+#ifndef __mast_membrane_extension_h__
+#define __mast_membrane_extension_h__
+
+
 // MAST includes
-#include "base/output_function_base.h"
+#include "examples/structural/base/structural_example_2d.h"
 
-MAST::OutputFunctionBase::OutputFunctionBase(MAST::OutputQuantityType t):
-_type(t),
-_eval_mode(MAST::CENTROID) {
+
+namespace MAST  {
     
+    namespace Examples {
+        
+        class MembraneExtension:
+        public MAST::Examples::StructuralExample2D {
+            
+        public:
+            
+            MembraneExtension();
+            
+            virtual ~MembraneExtension() {}
+            
+        protected:
+            
+            virtual void _init_loads();
+        };
+    }
 }
 
 
 
-MAST::OutputFunctionBase::~OutputFunctionBase() {
-    
-}
-
-
-
-MAST::OutputQuantityType
-MAST::OutputFunctionBase::type() const {
-    
-    return _type;
-}
-
-
-void
-MAST::OutputFunctionBase::
-set_points_for_evaluation(const std::vector<libMesh::Point>& pts) {
-    
-    // make sure that some points were specified
-    libmesh_assert(pts.size());
-    
-    _eval_mode = MAST::SPECIFIED_POINTS;
-    _eval_points = pts;
-}
-
-
-
-const std::vector<libMesh::Point>&
-MAST::OutputFunctionBase::get_points_for_evaluation() const {
-
-    // make sure that the data was provide
-    libmesh_assert(_eval_mode == MAST::SPECIFIED_POINTS);
-    return _eval_points;
-}
-
-
+#endif //  __mast_membrane_extension_h__

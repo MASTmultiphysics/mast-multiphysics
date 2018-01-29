@@ -45,16 +45,17 @@ MAST::StructuralTransientAssemblyElemOperations::
 
 void
 MAST::StructuralTransientAssemblyElemOperations::
-elem_calculations(MAST::ElementBase& elem,
-                  bool if_jac,
+elem_calculations(bool if_jac,
                   RealVectorX& f_m,
                   RealVectorX& f_x,
                   RealMatrixX& f_m_jac_xdot,
                   RealMatrixX& f_m_jac,
                   RealMatrixX& f_x_jac) {
     
+    libmesh_assert(_physics_elem);
+    
     MAST::StructuralElementBase& e =
-    dynamic_cast<MAST::StructuralElementBase&>(elem);
+    dynamic_cast<MAST::StructuralElementBase&>(*_physics_elem);
     
     f_m.setZero();
     f_x.setZero();
@@ -84,8 +85,7 @@ elem_calculations(MAST::ElementBase& elem,
 
 void
 MAST::StructuralTransientAssemblyElemOperations::
-elem_calculations(MAST::ElementBase& elem,
-                  bool if_jac,
+elem_calculations(bool if_jac,
                   RealVectorX& f_m,
                   RealVectorX& f_x,
                   RealMatrixX& f_m_jac_xddot,
@@ -94,8 +94,10 @@ elem_calculations(MAST::ElementBase& elem,
                   RealMatrixX& f_x_jac_xdot,
                   RealMatrixX& f_x_jac) {
     
+    libmesh_assert(_physics_elem);
+
     MAST::StructuralElementBase& e =
-    dynamic_cast<MAST::StructuralElementBase&>(elem);
+    dynamic_cast<MAST::StructuralElementBase&>(*_physics_elem);
     
     f_m.setZero();
     f_x.setZero();
@@ -127,11 +129,12 @@ elem_calculations(MAST::ElementBase& elem,
 
 void
 MAST::StructuralTransientAssemblyElemOperations::
-linearized_jacobian_solution_product(MAST::ElementBase& elem,
-                                     RealVectorX& f) {
+linearized_jacobian_solution_product(RealVectorX& f) {
     
+    libmesh_assert(_physics_elem);
+
     MAST::StructuralElementBase& e =
-    dynamic_cast<MAST::StructuralElementBase&>(elem);
+    dynamic_cast<MAST::StructuralElementBase&>(*_physics_elem);
     
     const unsigned int
     n = (unsigned int) f.size();
@@ -164,8 +167,7 @@ linearized_jacobian_solution_product(MAST::ElementBase& elem,
 
 void
 MAST::StructuralTransientAssemblyElemOperations::
-elem_sensitivity_calculations(MAST::ElementBase& elem,
-                              RealVectorX& vec) {
+elem_sensitivity_calculations(RealVectorX& vec) {
     
     libmesh_error(); // to be implemented
     
@@ -175,8 +177,7 @@ elem_sensitivity_calculations(MAST::ElementBase& elem,
 
 void
 MAST::StructuralTransientAssemblyElemOperations::
-elem_second_derivative_dot_solution_assembly(MAST::ElementBase& elem,
-                                             RealMatrixX& m) {
+elem_second_derivative_dot_solution_assembly(RealMatrixX& m) {
     
     libmesh_error(); // to be implemented
 }
@@ -184,25 +185,27 @@ elem_second_derivative_dot_solution_assembly(MAST::ElementBase& elem,
 
 
 
-std::unique_ptr<MAST::ElementBase>
-MAST::StructuralTransientAssemblyElemOperations::build_elem(const libMesh::Elem& elem) {
-    
+void
+MAST::StructuralTransientAssemblyElemOperations::init(const libMesh::Elem& elem) {
+
+    libmesh_assert(!_physics_elem);
     
     const MAST::ElementPropertyCardBase& p =
     dynamic_cast<const MAST::ElementPropertyCardBase&>
     (_assembly->discipline().get_property_card(elem));
     
-    MAST::ElementBase* rval =
+    _physics_elem =
     MAST::build_structural_element(_assembly->system_init(), *_assembly, elem, p).release();
-    
-    return std::unique_ptr<MAST::ElementBase>(rval);
 }
 
 
 void
 MAST::StructuralTransientAssemblyElemOperations::
-set_local_fe_data(const libMesh::Elem& e,
-                  MAST::LocalElemFE& fe) const {
+set_local_fe_data(MAST::LocalElemFE& fe) const {
+
+    libmesh_assert(!_physics_elem);
+
+    const libMesh::Elem& e = _physics_elem->elem();
     
     if (e.dim() == 1) {
         

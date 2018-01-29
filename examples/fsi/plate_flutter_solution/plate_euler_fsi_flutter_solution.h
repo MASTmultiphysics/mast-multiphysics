@@ -43,9 +43,9 @@ namespace MAST {
     
     // Forward declerations
     class ConservativeFluidSystemInitialization;
+    class PhysicsDisciplineBase;
     class ConservativeFluidDiscipline;
     class StructuralSystemInitialization;
-    class StructuralDiscipline;
     class Parameter;
     class ConstantFieldFunction;
     class IsotropicMaterialPropertyCard;
@@ -120,7 +120,7 @@ namespace MAST {
         
         // initialize the system to the right set of variables
         MAST::StructuralSystemInitialization*    _structural_sys_init;
-        MAST::StructuralDiscipline*              _structural_discipline;
+        MAST::PhysicsDisciplineBase*              _structural_discipline;
         
         
         // initialize the system to the right set of variables

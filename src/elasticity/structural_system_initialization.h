@@ -23,6 +23,8 @@
 // MAST includes
 #include "base/system_initialization.h"
 
+// libMesh includes
+#include "libmesh/system.h"
 
 namespace MAST {
     
@@ -39,8 +41,36 @@ namespace MAST {
         
         virtual ~StructuralSystemInitialization();
         
+        /*!
+         *   @returns a reference to libMesh::System that stores the stress
+         *   variables
+         */
+        libMesh::System& get_stress_sys() {
+            
+            return *_stress_output_sys;
+        }
+        
+        /*!
+         *   @returns a reference to vector of strain-stress variable ids in the
+         *   sequence \f$ \{
+         *   \epsilon_{xx}, \epsilon_{yy}, \epsilon_{zz},
+         *   \epsilon_{xy}, \epsilon_{yz}, \epsilon_{zx},
+         *   \sigma_{xx},     \sigma_{yy},   \sigma_{zz},
+         *   \sigma_{xy},     \sigma_{yz},   \sigma_{zx},
+         *   \sigma_{vm}
+         *   \} \f$
+         */
+        const std::vector<unsigned int>& get_stress_var_ids() {
+            
+            return _stress_vars;
+        }
+
+        
     protected:
         
+        libMesh::System*           _stress_output_sys;
+        
+        std::vector<unsigned int>  _stress_vars;
     };
 }
 

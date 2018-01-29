@@ -27,7 +27,6 @@
 #include "base/system_initialization.h"
 #include "base/mesh_field_function.h"
 #include "numerics/utility.h"
-#include "base/real_output_function.h"
 #include "base/nonlinear_system.h"
 #include "mesh/local_elem_fe.h"
 
@@ -132,7 +131,7 @@ assemble_reduced_order_quantity
     
     std::vector<libMesh::dof_id_type> dof_indices;
     const libMesh::DofMap& dof_map = nonlin_sys.get_dof_map();
-    std::unique_ptr<MAST::ElementBase> physics_elem;
+    
     
     std::unique_ptr<libMesh::NumericVector<Real> > localized_solution;
     if (_base_sol)
@@ -162,7 +161,7 @@ assemble_reduced_order_quantity
         
         dof_map.dof_indices (elem, dof_indices);
         
-        physics_elem.reset(this->build_elem(*elem).release());
+        this->init(*elem);
         
         // get the solution
         unsigned int ndofs = (unsigned int)dof_indices.size();
@@ -181,22 +180,24 @@ assemble_reduced_order_quantity
                 basis_mat(i,j) = (*localized_basis[j])(dof_indices[i]);
         }
         
-        physics_elem->set_solution(sol);
-        physics_elem->set_velocity(vec);     // set to zero value
-        physics_elem->set_acceleration(vec); // set to zero value
+        _physics_elem->set_solution(sol);
+        _physics_elem->set_velocity(vec);     // set to zero value
+        _physics_elem->set_acceleration(vec); // set to zero value
         
         
-        if (_sol_function)
-            physics_elem->attach_active_solution_function(*_sol_function);
+//        if (_sol_function)
+//            physics_elem->attach_active_solution_function(*_sol_function);
         
+        this->clear_elem();
+
         // now iterative over all qty types in the map and assemble them
-        it   = mat_qty_map.begin(),
+        it   = mat_qty_map.begin();
         end  = mat_qty_map.end();
         
         for ( ; it != end; it++) {
             
             _qty_type = it->first;
-            _elem_calculations(*physics_elem, true, vec, mat);
+            _elem_calculations(true, vec, mat);
             
             DenseRealMatrix m;
             MAST::copy(m, mat);
@@ -207,7 +208,7 @@ assemble_reduced_order_quantity
             (*it->second) += basis_mat.transpose() * mat * basis_mat;
         }
         
-        physics_elem->detach_active_solution_function();
+//        physics_elem->detach_active_solution_function();
         
     }
     
@@ -222,7 +223,7 @@ assemble_reduced_order_quantity
         delete localized_basis[i];
 
     // sum the matrix and provide it to each processor
-    it  = mat_qty_map.begin(),
+    it  = mat_qty_map.begin();
     end = mat_qty_map.end();
     
     
@@ -264,7 +265,7 @@ assemble_reduced_order_quantity_sensitivity
     
     std::vector<libMesh::dof_id_type> dof_indices;
     const libMesh::DofMap& dof_map = _system->system().get_dof_map();
-    std::unique_ptr<MAST::ElementBase> physics_elem;
+    
     
     std::unique_ptr<libMesh::NumericVector<Real> >
     localized_solution,
@@ -304,7 +305,7 @@ assemble_reduced_order_quantity_sensitivity
         
         dof_map.dof_indices (elem, dof_indices);
         
-        physics_elem.reset(this->build_elem(*elem).release());
+        this->init(*elem);
         
         // get the solution
         unsigned int ndofs = (unsigned int)dof_indices.size();
@@ -326,24 +327,24 @@ assemble_reduced_order_quantity_sensitivity
                 basis_mat(i,j) = (*localized_basis[j])(dof_indices[i]);
         }
         
-        physics_elem->sensitivity_param  = _discipline->get_parameter(&(parameters[i].get()));
-        physics_elem->set_solution(sol);
-        physics_elem->set_solution(dsol, true);
-        physics_elem->set_velocity(vec);     // set to zero value
-        physics_elem->set_acceleration(vec); // set to zero value
+        this->set_elem_sensitivity_parameter(*_discipline->get_parameter(&(parameters[i].get())));
+        this->set_elem_solution(sol);
+        this->set_elem_solution_sensitivity(dsol);
+        this->set_elem_velocity(vec);     // set to zero value
+        this->set_elem_acceleration(vec); // set to zero value
         
         
-        if (_sol_function)
-            physics_elem->attach_active_solution_function(*_sol_function);
+//        if (_sol_function)
+//            physics_elem->attach_active_solution_function(*_sol_function);
         
         // now iterative over all qty types in the map and assemble them
-        it   = mat_qty_map.begin(),
+        it   = mat_qty_map.begin();
         end  = mat_qty_map.end();
         
         for ( ; it != end; it++) {
             
             _qty_type = it->first;
-            _elem_sensitivity_calculations(*physics_elem, true, vec, mat);
+            _elem_sensitivity_calculations(true, vec, mat);
 
             DenseRealMatrix m;
             MAST::copy(m, mat);
@@ -354,7 +355,8 @@ assemble_reduced_order_quantity_sensitivity
             (*it->second) += basis_mat.transpose() * mat * basis_mat;
         }
         
-        physics_elem->detach_active_solution_function();
+        this->clear_elem();
+//        physics_elem->detach_active_solution_function();
         
     }
     
@@ -369,7 +371,7 @@ assemble_reduced_order_quantity_sensitivity
         delete localized_basis[i];
     
     // sum the matrix and provide it to each processor
-    it  = mat_qty_map.begin(),
+    it  = mat_qty_map.begin();
     end = mat_qty_map.end();
     
     
@@ -380,26 +382,28 @@ assemble_reduced_order_quantity_sensitivity
 
 
 
-std::unique_ptr<MAST::ElementBase>
-MAST::StructuralFluidInteractionAssembly::build_elem(const libMesh::Elem& elem) {
+void
+MAST::StructuralFluidInteractionAssembly::init(const libMesh::Elem& elem) {
     
+    libmesh_assert(!_physics_elem);
     
     const MAST::ElementPropertyCardBase& p =
     dynamic_cast<const MAST::ElementPropertyCardBase&>(_discipline->get_property_card(elem));
     
-    MAST::ElementBase* rval =
+    _physics_elem =
     MAST::build_structural_element(*_system, *this, elem, p).release();
-    
-    return std::unique_ptr<MAST::ElementBase>(rval);
 }
 
 
 
 void
 MAST::StructuralFluidInteractionAssembly::
-set_local_fe_data(const libMesh::Elem& e,
-                  MAST::LocalElemFE& fe) const {
+set_local_fe_data(MAST::LocalElemFE& fe) const {
     
+    libmesh_assert(!_physics_elem);
+    
+    const libMesh::Elem& e = _physics_elem->elem();
+
     if (e.dim() == 1) {
         
         const MAST::ElementPropertyCard1D&
@@ -414,15 +418,14 @@ set_local_fe_data(const libMesh::Elem& e,
 
 void
 MAST::StructuralFluidInteractionAssembly::
-_elem_calculations(MAST::ElementBase& elem,
-                   bool if_jac,
+_elem_calculations(bool if_jac,
                    RealVectorX& vec,
                    RealMatrixX& mat) {
 
     libmesh_assert(if_jac);
     
     MAST::StructuralElementBase& e =
-    dynamic_cast<MAST::StructuralElementBase&>(elem);
+    dynamic_cast<MAST::StructuralElementBase&>(*_physics_elem);
     
     RealMatrixX
     dummy = RealMatrixX::Zero(mat.rows(), mat.cols());
@@ -486,11 +489,10 @@ _elem_calculations(MAST::ElementBase& elem,
 
 void
 MAST::StructuralFluidInteractionAssembly::
-_elem_aerodynamic_force_calculations(MAST::ElementBase& elem,
-                                     ComplexVectorX& vec) {
+_elem_aerodynamic_force_calculations(ComplexVectorX& vec) {
     
     MAST::StructuralElementBase& e =
-    dynamic_cast<MAST::StructuralElementBase&>(elem);
+    dynamic_cast<MAST::StructuralElementBase&>(*_physics_elem);
     
     ComplexMatrixX
     dummy = ComplexMatrixX::Zero(vec.size(), vec.size());
@@ -511,15 +513,14 @@ _elem_aerodynamic_force_calculations(MAST::ElementBase& elem,
 
 void
 MAST::StructuralFluidInteractionAssembly::
-_elem_sensitivity_calculations(MAST::ElementBase& elem,
-                               bool if_jac,
+_elem_sensitivity_calculations(bool if_jac,
                                RealVectorX& vec,
                                RealMatrixX& mat) {
     
     libmesh_assert(if_jac);
 
     MAST::StructuralElementBase& e =
-    dynamic_cast<MAST::StructuralElementBase&>(elem);
+    dynamic_cast<MAST::StructuralElementBase&>(*_physics_elem);
     
     RealMatrixX
     dummy = RealMatrixX::Zero(vec.size(), vec.size());
@@ -584,8 +585,7 @@ _elem_sensitivity_calculations(MAST::ElementBase& elem,
 
 void
 MAST::StructuralFluidInteractionAssembly::
-_elem_second_derivative_dot_solution_assembly(MAST::ElementBase& elem,
-                                              RealMatrixX& m) {
+_elem_second_derivative_dot_solution_assembly(RealMatrixX& m) {
     
     libmesh_error(); // to be implemented
 }

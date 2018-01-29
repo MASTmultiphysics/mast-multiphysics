@@ -187,7 +187,7 @@ MAST::StructuralAssembly::update_incompatible_solution(libMesh::NumericVector<Re
     
     std::vector<libMesh::dof_id_type> dof_indices;
     const libMesh::DofMap& dof_map = sys.get_dof_map();
-    std::unique_ptr<MAST::ElementBase> physics_elem;
+    
     
     std::unique_ptr<libMesh::NumericVector<Real> >
     localized_solution(_assembly->build_localized_vector(sys,
@@ -209,12 +209,13 @@ MAST::StructuralAssembly::update_incompatible_solution(libMesh::NumericVector<Re
     
     for ( ; el != end_el; ++el) {
         
-        const libMesh::Elem* elem = *el;
+        const libMesh::Elem* elem         = *el;
+        MAST::AssemblyElemOperations& ops = _assembly->get_elem_ops();
         
-        physics_elem.reset(_assembly->get_elem_ops().build_elem(*elem).release());
+        ops.init(*elem);
         
         MAST::StructuralElementBase& p_elem =
-        dynamic_cast<MAST::StructuralElementBase&>(*physics_elem);
+        dynamic_cast<MAST::StructuralElementBase&>(ops.get_physics_elem());
         
         if (p_elem.if_incompatible_modes()) {
             

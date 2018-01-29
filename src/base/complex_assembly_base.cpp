@@ -21,7 +21,6 @@
 // MAST includes
 #include "base/complex_assembly_base.h"
 #include "base/system_initialization.h"
-#include "base/elem_base.h"
 #include "base/physics_discipline_base.h"
 #include "numerics/utility.h"
 #include "base/mesh_field_function.h"
@@ -192,7 +191,7 @@ MAST::ComplexAssemblyBase::residual_l2_norm() {
     
     std::vector<libMesh::dof_id_type> dof_indices;
     const libMesh::DofMap& dof_map = nonlin_sys.get_dof_map();
-    std::unique_ptr<MAST::ElementBase> physics_elem;
+    
     
     std::unique_ptr<libMesh::NumericVector<Real> >
     residual_re(nonlin_sys.solution->zero_clone().release()),
@@ -228,7 +227,7 @@ MAST::ComplexAssemblyBase::residual_l2_norm() {
         
         dof_map.dof_indices (elem, dof_indices);
         
-        physics_elem.reset(_complex_elem_ops->build_elem(*elem).release());
+        _complex_elem_ops->init(*elem);
         
         // get the solution
         unsigned int ndofs = (unsigned int)dof_indices.size();
@@ -238,32 +237,32 @@ MAST::ComplexAssemblyBase::residual_l2_norm() {
         mat.setZero(ndofs, ndofs);
         
         // set zero velocity for base solution
-        physics_elem->set_velocity(sol);
+        _complex_elem_ops->set_elem_velocity(sol);
         
         // set the value of the base solution, if provided
         if (_base_sol)
             for (unsigned int i=0; i<dof_indices.size(); i++)
                 sol(i) = (*localized_base_solution)(dof_indices[i]);
-        physics_elem->set_solution(sol);
+        _complex_elem_ops->set_elem_solution(sol);
         
         // set the value of the small-disturbance solution
         for (unsigned int i=0; i<dof_indices.size(); i++)
             delta_sol(i) = Complex((*localized_real_solution)(dof_indices[i]),
                                    (*localized_imag_solution)(dof_indices[i]));
         
-        physics_elem->set_complex_solution(delta_sol);
+        _complex_elem_ops->set_elem_complex_solution(delta_sol);
         
         
-        if (_sol_function)
-            physics_elem->attach_active_solution_function(*_sol_function);
+//        if (_sol_function)
+//            _complex_elem_ops->attach_active_solution_function(*_sol_function);
         
         
         // perform the element level calculations
-        _complex_elem_ops->elem_calculations(*physics_elem,
-                                            false,
-                                            vec, mat);
+        _complex_elem_ops->elem_calculations(false,
+                                             vec, mat);
+        _complex_elem_ops->clear_elem();
         
-        physics_elem->detach_active_solution_function();
+//        _complex_elem_ops->detach_active_solution_function();
         
         // add to the real part of the residual
         vec_re  =  vec.real();
@@ -327,7 +326,7 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
     
     std::vector<libMesh::dof_id_type> dof_indices;
     const libMesh::DofMap& dof_map = _system->system().get_dof_map();
-    std::unique_ptr<MAST::ElementBase> physics_elem;
+    
     
     std::unique_ptr<libMesh::NumericVector<Real> >
     localized_base_solution,
@@ -381,7 +380,7 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
         
         dof_map.dof_indices (elem, dof_indices);
         
-        physics_elem.reset(_complex_elem_ops->build_elem(*elem).release());
+        _complex_elem_ops->init(*elem);
         
         // get the solution
         unsigned int ndofs = (unsigned int)dof_indices.size();
@@ -391,33 +390,33 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
         mat.setZero(ndofs, ndofs);
         
         // first set the velocity to be zero
-        physics_elem->set_velocity(sol);
+        _complex_elem_ops->set_elem_velocity(sol);
         
         // next, set the base solution, if provided
         if (_base_sol)
             for (unsigned int i=0; i<dof_indices.size(); i++)
                 sol(i) = (*localized_base_solution)(dof_indices[i]);
         
-        physics_elem->set_solution(sol);
+        _complex_elem_ops->set_elem_solution(sol);
         
         // set the value of the small-disturbance solution
         for (unsigned int i=0; i<dof_indices.size(); i++)
             delta_sol(i) = Complex((*localized_real_solution)(dof_indices[i]),
                                    (*localized_imag_solution)(dof_indices[i]));
         
-        physics_elem->set_complex_solution(delta_sol);
+        _complex_elem_ops->set_elem_complex_solution(delta_sol);
         
         
-        if (_sol_function)
-            physics_elem->attach_active_solution_function(*_sol_function);
+//        if (_sol_function)
+//            physics_elem->attach_active_solution_function(*_sol_function);
 
         
         // perform the element level calculations
-        _complex_elem_ops->elem_calculations(*physics_elem,
-                                            J!=nullptr?true:false,
-                                            vec, mat);
+        _complex_elem_ops->elem_calculations(J!=nullptr?true:false,
+                                             vec, mat);
+        _complex_elem_ops->clear_elem();
         
-        physics_elem->detach_active_solution_function();
+//        physics_elem->detach_active_solution_function();
         
         // extract the real or the imaginary part of the matrix/vector
         //  The complex system of equations
@@ -508,7 +507,7 @@ residual_and_jacobian_field_split (const libMesh::NumericVector<Real>& X_R,
     
     std::vector<libMesh::dof_id_type> dof_indices;
     const libMesh::DofMap& dof_map = _system->system().get_dof_map();
-    std::unique_ptr<MAST::ElementBase> physics_elem;
+    
     
     std::unique_ptr<libMesh::NumericVector<Real> >
     localized_base_solution,
@@ -547,7 +546,7 @@ residual_and_jacobian_field_split (const libMesh::NumericVector<Real>& X_R,
         
         dof_map.dof_indices (elem, dof_indices);
         
-        physics_elem.reset(_complex_elem_ops->build_elem(*elem).release());
+        _complex_elem_ops->init(*elem);
         
         // get the solution
         unsigned int ndofs = (unsigned int)dof_indices.size();
@@ -557,33 +556,33 @@ residual_and_jacobian_field_split (const libMesh::NumericVector<Real>& X_R,
         mat.setZero(ndofs, ndofs);
         
         // first set the velocity to be zero
-        physics_elem->set_velocity(sol);
+        _complex_elem_ops->set_elem_velocity(sol);
         
         // next, set the base solution, if provided
         if (_base_sol)
             for (unsigned int i=0; i<dof_indices.size(); i++)
                 sol(i) = (*localized_base_solution)(dof_indices[i]);
         
-        physics_elem->set_solution(sol);
+        _complex_elem_ops->set_elem_solution(sol);
         
         // set the value of the small-disturbance solution
         for (unsigned int i=0; i<dof_indices.size(); i++)
             delta_sol(i) = Complex((*localized_real_solution)(dof_indices[i]),
                                    (*localized_imag_solution)(dof_indices[i]));
         
-        physics_elem->set_complex_solution(delta_sol);
+        _complex_elem_ops->set_elem_complex_solution(delta_sol);
         
         
-        if (_sol_function)
-            physics_elem->attach_active_solution_function(*_sol_function);
+//        if (_sol_function)
+//            physics_elem->attach_active_solution_function(*_sol_function);
         
         
         // perform the element level calculations
-        _complex_elem_ops->elem_calculations(*physics_elem,
-                                            true,
-                                            vec,
-                                            mat);
-        
+        _complex_elem_ops->elem_calculations(true,
+                                             vec,
+                                             mat);
+        _complex_elem_ops->clear_elem();
+
         vec *= -1.;
         
         //physics_elem->detach_active_solution_function();
@@ -678,7 +677,7 @@ residual_and_jacobian_blocked (const libMesh::NumericVector<Real>& X,
     const std::vector<libMesh::dof_id_type>&
     send_list = nonlin_sys.get_dof_map().get_send_list();
     
-    std::unique_ptr<MAST::ElementBase> physics_elem;
+    
     
     std::unique_ptr<libMesh::NumericVector<Real> >
     localized_base_solution,
@@ -724,7 +723,7 @@ residual_and_jacobian_blocked (const libMesh::NumericVector<Real>& X,
         
         dof_map.dof_indices (elem, dof_indices);
         
-        physics_elem.reset(_complex_elem_ops->build_elem(*elem).release());
+        _complex_elem_ops->init(*elem);
         
         // get the solution
         unsigned int ndofs = (unsigned int)dof_indices.size();
@@ -734,14 +733,14 @@ residual_and_jacobian_blocked (const libMesh::NumericVector<Real>& X,
         mat.setZero(ndofs, ndofs);
         
         // first set the velocity to be zero
-        physics_elem->set_velocity(sol);
+        _complex_elem_ops->set_elem_velocity(sol);
         
         // next, set the base solution, if provided
         if (_base_sol)
             for (unsigned int i=0; i<dof_indices.size(); i++)
                 sol(i) = (*localized_base_solution)(dof_indices[i]);
         
-        physics_elem->set_solution(sol);
+        _complex_elem_ops->set_elem_solution(sol);
         
         // set the value of the small-disturbance solution
         for (unsigned int i=0; i<dof_indices.size(); i++) {
@@ -751,30 +750,31 @@ residual_and_jacobian_blocked (const libMesh::NumericVector<Real>& X,
                                    (*localized_complex_sol)(2*dof_indices[i]+1));
         }
         
-        physics_elem->set_complex_solution(delta_sol);
+        _complex_elem_ops->set_elem_complex_solution(delta_sol);
         
         
-        if (_sol_function)
-            physics_elem->attach_active_solution_function(*_sol_function);
+//        if (_sol_function)
+//            physics_elem->attach_active_solution_function(*_sol_function);
         
         
         // perform the element level calculations
-        _complex_elem_ops->elem_calculations(*physics_elem, true, vec, mat);
+        _complex_elem_ops->elem_calculations(true, vec, mat);
         
         // if sensitivity was requested, then ask the element for sensitivity
         // of the residual
         if (p) {
             
-            physics_elem->sensitivity_param = p;
+            _complex_elem_ops->set_elem_sensitivity_parameter(*p);
             // set the sensitivity of complex sol to zero
             delta_sol.setZero();
-            physics_elem->set_complex_solution(delta_sol, true);
+            _complex_elem_ops->set_elem_complex_solution_sensitivity(delta_sol);
             vec.setZero();
-            _complex_elem_ops->elem_sensitivity_calculations(*physics_elem, vec);
+            _complex_elem_ops->elem_sensitivity_calculations(vec);
         }
         
         vec *= -1.;
-        
+        _complex_elem_ops->clear_elem();
+
         //physics_elem->detach_active_solution_function();
         
         // extract the real or the imaginary part of the matrix/vector

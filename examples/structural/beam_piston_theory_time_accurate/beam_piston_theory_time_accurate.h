@@ -21,160 +21,36 @@
 #define __mast_beam_piston_theory_time_accurate_analysis_h__
 
 
-// C++ includes
-#include <memory>
-#include <vector>
-
 // MAST includes
-#include "base/mast_data_types.h"
-
-// libMesh includes
-#include "libmesh/libmesh.h"
-#include "libmesh/equation_systems.h"
-#include "libmesh/serial_mesh.h"
-#include "libmesh/mesh_generation.h"
-#include "libmesh/nonlinear_implicit_system.h"
-#include "libmesh/fe_type.h"
-#include "libmesh/dof_map.h"
+#include "examples/structural/base/structural_example_1d.h"
 
 
-
-namespace MAST {
+namespace MAST  {
     
-    // Forward declerations
-    class StructuralSystemInitialization;
-    class StructuralDiscipline;
-    class Parameter;
-    class ConstantFieldFunction;
-    class IsotropicMaterialPropertyCard;
-    class Solid1DSectionElementPropertyCard;
-    class DirichletBoundaryCondition;
-    class BoundaryConditionBase;
-    class StressStrainOutputBase;
-    class PistonTheoryBoundaryCondition;
-    class NonlinearSystem;
-
-    
-    struct BeamPistonTheoryTimeAccurateAnalysis {
+    namespace Examples {
         
+        class BeamPistonTheoryTimeAccurateAnalysis:
+        public MAST::Examples::StructuralExample1D {
+            
+        public:
+            
+            BeamPistonTheoryTimeAccurateAnalysis();
+            
+            virtual ~BeamPistonTheoryTimeAccurateAnalysis();
+            
+            /*!
+             *   sets the solution to a half-sin bump.
+             */
+            virtual void initialize_solution();
+            
+        protected:
+            
+            virtual void _init_loads();
+            
+        };
         
-        BeamPistonTheoryTimeAccurateAnalysis();
-        
-        
-        ~BeamPistonTheoryTimeAccurateAnalysis();
-        
-        /*!
-         *   initializes the object for specified characteristics
-         */
-        void init(libMesh::ElemType etype, bool if_nonlin);
-
-        
-        /*!
-         *   @returns a pointer to the parameter of the specified name.
-         *   If no parameter exists by the specified name, then a \p nullptr
-         *   pointer is returned and a message is printed with a valid list
-         *   of parameters.
-         */
-        MAST::Parameter* get_parameter(const std::string& nm);
-        
-        /*!
-         *  solves the system and returns the final solution
-         */
-        const libMesh::NumericVector<Real>&
-        solve(bool if_write_output = false);
-        
-        
-        /*!
-         *  solves the sensitivity of system and returns the final solution
-         */
-        const libMesh::NumericVector<Real>&
-        sensitivity_solve(MAST::Parameter& p,
-                          bool if_write_output = false);
-        
-        
-        /*!
-         *   clears the stress data structures for a followup analysis
-         */
-        void clear_stresss();
-        
-        bool _initialized;
-        
-        // length of domain
-        Real _length;
-
-        // create the mesh
-        libMesh::SerialMesh*           _mesh;
-        
-        // create the equation system
-        libMesh::EquationSystems*      _eq_sys;
-        
-        // create the libmesh system
-        MAST::NonlinearSystem*  _sys;
-        
-        // initialize the system to the right set of variables
-        MAST::StructuralSystemInitialization* _structural_sys;
-        MAST::StructuralDiscipline*           _discipline;
-        
-        // create the property functions and add them to the
-        MAST::Parameter
-        *_thy,
-        *_thz,
-        *_alpha,
-        *_E,
-        *_nu,
-        *_rho,
-        *_temp,
-        *_zero,
-        *_velocity,
-        *_mach,
-        *_rho_air,
-        *_gamma_air;
-        
-        
-        MAST::ConstantFieldFunction
-        *_thy_f,
-        *_thz_f,
-        *_alpha_f,
-        *_E_f,
-        *_nu_f,
-        *_rho_f,
-        *_hyoff_f,
-        *_hzoff_f,
-        *_temp_f,
-        *_ref_temp_f,
-        *_velocity_f,
-        *_mach_f,
-        *_rho_air_f,
-        *_gamma_air_f;
-        
-        
-        /*!
-         *   piston theory boundary condition for the whole domain
-         */
-        MAST::PistonTheoryBoundaryCondition*     _piston_bc;
-        
-        // create the material property card
-        MAST::IsotropicMaterialPropertyCard*     _m_card;
-        
-        // create the element property card
-        MAST::Solid1DSectionElementPropertyCard* _p_card;
-        
-        // create the Dirichlet boundary condition on left edge
-        MAST::DirichletBoundaryCondition*     _dirichlet_left;
-        
-        // create the Dirichlet boundary condition on right edge
-        MAST::DirichletBoundaryCondition*     _dirichlet_right;
-
-        MAST::BoundaryConditionBase*             _T_load;
-
-        // vector of parameters to evaluate sensitivity wrt
-        std::vector<MAST::Parameter*> _params_for_sensitivity;
-        
-        // output quantity objects to evaluate stress
-        std::vector<MAST::StressStrainOutputBase*>  _outputs;
-    };
+    }
 }
-
 
 
 #endif //  __mast_beam_piston_theory_time_accurate_analysis_h__

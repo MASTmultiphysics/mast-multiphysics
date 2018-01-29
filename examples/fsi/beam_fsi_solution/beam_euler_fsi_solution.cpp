@@ -36,7 +36,6 @@
 #include "base/boundary_condition_base.h"
 #include "base/transient_assembly.h"
 #include "elasticity/structural_system_initialization.h"
-#include "elasticity/structural_discipline.h"
 #include "elasticity/structural_element_base.h"
 #include "elasticity/structural_transient_assembly.h"
 #include "elasticity/structural_near_null_vector_space.h"
@@ -442,7 +441,7 @@ _bc_updates                         (nullptr) {
     _structural_sys_init  = new MAST::StructuralSystemInitialization(*_structural_sys,
                                                                      _structural_sys->name(),
                                                                      fetype);
-    _structural_discipline = new MAST::StructuralDiscipline(*_structural_eq_sys);
+    _structural_discipline = new MAST::PhysicsDisciplineBase(*_structural_eq_sys);
     
     
     // create and add the boundary condition and loads
@@ -624,47 +623,6 @@ MAST::BeamEulerFSIAnalysis::~BeamEulerFSIAnalysis() {
     delete _bc_updates;
     delete _augment_send_list_obj;
 }
-
-
-
-
-
-MAST::Parameter*
-MAST::BeamEulerFSIAnalysis::get_parameter(const std::string &nm) {
-    
-    MAST::Parameter *rval = nullptr;
-    
-    // look through the vector of parameters to see if the name is available
-    std::vector<MAST::Parameter*>::iterator
-    it   =  _params_for_sensitivity.begin(),
-    end  =  _params_for_sensitivity.end();
-    
-    bool
-    found = false;
-    
-    for ( ; it != end; it++) {
-        
-        if (nm == (*it)->name()) {
-            rval    = *it;
-            found   = true;
-        }
-    }
-    
-    // if the param was not found, then print the message
-    if (!found) {
-        libMesh::out
-        << std::endl
-        << "Parameter not found by name: " << nm << std::endl
-        << "Valid names are: "
-        << std::endl;
-        for (it = _params_for_sensitivity.begin(); it != end; it++)
-            libMesh::out << "   " << (*it)->name() << std::endl;
-        libMesh::out << std::endl;
-    }
-    
-    return rval;
-}
-
 
 
 

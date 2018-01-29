@@ -19,6 +19,7 @@
 
 // MAST includes
 #include "base/assembly_elem_operation.h"
+#include "base/elem_base.h"
 #include "base/assembly_base.h"
 #include "mesh/fe_base.h"
 
@@ -28,13 +29,15 @@
 
 
 MAST::AssemblyElemOperations::AssemblyElemOperations():
-_assembly (nullptr) {
+_assembly      (nullptr),
+_physics_elem  (nullptr) {
     
 }
 
 
 MAST::AssemblyElemOperations::~AssemblyElemOperations() {
     
+    this->clear_elem();
 }
 
 
@@ -61,3 +64,96 @@ MAST::AssemblyElemOperations::get_assembly() {
     return *_assembly;
 }
 
+
+void
+MAST::AssemblyElemOperations::set_elem_sensitivity_parameter(const MAST::FunctionBase& f) {
+    
+    libmesh_assert(_physics_elem);
+    
+    _physics_elem->sensitivity_param = &f;
+}
+
+
+
+void
+MAST::AssemblyElemOperations::set_elem_solution(const RealVectorX& sol) {
+
+    libmesh_assert(_physics_elem);
+
+    _physics_elem->set_solution(sol);
+}
+
+
+void
+MAST::AssemblyElemOperations::set_elem_solution_sensitivity(const RealVectorX& sol) {
+    
+    libmesh_assert(_physics_elem);
+
+    _physics_elem->set_solution(sol, true);
+}
+
+
+
+void
+MAST::AssemblyElemOperations::set_elem_velocity(const RealVectorX &vel) {
+    
+    libmesh_assert(_physics_elem);
+
+    _physics_elem->set_velocity(vel);
+}
+
+
+void
+MAST::AssemblyElemOperations::set_elem_velocity_sensitivity(const RealVectorX &vel) {
+    
+    libmesh_assert(_physics_elem);
+
+    _physics_elem->set_velocity(vel, true);
+}
+
+
+
+void
+MAST::AssemblyElemOperations::set_elem_acceleration(const RealVectorX &accel) {
+    
+    libmesh_assert(_physics_elem);
+
+    _physics_elem->set_acceleration(accel);
+}
+
+
+void
+MAST::AssemblyElemOperations::set_elem_perturbed_solution(const RealVectorX &sol) {
+    
+    libmesh_assert(_physics_elem);
+    
+    _physics_elem->set_perturbed_solution(sol);
+}
+
+
+void
+MAST::AssemblyElemOperations::set_elem_perturbed_velocity(const RealVectorX &vel) {
+    
+    libmesh_assert(_physics_elem);
+    
+    _physics_elem->set_perturbed_velocity(vel);
+}
+
+
+void
+MAST::AssemblyElemOperations::set_elem_perturbed_acceleration(const RealVectorX &accel) {
+    
+    libmesh_assert(_physics_elem);
+    
+    _physics_elem->set_perturbed_acceleration(accel);
+}
+
+
+void
+MAST::AssemblyElemOperations::clear_elem() {
+    
+    if (_physics_elem)
+        delete _physics_elem;
+        
+    _physics_elem = nullptr;
+}

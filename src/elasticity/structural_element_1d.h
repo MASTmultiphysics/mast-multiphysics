@@ -103,7 +103,16 @@ namespace MAST {
             return false;
         }
 
+        /*!
+         *    Calculates the stress tensor. If derivative and sensitivity
+         *    with respect to the parameter \p sesitivity_param are calculated
+         *    and provided if the respective flags are true.
+         */
+        virtual bool calculate_stress(bool request_derivative,
+                                      bool request_sensitivity,
+                                      MAST::StressStrainOutputBase& output);
         
+
     protected:
         
         
@@ -241,17 +250,6 @@ namespace MAST {
             
             libmesh_error(); // to be implemented
         }
-        
-        
-        /*!
-         *    Calculates the stress tensor. If derivative and sensitivity 
-         *    with respect to the parameter \p sesitivity_param are calculated
-         *    and provided if the respective flags are true.
-         */
-        virtual bool calculate_stress(bool request_derivative,
-                                      bool request_sensitivity,
-                                      MAST::OutputFunctionBase& output);
-        
         
 
         /*!

@@ -111,7 +111,7 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
     
     std::vector<libMesh::dof_id_type> dof_indices;
     const libMesh::DofMap& dof_map = _system->system().get_dof_map();
-    std::unique_ptr<MAST::ElementBase> physics_elem;
+    
     
     std::unique_ptr<libMesh::NumericVector<Real> > localized_solution;
     localized_solution.reset(build_localized_vector(nonlin_sys,
@@ -180,7 +180,7 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
                 
                 dof_map.dof_indices (elem, dof_indices);
                 
-                physics_elem.reset(_implicit_elem_ops->build_elem(*sub_elem).release());
+                _implicit_elem_ops->init(*sub_elem);
                 
                 // get the solution
                 unsigned int ndofs = (unsigned int)dof_indices.size();
@@ -191,17 +191,18 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
                 for (unsigned int i=0; i<dof_indices.size(); i++)
                     sol(i) = (*localized_solution)(dof_indices[i]);
                 
-                _implicit_elem_ops->set_elem_sol(*physics_elem, sol);
+                _implicit_elem_ops->set_elem_solution(sol);
                 
-                if (_sol_function)
-                    physics_elem->attach_active_solution_function(*_sol_function);
+//                if (_sol_function)
+//                    physics_elem->attach_active_solution_function(*_sol_function);
                 
                 // perform the element level calculations
-                _implicit_elem_ops->elem_calculations(*physics_elem,
-                                                      J!=nullptr?true:false,
+                _implicit_elem_ops->elem_calculations(J!=nullptr?true:false,
                                                       vec, mat);
                 
-                physics_elem->detach_active_solution_function();
+//                physics_elem->detach_active_solution_function();
+                
+                _implicit_elem_ops->clear_elem();
                 
                 // copy to the libMesh matrix for further processing
                 DenseRealVector v;
@@ -350,7 +351,11 @@ MAST::LevelSetNonlinearImplicitAssembly::build_fe(const libMesh::Elem& elem) {
         MAST::SubCellFE*
         local_fe = new MAST::SubCellFE(*_system,
                                        *_intersection);
-        
+        // FIXME: we would ideally like to send this to the elem ops object for
+        // setting of any local data. But the code has not been setup to do that
+        // for SubCellFE. 
+        //_elem_ops->set_local_fe_data(*local_fe);
+
         fe.reset(local_fe);
     }
     else {

@@ -990,36 +990,6 @@ volume_heat_source_residual_sensitivity(bool request_jacobian,
 
 
 
-bool
-MAST::HeatConductionElementBase::volume_output_quantity
-(bool request_derivative,
- bool request_sensitivity,
- std::multimap<libMesh::subdomain_id_type, MAST::OutputFunctionBase*>& output) {
-    
-    
-    // there are currently no output quantities defined for heat conduction
-    // elements
-    
-    return (request_derivative || request_sensitivity);
-}
-
-
-
-
-bool
-MAST::HeatConductionElementBase::
-side_output_quantity (bool request_derivative,
-                      bool request_sensitivity,
-                      std::multimap<libMesh::boundary_id_type, MAST::OutputFunctionBase*>& output) {
-    
-    // there are currently no output quantities defined for heat conduction
-    // elements
-    
-    return (request_derivative || request_sensitivity);
-}
-
-
-
 
 void
 MAST::HeatConductionElementBase::

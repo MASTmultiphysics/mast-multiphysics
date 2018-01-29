@@ -33,6 +33,7 @@ namespace MAST {
     class LocalElemBase;
     class BoundaryConditionBase;
     class FEMOperatorMatrix;
+    class OutputAssemblyElemOperations;
 
     
     /*!
@@ -134,29 +135,6 @@ namespace MAST {
                                             RealMatrixX& jac,
                                             std::multimap<libMesh::boundary_id_type, MAST::BoundaryConditionBase*>& bc);
         
-        /*!
-         *   evaluates an output quantity requested in the map over the
-         *   boundary of the element that may coincide with the boundary
-         *   identified in the map. The derivative with respect to the
-         *   state variables is provided if \p request_derivative is true.
-         */
-        virtual bool
-        volume_output_quantity (bool request_derivative,
-                                bool request_sensitivity,
-                                std::multimap<libMesh::subdomain_id_type, MAST::OutputFunctionBase*>& output);
-        
-        
-        /*!
-         *   evaluates an output quantity requested in the map over the
-         *   boundary of the element that may coincide with the boundary
-         *   identified in the map. The derivative with respect to the
-         *   state variables is provided if \p request_derivative is true.
-         */
-        virtual bool
-        side_output_quantity (bool request_derivative,
-                              bool request_sensitivity,
-                              std::multimap<libMesh::boundary_id_type, MAST::OutputFunctionBase*>& output);
-
         
     protected:
         
@@ -245,7 +223,7 @@ namespace MAST {
         void _calculate_surface_integrated_load(bool request_derivative,
                                                 bool request_sensitivity,
                                                 const unsigned int s,
-                                                MAST::OutputFunctionBase& output);
+                                                MAST::OutputAssemblyElemOperations& output);
         
 
         /*!

@@ -20,7 +20,6 @@
 // MAST includes
 #include "base/nonlinear_implicit_assembly.h"
 #include "base/system_initialization.h"
-#include "base/elem_base.h"
 #include "base/physics_discipline_base.h"
 #include "numerics/utility.h"
 #include "base/mesh_field_function.h"
@@ -126,7 +125,7 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
     
     std::vector<libMesh::dof_id_type> dof_indices;
     const libMesh::DofMap& dof_map = _system->system().get_dof_map();
-    std::unique_ptr<MAST::ElementBase> physics_elem;
+    
     
     std::unique_ptr<libMesh::NumericVector<Real> > localized_solution;
     localized_solution.reset(build_localized_vector(nonlin_sys,
@@ -150,7 +149,7 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
         
         dof_map.dof_indices (elem, dof_indices);
         
-        physics_elem.reset(_implicit_elem_ops->build_elem(*elem).release());
+        _implicit_elem_ops->init(*elem);
         
         // get the solution
         unsigned int ndofs = (unsigned int)dof_indices.size();
@@ -161,21 +160,22 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
         for (unsigned int i=0; i<dof_indices.size(); i++)
             sol(i) = (*localized_solution)(dof_indices[i]);
         
-        _implicit_elem_ops->set_elem_sol(*physics_elem, sol);
+        _implicit_elem_ops->set_elem_solution(sol);
         
         
-        if (_sol_function)
-            physics_elem->attach_active_solution_function(*_sol_function);
+//        if (_sol_function)
+//            physics_elem->attach_active_solution_function(*_sol_function);
         
         //_check_element_numerical_jacobian(*physics_elem, sol);
         
         // perform the element level calculations
-        _implicit_elem_ops->elem_calculations(*physics_elem,
-                                             J!=nullptr?true:false,
-                                             vec, mat);
+        _implicit_elem_ops->elem_calculations(J!=nullptr?true:false,
+                                              vec, mat);
         
-        physics_elem->detach_active_solution_function();
+//        physics_elem->detach_active_solution_function();
 
+        _implicit_elem_ops->clear_elem();
+        
         // copy to the libMesh matrix for further processing
         DenseRealVector v;
         DenseRealMatrix m;
@@ -237,7 +237,7 @@ linearized_jacobian_solution_product (const libMesh::NumericVector<Real>& X,
     
     std::vector<libMesh::dof_id_type> dof_indices;
     const libMesh::DofMap& dof_map = _system->system().get_dof_map();
-    std::unique_ptr<MAST::ElementBase> physics_elem;
+    
     
     std::unique_ptr<libMesh::NumericVector<Real> >
     localized_solution,
@@ -266,7 +266,7 @@ linearized_jacobian_solution_product (const libMesh::NumericVector<Real>& X,
         
         dof_map.dof_indices (elem, dof_indices);
         
-        physics_elem.reset(_implicit_elem_ops->build_elem(*elem).release());
+        _implicit_elem_ops->init(*elem);
         
         // get the solution
         unsigned int ndofs = (unsigned int)dof_indices.size();
@@ -280,20 +280,20 @@ linearized_jacobian_solution_product (const libMesh::NumericVector<Real>& X,
             dsol(i) = (*localized_perturbed_solution)(dof_indices[i]);
         }
         
-        physics_elem->set_solution(sol);
-        physics_elem->set_perturbed_solution(dsol);
+        _implicit_elem_ops->set_elem_solution(sol);
+        _implicit_elem_ops->set_elem_perturbed_solution(dsol);
         
-        if (_sol_function)
-            physics_elem->attach_active_solution_function(*_sol_function);
+//        if (_sol_function)
+//            physics_elem->attach_active_solution_function(*_sol_function);
         
         //_check_element_numerical_jacobian(*physics_elem, sol);
         
         // perform the element level calculations
-        _implicit_elem_ops->elem_linearized_jacobian_solution_product(*physics_elem,
-                                                                     vec);
+        _implicit_elem_ops->elem_linearized_jacobian_solution_product(vec);
         
-        physics_elem->detach_active_solution_function();
-        
+        //physics_elem->detach_active_solution_function();
+        _implicit_elem_ops->clear_elem();
+
         // copy to the libMesh matrix for further processing
         DenseRealVector v;
         MAST::copy(v, vec);
@@ -339,7 +339,7 @@ second_derivative_dot_solution_assembly (const libMesh::NumericVector<Real>& X,
     
     std::vector<libMesh::dof_id_type> dof_indices;
     const libMesh::DofMap& dof_map = _system->system().get_dof_map();
-    std::unique_ptr<MAST::ElementBase> physics_elem;
+    
     
     std::unique_ptr<libMesh::NumericVector<Real> >
     localized_solution,
@@ -368,7 +368,7 @@ second_derivative_dot_solution_assembly (const libMesh::NumericVector<Real>& X,
         
         dof_map.dof_indices (elem, dof_indices);
         
-        physics_elem.reset(_implicit_elem_ops->build_elem(*elem).release());
+        _implicit_elem_ops->init(*elem);
         
         // get the solution
         unsigned int ndofs = (unsigned int)dof_indices.size();
@@ -381,17 +381,18 @@ second_derivative_dot_solution_assembly (const libMesh::NumericVector<Real>& X,
             dsol(i) = (*localized_perturbed_solution)(dof_indices[i]);
         }
         
-        physics_elem->set_solution(sol);
-        physics_elem->set_solution(dsol, true);
+        _implicit_elem_ops->set_elem_solution(sol);
+        _implicit_elem_ops->set_elem_solution_sensitivity(dsol);
         
-        if (_sol_function)
-            physics_elem->attach_active_solution_function(*_sol_function);
+//        if (_sol_function)
+//            physics_elem->attach_active_solution_function(*_sol_function);
         
         // perform the element level calculations
-        _implicit_elem_ops->elem_second_derivative_dot_solution_assembly(*physics_elem, mat);
+        _implicit_elem_ops->elem_second_derivative_dot_solution_assembly(mat);
         
-        physics_elem->detach_active_solution_function();
-        
+//        physics_elem->detach_active_solution_function();
+        _implicit_elem_ops->clear_elem();
+
         // copy to the libMesh matrix for further processing
         DenseRealMatrix m;
         MAST::copy(m, mat);
@@ -432,7 +433,7 @@ sensitivity_assemble (const libMesh::ParameterVector& parameters,
     
     std::vector<libMesh::dof_id_type> dof_indices;
     const libMesh::DofMap& dof_map = nonlin_sys.get_dof_map();
-    std::unique_ptr<MAST::ElementBase> physics_elem;
+    
     
     std::unique_ptr<libMesh::NumericVector<Real> > localized_solution;
     localized_solution.reset(build_localized_vector(nonlin_sys,
@@ -453,7 +454,7 @@ sensitivity_assemble (const libMesh::ParameterVector& parameters,
         
         dof_map.dof_indices (elem, dof_indices);
         
-        physics_elem.reset(_implicit_elem_ops->build_elem(*elem).release());
+        _implicit_elem_ops->init(*elem);
         
         // get the solution
         unsigned int ndofs = (unsigned int)dof_indices.size();
@@ -463,22 +464,24 @@ sensitivity_assemble (const libMesh::ParameterVector& parameters,
         for (unsigned int i=0; i<dof_indices.size(); i++)
             sol(i) = (*localized_solution)(dof_indices[i]);
         
-        physics_elem->sensitivity_param = _discipline->get_parameter(&(parameters[i].get()));
-        _implicit_elem_ops->set_elem_sol(*physics_elem, sol);
+        _implicit_elem_ops->set_elem_sensitivity_parameter
+        (*_discipline->get_parameter(&(parameters[i].get())));
+        _implicit_elem_ops->set_elem_solution(sol);
         
-        if (_sol_function)
-            physics_elem->attach_active_solution_function(*_sol_function);
+//        if (_sol_function)
+//            physics_elem->attach_active_solution_function(*_sol_function);
         
         // perform the element level calculations
-        _implicit_elem_ops->elem_sensitivity_calculations(*physics_elem, vec);
+        _implicit_elem_ops->elem_sensitivity_calculations(vec);
         
         // the sensitivity method provides sensitivity of the residual.
         // Hence, this is multiplied with -1 to make it the RHS of the
         // sensitivity equations. 
         vec *= -1.;
         
-        physics_elem->detach_active_solution_function();
-        
+//        physics_elem->detach_active_solution_function();
+        _implicit_elem_ops->clear_elem();
+
         // copy to the libMesh matrix for further processing
         DenseRealVector v;
         MAST::copy(v, vec);

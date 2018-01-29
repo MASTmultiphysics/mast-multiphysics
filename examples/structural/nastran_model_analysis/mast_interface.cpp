@@ -26,10 +26,10 @@
 #include "examples/structural/nastran_model_analysis/mast_interface.h"
 #include "base/parameter.h"
 #include "base/constant_field_function.h"
+#include "base/physics_discipline_base.h"
 #include "property_cards/isotropic_material_property_card.h"
 #include "property_cards/solid_2d_section_element_property_card.h"
 #include "base/nonlinear_system.h"
-#include "elasticity/structural_discipline.h"
 #include "elasticity/structural_system_initialization.h"
 
 // libMesh includes
@@ -340,7 +340,7 @@ MAST::Model::initialize_after_mesh() {
     _sys_init    = new MAST::StructuralSystemInitialization(*_sys,
                                                                _sys->name(),
                                                                fetype);
-    _discipline  = new MAST::StructuralDiscipline(*_eq_sys);
+    _discipline  = new MAST::PhysicsDisciplineBase(*_eq_sys);
     
     // initialize the equation system
     

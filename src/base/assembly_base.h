@@ -38,11 +38,12 @@ namespace MAST {
     class PhysicsDisciplineBase;
     class SystemInitialization;
     class ElementBase;
-    class OutputFunctionBase;
     class MeshFieldFunction;
     class NonlinearSystem;
     class FEBase;
     class AssemblyElemOperations;
+    class OutputAssemblyElemOperations;
+    class FunctionBase;
     
     class AssemblyBase {
     public:
@@ -161,29 +162,66 @@ namespace MAST {
         
         
         /*!
-         *   evaluates the volume and boundary outputs for the specified
-         *   solution
+         *   calculates the value of quantity \f$ q(X,p) \f$.
          */
-        virtual void calculate_outputs(const libMesh::NumericVector<Real>& X);
+        virtual void
+        calculate_output(const libMesh::NumericVector<Real>& X,
+                         MAST::OutputAssemblyElemOperations& output);
 
         
         /*!
-         *   evaluates the sensitivity of the outputs in the attached 
+         *   calculates \f$ \frac{\partial q(X, p)}{\partial X} \f$
+         */
+        virtual void
+        calculate_output_derivative(const libMesh::NumericVector<Real>& X,
+                                    MAST::OutputAssemblyElemOperations& output,
+                                    libMesh::NumericVector<Real>& dq_dX);
+
+        
+        /*!
+         *   evaluates the sensitivity of the outputs in the attached
          *   discipline with respect to the parametrs in \par params.
-         *   The base solution should be provided in \par X. If the parameter 
-         *   \par if_total_sensitivity is true, then the method will calculate 
+         *   The base solution should be provided in \par X. If the parameter
+         *   \par if_total_sensitivity is true, then the method will calculate
          *   the total derivative of the output with respect to the parameters.
-         *   In this case, the method will look for the sensitivity solution for 
+         *   In this case, the method will look for the sensitivity solution for
          *   the i^th parameter in get_sensitivity_solution() of the associated
          *   libMesh::System object. If the parameter \par if_total_sensitivity
          *   if \p false, then the method will calculate the sensitivity
          *   assuming the sensitivity of solution is zero. This can be used for
          *   adjoint sensitivity analysis.
          */
-        void calculate_output_sensitivity(libMesh::ParameterVector& params,
-                                          const bool if_total_sensitivity,
-                                          const libMesh::NumericVector<Real>& X);
+        virtual void
+        calculate_output_direct_sensitivity(const bool if_total_sensitivity,
+                                            const libMesh::NumericVector<Real>& X,
+                                            const MAST::FunctionBase& p,
+                                            MAST::OutputAssemblyElemOperations& output) {
+            libmesh_error(); // to be implemented
+        }
 
+        
+        /*!
+         *   evaluates the sensitivity of the outputs in the attached
+         *   discipline with respect to the parametrs in \par params.
+         *   The base solution should be provided in \par X. If the parameter
+         *   \par if_total_sensitivity is true, then the method will calculate
+         *   the total derivative of the output with respect to the parameters.
+         *   In this case, the method will look for the sensitivity solution for
+         *   the i^th parameter in get_sensitivity_solution() of the associated
+         *   libMesh::System object. If the parameter \par if_total_sensitivity
+         *   if \p false, then the method will calculate the sensitivity
+         *   assuming the sensitivity of solution is zero. This can be used for
+         *   adjoint sensitivity analysis.
+         */
+        virtual void
+        calculate_output_adjoint_sensitivity(const bool if_total_sensitivity,
+                                             const libMesh::NumericVector<Real>& X,
+                                             const MAST::FunctionBase& p,
+                                             MAST::OutputAssemblyElemOperations& output)  {
+            libmesh_error(); // to be implemented
+        }
+
+        
         /*!
          *   localizes the parallel vector so that the local copy
          *   stores all values necessary for calculation of the
@@ -191,7 +229,7 @@ namespace MAST {
          */
         std::unique_ptr<libMesh::NumericVector<Real> >
         build_localized_vector(const libMesh::System& sys,
-                               const libMesh::NumericVector<Real>& global);
+                               const libMesh::NumericVector<Real>& global) const;
         
         
         /*!
@@ -207,26 +245,6 @@ namespace MAST {
 
     protected:
         
-        
-        
-        
-        /*!
-         *   assembles the outputs for this element
-         */
-        virtual void
-        _elem_outputs(MAST::ElementBase& elem,
-                      std::multimap<libMesh::subdomain_id_type, MAST::OutputFunctionBase *> &vol_output,
-                      std::multimap<libMesh::boundary_id_type,MAST::OutputFunctionBase *> &side_output);
-
-        
-        /*!
-         *   assembles the sensitivity of outputs for this element
-         */
-        virtual void
-        _elem_output_sensitivity(MAST::ElementBase& elem,
-                                 std::multimap<libMesh::subdomain_id_type, MAST::OutputFunctionBase *> &vol_output,
-                                 std::multimap<libMesh::boundary_id_type,MAST::OutputFunctionBase *> &side_output);
-
         /*!
          *   provides assembly elem operations for use by this class
          */

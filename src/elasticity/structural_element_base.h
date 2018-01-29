@@ -35,7 +35,7 @@ namespace MAST {
     class LocalElemFE;
     class BoundaryConditionBase;
     class FEMOperatorMatrix;
-    class OutputFunctionBase;
+    class StressStrainOutputBase;
     
     
     class StructuralElementBase:
@@ -219,18 +219,6 @@ namespace MAST {
          ComplexMatrixX& jac,
          std::multimap<libMesh::boundary_id_type, MAST::BoundaryConditionBase*>& bc);
         
-
-        /*!
-         *   evaluates an output quantity requested in the map over the 
-         *   boundary of the element that may coincide with the boundary 
-         *   identified in the map. The derivative with respect to the 
-         *   state variables is provided if \p request_derivative is true.
-         */
-        virtual bool
-        side_output_quantity (bool request_derivative,
-                              bool request_sensitivity,
-                              std::multimap<libMesh::boundary_id_type, MAST::OutputFunctionBase*>& output);
-        
         
         /*!
          *   prestress force contribution to system residual
@@ -279,16 +267,6 @@ namespace MAST {
          std::multimap<libMesh::subdomain_id_type, MAST::BoundaryConditionBase*>& bc);
         
         
-        /*!
-         *   evaluates an output quantity requested in the map over the
-         *   boundary of the element that may coincide with the boundary
-         *   identified in the map. The derivative with respect to the
-         *   state variables is provided if \p request_derivative is true.
-         */
-        virtual bool volume_output_quantity (bool request_derivative,
-                                             bool request_sensitivity,
-                                             std::multimap<libMesh::subdomain_id_type, MAST::OutputFunctionBase*>& output);
-
         
         /*!
          *   sensitivity of the internal force contribution to system residual
@@ -380,6 +358,16 @@ namespace MAST {
         }
 
         
+        /*!
+         *    Calculates the stress tensor. If derivative and sensitivity
+         *    with respect to the parameter \p sesitivity_param are calculated
+         *    and provided if the respective flags are true.
+         */
+        virtual bool calculate_stress(bool request_derivative,
+                                      bool request_sensitivity,
+                                      MAST::StressStrainOutputBase& output) = 0;
+        
+
         /*!
          *    flag for follower forces
          */
@@ -608,16 +596,6 @@ namespace MAST {
                                                   RealMatrixX& jac,
                                                   MAST::BoundaryConditionBase& bc) = 0;
         
-        
-        /*!
-         *    Calculates the stress tensor. If derivative and sensitivity
-         *    with respect to the parameter \p sesitivity_param are calculated
-         *    and provided if the respective flags are true.
-         */
-        virtual bool calculate_stress(bool request_derivative,
-                                      bool request_sensitivity,
-                                      MAST::OutputFunctionBase& output) = 0;
-
         
         /*!
          *   @returns a constant reference to transformation matrix needed

@@ -48,8 +48,7 @@ namespace MAST {
          *   \par vec, respectively. \par if_jac tells the method to also
          *   assemble the Jacobian, in addition to the residual vector.
          */
-        virtual void elem_calculations(MAST::ElementBase& elem,
-                                       bool if_jac,
+        virtual void elem_calculations(bool if_jac,
                                        RealVectorX& f_m,
                                        RealVectorX& f_x,
                                        RealMatrixX& f_m_jac_xdot,
@@ -73,8 +72,7 @@ namespace MAST {
          *   \par vec, respectively. \par if_jac tells the method to also
          *   assemble the Jacobian, in addition to the residual vector.
          */
-        virtual void elem_calculations(MAST::ElementBase& elem,
-                                       bool if_jac,
+        virtual void elem_calculations(bool if_jac,
                                        RealVectorX& f_m,
                                        RealVectorX& f_x,
                                        RealMatrixX& f_m_jac_xddot,
@@ -92,16 +90,14 @@ namespace MAST {
          *    df_m(x,\dot{x})/d\dot{x} \cdot d{\dot x} \f$
          */
         virtual void
-        linearized_jacobian_solution_product(MAST::ElementBase& elem,
-                                             RealVectorX& f) = 0;
+        linearized_jacobian_solution_product(RealVectorX& f) = 0;
         
         
         /*!
          *   performs the element sensitivity calculations over \par elem,
          *   and returns the element residual sensitivity in \par vec .
          */
-        virtual void elem_sensitivity_calculations(MAST::ElementBase& elem,
-                                                   RealVectorX& vec) = 0;
+        virtual void elem_sensitivity_calculations(RealVectorX& vec) = 0;
 
 
     protected:

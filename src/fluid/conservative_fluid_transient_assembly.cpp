@@ -44,16 +44,17 @@ MAST::ConservativeFluidTransientAssemblyElemOperations::
 
 void
 MAST::ConservativeFluidTransientAssemblyElemOperations::
-elem_calculations(MAST::ElementBase& elem,
-                  bool if_jac,
+elem_calculations(bool if_jac,
                   RealVectorX& f_m,
                   RealVectorX& f_x,
                   RealMatrixX& f_m_jac_xdot,
                   RealMatrixX& f_m_jac,
                   RealMatrixX& f_x_jac) {
     
+    libmesh_assert(_physics_elem);
+
     MAST::ConservativeFluidElementBase& e =
-    dynamic_cast<MAST::ConservativeFluidElementBase&>(elem);
+    dynamic_cast<MAST::ConservativeFluidElementBase&>(*_physics_elem);
     
     f_m.setZero();
     f_x.setZero();
@@ -73,11 +74,12 @@ elem_calculations(MAST::ElementBase& elem,
 
 void
 MAST::ConservativeFluidTransientAssemblyElemOperations::
-linearized_jacobian_solution_product(MAST::ElementBase& elem,
-                                     RealVectorX& f) {
+linearized_jacobian_solution_product(RealVectorX& f) {
     
+    libmesh_assert(_physics_elem);
+
     MAST::ConservativeFluidElementBase& e =
-    dynamic_cast<MAST::ConservativeFluidElementBase&>(elem);
+    dynamic_cast<MAST::ConservativeFluidElementBase&>(*_physics_elem);
     
     const unsigned int
     n = (unsigned int) f.size();
@@ -100,8 +102,7 @@ linearized_jacobian_solution_product(MAST::ElementBase& elem,
 
 void
 MAST::ConservativeFluidTransientAssemblyElemOperations::
-elem_sensitivity_calculations(MAST::ElementBase& elem,
-                              RealVectorX& vec) {
+elem_sensitivity_calculations(RealVectorX& vec) {
     
     libmesh_error(); // to be implemented
     
@@ -111,25 +112,23 @@ elem_sensitivity_calculations(MAST::ElementBase& elem,
 
 void
 MAST::ConservativeFluidTransientAssemblyElemOperations::
-elem_second_derivative_dot_solution_assembly(MAST::ElementBase& elem,
-                                             RealMatrixX& m) {
+elem_second_derivative_dot_solution_assembly(RealMatrixX& m) {
     
     libmesh_error(); // to be implemented
 }
 
 
-std::unique_ptr<MAST::ElementBase>
+void
 MAST::ConservativeFluidTransientAssemblyElemOperations::
-build_elem(const libMesh::Elem& elem) {
+init(const libMesh::Elem& elem) {
     
+    libmesh_assert(!_physics_elem);
     
     const MAST::FlightCondition& p =
     dynamic_cast<MAST::ConservativeFluidDiscipline&>
     (_assembly->discipline()).flight_condition();
     
-    MAST::ElementBase* rval =
+    _physics_elem =
     new MAST::ConservativeFluidElementBase(_assembly->system_init(), *_assembly, elem, p);
-    
-    return std::unique_ptr<MAST::ElementBase>(rval);
 }
 

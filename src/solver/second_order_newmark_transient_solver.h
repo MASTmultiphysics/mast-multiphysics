@@ -102,8 +102,7 @@ namespace MAST {
          */
         virtual void
         set_element_data(const std::vector<libMesh::dof_id_type>& dof_indices,
-                         const std::vector<libMesh::NumericVector<Real>*>& sols,
-                         MAST::ElementBase& elem);
+                         const std::vector<libMesh::NumericVector<Real>*>& sols);
         
         /*!
          *    provides the element with the transient data for calculations
@@ -111,8 +110,7 @@ namespace MAST {
         virtual void
         set_element_perturbed_data
         (const std::vector<libMesh::dof_id_type>& dof_indices,
-         const std::vector<libMesh::NumericVector<Real>*>& sols,
-         MAST::ElementBase& elem);
+         const std::vector<libMesh::NumericVector<Real>*>& sols);
         
         
         /*!
@@ -122,8 +120,7 @@ namespace MAST {
          *   assemble the Jacobian, in addition to the residual vector.
          */
         virtual void
-        elem_calculations(MAST::ElementBase& elem,
-                          bool if_jac,
+        elem_calculations(bool if_jac,
                           RealVectorX& vec,
                           RealMatrixX& mat);
         
@@ -135,25 +132,31 @@ namespace MAST {
          *   forces/etc.) are added to this vector.
          */
         virtual void
-        elem_linearized_jacobian_solution_product(MAST::ElementBase& elem,
-                                                  RealVectorX& vec);
+        elem_linearized_jacobian_solution_product(RealVectorX& vec);
         
         /*!
          *   performs the element sensitivity calculations over \par elem,
          *   and returns the element residual sensitivity in \par vec .
          */
         virtual void
-        elem_sensitivity_calculations(MAST::ElementBase& elem,
-                                      RealVectorX& vec);
+        elem_sensitivity_calculations(RealVectorX& vec);
         
         /*!
          *   calculates \f$ d ([J] \{\Delta X\})/ dX  \f$ over \par elem,
          *   and returns the matrix in \par vec .
          */
         virtual void
-        elem_second_derivative_dot_solution_assembly(MAST::ElementBase& elem,
-                                                     RealMatrixX& mat) {
+        elem_second_derivative_dot_solution_assembly(RealMatrixX& mat) {
             libmesh_assert(false); // to be implemented
+        }
+
+        /*!
+         *   overloaded method, should not get called, since the element
+         *   operations are handled by the assembly operation object.
+         */
+        virtual void
+        init(const libMesh::Elem& elem) {
+            libmesh_error(); // should not get called.
         }
 
     protected:

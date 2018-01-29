@@ -299,43 +299,6 @@ MAST::PanelSmallDisturbanceFrequencyDomainInviscidAnalysis3DHalfDomain::~PanelSm
 
 
 
-MAST::Parameter*
-MAST::PanelSmallDisturbanceFrequencyDomainInviscidAnalysis3DHalfDomain::get_parameter(const std::string &nm) {
-    
-    MAST::Parameter *rval = nullptr;
-    
-    // look through the vector of parameters to see if the name is available
-    std::vector<MAST::Parameter*>::iterator
-    it   =  _params_for_sensitivity.begin(),
-    end  =  _params_for_sensitivity.end();
-    
-    bool
-    found = false;
-    
-    for ( ; it != end; it++) {
-        
-        if (nm == (*it)->name()) {
-            rval    = *it;
-            found   = true;
-        }
-    }
-    
-    // if the param was not found, then print the message
-    if (!found) {
-        libMesh::out
-        << std::endl
-        << "Parameter not found by name: " << nm << std::endl
-        << "Valid names are: "
-        << std::endl;
-        for (it = _params_for_sensitivity.begin(); it != end; it++)
-            libMesh::out << "   " << (*it)->name() << std::endl;
-        libMesh::out << std::endl;
-    }
-    
-    return rval;
-}
-
-
 
 const libMesh::NumericVector<Real>&
 MAST::PanelSmallDisturbanceFrequencyDomainInviscidAnalysis3DHalfDomain::solve(bool if_write_output) {
@@ -468,60 +431,12 @@ MAST::PanelSmallDisturbanceFrequencyDomainInviscidAnalysis3DHalfDomain::solve(bo
 
 
 const libMesh::NumericVector<Real>&
-MAST::PanelSmallDisturbanceFrequencyDomainInviscidAnalysis3DHalfDomain::sensitivity_solve(MAST::Parameter& p,
-                                          bool if_write_output) {
+MAST::PanelSmallDisturbanceFrequencyDomainInviscidAnalysis3DHalfDomain::
+sensitivity_solve(MAST::Parameter& p,
+                  bool if_write_output) {
     
-    /*_discipline->add_parameter(p);
-    
-    // create the nonlinear assembly object
-    MAST::StructuralNonlinearAssembly   assembly;
-    
-    assembly.attach_discipline_and_system(*_discipline, *_structural_sys);
-    
-    MAST::NonlinearSystem& nonlin_sys = assembly.system();
-    
-    libMesh::ParameterVector params;
-    params.resize(1);
-    params[0]  =  p.ptr();
-    
-    // zero the solution before solving
-    nonlin_sys.add_sensitivity_solution(0).zero();
-    this->clear_stresss();
-    
-    nonlin_sys.sensitivity_solve(params);
-    
-    // evaluate sensitivity of the outputs
-    assembly.calculate_output_sensitivity(params,
-                                          true,    // true for total sensitivity
-                                          *(_sys->solution));
-    
-    
-    assembly.clear_discipline_and_system();
-    _discipline->remove_parameter(p);
-    
-    // write the solution for visualization
-    if (if_write_output) {
-        
-        std::ostringstream oss1, oss2;
-        oss1 << "output_" << p.name() << ".exo";
-        oss2 << "output_" << p.name() << ".exo";
-        
-        libMesh::out
-        << "Writing sensitivity output to : " << oss1.str()
-        << "  and stress/strain sensitivity to : " << oss2.str()
-        << std::endl;
-        
-        
-        _sys->solution->swap(_sys->get_sensitivity_solution(0));
-        
-        // write the solution for visualization
-        _discipline->update_stress_strain_data( &p);
-        libMesh::ExodusII_IO(*_mesh).write_equation_systems(oss1.str(),
-                                                            *_eq_sys);
-     
-        _sys->solution->swap(_sys->get_sensitivity_solution(0));
-    }
-     */
+    libmesh_assert(false); // to be implemented
+
     return _sys->get_sensitivity_solution(0);
 }
 

@@ -26,8 +26,8 @@
 
 // MAST includes
 #include "base/mast_data_types.h"
-#include "base/output_function_base.h"
 #include "base/physics_discipline_base.h"
+#include "base/output_assembly_elem_operations.h"
 
 
 // libMesh includes
@@ -48,18 +48,18 @@ namespace MAST {
      *
      *    This is, by default, a 3D tensor that should be initialized
      *    with 6 components. The first three components of stress are the direct
-     *    stresses in the x, y, z directions, sigma_xx, sigma_yy, sigma_zz, and
-     *    the next three components are the shear stresses
-     *    tau_xy, tau_yz, tau_xz.
+     *    stresses in the \f$ x, y, z\f$ directions, \f$ \sigma_{xx},
+     *    \sigma_{yy}, \sigma_{zz}\f$, and the next three components are
+     *     the shear stresses \f$ \tau_{xy}, \tau_{yz}, \tau_{xz} \f$.
      *
      *    The first three components of strain are the direct
-     *    strains in the x, y, z directions, epsilon_xx, epsilon_yy, epsilon_zz,
-     *    and the next three components are the engineering shear strains
-     *    gamma_xy, gamma_yz, gamma_xz.
-
+     *    strains in the \f$x, y, z\f$ directions, \f$ \epsilon_{xx},
+     *    \epsilon_{yy}, \epsilon_{zz} \f$, and the next three components
+     *    are the engineering shear strains \f$ \gamma_{xy}, \gamma_{yz},
+     *     \gamma_{xz} \f$.
      */
     class StressStrainOutputBase:
-    public MAST::OutputFunctionBase {
+    public MAST::OutputAssemblyElemOperations {
         
     public:
     
@@ -229,41 +229,119 @@ namespace MAST {
         
         virtual ~StressStrainOutputBase();
         
+        
+        /*!
+         *   sets the \f$p-\f$norm for calculation of stress functional
+         */
+        void set_p_val(Real p) {
+            
+            _p_norm =  p;
+        }
+        
+        /*!
+         *   @returns the \f$p-\f$norm for calculation of stress functional
+         */
+        Real get_p_val() {
+            
+            return _p_norm;
+        }
+        
+        /*!
+         *   initialize for the element.
+         */
+        virtual void init(const libMesh::Elem& elem);
 
+        /*!
+         *   zeroes the output quantity values stored inside this object
+         *   so that assembly process can begin.
+         */
+        virtual void zero();
+        
+        /*!
+         *   @returns the output quantity value
+         */
+        virtual Real output();
+        
+        /*!
+         *   @returns the output quantity sensitivity for parameter
+         */
+        virtual Real output_sensitivity(const MAST::FunctionBase& p);
+        
+        
+        /*!
+         *   @returns the output quantity derivative with respect to
+         *   state vector
+         */
+        virtual RealVectorX output_derivative();
+        
+        
+        /*!
+         *    this is the abstract interface to be implemented by derived
+         *    classes. This method calculates the quantity \f$ q(X, p) \f$.
+         */
+        virtual void evaluate();
+        
+        
+        /*!
+         *    this is the abstract interface to be implemented by derived
+         *    classes. This method calculates the partial derivative of quantity
+         *    \f[ \frac{\partial q(X, p)}{\partial p} \f]  with
+         *    respect to parameter \f$ p \f$.
+         */
+        virtual void evaluate_sensitivity(const MAST::FunctionBase& p);
+        
+        
+        /*!
+         *    this is the abstract interface to be implemented by derived
+         *    classes. This method calculates the quantity
+         *    \f[ \frac{\partial q(X, p)}{\partial X} \f] for this
+         *    output function.
+         */
+        virtual void evaluate_derivative();
+                
+        
+        /*!
+         *   some simulations frequently deal with 1D/2D elements in 3D space,
+         *   which requires use of MAST::LocalElemFE.
+         */
+        virtual bool
+        if_use_local_elem() const {
+            
+            return true;
+        }
+        
+        
+        /*!
+         *   sets additional data for local elem FE.
+         */
+        virtual void
+        set_local_fe_data(MAST::LocalElemFE& fe) const;
+
+        
         /*!
          *   clears the data structure of any stored values so that it can be 
-         *   used for another element. If \par clear_elem_subset is true, then 
-         *   the default behaviour will return to calculation and storage of all
-         *   elements in the subdomain. Otherwise, the object will retain the 
-         *   element subsets specified using \p set_elements_in_domain.
+         *   used for another element.
          */
-        void clear(bool clear_elem_subset);
-        
+        void clear();
         
         /*!
-         *    checks to see if the object has been told about the subset of 
-         *    elements and if the specified element is in the subset.
+         *   calculates stress data for the element \p elem with the
+         *   element solution \p sol.
+         *   \p this object should have been cleared before calling this method.
          */
-        bool evaluate_for_element(const libMesh::Elem& elem) const;
+        void calculate_for_element(const libMesh::Elem& elem,
+                                   const RealVectorX& sol);
+
 
         /*!
-         *   sets the elements for which this object will evaluate and store
-         *   the stress and strain data. This allows the user the specify a 
-         *   smaller subset of elements that will be grouped together in the 
-         *   stress functionals for constraint evaluation. If this method is 
-         *   not called, then the object will store data for all elements in 
-         *   the subdomain.
+         *   calculates sensitivity of stress data for the element \p elem
+         *   with the element solution \p sol.
+         *   \p this object should have been cleared before calling this method.
          */
-        void set_elements_in_domain(const std::set<const libMesh::Elem*>& elems);
-
-        
-        /*!
-         *   If the discipline includes loads such as thermal stresses and
-         *   prestresses in the analysis, then those need to be included in 
-         *   the analysis. This method can be used to specify the volume loads
-         *   that the elements can use for stress calculations.
-         */
-        void set_volume_loads(MAST::VolumeBCMapType& vol_loads);
+        void calculate_sensitivity_for_element(const libMesh::Elem& elem,
+                                               const RealVectorX& sol,
+                                               const RealVectorX& dsol,
+                                               const MAST::FunctionBase& p);
 
         
         /*!
@@ -274,22 +352,6 @@ namespace MAST {
         MAST::BoundaryConditionBase*
         get_thermal_load_for_elem(const libMesh::Elem& elem);
 
-        
-        /*!
-         *   @returns the number of elements for which data is stored in this 
-         *   object.
-         */
-        unsigned int
-        n_elem_in_storage() const;
-
-        
-        /*!
-         *    @returns the set of elements for which data will be stored. This 
-         *    is set using the \par set_elements_in_domain method.
-         */
-        const std::set<const libMesh::Elem*>&
-        get_elem_subset() const;
-        
         
         /*!
          *   @returns the number of points for which stress-strain data is 
@@ -360,6 +422,11 @@ namespace MAST {
         
     protected:
 
+        /*!
+         *   \f$ p-\f$norm to be used for calculation of output stress function
+         */
+        Real _p_norm;
+        
         
         /*!
          *    vector of stress with the associated location details
@@ -367,18 +434,6 @@ namespace MAST {
         std::map<const libMesh::Elem*, std::vector<MAST::StressStrainOutputBase::Data*> >
         _stress_data;
         
-        
-        /*!
-         *    set of elements for which the data will be stored. If this is 
-         *    empty, then data for all elements will be stored.
-         */
-        std::set<const libMesh::Elem*> _elem_subset;
-        
-        /*!
-         *    Volume loads used in the analysis
-         */
-        MAST::VolumeBCMapType* _vol_loads;
-
     };
 }
 
