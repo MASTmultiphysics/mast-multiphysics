@@ -332,12 +332,9 @@ MAST::StressStrainOutputBase::init(const libMesh::Elem& elem) {
 
 
 void
-MAST::StressStrainOutputBase::set_local_fe_data(MAST::LocalElemFE& fe) const {
-
-    libmesh_assert(!_physics_elem);
+MAST::StressStrainOutputBase::set_local_fe_data(MAST::LocalElemFE& fe,
+                                                const libMesh::Elem& e) const {
     
-    const libMesh::Elem& e = _physics_elem->elem();
-
     if (e.dim() == 1) {
         
         const MAST::ElementPropertyCard1D&
@@ -371,6 +368,7 @@ MAST::StressStrainOutputBase::clear() {
     }
     
     _stress_data.clear();
+    this->clear_elem();
 }
 
 
@@ -379,6 +377,8 @@ MAST::StressStrainOutputBase::clear() {
 void
 MAST::StressStrainOutputBase::calculate_for_element(const libMesh::Elem& elem,
                                                     const RealVectorX& sol) {
+    
+    libmesh_assert(this->if_evaluate_for_element(elem));
     
     // create the element, set its solution and then ask it for
     this->init(elem);
@@ -402,6 +402,8 @@ calculate_sensitivity_for_element(const libMesh::Elem& elem,
                                   const RealVectorX& dsol,
                                   const MAST::FunctionBase& p) {
     
+    libmesh_assert(this->if_evaluate_for_element(elem));
+
     // create the element, set its solution and then ask it for
     this->init(elem);
     _physics_elem->sensitivity_param = &p;

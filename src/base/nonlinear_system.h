@@ -248,6 +248,11 @@ namespace MAST {
          */
         std::unique_ptr<MAST::SlepcEigenSolver> eigen_solver;
         
+        /*!
+         *  The LinearSolver for solution of the linear equations
+         */
+        std::unique_ptr<libMesh::LinearSolver<Real>> linear_solver;
+        
         /**
          * Loop over the dofs on each processor to initialize the list
          * of non-condensed dofs. These are the dofs in the system that

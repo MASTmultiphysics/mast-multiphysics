@@ -35,6 +35,7 @@
 #include "libmesh/sparse_matrix.h"
 #include "libmesh/dof_map.h"
 #include "libmesh/nonlinear_solver.h"
+#include "libmesh/petsc_linear_solver.h"
 
 
 MAST::NonlinearSystem::NonlinearSystem(libMesh::EquationSystems& es,
@@ -138,6 +139,13 @@ MAST::NonlinearSystem::init_data () {
     }
     eigen_solver->set_eigenproblem_type(_eigen_problem_type);
     
+    
+    linear_solver.reset(new libMesh::PetscLinearSolver<Real>(this->comm()));
+    if (libMesh::on_command_line("--solver_system_names")) {
+        
+        std::string nm = this->name() + "_";
+        linear_solver->init(nm.c_str());
+    }
 }
 
 

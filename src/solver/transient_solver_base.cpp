@@ -221,9 +221,6 @@ MAST::TransientSolverBase::solve_highest_derivative_and_advance_time_step() {
     // reset the solution flag
     _if_highest_derivative_solution = false;
     
-    // The sensitivity problem is linear
-    libMesh::LinearSolver<Real> * linear_solver = _system->get_linear_solver();
-    
     std::pair<unsigned int, Real>
     solver_params = _system->get_linear_solve_parameters();
     
@@ -234,12 +231,11 @@ MAST::TransientSolverBase::solve_highest_derivative_and_advance_time_step() {
     std::unique_ptr<libMesh::NumericVector<Real> >
     dvec(velocity().zero_clone().release());
 
-    std::pair<unsigned int, Real>
-    rval = linear_solver->solve (*_system->matrix, pc,
-                                 *dvec,
-                                 *_system->rhs,
-                                 solver_params.second,
-                                 solver_params.first);
+    _system->linear_solver->solve (*_system->matrix, pc,
+                                   *dvec,
+                                   *_system->rhs,
+                                   solver_params.second,
+                                   solver_params.first);
 
     libMesh::NumericVector<Real> *vec = nullptr;
     
@@ -265,8 +261,6 @@ MAST::TransientSolverBase::solve_highest_derivative_and_advance_time_step() {
     _system->get_dof_map().enforce_constraints_exactly
     (*_system, vec, /* homogeneous = */ true);
 #endif
-    
-    _system->release_linear_solver(linear_solver);
     
     // next, move all the solutions and velocities into older
     // time step locations

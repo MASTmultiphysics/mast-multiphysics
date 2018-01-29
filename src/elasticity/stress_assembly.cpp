@@ -185,7 +185,8 @@ update_stress_strain_data(const libMesh::NumericVector<Real>& X) const {
         // clear before calculating the data
         _stress_ops->clear();
         _stress_ops->calculate_for_element(*elem, sol);
-        
+        _stress_ops->clear_elem();
+
         // get the stress-strain data map from the object
         const std::map<const libMesh::Elem*,
         std::vector<MAST::StressStrainOutputBase::Data*> >& output_map =

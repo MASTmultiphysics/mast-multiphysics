@@ -96,7 +96,6 @@ MAST::Examples::StructuralExample2D::_init_dirichlet_conditions() {
     this->_init_boundary_dirichlet_constraint(3, "left_constraint");
 
     _discipline->init_system_dirichlet_bc(*_sys);
-    _eq_sys->init();
 }
 
 

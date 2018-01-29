@@ -302,7 +302,10 @@ int main(int argc, char* const argv[]) {
 //                                    with_sens,
 //                                    par_name);
     /*else*/ if (case_name == "beam_oscillating_load") {
-
+        
+        MAST::Examples::BeamOscillatingLoad example;
+        example.init(*input);
+        example.transient_solve();
     }
 //    else if (case_name == "beam_bending_with_offset")
 //        analysis<MAST::BeamBendingWithOffset>(case_name,

@@ -201,7 +201,8 @@ namespace MAST {
         }
         
         virtual void
-        set_local_fe_data(MAST::LocalElemFE& fe) const {
+        set_local_fe_data(MAST::LocalElemFE& fe,
+                          const libMesh::Elem& e) const {
             libmesh_assert(false); // should not get called.
         }
 

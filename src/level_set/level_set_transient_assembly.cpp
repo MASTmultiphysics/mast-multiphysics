@@ -118,12 +118,9 @@ init(const libMesh::Elem& elem) {
 
 void
 MAST::LevelSetTransientAssemblyElemOperations::
-set_local_fe_data(MAST::LocalElemFE& fe) const {
-    
-    libmesh_assert(!_physics_elem);
-    
-    const libMesh::Elem& e = _physics_elem->elem();
-
+set_local_fe_data(MAST::LocalElemFE& fe,
+                  const libMesh::Elem& e) const {
+        
     if (e.dim() == 1) {
         
         const MAST::ElementPropertyCard1D&

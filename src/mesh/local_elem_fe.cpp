@@ -99,7 +99,7 @@ MAST::LocalElemFE::init_for_side(const libMesh::Elem& elem,
 void
 MAST::LocalElemFE::set_1d_y_vector(const libMesh::Point& y) {
     
-    libmesh_assert_greater(y.size(), 0.);
+    libmesh_assert_greater(y.norm(), 0.);
     _y_vector_1d_elem = y;
 }
 
@@ -107,7 +107,7 @@ MAST::LocalElemFE::set_1d_y_vector(const libMesh::Point& y) {
 const libMesh::Point&
 MAST::LocalElemFE::get_1d_y_vector() const {
     
-    libmesh_assert_greater(_y_vector_1d_elem.size(), 0.);
+    libmesh_assert_greater(_y_vector_1d_elem.norm(), 0.);
     return _y_vector_1d_elem;
 }
 
@@ -120,7 +120,7 @@ MAST::LocalElemFE::_create_local_element(const libMesh::Elem& elem) {
     switch (elem.dim()) {
         case 1: {
             
-            libmesh_assert_greater(_y_vector_1d_elem.size(), 0.);
+            libmesh_assert_greater(_y_vector_1d_elem.norm(), 0.);
             _local_elem = new MAST::Local1DElem(elem, _y_vector_1d_elem);
         }
             break;

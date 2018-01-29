@@ -111,12 +111,9 @@ elem_second_derivative_dot_solution_assembly(RealMatrixX& m) {
 
 void
 MAST::HeatConductionNonlinearAssemblyElemOperations::
-set_local_fe_data(MAST::LocalElemFE& fe) const {
-
-    libmesh_assert(!_physics_elem);
+set_local_fe_data(MAST::LocalElemFE& fe,
+                  const libMesh::Elem& e) const {
     
-    const libMesh::Elem& e = _physics_elem->elem();
-
     if (e.dim() == 1) {
         
         const MAST::ElementPropertyCard1D&

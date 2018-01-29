@@ -130,6 +130,11 @@ namespace MAST {
 
         
         /*!
+         *   This will allow volume contribution from all elements.
+         */
+        void set_participating_elements_to_all();
+
+        /*!
          *   The assembly will integration over boudnaries with ids specified in
          *   \p bids.
          */
@@ -168,6 +173,10 @@ namespace MAST {
         
     protected:
         
+        /*!
+         *   if true, evaluates on all elements.
+         */
+        bool _if_evaluate_on_all_elems;
         
         /*!
          *    set of elements for which the data will be stored. If this is

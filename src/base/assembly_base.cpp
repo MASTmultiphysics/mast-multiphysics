@@ -215,7 +215,7 @@ MAST::AssemblyBase::build_fe(const libMesh::Elem& elem) {
         
         MAST::LocalElemFE*
         local_fe = new MAST::LocalElemFE(*_system);
-        _elem_ops->set_local_fe_data(*local_fe);
+        _elem_ops->set_local_fe_data(*local_fe, elem);
         
         fe.reset(local_fe);
     }

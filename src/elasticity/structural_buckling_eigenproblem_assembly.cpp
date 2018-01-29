@@ -361,12 +361,9 @@ MAST::StructuralBucklingEigenproblemAssembly::set_elem_sol_sens(MAST::ElementBas
 
 void
 MAST::StructuralBucklingEigenproblemAssembly::
-set_local_fe_data(MAST::LocalElemFE& fe) const {
-
-    libmesh_assert(!_physics_elem);
+set_local_fe_data(MAST::LocalElemFE& fe,
+                  const libMesh::Elem& e) const {
     
-    const libMesh::Elem& e = _physics_elem->elem();
-
     if (e.dim() == 1) {
         
         const MAST::ElementPropertyCard1D&

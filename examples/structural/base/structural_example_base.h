@@ -85,6 +85,7 @@ namespace MAST {
             virtual void _init_dirichlet_conditions();
             virtual void _init_boundary_dirichlet_constraint(const unsigned int bid,
                                                              const std::string& tag);
+            virtual void _init_eq_sys();
             virtual void _init_loads();
             virtual void _init_material();
             virtual void _init_section_property();

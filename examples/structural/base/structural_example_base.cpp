@@ -109,6 +109,7 @@ MAST::Examples::StructuralExampleBase::init(GetPot& input) {
     _init_mesh();
     _init_system_and_discipline();
     _init_dirichlet_conditions();
+    _init_eq_sys();
     _init_loads();
     _init_material();
     _init_section_property();
@@ -134,8 +135,6 @@ MAST::Examples::StructuralExampleBase::_init_system_and_discipline() {
     // eigenvalue problems
     _sys       = &(_eq_sys->add_system<MAST::NonlinearSystem>("structural"));
     _sys->set_eigenproblem_type(libMesh::GHEP);
-    _sys->eigen_solver->set_position_of_spectrum(libMesh::LARGEST_MAGNITUDE);
-    _sys->set_exchange_A_and_B(true);
 
     // initialize the system to the right set of variables
     _structural_sys = new MAST::StructuralSystemInitialization(*_sys,
@@ -143,6 +142,16 @@ MAST::Examples::StructuralExampleBase::_init_system_and_discipline() {
                                                                _fetype);
     _discipline     = new MAST::PhysicsDisciplineBase(*_eq_sys);
 }
+
+
+void
+MAST::Examples::StructuralExampleBase::_init_eq_sys() {
+    
+    _eq_sys->init();
+    _sys->eigen_solver->set_position_of_spectrum(libMesh::LARGEST_MAGNITUDE);
+    _sys->set_exchange_A_and_B(true);
+}
+
 
 
 
@@ -160,7 +169,6 @@ _init_boundary_dirichlet_constraint(const unsigned int bid,
     
     int
     constraint_dofs = (*_input)(tag, 123456), // by-default, constrain everything
-    val             = constraint_dofs,
     dof             = 0;
     
     // nothing to constrain if the value is negative
@@ -170,10 +178,10 @@ _init_boundary_dirichlet_constraint(const unsigned int bid,
     std::vector<unsigned int>
     constr_dofs;
     
-    while (val > 0) {
-        dof = constraint_dofs%10;  // gives the last integer
-        val = constraint_dofs/10;  // removes the last integrer
-        constr_dofs.push_back(dof);
+    while (constraint_dofs > 0) {
+        dof             = constraint_dofs%10;  // gives the last integer
+        constraint_dofs = constraint_dofs/10;  // removes the last integrer
+        constr_dofs.push_back(dof-1);
     }
     
     // remove duplicates, if any
@@ -379,6 +387,7 @@ MAST::Examples::StructuralExampleBase::static_solve() {
     MAST::StructuralNonlinearAssemblyElemOperations  elem_ops;
     MAST::StressAssembly                             stress_assembly;
     MAST::StressStrainOutputBase                     stress_elem_ops;
+    stress_elem_ops.set_participating_elements_to_all();
 
     assembly.attach_discipline_and_system(elem_ops,
                                           *_discipline,
@@ -442,7 +451,8 @@ MAST::Examples::StructuralExampleBase::static_sensitivity_solve(MAST::Parameter&
     MAST::StructuralNonlinearAssemblyElemOperations  elem_ops;
     MAST::StressAssembly                             stress_assembly;
     MAST::StressStrainOutputBase                     stress_elem_ops;
-    
+    stress_elem_ops.set_participating_elements_to_all();
+
     libMesh::System
     &stress_sys = _structural_sys->get_stress_sys();
     
@@ -668,7 +678,8 @@ MAST::Examples::StructuralExampleBase::modal_solve_with_nonlinear_load_stepping(
     MAST::EigenproblemAssembly                               modal_assembly;
     MAST::StructuralModalEigenproblemAssemblyElemOperations  modal_elem_ops;
     _sys->initialize_condensed_dofs(*_discipline);
-    
+    stress_elem_ops.set_participating_elements_to_all();
+
 
     libMesh::ExodusII_IO exodus_writer(*_mesh);
     // writer for the modes
@@ -813,6 +824,7 @@ MAST::Examples::StructuralExampleBase::transient_solve() {
     MAST::StructuralTransientAssemblyElemOperations   elem_ops;
     MAST::StressAssembly                              stress_assembly;
     MAST::StressStrainOutputBase                      stress_elem_ops;
+    stress_elem_ops.set_participating_elements_to_all();
 
     
     // time solver

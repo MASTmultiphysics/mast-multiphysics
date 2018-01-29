@@ -51,12 +51,12 @@ MAST::Local1DElem::_create_local_elem() {
     // first node is the origin of the new cs
     // calculate the coordinate system for the plane of the element
     libMesh::Point v1, v2, v3, p;
-    v1 = *_elem.node_ptr(1); v1 -= *_elem.node_ptr(0); v1 /= v1.size(); // local x
+    v1 = *_elem.node_ptr(1); v1 -= *_elem.node_ptr(0); v1 /= v1.norm(); // local x
     v2 = _local_y;                           // vector in local x-y plane
     v3 = v1.cross(v2);                       // local z
-    libmesh_assert_greater(v3.size(), 0.);   // 0. implies x == y
-    v3 /= v3.size();
-    v2 = v3.cross(v1); v2 /= v2.size();      // local y
+    libmesh_assert_greater(v3.norm(), 0.);   // 0. implies x == y
+    v3 /= v3.norm();
+    v2 = v3.cross(v1); v2 /= v2.norm();      // local y
     
     _T_mat  = RealMatrixX::Zero(3,3);
     

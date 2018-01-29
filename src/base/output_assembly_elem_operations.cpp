@@ -22,7 +22,8 @@
 
 
 MAST::OutputAssemblyElemOperations::OutputAssemblyElemOperations():
-MAST::AssemblyElemOperations() {
+MAST::AssemblyElemOperations(),
+_if_evaluate_on_all_elems(false) {
     
 }
 
@@ -42,9 +43,22 @@ set_participating_subdomains(const std::set<libMesh::subdomain_id_type>& sids) {
     libmesh_assert(!_sub_domain_ids.size());
     libmesh_assert(!_elem_subset.size());
     
-    _sub_domain_ids = sids;
+    _sub_domain_ids           = sids;
+    _if_evaluate_on_all_elems = false;
 }
     
+
+
+
+void
+MAST::OutputAssemblyElemOperations::set_participating_elements_to_all() {
+    
+    // this object should be in a clean state before this method is called
+    libmesh_assert(!_sub_domain_ids.size());
+    libmesh_assert(!_elem_subset.size());
+    
+    _if_evaluate_on_all_elems = true;
+}
 
 
 void
@@ -55,7 +69,8 @@ set_participating_elements(const std::set<const libMesh::Elem*>& elems) {
     libmesh_assert(!_sub_domain_ids.size());
     libmesh_assert(!_elem_subset.size());
     
-    _elem_subset = elems;
+    _elem_subset              = elems;
+    _if_evaluate_on_all_elems = false;
 }
     
 
@@ -98,7 +113,9 @@ bool
 MAST::OutputAssemblyElemOperations::
 if_evaluate_for_element(const libMesh::Elem& elem) const {
 
-    if (_elem_subset.count(&elem))
+    if (_if_evaluate_on_all_elems)
+        return true;
+    else if (_elem_subset.count(&elem))
         return true;
     else if (_sub_domain_ids.count(elem.subdomain_id()))
         return true;

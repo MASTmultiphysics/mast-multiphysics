@@ -142,7 +142,8 @@ namespace MAST {
          *   sets additional data for local elem FE.
          */
         virtual void
-        set_local_fe_data(MAST::LocalElemFE& fe) const = 0;
+        set_local_fe_data(MAST::LocalElemFE& fe,
+                          const libMesh::Elem& e) const = 0;
 
     protected:
 
