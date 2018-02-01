@@ -27,7 +27,7 @@
 // libMesh includes
 #include "libmesh/unstructured_mesh.h"
 #include "libmesh/equation_systems.h"
-
+#include "libmesh/exodusII_io.h"
 
 
 namespace MAST {
@@ -74,7 +74,8 @@ namespace MAST {
             virtual void modal_solve_with_nonlinear_load_stepping();
             
             virtual void transient_solve();
-            
+            virtual void transient_sensitivity_solve(MAST::Parameter& p);
+
             virtual void piston_theory_flutter_solve();
             virtual void piston_theory_flutter_sensitivity_solve(MAST::Parameter& p);
             
@@ -121,10 +122,9 @@ namespace MAST {
              *   flutter root from the analysis
              */
             MAST::FlutterRootBase*                               _flutter_root;
-            
+
             // vector of basis vectors from modal analysis
             std::vector<libMesh::NumericVector<Real>*>           _basis;
-
         };
     }
 }

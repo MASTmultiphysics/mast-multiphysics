@@ -54,11 +54,16 @@ MAST::SecondOrderNewmarkTransientSolver::solve() {
 
 
 void
-MAST::SecondOrderNewmarkTransientSolver::advance_time_step() {
+MAST::SecondOrderNewmarkTransientSolver::sensitivity_solve(const MAST::FunctionBase& f) {
     
-    // use the parent class' advance time scheme
-    MAST::TransientSolverBase::advance_time_step();
+    // make sure that the system has been specified
+    libmesh_assert_msg(_system, "System pointer is nullptr.");
+    
+    // ask the Newton solver to solve for the system solution
+    _system->sensitivity_solve(f);
+    
 }
+
 
 
 
@@ -97,6 +102,42 @@ set_element_data(const std::vector<libMesh::dof_id_type>& dof_indices,
     _assembly_ops->set_elem_acceleration(accel);
 }
 
+
+
+void
+MAST::SecondOrderNewmarkTransientSolver::
+set_element_sensitivity_data(const std::vector<libMesh::dof_id_type>& dof_indices,
+                             const std::vector<libMesh::NumericVector<Real>*>& sols){
+    
+    libmesh_assert_equal_to(sols.size(), 3);
+    
+    const unsigned int n_dofs = (unsigned int)dof_indices.size();
+    
+    // get the current state and velocity estimates
+    // also get the current discrete velocity replacement
+    RealVectorX
+    sol          = RealVectorX::Zero(n_dofs),
+    vel          = RealVectorX::Zero(n_dofs),
+    accel        = RealVectorX::Zero(n_dofs);
+    
+    
+    // get the references to current and previous sol and velocity
+    const libMesh::NumericVector<Real>
+    &sol_global     =   *sols[0],
+    &vel_global     =   *sols[1],
+    &acc_global     =   *sols[2];
+    
+    for (unsigned int i=0; i<n_dofs; i++) {
+        
+        sol(i)          = sol_global(dof_indices[i]);
+        vel(i)          = vel_global(dof_indices[i]);
+        accel(i)        = acc_global(dof_indices[i]);
+    }
+    
+    _assembly_ops->set_elem_solution_sensitivity(sol);
+    _assembly_ops->set_elem_velocity_sensitivity(vel);
+    _assembly_ops->set_elem_acceleration_sensitivity(accel);
+}
 
 
 
@@ -335,7 +376,19 @@ void
 MAST::SecondOrderNewmarkTransientSolver::
 elem_sensitivity_calculations(RealVectorX& vec) {
     
-    // to be implemented
-    libmesh_error();
+    // make sure that the assembly object is provided
+    libmesh_assert(_assembly_ops);
+    unsigned int n_dofs = (unsigned int)vec.size();
+    
+    RealVectorX
+    f_x     = RealVectorX::Zero(n_dofs),
+    f_m     = RealVectorX::Zero(n_dofs);
+    
+    // perform the element assembly
+    _assembly_ops->elem_sensitivity_calculations(f_m,           // mass vector
+                                                 f_x);          // forcing vector
+    
+    // system residual
+    vec  = (f_m + f_x);
 }
 

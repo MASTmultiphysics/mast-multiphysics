@@ -875,8 +875,7 @@ MAST::PKFlutterSolver::_analyze(const Real k_red,
 
 void
 MAST::PKFlutterSolver::calculate_sensitivity(MAST::FlutterRootBase& root,
-                                             const libMesh::ParameterVector& params,
-                                             const unsigned int i) {
+                                             const MAST::FunctionBase& p) {
 
     /*
     libMesh::out
@@ -1027,8 +1026,7 @@ MAST::PKFlutterSolver::_initialize_matrices(const Real k_red,
 
 void
 MAST::PKFlutterSolver::
-_initialize_matrix_sensitivity_for_param(const libMesh::ParameterVector& params,
-                                         unsigned int p,
+_initialize_matrix_sensitivity_for_param(const MAST::FunctionBase& f,
                                          const Real k_red,
                                          const Real v_ref,
                                          ComplexMatrixX& L,   // stiff, aero, damp

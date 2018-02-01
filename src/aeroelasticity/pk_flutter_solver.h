@@ -30,6 +30,9 @@
 
 namespace MAST {
     
+    // Forward declerations
+    class Parameter;
+    
     class PKFlutterSolver: public MAST::FlutterSolverBase
     {
     public:
@@ -126,11 +129,10 @@ namespace MAST {
         
         /*!
          *   Calculate the sensitivity of the flutter root with respect to the
-         *   \par i^th parameter in params
+         *   parameter \par f
          */
         virtual void calculate_sensitivity(MAST::FlutterRootBase& root,
-                                           const libMesh::ParameterVector& params,
-                                           const unsigned int i);
+                                           const MAST::FunctionBase& f);
         
         
     protected:
@@ -187,8 +189,7 @@ namespace MAST {
          *    matrices for specified flight velocity \par U_inf.
          */
         void
-        _initialize_matrix_sensitivity_for_param(const libMesh::ParameterVector& params,
-                                                 const unsigned int i,
+        _initialize_matrix_sensitivity_for_param(const MAST::FunctionBase& f,
                                                  const Real k_red,
                                                  const Real U_inf,
                                                  ComplexMatrixX& L,  // stiff, aero, damp

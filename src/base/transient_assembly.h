@@ -36,8 +36,7 @@ namespace MAST {
     
     
     class TransientAssembly:
-    public MAST::AssemblyBase,
-    public libMesh::NonlinearImplicitSystem::ComputeResidualandJacobian {
+    public MAST::AssemblyBase {
     public:
         
         /*!
@@ -114,8 +113,7 @@ namespace MAST {
          * finite differencing.
          */
         virtual bool
-        sensitivity_assemble (const libMesh::ParameterVector& parameters,
-                              const unsigned int i,
+        sensitivity_assemble (const MAST::FunctionBase& f,
                               libMesh::NumericVector<Real>& sensitivity_rhs);
         
         

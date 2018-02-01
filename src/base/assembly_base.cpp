@@ -32,7 +32,6 @@
 // libMesh includes
 #include "libmesh/numeric_vector.h"
 #include "libmesh/dof_map.h"
-#include "libmesh/parameter_vector.h"
 
 
 MAST::AssemblyBase::AssemblyBase():

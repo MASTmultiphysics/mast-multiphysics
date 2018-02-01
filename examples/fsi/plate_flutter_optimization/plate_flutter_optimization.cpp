@@ -664,8 +664,6 @@
 //        _th_station_parameters[i]          = h;
 //        _th_station_functions[i]           = h_f;
 //        
-//        // tell the assembly system about the sensitvity parameter
-//        _structural_discipline->add_parameter(*h);
 //    }
 //    
 //    // now create the h function and give it to the property card

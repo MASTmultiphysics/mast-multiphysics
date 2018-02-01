@@ -66,12 +66,15 @@ MAST::StructuralElement3D::inertial_residual (bool request_jacobian,
     RealVectorX
     phi_vec    = RealVectorX::Zero(n_phi),
     vec1_n1    = RealVectorX::Zero(n1),
-    vec2_n2    = RealVectorX::Zero(n2);
+    vec2_n2    = RealVectorX::Zero(n2),
+    local_acc  = RealVectorX::Zero(n2);
     
     std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
     mat_inertia  = _property.inertia_matrix(*this);
     
     MAST::FEMOperatorMatrix Bmat;
+    
+    local_acc.topRows(n2) = _local_accel.topRows(n2);
     
     if (_property.if_diagonal_mass_matrix()) {
         
@@ -104,7 +107,7 @@ MAST::StructuralElement3D::inertial_residual (bool request_jacobian,
             
             Bmat.left_multiply(mat1_n1n2, material_mat);
             
-            vec1_n1 = mat1_n1n2 * _local_accel;
+            vec1_n1 = mat1_n1n2 * local_acc;
             Bmat.vector_mult_transpose(vec2_n2, vec1_n1);
             
             f.topRows(n2) += JxW[qp] * vec2_n2;

@@ -21,6 +21,7 @@
 #include "solver/transient_solver_base.h"
 #include "base/transient_assembly_elem_operations.h"
 #include "base/assembly_base.h"
+#include "base/transient_assembly.h"
 #include "base/nonlinear_system.h"
 
 
@@ -35,6 +36,7 @@
 MAST::TransientSolverBase::TransientSolverBase():
 dt                              (0.),
 _first_step                     (true),
+_first_sensitivity_step         (true),
 _assembly_ops                   (nullptr),
 _system                         (nullptr),
 _if_highest_derivative_solution (false) {
@@ -77,15 +79,24 @@ set_assembly_ops(MAST::TransientAssemblyElemOperations &assembly_ops) {
             nm += iter.str();
             _system->add_vector(nm);
         }
-        
+        nm = "transient_solution_sensitivity_";
+        nm += iter.str();
+        _system->add_vector(nm);
+
         // add the velocity
         nm = "transient_velocity_";
         nm += iter.str();
         _system->add_vector(nm);
-        
+        nm = "transient_velocity_sensitivity_";
+        nm += iter.str();
+        _system->add_vector(nm);
+
         if (this->ode_order() > 1) {
             // add the acceleration
             nm = "transient_acceleration_";
+            nm += iter.str();
+            _system->add_vector(nm);
+            nm = "transient_acceleration_sensitivity_";
             nm += iter.str();
             _system->add_vector(nm);
         }
@@ -114,25 +125,31 @@ MAST::TransientSolverBase::clear_assembly_ops() {
         std::ostringstream iter;
         iter << i;
         
-        // add the solution
+        // remove the solution
         nm = "transient_solution_";
         nm += iter.str();
-        if (_system->have_vector(nm))
-            _system->remove_vector(nm);
-        
-        // add the velocity
+        if (_system->have_vector(nm)) _system->remove_vector(nm);
+        nm = "transient_solution_sensitivity_";
+        nm += iter.str();
+        if (_system->have_vector(nm)) _system->remove_vector(nm);
+
+        // remove the velocity
         nm = "transient_velocity_";
         nm += iter.str();
-        if (_system->have_vector(nm))
-            _system->remove_vector(nm);
-        
+        if (_system->have_vector(nm)) _system->remove_vector(nm);
+        nm = "transient_velocity_sensitivity_";
+        nm += iter.str();
+        if (_system->have_vector(nm)) _system->remove_vector(nm);
+
         if (this->ode_order() > 1) {
-            // add the acceleration
+            // remove the acceleration
             nm = "transient_acceleration_";
             nm += iter.str();
-            if (_system->have_vector(nm))
-                _system->remove_vector(nm);
-            
+            if (_system->have_vector(nm)) _system->remove_vector(nm);
+            nm = "transient_acceleration_sensitivity_";
+            nm += iter.str();
+            if (_system->have_vector(nm)) _system->remove_vector(nm);
+
         }
     }
     
@@ -168,6 +185,24 @@ MAST::TransientSolverBase::solution(unsigned int prev_iter) const {
 
 
 libMesh::NumericVector<Real>&
+MAST::TransientSolverBase::solution_sensitivity(unsigned int prev_iter) const {
+    
+    // make sura that prev_iter is within acceptable bounds
+    libmesh_assert_less(prev_iter, _n_iters_to_store());
+    
+    // make sure that the vectors have been initialized
+    std::ostringstream oss;
+    oss << prev_iter;
+    
+    std::string
+    nm = "transient_solution_sensitivity_" + oss.str();
+    
+    return _system->get_vector(nm);
+}
+
+
+
+libMesh::NumericVector<Real>&
 MAST::TransientSolverBase::velocity(unsigned int prev_iter) const {
     
     // make sura that prev_iter is within acceptable bounds
@@ -187,6 +222,26 @@ MAST::TransientSolverBase::velocity(unsigned int prev_iter) const {
 
 
 libMesh::NumericVector<Real>&
+MAST::TransientSolverBase::velocity_sensitivity(unsigned int prev_iter) const {
+    
+    // make sura that prev_iter is within acceptable bounds
+    libmesh_assert_less(prev_iter, _n_iters_to_store());
+    
+    // make sure that the vectors have been initialized
+    std::ostringstream oss;
+    oss << prev_iter;
+    
+    // get references to the solution
+    std::string
+    nm = "transient_velocity_sensitivity_" + oss.str();
+    
+    return _system->get_vector(nm);
+}
+
+
+
+
+libMesh::NumericVector<Real>&
 MAST::TransientSolverBase::acceleration(unsigned int prev_iter) const {
     
     // make sura that prev_iter is within acceptable bounds
@@ -199,6 +254,25 @@ MAST::TransientSolverBase::acceleration(unsigned int prev_iter) const {
     // get references to the solution
     std::string
     nm = "transient_acceleration_" + oss.str();
+    
+    return _system->get_vector(nm);
+}
+
+
+
+libMesh::NumericVector<Real>&
+MAST::TransientSolverBase::acceleration_sensitivity(unsigned int prev_iter) const {
+    
+    // make sura that prev_iter is within acceptable bounds
+    libmesh_assert_less(prev_iter, _n_iters_to_store());
+    
+    // make sure that the vectors have been initialized
+    std::ostringstream oss;
+    oss << prev_iter;
+    
+    // get references to the solution
+    std::string
+    nm = "transient_acceleration_sensitivity_" + oss.str();
     
     return _system->get_vector(nm);
 }
@@ -284,6 +358,94 @@ MAST::TransientSolverBase::solve_highest_derivative_and_advance_time_step() {
     // finally, update the system time
     _system->time     += dt;
     _first_step        = false;
+}
+
+
+
+
+void
+MAST::TransientSolverBase::
+solve_highest_derivative_and_advance_time_step_with_sensitivity(const MAST::FunctionBase& f) {
+    
+    libmesh_assert(_first_sensitivity_step);
+    
+    // tell the solver that the current solution being obtained is for the
+    // highest time derivative
+    _if_highest_derivative_solution = true;
+    
+    // Build the residual and Jacobian
+    _system->assembly(true, true); // this should evaluate the Mass matrix.
+    // this should assembly the sensitivity of the residual
+    _assembly_ops->get_assembly().sensitivity_assemble(f, *_system->rhs);
+
+    // reset the solution flag
+    _if_highest_derivative_solution = false;
+    
+    std::pair<unsigned int, Real>
+    solver_params = _system->get_linear_solve_parameters();
+    
+    // Solve the linear system.
+    libMesh::SparseMatrix<Real> *
+    pc = _system->request_matrix("Preconditioner");
+    
+    std::unique_ptr<libMesh::NumericVector<Real> >
+    dvec(velocity().zero_clone().release());
+    
+    _system->linear_solver->solve (*_system->matrix, pc,
+                                   *dvec,
+                                   *_system->rhs,
+                                   solver_params.second,
+                                   solver_params.first);
+    
+    libMesh::NumericVector<Real> *vec = nullptr;
+    
+    switch (this->ode_order()) {
+            
+        case 1:
+            vec = &velocity_sensitivity();
+            break;
+            
+        case 2:
+            vec = &acceleration_sensitivity();
+            break;
+            
+        default:
+            // higher than 2 derivative not implemented yet.
+            libmesh_error();
+    }
+    
+    vec->add(-1., *dvec);
+    
+    // The linear solver may not have fit our constraints exactly
+#ifdef LIBMESH_ENABLE_CONSTRAINTS
+    _system->get_dof_map().enforce_constraints_exactly
+    (*_system, vec, /* homogeneous = */ true);
+#endif
+    
+    // next, move all the solutions and velocities into older
+    // time step locations
+    for (unsigned int i=_n_iters_to_store()-1; i>0; i--) {
+        
+        this->solution_sensitivity(i).zero();
+        this->solution_sensitivity(i).add(1., this->solution_sensitivity(i-1));
+        this->solution_sensitivity(i).close();
+        
+        this->velocity_sensitivity(i).zero();
+        this->velocity_sensitivity(i).add(1., this->velocity_sensitivity(i-1));
+        this->velocity_sensitivity(i).close();
+        
+        if (this->ode_order() > 1) {
+            
+            this->acceleration_sensitivity(i).zero();
+            this->acceleration_sensitivity(i).add(1., this->acceleration_sensitivity(i-1));
+            this->acceleration_sensitivity(i).close();
+        }
+    }
+    
+    // finally, update the system time
+    _first_sensitivity_step        = false;
+    
+    this->solve_highest_derivative_and_advance_time_step();
 }
 
 
@@ -473,12 +635,45 @@ MAST::TransientSolverBase::advance_time_step() {
         }
     }
 
-    // and localize solution so that if the user calls the solution and
-    // velocity routines,
-    
     // finally, update the system time
     _system->time     += dt;
     _first_step        = false;
+}
+
+
+
+void
+MAST::TransientSolverBase::advance_time_step_with_sensitivity() {
+    
+    // first ask the solver to update the velocity and acceleration vector
+    update_delta_velocity(this->velocity_sensitivity(), this->solution_sensitivity());
+    
+    if (this->ode_order() > 1)
+        update_delta_acceleration(this->acceleration_sensitivity(), this->solution_sensitivity());
+    
+    // next, move all the solutions and velocities into older
+    // time step locations
+    for (unsigned int i=_n_iters_to_store()-1; i>0; i--) {
+        this->solution_sensitivity(i).zero();
+        this->solution_sensitivity(i).add(1., this->solution_sensitivity(i-1));
+        this->solution_sensitivity(i).close();
+        
+        this->velocity_sensitivity(i).zero();
+        this->velocity_sensitivity(i).add(1., this->velocity_sensitivity(i-1));
+        this->velocity_sensitivity(i).close();
+        
+        if (this->ode_order() > 1) {
+            
+            this->acceleration_sensitivity(i).zero();
+            this->acceleration_sensitivity(i).add(1., this->acceleration_sensitivity(i-1));
+            this->acceleration_sensitivity(i).close();
+        }
+    }
+    
+    // finally, update the system time
+    _first_sensitivity_step   = false;
+
+    this->advance_time_step();
 }
 
 

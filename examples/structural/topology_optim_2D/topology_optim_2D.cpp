@@ -395,7 +395,6 @@
 //        p_card->set_material(*m_card);
 //        
 //        _discipline->set_property_for_subdomain(counter, *p_card);
-//        _discipline->add_parameter(*rho);
 //        
 //        
 //        // now add the property and card pointers to the map

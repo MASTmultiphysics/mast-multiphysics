@@ -61,7 +61,6 @@
 #include "libmesh/exodusII_io.h"
 #include "libmesh/nemesis_io.h"
 #include "libmesh/numeric_vector.h"
-#include "libmesh/parameter_vector.h"
 #include "libmesh/getpot.h"
 #include "libmesh/string_to_enum.h"
 #include "libmesh/nonlinear_solver.h"
@@ -783,8 +782,7 @@ MAST::PlateEulerFSIHalfDomainFlutterAnalysis::solve(bool if_write_output,
 Real
 MAST::PlateEulerFSIHalfDomainFlutterAnalysis::sensitivity_solve(MAST::Parameter& p) {
     
-    /*_discipline->add_parameter(p);
-     
+    /*
      // create the nonlinear assembly object
      MAST::StructuralNonlinearAssembly   assembly;
      
@@ -810,7 +808,6 @@ MAST::PlateEulerFSIHalfDomainFlutterAnalysis::sensitivity_solve(MAST::Parameter&
      
      
      assembly.clear_discipline_and_system();
-     _discipline->remove_parameter(p);
      
      // write the solution for visualization
      if (if_write_output) {

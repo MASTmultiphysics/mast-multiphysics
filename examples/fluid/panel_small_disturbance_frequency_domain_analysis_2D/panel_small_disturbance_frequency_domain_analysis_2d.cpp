@@ -43,7 +43,6 @@
 #include "libmesh/mesh_generation.h"
 #include "libmesh/exodusII_io.h"
 #include "libmesh/numeric_vector.h"
-#include "libmesh/parameter_vector.h"
 #include "libmesh/getpot.h"
 #include "libmesh/string_to_enum.h"
 
@@ -415,7 +414,6 @@ sensitivity_solve(MAST::Parameter& p, bool if_write_output) {
 
     // tell the discipline about the parameter with respect to this
     // sensitivity will be calculated
-    _discipline->add_parameter(p);
     
     // create the nonlinear assembly object
     MAST::ComplexAssemblyBase                                    assembly;
@@ -463,7 +461,7 @@ sensitivity_solve(MAST::Parameter& p, bool if_write_output) {
     
     
     assembly.clear_discipline_and_system();
-    _discipline->remove_parameter(p);
+    
 
     
 }

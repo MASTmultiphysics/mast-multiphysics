@@ -31,7 +31,6 @@
 #include "libmesh/numeric_vector.h"
 #include "libmesh/sparse_matrix.h"
 #include "libmesh/dof_map.h"
-#include "libmesh/parameter_vector.h"
 
 
 
@@ -61,6 +60,7 @@ attach_discipline_and_system(MAST::NonlinearImplicitAssemblyElemOperations& elem
     _implicit_elem_ops = &elem_ops;
     
     _system->system().nonlinear_solver->residual_and_jacobian_object = this;
+    _system->system().attach_assemble_object(*this);
     
     if (_solver_monitor) _solver_monitor->init(*this);
 }
@@ -73,6 +73,7 @@ MAST::NonlinearImplicitAssembly::reattach_to_system() {
     libmesh_assert(_system);
     
     _system->system().nonlinear_solver->residual_and_jacobian_object = this;
+    _system->system().attach_assemble_object(*this);
 }
 
 
@@ -88,7 +89,8 @@ clear_discipline_and_system( ) {
 
     if (_solver_monitor) _solver_monitor->clear();
     _implicit_elem_ops = nullptr;
-    
+    _system->system().reset_assemble_object();
+
     MAST::AssemblyBase::clear_discipline_and_system();
 }
 
@@ -419,8 +421,7 @@ second_derivative_dot_solution_assembly (const libMesh::NumericVector<Real>& X,
 
 bool
 MAST::NonlinearImplicitAssembly::
-sensitivity_assemble (const libMesh::ParameterVector& parameters,
-                      const unsigned int i,
+sensitivity_assemble (const MAST::FunctionBase& f,
                       libMesh::NumericVector<Real>& sensitivity_rhs) {
     
     MAST::NonlinearSystem& nonlin_sys = _system->system();
@@ -464,8 +465,7 @@ sensitivity_assemble (const libMesh::ParameterVector& parameters,
         for (unsigned int i=0; i<dof_indices.size(); i++)
             sol(i) = (*localized_solution)(dof_indices[i]);
         
-        _implicit_elem_ops->set_elem_sensitivity_parameter
-        (*_discipline->get_parameter(&(parameters[i].get())));
+        _implicit_elem_ops->set_elem_sensitivity_parameter(f);
         _implicit_elem_ops->set_elem_solution(sol);
         
 //        if (_sol_function)
@@ -473,11 +473,6 @@ sensitivity_assemble (const libMesh::ParameterVector& parameters,
         
         // perform the element level calculations
         _implicit_elem_ops->elem_sensitivity_calculations(vec);
-        
-        // the sensitivity method provides sensitivity of the residual.
-        // Hence, this is multiplied with -1 to make it the RHS of the
-        // sensitivity equations. 
-        vec *= -1.;
         
 //        physics_elem->detach_active_solution_function();
         _implicit_elem_ops->clear_elem();

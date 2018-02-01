@@ -306,6 +306,7 @@ int main(int argc, char* const argv[]) {
         MAST::Examples::BeamOscillatingLoad example;
         example.init(*input);
         example.transient_solve();
+        example.transient_sensitivity_solve(example.get_parameter("thy"));
     }
 //    else if (case_name == "beam_bending_with_offset")
 //        analysis<MAST::BeamBendingWithOffset>(case_name,

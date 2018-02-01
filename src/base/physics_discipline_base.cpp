@@ -168,53 +168,6 @@ MAST::PhysicsDisciplineBase::get_property_card(const libMesh::Elem& elem) const 
 
 
 void
-MAST::PhysicsDisciplineBase::add_parameter(MAST::Parameter& f) {
-    
-    Real* par = f.ptr();
-    // make sure it does not already exist in the map
-    libmesh_assert(!_parameter_map.count(par));
-    
-    // now add this to the map
-    bool insert_success = _parameter_map.insert
-    (std::map<const Real*, MAST::FunctionBase*>::value_type(par, &f)).second;
-    
-    libmesh_assert(insert_success);
-}
-
-
-
-
-void
-MAST::PhysicsDisciplineBase::remove_parameter(MAST::Parameter& f) {
-    
-    // now add this to the map
-    std::map<const Real*, const MAST::FunctionBase*>::iterator
-    it = _parameter_map.find(f.ptr());
-    
-    if (it != _parameter_map.end())
-        _parameter_map.erase(it);
-}
-
-
-
-
-const MAST::FunctionBase*
-MAST::PhysicsDisciplineBase::get_parameter(const Real* par) const {
-    // make sure valid values are given
-    libmesh_assert(par);
-    
-    std::map<const Real*, const MAST::FunctionBase*>::const_iterator
-    it = _parameter_map.find(par);
-    
-    // make sure it does not already exist in the map
-    libmesh_assert(it != _parameter_map.end());
-    
-    return it->second;
-}
-
-
-
-void
 MAST::PhysicsDisciplineBase::
 init_system_dirichlet_bc(libMesh::System& sys) const {
     

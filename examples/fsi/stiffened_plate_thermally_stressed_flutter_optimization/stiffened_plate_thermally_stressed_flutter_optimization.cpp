@@ -703,7 +703,6 @@
 //        _th_station_functions_plate[i]           = h_f;
 //        
 //        // tell the assembly system about the sensitvity parameter
-//        _structural_discipline->add_parameter(*h);
 //        _problem_parameters[i] = h;
 //    }
 //    
@@ -812,8 +811,6 @@
 //            
 //            
 //            // tell the assembly system about the sensitvity parameter
-//            _structural_discipline->add_parameter(*h_y);
-//            _structural_discipline->add_parameter(*h_z);
 //            _problem_parameters[(2*i+1)*_n_dv_stations_x+j] = h_y;
 //            _problem_parameters[(2*i+2)*_n_dv_stations_x+j] = h_z;
 //        }

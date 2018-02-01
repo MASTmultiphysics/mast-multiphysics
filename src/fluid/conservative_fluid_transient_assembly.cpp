@@ -102,7 +102,8 @@ linearized_jacobian_solution_product(RealVectorX& f) {
 
 void
 MAST::ConservativeFluidTransientAssemblyElemOperations::
-elem_sensitivity_calculations(RealVectorX& vec) {
+elem_sensitivity_calculations(RealVectorX& f_m,
+                              RealVectorX& f_x) {
     
     libmesh_error(); // to be implemented
     

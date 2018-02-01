@@ -621,38 +621,30 @@
 //
 //    MAST::NonlinearSystem& nonlin_sys = assembly.system();
 //
-//    libMesh::ParameterVector params;
-//    params.resize(1);
-//
 //
 //    // first, sensitivity wrt parameter p
 //    libMesh::out
 //    << "**** Steady-state sensitivity wrt param: " << p.name() << "  ****"
 //    << std::endl;
-//    params[0]  =  p.ptr();
-//    _discipline->add_parameter(p);
 //    libMesh::NumericVector<Real>& dXdp = nonlin_sys.add_vector("sol_param_sens");
-//    nonlin_sys.sensitivity_solve(params);
+//    nonlin_sys.sensitivity_solve(p);
 //
 //    // libMesh will provide the sensitivity solution of the ith param in
 //    // the ith sensitivity solution vector. Hence, we get that solution vector
 //    // and copy it to dXdp.
 //    dXdp = nonlin_sys.get_sensitivity_solution(0);
-//    _discipline->remove_parameter(p);
+//    
 //
 //
 //    // next, sensitivity wrt flight velocity
 //    libMesh::out
 //    << "**** Steady-state sensitivity wrt param: " << _velocity->name() << "  ****"
 //    << std::endl;
-//    params[0] = _velocity->ptr();
-//    _discipline->add_parameter(*_velocity);
 //    libMesh::NumericVector<Real>& dXdV = nonlin_sys.add_vector("sol_V_sens");
-//    nonlin_sys.sensitivity_solve(params);
+//    nonlin_sys.sensitivity_solve(*_velocity);
 //
 //    // copy the sensitivity solution for later use.
 //    dXdV = nonlin_sys.get_sensitivity_solution(0);
-//    _discipline->remove_parameter(*_velocity);
 //
 //
 //    // evaluate sensitivity of the outputs
@@ -702,9 +694,6 @@
 //
 //    // flutter solver will need velocity to be defined as a parameter for
 //    // sensitivity analysis
-//    _discipline->add_parameter(*_velocity);
-//    _discipline->add_parameter(p);
-//
 //    params.resize(1);
 //    params[0]  =  p.ptr();
 //
@@ -721,8 +710,7 @@
 //    fsi_assembly.clear_discipline_and_system();
 //    _flutter_solver->clear_assembly_object();
 //
-//    _discipline->remove_parameter(p);
-//    _discipline->remove_parameter(*_velocity);
+//    
 //    libMesh::out << "sens of V_F for param " << p.name() << " = " << _flutter_root->V_sens << std::endl;
 //    return _flutter_root->V_sens;
 //}

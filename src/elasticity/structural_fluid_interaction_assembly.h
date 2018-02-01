@@ -142,8 +142,7 @@ namespace MAST {
          */
         virtual void
         assemble_reduced_order_quantity_sensitivity
-        (const libMesh::ParameterVector& parameters,
-         const unsigned int i,
+        (const MAST::FunctionBase& f,
          std::vector<libMesh::NumericVector<Real>*>& basis,
          std::map<MAST::StructuralQuantityType, RealMatrixX*>& mat_qty_map);
 

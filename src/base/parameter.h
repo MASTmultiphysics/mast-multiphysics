@@ -71,8 +71,7 @@ namespace MAST {
         
         
         /*!
-         *    @eturns the pointer to value of this function. This is used for 
-         *    association with libMesh::Parameter.
+         *    @eturns the pointer to value of this function.
          */
         Real* ptr()
         {   return _val; }

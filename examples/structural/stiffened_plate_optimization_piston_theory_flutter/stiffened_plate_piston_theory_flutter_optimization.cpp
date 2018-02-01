@@ -355,7 +355,6 @@
 //        _th_station_functions_plate[i]           = h_f;
 //        
 //        // tell the assembly system about the sensitvity parameter
-//        _discipline->add_parameter(*h);
 //        _problem_parameters[i] = h;
 //    }
 //    
@@ -440,7 +439,6 @@
 //    _piston_bc->add(*_rho_air_f);
 //    _piston_bc->add(*_gamma_air_f);
 //    _discipline->add_volume_load(0, *_piston_bc);
-//    _discipline->add_parameter(*_velocity);
 //
 //    // flutter solver
 //    _flutter_solver  = new MAST::TimeDomainFlutterSolver;
@@ -504,8 +502,6 @@
 //            _thz_station_functions_stiff [i*_n_dv_stations_x+j]          = h_z_f;
 //
 //            // tell the assembly system about the sensitvity parameter
-//            _discipline->add_parameter(*h_y);
-//            _discipline->add_parameter(*h_z);
 //            _problem_parameters[(2*i+1)*_n_dv_stations_x+j] = h_y;
 //            _problem_parameters[(2*i+2)*_n_dv_stations_x+j] = h_z;
 //        }

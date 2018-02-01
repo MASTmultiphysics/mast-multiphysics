@@ -19,6 +19,10 @@
 
 // C++ includes
 #include <vector>
+#include <string>
+#include <fstream>
+#include <sstream>
+#include <sys/stat.h>
 
 // MAST includes
 #include "base/nonlinear_system.h"
@@ -30,12 +34,15 @@
 
 // libMesh includes
 #include "libmesh/numeric_vector.h"
-#include "libmesh/parameter_vector.h"
 #include "libmesh/equation_systems.h"
 #include "libmesh/sparse_matrix.h"
 #include "libmesh/dof_map.h"
 #include "libmesh/nonlinear_solver.h"
 #include "libmesh/petsc_linear_solver.h"
+#include "libmesh/xdr_cxx.h"
+#include "libmesh/mesh_tools.h"
+#include "libmesh/utility.h"
+#include "libmesh/libmesh_version.h"
 
 
 MAST::NonlinearSystem::NonlinearSystem(libMesh::EquationSystems& es,
@@ -55,8 +62,7 @@ _n_converged_eigenpairs               (0),
 _n_iterations                         (0),
 _is_generalized_eigenproblem          (false),
 _eigen_problem_type                   (libMesh::NHEP),
-_eigenproblem_assemble_system_object  (nullptr),
-_output                               (nullptr) {
+_assemble                             (nullptr) {
     
 }
 
@@ -187,6 +193,10 @@ void MAST::NonlinearSystem::reinit () {
 void
 MAST::NonlinearSystem::eigenproblem_solve() {
     
+    libmesh_assert(_assemble);
+    
+    MAST::EigenproblemAssembly
+    &eigen_assemble = dynamic_cast<MAST::EigenproblemAssembly&>(*_assemble);
     
     START_LOG("eigensolve()", "NonlinearSystem");
     
@@ -217,8 +227,8 @@ MAST::NonlinearSystem::eigenproblem_solve() {
     *eig_B  = nullptr;
     
     // assemble the matrices
-    this->assemble_eigensystem();
-    
+    eigen_assemble.eigenproblem_assemble(matrix_A, matrix_B);
+
     // If we haven't initialized any condensed dofs,
     // just use the default eigen_system
     if (!_condensed_dofs_initialized) {
@@ -474,9 +484,14 @@ MAST::NonlinearSystem::get_eigenpair(unsigned int i,
 
 void
 MAST::NonlinearSystem::
-eigenproblem_sensitivity_solve (const libMesh::ParameterVector& parameters,
+eigenproblem_sensitivity_solve (const MAST::FunctionBase& f,
                                 std::vector<Real>& sens) {
     
+    libmesh_assert(_assemble);
+
+    MAST::EigenproblemAssembly
+    &eigen_assemble = dynamic_cast<MAST::EigenproblemAssembly&>(*_assemble);
+
     // make sure that eigensolution is already available
     libmesh_assert(_n_converged_eigenpairs);
     
@@ -494,7 +509,7 @@ eigenproblem_sensitivity_solve (const libMesh::ParameterVector& parameters,
     nconv = std::min(_n_requested_eigenpairs, _n_converged_eigenpairs);
     std::vector<Real>
     denom(nconv, 0.);
-    sens.resize(nconv*parameters.size(), 0.);
+    sens.resize(nconv, 0.);
     
     std::vector<libMesh::NumericVector<Real>*>
     x_right (nconv);
@@ -543,45 +558,39 @@ eigenproblem_sensitivity_solve (const libMesh::ParameterVector& parameters,
         }
     }
     
-    unsigned int
-    num = 0;
+    // calculate sensitivity of matrix quantities
+    eigen_assemble.eigenproblem_sensitivity_assemble
+    (f, matrix_A, matrix_B);
     
-    for (unsigned int p=0; p<parameters.size(); p++) {
+    
+    // now calculate sensitivity of each eigenvalue for the parameter
+    for (unsigned int i=0; i<nconv; i++) {
         
-        // calculate sensitivity of matrix quantities
-        this->assemble_eigensystem_sensitivity(parameters, p);
-        
-        // now calculate sensitivity of each eigenvalue for the parameter
-        for (unsigned int i=0; i<nconv; i++) {
-            
-            num = p*nconv+i;
-
-            switch (_eigen_problem_type) {
-                    
-                case libMesh::HEP: {
-                    
-                    matrix_A->vector_mult(*tmp, *x_right[i]);
-                    sens[num] = x_right[i]->dot(*tmp);                  // x^H A' x
-                    sens[num]-= eig[i] * x_right[i]->dot(*x_right[i]);  // - lambda x^H x
-                    sens[num] /= denom[i];                              // x^H x
-                }
-                    break;
-                    
-                case libMesh::GHEP: {
-                    
-                    matrix_A->vector_mult(*tmp, *x_right[i]);
-                    sens[num] = x_right[i]->dot(*tmp);              // x^H A' x
-                    matrix_B->vector_mult(*tmp, *x_right[i]);
-                    sens[num]-= eig[i] * x_right[i]->dot(*tmp);     // - lambda x^H B' x
-                    sens[num] /= denom[i];                          // x^H B x
-                }
-                    break;
-                    
-                default:
-                    // to be implemented for the non-Hermitian problems
-                    libmesh_error();
-                    break;
+        switch (_eigen_problem_type) {
+                
+            case libMesh::HEP: {
+                
+                matrix_A->vector_mult(*tmp, *x_right[i]);
+                sens[i] = x_right[i]->dot(*tmp);                  // x^H A' x
+                sens[i]-= eig[i] * x_right[i]->dot(*x_right[i]);  // - lambda x^H x
+                sens[i] /= denom[i];                              // x^H x
             }
+                break;
+                
+            case libMesh::GHEP: {
+                
+                matrix_A->vector_mult(*tmp, *x_right[i]);
+                sens[i] = x_right[i]->dot(*tmp);              // x^H A' x
+                matrix_B->vector_mult(*tmp, *x_right[i]);
+                sens[i]-= eig[i] * x_right[i]->dot(*tmp);     // - lambda x^H B' x
+                sens[i] /= denom[i];                          // x^H B x
+            }
+                break;
+                
+            default:
+                // to be implemented for the non-Hermitian problems
+                libmesh_error();
+                break;
         }
     }
     
@@ -595,50 +604,21 @@ eigenproblem_sensitivity_solve (const libMesh::ParameterVector& parameters,
 
 void
 MAST::NonlinearSystem::
-assemble_eigensystem () {
+attach_assemble_object(MAST::AssemblyBase& assemble) {
     
-    libmesh_assert(_eigenproblem_assemble_system_object);
+    libmesh_assert(!_assemble);
     
-    _eigenproblem_assemble_system_object->eigenproblem_assemble(matrix_A,
-                                                                matrix_B);
-    
-}
-
-
-
-void
-MAST::NonlinearSystem::
-assemble_eigensystem_sensitivity(const libMesh::ParameterVector& parameters,
-                                 const unsigned int p) {
-    
-    libmesh_assert(_eigenproblem_assemble_system_object);
-    
-    _eigenproblem_assemble_system_object->eigenproblem_sensitivity_assemble
-    (parameters, p, matrix_A, matrix_B);
-    
+    _assemble = &assemble;
 }
 
 
 
 
 void
-MAST::NonlinearSystem::
-attach_eigenproblem_assemble_object(MAST::EigenproblemAssembly& assemble) {
+MAST::NonlinearSystem::reset_assemble_object () {
     
-    libmesh_assert(!_eigenproblem_assemble_system_object);
-    
-    _eigenproblem_assemble_system_object = &assemble;
+    _assemble   = nullptr;
 }
-
-
-
-
-void
-MAST::NonlinearSystem::reset_eigenproblem_assemble_object () {
-    
-    _eigenproblem_assemble_system_object   = nullptr;
-}
-
 
 
 
@@ -692,46 +672,213 @@ initialize_condensed_dofs(MAST::PhysicsDisciplineBase& physics) {
 
 
 
-void
-MAST::NonlinearSystem::assemble_residual_derivatives
-(const libMesh::ParameterVector & parameters) {
 
-    // this assumes that the residual and jacobian object of the
-    // nonlinear implicit system is the assembly object implemented in MAST,
-    // which also implements the assembly for sensitivity of residual.
+
+void
+MAST::NonlinearSystem::sensitivity_solve(const MAST::FunctionBase& p) {
     
-    MAST::NonlinearImplicitAssembly& assembly =
-    dynamic_cast<MAST::NonlinearImplicitAssembly&>
-    (*this->nonlinear_solver->residual_and_jacobian_object);
+    libmesh_assert(_assemble);
     
-    assembly.sensitivity_assemble(parameters, 0, this->add_sensitivity_rhs());
+    // Log how long the linear solve takes.
+    LOG_SCOPE("sensitivity_solve()", "NonlinearSystem");
+
+    libMesh::NumericVector<Real>
+    &dsol  = this->add_sensitivity_solution(),
+    &rhs   = this->add_sensitivity_rhs();
+    
+    _assemble->residual_and_jacobian(*solution, nullptr, matrix, *this);
+    _assemble->sensitivity_assemble(p, rhs);
+    
+    rhs.scale(-1.);
+    
+    // The sensitivity problem is linear
+    // Our iteration counts and residuals will be sums of the individual
+    // results
+    std::pair<unsigned int, Real>
+    solver_params = this->get_linear_solve_parameters();
+    
+    // Solve the linear system.
+    libMesh::SparseMatrix<Real> * pc = this->request_matrix("Preconditioner");
+    
+    std::pair<unsigned int, Real> rval =
+    this->linear_solver->solve (*matrix, pc,
+                                dsol,
+                                rhs,
+                                solver_params.second,
+                                solver_params.first);
+    
+    // The linear solver may not have fit our constraints exactly
+#ifdef LIBMESH_ENABLE_CONSTRAINTS
+    this->get_dof_map().enforce_constraints_exactly (*this, &dsol, /* homogeneous = */ true);
+#endif
 }
 
 
 
 void
-MAST::NonlinearSystem::adjoint_solve(MAST::OutputAssemblyBase &output) {
+MAST::NonlinearSystem::adjoint_solve(MAST::OutputAssemblyElemOperations &output) {
     
-    libmesh_assert(!_output);
+    libmesh_assert(_assemble);
+
+    // Log how long the linear solve takes.
+    LOG_SCOPE("adjoint_solve()", "ImplicitSystem");
     
-    _output = &output;
+    libMesh::NumericVector<Real>
+    &dsol  = this->add_adjoint_solution(),
+    &rhs   = this->get_adjoint_rhs();
+
+    _assemble->residual_and_jacobian(*solution, nullptr, matrix, *this);
+    _assemble->calculate_output_derivative(*solution, output, rhs);
     
-    libMesh::NonlinearImplicitSystem::adjoint_solve();
     
-    _output = nullptr;
+    // Our iteration counts and residuals will be sums of the individual
+    // results
+    std::pair<unsigned int, Real>
+    solver_params = this->get_linear_solve_parameters();
+    
+    const std::pair<unsigned int, Real> rval =
+    linear_solver->adjoint_solve (*matrix,
+                                  dsol,
+                                  rhs,
+                                  solver_params.second,
+                                  solver_params.first);
+    
+    // The linear solver may not have fit our constraints exactly
+#ifdef LIBMESH_ENABLE_CONSTRAINTS
+    this->get_dof_map().enforce_adjoint_constraints_exactly(dsol, 0);
+#endif
+}
+
+
+
+
+
+void
+MAST::NonlinearSystem::write_out_vector(libMesh::NumericVector<Real>& vec,
+                                        const std::string & directory_name,
+                                        const std::string & data_name,
+                                        const bool write_binary_vectors)
+{
+    LOG_SCOPE("write_out_vector()", "NonlinearSystem");
+    
+    if (this->processor_id() == 0)
+    {
+        // Make a directory to store all the data files
+        libMesh::Utility::mkdir(directory_name.c_str());
+    }
+    
+    // Make sure processors are synced up before we begin
+    this->comm().barrier();
+    
+    std::ostringstream file_name;
+    const std::string suffix = (write_binary_vectors ? ".xdr" : ".dat");
+    
+    file_name << directory_name << "/" << data_name << "_data" << suffix;
+    libMesh::Xdr bf_data(file_name.str(),
+                         write_binary_vectors ? libMesh::ENCODE : libMesh::WRITE);
+    
+    std::string version("libMesh-" + libMesh::get_io_compatibility_version());
+#ifdef LIBMESH_ENABLE_INFINITE_ELEMENTS
+    version += " with infinite elements";
+#endif
+    bf_data.data(version ,"# File Format Identifier");
+    
+    this->write_header(bf_data, /*(unused arg)*/ version, /*write_additional_data=*/false);
+    
+    // Following EquationSystemsIO::write, we use a temporary numbering (node major)
+    // before writing out the data
+    libMesh::MeshTools::Private::globally_renumber_nodes_and_elements(this->get_mesh());
+    
+    // Write all vectors at once.
+    {
+        // Note the API wants pointers to constant vectors, hence this...
+        std::vector<const libMesh::NumericVector<Real> *> bf_out(1);
+        bf_out[0] = &vec;
+        this->write_serialized_vectors (bf_data, bf_out);
+    }
+    
+    
+    // set the current version
+    bf_data.set_version(LIBMESH_VERSION_ID(LIBMESH_MAJOR_VERSION,
+                                           LIBMESH_MINOR_VERSION,
+                                           LIBMESH_MICRO_VERSION));
+    
+    
+    // Undo the temporary renumbering
+    this->get_mesh().fix_broken_node_and_element_numbering();
 }
 
 
 
 void
-MAST::NonlinearSystem::
-assemble_qoi_derivative (const libMesh::QoISet & qoi_indices,
-                         bool include_liftfunc,
-                         bool apply_constraints) {
+MAST::NonlinearSystem::read_in_vector(libMesh::NumericVector<Real>& vec,
+                                      const std::string & directory_name,
+                                      const std::string & data_name,
+                                      const bool read_binary_vector) {
     
-    // make sure the output object has been set
-    libmesh_assert(_output);
+    LOG_SCOPE("read_in_vector()", "NonlinearSystem");
+    
+    // Make sure processors are synced up before we begin
+    this->comm().barrier();
     
     
+    // Following EquationSystemsIO::read, we use a temporary numbering (node major)
+    // before writing out the data. For the sake of efficiency, we do this once for
+    // all the vectors that we read in.
+    libMesh::MeshTools::Private::globally_renumber_nodes_and_elements(this->get_mesh());
+    
+    std::ostringstream file_name;
+    const std::string suffix = (read_binary_vector ? ".xdr" : ".dat");
+    file_name.str("");
+    file_name << directory_name
+    << "/" << data_name
+    << "_data" << suffix;
+    
+    // On processor zero check to be sure the file exists
+    if (this->processor_id() == 0)
+    {
+        struct stat stat_info;
+        int stat_result = stat(file_name.str().c_str(), &stat_info);
+        
+        if (stat_result != 0)
+            libmesh_error_msg("File does not exist: " << file_name.str());
+    }
+    
+    if (!std::ifstream(file_name.str()))
+        libmesh_error_msg("File missing: " + file_name.str());
+
+    libMesh::Xdr vector_data(file_name.str(),
+                             read_binary_vector ? libMesh::DECODE : libMesh::READ);
+    
+    // Read the header data. This block of code is based on EquationSystems::_read_impl.
+    {
+        std::string version;
+        vector_data.data(version);
+        
+        const std::string libMesh_label = "libMesh-";
+        std::string::size_type lm_pos = version.find(libMesh_label);
+        if (lm_pos==std::string::npos)
+        {
+            libmesh_error_msg("version info missing in Xdr header");
+        }
+        
+        std::istringstream iss(version.substr(lm_pos + libMesh_label.size()));
+        int ver_major = 0, ver_minor = 0, ver_patch = 0;
+        char dot;
+        iss >> ver_major >> dot >> ver_minor >> dot >> ver_patch;
+        vector_data.set_version(LIBMESH_VERSION_ID(ver_major, ver_minor, ver_patch));
+        
+        // Actually read the header data. When we do this, set read_header=false
+        // so taht we do not reinit sys, since we assume that it has already been
+        // set up properly (e.g. the appropriate variables have already been added).
+        this->read_header(vector_data, version, /*read_header=*/false, /*read_additional_data=*/false);
+    }
+    
+    std::vector<libMesh::NumericVector<Real> *> bf_in(1);
+    bf_in[0] = &vec;
+    this->read_serialized_vectors (vector_data, bf_in);
+    
+    // Undo the temporary renumbering
+    this->get_mesh().fix_broken_node_and_element_numbering();
 }
 

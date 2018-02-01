@@ -126,6 +126,11 @@ namespace MAST {
         virtual void set_elem_acceleration(const RealVectorX& accel);
         
         /*!
+         *   sets the element acceleration
+         */
+        virtual void set_elem_acceleration_sensitivity(const RealVectorX& accel);
+
+        /*!
          *   sets the element perturbed acceleration
          */
         virtual void set_elem_perturbed_acceleration(const RealVectorX& accel);

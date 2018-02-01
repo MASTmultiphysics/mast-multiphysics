@@ -31,6 +31,9 @@
 
 // libMesh includes
 #include "libmesh/system.h"
+#include "libmesh/nonlinear_implicit_system.h"
+#include "libmesh/sparse_matrix.h"
+
 
 namespace MAST {
     
@@ -45,7 +48,8 @@ namespace MAST {
     class OutputAssemblyElemOperations;
     class FunctionBase;
     
-    class AssemblyBase {
+    class AssemblyBase:
+    public libMesh::NonlinearImplicitSystem::ComputeResidualandJacobian {
     public:
         
         /*!
@@ -160,7 +164,35 @@ namespace MAST {
          */
         void detach_solution_function();
         
-        
+        /*!
+         *    function that assembles the matrices and vectors quantities for
+         *    nonlinear solution
+         */
+        virtual void
+        residual_and_jacobian (const libMesh::NumericVector<Real>& X,
+                               libMesh::NumericVector<Real>* R,
+                               libMesh::SparseMatrix<Real>*  J,
+                               libMesh::NonlinearImplicitSystem& S) {
+            libmesh_assert(false); // implement in the derived class
+        }
+
+        /**
+         * Assembly function.  This function will be called
+         * to assemble the RHS of the sensitivity equations (which is -1 times
+         * sensitivity of system residual) prior to a solve and must
+         * be provided by the user in a derived class. The method provides dR/dp
+         * for \par f parameter.
+         *
+         * If the routine is not able to provide sensitivity for this parameter,
+         * then it should return false, and the system will attempt to use
+         * finite differencing.
+         */
+        virtual bool
+        sensitivity_assemble (const MAST::FunctionBase& f,
+                              libMesh::NumericVector<Real>& sensitivity_rhs) {
+            libmesh_assert(false); // implemented in the derived class
+        }
+
         /*!
          *   calculates the value of quantity \f$ q(X,p) \f$.
          */

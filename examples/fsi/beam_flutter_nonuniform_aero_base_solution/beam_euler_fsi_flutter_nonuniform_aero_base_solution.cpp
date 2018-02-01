@@ -64,7 +64,6 @@
 #include "libmesh/mesh_generation.h"
 #include "libmesh/exodusII_io.h"
 #include "libmesh/numeric_vector.h"
-#include "libmesh/parameter_vector.h"
 #include "libmesh/getpot.h"
 #include "libmesh/string_to_enum.h"
 #include "libmesh/nonlinear_solver.h"
@@ -1043,23 +1042,13 @@ sensitivity_solve(MAST::Parameter& p) {
 
     // flutter solver will need velocity to be defined as a parameter for
     // sensitivity analysis
-    _structural_discipline->add_parameter(p);
-    _fluid_discipline->add_parameter(*_omega);
-    
-    libMesh::ParameterVector params;
-    params.resize(1);
-    params[0]  =  p.ptr();
-    
     // calculate the sensitivity
-    _flutter_solver->calculate_sensitivity(*_flutter_root, params, 0);
+    _flutter_solver->calculate_sensitivity(*_flutter_root, p);
 
     
     // clean up before exiting
     fsi_assembly.clear_discipline_and_system();
     _flutter_solver->clear_assembly_object();
-    _structural_discipline->remove_parameter(p);
-    _fluid_discipline->remove_parameter(*_omega);
-    
     
     
     return _flutter_root->V_sens;

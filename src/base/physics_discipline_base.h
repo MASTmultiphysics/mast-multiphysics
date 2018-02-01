@@ -201,21 +201,6 @@ namespace MAST {
          */
         const MAST::ElementPropertyCardBase& get_property_card(const unsigned int i) const;
         
-        /*!
-         *   Adds the parameter and function pairing
-         */
-        void add_parameter(MAST::Parameter& f);
-        
-        /*!
-         *   Removes the parameter and function pairing
-         */
-        void remove_parameter(MAST::Parameter& f);
-        
-
-        /*!
-         *   Returns the function corresponding to a parameter
-         */
-        const MAST::FunctionBase* get_parameter(const Real* par) const;
         
         
     protected:
@@ -229,12 +214,6 @@ namespace MAST {
          *   map of element property cards for each element
          */
         MAST::PropertyCardMapType _element_property;
-        
-        /*!
-         *   map of sensitivity parameters and the corresponding functions that
-         *   are directly dependent on these parameters
-         */
-        std::map<const Real*, const MAST::FunctionBase*> _parameter_map;
         
         /*!
          *   side boundary condition map of boundary id and load

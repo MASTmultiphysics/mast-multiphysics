@@ -63,11 +63,11 @@ namespace MAST {
         virtual void solve();
         
         /*!
-         *   advances the time step and copies the current solution to old
-         *   solution, and so on.
+         *   solves the current time step for solution and velocity
          */
-        virtual void advance_time_step();
-        
+        virtual void sensitivity_solve(const MAST::FunctionBase& f);
+
+
         /*!
          *    update the transient velocity based on the current solution
          */
@@ -104,6 +104,14 @@ namespace MAST {
         set_element_data(const std::vector<libMesh::dof_id_type>& dof_indices,
                          const std::vector<libMesh::NumericVector<Real>*>& sols);
         
+        /*!
+         *    provides the element with the sensitivity of transient data for
+         *    calculations
+         */
+        virtual void
+        set_element_sensitivity_data(const std::vector<libMesh::dof_id_type>& dof_indices,
+                                     const std::vector<libMesh::NumericVector<Real>*>& sols);
+
         /*!
          *    provides the element with the transient data for calculations
          */

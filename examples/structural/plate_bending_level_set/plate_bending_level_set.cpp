@@ -49,8 +49,7 @@
 //#include "libmesh/mesh_generation.h"
 //#include "libmesh/exodusII_io.h"
 //#include "libmesh/numeric_vector.h"
-//#include "libmesh/parameter_vector.h"
-//#include "libmesh/diff_solver.h"
+////#include "libmesh/diff_solver.h"
 //#include "libmesh/nonlinear_solver.h"
 //
 //
@@ -660,8 +659,6 @@
 //                                              bool if_write_output) {
 //    
 //    libmesh_assert(_initialized);
-//    
-//    _str_discipline->add_parameter(p);
 //
 //    Phi phi(_length, _width, _length*0.5*.1, _length*0.5*0.9);
 //
@@ -693,7 +690,7 @@
 //    
 //    
 //    assembly.clear_discipline_and_system();
-//    _str_discipline->remove_parameter(p);
+//    _str
 //    
 //    // write the solution for visualization
 //    if (if_write_output) {

@@ -320,8 +320,6 @@
 //        _th_station_parameters[i]          = h;
 //        _th_station_functions[i]           = h_f;
 //        
-//        // tell the assembly system about the sensitvity parameter
-//        _discipline->add_parameter(*h);
 //    }
 //    
 //    // now create the h_y function and give it to the property card

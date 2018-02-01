@@ -75,7 +75,14 @@ namespace MAST {
          */
         libMesh::NumericVector<Real>&
         solution(unsigned int prev_iter = 0) const;
-        
+
+        /*!
+         *   @returns a reference to the localized solution sensitivity. The
+         *   \p prev_iter parameter is similar to the solution() method.
+         */
+        libMesh::NumericVector<Real>&
+        solution_sensitivity(unsigned int prev_iter = 0) const;
+
         /*!
          *    @returns a reference to the localized velocity from
          *    iteration number = current - prev_iter. So, \par prev_iter = 0
@@ -88,6 +95,14 @@ namespace MAST {
 
         
         /*!
+         *   @returns a reference to the localized velocity sensitivity. The
+         *   \p prev_iter parameter is similar to the velocity() method.
+         */
+        libMesh::NumericVector<Real>&
+        velocity_sensitivity(unsigned int prev_iter = 0) const;
+
+        
+        /*!
          *    @returns a reference to the localized acceleration from
          *    iteration number = current - prev_iter. So, \par prev_iter = 0
          *    gives the current acceleration estimate. Note that \par prev_iter
@@ -96,6 +111,13 @@ namespace MAST {
          */
         libMesh::NumericVector<Real>&
         acceleration(unsigned int prev_iter = 0) const;
+        
+        /*!
+         *   @returns a reference to the localized acceleration sensitivity. The
+         *   \p prev_iter parameter is similar to the acceleration() method.
+         */
+        libMesh::NumericVector<Real>&
+        acceleration_sensitivity(unsigned int prev_iter = 0) const;
 
         
         /*!
@@ -132,6 +154,11 @@ namespace MAST {
          */
         virtual void solve() = 0;
         
+        /*!
+         *    solvers the current time step for sensitivity wrt \p f
+         */
+        virtual void sensitivity_solve(const MAST::FunctionBase& f) = 0;
+
         
         /*!
          *    To be used only for initial conditions.
@@ -141,6 +168,13 @@ namespace MAST {
          *    time integration.
          */
         void solve_highest_derivative_and_advance_time_step();
+        
+        /*!
+         *    solves for the sensitivity of highest derivative and advances
+         *    the time-step.
+         */
+        void
+        solve_highest_derivative_and_advance_time_step_with_sensitivity(const MAST::FunctionBase& f);
 
 
         
@@ -149,6 +183,13 @@ namespace MAST {
          *   solution, and so on.
          */
         virtual void advance_time_step();
+        
+        /*!
+         *   advances the time step and copies the current sensitivity solution
+         *   to old sensitivity solution, and so on. Does not influence the
+         *   primary solution.
+         */
+        virtual void advance_time_step_with_sensitivity();
 
         
         /*!
@@ -178,8 +219,17 @@ namespace MAST {
          */
         virtual void
         set_element_data(const std::vector<libMesh::dof_id_type>& dof_indices,
-                          const std::vector<libMesh::NumericVector<Real>*>& sols) = 0;
+                         const std::vector<libMesh::NumericVector<Real>*>& sols) = 0;
         
+        
+        /*!
+         *    provides the element with the sensitivity of transient data for
+         *    calculations
+         */
+        virtual void
+        set_element_sensitivity_data(const std::vector<libMesh::dof_id_type>& dof_indices,
+                                     const std::vector<libMesh::NumericVector<Real>*>& sols) = 0;
+
         /*!
          *    provides the element with the transient data for calculations
          */
@@ -211,7 +261,7 @@ namespace MAST {
         /*!
          *    flag to check if this is the first time step.
          */
-        bool  _first_step;
+        bool  _first_step, _first_sensitivity_step;
         
         /*!
          *    @returns the number of iterations for which solution and velocity

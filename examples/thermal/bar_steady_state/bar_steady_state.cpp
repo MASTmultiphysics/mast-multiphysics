@@ -40,8 +40,7 @@
 //#include "libmesh/mesh_generation.h"
 //#include "libmesh/exodusII_io.h"
 //#include "libmesh/numeric_vector.h"
-//#include "libmesh/parameter_vector.h"
-//
+////
 //
 //extern libMesh::LibMeshInit* __init;
 //
@@ -249,7 +248,6 @@
 //    
 //    libmesh_assert(_initialized);
 //    
-//    _discipline->add_parameter(p);
 //    
 //    // create the nonlinear assembly object
 //    MAST::NonlinearImplicitAssembly                      assembly;
@@ -271,7 +269,7 @@
 //    nonlin_sys.sensitivity_solve(params);
 //    
 //    assembly.clear_discipline_and_system();
-//    _discipline->remove_parameter(p);
+//    
 //    
 //    // write the solution for visualization
 //    if (if_write_output) {

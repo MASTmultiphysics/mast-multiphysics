@@ -30,7 +30,6 @@
 #include "libmesh/numeric_vector.h"
 #include "libmesh/sparse_matrix.h"
 #include "libmesh/dof_map.h"
-#include "libmesh/parameter_vector.h"
 
 
 
@@ -65,7 +64,7 @@ attach_discipline_and_system(MAST::EigenproblemAssemblyElemOperations& elem_ops,
     MAST::NonlinearSystem& eigen_sys =
     dynamic_cast<MAST::NonlinearSystem&>(system.system());
     
-    eigen_sys.attach_eigenproblem_assemble_object(*this);
+    eigen_sys.attach_assemble_object(*this);
 }
 
 
@@ -82,7 +81,7 @@ MAST::EigenproblemAssembly::reattach_to_system() {
     MAST::NonlinearSystem& eigen_sys =
     dynamic_cast<MAST::NonlinearSystem&>(_system->system());
     
-    eigen_sys.attach_eigenproblem_assemble_object(*this);
+    eigen_sys.attach_assemble_object(*this);
 }
 
 
@@ -96,7 +95,7 @@ clear_discipline_and_system( ) {
         MAST::NonlinearSystem& sys =
         dynamic_cast<MAST::NonlinearSystem&>(_system->system());
         
-        sys.reset_eigenproblem_assemble_object();
+        sys.reset_assemble_object();
     }
     
     _base_sol              = nullptr;
@@ -231,8 +230,7 @@ eigenproblem_assemble(libMesh::SparseMatrix<Real>* A,
 
 bool
 MAST::EigenproblemAssembly::
-eigenproblem_sensitivity_assemble(const libMesh::ParameterVector& parameters,
-                                  const unsigned int i,
+eigenproblem_sensitivity_assemble(const MAST::FunctionBase& f,
                                   libMesh::SparseMatrix<Real>* sensitivity_A,
                                   libMesh::SparseMatrix<Real>* sensitivity_B) {
     
@@ -312,7 +310,7 @@ eigenproblem_sensitivity_assemble(const libMesh::ParameterVector& parameters,
         _eigenproblem_elem_ops->set_elem_solution_sensitivity(sol);
 
         // tell the element about the sensitivity parameter
-        _eigenproblem_elem_ops->set_elem_sensitivity_parameter(*_discipline->get_parameter(&(parameters[i].get())));
+        _eigenproblem_elem_ops->set_elem_sensitivity_parameter(f);
         
         _eigenproblem_elem_ops->elem_sensitivity_calculations(_base_sol!=nullptr,
                                                               mat_A,

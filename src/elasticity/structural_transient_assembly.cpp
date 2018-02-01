@@ -167,10 +167,39 @@ linearized_jacobian_solution_product(RealVectorX& f) {
 
 void
 MAST::StructuralTransientAssemblyElemOperations::
-elem_sensitivity_calculations(RealVectorX& vec) {
+elem_sensitivity_calculations(RealVectorX& f_m,
+                              RealVectorX& f_x) {
     
-    libmesh_error(); // to be implemented
+    libmesh_assert(_physics_elem);
     
+    MAST::StructuralElementBase& e =
+    dynamic_cast<MAST::StructuralElementBase&>(*_physics_elem);
+    
+    unsigned int
+    n       =  f_m.size();
+    
+    RealMatrixX
+    dummy   =  RealMatrixX::Zero(n, n);
+    
+    f_m.setZero();
+    f_x.setZero();
+    
+    // assembly of the flux terms
+    e.internal_residual_sensitivity(false, f_x, dummy);
+    e.damping_residual_sensitivity(false, f_x, dummy, dummy);
+    e.side_external_residual_sensitivity(false,
+                                         f_x,
+                                         dummy,
+                                         dummy,
+                                         _assembly->discipline().side_loads());
+    e.volume_external_residual_sensitivity(false,
+                                           f_x,
+                                           dummy,
+                                           dummy,
+                                           _assembly->discipline().volume_loads());
+    
+    //assembly of the capacitance term
+    e.inertial_residual_sensitivity(false, f_m, dummy, dummy, dummy);
 }
 
 

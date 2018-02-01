@@ -26,7 +26,6 @@
 
 // libMesh includes
 #include "libmesh/numeric_vector.h"
-#include "libmesh/parameter_vector.h"
 #include "libmesh/equation_systems.h"
 #include "libmesh/sparse_matrix.h"
 #include "libmesh/eigen_solver.h"
@@ -191,10 +190,7 @@ MAST::StructuralSystem::solve() {
         
         
         // next solve the displacement update due to load update
-        libMesh::ParameterVector parameters;
-        parameters.resize(1);
-        parameters[0]  = _load_param->ptr();
-        MAST::NonlinearSystem::sensitivity_solve(parameters);
+        MAST::NonlinearSystem::sensitivity_solve(*_load_param);
         *dx_load = this->get_sensitivity_solution();
         
         // now, calculate the load update using the constraint definition.

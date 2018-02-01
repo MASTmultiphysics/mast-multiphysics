@@ -341,7 +341,6 @@
 //        _th_station_functions_plate[i]           = h_f;
 //        
 //        // tell the assembly system about the sensitvity parameter
-//        _discipline->add_parameter(*h);
 //        _problem_parameters[i] = h;
 //    }
 //    
@@ -449,7 +448,6 @@
 //            _th_station_functions_stiff [i*_n_dv_stations_x+j]          = h_y_f;
 //            
 //            // tell the assembly system about the sensitvity parameter
-//            _discipline->add_parameter(*h_y);
 //            _problem_parameters[(i+1)*_n_dv_stations_x+j] = h_y;
 //        }
 //        

@@ -575,8 +575,7 @@ MAST::UGFlutterSolver::_initialize_matrices(Real kr,
 
 void
 MAST::UGFlutterSolver::
-_initialize_matrix_sensitivity_for_param(const libMesh::ParameterVector& params,
-                                         const unsigned int i,
+_initialize_matrix_sensitivity_for_param(const MAST::FunctionBase& f,
                                          const libMesh::NumericVector<Real>& dXdp,
                                          Real kr,
                                          ComplexMatrixX& A,
@@ -608,8 +607,7 @@ _initialize_matrix_sensitivity_for_param(const libMesh::ParameterVector& params,
     // set the velocity value in the parameter that was provided
     (*_kr_param) = kr;
     
-    _assembly->assemble_reduced_order_quantity_sensitivity(params,
-                                                           i,
+    _assembly->assemble_reduced_order_quantity_sensitivity(f,
                                                            *_basis_vectors,
                                                            qty_map);
 
@@ -871,8 +869,7 @@ MAST::UGFlutterSolver::_identify_crossover_points() {
 void
 MAST::UGFlutterSolver::
 calculate_sensitivity(MAST::FlutterRootBase& root,
-                      const libMesh::ParameterVector& params,
-                      const unsigned int i,
+                      const MAST::FunctionBase& f,
                       libMesh::NumericVector<Real>* dXdp,
                       libMesh::NumericVector<Real>* dXdkr) {
     
@@ -920,8 +917,7 @@ calculate_sensitivity(MAST::FlutterRootBase& root,
         sol_sens = dXdp;
     
     // calculate the eigenproblem sensitivity
-    _initialize_matrix_sensitivity_for_param(params,
-                                             i,
+    _initialize_matrix_sensitivity_for_param(f,
                                              *sol_sens,
                                              root.kr,
                                              mat_A_sens,

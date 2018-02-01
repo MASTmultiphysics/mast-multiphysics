@@ -280,8 +280,10 @@ namespace MAST {
          */
         virtual bool damping_residual_sensitivity (bool request_jacobian,
                                                    RealVectorX& f,
-                                                   RealMatrixX& jac)
-        { libmesh_assert(false);}
+                                                   RealMatrixX& jac_xdot,
+                                                   RealMatrixX& jac) {
+            return false;
+        }
         
         /*!
          *   sensitivity of the inertial force contribution to system residual

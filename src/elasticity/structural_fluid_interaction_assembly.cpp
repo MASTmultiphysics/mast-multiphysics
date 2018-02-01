@@ -36,7 +36,6 @@
 #include "libmesh/dof_map.h"
 #include "libmesh/petsc_nonlinear_solver.h"
 #include "libmesh/petsc_vector.h"
-#include "libmesh/parameter_vector.h"
 
 
 
@@ -238,8 +237,7 @@ assemble_reduced_order_quantity
 void
 MAST::StructuralFluidInteractionAssembly::
 assemble_reduced_order_quantity_sensitivity
-(const libMesh::ParameterVector& parameters,
- const unsigned int i,
+(const MAST::FunctionBase& f,
  std::vector<libMesh::NumericVector<Real>*>& basis,
  std::map<MAST::StructuralQuantityType, RealMatrixX*>& mat_qty_map) {
     
@@ -327,7 +325,7 @@ assemble_reduced_order_quantity_sensitivity
                 basis_mat(i,j) = (*localized_basis[j])(dof_indices[i]);
         }
         
-        this->set_elem_sensitivity_parameter(*_discipline->get_parameter(&(parameters[i].get())));
+        this->set_elem_sensitivity_parameter(f);
         this->set_elem_solution(sol);
         this->set_elem_solution_sensitivity(dsol);
         this->set_elem_velocity(vec);     // set to zero value

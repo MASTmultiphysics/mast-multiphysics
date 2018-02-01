@@ -123,6 +123,15 @@ MAST::AssemblyElemOperations::set_elem_acceleration(const RealVectorX &accel) {
 
 
 void
+MAST::AssemblyElemOperations::set_elem_acceleration_sensitivity(const RealVectorX &accel) {
+    
+    libmesh_assert(_physics_elem);
+    
+    _physics_elem->set_acceleration(accel, true);
+}
+
+
+void
 MAST::AssemblyElemOperations::set_elem_perturbed_solution(const RealVectorX &sol) {
     
     libmesh_assert(_physics_elem);

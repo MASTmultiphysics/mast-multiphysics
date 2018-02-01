@@ -35,7 +35,6 @@
 #include "libmesh/numeric_vector.h"
 #include "libmesh/sparse_matrix.h"
 #include "libmesh/dof_map.h"
-#include "libmesh/parameter_vector.h"
 #include "libmesh/petsc_vector.h"
 #include "libmesh/petsc_matrix.h"
 
@@ -772,7 +771,6 @@ residual_and_jacobian_blocked (const libMesh::NumericVector<Real>& X,
             _complex_elem_ops->elem_sensitivity_calculations(vec);
         }
         
-        vec *= -1.;
         _complex_elem_ops->clear_elem();
 
         //physics_elem->detach_active_solution_function();
@@ -802,7 +800,7 @@ residual_and_jacobian_blocked (const libMesh::NumericVector<Real>& X,
         
         
         for (unsigned int i=0; i<dof_indices.size(); i++) {
-         
+            
             R.add(2*dof_indices[i],     v_R(i));
             R.add(2*dof_indices[i]+1,   v_I(i));
             
@@ -811,11 +809,11 @@ residual_and_jacobian_blocked (const libMesh::NumericVector<Real>& X,
                 vals[1] = m_I1(i,j);
                 vals[2] = m_I2(i,j);
                 vals[3] = m_R (i,j);
-            ierr = MatSetValuesBlocked(jac_bmat,
-                                       1, (PetscInt*)&dof_indices[i],
-                                       1, (PetscInt*)&dof_indices[j],
-                                       &vals[0],
-                                       ADD_VALUES);
+                ierr = MatSetValuesBlocked(jac_bmat,
+                                           1, (PetscInt*)&dof_indices[i],
+                                           1, (PetscInt*)&dof_indices[j],
+                                           &vals[0],
+                                           ADD_VALUES);
             }
         }
     }
@@ -839,8 +837,7 @@ residual_and_jacobian_blocked (const libMesh::NumericVector<Real>& X,
 
 bool
 MAST::ComplexAssemblyBase::
-sensitivity_assemble (const libMesh::ParameterVector& parameters,
-                      const unsigned int i,
+sensitivity_assemble (const MAST::FunctionBase& f,
                       libMesh::NumericVector<Real>& sensitivity_rhs) {
 
     libmesh_error(); // not implemented. Call the blocked assembly instead.

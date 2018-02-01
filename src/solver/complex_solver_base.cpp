@@ -495,7 +495,7 @@ MAST::ComplexSolverBase::solve_block_matrix(MAST::Parameter* p)  {
                                              *jac_mat,
                                              sys,
                                              p);
-    
+    res->scale(-1.);
     
     // now initialize the KSP and ask for solution.
     KSP        ksp;
@@ -524,12 +524,6 @@ MAST::ComplexSolverBase::solve_block_matrix(MAST::Parameter* p)  {
     ierr = KSPSolve(ksp, res_vec, sol_vec);
 
     STOP_LOG("KSPSolve", "ComplexSolve");
-    
-    // evaluate the residual again
-    //_assembly->residual_and_jacobian_blocked(*sol,
-    //                                         *res,
-    //                                         *jac_mat,
-    //                                         sys);
     
     
     // copy the solution to separate real and imaginary vectors

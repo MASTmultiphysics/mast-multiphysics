@@ -51,9 +51,8 @@
 // libMesh includes
 #include "libmesh/equation_systems.h"
 #include "libmesh/numeric_vector.h"
-#include "libmesh/exodusII_io.h"
 #include "libmesh/nonlinear_solver.h"
-#include "libmesh/parameter_vector.h"
+#include "libmesh/serial_mesh.h"
 
 
 extern libMesh::LibMeshInit* __init;
@@ -444,8 +443,6 @@ MAST::Examples::StructuralExampleBase::static_sensitivity_solve(MAST::Parameter&
     bool
     output     = (*_input)(   "if_output", false);
 
-    _discipline->add_parameter(p);
-    
     // create the nonlinear assembly object
     MAST::NonlinearImplicitAssembly                  assembly;
     MAST::StructuralNonlinearAssemblyElemOperations  elem_ops;
@@ -465,13 +462,9 @@ MAST::Examples::StructuralExampleBase::static_sensitivity_solve(MAST::Parameter&
     MAST::StructuralNearNullVectorSpace nsp;
     nonlin_sys.nonlinear_solver->nearnullspace_object = &nsp;
 
-    libMesh::ParameterVector params;
-    params.resize(1);
-    params[0]  =  p.ptr();
-    
     // zero the solution before solving
     nonlin_sys.add_sensitivity_solution(0).zero();
-    nonlin_sys.sensitivity_solve(params);
+    nonlin_sys.sensitivity_solve(p);
     assembly.clear_discipline_and_system();
     
     // update stress sensitivity values
@@ -484,7 +477,7 @@ MAST::Examples::StructuralExampleBase::static_sensitivity_solve(MAST::Parameter&
                                                           stress_sys.get_sensitivity_solution(0));
     stress_assembly.clear_discipline_and_system();
     
-    _discipline->remove_parameter(p);
+    
     
     // write the solution for visualization
     if (output) {
@@ -597,17 +590,11 @@ MAST::Examples::StructuralExampleBase::modal_sensitivity_solve(MAST::Parameter& 
     bool
     static_solve = (*_input)(   "modal_about_nonlinear_static", false);
     
-    _discipline->add_parameter(p);
-
     // Get the number of converged eigen pairs.
     unsigned int
     nconv = std::min(_sys->get_n_converged_eigenvalues(),
                      _sys->get_n_requested_eigenvalues());
     deig_dp.resize(nconv);
-    
-    libMesh::ParameterVector params;
-    params.resize(1);
-    params[0]  =  p.ptr();
     
     // create the modal assembly object
     MAST::EigenproblemAssembly                               assembly;
@@ -630,10 +617,10 @@ MAST::Examples::StructuralExampleBase::modal_sensitivity_solve(MAST::Parameter& 
     assembly.attach_discipline_and_system(elem_ops,
                                           *_discipline,
                                           *_structural_sys);
-    _sys->eigenproblem_sensitivity_solve(params, deig_dp);
+    _sys->eigenproblem_sensitivity_solve(p, deig_dp);
     assembly.clear_discipline_and_system();
     
-    _discipline->remove_parameter(p);
+    
 }
 
 
@@ -842,12 +829,12 @@ MAST::Examples::StructuralExampleBase::transient_solve() {
     this->initialize_solution();
     
     // file to write the solution for visualization
-    libMesh::ExodusII_IO exodus_writer(*_mesh);
+    libMesh::ExodusII_IO transient_output(*_mesh);
+    
     
     // time solver parameters
     Real
-    tval     = 0.,
-    pi       = acos(-1.);
+    tval     = 0.;
     
     unsigned int
     t_step            = 0,
@@ -873,11 +860,13 @@ MAST::Examples::StructuralExampleBase::transient_solve() {
         // write the time-step
         if (output) {
             
-            exodus_writer.write_timestep("output.exo",
-                                         *_eq_sys,
-                                         t_step+1,
-                                         nonlin_sys.time);
-            
+            transient_output.write_timestep("output.exo",
+                                            *_eq_sys,
+                                            t_step+1,
+                                            nonlin_sys.time);
+            std::ostringstream oss;
+            oss << "sol_t_" << t_step;
+            _sys->write_out_vector(*_sys->solution, "data", oss.str(), true);
         }
         
         // solve for the time-step
@@ -891,6 +880,112 @@ MAST::Examples::StructuralExampleBase::transient_solve() {
         stress_assembly.update_stress_strain_data(*nonlin_sys.solution);
         stress_assembly.clear_discipline_and_system();
 
+        // update time value
+        tval  += solver.dt;
+        t_step++;
+    }
+    
+    assembly.clear_discipline_and_system();
+}
+
+
+
+
+void
+MAST::Examples::StructuralExampleBase::transient_sensitivity_solve(MAST::Parameter& p) {
+    
+    libmesh_assert(_initialized);
+    
+    bool
+    output     = (*_input)(   "if_output", false);
+    
+    // the output from analysis should have been saved for sensitivity
+    libmesh_assert(output);
+    
+    // create the nonlinear assembly object
+    MAST::TransientAssembly                           assembly;
+    MAST::StructuralTransientAssemblyElemOperations   elem_ops;
+    MAST::StressAssembly                              stress_assembly;
+    MAST::StressStrainOutputBase                      stress_elem_ops;
+    stress_elem_ops.set_participating_elements_to_all();
+    
+    
+    // time solver
+    MAST::SecondOrderNewmarkTransientSolver solver;
+    
+    assembly.attach_discipline_and_system(elem_ops,
+                                          *_discipline,
+                                          solver,
+                                          *_structural_sys);
+    
+    MAST::NonlinearSystem& nonlin_sys = assembly.system();
+    
+    // initialize the solution to zero, or to something that the
+    // user may have provided
+    //this->initialize_sensitivity_solution();
+    
+    // file to write the solution for visualization
+    libMesh::ExodusII_IO exodus_writer(*_mesh);
+    
+    std::ostringstream oss1;
+    oss1 << "output_" << p.name() << ".exo";
+
+    // time solver parameters
+    Real
+    tval     = 0.;
+    
+    unsigned int
+    t_step            = 0,
+    n_steps           = (*_input)("n_steps", 1000);
+    solver.dt         = (*_input)("dt",     1.e-3);
+    
+    
+    // ask the solver to update the initial condition for d2(X)/dt2
+    // This is recommended only for the initial time step, since the time
+    // integration scheme updates the velocity and acceleration at
+    // each subsequent iterate
+    solver.solve_highest_derivative_and_advance_time_step_with_sensitivity(p);
+
+    // loop over time steps
+    while (t_step < n_steps) {
+        
+        libMesh::out
+        << "Time step: " << t_step
+        << " :  t = " << tval
+        << " :  xdot-L2 = " << solver.velocity().l2_norm()
+        << std::endl;
+        
+        // write the time-step
+        if (output) {
+            
+            _sys->solution->swap(solver.solution_sensitivity());
+            exodus_writer.write_timestep(oss1.str(),
+                                         *_eq_sys,
+                                         t_step+1,
+                                         nonlin_sys.time);
+            _sys->solution->swap(solver.solution_sensitivity());
+        }
+
+        std::ostringstream oss2;
+        oss2 << "sol_t_" << t_step;
+        _sys->read_in_vector(*_sys->solution, "data", oss2.str(), true);
+
+        // solve for the sensitivity time-step
+        solver.sensitivity_solve(p);
+        solver.advance_time_step_with_sensitivity();
+        
+        // update stress values
+        stress_assembly.attach_discipline_and_system(stress_elem_ops,
+                                                     *_discipline,
+                                                     *_structural_sys);
+        /*
+         stress_assembly.update_stress_strain_sensitivity_data(solver.solution(),
+         solver.solution_sensitivity(),
+         p,
+         *_structural_sys->get_stress_sys().solution);
+         */
+        stress_assembly.clear_discipline_and_system();
+        
         // update time value
         tval  += solver.dt;
         t_step++;
@@ -1000,25 +1095,16 @@ piston_theory_flutter_sensitivity_solve(MAST::Parameter& p) {
     
     // flutter solver will need velocity to be defined as a parameter for
     // sensitivity analysis
-    _discipline->add_parameter(velocity);
-    _discipline->add_parameter(p);
-    
-    libMesh::ParameterVector params;
-    params.resize(1);
-    params[0]  =  p.ptr();
-    
     // initialize the flutter solver for sensitivity.
     MAST::StructuralFluidInteractionAssembly fsi_assembly;
     fsi_assembly.attach_discipline_and_system(fsi_assembly,
                                               *_discipline,
                                               *_structural_sys);
     _flutter_solver->attach_assembly(fsi_assembly);
-    _flutter_solver->calculate_sensitivity(*_flutter_root, params, 0);
+    _flutter_solver->calculate_sensitivity(*_flutter_root, p);
     fsi_assembly.clear_discipline_and_system();
     _flutter_solver->clear_assembly_object();
     
-    _discipline->remove_parameter(p);
-    _discipline->remove_parameter(velocity);
     //return _flutter_root->V_sens;
 }
 

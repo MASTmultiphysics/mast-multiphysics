@@ -95,7 +95,7 @@ namespace MAST {
          *  solves the sensitivity of system and returns the sensitiivty of
          *  flutter speed
          */
-        Real sensitivity_solve(MAST::Parameter& p);
+        Real sensitivity_solve(const MAST::Parameter& p);
         
         // parameters to control the time step size
         unsigned int _max_time_steps;

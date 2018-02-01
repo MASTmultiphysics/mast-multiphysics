@@ -41,7 +41,6 @@
 #include "libmesh/mesh_generation.h"
 #include "libmesh/exodusII_io.h"
 #include "libmesh/numeric_vector.h"
-#include "libmesh/parameter_vector.h"
 #include "libmesh/getpot.h"
 #include "libmesh/string_to_enum.h"
 #include "libmesh/elem.h"

@@ -90,9 +90,11 @@ namespace MAST {
         
         /*!
          *   performs the element sensitivity calculations over \par elem,
-         *   and returns the element residual sensitivity in \par vec .
+         *   and returns the component of  element residual sensitivity in
+         *   \par f_m and \par f_x.
          */
-        virtual void elem_sensitivity_calculations(RealVectorX& vec);
+        virtual void elem_sensitivity_calculations(RealVectorX& f_m,
+                                                   RealVectorX& f_x);
         
         /*!
          *   calculates \f$ d ([J] \{\Delta X\})/ dX  \f$ over \par elem,

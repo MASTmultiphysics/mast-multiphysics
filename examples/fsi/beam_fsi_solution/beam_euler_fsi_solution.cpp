@@ -54,7 +54,6 @@
 #include "libmesh/mesh_generation.h"
 #include "libmesh/exodusII_io.h"
 #include "libmesh/numeric_vector.h"
-#include "libmesh/parameter_vector.h"
 #include "libmesh/getpot.h"
 #include "libmesh/string_to_enum.h"
 #include "libmesh/nonlinear_solver.h"
@@ -784,7 +783,7 @@ MAST::BeamEulerFSIAnalysis::solve(bool if_write_output,
 
 
 Real
-MAST::BeamEulerFSIAnalysis::sensitivity_solve(MAST::Parameter& p) {
+MAST::BeamEulerFSIAnalysis::sensitivity_solve(const MAST::Parameter& p) {
     
     libmesh_error();
     

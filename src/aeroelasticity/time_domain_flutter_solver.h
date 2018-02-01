@@ -33,6 +33,7 @@ namespace MAST {
     
     // Forward declerations
     class TimeDomainFlutterSolution;
+    class Parameter;
     
     
     /*!
@@ -129,7 +130,7 @@ namespace MAST {
         
         /*!
          *   Calculate the sensitivity of the flutter root with respect to the
-         *   \par i^th parameter in params. If the base solution has a sensitivity
+         *   \par f parameter. If the base solution has a sensitivity
          *   with respect to the parameter, then that should be provided 
          *   through \par dXdp. The sensitivity solution also requires
          *   sensitivity of the eigenvalue wrt velocity, which is 
@@ -139,8 +140,7 @@ namespace MAST {
          */
         virtual void
         calculate_sensitivity(MAST::FlutterRootBase& root,
-                              const libMesh::ParameterVector& params,
-                              const unsigned int i,
+                              const MAST::FunctionBase& f,
                               libMesh::NumericVector<Real>* dXdp = nullptr,
                               libMesh::NumericVector<Real>* dXdV = nullptr);
         
@@ -205,8 +205,7 @@ namespace MAST {
          *    matrices for specified flight velocity \par U_inf.
          */
         void
-        _initialize_matrix_sensitivity_for_param(const libMesh::ParameterVector& params,
-                                                 const unsigned int i,
+        _initialize_matrix_sensitivity_for_param(const MAST::FunctionBase& f,
                                                  const libMesh::NumericVector<Real>& dXdp,
                                                  Real U_inf,
                                                  RealMatrixX& A,
