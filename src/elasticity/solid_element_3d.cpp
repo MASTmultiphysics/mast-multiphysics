@@ -1217,7 +1217,7 @@ initialize_green_lagrange_strain_operator(const unsigned int qp,
     Bmat_nl_w.set_shape_function(2, 2, phi); // dw/dz
 
     
-    // calculate the displacement gradient to create the
+    // calculate the displacement gradient to create the GL strain
     RealVectorX
     ddisp_dx = RealVectorX::Zero(3),
     ddisp_dy = RealVectorX::Zero(3),
@@ -1227,7 +1227,7 @@ initialize_green_lagrange_strain_operator(const unsigned int qp,
     Bmat_nl_y.vector_mult(ddisp_dy, local_disp);  // {du/dy, dv/dy, dw/dy}
     Bmat_nl_z.vector_mult(ddisp_dz, local_disp);  // {du/dz, dv/dz, dw/dz}
 
-    // prepare the deformation gradient matrix
+    // prepare the displacement gradient matrix: F = grad(u)
     RealMatrixX
     F = RealMatrixX::Zero(3,3),
     E = RealMatrixX::Zero(3,3);
