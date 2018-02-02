@@ -38,7 +38,8 @@ MAST::StructuralElement1D::StructuralElement1D(MAST::SystemInitialization& sys,
                                                MAST::AssemblyBase& assembly,
                                                const libMesh::Elem& elem,
                                                const MAST::ElementPropertyCardBase& p):
-MAST::BendingStructuralElem(sys, assembly, elem, p) {
+MAST::BendingStructuralElem(sys, assembly, elem, p),
+_bending_operator(nullptr) {
     
     // now initialize the finite element data structures
     _fe            = assembly.build_fe(_elem).release();
@@ -47,12 +48,17 @@ MAST::BendingStructuralElem(sys, assembly, elem, p) {
     
     MAST::BendingOperatorType bending_model =
     _property.bending_model(_elem, _fe->get_fe_type());
-    _bending_operator = MAST::build_bending_operator(bending_model,
-                                                     *this,
-                                                     _fe->get_qpoints()).release();
+    _bending_operator = MAST::build_bending_operator_1D(bending_model,
+                                                        *this,
+                                                        _fe->get_qpoints()).release();
 }
 
 
+
+MAST::StructuralElement1D::~StructuralElement1D() {
+    
+    if (_bending_operator)   delete _bending_operator;
+}
 
 
 
@@ -112,7 +118,7 @@ initialize_von_karman_strain_operator(const unsigned int qp,
     RealVectorX phi_vec   = RealVectorX::Zero(n_phi);
     
     for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ ) {
-        phi_vec(i_nd) = dphi[i_nd][qp](0);                // dphi/dx
+        phi_vec(i_nd) = dphi[i_nd][qp](0);            // dphi/dx
         dv += phi_vec(i_nd)*_local_sol(n_phi+i_nd);   // dv/dx
         dw += phi_vec(i_nd)*_local_sol(2*n_phi+i_nd); // dw/dx
     }
@@ -198,13 +204,10 @@ MAST::StructuralElement1D::calculate_stress(bool request_derivative,
     MAST::BendingOperatorType bending_model =
     _property.bending_model(_elem, _fe->get_fe_type());
     
-    MAST::BendingOperator*
-    b_ptr = MAST::build_bending_operator(bending_model,
-                                         *this,
-                                         qp_loc).release();
-    
     std::unique_ptr<MAST::BendingOperator1D>
-    bend(dynamic_cast<MAST::BendingOperator1D*>(b_ptr));
+    bend(MAST::build_bending_operator_1D(bending_model,
+                                         *this,
+                                         qp_loc).release());
 
     
     // now that the FE object has been initialized, evaluate the stress values
@@ -253,12 +256,14 @@ MAST::StructuralElement1D::calculate_stress(bool request_derivative,
 
     MAST::FEMOperatorMatrix
     Bmat_mem,
-    Bmat_bend,
+    Bmat_bend_v,
+    Bmat_bend_w,
     Bmat_v_vk,
     Bmat_w_vk;
     
     Bmat_mem.reinit(n1,  _system.n_vars(), n_phi); // three stress-strain components
-    Bmat_bend.reinit(n1, _system.n_vars(), n_phi);
+    Bmat_bend_v.reinit(n1, _system.n_vars(), n_phi);
+    Bmat_bend_w.reinit(n1, _system.n_vars(), n_phi);
     Bmat_v_vk.reinit(n3, _system.n_vars(), n_phi); // only dv/dx and dv/dy
     Bmat_w_vk.reinit(n3, _system.n_vars(), n_phi); // only dw/dx and dw/dy
 
@@ -296,7 +301,7 @@ MAST::StructuralElement1D::calculate_stress(bool request_derivative,
     // get pointers to the temperature, if thermal load is specified
     if (thermal_load) {
         temp_func     =
-        &(thermal_load->get<MAST::FieldFunction<Real> >("temperature")),
+        &(thermal_load->get<MAST::FieldFunction<Real> >("temperature"));
         ref_temp_func =
         &(thermal_load->get<MAST::FieldFunction<Real> >("ref_temperature"));
         alpha_func    =
@@ -357,11 +362,12 @@ MAST::StructuralElement1D::calculate_stress(bool request_derivative,
                                                             qp,
                                                             qp_loc[qp](1) * y/2.+y_off,
                                                             qp_loc[qp](2) * z/2.+z_off,
-                                                            Bmat_bend);
-            Bmat_bend.vector_mult(strain_bend, _local_sol);
-            
-            
-            // add stress due to bending.
+                                                            Bmat_bend_v,
+                                                            Bmat_bend_w);
+            Bmat_bend_v.vector_mult(strain_bend, _local_sol);
+            strain += strain_bend;
+
+            Bmat_bend_w.vector_mult(strain_bend, _local_sol);
             strain += strain_bend;
         }
 
@@ -415,13 +421,15 @@ MAST::StructuralElement1D::calculate_stress(bool request_derivative,
                 }
                 
                 // bending strain
-                Bmat_bend.left_multiply(mat_n1n2, eye);
+                Bmat_bend_v.left_multiply(mat_n1n2, eye);
+                dstrain_dX  +=   mat_n1n2;
+
+                Bmat_bend_w.left_multiply(mat_n1n2, eye);
                 dstrain_dX  +=   mat_n1n2;
             }
-            
             // note: this assumes linear material laws
             dstress_dX  = material_mat * dstrain_dX;
-            
+
             // copy to the 3D structure
             dstress_dX_3D.row(0)  = dstress_dX.row(0);
             dstrain_dX_3D.row(0)  = dstrain_dX.row(0);
@@ -474,11 +482,12 @@ MAST::StructuralElement1D::calculate_stress(bool request_derivative,
                                                                     qp,
                                                                     qp_loc[qp](1) * y/2.+y_off,
                                                                     qp_loc[qp](2) * z/2.+z_off,
-                                                                    Bmat_bend);
-                    Bmat_bend.vector_mult(strain_bend, _local_sol);
-                    
-                    
-                    // add stress due to bending.
+                                                                    Bmat_bend_v,
+                                                                    Bmat_bend_w);
+                    Bmat_bend_v.vector_mult(strain_bend, _local_sol);
+                    dstrain_dp += strain_bend;
+
+                    Bmat_bend_w.vector_mult(strain_bend, _local_sol);
                     dstrain_dp += strain_bend;
                 }
 
@@ -539,8 +548,6 @@ MAST::StructuralElement1D::internal_residual (bool request_jacobian,
                                               RealVectorX& f,
                                               RealMatrixX& jac)
 {
-    MAST::FEMOperatorMatrix Bmat_mem, Bmat_bend, Bmat_v_vk, Bmat_w_vk;
-    
     const std::vector<Real>& JxW           = _fe->get_JxW();
     const std::vector<libMesh::Point>& xyz = _fe->get_xyz();
     const unsigned int
@@ -574,8 +581,16 @@ MAST::StructuralElement1D::internal_residual (bool request_jacobian,
     local_f.setZero();
     local_jac.setZero();
     
+    MAST::FEMOperatorMatrix
+    Bmat_mem,
+    Bmat_bend_v,
+    Bmat_bend_w,
+    Bmat_v_vk,
+    Bmat_w_vk;
+    
     Bmat_mem.reinit(n1, _system.n_vars(), n_phi); // three stress-strain components
-    Bmat_bend.reinit(n1, _system.n_vars(), n_phi);
+    Bmat_bend_v.reinit(n1, _system.n_vars(), n_phi);
+    Bmat_bend_w.reinit(n1, _system.n_vars(), n_phi);
     Bmat_v_vk.reinit(n3, _system.n_vars(), n_phi); // only dv/dx and dv/dy
     Bmat_w_vk.reinit(n3, _system.n_vars(), n_phi); // only dw/dx and dw/dy
     
@@ -601,7 +616,8 @@ MAST::StructuralElement1D::internal_residual (bool request_jacobian,
         _internal_residual_operation(if_bending, if_vk, n2, qp, *_fe, JxW,
                                      request_jacobian, 
                                      local_f, local_jac,
-                                     Bmat_mem, Bmat_bend, Bmat_v_vk, Bmat_w_vk,
+                                     Bmat_mem, Bmat_bend_v, Bmat_bend_w,
+                                     Bmat_v_vk, Bmat_w_vk,
                                      stress, stress_l, vk_dvdxi_mat, vk_dwdxi_mat,
                                      material_A_mat,
                                      material_B_mat, material_D_mat, vec1_n1,
@@ -657,8 +673,6 @@ MAST::StructuralElement1D::internal_residual_sensitivity (bool request_jacobian,
     if (!calculate)
         return false;
     
-    MAST::FEMOperatorMatrix Bmat_mem, Bmat_bend, Bmat_v_vk, Bmat_w_vk;
-    
     const std::vector<Real>& JxW           = _fe->get_JxW();
     const std::vector<libMesh::Point>& xyz = _fe->get_xyz();
     const unsigned int
@@ -692,8 +706,16 @@ MAST::StructuralElement1D::internal_residual_sensitivity (bool request_jacobian,
     local_f.setZero();
     local_jac.setZero();
 
+    MAST::FEMOperatorMatrix
+    Bmat_mem,
+    Bmat_bend_v,
+    Bmat_bend_w,
+    Bmat_v_vk,
+    Bmat_w_vk;
+    
     Bmat_mem.reinit(n1, _system.n_vars(), n_phi); // three stress-strain components
-    Bmat_bend.reinit(n1, _system.n_vars(), n_phi);
+    Bmat_bend_v.reinit(n1, _system.n_vars(), n_phi);
+    Bmat_bend_w.reinit(n1, _system.n_vars(), n_phi);
     Bmat_v_vk.reinit(n3, _system.n_vars(), n_phi); // only dv/dx and dv/dy
     Bmat_w_vk.reinit(n3, _system.n_vars(), n_phi); // only dw/dx and dw/dy
     
@@ -725,7 +747,8 @@ MAST::StructuralElement1D::internal_residual_sensitivity (bool request_jacobian,
         _internal_residual_operation(if_bending, if_vk, n2, qp, *_fe, JxW,
                                      request_jacobian,
                                      local_f, local_jac,
-                                     Bmat_mem, Bmat_bend, Bmat_v_vk, Bmat_w_vk,
+                                     Bmat_mem, Bmat_bend_v, Bmat_bend_w,
+                                     Bmat_v_vk, Bmat_w_vk,
                                      stress, stress_l, vk_dvdxi_mat, vk_dwdxi_mat,
                                      material_A_mat,
                                      material_B_mat, material_D_mat, vec1_n1,
@@ -778,8 +801,6 @@ bool
 MAST::StructuralElement1D::
 internal_residual_jac_dot_state_sensitivity (RealMatrixX& jac) {
     
-    MAST::FEMOperatorMatrix Bmat_mem, Bmat_bend, Bmat_v_vk, Bmat_w_vk;
-    
     const std::vector<Real>& JxW            = _fe->get_JxW();
     const std::vector<libMesh::Point>& xyz  = _fe->get_xyz();
     const unsigned int
@@ -812,8 +833,16 @@ internal_residual_jac_dot_state_sensitivity (RealMatrixX& jac) {
     local_jac.setZero();
 
 
+    MAST::FEMOperatorMatrix
+    Bmat_mem,
+    Bmat_bend_v,
+    Bmat_bend_w,
+    Bmat_v_vk,
+    Bmat_w_vk;
+    
     Bmat_mem.reinit(n1, _system.n_vars(), n_phi); // three stress-strain components
-    Bmat_bend.reinit(n1, _system.n_vars(), n_phi);
+    Bmat_bend_v.reinit(n1, _system.n_vars(), n_phi);
+    Bmat_bend_w.reinit(n1, _system.n_vars(), n_phi);
     Bmat_v_vk.reinit(n3, _system.n_vars(), n_phi); // only dv/dx and dv/dy
     Bmat_w_vk.reinit(n3, _system.n_vars(), n_phi); // only dw/dx and dw/dy
     
@@ -851,13 +880,20 @@ internal_residual_jac_dot_state_sensitivity (RealMatrixX& jac) {
         // get the bending strain operator
         vec2_n1.setZero(); // used to store vk strain, if applicable
         if (if_bending) {
-            _bending_operator->initialize_bending_strain_operator(*_fe, qp, Bmat_bend);
+            _bending_operator->initialize_bending_strain_operator(*_fe, qp,
+                                                                  Bmat_bend_v,
+                                                                  Bmat_bend_w);
             
             //  evaluate the bending stress and add that to the stress vector
             // for evaluation in the nonlinear stress term
-            Bmat_bend.vector_mult(vec2_n1, _local_sol_sens);
+            Bmat_bend_v.vector_mult(vec2_n1, _local_sol_sens);
             vec1_n1 = material_B_mat * vec2_n1;
             stress(0,0)   += vec1_n1(0);
+
+            Bmat_bend_w.vector_mult(vec2_n1, _local_sol_sens);
+            vec1_n1 = material_B_mat * vec2_n1;
+            stress(0,0)   += vec1_n1(0);
+
             
             if (if_vk) {  // get the vonKarman strain operator if needed
                 
@@ -976,24 +1012,38 @@ internal_residual_jac_dot_state_sensitivity (RealMatrixX& jac) {
         mat3 = RealMatrixX::Zero(vk_dvdxi_mat.rows(), n2);
         Bmat_v_vk.left_multiply(mat3, vk_dvdxi_mat_sens);
         mat3 = material_B_mat.transpose() * mat3;
-        Bmat_bend.right_multiply_transpose(mat2_n2n2, mat3);
+        Bmat_bend_v.right_multiply_transpose(mat2_n2n2, mat3);
         local_jac += JxW[qp] * mat2_n2n2;
-        
+        Bmat_bend_w.right_multiply_transpose(mat2_n2n2, mat3);
+        local_jac += JxW[qp] * mat2_n2n2;
+
         // bending - vk: w-displacement
         mat3 = RealMatrixX::Zero(vk_dwdxi_mat.rows(), n2);
         Bmat_w_vk.left_multiply(mat3, vk_dwdxi_mat_sens);
         mat3 = material_B_mat.transpose() * mat3;
-        Bmat_bend.right_multiply_transpose(mat2_n2n2, mat3);
+        Bmat_bend_v.right_multiply_transpose(mat2_n2n2, mat3);
         local_jac += JxW[qp] * mat2_n2n2;
-        
+        Bmat_bend_w.right_multiply_transpose(mat2_n2n2, mat3);
+        local_jac += JxW[qp] * mat2_n2n2;
+
         // vk - bending: v-displacement
-        Bmat_bend.left_multiply(mat1_n1n2, material_B_mat);
+        Bmat_bend_v.left_multiply(mat1_n1n2, material_B_mat);
+        mat3 = vk_dvdxi_mat_sens.transpose() * mat1_n1n2;
+        Bmat_v_vk.right_multiply_transpose(mat2_n2n2, mat3);
+        local_jac += JxW[qp] * mat2_n2n2;
+
+        Bmat_bend_v.left_multiply(mat1_n1n2, material_B_mat);
+        mat3 = vk_dwdxi_mat_sens.transpose() * mat1_n1n2;
+        Bmat_w_vk.right_multiply_transpose(mat2_n2n2, mat3);
+        local_jac += JxW[qp] * mat2_n2n2;
+
+        // vk - bending: w-displacement
+        Bmat_bend_w.left_multiply(mat1_n1n2, material_B_mat);
         mat3 = vk_dvdxi_mat_sens.transpose() * mat1_n1n2;
         Bmat_v_vk.right_multiply_transpose(mat2_n2n2, mat3);
         local_jac += JxW[qp] * mat2_n2n2;
         
-        // vk - bending: w-displacement
-        Bmat_bend.left_multiply(mat1_n1n2, material_B_mat);
+        Bmat_bend_w.left_multiply(mat1_n1n2, material_B_mat);
         mat3 = vk_dwdxi_mat_sens.transpose() * mat1_n1n2;
         Bmat_w_vk.right_multiply_transpose(mat2_n2n2, mat3);
         local_jac += JxW[qp] * mat2_n2n2;
@@ -1020,7 +1070,8 @@ _internal_residual_operation(bool if_bending,
                              RealVectorX& local_f,
                              RealMatrixX& local_jac,
                              MAST::FEMOperatorMatrix& Bmat_mem,
-                             MAST::FEMOperatorMatrix& Bmat_bend,
+                             MAST::FEMOperatorMatrix& Bmat_bend_v,
+                             MAST::FEMOperatorMatrix& Bmat_bend_w,
                              MAST::FEMOperatorMatrix& Bmat_v_vk,
                              MAST::FEMOperatorMatrix& Bmat_w_vk,
                              RealMatrixX& stress,
@@ -1055,17 +1106,22 @@ _internal_residual_operation(bool if_bending,
     // get the bending strain operator
     vec2_n1.setZero(); // used to store vk strain, if applicable
     if (if_bending) {
-        _bending_operator->initialize_bending_strain_operator(fe, qp, Bmat_bend);
+        _bending_operator->initialize_bending_strain_operator(fe, qp,
+                                                              Bmat_bend_v,
+                                                              Bmat_bend_w);
         
         //  evaluate the bending stress and add that to the stress vector
         // for evaluation in the nonlinear stress term
-        Bmat_bend.vector_mult(vec2_n1, _local_sol);
-        // vec2_n1(0) is the longitudinal force due to v-bending
-        // vec2_n1(1) is the longitudinal force due to w-bending
+        Bmat_bend_v.vector_mult(vec2_n1, _local_sol);
         vec1_n1 = material_B_mat * vec2_n1;
         stress_l(0,0) += vec1_n1(0);
         stress(0,0)   += vec1_n1(0);
-        
+
+        Bmat_bend_w.vector_mult(vec2_n1, _local_sol);
+        vec1_n1 = material_B_mat * vec2_n1;
+        stress_l(0,0) += vec1_n1(0);
+        stress(0,0)   += vec1_n1(0);
+
         if (if_vk) {  // get the vonKarman strain operator if needed
             
             this->initialize_von_karman_strain_operator(qp,
@@ -1111,13 +1167,20 @@ _internal_residual_operation(bool if_bending,
         // now coupling with the bending strain
         // B_bend^T [B] B_mem
         vec1_n1 = material_B_mat.transpose() * vec2_n1;
-        Bmat_bend.vector_mult_transpose(vec3_n2, vec1_n1);
+        Bmat_bend_v.vector_mult_transpose(vec3_n2, vec1_n1);
         local_f += JxW[qp] * vec3_n2;
-        
+        Bmat_bend_w.vector_mult_transpose(vec3_n2, vec1_n1);
+        local_f += JxW[qp] * vec3_n2;
+
         // now bending stress
-        Bmat_bend.vector_mult(vec2_n1, _local_sol);
+        Bmat_bend_v.vector_mult(vec2_n1, _local_sol);
         vec1_n1 = material_D_mat * vec2_n1;
-        Bmat_bend.vector_mult_transpose(vec3_n2, vec1_n1);
+        Bmat_bend_v.vector_mult_transpose(vec3_n2, vec1_n1);
+        local_f += JxW[qp] * vec3_n2;
+
+        Bmat_bend_w.vector_mult(vec2_n1, _local_sol);
+        vec1_n1 = material_D_mat * vec2_n1;
+        Bmat_bend_w.vector_mult_transpose(vec3_n2, vec1_n1);
         local_f += JxW[qp] * vec3_n2;
     }
     
@@ -1216,24 +1279,38 @@ _internal_residual_operation(bool if_bending,
                 mat3 = RealMatrixX::Zero(vk_dvdxi_mat.rows(), n2);
                 Bmat_v_vk.left_multiply(mat3, vk_dvdxi_mat);
                 mat3 = material_B_mat.transpose() * mat3;
-                Bmat_bend.right_multiply_transpose(mat2_n2n2, mat3);
+                Bmat_bend_v.right_multiply_transpose(mat2_n2n2, mat3);
                 local_jac += JxW[qp] * mat2_n2n2;
-                
+                Bmat_bend_w.right_multiply_transpose(mat2_n2n2, mat3);
+                local_jac += JxW[qp] * mat2_n2n2;
+
                 // bending - vk: w-displacement
                 mat3 = RealMatrixX::Zero(vk_dwdxi_mat.rows(), n2);
                 Bmat_w_vk.left_multiply(mat3, vk_dwdxi_mat);
                 mat3 = material_B_mat.transpose() * mat3;
-                Bmat_bend.right_multiply_transpose(mat2_n2n2, mat3);
+                Bmat_bend_v.right_multiply_transpose(mat2_n2n2, mat3);
+                local_jac += JxW[qp] * mat2_n2n2;
+                Bmat_bend_w.right_multiply_transpose(mat2_n2n2, mat3);
                 local_jac += JxW[qp] * mat2_n2n2;
                 
                 // vk - bending: v-displacement
-                Bmat_bend.left_multiply(mat1_n1n2, material_B_mat);
+                Bmat_bend_v.left_multiply(mat1_n1n2, material_B_mat);
                 mat3 = vk_dvdxi_mat.transpose() * mat1_n1n2;
                 Bmat_v_vk.right_multiply_transpose(mat2_n2n2, mat3);
                 local_jac += JxW[qp] * mat2_n2n2;
-                
+
+                Bmat_bend_v.left_multiply(mat1_n1n2, material_B_mat);
+                mat3 = vk_dwdxi_mat.transpose() * mat1_n1n2;
+                Bmat_w_vk.right_multiply_transpose(mat2_n2n2, mat3);
+                local_jac += JxW[qp] * mat2_n2n2;
+
                 // vk - bending: w-displacement
-                Bmat_bend.left_multiply(mat1_n1n2, material_B_mat);
+                Bmat_bend_w.left_multiply(mat1_n1n2, material_B_mat);
+                mat3 = vk_dvdxi_mat.transpose() * mat1_n1n2;
+                Bmat_v_vk.right_multiply_transpose(mat2_n2n2, mat3);
+                local_jac += JxW[qp] * mat2_n2n2;
+
+                Bmat_bend_w.left_multiply(mat1_n1n2, material_B_mat);
                 mat3 = vk_dwdxi_mat.transpose() * mat1_n1n2;
                 Bmat_w_vk.right_multiply_transpose(mat2_n2n2, mat3);
                 local_jac += JxW[qp] * mat2_n2n2;
@@ -1242,17 +1319,27 @@ _internal_residual_operation(bool if_bending,
             // bending - membrane
             mat3 = material_B_mat.transpose();
             Bmat_mem.left_multiply(mat1_n1n2, mat3);
-            Bmat_bend.right_multiply_transpose(mat2_n2n2, mat1_n1n2);
+            Bmat_bend_v.right_multiply_transpose(mat2_n2n2, mat1_n1n2);
             local_jac += JxW[qp] * mat2_n2n2;
-            
+            Bmat_bend_w.right_multiply_transpose(mat2_n2n2, mat1_n1n2);
+            local_jac += JxW[qp] * mat2_n2n2;
+
             // membrane - bending
-            Bmat_bend.left_multiply(mat1_n1n2, material_B_mat);
+            Bmat_bend_v.left_multiply(mat1_n1n2, material_B_mat);
             Bmat_mem.right_multiply_transpose(mat2_n2n2, mat1_n1n2);
             local_jac += JxW[qp] * mat2_n2n2;
-            
+
+            Bmat_bend_w.left_multiply(mat1_n1n2, material_B_mat);
+            Bmat_mem.right_multiply_transpose(mat2_n2n2, mat1_n1n2);
+            local_jac += JxW[qp] * mat2_n2n2;
+
             // bending - bending
-            Bmat_bend.left_multiply(mat1_n1n2, material_D_mat);
-            Bmat_bend.right_multiply_transpose(mat2_n2n2, mat1_n1n2);
+            Bmat_bend_v.left_multiply(mat1_n1n2, material_D_mat);
+            Bmat_bend_v.right_multiply_transpose(mat2_n2n2, mat1_n1n2);
+            local_jac += JxW[qp] * mat2_n2n2;
+
+            Bmat_bend_w.left_multiply(mat1_n1n2, material_D_mat);
+            Bmat_bend_w.right_multiply_transpose(mat2_n2n2, mat1_n1n2);
             local_jac += JxW[qp] * mat2_n2n2;
         }
     }
@@ -1271,7 +1358,8 @@ _linearized_geometric_stiffness_sensitivity_with_static_solution
  const std::vector<Real>& JxW,
  RealMatrixX& local_jac,
  MAST::FEMOperatorMatrix& Bmat_mem,
- MAST::FEMOperatorMatrix& Bmat_bend,
+ MAST::FEMOperatorMatrix& Bmat_bend_v,
+ MAST::FEMOperatorMatrix& Bmat_bend_w,
  MAST::FEMOperatorMatrix& Bmat_v_vk,
  MAST::FEMOperatorMatrix& Bmat_w_vk,
  RealMatrixX& stress_l,
@@ -1286,7 +1374,9 @@ _linearized_geometric_stiffness_sensitivity_with_static_solution
  RealMatrixX& mat3) {
     
     this->initialize_direct_strain_operator(qp, fe, Bmat_mem);
-    _bending_operator->initialize_bending_strain_operator(fe, qp, Bmat_bend);
+    _bending_operator->initialize_bending_strain_operator(fe, qp,
+                                                          Bmat_bend_v,
+                                                          Bmat_bend_w);
     
     // first handle constant throught the thickness stresses: membrane and vonKarman
     Bmat_mem.vector_mult(vec1_n1, _local_sol);
@@ -1353,24 +1443,38 @@ _linearized_geometric_stiffness_sensitivity_with_static_solution
     mat3 = RealMatrixX::Zero(vk_dvdxi_mat.rows(), n2);
     Bmat_v_vk.left_multiply(mat3, vk_dvdxi_mat);
     mat3 = material_B_mat.transpose() * mat3;
-    Bmat_bend.right_multiply_transpose(mat2_n2n2, mat3);
+    Bmat_bend_v.right_multiply_transpose(mat2_n2n2, mat3);
     local_jac += JxW[qp] * mat2_n2n2;
-    
+    Bmat_bend_w.right_multiply_transpose(mat2_n2n2, mat3);
+    local_jac += JxW[qp] * mat2_n2n2;
+
     // bending - vk: w-displacement
     mat3 = RealMatrixX::Zero(vk_dwdxi_mat.rows(), n2);
     Bmat_w_vk.left_multiply(mat3, vk_dwdxi_mat);
     mat3 = material_B_mat.transpose() * mat3;
-    Bmat_bend.right_multiply_transpose(mat2_n2n2, mat3);
+    Bmat_bend_v.right_multiply_transpose(mat2_n2n2, mat3);
     local_jac += JxW[qp] * mat2_n2n2;
-    
+    Bmat_bend_w.right_multiply_transpose(mat2_n2n2, mat3);
+    local_jac += JxW[qp] * mat2_n2n2;
+
     // vk - bending: v-displacement
-    Bmat_bend.left_multiply(mat1_n1n2, material_B_mat);
+    Bmat_bend_v.left_multiply(mat1_n1n2, material_B_mat);
     mat3 = vk_dvdxi_mat.transpose() * mat1_n1n2;
     Bmat_v_vk.right_multiply_transpose(mat2_n2n2, mat3);
     local_jac += JxW[qp] * mat2_n2n2;
-    
+
+    Bmat_bend_v.left_multiply(mat1_n1n2, material_B_mat);
+    mat3 = vk_dwdxi_mat.transpose() * mat1_n1n2;
+    Bmat_w_vk.right_multiply_transpose(mat2_n2n2, mat3);
+    local_jac += JxW[qp] * mat2_n2n2;
+
     // vk - bending: w-displacement
-    Bmat_bend.left_multiply(mat1_n1n2, material_B_mat);
+    Bmat_bend_w.left_multiply(mat1_n1n2, material_B_mat);
+    mat3 = vk_dvdxi_mat.transpose() * mat1_n1n2;
+    Bmat_v_vk.right_multiply_transpose(mat2_n2n2, mat3);
+    local_jac += JxW[qp] * mat2_n2n2;
+
+    Bmat_bend_w.left_multiply(mat1_n1n2, material_B_mat);
     mat3 = vk_dwdxi_mat.transpose() * mat1_n1n2;
     Bmat_w_vk.right_multiply_transpose(mat2_n2n2, mat3);
     local_jac += JxW[qp] * mat2_n2n2;
@@ -1409,8 +1513,6 @@ MAST::StructuralElement1D::prestress_residual (bool request_jacobian,
     if (!_property.if_prestressed())
         return false;
     
-    MAST::FEMOperatorMatrix Bmat_mem, Bmat_bend, Bmat_v_vk, Bmat_w_vk;
-    
     const std::vector<Real>& JxW           = _fe->get_JxW();
     const std::vector<libMesh::Point>& xyz = _fe->get_xyz();
     const unsigned int
@@ -1439,8 +1541,16 @@ MAST::StructuralElement1D::prestress_residual (bool request_jacobian,
     local_f.setZero();
     local_jac.setZero();
     
+    MAST::FEMOperatorMatrix
+    Bmat_mem,
+    Bmat_bend_v,
+    Bmat_bend_w,
+    Bmat_v_vk,
+    Bmat_w_vk;
+    
     Bmat_mem.reinit(n1, _system.n_vars(), n_phi); // three stress-strain components
-    Bmat_bend.reinit(n1, _system.n_vars(), n_phi);
+    Bmat_bend_v.reinit(n1, _system.n_vars(), n_phi);
+    Bmat_bend_w.reinit(n1, _system.n_vars(), n_phi);
     Bmat_v_vk.reinit(n3, _system.n_vars(), n_phi); // only dv/dx and dv/dy
     Bmat_w_vk.reinit(n3, _system.n_vars(), n_phi); // only dw/dx and dw/dy
     
@@ -1464,7 +1574,9 @@ MAST::StructuralElement1D::prestress_residual (bool request_jacobian,
         // get the bending strain operator if needed
         vec2_n1.setZero(); // used to store vk strain, if applicable
         if (if_bending) {
-            _bending_operator->initialize_bending_strain_operator(*_fe, qp, Bmat_bend);
+            _bending_operator->initialize_bending_strain_operator(*_fe, qp,
+                                                                  Bmat_bend_v,
+                                                                  Bmat_bend_w);
             
             if (if_vk)  // get the vonKarman strain operator if needed
                 this->initialize_von_karman_strain_operator(qp,
@@ -1496,7 +1608,9 @@ MAST::StructuralElement1D::prestress_residual (bool request_jacobian,
             }
             
             // now coupling with the bending strain
-            Bmat_bend.vector_mult_transpose(vec3_n2, prestress_vec_B);
+            Bmat_bend_v.vector_mult_transpose(vec3_n2, prestress_vec_B);
+            local_f += JxW[qp] * vec3_n2; // epsilon_bend * sigma_0
+            Bmat_bend_w.vector_mult_transpose(vec3_n2, prestress_vec_B);
             local_f += JxW[qp] * vec3_n2; // epsilon_bend * sigma_0
         }
         
@@ -1541,8 +1655,6 @@ MAST::StructuralElement1D::prestress_residual_sensitivity (bool request_jacobian
     if (!_property.if_prestressed())
         return false;
     
-    MAST::FEMOperatorMatrix Bmat_mem, Bmat_bend, Bmat_v_vk, Bmat_w_vk;
-    
     const std::vector<Real>& JxW           = _fe->get_JxW();
     const std::vector<libMesh::Point>& xyz = _fe->get_xyz();
     const unsigned int
@@ -1571,8 +1683,16 @@ MAST::StructuralElement1D::prestress_residual_sensitivity (bool request_jacobian
     local_f.setZero();
     local_jac.setZero();
 
+    MAST::FEMOperatorMatrix
+    Bmat_mem,
+    Bmat_bend_v,
+    Bmat_bend_w,
+    Bmat_v_vk,
+    Bmat_w_vk;
+    
     Bmat_mem.reinit(n1, _system.n_vars(), n_phi); // three stress-strain components
-    Bmat_bend.reinit(n1, _system.n_vars(), n_phi);
+    Bmat_bend_v.reinit(n1, _system.n_vars(), n_phi);
+    Bmat_bend_w.reinit(n1, _system.n_vars(), n_phi);
     Bmat_v_vk.reinit(n3, _system.n_vars(), n_phi); // only dv/dx and dv/dy
     Bmat_w_vk.reinit(n3, _system.n_vars(), n_phi); // only dw/dx and dw/dy
     
@@ -1598,7 +1718,9 @@ MAST::StructuralElement1D::prestress_residual_sensitivity (bool request_jacobian
         // get the bending strain operator if needed
         vec2_n1.setZero(); // used to store vk strain, if applicable
         if (if_bending) {
-            _bending_operator->initialize_bending_strain_operator(*_fe, qp, Bmat_bend);
+            _bending_operator->initialize_bending_strain_operator(*_fe, qp,
+                                                                  Bmat_bend_v,
+                                                                  Bmat_bend_w);
             
             if (if_vk)  // get the vonKarman strain operator if needed
                 this->initialize_von_karman_strain_operator(qp,
@@ -1630,7 +1752,9 @@ MAST::StructuralElement1D::prestress_residual_sensitivity (bool request_jacobian
             }
             
             // now coupling with the bending strain
-            Bmat_bend.vector_mult_transpose(vec3_n2, prestress_vec_B);
+            Bmat_bend_v.vector_mult_transpose(vec3_n2, prestress_vec_B);
+            local_f += JxW[qp] * vec3_n2; // epsilon_bend * sigma_0
+            Bmat_bend_w.vector_mult_transpose(vec3_n2, prestress_vec_B);
             local_f += JxW[qp] * vec3_n2; // epsilon_bend * sigma_0
         }
         
@@ -1841,8 +1965,6 @@ MAST::StructuralElement1D::thermal_residual (bool request_jacobian,
                                              RealMatrixX& jac,
                                              MAST::BoundaryConditionBase& bc)
 {
-    MAST::FEMOperatorMatrix Bmat_mem, Bmat_bend, Bmat_v_vk, Bmat_w_vk;
-    
     const std::vector<Real>& JxW           = _fe->get_JxW();
     const std::vector<libMesh::Point>& xyz = _fe->get_xyz();
     const unsigned int
@@ -1874,8 +1996,16 @@ MAST::StructuralElement1D::thermal_residual (bool request_jacobian,
     local_f.setZero();
     local_jac.setZero();
 
+    MAST::FEMOperatorMatrix
+    Bmat_mem,
+    Bmat_bend_v,
+    Bmat_bend_w,
+    Bmat_v_vk,
+    Bmat_w_vk;
+    
     Bmat_mem.reinit(n1, _system.n_vars(), n_phi); // three stress-strain components
-    Bmat_bend.reinit(n1, _system.n_vars(), n_phi);
+    Bmat_bend_v.reinit(n1, _system.n_vars(), n_phi);
+    Bmat_bend_w.reinit(n1, _system.n_vars(), n_phi);
     Bmat_v_vk.reinit(n3, _system.n_vars(), n_phi); // only dv/dx and dv/dy
     Bmat_w_vk.reinit(n3, _system.n_vars(), n_phi); // only dw/dx and dw/dy
     
@@ -1916,10 +2046,14 @@ MAST::StructuralElement1D::thermal_residual (bool request_jacobian,
         
         if (if_bending) {
             // bending strain
-            _bending_operator->initialize_bending_strain_operator(*_fe, qp, Bmat_bend);
-            Bmat_bend.vector_mult_transpose(vec3_n2, vec2_n1);
+            _bending_operator->initialize_bending_strain_operator(*_fe, qp,
+                                                                  Bmat_bend_v,
+                                                                  Bmat_bend_w);
+            Bmat_bend_v.vector_mult_transpose(vec3_n2, vec2_n1);
             local_f += JxW[qp] * vec3_n2;
-            
+            Bmat_bend_w.vector_mult_transpose(vec3_n2, vec2_n1);
+            local_f += JxW[qp] * vec3_n2;
+
             // von Karman strain
             if (if_vk) {
                 // get the vonKarman strain operator if needed
@@ -1980,8 +2114,6 @@ MAST::StructuralElement1D::thermal_residual_sensitivity (bool request_jacobian,
                                                          RealMatrixX& jac,
                                                          MAST::BoundaryConditionBase& bc)
 {
-    MAST::FEMOperatorMatrix Bmat_mem, Bmat_bend, Bmat_v_vk, Bmat_w_vk;
-    
     const std::vector<Real>& JxW           = _fe->get_JxW();
     const std::vector<libMesh::Point>& xyz = _fe->get_xyz();
     const unsigned int
@@ -2013,8 +2145,16 @@ MAST::StructuralElement1D::thermal_residual_sensitivity (bool request_jacobian,
     delta_t      = RealVectorX::Zero(1),
     delta_t_sens = RealVectorX::Zero(1);
     
+    MAST::FEMOperatorMatrix
+    Bmat_mem,
+    Bmat_bend_v,
+    Bmat_bend_w,
+    Bmat_v_vk,
+    Bmat_w_vk;
+    
     Bmat_mem.reinit(n1, _system.n_vars(), n_phi); // three stress-strain components
-    Bmat_bend.reinit(n1, _system.n_vars(), n_phi);
+    Bmat_bend_v.reinit(n1, _system.n_vars(), n_phi);
+    Bmat_bend_w.reinit(n1, _system.n_vars(), n_phi);
     Bmat_v_vk.reinit(n3, _system.n_vars(), n_phi); // only dv/dx and dv/dy
     Bmat_w_vk.reinit(n3, _system.n_vars(), n_phi); // only dw/dx and dw/dy
     
@@ -2070,10 +2210,14 @@ MAST::StructuralElement1D::thermal_residual_sensitivity (bool request_jacobian,
         
         if (if_bending) {
             // bending strain
-            _bending_operator->initialize_bending_strain_operator(*_fe, qp, Bmat_bend);
-            Bmat_bend.vector_mult_transpose(vec3_n2, vec2_n1);
+            _bending_operator->initialize_bending_strain_operator(*_fe, qp,
+                                                                  Bmat_bend_v,
+                                                                  Bmat_bend_w);
+            Bmat_bend_v.vector_mult_transpose(vec3_n2, vec2_n1);
             local_f += JxW[qp] * vec3_n2;
-            
+            Bmat_bend_w.vector_mult_transpose(vec3_n2, vec2_n1);
+            local_f += JxW[qp] * vec3_n2;
+
             // von Karman strain
             if (if_vk) {
                 // get the vonKarman strain operator if needed

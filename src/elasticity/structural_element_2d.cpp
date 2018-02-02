@@ -39,7 +39,8 @@ StructuralElement2D(MAST::SystemInitialization& sys,
                     MAST::AssemblyBase& assembly,
                     const libMesh::Elem& elem,
                     const MAST::ElementPropertyCardBase& p):
-MAST::BendingStructuralElem(sys, assembly, elem, p) {
+MAST::BendingStructuralElem(sys, assembly, elem, p),
+_bending_operator(nullptr) {
 
     // now initialize the finite element data structures
     _fe            = assembly.build_fe(_elem).release();
@@ -48,13 +49,17 @@ MAST::BendingStructuralElem(sys, assembly, elem, p) {
 
     MAST::BendingOperatorType bending_model =
     _property.bending_model(_elem, _fe->get_fe_type());
-    _bending_operator = MAST::build_bending_operator(bending_model,
-                                                     *this,
-                                                     _fe->get_qpoints()).release();
+    _bending_operator = MAST::build_bending_operator_2D(bending_model,
+                                                        *this,
+                                                        _fe->get_qpoints()).release();
 }
 
 
 
+MAST::StructuralElement2D::~StructuralElement2D() {
+    
+    if (_bending_operator)   delete _bending_operator;
+}
 
 
 
@@ -202,16 +207,12 @@ MAST::StructuralElement2D::calculate_stress(bool request_derivative,
     MAST::BendingOperatorType bending_model =
     _property.bending_model(_elem, _fe->get_fe_type());
     
-    MAST::BendingOperator*
-    b_ptr = MAST::build_bending_operator(bending_model,
-                                         *this,
-                                         qp_loc).release();
-    
     std::unique_ptr<MAST::BendingOperator2D>
-    bend(dynamic_cast<MAST::BendingOperator2D*>(b_ptr));
+    bend(MAST::build_bending_operator_2D(bending_model,
+                                         *this,
+                                         qp_loc).release());
     
     // now that the FE object has been initialized, evaluate the stress values
-    
     
     const std::vector<Real> &JxW              = fe->get_JxW();
     const std::vector<libMesh::Point>& xyz    = fe->get_xyz();
@@ -294,7 +295,7 @@ MAST::StructuralElement2D::calculate_stress(bool request_derivative,
     // get pointers to the temperature, if thermal load is specified
     if (thermal_load) {
         temp_func     =
-        &(thermal_load->get<MAST::FieldFunction<Real> >("temperature")),
+        &(thermal_load->get<MAST::FieldFunction<Real> >("temperature"));
         ref_temp_func =
         &(thermal_load->get<MAST::FieldFunction<Real> >("ref_temperature"));
         alpha_func    =

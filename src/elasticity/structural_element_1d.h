@@ -29,6 +29,7 @@
 namespace MAST {
     
     // Forward declerations
+    class BendingOperator1D;
     class BoundaryConditionBase;
     class FEMOperatorMatrix;
     
@@ -41,6 +42,10 @@ namespace MAST {
                             MAST::AssemblyBase& assembly,
                             const libMesh::Elem& elem,
                             const MAST::ElementPropertyCardBase& p);
+        
+        
+        virtual ~StructuralElement1D();
+        
         
         /*!
          *    row dimension of the direct strain matrix, also used for the
@@ -302,7 +307,8 @@ namespace MAST {
                                                   RealVectorX& local_f,
                                                   RealMatrixX& local_jac,
                                                   MAST::FEMOperatorMatrix& Bmat_mem,
-                                                  MAST::FEMOperatorMatrix& Bmat_bend,
+                                                  MAST::FEMOperatorMatrix& Bmat_bend_v,
+                                                  MAST::FEMOperatorMatrix& Bmat_bend_w,
                                                   MAST::FEMOperatorMatrix& Bmat_v_vk,
                                                   MAST::FEMOperatorMatrix& Bmat_w_vk,
                                                   RealMatrixX& stress,
@@ -333,7 +339,8 @@ namespace MAST {
          const std::vector<Real>& JxW,
          RealMatrixX& local_jac,
          MAST::FEMOperatorMatrix& Bmat_mem,
-         MAST::FEMOperatorMatrix& Bmat_bend,
+         MAST::FEMOperatorMatrix& Bmat_bend_v,
+         MAST::FEMOperatorMatrix& Bmat_bend_w,
          MAST::FEMOperatorMatrix& Bmat_v_vk,
          MAST::FEMOperatorMatrix& Bmat_w_vk,
          RealMatrixX& stress_l,
@@ -359,6 +366,13 @@ namespace MAST {
          */
         void _convert_prestress_B_mat_to_vector(const RealMatrixX& mat,
                                                 RealVectorX& vec) const;
+
+        
+        /*!
+         *    bending operator used for this elmeent
+         */
+        MAST::BendingOperator1D *_bending_operator;
+        
 
     };
 }

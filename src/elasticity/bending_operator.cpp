@@ -42,12 +42,12 @@ MAST::BendingOperator::~BendingOperator()
 
 
 
-std::unique_ptr<MAST::BendingOperator>
-MAST::build_bending_operator(MAST::BendingOperatorType type,
-                             MAST::StructuralElementBase& elem,
-                             const std::vector<libMesh::Point>& pts) {
+std::unique_ptr<MAST::BendingOperator1D>
+MAST::build_bending_operator_1D(MAST::BendingOperatorType type,
+                                MAST::StructuralElementBase& elem,
+                                const std::vector<libMesh::Point>& pts) {
     
-    std::unique_ptr<MAST::BendingOperator> rval;
+    std::unique_ptr<MAST::BendingOperator1D> rval;
     
     switch (type) {
         case MAST::BERNOULLI:
@@ -58,6 +58,28 @@ MAST::build_bending_operator(MAST::BendingOperatorType type,
             rval.reset(new MAST::TimoshenkoBendingOperator(elem));
             break;
             
+        case MAST::NO_BENDING:
+            // nothing to be done
+            break;
+            
+        default:
+            libmesh_error(); // should not get here
+            break;
+    }
+    
+    return rval;
+}
+
+
+std::unique_ptr<MAST::BendingOperator2D>
+MAST::build_bending_operator_2D(MAST::BendingOperatorType type,
+                                MAST::StructuralElementBase& elem,
+                                const std::vector<libMesh::Point>& pts) {
+    
+    std::unique_ptr<MAST::BendingOperator2D> rval;
+    
+    switch (type) {
+
         case MAST::DKT:
             rval.reset(new MAST::DKTBendingOperator(elem, pts));
             break;

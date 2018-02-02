@@ -28,7 +28,6 @@
 namespace MAST {
     
     // Forward declerations
-    class BendingOperator;
     class BoundaryConditionBase;
     class FEMOperatorMatrix;
     
@@ -75,12 +74,6 @@ namespace MAST {
             // should be implemented in 1D and 2D elements
             return _Tmat;
         }
-
-        /*!
-         *    bending operator used for this elmeent
-         */
-        MAST::BendingOperator *_bending_operator;
-        
         
         /*!
          *   Transformation matrix to be used for various operations

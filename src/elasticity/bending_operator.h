@@ -66,14 +66,6 @@ namespace MAST {
         virtual bool include_transverse_shear_energy() const = 0;
         
         /*!
-         *   initialze the bending strain operator for the specified quadrature point
-         */
-        virtual void
-        initialize_bending_strain_operator (const MAST::FEBase& fe,
-                                            const unsigned int qp,
-                                            MAST::FEMOperatorMatrix& Bmat) = 0;
-        
-        /*!
          *   calculate the transverse shear component for the element
          */
         virtual void
@@ -114,11 +106,21 @@ namespace MAST {
          *   initialze the bending strain operator for the specified quadrature point
          */
         virtual void
+        initialize_bending_strain_operator (const MAST::FEBase& fe,
+                                            const unsigned int qp,
+                                            MAST::FEMOperatorMatrix& Bmat_v,
+                                            MAST::FEMOperatorMatrix& Bmat_w) = 0;
+
+        /*!
+         *   initialze the bending strain operator for the specified quadrature point
+         */
+        virtual void
         initialize_bending_strain_operator_for_yz (const MAST::FEBase& fe,
                                                    const unsigned int qp,
                                                    const Real y,
                                                    const Real z,
-                                                   MAST::FEMOperatorMatrix& Bmat) = 0;
+                                                   MAST::FEMOperatorMatrix& Bmat_v,
+                                                   MAST::FEMOperatorMatrix& Bmat_w) = 0;
         
     };
     
@@ -136,6 +138,14 @@ namespace MAST {
          *   initialze the bending strain operator for the specified quadrature point
          */
         virtual void
+        initialize_bending_strain_operator (const MAST::FEBase& fe,
+                                            const unsigned int qp,
+                                            MAST::FEMOperatorMatrix& Bmat) = 0;
+
+        /*!
+         *   initialze the bending strain operator for the specified quadrature point
+         */
+        virtual void
         initialize_bending_strain_operator_for_z (const MAST::FEBase& fe,
                                                   const unsigned int qp,
                                                   const Real z,
@@ -147,10 +157,15 @@ namespace MAST {
     /*!
      *   builds a bending operator and returns it in a smart-pointer
      */
-    std::unique_ptr<MAST::BendingOperator>
-    build_bending_operator(MAST::BendingOperatorType type,
-                           MAST::StructuralElementBase& elem,
-                           const std::vector<libMesh::Point>& pts);
+    std::unique_ptr<MAST::BendingOperator1D>
+    build_bending_operator_1D(MAST::BendingOperatorType type,
+                              MAST::StructuralElementBase& elem,
+                              const std::vector<libMesh::Point>& pts);
+
+    std::unique_ptr<MAST::BendingOperator2D>
+    build_bending_operator_2D(MAST::BendingOperatorType type,
+                              MAST::StructuralElementBase& elem,
+                              const std::vector<libMesh::Point>& pts);
 
 }
 

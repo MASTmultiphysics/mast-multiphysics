@@ -36,7 +36,6 @@ MAST::StructuralElementBase(sys, assembly, elem, p) {
 
 MAST::BendingStructuralElem::~BendingStructuralElem() {
     
-    if (_bending_operator)   delete _bending_operator;
 }
 
 

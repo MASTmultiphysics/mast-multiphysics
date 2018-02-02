@@ -58,7 +58,8 @@ namespace MAST {
         virtual void
         initialize_bending_strain_operator (const MAST::FEBase& fe,
                                             const unsigned int qp,
-                                            MAST::FEMOperatorMatrix& Bmat);
+                                            MAST::FEMOperatorMatrix& Bmat_v,
+                                            MAST::FEMOperatorMatrix& Bmat_w);
         
         /*!
          *    initializes the bending strain operator for the specified quadrature
@@ -69,7 +70,8 @@ namespace MAST {
                                                   const unsigned int qp,
                                                   const Real y,
                                                   const Real z,
-                                                  MAST::FEMOperatorMatrix& Bmat_bend);
+                                                  MAST::FEMOperatorMatrix& Bmat_bend_v,
+                                                  MAST::FEMOperatorMatrix& Bmat_bend_w);
         
         /*!
          *   calculate the transverse shear component for the element
@@ -96,9 +98,12 @@ inline void
 MAST::TimoshenkoBendingOperator::
 initialize_bending_strain_operator(const MAST::FEBase& fe,
                                    const unsigned int qp,
-                                   MAST::FEMOperatorMatrix& Bmat_bend) {
+                                   MAST::FEMOperatorMatrix& Bmat_bend_v,
+                                   MAST::FEMOperatorMatrix& Bmat_bend_w) {
     
-    this->initialize_bending_strain_operator_for_yz(fe, qp, 1., 1., Bmat_bend);
+    this->initialize_bending_strain_operator_for_yz(fe, qp, 1., 1.,
+                                                    Bmat_bend_v,
+                                                    Bmat_bend_w);
 }
 
 
@@ -110,7 +115,8 @@ initialize_bending_strain_operator_for_yz(const MAST::FEBase& fe,
                                           const unsigned int qp,
                                           const Real y,
                                           const Real z,
-                                          MAST::FEMOperatorMatrix& Bmat_bend) {
+                                          MAST::FEMOperatorMatrix& Bmat_bend_v,
+                                          MAST::FEMOperatorMatrix& Bmat_bend_w) {
     
     const std::vector<std::vector<libMesh::RealVectorValue> >& dphi = fe.get_dphi();
     const std::vector<std::vector<Real> >& phi = fe.get_phi();
@@ -122,12 +128,12 @@ initialize_bending_strain_operator_for_yz(const MAST::FEBase& fe,
     for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
         phi_vec(i_nd) = dphi[i_nd][qp](0);  // dphi/dx
     phi_vec *= -y;
-    Bmat_bend.set_shape_function(0, 5, phi_vec); // v-bending: thetaz
+    Bmat_bend_v.set_shape_function(0, 5, phi_vec); // v-bending: thetaz
     
     for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
         phi_vec(i_nd) = dphi[i_nd][qp](0);  // dphi/dx
     phi_vec *= z;
-    Bmat_bend.set_shape_function(1, 4, phi_vec); // w-bending : thetay
+    Bmat_bend_w.set_shape_function(0, 4, phi_vec); // w-bending : thetay
 }
 
 
@@ -168,8 +174,11 @@ calculate_transverse_shear_residual(bool request_jacobian,
     mat4_2n2   = RealMatrixX::Zero(2,n2);
     
 
-    FEMOperatorMatrix Bmat_trans;
-    Bmat_trans.reinit(2, 6, n_phi); // only two shear stresses
+    FEMOperatorMatrix
+    Bmat_trans_v,
+    Bmat_trans_w;
+    Bmat_trans_v.reinit(2, 6, n_phi); // one shear stress for v-bending
+    Bmat_trans_w.reinit(2, 6, n_phi); // one shear stress for w-bending
     
     std::unique_ptr<MAST::FieldFunction<RealMatrixX > >
     mat_stiff = property.transverse_shear_stiffness_matrix(_structural_elem);
@@ -189,26 +198,35 @@ calculate_transverse_shear_residual(bool request_jacobian,
         // initialize the strain operator
         for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
             phi_vec(i_nd) = dphi[i_nd][qp](0);  // dphi/dx
-        Bmat_trans.set_shape_function(0, 1, phi_vec); // gamma-xy:  v
-        Bmat_trans.set_shape_function(1, 2, phi_vec); // gamma-xz : w
+        Bmat_trans_v.set_shape_function(0, 1, phi_vec); // gamma-xy:  v
+        Bmat_trans_w.set_shape_function(0, 2, phi_vec); // gamma-xz : w
         
         for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
             phi_vec(i_nd) = phi[i_nd][qp];  // phi
-        Bmat_trans.set_shape_function(1, 4, phi_vec); // gamma-xy:  thetay
+        Bmat_trans_w.set_shape_function(0, 4, phi_vec); // gamma-xz:  thetay
         phi_vec *= -1.0;
-        Bmat_trans.set_shape_function(0, 5, phi_vec); // gamma-xz : thetaz
+        Bmat_trans_v.set_shape_function(0, 5, phi_vec); // gamma-xy : thetaz
         
         
         // now add the transverse shear component
-        Bmat_trans.vector_mult(vec4_2, _structural_elem.local_solution());
+        Bmat_trans_v.vector_mult(vec4_2, _structural_elem.local_solution());
         vec5_2 = material_trans_shear_mat * vec4_2;
-        Bmat_trans.vector_mult_transpose(vec3_n2, vec5_2);
+        Bmat_trans_v.vector_mult_transpose(vec3_n2, vec5_2);
         local_f += JxW[qp] * vec3_n2;
-        
+
+        Bmat_trans_w.vector_mult(vec4_2, _structural_elem.local_solution());
+        vec5_2 = material_trans_shear_mat * vec4_2;
+        Bmat_trans_w.vector_mult_transpose(vec3_n2, vec5_2);
+        local_f += JxW[qp] * vec3_n2;
+
         if (request_jacobian) {
             // now add the transverse shear component
-            Bmat_trans.left_multiply(mat4_2n2, material_trans_shear_mat);
-            Bmat_trans.right_multiply_transpose(mat2_n2n2, mat4_2n2);
+            Bmat_trans_v.left_multiply(mat4_2n2, material_trans_shear_mat);
+            Bmat_trans_v.right_multiply_transpose(mat2_n2n2, mat4_2n2);
+            local_jac += JxW[qp] * mat2_n2n2;
+
+            Bmat_trans_w.left_multiply(mat4_2n2, material_trans_shear_mat);
+            Bmat_trans_w.right_multiply_transpose(mat2_n2n2, mat4_2n2);
             local_jac += JxW[qp] * mat2_n2n2;
         }
     }

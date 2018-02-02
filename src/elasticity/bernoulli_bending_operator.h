@@ -59,7 +59,8 @@ namespace MAST {
         virtual void
         initialize_bending_strain_operator (const MAST::FEBase& fe,
                                             const unsigned int qp,
-                                            MAST::FEMOperatorMatrix& Bmat);
+                                            MAST::FEMOperatorMatrix& Bmat_v,
+                                            MAST::FEMOperatorMatrix& Bmat_w);
         
         /*!
          *    initializes the bending strain operator for the specified quadrature
@@ -70,7 +71,8 @@ namespace MAST {
                                                   const unsigned int qp,
                                                   const Real y,
                                                   const Real z,
-                                                  MAST::FEMOperatorMatrix& Bmat_bend);
+                                                  MAST::FEMOperatorMatrix& Bmat_bend_v,
+                                                  MAST::FEMOperatorMatrix& Bmat_bend_w);
         
     protected:
         
@@ -92,9 +94,12 @@ inline void
 MAST::BernoulliBendingOperator::
 initialize_bending_strain_operator (const MAST::FEBase& fe,
                                     const unsigned int qp,
-                                    MAST::FEMOperatorMatrix& Bmat) {
+                                    MAST::FEMOperatorMatrix& Bmat_v,
+                                    MAST::FEMOperatorMatrix& Bmat_w) {
     
-    this->initialize_bending_strain_operator_for_yz(fe, qp, 1., 1., Bmat);
+    this->initialize_bending_strain_operator_for_yz(fe, qp, 1., 1.,
+                                                    Bmat_v,
+                                                    Bmat_w);
 }
 
 
@@ -105,7 +110,8 @@ initialize_bending_strain_operator_for_yz (const MAST::FEBase& fe,
                                            const unsigned int qp,
                                            const Real y,
                                            const Real z,
-                                           MAST::FEMOperatorMatrix& Bmat) {
+                                           MAST::FEMOperatorMatrix& Bmat_v,
+                                           MAST::FEMOperatorMatrix& Bmat_w) {
     
     const Real xi = _qpts[qp](0);
     
@@ -127,22 +133,22 @@ initialize_bending_strain_operator_for_yz (const MAST::FEBase& fe,
     N(0) = (0.5/_length) * (  0.0     +  12.0/_length*xi);
     N(1) = (0.5/_length) * (  0.0     -  12.0/_length*xi);
     N *= -y;
-    Bmat.set_shape_function(0, 1, N);  // v-disp
+    Bmat_v.set_shape_function(0, 1, N);  // v-disp
     
     N(0) = (0.5/_length) * (  0.0     +  12.0/_length*xi);
     N(1) = (0.5/_length) * (  0.0     -  12.0/_length*xi);
     N *= -z;
-    Bmat.set_shape_function(1, 2, N);  // w-disp
+    Bmat_w.set_shape_function(0, 2, N);  // w-disp
     
     N(0) = (0.5/_length) * (- 2.0     +           6.0*xi);
     N(1) = (0.5/_length) * (  2.0     +           6.0*xi);
     N *= -y;
-    Bmat.set_shape_function(0, 5, N); // theta-z
+    Bmat_v.set_shape_function(0, 5, N); // theta-z
     
     N(0) = (0.5/_length) * (- 2.0     +           6.0*xi);  // needs a -1.0 factor for theta_y
     N(1) = (0.5/_length) * (  2.0     +           6.0*xi);  // needs a -1.0 factor for theta_y
     N *= z;
-    Bmat.set_shape_function(1, 4, N); // theta-y
+    Bmat_w.set_shape_function(0, 4, N); // theta-y
 }
 
 

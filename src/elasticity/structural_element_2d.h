@@ -33,6 +33,7 @@
 namespace MAST {
     
     // Forward declerations
+    class BendingOperator2D;
     class BoundaryCondition;
     class FEMOperatorMatrix;
     
@@ -47,6 +48,7 @@ namespace MAST {
                             const libMesh::Elem& elem,
                             const MAST::ElementPropertyCardBase& p);
         
+        virtual ~StructuralElement2D();
         
         /*!
          *    row dimension of the direct strain matrix, also used for the
@@ -348,6 +350,10 @@ namespace MAST {
         void _convert_prestress_B_mat_to_vector(const RealMatrixX& mat,
                                                 RealVectorX& vec) const;
 
+        /*!
+         *    bending operator used for this elmeent
+         */
+        MAST::BendingOperator2D *_bending_operator;
     };
 }
 
