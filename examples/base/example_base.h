@@ -67,7 +67,7 @@ namespace MAST {
             void register_field_function(MAST::FunctionBase& f);
 
             /*!
-             *   register a loading
+             *   register a boundary condition
              */
             void register_loading(MAST::BoundaryConditionBase& l);
 
@@ -95,7 +95,7 @@ namespace MAST {
             std::vector<MAST::Parameter*>                           _params_for_sensitivity;
             std::map<std::string, MAST::Parameter*>                 _parameters;
             std::map<std::string, MAST::FunctionBase*>              _field_functions;
-            std::set<MAST::BoundaryConditionBase*>                  _loadings;
+            std::set<MAST::BoundaryConditionBase*>                  _boundary_conditions;
             std::map<MAST::Parameter*, const Real>                  _load_parameters;
         };
     }

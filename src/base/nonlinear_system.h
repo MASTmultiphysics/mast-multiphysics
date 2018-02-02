@@ -91,15 +91,21 @@ namespace MAST {
 
         
         /*!
-         *   solves the sensitivity problem for the provided parameter
+         *   Solves the sensitivity problem for the provided parameter.
+         *   The Jacobian will be assembled before adjoint solve if
+         *   \par if_assemble_jacobian is \p true.
          */
-        void sensitivity_solve(const MAST::FunctionBase& p);
+        void sensitivity_solve(const MAST::FunctionBase& p,
+                               bool if_assemble_jacobian = true);
 
         
         /*!
-         *   solves the adjoint problem for the provided output function
+         *   solves the adjoint problem for the provided output function.
+         *   The Jacobian will be assembled before adjoint solve if
+         *   \par if_assemble_jacobian is \p true.
          */
-        void adjoint_solve(MAST::OutputAssemblyElemOperations& output);
+        void adjoint_solve(MAST::OutputAssemblyElemOperations& output,
+                           bool if_assemble_jacobian = true);
         
         
         /**

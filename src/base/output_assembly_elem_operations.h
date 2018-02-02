@@ -68,46 +68,60 @@ namespace MAST {
         virtual void zero() = 0;
         
         /*!
-         *   @returns the output quantity value
+         *   @returns the output quantity value contribution for the
+         *   present element for which this object has been initialized.
+         *   This does not make sense for some output quantities that are
+         *   defined as averaged over a domain, example the p-norm of
+         *   the stress (see MAST::StressStrainOutputBase). For such cases,
+         *   the output_total must be called.
          */
-        virtual Real output() = 0;
-        
+        virtual Real output_for_elem() = 0;
+
         /*!
-         *   @returns the output quantity sensitivity for parameter
+         *   @returns the output quantity value accumulated over all elements
          */
-        virtual Real output_sensitivity(const MAST::FunctionBase& p) = 0;
+        virtual Real output_total() = 0;
+
+        /*!
+         *   @returns the output quantity sensitivity for parameter.
+         *   This method calculates the partial derivative of quantity
+         *    \f[ \frac{\partial q(X, p)}{\partial p} \f]  with
+         *    respect to parameter \f$ p \f$. This returns the quantity
+         *    evaluated for on element for which this object is initialized.
+         */
+        virtual Real output_sensitivity_for_elem(const MAST::FunctionBase& p) = 0;
+
+        /*!
+         *   @returns the output quantity sensitivity for parameter.
+         *   This method calculates the partial derivative of quantity
+         *    \f[ \frac{\partial q(X, p)}{\partial p} \f]  with
+         *    respect to parameter \f$ p \f$. This returns the quantity
+         *   accumulated over all elements.
+         */
+        virtual Real output_sensitivity_total(const MAST::FunctionBase& p) = 0;
 
 
         /*!
-         *   @returns the output quantity derivative with respect to
-         *   state vector
+         *   returns the output quantity derivative with respect to
+         *   state vector in \par dq_dX.
+         *   This method calculates the quantity
+         *    \f[ \frac{\partial q(X, p)}{\partial X} \f] for this
+         *    output function. This is returned for the element for which
+         *   this
          */
-        virtual RealVectorX output_derivative() = 0;
+        virtual void output_derivative_for_elem(RealVectorX& dq_dX) = 0;
 
         
         /*!
          *    this is the abstract interface to be implemented by derived
          *    classes. This method calculates the quantity \f$ q(X, p) \f$.
+         *    This is provided as an interface since some quantities
+         *    requires evaluation of all inputs before the final quantity
+         *    can be calculated. So, the user can call this routine on each
+         *    element before requesting the output values using either
+         *    \p output_for_elem() or \p output_total().
          */
         virtual void evaluate() = 0;
-
-
-        /*!
-         *    this is the abstract interface to be implemented by derived
-         *    classes. This method calculates the partial derivative of quantity
-         *    \f[ \frac{\partial q(X, p)}{\partial p} \f]  with
-         *    respect to parameter \f$ p \f$.
-         */
-        virtual void evaluate_sensitivity(const MAST::FunctionBase& p) = 0;
-
-        
-        /*!
-         *    this is the abstract interface to be implemented by derived
-         *    classes. This method calculates the quantity
-         *    \f[ \frac{\partial q(X, p)}{\partial X} \f] for this
-         *    output function.
-         */
-        virtual void evaluate_derivative() = 0;
 
 
         /*!

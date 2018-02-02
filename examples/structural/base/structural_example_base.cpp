@@ -392,13 +392,11 @@ MAST::Examples::StructuralExampleBase::static_solve() {
                                           *_discipline,
                                           *_structural_sys);
     
-    MAST::NonlinearSystem& nonlin_sys = assembly.system();
-    
     // initialize the solution before solving
     this->initialize_solution();
     
     MAST::StructuralNearNullVectorSpace nsp;
-    nonlin_sys.nonlinear_solver->nearnullspace_object = &nsp;
+    _sys->nonlinear_solver->nearnullspace_object = &nsp;
     
     libMesh::ExodusII_IO exodus_writer(*_mesh);
     
@@ -409,13 +407,13 @@ MAST::Examples::StructuralExampleBase::static_solve() {
         this->update_load_parameters((i+1.)/(1.*n_steps));
         
         // solve the system
-        nonlin_sys.solve();
+        _sys->solve();
         
         // update stress values
         stress_assembly.attach_discipline_and_system(stress_elem_ops,
                                                      *_discipline,
                                                      *_structural_sys);
-        stress_assembly.update_stress_strain_data(*nonlin_sys.solution);
+        stress_assembly.update_stress_strain_data(*_sys->solution);
         stress_assembly.clear_discipline_and_system();
         
         // output, if asked
@@ -429,7 +427,7 @@ MAST::Examples::StructuralExampleBase::static_solve() {
         }
     }
     assembly.clear_discipline_and_system();
-    nonlin_sys.nonlinear_solver->nearnullspace_object = nullptr;
+    _sys->nonlinear_solver->nearnullspace_object = nullptr;
 }
 
 
@@ -457,22 +455,21 @@ MAST::Examples::StructuralExampleBase::static_sensitivity_solve(MAST::Parameter&
                                           *_discipline,
                                           *_structural_sys);
     
-    MAST::NonlinearSystem& nonlin_sys = assembly.system();
-    
     MAST::StructuralNearNullVectorSpace nsp;
-    nonlin_sys.nonlinear_solver->nearnullspace_object = &nsp;
+    _sys->nonlinear_solver->nearnullspace_object = &nsp;
 
     // zero the solution before solving
-    nonlin_sys.add_sensitivity_solution(0).zero();
-    nonlin_sys.sensitivity_solve(p);
+    // we are assuming that the nonlinear solve was completed before this.
+    // So, we will reuse that matrix, as opposed to reassembling it
+    _sys->sensitivity_solve(p, false);
     assembly.clear_discipline_and_system();
     
     // update stress sensitivity values
     stress_assembly.attach_discipline_and_system(stress_elem_ops,
                                                  *_discipline,
                                                  *_structural_sys);
-    stress_assembly.update_stress_strain_sensitivity_data(*nonlin_sys.solution,
-                                                          nonlin_sys.get_sensitivity_solution(0),
+    stress_assembly.update_stress_strain_sensitivity_data(*_sys->solution,
+                                                          _sys->get_sensitivity_solution(0),
                                                           p,
                                                           stress_sys.get_sensitivity_solution(0));
     stress_assembly.clear_discipline_and_system();
@@ -495,7 +492,67 @@ MAST::Examples::StructuralExampleBase::static_sensitivity_solve(MAST::Parameter&
         stress_sys.solution->swap(stress_sys.get_sensitivity_solution(0));
     }
     
-    nonlin_sys.nonlinear_solver->nearnullspace_object = nullptr;
+    _sys->nonlinear_solver->nearnullspace_object = nullptr;
+}
+
+
+
+
+void
+MAST::Examples::StructuralExampleBase::
+static_adjoint_sensitivity_solve(//MAST::OutputAssemblyElemOperations& q,
+                                 MAST::Parameter& p) {
+    
+    libmesh_assert(_initialized);
+    
+    bool
+    output     = (*_input)(   "if_output", false);
+    
+    // create the nonlinear assembly object
+    MAST::NonlinearImplicitAssembly                  assembly;
+    MAST::StructuralNonlinearAssemblyElemOperations  elem_ops;
+    MAST::StressAssembly                             stress_assembly;
+    MAST::StressStrainOutputBase                     stress_elem_ops;
+
+    // we define the output as the p-norm stress over the whole structure
+    stress_elem_ops.set_participating_elements_to_all();
+    
+    assembly.attach_discipline_and_system(elem_ops,
+                                          *_discipline,
+                                          *_structural_sys);
+    
+    MAST::StructuralNearNullVectorSpace nsp;
+    _sys->nonlinear_solver->nearnullspace_object = &nsp;
+
+    
+    // zero the solution before solving
+    // we are assuming that the nonlinear solve was completed before this.
+    // So, we will reuse that matrix, as opposed to reassembling it
+    stress_elem_ops.set_assembly(assembly);
+    assembly.calculate_output(*_sys->solution, stress_elem_ops);
+    stress_elem_ops.clear_assembly();
+    libMesh::out << "output : " << stress_elem_ops.output_total() << std::endl;
+    _sys->adjoint_solve(stress_elem_ops, false);
+    
+    
+    assembly.clear_discipline_and_system();
+    
+    
+    // write the solution for visualization
+    if (output) {
+        
+        std::ostringstream oss;
+        oss << "output_" << p.name() << ".exo";
+        
+        _sys->solution->swap(_sys->get_adjoint_solution(0));
+        
+        libMesh::ExodusII_IO(*_mesh).write_equation_systems(oss.str(),
+                                                            *_eq_sys);
+        
+        _sys->solution->swap(_sys->get_adjoint_solution(0));
+    }
+    
+    _sys->nonlinear_solver->nearnullspace_object = nullptr;
 }
 
 
@@ -822,8 +879,6 @@ MAST::Examples::StructuralExampleBase::transient_solve() {
                                           solver,
                                           *_structural_sys);
     
-    MAST::NonlinearSystem& nonlin_sys = assembly.system();
-    
     // initialize the solution to zero, or to something that the
     // user may have provided
     this->initialize_solution();
@@ -863,7 +918,7 @@ MAST::Examples::StructuralExampleBase::transient_solve() {
             transient_output.write_timestep("output.exo",
                                             *_eq_sys,
                                             t_step+1,
-                                            nonlin_sys.time);
+                                            _sys->time);
             std::ostringstream oss;
             oss << "sol_t_" << t_step;
             _sys->write_out_vector(*_sys->solution, "data", oss.str(), true);
@@ -877,7 +932,7 @@ MAST::Examples::StructuralExampleBase::transient_solve() {
         stress_assembly.attach_discipline_and_system(stress_elem_ops,
                                                      *_discipline,
                                                      *_structural_sys);
-        stress_assembly.update_stress_strain_data(*nonlin_sys.solution);
+        stress_assembly.update_stress_strain_data(*_sys->solution);
         stress_assembly.clear_discipline_and_system();
 
         // update time value
@@ -917,8 +972,6 @@ MAST::Examples::StructuralExampleBase::transient_sensitivity_solve(MAST::Paramet
                                           *_discipline,
                                           solver,
                                           *_structural_sys);
-    
-    MAST::NonlinearSystem& nonlin_sys = assembly.system();
     
     // initialize the solution to zero, or to something that the
     // user may have provided
@@ -962,7 +1015,7 @@ MAST::Examples::StructuralExampleBase::transient_sensitivity_solve(MAST::Paramet
             exodus_writer.write_timestep(oss1.str(),
                                          *_eq_sys,
                                          t_step+1,
-                                         nonlin_sys.time);
+                                         _sys->time);
             _sys->solution->swap(solver.solution_sensitivity());
         }
 
@@ -978,12 +1031,12 @@ MAST::Examples::StructuralExampleBase::transient_sensitivity_solve(MAST::Paramet
         stress_assembly.attach_discipline_and_system(stress_elem_ops,
                                                      *_discipline,
                                                      *_structural_sys);
-        /*
-         stress_assembly.update_stress_strain_sensitivity_data(solver.solution(),
-         solver.solution_sensitivity(),
-         p,
-         *_structural_sys->get_stress_sys().solution);
-         */
+        
+        stress_assembly.update_stress_strain_sensitivity_data(solver.solution(),
+                                                              solver.solution_sensitivity(),
+                                                              p,
+                                                              *_structural_sys->get_stress_sys().solution);
+        
         stress_assembly.clear_discipline_and_system();
         
         // update time value

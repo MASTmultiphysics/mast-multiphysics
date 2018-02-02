@@ -27,6 +27,7 @@
 #include "mesh/local_elem_fe.h"
 #include "base/assembly_elem_operation.h"
 #include "base/output_assembly_elem_operations.h"
+#include "numerics/utility.h"
 
 
 // libMesh includes
@@ -265,7 +266,8 @@ MAST::AssemblyBase::calculate_output(const libMesh::NumericVector<Real>& X,
         
         dof_map.dof_indices (elem, dof_indices);
         
-        
+        output.init(*elem);
+
         // get the solution
         unsigned int ndofs = (unsigned int)dof_indices.size();
         sol.setZero(ndofs);
@@ -277,10 +279,11 @@ MAST::AssemblyBase::calculate_output(const libMesh::NumericVector<Real>& X,
         //if (_sol_function)
         //    physics_elem->attach_active_solution_function(*_sol_function);
         
-        
+        output.set_elem_solution(sol);
+
         // perform the element level calculations
         output.evaluate();
-        
+        output.clear_elem();
         //physics_elem->detach_active_solution_function();
     }
     
@@ -301,10 +304,11 @@ calculate_output_derivative(const libMesh::NumericVector<Real>& X,
     
     MAST::NonlinearSystem& nonlin_sys = _system->system();
     
+    dq_dX.zero();
+    
     // iterate over each element, initialize it and get the relevant
     // analysis quantities
     RealVectorX vec, sol;
-    RealMatrixX mat;
     
     std::vector<libMesh::dof_id_type> dof_indices;
     const libMesh::DofMap& dof_map = _system->system().get_dof_map();
@@ -338,7 +342,6 @@ calculate_output_derivative(const libMesh::NumericVector<Real>& X,
         unsigned int ndofs = (unsigned int)dof_indices.size();
         sol.setZero(ndofs);
         vec.setZero(ndofs);
-        mat.setZero(ndofs, ndofs);
         
         for (unsigned int i=0; i<dof_indices.size(); i++)
             sol(i) = (*localized_solution)(dof_indices[i]);
@@ -352,15 +355,22 @@ calculate_output_derivative(const libMesh::NumericVector<Real>& X,
         //_check_element_numerical_jacobian(*physics_elem, sol);
         
         // perform the element level calculations
-        output.evaluate_derivative();
+        output.output_derivative_for_elem(vec);
+        output.clear_elem();
         
+        DenseRealVector v;
+        MAST::copy(v, vec);
+        dof_map.constrain_element_vector(v, dof_indices);
+        dq_dX.add_vector(v, dof_indices);
+
 //        physics_elem->detach_active_solution_function();
-        
     }
     
     // if a solution function is attached, clear it
     if (_sol_function)
         _sol_function->clear();
+    
+    dq_dX.close();
 }
 
 

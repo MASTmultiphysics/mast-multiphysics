@@ -30,6 +30,7 @@
 #include "base/nonlinear_implicit_assembly.h"
 #include "base/eigenproblem_assembly.h"
 #include "base/parameter.h"
+#include "base/output_assembly_elem_operations.h"
 #include "solver/slepc_eigen_solver.h"
 
 // libMesh includes
@@ -675,7 +676,8 @@ initialize_condensed_dofs(MAST::PhysicsDisciplineBase& physics) {
 
 
 void
-MAST::NonlinearSystem::sensitivity_solve(const MAST::FunctionBase& p) {
+MAST::NonlinearSystem::sensitivity_solve(const MAST::FunctionBase& p,
+                                         bool if_assemble_jacobian) {
     
     libmesh_assert(_assemble);
     
@@ -685,8 +687,9 @@ MAST::NonlinearSystem::sensitivity_solve(const MAST::FunctionBase& p) {
     libMesh::NumericVector<Real>
     &dsol  = this->add_sensitivity_solution(),
     &rhs   = this->add_sensitivity_rhs();
-    
-    _assemble->residual_and_jacobian(*solution, nullptr, matrix, *this);
+
+    if (if_assemble_jacobian)
+        _assemble->residual_and_jacobian(*solution, nullptr, matrix, *this);
     _assemble->sensitivity_assemble(p, rhs);
     
     rhs.scale(-1.);
@@ -716,19 +719,23 @@ MAST::NonlinearSystem::sensitivity_solve(const MAST::FunctionBase& p) {
 
 
 void
-MAST::NonlinearSystem::adjoint_solve(MAST::OutputAssemblyElemOperations &output) {
+MAST::NonlinearSystem::adjoint_solve(MAST::OutputAssemblyElemOperations &output,
+                                     bool if_assemble_jacobian) {
     
     libmesh_assert(_assemble);
 
     // Log how long the linear solve takes.
-    LOG_SCOPE("adjoint_solve()", "ImplicitSystem");
+    LOG_SCOPE("adjoint_solve()", "NonlinearSystem");
     
     libMesh::NumericVector<Real>
     &dsol  = this->add_adjoint_solution(),
-    &rhs   = this->get_adjoint_rhs();
+    &rhs   = this->add_adjoint_rhs();
 
-    _assemble->residual_and_jacobian(*solution, nullptr, matrix, *this);
+    if (if_assemble_jacobian)
+        _assemble->residual_and_jacobian(*solution, nullptr, matrix, *this);
+    output.set_assembly(*_assemble);
     _assemble->calculate_output_derivative(*solution, output, rhs);
+    output.clear_assembly();
     
     
     // Our iteration counts and residuals will be sums of the individual

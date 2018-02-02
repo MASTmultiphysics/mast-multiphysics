@@ -27,7 +27,7 @@ MAST::LocalElemBase(elem),
 _local_y(y) {
     
     _create_local_elem();
-    libmesh_assert_greater(_local_y.size(), 0.);
+    libmesh_assert_greater(_local_y.norm(), 0.);
 }
 
 
@@ -99,7 +99,7 @@ domain_surface_normal_in_global_coordinates(const libMesh::Point& p,
     for (unsigned int i=0; i<3; i++)
         n_global(i) = _local_y(i);
     
-    n_global /= _local_y.size();
+    n_global /= _local_y.norm();
 }
 
 

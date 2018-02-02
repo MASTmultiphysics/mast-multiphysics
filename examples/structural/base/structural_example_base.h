@@ -41,6 +41,7 @@ namespace MAST {
     class DirichletBoundaryCondition;
     class TimeDomainFlutterSolver;
     class FlutterRootBase;
+    class OutputAssemblyElemOperations;
     
     namespace Examples {
         
@@ -68,6 +69,8 @@ namespace MAST {
 
             virtual void static_solve();
             virtual void static_sensitivity_solve(MAST::Parameter& p);
+            virtual void static_adjoint_sensitivity_solve(//MAST::OutputAssemblyElemOperations& q,
+                                                          MAST::Parameter& p);
             
             virtual void modal_solve(std::vector<Real>& eig);
             virtual void modal_sensitivity_solve(MAST::Parameter& p, std::vector<Real>& deig_dp);

@@ -42,8 +42,8 @@ MAST::Examples::ExampleBase::~ExampleBase() {
     
     {
         std::set<MAST::BoundaryConditionBase*>::iterator
-        it   = _loadings.begin(),
-        end  = _loadings.end();
+        it   = _boundary_conditions.begin(),
+        end  = _boundary_conditions.end();
         for ( ; it!=end; it++)
             delete *it;
     }
@@ -152,12 +152,12 @@ MAST::Examples::ExampleBase::register_loading(MAST::BoundaryConditionBase& p) {
     
     
     // make sure that this already does not exist
-    if (_loadings.count(&p))
+    if (_boundary_conditions.count(&p))
         libMesh::out
         << std::endl
         << "Loading already exists." << std::endl;
     
-    _loadings.insert(&p);
+    _boundary_conditions.insert(&p);
 }
 
 

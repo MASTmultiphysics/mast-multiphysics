@@ -377,13 +377,25 @@ MAST::StructuralElement1D::calculate_stress(bool request_derivative,
         stress_3D(0)  =   stress(0);
         
         // set the stress and strain data
-        MAST::StressStrainOutputBase::Data&
-        data = stress_output.add_stress_strain_at_qp_location(&_elem,
-                                                              qp_loc[qp],
-                                                              xyz[qp],
-                                                              stress_3D,
-                                                              strain_3D,
-                                                              JxW[qp]);
+        MAST::StressStrainOutputBase::Data*
+        data = nullptr;
+        
+        // if neither the derivative nor sensitivity is requested, then
+        // we assume that a new data entry is to be provided. Otherwise,
+        // we assume that the stress at this quantity already
+        // exists, and we only need to append sensitivity/derivative
+        // data to it
+        if (!request_derivative && !request_sensitivity)
+            data = &(stress_output.add_stress_strain_at_qp_location(&_elem,
+                                                                    qp,
+                                                                    qp_loc[qp],
+                                                                    xyz[qp],
+                                                                    stress_3D,
+                                                                    strain_3D,
+                                                                    JxW[qp]));
+        else
+            data = &(stress_output.get_stress_strain_data_for_elem_at_qp(&_elem,
+                                                                         qp));
 
         // calculate the derivative if requested
         if (request_derivative || request_sensitivity) {
@@ -415,7 +427,7 @@ MAST::StructuralElement1D::calculate_stress(bool request_derivative,
             dstrain_dX_3D.row(0)  = dstrain_dX.row(0);
             
             if (request_derivative)
-                data.set_derivatives(dstress_dX_3D, dstrain_dX_3D);
+                data->set_derivatives(dstress_dX_3D, dstrain_dX_3D);
                 
 
             if (request_sensitivity) {
@@ -501,9 +513,9 @@ MAST::StructuralElement1D::calculate_stress(bool request_derivative,
                 strain_3D(0) = dstrain_dp(0);
                 
                 // tell the data object about the sensitivity values
-                data.set_sensitivity(sensitivity_param,
-                                     stress_3D,
-                                     strain_3D);
+                data->set_sensitivity(*sensitivity_param,
+                                      stress_3D,
+                                      strain_3D);
             }
         }
     }
@@ -1665,7 +1677,7 @@ surface_pressure_residual(bool request_jacobian,
     libmesh_assert(!follower_forces); // not implemented yet for follower forces
     
     // prepare the side finite element
-    std::unique_ptr<MAST::LocalElemFE> fe(new MAST::LocalElemFE(_system));
+    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem).release());
     fe->init_for_side(_elem, side, false);
 
     const std::vector<Real> &JxW                    = fe->get_JxW();
@@ -1744,7 +1756,7 @@ surface_pressure_residual_sensitivity(bool request_jacobian,
     libmesh_assert(!follower_forces); // not implemented yet for follower forces
     
     // prepare the side finite element
-    std::unique_ptr<MAST::LocalElemFE> fe(new MAST::LocalElemFE(_system));
+    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem).release());
     fe->init_for_side(_elem, side, false);
 
     const std::vector<Real> &JxW                    = fe->get_JxW();

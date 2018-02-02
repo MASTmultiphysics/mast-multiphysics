@@ -986,12 +986,27 @@ MAST::StructuralElement3D::calculate_stress(bool request_derivative,
         strain += Gmat * alpha;
         stress = material_mat * strain;
         
-        stress_output.add_stress_strain_at_qp_location(&_elem,
-                                                       qp_loc[qp],
-                                                       xyz[qp],
-                                                       stress,
-                                                       strain,
-                                                       JxW[qp]);
+        // set the stress and strain data
+        MAST::StressStrainOutputBase::Data*
+        data = nullptr;
+        
+        // if neither the derivative nor sensitivity is requested, then
+        // we assume that a new data entry is to be provided. Otherwise,
+        // we assume that the stress at this quantity already
+        // exists, and we only need to append sensitivity/derivative
+        // data to it
+        if (!request_derivative && !request_sensitivity)
+            data = &(stress_output.add_stress_strain_at_qp_location(&_elem,
+                                                                    qp,
+                                                                    qp_loc[qp],
+                                                                    xyz[qp],
+                                                                    stress,
+                                                                    strain,
+                                                                    JxW[qp]));
+        else
+            data = &(stress_output.get_stress_strain_data_for_elem_at_qp(&_elem,
+                                                                         qp));
+
         
         if (request_derivative) {
             // to be implemented
@@ -1142,7 +1157,7 @@ initialize_green_lagrange_strain_operator(const unsigned int qp,
     Bmat_nl_w.set_shape_function(2, 2, phi); // dw/dz
 
     
-    // calculate the displacement gradient to create the
+    // calculate the displacement gradient to create the GL strain
     RealVectorX
     ddisp_dx = RealVectorX::Zero(3),
     ddisp_dy = RealVectorX::Zero(3),
@@ -1152,7 +1167,7 @@ initialize_green_lagrange_strain_operator(const unsigned int qp,
     Bmat_nl_y.vector_mult(ddisp_dy, local_disp);  // {du/dy, dv/dy, dw/dy}
     Bmat_nl_z.vector_mult(ddisp_dz, local_disp);  // {du/dz, dv/dz, dw/dz}
 
-    // prepare the deformation gradient matrix
+    // prepare the displacement gradient matrix: F = grad(u)
     RealMatrixX
     F = RealMatrixX::Zero(3,3),
     E = RealMatrixX::Zero(3,3);

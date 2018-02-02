@@ -99,7 +99,7 @@ MAST::Examples::StructuralExample1D::_init_section_property() {
 }
 
     
-    void
+void
 MAST::Examples::StructuralExample1D::_init_section_property_without_offset() {
 
     Real

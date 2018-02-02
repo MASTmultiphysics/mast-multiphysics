@@ -118,7 +118,7 @@ namespace MAST {
             /*!
              *   @returns derivative of von Mises stress wrt sensitivity parameter
              */
-            Real dvon_Mises_stress_dp(const MAST::FunctionBase* f) const;
+            Real dvon_Mises_stress_dp(const MAST::FunctionBase& f) const;
 
 
             /*!
@@ -143,7 +143,7 @@ namespace MAST {
             /*!
              *   sets the sensitivity of the data with respect to a function
              */
-            void set_sensitivity(const MAST::FunctionBase* f,
+            void set_sensitivity(const MAST::FunctionBase& f,
                                  const RealVectorX& dstress_df,
                                  const RealVectorX& dstrain_df);
 
@@ -153,7 +153,7 @@ namespace MAST {
              *   function
              */
             const RealVectorX&
-            get_stress_sensitivity(const MAST::FunctionBase* f) const;
+            get_stress_sensitivity(const MAST::FunctionBase& f) const;
 
             
             /*!
@@ -161,7 +161,7 @@ namespace MAST {
              *   function
              */
             const RealVectorX&
-            get_strain_sensitivity(const MAST::FunctionBase* f) const;
+            get_strain_sensitivity(const MAST::FunctionBase& f) const;
 
             
         protected:
@@ -258,47 +258,60 @@ namespace MAST {
         virtual void zero();
         
         /*!
-         *   @returns the output quantity value
-         */
-        virtual Real output();
-        
-        /*!
-         *   @returns the output quantity sensitivity for parameter
-         */
-        virtual Real output_sensitivity(const MAST::FunctionBase& p);
-        
-        
-        /*!
-         *   @returns the output quantity derivative with respect to
-         *   state vector
-         */
-        virtual RealVectorX output_derivative();
-        
-        
-        /*!
-         *    this is the abstract interface to be implemented by derived
-         *    classes. This method calculates the quantity \f$ q(X, p) \f$.
+         *    this evaluates all relevant stress components on the element to
+         *    evaluate the p-averaged quantity.
+         *    This is only done on the current element for which this
+         *    object has been initialized.
          */
         virtual void evaluate();
-        
+
+        /*!
+         *    this evaluates all relevant stress sensitivity components on
+         *    the element to evaluate the p-averaged quantity sensitivity.
+         *    This is only done on the current element for which this
+         *    object has been initialized.
+         */
+        virtual void evaluate_sensitivity(const MAST::FunctionBase& f);
+
+        /*!
+         *   should not get called for this output. Use output_total() instead.
+         */
+        virtual Real output_for_elem() {
+            //
+            libmesh_error();
+        }
         
         /*!
-         *    this is the abstract interface to be implemented by derived
-         *    classes. This method calculates the partial derivative of quantity
+         *   @returns the output quantity value accumulated over all elements
+         */
+        virtual Real output_total();
+
+        /*!
+         *   @returns the sensitivity of p-norm von Mises stress for the
+         *   \f$p-\f$norm identified using \p set_p_val(). The returned quantity
+         *   is evaluated for the element for which this object is initialized.
+         */
+        virtual Real output_sensitivity_for_elem(const MAST::FunctionBase& p);
+        
+        /*!
+         *   @returns the output quantity sensitivity for parameter.
+         *   This method calculates the partial derivative of quantity
          *    \f[ \frac{\partial q(X, p)}{\partial p} \f]  with
-         *    respect to parameter \f$ p \f$.
+         *    respect to parameter \f$ p \f$. This returns the quantity
+         *   accumulated over all elements.
          */
-        virtual void evaluate_sensitivity(const MAST::FunctionBase& p);
-        
+        virtual Real output_sensitivity_total(const MAST::FunctionBase& p);
+
         
         /*!
-         *    this is the abstract interface to be implemented by derived
-         *    classes. This method calculates the quantity
-         *    \f[ \frac{\partial q(X, p)}{\partial X} \f] for this
-         *    output function.
+         *   calculates the derivative of p-norm von Mises stress for the
+         *   \f$p-\f$norm identified using \p set_p_val(). The quantity is
+         *   evaluated over the current element for which this object
+         *   is initialized.
          */
-        virtual void evaluate_derivative();
-                
+        virtual void output_derivative_for_elem(RealVectorX& dq_dX);
+
+        
         
         /*!
          *   some simulations frequently deal with 1D/2D elements in 3D space,
@@ -369,6 +382,7 @@ namespace MAST {
          */
         MAST::StressStrainOutputBase::Data&
         add_stress_strain_at_qp_location(const libMesh::Elem*,
+                                         const unsigned int qp,
                                          const libMesh::Point& quadrature_pt,
                                          const libMesh::Point& physical_pt,
                                          const RealVectorX& strain,
@@ -389,44 +403,88 @@ namespace MAST {
          */
         const std::vector<MAST::StressStrainOutputBase::Data*>&
         get_stress_strain_data_for_elem(const libMesh::Elem* e) const;
+
         
+        /*!
+         *    @returns the vector of stress/strain data for specified elem at
+         *    the specified quadrature point.
+         */
+        MAST::StressStrainOutputBase::Data&
+        get_stress_strain_data_for_elem_at_qp(const libMesh::Elem* e,
+                                              const unsigned int qp);
+
         
         
         /*!
          *   calculates and returns the von Mises p-norm functional for 
-         *   all the elements that this object currently stores data for
+         *   all the elements that this object currently stores data for.
+         *   This is defined as
+         *   \f[  \left( \frac{\int_\Omega (\sigma_{VM}(\Omega))^p ~
+         *    d\Omega}{\int_\Omega ~ d\Omega} \right)^{\frac{1}{p}} \f]
          */
-        Real
-        von_Mises_p_norm_functional_for_all_elems(const Real p) const;
-
+        void
+        von_Mises_p_norm_functional_for_all_elems();
+        
         
         /*!
          *   calculates and returns the sensitivity of von Mises p-norm
          *   functional for all the elements that this object currently 
-         *   stores data for
+         *   stores data for.
+         *   This is defined as
+         *   \f[  \frac{ \frac{1}{p} \left( \int_\Omega (\sigma_{VM}(\Omega))^p ~
+         *    d\Omega \right)^{\frac{1}{p}-1}}{\left(  \int_\Omega ~ d\Omega \right)^{\frac{1}{p}}}
+         *    \int_\Omega p (\sigma_{VM}(\Omega))^{p-1} \frac{d \sigma_{VM}(\Omega)}{d\alpha} ~
+         *    d\Omega \f]
          */
-        Real
+        void
         von_Mises_p_norm_functional_sensitivity_for_all_elems
-        (const Real p,
-         const MAST::FunctionBase* f) const;
+        (const MAST::FunctionBase& f,
+         Real& dsigma_vm_val_df) const;
 
+
+        /*!
+         *   calculates and returns the sensitivity of von Mises p-norm
+         *   functional for the element \par e.
+         */
+        void
+        von_Mises_p_norm_functional_sensitivity_for_elem
+        (const MAST::FunctionBase& f,
+         const libMesh::Elem& e,
+         Real& dsigma_vm_val_df) const;
         
+        
+
         /*!
          *   calculates and returns the derivative of von Mises p-norm
-         *   functional wrt state vector for all the elements that
-         *   this object currently stores data for
+         *   functional wrt state vector for the specified element. This
+         *   assumes that the \p von_Mises_p_norm_functional_for_all_elems()
+         *   has been called to calculate the primal data.
+         *   This is defined as
+         *   \f[  \frac{ \frac{1}{p} \left( \int_\Omega (\sigma_{VM}(\Omega))^p ~
+         *    d\Omega \right)^{\frac{1}{p}-1}}{\left(  \int_\Omega ~ d\Omega \right)^{\frac{1}{p}}}
+         *    \int_\Omega p (\sigma_{VM}(\Omega))^{p-1} \frac{d \sigma_{VM}(\Omega)}{dX} ~
+         *    d\Omega \f]
          */
-        RealVectorX
-        von_Mises_p_norm_functional_state_derivartive_for_all_elems(const Real p) const;
+        void von_Mises_p_norm_functional_state_derivartive_for_elem
+        (const libMesh::Elem& e,
+         RealVectorX& dq_dX) const;
 
         
         
     protected:
 
         /*!
-         *   \f$ p-\f$norm to be used for calculation of output stress function
+         *   \f$ p-\f$norm to be used for calculation of output stress function.
+         *    Default value is 2.0.
          */
         Real _p_norm;
+        
+        /*!
+         *    primal data, needed for sensitivity and adjoints
+         */
+        bool _primal_data_initialized;
+        Real _max_val, _JxW_val, _sigma_vm_int, _sigma_vm_p_norm;
+        
         
         
         /*!

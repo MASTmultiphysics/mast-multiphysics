@@ -89,9 +89,9 @@ get_max_stress_strain_values(const std::vector<MAST::StressStrainOutputBase::Dat
             max_vm      = data[0]->von_Mises_stress();
         }
         else {
-            max_strain  = data[0]->get_strain_sensitivity(p);
-            max_stress  = data[0]->get_stress_sensitivity(p);
-            max_vm      = data[0]->dvon_Mises_stress_dp  (p);
+            max_strain  = data[0]->get_strain_sensitivity(*p);
+            max_stress  = data[0]->get_stress_sensitivity(*p);
+            max_vm      = data[0]->dvon_Mises_stress_dp  (*p);
         }
         
         return;
@@ -293,6 +293,7 @@ update_stress_strain_sensitivity_data(const libMesh::NumericVector<Real>& X,
         
         unsigned int ndofs = (unsigned int)dof_indices.size();
         sol.setZero(ndofs);
+        dsol.setZero(ndofs);
         
         for (unsigned int i=0; i<dof_indices.size(); i++) {
             sol (i) = (*localized_solution)     (dof_indices[i]);

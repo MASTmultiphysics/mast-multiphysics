@@ -18,10 +18,10 @@
  */
 
 // MAST includes
-//#include "examples/structural/bar_extension/bar_extension.h"
+#include "examples/structural/bar_extension/bar_extension.h"
 //#include "examples/structural/beam_modal_analysis/beam_modal_analysis.h"
 //#include "examples/structural/beam_buckling_prestress/beam_column_buckling.h"
-//#include "examples/structural/beam_bending/beam_bending.h"
+#include "examples/structural/beam_bending/beam_bending.h"
 #include "examples/structural/beam_oscillating_load/beam_oscillating_load.h"
 //#include "examples/structural/beam_bending_with_offset/beam_bending_with_offset.h"
 //#include "examples/structural/beam_bending_thermal_stress_with_offset/beam_bending_thermal_stress.h"
@@ -271,12 +271,13 @@ int main(int argc, char* const argv[]) {
         input.reset(new GetPot(input_name));
     
     
-//    if (case_name == "bar_extension")
-//        analysis<MAST::BarExtension>(case_name,
-//                                     libMesh::EDGE2,
-//                                     if_nonlin,
-//                                     with_sens,
-//                                     par_name);
+    if (case_name == "bar_extension") {
+        
+        MAST::Examples::BarExtension example;
+        example.init(*input);
+        example.static_solve();
+        example.static_adjoint_sensitivity_solve(example.get_parameter("thy"));
+    }
 //    else if (case_name == "beam_modal_analysis")
 //        eigenvalue_analysis<MAST::BeamModalAnalysis>(case_name,
 //                                                     libMesh::EDGE2,
@@ -295,13 +296,13 @@ int main(int argc, char* const argv[]) {
 //                                                              false,
 //                                                              with_sens,
 //                                                              par_name);
-//    else if (case_name == "beam_bending")
-//        analysis<MAST::BeamBending>(case_name,
-//                                    libMesh::EDGE2,
-//                                    if_nonlin,
-//                                    with_sens,
-//                                    par_name);
-    /*else*/ if (case_name == "beam_oscillating_load") {
+    else if (case_name == "beam_bending") {
+        
+        MAST::Examples::BeamBending example;
+        example.init(*input);
+        example.static_solve();
+    }
+    else if (case_name == "beam_oscillating_load") {
         
         MAST::Examples::BeamOscillatingLoad example;
         example.init(*input);
