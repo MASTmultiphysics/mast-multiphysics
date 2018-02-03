@@ -191,7 +191,7 @@ MAST::StressStrainOutputBase::Data::dvon_Mises_stress_dX() const {
     dp = RealVectorX::Zero(_dstress_dX.cols());
     
     // if p == 0, then the sensitivity returns nan
-    // Hennce, we are avoiding this by setting it to zero whenever p = 0.
+    // Hence, we are avoiding this by setting it to zero whenever p = 0.
     if (fabs(p) > 0.)
         dp =
         (((_dstress_dX.row(0) - _dstress_dX.row(1)) * (_stress(0) - _stress(1)) +
@@ -229,7 +229,7 @@ dvon_Mises_stress_dp(const MAST::FunctionBase& f) const {
     dp = 0.;
     
     // if p == 0, then the sensitivity returns nan
-    // Hennce, we are avoiding this by setting it to zero whenever p = 0.
+    // Hence, we are avoiding this by setting it to zero whenever p = 0.
     if (fabs(p) > 0.)
         dp =
         (((dstress_dp(0) - dstress_dp(1)) * (_stress(0) - _stress(1)) +
@@ -770,7 +770,7 @@ von_Mises_p_norm_functional_state_derivartive_for_elem(const libMesh::Elem& e,
         dq_dX    +=  _p_norm * pow(e_val/_max_val, _p_norm-1.) * JxW * de_val/_max_val;
     }
     
-    dq_dX *= _max_val/_p_norm * pow(_JxW_val, 1./_p_norm) * pow(_sigma_vm_int, 1./_p_norm-1.);
+    dq_dX *= _max_val/_p_norm / pow(_JxW_val, 1./_p_norm) * pow(_sigma_vm_int, 1./_p_norm-1.);
 }
 
 

@@ -466,7 +466,7 @@ calculate_output_adjoint_sensitivity(const libMesh::NumericVector<Real>& X,
     this->sensitivity_assemble(p, dres_dp);
     
     Real
-    dq_dp = dq_dX.dot(dres_dp);
+    dq_dp = output.output_sensitivity_total(p) + dq_dX.dot(dres_dp);
     
     libMesh::out << "dq/dp: adjoint: " << dq_dp << std::endl;
 }
