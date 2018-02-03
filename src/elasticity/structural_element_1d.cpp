@@ -76,6 +76,7 @@ initialize_direct_strain_operator(const unsigned int qp,
     
     libmesh_assert_equal_to(Bmat.m(), 2);
     libmesh_assert_equal_to(Bmat.n(), 6*n_phi);
+    libmesh_assert_less    (qp, dphi[0].size());
     
     // now set the shape function values
     // dN/dx
@@ -109,7 +110,8 @@ initialize_von_karman_strain_operator(const unsigned int qp,
     libmesh_assert_equal_to(vk_dwdxi_mat.cols(), 2);
     libmesh_assert_equal_to(Bmat_w_vk.m(), 2);
     libmesh_assert_equal_to(Bmat_w_vk.n(), 6*n_phi);
-    
+    libmesh_assert_less    (qp, dphi[0].size());
+
     Real dv=0., dw=0.;
     vk_strain.setZero();
     vk_dvdxi_mat.setZero();
@@ -147,7 +149,8 @@ initialize_von_karman_strain_operator_sensitivity(const unsigned int qp,
     libmesh_assert_equal_to(vk_dvdxi_mat_sens.cols(), 2);
     libmesh_assert_equal_to(vk_dwdxi_mat_sens.rows(), 2);
     libmesh_assert_equal_to(vk_dwdxi_mat_sens.cols(), 2);
-    
+    libmesh_assert_less    (qp, dphi[0].size());
+
     Real dv=0., dw=0.;
     vk_dvdxi_mat_sens.setZero();
     vk_dwdxi_mat_sens.setZero();
@@ -174,9 +177,15 @@ MAST::StructuralElement1D::calculate_stress(bool request_derivative,
     
     std::unique_ptr<MAST::FEBase>   fe(_assembly.build_fe(_elem));
     fe->init(_elem);
+
+    const unsigned int
+    qp_loc_fe_size = (unsigned int)fe->get_qpoints().size(),
+    n_added_qp     = 4;
+
     std::vector<libMesh::Point>
     qp_loc_fe = fe->get_qpoints(),
-    qp_loc(qp_loc_fe.size()*4);
+    qp_loc(qp_loc_fe_size*n_added_qp);
+    
     
     // we will evaluate the stress at upper and lower layers of element,
     // so we will add two new points for each qp_loc
@@ -207,7 +216,7 @@ MAST::StructuralElement1D::calculate_stress(bool request_derivative,
     std::unique_ptr<MAST::BendingOperator1D>
     bend(MAST::build_bending_operator_1D(bending_model,
                                          *this,
-                                         qp_loc).release());
+                                         qp_loc_fe).release());
 
     
     // now that the FE object has been initialized, evaluate the stress values
@@ -313,222 +322,229 @@ MAST::StructuralElement1D::calculate_stress(bool request_derivative,
     
     ///////////////////////////////////////////////////////////////////////
     // second for loop to calculate the residual and stiffness contributions
-    for (unsigned int qp=0; qp<qp_loc.size(); qp++) {
-        
-        // get the material matrix
-        mat_stiff(xyz[qp], _time, material_mat);
-        
-        this->initialize_direct_strain_operator(qp, *fe, Bmat_mem);
-        
-        // first handle constant throught the thickness stresses: membrane and vonKarman
-        Bmat_mem.vector_mult(strain, _local_sol);
-        
-        // if thermal load was specified, then set the thermal strain
-        // component of the total strain
-        if (thermal_load) {
-            (*temp_func)    (xyz[qp], _time, temp);
-            (*ref_temp_func)(xyz[qp], _time, ref_t);
-            (*alpha_func)   (xyz[qp], _time, alpha);
-            strain(0)  -=  alpha*(temp-ref_t);
-        }
-
-        
-        if (if_bending) {
-            // von Karman strain
-            if (if_vk) {  // get the vonKarman strain operator if needed
-                
-                this->initialize_von_karman_strain_operator(qp,
-                                                            *fe,
-                                                            strain_vk,
-                                                            vk_dvdxi_mat,
-                                                            vk_dwdxi_mat,
-                                                            Bmat_v_vk,
-                                                            Bmat_w_vk);
-                strain += strain_vk;
+    ///////////////////////////////////////////////////////////////////////
+    unsigned int
+    qp = 0;
+    for (unsigned int qp_loc_index=0; qp_loc_index<qp_loc_fe_size; qp_loc_index++)
+        for (unsigned int section_qp_index=0; section_qp_index<n_added_qp; section_qp_index++)
+        {
+            qp = qp_loc_index*n_added_qp + section_qp_index;
+            
+            // get the material matrix
+            mat_stiff(xyz[qp_loc_index], _time, material_mat);
+            
+            this->initialize_direct_strain_operator(qp_loc_index, *fe, Bmat_mem);
+            
+            // first handle constant throught the thickness stresses: membrane and vonKarman
+            Bmat_mem.vector_mult(strain, _local_sol);
+            
+            // if thermal load was specified, then set the thermal strain
+            // component of the total strain
+            if (thermal_load) {
+                (*temp_func)    (xyz[qp_loc_index], _time, temp);
+                (*ref_temp_func)(xyz[qp_loc_index], _time, ref_t);
+                (*alpha_func)   (xyz[qp_loc_index], _time, alpha);
+                strain(0)  -=  alpha*(temp-ref_t);
             }
             
-            // add to this the bending strain
-            hy    (xyz[qp], _time,     y);
-            hz    (xyz[qp], _time,     z);
-            hy_off(xyz[qp], _time, y_off);
-            hz_off(xyz[qp], _time, z_off);
-
-            // TODO: this assumes isotropic section. Multilayered sections need
-            // special considerations
-            // This operator depends on the y and z thickness values. Sensitivity
-            // analysis should include the sensitivity of this operator on
-            // these thickness values
-            bend->initialize_bending_strain_operator_for_yz(*fe,
-                                                            qp,
-                                                            qp_loc[qp](1) * y/2.+y_off,
-                                                            qp_loc[qp](2) * z/2.+z_off,
-                                                            Bmat_bend_v,
-                                                            Bmat_bend_w);
-            Bmat_bend_v.vector_mult(strain_bend, _local_sol);
-            strain += strain_bend;
-
-            Bmat_bend_w.vector_mult(strain_bend, _local_sol);
-            strain += strain_bend;
-        }
-
-        
-        // note that this assumes linear material laws
-        stress = material_mat * strain;
-
-        // now set the data for the 3D stress-strain vector
-        // this is using only the direct strain/stress.
-        // this can be improved by estimating the shear stresses from
-        // torsion and shear flow from bending.
-        strain_3D(0)  =   strain(0);
-        stress_3D(0)  =   stress(0);
-        
-        // set the stress and strain data
-        MAST::StressStrainOutputBase::Data*
-        data = nullptr;
-        
-        // if neither the derivative nor sensitivity is requested, then
-        // we assume that a new data entry is to be provided. Otherwise,
-        // we assume that the stress at this quantity already
-        // exists, and we only need to append sensitivity/derivative
-        // data to it
-        if (!request_derivative && !request_sensitivity)
-            data = &(stress_output.add_stress_strain_at_qp_location(&_elem,
-                                                                    qp,
-                                                                    qp_loc[qp],
-                                                                    xyz[qp],
-                                                                    stress_3D,
-                                                                    strain_3D,
-                                                                    JxW[qp]));
-        else
-            data = &(stress_output.get_stress_strain_data_for_elem_at_qp(&_elem,
-                                                                         qp));
-
-        // calculate the derivative if requested
-        if (request_derivative || request_sensitivity) {
-            
-            Bmat_mem.left_multiply(dstrain_dX, eye);  // membrane strain is linear
             
             if (if_bending) {
-                
                 // von Karman strain
-                if (if_vk) {
+                if (if_vk) {  // get the vonKarman strain operator if needed
                     
-                    Bmat_v_vk.left_multiply(mat_n1n2, vk_dvdxi_mat);
-                    dstrain_dX   +=  mat_n1n2;
-
-                    Bmat_w_vk.left_multiply(mat_n1n2, vk_dwdxi_mat);
-                    dstrain_dX   +=  mat_n1n2;
+                    this->initialize_von_karman_strain_operator(qp_loc_index,
+                                                                *fe,
+                                                                strain_vk,
+                                                                vk_dvdxi_mat,
+                                                                vk_dwdxi_mat,
+                                                                Bmat_v_vk,
+                                                                Bmat_w_vk);
+                    strain += strain_vk;
                 }
                 
-                // bending strain
-                Bmat_bend_v.left_multiply(mat_n1n2, eye);
-                dstrain_dX  +=   mat_n1n2;
-
-                Bmat_bend_w.left_multiply(mat_n1n2, eye);
-                dstrain_dX  +=   mat_n1n2;
+                // add to this the bending strain
+                hy    (xyz[qp_loc_index], _time,     y);
+                hz    (xyz[qp_loc_index], _time,     z);
+                hy_off(xyz[qp_loc_index], _time, y_off);
+                hz_off(xyz[qp_loc_index], _time, z_off);
+                
+                // TODO: this assumes isotropic section. Multilayered sections need
+                // special considerations
+                // This operator depends on the y and z thickness values. Sensitivity
+                // analysis should include the sensitivity of this operator on
+                // these thickness values
+                bend->initialize_bending_strain_operator_for_yz(*fe,
+                                                                qp_loc_index,
+                                                                qp_loc[qp](1) * y/2.+y_off,
+                                                                qp_loc[qp](2) * z/2.+z_off,
+                                                                Bmat_bend_v,
+                                                                Bmat_bend_w);
+                Bmat_bend_v.vector_mult(strain_bend, _local_sol);
+                strain += strain_bend;
+                
+                Bmat_bend_w.vector_mult(strain_bend, _local_sol);
+                strain += strain_bend;
             }
-            // note: this assumes linear material laws
-            dstress_dX  = material_mat * dstrain_dX;
-
-            // copy to the 3D structure
-            dstress_dX_3D.row(0)  = dstress_dX.row(0);
-            dstrain_dX_3D.row(0)  = dstrain_dX.row(0);
             
-            if (request_derivative)
-                data->set_derivatives(dstress_dX_3D, dstrain_dX_3D);
+            
+            // note that this assumes linear material laws
+            stress = material_mat * strain;
+            
+            // now set the data for the 3D stress-strain vector
+            // this is using only the direct strain/stress.
+            // this can be improved by estimating the shear stresses from
+            // torsion and shear flow from bending.
+            strain_3D(0)  =   strain(0);
+            stress_3D(0)  =   stress(0);
+            
+            // set the stress and strain data
+            MAST::StressStrainOutputBase::Data*
+            data = nullptr;
+            
+            // if neither the derivative nor sensitivity is requested, then
+            // we assume that a new data entry is to be provided. Otherwise,
+            // we assume that the stress at this quantity already
+            // exists, and we only need to append sensitivity/derivative
+            // data to it
+            if (!request_derivative && !request_sensitivity)
+                data = &(stress_output.add_stress_strain_at_qp_location(&_elem,
+                                                                        qp,
+                                                                        qp_loc[qp],
+                                                                        xyz[qp_loc_index],
+                                                                        stress_3D,
+                                                                        strain_3D,
+                                                                        JxW[qp_loc_index]));
+            else
+                data = &(stress_output.get_stress_strain_data_for_elem_at_qp(&_elem,
+                                                                             qp));
+            
+            // calculate the derivative if requested
+            if (request_derivative || request_sensitivity) {
                 
-
-            if (request_sensitivity) {
-                // sensitivity of the response, s, is
-                //   ds/dp   = partial s/partial p  +
-                //             partial s/partial X   dX/dp
-                //   the first part of the sensitivity is obtained from
-                //
-                // the first term includes direct sensitivity of the stress
-                // with respect to the parameter, while holding the solution
-                // constant. This should include influence of shape changes,
-                // if the parameter is shape-dependent.
-                // TODO: include shape sensitivity.
-                // presently, only material parameter is included
-
-                dstrain_dp  =  RealVectorX::Zero(n1);
-
-                // if thermal load was specified, then set the thermal strain
-                // component of the total strain
-                if (thermal_load) {
-                    temp_func->derivative(*sensitivity_param,
-                                          xyz[qp], _time, dtemp);
-                    ref_temp_func->derivative(*sensitivity_param,
-                                              xyz[qp], _time, dref_t);
-                    alpha_func->derivative(*sensitivity_param,
-                                           xyz[qp], _time, dalpha);
-                    dstrain_dp(0)  -=  alpha*(dtemp-dref_t) - dalpha*(temp-ref_t);
-                }
+                Bmat_mem.left_multiply(dstrain_dX, eye);  // membrane strain is linear
                 
-                // include the dependence of strain on the thickness
                 if (if_bending) {
                     
-                    // add to this the bending strain
-                    hy.derivative(*sensitivity_param,
-                                  xyz[qp], _time, y);
-                    hz.derivative(*sensitivity_param,
-                                  xyz[qp], _time, z);
-                    hy_off.derivative(*sensitivity_param,
-                                      xyz[qp], _time, y_off);
-                    hz_off.derivative(*sensitivity_param,
-                                      xyz[qp], _time, z_off);
+                    // von Karman strain
+                    if (if_vk) {
+                        
+                        Bmat_v_vk.left_multiply(mat_n1n2, vk_dvdxi_mat);
+                        dstrain_dX   +=  mat_n1n2;
+                        
+                        Bmat_w_vk.left_multiply(mat_n1n2, vk_dwdxi_mat);
+                        dstrain_dX   +=  mat_n1n2;
+                    }
 
-                    bend->initialize_bending_strain_operator_for_yz(*fe,
-                                                                    qp,
-                                                                    qp_loc[qp](1) * y/2.+y_off,
-                                                                    qp_loc[qp](2) * z/2.+z_off,
-                                                                    Bmat_bend_v,
-                                                                    Bmat_bend_w);
-                    Bmat_bend_v.vector_mult(strain_bend, _local_sol);
-                    dstrain_dp += strain_bend;
+                    // bending strain
+                    Bmat_bend_v.left_multiply(mat_n1n2, eye);
+                    dstrain_dX  +=   mat_n1n2;
 
-                    Bmat_bend_w.vector_mult(strain_bend, _local_sol);
-                    dstrain_dp += strain_bend;
+                    Bmat_bend_w.left_multiply(mat_n1n2, eye);
+                    dstrain_dX  +=   mat_n1n2;
                 }
-
                 
-                // now use this to calculate the stress sensitivity.
-                dstress_dp  =  material_mat * dstrain_dp;
-
-                // get the material matrix sensitivity
-                mat_stiff.derivative(*sensitivity_param,
-                                     xyz[qp],
-                                     _time,
-                                     material_mat);
-
-                // partial sensitivity of strain is zero unless it is a
-                // shape parameter.
-                // TODO: shape sensitivity of strain operator
-
-                // now use this to calculate the stress sensitivity.
-                dstress_dp +=  material_mat * strain;
-
+                // note: this assumes linear material laws
+                dstress_dX  = material_mat * dstrain_dX;
                 
-                //
-                // use the derivative data to evaluate the second term in the
-                // sensitivity
-                //
+                // copy to the 3D structure
+                dstress_dX_3D.row(0)  = dstress_dX.row(0);
+                dstrain_dX_3D.row(0)  = dstrain_dX.row(0);
                 
-                dstress_dp  += dstress_dX * _local_sol_sens;
-                dstrain_dp  += dstrain_dX * _local_sol_sens;
+                if (request_derivative)
+                    data->set_derivatives(dstress_dX_3D, dstrain_dX_3D);
                 
-                // copy the 3D object
-                stress_3D(0) = dstress_dp(0);
-                strain_3D(0) = dstrain_dp(0);
                 
-                // tell the data object about the sensitivity values
-                data->set_sensitivity(*sensitivity_param,
-                                      stress_3D,
-                                      strain_3D);
+                if (request_sensitivity) {
+                    // sensitivity of the response, s, is
+                    //   ds/dp   = partial s/partial p  +
+                    //             partial s/partial X   dX/dp
+                    //   the first part of the sensitivity is obtained from
+                    //
+                    // the first term includes direct sensitivity of the stress
+                    // with respect to the parameter, while holding the solution
+                    // constant. This should include influence of shape changes,
+                    // if the parameter is shape-dependent.
+                    // TODO: include shape sensitivity.
+                    // presently, only material parameter is included
+                    
+                    dstrain_dp  =  RealVectorX::Zero(n1);
+                    
+                    // if thermal load was specified, then set the thermal strain
+                    // component of the total strain
+                    if (thermal_load) {
+                        temp_func->derivative(*sensitivity_param,
+                                              xyz[qp_loc_index], _time, dtemp);
+                        ref_temp_func->derivative(*sensitivity_param,
+                                                  xyz[qp_loc_index], _time, dref_t);
+                        alpha_func->derivative(*sensitivity_param,
+                                               xyz[qp_loc_index], _time, dalpha);
+                        dstrain_dp(0)  -=  alpha*(dtemp-dref_t) - dalpha*(temp-ref_t);
+                    }
+                    
+                    // include the dependence of strain on the thickness
+                    if (if_bending) {
+                        
+                        // add to this the bending strain
+                        hy.derivative(*sensitivity_param,
+                                      xyz[qp_loc_index], _time, y);
+                        hz.derivative(*sensitivity_param,
+                                      xyz[qp_loc_index], _time, z);
+                        hy_off.derivative(*sensitivity_param,
+                                          xyz[qp_loc_index], _time, y_off);
+                        hz_off.derivative(*sensitivity_param,
+                                          xyz[qp_loc_index], _time, z_off);
+                        
+                        bend->initialize_bending_strain_operator_for_yz(*fe,
+                                                                        qp_loc_index,
+                                                                        qp_loc[qp](1) * y/2.+y_off,
+                                                                        qp_loc[qp](2) * z/2.+z_off,
+                                                                        Bmat_bend_v,
+                                                                        Bmat_bend_w);
+                        Bmat_bend_v.vector_mult(strain_bend, _local_sol);
+                        dstrain_dp += strain_bend;
+                        
+                        Bmat_bend_w.vector_mult(strain_bend, _local_sol);
+                        dstrain_dp += strain_bend;
+                    }
+                    
+                    
+                    // now use this to calculate the stress sensitivity.
+                    dstress_dp  =  material_mat * dstrain_dp;
+                    
+                    // get the material matrix sensitivity
+                    mat_stiff.derivative(*sensitivity_param,
+                                         xyz[qp_loc_index],
+                                         _time,
+                                         material_mat);
+                    
+                    // partial sensitivity of strain is zero unless it is a
+                    // shape parameter.
+                    // TODO: shape sensitivity of strain operator
+                    
+                    // now use this to calculate the stress sensitivity.
+                    dstress_dp +=  material_mat * strain;
+                    
+                    
+                    //
+                    // use the derivative data to evaluate the second term in the
+                    // sensitivity
+                    //
+                    
+                    dstress_dp  += dstress_dX * _local_sol_sens;
+                    dstrain_dp  += dstrain_dX * _local_sol_sens;
+                    
+                    // copy the 3D object
+                    stress_3D(0) = dstress_dp(0);
+                    strain_3D(0) = dstrain_dp(0);
+                    
+                    // tell the data object about the sensitivity values
+                    data->set_sensitivity(*sensitivity_param,
+                                          stress_3D,
+                                          strain_3D);
+                }
             }
         }
-    }
-
+    
     // make sure that the number of data points for this element is
     // the same as the number of requested points
     libmesh_assert(qp_loc.size() ==

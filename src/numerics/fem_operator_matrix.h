@@ -22,7 +22,7 @@
 
 // C++ includes
 #include <vector>
-
+#include <iomanip>
 
 // MAST includes
 #include "base/mast_data_types.h"
@@ -50,6 +50,8 @@ namespace MAST {
         unsigned int m() const {return _n_interpolated_vars;}
         
         unsigned int n() const {return _n_discrete_vars*_n_dofs_per_var;}
+        
+        void print(std::ostream& o);
         
         /*!
          *   this initializes the operator for number of rows and variables, assuming
@@ -158,6 +160,26 @@ namespace MAST {
     
 }
 
+
+inline
+void
+MAST::FEMOperatorMatrix::print(std::ostream& o) {
+    
+    unsigned int index = 0;
+
+    for (unsigned int i=0; i<_n_interpolated_vars; i++) {// row
+        for (unsigned int j=0; j<_n_discrete_vars; j++) { // column
+            index = j*_n_interpolated_vars+i;
+            if (_var_shape_functions[index]) // check if this is non-nullptr
+                for (unsigned int k=0; k<_n_dofs_per_var; k++)
+                    o << std::setw(15) << (*_var_shape_functions[index])(k);
+            else
+                for (unsigned int k=0; k<_n_dofs_per_var; k++)
+                    o << std::setw(15) << 0.;
+        }
+        o << std::endl;
+    }
+}
 
 
 inline
