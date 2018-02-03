@@ -246,6 +246,17 @@ namespace MAST {
             return _p_norm;
         }
         
+        
+        /*!
+         *   tells the object that the calculation is for stress to be output
+         *   for plotting.
+         */
+        void set_stress_plot_mode(bool f) {
+            
+            _if_stress_plot_mode = f;
+        }
+         
+        
         /*!
          *   initialize for the element.
          */
@@ -338,25 +349,6 @@ namespace MAST {
          */
         void clear();
         
-        /*!
-         *   calculates stress data for the element \p elem with the
-         *   element solution \p sol.
-         *   \p this object should have been cleared before calling this method.
-         */
-        void calculate_for_element(const libMesh::Elem& elem,
-                                   const RealVectorX& sol);
-
-
-        /*!
-         *   calculates sensitivity of stress data for the element \p elem
-         *   with the element solution \p sol.
-         *   \p this object should have been cleared before calling this method.
-         */
-        void calculate_sensitivity_for_element(const libMesh::Elem& elem,
-                                               const RealVectorX& sol,
-                                               const RealVectorX& dsol,
-                                               const MAST::FunctionBase& p);
-
         
         /*!
          *   @returns the thermal load for this element, if present in the
@@ -485,7 +477,13 @@ namespace MAST {
         bool _primal_data_initialized;
         Real _max_val, _JxW_val, _sigma_vm_int, _sigma_vm_p_norm;
         
-        
+        /*!
+         *   identifies the mode in which evaluation is peformed. if p-norm
+         *   functional is being evaluated then certain requirements are not
+         *   enforced. This is to be used when stress is being calculated per
+         *   element for plotting.
+         */
+        bool _if_stress_plot_mode;
         
         /*!
          *    vector of stress with the associated location details

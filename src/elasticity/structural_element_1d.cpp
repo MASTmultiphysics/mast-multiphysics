@@ -20,7 +20,6 @@
 // MAST includes
 #include "elasticity/structural_element_1d.h"
 #include "numerics/fem_operator_matrix.h"
-#include "mesh/local_elem_base.h"
 #include "property_cards/element_property_card_1D.h"
 #include "property_cards/material_property_card_base.h"
 #include "elasticity/piston_theory_boundary_condition.h"
@@ -30,8 +29,9 @@
 #include "base/boundary_condition_base.h"
 #include "base/parameter.h"
 #include "base/constant_field_function.h"
-#include "mesh/local_elem_fe.h"
 #include "base/assembly_base.h"
+#include "mesh/local_elem_fe.h"
+#include "mesh/local_elem_base.h"
 
 
 MAST::StructuralElement1D::StructuralElement1D(MAST::SystemInitialization& sys,

@@ -733,10 +733,8 @@ MAST::NonlinearSystem::adjoint_solve(MAST::OutputAssemblyElemOperations &output,
 
     if (if_assemble_jacobian)
         _assemble->residual_and_jacobian(*solution, nullptr, matrix, *this);
-    output.set_assembly(*_assemble);
     _assemble->calculate_output_derivative(*solution, output, rhs);
-    output.clear_assembly();
-    
+    rhs.scale(-1.);
     
     // Our iteration counts and residuals will be sums of the individual
     // results

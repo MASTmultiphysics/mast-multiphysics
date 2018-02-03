@@ -123,6 +123,13 @@ namespace MAST {
          */
         virtual void evaluate() = 0;
 
+        /*!
+         *    this evaluates all relevant sensitivity components on
+         *    the element.
+         *    This is only done on the current element for which this
+         *    object has been initialized.
+         */
+        virtual void evaluate_sensitivity(const MAST::FunctionBase& f) = 0;
 
         /*!
          *   The output function can be a boundary integrated quantity, volume

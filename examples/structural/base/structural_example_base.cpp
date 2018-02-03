@@ -409,16 +409,16 @@ MAST::Examples::StructuralExampleBase::static_solve() {
         // solve the system
         _sys->solve();
         
-        // update stress values
-        stress_assembly.attach_discipline_and_system(stress_elem_ops,
-                                                     *_discipline,
-                                                     *_structural_sys);
-        stress_assembly.update_stress_strain_data(*_sys->solution);
-        stress_assembly.clear_discipline_and_system();
-        
         // output, if asked
         if (output) {
             
+            // update stress values
+            stress_assembly.attach_discipline_and_system(stress_elem_ops,
+                                                         *_discipline,
+                                                         *_structural_sys);
+            stress_assembly.update_stress_strain_data(*_sys->solution);
+            stress_assembly.clear_discipline_and_system();
+
             // write the solution for visualization
             exodus_writer.write_timestep("output.exo",
                                          *_eq_sys,
@@ -450,7 +450,14 @@ MAST::Examples::StructuralExampleBase::static_sensitivity_solve(MAST::Parameter&
 
     libMesh::System
     &stress_sys = _structural_sys->get_stress_sys();
+
+    libMesh::NumericVector<Real>
+    &dXdp      = _sys->add_sensitivity_solution(),
+    &dsigma_dp = stress_sys.add_sensitivity_solution();
     
+    /////////////////////////////////////////////////////////////////////
+    //   sensitivity of solution
+    /////////////////////////////////////////////////////////////////////
     assembly.attach_discipline_and_system(elem_ops,
                                           *_discipline,
                                           *_structural_sys);
@@ -462,34 +469,53 @@ MAST::Examples::StructuralExampleBase::static_sensitivity_solve(MAST::Parameter&
     // we are assuming that the nonlinear solve was completed before this.
     // So, we will reuse that matrix, as opposed to reassembling it
     _sys->sensitivity_solve(p, false);
+
+    stress_elem_ops.set_assembly(assembly);
+    // evaluate output before calculation of sensitivity, since the
+    // object requires the data
+    assembly.calculate_output(*_sys->solution, stress_elem_ops);
+    stress_elem_ops.output_total(); // this evaluates the total output
+    assembly.calculate_output_direct_sensitivity(*_sys->solution,
+                                                 dXdp,
+                                                 p,
+                                                 stress_elem_ops);
+    stress_elem_ops.clear_assembly();
+    libMesh::out << "dq/dp: direct: " << stress_elem_ops.output_sensitivity_total(p) << std::endl;
+    
     assembly.clear_discipline_and_system();
     
-    // update stress sensitivity values
-    stress_assembly.attach_discipline_and_system(stress_elem_ops,
-                                                 *_discipline,
-                                                 *_structural_sys);
-    stress_assembly.update_stress_strain_sensitivity_data(*_sys->solution,
-                                                          _sys->get_sensitivity_solution(0),
-                                                          p,
-                                                          stress_sys.get_sensitivity_solution(0));
-    stress_assembly.clear_discipline_and_system();
     
-    
-    
+    /////////////////////////////////////////////////////////////////////
     // write the solution for visualization
+    /////////////////////////////////////////////////////////////////////
     if (output) {
+        
+        /////////////////////////////////////////////////////////////////////
+        //   sensitivity of stress for plotting
+        /////////////////////////////////////////////////////////////////////
+        stress_assembly.attach_discipline_and_system(stress_elem_ops,
+                                                     *_discipline,
+                                                     *_structural_sys);
+        stress_assembly.update_stress_strain_sensitivity_data(*_sys->solution,
+                                                              dXdp,
+                                                              p,
+                                                              dsigma_dp);
+        
+        stress_assembly.clear_discipline_and_system();
         
         std::ostringstream oss;
         oss << "output_" << p.name() << ".exo";
-        
-        _sys->solution->swap(_sys->get_sensitivity_solution(0));
-        stress_sys.solution->swap(stress_sys.get_sensitivity_solution(0));
+
+        // swap solutions for output, since libMesh writes System::solution
+        // to the output.
+        _sys->solution->swap(dXdp);
+        stress_sys.solution->swap(dsigma_dp);
         
         libMesh::ExodusII_IO(*_mesh).write_equation_systems(oss.str(),
                                                             *_eq_sys);
         
-        _sys->solution->swap(_sys->get_sensitivity_solution(0));
-        stress_sys.solution->swap(stress_sys.get_sensitivity_solution(0));
+        _sys->solution->swap(dXdp);
+        stress_sys.solution->swap(dsigma_dp);
     }
     
     _sys->nonlinear_solver->nearnullspace_object = nullptr;
@@ -530,11 +556,14 @@ static_adjoint_sensitivity_solve(//MAST::OutputAssemblyElemOperations& q,
     // So, we will reuse that matrix, as opposed to reassembling it
     stress_elem_ops.set_assembly(assembly);
     assembly.calculate_output(*_sys->solution, stress_elem_ops);
-    stress_elem_ops.clear_assembly();
     libMesh::out << "output : " << stress_elem_ops.output_total() << std::endl;
     _sys->adjoint_solve(stress_elem_ops, false);
     
-    
+    assembly.calculate_output_adjoint_sensitivity(*_sys->solution,
+                                                  _sys->get_adjoint_solution(),
+                                                  p,
+                                                  stress_elem_ops);
+    stress_elem_ops.clear_assembly();
     assembly.clear_discipline_and_system();
     
     

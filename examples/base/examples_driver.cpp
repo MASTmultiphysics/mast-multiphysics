@@ -276,6 +276,7 @@ int main(int argc, char* const argv[]) {
         MAST::Examples::BarExtension example;
         example.init(*input);
         example.static_solve();
+        example.static_sensitivity_solve(example.get_parameter("thy"));
         example.static_adjoint_sensitivity_solve(example.get_parameter("thy"));
     }
 //    else if (case_name == "beam_modal_analysis")

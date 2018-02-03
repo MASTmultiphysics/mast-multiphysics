@@ -184,9 +184,11 @@ update_stress_strain_data(const libMesh::NumericVector<Real>& X) const {
         
         // clear before calculating the data
         _stress_ops->clear();
-        _stress_ops->calculate_for_element(*elem, sol);
+        _stress_ops->init(*elem);
+        _stress_ops->set_elem_solution(sol);
+        _stress_ops->evaluate();
         _stress_ops->clear_elem();
-
+        
         // get the stress-strain data map from the object
         const std::map<const libMesh::Elem*,
         std::vector<MAST::StressStrainOutputBase::Data*> >& output_map =
@@ -285,6 +287,7 @@ update_stress_strain_sensitivity_data(const libMesh::NumericVector<Real>& X,
     Real
     max_vm_stress    =   0.;
     
+    
     for ( ; el != end_el; el++) {
         
         const libMesh::Elem* elem = *el;
@@ -300,10 +303,18 @@ update_stress_strain_sensitivity_data(const libMesh::NumericVector<Real>& X,
             dsol(i) = (*localized_solution_sens)(dof_indices[i]);
         }
         
-        // clear before calculating the data
+        // clear before calculating the data. We have to calculate the stress
+        // before calculating sensitivity since the sensitivity assumes the
+        // presence of stress data, which is cleared after each element.
         _stress_ops->clear();
-        _stress_ops->calculate_sensitivity_for_element(*elem, sol, dsol, p);
-        
+        _stress_ops->init(*elem);
+        _stress_ops->set_stress_plot_mode(true);
+        _stress_ops->set_elem_solution(sol);
+        _stress_ops->set_elem_solution_sensitivity(dsol);
+        _stress_ops->evaluate();
+        _stress_ops->evaluate_sensitivity(p);
+        _stress_ops->clear_elem();
+
         // get the stress-strain data map from the object
         const std::map<const libMesh::Elem*,
         std::vector<MAST::StressStrainOutputBase::Data*> >& output_map =
@@ -342,6 +353,7 @@ update_stress_strain_sensitivity_data(const libMesh::NumericVector<Real>& X,
     }
     
     dsigmadp.close();
+    _stress_ops->set_stress_plot_mode(false);
 }
 
 

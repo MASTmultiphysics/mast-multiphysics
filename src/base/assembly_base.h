@@ -213,45 +213,29 @@ namespace MAST {
         /*!
          *   evaluates the sensitivity of the outputs in the attached
          *   discipline with respect to the parametrs in \par params.
-         *   The base solution should be provided in \par X. If the parameter
-         *   \par if_total_sensitivity is true, then the method will calculate
-         *   the total derivative of the output with respect to the parameters.
-         *   In this case, the method will look for the sensitivity solution for
-         *   the i^th parameter in get_sensitivity_solution() of the associated
-         *   libMesh::System object. If the parameter \par if_total_sensitivity
-         *   if \p false, then the method will calculate the sensitivity
-         *   assuming the sensitivity of solution is zero. This can be used for
-         *   adjoint sensitivity analysis.
+         *   The base solution should be provided in \par X. If total sensitivity
+         *   is desired, then \par dXdp should contain the sensitivity of
+         *   solution wrt the parameter \par p. If this \par dXdp is zero,
+         *   the calculated sensitivity will be the partial derivarive of
+         *   \par output wrt \par p.
          */
         virtual void
-        calculate_output_direct_sensitivity(const bool if_total_sensitivity,
-                                            const libMesh::NumericVector<Real>& X,
+        calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
+                                            const libMesh::NumericVector<Real>& dXdp,
                                             const MAST::FunctionBase& p,
-                                            MAST::OutputAssemblyElemOperations& output) {
-            libmesh_error(); // to be implemented
-        }
+                                            MAST::OutputAssemblyElemOperations& output);
 
         
         /*!
-         *   evaluates the sensitivity of the outputs in the attached
-         *   discipline with respect to the parametrs in \par params.
-         *   The base solution should be provided in \par X. If the parameter
-         *   \par if_total_sensitivity is true, then the method will calculate
-         *   the total derivative of the output with respect to the parameters.
-         *   In this case, the method will look for the sensitivity solution for
-         *   the i^th parameter in get_sensitivity_solution() of the associated
-         *   libMesh::System object. If the parameter \par if_total_sensitivity
-         *   if \p false, then the method will calculate the sensitivity
-         *   assuming the sensitivity of solution is zero. This can be used for
-         *   adjoint sensitivity analysis.
+         *   Evaluates the total sensitivity of \par output wrt \par p using
+         *   the adjoint solution provided in \par dq_dX for a linearization
+         *   about solution \par X.
          */
         virtual void
-        calculate_output_adjoint_sensitivity(const bool if_total_sensitivity,
-                                             const libMesh::NumericVector<Real>& X,
+        calculate_output_adjoint_sensitivity(const libMesh::NumericVector<Real>& X,
+                                             const libMesh::NumericVector<Real>& dq_dX,
                                              const MAST::FunctionBase& p,
-                                             MAST::OutputAssemblyElemOperations& output)  {
-            libmesh_error(); // to be implemented
-        }
+                                             MAST::OutputAssemblyElemOperations& output);
 
         
         /*!

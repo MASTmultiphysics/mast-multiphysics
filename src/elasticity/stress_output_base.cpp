@@ -251,7 +251,8 @@ _primal_data_initialized  (false),
 _max_val                  (0.),
 _JxW_val                  (0.),
 _sigma_vm_int             (0.),
-_sigma_vm_p_norm          (0.) {
+_sigma_vm_p_norm          (0.),
+_if_stress_plot_mode      (false) {
     
 }
 
@@ -293,19 +294,26 @@ void
 MAST::StressStrainOutputBase::evaluate_sensitivity(const MAST::FunctionBase &f) {
     
     // the primal data should have been calculated
-    libmesh_assert(_primal_data_initialized);
+    if (!_if_stress_plot_mode)
+        libmesh_assert(_primal_data_initialized);
+
+    _physics_elem->sensitivity_param = &f;
 
     // ask for the values
     dynamic_cast<MAST::StructuralElementBase*>
     (_physics_elem)->calculate_stress(false,
                                       true,
                                       *this);
+
+    _physics_elem->sensitivity_param = nullptr;
 }
 
 
 Real
 MAST::StressStrainOutputBase::output_total() {
 
+    libmesh_assert(!_if_stress_plot_mode);
+    
     // if this has not been initialized, then we should do so now
     if (!_primal_data_initialized)
         this->von_Mises_p_norm_functional_for_all_elems();
@@ -317,7 +325,9 @@ MAST::StressStrainOutputBase::output_total() {
 Real
 MAST::StressStrainOutputBase::output_sensitivity_for_elem(const MAST::FunctionBase& p) {
     
+    libmesh_assert(!_if_stress_plot_mode);
     libmesh_assert(_primal_data_initialized);
+    
     Real val = 0.;
     
     this->von_Mises_p_norm_functional_sensitivity_for_elem(p, _physics_elem->elem(), val);
@@ -329,7 +339,9 @@ MAST::StressStrainOutputBase::output_sensitivity_for_elem(const MAST::FunctionBa
 Real
 MAST::StressStrainOutputBase::output_sensitivity_total(const MAST::FunctionBase& p) {
     
+    libmesh_assert(!_if_stress_plot_mode);
     libmesh_assert(_primal_data_initialized);
+
     Real val = 0.;
     
     this->von_Mises_p_norm_functional_sensitivity_for_all_elems(p, val);
@@ -341,6 +353,7 @@ MAST::StressStrainOutputBase::output_sensitivity_total(const MAST::FunctionBase&
 void
 MAST::StressStrainOutputBase::output_derivative_for_elem(RealVectorX& dq_dX) {
     
+    libmesh_assert(!_if_stress_plot_mode);
     libmesh_assert(_primal_data_initialized);
     
     dq_dX.setZero();
@@ -419,56 +432,7 @@ MAST::StressStrainOutputBase::clear() {
     _JxW_val                 = 0.;
     _sigma_vm_int            = 0.;
     _sigma_vm_p_norm         = 0.;
-}
-
-
-
-
-void
-MAST::StressStrainOutputBase::calculate_for_element(const libMesh::Elem& elem,
-                                                    const RealVectorX& sol) {
-    
-    libmesh_assert(this->if_evaluate_for_element(elem));
-    
-    // create the element, set its solution and then ask it for
-    this->init(elem);
-    
-    // set the solution
-    this->set_elem_solution(sol);
-    
-    // ask for the values
-    dynamic_cast<MAST::StructuralElementBase*>
-    (_physics_elem)->calculate_stress(false,
-                                      false,
-                                      *this);
-}
-
-
-
-void
-MAST::StressStrainOutputBase::
-calculate_sensitivity_for_element(const libMesh::Elem& elem,
-                                  const RealVectorX& sol,
-                                  const RealVectorX& dsol,
-                                  const MAST::FunctionBase& p) {
-    
-    libmesh_assert(this->if_evaluate_for_element(elem));
-
-    // create the element, set its solution and then ask it for
-    this->init(elem);
-    _physics_elem->sensitivity_param = &p;
-    
-    // set the solution
-    this->set_elem_solution(sol);
-    this->set_elem_solution_sensitivity(dsol);
-    
-    // ask for the values
-    dynamic_cast<MAST::StructuralElementBase*>
-    (_physics_elem)->calculate_stress(false,
-                                      true,
-                                      *this);
-    
-    _physics_elem->sensitivity_param = nullptr;
+    _if_stress_plot_mode     = false;
 }
 
 
@@ -621,6 +585,7 @@ void
 MAST::StressStrainOutputBase::
 von_Mises_p_norm_functional_for_all_elems() {
     
+    libmesh_assert(!_if_stress_plot_mode);
     libmesh_assert(!_primal_data_initialized);
     
     Real
@@ -693,7 +658,8 @@ von_Mises_p_norm_functional_sensitivity_for_all_elems
 (const MAST::FunctionBase& f,
  Real& dsigma_vm_val_df) const {
     
-    libmesh_assert(!_primal_data_initialized);
+    libmesh_assert(!_if_stress_plot_mode);
+    libmesh_assert(_primal_data_initialized);
 
     Real
     val      = 0.;
@@ -721,7 +687,8 @@ von_Mises_p_norm_functional_sensitivity_for_elem
  const libMesh::Elem& e,
  Real& dsigma_vm_val_df) const {
     
-    libmesh_assert(!_primal_data_initialized);
+    libmesh_assert(!_if_stress_plot_mode);
+    libmesh_assert(_primal_data_initialized);
     
     Real
     e_val    = 0.,
@@ -765,6 +732,7 @@ MAST::StressStrainOutputBase::
 von_Mises_p_norm_functional_state_derivartive_for_elem(const libMesh::Elem& e,
                                                        RealVectorX& dq_dX) const {
     
+    libmesh_assert(!_if_stress_plot_mode);
     libmesh_assert(_primal_data_initialized);
     
     Real
