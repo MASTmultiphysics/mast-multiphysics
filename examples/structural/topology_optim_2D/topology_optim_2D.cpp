@@ -128,29 +128,40 @@ MAST::Examples::TopologyOptimizationLevelSet2D::level_set_solve() {
     libmesh_assert(_initialized);
     
     bool
-    output      = (*_input)(   "if_output", false);
+    output      = (*_input)(   "if_output", false),
+    propagate   = (*_input)(   "if_propagate", true);
+    
     
     std::string
     output_name = (*_input)(   "output_file_root", "output");
     output_name += "_level_set.exo";
 
     // create the nonlinear assembly object
-    MAST::LevelSetReinitializationTransientAssembly          level_set_assembly;
+    std::unique_ptr<MAST::TransientAssembly> level_set_assembly;
+    if (propagate)
+        level_set_assembly.reset(new MAST::TransientAssembly);
+    else {
+        MAST::LevelSetReinitializationTransientAssembly
+        *assembly = new MAST::LevelSetReinitializationTransientAssembly;
+
+        libMesh::NumericVector<Real>
+        &base_sol = _level_set_sys->add_vector("base_sol");
+        base_sol  = *_level_set_sys->solution;
+        
+        assembly->set_reference_solution(base_sol);
+        _level_set_discipline->set_level_set_propagation_mode(false);
+        level_set_assembly.reset(assembly);
+    }
     MAST::LevelSetTransientAssemblyElemOperations            level_set_elem_ops;
-    libMesh::NumericVector<Real>
-    &base_sol = _level_set_sys->add_vector("base_sol");
-    base_sol  = *_level_set_sys->solution;
-    level_set_assembly.set_reference_solution(base_sol);
-    _level_set_discipline->set_level_set_propagation_mode(false);
     
     // Transient solver for time integration
     MAST::FirstOrderNewmarkTransientSolver  level_set_solver;
 
     // now solve the system
-    level_set_assembly.attach_discipline_and_system(level_set_elem_ops,
-                                                    *_level_set_discipline,
-                                                    level_set_solver,
-                                                    *_level_set_sys_init);
+    level_set_assembly->attach_discipline_and_system(level_set_elem_ops,
+                                                     *_level_set_discipline,
+                                                     level_set_solver,
+                                                     *_level_set_sys_init);
 
     // file to write the solution for visualization
     libMesh::ExodusII_IO exodus_writer(*_mesh);
@@ -192,7 +203,7 @@ MAST::Examples::TopologyOptimizationLevelSet2D::level_set_solve() {
         t_step++;
     }
 
-    level_set_assembly.clear_discipline_and_system();
+    level_set_assembly->clear_discipline_and_system();
 }
 
 

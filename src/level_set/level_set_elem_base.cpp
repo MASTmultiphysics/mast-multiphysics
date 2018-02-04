@@ -460,11 +460,7 @@ MAST::LevelSetElementBase::_velocity_and_source(const unsigned int qp,
         ref_phi       = v(0),
         grad_phi_norm = grad_phi.norm();
         
-        source     = 0.;
-        if (ref_phi > tol)
-            source = 1.;
-        else if (ref_phi < -tol)
-            source = -1.;
+        source = ref_phi/pow(pow(ref_phi,2)+ tol*pow(grad_phi_norm,2), 0.5);
         
         if (grad_phi_norm > tol)
             vel        = grad_phi * source/grad_phi.norm();
