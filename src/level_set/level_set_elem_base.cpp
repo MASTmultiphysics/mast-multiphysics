@@ -88,6 +88,7 @@ MAST::LevelSetElementBase::internal_residual (bool request_jacobian,
     flux     = RealVectorX::Zero(1),
     vel      = RealVectorX::Zero(dim);
     Real
+    dc       = 0.,
     source   = 0.;
     
     std::vector<MAST::FEMOperatorMatrix> dBmat(dim);
@@ -101,6 +102,7 @@ MAST::LevelSetElementBase::internal_residual (bool request_jacobian,
         
         _velocity_and_source(qp, xyz[qp], _time, Bmat, dBmat, vel, source);
         _tau(qp, Bmat, dBmat, vel, tau);
+        _dc_operator(qp, dBmat, vel, dc);
         
         // calculate the flux for each dimension and add its weighted
         // component to the residual
@@ -115,10 +117,19 @@ MAST::LevelSetElementBase::internal_residual (bool request_jacobian,
         }
 
         // add to the residual vector
-        flux(0) -= source;                                   // grad(phi) - s
+        flux(0) -= source;                                   // V.grad(phi) - s
         Bmat.vector_mult_transpose(vec2_n2, flux);
-        f += JxW[qp] * vec2_n2;                              // int_omega          u       V.(grad(phi)-s)
+        f += JxW[qp] * vec2_n2;                              // int_omega          u      (V.grad(phi)-s)
         f += JxW[qp] * mat2_n1n2.transpose() * tau * flux;   // int_omega   V.grad(u) tau (V.grad(phi)-s)
+        
+        // discontinuity capturing
+        for (unsigned int j=0; j<dim; j++) {
+            
+            dBmat[j].vector_mult(vec1_n1, _sol);
+            dBmat[j].vector_mult_transpose(vec2_n2, vec1_n1);
+            f += JxW[qp] * dc * vec2_n2;
+        }
+
         
         if (request_jacobian) {
             
@@ -126,6 +137,10 @@ MAST::LevelSetElementBase::internal_residual (bool request_jacobian,
                     
                 Bmat.right_multiply_transpose(mat_n2n2, dBmat[j]);
                 jac += JxW[qp] * vel(j) * mat_n2n2;  // int_omega  u  V.grad(phi)
+                
+                // discontinuity capturing term
+                dBmat[j].right_multiply_transpose(mat_n2n2, dBmat[j]);   // dB_i^T dc dB_i
+                jac += JxW[qp] * dc * mat_n2n2;
             }
             
             jac += JxW[qp] * mat2_n1n2.transpose() * tau * mat2_n1n2;  // int_omega  V.grad(u) tau (V.grad(phi))
@@ -190,15 +205,15 @@ MAST::LevelSetElementBase::velocity_residual (bool request_jacobian,
         // add to the residual vector
         Bmat.right_multiply(vec1_n1, _vel);                     // dphi/dt
         Bmat.vector_mult_transpose(vec2_n2, vec1_n1);
-        f += JxW[qp] * vec2_n2;                                 // int_omega          u  dphi/dt
+        f += JxW[qp] * vec2_n2;                                 // int_omega          u      dphi/dt
         f += JxW[qp] * mat2_n1n2.transpose() * tau * vec1_n1;   // int_omega   V.grad(u) tau dphi/dt
         
         if (request_jacobian) {
             
             Bmat.right_multiply_transpose(mat_n2n2, Bmat);
-            jac_xdot += JxW[qp] * mat_n2n2;  // int_omega  u  dphi/dt
+            jac_xdot += JxW[qp] * mat_n2n2;  // int_omega         u      dphi/dt
             
-            mat_n2n1 = mat2_n1n2.transpose()*tau;
+            mat_n2n1  = mat2_n1n2.transpose()*tau;
             Bmat.left_multiply(mat_n2n2, mat_n2n1);
             jac_xdot += JxW[qp] * mat_n2n2;  // int_omega  V.grad(u) tau dphi/dt
         }
@@ -483,21 +498,149 @@ MAST::LevelSetElementBase::_tau(unsigned int qp,
     phi = RealVectorX::Zero(n_phi);
 
     Real
-    tol    = 1.e-8,
-    val    = 0.,
+    tol    = 1.e-6,
+    val1   = 0.,
+    val2   = 0.,
     vel_l2 = vel.norm();
 
+    libMesh::Point
+    nvec;
+    
     if (vel_l2 > tol) {
-        for (unsigned int i_dim=0; i_dim<_elem.dim(); i_dim++) {
+        for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ ) {
+         
+            nvec  = dphi[i_nd][qp];
+            val2 = 0.;
+            for (unsigned int i_dim=0; i_dim<_elem.dim(); i_dim++)
+                val2 += nvec(i_dim) * vel(i_dim);
             
-            for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
-                val += std::fabs(dphi[i_nd][qp](i_dim) * vel(i_dim));
+            val1 += std::fabs(val2);
         }
         
-        tau(0,0) = 1./val;
+        tau(0,0) = 1./val1;
     }
     else
         tau(0,0) = 0.;
+}
+
+
+
+
+void
+MAST::LevelSetElementBase::_dc_operator(const unsigned int qp,
+                                        const std::vector<MAST::FEMOperatorMatrix>& dB_mat,
+                                        const RealVectorX& vel,
+                                        Real& dc) {
+
+    unsigned int
+    dim = _elem.dim();
+
+    RealVectorX
+    dphi               = RealVectorX::Zero(dim),
+    vec1               = RealVectorX::Zero(1),
+    dflux              = RealVectorX::Zero(1);
+    
+    RealMatrixX
+    dxi_dX             = RealMatrixX::Zero(dim, dim);
+
+    
+    _calculate_dxidX(qp, dxi_dX);
+
+    for (unsigned int i=0; i<dim; i++) {
+
+        dB_mat[i].vector_mult(vec1, _sol); // dphi/dx_i
+        dflux(0) += vel(i) * vec1(0);      // V.grad(phi)
+        dphi(i)   = vec1(0);               // grad(phi)
+    }
+
+    Real
+    val1 = 1.0e-6;
+    
+    for (unsigned int i=0; i<dim; i++) {
+
+        vec1.setZero();
+        
+        for (unsigned int j=0; j<dim; j++)
+            vec1(0) += dxi_dX(i, j) * dphi(j);
+        
+        // calculate the value of denominator
+        val1 += pow(vec1.norm(), 2);
+    }
+
+    dc = dflux.norm()/pow(val1, 0.5);
+}
+
+
+
+void
+MAST::LevelSetElementBase::
+_calculate_dxidX (const unsigned int qp,
+                  RealMatrixX& dxi_dX) {
+    
+    
+    // initialize dxi_dX and dX_dxi
+    unsigned int
+    dim   = _elem.dim();
+    Real
+    val   = 0.;
+    dxi_dX.setZero();
+
+    for (unsigned int i_dim=0; i_dim<dim; i_dim++)
+        for (unsigned int j_dim=0; j_dim<dim; j_dim++)
+        {
+            switch (i_dim)
+            {
+                case 0:
+                {
+                    switch (j_dim)
+                    {
+                        case 0:
+                            val  = _fe->get_dxidx()[qp];
+                            break;
+                        case 1:
+                            val = _fe->get_dxidy()[qp];
+                            break;
+                        case 2:
+                            val = _fe->get_dxidz()[qp];
+                            break;
+                    }
+                }
+                    break;
+                case 1:
+                {
+                    switch (j_dim)
+                    {
+                        case 0:
+                            val = _fe->get_detadx()[qp];
+                            break;
+                        case 1:
+                            val = _fe->get_detady()[qp];
+                            break;
+                        case 2:
+                            val = _fe->get_detadz()[qp];
+                            break;
+                    }
+                }
+                    break;
+                case 2:
+                {
+                    switch (j_dim)
+                    {
+                        case 0:
+                            val = _fe->get_dzetadx()[qp];
+                            break;
+                        case 1:
+                            val = _fe->get_dzetady()[qp];
+                            break;
+                        case 2:
+                            val = _fe->get_dzetadz()[qp];
+                            break;
+                    }
+                }
+                    break;
+            }
+            dxi_dX(i_dim, j_dim) = val;
+        }
 }
 
 

@@ -1667,7 +1667,7 @@ calculate_barth_tau_matrix (const unsigned int qp,
     for (unsigned int i_node=0; i_node<dphi.size(); i_node++)
     {
         nvec = dphi[i_node][qp];
-        nval = nvec.size();
+        nval = nvec.norm();
         if (nval > 0.) {
             
             nvec /= nval;

@@ -39,9 +39,10 @@ public:
         Real l2,
         Real r):
     MAST::FieldFunction<RealVectorX>("Phi"),
-    _l1(l1),
-    _l2(l2),
-    _r(r) {
+    _l1  (l1),
+    _l2  (l2),
+    _r   (r),
+    _pi  (acos(-1.)) {
 
         libmesh_assert_less(r, _l1*.5);
         libmesh_assert_less(r, _l2*.5);
@@ -54,16 +55,28 @@ public:
         libmesh_assert_less_equal(t, 1);
         libmesh_assert_equal_to(v.size(), 1);
         
-        v(0) =
-        pow(p(0)-_l1*.5, 2) +
-        pow(p(1)-_l2*.5, 2) -
-        pow(_r, 2);
+        
+        // circle
+        //v(0) = -(pow(p(0)-_l1*.5, 2) + pow(p(1)-_l2*.5, 2) - pow(_r, 2));
+        
+        // waves
+        Real
+        nx = 1.2,
+        ny = 1.,
+        r  = pow(pow(p(0)-.5*_l1,2)+pow(p(1)-.5*_l2,2),.5);
+        v(0) = 1.*cos(nx*r*_pi/_l1);
+        
+        
+        // linear
+        //v(0) = (p(0)-_l1*0.5)*(-10.);
+        //v(0) = (p(0)+p(1)-_l1)*(-10.);
     }
 protected:
     Real
     _l1,
     _l2,
-    _r;
+    _r,
+    _pi;
 };
 
 class Vel: public MAST::FieldFunction<Real> {
@@ -168,9 +181,9 @@ MAST::Examples::TopologyOptimizationLevelSet2D::level_set_solve() {
 
     // time solver parameters
     unsigned int
-    t_step            = 0;
-
-    level_set_solver.dt            = 1.e-3;
+    t_step                         = 0,
+    n_steps                        = (*_input)("n_steps", 1000);
+    level_set_solver.dt            = (*_input)("dt",     1.e-3);
     level_set_solver.beta          = 0.5;
 
     // set the previous state to be same as the current state to account for
@@ -181,7 +194,7 @@ MAST::Examples::TopologyOptimizationLevelSet2D::level_set_solve() {
 
 
     // loop over time steps
-    while (t_step <= 100) {
+    while (t_step <= n_steps) {
 
         libMesh::out
         << "Time step: " << t_step

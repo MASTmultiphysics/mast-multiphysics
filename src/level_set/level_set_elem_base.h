@@ -160,6 +160,17 @@ namespace MAST {
                   RealMatrixX& tau);
         
         
+        
+        
+        void
+        _dc_operator(const unsigned int qp,
+                     const std::vector<MAST::FEMOperatorMatrix>& dB_mat,
+                     const RealVectorX& vel,
+                     Real& dc);
+        
+        void
+        _calculate_dxidX (const unsigned int qp, RealMatrixX& dxi_dX);
+        
         /*!
          *    When \p mass = false, initializes the FEM operator matrix to the
          *    shape functions as
