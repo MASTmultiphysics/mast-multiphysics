@@ -461,7 +461,7 @@ MAST::LevelSetElementBase::_velocity_and_source(const unsigned int qp,
         Vn        = 0.;
         
         _phi_vel(p, t, Vn);
-        vel       =  grad_phi * Vn/grad_phi.norm();
+        vel       =  grad_phi * (-Vn/grad_phi.norm());
         source    = 0.;
     }
     else {
