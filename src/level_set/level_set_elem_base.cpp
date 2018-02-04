@@ -567,7 +567,7 @@ MAST::LevelSetElementBase::_dc_operator(const unsigned int qp,
         val1 += pow(vec1.norm(), 2);
     }
 
-    dc = dflux.norm()/pow(val1, 0.5);
+    dc = 0.5*dflux.norm()/pow(val1, 0.5);
 }
 
 
