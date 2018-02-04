@@ -41,6 +41,17 @@ MAST::LevelSetTransientAssemblyElemOperations::
 }
 
 
+void
+MAST::LevelSetTransientAssemblyElemOperations::
+set_elem_reference_solution(const RealVectorX& sol) {
+    
+    libmesh_assert(_physics_elem);
+    
+    dynamic_cast<MAST::LevelSetElementBase*>(_physics_elem)->
+    set_reference_solution_for_initialization(sol);
+}
+
+
 
 void
 MAST::LevelSetTransientAssemblyElemOperations::
@@ -77,7 +88,7 @@ void
 MAST::LevelSetTransientAssemblyElemOperations::
 linearized_jacobian_solution_product(RealVectorX& f) {
     
-    libmesh_error(); // to be implemented
+    libmesh_error(); // should not get called
 }
 
 
@@ -86,7 +97,7 @@ void
 MAST::LevelSetTransientAssemblyElemOperations::
 elem_sensitivity_calculations(RealVectorX& vec) {
     
-    libmesh_error(); // to be implemented
+    libmesh_error(); // should not get called
     
 }
 
@@ -95,7 +106,15 @@ void
 MAST::LevelSetTransientAssemblyElemOperations::
 elem_second_derivative_dot_solution_assembly(RealMatrixX& m) {
     
-    libmesh_error(); // to be implemented
+    libmesh_error(); // should not get called
+}
+
+
+void
+MAST::LevelSetTransientAssemblyElemOperations::
+elem_sensitivity_calculations(RealVectorX& f_m,
+                              RealVectorX& f_x) {
+    libmesh_error(); // should not get called
 }
 
 
@@ -105,14 +124,19 @@ MAST::LevelSetTransientAssemblyElemOperations::
 init(const libMesh::Elem& elem) {
     
     libmesh_assert(!_physics_elem);
+
+    const MAST::LevelSetDiscipline&
+    discipline = dynamic_cast<const MAST::LevelSetDiscipline&>
+    (_assembly->discipline());
     
-    const MAST::FieldFunction<RealVectorX>& vel =
-    (dynamic_cast<const MAST::LevelSetDiscipline&>
-    (_assembly->discipline())).get_velocity_function();
+    MAST::LevelSetElementBase
+    *e = new MAST::LevelSetElementBase(_assembly->system_init(),
+                                       *_assembly,
+                                       elem,
+                                       discipline.get_velocity_function());
+    e->set_propagation_mode(discipline.if_level_set_propagation());
     
-    _physics_elem =
-    new MAST::LevelSetElementBase
-    (_assembly->system_init(), *_assembly, elem, vel);
+    _physics_elem = e;
 }
 
 

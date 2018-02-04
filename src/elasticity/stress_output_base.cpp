@@ -374,6 +374,7 @@ MAST::StressStrainOutputBase::output_derivative_for_elem(RealVectorX& dq_dX) {
 void
 MAST::StressStrainOutputBase::init(const libMesh::Elem& elem) {
     
+    libmesh_assert(_assembly);
     libmesh_assert(!_physics_elem);
     
     const MAST::ElementPropertyCardBase& p =

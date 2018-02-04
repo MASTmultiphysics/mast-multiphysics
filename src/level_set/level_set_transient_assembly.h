@@ -44,6 +44,12 @@ namespace MAST {
          */
         virtual ~LevelSetTransientAssemblyElemOperations();
         
+        
+        /*!
+         *   set element reference solution for reinitialization
+         */
+        void set_elem_reference_solution(const RealVectorX& sol);
+        
         /*!
          *   performs the element calculations over \par elem, and returns
          *   the element vector and matrix quantities in \par mat and
@@ -97,6 +103,10 @@ namespace MAST {
         virtual void
         elem_second_derivative_dot_solution_assembly(RealMatrixX& mat);
         
+        virtual void
+        elem_sensitivity_calculations(RealVectorX& f_m,
+                                      RealVectorX& f_x);
+
         /*!
          *   initializes the object for the geometric element \p elem. This
          *   expects the object to be in a cleared state, so the user should

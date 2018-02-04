@@ -52,7 +52,7 @@
 //#include "examples/structural/stiffened_plate_optimization_thermal_stress/stiffened_plate_thermal_stress_optimization.h"
 //#include "examples/structural/stiffened_plate_optimization_piston_theory_flutter/stiffened_plate_piston_theory_flutter_optimization.h"
 //#include "examples/structural/stiffened_plate_optimization_thermally_stressed_piston_theory_flutter/stiffened_plate_thermally_stressed_piston_theory_flutter_optimization.h"
-//#include "examples/structural/topology_optim_2D/topology_optim_2D.h"
+#include "examples/structural/topology_optim_2D/topology_optim_2D.h"
 //#include "optimization/npsol_optimization_interface.h"
 //#include "optimization/dot_optimization_interface.h"
 //#include "examples/fluid/panel_inviscid_analysis_2D/panel_inviscid_analysis_2d.h"
@@ -276,8 +276,8 @@ int main(int argc, char* const argv[]) {
         MAST::Examples::BarExtension example;
         example.init(*input);
         example.static_solve();
-        example.static_sensitivity_solve(example.get_parameter("p"));
-        example.static_adjoint_sensitivity_solve(example.get_parameter("p"));
+        example.static_sensitivity_solve(example.get_parameter("thy"));
+        example.static_adjoint_sensitivity_solve(example.get_parameter("thy"));
     }
 //    else if (case_name == "beam_modal_analysis")
 //        eigenvalue_analysis<MAST::BeamModalAnalysis>(case_name,
@@ -488,11 +488,13 @@ int main(int argc, char* const argv[]) {
 //         libMesh::QUAD4,
 //         verify_grads,
 //         if_nonlin);
-//    else if (case_name == "topology_optimization_2D")
-//        optimization<MAST::TopologyOptimization2D>(case_name,
-//                                                   libMesh::QUAD4,
-//                                                   verify_grads,
-//                                                   if_nonlin);
+    else if (case_name == "topology_optimization_2D") {
+
+        MAST::Examples::TopologyOptimizationLevelSet2D example;
+        example.init(*input);
+        example.static_solve();
+        example.level_set_solve();
+    }
 //    else if (case_name == "panel_inviscid_analysis_2d")
 //        fluid_analysis<MAST::PanelInviscidAnalysis2D>(case_name);
 //    else if (case_name == "ramp_laminar_analysis_2d")

@@ -1,22 +1,241 @@
-///*
-// * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
-// * Copyright (C) 2013-2018  Manav Bhatia
-// *
-// * This library is free software; you can redistribute it and/or
-// * modify it under the terms of the GNU Lesser General Public
-// * License as published by the Free Software Foundation; either
-// * version 2.1 of the License, or (at your option) any later version.
-// *
-// * This library is distributed in the hope that it will be useful,
-// * but WITHOUT ANY WARRANTY; without even the implied warranty of
-// * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-// * Lesser General Public License for more details.
-// *
-// * You should have received a copy of the GNU Lesser General Public
-// * License along with this library; if not, write to the Free Software
-// * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
-// */
-//
+/*
+ * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
+ * Copyright (C) 2013-2018  Manav Bhatia
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ */
+
+
+// MAST includes
+#include "examples/structural/topology_optim_2D/topology_optim_2D.h"
+#include "level_set/level_set_discipline.h"
+#include "level_set/level_set_system_initialization.h"
+#include "level_set/level_set_transient_assembly.h"
+#include "level_set/level_set_reinitialization_transient_assembly.h"
+#include "base/field_function_base.h"
+#include "base/nonlinear_system.h"
+#include "base/transient_assembly.h"
+#include "solver/first_order_newmark_transient_solver.h"
+
+
+
+class Phi:
+public MAST::FieldFunction<RealVectorX> {
+
+public:
+    Phi(Real l1,
+        Real l2,
+        Real r):
+    MAST::FieldFunction<RealVectorX>("Phi"),
+    _l1(l1),
+    _l2(l2),
+    _r(r) {
+
+        libmesh_assert_less(r, _l1*.5);
+        libmesh_assert_less(r, _l2*.5);
+    }
+    virtual ~Phi() {}
+    virtual void operator()(const libMesh::Point& p,
+                            const Real t,
+                            RealVectorX& v) const {
+
+        libmesh_assert_less_equal(t, 1);
+        libmesh_assert_equal_to(v.size(), 1);
+        
+        v(0) =
+        pow(p(0)-_l1*.5, 2) +
+        pow(p(1)-_l2*.5, 2) -
+        pow(_r, 2);
+    }
+protected:
+    Real
+    _l1,
+    _l2,
+    _r;
+};
+
+class Vel: public MAST::FieldFunction<Real> {
+public:
+    Vel(): MAST::FieldFunction<Real>("vel") {}
+
+    virtual void operator() (const libMesh::Point& p,
+                             const Real t,
+                             Real& v) const {
+
+        v = 1.;
+    }
+
+protected:
+
+};
+
+
+MAST::Examples::TopologyOptimizationLevelSet2D::TopologyOptimizationLevelSet2D():
+MAST::Examples::StructuralExample2D(),
+_level_set_sys         (nullptr),
+_level_set_sys_init    (nullptr),
+_level_set_discipline  (nullptr),
+_level_set_vel         (nullptr) {
+    
+}
+
+
+MAST::Examples::TopologyOptimizationLevelSet2D::~TopologyOptimizationLevelSet2D() {
+
+    if (!_initialized)
+        return;
+    
+    delete _level_set_sys_init;
+    delete _level_set_discipline;
+    delete _level_set_vel;
+}
+
+
+void
+MAST::Examples::TopologyOptimizationLevelSet2D::initialize_solution() {
+
+    // initialize solution of the structural problem
+    MAST::Examples::StructuralExample2D::initialize_solution();
+    
+    
+    // initialize solution of the level set problem
+    Real
+    length  = (*_input)("length", 0.3),
+    width   = (*_input)( "width", 0.3),
+    min_val = std::min(length, width);
+
+    Phi phi(length, width, min_val*0.4);
+    _level_set_sys_init->initialize_solution(phi);
+}
+
+
+
+void
+MAST::Examples::TopologyOptimizationLevelSet2D::level_set_solve() {
+    
+    libmesh_assert(_initialized);
+    
+    bool
+    output      = (*_input)(   "if_output", false);
+    
+    std::string
+    output_name = (*_input)(   "output_file_root", "output");
+    output_name += "_level_set.exo";
+
+    // create the nonlinear assembly object
+    MAST::LevelSetReinitializationTransientAssembly          level_set_assembly;
+    MAST::LevelSetTransientAssemblyElemOperations            level_set_elem_ops;
+    libMesh::NumericVector<Real>
+    &base_sol = _level_set_sys->add_vector("base_sol");
+    base_sol  = *_level_set_sys->solution;
+    level_set_assembly.set_reference_solution(base_sol);
+    _level_set_discipline->set_level_set_propagation_mode(false);
+    
+    // Transient solver for time integration
+    MAST::FirstOrderNewmarkTransientSolver  level_set_solver;
+
+    // now solve the system
+    level_set_assembly.attach_discipline_and_system(level_set_elem_ops,
+                                                    *_level_set_discipline,
+                                                    level_set_solver,
+                                                    *_level_set_sys_init);
+
+    // file to write the solution for visualization
+    libMesh::ExodusII_IO exodus_writer(*_mesh);
+
+    // time solver parameters
+    unsigned int
+    t_step            = 0;
+
+    level_set_solver.dt            = 1.e-3;
+    level_set_solver.beta          = 0.5;
+
+    // set the previous state to be same as the current state to account for
+    // zero velocity as the initial condition
+    level_set_solver.solution(1).zero();
+    level_set_solver.solution(1).add(1., level_set_solver.solution());
+    level_set_solver.solution(1).close();
+
+
+    // loop over time steps
+    while (t_step <= 100) {
+
+        libMesh::out
+        << "Time step: " << t_step
+        << " :  t = " << _level_set_sys->time
+        << std::endl;
+
+        // write the time-step
+        if (output) {
+
+            exodus_writer.write_timestep(output_name,
+                                         *_eq_sys,
+                                         t_step+1,
+                                         _level_set_sys->time);
+        }
+
+        level_set_solver.solve();
+
+        level_set_solver.advance_time_step();
+        t_step++;
+    }
+
+    level_set_assembly.clear_discipline_and_system();
+}
+
+
+
+void
+MAST::Examples::TopologyOptimizationLevelSet2D::_init_system_and_discipline() {
+    
+    // first initialize the structural system and discipline
+    MAST::Examples::StructuralExample2D::_init_system_and_discipline();
+    
+    // now initialize the level set related data structures
+    
+    _level_set_sys         = &(_eq_sys->add_system<MAST::NonlinearSystem>("level_set"));
+    _level_set_sys_init    = new MAST::LevelSetSystemInitialization(*_level_set_sys,
+                                                                    _level_set_sys->name(),
+                                                                    _fetype);
+    _level_set_vel         = new Vel;
+    _level_set_discipline  = new MAST::LevelSetDiscipline(*_eq_sys, *_level_set_vel);
+}
+
+
+
+void
+MAST::Examples::TopologyOptimizationLevelSet2D::_init_dirichlet_conditions() {
+    
+    // constrain only the left and right boundaries
+    this->_init_boundary_dirichlet_constraint(1, "right_constraint");
+    this->_init_boundary_dirichlet_constraint(3, "left_constraint");
+    
+    _discipline->init_system_dirichlet_bc(*_sys);
+}
+
+
+void
+MAST::Examples::TopologyOptimizationLevelSet2D::_init_loads() {
+    
+    _init_pressure_load(true, 2);
+    //_init_temperature_load();
+}
+
+
+
+
 //// C++ includes
 //#include <iostream>
 //

@@ -41,13 +41,31 @@ namespace MAST {
         /*!
          *   Constructor
          */
-        LevelSetElementBase(MAST::SystemInitialization&                   sys,
-                                  MAST::AssemblyBase&                     assembly,
-                                  const libMesh::Elem&                    elem,
-                                  const MAST::FieldFunction<RealVectorX>& velocity);
+        LevelSetElementBase(MAST::SystemInitialization&             sys,
+                            MAST::AssemblyBase&                     assembly,
+                            const libMesh::Elem&                    elem,
+                            const MAST::FieldFunction<Real>&        velocity);
         
         
         virtual ~LevelSetElementBase();
+        
+        
+        /*!
+         *   This can operate in one of two modes: propagation of level set
+         *   given Vn, or reinitialization of level set so that |grad(phi)|=1.
+         *   This method sets the flag for propagation to \p true or \p false.
+         */
+        void set_propagation_mode(bool f) {
+            _if_propagation = f;
+        }
+
+        
+        /*!
+         *   For reinitialization to \f$ |\nabla(\phi)| = 1 \f$, the solution
+         *   before initialization is used to calculate the source and velocity
+         *   switching. This method sets that solution
+         */
+        void set_reference_solution_for_initialization(const RealVectorX& sol);
         
         
         /*!
@@ -120,6 +138,17 @@ namespace MAST {
                                               std::multimap<libMesh::subdomain_id_type, MAST::BoundaryConditionBase*>& bc);
                 
     protected:
+
+        /*!
+         *   calculates the velocity at the quadrature point
+         */
+        void _velocity_and_source(const unsigned int qp,
+                                  const libMesh::Point& p,
+                                  const Real t,
+                                  const MAST::FEMOperatorMatrix& Bmat,
+                                  const std::vector<MAST::FEMOperatorMatrix>& dBmat,
+                                  RealVectorX& vel,
+                                  Real&        source);
         
         /*!
          *   initializes the tau operator
@@ -152,9 +181,20 @@ namespace MAST {
         /*!
          *   element property
          */
-        const MAST::FieldFunction<RealVectorX>&  _phi_vel;
+        const MAST::FieldFunction<Real>&  _phi_vel;
+
+        /*!
+         *   this can operate in one of two modes: propagation of level set
+         *   given Vn, or reinitialization of level set so that |grad(phi)|=1
+         */
+        bool  _if_propagation;
         
+        /*!
+         *     reference solution for reinitialization of the level set
+         */
+        RealVectorX    _ref_sol;
     };
+    
     
     std::unique_ptr<MAST::FEBase>
     build_level_set_fe(MAST::SystemInitialization& sys,

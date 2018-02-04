@@ -39,7 +39,7 @@ namespace MAST {
         
         // Constructor
         LevelSetDiscipline(libMesh::EquationSystems& eq_sys,
-                           MAST::FieldFunction<RealVectorX>& vel);
+                           MAST::FieldFunction<Real>& vel);
         
         
         /*!
@@ -51,17 +51,34 @@ namespace MAST {
         /*!
          *  @returns a reference to the velocity function for this level set
          */
-        const MAST::FieldFunction<RealVectorX>&
+        const MAST::FieldFunction<Real>&
         get_velocity_function() const {
             
             return _vel;
+        }
+
+        /*!
+         *   If \p true, then the level set will be propagated using the
+         *   velocity specified by the velocity object in the constructor.
+         *   Otherwise, the level set will be reinitialized for
+         *   \f$ |\nabla(\phi)| = 1 \f$.
+         */
+        void set_level_set_propagation_mode(bool f) {
+            _if_level_set_propagation = f;
+        }
+        
+        
+        bool if_level_set_propagation() const {
+            
+            return _if_level_set_propagation;
         }
         
     protected:
         
         
-        MAST::FieldFunction<RealVectorX>& _vel;
-        
+        MAST::FieldFunction<Real>& _vel;
+
+        bool _if_level_set_propagation;
     };
 }
 

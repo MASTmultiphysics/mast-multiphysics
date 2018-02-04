@@ -36,9 +36,10 @@ MAST::LevelSetElementBase::
 LevelSetElementBase(MAST::SystemInitialization&             sys,
                     MAST::AssemblyBase&                     assembly,
                     const libMesh::Elem&                    elem,
-                    const MAST::FieldFunction<RealVectorX>& velocity):
+                    const MAST::FieldFunction<Real>&        velocity):
 MAST::ElementBase(sys, assembly, elem),
-_phi_vel(velocity) {
+_phi_vel(velocity),
+_if_propagation(true) {
     
     // now initialize the finite element data structures
     _fe = assembly.build_fe(_elem).release();
@@ -51,6 +52,15 @@ MAST::LevelSetElementBase::~LevelSetElementBase() {
     
 }
 
+
+
+void
+MAST::LevelSetElementBase::
+set_reference_solution_for_initialization(const RealVectorX& sol) {
+
+    libmesh_assert(!_if_propagation);
+    _ref_sol = sol;
+}
 
 
 
@@ -77,6 +87,8 @@ MAST::LevelSetElementBase::internal_residual (bool request_jacobian,
     vec2_n2  = RealVectorX::Zero(n_phi),
     flux     = RealVectorX::Zero(1),
     vel      = RealVectorX::Zero(dim);
+    Real
+    source   = 0.;
     
     std::vector<MAST::FEMOperatorMatrix> dBmat(dim);
     MAST::FEMOperatorMatrix Bmat;
@@ -87,7 +99,7 @@ MAST::LevelSetElementBase::internal_residual (bool request_jacobian,
         // initialize the Bmat operator for this term
         _initialize_fem_operators(qp, *_fe, Bmat, dBmat);
         
-        _phi_vel(xyz[qp], _time, vel);
+        _velocity_and_source(qp, xyz[qp], _time, Bmat, dBmat, vel, source);
         _tau(qp, Bmat, dBmat, vel, tau);
         
         // calculate the flux for each dimension and add its weighted
@@ -103,9 +115,10 @@ MAST::LevelSetElementBase::internal_residual (bool request_jacobian,
         }
 
         // add to the residual vector
+        flux(0) -= source;                                   // grad(phi) - s
         Bmat.vector_mult_transpose(vec2_n2, flux);
-        f += JxW[qp] * vec2_n2;                              // int_omega          u       V.grad(phi)
-        f += JxW[qp] * mat2_n1n2.transpose() * tau * flux;   // int_omega   V.grad(u) tau (V.grad(phi))
+        f += JxW[qp] * vec2_n2;                              // int_omega          u       V.(grad(phi)-s)
+        f += JxW[qp] * mat2_n1n2.transpose() * tau * flux;   // int_omega   V.grad(u) tau (V.grad(phi)-s)
         
         if (request_jacobian) {
             
@@ -150,7 +163,9 @@ MAST::LevelSetElementBase::velocity_residual (bool request_jacobian,
     vec2_n2  = RealVectorX::Zero(n_phi),
     flux     = RealVectorX::Zero(1),
     vel      = RealVectorX::Zero(dim);
-    
+    Real
+    source   = 0.;
+
     std::vector<MAST::FEMOperatorMatrix> dBmat(dim);
     MAST::FEMOperatorMatrix Bmat;
     
@@ -160,7 +175,7 @@ MAST::LevelSetElementBase::velocity_residual (bool request_jacobian,
         // initialize the Bmat operator for this term
         _initialize_fem_operators(qp, *_fe, Bmat, dBmat);
         
-        _phi_vel(xyz[qp], _time, vel);
+        _velocity_and_source(qp, xyz[qp], _time, Bmat, dBmat, vel, source);
         _tau(qp, Bmat, dBmat, vel, tau);
         
         // calculate the flux for each dimension and add its weighted
@@ -173,7 +188,7 @@ MAST::LevelSetElementBase::velocity_residual (bool request_jacobian,
         }
         
         // add to the residual vector
-        Bmat.right_multiply(vec1_n1, _vel);                  // dphi/dt
+        Bmat.right_multiply(vec1_n1, _vel);                     // dphi/dt
         Bmat.vector_mult_transpose(vec2_n2, vec1_n1);
         f += JxW[qp] * vec2_n2;                                 // int_omega          u  dphi/dt
         f += JxW[qp] * mat2_n1n2.transpose() * tau * vec1_n1;   // int_omega   V.grad(u) tau dphi/dt
@@ -401,6 +416,63 @@ velocity_residual_sensitivity (bool request_jacobian,
 
 
 
+void
+MAST::LevelSetElementBase::_velocity_and_source(const unsigned int qp,
+                                                const libMesh::Point& p,
+                                                const Real t,
+                                                const MAST::FEMOperatorMatrix& Bmat,
+                                                const std::vector<MAST::FEMOperatorMatrix>& dBmat,
+                                                RealVectorX& vel,
+                                                Real&        source) {
+    
+    const unsigned int
+    dim       =  _elem.dim();
+    
+    RealVectorX
+    v         =  RealVectorX::Zero(1),
+    grad_phi  =  RealVectorX::Zero(dim);
+    
+    // first initialize grad(phi)
+    for (unsigned int i=0; i<dim; i++) {
+        
+        dBmat[i].right_multiply(v, _sol);
+        grad_phi(i) = v(0);
+    }
+    
+    if (_if_propagation) {
+
+        // now, initialize the velocity vector
+        Real
+        Vn        = 0.;
+        
+        _phi_vel(p, t, Vn);
+        vel       =  grad_phi * Vn/grad_phi.norm();
+        source    = 0.;
+    }
+    else {
+        
+        libmesh_assert_equal_to(_ref_sol.size(), _sol.size());
+        
+        Bmat.right_multiply(v, _ref_sol);
+        
+        Real
+        tol           = 1.e-6,
+        ref_phi       = v(0),
+        grad_phi_norm = grad_phi.norm();
+        
+        source     = 0.;
+        if (ref_phi > tol)
+            source = 1.;
+        else if (ref_phi < -tol)
+            source = -1.;
+        
+        if (grad_phi_norm > tol)
+            vel        = grad_phi * source/grad_phi.norm();
+        else
+            vel.setZero();
+    }
+}
+
 
 void
 MAST::LevelSetElementBase::_tau(unsigned int qp,
@@ -415,15 +487,21 @@ MAST::LevelSetElementBase::_tau(unsigned int qp,
     phi = RealVectorX::Zero(n_phi);
 
     Real
-    val = 0.;
+    tol    = 1.e-8,
+    val    = 0.,
+    vel_l2 = vel.norm();
 
-    for (unsigned int i_dim=0; i_dim<_elem.dim(); i_dim++) {
+    if (vel_l2 > tol) {
+        for (unsigned int i_dim=0; i_dim<_elem.dim(); i_dim++) {
+            
+            for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
+                val += std::fabs(dphi[i_nd][qp](i_dim) * vel(i_dim));
+        }
         
-        for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
-            val += std::abs(dphi[i_nd][qp](i_dim) * vel(i_dim));
+        tau(0,0) = 1./val;
     }
-
-    tau(0,0) = 1./val;
+    else
+        tau(0,0) = 0.;
 }
 
 

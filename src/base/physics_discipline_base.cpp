@@ -21,6 +21,7 @@
 #include "base/physics_discipline_base.h"
 #include "base/system_initialization.h"
 #include "base/parameter.h"
+#include "base/nonlinear_system.h"
 #include "boundary_condition/dirichlet_boundary_condition.h"
 
 // libMesh includes
@@ -169,7 +170,7 @@ MAST::PhysicsDisciplineBase::get_property_card(const libMesh::Elem& elem) const 
 
 void
 MAST::PhysicsDisciplineBase::
-init_system_dirichlet_bc(libMesh::System& sys) const {
+init_system_dirichlet_bc(MAST::NonlinearSystem& sys) const {
     
     
     // iterate over all the dirichlet boundary conditions and add them
@@ -185,7 +186,7 @@ init_system_dirichlet_bc(libMesh::System& sys) const {
 
 void
 MAST::PhysicsDisciplineBase::
-clear_system_dirichlet_bc(libMesh::System& sys) const {
+clear_system_dirichlet_bc(MAST::NonlinearSystem& sys) const {
     
     // iterate over all the dirichlet boundary conditions and add them
     // to the system

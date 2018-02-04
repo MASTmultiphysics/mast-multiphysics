@@ -381,6 +381,10 @@ MAST::Examples::StructuralExampleBase::static_solve() {
     
     if (!nonlinear) n_steps = 1;
     
+    std::string
+    output_name = (*_input)(   "output_file_root", "output");
+    output_name += "_static.exo";
+
     // create the nonlinear assembly object
     MAST::NonlinearImplicitAssembly                  assembly;
     MAST::StructuralNonlinearAssemblyElemOperations  elem_ops;
@@ -420,7 +424,7 @@ MAST::Examples::StructuralExampleBase::static_solve() {
             stress_assembly.clear_discipline_and_system();
 
             // write the solution for visualization
-            exodus_writer.write_timestep("output.exo",
+            exodus_writer.write_timestep(output_name,
                                          *_eq_sys,
                                          i+1,
                                          (1.*i)/(1.*(n_steps-1)));
@@ -440,6 +444,10 @@ MAST::Examples::StructuralExampleBase::static_sensitivity_solve(MAST::Parameter&
 
     bool
     output     = (*_input)(   "if_output", false);
+
+    std::string
+    output_name = (*_input)(   "output_file_root", "output");
+    output_name += "_static_sens_"+p.name()+".exo";
 
     // create the nonlinear assembly object
     MAST::NonlinearImplicitAssembly                  assembly;
@@ -503,15 +511,12 @@ MAST::Examples::StructuralExampleBase::static_sensitivity_solve(MAST::Parameter&
         
         stress_assembly.clear_discipline_and_system();
         
-        std::ostringstream oss;
-        oss << "output_" << p.name() << ".exo";
-
         // swap solutions for output, since libMesh writes System::solution
         // to the output.
         _sys->solution->swap(dXdp);
         stress_sys.solution->swap(dsigma_dp);
         
-        libMesh::ExodusII_IO(*_mesh).write_equation_systems(oss.str(),
+        libMesh::ExodusII_IO(*_mesh).write_equation_systems(output_name,
                                                             *_eq_sys);
         
         _sys->solution->swap(dXdp);
@@ -533,7 +538,11 @@ static_adjoint_sensitivity_solve(//MAST::OutputAssemblyElemOperations& q,
     
     bool
     output     = (*_input)(   "if_output", false);
-    
+
+    std::string
+    output_name = (*_input)(   "output_file_root", "output");
+    output_name += "_adjoint.exo";
+
     // create the nonlinear assembly object
     MAST::NonlinearImplicitAssembly                  assembly;
     MAST::StructuralNonlinearAssemblyElemOperations  elem_ops;
@@ -570,12 +579,9 @@ static_adjoint_sensitivity_solve(//MAST::OutputAssemblyElemOperations& q,
     // write the solution for visualization
     if (output) {
         
-        std::ostringstream oss;
-        oss << "output_" << p.name() << ".exo";
-        
         _sys->solution->swap(_sys->get_adjoint_solution(0));
         
-        libMesh::ExodusII_IO(*_mesh).write_equation_systems(oss.str(),
+        libMesh::ExodusII_IO(*_mesh).write_equation_systems(output_name,
                                                             *_eq_sys);
         
         _sys->solution->swap(_sys->get_adjoint_solution(0));
@@ -595,6 +601,10 @@ MAST::Examples::StructuralExampleBase::modal_solve(std::vector<Real>& eig) {
     bool
     output       = (*_input)(   "if_output", false),
     static_solve = (*_input)(   "modal_about_nonlinear_static", false);
+
+    std::string
+    output_name = (*_input)(   "output_file_root", "output");
+    output_name += "_modal.exo";
 
     unsigned int
     n_req        = (*_input)(   "n_eig", 10);
@@ -657,7 +667,7 @@ MAST::Examples::StructuralExampleBase::modal_solve(std::vector<Real>& eig) {
         if (output) {
             
             // We write the file in the ExodusII format.
-            writer->write_timestep("modes.exo",
+            writer->write_timestep(output_name,
                                    *_eq_sys,
                                    i+1, i);
         }
@@ -721,6 +731,10 @@ MAST::Examples::StructuralExampleBase::modal_solve_with_nonlinear_load_stepping(
     output       = (*_input)(   "if_output", false),
     nonlinear    = (*_input)("if_nonlinear", false);
     
+    std::string
+    output_name = (*_input)(   "output_file_root", "output"),
+    static_output_name = output_name + "_static.exo";
+
     libmesh_assert(nonlinear); // make sure that the user asked for nonlinear
     
     // set the number of load steps
@@ -803,7 +817,7 @@ MAST::Examples::StructuralExampleBase::modal_solve_with_nonlinear_load_stepping(
         stress_assembly.clear_discipline_and_system();
 
         if (output) {
-            exodus_writer.write_timestep("output.exo",
+            exodus_writer.write_timestep(static_output_name,
                                          *_eq_sys,
                                          i_step+1,
                                          eta);
@@ -858,7 +872,8 @@ MAST::Examples::StructuralExampleBase::modal_solve_with_nonlinear_load_stepping(
                 
                 // We write the file in the ExodusII format.
                 file_name
-                << "output_mode_"
+                << output_name
+                << "_mode_"
                 << std::setw(3) << std::setfill('0') << std::right << i
                 << ".exo";
                 
@@ -890,6 +905,9 @@ MAST::Examples::StructuralExampleBase::transient_solve() {
     
     bool
     output     = (*_input)(   "if_output", false);
+    std::string
+    output_name           = (*_input)(   "output_file_root", "output"),
+    transient_output_name = output_name + "_transient.exo";
 
     
     // create the nonlinear assembly object
@@ -944,12 +962,12 @@ MAST::Examples::StructuralExampleBase::transient_solve() {
         // write the time-step
         if (output) {
             
-            transient_output.write_timestep("output.exo",
+            transient_output.write_timestep(output_name,
                                             *_eq_sys,
                                             t_step+1,
                                             _sys->time);
             std::ostringstream oss;
-            oss << "sol_t_" << t_step;
+            oss << output_name << "_sol_t_" << t_step;
             _sys->write_out_vector(*_sys->solution, "data", oss.str(), true);
         }
         
@@ -982,7 +1000,10 @@ MAST::Examples::StructuralExampleBase::transient_sensitivity_solve(MAST::Paramet
     
     bool
     output     = (*_input)(   "if_output", false);
-    
+    std::string
+    output_name           = (*_input)(   "output_file_root", "output"),
+    transient_output_name = output_name + "_transient_sensitivity_" + p.name() + ".exo";
+
     // the output from analysis should have been saved for sensitivity
     libmesh_assert(output);
     
@@ -1009,9 +1030,6 @@ MAST::Examples::StructuralExampleBase::transient_sensitivity_solve(MAST::Paramet
     // file to write the solution for visualization
     libMesh::ExodusII_IO exodus_writer(*_mesh);
     
-    std::ostringstream oss1;
-    oss1 << "output_" << p.name() << ".exo";
-
     // time solver parameters
     Real
     tval     = 0.;
@@ -1041,16 +1059,16 @@ MAST::Examples::StructuralExampleBase::transient_sensitivity_solve(MAST::Paramet
         if (output) {
             
             _sys->solution->swap(solver.solution_sensitivity());
-            exodus_writer.write_timestep(oss1.str(),
+            exodus_writer.write_timestep(transient_output_name,
                                          *_eq_sys,
                                          t_step+1,
                                          _sys->time);
             _sys->solution->swap(solver.solution_sensitivity());
         }
 
-        std::ostringstream oss2;
-        oss2 << "sol_t_" << t_step;
-        _sys->read_in_vector(*_sys->solution, "data", oss2.str(), true);
+        std::ostringstream oss;
+        oss << output_name << "_sol_t_" << t_step;
+        _sys->read_in_vector(*_sys->solution, "data", oss.str(), true);
 
         // solve for the sensitivity time-step
         solver.sensitivity_solve(p);
@@ -1086,8 +1104,13 @@ MAST::Examples::StructuralExampleBase::piston_theory_flutter_solve() {
     libmesh_assert(_initialized);
 
     bool
-    output     = (*_input)(   "if_output", false),
-    nonlinear  = (*_input)("if_nonlinear", false);
+    output     = (*_input)(   "if_output", false);
+    
+    std::string
+    output_name         = (*_input)(   "output_file_root", "output"),
+    flutter_mode_name   = output_name + "_flutter_mode.exo",
+    flutter_output_name = output_name + "_flutter.txt";
+
 
     Real
     tol        = (*_input)("flutter_solver_tol", 1.e-5);
@@ -1098,9 +1121,8 @@ MAST::Examples::StructuralExampleBase::piston_theory_flutter_solve() {
     // clear out the data structures of the flutter solver before
     // this solution
     _flutter_root = nullptr;
-    std::string nm("flutter_output.txt");
     if (__init->comm().rank() == 0)
-        _flutter_solver->set_output_file(nm);
+        _flutter_solver->set_output_file(flutter_output_name);
     
     
     // set the velocity of piston theory to zero for modal analysis
@@ -1152,7 +1174,7 @@ MAST::Examples::StructuralExampleBase::piston_theory_flutter_solve() {
     
     if (sol.first && output) {
         
-        MAST::plot_structural_flutter_solution("structural_flutter_mode.exo",
+        MAST::plot_structural_flutter_solution(flutter_mode_name,
                                                *_sys,
                                                sol.second->eig_vec_right,
                                                _basis);

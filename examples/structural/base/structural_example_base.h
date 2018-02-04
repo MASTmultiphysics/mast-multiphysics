@@ -97,23 +97,17 @@ namespace MAST {
             virtual void _init_temperature_load();
             virtual void _init_piston_theory_load();
             
-            // create the mesh
             libMesh::UnstructuredMesh*                            _mesh;
             
-            // create the equation system
             libMesh::EquationSystems*                             _eq_sys;
             
-            // create the libmesh system
             MAST::NonlinearSystem*                                _sys;
             
-            // initialize the system to the right set of variables
             MAST::StructuralSystemInitialization*                 _structural_sys;
             MAST::PhysicsDisciplineBase*                          _discipline;
             
-            // create the material property card
             MAST::MaterialPropertyCardBase*                       _m_card;
             
-            // create the element property card
             MAST::ElementPropertyCardBase*                        _p_card;
             
             /*!

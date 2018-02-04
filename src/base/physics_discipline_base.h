@@ -42,6 +42,7 @@ namespace MAST {
     class SystemInitialization;
     class Parameter;
     class PointLoadCondition;
+    class NonlinearSystem;
     
     
     // typedefs
@@ -169,13 +170,13 @@ namespace MAST {
         /*!
          *    initializes the system for dirichlet boundary conditions
          */
-        void init_system_dirichlet_bc(libMesh::System& sys) const;
+        void init_system_dirichlet_bc(MAST::NonlinearSystem& sys) const;
 
         
         /*!
          *    clears the system dirichlet boundary conditions
          */
-        void clear_system_dirichlet_bc(libMesh::System& sys) const;
+        void clear_system_dirichlet_bc(MAST::NonlinearSystem& sys) const;
 
         
         /*!
