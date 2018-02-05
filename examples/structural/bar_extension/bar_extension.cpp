@@ -20,13 +20,23 @@
 
 // MAST includes
 #include "examples/structural/bar_extension/bar_extension.h"
-
+#include "base/physics_discipline_base.h"
 
 
 
 MAST::Examples::BarExtension::BarExtension():
 MAST::Examples::StructuralExample1D() {
     
+}
+
+
+void
+MAST::Examples::BarExtension::_init_dirichlet_conditions() {
+    
+    // constrain only the left
+    this->_init_boundary_dirichlet_constraint(0, "left_constraint");
+    
+    _discipline->init_system_dirichlet_bc(*_sys);
 }
 
 

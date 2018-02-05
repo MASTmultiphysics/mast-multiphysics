@@ -39,6 +39,7 @@ namespace MAST  {
             
         protected:
 
+            virtual void _init_dirichlet_conditions();
             virtual void _init_loads();
         };
     }
