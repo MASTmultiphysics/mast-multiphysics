@@ -343,7 +343,7 @@ _bc_updates                         (nullptr) {
     _fluid_eq_sys->init();
         
     // create the oundary conditions for slip-wall and far-field
-    _far_field     = new MAST::BoundaryConditionBase(MAST::FAR_FIELD),
+    _far_field     = new MAST::BoundaryConditionBase(MAST::FAR_FIELD);
     _symm_wall     = new MAST::BoundaryConditionBase(MAST::SYMMETRY_WALL);
     _slip_wall     = new MAST::BoundaryConditionBase(MAST::SLIP_WALL);
 

@@ -18,6 +18,7 @@
  */
 
 // MAST includes
+#include "examples/base/input_wrapper.h"
 #include "examples/structural/bar_extension/bar_extension.h"
 //#include "examples/structural/beam_modal_analysis/beam_modal_analysis.h"
 //#include "examples/structural/beam_buckling_prestress/beam_column_buckling.h"
@@ -255,26 +256,28 @@ int main(int argc, char* const argv[]) {
     
     // look for the name that the user has requested to run
     std::string
-    input_name   = command_line("input",    ""),
-    case_name    = command_line("run_case", ""),
-    par_name     = command_line(   "param", "");
+    input_name   = command_line(   "input",    ""),
+    prefix       = command_line(  "prefix",    ""),
+    case_name    = command_line("run_case",    ""),
+    par_name     = command_line(   "param",    "");
     bool
+    print_param  = command_line("print_params",        false),
     with_sens    = command_line("with_sensitivity",    false),
     if_nonlin    = command_line("nonlinear",           false),
     verify_grads = command_line("verify_grads",        false);
     
     // initialize the input file for this case
-    std::unique_ptr<GetPot> input;
+    std::unique_ptr<MAST::Examples::GetPotWrapper> input;
     if (input_name == "")
-        input.reset(new GetPot(argc, argv));
+        input.reset(new MAST::Examples::GetPotWrapper(argc, argv));
     else
-        input.reset(new GetPot(input_name));
-    
+        input.reset(new MAST::Examples::GetPotWrapper(input_name));
+    input->set_print(print_param);
     
     if (case_name == "bar_extension") {
         
         MAST::Examples::BarExtension example;
-        example.init(*input);
+        example.init(*input, prefix);
         example.static_solve();
         example.static_sensitivity_solve(example.get_parameter("thy"));
         example.static_adjoint_sensitivity_solve(example.get_parameter("thy"));
@@ -300,13 +303,13 @@ int main(int argc, char* const argv[]) {
     else if (case_name == "beam_bending") {
         
         MAST::Examples::BeamBending example;
-        example.init(*input);
+        example.init(*input, prefix);
         example.static_solve();
     }
     else if (case_name == "beam_oscillating_load") {
         
         MAST::Examples::BeamOscillatingLoad example;
-        example.init(*input);
+        example.init(*input, prefix);
         example.transient_solve();
         example.transient_sensitivity_solve(example.get_parameter("thy"));
     }
@@ -491,7 +494,7 @@ int main(int argc, char* const argv[]) {
     else if (case_name == "topology_optimization_2D") {
 
         MAST::Examples::TopologyOptimizationLevelSet2D example;
-        example.init(*input);
+        example.init(*input, prefix);
         example.static_solve();
         example.level_set_solve();
     }

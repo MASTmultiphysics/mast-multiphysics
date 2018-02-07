@@ -19,7 +19,7 @@
 
 // MAST includes
 #include "examples/structural/plate_oscillating_load/plate_oscillating_load.h"
-
+#include "examples/base/input_wrapper.h"
 #include "base/field_function_base.h"
 #include "base/parameter.h"
 #include "base/boundary_condition_base.h"
@@ -105,8 +105,8 @@ void
 MAST::Examples::PlateOscillatingLoad::_init_loads() {
     
     Real
-    p_val    =  (*_input)("pressure",      2.e4),
-    freq_val =  (*_input)("omega",         1.e2);
+    p_val    =  (*_input)(_prefix+"pressure",                     "pressure on plate surface",     2.e4),
+    freq_val =  (*_input)(   _prefix+"omega",  "frequency of oscillation of pressure (rad/s)",     1.e2);
     
     MAST::Parameter
     *press   = new MAST::Parameter( "p",         p_val),

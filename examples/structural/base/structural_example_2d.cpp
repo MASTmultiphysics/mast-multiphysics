@@ -21,6 +21,7 @@
 // MAST includes
 #include "examples/structural/base/structural_example_2d.h"
 #include "examples/base/multilinear_interpolation.h"
+#include "examples/base/input_wrapper.h"
 #include "base/nonlinear_system.h"
 #include "base/constant_field_function.h"
 #include "base/parameter.h"
@@ -57,15 +58,15 @@ MAST::Examples::StructuralExample2D::_init_mesh() {
     // of the element
     
     unsigned int
-    nx_divs = (*_input)("nx_divs", 10),
-    ny_divs = (*_input)("ny_divs", 10);
+    nx_divs = (*_input)(_prefix+"nx_divs", "number of elements along x-axis", 10),
+    ny_divs = (*_input)(_prefix+"ny_divs", "number of elements along y-axis", 10);
     
     Real
-    length  = (*_input)("length", 0.3),
-    width   = (*_input)( "width", 0.3);
+    length  = (*_input)(_prefix+"length", "length of domain along x-axis", 0.3),
+    width   = (*_input)(_prefix+ "width", "length of domain along y-axis", 0.3);
     
     std::string
-    t = (*_input)("elem_type", "quad4");
+    t = (*_input)(_prefix+"elem_type", "type of geometric element in the mesh", "quad4");
     
     libMesh::ElemType
     e_type = libMesh::Utility::string_to_enum<libMesh::ElemType>(t);
@@ -113,7 +114,7 @@ void
 MAST::Examples::StructuralExample2D::_init_section_property_without_offset() {
     
     Real
-    th_v      =  (*_input)("th",   0.006);
+    th_v      =  (*_input)(_prefix+"th", "thickness of 2D element",  0.006);
     
     MAST::Parameter
     *th       = new MAST::Parameter("th", th_v),
@@ -134,7 +135,7 @@ MAST::Examples::StructuralExample2D::_init_section_property_without_offset() {
 
     // set nonlinear strain if requested
     bool
-    nonlinear = (*_input)("if_nonlinear", false);
+    nonlinear = (*_input)(_prefix+"if_nonlinear", "flag to turn on/off nonlinear strain", false);
     if (nonlinear) p_card->set_strain(MAST::VON_KARMAN_STRAIN);
     
     p_card->add(*th_f);
@@ -149,8 +150,8 @@ void
 MAST::Examples::StructuralExample2D::_init_section_property_with_offset() {
     
     Real
-    th_v      =  (*_input)("th",   0.006);
-    
+    th_v      =  (*_input)(_prefix+"th", "thickness of 2D element",  0.006);
+
     MAST::Parameter
     *th       = new MAST::Parameter("th", th_v);
     
@@ -171,7 +172,7 @@ MAST::Examples::StructuralExample2D::_init_section_property_with_offset() {
     
     // set nonlinear strain if requested
     bool
-    nonlinear = (*_input)("if_nonlinear", false);
+    nonlinear = (*_input)(_prefix+"if_nonlinear", "flag to turn on/off nonlinear strain", false);
     if (nonlinear) p_card->set_strain(MAST::VON_KARMAN_STRAIN);
     
     p_card->add(*th_f);

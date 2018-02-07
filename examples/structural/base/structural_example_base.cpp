@@ -22,6 +22,7 @@
 
 // MAST includes
 #include "examples/structural/base/structural_example_base.h"
+#include "examples/base/input_wrapper.h"
 #include "examples/base/plot_results.h"
 #include "base/physics_discipline_base.h"
 #include "base/nonlinear_system.h"
@@ -101,9 +102,10 @@ MAST::Examples::StructuralExampleBase::initialize_solution() {
 
 
 void
-MAST::Examples::StructuralExampleBase::init(GetPot& input) {
+MAST::Examples::StructuralExampleBase::init(MAST::Examples::GetPotWrapper& input,
+                                            const std::string& prefix) {
     
-    MAST::Examples::ExampleBase::init(input);
+    MAST::Examples::ExampleBase::init(input, prefix);
 
     _init_mesh();
     _init_system_and_discipline();
@@ -167,7 +169,7 @@ _init_boundary_dirichlet_constraint(const unsigned int bid,
                                     const std::string& tag) {
     
     int
-    constraint_dofs = (*_input)(tag, 123456), // by-default, constrain everything
+    constraint_dofs = (*_input)(_prefix+tag, "dofs to constrain on side", 123456), // by-default, constrain everything
     dof             = 0;
     
     // nothing to constrain if the value is negative
@@ -209,10 +211,10 @@ void
 MAST::Examples::StructuralExampleBase::_init_material() {
 
     Real
-    Eval      = (*_input)(    "E", 72.e9),
-    rhoval    = (*_input)(  "rho", 2700.),
-    nu_val    = (*_input)(   "nu",  0.33),
-    kappa_val = (*_input)("kappa", 5./6.);
+    Eval      = (*_input)(_prefix+"E", "modulus of elasticity", 72.e9),
+    rhoval    = (*_input)(_prefix+"rho", "material density", 2700.),
+    nu_val    = (*_input)(_prefix+"nu", "Poisson's ratio",  0.33),
+    kappa_val = (*_input)(_prefix+"kappa", "shear correction factor",  5./6.);
     
     
     MAST::Parameter
@@ -255,7 +257,7 @@ MAST::Examples::StructuralExampleBase::_init_pressure_load(bool on_side,
                                                            unsigned int id_num) {
     
     Real
-    p_val    =  (*_input)("pressure",      2.e4);
+    p_val    =  (*_input)(_prefix+"pressure", "pressure on side of domain",   2.e4);
     
     MAST::Parameter
     *press   = new MAST::Parameter( "p",  p_val);
@@ -285,8 +287,8 @@ void
 MAST::Examples::StructuralExampleBase::_init_temperature_load() {
     
     Real
-    tval        =  (*_input)("temperature",        60.),
-    alpha_val   =  (*_input)("alpha_expansion", 2.5e-5);
+    tval        =  (*_input)(_prefix+"temperature", "temperature on domain",       60.),
+    alpha_val   =  (*_input)(_prefix+"alpha_expansion", "coefficient of thermal expansion", 2.5e-5);
     
     MAST::Parameter
     *temp            = new MAST::Parameter( "temperature",       tval),
@@ -322,9 +324,9 @@ void
 MAST::Examples::StructuralExampleBase::_init_piston_theory_load() {
 
     Real
-    M                = (*_input)("mach", 3.),
-    rho              = (*_input)("rho_fluid", 1.05),
-    gamma            = (*_input)("gamma_fluid", 1.4);
+    M                = (*_input)(_prefix+"mach", "Mach number", 3.),
+    rho              = (*_input)(_prefix+"rho_fluid", "fluid density", 1.05),
+    gamma            = (*_input)(_prefix+"gamma_fluid", "ratio of specific heats of fluid", 1.4);
     
     MAST::Parameter
     *velocity        = new MAST::Parameter("V"   ,     0.),
@@ -373,16 +375,16 @@ MAST::Examples::StructuralExampleBase::static_solve() {
     libmesh_assert(_initialized);
     
     bool
-    output     = (*_input)(   "if_output", false),
-    nonlinear  = (*_input)("if_nonlinear", false);
+    output     = (*_input)(_prefix+"if_output", "if write output to a file", false),
+    nonlinear  = (*_input)(_prefix+"if_nonlinear", "flag to turn on/off nonlinear strain", false);
     
     unsigned int
-    n_steps    = (*_input)("nonlinear_load_steps", 20);
+    n_steps    = (*_input)(_prefix+"nonlinear_load_steps", "number of load steps in nonlinear problem", 20);
     
     if (!nonlinear) n_steps = 1;
     
     std::string
-    output_name = (*_input)(   "output_file_root", "output");
+    output_name = (*_input)(_prefix+"output_file_root", "prefix of output file names", "output");
     output_name += "_static.exo";
 
     // create the nonlinear assembly object
@@ -391,7 +393,7 @@ MAST::Examples::StructuralExampleBase::static_solve() {
     MAST::StressAssembly                             stress_assembly;
     MAST::StressStrainOutputBase                     stress_elem_ops;
     stress_elem_ops.set_participating_elements_to_all();
-
+    
     assembly.attach_discipline_and_system(elem_ops,
                                           *_discipline,
                                           *_structural_sys);
@@ -443,10 +445,10 @@ MAST::Examples::StructuralExampleBase::static_sensitivity_solve(MAST::Parameter&
     libmesh_assert(_initialized);
 
     bool
-    output     = (*_input)(   "if_output", false);
+    output     = (*_input)(_prefix+"if_output", "if write output to a file", false);
 
     std::string
-    output_name = (*_input)(   "output_file_root", "output");
+    output_name = (*_input)(_prefix+"output_file_root", "prefix of output file names", "output");
     output_name += "_static_sens_"+p.name()+".exo";
 
     // create the nonlinear assembly object
@@ -537,10 +539,10 @@ static_adjoint_sensitivity_solve(//MAST::OutputAssemblyElemOperations& q,
     libmesh_assert(_initialized);
     
     bool
-    output     = (*_input)(   "if_output", false);
+    output     = (*_input)(_prefix+"if_output", "if write output to a file", false);
 
     std::string
-    output_name = (*_input)(   "output_file_root", "output");
+    output_name = (*_input)(_prefix+"output_file_root", "prefix of output file names", "output");
     output_name += "_adjoint.exo";
 
     // create the nonlinear assembly object
@@ -599,15 +601,15 @@ MAST::Examples::StructuralExampleBase::modal_solve(std::vector<Real>& eig) {
     libmesh_assert(_initialized);
     
     bool
-    output       = (*_input)(   "if_output", false),
-    static_solve = (*_input)(   "modal_about_nonlinear_static", false);
+    output     = (*_input)(_prefix+"if_output", "if write output to a file", false),
+    static_solve = (*_input)(_prefix+"modal_about_nonlinear_static", "modal eigensolution is performed about a nonlinear equilibrium", false);
 
     std::string
-    output_name = (*_input)(   "output_file_root", "output");
+    output_name = (*_input)(_prefix+"output_file_root", "prefix of output file names", "output");
     output_name += "_modal.exo";
 
     unsigned int
-    n_req        = (*_input)(   "n_eig", 10);
+    n_req        = (*_input)(_prefix+"n_eig", "number of eigenvalues to compute", 10);
     _sys->set_n_requested_eigenvalues(n_req);
     
     // create the nonlinear assembly object
@@ -684,8 +686,8 @@ MAST::Examples::StructuralExampleBase::modal_sensitivity_solve(MAST::Parameter& 
     libmesh_assert(_initialized);
 
     bool
-    static_solve = (*_input)(   "modal_about_nonlinear_static", false);
-    
+    static_solve = (*_input)(_prefix+"modal_about_nonlinear_static", "modal eigensolution is performed about a nonlinear equilibrium", false);
+
     // Get the number of converged eigen pairs.
     unsigned int
     nconv = std::min(_sys->get_n_converged_eigenvalues(),
@@ -728,18 +730,18 @@ MAST::Examples::StructuralExampleBase::modal_solve_with_nonlinear_load_stepping(
     libmesh_assert(_initialized);
     
     bool
-    output       = (*_input)(   "if_output", false),
-    nonlinear    = (*_input)("if_nonlinear", false);
-    
+    output       = (*_input)(_prefix+"if_output", "if write output to a file", false),
+    nonlinear  = (*_input)(_prefix+"if_nonlinear", "flag to turn on/off nonlinear strain", false);
+
     std::string
-    output_name = (*_input)(   "output_file_root", "output"),
+    output_name = (*_input)(_prefix+"output_file_root", "prefix of output file names", "output"),
     static_output_name = output_name + "_static.exo";
 
     libmesh_assert(nonlinear); // make sure that the user asked for nonlinear
     
     // set the number of load steps
     unsigned int
-    n_steps   = (*_input)("nonlinear_load_steps", 20),
+    n_steps    = (*_input)(_prefix+"nonlinear_load_steps", "number of load steps in nonlinear problem", 20),
     n_perturb = 1,
     n_eig_req = _sys->get_n_requested_eigenvalues();
     
@@ -904,9 +906,9 @@ MAST::Examples::StructuralExampleBase::transient_solve() {
     libmesh_assert(_initialized);
     
     bool
-    output     = (*_input)(   "if_output", false);
+    output     = (*_input)(_prefix+"if_output", "if write output to a file", false);
     std::string
-    output_name           = (*_input)(   "output_file_root", "output"),
+    output_name = (*_input)(_prefix+"output_file_root", "prefix of output file names", "output"),
     transient_output_name = output_name + "_transient.exo";
 
     
@@ -940,8 +942,8 @@ MAST::Examples::StructuralExampleBase::transient_solve() {
     
     unsigned int
     t_step            = 0,
-    n_steps           = (*_input)("n_steps", 1000);
-    solver.dt         = (*_input)("dt",     1.e-3);
+    n_steps           = (*_input)(_prefix+"n_transient_steps", "number of transient time-steps", 100);
+    solver.dt         = (*_input)(_prefix+"dt", "time-step size",    1.e-3);
     
     
     // ask the solver to update the initial condition for d2(X)/dt2
@@ -999,9 +1001,9 @@ MAST::Examples::StructuralExampleBase::transient_sensitivity_solve(MAST::Paramet
     libmesh_assert(_initialized);
     
     bool
-    output     = (*_input)(   "if_output", false);
+    output                = (*_input)(_prefix+"if_output", "if write output to a file", false);
     std::string
-    output_name           = (*_input)(   "output_file_root", "output"),
+    output_name           = (*_input)(_prefix+"output_file_root", "prefix of output file names", "output"),
     transient_output_name = output_name + "_transient_sensitivity_" + p.name() + ".exo";
 
     // the output from analysis should have been saved for sensitivity
@@ -1036,9 +1038,9 @@ MAST::Examples::StructuralExampleBase::transient_sensitivity_solve(MAST::Paramet
     
     unsigned int
     t_step            = 0,
-    n_steps           = (*_input)("n_steps", 1000);
-    solver.dt         = (*_input)("dt",     1.e-3);
-    
+    n_steps           = (*_input)(_prefix+"n_transient_steps", "number of transient time-steps", 100);
+    solver.dt         = (*_input)(_prefix+"dt", "time-step size",    1.e-3);
+
     
     // ask the solver to update the initial condition for d2(X)/dt2
     // This is recommended only for the initial time step, since the time
@@ -1104,19 +1106,19 @@ MAST::Examples::StructuralExampleBase::piston_theory_flutter_solve() {
     libmesh_assert(_initialized);
 
     bool
-    output     = (*_input)(   "if_output", false);
-    
+    output              = (*_input)(_prefix+"if_output", "if write output to a file", false);
+
     std::string
-    output_name         = (*_input)(   "output_file_root", "output"),
+    output_name         = (*_input)(_prefix+"output_file_root", "prefix of output file names", "output"),
     flutter_mode_name   = output_name + "_flutter_mode.exo",
     flutter_output_name = output_name + "_flutter.txt";
 
 
     Real
-    tol        = (*_input)("flutter_solver_tol", 1.e-5);
+    tol        = (*_input)(_prefix+"flutter_solver_tol", "tolerance of flutter root convergence", 1.e-5);
     
     unsigned int
-    max_iters  = (*_input)("flutter_solver_max_search_iters", 10);
+    max_iters  = (*_input)(_prefix+"flutter_solver_max_search_iters", "maximum iterations for convergence of flutter root after cross-over identification", 10);
     
     // clear out the data structures of the flutter solver before
     // this solution
@@ -1145,10 +1147,10 @@ MAST::Examples::StructuralExampleBase::piston_theory_flutter_solve() {
         _flutter_solver = new MAST::TimeDomainFlutterSolver;
     
     Real
-    V_low    =  (*_input)("V_lower",  1.e3),
-    V_up     =  (*_input)("V_upper", 1.2e3);
+    V_low    =  (*_input)(_prefix+"V_lower", "time-domain flutter solver search: lower limit on speed",  1.e3),
+    V_up     =  (*_input)(_prefix+"V_upper", "time-domain flutter solver search: upper limit on speed", 1.2e3);
     unsigned int
-    n_V_divs =  (*_input)("n_V_divs",   10);
+    n_V_divs =  (*_input)(_prefix+"n_V_divs", "time-domain flutter solver search: number of divisions between speed limits",   10);
     
     MAST::StructuralFluidInteractionAssembly fsi_assembly;
     fsi_assembly.attach_discipline_and_system(fsi_assembly,

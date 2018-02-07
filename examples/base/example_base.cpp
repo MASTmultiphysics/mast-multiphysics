@@ -19,6 +19,7 @@
 
 // MAST includes
 #include "examples/base/example_base.h"
+#include "examples/base/input_wrapper.h"
 #include "base/parameter.h"
 #include "base/boundary_condition_base.h"
 
@@ -30,6 +31,7 @@
 
 MAST::Examples::ExampleBase::ExampleBase():
 _initialized    (false),
+_prefix         (),
 _input          (nullptr) {
     
     MAST::Parameter
@@ -68,17 +70,19 @@ MAST::Examples::ExampleBase::~ExampleBase() {
 
 
 void
-MAST::Examples::ExampleBase::init(GetPot& input) {
+MAST::Examples::ExampleBase::init(MAST::Examples::GetPotWrapper& input,
+                                  const std::string& prefix) {
     
     libmesh_assert(!_initialized);
     
+    _prefix      = prefix;
     _input       = &input;
     
     // FEType to initialize the system
     // get the order and type of element
     std::string
-    order_str   = input( "fe_order",    "first"),
-    family_str  = input("fe_family", "lagrange");
+    order_str   = input( prefix+ "fe_order", "order of finite element shape basis functions",    "first"),
+    family_str  = input( prefix+"fe_family",      "family of finite element shape functions", "lagrange");
     
     libMesh::Order
     o  = libMesh::Utility::string_to_enum<libMesh::Order>(order_str);
@@ -180,6 +184,9 @@ MAST::Examples::ExampleBase::add_load_parameter(MAST::Parameter& p) {
 
 void
 MAST::Examples::ExampleBase::update_load_parameters(Real scale) {
+    
+    libmesh_assert_greater_equal(scale, 0.);
+    libmesh_assert_less_equal   (scale, 1.);
     
     std::map<MAST::Parameter*, const Real>::iterator
     it  = _load_parameters.begin(),

@@ -49,10 +49,14 @@ namespace MAST  {
             
         protected:
             
+            virtual void _init_mesh();
             virtual void _init_system_and_discipline();
             virtual void _init_dirichlet_conditions();
+            virtual void _init_eq_sys();
             virtual void _init_loads();
-            
+
+            libMesh::UnstructuredMesh*                _level_set_mesh;
+            libMesh::EquationSystems*                 _level_set_eq_sys;
             MAST::NonlinearSystem*                    _level_set_sys;
             MAST::LevelSetSystemInitialization*       _level_set_sys_init;
             MAST::LevelSetDiscipline*                 _level_set_discipline;

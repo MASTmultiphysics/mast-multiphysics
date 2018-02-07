@@ -40,6 +40,9 @@ namespace MAST {
     
     namespace Examples {
         
+        // Forward declerations
+        class GetPotWrapper;
+        
         class ExampleBase {
             
         public:
@@ -48,7 +51,14 @@ namespace MAST {
             
             virtual ~ExampleBase();
             
-            virtual void init(GetPot& input);
+            virtual void init(MAST::Examples::GetPotWrapper& input,
+                              const std::string& prefix);
+
+            /*!
+             *  If the user says, this is prepended to the input parameters
+             *  names.
+             */
+            std::string prefix();
             
             /*!
              *   adds a parameter
@@ -76,7 +86,8 @@ namespace MAST {
             
             
             /*!
-             *   this should
+             *   this should update the load parameter to a value between 0 and 1.
+             *
              */
             void update_load_parameters(Real scale);
             
@@ -88,7 +99,8 @@ namespace MAST {
             void register_paramter_for_sensitivity(MAST::Parameter& p);
             
             bool                             _initialized;
-            GetPot*                          _input;
+            std::string                      _prefix;
+            MAST::Examples::GetPotWrapper*   _input;
             libMesh::FEType                  _fetype;
             
         private:

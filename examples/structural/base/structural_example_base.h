@@ -57,7 +57,8 @@ namespace MAST {
             /*!
              *    call this from the derived class after initializing the mesh
              */
-            virtual void init(GetPot& input);
+            virtual void init(MAST::Examples::GetPotWrapper& input,
+                              const std::string& prefix);
 
             /*!
              *   This is called before each nonlinear and transient solve.

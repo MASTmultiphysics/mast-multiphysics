@@ -20,6 +20,7 @@
 
 // MAST includes
 #include "examples/structural/topology_optim_2D/topology_optim_2D.h"
+#include "examples/base/input_wrapper.h"
 #include "level_set/level_set_discipline.h"
 #include "level_set/level_set_system_initialization.h"
 #include "level_set/level_set_transient_assembly.h"
@@ -29,7 +30,12 @@
 #include "base/transient_assembly.h"
 #include "solver/first_order_newmark_transient_solver.h"
 
+// libMesh includes
+#include "libmesh/serial_mesh.h"
+#include "libmesh/string_to_enum.h"
+#include "libmesh/mesh_generation.h"
 
+extern libMesh::LibMeshInit* __init;
 
 class Phi:
 public MAST::FieldFunction<RealVectorX> {
@@ -61,11 +67,15 @@ public:
         
         // waves
         Real
-        nx = 1.2,
-        ny = 1.,
-        r  = pow(pow(p(0)-.5*_l1,2)+pow(p(1)-.5*_l2,2),.5);
-        v(0) = 1.*cos(nx*r*_pi/_l1);
-        
+        nx = 4.,
+        ny = 4.,
+        c  = 0.5,
+        pi = acos(-1.),
+        x  = p(0)-.5*_l1,
+        y  = p(1)-.5*_l2,
+        r  = pow(pow(x,2)+pow(y,2),.5);
+        //v(0) = 1.*cos(nx*r*_pi/_l1);
+        v(0) = cos(nx*pi*x/_l1)+cos(ny*pi*y/_l2)+c;
         
         // linear
         //v(0) = (p(0)-_l1*0.5)*(-10.);
@@ -87,7 +97,14 @@ public:
                              const Real t,
                              Real& v) const {
 
-        v = 1.;
+        // waves
+        Real
+        nt = 8.,
+        th = atan2(p(0)-.15, p(1)-.15);
+        v  = sin(nt*th/2.);
+        
+        // constant
+        // v    = 1.;
     }
 
 protected:
@@ -113,6 +130,8 @@ MAST::Examples::TopologyOptimizationLevelSet2D::~TopologyOptimizationLevelSet2D(
     delete _level_set_sys_init;
     delete _level_set_discipline;
     delete _level_set_vel;
+    delete _level_set_eq_sys;
+    delete _level_set_mesh;
 }
 
 
@@ -125,8 +144,8 @@ MAST::Examples::TopologyOptimizationLevelSet2D::initialize_solution() {
     
     // initialize solution of the level set problem
     Real
-    length  = (*_input)("length", 0.3),
-    width   = (*_input)( "width", 0.3),
+    length  = (*_input)(_prefix+"length", "length of domain along x-axis", 0.3),
+    width   = (*_input)(_prefix+ "width", "length of domain along y-axis", 0.3),
     min_val = std::min(length, width);
 
     Phi phi(length, width, min_val*0.4);
@@ -141,12 +160,12 @@ MAST::Examples::TopologyOptimizationLevelSet2D::level_set_solve() {
     libmesh_assert(_initialized);
     
     bool
-    output      = (*_input)(   "if_output", false),
-    propagate   = (*_input)(   "if_propagate", true);
+    output      = (*_input)(_prefix+"if_output", "if write output to a file", false),
+    propagate   = (*_input)(_prefix+"if_propagate", "if propagate level set, or reinitialize it", true);
     
     
     std::string
-    output_name = (*_input)(   "output_file_root", "output");
+    output_name = (*_input)(_prefix+"output_file_root", "prefix of output file names", "output");
     output_name += "_level_set.exo";
 
     // create the nonlinear assembly object
@@ -182,8 +201,8 @@ MAST::Examples::TopologyOptimizationLevelSet2D::level_set_solve() {
     // time solver parameters
     unsigned int
     t_step                         = 0,
-    n_steps                        = (*_input)("n_steps", 1000);
-    level_set_solver.dt            = (*_input)("dt",     1.e-3);
+    n_steps                        = (*_input)(_prefix+"level_set_n_transient_steps", "number of transient time-steps", 100);
+    level_set_solver.dt            = (*_input)(_prefix+"level_set_dt", "time-step size",    1.e-3);
     level_set_solver.beta          = 0.5;
 
     // set the previous state to be same as the current state to account for
@@ -218,6 +237,61 @@ MAST::Examples::TopologyOptimizationLevelSet2D::level_set_solve() {
 
     level_set_assembly->clear_discipline_and_system();
 }
+
+
+
+void
+MAST::Examples::TopologyOptimizationLevelSet2D::_init_mesh() {
+    
+    // first call the parent method
+    MAST::Examples::StructuralExample2D::_init_mesh();
+    
+    
+}
+
+
+
+
+void
+MAST::Examples::TopologyOptimizationLevelSet2D::_init_eq_sys() {
+    
+    // first call the parent method
+    MAST::Examples::StructuralExample2D::_init_eq_sys();
+    
+    _mesh = new libMesh::SerialMesh(__init->comm());
+    
+    // identify the element type from the input file or from the order
+    // of the element
+    
+    unsigned int
+    nx_divs = (*_input)(_prefix+"level_set_nx_divs", "number of elements of level-set mesh along x-axis", 10),
+    ny_divs = (*_input)(_prefix+"level_set_ny_divs", "number of elements of level-set mesh along y-axis", 10);
+
+    Real
+    length  = (*_input)(_prefix+"length", "length of domain along x-axis", 0.3),
+    width   = (*_input)(_prefix+ "width", "length of domain along y-axis", 0.3);
+
+    std::string
+    t = (*_input)(_prefix+"level_set_elem_type", "type of geometric element in the level set mesh", "quad4");
+
+    libMesh::ElemType
+    e_type = libMesh::Utility::string_to_enum<libMesh::ElemType>(t);
+    
+    // if high order FE is used, libMesh requires atleast a second order
+    // geometric element.
+    if (_fetype.order > 1 && e_type == libMesh::QUAD4)
+        e_type = libMesh::QUAD9;
+    else if (_fetype.order > 1 && e_type == libMesh::TRI3)
+        e_type = libMesh::TRI6;
+    
+    // initialize the mesh with one element
+    libMesh::MeshTools::Generation::build_square(*_mesh,
+                                                 nx_divs, ny_divs,
+                                                 0, length,
+                                                 0, width,
+                                                 e_type);
+}
+
 
 
 

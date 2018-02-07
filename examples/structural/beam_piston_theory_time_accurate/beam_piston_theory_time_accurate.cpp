@@ -20,6 +20,7 @@
 
 // MAST includes
 #include "examples/structural/beam_piston_theory_time_accurate/beam_piston_theory_time_accurate.h"
+#include "examples/base/input_wrapper.h"
 #include "base/nonlinear_system.h"
 
 // libMesh includes
@@ -66,9 +67,9 @@ MAST::Examples::BeamPistonTheoryTimeAccurateAnalysis::initialize_solution() {
     dof = 0;
 
     Real
-    x      = 0.,
-    length = (*_input)("length", 0.3),
-    pi     = acos(-1.);
+    x       = 0.,
+    length  = (*_input)(_prefix+"length", "length of domain along x-axis", 0.3),
+    pi      = acos(-1.);
     
     for ( ; n_id != n_end; n_id++) {
         

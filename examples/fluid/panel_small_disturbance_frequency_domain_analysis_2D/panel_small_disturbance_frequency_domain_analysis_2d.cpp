@@ -166,7 +166,7 @@ PanelInviscidSmallDisturbanceFrequencyDomain2DAnalysis() {
     _eq_sys->print_info();
     
     // create the oundary conditions for slip-wall and far-field
-    _far_field     = new MAST::BoundaryConditionBase(MAST::FAR_FIELD),
+    _far_field     = new MAST::BoundaryConditionBase(MAST::FAR_FIELD);
     _symm_wall     = new MAST::BoundaryConditionBase(MAST::SYMMETRY_WALL);
     _slip_wall     = new MAST::BoundaryConditionBase(MAST::SLIP_WALL);
     
