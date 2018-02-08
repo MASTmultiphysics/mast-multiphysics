@@ -25,10 +25,9 @@
 
 
 MAST::LevelSetDiscipline::
-LevelSetDiscipline(libMesh::EquationSystems& eq_sys,
-                   MAST::FieldFunction<Real>& vel):
+LevelSetDiscipline(libMesh::EquationSystems& eq_sys):
 MAST::PhysicsDisciplineBase(eq_sys),
-_vel                       (vel),
+_vel                       (nullptr),
 _if_level_set_propagation  (true)
 { }
 

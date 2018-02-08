@@ -36,7 +36,6 @@
 
 MAST::NonlinearImplicitAssembly::
 NonlinearImplicitAssembly():MAST::AssemblyBase(),
-_implicit_elem_ops  (nullptr),
 _post_assembly      (nullptr) {
     
 }
@@ -47,52 +46,6 @@ MAST::NonlinearImplicitAssembly::~NonlinearImplicitAssembly() {
     
 }
 
-
-
-
-void
-MAST::NonlinearImplicitAssembly::
-attach_discipline_and_system(MAST::NonlinearImplicitAssemblyElemOperations& elem_ops,
-                             MAST::PhysicsDisciplineBase &discipline,
-                             MAST::SystemInitialization &system) {
-    
-    MAST::AssemblyBase::attach_discipline_and_system(elem_ops, discipline, system);
-    _implicit_elem_ops = &elem_ops;
-    
-    _system->system().nonlinear_solver->residual_and_jacobian_object = this;
-    _system->system().attach_assemble_object(*this);
-    
-    if (_solver_monitor) _solver_monitor->init(*this);
-}
-
-
-
-void
-MAST::NonlinearImplicitAssembly::reattach_to_system() {
-
-    libmesh_assert(_system);
-    
-    _system->system().nonlinear_solver->residual_and_jacobian_object = this;
-    _system->system().attach_assemble_object(*this);
-}
-
-
-
-void
-MAST::NonlinearImplicitAssembly::
-clear_discipline_and_system( ) {
-    
-    if (_system && _discipline) {
-
-        _system->system().nonlinear_solver->residual_and_jacobian_object = nullptr;
-    }
-
-    if (_solver_monitor) _solver_monitor->clear();
-    _implicit_elem_ops = nullptr;
-    _system->system().reset_assemble_object();
-
-    MAST::AssemblyBase::clear_discipline_and_system();
-}
 
 
 void
@@ -111,6 +64,10 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
                        libMesh::SparseMatrix<Real>*  J,
                        libMesh::NonlinearImplicitSystem& S) {
     
+    libmesh_assert(_system);
+    libmesh_assert(_discipline);
+    libmesh_assert(_elem_ops);
+
     MAST::NonlinearSystem& nonlin_sys = _system->system();
     
     // make sure that the system for which this object was created,
@@ -143,7 +100,9 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
     nonlin_sys.get_mesh().active_local_elements_begin();
     const libMesh::MeshBase::const_element_iterator end_el =
     nonlin_sys.get_mesh().active_local_elements_end();
-        
+    
+    MAST::NonlinearImplicitAssemblyElemOperations&
+    ops = dynamic_cast<MAST::NonlinearImplicitAssemblyElemOperations&>(*_elem_ops);
 
     for ( ; el != end_el; ++el) {
         
@@ -151,7 +110,7 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
         
         dof_map.dof_indices (elem, dof_indices);
         
-        _implicit_elem_ops->init(*elem);
+        ops.init(*elem);
         
         // get the solution
         unsigned int ndofs = (unsigned int)dof_indices.size();
@@ -162,7 +121,7 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
         for (unsigned int i=0; i<dof_indices.size(); i++)
             sol(i) = (*localized_solution)(dof_indices[i]);
         
-        _implicit_elem_ops->set_elem_solution(sol);
+        ops.set_elem_solution(sol);
         
         
 //        if (_sol_function)
@@ -171,12 +130,12 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
         //_check_element_numerical_jacobian(*physics_elem, sol);
         
         // perform the element level calculations
-        _implicit_elem_ops->elem_calculations(J!=nullptr?true:false,
+        ops.elem_calculations(J!=nullptr?true:false,
                                               vec, mat);
         
 //        physics_elem->detach_active_solution_function();
 
-        _implicit_elem_ops->clear_elem();
+        ops.clear_elem();
         
         // copy to the libMesh matrix for further processing
         DenseRealVector v;
@@ -223,6 +182,10 @@ linearized_jacobian_solution_product (const libMesh::NumericVector<Real>& X,
                                       libMesh::NumericVector<Real>& JdX,
                                       libMesh::NonlinearImplicitSystem& S) {
     
+    libmesh_assert(_system);
+    libmesh_assert(_discipline);
+    libmesh_assert(_elem_ops);
+
     // zero the solution vector
     JdX.zero();
     
@@ -261,14 +224,16 @@ linearized_jacobian_solution_product (const libMesh::NumericVector<Real>& X,
     const libMesh::MeshBase::const_element_iterator end_el =
     nonlin_sys.get_mesh().active_local_elements_end();
     
-    
+    MAST::NonlinearImplicitAssemblyElemOperations&
+    ops = dynamic_cast<MAST::NonlinearImplicitAssemblyElemOperations&>(*_elem_ops);
+
     for ( ; el != end_el; ++el) {
         
         const libMesh::Elem* elem = *el;
         
         dof_map.dof_indices (elem, dof_indices);
         
-        _implicit_elem_ops->init(*elem);
+        ops.init(*elem);
         
         // get the solution
         unsigned int ndofs = (unsigned int)dof_indices.size();
@@ -282,8 +247,8 @@ linearized_jacobian_solution_product (const libMesh::NumericVector<Real>& X,
             dsol(i) = (*localized_perturbed_solution)(dof_indices[i]);
         }
         
-        _implicit_elem_ops->set_elem_solution(sol);
-        _implicit_elem_ops->set_elem_perturbed_solution(dsol);
+        ops.set_elem_solution(sol);
+        ops.set_elem_perturbed_solution(dsol);
         
 //        if (_sol_function)
 //            physics_elem->attach_active_solution_function(*_sol_function);
@@ -291,10 +256,10 @@ linearized_jacobian_solution_product (const libMesh::NumericVector<Real>& X,
         //_check_element_numerical_jacobian(*physics_elem, sol);
         
         // perform the element level calculations
-        _implicit_elem_ops->elem_linearized_jacobian_solution_product(vec);
+        ops.elem_linearized_jacobian_solution_product(vec);
         
         //physics_elem->detach_active_solution_function();
-        _implicit_elem_ops->clear_elem();
+        ops.clear_elem();
 
         // copy to the libMesh matrix for further processing
         DenseRealVector v;
@@ -325,6 +290,10 @@ second_derivative_dot_solution_assembly (const libMesh::NumericVector<Real>& X,
                                          libMesh::SparseMatrix<Real>& d_JdX_dX,
                                          libMesh::NonlinearImplicitSystem& S) {
     
+    libmesh_assert(_system);
+    libmesh_assert(_discipline);
+    libmesh_assert(_elem_ops);
+
     // zero the matrix
     d_JdX_dX.zero();
     
@@ -363,14 +332,16 @@ second_derivative_dot_solution_assembly (const libMesh::NumericVector<Real>& X,
     const libMesh::MeshBase::const_element_iterator end_el =
     nonlin_sys.get_mesh().active_local_elements_end();
     
-    
+    MAST::NonlinearImplicitAssemblyElemOperations&
+    ops = dynamic_cast<MAST::NonlinearImplicitAssemblyElemOperations&>(*_elem_ops);
+
     for ( ; el != end_el; ++el) {
         
         const libMesh::Elem* elem = *el;
         
         dof_map.dof_indices (elem, dof_indices);
         
-        _implicit_elem_ops->init(*elem);
+        ops.init(*elem);
         
         // get the solution
         unsigned int ndofs = (unsigned int)dof_indices.size();
@@ -383,17 +354,17 @@ second_derivative_dot_solution_assembly (const libMesh::NumericVector<Real>& X,
             dsol(i) = (*localized_perturbed_solution)(dof_indices[i]);
         }
         
-        _implicit_elem_ops->set_elem_solution(sol);
-        _implicit_elem_ops->set_elem_solution_sensitivity(dsol);
+        ops.set_elem_solution(sol);
+        ops.set_elem_solution_sensitivity(dsol);
         
 //        if (_sol_function)
 //            physics_elem->attach_active_solution_function(*_sol_function);
         
         // perform the element level calculations
-        _implicit_elem_ops->elem_second_derivative_dot_solution_assembly(mat);
+        ops.elem_second_derivative_dot_solution_assembly(mat);
         
 //        physics_elem->detach_active_solution_function();
-        _implicit_elem_ops->clear_elem();
+        ops.clear_elem();
 
         // copy to the libMesh matrix for further processing
         DenseRealMatrix m;
@@ -424,6 +395,10 @@ MAST::NonlinearImplicitAssembly::
 sensitivity_assemble (const MAST::FunctionBase& f,
                       libMesh::NumericVector<Real>& sensitivity_rhs) {
     
+    libmesh_assert(_system);
+    libmesh_assert(_discipline);
+    libmesh_assert(_elem_ops);
+
     MAST::NonlinearSystem& nonlin_sys = _system->system();
     
     sensitivity_rhs.zero();
@@ -449,13 +424,16 @@ sensitivity_assemble (const MAST::FunctionBase& f,
     const libMesh::MeshBase::const_element_iterator end_el =
     nonlin_sys.get_mesh().active_local_elements_end();
     
+    MAST::NonlinearImplicitAssemblyElemOperations&
+    ops = dynamic_cast<MAST::NonlinearImplicitAssemblyElemOperations&>(*_elem_ops);
+
     for ( ; el != end_el; ++el) {
         
         const libMesh::Elem* elem = *el;
         
         dof_map.dof_indices (elem, dof_indices);
         
-        _implicit_elem_ops->init(*elem);
+        ops.init(*elem);
         
         // get the solution
         unsigned int ndofs = (unsigned int)dof_indices.size();
@@ -465,17 +443,17 @@ sensitivity_assemble (const MAST::FunctionBase& f,
         for (unsigned int i=0; i<dof_indices.size(); i++)
             sol(i) = (*localized_solution)(dof_indices[i]);
         
-        _implicit_elem_ops->set_elem_sensitivity_parameter(f);
-        _implicit_elem_ops->set_elem_solution(sol);
+        ops.set_elem_sensitivity_parameter(f);
+        ops.set_elem_solution(sol);
         
 //        if (_sol_function)
 //            physics_elem->attach_active_solution_function(*_sol_function);
         
         // perform the element level calculations
-        _implicit_elem_ops->elem_sensitivity_calculations(vec);
+        ops.elem_sensitivity_calculations(vec);
         
 //        physics_elem->detach_active_solution_function();
-        _implicit_elem_ops->clear_elem();
+        ops.clear_elem();
 
         // copy to the libMesh matrix for further processing
         DenseRealVector v;

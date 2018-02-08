@@ -37,6 +37,7 @@
 #include "libmesh/fe_type.h"
 #include "libmesh/dof_map.h"
 #include "libmesh/parallel.h"
+#include "libmesh/parallel_object.h"
 
 
 
@@ -66,11 +67,13 @@ namespace MAST {
     class ConstrainBeamDofs;
 
     
-    struct BeamFlagEulerFSIFlutterAnalysis {
+    struct BeamFlagEulerFSIFlutterAnalysis:
+    public libMesh::ParallelObject {
         
         
-        BeamFlagEulerFSIFlutterAnalysis(unsigned int order_increment = 0,
-                                    unsigned int n_refine = 0);
+        BeamFlagEulerFSIFlutterAnalysis(const libMesh::Parallel::Communicator& comm_in,
+                                        unsigned int order_increment = 0,
+                                        unsigned int n_refine = 0);
         
         
         ~BeamFlagEulerFSIFlutterAnalysis();

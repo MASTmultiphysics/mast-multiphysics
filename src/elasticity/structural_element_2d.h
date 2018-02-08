@@ -86,7 +86,16 @@ namespace MAST {
         virtual bool
         internal_residual_jac_dot_state_sensitivity (RealMatrixX& jac);
         
-        
+        /*!
+         *   calculates the term on side \par s:
+         *   \f$ \int_\Gamma a(\delta u, u) v_n ~d\Gamma \f$.
+         *
+         */
+        virtual void
+        internal_residual_boundary_velocity(RealVectorX& f,
+                                            const unsigned int s,
+                                            MAST::FieldFunction<RealVectorX>& vel_f);
+
         /*!
          *    Calculates the internal residual vector and Jacobian due to
          *    strain energy coming from a prestress

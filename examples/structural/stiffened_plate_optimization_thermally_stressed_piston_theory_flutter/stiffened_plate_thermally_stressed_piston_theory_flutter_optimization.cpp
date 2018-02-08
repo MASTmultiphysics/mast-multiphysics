@@ -49,10 +49,6 @@
 //#include "libmesh/string_to_enum.h"
 //#include "libmesh/nonlinear_solver.h"
 //
-//extern
-//libMesh::LibMeshInit     *__init;
-//extern
-//MAST::FunctionEvaluation *__my_func_eval;
 //
 //
 //
@@ -288,7 +284,7 @@
 //    _stress_limit  = infile("max_stress", 4.00e8);
 //    
 //    // create the mesh
-//    _mesh          = new libMesh::SerialMesh(__init->comm());
+//    _mesh          = new libMesh::SerialMesh(this->comm());
 //    
 //    // initialize the mesh with one element
 //    MAST::StiffenedPanelMesh panel_mesh;
@@ -623,7 +619,7 @@
 //    // flutter solver
 //    _flutter_solver  = new MAST::TimeDomainFlutterSolver;
 //    std::string nm("flutter_output.txt");
-//    if (__init->comm().rank() == 0)
+//    if (this->comm().rank() == 0)
 //        _flutter_solver->set_output_file(nm);
 //    
 //    
@@ -852,7 +848,7 @@
 //            // zero the solution before solving
 //            _obj.clear_stresss();
 //            
-//            _obj._nonlinear_assembly->attach_discipline_and_system(*_obj._nonlinear_elem_ops,
+//            _obj._nonlinear_assembly->set_discipline_and_system(*_obj._nonlinear_elem_ops,
 //                                                                   *_obj._discipline,
 //                                                                   *_obj._structural_sys);
 //            
@@ -985,7 +981,7 @@
 //    // same exact values.
 //    std::vector<Real>
 //    my_dvars(dvars.begin(), dvars.end());
-//    __init->comm().broadcast(my_dvars);
+//    this->comm().broadcast(my_dvars);
 //    
 //    
 //    // set the parameter values equal to the DV value
@@ -1061,7 +1057,7 @@
 //    // So, they will act as generalized coordinates that will not provide
 //    // diagonal reduced order mass/stiffness operator. The eigenvalues
 //    // will also be independent of velocity.
-//    _modal_assembly->attach_discipline_and_system(*_modal_elem_ops,
+//    _modal_assembly->set_discipline_and_system(*_modal_elem_ops,
 //                                                  *_discipline,
 //                                                  *_structural_sys);
 //    _modal_assembly->set_base_solution(steady_sol_wo_aero);
@@ -1140,7 +1136,7 @@
 //        // a new equilibrium state is calculated for each velocity. So,
 //        // the flutter root, if found will depend on the equilibrium state
 //        // which, in turn, depends on the velocity.
-//        _fsi_assembly->attach_discipline_and_system(*_fsi_assembly,
+//        _fsi_assembly->set_discipline_and_system(*_fsi_assembly,
 //                                                    *_discipline,
 //                                                    *_structural_sys);
 //        _fsi_assembly->set_base_solution(steady_solve.solution());
@@ -1178,7 +1174,7 @@
 //    
 //    
 //    // now calculate the stress output based on the velocity output
-//    _nonlinear_assembly->attach_discipline_and_system(*_nonlinear_elem_ops,
+//    _nonlinear_assembly->set_discipline_and_system(*_nonlinear_elem_ops,
 //                                                      *_discipline,
 //                                                      *_structural_sys);
 //    _nonlinear_assembly->calculate_outputs(steady_solve.solution());
@@ -1233,16 +1229,16 @@
 //    // be mapped to unique spots by identifying the number of elements on each
 //    // subdomain
 //    std::vector<unsigned int>
-//    beginning_elem_id(__init->comm().size(), 0);
-//    for (unsigned int i=1; i<__init->comm().size(); i++)
+//    beginning_elem_id(this->comm().size(), 0);
+//    for (unsigned int i=1; i<this->comm().size(); i++)
 //        beginning_elem_id[i] = _mesh->n_elem_on_proc(i-1);
 //    
 //    // now use this info to identify the beginning elem id
-//    for (unsigned int i=2; i<__init->comm().size(); i++)
+//    for (unsigned int i=2; i<this->comm().size(); i++)
 //        beginning_elem_id[i] += beginning_elem_id[i-1];
 //
 //    const unsigned int
-//    my_id0 = beginning_elem_id[__init->comm().rank()];
+//    my_id0 = beginning_elem_id[this->comm().rank()];
 //    
 //    // copy the element von Mises stress values as the functions
 //    for (unsigned int i=0; i<_outputs.size(); i++)
@@ -1322,7 +1318,7 @@
 //        if (sol.second) {
 //            
 //            params[0] = _velocity->ptr();
-//            _nonlinear_assembly->attach_discipline_and_system(*_nonlinear_elem_ops,
+//            _nonlinear_assembly->set_discipline_and_system(*_nonlinear_elem_ops,
 //                                                              *_discipline,
 //                                                              *_structural_sys);
 //            _sys->sensitivity_solve(params);
@@ -1360,7 +1356,7 @@
 //            this->clear_stresss();
 //            
 //            // sensitivity analysis
-//            _nonlinear_assembly->attach_discipline_and_system(*_nonlinear_elem_ops,
+//            _nonlinear_assembly->set_discipline_and_system(*_nonlinear_elem_ops,
 //                                                              *_discipline,
 //                                                              *_structural_sys);
 //            _sys->sensitivity_solve(params);
@@ -1393,7 +1389,7 @@
 //                //
 //                _fsi_assembly->set_base_solution(steady_solve.solution());
 //                _fsi_assembly->set_base_solution(dXdp, true);
-//                _fsi_assembly->attach_discipline_and_system(*_fsi_assembly,
+//                _fsi_assembly->set_discipline_and_system(*_fsi_assembly,
 //                                                            *_discipline,
 //                                                            *_structural_sys);
 //                _flutter_solver->attach_assembly(*_fsi_assembly);
@@ -1425,7 +1421,7 @@
 //                // sensitivity analysis
 //                (*_velocity) = 0.;
 //                *_sys->solution = steady_sol_wo_aero;
-//                _nonlinear_assembly->attach_discipline_and_system(*_nonlinear_elem_ops,
+//                _nonlinear_assembly->set_discipline_and_system(*_nonlinear_elem_ops,
 //                                                                  *_discipline,
 //                                                                  *_structural_sys);
 //                _sys->sensitivity_solve(params);
@@ -1440,14 +1436,14 @@
 //            // now, sum the sensitivity of the stress function gradients
 //            // so that all processors have the same values
 //            for (unsigned int j=0; j<_n_elems; j++)
-//                __init->comm().sum(grads[(i*_n_ineq) + (j+_n_eig+1)]);
+//                this->comm().sum(grads[(i*_n_ineq) + (j+_n_eig+1)]);
 //            
 //            
 //            // calculate the sensitivity of the eigenvalues
 //            std::vector<Real> eig_sens(nconv);
 //            _modal_assembly->set_base_solution(steady_sol_wo_aero);
 //            _modal_assembly->set_base_solution(dXdp, true);
-//            _modal_assembly->attach_discipline_and_system(*_modal_elem_ops,
+//            _modal_assembly->set_discipline_and_system(*_modal_elem_ops,
 //                                                          *_discipline,
 //                                                          *_structural_sys);
 //            // this should not be necessary, but currently the eigenproblem sensitivity

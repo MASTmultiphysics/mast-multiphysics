@@ -34,7 +34,7 @@ namespace MAST  {
             
         public:
             
-            PlateBending();
+            PlateBending(const libMesh::Parallel::Communicator& comm_in);
             
             virtual ~PlateBending() {}
             

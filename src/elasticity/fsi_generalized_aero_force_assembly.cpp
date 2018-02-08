@@ -22,17 +22,18 @@
 #include "elasticity/fsi_generalized_aero_force_assembly.h"
 #include "elasticity/structural_element_base.h"
 #include "elasticity/structural_assembly.h"
-#include "solver/complex_solver_base.h"
+#include "elasticity/fluid_structure_assembly_elem_operations.h"
 #include "base/complex_mesh_field_function.h"
-#include "fluid/pressure_function.h"
-#include "fluid/frequency_domain_pressure_function.h"
 #include "base/complex_assembly_base.h"
 #include "base/physics_discipline_base.h"
 #include "base/system_initialization.h"
 #include "base/mesh_field_function.h"
-#include "property_cards/element_property_card_base.h"
-#include "numerics/utility.h"
 #include "base/nonlinear_system.h"
+#include "fluid/pressure_function.h"
+#include "fluid/frequency_domain_pressure_function.h"
+#include "property_cards/element_property_card_base.h"
+#include "solver/complex_solver_base.h"
+#include "numerics/utility.h"
 
 
 // libMesh includes
@@ -49,6 +50,7 @@
 MAST::FSIGeneralizedAeroForceAssembly::FSIGeneralizedAeroForceAssembly():
 MAST::StructuralFluidInteractionAssembly(),
 _fluid_complex_solver           (nullptr),
+_fluid_complex_assembly         (nullptr),
 _pressure_function              (nullptr),
 _freq_domain_pressure_function  (nullptr),
 _complex_displ                  (nullptr)
@@ -70,9 +72,10 @@ MAST::FSIGeneralizedAeroForceAssembly::~FSIGeneralizedAeroForceAssembly() {
 void
 MAST::FSIGeneralizedAeroForceAssembly::
 init(MAST::ComplexSolverBase*                complex_solver,
+     MAST::ComplexAssemblyBase*              complex_assembly,
      MAST::PressureFunction*                 pressure_func,
      MAST::FrequencyDomainPressureFunction*  freq_pressure_func,
-     MAST::ComplexMeshFieldFunction*                displ_func) {
+     MAST::ComplexMeshFieldFunction*         displ_func) {
     
     
     // make sure the pointer is provided
@@ -82,6 +85,7 @@ init(MAST::ComplexSolverBase*                complex_solver,
     
     _complex_displ                  = displ_func;
     _fluid_complex_solver           = complex_solver;
+    _fluid_complex_assembly         = complex_assembly;
     _pressure_function              = pressure_func;
     _freq_domain_pressure_function  = freq_pressure_func;
 }
@@ -96,6 +100,7 @@ MAST::FSIGeneralizedAeroForceAssembly::clear_discipline_and_system() {
     _pressure_function                 = nullptr;
     _freq_domain_pressure_function     = nullptr;
     _fluid_complex_solver              = nullptr;
+    _fluid_complex_assembly            = nullptr;
     
     MAST::StructuralFluidInteractionAssembly::clear_discipline_and_system();
 }
@@ -149,6 +154,8 @@ assemble_generalized_aerodynamic_force_matrix
     if (_sol_function && _base_sol)
         _sol_function->init( *_base_sol);
     
+    MAST::FluidStructureAssemblyElemOperations&
+    ops = dynamic_cast<MAST::FluidStructureAssemblyElemOperations&>(*_elem_ops);
     
     // iterate over each structural mode to calculate the
     // fluid small-disturbance solution
@@ -160,14 +167,14 @@ assemble_generalized_aerodynamic_force_matrix
         
         
         // solve the complex smamll-disturbance fluid-equations
-        _fluid_complex_solver->solve_block_matrix(p);
+        _fluid_complex_solver->solve_block_matrix(*_fluid_complex_assembly, p);
         
         // use this solution to initialize the structural boundary conditions
-        _pressure_function->init(_fluid_complex_solver->get_assembly().base_sol());
+        _pressure_function->init(_fluid_complex_assembly->base_sol());
         
         // use this solution to initialize the structural boundary conditions
         _freq_domain_pressure_function->init
-        (_fluid_complex_solver->get_assembly().base_sol(),
+        (_fluid_complex_assembly->base_sol(),
          _fluid_complex_solver->real_solution(p != nullptr),
          _fluid_complex_solver->imag_solution(p != nullptr));
 
@@ -181,13 +188,14 @@ assemble_generalized_aerodynamic_force_matrix
         _system->system().get_mesh().active_local_elements_end();
         
         
+        
         for ( ; el != end_el; ++el) {
             
             const libMesh::Elem* elem = *el;
             
             dof_map.dof_indices (elem, dof_indices);
             
-            MAST::StructuralFluidInteractionAssembly::init(*elem);
+            ops.init(*elem);
             
             // get the solution
             unsigned int ndofs = (unsigned int)dof_indices.size();
@@ -205,16 +213,16 @@ assemble_generalized_aerodynamic_force_matrix
             }
             
             
-            this->set_elem_solution(sol);
+            ops.set_elem_solution(sol);
             sol.setZero();
-            this->set_elem_velocity(sol);     // set to zero value
-            this->set_elem_acceleration(sol); // set to zero value
+            ops.set_elem_velocity(sol);     // set to zero value
+            ops.set_elem_acceleration(sol); // set to zero value
             
             
 //            if (_sol_function)
 //                physics_elem->attach_active_solution_function(*_sol_function);
             
-            _elem_aerodynamic_force_calculations(vec);
+            ops.elem_aerodynamic_force_calculations(vec);
             
             DenseRealVector v1;
             RealVectorX     v2;

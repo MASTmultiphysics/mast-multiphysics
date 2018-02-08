@@ -34,7 +34,6 @@ namespace MAST {
     // Forward declerations
     class ComplexSolverBase;
     class Parameter;
-    class ComplexAssemblyElemOperations;
     
     
     class ComplexAssemblyBase:
@@ -55,54 +54,10 @@ namespace MAST {
 
         
         /*!
-         *   tells the object to assembly the system of equations for the 
-         *   real part when residual_and_jacobian are called.
-         */
-        void set_assemble_real_part() {
-            _if_assemble_real = true;
-        }
-        
-        
-        
-        /*!
-         *   tells the object to assembly the system of equations for the
-         *   complex part when residual_and_jacobian are called.
-         */
-        void set_assemble_imag_part() {
-            _if_assemble_real = false;
-        }
-
-        
-        /*!
          *   calculates the L2 norm of the residual complex system of equations.
          */
-        Real residual_l2_norm();
-        
-        
-        /*!
-         *   attaches a system to this discipline, and vice-a-versa
-         */
-        virtual void
-        attach_discipline_and_system(MAST::ComplexAssemblyElemOperations& elem_ops,
-                                     MAST::PhysicsDisciplineBase& discipline,
-                                     MAST::ComplexSolverBase& solver,
-                                     MAST::SystemInitialization& sys);
-
-        
-        /*!
-         *   Reattaches to the same system that was attached earlier.
-         *
-         *   This cannot be called if the clear_discipline_and_system() method
-         *   has been called.
-         */
-        virtual void
-        reattach_to_system();
-        
-        /*!
-         *   clears association with a system to this discipline, and vice-a-versa
-         */
-        virtual void
-        clear_discipline_and_system( );
+        Real residual_l2_norm(const libMesh::NumericVector<Real>& real,
+                              const libMesh::NumericVector<Real>& imag);
         
         
         /*!
@@ -139,24 +94,13 @@ namespace MAST {
         const libMesh::NumericVector<Real>& base_sol(bool if_sens = false) const;
         
         
-        /*!
-         *    function that assembles the matrices and vectors quantities for
-         *    nonlinear solution
-         */
-        virtual void
-        residual_and_jacobian (const libMesh::NumericVector<Real>& X,
-                               libMesh::NumericVector<Real>* R,
-                               libMesh::SparseMatrix<Real>*  J,
-                               libMesh::NonlinearImplicitSystem& S);
-        
         void
         residual_and_jacobian_field_split (const libMesh::NumericVector<Real>& X_R,
                                            const libMesh::NumericVector<Real>& X_I,
                                            libMesh::NumericVector<Real>& R_R,
                                            libMesh::NumericVector<Real>& R_I,
                                            libMesh::SparseMatrix<Real>&  J_R,
-                                           libMesh::SparseMatrix<Real>&  J_I,
-                                           libMesh::NonlinearImplicitSystem& S);
+                                           libMesh::SparseMatrix<Real>&  J_I);
 
         /*!
          *   Assembles the residual and Jacobian of the N complex system of equations
@@ -170,7 +114,6 @@ namespace MAST {
         residual_and_jacobian_blocked (const libMesh::NumericVector<Real>& X,
                                        libMesh::NumericVector<Real>& R,
                                        libMesh::SparseMatrix<Real>&  J,
-                                       libMesh::NonlinearImplicitSystem& S,
                                        MAST::Parameter* p = nullptr);
 
         /**
@@ -189,23 +132,6 @@ namespace MAST {
                               libMesh::NumericVector<Real>& sensitivity_rhs);
         
     protected:
-        
-                
-        /*!
-         *   flag tells the solver of the current solution type being sought
-         */
-        bool _if_assemble_real;
-
-
-        /*!
-         *   complex assembly element operation class
-         */
-        MAST::ComplexAssemblyElemOperations* _complex_elem_ops;
-        
-        /*!
-         *   pointer to complex solver
-         */
-        MAST::ComplexSolverBase* _complex_solver;
         
         /*!
          *   base solution about which this problem is defined. This

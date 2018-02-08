@@ -49,7 +49,6 @@
 //
 //
 //// get this from the global namespace
-//extern libMesh::LibMeshInit* _init;
 //
 //
 //namespace MAST {

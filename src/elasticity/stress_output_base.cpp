@@ -270,7 +270,10 @@ MAST::StressStrainOutputBase::~StressStrainOutputBase() {
 void
 MAST::StressStrainOutputBase::zero() {
     
-    
+    _max_val         = 0.;
+    _JxW_val         = 0.;
+    _sigma_vm_int    = 0.;
+    _sigma_vm_p_norm = 0.;
 }
 
 

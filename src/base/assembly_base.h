@@ -92,29 +92,34 @@ namespace MAST {
         
         
         /*!
-         *   attaches a system to this discipline, and vice-a-versa
+         *   attaches a system to this discipline
          */
         virtual void
-        attach_discipline_and_system(MAST::AssemblyElemOperations& elem_ops,
-                                     MAST::PhysicsDisciplineBase& discipline,
-                                     MAST::SystemInitialization& system);
+        set_discipline_and_system(MAST::PhysicsDisciplineBase& discipline,
+                                  MAST::SystemInitialization& system);
 
         
         /*!
-         *   Reattaches to the same system that was attached earlier.
-         *
-         *   This cannot be called if the clear_discipline_and_system() method
-         *   has been called.
+         *   clears association with a system to this discipline
          */
         virtual void
-        reattach_to_system() = 0;
+        clear_discipline_and_system();
+
+
+        /*!
+         *   attaches a element operation to this object, and associated
+         *   \p this with the element operation object.
+         */
+        virtual void
+        set_elem_operation_object(MAST::AssemblyElemOperations& elem_ops);
 
         
         /*!
-         *   clears association with a system to this discipline, and vice-a-versa
+         *   clears the association of \p this object with the assembly
+         *   element operation object.
          */
         virtual void
-        clear_discipline_and_system( );
+        clear_elem_operation_object();
 
         
         /*!

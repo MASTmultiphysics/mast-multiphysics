@@ -55,7 +55,8 @@
 //#include "examples/structural/stiffened_plate_optimization_thermally_stressed_piston_theory_flutter/stiffened_plate_thermally_stressed_piston_theory_flutter_optimization.h"
 #include "examples/structural/topology_optim_2D/topology_optim_2D.h"
 //#include "optimization/npsol_optimization_interface.h"
-//#include "optimization/dot_optimization_interface.h"
+#include "optimization/dot_optimization_interface.h"
+#include "optimization/gcmma_optimization_interface.h"
 //#include "examples/fluid/panel_inviscid_analysis_2D/panel_inviscid_analysis_2d.h"
 //#include "examples/fluid/ramp_laminar_analysis_2D/ramp_viscous_analysis_2d.h"
 //#include "examples/fluid/panel_inviscid_analysis_3D_half_domain/panel_inviscid_analysis_3D_half_domain.h"
@@ -81,11 +82,6 @@
 // libMesh includes
 #include "libmesh/libmesh.h"
 #include "libmesh/getpot.h"
-
-
-libMesh::LibMeshInit     *__init         = nullptr;
-//MAST::FunctionEvaluation *__my_func_eval = nullptr;
-
 
 
 //template <typename ValType>
@@ -217,8 +213,8 @@ libMesh::LibMeshInit     *__init         = nullptr;
 //    MAST::GCMMAOptimizationInterface optimizer;
 //
 //    // create and attach sizing optimization object
-//    ValType func_eval(__init->comm());
-//    if (__init->comm().rank() == 0)
+//    ValType func_eval(this->comm());
+//    if (this->comm().rank() == 0)
 //        func_eval.set_output_file("optimization_output.txt");
 //    __my_func_eval = &func_eval;
 //    func_eval.init(infile, etype, nonlinear);
@@ -249,7 +245,6 @@ libMesh::LibMeshInit     *__init         = nullptr;
 int main(int argc, char* const argv[]) {
     
     libMesh::LibMeshInit init(argc, argv);
-    __init  = &init;
     
     // use to get arguments from the command line
     GetPot command_line(argc, argv);
@@ -276,7 +271,7 @@ int main(int argc, char* const argv[]) {
     
     if (case_name == "bar_extension") {
         
-        MAST::Examples::BarExtension example;
+        MAST::Examples::BarExtension example(init.comm());
         example.init(*input, prefix);
         example.static_solve();
         example.static_sensitivity_solve(example.get_parameter("thy"));
@@ -302,13 +297,13 @@ int main(int argc, char* const argv[]) {
 //                                                              par_name);
     else if (case_name == "beam_bending") {
         
-        MAST::Examples::BeamBending example;
+        MAST::Examples::BeamBending example(init.comm());
         example.init(*input, prefix);
         example.static_solve();
     }
     else if (case_name == "beam_oscillating_load") {
         
-        MAST::Examples::BeamOscillatingLoad example;
+        MAST::Examples::BeamOscillatingLoad example(init.comm());
         example.init(*input, prefix);
         example.transient_solve();
         example.transient_sensitivity_solve(example.get_parameter("thy"));
@@ -493,10 +488,11 @@ int main(int argc, char* const argv[]) {
 //         if_nonlin);
     else if (case_name == "topology_optimization_2D") {
 
-        MAST::Examples::TopologyOptimizationLevelSet2D example;
+        MAST::GCMMAOptimizationInterface optimizer;
+        MAST::Examples::TopologyOptimizationLevelSet2D example(init.comm());
         example.init(*input, prefix);
-        example.static_solve();
-        example.level_set_solve();
+        optimizer.attach_function_evaluation_object(example);
+        optimizer.optimize();
     }
 //    else if (case_name == "panel_inviscid_analysis_2d")
 //        fluid_analysis<MAST::PanelInviscidAnalysis2D>(case_name);

@@ -65,10 +65,11 @@ namespace MAST {
     class FSIBoundaryConditionUpdates;
     class AugmentGhostElementSendListObj;
     
-    struct BeamEulerFSIAnalysis {
+    struct BeamEulerFSIAnalysis:
+    public libMesh::ParallelObject {
         
         
-        BeamEulerFSIAnalysis();
+        BeamEulerFSIAnalysis(const libMesh::Parallel::Communicator& comm_in);
         
         
         ~BeamEulerFSIAnalysis();

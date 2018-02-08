@@ -36,6 +36,7 @@ namespace MAST {
     class BoundaryConditionBase;
     class FEMOperatorMatrix;
     class StressStrainOutputBase;
+    template <typename ValType> class FieldFunction;
     
     
     class StructuralElementBase:
@@ -137,6 +138,15 @@ namespace MAST {
                                       RealVectorX& f,
                                       RealMatrixX& jac);
 
+        /*!
+         *   calculates the term on side \par s:
+         *   \f$ \int_\Gamma a(\delta u, u) v_n ~d\Gamma \f$.
+         *
+         */
+        virtual void
+        internal_residual_boundary_velocity(RealVectorX& f,
+                                            const unsigned int s,
+                                            MAST::FieldFunction<RealVectorX>& vel_f) = 0;
         
         /*!
          *   calculates d[J]/d{x} . d{x}/dp

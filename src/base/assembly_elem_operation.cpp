@@ -29,8 +29,10 @@
 
 
 MAST::AssemblyElemOperations::AssemblyElemOperations():
-_assembly      (nullptr),
-_physics_elem  (nullptr) {
+_system           (nullptr),
+_discipline       (nullptr),
+_assembly         (nullptr),
+_physics_elem     (nullptr) {
     
 }
 
@@ -40,6 +42,28 @@ MAST::AssemblyElemOperations::~AssemblyElemOperations() {
     this->clear_elem();
 }
 
+
+void
+MAST::AssemblyElemOperations::
+set_discipline_and_system(MAST::PhysicsDisciplineBase &discipline,
+                          MAST::SystemInitialization &system) {
+    
+    libmesh_assert_msg(!_discipline && !_system,
+                       "Error: Assembly should be cleared before attaching System.");
+    
+    _discipline = &discipline;
+    _system     = &system;
+}
+
+
+
+void
+MAST::AssemblyElemOperations::
+clear_discipline_and_system() {
+    
+    _discipline    = nullptr;
+    _system        = nullptr;
+}
 
 
 void
@@ -54,6 +78,20 @@ void
 MAST::AssemblyElemOperations::clear_assembly() {
     
     _assembly = nullptr;
+}
+
+
+MAST::SystemInitialization&
+MAST::AssemblyElemOperations::get_system_initialization() {
+
+    return *_system;
+}
+
+
+MAST::PhysicsDisciplineBase&
+MAST::AssemblyElemOperations::get_discipline() {
+    
+    return *_discipline;
 }
 
 

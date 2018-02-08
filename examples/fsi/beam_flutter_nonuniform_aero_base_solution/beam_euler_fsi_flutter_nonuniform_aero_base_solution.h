@@ -37,6 +37,7 @@
 #include "libmesh/fe_type.h"
 #include "libmesh/dof_map.h"
 #include "libmesh/parallel.h"
+#include "libmesh/parallel_object.h"
 
 
 
@@ -68,10 +69,11 @@ namespace MAST {
     class AugmentGhostElementSendListObj;
 
     
-    struct BeamEulerFSIFlutterNonuniformAeroBaseAnalysis {
+    struct BeamEulerFSIFlutterNonuniformAeroBaseAnalysis:
+    public libMesh::ParallelObject {
         
         
-        BeamEulerFSIFlutterNonuniformAeroBaseAnalysis();
+        BeamEulerFSIFlutterNonuniformAeroBaseAnalysis(const libMesh::Parallel::Communicator& comm_in);
         
         
         ~BeamEulerFSIFlutterNonuniformAeroBaseAnalysis();

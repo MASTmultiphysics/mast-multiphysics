@@ -33,7 +33,7 @@ namespace MAST  {
             
         public:
             
-            BarExtension();
+            BarExtension(const libMesh::Parallel::Communicator& comm_in);
             
             virtual ~BarExtension() {}
             

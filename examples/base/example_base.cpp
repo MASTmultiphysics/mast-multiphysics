@@ -29,10 +29,11 @@
 #include "libmesh/enum_fe_family.h"
 
 
-MAST::Examples::ExampleBase::ExampleBase():
-_initialized    (false),
-_prefix         (),
-_input          (nullptr) {
+MAST::Examples::ExampleBase::ExampleBase(const libMesh::Parallel::Communicator& comm_in):
+libMesh::ParallelObject (comm_in),
+_initialized            (false),
+_prefix                 (),
+_input                  (nullptr) {
     
     MAST::Parameter
     *p = new MAST::Parameter("zero",  0.);

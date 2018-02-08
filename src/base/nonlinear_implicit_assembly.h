@@ -67,31 +67,6 @@ namespace MAST {
         virtual ~NonlinearImplicitAssembly();
         
         
-        /*!
-         *   attaches a system to this discipline, and vice-a-versa
-         */
-        virtual void
-        attach_discipline_and_system(MAST::NonlinearImplicitAssemblyElemOperations& elem_ops,
-                                     MAST::PhysicsDisciplineBase& discipline,
-                                     MAST::SystemInitialization& system);
-        
-        
-        /*!
-         *   Reattaches to the same system that was attached earlier.
-         *
-         *   This cannot be called if the clear_discipline_and_system() method
-         *   has been called.
-         */
-        virtual void
-        reattach_to_system();
-        
-
-        /*!
-         *   clears association with a system to this discipline, and vice-a-versa
-         */
-        virtual void
-        clear_discipline_and_system( );
-
         
         /*!
          *    sets the PostAssemblyOperation object for use after assembly. 
@@ -154,11 +129,6 @@ namespace MAST {
                               libMesh::NumericVector<Real>& sensitivity_rhs);
         
     protected:
-        
-        /*!
-         *    object to provide transient element operations
-         */
-        MAST::NonlinearImplicitAssemblyElemOperations* _implicit_elem_ops;
         
 
         

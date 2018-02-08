@@ -34,7 +34,7 @@ namespace MAST {
             
         public:
             
-            StructuralExample2D();
+            StructuralExample2D(const libMesh::Parallel::Communicator& comm_in);
             
             virtual ~StructuralExample2D();
             

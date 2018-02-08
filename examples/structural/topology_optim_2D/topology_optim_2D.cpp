@@ -24,18 +24,24 @@
 #include "level_set/level_set_discipline.h"
 #include "level_set/level_set_system_initialization.h"
 #include "level_set/level_set_transient_assembly.h"
+#include "level_set/level_set_nonlinear_implicit_assembly.h"
 #include "level_set/level_set_reinitialization_transient_assembly.h"
+#include "level_set/level_set_volume_output.h"
+#include "level_set/level_set_boundary_velocity.h"
+#include "elasticity/stress_output_base.h"
+#include "base/parameter.h"
 #include "base/field_function_base.h"
 #include "base/nonlinear_system.h"
 #include "base/transient_assembly.h"
 #include "solver/first_order_newmark_transient_solver.h"
 
+
 // libMesh includes
 #include "libmesh/serial_mesh.h"
 #include "libmesh/string_to_enum.h"
 #include "libmesh/mesh_generation.h"
+#include "libmesh/dof_map.h"
 
-extern libMesh::LibMeshInit* __init;
 
 class Phi:
 public MAST::FieldFunction<RealVectorX> {
@@ -112,12 +118,20 @@ protected:
 };
 
 
-MAST::Examples::TopologyOptimizationLevelSet2D::TopologyOptimizationLevelSet2D():
-MAST::Examples::StructuralExample2D(),
-_level_set_sys         (nullptr),
-_level_set_sys_init    (nullptr),
-_level_set_discipline  (nullptr),
-_level_set_vel         (nullptr) {
+
+
+
+MAST::Examples::TopologyOptimizationLevelSet2D::
+TopologyOptimizationLevelSet2D(const libMesh::Parallel::Communicator& comm_in):
+MAST::Examples::StructuralExample2D  (comm_in),
+MAST::FunctionEvaluation             (comm_in),
+_level_set_mesh                      (nullptr),
+_level_set_eq_sys                    (nullptr),
+_level_set_sys                       (nullptr),
+_level_set_sys_init                  (nullptr),
+_level_set_discipline                (nullptr),
+_level_set_function                  (nullptr),
+_level_set_vel                       (nullptr) {
     
 }
 
@@ -127,11 +141,15 @@ MAST::Examples::TopologyOptimizationLevelSet2D::~TopologyOptimizationLevelSet2D(
     if (!_initialized)
         return;
     
+    delete _level_set_function;
+    delete _level_set_vel;
     delete _level_set_sys_init;
     delete _level_set_discipline;
-    delete _level_set_vel;
     delete _level_set_eq_sys;
     delete _level_set_mesh;
+    
+    for (unsigned int i=0; i<_dv_params.size(); i++)
+        delete _dv_params[i].second;
 }
 
 
@@ -155,87 +173,174 @@ MAST::Examples::TopologyOptimizationLevelSet2D::initialize_solution() {
 
 
 void
-MAST::Examples::TopologyOptimizationLevelSet2D::level_set_solve() {
+MAST::Examples::TopologyOptimizationLevelSet2D::init(MAST::Examples::GetPotWrapper& input,
+                                                     const std::string& prefix) {
     
-    libmesh_assert(_initialized);
+    // let all other data structures be initialized
+    MAST::Examples::StructuralExample2D::init(input, prefix);
+
     
-    bool
-    output      = (*_input)(_prefix+"if_output", "if write output to a file", false),
-    propagate   = (*_input)(_prefix+"if_propagate", "if propagate level set, or reinitialize it", true);
-    
-    
+    // FEType to initialize the system
+    // get the order and type of element
     std::string
-    output_name = (*_input)(_prefix+"output_file_root", "prefix of output file names", "output");
-    output_name += "_level_set.exo";
-
-    // create the nonlinear assembly object
-    std::unique_ptr<MAST::TransientAssembly> level_set_assembly;
-    if (propagate)
-        level_set_assembly.reset(new MAST::TransientAssembly);
-    else {
-        MAST::LevelSetReinitializationTransientAssembly
-        *assembly = new MAST::LevelSetReinitializationTransientAssembly;
-
-        libMesh::NumericVector<Real>
-        &base_sol = _level_set_sys->add_vector("base_sol");
-        base_sol  = *_level_set_sys->solution;
-        
-        assembly->set_reference_solution(base_sol);
-        _level_set_discipline->set_level_set_propagation_mode(false);
-        level_set_assembly.reset(assembly);
-    }
-    MAST::LevelSetTransientAssemblyElemOperations            level_set_elem_ops;
+    order_str   = input( prefix+ "level_set_fe_order", "order of finite element shape basis functions for level set method",    "first");
     
-    // Transient solver for time integration
-    MAST::FirstOrderNewmarkTransientSolver  level_set_solver;
+    libMesh::Order
+    o  = libMesh::Utility::string_to_enum<libMesh::Order>(order_str);
+    _level_set_fetype = libMesh::FEType(o, libMesh::LAGRANGE);
 
-    // now solve the system
-    level_set_assembly->attach_discipline_and_system(level_set_elem_ops,
-                                                     *_level_set_discipline,
-                                                     level_set_solver,
-                                                     *_level_set_sys_init);
+    
+    /////////////////////////////////////////////////
+    // now initialize the design data.
+    /////////////////////////////////////////////////
 
-    // file to write the solution for visualization
-    libMesh::ExodusII_IO exodus_writer(*_mesh);
+    // first, initialize the level set functions over the domain
+    this->initialize_solution();
 
-    // time solver parameters
-    unsigned int
-    t_step                         = 0,
-    n_steps                        = (*_input)(_prefix+"level_set_n_transient_steps", "number of transient time-steps", 100);
-    level_set_solver.dt            = (*_input)(_prefix+"level_set_dt", "time-step size",    1.e-3);
-    level_set_solver.beta          = 0.5;
-
-    // set the previous state to be same as the current state to account for
-    // zero velocity as the initial condition
-    level_set_solver.solution(1).zero();
-    level_set_solver.solution(1).add(1., level_set_solver.solution());
-    level_set_solver.solution(1).close();
+    // next, define a new parameter to define design variable for nodal level-set
+    // function value
+    this->_init_phi_dvs();
+    
+    // next, define the stress functional and volume constraint
+    this->_init_functions();
+}
 
 
-    // loop over time steps
-    while (t_step <= n_steps) {
 
-        libMesh::out
-        << "Time step: " << t_step
-        << " :  t = " << _level_set_sys->time
-        << std::endl;
 
-        // write the time-step
-        if (output) {
+void
+MAST::Examples::TopologyOptimizationLevelSet2D::init_dvar(std::vector<Real>& x,
+                                                          std::vector<Real>& xmin,
+                                                          std::vector<Real>& xmax) {
+    
+    // one DV for each element
+    x.resize(_n_vars);
+    xmin.resize(_n_vars);
+    xmax.resize(_n_vars);
 
-            exodus_writer.write_timestep(output_name,
-                                         *_eq_sys,
-                                         t_step+1,
-                                         _level_set_sys->time);
-        }
+    std::fill(xmin.begin(), xmin.end(),   -1.);
+    std::fill(xmax.begin(), xmax.end(),    1.);
+    for (unsigned int i=0; i<_n_vars; i++)
+        x[i] = (*_dv_params[i].second)();
+}
 
-        level_set_solver.solve();
 
-        level_set_solver.advance_time_step();
-        t_step++;
+
+
+void
+MAST::Examples::TopologyOptimizationLevelSet2D::evaluate(const std::vector<Real>& dvars,
+                                                         Real& obj,
+                                                         bool eval_obj_grad,
+                                                         std::vector<Real>& obj_grad,
+                                                         std::vector<Real>& fvals,
+                                                         std::vector<bool>& eval_grads,
+                                                         std::vector<Real>& grads) {
+    
+    // copy DVs to level set function
+    for (unsigned int i=0; i<_n_vars; i++)
+        _level_set_sys->solution->set(_dv_params[i].first, dvars[i]);
+    
+    /**********************************************************************
+     * DO NOT zero out the gradient vector, since GCMMA needs it for the  *
+     * subproblem solution                                                *
+     **********************************************************************/
+    MAST::LevelSetNonlinearImplicitAssembly assembly;
+    assembly.set_discipline_and_system(*_level_set_discipline, *_level_set_sys_init);
+    assembly.set_level_set_function(*_level_set_function);
+    MAST::LevelSetVolume                    volume(assembly.get_intersection());
+    MAST::StressStrainOutputBase            stress;
+    volume.set_discipline_and_system(*_level_set_discipline, *_level_set_sys_init);
+    
+    //////////////////////////////////////////////////////////////////////
+    // evaluate the objective
+    //////////////////////////////////////////////////////////////////////
+    assembly.calculate_output(*_level_set_sys->solution, volume);
+    obj       = volume.output_total();
+    
+    //////////////////////////////////////////////////////////////////////
+    // evaluate the stress constraint
+    //////////////////////////////////////////////////////////////////////
+    this->static_solve();
+    assembly.calculate_output(*_sys->solution, stress);
+    fvals[0]  = stress.output_total();
+    
+    //////////////////////////////////////////////////////////////////////
+    // evaluate the objective sensitivities, if requested
+    //////////////////////////////////////////////////////////////////////
+    if (eval_obj_grad)
+        _evaluate_volume_sensitivity(volume, assembly, obj_grad);
+    
+    //////////////////////////////////////////////////////////////////////
+    // check to see if the sensitivity of constraint is requested
+    //////////////////////////////////////////////////////////////////////
+    bool if_grad_sens = false;
+    for (unsigned int i=0; i<eval_grads.size(); i++)
+        if_grad_sens = (if_grad_sens || eval_grads[i]);
+    
+    //////////////////////////////////////////////////////////////////////
+    // evaluate the sensitivities for constraints
+    //////////////////////////////////////////////////////////////////////
+    if (if_grad_sens)
+        _evaluate_stress_functional_sensitivity(stress, assembly, eval_grads, grads);
+}
+
+
+
+
+void
+MAST::Examples::TopologyOptimizationLevelSet2D::
+_evaluate_volume_sensitivity(MAST::LevelSetVolume& volume,
+                             MAST::LevelSetNonlinearImplicitAssembly& assembly,
+                             std::vector<Real>& obj_grad) {
+    
+    // iterate over each DV, create a sensitivity vector and calculate the
+    // volume sensitivity explicitly
+    std::unique_ptr<libMesh::NumericVector<Real>>
+    dphi(_level_set_sys->solution->zero_clone().release());
+    
+    for (unsigned int i=0; i<_n_vars; i++) {
+        
+        dphi->zero();
+        dphi->set(_dv_params[i].first, 1.);
+        dphi->close();
+        _level_set_vel->init(*_level_set_sys_init, *_level_set_sys->solution, *dphi);
+        
+        assembly.calculate_output_direct_sensitivity(*_level_set_sys->solution,
+                                                     *dphi,
+                                                     *_dv_params[i].second,
+                                                     volume);
     }
+}
 
-    level_set_assembly->clear_discipline_and_system();
+
+
+void
+MAST::Examples::TopologyOptimizationLevelSet2D::
+_evaluate_stress_functional_sensitivity(MAST::StressStrainOutputBase& stress,
+                                        MAST::LevelSetNonlinearImplicitAssembly& assembly,
+                                        const std::vector<bool>& eval_grads,
+                                        std::vector<Real>& grads) {
+
+    _sys->adjoint_solve(stress, assembly, false);
+
+    std::unique_ptr<libMesh::NumericVector<Real>>
+    dphi(_level_set_sys->solution->zero_clone().release());
+    
+    for (unsigned int i=0; i<_n_vars; i++) {
+        
+        dphi->zero();
+        dphi->set(_dv_params[i].first, 1.);
+        dphi->close();
+
+        // initialize the level set perturbation function to create a velocity
+        // field
+        _level_set_vel->init(*_level_set_sys_init, *_level_set_sys->solution, *dphi);
+        
+        assembly.calculate_output_adjoint_sensitivity(*_sys->solution,
+                                                      _sys->get_adjoint_solution(),
+                                                      *_dv_params[i].second,
+                                                      stress);
+    }
 }
 
 
@@ -246,19 +351,7 @@ MAST::Examples::TopologyOptimizationLevelSet2D::_init_mesh() {
     // first call the parent method
     MAST::Examples::StructuralExample2D::_init_mesh();
     
-    
-}
-
-
-
-
-void
-MAST::Examples::TopologyOptimizationLevelSet2D::_init_eq_sys() {
-    
-    // first call the parent method
-    MAST::Examples::StructuralExample2D::_init_eq_sys();
-    
-    _mesh = new libMesh::SerialMesh(__init->comm());
+    _level_set_mesh = new libMesh::SerialMesh(MAST::Examples::StructuralExample2D::comm());
     
     // identify the element type from the input file or from the order
     // of the element
@@ -266,14 +359,14 @@ MAST::Examples::TopologyOptimizationLevelSet2D::_init_eq_sys() {
     unsigned int
     nx_divs = (*_input)(_prefix+"level_set_nx_divs", "number of elements of level-set mesh along x-axis", 10),
     ny_divs = (*_input)(_prefix+"level_set_ny_divs", "number of elements of level-set mesh along y-axis", 10);
-
+    
     Real
     length  = (*_input)(_prefix+"length", "length of domain along x-axis", 0.3),
     width   = (*_input)(_prefix+ "width", "length of domain along y-axis", 0.3);
-
+    
     std::string
     t = (*_input)(_prefix+"level_set_elem_type", "type of geometric element in the level set mesh", "quad4");
-
+    
     libMesh::ElemType
     e_type = libMesh::Utility::string_to_enum<libMesh::ElemType>(t);
     
@@ -285,11 +378,22 @@ MAST::Examples::TopologyOptimizationLevelSet2D::_init_eq_sys() {
         e_type = libMesh::TRI6;
     
     // initialize the mesh with one element
-    libMesh::MeshTools::Generation::build_square(*_mesh,
+    libMesh::MeshTools::Generation::build_square(*_level_set_mesh,
                                                  nx_divs, ny_divs,
                                                  0, length,
                                                  0, width,
                                                  e_type);
+}
+
+
+
+
+void
+MAST::Examples::TopologyOptimizationLevelSet2D::_init_eq_sys() {
+    
+    // first call the parent method
+    MAST::Examples::StructuralExample2D::_init_eq_sys();
+    _level_set_eq_sys->init();
 }
 
 
@@ -307,8 +411,8 @@ MAST::Examples::TopologyOptimizationLevelSet2D::_init_system_and_discipline() {
     _level_set_sys_init    = new MAST::LevelSetSystemInitialization(*_level_set_sys,
                                                                     _level_set_sys->name(),
                                                                     _fetype);
-    _level_set_vel         = new Vel;
-    _level_set_discipline  = new MAST::LevelSetDiscipline(*_eq_sys, *_level_set_vel);
+    _level_set_vel         = new MAST::LevelSetBoundaryVelocity(2);
+    _level_set_discipline  = new MAST::LevelSetDiscipline(*_eq_sys);
 }
 
 
@@ -333,161 +437,150 @@ MAST::Examples::TopologyOptimizationLevelSet2D::_init_loads() {
 
 
 
+void
+MAST::Examples::TopologyOptimizationLevelSet2D::_init_phi_dvs() {
 
-//// C++ includes
-//#include <iostream>
-//
-//// MAST includes
-//#include "examples/structural/topology_optim_2D/topology_optim_2D.h"
-//#include "elasticity/stress_output_base.h"
-//#include "optimization/optimization_interface.h"
-//#include "optimization/function_evaluation.h"
-//#include "base/nonlinear_implicit_assembly.h"
-//#include "elasticity/structural_nonlinear_assembly.h"
-//#include "base/real_output_function.h"
-//#include "base/nonlinear_system.h"
-//
-//
-//// libMesh includes
-//#include "libmesh/parallel_mesh.h"
-//#include "libmesh/mesh_generation.h"
-//#include "libmesh/exodusII_io.h"
-//#include "libmesh/numeric_vector.h"
-//#include "libmesh/sparse_matrix.h"
-//#include "libmesh/getpot.h"
-//#include "libmesh/string_to_enum.h"
-//
-//
-//extern
-//libMesh::LibMeshInit     *__init;
-//extern
-//MAST::FunctionEvaluation *__my_func_eval;
-//
-//
-//
-//void
-//topology_optim_2D_optim_obj(int*    mode,
-//                            int*    n,
-//                            double* x,
-//                            double* f,
-//                            double* g,
-//                            int*    nstate) {
-//    
-//    
-//    // make sure that the global variable has been setup
-//    libmesh_assert(__my_func_eval);
-//    
-//    // initialize the local variables
-//    Real
-//    obj = 0.;
-//    
-//    unsigned int
-//    n_vars  =  __my_func_eval->n_vars(),
-//    n_con   =  __my_func_eval->n_eq()+__my_func_eval->n_ineq();
-//    
-//    libmesh_assert_equal_to(*n, n_vars);
-//    
-//    std::vector<Real>
-//    dvars   (*n,    0.),
-//    obj_grad(*n,    0.),
-//    fvals   (n_con, 0.),
-//    grads   (0);
-//    
-//    std::vector<bool>
-//    eval_grads(n_con);
-//    std::fill(eval_grads.begin(), eval_grads.end(), false);
-//    
-//    // copy the dvars
-//    for (unsigned int i=0; i<n_vars; i++)
-//        dvars[i] = x[i];
-//    
-//    
-//    __my_func_eval->evaluate(dvars,
-//                             obj,
-//                             true,       // request the derivatives of obj
-//                             obj_grad,
-//                             fvals,
-//                             eval_grads,
-//                             grads);
-//    
-//    
-//    // now copy them back as necessary
-//    *f  = obj;
-//    for (unsigned int i=0; i<n_vars; i++)
-//        g[i] = obj_grad[i];
-//}
-//
-//
-//
-//
-//
-//
-//void
-//topology_optim_2D_optim_con(int*    mode,
-//                            int*    ncnln,
-//                            int*    n,
-//                            int*    ldJ,
-//                            int*    needc,
-//                            double* x,
-//                            double* c,
-//                            double* cJac,
-//                            int*    nstate) {
-//    
-//    
-//    // make sure that the global variable has been setup
-//    libmesh_assert(__my_func_eval);
-//    
-//    // initialize the local variables
-//    Real
-//    obj = 0.;
-//    
-//    unsigned int
-//    n_vars  =  __my_func_eval->n_vars(),
-//    n_con   =  __my_func_eval->n_eq()+__my_func_eval->n_ineq();
-//    
-//    libmesh_assert_equal_to(    *n, n_vars);
-//    libmesh_assert_equal_to(*ncnln, n_con);
-//    
-//    std::vector<Real>
-//    dvars   (*n,    0.),
-//    obj_grad(*n,    0.),
-//    fvals   (n_con, 0.),
-//    grads   (n_vars*n_con, 0.);
-//    
-//    std::vector<bool>
-//    eval_grads(n_con);
-//    std::fill(eval_grads.begin(), eval_grads.end(), true);
-//    
-//    // copy the dvars
-//    for (unsigned int i=0; i<n_vars; i++)
-//        dvars[i] = x[i];
-//    
-//    
-//    __my_func_eval->evaluate(dvars,
-//                             obj,
-//                             true,       // request the derivatives of obj
-//                             obj_grad,
-//                             fvals,
-//                             eval_grads,
-//                             grads);
-//    
-//    
-//    // now copy them back as necessary
-//    
-//    // first the constraint functions
-//    for (unsigned int i=0; i<n_con; i++)
-//        c[i] = fvals[i];
-//    
-//    // next, the constraint gradients
-//    for (unsigned int i=0; i<n_con*n_vars; i++)
-//        cJac[i] = grads[i];
-//    
-//    
-//}
-//
-//
-//
-//
+    libmesh_assert(_initialized);
+    // this assumes that level set is defined using lagrange shape functions
+    libmesh_assert_equal_to(_level_set_fetype.family, libMesh::LAGRANGE);
+    
+    Real
+    tol     = 1.e-6,
+    width   = (*_input)(_prefix+ "width", "length of domain along y-axis", 0.3);
+
+    unsigned int
+    dof_id  = 0;
+    
+    Real
+    val     = 0.;
+    
+    // iterate over all the node values
+    libMesh::MeshBase::const_node_iterator
+    it  = _level_set_mesh->nodes_begin(),
+    end = _level_set_mesh->nodes_end();
+    
+    // maximum number of dvs is the number of nodes on the level set function
+    // mesh. We will evaluate the actual number of dvs
+    _dv_params.reserve(_level_set_mesh->n_nodes());
+    _n_vars = 0;
+    
+    for ( ; it!=end; it++) {
+        
+        const libMesh::Node& n = **it;
+        
+        // only if node is not on the upper edge
+        if (std::fabs(n(1)-width) > tol) {
+       
+            std::ostringstream oss;
+            oss << "dv_" << _n_vars;
+            dof_id                     = n.dof_number(0, 0, 0);
+            val                        = _level_set_sys->solution->el(dof_id);
+            _dv_params[_n_vars].first  = dof_id;
+            _dv_params[_n_vars].second = new MAST::Parameter(oss.str(), val);
+            
+            _n_vars++;
+        }
+    }
+}
+
+
+
+void
+MAST::Examples::TopologyOptimizationLevelSet2D::_init_functions() {
+    
+    libmesh_assert(_initialized);
+    
+}
+
+
+void
+MAST::Examples::TopologyOptimizationLevelSet2D::level_set_solve() {
+    
+    libmesh_assert(_initialized);
+    
+    bool
+    output      = (*_input)(_prefix+"if_output", "if write output to a file", false),
+    propagate   = (*_input)(_prefix+"if_propagate", "if propagate level set, or reinitialize it", true);
+    
+    
+    std::string
+    output_name = (*_input)(_prefix+"output_file_root", "prefix of output file names", "output");
+    output_name += "_level_set.exo";
+    
+    // create the nonlinear assembly object
+    std::unique_ptr<MAST::TransientAssembly> level_set_assembly;
+    if (propagate)
+        level_set_assembly.reset(new MAST::TransientAssembly);
+    else {
+        MAST::LevelSetReinitializationTransientAssembly
+        *assembly = new MAST::LevelSetReinitializationTransientAssembly;
+        
+        libMesh::NumericVector<Real>
+        &base_sol = _level_set_sys->add_vector("base_sol");
+        base_sol  = *_level_set_sys->solution;
+        
+        assembly->set_reference_solution(base_sol);
+        _level_set_discipline->set_level_set_propagation_mode(false);
+        level_set_assembly.reset(assembly);
+    }
+    MAST::LevelSetTransientAssemblyElemOperations            level_set_elem_ops;
+    
+    // Transient solver for time integration
+    MAST::FirstOrderNewmarkTransientSolver  level_set_solver;
+    
+    // now solve the system
+    level_set_assembly->set_discipline_and_system(*_level_set_discipline,
+                                                  *_level_set_sys_init);
+    level_set_assembly->set_elem_operation_object(level_set_elem_ops);
+    level_set_assembly->set_solver(level_set_solver);
+    
+    // file to write the solution for visualization
+    libMesh::ExodusII_IO exodus_writer(*_mesh);
+    
+    // time solver parameters
+    unsigned int
+    t_step                         = 0,
+    n_steps                        = (*_input)(_prefix+"level_set_n_transient_steps", "number of transient time-steps", 100);
+    level_set_solver.dt            = (*_input)(_prefix+"level_set_dt", "time-step size",    1.e-3);
+    level_set_solver.beta          = 0.5;
+    
+    // set the previous state to be same as the current state to account for
+    // zero velocity as the initial condition
+    level_set_solver.solution(1).zero();
+    level_set_solver.solution(1).add(1., level_set_solver.solution());
+    level_set_solver.solution(1).close();
+    
+    
+    // loop over time steps
+    while (t_step <= n_steps) {
+        
+        libMesh::out
+        << "Time step: " << t_step
+        << " :  t = " << _level_set_sys->time
+        << std::endl;
+        
+        // write the time-step
+        if (output) {
+            
+            exodus_writer.write_timestep(output_name,
+                                         *_eq_sys,
+                                         t_step+1,
+                                         _level_set_sys->time);
+        }
+        
+        level_set_solver.solve();
+        
+        level_set_solver.advance_time_step();
+        t_step++;
+    }
+    
+    level_set_assembly->clear_discipline_and_system();
+}
+
+
+
+
+
 //MAST::YoungsModulus::YoungsModulus(const std::string& nm,
 //                                   MAST::FieldFunction<Real> &rho,
 //                                   const Real base_modulus,
@@ -582,7 +675,7 @@ MAST::Examples::TopologyOptimizationLevelSet2D::_init_loads() {
 //    _volume_fraction  = infile("volume_fraction", 0.3);
 //    
 //    // create the mesh
-//    _mesh          = new libMesh::SerialMesh(__init->comm());
+//    _mesh          = new libMesh::SerialMesh(this->comm());
 //    
 //    // initialize the mesh with one element
 //    libMesh::MeshTools::Generation::build_square(*_mesh,
@@ -758,7 +851,7 @@ MAST::Examples::TopologyOptimizationLevelSet2D::_init_loads() {
 //    _assembly = new MAST::NonlinearImplicitAssembly;
 //    _elem_ops = new MAST::StructuralNonlinearAssemblyElemOperations;
 //    
-//    _assembly->attach_discipline_and_system(*_elem_ops,
+//    _assembly->set_discipline_and_system(*_elem_ops,
 //                                            *_discipline,
 //                                            *_structural_sys);
 //    
@@ -1014,19 +1107,4 @@ MAST::Examples::TopologyOptimizationLevelSet2D::_init_loads() {
 //}
 //
 //
-//
-//
-//MAST::FunctionEvaluation::funobj
-//MAST::TopologyOptimization2D::get_objective_evaluation_function() {
-//    
-//    return topology_optim_2D_optim_obj;
-//}
-//
-//
-//
-//MAST::FunctionEvaluation::funcon
-//MAST::TopologyOptimization2D::get_constraint_evaluation_function() {
-//    
-//    return topology_optim_2D_optim_con;
-//}
-//
+

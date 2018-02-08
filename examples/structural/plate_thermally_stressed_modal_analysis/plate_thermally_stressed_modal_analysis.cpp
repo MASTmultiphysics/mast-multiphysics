@@ -22,8 +22,9 @@
 #include "examples/structural/plate_thermally_stressed_modal_analysis/plate_thermally_stressed_modal_analysis.h"
 
 
-MAST::Examples::PlateModalAnalysis::PlateModalAnalysis():
-MAST::Examples::StructuralExample2D() {
+MAST::Examples::PlateModalAnalysis::
+PlateModalAnalysis(const libMesh::Parallel::Communicator& comm_in):
+MAST::Examples::StructuralExample2D(comm_in) {
     
 }
 

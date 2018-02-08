@@ -49,6 +49,8 @@ _solver_monitor   (nullptr) {
 
 MAST::AssemblyBase::~AssemblyBase() {
     
+    this->clear_discipline_and_system();
+    this->clear_elem_operation_object();
 }
 
 
@@ -133,31 +135,47 @@ MAST::AssemblyBase::clear_solver_monitor() {
 
 void
 MAST::AssemblyBase::
-attach_discipline_and_system(MAST::AssemblyElemOperations& elem_ops,
-                             MAST::PhysicsDisciplineBase &discipline,
-                             MAST::SystemInitialization &system) {
+set_discipline_and_system(MAST::PhysicsDisciplineBase &discipline,
+                          MAST::SystemInitialization &system) {
     
-    libmesh_assert_msg(!_discipline && !_system && !_elem_ops,
+    libmesh_assert_msg(!_discipline && !_system,
                        "Error: Assembly should be cleared before attaching System.");
     
-    _elem_ops   = &elem_ops;
     _discipline = &discipline;
     _system     = &system;
-    
-    _elem_ops->set_assembly(*this);
 }
 
 
 
 void
 MAST::AssemblyBase::
-clear_discipline_and_system( ) {
+clear_discipline_and_system() {
     
-    _elem_ops->clear_assembly();
-    
-    _elem_ops      = nullptr;
     _discipline    = nullptr;
     _system        = nullptr;
+}
+
+
+
+void
+MAST::AssemblyBase::set_elem_operation_object(MAST::AssemblyElemOperations& elem_ops) {
+    
+    libmesh_assert_msg(!_elem_ops,
+                       "Error: Assembly should be cleared before attaching Elem.");
+    
+    _elem_ops   = &elem_ops;
+    _elem_ops->set_assembly(*this);
+}
+
+
+
+void
+MAST::AssemblyBase::clear_elem_operation_object() {
+
+    if (_elem_ops) {
+        _elem_ops->clear_assembly();
+        _elem_ops    = nullptr;
+    }
 }
 
 
@@ -234,6 +252,8 @@ void
 MAST::AssemblyBase::calculate_output(const libMesh::NumericVector<Real>& X,
                                      MAST::OutputAssemblyElemOperations& output) {
     
+    libmesh_assert(_discipline);
+    libmesh_assert(_system);
     
     MAST::NonlinearSystem& nonlin_sys = _system->system();
     output.zero();
@@ -299,7 +319,9 @@ calculate_output_derivative(const libMesh::NumericVector<Real>& X,
                             MAST::OutputAssemblyElemOperations& output,
                             libMesh::NumericVector<Real>& dq_dX) {
     
-    
+    libmesh_assert(_discipline);
+    libmesh_assert(_system);
+
     MAST::NonlinearSystem& nonlin_sys = _system->system();
     
     dq_dX.zero();
@@ -374,12 +396,14 @@ calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
                                     const MAST::FunctionBase& p,
                                     MAST::OutputAssemblyElemOperations& output) {
 
+    libmesh_assert(_discipline);
+    libmesh_assert(_system);
+
     MAST::NonlinearSystem& nonlin_sys = _system->system();
     
     // iterate over each element, initialize it and get the relevant
     // analysis quantities
     RealVectorX
-    vec,
     sol,
     dsol;
     
@@ -417,7 +441,6 @@ calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
         unsigned int ndofs = (unsigned int)dof_indices.size();
         sol.setZero(ndofs);
         dsol.setZero(ndofs);
-        vec.setZero(ndofs);
         
         for (unsigned int i=0; i<dof_indices.size(); i++) {
             sol(i)  = (*localized_solution)(dof_indices[i]);
@@ -439,7 +462,6 @@ calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
     // if a solution function is attached, clear it
     if (_sol_function)
         _sol_function->clear();
-    
 }
 
 
@@ -451,6 +473,9 @@ calculate_output_adjoint_sensitivity(const libMesh::NumericVector<Real>& X,
                                      const libMesh::NumericVector<Real>& dq_dX,
                                      const MAST::FunctionBase& p,
                                      MAST::OutputAssemblyElemOperations& output) {
+
+    libmesh_assert(_discipline);
+    libmesh_assert(_system);
 
     // first calculate the partial sensitivity of the output, which is done
     // with zero solution vector

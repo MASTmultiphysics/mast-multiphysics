@@ -23,8 +23,9 @@
 
 
 
-MAST::Examples::BeamPistonTheoryFlutterAnalysis::BeamPistonTheoryFlutterAnalysis():
-MAST::Examples::StructuralExample1D() {
+MAST::Examples::BeamPistonTheoryFlutterAnalysis::
+BeamPistonTheoryFlutterAnalysis(const libMesh::Parallel::Communicator& comm_in):
+MAST::Examples::StructuralExample1D(comm_in) {
     
 }
 

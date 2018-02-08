@@ -23,7 +23,6 @@
 
 // MAST includes
 #include "base/assembly_base.h"
-#include "base/assembly_elem_operation.h"
 
 namespace MAST {
     
@@ -35,13 +34,13 @@ namespace MAST {
         MASS,                    // mass matrix
         DAMPING,                 // velocity proportional term
         STIFFNESS,               // tangent stiffess matrix
-        FORCE                    // force vector
+        FORCE,                   // force vector
+        INVALID_QTY
     };
     
     
     class StructuralFluidInteractionAssembly:
-    public MAST::AssemblyBase,
-    public MAST::AssemblyElemOperations {
+    public MAST::AssemblyBase {
         
     public:
         
@@ -57,18 +56,6 @@ namespace MAST {
          */
         virtual ~StructuralFluidInteractionAssembly();
         
-    
-        /*!
-         *   Reattaches to the same system that was attached earlier.
-         *
-         *   This cannot be called if the clear_discipline_and_system() method
-         *   has been called.
-         */
-        inline virtual void
-        reattach_to_system() {
-            // nothing to be done here.
-        }
-
         /*!
          *   clears association with a system to this discipline, and vice-a-versa
          */
@@ -76,17 +63,6 @@ namespace MAST {
         clear_discipline_and_system( );
 
         
-        /*!
-         *   tells the object about the quantity to be assembled in the 
-         *   matrix
-         */
-        inline void
-        set_quantity_to_assemble(MAST::StructuralQuantityType qty) {
-            
-            _qty_type = qty;
-        }
-        
-                
         /*!
          *   if the eigenproblem is defined about a non-zero base solution,
          *   then this method provides the object with the base solution.
@@ -132,7 +108,6 @@ namespace MAST {
          std::map<MAST::StructuralQuantityType, RealMatrixX*>& mat_qty_map);
 
         
-
         
         /*!
          *   calculates the sensitivity of reduced order matrix given the basis 
@@ -147,74 +122,9 @@ namespace MAST {
          std::map<MAST::StructuralQuantityType, RealMatrixX*>& mat_qty_map);
 
         
-        /*!
-         *   initializes the object for the geometric element \p elem. This
-         *   expects the object to be in a cleared state, so the user should
-         *   call \p clear_elem() between successive initializations.
-         */
-        virtual void
-        init(const libMesh::Elem& elem);
-
-        /*!
-         *   some simulations frequently deal with 1D/2D elements in 3D space,
-         *   which requires use of MAST::LocalElemFE.
-         */
-        virtual bool
-        if_use_local_elem() const {
-            
-            return true;
-        }
-        
-        /*!
-         *   sets additional data for local elem FE.
-         */
-        virtual void
-        set_local_fe_data(MAST::LocalElemFE& fe,
-                          const libMesh::Elem& e) const;
 
     protected:
         
-        
-        /*!
-         *   performs the element calculations over \par elem, and returns
-         *   the element vector and matrix quantities in \par mat and
-         *   \par vec, respectively. \par if_jac tells the method to also
-         *   assemble the Jacobian, in addition to the residual vector.
-         */
-        virtual void _elem_calculations(bool if_jac,
-                                        RealVectorX& vec,
-                                        RealMatrixX& mat);
-
-        
-        /*!
-         *   performs the frequency domain element aerodynamic force
-         *   calculations over \par elem, and returns
-         *   the element vector quantity in
-         *   \par vec, respectively.
-         */
-        virtual void _elem_aerodynamic_force_calculations(ComplexVectorX& vec);
-
-        
-        
-        /*!
-         *   performs the element sensitivity calculations over \par elem,
-         *   and returns the element residual sensitivity in \par vec .
-         */
-        virtual void _elem_sensitivity_calculations(bool if_jac,
-                                                    RealVectorX& vec,
-                                                    RealMatrixX& mat);
-
-        /*!
-         *   calculates \f$ d ([J] \{\Delta X\})/ dX  \f$ over \par elem,
-         *   and returns the matrix in \par vec .
-         */
-        virtual void
-        _elem_second_derivative_dot_solution_assembly(RealMatrixX& mat);
-
-        /*!
-         *   this defines the quantity to be assembled
-         */
-        MAST::StructuralQuantityType _qty_type;
         
         /*!
          *   base solution about which this eigenproblem is defined. This

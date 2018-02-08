@@ -21,8 +21,9 @@
 #include "examples/structural/beam_bending/beam_bending.h"
 
 
-MAST::Examples::BeamBending::BeamBending():
-MAST::Examples::StructuralExample1D() {
+MAST::Examples::BeamBending::
+BeamBending(const libMesh::Parallel::Communicator& comm_in):
+MAST::Examples::StructuralExample1D(comm_in) {
 
 }
 

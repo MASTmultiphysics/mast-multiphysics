@@ -50,7 +50,6 @@
 //#include "libmesh/numeric_vector.h"
 //
 //
-//extern libMesh::LibMeshInit* __init;
 //
 //
 //MAST::PlateThermallyStressedPistonTheoryFlutterAnalysis::
@@ -75,7 +74,7 @@
 //
 //
 //    // create the mesh
-//    _mesh       = new libMesh::SerialMesh(__init->comm());
+//    _mesh       = new libMesh::SerialMesh(this->comm());
 //
 //    // initialize the mesh with one element
 //    libMesh::MeshTools::Generation::build_square(*_mesh,
@@ -347,7 +346,7 @@
 //            MAST::NonlinearImplicitAssembly   nonlin_assembly;
 //            MAST::StructuralNonlinearAssemblyElemOperations elem_ops;
 //
-//            nonlin_assembly.attach_discipline_and_system(elem_ops,
+//            nonlin_assembly.set_discipline_and_system(elem_ops,
 //                                                         *_obj._discipline,
 //                                                         *_obj._structural_sys);
 //
@@ -483,7 +482,7 @@
 //    _flutter_root = nullptr;
 //    _flutter_solver->clear();
 //    std::string nm("flutter_output.txt");
-//    if (__init->comm().rank() == 0)
+//    if (this->comm().rank() == 0)
 //        _flutter_solver->set_output_file(nm);
 //
 //    // create the nonlinear assembly object
@@ -494,7 +493,7 @@
 //    // set the basis solution about which the structure will be initialized
 //    modal_assembly.set_base_solution(steady_solve.solution());
 //
-//    modal_assembly.attach_discipline_and_system(modal_elem_ops,
+//    modal_assembly.set_discipline_and_system(modal_elem_ops,
 //                                                *_discipline,
 //                                                *_structural_sys);
 //    _sys->eigenproblem_solve();
@@ -553,7 +552,7 @@
 //
 //    // initialize the assembly object for the flutter solver
 //    MAST::StructuralFluidInteractionAssembly fsi_assembly;
-//    fsi_assembly.attach_discipline_and_system(fsi_assembly,
+//    fsi_assembly.set_discipline_and_system(fsi_assembly,
 //                                              *_discipline,
 //                                              *_structural_sys);
 //
@@ -615,7 +614,7 @@
 //    MAST::NonlinearImplicitAssembly                   assembly;
 //    MAST::StructuralNonlinearAssemblyElemOperations   elem_ops;
 //
-//    assembly.attach_discipline_and_system(elem_ops,
+//    assembly.set_discipline_and_system(elem_ops,
 //                                          *_discipline,
 //                                          *_structural_sys);
 //
@@ -700,7 +699,7 @@
 //    // initialize the flutter solver for sensitivity.
 //    MAST::StructuralFluidInteractionAssembly fsi_assembly;
 //    fsi_assembly.set_base_solution(_sys->get_vector("base_solution"));
-//    fsi_assembly.attach_discipline_and_system(fsi_assembly,
+//    fsi_assembly.set_discipline_and_system(fsi_assembly,
 //                                              *_discipline,
 //                                              *_structural_sys);
 //    _flutter_solver->attach_assembly(fsi_assembly);

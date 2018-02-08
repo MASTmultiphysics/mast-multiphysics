@@ -70,14 +70,6 @@ namespace MAST {
          */
         Real beta;
         
-        /*!
-         *    @returns the highest order time derivative that the solver
-         *    will handle
-         */
-        virtual int ode_order() const {
-            return 1;
-        }
-
         
         /*!
          *   solves the current time step for solution and velocity
@@ -196,13 +188,6 @@ namespace MAST {
 
     protected:
         
-        /*!
-         *    @returns the number of iterations for which solution and velocity
-         *    are to be stored.
-         */
-        virtual unsigned int _n_iters_to_store() const {
-            return 2;
-        }
     };
     
 }

@@ -30,6 +30,7 @@ namespace MAST {
     
     // forward declerations
     class ComplexSolverBase;
+    class ComplexAssemblyBase;
     class PressureFunction;
     class FrequencyDomainPressureFunction;
     class ComplexMeshFieldFunction;
@@ -64,6 +65,7 @@ namespace MAST {
          *   communicator.
          */
         void init(MAST::ComplexSolverBase*                complex_solver,
+                  MAST::ComplexAssemblyBase*              complex_assembly,
                   MAST::PressureFunction*                 pressure_func,
                   MAST::FrequencyDomainPressureFunction*  freq_pressure_func,
                   MAST::ComplexMeshFieldFunction*         displ_func);
@@ -94,6 +96,7 @@ namespace MAST {
          */
         MAST::ComplexSolverBase                      *_fluid_complex_solver;
 
+        MAST::ComplexAssemblyBase                    *_fluid_complex_assembly;
         
         /*!
          *  pressure function boundary condition for structures

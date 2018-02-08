@@ -41,6 +41,7 @@ namespace MAST {
     class SensitivityParameters;
     class FEMOperatorMatrix;
     class FEBase;
+    template <typename ValType> class FieldFunction;
     
     
     enum BendingOperatorType {
@@ -74,7 +75,19 @@ namespace MAST {
                                             RealMatrixX& local_jac,
                                             const MAST::FunctionBase* sens_params )
         { libmesh_error(); }
-        
+
+
+        /*!
+         *   calculate the transverse shear component for the element
+         */
+        virtual void
+        calculate_transverse_shear_residual_boundary_velocity(bool request_jacobian,
+                                                              const unsigned int s,
+                                                              MAST::FieldFunction<RealVectorX>& vel_f,
+                                                              RealVectorX& local_f,
+                                                              const MAST::FunctionBase* sens_params)
+        { libmesh_error(); }
+
         
     protected:
         

@@ -34,7 +34,7 @@ namespace MAST  {
             
         public:
             
-            BeamBendingThermalStress();
+            BeamBendingThermalStress(const libMesh::Parallel::Communicator& comm_in);
             
             virtual ~BeamBendingThermalStress();
             

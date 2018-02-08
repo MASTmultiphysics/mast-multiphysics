@@ -35,11 +35,10 @@
 MAST::LevelSetElementBase::
 LevelSetElementBase(MAST::SystemInitialization&             sys,
                     MAST::AssemblyBase&                     assembly,
-                    const libMesh::Elem&                    elem,
-                    const MAST::FieldFunction<Real>&        velocity):
+                    const libMesh::Elem&                    elem):
 MAST::ElementBase(sys, assembly, elem),
-_phi_vel(velocity),
-_if_propagation(true) {
+_phi_vel          (nullptr),
+_if_propagation   (true) {
     
     // now initialize the finite element data structures
     _fe = assembly.build_fe(_elem).release();
@@ -68,6 +67,8 @@ bool
 MAST::LevelSetElementBase::internal_residual (bool request_jacobian,
                                               RealVectorX& f,
                                               RealMatrixX& jac) {
+    
+    libmesh_assert(_phi_vel);
     
     const std::vector<Real>& JxW           = _fe->get_JxW();
     const std::vector<libMesh::Point>& xyz = _fe->get_xyz();
@@ -160,6 +161,8 @@ MAST::LevelSetElementBase::velocity_residual (bool request_jacobian,
                                               RealMatrixX& jac_xdot,
                                               RealMatrixX& jac) {
 
+    libmesh_assert(_phi_vel);
+
     const std::vector<Real>& JxW           = _fe->get_JxW();
     const std::vector<libMesh::Point>& xyz = _fe->get_xyz();
     const unsigned int
@@ -232,51 +235,8 @@ side_external_residual (bool request_jacobian,
                         RealMatrixX& jac,
                         std::multimap<libMesh::boundary_id_type, MAST::BoundaryConditionBase*>& bc) {
     
-    typedef std::multimap<libMesh::boundary_id_type, MAST::BoundaryConditionBase*> maptype;
-    
-    // iterate over the boundary ids given in the provided force map
-    std::pair<maptype::const_iterator, maptype::const_iterator> it;
-    
-    const libMesh::BoundaryInfo& binfo = *_system.system().get_mesh().boundary_info;
-    
-    // for each boundary id, check if any of the sides on the element
-    // has the associated boundary
-    
-    for (unsigned short int n=0; n<_elem.n_sides(); n++) {
-        
-        // if no boundary ids have been specified for the side, then
-        // move to the next side.
-        if (!binfo.n_boundary_ids(&_elem, n))
-            continue;
-        
-        // check to see if any of the specified boundary ids has a boundary
-        // condition associated with them
-        std::vector<libMesh::boundary_id_type> bc_ids;
-        binfo.boundary_ids(&_elem, n, bc_ids);
-        std::vector<libMesh::boundary_id_type>::const_iterator bc_it = bc_ids.begin();
-        
-        for ( ; bc_it != bc_ids.end(); bc_it++) {
-            
-            // find the loads on this boundary and evaluate the f and jac
-            it = bc.equal_range(*bc_it);
-            
-            for ( ; it.first != it.second; it.first++) {
-                
-                // apply all the types of loading
-                switch (it.first->second->type()) {
-                    case MAST::DIRICHLET:
-                        // nothing to be done here
-                        break;
-                        
-                    default:
-                        // not implemented yet
-                        libmesh_error();
-                        break;
-                }
-            }
-        }
-    }
-    return request_jacobian;
+    libmesh_assert(false);
+    return false;
 }
 
 
@@ -290,30 +250,8 @@ volume_external_residual (bool request_jacobian,
                           RealMatrixX& jac,
                           std::multimap<libMesh::subdomain_id_type, MAST::BoundaryConditionBase*>& bc) {
     
-    typedef std::multimap<libMesh::subdomain_id_type, MAST::BoundaryConditionBase*> maptype;
-    
-    // iterate over the boundary ids given in the provided force map
-    std::pair<maptype::const_iterator, maptype::const_iterator> it;
-    
-    // for each boundary id, check if any of the sides on the element
-    // has the associated boundary
-    
-    libMesh::subdomain_id_type sid = _elem.subdomain_id();
-    // find the loads on this boundary and evaluate the f and jac
-    it =bc.equal_range(sid);
-    
-    for ( ; it.first != it.second; it.first++) {
-        // apply all the types of loading
-        switch (it.first->second->type()) {
-                
-            default:
-                // not implemented yet
-                libmesh_error();
-                break;
-        }
-    }
-    
-    return request_jacobian;
+    libmesh_assert(false);
+    return false;
 }
 
 
@@ -325,49 +263,8 @@ side_external_residual_sensitivity (bool request_jacobian,
                                     RealMatrixX& jac,
                                     std::multimap<libMesh::boundary_id_type, MAST::BoundaryConditionBase*>& bc) {
     
-    
-    typedef std::multimap<libMesh::boundary_id_type, MAST::BoundaryConditionBase*> maptype;
-    
-    // iterate over the boundary ids given in the provided force map
-    std::pair<maptype::const_iterator, maptype::const_iterator> it;
-    
-    const libMesh::BoundaryInfo& binfo = *_system.system().get_mesh().boundary_info;
-    
-    // for each boundary id, check if any of the sides on the element
-    // has the associated boundary
-    
-    for (unsigned short int n=0; n<_elem.n_sides(); n++) {
-        
-        // if no boundary ids have been specified for the side, then
-        // move to the next side.
-        if (!binfo.n_boundary_ids(&_elem, n))
-            continue;
-        
-        // check to see if any of the specified boundary ids has a boundary
-        // condition associated with them
-        std::vector<libMesh::boundary_id_type> bc_ids;
-        binfo.boundary_ids(&_elem, n, bc_ids);
-        std::vector<libMesh::boundary_id_type>::const_iterator bc_it = bc_ids.begin();
-        
-        for ( ; bc_it != bc_ids.end(); bc_it++) {
-            
-            // find the loads on this boundary and evaluate the f and jac
-            it = bc.equal_range(*bc_it);
-            
-            for ( ; it.first != it.second; it.first++) {
-                
-                // apply all the types of loading
-                switch (it.first->second->type()) {
-                        
-                    default:
-                        // not implemented yet
-                        libmesh_error();
-                        break;
-                }
-            }
-        }
-    }
-    return request_jacobian;
+    libmesh_assert(false);
+    return false;
 }
 
 
@@ -380,30 +277,8 @@ volume_external_residual_sensitivity (bool request_jacobian,
                                       RealMatrixX& jac,
                                       std::multimap<libMesh::subdomain_id_type, MAST::BoundaryConditionBase*>& bc) {
     
-    typedef std::multimap<libMesh::subdomain_id_type, MAST::BoundaryConditionBase*> maptype;
-    
-    // iterate over the boundary ids given in the provided force map
-    std::pair<maptype::const_iterator, maptype::const_iterator> it;
-    
-    // for each boundary id, check if any of the sides on the element
-    // has the associated boundary
-    
-    libMesh::subdomain_id_type sid = _elem.subdomain_id();
-    // find the loads on this boundary and evaluate the f and jac
-    it =bc.equal_range(sid);
-    
-    for ( ; it.first != it.second; it.first++) {
-        // apply all the types of loading
-        switch (it.first->second->type()) {
-                
-            default:
-                // not implemented yet
-                libmesh_error();
-                break;
-        }
-    }
-    
-    return request_jacobian;
+    libmesh_assert(false);
+    return false;
 }
 
 
@@ -415,6 +290,7 @@ internal_residual_sensitivity (bool request_jacobian,
                                RealVectorX& f,
                                RealMatrixX& jac) {
     
+    libmesh_assert(false); // should not get called
     return request_jacobian;
 }
 
@@ -426,7 +302,92 @@ velocity_residual_sensitivity (bool request_jacobian,
                                RealVectorX& f,
                                RealMatrixX& jac) {
     
+    libmesh_assert(false); // should not get called.
     return request_jacobian;
+}
+
+
+
+Real
+MAST::LevelSetElementBase::volume() {
+    
+    const std::vector<Real>& JxW           = _fe->get_JxW();
+    const unsigned int
+    dim    = _elem.dim();
+    
+    RealVectorX
+    phi      = RealVectorX::Zero(1);
+
+    Real
+    vol      = 0.;
+    
+    std::vector<MAST::FEMOperatorMatrix> dBmat(dim);
+    MAST::FEMOperatorMatrix Bmat;
+    
+    
+    for (unsigned int qp=0; qp<JxW.size(); qp++) {
+        
+        // initialize the Bmat operator for this term
+        _initialize_fem_operators(qp, *_fe, Bmat, dBmat);
+        Bmat.right_multiply(phi, _sol);
+        if (phi(0) > 0.) vol += JxW[qp];
+    }
+    
+    return vol;
+}
+
+
+
+Real
+MAST::LevelSetElementBase::volume_boundary_velocity_on_side(unsigned int s) {
+    
+    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem).release());
+    fe->init_for_side(_elem, s, true);
+
+    const std::vector<Real>& JxW           =  fe->get_JxW();
+    const unsigned int
+    dim    = _elem.dim();
+    
+    RealVectorX
+    phi      = RealVectorX::Zero(1),
+    gradphi  = RealVectorX::Zero(dim),
+    dphidp   = RealVectorX::Zero(1),
+    vel      = RealVectorX::Zero(dim);
+    
+    Real
+    vn       = 0.,
+    dvoldp   = 0.;
+    
+    std::vector<MAST::FEMOperatorMatrix> dBmat(dim);
+    MAST::FEMOperatorMatrix Bmat;
+    
+    
+    for (unsigned int qp=0; qp<JxW.size(); qp++) {
+        
+        // first calculate gradient of phi
+        for (unsigned int i=0; i<dim; i++) {
+            dBmat[i].right_multiply(phi, _sol);
+            gradphi(i) = phi(0);
+        }
+
+        // initialize the Bmat operator for this term
+        _initialize_fem_operators(qp, *fe, Bmat, dBmat);
+        Bmat.right_multiply(phi,         _sol);
+        Bmat.right_multiply(dphidp, _sol_sens);
+        
+        // at boundary, phi(x) = 0
+        // so,  dphi/dp + grad(phi) . V = 0
+        //      dphi/dp + grad(phi) . (-grad(phi)  Vn) = 0   [since V = -grad(phi) Vn]
+        //      dphi/dp -(grad(phi) .   grad(phi)) Vn  = 0
+        //      Vn  =  (dphi/dp) / |grad(phi)|^2
+        vn      =  dphidp(0) / gradphi.squaredNorm();
+        
+        // vol     =  int_omega  dOmega
+        // dvol/dp =  int_Gamma Vn dGamma
+        dvoldp += vn * JxW[qp];
+    }
+    
+    return dvoldp;
 }
 
 
@@ -460,7 +421,7 @@ MAST::LevelSetElementBase::_velocity_and_source(const unsigned int qp,
         Real
         Vn        = 0.;
         
-        _phi_vel(p, t, Vn);
+        (*_phi_vel)(p, t, Vn);
         vel       =  grad_phi * (-Vn/grad_phi.norm());
         source    = 0.;
     }

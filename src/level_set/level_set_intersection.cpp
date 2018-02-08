@@ -281,7 +281,7 @@ MAST::LevelSetIntersection::get_sub_elems_negative_phi() const {
 
 int
 MAST::LevelSetIntersection::
-get_side_on_interface(const libMesh::Elem& e) {
+get_side_on_interface(const libMesh::Elem& e) const {
     
     std::map<const libMesh::Elem*, int>::const_iterator it;
     it  = _elem_sides_on_interface.find(&e);

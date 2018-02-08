@@ -60,10 +60,6 @@
 //#include "libmesh/getpot.h"
 //
 //
-//extern
-//libMesh::LibMeshInit     *__init;
-//extern
-//MAST::FunctionEvaluation *__my_func_eval;
 //
 //
 //
@@ -289,7 +285,7 @@
 //    //////////////////////////////////////////////////////////////////////
 //
 //    // initialize the libMesh object
-//    _fluid_mesh              = new libMesh::ParallelMesh(__init->comm());
+//    _fluid_mesh              = new libMesh::ParallelMesh(this->comm());
 //    _fluid_eq_sys            = new libMesh::EquationSystems(*_fluid_mesh);
 //
 //
@@ -486,7 +482,7 @@
 //    _complex_solver                  = new MAST::ComplexSolverBase;
 //
 //    // now setup the assembly object
-//    _frequency_domain_fluid_assembly->attach_discipline_and_system(*_frequency_domain_elem_ops,
+//    _frequency_domain_fluid_assembly->set_discipline_and_system(*_frequency_domain_elem_ops,
 //                                                                   *_fluid_discipline,
 //                                                                   *_complex_solver,
 //                                                                   *_fluid_sys_init);
@@ -543,7 +539,7 @@
 //    }
 //
 //    // create the mesh
-//    _structural_mesh       = new libMesh::SerialMesh(__init->comm());
+//    _structural_mesh       = new libMesh::SerialMesh(this->comm());
 //
 //    MeshInitializer().init(divs, *_structural_mesh, libMesh::EDGE2);
 //
@@ -694,7 +690,7 @@
 //    // create the nonlinear assembly object
 //    _structural_sys->initialize_condensed_dofs(*_structural_discipline);
 //
-//    _modal_assembly->attach_discipline_and_system(*_modal_elem_ops,
+//    _modal_assembly->set_discipline_and_system(*_modal_elem_ops,
 //                                                  *_structural_discipline,
 //                                                  *_structural_sys_init);
 //
@@ -741,7 +737,7 @@
 //    // initialize the GAF interpolation assembly object
 //    _gaf_database = new  MAST::GAFDatabase((unsigned int)_basis.size());
 //
-//    _gaf_database->attach_discipline_and_system(*_gaf_database,
+//    _gaf_database->set_discipline_and_system(*_gaf_database,
 //                                                *_structural_discipline,
 //                                                *_structural_sys_init);
 //
@@ -966,17 +962,17 @@
 //    _flutter_solver->clear();
 //
 //    std::ostringstream oss;
-//    oss << "flutter_output_" << __init->comm().rank() << ".txt";
-//    if (__init->comm().rank() == 0)
+//    oss << "flutter_output_" << this->comm().rank() << ".txt";
+//    if (this->comm().rank() == 0)
 //        _flutter_solver->set_output_file(oss.str());
 //
-//    _gaf_database->attach_discipline_and_system(*_gaf_database,
+//    _gaf_database->set_discipline_and_system(*_gaf_database,
 //                                                *_structural_discipline,
 //                                                *_structural_sys_init);
 //
 //    libMesh::NumericVector<Real>&
 //    base_sol = _fluid_sys->get_vector("fluid_base_solution");
-//    _frequency_domain_fluid_assembly->attach_discipline_and_system(*_frequency_domain_elem_ops,
+//    _frequency_domain_fluid_assembly->set_discipline_and_system(*_frequency_domain_elem_ops,
 //                                                                   *_fluid_discipline,
 //                                                                   *_complex_solver,
 //                                                                   *_fluid_sys_init);
@@ -1094,11 +1090,11 @@
 //            // else, set it to zero
 //            if (sol.second) {
 //
-//                _gaf_database->attach_discipline_and_system(*_gaf_database,
+//                _gaf_database->set_discipline_and_system(*_gaf_database,
 //                                                            *_structural_discipline,
 //                                                            *_structural_sys_init);
 //
-//                _frequency_domain_fluid_assembly->attach_discipline_and_system
+//                _frequency_domain_fluid_assembly->set_discipline_and_system
 //                (*_frequency_domain_elem_ops,
 //                 *_fluid_discipline,
 //                 *_complex_solver,

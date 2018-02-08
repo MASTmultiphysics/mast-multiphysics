@@ -33,7 +33,7 @@ namespace MAST  {
             
         public:
             
-            BeamPistonTheoryFlutterAnalysis();
+            BeamPistonTheoryFlutterAnalysis(const libMesh::Parallel::Communicator& comm_in);
             
             virtual ~BeamPistonTheoryFlutterAnalysis();
             

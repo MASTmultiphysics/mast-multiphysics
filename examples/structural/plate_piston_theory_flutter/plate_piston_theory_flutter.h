@@ -34,7 +34,7 @@ namespace MAST  {
             
         public:
             
-            PlatePistonTheoryFlutterAnalysis();
+            PlatePistonTheoryFlutterAnalysis(const libMesh::Parallel::Communicator& comm_in);
             
             virtual ~PlatePistonTheoryFlutterAnalysis();
             

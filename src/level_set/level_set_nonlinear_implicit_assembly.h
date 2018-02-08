@@ -51,20 +51,22 @@ namespace MAST {
         
         
         /*!
-         *   attaches a system to this discipline, and vice-a-versa
+         *   attaches level set function to \p this
          */
         virtual void
-        attach_discipline_and_system(MAST::NonlinearImplicitAssemblyElemOperations& elem_ops,
-                                     MAST::PhysicsDisciplineBase& discipline,
-                                     MAST::SystemInitialization& system,
-                                     MAST::FieldFunction<Real>& level_set);
+        set_level_set_function(MAST::FieldFunction<Real>& level_set);
 
         /*!
-         *   clears association with a system to this discipline, and vice-a-versa
+         *   clears association with level set function
          */
         virtual void
-        clear_discipline_and_system( );
-
+        clear_level_set_function();
+        
+        /*!
+         *  @returns a reference to the level set function
+         */
+        MAST::LevelSetIntersection& get_intersection();
+        
         /*!
          *    function that assembles the matrices and vectors quantities for
          *    nonlinear solution
@@ -74,6 +76,32 @@ namespace MAST {
                                libMesh::NumericVector<Real>* R,
                                libMesh::SparseMatrix<Real>*  J,
                                libMesh::NonlinearImplicitSystem& S);
+
+        /*!
+         *   calculates the value of quantity \f$ q(X,p) \f$.
+         */
+        virtual void
+        calculate_output(const libMesh::NumericVector<Real>& X,
+                         MAST::OutputAssemblyElemOperations& output);
+        
+        
+        
+        /*!
+         *   evaluates the sensitivity of the outputs in the attached
+         *   discipline with respect to the parametrs in \par params.
+         *   The base solution should be provided in \par X. If total sensitivity
+         *   is desired, then \par dXdp should contain the sensitivity of
+         *   solution wrt the parameter \par p. If this \par dXdp is zero,
+         *   the calculated sensitivity will be the partial derivarive of
+         *   \par output wrt \par p.
+         */
+        virtual void
+        calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
+                                            const libMesh::NumericVector<Real>& dXdp,
+                                            const MAST::FunctionBase& p,
+                                            MAST::OutputAssemblyElemOperations& output);
+        
+        
 
         /*!
          *   provides implementation of the libMesh::System::Constraint::constrain()

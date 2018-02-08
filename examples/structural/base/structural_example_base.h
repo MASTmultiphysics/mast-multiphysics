@@ -50,7 +50,7 @@ namespace MAST {
             
         public:
             
-            StructuralExampleBase();
+            StructuralExampleBase(const libMesh::Parallel::Communicator& comm_in);
             
             virtual ~StructuralExampleBase();
             

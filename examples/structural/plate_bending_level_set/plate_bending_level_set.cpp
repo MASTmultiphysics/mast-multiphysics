@@ -53,7 +53,6 @@
 //#include "libmesh/nonlinear_solver.h"
 //
 //
-//extern libMesh::LibMeshInit* __init;
 //
 //
 //class Phi:
@@ -199,7 +198,7 @@
 //    
 //    
 //    // create the mesh
-//    _mesh       = new libMesh::ParallelMesh(__init->comm());
+//    _mesh       = new libMesh::ParallelMesh(this->comm());
 //    
 //    // initialize the mesh with one element
 //    libMesh::MeshTools::Generation::build_square(*_mesh,
@@ -526,7 +525,7 @@
 //    MAST::FirstOrderNewmarkTransientSolver  phi_solver;
 //    
 //    // now solve the system
-//    phi_assembly.attach_discipline_and_system(level_set_elem_ops,
+//    phi_assembly.set_discipline_and_system(level_set_elem_ops,
 //                                              *_phi_discipline,
 //                                              phi_solver,
 //                                              *_phi_sys_init);
@@ -594,7 +593,7 @@
 //    MAST::LevelSetNonlinearImplicitAssembly           assembly;
 //    MAST::StructuralNonlinearAssemblyElemOperations   elem_ops;
 //    
-//    assembly.attach_discipline_and_system(elem_ops,
+//    assembly.set_discipline_and_system(elem_ops,
 //                                          *_discipline,
 //                                          *_structural_sys,
 //                                          phi);
@@ -666,7 +665,7 @@
 //    MAST::LevelSetNonlinearImplicitAssembly           assembly;
 //    MAST::StructuralNonlinearAssemblyElemOperations   elem_ops;
 //    
-//    assembly.attach_discipline_and_system(elem_ops,
+//    assembly.set_discipline_and_system(elem_ops,
 //                                          *_str_discipline,
 //                                          *_structural_sys,
 //                                          phi);

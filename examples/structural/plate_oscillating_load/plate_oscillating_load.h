@@ -34,7 +34,7 @@ namespace MAST  {
             
         public:
             
-            PlateOscillatingLoad();
+            PlateOscillatingLoad(const libMesh::Parallel::Communicator& comm_in);
             
             virtual ~PlateOscillatingLoad() {}
             

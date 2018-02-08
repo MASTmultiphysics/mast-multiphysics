@@ -94,8 +94,9 @@ namespace MAST {
 }
 
 
-MAST::Examples::PlateOscillatingLoad::PlateOscillatingLoad():
-MAST::Examples::StructuralExample2D() {
+MAST::Examples::PlateOscillatingLoad::
+PlateOscillatingLoad(const libMesh::Parallel::Communicator& comm_in):
+MAST::Examples::StructuralExample2D(comm_in) {
     
 }
 

@@ -34,7 +34,7 @@ namespace MAST  {
         
         public:
 
-            BeamBending();
+            BeamBending(const libMesh::Parallel::Communicator& comm_in);
             
             virtual ~BeamBending() {}
         

@@ -34,7 +34,7 @@ namespace MAST  {
             
         public:
             
-            BeamOscillatingLoad();
+            BeamOscillatingLoad(const libMesh::Parallel::Communicator& comm_in);
             
             virtual ~BeamOscillatingLoad() {}
             

@@ -38,6 +38,7 @@
 #include "libmesh/nonlinear_implicit_system.h"
 #include "libmesh/fe_type.h"
 #include "libmesh/dof_map.h"
+#include "libmesh/parallel_object.h"
 
 
 
@@ -65,10 +66,11 @@ namespace MAST {
      *   -snes_type newtonls -snes_max_it 1 -snes_linesearch_type bt -snes_linesearch_max_it 2
      *   -snes_ls_view -snes_monitor -snes_log
      */
-    struct PanelSmallDisturbanceFrequencyDomainInviscidAnalysis3D {
+    struct PanelSmallDisturbanceFrequencyDomainInviscidAnalysis3D:
+    public libMesh::ParallelObject {
         
         
-        PanelSmallDisturbanceFrequencyDomainInviscidAnalysis3D();
+        PanelSmallDisturbanceFrequencyDomainInviscidAnalysis3D(const libMesh::Parallel::Communicator& comm_in);
         
         
         ~PanelSmallDisturbanceFrequencyDomainInviscidAnalysis3D();

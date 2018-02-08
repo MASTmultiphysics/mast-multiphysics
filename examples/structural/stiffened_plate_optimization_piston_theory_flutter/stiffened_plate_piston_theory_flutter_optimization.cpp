@@ -48,10 +48,6 @@
 //#include "libmesh/getpot.h"
 //#include "libmesh/string_to_enum.h"
 //
-//extern
-//libMesh::LibMeshInit     *__init;
-//extern
-//MAST::FunctionEvaluation *__my_func_eval;
 //
 //
 //
@@ -241,7 +237,7 @@
 //    _stress_limit  = infile("max_stress", 4.00e8);
 //    
 //    // create the mesh
-//    _mesh          = new libMesh::SerialMesh(__init->comm());
+//    _mesh          = new libMesh::SerialMesh(this->comm());
 //    
 //    // initialize the mesh with one element
 //    MAST::StiffenedPanelMesh panel_mesh;
@@ -443,7 +439,7 @@
 //    // flutter solver
 //    _flutter_solver  = new MAST::TimeDomainFlutterSolver;
 //    std::string nm("flutter_output.txt");
-//    if (__init->comm().rank() == 0)
+//    if (this->comm().rank() == 0)
 //        _flutter_solver->set_output_file(nm);
 //
 //    
@@ -767,7 +763,7 @@
 //    //////////////////////////////////////////////////////////////////////
 //    // perform the modal and flutter analysis
 //    //////////////////////////////////////////////////////////////////////
-//    _modal_assembly->attach_discipline_and_system(*_modal_elem_ops,
+//    _modal_assembly->set_discipline_and_system(*_modal_elem_ops,
 //                                                  *_discipline,
 //                                                  *_structural_sys);
 //    _sys->eigenproblem_solve();
@@ -827,7 +823,7 @@
 //    //////////////////////////////////////////////////////////////////////
 //    // perform the flutter analysis
 //    //////////////////////////////////////////////////////////////////////
-//    _fsi_assembly->attach_discipline_and_system(*_fsi_assembly,
+//    _fsi_assembly->set_discipline_and_system(*_fsi_assembly,
 //                                                *_discipline,
 //                                                *_structural_sys);
 //    _flutter_solver->clear_solutions();
@@ -941,7 +937,7 @@
 //                //   Hence, sensitivity is
 //                //   -V0/Vf^2  dVf
 //                //
-//                _fsi_assembly->attach_discipline_and_system(*_fsi_assembly,
+//                _fsi_assembly->set_discipline_and_system(*_fsi_assembly,
 //                                                            *_discipline,
 //                                                            *_structural_sys);
 //                _flutter_solver->attach_assembly(*_fsi_assembly);

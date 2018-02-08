@@ -56,37 +56,9 @@ namespace MAST {
         
         
         /*!
-         *  sets the assembly object
-         */
-        void set_assembly(MAST::ComplexAssemblyBase& assembly);
-        
-        
-        /*!
-         *   @returns a reference to the assembly object
-         */
-        inline
-        MAST::ComplexAssemblyBase& get_assembly() {
-            
-            return *_assembly;
-        }
-
-        
-        /*!
-         *  clears the assembly
-         */
-        void clear_assembly();
-        
-        
-        /*!
-         *  solves the complex system of equations
-         */
-        virtual void solve();
-
-        
-        /*!
          *  solves the complex system of equations using PCFieldSplit
          */
-        virtual void solve_pc_fieldsplit();
+        virtual void solve_pc_fieldsplit(MAST::ComplexAssemblyBase& assemble);
 
         
         /*!
@@ -95,7 +67,8 @@ namespace MAST {
          *  Otherwise, the sensitivity of the system is solved with respect
          *  to the parameter p
          */
-        virtual void solve_block_matrix(MAST::Parameter* p = nullptr);
+        virtual void solve_block_matrix(MAST::ComplexAssemblyBase& assemble,
+                                        MAST::Parameter* p = nullptr);
 
         
         /*!

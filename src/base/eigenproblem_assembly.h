@@ -55,30 +55,6 @@ namespace MAST {
         
 
         /*!
-         *   attaches a system to this discipline, and vice-a-versa
-         */
-        virtual void
-        attach_discipline_and_system(MAST::EigenproblemAssemblyElemOperations& elem_ops,
-                                     MAST::PhysicsDisciplineBase& discipline,
-                                     MAST::SystemInitialization& system);
-        
-        
-        /*!
-         *   Reattaches to the same system that was attached earlier.
-         *
-         *   This cannot be called if the clear_discipline_and_system() method
-         *   has been called.
-         */
-        virtual void
-        reattach_to_system();
-
-        /*!
-         *   clears association with a system to this discipline, and vice-a-versa
-         */
-        virtual void
-        clear_discipline_and_system( );
-
-        /*!
          *    @returns a reference to the A matrix of the EigenSystem
          */
         libMesh::SparseMatrix<Real>& A_matrix();
@@ -159,11 +135,6 @@ namespace MAST {
         
     protected:
         
-        /*!
-         *    object to provide transient element operations
-         */
-        MAST::EigenproblemAssemblyElemOperations* _eigenproblem_elem_ops;
-
         /*!
          *   base solution about which this eigenproblem is defined. This
          *   vector stores the localized values necessary to perform element

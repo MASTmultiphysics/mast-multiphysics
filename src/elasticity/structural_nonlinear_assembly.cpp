@@ -29,8 +29,7 @@
 
 
 
-MAST::StructuralNonlinearAssemblyElemOperations::
-StructuralNonlinearAssemblyElemOperations():
+MAST::StructuralNonlinearAssemblyElemOperations::StructuralNonlinearAssemblyElemOperations():
 MAST::NonlinearImplicitAssemblyElemOperations(),
 _incompatible_sol_assembly(nullptr) {
     

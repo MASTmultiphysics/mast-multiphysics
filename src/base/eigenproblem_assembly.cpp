@@ -35,7 +35,6 @@
 
 MAST::EigenproblemAssembly::EigenproblemAssembly():
 MAST::AssemblyBase(),
-_eigenproblem_elem_ops   (nullptr),
 _base_sol                (nullptr),
 _base_sol_sensitivity    (nullptr) {
     
@@ -45,64 +44,6 @@ _base_sol_sensitivity    (nullptr) {
 
 MAST::EigenproblemAssembly::~EigenproblemAssembly() {
     
-}
-
-
-
-
-void
-MAST::EigenproblemAssembly::
-attach_discipline_and_system(MAST::EigenproblemAssemblyElemOperations& elem_ops,
-                             MAST::PhysicsDisciplineBase &discipline,
-                             MAST::SystemInitialization &system) {
-    
-    MAST::AssemblyBase::attach_discipline_and_system(elem_ops, discipline, system);
-
-    _eigenproblem_elem_ops = &elem_ops;
-    
-    // now attach this to the system
-    MAST::NonlinearSystem& eigen_sys =
-    dynamic_cast<MAST::NonlinearSystem&>(system.system());
-    
-    eigen_sys.attach_assemble_object(*this);
-}
-
-
-
-
-
-void
-MAST::EigenproblemAssembly::reattach_to_system() {
-    
-    libmesh_assert(_discipline);
-    libmesh_assert(_system);
-    
-    // now attach this to the system
-    MAST::NonlinearSystem& eigen_sys =
-    dynamic_cast<MAST::NonlinearSystem&>(_system->system());
-    
-    eigen_sys.attach_assemble_object(*this);
-}
-
-
-
-void
-MAST::EigenproblemAssembly::
-clear_discipline_and_system( ) {
-    
-    if (_system && _discipline) {
-
-        MAST::NonlinearSystem& sys =
-        dynamic_cast<MAST::NonlinearSystem&>(_system->system());
-        
-        sys.reset_assemble_object();
-    }
-    
-    _base_sol              = nullptr;
-    _base_sol_sensitivity  = nullptr;
-    _eigenproblem_elem_ops = nullptr;
-    
-    MAST::AssemblyBase::clear_discipline_and_system();
 }
 
 
@@ -147,6 +88,10 @@ MAST::EigenproblemAssembly::
 eigenproblem_assemble(libMesh::SparseMatrix<Real>* A,
                       libMesh::SparseMatrix<Real>* B) {
     
+    libmesh_assert(_system);
+    libmesh_assert(_discipline);
+    libmesh_assert(_elem_ops);
+
     MAST::NonlinearSystem& eigen_sys =
     dynamic_cast<MAST::NonlinearSystem&>(_system->system());
     
@@ -180,13 +125,16 @@ eigenproblem_assemble(libMesh::SparseMatrix<Real>* A,
     const libMesh::MeshBase::const_element_iterator end_el =
     eigen_sys.get_mesh().active_local_elements_end();
     
+    MAST::EigenproblemAssemblyElemOperations
+    &ops = dynamic_cast<MAST::EigenproblemAssemblyElemOperations&>(*_elem_ops);
+    
     for ( ; el != end_el; ++el) {
         
         const libMesh::Elem* elem = *el;
         
         dof_map.dof_indices (elem, dof_indices);
         
-        _eigenproblem_elem_ops->init(*elem);
+        ops.init(*elem);
         
         // get the solution
         unsigned int ndofs = (unsigned int)dof_indices.size();
@@ -200,11 +148,11 @@ eigenproblem_assemble(libMesh::SparseMatrix<Real>* A,
                 sol(i) = (*localized_solution)(dof_indices[i]);
         }
         
-        _eigenproblem_elem_ops->set_elem_solution(sol);
+        ops.set_elem_solution(sol);
         
-        _eigenproblem_elem_ops->elem_calculations(mat_A, mat_B);
+        ops.elem_calculations(mat_A, mat_B);
 
-        _eigenproblem_elem_ops->clear_elem();
+        ops.clear_elem();
         
         // copy to the libMesh matrix for further processing
         DenseRealMatrix A, B;
@@ -233,7 +181,11 @@ MAST::EigenproblemAssembly::
 eigenproblem_sensitivity_assemble(const MAST::FunctionBase& f,
                                   libMesh::SparseMatrix<Real>* sensitivity_A,
                                   libMesh::SparseMatrix<Real>* sensitivity_B) {
-    
+
+    libmesh_assert(_system);
+    libmesh_assert(_discipline);
+    libmesh_assert(_elem_ops);
+
     MAST::NonlinearSystem& eigen_sys =
     dynamic_cast<MAST::NonlinearSystem&>(_system->system());
 
@@ -276,13 +228,16 @@ eigenproblem_sensitivity_assemble(const MAST::FunctionBase& f,
     const libMesh::MeshBase::const_element_iterator end_el =
     eigen_sys.get_mesh().active_local_elements_end();
     
+    MAST::EigenproblemAssemblyElemOperations
+    &ops = dynamic_cast<MAST::EigenproblemAssemblyElemOperations&>(*_elem_ops);
+
     for ( ; el != end_el; ++el) {
         
         const libMesh::Elem* elem = *el;
         
         dof_map.dof_indices (elem, dof_indices);
         
-        _eigenproblem_elem_ops->init(*elem);
+        ops.init(*elem);
         
         // get the solution
         unsigned int ndofs = (unsigned int)dof_indices.size();
@@ -298,7 +253,7 @@ eigenproblem_sensitivity_assemble(const MAST::FunctionBase& f,
                 sol(i) = (*localized_solution)(dof_indices[i]);
         }
         
-        _eigenproblem_elem_ops->set_elem_solution(sol);
+        ops.set_elem_solution(sol);
         
         // set the element's base solution sensitivity
         if (_base_sol) {
@@ -307,15 +262,15 @@ eigenproblem_sensitivity_assemble(const MAST::FunctionBase& f,
                 sol(i) = (*localized_solution_sens)(dof_indices[i]);
         }
         
-        _eigenproblem_elem_ops->set_elem_solution_sensitivity(sol);
+        ops.set_elem_solution_sensitivity(sol);
 
         // tell the element about the sensitivity parameter
-        _eigenproblem_elem_ops->set_elem_sensitivity_parameter(f);
+        ops.set_elem_sensitivity_parameter(f);
         
-        _eigenproblem_elem_ops->elem_sensitivity_calculations(_base_sol!=nullptr,
+        ops.elem_sensitivity_calculations(_base_sol!=nullptr,
                                                               mat_A,
                                                               mat_B);
-        _eigenproblem_elem_ops->clear_elem();
+        ops.clear_elem();
 
         // copy to the libMesh matrix for further processing
         DenseRealMatrix A, B;

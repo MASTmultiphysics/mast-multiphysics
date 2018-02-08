@@ -95,7 +95,7 @@ namespace MAST {
          *   value is returned. 
          */
         int
-        get_side_on_interface(const libMesh::Elem& e);
+        get_side_on_interface(const libMesh::Elem& e) const;
         
         const libMesh::Point&
         get_nondimensional_coordinate_for_node(const libMesh::Node& n) const;

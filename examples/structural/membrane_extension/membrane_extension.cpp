@@ -23,8 +23,9 @@
 
 
 
-MAST::Examples::MembraneExtension::MembraneExtension():
-MAST::Examples::StructuralExample2D() {
+MAST::Examples::MembraneExtension::
+MembraneExtension(const libMesh::Parallel::Communicator& comm_in):
+MAST::Examples::StructuralExample2D(comm_in) {
     
 }
 

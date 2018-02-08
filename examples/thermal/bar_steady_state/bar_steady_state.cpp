@@ -42,7 +42,6 @@
 //#include "libmesh/numeric_vector.h"
 ////
 //
-//extern libMesh::LibMeshInit* __init;
 //
 //
 //MAST::BarSteadyState::BarSteadyState():
@@ -55,7 +54,7 @@
 //    libmesh_assert(!_initialized);
 //    
 //    // create the mesh
-//    _mesh       = new libMesh::SerialMesh(__init->comm());
+//    _mesh       = new libMesh::SerialMesh(this->comm());
 //    
 //    // initialize the mesh with one element
 //    libMesh::MeshTools::Generation::build_line(*_mesh, 10, 0, 10);
@@ -213,10 +212,10 @@
 //    MAST::NonlinearImplicitAssembly                      assembly;
 //    MAST::HeatConductionNonlinearAssemblyElemOperations  elem_ops;
 //
-//    assembly.attach_discipline_and_system(elem_ops,
-//                                          *_discipline,
+//    assembly.set_discipline_and_system(   *_discipline,
 //                                          *_thermal_sys);
-//    
+//    assembly.set_elem_operation_object(elem_ops);
+//
 //    MAST::NonlinearSystem& nonlin_sys = assembly.system();
 //    
 //    // zero the solution before solving
@@ -253,7 +252,7 @@
 //    MAST::NonlinearImplicitAssembly                      assembly;
 //    MAST::HeatConductionNonlinearAssemblyElemOperations  elem_ops;
 //    
-//    assembly.attach_discipline_and_system(elem_ops,
+//    assembly.set_discipline_and_system(elem_ops,
 //                                          *_discipline,
 //                                          *_thermal_sys);
 //

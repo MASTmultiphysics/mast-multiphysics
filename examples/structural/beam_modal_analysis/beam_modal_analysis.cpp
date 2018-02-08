@@ -22,8 +22,9 @@
 
 
 
-MAST::Examples::BeamModalAnalysis::BeamModalAnalysis():
-MAST::Examples::StructuralExample1D() {
+MAST::Examples::BeamModalAnalysis::
+BeamModalAnalysis(const libMesh::Parallel::Communicator& comm_in):
+MAST::Examples::StructuralExample1D(comm_in) {
     
 }
 

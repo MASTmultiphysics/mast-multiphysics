@@ -140,17 +140,29 @@ namespace MAST {
         virtual bool verify_gradients(const std::vector<Real>& dvars);
         
         
+#if MAST_ENABLE_NPSOL == 1
+        typedef void (*funobj) (int*    mode,
+                                int*    n,
+                                double* x,
+                                double* f,
+                                double* g,
+                                int*    nstate);
         
+        
+        typedef void (*funcon) (int*    mode,
+                                int*    ncnln,
+                                int*    n,
+                                int*    ldJ,
+                                int*    needc,
+                                double* x,
+                                double* c,
+                                double* cJac,
+                                int*    nstate);
+
         /*!
          *  @returns a pointer to the function that evaluates the objective
+         *  used for NPSOL interface
          */
-        typedef void (*funobj) (int*    mode,
-        int*    n,
-        double* x,
-        double* f,
-        double* g,
-        int*    nstate);
-        
         virtual funobj
         get_objective_evaluation_function() {
             
@@ -163,17 +175,8 @@ namespace MAST {
         
         /*!
          *  @returns a pointer to the function that evaluates the constraint
+         *  used for NPSOL interface
          */
-        typedef void (*funcon) (int*    mode,
-        int*    ncnln,
-        int*    n,
-        int*    ldJ,
-        int*    needc,
-        double* x,
-        double* c,
-        double* cJac,
-        int*    nstate);
-        
         virtual funcon
         get_constraint_evaluation_function() {
             
@@ -182,7 +185,7 @@ namespace MAST {
             libmesh_assert(false);
             return nullptr;
         }
-
+#endif
         
         
     protected:

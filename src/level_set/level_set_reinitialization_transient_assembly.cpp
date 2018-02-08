@@ -69,6 +69,10 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
                        libMesh::SparseMatrix<Real>*  J,
                        libMesh::NonlinearImplicitSystem& S) {
     
+    libmesh_assert(_system);
+    libmesh_assert(_discipline);
+    libmesh_assert(_elem_ops);
+
     MAST::NonlinearSystem& transient_sys = _system->system();
     MAST::LevelSetTransientAssemblyElemOperations
     &level_set_elem_ops = dynamic_cast<MAST::LevelSetTransientAssemblyElemOperations&>(*_elem_ops);

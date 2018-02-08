@@ -34,7 +34,7 @@ namespace MAST  {
             
         public:
             
-            BeamModalAnalysis();
+            BeamModalAnalysis(const libMesh::Parallel::Communicator& comm_in);
             
             virtual ~BeamModalAnalysis();
             

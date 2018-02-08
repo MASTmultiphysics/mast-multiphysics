@@ -43,12 +43,18 @@ namespace MAST {
          */
         LevelSetElementBase(MAST::SystemInitialization&             sys,
                             MAST::AssemblyBase&                     assembly,
-                            const libMesh::Elem&                    elem,
-                            const MAST::FieldFunction<Real>&        velocity);
+                            const libMesh::Elem&                    elem);
         
         
         virtual ~LevelSetElementBase();
         
+        
+        void
+        set_velocity_function(const MAST::FieldFunction<Real>& vel) {
+            
+            libmesh_assert(!_phi_vel);
+            _phi_vel = &vel;
+        }
         
         /*!
          *   This can operate in one of two modes: propagation of level set
@@ -136,7 +142,24 @@ namespace MAST {
                                               RealVectorX& f,
                                               RealMatrixX& jac,
                                               std::multimap<libMesh::subdomain_id_type, MAST::BoundaryConditionBase*>& bc);
-                
+        
+        /*!
+         *   @returns the element volume over the domain of the element that has
+         *   positive level set function
+         */
+        Real
+        volume();
+
+        
+        /*!
+         *   @returns the contribution of the side to
+         *   \f$ \int_\Gamma V_n d\Gamma \f$, where \f$ V_n \f$ is the boundary
+         *   normal velocity evaluated from the solution and sensitivity.
+         */
+        Real
+        volume_boundary_velocity_on_side(unsigned int s);
+        
+        
     protected:
 
         /*!
@@ -192,7 +215,7 @@ namespace MAST {
         /*!
          *   element property
          */
-        const MAST::FieldFunction<Real>&  _phi_vel;
+        const MAST::FieldFunction<Real>*  _phi_vel;
 
         /*!
          *   this can operate in one of two modes: propagation of level set

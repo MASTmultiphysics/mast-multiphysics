@@ -35,6 +35,8 @@ namespace MAST {
     class AssemblyBase;
     class LocalElemFE;
     class FunctionBase;
+    class SystemInitialization;
+    class PhysicsDisciplineBase;
     
     class AssemblyElemOperations {
         
@@ -45,10 +47,34 @@ namespace MAST {
         
         
         /*!
+         *   @returns a reference to the system initialization object
+         */
+        MAST::SystemInitialization& get_system_initialization();
+        
+        /*!
+         *   @returns a reference to the discipline object
+         */
+        MAST::PhysicsDisciplineBase& get_discipline();
+        
+        /*!
+         *   attaches a system to this discipline
+         */
+        virtual void
+        set_discipline_and_system(MAST::PhysicsDisciplineBase& discipline,
+                                  MAST::SystemInitialization& system);
+        
+        
+        /*!
+         *   clears association with a system to this discipline
+         */
+        virtual void
+        clear_discipline_and_system();
+
+        /*!
          *   sets the assembly object
          */
         void set_assembly(MAST::AssemblyBase& assembly);
-
+        
         /*!
          *   @returns a reference to the assembly object
          */
@@ -58,19 +84,19 @@ namespace MAST {
          *   clears the assembly object
          */
         void clear_assembly();
-
+        
         /*!
          *   initializes the object for calculation of element quantities for
          *   the specified \p elem.
          */
         virtual void
         init(const libMesh::Elem& elem) = 0;
-
+        
         /*!
          *   clears the element initialization
          */
         virtual void clear_elem();
-
+        
         /*!
          *   @returns a reference to the physics element. The object must have
          *   been initialized before this method is called.
@@ -152,10 +178,12 @@ namespace MAST {
 
     protected:
 
+        MAST::SystemInitialization       *_system;
+        MAST::PhysicsDisciplineBase      *_discipline;
 
-        MAST::AssemblyBase *_assembly;
+        MAST::AssemblyBase               *_assembly;
         
-        MAST::ElementBase *_physics_elem;
+        MAST::ElementBase                *_physics_elem;
     };
 }
 

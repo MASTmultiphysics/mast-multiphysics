@@ -23,7 +23,6 @@
 
 // MAST includes
 #include "base/eigenproblem_assembly.h"
-#include "base/eigenproblem_assembly_elem_operations.h"
 
 namespace MAST {
 
@@ -32,8 +31,7 @@ namespace MAST {
     
     
     class StructuralBucklingEigenproblemAssembly:
-    public MAST::EigenproblemAssembly,
-    public MAST::EigenproblemAssemblyElemOperations {
+    public MAST::EigenproblemAssembly {
     public:
         
         /*!
@@ -94,60 +92,6 @@ namespace MAST {
          */
         virtual void clear_discipline_and_system();
         
-
-        virtual void
-        set_elem_solution(const RealVectorX& sol);
-        
-        /*!
-         *   sets the element solution(s) before calculations
-         */
-        virtual void
-        set_elem_sol_sens(MAST::ElementBase& elem,
-                          const RealVectorX& sol);
-        
-        /*!
-         *   performs the element calculations over \par elem, and returns
-         *   the element matrices for the eigenproblem
-         *   \f$ A x = \lambda B x \f$.
-         */
-        virtual void
-        elem_calculations(RealMatrixX& mat_A,
-                          RealMatrixX& mat_B);
-        
-        /*!
-         *   performs the element sensitivity calculations over \par elem,
-         *   and returns the element matrices for the eigenproblem
-         *   \f$ A x = \lambda B x \f$.
-         */
-        virtual void
-        elem_sensitivity_calculations(bool base_sol,
-                                      RealMatrixX& mat_A,
-                                      RealMatrixX& mat_B);
-        /*!
-         *   initializes the object for the geometric element \p elem. This
-         *   expects the object to be in a cleared state, so the user should
-         *   call \p clear_elem() between successive initializations.
-         */
-        virtual void
-        init(const libMesh::Elem& elem);
-        
-        /*!
-         *   some simulations frequently deal with 1D/2D elements in 3D space,
-         *   which requires use of MAST::LocalElemFE.
-         */
-        virtual bool
-        if_use_local_elem() const {
-            
-            return true;
-        }
-        
-        /*!
-         *   sets additional data for local elem FE.
-         */
-        virtual void
-        set_local_fe_data(MAST::LocalElemFE& fe,
-                          const libMesh::Elem& e) const;
-
 
     protected:
         

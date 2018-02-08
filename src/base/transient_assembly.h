@@ -55,27 +55,14 @@ namespace MAST {
          *   attaches a system to this discipline, and vice-a-versa
          */
         virtual void
-        attach_discipline_and_system(MAST::TransientAssemblyElemOperations& elem_ops,
-                                     MAST::PhysicsDisciplineBase& discipline,
-                                     MAST::TransientSolverBase& solver,
-                                     MAST::SystemInitialization& sys);
+        set_solver(MAST::TransientSolverBase& solver);
         
-        
-        /*!
-         *   Reattaches to the same system that was attached earlier.
-         *
-         *   This cannot be called if the clear_discipline_and_system() method
-         *   has been called.
-         */
-        virtual void
-        reattach_to_system();
-        
-        
+                
         /*!
          *   clears association with a system to this discipline, and vice-a-versa
          */
         virtual void
-        clear_discipline_and_system();
+        clear_solver();
         
         
         /*!
@@ -120,11 +107,6 @@ namespace MAST {
         
     protected:
         
-        /*!
-         *    object to provide transient element operations
-         */
-        MAST::TransientAssemblyElemOperations* _transient_elem_ops;
-
         /*!
          *   Pointer to a transient solver object that combines the
          *   element transient data appropriately for the nonlinear solver.

@@ -65,7 +65,15 @@ namespace MAST {
                                  const Real t,
                                  RealVectorX& v) const;
         
-        
+        /*!
+         *    calculates the gradient of value of the function at the specified
+         *    point, \par p, and time, \par t, and returns it in \p g.
+         *    g(i,j) = dv(i)/dx(j)
+         */
+        virtual void gradient(const libMesh::Point& p,
+                              const Real t,
+                              RealMatrixX& g) const;
+
         /*!
          *    calculates the value of perturbation in the function at
          *    the specified point, \par p, and time, \par t, and returns it
@@ -133,7 +141,7 @@ namespace MAST {
 
         
         /*!
-         *   clear the solution of
+         *   clear the solution
          */
         void clear();
 

@@ -30,6 +30,7 @@
 
 // libMesh includes
 #include "libmesh/numeric_vector.h"
+#include "libmesh/parallel_object.h"
 
 
 namespace MAST {
@@ -45,7 +46,7 @@ namespace MAST {
     public MAST::BeamEulerFSIAnalysis {
     
         
-        BeamAerothermoelasticFlutterSolution();
+        BeamAerothermoelasticFlutterSolution(const libMesh::Parallel::Communicator& comm_in);
         
         
         ~BeamAerothermoelasticFlutterSolution();

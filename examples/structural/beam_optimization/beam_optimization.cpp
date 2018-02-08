@@ -41,10 +41,6 @@
 //
 //
 //
-//extern 
-//libMesh::LibMeshInit     *__init;
-//extern
-//MAST::FunctionEvaluation *__my_func_eval;
 //
 //
 //
@@ -207,7 +203,7 @@
 //    _stress_limit  = infile("max_stress", 4.00e8);
 //    
 //    // create the mesh
-//    _mesh          = new libMesh::SerialMesh(__init->comm());
+//    _mesh          = new libMesh::SerialMesh(this->comm());
 //    
 //    // initialize the mesh with one element
 //    libMesh::MeshTools::Generation::build_line(*_mesh, _n_elems, 0, _length, etype);
@@ -373,7 +369,7 @@
 //    _assembly = new MAST::NonlinearImplicitAssembly;
 //    _elem_ops = new MAST::StructuralNonlinearAssemblyElemOperations;
 //    
-//    _assembly->attach_discipline_and_system(*_elem_ops,
+//    _assembly->set_discipline_and_system(*_elem_ops,
 //                                            *_discipline,
 //                                            *_structural_sys);
 //    

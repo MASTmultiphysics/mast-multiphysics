@@ -132,8 +132,9 @@ init(const libMesh::Elem& elem) {
     MAST::LevelSetElementBase
     *e = new MAST::LevelSetElementBase(_assembly->system_init(),
                                        *_assembly,
-                                       elem,
-                                       discipline.get_velocity_function());
+                                       elem);
+    if (discipline.has_velocity_function())
+        e->set_velocity_function(discipline.get_velocity_function());
     e->set_propagation_mode(discipline.if_level_set_propagation());
     
     _physics_elem = e;

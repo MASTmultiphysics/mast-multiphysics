@@ -22,8 +22,9 @@
 #include "examples/structural/plate_bending/plate_bending.h"
 
 
-MAST::Examples::PlateBending::PlateBending():
-MAST::Examples::StructuralExample2D() {
+MAST::Examples::PlateBending::
+PlateBending(const libMesh::Parallel::Communicator& comm_in):
+MAST::Examples::StructuralExample2D(comm_in) {
     
 }
 

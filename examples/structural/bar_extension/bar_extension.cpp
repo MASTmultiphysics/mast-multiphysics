@@ -24,8 +24,8 @@
 
 
 
-MAST::Examples::BarExtension::BarExtension():
-MAST::Examples::StructuralExample1D() {
+MAST::Examples::BarExtension::BarExtension(const libMesh::Parallel::Communicator& comm_in):
+MAST::Examples::StructuralExample1D(comm_in) {
     
 }
 

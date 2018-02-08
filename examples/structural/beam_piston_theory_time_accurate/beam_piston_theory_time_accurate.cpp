@@ -29,8 +29,9 @@
 #include "libmesh/numeric_vector.h"
 
 
-MAST::Examples::BeamPistonTheoryTimeAccurateAnalysis::BeamPistonTheoryTimeAccurateAnalysis():
-MAST::Examples::StructuralExample1D() {
+MAST::Examples::BeamPistonTheoryTimeAccurateAnalysis::
+BeamPistonTheoryTimeAccurateAnalysis(const libMesh::Parallel::Communicator& comm_in):
+MAST::Examples::StructuralExample1D(comm_in) {
     
 }
 

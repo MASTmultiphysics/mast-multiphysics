@@ -20,12 +20,12 @@
 // MAST includes
 #include "elasticity/structural_modal_eigenproblem_assembly.h"
 #include "elasticity/structural_element_base.h"
+#include "elasticity/structural_assembly.h"
 #include "property_cards/element_property_card_1D.h"
 #include "base/physics_discipline_base.h"
 #include "base/system_initialization.h"
-#include "mesh/local_elem_fe.h"
 #include "base/assembly_base.h"
-#include "elasticity/structural_assembly.h"
+#include "mesh/local_elem_fe.h"
 
 
 

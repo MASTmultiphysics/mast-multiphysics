@@ -185,7 +185,7 @@
 //
 //        p = 600.*(i+1)/n_load_steps;
 //        
-//        assembly.attach_discipline_and_system(elem_ops,
+//        assembly.set_discipline_and_system(elem_ops,
 //                                              structural_discipline,
 //                                              structural_sys);
 //        

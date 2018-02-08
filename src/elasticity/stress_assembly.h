@@ -51,31 +51,6 @@ namespace MAST {
         virtual ~StressAssembly();
         
         
-        /*!
-         *   attaches a system to this discipline, and vice-a-versa
-         */
-        virtual void
-        attach_discipline_and_system(MAST::StressStrainOutputBase& elem_ops,
-                                     MAST::PhysicsDisciplineBase& discipline,
-                                     MAST::SystemInitialization& system);
-        
-        
-        /*!
-         *   Reattaches to the same system that was attached earlier.
-         *
-         *   This cannot be called if the clear_discipline_and_system() method
-         *   has been called.
-         */
-        virtual void
-        reattach_to_system();
-        
-        
-        /*!
-         *   clears association with a system to this discipline, and vice-a-versa
-         */
-        virtual void
-        clear_discipline_and_system();
-        
         
         /*!
          *   updates the stresses and strains for the specified solution
@@ -98,10 +73,7 @@ namespace MAST {
 
 
     protected:
-        
-
-        MAST::StressStrainOutputBase* _stress_ops;
-        
+                
     };
 }
 

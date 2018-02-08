@@ -95,8 +95,9 @@ namespace MAST {
 }
 
 
-MAST::Examples::BeamOscillatingLoad::BeamOscillatingLoad():
-MAST::Examples::StructuralExample1D() {
+MAST::Examples::BeamOscillatingLoad::
+BeamOscillatingLoad(const libMesh::Parallel::Communicator& comm_in):
+MAST::Examples::StructuralExample1D(comm_in) {
     
 }
 

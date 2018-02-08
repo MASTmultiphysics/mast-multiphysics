@@ -20,6 +20,7 @@
 // MAST includes
 #include "elasticity/structural_buckling_eigenproblem_assembly.h"
 #include "elasticity/structural_element_base.h"
+#include "elasticity/structural_buckling_eigenproblem_elem_operations.h"
 #include "property_cards/element_property_card_1D.h"
 #include "base/physics_discipline_base.h"
 #include "base/system_initialization.h"
@@ -37,7 +38,6 @@
 MAST::StructuralBucklingEigenproblemAssembly::
 StructuralBucklingEigenproblemAssembly():
 MAST::EigenproblemAssembly(),
-MAST::EigenproblemAssemblyElemOperations(),
 _use_linearized_formulation(true),
 _load_param(nullptr),
 _lambda1(0.),
@@ -95,6 +95,10 @@ MAST::StructuralBucklingEigenproblemAssembly::
 eigenproblem_assemble(libMesh::SparseMatrix<Real> *A,
                       libMesh::SparseMatrix<Real> *B)  {
     
+    libmesh_assert(_system);
+    libmesh_assert(_discipline);
+    libmesh_assert(_elem_ops);
+
     MAST::NonlinearSystem& eigen_sys =
     dynamic_cast<MAST::NonlinearSystem&>(_system->system());
 
@@ -128,13 +132,14 @@ eigenproblem_assemble(libMesh::SparseMatrix<Real> *A,
     const libMesh::MeshBase::const_element_iterator end_el =
     eigen_sys.get_mesh().active_local_elements_end();
     
+    MAST::EigenproblemAssemblyElemOperations
+    &ops = dynamic_cast<MAST::EigenproblemAssemblyElemOperations&>(*_elem_ops);
+
     for ( ; el != end_el; ++el) {
         
         const libMesh::Elem* elem = *el;
         
         dof_map.dof_indices (elem, dof_indices);
-        
-        this->init(*elem);
         
         // get the solution
         unsigned int ndofs = (unsigned int)dof_indices.size();
@@ -151,30 +156,14 @@ eigenproblem_assemble(libMesh::SparseMatrix<Real> *A,
         for (unsigned int i=0; i<dof_indices.size(); i++)
             sol(i) = (*localized_solution1)(dof_indices[i]);
     
-        _elem_ops->set_elem_solution(sol);
-        
-        
-        // set the incompatible mode solution if required by the
-        // element
-        MAST::StructuralElementBase& p_elem =
-        dynamic_cast<MAST::StructuralElementBase&>(*_physics_elem);
-        
-        if (p_elem.if_incompatible_modes()) {
-            libmesh_error(); // this needs to be carefully implemented
-            // check if the vector exists in the map
-            if (!_incompatible_sol.count(elem))
-                _incompatible_sol[elem] = RealVectorX::Zero(p_elem.incompatible_mode_size());
-            p_elem.set_incompatible_mode_solution(_incompatible_sol[elem]);
-        }
+        ops.init(*elem);
+        ops.set_elem_solution(sol);
+        ops.elem_calculations(mat_A, dummy);
 
         DenseRealMatrix AA, BB;
-        this->elem_calculations(mat_A, dummy);
-        
         MAST::copy(AA, mat_A); // copy to the libMesh matrix for further processing
         dof_map.constrain_element_matrix(AA, dof_indices); // constrain the element matrices.
         matrix_A.add_matrix (AA, dof_indices); // add to the global matrices
-        
-        
         
         
         ////////////////////////////////////////////////////////////////
@@ -185,21 +174,8 @@ eigenproblem_assemble(libMesh::SparseMatrix<Real> *A,
         for (unsigned int i=0; i<dof_indices.size(); i++)
             sol(i) = (*localized_solution2)(dof_indices[i]);
         
-        _elem_ops->set_elem_solution(sol);
-        
-        
-        // set the incompatible mode solution if required by the
-        // element
-        if (p_elem.if_incompatible_modes()) {
-            
-            libmesh_error(); // this needs to be carefully implemented
-                             // check if the vector exists in the map
-            if (!_incompatible_sol.count(elem))
-                _incompatible_sol[elem] = RealVectorX::Zero(p_elem.incompatible_mode_size());
-            p_elem.set_incompatible_mode_solution(_incompatible_sol[elem]);
-        }
-
-        this->elem_calculations(mat_B, dummy);
+        ops.set_elem_solution(sol);
+        ops.elem_calculations(mat_B, dummy);
         mat_B  *= -1.;
         if (_use_linearized_formulation)
             mat_B  += mat_A;
@@ -217,84 +193,6 @@ eigenproblem_assemble(libMesh::SparseMatrix<Real> *A,
 
 
 
-
-void
-MAST::StructuralBucklingEigenproblemAssembly::init(const libMesh::Elem& elem) {
-
-    libmesh_assert(!_physics_elem);
-    
-    const MAST::ElementPropertyCardBase& p =
-    dynamic_cast<const MAST::ElementPropertyCardBase&>(_assembly->discipline().get_property_card(elem));
-    
-    _physics_elem =
-    MAST::build_structural_element(_assembly->system_init(), *this, elem, p).release();
-}
-
-
-
-void
-MAST::StructuralBucklingEigenproblemAssembly::
-elem_calculations(RealMatrixX& mat_A,
-                  RealMatrixX& mat_B) {
-    
-    MAST::StructuralElementBase& e =
-    dynamic_cast<MAST::StructuralElementBase&>(*_physics_elem);
-    
-    RealVectorX
-    vec = RealVectorX::Zero(mat_A.rows()); // dummy vector
-    RealMatrixX
-    dummy = RealMatrixX::Zero(vec.size(), vec.size());
-
-    mat_A.setZero();
-
-    // calculate the Jacobian components
-    e.internal_residual(true, vec, mat_A);
-    e.prestress_residual(true, vec, mat_A);
-    e.side_external_residual(true,
-                             vec,
-                             dummy,
-                             mat_A,
-                             _assembly->discipline().side_loads());
-    e.volume_external_residual(true,
-                               vec,
-                               dummy,
-                               mat_A,
-                               _assembly->discipline().volume_loads());
-}
-
-
-
-
-void
-MAST::StructuralBucklingEigenproblemAssembly::
-elem_sensitivity_calculations(bool base_sol,
-                              RealMatrixX& mat_A,
-                              RealMatrixX& mat_B) {
-    
-    MAST::StructuralElementBase& e =
-    dynamic_cast<MAST::StructuralElementBase&>(*_physics_elem);
-    
-    RealVectorX
-    vec = RealVectorX::Zero(mat_A.rows()); // dummy vector
-    RealMatrixX
-    dummy = RealMatrixX::Zero(vec.size(), vec.size());
-    
-    mat_A.setZero();
-    
-    // calculate the Jacobian components
-    e.internal_residual_sensitivity(true, vec, mat_A);
-    e.prestress_residual_sensitivity(true, vec, mat_A);
-    e.side_external_residual_sensitivity(true,
-                                         vec,
-                                         dummy,
-                                         mat_A,
-                                         _assembly->discipline().side_loads());
-    e.volume_external_residual_sensitivity(true,
-                                           vec,
-                                           dummy,
-                                           mat_A,
-                                           _assembly->discipline().volume_loads());
-}
 
 
 
@@ -314,64 +212,5 @@ critical_point_estimate_from_eigenproblem(Real v) const {
 }
 
 
-void
-MAST::StructuralBucklingEigenproblemAssembly::set_elem_solution(const RealVectorX& sol) {
-    
-    unsigned int
-    n = (unsigned int)sol.size();
-    
-    RealVectorX
-    zero = RealVectorX::Zero(n);
-    
-    _physics_elem->set_solution    (sol);
-    
-    
-    // set the incompatible mode solution if required by the
-    // element
-    MAST::StructuralElementBase& s_elem =
-    dynamic_cast<MAST::StructuralElementBase&>(*_physics_elem);
-    
-    if (s_elem.if_incompatible_modes()) {
-        
-        const libMesh::Elem& elem = _physics_elem->elem();
-        
-        // check if the vector exists in the map
-        if (!_incompatible_sol.count(&elem))
-            _incompatible_sol[&elem] = RealVectorX::Zero(s_elem.incompatible_mode_size());
-        s_elem.set_incompatible_mode_solution(_incompatible_sol[&elem]);
-    }
-}
-
-
-
-void
-MAST::StructuralBucklingEigenproblemAssembly::set_elem_sol_sens(MAST::ElementBase& elem,
-                                                                const RealVectorX& sol) {
-    
-    unsigned int
-    n = (unsigned int)sol.size();
-    
-    RealVectorX
-    zero = RealVectorX::Zero(n);
-    
-    elem.set_solution    (sol, true);
-}
-
-
-
-void
-MAST::StructuralBucklingEigenproblemAssembly::
-set_local_fe_data(MAST::LocalElemFE& fe,
-                  const libMesh::Elem& e) const {
-    
-    if (e.dim() == 1) {
-        
-        const MAST::ElementPropertyCard1D&
-        p_card = dynamic_cast<const MAST::ElementPropertyCard1D&>
-        (_assembly->discipline().get_property_card(e));
-        
-        fe.set_1d_y_vector(p_card.y_vector());
-    }
-}
 
 

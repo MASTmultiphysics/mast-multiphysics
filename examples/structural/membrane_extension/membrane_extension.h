@@ -34,7 +34,7 @@ namespace MAST  {
             
         public:
             
-            MembraneExtension();
+            MembraneExtension(const libMesh::Parallel::Communicator& comm_in);
             
             virtual ~MembraneExtension() {}
             

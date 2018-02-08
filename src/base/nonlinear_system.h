@@ -42,6 +42,8 @@ namespace MAST {
     class PhysicsDisciplineBase;
     class OutputAssemblyElemOperations;
     class FunctionBase;
+    class EigenproblemAssemblyElemOperations;
+    class EigenproblemAssembly;
     
     
     /*!
@@ -89,13 +91,21 @@ namespace MAST {
          */
         virtual void reinit () libmesh_override;
 
+
+        /*!
+         *  solves the nonlinear problem with the specified assembly operation
+         *  object
+         */
+        virtual void solve(MAST::AssemblyBase& assembly);
+        
         
         /*!
          *   Solves the sensitivity problem for the provided parameter.
          *   The Jacobian will be assembled before adjoint solve if
          *   \par if_assemble_jacobian is \p true.
          */
-        void sensitivity_solve(const MAST::FunctionBase& p,
+        void sensitivity_solve(MAST::AssemblyBase&           assembly,
+                               const MAST::FunctionBase&     p,
                                bool if_assemble_jacobian = true);
 
         
@@ -105,13 +115,14 @@ namespace MAST {
          *   \par if_assemble_jacobian is \p true.
          */
         void adjoint_solve(MAST::OutputAssemblyElemOperations& output,
-                           bool if_assemble_jacobian = true);
+                           MAST::AssemblyBase&                 assembly,
+                           bool if_assemble_jacobian           = true);
         
         
         /**
          * Assembles & solves the eigen system.
          */
-        virtual void eigenproblem_solve () ;
+        virtual void eigenproblem_solve(MAST::EigenproblemAssembly& assembly);
         
         /**
          * Solves the sensitivity system, for the provided parameters. The return
@@ -119,8 +130,9 @@ namespace MAST {
          * are returned in \p sens.
          */
         virtual void
-        eigenproblem_sensitivity_solve (const MAST::FunctionBase& f,
-                                        std::vector<Real>& sens) ;
+        eigenproblem_sensitivity_solve (MAST::EigenproblemAssembly& assembly,
+                                        const MAST::FunctionBase& f,
+                                        std::vector<Real>& sens);
         
         
         /*!
@@ -192,20 +204,6 @@ namespace MAST {
          */
         bool generalized () const { return _is_generalized_eigenproblem; }
         
-        
-        /**
-         * Register a user object to use in assembling the system matrix and
-         * residual
-         */
-        void
-        attach_assemble_object(MAST::AssemblyBase& assemble);
-        
-        
-        /**
-         *    clears the user specified function/object
-         */
-        void reset_assemble_object();
-
         
         /**
          * The system matrix for standard eigenvalue problems.
@@ -327,11 +325,6 @@ namespace MAST {
          * The type of the eigenvalue problem.
          */
         libMesh::EigenProblemType          _eigen_problem_type;
-        
-        /**
-         * Object that assembles the sensitivity of eigen_system.
-         */
-        MAST::AssemblyBase*                _assemble;
         
         /**
          * Vector storing the local dof indices that will not be condensed.

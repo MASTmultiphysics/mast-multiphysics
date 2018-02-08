@@ -43,7 +43,6 @@ extern "C" {
 #include "libmesh/numeric_vector.h"
 
 
-extern libMesh::LibMeshInit* __init;
 
 
 MAST::NastranModelAnalysis::NastranModelAnalysis() {
@@ -317,7 +316,7 @@ MAST::NastranModelAnalysis::_linear_static_solve() {
     MAST::StructuralNonlinearAssembly           assembly;
     MAST::NastranLinearAnalysisPostAssembly     post_assembly(*_model);
     
-    assembly.attach_discipline_and_system(discipline, sys_init);
+    assembly.set_discipline_and_system(discipline, sys_init);
     assembly.set_post_assembly_operation(post_assembly);
     
     // zero the solution before solving
@@ -368,7 +367,7 @@ MAST::NastranModelAnalysis::_normal_modes_solve() {
     // create the nonlinear assembly object
     MAST::StructuralModalEigenproblemAssembly   assembly;
     
-    assembly.attach_discipline_and_system(discipline, sys_init);
+    assembly.set_discipline_and_system(discipline, sys_init);
     sys.eigenproblem_solve();
     assembly.clear_discipline_and_system();
     

@@ -70,10 +70,6 @@
 //#include "libmesh/nonlinear_solver.h"
 //
 //
-//extern
-//libMesh::LibMeshInit     *__init;
-//extern
-//MAST::FunctionEvaluation *__my_func_eval;
 //
 //
 //
@@ -318,7 +314,7 @@
 //    //////////////////////////////////////////////////////////////////////
 //    
 //    // initialize the libMesh object
-//    _fluid_mesh              = new libMesh::ParallelMesh(__init->comm());
+//    _fluid_mesh              = new libMesh::ParallelMesh(this->comm());
 //    _fluid_eq_sys            = new libMesh::EquationSystems(*_fluid_mesh);
 //    
 //    
@@ -600,7 +596,7 @@
 //    }
 //    
 //    // create the mesh
-//    _structural_mesh       = new libMesh::SerialMesh(__init->comm());
+//    _structural_mesh       = new libMesh::SerialMesh(this->comm());
 //    
 //    // initialize the mesh with one element
 //    MAST::StiffenedPanelMesh panel_mesh;
@@ -919,7 +915,7 @@
 //    // create the nonlinear assembly object
 //    _structural_sys->initialize_condensed_dofs(*_structural_discipline);
 //    
-//    _modal_assembly->attach_discipline_and_system(*_modal_elem_ops,
+//    _modal_assembly->set_discipline_and_system(*_modal_elem_ops,
 //                                                  *_structural_discipline,
 //                                                  *_structural_sys_init);
 //    
@@ -979,14 +975,14 @@
 //    if (calculate_gafs) {
 //        
 //        // now setup the assembly object
-//        _frequency_domain_fluid_assembly->attach_discipline_and_system(*_fluid_discipline,
+//        _frequency_domain_fluid_assembly->set_discipline_and_system(*_fluid_discipline,
 //                                                                       *_complex_solver,
 //                                                                       *_fluid_sys_init);
 //        _frequency_domain_fluid_assembly->set_base_solution(base_sol);
 //        _frequency_domain_fluid_assembly->set_frequency_function(*_freq_function);
 //
 //        
-//        _gaf_database->attach_discipline_and_system(*_structural_discipline,
+//        _gaf_database->set_discipline_and_system(*_structural_discipline,
 //                                                    *_structural_sys_init);
 //        
 //        
@@ -1279,7 +1275,7 @@
 //            // zero the solution before solving
 //            _obj.clear_stresss();
 //            
-//            _obj._structural_nonlinear_assembly->attach_discipline_and_system
+//            _obj._structural_nonlinear_assembly->set_discipline_and_system
 //            (*_obj._structural_nonlinear_elem_ops,
 //             *_obj._structural_discipline,
 //             *_obj._structural_sys_init);
@@ -1394,7 +1390,7 @@
 //    // same exact values.
 //    std::vector<Real>
 //    my_dvars(dvars.begin(), dvars.end());
-//    __init->comm().broadcast(my_dvars);
+//    this->comm().broadcast(my_dvars);
 //    
 //    
 //    // set the parameter values equal to the DV value
@@ -1454,7 +1450,7 @@
 //    // modal analysis is about the thermoelastic base state, and is
 //    // used to ensure that the natural frequencies are positive about this
 //    // state
-//    _modal_assembly->attach_discipline_and_system(*_modal_elem_ops,
+//    _modal_assembly->set_discipline_and_system(*_modal_elem_ops,
 //                                                  *_structural_discipline,
 //                                                  *_structural_sys_init);
 //    _modal_assembly->set_base_solution(steady_solve.solution());
@@ -1527,17 +1523,17 @@
 //        _flutter_solver->clear();
 //        
 //        std::ostringstream oss;
-//        oss << "flutter_output_" << __init->comm().rank() << ".txt";
-//        if (__init->comm().rank() == 0)
+//        oss << "flutter_output_" << this->comm().rank() << ".txt";
+//        if (this->comm().rank() == 0)
 //            _flutter_solver->set_output_file(oss.str());
 //        
-//        _gaf_database->attach_discipline_and_system(*_gaf_database,
+//        _gaf_database->set_discipline_and_system(*_gaf_database,
 //                                                    *_structural_discipline,
 //                                                    *_structural_sys_init);
 //        
 //        libMesh::NumericVector<Real>&
 //        base_sol = _fluid_sys->get_vector("fluid_base_solution");
-//        _frequency_domain_fluid_assembly->attach_discipline_and_system(*_frequency_domain_elem_ops,
+//        _frequency_domain_fluid_assembly->set_discipline_and_system(*_frequency_domain_elem_ops,
 //                                                                       *_fluid_discipline,
 //                                                                       *_complex_solver,
 //                                                                       *_fluid_sys_init);
@@ -1581,7 +1577,7 @@
 //    }
 //    
 //    
-//    _structural_nonlinear_assembly->attach_discipline_and_system(*_structural_nonlinear_elem_ops,
+//    _structural_nonlinear_assembly->set_discipline_and_system(*_structural_nonlinear_elem_ops,
 //                                                                 *_structural_discipline,
 //                                                                 *_structural_sys_init);
 //    _structural_nonlinear_assembly->calculate_outputs(steady_solve.solution());
@@ -1624,16 +1620,16 @@
 //    // be mapped to unique spots by identifying the number of elements on each
 //    // subdomain
 //    std::vector<unsigned int>
-//    beginning_elem_id(__init->comm().size(), 0);
-//    for (unsigned int i=1; i<__init->comm().size(); i++)
+//    beginning_elem_id(this->comm().size(), 0);
+//    for (unsigned int i=1; i<this->comm().size(); i++)
 //        beginning_elem_id[i] = _structural_mesh->n_elem_on_proc(i-1);
 //    
 //    // now use this info to identify the beginning elem id
-//    for (unsigned int i=2; i<__init->comm().size(); i++)
+//    for (unsigned int i=2; i<this->comm().size(); i++)
 //        beginning_elem_id[i] += beginning_elem_id[i-1];
 //    
 //    const unsigned int
-//    my_id0 = beginning_elem_id[__init->comm().rank()];
+//    my_id0 = beginning_elem_id[this->comm().rank()];
 //    
 //    // copy the element von Mises stress values as the functions
 //    for (unsigned int i=0; i<_outputs.size(); i++)
@@ -1717,7 +1713,7 @@
 //            this->clear_stresss();
 //            
 //            // sensitivity analysis
-//            _structural_nonlinear_assembly->attach_discipline_and_system
+//            _structural_nonlinear_assembly->set_discipline_and_system
 //            (*_structural_nonlinear_elem_ops,
 //             *_structural_discipline,
 //             *_structural_sys_init);
@@ -1749,13 +1745,13 @@
 //            // else, set it to zero
 //            if (sol.second) {
 //                
-//                _gaf_database->attach_discipline_and_system(*_gaf_database,
+//                _gaf_database->set_discipline_and_system(*_gaf_database,
 //                                                            *_structural_discipline,
 //                                                            *_structural_sys_init);
 //                
 //                libMesh::NumericVector<Real>& base_sol =
 //                _fluid_sys->add_vector("fluid_base_solution");
-//                _frequency_domain_fluid_assembly->attach_discipline_and_system
+//                _frequency_domain_fluid_assembly->set_discipline_and_system
 //                (*_frequency_domain_elem_ops,
 //                 *_fluid_discipline,
 //                 *_complex_solver,
@@ -1797,14 +1793,14 @@
 //            // now, sum the sensitivity of the stress function gradients
 //            // so that all processors have the same values
 //            for (unsigned int j=0; j<_n_elems; j++)
-//                __init->comm().sum(grads[(i*_n_ineq) + (j+_n_eig+1)]);
+//                this->comm().sum(grads[(i*_n_ineq) + (j+_n_eig+1)]);
 //            
 //            
 //            // calculate the sensitivity of the eigenvalues
 //            std::vector<Real> eig_sens(nconv);
 //            _modal_assembly->set_base_solution(steady_solve.solution());
 //            _modal_assembly->set_base_solution(dXdp, true);
-//            _modal_assembly->attach_discipline_and_system(*_modal_elem_ops,
+//            _modal_assembly->set_discipline_and_system(*_modal_elem_ops,
 //                                                          *_structural_discipline,
 //                                                          *_structural_sys_init);
 //            // this should not be necessary, but currently the eigenproblem sensitivity

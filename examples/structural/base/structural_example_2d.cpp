@@ -34,11 +34,11 @@
 #include "libmesh/string_to_enum.h"
 #include "libmesh/mesh_generation.h"
 
-extern libMesh::LibMeshInit* __init;
 
 
-MAST::Examples::StructuralExample2D::StructuralExample2D():
-MAST::Examples::StructuralExampleBase() {
+MAST::Examples::StructuralExample2D::
+StructuralExample2D(const libMesh::Parallel::Communicator& comm_in):
+MAST::Examples::StructuralExampleBase(comm_in) {
     
 }
 
@@ -52,7 +52,7 @@ MAST::Examples::StructuralExample2D::~StructuralExample2D() {
 void
 MAST::Examples::StructuralExample2D::_init_mesh() {
     
-    _mesh = new libMesh::SerialMesh(__init->comm());
+    _mesh = new libMesh::SerialMesh(this->comm());
     
     // identify the element type from the input file or from the order
     // of the element

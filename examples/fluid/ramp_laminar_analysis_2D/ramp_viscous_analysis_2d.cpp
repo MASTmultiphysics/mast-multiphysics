@@ -47,15 +47,16 @@
 
 
 
-extern libMesh::LibMeshInit* __init;
 
 
 
-MAST::RampLaminarAnalysis2D::RampLaminarAnalysis2D() {
+MAST::RampLaminarAnalysis2D::
+RampLaminarAnalysis2D(const libMesh::Parallel::Communicator& comm_in):
+libMesh::ParallelObject (comm_in) {
 
 
     // initialize the libMesh object
-    _mesh              = new libMesh::ParallelMesh(__init->comm());
+    _mesh              = new libMesh::ParallelMesh(this->comm());
     _eq_sys            = new libMesh::EquationSystems(*_mesh);
     
     // add the system to be used for analysis
@@ -258,11 +259,11 @@ MAST::RampLaminarAnalysis2D::solve(bool if_write_output) {
     MAST::FirstOrderNewmarkTransientSolver  solver;
     
     // now solve the system
-    assembly.attach_discipline_and_system(elem_ops,
-                                          *_discipline,
-                                          solver,
-                                          *_fluid_sys);
-    
+    assembly.set_discipline_and_system(*_discipline,
+                                       *_fluid_sys);
+    assembly.set_elem_operation_object(elem_ops);
+    assembly.set_solver(solver);
+
     MAST::NonlinearSystem&  nonlin_sys   =
     dynamic_cast<MAST::NonlinearSystem&>(_fluid_sys->system());
 

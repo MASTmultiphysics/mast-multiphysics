@@ -122,7 +122,7 @@ MAST::plot_fluid_flutter_solution(const std::string&                      nm,
     // We write the simulation of the mode over a period of oscillation
     //
     
-    
+    /*
     // next write the fluid mode
     {
         // get the size of basis from the structural node
@@ -202,7 +202,7 @@ MAST::plot_fluid_flutter_solution(const std::string&                      nm,
             delete fluid_basis_re[i];
             delete fluid_basis_im[i];
         }
-    }
+    }*/
 }
 
 

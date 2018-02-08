@@ -25,6 +25,7 @@
 #include "base/nonlinear_system.h"
 #include "base/mesh_field_function.h"
 #include "base/nonlinear_implicit_assembly_elem_operations.h"
+#include "base/output_assembly_elem_operations.h"
 #include "base/elem_base.h"
 #include "numerics/utility.h"
 
@@ -54,29 +55,30 @@ MAST::LevelSetNonlinearImplicitAssembly::~LevelSetNonlinearImplicitAssembly() {
 }
 
 
+MAST::LevelSetIntersection&
+MAST::LevelSetNonlinearImplicitAssembly::get_intersection() {
+    
+    libmesh_assert(_level_set);
+    return *_intersection;
+}
 
 
 void
 MAST::LevelSetNonlinearImplicitAssembly::
-attach_discipline_and_system(MAST::NonlinearImplicitAssemblyElemOperations& elem_ops,
-                             MAST::PhysicsDisciplineBase &discipline,
-                             MAST::SystemInitialization &system,
-                             MAST::FieldFunction<Real>& level_set) {
+set_level_set_function(MAST::FieldFunction<Real>& level_set) {
+
+    libmesh_assert(!_level_set);
+    libmesh_assert(!_intersection);
     
-    MAST::NonlinearImplicitAssembly::attach_discipline_and_system(elem_ops,
-                                                                  discipline,
-                                                                  system);
-    _system->system().attach_constraint_object(*this);
-    _level_set = &level_set;
+    _level_set    = &level_set;
     _intersection = new MAST::LevelSetIntersection;
 }
 
 
 
 void
-MAST::LevelSetNonlinearImplicitAssembly::clear_discipline_and_system() {
+MAST::LevelSetNonlinearImplicitAssembly::clear_level_set_function() {
     
-    MAST::NonlinearImplicitAssembly::clear_discipline_and_system();
     _level_set = nullptr;
     
     if (_intersection) {
@@ -93,6 +95,11 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
                        libMesh::NumericVector<Real>* R,
                        libMesh::SparseMatrix<Real>*  J,
                        libMesh::NonlinearImplicitSystem& S) {
+
+    libmesh_assert(_system);
+    libmesh_assert(_discipline);
+    libmesh_assert(_elem_ops);
+    libmesh_assert(_level_set);
     
     MAST::NonlinearSystem& nonlin_sys = _system->system();
     
@@ -127,6 +134,8 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
     const libMesh::MeshBase::const_element_iterator end_el =
     nonlin_sys.get_mesh().active_local_elements_end();
     
+    MAST::NonlinearImplicitAssemblyElemOperations
+    &ops = dynamic_cast<MAST::NonlinearImplicitAssemblyElemOperations&>(*_elem_ops);
     
     for ( ; el != end_el; ++el) {
         
@@ -179,7 +188,7 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
                 
                 dof_map.dof_indices (elem, dof_indices);
                 
-                _implicit_elem_ops->init(*sub_elem);
+                ops.init(*sub_elem);
                 
                 // get the solution
                 unsigned int ndofs = (unsigned int)dof_indices.size();
@@ -190,18 +199,18 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
                 for (unsigned int i=0; i<dof_indices.size(); i++)
                     sol(i) = (*localized_solution)(dof_indices[i]);
                 
-                _implicit_elem_ops->set_elem_solution(sol);
+                ops.set_elem_solution(sol);
                 
 //                if (_sol_function)
 //                    physics_elem->attach_active_solution_function(*_sol_function);
                 
                 // perform the element level calculations
-                _implicit_elem_ops->elem_calculations(J!=nullptr?true:false,
+                ops.elem_calculations(J!=nullptr?true:false,
                                                       vec, mat);
                 
 //                physics_elem->detach_active_solution_function();
                 
-                _implicit_elem_ops->clear_elem();
+                ops.clear_elem();
                 
                 // copy to the libMesh matrix for further processing
                 DenseRealVector v;
@@ -244,8 +253,199 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
 
 
 
+
+void
+MAST::LevelSetNonlinearImplicitAssembly::
+calculate_output(const libMesh::NumericVector<Real>& X,
+                 MAST::OutputAssemblyElemOperations& output) {
+    
+    libmesh_assert(_system);
+    libmesh_assert(_discipline);
+    libmesh_assert(_level_set);
+
+    MAST::NonlinearSystem& nonlin_sys = _system->system();
+    output.zero();
+    
+    // iterate over each element, initialize it and get the relevant
+    // analysis quantities
+    RealVectorX sol;
+    
+    std::vector<libMesh::dof_id_type> dof_indices;
+    const libMesh::DofMap& dof_map = _system->system().get_dof_map();
+    
+    
+    std::unique_ptr<libMesh::NumericVector<Real> > localized_solution;
+    localized_solution.reset(build_localized_vector(nonlin_sys,
+                                                    X).release());
+    
+    
+    // if a solution function is attached, initialize it
+    //if (_sol_function)
+    //    _sol_function->init( X);
+    
+    
+    libMesh::MeshBase::const_element_iterator       el     =
+    nonlin_sys.get_mesh().active_local_elements_begin();
+    const libMesh::MeshBase::const_element_iterator end_el =
+    nonlin_sys.get_mesh().active_local_elements_end();
+    
+    
+    for ( ; el != end_el; ++el) {
+        
+        const libMesh::Elem* elem = *el;
+        
+        _intersection->init(*_level_set, *elem, nonlin_sys.time);
+        
+        
+        if (!_intersection->if_intersection() &&
+            _intersection->if_elem_on_positive_phi()) {
+            
+            const std::vector<const libMesh::Elem *> &
+            //elems_low = intersect.get_sub_elems_negative_phi(),
+            elems_hi = _intersection->get_sub_elems_positive_phi();
+            
+            std::vector<const libMesh::Elem*>::const_iterator
+            hi_sub_elem_it  = elems_hi.begin(),
+            hi_sub_elem_end = elems_hi.end();
+            
+            for (; hi_sub_elem_it != hi_sub_elem_end; hi_sub_elem_it++ ) {
+                
+                const libMesh::Elem* sub_elem = *hi_sub_elem_it;
+                
+                dof_map.dof_indices (elem, dof_indices);
+                
+                
+                // get the solution
+                unsigned int ndofs = (unsigned int)dof_indices.size();
+                sol.setZero(ndofs);
+                
+                for (unsigned int i=0; i<dof_indices.size(); i++)
+                    sol(i) = (*localized_solution)(dof_indices[i]);
+                
+                //                if (_sol_function)
+                //                    physics_elem->attach_active_solution_function(*_sol_function);
+                
+                output.init(*sub_elem);
+                output.set_elem_solution(sol);
+                output.evaluate();
+                output.clear_elem();
+            }
+        }
+        
+        _intersection->clear();
+    }
+    
+    // if a solution function is attached, clear it
+    if (_sol_function)
+        _sol_function->clear();
+}
+
+
+
+void
+MAST::LevelSetNonlinearImplicitAssembly::
+calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
+                                    const libMesh::NumericVector<Real>& dXdp,
+                                    const MAST::FunctionBase& p,
+                                    MAST::OutputAssemblyElemOperations& output) {
+    
+    libmesh_assert(_system);
+    libmesh_assert(_discipline);
+    libmesh_assert(_level_set);
+
+    MAST::NonlinearSystem& nonlin_sys = _system->system();
+    output.zero();
+    
+    // iterate over each element, initialize it and get the relevant
+    // analysis quantities
+    RealVectorX
+    sol,
+    dsol;
+    
+    std::vector<libMesh::dof_id_type> dof_indices;
+    const libMesh::DofMap& dof_map = _system->system().get_dof_map();
+    
+    
+    std::unique_ptr<libMesh::NumericVector<Real> >
+    localized_solution,
+    localized_solution_sens;
+    localized_solution.reset(build_localized_vector(nonlin_sys,
+                                                    X).release());
+    localized_solution_sens.reset(build_localized_vector(nonlin_sys,
+                                                         dXdp).release());
+
+    
+    // if a solution function is attached, initialize it
+    //if (_sol_function)
+    //    _sol_function->init( X);
+    
+    
+    libMesh::MeshBase::const_element_iterator       el     =
+    nonlin_sys.get_mesh().active_local_elements_begin();
+    const libMesh::MeshBase::const_element_iterator end_el =
+    nonlin_sys.get_mesh().active_local_elements_end();
+    
+    
+    for ( ; el != end_el; ++el) {
+        
+        const libMesh::Elem* elem = *el;
+        
+        _intersection->init(*_level_set, *elem, nonlin_sys.time);
+        
+        
+        if (!_intersection->if_intersection() &&
+            _intersection->if_elem_on_positive_phi()) {
+            
+            const std::vector<const libMesh::Elem *> &
+            //elems_low = intersect.get_sub_elems_negative_phi(),
+            elems_hi = _intersection->get_sub_elems_positive_phi();
+            
+            std::vector<const libMesh::Elem*>::const_iterator
+            hi_sub_elem_it  = elems_hi.begin(),
+            hi_sub_elem_end = elems_hi.end();
+            
+            for (; hi_sub_elem_it != hi_sub_elem_end; hi_sub_elem_it++ ) {
+                
+                const libMesh::Elem* sub_elem = *hi_sub_elem_it;
+                
+                dof_map.dof_indices (elem, dof_indices);
+                
+                
+                // get the solution
+                unsigned int ndofs = (unsigned int)dof_indices.size();
+                sol.setZero(ndofs);
+                
+                for (unsigned int i=0; i<dof_indices.size(); i++)
+                    sol(i) = (*localized_solution)(dof_indices[i]);
+                
+                //                if (_sol_function)
+                //                    physics_elem->attach_active_solution_function(*_sol_function);
+                
+                output.init(*sub_elem);
+                output.set_elem_solution(sol);
+                output.set_elem_solution_sensitivity(dsol);
+                output.evaluate_sensitivity(p);
+                output.clear_elem();
+            }
+        }
+        
+        _intersection->clear();
+    }
+    
+    // if a solution function is attached, clear it
+    if (_sol_function)
+        _sol_function->clear();
+}
+
+
+
+
 void
 MAST::LevelSetNonlinearImplicitAssembly::constrain() {
+
+    libmesh_assert(_system);
+    libmesh_assert(_discipline);
+    libmesh_assert(_level_set);
 
     MAST::NonlinearSystem& nonlin_sys = _system->system();
     

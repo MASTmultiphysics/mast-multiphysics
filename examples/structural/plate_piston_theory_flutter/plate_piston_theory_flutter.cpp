@@ -22,8 +22,9 @@
 #include "examples/structural/plate_piston_theory_flutter/plate_piston_theory_flutter.h"
 
 
-MAST::Examples::PlatePistonTheoryFlutterAnalysis::PlatePistonTheoryFlutterAnalysis():
-MAST::Examples::StructuralExample2D() {
+MAST::Examples::PlatePistonTheoryFlutterAnalysis::
+PlatePistonTheoryFlutterAnalysis(const libMesh::Parallel::Communicator& comm_in):
+MAST::Examples::StructuralExample2D(comm_in) {
     
 }
 

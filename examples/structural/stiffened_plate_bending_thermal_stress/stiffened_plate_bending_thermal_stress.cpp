@@ -46,7 +46,6 @@
 //#include "libmesh/numeric_vector.h"
 ////
 //
-//extern libMesh::LibMeshInit* __init;
 //
 //
 //MAST::StiffenedPlateBendingThermalStress::StiffenedPlateBendingThermalStress():
@@ -69,7 +68,7 @@
 //    n_stiff = 3;
 //    
 //    // create the mesh
-//    _mesh       = new libMesh::SerialMesh(__init->comm());
+//    _mesh       = new libMesh::SerialMesh(this->comm());
 //    
 //    MAST::StiffenedPanelMesh panel_mesh;
 //    panel_mesh.init(n_stiff,
@@ -310,7 +309,7 @@
 //    MAST::NonlinearImplicitAssembly                   assembly;
 //    MAST::StructuralNonlinearAssemblyElemOperations   elem_ops;
 //
-//    assembly.attach_discipline_and_system(elem_ops,
+//    assembly.set_discipline_and_system(elem_ops,
 //                                          *_discipline,
 //                                          *_structural_sys);
 //    
@@ -360,7 +359,7 @@
 //    MAST::NonlinearImplicitAssembly                   assembly;
 //    MAST::StructuralNonlinearAssemblyElemOperations   elem_ops;
 //    
-//    assembly.attach_discipline_and_system(elem_ops,
+//    assembly.set_discipline_and_system(elem_ops,
 //                                          *_discipline,
 //                                          *_structural_sys);
 //

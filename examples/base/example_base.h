@@ -23,6 +23,7 @@
 // C++ includes
 #include <string>
 #include <vector>
+#include <memory>
 
 // MAST includes
 #include "base/mast_data_types.h"
@@ -30,6 +31,8 @@
 // libMesh includes
 #include "libmesh/getpot.h"
 #include "libmesh/fe_type.h"
+#include "libmesh/parallel_object.h"
+
 
 namespace MAST {
     
@@ -43,11 +46,12 @@ namespace MAST {
         // Forward declerations
         class GetPotWrapper;
         
-        class ExampleBase {
+        class ExampleBase:
+        public libMesh::ParallelObject {
             
         public:
             
-            ExampleBase();
+            ExampleBase(const libMesh::Parallel::Communicator& comm_in);
             
             virtual ~ExampleBase();
             
@@ -64,7 +68,6 @@ namespace MAST {
              *   adds a parameter
              */
             void add_parameter(MAST::Parameter& p);
-            
             
             /*!
              *   @returns a parameter by the specified name
@@ -106,6 +109,7 @@ namespace MAST {
         private:
             std::vector<MAST::Parameter*>                           _params_for_sensitivity;
             std::map<std::string, MAST::Parameter*>                 _parameters;
+            std::vector<MAST::Parameter*>                           _dv_parameters;
             std::map<std::string, MAST::FunctionBase*>              _field_functions;
             std::set<MAST::BoundaryConditionBase*>                  _boundary_conditions;
             std::map<MAST::Parameter*, const Real>                  _load_parameters;

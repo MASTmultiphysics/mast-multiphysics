@@ -38,8 +38,7 @@ namespace MAST {
     public:
         
         // Constructor
-        LevelSetDiscipline(libMesh::EquationSystems& eq_sys,
-                           MAST::FieldFunction<Real>& vel);
+        LevelSetDiscipline(libMesh::EquationSystems& eq_sys);
         
         
         /*!
@@ -49,12 +48,32 @@ namespace MAST {
 
         
         /*!
+         *   sets the level set function normal velocity field
+         */
+        void
+        set_velocity_function(const MAST::FieldFunction<Real>& vel) {
+            
+            libmesh_assert(!_vel);
+            _vel = &vel;
+        }
+
+        /*!
+         *   @returns true if the velocity function has been set for this
+         *   discipline
+         */
+        bool
+        has_velocity_function() const  {
+            
+            return _vel;
+        }
+        
+        /*!
          *  @returns a reference to the velocity function for this level set
          */
         const MAST::FieldFunction<Real>&
         get_velocity_function() const {
             
-            return _vel;
+            return *_vel;
         }
 
         /*!
@@ -76,7 +95,7 @@ namespace MAST {
     protected:
         
         
-        MAST::FieldFunction<Real>& _vel;
+        const MAST::FieldFunction<Real>* _vel;
 
         bool _if_level_set_propagation;
     };

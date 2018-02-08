@@ -61,7 +61,18 @@ namespace MAST {
                                        RealVectorX& f,
                                        RealMatrixX& jac);
         
-        
+        /*!
+         *   calculates the term on side \par s:
+         *   \f$ \int_\Gamma a(\delta u, u) v_n ~d\Gamma \f$.
+         *
+         */
+        virtual void
+        internal_residual_boundary_velocity(RealVectorX& f,
+                                            const unsigned int s,
+                                            MAST::FieldFunction<RealVectorX>& vel_f) {
+            libmesh_assert(false);
+        }
+
         /*!
          *    Calculates the sensitivity of internal residual vector and
          *    Jacobian due to strain energy

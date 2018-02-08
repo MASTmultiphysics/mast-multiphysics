@@ -48,17 +48,17 @@
 
 
 
-extern libMesh::LibMeshInit* __init;
 
 
 
 
 MAST::PanelInviscidSmallDisturbanceFrequencyDomain2DAnalysis::
-PanelInviscidSmallDisturbanceFrequencyDomain2DAnalysis() {
+PanelInviscidSmallDisturbanceFrequencyDomain2DAnalysis(const libMesh::Parallel::Communicator& comm_in):
+libMesh::ParallelObject (comm_in) {
     
     
     // initialize the libMesh object
-    _mesh              = new libMesh::ParallelMesh(__init->comm());
+    _mesh              = new libMesh::ParallelMesh(this->comm());
     _eq_sys            = new libMesh::EquationSystems(*_mesh);
     
     // add the system to be used for analysis
@@ -304,14 +304,12 @@ solve(bool if_write_output) {
     MAST::ComplexSolverBase                          solver;
     
     // now solve the system
-    assembly.attach_discipline_and_system(elem_ops,
-                                          *_discipline,
-                                          solver,
-                                          *_fluid_sys);
+    assembly.set_discipline_and_system(*_discipline, *_fluid_sys);
+    assembly.set_elem_operation_object(elem_ops);
     assembly.set_base_solution(base_sol);
     elem_ops.set_frequency_function(*_freq_function);
     
-    solver.solve_block_matrix();
+    solver.solve_block_matrix(assembly);
     
     if (if_write_output) {
         
@@ -423,14 +421,13 @@ sensitivity_solve(MAST::Parameter& p, bool if_write_output) {
     MAST::ComplexSolverBase                          solver;
     
     // now solve the system
-    assembly.attach_discipline_and_system(elem_ops,
-                                          *_discipline,
-                                          solver,
-                                          *_fluid_sys);
+    assembly.set_discipline_and_system(*_discipline,
+                                       *_fluid_sys);
+    assembly.set_elem_operation_object(elem_ops);
     assembly.set_base_solution(base_sol);
     elem_ops.set_frequency_function(*_freq_function);
     
-    solver.solve_block_matrix(&p);
+    solver.solve_block_matrix(assembly, &p);
     
     if (if_write_output) {
         

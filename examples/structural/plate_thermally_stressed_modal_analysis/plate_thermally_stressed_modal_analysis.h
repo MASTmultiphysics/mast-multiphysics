@@ -34,7 +34,7 @@ namespace MAST  {
             
         public:
             
-            PlateModalAnalysis();
+            PlateModalAnalysis(const libMesh::Parallel::Communicator& comm_in);
             
             virtual ~PlateModalAnalysis();
             

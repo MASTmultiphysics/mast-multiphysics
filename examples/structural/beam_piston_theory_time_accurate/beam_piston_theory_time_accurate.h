@@ -34,7 +34,7 @@ namespace MAST  {
             
         public:
             
-            BeamPistonTheoryTimeAccurateAnalysis();
+            BeamPistonTheoryTimeAccurateAnalysis(const libMesh::Parallel::Communicator& comm_in);
             
             virtual ~BeamPistonTheoryTimeAccurateAnalysis();
             

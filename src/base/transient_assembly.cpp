@@ -37,7 +37,6 @@
 
 MAST::TransientAssembly::TransientAssembly():
 MAST::AssemblyBase(),
-_transient_elem_ops    (nullptr),
 _transient_solver      (nullptr) {
 
 }
@@ -53,55 +52,27 @@ MAST::TransientAssembly::~TransientAssembly() {
 
 
 void
-MAST::TransientAssembly::
-attach_discipline_and_system(MAST::TransientAssemblyElemOperations& elem_ops,
-                             MAST::PhysicsDisciplineBase& discipline,
-                             MAST::TransientSolverBase& solver,
-                             MAST::SystemInitialization& sys) {
+MAST::TransientAssembly::set_solver(MAST::TransientSolverBase& solver) {
     
-    MAST::AssemblyBase::attach_discipline_and_system(elem_ops, discipline, sys);
+    libmesh_assert(_elem_ops); // elem ops should be set before setting the solver
+    libmesh_assert(!_transient_solver);
     
     _transient_solver   = &solver;
-    _transient_elem_ops = &elem_ops;
     
     // attach this assembly object to the transient solver
     solver.set_assembly(*this);
-    solver.set_assembly_ops(elem_ops);
-    
-    _system->system().nonlinear_solver->residual_and_jacobian_object = this;
-    _system->system().attach_assemble_object(*this);
+    solver.set_assembly_ops(dynamic_cast<MAST::TransientAssemblyElemOperations&>(*_elem_ops));
 }
 
 
 
 void
-MAST::TransientAssembly::reattach_to_system() {
-    
-    libmesh_assert(_system);
-    
-    _system->system().nonlinear_solver->residual_and_jacobian_object = this;
-    _system->system().attach_assemble_object(*this);
-}
-
-
-
-void
-MAST::TransientAssembly::
-clear_discipline_and_system( ) {
-    
-    if (_system && _discipline) {
-
-        _system->system().nonlinear_solver->residual_and_jacobian_object = nullptr;
-    }
+MAST::TransientAssembly::clear_solver() {
     
     // clear the association of this assembly object to the solver
-    _system->system().reset_assemble_object();
     _transient_solver->clear_assembly_ops();
-    
+    _transient_solver->clear_assembly();
     _transient_solver   = nullptr;
-    _transient_elem_ops = nullptr;
-    
-    MAST::AssemblyBase::clear_discipline_and_system();
 }
 
 
@@ -113,6 +84,10 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
                        libMesh::SparseMatrix<Real>*  J,
                        libMesh::NonlinearImplicitSystem& S) {
     
+    libmesh_assert(_system);
+    libmesh_assert(_discipline);
+    libmesh_assert(_elem_ops);
+
     MAST::NonlinearSystem& transient_sys = _system->system();
     
     // make sure that the system for which this object was created,
@@ -217,6 +192,10 @@ linearized_jacobian_solution_product (const libMesh::NumericVector<Real>& X,
                                       libMesh::NumericVector<Real>& JdX,
                                       libMesh::NonlinearImplicitSystem& S) {
     
+    libmesh_assert(_system);
+    libmesh_assert(_discipline);
+    libmesh_assert(_elem_ops);
+
     MAST::NonlinearSystem& transient_sys = _system->system();
     
     // make sure that the system for which this object was created,
@@ -311,6 +290,10 @@ MAST::TransientAssembly::
 sensitivity_assemble (const MAST::FunctionBase& f,
                       libMesh::NumericVector<Real>& sensitivity_rhs) {
     
+    libmesh_assert(_system);
+    libmesh_assert(_discipline);
+    libmesh_assert(_elem_ops);
+
     MAST::NonlinearSystem& nonlin_sys = _system->system();
     
     sensitivity_rhs.zero();

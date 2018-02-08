@@ -23,8 +23,7 @@
 
 
 
-MAST::NonlinearImplicitAssemblyElemOperations::
-NonlinearImplicitAssemblyElemOperations():
+MAST::NonlinearImplicitAssemblyElemOperations::NonlinearImplicitAssemblyElemOperations():
 MAST::AssemblyElemOperations() {
     
 }

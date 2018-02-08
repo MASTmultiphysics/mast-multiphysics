@@ -40,7 +40,12 @@ namespace MAST {
     class TransientSolverBase:
     public MAST::NonlinearImplicitAssemblyElemOperations {
     public:
-        TransientSolverBase();
+        /*!
+         *   constructor requires the number of iterations to store for
+         *   the derived solver.
+         */
+        TransientSolverBase(unsigned int o,
+                            unsigned int n);
         
         virtual ~TransientSolverBase();
 
@@ -60,11 +65,6 @@ namespace MAST {
          */
         Real dt;
 
-        /*!
-         *    @returns the highest order time derivative that the solver 
-         *    will handle
-         */
-        virtual int ode_order() const = 0;
         
         /*!
          *    @returns a reference to the localized solution from
@@ -263,11 +263,18 @@ namespace MAST {
          */
         bool  _first_step, _first_sensitivity_step;
         
+        
         /*!
-         *    @returns the number of iterations for which solution and velocity
+         *    the highest order time derivative that the solver
+         *    will handle
+         */
+        const unsigned int _ode_order;
+        
+        /*!
+         *    the number of iterations for which solution and velocity
          *    are to be stored.
          */
-        virtual unsigned int _n_iters_to_store() const = 0;
+        const unsigned int _n_iters_to_store;
         
         
         /*!

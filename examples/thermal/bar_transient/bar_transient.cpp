@@ -43,7 +43,6 @@
 //#include "libmesh/numeric_vector.h"
 ////
 //
-//extern libMesh::LibMeshInit* __init;
 //
 //
 //MAST::BarTransient::BarTransient():
@@ -56,7 +55,7 @@
 //    libmesh_assert(!_initialized);
 //    
 //    // create the mesh
-//    _mesh       = new libMesh::SerialMesh(__init->comm());
+//    _mesh       = new libMesh::SerialMesh(this->comm());
 //    
 //    // initialize the mesh with one element
 //    libMesh::MeshTools::Generation::build_line(*_mesh, 10, 0, 10);
@@ -216,7 +215,7 @@
 //    // Transient solver for time integration
 //    MAST::FirstOrderNewmarkTransientSolver  solver;
 //
-//    assembly.attach_discipline_and_system(elem_ops,
+//    assembly.set_discipline_and_system(elem_ops,
 //                                          *_discipline,
 //                                          solver,
 //                                          *_thermal_sys);
@@ -290,7 +289,7 @@
 //
 //    MAST::FirstOrderNewmarkTransientSolver  solver;
 //
-//    assembly.attach_discipline_and_system(elem_ops,
+//    assembly.set_discipline_and_system(elem_ops,
 //                                          *_discipline,
 //                                          solver,
 //                                          *_thermal_sys);

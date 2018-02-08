@@ -36,6 +36,7 @@
 #include "libmesh/mesh_generation.h"
 #include "libmesh/fe_type.h"
 #include "libmesh/dof_map.h"
+#include "libmesh/parallel_object.h"
 
 
 
@@ -64,10 +65,11 @@ namespace MAST {
     class AugmentGhostElementSendListObj;
     
     
-    struct PlateFlagEulerFSIFlutterAnalysis {
+    struct PlateFlagEulerFSIFlutterAnalysis:
+    public libMesh::ParallelObject {
         
         
-        PlateFlagEulerFSIFlutterAnalysis();
+        PlateFlagEulerFSIFlutterAnalysis(const libMesh::Parallel::Communicator& comm_in);
         
         
         ~PlateFlagEulerFSIFlutterAnalysis();

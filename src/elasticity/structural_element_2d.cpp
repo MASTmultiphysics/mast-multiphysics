@@ -786,6 +786,134 @@ MAST::StructuralElement2D::internal_residual_sensitivity (bool request_jacobian,
 
 
 
+void
+MAST::StructuralElement2D::
+internal_residual_boundary_velocity(RealVectorX& f,
+                                    const unsigned int s,
+                                    MAST::FieldFunction<RealVectorX>& vel_f) {
+
+    // this should be true if the function is called
+    libmesh_assert(this->sensitivity_param);
+    libmesh_assert(!this->sensitivity_param->is_shape_parameter()); // this is not implemented for now
+
+    // prepare the side finite element
+    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem).release());
+    fe->init_for_side(_elem, s, true);
+    
+    std::vector<Real> JxW_Vn                        = fe->get_JxW();
+    const std::vector<libMesh::Point>& xyz          = fe->get_xyz();
+    const std::vector<libMesh::Point>& face_normals = fe->get_normals();
+
+    const unsigned int
+    n_phi    = (unsigned int)_fe->get_phi().size(),
+    n1       = this->n_direct_strain_components(),
+    n2       =6*n_phi,
+    n3       = this->n_von_karman_strain_components(),
+    dim      = 2;
+    
+    RealMatrixX
+    material_A_mat,
+    material_B_mat,
+    material_D_mat,
+    material_trans_shear_mat,
+    mat1_n1n2     = RealMatrixX::Zero(n1,n2),
+    mat2_n2n2     = RealMatrixX::Zero(n2,n2),
+    mat3,
+    mat4_n3n2     = RealMatrixX::Zero(n3,n2),
+    vk_dwdxi_mat  = RealMatrixX::Zero(n1,n3),
+    stress        = RealMatrixX::Zero(2,2),
+    stress_l      = RealMatrixX::Zero(2,2),
+    local_jac     = RealMatrixX::Zero(n2,n2);
+    RealVectorX
+    vec1_n1    = RealVectorX::Zero(n1),
+    vec2_n1    = RealVectorX::Zero(n1),
+    vec3_n2    = RealVectorX::Zero(n2),
+    vec4_n3    = RealVectorX::Zero(n3),
+    vec5_n3    = RealVectorX::Zero(n3),
+    local_f    = RealVectorX::Zero(n2),
+    vel        = RealVectorX::Zero(dim);
+    
+    FEMOperatorMatrix Bmat_mem, Bmat_bend, Bmat_vk;
+    
+    Bmat_mem.reinit(n1, _system.n_vars(), n_phi); // three stress-strain components
+    Bmat_bend.reinit(n1, _system.n_vars(), n_phi);
+    Bmat_vk.reinit(n3, _system.n_vars(), n_phi); // only dw/dx and dw/dy
+    
+    bool if_vk = (_property.strain_type() == MAST::VON_KARMAN_STRAIN),
+    if_bending = (_property.bending_model(_elem, _fe->get_fe_type()) != MAST::NO_BENDING);
+    
+    std::unique_ptr<MAST::FieldFunction<RealMatrixX > >
+    mat_stiff_A = _property.stiffness_A_matrix(*this),
+    mat_stiff_B = _property.stiffness_B_matrix(*this),
+    mat_stiff_D = _property.stiffness_D_matrix(*this);
+    
+    Real
+    vn  = 0.;
+    
+    // modify the JxW_Vn by multiplying the normal velocity to it
+    for (unsigned int qp=0; qp<JxW_Vn.size(); qp++) {
+        
+        vel_f(xyz[qp], _time, vel);
+        vn = 0.;
+        for (unsigned int i=0; i<dim; i++)
+            vn += vel(i)*face_normals[qp](i);
+        JxW_Vn[qp] *= vn;
+    }
+    
+    
+    // first calculate the sensitivity due to the parameter
+    for (unsigned int qp=0; qp<JxW_Vn.size(); qp++) {
+        
+        // get the material matrix
+        mat_stiff_A->derivative(*this->sensitivity_param,
+                                xyz[qp],
+                                _time,
+                                material_A_mat);
+        
+        if (if_bending) {
+            
+            mat_stiff_B->derivative(*this->sensitivity_param,
+                                    xyz[qp],
+                                    _time,
+                                    material_B_mat);
+            
+            mat_stiff_D->derivative(*this->sensitivity_param,
+                                    xyz[qp],
+                                    _time,
+                                    material_D_mat);
+        }
+        
+        // now calculte the quantity for these matrices
+        // this accounts for the sensitivity of the material property matrices
+        _internal_residual_operation(if_bending, if_vk, n2, qp, *fe, JxW_Vn,
+                                     false,
+                                     local_f, local_jac,
+                                     Bmat_mem, Bmat_bend, Bmat_vk,
+                                     stress, stress_l, vk_dwdxi_mat, material_A_mat,
+                                     material_B_mat, material_D_mat, vec1_n1,
+                                     vec2_n1, vec3_n2, vec4_n3,
+                                     vec5_n3, mat1_n1n2, mat2_n2n2,
+                                     mat3, mat4_n3n2);
+        
+        
+    }
+    
+    // now calculate the transverse shear contribution if appropriate for the
+    // element
+    if (if_bending && _bending_operator->include_transverse_shear_energy())
+        _bending_operator->calculate_transverse_shear_residual_boundary_velocity(false,
+                                                                                 s,
+                                                                                 vel_f,
+                                                                                 local_f,
+                                                                                 this->sensitivity_param);
+    
+    // now transform to the global coorodinate system
+    transform_vector_to_global_system(local_f, vec3_n2);
+    f += vec3_n2;
+}
+
+
+
 
 bool
 MAST::StructuralElement2D::

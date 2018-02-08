@@ -21,8 +21,9 @@
 #include "examples/structural/beam_bending_thermal_stress_with_offset/beam_bending_thermal_stress.h"
 
 
-MAST::Examples::BeamBendingThermalStress::BeamBendingThermalStress():
-MAST::Examples::StructuralExample1D() {
+MAST::Examples::BeamBendingThermalStress::
+BeamBendingThermalStress(const libMesh::Parallel::Communicator& comm_in):
+MAST::Examples::StructuralExample1D(comm_in) {
     
 }
 
