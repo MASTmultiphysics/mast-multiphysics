@@ -69,12 +69,12 @@ elem_calculations(bool if_jac,
                              f_x,
                              f_m_jac_xdot,
                              f_x_jac,
-                             _assembly->discipline().side_loads());
+                             _discipline->side_loads());
     e.volume_external_residual(if_jac,
                                f_x,
                                f_m_jac_xdot,
                                f_x_jac,
-                               _assembly->discipline().volume_loads());
+                               _discipline->volume_loads());
     
     //assembly of the capacitance term
     e.damping_residual(if_jac, f_m, f_m_jac_xdot, f_m_jac);
@@ -114,12 +114,12 @@ elem_calculations(bool if_jac,
                              f_x,
                              f_m_jac_xdot,
                              f_x_jac,
-                             _assembly->discipline().side_loads());
+                             _discipline->side_loads());
     e.volume_external_residual(if_jac,
                                f_x,
                                f_m_jac_xdot,
                                f_x_jac,
-                               _assembly->discipline().volume_loads());
+                               _discipline->volume_loads());
     
     //assembly of the capacitance term
     e.inertial_residual(if_jac, f_m, f_m_jac_xddot, f_m_jac_xdot, f_m_jac);
@@ -151,12 +151,12 @@ linearized_jacobian_solution_product(RealVectorX& f) {
                                         f,
                                         dummy,
                                         dummy,
-                                        _assembly->discipline().side_loads());
+                                        _discipline->side_loads());
     e.linearized_volume_external_residual(false,
                                           f,
                                           dummy,
                                           dummy,
-                                          _assembly->discipline().volume_loads());
+                                          _discipline->volume_loads());
     
     //assembly of the capacitance term
     e.linearized_inertial_residual(false, f, dummy, dummy, dummy);
@@ -191,12 +191,12 @@ elem_sensitivity_calculations(RealVectorX& f_m,
                                          f_x,
                                          dummy,
                                          dummy,
-                                         _assembly->discipline().side_loads());
+                                         _discipline->side_loads());
     e.volume_external_residual_sensitivity(false,
                                            f_x,
                                            dummy,
                                            dummy,
-                                           _assembly->discipline().volume_loads());
+                                           _discipline->volume_loads());
     
     //assembly of the capacitance term
     e.inertial_residual_sensitivity(false, f_m, dummy, dummy, dummy);
@@ -218,13 +218,14 @@ void
 MAST::StructuralTransientAssemblyElemOperations::init(const libMesh::Elem& elem) {
 
     libmesh_assert(!_physics_elem);
-    
+    libmesh_assert(_system);
+    libmesh_assert(_assembly);
+
     const MAST::ElementPropertyCardBase& p =
-    dynamic_cast<const MAST::ElementPropertyCardBase&>
-    (_assembly->discipline().get_property_card(elem));
+    dynamic_cast<const MAST::ElementPropertyCardBase&>(_discipline->get_property_card(elem));
     
     _physics_elem =
-    MAST::build_structural_element(_assembly->system_init(), *_assembly, elem, p).release();
+    MAST::build_structural_element(*_system, *_assembly, elem, p).release();
 }
 
 
@@ -237,7 +238,7 @@ set_local_fe_data(MAST::LocalElemFE& fe,
         
         const MAST::ElementPropertyCard1D&
         p_card = dynamic_cast<const MAST::ElementPropertyCard1D&>
-        (_assembly->discipline().get_property_card(e));
+        (_discipline->get_property_card(e));
         
         fe.set_1d_y_vector(p_card.y_vector());
     }

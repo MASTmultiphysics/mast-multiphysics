@@ -76,7 +76,8 @@ namespace MAST {
         /**
          * Assembles & solves the nonlinear system R(x) = 0.
          */
-        virtual void solve (MAST::AssemblyBase& assembly) libmesh_override;
+        virtual void solve (MAST::AssemblyElemOperations& elem_ops,
+                            MAST::AssemblyBase&           assembly) libmesh_override;
         
         
     protected:

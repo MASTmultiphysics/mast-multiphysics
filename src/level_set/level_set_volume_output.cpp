@@ -44,12 +44,11 @@ MAST::LevelSetVolume::~LevelSetVolume() {
 void
 MAST::LevelSetVolume::init(const libMesh::Elem& elem) {
     
-    libmesh_assert(_assembly);
     libmesh_assert(!_physics_elem);
+    libmesh_assert(_system);
+    libmesh_assert(_assembly);
     
-    _physics_elem = new MAST::LevelSetElementBase(_assembly->system_init(),
-                                                  *_assembly,
-                                                  elem);
+    _physics_elem = new MAST::LevelSetElementBase(*_system, *_assembly, elem);
 }
 
 
@@ -58,6 +57,7 @@ MAST::LevelSetVolume::init(const libMesh::Elem& elem) {
 
 void
 MAST::LevelSetVolume::zero() {
+
     _vol     = 0.;
     _dvol_dp = 0.;
 }
@@ -132,7 +132,6 @@ MAST::LevelSetVolume::evaluate_sensitivity(const MAST::FunctionBase& f) {
 bool
 MAST::LevelSetVolume::if_use_local_elem() const {
 
-    libmesh_assert(_physics_elem);
     return false;
 }
 
@@ -142,7 +141,6 @@ void
 MAST::LevelSetVolume::set_local_fe_data(MAST::LocalElemFE& fe,
                                         const libMesh::Elem& e) const {
 
-    libmesh_assert(_physics_elem);
     libmesh_assert(false); // should not get called
 }
 

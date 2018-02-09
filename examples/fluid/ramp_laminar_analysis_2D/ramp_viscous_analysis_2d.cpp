@@ -259,9 +259,7 @@ MAST::RampLaminarAnalysis2D::solve(bool if_write_output) {
     MAST::FirstOrderNewmarkTransientSolver  solver;
     
     // now solve the system
-    assembly.set_discipline_and_system(*_discipline,
-                                       *_fluid_sys);
-    assembly.set_elem_operation_object(elem_ops);
+    assembly.set_discipline_and_system(*_discipline, *_fluid_sys);
     assembly.set_solver(solver);
 
     MAST::NonlinearSystem&  nonlin_sys   =

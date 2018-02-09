@@ -136,10 +136,12 @@ MAST::ComplexSolverBase::imag_solution(bool if_sens) const {
 
 
 void
-MAST::ComplexSolverBase::solve_pc_fieldsplit(MAST::ComplexAssemblyBase& assemble) {
+MAST::ComplexSolverBase::solve_pc_fieldsplit(MAST::AssemblyElemOperations& elem_ops,
+                                             MAST::ComplexAssemblyBase& assemble) {
     
     libmesh_assert(!_assembly);
     _assembly = &assemble;
+    assemble.set_elem_operation_object(elem_ops);
 
     START_LOG("complex_solve()", "PetscFieldSplitSolver");
     
@@ -280,17 +282,20 @@ MAST::ComplexSolverBase::solve_pc_fieldsplit(MAST::ComplexAssemblyBase& assemble
     STOP_LOG("complex_solve()", "PetscFieldSplitSolver");
 
     _assembly = nullptr;
+    assemble.clear_elem_operation_object();
 }
 
 
 
 void
-MAST::ComplexSolverBase::solve_block_matrix(MAST::ComplexAssemblyBase& assemble,
+MAST::ComplexSolverBase::solve_block_matrix(MAST::AssemblyElemOperations& elem_ops,
+                                            MAST::ComplexAssemblyBase& assemble,
                                             MAST::Parameter* p)  {
     
     libmesh_assert(!_assembly);
     _assembly = &assemble;
-
+    assemble.set_elem_operation_object(elem_ops);
+    
     START_LOG("solve_block_matrix()", "ComplexSolve");
     
     // get reference to the system
@@ -462,6 +467,7 @@ MAST::ComplexSolverBase::solve_block_matrix(MAST::ComplexAssemblyBase& assemble,
     STOP_LOG("solve_block_matrix()", "ComplexSolve");
     
     _assembly = nullptr;
+    assemble.clear_elem_operation_object();
 }
 
 

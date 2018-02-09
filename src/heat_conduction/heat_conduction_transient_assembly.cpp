@@ -64,8 +64,8 @@ elem_calculations(bool if_jac,
     
     // assembly of the flux terms
     e.internal_residual(if_jac, f_x, f_x_jac);
-    e.side_external_residual(if_jac, f_x, f_x_jac, _assembly->discipline().side_loads());
-    e.volume_external_residual(if_jac, f_x, f_x_jac, _assembly->discipline().volume_loads());
+    e.side_external_residual(if_jac, f_x, f_x_jac, _discipline->side_loads());
+    e.volume_external_residual(if_jac, f_x, f_x_jac, _discipline->volume_loads());
     
     //assembly of the capacitance term
     e.velocity_residual(if_jac, f_m, f_m_jac_xdot, f_m_jac);
@@ -106,14 +106,14 @@ MAST::HeatConductionTransientAssemblyElemOperations::
 init(const libMesh::Elem& elem) {
     
     libmesh_assert(!_physics_elem);
-    
+    libmesh_assert(_system);
+    libmesh_assert(_assembly);
+
     const MAST::ElementPropertyCardBase& p =
-    dynamic_cast<const MAST::ElementPropertyCardBase&>
-    (_assembly->discipline().get_property_card(elem));
+    dynamic_cast<const MAST::ElementPropertyCardBase&>(_discipline->get_property_card(elem));
     
     _physics_elem =
-    new MAST::HeatConductionElementBase
-    (_assembly->system_init(), *_assembly, elem, p);
+    new MAST::HeatConductionElementBase(*_system, *_assembly, elem, p);
 }
 
 
@@ -126,7 +126,7 @@ set_local_fe_data(MAST::LocalElemFE& fe,
         
         const MAST::ElementPropertyCard1D&
         p_card = dynamic_cast<const MAST::ElementPropertyCard1D&>
-        (_assembly->discipline().get_property_card(e));
+        (_discipline->get_property_card(e));
         
         fe.set_1d_y_vector(p_card.y_vector());
     }

@@ -47,13 +47,15 @@ MAST::HeatConductionNonlinearAssemblyElemOperations::
 init(const libMesh::Elem& elem) {
     
     libmesh_assert(!_physics_elem);
-    
+    libmesh_assert(_system);
+    libmesh_assert(_assembly);
+
     const MAST::ElementPropertyCardBase& p =
     dynamic_cast<const MAST::ElementPropertyCardBase&>
-    (_assembly->discipline().get_property_card(elem));
+    (_discipline->get_property_card(elem));
     
     _physics_elem =
-    new MAST::HeatConductionElementBase(_assembly->system_init(), *_assembly, elem, p);
+    new MAST::HeatConductionElementBase(*_system, *_assembly, elem, p);
 }
 
 
@@ -74,8 +76,8 @@ elem_calculations(bool if_jac,
     mat.setZero();
     
     e.internal_residual(if_jac, vec, mat);
-    e.side_external_residual(if_jac, vec, mat, _assembly->discipline().side_loads());
-    e.volume_external_residual(if_jac, vec, mat, _assembly->discipline().volume_loads());
+    e.side_external_residual(if_jac, vec, mat, _discipline->side_loads());
+    e.volume_external_residual(if_jac, vec, mat, _discipline->volume_loads());
 }
 
 
@@ -95,8 +97,8 @@ elem_sensitivity_calculations(RealVectorX& vec) {
     dummy = RealMatrixX::Zero(vec.size(), vec.size());
     
     e.internal_residual_sensitivity(false, vec, dummy);
-    e.side_external_residual_sensitivity(false, vec, dummy, _assembly->discipline().side_loads());
-    e.volume_external_residual_sensitivity(false, vec, dummy, _assembly->discipline().volume_loads());
+    e.side_external_residual_sensitivity(false, vec, dummy, _discipline->side_loads());
+    e.volume_external_residual_sensitivity(false, vec, dummy, _discipline->volume_loads());
 }
 
 
@@ -118,7 +120,7 @@ set_local_fe_data(MAST::LocalElemFE& fe,
         
         const MAST::ElementPropertyCard1D&
         p_card = dynamic_cast<const MAST::ElementPropertyCard1D&>
-        (_assembly->discipline().get_property_card(e));
+        (_discipline->get_property_card(e));
         
         fe.set_1d_y_vector(p_card.y_vector());
     }

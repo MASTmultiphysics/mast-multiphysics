@@ -167,7 +167,7 @@ assemble_generalized_aerodynamic_force_matrix
         
         
         // solve the complex smamll-disturbance fluid-equations
-        _fluid_complex_solver->solve_block_matrix(*_fluid_complex_assembly, p);
+        _fluid_complex_solver->solve_block_matrix(*_elem_ops, *_fluid_complex_assembly, p);
         
         // use this solution to initialize the structural boundary conditions
         _pressure_function->init(_fluid_complex_assembly->base_sol());

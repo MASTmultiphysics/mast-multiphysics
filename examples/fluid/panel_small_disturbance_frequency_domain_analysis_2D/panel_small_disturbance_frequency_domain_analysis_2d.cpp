@@ -305,11 +305,10 @@ solve(bool if_write_output) {
     
     // now solve the system
     assembly.set_discipline_and_system(*_discipline, *_fluid_sys);
-    assembly.set_elem_operation_object(elem_ops);
     assembly.set_base_solution(base_sol);
     elem_ops.set_frequency_function(*_freq_function);
     
-    solver.solve_block_matrix(assembly);
+    solver.solve_block_matrix(elem_ops, assembly);
     
     if (if_write_output) {
         
@@ -423,11 +422,10 @@ sensitivity_solve(MAST::Parameter& p, bool if_write_output) {
     // now solve the system
     assembly.set_discipline_and_system(*_discipline,
                                        *_fluid_sys);
-    assembly.set_elem_operation_object(elem_ops);
     assembly.set_base_solution(base_sol);
     elem_ops.set_frequency_function(*_freq_function);
     
-    solver.solve_block_matrix(assembly, &p);
+    solver.solve_block_matrix(elem_ops, assembly, &p);
     
     if (if_write_output) {
         
@@ -458,8 +456,5 @@ sensitivity_solve(MAST::Parameter& p, bool if_write_output) {
     
     
     assembly.clear_discipline_and_system();
-    
-
-    
 }
 

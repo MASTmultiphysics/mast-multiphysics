@@ -64,7 +64,7 @@ elem_calculations(bool if_jac,
     
     // assembly of the flux terms
     e.internal_residual(if_jac, f_x, f_x_jac);
-    e.side_external_residual(if_jac, f_x, f_x_jac, _assembly->discipline().side_loads());
+    e.side_external_residual(if_jac, f_x, f_x_jac, _discipline->side_loads());
     
     //assembly of the capacitance term
     e.velocity_residual(if_jac, f_m, f_m_jac_xdot, f_m_jac);
@@ -91,7 +91,7 @@ linearized_jacobian_solution_product(RealVectorX& f) {
     
     
     e.linearized_internal_residual(false, f, dummy);
-    e.linearized_side_external_residual(false, f, dummy, _assembly->discipline().side_loads());
+    e.linearized_side_external_residual(false, f, dummy, _discipline->side_loads());
     
     // velocity term
     e.linearized_velocity_residual(false, f, dummy, dummy);
@@ -124,12 +124,14 @@ MAST::ConservativeFluidTransientAssemblyElemOperations::
 init(const libMesh::Elem& elem) {
     
     libmesh_assert(!_physics_elem);
-    
+    libmesh_assert(_system);
+    libmesh_assert(_assembly);
+
     const MAST::FlightCondition& p =
     dynamic_cast<MAST::ConservativeFluidDiscipline&>
     (_assembly->discipline()).flight_condition();
     
     _physics_elem =
-    new MAST::ConservativeFluidElementBase(_assembly->system_init(), *_assembly, elem, p);
+    new MAST::ConservativeFluidElementBase(*_system, *_assembly, elem, p);
 }
 

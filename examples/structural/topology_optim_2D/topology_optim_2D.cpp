@@ -28,9 +28,12 @@
 #include "level_set/level_set_reinitialization_transient_assembly.h"
 #include "level_set/level_set_volume_output.h"
 #include "level_set/level_set_boundary_velocity.h"
+#include "elasticity/structural_nonlinear_assembly.h"
 #include "elasticity/stress_output_base.h"
+#include "elasticity/structural_system_initialization.h"
 #include "base/parameter.h"
 #include "base/field_function_base.h"
+#include "base/mesh_field_function.h"
 #include "base/nonlinear_system.h"
 #include "base/transient_assembly.h"
 #include "solver/first_order_newmark_transient_solver.h"
@@ -41,84 +44,111 @@
 #include "libmesh/string_to_enum.h"
 #include "libmesh/mesh_generation.h"
 #include "libmesh/dof_map.h"
+#include "libmesh/exodusII_io.h"
 
 
-class Phi:
-public MAST::FieldFunction<RealVectorX> {
-
-public:
-    Phi(Real l1,
-        Real l2,
-        Real r):
-    MAST::FieldFunction<RealVectorX>("Phi"),
-    _l1  (l1),
-    _l2  (l2),
-    _r   (r),
-    _pi  (acos(-1.)) {
-
-        libmesh_assert_less(r, _l1*.5);
-        libmesh_assert_less(r, _l2*.5);
-    }
-    virtual ~Phi() {}
-    virtual void operator()(const libMesh::Point& p,
-                            const Real t,
-                            RealVectorX& v) const {
-
-        libmesh_assert_less_equal(t, 1);
-        libmesh_assert_equal_to(v.size(), 1);
+namespace MAST {
+    
+    class Phi:
+    public MAST::FieldFunction<RealVectorX> {
         
-        
-        // circle
-        //v(0) = -(pow(p(0)-_l1*.5, 2) + pow(p(1)-_l2*.5, 2) - pow(_r, 2));
-        
-        // waves
+    public:
+        Phi(Real l1,
+            Real l2,
+            Real r):
+        MAST::FieldFunction<RealVectorX>("Phi"),
+        _l1  (l1),
+        _l2  (l2),
+        _r   (r),
+        _pi  (acos(-1.)) {
+            
+            libmesh_assert_less(r, _l1*.5);
+            libmesh_assert_less(r, _l2*.5);
+        }
+        virtual ~Phi() {}
+        virtual void operator()(const libMesh::Point& p,
+                                const Real t,
+                                RealVectorX& v) const {
+            
+            libmesh_assert_less_equal(t, 1);
+            libmesh_assert_equal_to(v.size(), 1);
+            
+            
+            // circle
+            //v(0) = -(pow(p(0)-_l1*.5, 2) + pow(p(1)-_l2*.5, 2) - pow(_r, 2));
+            
+            // waves
+            Real
+            nx = 4.,
+            ny = 4.,
+            c  = 0.5,
+            pi = acos(-1.),
+            x  = p(0)-.5*_l1,
+            y  = p(1)-.5*_l2,
+            r  = pow(pow(x,2)+pow(y,2),.5);
+            //v(0) = 1.*cos(nx*r*_pi/_l1);
+            v(0) = cos(nx*pi*x/_l1)+cos(ny*pi*y/_l2)+c;
+            
+            // linear
+            //v(0) = (p(0)-_l1*0.5)*(-10.);
+            //v(0) = (p(0)+p(1)-_l1)*(-10.);
+        }
+    protected:
         Real
-        nx = 4.,
-        ny = 4.,
-        c  = 0.5,
-        pi = acos(-1.),
-        x  = p(0)-.5*_l1,
-        y  = p(1)-.5*_l2,
-        r  = pow(pow(x,2)+pow(y,2),.5);
-        //v(0) = 1.*cos(nx*r*_pi/_l1);
-        v(0) = cos(nx*pi*x/_l1)+cos(ny*pi*y/_l2)+c;
+        _l1,
+        _l2,
+        _r,
+        _pi;
+    };
+    
+    class Vel: public MAST::FieldFunction<Real> {
+    public:
+        Vel(): MAST::FieldFunction<Real>("vel") {}
         
-        // linear
-        //v(0) = (p(0)-_l1*0.5)*(-10.);
-        //v(0) = (p(0)+p(1)-_l1)*(-10.);
-    }
-protected:
-    Real
-    _l1,
-    _l2,
-    _r,
-    _pi;
-};
-
-class Vel: public MAST::FieldFunction<Real> {
-public:
-    Vel(): MAST::FieldFunction<Real>("vel") {}
-
-    virtual void operator() (const libMesh::Point& p,
-                             const Real t,
-                             Real& v) const {
-
-        // waves
-        Real
-        nt = 8.,
-        th = atan2(p(0)-.15, p(1)-.15);
-        v  = sin(nt*th/2.);
+        virtual void operator() (const libMesh::Point& p,
+                                 const Real t,
+                                 Real& v) const {
+            
+            // waves
+            Real
+            nt = 8.,
+            th = atan2(p(0)-.15, p(1)-.15);
+            v  = sin(nt*th/2.);
+            
+            // constant
+            // v    = 1.;
+        }
         
-        // constant
-        // v    = 1.;
-    }
-
-protected:
-
-};
-
-
-
+    protected:
+        
+    };
+    
+    
+    
+    class PhiMeshFunction:
+    public MAST::FieldFunction<Real> {
+    public:
+        PhiMeshFunction():
+        MAST::FieldFunction<Real>("phi"), _phi(nullptr) { }
+        virtual ~PhiMeshFunction(){ if (_phi) delete _phi;}
+        
+        void init(MAST::SystemInitialization& sys, const libMesh::NumericVector<Real>& sol) {
+            if (!_phi) _phi = new MAST::MeshFieldFunction(sys, "phi");
+            else _phi->clear();
+            _phi->init(sol);
+        }
+        
+        virtual void operator() (const libMesh::Point& p, const Real t, Real& v) const {
+            libmesh_assert(_phi);
+            RealVectorX v1;
+            (*_phi)(p, t, v1);
+            v = v1(0);
+        }
+        
+    protected:
+        MAST::MeshFieldFunction *_phi;
+    };
+}
 
 
 MAST::Examples::TopologyOptimizationLevelSet2D::
@@ -168,6 +198,7 @@ MAST::Examples::TopologyOptimizationLevelSet2D::initialize_solution() {
 
     Phi phi(length, width, min_val*0.4);
     _level_set_sys_init->initialize_solution(phi);
+    libMesh::ExodusII_IO(*_level_set_mesh).write_equation_systems("o.exo", *_level_set_eq_sys);
 }
 
 
@@ -180,15 +211,6 @@ MAST::Examples::TopologyOptimizationLevelSet2D::init(MAST::Examples::GetPotWrapp
     MAST::Examples::StructuralExample2D::init(input, prefix);
 
     
-    // FEType to initialize the system
-    // get the order and type of element
-    std::string
-    order_str   = input( prefix+ "level_set_fe_order", "order of finite element shape basis functions for level set method",    "first");
-    
-    libMesh::Order
-    o  = libMesh::Utility::string_to_enum<libMesh::Order>(order_str);
-    _level_set_fetype = libMesh::FEType(o, libMesh::LAGRANGE);
-
     
     /////////////////////////////////////////////////
     // now initialize the design data.
@@ -201,8 +223,11 @@ MAST::Examples::TopologyOptimizationLevelSet2D::init(MAST::Examples::GetPotWrapp
     // function value
     this->_init_phi_dvs();
     
-    // next, define the stress functional and volume constraint
-    this->_init_functions();
+    // one inequality constraint.
+    _n_ineq = 1;
+    
+    _level_set_vel         = new MAST::LevelSetBoundaryVelocity(2);
+    _level_set_function    = new PhiMeshFunction;
 }
 
 
@@ -217,7 +242,7 @@ MAST::Examples::TopologyOptimizationLevelSet2D::init_dvar(std::vector<Real>& x,
     x.resize(_n_vars);
     xmin.resize(_n_vars);
     xmax.resize(_n_vars);
-
+    
     std::fill(xmin.begin(), xmin.end(),   -1.);
     std::fill(xmax.begin(), xmax.end(),    1.);
     for (unsigned int i=0; i<_n_vars; i++)
@@ -239,36 +264,44 @@ MAST::Examples::TopologyOptimizationLevelSet2D::evaluate(const std::vector<Real>
     // copy DVs to level set function
     for (unsigned int i=0; i<_n_vars; i++)
         _level_set_sys->solution->set(_dv_params[i].first, dvars[i]);
+    _level_set_sys->solution->close();
+    _level_set_function->init(*_level_set_sys_init, *_level_set_sys->solution);
     
     /**********************************************************************
      * DO NOT zero out the gradient vector, since GCMMA needs it for the  *
      * subproblem solution                                                *
      **********************************************************************/
-    MAST::LevelSetNonlinearImplicitAssembly assembly;
-    assembly.set_discipline_and_system(*_level_set_discipline, *_level_set_sys_init);
-    assembly.set_level_set_function(*_level_set_function);
-    MAST::LevelSetVolume                    volume(assembly.get_intersection());
-    MAST::StressStrainOutputBase            stress;
+    MAST::LevelSetNonlinearImplicitAssembly         nonlinear_assembly;
+    MAST::LevelSetNonlinearImplicitAssembly         level_set_assembly;
+    MAST::StructuralNonlinearAssemblyElemOperations nonlinear_elem_ops;
+    nonlinear_elem_ops.set_discipline_and_system(*_discipline, *_structural_sys);
+    nonlinear_assembly.set_discipline_and_system(*_discipline, *_structural_sys);
+    nonlinear_assembly.set_level_set_function(*_level_set_function);
+    level_set_assembly.set_discipline_and_system(*_level_set_discipline, *_level_set_sys_init);
+    level_set_assembly.set_level_set_function(*_level_set_function);
+
+    MAST::LevelSetVolume                            volume(level_set_assembly.get_intersection());
+    MAST::StressStrainOutputBase                    stress;
     volume.set_discipline_and_system(*_level_set_discipline, *_level_set_sys_init);
-    
+
     //////////////////////////////////////////////////////////////////////
     // evaluate the objective
     //////////////////////////////////////////////////////////////////////
-    assembly.calculate_output(*_level_set_sys->solution, volume);
+    level_set_assembly.calculate_output(*_level_set_sys->solution, volume);
     obj       = volume.output_total();
     
     //////////////////////////////////////////////////////////////////////
     // evaluate the stress constraint
     //////////////////////////////////////////////////////////////////////
-    this->static_solve();
-    assembly.calculate_output(*_sys->solution, stress);
+    _sys->solve(nonlinear_elem_ops, nonlinear_assembly);
+    nonlinear_assembly.calculate_output(*_sys->solution, stress);
     fvals[0]  = stress.output_total();
-    
+
     //////////////////////////////////////////////////////////////////////
     // evaluate the objective sensitivities, if requested
     //////////////////////////////////////////////////////////////////////
     if (eval_obj_grad)
-        _evaluate_volume_sensitivity(volume, assembly, obj_grad);
+        _evaluate_volume_sensitivity(volume, level_set_assembly, obj_grad);
     
     //////////////////////////////////////////////////////////////////////
     // check to see if the sensitivity of constraint is requested
@@ -281,7 +314,11 @@ MAST::Examples::TopologyOptimizationLevelSet2D::evaluate(const std::vector<Real>
     // evaluate the sensitivities for constraints
     //////////////////////////////////////////////////////////////////////
     if (if_grad_sens)
-        _evaluate_stress_functional_sensitivity(stress, assembly, eval_grads, grads);
+        _evaluate_stress_functional_sensitivity(stress,
+                                                nonlinear_elem_ops,
+                                                nonlinear_assembly,
+                                                eval_grads,
+                                                grads);
 }
 
 
@@ -317,11 +354,13 @@ _evaluate_volume_sensitivity(MAST::LevelSetVolume& volume,
 void
 MAST::Examples::TopologyOptimizationLevelSet2D::
 _evaluate_stress_functional_sensitivity(MAST::StressStrainOutputBase& stress,
+                                        MAST::AssemblyElemOperations& elem_ops,
                                         MAST::LevelSetNonlinearImplicitAssembly& assembly,
                                         const std::vector<bool>& eval_grads,
                                         std::vector<Real>& grads) {
 
-    _sys->adjoint_solve(stress, assembly, false);
+    
+    _sys->adjoint_solve(elem_ops, stress, assembly, false);
 
     std::unique_ptr<libMesh::NumericVector<Real>>
     dphi(_level_set_sys->solution->zero_clone().release());
@@ -404,14 +443,23 @@ MAST::Examples::TopologyOptimizationLevelSet2D::_init_system_and_discipline() {
     
     // first initialize the structural system and discipline
     MAST::Examples::StructuralExample2D::_init_system_and_discipline();
+
+    // FEType to initialize the system
+    // get the order and type of element
+    std::string
+    order_str   = (*_input)(_prefix+ "level_set_fe_order", "order of finite element shape basis functions for level set method",    "first");
     
+    libMesh::Order
+    o  = libMesh::Utility::string_to_enum<libMesh::Order>(order_str);
+    _level_set_fetype = libMesh::FEType(o, libMesh::LAGRANGE);
+    
+
     // now initialize the level set related data structures
-    
-    _level_set_sys         = &(_eq_sys->add_system<MAST::NonlinearSystem>("level_set"));
+    _level_set_eq_sys      = new libMesh::EquationSystems(*_level_set_mesh);
+    _level_set_sys         = &(_level_set_eq_sys->add_system<MAST::NonlinearSystem>("level_set"));
     _level_set_sys_init    = new MAST::LevelSetSystemInitialization(*_level_set_sys,
                                                                     _level_set_sys->name(),
-                                                                    _fetype);
-    _level_set_vel         = new MAST::LevelSetBoundaryVelocity(2);
+                                                                    _level_set_fetype);
     _level_set_discipline  = new MAST::LevelSetDiscipline(*_eq_sys);
 }
 
@@ -426,6 +474,7 @@ MAST::Examples::TopologyOptimizationLevelSet2D::_init_dirichlet_conditions() {
     
     _discipline->init_system_dirichlet_bc(*_sys);
 }
+
 
 
 void
@@ -475,6 +524,8 @@ MAST::Examples::TopologyOptimizationLevelSet2D::_init_phi_dvs() {
             oss << "dv_" << _n_vars;
             dof_id                     = n.dof_number(0, 0, 0);
             val                        = _level_set_sys->solution->el(dof_id);
+            
+            _dv_params.push_back(std::pair<unsigned int, MAST::Parameter*>());
             _dv_params[_n_vars].first  = dof_id;
             _dv_params[_n_vars].second = new MAST::Parameter(oss.str(), val);
             
@@ -483,14 +534,6 @@ MAST::Examples::TopologyOptimizationLevelSet2D::_init_phi_dvs() {
     }
 }
 
-
-
-void
-MAST::Examples::TopologyOptimizationLevelSet2D::_init_functions() {
-    
-    libmesh_assert(_initialized);
-    
-}
 
 
 void
@@ -531,7 +574,6 @@ MAST::Examples::TopologyOptimizationLevelSet2D::level_set_solve() {
     // now solve the system
     level_set_assembly->set_discipline_and_system(*_level_set_discipline,
                                                   *_level_set_sys_init);
-    level_set_assembly->set_elem_operation_object(level_set_elem_ops);
     level_set_assembly->set_solver(level_set_solver);
     
     // file to write the solution for visualization

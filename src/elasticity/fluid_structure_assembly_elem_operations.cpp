@@ -64,9 +64,8 @@ set_local_fe_data(MAST::LocalElemFE& fe,
     
     if (e.dim() == 1) {
         
-        const MAST::ElementPropertyCard1D&
-        p_card = dynamic_cast<const MAST::ElementPropertyCard1D&>
-        (_assembly->discipline().get_property_card(e));
+        const MAST::ElementPropertyCard1D& p_card =
+        dynamic_cast<const MAST::ElementPropertyCard1D&>(_discipline->get_property_card(e));
         
         fe.set_1d_y_vector(p_card.y_vector());
     }

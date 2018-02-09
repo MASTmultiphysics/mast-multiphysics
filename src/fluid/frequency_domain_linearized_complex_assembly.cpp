@@ -82,7 +82,7 @@ elem_calculations(bool if_jac,
     
     // assembly of the flux terms
     e.internal_residual(if_jac, vec, mat);
-    e.side_external_residual(if_jac, vec, mat, _assembly->discipline().side_loads());
+    e.side_external_residual(if_jac, vec, mat, _discipline->side_loads());
 }
 
 
@@ -102,7 +102,7 @@ elem_sensitivity_calculations(ComplexVectorX& vec) {
     
     // assembly of the flux terms
     e.internal_residual_sensitivity(false, vec, dummy);
-    e.side_external_residual_sensitivity(false, vec, dummy, _assembly->discipline().side_loads());
+    e.side_external_residual_sensitivity(false, vec, dummy, _discipline->side_loads());
 }
 
 
@@ -112,15 +112,16 @@ MAST::FrequencyDomainLinearizedComplexAssemblyElemOperations::
 init(const libMesh::Elem& elem) {
     
     libmesh_assert(!_physics_elem);
-    
+    libmesh_assert(_system);
+    libmesh_assert(_assembly);
+
     const MAST::FlightCondition& p =
     dynamic_cast<MAST::ConservativeFluidDiscipline&>
     (_assembly->discipline()).flight_condition();
     
     FrequencyDomainLinearizedConservativeFluidElem
     *freq_elem =
-    new MAST::FrequencyDomainLinearizedConservativeFluidElem
-    (_assembly->system_init(), *_assembly, elem, p);
+    new MAST::FrequencyDomainLinearizedConservativeFluidElem(*_system, *_assembly, elem, p);
     freq_elem->freq   = _frequency;
     
     _physics_elem = freq_elem;

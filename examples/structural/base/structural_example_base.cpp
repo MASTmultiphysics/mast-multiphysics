@@ -107,7 +107,7 @@ MAST::Examples::StructuralExampleBase::init(MAST::Examples::GetPotWrapper& input
                                             const std::string& prefix) {
     
     MAST::Examples::ExampleBase::init(input, prefix);
-
+    
     _init_mesh();
     _init_system_and_discipline();
     _init_dirichlet_conditions();
@@ -394,10 +394,8 @@ MAST::Examples::StructuralExampleBase::static_solve() {
     MAST::StressAssembly                             stress_assembly;
     MAST::StressStrainOutputBase                     stress_elem_ops;
     stress_elem_ops.set_participating_elements_to_all();
-    
-    assembly.set_discipline_and_system(*_discipline,
-                                       *_structural_sys);
-    assembly.set_elem_operation_object(elem_ops);
+    assembly.set_discipline_and_system(*_discipline, *_structural_sys);
+    stress_assembly.set_discipline_and_system(*_discipline, *_structural_sys);
 
     
     // initialize the solution before solving
@@ -415,17 +413,13 @@ MAST::Examples::StructuralExampleBase::static_solve() {
         this->update_load_parameters((i+1.)/(1.*n_steps));
         
         // solve the system
-        _sys->solve(assembly);
+        _sys->solve(elem_ops, assembly);
         
         // output, if asked
         if (output) {
             
             // update stress values
-            stress_assembly.set_discipline_and_system(*_discipline, *_structural_sys);
-            stress_assembly.set_elem_operation_object(stress_elem_ops);
-            stress_assembly.update_stress_strain_data(*_sys->solution);
-            stress_assembly.clear_discipline_and_system();
-            stress_assembly.clear_elem_operation_object();
+            stress_assembly.update_stress_strain_data(stress_elem_ops, *_sys->solution);
             
             // write the solution for visualization
             exodus_writer.write_timestep(output_name,
@@ -434,8 +428,9 @@ MAST::Examples::StructuralExampleBase::static_solve() {
                                          (1.*i)/(1.*(n_steps-1)));
         }
     }
+    
     assembly.clear_discipline_and_system();
-    assembly.clear_elem_operation_object();
+    stress_assembly.clear_discipline_and_system();
     _sys->nonlinear_solver->nearnullspace_object = nullptr;
 }
 
@@ -472,17 +467,16 @@ MAST::Examples::StructuralExampleBase::static_sensitivity_solve(MAST::Parameter&
     //   sensitivity of solution
     /////////////////////////////////////////////////////////////////////
     assembly.set_discipline_and_system(*_discipline, *_structural_sys);
-    assembly.set_elem_operation_object(elem_ops);
-    
+    stress_assembly.set_discipline_and_system(*_discipline, *_structural_sys);
+
     MAST::StructuralNearNullVectorSpace nsp;
     _sys->nonlinear_solver->nearnullspace_object = &nsp;
 
     // zero the solution before solving
     // we are assuming that the nonlinear solve was completed before this.
     // So, we will reuse that matrix, as opposed to reassembling it
-    _sys->sensitivity_solve(assembly, p, false);
+    _sys->sensitivity_solve(elem_ops, assembly, p, false);
 
-    stress_elem_ops.set_assembly(assembly);
     // evaluate output before calculation of sensitivity, since the
     // object requires the data
     assembly.calculate_output(*_sys->solution, stress_elem_ops);
@@ -491,11 +485,9 @@ MAST::Examples::StructuralExampleBase::static_sensitivity_solve(MAST::Parameter&
                                                  dXdp,
                                                  p,
                                                  stress_elem_ops);
-    stress_elem_ops.clear_assembly();
     libMesh::out << "dq/dp: direct: " << stress_elem_ops.output_sensitivity_total(p) << std::endl;
     
     assembly.clear_discipline_and_system();
-    assembly.clear_elem_operation_object();
     
     /////////////////////////////////////////////////////////////////////
     // write the solution for visualization
@@ -505,15 +497,13 @@ MAST::Examples::StructuralExampleBase::static_sensitivity_solve(MAST::Parameter&
         /////////////////////////////////////////////////////////////////////
         //   sensitivity of stress for plotting
         /////////////////////////////////////////////////////////////////////
-        stress_assembly.set_discipline_and_system(*_discipline, *_structural_sys);
-        stress_assembly.set_elem_operation_object(stress_elem_ops);
-        stress_assembly.update_stress_strain_sensitivity_data(*_sys->solution,
+        stress_assembly.update_stress_strain_sensitivity_data(stress_elem_ops,
+                                                              *_sys->solution,
                                                               dXdp,
                                                               p,
                                                               dsigma_dp);
         
         stress_assembly.clear_discipline_and_system();
-        stress_assembly.clear_elem_operation_object();
         
         // swap solutions for output, since libMesh writes System::solution
         // to the output.
@@ -557,7 +547,6 @@ static_adjoint_sensitivity_solve(//MAST::OutputAssemblyElemOperations& q,
     stress_elem_ops.set_participating_elements_to_all();
     
     assembly.set_discipline_and_system(*_discipline, *_structural_sys);
-    assembly.set_elem_operation_object(elem_ops);
     
     MAST::StructuralNearNullVectorSpace nsp;
     _sys->nonlinear_solver->nearnullspace_object = &nsp;
@@ -566,16 +555,14 @@ static_adjoint_sensitivity_solve(//MAST::OutputAssemblyElemOperations& q,
     // zero the solution before solving
     // we are assuming that the nonlinear solve was completed before this.
     // So, we will reuse that matrix, as opposed to reassembling it
-    stress_elem_ops.set_assembly(assembly);
     assembly.calculate_output(*_sys->solution, stress_elem_ops);
     libMesh::out << "output : " << stress_elem_ops.output_total() << std::endl;
-    _sys->adjoint_solve(stress_elem_ops, assembly, false);
+    _sys->adjoint_solve(elem_ops, stress_elem_ops, assembly, false);
     
     assembly.calculate_output_adjoint_sensitivity(*_sys->solution,
                                                   _sys->get_adjoint_solution(),
                                                   p,
                                                   stress_elem_ops);
-    stress_elem_ops.clear_assembly();
     assembly.clear_discipline_and_system();
     
     
@@ -630,8 +617,7 @@ MAST::Examples::StructuralExampleBase::modal_solve(std::vector<Real>& eig) {
 
     
     assembly.set_discipline_and_system(*_discipline, *_structural_sys);
-    assembly.set_elem_operation_object(elem_ops);
-    _sys->eigenproblem_solve(assembly);
+    _sys->eigenproblem_solve(elem_ops, assembly);
     assembly.clear_discipline_and_system();
     
     // Get the number of converged eigen pairs.
@@ -712,8 +698,7 @@ MAST::Examples::StructuralExampleBase::modal_sensitivity_solve(MAST::Parameter& 
 
     
     assembly.set_discipline_and_system(*_discipline, *_structural_sys);
-    assembly.set_elem_operation_object(elem_ops);
-    _sys->eigenproblem_sensitivity_solve(assembly, p, deig_dp);
+    _sys->eigenproblem_sensitivity_solve(elem_ops, assembly, p, deig_dp);
     assembly.clear_discipline_and_system();
     
     
@@ -769,11 +754,8 @@ MAST::Examples::StructuralExampleBase::modal_solve_with_nonlinear_load_stepping(
 
     
     nonlinear_assembly.set_discipline_and_system(*_discipline, *_structural_sys);
-    nonlinear_assembly.set_elem_operation_object(nonlinear_elem_ops);
     modal_assembly.set_discipline_and_system(*_discipline, *_structural_sys);
-    modal_assembly.set_elem_operation_object(modal_elem_ops);
     stress_assembly.set_discipline_and_system(*_discipline, *_structural_sys);
-    stress_assembly.set_elem_operation_object(stress_elem_ops);
 
     libMesh::ExodusII_IO exodus_writer(*_mesh);
     // writer for the modes
@@ -807,13 +789,13 @@ MAST::Examples::StructuralExampleBase::modal_solve_with_nonlinear_load_stepping(
         ///////////////////////////////////////////////////////////////////
         // nonlinear solution
         ///////////////////////////////////////////////////////////////////
-        _sys->solve(nonlinear_assembly);
+        _sys->solve(nonlinear_elem_ops, nonlinear_assembly);
         
 
         ///////////////////////////////////////////////////////////////////
         // stress update
         ///////////////////////////////////////////////////////////////////
-        stress_assembly.update_stress_strain_data(*_sys->solution);
+        stress_assembly.update_stress_strain_data(stress_elem_ops, *_sys->solution);
 
         if (output) {
             exodus_writer.write_timestep(static_output_name,
@@ -829,7 +811,7 @@ MAST::Examples::StructuralExampleBase::modal_solve_with_nonlinear_load_stepping(
         base_sol = *_sys->solution;
         
         modal_assembly.set_base_solution(base_sol);
-        _sys->eigenproblem_solve(modal_assembly);
+        _sys->eigenproblem_solve(modal_elem_ops, modal_assembly);
         
         // Get the number of converged eigen pairs.
         unsigned int
@@ -921,10 +903,8 @@ MAST::Examples::StructuralExampleBase::transient_solve() {
     MAST::SecondOrderNewmarkTransientSolver solver;
     
     assembly.set_discipline_and_system(*_discipline, *_structural_sys);
-    assembly.set_elem_operation_object(elem_ops);
     assembly.set_solver(solver);
     stress_assembly.set_discipline_and_system(*_discipline, *_structural_sys);
-    stress_assembly.set_elem_operation_object(stress_elem_ops);
 
     // initialize the solution to zero, or to something that the
     // user may have provided
@@ -976,7 +956,7 @@ MAST::Examples::StructuralExampleBase::transient_solve() {
         solver.advance_time_step();
         
         // update stress values
-        stress_assembly.update_stress_strain_data(*_sys->solution);
+        stress_assembly.update_stress_strain_data(stress_elem_ops, *_sys->solution);
 
         // update time value
         tval  += solver.dt;
@@ -1016,10 +996,8 @@ MAST::Examples::StructuralExampleBase::transient_sensitivity_solve(MAST::Paramet
     MAST::SecondOrderNewmarkTransientSolver solver;
     
     assembly.set_discipline_and_system(*_discipline, *_structural_sys);
-    assembly.set_elem_operation_object(elem_ops);
     assembly.set_solver(solver);
     stress_assembly.set_discipline_and_system(*_discipline, *_structural_sys);
-    stress_assembly.set_elem_operation_object(stress_elem_ops);
 
     // initialize the solution to zero, or to something that the
     // user may have provided
@@ -1073,7 +1051,8 @@ MAST::Examples::StructuralExampleBase::transient_sensitivity_solve(MAST::Paramet
         solver.advance_time_step_with_sensitivity();
         
         // update stress values
-        stress_assembly.update_stress_strain_sensitivity_data(solver.solution(),
+        stress_assembly.update_stress_strain_sensitivity_data(stress_elem_ops,
+                                                              solver.solution(),
                                                               solver.solution_sensitivity(),
                                                               p,
                                                               *_structural_sys->get_stress_sys().solution);
@@ -1146,7 +1125,6 @@ MAST::Examples::StructuralExampleBase::piston_theory_flutter_solve() {
     MAST::StructuralFluidInteractionAssembly fsi_assembly;
     MAST::FluidStructureAssemblyElemOperations fsi_elem_ops;
     fsi_assembly.set_discipline_and_system(*_discipline, *_structural_sys);
-    fsi_assembly.set_elem_operation_object(fsi_elem_ops);
     _flutter_solver->attach_assembly(fsi_assembly);
     _flutter_solver->initialize(velocity,
                                 V_low,
@@ -1159,7 +1137,6 @@ MAST::Examples::StructuralExampleBase::piston_theory_flutter_solve() {
                                                                            max_iters);
     _flutter_solver->print_sorted_roots();
     fsi_assembly.clear_discipline_and_system();
-    fsi_assembly.clear_elem_operation_object();
     _flutter_solver->clear_assembly_object();
 
     // make sure solution was found
@@ -1198,14 +1175,12 @@ piston_theory_flutter_sensitivity_solve(MAST::Parameter& p) {
     MAST::FluidStructureAssemblyElemOperations fsi_elem_ops;
     
     fsi_assembly.set_discipline_and_system(*_discipline, *_structural_sys);
-    fsi_assembly.set_elem_operation_object(fsi_elem_ops);
     _flutter_solver->attach_assembly(fsi_assembly);
 
     _flutter_solver->calculate_sensitivity(*_flutter_root, p);
 
     _flutter_solver->clear_assembly_object();
     fsi_assembly.clear_discipline_and_system();
-    fsi_assembly.clear_elem_operation_object();
 }
 
 

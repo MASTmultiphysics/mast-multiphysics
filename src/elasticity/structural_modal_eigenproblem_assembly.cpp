@@ -106,8 +106,8 @@ elem_calculations(RealMatrixX& mat_A,
     
     // calculate the Jacobian components
     e.internal_residual(true, vec, mat_A);
-    e.side_external_residual(true, vec, mat, mat_A, _assembly->discipline().side_loads());
-    e.volume_external_residual(true, vec, mat, mat_A, _assembly->discipline().volume_loads());
+    e.side_external_residual(true, vec, mat, mat_A, _discipline->side_loads());
+    e.volume_external_residual(true, vec, mat, mat_A, _discipline->volume_loads());
     
     // calculate the mass matrix components
     e.inertial_residual(true, vec, mat_B, mat, mat_A);
@@ -134,8 +134,8 @@ elem_sensitivity_calculations(bool base_sol,
     
     // calculate the Jacobian components
     e.internal_residual_sensitivity(true, vec, mat_A);
-    e.side_external_residual_sensitivity(true, vec, mat, mat_A, _assembly->discipline().side_loads());
-    e.volume_external_residual_sensitivity(true, vec, mat, mat_A, _assembly->discipline().volume_loads());
+    e.side_external_residual_sensitivity(true, vec, mat, mat_A, _discipline->side_loads());
+    e.volume_external_residual_sensitivity(true, vec, mat, mat_A, _discipline->volume_loads());
     
     // calculate the mass matrix components
     e.inertial_residual_sensitivity(true, vec, mat_B, mat, mat_A);
@@ -153,13 +153,15 @@ MAST::StructuralModalEigenproblemAssemblyElemOperations::
 init(const libMesh::Elem& elem) {
 
     libmesh_assert(!_physics_elem);
-    
+    libmesh_assert(_system);
+    libmesh_assert(_assembly);
+
     const MAST::ElementPropertyCardBase& p =
     dynamic_cast<const MAST::ElementPropertyCardBase&>
-    (_assembly->discipline().get_property_card(elem));
+    (_discipline->get_property_card(elem));
     
     _physics_elem =
-    MAST::build_structural_element(_assembly->system_init(), *_assembly, elem, p).release();
+    MAST::build_structural_element(*_system, *_assembly, elem, p).release();
 }
 
 
@@ -173,7 +175,7 @@ set_local_fe_data(MAST::LocalElemFE& fe,
         
         const MAST::ElementPropertyCard1D&
         p_card = dynamic_cast<const MAST::ElementPropertyCard1D&>
-        (_assembly->discipline().get_property_card(e));
+        (_discipline->get_property_card(e));
         
         fe.set_1d_y_vector(p_card.y_vector());
     }

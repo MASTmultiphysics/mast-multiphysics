@@ -226,6 +226,8 @@ MAST::AssemblyBase::detach_solution_function() {
 std::unique_ptr<MAST::FEBase>
 MAST::AssemblyBase::build_fe(const libMesh::Elem& elem) {
 
+    libmesh_assert(_elem_ops);
+
     std::unique_ptr<MAST::FEBase> fe;
 
     if (_elem_ops->if_use_local_elem() &&
@@ -254,7 +256,8 @@ MAST::AssemblyBase::calculate_output(const libMesh::NumericVector<Real>& X,
     
     libmesh_assert(_discipline);
     libmesh_assert(_system);
-    
+
+    this->set_elem_operation_object(output);
     MAST::NonlinearSystem& nonlin_sys = _system->system();
     output.zero();
     
@@ -308,6 +311,8 @@ MAST::AssemblyBase::calculate_output(const libMesh::NumericVector<Real>& X,
     // if a solution function is attached, clear it
     if (_sol_function)
         _sol_function->clear();
+    
+    this->clear_elem_operation_object();
 }
 
 
@@ -321,6 +326,8 @@ calculate_output_derivative(const libMesh::NumericVector<Real>& X,
     
     libmesh_assert(_discipline);
     libmesh_assert(_system);
+
+    this->set_elem_operation_object(output);
 
     MAST::NonlinearSystem& nonlin_sys = _system->system();
     
@@ -385,6 +392,7 @@ calculate_output_derivative(const libMesh::NumericVector<Real>& X,
         _sol_function->clear();
     
     dq_dX.close();
+    this->clear_elem_operation_object();
 }
 
 
@@ -398,6 +406,8 @@ calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
 
     libmesh_assert(_discipline);
     libmesh_assert(_system);
+
+    this->set_elem_operation_object(output);
 
     MAST::NonlinearSystem& nonlin_sys = _system->system();
     
@@ -462,6 +472,8 @@ calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
     // if a solution function is attached, clear it
     if (_sol_function)
         _sol_function->clear();
+    
+    this->clear_elem_operation_object();
 }
 
 
@@ -488,11 +500,15 @@ calculate_output_adjoint_sensitivity(const libMesh::NumericVector<Real>& X,
     libMesh::NumericVector<Real>
     &dres_dp = nonlin_sys.add_sensitivity_rhs();
     
+    this->set_elem_operation_object(output);
+
     this->sensitivity_assemble(p, dres_dp);
     
     Real
     dq_dp = output.output_sensitivity_total(p) + dq_dX.dot(dres_dp);
     
     libMesh::out << "dq/dp: adjoint: " << dq_dp << std::endl;
+    
+    this->clear_elem_operation_object();
 }
 

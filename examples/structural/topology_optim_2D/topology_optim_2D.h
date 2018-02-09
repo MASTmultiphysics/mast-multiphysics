@@ -35,6 +35,8 @@ namespace MAST  {
     class LevelSetNonlinearImplicitAssembly;
     class StressStrainOutputBase;
     class LevelSetBoundaryVelocity;
+    class PhiMeshFunction;
+    class AssemblyElemOperations;
     template <typename ValType> class FieldFunction;
     
     
@@ -95,12 +97,12 @@ namespace MAST  {
             virtual void _init_eq_sys();
             virtual void _init_loads();
             virtual void _init_phi_dvs();
-            virtual void _init_functions();
             
             void _evaluate_volume_sensitivity(LevelSetVolume& volume,
                                               MAST::LevelSetNonlinearImplicitAssembly& assembly,
                                               std::vector<Real>& obj_grad);
             void _evaluate_stress_functional_sensitivity(MAST::StressStrainOutputBase& stress,
+                                                         MAST::AssemblyElemOperations& elem_ops,
                                                          MAST::LevelSetNonlinearImplicitAssembly& assembly,
                                                          const std::vector<bool>& eval_grads,
                                                          std::vector<Real>& grads);
@@ -112,7 +114,7 @@ namespace MAST  {
             MAST::NonlinearSystem*                    _level_set_sys;
             MAST::LevelSetSystemInitialization*       _level_set_sys_init;
             MAST::LevelSetDiscipline*                 _level_set_discipline;
-            MAST::FieldFunction<Real>*                _level_set_function;
+            PhiMeshFunction*                          _level_set_function;
             MAST::LevelSetBoundaryVelocity*           _level_set_vel;
             std::vector<std::pair<unsigned int, MAST::Parameter*>>  _dv_params;
         };

@@ -323,11 +323,10 @@ MAST::PanelSmallDisturbanceFrequencyDomainInviscidAnalysis3D::solve(bool if_writ
     // now solve the system
     assembly.set_discipline_and_system(*_discipline,
                                        *_fluid_sys);
-    assembly.set_elem_operation_object(elem_ops);
     assembly.set_base_solution(base_sol);
     elem_ops.set_frequency_function(*_freq_function);
     
-    solver.solve_block_matrix(assembly);
+    solver.solve_block_matrix(elem_ops, assembly);
     
     if (if_write_output) {
         

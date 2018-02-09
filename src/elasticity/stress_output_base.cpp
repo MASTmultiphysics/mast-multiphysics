@@ -377,16 +377,15 @@ MAST::StressStrainOutputBase::output_derivative_for_elem(RealVectorX& dq_dX) {
 void
 MAST::StressStrainOutputBase::init(const libMesh::Elem& elem) {
     
-    libmesh_assert(_assembly);
     libmesh_assert(!_physics_elem);
+    libmesh_assert(_assembly);
+    libmesh_assert(_system);
     
     const MAST::ElementPropertyCardBase& p =
-    dynamic_cast<const MAST::ElementPropertyCardBase&>
-    (_assembly->discipline().get_property_card(elem));
+    dynamic_cast<const MAST::ElementPropertyCardBase&>(_discipline->get_property_card(elem));
     
     _physics_elem =
-    MAST::build_structural_element
-    (_assembly->system_init(), *_assembly, elem, p).release();
+    MAST::build_structural_element(*_system, *_assembly, elem, p).release();
 }
 
 
@@ -398,9 +397,8 @@ MAST::StressStrainOutputBase::set_local_fe_data(MAST::LocalElemFE& fe,
     
     if (e.dim() == 1) {
         
-        const MAST::ElementPropertyCard1D&
-        p_card = dynamic_cast<const MAST::ElementPropertyCard1D&>
-        (_assembly->discipline().get_property_card(e));
+        const MAST::ElementPropertyCard1D& p_card =
+        dynamic_cast<const MAST::ElementPropertyCard1D&>(_discipline->get_property_card(e));
         
         fe.set_1d_y_vector(p_card.y_vector());
     }
@@ -561,7 +559,7 @@ MAST::StressStrainOutputBase::get_thermal_load_for_elem(const libMesh::Elem& ele
         
 
     MAST::VolumeBCMapType&
-    vol_loads = _assembly->discipline().volume_loads();
+    vol_loads = _discipline->volume_loads();
     
     std::pair<std::multimap<libMesh::subdomain_id_type, MAST::BoundaryConditionBase*>::const_iterator,
     std::multimap<libMesh::subdomain_id_type, MAST::BoundaryConditionBase*>::const_iterator> it;

@@ -78,14 +78,15 @@ MAST::StructuralNonlinearAssemblyElemOperations::
 init(const libMesh::Elem& elem) {
     
     libmesh_assert(!_physics_elem);
-    
+    libmesh_assert(_system);
+    libmesh_assert(_assembly);
+
     const MAST::ElementPropertyCardBase& p =
     dynamic_cast<const MAST::ElementPropertyCardBase&>
-    (_assembly->discipline().get_property_card(elem));
+    (_discipline->get_property_card(elem));
     
     _physics_elem =
-    MAST::build_structural_element
-    (_assembly->system_init(), *_assembly, elem, p).release();
+    MAST::build_structural_element(*_system, *_assembly, elem, p).release();
 }
 
 
@@ -112,12 +113,12 @@ elem_calculations(bool if_jac,
                              vec,
                              dummy,
                              mat,
-                             _assembly->discipline().side_loads());
+                             _discipline->side_loads());
     e.volume_external_residual(if_jac,
                                vec,
                                dummy,
                                mat,
-                               _assembly->discipline().volume_loads());
+                               _discipline->volume_loads());
 }
 
 
@@ -140,12 +141,12 @@ elem_linearized_jacobian_solution_product(RealVectorX& vec) {
                                         vec,
                                         mat,
                                         mat,
-                                        _assembly->discipline().side_loads());
+                                        _discipline->side_loads());
     e.linearized_volume_external_residual(false,
                                           vec,
                                           mat,
                                           mat,
-                                          _assembly->discipline().volume_loads());
+                                          _discipline->volume_loads());
 }
 
 
@@ -169,12 +170,12 @@ elem_sensitivity_calculations(RealVectorX& vec) {
                                          vec,
                                          dummy,
                                          dummy,
-                                         _assembly->discipline().side_loads());
+                                         _discipline->side_loads());
     e.volume_external_residual_sensitivity(false,
                                            vec,
                                            dummy,
                                            dummy,
-                                           _assembly->discipline().volume_loads());
+                                           _discipline->volume_loads());
 }
 
 
@@ -428,7 +429,7 @@ set_local_fe_data(MAST::LocalElemFE& fe,
         
         const MAST::ElementPropertyCard1D&
         p_card = dynamic_cast<const MAST::ElementPropertyCard1D&>
-        (_assembly->discipline().get_property_card(e));
+        (_discipline->get_property_card(e));
         
         fe.set_1d_y_vector(p_card.y_vector());
     }

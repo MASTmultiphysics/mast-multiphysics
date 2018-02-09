@@ -214,7 +214,6 @@
 //
 //    assembly.set_discipline_and_system(   *_discipline,
 //                                          *_thermal_sys);
-//    assembly.set_elem_operation_object(elem_ops);
 //
 //    MAST::NonlinearSystem& nonlin_sys = assembly.system();
 //    

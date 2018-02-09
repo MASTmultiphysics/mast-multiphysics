@@ -58,7 +58,8 @@ namespace MAST {
          *   updated. This will put the stress data in the System::solution
          *   vector related to stress/strain values.
          */
-        void update_stress_strain_data(const libMesh::NumericVector<Real>& X) const;
+        void update_stress_strain_data(MAST::StressStrainOutputBase&       ops,
+                                       const libMesh::NumericVector<Real>& X);
 
         /*!
          *   updates the sensitivity of stresses and strains for the specified
@@ -66,10 +67,11 @@ namespace MAST {
          *   to parameter \p p. Only the maximum values out of each element are
          *   updated.
          */
-        void update_stress_strain_sensitivity_data(const libMesh::NumericVector<Real>& X,
+        void update_stress_strain_sensitivity_data(MAST::StressStrainOutputBase&       ops,
+                                                   const libMesh::NumericVector<Real>& X,
                                                    const libMesh::NumericVector<Real>& dXdp,
                                                    const MAST::FunctionBase& p,
-                                                   libMesh::NumericVector<Real>& dsigmadp) const;
+                                                   libMesh::NumericVector<Real>& dsigmadp);
 
 
     protected:

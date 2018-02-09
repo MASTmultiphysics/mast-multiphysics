@@ -47,7 +47,7 @@ MAST::SecondOrderNewmarkTransientSolver::solve() {
     libmesh_assert_msg(_system, "System pointer is nullptr.");
     
     // ask the Newton solver to solve for the system solution
-    _system->solve(*_assembly);
+    _system->solve(*this, *_assembly);
     
 }
 
@@ -60,7 +60,7 @@ MAST::SecondOrderNewmarkTransientSolver::sensitivity_solve(const MAST::FunctionB
     libmesh_assert_msg(_system, "System pointer is nullptr.");
     
     // ask the Newton solver to solve for the system solution
-    _system->sensitivity_solve(*_assembly, f);
+    _system->sensitivity_solve(*this, *_assembly, f);
     
 }
 

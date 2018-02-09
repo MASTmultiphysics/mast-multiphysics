@@ -190,7 +190,10 @@ void MAST::NonlinearSystem::reinit () {
 
 
 void
-MAST::NonlinearSystem::solve(MAST::AssemblyBase&  assembly) {
+MAST::NonlinearSystem::solve(MAST::AssemblyElemOperations& elem_ops,
+                             MAST::AssemblyBase&  assembly) {
+    
+    assembly.set_elem_operation_object(elem_ops);
     
     libMesh::NonlinearImplicitSystem::ComputeResidualandJacobian
     *old_ptr = this->nonlinear_solver->residual_and_jacobian_object;
@@ -202,14 +205,19 @@ MAST::NonlinearSystem::solve(MAST::AssemblyBase&  assembly) {
     libMesh::NonlinearImplicitSystem::solve();
     
     this->nonlinear_solver->residual_and_jacobian_object = old_ptr;
+    
+    assembly.clear_elem_operation_object();
 }
 
 
 
 void
-MAST::NonlinearSystem::eigenproblem_solve(MAST::EigenproblemAssembly& assembly) {
+MAST::NonlinearSystem::eigenproblem_solve(MAST::AssemblyElemOperations& elem_ops,
+                                          MAST::EigenproblemAssembly& assembly) {
     
     START_LOG("eigensolve()", "NonlinearSystem");
+    
+    assembly.set_elem_operation_object(elem_ops);
     
     // A reference to the EquationSystems
     libMesh::EquationSystems& es = this->get_equation_systems();
@@ -338,9 +346,10 @@ MAST::NonlinearSystem::eigenproblem_solve(MAST::EigenproblemAssembly& assembly) 
     _n_converged_eigenpairs = solve_data.first;
     _n_iterations           = solve_data.second;
     
+    assembly.clear_elem_operation_object();
+    
     STOP_LOG("eigensolve()", "NonlinearSystem");
     
-    return;
 }
 
 
@@ -495,12 +504,15 @@ MAST::NonlinearSystem::get_eigenpair(unsigned int i,
 
 void
 MAST::NonlinearSystem::
-eigenproblem_sensitivity_solve (MAST::EigenproblemAssembly& assembly,
-                                const MAST::FunctionBase& f,
-                                std::vector<Real>& sens) {
+eigenproblem_sensitivity_solve (MAST::AssemblyElemOperations&  elem_ops,
+                                MAST::EigenproblemAssembly&    assembly,
+                                const MAST::FunctionBase&      f,
+                                std::vector<Real>&             sens) {
     
     // make sure that eigensolution is already available
     libmesh_assert(_n_converged_eigenpairs);
+
+    assembly.set_elem_operation_object(elem_ops);
     
     // the sensitivity is calculated based on the inner product of the left and
     // right eigen vectors.
@@ -603,6 +615,8 @@ eigenproblem_sensitivity_solve (MAST::EigenproblemAssembly& assembly,
     // now delete the x_right vectors
     for (unsigned int i=0; i<x_right.size(); i++)
         delete x_right[i];
+    
+    assembly.clear_elem_operation_object();
 }
 
 
@@ -660,13 +674,16 @@ initialize_condensed_dofs(MAST::PhysicsDisciplineBase& physics) {
 
 
 void
-MAST::NonlinearSystem::sensitivity_solve(MAST::AssemblyBase&       assembly,
-                                         const MAST::FunctionBase& p,
-                                         bool if_assemble_jacobian) {
+MAST::NonlinearSystem::sensitivity_solve(MAST::AssemblyElemOperations& elem_ops,
+                                         MAST::AssemblyBase&           assembly,
+                                         const MAST::FunctionBase&     p,
+                                         bool                          if_assemble_jacobian) {
     
     // Log how long the linear solve takes.
     LOG_SCOPE("sensitivity_solve()", "NonlinearSystem");
 
+    assembly.set_elem_operation_object(elem_ops);
+    
     libMesh::NumericVector<Real>
     &dsol  = this->add_sensitivity_solution(),
     &rhs   = this->add_sensitivity_rhs();
@@ -697,12 +714,15 @@ MAST::NonlinearSystem::sensitivity_solve(MAST::AssemblyBase&       assembly,
 #ifdef LIBMESH_ENABLE_CONSTRAINTS
     this->get_dof_map().enforce_constraints_exactly (*this, &dsol, /* homogeneous = */ true);
 #endif
+    
+    assembly.clear_elem_operation_object();
 }
 
 
 
 void
-MAST::NonlinearSystem::adjoint_solve(MAST::OutputAssemblyElemOperations& output,
+MAST::NonlinearSystem::adjoint_solve(MAST::AssemblyElemOperations&       elem_ops,
+                                     MAST::OutputAssemblyElemOperations& output,
                                      MAST::AssemblyBase&                 assembly,
                                      bool if_assemble_jacobian) {
     
@@ -714,9 +734,16 @@ MAST::NonlinearSystem::adjoint_solve(MAST::OutputAssemblyElemOperations& output,
     &dsol  = this->add_adjoint_solution(),
     &rhs   = this->add_adjoint_rhs();
 
-    if (if_assemble_jacobian)
+    if (if_assemble_jacobian) {
+        assembly.set_elem_operation_object(elem_ops);
         assembly.residual_and_jacobian(*solution, nullptr, matrix, *this);
+        assembly.clear_elem_operation_object();
+    }
+    
+    assembly.set_elem_operation_object(output);
     assembly.calculate_output_derivative(*solution, output, rhs);
+    assembly.clear_elem_operation_object();
+    
     rhs.scale(-1.);
     
     // Our iteration counts and residuals will be sums of the individual

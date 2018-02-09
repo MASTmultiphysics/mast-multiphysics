@@ -40,7 +40,6 @@ MAST::GCMMAOptimizationInterface::optimize() {
     M                  = _feval->n_eq() + _feval->n_ineq(),
     n_rel_change_iters = _feval->n_iters_relative_change();
     
-    libmesh_assert_greater(M, 0);
     libmesh_assert_greater(N, 0);
     
     std::vector<Real>  XVAL(N, 0.), XOLD1(N, 0.), XOLD2(N, 0.),

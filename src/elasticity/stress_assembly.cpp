@@ -98,13 +98,16 @@ get_max_stress_strain_values(const std::vector<MAST::StressStrainOutputBase::Dat
 
 
 void MAST::StressAssembly::
-update_stress_strain_data(const libMesh::NumericVector<Real>& X) const {
+update_stress_strain_data(MAST::StressStrainOutputBase&       ops,
+                          const libMesh::NumericVector<Real>& X) {
 
     // make sure it has been initialized
     libmesh_assert(_system);
     libmesh_assert(_discipline);
     libmesh_assert(_elem_ops);
     
+    this->set_elem_operation_object(ops);
+
     RealVectorX sol;
     
     const MAST::NonlinearSystem&
@@ -142,9 +145,6 @@ update_stress_strain_data(const libMesh::NumericVector<Real>& X) const {
     Real
     max_vm_stress    =   0.;
     
-    MAST::StressStrainOutputBase
-    &ops = dynamic_cast<MAST::StressStrainOutputBase&>(*_elem_ops);
-
     for ( ; el != end_el; el++) {
         
         const libMesh::Elem* elem = *el;
@@ -202,6 +202,7 @@ update_stress_strain_data(const libMesh::NumericVector<Real>& X) const {
     }
     
     stress_sys.solution->close();
+    this->clear_elem_operation_object();
 }
 
 
@@ -209,15 +210,18 @@ update_stress_strain_data(const libMesh::NumericVector<Real>& X) const {
 
 
 void MAST::StressAssembly::
-update_stress_strain_sensitivity_data(const libMesh::NumericVector<Real>& X,
+update_stress_strain_sensitivity_data(MAST::StressStrainOutputBase&       ops,
+                                      const libMesh::NumericVector<Real>& X,
                                       const libMesh::NumericVector<Real>& dXdp,
                                       const MAST::FunctionBase& p,
-                                      libMesh::NumericVector<Real>& dsigmadp) const {
+                                      libMesh::NumericVector<Real>& dsigmadp) {
     
     // make sure it has been initialized
     libmesh_assert(_system);
     libmesh_assert(_discipline);
     libmesh_assert(_elem_ops);
+    
+    this->set_elem_operation_object(ops);
     
     RealVectorX
     sol,
@@ -261,9 +265,6 @@ update_stress_strain_sensitivity_data(const libMesh::NumericVector<Real>& X,
     
     Real
     max_vm_stress    =   0.;
-    
-    MAST::StressStrainOutputBase
-    &ops = dynamic_cast<MAST::StressStrainOutputBase&>(*_elem_ops);
     
     for ( ; el != end_el; el++) {
         
@@ -331,6 +332,7 @@ update_stress_strain_sensitivity_data(const libMesh::NumericVector<Real>& X,
     
     dsigmadp.close();
     ops.set_stress_plot_mode(false);
+    this->clear_elem_operation_object();
 }
 
 

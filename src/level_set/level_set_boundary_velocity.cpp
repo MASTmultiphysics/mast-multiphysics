@@ -51,6 +51,8 @@ MAST::LevelSetBoundaryVelocity::operator() (const libMesh::Point& p,
                                             const Real t,
                                             RealVectorX& v) const {
     
+    libmesh_assert(_phi);
+    
     Real
     tol    = 1.e-6;
     

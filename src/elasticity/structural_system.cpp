@@ -82,7 +82,8 @@ MAST::StructuralSystem::clear() {
 
 
 void
-MAST::StructuralSystem::solve(MAST::AssemblyBase& assembly) {
+MAST::StructuralSystem::solve(MAST::AssemblyElemOperations& elem_ops,
+                              MAST::AssemblyBase& assembly) {
 
     // the system solves for both the structural displacement and
     // load update using a constraint definition
@@ -172,7 +173,7 @@ MAST::StructuralSystem::solve(MAST::AssemblyBase& assembly) {
         // delta_x1 = x - x0
         //       dx = delta_x1 - delta_x0
         // where delta_x0 is the delta_x at the end of the previous iterate
-        MAST::NonlinearSystem::solve(assembly);
+        MAST::NonlinearSystem::solve(elem_ops, assembly);
         
         // if the total load steps have been taken to the max load, then
         // quit
@@ -190,7 +191,7 @@ MAST::StructuralSystem::solve(MAST::AssemblyBase& assembly) {
         
         
         // next solve the displacement update due to load update
-        MAST::NonlinearSystem::sensitivity_solve(assembly, *_load_param);
+        MAST::NonlinearSystem::sensitivity_solve(elem_ops, assembly, *_load_param);
         *dx_load = this->get_sensitivity_solution();
         
         // now, calculate the load update using the constraint definition.

@@ -262,6 +262,7 @@ calculate_output(const libMesh::NumericVector<Real>& X,
     libmesh_assert(_system);
     libmesh_assert(_discipline);
     libmesh_assert(_level_set);
+    this->set_elem_operation_object(output);
 
     MAST::NonlinearSystem& nonlin_sys = _system->system();
     output.zero();
@@ -338,6 +339,7 @@ calculate_output(const libMesh::NumericVector<Real>& X,
     // if a solution function is attached, clear it
     if (_sol_function)
         _sol_function->clear();
+    this->clear_elem_operation_object();
 }
 
 
@@ -352,6 +354,8 @@ calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
     libmesh_assert(_system);
     libmesh_assert(_discipline);
     libmesh_assert(_level_set);
+
+    this->set_elem_operation_object(output);
 
     MAST::NonlinearSystem& nonlin_sys = _system->system();
     output.zero();
@@ -435,6 +439,7 @@ calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
     // if a solution function is attached, clear it
     if (_sol_function)
         _sol_function->clear();
+    this->clear_elem_operation_object();
 }
 
 
@@ -542,14 +547,17 @@ MAST::LevelSetNonlinearImplicitAssembly::constrain() {
 std::unique_ptr<MAST::FEBase>
 MAST::LevelSetNonlinearImplicitAssembly::build_fe(const libMesh::Elem& elem) {
     
+    libmesh_assert(_elem_ops);
+    libmesh_assert(_system);
+    libmesh_assert(_intersection);
+    
     std::unique_ptr<MAST::FEBase> fe;
     
     if (_elem_ops->if_use_local_elem() &&
         elem.dim() < 3) {
         
         MAST::SubCellFE*
-        local_fe = new MAST::SubCellFE(*_system,
-                                       *_intersection);
+        local_fe = new MAST::SubCellFE(*_system, *_intersection);
         // FIXME: we would ideally like to send this to the elem ops object for
         // setting of any local data. But the code has not been setup to do that
         // for SubCellFE. 
@@ -559,8 +567,7 @@ MAST::LevelSetNonlinearImplicitAssembly::build_fe(const libMesh::Elem& elem) {
     }
     else {
         
-        fe.reset(new MAST::SubCellFE(*_system,
-                                     *_intersection));
+        fe.reset(new MAST::SubCellFE(*_system, *_intersection));
     }
     
     return fe;

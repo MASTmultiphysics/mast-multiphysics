@@ -40,9 +40,9 @@ namespace MAST {
     class SlepcEigenSolver;
     class AssemblyBase;
     class PhysicsDisciplineBase;
+    class AssemblyElemOperations;
     class OutputAssemblyElemOperations;
     class FunctionBase;
-    class EigenproblemAssemblyElemOperations;
     class EigenproblemAssembly;
     
     
@@ -96,7 +96,8 @@ namespace MAST {
          *  solves the nonlinear problem with the specified assembly operation
          *  object
          */
-        virtual void solve(MAST::AssemblyBase& assembly);
+        virtual void solve(MAST::AssemblyElemOperations& elem_ops,
+                           MAST::AssemblyBase&           assembly);
         
         
         /*!
@@ -104,8 +105,9 @@ namespace MAST {
          *   The Jacobian will be assembled before adjoint solve if
          *   \par if_assemble_jacobian is \p true.
          */
-        void sensitivity_solve(MAST::AssemblyBase&           assembly,
-                               const MAST::FunctionBase&     p,
+        void sensitivity_solve(MAST::AssemblyElemOperations&   elem_ops,
+                               MAST::AssemblyBase&             assembly,
+                               const MAST::FunctionBase&       p,
                                bool if_assemble_jacobian = true);
 
         
@@ -114,7 +116,8 @@ namespace MAST {
          *   The Jacobian will be assembled before adjoint solve if
          *   \par if_assemble_jacobian is \p true.
          */
-        void adjoint_solve(MAST::OutputAssemblyElemOperations& output,
+        void adjoint_solve(MAST::AssemblyElemOperations&       elem_ops,
+                           MAST::OutputAssemblyElemOperations& output,
                            MAST::AssemblyBase&                 assembly,
                            bool if_assemble_jacobian           = true);
         
@@ -122,7 +125,8 @@ namespace MAST {
         /**
          * Assembles & solves the eigen system.
          */
-        virtual void eigenproblem_solve(MAST::EigenproblemAssembly& assembly);
+        virtual void eigenproblem_solve(MAST::AssemblyElemOperations& elem_ops,
+                                        MAST::EigenproblemAssembly&   assembly);
         
         /**
          * Solves the sensitivity system, for the provided parameters. The return
@@ -130,7 +134,8 @@ namespace MAST {
          * are returned in \p sens.
          */
         virtual void
-        eigenproblem_sensitivity_solve (MAST::EigenproblemAssembly& assembly,
+        eigenproblem_sensitivity_solve (MAST::AssemblyElemOperations& elem_ops,
+                                        MAST::EigenproblemAssembly& assembly,
                                         const MAST::FunctionBase& f,
                                         std::vector<Real>& sens);
         
