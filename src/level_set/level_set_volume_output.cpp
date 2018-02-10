@@ -69,10 +69,15 @@ MAST::LevelSetVolume::output_for_elem() {
     
     libmesh_assert(_physics_elem);
     
-    MAST::LevelSetElementBase&
-    e = dynamic_cast<MAST::LevelSetElementBase&>(*_physics_elem);
-    
-    return e.volume();
+    if (this->if_evaluate_for_element(_physics_elem->elem())) {
+        
+        MAST::LevelSetElementBase&
+        e = dynamic_cast<MAST::LevelSetElementBase&>(*_physics_elem);
+        
+        return e.volume();
+    }
+    else
+        return 0.;
 }
 
 
@@ -90,10 +95,16 @@ MAST::LevelSetVolume::output_sensitivity_for_elem(const MAST::FunctionBase& p) {
 
     libmesh_assert(_physics_elem);
 
-    MAST::LevelSetElementBase&
-    e = dynamic_cast<MAST::LevelSetElementBase&>(*_physics_elem);
+    if (this->if_evaluate_for_element(_physics_elem->elem())) {
+
+        MAST::LevelSetElementBase&
+        e = dynamic_cast<MAST::LevelSetElementBase&>(*_physics_elem);
+        
+        return e.volume_boundary_velocity_on_side(_intersection.get_side_on_interface(_physics_elem->elem()));
+    }
+    else
+        return 0.;
     
-    return e.volume_boundary_velocity_on_side(_intersection.get_side_on_interface(_physics_elem->elem()));
 }
 
 
@@ -110,10 +121,13 @@ MAST::LevelSetVolume::evaluate() {
 
     libmesh_assert(_physics_elem);
 
-    MAST::LevelSetElementBase&
-    e = dynamic_cast<MAST::LevelSetElementBase&>(*_physics_elem);
-
-    _vol += e.volume();
+    if (this->if_evaluate_for_element(_physics_elem->elem())) {
+        
+        MAST::LevelSetElementBase&
+        e = dynamic_cast<MAST::LevelSetElementBase&>(*_physics_elem);
+        
+        _vol += e.volume();
+    }
 }
 
 
@@ -122,10 +136,16 @@ MAST::LevelSetVolume::evaluate_sensitivity(const MAST::FunctionBase& f) {
 
     libmesh_assert(_physics_elem);
 
-    MAST::LevelSetElementBase&
-    e = dynamic_cast<MAST::LevelSetElementBase&>(*_physics_elem);
-    
-    _dvol_dp += e.volume_boundary_velocity_on_side(_intersection.get_side_on_interface(_physics_elem->elem()));
+    // sensitivity only exists at the boundary. So, we proceed with calculation
+    // only if this element has an intersection
+    if (this->if_evaluate_for_element(_physics_elem->elem()) &&
+         _intersection.if_intersection_through_elem()) {
+        
+        MAST::LevelSetElementBase&
+        e = dynamic_cast<MAST::LevelSetElementBase&>(*_physics_elem);
+        
+        _dvol_dp += e.volume_boundary_velocity_on_side(_intersection.get_side_on_interface(_physics_elem->elem()));
+    }
 }
 
 

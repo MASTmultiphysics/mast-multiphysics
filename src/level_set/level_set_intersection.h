@@ -38,6 +38,8 @@ namespace MAST {
         COLINEAR_EDGE,          // level set coliniear with edge of element
         ADJACENT_EDGES,         // level set passes through two adjacent edges
         OPPOSITE_EDGES,         // level set passes through two opposite edges
+        OPPOSITE_NODES,         // level set passes through diagonally opposite nodes
+        NODE_AND_EDGE,          // level set passes through a node and edge
         NO_INTERSECTION
     };
     
@@ -65,24 +67,52 @@ namespace MAST {
         void clear();
         
         /*!
-         *   @returns \p true if the mode is something other than
-         *   NO_INTERSECTION.
+         *   @returns mode of intersection
          */
-        bool if_intersection() const;
+        MAST::LevelSet2DIntersectionMode
+        get_intersection_mode() const;
+
+        /*!
+         *   @returns the node number on the element if the mode is THROUDH_NODE,
+         *   otherwise throws an error.
+         */
+        unsigned int node_on_boundary() const;
+
+        /*!
+         *   @returns the edge number on the element if the mode is COLINEAR_EDGE,
+         *   otherwise throws an error.
+         */
+        unsigned int edge_on_boundary() const;
+
         
         /*!
-         *   @returns \p true if the mode is ADJACENT_EDGES or OPPOSITE_EDGES.
+         *   @returns \p true if the intersection passes through the interior
+         *   of the element. 
          */
         bool if_intersection_through_elem() const;
 
         /*!
-         *   @returns true if the element is entirely on the positive side
+         *   @returns \p true if the element is entirely on the positive side
          *   of the level set without any intersection. This will return
          *   \p true only if the mode is NO_INTERSECTION and all nodal phi
          *   values are positive.
          */
         bool if_elem_on_positive_phi() const;
 
+        /*!
+         *   @returns \p true if the element is entirely on the negative side
+         *   of the level set without any intersection. This will return
+         *   \p true only if the mode is NO_INTERSECTION and all nodal phi
+         *   values are negative.
+         */
+        bool if_elem_on_negative_phi() const;
+
+        /*!
+         *  @returns \p true if there is any portion of the element (interior
+         *  or edge) that is on the positive side of the level set function.
+         */
+        bool if_elem_has_positive_phi_region() const;
+        
         const std::vector<const libMesh::Elem*>&
         get_sub_elems_positive_phi() const;
         
@@ -131,9 +161,23 @@ namespace MAST {
         
         bool                                         _initialized;
 
+        /*!
+         *   \p true if element is completely on the positive side of level set
+         *   with no intersection
+         */
         bool                                         _if_elem_on_positive_phi;
         
+        /*!
+         *   \p true if element is completely on the negative side of level set
+         *   with no intersection
+         */
+        bool                                         _if_elem_on_negative_phi;
+        
         MAST::LevelSet2DIntersectionMode             _mode;
+        
+        unsigned int                                 _node_num_on_boundary;
+        
+        unsigned int                                 _edge_num_on_boundary;
         
         std::vector<const libMesh::Elem*>            _positive_phi_elems;
         

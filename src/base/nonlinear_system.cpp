@@ -740,9 +740,7 @@ MAST::NonlinearSystem::adjoint_solve(MAST::AssemblyElemOperations&       elem_op
         assembly.clear_elem_operation_object();
     }
     
-    assembly.set_elem_operation_object(output);
     assembly.calculate_output_derivative(*solution, output, rhs);
-    assembly.clear_elem_operation_object();
     
     rhs.scale(-1.);
     

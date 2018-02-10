@@ -282,13 +282,15 @@ void
 MAST::StressStrainOutputBase::evaluate() {
 
     // make sure that this has not been initialized ana calculated for all elems
+    libmesh_assert(_physics_elem);
     libmesh_assert(!_primal_data_initialized);
-    
-    // ask for the values
-    dynamic_cast<MAST::StructuralElementBase*>
-    (_physics_elem)->calculate_stress(false,
-                                      false,
-                                      *this);
+
+    if (this->if_evaluate_for_element(_physics_elem->elem()))
+        // ask for the values
+        dynamic_cast<MAST::StructuralElementBase*>
+        (_physics_elem)->calculate_stress(false,
+                                          false,
+                                          *this);
 }
 
 
@@ -297,18 +299,22 @@ void
 MAST::StressStrainOutputBase::evaluate_sensitivity(const MAST::FunctionBase &f) {
     
     // the primal data should have been calculated
+    libmesh_assert(_physics_elem);
     if (!_if_stress_plot_mode)
         libmesh_assert(_primal_data_initialized);
 
-    _physics_elem->sensitivity_param = &f;
-
-    // ask for the values
-    dynamic_cast<MAST::StructuralElementBase*>
-    (_physics_elem)->calculate_stress(false,
-                                      true,
-                                      *this);
-
-    _physics_elem->sensitivity_param = nullptr;
+    if (this->if_evaluate_for_element(_physics_elem->elem())) {
+        
+        _physics_elem->sensitivity_param = &f;
+        
+        // ask for the values
+        dynamic_cast<MAST::StructuralElementBase*>
+        (_physics_elem)->calculate_stress(false,
+                                          true,
+                                          *this);
+        
+        _physics_elem->sensitivity_param = nullptr;
+    }
 }
 
 
@@ -355,19 +361,23 @@ MAST::StressStrainOutputBase::output_sensitivity_total(const MAST::FunctionBase&
 
 void
 MAST::StressStrainOutputBase::output_derivative_for_elem(RealVectorX& dq_dX) {
-    
+
+    libmesh_assert(_physics_elem);
     libmesh_assert(!_if_stress_plot_mode);
     libmesh_assert(_primal_data_initialized);
     
-    dq_dX.setZero();
-
-    dynamic_cast<MAST::StructuralElementBase*>
-    (_physics_elem)->calculate_stress(true,
-                                      false,
-                                      *this);
-
-    this->von_Mises_p_norm_functional_state_derivartive_for_elem(_physics_elem->elem(),
-                                                                 dq_dX);
+    if (this->if_evaluate_for_element(_physics_elem->elem())) {
+        
+        dq_dX.setZero();
+        
+        dynamic_cast<MAST::StructuralElementBase*>
+        (_physics_elem)->calculate_stress(true,
+                                          false,
+                                          *this);
+        
+        this->von_Mises_p_norm_functional_state_derivartive_for_elem(_physics_elem->elem(),
+                                                                     dq_dX);
+    }
 }
 
 

@@ -113,11 +113,19 @@ bool
 MAST::OutputAssemblyElemOperations::
 if_evaluate_for_element(const libMesh::Elem& elem) const {
 
+
     if (_if_evaluate_on_all_elems)
         return true;
-    else if (_elem_subset.count(&elem))
-        return true;
     else if (_sub_domain_ids.count(elem.subdomain_id()))
+        return true;
+
+    // check to see if the element has a parent. If yes, then use that element
+    // pointer otherwise use the element given in the function call.
+    const libMesh::Elem
+    *e = elem.parent();
+    if (!e) e = &elem;
+    
+    if (_elem_subset.count(e))
         return true;
     else
         return false;

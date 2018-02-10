@@ -77,6 +77,23 @@ namespace MAST {
                                libMesh::SparseMatrix<Real>*  J,
                                libMesh::NonlinearImplicitSystem& S);
 
+        
+        virtual bool
+        sensitivity_assemble (const MAST::FunctionBase& f,
+                              libMesh::NumericVector<Real>& sensitivity_rhs);
+        
+        
+        virtual void
+        calculate_output_derivative(const libMesh::NumericVector<Real>& X,
+                                    MAST::OutputAssemblyElemOperations& output,
+                                    libMesh::NumericVector<Real>& dq_dX);
+        
+        
+#if MAST_ENABLE_PLPLOT == 1
+        void plot_sub_elems();
+#endif
+        
+        
         /*!
          *   calculates the value of quantity \f$ q(X,p) \f$.
          */

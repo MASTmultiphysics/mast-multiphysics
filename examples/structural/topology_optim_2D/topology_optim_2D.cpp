@@ -37,7 +37,7 @@
 #include "base/nonlinear_system.h"
 #include "base/transient_assembly.h"
 #include "solver/first_order_newmark_transient_solver.h"
-
+#include "property_cards/element_property_card_2D.h"
 
 // libMesh includes
 #include "libmesh/serial_mesh.h"
@@ -210,7 +210,8 @@ MAST::Examples::TopologyOptimizationLevelSet2D::init(MAST::Examples::GetPotWrapp
     // let all other data structures be initialized
     MAST::Examples::StructuralExample2D::init(input, prefix);
 
-    
+    // ask structure to use Mindlin bending operator
+    dynamic_cast<MAST::ElementPropertyCard2D&>(*_p_card).set_bending_model(MAST::MINDLIN);
     
     /////////////////////////////////////////////////
     // now initialize the design data.
@@ -280,10 +281,22 @@ MAST::Examples::TopologyOptimizationLevelSet2D::evaluate(const std::vector<Real>
     level_set_assembly.set_discipline_and_system(*_level_set_discipline, *_level_set_sys_init);
     level_set_assembly.set_level_set_function(*_level_set_function);
 
+    // reinitialize the dof constraints before solution of the linear system
+    // FIXME: we should be able to clear the constraint object from the
+    // system before it goes out of scope, but libMesh::System does not
+    // have a clear method. So, we are going to leave it as is, hoping
+    // that libMesh::System will not attempt to use it (most likely, we
+    // shoudl be ok).
+    _sys->attach_constraint_object(nonlinear_assembly);
+    _sys->reinit_constraints();
+    
     MAST::LevelSetVolume                            volume(level_set_assembly.get_intersection());
     MAST::StressStrainOutputBase                    stress;
     volume.set_discipline_and_system(*_level_set_discipline, *_level_set_sys_init);
-
+    stress.set_discipline_and_system(*_discipline, *_structural_sys);
+    volume.set_participating_elements_to_all();
+    stress.set_participating_elements_to_all();
+    
     //////////////////////////////////////////////////////////////////////
     // evaluate the objective
     //////////////////////////////////////////////////////////////////////
