@@ -247,7 +247,8 @@ MAST::LevelSetIntersection::init(const MAST::FieldFunction<Real>& phi,
         // now figure out which side of the level-set function the
         // element lies on
         
-        if (min_val < _tol) { // element is on the negative side
+        if (min_val <= _tol &&
+            max_val <= _tol ) { // element is on the negative side
             _negative_phi_elems.push_back(&e);
         }
         else {
