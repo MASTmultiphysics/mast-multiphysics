@@ -95,6 +95,7 @@ MAST::SubCellFE::init(const libMesh::Elem& elem,
     
     std::unique_ptr<libMesh::Elem>
     local_coord_elem(libMesh::Elem::build(elem.type()).release());
+    local_coord_elem->set_id(elem.id());
     
     for (unsigned int i=0; i<elem.n_nodes(); i++) {
         const libMesh::Node
@@ -104,7 +105,7 @@ MAST::SubCellFE::init(const libMesh::Elem& elem,
         _local_nodes[i] = new libMesh::Node(p);
         // set the node id since libMesh does not allow invalid ids. This
         // should not influence the operations here
-        _local_nodes[i]->set_id(0);
+        _local_nodes[i]->set_id(n->id());
         local_coord_elem->set_node(i) = _local_nodes[i];
     }
     
@@ -217,7 +218,8 @@ MAST::SubCellFE::init_for_side(const libMesh::Elem& elem,
     
     std::unique_ptr<libMesh::Elem>
     local_coord_elem(libMesh::Elem::build(elem.type()).release());
-    
+    local_coord_elem->set_id(elem.id());
+
     for (unsigned int i=0; i<elem.n_nodes(); i++) {
         
         const libMesh::Node
@@ -227,7 +229,7 @@ MAST::SubCellFE::init_for_side(const libMesh::Elem& elem,
         _local_nodes[i] = new libMesh::Node(p);
         // set the node id since libMesh does not allow invalid ids. This
         // should not influence the operations here
-        _local_nodes[i]->set_id(0);
+        _local_nodes[i]->set_id(n->id());
         local_coord_elem->set_node(i) = _local_nodes[i];
     }
     

@@ -72,7 +72,8 @@ set_level_set_function(MAST::FieldFunction<Real>& level_set) {
     libmesh_assert(_system);
     
     _level_set    = &level_set;
-    _intersection = new MAST::LevelSetIntersection(_system->system().get_mesh().max_elem_id());
+    _intersection = new MAST::LevelSetIntersection(_system->system().get_mesh().max_elem_id(),
+                                                   _system->system().get_mesh().max_node_id());
 }
 
 

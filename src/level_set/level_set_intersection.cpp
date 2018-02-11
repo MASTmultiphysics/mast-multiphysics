@@ -28,10 +28,12 @@
 
 
 
-MAST::LevelSetIntersection::LevelSetIntersection(unsigned int max_elem_id):
+MAST::LevelSetIntersection::LevelSetIntersection(unsigned int max_elem_id,
+                                                 unsigned int max_node_id):
 _tol                             (1.e-8),
 _max_iters                       (10),
 _max_mesh_elem_id                (max_elem_id),
+_max_mesh_node_id                (max_node_id),
 _max_elem_divs                   (4),
 _initialized                     (false),
 _if_elem_on_positive_phi         (false),
@@ -636,6 +638,11 @@ MAST::LevelSetIntersection::_find_quad4_intersections
     bool
     node0_positive = false;
 
+    // used this to set unique node ids, since some of libMesh's operations
+    // depend on valid and unique ids for nodes.
+    unsigned int
+    node_id_incr   = 1;
+    
     //////////////////////////////////////////////////////////////////
     // Create a new node at each intersection: first, on ref_side
     //
@@ -651,7 +658,8 @@ MAST::LevelSetIntersection::_find_quad4_intersections
         s.reset(e.side_ptr(ref_side%n_nodes).release());
         p  = s->point(0) + xi_ref * (s->point(1) - s->point(0));
         nd = new libMesh::Node(p);
-        nd->set_id(0);
+        nd->set_id(_max_mesh_node_id + node_id_incr);
+        node_id_incr++;
         _new_nodes.push_back(nd);
         side_p0 = side_nondim_points[ref_side%n_nodes].first;
         side_p1 = side_nondim_points[ref_side%n_nodes].second;
@@ -691,7 +699,8 @@ MAST::LevelSetIntersection::_find_quad4_intersections
             s.reset(e.side_ptr((ref_side+2)%n_nodes).release());
             p  = s->point(0) + xi_other * (s->point(1) - s->point(0));
             nd = new libMesh::Node(p);
-            nd->set_id(0);
+            nd->set_id(_max_mesh_node_id + node_id_incr);
+            node_id_incr++;
             _new_nodes.push_back(nd);
             side_p0 = side_nondim_points[(ref_side+2)%n_nodes].first;
             side_p1 = side_nondim_points[(ref_side+2)%n_nodes].second;
@@ -764,7 +773,8 @@ MAST::LevelSetIntersection::_find_quad4_intersections
             s.reset(e.side_ptr((ref_side+1)%n_nodes).release());
             p  = s->point(0) + xi_other * (s->point(1) - s->point(0));
             nd = new libMesh::Node(p);
-            nd->set_id(0);
+            nd->set_id(_max_mesh_node_id + node_id_incr);
+            node_id_incr++;
             _new_nodes.push_back(nd);
             side_p0 = side_nondim_points[(ref_side+1)%n_nodes].first;
             side_p1 = side_nondim_points[(ref_side+1)%n_nodes].second;
@@ -776,7 +786,8 @@ MAST::LevelSetIntersection::_find_quad4_intersections
             s.reset(e.side_ptr((ref_side+2)%n_nodes).release());
             p  = s->point(1) + xi_ref * (s->point(0) - s->point(1));
             nd = new libMesh::Node(p);
-            nd->set_id(0);
+            nd->set_id(_max_mesh_node_id + node_id_incr);
+            node_id_incr++;
             _new_nodes.push_back(nd);
             side_p0 = side_nondim_points[(ref_side+2)%n_nodes].first;
             side_p1 = side_nondim_points[(ref_side+2)%n_nodes].second;
