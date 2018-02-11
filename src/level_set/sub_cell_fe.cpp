@@ -172,15 +172,115 @@ MAST::SubCellFE::init_for_side(const libMesh::Elem& elem,
                                unsigned int s,
                                bool if_calculate_dphi) {
     
-    // if there was no intersection, then move back to the parent class's
-    // method
     if (!_intersection.if_intersection_through_elem()) {
+        
+        // if there was no intersection, then move back to the parent class's
+        // method.
+        
         MAST::FEBase::init_for_side(elem, s, if_calculate_dphi);
         return;
     }
+    
+    // Otherwise, we follow the same procedure as the initialization
+    // over the domain, where the quadrature points from the subcell
+    // are mapped back to the original element and then the original
+    // element is initialized.
+    //
+    // This has to be carefully done. The JxW are needed on the sub-elem,
+    // however, the shape functions (and derivatives) are needed on the
+    // parent element. Additionally, the surface normal are also
+    // evaluated at the sub-elem.
+    //
+    
 
-    // to be implemented
-    libmesh_assert(false);
+    libmesh_assert(!_initialized);
+
+    const unsigned int
+    nv      = _sys.n_vars();
+    libMesh::FEType
+    fe_type = _sys.fetype(0); // all variables are assumed to be of same type
+    
+    for (unsigned int i=1; i != nv; ++i)
+        libmesh_assert(fe_type == _sys.fetype(i));
+
+    // initialize the quadrature rule since we will need this later and it
+    // it does not change
+    _subcell_qrule = fe_type.default_quadrature_rule
+    (elem.dim()-1,
+     _sys.system().extra_quadrature_order+_extra_quadrature_order).release();  // system extra quadrature
+
+    //////////////////////////////////////////////////////////////
+    // create the nondimensional coordinate nodes
+    //////////////////////////////////////////////////////////////
+    std::vector<libMesh::Node*>
+    _local_nodes(elem.n_nodes(), nullptr);
+    
+    std::unique_ptr<libMesh::Elem>
+    local_coord_elem(libMesh::Elem::build(elem.type()).release());
+    
+    for (unsigned int i=0; i<elem.n_nodes(); i++) {
+        
+        const libMesh::Node
+        *n = elem.node_ptr(i);
+        const libMesh::Point
+        &p = _intersection.get_nondimensional_coordinate_for_node(*n);
+        _local_nodes[i] = new libMesh::Node(p);
+        // set the node id since libMesh does not allow invalid ids. This
+        // should not influence the operations here
+        _local_nodes[i]->set_id(0);
+        local_coord_elem->set_node(i) = _local_nodes[i];
+    }
+    
+    // initialize the sub-cell FE to get the JxW coordinates
+    _subcell_fe = libMesh::FEBase::build(elem.dim(), fe_type).release();
+    _subcell_fe->get_JxW();
+    _subcell_fe->get_normals();
+
+    _fe     = libMesh::FEBase::build(elem.dim(), fe_type).release();
+    _fe->get_phi();
+    _fe->get_xyz();
+    _fe->get_JxW();
+    if (if_calculate_dphi)
+        _fe->get_dphi();
+
+    // now, we use the xyz points of this element, which should be the location
+    // of the quadrature points in the parent element, since elem was in the
+    // nondimensional coordinate system
+    const libMesh::Elem
+    *parent = elem.parent();
+    
+    // make sure parent and elem have the same dimensions
+    libmesh_assert_equal_to(elem.dim(), parent->dim());
+    
+    // initialize an FE object on this to get its nondimensional
+    // coordinates
+    std::unique_ptr<libMesh::FEBase>
+    local_fe(libMesh::FEBase::build(elem.dim(), fe_type).release());
+    local_fe->get_xyz();
+    
+    // in the nondimensional coordinate, initialize for the side
+    local_fe->attach_quadrature_rule(_subcell_qrule);
+    local_fe->reinit(local_coord_elem.get(), s);
+    
+    // We use the _subcell_fe to get the
+    // JxW and surface normals, since the area and normals need to come
+    // from the element on which the integration is being performed.
+    _subcell_fe->attach_quadrature_rule(_subcell_qrule);
+    _subcell_fe->reinit(&elem, s);
+    
+    // initialize parent FE using location of these points
+    // The shape functions and their derivatives are going to come on
+    // the parent elmeent, since the computations use the solution vector
+    // for local computations on that element.
+    _fe->reinit(parent, &local_fe->get_xyz());
+    _qpoints = local_fe->get_xyz();
+    
+    // now delete the node pointers
+    for (unsigned int i=0; i<elem.n_nodes(); i++)
+        delete _local_nodes[i];
+
+    
+    _initialized = true;
 }
 
 
@@ -191,10 +291,24 @@ MAST::SubCellFE::get_JxW() const {
     
     // if there was no intersection, then move back to the parent class's
     // method
-    if (!_intersection.if_intersection_through_elem())
-        return MAST::FEBase::get_JxW();
-    else
+    if (_subcell_fe)
         return _subcell_fe->get_JxW();
+    else
+        return MAST::FEBase::get_JxW();
+}
+
+
+const
+std::vector<libMesh::Point>&
+MAST::SubCellFE::get_normals() const {
+    libmesh_assert(_initialized);
+    
+    // if there was no intersection, then move back to the parent class's
+    // method
+    if (_subcell_fe)
+        return _subcell_fe->get_normals();
+    else
+        return MAST::FEBase::get_normals();
 }
 
 

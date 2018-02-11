@@ -364,6 +364,9 @@ MAST::LevelSetElementBase::volume_boundary_velocity_on_side(unsigned int s) {
     
     for (unsigned int qp=0; qp<JxW.size(); qp++) {
         
+        // initialize the Bmat operator for this term
+        _initialize_fem_operators(qp, *_fe, Bmat, dBmat);
+
         // first calculate gradient of phi
         for (unsigned int i=0; i<dim; i++) {
             dBmat[i].right_multiply(phi, _sol);
@@ -377,11 +380,11 @@ MAST::LevelSetElementBase::volume_boundary_velocity_on_side(unsigned int s) {
         
         // at boundary, phi(x) = 0
         // so,  dphi/dp + grad(phi) . V = 0
-        //      dphi/dp + grad(phi) . (-grad(phi)  Vn) = 0   [since V = -grad(phi) Vn]
-        //      dphi/dp -(grad(phi) .   grad(phi)) Vn  = 0
-        //      Vn  =  (dphi/dp) / |grad(phi)|^2
-        vn      =  dphidp(0) / gradphi.squaredNorm();
-        
+        //      dphi/dp + grad(phi) . (-grad(phi)/|grad(phi)|  Vn) = 0   [since V = -grad(phi)/|grad(phi)| Vn]
+        //      dphi/dp -(grad(phi) .  grad(phi))/|grad(phi)|  Vn  = 0
+        //      Vn  =  (dphi/dp) |grad(phi)|  / |grad(phi)|^2 = (dphi/dp) / |grad(phi)|
+        vn      =  dphidp(0) / gradphi.norm();
+                
         // vol     =  int_omega  dOmega
         // dvol/dp =  int_Gamma Vn dGamma
         dvoldp += vn * JxW[qp];

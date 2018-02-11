@@ -84,10 +84,16 @@ namespace MAST {
          */
         unsigned int edge_on_boundary() const;
 
+        /*!
+         *   @returns true if the intersection is through the element, or
+         *   has colinear edge.
+         */
+        bool if_elem_has_boundary() const;
         
         /*!
          *   @returns \p true if the intersection passes through the interior
-         *   of the element. 
+         *   of the element. Note that COLINEAR_EDGE or THROUGH_NODE do not
+         *   qualify for this. 
          */
         bool if_intersection_through_elem() const;
 

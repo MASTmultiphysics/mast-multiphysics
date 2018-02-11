@@ -112,6 +112,28 @@ MAST::LevelSetIntersection::if_elem_has_positive_phi_region() const {
 
 
 
+bool
+MAST::LevelSetIntersection::if_elem_has_boundary() const {
+    
+    return (this->if_intersection_through_elem() ||
+            (_mode == MAST::COLINEAR_EDGE));
+}
+
+
+
+
+bool
+MAST::LevelSetIntersection::if_intersection_through_elem() const {
+    
+    return ((_mode == MAST::OPPOSITE_EDGES) ||
+            (_mode == MAST::ADJACENT_EDGES) ||
+            (_mode == MAST::OPPOSITE_NODES) ||
+            (_mode == MAST::NODE_AND_EDGE));
+}
+
+
+
+
 void
 MAST::LevelSetIntersection::clear() {
     
@@ -239,8 +261,15 @@ MAST::LevelSetIntersection::init(const MAST::FieldFunction<Real>& phi,
     //   Check to see if the function passes through one node
     /////////////////////////////////////////////////////////////////////
     // if only one node intersection was found, then the level set
-    // passes through a node.
-    if (n_node_intersection == 1) {
+    // passes through a node. Node intersection happens when the level set on
+    // a node is zero and the level set does not change sign on the element.
+    Real
+    val1   = std::fabs(min_val)<_tol ? 0.: min_val,
+    val2   = std::fabs(max_val)<_tol ? 0.: max_val;
+    bool
+    sign_change = (val1*val2 < 0.);
+    if (n_node_intersection == 1 &&
+        !sign_change) {
         
         _mode = MAST::THROUGH_NODE;
         
@@ -350,16 +379,6 @@ MAST::LevelSetIntersection::init(const MAST::FieldFunction<Real>& phi,
     _initialized = true;
 }
     
-
-
-bool
-MAST::LevelSetIntersection::if_intersection_through_elem() const {
-    
-    return ((_mode == MAST::OPPOSITE_EDGES) ||
-            (_mode == MAST::ADJACENT_EDGES) ||
-            (_mode == MAST::OPPOSITE_NODES) ||
-            (_mode == MAST::NODE_AND_EDGE));
-}
 
 
 

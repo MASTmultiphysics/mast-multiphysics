@@ -95,7 +95,8 @@ MAST::LevelSetVolume::output_sensitivity_for_elem(const MAST::FunctionBase& p) {
 
     libmesh_assert(_physics_elem);
 
-    if (this->if_evaluate_for_element(_physics_elem->elem())) {
+    if (this->if_evaluate_for_element(_physics_elem->elem()) &&
+        _intersection.if_elem_has_boundary()) {
 
         MAST::LevelSetElementBase&
         e = dynamic_cast<MAST::LevelSetElementBase&>(*_physics_elem);
@@ -137,9 +138,10 @@ MAST::LevelSetVolume::evaluate_sensitivity(const MAST::FunctionBase& f) {
     libmesh_assert(_physics_elem);
 
     // sensitivity only exists at the boundary. So, we proceed with calculation
-    // only if this element has an intersection
+    // only if this element has an intersection in the interior, or with the
+    // node or a side. 
     if (this->if_evaluate_for_element(_physics_elem->elem()) &&
-         _intersection.if_intersection_through_elem()) {
+        _intersection.if_elem_has_boundary()) {
         
         MAST::LevelSetElementBase&
         e = dynamic_cast<MAST::LevelSetElementBase&>(*_physics_elem);

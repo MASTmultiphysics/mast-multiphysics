@@ -115,6 +115,7 @@ MAST::FEBase::init_for_side(const libMesh::Elem& elem,
     _fe->get_phi();
     _fe->get_xyz();
     _fe->get_JxW();
+    _fe->get_normals();
     if (if_calculate_dphi)
         _fe->get_dphi();
     

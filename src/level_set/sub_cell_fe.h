@@ -66,6 +66,9 @@ namespace MAST {
         get_JxW() const;
 
         virtual const std::vector<libMesh::Point>&
+        get_normals() const;
+
+        virtual const std::vector<libMesh::Point>&
         get_qpoints() const;
 
     protected:

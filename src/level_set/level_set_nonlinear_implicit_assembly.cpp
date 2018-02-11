@@ -734,9 +734,12 @@ calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
                 // get the solution
                 unsigned int ndofs = (unsigned int)dof_indices.size();
                 sol.setZero(ndofs);
+                dsol.setZero(ndofs);
                 
-                for (unsigned int i=0; i<dof_indices.size(); i++)
-                    sol(i) = (*localized_solution)(dof_indices[i]);
+                for (unsigned int i=0; i<dof_indices.size(); i++) {
+                    sol(i)  = (*localized_solution)(dof_indices[i]);
+                    dsol(i) = (*localized_solution_sens)(dof_indices[i]);
+                }
                 
                 //                if (_sol_function)
                 //                    physics_elem->attach_active_solution_function(*_sol_function);
