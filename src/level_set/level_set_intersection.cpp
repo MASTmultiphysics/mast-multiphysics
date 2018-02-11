@@ -256,7 +256,10 @@ MAST::LevelSetIntersection::init(const MAST::FieldFunction<Real>& phi,
             libmesh_assert_greater(max_val, _tol);
             _positive_phi_elems.push_back(&e);
         }
-
+        
+        std::vector<std::pair<libMesh::Point, libMesh::Point> >
+        side_nondim_points;
+        _add_node_local_coords(e, side_nondim_points, _node_local_coords);
         _initialized = true;
         return;
     }

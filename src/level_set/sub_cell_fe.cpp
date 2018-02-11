@@ -108,12 +108,6 @@ MAST::SubCellFE::init(const libMesh::Elem& elem,
         local_coord_elem->set_node(i) = _local_nodes[i];
     }
     
-    // initialize an FE object on this to get its nondimensional
-    // coordinates
-    std::unique_ptr<libMesh::FEBase>
-    local_fe(libMesh::FEBase::build(elem.dim(), fe_type).release());
-    local_fe->get_xyz();
-    
     // initialize the sub-cell FE to get the JxW coordinates
     _subcell_fe = libMesh::FEBase::build(elem.dim(), fe_type).release();
     _subcell_fe->get_JxW();
@@ -135,17 +129,28 @@ MAST::SubCellFE::init(const libMesh::Elem& elem,
     
     // make sure parent and elem have the same dimensions
     libmesh_assert_equal_to(elem.dim(), parent->dim());
+
+    // initialize an FE object on this to get its nondimensional
+    // coordinates
+    std::unique_ptr<libMesh::FEBase>
+    local_fe(libMesh::FEBase::build(elem.dim(), fe_type).release());
+    local_fe->get_xyz();
     
     if (pts == nullptr) {
         // in the nondimensional coordinate
         local_fe->attach_quadrature_rule(_subcell_qrule);
         local_fe->reinit(local_coord_elem.get());
         
-        // in the physical coordinate
+        // We use the _subcell_fe to get the
+        // JxW, since the area needs to come from the element on which
+        // the integration is being performed.
         _subcell_fe->attach_quadrature_rule(_subcell_qrule);
         _subcell_fe->reinit(&elem);
         
         // initialize parent FE using location of these points
+        // The shape functions and their derivatives are going to come on
+        // the parent elmeent, since the computations use the solution vector
+        // for local computations on that element.
         _fe->reinit(parent, &local_fe->get_xyz());
         _qpoints = local_fe->get_xyz();
     }
@@ -197,7 +202,11 @@ const std::vector<libMesh::Point>&
 MAST::SubCellFE::get_qpoints() const {
     
     libmesh_assert(_initialized);
-    return _qpoints;
+
+    if (_subcell_fe)
+        return _qpoints;
+    else
+        return MAST::FEBase::get_qpoints();
 }
 
 
