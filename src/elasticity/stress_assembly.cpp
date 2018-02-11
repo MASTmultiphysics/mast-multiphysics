@@ -165,13 +165,18 @@ update_stress_strain_data(MAST::StressStrainOutputBase&       ops,
         ops.clear_elem();
         
         // get the stress-strain data map from the object
-        const std::map<const libMesh::Elem*,
+        const std::map<const libMesh::dof_id_type,
         std::vector<MAST::StressStrainOutputBase::Data*> >& output_map =
         ops.get_stress_strain_data();
         
+        // make sure that only one element has been added to this data,
+        // and that the element id is the same as the one being computed
+        libmesh_assert_equal_to(output_map.size(), 1);
+        libmesh_assert_equal_to(output_map.begin()->first, elem->id());
+        
         // now iterate over all the elements and set the value in the
         // new system used for output
-        std::map<const libMesh::Elem*,
+        std::map<const libMesh::dof_id_type,
         std::vector<MAST::StressStrainOutputBase::Data*> >::const_iterator
         e_it    =  output_map.begin(),
         e_end   =  output_map.end();
@@ -186,16 +191,16 @@ update_stress_strain_data(MAST::StressStrainOutputBase&       ops,
             
             // set the values in the system
             // stress value
-            dof_id     =   (e_it->first)->dof_number(sys_num, stress_vars[12], 0);
+            dof_id     =   elem->dof_number(sys_num, stress_vars[12], 0);
             stress_sys.solution->set(dof_id, max_vm_stress);
             
             for (unsigned int i=0; i<6; i++) {
                 // strain value
-                dof_id     =   (e_it->first)->dof_number(sys_num, stress_vars[i], 0);
+                dof_id     =   elem->dof_number(sys_num, stress_vars[i], 0);
                 stress_sys.solution->set(dof_id, max_strain_vals(i));
                 
                 // stress value
-                dof_id     =   (e_it->first)->dof_number(sys_num, stress_vars[i+6], 0);
+                dof_id     =   elem->dof_number(sys_num, stress_vars[i+6], 0);
                 stress_sys.solution->set(dof_id, max_stress_vals(i));
             }
         }
@@ -294,13 +299,18 @@ update_stress_strain_sensitivity_data(MAST::StressStrainOutputBase&       ops,
         ops.clear_elem();
 
         // get the stress-strain data map from the object
-        const std::map<const libMesh::Elem*,
+        const std::map<const libMesh::dof_id_type,
         std::vector<MAST::StressStrainOutputBase::Data*> >& output_map =
         ops.get_stress_strain_data();
-        
+
+        // make sure that only one element has been added to this data,
+        // and that the element id is the same as the one being computed
+        libmesh_assert_equal_to(output_map.size(), 1);
+        libmesh_assert_equal_to(output_map.begin()->first, elem->id());
+
         // now iterate over all the elements and set the value in the
         // new system used for output
-        std::map<const libMesh::Elem*,
+        std::map<const libMesh::dof_id_type,
         std::vector<MAST::StressStrainOutputBase::Data*> >::const_iterator
         e_it    =  output_map.begin(),
         e_end   =  output_map.end();
@@ -315,16 +325,16 @@ update_stress_strain_sensitivity_data(MAST::StressStrainOutputBase&       ops,
             
             // set the values in the system
             // stress value
-            dof_id     =   (e_it->first)->dof_number(sys_num, stress_vars[12], 0);
+            dof_id     =   elem->dof_number(sys_num, stress_vars[12], 0);
             dsigmadp.set(dof_id, max_vm_stress);
             
             for (unsigned int i=0; i<6; i++) {
                 // strain value
-                dof_id     =   (e_it->first)->dof_number(sys_num, stress_vars[i], 0);
+                dof_id     =   elem->dof_number(sys_num, stress_vars[i], 0);
                 dsigmadp.set(dof_id, max_strain_vals(i));
                 
                 // stress value
-                dof_id     =   (e_it->first)->dof_number(sys_num, stress_vars[i+6], 0);
+                dof_id     =   elem->dof_number(sys_num, stress_vars[i+6], 0);
                 dsigmadp.set(dof_id, max_stress_vals(i));
             }
         }

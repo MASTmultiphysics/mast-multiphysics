@@ -53,7 +53,7 @@ namespace MAST {
         
     public:
         
-        LevelSetIntersection();
+        LevelSetIntersection(unsigned int max_elem_id);
         
         virtual ~LevelSetIntersection();
 
@@ -158,6 +158,8 @@ namespace MAST {
         Real                                         _tol;
         
         unsigned int                                 _max_iters;
+        const unsigned int                           _max_mesh_elem_id;
+        const unsigned int                           _max_elem_divs;
         
         bool                                         _initialized;
 

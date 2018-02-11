@@ -339,7 +339,7 @@ MAST::StressStrainOutputBase::output_sensitivity_for_elem(const MAST::FunctionBa
     
     Real val = 0.;
     
-    this->von_Mises_p_norm_functional_sensitivity_for_elem(p, _physics_elem->elem(), val);
+    this->von_Mises_p_norm_functional_sensitivity_for_elem(p, _physics_elem->elem().id(), val);
     return val;
 }
 
@@ -419,7 +419,7 @@ MAST::StressStrainOutputBase::set_local_fe_data(MAST::LocalElemFE& fe,
 void
 MAST::StressStrainOutputBase::clear() {
     
-    std::map<const libMesh::Elem*, std::vector<MAST::StressStrainOutputBase::Data*> >::iterator
+    std::map<const libMesh::dof_id_type, std::vector<MAST::StressStrainOutputBase::Data*> >::iterator
     map_it  =  _stress_data.begin(),
     map_end =  _stress_data.end();
     
@@ -477,14 +477,14 @@ add_stress_strain_at_qp_location(const libMesh::Elem* e,
 
     
     // check if the specified element exists in the map. If not, add it
-    std::map<const libMesh::Elem*, std::vector<MAST::StressStrainOutputBase::Data*> >::iterator
-    it = _stress_data.find(e);
+    std::map<const libMesh::dof_id_type, std::vector<MAST::StressStrainOutputBase::Data*> >::iterator
+    it = _stress_data.find(e->id());
     
     // if the element does not exist in the map, add it to the map.
     if (it == _stress_data.end())
         it =
-        _stress_data.insert(std::pair<const libMesh::Elem*, std::vector<MAST::StressStrainOutputBase::Data*> >
-                            (e, std::vector<MAST::StressStrainOutputBase::Data*>())).first;
+        _stress_data.insert(std::pair<const libMesh::dof_id_type, std::vector<MAST::StressStrainOutputBase::Data*> >
+                            (e->id(), std::vector<MAST::StressStrainOutputBase::Data*>())).first;
     else
         // this assumes that the previous qp data is provided and
         // therefore, this qp number should be == size of the vector.
@@ -497,7 +497,7 @@ add_stress_strain_at_qp_location(const libMesh::Elem* e,
 
 
 
-const std::map<const libMesh::Elem*, std::vector<MAST::StressStrainOutputBase::Data*> >&
+const std::map<const libMesh::dof_id_type, std::vector<MAST::StressStrainOutputBase::Data*> >&
 MAST::StressStrainOutputBase::get_stress_strain_data() const {
     
     return _stress_data;
@@ -511,8 +511,8 @@ n_stress_strain_data_for_elem(const libMesh::Elem* e) const {
     
     unsigned int n = 0;
     
-    std::map<const libMesh::Elem*, std::vector<MAST::StressStrainOutputBase::Data*> >::const_iterator
-    it = _stress_data.find(e);
+    std::map<const libMesh::dof_id_type, std::vector<MAST::StressStrainOutputBase::Data*> >::const_iterator
+    it = _stress_data.find(e->id());
     
     if ( it != _stress_data.end())
         n = (unsigned int)it->second.size();
@@ -527,8 +527,8 @@ MAST::StressStrainOutputBase::
 get_stress_strain_data_for_elem(const libMesh::Elem *e) const {
     
     // check if the specified element exists in the map. If not, add it
-    std::map<const libMesh::Elem*, std::vector<MAST::StressStrainOutputBase::Data*> >::const_iterator
-    it = _stress_data.find(e);
+    std::map<const libMesh::dof_id_type, std::vector<MAST::StressStrainOutputBase::Data*> >::const_iterator
+    it = _stress_data.find(e->id());
 
     // make sure that the specified elem exists in the map
     libmesh_assert(it != _stress_data.end());
@@ -545,8 +545,8 @@ get_stress_strain_data_for_elem_at_qp(const libMesh::Elem* e,
 
     
     // check if the specified element exists in the map. If not, add it
-    std::map<const libMesh::Elem*, std::vector<MAST::StressStrainOutputBase::Data*> >::const_iterator
-    it = _stress_data.find(e);
+    std::map<const libMesh::dof_id_type, std::vector<MAST::StressStrainOutputBase::Data*> >::const_iterator
+    it = _stress_data.find(e->id());
     
     // make sure that the specified elem exists in the map
     libmesh_assert(it != _stress_data.end());
@@ -612,7 +612,7 @@ von_Mises_p_norm_functional_for_all_elems() {
     // first find the data with the maximum value, to be used for scaling
     
     // iterate over all element data
-    std::map<const libMesh::Elem*, std::vector<MAST::StressStrainOutputBase::Data*> >::const_iterator
+    std::map<const libMesh::dof_id_type, std::vector<MAST::StressStrainOutputBase::Data*> >::const_iterator
     map_it   =  _stress_data.begin(),
     map_end  =  _stress_data.end();
     
@@ -679,13 +679,13 @@ von_Mises_p_norm_functional_sensitivity_for_all_elems
     dsigma_vm_val_df = 0.;
     
     // iterate over all element data
-    std::map<const libMesh::Elem*, std::vector<MAST::StressStrainOutputBase::Data*> >::const_iterator
+    std::map<const libMesh::dof_id_type, std::vector<MAST::StressStrainOutputBase::Data*> >::const_iterator
     map_it   =  _stress_data.begin(),
     map_end  =  _stress_data.end();
     
     for ( ; map_it != map_end; map_it++) {
         
-        this->von_Mises_p_norm_functional_sensitivity_for_elem(f, *map_it->first, val);
+        this->von_Mises_p_norm_functional_sensitivity_for_elem(f, map_it->first, val);
         dsigma_vm_val_df += val;
     }
 }
@@ -696,7 +696,7 @@ void
 MAST::StressStrainOutputBase::
 von_Mises_p_norm_functional_sensitivity_for_elem
 (const MAST::FunctionBase& f,
- const libMesh::Elem& e,
+ const libMesh::dof_id_type e_id,
  Real& dsigma_vm_val_df) const {
     
     libmesh_assert(!_if_stress_plot_mode);
@@ -710,8 +710,8 @@ von_Mises_p_norm_functional_sensitivity_for_elem
     dsigma_vm_val_df = 0.;
     
     // iterate over all element data
-    std::map<const libMesh::Elem*, std::vector<MAST::StressStrainOutputBase::Data*> >::const_iterator
-    map_it   =  _stress_data.find(&e),
+    std::map<const libMesh::dof_id_type, std::vector<MAST::StressStrainOutputBase::Data*> >::const_iterator
+    map_it   =  _stress_data.find(e_id),
     map_end  =  _stress_data.end();
     
     libmesh_assert(map_it != map_end);
@@ -758,8 +758,8 @@ von_Mises_p_norm_functional_state_derivartive_for_elem(const libMesh::Elem& e,
     // first find the data with the maximum value, to be used for scaling
     
     // iterate over all element data
-    std::map<const libMesh::Elem*, std::vector<MAST::StressStrainOutputBase::Data*> >::const_iterator
-    map_it   =  _stress_data.find(&e),
+    std::map<const libMesh::dof_id_type, std::vector<MAST::StressStrainOutputBase::Data*> >::const_iterator
+    map_it   =  _stress_data.find(e.id()),
     map_end  =  _stress_data.end();
 
     // make sure that the data exists

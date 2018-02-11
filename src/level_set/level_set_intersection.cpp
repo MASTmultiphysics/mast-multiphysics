@@ -28,9 +28,11 @@
 
 
 
-MAST::LevelSetIntersection::LevelSetIntersection():
+MAST::LevelSetIntersection::LevelSetIntersection(unsigned int max_elem_id):
 _tol                             (1.e-8),
 _max_iters                       (10),
+_max_mesh_elem_id                (max_elem_id),
+_max_elem_divs                   (4),
 _initialized                     (false),
 _if_elem_on_positive_phi         (false),
 _if_elem_on_negative_phi         (false),
@@ -325,9 +327,25 @@ MAST::LevelSetIntersection::init(const MAST::FieldFunction<Real>& phi,
             break;
     }
     
-    // set the subdomain id of all new elements
-    for (unsigned int i=0; i<_new_elems.size(); i++)
+    // set the IDs of the new elements. Both the subdomain ID and
+    // element IDs are set here.
+    //
+    // Note that the subdomain IDs are needed
+    // for querying the BCs, Loads and properties from the physics. We
+    // use the same subdomain ID as its parent ID
+    //
+    // The element id is a little more tricky. Strictly speaking, this
+    // should not be necessary, since we are only creating temporary
+    // elements to compute element quantities. However, the current stress
+    // storage implementation is storing this for element ids. So, we provide
+    // a unique element ID for each new element.
+    //
+    
+    for (unsigned int i=0; i<_new_elems.size(); i++) {
+        
         _new_elems[i]->subdomain_id() = e.subdomain_id();
+        _new_elems[i]->set_id(_max_mesh_elem_id+e.id()*_max_elem_divs+i);
+    }
     
     _initialized = true;
 }

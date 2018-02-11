@@ -385,7 +385,7 @@ namespace MAST {
         /*!
          *    @returns the map of stress/strain data for all elems
          */
-        const std::map<const libMesh::Elem*,
+        const std::map<const libMesh::dof_id_type,
         std::vector<MAST::StressStrainOutputBase::Data*> >&
         get_stress_strain_data() const;
 
@@ -441,7 +441,7 @@ namespace MAST {
         void
         von_Mises_p_norm_functional_sensitivity_for_elem
         (const MAST::FunctionBase& f,
-         const libMesh::Elem& e,
+         const libMesh::dof_id_type e_id,
          Real& dsigma_vm_val_df) const;
         
         
@@ -488,7 +488,7 @@ namespace MAST {
         /*!
          *    vector of stress with the associated location details
          */
-        std::map<const libMesh::Elem*, std::vector<MAST::StressStrainOutputBase::Data*> >
+        std::map<const libMesh::dof_id_type, std::vector<MAST::StressStrainOutputBase::Data*> >
         _stress_data;
         
     };

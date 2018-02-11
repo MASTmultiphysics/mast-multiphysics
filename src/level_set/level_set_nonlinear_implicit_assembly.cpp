@@ -69,9 +69,10 @@ set_level_set_function(MAST::FieldFunction<Real>& level_set) {
 
     libmesh_assert(!_level_set);
     libmesh_assert(!_intersection);
+    libmesh_assert(_system);
     
     _level_set    = &level_set;
-    _intersection = new MAST::LevelSetIntersection;
+    _intersection = new MAST::LevelSetIntersection(_system->system().get_mesh().max_elem_id());
 }
 
 
@@ -791,22 +792,21 @@ MAST::LevelSetNonlinearImplicitAssembly::constrain() {
         
         const libMesh::Elem* elem = *el;
         
-        MAST::LevelSetIntersection intersect;
-        intersect.init(*_level_set, *elem, nonlin_sys.time);
+        _intersection->init(*_level_set, *elem, nonlin_sys.time);
         
         // if the element is entirely on the negative side of the level set,
         // we will constrain all dofs of the element to zero
         
         dof_indices.clear();
 
-        if (intersect.if_elem_on_negative_phi()) {
+        if (_intersection->if_elem_on_negative_phi()) {
             // This identifies if the element is entirely on the negative side
             // All of these dofs are constrained
 
             dof_map.dof_indices(elem, dof_indices);
         }
-        else if (intersect.get_intersection_mode() == MAST::THROUGH_NODE &&
-                 !intersect.if_elem_has_positive_phi_region()) {
+        else if (_intersection->get_intersection_mode() == MAST::THROUGH_NODE &&
+                 !_intersection->if_elem_has_positive_phi_region()) {
             
             // boundary passes through node and the element is on the negative
             // side. Then, constrain everything but the boundary node.
@@ -820,7 +820,7 @@ MAST::LevelSetNonlinearImplicitAssembly::constrain() {
             
             // all dofs on the node should not be constrained
             const libMesh::Node
-            *node = elem->node_ptr(intersect.node_on_boundary());
+            *node = elem->node_ptr(_intersection->node_on_boundary());
             dof_map.dof_indices(node, group_B);
             
             std::set_difference(group_A.begin(),
@@ -829,8 +829,8 @@ MAST::LevelSetNonlinearImplicitAssembly::constrain() {
                                 group_B.end(),
                                 std::inserter(dof_indices, dof_indices.begin()));
         }
-        else if (intersect.get_intersection_mode() == MAST::THROUGH_NODE &&
-                 !intersect.if_elem_has_positive_phi_region()) {
+        else if (_intersection->get_intersection_mode() == MAST::THROUGH_NODE &&
+                 !_intersection->if_elem_has_positive_phi_region()) {
             
             // boundary passes through edge and the element is on the negative
             // side. Then, constrain everything but the boundary node.
@@ -844,7 +844,7 @@ MAST::LevelSetNonlinearImplicitAssembly::constrain() {
             
             // all dofs on the node, which should not be constraint
             std::unique_ptr<const libMesh::Elem>
-            side(elem->side_ptr(intersect.edge_on_boundary()).release());
+            side(elem->side_ptr(_intersection->edge_on_boundary()).release());
             dof_map.dof_indices(side.get(), group_B);
             
             std::set_difference(group_A.begin(),
@@ -854,6 +854,7 @@ MAST::LevelSetNonlinearImplicitAssembly::constrain() {
                                 std::inserter(dof_indices, dof_indices.begin()));
         }
      
+        _intersection->clear();
 
         constrained_dof_indices.insert(constrained_dof_indices.end(),
                                        dof_indices.begin(),
