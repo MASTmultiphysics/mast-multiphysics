@@ -72,17 +72,6 @@ namespace MAST {
         
         
         /*!
-         *   solves the current time step for solution and velocity
-         */
-        virtual void solve();
-
-        /*!
-         *   solves the current time step for solution and velocity
-         */
-        virtual void sensitivity_solve(const MAST::FunctionBase& f);
-
-
-        /*!
          *    update the transient velocity based on the current solution
          */
         virtual void update_velocity(libMesh::NumericVector<Real>& vel,
@@ -175,15 +164,6 @@ namespace MAST {
         virtual void
         elem_second_derivative_dot_solution_assembly(RealMatrixX& mat) {
             libmesh_assert(false); // to be implemented
-        }
-
-        /*!
-         *   overloaded method, should not get called, since the element
-         *   operations are handled by the assembly operation object.
-         */
-        virtual void
-        init(const libMesh::Elem& elem) {
-            libmesh_error(); // should not get called.
         }
 
     protected:

@@ -51,19 +51,6 @@ namespace MAST {
          */
         virtual ~TransientAssembly();
         
-        /*!
-         *   attaches a system to this discipline, and vice-a-versa
-         */
-        virtual void
-        set_solver(MAST::TransientSolverBase& solver);
-        
-                
-        /*!
-         *   clears association with a system to this discipline, and vice-a-versa
-         */
-        virtual void
-        clear_solver();
-        
         
         /*!
          *    function that assembles the matrices and vectors quantities for
@@ -107,11 +94,6 @@ namespace MAST {
         
     protected:
         
-        /*!
-         *   Pointer to a transient solver object that combines the
-         *   element transient data appropriately for the nonlinear solver.
-         */
-        MAST::TransientSolverBase* _transient_solver;
     };
     
     

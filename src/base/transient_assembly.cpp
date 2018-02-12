@@ -36,8 +36,7 @@
 
 
 MAST::TransientAssembly::TransientAssembly():
-MAST::AssemblyBase(),
-_transient_solver      (nullptr) {
+MAST::AssemblyBase() {
 
 }
 
@@ -52,32 +51,6 @@ MAST::TransientAssembly::~TransientAssembly() {
 
 
 void
-MAST::TransientAssembly::set_solver(MAST::TransientSolverBase& solver) {
-    
-    libmesh_assert(_elem_ops); // elem ops should be set before setting the solver
-    libmesh_assert(!_transient_solver);
-    
-    _transient_solver   = &solver;
-    
-    // attach this assembly object to the transient solver
-    solver.set_assembly(*this);
-    solver.set_assembly_ops(dynamic_cast<MAST::TransientAssemblyElemOperations&>(*_elem_ops));
-}
-
-
-
-void
-MAST::TransientAssembly::clear_solver() {
-    
-    // clear the association of this assembly object to the solver
-    _transient_solver->clear_assembly_ops();
-    _transient_solver->clear_assembly();
-    _transient_solver   = nullptr;
-}
-
-
-
-void
 MAST::TransientAssembly::
 residual_and_jacobian (const libMesh::NumericVector<Real>& X,
                        libMesh::NumericVector<Real>* R,
@@ -88,7 +61,11 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
     libmesh_assert(_discipline);
     libmesh_assert(_elem_ops);
 
-    MAST::NonlinearSystem& transient_sys = _system->system();
+    
+    MAST::TransientSolverBase
+    &solver = dynamic_cast<MAST::TransientSolverBase&>(*_elem_ops);
+    MAST::NonlinearSystem&
+    transient_sys = _system->system();
     
     // make sure that the system for which this object was created,
     // and the system passed through the function call are the same
@@ -117,7 +94,7 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
         _sol_function->init( X);
     
     // ask the solver to localize the relevant solutions
-    _transient_solver->build_local_quantities(X, local_qtys);
+    solver.build_local_quantities(X, local_qtys);
     
     libMesh::MeshBase::const_element_iterator       el     =
     transient_sys.get_mesh().active_local_elements_begin();
@@ -130,23 +107,22 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
         
         dof_map.dof_indices (elem, dof_indices);
         
-        _elem_ops->init(*elem);
+        solver.init(*elem);
         
         // get the solution
         unsigned int ndofs = (unsigned int)dof_indices.size();
         vec.setZero(ndofs);
         mat.setZero(ndofs, ndofs);
         
-        _transient_solver->set_element_data(dof_indices,
-                                            local_qtys);
+        solver.set_element_data(dof_indices, local_qtys);
         
 //        if (_sol_function)
 //            physics_elem->attach_active_solution_function(*_sol_function);
         
         // perform the element level calculations
-        _transient_solver->elem_calculations(J!=nullptr?true:false,
+        solver.elem_calculations(J!=nullptr?true:false,
                                              vec, mat);
-        _transient_solver->clear_elem();
+        solver.clear_elem();
 
         // copy to the libMesh matrix for further processing
         DenseRealVector v;
@@ -196,7 +172,10 @@ linearized_jacobian_solution_product (const libMesh::NumericVector<Real>& X,
     libmesh_assert(_discipline);
     libmesh_assert(_elem_ops);
 
-    MAST::NonlinearSystem& transient_sys = _system->system();
+    MAST::TransientSolverBase
+    &solver = dynamic_cast<MAST::TransientSolverBase&>(*_elem_ops);
+    MAST::NonlinearSystem
+    &transient_sys = _system->system();
     
     // make sure that the system for which this object was created,
     // and the system passed through the function call are the same
@@ -223,8 +202,8 @@ linearized_jacobian_solution_product (const libMesh::NumericVector<Real>& X,
         _sol_function->init( X);
 
     // ask the solver to localize the relevant solutions
-    _transient_solver->build_local_quantities(X, local_qtys);
-    _transient_solver->build_perturbed_local_quantities(dX, local_perturbed_qtys);
+    solver.build_local_quantities(X, local_qtys);
+    solver.build_perturbed_local_quantities(dX, local_perturbed_qtys);
     
     libMesh::MeshBase::const_element_iterator       el     =
     transient_sys.get_mesh().active_local_elements_begin();
@@ -244,18 +223,18 @@ linearized_jacobian_solution_product (const libMesh::NumericVector<Real>& X,
         vec.setZero(ndofs);
 
         
-        _transient_solver->set_element_data(dof_indices,
+        solver.set_element_data(dof_indices,
                                             local_qtys);
-        _transient_solver->set_element_perturbed_data(dof_indices,
+        solver.set_element_perturbed_data(dof_indices,
                                                       local_perturbed_qtys);
         
 //        if (_sol_function)
 //            physics_elem->attach_active_solution_function(*_sol_function);
 
         // perform the element level calculations
-        _transient_solver->elem_linearized_jacobian_solution_product(vec);
+        solver.elem_linearized_jacobian_solution_product(vec);
         
-        _transient_solver->clear_elem();
+        solver.clear_elem();
         
         // copy to the libMesh matrix for further processing
         DenseRealVector v;
@@ -294,7 +273,10 @@ sensitivity_assemble (const MAST::FunctionBase& f,
     libmesh_assert(_discipline);
     libmesh_assert(_elem_ops);
 
-    MAST::NonlinearSystem& nonlin_sys = _system->system();
+    MAST::TransientSolverBase
+    &solver = dynamic_cast<MAST::TransientSolverBase&>(*_elem_ops);
+    MAST::NonlinearSystem
+    &nonlin_sys = _system->system();
     
     sensitivity_rhs.zero();
     
@@ -308,7 +290,7 @@ sensitivity_assemble (const MAST::FunctionBase& f,
     
     std::vector<libMesh::NumericVector<Real>*>
     local_qtys;
-    _transient_solver->build_local_quantities(*nonlin_sys.solution, local_qtys);
+    solver.build_local_quantities(*nonlin_sys.solution, local_qtys);
 
     // if a solution function is attached, initialize it
     if (_sol_function)
@@ -332,19 +314,17 @@ sensitivity_assemble (const MAST::FunctionBase& f,
         sol.setZero(ndofs);
         vec.setZero(ndofs);
         
-        _transient_solver->set_element_data(dof_indices,
-                                            local_qtys);
-
-        _elem_ops->set_elem_sensitivity_parameter(f);
+        solver.set_element_data(dof_indices, local_qtys);
+        solver.set_elem_sensitivity_parameter(f);
         
         //        if (_sol_function)
         //            physics_elem->attach_active_solution_function(*_sol_function);
         
         // perform the element level calculations
-        _transient_solver->elem_sensitivity_calculations(vec);
+        solver.elem_sensitivity_calculations(vec);
         
         //        physics_elem->detach_active_solution_function();
-        _elem_ops->clear_elem();
+        solver.clear_elem();
         
         // copy to the libMesh matrix for further processing
         DenseRealVector v;

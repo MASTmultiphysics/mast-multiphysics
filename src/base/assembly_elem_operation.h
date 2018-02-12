@@ -73,17 +73,17 @@ namespace MAST {
         /*!
          *   sets the assembly object
          */
-        void set_assembly(MAST::AssemblyBase& assembly);
+        virtual void set_assembly(MAST::AssemblyBase& assembly);
         
         /*!
          *   @returns a reference to the assembly object
          */
-        MAST::AssemblyBase& get_assembly();
+        virtual MAST::AssemblyBase& get_assembly();
         
         /*!
          *   clears the assembly object
          */
-        void clear_assembly();
+        virtual void clear_assembly();
         
         /*!
          *   initializes the object for calculation of element quantities for
@@ -111,7 +111,8 @@ namespace MAST {
         /*!
          *   sets the element sensitivity parameter
          */
-        void set_elem_sensitivity_parameter(const MAST::FunctionBase& f);
+        virtual void
+        set_elem_sensitivity_parameter(const MAST::FunctionBase& f);
         
         /*!
          *   sets the element solution
@@ -128,7 +129,8 @@ namespace MAST {
         /*!
          *   sets the element perturbed solution
          */
-        virtual void set_elem_perturbed_solution(const RealVectorX& sol);
+        virtual void
+        set_elem_perturbed_solution(const RealVectorX& sol);
 
         
         /*!

@@ -240,6 +240,7 @@ namespace MAST {
         calculate_output_adjoint_sensitivity(const libMesh::NumericVector<Real>& X,
                                              const libMesh::NumericVector<Real>& dq_dX,
                                              const MAST::FunctionBase& p,
+                                             MAST::AssemblyElemOperations&       elem_ops,
                                              MAST::OutputAssemblyElemOperations& output);
 
         

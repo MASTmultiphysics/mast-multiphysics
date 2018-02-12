@@ -49,16 +49,27 @@ namespace MAST {
         
         virtual ~TransientSolverBase();
 
+        
+        virtual void
+        set_assembly(MAST::AssemblyBase &assembly);
+        
+        
+        virtual void clear_assembly();
+
         /*!
          *   Attaches the assembly elem operations object that provides the
          *   x_dot, M and J quantities for the element
          */
-        virtual void set_assembly_ops(MAST::TransientAssemblyElemOperations& assembly_ops);
+        virtual void set_elem_operation_object(MAST::TransientAssemblyElemOperations& elem_ops);
 
+        virtual MAST::TransientAssemblyElemOperations&
+        get_elem_operation_object();
+        
+        
         /*!
          *   Clears the assembly elem operations object
          */
-        virtual void clear_assembly_ops();
+        virtual void clear_elem_operation_object();
         
         /*!
          *   time step
@@ -152,12 +163,13 @@ namespace MAST {
         /*!
          *   solves the current time step for solution and velocity
          */
-        virtual void solve() = 0;
+        virtual void solve(MAST::AssemblyBase& assembly);
         
         /*!
          *    solvers the current time step for sensitivity wrt \p f
          */
-        virtual void sensitivity_solve(const MAST::FunctionBase& f) = 0;
+        virtual void sensitivity_solve(MAST::AssemblyBase& assembly,
+                                       const MAST::FunctionBase& f);
 
         
         /*!
@@ -167,14 +179,15 @@ namespace MAST {
          *    Then advances the time step so that the solver is ready for 
          *    time integration.
          */
-        void solve_highest_derivative_and_advance_time_step();
+        void solve_highest_derivative_and_advance_time_step(MAST::AssemblyBase& assembly);
         
         /*!
          *    solves for the sensitivity of highest derivative and advances
          *    the time-step.
          */
         void
-        solve_highest_derivative_and_advance_time_step_with_sensitivity(const MAST::FunctionBase& f);
+        solve_highest_derivative_and_advance_time_step_with_sensitivity(MAST::AssemblyBase& assembly,
+                                                                        const MAST::FunctionBase& f);
 
 
         
@@ -242,20 +255,34 @@ namespace MAST {
         /*!
          *   calls the method from TransientAssemblyElemOperations
          */
+        virtual void
+        init(const libMesh::Elem& elem);
+
+        /*!
+         *   calls the method from TransientAssemblyElemOperations
+         */
         virtual void clear_elem();
         
 
+        /*!
+         *   calls the method from TransientAssemblyElemOperations
+         */
         virtual bool
-        if_use_local_elem() const {
-            libmesh_assert(false); // should not get called.
-        }
+        if_use_local_elem() const;
         
+        /*!
+         *   calls the method from TransientAssemblyElemOperations
+         */
         virtual void
         set_local_fe_data(MAST::LocalElemFE& fe,
-                          const libMesh::Elem& e) const {
-            libmesh_assert(false); // should not get called.
-        }
+                          const libMesh::Elem& e) const;
 
+        /*!
+         *   calls the method from TransientAssemblyElemOperations
+         */
+        virtual void
+        set_elem_sensitivity_parameter(const MAST::FunctionBase& f);
+        
     protected:
         
         /*!
@@ -282,14 +309,7 @@ namespace MAST {
          *   element level quantities
          */
         MAST::TransientAssemblyElemOperations* _assembly_ops;
-        
-        /*!
-         *   NonlinearImplicitSystem for which this object is
-         *   calculating the solution
-         */
-        MAST::NonlinearSystem* _system;
-        
-        
+                
         /*!
          *    flag if the current procedure is to evaluate the highest ode
          *    derivative solution, or to evaluate solution at current time step.

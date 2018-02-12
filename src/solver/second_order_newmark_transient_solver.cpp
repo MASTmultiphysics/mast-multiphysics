@@ -21,6 +21,7 @@
 #include "solver/second_order_newmark_transient_solver.h"
 #include "base/transient_assembly_elem_operations.h"
 #include "base/elem_base.h"
+#include "base/system_initialization.h"
 #include "base/nonlinear_system.h"
 
 
@@ -37,32 +38,6 @@ gamma(0.5)
 
 MAST::SecondOrderNewmarkTransientSolver::~SecondOrderNewmarkTransientSolver()
 { }
-
-
-
-void
-MAST::SecondOrderNewmarkTransientSolver::solve() {
-    
-    // make sure that the system has been specified
-    libmesh_assert_msg(_system, "System pointer is nullptr.");
-    
-    // ask the Newton solver to solve for the system solution
-    _system->solve(*this, *_assembly);
-    
-}
-
-
-
-void
-MAST::SecondOrderNewmarkTransientSolver::sensitivity_solve(const MAST::FunctionBase& f) {
-    
-    // make sure that the system has been specified
-    libmesh_assert_msg(_system, "System pointer is nullptr.");
-    
-    // ask the Newton solver to solve for the system solution
-    _system->sensitivity_solve(*this, *_assembly, f);
-    
-}
 
 
 

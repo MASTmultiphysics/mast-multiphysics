@@ -649,6 +649,8 @@ calculate_output_derivative(const libMesh::NumericVector<Real>& X,
             }
             //        physics_elem->detach_active_solution_function();
         }
+        
+        _intersection->clear();
     }
     
     // if a solution function is attached, clear it

@@ -484,6 +484,7 @@ MAST::AssemblyBase::
 calculate_output_adjoint_sensitivity(const libMesh::NumericVector<Real>& X,
                                      const libMesh::NumericVector<Real>& dq_dX,
                                      const MAST::FunctionBase& p,
+                                     MAST::AssemblyElemOperations&       elem_ops,
                                      MAST::OutputAssemblyElemOperations& output) {
 
     libmesh_assert(_discipline);
@@ -500,15 +501,14 @@ calculate_output_adjoint_sensitivity(const libMesh::NumericVector<Real>& X,
     libMesh::NumericVector<Real>
     &dres_dp = nonlin_sys.add_sensitivity_rhs();
     
-    this->set_elem_operation_object(output);
-
+    this->set_elem_operation_object(elem_ops);
     this->sensitivity_assemble(p, dres_dp);
-    
+    this->clear_elem_operation_object();
+
     Real
     dq_dp = output.output_sensitivity_total(p) + dq_dX.dot(dres_dp);
     
     libMesh::out << "dq/dp: adjoint: " << dq_dp << std::endl;
     
-    this->clear_elem_operation_object();
 }
 

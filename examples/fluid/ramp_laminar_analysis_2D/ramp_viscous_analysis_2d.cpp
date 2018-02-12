@@ -260,7 +260,6 @@ MAST::RampLaminarAnalysis2D::solve(bool if_write_output) {
     
     // now solve the system
     assembly.set_discipline_and_system(*_discipline, *_fluid_sys);
-    assembly.set_solver(solver);
 
     MAST::NonlinearSystem&  nonlin_sys   =
     dynamic_cast<MAST::NonlinearSystem&>(_fluid_sys->system());
@@ -334,7 +333,7 @@ MAST::RampLaminarAnalysis2D::solve(bool if_write_output) {
                                          nonlin_sys.time);
         }
         
-        solver.solve();
+        solver.solve(assembly);
         
         solver.advance_time_step();
 

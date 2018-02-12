@@ -23,7 +23,7 @@
 #include "base/assembly_base.h"
 #include "base/transient_assembly.h"
 #include "base/nonlinear_system.h"
-
+#include "base/system_initialization.h"
 
 // libMesh includes
 #include "libmesh/numeric_vector.h"
@@ -42,7 +42,6 @@ _first_sensitivity_step         (true),
 _ode_order                      (o),
 _n_iters_to_store               (n),
 _assembly_ops                   (nullptr),
-_system                         (nullptr),
 _if_highest_derivative_solution (false) {
 
 }
@@ -51,20 +50,53 @@ _if_highest_derivative_solution (false) {
 
 
 MAST::TransientSolverBase::~TransientSolverBase() {
-    this->clear_assembly_ops();
+    
+    this->clear_elem_operation_object();
 }
 
 
 
 void
+MAST::TransientSolverBase::set_assembly(MAST::AssemblyBase &assembly) {
+    
+    libmesh_assert(_assembly_ops);
+    MAST::NonlinearImplicitAssemblyElemOperations::set_assembly(assembly);
+    _assembly_ops->set_assembly(assembly);
+}
+
+
+void
+MAST::TransientSolverBase::clear_assembly() {
+    
+    MAST::NonlinearImplicitAssemblyElemOperations::clear_assembly();
+    if (_assembly_ops)
+        _assembly_ops->clear_assembly();
+}
+
+
+MAST::TransientAssemblyElemOperations&
+MAST::TransientSolverBase::get_elem_operation_object() {
+    
+    libmesh_assert(_assembly_ops);
+    
+    return *_assembly_ops;
+}
+
+
+void
 MAST::TransientSolverBase::
-set_assembly_ops(MAST::TransientAssemblyElemOperations &assembly_ops) {
+set_elem_operation_object(MAST::TransientAssemblyElemOperations &assembly_ops) {
+    
+    libmesh_assert(_system);
+    libmesh_assert(_discipline);
+
+    MAST::NonlinearSystem
+    &sys = _system->system();
     
     // make sure that the previous assembly association has been cleared
-    this->clear_assembly_ops();
+    this->clear_elem_operation_object();
     
     _assembly_ops = &assembly_ops;
-    _system       = &assembly_ops.get_assembly().system();
     
     // now, add the vectors
     std::string nm;
@@ -78,28 +110,28 @@ set_assembly_ops(MAST::TransientAssemblyElemOperations &assembly_ops) {
             
             nm = "transient_solution_";
             nm += iter.str();
-            _system->add_vector(nm);
+            sys.add_vector(nm);
         }
         nm = "transient_solution_sensitivity_";
         nm += iter.str();
-        _system->add_vector(nm);
+        sys.add_vector(nm);
 
         // add the velocity
         nm = "transient_velocity_";
         nm += iter.str();
-        _system->add_vector(nm);
+        sys.add_vector(nm);
         nm = "transient_velocity_sensitivity_";
         nm += iter.str();
-        _system->add_vector(nm);
+        sys.add_vector(nm);
 
         if (_ode_order > 1) {
             // add the acceleration
             nm = "transient_acceleration_";
             nm += iter.str();
-            _system->add_vector(nm);
+            sys.add_vector(nm);
             nm = "transient_acceleration_sensitivity_";
             nm += iter.str();
-            _system->add_vector(nm);
+            sys.add_vector(nm);
         }
     }
     
@@ -109,11 +141,14 @@ set_assembly_ops(MAST::TransientAssemblyElemOperations &assembly_ops) {
 
 
 void
-MAST::TransientSolverBase::clear_assembly_ops() {
+MAST::TransientSolverBase::clear_elem_operation_object() {
     
     // if no system has been set so far, nothing needs to be done
     if (!_system)
         return;
+    
+    MAST::NonlinearSystem
+    &sys = _system->system();
     
     // clear the transient solutions stored in system for solution
     // number of time steps to store
@@ -125,33 +160,32 @@ MAST::TransientSolverBase::clear_assembly_ops() {
         // remove the solution
         nm = "transient_solution_";
         nm += iter.str();
-        if (_system->have_vector(nm)) _system->remove_vector(nm);
+        if (sys.have_vector(nm)) sys.remove_vector(nm);
         nm = "transient_solution_sensitivity_";
         nm += iter.str();
-        if (_system->have_vector(nm)) _system->remove_vector(nm);
+        if (sys.have_vector(nm)) sys.remove_vector(nm);
 
         // remove the velocity
         nm = "transient_velocity_";
         nm += iter.str();
-        if (_system->have_vector(nm)) _system->remove_vector(nm);
+        if (sys.have_vector(nm)) sys.remove_vector(nm);
         nm = "transient_velocity_sensitivity_";
         nm += iter.str();
-        if (_system->have_vector(nm)) _system->remove_vector(nm);
+        if (sys.have_vector(nm)) sys.remove_vector(nm);
 
         if (_ode_order > 1) {
             // remove the acceleration
             nm = "transient_acceleration_";
             nm += iter.str();
-            if (_system->have_vector(nm)) _system->remove_vector(nm);
+            if (sys.have_vector(nm)) sys.remove_vector(nm);
             nm = "transient_acceleration_sensitivity_";
             nm += iter.str();
-            if (_system->have_vector(nm)) _system->remove_vector(nm);
+            if (sys.have_vector(nm)) sys.remove_vector(nm);
 
         }
     }
     
     _assembly_ops   = nullptr;
-    _system         = nullptr;
     _first_step     = true;
 }
 
@@ -173,10 +207,10 @@ MAST::TransientSolverBase::solution(unsigned int prev_iter) const {
         std::string
         nm = "transient_solution_" + oss.str();
 
-        return _system->get_vector(nm);
+        return _system->system().get_vector(nm);
     }
     else
-        return *_system->solution;
+        return *_system->system().solution;
 }
 
 
@@ -194,7 +228,7 @@ MAST::TransientSolverBase::solution_sensitivity(unsigned int prev_iter) const {
     std::string
     nm = "transient_solution_sensitivity_" + oss.str();
     
-    return _system->get_vector(nm);
+    return _system->system().get_vector(nm);
 }
 
 
@@ -213,7 +247,7 @@ MAST::TransientSolverBase::velocity(unsigned int prev_iter) const {
     std::string
     nm = "transient_velocity_" + oss.str();
     
-    return _system->get_vector(nm);
+    return _system->system().get_vector(nm);
 }
 
 
@@ -232,7 +266,7 @@ MAST::TransientSolverBase::velocity_sensitivity(unsigned int prev_iter) const {
     std::string
     nm = "transient_velocity_sensitivity_" + oss.str();
     
-    return _system->get_vector(nm);
+    return _system->system().get_vector(nm);
 }
 
 
@@ -252,7 +286,7 @@ MAST::TransientSolverBase::acceleration(unsigned int prev_iter) const {
     std::string
     nm = "transient_acceleration_" + oss.str();
     
-    return _system->get_vector(nm);
+    return _system->system().get_vector(nm);
 }
 
 
@@ -271,42 +305,76 @@ MAST::TransientSolverBase::acceleration_sensitivity(unsigned int prev_iter) cons
     std::string
     nm = "transient_acceleration_sensitivity_" + oss.str();
     
-    return _system->get_vector(nm);
+    return _system->system().get_vector(nm);
 }
 
 
 
+void
+MAST::TransientSolverBase::solve(MAST::AssemblyBase& assembly) {
+    
+    // make sure that the system has been specified
+    libmesh_assert_msg(_system, "System pointer is nullptr.");
+    
+    // ask the Newton solver to solve for the system solution
+    _system->system().solve(*this, assembly);
+    
+}
+
+
 
 void
-MAST::TransientSolverBase::solve_highest_derivative_and_advance_time_step() {
+MAST::TransientSolverBase::sensitivity_solve(MAST::AssemblyBase& assembly,
+                                             const MAST::FunctionBase& f) {
+    
+    // make sure that the system has been specified
+    libmesh_assert_msg(_system, "System pointer is nullptr.");
+    
+    // ask the Newton solver to solve for the system solution
+    _system->system().sensitivity_solve(*this, assembly, f);
+}
+
+
+
+void
+MAST::TransientSolverBase::
+solve_highest_derivative_and_advance_time_step(MAST::AssemblyBase& assembly) {
     
     libmesh_assert(_first_step);
+    libmesh_assert(_system);
+    libmesh_assert(_discipline);
+    libmesh_assert(!_assembly);
     
     // tell the solver that the current solution being obtained is for the
     // highest time derivative
     _if_highest_derivative_solution = true;
     
+    MAST::NonlinearSystem
+    &sys = _system->system();
+    
     // Build the residual and Jacobian
-    _assembly->residual_and_jacobian(*_system->solution, _system->rhs, _system->matrix, *_system);
-
+    assembly.set_elem_operation_object(*this);
+    assembly.residual_and_jacobian(*sys.solution, sys.rhs, sys.matrix, sys);
+    assembly.clear_elem_operation_object();
+    
     // reset the solution flag
     _if_highest_derivative_solution = false;
     
     std::pair<unsigned int, Real>
-    solver_params = _system->get_linear_solve_parameters();
+    solver_params = sys.get_linear_solve_parameters();
     
     // Solve the linear system.
     libMesh::SparseMatrix<Real> *
-    pc = _system->request_matrix("Preconditioner");
+    pc = sys.request_matrix("Preconditioner");
     
     std::unique_ptr<libMesh::NumericVector<Real> >
     dvec(velocity().zero_clone().release());
 
-    _system->linear_solver->solve (*_system->matrix, pc,
-                                   *dvec,
-                                   *_system->rhs,
-                                   solver_params.second,
-                                   solver_params.first);
+    sys.linear_solver->solve (*sys.matrix, pc,
+                              *dvec,
+                              *sys.rhs,
+                              solver_params.second,
+                              solver_params.first);
 
     libMesh::NumericVector<Real> *vec = nullptr;
     
@@ -329,8 +397,7 @@ MAST::TransientSolverBase::solve_highest_derivative_and_advance_time_step() {
     
     // The linear solver may not have fit our constraints exactly
 #ifdef LIBMESH_ENABLE_CONSTRAINTS
-    _system->get_dof_map().enforce_constraints_exactly
-    (*_system, vec, /* homogeneous = */ true);
+    sys.get_dof_map().enforce_constraints_exactly(sys, vec, /* homogeneous = */ true);
 #endif
     
     // next, move all the solutions and velocities into older
@@ -353,7 +420,7 @@ MAST::TransientSolverBase::solve_highest_derivative_and_advance_time_step() {
     }
     
     // finally, update the system time
-    _system->time     += dt;
+    sys.time          += dt;
     _first_step        = false;
 }
 
@@ -362,37 +429,46 @@ MAST::TransientSolverBase::solve_highest_derivative_and_advance_time_step() {
 
 void
 MAST::TransientSolverBase::
-solve_highest_derivative_and_advance_time_step_with_sensitivity(const MAST::FunctionBase& f) {
+solve_highest_derivative_and_advance_time_step_with_sensitivity(MAST::AssemblyBase& assembly,
+                                                                const MAST::FunctionBase& f) {
     
     libmesh_assert(_first_sensitivity_step);
+    libmesh_assert(_system);
+    libmesh_assert(_discipline);
+    libmesh_assert(!_assembly);
     
     // tell the solver that the current solution being obtained is for the
     // highest time derivative
     _if_highest_derivative_solution = true;
+
+    MAST::NonlinearSystem
+    &sys = _system->system();
     
     // Build the Jacobian
-    _assembly->residual_and_jacobian(*_system->solution, nullptr, _system->matrix, *_system);
+    assembly.set_elem_operation_object(*this);
+    assembly.residual_and_jacobian(*sys.solution, nullptr, sys.matrix, sys);
     // this should assembl the sensitivity of the residual
-    _assembly->sensitivity_assemble(f, *_system->rhs);
+    assembly.sensitivity_assemble(f, *sys.rhs);
+    assembly.clear_elem_operation_object();
 
     // reset the solution flag
     _if_highest_derivative_solution = false;
     
     std::pair<unsigned int, Real>
-    solver_params = _system->get_linear_solve_parameters();
+    solver_params = sys.get_linear_solve_parameters();
     
     // Solve the linear system.
     libMesh::SparseMatrix<Real> *
-    pc = _system->request_matrix("Preconditioner");
+    pc = sys.request_matrix("Preconditioner");
     
     std::unique_ptr<libMesh::NumericVector<Real> >
     dvec(velocity().zero_clone().release());
     
-    _system->linear_solver->solve (*_system->matrix, pc,
-                                   *dvec,
-                                   *_system->rhs,
-                                   solver_params.second,
-                                   solver_params.first);
+    sys.linear_solver->solve (*sys.matrix, pc,
+                              *dvec,
+                              *sys.rhs,
+                              solver_params.second,
+                              solver_params.first);
     
     libMesh::NumericVector<Real> *vec = nullptr;
     
@@ -415,8 +491,7 @@ solve_highest_derivative_and_advance_time_step_with_sensitivity(const MAST::Func
     
     // The linear solver may not have fit our constraints exactly
 #ifdef LIBMESH_ENABLE_CONSTRAINTS
-    _system->get_dof_map().enforce_constraints_exactly
-    (*_system, vec, /* homogeneous = */ true);
+    sys.get_dof_map().enforce_constraints_exactly(sys, vec, /* homogeneous = */ true);
 #endif
     
     // next, move all the solutions and velocities into older
@@ -442,7 +517,7 @@ solve_highest_derivative_and_advance_time_step_with_sensitivity(const MAST::Func
     // finally, update the system time
     _first_sensitivity_step        = false;
     
-    this->solve_highest_derivative_and_advance_time_step();
+    this->solve_highest_derivative_and_advance_time_step(assembly);
 }
 
 
@@ -455,6 +530,9 @@ build_local_quantities(const libMesh::NumericVector<Real>& current_sol,
     // make sure that the system has been specified
     libmesh_assert(_system);
 
+    MAST::NonlinearSystem
+    &sys = _system->system();
+    
     // make sure there are no solutions in sol
     libmesh_assert(!sol.size());
 
@@ -462,14 +540,14 @@ build_local_quantities(const libMesh::NumericVector<Real>& current_sol,
     sol.resize(_ode_order+1);
     
     const std::vector<libMesh::dof_id_type>&
-    send_list = _system->get_dof_map().get_send_list();
+    send_list = sys.get_dof_map().get_send_list();
     
 
     for ( unsigned int i=0; i<=_ode_order; i++) {
         
-        sol[i] = libMesh::NumericVector<Real>::build(_system->comm()).release();
-        sol[i]->init(_system->n_dofs(),
-                     _system->n_local_dofs(),
+        sol[i] = libMesh::NumericVector<Real>::build(sys.comm()).release();
+        sol[i]->init(sys.n_dofs(),
+                     sys.n_local_dofs(),
                      send_list,
                      false,
                      libMesh::GHOSTED);
@@ -531,6 +609,9 @@ build_perturbed_local_quantities(const libMesh::NumericVector<Real>& current_dso
     // make sure that the system has been specified
     libmesh_assert(_system);
 
+    MAST::NonlinearSystem
+    &sys = _system->system();
+    
     // make sure there are no solutions in sol
     libmesh_assert(!sol.size());
     
@@ -538,7 +619,7 @@ build_perturbed_local_quantities(const libMesh::NumericVector<Real>& current_dso
     sol.resize(_ode_order+1);
     
     const std::vector<libMesh::dof_id_type>&
-    send_list = _system->get_dof_map().get_send_list();
+    send_list = sys.get_dof_map().get_send_list();
     
     
     std::unique_ptr<libMesh::NumericVector<Real> >
@@ -546,9 +627,9 @@ build_perturbed_local_quantities(const libMesh::NumericVector<Real>& current_dso
     
     for ( unsigned int i=0; i<=_ode_order; i++) {
         
-        sol[i] = libMesh::NumericVector<Real>::build(_system->comm()).release();
-        sol[i]->init(_system->n_dofs(),
-                     _system->n_local_dofs(),
+        sol[i] = libMesh::NumericVector<Real>::build(sys.comm()).release();
+        sol[i]->init(sys.n_dofs(),
+                     sys.n_local_dofs(),
                      send_list,
                      false,
                      libMesh::GHOSTED);
@@ -607,11 +688,17 @@ build_perturbed_local_quantities(const libMesh::NumericVector<Real>& current_dso
 void
 MAST::TransientSolverBase::advance_time_step() {
 
+    libmesh_assert(_system);
+    libmesh_assert(_discipline);
+    
+    MAST::NonlinearSystem
+    &sys = _system->system();
+    
     // first ask the solver to update the velocity and acceleration vector
-    update_velocity(this->velocity(), *_system->solution);
+    update_velocity(this->velocity(), *sys.solution);
 
     if (_ode_order > 1)
-        update_acceleration(this->acceleration(), *_system->solution);
+        update_acceleration(this->acceleration(), *sys.solution);
 
     // next, move all the solutions and velocities into older
     // time step locations
@@ -633,7 +720,7 @@ MAST::TransientSolverBase::advance_time_step() {
     }
 
     // finally, update the system time
-    _system->time     += dt;
+    sys.time          += dt;
     _first_step        = false;
 }
 
@@ -677,6 +764,16 @@ MAST::TransientSolverBase::advance_time_step_with_sensitivity() {
 
 
 void
+MAST::TransientSolverBase::init(const libMesh::Elem &elem) {
+    
+    libmesh_assert(_assembly_ops);
+    _assembly_ops->init(elem);
+}
+
+
+
+
+void
 MAST::TransientSolverBase::clear_elem() {
     
     libmesh_assert(_assembly_ops);
@@ -684,3 +781,28 @@ MAST::TransientSolverBase::clear_elem() {
 }
 
 
+
+bool
+MAST::TransientSolverBase::if_use_local_elem() const {
+    
+    libmesh_assert(_assembly_ops);
+    return _assembly_ops->if_use_local_elem();
+}
+
+
+void
+MAST::TransientSolverBase::set_local_fe_data(MAST::LocalElemFE& fe,
+                                             const libMesh::Elem& e) const {
+    
+    libmesh_assert(_assembly_ops);
+    _assembly_ops->set_local_fe_data(fe, e);
+}
+
+
+
+void
+MAST::TransientSolverBase::set_elem_sensitivity_parameter(const MAST::FunctionBase& f) {
+    
+    libmesh_assert(_assembly_ops);
+    _assembly_ops->set_elem_sensitivity_parameter(f);
+}

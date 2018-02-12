@@ -198,7 +198,6 @@ MAST::Examples::TopologyOptimizationLevelSet2D::initialize_solution() {
 
     Phi phi(length, width, min_val*0.4);
     _level_set_sys_init->initialize_solution(phi);
-    libMesh::ExodusII_IO(*_level_set_mesh).write_equation_systems("o.exo", *_level_set_eq_sys);
 }
 
 
@@ -267,7 +266,9 @@ MAST::Examples::TopologyOptimizationLevelSet2D::evaluate(const std::vector<Real>
         _level_set_sys->solution->set(_dv_params[i].first, dvars[i]);
     _level_set_sys->solution->close();
     _level_set_function->init(*_level_set_sys_init, *_level_set_sys->solution);
-    
+
+    libMesh::ExodusII_IO(*_level_set_mesh).write_equation_systems("o.exo", *_level_set_eq_sys);
+
     /**********************************************************************
      * DO NOT zero out the gradient vector, since GCMMA needs it for the  *
      * subproblem solution                                                *
@@ -302,7 +303,8 @@ MAST::Examples::TopologyOptimizationLevelSet2D::evaluate(const std::vector<Real>
     //////////////////////////////////////////////////////////////////////
     level_set_assembly.calculate_output(*_level_set_sys->solution, volume);
     obj       = volume.output_total();
-    
+    libMesh::out << "============================\n";
+
     //////////////////////////////////////////////////////////////////////
     // evaluate the stress constraint
     //////////////////////////////////////////////////////////////////////
@@ -350,6 +352,7 @@ _evaluate_volume_sensitivity(MAST::LevelSetVolume& volume,
     
     for (unsigned int i=0; i<_n_vars; i++) {
         
+        volume.zero();
         dphi->zero();
         dphi->set(_dv_params[i].first, 1.);
         dphi->close();
@@ -359,6 +362,7 @@ _evaluate_volume_sensitivity(MAST::LevelSetVolume& volume,
                                                      *dphi,
                                                      *_dv_params[i].second,
                                                      volume);
+        obj_grad[i] = volume.output_sensitivity_total(*_dv_params[i].second);
     }
 }
 
@@ -380,6 +384,7 @@ _evaluate_stress_functional_sensitivity(MAST::StressStrainOutputBase& stress,
     
     for (unsigned int i=0; i<_n_vars; i++) {
         
+        stress.zero();
         dphi->zero();
         dphi->set(_dv_params[i].first, 1.);
         dphi->close();
@@ -391,7 +396,9 @@ _evaluate_stress_functional_sensitivity(MAST::StressStrainOutputBase& stress,
         assembly.calculate_output_adjoint_sensitivity(*_sys->solution,
                                                       _sys->get_adjoint_solution(),
                                                       *_dv_params[i].second,
+                                                      elem_ops,
                                                       stress);
+        grads[i] = stress.output_sensitivity_total(*_dv_params[i].second);
     }
 }
 
@@ -587,7 +594,6 @@ MAST::Examples::TopologyOptimizationLevelSet2D::level_set_solve() {
     // now solve the system
     level_set_assembly->set_discipline_and_system(*_level_set_discipline,
                                                   *_level_set_sys_init);
-    level_set_assembly->set_solver(level_set_solver);
     
     // file to write the solution for visualization
     libMesh::ExodusII_IO exodus_writer(*_mesh);
@@ -623,7 +629,7 @@ MAST::Examples::TopologyOptimizationLevelSet2D::level_set_solve() {
                                          _level_set_sys->time);
         }
         
-        level_set_solver.solve();
+        level_set_solver.solve(*level_set_assembly);
         
         level_set_solver.advance_time_step();
         t_step++;

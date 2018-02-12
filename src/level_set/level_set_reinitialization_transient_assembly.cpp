@@ -73,9 +73,14 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
     libmesh_assert(_discipline);
     libmesh_assert(_elem_ops);
 
-    MAST::NonlinearSystem& transient_sys = _system->system();
+    MAST::TransientSolverBase
+    &solver = dynamic_cast<MAST::TransientSolverBase&>(*_elem_ops);
+    MAST::NonlinearSystem
+    &transient_sys = _system->system();
+    
     MAST::LevelSetTransientAssemblyElemOperations
-    &level_set_elem_ops = dynamic_cast<MAST::LevelSetTransientAssemblyElemOperations&>(*_elem_ops);
+    &level_set_elem_ops = dynamic_cast<MAST::LevelSetTransientAssemblyElemOperations&>
+    (solver.get_elem_operation_object());
     
     // make sure that the system for which this object was created,
     // and the system passed through the function call are the same
@@ -108,7 +113,7 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
         _sol_function->init( X);
     
     // ask the solver to localize the relevant solutions
-    _transient_solver->build_local_quantities(X, local_qtys);
+    solver.build_local_quantities(X, local_qtys);
     
     libMesh::MeshBase::const_element_iterator       el     =
     transient_sys.get_mesh().active_local_elements_begin();
@@ -121,7 +126,7 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
         
         dof_map.dof_indices (elem, dof_indices);
         
-        _elem_ops->init(*elem);
+        solver.init(*elem);
         
         // get the solution
         unsigned int ndofs = (unsigned int)dof_indices.size();
@@ -132,17 +137,15 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
         for (unsigned int i=0; i<dof_indices.size(); i++)
             ref_sol(i) = (*localized_solution)(dof_indices[i]);
 
-        _transient_solver->set_element_data(dof_indices,
-                                            local_qtys);
+        solver.set_element_data(dof_indices, local_qtys);
         level_set_elem_ops.set_elem_reference_solution(ref_sol);
         
         //        if (_sol_function)
         //            physics_elem->attach_active_solution_function(*_sol_function);
         
         // perform the element level calculations
-        _transient_solver->elem_calculations(J!=nullptr?true:false,
-                                             vec, mat);
-        _transient_solver->clear_elem();
+        solver.elem_calculations(J!=nullptr?true:false, vec, mat);
+        solver.clear_elem();
         
         // copy to the libMesh matrix for further processing
         DenseRealVector v;

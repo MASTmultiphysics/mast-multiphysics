@@ -104,7 +104,7 @@ update_stress_strain_data(MAST::StressStrainOutputBase&       ops,
     // make sure it has been initialized
     libmesh_assert(_system);
     libmesh_assert(_discipline);
-    libmesh_assert(_elem_ops);
+    libmesh_assert(!_elem_ops);
     
     this->set_elem_operation_object(ops);
 
@@ -224,7 +224,7 @@ update_stress_strain_sensitivity_data(MAST::StressStrainOutputBase&       ops,
     // make sure it has been initialized
     libmesh_assert(_system);
     libmesh_assert(_discipline);
-    libmesh_assert(_elem_ops);
+    libmesh_assert(!_elem_ops);
     
     this->set_elem_operation_object(ops);
     
