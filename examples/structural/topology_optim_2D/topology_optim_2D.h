@@ -17,8 +17,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#ifndef __mast_plate_bending_h__
-#define __mast_plate_bending_h__
+#ifndef __mast_topology_optimization_level_set_2d_h__
+#define __mast_topology_optimization_level_set_2d_h__
 
 
 // MAST includes
@@ -122,5 +122,5 @@ namespace MAST  {
 }
 
 
-#endif //  __mast_plate_bending_h__
+#endif //  __mast_topology_optimization_level_set_2d_h__
 

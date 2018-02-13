@@ -34,7 +34,7 @@
 //#include "examples/structural/beam_piston_theory_time_accurate/beam_piston_theory_time_accurate.h"
 //#include "examples/structural/membrane_extension_uniaxial_stress/membrane_extension_uniaxial.h"
 //#include "examples/structural/membrane_extension_biaxial_stress/membrane_extension_biaxial.h"
-//#include "examples/structural/plate_bending/plate_bending.h"
+#include "examples/structural/plate_bending/plate_bending.h"
 //#include "examples/structural/plate_bending_level_set/plate_bending_level_set.h"
 //#include "examples/structural/stiffened_plate_bending_thermal_stress/stiffened_plate_bending_thermal_stress.h"
 //#include "examples/structural/plate_oscillating_load/plate_oscillating_load.h"
@@ -300,6 +300,8 @@ int main(int argc, char* const argv[]) {
         MAST::Examples::BeamBending example(init.comm());
         example.init(*input, prefix);
         example.static_solve();
+        example.static_sensitivity_solve(example.get_parameter("thy"));
+        example.static_adjoint_sensitivity_solve(example.get_parameter("thy"));
     }
     else if (case_name == "beam_oscillating_load") {
         
@@ -385,12 +387,14 @@ int main(int argc, char* const argv[]) {
 //                                                          true,
 //                                                          with_sens,
 //                                                          par_name);
-//    else if (case_name == "plate_bending")
-//        analysis<MAST::PlateBending>(case_name,
-//                                     libMesh::QUAD4,
-//                                     if_nonlin,
-//                                     with_sens,
-//                                     par_name);
+    else if (case_name == "plate_bending") {
+        
+        MAST::Examples::PlateBending example(init.comm());
+        example.init(*input, prefix);
+        example.static_solve();
+        example.static_sensitivity_solve(example.get_parameter("th"));
+        example.static_adjoint_sensitivity_solve(example.get_parameter("th"));
+    }
 //    else if (case_name == "plate_bending_level_set")
 //        analysis<MAST::PlateBendingLevelSet>(case_name,
 //                                             libMesh::QUAD4,

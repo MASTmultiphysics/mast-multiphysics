@@ -112,8 +112,8 @@ MAST::Examples::StructuralExampleBase::init(MAST::Examples::GetPotWrapper& input
     _init_system_and_discipline();
     _init_dirichlet_conditions();
     _init_eq_sys();
-    _init_loads();
     _init_material();
+    _init_loads();
     _init_section_property();
 }
 

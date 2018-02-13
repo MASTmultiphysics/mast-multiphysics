@@ -406,7 +406,7 @@ MAST::StructuralElement2D::calculate_stress(bool request_derivative,
             
             
             // calculate the derivative if requested
-            if (request_derivative || !p) {
+            if (request_derivative || p) {
                 
                 Bmat_mem.left_multiply(dstrain_dX, eye);  // membrane strain is linear
                 
