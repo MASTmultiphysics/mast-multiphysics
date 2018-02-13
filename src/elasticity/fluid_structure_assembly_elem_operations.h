@@ -75,7 +75,8 @@ namespace MAST {
                                        RealVectorX& vec,
                                        RealMatrixX& mat);
         virtual void elem_aerodynamic_force_calculations(ComplexVectorX& vec);
-        virtual void elem_sensitivity_calculations(bool if_jac,
+        virtual void elem_sensitivity_calculations(const MAST::FunctionBase& f,
+                                                   bool if_jac,
                                                    RealVectorX& vec,
                                                    RealMatrixX& mat);
         virtual void elem_second_derivative_dot_solution_assembly(RealMatrixX& m);

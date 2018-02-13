@@ -72,8 +72,18 @@ namespace MAST {
         virtual void
         calculate_transverse_shear_residual(bool request_jacobian,
                                             RealVectorX& local_f,
-                                            RealMatrixX& local_jac,
-                                            const MAST::FunctionBase* sens_params )
+                                            RealMatrixX& local_jac)
+        { libmesh_error(); }
+
+        
+        /*!
+         *   calculate the transverse shear component for the element
+         */
+        virtual void
+        calculate_transverse_shear_residual_sensitivity(const MAST::FunctionBase& p,
+                                                        bool request_jacobian,
+                                                        RealVectorX& local_f,
+                                                        RealMatrixX& local_jac)
         { libmesh_error(); }
 
 
@@ -81,11 +91,11 @@ namespace MAST {
          *   calculate the transverse shear component for the element
          */
         virtual void
-        calculate_transverse_shear_residual_boundary_velocity(bool request_jacobian,
-                                                              const unsigned int s,
-                                                              MAST::FieldFunction<RealVectorX>& vel_f,
-                                                              RealVectorX& local_f,
-                                                              const MAST::FunctionBase* sens_params)
+        calculate_transverse_shear_residual_boundary_velocity
+        (const MAST::FunctionBase& p,
+         const unsigned int s,
+         const MAST::FieldFunction<RealVectorX>& vel_f,
+         RealVectorX& local_f)
         { libmesh_error(); }
 
         

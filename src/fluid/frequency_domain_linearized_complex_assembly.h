@@ -75,7 +75,8 @@ namespace MAST {
          *   performs the element sensitivity calculations over \par elem,
          *   and returns the element residual sensitivity in \par vec .
          */
-        virtual void elem_sensitivity_calculations(ComplexVectorX& vec);
+        virtual void elem_sensitivity_calculations(const MAST::FunctionBase& f,
+                                                   ComplexVectorX& vec);
         
         /*!
          *   initializes the object for the geometric element \p elem. This

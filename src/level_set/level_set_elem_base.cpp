@@ -384,7 +384,7 @@ MAST::LevelSetElementBase::volume_boundary_velocity_on_side(unsigned int s) {
         //      dphi/dp -(grad(phi) .  grad(phi))/|grad(phi)|  Vn  = 0
         //      Vn  =  (dphi/dp) |grad(phi)|  / |grad(phi)|^2 = (dphi/dp) / |grad(phi)|
         vn      =  dphidp(0) / gradphi.norm();
-                
+
         // vol     =  int_omega  dOmega
         // dvol/dp =  int_Gamma Vn dGamma
         dvoldp += vn * JxW[qp];

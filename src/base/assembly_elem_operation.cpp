@@ -103,15 +103,6 @@ MAST::AssemblyElemOperations::get_assembly() {
 }
 
 
-void
-MAST::AssemblyElemOperations::set_elem_sensitivity_parameter(const MAST::FunctionBase& f) {
-    
-    libmesh_assert(_physics_elem);
-    
-    _physics_elem->sensitivity_param = &f;
-}
-
-
 
 void
 MAST::AssemblyElemOperations::set_elem_solution(const RealVectorX& sol) {

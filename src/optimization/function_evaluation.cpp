@@ -143,7 +143,7 @@ MAST::FunctionEvaluation::verify_gradients(const std::vector<Real>& dvars) {
     
     // first call theh evaluate method to get the analytical sensitivities
     Real
-    delta           = 1.e1,
+    delta           = 1.e-5,
     tol             = 1.e-3,
     obj             = 0.,
     obj_fd          = 0.;

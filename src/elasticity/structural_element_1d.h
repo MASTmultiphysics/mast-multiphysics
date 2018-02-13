@@ -74,7 +74,8 @@ namespace MAST {
          *    Calculates the sensitivity internal force vector and Jacobian due to
          *    strain energy
          */
-        virtual bool internal_residual_sensitivity(bool request_jacobian,
+        virtual bool internal_residual_sensitivity(const MAST::FunctionBase& p,
+                                                   bool request_jacobian,
                                                    RealVectorX& f,
                                                    RealMatrixX& jac);
         
@@ -84,9 +85,10 @@ namespace MAST {
          *
          */
         virtual void
-        internal_residual_boundary_velocity(RealVectorX& f,
+        internal_residual_boundary_velocity(const MAST::FunctionBase& p,
+                                            RealVectorX& f,
                                             const unsigned int s,
-                                            MAST::FieldFunction<RealVectorX>& vel_f) {
+                                            const MAST::FieldFunction<RealVectorX>& vel_f) {
             libmesh_assert(false);
         }
 
@@ -108,7 +110,8 @@ namespace MAST {
          *    Calculates the internal force vector and Jacobian due to
          *    strain energy coming from a prestress
          */
-        virtual bool prestress_residual_sensitivity (bool request_jacobian,
+        virtual bool prestress_residual_sensitivity (const MAST::FunctionBase& p,
+                                                     bool request_jacobian,
                                                      RealVectorX& f,
                                                      RealMatrixX& jac);
         
@@ -126,7 +129,7 @@ namespace MAST {
          *    and provided if the respective flags are true.
          */
         virtual bool calculate_stress(bool request_derivative,
-                                      bool request_sensitivity,
+                                      const MAST::FunctionBase* p,
                                       MAST::StressStrainOutputBase& output);
         
 
@@ -146,7 +149,8 @@ namespace MAST {
          *    Calculates the force vector and Jacobian due to surface pressure.
          */
         virtual bool
-        surface_pressure_residual_sensitivity(bool request_jacobian,
+        surface_pressure_residual_sensitivity(const MAST::FunctionBase& p,
+                                              bool request_jacobian,
                                               RealVectorX& f,
                                               RealMatrixX& jac,
                                               const unsigned int side,
@@ -165,7 +169,8 @@ namespace MAST {
          *    Calculates the sensitivity of force vector and the Jacobian due to
          *    thermal stresses
          */
-        virtual bool thermal_residual_sensitivity(bool request_jacobian,
+        virtual bool thermal_residual_sensitivity(const MAST::FunctionBase& p,
+                                                  bool request_jacobian,
                                                   RealVectorX& f,
                                                   RealMatrixX& jac,
                                                   MAST::BoundaryConditionBase& bc);
@@ -193,7 +198,8 @@ namespace MAST {
          *    fluid flow are obtained from the BoundaryConditionBase object.
          */
         virtual bool
-        piston_theory_residual_sensitivity(bool request_jacobian,
+        piston_theory_residual_sensitivity(const MAST::FunctionBase& p,
+                                           bool request_jacobian,
                                            RealVectorX &f,
                                            RealMatrixX& jac_xdot,
                                            RealMatrixX& jac,
@@ -224,7 +230,8 @@ namespace MAST {
          *    The order of the boundary condition and direction of fluid
          *     flow are obtained from the BoundaryConditionBase object.
          */
-        virtual bool piston_theory_residual_sensitivity(bool request_jacobian,
+        virtual bool piston_theory_residual_sensitivity(const MAST::FunctionBase& p,
+                                                        bool request_jacobian,
                                                         RealVectorX &f,
                                                         RealMatrixX& jac_xdot,
                                                         RealMatrixX& jac,
@@ -259,7 +266,8 @@ namespace MAST {
          */
         virtual bool
         linearized_frequency_domain_surface_pressure_residual_sensitivity
-        (bool request_jacobian,
+        (const MAST::FunctionBase& p,
+         bool request_jacobian,
          ComplexVectorX& f,
          ComplexMatrixX& jac,
          const unsigned int side,

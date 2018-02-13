@@ -276,7 +276,8 @@ elem_linearized_jacobian_solution_product(RealVectorX& vec) {
 
 void
 MAST::FirstOrderNewmarkTransientSolver::
-elem_sensitivity_calculations(RealVectorX& vec) {
+elem_sensitivity_calculations(const MAST::FunctionBase& f,
+                              RealVectorX& vec) {
 
     // make sure that the assembly object is provided
     libmesh_assert(_assembly_ops);
@@ -287,9 +288,34 @@ elem_sensitivity_calculations(RealVectorX& vec) {
     f_m     = RealVectorX::Zero(n_dofs);
     
     // perform the element assembly
-    _assembly_ops->elem_sensitivity_calculations(f_m,           // mass vector
+    _assembly_ops->elem_sensitivity_calculations(f,
+                                                 f_m,           // mass vector
                                                  f_x);          // forcing vector
     
     // system residual
     vec  = (f_m + f_x);
 }
+
+
+
+void
+MAST::FirstOrderNewmarkTransientSolver::
+elem_shape_sensitivity_calculations(const MAST::FunctionBase& f,
+                                    RealVectorX& vec) {
+    
+    libmesh_assert(false); // to be implemented
+}
+
+
+
+void
+MAST::FirstOrderNewmarkTransientSolver::
+elem_topology_sensitivity_calculations(const MAST::FunctionBase& f,
+                                       const MAST::LevelSetIntersection& intersect,
+                                       const MAST::FieldFunction<RealVectorX>& vel,
+                                       RealVectorX& vec) {
+    libmesh_assert(false); // to be implemented
+}
+
+
+

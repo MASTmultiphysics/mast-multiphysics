@@ -60,7 +60,8 @@ namespace MAST {
          *   Jacobian is retured in \par jac.
          */
         virtual bool
-        internal_residual_sensitivity (bool request_jacobian,
+        internal_residual_sensitivity (const MAST::FunctionBase& p,
+                                       bool request_jacobian,
                                        ComplexVectorX& f,
                                        ComplexMatrixX& jac);
 
@@ -81,7 +82,8 @@ namespace MAST {
          *   Jacobian is retured in \par jac.
          */
         virtual bool
-        side_external_residual_sensitivity (bool request_jacobian,
+        side_external_residual_sensitivity (const MAST::FunctionBase& p,
+                                            bool request_jacobian,
                                             ComplexVectorX& f,
                                             ComplexMatrixX& jac,
                                             std::multimap<libMesh::boundary_id_type, MAST::BoundaryConditionBase*>& bc);
@@ -104,7 +106,7 @@ namespace MAST {
                                    ComplexVectorX& f,
                                    ComplexMatrixX& jac,
                                    const unsigned int s,
-                                   MAST::BoundaryConditionBase& p);
+                                   MAST::BoundaryConditionBase& bc);
 
         
         /*!
@@ -113,11 +115,12 @@ namespace MAST {
          *    Jacobian is returned in \par jac.
          */
         virtual bool
-        slip_wall_surface_residual_sensitivity(bool request_jacobian,
+        slip_wall_surface_residual_sensitivity(const MAST::FunctionBase& p,
+                                               bool request_jacobian,
                                                ComplexVectorX& f,
                                                ComplexMatrixX& jac,
                                                const unsigned int s,
-                                               MAST::BoundaryConditionBase& p);
+                                               MAST::BoundaryConditionBase& bc);
 
     };
 }

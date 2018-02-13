@@ -85,7 +85,8 @@ elem_calculations(bool if_jac,
 
 void
 MAST::HeatConductionNonlinearAssemblyElemOperations::
-elem_sensitivity_calculations(RealVectorX& vec) {
+elem_sensitivity_calculations(const MAST::FunctionBase& f,
+                              RealVectorX& vec) {
     
     libmesh_assert(_physics_elem);
 
@@ -96,9 +97,9 @@ elem_sensitivity_calculations(RealVectorX& vec) {
     RealMatrixX
     dummy = RealMatrixX::Zero(vec.size(), vec.size());
     
-    e.internal_residual_sensitivity(false, vec, dummy);
-    e.side_external_residual_sensitivity(false, vec, dummy, _discipline->side_loads());
-    e.volume_external_residual_sensitivity(false, vec, dummy, _discipline->volume_loads());
+    e.internal_residual_sensitivity(f, false, vec, dummy);
+    e.side_external_residual_sensitivity(f, false, vec, dummy, _discipline->side_loads());
+    e.volume_external_residual_sensitivity(f, false, vec, dummy, _discipline->volume_loads());
 }
 
 

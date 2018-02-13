@@ -84,7 +84,8 @@ linearized_jacobian_solution_product(RealVectorX& f) {
 
 void
 MAST::HeatConductionTransientAssemblyElemOperations::
-elem_sensitivity_calculations(RealVectorX& f_m,
+elem_sensitivity_calculations(const MAST::FunctionBase& f,
+                              RealVectorX& f_m,
                               RealVectorX& f_x) {
     
     libmesh_error(); // to be implemented

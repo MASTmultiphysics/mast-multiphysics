@@ -28,7 +28,6 @@
 MAST::ElementBase::ElementBase(MAST::SystemInitialization& sys,
                                MAST::AssemblyBase& assembly,
                                const libMesh::Elem& elem):
-sensitivity_param       (nullptr),
 _system                 (sys),
 _assembly               (assembly),
 _elem                   (elem),

@@ -22,6 +22,7 @@
 #include "level_set/level_set_elem_base.h"
 #include "level_set/level_set_intersection.h"
 #include "base/assembly_base.h"
+#include "base/function_base.h"
 
 
 MAST::LevelSetVolume::LevelSetVolume(MAST::LevelSetIntersection& intersection):
@@ -56,12 +57,22 @@ MAST::LevelSetVolume::init(const libMesh::Elem& elem) {
 
 
 void
-MAST::LevelSetVolume::zero() {
+MAST::LevelSetVolume::zero_for_analysis() {
 
     _vol     = 0.;
     _dvol_dp = 0.;
 }
 
+
+
+void
+MAST::LevelSetVolume::zero_for_sensitivity() {
+    
+    // sensitivity does not need the volume data, so we zero both.
+
+    _vol     = 0.;
+    _dvol_dp = 0.;
+}
 
 
 Real
@@ -134,19 +145,36 @@ MAST::LevelSetVolume::evaluate() {
 
 void
 MAST::LevelSetVolume::evaluate_sensitivity(const MAST::FunctionBase& f) {
+    
+    // nothing to be done here, since this is a topology quantity and
+    // the sensitivity is calculated for topology variables
+}
 
+
+
+void
+MAST::LevelSetVolume::evaluate_topology_sensitivity(const MAST::FunctionBase& f,
+                                                    const MAST::LevelSetIntersection& intersect,
+                                                    const MAST::FieldFunction<RealVectorX>& vel) {
+    
+    // here we ignore the velocity, since the element is able to compute that
+    // and provide the sensitivity from level set sensitivity values.
+    (void)vel;
+    
     libmesh_assert(_physics_elem);
+    libmesh_assert(f.is_topology_parameter());
+    libmesh_assert_equal_to(&intersect, &_intersection);
 
     // sensitivity only exists at the boundary. So, we proceed with calculation
-    // only if this element has an intersection in the interior, or with the
-    // node or a side. 
+    // only if this element has an intersection in the interior, or with a side. 
     if (this->if_evaluate_for_element(_physics_elem->elem()) &&
         _intersection.if_elem_has_boundary()) {
         
         MAST::LevelSetElementBase&
         e = dynamic_cast<MAST::LevelSetElementBase&>(*_physics_elem);
         
-        _dvol_dp += e.volume_boundary_velocity_on_side(_intersection.get_side_on_interface(_physics_elem->elem()));
+        _dvol_dp += e.volume_boundary_velocity_on_side
+        (_intersection.get_side_on_interface(_physics_elem->elem()));
     }
 }
 

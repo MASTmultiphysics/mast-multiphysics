@@ -95,7 +95,8 @@ linearized_jacobian_solution_product(RealVectorX& f) {
 
 void
 MAST::LevelSetTransientAssemblyElemOperations::
-elem_sensitivity_calculations(RealVectorX& vec) {
+elem_sensitivity_calculations(const MAST::FunctionBase& f,
+                              RealVectorX& vec) {
     
     libmesh_error(); // should not get called
     
@@ -112,7 +113,8 @@ elem_second_derivative_dot_solution_assembly(RealMatrixX& m) {
 
 void
 MAST::LevelSetTransientAssemblyElemOperations::
-elem_sensitivity_calculations(RealVectorX& f_m,
+elem_sensitivity_calculations(const MAST::FunctionBase& f,
+                              RealVectorX& f_m,
                               RealVectorX& f_x) {
     libmesh_error(); // should not get called
 }

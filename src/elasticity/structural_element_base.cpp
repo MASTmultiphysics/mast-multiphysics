@@ -401,7 +401,8 @@ linearized_inertial_residual (bool request_jacobian,
 
 
 bool
-MAST::StructuralElementBase::inertial_residual_sensitivity (bool request_jacobian,
+MAST::StructuralElementBase::inertial_residual_sensitivity (const MAST::FunctionBase& p,
+                                                            bool request_jacobian,
                                                             RealVectorX& f,
                                                             RealMatrixX& jac_xddot,
                                                             RealMatrixX& jac_xdot,
@@ -436,8 +437,7 @@ MAST::StructuralElementBase::inertial_residual_sensitivity (bool request_jacobia
     if (_property.if_diagonal_mass_matrix()) {
         
         // as an approximation, get matrix at the first quadrature point
-        mat_inertia->derivative(*this->sensitivity_param,
-                                xyz[0], _time, material_mat);
+        mat_inertia->derivative(p, xyz[0], _time, material_mat);
         
         Real vol = 0.;
         const unsigned int nshp = _fe->n_shape_functions();
@@ -455,8 +455,7 @@ MAST::StructuralElementBase::inertial_residual_sensitivity (bool request_jacobia
         
         for (unsigned int qp=0; qp<JxW.size(); qp++) {
             
-            mat_inertia->derivative(   *this->sensitivity_param,
-                                    xyz[qp], _time, material_mat);
+            mat_inertia->derivative(p, xyz[qp], _time, material_mat);
             
             // now set the shape function values
             for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
@@ -877,7 +876,8 @@ linearized_frequency_domain_volume_external_residual
 
 bool
 MAST::StructuralElementBase::
-side_external_residual_sensitivity(bool request_jacobian,
+side_external_residual_sensitivity(const MAST::FunctionBase& p,
+                                   bool request_jacobian,
                                    RealVectorX& f,
                                    RealMatrixX& jac_xdot,
                                    RealMatrixX& jac,
@@ -916,7 +916,8 @@ side_external_residual_sensitivity(bool request_jacobian,
                 // apply all the types of loading
                 switch (it.first->second->type()) {
                     case MAST::SURFACE_PRESSURE:
-                        surface_pressure_residual_sensitivity(request_jacobian,
+                        surface_pressure_residual_sensitivity(p,
+                                                              request_jacobian,
                                                               f, jac,
                                                               n,
                                                               *it.first->second);
@@ -924,7 +925,8 @@ side_external_residual_sensitivity(bool request_jacobian,
                         
                         
                     case MAST::PISTON_THEORY:
-                        piston_theory_residual_sensitivity(request_jacobian,
+                        piston_theory_residual_sensitivity(p,
+                                                           request_jacobian,
                                                            f,
                                                            jac_xdot,
                                                            jac,
@@ -952,7 +954,8 @@ side_external_residual_sensitivity(bool request_jacobian,
 
 bool
 MAST::StructuralElementBase::
-volume_external_residual_sensitivity (bool request_jacobian,
+volume_external_residual_sensitivity (const MAST::FunctionBase& p,
+                                      bool request_jacobian,
                                       RealVectorX& f,
                                       RealMatrixX& jac_xdot,
                                       RealMatrixX& jac,
@@ -974,13 +977,15 @@ volume_external_residual_sensitivity (bool request_jacobian,
         switch (it.first->second->type()) {
                 
             case MAST::SURFACE_PRESSURE:
-                surface_pressure_residual_sensitivity(request_jacobian,
+                surface_pressure_residual_sensitivity(p,
+                                                      request_jacobian,
                                                       f, jac,
                                                       *it.first->second);
                 break;
                 
             case MAST::PISTON_THEORY:
-                piston_theory_residual_sensitivity(request_jacobian,
+                piston_theory_residual_sensitivity(p,
+                                                   request_jacobian,
                                                    f,
                                                    jac_xdot,
                                                    jac,
@@ -988,7 +993,8 @@ volume_external_residual_sensitivity (bool request_jacobian,
                 break;
                 
             case MAST::TEMPERATURE:
-                thermal_residual_sensitivity(request_jacobian,
+                thermal_residual_sensitivity(p,
+                                             request_jacobian,
                                              f, jac,
                                              *it.first->second);
                 break;
@@ -1081,7 +1087,8 @@ surface_pressure_residual(bool request_jacobian,
 
 bool
 MAST::StructuralElementBase::
-surface_pressure_residual_sensitivity(bool request_jacobian,
+surface_pressure_residual_sensitivity(const MAST::FunctionBase& p,
+                                      bool request_jacobian,
                                       RealVectorX &f,
                                       RealMatrixX &jac,
                                       MAST::BoundaryConditionBase& bc) {
@@ -1129,10 +1136,7 @@ surface_pressure_residual_sensitivity(bool request_jacobian,
         Bmat.reinit(2*n1, phi_vec);
         
         // get pressure value
-        func.derivative(*sensitivity_param,
-                        qpoint[qp],
-                        _time,
-                        press);
+        func.derivative(p, qpoint[qp], _time, press);
         
         // calculate force
         for (unsigned int i_dim=0; i_dim<n1; i_dim++)

@@ -670,7 +670,8 @@ linearized_side_external_residual (bool request_jacobian,
 
 bool
 MAST::ConservativeFluidElementBase::
-side_external_residual_sensitivity (bool request_jacobian,
+side_external_residual_sensitivity (const MAST::FunctionBase& p,
+                                    bool request_jacobian,
                                     RealVectorX& f,
                                     RealMatrixX& jac,
                                     std::multimap<libMesh::boundary_id_type, MAST::BoundaryConditionBase*>& bc) {
@@ -709,21 +710,21 @@ side_external_residual_sensitivity (bool request_jacobian,
                 // apply all the types of loading
                 switch (it.first->second->type()) {
                     case MAST::SYMMETRY_WALL:
-                        symmetry_surface_residual_sensitivity(request_jacobian,
+                        symmetry_surface_residual_sensitivity(p, request_jacobian,
                                                               f, jac,
                                                               n,
                                                               *it.first->second);
                         break;
                         
                     case MAST::SLIP_WALL:
-                        slip_wall_surface_residual_sensitivity(request_jacobian,
+                        slip_wall_surface_residual_sensitivity(p, request_jacobian,
                                                                f, jac,
                                                                n,
                                                                *it.first->second);
                         break;
                         
                     case MAST::FAR_FIELD:
-                        far_field_surface_residual_sensitivity(request_jacobian,
+                        far_field_surface_residual_sensitivity(p, request_jacobian,
                                                                f, jac,
                                                                n,
                                                                *it.first->second);
@@ -751,7 +752,8 @@ side_external_residual_sensitivity (bool request_jacobian,
 
 bool
 MAST::ConservativeFluidElementBase::
-internal_residual_sensitivity (bool request_jacobian,
+internal_residual_sensitivity (const MAST::FunctionBase& p,
+                               bool request_jacobian,
                                RealVectorX& f,
                                RealMatrixX& jac) {
     
@@ -762,7 +764,8 @@ internal_residual_sensitivity (bool request_jacobian,
 
 bool
 MAST::ConservativeFluidElementBase::
-velocity_residual_sensitivity (bool request_jacobian,
+velocity_residual_sensitivity (const MAST::FunctionBase& p,
+                               bool request_jacobian,
                                RealVectorX& f,
                                RealMatrixX& jac) {
     
@@ -782,7 +785,7 @@ symmetry_surface_residual(bool request_jacobian,
                           RealVectorX& f,
                           RealMatrixX& jac,
                           const unsigned int s,
-                          MAST::BoundaryConditionBase& p) {
+                          MAST::BoundaryConditionBase& bc) {
     
     // prepare the side finite element
     std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem));
@@ -864,11 +867,12 @@ symmetry_surface_residual(bool request_jacobian,
 
 bool
 MAST::ConservativeFluidElementBase::
-symmetry_surface_residual_sensitivity(bool request_jacobian,
+symmetry_surface_residual_sensitivity(const MAST::FunctionBase& p,
+                                      bool request_jacobian,
                                       RealVectorX& f,
                                       RealMatrixX& jac,
                                       const unsigned int s,
-                                      MAST::BoundaryConditionBase& p) {
+                                      MAST::BoundaryConditionBase& bc) {
     
     return false;
 }
@@ -883,7 +887,7 @@ slip_wall_surface_residual(bool request_jacobian,
                            RealVectorX& f,
                            RealMatrixX& jac,
                            const unsigned int s,
-                           MAST::BoundaryConditionBase& p) {
+                           MAST::BoundaryConditionBase& bc) {
     
     // inviscid boundary condition without any diffusive component
     // conditions enforced are
@@ -937,12 +941,12 @@ slip_wall_surface_residual(bool request_jacobian,
     MAST::NormalRotationFunctionBase<RealVectorX>
     *n_rot = nullptr;
     
-    if (p.contains("velocity"))
-        vel = &p.get<MAST::FieldFunction<RealVectorX> >("velocity");
-    if (p.contains("normal_rotation")) {
+    if (bc.contains("velocity"))
+        vel = &bc.get<MAST::FieldFunction<RealVectorX> >("velocity");
+    if (bc.contains("normal_rotation")) {
         
         MAST::FieldFunction<RealVectorX>&
-        tmp = p.get<MAST::FieldFunction<RealVectorX> >("normal_rotation");
+        tmp = bc.get<MAST::FieldFunction<RealVectorX> >("normal_rotation");
         n_rot = dynamic_cast<MAST::NormalRotationFunctionBase<RealVectorX>*>(&tmp);
     }
 
@@ -1028,7 +1032,7 @@ linearized_slip_wall_surface_residual(bool request_jacobian,
                                       RealVectorX& f,
                                       RealMatrixX& jac,
                                       const unsigned int s,
-                                      MAST::BoundaryConditionBase& p) {
+                                      MAST::BoundaryConditionBase& bc) {
     
     // inviscid boundary condition without any diffusive component
     // conditions enforced are
@@ -1086,12 +1090,12 @@ linearized_slip_wall_surface_residual(bool request_jacobian,
     MAST::NormalRotationFunctionBase<RealVectorX>
     *n_rot = nullptr;
     
-    if (p.contains("velocity"))
-        vel = &p.get<MAST::FieldFunction<RealVectorX> >("velocity");
-    if (p.contains("normal_rotation")) {
+    if (bc.contains("velocity"))
+        vel = &bc.get<MAST::FieldFunction<RealVectorX> >("velocity");
+    if (bc.contains("normal_rotation")) {
         
         MAST::FieldFunction<RealVectorX>&
-        tmp = p.get<MAST::FieldFunction<RealVectorX> >("normal_rotation");
+        tmp = bc.get<MAST::FieldFunction<RealVectorX> >("normal_rotation");
         n_rot = dynamic_cast<MAST::NormalRotationFunctionBase<RealVectorX>*>(&tmp);
     }
     
@@ -1221,7 +1225,7 @@ noslip_wall_surface_residual(bool request_jacobian,
                              RealVectorX& f,
                              RealMatrixX& jac,
                              const unsigned int s,
-                             MAST::BoundaryConditionBase& p) {
+                             MAST::BoundaryConditionBase& bc) {
     
     // inviscid boundary condition without any diffusive component
     // conditions enforced are
@@ -1235,7 +1239,6 @@ noslip_wall_surface_residual(bool request_jacobian,
 
     const std::vector<Real> &JxW                 = fe->get_JxW();
     const std::vector<libMesh::Point>& normals   = fe->get_normals();
-    const std::vector<libMesh::Point>& qpoint    = fe->get_xyz();
     
     const unsigned int
     dim    = _elem.dim(),
@@ -1279,12 +1282,12 @@ noslip_wall_surface_residual(bool request_jacobian,
     MAST::NormalRotationFunctionBase<RealVectorX>
     *n_rot = nullptr;
     
-    if (p.contains("velocity"))
-        vel = &p.get<MAST::FieldFunction<RealVectorX> >("velocity");
-    if (p.contains("normal_rotation")) {
+    if (bc.contains("velocity"))
+        vel = &bc.get<MAST::FieldFunction<RealVectorX> >("velocity");
+    if (bc.contains("normal_rotation")) {
         
         MAST::FieldFunction<RealVectorX>&
-        tmp = p.get<MAST::FieldFunction<RealVectorX> >("normal_rotation");
+        tmp = bc.get<MAST::FieldFunction<RealVectorX> >("normal_rotation");
         n_rot = dynamic_cast<MAST::NormalRotationFunctionBase<RealVectorX>*>(&tmp);
     }
 
@@ -1406,11 +1409,12 @@ noslip_wall_surface_residual(bool request_jacobian,
 
 bool
 MAST::ConservativeFluidElementBase::
-slip_wall_surface_residual_sensitivity(bool request_jacobian,
+slip_wall_surface_residual_sensitivity(const MAST::FunctionBase& p,
+                                       bool request_jacobian,
                                        RealVectorX& f,
                                        RealMatrixX& jac,
                                        const unsigned int s,
-                                       MAST::BoundaryConditionBase& p) {
+                                       MAST::BoundaryConditionBase& bc) {
     
     return false;
 }
@@ -1423,7 +1427,7 @@ far_field_surface_residual(bool request_jacobian,
                            RealVectorX& f,
                            RealMatrixX& jac,
                            const unsigned int s,
-                           MAST::BoundaryConditionBase& p) {
+                           MAST::BoundaryConditionBase& bc) {
     
     // conditions enforced are:
     // -- f_adv_i ni =  f_adv = f_adv(+) + f_adv(-)     (flux vector splitting for advection)
@@ -1549,11 +1553,12 @@ far_field_surface_residual(bool request_jacobian,
 
 bool
 MAST::ConservativeFluidElementBase::
-far_field_surface_residual_sensitivity(bool request_jacobian,
+far_field_surface_residual_sensitivity(const MAST::FunctionBase& p,
+                                       bool request_jacobian,
                                        RealVectorX& f,
                                        RealMatrixX& jac,
                                        const unsigned int s,
-                                       MAST::BoundaryConditionBase& p) {
+                                       MAST::BoundaryConditionBase& bc) {
     
     return false;
 }
@@ -1565,7 +1570,7 @@ far_field_surface_residual_sensitivity(bool request_jacobian,
 void
 MAST::ConservativeFluidElementBase::
 _calculate_surface_integrated_load(bool request_derivative,
-                                   bool request_sensitivity,
+                                   const MAST::FunctionBase* p,
                                    const unsigned int s,
                                    MAST::OutputAssemblyElemOperations& output) {
     
@@ -1630,7 +1635,7 @@ _calculate_surface_integrated_load(bool request_derivative,
         
 
         // calculate the sensitivity, if requested
-        if (request_sensitivity) {
+        if (p) {
             
             // calculate the solution sensitivity
             Bmat.right_multiply(vec1_n1, _sol_sens);

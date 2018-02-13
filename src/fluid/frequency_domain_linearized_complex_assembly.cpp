@@ -89,7 +89,8 @@ elem_calculations(bool if_jac,
 
 void
 MAST::FrequencyDomainLinearizedComplexAssemblyElemOperations::
-elem_sensitivity_calculations(ComplexVectorX& vec) {
+elem_sensitivity_calculations(const MAST::FunctionBase& f,
+                              ComplexVectorX& vec) {
     
     libmesh_assert(_physics_elem);
 
@@ -101,8 +102,8 @@ elem_sensitivity_calculations(ComplexVectorX& vec) {
     dummy = ComplexMatrixX::Zero(vec.size(), vec.size());
     
     // assembly of the flux terms
-    e.internal_residual_sensitivity(false, vec, dummy);
-    e.side_external_residual_sensitivity(false, vec, dummy, _discipline->side_loads());
+    e.internal_residual_sensitivity(f, false, vec, dummy);
+    e.side_external_residual_sensitivity(f, false, vec, dummy, _discipline->side_loads());
 }
 
 

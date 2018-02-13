@@ -205,12 +205,6 @@ namespace MAST {
          *   element.
          */
         void detach_active_solution_function();
-
-        
-        /*!
-         *   parameter for which sensitivity has to be calculated.
-         */
-        const MAST::FunctionBase* sensitivity_param;
         
     
     protected:

@@ -140,7 +140,8 @@ internal_residual (bool request_jacobian,
 
 bool
 MAST::FrequencyDomainLinearizedConservativeFluidElem::
-internal_residual_sensitivity (bool request_jacobian,
+internal_residual_sensitivity (const MAST::FunctionBase& p,
+                               bool request_jacobian,
                                ComplexVectorX& f,
                                ComplexMatrixX& jac) {
     
@@ -189,7 +190,7 @@ internal_residual_sensitivity (bool request_jacobian,
     b_V     = 0.;
     
     (*freq)(omega);
-    freq->derivative(*this->sensitivity_param, domega);
+    freq->derivative(p, domega);
     freq->nondimensionalizing_factor(b_V);
     
     
@@ -368,7 +369,8 @@ side_external_residual (bool request_jacobian,
 
 bool
 MAST::FrequencyDomainLinearizedConservativeFluidElem::
-side_external_residual_sensitivity (bool request_jacobian,
+side_external_residual_sensitivity (const MAST::FunctionBase& p,
+                                    bool request_jacobian,
                                     ComplexVectorX& f,
                                     ComplexMatrixX& jac,
                                     std::multimap<libMesh::boundary_id_type, MAST::BoundaryConditionBase*>& bc) {
@@ -453,7 +455,7 @@ side_external_residual_sensitivity (bool request_jacobian,
                         
                         // this calculates the Jacobian and residual contribution
                         // including the nondimensionalizing factor.
-                        this->slip_wall_surface_residual_sensitivity(request_jacobian,
+                        this->slip_wall_surface_residual_sensitivity(p, request_jacobian,
                                                                      f,
                                                                      jac,
                                                                      n,
@@ -513,7 +515,7 @@ slip_wall_surface_residual(bool request_jacobian,
                            ComplexVectorX& f,
                            ComplexMatrixX& jac,
                            const unsigned int s,
-                           MAST::BoundaryConditionBase& p) {
+                           MAST::BoundaryConditionBase& bc) {
     
     // inviscid boundary condition without any diffusive component
     // conditions enforced are
@@ -585,24 +587,24 @@ slip_wall_surface_residual(bool request_jacobian,
     MAST::NormalRotationFunctionBase<ComplexVectorX>
     *n_rot_perturb = nullptr;
 
-    if (p.contains("velocity"))
-        vel = &p.get<MAST::FieldFunction<RealVectorX> >("velocity");
+    if (bc.contains("velocity"))
+        vel = &bc.get<MAST::FieldFunction<RealVectorX> >("velocity");
     
-    if (p.contains("normal_rotation")) {
+    if (bc.contains("normal_rotation")) {
 
         MAST::FieldFunction<RealVectorX>&
-        tmp = p.get<MAST::FieldFunction<RealVectorX> >("normal_rotation");
+        tmp = bc.get<MAST::FieldFunction<RealVectorX> >("normal_rotation");
         n_rot = dynamic_cast<MAST::NormalRotationFunctionBase<RealVectorX>*>(&tmp);
     }
 
-    if (p.contains("frequency_domain_displacement")) {
+    if (bc.contains("frequency_domain_displacement")) {
         
-        displ_perturb = &p.get<MAST::FieldFunction<ComplexVectorX> >("frequency_domain_displacement");
+        displ_perturb = &bc.get<MAST::FieldFunction<ComplexVectorX> >("frequency_domain_displacement");
         // if displ is provided then n_rot must also be provided
-        libmesh_assert(p.contains("frequency_domain_normal_rotation"));
+        libmesh_assert(bc.contains("frequency_domain_normal_rotation"));
         
         MAST::FieldFunction<ComplexVectorX>&
-        tmp = p.get<MAST::FieldFunction<ComplexVectorX> >("frequency_domain_normal_rotation");
+        tmp = bc.get<MAST::FieldFunction<ComplexVectorX> >("frequency_domain_normal_rotation");
         n_rot_perturb = dynamic_cast<MAST::NormalRotationFunctionBase<ComplexVectorX>*>(&tmp);
     }
 
@@ -739,11 +741,12 @@ slip_wall_surface_residual(bool request_jacobian,
 
 bool
 MAST::FrequencyDomainLinearizedConservativeFluidElem::
-slip_wall_surface_residual_sensitivity(bool request_jacobian,
+slip_wall_surface_residual_sensitivity(const MAST::FunctionBase& p,
+                                       bool request_jacobian,
                                        ComplexVectorX& f,
                                        ComplexMatrixX& jac,
                                        const unsigned int s,
-                                       MAST::BoundaryConditionBase& p) {
+                                       MAST::BoundaryConditionBase& bc) {
     
     // inviscid boundary condition without any diffusive component
     // conditions enforced are
@@ -815,32 +818,32 @@ slip_wall_surface_residual_sensitivity(bool request_jacobian,
     *n_rot_perturb = nullptr;
     
     
-    if (p.contains("displacement")) {
+    if (bc.contains("displacement")) {
         
-        displ = &p.get<MAST::FieldFunction<RealVectorX> >("displacement");
+        displ = &bc.get<MAST::FieldFunction<RealVectorX> >("displacement");
 
-        libmesh_assert( p.contains("normal_rotation"));
+        libmesh_assert( bc.contains("normal_rotation"));
         
         MAST::FieldFunction<RealVectorX>&
-        tmp = p.get<MAST::FieldFunction<RealVectorX> >("normal_rotation");
+        tmp = bc.get<MAST::FieldFunction<RealVectorX> >("normal_rotation");
         n_rot = dynamic_cast<MAST::NormalRotationFunctionBase<RealVectorX>*>(&tmp);
     }
     
 
-    if (p.contains("frequency_domain_displacement")) {
+    if (bc.contains("frequency_domain_displacement")) {
         
-        displ_perturb = &p.get<MAST::FieldFunction<ComplexVectorX> >("frequency_domain_displacement");
+        displ_perturb = &bc.get<MAST::FieldFunction<ComplexVectorX> >("frequency_domain_displacement");
         
-        libmesh_assert( p.contains("frequency_domain_normal_rotation"));
+        libmesh_assert( bc.contains("frequency_domain_normal_rotation"));
         
         MAST::FieldFunction<ComplexVectorX>&
-        tmp = p.get<MAST::FieldFunction<ComplexVectorX> >("frequency_domain_normal_rotation");
+        tmp = bc.get<MAST::FieldFunction<ComplexVectorX> >("frequency_domain_normal_rotation");
         n_rot_perturb = dynamic_cast<MAST::NormalRotationFunctionBase<ComplexVectorX>*>(&tmp);
     }
 
     
     (*freq)(omega);
-    freq->derivative(*this->sensitivity_param, domega);
+    freq->derivative(p, domega);
     freq->nondimensionalizing_factor(b_V);
     
     

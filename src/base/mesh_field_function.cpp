@@ -194,7 +194,7 @@ init(const libMesh::NumericVector<Real>& sol,
     sol.localize(*_sol, send_list);*/
     _sol->init(sol.size(), true, libMesh::SERIAL);
     sol.localize(*_sol);
-    
+
     // finally, create the mesh interpolation function
     _function = new libMesh::MeshFunction(system.get_equation_systems(),
                                           *_sol,
@@ -213,7 +213,7 @@ init(const libMesh::NumericVector<Real>& sol,
                             libMesh::GHOSTED);
          dsol->localize(*_dsol, send_list);*/
         _dsol->init(dsol->size(), true, libMesh::SERIAL);
-        dsol->localize(*_sol);
+        dsol->localize(*_dsol);
         
         
         // finally, create the mesh interpolation function

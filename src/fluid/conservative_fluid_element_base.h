@@ -115,14 +115,16 @@ namespace MAST {
          *   sensitivity of the internal force contribution to system residual
          */
         virtual bool
-        internal_residual_sensitivity (bool request_jacobian,
+        internal_residual_sensitivity (const MAST::FunctionBase& p,
+                                       bool request_jacobian,
                                        RealVectorX& f,
                                        RealMatrixX& jac);
         /*!
          *   sensitivity of the damping force contribution to system residual
          */
         virtual bool
-        velocity_residual_sensitivity (bool request_jacobian,
+        velocity_residual_sensitivity (const MAST::FunctionBase& p,
+                                       bool request_jacobian,
                                        RealVectorX& f,
                                        RealMatrixX& jac);
         
@@ -130,7 +132,8 @@ namespace MAST {
          *   sensitivity of the side external force contribution to system residual
          */
         bool
-        side_external_residual_sensitivity (bool request_jacobian,
+        side_external_residual_sensitivity (const MAST::FunctionBase& p,
+                                            bool request_jacobian,
                                             RealVectorX& f,
                                             RealMatrixX& jac,
                                             std::multimap<libMesh::boundary_id_type, MAST::BoundaryConditionBase*>& bc);
@@ -147,16 +150,17 @@ namespace MAST {
                                                RealVectorX& f,
                                                RealMatrixX& jac,
                                                const unsigned int s,
-                                               MAST::BoundaryConditionBase& p);
+                                               MAST::BoundaryConditionBase& bc);
         
         /*!
          *
          */
-        virtual bool symmetry_surface_residual_sensitivity(bool request_jacobian,
+        virtual bool symmetry_surface_residual_sensitivity(const MAST::FunctionBase& p,
+                                                           bool request_jacobian,
                                                            RealVectorX& f,
                                                            RealMatrixX& jac,
                                                            const unsigned int s,
-                                                           MAST::BoundaryConditionBase& p);
+                                                           MAST::BoundaryConditionBase& bc);
         
         /*!
          *
@@ -165,7 +169,7 @@ namespace MAST {
                                                 RealVectorX& f,
                                                 RealMatrixX& jac,
                                                 const unsigned int s,
-                                                MAST::BoundaryConditionBase& p);
+                                                MAST::BoundaryConditionBase& bc);
 
         
         /*!
@@ -176,7 +180,7 @@ namespace MAST {
                                               RealVectorX& f,
                                               RealMatrixX& jac,
                                               const unsigned int s,
-                                              MAST::BoundaryConditionBase& p);
+                                              MAST::BoundaryConditionBase& bc);
 
         
         /*!
@@ -186,17 +190,18 @@ namespace MAST {
                                                   RealVectorX& f,
                                                   RealMatrixX& jac,
                                                   const unsigned int s,
-                                                  MAST::BoundaryConditionBase& p);
+                                                  MAST::BoundaryConditionBase& bc);
 
         
         /*!
          *
          */
-        virtual bool slip_wall_surface_residual_sensitivity(bool request_jacobian,
+        virtual bool slip_wall_surface_residual_sensitivity(const MAST::FunctionBase& p,
+                                                            bool request_jacobian,
                                                             RealVectorX& f,
                                                             RealMatrixX& jac,
                                                             const unsigned int s,
-                                                            MAST::BoundaryConditionBase& p);
+                                                            MAST::BoundaryConditionBase& bc);
         
         /*!
          *
@@ -205,23 +210,24 @@ namespace MAST {
                                                 RealVectorX& f,
                                                 RealMatrixX& jac,
                                                 const unsigned int s,
-                                                MAST::BoundaryConditionBase& p);
+                                                MAST::BoundaryConditionBase& bc);
         
         /*!
          *
          */
-        virtual bool far_field_surface_residual_sensitivity(bool request_jacobian,
+        virtual bool far_field_surface_residual_sensitivity(const MAST::FunctionBase& p,
+                                                            bool request_jacobian,
                                                             RealVectorX& f,
                                                             RealMatrixX& jac,
                                                             const unsigned int s,
-                                                            MAST::BoundaryConditionBase& p);
+                                                            MAST::BoundaryConditionBase& bc);
         
         
         /*!
          *   calculates the surface integrated force vector
          */
         void _calculate_surface_integrated_load(bool request_derivative,
-                                                bool request_sensitivity,
+                                                const MAST::FunctionBase* p,
                                                 const unsigned int s,
                                                 MAST::OutputAssemblyElemOperations& output);
         

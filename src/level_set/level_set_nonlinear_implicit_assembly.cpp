@@ -42,7 +42,8 @@ MAST::LevelSetNonlinearImplicitAssembly::
 LevelSetNonlinearImplicitAssembly():
 MAST::NonlinearImplicitAssembly(),
 _level_set     (nullptr),
-_intersection  (nullptr) {
+_intersection  (nullptr),
+_velocity      (nullptr) {
     
 }
 
@@ -87,6 +88,29 @@ MAST::LevelSetNonlinearImplicitAssembly::clear_level_set_function() {
         delete _intersection;
         _intersection = nullptr;
     }
+}
+
+
+
+
+void
+MAST::LevelSetNonlinearImplicitAssembly::
+set_level_set_velocity_function(MAST::FieldFunction<RealVectorX>& velocity) {
+    
+    libmesh_assert(_level_set);
+    libmesh_assert(_intersection);
+    libmesh_assert(_system);
+    libmesh_assert(!_velocity);
+    
+    _velocity = &velocity;
+}
+
+
+
+void
+MAST::LevelSetNonlinearImplicitAssembly::clear_level_set_velocity_function() {
+
+    _velocity = nullptr;
 }
 
 
@@ -377,14 +401,16 @@ sensitivity_assemble (const MAST::FunctionBase& f,
     libmesh_assert(_system);
     libmesh_assert(_discipline);
     libmesh_assert(_elem_ops);
-    
+    // we need the velocity for topology parameter
+    if (f.is_topology_parameter()) libmesh_assert(_velocity);
+
     MAST::NonlinearSystem& nonlin_sys = _system->system();
     
     sensitivity_rhs.zero();
     
     // iterate over each element, initialize it and get the relevant
     // analysis quantities
-    RealVectorX vec, sol;
+    RealVectorX vec1, vec2, sol;
     
     std::vector<libMesh::dof_id_type> dof_indices;
     const libMesh::DofMap& dof_map = nonlin_sys.get_dof_map();
@@ -417,7 +443,8 @@ sensitivity_assemble (const MAST::FunctionBase& f,
         // get the solution
         unsigned int ndofs = (unsigned int)dof_indices.size();
         sol.setZero(ndofs);
-        vec.setZero(ndofs);
+        vec1.setZero(ndofs);
+        vec2.setZero(ndofs);
         
         for (unsigned int i=0; i<dof_indices.size(); i++)
             sol(i) = (*localized_solution)(dof_indices[i]);
@@ -436,21 +463,31 @@ sensitivity_assemble (const MAST::FunctionBase& f,
                 const libMesh::Elem* sub_elem = *hi_sub_elem_it;
                 
                 ops.init(*sub_elem);
-                ops.set_elem_sensitivity_parameter(f);
                 ops.set_elem_solution(sol);
                 
                 //        if (_sol_function)
                 //            physics_elem->attach_active_solution_function(*_sol_function);
                 
                 // perform the element level calculations
-                ops.elem_sensitivity_calculations(vec);
+                ops.elem_sensitivity_calculations(f, vec1);
+                
+                // if the quantity is also defined as a topology parameter,
+                // then calculate sensitivity from boundary movement.
+                if (f.is_topology_parameter()) {
+                    
+                    ops.elem_topology_sensitivity_calculations(f,
+                                                               *_intersection,
+                                                               *_velocity,
+                                                               vec2);
+                    vec1 += vec2;
+                }
                 
                 //        physics_elem->detach_active_solution_function();
                 ops.clear_elem();
                 
                 // copy to the libMesh matrix for further processing
                 DenseRealVector v;
-                MAST::copy(v, vec);
+                MAST::copy(v, vec1);
                 
                 // constrain the quantities to account for hanging dofs,
                 // Dirichlet constraints, etc.
@@ -484,10 +521,12 @@ calculate_output(const libMesh::NumericVector<Real>& X,
     libmesh_assert(_system);
     libmesh_assert(_discipline);
     libmesh_assert(_level_set);
+    
+    output.zero_for_analysis();
+
     this->set_elem_operation_object(output);
 
     MAST::NonlinearSystem& nonlin_sys = _system->system();
-    output.zero();
     
     // iterate over each element, initialize it and get the relevant
     // analysis quantities
@@ -575,6 +614,8 @@ calculate_output_derivative(const libMesh::NumericVector<Real>& X,
     libmesh_assert(_discipline);
     libmesh_assert(_system);
     
+    output.zero_for_sensitivity();
+
     this->set_elem_operation_object(output);
     
     MAST::NonlinearSystem& nonlin_sys = _system->system();
@@ -674,12 +715,15 @@ calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
     libmesh_assert(_system);
     libmesh_assert(_discipline);
     libmesh_assert(_level_set);
+    // we need the velocity for topology parameter
+    if (p.is_topology_parameter()) libmesh_assert(_velocity);
+
+    output.zero_for_sensitivity();
 
     this->set_elem_operation_object(output);
 
     MAST::NonlinearSystem& nonlin_sys = _system->system();
-    output.zero();
-    
+
     // iterate over each element, initialize it and get the relevant
     // analysis quantities
     RealVectorX
@@ -744,13 +788,16 @@ calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
                     dsol(i) = (*localized_solution_sens)(dof_indices[i]);
                 }
                 
-                //                if (_sol_function)
-                //                    physics_elem->attach_active_solution_function(*_sol_function);
+                // if (_sol_function)
+                //   physics_elem->attach_active_solution_function(*_sol_function);
                 
                 output.init(*sub_elem);
                 output.set_elem_solution(sol);
                 output.set_elem_solution_sensitivity(dsol);
                 output.evaluate_sensitivity(p);
+                if (p.is_topology_parameter())
+                    output.evaluate_topology_sensitivity(p, *_intersection, *_velocity);
+                
                 output.clear_elem();
             }
         }

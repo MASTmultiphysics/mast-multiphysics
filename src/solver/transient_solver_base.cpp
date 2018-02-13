@@ -800,9 +800,3 @@ MAST::TransientSolverBase::set_local_fe_data(MAST::LocalElemFE& fe,
 
 
 
-void
-MAST::TransientSolverBase::set_elem_sensitivity_parameter(const MAST::FunctionBase& f) {
-    
-    libmesh_assert(_assembly_ops);
-    _assembly_ops->set_elem_sensitivity_parameter(f);
-}

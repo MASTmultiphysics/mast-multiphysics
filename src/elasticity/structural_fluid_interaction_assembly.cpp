@@ -327,7 +327,6 @@ assemble_reduced_order_quantity_sensitivity
                 basis_mat(i,j) = (*localized_basis[j])(dof_indices[i]);
         }
         
-        _elem_ops->set_elem_sensitivity_parameter(f);
         _elem_ops->set_elem_solution(sol);
         _elem_ops->set_elem_solution_sensitivity(dsol);
         _elem_ops->set_elem_velocity(vec);     // set to zero value
@@ -343,7 +342,7 @@ assemble_reduced_order_quantity_sensitivity
         for ( ; it != end; it++) {
             
             ops.set_qty_to_evaluate(it->first);
-            ops.elem_sensitivity_calculations(true, vec, mat);
+            ops.elem_sensitivity_calculations(f, true, vec, mat);
 
             DenseRealMatrix m;
             MAST::copy(m, mat);

@@ -93,7 +93,8 @@ namespace MAST {
          *   and returns the component of  element residual sensitivity in
          *   \par f_m and \par f_x.
          */
-        virtual void elem_sensitivity_calculations(RealVectorX& f_m,
+        virtual void elem_sensitivity_calculations(const MAST::FunctionBase& f,
+                                                   RealVectorX& f_m,
                                                    RealVectorX& f_x);
         
         /*!

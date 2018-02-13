@@ -268,7 +268,7 @@ MAST::StressStrainOutputBase::~StressStrainOutputBase() {
 
 
 void
-MAST::StressStrainOutputBase::zero() {
+MAST::StressStrainOutputBase::zero_for_analysis() {
     
     _max_val         = 0.;
     _JxW_val         = 0.;
@@ -276,6 +276,13 @@ MAST::StressStrainOutputBase::zero() {
     _sigma_vm_p_norm = 0.;
 }
 
+
+
+void
+MAST::StressStrainOutputBase::zero_for_sensitivity() {
+
+    // nothign to be done here.
+}
 
 
 void
@@ -289,7 +296,7 @@ MAST::StressStrainOutputBase::evaluate() {
         // ask for the values
         dynamic_cast<MAST::StructuralElementBase*>
         (_physics_elem)->calculate_stress(false,
-                                          false,
+                                          nullptr,
                                           *this);
 }
 
@@ -305,16 +312,24 @@ MAST::StressStrainOutputBase::evaluate_sensitivity(const MAST::FunctionBase &f) 
 
     if (this->if_evaluate_for_element(_physics_elem->elem())) {
         
-        _physics_elem->sensitivity_param = &f;
-        
         // ask for the values
         dynamic_cast<MAST::StructuralElementBase*>
         (_physics_elem)->calculate_stress(false,
-                                          true,
+                                          &f,
                                           *this);
-        
-        _physics_elem->sensitivity_param = nullptr;
     }
+}
+
+
+
+void
+MAST::StressStrainOutputBase::
+evaluate_topology_sensitivity(const MAST::FunctionBase &f,
+                              const MAST::LevelSetIntersection &intersect,
+                              const MAST::FieldFunction<RealVectorX> &vel) {
+    
+    // this object does not implement direct sensitivity wrt topology
+    // parameters. Use adjoint sensitivity instead.
 }
 
 
@@ -372,7 +387,7 @@ MAST::StressStrainOutputBase::output_derivative_for_elem(RealVectorX& dq_dX) {
         
         dynamic_cast<MAST::StructuralElementBase*>
         (_physics_elem)->calculate_stress(true,
-                                          false,
+                                          nullptr,
                                           *this);
         
         this->von_Mises_p_norm_functional_state_derivartive_for_elem(_physics_elem->elem(),

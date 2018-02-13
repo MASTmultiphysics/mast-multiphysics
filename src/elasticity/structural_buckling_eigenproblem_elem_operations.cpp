@@ -93,7 +93,8 @@ elem_calculations(RealMatrixX& mat_A,
 
 void
 MAST::StructuralBucklingEigenproblemElemOperations::
-elem_sensitivity_calculations(bool base_sol,
+elem_sensitivity_calculations(const MAST::FunctionBase& f,
+                              bool base_sol,
                               RealMatrixX& mat_A,
                               RealMatrixX& mat_B) {
     
@@ -108,14 +109,14 @@ elem_sensitivity_calculations(bool base_sol,
     mat_A.setZero();
     
     // calculate the Jacobian components
-    e.internal_residual_sensitivity(true, vec, mat_A);
-    e.prestress_residual_sensitivity(true, vec, mat_A);
-    e.side_external_residual_sensitivity(true,
+    e.internal_residual_sensitivity(f, true, vec, mat_A);
+    e.prestress_residual_sensitivity(f, true, vec, mat_A);
+    e.side_external_residual_sensitivity(f, true,
                                          vec,
                                          dummy,
                                          mat_A,
                                          _discipline->side_loads());
-    e.volume_external_residual_sensitivity(true,
+    e.volume_external_residual_sensitivity(f, true,
                                            vec,
                                            dummy,
                                            mat_A,

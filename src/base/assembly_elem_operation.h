@@ -107,13 +107,6 @@ namespace MAST {
             return *_physics_elem;
         }
          
-        
-        /*!
-         *   sets the element sensitivity parameter
-         */
-        virtual void
-        set_elem_sensitivity_parameter(const MAST::FunctionBase& f);
-        
         /*!
          *   sets the element solution
          */

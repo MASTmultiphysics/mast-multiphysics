@@ -38,7 +38,9 @@ namespace MAST {
     // Forward declerations
     class FunctionBase;
     class ElementBase;
-    
+    class LevelSetIntersection;
+    template <typename ValType> class FieldFunction;
+
     /*!
      *   This provides the base class for definitin of element level
      *   contribution of output quantity in an analysis.
@@ -63,10 +65,22 @@ namespace MAST {
         
         /*!
          *   zeroes the output quantity values stored inside this object
-         *   so that assembly process can begin.
+         *   so that assembly process can begin. This will zero out data
+         *   so that it is ready for a new evaluation. Before sensitivity
+         *   analysis, call the other method, since some nonlinear
+         *   functionals need the forward quantities for sensitivity analysis,
+         *   eg., stress output.
          */
-        virtual void zero() = 0;
+        virtual void zero_for_analysis() = 0;
+
         
+        /*!
+         *   zeroes the output quantity values stored inside this object
+         *   so that assembly process can begin. This will only zero the
+         *   data to compute new sensitivity analysis.
+         */
+        virtual void zero_for_sensitivity() = 0;
+
         /*!
          *   @returns the output quantity value contribution for the
          *   present element for which this object has been initialized.
@@ -130,6 +144,24 @@ namespace MAST {
          *    object has been initialized.
          */
         virtual void evaluate_sensitivity(const MAST::FunctionBase& f) = 0;
+
+        /*!
+         *    this evaluates all relevant shape sensitivity components on
+         *    the element.
+         *    This is only done on the current element for which this
+         *    object has been initialized.
+         */
+        virtual void evaluate_shape_sensitivity(const MAST::FunctionBase& f) = 0;
+
+        /*!
+         *    this evaluates all relevant topological sensitivity components on
+         *    the element.
+         *    This is only done on the current element for which this
+         *    object has been initialized.
+         */
+        virtual void evaluate_topology_sensitivity(const MAST::FunctionBase& f,
+                                                   const MAST::LevelSetIntersection& intersect,
+                                                   const MAST::FieldFunction<RealVectorX>& vel) = 0;
 
         /*!
          *   The output function can be a boundary integrated quantity, volume

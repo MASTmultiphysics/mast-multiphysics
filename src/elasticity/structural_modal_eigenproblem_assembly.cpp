@@ -118,7 +118,8 @@ elem_calculations(RealMatrixX& mat_A,
 
 void
 MAST::StructuralModalEigenproblemAssemblyElemOperations::
-elem_sensitivity_calculations(bool base_sol,
+elem_sensitivity_calculations(const MAST::FunctionBase& f,
+                              bool base_sol,
                               RealMatrixX& mat_A,
                               RealMatrixX& mat_B) {
     
@@ -133,12 +134,12 @@ elem_sensitivity_calculations(bool base_sol,
     mat_B.setZero();
     
     // calculate the Jacobian components
-    e.internal_residual_sensitivity(true, vec, mat_A);
-    e.side_external_residual_sensitivity(true, vec, mat, mat_A, _discipline->side_loads());
-    e.volume_external_residual_sensitivity(true, vec, mat, mat_A, _discipline->volume_loads());
+    e.internal_residual_sensitivity(f, true, vec, mat_A);
+    e.side_external_residual_sensitivity(f, true, vec, mat, mat_A, _discipline->side_loads());
+    e.volume_external_residual_sensitivity(f, true, vec, mat, mat_A, _discipline->volume_loads());
     
     // calculate the mass matrix components
-    e.inertial_residual_sensitivity(true, vec, mat_B, mat, mat_A);
+    e.inertial_residual_sensitivity(f, true, vec, mat_B, mat, mat_A);
     
     // if the linearization is about a base state, then the sensitivity of
     // the base state will influence the sensitivity of the Jacobian

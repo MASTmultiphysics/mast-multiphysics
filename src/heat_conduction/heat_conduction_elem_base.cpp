@@ -367,7 +367,8 @@ volume_external_residual (bool request_jacobian,
 
 bool
 MAST::HeatConductionElementBase::
-side_external_residual_sensitivity (bool request_jacobian,
+side_external_residual_sensitivity (const MAST::FunctionBase& p,
+                                    bool request_jacobian,
                                     RealVectorX& f,
                                     RealMatrixX& jac,
                                     std::multimap<libMesh::boundary_id_type, MAST::BoundaryConditionBase*>& bc) {
@@ -406,21 +407,24 @@ side_external_residual_sensitivity (bool request_jacobian,
                 // apply all the types of loading
                 switch (it.first->second->type()) {
                     case MAST::HEAT_FLUX:
-                        surface_flux_residual_sensitivity(request_jacobian,
+                        surface_flux_residual_sensitivity(p,
+                                                          request_jacobian,
                                                           f, jac,
                                                           n,
                                                           *it.first->second);
                         break;
                         
                     case MAST::CONVECTION_HEAT_FLUX:
-                        surface_convection_residual_sensitivity(request_jacobian,
+                        surface_convection_residual_sensitivity(p,
+                                                                request_jacobian,
                                                                 f, jac,
                                                                 n,
                                                                 *it.first->second);
                         break;
                         
                     case MAST::SURFACE_RADIATION_HEAT_FLUX:
-                        surface_radiation_residual_sensitivity(request_jacobian,
+                        surface_radiation_residual_sensitivity(p,
+                                                               request_jacobian,
                                                                f, jac,
                                                                n,
                                                                *it.first->second);
@@ -446,7 +450,8 @@ side_external_residual_sensitivity (bool request_jacobian,
 
 bool
 MAST::HeatConductionElementBase::
-volume_external_residual_sensitivity (bool request_jacobian,
+volume_external_residual_sensitivity (const MAST::FunctionBase& p,
+                                      bool request_jacobian,
                                       RealVectorX& f,
                                       RealMatrixX& jac,
                                       std::multimap<libMesh::subdomain_id_type, MAST::BoundaryConditionBase*>& bc) {
@@ -468,25 +473,29 @@ volume_external_residual_sensitivity (bool request_jacobian,
         switch (it.first->second->type()) {
                 
             case MAST::HEAT_FLUX:
-                surface_flux_residual_sensitivity(request_jacobian,
+                surface_flux_residual_sensitivity(p,
+                                                  request_jacobian,
                                                   f, jac,
                                                   *it.first->second);
                 break;
 
             case MAST::CONVECTION_HEAT_FLUX:
-                surface_convection_residual_sensitivity(request_jacobian,
+                surface_convection_residual_sensitivity(p,
+                                                        request_jacobian,
                                                         f, jac,
                                                         *it.first->second);
                 break;
                 
             case MAST::SURFACE_RADIATION_HEAT_FLUX:
-                surface_radiation_residual_sensitivity(request_jacobian,
+                surface_radiation_residual_sensitivity(p,
+                                                       request_jacobian,
                                                        f, jac,
                                                        *it.first->second);
                 break;
                 
             case MAST::HEAT_SOURCE:
-                volume_heat_source_residual_sensitivity(request_jacobian,
+                volume_heat_source_residual_sensitivity(p,
+                                                        request_jacobian,
                                                         f, jac,
                                                         *it.first->second);
                 break;
@@ -506,7 +515,8 @@ volume_external_residual_sensitivity (bool request_jacobian,
 
 bool
 MAST::HeatConductionElementBase::
-internal_residual_sensitivity (bool request_jacobian,
+internal_residual_sensitivity (const MAST::FunctionBase& p,
+                               bool request_jacobian,
                                RealVectorX& f,
                                RealMatrixX& jac) {
     
@@ -517,7 +527,8 @@ internal_residual_sensitivity (bool request_jacobian,
 
 bool
 MAST::HeatConductionElementBase::
-velocity_residual_sensitivity (bool request_jacobian,
+velocity_residual_sensitivity (const MAST::FunctionBase& p,
+                               bool request_jacobian,
                                RealVectorX& f,
                                RealMatrixX& jac) {
     
@@ -537,7 +548,7 @@ surface_flux_residual(bool request_jacobian,
                       RealVectorX& f,
                       RealMatrixX& jac,
                       const unsigned int s,
-                      MAST::BoundaryConditionBase& p) {
+                      MAST::BoundaryConditionBase& bc) {
     
     // prepare the side finite element
     std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem));
@@ -546,7 +557,7 @@ surface_flux_residual(bool request_jacobian,
     
     // get the function from this boundary condition
     const MAST::FieldFunction<Real>& func =
-    p.get<MAST::FieldFunction<Real> >("heat_flux");
+    bc.get<MAST::FieldFunction<Real> >("heat_flux");
     
     
     const std::vector<Real> &JxW                 = fe->get_JxW();
@@ -582,11 +593,11 @@ MAST::HeatConductionElementBase::
 surface_flux_residual(bool request_jacobian,
                       RealVectorX& f,
                       RealMatrixX& jac,
-                      MAST::BoundaryConditionBase& p) {
+                      MAST::BoundaryConditionBase& bc) {
     
     // get the function from this boundary condition
     const MAST::FieldFunction<Real>& func =
-    p.get<MAST::FieldFunction<Real> >("heat_flux");
+    bc.get<MAST::FieldFunction<Real> >("heat_flux");
     
     
     const std::vector<Real> &JxW                 = _fe->get_JxW();
@@ -618,11 +629,12 @@ surface_flux_residual(bool request_jacobian,
 
 bool
 MAST::HeatConductionElementBase::
-surface_flux_residual_sensitivity(bool request_jacobian,
+surface_flux_residual_sensitivity(const MAST::FunctionBase& p,
+                                  bool request_jacobian,
                                   RealVectorX& f,
                                   RealMatrixX& jac,
                                   const unsigned int s,
-                                  MAST::BoundaryConditionBase& p) {
+                                  MAST::BoundaryConditionBase& bc) {
     
     return false;
 }
@@ -632,10 +644,11 @@ surface_flux_residual_sensitivity(bool request_jacobian,
 
 bool
 MAST::HeatConductionElementBase::
-surface_flux_residual_sensitivity(bool request_jacobian,
+surface_flux_residual_sensitivity(const MAST::FunctionBase& p,
+                                  bool request_jacobian,
                                   RealVectorX& f,
                                   RealMatrixX& jac,
-                                  MAST::BoundaryConditionBase& p) {
+                                  MAST::BoundaryConditionBase& bc) {
     
     return false;
 }
@@ -649,7 +662,7 @@ surface_convection_residual(bool request_jacobian,
                             RealVectorX& f,
                             RealMatrixX& jac,
                             const unsigned int s,
-                            MAST::BoundaryConditionBase& p) {
+                            MAST::BoundaryConditionBase& bc) {
     
     // prepare the side finite element
     std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem));
@@ -657,8 +670,8 @@ surface_convection_residual(bool request_jacobian,
 
     // get the function from this boundary condition
     const MAST::FieldFunction<Real>
-    &coeff = p.get<MAST::FieldFunction<Real> >("convection_coeff"),
-    &T_amb = p.get<MAST::FieldFunction<Real> >("ambient_temperature");
+    &coeff = bc.get<MAST::FieldFunction<Real> >("convection_coeff"),
+    &T_amb = bc.get<MAST::FieldFunction<Real> >("ambient_temperature");
     
     const std::vector<Real> &JxW               = fe->get_JxW();
     const std::vector<libMesh::Point>& qpoint  = fe->get_xyz();
@@ -708,12 +721,12 @@ MAST::HeatConductionElementBase::
 surface_convection_residual(bool request_jacobian,
                             RealVectorX& f,
                             RealMatrixX& jac,
-                            MAST::BoundaryConditionBase& p) {
+                            MAST::BoundaryConditionBase& bc) {
     
     // get the function from this boundary condition
     const MAST::FieldFunction<Real>
-    &coeff = p.get<MAST::FieldFunction<Real> >("convection_coeff"),
-    &T_amb = p.get<MAST::FieldFunction<Real> >("ambient_temperature");
+    &coeff = bc.get<MAST::FieldFunction<Real> >("convection_coeff"),
+    &T_amb = bc.get<MAST::FieldFunction<Real> >("ambient_temperature");
     
     const std::vector<Real> &JxW               = _fe->get_JxW();
     const std::vector<libMesh::Point>& qpoint  = _fe->get_xyz();
@@ -760,11 +773,12 @@ surface_convection_residual(bool request_jacobian,
 
 bool
 MAST::HeatConductionElementBase::
-surface_convection_residual_sensitivity(bool request_jacobian,
+surface_convection_residual_sensitivity(const MAST::FunctionBase& p,
+                                        bool request_jacobian,
                                         RealVectorX& f,
                                         RealMatrixX& jac,
                                         const unsigned int s,
-                                        MAST::BoundaryConditionBase& p) {
+                                        MAST::BoundaryConditionBase& bc) {
     
     return false;
 }
@@ -774,10 +788,11 @@ surface_convection_residual_sensitivity(bool request_jacobian,
 
 bool
 MAST::HeatConductionElementBase::
-surface_convection_residual_sensitivity(bool request_jacobian,
+surface_convection_residual_sensitivity(const MAST::FunctionBase& p,
+                                        bool request_jacobian,
                                         RealVectorX& f,
                                         RealMatrixX& jac,
-                                        MAST::BoundaryConditionBase& p) {
+                                        MAST::BoundaryConditionBase& bc) {
     
     return false;
 }
@@ -792,7 +807,7 @@ surface_radiation_residual(bool request_jacobian,
                            RealVectorX& f,
                            RealMatrixX& jac,
                            const unsigned int s,
-                           MAST::BoundaryConditionBase& p) {
+                           MAST::BoundaryConditionBase& bc) {
     
     // prepare the side finite element
     std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem));
@@ -800,12 +815,12 @@ surface_radiation_residual(bool request_jacobian,
 
     // get the function from this boundary condition
     const MAST::FieldFunction<Real>
-    &emissivity = p.get<MAST::FieldFunction<Real> >("emissivity");
+    &emissivity = bc.get<MAST::FieldFunction<Real> >("emissivity");
     
     const MAST::Parameter
-    &T_amb      = p.get<MAST::Parameter>("ambient_temperature"),
-    &T_ref_zero = p.get<MAST::Parameter>("reference_zero_temperature"),
-    &sb_const   = p.get<MAST::Parameter>("stefan_bolzmann_constant");
+    &T_amb      = bc.get<MAST::Parameter>("ambient_temperature"),
+    &T_ref_zero = bc.get<MAST::Parameter>("reference_zero_temperature"),
+    &sb_const   = bc.get<MAST::Parameter>("stefan_bolzmann_constant");
     
     
     const std::vector<Real> &JxW               = fe->get_JxW();
@@ -855,16 +870,16 @@ MAST::HeatConductionElementBase::
 surface_radiation_residual(bool request_jacobian,
                            RealVectorX& f,
                            RealMatrixX& jac,
-                           MAST::BoundaryConditionBase& p) {
+                           MAST::BoundaryConditionBase& bc) {
     
     // get the function from this boundary condition
     const MAST::FieldFunction<Real>
-    &emissivity = p.get<MAST::FieldFunction<Real> >("emissivity");
+    &emissivity = bc.get<MAST::FieldFunction<Real> >("emissivity");
     
     const MAST::Parameter
-    &T_amb      = p.get<MAST::Parameter>("ambient_temperature"),
-    &T_ref_zero = p.get<MAST::Parameter>("reference_zero_temperature"),
-    &sb_const   = p.get<MAST::Parameter>("stefan_bolzmann_constant");
+    &T_amb      = bc.get<MAST::Parameter>("ambient_temperature"),
+    &T_ref_zero = bc.get<MAST::Parameter>("reference_zero_temperature"),
+    &sb_const   = bc.get<MAST::Parameter>("stefan_bolzmann_constant");
     
     
     const std::vector<Real> &JxW               = _fe->get_JxW();
@@ -912,11 +927,12 @@ surface_radiation_residual(bool request_jacobian,
 
 bool
 MAST::HeatConductionElementBase::
-surface_radiation_residual_sensitivity(bool request_jacobian,
+surface_radiation_residual_sensitivity(const MAST::FunctionBase& p,
+                                       bool request_jacobian,
                                        RealVectorX& f,
                                        RealMatrixX& jac,
                                        const unsigned int s,
-                                       MAST::BoundaryConditionBase& p) {
+                                       MAST::BoundaryConditionBase& bc) {
     
     return true;
 }
@@ -926,10 +942,11 @@ surface_radiation_residual_sensitivity(bool request_jacobian,
 
 bool
 MAST::HeatConductionElementBase::
-surface_radiation_residual_sensitivity(bool request_jacobian,
+surface_radiation_residual_sensitivity(const MAST::FunctionBase& p,
+                                       bool request_jacobian,
                                        RealVectorX& f,
                                        RealMatrixX& jac,
-                                       MAST::BoundaryConditionBase& p) {
+                                       MAST::BoundaryConditionBase& bc) {
     
     return true;
 }
@@ -943,13 +960,13 @@ MAST::HeatConductionElementBase::
 volume_heat_source_residual(bool request_jacobian,
                             RealVectorX& f,
                             RealMatrixX& jac,
-                            MAST::BoundaryConditionBase& p) {
+                            MAST::BoundaryConditionBase& bc) {
     
     
     
     // get the function from this boundary condition
     const MAST::FieldFunction<Real>& func =
-    p.get<MAST::FieldFunction<Real> >("heat_source");
+    bc.get<MAST::FieldFunction<Real> >("heat_source");
     
     
     const std::vector<Real> &JxW                 = _fe->get_JxW();
@@ -980,10 +997,11 @@ volume_heat_source_residual(bool request_jacobian,
 
 bool
 MAST::HeatConductionElementBase::
-volume_heat_source_residual_sensitivity(bool request_jacobian,
+volume_heat_source_residual_sensitivity(const MAST::FunctionBase& p,
+                                        bool request_jacobian,
                                         RealVectorX& f,
                                         RealMatrixX& jac,
-                                        MAST::BoundaryConditionBase& p) {
+                                        MAST::BoundaryConditionBase& bc) {
     
     return false;
 }

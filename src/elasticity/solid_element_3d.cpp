@@ -540,7 +540,8 @@ update_incompatible_mode_solution(const RealVectorX& dsol) {
 
 
 bool
-MAST::StructuralElement3D::internal_residual_sensitivity(bool request_jacobian,
+MAST::StructuralElement3D::internal_residual_sensitivity(const MAST::FunctionBase& p,
+                                                         bool request_jacobian,
                                                          RealVectorX& f,
                                                          RealMatrixX& jac) {
     
@@ -561,7 +562,8 @@ MAST::StructuralElement3D::prestress_residual (bool request_jacobian,
 
 
 bool
-MAST::StructuralElement3D::prestress_residual_sensitivity (bool request_jacobian,
+MAST::StructuralElement3D::prestress_residual_sensitivity (const MAST::FunctionBase& p,
+                                                           bool request_jacobian,
                                                            RealVectorX& f,
                                                            RealMatrixX& jac) {
     
@@ -640,7 +642,8 @@ surface_pressure_residual(bool request_jacobian,
 
 bool
 MAST::StructuralElement3D::
-surface_pressure_residual_sensitivity(bool request_jacobian,
+surface_pressure_residual_sensitivity(const MAST::FunctionBase& p,
+                                      bool request_jacobian,
                                       RealVectorX &f,
                                       RealMatrixX &jac,
                                       const unsigned int side,
@@ -685,10 +688,7 @@ surface_pressure_residual_sensitivity(bool request_jacobian,
         Bmat.reinit(2*n1, phi_vec);
         
         // get pressure value
-        func.derivative(*sensitivity_param,
-                        qpoint[qp],
-                        _time,
-                        press);
+        func.derivative(p, qpoint[qp], _time, press);
         
         // calculate force
         for (unsigned int i_dim=0; i_dim<n1; i_dim++)
@@ -845,10 +845,11 @@ MAST::StructuralElement3D::thermal_residual(bool request_jacobian,
 
 
 bool
-MAST::StructuralElement3D::thermal_residual_sensitivity(bool request_jacobian,
+MAST::StructuralElement3D::thermal_residual_sensitivity(const MAST::FunctionBase& p,
+                                                        bool request_jacobian,
                                                         RealVectorX& f,
                                                         RealMatrixX& jac,
-                                                        MAST::BoundaryConditionBase& p) {
+                                                        MAST::BoundaryConditionBase& bc) {
     
     // to be implemented
     libmesh_error();
@@ -878,7 +879,8 @@ piston_theory_residual(bool request_jacobian,
 
 bool
 MAST::StructuralElement3D::
-piston_theory_residual_sensitivity(bool request_jacobian,
+piston_theory_residual_sensitivity(const MAST::FunctionBase& p,
+                                   bool request_jacobian,
                                    RealVectorX &f,
                                    RealMatrixX& jac_xdot,
                                    RealMatrixX& jac,
@@ -897,7 +899,7 @@ piston_theory_residual_sensitivity(bool request_jacobian,
 
 bool
 MAST::StructuralElement3D::calculate_stress(bool request_derivative,
-                                            bool request_sensitivity,
+                                            const MAST::FunctionBase* p,
                                             MAST::StressStrainOutputBase& output) {
     
     std::unique_ptr<MAST::FEBase>   fe(_assembly.build_fe(_elem));
@@ -995,7 +997,7 @@ MAST::StructuralElement3D::calculate_stress(bool request_derivative,
         // we assume that the stress at this quantity already
         // exists, and we only need to append sensitivity/derivative
         // data to it
-        if (!request_derivative && !request_sensitivity)
+        if (!request_derivative && !p)
             data = &(stress_output.add_stress_strain_at_qp_location(&_elem,
                                                                     qp,
                                                                     qp_loc[qp],

@@ -61,6 +61,20 @@ namespace MAST {
          */
         virtual void
         clear_level_set_function();
+
+        /*!
+         *   the velocity function used to calculate topology sensitivity
+         */
+        virtual void
+        set_level_set_velocity_function(MAST::FieldFunction<RealVectorX>& velocity);
+        
+        
+        /*!
+         *   clears the velocity function
+         */
+        virtual void
+        clear_level_set_velocity_function();
+
         
         /*!
          *  @returns a reference to the level set function
@@ -141,9 +155,11 @@ namespace MAST {
 
         void _initialize_constraints();
         
-        MAST::FieldFunction<Real> *_level_set;
+        MAST::FieldFunction<Real>            *_level_set;
 
-        MAST::LevelSetIntersection *_intersection;
+        MAST::LevelSetIntersection           *_intersection;
+        
+        MAST::FieldFunction<RealVectorX>     *_velocity;
 
     };
 }

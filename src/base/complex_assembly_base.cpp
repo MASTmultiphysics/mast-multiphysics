@@ -524,12 +524,11 @@ residual_and_jacobian_blocked (const libMesh::NumericVector<Real>& X,
         // of the residual
         if (p) {
             
-            ops.set_elem_sensitivity_parameter(*p);
             // set the sensitivity of complex sol to zero
             delta_sol.setZero();
             ops.set_elem_complex_solution_sensitivity(delta_sol);
             vec.setZero();
-            ops.elem_sensitivity_calculations(vec);
+            ops.elem_sensitivity_calculations(*p, vec);
         }
         
         ops.clear_elem();

@@ -61,8 +61,31 @@ namespace MAST {
          *   and returns the element residual sensitivity in \par vec .
          */
         virtual void
-        elem_sensitivity_calculations(RealVectorX& vec);
+        elem_sensitivity_calculations(const MAST::FunctionBase& f,
+                                      RealVectorX& vec);
         
+        /*!
+         *   performs the element shape sensitivity calculations over \par elem,
+         *   and returns the element residual sensitivity in \par vec .
+         */
+        virtual void
+        elem_shape_sensitivity_calculations(const MAST::FunctionBase& f,
+                                            RealVectorX& vec) {
+            libmesh_assert(false); // to be implemented
+        }
+        
+        /*!
+         *   performs the element topology sensitivity calculations over \par elem,
+         *   and returns the element residual sensitivity in \par vec .
+         */
+        virtual void
+        elem_topology_sensitivity_calculations(const MAST::FunctionBase& f,
+                                               const MAST::LevelSetIntersection& intersect,
+                                               const MAST::FieldFunction<RealVectorX>& vel,
+                                               RealVectorX& vec) {
+            libmesh_assert(false); // to be implemented
+        }
+
         /*!
          *   calculates \f$ d ([J] \{\Delta X\})/ dX  \f$ over \par elem,
          *   and returns the matrix in \par vec .

@@ -23,6 +23,7 @@
 
 MAST::LevelSetBoundaryVelocity::LevelSetBoundaryVelocity(const unsigned int dim):
 MAST::FieldFunction<RealVectorX>("phi"),
+_dim(dim),
 _phi(nullptr) {
     
 }
@@ -74,15 +75,20 @@ MAST::LevelSetBoundaryVelocity::operator() (const libMesh::Point& p,
     
     _phi->gradient(p, t, gradmat);
     _phi->perturbation(p, t, dval);
+    
     // copy the matrix to the vector for further calculations
     grad = gradmat.row(0);
     
     // at boundary, phi(x) = 0
     // so,  dphi/dp + grad(phi) . V = 0
-    //      dphi/dp + grad(phi) . (-grad(phi)  Vn) = 0   [since V = -grad(phi) Vn]
-    //      dphi/dp -(grad(phi) .   grad(phi)) Vn  = 0
-    //      Vn  =  (dphi/dp) / |grad(phi)|^2
-    //      V   =  -grad(phi) Vn = -grad(phi) * (dphi/dp) / |grad(phi)|^2
+    //      dphi/dp + grad(phi) . (-grad(phi)/|grad(phi)|  Vn) = 0   [since V = -grad(phi)/|grad(phi)| Vn]
+    //      dphi/dp -(grad(phi) .  grad(phi))/|grad(phi)|  Vn  = 0
+    //      Vn  =  (dphi/dp)   |grad(phi)|  / |grad(phi)|^2
+    //          =  (dphi/dp) / |grad(phi)|
+    //      V   =  -grad(phi)/ |grad(phi)| Vn
+    //          =  -grad(phi)/ |grad(phi)| * (dphi/dp) / |grad(phi)|
+    //          =  -grad(phi) * (dphi/dp)/|grad(phi)|^2
+    //
     v = -dval(0)/grad.squaredNorm()*grad;
 }
 

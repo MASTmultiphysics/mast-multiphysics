@@ -263,13 +263,10 @@ eigenproblem_sensitivity_assemble(const MAST::FunctionBase& f,
         }
         
         ops.set_elem_solution_sensitivity(sol);
-
-        // tell the element about the sensitivity parameter
-        ops.set_elem_sensitivity_parameter(f);
-        
-        ops.elem_sensitivity_calculations(_base_sol!=nullptr,
-                                                              mat_A,
-                                                              mat_B);
+        ops.elem_sensitivity_calculations(f,
+                                          _base_sol!=nullptr,
+                                          mat_A,
+                                          mat_B);
         ops.clear_elem();
 
         // copy to the libMesh matrix for further processing

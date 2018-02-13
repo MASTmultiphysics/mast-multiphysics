@@ -259,7 +259,7 @@ MAST::AssemblyBase::calculate_output(const libMesh::NumericVector<Real>& X,
 
     this->set_elem_operation_object(output);
     MAST::NonlinearSystem& nonlin_sys = _system->system();
-    output.zero();
+    output.zero_for_analysis();
     
     // iterate over each element, initialize it and get the relevant
     // analysis quantities
@@ -326,6 +326,8 @@ calculate_output_derivative(const libMesh::NumericVector<Real>& X,
     
     libmesh_assert(_discipline);
     libmesh_assert(_system);
+
+    output.zero_for_sensitivity();
 
     this->set_elem_operation_object(output);
 
@@ -407,6 +409,8 @@ calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
     libmesh_assert(_discipline);
     libmesh_assert(_system);
 
+    output.zero_for_sensitivity();
+
     this->set_elem_operation_object(output);
 
     MAST::NonlinearSystem& nonlin_sys = _system->system();
@@ -479,7 +483,7 @@ calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
 
 
 
-void
+Real
 MAST::AssemblyBase::
 calculate_output_adjoint_sensitivity(const libMesh::NumericVector<Real>& X,
                                      const libMesh::NumericVector<Real>& dq_dX,
@@ -506,9 +510,7 @@ calculate_output_adjoint_sensitivity(const libMesh::NumericVector<Real>& X,
     this->clear_elem_operation_object();
 
     Real
-    dq_dp = output.output_sensitivity_total(p) + dq_dX.dot(dres_dp);
-    
-    libMesh::out << "dq/dp: adjoint: " << dq_dp << std::endl;
-    
+    dq_dp = /*output.output_sensitivity_total(p) +*/ dq_dX.dot(dres_dp);
+    return dq_dp;
 }
 

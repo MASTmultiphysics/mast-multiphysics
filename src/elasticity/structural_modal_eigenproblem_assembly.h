@@ -83,7 +83,8 @@ namespace MAST {
          *   \f$ A x = \lambda B x \f$.
          */
         virtual void
-        elem_sensitivity_calculations(bool base_sol,
+        elem_sensitivity_calculations(const MAST::FunctionBase& f,
+                                      bool base_sol,
                                       RealMatrixX& mat_A,
                                       RealMatrixX& mat_B);
 

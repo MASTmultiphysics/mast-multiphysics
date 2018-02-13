@@ -25,7 +25,7 @@
 #include "property_cards/element_property_card_1D.h"
 #include "base/physics_discipline_base.h"
 #include "mesh/local_elem_fe.h"
-
+#include "level_set/level_set_intersection.h"
 
 
 
@@ -154,7 +154,8 @@ elem_linearized_jacobian_solution_product(RealVectorX& vec) {
 
 void
 MAST::StructuralNonlinearAssemblyElemOperations::
-elem_sensitivity_calculations(RealVectorX& vec) {
+elem_sensitivity_calculations(const MAST::FunctionBase& f,
+                              RealVectorX& vec) {
     
     libmesh_assert(_physics_elem);
 
@@ -165,17 +166,56 @@ elem_sensitivity_calculations(RealVectorX& vec) {
     RealMatrixX
     dummy = RealMatrixX::Zero(vec.size(), vec.size());
     
-    e.internal_residual_sensitivity(false, vec, dummy);
-    e.side_external_residual_sensitivity(false,
+    e.internal_residual_sensitivity(f, false, vec, dummy);
+    e.side_external_residual_sensitivity(f, false,
                                          vec,
                                          dummy,
                                          dummy,
                                          _discipline->side_loads());
-    e.volume_external_residual_sensitivity(false,
+    e.volume_external_residual_sensitivity(f, false,
                                            vec,
                                            dummy,
                                            dummy,
                                            _discipline->volume_loads());
+}
+
+
+
+void
+MAST::StructuralNonlinearAssemblyElemOperations::
+elem_topology_sensitivity_calculations(const MAST::FunctionBase& f,
+                                       const MAST::LevelSetIntersection& intersect,
+                                       const MAST::FieldFunction<RealVectorX>& vel,
+                                       RealVectorX& vec) {
+    
+    libmesh_assert(_physics_elem);
+    libmesh_assert(f.is_topology_parameter());
+
+    // sensitivity only exists at the boundary. So, we proceed with calculation
+    // only if this element has an intersection in the interior, or with a side.
+    if (intersect.if_elem_has_boundary()) {
+        
+        MAST::StructuralElementBase& e =
+        dynamic_cast<MAST::StructuralElementBase&>(*_physics_elem);
+        
+        vec.setZero();
+        RealMatrixX
+        dummy = RealMatrixX::Zero(vec.size(), vec.size());
+        
+        e.internal_residual_boundary_velocity(f, vec,
+                                              intersect.get_side_on_interface(_physics_elem->elem()),
+                                              vel);
+        /*e.side_external_residual_sensitivity(f, false,
+         vec,
+         dummy,
+         dummy,
+         _discipline->side_loads());
+         e.volume_external_residual_sensitivity(f, false,
+         vec,
+         dummy,
+         dummy,
+         _discipline->volume_loads());*/
+    }
 }
 
 
@@ -193,230 +233,6 @@ elem_second_derivative_dot_solution_assembly(RealMatrixX& m) {
     e.internal_residual_jac_dot_state_sensitivity(m);
 }
 
-
-
-
-//void
-//MAST::StructuralNonlinearAssemblyElemOperations::
-//calculate_outputs(const libMesh::NumericVector<Real>& X) {
-//
-//
-//    // look through the outputs for structural compliance. If present,
-//    // then evaluate it separately
-//    MAST::VolumeOutputMapType::iterator
-//    it    = _discipline->volume_output().begin(),
-//    end   = _discipline->volume_output().end();
-//
-//
-//    for ( ; it != end; it++)
-//        if (it->second->type() == MAST::STRUCTURAL_COMPLIANCE) {
-//
-//            MAST::NonlinearSystem& sys = _system->system();
-//
-//            MAST::RealOutputFunction& output =
-//            dynamic_cast<MAST::RealOutputFunction&>(*it->second);
-//
-//            _calculate_compliance(X, sys, output);
-//        }
-//
-//    // now call the parent's method for calculation of the other outputs
-//    MAST::NonlinearImplicitAssembly::calculate_outputs(X);
-//
-//}
-//
-//
-//
-//
-//
-//
-//void
-//MAST::StructuralNonlinearAssemblyElemOperations::
-//calculate_output_sensitivity(libMesh::ParameterVector& params,
-//                             const bool if_total_sensitivity,
-//                             const libMesh::NumericVector<Real>& X) {
-//
-//
-//    // look through the outputs for structural compliance. If present,
-//    // then evaluate it separately
-//    MAST::VolumeOutputMapType::iterator
-//    it    = _discipline->volume_output().begin(),
-//    end   = _discipline->volume_output().end();
-//
-//    std::unique_ptr<libMesh::NumericVector<Real> >
-//    localized_solution_sensitivity;
-//
-//    for ( ; it != end; it++)
-//        if (it->second->type() == MAST::STRUCTURAL_COMPLIANCE) {
-//
-//            MAST::NonlinearSystem& sys = _system->system();
-//
-//            MAST::RealOutputFunction& output =
-//            dynamic_cast<MAST::RealOutputFunction&>(*it->second);
-//
-//            for ( unsigned int i=0; i<params.size(); i++) {
-//
-//                const MAST::FunctionBase* f =
-//                _discipline->get_parameter(&(params[i].get()));
-//
-//                if (!if_total_sensitivity)
-//                    _calculate_compliance(X,
-//                                          sys,
-//                                          output,
-//                                          f);
-//                else {
-//
-//                    localized_solution_sensitivity.reset
-//                    (build_localized_vector(sys,
-//                                             sys.get_sensitivity_solution(i)).release());
-//
-//
-//                    _calculate_compliance(X,
-//                                          sys,
-//                                          output,
-//                                          f,
-//                                          localized_solution_sensitivity.get());
-//                }
-//            }
-//        }
-//
-//    // now call the parent's method for calculation of the other outputs
-//    MAST::NonlinearImplicitAssembly::
-//    calculate_output_sensitivity(params,
-//                                 if_total_sensitivity,
-//                                 X);
-//
-//}
-
-
-
-
-
-
-//void
-//MAST::StructuralNonlinearAssemblyElemOperations::
-//_calculate_compliance (const libMesh::NumericVector<Real>& X,
-//                       libMesh::NonlinearImplicitSystem& S,
-//                       MAST::RealOutputFunction& output,
-//                       const MAST::FunctionBase* f,
-//                       const libMesh::NumericVector<Real>* dX) {
-//
-//
-//    MAST::NonlinearSystem& nonlin_sys = _system->system();
-//
-//    // make sure that the system for which this object was created,
-//    // and the system passed through the function call are the same
-//    libmesh_assert_equal_to(&S, &(nonlin_sys));
-//
-//    // iterate over each element, initialize it and get the relevant
-//    // analysis quantities
-//    RealVectorX vec, sol, dsol;
-//    RealMatrixX mat;
-//    Real        val;
-//
-//    std::vector<libMesh::dof_id_type> dof_indices;
-//    const libMesh::DofMap& dof_map = _system->system().get_dof_map();
-//    
-//
-//    std::unique_ptr<libMesh::NumericVector<Real> >
-//    localized_solution,
-//    localized_solution_sens;
-//    localized_solution.reset(build_localized_vector(nonlin_sys,
-//                                                     X).release());
-//    if (f)
-//        localized_solution_sens.reset(build_localized_vector(nonlin_sys,
-//                                                              *dX).release());
-//
-//
-//    // if a solution function is attached, initialize it
-//    if (_sol_function)
-//        _sol_function->init( X);
-//
-//
-//    libMesh::MeshBase::const_element_iterator       el     =
-//    nonlin_sys.get_mesh().active_local_elements_begin();
-//    const libMesh::MeshBase::const_element_iterator end_el =
-//    nonlin_sys.get_mesh().active_local_elements_end();
-//
-//
-//    for ( ; el != end_el; ++el) {
-//
-//        const libMesh::Elem* elem = *el;
-//
-//        dof_map.dof_indices (elem, dof_indices);
-//
-//        _build_elem(*elem).release());
-//
-//        MAST::StructuralElementBase& p_elem =
-//        dynamic_cast<MAST::StructuralElementBase&>(*physics_elem);
-//
-//
-//        // get the solution
-//        unsigned int ndofs = (unsigned int)dof_indices.size();
-//        sol.setZero (ndofs);
-//        dsol.setZero(ndofs);
-//        vec.setZero (ndofs);
-//        mat.setZero (ndofs, ndofs);
-//
-//        for (unsigned int i=0; i<dof_indices.size(); i++)
-//            sol(i) = (*localized_solution)(dof_indices[i]);
-//
-//        physics_elem->set_solution(sol, false);  // primal solution
-//
-//        if (f) {
-//
-//            for (unsigned int i=0; i<dof_indices.size(); i++)
-//                dsol(i) = (*localized_solution_sens)(dof_indices[i]);
-//
-//            physics_elem->set_solution(dsol, true);  // sensitivity solution
-//            physics_elem->sensitivity_param = f;
-//        }
-//
-//        // set the incompatible mode solution if required by the
-//        // element
-//        if (p_elem.if_incompatible_modes()) {
-//            // check if the vector exists in the map
-//            if (!_incompatible_sol.count(elem))
-//                _incompatible_sol[elem] = RealVectorX::Zero(p_elem.incompatible_mode_size());
-//            p_elem.set_incompatible_mode_solution(_incompatible_sol[elem]);
-//        }
-//
-//        if (_sol_function)
-//            physics_elem->attach_active_solution_function(*_sol_function);
-//
-//        // if no parameter has been specified, then only evaluate
-//        // the output. Otherwise, calculate the sensitivity
-//        if (!f) {
-//
-//            // perform the element level calculations
-//            _elem_calculations(*physics_elem,
-//                               true,
-//                               vec, mat);
-//
-//
-//            output.add_value(sol.dot(mat * sol));
-//        }
-//        else {
-//
-//            // perform the element level calculations
-//            _elem_calculations(*physics_elem,
-//                               true,
-//                               vec, mat);
-//            val = sol.dot(mat * dsol) + dsol.dot(mat *  sol);
-//            output.add_sensitivity(f, val);
-//
-//            _elem_sensitivity_calculations(*physics_elem, true, vec, mat);
-//            output.add_sensitivity(f, sol.dot(mat * sol));
-//        }
-//
-//        physics_elem->detach_active_solution_function();
-//
-//    }
-//
-//
-//    // if a solution function is attached, clear it
-//    if (_sol_function)
-//        _sol_function->clear();
-//}
 
 
 

@@ -315,13 +315,12 @@ sensitivity_assemble (const MAST::FunctionBase& f,
         vec.setZero(ndofs);
         
         solver.set_element_data(dof_indices, local_qtys);
-        solver.set_elem_sensitivity_parameter(f);
         
         //        if (_sol_function)
         //            physics_elem->attach_active_solution_function(*_sol_function);
         
         // perform the element level calculations
-        solver.elem_sensitivity_calculations(vec);
+        solver.elem_sensitivity_calculations(f, vec);
         
         //        physics_elem->detach_active_solution_function();
         solver.clear_elem();

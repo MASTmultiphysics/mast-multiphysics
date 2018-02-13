@@ -236,7 +236,7 @@ namespace MAST {
          *   the adjoint solution provided in \par dq_dX for a linearization
          *   about solution \par X.
          */
-        virtual void
+        virtual Real
         calculate_output_adjoint_sensitivity(const libMesh::NumericVector<Real>& X,
                                              const libMesh::NumericVector<Real>& dq_dX,
                                              const MAST::FunctionBase& p,

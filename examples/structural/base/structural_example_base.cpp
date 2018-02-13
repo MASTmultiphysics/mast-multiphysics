@@ -559,11 +559,13 @@ static_adjoint_sensitivity_solve(//MAST::OutputAssemblyElemOperations& q,
     libMesh::out << "output : " << stress_elem_ops.output_total() << std::endl;
     _sys->adjoint_solve(elem_ops, stress_elem_ops, assembly, false);
     
+    Real dqdp =
     assembly.calculate_output_adjoint_sensitivity(*_sys->solution,
                                                   _sys->get_adjoint_solution(),
                                                   p,
                                                   elem_ops,
                                                   stress_elem_ops);
+    libMesh::out << "dq/dp: adjoint: " << dqdp << std::endl;
     
     // write the solution for visualization
     if (output) {

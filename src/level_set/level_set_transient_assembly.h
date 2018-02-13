@@ -93,7 +93,8 @@ namespace MAST {
          *   performs the element sensitivity calculations over \par elem,
          *   and returns the element residual sensitivity in \par vec .
          */
-        virtual void elem_sensitivity_calculations(RealVectorX& vec);
+        virtual void elem_sensitivity_calculations(const MAST::FunctionBase& f,
+                                                   RealVectorX& vec);
         
         
         /*!
@@ -104,7 +105,8 @@ namespace MAST {
         elem_second_derivative_dot_solution_assembly(RealMatrixX& mat);
         
         virtual void
-        elem_sensitivity_calculations(RealVectorX& f_m,
+        elem_sensitivity_calculations(const MAST::FunctionBase& f,
+                                      RealVectorX& f_m,
                                       RealVectorX& f_x);
 
         /*!

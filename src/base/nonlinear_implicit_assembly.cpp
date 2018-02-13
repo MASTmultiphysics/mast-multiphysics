@@ -443,14 +443,12 @@ sensitivity_assemble (const MAST::FunctionBase& f,
         for (unsigned int i=0; i<dof_indices.size(); i++)
             sol(i) = (*localized_solution)(dof_indices[i]);
         
-        ops.set_elem_sensitivity_parameter(f);
         ops.set_elem_solution(sol);
         
 //        if (_sol_function)
 //            physics_elem->attach_active_solution_function(*_sol_function);
         
-        // perform the element level calculations
-        ops.elem_sensitivity_calculations(vec);
+        ops.elem_sensitivity_calculations(f, vec);
         
 //        physics_elem->detach_active_solution_function();
         ops.clear_elem();

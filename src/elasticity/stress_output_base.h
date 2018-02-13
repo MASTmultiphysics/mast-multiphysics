@@ -264,10 +264,22 @@ namespace MAST {
 
         /*!
          *   zeroes the output quantity values stored inside this object
-         *   so that assembly process can begin.
+         *   so that assembly process can begin. This will zero out data
+         *   so that it is ready for a new evaluation. Before sensitivity
+         *   analysis, call the other method, since some nonlinear
+         *   functionals need the forward quantities for sensitivity analysis,
+         *   eg., stress output.
          */
-        virtual void zero();
+        virtual void zero_for_analysis();
         
+        
+        /*!
+         *   zeroes the output quantity values stored inside this object
+         *   so that assembly process can begin. This will only zero the
+         *   data to compute new sensitivity analysis.
+         */
+        virtual void zero_for_sensitivity();
+
         /*!
          *    this evaluates all relevant stress components on the element to
          *    evaluate the p-averaged quantity.
@@ -284,6 +296,28 @@ namespace MAST {
          */
         virtual void evaluate_sensitivity(const MAST::FunctionBase& f);
 
+        /*!
+         *    this evaluates all relevant shape sensitivity components on
+         *    the element.
+         *    This is only done on the current element for which this
+         *    object has been initialized.
+         */
+        virtual void evaluate_shape_sensitivity(const MAST::FunctionBase& f) {
+            
+            libmesh_assert(false); // to be implemented
+        }
+        
+        /*!
+         *    this evaluates all relevant topological sensitivity components on
+         *    the element.
+         *    This is only done on the current element for which this
+         *    object has been initialized.
+         */
+        virtual void
+        evaluate_topology_sensitivity(const MAST::FunctionBase& f,
+                                      const MAST::LevelSetIntersection& intersect,
+                                      const MAST::FieldFunction<RealVectorX>& vel);
+        
         /*!
          *   should not get called for this output. Use output_total() instead.
          */

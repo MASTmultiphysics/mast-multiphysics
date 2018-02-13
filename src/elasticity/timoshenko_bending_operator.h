@@ -22,10 +22,6 @@
 
 // MAST includes
 #include "elasticity/bending_operator.h"
-#include "property_cards/element_property_card_base.h"
-#include "numerics/fem_operator_matrix.h"
-#include "base/nonlinear_system.h"
-#include "mesh/fe_base.h"
 
 
 
@@ -35,12 +31,9 @@ namespace MAST {
     public MAST::BendingOperator1D {
         
     public:
-        TimoshenkoBendingOperator(MAST::StructuralElementBase& elem):
-        MAST::BendingOperator1D(elem),
-        _shear_quadrature_reduction(2)
-        { }
+        TimoshenkoBendingOperator(MAST::StructuralElementBase& elem);
         
-        virtual ~TimoshenkoBendingOperator() { }
+        virtual ~TimoshenkoBendingOperator();
         
         /*!
          *   returns true if this bending operator supports a transverse shear component
@@ -79,10 +72,48 @@ namespace MAST {
         virtual void
         calculate_transverse_shear_residual(bool request_jacobian,
                                             RealVectorX& local_f,
-                                            RealMatrixX& local_jac,
-                                            const MAST::FunctionBase* sens_params );
+                                            RealMatrixX& local_jac);
+
+        /*!
+         *   calculate the transverse shear component for the element
+         */
+        virtual void
+        calculate_transverse_shear_residual_sensitivity(const MAST::FunctionBase& p,
+                                                        bool request_jacobian,
+                                                        RealVectorX& local_f,
+                                                        RealMatrixX& local_jac);
+
+        /*!
+         *   calculate the transverse shear component for the element
+         */
+        virtual void
+        calculate_transverse_shear_residual_boundary_velocity
+        (const MAST::FunctionBase& p,
+         const unsigned int s,
+         const MAST::FieldFunction<RealVectorX>& vel_f,
+         RealVectorX& local_f) {
+            
+            libmesh_assert(false); // to be implemented
+        }
         
     protected:
+        
+        void
+        _transverse_shear_operations(const std::vector<std::vector<Real> >& phi,
+                                     const std::vector<std::vector<libMesh::RealVectorValue> >& dphi,
+                                     const std::vector<Real>& JxW,
+                                     const unsigned int     qp,
+                                     const RealMatrixX&     material,
+                                     FEMOperatorMatrix&     Bmat_v,
+                                     FEMOperatorMatrix&     Bmat_w,
+                                     RealVectorX&           phi_vec,
+                                     RealVectorX&           vec_n2,
+                                     RealVectorX&           vec_2,
+                                     RealMatrixX&           mat_n2n2,
+                                     RealMatrixX&           mat_2n2,
+                                     bool                   request_jacobian,
+                                     RealVectorX&           local_f,
+                                     RealMatrixX&           local_jac);
         
         /*!
          *   reduction in quadrature for shear energy
@@ -91,146 +122,6 @@ namespace MAST {
     };
 }
 
-
-
-
-inline void
-MAST::TimoshenkoBendingOperator::
-initialize_bending_strain_operator(const MAST::FEBase& fe,
-                                   const unsigned int qp,
-                                   MAST::FEMOperatorMatrix& Bmat_bend_v,
-                                   MAST::FEMOperatorMatrix& Bmat_bend_w) {
-    
-    this->initialize_bending_strain_operator_for_yz(fe, qp, 1., 1.,
-                                                    Bmat_bend_v,
-                                                    Bmat_bend_w);
-}
-
-
-
-
-inline void
-MAST::TimoshenkoBendingOperator::
-initialize_bending_strain_operator_for_yz(const MAST::FEBase& fe,
-                                          const unsigned int qp,
-                                          const Real y,
-                                          const Real z,
-                                          MAST::FEMOperatorMatrix& Bmat_bend_v,
-                                          MAST::FEMOperatorMatrix& Bmat_bend_w) {
-    
-    const std::vector<std::vector<libMesh::RealVectorValue> >& dphi = fe.get_dphi();
-    const std::vector<std::vector<Real> >& phi = fe.get_phi();
-    
-    const unsigned int n_phi = (unsigned int)phi.size();
-    
-    RealVectorX phi_vec = RealVectorX::Zero(n_phi);
-    
-    for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
-        phi_vec(i_nd) = dphi[i_nd][qp](0);  // dphi/dx
-    phi_vec *= -y;
-    Bmat_bend_v.set_shape_function(0, 5, phi_vec); // v-bending: thetaz
-    
-    for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
-        phi_vec(i_nd) = dphi[i_nd][qp](0);  // dphi/dx
-    phi_vec *= z;
-    Bmat_bend_w.set_shape_function(0, 4, phi_vec); // w-bending : thetay
-}
-
-
-
-void
-MAST::TimoshenkoBendingOperator::
-calculate_transverse_shear_residual(bool request_jacobian,
-                                    RealVectorX& local_f,
-                                    RealMatrixX& local_jac,
-                                    const MAST::FunctionBase* sens_param)
-{
-    const MAST::ElementPropertyCardBase& property = _structural_elem.elem_property();
-    
-    // make an fe and quadrature object for the requested order for integrating
-    // transverse shear
-    
-    std::unique_ptr<MAST::FEBase>
-    fe(_structural_elem.assembly().build_fe(_elem));
-    fe->set_extra_quadrature_order(-_shear_quadrature_reduction);
-    fe->init(_elem);
-
-    
-    const std::vector<std::vector<libMesh::RealVectorValue> >& dphi = fe->get_dphi();
-    const std::vector<std::vector<Real> >& phi = fe->get_phi();
-    const std::vector<Real>& JxW = fe->get_JxW();
-    const std::vector<libMesh::Point>& xyz = fe->get_xyz();
-    
-    const unsigned int n_phi = (unsigned int)phi.size(), n2 = 6*n_phi;
-    RealVectorX phi_vec  = RealVectorX::Zero(n_phi);
-    
-    RealVectorX
-    vec3_n2   = RealVectorX::Zero(n2),
-    vec4_2    = RealVectorX::Zero(2),
-    vec5_2    = RealVectorX::Zero(2);
-    RealMatrixX
-    material_trans_shear_mat,
-    mat2_n2n2  = RealMatrixX::Zero(n2,n2),
-    mat4_2n2   = RealMatrixX::Zero(2,n2);
-    
-
-    FEMOperatorMatrix
-    Bmat_trans_v,
-    Bmat_trans_w;
-    Bmat_trans_v.reinit(2, 6, n_phi); // one shear stress for v-bending
-    Bmat_trans_w.reinit(2, 6, n_phi); // one shear stress for w-bending
-    
-    std::unique_ptr<MAST::FieldFunction<RealMatrixX > >
-    mat_stiff = property.transverse_shear_stiffness_matrix(_structural_elem);
-    
-    for (unsigned int qp=0; qp<JxW.size(); qp++) {
-        
-        if (!sens_param)
-            (*mat_stiff)(xyz[qp],
-                         _structural_elem.system().time,
-                         material_trans_shear_mat);
-        else
-            mat_stiff->derivative(  *sens_param,
-                                  xyz[qp],
-                                  _structural_elem.system().time,
-                                  material_trans_shear_mat);
-        
-        // initialize the strain operator
-        for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
-            phi_vec(i_nd) = dphi[i_nd][qp](0);  // dphi/dx
-        Bmat_trans_v.set_shape_function(0, 1, phi_vec); // gamma-xy:  v
-        Bmat_trans_w.set_shape_function(0, 2, phi_vec); // gamma-xz : w
-        
-        for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
-            phi_vec(i_nd) = phi[i_nd][qp];  // phi
-        Bmat_trans_w.set_shape_function(0, 4, phi_vec); // gamma-xz:  thetay
-        phi_vec *= -1.0;
-        Bmat_trans_v.set_shape_function(0, 5, phi_vec); // gamma-xy : thetaz
-        
-        
-        // now add the transverse shear component
-        Bmat_trans_v.vector_mult(vec4_2, _structural_elem.local_solution());
-        vec5_2 = material_trans_shear_mat * vec4_2;
-        Bmat_trans_v.vector_mult_transpose(vec3_n2, vec5_2);
-        local_f += JxW[qp] * vec3_n2;
-
-        Bmat_trans_w.vector_mult(vec4_2, _structural_elem.local_solution());
-        vec5_2 = material_trans_shear_mat * vec4_2;
-        Bmat_trans_w.vector_mult_transpose(vec3_n2, vec5_2);
-        local_f += JxW[qp] * vec3_n2;
-
-        if (request_jacobian) {
-            // now add the transverse shear component
-            Bmat_trans_v.left_multiply(mat4_2n2, material_trans_shear_mat);
-            Bmat_trans_v.right_multiply_transpose(mat2_n2n2, mat4_2n2);
-            local_jac += JxW[qp] * mat2_n2n2;
-
-            Bmat_trans_w.left_multiply(mat4_2n2, material_trans_shear_mat);
-            Bmat_trans_w.right_multiply_transpose(mat2_n2n2, mat4_2n2);
-            local_jac += JxW[qp] * mat2_n2n2;
-        }
-    }
-}
 
 
 #endif // __mast_timoshenko_bending_operator_h__

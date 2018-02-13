@@ -162,7 +162,8 @@ MAST::FluidStructureAssemblyElemOperations::elem_aerodynamic_force_calculations(
 
 
 void
-MAST::FluidStructureAssemblyElemOperations::elem_sensitivity_calculations(bool if_jac,
+MAST::FluidStructureAssemblyElemOperations::elem_sensitivity_calculations(const MAST::FunctionBase& f,
+                                                                          bool if_jac,
                                                                           RealVectorX& vec,
                                                                           RealMatrixX& mat) {
     
@@ -179,19 +180,21 @@ MAST::FluidStructureAssemblyElemOperations::elem_sensitivity_calculations(bool i
     switch (_qty_type) {
         case MAST::MASS: {
             
-            e.inertial_residual_sensitivity(true, vec, mat, dummy, dummy);
+            e.inertial_residual_sensitivity(f, true, vec, mat, dummy, dummy);
         }
             break;
             
         case MAST::DAMPING: {
             
-            e.inertial_residual_sensitivity(true, vec, dummy, mat, dummy);
-            e.side_external_residual_sensitivity(true,
+            e.inertial_residual_sensitivity(f, true, vec, dummy, mat, dummy);
+            e.side_external_residual_sensitivity(f,
+                                                 true,
                                                  vec,
                                                  mat,
                                                  dummy,
                                                  _discipline->side_loads());
-            e.volume_external_residual_sensitivity(true,
+            e.volume_external_residual_sensitivity(f,
+                                                   true,
                                                    vec,
                                                    mat,
                                                    dummy,
@@ -202,20 +205,20 @@ MAST::FluidStructureAssemblyElemOperations::elem_sensitivity_calculations(bool i
             
         case MAST::STIFFNESS: {
             
-            e.internal_residual_sensitivity(true, vec, mat);
+            e.internal_residual_sensitivity(f, true, vec, mat);
             
             // if the linearization is about a base state, then the sensitivity of
             // the base state will influence the sensitivity of the Jacobian
             if (_base_sol)
                 e.internal_residual_jac_dot_state_sensitivity(mat);
             
-            e.inertial_residual_sensitivity(true, vec, dummy, dummy, mat);
-            e.side_external_residual_sensitivity(true,
+            e.inertial_residual_sensitivity(f, true, vec, dummy, dummy, mat);
+            e.side_external_residual_sensitivity(f, true,
                                                  vec,
                                                  dummy,
                                                  mat,
                                                  _discipline->side_loads());
-            e.volume_external_residual_sensitivity(true,
+            e.volume_external_residual_sensitivity(f, true,
                                                    vec,
                                                    dummy,
                                                    mat,
