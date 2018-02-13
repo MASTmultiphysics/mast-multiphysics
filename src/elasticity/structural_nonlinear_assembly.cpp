@@ -190,6 +190,7 @@ elem_topology_sensitivity_calculations(const MAST::FunctionBase& f,
     
     libmesh_assert(_physics_elem);
     libmesh_assert(f.is_topology_parameter());
+    const libMesh::Elem& elem = _physics_elem->elem();
 
     // sensitivity only exists at the boundary. So, we proceed with calculation
     // only if this element has an intersection in the interior, or with a side.
@@ -202,9 +203,10 @@ elem_topology_sensitivity_calculations(const MAST::FunctionBase& f,
         RealMatrixX
         dummy = RealMatrixX::Zero(vec.size(), vec.size());
         
-        e.internal_residual_boundary_velocity(f, vec,
-                                              intersect.get_side_on_interface(_physics_elem->elem()),
-                                              vel);
+        if (intersect.has_side_on_interface(elem))
+            e.internal_residual_boundary_velocity(f, vec,
+                                                  intersect.get_side_on_interface(elem),
+                                                  vel);
         /*e.side_external_residual_sensitivity(f, false,
          vec,
          dummy,

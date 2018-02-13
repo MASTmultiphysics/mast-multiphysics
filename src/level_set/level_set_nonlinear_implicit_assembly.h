@@ -104,7 +104,9 @@ namespace MAST {
         
         
 #if MAST_ENABLE_PLPLOT == 1
-        void plot_sub_elems();
+        void plot_sub_elems(bool plot_reference_elem,
+                            bool plot_low_phi_elem,
+                            bool plot_high_phi_elem);
 #endif
         
         

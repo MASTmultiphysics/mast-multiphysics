@@ -70,8 +70,12 @@ MAST::LevelSetBoundaryVelocity::operator() (const libMesh::Point& p,
     (*_phi)(p, t, val);
     
     // since the function provides the velocity at the boundary, the
-    // level set value should be close to zero.
-    libmesh_assert_less_equal(std::fabs(val(0)), tol);
+    // level set value should be close to zero. This is commented out since
+    // for a coarse level set mesh used to define geometry on a fine analysis
+    // mesh, the boundary can exist on locations that are not necessarily phi=0.
+    //libmesh_assert_less_equal(std::fabs(val(0)), tol);
+    //if (std::fabs(val(0)) > tol)
+    //    libMesh::out << "**** !!!  level-set not zero at boundary: " << val(0) << std::endl;
     
     _phi->gradient(p, t, gradmat);
     _phi->perturbation(p, t, dval);

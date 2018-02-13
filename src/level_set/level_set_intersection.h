@@ -131,9 +131,12 @@ namespace MAST {
          *   element does not have a side on the interface, then a negative
          *   value is returned. 
          */
-        int
+        unsigned int
         get_side_on_interface(const libMesh::Elem& e) const;
-        
+
+        bool
+        has_side_on_interface(const libMesh::Elem& e) const;
+
         const libMesh::Point&
         get_nondimensional_coordinate_for_node(const libMesh::Node& n) const;
         

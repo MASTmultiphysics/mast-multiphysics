@@ -178,15 +178,16 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
         // even if zero. Otherwise, it complains about lack of diagonal entry.
         // So, if the element is NOT completely on the positive side, we still
         // add a zero matrix to get around this issue.
-        if (!_intersection->if_elem_on_positive_phi() && J) {
+        if (_intersection->if_elem_on_negative_phi() && J) {
             
             DenseRealMatrix m(ndofs, ndofs);
+            dof_map.constrain_element_matrix(m, dof_indices);
             J->add_matrix(m, dof_indices);
         }
 
         
         if (_intersection->if_elem_has_positive_phi_region()) {
-            
+
             sol.setZero(ndofs);
             vec.setZero(ndofs);
             mat.setZero(ndofs, ndofs);
@@ -280,6 +281,7 @@ void plot_elem(const libMesh::Elem& e) {
     }
 
     plline(n+1, x.data(), y.data());
+    plflush();
 }
 
 
@@ -297,14 +299,17 @@ void plot_points(const std::vector<libMesh::Point>& pts) {
         y(i) = pts[i](1);
     }
 
-    char s[] = ".";
+    //char s[] = ".";
     //plstring(n, x.data(), y.data(), s);
     plpoin(n, x.data(), y.data(), -1);
+    plflush();
 }
 
 
 void
-MAST::LevelSetNonlinearImplicitAssembly::plot_sub_elems() {
+MAST::LevelSetNonlinearImplicitAssembly::plot_sub_elems(bool plot_reference_elem,
+                                                        bool plot_low_phi_elem,
+                                                        bool plot_high_phi_elem) {
     
     libmesh_assert(_system);
     libmesh_assert(_discipline);
@@ -336,10 +341,11 @@ MAST::LevelSetNonlinearImplicitAssembly::plot_sub_elems() {
                                                                   JxW.end(), 0.) << std::endl;
         }
 
-        
-        plcol0(1); // red color for elements
-        plot_elem(*elem);
-        plflush();
+
+        if (plot_reference_elem) {
+            plcol0(1); // red color for elements
+            plot_elem(*elem);
+        }
         
         _intersection->init(*_level_set, *elem, nonlin_sys.time);
         
@@ -348,37 +354,43 @@ MAST::LevelSetNonlinearImplicitAssembly::plot_sub_elems() {
         elems_low = _intersection->get_sub_elems_negative_phi(),
         elems_hi = _intersection->get_sub_elems_positive_phi();
         
-        plcol0(15); // white color for sub elements
         
-        for (unsigned int i = 0; i < elems_low.size(); i++) {
-            plot_elem(*elems_low[i]);
-            plflush();
-            // create FE
-            std::unique_ptr<MAST::FEBase> fe(new MAST::SubCellFE(*_system, *_intersection));
-            fe->init(*elems_low[i]);
-            const std::vector<Real>& JxW = fe->get_JxW();
-            const std::vector<libMesh::Point>& xyz = fe->get_xyz();
-            std::cout << "low: JxW: " << std::accumulate(JxW.begin(),
-                                                         JxW.end(), 0.) << std::endl;
-            plot_points(xyz);
-            plflush();
-        }
-                
-        for (unsigned int i=0; i<elems_hi.size(); i++) {
-            plot_elem(*elems_hi[i]);
-            plflush();
+        if (plot_low_phi_elem) {
             
-            // create FE
-            std::unique_ptr<MAST::FEBase> fe(new MAST::SubCellFE(*_system, *_intersection));
-            fe->init(*elems_hi[i]);
-            const std::vector<Real>& JxW = fe->get_JxW();
-            const std::vector<libMesh::Point>& xyz = fe->get_xyz();
-            std::cout << "hi: JxW: " << std::accumulate(JxW.begin(),
-                                                        JxW.end(), 0.) << std::endl;
-            plot_points(xyz);
-            plflush();
+            for (unsigned int i = 0; i < elems_low.size(); i++) {
+                
+                plcol0(3); // green color for sub elements
+                plot_elem(*elems_low[i]);
+        
+                // create FE
+                std::unique_ptr<MAST::FEBase> fe(new MAST::SubCellFE(*_system, *_intersection));
+                fe->init(*elems_low[i]);
+                const std::vector<Real>& JxW = fe->get_JxW();
+                const std::vector<libMesh::Point>& xyz = fe->get_xyz();
+                std::cout << "low: JxW: " << std::accumulate(JxW.begin(),
+                                                             JxW.end(), 0.) << std::endl;
+                plot_points(xyz);
+            }
         }
-
+        
+        
+        if (plot_high_phi_elem) {
+            
+            for (unsigned int i=0; i<elems_hi.size(); i++) {
+                
+                plcol0(15); // white color for sub elements
+                plot_elem(*elems_hi[i]);
+                
+                // create FE
+                std::unique_ptr<MAST::FEBase> fe(new MAST::SubCellFE(*_system, *_intersection));
+                fe->init(*elems_hi[i]);
+                const std::vector<Real>& JxW = fe->get_JxW();
+                const std::vector<libMesh::Point>& xyz = fe->get_xyz();
+                std::cout << "hi: JxW: " << std::accumulate(JxW.begin(),
+                                                            JxW.end(), 0.) << std::endl;
+                plot_points(xyz);
+            }
+        }
         
         _intersection->clear();
     }
@@ -835,9 +847,11 @@ MAST::LevelSetNonlinearImplicitAssembly::constrain() {
     group_A,
     group_B,
     dof_indices,
-    constrained_dof_indices;
+    constrained_dof_indices,
+    intersected_dof_indices;
     constrained_dof_indices.reserve(dof_map.n_local_dofs());
-    
+    intersected_dof_indices.reserve(dof_map.n_local_dofs());
+
     // our intent is to constrain only those dofs that belong to the
     // unintersected elements on the negative phi side of level set, AND
     // if they do not belong to any elements intersected by the level set.
@@ -857,6 +871,14 @@ MAST::LevelSetNonlinearImplicitAssembly::constrain() {
             // All of these dofs are constrained
 
             dof_map.dof_indices(elem, dof_indices);
+        }
+        else if (_intersection->if_intersection_through_elem()) {
+            
+            dof_map.dof_indices(elem, dof_indices);
+
+            intersected_dof_indices.insert(intersected_dof_indices.end(),
+                                           dof_indices.begin(),
+                                           dof_indices.end());
         }
         else if (_intersection->get_intersection_mode() == MAST::THROUGH_NODE &&
                  !_intersection->if_elem_has_positive_phi_region()) {
@@ -882,7 +904,7 @@ MAST::LevelSetNonlinearImplicitAssembly::constrain() {
                                 group_B.end(),
                                 std::inserter(dof_indices, dof_indices.begin()));
         }
-        else if (_intersection->get_intersection_mode() == MAST::THROUGH_NODE &&
+        else if (_intersection->get_intersection_mode() == MAST::COLINEAR_EDGE &&
                  !_intersection->if_elem_has_positive_phi_region()) {
             
             // boundary passes through edge and the element is on the negative
@@ -916,13 +938,29 @@ MAST::LevelSetNonlinearImplicitAssembly::constrain() {
     
     // create a set so that we only deal with unique set of ids.
     std::set<libMesh::dof_id_type>
-    constrained_dofs(constrained_dof_indices.begin(),
-                     constrained_dof_indices.end());
+    constrained_dofs_set(constrained_dof_indices.begin(),
+                         constrained_dof_indices.end()),
+    intersected_dofs_set(intersected_dof_indices.begin(),
+                         intersected_dof_indices.end());
+    
+    dof_indices.clear();
+    constrained_dof_indices.clear();
+    intersected_dof_indices.clear();
+    dof_indices.reserve(constrained_dofs_set.size());
+
+    std::set_difference(constrained_dofs_set.begin(),
+                        constrained_dofs_set.end(),
+                        intersected_dofs_set.begin(),
+                        intersected_dofs_set.end(),
+                        std::inserter(dof_indices, dof_indices.begin()));
+
+    constrained_dofs_set.clear();
+    intersected_dofs_set.clear();
     
     // now, constrain everythign in the set
-    std::set<libMesh::dof_id_type>::const_iterator
-    dof_it  = constrained_dofs.begin(),
-    dof_end = constrained_dofs.end();
+    std::vector<libMesh::dof_id_type>::const_iterator
+    dof_it  = dof_indices.begin(),
+    dof_end = dof_indices.end();
 
     for ( ; dof_it != dof_end; dof_it++) {
         

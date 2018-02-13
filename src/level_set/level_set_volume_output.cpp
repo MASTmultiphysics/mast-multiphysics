@@ -105,14 +105,16 @@ Real
 MAST::LevelSetVolume::output_sensitivity_for_elem(const MAST::FunctionBase& p) {
 
     libmesh_assert(_physics_elem);
-
+    const libMesh::Elem& elem = _physics_elem->elem();
+    
     if (this->if_evaluate_for_element(_physics_elem->elem()) &&
-        _intersection.if_elem_has_boundary()) {
+        _intersection.if_elem_has_boundary() &&
+        _intersection.has_side_on_interface(elem)) {
 
         MAST::LevelSetElementBase&
         e = dynamic_cast<MAST::LevelSetElementBase&>(*_physics_elem);
         
-        return e.volume_boundary_velocity_on_side(_intersection.get_side_on_interface(_physics_elem->elem()));
+        return e.volume_boundary_velocity_on_side(_intersection.get_side_on_interface(elem));
     }
     else
         return 0.;
@@ -173,8 +175,9 @@ MAST::LevelSetVolume::evaluate_topology_sensitivity(const MAST::FunctionBase& f,
         MAST::LevelSetElementBase&
         e = dynamic_cast<MAST::LevelSetElementBase&>(*_physics_elem);
         
-        _dvol_dp += e.volume_boundary_velocity_on_side
-        (_intersection.get_side_on_interface(_physics_elem->elem()));
+        if (_intersection.has_side_on_interface(_physics_elem->elem()))
+            _dvol_dp += e.volume_boundary_velocity_on_side
+            (_intersection.get_side_on_interface(_physics_elem->elem()));
     }
 }
 
