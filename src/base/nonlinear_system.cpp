@@ -854,7 +854,7 @@ MAST::NonlinearSystem::read_in_vector(libMesh::NumericVector<Real>& vec,
         int stat_result = stat(file_name.str().c_str(), &stat_info);
         
         if (stat_result != 0)
-            libmesh_error_msg("File does not exist: " << file_name.str());
+            libmesh_error_msg("File does not exist: " + file_name.str());
     }
     
     if (!std::ifstream(file_name.str()))

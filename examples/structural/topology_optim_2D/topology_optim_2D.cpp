@@ -271,8 +271,22 @@ MAST::Examples::TopologyOptimizationLevelSet2D::init_dvar(std::vector<Real>& x,
     
     std::fill(xmin.begin(), xmin.end(),   -1.);
     std::fill(xmax.begin(), xmax.end(),    1.);
-    for (unsigned int i=0; i<_n_vars; i++)
-        x[i] = (*_dv_params[i].second)();
+    
+    // now, check if the user asked to initialize dvs from a previous file
+    std::string
+    nm    =  (*_input)(_prefix+"restart_optimization_file", "filename with optimization history for restart", "");
+    
+    if (nm.length()) {
+        
+        unsigned int
+        iter = (*_input)(_prefix+"restart_optimization_iter", "restart iteration number from file", 0);
+        this->initialize_dv_from_output_file(nm, iter, x);
+    }
+    else {
+        
+        for (unsigned int i=0; i<_n_vars; i++)
+            x[i] = (*_dv_params[i].second)();
+    }
 }
 
 

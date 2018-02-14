@@ -135,6 +135,18 @@ namespace MAST {
         
         
         /*!
+         *   This reads and initializes the DV vector from a previous
+         *   optimization history output file. This will verify that the
+         *   optimization setup (number of DVs, constraints, etc.) are the
+         *   same as the initialized data for this object and then
+         *   read the dv values from \par iter iteration into
+         *   \par x. 
+         */
+        void initialize_dv_from_output_file(const std::string& nm,
+                                            const unsigned int iter,
+                                            std::vector<Real> &x);
+        
+        /*!
          *  verifies the gradients at the specified design point
          */
         virtual bool verify_gradients(const std::vector<Real>& dvars);
