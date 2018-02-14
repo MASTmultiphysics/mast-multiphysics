@@ -48,6 +48,14 @@ _JxW(JxW) {
 
 
 
+void
+MAST::StressStrainOutputBase::Data::clear_sensitivity_data() {
+    
+    _stress_sensitivity.clear();
+    _strain_sensitivity.clear();
+}
+
+
 const libMesh::Point&
 MAST::StressStrainOutputBase::Data::
 point_location_in_element_coordinate() const {
@@ -460,6 +468,28 @@ MAST::StressStrainOutputBase::clear() {
     _sigma_vm_int            = 0.;
     _sigma_vm_p_norm         = 0.;
     _if_stress_plot_mode     = false;
+}
+
+
+
+
+void
+MAST::StressStrainOutputBase::clear_sensitivity_data() {
+    
+    std::map<const libMesh::dof_id_type, std::vector<MAST::StressStrainOutputBase::Data*> >::iterator
+    map_it  =  _stress_data.begin(),
+    map_end =  _stress_data.end();
+    
+    for ( ; map_it != map_end; map_it++) {
+        
+        // iterate over all the data and delete them
+        std::vector<MAST::StressStrainOutputBase::Data*>::iterator
+        it   =  map_it->second.begin(),
+        end  =  map_it->second.end();
+        
+        for ( ; it != end; it++)
+            (*it)->clear_sensitivity_data();
+    }
 }
 
 

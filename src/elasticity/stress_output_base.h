@@ -79,6 +79,9 @@ namespace MAST {
                  Real JxW);
  
             
+            void clear_sensitivity_data();
+            
+            
             /*!
              *   @returns the point at which stress is evaluated, in the
              *   element coordinate system.
@@ -383,6 +386,11 @@ namespace MAST {
          */
         void clear();
         
+        /*!
+         *   clears the data stored for sensitivity analysis.
+         */
+        void clear_sensitivity_data();
+
         
         /*!
          *   @returns the thermal load for this element, if present in the
