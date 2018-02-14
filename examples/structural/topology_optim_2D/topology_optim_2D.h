@@ -114,6 +114,7 @@ namespace MAST  {
                                                          std::vector<Real>& grads);
 
             Real                                      _stress_lim;
+            Real                                      _p_val;
             libMesh::FEType                           _level_set_fetype;
             libMesh::UnstructuredMesh*                _level_set_mesh;
             libMesh::EquationSystems*                 _level_set_eq_sys;

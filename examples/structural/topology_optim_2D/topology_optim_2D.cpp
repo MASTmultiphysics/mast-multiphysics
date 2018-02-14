@@ -56,11 +56,15 @@ namespace MAST {
     public:
         Phi(Real l1,
             Real l2,
-            Real r):
+            Real r,
+            Real nx,
+            Real ny):
         MAST::FieldFunction<RealVectorX>("Phi"),
         _l1  (l1),
         _l2  (l2),
         _r   (r),
+        _nx  (nx),
+        _ny  (ny),
         _pi  (acos(-1.)) {
             
             libmesh_assert_less(r, _l1*.5);
@@ -80,15 +84,13 @@ namespace MAST {
             
             // waves
             Real
-            nx = 4.,
-            ny = 4.,
             c  = 0.5,
             pi = acos(-1.),
             x  = p(0)-.5*_l1,
             y  = p(1)-.5*_l2,
             r  = pow(pow(x,2)+pow(y,2),.5);
             //v(0) = 1.*cos(nx*r*_pi/_l1);
-            v(0) = cos(nx*pi*x/_l1)+cos(ny*pi*y/_l2)+c;
+            v(0) = cos(2.*_nx*pi*x/_l1)+cos(2.*_ny*pi*y/_l2)+c;
             
             // linear
             //v(0) = (p(0)-_l1*0.5)*(-10.);
@@ -99,6 +101,8 @@ namespace MAST {
         _l1,
         _l2,
         _r,
+        _nx,
+        _ny,
         _pi;
     };
     
@@ -159,6 +163,7 @@ TopologyOptimizationLevelSet2D(const libMesh::Parallel::Communicator& comm_in):
 MAST::Examples::StructuralExample2D  (comm_in),
 MAST::FunctionEvaluation             (comm_in),
 _stress_lim                          (0.),
+_p_val                               (0.),
 _level_set_mesh                      (nullptr),
 _level_set_eq_sys                    (nullptr),
 _level_set_sys                       (nullptr),
@@ -203,9 +208,13 @@ MAST::Examples::TopologyOptimizationLevelSet2D::initialize_solution() {
     Real
     length  = (*_input)(_prefix+"length", "length of domain along x-axis", 0.3),
     width   = (*_input)(_prefix+ "width", "length of domain along y-axis", 0.3),
+    nx      = (*_input)(_prefix+ "initial_level_set_n_holes_in_x",
+                        "number of holes along x-direction for initial level-set field", 2.),
+    ny      = (*_input)(_prefix+ "initial_level_set_n_holes_in_y",
+                        "number of holes along y-direction for initial level-set field", 2.),
     min_val = std::min(length, width);
 
-    Phi phi(length, width, min_val*0.4);
+    Phi phi(length, width, min_val*0.4, nx, ny);
     _level_set_sys_init->initialize_solution(phi);
 }
 
@@ -236,6 +245,7 @@ MAST::Examples::TopologyOptimizationLevelSet2D::init(MAST::Examples::GetPotWrapp
     _n_ineq = 1;
     
     _stress_lim            = (*_input)(_prefix+"vm_stress_limit", "limit von-mises stress value", 2.e8);
+    _p_val                 = (*_input)(_prefix+"constraint_aggregation_p_val", "value of p in p-norm stress aggregation", 2.0);
     _level_set_vel         = new MAST::LevelSetBoundaryVelocity(2);
     _level_set_function    = new PhiMeshFunction;
     _output                = new libMesh::ExodusII_IO(*_mesh);
@@ -314,6 +324,7 @@ MAST::Examples::TopologyOptimizationLevelSet2D::evaluate(const std::vector<Real>
     stress.set_discipline_and_system(*_discipline, *_structural_sys);
     volume.set_participating_elements_to_all();
     stress.set_participating_elements_to_all();
+    stress.set_p_val(_p_val);
     
     //////////////////////////////////////////////////////////////////////
     // evaluate the objective
@@ -694,7 +705,8 @@ MAST::Examples::TopologyOptimizationLevelSet2D::output(unsigned int iter,
     stress_assembly.set_discipline_and_system(*_discipline, *_structural_sys);
     stress.set_discipline_and_system(*_discipline, *_structural_sys);
     stress.set_participating_elements_to_all();
-
+    stress.set_p_val(_p_val);
+    
     _sys->solve(nonlinear_elem_ops, nonlinear_assembly);
     stress_assembly.update_stress_strain_data(stress, *_sys->solution);
     _output->write_timestep(output_name, *_eq_sys, iter+1, (1.*iter));
