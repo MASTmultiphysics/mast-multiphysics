@@ -30,6 +30,7 @@
 #include "level_set/level_set_boundary_velocity.h"
 #include "elasticity/structural_nonlinear_assembly.h"
 #include "elasticity/stress_output_base.h"
+#include "elasticity/stress_assembly.h"
 #include "elasticity/structural_system_initialization.h"
 #include "base/parameter.h"
 #include "base/field_function_base.h"
@@ -138,6 +139,8 @@ namespace MAST {
             _phi->init(sol);
         }
         
+        MAST::MeshFieldFunction& get_mesh_function() {return *_phi;}
+        
         virtual void operator() (const libMesh::Point& p, const Real t, Real& v) const {
             libmesh_assert(_phi);
             RealVectorX v1;
@@ -155,13 +158,17 @@ MAST::Examples::TopologyOptimizationLevelSet2D::
 TopologyOptimizationLevelSet2D(const libMesh::Parallel::Communicator& comm_in):
 MAST::Examples::StructuralExample2D  (comm_in),
 MAST::FunctionEvaluation             (comm_in),
+_stress_lim                          (0.),
 _level_set_mesh                      (nullptr),
 _level_set_eq_sys                    (nullptr),
 _level_set_sys                       (nullptr),
+_level_set_sys_on_str_mesh           (nullptr),
+_level_set_sys_init_on_str_mesh      (nullptr),
 _level_set_sys_init                  (nullptr),
 _level_set_discipline                (nullptr),
 _level_set_function                  (nullptr),
-_level_set_vel                       (nullptr) {
+_level_set_vel                       (nullptr),
+_output                              (nullptr) {
     
 }
 
@@ -177,6 +184,8 @@ MAST::Examples::TopologyOptimizationLevelSet2D::~TopologyOptimizationLevelSet2D(
     delete _level_set_discipline;
     delete _level_set_eq_sys;
     delete _level_set_mesh;
+    delete _output;
+    delete _level_set_sys_init_on_str_mesh;
     
     for (unsigned int i=0; i<_dv_params.size(); i++)
         delete _dv_params[i].second;
@@ -226,8 +235,15 @@ MAST::Examples::TopologyOptimizationLevelSet2D::init(MAST::Examples::GetPotWrapp
     // one inequality constraint.
     _n_ineq = 1;
     
+    _stress_lim            = (*_input)(_prefix+"vm_stress_limit", "limit von-mises stress value", 2.e8);
     _level_set_vel         = new MAST::LevelSetBoundaryVelocity(2);
     _level_set_function    = new PhiMeshFunction;
+    _output                = new libMesh::ExodusII_IO(*_mesh);
+
+    std::string
+    output_name = (*_input)(_prefix+"output_file_root", "prefix of output file names", "output");
+    output_name += "_optim_history.txt";
+    this->set_output_file(output_name);
 }
 
 
@@ -266,9 +282,6 @@ MAST::Examples::TopologyOptimizationLevelSet2D::evaluate(const std::vector<Real>
         _level_set_sys->solution->set(_dv_params[i].first, dvars[i]);
     _level_set_sys->solution->close();
     _level_set_function->init(*_level_set_sys_init, *_level_set_sys->solution);
-
-    libMesh::ExodusII_IO(*_level_set_mesh).write_equation_systems("o.exo", *_level_set_eq_sys);
-
     _sys->solution->zero();
     
     /**********************************************************************
@@ -307,14 +320,13 @@ MAST::Examples::TopologyOptimizationLevelSet2D::evaluate(const std::vector<Real>
     //////////////////////////////////////////////////////////////////////
     level_set_assembly.calculate_output(*_level_set_sys->solution, volume);
     obj       = volume.output_total();
-    libMesh::out << "============================\n";
 
     //////////////////////////////////////////////////////////////////////
     // evaluate the stress constraint
     //////////////////////////////////////////////////////////////////////
     _sys->solve(nonlinear_elem_ops, nonlinear_assembly);
     nonlinear_assembly.calculate_output(*_sys->solution, stress);
-    fvals[0]  = stress.output_total();
+    fvals[0]  =  stress.output_total()/_stress_lim - 1.;  // g = sigma/sigma0-1 <= 0
 
     //////////////////////////////////////////////////////////////////////
     // evaluate the objective sensitivities, if requested
@@ -396,11 +408,13 @@ _evaluate_stress_functional_sensitivity(MAST::StressStrainOutputBase& stress,
         // field
         _level_set_vel->init(*_level_set_sys_init, *_level_set_sys->solution, *dphi);
         
-        grads[i] = assembly.calculate_output_adjoint_sensitivity(*_sys->solution,
-                                                                 _sys->get_adjoint_solution(),
-                                                                 *_dv_params[i].second,
-                                                                 elem_ops,
-                                                                 stress);
+        grads[i] = 1./_stress_lim*
+        assembly.calculate_output_adjoint_sensitivity(*_sys->solution,
+                                                      _sys->get_adjoint_solution(),
+                                                      *_dv_params[i].second,
+                                                      elem_ops,
+                                                      stress);
+        stress.clear_sensitivity_data();
     }
 }
 
@@ -483,6 +497,11 @@ MAST::Examples::TopologyOptimizationLevelSet2D::_init_system_and_discipline() {
                                                                     _level_set_sys->name(),
                                                                     _level_set_fetype);
     _level_set_discipline  = new MAST::LevelSetDiscipline(*_eq_sys);
+    
+    _level_set_sys_on_str_mesh      = &(_eq_sys->add_system<MAST::NonlinearSystem>("level_set"));
+    _level_set_sys_init_on_str_mesh = new MAST::LevelSetSystemInitialization(*_level_set_sys_on_str_mesh,
+                                                                             _level_set_sys->name(),
+                                                                             _level_set_fetype);
 }
 
 
@@ -639,5 +658,47 @@ MAST::Examples::TopologyOptimizationLevelSet2D::level_set_solve() {
     }
     
     level_set_assembly->clear_discipline_and_system();
+}
+
+
+
+void
+MAST::Examples::TopologyOptimizationLevelSet2D::output(unsigned int iter,
+                                                       const std::vector<Real>& x,
+                                                       Real obj,
+                                                       const std::vector<Real>& fval,
+                                                       bool if_write_to_optim_file) const {
+
+    libmesh_assert_equal_to(x.size(), _n_vars);
+    
+    std::string
+    output_name = (*_input)(_prefix+"output_file_root", "prefix of output file names", "output");
+    output_name += "_optim.exo";
+
+    // copy DVs to level set function
+    for (unsigned int i=0; i<_n_vars; i++)
+        _level_set_sys->solution->set(_dv_params[i].first, x[i]);
+    _level_set_sys->solution->close();
+    _level_set_function->init(*_level_set_sys_init, *_level_set_sys->solution);
+    _level_set_sys_init_on_str_mesh->initialize_solution(_level_set_function->get_mesh_function());
+    
+    MAST::LevelSetNonlinearImplicitAssembly         nonlinear_assembly;
+    MAST::StructuralNonlinearAssemblyElemOperations nonlinear_elem_ops;
+    MAST::StressAssembly                            stress_assembly;
+    MAST::StressStrainOutputBase                    stress;
+
+    nonlinear_elem_ops.set_discipline_and_system(*_discipline, *_structural_sys);
+    nonlinear_assembly.set_discipline_and_system(*_discipline, *_structural_sys);
+    nonlinear_assembly.set_level_set_function(*_level_set_function);
+    nonlinear_assembly.set_level_set_velocity_function(*_level_set_vel);
+    stress_assembly.set_discipline_and_system(*_discipline, *_structural_sys);
+    stress.set_discipline_and_system(*_discipline, *_structural_sys);
+    stress.set_participating_elements_to_all();
+
+    _sys->solve(nonlinear_elem_ops, nonlinear_assembly);
+    stress_assembly.update_stress_strain_data(stress, *_sys->solution);
+    _output->write_timestep(output_name, *_eq_sys, iter+1, (1.*iter));
+
+    MAST::FunctionEvaluation::output(iter, x, obj, fval, if_write_to_optim_file);
 }
 

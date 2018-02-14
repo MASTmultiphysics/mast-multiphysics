@@ -89,6 +89,12 @@ namespace MAST  {
             void level_set_solve();
             
 
+            virtual void output(unsigned int iter,
+                                const std::vector<Real>& x,
+                                Real obj,
+                                const std::vector<Real>& fval,
+                                bool if_write_to_optim_file) const;
+
         protected:
             
             virtual void _init_mesh();
@@ -107,15 +113,18 @@ namespace MAST  {
                                                          const std::vector<bool>& eval_grads,
                                                          std::vector<Real>& grads);
 
-
+            Real                                      _stress_lim;
             libMesh::FEType                           _level_set_fetype;
             libMesh::UnstructuredMesh*                _level_set_mesh;
             libMesh::EquationSystems*                 _level_set_eq_sys;
             MAST::NonlinearSystem*                    _level_set_sys;
+            MAST::NonlinearSystem*                    _level_set_sys_on_str_mesh;
+            MAST::LevelSetSystemInitialization*       _level_set_sys_init_on_str_mesh;
             MAST::LevelSetSystemInitialization*       _level_set_sys_init;
             MAST::LevelSetDiscipline*                 _level_set_discipline;
             PhiMeshFunction*                          _level_set_function;
             MAST::LevelSetBoundaryVelocity*           _level_set_vel;
+            libMesh::ExodusII_IO*                     _output;
             std::vector<std::pair<unsigned int, MAST::Parameter*>>  _dv_params;
         };
     }

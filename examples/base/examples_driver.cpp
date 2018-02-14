@@ -496,9 +496,9 @@ int main(int argc, char* const argv[]) {
         MAST::Examples::TopologyOptimizationLevelSet2D example(init.comm());
         example.init(*input, prefix);
         optimizer.attach_function_evaluation_object(example);
-        std::vector<Real> dvals(example.n_vars()), dummy(example.n_vars());
-        example.init_dvar(dvals, dummy, dummy);
-        example.verify_gradients(dvals);
+        //std::vector<Real> dvals(example.n_vars()), dummy(example.n_vars());
+        //example.init_dvar(dvals, dummy, dummy);
+        //example.verify_gradients(dvals);
         optimizer.optimize();
     }
 //    else if (case_name == "panel_inviscid_analysis_2d")
