@@ -181,6 +181,7 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
         if (_intersection->if_elem_on_negative_phi() && J) {
             
             DenseRealMatrix m(ndofs, ndofs);
+            for (unsigned int i=0; i<dof_indices.size(); i++) m(i, i) = 1.e-6;
             dof_map.constrain_element_matrix(m, dof_indices);
             J->add_matrix(m, dof_indices);
         }
