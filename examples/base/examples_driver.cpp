@@ -75,8 +75,8 @@
 //#include "examples/fsi/plate_flutter_solution_half_domain/plate_euler_fsi_half_domain_flutter_solution.h"
 //#include "examples/fsi/beam_fsi_solution/beam_euler_fsi_solution.h"
 ////#include "examples/fsi/beam_aerothermoelastic_flutter_solution/beam_aerothermoelastic_flutter_solution.h"
-//#include "examples/thermal/bar_transient/bar_transient.h"
-//#include "examples/thermal/bar_steady_state/bar_steady_state.h"
+#include "examples/thermal/base/thermal_example_1d.h"
+#include "examples/thermal/base/thermal_example_2d.h"
 
 
 // libMesh includes
@@ -547,18 +547,34 @@ int main(int argc, char* const argv[]) {
 //         libMesh::QUAD4,
 //         verify_grads,
 //         if_nonlin);
-//    else if (case_name == "bar_steady_state_conduction")
-//        analysis<MAST::BarSteadyState>(case_name,
-//                                       libMesh::EDGE2,
-//                                       if_nonlin,
-//                                       with_sens,
-//                                       par_name);
-//    else if (case_name == "bar_transient_conduction")
-//        analysis<MAST::BarTransient>(case_name,
-//                                     libMesh::EDGE2,
-//                                     if_nonlin,
-//                                     with_sens,
-//                                     par_name);
+    else if (case_name == "steady_state_conduction_1d") {
+        
+        MAST::Examples::ThermalExample1D example(init.comm());
+        example.init(*input, prefix);
+        example.steady_solve();
+        example.steady_sensitivity_solve(example.get_parameter("th"));
+    }
+    else if (case_name == "transient_conduction_1d") {
+
+        MAST::Examples::ThermalExample1D example(init.comm());
+        example.init(*input, prefix);
+        example.transient_solve();
+        example.transient_sensitivity_solve(example.get_parameter("th"));
+    }
+    else if (case_name == "steady_state_conduction_2d") {
+        
+        MAST::Examples::ThermalExample2D example(init.comm());
+        example.init(*input, prefix);
+        example.steady_solve();
+        example.steady_sensitivity_solve(example.get_parameter("th"));
+    }
+    else if (case_name == "transient_conduction_2d") {
+        
+        MAST::Examples::ThermalExample2D example(init.comm());
+        example.init(*input, prefix);
+        example.transient_solve();
+        example.transient_sensitivity_solve(example.get_parameter("th"));
+    }
 //    else {
 //        libMesh::out
 //        << "Please run the driver with the name of example specified as: \n"

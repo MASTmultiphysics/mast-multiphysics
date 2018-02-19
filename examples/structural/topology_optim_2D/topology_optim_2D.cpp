@@ -329,7 +329,7 @@ MAST::Examples::TopologyOptimizationLevelSet2D::evaluate(const std::vector<Real>
     // have a clear method. So, we are going to leave it as is, hoping
     // that libMesh::System will not attempt to use it (most likely, we
     // shoudl be ok).
-    level_set_assembly.plot_sub_elems(true, false, true);
+    //level_set_assembly.plot_sub_elems(true, false, true);
     _sys->attach_constraint_object(nonlinear_assembly);
     _sys->reinit_constraints();
     
