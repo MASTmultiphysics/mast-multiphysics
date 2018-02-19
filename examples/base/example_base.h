@@ -32,6 +32,9 @@
 #include "libmesh/getpot.h"
 #include "libmesh/fe_type.h"
 #include "libmesh/parallel_object.h"
+#include "libmesh/unstructured_mesh.h"
+#include "libmesh/equation_systems.h"
+#include "libmesh/exodusII_io.h"
 
 
 namespace MAST {
@@ -40,7 +43,14 @@ namespace MAST {
     class Parameter;
     class FunctionBase;
     class BoundaryConditionBase;
-    
+    class NonlinearSystem;
+    class SystemInitialization;
+    class PhysicsDisciplineBase;
+    class MaterialPropertyCardBase;
+    class ElementPropertyCardBase;
+    class DirichletBoundaryCondition;
+    class OutputAssemblyElemOperations;
+
     namespace Examples {
         
         // Forward declerations
@@ -95,18 +105,37 @@ namespace MAST {
             void update_load_parameters(Real scale);
             
         protected:
-            
+
+            virtual void _init_mesh() = 0;
+            virtual void _init_system_and_discipline() = 0;
+            virtual void _init_dirichlet_conditions() = 0;
+            virtual void _init_boundary_dirichlet_constraint(const unsigned int bid,
+                                                             const std::string& tag) = 0;
+            virtual void _init_eq_sys() = 0;
+            virtual void _init_loads() = 0;
+            virtual void _init_material() = 0;
+            virtual void _init_section_property() = 0;
+
             /*!
              *   registers a parameter for sensitivity
              */
             void register_paramter_for_sensitivity(MAST::Parameter& p);
             
-            bool                             _initialized;
-            std::string                      _prefix;
-            MAST::Examples::GetPotWrapper*   _input;
-            libMesh::FEType                  _fetype;
+            bool                                                    _initialized;
+            std::string                                             _prefix;
+            MAST::Examples::GetPotWrapper*                          _input;
+            libMesh::FEType                                         _fetype;
             
+            libMesh::UnstructuredMesh*                              _mesh;
+            libMesh::EquationSystems*                               _eq_sys;
+            MAST::NonlinearSystem*                                  _sys;
+            MAST::SystemInitialization*                             _sys_init;
+            MAST::PhysicsDisciplineBase*                            _discipline;
+            MAST::MaterialPropertyCardBase*                         _m_card;
+            MAST::ElementPropertyCardBase*                          _p_card;
+
         private:
+
             std::vector<MAST::Parameter*>                           _params_for_sensitivity;
             std::map<std::string, MAST::Parameter*>                 _parameters;
             std::vector<MAST::Parameter*>                           _dv_parameters;

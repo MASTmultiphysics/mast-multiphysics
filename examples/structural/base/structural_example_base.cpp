@@ -62,13 +62,6 @@
 MAST::Examples::StructuralExampleBase::
 StructuralExampleBase(const libMesh::Parallel::Communicator& comm_in):
 MAST::Examples::ExampleBase(comm_in),
-_mesh            (nullptr),
-_eq_sys          (nullptr),
-_sys             (nullptr),
-_structural_sys  (nullptr),
-_discipline      (nullptr),
-_m_card          (nullptr),
-_p_card          (nullptr),
 _flutter_solver  (nullptr),
 _flutter_root    (nullptr) {
     
@@ -77,17 +70,6 @@ _flutter_root    (nullptr) {
 
 MAST::Examples::StructuralExampleBase::~StructuralExampleBase() {
     
-    if (!_initialized)
-        return;
-    
-    delete _m_card;
-    delete _p_card;
-    
-    delete _eq_sys;
-    delete _mesh;
-    
-    delete _discipline;
-    delete _structural_sys;
     
     if (_flutter_solver) delete _flutter_solver;
 }
@@ -100,28 +82,6 @@ MAST::Examples::StructuralExampleBase::initialize_solution() {
     _sys->solution->zero();
 }
 
-
-
-void
-MAST::Examples::StructuralExampleBase::init(MAST::Examples::GetPotWrapper& input,
-                                            const std::string& prefix) {
-    
-    MAST::Examples::ExampleBase::init(input, prefix);
-    
-    _init_mesh();
-    _init_system_and_discipline();
-    _init_dirichlet_conditions();
-    _init_eq_sys();
-    _init_material();
-    _init_loads();
-    _init_section_property();
-}
-
-
-void
-MAST::Examples::StructuralExampleBase::_init_mesh() {
-    // should be done in the derived class
-}
 
 
 void
@@ -139,7 +99,7 @@ MAST::Examples::StructuralExampleBase::_init_system_and_discipline() {
     _sys->set_eigenproblem_type(libMesh::GHEP);
 
     // initialize the system to the right set of variables
-    _structural_sys = new MAST::StructuralSystemInitialization(*_sys,
+    _sys_init       = new MAST::StructuralSystemInitialization(*_sys,
                                                                _sys->name(),
                                                                _fetype);
     _discipline     = new MAST::PhysicsDisciplineBase(*_eq_sys);
@@ -394,10 +354,10 @@ MAST::Examples::StructuralExampleBase::static_solve() {
     MAST::StressAssembly                             stress_assembly;
     MAST::StressStrainOutputBase                     stress_elem_ops;
     stress_elem_ops.set_participating_elements_to_all();
-    assembly.set_discipline_and_system(*_discipline, *_structural_sys);
-    elem_ops.set_discipline_and_system(*_discipline, *_structural_sys);
-    stress_assembly.set_discipline_and_system(*_discipline, *_structural_sys);
-    stress_elem_ops.set_discipline_and_system(*_discipline, *_structural_sys);
+    assembly.set_discipline_and_system(*_discipline, *_sys_init);
+    elem_ops.set_discipline_and_system(*_discipline, *_sys_init);
+    stress_assembly.set_discipline_and_system(*_discipline, *_sys_init);
+    stress_elem_ops.set_discipline_and_system(*_discipline, *_sys_init);
 
     
     // initialize the solution before solving
@@ -455,13 +415,16 @@ MAST::Examples::StructuralExampleBase::static_sensitivity_solve(MAST::Parameter&
     MAST::StressAssembly                             stress_assembly;
     MAST::StressStrainOutputBase                     stress_elem_ops;
     stress_elem_ops.set_participating_elements_to_all();
-    assembly.set_discipline_and_system(*_discipline, *_structural_sys);
-    elem_ops.set_discipline_and_system(*_discipline, *_structural_sys);
-    stress_assembly.set_discipline_and_system(*_discipline, *_structural_sys);
-    stress_elem_ops.set_discipline_and_system(*_discipline, *_structural_sys);
+    assembly.set_discipline_and_system(*_discipline, *_sys_init);
+    elem_ops.set_discipline_and_system(*_discipline, *_sys_init);
+    stress_assembly.set_discipline_and_system(*_discipline, *_sys_init);
+    stress_elem_ops.set_discipline_and_system(*_discipline, *_sys_init);
+
+    MAST::StructuralSystemInitialization
+    &str_sys_init = dynamic_cast<MAST::StructuralSystemInitialization&>(*_sys_init);
 
     libMesh::System
-    &stress_sys = _structural_sys->get_stress_sys();
+    &stress_sys = str_sys_init.get_stress_sys();
 
     libMesh::NumericVector<Real>
     &dXdp      = _sys->add_sensitivity_solution(),
@@ -542,10 +505,10 @@ static_adjoint_sensitivity_solve(//MAST::OutputAssemblyElemOperations& q,
 
     // we define the output as the p-norm stress over the whole structure
     stress_elem_ops.set_participating_elements_to_all();
-    elem_ops.set_discipline_and_system(*_discipline, *_structural_sys);
-    assembly.set_discipline_and_system(*_discipline, *_structural_sys);
-    stress_assembly.set_discipline_and_system(*_discipline, *_structural_sys);
-    stress_elem_ops.set_discipline_and_system(*_discipline, *_structural_sys);
+    elem_ops.set_discipline_and_system(*_discipline, *_sys_init);
+    assembly.set_discipline_and_system(*_discipline, *_sys_init);
+    stress_assembly.set_discipline_and_system(*_discipline, *_sys_init);
+    stress_elem_ops.set_discipline_and_system(*_discipline, *_sys_init);
 
     
     MAST::StructuralNearNullVectorSpace nsp;
@@ -605,8 +568,8 @@ MAST::Examples::StructuralExampleBase::modal_solve(std::vector<Real>& eig) {
     MAST::EigenproblemAssembly                               assembly;
     MAST::StructuralModalEigenproblemAssemblyElemOperations  elem_ops;
     _sys->initialize_condensed_dofs(*_discipline);
-    assembly.set_discipline_and_system(*_discipline, *_structural_sys);
-    elem_ops.set_discipline_and_system(*_discipline, *_structural_sys);
+    assembly.set_discipline_and_system(*_discipline, *_sys_init);
+    elem_ops.set_discipline_and_system(*_discipline, *_sys_init);
 
     
     // perform static solution if requested
@@ -684,8 +647,8 @@ MAST::Examples::StructuralExampleBase::modal_sensitivity_solve(MAST::Parameter& 
     // create the modal assembly object
     MAST::EigenproblemAssembly                               assembly;
     MAST::StructuralModalEigenproblemAssemblyElemOperations  elem_ops;
-    assembly.set_discipline_and_system(*_discipline, *_structural_sys);
-    elem_ops.set_discipline_and_system(*_discipline, *_structural_sys);
+    assembly.set_discipline_and_system(*_discipline, *_sys_init);
+    elem_ops.set_discipline_and_system(*_discipline, *_sys_init);
 
     // perform static solution sensitivity if requested
     if (static_solve) {
@@ -752,12 +715,12 @@ MAST::Examples::StructuralExampleBase::modal_solve_with_nonlinear_load_stepping(
     stress_elem_ops.set_participating_elements_to_all();
 
     
-    nonlinear_assembly.set_discipline_and_system(*_discipline, *_structural_sys);
-    modal_assembly.set_discipline_and_system(*_discipline, *_structural_sys);
-    stress_assembly.set_discipline_and_system(*_discipline, *_structural_sys);
-    stress_elem_ops.set_discipline_and_system(*_discipline, *_structural_sys);
-    nonlinear_elem_ops.set_discipline_and_system(*_discipline, *_structural_sys);
-    modal_elem_ops.set_discipline_and_system(*_discipline, *_structural_sys);
+    nonlinear_assembly.set_discipline_and_system(*_discipline, *_sys_init);
+    modal_assembly.set_discipline_and_system(*_discipline, *_sys_init);
+    stress_assembly.set_discipline_and_system(*_discipline, *_sys_init);
+    stress_elem_ops.set_discipline_and_system(*_discipline, *_sys_init);
+    nonlinear_elem_ops.set_discipline_and_system(*_discipline, *_sys_init);
+    modal_elem_ops.set_discipline_and_system(*_discipline, *_sys_init);
 
     
     
@@ -900,11 +863,11 @@ MAST::Examples::StructuralExampleBase::transient_solve() {
     MAST::SecondOrderNewmarkTransientSolver solver;
 
     stress_elem_ops.set_participating_elements_to_all();
-    assembly.set_discipline_and_system(*_discipline, *_structural_sys);
-    elem_ops.set_discipline_and_system(*_discipline, *_structural_sys);
-    stress_assembly.set_discipline_and_system(*_discipline, *_structural_sys);
-    stress_elem_ops.set_discipline_and_system(*_discipline, *_structural_sys);
-    solver.set_discipline_and_system(*_discipline, *_structural_sys);
+    assembly.set_discipline_and_system(*_discipline, *_sys_init);
+    elem_ops.set_discipline_and_system(*_discipline, *_sys_init);
+    stress_assembly.set_discipline_and_system(*_discipline, *_sys_init);
+    stress_elem_ops.set_discipline_and_system(*_discipline, *_sys_init);
+    solver.set_discipline_and_system(*_discipline, *_sys_init);
     solver.set_elem_operation_object(elem_ops);
 
     // initialize the solution to zero, or to something that the
@@ -990,11 +953,11 @@ MAST::Examples::StructuralExampleBase::transient_sensitivity_solve(MAST::Paramet
     MAST::SecondOrderNewmarkTransientSolver solver;
 
     stress_elem_ops.set_participating_elements_to_all();
-    assembly.set_discipline_and_system(*_discipline, *_structural_sys);
-    elem_ops.set_discipline_and_system(*_discipline, *_structural_sys);
-    stress_assembly.set_discipline_and_system(*_discipline, *_structural_sys);
-    stress_elem_ops.set_discipline_and_system(*_discipline, *_structural_sys);
-    solver.set_discipline_and_system(*_discipline, *_structural_sys);
+    assembly.set_discipline_and_system(*_discipline, *_sys_init);
+    elem_ops.set_discipline_and_system(*_discipline, *_sys_init);
+    stress_assembly.set_discipline_and_system(*_discipline, *_sys_init);
+    stress_elem_ops.set_discipline_and_system(*_discipline, *_sys_init);
+    solver.set_discipline_and_system(*_discipline, *_sys_init);
     solver.set_elem_operation_object(elem_ops);
     
     // initialize the solution to zero, or to something that the
@@ -1049,11 +1012,14 @@ MAST::Examples::StructuralExampleBase::transient_sensitivity_solve(MAST::Paramet
         solver.advance_time_step_with_sensitivity();
         
         // update stress values
+        MAST::StructuralSystemInitialization
+        &str_sys_init = dynamic_cast<MAST::StructuralSystemInitialization&>(*_sys_init);
+        
         stress_assembly.update_stress_strain_sensitivity_data(stress_elem_ops,
                                                               solver.solution(),
                                                               solver.solution_sensitivity(),
                                                               p,
-                                                              *_structural_sys->get_stress_sys().solution);
+                                                              *str_sys_init.get_stress_sys().solution);
         
         // update time value
         tval  += solver.dt;
@@ -1120,8 +1086,8 @@ MAST::Examples::StructuralExampleBase::piston_theory_flutter_solve() {
     
     MAST::StructuralFluidInteractionAssembly fsi_assembly;
     MAST::FluidStructureAssemblyElemOperations fsi_elem_ops;
-    fsi_assembly.set_discipline_and_system(*_discipline, *_structural_sys);
-    fsi_elem_ops.set_discipline_and_system(*_discipline, *_structural_sys);
+    fsi_assembly.set_discipline_and_system(*_discipline, *_sys_init);
+    fsi_elem_ops.set_discipline_and_system(*_discipline, *_sys_init);
 
     
     _flutter_solver->attach_assembly(fsi_assembly);
@@ -1172,8 +1138,8 @@ piston_theory_flutter_sensitivity_solve(MAST::Parameter& p) {
     MAST::StructuralFluidInteractionAssembly fsi_assembly;
     MAST::FluidStructureAssemblyElemOperations fsi_elem_ops;
     
-    fsi_assembly.set_discipline_and_system(*_discipline, *_structural_sys);
-    fsi_elem_ops.set_discipline_and_system(*_discipline, *_structural_sys);
+    fsi_assembly.set_discipline_and_system(*_discipline, *_sys_init);
+    fsi_elem_ops.set_discipline_and_system(*_discipline, *_sys_init);
 
     _flutter_solver->attach_assembly(fsi_assembly);
 

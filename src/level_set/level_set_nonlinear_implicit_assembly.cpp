@@ -845,13 +845,10 @@ MAST::LevelSetNonlinearImplicitAssembly::constrain() {
     
 
     std::vector<libMesh::dof_id_type>
-    group_A,
-    group_B,
-    dof_indices,
-    constrained_dof_indices,
-    intersected_dof_indices;
-    constrained_dof_indices.reserve(dof_map.n_local_dofs());
-    intersected_dof_indices.reserve(dof_map.n_local_dofs());
+    dof_indices;
+    std::set<libMesh::dof_id_type>
+    all_dof_indices,
+    connected_dof_indices;
 
     // our intent is to constrain only those dofs that belong to the
     // unintersected elements on the negative phi side of level set, AND
@@ -866,97 +863,35 @@ MAST::LevelSetNonlinearImplicitAssembly::constrain() {
         // we will constrain all dofs of the element to zero
         
         dof_indices.clear();
+        dof_map.dof_indices(elem, dof_indices);
 
-        if (_intersection->if_elem_on_negative_phi()) {
-            // This identifies if the element is entirely on the negative side
-            // All of these dofs are constrained
+        for (unsigned int i=0; i<dof_indices.size(); i++)
+            all_dof_indices.insert(dof_indices[i]);
+        
+        if (_intersection->if_elem_has_positive_phi_region()) {
+            // This identifies if the element is has some positive phi
+            // region. If it does, then it will provide a contribution to
+            // the dofs connected to it.
 
-            dof_map.dof_indices(elem, dof_indices);
+            for (unsigned int i=0; i<dof_indices.size(); i++)
+                connected_dof_indices.insert(dof_indices[i]);
         }
-        else if (_intersection->if_intersection_through_elem()) {
-            
-            dof_map.dof_indices(elem, dof_indices);
-
-            intersected_dof_indices.insert(intersected_dof_indices.end(),
-                                           dof_indices.begin(),
-                                           dof_indices.end());
-        }
-        else if (_intersection->get_intersection_mode() == MAST::THROUGH_NODE &&
-                 !_intersection->if_elem_has_positive_phi_region()) {
-            
-            // boundary passes through node and the element is on the negative
-            // side. Then, constrain everything but the boundary node.
-            
-            group_A.clear();
-            group_B.clear();
-            
-            // all dofs on the element
-            dof_map.dof_indices(elem, group_A);
-            dof_indices.reserve(group_A.size());
-            
-            // all dofs on the node should not be constrained
-            const libMesh::Node
-            *node = elem->node_ptr(_intersection->node_on_boundary());
-            dof_map.dof_indices(node, group_B);
-            
-            std::set_difference(group_A.begin(),
-                                group_A.end(),
-                                group_B.begin(),
-                                group_B.end(),
-                                std::inserter(dof_indices, dof_indices.begin()));
-        }
-        else if (_intersection->get_intersection_mode() == MAST::COLINEAR_EDGE &&
-                 !_intersection->if_elem_has_positive_phi_region()) {
-            
-            // boundary passes through edge and the element is on the negative
-            // side. Then, constrain everything but the boundary node.
-
-            group_A.clear();
-            group_B.clear();
-            
-            // all dofs on the element
-            dof_map.dof_indices(elem, group_A);
-            dof_indices.reserve(group_A.size());
-            
-            // all dofs on the node, which should not be constraint
-            std::unique_ptr<const libMesh::Elem>
-            side(elem->side_ptr(_intersection->edge_on_boundary()).release());
-            dof_map.dof_indices(side.get(), group_B);
-            
-            std::set_difference(group_A.begin(),
-                                group_A.end(),
-                                group_B.begin(),
-                                group_B.end(),
-                                std::inserter(dof_indices, dof_indices.begin()));
-        }
-     
+        
         _intersection->clear();
-
-        constrained_dof_indices.insert(constrained_dof_indices.end(),
-                                       dof_indices.begin(),
-                                       dof_indices.end());
     }
     
     // create a set so that we only deal with unique set of ids.
-    std::set<libMesh::dof_id_type>
-    constrained_dofs_set(constrained_dof_indices.begin(),
-                         constrained_dof_indices.end()),
-    intersected_dofs_set(intersected_dof_indices.begin(),
-                         intersected_dof_indices.end());
-    
     dof_indices.clear();
-    constrained_dof_indices.clear();
-    intersected_dof_indices.clear();
-    dof_indices.reserve(constrained_dofs_set.size());
+    dof_indices.reserve(all_dof_indices.size() - connected_dof_indices.size());
 
-    std::set_difference(constrained_dofs_set.begin(),
-                        constrained_dofs_set.end(),
-                        intersected_dofs_set.begin(),
-                        intersected_dofs_set.end(),
+    std::set_difference(all_dof_indices.begin(),
+                        all_dof_indices.end(),
+                        connected_dof_indices.begin(),
+                        connected_dof_indices.end(),
                         std::inserter(dof_indices, dof_indices.begin()));
 
-    constrained_dofs_set.clear();
-    intersected_dofs_set.clear();
+    all_dof_indices.clear();
+    connected_dof_indices.clear();
     
     // now, constrain everythign in the set
     std::vector<libMesh::dof_id_type>::const_iterator

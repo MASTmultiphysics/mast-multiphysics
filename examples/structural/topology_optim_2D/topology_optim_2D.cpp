@@ -315,8 +315,8 @@ MAST::Examples::TopologyOptimizationLevelSet2D::evaluate(const std::vector<Real>
     MAST::LevelSetNonlinearImplicitAssembly         nonlinear_assembly;
     MAST::LevelSetNonlinearImplicitAssembly         level_set_assembly;
     MAST::StructuralNonlinearAssemblyElemOperations nonlinear_elem_ops;
-    nonlinear_elem_ops.set_discipline_and_system(*_discipline, *_structural_sys);
-    nonlinear_assembly.set_discipline_and_system(*_discipline, *_structural_sys);
+    nonlinear_elem_ops.set_discipline_and_system(*_discipline, *_sys_init);
+    nonlinear_assembly.set_discipline_and_system(*_discipline, *_sys_init);
     nonlinear_assembly.set_level_set_function(*_level_set_function);
     level_set_assembly.set_discipline_and_system(*_level_set_discipline, *_level_set_sys_init);
     level_set_assembly.set_level_set_function(*_level_set_function);
@@ -329,13 +329,14 @@ MAST::Examples::TopologyOptimizationLevelSet2D::evaluate(const std::vector<Real>
     // have a clear method. So, we are going to leave it as is, hoping
     // that libMesh::System will not attempt to use it (most likely, we
     // shoudl be ok).
+    level_set_assembly.plot_sub_elems(true, false, true);
     _sys->attach_constraint_object(nonlinear_assembly);
     _sys->reinit_constraints();
     
     MAST::LevelSetVolume                            volume(level_set_assembly.get_intersection());
     MAST::StressStrainOutputBase                    stress;
     volume.set_discipline_and_system(*_level_set_discipline, *_level_set_sys_init);
-    stress.set_discipline_and_system(*_discipline, *_structural_sys);
+    stress.set_discipline_and_system(*_discipline, *_sys_init);
     volume.set_participating_elements_to_all();
     stress.set_participating_elements_to_all();
     stress.set_p_val(_p_val);
@@ -712,12 +713,12 @@ MAST::Examples::TopologyOptimizationLevelSet2D::output(unsigned int iter,
     MAST::StressAssembly                            stress_assembly;
     MAST::StressStrainOutputBase                    stress;
 
-    nonlinear_elem_ops.set_discipline_and_system(*_discipline, *_structural_sys);
-    nonlinear_assembly.set_discipline_and_system(*_discipline, *_structural_sys);
+    nonlinear_elem_ops.set_discipline_and_system(*_discipline, *_sys_init);
+    nonlinear_assembly.set_discipline_and_system(*_discipline, *_sys_init);
     nonlinear_assembly.set_level_set_function(*_level_set_function);
     nonlinear_assembly.set_level_set_velocity_function(*_level_set_vel);
-    stress_assembly.set_discipline_and_system(*_discipline, *_structural_sys);
-    stress.set_discipline_and_system(*_discipline, *_structural_sys);
+    stress_assembly.set_discipline_and_system(*_discipline, *_sys_init);
+    stress.set_discipline_and_system(*_discipline, *_sys_init);
     stress.set_participating_elements_to_all();
     stress.set_p_val(_p_val);
     

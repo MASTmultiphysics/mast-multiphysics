@@ -22,6 +22,12 @@
 #include "examples/base/input_wrapper.h"
 #include "base/parameter.h"
 #include "base/boundary_condition_base.h"
+#include "base/physics_discipline_base.h"
+#include "base/nonlinear_system.h"
+#include "base/system_initialization.h"
+#include "property_cards/element_property_card_base.h"
+#include "property_cards/material_property_card_base.h"
+
 
 // libMesh includes
 #include "libmesh/string_to_enum.h"
@@ -33,7 +39,14 @@ MAST::Examples::ExampleBase::ExampleBase(const libMesh::Parallel::Communicator& 
 libMesh::ParallelObject (comm_in),
 _initialized            (false),
 _prefix                 (),
-_input                  (nullptr) {
+_input                  (nullptr),
+_mesh                   (nullptr),
+_eq_sys                 (nullptr),
+_sys                    (nullptr),
+_sys_init               (nullptr),
+_discipline             (nullptr),
+_m_card                 (nullptr),
+_p_card                 (nullptr) {
     
     MAST::Parameter
     *p = new MAST::Parameter("zero",  0.);
@@ -66,6 +79,18 @@ MAST::Examples::ExampleBase::~ExampleBase() {
         for ( ; it!=end; it++)
             delete it->second;
     }
+    
+    if (!_initialized)
+        return;
+    
+    delete _m_card;
+    delete _p_card;
+    
+    delete _eq_sys;
+    delete _mesh;
+    
+    delete _discipline;
+    delete _sys_init;
 }
 
 
@@ -90,7 +115,16 @@ MAST::Examples::ExampleBase::init(MAST::Examples::GetPotWrapper& input,
     libMesh::FEFamily
     fe = libMesh::Utility::string_to_enum<libMesh::FEFamily>(family_str);
     _fetype = libMesh::FEType(o, fe);
-    
+
+    // call the initialization routines for each component
+    _init_mesh();
+    _init_system_and_discipline();
+    _init_dirichlet_conditions();
+    _init_eq_sys();
+    _init_material();
+    _init_loads();
+    _init_section_property();
+
     _initialized = true;
 }
 

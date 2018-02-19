@@ -24,24 +24,13 @@
 // MAST includes
 #include "examples/base/example_base.h"
 
-// libMesh includes
-#include "libmesh/unstructured_mesh.h"
-#include "libmesh/equation_systems.h"
-#include "libmesh/exodusII_io.h"
 
 
 namespace MAST {
     
     // Forward declerations
-    class NonlinearSystem;
-    class StructuralSystemInitialization;
-    class PhysicsDisciplineBase;
-    class MaterialPropertyCardBase;
-    class ElementPropertyCardBase;
-    class DirichletBoundaryCondition;
     class TimeDomainFlutterSolver;
     class FlutterRootBase;
-    class OutputAssemblyElemOperations;
     
     namespace Examples {
         
@@ -54,12 +43,6 @@ namespace MAST {
             
             virtual ~StructuralExampleBase();
             
-            /*!
-             *    call this from the derived class after initializing the mesh
-             */
-            virtual void init(MAST::Examples::GetPotWrapper& input,
-                              const std::string& prefix);
-
             /*!
              *   This is called before each nonlinear and transient solve.
              *   By default, this zeros the solution, but the user can
@@ -85,7 +68,6 @@ namespace MAST {
             
         protected:
             
-            virtual void _init_mesh();
             virtual void _init_system_and_discipline();
             virtual void _init_dirichlet_conditions();
             virtual void _init_boundary_dirichlet_constraint(const unsigned int bid,
@@ -97,19 +79,6 @@ namespace MAST {
             virtual void _init_pressure_load(bool on_side, unsigned int id_num);
             virtual void _init_temperature_load();
             virtual void _init_piston_theory_load();
-            
-            libMesh::UnstructuredMesh*                            _mesh;
-            
-            libMesh::EquationSystems*                             _eq_sys;
-            
-            MAST::NonlinearSystem*                                _sys;
-            
-            MAST::StructuralSystemInitialization*                 _structural_sys;
-            MAST::PhysicsDisciplineBase*                          _discipline;
-            
-            MAST::MaterialPropertyCardBase*                       _m_card;
-            
-            MAST::ElementPropertyCardBase*                        _p_card;
             
             /*!
              *   piston theory boundary condition for the whole domain

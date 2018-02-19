@@ -102,7 +102,7 @@ namespace MAST {
                                     MAST::OutputAssemblyElemOperations& output,
                                     libMesh::NumericVector<Real>& dq_dX);
         
-        
+#define MAST_ENABLE_PLPLOT 1
 #if MAST_ENABLE_PLPLOT == 1
         void plot_sub_elems(bool plot_reference_elem,
                             bool plot_low_phi_elem,
