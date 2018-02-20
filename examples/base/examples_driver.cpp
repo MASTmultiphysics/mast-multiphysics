@@ -575,22 +575,21 @@ int main(int argc, char* const argv[]) {
         example.transient_solve();
         example.transient_sensitivity_solve(example.get_parameter("th"));
     }
-//    else {
-//        libMesh::out
-//        << "Please run the driver with the name of example specified as: \n"
-//        << "   run_case=<name>"
-//        << "   nonlinear=<true/false>"
-//        << "   verify_grads=<true/false>"
-//        << "   with_sensitivity=<true/false>"
-//        << "   param=<name>\n\n"
-//        << "Possible values are:\n\n\n"
-//        << "**********************************\n"
-//        << "*********   STRUCTURAL   *********\n"
-//        << "**********************************\n"
-//        << "  bar_extension \n"
-//        << "  beam_bending \n"
-//        << "  beam_oscillating_load \n"
-//        << "  beam_modal_analysis\n"
+    else {
+        libMesh::out
+        << "Please run the driver with the name of example specified as: \n"
+        << "   run_case=<name> (required, otherwise this message is printed)\n"
+        << "   input=<file_name> (optional input file name, otherwise default values of parameters are used) \n"
+        << "   prefix=<name> (optional string that will prepend each parameter name) \n"
+        << "   print_params=<true/false> (optional flag, if true, the list of problem parameters and their default values will be printed) \n"
+        << "Possible values for run_case are:\n\n\n"
+        << "**********************************\n"
+        << "*********   STRUCTURAL   *********\n"
+        << "**********************************\n"
+        << "  bar_extension \n"
+        << "  beam_bending \n"
+        << "  beam_oscillating_load \n"
+        << "  beam_modal_analysis\n"
 //        << "  beam_thermally_stressed_modal_analysis\n"
 //        << "  beam_prestress_buckling_analysis\n"
 //        << "  beam_bending_with_offset \n"
@@ -603,7 +602,7 @@ int main(int argc, char* const argv[]) {
 //        << "  beam_piston_theory_time_accurate_analysis\n"
 //        << "  membrane_extension_uniaxial \n"
 //        << "  membrane_extension_biaxial \n"
-//        << "  plate_bending \n"
+        << "  plate_bending \n"
 //        << "  plate_bending_level_set \n"
 //        << "  plate_oscillating_load \n"
 //        << "  plate_bending_section_offset \n"
@@ -622,12 +621,12 @@ int main(int argc, char* const argv[]) {
 //        << "  stiffened_plate_bending_thermal_stress_optimization \n"
 //        << "  stiffened_plate_piston_theory_optimization \n"
 //        << "  stiffened_plate_thermally_stressed_piston_theory_optimization \n"
-//        << "  topology_optimization_2D \n"
+        << "  topology_optimization_2D \n"
 //        << "*  The default for with_sensitivity is: false.\n"
 //        << "*  param is used to specify the parameter name for which sensitivity is desired.\n"
 //        << "*  nonlinear is used to turn on/off nonlinear stiffening in the problem.\n"
 //        << "*  verify_grads=true will verify the gradients of the optimization problem before calling the optimizer.\n"
-//        << "\n\n\n"
+        << "\n\n\n"
 //        << "**********************************\n"
 //        << "***********   FLUID   ************\n"
 //        << "**********************************\n"
@@ -638,12 +637,14 @@ int main(int argc, char* const argv[]) {
 //        << "  panel_inviscid_small_disturbance_frequency_domain_analysis_3d\n"
 //        << "  panel_inviscid_small_disturbance_frequency_domain_analysis_3d_half_domain\n"
 //        << "\n\n\n"
-//        << "**********************************\n"
-//        << "***********   CONDUCTION   *******\n"
-//        << "**********************************\n"
-//        << "  bar_steady_state_conduction \n"
-//        << "  bar_transient_conduction \n"
-//        << "\n\n\n"
+        << "**********************************\n"
+        << "***********   CONDUCTION   *******\n"
+        << "**********************************\n"
+        << "  steady_state_conduction_1d \n"
+        << "  transient_conduction_1d \n"
+        << "  steady_state_conduction_2d \n"
+        << "  transient_conduction_2d \n"
+        << "\n\n\n"
 //        << "**********************************\n"
 //        << "***********   FSI     ************\n"
 //        << "**********************************\n"
@@ -660,8 +661,8 @@ int main(int argc, char* const argv[]) {
 //        << "  plate_fsi_flutter_optimization \n"
 //        << "  stiffened_plate_fsi_thermally_stressed_flutter_optimization \n"
 //        << "\n\n\n"
-//        << std::endl;
-//    }
+        << std::endl;
+    }
     
     return 0;
 }
