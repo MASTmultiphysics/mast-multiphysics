@@ -81,7 +81,7 @@ MAST::Examples::ThermalExampleBase::_init_system_and_discipline() {
     
     // create the libmesh system and set the preferences for structural
     // eigenvalue problems
-    _sys       = &(_eq_sys->add_system<MAST::NonlinearSystem>("structural"));
+    _sys       = &(_eq_sys->add_system<MAST::NonlinearSystem>("conduction"));
     _sys->set_eigenproblem_type(libMesh::GHEP);
     
     // initialize the system to the right set of variables
@@ -196,7 +196,7 @@ MAST::Examples::ThermalExampleBase::
 _init_flux_load(bool on_side, unsigned int id_num) {
     
     Real
-    q_val    =  (*_input)(_prefix+"flux", "flux load on side of domain",   2.e1);
+    q_val    =  (*_input)(_prefix+"flux", "flux load on side of domain",  -2.e6);
     
     MAST::Parameter
     *q       = new MAST::Parameter( "flux",  q_val);
@@ -226,8 +226,8 @@ MAST::Examples::ThermalExampleBase::
 _init_convection_load(bool on_side, unsigned int id_num) {
     
     Real
-    h_val    =  (*_input)(_prefix+"convection_coeff", "coefficient of thermal convection",   1.e-2),
-    T_val    =  (*_input)(_prefix+"convection_T_inf", "ambient temperature for thermal convection",   30.0);
+    h_val    =  (*_input)(_prefix+"convection_coeff", "coefficient of thermal convection",           1.e2),
+    T_val    =  (*_input)(_prefix+"convection_T_inf", "ambient temperature for thermal convection",   300.0);
 
     MAST::Parameter
     *h       = new MAST::Parameter( "h_coeff_convection",  h_val),
@@ -302,7 +302,7 @@ void
 MAST::Examples::ThermalExampleBase::_init_source_load(unsigned int   domain_num) {
     
     Real
-    q_val    =  (*_input)(_prefix+"heat_source", "heat source on domain",   2.e1);
+    q_val    =  (*_input)(_prefix+"heat_source", "heat source on domain",   2.e6);
     
     MAST::Parameter
     *q       = new MAST::Parameter( "q",  q_val);
