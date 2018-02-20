@@ -64,8 +64,10 @@ namespace MAST {
             virtual void _init_loads();
             virtual void _init_material();
             virtual void _init_section_property();
-            virtual void _init_flux_load  (unsigned int   side_num);
-            virtual void _init_source_load(unsigned int domain_num);
+            virtual void _init_flux_load       (unsigned int   side_num);
+            virtual void _init_convection_load (unsigned int   side_num);
+            virtual void _init_radiation_load  (unsigned int   side_num);
+            virtual void _init_source_load     (unsigned int domain_num);
         };
     }
 }

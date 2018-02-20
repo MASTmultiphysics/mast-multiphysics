@@ -1727,4 +1727,10 @@ thermal_capacitance_matrix(const MAST::ElementBase& e) const {
 }
 
 
+const MAST::FieldFunction<Real>&
+MAST::Solid1DSectionElementPropertyCard::
+section(const MAST::ElementBase& e) const {
+    
+    return *_A;
+}
 

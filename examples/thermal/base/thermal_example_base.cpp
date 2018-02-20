@@ -212,7 +212,74 @@ MAST::Examples::ThermalExampleBase::_init_flux_load(unsigned int   side_num) {
     this->add_parameter(*q);
     this->register_field_function(*q_f);
     this->register_loading(*q_load);
-    this->add_load_parameter(*q);
+}
+
+
+
+void
+MAST::Examples::ThermalExampleBase::_init_convection_load(unsigned int   side_num) {
+    
+    Real
+    h_val    =  (*_input)(_prefix+"convection_coeff", "coefficient of thermal convection",   1.e-2),
+    T_val    =  (*_input)(_prefix+"convection_T_inf", "ambient temperature for thermal convection",   30.0);
+
+    MAST::Parameter
+    *h       = new MAST::Parameter( "h_coeff_convection",  h_val),
+    *T       = new MAST::Parameter( "T_inf_convection",    T_val);
+
+    MAST::ConstantFieldFunction
+    *h_f     = new MAST::ConstantFieldFunction("convection_coeff", *h),
+    *T_f     = new MAST::ConstantFieldFunction("ambient_temperature", *T);
+    
+    // initialize the load
+    MAST::BoundaryConditionBase
+    *q_load  = new MAST::BoundaryConditionBase(MAST::CONVECTION_HEAT_FLUX);
+    q_load->add(*h_f);
+    q_load->add(*T_f);
+    _discipline->add_side_load(side_num, *q_load);
+    
+    this->add_parameter(*h);
+    this->add_parameter(*T);
+    this->register_field_function(*h_f);
+    this->register_field_function(*T_f);
+    this->register_loading(*q_load);
+}
+
+
+
+void
+MAST::Examples::ThermalExampleBase::_init_radiation_load(unsigned int   side_num) {
+    
+    Real
+    s_val    =  (*_input)(_prefix+"sb_constant", "Stefan-Boltzmann constant",             5.670367e-8),
+    e_val    =  (*_input)(_prefix+"emissivity", "radiation emissivity",                          0.85),
+    T_val    =  (*_input)(_prefix+"radiation_T_inf", "ambient temperature for thermal radiation",  0.),
+    T_zero   =  (*_input)(_prefix+"absolute_zero_T", "absolute zero temperature",                273.);
+    
+    MAST::Parameter
+    *s       = new MAST::Parameter( "sb_constant",                  s_val),
+    *e       = new MAST::Parameter( "emissivity",                   e_val),
+    *T       = new MAST::Parameter( "ambient_temperature",          T_val),
+    *T0      = new MAST::Parameter( "reference_zero_temperature",  T_zero);
+
+    MAST::ConstantFieldFunction
+    *e_f     = new MAST::ConstantFieldFunction("emissivity", *e);
+
+    // initialize the load
+    MAST::BoundaryConditionBase
+    *q_load  = new MAST::BoundaryConditionBase(MAST::SURFACE_RADIATION_HEAT_FLUX);
+    q_load->add(*e_f);
+    q_load->add(*s);
+    q_load->add(*T);
+    q_load->add(*T0);
+    _discipline->add_side_load(side_num, *q_load);
+    
+    this->add_parameter(*s);
+    this->add_parameter(*e);
+    this->add_parameter(*T);
+    this->add_parameter(*T0);
+    this->register_field_function(*e_f);
+    this->register_loading(*q_load);
 }
 
 
@@ -239,7 +306,6 @@ MAST::Examples::ThermalExampleBase::_init_source_load(unsigned int   domain_num)
     this->add_parameter(*q);
     this->register_field_function(*q_f);
     this->register_loading(*q_load);
-    this->add_load_parameter(*q);
 }
 
 
@@ -252,8 +318,7 @@ MAST::Examples::ThermalExampleBase::steady_solve() {
     libmesh_assert(_initialized);
     
     bool
-    output     = (*_input)(_prefix+"if_output", "if write output to a file", false),
-    nonlinear  = (*_input)(_prefix+"if_nonlinear", "flag to turn on/off nonlinear strain", false);
+    output     = (*_input)(_prefix+"if_output", "if write output to a file", false);
     
     std::string
     output_name = (*_input)(_prefix+"output_file_root", "prefix of output file names", "output");

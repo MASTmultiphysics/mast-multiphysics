@@ -113,7 +113,10 @@ namespace MAST
         virtual std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
         thermal_capacitance_matrix(const MAST::ElementBase& e) const= 0;
 
-                
+        virtual const MAST::FieldFunction<Real>&
+        section(const MAST::ElementBase& e) const = 0;
+
+        
         /*!
          *   return true if the property is isotropic
          */

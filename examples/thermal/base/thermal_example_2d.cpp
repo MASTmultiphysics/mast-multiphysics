@@ -91,14 +91,16 @@ void
 MAST::Examples::ThermalExample2D::_init_dirichlet_conditions() {
     
     this->_init_boundary_dirichlet_constraint(0, "bottom_constraint");
-    this->_init_boundary_dirichlet_constraint(1, "right_constraint");
-    this->_init_boundary_dirichlet_constraint(2, "top_constraint");
-    this->_init_boundary_dirichlet_constraint(3, "left_constraint");
-    
     _discipline->init_system_dirichlet_bc(*_sys);
 }
 
 
+void
+MAST::Examples::ThermalExample2D::_init_loads() {
+    
+    _init_flux_load(2);
+    _init_source_load(0);
+}
 
 
 void

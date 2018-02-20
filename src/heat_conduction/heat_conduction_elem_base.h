@@ -78,7 +78,7 @@ namespace MAST {
         /*!
          *   internal force contribution to system residual
          */
-        virtual bool
+        virtual void
         internal_residual (bool request_jacobian,
                            RealVectorX& f,
                            RealMatrixX& jac);
@@ -87,7 +87,7 @@ namespace MAST {
         /*!
          *   inertial force contribution to system residual
          */
-        virtual bool
+        virtual void
         velocity_residual (bool request_jacobian,
                            RealVectorX& f,
                            RealMatrixX& jac_xdot,
@@ -96,7 +96,7 @@ namespace MAST {
         /*!
          *   side external force contribution to system residual
          */
-        bool
+        void
         side_external_residual (bool request_jacobian,
                                 RealVectorX& f,
                                 RealMatrixX& jac,
@@ -105,7 +105,7 @@ namespace MAST {
         /*!
          *   volume external force contribution to system residual
          */
-        bool
+        void
         volume_external_residual (bool request_jacobian,
                                   RealVectorX& f,
                                   RealMatrixX& jac,
@@ -114,38 +114,30 @@ namespace MAST {
         /*!
          *   sensitivity of the internal force contribution to system residual
          */
-        virtual bool
+        virtual void
         internal_residual_sensitivity (const MAST::FunctionBase& p,
-                                       bool request_jacobian,
-                                       RealVectorX& f,
-                                       RealMatrixX& jac);
+                                       RealVectorX& f);
         /*!
          *   sensitivity of the damping force contribution to system residual
          */
-        virtual bool
+        virtual void
         velocity_residual_sensitivity (const MAST::FunctionBase& p,
-                                       bool request_jacobian,
-                                       RealVectorX& f,
-                                       RealMatrixX& jac);
+                                       RealVectorX& f);
         
         /*!
          *   sensitivity of the side external force contribution to system residual
          */
-        bool
+        void
         side_external_residual_sensitivity (const MAST::FunctionBase& p,
-                                            bool request_jacobian,
                                             RealVectorX& f,
-                                            RealMatrixX& jac,
                                             std::multimap<libMesh::boundary_id_type, MAST::BoundaryConditionBase*>& bc);
         
         /*!
          *   sensitivity of the volume external force contribution to system residual
          */
-        bool
+        void
         volume_external_residual_sensitivity (const MAST::FunctionBase& p,
-                                              bool request_jacobian,
                                               RealVectorX& f,
-                                              RealMatrixX& jac,
                                               std::multimap<libMesh::subdomain_id_type, MAST::BoundaryConditionBase*>& bc);
         
 
@@ -157,7 +149,7 @@ namespace MAST {
          *    Calculates the residual vector and Jacobian due to surface flux
          *    on element side \par s.
          */
-        virtual bool surface_flux_residual(bool request_jacobian,
+        virtual void surface_flux_residual(bool request_jacobian,
                                            RealVectorX& f,
                                            RealMatrixX& jac,
                                            const unsigned int s,
@@ -168,7 +160,7 @@ namespace MAST {
          *    surface flux on element volumetric domain. This is used only for
          *    2D or 3D elements.
          */
-        virtual bool surface_flux_residual(bool request_jacobian,
+        virtual void surface_flux_residual(bool request_jacobian,
                                            RealVectorX& f,
                                            RealMatrixX& jac,
                                            MAST::BoundaryConditionBase& bc);
@@ -177,10 +169,8 @@ namespace MAST {
          *    Calculates the residual vector sensitivity and Jacobian due to
          *    surface flux on element side \par s.
          */
-        virtual bool surface_flux_residual_sensitivity(const MAST::FunctionBase& p,
-                                                       bool request_jacobian,
+        virtual void surface_flux_residual_sensitivity(const MAST::FunctionBase& p,
                                                        RealVectorX& f,
-                                                       RealMatrixX& jac,
                                                        const unsigned int s,
                                                        MAST::BoundaryConditionBase& bc);
         
@@ -189,10 +179,8 @@ namespace MAST {
          *    on element volumetric domain. This is used only for 1D or 2D
          *    elements.
          */
-        virtual bool surface_flux_residual_sensitivity(const MAST::FunctionBase& p,
-                                                       bool request_jacobian,
+        virtual void surface_flux_residual_sensitivity(const MAST::FunctionBase& p,
                                                        RealVectorX& f,
-                                                       RealMatrixX& jac,
                                                        MAST::BoundaryConditionBase& bc);
         
         
@@ -200,7 +188,7 @@ namespace MAST {
          *    Calculates the residual vector and Jacobian due to surface
          *    convection.
          */
-        virtual bool surface_convection_residual(bool request_jacobian,
+        virtual void surface_convection_residual(bool request_jacobian,
                                                  RealVectorX& f,
                                                  RealMatrixX& jac,
                                                  const unsigned int s,
@@ -212,7 +200,7 @@ namespace MAST {
          *    convection on the element domain. This is relevant only for
          *    1D and 2D elements.
          */
-        virtual bool surface_convection_residual(bool request_jacobian,
+        virtual void surface_convection_residual(bool request_jacobian,
                                                  RealVectorX& f,
                                                  RealMatrixX& jac,
                                                  MAST::BoundaryConditionBase& bc);
@@ -222,11 +210,9 @@ namespace MAST {
          *    Calculates the residual vector sensitivity and Jacobian due
          *    to surface convection.
          */
-        virtual bool
+        virtual void
         surface_convection_residual_sensitivity(const MAST::FunctionBase& p,
-                                                bool request_jacobian,
                                                 RealVectorX& f,
-                                                RealMatrixX& jac,
                                                 const unsigned int s,
                                                 MAST::BoundaryConditionBase& bc);
 
@@ -235,11 +221,9 @@ namespace MAST {
          *    to surface convection on element domain. This is relevant only 
          *    for 1D and 2D elements.
          */
-        virtual bool
+        virtual void
         surface_convection_residual_sensitivity(const MAST::FunctionBase& p,
-                                                bool request_jacobian,
                                                 RealVectorX& f,
-                                                RealMatrixX& jac,
                                                 MAST::BoundaryConditionBase& bc);
 
         
@@ -247,7 +231,7 @@ namespace MAST {
          *    Calculates the residual vector and Jacobian due to surface
          *    radiation flux on side s.
          */
-        virtual bool surface_radiation_residual(bool request_jacobian,
+        virtual void surface_radiation_residual(bool request_jacobian,
                                                 RealVectorX& f,
                                                 RealMatrixX& jac,
                                                 const unsigned int s,
@@ -258,7 +242,7 @@ namespace MAST {
          *    Calculates the residual vector and Jacobian due to surface 
          *    radiation flux on element domain.
          */
-        virtual bool surface_radiation_residual(bool request_jacobian,
+        virtual void surface_radiation_residual(bool request_jacobian,
                                                 RealVectorX& f,
                                                 RealMatrixX& jac,
                                                 MAST::BoundaryConditionBase& bc);
@@ -268,11 +252,9 @@ namespace MAST {
          *    Calculates the residual vector sensitivity and Jacobian due
          *    to surface radiation flux on element side.
          */
-        virtual bool
+        virtual void
         surface_radiation_residual_sensitivity(const MAST::FunctionBase& p,
-                                               bool request_jacobian,
                                                RealVectorX& f,
-                                               RealMatrixX& jac,
                                                const unsigned int s,
                                                MAST::BoundaryConditionBase& bc);
 
@@ -281,11 +263,9 @@ namespace MAST {
          *    Calculates the residual vector sensitivity and Jacobian due
          *    to surface radiation flux on element domain.
          */
-        virtual bool
+        virtual void
         surface_radiation_residual_sensitivity(const MAST::FunctionBase& p,
-                                               bool request_jacobian,
                                                RealVectorX& f,
-                                               RealMatrixX& jac,
                                                MAST::BoundaryConditionBase& bc);
 
         
@@ -293,7 +273,7 @@ namespace MAST {
          *    Calculates the residual vector and Jacobian due to volume heat
          *    source.
          */
-        virtual bool volume_heat_source_residual(bool request_jacobian,
+        virtual void volume_heat_source_residual(bool request_jacobian,
                                                  RealVectorX& f,
                                                  RealMatrixX& jac,
                                                  MAST::BoundaryConditionBase& bc);
@@ -303,11 +283,9 @@ namespace MAST {
          *    Calculates the residual vector and Jacobian due to volume heat 
          *    source.
          */
-        virtual bool
+        virtual void
         volume_heat_source_residual_sensitivity(const MAST::FunctionBase& p,
-                                                bool request_jacobian,
                                                 RealVectorX& f,
-                                                RealMatrixX& jac,
                                                 MAST::BoundaryConditionBase& bc);
         
         /*!

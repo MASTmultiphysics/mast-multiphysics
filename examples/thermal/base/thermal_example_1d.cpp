@@ -89,6 +89,13 @@ MAST::Examples::ThermalExample1D::_init_dirichlet_conditions() {
 
 
 
+void
+MAST::Examples::ThermalExample1D::_init_loads() {
+
+    _init_source_load(0);
+}
+
+
 
 void
 MAST::Examples::ThermalExample1D::_init_section_property() {

@@ -42,6 +42,7 @@ namespace MAST {
             
             virtual void _init_mesh();
             virtual void _init_dirichlet_conditions();
+            virtual void _init_loads();
             virtual void _init_section_property();
         };
     }

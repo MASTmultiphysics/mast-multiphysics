@@ -94,12 +94,10 @@ elem_sensitivity_calculations(const MAST::FunctionBase& f,
     dynamic_cast<MAST::HeatConductionElementBase&>(*_physics_elem);
     
     vec.setZero();
-    RealMatrixX
-    dummy = RealMatrixX::Zero(vec.size(), vec.size());
     
-    e.internal_residual_sensitivity(f, false, vec, dummy);
-    e.side_external_residual_sensitivity(f, false, vec, dummy, _discipline->side_loads());
-    e.volume_external_residual_sensitivity(f, false, vec, dummy, _discipline->volume_loads());
+    e.internal_residual_sensitivity(f, vec);
+    e.side_external_residual_sensitivity(f, vec, _discipline->side_loads());
+    e.volume_external_residual_sensitivity(f, vec, _discipline->volume_loads());
 }
 
 
