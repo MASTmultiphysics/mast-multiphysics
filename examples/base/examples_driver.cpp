@@ -552,14 +552,14 @@ int main(int argc, char* const argv[]) {
         MAST::Examples::ThermalExample1D example(init.comm());
         example.init(*input, prefix);
         example.steady_solve();
-        example.steady_sensitivity_solve(example.get_parameter("th"));
+        example.steady_sensitivity_solve(example.get_parameter("thy"));
     }
     else if (case_name == "transient_conduction_1d") {
 
         MAST::Examples::ThermalExample1D example(init.comm());
         example.init(*input, prefix);
         example.transient_solve();
-        example.transient_sensitivity_solve(example.get_parameter("th"));
+        example.transient_sensitivity_solve(example.get_parameter("thy"));
     }
     else if (case_name == "steady_state_conduction_2d") {
         

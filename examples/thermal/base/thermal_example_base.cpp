@@ -167,7 +167,7 @@ MAST::Examples::ThermalExampleBase::_init_material() {
     *cp        = new MAST::Parameter("cp",        cpval);
     
     MAST::ConstantFieldFunction
-    *k_f     = new MAST::ConstantFieldFunction(    "k",      *k),
+    *k_f     = new MAST::ConstantFieldFunction( "k_th",      *k),
     *rho_f   = new MAST::ConstantFieldFunction(  "rho",    *rho),
     *cp_f    = new MAST::ConstantFieldFunction(   "cp",     *cp);
     
@@ -192,7 +192,8 @@ MAST::Examples::ThermalExampleBase::_init_section_property() {
 
 
 void
-MAST::Examples::ThermalExampleBase::_init_flux_load(unsigned int   side_num) {
+MAST::Examples::ThermalExampleBase::
+_init_flux_load(bool on_side, unsigned int id_num) {
     
     Real
     q_val    =  (*_input)(_prefix+"flux", "flux load on side of domain",   2.e1);
@@ -201,14 +202,18 @@ MAST::Examples::ThermalExampleBase::_init_flux_load(unsigned int   side_num) {
     *q       = new MAST::Parameter( "flux",  q_val);
     
     MAST::ConstantFieldFunction
-    *q_f     = new MAST::ConstantFieldFunction("flux", *q);
+    *q_f     = new MAST::ConstantFieldFunction("heat_flux", *q);
     
     // initialize the load
     MAST::BoundaryConditionBase
     *q_load  = new MAST::BoundaryConditionBase(MAST::HEAT_FLUX);
     q_load->add(*q_f);
-    _discipline->add_side_load(side_num, *q_load);
-    
+
+    if (on_side)
+        _discipline->add_side_load(id_num, *q_load);
+    else
+        _discipline->add_volume_load(id_num, *q_load);
+
     this->add_parameter(*q);
     this->register_field_function(*q_f);
     this->register_loading(*q_load);
@@ -217,7 +222,8 @@ MAST::Examples::ThermalExampleBase::_init_flux_load(unsigned int   side_num) {
 
 
 void
-MAST::Examples::ThermalExampleBase::_init_convection_load(unsigned int   side_num) {
+MAST::Examples::ThermalExampleBase::
+_init_convection_load(bool on_side, unsigned int id_num) {
     
     Real
     h_val    =  (*_input)(_prefix+"convection_coeff", "coefficient of thermal convection",   1.e-2),
@@ -236,8 +242,11 @@ MAST::Examples::ThermalExampleBase::_init_convection_load(unsigned int   side_nu
     *q_load  = new MAST::BoundaryConditionBase(MAST::CONVECTION_HEAT_FLUX);
     q_load->add(*h_f);
     q_load->add(*T_f);
-    _discipline->add_side_load(side_num, *q_load);
-    
+    if (on_side)
+        _discipline->add_side_load(id_num, *q_load);
+    else
+        _discipline->add_volume_load(id_num, *q_load);
+
     this->add_parameter(*h);
     this->add_parameter(*T);
     this->register_field_function(*h_f);
@@ -248,7 +257,8 @@ MAST::Examples::ThermalExampleBase::_init_convection_load(unsigned int   side_nu
 
 
 void
-MAST::Examples::ThermalExampleBase::_init_radiation_load(unsigned int   side_num) {
+MAST::Examples::ThermalExampleBase::
+_init_radiation_load(bool on_side, unsigned int id_num) {
     
     Real
     s_val    =  (*_input)(_prefix+"sb_constant", "Stefan-Boltzmann constant",             5.670367e-8),
@@ -257,7 +267,7 @@ MAST::Examples::ThermalExampleBase::_init_radiation_load(unsigned int   side_num
     T_zero   =  (*_input)(_prefix+"absolute_zero_T", "absolute zero temperature",                273.);
     
     MAST::Parameter
-    *s       = new MAST::Parameter( "sb_constant",                  s_val),
+    *s       = new MAST::Parameter( "stefan_bolzmann_constant",     s_val),
     *e       = new MAST::Parameter( "emissivity",                   e_val),
     *T       = new MAST::Parameter( "ambient_temperature",          T_val),
     *T0      = new MAST::Parameter( "reference_zero_temperature",  T_zero);
@@ -272,8 +282,12 @@ MAST::Examples::ThermalExampleBase::_init_radiation_load(unsigned int   side_num
     q_load->add(*s);
     q_load->add(*T);
     q_load->add(*T0);
-    _discipline->add_side_load(side_num, *q_load);
     
+    if (on_side)
+        _discipline->add_side_load(id_num, *q_load);
+    else
+        _discipline->add_volume_load(id_num, *q_load);
+
     this->add_parameter(*s);
     this->add_parameter(*e);
     this->add_parameter(*T);
@@ -299,9 +313,9 @@ MAST::Examples::ThermalExampleBase::_init_source_load(unsigned int   domain_num)
     // initialize the load
     MAST::BoundaryConditionBase
     *q_load  = new MAST::BoundaryConditionBase(MAST::HEAT_SOURCE);
+    q_load->add(*q_f);
     
     _discipline->add_volume_load(domain_num, *q_load);
-    
     
     this->add_parameter(*q);
     this->register_field_function(*q_f);

@@ -98,8 +98,10 @@ MAST::Examples::ThermalExample2D::_init_dirichlet_conditions() {
 void
 MAST::Examples::ThermalExample2D::_init_loads() {
     
-    _init_flux_load(2);
-    _init_source_load(0);
+    _init_radiation_load  (true, 1); // radiation on right
+    _init_flux_load       (true, 2); // flux on top
+    _init_convection_load (true, 3); // convection on left
+    _init_source_load     (0); // source on entire domain
 }
 
 
