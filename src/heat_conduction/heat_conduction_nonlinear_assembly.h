@@ -82,9 +82,7 @@ namespace MAST {
         elem_topology_sensitivity_calculations(const MAST::FunctionBase& f,
                                                const MAST::LevelSetIntersection& intersect,
                                                const MAST::FieldFunction<RealVectorX>& vel,
-                                               RealVectorX& vec) {
-            libmesh_assert(false); // to be implemented
-        }
+                                               RealVectorX& vec);
 
         /*!
          *   calculates \f$ d ([J] \{\Delta X\})/ dX  \f$ over \par elem,

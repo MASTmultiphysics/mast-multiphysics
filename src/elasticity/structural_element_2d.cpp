@@ -790,7 +790,7 @@ internal_residual_boundary_velocity(const MAST::FunctionBase& p,
     const unsigned int
     n_phi    = (unsigned int)_fe->get_phi().size(),
     n1       = this->n_direct_strain_components(),
-    n2       =6*n_phi,
+    n2       = 6*n_phi,
     n3       = this->n_von_karman_strain_components(),
     dim      = 2;
     
@@ -2001,6 +2001,133 @@ thermal_residual_sensitivity (const MAST::FunctionBase& p,
 }
 
 
+
+
+void
+MAST::StructuralElement2D::
+thermal_residual_boundary_velocity(const MAST::FunctionBase& p,
+                                   RealVectorX& f,
+                                   const unsigned int s,
+                                   const MAST::FieldFunction<RealVectorX>& vel_f,
+                                   MAST::BoundaryConditionBase& bc) {
+    
+    // prepare the side finite element
+    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem).release());
+    fe->init_for_side(_elem, s, true);
+
+    FEMOperatorMatrix Bmat_mem, Bmat_bend, Bmat_vk;
+    
+    std::vector<Real> JxW_Vn                        = fe->get_JxW();
+    const std::vector<libMesh::Point>& xyz          = fe->get_xyz();
+    const std::vector<libMesh::Point>& face_normals = fe->get_normals();
+
+    const unsigned int
+    n_phi    = (unsigned int)_fe->get_phi().size(),
+    n1       = this->n_direct_strain_components(), n2=6*n_phi,
+    n3       = this->n_von_karman_strain_components(),
+    dim      = 2;
+
+    RealMatrixX
+    material_exp_A_mat,
+    material_exp_B_mat,
+    mat1_n1n2     = RealMatrixX::Zero(n1,n2),
+    mat2_n2n2     = RealMatrixX::Zero(n2,n2),
+    mat3,
+    mat4_n3n2     = RealMatrixX::Zero(n3,n2),
+    vk_dwdxi_mat  = RealMatrixX::Zero(n1,n3),
+    stress        = RealMatrixX::Zero(2,2);
+    RealVectorX
+    vec1_n1     = RealVectorX::Zero(n1),
+    vec2_n1     = RealVectorX::Zero(n1),
+    vec3_n2     = RealVectorX::Zero(n2),
+    vec4_2      = RealVectorX::Zero(2),
+    vec5_n3     = RealVectorX::Zero(n3),
+    local_f     = RealVectorX::Zero(n2),
+    delta_t     = RealVectorX::Zero(1),
+    vel        = RealVectorX::Zero(dim);
+    
+    local_f.setZero();
+    
+    Bmat_mem.reinit(n1, _system.n_vars(), n_phi); // three stress-strain components
+    Bmat_bend.reinit(n1, _system.n_vars(), n_phi);
+    Bmat_vk.reinit(n3, _system.n_vars(), n_phi); // only dw/dx and dw/dy
+    
+    bool if_vk = (_property.strain_type() == MAST::VON_KARMAN_STRAIN),
+    if_bending = (_property.bending_model(_elem, _fe->get_fe_type()) != MAST::NO_BENDING);
+    
+    std::unique_ptr<MAST::FieldFunction<RealMatrixX > >
+    expansion_A = _property.thermal_expansion_A_matrix(*this),
+    expansion_B = _property.thermal_expansion_B_matrix(*this);
+    
+    const MAST::FieldFunction<Real>
+    &temp_func     = bc.get<MAST::FieldFunction<Real> >("temperature"),
+    &ref_temp_func = bc.get<MAST::FieldFunction<Real> >("ref_temperature");
+    
+    Real
+    vn  = 0.,
+    t   = 0.,
+    t0  = 0.;
+    
+    // modify the JxW_Vn by multiplying the normal velocity to it
+    for (unsigned int qp=0; qp<JxW_Vn.size(); qp++) {
+        
+        vel_f(xyz[qp], _time, vel);
+        vn = 0.;
+        for (unsigned int i=0; i<dim; i++)
+            vn += vel(i)*face_normals[qp](i);
+        JxW_Vn[qp] *= vn;
+    }
+    
+    for (unsigned int qp=0; qp<JxW_Vn.size(); qp++) {
+        
+        // this is moved inside the domain since
+        (*expansion_A)(xyz[qp], _time, material_exp_A_mat);
+        (*expansion_B)(xyz[qp], _time, material_exp_B_mat);
+        
+        // get the temperature function
+        temp_func(xyz[qp], _time, t);
+        ref_temp_func(xyz[qp], _time, t0);
+        delta_t(0) = t-t0;
+        
+        vec1_n1 = material_exp_A_mat * delta_t; // [C]{alpha (T - T0)} (with membrane strain)
+        vec2_n1 = material_exp_B_mat * delta_t; // [C]{alpha (T - T0)} (with bending strain)
+        stress(0,0) = vec1_n1(0); // sigma_xx
+        stress(0,1) = vec1_n1(2); // sigma_xy
+        stress(1,0) = vec1_n1(2); // sigma_yx
+        stress(1,1) = vec1_n1(1); // sigma_yy
+        
+        this->initialize_direct_strain_operator(qp, *_fe, Bmat_mem);
+        
+        // membrane strain
+        Bmat_mem.vector_mult_transpose(vec3_n2, vec1_n1);
+        local_f += JxW_Vn[qp] * vec3_n2;
+        
+        if (if_bending) {
+            // bending strain
+            _bending_operator->initialize_bending_strain_operator(*_fe, qp, Bmat_bend);
+            Bmat_bend.vector_mult_transpose(vec3_n2, vec2_n1);
+            local_f += JxW_Vn[qp] * vec3_n2;
+            
+            // von Karman strain
+            if (if_vk) {
+                // get the vonKarman strain operator if needed
+                this->initialize_von_karman_strain_operator(qp,
+                                                            *_fe,
+                                                            vec2_n1, // epsilon_vk
+                                                            vk_dwdxi_mat,
+                                                            Bmat_vk);
+                // von Karman strain
+                vec4_2 = vk_dwdxi_mat.transpose() * vec1_n1;
+                Bmat_vk.vector_mult_transpose(vec3_n2, vec4_2);
+                local_f += JxW_Vn[qp] * vec3_n2;
+            }
+        }
+    }
+    
+    // now transform to the global coorodinate system
+    transform_vector_to_global_system(local_f, vec3_n2);
+    f -= vec3_n2;
+}
 
 
 

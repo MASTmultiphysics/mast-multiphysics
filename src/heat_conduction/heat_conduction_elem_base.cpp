@@ -493,6 +493,73 @@ volume_external_residual_sensitivity (const MAST::FunctionBase& p,
 
 
 
+void
+MAST::HeatConductionElementBase::
+volume_external_residual_boundary_velocity(const MAST::FunctionBase& p,
+                                           RealVectorX& f,
+                                           const unsigned int s,
+                                           const MAST::FieldFunction<RealVectorX>& vel_f,
+                                           std::multimap<libMesh::subdomain_id_type, MAST::BoundaryConditionBase*>& bc) {
+    
+    typedef std::multimap<libMesh::subdomain_id_type, MAST::BoundaryConditionBase*> maptype;
+    
+    // iterate over the boundary ids given in the provided force map
+    std::pair<maptype::const_iterator, maptype::const_iterator> it;
+    
+    // for each boundary id, check if any of the sides on the element
+    // has the associated boundary
+    
+    libMesh::subdomain_id_type sid = _elem.subdomain_id();
+    // find the loads on this boundary and evaluate the f and jac
+    it =bc.equal_range(sid);
+    
+    for ( ; it.first != it.second; it.first++) {
+        // apply all the types of loading
+        switch (it.first->second->type()) {
+                
+            case MAST::HEAT_FLUX:
+                surface_flux_boundary_velocity(p,
+                                               f,
+                                               s,
+                                               vel_f,
+                                               *it.first->second);
+                break;
+                
+            case MAST::CONVECTION_HEAT_FLUX:
+                surface_convection_boundary_velocity(p,
+                                                     f,
+                                                     s,
+                                                     vel_f,
+                                                     *it.first->second);
+                break;
+                
+            case MAST::SURFACE_RADIATION_HEAT_FLUX:
+                surface_radiation_boundary_velocity(p,
+                                                    f,
+                                                    s,
+                                                    vel_f,
+                                                    *it.first->second);
+                break;
+                
+            case MAST::HEAT_SOURCE:
+                volume_heat_source_boundary_velocity(p,
+                                                     f,
+                                                     s,
+                                                     vel_f,
+                                                     *it.first->second);
+                break;
+                
+            default:
+                // not implemented yet
+                libmesh_error();
+                break;
+        }
+    }
+    
+}
+
+
+
 
 void
 MAST::HeatConductionElementBase::
@@ -560,6 +627,92 @@ internal_residual_sensitivity (const MAST::FunctionBase& p,
 }
 
 
+void
+MAST::HeatConductionElementBase::
+internal_residual_boundary_velocity (const MAST::FunctionBase& p,
+                                     RealVectorX& f,
+                                     const unsigned int s,
+                                     const MAST::FieldFunction<RealVectorX>& vel_f) {
+    
+    // prepare the side finite element
+    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem).release());
+    fe->init_for_side(_elem, s, true);
+    
+    std::vector<Real> JxW_Vn                        = fe->get_JxW();
+    const std::vector<libMesh::Point>& xyz          = fe->get_xyz();
+    const std::vector<libMesh::Point>& face_normals = fe->get_normals();
+
+    const unsigned int
+    n_phi  = _fe->n_shape_functions(),
+    dim    = _elem.dim();
+    
+    RealMatrixX
+    material_mat   = RealMatrixX::Zero(dim, dim),
+    dmaterial_mat  = RealMatrixX::Zero(dim, dim), // for calculation of Jac when k is temp. dep.
+    mat_n2n2       = RealMatrixX::Zero(n_phi, n_phi);
+    RealVectorX
+    vec1     = RealVectorX::Zero(1),
+    vec2_n2  = RealVectorX::Zero(n_phi),
+    flux     = RealVectorX::Zero(dim),
+    vel      = RealVectorX::Zero(dim);
+    
+    std::unique_ptr<MAST::FieldFunction<RealMatrixX> > conductance =
+    _property.thermal_conductance_matrix(*this);
+    
+    std::vector<MAST::FEMOperatorMatrix> dBmat(dim);
+    MAST::FEMOperatorMatrix Bmat; // for calculation of Jac when k is temp. dep.
+    
+    Real
+    vn  = 0.;
+    
+    // modify the JxW_Vn by multiplying the normal velocity to it
+    for (unsigned int qp=0; qp<JxW_Vn.size(); qp++) {
+        
+        vel_f(xyz[qp], _time, vel);
+        vn = 0.;
+        for (unsigned int i=0; i<dim; i++)
+            vn += vel(i)*face_normals[qp](i);
+        JxW_Vn[qp] *= vn;
+    }
+
+    
+    for (unsigned int qp=0; qp<JxW_Vn.size(); qp++) {
+        
+        // initialize the Bmat operator for this term
+        _initialize_mass_fem_operator(qp, *_fe, Bmat);
+        Bmat.right_multiply(vec1, _sol);
+        
+        if (_active_sol_function)
+            dynamic_cast<MAST::MeshFieldFunction*>
+            (_active_sol_function)->set_element_quadrature_point_solution(vec1);
+        
+        (*conductance)(xyz[qp], _time, material_mat);
+        
+        _initialize_fem_gradient_operator(qp, dim, *_fe, dBmat);
+        
+        // calculate the flux for each dimension and add its weighted
+        // component to the residual
+        flux.setZero();
+        for (unsigned int j=0; j<dim; j++) {
+            dBmat[j].right_multiply(vec1, _sol);        // dT_dxj
+            
+            for (unsigned int i=0; i<dim; i++)
+                flux(i) += vec1(0) * material_mat(i,j); // q_i = k_ij dT_dxj
+        }
+        
+        // now add to the residual vector
+        for (unsigned int i=0; i<dim; i++) {
+            vec1(0)  = flux(i);
+            dBmat[i].vector_mult_transpose(vec2_n2, vec1);
+            f += JxW_Vn[qp] * vec2_n2;
+        }
+    }
+    
+    if (_active_sol_function)
+        dynamic_cast<MAST::MeshFieldFunction*>
+        (_active_sol_function)->clear_element_quadrature_point_solution();
+}
+
 
 
 void
@@ -612,6 +765,73 @@ velocity_residual_sensitivity (const MAST::FunctionBase& p,
 
 
 
+void
+MAST::HeatConductionElementBase::
+velocity_residual_boundary_velocity (const MAST::FunctionBase& p,
+                                     RealVectorX& f,
+                                     const unsigned int s,
+                                     const MAST::FieldFunction<RealVectorX>& vel_f) {
+    
+    // prepare the side finite element
+    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem).release());
+    fe->init_for_side(_elem, s, true);
+    
+    std::vector<Real> JxW_Vn                        = fe->get_JxW();
+    const std::vector<libMesh::Point>& xyz          = fe->get_xyz();
+    const std::vector<libMesh::Point>& face_normals = fe->get_normals();
+
+    MAST::FEMOperatorMatrix Bmat;
+    
+    const unsigned int
+    n_phi      = _fe->n_shape_functions(),
+    dim        = _elem.dim();
+    
+    RealMatrixX
+    material_mat    = RealMatrixX::Zero(dim, dim),
+    mat_n2n2        = RealMatrixX::Zero(n_phi, n_phi);
+    RealVectorX
+    vec1    = RealVectorX::Zero(1),
+    vec2_n2 = RealVectorX::Zero(n_phi),
+    vel     = RealVectorX::Zero(dim);
+    
+    std::unique_ptr<MAST::FieldFunction<RealMatrixX> > capacitance =
+    _property.thermal_capacitance_matrix(*this);
+
+    Real
+    vn  = 0.;
+    
+    // modify the JxW_Vn by multiplying the normal velocity to it
+    for (unsigned int qp=0; qp<JxW_Vn.size(); qp++) {
+        
+        vel_f(xyz[qp], _time, vel);
+        vn = 0.;
+        for (unsigned int i=0; i<dim; i++)
+            vn += vel(i)*face_normals[qp](i);
+        JxW_Vn[qp] *= vn;
+    }
+
+    for (unsigned int qp=0; qp<JxW_Vn.size(); qp++) {
+        
+        _initialize_mass_fem_operator(qp, *_fe, Bmat);
+        Bmat.right_multiply(vec1, _sol);               //  B * T
+        
+        if (_active_sol_function)
+            dynamic_cast<MAST::MeshFieldFunction*>
+            (_active_sol_function)->set_element_quadrature_point_solution(vec1);
+        
+        (*capacitance)(xyz[qp], _time, material_mat);
+        
+        Bmat.right_multiply(vec1, _vel);               //  B * T_dot
+        Bmat.vector_mult_transpose(vec2_n2, vec1);     //  B^T * B * T_dot
+        
+        f      += JxW_Vn[qp] * material_mat(0,0) * vec2_n2; // (rho*cp)*JxW B^T B T_dot
+    }
+    
+    
+    if (_active_sol_function)
+        dynamic_cast<MAST::MeshFieldFunction*>
+        (_active_sol_function)->clear_element_quadrature_point_solution();
+}
 
 
 
@@ -775,6 +995,63 @@ surface_flux_residual_sensitivity(const MAST::FunctionBase& p,
 }
 
 
+
+void
+MAST::HeatConductionElementBase::
+surface_flux_boundary_velocity(const MAST::FunctionBase& p,
+                               RealVectorX& f,
+                               const unsigned int s,
+                               const MAST::FieldFunction<RealVectorX>& vel_f,
+                               MAST::BoundaryConditionBase& bc) {
+    
+    
+    // prepare the side finite element
+    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem).release());
+    fe->init_for_side(_elem, s, true);
+    
+    std::vector<Real> JxW_Vn                        = fe->get_JxW();
+    const std::vector<libMesh::Point>& xyz          = fe->get_xyz();
+    const std::vector<libMesh::Point>& face_normals = fe->get_normals();
+    const std::vector<std::vector<Real> >& phi      = fe->get_phi();
+    const unsigned int
+    n_phi    = (unsigned int)phi.size(),
+    dim      = _elem.dim();
+
+    RealVectorX
+    phi_vec  = RealVectorX::Zero(n_phi),
+    vel      = RealVectorX::Zero(dim);
+    Real  flux;
+
+    Real
+    vn  = 0.;
+    
+    // modify the JxW_Vn by multiplying the normal velocity to it
+    for (unsigned int qp=0; qp<JxW_Vn.size(); qp++) {
+        
+        vel_f(xyz[qp], _time, vel);
+        vn = 0.;
+        for (unsigned int i=0; i<dim; i++)
+            vn += vel(i)*face_normals[qp](i);
+        JxW_Vn[qp] *= vn;
+    }
+
+    // get the function from this boundary condition
+    const MAST::FieldFunction<Real>& func =
+    bc.get<MAST::FieldFunction<Real> >("heat_flux");
+    
+
+    for (unsigned int qp=0; qp<xyz.size(); qp++) {
+        
+        // now set the shape function values
+        for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
+            phi_vec(i_nd) = phi[i_nd][qp];
+        
+        // get the value of flux = q_i . n_i
+        func(xyz[qp], _time, flux);
+        
+        f   +=  JxW_Vn[qp] * phi_vec * flux;
+    }
+}
 
 
 void
@@ -997,6 +1274,76 @@ surface_convection_residual_sensitivity(const MAST::FunctionBase& p,
     
 }
 
+
+
+void
+MAST::HeatConductionElementBase::
+surface_convection_boundary_velocity(const MAST::FunctionBase& p,
+                                     RealVectorX& f,
+                                     const unsigned int s,
+                                     const MAST::FieldFunction<RealVectorX>& vel_f,
+                                     MAST::BoundaryConditionBase& bc) {
+    
+    // prepare the side finite element
+    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem).release());
+    fe->init_for_side(_elem, s, true);
+    
+    std::vector<Real> JxW_Vn                        = fe->get_JxW();
+    const std::vector<libMesh::Point>& xyz          = fe->get_xyz();
+    const std::vector<libMesh::Point>& face_normals = fe->get_normals();
+    const std::vector<std::vector<Real> >& phi      = fe->get_phi();
+
+    // get the function from this boundary condition
+    const MAST::FieldFunction<Real>
+    &coeff = bc.get<MAST::FieldFunction<Real> >("convection_coeff"),
+    &T_amb = bc.get<MAST::FieldFunction<Real> >("ambient_temperature");
+    
+    const unsigned int
+    n_phi   = (unsigned int)phi.size(),
+    dim     = _elem.dim();
+    
+    
+    RealVectorX
+    phi_vec  = RealVectorX::Zero(n_phi),
+    vel      = RealVectorX::Zero(dim);
+    RealMatrixX
+    mat      = RealMatrixX::Zero(n_phi, n_phi);
+    
+    Real temp, amb_temp, h_coeff;
+    MAST::FEMOperatorMatrix Bmat;
+    
+    Real
+    vn  = 0.;
+    
+    
+    // modify the JxW_Vn by multiplying the normal velocity to it
+    for (unsigned int qp=0; qp<JxW_Vn.size(); qp++) {
+        
+        vel_f(xyz[qp], _time, vel);
+        vn = 0.;
+        for (unsigned int i=0; i<dim; i++)
+            vn += vel(i)*face_normals[qp](i);
+        JxW_Vn[qp] *= vn;
+    }
+
+    for (unsigned int qp=0; qp<xyz.size(); qp++) {
+        
+        // now set the shape function values
+        for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
+            phi_vec(i_nd) = phi[i_nd][qp];
+        
+        // value of flux
+        coeff(xyz[qp], _time, h_coeff);
+        T_amb(xyz[qp], _time, amb_temp);
+        temp  = phi_vec.dot(_sol);
+        
+        // normal flux is given as:
+        // qi_ni = h_coeff * (T - T_amb)
+        //
+        f   += JxW_Vn[qp] * phi_vec * h_coeff * (temp - amb_temp);
+    }
+    
+}
 
 
 
@@ -1225,6 +1572,79 @@ surface_radiation_residual_sensitivity(const MAST::FunctionBase& p,
 }
 
 
+void
+MAST::HeatConductionElementBase::
+surface_radiation_boundary_velocity(const MAST::FunctionBase& p,
+                                    RealVectorX& f,
+                                    const unsigned int s,
+                                    const MAST::FieldFunction<RealVectorX>& vel_f,
+                                    MAST::BoundaryConditionBase& bc) {
+    
+    // prepare the side finite element
+    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem).release());
+    fe->init_for_side(_elem, s, true);
+    
+    std::vector<Real> JxW_Vn                        = fe->get_JxW();
+    const std::vector<libMesh::Point>& xyz          = fe->get_xyz();
+    const std::vector<libMesh::Point>& face_normals = fe->get_normals();
+    const std::vector<std::vector<Real> >& phi      = fe->get_phi();
+
+    // get the function from this boundary condition
+    const MAST::FieldFunction<Real>
+    &emissivity = bc.get<MAST::FieldFunction<Real> >("emissivity");
+    
+    const MAST::Parameter
+    &T_amb      = bc.get<MAST::Parameter>("ambient_temperature"),
+    &T_ref_zero = bc.get<MAST::Parameter>("reference_zero_temperature"),
+    &sb_const   = bc.get<MAST::Parameter>("stefan_bolzmann_constant");
+    
+    const unsigned int
+    n_phi       = (unsigned int)phi.size(),
+    dim         = _elem.dim();
+    
+    RealVectorX
+    phi_vec  = RealVectorX::Zero(n_phi),
+    vel      = RealVectorX::Zero(dim);
+    RealMatrixX
+    mat      = RealMatrixX::Zero(n_phi, n_phi);
+    
+    const Real
+    sbc      = sb_const(),
+    amb_temp = T_amb(),
+    zero_ref = T_ref_zero();
+    
+    Real
+    temp   = 0.,
+    emiss  = 0.,
+    vn     = 0.;
+    
+    MAST::FEMOperatorMatrix Bmat;
+    
+    
+    // modify the JxW_Vn by multiplying the normal velocity to it
+    for (unsigned int qp=0; qp<JxW_Vn.size(); qp++) {
+        
+        vel_f(xyz[qp], _time, vel);
+        vn = 0.;
+        for (unsigned int i=0; i<dim; i++)
+            vn += vel(i)*face_normals[qp](i);
+        JxW_Vn[qp] *= vn;
+    }
+
+    for (unsigned int qp=0; qp<xyz.size(); qp++) {
+        
+        // now set the shape function values
+        for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
+            phi_vec(i_nd) = phi[i_nd][qp];
+        
+        // value of flux
+        emissivity(xyz[qp], _time, emiss);
+        temp  = phi_vec.dot(_sol);
+        
+        f   += JxW_Vn[qp] * phi_vec * sbc * emiss *
+        (pow(temp+zero_ref, 4.) - pow(amb_temp+zero_ref, 4.));
+    }
+}
 
 
 
@@ -1299,6 +1719,65 @@ volume_heat_source_residual_sensitivity(const MAST::FunctionBase& p,
         section.derivative(p, qpoint[qp], _time, dth);
 
         f   -=  JxW[qp] * phi_vec * (dsource * th + source * dth);
+    }
+}
+
+
+void
+MAST::HeatConductionElementBase::
+volume_heat_source_boundary_velocity(const MAST::FunctionBase& p,
+                                     RealVectorX& f,
+                                     const unsigned int s,
+                                     const MAST::FieldFunction<RealVectorX>& vel_f,
+                                     MAST::BoundaryConditionBase& bc) {
+    
+    // prepare the side finite element
+    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem).release());
+    fe->init_for_side(_elem, s, true);
+    
+    std::vector<Real> JxW_Vn                        = fe->get_JxW();
+    const std::vector<libMesh::Point>& xyz          = fe->get_xyz();
+    const std::vector<libMesh::Point>& face_normals = fe->get_normals();
+    const std::vector<std::vector<Real> >& phi      = fe->get_phi();
+
+    // get the function from this boundary condition
+    const MAST::FieldFunction<Real>
+    &func       = bc.get<MAST::FieldFunction<Real> >("heat_source"),
+    &section    = _property.section(*this);
+    
+    const unsigned int
+    n_phi   = (unsigned int)phi.size(),
+    dim     = _elem.dim();
+    
+    RealVectorX
+    phi_vec  = RealVectorX::Zero(n_phi),
+    vel      = RealVectorX::Zero(dim);
+    Real
+    source = 0.,
+    th     = 0.,
+    vn     = 0.;
+    
+    // modify the JxW_Vn by multiplying the normal velocity to it
+    for (unsigned int qp=0; qp<JxW_Vn.size(); qp++) {
+        
+        vel_f(xyz[qp], _time, vel);
+        vn = 0.;
+        for (unsigned int i=0; i<dim; i++)
+            vn += vel(i)*face_normals[qp](i);
+        JxW_Vn[qp] *= vn;
+    }
+
+    for (unsigned int qp=0; qp<xyz.size(); qp++) {
+        
+        // now set the shape function values
+        for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
+            phi_vec(i_nd) = phi[i_nd][qp];
+        
+        // get the value of heat source
+        func(xyz[qp], _time, source);
+        section(xyz[qp], _time, th);
+        
+        f   -=  JxW_Vn[qp] * phi_vec * source * th;
     }
 }
 

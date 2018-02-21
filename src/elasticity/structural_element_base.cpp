@@ -24,13 +24,14 @@
 #include "elasticity/solid_element_3d.h"
 #include "base/system_initialization.h"
 #include "base/boundary_condition_base.h"
+#include "base/nonlinear_system.h"
+#include "base/assembly_base.h"
 #include "property_cards/element_property_card_1D.h"
 #include "mesh/local_elem_base.h"
+#include "mesh/local_elem_fe.h"
 #include "numerics/fem_operator_matrix.h"
 #include "numerics/utility.h"
 #include "elasticity/stress_output_base.h"
-#include "base/nonlinear_system.h"
-#include "mesh/local_elem_fe.h"
 
 
 MAST::StructuralElementBase::StructuralElementBase(MAST::SystemInitialization& sys,
@@ -1011,6 +1012,56 @@ volume_external_residual_sensitivity (const MAST::FunctionBase& p,
 
 
 
+void
+MAST::StructuralElementBase::
+volume_external_residual_boundary_velocity(const MAST::FunctionBase& p,
+                                           RealVectorX& f,
+                                           const unsigned int s,
+                                           const MAST::FieldFunction<RealVectorX>& vel_f,
+                                           std::multimap<libMesh::subdomain_id_type, MAST::BoundaryConditionBase*>& bc) {
+    
+    // iterate over the boundary ids given in the provided force map
+    std::pair<std::multimap<libMesh::subdomain_id_type, MAST::BoundaryConditionBase*>::const_iterator,
+    std::multimap<libMesh::subdomain_id_type, MAST::BoundaryConditionBase*>::const_iterator> it;
+    
+    // for each boundary id, check if any of the sides on the element
+    // has the associated boundary
+    
+    libMesh::subdomain_id_type sid = _elem.subdomain_id();
+    // find the loads on this boundary and evaluate the f and jac
+    it =bc.equal_range(sid);
+    
+    for ( ; it.first != it.second; it.first++) {
+        // apply all the types of loading
+        switch (it.first->second->type()) {
+                
+            case MAST::SURFACE_PRESSURE:
+                surface_pressure_boundary_velocity(p,
+                                                   f,
+                                                   s,
+                                                   vel_f,
+                                                   *it.first->second);
+                break;
+                
+            case MAST::TEMPERATURE:
+                thermal_residual_boundary_velocity(p,
+                                                   f,
+                                                   s,
+                                                   vel_f,
+                                                   *it.first->second);
+                break;
+                
+            case MAST::PISTON_THEORY:
+            default:
+                // not implemented yet
+                libmesh_error();
+                break;
+        }
+    }
+}
+
+
+
 bool
 MAST::StructuralElementBase::
 surface_pressure_residual(bool request_jacobian,
@@ -1155,6 +1206,96 @@ surface_pressure_residual_sensitivity(const MAST::FunctionBase& p,
     return (request_jacobian);
 }
 
+
+
+
+void
+MAST::StructuralElementBase::
+surface_pressure_boundary_velocity(const MAST::FunctionBase& p,
+                                   RealVectorX& f,
+                                   const unsigned int s,
+                                   const MAST::FieldFunction<RealVectorX>& vel_f,
+                                   MAST::BoundaryConditionBase& bc) {
+    
+    libmesh_assert(_elem.dim() < 3); // only applicable for lower dimensional elements
+    libmesh_assert(!follower_forces); // not implemented yet for follower forces
+    
+    // prepare the side finite element
+    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem).release());
+    fe->init_for_side(_elem, s, true);
+
+    std::vector<Real> JxW_Vn                        = fe->get_JxW();
+    const std::vector<libMesh::Point>& xyz          = fe->get_xyz();
+    const std::vector<libMesh::Point>& face_normals = fe->get_normals();
+    const std::vector<std::vector<Real> >& phi      = fe->get_phi();
+
+    const unsigned int
+    n_phi = (unsigned int)phi.size(),
+    n1    = 3,
+    n2    = 6*n_phi,
+    dim   = _elem.dim();
+    
+    
+    // normal for face integration
+    libMesh::Point normal;
+    // direction of pressure assumed to be normal (along local z-axis)
+    // to the element face for 2D and along local y-axis for 1D element.
+    normal(_elem.dim()) = -1.;
+    
+    
+    // get the function from this boundary condition
+    MAST::FieldFunction<Real>& func =
+    bc.get<MAST::FieldFunction<Real> >("pressure");
+    
+    Real press;
+    FEMOperatorMatrix Bmat;
+    
+    RealVectorX
+    phi_vec  = RealVectorX::Zero(n_phi),
+    force    = RealVectorX::Zero(2*n1),
+    local_f  = RealVectorX::Zero(n2),
+    vec_n2   = RealVectorX::Zero(n2),
+    vel      = RealVectorX::Zero(dim);
+
+    Real
+    vn  = 0.;
+    
+    
+    // modify the JxW_Vn by multiplying the normal velocity to it
+    for (unsigned int qp=0; qp<JxW_Vn.size(); qp++) {
+        
+        vel_f(xyz[qp], _time, vel);
+        vn = 0.;
+        for (unsigned int i=0; i<dim; i++)
+            vn += vel(i)*face_normals[qp](i);
+        JxW_Vn[qp] *= vn;
+    }
+
+    
+    for (unsigned int qp=0; qp<xyz.size(); qp++) {
+        
+        // now set the shape function values
+        for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
+            phi_vec(i_nd) = phi[i_nd][qp];
+        
+        Bmat.reinit(2*n1, phi_vec);
+        
+        // get pressure value
+        func(xyz[qp], _time, press);
+        
+        // calculate force
+        for (unsigned int i_dim=0; i_dim<n1; i_dim++)
+            force(i_dim) = press * normal(i_dim);
+        
+        Bmat.vector_mult_transpose(vec_n2, force);
+        
+        local_f += JxW_Vn[qp] * vec_n2;
+    }
+    
+    // now transform to the global system and add
+    transform_vector_to_global_system(local_f, vec_n2);
+    f -= vec_n2;
+}
 
 
 

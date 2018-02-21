@@ -31,6 +31,7 @@ namespace MAST {
     class LocalElemBase;
     class BoundaryConditionBase;
     class FEMOperatorMatrix;
+    template <typename ValType> class FieldFunction;
     
     
     /*!
@@ -117,13 +118,32 @@ namespace MAST {
         virtual void
         internal_residual_sensitivity (const MAST::FunctionBase& p,
                                        RealVectorX& f);
+
+        /*!
+         *   sensitivity of the internal force contribution to system residual
+         */
+        virtual void
+        internal_residual_boundary_velocity (const MAST::FunctionBase& p,
+                                             RealVectorX& f,
+                                             const unsigned int s,
+                                             const MAST::FieldFunction<RealVectorX>& vel_f);
+
         /*!
          *   sensitivity of the damping force contribution to system residual
          */
         virtual void
         velocity_residual_sensitivity (const MAST::FunctionBase& p,
                                        RealVectorX& f);
-        
+
+        /*!
+         *   sensitivity of the internal force contribution to system residual
+         */
+        virtual void
+        velocity_residual_boundary_velocity (const MAST::FunctionBase& p,
+                                             RealVectorX& f,
+                                             const unsigned int s,
+                                             const MAST::FieldFunction<RealVectorX>& vel_f);
+
         /*!
          *   sensitivity of the side external force contribution to system residual
          */
@@ -140,6 +160,15 @@ namespace MAST {
                                               RealVectorX& f,
                                               std::multimap<libMesh::subdomain_id_type, MAST::BoundaryConditionBase*>& bc);
         
+        /*!
+         *   boundary velocity contribution of volume external force.
+         */
+        void
+        volume_external_residual_boundary_velocity(const MAST::FunctionBase& p,
+                                                   RealVectorX& f,
+                                                   const unsigned int s,
+                                                   const MAST::FieldFunction<RealVectorX>& vel_f,
+                                                   std::multimap<libMesh::subdomain_id_type, MAST::BoundaryConditionBase*>& bc);
 
     protected:
         
@@ -182,7 +211,18 @@ namespace MAST {
         virtual void surface_flux_residual_sensitivity(const MAST::FunctionBase& p,
                                                        RealVectorX& f,
                                                        MAST::BoundaryConditionBase& bc);
-        
+
+        /*!
+         *    Calculates the residual vector and Jacobian due to surface flux
+         *    on element volumetric domain. This is used only for 1D or 2D
+         *    elements.
+         */
+        virtual void surface_flux_boundary_velocity(const MAST::FunctionBase& p,
+                                                    RealVectorX& f,
+                                                    const unsigned int s,
+                                                    const MAST::FieldFunction<RealVectorX>& vel_f,
+                                                    MAST::BoundaryConditionBase& bc);
+
         
         /*!
          *    Calculates the residual vector and Jacobian due to surface
@@ -226,7 +266,18 @@ namespace MAST {
                                                 RealVectorX& f,
                                                 MAST::BoundaryConditionBase& bc);
 
-        
+        /*!
+         *    Calculates the residual vector and Jacobian due to surface flux
+         *    on element volumetric domain. This is used only for 1D or 2D
+         *    elements.
+         */
+        virtual void
+        surface_convection_boundary_velocity(const MAST::FunctionBase& p,
+                                             RealVectorX& f,
+                                             const unsigned int s,
+                                             const MAST::FieldFunction<RealVectorX>& vel_f,
+                                             MAST::BoundaryConditionBase& bc);
+
         /*!
          *    Calculates the residual vector and Jacobian due to surface
          *    radiation flux on side s.
@@ -268,7 +319,18 @@ namespace MAST {
                                                RealVectorX& f,
                                                MAST::BoundaryConditionBase& bc);
 
-        
+        /*!
+         *    Calculates the residual vector and Jacobian due to surface flux
+         *    on element volumetric domain. This is used only for 1D or 2D
+         *    elements.
+         */
+        virtual void
+        surface_radiation_boundary_velocity(const MAST::FunctionBase& p,
+                                            RealVectorX& f,
+                                            const unsigned int s,
+                                            const MAST::FieldFunction<RealVectorX>& vel_f,
+                                            MAST::BoundaryConditionBase& bc);
+
         /*!
          *    Calculates the residual vector and Jacobian due to volume heat
          *    source.
@@ -287,7 +349,18 @@ namespace MAST {
         volume_heat_source_residual_sensitivity(const MAST::FunctionBase& p,
                                                 RealVectorX& f,
                                                 MAST::BoundaryConditionBase& bc);
-        
+
+        /*!
+         *    Calculates the residual vector and Jacobian due to volume heat
+         *    source on element volumetric domain.
+         */
+        virtual void
+        volume_heat_source_boundary_velocity(const MAST::FunctionBase& p,
+                                             RealVectorX& f,
+                                             const unsigned int s,
+                                             const MAST::FieldFunction<RealVectorX>& vel_f,
+                                             MAST::BoundaryConditionBase& bc);
+
         /*!
          *    When \p mass = false, initializes the FEM operator matrix to the
          *    shape functions as

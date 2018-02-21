@@ -21,10 +21,11 @@
 // MAST includes
 #include "heat_conduction/heat_conduction_nonlinear_assembly.h"
 #include "base/assembly_base.h"
+#include "base/physics_discipline_base.h"
 #include "heat_conduction/heat_conduction_elem_base.h"
 #include "property_cards/element_property_card_1D.h"
-#include "base/physics_discipline_base.h"
 #include "mesh/local_elem_fe.h"
+#include "level_set/level_set_intersection.h"
 
 
 MAST::HeatConductionNonlinearAssemblyElemOperations::
@@ -100,6 +101,45 @@ elem_sensitivity_calculations(const MAST::FunctionBase& f,
     e.volume_external_residual_sensitivity(f, vec, _discipline->volume_loads());
 }
 
+
+void
+MAST::HeatConductionNonlinearAssemblyElemOperations::
+elem_topology_sensitivity_calculations(const MAST::FunctionBase& f,
+                                       const MAST::LevelSetIntersection& intersect,
+                                       const MAST::FieldFunction<RealVectorX>& vel,
+                                       RealVectorX& vec) {
+    
+    libmesh_assert(_physics_elem);
+    libmesh_assert(f.is_topology_parameter());
+    const libMesh::Elem& elem = _physics_elem->elem();
+    
+    // sensitivity only exists at the boundary. So, we proceed with calculation
+    // only if this element has an intersection in the interior, or with a side.
+    if (intersect.if_elem_has_boundary()) {
+        
+        MAST::HeatConductionElementBase& e =
+        dynamic_cast<MAST::HeatConductionElementBase&>(*_physics_elem);
+        
+        vec.setZero();
+        RealMatrixX
+        dummy = RealMatrixX::Zero(vec.size(), vec.size());
+        
+        if (intersect.has_side_on_interface(elem)) {
+            e.internal_residual_boundary_velocity(f, vec,
+                                                  intersect.get_side_on_interface(elem),
+                                                  vel);
+            e.volume_external_residual_boundary_velocity(f, vec,
+                                                         intersect.get_side_on_interface(elem),
+                                                         vel,
+                                                         _discipline->volume_loads());
+        }
+        /*e.side_external_residual_sensitivity(f, false,
+         vec,
+         dummy,
+         dummy,
+         _discipline->side_loads());*/
+    }
+}
 
 
 void

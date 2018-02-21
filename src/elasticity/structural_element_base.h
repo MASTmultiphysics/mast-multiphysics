@@ -250,6 +250,18 @@ namespace MAST {
                                        RealMatrixX& jac,
                                        std::multimap<libMesh::subdomain_id_type, MAST::BoundaryConditionBase*>& bc);
 
+        
+        /*!
+         *   boundary velocity contribution of volume external force.
+         */
+        void volume_external_residual_boundary_velocity
+        (const MAST::FunctionBase& p,
+         RealVectorX& f,
+         const unsigned int s,
+         const MAST::FieldFunction<RealVectorX>& vel_f,
+         std::multimap<libMesh::subdomain_id_type, MAST::BoundaryConditionBase*>& bc);
+
+        
         /*!
          *   volume external force contribution to system residual. If
          *   requested, the Jacobians of the residual due to xdot will be
@@ -428,6 +440,18 @@ namespace MAST {
                                   RealVectorX& f,
                                   RealMatrixX& jac,
                                   MAST::BoundaryConditionBase& bc);
+
+        /*!
+         *    Calculates the force vector and Jacobian due to surface pressure
+         *    applied on the entire element domain. This is applicable for
+         *    only 1D and 2D elements.
+         */
+        virtual void
+        surface_pressure_boundary_velocity(const MAST::FunctionBase& p,
+                                           RealVectorX& f,
+                                           const unsigned int s,
+                                           const MAST::FieldFunction<RealVectorX>& vel_f,
+                                           MAST::BoundaryConditionBase& bc);
 
         /*!
          *    Calculates the force vector and Jacobian due to surface pressure
@@ -622,7 +646,16 @@ namespace MAST {
                                                   RealMatrixX& jac,
                                                   MAST::BoundaryConditionBase& bc) = 0;
         
-        
+        /*!
+         *    Calculates the sensitivity of force vector and Jacobian due to
+         *    thermal stresses. this should be implemented for each element type
+         */
+        virtual void thermal_residual_boundary_velocity(const MAST::FunctionBase& p,
+                                                        RealVectorX& f,
+                                                        const unsigned int s,
+                                                        const MAST::FieldFunction<RealVectorX>& vel_f,
+                                                        MAST::BoundaryConditionBase& bc) = 0;
+
         /*!
          *   @returns a constant reference to transformation matrix needed
          *   for mapping of 1D and 2D matrices from coordinate system defined

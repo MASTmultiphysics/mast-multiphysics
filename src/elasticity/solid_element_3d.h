@@ -175,6 +175,19 @@ namespace MAST {
                                                   MAST::BoundaryConditionBase& bc);
         
         /*!
+         *    Calculates the sensitivity of force vector and Jacobian due to
+         *    thermal stresses. this should be implemented for each element type
+         */
+        virtual void thermal_residual_boundary_velocity(const MAST::FunctionBase& p,
+                                                        RealVectorX& f,
+                                                        const unsigned int s,
+                                                        const MAST::FieldFunction<RealVectorX>& vel_f,
+                                                        MAST::BoundaryConditionBase& bc) {
+            
+            libmesh_assert(false); // to be implemented
+        }
+
+        /*!
          *    Calculates the force vector and Jacobian due to piston-theory
          *    based surface pressure on the entire element domain.
          *    This is applicable for only 1D and 2D elements. The order
