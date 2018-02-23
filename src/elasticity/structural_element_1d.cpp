@@ -290,7 +290,7 @@ MAST::StructuralElement1D::calculate_stress(bool request_derivative,
     &hz_off =  _property.get<MAST::FieldFunction<Real> >("hz_off");
 
     
-    bool if_vk = (_property.strain_type() == MAST::VON_KARMAN_STRAIN),
+    bool if_vk = (_property.strain_type() == MAST::NONLINEAR_STRAIN),
     if_bending = (_property.bending_model(_elem, fe->get_fe_type()) != MAST::NO_BENDING);
     
     // a reference to the stress output data structure
@@ -600,7 +600,7 @@ MAST::StructuralElement1D::internal_residual (bool request_jacobian,
     Bmat_v_vk.reinit(n3, _system.n_vars(), n_phi); // only dv/dx and dv/dy
     Bmat_w_vk.reinit(n3, _system.n_vars(), n_phi); // only dw/dx and dw/dy
     
-    bool if_vk = (_property.strain_type() == MAST::VON_KARMAN_STRAIN),
+    bool if_vk = (_property.strain_type() == MAST::NONLINEAR_STRAIN),
     if_bending = (_property.bending_model(_elem, _fe->get_fe_type()) != MAST::NO_BENDING);
     
     std::unique_ptr<MAST::FieldFunction<RealMatrixX > >
@@ -724,7 +724,7 @@ MAST::StructuralElement1D::internal_residual_sensitivity (const MAST::FunctionBa
     Bmat_v_vk.reinit(n3, _system.n_vars(), n_phi); // only dv/dx and dv/dy
     Bmat_w_vk.reinit(n3, _system.n_vars(), n_phi); // only dw/dx and dw/dy
     
-    bool if_vk = (_property.strain_type() == MAST::VON_KARMAN_STRAIN),
+    bool if_vk = (_property.strain_type() == MAST::NONLINEAR_STRAIN),
     if_bending = (_property.bending_model(_elem, _fe->get_fe_type()) != MAST::NO_BENDING);
     
     std::unique_ptr<MAST::FieldFunction<RealMatrixX > >
@@ -846,7 +846,7 @@ internal_residual_jac_dot_state_sensitivity (RealMatrixX& jac) {
     Bmat_v_vk.reinit(n3, _system.n_vars(), n_phi); // only dv/dx and dv/dy
     Bmat_w_vk.reinit(n3, _system.n_vars(), n_phi); // only dw/dx and dw/dy
     
-    bool if_vk = (_property.strain_type() == MAST::VON_KARMAN_STRAIN),
+    bool if_vk = (_property.strain_type() == MAST::NONLINEAR_STRAIN),
     if_bending = (_property.bending_model(_elem, _fe->get_fe_type()) != MAST::NO_BENDING);
     
     // without the nonlinear strain, this matrix is zero.
@@ -1554,7 +1554,7 @@ MAST::StructuralElement1D::prestress_residual (bool request_jacobian,
     Bmat_v_vk.reinit(n3, _system.n_vars(), n_phi); // only dv/dx and dv/dy
     Bmat_w_vk.reinit(n3, _system.n_vars(), n_phi); // only dw/dx and dw/dy
     
-    bool if_vk = (_property.strain_type() == MAST::VON_KARMAN_STRAIN),
+    bool if_vk = (_property.strain_type() == MAST::NONLINEAR_STRAIN),
     if_bending = (_property.bending_model(_elem, _fe->get_fe_type()) != MAST::NO_BENDING);
     
     std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
@@ -1697,7 +1697,7 @@ MAST::StructuralElement1D::prestress_residual_sensitivity (const MAST::FunctionB
     Bmat_v_vk.reinit(n3, _system.n_vars(), n_phi); // only dv/dx and dv/dy
     Bmat_w_vk.reinit(n3, _system.n_vars(), n_phi); // only dw/dx and dw/dy
     
-    bool if_vk = (_property.strain_type() == MAST::VON_KARMAN_STRAIN),
+    bool if_vk = (_property.strain_type() == MAST::NONLINEAR_STRAIN),
     if_bending = (_property.bending_model(_elem, _fe->get_fe_type()) != MAST::NO_BENDING);
     
     std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
@@ -2003,7 +2003,7 @@ MAST::StructuralElement1D::thermal_residual (bool request_jacobian,
     Bmat_v_vk.reinit(n3, _system.n_vars(), n_phi); // only dv/dx and dv/dy
     Bmat_w_vk.reinit(n3, _system.n_vars(), n_phi); // only dw/dx and dw/dy
     
-    bool if_vk = (_property.strain_type() == MAST::VON_KARMAN_STRAIN),
+    bool if_vk = (_property.strain_type() == MAST::NONLINEAR_STRAIN),
     if_bending = (_property.bending_model(_elem, _fe->get_fe_type()) != MAST::NO_BENDING);
     
     std::unique_ptr<MAST::FieldFunction<RealMatrixX > >
@@ -2153,7 +2153,7 @@ MAST::StructuralElement1D::thermal_residual_sensitivity (const MAST::FunctionBas
     Bmat_v_vk.reinit(n3, _system.n_vars(), n_phi); // only dv/dx and dv/dy
     Bmat_w_vk.reinit(n3, _system.n_vars(), n_phi); // only dw/dx and dw/dy
     
-    bool if_vk = (_property.strain_type() == MAST::VON_KARMAN_STRAIN),
+    bool if_vk = (_property.strain_type() == MAST::NONLINEAR_STRAIN),
     if_bending = (_property.bending_model(_elem, _fe->get_fe_type()) != MAST::NO_BENDING);
     
     std::unique_ptr<MAST::FieldFunction<RealMatrixX > >

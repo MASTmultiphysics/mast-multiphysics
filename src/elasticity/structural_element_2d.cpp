@@ -19,18 +19,18 @@
 
 // MAST includes
 #include "elasticity/structural_element_2d.h"
-#include "property_cards/element_property_card_2D.h"
-#include "numerics/fem_operator_matrix.h"
-#include "mesh/local_elem_base.h"
 #include "elasticity/piston_theory_boundary_condition.h"
 #include "elasticity/stress_output_base.h"
 #include "elasticity/bending_operator.h"
+#include "property_cards/element_property_card_2D.h"
 #include "property_cards/material_property_card_base.h"
+#include "numerics/fem_operator_matrix.h"
+#include "mesh/local_elem_fe.h"
+#include "mesh/local_elem_base.h"
 #include "base/system_initialization.h"
 #include "base/boundary_condition_base.h"
 #include "base/parameter.h"
 #include "base/constant_field_function.h"
-#include "mesh/local_elem_fe.h"
 #include "base/assembly_base.h"
 
 
@@ -283,7 +283,7 @@ MAST::StructuralElement2D::calculate_stress(bool request_derivative,
     &h_off  =  _property.get<MAST::FieldFunction<Real> >("off");
     
     
-    bool if_vk = (_property.strain_type() == MAST::VON_KARMAN_STRAIN),
+    bool if_vk = (_property.strain_type() == MAST::NONLINEAR_STRAIN),
     if_bending = (_property.bending_model(_elem, fe->get_fe_type()) != MAST::NO_BENDING);
     
     // a reference to the stress output data structure
@@ -583,7 +583,7 @@ MAST::StructuralElement2D::internal_residual (bool request_jacobian,
     Bmat_bend.reinit(n1, _system.n_vars(), n_phi);
     Bmat_vk.reinit(n3, _system.n_vars(), n_phi); // only dw/dx and dw/dy
     
-    bool if_vk = (_property.strain_type() == MAST::VON_KARMAN_STRAIN),
+    bool if_vk = (_property.strain_type() == MAST::NONLINEAR_STRAIN),
     if_bending = (_property.bending_model(_elem, _fe->get_fe_type()) != MAST::NO_BENDING);
     
     std::unique_ptr<MAST::FieldFunction<RealMatrixX > >
@@ -702,7 +702,7 @@ MAST::StructuralElement2D::internal_residual_sensitivity (const MAST::FunctionBa
     Bmat_bend.reinit(n1, _system.n_vars(), n_phi);
     Bmat_vk.reinit(n3, _system.n_vars(), n_phi); // only dw/dx and dw/dy
     
-    bool if_vk = (_property.strain_type() == MAST::VON_KARMAN_STRAIN),
+    bool if_vk = (_property.strain_type() == MAST::NONLINEAR_STRAIN),
     if_bending = (_property.bending_model(_elem, _fe->get_fe_type()) != MAST::NO_BENDING);
     
     std::unique_ptr<MAST::FieldFunction<RealMatrixX > >
@@ -822,7 +822,7 @@ internal_residual_boundary_velocity(const MAST::FunctionBase& p,
     Bmat_bend.reinit(n1, _system.n_vars(), n_phi);
     Bmat_vk.reinit(n3, _system.n_vars(), n_phi); // only dw/dx and dw/dy
     
-    bool if_vk = (_property.strain_type() == MAST::VON_KARMAN_STRAIN),
+    bool if_vk = (_property.strain_type() == MAST::NONLINEAR_STRAIN),
     if_bending = (_property.bending_model(_elem, _fe->get_fe_type()) != MAST::NO_BENDING);
     
     std::unique_ptr<MAST::FieldFunction<RealMatrixX > >
@@ -917,7 +917,7 @@ internal_residual_jac_dot_state_sensitivity (RealMatrixX& jac) {
     Bmat_bend.reinit(n1, _system.n_vars(), n_phi);
     Bmat_vk.reinit(n3, _system.n_vars(), n_phi);
     
-    bool if_vk = (_property.strain_type() == MAST::VON_KARMAN_STRAIN),
+    bool if_vk = (_property.strain_type() == MAST::NONLINEAR_STRAIN),
     if_bending = (_property.bending_model(_elem, _fe->get_fe_type()) != MAST::NO_BENDING);
     
     // without the nonlinear strain, this matrix is zero.
@@ -1390,7 +1390,7 @@ MAST::StructuralElement2D::prestress_residual (bool request_jacobian,
     Bmat_bend.reinit(n1, _system.n_vars(), n_phi);
     Bmat_vk.reinit(n3, _system.n_vars(), n_phi); // only dw/dx and dw/dy
     
-    bool if_vk = (_property.strain_type() == MAST::VON_KARMAN_STRAIN),
+    bool if_vk = (_property.strain_type() == MAST::NONLINEAR_STRAIN),
     if_bending = (_property.bending_model(_elem, _fe->get_fe_type()) != MAST::NO_BENDING);
     
     std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
@@ -1507,7 +1507,7 @@ MAST::StructuralElement2D::prestress_residual_sensitivity (const MAST::FunctionB
     Bmat_bend.reinit(n1, _system.n_vars(), n_phi);
     Bmat_vk.reinit(n3, _system.n_vars(), n_phi); // only dw/dx and dw/dy
     
-    bool if_vk = (_property.strain_type() == MAST::VON_KARMAN_STRAIN),
+    bool if_vk = (_property.strain_type() == MAST::NONLINEAR_STRAIN),
     if_bending = (_property.bending_model(_elem, _fe->get_fe_type()) != MAST::NO_BENDING);
     
     std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
@@ -1779,7 +1779,7 @@ MAST::StructuralElement2D::thermal_residual (bool request_jacobian,
     Bmat_bend.reinit(n1, _system.n_vars(), n_phi);
     Bmat_vk.reinit(n3, _system.n_vars(), n_phi); // only dw/dx and dw/dy
     
-    bool if_vk = (_property.strain_type() == MAST::VON_KARMAN_STRAIN),
+    bool if_vk = (_property.strain_type() == MAST::NONLINEAR_STRAIN),
     if_bending = (_property.bending_model(_elem, _fe->get_fe_type()) != MAST::NO_BENDING);
     
     std::unique_ptr<MAST::FieldFunction<RealMatrixX > >
@@ -1902,7 +1902,7 @@ thermal_residual_sensitivity (const MAST::FunctionBase& p,
     Bmat_bend.reinit(n1, _system.n_vars(), n_phi);
     Bmat_vk.reinit(n3, _system.n_vars(), n_phi); // only dw/dx and dw/dy
     
-    bool if_vk = (_property.strain_type() == MAST::VON_KARMAN_STRAIN),
+    bool if_vk = (_property.strain_type() == MAST::NONLINEAR_STRAIN),
     if_bending = (_property.bending_model(_elem, _fe->get_fe_type()) != MAST::NO_BENDING);
     
     std::unique_ptr<MAST::FieldFunction<RealMatrixX > >
@@ -2052,7 +2052,7 @@ thermal_residual_boundary_velocity(const MAST::FunctionBase& p,
     Bmat_bend.reinit(n1, _system.n_vars(), n_phi);
     Bmat_vk.reinit(n3, _system.n_vars(), n_phi); // only dw/dx and dw/dy
     
-    bool if_vk = (_property.strain_type() == MAST::VON_KARMAN_STRAIN),
+    bool if_vk = (_property.strain_type() == MAST::NONLINEAR_STRAIN),
     if_bending = (_property.bending_model(_elem, _fe->get_fe_type()) != MAST::NO_BENDING);
     
     std::unique_ptr<MAST::FieldFunction<RealMatrixX > >

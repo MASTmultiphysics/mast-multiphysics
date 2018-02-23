@@ -78,8 +78,8 @@ MAST::LocalElemFE::init_for_side(const libMesh::Elem& elem,
     
     // now initialize the global xyz locations and normals
     const std::vector<libMesh::Point>
-    local_xyz     = _fe->get_xyz(),
-    local_normals = _fe->get_normals();
+    &local_xyz     = _fe->get_xyz(),
+    &local_normals = _fe->get_normals();
     
     unsigned int
     n = (unsigned int) local_xyz.size();

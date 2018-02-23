@@ -481,7 +481,7 @@
 //    
 //    // tell the section property about the material property
 //    _p_card_plate->set_material(*_m_card);
-//    if (if_vk) _p_card_plate->set_strain(MAST::VON_KARMAN_STRAIN);
+//    if (if_vk) _p_card_plate->set_strain(MAST::NONLINEAR_STRAIN);
 //    
 //    _discipline->set_property_for_subdomain(0, *_p_card_plate);
 //    
@@ -574,7 +574,7 @@
 //        
 //        // tell the section property about the material property
 //        _p_card_stiff[i]->set_material(*_m_card);
-//        if (if_vk) _p_card_stiff[i]->set_strain(MAST::VON_KARMAN_STRAIN);
+//        if (if_vk) _p_card_stiff[i]->set_strain(MAST::NONLINEAR_STRAIN);
 //        
 //        _p_card_stiff[i]->init();
 //        
@@ -830,7 +830,7 @@
 //            // now do the solve
 //            libmesh_assert(_obj._initialized);
 //            
-//            bool if_vk = (_obj._p_card_plate->strain_type() == MAST::VON_KARMAN_STRAIN);
+//            bool if_vk = (_obj._p_card_plate->strain_type() == MAST::NONLINEAR_STRAIN);
 //            
 //            ///////////////////////////////////////////////////////////////
 //            // first, solve the quasi-steady problem

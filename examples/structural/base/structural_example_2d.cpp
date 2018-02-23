@@ -136,7 +136,7 @@ MAST::Examples::StructuralExample2D::_init_section_property_without_offset() {
     // set nonlinear strain if requested
     bool
     nonlinear = (*_input)(_prefix+"if_nonlinear", "flag to turn on/off nonlinear strain", false);
-    if (nonlinear) p_card->set_strain(MAST::VON_KARMAN_STRAIN);
+    if (nonlinear) p_card->set_strain(MAST::NONLINEAR_STRAIN);
     
     p_card->add(*th_f);
     p_card->add(*hoff_f);
@@ -173,7 +173,7 @@ MAST::Examples::StructuralExample2D::_init_section_property_with_offset() {
     // set nonlinear strain if requested
     bool
     nonlinear = (*_input)(_prefix+"if_nonlinear", "flag to turn on/off nonlinear strain", false);
-    if (nonlinear) p_card->set_strain(MAST::VON_KARMAN_STRAIN);
+    if (nonlinear) p_card->set_strain(MAST::NONLINEAR_STRAIN);
     
     p_card->add(*th_f);
     p_card->add(*hoff_f);

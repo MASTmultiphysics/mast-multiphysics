@@ -40,7 +40,7 @@ namespace MAST
     
     enum StrainType {
         LINEAR_STRAIN,
-        VON_KARMAN_STRAIN
+        NONLINEAR_STRAIN
     };
     
     

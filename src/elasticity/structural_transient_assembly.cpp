@@ -177,7 +177,7 @@ elem_sensitivity_calculations(const MAST::FunctionBase& f,
     dynamic_cast<MAST::StructuralElementBase&>(*_physics_elem);
     
     unsigned int
-    n       =  f_m.size();
+    n       =  (unsigned int)f_m.size();
     
     RealMatrixX
     dummy   =  RealMatrixX::Zero(n, n);
