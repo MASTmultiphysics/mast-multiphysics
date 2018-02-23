@@ -178,7 +178,7 @@ MAST::BeamThermallyStressedModalAnalysis::init(libMesh::ElemType etype,
     
     // tell the section property about the material property
     _p_card->set_material(*_m_card);
-    if (if_nonlin) _p_card->set_strain(MAST::VON_KARMAN_STRAIN);
+    if (if_nonlin) _p_card->set_strain(MAST::NONLINEAR_STRAIN);
 
     _p_card->init();
     
@@ -321,7 +321,7 @@ MAST::BeamThermallyStressedModalAnalysis::solve(bool if_write_output,
     
     libmesh_assert(_initialized);
     
-    bool if_vk = (_p_card->strain_type() == MAST::VON_KARMAN_STRAIN);
+    bool if_vk = (_p_card->strain_type() == MAST::NONLINEAR_STRAIN);
     
     ///////////////////////////////////////////////////////////////////
     // solve for the static deformation

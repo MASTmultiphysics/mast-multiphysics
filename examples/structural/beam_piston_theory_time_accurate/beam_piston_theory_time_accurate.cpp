@@ -69,7 +69,7 @@ MAST::BeamPistonTheoryTimeAccurateAnalysis::init(libMesh::ElemType etype,
     _mesh       = new libMesh::SerialMesh(__init->comm());
     
     // initialize the mesh with one element
-    libMesh::MeshTools::Generation::build_line(*_mesh, 20, 0, _length);
+    libMesh::MeshTools::Generation::build_line(*_mesh, 16, 0, _length);
     
     // create the equation system
     _eq_sys    = new  libMesh::EquationSystems(*_mesh);
@@ -107,7 +107,7 @@ MAST::BeamPistonTheoryTimeAccurateAnalysis::init(libMesh::ElemType etype,
     _alpha           = new MAST::Parameter("alpha",      17.3e-6);
     _nu              = new MAST::Parameter("nu",      0.33);
     _rho             = new MAST::Parameter("rho",   2700.0);
-    _temp            = new MAST::Parameter("temperature", 50.);
+    _temp            = new MAST::Parameter("temperature", 0*50.);
     _zero            = new MAST::Parameter("zero",      0.);
     _velocity        = new MAST::Parameter("V"   ,    800.);
     _mach            = new MAST::Parameter("mach",      3.);
@@ -182,7 +182,7 @@ MAST::BeamPistonTheoryTimeAccurateAnalysis::init(libMesh::ElemType etype,
     
     // tell the section property about the material property
     _p_card->set_material(*_m_card);
-    if (if_nonlin) _p_card->set_strain(MAST::VON_KARMAN_STRAIN);
+    if (if_nonlin) _p_card->set_strain(MAST::NONLINEAR_STRAIN);
     
     _p_card->init();
         
@@ -418,6 +418,9 @@ MAST::BeamPistonTheoryTimeAccurateAnalysis::solve(bool if_write_output) {
                                          *_eq_sys,
                                          t_step+1,
                                          nonlin_sys.time);
+            o
+            << solver.solution()(dof) << "  "
+            << solver.velocity()(dof) << std::endl;
         }
         
         solver.solve();

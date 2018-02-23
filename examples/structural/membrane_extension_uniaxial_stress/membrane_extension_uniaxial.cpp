@@ -34,7 +34,7 @@
 #include "property_cards/isotropic_material_property_card.h"
 #include "boundary_condition/dirichlet_boundary_condition.h"
 #include "base/nonlinear_system.h"
-
+#include "base/real_output_function.h"
 
 // libMesh includes
 #include "libmesh/mesh_generation.h"
@@ -324,6 +324,9 @@ MAST::MembraneExtensionUniaxial::solve(bool if_write_output) {
     this->clear_stresss();
     
     nonlin_sys.solve();
+
+    MAST::RealOutputFunction compliance(MAST::STRUCTURAL_COMPLIANCE);
+    _discipline->add_volume_output(0, compliance);
     
     // evaluate the outputs
     assembly.calculate_outputs(*(_sys->solution));
@@ -339,6 +342,7 @@ MAST::MembraneExtensionUniaxial::solve(bool if_write_output) {
         libMesh::ExodusII_IO(*_mesh).write_equation_systems("output.exo",
                                                             *_eq_sys);
         
+        libMesh::out << "compliance value: " << compliance.get_value() << std::endl;
     }
     
     return *(_sys->solution);

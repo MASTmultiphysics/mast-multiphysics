@@ -58,7 +58,7 @@ namespace MAST {
         /*!
          *    row dimension of the von Karman strain matrix
          */
-        virtual unsigned int n_von_karman_strain_components() {
+        virtual unsigned int n_NONLINEAR_STRAIN_components() {
             return 2;
         }
         
@@ -269,7 +269,7 @@ namespace MAST {
          *   Bmat_vk   = [dw/dx; dw/dy]
          */
         virtual void
-        initialize_von_karman_strain_operator(const unsigned int qp,
+        initialize_NONLINEAR_STRAIN_operator(const unsigned int qp,
                                               const libMesh::FEBase& fe,
                                               RealVectorX& vk_strain,
                                               RealMatrixX& vk_dwdxi_mat,
@@ -281,7 +281,7 @@ namespace MAST {
          *   vk_dwdxi_mat_sens = [dw/dx 0; 0 dw/dy; dw/dy dw/dx]
          */
         virtual void
-        initialize_von_karman_strain_operator_sensitivity(const unsigned int qp,
+        initialize_NONLINEAR_STRAIN_operator_sensitivity(const unsigned int qp,
                                                           const libMesh::FEBase& fe,
                                                           RealMatrixX& vk_dwdxi_mat_sens);
         

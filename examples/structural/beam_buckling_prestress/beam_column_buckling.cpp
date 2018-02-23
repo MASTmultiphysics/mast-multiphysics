@@ -242,7 +242,7 @@ MAST::BeamColumnBucklingAnalysis::init(libMesh::ElemType etype,
     
     // tell the section property about the material property
     _p_card->set_material(*_m_card);
-    _p_card->set_strain(MAST::VON_KARMAN_STRAIN);
+    _p_card->set_strain(MAST::NONLINEAR_STRAIN);
     
     _p_card->init();
     

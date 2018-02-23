@@ -57,7 +57,7 @@ namespace MAST {
         /*!
          *    row dimension of the von Karman strain matrix
          */
-        virtual unsigned int n_von_karman_strain_components() = 0;
+        virtual unsigned int n_NONLINEAR_STRAIN_components() = 0;
         
     protected:
         

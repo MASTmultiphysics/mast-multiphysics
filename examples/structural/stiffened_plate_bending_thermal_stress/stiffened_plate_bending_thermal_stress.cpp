@@ -224,8 +224,8 @@ MAST::StiffenedPlateBendingThermalStress::init(libMesh::ElemType e_type,
     _p_card_plate->set_material(*_m_card);
     _p_card_stiff->set_material(*_m_card);
     if (if_vk) {
-        _p_card_plate->set_strain(MAST::VON_KARMAN_STRAIN);
-        _p_card_stiff->set_strain(MAST::VON_KARMAN_STRAIN);
+        _p_card_plate->set_strain(MAST::NONLINEAR_STRAIN);
+        _p_card_stiff->set_strain(MAST::NONLINEAR_STRAIN);
     }
     
     
@@ -397,7 +397,7 @@ MAST::StiffenedPlateBendingThermalStress::solve(bool if_write_output) {
     
     libmesh_assert(_initialized);
 
-    bool if_vk = (_p_card_plate->strain_type() == MAST::VON_KARMAN_STRAIN);
+    bool if_vk = (_p_card_plate->strain_type() == MAST::NONLINEAR_STRAIN);
     
     // set the number of load steps
     unsigned int

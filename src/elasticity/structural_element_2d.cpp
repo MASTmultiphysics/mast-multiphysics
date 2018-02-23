@@ -84,7 +84,7 @@ initialize_direct_strain_operator(const unsigned int qp,
 
 void
 MAST::StructuralElement2D::
-initialize_von_karman_strain_operator(const unsigned int qp,
+initialize_NONLINEAR_STRAIN_operator(const unsigned int qp,
                                       const libMesh::FEBase& fe,
                                       RealVectorX& vk_strain,
                                       RealMatrixX& vk_dwdxi_mat,
@@ -133,7 +133,7 @@ initialize_von_karman_strain_operator(const unsigned int qp,
 
 void
 MAST::StructuralElement2D::
-initialize_von_karman_strain_operator_sensitivity(const unsigned int qp,
+initialize_NONLINEAR_STRAIN_operator_sensitivity(const unsigned int qp,
                                                   const libMesh::FEBase& fe,
                                                   RealMatrixX &vk_dwdxi_mat_sens) {
     
@@ -234,7 +234,7 @@ MAST::StructuralElement2D::calculate_stress(bool request_derivative,
     n_phi    = (unsigned int)fe->n_shape_functions(),
     n1       = this->n_direct_strain_components(),
     n2       = 6*n_phi,
-    n3       = this->n_von_karman_strain_components();
+    n3       = this->n_NONLINEAR_STRAIN_components();
     
     Real
     z     =  0.,
@@ -290,7 +290,7 @@ MAST::StructuralElement2D::calculate_stress(bool request_derivative,
     &h_off  =  _property.get<MAST::FieldFunction<Real> >("off");
     
     
-    bool if_vk = (_property.strain_type() == MAST::VON_KARMAN_STRAIN),
+    bool if_vk = (_property.strain_type() == MAST::NONLINEAR_STRAIN),
     if_bending = (_property.bending_model(_elem, fe->get_fe_type()) != MAST::NO_BENDING);
     
     // a reference to the stress output data structure
@@ -347,7 +347,7 @@ MAST::StructuralElement2D::calculate_stress(bool request_derivative,
             // von Karman strain
             if (if_vk) {  // get the vonKarman strain operator if needed
                 
-                this->initialize_von_karman_strain_operator(qp,
+                this->initialize_NONLINEAR_STRAIN_operator(qp,
                                                             *fe,
                                                             strain_vk,
                                                             vk_dwdxi_mat,
@@ -545,7 +545,7 @@ MAST::StructuralElement2D::internal_residual (bool request_jacobian,
     n_phi    = (unsigned int)_fe->get_phi().size(),
     n1       = this->n_direct_strain_components(),
     n2       =6*n_phi,
-    n3       = this->n_von_karman_strain_components();
+    n3       = this->n_NONLINEAR_STRAIN_components();
     
     RealMatrixX
     material_A_mat,
@@ -577,7 +577,7 @@ MAST::StructuralElement2D::internal_residual (bool request_jacobian,
     Bmat_bend.reinit(n1, _system.n_vars(), n_phi);
     Bmat_vk.reinit(n3, _system.n_vars(), n_phi); // only dw/dx and dw/dy
     
-    bool if_vk = (_property.strain_type() == MAST::VON_KARMAN_STRAIN),
+    bool if_vk = (_property.strain_type() == MAST::NONLINEAR_STRAIN),
     if_bending = (_property.bending_model(_elem, _fe->get_fe_type()) != MAST::NO_BENDING);
     
     std::auto_ptr<MAST::FieldFunction<RealMatrixX > >
@@ -673,7 +673,7 @@ MAST::StructuralElement2D::internal_residual_sensitivity (bool request_jacobian,
     n_phi    = (unsigned int)_fe->get_phi().size(),
     n1       = this->n_direct_strain_components(),
     n2       =6*n_phi,
-    n3       = this->n_von_karman_strain_components();
+    n3       = this->n_NONLINEAR_STRAIN_components();
 
     RealMatrixX
     material_A_mat,
@@ -702,7 +702,7 @@ MAST::StructuralElement2D::internal_residual_sensitivity (bool request_jacobian,
     Bmat_bend.reinit(n1, _system.n_vars(), n_phi);
     Bmat_vk.reinit(n3, _system.n_vars(), n_phi); // only dw/dx and dw/dy
     
-    bool if_vk = (_property.strain_type() == MAST::VON_KARMAN_STRAIN),
+    bool if_vk = (_property.strain_type() == MAST::NONLINEAR_STRAIN),
     if_bending = (_property.bending_model(_elem, _fe->get_fe_type()) != MAST::NO_BENDING);
     
     std::auto_ptr<MAST::FieldFunction<RealMatrixX > >
@@ -797,7 +797,7 @@ internal_residual_jac_dot_state_sensitivity (RealMatrixX& jac) {
     n_phi = (unsigned int)_fe->get_phi().size(),
     n1    = this->n_direct_strain_components(),
     n2    = 6*n_phi,
-    n3    = this->n_von_karman_strain_components();
+    n3    = this->n_NONLINEAR_STRAIN_components();
     
     RealMatrixX
     material_A_mat,
@@ -822,7 +822,7 @@ internal_residual_jac_dot_state_sensitivity (RealMatrixX& jac) {
     Bmat_bend.reinit(n1, _system.n_vars(), n_phi);
     Bmat_vk.reinit(n3, _system.n_vars(), n_phi);
     
-    bool if_vk = (_property.strain_type() == MAST::VON_KARMAN_STRAIN),
+    bool if_vk = (_property.strain_type() == MAST::NONLINEAR_STRAIN),
     if_bending = (_property.bending_model(_elem, _fe->get_fe_type()) != MAST::NO_BENDING);
     
     // without the nonlinear strain, this matrix is zero.
@@ -864,12 +864,12 @@ internal_residual_jac_dot_state_sensitivity (RealMatrixX& jac) {
 
             if (if_vk) {  // get the vonKarman strain operator if needed
                 
-                this->initialize_von_karman_strain_operator(qp,
+                this->initialize_NONLINEAR_STRAIN_operator(qp,
                                                             *_fe,
                                                             vec1_n1, // epsilon_vk
                                                             vk_dwdxi_mat,
                                                             Bmat_vk);
-                this->initialize_von_karman_strain_operator_sensitivity(qp,
+                this->initialize_NONLINEAR_STRAIN_operator_sensitivity(qp,
                                                                         *_fe,
                                                                         vk_dwdxi_mat_sens);
                 
@@ -1015,7 +1015,7 @@ MAST::StructuralElement2D::_internal_residual_operation
         // in it for the next operation
         vec2_n1.setZero();
         if (if_vk)  { // get the vonKarman strain operator if needed
-            this->initialize_von_karman_strain_operator(qp,
+            this->initialize_NONLINEAR_STRAIN_operator(qp,
                                                         fe,
                                                         vec2_n1, // epsilon_vk
                                                         vk_dwdxi_mat,
@@ -1183,14 +1183,14 @@ _linearized_geometric_stiffness_sensitivity_with_static_solution
     stress_l(1,1) = vec2_n1(1); // sigma_yy
     
     // get the von Karman operator matrix
-    this->initialize_von_karman_strain_operator(qp,
+    this->initialize_NONLINEAR_STRAIN_operator(qp,
                                                 fe,
                                                 vec2_n1, // epsilon_vk
                                                 vk_dwdxi_mat,
                                                 Bmat_vk);
     
     // sensitivity of the vk_dwdxi matrix due to solution sensitivity
-    this->initialize_von_karman_strain_operator_sensitivity(qp,
+    this->initialize_NONLINEAR_STRAIN_operator_sensitivity(qp,
                                                             fe,
                                                             vk_dwdxi_mat);
     
@@ -1274,7 +1274,7 @@ MAST::StructuralElement2D::prestress_residual (bool request_jacobian,
     n_phi  = (unsigned int)_fe->get_phi().size(),
     n1     = this->n_direct_strain_components(),
     n2     = 6*n_phi,
-    n3     = this->n_von_karman_strain_components();
+    n3     = this->n_NONLINEAR_STRAIN_components();
     
     RealMatrixX
     mat2_n2n2     = RealMatrixX::Zero(n2,n2),
@@ -1299,7 +1299,7 @@ MAST::StructuralElement2D::prestress_residual (bool request_jacobian,
     Bmat_bend.reinit(n1, _system.n_vars(), n_phi);
     Bmat_vk.reinit(n3, _system.n_vars(), n_phi); // only dw/dx and dw/dy
     
-    bool if_vk = (_property.strain_type() == MAST::VON_KARMAN_STRAIN),
+    bool if_vk = (_property.strain_type() == MAST::NONLINEAR_STRAIN),
     if_bending = (_property.bending_model(_elem, _fe->get_fe_type()) != MAST::NO_BENDING);
     
     std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
@@ -1326,7 +1326,7 @@ MAST::StructuralElement2D::prestress_residual (bool request_jacobian,
             _bending_operator->initialize_bending_strain_operator(*_fe, qp, Bmat_bend);
             
             if (if_vk)  // get the vonKarman strain operator if needed
-                this->initialize_von_karman_strain_operator(qp,
+                this->initialize_NONLINEAR_STRAIN_operator(qp,
                                                             *_fe,
                                                             vec2_n1,
                                                             vk_dwdxi_mat,
@@ -1394,7 +1394,7 @@ MAST::StructuralElement2D::prestress_residual_sensitivity (bool request_jacobian
     n_phi = (unsigned int)_fe->get_phi().size(),
     n1    = this->n_direct_strain_components(),
     n2    = 6*n_phi,
-    n3    = this->n_von_karman_strain_components();
+    n3    = this->n_NONLINEAR_STRAIN_components();
     
     RealMatrixX
     mat2_n2n2     = RealMatrixX::Zero(n2,n2),
@@ -1419,7 +1419,7 @@ MAST::StructuralElement2D::prestress_residual_sensitivity (bool request_jacobian
     Bmat_bend.reinit(n1, _system.n_vars(), n_phi);
     Bmat_vk.reinit(n3, _system.n_vars(), n_phi); // only dw/dx and dw/dy
     
-    bool if_vk = (_property.strain_type() == MAST::VON_KARMAN_STRAIN),
+    bool if_vk = (_property.strain_type() == MAST::NONLINEAR_STRAIN),
     if_bending = (_property.bending_model(_elem, _fe->get_fe_type()) != MAST::NO_BENDING);
     
     std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
@@ -1452,7 +1452,7 @@ MAST::StructuralElement2D::prestress_residual_sensitivity (bool request_jacobian
             _bending_operator->initialize_bending_strain_operator(*_fe, qp, Bmat_bend);
             
             if (if_vk)  // get the vonKarman strain operator if needed
-                this->initialize_von_karman_strain_operator(qp,
+                this->initialize_NONLINEAR_STRAIN_operator(qp,
                                                             *_fe,
                                                             vec2_n1,
                                                             vk_dwdxi_mat,
@@ -1699,7 +1699,7 @@ MAST::StructuralElement2D::thermal_residual (bool request_jacobian,
     const std::vector<libMesh::Point>& xyz = _fe->get_xyz();
     const unsigned int n_phi = (unsigned int)_fe->get_phi().size();
     const unsigned int n1= this->n_direct_strain_components(), n2=6*n_phi,
-    n3 = this->n_von_karman_strain_components();
+    n3 = this->n_NONLINEAR_STRAIN_components();
     RealMatrixX
     material_exp_A_mat,
     material_exp_B_mat,
@@ -1726,7 +1726,7 @@ MAST::StructuralElement2D::thermal_residual (bool request_jacobian,
     Bmat_bend.reinit(n1, _system.n_vars(), n_phi);
     Bmat_vk.reinit(n3, _system.n_vars(), n_phi); // only dw/dx and dw/dy
     
-    bool if_vk = (_property.strain_type() == MAST::VON_KARMAN_STRAIN),
+    bool if_vk = (_property.strain_type() == MAST::NONLINEAR_STRAIN),
     if_bending = (_property.bending_model(_elem, _fe->get_fe_type()) != MAST::NO_BENDING);
     
     std::auto_ptr<MAST::FieldFunction<RealMatrixX > >
@@ -1775,7 +1775,7 @@ MAST::StructuralElement2D::thermal_residual (bool request_jacobian,
             // von Karman strain
             if (if_vk) {
                 // get the vonKarman strain operator if needed
-                this->initialize_von_karman_strain_operator(qp,
+                this->initialize_NONLINEAR_STRAIN_operator(qp,
                                                             *_fe,
                                                             vec2_n1, // epsilon_vk
                                                             vk_dwdxi_mat,
@@ -1824,7 +1824,7 @@ thermal_residual_sensitivity (bool request_jacobian,
     const std::vector<libMesh::Point>& xyz = _fe->get_xyz();
     const unsigned int n_phi = (unsigned int)_fe->get_phi().size();
     const unsigned int n1= this->n_direct_strain_components(), n2=6*n_phi,
-    n3 = this->n_von_karman_strain_components();
+    n3 = this->n_NONLINEAR_STRAIN_components();
     RealMatrixX
     material_exp_A_mat,
     material_exp_B_mat,
@@ -1851,7 +1851,7 @@ thermal_residual_sensitivity (bool request_jacobian,
     Bmat_bend.reinit(n1, _system.n_vars(), n_phi);
     Bmat_vk.reinit(n3, _system.n_vars(), n_phi); // only dw/dx and dw/dy
     
-    bool if_vk = (_property.strain_type() == MAST::VON_KARMAN_STRAIN),
+    bool if_vk = (_property.strain_type() == MAST::NONLINEAR_STRAIN),
     if_bending = (_property.bending_model(_elem, _fe->get_fe_type()) != MAST::NO_BENDING);
     
     std::auto_ptr<MAST::FieldFunction<RealMatrixX > >
@@ -1926,7 +1926,7 @@ thermal_residual_sensitivity (bool request_jacobian,
             // von Karman strain
             if (if_vk) {
                 // get the vonKarman strain operator if needed
-                this->initialize_von_karman_strain_operator(qp,
+                this->initialize_NONLINEAR_STRAIN_operator(qp,
                                                             *_fe,
                                                             vec2_n1, // epsilon_vk
                                                             vk_dwdxi_mat,
@@ -2105,7 +2105,7 @@ piston_theory_residual(bool request_jacobian,
         // get the operators for dw/dx and dw/dy to calculate the
         // normal velocity. We will use the von Karman strain operators
         // for this
-        this->initialize_von_karman_strain_operator(qp,
+        this->initialize_NONLINEAR_STRAIN_operator(qp,
                                                     *_fe,
                                                     dummy,
                                                     dwdx,
@@ -2285,7 +2285,7 @@ piston_theory_residual_sensitivity(bool request_jacobian,
         // get the operators for dw/dx and dw/dy to calculate the
         // normal velocity. We will use the von Karman strain operators
         // for this
-        this->initialize_von_karman_strain_operator(qp,
+        this->initialize_NONLINEAR_STRAIN_operator(qp,
                                                     *_fe,
                                                     dummy,
                                                     dwdx,

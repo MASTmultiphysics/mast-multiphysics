@@ -366,7 +366,7 @@ MAST::PlateBendingSizingOptimization::init(GetPot& infile,
     
     // tell the section property about the material property
     _p_card->set_material(*_m_card);
-    if (if_vk) _p_card->set_strain(MAST::VON_KARMAN_STRAIN);
+    if (if_vk) _p_card->set_strain(MAST::NONLINEAR_STRAIN);
     
     _discipline->set_property_for_subdomain(0, *_p_card);
     
@@ -563,7 +563,7 @@ MAST::PlateBendingSizingOptimization::evaluate(const std::vector<Real>& dvars,
     //////////////////////////////////////////////////////////////////////
     // now solve using appropriate number of load steps this load step
     //////////////////////////////////////////////////////////////////////
-    bool if_vk = (_p_card->strain_type() == MAST::VON_KARMAN_STRAIN);
+    bool if_vk = (_p_card->strain_type() == MAST::NONLINEAR_STRAIN);
     
     // set the number of load steps
     unsigned int

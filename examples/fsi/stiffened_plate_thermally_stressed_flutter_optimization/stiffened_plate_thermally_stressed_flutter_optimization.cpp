@@ -747,7 +747,7 @@ init(GetPot &infile,
     
     // tell the section property about the material property
     _p_card_plate->set_material(*_m_card);
-    //if (if_nonlin) _p_card_plate->set_strain(MAST::VON_KARMAN_STRAIN);
+    //if (if_nonlin) _p_card_plate->set_strain(MAST::NONLINEAR_STRAIN);
 
     _structural_discipline->set_property_for_subdomain(0, *_p_card_plate);
 
@@ -832,7 +832,7 @@ init(GetPot &infile,
         
         // tell the section property about the material property
         _p_card_stiff[i]->set_material(*_m_card);
-        //if (if_nonlin) _p_card_stiff[i]->set_strain(MAST::VON_KARMAN_STRAIN);
+        //if (if_nonlin) _p_card_stiff[i]->set_strain(MAST::NONLINEAR_STRAIN);
         
         _p_card_stiff[i]->init();
         
@@ -966,9 +966,9 @@ init(GetPot &infile,
     // now set the nonlinear strain, if that has been requested
     if (if_nonlin) {
      
-        _p_card_plate->set_strain(MAST::VON_KARMAN_STRAIN);
+        _p_card_plate->set_strain(MAST::NONLINEAR_STRAIN);
         for (unsigned int i=0; i<_n_stiff; i++)
-            _p_card_stiff[i]->set_strain(MAST::VON_KARMAN_STRAIN);
+            _p_card_stiff[i]->set_strain(MAST::NONLINEAR_STRAIN);
     }
     
     // Get the number of converged eigen pairs.
@@ -1296,7 +1296,7 @@ namespace MAST {
             // now do the solve
             libmesh_assert(_obj._initialized);
             
-            bool if_vk = (_obj._p_card_plate->strain_type() == MAST::VON_KARMAN_STRAIN);
+            bool if_vk = (_obj._p_card_plate->strain_type() == MAST::NONLINEAR_STRAIN);
             
             ///////////////////////////////////////////////////////////////
             // first, solve the quasi-steady problem
