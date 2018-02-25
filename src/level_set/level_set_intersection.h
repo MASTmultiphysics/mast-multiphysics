@@ -40,6 +40,8 @@ namespace MAST {
         OPPOSITE_EDGES,         // level set passes through two opposite edges
         OPPOSITE_NODES,         // level set passes through diagonally opposite nodes
         NODE_AND_EDGE,          // level set passes through a node and edge
+        TWO_ADJACENT_EDGES,     // level set passes through four edges
+        NODE_AND_TWO_EDGES,     // level set passes through a node and two edges
         NO_INTERSECTION
     };
     

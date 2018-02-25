@@ -127,10 +127,12 @@ MAST::LevelSetIntersection::if_elem_has_boundary() const {
 bool
 MAST::LevelSetIntersection::if_intersection_through_elem() const {
     
-    return ((_mode == MAST::OPPOSITE_EDGES) ||
-            (_mode == MAST::ADJACENT_EDGES) ||
-            (_mode == MAST::OPPOSITE_NODES) ||
-            (_mode == MAST::NODE_AND_EDGE));
+    return ((_mode == MAST::OPPOSITE_EDGES)      ||
+            (_mode == MAST::ADJACENT_EDGES)      ||
+            (_mode == MAST::OPPOSITE_NODES)      ||
+            (_mode == MAST::NODE_AND_EDGE)       ||
+            (_mode == MAST::NODE_AND_TWO_EDGES)  ||
+            (_mode == MAST::TWO_ADJACENT_EDGES));
 }
 
 
@@ -562,8 +564,18 @@ MAST::LevelSetIntersection::_find_quad4_intersections
             n_intersection += *it;
     }
 
-    
-    libmesh_assert_equal_to(n_intersection, 2);
+    //
+    // identify the sets of intersections, which will be processed
+    // individually for creation of the subelements.
+    // The current implementation of linear quad4s only permits one intersection
+    // per edge. This will have to be chanegd for high-order elements.
+    //
+    // As a result of this assumption, the following should hold:
+    //   -- OPPOSITE_EDGES: only two intersections can exist
+    //   -- OPPOSITE_NODES: only two nodes can intersect that ways
+    //   -- NODE_AND_EDGE: two such intersections can occur
+    //   -- ADJACENT_EDGES: two such intersections can occur
+    //
     
     // now identify which approch to use for creation of the sub-elements.
     // one case is where two adjacent sides of the element have a
@@ -571,50 +583,116 @@ MAST::LevelSetIntersection::_find_quad4_intersections
     ref_side = 0,
     ref_node = 0;
     
-    for (unsigned int i=0; i<n_nodes; i++) {
-        
-        if (side_intersection[i].first &&
-            side_intersection[(i+1)%n_nodes].first) {
-            // found adjacent mode with ref edge i
-            _mode    = MAST::ADJACENT_EDGES;
-            ref_side = i;
+    switch (n_intersection) {
+        case 2: {
+            for (unsigned int i=0; i<n_nodes; i++) {
+                
+                if (side_intersection[i].first &&
+                    side_intersection[(i+1)%n_nodes].first) {
+                    // found adjacent mode with ref edge i
+                    _mode    = MAST::ADJACENT_EDGES;
+                    ref_side = i;
+                    break;
+                }
+                else if (side_intersection[i].first &&
+                         side_intersection[(i+2)%n_nodes].first) {
+                    // found adjacent mode with ref edge i
+                    _mode    = MAST::OPPOSITE_EDGES;
+                    ref_side = i;
+                    break;
+                }
+                else if (node_intersection[i] &&
+                         node_intersection[(i+2)%n_nodes]) {
+                    // found intersection on two opposite nodes
+                    _mode    = MAST::OPPOSITE_NODES;
+                    ref_node = i;
+                    break;
+                }
+                else if (node_intersection[i] &&
+                         side_intersection[(i+1)%n_nodes].first) {
+                    // found intersection on node and edge
+                    _mode    = MAST::NODE_AND_EDGE;
+                    ref_node = i;
+                    ref_side = i+1;
+                }
+                else if (node_intersection[i] &&
+                         side_intersection[(i+2)%n_nodes].first) {
+                    // found intersection on node and edge
+                    _mode    = MAST::NODE_AND_EDGE;
+                    ref_node = i;
+                    ref_side = i+2;
+                }
+            }
+        }
             break;
+            
+        case 3: {
+            // this must be a node with two edge intersection
+            // we first identify the node
+            for (unsigned int i=0; i<n_nodes; i++) {
+                if (node_intersection[i] &&
+                    side_intersection[(i+1)%n_nodes].first &&
+                    side_intersection[(i+2)%n_nodes].first) {
+                    
+                    _mode    = NODE_AND_TWO_EDGES;
+                    ref_node = i;
+                    ref_side = i+1;
+                    break;
+                }
+            }
         }
-        else if (side_intersection[i].first &&
-                 side_intersection[(i+2)%n_nodes].first) {
-            // found adjacent mode with ref edge i
-            _mode    = MAST::OPPOSITE_EDGES;
-            ref_side = i;
             break;
+            
+        case 4: {
+            // this must be two adjacent edge intersections, where all four edges
+            // should have intersections
+            if (side_intersection[0].first &&
+                side_intersection[1].first &&
+                side_intersection[2].first &&
+                side_intersection[3].first) {
+                
+                _mode    = TWO_ADJACENT_EDGES;
+                
+                //
+                // this means that all four edges have an intersection, one
+                // per edge. So, now we identify how to connect the edges.
+                // The choices are:  intersection in sides 0-1 and 2-3, or
+                // intersction in side 0-3 and 1-2.
+                //
+                // For this, we need to figure out the gradient. We will
+                // do so by checking the value of the level-set function
+                // in the middle of the element. If it is the same sign as
+                // the zero-th node, then the intersection will be 0-1 and 2-3,
+                // if it is the opposite sign, then the intersection is
+                // 0-3 and 1-2.
+                //
+                
+                Real mid_phi = 0.;
+                phi(e.centroid(), t, mid_phi);
+                it0 = node_phi_vals.find(e.node_ptr(0));
+                v0  = it0->second.first;
+
+                if (mid_phi * v0 > 0.) // same sign
+                    ref_side = 0;
+                else
+                    ref_side = 1;
+            }
         }
-        else if (node_intersection[i] &&
-                 node_intersection[(i+2)%n_nodes]) {
-            // found intersection on two opposite nodes
-            _mode    = MAST::OPPOSITE_NODES;
-            ref_node = i;
             break;
-        }
-        else if (node_intersection[i] &&
-                 side_intersection[(i+1)%n_nodes].first) {
-            // found intersection on node and edge
-            _mode    = MAST::NODE_AND_EDGE;
-            ref_node = i;
-            ref_side = i+1;
-        }
-        else if (node_intersection[i] &&
-                 side_intersection[(i+2)%n_nodes].first) {
-            // found intersection on node and edge
-            _mode    = MAST::NODE_AND_EDGE;
-            ref_node = i;
-            ref_side = i+2;
-        }
+            
+        default:
+            // if it gets here, then we have a mode that we have not
+            // created
+            assert(false);
     }
     
     // make sure that atleast one of the modes was found
-    libmesh_assert(_mode == MAST::ADJACENT_EDGES ||
-                   _mode == MAST::OPPOSITE_EDGES ||
-                   _mode == MAST::OPPOSITE_NODES ||
-                   _mode == MAST::NODE_AND_EDGE);
+    libmesh_assert(_mode == MAST::ADJACENT_EDGES     ||
+                   _mode == MAST::OPPOSITE_EDGES     ||
+                   _mode == MAST::OPPOSITE_NODES     ||
+                   _mode == MAST::NODE_AND_EDGE      ||
+                   _mode == MAST::NODE_AND_TWO_EDGES ||
+                   _mode == MAST::TWO_ADJACENT_EDGES);
     
     ///////////////////////////////////////////////////////
     // now create the sub elements
@@ -651,7 +729,7 @@ MAST::LevelSetIntersection::_find_quad4_intersections
     s;
 
     bool
-    node0_positive = false;
+    ref_side_node0_positive = false;
 
     // used this to set unique node ids, since some of libMesh's operations
     // depend on valid and unique ids for nodes.
@@ -665,9 +743,12 @@ MAST::LevelSetIntersection::_find_quad4_intersections
     // opposite nodes. In this case, the current nodes are used for
     // the new elements.
     //////////////////////////////////////////////////////////////////
-    if (_mode == MAST::ADJACENT_EDGES ||
-        _mode == MAST::OPPOSITE_EDGES ||
-        _mode == MAST::NODE_AND_EDGE) {
+    if (_mode == MAST::ADJACENT_EDGES     ||
+        _mode == MAST::OPPOSITE_EDGES     ||
+        _mode == MAST::NODE_AND_EDGE      ||
+        _mode == MAST::TWO_ADJACENT_EDGES ||
+        _mode == MAST::NODE_AND_EDGE      ||
+        _mode == MAST::NODE_AND_TWO_EDGES ) {
         
         xi_ref = side_intersection[ref_side%n_nodes].second;
         s.reset(e.side_ptr(ref_side%n_nodes).release());
@@ -691,7 +772,7 @@ MAST::LevelSetIntersection::_find_quad4_intersections
         v0  = it0->second.first;
         
         if (v0 > 0.)
-            node0_positive = true;
+            ref_side_node0_positive = true;
     }
     else {
         
@@ -699,7 +780,7 @@ MAST::LevelSetIntersection::_find_quad4_intersections
         v0  = it0->second.first;
         
         if (v0 > 0.)
-            node0_positive = true;
+            ref_side_node0_positive = true;
 
     }
 
@@ -767,7 +848,7 @@ MAST::LevelSetIntersection::_find_quad4_intersections
             
             _elem_sides_on_interface[e2] = 3;
             
-            if (node0_positive) {
+            if (ref_side_node0_positive) {
                 
                 _positive_phi_elems.push_back(e2);
                 _negative_phi_elems.push_back(e1);
@@ -878,7 +959,7 @@ MAST::LevelSetIntersection::_find_quad4_intersections
             
             _elem_sides_on_interface[e3] = 3;
             
-            if (node0_positive) {
+            if (ref_side_node0_positive) {
                 
                 _positive_phi_elems.push_back(e2);
                 _positive_phi_elems.push_back(e3);
@@ -944,7 +1025,7 @@ MAST::LevelSetIntersection::_find_quad4_intersections
                 
                 
                 // node0 is the first node of ref_side
-                if (node0_positive) {
+                if (ref_side_node0_positive) {
                     
                     _positive_phi_elems.push_back(e1);
                     _negative_phi_elems.push_back(e2);
@@ -993,7 +1074,7 @@ MAST::LevelSetIntersection::_find_quad4_intersections
                 _elem_sides_on_interface[e2] = 3;
                 
                 
-                if (node0_positive) {
+                if (ref_side_node0_positive) {
                     
                     _positive_phi_elems.push_back(e2);
                     _negative_phi_elems.push_back(e1);
@@ -1053,7 +1134,7 @@ MAST::LevelSetIntersection::_find_quad4_intersections
             
             _elem_sides_on_interface[e2] = 2;
             
-            if (node0_positive) {
+            if (ref_side_node0_positive) {
                 
                 _positive_phi_elems.push_back(e1);
                 _negative_phi_elems.push_back(e2);
@@ -1066,6 +1147,241 @@ MAST::LevelSetIntersection::_find_quad4_intersections
         }
             break;
             
+            
+        case MAST::NODE_AND_TWO_EDGES: {
+            
+            // create a new node at each intersection: second on ref_side+1
+            xi_other = side_intersection[(ref_side+1)%n_nodes].second;
+            s.reset(e.side_ptr((ref_side+1)%n_nodes).release());
+            p  = s->point(0) + xi_other * (s->point(1) - s->point(0));
+            nd = new libMesh::Node(p);
+            nd->set_id(_max_mesh_node_id + node_id_incr);
+            node_id_incr++;
+            _new_nodes.push_back(nd);
+            side_p0 = side_nondim_points[(ref_side+1)%n_nodes].first;
+            side_p1 = side_nondim_points[(ref_side+1)%n_nodes].second;
+            _node_local_coords[nd] = side_p0 + xi_other * (side_p1 - side_p0);
+
+            
+            libMesh::Elem
+            *e_p = const_cast<libMesh::Elem*>(&e),
+            *e1  = libMesh::Elem::build(libMesh::TRI3,  e_p).release(),
+            *e2  = libMesh::Elem::build(libMesh::TRI3,  e_p).release(),
+            *e3  = libMesh::Elem::build(libMesh::TRI3,  e_p).release(),
+            *e4  = libMesh::Elem::build(libMesh::TRI3,  e_p).release();
+            
+            _new_elems.push_back(e1);
+            _new_elems.push_back(e2);
+            _new_elems.push_back(e3);
+            _new_elems.push_back(e4);
+            
+            // create the elements. We create the elements such that:
+            //     node(0) = elem node (ref_node)
+            //     node(1) = elem node (ref_node+1)%n_nodes
+            //     node(2) = new node on ref_side%n_nodes
+            // this way, the element has the same orientation as the original
+            // element and the sides have the following association:
+            //     side(0) = coincident with ref_node of original element
+            //     side(1) = coincident side with ref_node+1 of original element
+            //     side(2) = coincident side with level-set interface
+            
+            e1->set_node(0) = const_cast<libMesh::Node*>(e.node_ptr((ref_node)%n_nodes));
+            e1->set_node(1) = const_cast<libMesh::Node*>(e.node_ptr((ref_node+1)%n_nodes));
+            e1->set_node(2) = _new_nodes[0];
+            
+            _elem_sides_on_interface[e1] = 2;
+            
+            
+            // create the elements. We create the elements such that:
+            //     node(0) = elem node (ref_node)
+            //     node(1) = new node on (ref_side+1)%n_nodes
+            //     node(2) = elem node (ref_node+3)%n_nodes
+            // this way, the element has the same orientation as the original
+            // element and the sides have the following association:
+            //     side(0) = coincident side with level-set interface
+            //     side(1) = coincident side with (ref_side+1)%n_nodes of original element
+            //     side(2) = coincident side with (ref_side+2)%n_nodes of original element
+            
+            e2->set_node(0) = const_cast<libMesh::Node*>(e.node_ptr((ref_node)%n_nodes));
+            e2->set_node(1) = _new_nodes[1];
+            e2->set_node(2) = const_cast<libMesh::Node*>(e.node_ptr((ref_node+3)%n_nodes));
+            
+            _elem_sides_on_interface[e2] = 0;
+            
+            
+            // create a third element and set its nodes so that:
+            //     node(0) = elem node ref_node
+            //     node(1) = new node on (ref_side)%n_nodes
+            //     node(2) = elem node (ref_node+2)%n_nodes
+            // this way, the element has the same orientation as the original
+            // element and the sides have the following association:
+            //     side(0) = coincident side with level-set interface
+            //     side(1) = coincident side with (ref_side)%n_sides of original element
+            //     side(2) = diagonal between elem nodes (ref_node) and (ref_node+2)%n_sides
+            
+            e3->set_node(0) = const_cast<libMesh::Node*>(e.node_ptr((ref_node)%n_nodes));
+            e3->set_node(1) = _new_nodes[0];
+            e3->set_node(2) = const_cast<libMesh::Node*>(e.node_ptr((ref_node+2)%n_nodes));
+            
+            _elem_sides_on_interface[e3] = 0;
+
+            
+            // create a fourth element and set its nodes so that:
+            //     node(0) = elem node ref_node
+            //     node(1) = new node on (ref_side)%n_nodes
+            //     node(2) = elem node (ref_node+2)%n_nodes
+            // this way, the element has the same orientation as the original
+            // element and the sides have the following association:
+            //     side(0) = coincident side with level-set interface
+            //     side(1) = coincident side with (ref_side)%n_sides of original element
+            //     side(2) = diagonal between elem nodes (ref_node) and (ref_node+2)%n_sides
+            
+            e4->set_node(0) = const_cast<libMesh::Node*>(e.node_ptr((ref_node)%n_nodes));
+            e4->set_node(1) = const_cast<libMesh::Node*>(e.node_ptr((ref_node+2)%n_nodes));
+            e4->set_node(2) = _new_nodes[1];
+            
+            _elem_sides_on_interface[e4] = 2;
+
+            
+            // node0 is the first node of ref_side
+            if (ref_side_node0_positive) {
+                
+                _positive_phi_elems.push_back(e1);
+                _positive_phi_elems.push_back(e2);
+                _negative_phi_elems.push_back(e3);
+                _negative_phi_elems.push_back(e4);
+            }
+            else {
+                
+                _positive_phi_elems.push_back(e3);
+                _positive_phi_elems.push_back(e4);
+                _negative_phi_elems.push_back(e1);
+                _negative_phi_elems.push_back(e2);
+            }
+        }
+            break;
+            
+        case MAST::TWO_ADJACENT_EDGES: {
+            
+            // create a new node at each intersection: second on ref_side+1
+            for (unsigned int i=1; i<4; i++) {
+                
+                xi_other = side_intersection[(ref_side+i)%n_nodes].second;
+                s.reset(e.side_ptr((ref_side+i)%n_nodes).release());
+                p  = s->point(0) + xi_other * (s->point(1) - s->point(0));
+                nd = new libMesh::Node(p);
+                nd->set_id(_max_mesh_node_id + node_id_incr);
+                node_id_incr++;
+                _new_nodes.push_back(nd);
+                side_p0 = side_nondim_points[(ref_side+i)%n_nodes].first;
+                side_p1 = side_nondim_points[(ref_side+i)%n_nodes].second;
+                _node_local_coords[nd] = side_p0 + xi_other * (side_p1 - side_p0);
+            }
+            
+            // the algorithm of identifying the ref_side always ensures that the
+            // region with xi > x0 on ref_side will be triangular. The other side
+            // will be modeled with two QUAD4 elements
+            
+            libMesh::Elem
+            *e_p = const_cast<libMesh::Elem*>(&e),
+            *e1  = libMesh::Elem::build( libMesh::TRI3, e_p).release(),
+            *e2  = libMesh::Elem::build( libMesh::TRI3, e_p).release(),
+            *e3  = libMesh::Elem::build(libMesh::QUAD4, e_p).release(),
+            *e4  = libMesh::Elem::build(libMesh::QUAD4, e_p).release();
+            
+            _new_elems.push_back(e1);
+            _new_elems.push_back(e2);
+            _new_elems.push_back(e3);
+            _new_elems.push_back(e4);
+
+            // create the elements. We create the elements such that:
+            //     node(0) = new node on ref_side
+            //     node(1) = elem node (ref_side+1)%n_sides
+            //     node(2) = new node on (ref_side+1)%n_sides
+            // this way, the element has the same orientation as the original
+            // element and the sides have the following association:
+            //     side(0) = coincident with ref_side of original element
+            //     side(1) = coincident side with ref_side+1 of original element
+            //     side(2) = coincident side with level-set interface
+            
+            e1->set_node(0) = _new_nodes[0];
+            e1->set_node(1) = const_cast<libMesh::Node*>(e.node_ptr((ref_side+1)%n_nodes));
+            e1->set_node(2) = _new_nodes[1];
+            
+            _elem_sides_on_interface[e1] = 2;
+
+            
+            // create the second element. We create the elements such that:
+            //     node(0) = new node on ref_side+3
+            //     node(1) = new node on (ref_side+2)%n_sides
+            //     node(2) = elem node (ref_side+3)%n_sides
+            // this way, the element has the same orientation as the original
+            // element and the sides have the following association:
+            //     side(0) = coincident with ref_side of original element
+            //     side(1) = coincident side with ref_side+1 of original element
+            //     side(2) = coincident side with level-set interface
+            
+            e2->set_node(0) = _new_nodes[3];
+            e2->set_node(1) = _new_nodes[2];
+            e2->set_node(2) = const_cast<libMesh::Node*>(e.node_ptr((ref_side+3)%n_nodes));
+            
+            _elem_sides_on_interface[e2] = 0;
+
+            
+            // create a third element and set its nodes so that:
+            //     node(0) = elem node ref_side
+            //     node(1) = new node on (ref_side)%n_nodes
+            //     node(2) = new node on (ref_side+2)%n_nodes
+            //     node(3) = new node on (ref_side+3)%n_nodes
+            // this way, the element has the same orientation as the original
+            // element and the sides have the following association:
+            //     side(0) = coincident side with ref_side of original element
+            //     side(1) = new edge connecting new node on ref_side to new node on ref_side+2
+            //     side(2) = coincident side with level-set interface
+            //     side(3) = coincident side with (ref_side+3)%n_sides of original element
+            
+            e3->set_node(0) = const_cast<libMesh::Node*>(e.node_ptr(ref_side));
+            e3->set_node(1) = _new_nodes[0];
+            e3->set_node(2) = _new_nodes[2];
+            e3->set_node(3) = _new_nodes[3];
+            
+            _elem_sides_on_interface[e3] = 2;
+            
+            // create a fourth element and set its nodes so that:
+            //     node(0) = new node on ref_side
+            //     node(1) = new node on ref_side+1
+            //     node(2) = elem node ref_side+2
+            //     node(3) = new node on ref_side+2
+            // this way, the element has the same orientation as the original
+            // element and the sides have the following association:
+            //     side(0) = coincident side with level-set interface
+            //     side(1) = coincident side with (ref_side+1)%n_sides of original element
+            //     side(2) = coincident side with (ref_side+2)%n_sides of original element
+            //     side(3) = new edge connecting new node on ref_side to new node on ref_side+2
+            
+            e4->set_node(0) = _new_nodes[0];
+            e4->set_node(1) = _new_nodes[1];
+            e4->set_node(2) = const_cast<libMesh::Node*>(e.node_ptr((ref_side+2)%n_nodes));
+            e4->set_node(3) = _new_nodes[2];
+            
+            _elem_sides_on_interface[e4] = 0;
+            
+            if (ref_side_node0_positive) {
+                
+                _positive_phi_elems.push_back(e3);
+                _positive_phi_elems.push_back(e4);
+                _negative_phi_elems.push_back(e1);
+                _negative_phi_elems.push_back(e2);
+            }
+            else {
+                
+                _positive_phi_elems.push_back(e1);
+                _positive_phi_elems.push_back(e2);
+                _negative_phi_elems.push_back(e3);
+                _negative_phi_elems.push_back(e4);
+            }
+        }
+            break;
             
         default:
             // should not get here
