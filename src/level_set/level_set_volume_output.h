@@ -142,10 +142,8 @@ namespace MAST {
         }
         
         /*!
-         *    this evaluates all relevant topological sensitivity components on
-         *    the element.
-         *    This is only done on the current element for which this
-         *    object has been initialized.
+         *    This evaluates the contribution to the topology sensitivity on the
+         *    boundary \f$ \int_\Gamma V_n~d\Gamma \f$
          */
         virtual void evaluate_topology_sensitivity(const MAST::FunctionBase& f,
                                                    const MAST::LevelSetIntersection& intersect,

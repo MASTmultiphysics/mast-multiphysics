@@ -311,10 +311,15 @@ namespace MAST {
         }
         
         /*!
-         *    this evaluates all relevant topological sensitivity components on
-         *    the element.
-         *    This is only done on the current element for which this
-         *    object has been initialized.
+         *    This evaluates the contribution to the topology sensitivity on the
+         *    boundary. Given that the integral is nonlinear due to the \f$p-\f$norm,
+         *    the expression is quite involved:
+         *   \f[  \frac{ \frac{1}{p} \left( \int_\Omega (\sigma_{VM}(\Omega))^p ~
+         *    d\Omega \right)^{\frac{1}{p}-1}}{\left(  \int_\Omega ~ d\Omega \right)^{\frac{1}{p}}}
+         *    \int_\Gamma  V_n \sigma_{VM}^p  ~d\Gamma +
+         *    \frac{ \frac{-1}{p} \left( \int_\Omega (\sigma_{VM}(\Omega))^p ~
+         *    d\Omega \right)^{\frac{1}{p}}}{\left(  \int_\Omega ~ d\Omega \right)^{\frac{1+p}{p}}}
+         *    \int_\Gamma  V_n ~d\Gamma \f]
          */
         virtual void
         evaluate_topology_sensitivity(const MAST::FunctionBase& f,
@@ -409,19 +414,43 @@ namespace MAST {
         n_stress_strain_data_for_elem(const libMesh::Elem* e) const;
 
         
+        /*!
+         *   @returns the number of points for which stress-strain data is
+         *   stored for the boundary of element.
+         */
+        unsigned int
+        n_boundary_stress_strain_data_for_elem(const libMesh::Elem* e) const;
+
+        
         
         /*!
          *   add the stress tensor associated with the qp. @returns a reference
          *   to \p Data.
          */
         MAST::StressStrainOutputBase::Data&
-        add_stress_strain_at_qp_location(const libMesh::Elem*,
+        add_stress_strain_at_qp_location(const libMesh::Elem* e,
                                          const unsigned int qp,
                                          const libMesh::Point& quadrature_pt,
                                          const libMesh::Point& physical_pt,
-                                         const RealVectorX& strain,
                                          const RealVectorX& stress,
+                                         const RealVectorX& strain,
                                          Real JxW);
+
+        
+        /*!
+         *   add the stress tensor associated with the \p qp on side \p s of
+         *   element \p e. @returns a reference to \p Data.
+         */
+        MAST::StressStrainOutputBase::Data&
+        add_stress_strain_at_boundary_qp_location(const libMesh::Elem* e,
+                                                  const unsigned int s,
+                                                  const unsigned int qp,
+                                                  const libMesh::Point& quadrature_pt,
+                                                  const libMesh::Point& physical_pt,
+                                                  const RealVectorX& stress,
+                                                  const RealVectorX& strain,
+                                                  Real JxW_Vn);
+        
         
         
         /*!
@@ -475,6 +504,24 @@ namespace MAST {
         (const MAST::FunctionBase& f,
          Real& dsigma_vm_val_df) const;
 
+        
+        /*!
+         *   calculates and returns the sensitivity of von Mises p-norm
+         *   functional for all the elements that this object currently
+         *   stores data for.
+         *   This is defined as
+         *   \f[  \frac{ \frac{1}{p} \left( \int_\Omega (\sigma_{VM}(\Omega))^p ~
+         *    d\Omega \right)^{\frac{1}{p}-1}}{\left(  \int_\Omega ~ d\Omega \right)^{\frac{1}{p}}}
+         *    \int_\Gamma  V_n \sigma_{VM}^p  ~d\Gamma +
+         *    \frac{ \frac{-1}{p} \left( \int_\Omega (\sigma_{VM}(\Omega))^p ~
+         *    d\Omega \right)^{\frac{1}{p}}}{\left(  \int_\Omega ~ d\Omega \right)^{\frac{1+p}{p}}}
+         *    \int_\Gamma  V_n ~d\Gamma \f]
+         */
+        void
+        von_Mises_p_norm_functional_boundary_sensitivity_for_all_elems
+        (const MAST::FunctionBase& f,
+         Real& dsigma_vm_val_df) const;
+
 
         /*!
          *   calculates and returns the sensitivity of von Mises p-norm
@@ -485,7 +532,18 @@ namespace MAST {
         (const MAST::FunctionBase& f,
          const libMesh::dof_id_type e_id,
          Real& dsigma_vm_val_df) const;
+
         
+        /*!
+         *   calculates and returns the boundary sensitivity of von Mises p-norm
+         *   functional for the element \par e.
+         */
+        void
+        von_Mises_p_norm_functional_boundary_sensitivity_for_elem
+        (const MAST::FunctionBase& f,
+         const libMesh::dof_id_type e_id,
+         Real& dsigma_vm_val_df) const;
+
         
 
         /*!
@@ -530,9 +588,15 @@ namespace MAST {
         /*!
          *    vector of stress with the associated location details
          */
-        std::map<const libMesh::dof_id_type, std::vector<MAST::StressStrainOutputBase::Data*> >
+        std::map<const libMesh::dof_id_type, std::vector<MAST::StressStrainOutputBase::Data*>>
         _stress_data;
-        
+
+
+        /*!
+         *    vector of stress with the associated location details
+         */
+        std::map<const libMesh::dof_id_type, std::vector<MAST::StressStrainOutputBase::Data*>>
+        _boundary_stress_data;
     };
 }
 

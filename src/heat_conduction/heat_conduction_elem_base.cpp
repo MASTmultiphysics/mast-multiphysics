@@ -643,7 +643,7 @@ internal_residual_boundary_velocity (const MAST::FunctionBase& p,
     const std::vector<libMesh::Point>& face_normals = fe->get_normals();
 
     const unsigned int
-    n_phi  = _fe->n_shape_functions(),
+    n_phi  = fe->n_shape_functions(),
     dim    = _elem.dim();
     
     RealMatrixX
@@ -679,7 +679,7 @@ internal_residual_boundary_velocity (const MAST::FunctionBase& p,
     for (unsigned int qp=0; qp<JxW_Vn.size(); qp++) {
         
         // initialize the Bmat operator for this term
-        _initialize_mass_fem_operator(qp, *_fe, Bmat);
+        _initialize_mass_fem_operator(qp, *fe, Bmat);
         Bmat.right_multiply(vec1, _sol);
         
         if (_active_sol_function)
@@ -688,7 +688,7 @@ internal_residual_boundary_velocity (const MAST::FunctionBase& p,
         
         (*conductance)(xyz[qp], _time, material_mat);
         
-        _initialize_fem_gradient_operator(qp, dim, *_fe, dBmat);
+        _initialize_fem_gradient_operator(qp, dim, *fe, dBmat);
         
         // calculate the flux for each dimension and add its weighted
         // component to the residual
@@ -783,7 +783,7 @@ velocity_residual_boundary_velocity (const MAST::FunctionBase& p,
     MAST::FEMOperatorMatrix Bmat;
     
     const unsigned int
-    n_phi      = _fe->n_shape_functions(),
+    n_phi      = fe->n_shape_functions(),
     dim        = _elem.dim();
     
     RealMatrixX
@@ -812,7 +812,7 @@ velocity_residual_boundary_velocity (const MAST::FunctionBase& p,
 
     for (unsigned int qp=0; qp<JxW_Vn.size(); qp++) {
         
-        _initialize_mass_fem_operator(qp, *_fe, Bmat);
+        _initialize_mass_fem_operator(qp, *fe, Bmat);
         Bmat.right_multiply(vec1, _sol);               //  B * T
         
         if (_active_sol_function)

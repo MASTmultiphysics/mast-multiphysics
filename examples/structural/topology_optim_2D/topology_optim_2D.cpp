@@ -37,6 +37,7 @@
 #include "base/mesh_field_function.h"
 #include "base/nonlinear_system.h"
 #include "base/transient_assembly.h"
+#include "base/boundary_condition_base.h"
 #include "solver/first_order_newmark_transient_solver.h"
 #include "property_cards/element_property_card_2D.h"
 
@@ -155,6 +156,24 @@ namespace MAST {
     protected:
         MAST::MeshFieldFunction *_phi;
     };
+    
+    
+    class PressureLoad:
+    public MAST::FieldFunction<Real> {
+    public:
+        PressureLoad(Real p, Real l1, Real fraction):
+        MAST::FieldFunction<Real>("pressure"), _p(p), _l1(l1), _frac(fraction) { }
+        virtual ~PressureLoad() {}
+        virtual void operator() (const libMesh::Point& p, const Real t, Real& v) const {
+            if (fabs(p(0)-_l1*0.5) <= 0.5*_frac*_l1) v = _p;
+            else v = 0.;
+        }
+        virtual void derivative(const MAST::FunctionBase& f, const libMesh::Point& p, const Real t, Real& v) const {
+            v = 0.;
+        }
+    protected:
+        Real _p, _l1, _frac;
+    };
 }
 
 
@@ -207,14 +226,14 @@ MAST::Examples::TopologyOptimizationLevelSet2D::initialize_solution() {
     // initialize solution of the level set problem
     Real
     length  = (*_input)(_prefix+"length", "length of domain along x-axis", 0.3),
-    width   = (*_input)(_prefix+ "width", "length of domain along y-axis", 0.3),
+    height  = (*_input)(_prefix+"height", "length of domain along y-axis", 0.3),
     nx      = (*_input)(_prefix+ "initial_level_set_n_holes_in_x",
                         "number of holes along x-direction for initial level-set field", 2.),
     ny      = (*_input)(_prefix+ "initial_level_set_n_holes_in_y",
                         "number of holes along y-direction for initial level-set field", 2.),
-    min_val = std::min(length, width);
+    min_val = std::min(length, height);
 
-    Phi phi(length, width, min_val*0.4, nx, ny);
+    Phi phi(length, height, min_val*0.4, nx, ny);
     _level_set_sys_init->initialize_solution(phi);
 }
 
@@ -463,7 +482,7 @@ MAST::Examples::TopologyOptimizationLevelSet2D::_init_mesh() {
     
     Real
     length  = (*_input)(_prefix+"length", "length of domain along x-axis", 0.3),
-    width   = (*_input)(_prefix+ "width", "length of domain along y-axis", 0.3);
+    height  = (*_input)(_prefix+"height", "length of domain along y-axis", 0.3);
     
     std::string
     t = (*_input)(_prefix+"level_set_elem_type", "type of geometric element in the level set mesh", "quad4");
@@ -482,7 +501,7 @@ MAST::Examples::TopologyOptimizationLevelSet2D::_init_mesh() {
     libMesh::MeshTools::Generation::build_square(*_level_set_mesh,
                                                  nx_divs, ny_divs,
                                                  0, length,
-                                                 0, width,
+                                                 0, height,
                                                  e_type);
 }
 
@@ -547,8 +566,25 @@ MAST::Examples::TopologyOptimizationLevelSet2D::_init_dirichlet_conditions() {
 void
 MAST::Examples::TopologyOptimizationLevelSet2D::_init_loads() {
     
-    _init_pressure_load(true, 2);
-    //_init_temperature_load();
+    Real
+    length  = (*_input)(_prefix+"length", "length of domain along x-axis", 0.3),
+    frac    = (*_input)(_prefix+"load_length_fraction", "fraction of boundary length on which pressure will act", 0.2),
+    p_val   =  (*_input)(_prefix+"pressure", "pressure on side of domain",   2.e4);
+    
+    MAST::PressureLoad
+    *press_f         = new MAST::PressureLoad(p_val, length, frac);
+    
+    // initialize the load
+    MAST::BoundaryConditionBase
+    *p_load          = new MAST::BoundaryConditionBase(MAST::SURFACE_PRESSURE);
+    
+    p_load->add(*press_f);
+    _discipline->add_side_load(2, *p_load);
+    
+    this->register_field_function(*press_f);
+    this->register_loading(*p_load);
+
+    _init_temperature_load();
 }
 
 
@@ -562,7 +598,9 @@ MAST::Examples::TopologyOptimizationLevelSet2D::_init_phi_dvs() {
     
     Real
     tol     = 1.e-6,
-    width   = (*_input)(_prefix+ "width", "length of domain along y-axis", 0.3);
+    length  = (*_input)(_prefix+"length", "length of domain along x-axis", 0.3),
+    height  = (*_input)(_prefix+"height", "length of domain along y-axis", 0.3),
+    frac    = (*_input)(_prefix+"load_length_fraction", "fraction of boundary length on which pressure will act", 0.2);
 
     unsigned int
     dof_id  = 0;
@@ -585,8 +623,10 @@ MAST::Examples::TopologyOptimizationLevelSet2D::_init_phi_dvs() {
         const libMesh::Node& n = **it;
         
         // only if node is not on the upper edge
-        if (std::fabs(n(1)-width) > tol) {
-       
+        if ((std::fabs(n(1)-height) > tol) ||
+            (n(0) > length*.5*(1.+frac))   ||
+            (n(0) < length*.5*(1.-frac))) {
+     
             std::ostringstream oss;
             oss << "dv_" << _n_vars;
             dof_id                     = n.dof_number(0, 0, 0);

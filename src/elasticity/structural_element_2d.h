@@ -130,6 +130,15 @@ namespace MAST {
                                       const MAST::FunctionBase* p,
                                       MAST::StressStrainOutputBase& output);
         
+        /*!
+         *    Calculates the boundary velocity term contributions to the
+         *    sensitivity of stress at the specified boundary of this element.
+         */
+        virtual void
+        calculate_stress_boundary_velocity(const MAST::FunctionBase& p,
+                                           MAST::StressStrainOutputBase& output,
+                                           const unsigned int s,
+                                           const MAST::FieldFunction<RealVectorX>& vel_f);
         
     protected:
         

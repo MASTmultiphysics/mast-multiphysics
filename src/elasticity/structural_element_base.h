@@ -400,6 +400,16 @@ namespace MAST {
         
 
         /*!
+         *    Calculates the boundary velocity term contributions to the
+         *    sensitivity of stress at the specified boundary of this element.
+         */
+        virtual void
+        calculate_stress_boundary_velocity(const MAST::FunctionBase& p,
+                                           MAST::StressStrainOutputBase& output,
+                                           const unsigned int s,
+                                           const MAST::FieldFunction<RealVectorX>& vel_f) = 0;
+
+        /*!
          *    flag for follower forces
          */
         bool follower_forces;
