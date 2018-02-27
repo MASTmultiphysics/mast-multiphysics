@@ -288,8 +288,8 @@ MAST::Examples::TopologyOptimizationLevelSet2D::init_dvar(std::vector<Real>& x,
     xmin.resize(_n_vars);
     xmax.resize(_n_vars);
     
-    std::fill(xmin.begin(), xmin.end(),   -1.);
-    std::fill(xmax.begin(), xmax.end(),    1.);
+    std::fill(xmin.begin(), xmin.end(),   -10.);
+    std::fill(xmax.begin(), xmax.end(),    10.);
     
     // now, check if the user asked to initialize dvs from a previous file
     std::string
