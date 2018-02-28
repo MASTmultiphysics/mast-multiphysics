@@ -89,6 +89,17 @@ namespace MAST {
                                       RealMatrixX& mat_B);
 
         /*!
+         *   performs the element topology sensitivity calculations over \par elem.
+         */
+        virtual void
+        elem_topology_sensitivity_calculations(const MAST::FunctionBase& f,
+                                               bool base_sol,
+                                               const MAST::LevelSetIntersection& intersect,
+                                               const MAST::FieldFunction<RealVectorX>& vel,
+                                               RealMatrixX& mat_A,
+                                               RealMatrixX& mat_B);
+
+        /*!
          *   initializes the object for the geometric element \p elem. This
          *   expects the object to be in a cleared state, so the user should
          *   call \p clear_elem() between successive initializations.

@@ -157,5 +157,9 @@ MAST::DOTOptimizationInterface::optimize() {
         
         ITER = ITER + 1;
     }
+    
+    // write the final iteration to the output
+    _feval->output(0, X, OBJ, G, true);
+    
 #endif  // MAST_ENABLE_DOT 1
 }

@@ -144,6 +144,15 @@ namespace MAST {
          * gets the real and imaginary parts of the ith eigenvalue for the
          * eigenproblem \f$ {\bf A} {\bf x} = \lambda {\bf B} {\bf x} \f$, and
          * the associated eigenvector.
+         */
+        virtual void
+        get_eigenvalue (unsigned int i, Real&  re, Real&  im);
+
+        
+        /*!
+         * gets the real and imaginary parts of the ith eigenvalue for the
+         * eigenproblem \f$ {\bf A} {\bf x} = \lambda {\bf B} {\bf x} \f$, and
+         * the associated eigenvector.
          *
          * The returned eigenvector will be scaled such that it has a unit 
          * inner product with respect to the B matrix.

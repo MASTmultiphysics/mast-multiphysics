@@ -91,7 +91,9 @@ namespace MAST {
         (const MAST::FunctionBase& p,
          const unsigned int s,
          const MAST::FieldFunction<RealVectorX>& vel_f,
-         RealVectorX& local_f) {
+         bool request_jacobian,
+         RealVectorX& local_f,
+         RealMatrixX& local_jac) {
             
             libmesh_assert(false); // to be implemented
         }

@@ -114,7 +114,7 @@ void
 MAST::Examples::StructuralExample2D::_init_section_property_without_offset() {
     
     Real
-    th_v      =  (*_input)(_prefix+"th", "thickness of 2D element",  0.006);
+    th_v      =  (*_input)(_prefix+"th", "thickness of 2D element",  0.001);
     
     MAST::Parameter
     *th       = new MAST::Parameter("th", th_v),

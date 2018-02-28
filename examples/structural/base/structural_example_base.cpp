@@ -619,9 +619,11 @@ MAST::Examples::StructuralExampleBase::modal_solve(std::vector<Real>& eig) {
         if (output) {
             
             // We write the file in the ExodusII format.
+            _sys->solution->swap(*_basis[i]);
             writer->write_timestep(output_name,
                                    *_eq_sys,
                                    i+1, i);
+            _sys->solution->swap(*_basis[i]);
         }
     }
 }

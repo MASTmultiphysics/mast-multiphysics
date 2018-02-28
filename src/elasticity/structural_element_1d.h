@@ -86,9 +86,11 @@ namespace MAST {
          */
         virtual void
         internal_residual_boundary_velocity(const MAST::FunctionBase& p,
-                                            RealVectorX& f,
                                             const unsigned int s,
-                                            const MAST::FieldFunction<RealVectorX>& vel_f) {
+                                            const MAST::FieldFunction<RealVectorX>& vel_f,
+                                            bool request_jacobian,
+                                            RealVectorX& f,
+                                            RealMatrixX& jac) {
             libmesh_assert(false);
         }
 
@@ -192,10 +194,12 @@ namespace MAST {
          *    thermal stresses. this should be implemented for each element type
          */
         virtual void thermal_residual_boundary_velocity(const MAST::FunctionBase& p,
-                                                        RealVectorX& f,
                                                         const unsigned int s,
                                                         const MAST::FieldFunction<RealVectorX>& vel_f,
-                                                        MAST::BoundaryConditionBase& bc) {
+                                                        MAST::BoundaryConditionBase& bc,
+                                                        bool request_jacobian,
+                                                        RealVectorX& f,
+                                                        RealMatrixX& jac) {
             
             libmesh_assert(false); // to be implemented
         }

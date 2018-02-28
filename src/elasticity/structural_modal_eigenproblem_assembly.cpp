@@ -26,6 +26,7 @@
 #include "base/system_initialization.h"
 #include "base/assembly_base.h"
 #include "mesh/local_elem_fe.h"
+#include "level_set/level_set_intersection.h"
 
 
 
@@ -146,6 +147,71 @@ elem_sensitivity_calculations(const MAST::FunctionBase& f,
     if (base_sol)
         e.internal_residual_jac_dot_state_sensitivity(mat_A);
 }
+
+
+
+
+void
+MAST::StructuralModalEigenproblemAssemblyElemOperations::
+elem_topology_sensitivity_calculations(const MAST::FunctionBase& f,
+                                       bool base_sol,
+                                       const MAST::LevelSetIntersection& intersect,
+                                       const MAST::FieldFunction<RealVectorX>& vel,
+                                       RealMatrixX& mat_A,
+                                       RealMatrixX& mat_B) {
+    
+    libmesh_assert(_physics_elem);
+    libmesh_assert(f.is_topology_parameter());
+    const libMesh::Elem& elem = _physics_elem->elem();
+    
+    RealVectorX vec = RealVectorX::Zero(mat_A.rows()); // dummy vector
+    RealMatrixX mat = RealMatrixX::Zero(mat_A.rows(), mat_A.cols()); // dummy matrix
+    mat_A.setZero();
+    mat_B.setZero();
+
+    // sensitivity only exists at the boundary. So, we proceed with calculation
+    // only if this element has an intersection in the interior, or with a side.
+    if (intersect.if_elem_has_boundary()) {
+        
+        MAST::StructuralElementBase& e =
+        dynamic_cast<MAST::StructuralElementBase&>(*_physics_elem);
+        
+        if (intersect.has_side_on_interface(elem)) {
+            e.internal_residual_boundary_velocity(f,
+                                                  intersect.get_side_on_interface(elem),
+                                                  vel,
+                                                  true,
+                                                  vec,
+                                                  mat_A);
+            e.volume_external_residual_boundary_velocity(f,
+                                                         intersect.get_side_on_interface(elem),
+                                                         vel,
+                                                         _discipline->volume_loads(),
+                                                         true,
+                                                         vec,
+                                                         mat_A);
+            
+            e.inertial_residual_boundary_velocity(f,
+                                                  intersect.get_side_on_interface(elem),
+                                                  vel,
+                                                  true,
+                                                  vec,
+                                                  mat_B,
+                                                  mat,
+                                                  mat_A);
+
+            // if the linearization is about a base state, then the sensitivity of
+            // the base state will influence the sensitivity of the Jacobian
+            if (base_sol)
+                libmesh_assert(false); // to be implemented
+                //e.internal_residual_jac_dot_state_sensitivity(mat_A);
+            
+        }
+        
+    }
+}
+
+
 
 
 

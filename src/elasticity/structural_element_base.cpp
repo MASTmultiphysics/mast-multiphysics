@@ -503,6 +503,128 @@ MAST::StructuralElementBase::inertial_residual_sensitivity (const MAST::Function
 
 
 
+void
+MAST::StructuralElementBase::
+inertial_residual_boundary_velocity (const MAST::FunctionBase& p,
+                                     const unsigned int s,
+                                     const MAST::FieldFunction<RealVectorX>& vel_f,
+                                     bool request_jacobian,
+                                     RealVectorX& f,
+                                     RealMatrixX& jac_xddot,
+                                     RealMatrixX& jac_xdot,
+                                     RealMatrixX& jac) {
+    
+    // prepare the side finite element
+    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem).release());
+    fe->init_for_side(_elem, s, true);
+
+    std::vector<Real> JxW_Vn                        = fe->get_JxW();
+    const std::vector<libMesh::Point>& xyz          = fe->get_xyz();
+    const std::vector<std::vector<Real> >& phi      = fe->get_phi();
+    const std::vector<libMesh::Point>& face_normals = fe->get_normals();
+
+    const unsigned int
+    n_phi    = (unsigned int)phi.size(),
+    n_vars   = _system.system().n_vars(),
+    n1       =6,
+    n2       =6*n_phi,
+    dim      =_elem.dim();
+    
+    RealMatrixX
+    material_mat,
+    mat1_n1n2     = RealMatrixX::Zero(n1, n2),
+    mat2_n2n2     = RealMatrixX::Zero(n2, n2),
+    local_jac     = RealMatrixX::Zero(n2, n2);
+    RealVectorX
+    phi_vec    = RealVectorX::Zero(n_phi),
+    vec1_n1    = RealVectorX::Zero(n1),
+    vec2_n2    = RealVectorX::Zero(n2),
+    local_f    = RealVectorX::Zero(n2),
+    vel        = RealVectorX::Zero(dim);
+    
+    Real
+    vn  = 0.;
+    
+    // modify the JxW_Vn by multiplying the normal velocity to it
+    for (unsigned int qp=0; qp<JxW_Vn.size(); qp++) {
+        
+        vel_f(xyz[qp], _time, vel);
+        vn = 0.;
+        for (unsigned int i=0; i<dim; i++)
+            vn += vel(i)*face_normals[qp](i);
+        JxW_Vn[qp] *= vn;
+    }
+    
+
+    std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
+    mat_inertia  = _property.inertia_matrix(*this);
+    
+    MAST::FEMOperatorMatrix Bmat;
+    
+    if (_property.if_diagonal_mass_matrix()) {
+        
+        (*mat_inertia)(xyz[0], _time, material_mat);
+        
+        Real vol = 0.;
+        const unsigned int nshp = fe->n_shape_functions();
+        for (unsigned int i=0; i<JxW_Vn.size(); i++)
+            vol += JxW_Vn[i];
+        vol /= (1.* nshp);
+        for (unsigned int i_var=0; i_var<6; i_var++)
+            for (unsigned int i=0; i<nshp; i++)
+                local_jac(i_var*nshp+i, i_var*nshp+i) =
+                vol*material_mat(i_var, i_var);
+        
+        local_f =  local_jac * _local_accel;
+    }
+    else {
+        
+        for (unsigned int qp=0; qp<JxW_Vn.size(); qp++) {
+            
+            (*mat_inertia)(xyz[qp], _time, material_mat);
+            
+            // now set the shape function values
+            for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
+                phi_vec(i_nd) = phi[i_nd][qp];
+            
+            Bmat.reinit(n_vars, phi_vec);
+            
+            Bmat.left_multiply(mat1_n1n2, material_mat);
+            
+            vec1_n1 = mat1_n1n2 * _local_accel;
+            Bmat.vector_mult_transpose(vec2_n2, vec1_n1);
+            
+            local_f += JxW_Vn[qp] * vec2_n2;
+            
+            if (request_jacobian) {
+                
+                Bmat.right_multiply_transpose(mat2_n2n2,
+                                              mat1_n1n2);
+                local_jac += JxW_Vn[qp]*mat2_n2n2;
+            }
+        }
+    }
+    
+    // now transform to the global coorodinate system
+    if (_elem.dim() < 3) {
+        transform_vector_to_global_system(local_f, vec2_n2);
+        f += vec2_n2;
+        
+        if (request_jacobian) {
+            transform_matrix_to_global_system(local_jac, mat2_n2n2);
+            jac_xddot += mat2_n2n2;
+        }
+    }
+    else {
+        
+        f += local_f;
+        if (request_jacobian)
+            jac_xddot += local_jac;
+    }
+}
+
+
+
 
 bool
 MAST::StructuralElementBase::
@@ -1015,10 +1137,12 @@ volume_external_residual_sensitivity (const MAST::FunctionBase& p,
 void
 MAST::StructuralElementBase::
 volume_external_residual_boundary_velocity(const MAST::FunctionBase& p,
-                                           RealVectorX& f,
                                            const unsigned int s,
                                            const MAST::FieldFunction<RealVectorX>& vel_f,
-                                           std::multimap<libMesh::subdomain_id_type, MAST::BoundaryConditionBase*>& bc) {
+                                           std::multimap<libMesh::subdomain_id_type, MAST::BoundaryConditionBase*>& bc,
+                                           bool request_jacobian,
+                                           RealVectorX& f,
+                                           RealMatrixX& jac) {
     
     // iterate over the boundary ids given in the provided force map
     std::pair<std::multimap<libMesh::subdomain_id_type, MAST::BoundaryConditionBase*>::const_iterator,
@@ -1037,18 +1161,22 @@ volume_external_residual_boundary_velocity(const MAST::FunctionBase& p,
                 
             case MAST::SURFACE_PRESSURE:
                 surface_pressure_boundary_velocity(p,
-                                                   f,
                                                    s,
                                                    vel_f,
-                                                   *it.first->second);
+                                                   *it.first->second,
+                                                   request_jacobian,
+                                                   f,
+                                                   jac);
                 break;
                 
             case MAST::TEMPERATURE:
                 thermal_residual_boundary_velocity(p,
-                                                   f,
                                                    s,
                                                    vel_f,
-                                                   *it.first->second);
+                                                   *it.first->second,
+                                                   request_jacobian,
+                                                   f,
+                                                   jac);
                 break;
                 
             case MAST::PISTON_THEORY:
@@ -1212,10 +1340,12 @@ surface_pressure_residual_sensitivity(const MAST::FunctionBase& p,
 void
 MAST::StructuralElementBase::
 surface_pressure_boundary_velocity(const MAST::FunctionBase& p,
-                                   RealVectorX& f,
                                    const unsigned int s,
                                    const MAST::FieldFunction<RealVectorX>& vel_f,
-                                   MAST::BoundaryConditionBase& bc) {
+                                   MAST::BoundaryConditionBase& bc,
+                                   bool request_jacobian,
+                                   RealVectorX& f,
+                                   RealMatrixX& jac) {
     
     libmesh_assert(_elem.dim() < 3); // only applicable for lower dimensional elements
     libmesh_assert(!follower_forces); // not implemented yet for follower forces

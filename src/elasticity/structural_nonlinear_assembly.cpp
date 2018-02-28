@@ -204,13 +204,19 @@ elem_topology_sensitivity_calculations(const MAST::FunctionBase& f,
         dummy = RealMatrixX::Zero(vec.size(), vec.size());
         
         if (intersect.has_side_on_interface(elem)) {
-            e.internal_residual_boundary_velocity(f, vec,
+            e.internal_residual_boundary_velocity(f,
                                                   intersect.get_side_on_interface(elem),
-                                                  vel);
-            e.volume_external_residual_boundary_velocity(f, vec,
+                                                  vel,
+                                                  false,
+                                                  vec,
+                                                  dummy);
+            e.volume_external_residual_boundary_velocity(f,
                                                          intersect.get_side_on_interface(elem),
                                                          vel,
-                                                         _discipline->volume_loads());
+                                                         _discipline->volume_loads(),
+                                                         false,
+                                                         vec,
+                                                         dummy);
         }
         /*e.side_external_residual_sensitivity(f, false,
          vec,

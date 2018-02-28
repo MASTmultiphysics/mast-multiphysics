@@ -104,8 +104,8 @@ void
 MAST::Examples::StructuralExample1D::_init_section_property_without_offset() {
 
     Real
-    thy_v     =  (*_input)(_prefix+"thy", "thickness of element along y-axis",  0.06),
-    thz_v     =  (*_input)(_prefix+"thz", "thickness of element along z-axis",  0.02);
+    thy_v     =  (*_input)(_prefix+"thy", "thickness of element along y-axis",  0.001),
+    thz_v     =  (*_input)(_prefix+"thz", "thickness of element along z-axis",  0.002);
     
     MAST::Parameter
     *thy      = new MAST::Parameter("thy", thy_v),
@@ -153,8 +153,8 @@ void
 MAST::Examples::StructuralExample1D::_init_section_property_with_offset() {
     
     Real
-    thy_v     =  (*_input)(_prefix+"thy", "thickness of element along y-axis",  0.06),
-    thz_v     =  (*_input)(_prefix+"thz", "thickness of element along z-axis",  0.02);
+    thy_v     =  (*_input)(_prefix+"thy", "thickness of element along y-axis",  0.001),
+    thz_v     =  (*_input)(_prefix+"thz", "thickness of element along z-axis",  0.002);
 
     MAST::Parameter
     *thy      = new MAST::Parameter("thy", thy_v),

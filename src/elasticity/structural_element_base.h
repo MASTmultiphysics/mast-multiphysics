@@ -145,9 +145,11 @@ namespace MAST {
          */
         virtual void
         internal_residual_boundary_velocity(const MAST::FunctionBase& p,
-                                            RealVectorX& f,
                                             const unsigned int s,
-                                            const MAST::FieldFunction<RealVectorX>& vel_f) = 0;
+                                            const MAST::FieldFunction<RealVectorX>& vel_f,
+                                            bool request_jacobian,
+                                            RealVectorX& f,
+                                            RealMatrixX& jac) = 0;
         
         /*!
          *   calculates d[J]/d{x} . d{x}/dp
@@ -256,10 +258,12 @@ namespace MAST {
          */
         void volume_external_residual_boundary_velocity
         (const MAST::FunctionBase& p,
-         RealVectorX& f,
          const unsigned int s,
          const MAST::FieldFunction<RealVectorX>& vel_f,
-         std::multimap<libMesh::subdomain_id_type, MAST::BoundaryConditionBase*>& bc);
+         std::multimap<libMesh::subdomain_id_type, MAST::BoundaryConditionBase*>& bc,
+         bool request_jacobian,
+         RealVectorX& f,
+         RealMatrixX& jac);
 
         
         /*!
@@ -319,7 +323,20 @@ namespace MAST {
                                                     RealMatrixX& jac_xddot,
                                                     RealMatrixX& jac_xdot,
                                                     RealMatrixX& jac);
-        
+
+        /*!
+         *   sensitivity of the inertial force contribution to system residual
+         */
+        virtual void
+        inertial_residual_boundary_velocity (const MAST::FunctionBase& p,
+                                             const unsigned int s,
+                                             const MAST::FieldFunction<RealVectorX>& vel_f,
+                                             bool request_jacobian,
+                                             RealVectorX& f,
+                                             RealMatrixX& jac_xddot,
+                                             RealMatrixX& jac_xdot,
+                                             RealMatrixX& jac);
+
         /*!
          *   sensitivity of the side external force contribution to system residual
          */
@@ -458,10 +475,12 @@ namespace MAST {
          */
         virtual void
         surface_pressure_boundary_velocity(const MAST::FunctionBase& p,
-                                           RealVectorX& f,
                                            const unsigned int s,
                                            const MAST::FieldFunction<RealVectorX>& vel_f,
-                                           MAST::BoundaryConditionBase& bc);
+                                           MAST::BoundaryConditionBase& bc,
+                                           bool request_jacobian,
+                                           RealVectorX& f,
+                                           RealMatrixX& jac);
 
         /*!
          *    Calculates the force vector and Jacobian due to surface pressure
@@ -661,10 +680,12 @@ namespace MAST {
          *    thermal stresses. this should be implemented for each element type
          */
         virtual void thermal_residual_boundary_velocity(const MAST::FunctionBase& p,
-                                                        RealVectorX& f,
                                                         const unsigned int s,
                                                         const MAST::FieldFunction<RealVectorX>& vel_f,
-                                                        MAST::BoundaryConditionBase& bc) = 0;
+                                                        MAST::BoundaryConditionBase& bc,
+                                                        bool request_jacobian,
+                                                        RealVectorX& f,
+                                                        RealMatrixX& jac) = 0;
 
         /*!
          *   @returns a constant reference to transformation matrix needed

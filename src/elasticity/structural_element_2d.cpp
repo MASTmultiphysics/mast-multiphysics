@@ -1012,9 +1012,11 @@ MAST::StructuralElement2D::internal_residual_sensitivity (const MAST::FunctionBa
 void
 MAST::StructuralElement2D::
 internal_residual_boundary_velocity(const MAST::FunctionBase& p,
-                                    RealVectorX& f,
                                     const unsigned int s,
-                                    const MAST::FieldFunction<RealVectorX>& vel_f) {
+                                    const MAST::FieldFunction<RealVectorX>& vel_f,
+                                    bool request_jacobian,
+                                    RealVectorX& f,
+                                    RealMatrixX& jac) {
 
     // prepare the side finite element
     std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem).release());
@@ -1095,7 +1097,7 @@ internal_residual_boundary_velocity(const MAST::FunctionBase& p,
         // now calculte the quantity for these matrices
         // this accounts for the sensitivity of the material property matrices
         _internal_residual_operation(if_bending, if_vk, n2, qp, *fe, JxW_Vn,
-                                     false,
+                                     request_jacobian,
                                      local_f, local_jac,
                                      Bmat_mem, Bmat_bend, Bmat_vk,
                                      stress, stress_l, vk_dwdxi_mat, material_A_mat,
@@ -1109,11 +1111,22 @@ internal_residual_boundary_velocity(const MAST::FunctionBase& p,
     // element
     if (if_bending && _bending_operator->include_transverse_shear_energy())
         _bending_operator->calculate_transverse_shear_residual_boundary_velocity
-        (p, s, vel_f, local_f);
+        (p, s, vel_f, request_jacobian, local_f, local_jac);
     
     // now transform to the global coorodinate system
     transform_vector_to_global_system(local_f, vec3_n2);
     f += vec3_n2;
+
+    if (request_jacobian) {
+        // for 2D elements
+        if (_elem.dim() == 2) {
+            // add small values to the diagonal of the theta_z dofs
+            for (unsigned int i=0; i<n_phi; i++)
+                local_jac(5*n_phi+i, 5*n_phi+i) = 1.0e-8;
+        }
+        transform_matrix_to_global_system(local_jac, mat2_n2n2);
+        jac += mat2_n2n2;
+    }
 }
 
 
@@ -2243,10 +2256,12 @@ thermal_residual_sensitivity (const MAST::FunctionBase& p,
 void
 MAST::StructuralElement2D::
 thermal_residual_boundary_velocity(const MAST::FunctionBase& p,
-                                   RealVectorX& f,
                                    const unsigned int s,
                                    const MAST::FieldFunction<RealVectorX>& vel_f,
-                                   MAST::BoundaryConditionBase& bc) {
+                                   MAST::BoundaryConditionBase& bc,
+                                   bool request_jacobian,
+                                   RealVectorX& f,
+                                   RealMatrixX& jac) {
     
     // prepare the side finite element
     std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem).release());
@@ -2271,7 +2286,9 @@ thermal_residual_boundary_velocity(const MAST::FunctionBase& p,
     mat2_n2n2     = RealMatrixX::Zero(n2,n2),
     mat3,
     mat4_n3n2     = RealMatrixX::Zero(n3,n2),
-    vk_dwdxi_mat  = RealMatrixX::Zero(n1,n3);
+    vk_dwdxi_mat  = RealMatrixX::Zero(n1,n3),
+    stress        = RealMatrixX::Zero(2,2),
+    local_jac     = RealMatrixX::Zero(n2,n2);
     RealVectorX
     vec1_n1     = RealVectorX::Zero(n1),
     vec2_n1     = RealVectorX::Zero(n1),
@@ -2327,7 +2344,11 @@ thermal_residual_boundary_velocity(const MAST::FunctionBase& p,
         
         vec1_n1 = material_exp_A_mat * delta_t; // [C]{alpha (T - T0)} (with membrane strain)
         vec2_n1 = material_exp_B_mat * delta_t; // [C]{alpha (T - T0)} (with bending strain)
-        
+        stress(0,0) = vec1_n1(0); // sigma_xx
+        stress(0,1) = vec1_n1(2); // sigma_xy
+        stress(1,0) = vec1_n1(2); // sigma_yx
+        stress(1,1) = vec1_n1(1); // sigma_yy
+
         this->initialize_direct_strain_operator(qp, *fe, Bmat_mem);
         
         // membrane strain
@@ -2353,12 +2374,24 @@ thermal_residual_boundary_velocity(const MAST::FunctionBase& p,
                 Bmat_vk.vector_mult_transpose(vec3_n2, vec4_2);
                 local_f += JxW_Vn[qp] * vec3_n2;
             }
+
+            if (request_jacobian && if_vk) { // Jacobian only for vk strain
+                // vk - vk
+                mat3 = RealMatrixX::Zero(2, n2);
+                Bmat_vk.left_multiply(mat3, stress);
+                Bmat_vk.right_multiply_transpose(mat2_n2n2, mat3);
+                local_jac += JxW_Vn[qp] * mat2_n2n2;
+            }
         }
     }
     
     // now transform to the global coorodinate system
     transform_vector_to_global_system(local_f, vec3_n2);
     f -= vec3_n2;
+    if (request_jacobian && if_vk) {
+        transform_matrix_to_global_system(local_jac, mat2_n2n2);
+        jac -= mat2_n2n2;
+    }
 }
 
 

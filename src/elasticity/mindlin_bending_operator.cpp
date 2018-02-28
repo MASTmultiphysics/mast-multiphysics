@@ -233,7 +233,9 @@ calculate_transverse_shear_residual_boundary_velocity
 (const MAST::FunctionBase& p,
  const unsigned int s,
  const MAST::FieldFunction<RealVectorX>& vel_f,
- RealVectorX& local_f) {
+ bool request_jacobian,
+ RealVectorX& local_f,
+ RealMatrixX& local_jac) {
     
     const MAST::ElementPropertyCardBase& property = _structural_elem.elem_property();
     
@@ -264,7 +266,6 @@ calculate_transverse_shear_residual_boundary_velocity
     RealMatrixX
     material_trans_shear_mat,
     dmaterial_trans_shear_mat_dp,
-    dummy,
     mat_n2n2    = RealMatrixX::Zero(n2,n2),
     mat_2n2     = RealMatrixX::Zero(2,n2);
 
@@ -306,9 +307,9 @@ calculate_transverse_shear_residual_boundary_velocity
                                      vec_2,
                                      mat_n2n2,
                                      mat_2n2,
-                                     false,
+                                     request_jacobian,
                                      local_f,
-                                     dummy);
+                                     local_jac);
     }
 }
 

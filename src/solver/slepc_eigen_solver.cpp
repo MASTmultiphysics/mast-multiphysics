@@ -34,6 +34,23 @@ libMesh::SlepcEigenSolver<Real>(comm_in) {
 
 
 std::pair<Real, Real>
+MAST::SlepcEigenSolver::get_eigenvalue(unsigned int i) {
+    
+    PetscErrorCode ierr=0;
+    
+    PetscReal re, im;
+    
+    ierr = EPSGetEigenvalue(eps(), i, &re, &im);
+    
+    CHKERRABORT(this->comm().get(), ierr);
+    
+    return std::make_pair(re, im);
+}
+
+
+
+
+std::pair<Real, Real>
 MAST::SlepcEigenSolver::get_eigenpair(unsigned int i,
                                       libMesh::NumericVector<Real> &eig_vec,
                                       libMesh::NumericVector<Real> *eig_vec_im) {

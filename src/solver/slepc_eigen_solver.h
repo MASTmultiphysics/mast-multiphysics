@@ -45,6 +45,14 @@ namespace MAST {
         
         /**
          * This function returns the real and imaginary part of the
+         * ith eigenvalues.
+         */
+        virtual std::pair<Real, Real>
+        get_eigenvalue (unsigned int i);
+
+        
+        /**
+         * This function returns the real and imaginary part of the
          * ith eigenvalue and copies the respective eigenvector to the
          * solution vector. Note that also in case of purely real matrix
          * entries the eigenpair may be complex values.

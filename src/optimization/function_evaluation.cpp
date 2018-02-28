@@ -184,7 +184,7 @@ MAST::FunctionEvaluation::initialize_dv_from_output_file(const std::string& nm,
         // number of desing variables
         std::getline(input, line);
         boost::trim(line);
-        boost::split(results, line, boost::is_any_of(" "), boost::token_compress_on);
+        boost::split(results, line, boost::is_any_of(" \t"), boost::token_compress_on);
         libmesh_assert_equal_to(results[0],   "n_dv");
         ndv = stod(results[1]);
         libmesh_assert_equal_to(  ndv, x.size());
@@ -193,7 +193,7 @@ MAST::FunctionEvaluation::initialize_dv_from_output_file(const std::string& nm,
         // number of equality constraint
         std::getline(input, line);
         boost::trim(line);
-        boost::split(results, line, boost::is_any_of(" "), boost::token_compress_on);
+        boost::split(results, line, boost::is_any_of(" \t"), boost::token_compress_on);
         libmesh_assert_equal_to(results[0],   "n_eq");
         neq = stod(results[1]);
         libmesh_assert_equal_to(  neq, _n_eq);
@@ -202,7 +202,7 @@ MAST::FunctionEvaluation::initialize_dv_from_output_file(const std::string& nm,
         // number of inequality constriants
         std::getline(input, line);
         boost::trim(line);
-        boost::split(results, line, boost::is_any_of(" "), boost::token_compress_on);
+        boost::split(results, line, boost::is_any_of(" \t"), boost::token_compress_on);
         libmesh_assert_equal_to(results[0],   "n_ineq");
         nineq = stod(results[1]);
         libmesh_assert_equal_to(  nineq, _n_ineq);
@@ -217,7 +217,7 @@ MAST::FunctionEvaluation::initialize_dv_from_output_file(const std::string& nm,
         // make sure that the iteration number is what we are looking for
         std::getline(input, line);
         boost::trim(line);
-        boost::split(results, line, boost::is_any_of(" "), boost::token_compress_on);
+        boost::split(results, line, boost::is_any_of(" \t"), boost::token_compress_on);
 
         libmesh_assert_greater(results.size(), ndv+1);
 
