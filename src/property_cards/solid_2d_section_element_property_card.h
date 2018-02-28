@@ -57,7 +57,7 @@ namespace MAST {
         /*!
          *    sets the material card
          */
-        void set_material(MAST::MaterialPropertyCardBase& mat) {
+        virtual void set_material(MAST::MaterialPropertyCardBase& mat) {
             _material = &mat;
         }
         

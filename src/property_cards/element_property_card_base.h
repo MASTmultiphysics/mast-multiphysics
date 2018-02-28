@@ -113,6 +113,12 @@ namespace MAST
         virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
         thermal_capacitance_matrix(const MAST::ElementBase& e) const= 0;
 
+
+        /*!
+         *    sets the material card
+         */
+        virtual void set_material(MAST::MaterialPropertyCardBase& mat) = 0;
+
                 
         /*!
          *   return true if the property is isotropic
