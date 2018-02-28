@@ -356,6 +356,26 @@ MAST::NonlinearSystem::eigenproblem_solve(MAST::AssemblyElemOperations& elem_ops
 
 
 void
+MAST::NonlinearSystem::get_eigenvalue(unsigned int i, Real&  re, Real&  im) {
+    
+    std::pair<Real, Real>
+    val   = this->eigen_solver->get_eigenvalue (i);
+    
+    if (!_exchange_A_and_B) {
+        re   = val.first;
+        im   = val.second;
+    }
+    else {
+        Complex complex_val (val.first, val.second);
+        complex_val = 1./complex_val;
+        re = complex_val.real();
+        im = complex_val.imag();
+    }
+}
+
+
+
+void
 MAST::NonlinearSystem::get_eigenpair(unsigned int i,
                                      Real&  re,
                                      Real&  im,

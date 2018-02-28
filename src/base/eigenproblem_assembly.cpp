@@ -149,11 +149,9 @@ eigenproblem_assemble(libMesh::SparseMatrix<Real>* A,
         }
         
         ops.set_elem_solution(sol);
-        
         ops.elem_calculations(mat_A, mat_B);
-
         ops.clear_elem();
-        
+
         // copy to the libMesh matrix for further processing
         DenseRealMatrix A, B;
         MAST::copy(A, mat_A);
