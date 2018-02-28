@@ -84,60 +84,6 @@
 #include "libmesh/getpot.h"
 
 
-//template <typename ValType>
-//void analysis(const std::string& case_name,
-//              const libMesh::ElemType etype,
-//              const bool nonlinear,
-//              bool with_sens,
-//              std::string& par_name)  {
-//
-//    ValType run_case;
-//    run_case.init(etype, nonlinear);
-//
-//    libMesh::out << "Running case: " << case_name << std::endl;
-//    run_case.solve(true);
-//    if (with_sens) {
-//        MAST::Parameter* p = run_case.get_parameter(par_name);
-//        if (p) {
-//
-//            libMesh::out
-//            << "Running sensitivity for case: " << case_name
-//            << "  wrt  " << par_name << std::endl;
-//            run_case.sensitivity_solve(*p, true);
-//        }
-//    }
-//
-//}
-
-
-
-//template <typename ValType>
-//void eigenvalue_analysis(const std::string& case_name,
-//                         const libMesh::ElemType etype,
-//                         bool if_nonlin,
-//                         bool with_sens,
-//                         std::string& par_name)  {
-//
-//    ValType run_case;
-//    run_case.init(etype, if_nonlin);
-//
-//    libMesh::out << "Running case: " << case_name << std::endl;
-//    run_case.solve(true);
-//    if (with_sens) {
-//        MAST::Parameter* p = run_case.get_parameter(par_name);
-//        if (p) {
-//
-//            std::vector<Real> eig;
-//            libMesh::out
-//            << "Running sensitivity for case: " << case_name
-//            << "  wrt  " << par_name << std::endl;
-//            run_case.sensitivity_solve(*p, eig);
-//        }
-//    }
-//
-//}
-
-
 
 
 //template <typename ValType>
@@ -186,60 +132,6 @@
 //     }
 //     }*/
 //}
-
-
-
-
-//template <typename ValType>
-//void optimization(const std::string& case_name,
-//                  libMesh::ElemType etype,
-//                  bool verify_grads,
-//                  bool nonlinear)  {
-//
-//
-//    libMesh::out
-//    << case_name << std::endl
-//    << "  input.in should be provided in the working directory with"
-//    << " desired parameter values."
-//    << "  In absence of a parameter value, its default value will be used."
-//    << std::endl
-//    << "  Output per iteration is written to optimization_output.txt."
-//    << std::endl;
-//
-//    GetPot infile("input.in");
-//    std::ofstream output;
-//    output.open("optimization_output.txt", std::ofstream::out);
-//
-//    MAST::GCMMAOptimizationInterface optimizer;
-//
-//    // create and attach sizing optimization object
-//    ValType func_eval(this->comm());
-//    if (this->comm().rank() == 0)
-//        func_eval.set_output_file("optimization_output.txt");
-//    __my_func_eval = &func_eval;
-//    func_eval.init(infile, etype, nonlinear);
-//
-//    if (verify_grads) {
-//        std::vector<Real>
-//        dvals(func_eval.n_vars()),
-//        dummy(func_eval.n_vars());
-//        func_eval.init_dvar(dvals, dummy, dummy);
-//
-//        libMesh::out << "******* Begin: Verifying gradients ***********" << std::endl;
-//        func_eval.verify_gradients(dvals);
-//        libMesh::out << "******* End: Verifying gradients ***********" << std::endl;
-//    }
-//    else {
-//
-//        // attach and optimize
-//        optimizer.attach_function_evaluation_object(func_eval);
-//        optimizer.optimize();
-//    }
-//
-//    output.close();
-//}
-
-
 
 
 int main(int argc, char* const argv[]) {
