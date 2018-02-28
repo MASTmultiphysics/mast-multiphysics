@@ -119,6 +119,7 @@ namespace MAST {
         
         MAST::FieldFunction<RealVectorX>     *_velocity;
         
+        bool                                  _analysis_mode;
     };
 }
 

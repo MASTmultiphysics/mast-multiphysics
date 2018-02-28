@@ -290,7 +290,7 @@ MAST::NonlinearSystem::eigenproblem_solve(MAST::AssemblyElemOperations& elem_ops
         
         // If we reach here, then there should be some non-condensed dofs
         libmesh_assert(!_local_non_condensed_dofs_vector.empty());
-        
+
         std::unique_ptr<libMesh::SparseMatrix<Real> >
         condensed_matrix_A(libMesh::SparseMatrix<Real>::build(this->comm()).release()),
         condensed_matrix_B(libMesh::SparseMatrix<Real>::build(this->comm()).release());
@@ -524,10 +524,11 @@ MAST::NonlinearSystem::get_eigenpair(unsigned int i,
 
 void
 MAST::NonlinearSystem::
-eigenproblem_sensitivity_solve (MAST::AssemblyElemOperations&  elem_ops,
-                                MAST::EigenproblemAssembly&    assembly,
-                                const MAST::FunctionBase&      f,
-                                std::vector<Real>&             sens) {
+eigenproblem_sensitivity_solve (MAST::AssemblyElemOperations&    elem_ops,
+                                MAST::EigenproblemAssembly&      assembly,
+                                const MAST::FunctionBase&        f,
+                                std::vector<Real>&               sens,
+                                const std::vector<unsigned int>* indices) {
     
     // make sure that eigensolution is already available
     libmesh_assert(_n_converged_eigenpairs);
@@ -545,27 +546,42 @@ eigenproblem_sensitivity_solve (MAST::AssemblyElemOperations&  elem_ops,
     //    the denominator remain constant for all sensitivity calculations.
     //
     const unsigned int
-    nconv = std::min(_n_requested_eigenpairs, _n_converged_eigenpairs);
+    nconv  = std::min(_n_requested_eigenpairs, _n_converged_eigenpairs),
+    n_calc = indices?(unsigned int)indices->size():nconv;
+
+    libmesh_assert_equal_to(n_calc, nconv);
+    
+    std::vector<unsigned int> indices_to_calculate;
+    if (indices) {
+        indices_to_calculate = *indices;
+        for (unsigned int i=0; i<n_calc; i++) libmesh_assert_less(indices_to_calculate[i], nconv);
+    }
+    else {
+        // calculate all
+        indices_to_calculate.resize(n_calc);
+        for (unsigned int i=0; i<n_calc; i++) indices_to_calculate[i] = i;
+    }
+    
     std::vector<Real>
-    denom(nconv, 0.);
-    sens.resize(nconv, 0.);
+    denom(n_calc, 0.);
+    sens.resize(n_calc, 0.);
     
     std::vector<libMesh::NumericVector<Real>*>
-    x_right (nconv);
+    x_right (n_calc);
     //x_left  (_n_converged_eigenpairs);
     
     std::unique_ptr<libMesh::NumericVector<Real> >
     tmp     (this->solution->zero_clone().release());
 
     std::vector<Real>
-    eig (nconv);
+    eig (n_calc);
     
     Real
     re  = 0.,
     im  = 0.;
     
     
-    for (unsigned int i=0; i<nconv; i++) {
+    for (unsigned int i=0; i<n_calc; i++) {
 
         x_right[i] = (this->solution->zero_clone().release());
         
@@ -575,7 +591,7 @@ eigenproblem_sensitivity_solve (MAST::AssemblyElemOperations&  elem_ops,
             case libMesh::HEP: {
                 // right and left eigenvectors are same
                 // imaginary part of eigenvector for real matrices is zero
-                this->get_eigenpair(i, re, im, *x_right[i], nullptr);
+                this->get_eigenpair(indices_to_calculate[i], re, im, *x_right[i], nullptr);
                 denom[i] = x_right[i]->dot(*x_right[i]);               // x^H x
                 eig[i]   = re;
             }
@@ -583,7 +599,7 @@ eigenproblem_sensitivity_solve (MAST::AssemblyElemOperations&  elem_ops,
                 
             case libMesh::GHEP: {
                 // imaginary part of eigenvector for real matrices is zero
-                this->get_eigenpair(i, re, im, *x_right[i], nullptr);
+                this->get_eigenpair(indices_to_calculate[i], re, im, *x_right[i], nullptr);
                 matrix_B->vector_mult(*tmp, *x_right[i]);
                 denom[i] = x_right[i]->dot(*tmp);                  // x^H B x
                 eig[i]   = re;
@@ -602,7 +618,7 @@ eigenproblem_sensitivity_solve (MAST::AssemblyElemOperations&  elem_ops,
     
     
     // now calculate sensitivity of each eigenvalue for the parameter
-    for (unsigned int i=0; i<nconv; i++) {
+    for (unsigned int i=0; i<n_calc; i++) {
         
         switch (_eigen_problem_type) {
                 

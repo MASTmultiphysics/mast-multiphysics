@@ -186,9 +186,6 @@ eigenproblem_sensitivity_assemble(const MAST::FunctionBase& f,
 
     MAST::NonlinearSystem& eigen_sys =
     dynamic_cast<MAST::NonlinearSystem&>(_system->system());
-
-    // zero the solution since it is not needed for eigenproblem
-    eigen_sys.solution->zero();
     
     libMesh::SparseMatrix<Real>&  matrix_A = *sensitivity_A;
     libMesh::SparseMatrix<Real>&  matrix_B = *sensitivity_B;

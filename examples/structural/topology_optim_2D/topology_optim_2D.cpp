@@ -23,12 +23,14 @@
 #include "examples/base/input_wrapper.h"
 #include "level_set/level_set_discipline.h"
 #include "level_set/level_set_system_initialization.h"
+#include "level_set/level_set_eigenproblem_assembly.h"
 #include "level_set/level_set_transient_assembly.h"
 #include "level_set/level_set_nonlinear_implicit_assembly.h"
 #include "level_set/level_set_reinitialization_transient_assembly.h"
 #include "level_set/level_set_volume_output.h"
 #include "level_set/level_set_boundary_velocity.h"
 #include "elasticity/structural_nonlinear_assembly.h"
+#include "elasticity/structural_modal_eigenproblem_assembly.h"
 #include "elasticity/stress_output_base.h"
 #include "elasticity/stress_assembly.h"
 #include "elasticity/structural_system_initialization.h"
@@ -183,6 +185,8 @@ MAST::Examples::StructuralExample2D  (comm_in),
 MAST::FunctionEvaluation             (comm_in),
 _stress_lim                          (0.),
 _p_val                               (0.),
+_ref_eig_val                         (0.),
+_n_eig_vals                          (0),
 _level_set_mesh                      (nullptr),
 _level_set_eq_sys                    (nullptr),
 _level_set_sys                       (nullptr),
@@ -260,14 +264,21 @@ MAST::Examples::TopologyOptimizationLevelSet2D::init(MAST::Examples::GetPotWrapp
     // function value
     this->_init_phi_dvs();
     
-    // one inequality constraint.
-    _n_ineq = 1;
-    
     _stress_lim            = (*_input)(_prefix+"vm_stress_limit", "limit von-mises stress value", 2.e8);
     _p_val                 = (*_input)(_prefix+"constraint_aggregation_p_val", "value of p in p-norm stress aggregation", 2.0);
     _level_set_vel         = new MAST::LevelSetBoundaryVelocity(2);
     _level_set_function    = new PhiMeshFunction;
     _output                = new libMesh::ExodusII_IO(*_mesh);
+
+    _n_eig_vals            = (*_input)(_prefix+"n_eig", "number of eigenvalues to constrain", 5);
+    if (_n_eig_vals) {
+        // set only if the user requested eigenvalue constraints
+        _ref_eig_val           = (*_input)(_prefix+"eigenvalue_low_bound", "lower bound enforced on eigenvalue constraints", 1.e3);
+        _sys->set_n_requested_eigenvalues(_n_eig_vals);
+    }
+
+    // two inequality constraints: stress and eigenvalue.
+    _n_ineq = 1+_n_eig_vals;
 
     std::string
     output_name = (*_input)(_prefix+"output_file_root", "prefix of output file names", "output");
@@ -288,8 +299,8 @@ MAST::Examples::TopologyOptimizationLevelSet2D::init_dvar(std::vector<Real>& x,
     xmin.resize(_n_vars);
     xmax.resize(_n_vars);
     
-    std::fill(xmin.begin(), xmin.end(),   -10.);
-    std::fill(xmax.begin(), xmax.end(),    10.);
+    std::fill(xmin.begin(), xmin.end(),   -1.);
+    std::fill(xmax.begin(), xmax.end(),    1.);
     
     // now, check if the user asked to initialize dvs from a previous file
     std::string
@@ -331,16 +342,22 @@ MAST::Examples::TopologyOptimizationLevelSet2D::evaluate(const std::vector<Real>
      * DO NOT zero out the gradient vector, since GCMMA needs it for the  *
      * subproblem solution                                                *
      **********************************************************************/
-    MAST::LevelSetNonlinearImplicitAssembly         nonlinear_assembly;
-    MAST::LevelSetNonlinearImplicitAssembly         level_set_assembly;
-    MAST::StructuralNonlinearAssemblyElemOperations nonlinear_elem_ops;
-    nonlinear_elem_ops.set_discipline_and_system(*_discipline, *_sys_init);
+    MAST::LevelSetNonlinearImplicitAssembly                  nonlinear_assembly;
+    MAST::LevelSetNonlinearImplicitAssembly                  level_set_assembly;
+    MAST::LevelSetEigenproblemAssembly                       eigen_assembly;
+    MAST::StructuralNonlinearAssemblyElemOperations          nonlinear_elem_ops;
+    MAST::StructuralModalEigenproblemAssemblyElemOperations  modal_elem_ops;
     nonlinear_assembly.set_discipline_and_system(*_discipline, *_sys_init);
     nonlinear_assembly.set_level_set_function(*_level_set_function);
+    nonlinear_assembly.set_level_set_velocity_function(*_level_set_vel);
+    eigen_assembly.set_discipline_and_system(*_discipline, *_sys_init);
+    eigen_assembly.set_level_set_function(*_level_set_function);
+    eigen_assembly.set_level_set_velocity_function(*_level_set_vel);
     level_set_assembly.set_discipline_and_system(*_level_set_discipline, *_level_set_sys_init);
     level_set_assembly.set_level_set_function(*_level_set_function);
-    nonlinear_assembly.set_level_set_velocity_function(*_level_set_vel);
     level_set_assembly.set_level_set_velocity_function(*_level_set_vel);
+    nonlinear_elem_ops.set_discipline_and_system(*_discipline, *_sys_init);
+    modal_elem_ops.set_discipline_and_system(*_discipline, *_sys_init);
     
     // reinitialize the dof constraints before solution of the linear system
     // FIXME: we should be able to clear the constraint object from the
@@ -351,7 +368,8 @@ MAST::Examples::TopologyOptimizationLevelSet2D::evaluate(const std::vector<Real>
     //level_set_assembly.plot_sub_elems(true, false, true);
     _sys->attach_constraint_object(nonlinear_assembly);
     _sys->reinit_constraints();
-    
+    _sys->initialize_condensed_dofs(*_discipline);
+
     MAST::LevelSetVolume                            volume(level_set_assembly.get_intersection());
     MAST::StressStrainOutputBase                    stress;
     volume.set_discipline_and_system(*_level_set_discipline, *_level_set_sys_init);
@@ -373,6 +391,32 @@ MAST::Examples::TopologyOptimizationLevelSet2D::evaluate(const std::vector<Real>
     nonlinear_assembly.calculate_output(*_sys->solution, stress);
     fvals[0]  =  stress.output_total()/_stress_lim - 1.;  // g = sigma/sigma0-1 <= 0
 
+    if (_n_eig_vals) {
+        
+        //////////////////////////////////////////////////////////////////////
+        // evaluate the eigenvalue constraint
+        //////////////////////////////////////////////////////////////////////
+        _sys->eigenproblem_solve(modal_elem_ops, eigen_assembly);
+        Real eig_imag = 0.;
+        //
+        // hopefully, the solver found the requested number of eigenvalues.
+        // if not, then we will set zero values for the ones it did not.
+        //
+        unsigned int n_conv = std::min(_n_eig_vals, _sys->get_n_converged_eigenvalues());
+        std::vector<Real> eig(_n_eig_vals, 0.);
+
+        // get the converged eigenvalues
+        for (unsigned int i=0; i<n_conv; i++)      _sys->get_eigenvalue(0, eig[i], eig_imag);
+        //
+        //  eig > eig0
+        //  -eig < -eig0
+        //  -eig/eig0 < -1
+        // -eig/eig0 + 1 < 0
+        //
+        for (unsigned int i=0; i<_n_eig_vals; i++)
+            fvals[i+1] = -eig[i]/_ref_eig_val + 1.;
+    }
+    
     //////////////////////////////////////////////////////////////////////
     // evaluate the objective sensitivities, if requested
     //////////////////////////////////////////////////////////////////////
@@ -390,11 +434,13 @@ MAST::Examples::TopologyOptimizationLevelSet2D::evaluate(const std::vector<Real>
     // evaluate the sensitivities for constraints
     //////////////////////////////////////////////////////////////////////
     if (if_grad_sens)
-        _evaluate_stress_functional_sensitivity(stress,
-                                                nonlinear_elem_ops,
-                                                nonlinear_assembly,
-                                                eval_grads,
-                                                grads);
+        _evaluate_constraint_sensitivity(stress,
+                                         nonlinear_elem_ops,
+                                         nonlinear_assembly,
+                                         modal_elem_ops,
+                                         eigen_assembly,
+                                         eval_grads,
+                                         grads);
 }
 
 
@@ -431,18 +477,26 @@ _evaluate_volume_sensitivity(MAST::LevelSetVolume& volume,
 
 void
 MAST::Examples::TopologyOptimizationLevelSet2D::
-_evaluate_stress_functional_sensitivity(MAST::StressStrainOutputBase& stress,
-                                        MAST::AssemblyElemOperations& elem_ops,
-                                        MAST::LevelSetNonlinearImplicitAssembly& assembly,
-                                        const std::vector<bool>& eval_grads,
-                                        std::vector<Real>& grads) {
+_evaluate_constraint_sensitivity
+(MAST::StressStrainOutputBase& stress,
+ MAST::AssemblyElemOperations& nonlinear_elem_ops,
+ MAST::LevelSetNonlinearImplicitAssembly& nonlinear_assembly,
+ MAST::StructuralModalEigenproblemAssemblyElemOperations& eigen_elem_ops,
+ MAST::LevelSetEigenproblemAssembly& eigen_assembly,
+ const std::vector<bool>& eval_grads,
+ std::vector<Real>& grads) {
 
-    
-    _sys->adjoint_solve(elem_ops, stress, assembly, false);
+    unsigned int n_conv = std::min(_n_eig_vals, _sys->get_n_converged_eigenvalues());
+
+    _sys->adjoint_solve(nonlinear_elem_ops, stress, nonlinear_assembly, false);
     
     std::unique_ptr<libMesh::NumericVector<Real>>
     dphi(_level_set_sys->solution->zero_clone().release());
     
+    //////////////////////////////////////////////////////////////////
+    // indices used by GCMMA follow this rule:
+    // grad_k = dfi/dxj  ,  where k = j*NFunc + i
+    //////////////////////////////////////////////////////////////////
     for (unsigned int i=0; i<_n_vars; i++) {
         
         dphi->zero();
@@ -453,13 +507,30 @@ _evaluate_stress_functional_sensitivity(MAST::StressStrainOutputBase& stress,
         // field
         _level_set_vel->init(*_level_set_sys_init, *_level_set_sys->solution, *dphi);
         
-        grads[i] = 1./_stress_lim*
-        assembly.calculate_output_adjoint_sensitivity(*_sys->solution,
-                                                      _sys->get_adjoint_solution(),
-                                                      *_dv_params[i].second,
-                                                      elem_ops,
-                                                      stress);
+        //////////////////////////////////////////////////////////////////////
+        // stress sensitivity
+        //////////////////////////////////////////////////////////////////////
+        grads[_n_ineq*i+0] = 1./_stress_lim*
+        nonlinear_assembly.calculate_output_adjoint_sensitivity(*_sys->solution,
+                                                                _sys->get_adjoint_solution(),
+                                                                *_dv_params[i].second,
+                                                                nonlinear_elem_ops,
+                                                                stress);
         stress.clear_sensitivity_data();
+        
+        //////////////////////////////////////////////////////////////////////
+        // eigenvalue sensitivity, only if the values were requested
+        //////////////////////////////////////////////////////////////////////
+        if (_n_eig_vals) {
+            
+            std::vector<Real> sens;
+            _sys->eigenproblem_sensitivity_solve(eigen_elem_ops,
+                                                 eigen_assembly,
+                                                 *_dv_params[i].second,
+                                                 sens);
+            for (unsigned int j=0; j<n_conv; j++)
+                grads[_n_ineq*i+j+1] = -sens[j]/_ref_eig_val;
+        }
     }
 }
 
@@ -738,7 +809,8 @@ MAST::Examples::TopologyOptimizationLevelSet2D::output(unsigned int iter,
     libmesh_assert_equal_to(x.size(), _n_vars);
     
     std::string
-    output_name = (*_input)(_prefix+"output_file_root", "prefix of output file names", "output");
+    output_name  = (*_input)(_prefix+"output_file_root", "prefix of output file names", "output"),
+    modes_name   = output_name + "modes.exo";
     output_name += "_optim.exo";
 
     // copy DVs to level set function
@@ -748,23 +820,44 @@ MAST::Examples::TopologyOptimizationLevelSet2D::output(unsigned int iter,
     _level_set_function->init(*_level_set_sys_init, *_level_set_sys->solution);
     _level_set_sys_init_on_str_mesh->initialize_solution(_level_set_function->get_mesh_function());
     
-    MAST::LevelSetNonlinearImplicitAssembly         nonlinear_assembly;
-    MAST::StructuralNonlinearAssemblyElemOperations nonlinear_elem_ops;
-    MAST::StressAssembly                            stress_assembly;
-    MAST::StressStrainOutputBase                    stress;
+    MAST::LevelSetNonlinearImplicitAssembly                  nonlinear_assembly;
+    MAST::LevelSetEigenproblemAssembly                       eigen_assembly;
+    MAST::StructuralNonlinearAssemblyElemOperations          nonlinear_elem_ops;
+    MAST::StressAssembly                                     stress_assembly;
+    MAST::StressStrainOutputBase                             stress;
+    MAST::StructuralModalEigenproblemAssemblyElemOperations  modal_elem_ops;
 
     nonlinear_elem_ops.set_discipline_and_system(*_discipline, *_sys_init);
+    modal_elem_ops.set_discipline_and_system(*_discipline, *_sys_init);
     nonlinear_assembly.set_discipline_and_system(*_discipline, *_sys_init);
     nonlinear_assembly.set_level_set_function(*_level_set_function);
     nonlinear_assembly.set_level_set_velocity_function(*_level_set_vel);
+    eigen_assembly.set_discipline_and_system(*_discipline, *_sys_init);
+    eigen_assembly.set_level_set_function(*_level_set_function);
+    eigen_assembly.set_level_set_velocity_function(*_level_set_vel);
     stress_assembly.set_discipline_and_system(*_discipline, *_sys_init);
     stress.set_discipline_and_system(*_discipline, *_sys_init);
     stress.set_participating_elements_to_all();
     stress.set_p_val(_p_val);
     
+    //////////////////////////////////////////////////////////////////////////
+    // static analysis and write to file
+    //////////////////////////////////////////////////////////////////////////
     _sys->solve(nonlinear_elem_ops, nonlinear_assembly);
     stress_assembly.update_stress_strain_data(stress, *_sys->solution);
     _output->write_timestep(output_name, *_eq_sys, iter+1, (1.*iter));
+
+    //////////////////////////////////////////////////////////////////////////
+    // eigenvalue analysis and write modes to file
+    //////////////////////////////////////////////////////////////////////////
+   _sys->eigenproblem_solve(modal_elem_ops, eigen_assembly);
+    libMesh::ExodusII_IO writer(*_mesh);
+    Real eig_r, eig_i;
+    for (unsigned int i=0; i<_sys->get_n_converged_eigenvalues(); i++) {
+        _sys->get_eigenpair(i, eig_r, eig_i, *_sys->solution);
+        writer.write_timestep(modes_name, *_eq_sys, i+1, i);
+    }
+    _sys->solution->zero();
 
     MAST::FunctionEvaluation::output(iter, x, obj, fval, if_write_to_optim_file);
 }

@@ -26,6 +26,7 @@
 #include "base/mesh_field_function.h"
 #include "base/eigenproblem_assembly_elem_operations.h"
 #include "base/elem_base.h"
+#include "mesh/local_elem_fe.h"
 #include "numerics/utility.h"
 
 
@@ -42,7 +43,8 @@ LevelSetEigenproblemAssembly():
 MAST::EigenproblemAssembly(),
 _level_set     (nullptr),
 _intersection  (nullptr),
-_velocity      (nullptr) {
+_velocity      (nullptr),
+_analysis_mode (false) {
     
 }
 
@@ -119,6 +121,7 @@ MAST::LevelSetEigenproblemAssembly::
 eigenproblem_assemble(libMesh::SparseMatrix<Real>* A,
                       libMesh::SparseMatrix<Real>* B) {
     
+    _analysis_mode = true;
     libmesh_assert(_system);
     libmesh_assert(_discipline);
     libmesh_assert(_elem_ops);
@@ -167,23 +170,6 @@ eigenproblem_assemble(libMesh::SparseMatrix<Real>* A,
         
         dof_map.dof_indices (elem, dof_indices);
         
-        // get the solution
-        unsigned int ndofs = (unsigned int)dof_indices.size();
-        
-        // Petsc needs that every diagonal term be provided some contribution,
-        // even if zero. Otherwise, it complains about lack of diagonal entry.
-        // So, if the element is NOT completely on the positive side, we still
-        // add a zero matrix to get around this issue.
-        if (_intersection->if_elem_on_negative_phi()) {
-            
-            DenseRealMatrix m(ndofs, ndofs);
-            for (unsigned int i=0; i<dof_indices.size(); i++) m(i, i) = 1.e-6;
-            dof_map.constrain_element_matrix(m, dof_indices);
-            matrix_A.add_matrix(m, dof_indices);
-            matrix_B.add_matrix(m, dof_indices);
-        }
-        
-        
         if (_intersection->if_elem_has_positive_phi_region()) {
             
             // get the solution
@@ -199,22 +185,23 @@ eigenproblem_assemble(libMesh::SparseMatrix<Real>* A,
                     sol(i) = (*localized_solution)(dof_indices[i]);
             }
 
-            const std::vector<const libMesh::Elem *> &
+            /*const std::vector<const libMesh::Elem *> &
             elems_hi = _intersection->get_sub_elems_positive_phi();
+            
             
             std::vector<const libMesh::Elem*>::const_iterator
             hi_sub_elem_it  = elems_hi.begin(),
             hi_sub_elem_end = elems_hi.end();
             
-            for (; hi_sub_elem_it != hi_sub_elem_end; hi_sub_elem_it++ ) {
+            for (; hi_sub_elem_it != hi_sub_elem_end; hi_sub_elem_it++ )*/ {
                 
-                const libMesh::Elem* sub_elem = *hi_sub_elem_it;
+                //const libMesh::Elem* sub_elem = *hi_sub_elem_it;
                 
-                ops.init(*sub_elem);
+                ops.init(*elem);
                 ops.set_elem_solution(sol);
                 ops.elem_calculations(mat_A, mat_B);
                 ops.clear_elem();
-                
+
                 // copy to the libMesh matrix for further processing
                 DenseRealMatrix A, B;
                 MAST::copy(A, mat_A);
@@ -223,7 +210,7 @@ eigenproblem_assemble(libMesh::SparseMatrix<Real>* A,
                 // constrain the element matrices.
                 dof_map.constrain_element_matrix(A, dof_indices);
                 dof_map.constrain_element_matrix(B, dof_indices);
-                
+
                 matrix_A.add_matrix (A, dof_indices); // load independent
                 matrix_B.add_matrix (B, dof_indices); // load dependent
             }
@@ -246,19 +233,15 @@ eigenproblem_sensitivity_assemble(const MAST::FunctionBase& f,
                                   libMesh::SparseMatrix<Real>* sensitivity_A,
                                   libMesh::SparseMatrix<Real>* sensitivity_B) {
 
+    _analysis_mode = false;
     libmesh_assert(_system);
     libmesh_assert(_discipline);
     libmesh_assert(_elem_ops);
     // we need the velocity for topology parameter
     if (f.is_topology_parameter()) libmesh_assert(_velocity);
     
-    Real v = 0.;
-    
     MAST::NonlinearSystem& eigen_sys =
     dynamic_cast<MAST::NonlinearSystem&>(_system->system());
-    
-    // zero the solution since it is not needed for eigenproblem
-    eigen_sys.solution->zero();
     
     libMesh::SparseMatrix<Real>&  matrix_A = *sensitivity_A;
     libMesh::SparseMatrix<Real>&  matrix_B = *sensitivity_B;
@@ -357,6 +340,7 @@ eigenproblem_sensitivity_assemble(const MAST::FunctionBase& f,
                                                                *_velocity,
                                                                mat2_A,
                                                                mat2_B);
+
                     mat_A += mat2_A;
                     mat_B += mat2_B;
                 }
@@ -399,14 +383,23 @@ MAST::LevelSetEigenproblemAssembly::build_fe(const libMesh::Elem& elem) {
     if (_elem_ops->if_use_local_elem() &&
         elem.dim() < 3) {
         
-        MAST::SubCellFE*
-        local_fe = new MAST::SubCellFE(*_system, *_intersection);
-        // FIXME: we would ideally like to send this to the elem ops object for
-        // setting of any local data. But the code has not been setup to do that
-        // for SubCellFE.
-        //_elem_ops->set_local_fe_data(*local_fe);
-        
-        fe.reset(local_fe);
+        if (_analysis_mode) {
+            
+            MAST::LocalElemFE*
+            local_fe = new MAST::LocalElemFE(*_system);
+            _elem_ops->set_local_fe_data(*local_fe, elem);
+            fe.reset(local_fe);
+        }
+        else {
+            
+            MAST::SubCellFE*
+            local_fe = new MAST::SubCellFE(*_system, *_intersection);
+            // FIXME: we would ideally like to send this to the elem ops object for
+            // setting of any local data. But the code has not been setup to do that
+            // for SubCellFE.
+            //_elem_ops->set_local_fe_data(*local_fe);
+            fe.reset(local_fe);
+        }
     }
     else {
         

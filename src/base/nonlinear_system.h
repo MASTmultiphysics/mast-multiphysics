@@ -129,16 +129,20 @@ namespace MAST {
                                         MAST::EigenproblemAssembly&   assembly);
         
         /**
-         * Solves the sensitivity system, for the provided parameters. The return
-         * parameters are irrelevant for EigenSystem. Sensitivity of eigenvalues
-         * are returned in \p sens.
+         * Solves the sensitivity system, for the provided parameters.
+         * Sensitivity of eigenvalues are returned in \p sens. This is more
+         * If only a subset of sensitivities are needed, then the indices
+         * can be passed in the last argument. If the last argument is not
+         * provided, then sensitivity of all eigenvalues will be computed and
+         * returned in \p sens. 
          */
         virtual void
         eigenproblem_sensitivity_solve (MAST::AssemblyElemOperations& elem_ops,
                                         MAST::EigenproblemAssembly& assembly,
                                         const MAST::FunctionBase& f,
-                                        std::vector<Real>& sens);
-        
+                                        std::vector<Real>& sens,
+                                        const std::vector<unsigned int>* indices=nullptr);
+
         
         /*!
          * gets the real and imaginary parts of the ith eigenvalue for the

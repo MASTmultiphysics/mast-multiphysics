@@ -33,10 +33,12 @@ namespace MAST  {
     class LevelSetDiscipline;
     class LevelSetVolume;
     class LevelSetNonlinearImplicitAssembly;
+    class LevelSetEigenproblemAssembly;
     class StressStrainOutputBase;
     class LevelSetBoundaryVelocity;
     class PhiMeshFunction;
     class AssemblyElemOperations;
+    class StructuralModalEigenproblemAssemblyElemOperations;
     template <typename ValType> class FieldFunction;
     
     
@@ -103,18 +105,22 @@ namespace MAST  {
             virtual void _init_eq_sys();
             virtual void _init_loads();
             virtual void _init_phi_dvs();
-            
             void _evaluate_volume_sensitivity(LevelSetVolume& volume,
                                               MAST::LevelSetNonlinearImplicitAssembly& assembly,
                                               std::vector<Real>& obj_grad);
-            void _evaluate_stress_functional_sensitivity(MAST::StressStrainOutputBase& stress,
-                                                         MAST::AssemblyElemOperations& elem_ops,
-                                                         MAST::LevelSetNonlinearImplicitAssembly& assembly,
-                                                         const std::vector<bool>& eval_grads,
-                                                         std::vector<Real>& grads);
-
+            void _evaluate_constraint_sensitivity
+            (MAST::StressStrainOutputBase& stress,
+             MAST::AssemblyElemOperations& nonlinear_elem_ops,
+             MAST::LevelSetNonlinearImplicitAssembly& nonlinear_assembly,
+             MAST::StructuralModalEigenproblemAssemblyElemOperations& eigen_elem_ops,
+             MAST::LevelSetEigenproblemAssembly& eigen_assembly,
+             const std::vector<bool>& eval_grads,
+             std::vector<Real>& grads);
+            
             Real                                      _stress_lim;
             Real                                      _p_val;
+            Real                                      _ref_eig_val;
+            unsigned int                              _n_eig_vals;
             libMesh::FEType                           _level_set_fetype;
             libMesh::UnstructuredMesh*                _level_set_mesh;
             libMesh::EquationSystems*                 _level_set_eq_sys;
