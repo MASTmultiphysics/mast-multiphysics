@@ -200,7 +200,7 @@ namespace MAST {
         /*!
          *    get property card for the specified subdomain id \par i
          */
-        const MAST::ElementPropertyCardBase& get_property_card(const unsigned int i) const;
+        const MAST::ElementPropertyCardBase& get_property_card(const unsigned int sid) const;
         
         
         

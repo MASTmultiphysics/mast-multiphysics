@@ -39,6 +39,7 @@ namespace MAST  {
     class PhiMeshFunction;
     class AssemblyElemOperations;
     class StructuralModalEigenproblemAssemblyElemOperations;
+    class HeatConductionSystemInitialization;
     template <typename ValType> class FieldFunction;
     
     
@@ -104,6 +105,8 @@ namespace MAST  {
             virtual void _init_dirichlet_conditions();
             virtual void _init_eq_sys();
             virtual void _init_loads();
+            virtual void _init_material();
+            virtual void _init_section_property();
             virtual void _init_phi_dvs();
             void _evaluate_volume_sensitivity(LevelSetVolume& volume,
                                               MAST::LevelSetNonlinearImplicitAssembly& assembly,
@@ -126,8 +129,11 @@ namespace MAST  {
             libMesh::EquationSystems*                 _level_set_eq_sys;
             MAST::NonlinearSystem*                    _level_set_sys;
             MAST::NonlinearSystem*                    _level_set_sys_on_str_mesh;
+            MAST::NonlinearSystem*                    _indicator_sys;
             MAST::LevelSetSystemInitialization*       _level_set_sys_init_on_str_mesh;
             MAST::LevelSetSystemInitialization*       _level_set_sys_init;
+            MAST::HeatConductionSystemInitialization* _indicator_sys_init;
+            MAST::PhysicsDisciplineBase*              _indicator_discipline;
             MAST::LevelSetDiscipline*                 _level_set_discipline;
             PhiMeshFunction*                          _level_set_function;
             MAST::LevelSetBoundaryVelocity*           _level_set_vel;

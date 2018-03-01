@@ -32,8 +32,7 @@ namespace MAST {
     
     
     class LevelSetNonlinearImplicitAssembly:
-    public MAST::NonlinearImplicitAssembly,
-    public libMesh::System::Constraint {
+    public MAST::NonlinearImplicitAssembly {
     public:
         
         
@@ -135,13 +134,6 @@ namespace MAST {
                                             MAST::OutputAssemblyElemOperations& output);
         
         
-
-        /*!
-         *   provides implementation of the libMesh::System::Constraint::constrain()
-         *   virtual method
-         */
-        virtual void
-        constrain ();
         
         /*!
          *   @returns a MAST::FEBase object for calculation of finite element
@@ -154,8 +146,6 @@ namespace MAST {
         build_fe(const libMesh::Elem& e);
 
     protected:
-
-        void _initialize_constraints();
         
         MAST::FieldFunction<Real>            *_level_set;
 

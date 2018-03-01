@@ -181,7 +181,7 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
         if (_intersection->if_elem_on_negative_phi() && J) {
             
             DenseRealMatrix m(ndofs, ndofs);
-            for (unsigned int i=0; i<dof_indices.size(); i++) m(i, i) = 1.e-6;
+            for (unsigned int i=0; i<dof_indices.size(); i++) m(i, i) = 1.e-12;
             dof_map.constrain_element_matrix(m, dof_indices);
             J->add_matrix(m, dof_indices);
         }
@@ -824,91 +824,6 @@ calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
     this->clear_elem_operation_object();
 }
 
-
-
-
-void
-MAST::LevelSetNonlinearImplicitAssembly::constrain() {
-
-    libmesh_assert(_system);
-    libmesh_assert(_discipline);
-    libmesh_assert(_level_set);
-
-    MAST::NonlinearSystem& nonlin_sys = _system->system();
-    
-    libMesh::DofMap& dof_map = _system->system().get_dof_map();
-    
-    libMesh::MeshBase::const_element_iterator       el     =
-    nonlin_sys.get_mesh().active_local_elements_begin();
-    const libMesh::MeshBase::const_element_iterator end_el =
-    nonlin_sys.get_mesh().active_local_elements_end();
-    
-
-    std::vector<libMesh::dof_id_type>
-    dof_indices;
-    std::set<libMesh::dof_id_type>
-    all_dof_indices,
-    connected_dof_indices;
-
-    // our intent is to constrain only those dofs that belong to the
-    // unintersected elements on the negative phi side of level set, AND
-    // if they do not belong to any elements intersected by the level set.
-    for ( ; el != end_el; ++el) {
-        
-        const libMesh::Elem* elem = *el;
-        
-        _intersection->init(*_level_set, *elem, nonlin_sys.time);
-        
-        // if the element is entirely on the negative side of the level set,
-        // we will constrain all dofs of the element to zero
-        
-        dof_indices.clear();
-        dof_map.dof_indices(elem, dof_indices);
-
-        for (unsigned int i=0; i<dof_indices.size(); i++)
-            all_dof_indices.insert(dof_indices[i]);
-        
-        if (_intersection->if_elem_has_positive_phi_region()) {
-            // This identifies if the element is has some positive phi
-            // region. If it does, then it will provide a contribution to
-            // the dofs connected to it.
-
-            for (unsigned int i=0; i<dof_indices.size(); i++)
-                connected_dof_indices.insert(dof_indices[i]);
-        }
-        
-        _intersection->clear();
-    }
-    
-    // create a set so that we only deal with unique set of ids.
-    dof_indices.clear();
-    dof_indices.reserve(all_dof_indices.size() - connected_dof_indices.size());
-
-    std::set_difference(all_dof_indices.begin(),
-                        all_dof_indices.end(),
-                        connected_dof_indices.begin(),
-                        connected_dof_indices.end(),
-                        std::inserter(dof_indices, dof_indices.begin()));
-
-    all_dof_indices.clear();
-    connected_dof_indices.clear();
-    
-    // now, constrain everythign in the set
-    std::vector<libMesh::dof_id_type>::const_iterator
-    dof_it  = dof_indices.begin(),
-    dof_end = dof_indices.end();
-
-    for ( ; dof_it != dof_end; dof_it++) {
-        
-        // if the dof is already Dirichlet constrained, then we do not
-        // add another constraint on it
-        if (!dof_map.is_constrained_dof(*dof_it)) {
-            
-            libMesh::DofConstraintRow c_row;
-            dof_map.add_constraint_row(*dof_it, c_row, true);
-        }
-    }
-}
 
 
 

@@ -29,18 +29,24 @@
 #include "level_set/level_set_reinitialization_transient_assembly.h"
 #include "level_set/level_set_volume_output.h"
 #include "level_set/level_set_boundary_velocity.h"
+#include "level_set/indicator_function_constrain_dofs.h"
+#include "level_set/level_set_constrain_dofs.h"
 #include "elasticity/structural_nonlinear_assembly.h"
 #include "elasticity/structural_modal_eigenproblem_assembly.h"
 #include "elasticity/stress_output_base.h"
 #include "elasticity/stress_assembly.h"
 #include "elasticity/structural_system_initialization.h"
+#include "heat_conduction/heat_conduction_system_initialization.h"
+#include "heat_conduction/heat_conduction_nonlinear_assembly.h"
 #include "base/parameter.h"
-#include "base/field_function_base.h"
+#include "base/constant_field_function.h"
 #include "base/mesh_field_function.h"
 #include "base/nonlinear_system.h"
 #include "base/transient_assembly.h"
 #include "base/boundary_condition_base.h"
+#include "boundary_condition/dirichlet_boundary_condition.h"
 #include "solver/first_order_newmark_transient_solver.h"
+#include "property_cards/material_property_card_base.h"
 #include "property_cards/element_property_card_2D.h"
 
 // libMesh includes
@@ -160,12 +166,12 @@ namespace MAST {
     };
     
     
-    class PressureLoad:
+    class FluxLoad:
     public MAST::FieldFunction<Real> {
     public:
-        PressureLoad(Real p, Real l1, Real fraction):
-        MAST::FieldFunction<Real>("pressure"), _p(p), _l1(l1), _frac(fraction) { }
-        virtual ~PressureLoad() {}
+        FluxLoad(const std::string& nm, Real p, Real l1, Real fraction):
+        MAST::FieldFunction<Real>(nm), _p(p), _l1(l1), _frac(fraction) { }
+        virtual ~FluxLoad() {}
         virtual void operator() (const libMesh::Point& p, const Real t, Real& v) const {
             if (fabs(p(0)-_l1*0.5) <= 0.5*_frac*_l1) v = _p;
             else v = 0.;
@@ -192,7 +198,10 @@ _level_set_eq_sys                    (nullptr),
 _level_set_sys                       (nullptr),
 _level_set_sys_on_str_mesh           (nullptr),
 _level_set_sys_init_on_str_mesh      (nullptr),
+_indicator_sys                       (nullptr),
 _level_set_sys_init                  (nullptr),
+_indicator_sys_init                  (nullptr),
+_indicator_discipline                (nullptr),
 _level_set_discipline                (nullptr),
 _level_set_function                  (nullptr),
 _level_set_vel                       (nullptr),
@@ -209,6 +218,8 @@ MAST::Examples::TopologyOptimizationLevelSet2D::~TopologyOptimizationLevelSet2D(
     delete _level_set_function;
     delete _level_set_vel;
     delete _level_set_sys_init;
+    delete _indicator_sys_init;
+    delete _indicator_discipline;
     delete _level_set_discipline;
     delete _level_set_eq_sys;
     delete _level_set_mesh;
@@ -346,7 +357,49 @@ MAST::Examples::TopologyOptimizationLevelSet2D::evaluate(const std::vector<Real>
     MAST::LevelSetNonlinearImplicitAssembly                  level_set_assembly;
     MAST::LevelSetEigenproblemAssembly                       eigen_assembly;
     MAST::StructuralNonlinearAssemblyElemOperations          nonlinear_elem_ops;
+    MAST::HeatConductionNonlinearAssemblyElemOperations      conduction_elem_ops;
     MAST::StructuralModalEigenproblemAssemblyElemOperations  modal_elem_ops;
+    
+    // reinitialize the dof constraints before solution of the linear system
+    // FIXME: we should be able to clear the constraint object from the
+    // system before it goes out of scope, but libMesh::System does not
+    // have a clear method. So, we are going to leave it as is, hoping
+    // that libMesh::System will not attempt to use it (most likely, we
+    // shoudl be ok).
+    //level_set_assembly.plot_sub_elems(true, false, true);
+    
+    /////////////////////////////////////////////////////////////////////
+    // first constrain the indicator function and solve
+    /////////////////////////////////////////////////////////////////////
+    {
+        nonlinear_assembly.set_discipline_and_system(*_indicator_discipline, *_indicator_sys_init);
+        conduction_elem_ops.set_discipline_and_system(*_indicator_discipline, *_indicator_sys_init);
+        nonlinear_assembly.set_level_set_function(*_level_set_function);
+        
+        MAST::LevelSetConstrainDofs constrain(*_indicator_sys_init, *_level_set_function);
+        _indicator_sys->attach_constraint_object(constrain);
+        _indicator_sys->reinit_constraints();
+        _indicator_sys->solve(conduction_elem_ops, nonlinear_assembly);
+        nonlinear_assembly.clear_discipline_and_system();
+        nonlinear_assembly.clear_level_set_function();
+    }
+
+    /////////////////////////////////////////////////////////////////////
+    // now, use the indicator function to constrain dofs in the structural
+    // system
+    /////////////////////////////////////////////////////////////////////
+    {
+        MAST::MeshFieldFunction indicator(*_indicator_sys_init, "indicator");
+        indicator.init(*_indicator_sys->solution);
+        MAST::IndicatorFunctionConstrainDofs constrain(*_sys_init, *_level_set_function, indicator);
+        _sys->attach_constraint_object(constrain);
+        _sys->reinit_constraints();
+        _sys->initialize_condensed_dofs(*_discipline);
+    }
+    
+    /////////////////////////////////////////////////////////////////////
+    // first constrain the indicator function and solve
+    /////////////////////////////////////////////////////////////////////
     nonlinear_assembly.set_discipline_and_system(*_discipline, *_sys_init);
     nonlinear_assembly.set_level_set_function(*_level_set_function);
     nonlinear_assembly.set_level_set_velocity_function(*_level_set_vel);
@@ -359,16 +412,8 @@ MAST::Examples::TopologyOptimizationLevelSet2D::evaluate(const std::vector<Real>
     nonlinear_elem_ops.set_discipline_and_system(*_discipline, *_sys_init);
     modal_elem_ops.set_discipline_and_system(*_discipline, *_sys_init);
     
-    // reinitialize the dof constraints before solution of the linear system
-    // FIXME: we should be able to clear the constraint object from the
-    // system before it goes out of scope, but libMesh::System does not
-    // have a clear method. So, we are going to leave it as is, hoping
-    // that libMesh::System will not attempt to use it (most likely, we
-    // shoudl be ok).
-    //level_set_assembly.plot_sub_elems(true, false, true);
-    _sys->attach_constraint_object(nonlinear_assembly);
-    _sys->reinit_constraints();
-    _sys->initialize_condensed_dofs(*_discipline);
+
+    
 
     MAST::LevelSetVolume                            volume(level_set_assembly.get_intersection());
     MAST::StressStrainOutputBase                    stress;
@@ -615,9 +660,14 @@ MAST::Examples::TopologyOptimizationLevelSet2D::_init_system_and_discipline() {
     _level_set_discipline  = new MAST::LevelSetDiscipline(*_eq_sys);
     
     _level_set_sys_on_str_mesh      = &(_eq_sys->add_system<MAST::NonlinearSystem>("level_set"));
+    _indicator_sys                  = &(_eq_sys->add_system<MAST::NonlinearSystem>("indicator"));
     _level_set_sys_init_on_str_mesh = new MAST::LevelSetSystemInitialization(*_level_set_sys_on_str_mesh,
                                                                              _level_set_sys->name(),
                                                                              _level_set_fetype);
+    _indicator_sys_init             = new MAST::HeatConductionSystemInitialization(*_indicator_sys,
+                                                                                   _indicator_sys->name(),
+                                                                                   _fetype);
+    _indicator_discipline           = new MAST::PhysicsDisciplineBase(*_eq_sys);
 }
 
 
@@ -629,7 +679,24 @@ MAST::Examples::TopologyOptimizationLevelSet2D::_init_dirichlet_conditions() {
     this->_init_boundary_dirichlet_constraint(1, "right_constraint");
     this->_init_boundary_dirichlet_constraint(3, "left_constraint");
     
+    ///////////////////////////////////////////////////////////////////////
+    // initialize Dirichlet conditions for structural system
+    ///////////////////////////////////////////////////////////////////////
     _discipline->init_system_dirichlet_bc(*_sys);
+
+    ///////////////////////////////////////////////////////////////////////
+    // initialize Dirichlet conditions for indicator system
+    ///////////////////////////////////////////////////////////////////////
+    MAST::DirichletBoundaryCondition
+    *dirichlet  = new MAST::DirichletBoundaryCondition;   // right boundary
+    dirichlet->init(1, _indicator_sys_init->vars());
+    _indicator_discipline->add_dirichlet_bc(1,  *dirichlet);
+    this->register_loading(*dirichlet);                   // register, so that it will be deleted later
+    dirichlet   = new MAST::DirichletBoundaryCondition;   // left boundary
+    dirichlet->init(3, _indicator_sys_init->vars());
+    _indicator_discipline->add_dirichlet_bc(3,  *dirichlet);
+    this->register_loading(*dirichlet);                   // register, so that it will be deleted later
+    _indicator_discipline->init_system_dirichlet_bc(*_indicator_sys);
 }
 
 
@@ -642,20 +709,66 @@ MAST::Examples::TopologyOptimizationLevelSet2D::_init_loads() {
     frac    = (*_input)(_prefix+"load_length_fraction", "fraction of boundary length on which pressure will act", 0.2),
     p_val   =  (*_input)(_prefix+"pressure", "pressure on side of domain",   2.e4);
     
-    MAST::PressureLoad
-    *press_f         = new MAST::PressureLoad(p_val, length, frac);
+    MAST::FluxLoad
+    *press_f         = new MAST::FluxLoad( "pressure", p_val, length, frac),
+    *flux_f          = new MAST::FluxLoad("heat_flux", -2.e6, length, frac);
     
     // initialize the load
     MAST::BoundaryConditionBase
-    *p_load          = new MAST::BoundaryConditionBase(MAST::SURFACE_PRESSURE);
+    *p_load          = new MAST::BoundaryConditionBase(MAST::SURFACE_PRESSURE),
+    *f_load          = new MAST::BoundaryConditionBase(MAST::HEAT_FLUX);
     
     p_load->add(*press_f);
     _discipline->add_side_load(2, *p_load);
     
+    f_load->add(*flux_f);
+    _indicator_discipline->add_side_load(2, *f_load);
+    
     this->register_field_function(*press_f);
+    this->register_field_function(*flux_f);
     this->register_loading(*p_load);
+    this->register_loading(*f_load);
 
     _init_temperature_load();
+}
+
+
+
+void
+MAST::Examples::TopologyOptimizationLevelSet2D::_init_material() {
+    
+    MAST::Examples::StructuralExample2D::_init_material();
+
+    // add the conduction property to this card
+    Real
+    kval      = (*_input)(_prefix+"k", "thermal conductivity",  190.),
+    cpval     = (*_input)(_prefix+"cp", "thermal capacitance",  864.);
+    
+    
+    MAST::Parameter
+    *k         = new MAST::Parameter("k",          kval),
+    *cp        = new MAST::Parameter("cp",        cpval);
+    
+    MAST::ConstantFieldFunction
+    *k_f     = new MAST::ConstantFieldFunction( "k_th",      *k),
+    *cp_f    = new MAST::ConstantFieldFunction(   "cp",     *cp);
+    
+    this->add_parameter(*k);
+    this->add_parameter(*cp);
+    this->register_field_function(*k_f);
+    this->register_field_function(*cp_f);
+    
+    _m_card->add(*k_f);
+    _m_card->add(*cp_f);
+}
+
+
+
+void
+MAST::Examples::TopologyOptimizationLevelSet2D::_init_section_property() {
+    
+    MAST::Examples::StructuralExample2D::_init_section_property();
+    _indicator_discipline->set_property_for_subdomain(0, _discipline->get_property_card(0));
 }
 
 
@@ -847,18 +960,21 @@ MAST::Examples::TopologyOptimizationLevelSet2D::output(unsigned int iter,
     stress_assembly.update_stress_strain_data(stress, *_sys->solution);
     _output->write_timestep(output_name, *_eq_sys, iter+1, (1.*iter));
 
-    //////////////////////////////////////////////////////////////////////////
-    // eigenvalue analysis and write modes to file
-    //////////////////////////////////////////////////////////////////////////
-   _sys->eigenproblem_solve(modal_elem_ops, eigen_assembly);
-    libMesh::ExodusII_IO writer(*_mesh);
-    Real eig_r, eig_i;
-    for (unsigned int i=0; i<_sys->get_n_converged_eigenvalues(); i++) {
-        _sys->get_eigenpair(i, eig_r, eig_i, *_sys->solution);
-        writer.write_timestep(modes_name, *_eq_sys, i+1, i);
+    if (_n_eig_vals) {
+        
+        //////////////////////////////////////////////////////////////////////////
+        // eigenvalue analysis and write modes to file
+        //////////////////////////////////////////////////////////////////////////
+        _sys->eigenproblem_solve(modal_elem_ops, eigen_assembly);
+        libMesh::ExodusII_IO writer(*_mesh);
+        Real eig_r, eig_i;
+        for (unsigned int i=0; i<_sys->get_n_converged_eigenvalues(); i++) {
+            _sys->get_eigenpair(i, eig_r, eig_i, *_sys->solution);
+            writer.write_timestep(modes_name, *_eq_sys, i+1, i);
+        }
+        _sys->solution->zero();
     }
-    _sys->solution->zero();
-
+    
     MAST::FunctionEvaluation::output(iter, x, obj, fval, if_write_to_optim_file);
 }
 

@@ -145,10 +145,10 @@ set_property_for_subdomain(const libMesh::subdomain_id_type sid,
 
 
 const MAST::ElementPropertyCardBase&
-MAST::PhysicsDisciplineBase::get_property_card(const unsigned int i) const {
+MAST::PhysicsDisciplineBase::get_property_card(const unsigned int sid) const {
     
     MAST::PropertyCardMapType::const_iterator
-    elem_p_it = _element_property.find(i);
+    elem_p_it = _element_property.find(sid);
     libmesh_assert(elem_p_it != _element_property.end());
     
     return *elem_p_it->second;
@@ -266,7 +266,7 @@ get_system_dirichlet_bc_dofs(libMesh::System& sys,
         // boundary condition is applied only on sides with no neighbors
         // and if the side's boundary id has a boundary condition tag on it
         for (unsigned int s=0; s<elem->n_sides(); s++)
-            if ((*el)->neighbor(s) == nullptr &&
+            if ((*el)->neighbor_ptr(s) == nullptr &&
                 mesh.boundary_info->n_boundary_ids(elem, s)) {
                 
                 std::vector<libMesh::boundary_id_type> bc_ids;

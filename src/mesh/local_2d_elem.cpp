@@ -52,10 +52,10 @@ MAST::Local2DElem::_create_local_elem() {
     // first node is the origin of the new cs
     // calculate the coordinate system for the plane of the element
     libMesh::Point v1, v2, v3, p;
-    v1 = *_elem.node_ptr(1); v1 -= *_elem.node_ptr(0); v1 /= v1.size(); // local x
-    v2 = *_elem.node_ptr(2); v2 -= *_elem.node_ptr(0); v2 /= v2.size();
-    v3 = v1.cross(v2); v3 /= v3.size();      // local z
-    v2 = v3.cross(v1); v2 /= v2.size();      // local y
+    v1 = *_elem.node_ptr(1); v1 -= *_elem.node_ptr(0); v1 /= v1.norm(); // local x
+    v2 = *_elem.node_ptr(2); v2 -= *_elem.node_ptr(0); v2 /= v2.norm();
+    v3 = v1.cross(v2); v3 /= v3.norm();      // local z
+    v2 = v3.cross(v1); v2 /= v2.norm();      // local y
     
     // copy the surface normal
     for (unsigned int i=0; i<3; i++)
