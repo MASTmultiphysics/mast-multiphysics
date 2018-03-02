@@ -51,6 +51,17 @@ namespace MAST {
         
         
         /*!
+         *  if set to true, then if the element has a node on negative side
+         * of the level set, we will constrain all dofs of the node to be zero.
+         *  If false,
+         *  then nodes will be constrained only if they get no contribution
+         *  from elements with a positive level set region.
+         */
+        void constrain_all_negative_indices(bool f) {
+            _constrain_all_negative_indices = f;
+        }
+        
+        /*!
          *  @returns a reference to the level set function
          */
         MAST::LevelSetIntersection& get_intersection();
@@ -64,6 +75,8 @@ namespace MAST {
         constrain ();
         
     protected:
+        
+        bool                                  _constrain_all_negative_indices;
         
         MAST::SystemInitialization           &_sys;
         

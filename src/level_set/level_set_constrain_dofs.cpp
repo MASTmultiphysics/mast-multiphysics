@@ -33,9 +33,10 @@
 MAST::LevelSetConstrainDofs::
 LevelSetConstrainDofs(MAST::SystemInitialization& sys,
                       MAST::FieldFunction<Real>& level_set):
-_sys           (sys),
-_level_set     (level_set),
-_intersection  (nullptr) {
+_constrain_all_negative_indices  (false),
+_sys                             (sys),
+_level_set                       (level_set),
+_intersection                    (nullptr) {
     
     _intersection = new MAST::LevelSetIntersection(sys.system().get_mesh().max_elem_id(),
                                                    sys.system().get_mesh().max_node_id());
@@ -74,23 +75,21 @@ MAST::LevelSetConstrainDofs::constrain() {
     dof_indices;
     std::set<libMesh::dof_id_type>
     all_dof_indices,
+    negative_dof_indices,
     connected_dof_indices;
     
-    // our intent is to constrain only those dofs that belong to the
-    // unintersected elements on the negative phi side of level set, AND
-    // if they do not belong to any elements intersected by the level set.
     for ( ; el != end_el; ++el) {
         
         const libMesh::Elem* elem = *el;
         
         _intersection->init(_level_set, *elem, nonlin_sys.time);
         
-        // if the element is entirely on the negative side of the level set,
-        // we will constrain all dofs of the element to zero
-        
         dof_indices.clear();
         dof_map.dof_indices(elem, dof_indices);
         
+        // our intent is to constrain only those dofs that belong to the
+        // unintersected elements on the negative phi side of level set, AND
+        // if they do not belong to any elements intersected by the level set.
         for (unsigned int i=0; i<dof_indices.size(); i++)
             all_dof_indices.insert(dof_indices[i]);
         
@@ -101,6 +100,26 @@ MAST::LevelSetConstrainDofs::constrain() {
             
             for (unsigned int i=0; i<dof_indices.size(); i++)
                 connected_dof_indices.insert(dof_indices[i]);
+        }
+
+        if (_constrain_all_negative_indices) {
+
+            // if the element has a node on negative side of the level set,
+            // we will constrain all dofs of the node to be zero
+            
+            if (_intersection->if_elem_has_boundary()) {
+                for (unsigned int i=0; i<elem->n_nodes(); i++) {
+
+                    const libMesh::Node* nd = elem->node_ptr(i);
+                    if (_intersection->get_node_phi_value(nd) <= 0.) {
+                        
+                        dof_indices.clear();
+                        dof_map.dof_indices(nd, dof_indices);
+                        for (unsigned int i=0; i<dof_indices.size(); i++)
+                            negative_dof_indices.insert(dof_indices[i]);
+                    }
+                }
+            }
         }
         
         _intersection->clear();
@@ -132,6 +151,26 @@ MAST::LevelSetConstrainDofs::constrain() {
             
             libMesh::DofConstraintRow c_row;
             dof_map.add_constraint_row(*dof_it, c_row, true);
+        }
+    }
+
+    
+    if (_constrain_all_negative_indices) {
+        
+        // now, constrain everythign in the set
+        std::set<libMesh::dof_id_type>::const_iterator
+        dof_it  = negative_dof_indices.begin(),
+        dof_end = negative_dof_indices.end();
+        
+        for ( ; dof_it != dof_end; dof_it++) {
+            
+            // if the dof is already Dirichlet constrained, then we do not
+            // add another constraint on it
+            if (!dof_map.is_constrained_dof(*dof_it)) {
+                
+                libMesh::DofConstraintRow c_row;
+                dof_map.add_constraint_row(*dof_it, c_row, true);
+            }
         }
     }
 }

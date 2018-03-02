@@ -137,6 +137,19 @@ MAST::LevelSetIntersection::if_intersection_through_elem() const {
 
 
 
+Real
+MAST::LevelSetIntersection::get_node_phi_value(const libMesh::Node* n) const {
+    
+    libmesh_assert(_initialized);
+    std::map<const libMesh::Node*, std::pair<Real, bool> >::const_iterator
+    it   = _node_phi_vals.find(n),
+    end  = _node_phi_vals.end();
+    
+    libmesh_assert(it != end);
+    return it->second.first;
+}
+
+
 
 void
 MAST::LevelSetIntersection::clear() {
@@ -192,8 +205,7 @@ MAST::LevelSetIntersection::init(const MAST::FieldFunction<Real>& phi,
     // mesh. However, with larger high-order elements this assumption will
     // not be valid and more accurate implementations will be needed.
     
-    std::map<const libMesh::Node*, std::pair<Real, bool> >
-    node_phi_vals;
+    _node_phi_vals.clear();
 
     unsigned int
     n_node_intersection = 0;
@@ -211,7 +223,7 @@ MAST::LevelSetIntersection::init(const MAST::FieldFunction<Real>& phi,
         const libMesh::Node& n = e.node_ref(i);
         phi(n, t, val);
         on_level_set      = fabs(val) <= _tol;
-        node_phi_vals[&n] = std::pair<Real, bool>(val, on_level_set);
+        _node_phi_vals[&n] = std::pair<Real, bool>(val, on_level_set);
         if (on_level_set) {
             _node_num_on_boundary = i;
             n_node_intersection++;
@@ -313,7 +325,7 @@ MAST::LevelSetIntersection::init(const MAST::FieldFunction<Real>& phi,
         n_nodes_on_level_set = 0;
         
         for (unsigned int j=0; j<s->n_nodes(); j++)
-            n_nodes_on_level_set += node_phi_vals[s->node_ptr(j)].second;
+            n_nodes_on_level_set += _node_phi_vals[s->node_ptr(j)].second;
         
         if (n_nodes_on_level_set == s->n_nodes()) {
             
@@ -352,7 +364,7 @@ MAST::LevelSetIntersection::init(const MAST::FieldFunction<Real>& phi,
     switch (e.type()) {
             
         case libMesh::QUAD4:
-            _find_quad4_intersections(phi, e, t, node_phi_vals);
+            _find_quad4_intersections(phi, e, t, _node_phi_vals);
             break;
             
         default:

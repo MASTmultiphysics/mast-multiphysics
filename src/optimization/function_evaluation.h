@@ -131,7 +131,7 @@ namespace MAST {
                             const std::vector<Real>& x,
                             Real obj,
                             const std::vector<Real>& fval,
-                            bool if_write_to_optim_file) const;
+                            bool if_write_to_optim_file);
         
         
         /*!

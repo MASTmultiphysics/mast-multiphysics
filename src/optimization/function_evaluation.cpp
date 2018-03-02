@@ -31,7 +31,7 @@ MAST::FunctionEvaluation::output(unsigned int iter,
                                  const std::vector<Real> &x,
                                  Real obj,
                                  const std::vector<Real> &fval,
-                                 bool if_write_to_optim_file) const {
+                                 bool if_write_to_optim_file) {
     
     libmesh_assert_equal_to(x.size(), _n_vars);
     libmesh_assert_equal_to(fval.size(), _n_eq + _n_ineq);
@@ -205,7 +205,7 @@ MAST::FunctionEvaluation::initialize_dv_from_output_file(const std::string& nm,
         boost::split(results, line, boost::is_any_of(" \t"), boost::token_compress_on);
         libmesh_assert_equal_to(results[0],   "n_ineq");
         nineq = stod(results[1]);
-        libmesh_assert_equal_to(  nineq, _n_ineq);
+        //libmesh_assert_equal_to(  nineq, _n_ineq);
         
         
         // skip all lines before iter.

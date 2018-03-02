@@ -27,6 +27,7 @@
 #include "base/nonlinear_implicit_assembly_elem_operations.h"
 #include "base/output_assembly_elem_operations.h"
 #include "base/elem_base.h"
+#include "mesh/local_elem_fe.h"
 #include "numerics/utility.h"
 
 
@@ -41,6 +42,7 @@
 MAST::LevelSetNonlinearImplicitAssembly::
 LevelSetNonlinearImplicitAssembly():
 MAST::NonlinearImplicitAssembly(),
+_analysis_mode (true),
 _level_set     (nullptr),
 _intersection  (nullptr),
 _velocity      (nullptr) {
@@ -127,6 +129,8 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
     libmesh_assert(_elem_ops);
     libmesh_assert(_level_set);
     
+    _analysis_mode = false;
+    
     MAST::NonlinearSystem& nonlin_sys = _system->system();
     
     // make sure that the system for which this object was created,
@@ -173,6 +177,9 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
         
         // get the solution
         unsigned int ndofs = (unsigned int)dof_indices.size();
+        sol.setZero(ndofs);
+        vec.setZero(ndofs);
+        mat.setZero(ndofs, ndofs);
 
         // Petsc needs that every diagonal term be provided some contribution,
         // even if zero. Otherwise, it complains about lack of diagonal entry.
@@ -181,7 +188,6 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
         if (_intersection->if_elem_on_negative_phi() && J) {
             
             DenseRealMatrix m(ndofs, ndofs);
-            for (unsigned int i=0; i<dof_indices.size(); i++) m(i, i) = 1.e-12;
             dof_map.constrain_element_matrix(m, dof_indices);
             J->add_matrix(m, dof_indices);
         }
@@ -189,10 +195,6 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
         
         if (_intersection->if_elem_has_positive_phi_region()) {
 
-            sol.setZero(ndofs);
-            vec.setZero(ndofs);
-            mat.setZero(ndofs, ndofs);
-            
             for (unsigned int i=0; i<dof_indices.size(); i++)
                 sol(i) = (*localized_solution)(dof_indices[i]);
 
@@ -214,9 +216,7 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
 //                if (_sol_function)
 //                    physics_elem->attach_active_solution_function(*_sol_function);
                 
-                // perform the element level calculations
-                ops.elem_calculations(J!=nullptr?true:false,
-                                      vec, mat);
+                ops.elem_calculations(J!=nullptr?true:false, vec, mat);
                 
 //                physics_elem->detach_active_solution_function();
                 
@@ -300,8 +300,6 @@ void plot_points(const std::vector<libMesh::Point>& pts) {
         y(i) = pts[i](1);
     }
 
-    //char s[] = ".";
-    //plstring(n, x.data(), y.data(), s);
     plpoin(n, x.data(), y.data(), -1);
     plflush();
 }
@@ -417,6 +415,8 @@ sensitivity_assemble (const MAST::FunctionBase& f,
     // we need the velocity for topology parameter
     if (f.is_topology_parameter()) libmesh_assert(_velocity);
 
+    _analysis_mode = false;
+    
     MAST::NonlinearSystem& nonlin_sys = _system->system();
     
     sensitivity_rhs.zero();
@@ -535,6 +535,7 @@ calculate_output(const libMesh::NumericVector<Real>& X,
     libmesh_assert(_discipline);
     libmesh_assert(_level_set);
     
+    _analysis_mode = false;
     output.zero_for_analysis();
 
     this->set_elem_operation_object(output);
@@ -626,6 +627,8 @@ calculate_output_derivative(const libMesh::NumericVector<Real>& X,
     
     libmesh_assert(_discipline);
     libmesh_assert(_system);
+    
+    _analysis_mode = false;
     
     output.zero_for_sensitivity();
 
@@ -728,6 +731,9 @@ calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
     libmesh_assert(_system);
     libmesh_assert(_discipline);
     libmesh_assert(_level_set);
+    
+    _analysis_mode = false;
+    
     // we need the velocity for topology parameter
     if (p.is_topology_parameter()) libmesh_assert(_velocity);
 
@@ -839,14 +845,23 @@ MAST::LevelSetNonlinearImplicitAssembly::build_fe(const libMesh::Elem& elem) {
     if (_elem_ops->if_use_local_elem() &&
         elem.dim() < 3) {
         
-        MAST::SubCellFE*
-        local_fe = new MAST::SubCellFE(*_system, *_intersection);
-        // FIXME: we would ideally like to send this to the elem ops object for
-        // setting of any local data. But the code has not been setup to do that
-        // for SubCellFE. 
-        //_elem_ops->set_local_fe_data(*local_fe);
-
-        fe.reset(local_fe);
+        if (_analysis_mode) {
+            
+            MAST::LocalElemFE*
+            local_fe = new MAST::LocalElemFE(*_system);
+            _elem_ops->set_local_fe_data(*local_fe, elem);
+            fe.reset(local_fe);
+        }
+        else {
+            
+            MAST::SubCellFE*
+            local_fe = new MAST::SubCellFE(*_system, *_intersection);
+            // FIXME: we would ideally like to send this to the elem ops object for
+            // setting of any local data. But the code has not been setup to do that
+            // for SubCellFE.
+            //_elem_ops->set_local_fe_data(*local_fe);
+            fe.reset(local_fe);
+        }
     }
     else {
         

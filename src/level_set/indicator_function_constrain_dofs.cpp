@@ -67,13 +67,16 @@ MAST::IndicatorFunctionConstrainDofs::constrain() {
     std::vector<libMesh::dof_id_type>
     dof_indices;
     std::set<libMesh::dof_id_type>
+    exclude_dof_indices,
     constrained_dof_indices;
 
     bool
+    exclude_elem   = true,
     constrain_elem = true;
 
     RealVectorX
-    vec = RealVectorX::Zero(1);
+    nd_vals,
+    vec     = RealVectorX::Zero(1);
     
     Real
     tol = 1.e-6;
@@ -84,6 +87,12 @@ MAST::IndicatorFunctionConstrainDofs::constrain() {
         
         const libMesh::Elem* elem = *el;
         
+        nd_vals = RealVectorX::Zero(elem->n_nodes());
+        for (unsigned int i=0; i<elem->n_nodes(); i++) {
+            _indicator(elem->node_ref(i), nonlin_sys.time, vec);
+            nd_vals(i) = vec(0);
+        }
+
         // if the element is entirely on the negative side of the level set,
         // we will constrain all dofs of the element to zero
         //
@@ -92,20 +101,33 @@ MAST::IndicatorFunctionConstrainDofs::constrain() {
         constrain_elem = true;
         for (unsigned int i=0; i<elem->n_nodes(); i++) {
             
-            _indicator(elem->node_ref(i), nonlin_sys.time, vec);
-            if (vec(0) > tol) {
+            if (nd_vals(i) > tol) {
                 constrain_elem = false;
                 break;
             }
         }
-        
-        if (constrain_elem) {
+
+        //
+        // we also exclude all dofs from elements with a gradient on them
+        //
+        if (std::fabs(nd_vals.maxCoeff()-nd_vals.maxCoeff()) > tol)
+            exclude_elem = true;
+
+        //
+        // now populate the dof index vectors
+        //
+        if (constrain_elem || exclude_elem) {
 
             dof_indices.clear();
             dof_map.dof_indices(elem, dof_indices);
 
-            for (unsigned int i=0; i<dof_indices.size(); i++)
-                constrained_dof_indices.insert(dof_indices[i]);
+            if (constrain_elem)
+                for (unsigned int i=0; i<dof_indices.size(); i++)
+                    constrained_dof_indices.insert(dof_indices[i]);
+            
+            if (exclude_elem)
+                for (unsigned int i=0; i<dof_indices.size(); i++)
+                    exclude_dof_indices.insert(dof_indices[i]);
         }
     }
     
@@ -121,7 +143,8 @@ MAST::IndicatorFunctionConstrainDofs::constrain() {
         
         // if the dof is already Dirichlet constrained, then we do not
         // add another constraint on it
-        if (!dof_map.is_constrained_dof(*dof_it)) {
+        if (!dof_map.is_constrained_dof(*dof_it)  &&
+            !exclude_dof_indices.count(*dof_it)) {
             
             libMesh::DofConstraintRow c_row;
             dof_map.add_constraint_row(*dof_it, c_row, true);

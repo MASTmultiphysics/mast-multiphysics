@@ -146,6 +146,8 @@ namespace MAST {
         build_fe(const libMesh::Elem& e);
 
     protected:
+
+        bool                                 _analysis_mode;
         
         MAST::FieldFunction<Real>            *_level_set;
 

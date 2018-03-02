@@ -55,6 +55,7 @@
 #include "libmesh/mesh_generation.h"
 #include "libmesh/dof_map.h"
 #include "libmesh/exodusII_io.h"
+#include "libmesh/petsc_nonlinear_solver.h"
 
 
 namespace MAST {
@@ -342,6 +343,8 @@ MAST::Examples::TopologyOptimizationLevelSet2D::evaluate(const std::vector<Real>
                                                          std::vector<bool>& eval_grads,
                                                          std::vector<Real>& grads) {
     
+    libMesh::out << "New Evaluation" << std::endl;
+    
     // copy DVs to level set function
     for (unsigned int i=0; i<_n_vars; i++)
         _level_set_sys->solution->set(_dv_params[i].first, dvars[i]);
@@ -356,6 +359,7 @@ MAST::Examples::TopologyOptimizationLevelSet2D::evaluate(const std::vector<Real>
     MAST::LevelSetNonlinearImplicitAssembly                  nonlinear_assembly;
     MAST::LevelSetNonlinearImplicitAssembly                  level_set_assembly;
     MAST::LevelSetEigenproblemAssembly                       eigen_assembly;
+    MAST::StressAssembly                                     stress_assembly;
     MAST::StructuralNonlinearAssemblyElemOperations          nonlinear_elem_ops;
     MAST::HeatConductionNonlinearAssemblyElemOperations      conduction_elem_ops;
     MAST::StructuralModalEigenproblemAssemblyElemOperations  modal_elem_ops;
@@ -371,18 +375,34 @@ MAST::Examples::TopologyOptimizationLevelSet2D::evaluate(const std::vector<Real>
     /////////////////////////////////////////////////////////////////////
     // first constrain the indicator function and solve
     /////////////////////////////////////////////////////////////////////
+    SNESConvergedReason r;
     {
+        libMesh::out << "Indicator Function" << std::endl;
         nonlinear_assembly.set_discipline_and_system(*_indicator_discipline, *_indicator_sys_init);
         conduction_elem_ops.set_discipline_and_system(*_indicator_discipline, *_indicator_sys_init);
         nonlinear_assembly.set_level_set_function(*_level_set_function);
         
         MAST::LevelSetConstrainDofs constrain(*_indicator_sys_init, *_level_set_function);
+        constrain.constrain_all_negative_indices(true);
         _indicator_sys->attach_constraint_object(constrain);
         _indicator_sys->reinit_constraints();
         _indicator_sys->solve(conduction_elem_ops, nonlinear_assembly);
+        r = dynamic_cast<libMesh::PetscNonlinearSolver<Real>&>
+        (*_indicator_sys->nonlinear_solver).get_converged_reason();
         nonlinear_assembly.clear_discipline_and_system();
         nonlinear_assembly.clear_level_set_function();
     }
+    // if the solver diverged due to linear solve, then there is a problem with
+    // this geometry and we need to return with a high value set for the
+    // constraints
+    if (r == SNES_DIVERGED_LINEAR_SOLVE) {
+        
+        obj = 1.e10;
+        for (unsigned int i=0; i<_n_ineq; i++)
+            fvals[i] = 1.e10;
+        return;
+    }
+    
 
     /////////////////////////////////////////////////////////////////////
     // now, use the indicator function to constrain dofs in the structural
@@ -392,6 +412,7 @@ MAST::Examples::TopologyOptimizationLevelSet2D::evaluate(const std::vector<Real>
         MAST::MeshFieldFunction indicator(*_indicator_sys_init, "indicator");
         indicator.init(*_indicator_sys->solution);
         MAST::IndicatorFunctionConstrainDofs constrain(*_sys_init, *_level_set_function, indicator);
+        //MAST::LevelSetConstrainDofs constrain(*_sys_init, *_level_set_function);
         _sys->attach_constraint_object(constrain);
         _sys->reinit_constraints();
         _sys->initialize_condensed_dofs(*_discipline);
@@ -406,13 +427,14 @@ MAST::Examples::TopologyOptimizationLevelSet2D::evaluate(const std::vector<Real>
     eigen_assembly.set_discipline_and_system(*_discipline, *_sys_init);
     eigen_assembly.set_level_set_function(*_level_set_function);
     eigen_assembly.set_level_set_velocity_function(*_level_set_vel);
+    stress_assembly.set_discipline_and_system(*_discipline, *_sys_init);
     level_set_assembly.set_discipline_and_system(*_level_set_discipline, *_level_set_sys_init);
     level_set_assembly.set_level_set_function(*_level_set_function);
     level_set_assembly.set_level_set_velocity_function(*_level_set_vel);
     nonlinear_elem_ops.set_discipline_and_system(*_discipline, *_sys_init);
     modal_elem_ops.set_discipline_and_system(*_discipline, *_sys_init);
     
-
+    
     
 
     MAST::LevelSetVolume                            volume(level_set_assembly.get_intersection());
@@ -432,15 +454,34 @@ MAST::Examples::TopologyOptimizationLevelSet2D::evaluate(const std::vector<Real>
     //////////////////////////////////////////////////////////////////////
     // evaluate the stress constraint
     //////////////////////////////////////////////////////////////////////
+    libMesh::out << "Static Solve" << std::endl;
     _sys->solve(nonlinear_elem_ops, nonlinear_assembly);
+    r = dynamic_cast<libMesh::PetscNonlinearSolver<Real>&>
+    (*_sys->nonlinear_solver).get_converged_reason();
+    
+    // if the solver diverged due to linear solve, then there is a problem with
+    // this geometry and we need to return with a high value set for the
+    // constraints
+    if (r == SNES_DIVERGED_LINEAR_SOLVE) {
+        
+        obj = 1.e10;
+        for (unsigned int i=0; i<_n_ineq; i++)
+            fvals[i] = 1.e10;
+        return;
+    }
+    
     nonlinear_assembly.calculate_output(*_sys->solution, stress);
     fvals[0]  =  stress.output_total()/_stress_lim - 1.;  // g = sigma/sigma0-1 <= 0
-
+    
+    //libMesh::ExodusII_IO(*_mesh).write_equation_systems("indicator.exo", *_eq_sys);
+    //libMesh::ExodusII_IO(*_level_set_mesh).write_equation_systems("phi.exo", *_level_set_eq_sys);
+    
     if (_n_eig_vals) {
         
         //////////////////////////////////////////////////////////////////////
         // evaluate the eigenvalue constraint
         //////////////////////////////////////////////////////////////////////
+        libMesh::out << "Eigen Solve" << std::endl;
         _sys->eigenproblem_solve(modal_elem_ops, eigen_assembly);
         Real eig_imag = 0.;
         //
@@ -486,6 +527,9 @@ MAST::Examples::TopologyOptimizationLevelSet2D::evaluate(const std::vector<Real>
                                          eigen_assembly,
                                          eval_grads,
                                          grads);
+
+    // also the stress data for plotting
+    stress_assembly.update_stress_strain_data(stress, *_sys->solution);
 }
 
 
@@ -917,7 +961,7 @@ MAST::Examples::TopologyOptimizationLevelSet2D::output(unsigned int iter,
                                                        const std::vector<Real>& x,
                                                        Real obj,
                                                        const std::vector<Real>& fval,
-                                                       bool if_write_to_optim_file) const {
+                                                       bool if_write_to_optim_file) {
 
     libmesh_assert_equal_to(x.size(), _n_vars);
     
@@ -932,40 +976,18 @@ MAST::Examples::TopologyOptimizationLevelSet2D::output(unsigned int iter,
     _level_set_sys->solution->close();
     _level_set_function->init(*_level_set_sys_init, *_level_set_sys->solution);
     _level_set_sys_init_on_str_mesh->initialize_solution(_level_set_function->get_mesh_function());
-    
-    MAST::LevelSetNonlinearImplicitAssembly                  nonlinear_assembly;
-    MAST::LevelSetEigenproblemAssembly                       eigen_assembly;
-    MAST::StructuralNonlinearAssemblyElemOperations          nonlinear_elem_ops;
-    MAST::StressAssembly                                     stress_assembly;
-    MAST::StressStrainOutputBase                             stress;
-    MAST::StructuralModalEigenproblemAssemblyElemOperations  modal_elem_ops;
 
-    nonlinear_elem_ops.set_discipline_and_system(*_discipline, *_sys_init);
-    modal_elem_ops.set_discipline_and_system(*_discipline, *_sys_init);
-    nonlinear_assembly.set_discipline_and_system(*_discipline, *_sys_init);
-    nonlinear_assembly.set_level_set_function(*_level_set_function);
-    nonlinear_assembly.set_level_set_velocity_function(*_level_set_vel);
-    eigen_assembly.set_discipline_and_system(*_discipline, *_sys_init);
-    eigen_assembly.set_level_set_function(*_level_set_function);
-    eigen_assembly.set_level_set_velocity_function(*_level_set_vel);
-    stress_assembly.set_discipline_and_system(*_discipline, *_sys_init);
-    stress.set_discipline_and_system(*_discipline, *_sys_init);
-    stress.set_participating_elements_to_all();
-    stress.set_p_val(_p_val);
+    std::vector<bool> eval_grads(this->n_ineq(), false);
+    std::vector<Real> f(this->n_ineq(), 0.), grads;
+    this->evaluate(x, obj, false, grads, f, eval_grads, grads);
     
-    //////////////////////////////////////////////////////////////////////////
-    // static analysis and write to file
-    //////////////////////////////////////////////////////////////////////////
-    _sys->solve(nonlinear_elem_ops, nonlinear_assembly);
-    stress_assembly.update_stress_strain_data(stress, *_sys->solution);
     _output->write_timestep(output_name, *_eq_sys, iter+1, (1.*iter));
 
     if (_n_eig_vals) {
         
         //////////////////////////////////////////////////////////////////////////
-        // eigenvalue analysis and write modes to file
+        // eigenvalue analysis: write modes to file
         //////////////////////////////////////////////////////////////////////////
-        _sys->eigenproblem_solve(modal_elem_ops, eigen_assembly);
         libMesh::ExodusII_IO writer(*_mesh);
         Real eig_r, eig_i;
         for (unsigned int i=0; i<_sys->get_n_converged_eigenvalues(); i++) {

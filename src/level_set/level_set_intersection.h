@@ -87,6 +87,13 @@ namespace MAST {
          */
         unsigned int edge_on_boundary() const;
 
+        
+        /*!
+         *   @returns value of phi on element node. This can only be the
+         *   node in the
+         */
+        Real get_node_phi_value(const libMesh::Node* n) const;
+        
         /*!
          *   @returns true if the intersection is through the element, or
          *   has colinear edge.
@@ -203,6 +210,7 @@ namespace MAST {
         std::vector<libMesh::Node*>                  _new_nodes;
         std::vector<libMesh::Elem*>                  _new_elems;
         std::map<const libMesh::Node*, libMesh::Point> _node_local_coords;
+        std::map<const libMesh::Node*, std::pair<Real, bool> > _node_phi_vals;
     };
     
 }
