@@ -2361,6 +2361,20 @@ MAST::StructuralElement2D::thermal_residual (bool request_jacobian,
         Bmat_lin.vector_mult_transpose(vec3_n2, vec1_n1);
         local_f += JxW[qp] * vec3_n2;
         
+        if (_property.strain_type() == MAST::NONLINEAR_STRAIN) {
+
+            // nonlinear strain operotor
+            // x
+            vec4_2 = mat_x.transpose() * vec1_n1;
+            Bmat_nl_x.vector_mult_transpose(vec3_n2, vec4_2);
+            f.topRows(n2) -= JxW[qp] * vec3_n2;
+            
+            // y
+            vec4_2 = mat_y.transpose() * vec1_n1;
+            Bmat_nl_y.vector_mult_transpose(vec3_n2, vec4_2);
+            f.topRows(n2) -= JxW[qp] * vec3_n2;
+        }
+        
         if (if_bending) {
             // bending strain
             _bending_operator->initialize_bending_strain_operator(*_fe, qp, Bmat_bend);
@@ -2381,8 +2395,12 @@ MAST::StructuralElement2D::thermal_residual (bool request_jacobian,
                 local_f += JxW[qp] * vec3_n2;
             }
             
-            if (request_jacobian && if_vk) { // Jacobian only for vk strain
-                                             // vk - vk
+            if (request_jacobian &&
+                (if_vk || _property.strain_type() == MAST::NONLINEAR_STRAIN)) {
+                
+                
+                
+                // vk - vk
                 mat3 = RealMatrixX::Zero(2, n2);
                 Bmat_vk.left_multiply(mat3, stress);
                 Bmat_vk.right_multiply_transpose(mat2_n2n2, mat3);
