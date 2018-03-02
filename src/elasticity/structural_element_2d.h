@@ -290,15 +290,6 @@ namespace MAST {
         }
         
 
-        
-        /*!
-         *   initialize membrane strain operator matrix
-         */
-        virtual void
-        initialize_direct_strain_operator(const unsigned int qp,
-                                          const MAST::FEBase& fe,
-                                          MAST::FEMOperatorMatrix& Bmat);
-        
         /*!
          *   initialze the von Karman strain in \par vK_strain, the operator
          *   matrices needed for Jacobian calculation.
@@ -322,62 +313,62 @@ namespace MAST {
                                                           const MAST::FEBase& fe,
                                                           RealMatrixX& vk_dwdxi_mat_sens);
         
+
+        virtual void
+        initialize_green_lagrange_strain_operator(const unsigned int qp,
+                                                  const MAST::FEBase& fe,
+                                                  const RealVectorX& local_disp,
+                                                  RealVectorX& epsilon,
+                                                  RealMatrixX& mat_x,
+                                                  RealMatrixX& mat_y,
+                                                  MAST::FEMOperatorMatrix& Bmat_lin,
+                                                  MAST::FEMOperatorMatrix& Bmat_nl_x,
+                                                  MAST::FEMOperatorMatrix& Bmat_nl_y,
+                                                  MAST::FEMOperatorMatrix& Bmat_nl_u,
+                                                  MAST::FEMOperatorMatrix& Bmat_nl_v);
+
         /*!
          *   performs integration at the quadrature point for the provided
          *   matrices. The temperature vector and matrix entities are provided for
          *   integration
          */
         virtual void
-        _internal_residual_operation(bool if_bending,
-                                     bool if_vk,
-                                     const unsigned int n2,
-                                     const unsigned int qp,
-                                     const MAST::FEBase& fe,
-                                     const std::vector<Real>& JxW,
-                                     bool request_jacobian,
-                                     RealVectorX& local_f,
-                                     RealMatrixX& local_jac,
-                                     MAST::FEMOperatorMatrix& Bmat_mem,
-                                     MAST::FEMOperatorMatrix& Bmat_bend,
-                                     MAST::FEMOperatorMatrix& Bmat_vk,
-                                     RealMatrixX& stress,
-                                     RealMatrixX& stress_l,
-                                     RealMatrixX& vk_dwdxi_mat,
-                                     RealMatrixX& material_A_mat,
-                                     RealMatrixX& material_B_mat,
-                                     RealMatrixX& material_D_mat,
-                                     RealVectorX& vec1_n1,
-                                     RealVectorX& vec2_n1,
-                                     RealVectorX& vec3_n2,
-                                     RealVectorX& vec4_2,
-                                     RealVectorX& vec5_2,
-                                     RealMatrixX& mat1_n1n2,
-                                     RealMatrixX& mat2_n2n2,
-                                     RealMatrixX& mat3,
-                                     RealMatrixX& mat4_2n2);
-        
-        /*!
-         *   sensitivity of linear part of the geometric stiffness matrix
-         */
-        void
-        _linearized_geometric_stiffness_sensitivity_with_static_solution
-        (const unsigned int n2,
-         const unsigned int qp,
-         const MAST::FEBase& fe,
-         const std::vector<Real>& JxW,
-         RealMatrixX& local_jac,
-         MAST::FEMOperatorMatrix& Bmat_mem,
-         MAST::FEMOperatorMatrix& Bmat_bend,
-         MAST::FEMOperatorMatrix& Bmat_vk,
-         RealMatrixX& stress_l,
-         RealMatrixX& vk_dwdxi_mat,
-         RealMatrixX& material_A_mat,
-         RealMatrixX& material_B_mat,
-         RealVectorX& vec1_n1,
-         RealVectorX& vec2_n1,
-         RealMatrixX& mat1_n1n2,
-         RealMatrixX& mat2_n2n2,
-         RealMatrixX& mat3);
+        _internal_residual_operation(bool                       if_bending,
+                                     bool                       if_vk,
+                                     const unsigned int         n2,
+                                     const unsigned int         qp,
+                                     const MAST::FEBase&        fe,
+                                     const std::vector<Real>&   JxW,
+                                     bool                       request_jacobian,
+                                     RealVectorX&               local_f,
+                                     RealMatrixX&               local_jac,
+                                     RealVectorX&               local_disp,
+                                     RealVectorX&               strain_mem,
+                                     FEMOperatorMatrix&         Bmat_lin,
+                                     FEMOperatorMatrix&         Bmat_nl_x,
+                                     FEMOperatorMatrix&         Bmat_nl_y,
+                                     FEMOperatorMatrix&         Bmat_nl_u,
+                                     FEMOperatorMatrix&         Bmat_nl_v,
+                                     MAST::FEMOperatorMatrix&   Bmat_bend,
+                                     MAST::FEMOperatorMatrix&   Bmat_vk,
+                                     RealMatrixX&               mat_x,
+                                     RealMatrixX&               mat_y,
+                                     RealMatrixX&               stress,
+                                     RealMatrixX&               vk_dwdxi_mat,
+                                     RealMatrixX&               material_A_mat,
+                                     RealMatrixX&               material_B_mat,
+                                     RealMatrixX&               material_D_mat,
+                                     RealVectorX&               vec1_n1,
+                                     RealVectorX&               vec2_n1,
+                                     RealVectorX&               vec3_n2,
+                                     RealVectorX&               vec4_2,
+                                     RealVectorX&               vec5_2,
+                                     RealVectorX&               vec6_n2,
+                                     RealMatrixX&               mat1_n1n2,
+                                     RealMatrixX&               mat2_n2n2,
+                                     RealMatrixX&               mat3,
+                                     RealMatrixX&               mat4_2n2,
+                                     RealMatrixX&               mat5_3n2);
         
         
         /*!
@@ -385,7 +376,7 @@ namespace MAST {
          */
         void _convert_prestress_A_mat_to_vector(const RealMatrixX& mat,
                                                 RealVectorX& vec) const;
-
+        
         /*!
          *   converts the prestress stress tensor to a vector representation
          */

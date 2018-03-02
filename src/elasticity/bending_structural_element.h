@@ -61,13 +61,6 @@ namespace MAST {
     protected:
         
         
-        /*!
-         *   initialize membrane strain operator matrix
-         */
-        virtual void initialize_direct_strain_operator(const unsigned int qp,
-                                                       const MAST::FEBase& fe,
-                                                       FEMOperatorMatrix& Bmat) = 0;
-        
         virtual const RealMatrixX&
         _Tmatrix() const {
             

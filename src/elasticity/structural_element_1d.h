@@ -377,31 +377,6 @@ namespace MAST {
                                                   RealMatrixX& mat4_2n2);
         
         
-        /*!
-         *   sensitivity of linear part of the geometric stiffness matrix
-         */
-        void _linearized_geometric_stiffness_sensitivity_with_static_solution
-        (const unsigned int n2,
-         const unsigned int qp,
-         const MAST::FEBase& fe,
-         const std::vector<Real>& JxW,
-         RealMatrixX& local_jac,
-         MAST::FEMOperatorMatrix& Bmat_mem,
-         MAST::FEMOperatorMatrix& Bmat_bend_v,
-         MAST::FEMOperatorMatrix& Bmat_bend_w,
-         MAST::FEMOperatorMatrix& Bmat_v_vk,
-         MAST::FEMOperatorMatrix& Bmat_w_vk,
-         RealMatrixX& stress_l,
-         RealMatrixX& vk_dvdxi_mat,
-         RealMatrixX& vk_dwdxi_mat,
-         RealMatrixX& material_A_mat,
-         RealMatrixX& material_B_mat,
-         RealVectorX& vec1_n1,
-         RealVectorX& vec2_n1,
-         RealMatrixX& mat1_n1n2,
-         RealMatrixX& mat2_n2n2,
-         RealMatrixX& mat3);
-
 
         /*!
          *   converts the prestress stress tensor to a vector representation
