@@ -86,7 +86,8 @@ MAST::IndicatorFunctionConstrainDofs::constrain() {
     for ( ; el != end_el; ++el) {
         
         const libMesh::Elem* elem = *el;
-        
+        _intersection->init(_level_set, *elem, nonlin_sys.time);
+
         nd_vals = RealVectorX::Zero(elem->n_nodes());
         for (unsigned int i=0; i<elem->n_nodes(); i++) {
             _indicator(elem->node_ref(i), nonlin_sys.time, vec);
@@ -110,7 +111,7 @@ MAST::IndicatorFunctionConstrainDofs::constrain() {
         //
         // we also exclude all dofs from elements with a gradient on them
         //
-        if (std::fabs(nd_vals.maxCoeff()-nd_vals.maxCoeff()) > tol)
+        if (_intersection->if_elem_has_boundary() && nd_vals.maxCoeff() > tol)
             exclude_elem = true;
         else
             exclude_elem = false;
@@ -131,6 +132,8 @@ MAST::IndicatorFunctionConstrainDofs::constrain() {
                 for (unsigned int i=0; i<dof_indices.size(); i++)
                     exclude_dof_indices.insert(dof_indices[i]);
         }
+        
+        _intersection->clear();
     }
     
     // create a set so that we only deal with unique set of ids.
