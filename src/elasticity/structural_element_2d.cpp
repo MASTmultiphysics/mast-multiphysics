@@ -2394,18 +2394,28 @@ MAST::StructuralElement2D::thermal_residual (bool request_jacobian,
                 Bmat_vk.vector_mult_transpose(vec3_n2, vec4_2);
                 local_f += JxW[qp] * vec3_n2;
             }
+        }
+        
+        if (request_jacobian &&
+            _property.strain_type() == MAST::NONLINEAR_STRAIN) {
             
-            if (request_jacobian &&
-                (if_vk || _property.strain_type() == MAST::NONLINEAR_STRAIN)) {
-                
-                
-                
-                // vk - vk
-                mat3 = RealMatrixX::Zero(2, n2);
-                Bmat_vk.left_multiply(mat3, stress);
-                Bmat_vk.right_multiply_transpose(mat2_n2n2, mat3);
-                local_jac += JxW[qp] * mat2_n2n2;
-            }
+            // u-disp
+            Bmat_nl_u.left_multiply(mat3, stress);
+            Bmat_nl_u.right_multiply_transpose(mat2_n2n2, mat3);
+            jac.topLeftCorner(n2, n2) -= JxW[qp] * mat2_n2n2;
+            
+            // v-disp
+            Bmat_nl_v.left_multiply(mat3, stress);
+            Bmat_nl_v.right_multiply_transpose(mat2_n2n2, mat3);
+            jac.topLeftCorner(n2, n2) -= JxW[qp] * mat2_n2n2;
+        }
+            
+        if (request_jacobian && if_vk) {
+            // vk - vk
+            mat3 = RealMatrixX::Zero(2, n2);
+            Bmat_vk.left_multiply(mat3, stress);
+            Bmat_vk.right_multiply_transpose(mat2_n2n2, mat3);
+            local_jac += JxW[qp] * mat2_n2n2;
         }
     }
     
@@ -2548,6 +2558,20 @@ thermal_residual_sensitivity (const MAST::FunctionBase& p,
         Bmat_lin.vector_mult_transpose(vec3_n2, vec1_n1);
         local_f += JxW[qp] * vec3_n2;
         
+        if (_property.strain_type() == MAST::NONLINEAR_STRAIN) {
+            
+            // nonlinear strain operotor
+            // x
+            vec4_2 = mat_x.transpose() * vec1_n1;
+            Bmat_nl_x.vector_mult_transpose(vec3_n2, vec4_2);
+            f.topRows(n2) -= JxW[qp] * vec3_n2;
+            
+            // y
+            vec4_2 = mat_y.transpose() * vec1_n1;
+            Bmat_nl_y.vector_mult_transpose(vec3_n2, vec4_2);
+            f.topRows(n2) -= JxW[qp] * vec3_n2;
+        }
+
         if (if_bending) {
             // bending strain
             _bending_operator->initialize_bending_strain_operator(*_fe, qp, Bmat_bend);
@@ -2567,15 +2591,29 @@ thermal_residual_sensitivity (const MAST::FunctionBase& p,
                 Bmat_vk.vector_mult_transpose(vec3_n2, vec4_2);
                 local_f += JxW[qp] * vec3_n2;
             }
+        }
+
+        if (request_jacobian &&
+            _property.strain_type() == MAST::NONLINEAR_STRAIN) {
             
-            if (request_jacobian && if_vk) { // Jacobian only for vk strain
-                
-                // vk - vk
-                mat3 = RealMatrixX::Zero(2, n2);
-                Bmat_vk.left_multiply(mat3, stress);
-                Bmat_vk.right_multiply_transpose(mat2_n2n2, mat3);
-                local_jac += JxW[qp] * mat2_n2n2;
-            }
+            // u-disp
+            Bmat_nl_u.left_multiply(mat3, stress);
+            Bmat_nl_u.right_multiply_transpose(mat2_n2n2, mat3);
+            jac.topLeftCorner(n2, n2) -= JxW[qp] * mat2_n2n2;
+            
+            // v-disp
+            Bmat_nl_v.left_multiply(mat3, stress);
+            Bmat_nl_v.right_multiply_transpose(mat2_n2n2, mat3);
+            jac.topLeftCorner(n2, n2) -= JxW[qp] * mat2_n2n2;
+        }
+        
+        if (request_jacobian && if_vk) { // Jacobian only for vk strain
+            
+            // vk - vk
+            mat3 = RealMatrixX::Zero(2, n2);
+            Bmat_vk.left_multiply(mat3, stress);
+            Bmat_vk.right_multiply_transpose(mat2_n2n2, mat3);
+            local_jac += JxW[qp] * mat2_n2n2;
         }
     }
     
@@ -2720,6 +2758,20 @@ thermal_residual_boundary_velocity(const MAST::FunctionBase& p,
         Bmat_lin.vector_mult_transpose(vec3_n2, vec1_n1);
         local_f += JxW_Vn[qp] * vec3_n2;
         
+        if (_property.strain_type() == MAST::NONLINEAR_STRAIN) {
+            
+            // nonlinear strain operotor
+            // x
+            vec4_2 = mat_x.transpose() * vec1_n1;
+            Bmat_nl_x.vector_mult_transpose(vec3_n2, vec4_2);
+            f.topRows(n2) -= JxW_Vn[qp] * vec3_n2;
+            
+            // y
+            vec4_2 = mat_y.transpose() * vec1_n1;
+            Bmat_nl_y.vector_mult_transpose(vec3_n2, vec4_2);
+            f.topRows(n2) -= JxW_Vn[qp] * vec3_n2;
+        }
+
         if (if_bending) {
             // bending strain
             _bending_operator->initialize_bending_strain_operator(*fe, qp, Bmat_bend);
@@ -2739,14 +2791,28 @@ thermal_residual_boundary_velocity(const MAST::FunctionBase& p,
                 Bmat_vk.vector_mult_transpose(vec3_n2, vec4_2);
                 local_f += JxW_Vn[qp] * vec3_n2;
             }
+        }
+        
+        if (request_jacobian &&
+            _property.strain_type() == MAST::NONLINEAR_STRAIN) {
+            
+            // u-disp
+            Bmat_nl_u.left_multiply(mat3, stress);
+            Bmat_nl_u.right_multiply_transpose(mat2_n2n2, mat3);
+            jac.topLeftCorner(n2, n2) -= JxW_Vn[qp] * mat2_n2n2;
+            
+            // v-disp
+            Bmat_nl_v.left_multiply(mat3, stress);
+            Bmat_nl_v.right_multiply_transpose(mat2_n2n2, mat3);
+            jac.topLeftCorner(n2, n2) -= JxW_Vn[qp] * mat2_n2n2;
+        }
 
-            if (request_jacobian && if_vk) { // Jacobian only for vk strain
+        if (request_jacobian && if_vk) { // Jacobian only for vk strain
                 // vk - vk
                 mat3 = RealMatrixX::Zero(2, n2);
                 Bmat_vk.left_multiply(mat3, stress);
                 Bmat_vk.right_multiply_transpose(mat2_n2n2, mat3);
                 local_jac += JxW_Vn[qp] * mat2_n2n2;
-            }
         }
     }
     
