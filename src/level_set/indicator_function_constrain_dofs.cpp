@@ -79,7 +79,7 @@ MAST::IndicatorFunctionConstrainDofs::constrain() {
     vec     = RealVectorX::Zero(1);
     
     Real
-    tol = 1.e-6;
+    tol = 1.e-10;
     
     // our intent is to constrain only those dofs that belong to elements
     // where all nodes have zero indicator function value
@@ -112,6 +112,8 @@ MAST::IndicatorFunctionConstrainDofs::constrain() {
         //
         if (std::fabs(nd_vals.maxCoeff()-nd_vals.maxCoeff()) > tol)
             exclude_elem = true;
+        else
+            exclude_elem = false;
 
         //
         // now populate the dof index vectors

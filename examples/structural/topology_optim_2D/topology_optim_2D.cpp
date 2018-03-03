@@ -472,7 +472,8 @@ MAST::Examples::TopologyOptimizationLevelSet2D::evaluate(const std::vector<Real>
     
     nonlinear_assembly.calculate_output(*_sys->solution, stress);
     fvals[0]  =  stress.output_total()/_stress_lim - 1.;  // g = sigma/sigma0-1 <= 0
-    
+
+    //stress_assembly.update_stress_strain_data(stress, *_sys->solution);
     //libMesh::ExodusII_IO(*_mesh).write_equation_systems("indicator.exo", *_eq_sys);
     //libMesh::ExodusII_IO(*_level_set_mesh).write_equation_systems("phi.exo", *_level_set_eq_sys);
     
@@ -785,7 +786,7 @@ MAST::Examples::TopologyOptimizationLevelSet2D::_init_material() {
 
     // add the conduction property to this card
     Real
-    kval      = (*_input)(_prefix+"k", "thermal conductivity",  190.),
+    kval      = (*_input)(_prefix+"k", "thermal conductivity",  1.e-2),
     cpval     = (*_input)(_prefix+"cp", "thermal capacitance",  864.);
     
     
