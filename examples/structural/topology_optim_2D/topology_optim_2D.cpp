@@ -462,7 +462,8 @@ MAST::Examples::TopologyOptimizationLevelSet2D::evaluate(const std::vector<Real>
     // if the solver diverged due to linear solve, then there is a problem with
     // this geometry and we need to return with a high value set for the
     // constraints
-    if (r == SNES_DIVERGED_LINEAR_SOLVE) {
+    if (r == SNES_DIVERGED_LINEAR_SOLVE ||
+        _sys->final_nonlinear_residual() > 1.e-1) {
         
         obj = 1.e10;
         for (unsigned int i=0; i<_n_ineq; i++)
