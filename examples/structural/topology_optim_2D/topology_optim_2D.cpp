@@ -408,15 +408,13 @@ MAST::Examples::TopologyOptimizationLevelSet2D::evaluate(const std::vector<Real>
     // now, use the indicator function to constrain dofs in the structural
     // system
     /////////////////////////////////////////////////////////////////////
-    {
-        MAST::MeshFieldFunction indicator(*_indicator_sys_init, "indicator");
-        indicator.init(*_indicator_sys->solution);
-        MAST::IndicatorFunctionConstrainDofs constrain(*_sys_init, *_level_set_function, indicator);
-        //MAST::LevelSetConstrainDofs constrain(*_sys_init, *_level_set_function);
-        _sys->attach_constraint_object(constrain);
-        _sys->reinit_constraints();
-        _sys->initialize_condensed_dofs(*_discipline);
-    }
+    MAST::MeshFieldFunction indicator(*_indicator_sys_init, "indicator");
+    indicator.init(*_indicator_sys->solution);
+    MAST::IndicatorFunctionConstrainDofs constrain(*_sys_init, *_level_set_function, indicator);
+    //MAST::LevelSetConstrainDofs constrain(*_sys_init, *_level_set_function);
+    _sys->attach_constraint_object(constrain);
+    _sys->reinit_constraints();
+    _sys->initialize_condensed_dofs(*_discipline);
     
     /////////////////////////////////////////////////////////////////////
     // first constrain the indicator function and solve
@@ -424,6 +422,7 @@ MAST::Examples::TopologyOptimizationLevelSet2D::evaluate(const std::vector<Real>
     nonlinear_assembly.set_discipline_and_system(*_discipline, *_sys_init);
     nonlinear_assembly.set_level_set_function(*_level_set_function);
     nonlinear_assembly.set_level_set_velocity_function(*_level_set_vel);
+    nonlinear_assembly.set_indicator_function(indicator);
     eigen_assembly.set_discipline_and_system(*_discipline, *_sys_init);
     eigen_assembly.set_level_set_function(*_level_set_function);
     eigen_assembly.set_level_set_velocity_function(*_level_set_vel);

@@ -55,6 +55,13 @@ namespace MAST {
         virtual void
         set_level_set_function(MAST::FieldFunction<Real>& level_set);
 
+        
+        /*!
+         *   attaches indicator function to \p this.
+         */
+        virtual void
+        set_indicator_function(MAST::FieldFunction<RealVectorX>& indicator);
+        
         /*!
          *   clears association with level set function
          */
@@ -150,6 +157,8 @@ namespace MAST {
         bool                                 _analysis_mode;
         
         MAST::FieldFunction<Real>            *_level_set;
+
+        MAST::FieldFunction<RealVectorX>     *_indicator;
 
         MAST::LevelSetIntersection           *_intersection;
         

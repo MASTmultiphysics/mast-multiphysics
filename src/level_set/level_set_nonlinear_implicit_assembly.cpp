@@ -44,6 +44,7 @@ LevelSetNonlinearImplicitAssembly():
 MAST::NonlinearImplicitAssembly(),
 _analysis_mode (true),
 _level_set     (nullptr),
+_indicator     (nullptr),
 _intersection  (nullptr),
 _velocity      (nullptr) {
     
@@ -77,6 +78,18 @@ set_level_set_function(MAST::FieldFunction<Real>& level_set) {
     _level_set    = &level_set;
     _intersection = new MAST::LevelSetIntersection(_system->system().get_mesh().max_elem_id(),
                                                    _system->system().get_mesh().max_node_id());
+}
+
+
+
+void
+MAST::LevelSetNonlinearImplicitAssembly::
+set_indicator_function(MAST::FieldFunction<RealVectorX>& indicator) {
+    
+    libmesh_assert(!_indicator);
+    libmesh_assert(_system);
+    
+    _indicator    = &indicator;
 }
 
 
@@ -140,9 +153,16 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
     if (R) R->zero();
     if (J) J->zero();
     
+    const Real
+    tol = 1.e-10;
+    
     // iterate over each element, initialize it and get the relevant
     // analysis quantities
-    RealVectorX vec, sol;
+    RealVectorX
+    vec,
+    sol,
+    nd_indicator = RealVectorX::Ones(1),
+    indicator    = RealVectorX::Zero(1);
     RealMatrixX mat;
     
     std::vector<libMesh::dof_id_type> dof_indices;
@@ -172,9 +192,19 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
         const libMesh::Elem* elem = *el;
         
         _intersection->init(*_level_set, *elem, nonlin_sys.time);
-
         dof_map.dof_indices (elem, dof_indices);
-        
+
+        // use the indicator if it was provided
+        if (_indicator) {
+            
+            nd_indicator.setZero(elem->n_nodes());
+            for (unsigned int i=0; i<elem->n_nodes(); i++) {
+                (*_indicator)(elem->node_ref(i), nonlin_sys.time, indicator);
+                nd_indicator(i) = indicator(0);
+            }
+        }
+
+
         // get the solution
         unsigned int ndofs = (unsigned int)dof_indices.size();
         sol.setZero(ndofs);
@@ -185,7 +215,8 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
         // even if zero. Otherwise, it complains about lack of diagonal entry.
         // So, if the element is NOT completely on the positive side, we still
         // add a zero matrix to get around this issue.
-        if (_intersection->if_elem_on_negative_phi() && J) {
+        if ((_intersection->if_elem_on_negative_phi() ||
+              nd_indicator.maxCoeff() < tol) && J) {
             
             DenseRealMatrix m(ndofs, ndofs);
             dof_map.constrain_element_matrix(m, dof_indices);
@@ -193,7 +224,8 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
         }
 
         
-        if (_intersection->if_elem_has_positive_phi_region()) {
+        if (nd_indicator.maxCoeff() > tol &&
+            _intersection->if_elem_has_positive_phi_region()) {
 
             for (unsigned int i=0; i<dof_indices.size(); i++)
                 sol(i) = (*localized_solution)(dof_indices[i]);
@@ -421,9 +453,17 @@ sensitivity_assemble (const MAST::FunctionBase& f,
     
     sensitivity_rhs.zero();
     
+    const Real
+    tol = 1.e-10;
+
     // iterate over each element, initialize it and get the relevant
     // analysis quantities
-    RealVectorX vec1, vec2, sol;
+    RealVectorX
+    vec1,
+    vec2,
+    sol,
+    nd_indicator = RealVectorX::Ones(1),
+    indicator    = RealVectorX::Zero(1);
     
     std::vector<libMesh::dof_id_type> dof_indices;
     const libMesh::DofMap& dof_map = nonlin_sys.get_dof_map();
@@ -453,6 +493,16 @@ sensitivity_assemble (const MAST::FunctionBase& f,
 
         dof_map.dof_indices (elem, dof_indices);
         
+        // use the indicator if it was provided
+        if (_indicator) {
+            
+            nd_indicator.setZero(elem->n_nodes());
+            for (unsigned int i=0; i<elem->n_nodes(); i++) {
+                (*_indicator)(elem->node_ref(i), nonlin_sys.time, indicator);
+                nd_indicator(i) = indicator(0);
+            }
+        }
+
         // get the solution
         unsigned int ndofs = (unsigned int)dof_indices.size();
         sol.setZero(ndofs);
@@ -462,8 +512,9 @@ sensitivity_assemble (const MAST::FunctionBase& f,
         for (unsigned int i=0; i<dof_indices.size(); i++)
             sol(i) = (*localized_solution)(dof_indices[i]);
         
-        if (_intersection->if_elem_has_positive_phi_region()) {
-            
+        if (nd_indicator.maxCoeff() > tol &&
+            _intersection->if_elem_has_positive_phi_region()) {
+
             const std::vector<const libMesh::Elem *> &
             elems_hi = _intersection->get_sub_elems_positive_phi();
             
@@ -542,9 +593,15 @@ calculate_output(const libMesh::NumericVector<Real>& X,
 
     MAST::NonlinearSystem& nonlin_sys = _system->system();
     
+    const Real
+    tol = 1.e-10;
+    
     // iterate over each element, initialize it and get the relevant
     // analysis quantities
-    RealVectorX sol;
+    RealVectorX
+    sol,
+    nd_indicator = RealVectorX::Ones(1),
+    indicator    = RealVectorX::Zero(1);
     
     std::vector<libMesh::dof_id_type> dof_indices;
     const libMesh::DofMap& dof_map = _system->system().get_dof_map();
@@ -572,9 +629,19 @@ calculate_output(const libMesh::NumericVector<Real>& X,
         
         _intersection->init(*_level_set, *elem, nonlin_sys.time);
         
-        
-        if (_intersection->if_elem_has_positive_phi_region()) {
+        // use the indicator if it was provided
+        if (_indicator) {
             
+            nd_indicator.setZero(elem->n_nodes());
+            for (unsigned int i=0; i<elem->n_nodes(); i++) {
+                (*_indicator)(elem->node_ref(i), nonlin_sys.time, indicator);
+                nd_indicator(i) = indicator(0);
+            }
+        }
+
+        if (nd_indicator.maxCoeff() > tol &&
+            _intersection->if_elem_has_positive_phi_region()) {
+
             const std::vector<const libMesh::Elem *> &
             //elems_low = intersect.get_sub_elems_negative_phi(),
             elems_hi = _intersection->get_sub_elems_positive_phi();
@@ -638,9 +705,16 @@ calculate_output_derivative(const libMesh::NumericVector<Real>& X,
     
     dq_dX.zero();
     
+    const Real
+    tol = 1.e-10;
+
     // iterate over each element, initialize it and get the relevant
     // analysis quantities
-    RealVectorX vec, sol;
+    RealVectorX
+    vec,
+    sol,
+    nd_indicator = RealVectorX::Ones(1),
+    indicator    = RealVectorX::Zero(1);
     
     std::vector<libMesh::dof_id_type> dof_indices;
     const libMesh::DofMap& dof_map = _system->system().get_dof_map();
@@ -670,6 +744,16 @@ calculate_output_derivative(const libMesh::NumericVector<Real>& X,
 
         dof_map.dof_indices (elem, dof_indices);
         
+        // use the indicator if it was provided
+        if (_indicator) {
+            
+            nd_indicator.setZero(elem->n_nodes());
+            for (unsigned int i=0; i<elem->n_nodes(); i++) {
+                (*_indicator)(elem->node_ref(i), nonlin_sys.time, indicator);
+                nd_indicator(i) = indicator(0);
+            }
+        }
+        
         // get the solution
         unsigned int ndofs = (unsigned int)dof_indices.size();
         sol.setZero(ndofs);
@@ -678,8 +762,9 @@ calculate_output_derivative(const libMesh::NumericVector<Real>& X,
         for (unsigned int i=0; i<dof_indices.size(); i++)
             sol(i) = (*localized_solution)(dof_indices[i]);
         
-        if (_intersection->if_elem_has_positive_phi_region()) {
-            
+        if (nd_indicator.maxCoeff() > tol &&
+            _intersection->if_elem_has_positive_phi_region()) {
+
             const std::vector<const libMesh::Elem *> &
             elems_hi = _intersection->get_sub_elems_positive_phi();
 
@@ -743,11 +828,16 @@ calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
 
     MAST::NonlinearSystem& nonlin_sys = _system->system();
 
+    const Real
+    tol = 1.e-10;
+
     // iterate over each element, initialize it and get the relevant
     // analysis quantities
     RealVectorX
     sol,
-    dsol;
+    dsol,
+    nd_indicator = RealVectorX::Ones(1),
+    indicator    = RealVectorX::Zero(1);
     
     std::vector<libMesh::dof_id_type> dof_indices;
     const libMesh::DofMap& dof_map = _system->system().get_dof_map();
@@ -778,10 +868,20 @@ calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
         const libMesh::Elem* elem = *el;
         
         _intersection->init(*_level_set, *elem, nonlin_sys.time);
-        
-        
-        if (_intersection->if_elem_has_positive_phi_region()) {
+ 
+        // use the indicator if it was provided
+        if (_indicator) {
             
+            nd_indicator.setZero(elem->n_nodes());
+            for (unsigned int i=0; i<elem->n_nodes(); i++) {
+                (*_indicator)(elem->node_ref(i), nonlin_sys.time, indicator);
+                nd_indicator(i) = indicator(0);
+            }
+        }
+        
+        if (nd_indicator.maxCoeff() > tol &&
+            _intersection->if_elem_has_positive_phi_region()) {
+
             const std::vector<const libMesh::Elem *> &
             //elems_low = intersect.get_sub_elems_negative_phi(),
             elems_hi = _intersection->get_sub_elems_positive_phi();

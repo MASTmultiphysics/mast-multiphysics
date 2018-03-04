@@ -88,7 +88,7 @@ MAST::IndicatorFunctionConstrainDofs::constrain() {
         const libMesh::Elem* elem = *el;
         _intersection->init(_level_set, *elem, nonlin_sys.time);
 
-        nd_vals = RealVectorX::Zero(elem->n_nodes());
+        nd_vals.setZero(elem->n_nodes());
         for (unsigned int i=0; i<elem->n_nodes(); i++) {
             _indicator(elem->node_ref(i), nonlin_sys.time, vec);
             nd_vals(i) = vec(0);
@@ -109,7 +109,8 @@ MAST::IndicatorFunctionConstrainDofs::constrain() {
         }
 
         //
-        // we also exclude all dofs from elements with a gradient on them
+        // we also exclude all dofs from elements with atleast one node
+        // on it that belongs to positive indicator
         //
         if (_intersection->if_elem_has_boundary() && nd_vals.maxCoeff() > tol)
             exclude_elem = true;
