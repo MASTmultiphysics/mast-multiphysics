@@ -142,7 +142,7 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
     libmesh_assert(_elem_ops);
     libmesh_assert(_level_set);
     
-    _analysis_mode = false;
+    _analysis_mode = true;
     
     MAST::NonlinearSystem& nonlin_sys = _system->system();
     
@@ -230,7 +230,7 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
             for (unsigned int i=0; i<dof_indices.size(); i++)
                 sol(i) = (*localized_solution)(dof_indices[i]);
 
-            const std::vector<const libMesh::Elem *> &
+            /*const std::vector<const libMesh::Elem *> &
             //elems_low = intersect.get_sub_elems_negative_phi(),
             elems_hi = _intersection->get_sub_elems_positive_phi();
             
@@ -238,11 +238,11 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
             hi_sub_elem_it  = elems_hi.begin(),
             hi_sub_elem_end = elems_hi.end();
             
-            for (; hi_sub_elem_it != hi_sub_elem_end; hi_sub_elem_it++ ) {
+            for (; hi_sub_elem_it != hi_sub_elem_end; hi_sub_elem_it++ )*/ {
                 
-                const libMesh::Elem* sub_elem = *hi_sub_elem_it;
+                //const libMesh::Elem* sub_elem = *hi_sub_elem_it;
                 
-                ops.init(*sub_elem);
+                ops.init(*elem);
                 ops.set_elem_solution(sol);
                 
 //                if (_sol_function)
