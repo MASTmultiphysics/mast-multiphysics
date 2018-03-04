@@ -130,170 +130,6 @@ MAST::LevelSetNonlinearImplicitAssembly::clear_level_set_velocity_function() {
 
 
 
-void
-MAST::LevelSetNonlinearImplicitAssembly::
-residual_and_jacobian (const libMesh::NumericVector<Real>& X,
-                       libMesh::NumericVector<Real>* R,
-                       libMesh::SparseMatrix<Real>*  J,
-                       libMesh::NonlinearImplicitSystem& S) {
-
-    libmesh_assert(_system);
-    libmesh_assert(_discipline);
-    libmesh_assert(_elem_ops);
-    libmesh_assert(_level_set);
-    
-    _analysis_mode = true;
-    
-    MAST::NonlinearSystem& nonlin_sys = _system->system();
-    
-    // make sure that the system for which this object was created,
-    // and the system passed through the function call are the same
-    libmesh_assert_equal_to(&S, &(nonlin_sys));
-    
-    if (R) R->zero();
-    if (J) J->zero();
-    
-    const Real
-    tol = 1.e-10;
-    
-    // iterate over each element, initialize it and get the relevant
-    // analysis quantities
-    RealVectorX
-    vec,
-    sol,
-    nd_indicator = RealVectorX::Ones(1),
-    indicator    = RealVectorX::Zero(1);
-    RealMatrixX mat;
-    
-    std::vector<libMesh::dof_id_type> dof_indices;
-    const libMesh::DofMap& dof_map = _system->system().get_dof_map();
-    
-    
-    std::unique_ptr<libMesh::NumericVector<Real> > localized_solution;
-    localized_solution.reset(build_localized_vector(nonlin_sys,
-                                                    X).release());
-    
-    
-    // if a solution function is attached, initialize it
-    if (_sol_function)
-        _sol_function->init( X);
-    
-    
-    libMesh::MeshBase::const_element_iterator       el     =
-    nonlin_sys.get_mesh().active_local_elements_begin();
-    const libMesh::MeshBase::const_element_iterator end_el =
-    nonlin_sys.get_mesh().active_local_elements_end();
-    
-    MAST::NonlinearImplicitAssemblyElemOperations
-    &ops = dynamic_cast<MAST::NonlinearImplicitAssemblyElemOperations&>(*_elem_ops);
-    
-    for ( ; el != end_el; ++el) {
-        
-        const libMesh::Elem* elem = *el;
-        
-        _intersection->init(*_level_set, *elem, nonlin_sys.time);
-        dof_map.dof_indices (elem, dof_indices);
-
-        // use the indicator if it was provided
-        if (_indicator) {
-            
-            nd_indicator.setZero(elem->n_nodes());
-            for (unsigned int i=0; i<elem->n_nodes(); i++) {
-                (*_indicator)(elem->node_ref(i), nonlin_sys.time, indicator);
-                nd_indicator(i) = indicator(0);
-            }
-        }
-
-
-        // get the solution
-        unsigned int ndofs = (unsigned int)dof_indices.size();
-        sol.setZero(ndofs);
-        vec.setZero(ndofs);
-        mat.setZero(ndofs, ndofs);
-
-        // Petsc needs that every diagonal term be provided some contribution,
-        // even if zero. Otherwise, it complains about lack of diagonal entry.
-        // So, if the element is NOT completely on the positive side, we still
-        // add a zero matrix to get around this issue.
-        if ((_intersection->if_elem_on_negative_phi() ||
-              nd_indicator.maxCoeff() < tol) && J) {
-            
-            DenseRealMatrix m(ndofs, ndofs);
-            dof_map.constrain_element_matrix(m, dof_indices);
-            J->add_matrix(m, dof_indices);
-        }
-
-        
-        if (nd_indicator.maxCoeff() > tol &&
-            _intersection->if_elem_has_positive_phi_region()) {
-
-            for (unsigned int i=0; i<dof_indices.size(); i++)
-                sol(i) = (*localized_solution)(dof_indices[i]);
-
-            /*const std::vector<const libMesh::Elem *> &
-            //elems_low = intersect.get_sub_elems_negative_phi(),
-            elems_hi = _intersection->get_sub_elems_positive_phi();
-            
-            std::vector<const libMesh::Elem*>::const_iterator
-            hi_sub_elem_it  = elems_hi.begin(),
-            hi_sub_elem_end = elems_hi.end();
-            
-            for (; hi_sub_elem_it != hi_sub_elem_end; hi_sub_elem_it++ )*/ {
-                
-                //const libMesh::Elem* sub_elem = *hi_sub_elem_it;
-                
-                ops.init(*elem);
-                ops.set_elem_solution(sol);
-                
-//                if (_sol_function)
-//                    physics_elem->attach_active_solution_function(*_sol_function);
-                
-                ops.elem_calculations(J!=nullptr?true:false, vec, mat);
-                
-//                physics_elem->detach_active_solution_function();
-                
-                ops.clear_elem();
-                
-                // copy to the libMesh matrix for further processing
-                DenseRealVector v;
-                DenseRealMatrix m;
-                if (R)
-                    MAST::copy(v, vec);
-                if (J)
-                    MAST::copy(m, mat);
-                
-                // constrain the quantities to account for hanging dofs,
-                // Dirichlet constraints, etc.
-                if (R && J)
-                    dof_map.constrain_element_matrix_and_vector(m, v, dof_indices);
-                else if (R)
-                    dof_map.constrain_element_vector(v, dof_indices);
-                else
-                    dof_map.constrain_element_matrix(m, dof_indices);
-                
-                // add to the global matrices
-                if (R) R->add_vector(v, dof_indices);
-                if (J) J->add_matrix(m, dof_indices);
-            }
-        }
-        
-        _intersection->clear();
-    }
-    
-    // call the post assembly object, if provided by user
-    if (_post_assembly)
-        _post_assembly->post_assembly(X, R, J, S);
-    
-    
-    // if a solution function is attached, clear it
-    if (_sol_function)
-        _sol_function->clear();
-    
-    if (R) R->close();
-    if (J) J->close();
-}
-
-
 #if MAST_ENABLE_PLPLOT == 1
 
 #include <numeric>
@@ -434,6 +270,191 @@ MAST::LevelSetNonlinearImplicitAssembly::plot_sub_elems(bool plot_reference_elem
 
 #endif // HAVE_PLPLOT
 
+
+
+
+void
+MAST::LevelSetNonlinearImplicitAssembly::
+residual_and_jacobian (const libMesh::NumericVector<Real>& X,
+                       libMesh::NumericVector<Real>* R,
+                       libMesh::SparseMatrix<Real>*  J,
+                       libMesh::NonlinearImplicitSystem& S) {
+    
+    libmesh_assert(_system);
+    libmesh_assert(_discipline);
+    libmesh_assert(_elem_ops);
+    libmesh_assert(_level_set);
+    
+    _analysis_mode = false;
+    
+    MAST::NonlinearSystem& nonlin_sys = _system->system();
+    
+    // make sure that the system for which this object was created,
+    // and the system passed through the function call are the same
+    libmesh_assert_equal_to(&S, &(nonlin_sys));
+    
+    if (R) R->zero();
+    if (J) J->zero();
+    
+    Real
+    vol_f = 0.,
+    tol   = 1.e-10;
+    
+    // iterate over each element, initialize it and get the relevant
+    // analysis quantities
+    RealVectorX
+    vec,
+    sol,
+    nd_indicator = RealVectorX::Ones(1),
+    indicator    = RealVectorX::Zero(1);
+    RealMatrixX mat;
+    
+    std::vector<libMesh::dof_id_type> dof_indices;
+    const libMesh::DofMap& dof_map = _system->system().get_dof_map();
+    
+    
+    std::unique_ptr<libMesh::NumericVector<Real> > localized_solution;
+    localized_solution.reset(build_localized_vector(nonlin_sys,
+                                                    X).release());
+    
+    
+    // if a solution function is attached, initialize it
+    if (_sol_function)
+        _sol_function->init( X);
+    
+    
+    libMesh::MeshBase::const_element_iterator       el     =
+    nonlin_sys.get_mesh().active_local_elements_begin();
+    const libMesh::MeshBase::const_element_iterator end_el =
+    nonlin_sys.get_mesh().active_local_elements_end();
+    
+    MAST::NonlinearImplicitAssemblyElemOperations
+    &ops = dynamic_cast<MAST::NonlinearImplicitAssemblyElemOperations&>(*_elem_ops);
+    
+    for ( ; el != end_el; ++el) {
+        
+        const libMesh::Elem* elem = *el;
+        
+        _intersection->init(*_level_set, *elem, nonlin_sys.time);
+        dof_map.dof_indices (elem, dof_indices);
+        
+        // use the indicator if it was provided
+        if (_indicator) {
+            
+            nd_indicator.setZero(elem->n_nodes());
+            for (unsigned int i=0; i<elem->n_nodes(); i++) {
+                (*_indicator)(elem->node_ref(i), nonlin_sys.time, indicator);
+                nd_indicator(i) = indicator(0);
+            }
+        }
+        
+        
+        // get the solution
+        unsigned int ndofs = (unsigned int)dof_indices.size();
+        sol.setZero(ndofs);
+        vec.setZero(ndofs);
+        mat.setZero(ndofs, ndofs);
+        
+        // Petsc needs that every diagonal term be provided some contribution,
+        // even if zero. Otherwise, it complains about lack of diagonal entry.
+        // So, if the element is NOT completely on the positive side, we still
+        // add a zero matrix to get around this issue.
+        if ((_intersection->if_elem_on_negative_phi() ||
+             nd_indicator.maxCoeff() < tol) && J) {
+            
+            DenseRealMatrix m(ndofs, ndofs);
+            dof_map.constrain_element_matrix(m, dof_indices);
+            J->add_matrix(m, dof_indices);
+        }
+        
+        
+        if (nd_indicator.maxCoeff() > tol &&
+            _intersection->if_elem_has_positive_phi_region()) {
+            
+            for (unsigned int i=0; i<dof_indices.size(); i++)
+                sol(i) = (*localized_solution)(dof_indices[i]);
+            
+            const std::vector<const libMesh::Elem *> &
+            //elems_low = intersect.get_sub_elems_negative_phi(),
+            elems_hi = _intersection->get_sub_elems_positive_phi();
+            
+            std::vector<const libMesh::Elem*>::const_iterator
+            hi_sub_elem_it  = elems_hi.begin(),
+            hi_sub_elem_end = elems_hi.end();
+            
+            for (; hi_sub_elem_it != hi_sub_elem_end; hi_sub_elem_it++ ) {
+                
+                const libMesh::Elem* sub_elem = *hi_sub_elem_it;
+                
+                vol_f = sub_elem->volume()/elem->volume();
+                
+                if (vol_f < 0.05) {
+
+                    _analysis_mode = true;
+
+                    ops.init(*elem);
+                    ops.set_elem_solution(sol);
+                    ops.elem_calculations(J!=nullptr?true:false, vec, mat);
+                    ops.clear_elem();
+                    
+                    vec *= vol_f;
+                    mat *= vol_f;
+                }
+                else {
+                    
+                    _analysis_mode = false;
+                    
+                    ops.init(*sub_elem);
+                    ops.set_elem_solution(sol);
+                    
+                    //if (_sol_function)
+                    // physics_elem->attach_active_solution_function(*_sol_function);
+                    
+                    ops.elem_calculations(J!=nullptr?true:false, vec, mat);
+                    
+                    //                physics_elem->detach_active_solution_function();
+                    
+                    ops.clear_elem();
+                }
+
+                // copy to the libMesh matrix for further processing
+                DenseRealVector v;
+                DenseRealMatrix m;
+                if (R)
+                    MAST::copy(v, vec);
+                if (J)
+                    MAST::copy(m, mat);
+                
+                // constrain the quantities to account for hanging dofs,
+                // Dirichlet constraints, etc.
+                if (R && J)
+                    dof_map.constrain_element_matrix_and_vector(m, v, dof_indices);
+                else if (R)
+                    dof_map.constrain_element_vector(v, dof_indices);
+                else
+                    dof_map.constrain_element_matrix(m, dof_indices);
+                
+                // add to the global matrices
+                if (R) R->add_vector(v, dof_indices);
+                if (J) J->add_matrix(m, dof_indices);
+            }
+        }
+        
+        _intersection->clear();
+    }
+    
+    // call the post assembly object, if provided by user
+    if (_post_assembly)
+        _post_assembly->post_assembly(X, R, J, S);
+    
+    
+    // if a solution function is attached, clear it
+    if (_sol_function)
+        _sol_function->clear();
+    
+    if (R) R->close();
+    if (J) J->close();
+}
 
 
 bool
