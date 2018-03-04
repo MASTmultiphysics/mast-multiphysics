@@ -370,7 +370,6 @@ MAST::Examples::TopologyOptimizationLevelSet2D::evaluate(const std::vector<Real>
     // have a clear method. So, we are going to leave it as is, hoping
     // that libMesh::System will not attempt to use it (most likely, we
     // shoudl be ok).
-    //level_set_assembly.plot_sub_elems(true, false, true);
     
     /////////////////////////////////////////////////////////////////////
     // first constrain the indicator function and solve
@@ -432,7 +431,8 @@ MAST::Examples::TopologyOptimizationLevelSet2D::evaluate(const std::vector<Real>
     level_set_assembly.set_level_set_velocity_function(*_level_set_vel);
     nonlinear_elem_ops.set_discipline_and_system(*_discipline, *_sys_init);
     modal_elem_ops.set_discipline_and_system(*_discipline, *_sys_init);
-    
+    //nonlinear_assembly.plot_sub_elems(true, false, true);
+
     
     
 
