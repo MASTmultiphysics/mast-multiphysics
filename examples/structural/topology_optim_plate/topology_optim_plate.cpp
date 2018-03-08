@@ -75,7 +75,7 @@ namespace MAST {
             virtual ~PlateFluxLoadCenter() {}
             virtual void operator() (const libMesh::Point& p, const Real t, Real& v) const {
                 Real d = pow(pow(p(0)-_l1*0.5, 2) + pow(p(1)-_l2*0.5, 2), 0.5);
-                if (std::fabs(d - 0.25*_frac*(_l1+_l2)) <= 0.) v = _p;
+                if (d <= 0.25*_frac*(_l1+_l2)) v = _p;
                 else v = 0.;
             }
             virtual void derivative(const MAST::FunctionBase& f, const libMesh::Point& p, const Real t, Real& v) const {
@@ -98,7 +98,7 @@ MAST::Examples::TopologyOptimizationLevelSetPlate::_init_loads() {
     
     MAST::Examples::PlateFluxLoadCenter
     *press_f         = new MAST::Examples::PlateFluxLoadCenter( "pressure", p_val, length, height, frac),
-    *flux_f          = new MAST::Examples::PlateFluxLoadCenter("heat_flux", -2.e6, length, height, frac);
+    *flux_f          = new MAST::Examples::PlateFluxLoadCenter("heat_flux", -2.e2, length, height, frac);
     
     // initialize the load
     MAST::BoundaryConditionBase
@@ -129,7 +129,6 @@ MAST::Examples::TopologyOptimizationLevelSetPlate::_init_phi_dvs() {
     libmesh_assert_equal_to(_level_set_fetype.family, libMesh::LAGRANGE);
     
     Real
-    tol     = 1.e-6,
     length  = (*_input)(_prefix+"length", "length of domain along x-axis", 0.3),
     height  = (*_input)(_prefix+"height", "length of domain along y-axis", 0.3),
     frac    = (*_input)(_prefix+"load_length_fraction", "fraction of boundary length on which pressure will act", 0.2);
