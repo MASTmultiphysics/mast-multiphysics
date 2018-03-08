@@ -35,6 +35,7 @@
 #include "libmesh/string_to_enum.h"
 #include "libmesh/mesh_generation.h"
 #include "libmesh/elem.h"
+#include "libmesh/boundary_info.h"
 
 MAST::Examples::TopologyOptimizationLevelSetLBracket::
 TopologyOptimizationLevelSetLBracket(const libMesh::Parallel::Communicator& comm_in):
@@ -53,7 +54,23 @@ MAST::Examples::TopologyOptimizationLevelSetLBracket::
 void
 MAST::Examples::TopologyOptimizationLevelSetLBracket::_init_mesh() {
     
+    {
+        unsigned int
+        nx_divs = (*_input)(_prefix+"nx_divs", "number of elements along x-axis", 10),
+        ny_divs = (*_input)(_prefix+"ny_divs", "number of elements along y-axis", 10);
+        
+        if (nx_divs%10 != 0 || ny_divs%10 != 0) libmesh_error();
+    }
+    
+    {
+        unsigned int
+        nx_divs = (*_input)(_prefix+"level_set_nx_divs", "number of elements of level-set mesh along x-axis", 10),
+        ny_divs = (*_input)(_prefix+"level_set_ny_divs", "number of elements of level-set mesh along y-axis", 10);
 
+        if (nx_divs%10 != 0 || ny_divs%10 != 0) libmesh_error();
+
+    }
+    
     MAST::Examples::TopologyOptimizationLevelSet2D::_init_mesh();
     _delete_elems_from_mesh(*_mesh);
     _delete_elems_from_mesh(*_level_set_mesh);
@@ -110,10 +127,10 @@ MAST::Examples::TopologyOptimizationLevelSetLBracket::_init_loads() {
     *f_load          = new MAST::BoundaryConditionBase(MAST::HEAT_FLUX);
     
     p_load->add(*press_f);
-    _discipline->add_side_load(2, *p_load);
+    _discipline->add_side_load(5, *p_load);
     
     f_load->add(*flux_f);
-    _indicator_discipline->add_side_load(2, *f_load);
+    _indicator_discipline->add_side_load(5, *f_load);
     
     this->register_field_function(*press_f);
     this->register_field_function(*flux_f);
@@ -136,8 +153,8 @@ MAST::Examples::TopologyOptimizationLevelSetLBracket::_init_phi_dvs() {
     tol     = 1.e-6,
     length  = (*_input)(_prefix+"length", "length of domain along x-axis", 0.3),
     height  = (*_input)(_prefix+"height", "length of domain along y-axis", 0.3),
-    l_frac  = (*_input)(_prefix+"length_fraction", "fraction of length along x-axis that is in the bracket", 0.4),
-    w_frac  = (*_input)(_prefix+ "width_fraction", "fraction of length along y-axis that is in the bracket", 0.4),
+    l_frac  = 0.4,//(*_input)(_prefix+"length_fraction", "fraction of length along x-axis that is in the bracket", 0.4),
+    w_frac  = 0.4,//(*_input)(_prefix+ "width_fraction", "fraction of length along y-axis that is in the bracket", 0.4),
     x_lim   = length * l_frac,
     y_lim   =  height * (1.-w_frac),
     frac    = (*_input)(_prefix+"load_length_fraction", "fraction of boundary length on which pressure will act", 0.125);
@@ -164,8 +181,13 @@ MAST::Examples::TopologyOptimizationLevelSetLBracket::_init_phi_dvs() {
 
         dof_id                     = n.dof_number(0, 0, 0);
 
-        if ((std::fabs(n(1)-height) > tol) ||
-            (n(0) < length*(1.-frac))) {
+        if (n(1) <= y_lim && n(0) >= length*(1.-frac)) {
+
+            // set value at the constrained points to a small positive number
+            // material here
+            _level_set_sys->solution->set(dof_id, 0.01);
+        }
+        else {
             
             std::ostringstream oss;
             oss << "dv_" << _n_vars;
@@ -189,11 +211,6 @@ MAST::Examples::TopologyOptimizationLevelSetLBracket::_init_phi_dvs() {
             
             _n_vars++;
         }
-        else {
-            // set value at the constrained points to a small positive number
-            // material here
-            _level_set_sys->solution->set(dof_id, 0.01);
-        }
     }
     
     _level_set_sys->solution->close();
@@ -204,12 +221,13 @@ void
 MAST::Examples::TopologyOptimizationLevelSetLBracket::_delete_elems_from_mesh(libMesh::MeshBase &mesh) {
     
     Real
+    tol     = 1.e-6,
     x       = -1.,
     y       = -1.,
     length  = (*_input)(_prefix+"length", "length of domain along x-axis", 0.3),
     width   = (*_input)(_prefix+ "width", "length of domain along y-axis", 0.3),
-    l_frac  = (*_input)(_prefix+"length_fraction", "fraction of length along x-axis that is in the bracket", 0.4),
-    w_frac  = (*_input)(_prefix+ "width_fraction", "fraction of length along y-axis that is in the bracket", 0.4),
+    l_frac  = 0.4,//(*_input)(_prefix+"length_fraction", "fraction of length along x-axis that is in the bracket", 0.4),
+    w_frac  = 0.4,//(*_input)(_prefix+ "width_fraction", "fraction of length along y-axis that is in the bracket", 0.4),
     x_lim   = length * l_frac,
     y_lim   =  width * (1.-w_frac);
     
@@ -236,5 +254,51 @@ MAST::Examples::TopologyOptimizationLevelSetLBracket::_delete_elems_from_mesh(li
     }
     
     mesh.prepare_for_use();
+    
+    // add the two additional boundaries to the boundary info so that
+    // we can apply loads on them
+    bool
+    facing_right = false,
+    facing_down  = false;
+    
+    e_it   = mesh.elements_begin();
+    e_end  = mesh.elements_end();
+    
+    for ( ; e_it != e_end; e_it++) {
+        
+        libMesh::Elem* elem = *e_it;
+
+        if (!elem->on_boundary()) continue;
+        
+        for (unsigned int i=0; i<elem->n_sides(); i++) {
+            
+            if (elem->neighbor_ptr(i)) continue;
+            
+            std::unique_ptr<libMesh::Elem> s(elem->side_ptr(i).release());
+
+            const libMesh::Point p = s->centroid();
+            
+            facing_right = true;
+            facing_down  = true;
+            for (unsigned int j=0; j<s->n_nodes(); j++) {
+                const libMesh::Node& n = s->node_ref(j);
+                
+                if (n(0) < x_lim ||  n(1) > y_lim) {
+                    facing_right = false;
+                    facing_down  = false;
+                }
+                else if (std::fabs(n(0) - p(0)) > tol)
+                    facing_right = false;
+                else if (std::fabs(n(1) - p(1)) > tol)
+                    facing_down = false;
+            }
+
+            if (facing_right) mesh.boundary_info->add_side(elem, i, 4);
+            if (facing_down) mesh.boundary_info->add_side(elem, i, 5);
+        }
+    }
+    
+    mesh.boundary_info->sideset_name(4) = "facing_right";
+    mesh.boundary_info->sideset_name(5) = "facing_down";
 }
 

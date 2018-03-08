@@ -105,7 +105,7 @@ namespace MAST {
             const Real
             lx_cell = _l1/(1.*_nx),
             ly_cell = _l2/(1.*_ny),
-            frac    = 0.2,
+            frac    = 0.25,
             r       = frac*0.5*std::min(lx_cell, lx_cell),
             x       =  p(0) - lx_cell * std::floor(p(0)/lx_cell),
             y       =  p(1) - ly_cell * std::floor(p(1)/ly_cell),
