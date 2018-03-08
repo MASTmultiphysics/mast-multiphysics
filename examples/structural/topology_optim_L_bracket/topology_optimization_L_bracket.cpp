@@ -176,8 +176,7 @@ MAST::Examples::TopologyOptimizationLevelSetLBracket::_init_phi_dvs() {
             if (n(0) < tol                     ||  // left boundary
                 std::fabs(n(0) - length) < tol ||  // right boundary
                 std::fabs(n(1) - height) < tol ||  // top boundary
-                (std::fabs(n(0) - x_lim) < tol && n(1) <= y_lim)  ||
-                (std::fabs(n(1) - y_lim) < tol && n(0) >= x_lim)) {
+                (n(0) >= x_lim && n(1) <= y_lim)) {
                 
                 _level_set_sys->solution->set(dof_id, 0.);
                 val = 0.;
