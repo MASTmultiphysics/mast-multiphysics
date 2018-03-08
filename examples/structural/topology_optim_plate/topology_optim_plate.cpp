@@ -170,14 +170,14 @@ MAST::Examples::TopologyOptimizationLevelSetPlate::_init_phi_dvs() {
             
             // on the boundary, set everything to be zero, so that there
             // is always a boundary there
-            if (n(0) < tol                     ||
+            /*if (n(0) < tol                     ||
                 n(1) < tol                     ||
                 std::fabs(n(0) - length) < tol ||
                 std::fabs(n(1) - height) < tol) {
                 
                 _level_set_sys->solution->set(dof_id, 0.);
                 val = 0.;
-            }
+            }*/
 
             _dv_params.push_back(std::pair<unsigned int, MAST::Parameter*>());
             _dv_params[_n_vars].first  = dof_id;

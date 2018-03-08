@@ -836,11 +836,9 @@ MAST::Examples::TopologyOptimizationLevelSet2D::_init_phi_dvs() {
             val                        = _level_set_sys->solution->el(dof_id);
 
             
-            // on the boundary, set everything to be zero, so that there
+            // on the traction free boundary, set everything to be zero, so that there
             // is always a boundary there that the optimizer can move
-            if (n(0) < tol                     ||
-                n(1) < tol                     ||
-                std::fabs(n(0) - length) < tol ||
+            if (n(1) < tol                     ||
                 std::fabs(n(1) - height) < tol) {
                 
                 _level_set_sys->solution->set(dof_id, 0.);

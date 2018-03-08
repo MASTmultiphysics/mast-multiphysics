@@ -164,7 +164,6 @@ MAST::Examples::TopologyOptimizationLevelSetLBracket::_init_phi_dvs() {
 
         dof_id                     = n.dof_number(0, 0, 0);
 
-        // only if node is not on the upper edge
         if ((std::fabs(n(1)-height) > tol) ||
             (n(0) < length*(1.-frac))) {
             
@@ -175,7 +174,6 @@ MAST::Examples::TopologyOptimizationLevelSetLBracket::_init_phi_dvs() {
             // on the boundary, set everything to be zero, so that there
             // is always a boundary there that the optimizer can move
             if (n(0) < tol                     ||  // left boundary
-                n(1) < tol                     ||  // bottom boundary
                 std::fabs(n(0) - length) < tol ||  // right boundary
                 std::fabs(n(1) - height) < tol ||  // top boundary
                 (std::fabs(n(0) - x_lim) < tol && n(1) <= y_lim)  ||
