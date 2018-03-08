@@ -894,6 +894,117 @@ calculate_stress_boundary_velocity(const MAST::FunctionBase& p,
 
 
 
+void
+MAST::StructuralElement2D::
+calculate_stress_temperature_derivative(MAST::FEBase& fe_thermal,
+                                        MAST::StressStrainOutputBase& output)  {
+    
+    std::unique_ptr<MAST::FEBase> fe_str(_assembly.build_fe(_elem));
+    fe_str->init(_elem);
+    fe_thermal.init(_elem, &fe_str->get_qpoints());
+    
+    MAST::StressStrainOutputBase&
+    stress_output = dynamic_cast<MAST::StressStrainOutputBase&>(output);
+
+    libmesh_assert(stress_output.get_thermal_load_for_elem(_elem));
+
+    const unsigned int
+    qp_loc_fe_size = (unsigned int)fe_str->get_qpoints().size(),
+    n_added_qp     = 2;
+    
+    std::vector<libMesh::Point>
+    qp_loc_fe = fe_str->get_qpoints(),
+    qp_loc(qp_loc_fe.size()*n_added_qp);
+    
+    const std::vector<std::vector<Real>>& phi_temp = fe_thermal.get_phi();
+    const std::vector<libMesh::Point>& xyz         = fe_str->get_xyz();
+
+    // we will evaluate the stress at upper and lower layers of element,
+    // so we will add two new points for each qp_loc.
+    // TODO: this will need to be moved to element property section card
+    // to handle composite elements at a later date
+    for (unsigned int i=0; i<qp_loc_fe.size(); i++) {
+        
+        qp_loc[i*2]      = qp_loc_fe[i];
+        qp_loc[i*2](2)   = +1.; // upper skin
+        
+        qp_loc[i*2+1]    = qp_loc_fe[i];
+        qp_loc[i*2+1](2) = -1.; // lower skin
+    }
+    
+    
+    
+    MAST::BendingOperatorType bending_model =
+    _property.bending_model(_elem, fe_str->get_fe_type());
+    
+    std::unique_ptr<MAST::BendingOperator2D>
+    bend(MAST::build_bending_operator_2D(bending_model,
+                                         *this,
+                                         qp_loc_fe).release());
+    
+    // now that the FE object has been initialized, evaluate the stress values
+    
+    const unsigned int
+    nt           = (unsigned int)fe_thermal.get_phi().size();
+    
+    Real
+    alpha        = 0.;
+    
+    RealMatrixX
+    material_mat,
+    dstress_dX,
+    dstrain_dX_3D = RealMatrixX::Zero(6,nt),
+    dstress_dX_3D = RealMatrixX::Zero(6,nt);
+    
+    RealVectorX
+    Bmat_temp      = RealVectorX::Zero(nt);
+    
+    // TODO: remove this const-cast, which may need change in API of
+    // material card
+    const MAST::FieldFunction<RealMatrixX >&
+    mat_stiff  =
+    const_cast<MAST::MaterialPropertyCardBase&>(_property.get_material()).
+    stiffness_matrix(2);
+    
+    const MAST::FieldFunction<Real>
+    &alpha_func    =
+    _property.get_material().get<MAST::FieldFunction<Real> >("alpha_expansion");
+    
+    
+    ///////////////////////////////////////////////////////////////////////
+    unsigned int
+    qp = 0;
+    for (unsigned int qp_loc_index=0; qp_loc_index<qp_loc_fe_size; qp_loc_index++)
+        for (unsigned int section_qp_index=0; section_qp_index<n_added_qp; section_qp_index++)
+        {
+            qp = qp_loc_index*n_added_qp + section_qp_index;
+            
+            // shape function values for the temperature FE
+            for ( unsigned int i_nd=0; i_nd<nt; i_nd++ )
+                Bmat_temp(i_nd) = phi_temp[i_nd][qp_loc_index];
+            
+            // get the material matrix
+            mat_stiff(xyz[qp_loc_index], _time, material_mat);
+            
+            // if thermal load was specified, then set the thermal strain
+            // component of the total strain
+            alpha_func(xyz[qp_loc_index], _time, alpha);
+            Bmat_temp *= alpha;
+            
+            dstress_dX = alpha * material_mat * Bmat_temp;
+            
+            dstress_dX_3D.row(0) = dstress_dX;
+            dstress_dX_3D.row(1) = dstress_dX;
+
+            // set the stress and strain data
+            MAST::StressStrainOutputBase::Data
+            &data = stress_output.get_stress_strain_data_for_elem_at_qp(&_elem, qp);
+            data.set_derivatives(dstress_dX_3D, dstrain_dX_3D);
+        }
+}
+
+
+
 
 bool
 MAST::StructuralElement2D::internal_residual (bool request_jacobian,
@@ -2367,12 +2478,12 @@ MAST::StructuralElement2D::thermal_residual (bool request_jacobian,
             // x
             vec4_2 = mat_x.transpose() * vec1_n1;
             Bmat_nl_x.vector_mult_transpose(vec3_n2, vec4_2);
-            f.topRows(n2) -= JxW[qp] * vec3_n2;
+            local_f.topRows(n2) += JxW[qp] * vec3_n2;
             
             // y
             vec4_2 = mat_y.transpose() * vec1_n1;
             Bmat_nl_y.vector_mult_transpose(vec3_n2, vec4_2);
-            f.topRows(n2) -= JxW[qp] * vec3_n2;
+            local_f.topRows(n2) += JxW[qp] * vec3_n2;
         }
         
         if (if_bending) {
@@ -2402,12 +2513,12 @@ MAST::StructuralElement2D::thermal_residual (bool request_jacobian,
             // u-disp
             Bmat_nl_u.left_multiply(mat3, stress);
             Bmat_nl_u.right_multiply_transpose(mat2_n2n2, mat3);
-            jac.topLeftCorner(n2, n2) -= JxW[qp] * mat2_n2n2;
+            local_jac.topLeftCorner(n2, n2) += JxW[qp] * mat2_n2n2;
             
             // v-disp
             Bmat_nl_v.left_multiply(mat3, stress);
             Bmat_nl_v.right_multiply_transpose(mat2_n2n2, mat3);
-            jac.topLeftCorner(n2, n2) -= JxW[qp] * mat2_n2n2;
+            local_jac.topLeftCorner(n2, n2) += JxW[qp] * mat2_n2n2;
         }
             
         if (request_jacobian && if_vk) {
@@ -2564,12 +2675,12 @@ thermal_residual_sensitivity (const MAST::FunctionBase& p,
             // x
             vec4_2 = mat_x.transpose() * vec1_n1;
             Bmat_nl_x.vector_mult_transpose(vec3_n2, vec4_2);
-            f.topRows(n2) -= JxW[qp] * vec3_n2;
+            local_f.topRows(n2) += JxW[qp] * vec3_n2;
             
             // y
             vec4_2 = mat_y.transpose() * vec1_n1;
             Bmat_nl_y.vector_mult_transpose(vec3_n2, vec4_2);
-            f.topRows(n2) -= JxW[qp] * vec3_n2;
+            local_f.topRows(n2) += JxW[qp] * vec3_n2;
         }
 
         if (if_bending) {
@@ -2599,12 +2710,12 @@ thermal_residual_sensitivity (const MAST::FunctionBase& p,
             // u-disp
             Bmat_nl_u.left_multiply(mat3, stress);
             Bmat_nl_u.right_multiply_transpose(mat2_n2n2, mat3);
-            jac.topLeftCorner(n2, n2) -= JxW[qp] * mat2_n2n2;
+            local_jac.topLeftCorner(n2, n2) += JxW[qp] * mat2_n2n2;
             
             // v-disp
             Bmat_nl_v.left_multiply(mat3, stress);
             Bmat_nl_v.right_multiply_transpose(mat2_n2n2, mat3);
-            jac.topLeftCorner(n2, n2) -= JxW[qp] * mat2_n2n2;
+            local_jac.topLeftCorner(n2, n2) += JxW[qp] * mat2_n2n2;
         }
         
         if (request_jacobian && if_vk) { // Jacobian only for vk strain
@@ -2764,12 +2875,12 @@ thermal_residual_boundary_velocity(const MAST::FunctionBase& p,
             // x
             vec4_2 = mat_x.transpose() * vec1_n1;
             Bmat_nl_x.vector_mult_transpose(vec3_n2, vec4_2);
-            f.topRows(n2) -= JxW_Vn[qp] * vec3_n2;
+            local_f.topRows(n2) += JxW_Vn[qp] * vec3_n2;
             
             // y
             vec4_2 = mat_y.transpose() * vec1_n1;
             Bmat_nl_y.vector_mult_transpose(vec3_n2, vec4_2);
-            f.topRows(n2) -= JxW_Vn[qp] * vec3_n2;
+            local_f.topRows(n2) += JxW_Vn[qp] * vec3_n2;
         }
 
         if (if_bending) {
@@ -2799,12 +2910,12 @@ thermal_residual_boundary_velocity(const MAST::FunctionBase& p,
             // u-disp
             Bmat_nl_u.left_multiply(mat3, stress);
             Bmat_nl_u.right_multiply_transpose(mat2_n2n2, mat3);
-            jac.topLeftCorner(n2, n2) -= JxW_Vn[qp] * mat2_n2n2;
+            local_jac.topLeftCorner(n2, n2) += JxW_Vn[qp] * mat2_n2n2;
             
             // v-disp
             Bmat_nl_v.left_multiply(mat3, stress);
             Bmat_nl_v.right_multiply_transpose(mat2_n2n2, mat3);
-            jac.topLeftCorner(n2, n2) -= JxW_Vn[qp] * mat2_n2n2;
+            local_jac.topLeftCorner(n2, n2) += JxW_Vn[qp] * mat2_n2n2;
         }
 
         if (request_jacobian && if_vk) { // Jacobian only for vk strain
@@ -2824,6 +2935,141 @@ thermal_residual_boundary_velocity(const MAST::FunctionBase& p,
         jac -= mat2_n2n2;
     }
 }
+
+
+
+void
+MAST::StructuralElement2D::
+thermal_residual_temperature_derivative(const MAST::FEBase& fe_thermal,
+                                        RealMatrixX& m) {
+    
+    
+    const std::vector<std::vector<Real>>& phi_temp =  fe_thermal.get_phi();
+    const std::vector<Real>& JxW                   =  fe_thermal.get_JxW();
+    const std::vector<libMesh::Point>& xyz         =  fe_thermal.get_xyz();
+    
+    std::unique_ptr<MAST::FEBase>   fe_str(_assembly.build_fe(_elem));
+    fe_str->init(_elem, &fe_thermal.get_qpoints());
+
+    
+    const unsigned int
+    n_phi_str    = (unsigned int)fe_str->get_phi().size(),
+    nt           = (unsigned int)fe_thermal.get_phi().size(),
+    n1           = this->n_direct_strain_components(),
+    n2           = 6*n_phi_str,
+    n3           = this->n_von_karman_strain_components();
+    
+    RealMatrixX
+    material_exp_A_mat,
+    material_exp_B_mat,
+    mat1_n1nt     = RealMatrixX::Zero(n1,nt),
+    mat2_n1nt     = RealMatrixX::Zero(n1,nt),
+    mat3_n2nt     = RealMatrixX::Zero(n2,nt),
+    mat5,
+    vk_dwdxi_mat  = RealMatrixX::Zero(n1,n3),
+    stress        = RealMatrixX::Zero(2,2),
+    mat_x         = RealMatrixX::Zero(3,2),
+    mat_y         = RealMatrixX::Zero(3,2),
+    Bmat_temp     = RealMatrixX::Zero(1,nt),
+    local_m       = RealMatrixX::Zero(n2,nt);
+    
+    RealVectorX
+    phi         = RealVectorX::Zero(nt),
+    vec_n1      = RealVectorX::Zero(n1),
+    strain      = RealVectorX::Zero(3);
+    
+    FEMOperatorMatrix
+    Bmat_lin,
+    Bmat_nl_x,
+    Bmat_nl_y,
+    Bmat_nl_u,
+    Bmat_nl_v,
+    Bmat_bend,
+    Bmat_vk;
+    
+    Bmat_lin.reinit(n1, _system.n_vars(), n_phi_str); // three stress-strain components
+    Bmat_nl_x.reinit(2, _system.n_vars(), n_phi_str);
+    Bmat_nl_y.reinit(2, _system.n_vars(), n_phi_str);
+    Bmat_nl_u.reinit(2, _system.n_vars(), n_phi_str);
+    Bmat_nl_v.reinit(2, _system.n_vars(), n_phi_str);
+    Bmat_bend.reinit(n1, _system.n_vars(), n_phi_str);
+    Bmat_vk.reinit(n3, _system.n_vars(), n_phi_str); // only dw/dx and dw/dy
+    
+    bool if_vk = (_property.strain_type() == MAST::NONLINEAR_STRAIN),
+    if_bending = (_property.bending_model(_elem, _fe->get_fe_type()) != MAST::NO_BENDING);
+    
+    std::unique_ptr<MAST::FieldFunction<RealMatrixX > >
+    expansion_A = _property.thermal_expansion_A_matrix(*this),
+    expansion_B = _property.thermal_expansion_B_matrix(*this);
+    
+    for (unsigned int qp=0; qp<JxW.size(); qp++) {
+        
+        // this is moved inside the domain since
+        (*expansion_A)(xyz[qp], _time, material_exp_A_mat);
+        (*expansion_B)(xyz[qp], _time, material_exp_B_mat);
+
+        // shape function values for the temperature FE
+        for ( unsigned int i_nd=0; i_nd<nt; i_nd++ )
+            Bmat_temp(1, i_nd) = phi_temp[i_nd][qp];
+        
+        this->initialize_green_lagrange_strain_operator(qp,
+                                                        *_fe,
+                                                        _local_sol,
+                                                        strain,
+                                                        mat_x,
+                                                        mat_y,
+                                                        Bmat_lin,
+                                                        Bmat_nl_x,
+                                                        Bmat_nl_y,
+                                                        Bmat_nl_u,
+                                                        Bmat_nl_v);
+        
+        mat1_n1nt = material_exp_A_mat * Bmat_temp;
+        mat2_n1nt = material_exp_B_mat * Bmat_temp;
+        Bmat_lin.right_multiply_transpose(mat3_n2nt, mat1_n1nt);
+        local_m += JxW[qp] * mat3_n2nt;
+
+
+        if (_property.strain_type() == MAST::NONLINEAR_STRAIN) {
+            
+            // nonlinear strain operotor
+            // x
+            mat5 = mat_x.transpose() * mat1_n1nt;
+            Bmat_nl_x.right_multiply_transpose(mat3_n2nt, mat5);
+            local_m.topRows(n2) += JxW[qp] * mat3_n2nt;
+            
+            // y
+            mat5 = mat_y.transpose() * mat1_n1nt;
+            Bmat_nl_y.right_multiply_transpose(mat3_n2nt, mat5);
+            local_m.topRows(n2) += JxW[qp] * mat3_n2nt;
+        }
+        
+        if (if_bending) {
+            // bending strain
+            _bending_operator->initialize_bending_strain_operator(*_fe, qp, Bmat_bend);
+            Bmat_bend.right_multiply_transpose(mat3_n2nt, mat2_n1nt);
+            local_m += JxW[qp] * mat3_n2nt;
+            
+            // von Karman strain
+            if (if_vk) {
+                // get the vonKarman strain operator if needed
+                this->initialize_von_karman_strain_operator(qp,
+                                                            *_fe,
+                                                            vec_n1, // epsilon_vk
+                                                            vk_dwdxi_mat,
+                                                            Bmat_vk);
+                // von Karman strain
+                mat5 = vk_dwdxi_mat.transpose() * mat1_n1nt;
+                Bmat_vk.right_multiply_transpose(mat3_n2nt, mat5);
+                local_m += JxW[qp] * mat3_n2nt;
+            }
+        }
+    }
+    
+    transform_matrix_to_global_system(local_m, mat3_n2nt);
+    m -= mat3_n2nt;
+}
+
 
 
 

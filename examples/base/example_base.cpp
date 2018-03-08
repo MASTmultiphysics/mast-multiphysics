@@ -65,11 +65,11 @@ MAST::Examples::ExampleBase::~ExampleBase() {
     }
 
     {
-        std::map<std::string, MAST::FunctionBase*>::iterator
+        std::set<MAST::FunctionBase*>::iterator
         it   = _field_functions.begin(),
         end  = _field_functions.end();
         for ( ; it!=end; it++)
-            delete it->second;
+            delete *it;
     }
     
     {
@@ -172,17 +172,17 @@ MAST::Examples::ExampleBase::register_field_function(MAST::FunctionBase& p) {
     
     
     
-    std::map<std::string, MAST::FunctionBase*>::iterator
-    it   =  _field_functions.find(p.name()),
+    std::set<MAST::FunctionBase*>::iterator
+    it   =  _field_functions.find(&p),
     end  =  _field_functions.end();
     
     // if the param was not found, then print the message
     if (it != end)
         libMesh::out
         << std::endl
-        << "Function already exists by name: " << p.name() << std::endl;
+        << "Function already exists: " << p.name() << std::endl;
     
-    _field_functions.insert(std::map<std::string, MAST::FunctionBase*>::value_type(p.name(), &p));
+    _field_functions.insert(&p);
 }
 
 

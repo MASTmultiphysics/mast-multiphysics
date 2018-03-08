@@ -146,6 +146,18 @@ namespace MAST {
             libmesh_error(); // to be implemented
         }
 
+        virtual void
+        calculate_stress_temperature_derivative(MAST::FEBase& fe_thermal,
+                                                MAST::StressStrainOutputBase& output) {
+            libmesh_error(); // to be implemented
+        }
+        
+        virtual void
+        thermal_residual_temperature_derivative (const MAST::FEBase& fe_thermal,
+                                                 RealMatrixX& m) {
+            libmesh_error(); // to be implemented
+        }
+
     protected:
         
         

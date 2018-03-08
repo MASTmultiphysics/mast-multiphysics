@@ -82,9 +82,7 @@ MAST::Examples::ThermalExampleBase::_init_system_and_discipline() {
     // create the libmesh system and set the preferences for structural
     // eigenvalue problems
     _sys       = &(_eq_sys->add_system<MAST::NonlinearSystem>("conduction"));
-    _sys->set_eigenproblem_type(libMesh::GHEP);
     
-    // initialize the system to the right set of variables
     _sys_init       = new MAST::HeatConductionSystemInitialization(*_sys,
                                                                    _sys->name(),
                                                                    _fetype);

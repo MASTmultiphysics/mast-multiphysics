@@ -139,7 +139,7 @@ namespace MAST {
             std::vector<MAST::Parameter*>                           _params_for_sensitivity;
             std::map<std::string, MAST::Parameter*>                 _parameters;
             std::vector<MAST::Parameter*>                           _dv_parameters;
-            std::map<std::string, MAST::FunctionBase*>              _field_functions;
+            std::set<MAST::FunctionBase*>                           _field_functions;
             std::set<MAST::BoundaryConditionBase*>                  _boundary_conditions;
             std::map<MAST::Parameter*, const Real>                  _load_parameters;
         };

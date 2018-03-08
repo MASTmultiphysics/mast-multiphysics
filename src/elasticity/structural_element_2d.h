@@ -141,7 +141,16 @@ namespace MAST {
                                            MAST::StressStrainOutputBase& output,
                                            const unsigned int s,
                                            const MAST::FieldFunction<RealVectorX>& vel_f);
+    
+
+        virtual void
+        calculate_stress_temperature_derivative(MAST::FEBase& fe_thermal,
+                                                MAST::StressStrainOutputBase& output);
         
+        virtual void
+        thermal_residual_temperature_derivative (const MAST::FEBase& fe_thermal,
+                                                 RealMatrixX& m);
+    
     protected:
         
         

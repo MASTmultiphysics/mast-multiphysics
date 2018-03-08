@@ -40,7 +40,6 @@
 #include "heat_conduction/heat_conduction_nonlinear_assembly.h"
 #include "base/parameter.h"
 #include "base/constant_field_function.h"
-#include "base/mesh_field_function.h"
 #include "base/nonlinear_system.h"
 #include "base/transient_assembly.h"
 #include "base/boundary_condition_base.h"
@@ -138,51 +137,6 @@ namespace MAST {
         
     };
     
-    
-    
-    class PhiMeshFunction:
-    public MAST::FieldFunction<Real> {
-    public:
-        PhiMeshFunction():
-        MAST::FieldFunction<Real>("phi"), _phi(nullptr) { }
-        virtual ~PhiMeshFunction(){ if (_phi) delete _phi;}
-        
-        void init(MAST::SystemInitialization& sys, const libMesh::NumericVector<Real>& sol) {
-            if (!_phi) _phi = new MAST::MeshFieldFunction(sys, "phi");
-            else _phi->clear();
-            _phi->init(sol);
-        }
-        
-        MAST::MeshFieldFunction& get_mesh_function() {return *_phi;}
-        
-        virtual void operator() (const libMesh::Point& p, const Real t, Real& v) const {
-            libmesh_assert(_phi);
-            RealVectorX v1;
-            (*_phi)(p, t, v1);
-            v = v1(0);
-        }
-        
-    protected:
-        MAST::MeshFieldFunction *_phi;
-    };
-    
-    
-    class FluxLoad:
-    public MAST::FieldFunction<Real> {
-    public:
-        FluxLoad(const std::string& nm, Real p, Real l1, Real fraction):
-        MAST::FieldFunction<Real>(nm), _p(p), _l1(l1), _frac(fraction) { }
-        virtual ~FluxLoad() {}
-        virtual void operator() (const libMesh::Point& p, const Real t, Real& v) const {
-            if (fabs(p(0)-_l1*0.5) <= 0.5*_frac*_l1) v = _p;
-            else v = 0.;
-        }
-        virtual void derivative(const MAST::FunctionBase& f, const libMesh::Point& p, const Real t, Real& v) const {
-            v = 0.;
-        }
-    protected:
-        Real _p, _l1, _frac;
-    };
 }
 
 
@@ -754,9 +708,9 @@ MAST::Examples::TopologyOptimizationLevelSet2D::_init_loads() {
     frac    = (*_input)(_prefix+"load_length_fraction", "fraction of boundary length on which pressure will act", 0.2),
     p_val   =  (*_input)(_prefix+"pressure", "pressure on side of domain",   2.e4);
     
-    MAST::FluxLoad
-    *press_f         = new MAST::FluxLoad( "pressure", p_val, length, frac),
-    *flux_f          = new MAST::FluxLoad("heat_flux", -2.e6, length, frac);
+    MAST::Examples::FluxLoad
+    *press_f         = new MAST::Examples::FluxLoad( "pressure", p_val, length, frac),
+    *flux_f          = new MAST::Examples::FluxLoad("heat_flux", -2.e6, length, frac);
     
     // initialize the load
     MAST::BoundaryConditionBase
