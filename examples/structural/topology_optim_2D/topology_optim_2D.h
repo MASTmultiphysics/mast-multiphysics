@@ -151,6 +151,7 @@ namespace MAST  {
             virtual void _init_mesh();
             virtual void _init_system_and_discipline();
             virtual void _init_dirichlet_conditions();
+            virtual void _init_indicator_system_dirichlet_conditions();
             virtual void _init_eq_sys();
             virtual void _init_loads();
             virtual void _init_material();
