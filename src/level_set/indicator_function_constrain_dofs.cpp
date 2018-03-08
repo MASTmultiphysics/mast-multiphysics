@@ -99,14 +99,10 @@ MAST::IndicatorFunctionConstrainDofs::constrain() {
         //
         // if any of the nodes have a positive value, we will not constrain
         // the element
-        constrain_elem = true;
-        for (unsigned int i=0; i<elem->n_nodes(); i++) {
-            
-            if (nd_vals(i) > tol) {
-                constrain_elem = false;
-                break;
-            }
-        }
+        if (nd_vals.maxCoeff() > tol)
+            constrain_elem = false;
+        else
+            constrain_elem = true;
 
         //
         // we also exclude all dofs from elements with atleast one node

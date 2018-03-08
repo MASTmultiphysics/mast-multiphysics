@@ -54,6 +54,7 @@
 //#include "examples/structural/stiffened_plate_optimization_piston_theory_flutter/stiffened_plate_piston_theory_flutter_optimization.h"
 //#include "examples/structural/stiffened_plate_optimization_thermally_stressed_piston_theory_flutter/stiffened_plate_thermally_stressed_piston_theory_flutter_optimization.h"
 #include "examples/structural/topology_optim_2D/topology_optim_2D.h"
+#include "examples/structural/topology_optim_L_bracket/topology_optimization_L_bracket.h"
 //#include "optimization/npsol_optimization_interface.h"
 #include "optimization/dot_optimization_interface.h"
 #include "optimization/gcmma_optimization_interface.h"
@@ -385,7 +386,8 @@ int main(int argc, char* const argv[]) {
     else if (case_name == "topology_optimization_2D") {
 
         MAST::GCMMAOptimizationInterface optimizer;
-        MAST::Examples::TopologyOptimizationLevelSet2D example(init.comm());
+        //MAST::Examples::TopologyOptimizationLevelSet2D example(init.comm());
+        MAST::Examples::TopologyOptimizationLevelSetLBracket example(init.comm());
         example.init(*input, prefix);
         optimizer.attach_function_evaluation_object(example);
         //std::vector<Real> dvals(example.n_vars()), dummy(example.n_vars());
