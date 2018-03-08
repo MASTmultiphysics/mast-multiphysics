@@ -65,19 +65,15 @@ namespace MAST {
     public:
         Phi(Real l1,
             Real l2,
-            Real r,
             Real nx,
             Real ny):
         MAST::FieldFunction<RealVectorX>("Phi"),
         _l1  (l1),
         _l2  (l2),
-        _r   (r),
         _nx  (nx),
         _ny  (ny),
         _pi  (acos(-1.)) {
             
-            libmesh_assert_less(r, _l1*.5);
-            libmesh_assert_less(r, _l2*.5);
         }
         virtual ~Phi() {}
         virtual void operator()(const libMesh::Point& p,
@@ -88,7 +84,7 @@ namespace MAST {
             libmesh_assert_equal_to(v.size(), 1);
             
             
-            // circle
+            /*// circle
             //v(0) = -(pow(p(0)-_l1*.5, 2) + pow(p(1)-_l2*.5, 2) - pow(_r, 2));
             
             // waves
@@ -103,13 +99,27 @@ namespace MAST {
             
             // linear
             //v(0) = (p(0)-_l1*0.5)*(-10.);
-            //v(0) = (p(0)+p(1)-_l1)*(-10.);
+            //v(0) = (p(0)+p(1)-_l1)*(-10.);*/
+            
+            // periodic circles
+            const Real
+            lx_cell = _l1/(1.*_nx),
+            ly_cell = _l2/(1.*_ny),
+            frac    = 0.2,
+            r       = frac*0.5*std::min(lx_cell, lx_cell),
+            x       =  p(0) - lx_cell * std::floor(p(0)/lx_cell),
+            y       =  p(1) - ly_cell * std::floor(p(1)/ly_cell),
+            d       =  pow(pow(x-lx_cell*0.5, 2) + pow(y-ly_cell*0.5, 2), 0.5);
+            
+            if (d <= r)
+                v(0) = -0.01;
+            else
+                v(0) = 0.01;
         }
     protected:
         Real
         _l1,
         _l2,
-        _r,
         _nx,
         _ny,
         _pi;
@@ -203,7 +213,7 @@ MAST::Examples::TopologyOptimizationLevelSet2D::initialize_solution() {
                         "number of holes along y-direction for initial level-set field", 2.),
     min_val = std::min(length, height);
 
-    Phi phi(length, height, min_val*0.4, nx, ny);
+    Phi phi(length, height, nx, ny);
     _level_set_sys_init->initialize_solution(phi);
 }
 
