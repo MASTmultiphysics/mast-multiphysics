@@ -136,6 +136,10 @@ MAST::Examples::TopologyOptimizationLevelSetLBracket::_init_phi_dvs() {
     tol     = 1.e-6,
     length  = (*_input)(_prefix+"length", "length of domain along x-axis", 0.3),
     height  = (*_input)(_prefix+"height", "length of domain along y-axis", 0.3),
+    l_frac  = (*_input)(_prefix+"length_fraction", "fraction of length along x-axis that is in the bracket", 0.4),
+    w_frac  = (*_input)(_prefix+ "width_fraction", "fraction of length along y-axis that is in the bracket", 0.4),
+    x_lim   = length * l_frac,
+    y_lim   =  height * (1.-w_frac),
     frac    = (*_input)(_prefix+"load_length_fraction", "fraction of boundary length on which pressure will act", 0.125);
     
     unsigned int
@@ -158,14 +162,28 @@ MAST::Examples::TopologyOptimizationLevelSetLBracket::_init_phi_dvs() {
         
         const libMesh::Node& n = **it;
 
+        dof_id                     = n.dof_number(0, 0, 0);
+
         // only if node is not on the upper edge
         if ((std::fabs(n(1)-height) > tol) ||
             (n(0) < length*(1.-frac))) {
             
             std::ostringstream oss;
             oss << "dv_" << _n_vars;
-            dof_id                     = n.dof_number(0, 0, 0);
             val                        = _level_set_sys->solution->el(dof_id);
+            
+            // on the boundary, set everything to be zero, so that there
+            // is always a boundary there that the optimizer can move
+            if (n(0) < tol                     ||  // left boundary
+                n(1) < tol                     ||  // bottom boundary
+                std::fabs(n(0) - length) < tol ||  // right boundary
+                std::fabs(n(1) - height) < tol ||  // top boundary
+                (std::fabs(n(0) - x_lim) < tol && n(1) <= y_lim)  ||
+                (std::fabs(n(1) - y_lim) < tol && n(0) >= x_lim)) {
+                
+                _level_set_sys->solution->set(dof_id, 0.);
+                val = 0.;
+            }
             
             _dv_params.push_back(std::pair<unsigned int, MAST::Parameter*>());
             _dv_params[_n_vars].first  = dof_id;
@@ -174,7 +192,14 @@ MAST::Examples::TopologyOptimizationLevelSetLBracket::_init_phi_dvs() {
             
             _n_vars++;
         }
+        else {
+            // set value at the constrained points to a small positive number
+            // material here
+            _level_set_sys->solution->set(dof_id, 0.01);
+        }
     }
+    
+    _level_set_sys->solution->close();
 }
 
 

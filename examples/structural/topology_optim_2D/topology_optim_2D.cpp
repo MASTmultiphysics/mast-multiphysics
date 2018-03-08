@@ -814,6 +814,8 @@ MAST::Examples::TopologyOptimizationLevelSet2D::_init_phi_dvs() {
         
         const libMesh::Node& n = **it;
         
+        dof_id                     = n.dof_number(0, 0, 0);
+
         // only if node is not on the upper edge
         if ((std::fabs(n(1)-height) > tol) ||
             (n(0) > length*.5*(1.+frac))   ||
@@ -821,9 +823,20 @@ MAST::Examples::TopologyOptimizationLevelSet2D::_init_phi_dvs() {
      
             std::ostringstream oss;
             oss << "dv_" << _n_vars;
-            dof_id                     = n.dof_number(0, 0, 0);
             val                        = _level_set_sys->solution->el(dof_id);
+
             
+            // on the boundary, set everything to be zero, so that there
+            // is always a boundary there that the optimizer can move
+            if (n(0) < tol                     ||
+                n(1) < tol                     ||
+                std::fabs(n(0) - length) < tol ||
+                std::fabs(n(1) - height) < tol) {
+                
+                _level_set_sys->solution->set(dof_id, 0.);
+                val = 0.;
+            }
+
             _dv_params.push_back(std::pair<unsigned int, MAST::Parameter*>());
             _dv_params[_n_vars].first  = dof_id;
             _dv_params[_n_vars].second = new MAST::Parameter(oss.str(), val);
@@ -831,7 +844,14 @@ MAST::Examples::TopologyOptimizationLevelSet2D::_init_phi_dvs() {
             
             _n_vars++;
         }
+        else {
+            // set value at the constrained points to a small positive number
+            // material here
+            _level_set_sys->solution->set(dof_id, 0.01);
+        }
     }
+    
+    _level_set_sys->solution->close();
 }
 
 

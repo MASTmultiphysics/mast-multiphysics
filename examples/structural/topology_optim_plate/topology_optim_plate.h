@@ -41,6 +41,7 @@ namespace MAST {
             
             virtual void _init_dirichlet_conditions();
             virtual void _init_loads();
+            virtual void _init_phi_dvs();
 
         };
     }
