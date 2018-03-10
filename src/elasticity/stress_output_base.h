@@ -236,9 +236,11 @@ namespace MAST {
         /*!
          *   sets the \f$p-\f$norm for calculation of stress functional
          */
-        void set_p_val(Real p) {
+        void set_aggregation_coefficients(Real p, Real rho, Real sigma0) {
             
             _p_norm =  p;
+            _rho    =  rho;
+            _sigma0 =  sigma0;
         }
         
         /*!
@@ -572,10 +574,20 @@ namespace MAST {
         Real _p_norm;
         
         /*!
+         *   exponent used in scaling volume based on stress value.
+         */
+        Real _rho;
+        
+        /*!
+         *   reference stress value used in scaling volume.
+         */
+        Real _sigma0;
+        
+        /*!
          *    primal data, needed for sensitivity and adjoints
          */
         bool _primal_data_initialized;
-        Real _max_val, _JxW_val, _sigma_vm_int, _sigma_vm_p_norm;
+        Real _JxW_val, _sigma_vm_int, _sigma_vm_p_norm;
         
         /*!
          *   identifies the mode in which evaluation is peformed. if p-norm

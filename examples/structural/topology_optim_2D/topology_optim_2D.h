@@ -170,7 +170,7 @@ namespace MAST  {
              std::vector<Real>& grads);
             
             Real                                      _stress_lim;
-            Real                                      _p_val;
+            Real                                      _p_val, _vm_rho;
             Real                                      _ref_eig_val;
             unsigned int                              _n_eig_vals;
             libMesh::FEType                           _level_set_fetype;

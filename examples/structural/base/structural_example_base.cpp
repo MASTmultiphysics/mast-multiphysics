@@ -419,7 +419,8 @@ MAST::Examples::StructuralExampleBase::static_sensitivity_solve(MAST::Parameter&
     elem_ops.set_discipline_and_system(*_discipline, *_sys_init);
     stress_assembly.set_discipline_and_system(*_discipline, *_sys_init);
     stress_elem_ops.set_discipline_and_system(*_discipline, *_sys_init);
-
+    stress_elem_ops.set_aggregation_coefficients(2., 10., 2.e8);
+    
     MAST::StructuralSystemInitialization
     &str_sys_init = dynamic_cast<MAST::StructuralSystemInitialization&>(*_sys_init);
 
@@ -509,6 +510,7 @@ static_adjoint_sensitivity_solve(//MAST::OutputAssemblyElemOperations& q,
     assembly.set_discipline_and_system(*_discipline, *_sys_init);
     stress_assembly.set_discipline_and_system(*_discipline, *_sys_init);
     stress_elem_ops.set_discipline_and_system(*_discipline, *_sys_init);
+    stress_elem_ops.set_aggregation_coefficients(2., 10., 2.e8);
 
     
     MAST::StructuralNearNullVectorSpace nsp;

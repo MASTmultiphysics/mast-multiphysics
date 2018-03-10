@@ -156,6 +156,7 @@ MAST::Examples::StructuralExample2D  (comm_in),
 MAST::FunctionEvaluation             (comm_in),
 _stress_lim                          (0.),
 _p_val                               (0.),
+_vm_rho                              (0.),
 _ref_eig_val                         (0.),
 _n_eig_vals                          (0),
 _level_set_mesh                      (nullptr),
@@ -242,6 +243,7 @@ MAST::Examples::TopologyOptimizationLevelSet2D::init(MAST::Examples::GetPotWrapp
     
     _stress_lim            = (*_input)(_prefix+"vm_stress_limit", "limit von-mises stress value", 2.e8);
     _p_val                 = (*_input)(_prefix+"constraint_aggregation_p_val", "value of p in p-norm stress aggregation", 2.0);
+    _vm_rho                = (*_input)(_prefix+"constraint_aggregation_rho_val", "value of rho in p-norm stress aggregation", 10.0);
     _level_set_vel         = new MAST::LevelSetBoundaryVelocity(2);
     _level_set_function    = new PhiMeshFunction;
     _output                = new libMesh::ExodusII_IO(*_mesh);
@@ -406,7 +408,7 @@ MAST::Examples::TopologyOptimizationLevelSet2D::evaluate(const std::vector<Real>
     stress.set_discipline_and_system(*_discipline, *_sys_init);
     volume.set_participating_elements_to_all();
     stress.set_participating_elements_to_all();
-    stress.set_p_val(_p_val);
+    stress.set_aggregation_coefficients(_p_val, _vm_rho, _stress_lim);
     
     //////////////////////////////////////////////////////////////////////
     // evaluate the objective
