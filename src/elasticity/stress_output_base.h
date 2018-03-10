@@ -582,6 +582,8 @@ namespace MAST {
          *   reference stress value used in scaling volume.
          */
         Real _sigma0;
+
+        Real _exp_arg_lim;
         
         /*!
          *    primal data, needed for sensitivity and adjoints
