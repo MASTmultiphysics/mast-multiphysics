@@ -243,7 +243,7 @@ MAST::Examples::TopologyOptimizationLevelSet2D::init(MAST::Examples::GetPotWrapp
     
     _stress_lim            = (*_input)(_prefix+"vm_stress_limit", "limit von-mises stress value", 2.e8);
     _p_val                 = (*_input)(_prefix+"constraint_aggregation_p_val", "value of p in p-norm stress aggregation", 2.0);
-    _vm_rho                = (*_input)(_prefix+"constraint_aggregation_rho_val", "value of rho in p-norm stress aggregation", 10.0);
+    _vm_rho                = (*_input)(_prefix+"constraint_aggregation_rho_val", "value of rho in p-norm stress aggregation", 2.0);
     _level_set_vel         = new MAST::LevelSetBoundaryVelocity(2);
     _level_set_function    = new PhiMeshFunction;
     _output                = new libMesh::ExodusII_IO(*_mesh);
