@@ -71,8 +71,9 @@ namespace MAST {
             _function(new MAST::MeshFieldFunction(sys, nm)) { }
             virtual ~TemperatureFunction() { delete _function;}
             void init(const libMesh::NumericVector<Real>& sol) { _function->init(sol);}
+            void clear() { _function->clear();}
             virtual void operator() (const libMesh::Point& p, const Real t, Real& v) const {
-                RealVectorX vec; (*_function)(p, t, vec);
+                RealVectorX vec; (*_function)(p, t, vec); v = vec(0);
             }
             virtual void derivative (const MAST::FunctionBase& f,
                                      const libMesh::Point& p,
@@ -108,7 +109,6 @@ MAST::Examples::ThermoelasticityTopologyOptimizationLevelSet2D::
     if (!_initialized)
         return;
     
-    delete _conduction_sys;
     delete _conduction_sys_init;
     delete _conduction_discipline;
 }
@@ -195,10 +195,15 @@ evaluate(const std::vector<Real>& dvars,
     MAST::MeshFieldFunction indicator(*_indicator_sys_init, "indicator");
     indicator.init(*_indicator_sys->solution);
     //MAST::IndicatorFunctionConstrainDofs constrain(*_sys_init, *_level_set_function, indicator);
-    MAST::LevelSetConstrainDofs constrain(*_sys_init, *_level_set_function);
-    _sys->attach_constraint_object(constrain);
+    MAST::LevelSetConstrainDofs str_constrain (*_sys_init, *_level_set_function);
+    MAST::LevelSetConstrainDofs cond_constrain(*_conduction_sys_init, *_level_set_function);
+    _sys->attach_constraint_object(str_constrain);
     _sys->reinit_constraints();
     _sys->initialize_condensed_dofs(*_discipline);
+    _conduction_sys->attach_constraint_object(cond_constrain);
+    _conduction_sys->reinit_constraints();
+    _conduction_sys->initialize_condensed_dofs(*_conduction_discipline);
+
     
     /////////////////////////////////////////////////////////////////////
     // first solve the conduction problem
@@ -329,6 +334,7 @@ evaluate(const std::vector<Real>& dvars,
     
     // also the stress data for plotting
     stress_assembly.update_stress_strain_data(stress, *_sys->solution);
+    _temp_function->clear();
 }
 
 
@@ -445,6 +451,53 @@ _init_system_and_discipline() {
 }
 
 
+void
+MAST::Examples::ThermoelasticityTopologyOptimizationLevelSet2D::_init_dirichlet_conditions() {
+
+    MAST::Examples::TopologyOptimizationLevelSet2D::_init_dirichlet_conditions();
+    _init_conduction_boundary_dirichlet_constraint(1, "right_temperature_dirichlet");
+    _init_conduction_boundary_dirichlet_constraint(3, "left_temperature_dirichlet");
+    _conduction_discipline->init_system_dirichlet_bc(*_conduction_sys);
+}
+
+
+
+void
+MAST::Examples::ThermoelasticityTopologyOptimizationLevelSet2D::
+_init_conduction_boundary_dirichlet_constraint(const unsigned int bid,
+                                               const std::string& tag) {
+    
+    int
+    constraint_dofs = (*_input)(_prefix+tag, "dofs to constrain on side", 1), // by-default, constrain temperature
+    dof             = 0;
+    
+    // nothing to constrain if the value is negative
+    if (constraint_dofs < 0) return;
+    
+    // now, use this to add numbers
+    std::vector<unsigned int>
+    constr_dofs;
+    
+    while (constraint_dofs > 0) {
+        dof             = constraint_dofs%10;  // gives the last integer
+        constraint_dofs = constraint_dofs/10;  // removes the last integrer
+        constr_dofs.push_back(dof-1);
+    }
+    
+    // remove duplicates, if any
+    std::sort(constr_dofs.begin(), constr_dofs.end());
+    constr_dofs.erase(std::unique(constr_dofs.begin(), constr_dofs.end()), constr_dofs.end());
+    
+    MAST::DirichletBoundaryCondition
+    *dirichlet  = new MAST::DirichletBoundaryCondition;
+    dirichlet->init (bid,  constr_dofs);
+    _conduction_discipline->add_dirichlet_bc(bid,  *dirichlet);
+    
+    
+    this->register_loading(*dirichlet);
+}
+
+
 
 void
 MAST::Examples::ThermoelasticityTopologyOptimizationLevelSet2D::
@@ -456,7 +509,7 @@ _init_loads() {
         Real
         length   = (*_input)(_prefix+"length", "length of domain along x-axis", 0.3),
         frac     = (*_input)(_prefix+"load_length_fraction", "fraction of boundary length on which pressure will act", 0.2),
-        q_val    =  (*_input)(_prefix+"flux", "flux load on side of domain",  -2.e6);
+        q_val    =  (*_input)(_prefix+"flux", "flux load on side of domain",  -2.e1);
         
         MAST::Examples::FluxLoad
         *q_f     = new MAST::Examples::FluxLoad("heat_flux", q_val, length, frac);;
@@ -472,7 +525,7 @@ _init_loads() {
         this->register_loading(*q_load);
     }
     
-    {
+    /*{
         Real
         s_val    =  (*_input)(_prefix+"sb_constant", "Stefan-Boltzmann constant",             5.670367e-8),
         e_val    =  (*_input)(_prefix+"emissivity", "radiation emissivity",                          0.85),
@@ -504,7 +557,7 @@ _init_loads() {
         this->add_parameter(*T0);
         this->register_field_function(*e_f);
         this->register_loading(*q_load);
-    }
+    }*/
 }
 
 

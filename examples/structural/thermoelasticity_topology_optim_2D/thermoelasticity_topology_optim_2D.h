@@ -56,10 +56,12 @@ namespace MAST  {
         protected:
 
             virtual void _init_system_and_discipline();
+            virtual void _init_dirichlet_conditions();
             virtual void _init_loads();
             virtual void _init_temperature_load();
             virtual void _init_section_property();
-
+            virtual void _init_conduction_boundary_dirichlet_constraint(const unsigned int bid,
+                                                                        const std::string& tag);
             void _evaluate_constraint_sensitivity
             (MAST::StressStrainOutputBase& stress,
              MAST::AssemblyElemOperations& conduction_elem_ops,
