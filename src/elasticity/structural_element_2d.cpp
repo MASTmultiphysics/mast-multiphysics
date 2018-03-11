@@ -1001,9 +1001,9 @@ calculate_stress_temperature_derivative(MAST::FEBase& fe_thermal,
             
             dstress_dX = alpha * material_mat * dT_mat * Bmat_temp;
             
-            dstress_dX_3D.row(0) = dstress_dX.row(0);  // sigma-xx
-            dstress_dX_3D.row(1) = dstress_dX.row(1);  // sigma-yy
-            dstress_dX_3D.row(3) = dstress_dX.row(2);  // sigma-xy
+            dstress_dX_3D.row(0) = -dstress_dX.row(0);  // sigma-xx
+            dstress_dX_3D.row(1) = -dstress_dX.row(1);  // sigma-yy
+            dstress_dX_3D.row(3) = -dstress_dX.row(2);  // sigma-xy
 
             // set the stress and strain data
             MAST::StressStrainOutputBase::Data
