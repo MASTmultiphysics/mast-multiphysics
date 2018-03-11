@@ -901,8 +901,16 @@ calculate_stress_temperature_derivative(MAST::FEBase& fe_thermal,
     
     std::unique_ptr<MAST::FEBase> fe_str(_assembly.build_fe(_elem));
     fe_str->init(_elem);
-    fe_thermal.init(_elem, &fe_str->get_qpoints());
     
+    // make sure that the structural and thermal FE have the same types and
+    // locations
+    libmesh_assert(fe_str->get_fe_type() == fe_thermal.get_fe_type());
+    // this is a weak assertion. We really want that the same qpoints be used,
+    // but we are assuming that if the elem type is the same, and if the
+    // number fo qpoints is the same, then the location of qpoints will also
+    // be the same.
+    libmesh_assert_equal_to(fe_str->get_qpoints().size(), fe_thermal.get_qpoints().size());
+
     MAST::StressStrainOutputBase&
     stress_output = dynamic_cast<MAST::StressStrainOutputBase&>(output);
 
@@ -953,11 +961,12 @@ calculate_stress_temperature_derivative(MAST::FEBase& fe_thermal,
     RealMatrixX
     material_mat,
     dstress_dX,
+    dT_mat        = RealMatrixX::Zero(3,1),
     dstrain_dX_3D = RealMatrixX::Zero(6,nt),
-    dstress_dX_3D = RealMatrixX::Zero(6,nt);
+    dstress_dX_3D = RealMatrixX::Zero(6,nt),
+    Bmat_temp     = RealMatrixX::Zero(1,nt);
     
-    RealVectorX
-    Bmat_temp      = RealVectorX::Zero(nt);
+    dT_mat(0) = dT_mat(1) = 1.;
     
     // TODO: remove this const-cast, which may need change in API of
     // material card
@@ -981,7 +990,7 @@ calculate_stress_temperature_derivative(MAST::FEBase& fe_thermal,
             
             // shape function values for the temperature FE
             for ( unsigned int i_nd=0; i_nd<nt; i_nd++ )
-                Bmat_temp(i_nd) = phi_temp[i_nd][qp_loc_index];
+                Bmat_temp(0, i_nd) = phi_temp[i_nd][qp_loc_index];
             
             // get the material matrix
             mat_stiff(xyz[qp_loc_index], _time, material_mat);
@@ -989,12 +998,12 @@ calculate_stress_temperature_derivative(MAST::FEBase& fe_thermal,
             // if thermal load was specified, then set the thermal strain
             // component of the total strain
             alpha_func(xyz[qp_loc_index], _time, alpha);
-            Bmat_temp *= alpha;
             
-            dstress_dX = alpha * material_mat * Bmat_temp;
+            dstress_dX = alpha * material_mat * dT_mat * Bmat_temp;
             
-            dstress_dX_3D.row(0) = dstress_dX;
-            dstress_dX_3D.row(1) = dstress_dX;
+            dstress_dX_3D.row(0) = dstress_dX.row(0);  // sigma-xx
+            dstress_dX_3D.row(1) = dstress_dX.row(1);  // sigma-yy
+            dstress_dX_3D.row(3) = dstress_dX.row(2);  // sigma-xy
 
             // set the stress and strain data
             MAST::StressStrainOutputBase::Data
@@ -2949,7 +2958,13 @@ thermal_residual_temperature_derivative(const MAST::FEBase& fe_thermal,
     const std::vector<libMesh::Point>& xyz         =  fe_thermal.get_xyz();
     
     std::unique_ptr<MAST::FEBase>   fe_str(_assembly.build_fe(_elem));
-    fe_str->init(_elem, &fe_thermal.get_qpoints());
+    fe_str->init(_elem);
+    libmesh_assert(fe_str->get_fe_type() == fe_thermal.get_fe_type());
+    // this is a weak assertion. We really want that the same qpoints be used,
+    // but we are assuming that if the elem type is the same, and if the
+    // number fo qpoints is the same, then the location of qpoints will also
+    // be the same.
+    libmesh_assert_equal_to(fe_str->get_qpoints().size(), fe_thermal.get_qpoints().size());
 
     
     const unsigned int
@@ -3010,7 +3025,7 @@ thermal_residual_temperature_derivative(const MAST::FEBase& fe_thermal,
 
         // shape function values for the temperature FE
         for ( unsigned int i_nd=0; i_nd<nt; i_nd++ )
-            Bmat_temp(1, i_nd) = phi_temp[i_nd][qp];
+            Bmat_temp(0, i_nd) = phi_temp[i_nd][qp];
         
         this->initialize_green_lagrange_strain_operator(qp,
                                                         *_fe,
@@ -3065,8 +3080,15 @@ thermal_residual_temperature_derivative(const MAST::FEBase& fe_thermal,
             }
         }
     }
-    
-    transform_matrix_to_global_system(local_m, mat3_n2nt);
+
+    mat3_n2nt.setZero();
+    phi    = RealVectorX::Zero(n2);
+    vec_n1 = RealVectorX::Zero(n2);
+    for (unsigned int i=0; i<nt; i++) {
+        phi = local_m.col(i);
+        transform_vector_to_global_system(phi, vec_n1);
+        mat3_n2nt.col(i) = vec_n1;
+    }
     m -= mat3_n2nt;
 }
 

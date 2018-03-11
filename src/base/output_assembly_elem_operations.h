@@ -221,7 +221,7 @@ namespace MAST {
          *    checks to see if the object has been told about the subset of
          *    elements and if the specified element is in the subset.
          */
-        bool if_evaluate_for_element(const libMesh::Elem& elem) const;
+        virtual bool if_evaluate_for_element(const libMesh::Elem& elem) const;
 
         
     protected:

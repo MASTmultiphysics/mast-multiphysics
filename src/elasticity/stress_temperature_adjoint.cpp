@@ -103,20 +103,23 @@ MAST::StressTemperatureAdjoint::output_derivative_for_elem(RealVectorX& dq_dX) {
     
     dq_dX.setZero();
     
-    if (this->if_evaluate_for_element(_physics_elem->elem())) {
+    if (_stress.if_evaluate_for_element(_physics_elem->elem())) {
 
         MAST::StructuralElementBase* p_elem =
         dynamic_cast<MAST::StructuralElementBase*>(_physics_elem);
 
         std::vector<libMesh::dof_id_type> dof_indices;
         const libMesh::DofMap& dof_map = _system->system().get_dof_map();
-        dof_map.dof_indices (&p_elem->elem(), dof_indices);
+        if (p_elem->elem().parent())
+            dof_map.dof_indices (p_elem->elem().parent(), dof_indices);
+        else
+            dof_map.dof_indices (&p_elem->elem(), dof_indices);
         
         RealVectorX
         str_adj   = RealVectorX::Zero(dof_indices.size());
         
         RealMatrixX
-        mat       = RealVectorX::Zero(dof_indices.size(), dq_dX.size());
+        mat       = RealMatrixX::Zero(dof_indices.size(), dq_dX.size());
         
         // get the element structural adjoint solution
         for (unsigned int i=0; i<dof_indices.size(); i++)
@@ -125,21 +128,16 @@ MAST::StressTemperatureAdjoint::output_derivative_for_elem(RealVectorX& dq_dX) {
         
         if (_stress.get_thermal_load_for_elem(_physics_elem->elem())) {
             
-            {
-                // do not initialize the conduction FE object, since the stress
-                // derivative routine will do that for stress evaluation points
-                std::unique_ptr<MAST::FEBase> fe(_thermal_assembly->build_fe(p_elem->elem()));
-                p_elem->calculate_stress_temperature_derivative(*fe, _stress);
-            }
-
-            std::unique_ptr<MAST::FEBase> fe(_thermal_assembly-> build_fe(p_elem->elem()));
+            std::unique_ptr<MAST::FEBase> fe(_thermal_assembly->build_fe(p_elem->elem()));
             fe->init(p_elem->elem());
+
+            p_elem->calculate_stress_temperature_derivative(*fe, _stress);
             p_elem->thermal_residual_temperature_derivative(*fe, mat);
         }
         
         _stress.von_Mises_p_norm_functional_state_derivartive_for_elem(_physics_elem->elem(),
                                                                        dq_dX);
-        dq_dX -= str_adj.transpose() * mat;
+        dq_dX += str_adj.transpose() * mat;
     }
 }
 
