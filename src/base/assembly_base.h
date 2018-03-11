@@ -241,7 +241,8 @@ namespace MAST {
                                              const libMesh::NumericVector<Real>& dq_dX,
                                              const MAST::FunctionBase& p,
                                              MAST::AssemblyElemOperations&       elem_ops,
-                                             MAST::OutputAssemblyElemOperations& output);
+                                             MAST::OutputAssemblyElemOperations& output,
+                                             const bool include_partial_sens = true);
 
         
         /*!

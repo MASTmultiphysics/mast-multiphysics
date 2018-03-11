@@ -489,16 +489,11 @@ calculate_output_adjoint_sensitivity(const libMesh::NumericVector<Real>& X,
                                      const libMesh::NumericVector<Real>& dq_dX,
                                      const MAST::FunctionBase& p,
                                      MAST::AssemblyElemOperations&       elem_ops,
-                                     MAST::OutputAssemblyElemOperations& output) {
+                                     MAST::OutputAssemblyElemOperations& output,
+                                     const bool include_partial_sens) {
 
     libmesh_assert(_discipline);
     libmesh_assert(_system);
-
-    // first calculate the partial sensitivity of the output, which is done
-    // with zero solution vector
-    std::unique_ptr<libMesh::NumericVector<Real>>
-    zero_X(X.zero_clone().release());
-    this->calculate_output_direct_sensitivity(X, *zero_X, p, output);
     
     MAST::NonlinearSystem& nonlin_sys = _system->system();
 
@@ -510,7 +505,19 @@ calculate_output_adjoint_sensitivity(const libMesh::NumericVector<Real>& X,
     this->clear_elem_operation_object();
 
     Real
-    dq_dp = output.output_sensitivity_total(p) + dq_dX.dot(dres_dp);
+    dq_dp = dq_dX.dot(dres_dp);
+
+    if (include_partial_sens) {
+
+        // calculate the partial sensitivity of the output, which is done
+        // with zero solution vector
+        std::unique_ptr<libMesh::NumericVector<Real>>
+        zero_X(X.zero_clone().release());
+        this->calculate_output_direct_sensitivity(X, *zero_X, p, output);
+
+        dq_dp += output.output_sensitivity_total(p);
+    }
+
     return dq_dp;
 }
 

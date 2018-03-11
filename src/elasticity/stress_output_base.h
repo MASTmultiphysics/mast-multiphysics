@@ -387,6 +387,14 @@ namespace MAST {
                           const libMesh::Elem& e) const;
 
         
+        bool stress_plot_mode() const {
+            return _if_stress_plot_mode;
+        }
+        
+        bool primal_data_initialized() const {
+            return _primal_data_initialized;
+        }
+        
         /*!
          *   clears the data structure of any stored values so that it can be 
          *   used for another element.
@@ -396,7 +404,7 @@ namespace MAST {
         /*!
          *   clears the data stored for sensitivity analysis.
          */
-        void clear_sensitivity_data();
+        virtual void clear_sensitivity_data();
 
         
         /*!
@@ -429,7 +437,7 @@ namespace MAST {
          *   add the stress tensor associated with the qp. @returns a reference
          *   to \p Data.
          */
-        MAST::StressStrainOutputBase::Data&
+        virtual MAST::StressStrainOutputBase::Data&
         add_stress_strain_at_qp_location(const libMesh::Elem* e,
                                          const unsigned int qp,
                                          const libMesh::Point& quadrature_pt,
@@ -443,7 +451,7 @@ namespace MAST {
          *   add the stress tensor associated with the \p qp on side \p s of
          *   element \p e. @returns a reference to \p Data.
          */
-        MAST::StressStrainOutputBase::Data&
+        virtual MAST::StressStrainOutputBase::Data&
         add_stress_strain_at_boundary_qp_location(const libMesh::Elem* e,
                                                   const unsigned int s,
                                                   const unsigned int qp,
@@ -458,7 +466,7 @@ namespace MAST {
         /*!
          *    @returns the map of stress/strain data for all elems
          */
-        const std::map<const libMesh::dof_id_type,
+        virtual const std::map<const libMesh::dof_id_type,
         std::vector<MAST::StressStrainOutputBase::Data*> >&
         get_stress_strain_data() const;
 
@@ -466,7 +474,7 @@ namespace MAST {
         /*!
          *    @returns the vector of stress/strain data for specified elem.
          */
-        const std::vector<MAST::StressStrainOutputBase::Data*>&
+        virtual const std::vector<MAST::StressStrainOutputBase::Data*>&
         get_stress_strain_data_for_elem(const libMesh::Elem* e) const;
 
         
@@ -474,7 +482,7 @@ namespace MAST {
          *    @returns the vector of stress/strain data for specified elem at
          *    the specified quadrature point.
          */
-        MAST::StressStrainOutputBase::Data&
+        virtual MAST::StressStrainOutputBase::Data&
         get_stress_strain_data_for_elem_at_qp(const libMesh::Elem* e,
                                               const unsigned int qp);
 

@@ -30,8 +30,9 @@
 #include "libmesh/dof_map.h"
 #include "libmesh/numeric_vector.h"
 
-MAST::StressTemperatureAdjoint::StressTemperatureAdjoint():
+MAST::StressTemperatureAdjoint::StressTemperatureAdjoint(MAST::StressStrainOutputBase& stress):
 MAST::StressStrainOutputBase(),
+_stress             (stress),
 _thermal_assembly   (nullptr) {
     
 }
@@ -55,20 +56,48 @@ set_thermal_assembly(MAST::AssemblyBase& thermal_assembly) {
 
 void
 MAST::StressTemperatureAdjoint::
-set_structural_adjoint_solution(const libMesh::NumericVector<Real>& adj_sol) {
+set_structural_solutions(const libMesh::NumericVector<Real>& sol,
+                         const libMesh::NumericVector<Real>& adj_sol) {
     
+    _structural_sol.reset(_assembly->build_localized_vector(_system->system(),
+                                                            sol).release());
     _structural_adjoint.reset(_assembly->build_localized_vector(_system->system(),
                                                                 adj_sol).release());
 }
 
+
+void
+MAST::StressTemperatureAdjoint::set_elem_solution(const RealVectorX& sol) {
+    
+    libmesh_assert(_physics_elem);
+
+    MAST::StructuralElementBase* p_elem =
+    dynamic_cast<MAST::StructuralElementBase*>(_physics_elem);
+    
+    std::vector<libMesh::dof_id_type> dof_indices;
+    const libMesh::DofMap& dof_map = _system->system().get_dof_map();
+    if (p_elem->elem().parent())
+        dof_map.dof_indices (p_elem->elem().parent(), dof_indices);
+    else
+        dof_map.dof_indices (&p_elem->elem(), dof_indices);
+    
+    RealVectorX
+    str_sol   = RealVectorX::Zero(dof_indices.size());
+    
+    // get the element structural solution
+    for (unsigned int i=0; i<dof_indices.size(); i++)
+        str_sol(i) = (*_structural_sol)(dof_indices[i]);
+
+    _physics_elem->set_solution(str_sol);
+}
 
 
 void
 MAST::StressTemperatureAdjoint::output_derivative_for_elem(RealVectorX& dq_dX) {
     
     libmesh_assert(_physics_elem);
-    libmesh_assert(!_if_stress_plot_mode);
-    libmesh_assert(_primal_data_initialized);
+    libmesh_assert(!_stress.stress_plot_mode());
+    libmesh_assert(_stress.primal_data_initialized());
 
 
     
@@ -93,21 +122,26 @@ MAST::StressTemperatureAdjoint::output_derivative_for_elem(RealVectorX& dq_dX) {
         for (unsigned int i=0; i<dof_indices.size(); i++)
             str_adj(i) = (*_structural_adjoint)(dof_indices[i]);
         
-        {
-            std::unique_ptr<MAST::FEBase> fe(_thermal_assembly->build_fe(p_elem->elem()));
-            p_elem->calculate_stress_temperature_derivative(*fe, *this);
-        }
         
-        if (this->get_thermal_load_for_elem(_physics_elem->elem())) {
+        if (_stress.get_thermal_load_for_elem(_physics_elem->elem())) {
             
+            {
+                // do not initialize the conduction FE object, since the stress
+                // derivative routine will do that for stress evaluation points
+                std::unique_ptr<MAST::FEBase> fe(_thermal_assembly->build_fe(p_elem->elem()));
+                p_elem->calculate_stress_temperature_derivative(*fe, _stress);
+            }
+
             std::unique_ptr<MAST::FEBase> fe(_thermal_assembly-> build_fe(p_elem->elem()));
             fe->init(p_elem->elem());
             p_elem->thermal_residual_temperature_derivative(*fe, mat);
         }
         
-        this->von_Mises_p_norm_functional_state_derivartive_for_elem(_physics_elem->elem(),
-                                                                     dq_dX);
+        _stress.von_Mises_p_norm_functional_state_derivartive_for_elem(_physics_elem->elem(),
+                                                                       dq_dX);
         dq_dX -= str_adj.transpose() * mat;
     }
 }
+
+
 
