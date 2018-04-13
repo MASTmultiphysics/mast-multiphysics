@@ -39,8 +39,6 @@ namespace MAST {
         _x0(0.), _x1(0.),
         _y0(0.), _y1(0.),
         _n_maxima(0),
-        _panel_bc_id(0),
-        _symmetry_bc_id(0),
         _cos_profile(false)
         { }
         
@@ -53,8 +51,6 @@ namespace MAST {
          */
         virtual void init (const Real tc, bool cos_profile,
                            const unsigned int n_maxima,
-                           const unsigned int panel_bc_id,
-                           const unsigned int symmetry_bc_id,
                            const std::vector<MeshInitializer::CoordinateDivisions*>& divs,
                            libMesh::UnstructuredMesh& mesh, libMesh::ElemType t);
         
@@ -75,8 +71,6 @@ namespace MAST {
         Real _y0, _y1;
         
         unsigned int _n_maxima;
-        
-        unsigned int _panel_bc_id, _symmetry_bc_id;
         
         bool _cos_profile;
     };

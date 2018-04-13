@@ -373,7 +373,6 @@
 //    }
 //    
 //    _flight_cond->ref_chord       = infile("ref_c",    1.);
-//    _flight_cond->altitude        = infile( "alt",     0.);
 //    _flight_cond->mach            = infile("mach",     .5);
 //    _flight_cond->gas_property.cp = infile(  "cp",  1003.);
 //    _flight_cond->gas_property.cv = infile(  "cv",   716.);

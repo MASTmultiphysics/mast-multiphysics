@@ -106,6 +106,7 @@ namespace MAST {
             
         protected:
 
+            virtual void _init_fetype();
             virtual void _init_mesh() = 0;
             virtual void _init_system_and_discipline() = 0;
             virtual void _init_dirichlet_conditions() = 0;

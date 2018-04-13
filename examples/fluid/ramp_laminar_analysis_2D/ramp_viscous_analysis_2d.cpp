@@ -173,7 +173,7 @@ libMesh::ParallelObject (comm_in) {
     _eq_sys->print_info();
     
     // create the oundary conditions for slip-wall and far-field
-    _far_field    = new MAST::BoundaryConditionBase(    MAST::FAR_FIELD),
+    _far_field    = new MAST::BoundaryConditionBase(    MAST::FAR_FIELD);
     _slip_wall    = new MAST::BoundaryConditionBase( MAST::NO_SLIP_WALL);
     _symm_wall    = new MAST::BoundaryConditionBase(MAST::SYMMETRY_WALL);
     
@@ -192,17 +192,10 @@ libMesh::ParallelObject (comm_in) {
     
     
     _flight_cond    =  new MAST::FlightCondition;
-    for (unsigned int i=0; i<3; i++) {
-        
-        _flight_cond->body_roll_axis(i)     = infile(    "body_roll_axis", 0., i);
-        _flight_cond->body_pitch_axis(i)    = infile(   "body_pitch_axis", 0., i);
-        _flight_cond->body_yaw_axis(i)      = infile(     "body_yaw_axis", 0., i);
-        _flight_cond->body_euler_angles(i)  = infile( "body_euler_angles", 0., i);
-        _flight_cond->body_angular_rates(i) = infile("body_angular_rates", 0., i);
-    }
-        
+    for (unsigned int i=0; i<3; i++)
+        _flight_cond->flow_unit_vector(i)   = infile(    "flow_unit_vector", 0., i);
+    
     _flight_cond->ref_chord       = infile("ref_c",    1.);
-    _flight_cond->altitude        = infile( "alt",     0.);
     _flight_cond->mach            = infile("mach",     .5);
     _flight_cond->gas_property.cp = infile(  "cp",  1003.);
     _flight_cond->gas_property.cv = infile(  "cv",   716.);

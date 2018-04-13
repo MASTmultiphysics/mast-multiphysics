@@ -104,19 +104,8 @@ MAST::Examples::ExampleBase::init(MAST::Examples::GetPotWrapper& input,
     _prefix      = prefix;
     _input       = &input;
     
-    // FEType to initialize the system
-    // get the order and type of element
-    std::string
-    order_str   = input( prefix+ "fe_order", "order of finite element shape basis functions",    "first"),
-    family_str  = input( prefix+"fe_family",      "family of finite element shape functions", "lagrange");
-    
-    libMesh::Order
-    o  = libMesh::Utility::string_to_enum<libMesh::Order>(order_str);
-    libMesh::FEFamily
-    fe = libMesh::Utility::string_to_enum<libMesh::FEFamily>(family_str);
-    _fetype = libMesh::FEType(o, fe);
-
     // call the initialization routines for each component
+    _init_fetype();
     _init_mesh();
     _init_system_and_discipline();
     _init_dirichlet_conditions();
@@ -241,6 +230,23 @@ MAST::Examples::ExampleBase::register_paramter_for_sensitivity(MAST::Parameter& 
         libmesh_assert_not_equal_to(_params_for_sensitivity[i], &p);
     
     _params_for_sensitivity.push_back(&p);
+}
+
+
+void
+MAST::Examples::ExampleBase::_init_fetype() {
+    
+    // FEType to initialize the system
+    // get the order and type of element
+    std::string
+    order_str   = (*_input)(_prefix+ "fe_order", "order of finite element shape basis functions",    "first"),
+    family_str  = (*_input)(_prefix+"fe_family",      "family of finite element shape functions", "lagrange");
+    
+    libMesh::Order
+    o  = libMesh::Utility::string_to_enum<libMesh::Order>(order_str);
+    libMesh::FEFamily
+    fe = libMesh::Utility::string_to_enum<libMesh::FEFamily>(family_str);
+    _fetype = libMesh::FEType(o, fe);
 }
 
 

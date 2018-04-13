@@ -146,8 +146,6 @@ libMesh::ParallelObject (comm_in) {
     MAST::PanelMesh2D().init(0.,               // t/c
                              false,            // if cos bump
                              0,                // n max bumps
-                             panel_bc_id,
-                             symmetry_bc_id,
                              divs,
                              *_mesh,
                              elem_type);
@@ -171,17 +169,10 @@ libMesh::ParallelObject (comm_in) {
     _slip_wall     = new MAST::BoundaryConditionBase(MAST::SLIP_WALL);
     
     _flight_cond    =  new MAST::FlightCondition;
-    for (unsigned int i=0; i<3; i++) {
-        
-        _flight_cond->body_roll_axis(i)     = infile(    "body_roll_axis", 0., i);
-        _flight_cond->body_pitch_axis(i)    = infile(   "body_pitch_axis", 0., i);
-        _flight_cond->body_yaw_axis(i)      = infile(     "body_yaw_axis", 0., i);
-        _flight_cond->body_euler_angles(i)  = infile( "body_euler_angles", 0., i);
-        _flight_cond->body_angular_rates(i) = infile("body_angular_rates", 0., i);
-    }
-    
+    for (unsigned int i=0; i<3; i++)
+        _flight_cond->flow_unit_vector(i)   = infile(    "flow_unit_vector", 0., i);
+
     _flight_cond->ref_chord       = infile("ref_c",    1.);
-    _flight_cond->altitude        = infile( "alt",     0.);
     _flight_cond->mach            = infile("mach",     .5);
     _flight_cond->gas_property.cp = infile(  "cp",  1003.);
     _flight_cond->gas_property.cv = infile(  "cv",   716.);
@@ -195,7 +186,7 @@ libMesh::ParallelObject (comm_in) {
     
     // define parameters
     _omega             = new MAST::Parameter("omega",     100.);
-    _velocity          = new MAST::Parameter("velocity",  _flight_cond->velocity_magnitude);
+    _velocity          = new MAST::Parameter("velocity",  _flight_cond->velocity_magnitude());
     _b_ref             = new MAST::Parameter("b_ref",       1.);
     
     
@@ -215,10 +206,11 @@ libMesh::ParallelObject (comm_in) {
                                                      *_b_ref_f);
     
     // initialize the motion object
+    RealVectorX tmp;
     _motion            = new MAST::RigidSurfaceMotion;
     _motion->init(*_freq_function,                 // frequency function
-                  _flight_cond->body_yaw_axis,     // plunge vector
-                  _flight_cond->body_pitch_axis,   // pitch axis
+                  tmp,                             // plunge vector
+                  tmp,                             // pitch axis
                   RealVectorX::Zero(3),            // hinge location
                   1.,                              // plunge amplitude
                   0.,                              // pitch amplitude

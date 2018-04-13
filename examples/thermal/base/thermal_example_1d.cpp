@@ -106,17 +106,22 @@ MAST::Examples::ThermalExample1D::_init_section_property() {
     
     MAST::Parameter
     *thy      = new MAST::Parameter("thy", thy_v),
-    *thz      = new MAST::Parameter("thz", thz_v);
+    *thz      = new MAST::Parameter("thz", thz_v),
+    &zero     = this->get_parameter("zero");
     
     MAST::ConstantFieldFunction
     *thy_f    = new MAST::ConstantFieldFunction("hy",      *thy),
-    *thz_f    = new MAST::ConstantFieldFunction("hz",      *thz);
+    *thz_f    = new MAST::ConstantFieldFunction("hz",      *thz),
+    *hyoff_f  = new MAST::ConstantFieldFunction("hy_off",  zero),
+    *hzoff_f  = new MAST::ConstantFieldFunction("hz_off",  zero);
     
     this->add_parameter(*thy);
     this->add_parameter(*thz);
     this->register_field_function(*thy_f);
     this->register_field_function(*thz_f);
-    
+    this->register_field_function(*hyoff_f);
+    this->register_field_function(*hzoff_f);
+
     MAST::Solid1DSectionElementPropertyCard
     *p_card = new MAST::Solid1DSectionElementPropertyCard;
     
@@ -127,6 +132,8 @@ MAST::Examples::ThermalExample1D::_init_section_property() {
     
     p_card->add(*thy_f);
     p_card->add(*thz_f);
+    p_card->add(*hyoff_f);
+    p_card->add(*hzoff_f);
     p_card->set_material(*_m_card);
     p_card->init();
     _discipline->set_property_for_subdomain(0, *p_card);

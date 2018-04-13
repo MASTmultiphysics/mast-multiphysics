@@ -55,10 +55,12 @@
 //#include "examples/structural/stiffened_plate_optimization_thermally_stressed_piston_theory_flutter/stiffened_plate_thermally_stressed_piston_theory_flutter_optimization.h"
 #include "examples/structural/topology_optim_2D/topology_optim_2D.h"
 #include "examples/structural/topology_optim_L_bracket/topology_optimization_L_bracket.h"
+#include "examples/structural/topology_optim_plate/topology_optim_plate.h"
+#include "examples/structural/thermoelasticity_topology_optim_2D/thermoelasticity_topology_optim_2D.h"
 //#include "optimization/npsol_optimization_interface.h"
 #include "optimization/dot_optimization_interface.h"
 #include "optimization/gcmma_optimization_interface.h"
-//#include "examples/fluid/panel_inviscid_analysis_2D/panel_inviscid_analysis_2d.h"
+#include "examples/fluid/panel_inviscid_analysis_2D/panel_inviscid_analysis_2d.h"
 //#include "examples/fluid/ramp_laminar_analysis_2D/ramp_viscous_analysis_2d.h"
 //#include "examples/fluid/panel_inviscid_analysis_3D_half_domain/panel_inviscid_analysis_3D_half_domain.h"
 //#include "examples/fluid/panel_small_disturbance_frequency_domain_analysis_2D/panel_small_disturbance_frequency_domain_analysis_2d.h"
@@ -386,18 +388,24 @@ int main(int argc, char* const argv[]) {
     else if (case_name == "topology_optimization_2D") {
 
         MAST::GCMMAOptimizationInterface optimizer;
-        //MAST::Examples::TopologyOptimizationLevelSet2D example(init.comm());
-        MAST::Examples::TopologyOptimizationLevelSetLBracket example(init.comm());
+        MAST::Examples::TopologyOptimizationLevelSet2D example(init.comm());
+        //MAST::Examples::TopologyOptimizationLevelSetLBracket example(init.comm());
+        //MAST::Examples::TopologyOptimizationLevelSetPlate example(init.comm());
+        //MAST::Examples::ThermoelasticityTopologyOptimizationLevelSet2D example(init.comm());
+        
         example.init(*input, prefix);
         optimizer.attach_function_evaluation_object(example);
-        //std::vector<Real> dvals(example.n_vars()), dummy(example.n_vars());
-        //example.init_dvar(dvals, dummy, dummy);
-        //example.verify_gradients(dvals);
-        //return 0;
+        std::vector<Real> dvals(example.n_vars()), dummy(example.n_vars());
+        example.init_dvar(dvals, dummy, dummy);
+        example.verify_gradients(dvals);
         optimizer.optimize();
     }
-//    else if (case_name == "panel_inviscid_analysis_2d")
-//        fluid_analysis<MAST::PanelInviscidAnalysis2D>(case_name);
+    else if (case_name == "panel_flow_analysis_2d") {
+        
+        MAST::Examples::PanelAnalysis2D  example(init.comm());
+        example.init(*input, prefix);
+        example.transient_solve();
+    }
 //    else if (case_name == "ramp_laminar_analysis_2d")
 //        fluid_analysis<MAST::RampLaminarAnalysis2D>(case_name);
 //    else if (case_name == "panel_inviscid_analysis_3d_half_domain")
@@ -522,10 +530,10 @@ int main(int argc, char* const argv[]) {
 //        << "*  nonlinear is used to turn on/off nonlinear stiffening in the problem.\n"
 //        << "*  verify_grads=true will verify the gradients of the optimization problem before calling the optimizer.\n"
         << "\n\n\n"
-//        << "**********************************\n"
-//        << "***********   FLUID   ************\n"
-//        << "**********************************\n"
-//        << "  panel_inviscid_analysis_2d \n"
+        << "**********************************\n"
+        << "***********   FLUID   ************\n"
+        << "**********************************\n"
+        << "  panel_flow_analysis_2d \n"
 //        << "  ramp_laminar_analysis_2d \n"
 //        << "  panel_inviscid_analysis_3d_half_domain \n"
 //        << "  panel_inviscid_small_disturbance_frequency_domain_analysis_2d\n"

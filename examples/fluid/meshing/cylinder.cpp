@@ -177,8 +177,6 @@ MAST::Examples::CylinderMesh2D::mesh(const Real r,
     mesh.boundary_info->sideset_name(3) = "cylinder";
     mesh.boundary_info->remove_id(0);
     mesh.boundary_info->remove_id(2);
-    mesh.write("mesh.exo");
-    eta = 0.;
 }
 
 
