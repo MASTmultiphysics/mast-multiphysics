@@ -61,6 +61,7 @@
 #include "optimization/dot_optimization_interface.h"
 #include "optimization/gcmma_optimization_interface.h"
 #include "examples/fluid/panel_inviscid_analysis_2D/panel_inviscid_analysis_2d.h"
+#include "examples/fluid/cylinder_analysis_2D/cylinder_analysis_2d.h"
 //#include "examples/fluid/ramp_laminar_analysis_2D/ramp_viscous_analysis_2d.h"
 //#include "examples/fluid/panel_inviscid_analysis_3D_half_domain/panel_inviscid_analysis_3D_half_domain.h"
 //#include "examples/fluid/panel_small_disturbance_frequency_domain_analysis_2D/panel_small_disturbance_frequency_domain_analysis_2d.h"
@@ -406,6 +407,12 @@ int main(int argc, char* const argv[]) {
         example.init(*input, prefix);
         example.transient_solve();
     }
+    else if (case_name == "cylinder_flow_analysis_2d") {
+        
+        MAST::Examples::CylinderAnalysis2D  example(init.comm());
+        example.init(*input, prefix);
+        example.transient_solve();
+    }
 //    else if (case_name == "ramp_laminar_analysis_2d")
 //        fluid_analysis<MAST::RampLaminarAnalysis2D>(case_name);
 //    else if (case_name == "panel_inviscid_analysis_3d_half_domain")
@@ -534,6 +541,7 @@ int main(int argc, char* const argv[]) {
         << "***********   FLUID   ************\n"
         << "**********************************\n"
         << "  panel_flow_analysis_2d \n"
+        << "  cylinder_flow_analysis_2d \n"
 //        << "  ramp_laminar_analysis_2d \n"
 //        << "  panel_inviscid_analysis_3d_half_domain \n"
 //        << "  panel_inviscid_small_disturbance_frequency_domain_analysis_2d\n"

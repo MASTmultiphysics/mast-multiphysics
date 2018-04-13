@@ -23,7 +23,7 @@
 #include "examples/fluid/meshing/mesh_initializer.h"
 
 // libMesh includes
-#include "libmesh/serial_mesh.h"
+#include "libmesh/mesh_serializer.h"
 #include "libmesh/mesh_generation.h"
 #include "libmesh/node.h"
 #include "libmesh/elem.h"
@@ -75,7 +75,8 @@ MAST::Examples::CylinderMesh2D::mesh(const Real r,
     // we can close the domain by removing nodes at phi = 7 and use the
     // nodes at phi = -1 instead.
     
-    
+    libMesh::MeshSerializer serializer(mesh);
+
     libMesh::MeshBase::node_iterator
     n_it    = mesh.nodes_begin(),
     n_end   = mesh.nodes_end();
