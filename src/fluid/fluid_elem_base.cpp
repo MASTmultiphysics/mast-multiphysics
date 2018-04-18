@@ -1682,7 +1682,23 @@ calculate_barth_tau_matrix (const unsigned int qp,
             tmp1 += nval * l_eig_vec_inv_tr;  // sum_inode  | A_i |
         }
     }
-    
+
+    // add the viscous contribution
+    if (if_viscous()) {
+
+        for (unsigned int i_node=0; i_node<dphi.size(); i_node++) {
+            
+            nvec = dphi[i_node][qp];
+            
+            for (unsigned int i=0; i<dim; i++)
+                for (unsigned int j=0; j<dim; j++) {
+                
+                    calculate_diffusion_flux_jacobian(i, j, sol, l_eig_vec);
+                    tmp1 += l_eig_vec * nvec(i) * nvec(j);
+                }
+        }
+    }
+
     
     // now invert the tmp matrix to get the tau matrix
     RealVectorX

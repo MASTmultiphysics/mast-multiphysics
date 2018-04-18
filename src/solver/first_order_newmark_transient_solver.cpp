@@ -31,7 +31,7 @@
 
 MAST::FirstOrderNewmarkTransientSolver::FirstOrderNewmarkTransientSolver():
 MAST::TransientSolverBase(1, 2),
-beta(1.)
+beta(0.5)
 { }
 
 

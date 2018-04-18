@@ -82,12 +82,28 @@ MAST::Examples::CylinderAnalysis2D::_init_mesh() {
 void
 MAST::Examples::CylinderAnalysis2D::_init_loads() {
     
-    std::vector<unsigned int>
-    slip      =  {3},
-    no_slip,
-    symm,
-    far_field =  {1};
-    _init_boundary_conditions(slip, no_slip, symm, far_field);
+    bool
+    if_viscous =
+    (*_input)(_prefix+"if_viscous", "if the flow analysis should include viscosity", false);
+
+    if (!if_viscous) {
+    
+        std::vector<unsigned int>
+        slip      =  {3},
+        no_slip,
+        symm,
+        far_field =  {1};
+        _init_boundary_conditions(slip, no_slip, symm, far_field);
+    }
+    else {
+        
+        std::vector<unsigned int>
+        slip,
+        no_slip = {3},
+        symm,
+        far_field =  {1};
+        _init_boundary_conditions(slip, no_slip, symm, far_field);
+    }
 }
 
 
