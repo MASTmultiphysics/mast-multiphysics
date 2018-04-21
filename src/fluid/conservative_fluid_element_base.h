@@ -142,7 +142,9 @@ namespace MAST {
          *   surface integrated force
          */
         virtual void
-        side_integrted_force(const unsigned int s, RealVectorX& f);
+        side_integrted_force(const unsigned int s,
+                             RealVectorX& f,
+                             RealMatrixX* dfdX = nullptr);
         
     protected:
         
@@ -258,6 +260,15 @@ namespace MAST {
                                                const unsigned int dim,
                                                const MAST::FEBase& fe,
                                                std::vector<MAST::FEMOperatorMatrix>& dBmat);
+
+        /*!
+         *   d2Bmat[i][j] is the derivative d2B/dxi dxj
+         */
+        void
+        _initialize_fem_second_derivative_operator(const unsigned int qp,
+                                                   const unsigned int dim,
+                                                   const MAST::FEBase& fe,
+                                                   std::vector<std::vector<MAST::FEMOperatorMatrix>>& d2Bmat);
         
     };
 }

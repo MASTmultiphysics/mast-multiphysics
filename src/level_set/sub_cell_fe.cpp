@@ -121,6 +121,7 @@ MAST::SubCellFE::init(const libMesh::Elem& elem,
     _fe->get_dphidxi();
     _fe->get_dphideta();
     _fe->get_dphidzeta();
+    if (_init_second_order_derivatives) _fe->get_d2phi();
 
     // now, we use the xyz points of this element, which should be the location
     // of the quadrature points in the parent element, since elem was in the

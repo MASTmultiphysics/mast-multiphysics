@@ -74,6 +74,7 @@ MAST::FEBase::init(const libMesh::Elem& elem,
     _fe->get_dphidxi();
     _fe->get_dphideta();
     _fe->get_dphidzeta();
+    if (_init_second_order_derivatives) _fe->get_d2phi();
     
     if (pts == nullptr) {
         _qrule = fe_type.default_quadrature_rule
@@ -116,8 +117,11 @@ MAST::FEBase::init_for_side(const libMesh::Elem& elem,
     _fe->get_xyz();
     _fe->get_JxW();
     _fe->get_normals();
-    if (if_calculate_dphi)
+    if (if_calculate_dphi) {
+
         _fe->get_dphi();
+        if (_init_second_order_derivatives) _fe->get_d2phi();
+    }
     
     _fe->reinit(&elem, s);
 
@@ -170,6 +174,14 @@ MAST::FEBase::get_dphi() const {
     
     libmesh_assert(_initialized);
     return _fe->get_dphi();
+}
+
+
+const std::vector<std::vector<libMesh::RealTensorValue>>&
+MAST::FEBase::get_d2phi() const {
+    
+    libmesh_assert(_initialized);
+    return _fe->get_d2phi();
 }
 
 

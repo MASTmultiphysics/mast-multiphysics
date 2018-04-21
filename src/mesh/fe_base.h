@@ -92,6 +92,9 @@ namespace MAST {
         virtual const std::vector<std::vector<libMesh::RealVectorValue> >&
         get_dphi() const;
 
+        virtual const std::vector<std::vector<libMesh::RealTensorValue>>&
+        get_d2phi() const;
+        
         virtual const std::vector<Real>&
         get_dxidx() const;
 
@@ -150,6 +153,7 @@ namespace MAST {
         
         const MAST::SystemInitialization& _sys;
         unsigned int                      _extra_quadrature_order;
+        bool                              _init_second_order_derivatives;
         bool                              _initialized;
         const libMesh::Elem*              _elem;
         libMesh::FEBase*                  _fe;

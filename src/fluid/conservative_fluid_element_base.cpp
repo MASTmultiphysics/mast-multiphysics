@@ -102,9 +102,11 @@ MAST::ConservativeFluidElementBase::internal_residual (bool request_jacobian,
     }
     
     
-    std::vector<MAST::FEMOperatorMatrix> dBmat(dim);
-    MAST::FEMOperatorMatrix Bmat;
-    MAST::PrimitiveSolution      primitive_sol;
+    std::vector<MAST::FEMOperatorMatrix>              dBmat(dim);
+    std::vector<std::vector<MAST::FEMOperatorMatrix>> d2Bmat(dim);
+    MAST::FEMOperatorMatrix                           Bmat;
+    MAST::PrimitiveSolution                           primitive_sol;
+    for (unsigned int i=0; i<dim; i++) d2Bmat[i].resize(dim);
     
     
     for (unsigned int qp=0; qp<JxW.size(); qp++) {
@@ -126,6 +128,8 @@ MAST::ConservativeFluidElementBase::internal_residual (bool request_jacobian,
         _initialize_fem_gradient_operator(qp, dim, *_fe, dBmat);
         
         if (if_viscous()) {
+        
+            _initialize_fem_second_derivative_operator(qp, dim, *_fe, d2Bmat);
             
             calculate_conservative_variable_jacobian(primitive_sol,
                                                      dcons_dprim,
@@ -140,6 +144,7 @@ MAST::ConservativeFluidElementBase::internal_residual (bool request_jacobian,
         
         AiBi_adv.setZero();
         for (unsigned int i_dim=0; i_dim<dim; i_dim++) {
+            
             calculate_advection_flux_jacobian(i_dim, primitive_sol, Ai_adv[i_dim]);
             calculate_advection_flux_jacobian_sensitivity_for_conservative_variable
             (i_dim, primitive_sol, Ai_sens[i_dim]);
@@ -199,6 +204,21 @@ MAST::ConservativeFluidElementBase::internal_residual (bool request_jacobian,
         
         // stabilization term
         f += JxW[qp] * LS.transpose() * (AiBi_adv * _sol);
+        if (if_viscous()) {
+            
+            for (unsigned int i_dim=0; i_dim<dim; i_dim++)
+                for (unsigned int j_dim=0; j_dim<dim; j_dim++) {
+                    
+                    
+                    calculate_diffusion_flux_jacobian(i_dim,
+                                                      j_dim,
+                                                      primitive_sol,
+                                                      mat1_n1n1);
+                    
+                    d2Bmat[i_dim][j_dim].vector_mult(vec1_n1, _sol);
+                    f -= JxW[qp] * LS.transpose() * (mat1_n1n1 * vec1_n1);
+                }
+        }
         
         
         if (request_jacobian) {
@@ -244,6 +264,21 @@ MAST::ConservativeFluidElementBase::internal_residual (bool request_jacobian,
             
             // stabilization term
             jac  += JxW[qp] * LS.transpose() * AiBi_adv;                          // A_i dB_i
+            if (if_viscous()) {
+                
+                for (unsigned int i_dim=0; i_dim<dim; i_dim++)
+                    for (unsigned int j_dim=0; j_dim<dim; j_dim++) {
+                        
+                        
+                        calculate_diffusion_flux_jacobian(i_dim,
+                                                          j_dim,
+                                                          primitive_sol,
+                                                          mat1_n1n1);
+                        
+                        d2Bmat[i_dim][j_dim].left_multiply(mat3_n1n2, mat1_n1n1);
+                        jac -= JxW[qp] * LS.transpose() * mat3_n1n2;
+                    }
+            }
 
             // linearization of the Jacobian terms
             jac += JxW[qp] * LS.transpose() * A_sens; // LS^T tau d^2F^adv_i / dx dU  (Ai sensitivity)
@@ -778,7 +813,8 @@ velocity_residual_sensitivity (const MAST::FunctionBase& p,
 
 void
 MAST::ConservativeFluidElementBase::side_integrted_force(const unsigned int s,
-                                                         RealVectorX& f) {
+                                                         RealVectorX& f,
+                                                         RealMatrixX* dfdX) {
     
     // prepare the side finite element
     std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem));
@@ -1775,6 +1811,33 @@ _initialize_fem_gradient_operator(const unsigned int qp,
         for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
             phi(i_nd) = dphi[i_nd][qp](i_dim);
         dBmat[i_dim].reinit(dim+2, phi); //  dU/dx_i
+    }
+}
+
+
+void
+MAST::ConservativeFluidElementBase::
+_initialize_fem_second_derivative_operator(const unsigned int qp,
+                                           const unsigned int dim,
+                                           const MAST::FEBase& fe,
+                                           std::vector<std::vector<MAST::FEMOperatorMatrix>>& d2Bmat) {
+    
+    libmesh_assert(d2Bmat.size() == dim);
+    for (unsigned int i=0; i<dim; i++)
+        libmesh_assert(d2Bmat[i].size() == dim);
+    
+    const std::vector<std::vector<libMesh::RealTensorValue> >& d2phi = fe.get_d2phi();
+    
+    const unsigned int n_phi = (unsigned int)d2phi.size();
+    RealVectorX phi = RealVectorX::Zero(n_phi);
+    
+    // now set the shape function values
+    for (unsigned int i_dim=0; i_dim<dim; i_dim++)
+        for (unsigned int j_dim=0; j_dim<dim; j_dim++) {
+        
+        for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
+            phi(i_nd) = d2phi[i_nd][qp](i_dim, j_dim);
+        d2Bmat[i_dim][j_dim].reinit(dim+2, phi); //  d2U/dx_i dx_j
     }
 }
 
