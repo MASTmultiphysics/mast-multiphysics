@@ -50,6 +50,11 @@ namespace MAST {
         void set_extra_quadrature_order(int n);
         
         /*!
+         *   sets the flag for evaluation of second order derivative
+         */
+        void set_evaluate_second_order_derivatives(bool f);
+        
+        /*!
          *   Initializes the quadrature and finite element for element volume
          *   integration.
          *   \param elem libMesh::Elem for which the finite element is

@@ -142,9 +142,9 @@ namespace MAST {
          *   surface integrated force
          */
         virtual void
-        side_integrted_force(const unsigned int s,
-                             RealVectorX& f,
-                             RealMatrixX* dfdX = nullptr);
+        side_integrated_force(const unsigned int s,
+                              RealVectorX& f,
+                              RealMatrixX* dfdX = nullptr);
         
     protected:
         

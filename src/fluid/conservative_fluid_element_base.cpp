@@ -42,6 +42,7 @@ MAST::ElementBase(sys, assembly, elem) {
     
     // initialize the finite element data structures
     _fe = assembly.build_fe(_elem).release();
+    _fe->set_evaluate_second_order_derivatives(if_viscous());
     _fe->init(elem);
 }
 
@@ -812,9 +813,9 @@ velocity_residual_sensitivity (const MAST::FunctionBase& p,
 
 
 void
-MAST::ConservativeFluidElementBase::side_integrted_force(const unsigned int s,
-                                                         RealVectorX& f,
-                                                         RealMatrixX* dfdX) {
+MAST::ConservativeFluidElementBase::side_integrated_force(const unsigned int s,
+                                                          RealVectorX& f,
+                                                          RealMatrixX* dfdX) {
     
     // prepare the side finite element
     std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem));
@@ -825,16 +826,20 @@ MAST::ConservativeFluidElementBase::side_integrted_force(const unsigned int s,
     
     const unsigned int
     dim    = _elem.dim(),
-    n1     = dim+2;
+    n1     = dim+2,
+    n2     = _fe->n_shape_functions()*n1;
     
     RealVectorX
     temp_grad = RealVectorX::Zero(dim),
-    vec1_n1   = RealVectorX::Zero(n1);
+    dpdX      = RealVectorX::Zero(n1),
+    vec1_n1   = RealVectorX::Zero(n1),
+    vec2_n2   = RealVectorX::Zero(n2);
     
     RealMatrixX
     stress          = RealMatrixX::Zero(  dim,   dim),
     dprim_dcons     = RealMatrixX::Zero(   n1,    n1),
-    dcons_dprim     = RealMatrixX::Zero(   n1,    n1);
+    mat2_n1n2       = RealMatrixX::Zero(   n1,    n2),
+    mat1_n1n1       = RealMatrixX::Zero(   n1,    n1);
 
     
     libMesh::Point pt;
@@ -872,7 +877,7 @@ MAST::ConservativeFluidElementBase::side_integrted_force(const unsigned int s,
             _initialize_fem_gradient_operator(qp, dim, *_fe, dBmat);
             
             calculate_conservative_variable_jacobian(primitive_sol,
-                                                     dcons_dprim,
+                                                     mat1_n1n1,
                                                      dprim_dcons);
             calculate_diffusion_tensors(_sol,
                                         dBmat,
@@ -883,6 +888,34 @@ MAST::ConservativeFluidElementBase::side_integrted_force(const unsigned int s,
             
             for (unsigned int i_dim=0; i_dim<dim; i_dim++)
                 f.topRows(dim) -= JxW[qp] * stress.col(i_dim) * normals[qp](i_dim);
+        }
+        
+
+        // adjoints, if requested
+        if (dfdX) {
+            
+            calculate_pressure_derivative_wrt_conservative_variables(primitive_sol,
+                                                                     dpdX);
+            for (unsigned int i_dim=0; i_dim<dim; i_dim++) {
+                
+                Bmat.vector_mult_transpose(vec2_n2, dpdX);
+                dfdX->row(i_dim) += JxW[qp] * vec2_n2 * normals[qp](i_dim);
+            }
+
+            if (if_viscous()) {
+                
+                for (unsigned int i_dim=0; i_dim<dim; i_dim++)
+                    for (unsigned int j_dim=0; j_dim<dim; j_dim++) {
+                    
+                    calculate_diffusion_flux_jacobian(i_dim,
+                                                      j_dim,
+                                                      primitive_sol,
+                                                      mat1_n1n1);
+                    
+                    dBmat[j_dim].left_multiply(mat2_n1n2, mat1_n1n1);
+                    dfdX->topRows(dim) -= JxW[qp] * mat2_n1n2.middleRows(1,dim) * normals[qp](i_dim);
+                }
+            }
         }
     }
 }

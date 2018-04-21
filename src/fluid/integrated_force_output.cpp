@@ -71,6 +71,12 @@ MAST::IntegratedForceOutput::zero_for_analysis()  {
 }
 
 
+void
+MAST::IntegratedForceOutput::zero_for_sensitivity() {
+    
+    // nothing to be done here
+}
+
 
 Real
 MAST::IntegratedForceOutput::output_total()  {
@@ -97,12 +103,38 @@ MAST::IntegratedForceOutput::evaluate() {
     f  = RealVectorX::Zero(3);
     
     for (unsigned short int n=0; n<elem.n_sides(); n++)
-        
         if (this->if_evaluate_for_boundary(elem, n)) {
             
-            e.side_integrted_force(n, f);
+            e.side_integrated_force(n, f);
             _force += f.dot(_n_vec);
         }
 }
+
+
+void
+MAST::IntegratedForceOutput::output_derivative_for_elem(RealVectorX& dq_dX) {
+    
+    libmesh_assert(_physics_elem);
+    
+    MAST::ConservativeFluidElementBase& e =
+    dynamic_cast<MAST::ConservativeFluidElementBase&>(*_physics_elem);
+    
+    const libMesh::Elem&
+    elem = _physics_elem->elem();
+    
+    RealVectorX
+    f    = RealVectorX::Zero(3);
+    
+    RealMatrixX
+    dfdX = RealMatrixX::Zero(3, dq_dX.size());
+    
+    for (unsigned short int n=0; n<elem.n_sides(); n++)
+        if (this->if_evaluate_for_boundary(elem, n)) {
+            
+            e.side_integrated_force(n, f, &dfdX);
+            dq_dX += _n_vec.transpose() * dfdX;
+        }
+}
+
 
 

@@ -24,11 +24,12 @@
 
 
 MAST::FEBase::FEBase(const MAST::SystemInitialization& sys):
-_sys        (sys),
-_extra_quadrature_order(0),
-_initialized(false),
-_fe         (nullptr),
-_qrule      (nullptr) {
+_sys                           (sys),
+_extra_quadrature_order        (0),
+_init_second_order_derivatives (false),
+_initialized                   (false),
+_fe                            (nullptr),
+_qrule                         (nullptr) {
     
 }
 
@@ -47,6 +48,13 @@ void
 MAST::FEBase::set_extra_quadrature_order(int n) {
     
     _extra_quadrature_order = n;
+}
+
+
+void
+MAST::FEBase::set_evaluate_second_order_derivatives(bool f) {
+    
+    _init_second_order_derivatives = f;
 }
 
 

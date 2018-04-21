@@ -56,9 +56,7 @@ namespace MAST {
          *   so that assembly process can begin. This will only zero the
          *   data to compute new sensitivity analysis.
          */
-        virtual void zero_for_sensitivity() {
-            libmesh_error(); // not yet implemented
-        }
+        virtual void zero_for_sensitivity();
         
         /*!
          *   @returns the output quantity value contribution for the
@@ -108,9 +106,7 @@ namespace MAST {
          *    output function. This is returned for the element for which
          *   this
          */
-        virtual void output_derivative_for_elem(RealVectorX& dq_dX) {
-            libmesh_error(); // not yet implemented
-        }
+        virtual void output_derivative_for_elem(RealVectorX& dq_dX);
         
         
         /*!
