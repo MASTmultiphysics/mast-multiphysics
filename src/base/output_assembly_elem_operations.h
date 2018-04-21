@@ -159,9 +159,10 @@ namespace MAST {
          *    This is only done on the current element for which this
          *    object has been initialized.
          */
-        virtual void evaluate_topology_sensitivity(const MAST::FunctionBase& f,
-                                                   const MAST::LevelSetIntersection& intersect,
-                                                   const MAST::FieldFunction<RealVectorX>& vel) = 0;
+        virtual void
+        evaluate_topology_sensitivity(const MAST::FunctionBase& f,
+                                      const MAST::LevelSetIntersection& intersect,
+                                      const MAST::FieldFunction<RealVectorX>& vel) = 0;
 
         /*!
          *   The output function can be a boundary integrated quantity, volume
@@ -222,6 +223,14 @@ namespace MAST {
          *    elements and if the specified element is in the subset.
          */
         virtual bool if_evaluate_for_element(const libMesh::Elem& elem) const;
+
+        
+        /*!
+         *    checks to see if the specified side of the element
+         *    needs evaluation of the output contribution.
+         */
+        virtual bool if_evaluate_for_boundary(const libMesh::Elem& elem,
+                                              const unsigned int s) const;
 
         
     protected:

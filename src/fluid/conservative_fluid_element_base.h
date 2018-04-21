@@ -138,6 +138,11 @@ namespace MAST {
                                             RealMatrixX& jac,
                                             std::multimap<libMesh::boundary_id_type, MAST::BoundaryConditionBase*>& bc);
         
+        /*!
+         *   surface integrated force
+         */
+        virtual void
+        side_integrted_force(const unsigned int s, RealVectorX& f);
         
     protected:
         

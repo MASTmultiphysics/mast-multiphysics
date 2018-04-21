@@ -776,6 +776,81 @@ velocity_residual_sensitivity (const MAST::FunctionBase& p,
 
 
 
+void
+MAST::ConservativeFluidElementBase::side_integrted_force(const unsigned int s,
+                                                         RealVectorX& f) {
+    
+    // prepare the side finite element
+    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem));
+    fe->init_for_side(_elem, s, if_viscous()); // viscous requires derivatives of shape functions
+    
+    const std::vector<Real> &JxW                 = fe->get_JxW();
+    const std::vector<libMesh::Point>& normals   = fe->get_normals();
+    
+    const unsigned int
+    dim    = _elem.dim(),
+    n1     = dim+2;
+    
+    RealVectorX
+    temp_grad = RealVectorX::Zero(dim),
+    vec1_n1   = RealVectorX::Zero(n1);
+    
+    RealMatrixX
+    stress          = RealMatrixX::Zero(  dim,   dim),
+    dprim_dcons     = RealMatrixX::Zero(   n1,    n1),
+    dcons_dprim     = RealMatrixX::Zero(   n1,    n1);
+
+    
+    libMesh::Point pt;
+    std::vector<MAST::FEMOperatorMatrix> dBmat(dim);
+    MAST::FEMOperatorMatrix Bmat;
+    
+    // create objects to calculate the primitive solution, flux, and Jacobian
+    MAST::PrimitiveSolution      primitive_sol;
+    
+    for (unsigned int qp=0; qp<JxW.size(); qp++) {
+        
+        // initialize the Bmat operator for this term
+        _initialize_fem_interpolation_operator(qp, dim, *fe, Bmat);
+        Bmat.right_multiply(vec1_n1, _sol);
+        
+        // initialize the primitive solution
+        primitive_sol.zero();
+        primitive_sol.init(dim,
+                           vec1_n1,
+                           flight_condition->gas_property.cp,
+                           flight_condition->gas_property.cv,
+                           if_viscous());
+        
+        //
+        // first add the pressure term
+        //
+        for (unsigned int i_dim=0; i_dim<dim; i_dim++)
+            f(i_dim) += JxW[qp] * primitive_sol.p * normals[qp](i_dim);
+
+        //
+        // next, add the contribution from viscous stress
+        //
+        if (if_viscous()) {
+            
+            _initialize_fem_gradient_operator(qp, dim, *_fe, dBmat);
+            
+            calculate_conservative_variable_jacobian(primitive_sol,
+                                                     dcons_dprim,
+                                                     dprim_dcons);
+            calculate_diffusion_tensors(_sol,
+                                        dBmat,
+                                        dprim_dcons,
+                                        primitive_sol,
+                                        stress,
+                                        temp_grad);
+            
+            for (unsigned int i_dim=0; i_dim<dim; i_dim++)
+                f.topRows(dim) -= JxW[qp] * stress.col(i_dim) * normals[qp](i_dim);
+        }
+    }
+}
+
 
 
 

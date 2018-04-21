@@ -19,6 +19,12 @@
 
 // MAST includes
 #include "base/output_assembly_elem_operations.h"
+#include "base/elem_base.h"
+#include "base/system_initialization.h"
+#include "base/nonlinear_system.h"
+
+// libMesh includes
+#include "libmesh/boundary_info.h"
 
 
 MAST::OutputAssemblyElemOperations::OutputAssemblyElemOperations():
@@ -132,5 +138,32 @@ if_evaluate_for_element(const libMesh::Elem& elem) const {
 }
     
     
+bool
+MAST::OutputAssemblyElemOperations::
+if_evaluate_for_boundary(const libMesh::Elem& elem,
+                         const unsigned int s) const {
+
+    const libMesh::BoundaryInfo
+    &binfo = *_system->system().get_mesh().boundary_info;
+
+    // if no boundary ids have been specified for the side, then
+    // move to the next side.
+    if (!binfo.n_boundary_ids(&elem, s))
+        return false;
     
+    // check to see if any of the specified boundary ids is included
+    // for this element
+    std::vector<libMesh::boundary_id_type> bc_ids;
+    binfo.boundary_ids(&elem, s, bc_ids);
+    std::vector<libMesh::boundary_id_type>::const_iterator bc_it = bc_ids.begin();
+    
+    for ( ; bc_it != bc_ids.end(); bc_it++)
+        if (_bids.count(*bc_it))
+            return true;
+    
+    // if it gets here, then the side has an id that was not specified
+    // in output object for evaluation
+    return false;
+}
+
 
