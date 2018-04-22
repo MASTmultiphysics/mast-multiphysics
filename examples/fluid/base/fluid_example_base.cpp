@@ -39,6 +39,7 @@
 #include "fluid/conservative_fluid_discipline.h"
 #include "fluid/conservative_fluid_transient_assembly.h"
 #include "fluid/flight_condition.h"
+#include "fluid/integrated_force_output.h"
 
 // libMesh includes
 #include "libmesh/equation_systems.h"
@@ -215,7 +216,7 @@ MAST::Examples::FluidExampleBase::_init_material() {
     (*_input)(_prefix+"if_viscous", "if the flow analysis should include viscosity", false);
 
     _flight_cond->init();
-    
+
     // tell the discipline about the fluid values
     dynamic_cast<MAST::ConservativeFluidDiscipline*>(_discipline)->set_flight_condition(*_flight_cond);
 }
@@ -239,9 +240,17 @@ MAST::Examples::FluidExampleBase::transient_solve() {
     MAST::TransientAssembly                                  assembly;
     MAST::ConservativeFluidTransientAssemblyElemOperations   elem_ops;
     MAST::FirstOrderNewmarkTransientSolver                   solver;
-    
+    RealVectorX
+    nvec = RealVectorX::Zero(3);
+    nvec(0) = 1.;
+    MAST::IntegratedForceOutput                              force(nvec);
+    std::set<libMesh::boundary_id_type> bids;
+    bids.insert(3);
+    force.set_participating_boundaries(bids);
+
     assembly.set_discipline_and_system(*_discipline, *_sys_init);
     elem_ops.set_discipline_and_system(*_discipline, *_sys_init);
+    force.set_discipline_and_system(*_discipline, *_sys_init);
     solver.set_discipline_and_system(*_discipline, *_sys_init);
     solver.set_elem_operation_object(elem_ops);
     
@@ -289,6 +298,16 @@ MAST::Examples::FluidExampleBase::transient_solve() {
             oss << output_name << "_sol_t_" << t_step;
             _sys->write_out_vector(*_sys->solution, "data", oss.str(), true);
         }
+        
+        // calculate the output quantity
+        force.zero_for_analysis();
+        assembly.calculate_output(solver.solution(), force);
+        libMesh::out << force.output_total() << std::endl;
+
+        //_sys->adjoint_solve(solver, force, assembly, true);
+        //_sys->solution->swap(_sys->get_adjoint_solution(0));
+        //adjoint_output.write_timestep("adjoint.exo", *_eq_sys, t_step+1, _sys->time);
+        //_sys->solution->swap(_sys->get_adjoint_solution(0));
         
         // solve for the time-step
         solver.solve(assembly);
