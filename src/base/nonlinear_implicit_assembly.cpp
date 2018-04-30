@@ -36,7 +36,9 @@
 
 MAST::NonlinearImplicitAssembly::
 NonlinearImplicitAssembly():MAST::AssemblyBase(),
-_post_assembly      (nullptr) {
+_post_assembly           (nullptr),
+_res_l2_norm             (0.),
+_first_iter_res_l2_norm  (-1.) {
     
 }
 
@@ -168,7 +170,13 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
     if (_sol_function)
         _sol_function->clear();
     
-    if (R) R->close();
+    if (R) {
+        
+        R->close();
+        _res_l2_norm = R->l2_norm();
+        if (_first_iter_res_l2_norm < 0.)
+            _first_iter_res_l2_norm = _res_l2_norm;
+    }
     if (J) J->close();
 }
 

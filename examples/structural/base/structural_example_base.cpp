@@ -22,6 +22,7 @@
 
 // MAST includes
 #include "examples/structural/base/structural_example_base.h"
+#include "examples/structural/base/thermal_stress_jacobian_scaling_function.h"
 #include "examples/base/input_wrapper.h"
 #include "examples/base/plot_results.h"
 #include "base/physics_discipline_base.h"
@@ -359,6 +360,11 @@ MAST::Examples::StructuralExampleBase::static_solve() {
     stress_assembly.set_discipline_and_system(*_discipline, *_sys_init);
     stress_elem_ops.set_discipline_and_system(*_discipline, *_sys_init);
 
+    MAST::Examples::ThermalJacobianScaling
+    &jac_scaling =
+    _discipline->get_property_card(0).get<MAST::Examples::ThermalJacobianScaling&>
+    ("thermal_jacobian_scaling");
+    jac_scaling.set_assembly(assembly);
     
     // initialize the solution before solving
     this->initialize_solution();
@@ -370,6 +376,9 @@ MAST::Examples::StructuralExampleBase::static_solve() {
     
     // now iterate over the load steps
     for (unsigned int i=0; i<n_steps; i++) {
+        
+        jac_scaling.set_enable(true);
+        assembly.reset_residual_norm_history();
         
         // update the load values
         this->update_load_parameters((i+1.)/(1.*n_steps));
@@ -391,6 +400,7 @@ MAST::Examples::StructuralExampleBase::static_solve() {
         }
     }
     
+    jac_scaling.set_enable(false);
     _sys->nonlinear_solver->nearnullspace_object = nullptr;
 }
 

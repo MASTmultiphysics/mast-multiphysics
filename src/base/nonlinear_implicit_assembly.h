@@ -69,6 +69,21 @@ namespace MAST {
         
         
         /*!
+         *   L2 norm of the last-assembled residual
+         */
+        Real res_l2_norm() const { return _res_l2_norm; }
+        
+        Real first_iter_res_l2_norm() const { return _first_iter_res_l2_norm; }
+
+        /*!
+         *   reset L2 norm of the last-assembled residual
+         */
+        void reset_residual_norm_history() {
+            _res_l2_norm = 0.;
+            _first_iter_res_l2_norm = -1.;
+        }
+
+        /*!
          *    sets the PostAssemblyOperation object for use after assembly. 
          *    Note that calling \p clear_discipline_and_system() will 
          *    clear this pointer and the user will have to call this function 
@@ -138,6 +153,11 @@ namespace MAST {
          */
         MAST::NonlinearImplicitAssembly::PostAssemblyOperation* _post_assembly;
 
+        /*!
+         *   L2 norm of the last-assembled residual
+         */
+        Real _res_l2_norm, _first_iter_res_l2_norm;
+        
     };
 }
 

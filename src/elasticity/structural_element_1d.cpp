@@ -1864,8 +1864,14 @@ MAST::StructuralElement1D::thermal_residual (bool request_jacobian,
     &temp_func     = bc.get<MAST::FieldFunction<Real> >("temperature"),
     &ref_temp_func = bc.get<MAST::FieldFunction<Real> >("ref_temperature");
     
-    Real t, t0;
+    Real
+    t       = 0.,
+    t0      = 0.,
+    scaling = 1.;
     
+    if (_property.contains("thermal_jacobian_scaling"))
+        _property.get<MAST::FieldFunction<Real>>("thermal_jacobian_scaling")(scaling);
+
     for (unsigned int qp=0; qp<JxW.size(); qp++) {
         
         // get the material property
@@ -1941,7 +1947,7 @@ MAST::StructuralElement1D::thermal_residual (bool request_jacobian,
     f -= vec3_n2;
     if (request_jacobian && if_vk) {
         transform_matrix_to_global_system(local_jac, mat2_n2n2);
-        jac -= mat2_n2n2;
+        jac -= scaling * mat2_n2n2;
     }
     
     // Jacobian contribution from von Karman strain
