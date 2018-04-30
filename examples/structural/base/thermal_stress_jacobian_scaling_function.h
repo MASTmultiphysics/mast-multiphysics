@@ -39,6 +39,8 @@ namespace MAST {
             void set_assembly(MAST::NonlinearImplicitAssembly& assembly);
             
             void set_enable(bool f);
+
+            void set_acceleration_factor(Real f);
             
             virtual void operator() (Real& val) const;
             
@@ -46,6 +48,7 @@ namespace MAST {
             
             MAST::NonlinearImplicitAssembly *_assembly;
             bool                             _enable;
+            Real                             _accel_factor;
         };
     }
 }

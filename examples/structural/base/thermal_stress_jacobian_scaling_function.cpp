@@ -25,8 +25,9 @@
 
 MAST::Examples::ThermalJacobianScaling::ThermalJacobianScaling():
 MAST::FieldFunction<Real>("thermal_jacobian_scaling"),
-_assembly (nullptr),
-_enable   (false) {
+_assembly     (nullptr),
+_enable       (false),
+_accel_factor (2.)    {
     
 }
 
@@ -44,6 +45,16 @@ MAST::Examples::ThermalJacobianScaling::set_enable(bool f) {
     
     _enable = f;
 }
+
+
+void
+MAST::Examples::ThermalJacobianScaling::set_acceleration_factor(Real f) {
+
+    libmesh_assert_greater(f, 0.);
+    
+    _accel_factor = f;
+}
+
 
 
 void
@@ -71,7 +82,7 @@ MAST::Examples::ThermalJacobianScaling::operator() (Real& val) const {
         
         if (max_res > 0.)
             max_log = std::log10(max_res);
-        val      = std::fmax(1.-std::exp(log-max_log), low);
+        val      = std::fmax(1.-std::exp(_accel_factor*(log-max_log)), low);
         //libMesh::out << log << " " << max_log << " " << val << std::endl;
     }
 }

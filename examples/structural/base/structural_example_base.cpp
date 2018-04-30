@@ -702,21 +702,26 @@ MAST::Examples::StructuralExampleBase::modal_solve_with_nonlinear_load_stepping(
     unsigned int
     n_steps    = (*_input)(_prefix+"nonlinear_load_steps", "number of load steps in nonlinear problem", 20),
     n_perturb = 1,
-    n_eig_req = _sys->get_n_requested_eigenvalues();
+    n_eig_req = (*_input)(_prefix+"n_eig", "number of eigenvalues to compute", 10);
+    _sys->set_n_requested_eigenvalues(n_eig_req);
     
     std::ofstream freq;
-    freq.open("freq.txt", std::ofstream::out);
     
-    // write the header to the freq file
-    freq
-    << std::setw(10) << "Step"
-    << std::setw(35) << "Load-Factor";
-    for (unsigned int i=0; i<n_eig_req; i++) {
-        std::ostringstream nm;
-        nm << "mode_" << i;
-        freq << std::setw(35) << nm.str();
+    // write only on the zero-th processor
+    if (this->comm().rank() == 0) {
+        
+        freq.open("freq.txt", std::ofstream::out);
+        
+        // write the header to the freq file
+        freq
+        << std::setw(10) << "Step"
+        << std::setw(35) << "Load-Factor";
+        for (unsigned int i=0; i<n_eig_req; i++) {
+            std::ostringstream nm;
+            nm << "mode_" << i;
+            freq << std::setw(35) << nm.str();
+        }
     }
-
     
     // create the assembly object
     MAST::NonlinearImplicitAssembly                          nonlinear_assembly;
@@ -736,7 +741,12 @@ MAST::Examples::StructuralExampleBase::modal_solve_with_nonlinear_load_stepping(
     nonlinear_elem_ops.set_discipline_and_system(*_discipline, *_sys_init);
     modal_elem_ops.set_discipline_and_system(*_discipline, *_sys_init);
 
-    
+    MAST::Examples::ThermalJacobianScaling
+    &jac_scaling =
+    _discipline->get_property_card(0).get<MAST::Examples::ThermalJacobianScaling&>
+    ("thermal_jacobian_scaling");
+    jac_scaling.set_assembly(nonlinear_assembly);
+
     
     libMesh::ExodusII_IO exodus_writer(*_mesh);
     // writer for the modes
@@ -756,15 +766,20 @@ MAST::Examples::StructuralExampleBase::modal_solve_with_nonlinear_load_stepping(
     // now iterate over the load steps
     for (int i_step=0; i_step<n_steps; i_step++) {
 
+        jac_scaling.set_enable(true);
+        nonlinear_assembly.reset_residual_norm_history();
+
         Real
         eta = (i_step+1.)/(1.*n_steps);
         this->update_load_parameters(eta);
         
         libMesh::out
         << "Load step: " << i_step << "  Load-factor = " << eta << std::endl;
-        freq << std::endl
-        << std::setw(10) << i_step
-        << std::setw(35) << std::fixed << std::setprecision(15) << eta;
+
+        if (this->comm().rank() == 0)
+            freq << std::endl
+            << std::setw(10) << i_step
+            << std::setw(35) << std::fixed << std::setprecision(15) << eta;
         
 
         ///////////////////////////////////////////////////////////////////
@@ -791,6 +806,7 @@ MAST::Examples::StructuralExampleBase::modal_solve_with_nonlinear_load_stepping(
         //////////////////////////////////////////////////////////////////
         base_sol = *_sys->solution;
         
+        modal_assembly.clear_base_solution();
         modal_assembly.set_base_solution(base_sol);
         _sys->eigenproblem_solve(modal_elem_ops, modal_assembly);
         
@@ -810,7 +826,9 @@ MAST::Examples::StructuralExampleBase::modal_solve_with_nonlinear_load_stepping(
             libMesh::out
             << std::setw(35) << std::fixed << std::setprecision(15)
             << re << std::endl;
-            freq << std::setw(35) << std::fixed << std::setprecision(15) << re;
+
+            if (this->comm().rank() == 0)
+                freq << std::setw(35) << std::fixed << std::setprecision(15) << re;
             
             // if any of the eigenvalues is negative, then use the mode of the
             // smallest eigenvalue to perturb the deformation shape
@@ -853,6 +871,7 @@ MAST::Examples::StructuralExampleBase::modal_solve_with_nonlinear_load_stepping(
     for (unsigned int i=0; i<n_eig_req; i++)
         delete mode_writer[i];
 
+    jac_scaling.set_enable(false);
 }
 
 
