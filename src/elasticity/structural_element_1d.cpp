@@ -1869,8 +1869,8 @@ MAST::StructuralElement1D::thermal_residual (bool request_jacobian,
     t0      = 0.,
     scaling = 1.;
     
-    if (_property.contains("thermal_jacobian_scaling"))
-        _property.get<MAST::FieldFunction<Real>>("thermal_jacobian_scaling")(scaling);
+    if (bc.contains("thermal_jacobian_scaling"))
+        bc.get<MAST::FieldFunction<Real>>("thermal_jacobian_scaling")(scaling);
 
     for (unsigned int qp=0; qp<JxW.size(); qp++) {
         

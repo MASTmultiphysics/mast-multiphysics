@@ -1490,6 +1490,23 @@ MAST::Solid1DSectionElementPropertyCard::I() {
 
 
 void
+MAST::Solid1DSectionElementPropertyCard::clear() {
+    
+    libmesh_assert(!_initialized);
+    
+    _A.reset();
+    _Ay.reset();
+    _Az.reset();
+    _J.reset();
+    _Ip.reset();
+    _AI.reset();
+    
+    _initialized = false;
+}
+
+
+
+void
 MAST::Solid1DSectionElementPropertyCard::init() {
     
     libmesh_assert(!_initialized);

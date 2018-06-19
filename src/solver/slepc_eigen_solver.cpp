@@ -22,6 +22,7 @@
 
 // libMesh includes
 #include "libmesh/petsc_vector.h"
+#include "libmesh/enum_eigen_solver_type.h"
 
 
 MAST::SlepcEigenSolver::SlepcEigenSolver(const libMesh::Parallel::Communicator & comm_in

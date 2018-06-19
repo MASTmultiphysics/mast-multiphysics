@@ -186,6 +186,8 @@ namespace MAST {
         virtual bool depends_on(const MAST::FunctionBase& f) const;
 
         
+        virtual void clear();
+        
         virtual void init();
         
     protected:

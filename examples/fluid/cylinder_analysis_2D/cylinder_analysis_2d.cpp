@@ -27,6 +27,7 @@
 // libMesh includes
 #include "libmesh/parallel_mesh.h"
 #include "libmesh/string_to_enum.h"
+#include "libmesh/enum_elem_type.h"
 
 
 MAST::Examples::CylinderAnalysis2D::
