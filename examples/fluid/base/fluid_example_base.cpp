@@ -242,7 +242,7 @@ MAST::Examples::FluidExampleBase::transient_solve() {
     MAST::FirstOrderNewmarkTransientSolver                   solver;
     RealVectorX
     nvec = RealVectorX::Zero(3);
-    nvec(0) = 1.;
+    nvec(1) = 1.;
     MAST::IntegratedForceOutput                              force(nvec);
     std::set<libMesh::boundary_id_type> bids;
     bids.insert(3);
@@ -260,17 +260,29 @@ MAST::Examples::FluidExampleBase::transient_solve() {
     
     // file to write the solution for visualization
     libMesh::ExodusII_IO transient_output(*_mesh);
-    
+    std::ofstream force_output;
+    force_output.open("force.txt");
+    force_output
+            << std::setw(10) << "t"
+            << std::setw(30) << "force" << std::endl;
     
     // time solver parameters
     Real
-    tval     = 0.;
+    factor   = 0.,
+    min_fac  = 1.5,
+    vel_0    = 0.,
+    vel_1    = 1.e12,
+    p        = 0.5,
+    tval     = 0.,
+    max_dt   = (*_input)(_prefix+"max_dt", "maximum time-step size", 1.e-1);
     
     unsigned int
     t_step            = 0,
+    iter_count_dt     = 0,
+    n_iters_change_dt = (*_input)(_prefix+"n_iters_change_dt", "number of time-steps before dt is changed", 4),
     n_steps           = (*_input)(_prefix+"n_transient_steps", "number of transient time-steps", 100);
     solver.dt         = (*_input)(_prefix+"dt", "time-step size",    1.e-3);
-    
+    libMesh::out << "q_dyn = " << _flight_cond->q0() << std::endl;
     
     // ask the solver to update the initial condition for d2(X)/dt2
     // This is recommended only for the initial time step, since the time
@@ -280,10 +292,29 @@ MAST::Examples::FluidExampleBase::transient_solve() {
     
     // loop over time steps
     while (t_step < n_steps) {
-        
+
+        if (iter_count_dt == n_iters_change_dt) {
+
+            libMesh::out
+            << "Changing dt:  old dt = " << solver.dt
+            << "    new dt = " ;
+
+            factor        = std::pow(vel_0/vel_1, p);
+            factor        = std::max(factor, min_fac);
+            solver.dt     = std::min(solver.dt*factor, max_dt);
+
+            libMesh::out << solver.dt << std::endl;
+
+            iter_count_dt = 0;
+            vel_0         = vel_1;
+        }
+        else
+            iter_count_dt++;
+
         libMesh::out
-        << "Time step: " << t_step
-        << " :  t = " << tval
+        << "Time step: "    << t_step
+        << " :  t = "       << tval
+        << " :  dt = "      << solver.dt
         << " :  xdot-L2 = " << solver.velocity().l2_norm()
         << std::endl;
         
@@ -302,7 +333,9 @@ MAST::Examples::FluidExampleBase::transient_solve() {
         // calculate the output quantity
         force.zero_for_analysis();
         assembly.calculate_output(solver.solution(), force);
-        libMesh::out << force.output_total() << std::endl;
+        force_output
+                << std::setw(10) << tval
+                << std::setw(30) << force.output_total() << std::endl;
 
         //_sys->adjoint_solve(solver, force, assembly, true);
         //_sys->solution->swap(_sys->get_adjoint_solution(0));
