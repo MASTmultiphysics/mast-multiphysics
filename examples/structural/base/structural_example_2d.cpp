@@ -125,13 +125,10 @@ MAST::Examples::StructuralExample2D::_init_section_property_without_offset() {
     *th_f     = new MAST::ConstantFieldFunction("h",       *th),
     *hoff_f   = new MAST::ConstantFieldFunction("off",    zero);
     
-    MAST::FieldFunction<Real>
-    *jac_scaling = new MAST::Examples::ThermalJacobianScaling;
     
     this->add_parameter(*th);
     this->register_field_function(*th_f);
     this->register_field_function(*hoff_f);
-    this->register_field_function(*jac_scaling);
     
     MAST::Solid2DSectionElementPropertyCard
     *p_card   = new MAST::Solid2DSectionElementPropertyCard;
@@ -145,7 +142,6 @@ MAST::Examples::StructuralExample2D::_init_section_property_without_offset() {
     
     p_card->add(*th_f);
     p_card->add(*hoff_f);
-    p_card->add(*jac_scaling);
     p_card->set_material(*_m_card);
     _discipline->set_property_for_subdomain(0, *p_card);
 }

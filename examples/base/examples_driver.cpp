@@ -287,9 +287,10 @@ int main(int argc, char* const argv[]) {
         
         MAST::Examples::PlateBending example(init.comm());
         example.init(*input, prefix);
-        example.static_solve();
-        example.static_sensitivity_solve(example.get_parameter("th"));
-        example.static_adjoint_sensitivity_solve(example.get_parameter("th"));
+        example.modal_solve_with_nonlinear_load_stepping();
+//        example.static_solve();
+//        example.static_sensitivity_solve(example.get_parameter("th"));
+//        example.static_adjoint_sensitivity_solve(example.get_parameter("th"));
     }
 //    else if (case_name == "plate_bending_level_set")
 //        analysis<MAST::PlateBendingLevelSet>(case_name,

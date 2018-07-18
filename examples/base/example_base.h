@@ -90,6 +90,11 @@ namespace MAST {
             void register_field_function(MAST::FunctionBase& f);
 
             /*!
+             *   adds a function
+             */
+            MAST::FunctionBase& get_field_function(const std::string& nm);
+
+            /*!
              *   register a boundary condition
              */
             void register_loading(MAST::BoundaryConditionBase& l);

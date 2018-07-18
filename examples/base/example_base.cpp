@@ -175,6 +175,31 @@ MAST::Examples::ExampleBase::register_field_function(MAST::FunctionBase& p) {
 }
 
 
+MAST::FunctionBase&
+MAST::Examples::ExampleBase::get_field_function(const std::string& nm) {
+
+    std::set<MAST::FunctionBase*>::iterator
+    it   =  _field_functions.begin(),
+    end  =  _field_functions.end();
+
+    for ( ; it != end; it++) {
+        if ((*it)->name() == nm)
+            break;
+    }
+
+    if (it == end) {
+        // if it gets here, then we did not find the function
+        libMesh::out
+        << std::endl
+        << "Function does not exits: " << nm << std::endl;
+        libmesh_error();
+    }
+    
+    return **it;
+}
+
+
+
 void
 MAST::Examples::ExampleBase::register_loading(MAST::BoundaryConditionBase& p) {
     

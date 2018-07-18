@@ -264,11 +264,15 @@ MAST::Examples::StructuralExampleBase::_init_temperature_load() {
     
     MAST::BoundaryConditionBase
     *T_load          = new MAST::BoundaryConditionBase(MAST::TEMPERATURE);
-    
+
+    MAST::FieldFunction<Real>
+    *jac_scaling = new MAST::Examples::ThermalJacobianScaling;
+
     T_load->add(*temp_f);
     T_load->add(*ref_temp_f);
+    T_load->add(*jac_scaling);
     _m_card->add(*alpha_f);
-    
+
     _discipline->add_volume_load(0, *T_load);
 
     
@@ -277,6 +281,7 @@ MAST::Examples::StructuralExampleBase::_init_temperature_load() {
     this->register_field_function(*alpha_f);
     this->register_field_function(*temp_f);
     this->register_field_function(*ref_temp_f);
+    this->register_field_function(*jac_scaling);
     this->register_loading(*T_load);
     this->add_load_parameter(*temp);
 }
@@ -361,9 +366,8 @@ MAST::Examples::StructuralExampleBase::static_solve() {
     stress_elem_ops.set_discipline_and_system(*_discipline, *_sys_init);
 
     MAST::Examples::ThermalJacobianScaling
-    &jac_scaling =
-    _discipline->get_property_card(0).get<MAST::Examples::ThermalJacobianScaling&>
-    ("thermal_jacobian_scaling");
+    &jac_scaling = dynamic_cast<MAST::Examples::ThermalJacobianScaling&>
+    (this->get_field_function("thermal_jacobian_scaling"));
     jac_scaling.set_assembly(assembly);
     
     // initialize the solution before solving
@@ -742,9 +746,8 @@ MAST::Examples::StructuralExampleBase::modal_solve_with_nonlinear_load_stepping(
     modal_elem_ops.set_discipline_and_system(*_discipline, *_sys_init);
 
     MAST::Examples::ThermalJacobianScaling
-    &jac_scaling =
-    _discipline->get_property_card(0).get<MAST::Examples::ThermalJacobianScaling&>
-    ("thermal_jacobian_scaling");
+    &jac_scaling = dynamic_cast<MAST::Examples::ThermalJacobianScaling&>
+    (this->get_field_function("thermal_jacobian_scaling"));
     jac_scaling.set_assembly(nonlinear_assembly);
 
     
