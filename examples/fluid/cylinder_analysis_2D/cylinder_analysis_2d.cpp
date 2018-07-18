@@ -21,6 +21,7 @@
 // MAST includes
 #include "examples/fluid/cylinder_analysis_2D/cylinder_analysis_2d.h"
 #include "examples/fluid/meshing/cylinder.h"
+#include "examples/fluid/meshing/naca0012.h"
 #include "examples/base/input_wrapper.h"
 
 
@@ -69,7 +70,7 @@ MAST::Examples::CylinderAnalysis2D::_init_mesh() {
         e_type = libMesh::TRI6;
 
     // initialize the mesh
-    MAST::Examples::CylinderMesh2D().mesh(r,
+    MAST::Examples::NACA0012Mesh2D().mesh(r,
                                           r*l_by_r,
                                           radial_divs,
                                           quarter_divs,
