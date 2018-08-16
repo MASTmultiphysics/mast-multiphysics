@@ -37,7 +37,9 @@ namespace MAST {
             ThermalJacobianScaling();
             
             void set_assembly(MAST::NonlinearImplicitAssembly& assembly);
-            
+
+            void clear_assembly();
+
             void set_enable(bool f);
 
             void set_acceleration_factor(Real f);

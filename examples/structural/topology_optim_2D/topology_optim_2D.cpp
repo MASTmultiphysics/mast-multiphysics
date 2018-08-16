@@ -19,6 +19,7 @@
 
 
 // MAST includes
+#include <structural/base/thermal_stress_jacobian_scaling_function.h>
 #include "examples/structural/topology_optim_2D/topology_optim_2D.h"
 #include "examples/base/input_wrapper.h"
 #include "level_set/level_set_discipline.h"
@@ -376,10 +377,10 @@ MAST::Examples::TopologyOptimizationLevelSet2D::evaluate(const std::vector<Real>
     MAST::MeshFieldFunction indicator(*_indicator_sys_init, "indicator");
     indicator.init(*_indicator_sys->solution);
     //MAST::IndicatorFunctionConstrainDofs constrain(*_sys_init, *_level_set_function, indicator);
-    MAST::LevelSetConstrainDofs constrain(*_sys_init, *_level_set_function);
-    _sys->attach_constraint_object(constrain);
-    _sys->reinit_constraints();
-    _sys->initialize_condensed_dofs(*_discipline);
+    //MAST::LevelSetConstrainDofs constrain(*_sys_init, *_level_set_function);
+    //_sys->attach_constraint_object(constrain);
+    //_sys->reinit_constraints();
+    //_sys->initialize_condensed_dofs(*_discipline);
     
     /////////////////////////////////////////////////////////////////////
     // first constrain the indicator function and solve
@@ -419,6 +420,12 @@ MAST::Examples::TopologyOptimizationLevelSet2D::evaluate(const std::vector<Real>
     //////////////////////////////////////////////////////////////////////
     // evaluate the stress constraint
     //////////////////////////////////////////////////////////////////////
+    // tell the thermal jacobian scaling object about the assembly object
+    MAST::Examples::ThermalJacobianScaling&
+    scaling = dynamic_cast<MAST::Examples::ThermalJacobianScaling&>
+            (this->get_field_function("thermal_jacobian_scaling"));
+    scaling.set_assembly(nonlinear_assembly);
+
     libMesh::out << "Static Solve" << std::endl;
     _sys->solve(nonlinear_elem_ops, nonlinear_assembly);
     r = dynamic_cast<libMesh::PetscNonlinearSolver<Real>&>
@@ -497,6 +504,7 @@ MAST::Examples::TopologyOptimizationLevelSet2D::evaluate(const std::vector<Real>
 
     // also the stress data for plotting
     stress_assembly.update_stress_strain_data(stress, *_sys->solution);
+    scaling.clear_assembly();
 }
 
 
@@ -814,8 +822,8 @@ MAST::Examples::TopologyOptimizationLevelSet2D::_init_phi_dvs() {
     
     // iterate over all the node values
     libMesh::MeshBase::const_node_iterator
-    it  = _level_set_mesh->nodes_begin(),
-    end = _level_set_mesh->nodes_end();
+    it  = _level_set_mesh->local_nodes_begin(),
+    end = _level_set_mesh->local_nodes_end();
     
     // maximum number of dvs is the number of nodes on the level set function
     // mesh. We will evaluate the actual number of dvs

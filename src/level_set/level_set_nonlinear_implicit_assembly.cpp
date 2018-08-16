@@ -362,7 +362,9 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
              nd_indicator.maxCoeff() < tol) && J) {
             
             DenseRealMatrix m(ndofs, ndofs);
-            dof_map.constrain_element_matrix(m, dof_indices);
+            //dof_map.constrain_element_matrix(m, dof_indices);
+	    for (unsigned int i=0; i<ndofs; i++)
+	      m(i,i) = 1.e-6;
             J->add_matrix(m, dof_indices);
         }
         

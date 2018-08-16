@@ -397,9 +397,9 @@ int main(int argc, char* const argv[]) {
         
         example.init(*input, prefix);
         optimizer.attach_function_evaluation_object(example);
-        std::vector<Real> dvals(example.n_vars()), dummy(example.n_vars());
-        example.init_dvar(dvals, dummy, dummy);
-        example.verify_gradients(dvals);
+        //std::vector<Real> dvals(example.n_vars()), dummy(example.n_vars());
+        //example.init_dvar(dvals, dummy, dummy);
+        //example.verify_gradients(dvals);
         optimizer.optimize();
     }
     else if (case_name == "panel_flow_analysis_2d") {

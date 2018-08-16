@@ -34,9 +34,16 @@ _accel_factor (2.)    {
 
 void
 MAST::Examples::ThermalJacobianScaling::set_assembly(MAST::NonlinearImplicitAssembly& assembly) {
-    
+
     libmesh_assert(!_assembly);
     _assembly = &assembly;
+}
+
+
+void
+MAST::Examples::ThermalJacobianScaling::clear_assembly() {
+
+    _assembly = nullptr;
 }
 
 
