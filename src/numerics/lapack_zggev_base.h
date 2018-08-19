@@ -85,13 +85,17 @@ namespace MAST {
         void scale_eigenvectors_to_identity_innerproduct() {
             libmesh_assert(info_val == 0);
             
-            // scale the right eigenvectors so that they all have the same norm
-            Real l2 = this->VR.col(0).norm();
+            // scale the right eigenvectors so that they all have unit norm
+            Real l2 = 0.;
             
-            libmesh_assert(l2 > 0.);
-            
-            for (unsigned int i=1; i<this->VR.cols(); i++)
-                this->VR.col(i) *= l2 / this->VR.col(i).norm();
+            for (unsigned int i=0; i<this->VR.cols(); i++) {
+                
+                l2 = this->VR.col(i).norm();
+                libmesh_assert(l2 > 0.);
+                
+                // scale all right eigenvectors to unit length
+                this->VR.col(i) /= l2;
+            }
             
             // this product should be an identity matrix
             ComplexMatrixX r = this->VL.conjugate().transpose() * _B * this->VR;
@@ -102,7 +106,7 @@ namespace MAST {
             for (unsigned int i=0; i<_B.cols(); i++) {
                 val = r(i,i);
                 if (std::abs(val) > 0.)
-                    this->VR.col(i) *= (1./val);
+                    this->VL.col(i) *= (1./val);
             }
         }
         
