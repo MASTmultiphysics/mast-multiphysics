@@ -66,15 +66,54 @@ namespace MAST {
     public:
         Phi(Real l1,
             Real l2,
-            Real nx,
-            Real ny):
+            Real nx_mesh,
+            Real ny_mesh,
+            Real nx_holes,
+            Real ny_holes):
         MAST::FieldFunction<RealVectorX>("Phi"),
         _l1  (l1),
         _l2  (l2),
-        _nx  (nx),
-        _ny  (ny),
+        _nx_mesh  (nx_mesh),
+        _ny_mesh  (ny_mesh),
+        _nx_holes (nx_holes),
+        _ny_holes (ny_holes),
         _pi  (acos(-1.)) {
+         
+            // initialize the locations at which the holes will be nucleated
+            // first, along the x-axis
+            if (_nx_holes == 1)
+                _x_axis_hole_locations.insert(l1 * 0.5);
+            else if (_nx_holes >= 2) {
+                
+                // add holes at the beginning and end
+                _x_axis_hole_locations.insert(0.);
+                _x_axis_hole_locations.insert(_l1);
+                
+                // now, add holes at uniformly spaced locations
+                // in the domain
+                Real
+                dx = _l1/(1.*(_nx_holes-1));
+                for (unsigned int i=2; i<_nx_holes; i++)
+                    _x_axis_hole_locations.insert(dx*(i-1));
+            }
+
             
+            // now, along the y-axis
+            if (_ny_holes == 1)
+                _y_axis_hole_locations.insert(l2 * 0.5);
+            else if (_ny_holes >= 2) {
+                
+                // add holes at the beginning and end
+                _y_axis_hole_locations.insert(0.);
+                _y_axis_hole_locations.insert(_l2);
+                
+                // now, add holes at uniformly spaced locations
+                // in the domain
+                Real
+                dx = _l2/(1.*(_ny_holes-1));
+                for (unsigned int i=2; i<_ny_holes; i++)
+                    _y_axis_hole_locations.insert(dx*(i-1));
+            }
         }
         virtual ~Phi() {}
         virtual void operator()(const libMesh::Point& p,
@@ -102,17 +141,42 @@ namespace MAST {
             //v(0) = (p(0)-_l1*0.5)*(-10.);
             //v(0) = (p(0)+p(1)-_l1)*(-10.);*/
             
-            // periodic circles
-            const Real
-            lx_cell = _l1/(1.*_nx),
-            ly_cell = _l2/(1.*_ny),
-            frac    = 0.25,
-            r       = frac*0.5*std::min(lx_cell, lx_cell),
-            x       =  p(0) - lx_cell * std::floor(p(0)/lx_cell),
-            y       =  p(1) - ly_cell * std::floor(p(1)/ly_cell),
-            d       =  pow(pow(x-lx_cell*0.5, 2) + pow(y-ly_cell*0.5, 2), 0.5);
+            // the libMesh solution projection routine for Lagrange elements
+            // will query the function value at the nodes. So, we figure
+            // out which nodes should have zero values set to them.
+            // if there is one hole in any direction, it will be in the
+            // center of the domain. If there are more than 1, then two of
+            // the holes will be on the boundary and others will fill the
+            // interior evenly.
             
-            if (d <= r)
+            const Real
+            tol     = 1.e-6*std::min(_l1, _l2),
+            dx_mesh = _l1/(1.*_nx_mesh),
+            dy_mesh = _l2/(1.*_ny_mesh);
+            
+            std::set<Real>::const_iterator
+            x_it_low = _x_axis_hole_locations.lower_bound(p(0)-dx_mesh),
+            y_it_low = _y_axis_hole_locations.lower_bound(p(1)-dy_mesh);
+            
+            unsigned int
+            n = 0;
+            // see if the x-location needs a hole
+            for ( ; x_it_low != _x_axis_hole_locations.end(); x_it_low++) {
+                if (std::fabs(*x_it_low - p(0)) <= dx_mesh*0.5) {
+                    n++;
+                    break;
+                }
+            }
+            
+            // now check the y-location
+            for ( ; y_it_low != _y_axis_hole_locations.end(); y_it_low++) {
+                if (std::fabs(*y_it_low - p(1)) <= dy_mesh*0.5) {
+                    n++;
+                    break;
+                }
+            }
+
+            if (n == 2)
                 v(0) = -0.01;
             else
                 v(0) = 0.01;
@@ -121,9 +185,13 @@ namespace MAST {
         Real
         _l1,
         _l2,
-        _nx,
-        _ny,
+        _nx_mesh,
+        _ny_mesh,
+        _nx_holes,
+        _ny_holes,
         _pi;
+        std::set<Real> _x_axis_hole_locations;
+        std::set<Real> _y_axis_hole_locations;
     };
     
     class Vel: public MAST::FieldFunction<Real> {
@@ -206,16 +274,19 @@ MAST::Examples::TopologyOptimizationLevelSet2D::initialize_solution() {
     
     
     // initialize solution of the level set problem
+    unsigned int
+    nx_h    = (*_input)(_prefix+ "initial_level_set_n_holes_in_x",
+                        "number of holes along x-direction for initial level-set field", 2.),
+    ny_h    = (*_input)(_prefix+ "initial_level_set_n_holes_in_y",
+                        "number of holes along y-direction for initial level-set field", 2.),
+    nx_m    = (*_input)(_prefix+"level_set_nx_divs", "number of elements of level-set mesh along x-axis", 10),
+    ny_m    = (*_input)(_prefix+"level_set_ny_divs", "number of elements of level-set mesh along y-axis", 10);
+
     Real
     length  = (*_input)(_prefix+"length", "length of domain along x-axis", 0.3),
-    height  = (*_input)(_prefix+"height", "length of domain along y-axis", 0.3),
-    nx      = (*_input)(_prefix+ "initial_level_set_n_holes_in_x",
-                        "number of holes along x-direction for initial level-set field", 2.),
-    ny      = (*_input)(_prefix+ "initial_level_set_n_holes_in_y",
-                        "number of holes along y-direction for initial level-set field", 2.),
-    min_val = std::min(length, height);
+    height  = (*_input)(_prefix+"height", "length of domain along y-axis", 0.3);
 
-    Phi phi(length, height, nx, ny);
+    Phi phi(length, height, nx_m, ny_m, nx_h, ny_h);
     _level_set_sys_init->initialize_solution(phi);
 }
 
@@ -857,16 +928,16 @@ MAST::Examples::TopologyOptimizationLevelSet2D::_init_phi_dvs() {
             oss << "dv_" << _n_vars;
             val  = local_phi[dof_id];
             
-            // on the traction free boundary, set everything to be zero, so that there
-            // is always a boundary there that the optimizer can move
-            if (n(1) < tol                     ||
-                std::fabs(n(1) - height) < tol) {
-                
-                if (dof_id >= _level_set_sys->solution->first_local_index() &&
-                    dof_id <  _level_set_sys->solution->last_local_index())
-                    _level_set_sys->solution->set(dof_id, 0.);
-                val = 0.;
-            }
+//            // on the traction free boundary, set everything to be zero, so that there
+//            // is always a boundary there that the optimizer can move
+//            if (n(1) < tol                     ||
+//                std::fabs(n(1) - height) < tol) {
+//
+//                if (dof_id >= _level_set_sys->solution->first_local_index() &&
+//                    dof_id <  _level_set_sys->solution->last_local_index())
+//                    _level_set_sys->solution->set(dof_id, 0.);
+//                val = 0.;
+//            }
 
             _dv_params.push_back(std::pair<unsigned int, MAST::Parameter*>());
             _dv_params[_n_vars].first  = dof_id;
