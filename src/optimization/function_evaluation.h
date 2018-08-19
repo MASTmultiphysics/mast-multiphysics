@@ -198,8 +198,48 @@ namespace MAST {
             return nullptr;
         }
 #endif
+      
+        /*!
+         *   make sure that the analysis is setup consistently across
+         *   all parallel processes
+         */
+        void sanitize_parallel();
         
+        /*!
+         *  This serves as a wrapper around init_dvar() and makes sure
+         *  that the derived class's implementation provides the same
+         *  initialization to the design variable vector on all processors
+         */
+        virtual void _init_dvar_wrapper(std::vector<Real>& x,
+                                        std::vector<Real>& xmin,
+                                        std::vector<Real>& xmax);
         
+
+        /*!
+         *  This serves as a wrapper around evaluate() and makes sure
+         *  that the derived class's implementation is given the same
+         *  design variable vector and returns the same values for
+         *  specific parameters on all processors.
+         */
+        virtual void _evaluate_wrapper(const std::vector<Real>& dvars,
+                                       Real& obj,
+                                       bool eval_obj_grad,
+                                       std::vector<Real>& obj_grad,
+                                       std::vector<Real>& fvals,
+                                       std::vector<bool>& eval_grads,
+                                       std::vector<Real>& grads);
+
+        /*!
+         *  This serves as a wrapper around evaluate() and makes sure
+         *  that the derived class's implementation is given the same
+         *  design variable vector on all processors.
+         */
+        virtual void _output_wrapper(unsigned int iter,
+                                     const std::vector<Real>& x,
+                                     Real obj,
+                                     const std::vector<Real>& fval,
+                                     bool if_write_to_optim_file);
+
     protected:
         
         unsigned int _n_vars;

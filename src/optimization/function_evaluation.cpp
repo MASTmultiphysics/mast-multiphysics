@@ -364,3 +364,82 @@ MAST::FunctionEvaluation::verify_gradients(const std::vector<Real>& dvars) {
 
 
 
+void
+MAST::FunctionEvaluation::sanitize_parallel() {
+
+    unsigned int
+    N                  = this->n_vars(),
+    N_EQ               = this->n_eq(),
+    N_INEQ             = this->n_ineq(),
+    n_rel_change_iters = this->n_iters_relative_change();
+    
+    // make sure all processors have the same values
+    libmesh_assert(this->comm().verify(N));
+    libmesh_assert(this->comm().verify(N_EQ));
+    libmesh_assert(this->comm().verify(N_INEQ));
+    libmesh_assert(this->comm().verify(n_rel_change_iters));
+}
+
+
+
+void
+MAST::FunctionEvaluation::_init_dvar_wrapper(std::vector<Real>& x,
+                                             std::vector<Real>& xmin,
+                                             std::vector<Real>& xmax) {
+
+    this->init_dvar(x, xmin, xmax);
+    
+    libmesh_assert(this->comm().verify(x));
+    libmesh_assert(this->comm().verify(xmin));
+    libmesh_assert(this->comm().verify(xmax));
+}
+
+
+
+void
+MAST::FunctionEvaluation::_evaluate_wrapper(const std::vector<Real>& dvars,
+                                            Real& obj,
+                                            bool eval_obj_grad,
+                                            std::vector<Real>& obj_grad,
+                                            std::vector<Real>& fvals,
+                                            std::vector<bool>& eval_grads,
+                                            std::vector<Real>& grads) {
+    
+    // verify that all values going into the function are consistent
+    // across all processors
+    libmesh_assert(this->comm().verify(dvars));
+    libmesh_assert(this->comm().verify(eval_obj_grad));
+    
+    this->evaluate(dvars,
+                   obj,
+                   eval_obj_grad,
+                   obj_grad,
+                   fvals,
+                   eval_grads,
+                   grads);
+    
+    // verify that all output values coming out of all functions are
+    // consistent across all processors
+    libmesh_assert(this->comm().verify(obj));
+    libmesh_assert(this->comm().verify(obj_grad));
+    libmesh_assert(this->comm().verify(fvals));
+    libmesh_assert(this->comm().verify(grads));
+}
+
+
+
+void
+MAST::FunctionEvaluation::_output_wrapper(unsigned int iter,
+                                          const std::vector<Real>& x,
+                                          Real obj,
+                                          const std::vector<Real>& fval,
+                                          bool if_write_to_optim_file) {
+    
+    // verify that all values going into the function are consistent
+    // across all processors
+    libmesh_assert(this->comm().verify(iter));
+    libmesh_assert(this->comm().verify(x));
+    
+    this->output(iter, x, obj, fval, if_write_to_optim_file);
+}
+

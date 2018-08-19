@@ -22,6 +22,8 @@
 #include "elasticity/stress_output_base.h"
 #include "elasticity/structural_element_base.h"
 #include "base/assembly_base.h"
+#include "base/system_initialization.h"
+#include "base/nonlinear_system.h"
 #include "base/physics_discipline_base.h"
 #include "base/boundary_condition_base.h"
 #include "property_cards/element_property_card_1D.h"
@@ -813,7 +815,11 @@ von_Mises_p_norm_functional_for_all_elems() {
         }
     }
     
-    
+    // sum over all processors, since part of the mesh will exist on the
+    // other processors.
+    _system->system().comm().sum(_sigma_vm_int);
+    _system->system().comm().sum(_JxW_val);
+
     _sigma_vm_p_norm         = _sigma0 * pow(_sigma_vm_int/_JxW_val, 1./_p_norm);
     _primal_data_initialized = true;
 }
@@ -844,6 +850,10 @@ von_Mises_p_norm_functional_sensitivity_for_all_elems
         this->von_Mises_p_norm_functional_sensitivity_for_elem(f, map_it->first, val);
         dsigma_vm_val_df += val;
     }
+    
+    // sum over all processors, since part of the mesh will exist on the
+    // other processors
+    _system->system().comm().sum(dsigma_vm_val_df);
 }
 
 
@@ -873,6 +883,10 @@ von_Mises_p_norm_functional_boundary_sensitivity_for_all_elems
         this->von_Mises_p_norm_functional_boundary_sensitivity_for_elem(f, map_it->first, val);
         dsigma_vm_val_df += val;
     }
+
+    // sum over all processors, since part of the mesh will exist on the
+    // other processors
+    _system->system().comm().sum(dsigma_vm_val_df);
 }
 
 

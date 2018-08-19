@@ -314,6 +314,8 @@ MAST::Examples::TopologyOptimizationLevelSet2D::evaluate(const std::vector<Real>
     
     // copy DVs to level set function
     for (unsigned int i=0; i<_n_vars; i++)
+        if (_dv_params[i].first >= _level_set_sys->solution->first_local_index() &&
+            _dv_params[i].first <  _level_set_sys->solution->last_local_index())
         _level_set_sys->solution->set(_dv_params[i].first, dvars[i]);
     _level_set_sys->solution->close();
     _level_set_function->init(*_level_set_sys_init, *_level_set_sys->solution);
@@ -424,6 +426,7 @@ MAST::Examples::TopologyOptimizationLevelSet2D::evaluate(const std::vector<Real>
     MAST::Examples::ThermalJacobianScaling&
     scaling = dynamic_cast<MAST::Examples::ThermalJacobianScaling&>
             (this->get_field_function("thermal_jacobian_scaling"));
+    scaling.clear_assembly();
     scaling.set_assembly(nonlinear_assembly);
 
     libMesh::out << "Static Solve" << std::endl;
@@ -504,7 +507,6 @@ MAST::Examples::TopologyOptimizationLevelSet2D::evaluate(const std::vector<Real>
 
     // also the stress data for plotting
     stress_assembly.update_stress_strain_data(stress, *_sys->solution);
-    scaling.clear_assembly();
 }
 
 
@@ -524,7 +526,10 @@ _evaluate_volume_sensitivity(MAST::LevelSetVolume& volume,
     for (unsigned int i=0; i<_n_vars; i++) {
         
         dphi->zero();
-        dphi->set(_dv_params[i].first, 1.);
+        // set the value only if the dof corresponds to a local node
+        if (_dv_params[i].first >=  dphi->first_local_index() &&
+            _dv_params[i].first <   dphi->last_local_index())
+            dphi->set(_dv_params[i].first, 1.);
         dphi->close();
 
         _level_set_vel->init(*_level_set_sys_init, *_level_set_sys->solution, *dphi);
@@ -819,11 +824,18 @@ MAST::Examples::TopologyOptimizationLevelSet2D::_init_phi_dvs() {
     
     Real
     val     = 0.;
+
+    // all ranks will have DVs defined for all variables. So, we should be
+    // operating on a replicated mesh
+    libmesh_assert(_level_set_mesh->is_replicated());
+    
+    std::vector<Real> local_phi(_level_set_sys->solution->size());
+    _level_set_sys->solution->localize(local_phi);
     
     // iterate over all the node values
     libMesh::MeshBase::const_node_iterator
-    it  = _level_set_mesh->local_nodes_begin(),
-    end = _level_set_mesh->local_nodes_end();
+    it  = _level_set_mesh->nodes_begin(),
+    end = _level_set_mesh->nodes_end();
     
     // maximum number of dvs is the number of nodes on the level set function
     // mesh. We will evaluate the actual number of dvs
@@ -843,15 +855,16 @@ MAST::Examples::TopologyOptimizationLevelSet2D::_init_phi_dvs() {
      
             std::ostringstream oss;
             oss << "dv_" << _n_vars;
-            val                        = _level_set_sys->solution->el(dof_id);
-
+            val  = local_phi[dof_id];
             
             // on the traction free boundary, set everything to be zero, so that there
             // is always a boundary there that the optimizer can move
             if (n(1) < tol                     ||
                 std::fabs(n(1) - height) < tol) {
                 
-                _level_set_sys->solution->set(dof_id, 0.);
+                if (dof_id >= _level_set_sys->solution->first_local_index() &&
+                    dof_id <  _level_set_sys->solution->last_local_index())
+                    _level_set_sys->solution->set(dof_id, 0.);
                 val = 0.;
             }
 
@@ -863,9 +876,10 @@ MAST::Examples::TopologyOptimizationLevelSet2D::_init_phi_dvs() {
             _n_vars++;
         }
         else {
-            // set value at the constrained points to a small positive number
-            // material here
-            _level_set_sys->solution->set(dof_id, 0.01);
+            // set value at the material points to a small positive number
+            if (dof_id >= _level_set_sys->solution->first_local_index() &&
+                dof_id <  _level_set_sys->solution->last_local_index())
+                _level_set_sys->solution->set(dof_id, 0.01);
         }
     }
     
@@ -974,7 +988,9 @@ MAST::Examples::TopologyOptimizationLevelSet2D::output(unsigned int iter,
 
     // copy DVs to level set function
     for (unsigned int i=0; i<_n_vars; i++)
-        _level_set_sys->solution->set(_dv_params[i].first, x[i]);
+        if (_dv_params[i].first >= _level_set_sys->solution->first_local_index() &&
+            _dv_params[i].first <  _level_set_sys->solution->last_local_index())
+            _level_set_sys->solution->set(_dv_params[i].first, x[i]);
     _level_set_sys->solution->close();
     _level_set_function->init(*_level_set_sys_init, *_level_set_sys->solution);
     _level_set_sys_init_on_str_mesh->initialize_solution(_level_set_function->get_mesh_function());

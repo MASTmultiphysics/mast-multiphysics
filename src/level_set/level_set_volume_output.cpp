@@ -21,6 +21,8 @@
 #include "level_set/level_set_volume_output.h"
 #include "level_set/level_set_elem_base.h"
 #include "level_set/level_set_intersection.h"
+#include "base/system_initialization.h"
+#include "base/nonlinear_system.h"
 #include "base/assembly_base.h"
 #include "base/function_base.h"
 
@@ -96,7 +98,13 @@ MAST::LevelSetVolume::output_for_elem() {
 Real
 MAST::LevelSetVolume::output_total() {
 
-    return _vol;
+    Real val = _vol;
+    
+    // sum over all processors since part of the mesh can live on different
+    // processors
+    _system->system().comm().sum(val);
+    
+    return val;
 }
 
 
@@ -126,7 +134,13 @@ MAST::LevelSetVolume::output_sensitivity_for_elem(const MAST::FunctionBase& p) {
 Real
 MAST::LevelSetVolume::output_sensitivity_total(const MAST::FunctionBase& p) {
 
-    return _dvol_dp;
+    Real val = _dvol_dp;
+    
+    // sum over all processors since part of the mesh can live on different
+    // processors
+    _system->system().comm().sum(val);
+
+    return val;
 }
 
 
