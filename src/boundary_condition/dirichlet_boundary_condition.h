@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -70,7 +70,7 @@ namespace MAST {
         /*!
          *    Dirichlet boundary function for this boundary
          */
-        std::auto_ptr<libMesh::DirichletBoundary> _dirichlet_boundary;
+        std::unique_ptr<libMesh::DirichletBoundary> _dirichlet_boundary;
     };
 }
 

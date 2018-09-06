@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -30,8 +30,6 @@
 // libMesh includes
 #include "libmesh/elem.h"
 #include "libmesh/system.h"
-#include "libmesh/fe_base.h"
-#include "libmesh/quadrature.h"
 
 
 
@@ -41,8 +39,9 @@ namespace MAST {
     class FunctionBase;
     class SystemInitialization;
     class LocalElemBase;
-    class OutputFunctionBase;
     class NonlinearSystem;
+    class FEBase;
+    class AssemblyBase;
     
     /*!
      *    This is the base class for elements that implement calculation of
@@ -80,8 +79,9 @@ namespace MAST {
          *   \param elem libMesh::Elem object on which calculations will be
          *   performed.
          */
-        ElementBase(MAST::SystemInitialization& sys,
-                    const libMesh::Elem& elem);
+        ElementBase(MAST::SystemInitialization&     sys,
+                    MAST::AssemblyBase&             assembly,
+                    const libMesh::Elem&            elem);
         
         
         /*!
@@ -89,6 +89,21 @@ namespace MAST {
          */
         virtual ~ElementBase();
         
+        
+        /*!
+         *   @returns a reference to the libMesh::System object
+         */
+        MAST::SystemInitialization& system_initialization() {
+            return _system;
+        }
+
+        /*!
+         *   @returns a reference to the libMesh::System object
+         */
+        MAST::AssemblyBase& assembly() {
+            return _assembly;
+        }
+
         
         /*!
          *   @returns a reference to the libMesh::System object
@@ -105,39 +120,9 @@ namespace MAST {
         
         
         /*!
-         *   @returns a non-constant reference to the element in the local
-         *   coordinate. This is needed for 1D or 2D elements that live
-         *   in a 3D space.
-         */
-        MAST::LocalElemBase& local_elem() {
-            return *_local_elem;
-        }
-
-        
-        /*!
-         *   @returns a constant reference to the element in the local
-         *   coordinate. This is needed for 1D or 2D elements that live
-         *   in a 3D space.
-         */
-        const MAST::LocalElemBase& local_elem() const {
-            return *_local_elem;
-        }
-        
-        
-        
-        /*!
-         *   @returns a constant reference to the volume quadrature rule
-         */
-        libMesh::QBase& quadrature_rule()  {
-            return *_qrule;
-        }
-        
-        
-        
-        /*!
          *   @returns a constant reference to the finite element object
          */
-        libMesh::FEBase& fe()  {
+        MAST::FEBase& fe()  {
             return *_fe;
         }
         
@@ -220,79 +205,9 @@ namespace MAST {
          *   element.
          */
         void detach_active_solution_function();
-
         
-        /*!
-         *   parameter for which sensitivity has to be calculated.
-         */
-        const MAST::FunctionBase* sensitivity_param;
-        
-        
-        /*!
-         *   @returns a constant reference to the geometric element used for
-         *   initialization of finite element quadrature and shape functions.
-         *   This is needed for cases where a 1D or 2D element might live in a
-         *   3D space, in which case the element returned will be one that
-         *   has been transformed to a local coordinate system. For a 3D element,
-         *   the method returns the element used to initialize this object.
-         */
-        const libMesh::Elem& get_elem_for_quadrature() const;
-        
-        /*!
-         *   evaluates an output quantity requested in the map over the
-         *   boundary of the element that may coincide with the boundary
-         *   identified in the map. The derivative with respect to the
-         *   state variables is provided if \p request_derivative is true.
-         */
-        virtual bool
-        volume_output_quantity (bool request_derivative,
-                                bool request_sensitivity,
-                                std::multimap<libMesh::subdomain_id_type, MAST::OutputFunctionBase*>& output) = 0;
-        
-        
-        /*!
-         *   evaluates an output quantity requested in the map over the
-         *   boundary of the element that may coincide with the boundary
-         *   identified in the map. The derivative with respect to the
-         *   state variables is provided if \p request_derivative is true.
-         */
-        virtual bool
-        side_output_quantity (bool request_derivative,
-                              bool request_sensitivity,
-                              std::multimap<libMesh::boundary_id_type, MAST::OutputFunctionBase*>& output) = 0;
-
     
     protected:
-        
-        
-        /*!
-         *   Initializes the quadrature and finite element for element volume
-         *   integration.
-         *   \param e libMesh::Elem for which the finite element is initialized.
-         *   \param pts the points at which the element should be initialized. If nullptr, 
-         *    the points specified by quadrature rule will be used.
-         */
-        virtual void
-        _init_fe_and_qrule(const libMesh::Elem& e,
-                           libMesh::FEBase **fe,
-                           libMesh::QBase **qrule,
-                           const std::vector<libMesh::Point>* pts = nullptr);
-        
-        
-        /*!
-         *   @returns the quadrature and finite element for element side
-         *   integration. These are raw pointers created using new. The
-         *   pointers must be deleted at the end of scope. The last argument
-         *   \p if_calculate_dphi tell the function to request the 
-         *   \p fe object to also initialize the calculation of shape function
-         *   derivatives 
-         */
-        virtual void
-        _get_side_fe_and_qrule(const libMesh::Elem& e,
-                               unsigned int s,
-                               libMesh::FEBase **fe,
-                               libMesh::QBase **qrule,
-                               bool if_calculate_dphi);
         
         
         /*!
@@ -300,12 +215,15 @@ namespace MAST {
          */
         MAST::SystemInitialization& _system;
         
+        /*!
+         *    Assembly object
+         */
+        MAST::AssemblyBase&        _assembly;
         
         /*!
          *   geometric element for which the computations are performed
          */
         const libMesh::Elem& _elem;
-        
         
         /*!
          *   pointer to the active solution mesh field function. If this 
@@ -314,13 +232,6 @@ namespace MAST {
          *   perform the necessary operations in calculation of the Jacobian
          */
         MAST::FunctionBase* _active_sol_function;
-        
-        
-        /*!
-         *   local element to support the presence of 1D and 2D elements
-         *   in 3D space
-         */
-        std::auto_ptr<MAST::LocalElemBase> _local_elem;
         
         
         /*!
@@ -415,13 +326,7 @@ namespace MAST {
         /*!
          *   element finite element for computations
          */
-        libMesh::FEBase *_fe;
-        
-        
-        /*!
-         *   element quadrature rule for computations
-         */
-        libMesh::QBase *_qrule;
+        MAST::FEBase *_fe;
     };
 }
 

@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -127,19 +127,19 @@ namespace MAST {
         /*!
          *   mesh function that interpolates the solution
          */
-        std::auto_ptr<libMesh::MeshFunction>
+        std::unique_ptr<libMesh::MeshFunction>
         _sol_function,
         _dsol_function;
         
         /*!
          *   steady part of solution
          */
-        std::auto_ptr<libMesh::NumericVector<Real> > _sol;
+        std::unique_ptr<libMesh::NumericVector<Real> > _sol;
         
         /*!
          *   small-disturbance solution
          */
-        std::auto_ptr<libMesh::NumericVector<Real> > _dsol;
+        std::unique_ptr<libMesh::NumericVector<Real> > _dsol;
     };
 }
 

@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -28,10 +28,8 @@
 namespace MAST {
     
     // Forward declerations
-    class BendingOperator;
     class BoundaryConditionBase;
     class FEMOperatorMatrix;
-    
     
     
     class BendingStructuralElem:
@@ -39,6 +37,7 @@ namespace MAST {
         
     public:
         BendingStructuralElem(MAST::SystemInitialization& sys,
+                              MAST::AssemblyBase& assembly,
                               const libMesh::Elem& elem,
                               const MAST::ElementPropertyCardBase& p);
         
@@ -62,29 +61,18 @@ namespace MAST {
     protected:
         
         
-        /*!
-         *   initialize membrane strain operator matrix
-         */
-        virtual void initialize_direct_strain_operator(const unsigned int qp,
-                                                       const libMesh::FEBase& fe,
-                                                       FEMOperatorMatrix& Bmat) = 0;
+        virtual const RealMatrixX&
+        _Tmatrix() const {
+            
+            // should be implemented in 1D and 2D elements
+            return _Tmat;
+        }
         
         /*!
-         *   Initializes the bending strain operator based on the FE 
-         *   initialization.
+         *   Transformation matrix to be used for various operations
+         *   in 1D and 2D structural elements
          */
-        virtual void
-        _init_fe_operators(const libMesh::Elem& e,
-                           libMesh::FEBase **fe,
-                           libMesh::QBase  **qrule,
-                           MAST::BendingOperator **bend,
-                           const std::vector<libMesh::Point>* pts = nullptr);
-        
-        /*!
-         *    bending operator used for this elmeent
-         */
-        MAST::BendingOperator *_bending_operator;
-        
+        RealMatrixX      _Tmat;
     };
 }
 

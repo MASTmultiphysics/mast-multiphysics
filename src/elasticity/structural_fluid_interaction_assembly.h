@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -22,7 +22,7 @@
 
 
 // MAST includes
-#include "base/nonlinear_implicit_assembly.h"
+#include "base/assembly_base.h"
 
 namespace MAST {
     
@@ -34,12 +34,13 @@ namespace MAST {
         MASS,                    // mass matrix
         DAMPING,                 // velocity proportional term
         STIFFNESS,               // tangent stiffess matrix
-        FORCE                    // force vector
+        FORCE,                   // force vector
+        INVALID_QTY
     };
     
     
     class StructuralFluidInteractionAssembly:
-    public MAST::NonlinearImplicitAssembly {
+    public MAST::AssemblyBase {
         
     public:
         
@@ -55,54 +56,12 @@ namespace MAST {
          */
         virtual ~StructuralFluidInteractionAssembly();
         
-
-        /*!
-         *   attaches a system to this discipline, and vice-a-versa
-         */
-        virtual void
-        attach_discipline_and_system(MAST::PhysicsDisciplineBase& discipline,
-                                     MAST::SystemInitialization& system);
-        
-    
-        /*!
-         *   Reattaches to the same system that was attached earlier.
-         *
-         *   This cannot be called if the clear_discipline_and_system() method
-         *   has been called.
-         */
-        inline virtual void
-        reattach_to_system() {
-            // nothing to be done here.
-        }
-
         /*!
          *   clears association with a system to this discipline, and vice-a-versa
          */
         virtual void
         clear_discipline_and_system( );
 
-        
-        /*!
-         *   tells the object about the quantity to be assembled in the 
-         *   matrix
-         */
-        inline void
-        set_quantity_to_assemble(MAST::StructuralQuantityType qty) {
-            
-            _qty_type = qty;
-        }
-        
-        
-        /*!
-         *    function that assembles the matrices and vectors quantities for
-         *    nonlinear solution
-         */
-        virtual void
-        residual_and_jacobian (const libMesh::NumericVector<Real>& X,
-                               libMesh::NumericVector<Real>* R,
-                               libMesh::SparseMatrix<Real>*  J,
-                               libMesh::NonlinearImplicitSystem& S);
-        
         
         /*!
          *   if the eigenproblem is defined about a non-zero base solution,
@@ -149,7 +108,6 @@ namespace MAST {
          std::map<MAST::StructuralQuantityType, RealMatrixX*>& mat_qty_map);
 
         
-
         
         /*!
          *   calculates the sensitivity of reduced order matrix given the basis 
@@ -159,67 +117,14 @@ namespace MAST {
          */
         virtual void
         assemble_reduced_order_quantity_sensitivity
-        (const libMesh::ParameterVector& parameters,
-         const unsigned int i,
+        (const MAST::FunctionBase& f,
          std::vector<libMesh::NumericVector<Real>*>& basis,
          std::map<MAST::StructuralQuantityType, RealMatrixX*>& mat_qty_map);
 
         
+
     protected:
         
-        
-        /*!
-         *   @returns a smart-pointer to a newly created element for
-         *   calculation of element quantities.
-         */
-        virtual std::auto_ptr<MAST::ElementBase>
-        _build_elem(const libMesh::Elem& elem);
-        
-        
-        /*!
-         *   performs the element calculations over \par elem, and returns
-         *   the element vector and matrix quantities in \par mat and
-         *   \par vec, respectively. \par if_jac tells the method to also
-         *   assemble the Jacobian, in addition to the residual vector.
-         */
-        virtual void _elem_calculations(MAST::ElementBase& elem,
-                                        bool if_jac,
-                                        RealVectorX& vec,
-                                        RealMatrixX& mat);
-
-        
-        /*!
-         *   performs the frequency domain element aerodynamic force
-         *   calculations over \par elem, and returns
-         *   the element vector quantity in
-         *   \par vec, respectively.
-         */
-        virtual void _elem_aerodynamic_force_calculations(MAST::ElementBase& elem,
-                                                          ComplexVectorX& vec);
-
-        
-        
-        /*!
-         *   performs the element sensitivity calculations over \par elem,
-         *   and returns the element residual sensitivity in \par vec .
-         */
-        virtual void _elem_sensitivity_calculations(MAST::ElementBase& elem,
-                                                    bool if_jac,
-                                                    RealVectorX& vec,
-                                                    RealMatrixX& mat);
-
-        /*!
-         *   calculates \f$ d ([J] \{\Delta X\})/ dX  \f$ over \par elem,
-         *   and returns the matrix in \par vec .
-         */
-        virtual void
-        _elem_second_derivative_dot_solution_assembly(MAST::ElementBase& elem,
-                                                      RealMatrixX& mat);
-
-        /*!
-         *   this defines the quantity to be assembled
-         */
-        MAST::StructuralQuantityType _qty_type;
         
         /*!
          *   base solution about which this eigenproblem is defined. This

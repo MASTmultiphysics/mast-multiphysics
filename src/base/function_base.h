@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -39,19 +39,13 @@ namespace MAST
          *   initializes the parameter to the given name
          */
         FunctionBase(const std::string& nm ,
-                     const bool is_field_func):
-        _name(nm),
-        _is_field_func(is_field_func)
-        { }
+                     const bool is_field_func);
 
         
         /*!
          *    Copy constructor
          */
-        FunctionBase(const MAST::FunctionBase& f):
-        _name(f._name),
-        _is_field_func(f._is_field_func)
-        { }
+        FunctionBase(const MAST::FunctionBase& f);
 
         
         /*!
@@ -90,12 +84,18 @@ namespace MAST
         
         /*!
          *  @returns true if the function is a shape parameter. False by
-         *  default. This should be reimplemneted in a new function
-         *  that is a shape function.
+         *  default.
          */
-        virtual bool is_shape_parameter() const {
-            return false;
-        }
+        virtual bool is_shape_parameter() const {return _is_shape_parameter; }
+        virtual void set_as_shape_parameter(bool f) {_is_shape_parameter = f;}
+
+
+        /*!
+         *  @returns true if the function is a topology parameter. False by
+         *  default.
+         */
+        virtual bool is_topology_parameter() const {return _is_topology_parameter;}
+        virtual void set_as_topology_parameter(bool f) {_is_topology_parameter = f;}
         
     protected:
         
@@ -108,6 +108,9 @@ namespace MAST
          *    flag to store the nature of field function
          */
         bool _is_field_func;
+
+        bool _is_shape_parameter;
+        bool _is_topology_parameter;
         
         /*!
          *   set of functions that \p this function depends on

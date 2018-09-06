@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -57,7 +57,7 @@ void  check_material_property (ValType& v) {
     const libMesh::Elem& elem = **(v._mesh->local_elements_begin());
     
     // now create the structural element
-    std::auto_ptr<MAST::StructuralElementBase>
+    std::unique_ptr<MAST::StructuralElementBase>
     e(MAST::build_structural_element(*v._structural_sys,
                                      elem,
                                      *v._p_card).release());
@@ -80,7 +80,7 @@ void  check_material_property (ValType& v) {
     for (unsigned int jj=0; jj<3; jj++) {
     
         
-        std::auto_ptr<MAST::FieldFunction<RealMatrixX > > mat_stiff;
+        std::unique_ptr<MAST::FieldFunction<RealMatrixX > > mat_stiff;
         
         switch (jj) {
             case 0: {

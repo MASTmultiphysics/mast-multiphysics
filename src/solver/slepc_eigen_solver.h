@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -45,6 +45,14 @@ namespace MAST {
         
         /**
          * This function returns the real and imaginary part of the
+         * ith eigenvalues.
+         */
+        virtual std::pair<Real, Real>
+        get_eigenvalue (unsigned int i);
+
+        
+        /**
+         * This function returns the real and imaginary part of the
          * ith eigenvalue and copies the respective eigenvector to the
          * solution vector. Note that also in case of purely real matrix
          * entries the eigenpair may be complex values.
@@ -60,3 +68,4 @@ namespace MAST {
 
 
 #endif // __mast__slepc_eigen_solver__
+

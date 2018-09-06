@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -50,7 +50,7 @@ check_internal_force_jacobian(MAST::BuildConservativeFluidElem& v,
     const MAST::FlightCondition& p =
     dynamic_cast<MAST::ConservativeFluidDiscipline*>(v._discipline)->flight_condition();
     
-    std::auto_ptr<MAST::FrequencyDomainLinearizedConservativeFluidElem>
+    std::unique_ptr<MAST::FrequencyDomainLinearizedConservativeFluidElem>
     elem(new MAST::FrequencyDomainLinearizedConservativeFluidElem(*v._fluid_sys, e, p));
     elem->freq   = v._freq_function;
     
@@ -170,7 +170,7 @@ check_far_field_jacobian(MAST::BuildConservativeFluidElem& v,
     const MAST::FlightCondition& p =
     dynamic_cast<MAST::ConservativeFluidDiscipline*>(v._discipline)->flight_condition();
     
-    std::auto_ptr<MAST::FrequencyDomainLinearizedConservativeFluidElem>
+    std::unique_ptr<MAST::FrequencyDomainLinearizedConservativeFluidElem>
     elem(new MAST::FrequencyDomainLinearizedConservativeFluidElem(*v._fluid_sys, e, p));
     elem->freq   = v._freq_function;
     
@@ -295,7 +295,7 @@ check_moving_wall_jacobian(MAST::BuildConservativeFluidElem& v,
     const MAST::FlightCondition& p =
     dynamic_cast<MAST::ConservativeFluidDiscipline*>(v._discipline)->flight_condition();
     
-    std::auto_ptr<MAST::FrequencyDomainLinearizedConservativeFluidElem>
+    std::unique_ptr<MAST::FrequencyDomainLinearizedConservativeFluidElem>
     elem(new MAST::FrequencyDomainLinearizedConservativeFluidElem(*v._fluid_sys, e, p));
     elem->freq   = v._freq_function;
     
@@ -461,7 +461,7 @@ BOOST_AUTO_TEST_CASE   (InternalForceFreqSens) {
     const MAST::FlightCondition& p =
     dynamic_cast<MAST::ConservativeFluidDiscipline*>(_discipline)->flight_condition();
     
-    std::auto_ptr<MAST::FrequencyDomainLinearizedConservativeFluidElem>
+    std::unique_ptr<MAST::FrequencyDomainLinearizedConservativeFluidElem>
     elem(new MAST::FrequencyDomainLinearizedConservativeFluidElem(*_fluid_sys, e, p));
     elem->freq                = _freq_function;
     elem->sensitivity_param   = _omega;
@@ -552,7 +552,7 @@ BOOST_AUTO_TEST_CASE   (FarFieldResidualFreqSens) {
     const MAST::FlightCondition& p =
     dynamic_cast<MAST::ConservativeFluidDiscipline*>(_discipline)->flight_condition();
     
-    std::auto_ptr<MAST::FrequencyDomainLinearizedConservativeFluidElem>
+    std::unique_ptr<MAST::FrequencyDomainLinearizedConservativeFluidElem>
     elem(new MAST::FrequencyDomainLinearizedConservativeFluidElem(*_fluid_sys, e, p));
     elem->freq                = _freq_function;
     elem->sensitivity_param   = _omega;
@@ -644,7 +644,7 @@ BOOST_AUTO_TEST_CASE   (MovingWallResidualFreqSens) {
     const MAST::FlightCondition& p =
     dynamic_cast<MAST::ConservativeFluidDiscipline*>(_discipline)->flight_condition();
     
-    std::auto_ptr<MAST::FrequencyDomainLinearizedConservativeFluidElem>
+    std::unique_ptr<MAST::FrequencyDomainLinearizedConservativeFluidElem>
     elem(new MAST::FrequencyDomainLinearizedConservativeFluidElem(*_fluid_sys, e, p));
     elem->freq                = _freq_function;
     elem->sensitivity_param   = _omega;

@@ -1,6 +1,6 @@
 ///*
 // * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
-// * Copyright (C) 2013-2017  Manav Bhatia
+// * Copyright (C) 2013-2018  Manav Bhatia
 // *
 // * This library is free software; you can redistribute it and/or
 // * modify it under the terms of the GNU Lesser General Public
@@ -79,7 +79,7 @@
 //            
 //            for (unsigned int i_side=0; i_side<(*e_it)->n_sides(); i_side++)
 //            {
-//                libMesh::AutoPtr<libMesh::Elem> side_elem ((*e_it)->side(i_side).release());
+//                std::unique_ptr<const libMesh::Elem> side_elem ((*e_it)->side_ptr(i_side).release());
 //                std::vector<bool> side_on_ramp(side_elem->n_nodes()),
 //                side_on_slip_wall(side_elem->n_nodes());
 //                std::fill(side_on_ramp.begin(), side_on_ramp.end(), false);
@@ -87,7 +87,7 @@
 //                
 //                for (unsigned int i_node=0; i_node<side_elem->n_nodes(); i_node++)
 //                {
-//                    const libMesh::Node& n = *(side_elem->get_node(i_node));
+//                    const libMesh::Node& n = *(side_elem->node_ptr(i_node));
 //                    if ((n(1)==_y0) && (n(0) >= _x0-1.0e-6))
 //                        side_on_ramp[i_node] = true;
 //                    

@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -34,6 +34,7 @@ namespace MAST {
     class ComplexAssemblyBase;
     class ElementBase;
     class Parameter;
+    class AssemblyElemOperations;
     
     /*!
      *   uses a Gauss-Siedel method to solve the complex system of equations
@@ -56,37 +57,10 @@ namespace MAST {
         
         
         /*!
-         *  sets the assembly object
-         */
-        void set_assembly(MAST::ComplexAssemblyBase& assembly);
-        
-        
-        /*!
-         *   @returns a reference to the assembly object
-         */
-        inline
-        MAST::ComplexAssemblyBase& get_assembly() {
-            
-            return *_assembly;
-        }
-
-        
-        /*!
-         *  clears the assembly
-         */
-        void clear_assembly();
-        
-        
-        /*!
-         *  solves the complex system of equations
-         */
-        virtual void solve();
-
-        
-        /*!
          *  solves the complex system of equations using PCFieldSplit
          */
-        virtual void solve_pc_fieldsplit();
+        virtual void solve_pc_fieldsplit(MAST::AssemblyElemOperations& elem_ops,
+                                         MAST::ComplexAssemblyBase&    assemble);
 
         
         /*!
@@ -95,7 +69,9 @@ namespace MAST {
          *  Otherwise, the sensitivity of the system is solved with respect
          *  to the parameter p
          */
-        virtual void solve_block_matrix(MAST::Parameter* p = nullptr);
+        virtual void solve_block_matrix(MAST::AssemblyElemOperations& elem_ops,
+                                        MAST::ComplexAssemblyBase&    assemble,
+                                        MAST::Parameter*              p = nullptr);
 
         
         /*!

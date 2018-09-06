@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -22,12 +22,30 @@
 
 // libMesh includes
 #include "libmesh/petsc_vector.h"
+#include "libmesh/enum_eigen_solver_type.h"
 
 
 MAST::SlepcEigenSolver::SlepcEigenSolver(const libMesh::Parallel::Communicator & comm_in
                                          LIBMESH_CAN_DEFAULT_TO_COMMWORLD):
 libMesh::SlepcEigenSolver<Real>(comm_in) {
     
+}
+
+
+
+
+std::pair<Real, Real>
+MAST::SlepcEigenSolver::get_eigenvalue(unsigned int i) {
+    
+    PetscErrorCode ierr=0;
+    
+    PetscReal re, im;
+    
+    ierr = EPSGetEigenvalue(eps(), i, &re, &im);
+    
+    CHKERRABORT(this->comm().get(), ierr);
+    
+    return std::make_pair(re, im);
 }
 
 

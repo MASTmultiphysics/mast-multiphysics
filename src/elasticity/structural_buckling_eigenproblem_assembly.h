@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -23,7 +23,6 @@
 
 // MAST includes
 #include "base/eigenproblem_assembly.h"
-
 
 namespace MAST {
 
@@ -54,22 +53,6 @@ namespace MAST {
         virtual void
         eigenproblem_assemble(libMesh::SparseMatrix<Real>* A,
                               libMesh::SparseMatrix<Real>* B);
-        
-        /**
-         * Assembly function.  This function will be called
-         * to assemble the sensitivity of eigenproblem matrices.
-         * The method provides dA/dp_i and dB/dpi for \par i ^th parameter
-         * in the vector \par parameters.
-         *
-         * If the routine is not able to provide sensitivity for this parameter,
-         * then it should return false, and the system will attempt to use
-         * finite differencing.
-         */
-        virtual bool
-        eigenproblem_sensitivity_assemble (const libMesh::ParameterVector& parameters,
-                                           const unsigned int i,
-                                           libMesh::SparseMatrix<Real>* sensitivity_A,
-                                           libMesh::SparseMatrix<Real>* sensitivity_B);
         
         
         /*!
@@ -111,56 +94,6 @@ namespace MAST {
         
 
     protected:
-        
-        /*!
-         *   @returns a smart-pointer to a newly created element for
-         *   calculation of element quantities.
-         */
-        virtual std::auto_ptr<MAST::ElementBase>
-        _build_elem(const libMesh::Elem& elem);
-        
-        /*!
-         *   performs the element calculations over \par elem, and returns
-         *   the element matrices for the eigenproblem
-         *   \f$ A x = \lambda B x \f$.
-         */
-        virtual void
-        _elem_calculations(MAST::ElementBase& elem,
-                           RealMatrixX& mat_A,
-                           RealMatrixX& mat_B) {
-            libmesh_error(); // should not get here.
-        }
-        
-        /*!
-         *   performs the element sensitivity calculations over \par elem,
-         *   and returns the element matrices for the eigenproblem
-         *   \f$ A x = \lambda B x \f$.
-         */
-        virtual void
-        _elem_sensitivity_calculations(MAST::ElementBase& elem,
-                                       RealMatrixX& mat_A,
-                                       RealMatrixX& mat_B) {
-            libmesh_error(); // should not get here.
-        }
-
-        
-        /*!
-         *   performs the element calculations over \par elem, and returns
-         *   the element matrices for the eigenproblem
-         *   \f$ A x = \lambda B x \f$.
-         */
-        virtual void
-        _elem_calculations(MAST::ElementBase& elem,
-                           RealMatrixX& mat_A);
-        
-        /*!
-         *   performs the element sensitivity calculations over \par elem,
-         *   and returns the element matrices for the eigenproblem
-         *   \f$ A x = \lambda B x \f$.
-         */
-        virtual void
-        _elem_sensitivity_calculations(MAST::ElementBase& elem,
-                                       RealMatrixX& mat_A);
         
         /*!
          *   map of local incompatible mode solution per 3D elements

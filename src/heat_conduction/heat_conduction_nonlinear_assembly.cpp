@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -20,52 +20,58 @@
 
 // MAST includes
 #include "heat_conduction/heat_conduction_nonlinear_assembly.h"
-#include "heat_conduction/heat_conduction_elem_base.h"
-#include "property_cards/element_property_card_base.h"
+#include "base/assembly_base.h"
 #include "base/physics_discipline_base.h"
+#include "heat_conduction/heat_conduction_elem_base.h"
+#include "property_cards/element_property_card_1D.h"
+#include "mesh/local_elem_fe.h"
+#include "level_set/level_set_intersection.h"
 
 
-
-MAST::HeatConductionNonlinearAssembly::
-HeatConductionNonlinearAssembly():
-MAST::NonlinearImplicitAssembly() {
+MAST::HeatConductionNonlinearAssemblyElemOperations::
+HeatConductionNonlinearAssemblyElemOperations():
+MAST::NonlinearImplicitAssemblyElemOperations() {
     
 }
 
 
 
-MAST::HeatConductionNonlinearAssembly::
-~HeatConductionNonlinearAssembly() {
+MAST::HeatConductionNonlinearAssemblyElemOperations::
+~HeatConductionNonlinearAssemblyElemOperations() {
     
 }
 
 
 
-std::auto_ptr<MAST::ElementBase>
-MAST::HeatConductionNonlinearAssembly::_build_elem(const libMesh::Elem& elem) {
-
+void
+MAST::HeatConductionNonlinearAssemblyElemOperations::
+init(const libMesh::Elem& elem) {
     
+    libmesh_assert(!_physics_elem);
+    libmesh_assert(_system);
+    libmesh_assert(_assembly);
+
     const MAST::ElementPropertyCardBase& p =
-    dynamic_cast<const MAST::ElementPropertyCardBase&>(_discipline->get_property_card(elem));
+    dynamic_cast<const MAST::ElementPropertyCardBase&>
+    (_discipline->get_property_card(elem));
     
-    MAST::ElementBase* rval =
-    new MAST::HeatConductionElementBase(*_system, elem, p);
-    
-    return std::auto_ptr<MAST::ElementBase>(rval);
+    _physics_elem =
+    new MAST::HeatConductionElementBase(*_system, *_assembly, elem, p);
 }
 
 
 
 
 void
-MAST::HeatConductionNonlinearAssembly::
-_elem_calculations(MAST::ElementBase& elem,
-                   bool if_jac,
-                   RealVectorX& vec,
-                   RealMatrixX& mat) {
-    
+MAST::HeatConductionNonlinearAssemblyElemOperations::
+elem_calculations(bool if_jac,
+                  RealVectorX& vec,
+                  RealMatrixX& mat) {
+
+    libmesh_assert(_physics_elem);
+
     MAST::HeatConductionElementBase& e =
-    dynamic_cast<MAST::HeatConductionElementBase&>(elem);
+    dynamic_cast<MAST::HeatConductionElementBase&>(*_physics_elem);
     
     vec.setZero();
     mat.setZero();
@@ -79,31 +85,82 @@ _elem_calculations(MAST::ElementBase& elem,
 
 
 void
-MAST::HeatConductionNonlinearAssembly::
-_elem_sensitivity_calculations(MAST::ElementBase& elem,
-                               bool if_jac,
-                               RealVectorX& vec,
-                               RealMatrixX& mat) {
+MAST::HeatConductionNonlinearAssemblyElemOperations::
+elem_sensitivity_calculations(const MAST::FunctionBase& f,
+                              RealVectorX& vec) {
     
+    libmesh_assert(_physics_elem);
+
     MAST::HeatConductionElementBase& e =
-    dynamic_cast<MAST::HeatConductionElementBase&>(elem);
+    dynamic_cast<MAST::HeatConductionElementBase&>(*_physics_elem);
     
     vec.setZero();
-    mat.setZero();
     
-    e.internal_residual_sensitivity(if_jac, vec, mat);
-    e.side_external_residual_sensitivity(if_jac, vec, mat, _discipline->side_loads());
-    e.volume_external_residual_sensitivity(if_jac, vec, mat, _discipline->volume_loads());
+    e.internal_residual_sensitivity(f, vec);
+    e.side_external_residual_sensitivity(f, vec, _discipline->side_loads());
+    e.volume_external_residual_sensitivity(f, vec, _discipline->volume_loads());
 }
 
 
+void
+MAST::HeatConductionNonlinearAssemblyElemOperations::
+elem_topology_sensitivity_calculations(const MAST::FunctionBase& f,
+                                       const MAST::LevelSetIntersection& intersect,
+                                       const MAST::FieldFunction<RealVectorX>& vel,
+                                       RealVectorX& vec) {
+    
+    libmesh_assert(_physics_elem);
+    libmesh_assert(f.is_topology_parameter());
+    const libMesh::Elem& elem = _physics_elem->elem();
+    
+    // sensitivity only exists at the boundary. So, we proceed with calculation
+    // only if this element has an intersection in the interior, or with a side.
+    if (intersect.if_elem_has_boundary()) {
+        
+        MAST::HeatConductionElementBase& e =
+        dynamic_cast<MAST::HeatConductionElementBase&>(*_physics_elem);
+        
+        vec.setZero();
+        RealMatrixX
+        dummy = RealMatrixX::Zero(vec.size(), vec.size());
+        
+        if (intersect.has_side_on_interface(elem)) {
+            e.internal_residual_boundary_velocity(f, vec,
+                                                  intersect.get_side_on_interface(elem),
+                                                  vel);
+            e.volume_external_residual_boundary_velocity(f, vec,
+                                                         intersect.get_side_on_interface(elem),
+                                                         vel,
+                                                         _discipline->volume_loads());
+        }
+        /*e.side_external_residual_sensitivity(f, false,
+         vec,
+         dummy,
+         dummy,
+         _discipline->side_loads());*/
+    }
+}
+
 
 void
-MAST::HeatConductionNonlinearAssembly::
-_elem_second_derivative_dot_solution_assembly(MAST::ElementBase& elem,
-                                              RealMatrixX& m) {
+MAST::HeatConductionNonlinearAssemblyElemOperations::
+elem_second_derivative_dot_solution_assembly(RealMatrixX& m) {
     
     libmesh_error(); // to be implemented
 }
 
 
+void
+MAST::HeatConductionNonlinearAssemblyElemOperations::
+set_local_fe_data(MAST::LocalElemFE& fe,
+                  const libMesh::Elem& e) const {
+    
+    if (e.dim() == 1) {
+        
+        const MAST::ElementPropertyCard1D&
+        p_card = dynamic_cast<const MAST::ElementPropertyCard1D&>
+        (_discipline->get_property_card(e));
+        
+        fe.set_1d_y_vector(p_card.y_vector());
+    }
+}

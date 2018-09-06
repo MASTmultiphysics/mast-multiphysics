@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -60,7 +60,7 @@ check_piston_theory_jacobian (ValType& v) {
     const libMesh::Elem& elem = **(v._mesh->local_elements_begin());
     
     // now create the structural element
-    std::auto_ptr<MAST::StructuralElementBase>
+    std::unique_ptr<MAST::StructuralElementBase>
     e(MAST::build_structural_element(*v._structural_sys,
                                      elem,
                                      *v._p_card).release());
@@ -215,7 +215,7 @@ BOOST_AUTO_TEST_CASE   (PistonTheoryPressure) {
 
     // calculate the surface pressure and its sensitivity with respect to the
     // relevant parameters
-    std::auto_ptr<MAST::FieldFunction<Real> >
+    std::unique_ptr<MAST::FieldFunction<Real> >
     pressure       (_p_theory->get_pressure_function(*_dwdx_f, *_dwdt_f).release()),
     dpressure_dx   (_p_theory->get_dpdx_function    (*_dwdx_f, *_dwdt_f).release()),
     dpressure_dxdot(_p_theory->get_dpdxdot_function (*_dwdx_f, *_dwdt_f).release());

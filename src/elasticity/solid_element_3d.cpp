@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -26,17 +26,20 @@
 #include "base/system_initialization.h"
 #include "elasticity/stress_output_base.h"
 #include "base/nonlinear_system.h"
+#include "mesh/fe_base.h"
+#include "base/assembly_base.h"
 
 
 MAST::StructuralElement3D::
 StructuralElement3D(MAST::SystemInitialization& sys,
+                    MAST::AssemblyBase& assembly,
                     const libMesh::Elem& elem,
                     const MAST::ElementPropertyCardBase& p):
-MAST::StructuralElementBase(sys, elem, p) {
+MAST::StructuralElementBase(sys, assembly, elem, p) {
     
     // now initialize the finite element data structures
-    _init_fe_and_qrule(get_elem_for_quadrature(), &_fe, &_qrule);
-    
+    _fe = assembly.build_fe(_elem).release();
+    _fe->init(_elem);
 }
 
 
@@ -63,20 +66,19 @@ MAST::StructuralElement3D::inertial_residual (bool request_jacobian,
     RealVectorX
     phi_vec    = RealVectorX::Zero(n_phi),
     vec1_n1    = RealVectorX::Zero(n1),
-    vec2_n2    = RealVectorX::Zero(n2);
+    vec2_n2    = RealVectorX::Zero(n2),
+    local_acc  = RealVectorX::Zero(n2);
     
-    std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+    std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
     mat_inertia  = _property.inertia_matrix(*this);
     
-    libMesh::Point p;
     MAST::FEMOperatorMatrix Bmat;
+    
+    local_acc.topRows(n2) = _local_accel.topRows(n2);
     
     if (_property.if_diagonal_mass_matrix()) {
         
-        // as an approximation, get matrix at the first quadrature point
-        _local_elem->global_coordinates_location(xyz[0], p);
-        
-        (*mat_inertia)(p, _time, material_mat);
+        (*mat_inertia)(xyz[0], _time, material_mat);
         
         Real vol = 0.;
         const unsigned int nshp = _fe->n_shape_functions();
@@ -95,9 +97,7 @@ MAST::StructuralElement3D::inertial_residual (bool request_jacobian,
         
         for (unsigned int qp=0; qp<JxW.size(); qp++) {
             
-            _local_elem->global_coordinates_location(xyz[0], p);
-            
-            (*mat_inertia)(p, _time, material_mat);
+            (*mat_inertia)(xyz[0], _time, material_mat);
             
             // now set the shape function values
             for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
@@ -107,7 +107,7 @@ MAST::StructuralElement3D::inertial_residual (bool request_jacobian,
             
             Bmat.left_multiply(mat1_n1n2, material_mat);
             
-            vec1_n1 = mat1_n1n2 * _local_accel;
+            vec1_n1 = mat1_n1n2 * local_acc;
             Bmat.vector_mult_transpose(vec2_n2, vec1_n1);
             
             f.topRows(n2) += JxW[qp] * vec2_n2;
@@ -169,10 +169,9 @@ MAST::StructuralElement3D::internal_residual(bool request_jacobian,
     // copy the values from the global to the local element
     local_disp.topRows(n2) = _local_sol.topRows(n2);
     
-    std::auto_ptr<MAST::FieldFunction<RealMatrixX> > mat_stiff =
+    std::unique_ptr<MAST::FieldFunction<RealMatrixX> > mat_stiff =
     _property.stiffness_A_matrix(*this);
     
-    libMesh::Point p;
     MAST::FEMOperatorMatrix
     Bmat_lin,
     Bmat_nl_x,
@@ -199,10 +198,8 @@ MAST::StructuralElement3D::internal_residual(bool request_jacobian,
     // first for loop to evaluate alpha
     for (unsigned int qp=0; qp<JxW.size(); qp++) {
         
-        _local_elem->global_coordinates_location(xyz[qp], p);
-        
         // get the material matrix
-        (*mat_stiff)(p, _time, material_mat);
+        (*mat_stiff)(xyz[qp], _time, material_mat);
         
         this->initialize_green_lagrange_strain_operator(qp,
                                                         *_fe,
@@ -228,21 +225,24 @@ MAST::StructuralElement3D::internal_residual(bool request_jacobian,
         Bmat_lin.right_multiply_transpose(mat6_n2n3, mat5_n1n3);
         K_ualpha  += JxW[qp] * mat6_n2n3;
         
-        // nonlinear component
-        // along x
-        mat7_3n3  = mat_x.transpose() * mat5_n1n3;
-        Bmat_nl_x.right_multiply_transpose(mat6_n2n3, mat7_3n3);
-        K_ualpha  += JxW[qp] * mat6_n2n3;
-        
-        // along y
-        mat7_3n3  = mat_y.transpose() * mat5_n1n3;
-        Bmat_nl_y.right_multiply_transpose(mat6_n2n3, mat7_3n3);
-        K_ualpha  += JxW[qp] * mat6_n2n3;
-        
-        // along z
-        mat7_3n3  = mat_z.transpose() * mat5_n1n3;
-        Bmat_nl_z.right_multiply_transpose(mat6_n2n3, mat7_3n3);
-        K_ualpha  += JxW[qp] * mat6_n2n3;
+        if (_property.strain_type() == MAST::NONLINEAR_STRAIN) {
+            
+            // nonlinear component
+            // along x
+            mat7_3n3  = mat_x.transpose() * mat5_n1n3;
+            Bmat_nl_x.right_multiply_transpose(mat6_n2n3, mat7_3n3);
+            K_ualpha  += JxW[qp] * mat6_n2n3;
+            
+            // along y
+            mat7_3n3  = mat_y.transpose() * mat5_n1n3;
+            Bmat_nl_y.right_multiply_transpose(mat6_n2n3, mat7_3n3);
+            K_ualpha  += JxW[qp] * mat6_n2n3;
+            
+            // along z
+            mat7_3n3  = mat_z.transpose() * mat5_n1n3;
+            Bmat_nl_z.right_multiply_transpose(mat6_n2n3, mat7_3n3);
+            K_ualpha  += JxW[qp] * mat6_n2n3;
+        }
     }
     
     
@@ -258,10 +258,8 @@ MAST::StructuralElement3D::internal_residual(bool request_jacobian,
     // second for loop to calculate the residual and stiffness contributions
     for (unsigned int qp=0; qp<JxW.size(); qp++) {
         
-        _local_elem->global_coordinates_location(xyz[qp], p);
-        
         // get the material matrix
-        (*mat_stiff)(p, _time, material_mat);
+        (*mat_stiff)(xyz[qp], _time, material_mat);
         
         this->initialize_green_lagrange_strain_operator(qp,
                                                         *_fe,
@@ -288,22 +286,24 @@ MAST::StructuralElement3D::internal_residual(bool request_jacobian,
         Bmat_lin.vector_mult_transpose(vec2_n2, stress);
         f.topRows(n2) += JxW[qp] * vec2_n2;
         
-        // nonlinear strain operator
-        // x
-        vec3_3 = mat_x.transpose() * stress;
-        Bmat_nl_x.vector_mult_transpose(vec2_n2, vec3_3);
-        f.topRows(n2) += JxW[qp] * vec2_n2;
-
-        // y
-        vec3_3 = mat_y.transpose() * stress;
-        Bmat_nl_y.vector_mult_transpose(vec2_n2, vec3_3);
-        f.topRows(n2) += JxW[qp] * vec2_n2;
-
-        // z
-        vec3_3 = mat_z.transpose() * stress;
-        Bmat_nl_z.vector_mult_transpose(vec2_n2, vec3_3);
-        f.topRows(n2) += JxW[qp] * vec2_n2;
-
+        if (_property.strain_type() == MAST::NONLINEAR_STRAIN) {
+            
+            // nonlinear strain operator
+            // x
+            vec3_3 = mat_x.transpose() * stress;
+            Bmat_nl_x.vector_mult_transpose(vec2_n2, vec3_3);
+            f.topRows(n2) += JxW[qp] * vec2_n2;
+            
+            // y
+            vec3_3 = mat_y.transpose() * stress;
+            Bmat_nl_y.vector_mult_transpose(vec2_n2, vec3_3);
+            f.topRows(n2) += JxW[qp] * vec2_n2;
+            
+            // z
+            vec3_3 = mat_z.transpose() * stress;
+            Bmat_nl_z.vector_mult_transpose(vec2_n2, vec3_3);
+            f.topRows(n2) += JxW[qp] * vec2_n2;
+        }
         
         if (request_jacobian) {
             
@@ -318,82 +318,85 @@ MAST::StructuralElement3D::internal_residual(bool request_jacobian,
             Bmat_lin.right_multiply_transpose(mat2_n2n2, mat1_n1n2);
             jac.topLeftCorner(n2, n2) += JxW[qp] * mat2_n2n2;
             
-            // B_x^T mat_x^T C B_lin
-            mat3_3n2 = mat_x.transpose() * mat1_n1n2;
-            Bmat_nl_x.right_multiply_transpose(mat2_n2n2, mat3_3n2);
-            jac.topLeftCorner(n2, n2) += JxW[qp] * mat2_n2n2;
-            
-            // B_y^T mat_y^T C B_lin
-            mat3_3n2 = mat_y.transpose() * mat1_n1n2;
-            Bmat_nl_y.right_multiply_transpose(mat2_n2n2, mat3_3n2);
-            jac.topLeftCorner(n2, n2) += JxW[qp] * mat2_n2n2;
-
-            // B_z^T mat_z^T C B_lin
-            mat3_3n2 = mat_z.transpose() * mat1_n1n2;
-            Bmat_nl_z.right_multiply_transpose(mat2_n2n2, mat3_3n2);
-            jac.topLeftCorner(n2, n2) += JxW[qp] * mat2_n2n2;
-
-            ///////////////////////////////////////////////////////
-            for (unsigned int i_dim=0; i_dim<3; i_dim++) {
-                switch (i_dim) {
-                    case 0:
-                        Bmat_nl_x.left_multiply(mat1_n1n2, mat_x);
-                        break;
-                        
-                    case 1:
-                        Bmat_nl_y.left_multiply(mat1_n1n2, mat_y);
-                        break;
-                        
-                    case 2:
-                        Bmat_nl_z.left_multiply(mat1_n1n2, mat_z);
-                        break;
-                }
+            if (_property.strain_type() == MAST::NONLINEAR_STRAIN) {
                 
-                // B_lin^T C mat_x_i B_x_i
-                mat1_n1n2 =  material_mat * mat1_n1n2;
-                Bmat_lin.right_multiply_transpose(mat2_n2n2, mat1_n1n2);
-                jac.topLeftCorner(n2, n2) += JxW[qp] * mat2_n2n2;
-                
-                // B_x^T mat_x^T C mat_x B_x
+                // B_x^T mat_x^T C B_lin
                 mat3_3n2 = mat_x.transpose() * mat1_n1n2;
                 Bmat_nl_x.right_multiply_transpose(mat2_n2n2, mat3_3n2);
                 jac.topLeftCorner(n2, n2) += JxW[qp] * mat2_n2n2;
-
-                // B_y^T mat_y^T C mat_x B_x
+                
+                // B_y^T mat_y^T C B_lin
                 mat3_3n2 = mat_y.transpose() * mat1_n1n2;
                 Bmat_nl_y.right_multiply_transpose(mat2_n2n2, mat3_3n2);
                 jac.topLeftCorner(n2, n2) += JxW[qp] * mat2_n2n2;
                 
-                // B_z^T mat_z^T C mat_x B_x
+                // B_z^T mat_z^T C B_lin
                 mat3_3n2 = mat_z.transpose() * mat1_n1n2;
                 Bmat_nl_z.right_multiply_transpose(mat2_n2n2, mat3_3n2);
                 jac.topLeftCorner(n2, n2) += JxW[qp] * mat2_n2n2;
                 
+                ///////////////////////////////////////////////////////
+                for (unsigned int i_dim=0; i_dim<3; i_dim++) {
+                    switch (i_dim) {
+                        case 0:
+                            Bmat_nl_x.left_multiply(mat1_n1n2, mat_x);
+                            break;
+                            
+                        case 1:
+                            Bmat_nl_y.left_multiply(mat1_n1n2, mat_y);
+                            break;
+                            
+                        case 2:
+                            Bmat_nl_z.left_multiply(mat1_n1n2, mat_z);
+                            break;
+                    }
+                    
+                    // B_lin^T C mat_x_i B_x_i
+                    mat1_n1n2 =  material_mat * mat1_n1n2;
+                    Bmat_lin.right_multiply_transpose(mat2_n2n2, mat1_n1n2);
+                    jac.topLeftCorner(n2, n2) += JxW[qp] * mat2_n2n2;
+                    
+                    // B_x^T mat_x^T C mat_x B_x
+                    mat3_3n2 = mat_x.transpose() * mat1_n1n2;
+                    Bmat_nl_x.right_multiply_transpose(mat2_n2n2, mat3_3n2);
+                    jac.topLeftCorner(n2, n2) += JxW[qp] * mat2_n2n2;
+                    
+                    // B_y^T mat_y^T C mat_x B_x
+                    mat3_3n2 = mat_y.transpose() * mat1_n1n2;
+                    Bmat_nl_y.right_multiply_transpose(mat2_n2n2, mat3_3n2);
+                    jac.topLeftCorner(n2, n2) += JxW[qp] * mat2_n2n2;
+                    
+                    // B_z^T mat_z^T C mat_x B_x
+                    mat3_3n2 = mat_z.transpose() * mat1_n1n2;
+                    Bmat_nl_z.right_multiply_transpose(mat2_n2n2, mat3_3n2);
+                    jac.topLeftCorner(n2, n2) += JxW[qp] * mat2_n2n2;
+                    
+                }
+                
+                // use the stress to calculate the final contribution
+                // to the Jacobian stiffness matrix
+                mat4_33(0,0) = stress(0);
+                mat4_33(1,1) = stress(1);
+                mat4_33(2,2) = stress(2);
+                mat4_33(0,1) = mat4_33(1,0) = stress(3);
+                mat4_33(1,2) = mat4_33(2,1) = stress(4);
+                mat4_33(0,2) = mat4_33(2,0) = stress(5);
+                
+                // u-disp
+                Bmat_nl_u.left_multiply(mat3_3n2, mat4_33);
+                Bmat_nl_u.right_multiply_transpose(mat2_n2n2, mat3_3n2);
+                jac.topLeftCorner(n2, n2) += JxW[qp] * mat2_n2n2;
+                
+                // v-disp
+                Bmat_nl_v.left_multiply(mat3_3n2, mat4_33);
+                Bmat_nl_v.right_multiply_transpose(mat2_n2n2, mat3_3n2);
+                jac.topLeftCorner(n2, n2) += JxW[qp] * mat2_n2n2;
+                
+                // w-disp
+                Bmat_nl_w.left_multiply(mat3_3n2, mat4_33);
+                Bmat_nl_w.right_multiply_transpose(mat2_n2n2, mat3_3n2);
+                jac.topLeftCorner(n2, n2) += JxW[qp] * mat2_n2n2;
             }
-            
-            // use the stress to calculate the final contribution
-            // to the Jacobian stiffness matrix
-            mat4_33(0,0) = stress(0);
-            mat4_33(1,1) = stress(1);
-            mat4_33(2,2) = stress(2);
-            mat4_33(0,1) = mat4_33(1,0) = stress(3);
-            mat4_33(1,2) = mat4_33(2,1) = stress(4);
-            mat4_33(0,2) = mat4_33(2,0) = stress(5);
-
-            // u-disp
-            Bmat_nl_u.left_multiply(mat3_3n2, mat4_33);
-            Bmat_nl_u.right_multiply_transpose(mat2_n2n2, mat3_3n2);
-            jac.topLeftCorner(n2, n2) += JxW[qp] * mat2_n2n2;
-
-            // v-disp
-            Bmat_nl_v.left_multiply(mat3_3n2, mat4_33);
-            Bmat_nl_v.right_multiply_transpose(mat2_n2n2, mat3_3n2);
-            jac.topLeftCorner(n2, n2) += JxW[qp] * mat2_n2n2;
-
-            // w-disp
-            Bmat_nl_w.left_multiply(mat3_3n2, mat4_33);
-            Bmat_nl_w.right_multiply_transpose(mat2_n2n2, mat3_3n2);
-            jac.topLeftCorner(n2, n2) += JxW[qp] * mat2_n2n2;
         }
     }
     
@@ -454,10 +457,9 @@ update_incompatible_mode_solution(const RealVectorX& dsol) {
     // copy the values from the global to the local element
     local_disp.topRows(n2) = _local_sol.topRows(n2);
     
-    std::auto_ptr<MAST::FieldFunction<RealMatrixX> > mat_stiff =
+    std::unique_ptr<MAST::FieldFunction<RealMatrixX> > mat_stiff =
     _property.stiffness_A_matrix(*this);
     
-    libMesh::Point p;
     MAST::FEMOperatorMatrix
     Bmat_lin,
     Bmat_nl_x,
@@ -485,10 +487,8 @@ update_incompatible_mode_solution(const RealVectorX& dsol) {
     // first for loop to evaluate alpha
     for (unsigned int qp=0; qp<JxW.size(); qp++) {
         
-        _local_elem->global_coordinates_location(xyz[qp], p);
-        
         // get the material matrix
-        (*mat_stiff)(p, _time, material_mat);
+        (*mat_stiff)(xyz[qp], _time, material_mat);
         
         this->initialize_green_lagrange_strain_operator(qp,
                                                         *_fe,
@@ -520,21 +520,24 @@ update_incompatible_mode_solution(const RealVectorX& dsol) {
         Bmat_lin.right_multiply_transpose(mat6_n2n3, mat5_n1n3);
         K_ualpha  += JxW[qp] * mat6_n2n3;
         
-        // nonlinear component
-        // along x
-        mat7_3n3  = mat_x.transpose() * mat5_n1n3;
-        Bmat_nl_x.right_multiply_transpose(mat6_n2n3, mat7_3n3);
-        K_ualpha  += JxW[qp] * mat6_n2n3;
-        
-        // along y
-        mat7_3n3  = mat_y.transpose() * mat5_n1n3;
-        Bmat_nl_y.right_multiply_transpose(mat6_n2n3, mat7_3n3);
-        K_ualpha  += JxW[qp] * mat6_n2n3;
-        
-        // along z
-        mat7_3n3  = mat_z.transpose() * mat5_n1n3;
-        Bmat_nl_z.right_multiply_transpose(mat6_n2n3, mat7_3n3);
-        K_ualpha  += JxW[qp] * mat6_n2n3;
+        if (_property.strain_type() == MAST::NONLINEAR_STRAIN) {
+            
+            // nonlinear component
+            // along x
+            mat7_3n3  = mat_x.transpose() * mat5_n1n3;
+            Bmat_nl_x.right_multiply_transpose(mat6_n2n3, mat7_3n3);
+            K_ualpha  += JxW[qp] * mat6_n2n3;
+            
+            // along y
+            mat7_3n3  = mat_y.transpose() * mat5_n1n3;
+            Bmat_nl_y.right_multiply_transpose(mat6_n2n3, mat7_3n3);
+            K_ualpha  += JxW[qp] * mat6_n2n3;
+            
+            // along z
+            mat7_3n3  = mat_z.transpose() * mat5_n1n3;
+            Bmat_nl_z.right_multiply_transpose(mat6_n2n3, mat7_3n3);
+            K_ualpha  += JxW[qp] * mat6_n2n3;
+        }
     }
     
     
@@ -548,7 +551,8 @@ update_incompatible_mode_solution(const RealVectorX& dsol) {
 
 
 bool
-MAST::StructuralElement3D::internal_residual_sensitivity(bool request_jacobian,
+MAST::StructuralElement3D::internal_residual_sensitivity(const MAST::FunctionBase& p,
+                                                         bool request_jacobian,
                                                          RealVectorX& f,
                                                          RealMatrixX& jac) {
     
@@ -569,7 +573,8 @@ MAST::StructuralElement3D::prestress_residual (bool request_jacobian,
 
 
 bool
-MAST::StructuralElement3D::prestress_residual_sensitivity (bool request_jacobian,
+MAST::StructuralElement3D::prestress_residual_sensitivity (const MAST::FunctionBase& p,
+                                                           bool request_jacobian,
                                                            RealVectorX& f,
                                                            RealMatrixX& jac) {
     
@@ -590,16 +595,9 @@ surface_pressure_residual(bool request_jacobian,
     libmesh_assert(!follower_forces); // not implemented yet for follower forces
     
     // prepare the side finite element
-    libMesh::FEBase *fe_ptr    = nullptr;
-    libMesh::QBase  *qrule_ptr = nullptr;
-    _get_side_fe_and_qrule(get_elem_for_quadrature(),
-                           side,
-                           &fe_ptr,
-                           &qrule_ptr,
-                           false);
-    std::auto_ptr<libMesh::FEBase> fe(fe_ptr);
-    std::auto_ptr<libMesh::QBase>  qrule(qrule_ptr);
-    
+    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem));
+    fe->init_for_side(_elem, side, false);
+
     const std::vector<Real> &JxW                    = fe->get_JxW();
     const std::vector<libMesh::Point>& qpoint       = fe->get_xyz();
     const std::vector<std::vector<Real> >& phi      = fe->get_phi();
@@ -617,7 +615,6 @@ surface_pressure_residual(bool request_jacobian,
     
     FEMOperatorMatrix Bmat;
     Real press;
-    libMesh::Point pt;
     
     RealVectorX
     phi_vec     = RealVectorX::Zero(n_phi),
@@ -627,8 +624,6 @@ surface_pressure_residual(bool request_jacobian,
     
     for (unsigned int qp=0; qp<qpoint.size(); qp++) {
         
-        _local_elem->global_coordinates_location(qpoint[qp], pt);
-        
         // now set the shape function values
         for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
             phi_vec(i_nd) = phi[i_nd][qp];
@@ -636,7 +631,7 @@ surface_pressure_residual(bool request_jacobian,
         Bmat.reinit(2*n1, phi_vec);
         
         // get pressure value
-        func(pt, _time, press);
+        func(qpoint[qp], _time, press);
         
         // calculate force
         for (unsigned int i_dim=0; i_dim<n1; i_dim++)
@@ -658,7 +653,8 @@ surface_pressure_residual(bool request_jacobian,
 
 bool
 MAST::StructuralElement3D::
-surface_pressure_residual_sensitivity(bool request_jacobian,
+surface_pressure_residual_sensitivity(const MAST::FunctionBase& p,
+                                      bool request_jacobian,
                                       RealVectorX &f,
                                       RealMatrixX &jac,
                                       const unsigned int side,
@@ -667,16 +663,9 @@ surface_pressure_residual_sensitivity(bool request_jacobian,
     libmesh_assert(!follower_forces); // not implemented yet for follower forces
     
     // prepare the side finite element
-    libMesh::FEBase *fe_ptr    = nullptr;
-    libMesh::QBase  *qrule_ptr = nullptr;
-    _get_side_fe_and_qrule(get_elem_for_quadrature(),
-                           side,
-                           &fe_ptr,
-                           &qrule_ptr,
-                           false);
-    std::auto_ptr<libMesh::FEBase> fe(fe_ptr);
-    std::auto_ptr<libMesh::QBase>  qrule(qrule_ptr);
-    
+    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem));
+    fe->init_for_side(_elem, side, false);
+
     const std::vector<Real> &JxW                    = fe->get_JxW();
     const std::vector<libMesh::Point>& qpoint       = fe->get_xyz();
     const std::vector<std::vector<Real> >& phi      = fe->get_phi();
@@ -694,7 +683,6 @@ surface_pressure_residual_sensitivity(bool request_jacobian,
     
     FEMOperatorMatrix Bmat;
     Real press;
-    libMesh::Point pt;
     
     RealVectorX
     phi_vec     = RealVectorX::Zero(n_phi),
@@ -704,8 +692,6 @@ surface_pressure_residual_sensitivity(bool request_jacobian,
     
     for (unsigned int qp=0; qp<qpoint.size(); qp++) {
         
-        _local_elem->global_coordinates_location(qpoint[qp], pt);
-        
         // now set the shape function values
         for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
             phi_vec(i_nd) = phi[i_nd][qp];
@@ -713,10 +699,7 @@ surface_pressure_residual_sensitivity(bool request_jacobian,
         Bmat.reinit(2*n1, phi_vec);
         
         // get pressure value
-        func.derivative(*sensitivity_param,
-                        pt,
-                        _time,
-                        press);
+        func.derivative(p, qpoint[qp], _time, press);
         
         // calculate force
         for (unsigned int i_dim=0; i_dim<n1; i_dim++)
@@ -727,14 +710,7 @@ surface_pressure_residual_sensitivity(bool request_jacobian,
         local_f += JxW[qp] * vec_n2;
     }
     
-    // now transform to the global system and add
-    if (_elem.dim() < 3) {
-        transform_vector_to_global_system(local_f, vec_n2);
-        f -= vec_n2;
-    }
-    else
-        f -= local_f;
-    
+    f -= local_f;
     
     return (request_jacobian);
 }
@@ -776,8 +752,6 @@ MAST::StructuralElement3D::thermal_residual(bool request_jacobian,
     // copy the values from the global to the local element
     local_disp.topRows(n2) = _local_sol.topRows(n2);
     
-    libMesh::Point p;
-
     MAST::FEMOperatorMatrix
     Bmat_lin,
     Bmat_nl_x,
@@ -795,7 +769,7 @@ MAST::StructuralElement3D::thermal_residual(bool request_jacobian,
     Bmat_nl_v.reinit(3, 3, _elem.n_nodes());
     Bmat_nl_w.reinit(3, 3, _elem.n_nodes());
 
-    std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+    std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
     mat = _property.thermal_expansion_A_matrix(*this);
     
     const MAST::FieldFunction<Real>
@@ -806,11 +780,9 @@ MAST::StructuralElement3D::thermal_residual(bool request_jacobian,
     
     for (unsigned int qp=0; qp<JxW.size(); qp++) {
         
-        _local_elem->global_coordinates_location(xyz[qp], p);
-        
-        (*mat)       (p, _time, material_exp_A_mat);
-        temp_func    (p, _time, t);
-        ref_temp_func(p, _time, t0);
+        (*mat)       (xyz[qp], _time, material_exp_A_mat);
+        temp_func    (xyz[qp], _time, t);
+        ref_temp_func(xyz[qp], _time, t0);
         delta_t(0) = t-t0;
         
         vec1_n1 = material_exp_A_mat * delta_t; // [C]{alpha (T - T0)}
@@ -832,48 +804,51 @@ MAST::StructuralElement3D::thermal_residual(bool request_jacobian,
         Bmat_lin.vector_mult_transpose(vec3_n2, vec1_n1);
         f.topRows(n2) -= JxW[qp] * vec3_n2;
         
-        // nonlinear strain operotor
-        // x
-        vec2_3 = mat_x.transpose() * vec1_n1;
-        Bmat_nl_x.vector_mult_transpose(vec3_n2, vec2_3);
-        f.topRows(n2) -= JxW[qp] * vec3_n2;
-
-        // y
-        vec2_3 = mat_y.transpose() * vec1_n1;
-        Bmat_nl_y.vector_mult_transpose(vec3_n2, vec2_3);
-        f.topRows(n2) -= JxW[qp] * vec3_n2;
-
-        // z
-        vec2_3 = mat_z.transpose() * vec1_n1;
-        Bmat_nl_z.vector_mult_transpose(vec3_n2, vec2_3);
-        f.topRows(n2) -= JxW[qp] * vec3_n2;
-        
-        // Jacobian for the nonlinear case
-        if (request_jacobian) {
-
-            // use the stress to calculate the final contribution
-            // to the Jacobian stiffness matrix
-            mat4_33(0,0) = vec1_n1(0);
-            mat4_33(1,1) = vec1_n1(1);
-            mat4_33(2,2) = vec1_n1(2);
-            mat4_33(0,1) = mat4_33(1,0) = vec1_n1(3);
-            mat4_33(1,2) = mat4_33(2,1) = vec1_n1(4);
-            mat4_33(0,2) = mat4_33(2,0) = vec1_n1(5);
+        if (_property.strain_type() == MAST::NONLINEAR_STRAIN) {
             
-            // u-disp
-            Bmat_nl_u.left_multiply(mat3_3n2, mat4_33);
-            Bmat_nl_u.right_multiply_transpose(mat2_n2n2, mat3_3n2);
-            jac.topLeftCorner(n2, n2) -= JxW[qp] * mat2_n2n2;
+            // nonlinear strain operotor
+            // x
+            vec2_3 = mat_x.transpose() * vec1_n1;
+            Bmat_nl_x.vector_mult_transpose(vec3_n2, vec2_3);
+            f.topRows(n2) -= JxW[qp] * vec3_n2;
             
-            // v-disp
-            Bmat_nl_v.left_multiply(mat3_3n2, mat4_33);
-            Bmat_nl_v.right_multiply_transpose(mat2_n2n2, mat3_3n2);
-            jac.topLeftCorner(n2, n2) -= JxW[qp] * mat2_n2n2;
+            // y
+            vec2_3 = mat_y.transpose() * vec1_n1;
+            Bmat_nl_y.vector_mult_transpose(vec3_n2, vec2_3);
+            f.topRows(n2) -= JxW[qp] * vec3_n2;
             
-            // w-disp
-            Bmat_nl_w.left_multiply(mat3_3n2, mat4_33);
-            Bmat_nl_w.right_multiply_transpose(mat2_n2n2, mat3_3n2);
-            jac.topLeftCorner(n2, n2) -= JxW[qp] * mat2_n2n2;
+            // z
+            vec2_3 = mat_z.transpose() * vec1_n1;
+            Bmat_nl_z.vector_mult_transpose(vec3_n2, vec2_3);
+            f.topRows(n2) -= JxW[qp] * vec3_n2;
+            
+            // Jacobian for the nonlinear case
+            if (request_jacobian) {
+                
+                // use the stress to calculate the final contribution
+                // to the Jacobian stiffness matrix
+                mat4_33(0,0) = vec1_n1(0);
+                mat4_33(1,1) = vec1_n1(1);
+                mat4_33(2,2) = vec1_n1(2);
+                mat4_33(0,1) = mat4_33(1,0) = vec1_n1(3);
+                mat4_33(1,2) = mat4_33(2,1) = vec1_n1(4);
+                mat4_33(0,2) = mat4_33(2,0) = vec1_n1(5);
+                
+                // u-disp
+                Bmat_nl_u.left_multiply(mat3_3n2, mat4_33);
+                Bmat_nl_u.right_multiply_transpose(mat2_n2n2, mat3_3n2);
+                jac.topLeftCorner(n2, n2) -= JxW[qp] * mat2_n2n2;
+                
+                // v-disp
+                Bmat_nl_v.left_multiply(mat3_3n2, mat4_33);
+                Bmat_nl_v.right_multiply_transpose(mat2_n2n2, mat3_3n2);
+                jac.topLeftCorner(n2, n2) -= JxW[qp] * mat2_n2n2;
+                
+                // w-disp
+                Bmat_nl_w.left_multiply(mat3_3n2, mat4_33);
+                Bmat_nl_w.right_multiply_transpose(mat2_n2n2, mat3_3n2);
+                jac.topLeftCorner(n2, n2) -= JxW[qp] * mat2_n2n2;
+            }
         }
     }
 
@@ -884,10 +859,11 @@ MAST::StructuralElement3D::thermal_residual(bool request_jacobian,
 
 
 bool
-MAST::StructuralElement3D::thermal_residual_sensitivity(bool request_jacobian,
+MAST::StructuralElement3D::thermal_residual_sensitivity(const MAST::FunctionBase& p,
+                                                        bool request_jacobian,
                                                         RealVectorX& f,
                                                         RealMatrixX& jac,
-                                                        MAST::BoundaryConditionBase& p) {
+                                                        MAST::BoundaryConditionBase& bc) {
     
     // to be implemented
     libmesh_error();
@@ -917,7 +893,8 @@ piston_theory_residual(bool request_jacobian,
 
 bool
 MAST::StructuralElement3D::
-piston_theory_residual_sensitivity(bool request_jacobian,
+piston_theory_residual_sensitivity(const MAST::FunctionBase& p,
+                                   bool request_jacobian,
                                    RealVectorX &f,
                                    RealMatrixX& jac_xdot,
                                    RealMatrixX& jac,
@@ -936,46 +913,13 @@ piston_theory_residual_sensitivity(bool request_jacobian,
 
 bool
 MAST::StructuralElement3D::calculate_stress(bool request_derivative,
-                                            bool request_sensitivity,
-                                            MAST::OutputFunctionBase& output) {
+                                            const MAST::FunctionBase* p,
+                                            MAST::StressStrainOutputBase& output) {
     
-    // ask the output object about the quadrature points at which
-    // the stress evaluations need to be peformed
-    MAST::PointwiseOutputEvaluationMode mode = output.evaluation_mode();
+    std::unique_ptr<MAST::FEBase>   fe(_assembly.build_fe(_elem));
+    fe->init(_elem);
+    std::vector<libMesh::Point>     qp_loc = fe->get_qpoints();
 
-    std::vector<libMesh::Point> qp_loc;
-    
-    libMesh::FEBase         *fe_ptr     = nullptr;
-    libMesh::QBase          *qrule_ptr  = nullptr;
-
-    switch (mode) {
-        case MAST::CENTROID: {
-            qp_loc.resize(1);
-            qp_loc[0] = libMesh::Point();
-            _init_fe_and_qrule(get_elem_for_quadrature(), &fe_ptr, &qrule_ptr, &qp_loc);
-        }
-            break;
-            
-        case MAST::SPECIFIED_POINTS: {
-            qp_loc = output.get_points_for_evaluation();
-            _init_fe_and_qrule(get_elem_for_quadrature(), &fe_ptr, &qrule_ptr, &qp_loc);
-        }
-            break;
-         
-        case MAST::ELEM_QP:
-            // this will initialize the FE object at the points specified
-            // by the quadrature rule
-            _init_fe_and_qrule(get_elem_for_quadrature(), &fe_ptr, &qrule_ptr);
-            qp_loc = qrule_ptr->get_points();
-            break;
-            
-        default:
-            // should not get here
-            libmesh_error();
-    }
-    
-    std::auto_ptr<libMesh::FEBase>         fe(fe_ptr);
-    std::auto_ptr<libMesh::QBase>          qrule(qrule_ptr);
 
     // now that the FE object has been initialized, evaluate the stress values
     
@@ -1004,10 +948,9 @@ MAST::StructuralElement3D::calculate_stress(bool request_derivative,
     // copy the values from the global to the local element
     local_disp.topRows(n2) = _local_sol.topRows(n2);
     
-    std::auto_ptr<MAST::FieldFunction<RealMatrixX> > mat_stiff =
+    std::unique_ptr<MAST::FieldFunction<RealMatrixX> > mat_stiff =
     _property.stiffness_A_matrix(*this);
     
-    libMesh::Point p;
     MAST::FEMOperatorMatrix
     Bmat_lin,
     Bmat_nl_x,
@@ -1038,10 +981,8 @@ MAST::StructuralElement3D::calculate_stress(bool request_derivative,
     // second for loop to calculate the residual and stiffness contributions
     for (unsigned int qp=0; qp<qp_loc.size(); qp++) {
         
-        _local_elem->global_coordinates_location(xyz[qp], p);
-        
         // get the material matrix
-        (*mat_stiff)(p, _time, material_mat);
+        (*mat_stiff)(xyz[qp], _time, material_mat);
         
         this->initialize_green_lagrange_strain_operator(qp,
                                                         *fe,
@@ -1061,12 +1002,27 @@ MAST::StructuralElement3D::calculate_stress(bool request_derivative,
         strain += Gmat * alpha;
         stress = material_mat * strain;
         
-        stress_output.add_stress_strain_at_qp_location(&_elem,
-                                                       qp_loc[qp],
-                                                       xyz[qp],
-                                                       stress,
-                                                       strain,
-                                                       JxW[qp]);
+        // set the stress and strain data
+        MAST::StressStrainOutputBase::Data*
+        data = nullptr;
+        
+        // if neither the derivative nor sensitivity is requested, then
+        // we assume that a new data entry is to be provided. Otherwise,
+        // we assume that the stress at this quantity already
+        // exists, and we only need to append sensitivity/derivative
+        // data to it
+        if (!request_derivative && !p)
+            data = &(stress_output.add_stress_strain_at_qp_location(&_elem,
+                                                                    qp,
+                                                                    qp_loc[qp],
+                                                                    xyz[qp],
+                                                                    stress,
+                                                                    strain,
+                                                                    JxW[qp]));
+        else
+            data = &(stress_output.get_stress_strain_data_for_elem_at_qp(&_elem,
+                                                                         qp));
+
         
         if (request_derivative) {
             // to be implemented
@@ -1084,7 +1040,7 @@ MAST::StructuralElement3D::calculate_stress(bool request_derivative,
 
 void
 MAST::StructuralElement3D::initialize_strain_operator (const unsigned int qp,
-                                                       const libMesh::FEBase& fe,
+                                                       const MAST::FEBase& fe,
                                                        FEMOperatorMatrix& Bmat) {
     
     const std::vector<std::vector<libMesh::RealVectorValue> >&
@@ -1121,7 +1077,7 @@ MAST::StructuralElement3D::initialize_strain_operator (const unsigned int qp,
 void
 MAST::StructuralElement3D::
 initialize_green_lagrange_strain_operator(const unsigned int qp,
-                                          const libMesh::FEBase& fe,
+                                          const MAST::FEBase& fe,
                                           const RealVectorX& local_disp,
                                           RealVectorX& epsilon,
                                           RealMatrixX& mat_x,
@@ -1135,7 +1091,10 @@ initialize_green_lagrange_strain_operator(const unsigned int qp,
                                           MAST::FEMOperatorMatrix& Bmat_nl_v,
                                           MAST::FEMOperatorMatrix& Bmat_nl_w) {
     
-
+    epsilon.setZero();
+    mat_x.setZero();
+    mat_y.setZero();
+    mat_z.setZero();
     
     const std::vector<std::vector<libMesh::RealVectorValue> >&
     dphi = fe.get_dphi();
@@ -1170,16 +1129,18 @@ initialize_green_lagrange_strain_operator(const unsigned int qp,
     Bmat_lin.set_shape_function(3, 1, phi); //  gamma_xy = dv/dx + ...
     Bmat_lin.set_shape_function(5, 2, phi); //  gamma_zx = dw/dx + ...
     
-    // nonlinear strain operator in x
-    Bmat_nl_x.set_shape_function(0, 0, phi); // du/dx
-    Bmat_nl_x.set_shape_function(1, 1, phi); // dv/dx
-    Bmat_nl_x.set_shape_function(2, 2, phi); // dw/dx
-
-    // nonlinear strain operator in u
-    Bmat_nl_u.set_shape_function(0, 0, phi); // du/dx
-    Bmat_nl_v.set_shape_function(0, 1, phi); // dv/dx
-    Bmat_nl_w.set_shape_function(0, 2, phi); // dw/dx
-
+    if (_property.strain_type() == MAST::NONLINEAR_STRAIN) {
+        
+        // nonlinear strain operator in x
+        Bmat_nl_x.set_shape_function(0, 0, phi); // du/dx
+        Bmat_nl_x.set_shape_function(1, 1, phi); // dv/dx
+        Bmat_nl_x.set_shape_function(2, 2, phi); // dw/dx
+        
+        // nonlinear strain operator in u
+        Bmat_nl_u.set_shape_function(0, 0, phi); // du/dx
+        Bmat_nl_v.set_shape_function(0, 1, phi); // dv/dx
+        Bmat_nl_w.set_shape_function(0, 2, phi); // dw/dx
+    }
     
     // dN/dy
     for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
@@ -1189,78 +1150,85 @@ initialize_green_lagrange_strain_operator(const unsigned int qp,
     Bmat_lin.set_shape_function(3, 0, phi); //  gamma_xy = du/dy + ...
     Bmat_lin.set_shape_function(4, 2, phi); //  gamma_yz = dw/dy + ...
     
-    // nonlinear strain operator in y
-    Bmat_nl_y.set_shape_function(0, 0, phi); // du/dy
-    Bmat_nl_y.set_shape_function(1, 1, phi); // dv/dy
-    Bmat_nl_y.set_shape_function(2, 2, phi); // dw/dy
-
-    // nonlinear strain operator in v
-    Bmat_nl_u.set_shape_function(1, 0, phi); // du/dy
-    Bmat_nl_v.set_shape_function(1, 1, phi); // dv/dy
-    Bmat_nl_w.set_shape_function(1, 2, phi); // dw/dy
-
+    if (_property.strain_type() == MAST::NONLINEAR_STRAIN) {
+        
+        // nonlinear strain operator in y
+        Bmat_nl_y.set_shape_function(0, 0, phi); // du/dy
+        Bmat_nl_y.set_shape_function(1, 1, phi); // dv/dy
+        Bmat_nl_y.set_shape_function(2, 2, phi); // dw/dy
+        
+        // nonlinear strain operator in v
+        Bmat_nl_u.set_shape_function(1, 0, phi); // du/dy
+        Bmat_nl_v.set_shape_function(1, 1, phi); // dv/dy
+        Bmat_nl_w.set_shape_function(1, 2, phi); // dw/dy
+    }
+    
     // dN/dz
     for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
         phi(i_nd) = dphi[i_nd][qp](2);
     Bmat_lin.set_shape_function(2, 2, phi); //  epsilon_xx = dw/dz
     Bmat_lin.set_shape_function(4, 1, phi); //  gamma_xy = dv/dz + ...
     Bmat_lin.set_shape_function(5, 0, phi); //  gamma_zx = du/dz + ...
-
-    // nonlinear strain operator in z
-    Bmat_nl_z.set_shape_function(0, 0, phi); // du/dz
-    Bmat_nl_z.set_shape_function(1, 1, phi); // dv/dz
-    Bmat_nl_z.set_shape_function(2, 2, phi); // dw/dz
-
-    // nonlinear strain operator in w
-    Bmat_nl_u.set_shape_function(2, 0, phi); // du/dz
-    Bmat_nl_v.set_shape_function(2, 1, phi); // dv/dz
-    Bmat_nl_w.set_shape_function(2, 2, phi); // dw/dz
-
     
-    // calculate the displacement gradient to create the
-    RealVectorX
-    ddisp_dx = RealVectorX::Zero(3),
-    ddisp_dy = RealVectorX::Zero(3),
-    ddisp_dz = RealVectorX::Zero(3);
-    
-    Bmat_nl_x.vector_mult(ddisp_dx, local_disp);  // {du/dx, dv/dx, dw/dx}
-    Bmat_nl_y.vector_mult(ddisp_dy, local_disp);  // {du/dy, dv/dy, dw/dy}
-    Bmat_nl_z.vector_mult(ddisp_dz, local_disp);  // {du/dz, dv/dz, dw/dz}
-
-    // prepare the deformation gradient matrix
-    RealMatrixX
-    F = RealMatrixX::Zero(3,3),
-    E = RealMatrixX::Zero(3,3);
-    F.col(0) = ddisp_dx;
-    F.col(1) = ddisp_dy;
-    F.col(2) = ddisp_dz;
-    
-    // this calculates the Green-Lagrange strain in the reference config
-    E = 0.5*(F + F.transpose() + F.transpose() * F);
-    
-    // now, add this to the strain vector
-    epsilon(0) = E(0,0);
-    epsilon(1) = E(1,1);
-    epsilon(2) = E(2,2);
-    epsilon(3) = E(0,1) + E(1,0);
-    epsilon(4) = E(1,2) + E(2,1);
-    epsilon(5) = E(0,2) + E(2,0);
-    
-    // now initialize the matrices with strain components
-    // that multiply the Bmat_nl terms
-    mat_x.row(0) =     ddisp_dx;
-    mat_x.row(3) =     ddisp_dy;
-    mat_x.row(5) =     ddisp_dz;
-    
-    mat_y.row(1) =     ddisp_dy;
-    mat_y.row(3) =     ddisp_dx;
-    mat_y.row(4) =     ddisp_dz;
-
-    
-    mat_z.row(2) =     ddisp_dz;
-    mat_z.row(4) =     ddisp_dy;
-    mat_z.row(5) =     ddisp_dx;
-
+    if (_property.strain_type() == MAST::NONLINEAR_STRAIN) {
+        
+        // nonlinear strain operator in z
+        Bmat_nl_z.set_shape_function(0, 0, phi); // du/dz
+        Bmat_nl_z.set_shape_function(1, 1, phi); // dv/dz
+        Bmat_nl_z.set_shape_function(2, 2, phi); // dw/dz
+        
+        // nonlinear strain operator in w
+        Bmat_nl_u.set_shape_function(2, 0, phi); // du/dz
+        Bmat_nl_v.set_shape_function(2, 1, phi); // dv/dz
+        Bmat_nl_w.set_shape_function(2, 2, phi); // dw/dz
+        
+        
+        // calculate the displacement gradient to create the GL strain
+        RealVectorX
+        ddisp_dx = RealVectorX::Zero(3),
+        ddisp_dy = RealVectorX::Zero(3),
+        ddisp_dz = RealVectorX::Zero(3);
+        
+        Bmat_nl_x.vector_mult(ddisp_dx, local_disp);  // {du/dx, dv/dx, dw/dx}
+        Bmat_nl_y.vector_mult(ddisp_dy, local_disp);  // {du/dy, dv/dy, dw/dy}
+        Bmat_nl_z.vector_mult(ddisp_dz, local_disp);  // {du/dz, dv/dz, dw/dz}
+        
+        // prepare the displacement gradient matrix: F = grad(u)
+        RealMatrixX
+        F = RealMatrixX::Zero(3,3),
+        E = RealMatrixX::Zero(3,3);
+        F.col(0) = ddisp_dx;
+        F.col(1) = ddisp_dy;
+        F.col(2) = ddisp_dz;
+        
+        // this calculates the Green-Lagrange strain in the reference config
+        E = 0.5*(F + F.transpose() + F.transpose() * F);
+        
+        // now, add this to the strain vector
+        epsilon(0) = E(0,0);
+        epsilon(1) = E(1,1);
+        epsilon(2) = E(2,2);
+        epsilon(3) = E(0,1) + E(1,0);
+        epsilon(4) = E(1,2) + E(2,1);
+        epsilon(5) = E(0,2) + E(2,0);
+        
+        // now initialize the matrices with strain components
+        // that multiply the Bmat_nl terms
+        mat_x.row(0) =     ddisp_dx;
+        mat_x.row(3) =     ddisp_dy;
+        mat_x.row(5) =     ddisp_dz;
+        
+        mat_y.row(1) =     ddisp_dy;
+        mat_y.row(3) =     ddisp_dx;
+        mat_y.row(4) =     ddisp_dz;
+        
+        
+        mat_z.row(2) =     ddisp_dz;
+        mat_z.row(4) =     ddisp_dy;
+        mat_z.row(5) =     ddisp_dx;
+    }
+    else
+        Bmat_lin.vector_mult(epsilon, local_disp);
 }
 
 
@@ -1269,14 +1237,14 @@ initialize_green_lagrange_strain_operator(const unsigned int qp,
 void
 MAST::StructuralElement3D::
 initialize_incompatible_strain_operator(const unsigned int qp,
-                                        const libMesh::FEBase& fe,
+                                        const MAST::FEBase& fe,
                                         FEMOperatorMatrix& Bmat,
                                         RealMatrixX& G_mat) {
     
     RealVectorX phi_vec = RealVectorX::Zero(1);
     
     // get the location of element coordinates
-    const std::vector<libMesh::Point>& q_point = _qrule->get_points();
+    const std::vector<libMesh::Point>& q_point = fe.get_qrule().get_points();
     const Real
     xi  = q_point[qp](0),
     eta = q_point[qp](1),
@@ -1402,7 +1370,7 @@ MAST::StructuralElement3D::_init_incompatible_fe_mapping( const libMesh::Elem& e
         libmesh_assert(fe_type == _system.system().variable_type(i));
     
     // Create an adequate quadrature rule
-    std::auto_ptr<libMesh::FEBase> fe(libMesh::FEBase::build(e.dim(), fe_type).release());
+    std::unique_ptr<libMesh::FEBase> fe(libMesh::FEBase::build(e.dim(), fe_type).release());
     const std::vector<libMesh::Point> pts(1); // initializes point to (0,0,0)
     
     fe->get_dphidxi();

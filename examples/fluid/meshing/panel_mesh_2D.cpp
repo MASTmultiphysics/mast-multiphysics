@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -29,16 +29,12 @@
 void
 MAST::PanelMesh2D::init (const Real tc, bool cos_profile,
                          const unsigned int n_maxima,
-                         const unsigned int panel_bc_id,
-                         const unsigned int symmetry_bc_id,
                          const std::vector<MeshInitializer::CoordinateDivisions*>& divs,
                          libMesh::UnstructuredMesh& mesh, libMesh::ElemType t) {
     
     libmesh_assert(divs.size() == 2);
     libmesh_assert(divs[0]->n_divs() == 3);
     libmesh_assert(divs[1]->n_divs() >= 1);
-    libmesh_assert(panel_bc_id > 3);
-    libmesh_assert(symmetry_bc_id > 3);
     
     _tc_ratio = tc;
     _x0 = divs[0]->div_location(1);
@@ -47,8 +43,6 @@ MAST::PanelMesh2D::init (const Real tc, bool cos_profile,
     _y1 = divs[1]->div_location(1);
     _n_maxima = n_maxima;
     _cos_profile = cos_profile;
-    _panel_bc_id = panel_bc_id;
-    _symmetry_bc_id = symmetry_bc_id;
     MeshInitializer::init(divs, mesh, t);
 }
 
@@ -65,6 +59,10 @@ MAST::PanelMesh2D::process_mesh( ) {
     const bool
     parallel_mesh = !_mesh->is_serial();
     
+    unsigned int
+    panel_bc_id    = 4,
+    symmetry_bc_id = 5;
+    
     {
         libMesh::MeshSerializer serializer(*_mesh);
         
@@ -79,7 +77,7 @@ MAST::PanelMesh2D::process_mesh( ) {
             
             for (unsigned int i_side=0; i_side<(*e_it)->n_sides(); i_side++)
             {
-                libMesh::AutoPtr<libMesh::Elem> side_elem ((*e_it)->side(i_side).release());
+                std::unique_ptr<const libMesh::Elem> side_elem ((*e_it)->side_ptr(i_side).release());
                 std::vector<bool> side_on_panel(side_elem->n_nodes()),
                 side_on_slip_wall(side_elem->n_nodes());
                 std::fill(side_on_panel.begin(), side_on_panel.end(), false);
@@ -87,7 +85,7 @@ MAST::PanelMesh2D::process_mesh( ) {
                 
                 for (unsigned int i_node=0; i_node<side_elem->n_nodes(); i_node++)
                 {
-                    const libMesh::Node& n = *(side_elem->get_node(i_node));
+                    const libMesh::Node& n = *(side_elem->node_ptr(i_node));
                     if ((n(1)==_y0) && (n(0) >= _x0-1.0e-6) && (n(0) <= _x1+1.0e-6))
                         side_on_panel[i_node] = true;
                     
@@ -100,7 +98,7 @@ MAST::PanelMesh2D::process_mesh( ) {
                 for (unsigned int i_node=0; i_node<side_elem->n_nodes(); i_node++)
                     if_apply_bc = side_on_panel[i_node] && if_apply_bc;
                 if (if_apply_bc) {
-                    _mesh->boundary_info->add_side(*e_it, i_side, _panel_bc_id);
+                    _mesh->boundary_info->add_side(*e_it, i_side, panel_bc_id);
                     if (parallel_mesh)
                         dynamic_cast<libMesh::DistributedMesh*>(_mesh)->add_extra_ghost_elem(*e_it);
                 }
@@ -110,13 +108,13 @@ MAST::PanelMesh2D::process_mesh( ) {
                 for (unsigned int i_node=0; i_node<side_elem->n_nodes(); i_node++)
                     if_apply_bc = side_on_slip_wall[i_node] && if_apply_bc;
                 if (if_apply_bc)
-                    _mesh->boundary_info->add_side(*e_it, i_side, _symmetry_bc_id);
+                    _mesh->boundary_info->add_side(*e_it, i_side, symmetry_bc_id);
             }
         }
         
         // set the boudnary id names
-        _mesh->boundary_info->sideset_name(_panel_bc_id) = "Panel";
-        _mesh->boundary_info->sideset_name(_symmetry_bc_id) = "Symmetry";
+        _mesh->boundary_info->sideset_name(panel_bc_id)    = "Panel";
+        _mesh->boundary_info->sideset_name(symmetry_bc_id) = "Symmetry";
     }
     
     // now move the mesh points

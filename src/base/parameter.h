@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -71,8 +71,7 @@ namespace MAST {
         
         
         /*!
-         *    @eturns the pointer to value of this function. This is used for 
-         *    association with libMesh::Parameter.
+         *    @eturns the pointer to value of this function.
          */
         Real* ptr()
         {   return _val; }

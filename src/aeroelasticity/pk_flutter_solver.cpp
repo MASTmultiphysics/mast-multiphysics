@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -181,7 +181,7 @@ MAST::PKFlutterSolver::scan_for_roots() {
             //
             for (unsigned int i=0; i<_n_V_divs+1; i++) {
                 current_v_ref = v_ref_vals[i];
-                std::auto_ptr<MAST::FlutterSolutionBase> sol =
+                std::unique_ptr<MAST::FlutterSolutionBase> sol =
                 _analyze(current_k_red,
                          current_v_ref,
                          prev_sol);
@@ -269,7 +269,7 @@ MAST::PKFlutterSolver::print_sorted_roots()
         << "V      = " << std::setw(15) << std::setprecision(15) << root.V << std::endl
         << "g      = " << std::setw(15) << root.g << std::endl
         << "omega  = " << std::setw(15) << root.omega << std::endl
-        << std::setprecision(prec) // set the precision to the default value
+        << std::setprecision((int) prec) // set the precision to the default value
         << "Modal Participation : " << std::endl ;
         for (unsigned int j=0; j<nvals; j++)
             *_output
@@ -327,7 +327,7 @@ MAST::PKFlutterSolver::_bisection_search(const std::pair<MAST::FlutterSolutionBa
     new_v   = 0.; // linear interpolation
     unsigned int n_iters = 0;
     
-    std::auto_ptr<MAST::FlutterSolutionBase> new_sol;
+    std::unique_ptr<MAST::FlutterSolutionBase> new_sol;
     std::pair<bool, MAST::FlutterSolutionBase*> rval(false, nullptr);
     
     while (n_iters < max_iters) {
@@ -521,7 +521,7 @@ MAST::PKFlutterSolver::_newton_search(const MAST::FlutterSolutionBase& init_sol,
     Real k_red, v_ref;
     unsigned int n_iters = 0;
     
-    std::auto_ptr<MAST::FlutterSolutionBase> new_sol;
+    std::unique_ptr<MAST::FlutterSolutionBase> new_sol;
     
     RealVectorX res, sol, dsol;
     RealMatrixX jac, stiff;
@@ -544,7 +544,7 @@ MAST::PKFlutterSolver::_newton_search(const MAST::FlutterSolutionBase& init_sol,
     while (if_continue) {
         
         // evaluate the residual and Jacobians
-        std::auto_ptr<MAST::FlutterSolutionBase> pk_sol =
+        std::unique_ptr<MAST::FlutterSolutionBase> pk_sol =
         this->analyze(k_red, v_ref, prev_sol);
         
         pk_sol->print(_output);
@@ -585,7 +585,7 @@ MAST::PKFlutterSolver::_newton_search(const MAST::FlutterSolutionBase& init_sol,
         den = root.eig_vec_left.dot(mat_B*root.eig_vec_right);
         eig_k_red_sens = root.eig_vec_left.dot(v) / den;
         
-        //std::auto_ptr<MAST::FlutterSolutionBase> PK_dsol =
+        //std::unique_ptr<MAST::FlutterSolutionBase> PK_dsol =
         //this->analyze(k_red+.001, v_ref, prev_sol);
         //eig -= PK_dsol->get_root(root_num).root;
         //eig /= -.001;
@@ -607,7 +607,7 @@ MAST::PKFlutterSolver::_newton_search(const MAST::FlutterSolutionBase& init_sol,
         den = root.eig_vec_left.dot(mat_B*root.eig_vec_right);
         eig_V_ref_sens = root.eig_vec_left.dot(v) / den;
         
- //std::auto_ptr<MAST::FlutterSolutionBase> PK_dsol =
+ //std::unique_ptr<MAST::FlutterSolutionBase> PK_dsol =
  //this->analyze(k_red, v_ref+.001, prev_sol);
  //eig -= PK_dsol->get_root(root_num).root;
  //eig /= -.001;
@@ -835,7 +835,7 @@ void MAST::PKFlutterSolver::_identify_crossover_points()
 
 
 
-std::auto_ptr<MAST::FlutterSolutionBase>
+std::unique_ptr<MAST::FlutterSolutionBase>
 MAST::PKFlutterSolver::_analyze(const Real k_red,
                                 const Real v_ref,
                                 const MAST::FlutterSolutionBase* prev_sol) {
@@ -867,7 +867,7 @@ MAST::PKFlutterSolver::_analyze(const Real k_red,
     << " ====================================================" << std::endl;
     
     
-    return std::auto_ptr<MAST::FlutterSolutionBase> (root);
+    return std::unique_ptr<MAST::FlutterSolutionBase> (root);
 }
 
 
@@ -875,8 +875,7 @@ MAST::PKFlutterSolver::_analyze(const Real k_red,
 
 void
 MAST::PKFlutterSolver::calculate_sensitivity(MAST::FlutterRootBase& root,
-                                             const libMesh::ParameterVector& params,
-                                             const unsigned int i) {
+                                             const MAST::FunctionBase& p) {
 
     /*
     libMesh::out
@@ -1027,8 +1026,7 @@ MAST::PKFlutterSolver::_initialize_matrices(const Real k_red,
 
 void
 MAST::PKFlutterSolver::
-_initialize_matrix_sensitivity_for_param(const libMesh::ParameterVector& params,
-                                         unsigned int p,
+_initialize_matrix_sensitivity_for_param(const MAST::FunctionBase& f,
                                          const Real k_red,
                                          const Real v_ref,
                                          ComplexMatrixX& L,   // stiff, aero, damp

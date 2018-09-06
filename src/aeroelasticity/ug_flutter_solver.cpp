@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -279,7 +279,7 @@ MAST::UGFlutterSolver::scan_for_roots() {
         for (unsigned int i=0; i< _n_kr_divs+1; i++) {
             
             current_kr = k_vals[i];
-            std::auto_ptr<MAST::FlutterSolutionBase> sol =
+            std::unique_ptr<MAST::FlutterSolutionBase> sol =
             _analyze(current_kr, prev_sol);
             
             prev_sol = sol.get();
@@ -363,7 +363,7 @@ MAST::UGFlutterSolver::print_sorted_roots()
         << "V      = " << std::setw(15) << std::setprecision(15) << root.V << std::endl
         << "g      = " << std::setw(15) << root.g << std::endl
         << "omega  = " << std::setw(15) << root.omega << std::endl
-        << std::setprecision(prec) // set the precision to the default value
+        << std::setprecision((int) prec) // set the precision to the default value
         << "Modal Participation : " << std::endl ;
         for (unsigned int j=0; j<nvals; j++)
             *_output
@@ -482,7 +482,7 @@ _bisection_search(const std::pair<MAST::FlutterSolutionBase*,
 
 
 
-std::auto_ptr<MAST::FlutterSolutionBase>
+std::unique_ptr<MAST::FlutterSolutionBase>
 MAST::UGFlutterSolver::_analyze(const Real kr_ref,
                                 const MAST::FlutterSolutionBase* prev_sol) {
     
@@ -512,7 +512,7 @@ MAST::UGFlutterSolver::_analyze(const Real kr_ref,
     << " ====================================================" << std::endl;
     
     
-    return std::auto_ptr<MAST::FlutterSolutionBase> (root);
+    return std::unique_ptr<MAST::FlutterSolutionBase> (root);
 }
 
 
@@ -575,8 +575,7 @@ MAST::UGFlutterSolver::_initialize_matrices(Real kr,
 
 void
 MAST::UGFlutterSolver::
-_initialize_matrix_sensitivity_for_param(const libMesh::ParameterVector& params,
-                                         const unsigned int i,
+_initialize_matrix_sensitivity_for_param(const MAST::FunctionBase& f,
                                          const libMesh::NumericVector<Real>& dXdp,
                                          Real kr,
                                          ComplexMatrixX& A,
@@ -608,8 +607,7 @@ _initialize_matrix_sensitivity_for_param(const libMesh::ParameterVector& params,
     // set the velocity value in the parameter that was provided
     (*_kr_param) = kr;
     
-    _assembly->assemble_reduced_order_quantity_sensitivity(params,
-                                                           i,
+    _assembly->assemble_reduced_order_quantity_sensitivity(f,
                                                            *_basis_vectors,
                                                            qty_map);
 
@@ -871,8 +869,7 @@ MAST::UGFlutterSolver::_identify_crossover_points() {
 void
 MAST::UGFlutterSolver::
 calculate_sensitivity(MAST::FlutterRootBase& root,
-                      const libMesh::ParameterVector& params,
-                      const unsigned int i,
+                      const MAST::FunctionBase& f,
                       libMesh::NumericVector<Real>* dXdp,
                       libMesh::NumericVector<Real>* dXdkr) {
     
@@ -911,7 +908,7 @@ calculate_sensitivity(MAST::FlutterRootBase& root,
     // if the sensitivity of the solution was provided, then use that.
     // otherwise pass a zero vector
     libMesh::NumericVector<Real>* sol_sens = dXdp;
-    std::auto_ptr<libMesh::NumericVector<Real> > zero_sol_sens;
+    std::unique_ptr<libMesh::NumericVector<Real> > zero_sol_sens;
     if (!dXdp) {
         zero_sol_sens.reset(_assembly->system().solution->zero_clone().release());
         sol_sens = zero_sol_sens.get();
@@ -920,8 +917,7 @@ calculate_sensitivity(MAST::FlutterRootBase& root,
         sol_sens = dXdp;
     
     // calculate the eigenproblem sensitivity
-    _initialize_matrix_sensitivity_for_param(params,
-                                             i,
+    _initialize_matrix_sensitivity_for_param(f,
                                              *sol_sens,
                                              root.kr,
                                              mat_A_sens,

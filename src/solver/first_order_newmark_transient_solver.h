@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -70,25 +70,6 @@ namespace MAST {
          */
         Real beta;
         
-        /*!
-         *    @returns the highest order time derivative that the solver
-         *    will handle
-         */
-        virtual int ode_order() const {
-            return 1;
-        }
-
-        
-        /*!
-         *   solves the current time step for solution and velocity
-         */
-        virtual void solve();
-        
-        /*!
-         *   advances the time step and copies the current solution to old
-         *   solution, and so on.
-         */
-        virtual void advance_time_step();
         
         /*!
          *    update the transient velocity based on the current solution
@@ -124,33 +105,29 @@ namespace MAST {
             libmesh_error();
         }
 
-    protected:
-        
-        /*!
-         *    @returns the number of iterations for which solution and velocity
-         *    are to be stored.
-         */
-        virtual unsigned int _n_iters_to_store() const {
-            return 2;
-        }
-        
         /*!
          *    provides the element with the transient data for calculations
          */
         virtual void
-        _set_element_data(const std::vector<libMesh::dof_id_type>& dof_indices,
-                          const std::vector<libMesh::NumericVector<Real>*>& sols,
-                          MAST::ElementBase& elem);
+        set_element_data(const std::vector<libMesh::dof_id_type>& dof_indices,
+                         const std::vector<libMesh::NumericVector<Real>*>& sols);
+        
+        /*!
+         *    provides the element with the sensitivity of transient data for
+         *    calculations
+         */
+        virtual void
+        set_element_sensitivity_data(const std::vector<libMesh::dof_id_type>& dof_indices,
+                                     const std::vector<libMesh::NumericVector<Real>*>& sols);
 
         /*!
          *    provides the element with the transient data for calculations
          */
         virtual void
-        _set_element_perturbed_data
+        set_element_perturbed_data
         (const std::vector<libMesh::dof_id_type>& dof_indices,
-         const std::vector<libMesh::NumericVector<Real>*>& sols,
-         MAST::ElementBase& elem);
-
+         const std::vector<libMesh::NumericVector<Real>*>& sols);
+        
         
         /*!
          *   performs the element calculations over \par elem, and returns
@@ -159,11 +136,9 @@ namespace MAST {
          *   assemble the Jacobian, in addition to the residual vector.
          */
         virtual void
-        _elem_calculations(MAST::ElementBase& elem,
-                           const std::vector<libMesh::dof_id_type>& dof_indices,
-                           bool if_jac,
-                           RealVectorX& vec,
-                           RealMatrixX& mat);
+        elem_calculations(bool if_jac,
+                          RealVectorX& vec,
+                          RealMatrixX& mat);
         
         /*!
          *   performs the element calculations over \par elem, and returns
@@ -173,18 +148,45 @@ namespace MAST {
          *   forces/etc.) are added to this vector.
          */
         virtual void
-        _elem_linearized_jacobian_solution_product(MAST::ElementBase& elem,
-                                                   const std::vector<libMesh::dof_id_type>& dof_indices,
-                                                   RealVectorX& vec);
-
+        elem_linearized_jacobian_solution_product(RealVectorX& vec);
+        
         /*!
          *   performs the element sensitivity calculations over \par elem,
          *   and returns the element residual sensitivity in \par vec .
          */
         virtual void
-        _elem_sensitivity_calculations(MAST::ElementBase& elem,
-                                       const std::vector<libMesh::dof_id_type>& dof_indices,
-                                       RealVectorX& vec);
+        elem_sensitivity_calculations(const MAST::FunctionBase& f,
+                                      RealVectorX& vec);
+
+        /*!
+         *   performs the element shape sensitivity calculations over \par elem,
+         *   and returns the element residual sensitivity in \par vec .
+         */
+        virtual void
+        elem_shape_sensitivity_calculations(const MAST::FunctionBase& f,
+                                            RealVectorX& vec);
+        
+        /*!
+         *   performs the element topology sensitivity calculations over \par elem,
+         *   and returns the element residual sensitivity in \par vec .
+         */
+        virtual void
+        elem_topology_sensitivity_calculations(const MAST::FunctionBase& f,
+                                               const MAST::LevelSetIntersection& intersect,
+                                               const MAST::FieldFunction<RealVectorX>& vel,
+                                               RealVectorX& vec);
+
+        /*!
+         *   calculates \f$ d ([J] \{\Delta X\})/ dX  \f$ over \par elem,
+         *   and returns the matrix in \par vec .
+         */
+        virtual void
+        elem_second_derivative_dot_solution_assembly(RealMatrixX& mat) {
+            libmesh_assert(false); // to be implemented
+        }
+
+    protected:
+        
     };
     
 }

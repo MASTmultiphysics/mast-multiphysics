@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -21,28 +21,28 @@
 #define __mast__conservative_fluid_transient_assembly_h__
 
 // MAST includes
-#include "base/transient_assembly.h"
+#include "base/transient_assembly_elem_operations.h"
 
 
 
 namespace MAST {
     
     
-    class ConservativeFluidTransientAssembly:
-    public MAST::TransientAssembly {
+    class ConservativeFluidTransientAssemblyElemOperations:
+    public MAST::TransientAssemblyElemOperations {
     public:
         
         /*!
          *   constructor associates this assembly object with the system
          */
-        ConservativeFluidTransientAssembly();
+        ConservativeFluidTransientAssemblyElemOperations();
         
         
         /*!
          *   destructor resets the association of this assembly object with
          *   the system
          */
-        virtual ~ConservativeFluidTransientAssembly();
+        virtual ~ConservativeFluidTransientAssemblyElemOperations();
         
         //**************************************************************
         //these methods are provided for use by the solvers
@@ -55,27 +55,25 @@ namespace MAST {
          *   \par vec, respectively. \par if_jac tells the method to also
          *   assemble the Jacobian, in addition to the residual vector.
          */
-        virtual void _elem_calculations(MAST::ElementBase& elem,
-                                        bool if_jac,
-                                        RealVectorX& f_m,
-                                        RealVectorX& f_x,
-                                        RealMatrixX& f_m_jac_x_dot,
-                                        RealMatrixX& f_m_jac,
-                                        RealMatrixX& f_x_jac);
+        virtual void elem_calculations(bool if_jac,
+                                       RealVectorX& f_m,
+                                       RealVectorX& f_x,
+                                       RealMatrixX& f_m_jac_x_dot,
+                                       RealMatrixX& f_m_jac,
+                                       RealMatrixX& f_x_jac);
         
         /*!
          *   This call for second order ode should not be used for this
          *   transient assembly
          */
-        virtual void _elem_calculations(MAST::ElementBase& elem,
-                                        bool if_jac,
-                                        RealVectorX& f_m,
-                                        RealVectorX& f_x,
-                                        RealMatrixX& f_m_jac_xddot,
-                                        RealMatrixX& f_m_jac_xdot,
-                                        RealMatrixX& f_m_jac,
-                                        RealMatrixX& f_x_jac_xdot,
-                                        RealMatrixX& f_x_jac) {
+        virtual void elem_calculations(bool if_jac,
+                                       RealVectorX& f_m,
+                                       RealVectorX& f_x,
+                                       RealMatrixX& f_m_jac_xddot,
+                                       RealMatrixX& f_m_jac_xdot,
+                                       RealMatrixX& f_m_jac,
+                                       RealMatrixX& f_x_jac_xdot,
+                                       RealMatrixX& f_x_jac) {
             
             libmesh_error(); // should not get here.
         }
@@ -90,8 +88,7 @@ namespace MAST {
          *    df_m(x,\dot{x})/d\dot{x} \cdot d{\dot x} \f$
          */
         virtual void
-        _linearized_jacobian_solution_product(MAST::ElementBase& elem,
-                                              RealVectorX& f);
+        linearized_jacobian_solution_product(RealVectorX& f);
         
         
         
@@ -99,8 +96,10 @@ namespace MAST {
          *   performs the element sensitivity calculations over \par elem,
          *   and returns the element residual sensitivity in \par vec .
          */
-        virtual void _elem_sensitivity_calculations(MAST::ElementBase& elem,
-                                                    RealVectorX& vec);
+        virtual void
+        elem_sensitivity_calculations(const MAST::FunctionBase& f,
+                                      RealVectorX& f_m,
+                                      RealVectorX& f_x);
         
         
         /*!
@@ -108,18 +107,37 @@ namespace MAST {
          *   and returns the matrix in \par vec .
          */
         virtual void
-        _elem_second_derivative_dot_solution_assembly(MAST::ElementBase& elem,
-                                                      RealMatrixX& mat);
+        elem_second_derivative_dot_solution_assembly(RealMatrixX& mat);
+
+        /*!
+         *   initializes the object for the geometric element \p elem. This
+         *   expects the object to be in a cleared state, so the user should
+         *   call \p clear_elem() between successive initializations.
+         */
+        virtual void
+        init(const libMesh::Elem& elem);
+
+        /*!
+         *   some simulations frequently deal with 1D/2D elements in 3D space,
+         *   which requires use of MAST::LocalElemFE.
+         */
+        virtual bool
+        if_use_local_elem() const {
+            
+            return false;
+        }
+
+        /*!
+         *   sets additional data for local elem FE.
+         */
+        virtual void
+        set_local_fe_data(MAST::LocalElemFE& fe,
+                          const libMesh::Elem& e) const {
+            // nothing to be done here
+        }
 
     protected:
         
-        
-        /*!
-         *   @returns a smart-pointer to a newly created element for
-         *   calculation of element quantities.
-         */
-        virtual std::auto_ptr<MAST::ElementBase>
-        _build_elem(const libMesh::Elem& elem);
         
     };
     

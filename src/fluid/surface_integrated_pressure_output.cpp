@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -24,10 +24,9 @@
 
 
 MAST::SurfaceIntegratedPressureOutput::
-SurfaceIntegratedPressureOutput(MAST::OutputQuantityType t,
-                                MAST::SurfaceIntegratedPressureOutput::OutputMode o,
+SurfaceIntegratedPressureOutput(MAST::SurfaceIntegratedPressureOutput::OutputMode o,
                                 const RealVectorX& n_vec):
-MAST::OutputFunctionBase(t),
+MAST::OutputAssemblyElemOperations(),
 _mode(o),
 _n_vec(n_vec) {
 

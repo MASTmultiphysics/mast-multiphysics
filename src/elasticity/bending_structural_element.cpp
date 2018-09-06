@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -25,9 +25,10 @@
 
 MAST::BendingStructuralElem::
 BendingStructuralElem(MAST::SystemInitialization& sys,
+                      MAST::AssemblyBase& assembly,
                       const libMesh::Elem& elem,
                       const MAST::ElementPropertyCardBase& p):
-MAST::StructuralElementBase(sys, elem, p) {
+MAST::StructuralElementBase(sys, assembly, elem, p) {
     
 }
 
@@ -35,33 +36,7 @@ MAST::StructuralElementBase(sys, elem, p) {
 
 MAST::BendingStructuralElem::~BendingStructuralElem() {
     
-    if (_bending_operator)   delete _bending_operator;
 }
 
 
 
-void
-MAST::BendingStructuralElem::
-_init_fe_operators(const libMesh::Elem& e,
-                   libMesh::FEBase **fe,
-                   libMesh::QBase  **qrule,
-                   MAST::BendingOperator **bend,
-                   const std::vector<libMesh::Point>* pts) {
-    
-    // first call the parent elements initialization routine
-    _init_fe_and_qrule(e, fe, qrule, pts);
-    
-    
-    // now, initialize the bending operator
-    MAST::BendingOperatorType bending_model =
-    _property.bending_model(e, (*fe)->get_fe_type());
-    
-    if (pts)
-        (*bend) = MAST::build_bending_operator(bending_model,
-                                               *this,
-                                               *pts).release();
-    else
-        (*bend) = MAST::build_bending_operator(bending_model,
-                                               *this,
-                                               (*qrule)->get_points()).release();
-}

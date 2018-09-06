@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -39,10 +39,10 @@ namespace MAST {
         }
         
         
-      virtual libMesh::UniquePtr<libMesh::FunctionBase<Real> > clone () const {
+      virtual std::unique_ptr<libMesh::FunctionBase<Real> > clone () const {
             
 	libMesh::FunctionBase<Real> *rval = new MAST::StructuralModes(_mode);
-	return libMesh::UniquePtr<libMesh::FunctionBase<Real> >(rval);
+	return std::unique_ptr<libMesh::FunctionBase<Real> >(rval);
         }
         
         // this should not get called

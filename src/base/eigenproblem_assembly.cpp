@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -24,19 +24,19 @@
 #include "base/elem_base.h"
 #include "base/physics_discipline_base.h"
 #include "numerics/utility.h"
+#include "base/eigenproblem_assembly_elem_operations.h"
 
 // libMesh includes
 #include "libmesh/numeric_vector.h"
 #include "libmesh/sparse_matrix.h"
 #include "libmesh/dof_map.h"
-#include "libmesh/parameter_vector.h"
 
 
 
 MAST::EigenproblemAssembly::EigenproblemAssembly():
 MAST::AssemblyBase(),
-_base_sol(nullptr),
-_base_sol_sensitivity(nullptr) {
+_base_sol                (nullptr),
+_base_sol_sensitivity    (nullptr) {
     
 }
 
@@ -44,64 +44,6 @@ _base_sol_sensitivity(nullptr) {
 
 MAST::EigenproblemAssembly::~EigenproblemAssembly() {
     
-}
-
-
-
-
-void
-MAST::EigenproblemAssembly::
-attach_discipline_and_system(MAST::PhysicsDisciplineBase &discipline,
-                             MAST::SystemInitialization &system) {
-    
-    libmesh_assert_msg(!_discipline && !_system,
-                       "Error: Assembly should be cleared before attaching System.");
-    
-    _discipline = &discipline;
-    _system     = &system;
-    
-    // now attach this to the system
-    MAST::NonlinearSystem& eigen_sys =
-    dynamic_cast<MAST::NonlinearSystem&>(system.system());
-    
-    eigen_sys.attach_eigenproblem_assemble_object(*this);
-}
-
-
-
-
-
-void
-MAST::EigenproblemAssembly::reattach_to_system() {
-    
-    libmesh_assert(_discipline);
-    libmesh_assert(_system);
-    
-    // now attach this to the system
-    MAST::NonlinearSystem& eigen_sys =
-    dynamic_cast<MAST::NonlinearSystem&>(_system->system());
-    
-    eigen_sys.attach_eigenproblem_assemble_object(*this);
-}
-
-
-
-void
-MAST::EigenproblemAssembly::
-clear_discipline_and_system( ) {
-    
-    if (_system && _discipline) {
-
-        MAST::NonlinearSystem& sys =
-        dynamic_cast<MAST::NonlinearSystem&>(_system->system());
-        
-        sys.reset_eigenproblem_assemble_object();
-    }
-    
-    _discipline           = nullptr;
-    _system               = nullptr;
-    _base_sol             = nullptr;
-    _base_sol_sensitivity = nullptr;
 }
 
 
@@ -146,6 +88,10 @@ MAST::EigenproblemAssembly::
 eigenproblem_assemble(libMesh::SparseMatrix<Real>* A,
                       libMesh::SparseMatrix<Real>* B) {
     
+    libmesh_assert(_system);
+    libmesh_assert(_discipline);
+    libmesh_assert(_elem_ops);
+
     MAST::NonlinearSystem& eigen_sys =
     dynamic_cast<MAST::NonlinearSystem&>(_system->system());
     
@@ -158,11 +104,11 @@ eigenproblem_assemble(libMesh::SparseMatrix<Real>* A,
     
 
     // build localized solutions if needed
-    std::auto_ptr<libMesh::NumericVector<Real> >
+    std::unique_ptr<libMesh::NumericVector<Real> >
     localized_solution;
     
     if (_base_sol)
-        localized_solution.reset(_build_localized_vector(eigen_sys,
+        localized_solution.reset(build_localized_vector(eigen_sys,
                                                          *_base_sol).release());
 
     
@@ -172,12 +118,15 @@ eigenproblem_assemble(libMesh::SparseMatrix<Real>* A,
     RealMatrixX mat_A, mat_B;
     std::vector<libMesh::dof_id_type> dof_indices;
     const libMesh::DofMap& dof_map = eigen_sys.get_dof_map();
-    std::auto_ptr<MAST::ElementBase> physics_elem;
+    
     
     libMesh::MeshBase::const_element_iterator       el     =
     eigen_sys.get_mesh().active_local_elements_begin();
     const libMesh::MeshBase::const_element_iterator end_el =
     eigen_sys.get_mesh().active_local_elements_end();
+    
+    MAST::EigenproblemAssemblyElemOperations
+    &ops = dynamic_cast<MAST::EigenproblemAssemblyElemOperations&>(*_elem_ops);
     
     for ( ; el != end_el; ++el) {
         
@@ -185,7 +134,7 @@ eigenproblem_assemble(libMesh::SparseMatrix<Real>* A,
         
         dof_map.dof_indices (elem, dof_indices);
         
-        physics_elem.reset(_build_elem(*elem).release());
+        ops.init(*elem);
         
         // get the solution
         unsigned int ndofs = (unsigned int)dof_indices.size();
@@ -199,9 +148,9 @@ eigenproblem_assemble(libMesh::SparseMatrix<Real>* A,
                 sol(i) = (*localized_solution)(dof_indices[i]);
         }
         
-        physics_elem->set_solution(sol);
-        
-        _elem_calculations(*physics_elem, mat_A, mat_B);
+        ops.set_elem_solution(sol);
+        ops.elem_calculations(mat_A, mat_B);
+        ops.clear_elem();
 
         // copy to the libMesh matrix for further processing
         DenseRealMatrix A, B;
@@ -216,7 +165,9 @@ eigenproblem_assemble(libMesh::SparseMatrix<Real>* A,
         matrix_B.add_matrix (B, dof_indices); // load dependent
     }
     
-    
+    // finalize the data structures
+    A->close();
+    B->close();
 }
 
 
@@ -225,16 +176,16 @@ eigenproblem_assemble(libMesh::SparseMatrix<Real>* A,
 
 bool
 MAST::EigenproblemAssembly::
-eigenproblem_sensitivity_assemble(const libMesh::ParameterVector& parameters,
-                                  const unsigned int i,
+eigenproblem_sensitivity_assemble(const MAST::FunctionBase& f,
                                   libMesh::SparseMatrix<Real>* sensitivity_A,
                                   libMesh::SparseMatrix<Real>* sensitivity_B) {
-    
+
+    libmesh_assert(_system);
+    libmesh_assert(_discipline);
+    libmesh_assert(_elem_ops);
+
     MAST::NonlinearSystem& eigen_sys =
     dynamic_cast<MAST::NonlinearSystem&>(_system->system());
-
-    // zero the solution since it is not needed for eigenproblem
-    eigen_sys.solution->zero();
     
     libMesh::SparseMatrix<Real>&  matrix_A = *sensitivity_A;
     libMesh::SparseMatrix<Real>&  matrix_B = *sensitivity_B;
@@ -243,18 +194,18 @@ eigenproblem_sensitivity_assemble(const libMesh::ParameterVector& parameters,
     matrix_B.zero();
     
     // build localized solutions if needed
-    std::auto_ptr<libMesh::NumericVector<Real> >
+    std::unique_ptr<libMesh::NumericVector<Real> >
     localized_solution,
     localized_solution_sens;
     
     if (_base_sol) {
         
-        localized_solution.reset(_build_localized_vector(eigen_sys,
+        localized_solution.reset(build_localized_vector(eigen_sys,
                                                          *_base_sol).release());
         
         // make sure that the sensitivity was also provided
         libmesh_assert(_base_sol_sensitivity);
-        localized_solution_sens.reset(_build_localized_vector(eigen_sys,
+        localized_solution_sens.reset(build_localized_vector(eigen_sys,
                                                               *_base_sol_sensitivity).release());
     }
     
@@ -265,20 +216,23 @@ eigenproblem_sensitivity_assemble(const libMesh::ParameterVector& parameters,
     RealMatrixX mat_A, mat_B;
     std::vector<libMesh::dof_id_type> dof_indices;
     const libMesh::DofMap& dof_map = eigen_sys.get_dof_map();
-    std::auto_ptr<MAST::ElementBase> physics_elem;
+    
     
     libMesh::MeshBase::const_element_iterator       el     =
     eigen_sys.get_mesh().active_local_elements_begin();
     const libMesh::MeshBase::const_element_iterator end_el =
     eigen_sys.get_mesh().active_local_elements_end();
     
+    MAST::EigenproblemAssemblyElemOperations
+    &ops = dynamic_cast<MAST::EigenproblemAssemblyElemOperations&>(*_elem_ops);
+
     for ( ; el != end_el; ++el) {
         
         const libMesh::Elem* elem = *el;
         
         dof_map.dof_indices (elem, dof_indices);
         
-        physics_elem.reset(_build_elem(*elem).release());
+        ops.init(*elem);
         
         // get the solution
         unsigned int ndofs = (unsigned int)dof_indices.size();
@@ -294,7 +248,7 @@ eigenproblem_sensitivity_assemble(const libMesh::ParameterVector& parameters,
                 sol(i) = (*localized_solution)(dof_indices[i]);
         }
         
-        physics_elem->set_solution(sol);
+        ops.set_elem_solution(sol);
         
         // set the element's base solution sensitivity
         if (_base_sol) {
@@ -303,12 +257,12 @@ eigenproblem_sensitivity_assemble(const libMesh::ParameterVector& parameters,
                 sol(i) = (*localized_solution_sens)(dof_indices[i]);
         }
         
-        physics_elem->set_solution(sol, true);
-        
-        // tell the element about the sensitivity parameter
-        physics_elem->sensitivity_param = _discipline->get_parameter(&(parameters[i].get()));
-        
-        _elem_sensitivity_calculations(*physics_elem, mat_A, mat_B);
+        ops.set_elem_solution_sensitivity(sol);
+        ops.elem_sensitivity_calculations(f,
+                                          _base_sol!=nullptr,
+                                          mat_A,
+                                          mat_B);
+        ops.clear_elem();
 
         // copy to the libMesh matrix for further processing
         DenseRealMatrix A, B;
@@ -323,6 +277,12 @@ eigenproblem_sensitivity_assemble(const libMesh::ParameterVector& parameters,
         matrix_B.add_matrix (B, dof_indices);
     }
     
+    // finalize the data structures
+    sensitivity_A->close();
+    sensitivity_B->close();
+    
     return true;
 }
+
+
 

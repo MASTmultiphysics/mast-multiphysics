@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -21,6 +21,7 @@
 #include "base/physics_discipline_base.h"
 #include "base/system_initialization.h"
 #include "base/parameter.h"
+#include "base/nonlinear_system.h"
 #include "boundary_condition/dirichlet_boundary_condition.h"
 
 // libMesh includes
@@ -101,20 +102,6 @@ MAST::PhysicsDisciplineBase::add_volume_load(libMesh::subdomain_id_type sid,
 
 
 
-void
-MAST::PhysicsDisciplineBase::add_volume_output(libMesh::subdomain_id_type sid,
-                                               MAST::OutputFunctionBase& output) {
-    std::pair<MAST::VolumeOutputMapType::iterator,
-    MAST::VolumeOutputMapType::iterator> it =
-    _vol_output_map.equal_range(sid);
-    
-    for ( ; it.first != it.second; it.first++)
-        libmesh_assert(it.first->second != &output);
-    
-    _vol_output_map.insert(MAST::VolumeOutputMapType::value_type(sid, &output));
-}
-
-
 
 void
 MAST::PhysicsDisciplineBase::add_point_load(MAST::PointLoadCondition& load) {
@@ -158,10 +145,10 @@ set_property_for_subdomain(const libMesh::subdomain_id_type sid,
 
 
 const MAST::ElementPropertyCardBase&
-MAST::PhysicsDisciplineBase::get_property_card(const unsigned int i) const {
+MAST::PhysicsDisciplineBase::get_property_card(const unsigned int sid) const {
     
     MAST::PropertyCardMapType::const_iterator
-    elem_p_it = _element_property.find(i);
+    elem_p_it = _element_property.find(sid);
     libmesh_assert(elem_p_it != _element_property.end());
     
     return *elem_p_it->second;
@@ -182,55 +169,8 @@ MAST::PhysicsDisciplineBase::get_property_card(const libMesh::Elem& elem) const 
 
 
 void
-MAST::PhysicsDisciplineBase::add_parameter(MAST::Parameter& f) {
-    
-    Real* par = f.ptr();
-    // make sure it does not already exist in the map
-    libmesh_assert(!_parameter_map.count(par));
-    
-    // now add this to the map
-    bool insert_success = _parameter_map.insert
-    (std::map<const Real*, MAST::FunctionBase*>::value_type(par, &f)).second;
-    
-    libmesh_assert(insert_success);
-}
-
-
-
-
-void
-MAST::PhysicsDisciplineBase::remove_parameter(MAST::Parameter& f) {
-    
-    // now add this to the map
-    std::map<const Real*, const MAST::FunctionBase*>::iterator
-    it = _parameter_map.find(f.ptr());
-    
-    if (it != _parameter_map.end())
-        _parameter_map.erase(it);
-}
-
-
-
-
-const MAST::FunctionBase*
-MAST::PhysicsDisciplineBase::get_parameter(const Real* par) const {
-    // make sure valid values are given
-    libmesh_assert(par);
-    
-    std::map<const Real*, const MAST::FunctionBase*>::const_iterator
-    it = _parameter_map.find(par);
-    
-    // make sure it does not already exist in the map
-    libmesh_assert(it != _parameter_map.end());
-    
-    return it->second;
-}
-
-
-
-void
 MAST::PhysicsDisciplineBase::
-init_system_dirichlet_bc(libMesh::System& sys) const {
+init_system_dirichlet_bc(MAST::NonlinearSystem& sys) const {
     
     
     // iterate over all the dirichlet boundary conditions and add them
@@ -246,7 +186,7 @@ init_system_dirichlet_bc(libMesh::System& sys) const {
 
 void
 MAST::PhysicsDisciplineBase::
-clear_system_dirichlet_bc(libMesh::System& sys) const {
+clear_system_dirichlet_bc(MAST::NonlinearSystem& sys) const {
     
     // iterate over all the dirichlet boundary conditions and add them
     // to the system
@@ -326,11 +266,11 @@ get_system_dirichlet_bc_dofs(libMesh::System& sys,
         // boundary condition is applied only on sides with no neighbors
         // and if the side's boundary id has a boundary condition tag on it
         for (unsigned int s=0; s<elem->n_sides(); s++)
-            if ((*el)->neighbor(s) == nullptr &&
+            if ((*el)->neighbor_ptr(s) == nullptr &&
                 mesh.boundary_info->n_boundary_ids(elem, s)) {
                 
-                std::vector<libMesh::boundary_id_type>
-                bc_ids = mesh.boundary_info->boundary_ids(elem, s);
+                std::vector<libMesh::boundary_id_type> bc_ids;
+                mesh.boundary_info->boundary_ids(elem, s, bc_ids);
                 
                 for (unsigned int i_bid=0; i_bid<bc_ids.size(); i_bid++)
                     if (constrained_vars_map.count(bc_ids[i_bid])) {

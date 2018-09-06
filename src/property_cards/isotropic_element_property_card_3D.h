@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -101,40 +101,40 @@ namespace MAST
         virtual bool depends_on(const MAST::FunctionBase& f) const;
 
         
-        virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+        virtual std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
         stiffness_A_matrix(const MAST::ElementBase& e) const;
         
-        virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+        virtual std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
         stiffness_B_matrix(const MAST::ElementBase& e) const;
         
-        virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+        virtual std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
         stiffness_D_matrix(const MAST::ElementBase& e) const;
         
-        virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+        virtual std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
         damping_matrix(const MAST::ElementBase& e) const;
         
-        virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+        virtual std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
         inertia_matrix(const MAST::ElementBase& e) const;
         
-        virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+        virtual std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
         thermal_expansion_A_matrix(const MAST::ElementBase& e) const;
         
-        virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+        virtual std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
         thermal_expansion_B_matrix(const MAST::ElementBase& e) const;
         
-        virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+        virtual std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
         transverse_shear_stiffness_matrix(const MAST::ElementBase& e) const;
         
-        virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+        virtual std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
         prestress_A_matrix( MAST::ElementBase& e) const;
         
-        virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+        virtual std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
         prestress_B_matrix( MAST::ElementBase& e) const;
         
-        virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+        virtual std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
         thermal_conductance_matrix(const MAST::ElementBase& e) const;
         
-        virtual std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+        virtual std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
         thermal_capacitance_matrix(const MAST::ElementBase& e) const;
         
     protected:

@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -21,7 +21,6 @@
 #define __mast__conservative_fluid_system_initialization_h__
 
 // MAST includes
-#include "base/mast_data_types.h"
 #include "base/system_initialization.h"
 
 
@@ -37,13 +36,6 @@ namespace MAST {
                                               const unsigned int dim);
         
         virtual ~ConservativeFluidSystemInitialization();
-        
-
-        /*!
-         *    initializes the FE solution vector to the conservative 
-         *    solution provided in \par conservative_sol.
-         */
-        void initialize_solution(const RealVectorX& conservative_sol);
         
         
         /*!

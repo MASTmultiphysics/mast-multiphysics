@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -35,7 +35,7 @@ MAST::DirichletBoundaryCondition::init(const libMesh::boundary_id_type bid,
     std::set<libMesh::boundary_id_type> bid_set;
     bid_set.insert(bid);
     
-    std::auto_ptr<libMesh::FunctionBase<Real> > function;
+    std::unique_ptr<libMesh::FunctionBase<Real> > function;
 
     // if the function was not give, then assume it to be zero function
     function.reset(new libMesh::ZeroFunction<Real>);

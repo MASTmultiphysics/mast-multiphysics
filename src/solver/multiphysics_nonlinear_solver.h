@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -39,7 +39,7 @@
 namespace MAST {
 
     // Forward declerations
-    class NonlinearImplicitAssembly;
+    class TransientAssembly;
     
     
     class MultiphysicsNonlinearSolverBase:
@@ -85,7 +85,7 @@ namespace MAST {
          *   assembly.
          */
         void set_system_assembly(unsigned int i,
-                                 MAST::NonlinearImplicitAssembly& assembly);
+                                 MAST::TransientAssembly& assembly);
 
 
         
@@ -93,7 +93,7 @@ namespace MAST {
          *   @returns a reference to the n^th discipline of this multiphysics
          *   system assembly
          */
-        MAST::NonlinearImplicitAssembly& get_system_assembly(unsigned int i);
+        MAST::TransientAssembly& get_system_assembly(unsigned int i);
 
         
         
@@ -200,7 +200,7 @@ namespace MAST {
          *   vector of assembly objects for each discipline in this 
          *   multiphysics system
          */
-        std::vector<MAST::NonlinearImplicitAssembly*>  _discipline_assembly;
+        std::vector<MAST::TransientAssembly*>  _discipline_assembly;
 
         std::vector<IS>  _is;
         std::vector<Mat> _sub_mats; // row-major ordering

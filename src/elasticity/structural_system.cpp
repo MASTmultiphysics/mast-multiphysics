@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -26,7 +26,6 @@
 
 // libMesh includes
 #include "libmesh/numeric_vector.h"
-#include "libmesh/parameter_vector.h"
 #include "libmesh/equation_systems.h"
 #include "libmesh/sparse_matrix.h"
 #include "libmesh/eigen_solver.h"
@@ -83,7 +82,8 @@ MAST::StructuralSystem::clear() {
 
 
 void
-MAST::StructuralSystem::solve() {
+MAST::StructuralSystem::solve(MAST::AssemblyElemOperations& elem_ops,
+                              MAST::AssemblyBase& assembly) {
 
     // the system solves for both the structural displacement and
     // load update using a constraint definition
@@ -144,7 +144,7 @@ MAST::StructuralSystem::solve() {
     _dl = 1.;
     
     // these vectors will be used for solution updates here
-    std::auto_ptr<libMesh::NumericVector<Real> >
+    std::unique_ptr<libMesh::NumericVector<Real> >
     x_old        (this->solution->zero_clone().release()),  // to store solution after previous iteration
     delta_x0     (this->solution->zero_clone().release()),  // displacement update for this load step
     dx           (this->solution->zero_clone().release()),  // updates to delta_x
@@ -173,7 +173,7 @@ MAST::StructuralSystem::solve() {
         // delta_x1 = x - x0
         //       dx = delta_x1 - delta_x0
         // where delta_x0 is the delta_x at the end of the previous iterate
-        MAST::NonlinearSystem::solve();
+        MAST::NonlinearSystem::solve(elem_ops, assembly);
         
         // if the total load steps have been taken to the max load, then
         // quit
@@ -191,10 +191,7 @@ MAST::StructuralSystem::solve() {
         
         
         // next solve the displacement update due to load update
-        libMesh::ParameterVector parameters;
-        parameters.resize(1);
-        parameters[0]  = _load_param->ptr();
-        MAST::NonlinearSystem::sensitivity_solve(parameters);
+        MAST::NonlinearSystem::sensitivity_solve(elem_ops, assembly, *_load_param);
         *dx_load = this->get_sensitivity_solution();
         
         // now, calculate the load update using the constraint definition.

@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -17,65 +17,56 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#ifndef __mast__structural_modal_eigenproblem_assembly__
-#define __mast__structural_modal_eigenproblem_assembly__
+#ifndef __mast__structural_modal_eigenproblem_assembly_elem_operations_h__
+#define __mast__structural_modal_eigenproblem_assembly_elem_operations_h__
 
 // MAST includes
-#include "base/eigenproblem_assembly.h"
+#include "base/eigenproblem_assembly_elem_operations.h"
 
 
 namespace MAST {
     
+    // Forward declerations
+    class StructuralAssembly;
     
-    class StructuralModalEigenproblemAssembly:
-    public MAST::EigenproblemAssembly {
+    class StructuralModalEigenproblemAssemblyElemOperations:
+    public MAST::EigenproblemAssemblyElemOperations {
     public:
         
         /*!
          *   constructor associates the eigen system with this assembly object
          */
-        StructuralModalEigenproblemAssembly();
+        StructuralModalEigenproblemAssemblyElemOperations();
         
         /*!
          *   destructor resets the association with the eigen system
          *   from this assembly object
          */
-        virtual ~StructuralModalEigenproblemAssembly();
+        virtual ~StructuralModalEigenproblemAssemblyElemOperations();
 
+                
+        /*!
+         *   attached the incompatible solution object
+         */
+        void attach_incompatible_solution_object(MAST::StructuralAssembly& str_assembly);
+        
         
         /*!
-         *   assembles the global A and B matrices for the modal 
-         *   eigenvalue problem
+         *   clear the incompatible solution object
+         */
+        void clear_incompatible_solution_object();
+
+        /*!
+         *   sets the element solution(s) before calculations
          */
         virtual void
-        eigenproblem_assemble(libMesh::SparseMatrix<Real>* A,
-                              libMesh::SparseMatrix<Real>* B);
-        
-        /**
-         * Assembly function.  This function will be called
-         * to assemble the sensitivity of eigenproblem matrices.
-         * The method provides dA/dp_i and dB/dpi for \par i ^th parameter
-         * in the vector \par parameters.
-         *
-         * If the routine is not able to provide sensitivity for this parameter,
-         * then it should return false, and the system will attempt to use
-         * finite differencing.
-         */
-        virtual bool
-        eigenproblem_sensitivity_assemble (const libMesh::ParameterVector& parameters,
-                                           const unsigned int i,
-                                           libMesh::SparseMatrix<Real>* sensitivity_A,
-                                           libMesh::SparseMatrix<Real>* sensitivity_B);
-        
+        set_elem_solution(const RealVectorX& sol);
 
-    protected:
-        
         /*!
-         *   @returns a smart-pointer to a newly created element for
-         *   calculation of element quantities.
+         *   sets the element solution sensitivity before calculations
          */
-        virtual std::auto_ptr<MAST::ElementBase>
-        _build_elem(const libMesh::Elem& elem);
+        virtual void
+        set_elem_solution_sensitivity(const RealVectorX& sol);
 
         /*!
          *   performs the element calculations over \par elem, and returns
@@ -83,9 +74,8 @@ namespace MAST {
          *   \f$ A x = \lambda B x \f$.
          */
         virtual void
-        _elem_calculations(MAST::ElementBase& elem,
-                           RealMatrixX& mat_A,
-                           RealMatrixX& mat_B);
+        elem_calculations(RealMatrixX& mat_A,
+                          RealMatrixX& mat_B);
         
         /*!
          *   performs the element sensitivity calculations over \par elem,
@@ -93,16 +83,53 @@ namespace MAST {
          *   \f$ A x = \lambda B x \f$.
          */
         virtual void
-        _elem_sensitivity_calculations(MAST::ElementBase& elem,
-                                       RealMatrixX& mat_A,
-                                       RealMatrixX& mat_B);
+        elem_sensitivity_calculations(const MAST::FunctionBase& f,
+                                      bool base_sol,
+                                      RealMatrixX& mat_A,
+                                      RealMatrixX& mat_B);
+
+        /*!
+         *   performs the element topology sensitivity calculations over \par elem.
+         */
+        virtual void
+        elem_topology_sensitivity_calculations(const MAST::FunctionBase& f,
+                                               bool base_sol,
+                                               const MAST::LevelSetIntersection& intersect,
+                                               const MAST::FieldFunction<RealVectorX>& vel,
+                                               RealMatrixX& mat_A,
+                                               RealMatrixX& mat_B);
+
+        /*!
+         *   initializes the object for the geometric element \p elem. This
+         *   expects the object to be in a cleared state, so the user should
+         *   call \p clear_elem() between successive initializations.
+         */
+        virtual void
+        init(const libMesh::Elem& elem);
+
+        /*!
+         *   some simulations frequently deal with 1D/2D elements in 3D space,
+         *   which requires use of MAST::LocalElemFE.
+         */
+        virtual bool
+        if_use_local_elem() const {
+            
+            return true;
+        }
         
         /*!
-         *   map of local incompatible mode solution per 3D elements
+         *   sets additional data for local elem FE.
          */
-        std::map<const libMesh::Elem*, RealVectorX> _incompatible_sol;
+        virtual void
+        set_local_fe_data(MAST::LocalElemFE& fe,
+                          const libMesh::Elem& e) const;
+
+    protected:
+        
+        
+        MAST::StructuralAssembly* _incompatible_sol_assembly;
     };
     
 }
 
-#endif // __mast__structural_modal_eigenproblem_assembly__
+#endif // __mast__structural_modal_eigenproblem_assembly_elem_operations_h__

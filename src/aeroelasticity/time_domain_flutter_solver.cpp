@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -440,7 +440,7 @@ MAST::TimeDomainFlutterSolver::scan_for_roots() {
         MAST::FlutterSolutionBase* prev_sol = nullptr;
         for (unsigned int i=0; i<_n_V_divs+1; i++) {
             current_V = V_vals[i];
-            std::auto_ptr<MAST::TimeDomainFlutterSolution>
+            std::unique_ptr<MAST::TimeDomainFlutterSolution>
             sol = _analyze(current_V, prev_sol);
             
             prev_sol = sol.get();
@@ -522,7 +522,7 @@ MAST::TimeDomainFlutterSolver::print_sorted_roots() {
         << "V      = " << std::setw(15) << std::setprecision(15) << root.V << std::endl
         << "g      = " << std::setw(15) << std::real(root.root) << std::endl
         << "omega  = " << std::setw(15) << std::imag(root.root) << std::endl
-        << std::setprecision(prec) // set the precision to the default value
+        << std::setprecision((int) prec) // set the precision to the default value
         << "Modal Participation : " << std::endl ;
         for (unsigned int j=0; j<nvals; j++)
             *_output
@@ -636,7 +636,7 @@ _bisection_search(const std::pair<MAST::FlutterSolutionBase*,
 
 
 
-std::auto_ptr<MAST::TimeDomainFlutterSolution>
+std::unique_ptr<MAST::TimeDomainFlutterSolution>
 MAST::TimeDomainFlutterSolver::_analyze(const Real v_ref,
                                        const MAST::FlutterSolutionBase* prev_sol) {
     
@@ -666,7 +666,7 @@ MAST::TimeDomainFlutterSolver::_analyze(const Real v_ref,
     << " ====================================================" << std::endl;
     
     
-    return std::auto_ptr<MAST::TimeDomainFlutterSolution> (root);
+    return std::unique_ptr<MAST::TimeDomainFlutterSolution> (root);
 }
 
 
@@ -707,7 +707,6 @@ MAST::TimeDomainFlutterSolver::_initialize_matrices(Real U_inf,
         << "***  Performing Steady State Solve ***" << std::endl;
         
         _steady_solver->solve();
-        _assembly->reattach_to_system();
     }
     
     
@@ -752,8 +751,7 @@ MAST::TimeDomainFlutterSolver::_initialize_matrices(Real U_inf,
 
 void
 MAST::TimeDomainFlutterSolver::
-_initialize_matrix_sensitivity_for_param(const libMesh::ParameterVector& params,
-                                         const unsigned int i,
+_initialize_matrix_sensitivity_for_param(const MAST::FunctionBase& f,
                                          const libMesh::NumericVector<Real>& dXdp,
                                          Real U_inf,
                                          RealMatrixX& A,
@@ -798,7 +796,7 @@ _initialize_matrix_sensitivity_for_param(const libMesh::ParameterVector& params,
     
     _assembly->set_base_solution(dXdp, true);
     _assembly->assemble_reduced_order_quantity_sensitivity
-    (params, i, *_basis_vectors, qty_map);
+    (f, *_basis_vectors, qty_map);
     _assembly->clear_base_solution(true);
     
     
@@ -992,8 +990,7 @@ MAST::TimeDomainFlutterSolver::_identify_crossover_points() {
 void
 MAST::TimeDomainFlutterSolver::
 calculate_sensitivity(MAST::FlutterRootBase& root,
-                      const libMesh::ParameterVector& params,
-                      const unsigned int i,
+                      const MAST::FunctionBase& f,
                       libMesh::NumericVector<Real>* dXdp,
                       libMesh::NumericVector<Real>* dXdV) {
     
@@ -1025,7 +1022,7 @@ calculate_sensitivity(MAST::FlutterRootBase& root,
     // if the sensitivity of the solution was provided, then use that.
     // otherwise pass a zero vector
     libMesh::NumericVector<Real>* sol_sens = dXdp;
-    std::auto_ptr<libMesh::NumericVector<Real> > zero_sol_sens;
+    std::unique_ptr<libMesh::NumericVector<Real> > zero_sol_sens;
     if (!dXdp) {
         zero_sol_sens.reset(_assembly->system().solution->zero_clone().release());
         sol_sens = zero_sol_sens.get();
@@ -1034,8 +1031,7 @@ calculate_sensitivity(MAST::FlutterRootBase& root,
         sol_sens = dXdp;
     
     // calculate the eigenproblem sensitivity
-    _initialize_matrix_sensitivity_for_param(params,
-                                             i,
+    _initialize_matrix_sensitivity_for_param(f,
                                              *sol_sens,
                                              root.V,
                                              mat_A_sens,
@@ -1057,11 +1053,6 @@ calculate_sensitivity(MAST::FlutterRootBase& root,
                                     eig*mat_B_sens.cast<Complex>())*root.eig_vec_right)/den;
     
     // next we need the sensitivity of eigenvalue wrt V
-    libMesh::ParameterVector param_V;
-    param_V.resize(1);
-    param_V[0]  =  _velocity_param->ptr();
-
-    
     // identify the sensitivity of solution to be used based on the
     // function arguments
     if (!dXdV) {
@@ -1070,8 +1061,7 @@ calculate_sensitivity(MAST::FlutterRootBase& root,
     else
         sol_sens = dXdV;
     
-    _initialize_matrix_sensitivity_for_param(param_V,
-                                             0,
+    _initialize_matrix_sensitivity_for_param(*_velocity_param,
                                              *sol_sens,
                                              root.V,
                                              mat_A_sens,

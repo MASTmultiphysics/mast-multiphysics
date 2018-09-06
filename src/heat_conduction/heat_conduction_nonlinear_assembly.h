@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -22,66 +22,108 @@
 #define __mast__heat_conduction_nonlinear_assembly__
 
 // MAST includes
-#include "base/nonlinear_implicit_assembly.h"
+#include "base/nonlinear_implicit_assembly_elem_operations.h"
 
 
 namespace MAST {
     
     
-    class HeatConductionNonlinearAssembly:
-    public MAST::NonlinearImplicitAssembly {
+    class HeatConductionNonlinearAssemblyElemOperations:
+    public MAST::NonlinearImplicitAssemblyElemOperations {
         
     public:
         
         /*!
          *   constructor associates this assembly object with the system
          */
-        HeatConductionNonlinearAssembly();
+        HeatConductionNonlinearAssemblyElemOperations();
         
         
         /*!
          *   destructor resets the association of this assembly object with
          *   the system
          */
-        virtual ~HeatConductionNonlinearAssembly();
+        virtual ~HeatConductionNonlinearAssemblyElemOperations();
         
-        
-    protected:
-        
-        /*!
-         *   @returns a smart-pointer to a newly created element for
-         *   calculation of element quantities.
-         */
-        virtual std::auto_ptr<MAST::ElementBase>
-        _build_elem(const libMesh::Elem& elem);
-
         /*!
          *   performs the element calculations over \par elem, and returns
          *   the element vector and matrix quantities in \par mat and
          *   \par vec, respectively. \par if_jac tells the method to also
          *   assemble the Jacobian, in addition to the residual vector.
          */
-        virtual void _elem_calculations(MAST::ElementBase& elem,
-                                        bool if_jac,
-                                        RealVectorX& vec,
-                                        RealMatrixX& mat);
+        virtual void
+        elem_calculations(bool if_jac,
+                          RealVectorX& vec,
+                          RealMatrixX& mat);
         
         /*!
          *   performs the element sensitivity calculations over \par elem,
          *   and returns the element residual sensitivity in \par vec .
          */
-        virtual void _elem_sensitivity_calculations(MAST::ElementBase& elem,
-                                                    bool if_jac,
-                                                    RealVectorX& vec,
-                                                    RealMatrixX& mat);
+        virtual void
+        elem_sensitivity_calculations(const MAST::FunctionBase& f,
+                                      RealVectorX& vec);
+        
+        /*!
+         *   performs the element shape sensitivity calculations over \par elem,
+         *   and returns the element residual sensitivity in \par vec .
+         */
+        virtual void
+        elem_shape_sensitivity_calculations(const MAST::FunctionBase& f,
+                                            RealVectorX& vec) {
+            libmesh_assert(false); // to be implemented
+        }
+        
+        /*!
+         *   performs the element topology sensitivity calculations over \par elem,
+         *   and returns the element residual sensitivity in \par vec .
+         */
+        virtual void
+        elem_topology_sensitivity_calculations(const MAST::FunctionBase& f,
+                                               const MAST::LevelSetIntersection& intersect,
+                                               const MAST::FieldFunction<RealVectorX>& vel,
+                                               RealVectorX& vec);
 
         /*!
          *   calculates \f$ d ([J] \{\Delta X\})/ dX  \f$ over \par elem,
          *   and returns the matrix in \par vec .
          */
         virtual void
-        _elem_second_derivative_dot_solution_assembly(MAST::ElementBase& elem,
-                                                      RealMatrixX& mat);
+        elem_second_derivative_dot_solution_assembly(RealMatrixX& mat);
+
+        virtual void
+        elem_linearized_jacobian_solution_product(RealVectorX& vec) {
+            
+            libmesh_assert(false); // not implemented yet.
+        }
+
+        /*!
+         *   initializes the object for the geometric element \p elem. This
+         *   expects the object to be in a cleared state, so the user should
+         *   call \p clear_elem() between successive initializations.
+         */
+        virtual void
+        init(const libMesh::Elem& elem);
+        
+        /*!
+         *   some simulations frequently deal with 1D/2D elements in 3D space,
+         *   which requires use of MAST::LocalElemFE.
+         */
+        virtual bool
+        if_use_local_elem() const {
+            
+            return true;
+        }
+
+        /*!
+         *   sets additional data for local elem FE.
+         */
+        virtual void
+        set_local_fe_data(MAST::LocalElemFE& fe,
+                          const libMesh::Elem& e) const;
+
+    protected:
+        
     };
 }
 

@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -29,6 +29,7 @@
 namespace MAST {
     
     // Forward declerations
+    class BendingOperator1D;
     class BoundaryConditionBase;
     class FEMOperatorMatrix;
     
@@ -38,8 +39,13 @@ namespace MAST {
         
     public:
         StructuralElement1D(MAST::SystemInitialization& sys,
+                            MAST::AssemblyBase& assembly,
                             const libMesh::Elem& elem,
                             const MAST::ElementPropertyCardBase& p);
+        
+        
+        virtual ~StructuralElement1D();
+        
         
         /*!
          *    row dimension of the direct strain matrix, also used for the
@@ -68,10 +74,26 @@ namespace MAST {
          *    Calculates the sensitivity internal force vector and Jacobian due to
          *    strain energy
          */
-        virtual bool internal_residual_sensitivity(bool request_jacobian,
+        virtual bool internal_residual_sensitivity(const MAST::FunctionBase& p,
+                                                   bool request_jacobian,
                                                    RealVectorX& f,
                                                    RealMatrixX& jac);
         
+        /*!
+         *   calculates the term on side \par s:
+         *   \f$ \int_\Gamma a(\delta u, u) v_n ~d\Gamma \f$.
+         *
+         */
+        virtual void
+        internal_residual_boundary_velocity(const MAST::FunctionBase& p,
+                                            const unsigned int s,
+                                            const MAST::FieldFunction<RealVectorX>& vel_f,
+                                            bool request_jacobian,
+                                            RealVectorX& f,
+                                            RealMatrixX& jac) {
+            libmesh_assert(false);
+        }
+
         /*!
          *   calculates d[J]/d{x} . d{x}/dp
          */
@@ -90,7 +112,8 @@ namespace MAST {
          *    Calculates the internal force vector and Jacobian due to
          *    strain energy coming from a prestress
          */
-        virtual bool prestress_residual_sensitivity (bool request_jacobian,
+        virtual bool prestress_residual_sensitivity (const MAST::FunctionBase& p,
+                                                     bool request_jacobian,
                                                      RealVectorX& f,
                                                      RealMatrixX& jac);
         
@@ -102,7 +125,39 @@ namespace MAST {
             return false;
         }
 
+        /*!
+         *    Calculates the stress tensor. If derivative and sensitivity
+         *    with respect to the parameter \p sesitivity_param are calculated
+         *    and provided if the respective flags are true.
+         */
+        virtual bool calculate_stress(bool request_derivative,
+                                      const MAST::FunctionBase* p,
+                                      MAST::StressStrainOutputBase& output);
         
+        /*!
+         *    Calculates the boundary velocity term contributions to the
+         *    sensitivity of stress at the specified boundary of this element.
+         */
+        virtual void
+        calculate_stress_boundary_velocity(const MAST::FunctionBase& p,
+                                           MAST::StressStrainOutputBase& output,
+                                           const unsigned int s,
+                                           const MAST::FieldFunction<RealVectorX>& vel_f) {
+            libmesh_error(); // to be implemented
+        }
+
+        virtual void
+        calculate_stress_temperature_derivative(MAST::FEBase& fe_thermal,
+                                                MAST::StressStrainOutputBase& output) {
+            libmesh_error(); // to be implemented
+        }
+        
+        virtual void
+        thermal_residual_temperature_derivative (const MAST::FEBase& fe_thermal,
+                                                 RealMatrixX& m) {
+            libmesh_error(); // to be implemented
+        }
+
     protected:
         
         
@@ -119,7 +174,8 @@ namespace MAST {
          *    Calculates the force vector and Jacobian due to surface pressure.
          */
         virtual bool
-        surface_pressure_residual_sensitivity(bool request_jacobian,
+        surface_pressure_residual_sensitivity(const MAST::FunctionBase& p,
+                                              bool request_jacobian,
                                               RealVectorX& f,
                                               RealMatrixX& jac,
                                               const unsigned int side,
@@ -138,12 +194,28 @@ namespace MAST {
          *    Calculates the sensitivity of force vector and the Jacobian due to
          *    thermal stresses
          */
-        virtual bool thermal_residual_sensitivity(bool request_jacobian,
+        virtual bool thermal_residual_sensitivity(const MAST::FunctionBase& p,
+                                                  bool request_jacobian,
                                                   RealVectorX& f,
                                                   RealMatrixX& jac,
                                                   MAST::BoundaryConditionBase& bc);
         
         
+        /*!
+         *    Calculates the sensitivity of force vector and Jacobian due to
+         *    thermal stresses. this should be implemented for each element type
+         */
+        virtual void thermal_residual_boundary_velocity(const MAST::FunctionBase& p,
+                                                        const unsigned int s,
+                                                        const MAST::FieldFunction<RealVectorX>& vel_f,
+                                                        MAST::BoundaryConditionBase& bc,
+                                                        bool request_jacobian,
+                                                        RealVectorX& f,
+                                                        RealMatrixX& jac) {
+            
+            libmesh_assert(false); // to be implemented
+        }
+
         /*!
          *    Calculates the force vector and Jacobian due to piston-theory
          *    based surface pressure on the entire element domain.
@@ -166,7 +238,8 @@ namespace MAST {
          *    fluid flow are obtained from the BoundaryConditionBase object.
          */
         virtual bool
-        piston_theory_residual_sensitivity(bool request_jacobian,
+        piston_theory_residual_sensitivity(const MAST::FunctionBase& p,
+                                           bool request_jacobian,
                                            RealVectorX &f,
                                            RealMatrixX& jac_xdot,
                                            RealMatrixX& jac,
@@ -197,7 +270,8 @@ namespace MAST {
          *    The order of the boundary condition and direction of fluid
          *     flow are obtained from the BoundaryConditionBase object.
          */
-        virtual bool piston_theory_residual_sensitivity(bool request_jacobian,
+        virtual bool piston_theory_residual_sensitivity(const MAST::FunctionBase& p,
+                                                        bool request_jacobian,
                                                         RealVectorX &f,
                                                         RealMatrixX& jac_xdot,
                                                         RealMatrixX& jac,
@@ -232,7 +306,8 @@ namespace MAST {
          */
         virtual bool
         linearized_frequency_domain_surface_pressure_residual_sensitivity
-        (bool request_jacobian,
+        (const MAST::FunctionBase& p,
+         bool request_jacobian,
          ComplexVectorX& f,
          ComplexMatrixX& jac,
          const unsigned int side,
@@ -241,23 +316,12 @@ namespace MAST {
             libmesh_error(); // to be implemented
         }
         
-        
-        /*!
-         *    Calculates the stress tensor. If derivative and sensitivity 
-         *    with respect to the parameter \p sesitivity_param are calculated
-         *    and provided if the respective flags are true.
-         */
-        virtual bool calculate_stress(bool request_derivative,
-                                      bool request_sensitivity,
-                                      MAST::OutputFunctionBase& output);
-        
-        
 
         /*!
          *   initialize membrane strain operator matrix
          */
         virtual void initialize_direct_strain_operator(const unsigned int qp,
-                                                       const libMesh::FEBase& fe,
+                                                       const MAST::FEBase& fe,
                                                        MAST::FEMOperatorMatrix& Bmat);
         
         /*!
@@ -268,7 +332,7 @@ namespace MAST {
          */
         virtual void
         initialize_von_karman_strain_operator(const unsigned int qp,
-                                              const libMesh::FEBase& fe,
+                                              const MAST::FEBase& fe,
                                               RealVectorX& vk_strain,
                                               RealMatrixX& vk_dvdxi_mat,
                                               RealMatrixX& vk_dwdxi_mat,
@@ -283,7 +347,7 @@ namespace MAST {
         void
         initialize_von_karman_strain_operator_sensitivity
         (const unsigned int qp,
-         const libMesh::FEBase& fe,
+         const MAST::FEBase& fe,
          RealMatrixX& vk_dvdxi_mat_sens,
          RealMatrixX& vk_dwdxi_mat_sens);
         
@@ -297,13 +361,14 @@ namespace MAST {
                                                   bool if_vk,
                                                   const unsigned int n2,
                                                   const unsigned int qp,
-                                                  const libMesh::FEBase& fe,
+                                                  const MAST::FEBase& fe,
                                                   const std::vector<Real>& JxW,
                                                   bool request_jacobian,
                                                   RealVectorX& local_f,
                                                   RealMatrixX& local_jac,
                                                   MAST::FEMOperatorMatrix& Bmat_mem,
-                                                  MAST::FEMOperatorMatrix& Bmat_bend,
+                                                  MAST::FEMOperatorMatrix& Bmat_bend_v,
+                                                  MAST::FEMOperatorMatrix& Bmat_bend_w,
                                                   MAST::FEMOperatorMatrix& Bmat_v_vk,
                                                   MAST::FEMOperatorMatrix& Bmat_w_vk,
                                                   RealMatrixX& stress,
@@ -324,30 +389,6 @@ namespace MAST {
                                                   RealMatrixX& mat4_2n2);
         
         
-        /*!
-         *   sensitivity of linear part of the geometric stiffness matrix
-         */
-        void _linearized_geometric_stiffness_sensitivity_with_static_solution
-        (const unsigned int n2,
-         const unsigned int qp,
-         const libMesh::FEBase& fe,
-         const std::vector<Real>& JxW,
-         RealMatrixX& local_jac,
-         MAST::FEMOperatorMatrix& Bmat_mem,
-         MAST::FEMOperatorMatrix& Bmat_bend,
-         MAST::FEMOperatorMatrix& Bmat_v_vk,
-         MAST::FEMOperatorMatrix& Bmat_w_vk,
-         RealMatrixX& stress_l,
-         RealMatrixX& vk_dvdxi_mat,
-         RealMatrixX& vk_dwdxi_mat,
-         RealMatrixX& material_A_mat,
-         RealMatrixX& material_B_mat,
-         RealVectorX& vec1_n1,
-         RealVectorX& vec2_n1,
-         RealMatrixX& mat1_n1n2,
-         RealMatrixX& mat2_n2n2,
-         RealMatrixX& mat3);
-
 
         /*!
          *   converts the prestress stress tensor to a vector representation
@@ -360,6 +401,13 @@ namespace MAST {
          */
         void _convert_prestress_B_mat_to_vector(const RealMatrixX& mat,
                                                 RealVectorX& vec) const;
+
+        
+        /*!
+         *    bending operator used for this elmeent
+         */
+        MAST::BendingOperator1D *_bending_operator;
+        
 
     };
 }

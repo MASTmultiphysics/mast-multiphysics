@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -419,7 +419,7 @@ MAST::IsotropicElementProperty3D::ThermalCapacitanceMatrix::derivative (        
 
 
 
-std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::IsotropicElementPropertyCard3D::
 stiffness_A_matrix(const MAST::ElementBase& e) const {
     
@@ -427,45 +427,45 @@ stiffness_A_matrix(const MAST::ElementBase& e) const {
     new MAST::IsotropicElementProperty3D::StiffnessMatrix
     (_material->stiffness_matrix(3));
     
-    return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >(rval);
+    return std::unique_ptr<MAST::FieldFunction<RealMatrixX> >(rval);
 }
 
 
 
-std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::IsotropicElementPropertyCard3D::
 stiffness_B_matrix(const MAST::ElementBase& e) const {
     
     libmesh_assert(false);
     
-    return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >(nullptr);
+    return std::unique_ptr<MAST::FieldFunction<RealMatrixX> >(nullptr);
 }
 
 
 
 
-std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::IsotropicElementPropertyCard3D::
 stiffness_D_matrix(const MAST::ElementBase& e) const {
     
     libmesh_assert(false);
     
-    return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >(nullptr);
+    return std::unique_ptr<MAST::FieldFunction<RealMatrixX> >(nullptr);
 }
 
 
 
-std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::IsotropicElementPropertyCard3D::
 damping_matrix(const MAST::ElementBase& e) const {
     
     libmesh_assert(false);
     
-    return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >(nullptr);
+    return std::unique_ptr<MAST::FieldFunction<RealMatrixX> >(nullptr);
 }
 
 
-std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::IsotropicElementPropertyCard3D::
 inertia_matrix(const MAST::ElementBase& e) const {
     
@@ -473,12 +473,12 @@ inertia_matrix(const MAST::ElementBase& e) const {
     new MAST::IsotropicElementProperty3D::InertiaMatrix
     (_material->inertia_matrix(3));
     
-    return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >(rval);
+    return std::unique_ptr<MAST::FieldFunction<RealMatrixX> >(rval);
 }
 
 
 
-std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::IsotropicElementPropertyCard3D::
 thermal_expansion_A_matrix(const MAST::ElementBase& e) const {
     
@@ -487,11 +487,11 @@ thermal_expansion_A_matrix(const MAST::ElementBase& e) const {
     (_material->stiffness_matrix(3),
      _material->thermal_expansion_matrix(3));
     
-    return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >(rval);
+    return std::unique_ptr<MAST::FieldFunction<RealMatrixX> >(rval);
 }
 
 
-std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::IsotropicElementPropertyCard3D::
 thermal_expansion_B_matrix(const MAST::ElementBase& e) const {
     
@@ -501,37 +501,37 @@ thermal_expansion_B_matrix(const MAST::ElementBase& e) const {
 
 
 
-std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::IsotropicElementPropertyCard3D::
 transverse_shear_stiffness_matrix(const MAST::ElementBase& e) const {
     
     libmesh_assert(false);
     
-    return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >(nullptr);
+    return std::unique_ptr<MAST::FieldFunction<RealMatrixX> >(nullptr);
 }
 
 
-std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::IsotropicElementPropertyCard3D::
 prestress_A_matrix( MAST::ElementBase& e) const {
     
     libmesh_assert(false);
     
-    return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >(nullptr);
+    return std::unique_ptr<MAST::FieldFunction<RealMatrixX> >(nullptr);
 }
 
 
-std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::IsotropicElementPropertyCard3D::
 prestress_B_matrix( MAST::ElementBase& e) const {
     
     libmesh_assert(false);
     
-    return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >(nullptr);
+    return std::unique_ptr<MAST::FieldFunction<RealMatrixX> >(nullptr);
 }
 
 
-std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::IsotropicElementPropertyCard3D::
 thermal_conductance_matrix(const MAST::ElementBase& e) const {
     
@@ -539,11 +539,11 @@ thermal_conductance_matrix(const MAST::ElementBase& e) const {
     new MAST::IsotropicElementProperty3D::ThermalConductanceMatrix
     (_material->conductance_matrix(3));
     
-    return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >(rval);
+    return std::unique_ptr<MAST::FieldFunction<RealMatrixX> >(rval);
 }
 
 
-std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::IsotropicElementPropertyCard3D::
 thermal_capacitance_matrix(const MAST::ElementBase& e) const {
     
@@ -551,7 +551,7 @@ thermal_capacitance_matrix(const MAST::ElementBase& e) const {
     new MAST::IsotropicElementProperty3D::ThermalCapacitanceMatrix
     (_material->capacitance_matrix(3));
     
-    return std::auto_ptr<MAST::FieldFunction<RealMatrixX> >(rval);
+    return std::unique_ptr<MAST::FieldFunction<RealMatrixX> >(rval);
 }
 
 

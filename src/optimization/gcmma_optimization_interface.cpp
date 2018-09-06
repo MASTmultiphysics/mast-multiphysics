@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -34,13 +34,15 @@ MAST::OptimizationInterface() {
 void
 MAST::GCMMAOptimizationInterface::optimize() {
 #if MAST_ENABLE_GCMMA == 1
+
+    // make sure that all processes have the same problem setup
+    _feval->sanitize_parallel();
     
     int
     N                  = _feval->n_vars(),
     M                  = _feval->n_eq() + _feval->n_ineq(),
     n_rel_change_iters = _feval->n_iters_relative_change();
     
-    libmesh_assert_greater(M, 0);
     libmesh_assert_greater(N, 0);
     
     std::vector<Real>  XVAL(N, 0.), XOLD1(N, 0.), XOLD2(N, 0.),
@@ -123,7 +125,7 @@ MAST::GCMMAOptimizationInterface::optimize() {
      C*/
     // _initi(M,N,GEPS,XVAL,XMIN,XMAX,FMAX,A,C);
     // Assumed:  FMAX == A
-    _feval->init_dvar(XVAL, XMIN, XMAX);
+    _feval->_init_dvar_wrapper(XVAL, XMIN, XMAX);
     // set the value of C[i] to be very large numbers
     Real max_x = 0.;
     for (unsigned int i=0; i<N; i++)
@@ -147,12 +149,12 @@ MAST::GCMMAOptimizationInterface::optimize() {
          C  at XVAL. The result should be put in F0VAL,DF0DX,FVAL,DFDX.
          C*/
         std::fill(eval_grads.begin(), eval_grads.end(), true);
-        _feval->evaluate(XVAL,
-                         F0VAL, true, DF0DX,
-                         FVAL, eval_grads, DFDX);
+        _feval->_evaluate_wrapper(XVAL,
+                                  F0VAL, true, DF0DX,
+                                  FVAL, eval_grads, DFDX);
         if (ITER == 1)
             // output the very first iteration
-            _feval->output(0, XVAL, F0VAL, FVAL, true);
+            _feval->_output_wrapper(0, XVAL, F0VAL, FVAL, true);
         
         /*C
          C  RAA0,RAA,XLOW,XUPP,ALFA and BETA are calculated.
@@ -183,9 +185,9 @@ MAST::GCMMAOptimizationInterface::optimize() {
              C  The result should be put in F0NEW and FNEW.
              C*/
             std::fill(eval_grads.begin(), eval_grads.end(), false);
-            _feval->evaluate(XMMA,
-                             F0NEW, false, DF0DX,
-                             FNEW, eval_grads, DFDX);
+            _feval->_evaluate_wrapper(XMMA,
+                                      F0NEW, false, DF0DX,
+                                      FNEW, eval_grads, DFDX);
             
             if (INNER >= INNMAX)
                 inner_terminate = true;
@@ -221,7 +223,7 @@ MAST::GCMMAOptimizationInterface::optimize() {
         /*C
          C  The USER may now write the current solution.
          C*/
-        _feval->output(ITER, XVAL, F0VAL, FVAL, true);
+        _feval->_output_wrapper(ITER, XVAL, F0VAL, FVAL, true);
         f0_iters[(ITE-1)%n_rel_change_iters] = F0VAL;
         
         /*C

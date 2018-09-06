@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -36,6 +36,7 @@
 #include "libmesh/mesh_generation.h"
 #include "libmesh/fe_type.h"
 #include "libmesh/dof_map.h"
+#include "libmesh/parallel_object.h"
 
 
 
@@ -45,8 +46,8 @@ namespace MAST {
     class ConservativeFluidSystemInitialization;
     class ConservativeFluidDiscipline;
     class StructuralSystemInitialization;
-    class StructuralDiscipline;
     class Parameter;
+    class PhysicsDisciplineBase;
     class ConstantFieldFunction;
     class IsotropicMaterialPropertyCard;
     class Solid2DSectionElementPropertyCard;
@@ -64,10 +65,11 @@ namespace MAST {
     class AugmentGhostElementSendListObj;
     
     
-    struct PlateFlagEulerFSIFlutterAnalysis {
+    struct PlateFlagEulerFSIFlutterAnalysis:
+    public libMesh::ParallelObject {
         
         
-        PlateFlagEulerFSIFlutterAnalysis();
+        PlateFlagEulerFSIFlutterAnalysis(const libMesh::Parallel::Communicator& comm_in);
         
         
         ~PlateFlagEulerFSIFlutterAnalysis();
@@ -120,7 +122,7 @@ namespace MAST {
         
         // initialize the system to the right set of variables
         MAST::StructuralSystemInitialization*    _structural_sys_init;
-        MAST::StructuralDiscipline*              _structural_discipline;
+        MAST::PhysicsDisciplineBase*              _structural_discipline;
         
         
         // initialize the system to the right set of variables

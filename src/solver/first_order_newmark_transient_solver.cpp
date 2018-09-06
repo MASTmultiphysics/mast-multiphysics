@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -19,8 +19,9 @@
 
 // MAST includes
 #include "solver/first_order_newmark_transient_solver.h"
-#include "base/transient_assembly.h"
+#include "base/transient_assembly_elem_operations.h"
 #include "base/elem_base.h"
+#include "base/system_initialization.h"
 #include "base/nonlinear_system.h"
 
 
@@ -29,8 +30,8 @@
 
 
 MAST::FirstOrderNewmarkTransientSolver::FirstOrderNewmarkTransientSolver():
-MAST::TransientSolverBase(),
-beta(1.)
+MAST::TransientSolverBase(1, 2),
+beta(0.5)
 { }
 
 
@@ -40,32 +41,9 @@ MAST::FirstOrderNewmarkTransientSolver::~FirstOrderNewmarkTransientSolver()
 
 
 void
-MAST::FirstOrderNewmarkTransientSolver::solve() {
-    
-    // make sure that the system has been specified
-    libmesh_assert_msg(_system, "System pointer is nullptr.");
-    
-    // ask the Newton solver to solve for the system solution
-    _system->solve();
-    
-}
-
-
-
-void
-MAST::FirstOrderNewmarkTransientSolver::advance_time_step() {
-    
-    // use the parent class' advance time scheme
-    MAST::TransientSolverBase::advance_time_step();
-}
-
-
-
-void
 MAST::FirstOrderNewmarkTransientSolver::
-_set_element_data(const std::vector<libMesh::dof_id_type>& dof_indices,
-                  const std::vector<libMesh::NumericVector<Real>*>& sols,
-                  MAST::ElementBase &elem){
+set_element_data(const std::vector<libMesh::dof_id_type>& dof_indices,
+                 const std::vector<libMesh::NumericVector<Real>*>& sols) {
     
     libmesh_assert_equal_to(sols.size(), 2);
     
@@ -90,17 +68,16 @@ _set_element_data(const std::vector<libMesh::dof_id_type>& dof_indices,
         vel(i)          = vel_global(dof_indices[i]);
     }
     
-    elem.set_solution(sol);
-    elem.set_velocity(vel);
+    _assembly_ops->set_elem_solution(sol);
+    _assembly_ops->set_elem_velocity(vel);
 }
 
 
 
 void
 MAST::FirstOrderNewmarkTransientSolver::
-_set_element_perturbed_data(const std::vector<libMesh::dof_id_type>& dof_indices,
-                            const std::vector<libMesh::NumericVector<Real>*>& sols,
-                            MAST::ElementBase &elem){
+set_element_sensitivity_data(const std::vector<libMesh::dof_id_type>& dof_indices,
+                             const std::vector<libMesh::NumericVector<Real>*>& sols) {
     
     libmesh_assert_equal_to(sols.size(), 2);
     
@@ -125,8 +102,42 @@ _set_element_perturbed_data(const std::vector<libMesh::dof_id_type>& dof_indices
         vel(i)          = vel_global(dof_indices[i]);
     }
     
-    elem.set_perturbed_solution(sol);
-    elem.set_perturbed_velocity(vel);
+    _assembly_ops->set_elem_solution_sensitivity(sol);
+    _assembly_ops->set_elem_velocity_sensitivity(vel);
+}
+
+
+
+void
+MAST::FirstOrderNewmarkTransientSolver::
+set_element_perturbed_data(const std::vector<libMesh::dof_id_type>& dof_indices,
+                           const std::vector<libMesh::NumericVector<Real>*>& sols){
+    
+    libmesh_assert_equal_to(sols.size(), 2);
+    
+    const unsigned int n_dofs = (unsigned int)dof_indices.size();
+    
+    // get the current state and velocity estimates
+    // also get the current discrete velocity replacement
+    RealVectorX
+    sol          = RealVectorX::Zero(n_dofs),
+    vel          = RealVectorX::Zero(n_dofs);
+    
+    
+    const libMesh::NumericVector<Real>
+    &sol_global = *sols[0],
+    &vel_global = *sols[1];
+    
+    // get the references to current and previous sol and velocity
+    
+    for (unsigned int i=0; i<n_dofs; i++) {
+        
+        sol(i)          = sol_global(dof_indices[i]);
+        vel(i)          = vel_global(dof_indices[i]);
+    }
+    
+    _assembly_ops->set_elem_perturbed_solution(sol);
+    _assembly_ops->set_elem_perturbed_velocity(vel);
 }
 
 
@@ -136,7 +147,7 @@ _set_element_perturbed_data(const std::vector<libMesh::dof_id_type>& dof_indices
 void
 MAST::FirstOrderNewmarkTransientSolver::
 update_velocity(libMesh::NumericVector<Real>&       vec,
-                 const libMesh::NumericVector<Real>& sol) {
+                const libMesh::NumericVector<Real>& sol) {
     
     const libMesh::NumericVector<Real>
     &prev_sol = this->solution(1),
@@ -170,14 +181,12 @@ update_delta_velocity(libMesh::NumericVector<Real>&       vec,
 
 void
 MAST::FirstOrderNewmarkTransientSolver::
-_elem_calculations(MAST::ElementBase& elem,
-                   const std::vector<libMesh::dof_id_type>& dof_indices,
-                   bool if_jac,
-                   RealVectorX& vec,
-                   RealMatrixX& mat) {
+elem_calculations(bool if_jac,
+                  RealVectorX& vec,
+                  RealMatrixX& mat) {
     // make sure that the assembly object is provided
-    libmesh_assert(_assembly);
-    unsigned int n_dofs = (unsigned int)dof_indices.size();
+    libmesh_assert(_assembly_ops);
+    unsigned int n_dofs = (unsigned int)vec.size();
 
     RealVectorX
     f_x     = RealVectorX::Zero(n_dofs),
@@ -189,13 +198,12 @@ _elem_calculations(MAST::ElementBase& elem,
     f_x_jac       = RealMatrixX::Zero(n_dofs, n_dofs);
     
     // perform the element assembly
-    _assembly->_elem_calculations(elem,
-                                  if_jac,
-                                  f_m,           // mass vector
-                                  f_x,           // forcing vector
-                                  f_m_jac_xdot,  // Jac of mass wrt x_dot
-                                  f_m_jac,       // Jac of mass wrt x
-                                  f_x_jac);      // Jac of forcing vector wrt x
+    _assembly_ops->elem_calculations(if_jac,
+                                     f_m,           // mass vector
+                                     f_x,           // forcing vector
+                                     f_m_jac_xdot,  // Jac of mass wrt x_dot
+                                     f_m_jac,       // Jac of mass wrt x
+                                     f_x_jac);      // Jac of forcing vector wrt x
 
     if (_if_highest_derivative_solution) {
         
@@ -254,15 +262,13 @@ _elem_calculations(MAST::ElementBase& elem,
 
 void
 MAST::FirstOrderNewmarkTransientSolver::
-_elem_linearized_jacobian_solution_product(MAST::ElementBase& elem,
-                                           const std::vector<libMesh::dof_id_type>& dof_indices,
-                                           RealVectorX& vec) {
+elem_linearized_jacobian_solution_product(RealVectorX& vec) {
 
     // make sure that the assembly object is provided
-    libmesh_assert(_assembly);
+    libmesh_assert(_assembly_ops);
     
     // perform the element assembly
-    _assembly->_linearized_jacobian_solution_product(elem, vec);
+    _assembly_ops->linearized_jacobian_solution_product(vec);
 }
 
 
@@ -270,10 +276,46 @@ _elem_linearized_jacobian_solution_product(MAST::ElementBase& elem,
 
 void
 MAST::FirstOrderNewmarkTransientSolver::
-_elem_sensitivity_calculations(MAST::ElementBase& elem,
-                               const std::vector<libMesh::dof_id_type>& dof_indices,
-                               RealVectorX& vec) {
+elem_sensitivity_calculations(const MAST::FunctionBase& f,
+                              RealVectorX& vec) {
+
+    // make sure that the assembly object is provided
+    libmesh_assert(_assembly_ops);
+    unsigned int n_dofs = (unsigned int)vec.size();
     
-    // to be implemented
-    libmesh_error();
+    RealVectorX
+    f_x     = RealVectorX::Zero(n_dofs),
+    f_m     = RealVectorX::Zero(n_dofs);
+    
+    // perform the element assembly
+    _assembly_ops->elem_sensitivity_calculations(f,
+                                                 f_m,           // mass vector
+                                                 f_x);          // forcing vector
+    
+    // system residual
+    vec  = (f_m + f_x);
 }
+
+
+
+void
+MAST::FirstOrderNewmarkTransientSolver::
+elem_shape_sensitivity_calculations(const MAST::FunctionBase& f,
+                                    RealVectorX& vec) {
+    
+    libmesh_assert(false); // to be implemented
+}
+
+
+
+void
+MAST::FirstOrderNewmarkTransientSolver::
+elem_topology_sensitivity_calculations(const MAST::FunctionBase& f,
+                                       const MAST::LevelSetIntersection& intersect,
+                                       const MAST::FieldFunction<RealVectorX>& vel,
+                                       RealVectorX& vec) {
+    libmesh_assert(false); // to be implemented
+}
+
+
+

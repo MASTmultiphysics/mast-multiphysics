@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -29,9 +29,12 @@
 
 namespace MAST {
     
+    // Forward declerations
+    class NonlinearImplicitAssemblyElemOperations;
+    
+    
     class NonlinearImplicitAssembly:
-    public MAST::AssemblyBase,
-    public libMesh::NonlinearImplicitSystem::ComputeResidualandJacobian {
+    public MAST::AssemblyBase {
     public:
         
         
@@ -64,31 +67,22 @@ namespace MAST {
         virtual ~NonlinearImplicitAssembly();
         
         
-        /*!
-         *   attaches a system to this discipline, and vice-a-versa
-         */
-        virtual void
-        attach_discipline_and_system(MAST::PhysicsDisciplineBase& discipline,
-                                     MAST::SystemInitialization& system);
-        
         
         /*!
-         *   Reattaches to the same system that was attached earlier.
-         *
-         *   This cannot be called if the clear_discipline_and_system() method
-         *   has been called.
+         *   L2 norm of the last-assembled residual
          */
-        virtual void
-        reattach_to_system();
+        Real res_l2_norm() const { return _res_l2_norm; }
         
+        Real first_iter_res_l2_norm() const { return _first_iter_res_l2_norm; }
 
         /*!
-         *   clears association with a system to this discipline, and vice-a-versa
+         *   reset L2 norm of the last-assembled residual
          */
-        virtual void
-        clear_discipline_and_system( );
+        void reset_residual_norm_history() {
+            _res_l2_norm = 0.;
+            _first_iter_res_l2_norm = -1.;
+        }
 
-        
         /*!
          *    sets the PostAssemblyOperation object for use after assembly. 
          *    Note that calling \p clear_discipline_and_system() will 
@@ -138,71 +132,20 @@ namespace MAST {
          * Assembly function.  This function will be called
          * to assemble the RHS of the sensitivity equations (which is -1 times
          * sensitivity of system residual) prior to a solve and must
-         * be provided by the user in a derived class. The method provides dR/dp_i
-         * for \par i ^th parameter in the vector \par parameters.
+         * be provided by the user in a derived class. The method provides dR/dp
+         * for \par f parameter.
          *
          * If the routine is not able to provide sensitivity for this parameter,
          * then it should return false, and the system will attempt to use
          * finite differencing.
          */
         virtual bool
-        sensitivity_assemble (const libMesh::ParameterVector& parameters,
-                              const unsigned int i,
+        sensitivity_assemble (const MAST::FunctionBase& f,
                               libMesh::NumericVector<Real>& sensitivity_rhs);
         
     protected:
         
-        /*!
-         *   performs the element calculations over \par elem, and returns
-         *   the element vector and matrix quantities in \par mat and
-         *   \par vec, respectively. \par if_jac tells the method to also
-         *   assemble the Jacobian, in addition to the residual vector.
-         */
-        virtual void _elem_calculations(MAST::ElementBase& elem,
-                                        bool if_jac,
-                                        RealVectorX& vec,
-                                        RealMatrixX& mat) = 0;
 
-        
-        /*!
-         *   performs the element calculations over \par elem, and returns
-         *   the element vector quantity in \par vec. The vector quantity only
-         *   include the \f$ [J] \{dX\} f$ components, so the inherited classes
-         *   must ensure that no component of constant forces (traction/body
-         *   forces/etc.) are added to this vector.
-         */
-        virtual void
-        _elem_linearized_jacobian_solution_product(MAST::ElementBase& elem,
-                                                   RealVectorX& vec);
-        
-
-        /*!
-         *   performs the element sensitivity calculations over \par elem,
-         *   and returns the element residual sensitivity in \par vec .
-         */
-        virtual void _elem_sensitivity_calculations(MAST::ElementBase& elem,
-                                                    bool if_jac,
-                                                    RealVectorX& vec,
-                                                    RealMatrixX& mat) = 0;
-        
-        
-        /*!
-         *   calculates \f$ d ([J] \{\Delta X\})/ dX  \f$ over \par elem,
-         *   and returns the matrix in \par vec .
-         */
-        virtual void
-        _elem_second_derivative_dot_solution_assembly(MAST::ElementBase& elem,
-                                                      RealMatrixX& mat) = 0;
-        
-
-        /*!
-         *    a helper function to evaluate the numerical Jacobian 
-         *    and compare it with the analytical Jacobian.
-         */
-        void _check_element_numerical_jacobian(MAST::ElementBase& e,
-                                               RealVectorX& sol);
-        
-        
         
         /*!
          *    this object, if non-NULL is user-provided to perform actions
@@ -210,6 +153,11 @@ namespace MAST {
          */
         MAST::NonlinearImplicitAssembly::PostAssemblyOperation* _post_assembly;
 
+        /*!
+         *   L2 norm of the last-assembled residual
+         */
+        Real _res_l2_norm, _first_iter_res_l2_norm;
+        
     };
 }
 
