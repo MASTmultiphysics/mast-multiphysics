@@ -36,3 +36,6 @@ include_directories(SLEPc_INCLUDE_DIRS)
 
 find_package(libMesh)
 include_directories(libMesh_INCLUDE_DIRS)
+
+# MAIN TARGETS
+add_subdirectory(src)
