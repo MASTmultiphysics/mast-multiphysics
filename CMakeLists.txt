@@ -26,16 +26,9 @@ set(SLEPc_DIR   "SLEPc_DIR"   CACHE PATH "Directory containing SLEPc include/ an
 
 # FIND DEPENDENCIES
 find_package(MPI REQUIRED)
-include_directories(MPI_CXX_INCLUDE_PATH)
-
 find_package(PETSc)
-include_directories(PETSc_INCLUDE_DIRS)
-
 find_package(SLEPc)
-include_directories(SLEPc_INCLUDE_DIRS)
-
 find_package(libMesh)
-include_directories(libMesh_INCLUDE_DIRS)
 
 # MAIN TARGETS
 add_subdirectory(src)
