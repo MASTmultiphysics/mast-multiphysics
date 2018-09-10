@@ -9,15 +9,23 @@ add_library(mast)
 
 # Add include directories.
 target_include_directories(mast
-        PRIVATE ${CMAKE_CURRENT_LIST_DIR}
-                ${PETSc_INCLUDE_DIRS}
-                ${SLEPc_INCLUDE_DIRS}
-                ${libMesh_INCLUDE_DIRS})
+        PUBLIC
+            ${CMAKE_CURRENT_LIST_DIR}
+            ${PETSc_INCLUDE_DIRS}
+            ${SLEPc_INCLUDE_DIRS}
+            ${libMesh_INCLUDE_DIRS})
 
 # Add libraries.
-target_link_libraries(mast)
-#        ${MPI_CXX_LIBRARIES}
-#        ${libMesh_LIBRARIES})
+target_link_libraries(mast
+        PUBLIC
+            ${MPI_CXX_LIBRARIES}
+            ${PETSc_LIBRARIES}
+            ${SLEPc_LIBRARIES}
+            ${libMesh_LIBRARIES})
 
 # Add subdirectories containing sources.
 add_subdirectory(base)
+add_subdirectory(solver)
+
+# NOTE: Use of PUBLIC keyword above means other CMake target (like an example)
+#       that target_link_library(XXXX mast) will inheret these properties.

@@ -39,3 +39,6 @@ include_directories(libMesh_INCLUDE_DIRS)
 
 # MAIN TARGETS
 add_subdirectory(src)
+
+# EXAMPLES
+add_subdirectory(ex)
