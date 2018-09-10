@@ -1,7 +1,38 @@
-cmake_minimum_required(VERSION 2.8)
-project(MAST-MULTIPHYSICS)
+# PREAMBLE
+cmake_minimum_required(VERSION 3.2)
+project(MAST
+        VERSION 0.1
+        LANGUAGES C CXX)
 
+# PROJECT WIDE SETUP
+# Get CMake modules and set language standards.
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-add_subdirectory(build)
+# Build options with defaults.
+option(ENABLE_GCMMA   "Build with GCMMA interface"  OFF)
+option(ENABLE_DOT     "Build with DOT interface"    OFF)
+option(ENABLE_NPSOL   "Build with NPSOL interface"  OFF)
+option(ENABLE_CYTHON  "Build with CYTHON interface" OFF)
+
+# Required dependency paths.
+set(libMesh_DIR "libMesh_DIR" CACHE PATH "Directory containing libMesh include/ and lib/")
+set(PETSc_DIR   "PETSc_DIR"   CACHE PATH "Directory containing PETSc include/ and lib/")
+set(SLEPc_DIR   "SLEPc_DIR"   CACHE PATH "Directory containing SLEPc include/ and lib/")
+
+# EXTERNALLY PROVIDED CONTENT
+# None. Use this if we pull something in during the build in the future.
+
+# FIND DEPENDENCIES
+find_package(MPI REQUIRED)
+include_directories(MPI_CXX_INCLUDE_PATH)
+
+find_package(PETSc)
+include_directories(PETSc_INCLUDE_DIRS)
+
+find_package(SLEPc)
+include_directories(SLEPc_INCLUDE_DIRS)
+
+find_package(libMesh)
+include_directories(libMesh_INCLUDE_DIRS)
