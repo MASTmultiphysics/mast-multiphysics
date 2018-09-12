@@ -15,6 +15,7 @@ option(ENABLE_GCMMA   "Build with GCMMA interface"  OFF)
 option(ENABLE_DOT     "Build with DOT interface"    OFF)
 option(ENABLE_NPSOL   "Build with NPSOL interface"  OFF)
 option(ENABLE_CYTHON  "Build with CYTHON interface" OFF)
+option(BUILD_DOC      "Build documentation"         OFF)
 
 # Required dependency paths.
 set(libMesh_DIR "libMesh_DIR" CACHE PATH "Directory containing libMesh include/ and lib/")
@@ -35,3 +36,8 @@ add_subdirectory(src)
 
 # EXAMPLES
 add_subdirectory(ex)
+
+# DOCUMENTATION
+if(BUILD_DOC)
+    add_subdirectory(doc)
+endif()
