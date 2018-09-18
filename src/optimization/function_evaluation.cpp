@@ -156,78 +156,75 @@ MAST::FunctionEvaluation::initialize_dv_from_output_file(const std::string& nm,
                                                          const unsigned int iter,
                                                          std::vector<Real> &x) {
     
-    if (this->processor_id() == 0)
-    {
-        struct stat stat_info;
-        int stat_result = stat(nm.c_str(), &stat_info);
-        
-        if (stat_result != 0)
-            libmesh_error_msg("File does not exist: " + nm);
-        
-        if (!std::ifstream(nm))
-            libmesh_error_msg("File missing: " + nm);
-        
-        std::ifstream input;
-        input.open(nm, std::ofstream::in);
-        
-
-        std::string
-        line;
-        unsigned int
-        ndv        = 0,
-        nineq      = 0,
-        neq        = 0,
-        it_num     = 0;
-
-        std::vector<std::string> results;
-
-        // number of desing variables
+    struct stat stat_info;
+    int stat_result = stat(nm.c_str(), &stat_info);
+    
+    if (stat_result != 0)
+        libmesh_error_msg("File does not exist: " + nm);
+    
+    if (!std::ifstream(nm))
+        libmesh_error_msg("File missing: " + nm);
+    
+    std::ifstream input;
+    input.open(nm, std::ofstream::in);
+    
+    
+    std::string
+    line;
+    unsigned int
+    ndv        = 0,
+    nineq      = 0,
+    neq        = 0,
+    it_num     = 0;
+    
+    std::vector<std::string> results;
+    
+    // number of desing variables
+    std::getline(input, line);
+    boost::trim(line);
+    boost::split(results, line, boost::is_any_of(" \t"), boost::token_compress_on);
+    libmesh_assert_equal_to(results[0],   "n_dv");
+    ndv = stod(results[1]);
+    libmesh_assert_equal_to(  ndv, x.size());
+    
+    
+    // number of equality constraint
+    std::getline(input, line);
+    boost::trim(line);
+    boost::split(results, line, boost::is_any_of(" \t"), boost::token_compress_on);
+    libmesh_assert_equal_to(results[0],   "n_eq");
+    neq = stod(results[1]);
+    libmesh_assert_equal_to(  neq, _n_eq);
+    
+    
+    // number of inequality constriants
+    std::getline(input, line);
+    boost::trim(line);
+    boost::split(results, line, boost::is_any_of(" \t"), boost::token_compress_on);
+    libmesh_assert_equal_to(results[0],   "n_ineq");
+    nineq = stod(results[1]);
+    //libmesh_assert_equal_to(  nineq, _n_ineq);
+    
+    
+    // skip all lines before iter.
+    while (!input.eof() && it_num < iter+1) {
         std::getline(input, line);
-        boost::trim(line);
-        boost::split(results, line, boost::is_any_of(" \t"), boost::token_compress_on);
-        libmesh_assert_equal_to(results[0],   "n_dv");
-        ndv = stod(results[1]);
-        libmesh_assert_equal_to(  ndv, x.size());
-
-        
-        // number of equality constraint
-        std::getline(input, line);
-        boost::trim(line);
-        boost::split(results, line, boost::is_any_of(" \t"), boost::token_compress_on);
-        libmesh_assert_equal_to(results[0],   "n_eq");
-        neq = stod(results[1]);
-        libmesh_assert_equal_to(  neq, _n_eq);
-
-        
-        // number of inequality constriants
-        std::getline(input, line);
-        boost::trim(line);
-        boost::split(results, line, boost::is_any_of(" \t"), boost::token_compress_on);
-        libmesh_assert_equal_to(results[0],   "n_ineq");
-        nineq = stod(results[1]);
-        //libmesh_assert_equal_to(  nineq, _n_ineq);
-        
-        
-        // skip all lines before iter.
-        while (!input.eof() && it_num < iter+1) {
-            std::getline(input, line);
-            it_num++;
-        }
-
-        // make sure that the iteration number is what we are looking for
-        std::getline(input, line);
-        boost::trim(line);
-        boost::split(results, line, boost::is_any_of(" \t"), boost::token_compress_on);
-
-        libmesh_assert_greater(results.size(), ndv+1);
-
-        it_num = stoi(results[0]);
-        libmesh_assert_equal_to(it_num, iter);
-        
-        // make sure that the file has data
-        for (unsigned int i=0; i<ndv; i++)
-            x[i] = stod(results[i+1]);
+        it_num++;
     }
+    
+    // make sure that the iteration number is what we are looking for
+    std::getline(input, line);
+    boost::trim(line);
+    boost::split(results, line, boost::is_any_of(" \t"), boost::token_compress_on);
+    
+    libmesh_assert_greater(results.size(), ndv+1);
+    
+    it_num = stoi(results[0]);
+    libmesh_assert_equal_to(it_num, iter);
+    
+    // make sure that the file has data
+    for (unsigned int i=0; i<ndv; i++)
+        x[i] = stod(results[i+1]);
 }
 
 
