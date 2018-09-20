@@ -35,7 +35,7 @@
 #include "elasticity/structural_nonlinear_assembly.h"
 #include "elasticity/structural_modal_eigenproblem_assembly.h"
 #include "elasticity/stress_output_base.h"
-#include "elasticity/stress_assembly.h"
+#include "elasticity/level_set_stress_assembly.h"
 #include "elasticity/structural_system_initialization.h"
 #include "heat_conduction/heat_conduction_system_initialization.h"
 #include "heat_conduction/heat_conduction_nonlinear_assembly.h"
@@ -399,7 +399,7 @@ MAST::Examples::TopologyOptimizationLevelSet2D::evaluate(const std::vector<Real>
     MAST::LevelSetNonlinearImplicitAssembly                  nonlinear_assembly;
     MAST::LevelSetNonlinearImplicitAssembly                  level_set_assembly;
     MAST::LevelSetEigenproblemAssembly                       eigen_assembly;
-    MAST::StressAssembly                                     stress_assembly;
+    MAST::LevelSetStressAssembly                             stress_assembly;
     MAST::StructuralNonlinearAssemblyElemOperations          nonlinear_elem_ops;
     MAST::HeatConductionNonlinearAssemblyElemOperations      conduction_elem_ops;
     MAST::StructuralModalEigenproblemAssemblyElemOperations  modal_elem_ops;
@@ -466,6 +466,7 @@ MAST::Examples::TopologyOptimizationLevelSet2D::evaluate(const std::vector<Real>
     eigen_assembly.set_level_set_function(*_level_set_function);
     eigen_assembly.set_level_set_velocity_function(*_level_set_vel);
     stress_assembly.set_discipline_and_system(*_discipline, *_sys_init);
+    stress_assembly.set_level_set_function(*_level_set_function);
     level_set_assembly.set_discipline_and_system(*_level_set_discipline, *_level_set_sys_init);
     level_set_assembly.set_level_set_function(*_level_set_function);
     level_set_assembly.set_level_set_velocity_function(*_level_set_vel);

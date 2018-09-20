@@ -318,35 +318,48 @@ MAST::FunctionEvaluation::verify_gradients(const std::vector<Real>& dvars) {
     << std::endl;
     
     bool accurate_sens = true;
-    
-    for (unsigned int i=0; i<_n_vars; i++)
+
+    libMesh::out
+    << std::setw(10) << "DV"
+    << std::setw(30) << "Analytical"
+    << std::setw(30) << "Numerical" << std::endl;
+
+    for (unsigned int i=0; i<_n_vars; i++) {
+        libMesh::out
+        << std::setw(10) << i
+        << std::setw(30) << obj_grad[i]
+        << std::setw(30) << obj_grad_fd[i];
         if (fabs((obj_grad[i] - obj_grad_fd[i])/obj_grad[i]) > tol) {
-            libMesh::out
-            << " Mismatched sensitivity: DV:  "  << i << "   "
-            << obj_grad[i] << "    " << obj_grad_fd[i] << std::endl;
+            libMesh::out << " : Mismatched sensitivity";
             accurate_sens = false;
         }
+        libMesh::out << std::endl;
+    }
     
     
     
     libMesh::out
     << " *** Constraint function gradients: analytical vs numerical"
     << std::endl;
-    
+
+    libMesh::out
+    << std::setw(10) << "DV"
+    << std::setw(30) << "Analytical"
+    << std::setw(30) << "Numerical" << std::endl;
+
     for (unsigned int j=0; j<_n_eq+_n_ineq; j++) {
         
         libMesh::out << "  Constraint: " << j << std::endl;
         for (unsigned int i=0; i<_n_vars; i++) {
             libMesh::out
-            << " DV:  "  << i << "   "
-            << grads[i*(_n_eq+_n_ineq)+j] << "    "
-            << grads_fd[i*(_n_eq+_n_ineq)+j];
+            << std::setw(10) << i
+            << std::setw(30) << grads[i*(_n_eq+_n_ineq)+j]
+            << std::setw(30) << grads_fd[i*(_n_eq+_n_ineq)+j];
             if (fabs((grads[i*(_n_eq+_n_ineq)+j] - grads_fd[i*(_n_eq+_n_ineq)+j])/grads[i*(_n_eq+_n_ineq)+j]) > tol) {
-                libMesh::out << "    Mismatched sensitivity" << std::endl;
+                libMesh::out << " : Mismatched sensitivity";
                 accurate_sens = false;
             }
-            else
-                libMesh::out << std::endl;
+            libMesh::out << std::endl;
         }
     }
     // print the message that all sensitivity data satisfied limits.

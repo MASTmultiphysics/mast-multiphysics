@@ -17,40 +17,51 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#ifndef __mast__stress_assembly__
-#define __mast__stress_assembly__
+#ifndef __mast__level_set_stress_assembly__
+#define __mast__level_set_stress_assembly__
 
 // MAST includes
-#include "base/assembly_base.h"
-
-// libMesh includes
-#include "libmesh/nonlinear_implicit_system.h"
+#include "elasticity/stress_assembly.h"
 
 
 namespace MAST {
     
     // Forward declerations
-    class StressStrainOutputBase;
+    template <typename ValType> class FieldFunction;
+    class LevelSetIntersection;
+
     
-    
-    class StressAssembly:
-    public MAST::AssemblyBase {
+    class LevelSetStressAssembly:
+    public MAST::StressAssembly {
     public:
         
         
         /*!
          *   constructor associates this assembly object with the system
          */
-        StressAssembly();
+        LevelSetStressAssembly();
         
         
         /*!
          *   destructor resets the association of this assembly object with
          *   the system
          */
-        virtual ~StressAssembly();
+        virtual ~LevelSetStressAssembly();
         
         
+        /*!
+         *   attaches level set function to \p this
+         */
+        virtual void
+        set_level_set_function(MAST::FieldFunction<Real>& level_set);
+
+        
+        /*!
+         *   clears association with level set function
+         */
+        virtual void
+        clear_level_set_function();
+
         
         /*!
          *   updates the stresses and strains for the specified solution
@@ -61,26 +72,17 @@ namespace MAST {
         virtual void
         update_stress_strain_data(MAST::StressStrainOutputBase&       ops,
                                   const libMesh::NumericVector<Real>& X);
-
-        /*!
-         *   updates the sensitivity of stresses and strains for the specified
-         *   solution vector \p X and its sensitivity, \p dXdp, with respect
-         *   to parameter \p p. Only the maximum values out of each element are
-         *   updated.
-         */
-        virtual void
-        update_stress_strain_sensitivity_data(MAST::StressStrainOutputBase&       ops,
-                                              const libMesh::NumericVector<Real>& X,
-                                              const libMesh::NumericVector<Real>& dXdp,
-                                              const MAST::FunctionBase& p,
-                                              libMesh::NumericVector<Real>& dsigmadp);
-
-
+        
+        
     protected:
-                
+
+        MAST::FieldFunction<Real>            *_level_set;
+        MAST::LevelSetIntersection           *_intersection;
+
     };
 }
 
 
-#endif //__mast__stress_assembly__
+#endif //__mast__level_set_stress_assembly__
+
 
