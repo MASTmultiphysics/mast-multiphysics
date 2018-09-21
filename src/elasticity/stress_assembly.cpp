@@ -118,6 +118,7 @@ update_stress_strain_data(MAST::StressStrainOutputBase&       ops,
     const std::vector<unsigned int>&
     stress_vars = dynamic_cast<MAST::StructuralSystemInitialization*>(_system)->get_stress_var_ids();
     
+    stress_sys.solution->zero();
     
     std::vector<libMesh::dof_id_type> dof_indices;
     const libMesh::DofMap& dof_map = structural_sys.get_dof_map();
@@ -240,7 +241,8 @@ update_stress_strain_sensitivity_data(MAST::StressStrainOutputBase&       ops,
     const std::vector<unsigned int>&
     stress_vars = dynamic_cast<MAST::StructuralSystemInitialization*>(_system)->get_stress_var_ids();
     
-    
+    dsigmadp.zero();
+
     std::vector<libMesh::dof_id_type> dof_indices;
     const libMesh::DofMap& dof_map = structural_sys.get_dof_map();
     

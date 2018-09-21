@@ -24,6 +24,9 @@
 #include "elasticity/structural_system_initialization.h"
 #include "base/nonlinear_system.h"
 #include "level_set/level_set_intersection.h"
+#include "base/elem_base.h"
+#include "level_set/sub_cell_fe.h"
+#include "mesh/local_elem_fe.h"
 
 
 // libMesh includes
@@ -105,6 +108,7 @@ update_stress_strain_data(MAST::StressStrainOutputBase&       ops,
     const std::vector<unsigned int>&
     stress_vars = dynamic_cast<MAST::StructuralSystemInitialization*>(_system)->get_stress_var_ids();
     
+    stress_sys.solution->zero();
     
     std::vector<libMesh::dof_id_type> dof_indices;
     const libMesh::DofMap& dof_map = structural_sys.get_dof_map();
@@ -138,64 +142,81 @@ update_stress_strain_data(MAST::StressStrainOutputBase&       ops,
         
         _intersection->init(*_level_set, *elem, structural_sys.time);
         
-        // process only if the element has any positive region
-        if (!_intersection->if_elem_on_positive_phi()) continue;
-        
-        dof_map.dof_indices (elem, dof_indices);
-        
-        unsigned int ndofs = (unsigned int)dof_indices.size();
-        sol.setZero(ndofs);
-        
-        for (unsigned int i=0; i<dof_indices.size(); i++)
-            sol(i) = (*localized_solution)(dof_indices[i]);
-        
-        // clear before calculating the data
+        // clear data structure since each element will account for all
+        // sub elements only
         ops.clear();
-        ops.init(*elem);
-        ops.set_elem_solution(sol);
-        ops.evaluate();
-        ops.clear_elem();
-        
-        // get the stress-strain data map from the object
-        const std::map<const libMesh::dof_id_type,
-        std::vector<MAST::StressStrainOutputBase::Data*> >& output_map =
-        ops.get_stress_strain_data();
-        
-        // make sure that only one element has been added to this data,
-        // and that the element id is the same as the one being computed
-        libmesh_assert_equal_to(output_map.size(), 1);
-        libmesh_assert_equal_to(output_map.begin()->first, elem->id());
-        
-        // now iterate over all the elements and set the value in the
-        // new system used for output
-        std::map<const libMesh::dof_id_type,
-        std::vector<MAST::StressStrainOutputBase::Data*> >::const_iterator
-        e_it    =  output_map.begin(),
-        e_end   =  output_map.end();
-        
-        for ( ; e_it != e_end; e_it++) {
+
+        // process only if the element has any positive region
+        if (_intersection->if_elem_has_positive_phi_region()) {
             
-            get_max_stress_strain_values(e_it->second,
-                                         max_strain_vals,
-                                         max_stress_vals,
-                                         max_vm_stress,
-                                         nullptr);
+            dof_map.dof_indices (elem, dof_indices);
             
-            // set the values in the system
-            // stress value
-            dof_id     =   elem->dof_number(sys_num, stress_vars[12], 0);
-            stress_sys.solution->set(dof_id, max_vm_stress);
+            unsigned int ndofs = (unsigned int)dof_indices.size();
+            sol.setZero(ndofs);
             
-            for (unsigned int i=0; i<6; i++) {
-                // strain value
-                dof_id     =   elem->dof_number(sys_num, stress_vars[i], 0);
-                stress_sys.solution->set(dof_id, max_strain_vals(i));
+            for (unsigned int i=0; i<dof_indices.size(); i++)
+                sol(i) = (*localized_solution)(dof_indices[i]);
+            
+            const std::vector<const libMesh::Elem *> &
+            elems_hi = _intersection->get_sub_elems_positive_phi();
+            
+            std::vector<const libMesh::Elem*>::const_iterator
+            hi_sub_elem_it  = elems_hi.begin(),
+            hi_sub_elem_end = elems_hi.end();
+            
+            for (; hi_sub_elem_it != hi_sub_elem_end; hi_sub_elem_it++ ) {
                 
+                const libMesh::Elem* sub_elem = *hi_sub_elem_it;
+                
+                // clear before calculating the data
+                ops.init(*sub_elem);
+                ops.set_elem_solution(sol);
+                ops.evaluate();
+                ops.clear_elem();
+            }
+            
+            // get the stress-strain data map from the object
+            const std::map<const libMesh::dof_id_type,
+            std::vector<MAST::StressStrainOutputBase::Data*> >& output_map =
+            ops.get_stress_strain_data();
+            
+            // make sure that the number of elements in this is the same
+            // as the number of elements in the subelement vector
+            libmesh_assert_equal_to(output_map.size(), elems_hi.size());
+            
+            // now iterate over all the elements and set the value in the
+            // new system used for output
+            std::map<const libMesh::dof_id_type,
+            std::vector<MAST::StressStrainOutputBase::Data*> >::const_iterator
+            e_it    =  output_map.begin(),
+            e_end   =  output_map.end();
+            
+            for ( ; e_it != e_end; e_it++) {
+                
+                get_max_stress_strain_values(e_it->second,
+                                             max_strain_vals,
+                                             max_stress_vals,
+                                             max_vm_stress,
+                                             nullptr);
+                
+                // set the values in the system
                 // stress value
-                dof_id     =   elem->dof_number(sys_num, stress_vars[i+6], 0);
-                stress_sys.solution->set(dof_id, max_stress_vals(i));
+                dof_id     =   elem->dof_number(sys_num, stress_vars[12], 0);
+                stress_sys.solution->set(dof_id, max_vm_stress);
+                
+                for (unsigned int i=0; i<6; i++) {
+                    // strain value
+                    dof_id     =   elem->dof_number(sys_num, stress_vars[i], 0);
+                    stress_sys.solution->set(dof_id, max_strain_vals(i));
+                    
+                    // stress value
+                    dof_id     =   elem->dof_number(sys_num, stress_vars[i+6], 0);
+                    stress_sys.solution->set(dof_id, max_stress_vals(i));
+                }
             }
         }
+        
+        _intersection->clear();
     }
     
     stress_sys.solution->close();
@@ -203,3 +224,30 @@ update_stress_strain_data(MAST::StressStrainOutputBase&       ops,
 }
 
 
+std::unique_ptr<MAST::FEBase>
+MAST::LevelSetStressAssembly::build_fe(const libMesh::Elem& elem) {
+
+    libmesh_assert(_elem_ops);
+    libmesh_assert(_system);
+    libmesh_assert(_intersection);
+    
+    std::unique_ptr<MAST::FEBase> fe;
+    
+    if (_elem_ops->if_use_local_elem() &&
+        elem.dim() < 3) {
+        
+        MAST::SubCellFE*
+        local_fe = new MAST::SubCellFE(*_system, *_intersection);
+        // FIXME: we would ideally like to send this to the elem ops object for
+        // setting of any local data. But the code has not been setup to do that
+        // for SubCellFE.
+        //_elem_ops->set_local_fe_data(*local_fe);
+        fe.reset(local_fe);
+    }
+    else {
+        
+        fe.reset(new MAST::SubCellFE(*_system, *_intersection));
+    }
+    
+    return fe;
+}
