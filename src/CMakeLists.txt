@@ -13,7 +13,8 @@ target_include_directories(mast
             ${CMAKE_CURRENT_LIST_DIR}
             ${PETSc_INCLUDE_DIRS}
             ${SLEPc_INCLUDE_DIRS}
-            ${libMesh_INCLUDE_DIRS})
+            ${libMesh_INCLUDE_DIRS}
+            ${Boost_INCLUDE_DIRS}) # Could possibly move this into src/optimization since it is closer to where Boost is actually used.
 
 # Add libraries.
 target_link_libraries(mast
@@ -37,7 +38,7 @@ add_subdirectory(heat_conduction)
 add_subdirectory(level_set)
 add_subdirectory(mesh)
 add_subdirectory(numerics)
-#add_subdirectory(optimization)
+add_subdirectory(optimization)
 add_subdirectory(property_cards)
 add_subdirectory(solver)
 

@@ -27,9 +27,12 @@ set(SLEPc_DIR   "SLEPc_DIR"   CACHE PATH "Directory containing SLEPc include/ an
 
 # FIND DEPENDENCIES
 find_package(MPI REQUIRED)
-find_package(PETSc)
-find_package(SLEPc)
-find_package(libMesh)
+find_package(PETSc REQUIRED)
+find_package(SLEPc REQUIRED)
+find_package(libMesh REQUIRED)
+find_package(Boost REQUIRED) # Boost is currently only utilized in src/optimization/function_evaluation (not counting tests).
+                             # We possibly could refactor to move finding Boost libraries closer to source where Boost is used.
+
 
 # MAIN TARGETS
 add_subdirectory(src)

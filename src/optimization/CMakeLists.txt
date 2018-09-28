@@ -1,0 +1,11 @@
+target_sources(mast
+        PRIVATE
+        #${CMAKE_CURRENT_LIST_DIR}/dot_optimization_interface.cpp
+        #${CMAKE_CURRENT_LIST_DIR}/dot_optimization_interface.h
+        ${CMAKE_CURRENT_LIST_DIR}/function_evaluation.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/function_evaluation.h)
+        #${CMAKE_CURRENT_LIST_DIR}/gcmma_optimization_interface.cpp
+        #${CMAKE_CURRENT_LIST_DIR}/gcmma_optimization_interface.h
+        #${CMAKE_CURRENT_LIST_DIR}/npsol_optimization_interface.cpp
+        #${CMAKE_CURRENT_LIST_DIR}/npsol_optimization_interface.h
+        #${CMAKE_CURRENT_LIST_DIR}/optimization_interface.h)
