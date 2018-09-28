@@ -1,4 +1,4 @@
-# This CMake defines the MAST library target.
+# This CMakeLists.txt defines the MAST library target (mast).
 # - Source files are added to the `mast` target in subdirectories using the
 #   target_sources(mast PRIVATE <source_files...>) command.
 #
@@ -23,9 +23,29 @@ target_link_libraries(mast
             ${SLEPc_LIBRARIES}
             ${libMesh_LIBRARIES})
 
-# Add subdirectories containing sources.
-add_subdirectory(base)
-add_subdirectory(solver)
-
 # NOTE: Use of PUBLIC keyword above means other CMake target (like an example)
 #       that target_link_library(XXXX mast) will inheret these properties.
+
+# Add subdirectories containing sources.
+add_subdirectory(aeroelasticity)
+add_subdirectory(base)
+add_subdirectory(boundary_condition)
+add_subdirectory(coordinates)
+add_subdirectory(elasticity)
+add_subdirectory(fluid)
+add_subdirectory(heat_conduction)
+add_subdirectory(level_set)
+add_subdirectory(mesh)
+add_subdirectory(numerics)
+#add_subdirectory(optimization)
+add_subdirectory(property_cards)
+add_subdirectory(solver)
+
+# NOTE: There is an argument to be made for why we might want to switch the
+#       add_subdirectory(<dir>) above to include(<dir>/CMakeLists.txt).
+#       - https://crascit.com/2016/01/31/enhanced-source-file-handling-with-target_sources/
+#
+#       This would enable us to call target_link_libraries() closer to to the
+#       code that is using it. (There is a documented limitation with CMake
+#       that prevents this with using add_subdirectory).
+
