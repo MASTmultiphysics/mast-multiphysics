@@ -428,8 +428,8 @@ MAST::Examples::TopologyOptimizationLevelSet2D::evaluate(const std::vector<Real>
         _indicator_sys->solve(conduction_elem_ops, nonlinear_assembly);
         r = dynamic_cast<libMesh::PetscNonlinearSolver<Real>&>
         (*_indicator_sys->nonlinear_solver).get_converged_reason();
-        nonlinear_assembly.clear_discipline_and_system();
         nonlinear_assembly.clear_level_set_function();
+        nonlinear_assembly.clear_discipline_and_system();
     }
     // if the solver diverged due to linear solve, then there is a problem with
     // this geometry and we need to return with a high value set for the

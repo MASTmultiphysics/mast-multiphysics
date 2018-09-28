@@ -29,6 +29,8 @@ namespace MAST {
     // Forward declerations
     template <typename ValType> class FieldFunction;
     class LevelSetIntersection;
+    class LevelSetInterfaceDofHandler;
+    class LevelSetVoidSolution;
     
     
     class LevelSetNonlinearImplicitAssembly:
@@ -161,7 +163,11 @@ namespace MAST {
         MAST::FieldFunction<RealVectorX>     *_indicator;
 
         MAST::LevelSetIntersection           *_intersection;
+
+        MAST::LevelSetInterfaceDofHandler    *_dof_handler;
         
+        MAST::LevelSetVoidSolution           *_void_solution_monitor;
+
         MAST::FieldFunction<RealVectorX>     *_velocity;
 
     };

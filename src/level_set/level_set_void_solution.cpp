@@ -17,15 +17,14 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-
 // MAST includes
-#include "elasticity/structural_assembly.h"
+#include "level_set/level_set_void_solution.h"
+#include "level_set/interface_dof_handler.h"
 #include "base/physics_discipline_base.h"
 #include "base/system_initialization.h"
 #include "base/nonlinear_system.h"
-#include "base/assembly_elem_operation.h"
-#include "elasticity/structural_element_base.h"
-
+#include "base/nonlinear_implicit_assembly_elem_operations.h"
+#include "base/elem_base.h"
 
 // libMesh includes
 #include "libmesh/petsc_nonlinear_solver.h"
@@ -36,19 +35,16 @@
 // monitor function for PETSc solver so that
 // the incompatible solution can be updated after each converged iterate
 PetscErrorCode
-_snes_structural_nonlinear_assembly_monitor_function(SNES snes,
-                                                     PetscInt its,
-                                                     PetscReal norm2,
-                                                     void* ctx) {
+_snes_level_set_void_solution_assembly_monitor_function(SNES snes,
+                                                        PetscInt its,
+                                                        PetscReal norm2,
+                                                        void* ctx) {
     
     // convert the context pointer to the assembly object pointer
-    MAST::AssemblyBase* assembly = (MAST::AssemblyBase*)ctx;
+    MAST::LevelSetVoidSolution* sol_update = (MAST::LevelSetVoidSolution*)ctx;
     
     // system for which this is being processed
-    MAST::NonlinearSystem& sys = assembly->system();
-
-    MAST::StructuralAssembly*
-    str_assembly = dynamic_cast<MAST::StructuralAssembly*>(assembly->get_solver_monitor());
+    MAST::NonlinearSystem& sys = sol_update->get_assembly().system();
     
     // if this is the first iteration, create a vector in system
     // as the initial approximation of the system solution
@@ -75,8 +71,8 @@ _snes_structural_nonlinear_assembly_monitor_function(SNES snes,
         
         // ask the assembly to update the incompatible mode solution
         // for all the 3D elements based on the solution update here
-        str_assembly->update_incompatible_solution(sys.get_vector("old_solution"),
-                                                   *vec_scaled);
+        sol_update->update_void_solution(sys.get_vector("old_solution"),
+                                         *vec_scaled);
     }
     
     
@@ -91,41 +87,33 @@ _snes_structural_nonlinear_assembly_monitor_function(SNES snes,
 
 
 
-
-MAST::StructuralAssembly::StructuralAssembly():
+MAST::LevelSetVoidSolution::LevelSetVoidSolution():
 MAST::AssemblyBase::SolverMonitor(),
-_assembly (nullptr) {
+_assembly      (nullptr),
+_dof_handler   (nullptr) {
+    
     
 }
 
 
-MAST::StructuralAssembly::~StructuralAssembly() {
+
+MAST::LevelSetVoidSolution::~LevelSetVoidSolution() {
     
+    this->clear();
 }
+
+
 
 
 void
-MAST::StructuralAssembly::set_elem_incompatible_sol(MAST::StructuralElementBase &elem) {
-    
-    if (elem.if_incompatible_modes()) {
-        
-        // init the solution if it is not currently set
-        if (!_incompatible_sol.count(&elem.elem()))
-            _incompatible_sol[&elem.elem()] = RealVectorX::Zero(elem.incompatible_mode_size());
-        
-        // use the solution currently available 
-        elem.set_incompatible_mode_solution(_incompatible_sol[&elem.elem()]);
-    }
-}
-
-
-void
-MAST::StructuralAssembly::init(MAST::AssemblyBase& assembly) {
+MAST::LevelSetVoidSolution::init(MAST::AssemblyBase& assembly,
+                                 MAST::LevelSetInterfaceDofHandler  &dof_handler) {
 
     // should be cleared before initialization
     libmesh_assert(!_assembly);
     
-    _assembly = &assembly;
+    _assembly    = &assembly;
+    _dof_handler = &dof_handler;
     
     // get the nonlinear solver SNES object from System and
     // add a monitor to it so that it can be used to update the
@@ -145,7 +133,7 @@ MAST::StructuralAssembly::init(MAST::AssemblyBase& assembly) {
     
     PetscErrorCode ierr =
     SNESMonitorSet(snes,
-                   _snes_structural_nonlinear_assembly_monitor_function,
+                   _snes_level_set_void_solution_assembly_monitor_function,
                    (void*)this,
                    PETSC_NULL);
     
@@ -155,7 +143,7 @@ MAST::StructuralAssembly::init(MAST::AssemblyBase& assembly) {
 
 
 void
-MAST::StructuralAssembly::clear() {
+MAST::LevelSetVoidSolution::clear() {
     
     // next, remove the monitor function from the snes object
     libMesh::PetscNonlinearSolver<Real> &petsc_nonlinear_solver =
@@ -169,132 +157,87 @@ MAST::StructuralAssembly::clear() {
     SNESMonitorCancel(snes);
     libmesh_assert(!ierr);
     
-    _assembly = nullptr;
+    _assembly     = nullptr;
+    _dof_handler  = nullptr;
 }
 
 
 
 void
-MAST::StructuralAssembly::update_incompatible_solution(libMesh::NumericVector<Real>& X,
-                                                       libMesh::NumericVector<Real>& dX) {
+MAST::LevelSetVoidSolution::
+update_void_solution(libMesh::NumericVector<Real>& X,
+                     libMesh::NumericVector<Real>& dX) {
     
+    MAST::NonlinearImplicitAssemblyElemOperations
+    &elem_ops  = dynamic_cast<MAST::NonlinearImplicitAssemblyElemOperations&>(_assembly->get_elem_ops());
     
-    // iterate over each element and ask the 3D elements to update
-    // their local solutions
-    
-    MAST::NonlinearSystem& sys = _assembly->system();
+    MAST::NonlinearSystem&
+    sys        = _assembly->system();
     
     // iterate over each element, initialize it and get the relevant
     // analysis quantities
-    RealVectorX sol, dsol;
+    RealVectorX
+    sol,
+    dsol,
+    res;
     
-    std::vector<libMesh::dof_id_type> dof_indices;
+    RealMatrixX
+    jac;
+    
+    std::vector<libMesh::dof_id_type>
+    dof_indices,
+    system_dofs,
+    free_dofs;
+    
     const libMesh::DofMap& dof_map = sys.get_dof_map();
     
-    
     std::unique_ptr<libMesh::NumericVector<Real> >
-    localized_solution(_assembly->build_localized_vector(sys,
-                                                         X).release()),
-    localized_dsolution(_assembly->build_localized_vector(sys,
-                                                          dX).release());
-    
-    
-    // if a solution function is attached, initialize it
-    //if (_sol_function)
-    //    _sol_function->init( X);
-    
-    
+    localized_solution (_assembly->build_localized_vector (sys,  X).release()),
+    localized_dsolution(_assembly->build_localized_vector (sys, dX).release());
+
+
     libMesh::MeshBase::const_element_iterator       el     =
     sys.get_mesh().active_local_elements_begin();
     const libMesh::MeshBase::const_element_iterator end_el =
     sys.get_mesh().active_local_elements_end();
-    
-    
+
     for ( ; el != end_el; ++el) {
         
         const libMesh::Elem* elem         = *el;
-        MAST::AssemblyElemOperations& ops = _assembly->get_elem_ops();
         
-        ops.init(*elem);
-        
-        MAST::StructuralElementBase& p_elem =
-        dynamic_cast<MAST::StructuralElementBase&>(ops.get_physics_elem());
-        
-        if (p_elem.if_incompatible_modes()) {
+        if (_dof_handler->if_factor_element(*elem)) {
             
             dof_map.dof_indices (elem, dof_indices);
             
-            // get the solution
+            // get the solution from the system vector
             unsigned int ndofs = (unsigned int)dof_indices.size();
             sol.setZero(ndofs);
             dsol.setZero(ndofs);
+            res.setZero(ndofs);
+            jac.setZero(ndofs, ndofs);
             
             for (unsigned int i=0; i<dof_indices.size(); i++) {
-                sol(i)  = (*localized_solution) (dof_indices[i]);
-                dsol(i) = (*localized_dsolution)(dof_indices[i]);
+                sol(i)   = (*localized_solution)(dof_indices[i]);
+                dsol(i)  = (*localized_dsolution)(dof_indices[i]);
             }
             
-            p_elem.set_solution(sol);
-            p_elem.set_incompatible_mode_solution(_incompatible_sol[elem]);
+            _dof_handler->solution_of_factored_element(*elem, sol);
             
-            //if (_sol_function)
-            //    p_elem.attach_active_solution_function(*_sol_function);
+            elem_ops.init(*elem);
+            elem_ops.set_elem_solution(sol);
             
-            // perform the element level calculations
-            p_elem.update_incompatible_mode_solution(dsol);
+            // compute the stiffness matrix for the element using the previous
+            // solution
+            elem_ops.elem_calculations(true, res, jac);
+            elem_ops.clear_elem();
             
-            p_elem.detach_active_solution_function();
+            _dof_handler->update_factored_element_solution(*elem,
+                                                           res,
+                                                           jac,
+                                                           sol,
+                                                           dsol,
+                                                           sol);
         }
     }
-    
-    
-    // if a solution function is attached, clear it
-    //if (_sol_function)
-    //    _sol_function->clear();
 }
-
-
-//void
-//MAST::StructuralAssembly::
-//_assemble_point_loads(MAST::PhysicsDisciplineBase& discipline,
-//                      MAST::SystemInitialization& system,
-//                      libMesh::NumericVector<Real>& res) {
-//    
-//    // get a reference to the system, mesh and dof map
-//    MAST::NonlinearSystem& sys     = system.system();
-//    libMesh::DofMap& dof_map       = sys.get_dof_map();
-//    
-//    // get a reference to the set of loads
-//    const MAST::PointLoadSetType& point_loads = discipline.point_loads();
-//    
-//    // iterate over the loads and process them
-//    MAST::PointLoadSetType::const_iterator
-//    load_it   = point_loads.begin(),
-//    load_end  = point_loads.end();
-//    
-//    for ( ; load_it != load_end; load_it++) {
-//        const MAST::PointLoadCondition& load = **load_it;
-//        const std::set<libMesh::Node*>& nodes = load.get_nodes();
-//        
-//        std::set<libMesh::Node*>::const_iterator
-//        n_it  = nodes.begin(),
-//        n_end = nodes.end();
-//        
-//        for ( ; n_it != n_end; n_it++) {
-//            
-//            // iterate over the nodes and the variables on them
-//            
-//            // get the dof id for the var on node
-//            
-//            // if the dof is not constrained, then add the
-//            
-//            // load to the residual vector
-//        }
-//        
-//    }
-//    
-//    res.close();
-//}
-
-
 

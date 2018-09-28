@@ -131,7 +131,7 @@ MAST::GCMMAOptimizationInterface::optimize() {
     for (unsigned int i=0; i<N; i++)
         if (max_x < fabs(XVAL[i]))
             max_x = fabs(XVAL[i]);
-    std::fill(C.begin(), C.end(), std::max(1.e6*max_x, 1.e6));
+    std::fill(C.begin(), C.end(), std::max(1.e0*max_x, 1.e0));
     //IF(M.EQ.0) GOTO 100
     //IF(N.EQ.0) GOTO 100
     

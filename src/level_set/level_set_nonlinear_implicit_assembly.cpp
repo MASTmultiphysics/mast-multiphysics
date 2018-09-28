@@ -20,6 +20,8 @@
 // MAST includes
 #include "level_set/level_set_nonlinear_implicit_assembly.h"
 #include "level_set/level_set_intersection.h"
+#include "level_set/interface_dof_handler.h"
+#include "level_set/level_set_void_solution.h"
 #include "level_set/sub_cell_fe.h"
 #include "base/system_initialization.h"
 #include "base/nonlinear_system.h"
@@ -42,11 +44,13 @@
 MAST::LevelSetNonlinearImplicitAssembly::
 LevelSetNonlinearImplicitAssembly():
 MAST::NonlinearImplicitAssembly(),
-_analysis_mode (true),
-_level_set     (nullptr),
-_indicator     (nullptr),
-_intersection  (nullptr),
-_velocity      (nullptr) {
+_analysis_mode           (true),
+_level_set               (nullptr),
+_indicator               (nullptr),
+_intersection            (nullptr),
+_dof_handler             (nullptr),
+_void_solution_monitor   (nullptr),
+_velocity                (nullptr) {
     
 }
 
@@ -54,8 +58,11 @@ _velocity      (nullptr) {
 
 MAST::LevelSetNonlinearImplicitAssembly::~LevelSetNonlinearImplicitAssembly() {
  
-    if (_intersection)
+    if (_intersection) {
         delete _intersection;
+        delete _dof_handler;
+        delete _void_solution_monitor;
+    }
 }
 
 
@@ -78,6 +85,10 @@ set_level_set_function(MAST::FieldFunction<Real>& level_set) {
     _level_set    = &level_set;
     _intersection = new MAST::LevelSetIntersection(_system->system().get_mesh().max_elem_id(),
                                                    _system->system().get_mesh().max_node_id());
+    _dof_handler  = new MAST::LevelSetInterfaceDofHandler();
+    _dof_handler->init(*_system, *_intersection, *_level_set);
+    _void_solution_monitor = new MAST::LevelSetVoidSolution();
+    _void_solution_monitor->init(*this, *_dof_handler);
 }
 
 
@@ -101,7 +112,12 @@ MAST::LevelSetNonlinearImplicitAssembly::clear_level_set_function() {
     
     if (_intersection) {
         delete _intersection;
-        _intersection = nullptr;
+        delete _dof_handler;
+        delete _void_solution_monitor;
+        
+        _intersection          = nullptr;
+        _dof_handler           = nullptr;
+        _void_solution_monitor = nullptr;
     }
 }
 
