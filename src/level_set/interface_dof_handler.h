@@ -50,6 +50,12 @@ namespace MAST {
                   MAST::LevelSetIntersection& intersection,
                   MAST::FieldFunction<Real>& phi);
 
+        MAST::FieldFunction<Real>&
+        get_level_set_function() {
+            libmesh_assert(_phi);
+            return *_phi;
+        }
+        
         /*!
          *  @returns true if the element is on the interface and some nodes
          *  of this element should be factored out of the system instead of
@@ -65,10 +71,19 @@ namespace MAST {
          *   four nodes and two variales will have the following sequence
          *   \f$ \{ u_1, u_2, u_3, u_4, v_1, v_2, v_3, v_4 \} \f$.
          */
-        void partition_elem_rows(const libMesh::Elem& elem,
-                                 std::vector<libMesh::dof_id_type>& material_dofs,
-                                 std::vector<libMesh::dof_id_type>& void_dofs);
+        void partition_local_elem_rows(const libMesh::Elem& elem,
+                                       std::vector<libMesh::dof_id_type>& material_dofs,
+                                       std::vector<libMesh::dof_id_type>& void_dofs);
+
         
+        /*!
+         *   fills the \p material_dofs and \p void_dofs with the dofs_ids
+         *   in the global system corresponding to these dofs in the element.
+         */
+        void partition_global_elem_rows(const libMesh::Elem& elem,
+                                        std::vector<libMesh::dof_id_type>& material_dofs,
+                                        std::vector<libMesh::dof_id_type>& void_dofs);
+
 
         /*!
          *   updates the components of the solution vector in \p elem_sol
@@ -83,21 +98,37 @@ namespace MAST {
          *   This takes the jacobian \p jac and factors it over the material
          *   and void domains and returns the following matrix in
          *   \p jac_factored_uu : \f$ J_{uu} - J_{uf} J_{ff}^{-1} J_{fu} \f$ .
-         *   The \p *_dof_ids are the degree of freedom ids in the global
-         *   solution vector that can be used for global assembly.
+         *   The \p *_dof_ids are the local rows of the element vector/matrix
+         *   quantities that are in the material domain.
          */
         void element_factored_jacobian(const libMesh::Elem& elem,
                                        const RealMatrixX& jac,
                                        std::vector<libMesh::dof_id_type>& material_dof_ids,
                                        RealMatrixX& jac_factored_uu);
 
+        /*!
+         *    factorizes the residual and jacobian into the components for
+         *    the dofs on material nodes. The factored Jacobian is defined as
+         *    \p jac_factored_uu : \f$ J_{uu} - J_{uf} J_{ff}^{-1} J_{fu} \f$.
+         *    The factored residual is defined as \p res_factored_u :
+         *    \f$  f_{u} - J_{uf} J_{ff}^{-1} f_{f} \f$. The \p material_dof_ids
+         *    are the rows in the element quantity that belong to the material
+         *    domain.
+         */
+        void
+        element_factored_residual_and_jacobian(const libMesh::Elem& elem,
+                                               const RealMatrixX& jac,
+                                               const RealVectorX& res,
+                                               std::vector<libMesh::dof_id_type>& material_dof_ids,
+                                               RealMatrixX& jac_factored_uu,
+                                               RealVectorX& res_factored_u);
 
         /*!
          *   This takes the jacobian \p jac and factors it over the material
          *   and void domains and returns the following matrix in
          *   \p jac_factored_uu : \f$ J_{uu} - J_{uf} J_{ff}^{-1} J_{fu} \f$ .
-         *   The \p *_dof_ids are the degree of freedom ids in the global
-         *   solution vector that can be used for global assembly.
+         *   The \p *_dof_ids are the local rows of the element vector/matrix
+         *   quantities that are in the material/void domain.
          */
         void element_factored_jacobian(const libMesh::Elem& elem,
                                        const RealMatrixX& jac,

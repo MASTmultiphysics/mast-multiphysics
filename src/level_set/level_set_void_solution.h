@@ -29,7 +29,7 @@ namespace MAST {
 
     // Forward declerations
     class LevelSetInterfaceDofHandler;
-    
+    class LevelSetIntersection;
     
     /*!
      *   This will compute the solution at the interface under the
@@ -53,6 +53,7 @@ namespace MAST {
         }
 
         virtual void init(MAST::AssemblyBase& assembly,
+                          MAST::LevelSetIntersection& intersection,
                           MAST::LevelSetInterfaceDofHandler  &dof_handler);
         
         virtual void clear();
@@ -70,6 +71,8 @@ namespace MAST {
 
         
         MAST::AssemblyBase                 *_assembly;
+
+        MAST::LevelSetIntersection         *_intersection;
 
         MAST::LevelSetInterfaceDofHandler  *_dof_handler;
     };

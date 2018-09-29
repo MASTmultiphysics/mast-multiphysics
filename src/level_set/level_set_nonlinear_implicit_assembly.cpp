@@ -88,7 +88,7 @@ set_level_set_function(MAST::FieldFunction<Real>& level_set) {
     _dof_handler  = new MAST::LevelSetInterfaceDofHandler();
     _dof_handler->init(*_system, *_intersection, *_level_set);
     _void_solution_monitor = new MAST::LevelSetVoidSolution();
-    _void_solution_monitor->init(*this, *_dof_handler);
+    _void_solution_monitor->init(*this, *_intersection, *_dof_handler);
 }
 
 
@@ -320,11 +320,18 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
     RealVectorX
     vec,
     sol,
+    sub_elem_vec,
+    res_factored_u,
     nd_indicator = RealVectorX::Ones(1),
     indicator    = RealVectorX::Zero(1);
-    RealMatrixX mat;
+    RealMatrixX
+    mat,
+    sub_elem_mat,
+    jac_factored_uu;
     
-    std::vector<libMesh::dof_id_type> dof_indices;
+    std::vector<libMesh::dof_id_type>
+    dof_indices,
+    material_rows;
     const libMesh::DofMap& dof_map = _system->system().get_dof_map();
     
     
@@ -368,7 +375,9 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
         unsigned int ndofs = (unsigned int)dof_indices.size();
         sol.setZero(ndofs);
         vec.setZero(ndofs);
+        sub_elem_vec.setZero(ndofs);
         mat.setZero(ndofs, ndofs);
+        sub_elem_mat.setZero(ndofs, ndofs);
         
         // Petsc needs that every diagonal term be provided some contribution,
         // even if zero. Otherwise, it complains about lack of diagonal entry.
@@ -379,8 +388,8 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
             
             DenseRealMatrix m(ndofs, ndofs);
             //dof_map.constrain_element_matrix(m, dof_indices);
-	    for (unsigned int i=0; i<ndofs; i++)
-	      m(i,i) = 1.e-6;
+            for (unsigned int i=0; i<ndofs; i++)
+                m(i,i) = 1.e-6;
             J->add_matrix(m, dof_indices);
         }
         
@@ -390,6 +399,11 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
             
             for (unsigned int i=0; i<dof_indices.size(); i++)
                 sol(i) = (*localized_solution)(dof_indices[i]);
+            
+            // if the element has been marked for factorization then
+            // get the void solution from the storage
+            if (_dof_handler->if_factor_element(*elem))
+                _dof_handler->solution_of_factored_element(*elem, sol);
             
             const std::vector<const libMesh::Elem *> &
             //elems_low = intersect.get_sub_elems_negative_phi(),
@@ -406,36 +420,64 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
                 ops.init(*sub_elem);
                 ops.set_elem_solution(sol);
                 
-                //if (_sol_function)
-                // physics_elem->attach_active_solution_function(*_sol_function);
+                // if the element has been marked for factorization,
+                // get the factorized jacobian and residual contributions
+                if (_dof_handler->if_factor_element(*elem))
+                    ops.elem_calculations(true, sub_elem_vec, sub_elem_mat);
+                else
+                    ops.elem_calculations(J!=nullptr?true:false, sub_elem_vec, sub_elem_mat);
                 
-                ops.elem_calculations(J!=nullptr?true:false, vec, mat);
-                
-                //                physics_elem->detach_active_solution_function();
+                mat += sub_elem_mat;
+                vec += sub_elem_vec;
                 
                 ops.clear_elem();
-
-                // copy to the libMesh matrix for further processing
-                DenseRealVector v;
-                DenseRealMatrix m;
-                if (R)
-                    MAST::copy(v, vec);
-                if (J)
-                    MAST::copy(m, mat);
-                
-                // constrain the quantities to account for hanging dofs,
-                // Dirichlet constraints, etc.
-                if (R && J)
-                    dof_map.constrain_element_matrix_and_vector(m, v, dof_indices);
-                else if (R)
-                    dof_map.constrain_element_vector(v, dof_indices);
-                else
-                    dof_map.constrain_element_matrix(m, dof_indices);
-                
-                // add to the global matrices
-                if (R) R->add_vector(v, dof_indices);
-                if (J) J->add_matrix(m, dof_indices);
             }
+
+            // if the element needs to be factored, then process the
+            // factored jacobian and residual
+            if (_dof_handler->if_factor_element(*elem)) {
+                
+                _dof_handler->element_factored_residual_and_jacobian(*elem,
+                                                                     mat,
+                                                                     vec,
+                                                                     material_rows,
+                                                                     jac_factored_uu,
+                                                                     res_factored_u);
+                
+                // zero the element matrix and update with the
+                // factored matrix
+                mat.setIdentity(); mat *= 1.e-6; // set a small value on the diagonal to avoid nans
+                vec.setZero();
+                
+                for (unsigned int i=0; i<material_rows.size(); i++) {
+                    
+                    vec(material_rows[i])   = res_factored_u(i);
+                    
+                    for (unsigned int j=0; j<material_rows.size(); j++)
+                        mat(material_rows[i], material_rows[j]) = jac_factored_uu(i,j);
+                }
+            }
+            
+            // copy to the libMesh matrix for further processing
+            DenseRealVector v;
+            DenseRealMatrix m;
+            if (R)
+                MAST::copy(v, vec);
+            if (J)
+                MAST::copy(m, mat);
+            
+            // constrain the quantities to account for hanging dofs,
+            // Dirichlet constraints, etc.
+            if (R && J)
+                dof_map.constrain_element_matrix_and_vector(m, v, dof_indices);
+            else if (R)
+                dof_map.constrain_element_vector(v, dof_indices);
+            else
+                dof_map.constrain_element_matrix(m, dof_indices);
+            
+            // add to the global matrices
+            if (R) R->add_vector(v, dof_indices);
+            if (J) J->add_matrix(m, dof_indices);
         }
         
         _intersection->clear();

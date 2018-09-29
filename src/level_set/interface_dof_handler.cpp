@@ -136,14 +136,17 @@ MAST::LevelSetInterfaceDofHandler::if_factor_element(const libMesh::Elem& elem) 
 
 
 void
-MAST::LevelSetInterfaceDofHandler::partition_elem_rows(const libMesh::Elem& elem,
-                                                       std::vector<libMesh::dof_id_type>& material_dofs,
-                                                       std::vector<libMesh::dof_id_type>& void_dofs) {
+MAST::LevelSetInterfaceDofHandler::
+partition_local_elem_rows(const libMesh::Elem& elem,
+                          std::vector<libMesh::dof_id_type>& material_dofs,
+                          std::vector<libMesh::dof_id_type>& void_dofs) {
     
     
     const MAST::NonlinearSystem &system  = _sys_init->system();
     Real val = 0.;
-    unsigned int nvars = _sys_init->n_vars();
+    unsigned int
+    nvars   = _sys_init->n_vars(),
+    n_nodes = elem.n_nodes();
     
     // currently only implemented for quad4 and Lagrange functions
     libmesh_assert_equal_to(elem.type(), libMesh::QUAD4);
@@ -165,19 +168,46 @@ MAST::LevelSetInterfaceDofHandler::partition_elem_rows(const libMesh::Elem& elem
             
             // mark all dofs for this node to be in void
             for (unsigned int j=0; j<nvars; j++)
-                void_dofs.push_back(i*nvars+j);
+                void_dofs.push_back(j*n_nodes+i);
         }
         else {
             
             // mark all dofs for this node to be in material
             for (unsigned int j=0; j<nvars; j++)
-                material_dofs.push_back(i*nvars+j);
+                material_dofs.push_back(j*n_nodes+i);
         }
     }
     
     // now sort the dofs
     std::sort(void_dofs.begin(), void_dofs.end());
     std::sort(material_dofs.begin(), material_dofs.end());
+}
+
+
+void
+MAST::LevelSetInterfaceDofHandler::
+partition_global_elem_rows(const libMesh::Elem& elem,
+                           std::vector<libMesh::dof_id_type>& material_dofs,
+                           std::vector<libMesh::dof_id_type>& void_dofs) {
+    
+    // get the local dof partitioning
+    this->partition_local_elem_rows(elem, material_dofs, void_dofs);
+    
+    //
+    // now replace the dof ids with the global ids
+    //
+    const MAST::NonlinearSystem &system  = _sys_init->system();
+    const libMesh::DofMap       &dof_map = system.get_dof_map();
+    std::vector<libMesh::dof_id_type>
+    dof_ids;
+    
+    dof_map.dof_indices(&elem, dof_ids);
+    
+    for (unsigned int i=0; i<material_dofs.size(); i++)
+        material_dofs[i] = dof_ids[material_dofs[i]];
+    
+    for (unsigned int i=0; i<void_dofs.size(); i++)
+        void_dofs[i]     = dof_ids[void_dofs[i]];
 }
 
 
@@ -199,7 +229,7 @@ MAST::LevelSetInterfaceDofHandler::solution_of_factored_element(const libMesh::E
     const RealVectorX
     &free_sol = it->second;
     
-    this->partition_elem_rows(elem, material_dofs, void_dofs);
+    this->partition_local_elem_rows(elem, material_dofs, void_dofs);
     
     // overwirte the void dofs from the stored data
     for (unsigned int i=0; i<void_dofs.size(); i++)
@@ -240,6 +270,54 @@ element_factored_jacobian(const libMesh::Elem& elem,
 
 void
 MAST::LevelSetInterfaceDofHandler::
+element_factored_residual_and_jacobian(const libMesh::Elem& elem,
+                                       const RealMatrixX& jac,
+                                       const RealVectorX& res,
+                                       std::vector<libMesh::dof_id_type>& material_dof_ids,
+                                       RealMatrixX& jac_factored_uu,
+                                       RealVectorX& res_factored_u) {
+    
+    std::vector<libMesh::dof_id_type>
+    void_dof_ids;
+    
+    RealMatrixX
+    jac_uu,
+    jac_uf,
+    jac_fu,
+    jac_ff;
+    
+    this->element_factored_jacobian(elem,
+                                    jac,
+                                    material_dof_ids,
+                                    void_dof_ids,
+                                    jac_uu,
+                                    jac_uf,
+                                    jac_fu,
+                                    jac_ff,
+                                    jac_factored_uu);
+
+    unsigned int
+    nu   = material_dof_ids.size(),
+    nf   = void_dof_ids.size();
+
+    RealVectorX
+    res_f           = RealVectorX::Zero(nf);
+    
+    res_factored_u  = RealVectorX::Zero(nu);
+    
+    for (unsigned int i=0; i<material_dof_ids.size(); i++)
+        res_factored_u(i)  = res(material_dof_ids[i]);
+    
+    for (unsigned int i=0; i<void_dof_ids.size(); i++)
+        res_f(i)           = res(void_dof_ids[i]);
+    
+    res_factored_u -= jac_uf * jac_ff.inverse() * res_f;
+}
+
+
+
+void
+MAST::LevelSetInterfaceDofHandler::
 element_factored_jacobian(const libMesh::Elem& elem,
                           const RealMatrixX& jac,
                           std::vector<libMesh::dof_id_type>& material_dof_ids,
@@ -254,7 +332,7 @@ element_factored_jacobian(const libMesh::Elem& elem,
     material_dof_ids.clear();
     void_dof_ids.clear();
     
-    this->partition_elem_rows(elem, material_dof_ids, void_dof_ids);
+    this->partition_local_elem_rows(elem, material_dof_ids, void_dof_ids);
     
     unsigned int
     nu = material_dof_ids.size(),
@@ -285,23 +363,6 @@ element_factored_jacobian(const libMesh::Elem& elem,
     }
     
     jac_factored_uu = jac_uu - jac_uf * jac_ff.inverse() * jac_fu;
-
-
-    //
-    // now replace the dof ids with the global ids
-    //
-    const MAST::NonlinearSystem &system  = _sys_init->system();
-    const libMesh::DofMap       &dof_map = system.get_dof_map();
-    std::vector<libMesh::dof_id_type>
-    dof_ids;
-    
-    dof_map.dof_indices(&elem, dof_ids);
-
-    for (unsigned int i=0; i<nu; i++)
-        material_dof_ids[i] = dof_ids[material_dof_ids[i]];
-
-    for (unsigned int i=0; i<nf; i++)
-        void_dof_ids[i]     = dof_ids[void_dof_ids[i]];
 }
 
 
@@ -324,14 +385,14 @@ update_factored_element_solution(const libMesh::Elem& elem,
     //   [Juu  Juf] {dxu} = - {f_u}
     //   [Jfu  Jff] {dxf} = - {f_f}
     //   so,
-    //   {dxf} = inv(Jff) (-{f_f} + Jfu {dxu})
+    //   {dxf} = inv(Jff) (-{f_f} - Jfu {dxu})
     //
 
     std::vector<libMesh::dof_id_type>
     material_dof_ids,
     void_dof_ids;
     
-    this->partition_elem_rows(elem, material_dof_ids, void_dof_ids);
+    this->partition_local_elem_rows(elem, material_dof_ids, void_dof_ids);
     
     // we should not be capturing elements that are purely in void or material
     libmesh_assert_greater(material_dof_ids.size(), 0);
@@ -369,7 +430,7 @@ update_factored_element_solution(const libMesh::Elem& elem,
     for (unsigned int i=0; i<nu; i++)
         dx_u(i)= dsol(material_dof_ids[i]);
 
-    dx_f = jac_ff.inverse() * (-f_f + jac_fu * dx_u);
+    dx_f = jac_ff.inverse() * (-f_f - jac_fu * dx_u);
     
     updated_sol = sol;
     for (unsigned int i=0; i<nf; i++)

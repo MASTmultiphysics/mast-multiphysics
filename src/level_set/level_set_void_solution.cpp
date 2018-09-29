@@ -20,6 +20,7 @@
 // MAST includes
 #include "level_set/level_set_void_solution.h"
 #include "level_set/interface_dof_handler.h"
+#include "level_set/level_set_intersection.h"
 #include "base/physics_discipline_base.h"
 #include "base/system_initialization.h"
 #include "base/nonlinear_system.h"
@@ -90,6 +91,7 @@ _snes_level_set_void_solution_assembly_monitor_function(SNES snes,
 MAST::LevelSetVoidSolution::LevelSetVoidSolution():
 MAST::AssemblyBase::SolverMonitor(),
 _assembly      (nullptr),
+_intersection  (nullptr),
 _dof_handler   (nullptr) {
     
     
@@ -107,12 +109,14 @@ MAST::LevelSetVoidSolution::~LevelSetVoidSolution() {
 
 void
 MAST::LevelSetVoidSolution::init(MAST::AssemblyBase& assembly,
+                                 MAST::LevelSetIntersection &intersection,
                                  MAST::LevelSetInterfaceDofHandler  &dof_handler) {
 
     // should be cleared before initialization
     libmesh_assert(!_assembly);
     
     _assembly    = &assembly;
+    _intersection= &intersection;
     _dof_handler = &dof_handler;
     
     // get the nonlinear solver SNES object from System and
@@ -158,6 +162,7 @@ MAST::LevelSetVoidSolution::clear() {
     libmesh_assert(!ierr);
     
     _assembly     = nullptr;
+    _intersection = nullptr;
     _dof_handler  = nullptr;
 }
 
@@ -174,14 +179,19 @@ update_void_solution(libMesh::NumericVector<Real>& X,
     MAST::NonlinearSystem&
     sys        = _assembly->system();
     
+    MAST::FieldFunction<Real>&
+    phi        = _dof_handler->get_level_set_function();
+    
     // iterate over each element, initialize it and get the relevant
     // analysis quantities
     RealVectorX
     sol,
     dsol,
+    sub_elem_vec,
     res;
     
     RealMatrixX
+    sub_elem_mat,
     jac;
     
     std::vector<libMesh::dof_id_type>
@@ -204,7 +214,6 @@ update_void_solution(libMesh::NumericVector<Real>& X,
     for ( ; el != end_el; ++el) {
         
         const libMesh::Elem* elem         = *el;
-        
         if (_dof_handler->if_factor_element(*elem)) {
             
             dof_map.dof_indices (elem, dof_indices);
@@ -213,7 +222,9 @@ update_void_solution(libMesh::NumericVector<Real>& X,
             unsigned int ndofs = (unsigned int)dof_indices.size();
             sol.setZero(ndofs);
             dsol.setZero(ndofs);
+            sub_elem_vec.setZero(ndofs);
             res.setZero(ndofs);
+            sub_elem_mat.setZero(ndofs, ndofs);
             jac.setZero(ndofs, ndofs);
             
             for (unsigned int i=0; i<dof_indices.size(); i++) {
@@ -223,13 +234,35 @@ update_void_solution(libMesh::NumericVector<Real>& X,
             
             _dof_handler->solution_of_factored_element(*elem, sol);
             
-            elem_ops.init(*elem);
-            elem_ops.set_elem_solution(sol);
+            // get the intersection and compute the residual and jacobian
+            // with contribution from all elements.
+            _intersection->init(phi, *elem, sys.time);
             
-            // compute the stiffness matrix for the element using the previous
-            // solution
-            elem_ops.elem_calculations(true, res, jac);
-            elem_ops.clear_elem();
+            const std::vector<const libMesh::Elem *> &
+            elems_hi = _intersection->get_sub_elems_positive_phi();
+            
+            std::vector<const libMesh::Elem*>::const_iterator
+            hi_sub_elem_it  = elems_hi.begin(),
+            hi_sub_elem_end = elems_hi.end();
+            
+            for (; hi_sub_elem_it != hi_sub_elem_end; hi_sub_elem_it++ ) {
+                
+                const libMesh::Elem* sub_elem = *hi_sub_elem_it;
+                
+                elem_ops.init(*sub_elem);
+                elem_ops.set_elem_solution(sol);
+                
+                // if the element has been marked for factorization,
+                // get the factorized jacobian and residual contributions
+                elem_ops.elem_calculations(true, sub_elem_vec, sub_elem_mat);
+                
+                jac += sub_elem_mat;
+                res += sub_elem_vec;
+                
+                elem_ops.clear_elem();
+            }
+
+            _intersection->clear();
             
             _dof_handler->update_factored_element_solution(*elem,
                                                            res,
