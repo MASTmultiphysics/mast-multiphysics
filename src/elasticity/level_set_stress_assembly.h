@@ -29,6 +29,7 @@ namespace MAST {
     // Forward declerations
     template <typename ValType> class FieldFunction;
     class LevelSetIntersection;
+    class LevelSetInterfaceDofHandler;
 
     
     class LevelSetStressAssembly:
@@ -53,14 +54,15 @@ namespace MAST {
          *   attaches level set function to \p this
          */
         virtual void
-        set_level_set_function(MAST::FieldFunction<Real>& level_set);
+        init(MAST::FieldFunction<Real>& level_set,
+             MAST::LevelSetInterfaceDofHandler& dof_handler);
 
         
         /*!
          *   clears association with level set function
          */
         virtual void
-        clear_level_set_function();
+        clear();
 
         
         /*!
@@ -88,7 +90,7 @@ namespace MAST {
 
         MAST::FieldFunction<Real>            *_level_set;
         MAST::LevelSetIntersection           *_intersection;
-
+        MAST::LevelSetInterfaceDofHandler    *_dof_handler;
     };
 }
 

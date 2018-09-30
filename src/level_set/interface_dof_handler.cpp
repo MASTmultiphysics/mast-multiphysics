@@ -284,7 +284,8 @@ element_factored_residual_and_jacobian(const libMesh::Elem& elem,
     jac_uu,
     jac_uf,
     jac_fu,
-    jac_ff;
+    jac_ff,
+    jac_ff_inv;
     
     this->element_factored_jacobian(elem,
                                     jac,
@@ -311,7 +312,9 @@ element_factored_residual_and_jacobian(const libMesh::Elem& elem,
     for (unsigned int i=0; i<void_dof_ids.size(); i++)
         res_f(i)           = res(void_dof_ids[i]);
     
-    res_factored_u -= jac_uf * jac_ff.inverse() * res_f;
+    _compute_matrix_inverse(jac_ff, jac_ff_inv);
+    
+    res_factored_u -= jac_uf * jac_ff_inv * res_f;
 }
 
 
@@ -343,6 +346,9 @@ element_factored_jacobian(const libMesh::Elem& elem,
     jac_fu = RealMatrixX::Zero(nf, nu);
     jac_ff = RealMatrixX::Zero(nf, nf);
     
+    RealMatrixX
+    jac_ff_inv;
+    
     //
     // partition the matrices
     //
@@ -362,7 +368,9 @@ element_factored_jacobian(const libMesh::Elem& elem,
             jac_ff(i,j) = jac(void_dof_ids[i],     void_dof_ids[j]);
     }
     
-    jac_factored_uu = jac_uu - jac_uf * jac_ff.inverse() * jac_fu;
+    _compute_matrix_inverse(jac_ff, jac_ff_inv);
+    
+    jac_factored_uu = jac_uu - jac_uf * jac_ff_inv * jac_fu;
 }
 
 
@@ -404,7 +412,8 @@ update_factored_element_solution(const libMesh::Elem& elem,
     
     RealMatrixX
     jac_fu = RealMatrixX::Zero(nf, nu),
-    jac_ff = RealMatrixX::Zero(nf, nf);
+    jac_ff = RealMatrixX::Zero(nf, nf),
+    jac_ff_inv;
     
     RealVectorX
     f_u    = RealVectorX::Zero(nu),
@@ -430,7 +439,9 @@ update_factored_element_solution(const libMesh::Elem& elem,
     for (unsigned int i=0; i<nu; i++)
         dx_u(i)= dsol(material_dof_ids[i]);
 
-    dx_f = jac_ff.inverse() * (-f_f - jac_fu * dx_u);
+    _compute_matrix_inverse(jac_ff, jac_ff_inv);
+    
+    dx_f = jac_ff_inv * (-f_f - jac_fu * dx_u);
     
     updated_sol = sol;
     for (unsigned int i=0; i<nf; i++)
@@ -441,5 +452,31 @@ update_factored_element_solution(const libMesh::Elem& elem,
     // now update the solution in the map
     //
     it->second = updated_sol;
+}
+
+
+void
+MAST::LevelSetInterfaceDofHandler::_compute_matrix_inverse(const RealMatrixX& mat,
+                                                           RealMatrixX& mat_inv) {
+    
+    const unsigned int
+    m = mat.rows(),
+    n = mat.cols();
+    
+    libmesh_assert_equal_to(m, n);
+    
+    Eigen::FullPivLU<RealMatrixX> solver(mat);
+    RealVectorX
+    rhs = RealVectorX::Zero(m);
+    
+    mat_inv = RealMatrixX::Zero(m, m);
+    
+    for (unsigned int i=0; i<m; i++) {
+        
+        rhs  = RealVectorX::Zero(m);
+        rhs(i) = 1.;
+        
+        mat_inv.col(i) = solver.solve(rhs);
+    }
 }
 

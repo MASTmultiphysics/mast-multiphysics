@@ -150,6 +150,9 @@ namespace MAST {
         
     protected:
 
+        void _compute_matrix_inverse(const RealMatrixX& mat,
+                                     RealMatrixX& mat_inv);
+        
         const MAST::SystemInitialization*           _sys_init;
         MAST::FieldFunction<Real>*                  _phi;
         

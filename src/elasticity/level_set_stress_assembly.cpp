@@ -23,8 +23,9 @@
 #include "elasticity/stress_output_base.h"
 #include "elasticity/structural_system_initialization.h"
 #include "base/nonlinear_system.h"
-#include "level_set/level_set_intersection.h"
 #include "base/elem_base.h"
+#include "level_set/level_set_intersection.h"
+#include "level_set/interface_dof_handler.h"
 #include "level_set/sub_cell_fe.h"
 #include "mesh/local_elem_fe.h"
 
@@ -37,7 +38,8 @@
 MAST::LevelSetStressAssembly::LevelSetStressAssembly():
 MAST::StressAssembly(),
 _level_set     (nullptr),
-_intersection  (nullptr) {
+_intersection  (nullptr),
+_dof_handler   (nullptr) {
     
 }
 
@@ -50,14 +52,16 @@ MAST::LevelSetStressAssembly::~LevelSetStressAssembly() {
 
 
 void
-MAST::LevelSetStressAssembly::
-set_level_set_function(MAST::FieldFunction<Real>& level_set) {
+MAST::LevelSetStressAssembly::init(MAST::FieldFunction<Real>& level_set,
+                                   MAST::LevelSetInterfaceDofHandler& dof_handler) {
     
     libmesh_assert(!_level_set);
     libmesh_assert(!_intersection);
+    libmesh_assert(!_dof_handler);
     libmesh_assert(_system);
     
     _level_set    = &level_set;
+    _dof_handler  = &dof_handler;
     _intersection = new MAST::LevelSetIntersection(_system->system().get_mesh().max_elem_id(),
                                                    _system->system().get_mesh().max_node_id());
 }
@@ -65,9 +69,10 @@ set_level_set_function(MAST::FieldFunction<Real>& level_set) {
 
 
 void
-MAST::LevelSetStressAssembly::clear_level_set_function() {
+MAST::LevelSetStressAssembly::clear() {
     
-    _level_set = nullptr;
+    _level_set   = nullptr;
+    _dof_handler = nullptr;
     
     if (_intersection) {
         delete _intersection;
@@ -157,6 +162,9 @@ update_stress_strain_data(MAST::StressStrainOutputBase&       ops,
             for (unsigned int i=0; i<dof_indices.size(); i++)
                 sol(i) = (*localized_solution)(dof_indices[i]);
             
+            if (_dof_handler->if_factor_element(*elem))
+                _dof_handler->solution_of_factored_element(*elem, sol);
+
             const std::vector<const libMesh::Elem *> &
             elems_hi = _intersection->get_sub_elems_positive_phi();
             
