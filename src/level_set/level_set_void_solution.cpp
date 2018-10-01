@@ -233,12 +233,22 @@ update_void_solution(libMesh::NumericVector<Real>& X,
             }
             
             _dof_handler->solution_of_factored_element(*elem, sol);
-            
+
             // get the intersection and compute the residual and jacobian
             // with contribution from all elements.
             _intersection->init(phi, *elem, sys.time);
+
+            // the Jacobian is based on the homogenization method
+            elem_ops.init(*elem);
+            elem_ops.set_elem_solution(sol);
+            elem_ops.elem_calculations(true, res, jac);
+            elem_ops.clear_elem();
+            jac *= _intersection->get_positive_phi_volume_fraction();
+            res *= _intersection->get_positive_phi_volume_fraction();
+            //res.setZero();
+
             
-            const std::vector<const libMesh::Elem *> &
+            /*const std::vector<const libMesh::Elem *> &
             elems_hi = _intersection->get_sub_elems_positive_phi();
             
             std::vector<const libMesh::Elem*>::const_iterator
@@ -256,11 +266,11 @@ update_void_solution(libMesh::NumericVector<Real>& X,
                 // get the factorized jacobian and residual contributions
                 elem_ops.elem_calculations(true, sub_elem_vec, sub_elem_mat);
                 
-                jac += sub_elem_mat;
+                //jac += sub_elem_mat;
                 res += sub_elem_vec;
                 
                 elem_ops.clear_elem();
-            }
+            }*/
 
             _intersection->clear();
             

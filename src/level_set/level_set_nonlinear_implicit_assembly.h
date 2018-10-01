@@ -88,6 +88,13 @@ namespace MAST {
          *  @returns a reference to the level set function
          */
         MAST::LevelSetIntersection& get_intersection();
+
+        
+        /*!
+         *  @returns a reference to the \p LevelSetInterfaceDofHandler object
+         */
+        MAST::LevelSetInterfaceDofHandler& get_dof_handler();
+
         
         /*!
          *    function that assembles the matrices and vectors quantities for
@@ -152,12 +159,10 @@ namespace MAST {
          *   for element integration.
          */
         virtual std::unique_ptr<MAST::FEBase>
-        build_fe(const libMesh::Elem& e);
+        build_fe();
 
     protected:
 
-        bool                                 _analysis_mode;
-        
         MAST::FieldFunction<Real>            *_level_set;
 
         MAST::FieldFunction<RealVectorX>     *_indicator;

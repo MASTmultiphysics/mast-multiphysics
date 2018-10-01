@@ -29,7 +29,6 @@
 #include "base/nonlinear_implicit_assembly_elem_operations.h"
 #include "base/output_assembly_elem_operations.h"
 #include "base/elem_base.h"
-#include "mesh/local_elem_fe.h"
 #include "numerics/utility.h"
 
 
@@ -44,7 +43,6 @@
 MAST::LevelSetNonlinearImplicitAssembly::
 LevelSetNonlinearImplicitAssembly():
 MAST::NonlinearImplicitAssembly(),
-_analysis_mode           (true),
 _level_set               (nullptr),
 _indicator               (nullptr),
 _intersection            (nullptr),
@@ -71,6 +69,14 @@ MAST::LevelSetNonlinearImplicitAssembly::get_intersection() {
     
     libmesh_assert(_level_set);
     return *_intersection;
+}
+
+
+MAST::LevelSetInterfaceDofHandler&
+MAST::LevelSetNonlinearImplicitAssembly::get_dof_handler() {
+    
+    libmesh_assert(_level_set);
+    return *_dof_handler;
 }
 
 
@@ -301,8 +307,6 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
     libmesh_assert(_elem_ops);
     libmesh_assert(_level_set);
     
-    _analysis_mode = false;
-    
     MAST::NonlinearSystem& nonlin_sys = _system->system();
     
     // make sure that the system for which this object was created,
@@ -404,37 +408,22 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
             // get the void solution from the storage
             if (_dof_handler->if_factor_element(*elem))
                 _dof_handler->solution_of_factored_element(*elem, sol);
-            
-            const std::vector<const libMesh::Elem *> &
-            //elems_low = intersect.get_sub_elems_negative_phi(),
-            elems_hi = _intersection->get_sub_elems_positive_phi();
-            
-            std::vector<const libMesh::Elem*>::const_iterator
-            hi_sub_elem_it  = elems_hi.begin(),
-            hi_sub_elem_end = elems_hi.end();
-            
-            for (; hi_sub_elem_it != hi_sub_elem_end; hi_sub_elem_it++ ) {
-                
-                const libMesh::Elem* sub_elem = *hi_sub_elem_it;
-                
-                ops.init(*sub_elem);
-                ops.set_elem_solution(sol);
-                
-                // if the element has been marked for factorization,
-                // get the factorized jacobian and residual contributions
-                if (_dof_handler->if_factor_element(*elem))
-                    ops.elem_calculations(true, sub_elem_vec, sub_elem_mat);
-                else
-                    ops.elem_calculations(J!=nullptr?true:false, sub_elem_vec, sub_elem_mat);
-                
-                mat += sub_elem_mat;
-                vec += sub_elem_vec;
-                
-                ops.clear_elem();
-            }
 
-            // if the element needs to be factored, then process the
-            // factored jacobian and residual
+            // the Jacobian is based on the homogenizaton method to maintain
+            // a well conditioned global Jacobian.
+            ops.init(*elem);
+            ops.set_elem_solution(sol);
+            ops.elem_calculations(true, vec, mat);
+            ops.clear_elem();
+            mat *= _intersection->get_positive_phi_volume_fraction();
+            // the residual based on homogenization is used for factorized
+            // elements since the factorization depends on exact Jacobian
+            // and the homogenization based Jacobian is not exact linearization
+            // of residual based on sub cells.
+            vec *= _intersection->get_positive_phi_volume_fraction();
+            
+            // if the element has been marked for factorization,
+            // get the factorized jacobian and residual contributions
             if (_dof_handler->if_factor_element(*elem)) {
                 
                 _dof_handler->element_factored_residual_and_jacobian(*elem,
@@ -457,6 +446,33 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
                         mat(material_rows[i], material_rows[j]) = jac_factored_uu(i,j);
                 }
             }
+            /*else {
+                
+                // get the residual from the sub elements
+                vec.setZero();
+
+                const std::vector<const libMesh::Elem *> &
+                elems_hi = _intersection->get_sub_elems_positive_phi();
+                
+                std::vector<const libMesh::Elem*>::const_iterator
+                hi_sub_elem_it  = elems_hi.begin(),
+                hi_sub_elem_end = elems_hi.end();
+                
+                for (; hi_sub_elem_it != hi_sub_elem_end; hi_sub_elem_it++ ) {
+                    
+                    const libMesh::Elem* sub_elem = *hi_sub_elem_it;
+                    
+                    ops.init(*sub_elem);
+                    ops.set_elem_solution(sol);
+                    
+                    ops.elem_calculations(J!=nullptr?true:false, sub_elem_vec, sub_elem_mat);
+                    
+                    //mat += sub_elem_mat;
+                    vec += sub_elem_vec;
+                    
+                    ops.clear_elem();
+                }
+            }*/
             
             // copy to the libMesh matrix for further processing
             DenseRealVector v;
@@ -508,8 +524,6 @@ sensitivity_assemble (const MAST::FunctionBase& f,
     // we need the velocity for topology parameter
     if (f.is_topology_parameter()) libmesh_assert(_velocity);
 
-    _analysis_mode = false;
-    
     MAST::NonlinearSystem& nonlin_sys = _system->system();
     
     sensitivity_rhs.zero();
@@ -647,7 +661,6 @@ calculate_output(const libMesh::NumericVector<Real>& X,
     libmesh_assert(_discipline);
     libmesh_assert(_level_set);
     
-    _analysis_mode = false;
     output.zero_for_analysis();
 
     this->set_elem_operation_object(output);
@@ -753,8 +766,6 @@ calculate_output_derivative(const libMesh::NumericVector<Real>& X,
     
     libmesh_assert(_discipline);
     libmesh_assert(_system);
-    
-    _analysis_mode = false;
     
     output.zero_for_sensitivity();
 
@@ -876,8 +887,6 @@ calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
     libmesh_assert(_discipline);
     libmesh_assert(_level_set);
     
-    _analysis_mode = false;
-    
     // we need the velocity for topology parameter
     if (p.is_topology_parameter()) libmesh_assert(_velocity);
 
@@ -993,39 +1002,14 @@ calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
 
 
 std::unique_ptr<MAST::FEBase>
-MAST::LevelSetNonlinearImplicitAssembly::build_fe(const libMesh::Elem& elem) {
+MAST::LevelSetNonlinearImplicitAssembly::build_fe() {
     
     libmesh_assert(_elem_ops);
     libmesh_assert(_system);
     libmesh_assert(_intersection);
     
-    std::unique_ptr<MAST::FEBase> fe;
-    
-    if (_elem_ops->if_use_local_elem() &&
-        elem.dim() < 3) {
-        
-        if (_analysis_mode) {
-            
-            MAST::LocalElemFE*
-            local_fe = new MAST::LocalElemFE(*_system);
-            _elem_ops->set_local_fe_data(*local_fe, elem);
-            fe.reset(local_fe);
-        }
-        else {
-            
-            MAST::SubCellFE*
-            local_fe = new MAST::SubCellFE(*_system, *_intersection);
-            // FIXME: we would ideally like to send this to the elem ops object for
-            // setting of any local data. But the code has not been setup to do that
-            // for SubCellFE.
-            //_elem_ops->set_local_fe_data(*local_fe);
-            fe.reset(local_fe);
-        }
-    }
-    else {
-        
-        fe.reset(new MAST::SubCellFE(*_system, *_intersection));
-    }
+    std::unique_ptr<MAST::FEBase>
+    fe(new MAST::SubCellFE(*_system, *_intersection));
     
     return fe;
 }

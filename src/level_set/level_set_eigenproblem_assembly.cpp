@@ -42,8 +42,7 @@ LevelSetEigenproblemAssembly():
 MAST::EigenproblemAssembly(),
 _level_set     (nullptr),
 _intersection  (nullptr),
-_velocity      (nullptr),
-_analysis_mode (false) {
+_velocity      (nullptr) {
     
 }
 
@@ -120,7 +119,6 @@ MAST::LevelSetEigenproblemAssembly::
 eigenproblem_assemble(libMesh::SparseMatrix<Real>* A,
                       libMesh::SparseMatrix<Real>* B) {
     
-    _analysis_mode = true;
     libmesh_assert(_system);
     libmesh_assert(_discipline);
     libmesh_assert(_elem_ops);
@@ -232,7 +230,6 @@ eigenproblem_sensitivity_assemble(const MAST::FunctionBase& f,
                                   libMesh::SparseMatrix<Real>* sensitivity_A,
                                   libMesh::SparseMatrix<Real>* sensitivity_B) {
 
-    _analysis_mode = false;
     libmesh_assert(_system);
     libmesh_assert(_discipline);
     libmesh_assert(_elem_ops);

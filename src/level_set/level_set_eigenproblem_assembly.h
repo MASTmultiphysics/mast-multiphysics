@@ -118,8 +118,6 @@ namespace MAST {
         MAST::LevelSetIntersection           *_intersection;
         
         MAST::FieldFunction<RealVectorX>     *_velocity;
-        
-        bool                                  _analysis_mode;
     };
 }
 
