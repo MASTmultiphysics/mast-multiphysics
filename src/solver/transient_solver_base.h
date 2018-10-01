@@ -262,21 +262,7 @@ namespace MAST {
          *   calls the method from TransientAssemblyElemOperations
          */
         virtual void clear_elem();
-        
-
-        /*!
-         *   calls the method from TransientAssemblyElemOperations
-         */
-        virtual bool
-        if_use_local_elem() const;
-        
-        /*!
-         *   calls the method from TransientAssemblyElemOperations
-         */
-        virtual void
-        set_local_fe_data(MAST::LocalElemFE& fe,
-                          const libMesh::Elem& e) const;
-        
+                
     protected:
         
         /*!

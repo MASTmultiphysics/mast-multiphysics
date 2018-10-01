@@ -1154,7 +1154,7 @@ prestress_A_matrix( MAST::ElementBase& e) const {
     libmesh_assert(false);
     // = new MAST::Solid2DSectionProperty::PrestressAMatrix
     // (this->get<MAST::FieldFunction<RealMatrixX> >("prestress"),
-    // e.local_elem().T_matrix_function(),
+    // e.local_elem().T_matrix(),
     // this->get<FieldFunction<Real> >("h"));
     
     return std::unique_ptr<MAST::FieldFunction<RealMatrixX> > (rval);
@@ -1170,7 +1170,7 @@ prestress_B_matrix( MAST::ElementBase& e) const {
     libmesh_assert(false);
     // = new MAST::Solid2DSectionProperty::PrestressBMatrix
     // (this->get<MAST::FieldFunction<RealMatrixX> >("prestress"),
-    // e.local_elem().T_matrix_function(),
+    // e.local_elem().T_matrix(),
     // this->get<FieldFunction<Real> >("h"),
     // this->get<FieldFunction<Real> >("off"));
     

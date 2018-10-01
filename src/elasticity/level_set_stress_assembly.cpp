@@ -27,7 +27,6 @@
 #include "level_set/level_set_intersection.h"
 #include "level_set/interface_dof_handler.h"
 #include "level_set/sub_cell_fe.h"
-#include "mesh/local_elem_fe.h"
 
 
 // libMesh includes
@@ -233,29 +232,14 @@ update_stress_strain_data(MAST::StressStrainOutputBase&       ops,
 
 
 std::unique_ptr<MAST::FEBase>
-MAST::LevelSetStressAssembly::build_fe(const libMesh::Elem& elem) {
+MAST::LevelSetStressAssembly::build_fe() {
 
     libmesh_assert(_elem_ops);
     libmesh_assert(_system);
     libmesh_assert(_intersection);
     
-    std::unique_ptr<MAST::FEBase> fe;
-    
-    if (_elem_ops->if_use_local_elem() &&
-        elem.dim() < 3) {
-        
-        MAST::SubCellFE*
-        local_fe = new MAST::SubCellFE(*_system, *_intersection);
-        // FIXME: we would ideally like to send this to the elem ops object for
-        // setting of any local data. But the code has not been setup to do that
-        // for SubCellFE.
-        //_elem_ops->set_local_fe_data(*local_fe);
-        fe.reset(local_fe);
-    }
-    else {
-        
-        fe.reset(new MAST::SubCellFE(*_system, *_intersection));
-    }
-    
+    std::unique_ptr<MAST::FEBase>
+    fe(new MAST::SubCellFE(*_system, *_intersection));
+
     return fe;
 }

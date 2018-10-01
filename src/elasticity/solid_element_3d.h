@@ -42,6 +42,7 @@ namespace MAST {
                             const MAST::ElementPropertyCardBase& p);
         
         
+        virtual ~StructuralElement3D();
         
         /*!
          *   Calculates the inertial force and the Jacobian matrices

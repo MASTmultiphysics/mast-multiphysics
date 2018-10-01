@@ -19,15 +19,15 @@
 
 // MAST includes
 #include "elasticity/solid_element_3d.h"
-#include "numerics/fem_operator_matrix.h"
-#include "mesh/local_elem_base.h"
-#include "property_cards/element_property_card_base.h"
+#include "elasticity/stress_output_base.h"
 #include "base/boundary_condition_base.h"
 #include "base/system_initialization.h"
-#include "elasticity/stress_output_base.h"
 #include "base/nonlinear_system.h"
-#include "mesh/fe_base.h"
 #include "base/assembly_base.h"
+#include "numerics/fem_operator_matrix.h"
+#include "mesh/local_3d_elem.h"
+#include "mesh/fe_base.h"
+#include "property_cards/element_property_card_base.h"
 
 
 MAST::StructuralElement3D::
@@ -38,8 +38,15 @@ StructuralElement3D(MAST::SystemInitialization& sys,
 MAST::StructuralElementBase(sys, assembly, elem, p) {
     
     // now initialize the finite element data structures
-    _fe = assembly.build_fe(_elem).release();
-    _fe->init(_elem);
+    _fe         = assembly.build_fe().release();
+    _local_elem = new MAST::Local3DElem(elem);
+    _fe->init(*_local_elem);
+}
+
+
+MAST::StructuralElement3D::~StructuralElement3D() {
+    
+    delete _local_elem;
 }
 
 
@@ -595,7 +602,7 @@ surface_pressure_residual(bool request_jacobian,
     libmesh_assert(!follower_forces); // not implemented yet for follower forces
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem));
+    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe());
     fe->init_for_side(_elem, side, false);
 
     const std::vector<Real> &JxW                    = fe->get_JxW();
@@ -663,7 +670,7 @@ surface_pressure_residual_sensitivity(const MAST::FunctionBase& p,
     libmesh_assert(!follower_forces); // not implemented yet for follower forces
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem));
+    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe());
     fe->init_for_side(_elem, side, false);
 
     const std::vector<Real> &JxW                    = fe->get_JxW();
@@ -916,7 +923,7 @@ MAST::StructuralElement3D::calculate_stress(bool request_derivative,
                                             const MAST::FunctionBase* p,
                                             MAST::StressStrainOutputBase& output) {
     
-    std::unique_ptr<MAST::FEBase>   fe(_assembly.build_fe(_elem));
+    std::unique_ptr<MAST::FEBase>   fe(_assembly.build_fe());
     fe->init(_elem);
     std::vector<libMesh::Point>     qp_loc = fe->get_qpoints();
 

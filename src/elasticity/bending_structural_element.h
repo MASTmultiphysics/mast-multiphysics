@@ -60,19 +60,6 @@ namespace MAST {
         
     protected:
         
-        
-        virtual const RealMatrixX&
-        _Tmatrix() const {
-            
-            // should be implemented in 1D and 2D elements
-            return _Tmat;
-        }
-        
-        /*!
-         *   Transformation matrix to be used for various operations
-         *   in 1D and 2D structural elements
-         */
-        RealMatrixX      _Tmat;
     };
 }
 

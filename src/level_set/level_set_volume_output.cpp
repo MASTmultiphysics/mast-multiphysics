@@ -195,19 +195,3 @@ MAST::LevelSetVolume::evaluate_topology_sensitivity(const MAST::FunctionBase& f,
     }
 }
 
-
-bool
-MAST::LevelSetVolume::if_use_local_elem() const {
-
-    return false;
-}
-
-
-
-void
-MAST::LevelSetVolume::set_local_fe_data(MAST::LocalElemFE& fe,
-                                        const libMesh::Elem& e) const {
-
-    libmesh_assert(false); // should not get called
-}
-

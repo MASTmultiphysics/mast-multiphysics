@@ -25,8 +25,8 @@
 #include "property_cards/element_property_card_2D.h"
 #include "property_cards/material_property_card_base.h"
 #include "numerics/fem_operator_matrix.h"
-#include "mesh/local_elem_fe.h"
-#include "mesh/local_elem_base.h"
+#include "mesh/fe_base.h"
+#include "mesh/local_2d_elem.h"
 #include "base/system_initialization.h"
 #include "base/boundary_condition_base.h"
 #include "base/parameter.h"
@@ -43,9 +43,9 @@ MAST::BendingStructuralElem(sys, assembly, elem, p),
 _bending_operator(nullptr) {
 
     // now initialize the finite element data structures
-    _fe            = assembly.build_fe(_elem).release();
-    _fe->init(_elem);
-    _Tmat          = RealMatrixX::Identity(3,3); //dynamic_cast<MAST::LocalElemFE*>(_fe)->local_elem().T_matrix();
+    _local_elem    = new MAST::Local2DElem(elem);
+    _fe            = assembly.build_fe().release();
+    _fe->init(*_local_elem);
 
     MAST::BendingOperatorType bending_model =
     _property.bending_model(_elem, _fe->get_fe_type());
@@ -57,7 +57,8 @@ _bending_operator(nullptr) {
 
 
 MAST::StructuralElement2D::~StructuralElement2D() {
-    
+
+    delete _local_elem;
     if (_bending_operator)   delete _bending_operator;
 }
 
@@ -266,8 +267,8 @@ MAST::StructuralElement2D::calculate_stress(bool request_derivative,
                                             const MAST::FunctionBase* p,
                                             MAST::StressStrainOutputBase& output) {
     
-    std::unique_ptr<MAST::FEBase>   fe(_assembly.build_fe(_elem));
-    fe->init(_elem);
+    std::unique_ptr<MAST::FEBase>   fe(_assembly.build_fe());
+    fe->init(*_local_elem);
     
     const unsigned int
     qp_loc_fe_size = (unsigned int)fe->get_qpoints().size(),
@@ -658,8 +659,8 @@ calculate_stress_boundary_velocity(const MAST::FunctionBase& p,
                                    const unsigned int s,
                                    const MAST::FieldFunction<RealVectorX>& vel_f) {
     
-    std::unique_ptr<MAST::FEBase>   fe(_assembly.build_fe(_elem));
-    fe->init_for_side(_elem, s, true);
+    std::unique_ptr<MAST::FEBase>   fe(_assembly.build_fe());
+    fe->init_for_side(*_local_elem, s, true);
 
     const unsigned int
     qp_loc_fe_size = (unsigned int)fe->get_qpoints().size(),
@@ -899,8 +900,8 @@ MAST::StructuralElement2D::
 calculate_stress_temperature_derivative(MAST::FEBase& fe_thermal,
                                         MAST::StressStrainOutputBase& output)  {
     
-    std::unique_ptr<MAST::FEBase> fe_str(_assembly.build_fe(_elem));
-    fe_str->init(_elem);
+    std::unique_ptr<MAST::FEBase> fe_str(_assembly.build_fe());
+    fe_str->init(*_local_elem);
     
     // make sure that the structural and thermal FE have the same types and
     // locations
@@ -1324,8 +1325,8 @@ internal_residual_boundary_velocity(const MAST::FunctionBase& p,
                                     RealMatrixX& jac) {
 
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem).release());
-    fe->init_for_side(_elem, s, true);
+    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe());
+    fe->init_for_side(*_local_elem, s, true);
     
     std::vector<Real> JxW_Vn                        = fe->get_JxW();
     const std::vector<libMesh::Point>& xyz          = fe->get_xyz();
@@ -2231,8 +2232,8 @@ surface_pressure_residual(bool request_jacobian,
     libmesh_assert(!follower_forces); // not implemented yet for follower forces
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem).release());
-    fe->init_for_side(_elem, side, false);
+    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe());
+    fe->init_for_side(*_local_elem, side, false);
     
     const std::vector<Real> &JxW                    = fe->get_JxW();
     const std::vector<libMesh::Point>& qpoint       = fe->get_xyz();
@@ -2308,8 +2309,8 @@ surface_pressure_residual_sensitivity(const MAST::FunctionBase& p,
     libmesh_assert(!follower_forces); // not implemented yet for follower forces
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem).release());
-    fe->init_for_side(_elem, side, false);
+    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe());
+    fe->init_for_side(*_local_elem, side, false);
 
     const std::vector<Real> &JxW                    = fe->get_JxW();
     const std::vector<libMesh::Point>& qpoint       = fe->get_xyz();
@@ -2770,8 +2771,8 @@ thermal_residual_boundary_velocity(const MAST::FunctionBase& p,
                                    RealMatrixX& jac) {
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem).release());
-    fe->init_for_side(_elem, s, true);
+    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe());
+    fe->init_for_side(*_local_elem, s, true);
     
     std::vector<Real> JxW_Vn                        = fe->get_JxW();
     const std::vector<libMesh::Point>& xyz          = fe->get_xyz();
@@ -2963,8 +2964,8 @@ thermal_residual_temperature_derivative(const MAST::FEBase& fe_thermal,
     const std::vector<Real>& JxW                   =  fe_thermal.get_JxW();
     const std::vector<libMesh::Point>& xyz         =  fe_thermal.get_xyz();
     
-    std::unique_ptr<MAST::FEBase>   fe_str(_assembly.build_fe(_elem));
-    fe_str->init(_elem);
+    std::unique_ptr<MAST::FEBase>   fe_str(_assembly.build_fe());
+    fe_str->init(*_local_elem);
     libmesh_assert(fe_str->get_fe_type() == fe_thermal.get_fe_type());
     // this is a weak assertion. We really want that the same qpoints be used,
     // but we are assuming that if the elem type is the same, and if the

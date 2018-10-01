@@ -229,12 +229,6 @@ namespace MAST {
         RealVectorX    _ref_sol;
     };
     
-    
-    std::unique_ptr<MAST::FEBase>
-    build_level_set_fe(MAST::SystemInitialization& sys,
-                       const libMesh::Elem& elem,
-                       const MAST::ElementPropertyCardBase& p);
-    
 }
 
 

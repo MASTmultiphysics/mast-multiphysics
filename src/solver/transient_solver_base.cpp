@@ -781,22 +781,3 @@ MAST::TransientSolverBase::clear_elem() {
 }
 
 
-
-bool
-MAST::TransientSolverBase::if_use_local_elem() const {
-    
-    libmesh_assert(_assembly_ops);
-    return _assembly_ops->if_use_local_elem();
-}
-
-
-void
-MAST::TransientSolverBase::set_local_fe_data(MAST::LocalElemFE& fe,
-                                             const libMesh::Elem& e) const {
-    
-    libmesh_assert(_assembly_ops);
-    _assembly_ops->set_local_fe_data(fe, e);
-}
-
-
-

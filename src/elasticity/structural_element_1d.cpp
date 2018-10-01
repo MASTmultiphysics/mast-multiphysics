@@ -19,19 +19,19 @@
 
 // MAST includes
 #include "elasticity/structural_element_1d.h"
-#include "numerics/fem_operator_matrix.h"
-#include "property_cards/element_property_card_1D.h"
-#include "property_cards/material_property_card_base.h"
 #include "elasticity/piston_theory_boundary_condition.h"
 #include "elasticity/stress_output_base.h"
 #include "elasticity/bending_operator.h"
+#include "numerics/fem_operator_matrix.h"
+#include "property_cards/element_property_card_1D.h"
+#include "property_cards/material_property_card_base.h"
 #include "base/system_initialization.h"
 #include "base/boundary_condition_base.h"
 #include "base/parameter.h"
 #include "base/constant_field_function.h"
 #include "base/assembly_base.h"
-#include "mesh/local_elem_fe.h"
-#include "mesh/local_elem_base.h"
+#include "mesh/fe_base.h"
+#include "mesh/local_1d_elem.h"
 
 
 MAST::StructuralElement1D::StructuralElement1D(MAST::SystemInitialization& sys,
@@ -41,10 +41,12 @@ MAST::StructuralElement1D::StructuralElement1D(MAST::SystemInitialization& sys,
 MAST::BendingStructuralElem(sys, assembly, elem, p),
 _bending_operator(nullptr) {
     
-    // now initialize the finite element data structures
-    _fe            = assembly.build_fe(_elem).release();
-    _fe->init(_elem);
-    _Tmat          = dynamic_cast<MAST::LocalElemFE*>(_fe)->local_elem().T_matrix();
+    const MAST::ElementPropertyCard1D& p_card =
+    dynamic_cast<const MAST::ElementPropertyCard1D&>(p);
+    
+    _local_elem    = new MAST::Local1DElem(elem, p_card.y_vector());
+    _fe            = assembly.build_fe().release();
+    _fe->init(*_local_elem);
     
     MAST::BendingOperatorType bending_model =
     _property.bending_model(_elem, _fe->get_fe_type());
@@ -57,6 +59,7 @@ _bending_operator(nullptr) {
 
 MAST::StructuralElement1D::~StructuralElement1D() {
     
+    delete _local_elem;
     if (_bending_operator)   delete _bending_operator;
 }
 
@@ -175,8 +178,8 @@ MAST::StructuralElement1D::calculate_stress(bool request_derivative,
                                             const MAST::FunctionBase* p,
                                             MAST::StressStrainOutputBase& output) {
     
-    std::unique_ptr<MAST::FEBase>   fe(_assembly.build_fe(_elem));
-    fe->init(_elem);
+    std::unique_ptr<MAST::FEBase>   fe(_assembly.build_fe());
+    fe->init(*_local_elem);
 
     const unsigned int
     qp_loc_fe_size = (unsigned int)fe->get_qpoints().size(),
@@ -216,7 +219,7 @@ MAST::StructuralElement1D::calculate_stress(bool request_derivative,
     std::unique_ptr<MAST::BendingOperator1D>
     bend(MAST::build_bending_operator_1D(bending_model,
                                          *this,
-                                         qp_loc_fe).release());
+                                         qp_loc_fe));
 
     
     // now that the FE object has been initialized, evaluate the stress values
@@ -1649,8 +1652,8 @@ surface_pressure_residual(bool request_jacobian,
     libmesh_assert(!follower_forces); // not implemented yet for follower forces
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem).release());
-    fe->init_for_side(_elem, side, false);
+    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe());
+    fe->init_for_side(*_local_elem, side, false);
 
     const std::vector<Real> &JxW                    = fe->get_JxW();
     const std::vector<libMesh::Point>& qpoint       = fe->get_xyz();
@@ -1729,8 +1732,8 @@ surface_pressure_residual_sensitivity(const MAST::FunctionBase& p,
     libmesh_assert(!follower_forces); // not implemented yet for follower forces
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem).release());
-    fe->init_for_side(_elem, side, false);
+    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe());
+    fe->init_for_side(*_local_elem, side, false);
 
     const std::vector<Real> &JxW                    = fe->get_JxW();
     const std::vector<libMesh::Point>& qpoint       = fe->get_xyz();
