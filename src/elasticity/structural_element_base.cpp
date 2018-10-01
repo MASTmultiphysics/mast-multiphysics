@@ -1594,6 +1594,13 @@ linearized_frequency_domain_surface_pressure_residual
 
 
 
+const RealMatrixX&
+MAST::StructuralElementBase::_Tmatrix() const {
+    
+    libmesh_assert(_local_elem);
+    
+    return _local_elem->T_matrix();
+}
 
 
 

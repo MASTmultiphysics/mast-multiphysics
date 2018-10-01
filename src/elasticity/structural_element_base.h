@@ -705,11 +705,8 @@ namespace MAST {
          *   1D/2D elements.
          */
         virtual const RealMatrixX&
-        _Tmatrix() const {
-            
-            // should be implemented in 1D and 2D elements
-            libmesh_assert(false);
-        }
+        _Tmatrix() const;
+        
         
         MAST::LocalElemBase*                _local_elem;
         
