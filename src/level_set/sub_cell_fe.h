@@ -62,6 +62,16 @@ namespace MAST {
                                    unsigned int s,
                                    bool if_calculate_dphi);
 
+        /*!
+         *   provides an interface for elements where a local element is used
+         *   as a surrogate for the geometric element, as is the case for
+         *   1D and 2D elements that can live in 3D space. This is applicable
+         *   problems arising from heat conduction and structural problems.
+         */
+        virtual void init_for_side(const MAST::LocalElemBase& elem,
+                                   unsigned int s,
+                                   bool if_calculate_dphi);
+
         virtual const std::vector<Real>&
         get_JxW() const;
 
