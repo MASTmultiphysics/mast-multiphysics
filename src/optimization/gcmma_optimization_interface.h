@@ -79,6 +79,14 @@ namespace MAST {
         
     protected:
         
+        void _output_iteration_data(unsigned int i,
+                                    const std::vector<Real>& XVAL,
+                                    const std::vector<Real>& XMIN,
+                                    const std::vector<Real>& XMAX,
+                                    const std::vector<Real>& XLOW,
+                                    const std::vector<Real>& XUPP,
+                                    const std::vector<Real>& ALFA,
+                                    const std::vector<Real>& BETA);
     };
 }
 

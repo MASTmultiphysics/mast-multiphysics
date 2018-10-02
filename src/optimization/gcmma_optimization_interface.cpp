@@ -118,11 +118,11 @@ MAST::GCMMAOptimizationInterface::optimize() {
      C********+*********+*********+*********+*********+*********+*********+*/
     
     
-    /*C
-     C  The USER should now give values to the parameters
-     C  M, N, GEPS, XVAL (starting point),
-     C  XMIN, XMAX, FMAX, A and C.
-     C*/
+    /*
+     *  The USER should now give values to the parameters
+     *  M, N, GEPS, XVAL (starting point),
+     *  XMIN, XMAX, FMAX, A and C.
+     */
     // _initi(M,N,GEPS,XVAL,XMIN,XMAX,FMAX,A,C);
     // Assumed:  FMAX == A
     _feval->_init_dvar_wrapper(XVAL, XMIN, XMAX);
@@ -132,22 +132,20 @@ MAST::GCMMAOptimizationInterface::optimize() {
         if (max_x < fabs(XVAL[i]))
             max_x = fabs(XVAL[i]);
     std::fill(C.begin(), C.end(), std::max(1.e0*max_x, 1.e0));
-    //IF(M.EQ.0) GOTO 100
-    //IF(N.EQ.0) GOTO 100
     
     int INNMAX=15, ITER=0, ITE=0, INNER=0, ICONSE=0;
-    /*C
-     C  The outer iterative process starts.
-     C*/
+    /*
+     *  The outer iterative process starts.
+     */
     bool terminate = false, inner_terminate=false;
-    while (!terminate) {//30   CONTINUE
+    while (!terminate) {
         
         ITER=ITER+1;
         ITE=ITE+1;
-        /*C
-         C  The USER should now calculate function values and gradients
-         C  at XVAL. The result should be put in F0VAL,DF0DX,FVAL,DFDX.
-         C*/
+        /*
+         *  The USER should now calculate function values and gradients
+         *  at XVAL. The result should be put in F0VAL,DF0DX,FVAL,DFDX.
+         */
         std::fill(eval_grads.begin(), eval_grads.end(), true);
         _feval->_evaluate_wrapper(XVAL,
                                   F0VAL, true, DF0DX,
@@ -156,80 +154,88 @@ MAST::GCMMAOptimizationInterface::optimize() {
             // output the very first iteration
             _feval->_output_wrapper(0, XVAL, F0VAL, FVAL, true);
         
-        /*C
-         C  RAA0,RAA,XLOW,XUPP,ALFA and BETA are calculated.
-         C*/
+        /*
+         *  RAA0,RAA,XLOW,XUPP,ALFA and BETA are calculated.
+         */
         raasta_(&M, &N, &RAA0, &RAA[0], &XMIN[0], &XMAX[0], &DF0DX[0], &DFDX[0]);
         asympg_(&ITER, &M, &N, &XVAL[0], &XMIN[0], &XMAX[0], &XOLD1[0], &XOLD2[0],
                 &XLOW[0], &XUPP[0], &ALFA[0], &BETA[0]);
-        /*C      CALL ASYMPG(ITER,M,N,XVAL,XMIN,XMAX,XOLD1,XOLD2,
-         C     1            XLOW,XUPP,ALFA,BETA,RAA0,RAA)
-         C
-         C  The inner iterative process starts.
-         C*/
+        /*
+         *  The inner iterative process starts.
+         */
+        
+        // write the asymptote data for the inneriterations
+        _output_iteration_data(ITER, XVAL, XMIN, XMAX, XLOW, XUPP, ALFA, BETA);
+
         INNER=0;
         inner_terminate = false;
         while (!inner_terminate) {
             
-            //40   CONTINUE
-            /*C
-             C  The subproblem is generated and solved.
-             C*/
+            /*
+             *  The subproblem is generated and solved.
+             */
             mmasug_(&ITER, &M, &N, &GEPS, &IYFREE[0], &XVAL[0], &XMMA[0],
                     &XMIN[0], &XMAX[0], &XLOW[0], &XUPP[0], &ALFA[0], &BETA[0],
                     &A[0], &B[0], &C[0], &Y[0], &Z, &RAA0, &RAA[0], &ULAM[0],
                     &F0VAL, &FVAL[0], &F0APP, &FAPP[0], &FMAX[0], &DF0DX[0], &DFDX[0],
                     &P[0], &Q[0], &P0[0], &Q0[0], &UU[0], &GRADF[0], &DSRCH[0], &HESSF[0]);
-            /*C
-             C  The USER should now calculate function values at XMMA.
-             C  The result should be put in F0NEW and FNEW.
-             C*/
+            /*
+             *  The USER should now calculate function values at XMMA.
+             *  The result should be put in F0NEW and FNEW.
+             */
             std::fill(eval_grads.begin(), eval_grads.end(), false);
             _feval->_evaluate_wrapper(XMMA,
                                       F0NEW, false, DF0DX,
                                       FNEW, eval_grads, DFDX);
             
-            if (INNER >= INNMAX)
+            if (INNER >= INNMAX) {
+                libMesh::out
+                << "** Max Inner Iter Reached: Terminating! Inner Iter = "
+                << INNER << std::endl;
                 inner_terminate = true;
+            }
             else {
-                /*C
-                 C  It is checked if the approximations were conservative.
-                 C*/
+                /*
+                 *  It is checked if the approximations were conservative.
+                 */
                 conser_( &M, &ICONSE, &GEPS, &F0NEW, &F0APP, &FNEW[0], &FAPP[0]);
-                if (ICONSE == 1)
+                if (ICONSE == 1) {
+                    libMesh::out
+                    << "** Conservative Solution: Terminating! Inner Iter = "
+                    << INNER << std::endl;
                     inner_terminate = true;
+                }
                 else {
-                    /*C
-                     C  The approximations were not conservative, so RAA0 and RAA
-                     C  are updated and one more inner iteration is started.
-                     C*/
+                    /*
+                     *  The approximations were not conservative, so RAA0 and RAA
+                     *  are updated and one more inner iteration is started.
+                     */
                     INNER=INNER+1;
                     raaupd_( &M, &N, &GEPS, &XMMA[0], &XVAL[0],
                             &XMIN[0], &XMAX[0], &XLOW[0], &XUPP[0],
                             &F0NEW, &FNEW[0], &F0APP, &FAPP[0], &RAA0, &RAA[0]);
                 }
             }
-            //GOTO 40
-        } //60   CONTINUE
+        }
         
-        /*C
-         C  The inner iterative process has terminated, which means
-         C  that an outer iteration has been completed.
-         C  The variables are updated so that XVAL stands for the new
-         C  outer iteration point. The fuction values are also updated.
-         C*/
+        /*
+         *  The inner iterative process has terminated, which means
+         *  that an outer iteration has been completed.
+         *  The variables are updated so that XVAL stands for the new
+         *  outer iteration point. The fuction values are also updated.
+         */
         xupdat_( &N, &ITER, &XMMA[0], &XVAL[0], &XOLD1[0], &XOLD2[0]);
         fupdat_( &M, &F0NEW, &FNEW[0], &F0VAL, &FVAL[0]);
-        /*C
-         C  The USER may now write the current solution.
-         C*/
+        /*
+         *  The USER may now write the current solution.
+         */
         _feval->_output_wrapper(ITER, XVAL, F0VAL, FVAL, true);
         f0_iters[(ITE-1)%n_rel_change_iters] = F0VAL;
         
-        /*C
-         C  One more outer iteration is started as long as
-         C  ITE is less than MAXITE:
-         C*/
+        /*
+         *  One more outer iteration is started as long as
+         *  ITE is less than MAXITE:
+         */
         if (ITE == _feval->max_iters()) {
             libMesh::out
             << "GCMMA: Reached maximum iterations, terminating! "
@@ -256,7 +262,54 @@ MAST::GCMMAOptimizationInterface::optimize() {
             terminate = true;
         }
         
-    }//100  CONTINUE
+    }
     
 #endif //MAST_ENABLE_GCMMA == 1
 }
+
+
+void
+MAST::GCMMAOptimizationInterface::_output_iteration_data(unsigned int i,
+                                                         const std::vector<Real>& XVAL,
+                                                         const std::vector<Real>& XMIN,
+                                                         const std::vector<Real>& XMAX,
+                                                         const std::vector<Real>& XLOW,
+                                                         const std::vector<Real>& XUPP,
+                                                         const std::vector<Real>& ALFA,
+                                                         const std::vector<Real>& BETA) {
+
+    libmesh_assert(_feval);
+    libmesh_assert_equal_to(XVAL.size(), _feval->n_vars());
+    libmesh_assert_equal_to(XMIN.size(), _feval->n_vars());
+    libmesh_assert_equal_to(XMAX.size(), _feval->n_vars());
+    libmesh_assert_equal_to(XLOW.size(), _feval->n_vars());
+    libmesh_assert_equal_to(XUPP.size(), _feval->n_vars());
+    libmesh_assert_equal_to(ALFA.size(), _feval->n_vars());
+    libmesh_assert_equal_to(BETA.size(), _feval->n_vars());
+
+    libMesh::out
+    << "****************************************************\n"
+    << "             GCMMA: ASYMPTOTE DATA                  \n"
+    << "****************************************************\n"
+    << std::setw(5) << "Iter: " << i << std::endl
+    << std::setw(5) << "DV"
+    << std::setw(20) << "XMIN"
+    << std::setw(20) << "XLOW"
+    << std::setw(20) << "ALFA"
+    << std::setw(20) << "X"
+    << std::setw(20) << "BETA"
+    << std::setw(20) << "XUP"
+    << std::setw(20) << "XMAX" << std::endl;
+
+    for (unsigned int j=0; j<_feval->n_vars(); j++)
+        libMesh::out
+        << std::setw(5) << j
+        << std::setw(20) << XMIN[j]
+        << std::setw(20) << XLOW[j]
+        << std::setw(20) << ALFA[j]
+        << std::setw(20) << XVAL[j]
+        << std::setw(20) << BETA[j]
+        << std::setw(20) << XUPP[j]
+        << std::setw(20) << XMAX[j] << std::endl;
+}
+

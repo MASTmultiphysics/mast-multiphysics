@@ -169,6 +169,7 @@ namespace MAST  {
              const std::vector<bool>& eval_grads,
              std::vector<Real>& grads);
             
+            Real                                      _obj_scaling;
             Real                                      _stress_lim;
             Real                                      _p_val, _vm_rho;
             Real                                      _ref_eig_val;

@@ -223,6 +223,7 @@ MAST::Examples::TopologyOptimizationLevelSet2D::
 TopologyOptimizationLevelSet2D(const libMesh::Parallel::Communicator& comm_in):
 MAST::Examples::StructuralExample2D  (comm_in),
 MAST::FunctionEvaluation             (comm_in),
+_obj_scaling                         (0.),
 _stress_lim                          (0.),
 _p_val                               (0.),
 _vm_rho                              (0.),
@@ -313,6 +314,11 @@ MAST::Examples::TopologyOptimizationLevelSet2D::init(MAST::Examples::GetPotWrapp
     // function value
     this->_init_phi_dvs();
     
+    Real
+    length  = (*_input)(_prefix+"length", "length of domain along x-axis", 0.3),
+    height  = (*_input)(_prefix+"height", "length of domain along y-axis", 0.3);
+
+    _obj_scaling           = 100./length/height;
     _stress_lim            = (*_input)(_prefix+"vm_stress_limit", "limit von-mises stress value", 2.e8);
     _p_val                 = (*_input)(_prefix+"constraint_aggregation_p_val", "value of p in p-norm stress aggregation", 2.0);
     _vm_rho                = (*_input)(_prefix+"constraint_aggregation_rho_val", "value of rho in p-norm stress aggregation", 2.0);
@@ -466,7 +472,7 @@ MAST::Examples::TopologyOptimizationLevelSet2D::evaluate(const std::vector<Real>
     eigen_assembly.set_level_set_function(*_level_set_function);
     eigen_assembly.set_level_set_velocity_function(*_level_set_vel);
     stress_assembly.set_discipline_and_system(*_discipline, *_sys_init);
-    stress_assembly.set_level_set_function(*_level_set_function);
+    stress_assembly.init(*_level_set_function, nonlinear_assembly.get_dof_handler());
     level_set_assembly.set_discipline_and_system(*_level_set_discipline, *_level_set_sys_init);
     level_set_assembly.set_level_set_function(*_level_set_function);
     level_set_assembly.set_level_set_velocity_function(*_level_set_vel);
@@ -489,7 +495,7 @@ MAST::Examples::TopologyOptimizationLevelSet2D::evaluate(const std::vector<Real>
     // evaluate the objective
     //////////////////////////////////////////////////////////////////////
     level_set_assembly.calculate_output(*_level_set_sys->solution, volume);
-    obj       = volume.output_total();
+    obj       = volume.output_total() * _obj_scaling;
 
     //////////////////////////////////////////////////////////////////////
     // evaluate the stress constraint
@@ -610,7 +616,7 @@ _evaluate_volume_sensitivity(MAST::LevelSetVolume& volume,
                                                      *dphi,
                                                      *_dv_params[i].second,
                                                      volume);
-        obj_grad[i] = volume.output_sensitivity_total(*_dv_params[i].second);
+        obj_grad[i] = _obj_scaling * volume.output_sensitivity_total(*_dv_params[i].second);
     }
 }
 
@@ -1087,6 +1093,6 @@ MAST::Examples::TopologyOptimizationLevelSet2D::output(unsigned int iter,
         _sys->solution->zero();
     }
     
-    MAST::FunctionEvaluation::output(iter, x, obj, fval, if_write_to_optim_file);
+    MAST::FunctionEvaluation::output(iter, x, obj/_obj_scaling, fval, if_write_to_optim_file);
 }
 
