@@ -57,7 +57,17 @@ MAST::GCMMAOptimizationInterface::optimize() {
     std::vector<int> IYFREE(M, 0);
     std::vector<bool> eval_grads(M, false);
     
-    Real F0VAL, F0NEW, F0APP, RAA0, Z, GEPS=_feval->tolerance();
+    Real
+    ALBEFA  = 0.1,
+    GHINIT  = 0.5,
+    GHDECR  = 0.7,
+    GHINCR  = 1.2,
+    F0VAL   = 0.,
+    F0NEW   = 0.,
+    F0APP   = 0.,
+    RAA0    = 0.,
+    Z       = 0.,
+    GEPS    =_feval->tolerance();
     
     
     /*C********+*********+*********+*********+*********+*********+*********+
@@ -67,6 +77,18 @@ MAST::GCMMAOptimizationInterface::optimize() {
      C     N  = Complex of variables x_j in the problem.
      C     M  = Complex of constraints in the problem (not including
      C          the simple upper and lower bounds on the variables).
+     C ALBEFA = Relative spacing between asymptote and mode limit. Lower value
+     C          will cause the move limit (alpha,beta) to move closer to asymptote
+     C          values (l, u).
+     C GHINIT = Initial asymptote setting. For the first two iterations the
+     C          asymptotes (l, u) are defined based on offsets from the design
+     C          point as this fraction of the design variable bounds, ie.
+     C              l_j   =   x_j^k  - GHINIT * (x_j^max - x_j^min)
+     C              u_j   =   x_j^k  + GHINIT * (x_j^max - x_j^min)
+     C GHDECR = Fraction by which the asymptote is reduced for oscillating
+     C          changes in design variables based on three consecutive iterations
+     C GHINCR = Fraction by which the asymptote is increased for non-oscillating
+     C          changes in design variables based on three consecutive iterations
      C INNMAX = Maximal number of inner iterations within each outer iter.
      C          A reasonable choice is INNMAX=10.
      C  ITER  = Current outer iteration number ( =1 the first iteration).
@@ -158,7 +180,8 @@ MAST::GCMMAOptimizationInterface::optimize() {
          *  RAA0,RAA,XLOW,XUPP,ALFA and BETA are calculated.
          */
         raasta_(&M, &N, &RAA0, &RAA[0], &XMIN[0], &XMAX[0], &DF0DX[0], &DFDX[0]);
-        asympg_(&ITER, &M, &N, &XVAL[0], &XMIN[0], &XMAX[0], &XOLD1[0], &XOLD2[0],
+        asympg_(&ITER, &M, &N, &ALBEFA, &GHINIT, &GHDECR, &GHINCR,
+                &XVAL[0], &XMIN[0], &XMAX[0], &XOLD1[0], &XOLD2[0],
                 &XLOW[0], &XUPP[0], &ALFA[0], &BETA[0]);
         /*
          *  The inner iterative process starts.

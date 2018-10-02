@@ -29,6 +29,8 @@ extern "C" {
                         double *XMIN, double *XMAX,
                         double *DF0DX, double *DFDX);
     extern void asympg_(int *ITER, int *M, int *N,
+                        double *ALBEFA, double *GHINIT,
+                        double *GHDECR, double *GHINCR,
                         double *XVAL, double *XMIN, double *XMAX,
                         double *XOLD1, double *XOLD2,
                         double *XLOW, double *XUPP,
