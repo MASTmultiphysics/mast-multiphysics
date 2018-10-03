@@ -47,6 +47,9 @@ _snes_level_set_void_solution_assembly_monitor_function(SNES snes,
     // system for which this is being processed
     MAST::NonlinearSystem& sys = sol_update->get_assembly().system();
     
+    if (sys.operation() != MAST::NonlinearSystem::NONLINEAR_SOLVE)
+        return 0;
+    
     // if this is the first iteration, create a vector in system
     // as the initial approximation of the system solution
     if (its == 0) {
