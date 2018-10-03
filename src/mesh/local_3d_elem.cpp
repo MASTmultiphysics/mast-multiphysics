@@ -24,7 +24,8 @@
 
 MAST::Local3DElem::Local3DElem(const libMesh::Elem& elem):
 MAST::LocalElemBase(elem) {
-    
+ 
+    _T_mat = RealMatrixX::Identity(3,3);
 }
 
 

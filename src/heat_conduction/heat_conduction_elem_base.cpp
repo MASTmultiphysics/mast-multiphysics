@@ -54,7 +54,7 @@ _local_elem     (nullptr) {
         }
             break;
         case 2:
-            _local_elem    = new MAST::Local2DElem(elem);
+            _local_elem    = new MAST::Local3DElem(elem);
             break;
         case 3:
             _local_elem    = new MAST::Local3DElem(elem);
