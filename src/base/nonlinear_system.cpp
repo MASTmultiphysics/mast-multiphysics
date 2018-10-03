@@ -60,7 +60,8 @@ _n_requested_eigenpairs               (0),
 _n_converged_eigenpairs               (0),
 _n_iterations                         (0),
 _is_generalized_eigenproblem          (false),
-_eigen_problem_type                   (libMesh::NHEP) {
+_eigen_problem_type                   (libMesh::NHEP),
+_operation                            (MAST::NonlinearSystem::NONE) {
     
 }
 
@@ -191,6 +192,9 @@ void
 MAST::NonlinearSystem::solve(MAST::AssemblyElemOperations& elem_ops,
                              MAST::AssemblyBase&  assembly) {
     
+    libmesh_assert(_operation == MAST::NonlinearSystem::NONE);
+    
+    _operation = MAST::NonlinearSystem::NONLINEAR_SOLVE;
     assembly.set_elem_operation_object(elem_ops);
     
     libMesh::NonlinearImplicitSystem::ComputeResidualandJacobian
@@ -205,6 +209,7 @@ MAST::NonlinearSystem::solve(MAST::AssemblyElemOperations& elem_ops,
     this->nonlinear_solver->residual_and_jacobian_object = old_ptr;
     
     assembly.clear_elem_operation_object();
+    _operation = MAST::NonlinearSystem::NONE;
 }
 
 
@@ -213,6 +218,10 @@ void
 MAST::NonlinearSystem::eigenproblem_solve(MAST::AssemblyElemOperations& elem_ops,
                                           MAST::EigenproblemAssembly& assembly) {
     
+    libmesh_assert(_operation == MAST::NonlinearSystem::NONE);
+    
+    _operation = MAST::NonlinearSystem::EIGENPROBLEM_SOLVE;
+
     START_LOG("eigensolve()", "NonlinearSystem");
     
     assembly.set_elem_operation_object(elem_ops);
@@ -347,7 +356,7 @@ MAST::NonlinearSystem::eigenproblem_solve(MAST::AssemblyElemOperations& elem_ops
     assembly.clear_elem_operation_object();
     
     STOP_LOG("eigensolve()", "NonlinearSystem");
-    
+    _operation = MAST::NonlinearSystem::NONE;
 }
 
 
@@ -712,6 +721,10 @@ MAST::NonlinearSystem::sensitivity_solve(MAST::AssemblyElemOperations& elem_ops,
                                          MAST::AssemblyBase&           assembly,
                                          const MAST::FunctionBase&     p,
                                          bool                          if_assemble_jacobian) {
+
+    libmesh_assert(_operation == MAST::NonlinearSystem::NONE);
+    
+    _operation = MAST::NonlinearSystem::FORWARD_SENSITIVITY_SOLVE;
     
     // Log how long the linear solve takes.
     LOG_SCOPE("sensitivity_solve()", "NonlinearSystem");
@@ -750,6 +763,10 @@ MAST::NonlinearSystem::sensitivity_solve(MAST::AssemblyElemOperations& elem_ops,
 #endif
     
     assembly.clear_elem_operation_object();
+    
+    _operation = MAST::NonlinearSystem::NONE;
+    
+
 }
 
 
@@ -761,6 +778,10 @@ MAST::NonlinearSystem::adjoint_solve(MAST::AssemblyElemOperations&       elem_op
                                      bool if_assemble_jacobian) {
     
 
+    libmesh_assert(_operation == MAST::NonlinearSystem::NONE);
+    
+    _operation = MAST::NonlinearSystem::ADJOINT_SOLVE;
+    
     // Log how long the linear solve takes.
     LOG_SCOPE("adjoint_solve()", "NonlinearSystem");
     
@@ -794,6 +815,8 @@ MAST::NonlinearSystem::adjoint_solve(MAST::AssemblyElemOperations&       elem_op
 #ifdef LIBMESH_ENABLE_CONSTRAINTS
     this->get_dof_map().enforce_adjoint_constraints_exactly(dsol, 0);
 #endif
+    
+    _operation = MAST::NonlinearSystem::NONE;
 }
 
 
