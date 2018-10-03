@@ -153,9 +153,9 @@ MAST::GCMMAOptimizationInterface::optimize() {
     for (unsigned int i=0; i<N; i++)
         if (max_x < fabs(XVAL[i]))
             max_x = fabs(XVAL[i]);
-    std::fill(C.begin(), C.end(), std::max(1.e0*max_x, 1.e0));
+    std::fill(C.begin(), C.end(), std::max(1.e0*max_x, 5.e1));
     
-    int INNMAX=15, ITER=0, ITE=0, INNER=0, ICONSE=0;
+    int INNMAX=10, ITER=0, ITE=0, INNER=0, ICONSE=0;
     /*
      *  The outer iterative process starts.
      */
