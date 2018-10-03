@@ -446,9 +446,10 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
                         mat(material_rows[i], material_rows[j]) = jac_factored_uu(i,j);
                 }
             }
-            /*else {
+            else {
                 
                 // get the residual from the sub elements
+                mat.setZero();
                 vec.setZero();
 
                 const std::vector<const libMesh::Elem *> &
@@ -467,12 +468,12 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
                     
                     ops.elem_calculations(J!=nullptr?true:false, sub_elem_vec, sub_elem_mat);
                     
-                    //mat += sub_elem_mat;
+                    mat += sub_elem_mat;
                     vec += sub_elem_vec;
                     
                     ops.clear_elem();
                 }
-            }*/
+            }
             
             // copy to the libMesh matrix for further processing
             DenseRealVector v;
@@ -588,7 +589,8 @@ sensitivity_assemble (const MAST::FunctionBase& f,
             sol(i) = (*localized_solution)(dof_indices[i]);
         
         if (nd_indicator.maxCoeff() > tol &&
-            _intersection->if_elem_has_positive_phi_region()) {
+            _intersection->if_elem_has_positive_phi_region() &&
+            !_dof_handler->if_factor_element(*elem)) {
 
             const std::vector<const libMesh::Elem *> &
             elems_hi = _intersection->get_sub_elems_positive_phi();
@@ -712,7 +714,8 @@ calculate_output(const libMesh::NumericVector<Real>& X,
         _intersection->init(*_level_set, *elem, nonlin_sys.time);
         
         if (nd_indicator.maxCoeff() > tol &&
-            _intersection->if_elem_has_positive_phi_region()) {
+            _intersection->if_elem_has_positive_phi_region() &&
+            !_dof_handler->if_factor_element(*elem)) {
 
             const std::vector<const libMesh::Elem *> &
             //elems_low = intersect.get_sub_elems_negative_phi(),
@@ -833,7 +836,8 @@ calculate_output_derivative(const libMesh::NumericVector<Real>& X,
             sol(i) = (*localized_solution)(dof_indices[i]);
         
         if (nd_indicator.maxCoeff() > tol &&
-            _intersection->if_elem_has_positive_phi_region()) {
+            _intersection->if_elem_has_positive_phi_region() &&
+            !_dof_handler->if_factor_element(*elem)) {
 
             const std::vector<const libMesh::Elem *> &
             elems_hi = _intersection->get_sub_elems_positive_phi();
@@ -948,7 +952,8 @@ calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
         _intersection->init(*_level_set, *elem, nonlin_sys.time);
          
         if (nd_indicator.maxCoeff() > tol &&
-            _intersection->if_elem_has_positive_phi_region()) {
+            _intersection->if_elem_has_positive_phi_region() &&
+            !_dof_handler->if_factor_element(*elem)) {
 
             const std::vector<const libMesh::Elem *> &
             //elems_low = intersect.get_sub_elems_negative_phi(),
