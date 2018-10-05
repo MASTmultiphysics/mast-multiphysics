@@ -70,7 +70,7 @@ int main(int argc, const char** argv)
     discipline.add_dirichlet_bc(0, dirichlet_bc);
     discipline.init_system_dirichlet_bc(system);
 
-// Initialize the equation system since we now know the size of our
+    // Initialize the equation system since we now know the size of our
     // system matrices (based on mesh, element type, variables in the
     // structural_system) as well as the setup of dirichlet boundary conditions.
     // This initialization process is basically a pre-processing step to
