@@ -2,6 +2,11 @@
 build/dbg/
 build/opt/
 src/base/mast_config.h
+
 # CLion IDE files.
 .idea/
 cmake-build-debug/
+build2
+
+# Visual Studio Code settings.
+.vscode/
