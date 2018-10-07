@@ -35,6 +35,7 @@
 //#include "examples/structural/membrane_extension_uniaxial_stress/membrane_extension_uniaxial.h"
 //#include "examples/structural/membrane_extension_biaxial_stress/membrane_extension_biaxial.h"
 #include "examples/structural/plate_bending/plate_bending.h"
+#include "examples/structural/nonlinear_circular_cantilever/circular_cantilever.h"
 //#include "examples/structural/plate_bending_level_set/plate_bending_level_set.h"
 //#include "examples/structural/stiffened_plate_bending_thermal_stress/stiffened_plate_bending_thermal_stress.h"
 //#include "examples/structural/plate_oscillating_load/plate_oscillating_load.h"
@@ -291,6 +292,14 @@ int main(int argc, char* const argv[]) {
 //        example.static_solve();
 //        example.static_sensitivity_solve(example.get_parameter("th"));
 //        example.static_adjoint_sensitivity_solve(example.get_parameter("th"));
+    }
+    else if (case_name == "beam_3d") {
+        
+        MAST::Examples::StructuralExample3D example(init.comm());
+        example.init(*input, prefix);
+        example.static_solve();
+        //        example.static_sensitivity_solve(example.get_parameter("th"));
+        //        example.static_adjoint_sensitivity_solve(example.get_parameter("th"));
     }
 //    else if (case_name == "plate_bending_level_set")
 //        analysis<MAST::PlateBendingLevelSet>(case_name,
