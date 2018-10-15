@@ -117,7 +117,7 @@ namespace MAST {
          *  incompatible modes
          */
         virtual bool if_incompatible_modes() const {
-            return true;
+            return false;
         }
 
         

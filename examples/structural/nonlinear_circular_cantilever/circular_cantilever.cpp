@@ -132,5 +132,5 @@ void
 MAST::Examples::StructuralExample3D::_init_loads() {
     
     _init_pressure_load(true, 3);
-    _init_temperature_load();
+    //_init_temperature_load();
 }

@@ -90,9 +90,15 @@ namespace MAST {
             void register_field_function(MAST::FunctionBase& f);
 
             /*!
-             *   adds a function
+             *   @returns a reference to a function
              */
             MAST::FunctionBase& get_field_function(const std::string& nm);
+
+            
+            /*!
+             *   checks if the field function exists
+             */
+            bool has_field_function(const std::string& nm) const;
 
             /*!
              *   register a boundary condition
