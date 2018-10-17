@@ -131,8 +131,7 @@ MAST::LevelSetInterfaceDofHandler::if_factor_element(const libMesh::Elem& elem) 
     
     libmesh_assert(_sys_init);
     
-    return false;
-    //return _elem_sol.count(&elem);
+    return _elem_sol.count(&elem);
 }
 
 

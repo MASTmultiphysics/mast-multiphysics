@@ -287,7 +287,6 @@ MAST::LevelSetNonlinearImplicitAssembly::plot_sub_elems(bool plot_reference_elem
     // if a solution function is attached, clear it
     if (_sol_function)
         _sol_function->clear();
-    this->clear_elem_operation_object();
 }
 
 #endif // HAVE_PLPLOT
@@ -373,16 +372,9 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
                 nd_indicator(i) = indicator(0);
             }
         }
-        
-        
-        // get the solution
+
         unsigned int ndofs = (unsigned int)dof_indices.size();
-        sol.setZero(ndofs);
-        vec.setZero(ndofs);
-        sub_elem_vec.setZero(ndofs);
-        mat.setZero(ndofs, ndofs);
-        sub_elem_mat.setZero(ndofs, ndofs);
-        
+
         // Petsc needs that every diagonal term be provided some contribution,
         // even if zero. Otherwise, it complains about lack of diagonal entry.
         // So, if the element is NOT completely on the positive side, we still
@@ -401,6 +393,13 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
         if (nd_indicator.maxCoeff() > tol &&
             _intersection->if_elem_has_positive_phi_region()) {
             
+            // get the solution
+            sol.setZero(ndofs);
+            vec.setZero(ndofs);
+            sub_elem_vec.setZero(ndofs);
+            mat.setZero(ndofs, ndofs);
+            sub_elem_mat.setZero(ndofs, ndofs);
+
             for (unsigned int i=0; i<dof_indices.size(); i++)
                 sol(i) = (*localized_solution)(dof_indices[i]);
             
@@ -408,24 +407,24 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
             // get the void solution from the storage
             if (_dof_handler->if_factor_element(*elem))
                 _dof_handler->solution_of_factored_element(*elem, sol);
-
-            // the Jacobian is based on the homogenizaton method to maintain
-            // a well conditioned global Jacobian.
-            ops.init(*elem);
-            ops.set_elem_solution(sol);
-            ops.elem_calculations(true, vec, mat);
-            ops.clear_elem();
-            mat *= _intersection->get_positive_phi_volume_fraction();
-            // the residual based on homogenization is used for factorized
-            // elements since the factorization depends on exact Jacobian
-            // and the homogenization based Jacobian is not exact linearization
-            // of residual based on sub cells.
-            vec *= _intersection->get_positive_phi_volume_fraction();
             
             // if the element has been marked for factorization,
             // get the factorized jacobian and residual contributions
             if (_dof_handler->if_factor_element(*elem)) {
                 
+                // the Jacobian is based on the homogenizaton method to maintain
+                // a well conditioned global Jacobian.
+                ops.init(*elem);
+                ops.set_elem_solution(sol);
+                ops.elem_calculations(true, vec, mat);
+                ops.clear_elem();
+                mat *= _intersection->get_positive_phi_volume_fraction();
+                // the residual based on homogenization is used for factorized
+                // elements since the factorization depends on exact Jacobian
+                // and the homogenization based Jacobian is not exact linearization
+                // of residual based on sub cells.
+                vec *= _intersection->get_positive_phi_volume_fraction();
+
                 _dof_handler->element_factored_residual_and_jacobian(*elem,
                                                                      mat,
                                                                      vec,
@@ -538,10 +537,16 @@ sensitivity_assemble (const MAST::FunctionBase& f,
     vec1,
     vec2,
     sol,
+    res_factored_u,
     nd_indicator = RealVectorX::Ones(1),
     indicator    = RealVectorX::Zero(1);
-    
-    std::vector<libMesh::dof_id_type> dof_indices;
+    RealMatrixX
+    mat,
+    jac_factored_uu;
+
+    std::vector<libMesh::dof_id_type>
+    dof_indices,
+    material_rows;
     const libMesh::DofMap& dof_map = nonlin_sys.get_dof_map();
     
     
@@ -579,18 +584,22 @@ sensitivity_assemble (const MAST::FunctionBase& f,
             }
         }
 
-        // get the solution
-        unsigned int ndofs = (unsigned int)dof_indices.size();
-        sol.setZero(ndofs);
-        vec1.setZero(ndofs);
-        vec2.setZero(ndofs);
-        
-        for (unsigned int i=0; i<dof_indices.size(); i++)
-            sol(i) = (*localized_solution)(dof_indices[i]);
-        
         if (nd_indicator.maxCoeff() > tol &&
-            _intersection->if_elem_has_positive_phi_region() &&
-            !_dof_handler->if_factor_element(*elem)) {
+            _intersection->if_elem_has_positive_phi_region()) {
+
+            // get the solution
+            unsigned int ndofs = (unsigned int)dof_indices.size();
+            sol.setZero(ndofs);
+            vec1.setZero(ndofs);
+            vec2.setZero(ndofs);
+            
+            for (unsigned int i=0; i<dof_indices.size(); i++)
+                sol(i) = (*localized_solution)(dof_indices[i]);
+
+            // if the element has been marked for factorization then
+            // get the void solution from the storage
+            if (_dof_handler->if_factor_element(*elem))
+                _dof_handler->solution_of_factored_element(*elem, sol);
 
             const std::vector<const libMesh::Elem *> &
             elems_hi = _intersection->get_sub_elems_positive_phi();
@@ -621,6 +630,30 @@ sensitivity_assemble (const MAST::FunctionBase& f,
                                                                *_velocity,
                                                                vec2);
                     vec1 += vec2;
+                }
+                
+                // if the element has been identified for factoring then
+                // we will factor the residual and replace it in the
+                // residual vector. For this we need to compute the
+                // element Jacobian matrix
+                if (_dof_handler->if_factor_element(*elem)) {
+
+                    vec2.setZero(ndofs);
+                    mat.setZero(ndofs, ndofs);
+                    
+                    ops.elem_calculations(true, vec2, mat);
+
+                    _dof_handler->element_factored_residual_and_jacobian(*elem,
+                                                                         mat,
+                                                                         vec1,
+                                                                         material_rows,
+                                                                         jac_factored_uu,
+                                                                         res_factored_u);
+
+                    vec1.setZero();
+                    
+                    for (unsigned int i=0; i<material_rows.size(); i++)
+                        vec1(material_rows[i])   = res_factored_u(i);
                 }
                 
                 //        physics_elem->detach_active_solution_function();
@@ -665,9 +698,8 @@ calculate_output(const libMesh::NumericVector<Real>& X,
     
     output.zero_for_analysis();
 
-    this->set_elem_operation_object(output);
-
     MAST::NonlinearSystem& nonlin_sys = _system->system();
+    output.set_assembly(*this);
     
     const Real
     tol   = 1.e-10;
@@ -714,8 +746,21 @@ calculate_output(const libMesh::NumericVector<Real>& X,
         _intersection->init(*_level_set, *elem, nonlin_sys.time);
         
         if (nd_indicator.maxCoeff() > tol &&
-            _intersection->if_elem_has_positive_phi_region() &&
-            !_dof_handler->if_factor_element(*elem)) {
+            _intersection->if_elem_has_positive_phi_region()) {
+
+            dof_map.dof_indices (elem, dof_indices);
+            
+            // get the solution
+            unsigned int ndofs = (unsigned int)dof_indices.size();
+            sol.setZero(ndofs);
+            
+            for (unsigned int i=0; i<dof_indices.size(); i++)
+                sol(i) = (*localized_solution)(dof_indices[i]);
+
+            // if the element has been marked for factorization then
+            // get the void solution from the storage
+            if (_dof_handler->if_factor_element(*elem))
+                _dof_handler->solution_of_factored_element(*elem, sol);
 
             const std::vector<const libMesh::Elem *> &
             //elems_low = intersect.get_sub_elems_negative_phi(),
@@ -728,16 +773,6 @@ calculate_output(const libMesh::NumericVector<Real>& X,
             for (; hi_sub_elem_it != hi_sub_elem_end; hi_sub_elem_it++ ) {
                 
                 const libMesh::Elem* sub_elem = *hi_sub_elem_it;
-                
-                dof_map.dof_indices (elem, dof_indices);
-                
-                
-                // get the solution
-                unsigned int ndofs = (unsigned int)dof_indices.size();
-                sol.setZero(ndofs);
-                
-                for (unsigned int i=0; i<dof_indices.size(); i++)
-                    sol(i) = (*localized_solution)(dof_indices[i]);
                 
                 //                if (_sol_function)
                 //                    physics_elem->attach_active_solution_function(*_sol_function);
@@ -755,7 +790,7 @@ calculate_output(const libMesh::NumericVector<Real>& X,
     // if a solution function is attached, clear it
     if (_sol_function)
         _sol_function->clear();
-    this->clear_elem_operation_object();
+    output.clear_assembly();
 }
 
 
@@ -772,9 +807,8 @@ calculate_output_derivative(const libMesh::NumericVector<Real>& X,
     
     output.zero_for_sensitivity();
 
-    this->set_elem_operation_object(output);
-    
     MAST::NonlinearSystem& nonlin_sys = _system->system();
+    output.set_assembly(*this);
     
     dq_dX.zero();
 
@@ -784,15 +818,24 @@ calculate_output_derivative(const libMesh::NumericVector<Real>& X,
     // iterate over each element, initialize it and get the relevant
     // analysis quantities
     RealVectorX
-    vec,
+    vec1,
+    vec2,
     sol,
+    res_factored_u,
     nd_indicator = RealVectorX::Ones(1),
     indicator    = RealVectorX::Zero(1);
-    
-    std::vector<libMesh::dof_id_type> dof_indices;
+    RealMatrixX
+    mat,
+    jac_factored_uu;
+
+    std::vector<libMesh::dof_id_type>
+    dof_indices,
+    material_rows;
     const libMesh::DofMap& dof_map = _system->system().get_dof_map();
     
-    
+    MAST::NonlinearImplicitAssemblyElemOperations&
+    ops = dynamic_cast<MAST::NonlinearImplicitAssemblyElemOperations&>(*_elem_ops);
+
     std::unique_ptr<libMesh::NumericVector<Real> > localized_solution;
     localized_solution.reset(build_localized_vector(nonlin_sys,
                                                     X).release());
@@ -825,19 +868,25 @@ calculate_output_derivative(const libMesh::NumericVector<Real>& X,
             }
         }
 
-        dof_map.dof_indices (elem, dof_indices);
-        
-        // get the solution
-        unsigned int ndofs = (unsigned int)dof_indices.size();
-        sol.setZero(ndofs);
-        vec.setZero(ndofs);
-        
-        for (unsigned int i=0; i<dof_indices.size(); i++)
-            sol(i) = (*localized_solution)(dof_indices[i]);
-        
+
         if (nd_indicator.maxCoeff() > tol &&
-            _intersection->if_elem_has_positive_phi_region() &&
-            !_dof_handler->if_factor_element(*elem)) {
+            _intersection->if_elem_has_positive_phi_region()) {
+
+            dof_map.dof_indices (elem, dof_indices);
+            
+            // get the solution
+            unsigned int ndofs = (unsigned int)dof_indices.size();
+            sol.setZero(ndofs);
+            vec1.setZero(ndofs);
+            vec2.setZero(ndofs);
+            
+            for (unsigned int i=0; i<dof_indices.size(); i++)
+                sol(i) = (*localized_solution)(dof_indices[i]);
+            
+            // if the element has been marked for factorization then
+            // get the void solution from the storage
+            if (_dof_handler->if_factor_element(*elem))
+                _dof_handler->solution_of_factored_element(*elem, sol);
 
             const std::vector<const libMesh::Elem *> &
             elems_hi = _intersection->get_sub_elems_positive_phi();
@@ -855,11 +904,34 @@ calculate_output_derivative(const libMesh::NumericVector<Real>& X,
                 
                 output.init(*sub_elem);
                 output.set_elem_solution(sol);
-                output.output_derivative_for_elem(vec);
+                output.output_derivative_for_elem(vec1);
                 output.clear_elem();
-                
+
+                if (_dof_handler->if_factor_element(*elem)) {
+                    
+                    vec2.setZero(ndofs);
+                    mat.setZero(ndofs, ndofs);
+                    
+                    ops.init(*sub_elem);
+                    ops.set_elem_solution(sol);
+                    ops.elem_calculations(true, vec2, mat);
+                    ops.clear_elem();
+
+                    _dof_handler->element_factored_residual_and_jacobian(*elem,
+                                                                         mat.transpose(),
+                                                                         vec1,
+                                                                         material_rows,
+                                                                         jac_factored_uu,
+                                                                         res_factored_u);
+                    
+                    vec1.setZero();
+                    
+                    for (unsigned int i=0; i<material_rows.size(); i++)
+                        vec1(material_rows[i])   = res_factored_u(i);
+                }
+
                 DenseRealVector v;
-                MAST::copy(v, vec);
+                MAST::copy(v, vec1);
                 dof_map.constrain_element_vector(v, dof_indices);
                 dq_dX.add_vector(v, dof_indices);
             }
@@ -874,7 +946,7 @@ calculate_output_derivative(const libMesh::NumericVector<Real>& X,
         _sol_function->clear();
     
     dq_dX.close();
-    this->clear_elem_operation_object();
+    output.clear_assembly();
 }
 
 
@@ -896,10 +968,9 @@ calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
 
     output.zero_for_sensitivity();
 
-    this->set_elem_operation_object(output);
-
     MAST::NonlinearSystem& nonlin_sys = _system->system();
-
+    output.set_assembly(*this);
+    
     const Real
     tol   = 1.e-10;
 
@@ -952,8 +1023,25 @@ calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
         _intersection->init(*_level_set, *elem, nonlin_sys.time);
          
         if (nd_indicator.maxCoeff() > tol &&
-            _intersection->if_elem_has_positive_phi_region() &&
-            !_dof_handler->if_factor_element(*elem)) {
+            _intersection->if_elem_has_positive_phi_region()) {
+
+            dof_map.dof_indices (elem, dof_indices);
+            
+            
+            // get the solution
+            unsigned int ndofs = (unsigned int)dof_indices.size();
+            sol.setZero(ndofs);
+            dsol.setZero(ndofs);
+            
+            for (unsigned int i=0; i<dof_indices.size(); i++) {
+                sol(i)  = (*localized_solution)(dof_indices[i]);
+                dsol(i) = (*localized_solution_sens)(dof_indices[i]);
+            }
+            
+            // if the element has been marked for factorization then
+            // get the void solution from the storage
+            if (_dof_handler->if_factor_element(*elem))
+                _dof_handler->solution_of_factored_element(*elem, sol);
 
             const std::vector<const libMesh::Elem *> &
             //elems_low = intersect.get_sub_elems_negative_phi(),
@@ -966,19 +1054,6 @@ calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
             for (; hi_sub_elem_it != hi_sub_elem_end; hi_sub_elem_it++ ) {
                 
                 const libMesh::Elem* sub_elem = *hi_sub_elem_it;
-                
-                dof_map.dof_indices (elem, dof_indices);
-                
-                
-                // get the solution
-                unsigned int ndofs = (unsigned int)dof_indices.size();
-                sol.setZero(ndofs);
-                dsol.setZero(ndofs);
-                
-                for (unsigned int i=0; i<dof_indices.size(); i++) {
-                    sol(i)  = (*localized_solution)(dof_indices[i]);
-                    dsol(i) = (*localized_solution_sens)(dof_indices[i]);
-                }
                 
                 // if (_sol_function)
                 //   physics_elem->attach_active_solution_function(*_sol_function);
@@ -1000,7 +1075,8 @@ calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
     // if a solution function is attached, clear it
     if (_sol_function)
         _sol_function->clear();
-    this->clear_elem_operation_object();
+    
+    output.clear_assembly();
 }
 
 
@@ -1009,7 +1085,6 @@ calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
 std::unique_ptr<MAST::FEBase>
 MAST::LevelSetNonlinearImplicitAssembly::build_fe() {
     
-    libmesh_assert(_elem_ops);
     libmesh_assert(_system);
     libmesh_assert(_intersection);
     
