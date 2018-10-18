@@ -24,12 +24,46 @@
 
 
 MAST::GCMMAOptimizationInterface::GCMMAOptimizationInterface():
-MAST::OptimizationInterface() {
+MAST::OptimizationInterface(),
+_constr_penalty  (5.e1),
+_max_inner_iters (15)   {
     
 #if MAST_ENABLE_GCMMA == 0
     libmesh_error_msg("MAST configured without GCMMA support.");
 #endif
 }
+
+
+void
+MAST::GCMMAOptimizationInterface::set_real_parameter(const std::string &nm, Real val) {
+
+    if (nm == "constraint_penalty") {
+        
+        libmesh_assert_greater(val, 0.);
+        
+        _constr_penalty = val;
+    }
+    else
+        libMesh::out
+        << "Unrecognized real parameter: " << nm << std::endl;
+}
+
+
+void
+MAST::GCMMAOptimizationInterface::set_integer_parameter(const std::string &nm, int val) {
+    
+    if (nm == "max_inner_iters") {
+        
+        libmesh_assert_greater(val, 0);
+        
+        _max_inner_iters = val;
+    }
+    else
+        libMesh::out
+        << "Unrecognized integer parameter: " << nm << std::endl;
+}
+
+
 
 void
 MAST::GCMMAOptimizationInterface::optimize() {
@@ -153,9 +187,9 @@ MAST::GCMMAOptimizationInterface::optimize() {
     for (unsigned int i=0; i<N; i++)
         if (max_x < fabs(XVAL[i]))
             max_x = fabs(XVAL[i]);
-    std::fill(C.begin(), C.end(), std::max(1.e0*max_x, 1.e1));
+    std::fill(C.begin(), C.end(), std::max(1.e0*max_x, _constr_penalty));
     
-    int INNMAX=10, ITER=0, ITE=0, INNER=0, ICONSE=0;
+    int INNMAX=_max_inner_iters, ITER=0, ITE=0, INNER=0, ICONSE=0;
     /*
      *  The outer iterative process starts.
      */

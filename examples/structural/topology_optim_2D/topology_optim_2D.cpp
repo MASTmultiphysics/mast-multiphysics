@@ -48,6 +48,7 @@
 #include "solver/first_order_newmark_transient_solver.h"
 #include "property_cards/material_property_card_base.h"
 #include "property_cards/element_property_card_2D.h"
+#include "optimization/optimization_interface.h"
 
 // libMesh includes
 #include "libmesh/serial_mesh.h"
@@ -297,6 +298,8 @@ void
 MAST::Examples::TopologyOptimizationLevelSet2D::init(MAST::Examples::GetPotWrapper& input,
                                                      const std::string& prefix) {
     
+    libmesh_assert(_optimization_interface);
+    
     // let all other data structures be initialized
     MAST::Examples::StructuralExample2D::init(input, prefix);
 
@@ -313,11 +316,18 @@ MAST::Examples::TopologyOptimizationLevelSet2D::init(MAST::Examples::GetPotWrapp
     // next, define a new parameter to define design variable for nodal level-set
     // function value
     this->_init_phi_dvs();
+
+    unsigned int
+    max_inner_iters        = (*_input)(_prefix+"max_inner_iters", "maximum inner iterations in GCMMA", 15);
     
     Real
-    length  = (*_input)(_prefix+"length", "length of domain along x-axis", 0.3),
-    height  = (*_input)(_prefix+"height", "length of domain along y-axis", 0.3);
+    constr_penalty         = (*_input)(_prefix+"constr_penalty", "constraint penalty in GCMMA", 50.),
+    length                 = (*_input)(_prefix+"length", "length of domain along x-axis", 0.3),
+    height                 = (*_input)(_prefix+"height", "length of domain along y-axis", 0.3);
 
+    _optimization_interface->set_real_parameter   ( "constr_penalty",  constr_penalty);
+    _optimization_interface->set_integer_parameter("max_inner_iters", max_inner_iters);
+    
     _obj_scaling           = 100./length/height;
     _stress_lim            = (*_input)(_prefix+"vm_stress_limit", "limit von-mises stress value", 2.e8);
     _p_val                 = (*_input)(_prefix+"constraint_aggregation_p_val", "value of p in p-norm stress aggregation", 2.0);

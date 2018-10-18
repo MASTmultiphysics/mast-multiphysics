@@ -37,6 +37,9 @@
 
 
 namespace MAST {
+
+    // Forward declerations
+    class OptimizationInterface;
     
     class FunctionEvaluation:
     public libMesh::ParallelObject {
@@ -44,17 +47,21 @@ namespace MAST {
     public:
         
         FunctionEvaluation(const libMesh::Parallel::Communicator& comm_in):
-        libMesh::ParallelObject(comm_in),
-        _n_vars(0),
-        _n_eq(0),
-        _n_ineq(0),
-        _max_iters(0),
-        _n_rel_change_iters(5),
-        _tol(1.0e-6),
-        _output(nullptr)
+        libMesh::ParallelObject (comm_in),
+        _n_vars                 (0),
+        _n_eq                   (0),
+        _n_ineq                 (0),
+        _max_iters              (0),
+        _n_rel_change_iters     (5),
+        _tol                    (1.0e-6),
+        _output                 (nullptr),
+        _optimization_interface (nullptr)
         { }
         
         virtual ~FunctionEvaluation() { }
+        
+        
+        void attach_optimization_interface(MAST::OptimizationInterface& opt);
         
         
         unsigned int n_vars() const {
@@ -255,6 +262,8 @@ namespace MAST {
         Real _tol;
         
         std::ofstream* _output;
+        
+        MAST::OptimizationInterface        *_optimization_interface;
     };
 
 

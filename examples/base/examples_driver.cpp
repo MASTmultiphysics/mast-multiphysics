@@ -288,8 +288,8 @@ int main(int argc, char* const argv[]) {
         
         MAST::Examples::PlateBending example(init.comm());
         example.init(*input, prefix);
-        example.modal_solve_with_nonlinear_load_stepping();
-//        example.static_solve();
+        //example.modal_solve_with_nonlinear_load_stepping();
+        example.static_solve();
 //        example.static_sensitivity_solve(example.get_parameter("th"));
 //        example.static_adjoint_sensitivity_solve(example.get_parameter("th"));
     }
@@ -400,12 +400,25 @@ int main(int argc, char* const argv[]) {
 
         MAST::GCMMAOptimizationInterface optimizer;
         MAST::Examples::TopologyOptimizationLevelSet2D example(init.comm());
-        //MAST::Examples::TopologyOptimizationLevelSetLBracket example(init.comm());
         //MAST::Examples::TopologyOptimizationLevelSetPlate example(init.comm());
         //MAST::Examples::ThermoelasticityTopologyOptimizationLevelSet2D example(init.comm());
         
-        example.init(*input, prefix);
         optimizer.attach_function_evaluation_object(example);
+        example.init(*input, prefix);
+        //std::vector<Real> dvals(example.n_vars()), dummy(example.n_vars());
+        //example.init_dvar(dvals, dummy, dummy);
+        //example.verify_gradients(dvals);
+        optimizer.optimize();
+    }
+    else if (case_name == "topology_optimization_bracket_2D") {
+        
+        MAST::GCMMAOptimizationInterface optimizer;
+        MAST::Examples::TopologyOptimizationLevelSetLBracket example(init.comm());
+        //MAST::Examples::TopologyOptimizationLevelSetPlate example(init.comm());
+        //MAST::Examples::ThermoelasticityTopologyOptimizationLevelSet2D example(init.comm());
+        
+        optimizer.attach_function_evaluation_object(example);
+        example.init(*input, prefix);
         //std::vector<Real> dvals(example.n_vars()), dummy(example.n_vars());
         //example.init_dvar(dvals, dummy, dummy);
         //example.verify_gradients(dvals);
@@ -542,6 +555,7 @@ int main(int argc, char* const argv[]) {
 //        << "  stiffened_plate_piston_theory_optimization \n"
 //        << "  stiffened_plate_thermally_stressed_piston_theory_optimization \n"
         << "  topology_optimization_2D \n"
+        << "  topology_optimization_bracket_2D \n"
 //        << "*  The default for with_sensitivity is: false.\n"
 //        << "*  param is used to specify the parameter name for which sensitivity is desired.\n"
 //        << "*  nonlinear is used to turn on/off nonlinear stiffening in the problem.\n"

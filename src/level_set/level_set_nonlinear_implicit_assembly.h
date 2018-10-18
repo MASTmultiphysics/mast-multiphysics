@@ -150,6 +150,19 @@ namespace MAST {
                                             MAST::OutputAssemblyElemOperations& output);
         
         
+        /*!
+         *   Evaluates the total sensitivity of \par output wrt \par p using
+         *   the adjoint solution provided in \par dq_dX for a linearization
+         *   about solution \par X.
+         */
+        /*virtual Real
+        calculate_output_adjoint_sensitivity(const libMesh::NumericVector<Real>& X,
+                                             const libMesh::NumericVector<Real>& dq_dX,
+                                             const MAST::FunctionBase& p,
+                                             MAST::AssemblyElemOperations&       elem_ops,
+                                             MAST::OutputAssemblyElemOperations& output,
+                                             const bool include_partial_sens = true);
+         */
         
         /*!
          *   @returns a MAST::FEBase object for calculation of finite element
@@ -163,6 +176,12 @@ namespace MAST {
 
     protected:
 
+        /*Real
+        _adjoint_sensitivity_dot_product (const MAST::FunctionBase& f,
+                                          const libMesh::NumericVector<Real>& X,
+                                          const libMesh::NumericVector<Real>& dq_dX);
+        */
+        
         MAST::FieldFunction<Real>            *_level_set;
 
         MAST::FieldFunction<RealVectorX>     *_indicator;

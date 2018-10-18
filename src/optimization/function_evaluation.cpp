@@ -27,6 +27,15 @@
 
 
 void
+MAST::FunctionEvaluation::attach_optimization_interface(MAST::OptimizationInterface& opt) {
+    
+    libmesh_assert(!_optimization_interface);
+    
+    _optimization_interface = &opt;
+}
+
+
+void
 MAST::FunctionEvaluation::output(unsigned int iter,
                                  const std::vector<Real> &x,
                                  Real obj,

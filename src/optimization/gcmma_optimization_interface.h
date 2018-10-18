@@ -75,7 +75,13 @@ namespace MAST {
         
         virtual ~GCMMAOptimizationInterface()
         { }
+
+        virtual void
+        set_real_parameter(const std::string& nm, Real val);
         
+        virtual void
+        set_integer_parameter(const std::string& nm, int val);
+
         virtual void optimize();
         
         
@@ -89,6 +95,9 @@ namespace MAST {
                                     const std::vector<Real>& XUPP,
                                     const std::vector<Real>& ALFA,
                                     const std::vector<Real>& BETA);
+        
+        Real           _constr_penalty;
+        unsigned int   _max_inner_iters;
     };
 }
 
