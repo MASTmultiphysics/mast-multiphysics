@@ -9,6 +9,4 @@ target_sources(mast
         ${CMAKE_CURRENT_LIST_DIR}/local_3d_elem.cpp
         ${CMAKE_CURRENT_LIST_DIR}/local_3d_elem.h
         ${CMAKE_CURRENT_LIST_DIR}/local_elem_base.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/local_elem_base.h
-        ${CMAKE_CURRENT_LIST_DIR}/local_elem_fe.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/local_elem_fe.h)
+        ${CMAKE_CURRENT_LIST_DIR}/local_elem_base.h)

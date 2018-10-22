@@ -4,7 +4,7 @@ enable_language (CXX Fortran)
 set (MAST_VERSION_MAJOR 0)
 set (MAST_VERSION_MINOR 9)
 
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.2)
 
 # flags for optional compilation of packages
 option (ENABLE_GCMMA "Build with GCMMA interface" OFF)
