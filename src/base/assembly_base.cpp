@@ -226,7 +226,7 @@ MAST::AssemblyBase::detach_solution_function() {
 std::unique_ptr<MAST::FEBase>
 MAST::AssemblyBase::build_fe() {
 
-    libmesh_assert(_elem_ops);
+    libmesh_assert(_system);
 
     std::unique_ptr<MAST::FEBase>
     fe(new MAST::FEBase(*_system));
@@ -243,9 +243,10 @@ MAST::AssemblyBase::calculate_output(const libMesh::NumericVector<Real>& X,
     
     libmesh_assert(_discipline);
     libmesh_assert(_system);
-
-    this->set_elem_operation_object(output);
+    
     MAST::NonlinearSystem& nonlin_sys = _system->system();
+    output.set_assembly(*this);
+    
     output.zero_for_analysis();
     
     // iterate over each element, initialize it and get the relevant
@@ -299,7 +300,7 @@ MAST::AssemblyBase::calculate_output(const libMesh::NumericVector<Real>& X,
     if (_sol_function)
         _sol_function->clear();
     
-    this->clear_elem_operation_object();
+    output.clear_assembly();
 }
 
 
@@ -315,10 +316,9 @@ calculate_output_derivative(const libMesh::NumericVector<Real>& X,
     libmesh_assert(_system);
 
     output.zero_for_sensitivity();
-
-    this->set_elem_operation_object(output);
-
+    
     MAST::NonlinearSystem& nonlin_sys = _system->system();
+    output.set_assembly(*this);
     
     dq_dX.zero();
     
@@ -381,7 +381,8 @@ calculate_output_derivative(const libMesh::NumericVector<Real>& X,
         _sol_function->clear();
     
     dq_dX.close();
-    this->clear_elem_operation_object();
+    
+    output.clear_assembly();
 }
 
 
@@ -398,9 +399,8 @@ calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
 
     output.zero_for_sensitivity();
 
-    this->set_elem_operation_object(output);
-
     MAST::NonlinearSystem& nonlin_sys = _system->system();
+    output.set_assembly(*this);
     
     // iterate over each element, initialize it and get the relevant
     // analysis quantities
@@ -464,7 +464,7 @@ calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
     if (_sol_function)
         _sol_function->clear();
     
-    this->clear_elem_operation_object();
+    output.clear_assembly();
 }
 
 

@@ -17,31 +17,18 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-
 // MAST includes
-#include "mesh/local_3d_elem.h"
-
-
-MAST::Local3DElem::Local3DElem(const libMesh::Elem& elem):
-MAST::LocalElemBase(elem) {
- 
-    _T_mat = RealMatrixX::Identity(3,3);
-}
-
-
-
-MAST::Local3DElem::~Local3DElem() {
-    
-}
-
+#include "optimization/optimization_interface.h"
+#include "optimization/function_evaluation.h"
 
 
 void
-MAST::Local3DElem::
-domain_surface_normal_in_global_coordinates(const libMesh::Point& p,
-                                            RealVector3& n_global) const {
-    for (unsigned int i=0; i<3; i++)
-        n_global(i) = p(i);
+MAST::OptimizationInterface::
+attach_function_evaluation_object (MAST::FunctionEvaluation& feval) {
+            
+    libmesh_assert(!_feval);
+    
+    _feval = &feval;
+    feval.attach_optimization_interface(*this);
 }
-
-
+        

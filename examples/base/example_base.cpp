@@ -200,6 +200,26 @@ MAST::Examples::ExampleBase::get_field_function(const std::string& nm) {
 
 
 
+bool
+MAST::Examples::ExampleBase::has_field_function(const std::string& nm) const {
+    
+    std::set<MAST::FunctionBase*>::iterator
+    it   =  _field_functions.begin(),
+    end  =  _field_functions.end();
+    
+    for ( ; it != end; it++) {
+        if ((*it)->name() == nm)
+            break;
+    }
+    
+    if (it == end)
+        return false;
+    else
+        return true;
+}
+
+
+
 void
 MAST::Examples::ExampleBase::register_loading(MAST::BoundaryConditionBase& p) {
     

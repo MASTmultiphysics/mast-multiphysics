@@ -171,7 +171,7 @@ MAST::StructuralElement3D::internal_residual(bool request_jacobian,
     vec3_3    = RealVectorX::Zero(3),
     local_disp= RealVectorX::Zero(n2),
     f_alpha   = RealVectorX::Zero(n3),
-    &alpha    = *_incompatible_sol;
+    alpha     = RealVectorX::Zero(n3);//*_incompatible_sol;
     
     // copy the values from the global to the local element
     local_disp.topRows(n2) = _local_sol.topRows(n2);
@@ -198,6 +198,7 @@ MAST::StructuralElement3D::internal_residual(bool request_jacobian,
     Bmat_nl_w.reinit(3, 3, _elem.n_nodes());
     Bmat_inc.reinit(n1, n3, 1);            // six stress-strain components
 
+    /*
     // initialize the incompatible mode mapping at element mid-point
     _init_incompatible_fe_mapping(_elem);
     
@@ -259,7 +260,7 @@ MAST::StructuralElement3D::internal_residual(bool request_jacobian,
     
     if (request_jacobian)
         jac.topLeftCorner(n2, n2) -= K_corr;
-
+    */
     
     ///////////////////////////////////////////////////////////////////////
     // second for loop to calculate the residual and stiffness contributions
@@ -280,7 +281,7 @@ MAST::StructuralElement3D::internal_residual(bool request_jacobian,
                                                         Bmat_nl_u,
                                                         Bmat_nl_v,
                                                         Bmat_nl_w);
-        this->initialize_incompatible_strain_operator(qp, *_fe, Bmat_inc, Gmat);
+        //this->initialize_incompatible_strain_operator(qp, *_fe, Bmat_inc, Gmat);
         
         // calculate the stress
         stress = material_mat * (strain + Gmat * alpha);
@@ -414,7 +415,7 @@ MAST::StructuralElement3D::internal_residual(bool request_jacobian,
         1.0e-20 * jac.diagonal().maxCoeff();
 
     // correction to the residual from incompatible mode
-    f.topRows(n2) -= K_ualpha * (K_alphaalpha * f_alpha);
+    //f.topRows(n2) -= c * (K_alphaalpha * f_alpha);
     
     return request_jacobian;
 }
@@ -458,9 +459,9 @@ update_incompatible_mode_solution(const RealVectorX& dsol) {
     vec2_n2   = RealVectorX::Zero(n2),
     vec3_3    = RealVectorX::Zero(3),
     local_disp= RealVectorX::Zero(n2),
-    &alpha    = *_incompatible_sol,
-    f         = RealVectorX::Zero(n3);
-    
+    f         = RealVectorX::Zero(n3),
+    alpha     = RealVectorX::Zero(n3);//*_incompatible_sol;
+
     // copy the values from the global to the local element
     local_disp.topRows(n2) = _local_sol.topRows(n2);
     
@@ -509,7 +510,7 @@ update_incompatible_mode_solution(const RealVectorX& dsol) {
                                                         Bmat_nl_u,
                                                         Bmat_nl_v,
                                                         Bmat_nl_w);
-        this->initialize_incompatible_strain_operator(qp, *_fe, Bmat_inc, Gmat);
+        //this->initialize_incompatible_strain_operator(qp, *_fe, Bmat_inc, Gmat);
 
         // calculate the stress
         stress = material_mat * (strain + Gmat * alpha);
@@ -612,7 +613,7 @@ surface_pressure_residual(bool request_jacobian,
     const unsigned int
     n_phi  = (unsigned int)phi.size(),
     n1     = 3,
-    n2     = 6*n_phi;
+    n2     = 3*n_phi;
     
     
     // get the function from this boundary condition
@@ -625,7 +626,7 @@ surface_pressure_residual(bool request_jacobian,
     
     RealVectorX
     phi_vec     = RealVectorX::Zero(n_phi),
-    force       = RealVectorX::Zero(2*n1),
+    force       = RealVectorX::Zero(n1),
     local_f     = RealVectorX::Zero(n2),
     vec_n2      = RealVectorX::Zero(n2);
     
@@ -635,7 +636,7 @@ surface_pressure_residual(bool request_jacobian,
         for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
             phi_vec(i_nd) = phi[i_nd][qp];
         
-        Bmat.reinit(2*n1, phi_vec);
+        Bmat.reinit(n1, phi_vec);
         
         // get pressure value
         func(qpoint[qp], _time, press);
@@ -649,7 +650,7 @@ surface_pressure_residual(bool request_jacobian,
         local_f += JxW[qp] * vec_n2;
     }
     
-    f -= local_f;
+    f.topRows(n2) -= local_f;
     
     return (request_jacobian);
 }
@@ -950,8 +951,8 @@ MAST::StructuralElement3D::calculate_stress(bool request_derivative,
     strain    = RealVectorX::Zero(6),
     stress    = RealVectorX::Zero(6),
     local_disp= RealVectorX::Zero(n2),
-    &alpha    = *_incompatible_sol;
-    
+    alpha     = RealVectorX::Zero(n3);//*_incompatible_sol;
+
     // copy the values from the global to the local element
     local_disp.topRows(n2) = _local_sol.topRows(n2);
     
@@ -1003,7 +1004,7 @@ MAST::StructuralElement3D::calculate_stress(bool request_derivative,
                                                         Bmat_nl_u,
                                                         Bmat_nl_v,
                                                         Bmat_nl_w);
-        this->initialize_incompatible_strain_operator(qp, *fe, Bmat_inc, Gmat);
+        //this->initialize_incompatible_strain_operator(qp, *fe, Bmat_inc, Gmat);
         
         // calculate the stress
         strain += Gmat * alpha;
@@ -1366,6 +1367,8 @@ initialize_incompatible_strain_operator(const unsigned int qp,
 
 void
 MAST::StructuralElement3D::_init_incompatible_fe_mapping( const libMesh::Elem& e) {
+    
+    libmesh_assert(e.type() == libMesh::HEX8);
     
     unsigned int nv = _system.system().n_vars();
     

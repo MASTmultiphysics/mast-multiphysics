@@ -64,7 +64,7 @@ MAST::Examples::StructuralExample2D::_init_mesh() {
     
     Real
     length  = (*_input)(_prefix+"length", "length of domain along x-axis", 0.3),
-    width   = (*_input)(_prefix+ "width", "length of domain along y-axis", 0.3);
+    width   = (*_input)(_prefix+"height", "length of domain along y-axis", 0.3);
     
     std::string
     t = (*_input)(_prefix+"elem_type", "type of geometric element in the mesh", "quad4");

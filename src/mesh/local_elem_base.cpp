@@ -25,20 +25,7 @@
 
 MAST::LocalElemBase::~LocalElemBase() {
     
-    if (_T_mat_function) delete _T_mat_function;
 }
-
-
-
-const MAST::FieldFunction<RealMatrixX>&
-MAST::LocalElemBase::T_matrix_function() {
-
-    if (!_T_mat_function)
-        _T_mat_function = new MAST::TransformMatrixFunction(_T_mat);
-        
-    return *_T_mat_function;
-}
-
 
 
 
@@ -56,7 +43,10 @@ MAST::LocalElemBase::global_coordinates_location(const libMesh::Point& local,
                 global(j) += _T_mat(j,k)*local(k);
         
         // shift to the global coordinate
-        global += (*_elem.node_ptr(0));
+        if (_elem.parent())
+            global += (*_elem.parent()->node_ptr(0));
+        else
+            global += (*_elem.node_ptr(0));
     }
 }
 
@@ -79,31 +69,5 @@ MAST::LocalElemBase::global_coordinates_normal(const libMesh::Point& local,
     }
 }
 
-
-MAST::TransformMatrixFunction::
-TransformMatrixFunction(const RealMatrixX& Tmat):
-MAST::FieldFunction<RealMatrixX>("T_function"),
-_Tmat(Tmat) {
-    
-}
-
-
-
-void
-MAST::TransformMatrixFunction::operator() (const libMesh::Point& p,
-                                           const Real t,
-                                           RealMatrixX& v) const {
-    v = _Tmat;
-}
-
-
-
-void
-MAST::TransformMatrixFunction::derivative (const MAST::FunctionBase& f,
-                                           const libMesh::Point& p,
-                                           const Real t,
-                                           RealMatrixX& v) const {
-    v.setZero(3, 3);
-}
 
 

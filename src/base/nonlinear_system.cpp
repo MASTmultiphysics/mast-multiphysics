@@ -789,14 +789,15 @@ MAST::NonlinearSystem::adjoint_solve(MAST::AssemblyElemOperations&       elem_op
     &dsol  = this->add_adjoint_solution(),
     &rhs   = this->add_adjoint_rhs();
 
-    if (if_assemble_jacobian) {
-        assembly.set_elem_operation_object(elem_ops);
+    assembly.set_elem_operation_object(elem_ops);
+
+    if (if_assemble_jacobian)
         assembly.residual_and_jacobian(*solution, nullptr, matrix, *this);
-        assembly.clear_elem_operation_object();
-    }
     
     assembly.calculate_output_derivative(*solution, output, rhs);
-    
+
+    assembly.clear_elem_operation_object();
+
     rhs.scale(-1.);
     
     // Our iteration counts and residuals will be sums of the individual

@@ -122,6 +122,11 @@ MAST::MaterialPatch::_quad4_material_levels(const libMesh::Elem& elem,
      */
     
     
+    // if fewer than 4 elements are identified as neighbors then this node
+    // is on the boundary and we ignore it.
+    if (elem_neighbors.size() < 4)
+        return false;
+    
     std::vector<const libMesh::Elem*>
     patch_elems(4, nullptr);
     

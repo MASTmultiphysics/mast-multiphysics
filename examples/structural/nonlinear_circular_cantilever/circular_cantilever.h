@@ -17,31 +17,36 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+#ifndef __mast__structural_example_3d_h__
+#define __mast__structural_example_3d_h__
 
 // MAST includes
-#include "mesh/local_3d_elem.h"
+#include "examples/structural/base/structural_example_base.h"
 
 
-MAST::Local3DElem::Local3DElem(const libMesh::Elem& elem):
-MAST::LocalElemBase(elem) {
- 
-    _T_mat = RealMatrixX::Identity(3,3);
-}
-
-
-
-MAST::Local3DElem::~Local3DElem() {
+namespace MAST {
     
+    namespace Examples {
+        
+        
+        class StructuralExample3D:
+        public MAST::Examples::StructuralExampleBase {
+            
+        public:
+            
+            StructuralExample3D(const libMesh::Parallel::Communicator& comm_in);
+            
+            virtual ~StructuralExample3D();
+            
+        protected:
+            
+            virtual void _init_loads();
+            virtual void _init_mesh();
+            virtual void _init_dirichlet_conditions();
+            virtual void _init_section_property();
+        };
+    }
 }
 
 
-
-void
-MAST::Local3DElem::
-domain_surface_normal_in_global_coordinates(const libMesh::Point& p,
-                                            RealVector3& n_global) const {
-    for (unsigned int i=0; i<3; i++)
-        n_global(i) = p(i);
-}
-
-
+#endif  // __mast__structural_example_3d_h__
