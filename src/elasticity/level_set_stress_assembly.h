@@ -17,11 +17,11 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#ifndef __mast__level_set_eigenproblem_assembly_h__
-#define __mast__level_set_eigenproblem_assembly_h__
+#ifndef __mast__level_set_stress_assembly__
+#define __mast__level_set_stress_assembly__
 
 // MAST includes
-#include "base/eigenproblem_assembly.h"
+#include "elasticity/stress_assembly.h"
 
 
 namespace MAST {
@@ -29,77 +29,52 @@ namespace MAST {
     // Forward declerations
     template <typename ValType> class FieldFunction;
     class LevelSetIntersection;
+    class LevelSetInterfaceDofHandler;
+
     
-    
-    class LevelSetEigenproblemAssembly:
-    public MAST::EigenproblemAssembly {
+    class LevelSetStressAssembly:
+    public MAST::StressAssembly {
     public:
         
         
         /*!
          *   constructor associates this assembly object with the system
          */
-        LevelSetEigenproblemAssembly();
+        LevelSetStressAssembly();
         
         
         /*!
          *   destructor resets the association of this assembly object with
          *   the system
          */
-        virtual ~LevelSetEigenproblemAssembly();
+        virtual ~LevelSetStressAssembly();
         
         
         /*!
          *   attaches level set function to \p this
          */
         virtual void
-        set_level_set_function(MAST::FieldFunction<Real>& level_set);
+        init(MAST::FieldFunction<Real>& level_set,
+             MAST::LevelSetInterfaceDofHandler& dof_handler);
+
         
         /*!
          *   clears association with level set function
          */
         virtual void
-        clear_level_set_function();
+        clear();
+
         
         /*!
-         *   the velocity function used to calculate topology sensitivity
+         *   updates the stresses and strains for the specified solution
+         *   vector \p X. Only the maximum values out of each element are
+         *   updated. This will put the stress data in the System::solution
+         *   vector related to stress/strain values.
          */
         virtual void
-        set_level_set_velocity_function(MAST::FieldFunction<RealVectorX>& velocity);
+        update_stress_strain_data(MAST::StressStrainOutputBase&       ops,
+                                  const libMesh::NumericVector<Real>& X);
         
-        
-        /*!
-         *   clears the velocity function
-         */
-        virtual void
-        clear_level_set_velocity_function();
-        
-        
-        /*!
-         *  @returns a reference to the level set function
-         */
-        MAST::LevelSetIntersection& get_intersection();
-        
-        /*!
-         *    assembles the matrices for eigenproblem depending on the analysis type
-         */
-        virtual void
-        eigenproblem_assemble(libMesh::SparseMatrix<Real>* A,
-                              libMesh::SparseMatrix<Real>* B);
-        
-        /**
-         * Assembly function.  This function will be called
-         * to assemble the sensitivity of eigenproblem matrices.
-         * The method provides dA/dp and dB/dp for \par f parameter.
-         *
-         * If the routine is not able to provide sensitivity for this parameter,
-         * then it should return false, and the system will attempt to use
-         * finite differencing.
-         */
-        virtual bool
-        eigenproblem_sensitivity_assemble (const MAST::FunctionBase& f,
-                                           libMesh::SparseMatrix<Real>* sensitivity_A,
-                                           libMesh::SparseMatrix<Real>* sensitivity_B);
 
         /*!
          *   @returns a MAST::FEBase object for calculation of finite element
@@ -110,18 +85,16 @@ namespace MAST {
          */
         virtual std::unique_ptr<MAST::FEBase>
         build_fe();
-        
+
     protected:
-        
+
         MAST::FieldFunction<Real>            *_level_set;
-        
         MAST::LevelSetIntersection           *_intersection;
-        
-        MAST::FieldFunction<RealVectorX>     *_velocity;
+        MAST::LevelSetInterfaceDofHandler    *_dof_handler;
     };
 }
 
 
-#endif //__mast__level_set_eigenproblem_assembly_h__
+#endif //__mast__level_set_stress_assembly__
 
 

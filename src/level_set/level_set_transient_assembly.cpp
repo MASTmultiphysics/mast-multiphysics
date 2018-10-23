@@ -22,7 +22,6 @@
 #include "level_set/level_set_elem_base.h"
 #include "property_cards/element_property_card_1D.h"
 #include "level_set/level_set_discipline.h"
-#include "mesh/local_elem_fe.h"
 #include "base/assembly_base.h"
 
 
@@ -141,21 +140,4 @@ init(const libMesh::Elem& elem) {
     
     _physics_elem = e;
 }
-
-
-void
-MAST::LevelSetTransientAssemblyElemOperations::
-set_local_fe_data(MAST::LocalElemFE& fe,
-                  const libMesh::Elem& e) const {
-        
-    if (e.dim() == 1) {
-        
-        const MAST::ElementPropertyCard1D&
-        p_card = dynamic_cast<const MAST::ElementPropertyCard1D&>
-        (_discipline->get_property_card(e));
-        
-        fe.set_1d_y_vector(p_card.y_vector());
-    }
-}
-
 

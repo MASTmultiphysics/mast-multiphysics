@@ -368,25 +368,6 @@ namespace MAST {
 
         
         
-        /*!
-         *   some simulations frequently deal with 1D/2D elements in 3D space,
-         *   which requires use of MAST::LocalElemFE.
-         */
-        virtual bool
-        if_use_local_elem() const {
-            
-            return true;
-        }
-        
-        
-        /*!
-         *   sets additional data for local elem FE.
-         */
-        virtual void
-        set_local_fe_data(MAST::LocalElemFE& fe,
-                          const libMesh::Elem& e) const;
-
-        
         bool stress_plot_mode() const {
             return _if_stress_plot_mode;
         }

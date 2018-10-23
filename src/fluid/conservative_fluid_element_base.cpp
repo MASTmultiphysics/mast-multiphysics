@@ -22,14 +22,14 @@
 #include "fluid/primitive_fluid_solution.h"
 #include "fluid/small_disturbance_primitive_fluid_solution.h"
 #include "fluid/flight_condition.h"
-#include "base/boundary_condition_base.h"
-#include "numerics/fem_operator_matrix.h"
-#include "base/system_initialization.h"
-#include "elasticity/normal_rotation_function_base.h"
 #include "fluid/surface_integrated_pressure_output.h"
+#include "elasticity/normal_rotation_function_base.h"
+#include "base/boundary_condition_base.h"
+#include "base/system_initialization.h"
 #include "base/nonlinear_system.h"
-#include "mesh/fe_base.h"
 #include "base/assembly_base.h"
+#include "numerics/fem_operator_matrix.h"
+#include "mesh/fe_base.h"
 
 
 MAST::ConservativeFluidElementBase::
@@ -41,7 +41,7 @@ MAST::FluidElemBase(elem.dim(), f),
 MAST::ElementBase(sys, assembly, elem) {
     
     // initialize the finite element data structures
-    _fe = assembly.build_fe(_elem).release();
+    _fe = assembly.build_fe().release();
     _fe->set_evaluate_second_order_derivatives(if_viscous());
     _fe->init(elem);
 }
@@ -818,7 +818,7 @@ MAST::ConservativeFluidElementBase::side_integrated_force(const unsigned int s,
                                                           RealMatrixX* dfdX) {
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem));
+    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe());
     fe->init_for_side(_elem, s, if_viscous()); // viscous requires derivatives of shape functions
     
     const std::vector<Real> &JxW                 = fe->get_JxW();
@@ -932,7 +932,7 @@ symmetry_surface_residual(bool request_jacobian,
                           MAST::BoundaryConditionBase& bc) {
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem));
+    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe());
     fe->init_for_side(_elem, s, false);
 
     const std::vector<Real> &JxW                 = fe->get_JxW();
@@ -1040,7 +1040,7 @@ slip_wall_surface_residual(bool request_jacobian,
     // qi ni = 0       (since heat flux occurs only on no-slip wall and far-field bc)
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem));
+    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe());
     fe->init_for_side(_elem, s, false);
 
     const std::vector<Real> &JxW                 = fe->get_JxW();
@@ -1185,7 +1185,7 @@ linearized_slip_wall_surface_residual(bool request_jacobian,
     // qi ni = 0       (since heat flux occurs only on no-slip wall and far-field bc)
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem));
+    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe());
     fe->init_for_side(_elem, s, false);
 
     const std::vector<Real> &JxW                 = fe->get_JxW();
@@ -1378,7 +1378,7 @@ noslip_wall_surface_residual(bool request_jacobian,
     // qi ni = 0       (since heat flux occurs only on no-slip wall and far-field bc)
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem));
+    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe());
     fe->init_for_side(_elem, s, true);
 
     const std::vector<Real> &JxW                 = fe->get_JxW();
@@ -1578,7 +1578,7 @@ far_field_surface_residual(bool request_jacobian,
     // -- f_diff_i ni  = f_diff                         (evaluation of diffusion flux based on domain solution)
 
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem));
+    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe());
     fe->init_for_side(_elem, s, false);
 
     const std::vector<Real> &JxW                 = fe->get_JxW();
@@ -1719,7 +1719,7 @@ _calculate_surface_integrated_load(bool request_derivative,
                                    MAST::OutputAssemblyElemOperations& output) {
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem));
+    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe());
     fe->init_for_side(_elem, s, false);
     
     const std::vector<Real> &JxW                 = fe->get_JxW();

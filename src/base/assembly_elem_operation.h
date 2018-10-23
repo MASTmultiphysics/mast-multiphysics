@@ -33,7 +33,6 @@ namespace MAST {
     class FEBase;
     class ElementBase;
     class AssemblyBase;
-    class LocalElemFE;
     class FunctionBase;
     class SystemInitialization;
     class PhysicsDisciplineBase;
@@ -156,21 +155,7 @@ namespace MAST {
          */
         virtual void set_elem_perturbed_acceleration(const RealVectorX& accel);
 
-        /*!
-         *   some simulations frequently deal with 1D/2D elements in 3D space,
-         *   which requires use of MAST::LocalElemFE.
-         */
-        virtual bool
-        if_use_local_elem() const = 0;
-
         
-        /*!
-         *   sets additional data for local elem FE.
-         */
-        virtual void
-        set_local_fe_data(MAST::LocalElemFE& fe,
-                          const libMesh::Elem& e) const = 0;
-
     protected:
 
         MAST::SystemInitialization       *_system;

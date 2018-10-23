@@ -31,8 +31,8 @@
 namespace MAST {
     
     // Forward declerations
+    class LocalElemBase;
     class ElementPropertyCardBase;
-    class LocalElemFE;
     class BoundaryConditionBase;
     class FEMOperatorMatrix;
     class StressStrainOutputBase;
@@ -52,7 +52,9 @@ namespace MAST {
                               const MAST::ElementPropertyCardBase& p);
         
         virtual ~StructuralElementBase();
+
         
+        virtual MAST::LocalElemBase& local_elem();
 
         /*!
          *   stores \p vec as solution for element level calculations,
@@ -703,11 +705,10 @@ namespace MAST {
          *   1D/2D elements.
          */
         virtual const RealMatrixX&
-        _Tmatrix() const {
-            
-            // should be implemented in 1D and 2D elements
-            libmesh_assert(false);
-        }
+        _Tmatrix() const;
+        
+        
+        MAST::LocalElemBase*                _local_elem;
         
         /*!
          *   element property
@@ -804,11 +805,6 @@ namespace MAST {
                              const libMesh::Elem& elem,
                              const MAST::ElementPropertyCardBase& p);
     
-    std::unique_ptr<MAST::FEBase>
-    build_structural_fe(MAST::SystemInitialization& sys,
-                        const libMesh::Elem& elem,
-                        const MAST::ElementPropertyCardBase& p);
-
 }
 
 

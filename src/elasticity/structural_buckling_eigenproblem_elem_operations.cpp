@@ -25,7 +25,6 @@
 #include "base/physics_discipline_base.h"
 #include "base/system_initialization.h"
 #include "base/assembly_base.h"
-#include "mesh/local_elem_fe.h"
 
 MAST::StructuralBucklingEigenproblemElemOperations::
 StructuralBucklingEigenproblemElemOperations():
@@ -122,22 +121,4 @@ elem_sensitivity_calculations(const MAST::FunctionBase& f,
                                            mat_A,
                                            _discipline->volume_loads());
 }
-
-
-
-void
-MAST::StructuralBucklingEigenproblemElemOperations::
-set_local_fe_data(MAST::LocalElemFE& fe,
-                  const libMesh::Elem& e) const {
-    
-    if (e.dim() == 1) {
-        
-        const MAST::ElementPropertyCard1D&
-        p_card = dynamic_cast<const MAST::ElementPropertyCard1D&>
-        (_discipline->get_property_card(e));
-        
-        fe.set_1d_y_vector(p_card.y_vector());
-    }
-}
-
 

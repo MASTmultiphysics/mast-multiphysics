@@ -11,6 +11,7 @@ add_library(mast)
 target_include_directories(mast
         PUBLIC
             ${CMAKE_CURRENT_LIST_DIR}
+            ${MPI_CXX_INCLUDE_PATH}
             ${PETSc_INCLUDE_DIRS}
             ${SLEPc_INCLUDE_DIRS}
             ${libMesh_INCLUDE_DIRS}

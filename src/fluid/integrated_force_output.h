@@ -153,26 +153,6 @@ namespace MAST {
             libmesh_error(); // not yet implemented
         }
         
-        /*!
-         *   fluid simulations do not use local elements
-         */
-        virtual bool
-        if_use_local_elem() const {
-            
-            return false;
-        }
-        
-        
-        /*!
-         *   sets additional data for local elem FE.
-         */
-        virtual void
-        set_local_fe_data(MAST::LocalElemFE& fe,
-                          const libMesh::Elem& e) const {
-            
-            // nothing to be done here
-        }
-
     protected:
         
         /*!

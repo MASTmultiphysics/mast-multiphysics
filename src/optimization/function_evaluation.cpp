@@ -156,78 +156,75 @@ MAST::FunctionEvaluation::initialize_dv_from_output_file(const std::string& nm,
                                                          const unsigned int iter,
                                                          std::vector<Real> &x) {
     
-    if (this->processor_id() == 0)
-    {
-        struct stat stat_info;
-        int stat_result = stat(nm.c_str(), &stat_info);
-        
-        if (stat_result != 0)
-            libmesh_error_msg("File does not exist: " + nm);
-        
-        if (!std::ifstream(nm))
-            libmesh_error_msg("File missing: " + nm);
-        
-        std::ifstream input;
-        input.open(nm, std::ofstream::in);
-        
-
-        std::string
-        line;
-        unsigned int
-        ndv        = 0,
-        nineq      = 0,
-        neq        = 0,
-        it_num     = 0;
-
-        std::vector<std::string> results;
-
-        // number of desing variables
+    struct stat stat_info;
+    int stat_result = stat(nm.c_str(), &stat_info);
+    
+    if (stat_result != 0)
+        libmesh_error_msg("File does not exist: " + nm);
+    
+    if (!std::ifstream(nm))
+        libmesh_error_msg("File missing: " + nm);
+    
+    std::ifstream input;
+    input.open(nm, std::ofstream::in);
+    
+    
+    std::string
+    line;
+    unsigned int
+    ndv        = 0,
+    nineq      = 0,
+    neq        = 0,
+    it_num     = 0;
+    
+    std::vector<std::string> results;
+    
+    // number of desing variables
+    std::getline(input, line);
+    boost::trim(line);
+    boost::split(results, line, boost::is_any_of(" \t"), boost::token_compress_on);
+    libmesh_assert_equal_to(results[0],   "n_dv");
+    ndv = stod(results[1]);
+    libmesh_assert_equal_to(  ndv, x.size());
+    
+    
+    // number of equality constraint
+    std::getline(input, line);
+    boost::trim(line);
+    boost::split(results, line, boost::is_any_of(" \t"), boost::token_compress_on);
+    libmesh_assert_equal_to(results[0],   "n_eq");
+    neq = stod(results[1]);
+    libmesh_assert_equal_to(  neq, _n_eq);
+    
+    
+    // number of inequality constriants
+    std::getline(input, line);
+    boost::trim(line);
+    boost::split(results, line, boost::is_any_of(" \t"), boost::token_compress_on);
+    libmesh_assert_equal_to(results[0],   "n_ineq");
+    nineq = stod(results[1]);
+    //libmesh_assert_equal_to(  nineq, _n_ineq);
+    
+    
+    // skip all lines before iter.
+    while (!input.eof() && it_num < iter+1) {
         std::getline(input, line);
-        boost::trim(line);
-        boost::split(results, line, boost::is_any_of(" \t"), boost::token_compress_on);
-        libmesh_assert_equal_to(results[0],   "n_dv");
-        ndv = stod(results[1]);
-        libmesh_assert_equal_to(  ndv, x.size());
-
-        
-        // number of equality constraint
-        std::getline(input, line);
-        boost::trim(line);
-        boost::split(results, line, boost::is_any_of(" \t"), boost::token_compress_on);
-        libmesh_assert_equal_to(results[0],   "n_eq");
-        neq = stod(results[1]);
-        libmesh_assert_equal_to(  neq, _n_eq);
-
-        
-        // number of inequality constriants
-        std::getline(input, line);
-        boost::trim(line);
-        boost::split(results, line, boost::is_any_of(" \t"), boost::token_compress_on);
-        libmesh_assert_equal_to(results[0],   "n_ineq");
-        nineq = stod(results[1]);
-        //libmesh_assert_equal_to(  nineq, _n_ineq);
-        
-        
-        // skip all lines before iter.
-        while (!input.eof() && it_num < iter+1) {
-            std::getline(input, line);
-            it_num++;
-        }
-
-        // make sure that the iteration number is what we are looking for
-        std::getline(input, line);
-        boost::trim(line);
-        boost::split(results, line, boost::is_any_of(" \t"), boost::token_compress_on);
-
-        libmesh_assert_greater(results.size(), ndv+1);
-
-        it_num = stoi(results[0]);
-        libmesh_assert_equal_to(it_num, iter);
-        
-        // make sure that the file has data
-        for (unsigned int i=0; i<ndv; i++)
-            x[i] = stod(results[i+1]);
+        it_num++;
     }
+    
+    // make sure that the iteration number is what we are looking for
+    std::getline(input, line);
+    boost::trim(line);
+    boost::split(results, line, boost::is_any_of(" \t"), boost::token_compress_on);
+    
+    libmesh_assert_greater(results.size(), ndv+1);
+    
+    it_num = stoi(results[0]);
+    libmesh_assert_equal_to(it_num, iter);
+    
+    // make sure that the file has data
+    for (unsigned int i=0; i<ndv; i++)
+        x[i] = stod(results[i+1]);
 }
 
 
@@ -321,35 +318,48 @@ MAST::FunctionEvaluation::verify_gradients(const std::vector<Real>& dvars) {
     << std::endl;
     
     bool accurate_sens = true;
-    
-    for (unsigned int i=0; i<_n_vars; i++)
+
+    libMesh::out
+    << std::setw(10) << "DV"
+    << std::setw(30) << "Analytical"
+    << std::setw(30) << "Numerical" << std::endl;
+
+    for (unsigned int i=0; i<_n_vars; i++) {
+        libMesh::out
+        << std::setw(10) << i
+        << std::setw(30) << obj_grad[i]
+        << std::setw(30) << obj_grad_fd[i];
         if (fabs((obj_grad[i] - obj_grad_fd[i])/obj_grad[i]) > tol) {
-            libMesh::out
-            << " Mismatched sensitivity: DV:  "  << i << "   "
-            << obj_grad[i] << "    " << obj_grad_fd[i] << std::endl;
+            libMesh::out << " : Mismatched sensitivity";
             accurate_sens = false;
         }
+        libMesh::out << std::endl;
+    }
     
     
     
     libMesh::out
     << " *** Constraint function gradients: analytical vs numerical"
     << std::endl;
-    
+
+    libMesh::out
+    << std::setw(10) << "DV"
+    << std::setw(30) << "Analytical"
+    << std::setw(30) << "Numerical" << std::endl;
+
     for (unsigned int j=0; j<_n_eq+_n_ineq; j++) {
         
         libMesh::out << "  Constraint: " << j << std::endl;
         for (unsigned int i=0; i<_n_vars; i++) {
             libMesh::out
-            << " DV:  "  << i << "   "
-            << grads[i*(_n_eq+_n_ineq)+j] << "    "
-            << grads_fd[i*(_n_eq+_n_ineq)+j];
+            << std::setw(10) << i
+            << std::setw(30) << grads[i*(_n_eq+_n_ineq)+j]
+            << std::setw(30) << grads_fd[i*(_n_eq+_n_ineq)+j];
             if (fabs((grads[i*(_n_eq+_n_ineq)+j] - grads_fd[i*(_n_eq+_n_ineq)+j])/grads[i*(_n_eq+_n_ineq)+j]) > tol) {
-                libMesh::out << "    Mismatched sensitivity" << std::endl;
+                libMesh::out << " : Mismatched sensitivity";
                 accurate_sens = false;
             }
-            else
-                libMesh::out << std::endl;
+            libMesh::out << std::endl;
         }
     }
     // print the message that all sensitivity data satisfied limits.

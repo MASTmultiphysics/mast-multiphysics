@@ -24,7 +24,6 @@
 #include "property_cards/element_property_card_1D.h"
 #include "base/physics_discipline_base.h"
 #include "base/system_initialization.h"
-#include "mesh/local_elem_fe.h"
 #include "base/assembly_base.h"
 #include "base/nonlinear_system.h"
 #include "base/parameter.h"

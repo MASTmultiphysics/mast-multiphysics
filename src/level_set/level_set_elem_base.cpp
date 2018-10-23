@@ -24,12 +24,12 @@
 #include "base/field_function_base.h"
 #include "base/parameter.h"
 #include "base/boundary_condition_base.h"
-#include "property_cards/element_property_card_base.h"
-#include "property_cards/element_property_card_1D.h"
 #include "base/mesh_field_function.h"
 #include "base/nonlinear_system.h"
-#include "mesh/local_elem_fe.h"
 #include "base/assembly_base.h"
+#include "mesh/fe_base.h"
+#include "property_cards/element_property_card_base.h"
+#include "property_cards/element_property_card_1D.h"
 
 
 MAST::LevelSetElementBase::
@@ -41,7 +41,7 @@ _phi_vel          (nullptr),
 _if_propagation   (true) {
     
     // now initialize the finite element data structures
-    _fe = assembly.build_fe(_elem).release();
+    _fe = assembly.build_fe().release();
     _fe->init(_elem);
 }
 
@@ -341,7 +341,7 @@ MAST::LevelSetElementBase::volume() {
 Real
 MAST::LevelSetElementBase::volume_boundary_velocity_on_side(unsigned int s) {
     
-    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem).release());
+    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe());
     fe->init_for_side(_elem, s, true);
 
     const std::vector<Real>& JxW           =  fe->get_JxW();
@@ -641,49 +641,5 @@ _initialize_fem_operators(const unsigned int qp,
     }
 
 }
-
-
-
-
-
-std::unique_ptr<MAST::FEBase>
-MAST::build_level_set_fe(MAST::SystemInitialization& sys,
-                         const libMesh::Elem& elem,
-                         const MAST::ElementPropertyCardBase& p) {
-    
-    std::unique_ptr<MAST::FEBase> rval;
-    
-    switch (elem.dim()) {
-            
-        case 1: {
-            
-            MAST::LocalElemFE
-            *fe = new MAST::LocalElemFE(sys);
-            fe->set_1d_y_vector
-            (dynamic_cast<const MAST::ElementPropertyCard1D&>(p).y_vector());
-            rval.reset(fe);
-        }
-            break;
-            
-        case 2: {
-            
-            rval.reset(new MAST::LocalElemFE(sys));
-        }
-            break;
-            
-        case 3: {
-            
-            rval.reset(new MAST::FEBase(sys));
-        }
-            break;
-            
-        default:
-            libmesh_error(); // should not get here.
-    }
-    
-    return rval;
-}
-
-
 
 
