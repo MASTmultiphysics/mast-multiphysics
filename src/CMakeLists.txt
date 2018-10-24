@@ -51,3 +51,8 @@ add_subdirectory(solver)
 #       code that is using it. (There is a documented limitation with CMake
 #       that prevents this with using add_subdirectory).
 
+# MAST library installation.
+install(TARGETS mast
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+#        INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
