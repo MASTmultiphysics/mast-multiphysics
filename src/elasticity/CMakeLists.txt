@@ -1,4 +1,3 @@
-
 target_sources(mast
     PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}/bending_operator.cpp
@@ -56,3 +55,7 @@ target_sources(mast
         ${CMAKE_CURRENT_LIST_DIR}/structural_transient_assembly.h
         ${CMAKE_CURRENT_LIST_DIR}/timoshenko_bending_operator.cpp
         ${CMAKE_CURRENT_LIST_DIR}/timoshenko_bending_operator.h)
+
+# Install MAST headers for this directory.
+install(DIRECTORY ./ DESTINATION include/elasticity
+        FILES_MATCHING PATTERN "*.h")

@@ -1,5 +1,5 @@
 target_sources(mast
-        PRIVATE
+    PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}/conservative_fluid_discipline.cpp
         ${CMAKE_CURRENT_LIST_DIR}/conservative_fluid_discipline.h
         ${CMAKE_CURRENT_LIST_DIR}/conservative_fluid_element_base.cpp
@@ -28,3 +28,7 @@ target_sources(mast
         ${CMAKE_CURRENT_LIST_DIR}/small_disturbance_primitive_fluid_solution.h
         ${CMAKE_CURRENT_LIST_DIR}/surface_integrated_pressure_output.cpp
         ${CMAKE_CURRENT_LIST_DIR}/surface_integrated_pressure_output.h)
+
+# Install MAST headers for this directory.
+install(DIRECTORY ./ DESTINATION include/fluid
+        FILES_MATCHING PATTERN "*.h")

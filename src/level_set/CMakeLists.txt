@@ -1,5 +1,5 @@
 target_sources(mast
-        PRIVATE
+    PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}/indicator_function_constrain_dofs.cpp
         ${CMAKE_CURRENT_LIST_DIR}/indicator_function_constrain_dofs.h
         ${CMAKE_CURRENT_LIST_DIR}/level_set_boundary_velocity.cpp
@@ -26,3 +26,7 @@ target_sources(mast
         ${CMAKE_CURRENT_LIST_DIR}/level_set_volume_output.h
         ${CMAKE_CURRENT_LIST_DIR}/sub_cell_fe.cpp
         ${CMAKE_CURRENT_LIST_DIR}/sub_cell_fe.h)
+
+# Install MAST headers for this directory.
+install(DIRECTORY ./ DESTINATION include/level_set
+        FILES_MATCHING PATTERN "*.h")
