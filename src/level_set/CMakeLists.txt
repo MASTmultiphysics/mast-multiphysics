@@ -2,6 +2,8 @@ target_sources(mast
         PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}/indicator_function_constrain_dofs.cpp
         ${CMAKE_CURRENT_LIST_DIR}/indicator_function_constrain_dofs.h
+        ${CMAKE_CURRENT_LIST_DIR}/interface_dof_handler.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/interface_dof_handler.h
         ${CMAKE_CURRENT_LIST_DIR}/level_set_boundary_velocity.cpp
         ${CMAKE_CURRENT_LIST_DIR}/level_set_boundary_velocity.h
         ${CMAKE_CURRENT_LIST_DIR}/level_set_constrain_dofs.cpp
@@ -22,7 +24,11 @@ target_sources(mast
         ${CMAKE_CURRENT_LIST_DIR}/level_set_system_initialization.h
         ${CMAKE_CURRENT_LIST_DIR}/level_set_transient_assembly.cpp
         ${CMAKE_CURRENT_LIST_DIR}/level_set_transient_assembly.h
+        ${CMAKE_CURRENT_LIST_DIR}/level_set_void_solution.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/level_set_void_solution.h
         ${CMAKE_CURRENT_LIST_DIR}/level_set_volume_output.cpp
         ${CMAKE_CURRENT_LIST_DIR}/level_set_volume_output.h
+        ${CMAKE_CURRENT_LIST_DIR}/material_patch.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/material_patch.h
         ${CMAKE_CURRENT_LIST_DIR}/sub_cell_fe.cpp
         ${CMAKE_CURRENT_LIST_DIR}/sub_cell_fe.h)
