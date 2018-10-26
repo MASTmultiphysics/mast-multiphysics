@@ -1,5 +1,5 @@
 target_sources(mast
-        PRIVATE
+    PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}/indicator_function_constrain_dofs.cpp
         ${CMAKE_CURRENT_LIST_DIR}/indicator_function_constrain_dofs.h
         ${CMAKE_CURRENT_LIST_DIR}/interface_dof_handler.cpp
@@ -32,3 +32,7 @@ target_sources(mast
         ${CMAKE_CURRENT_LIST_DIR}/material_patch.h
         ${CMAKE_CURRENT_LIST_DIR}/sub_cell_fe.cpp
         ${CMAKE_CURRENT_LIST_DIR}/sub_cell_fe.h)
+
+# Install MAST headers for this directory.
+install(DIRECTORY ./ DESTINATION include/level_set
+        FILES_MATCHING PATTERN "*.h")

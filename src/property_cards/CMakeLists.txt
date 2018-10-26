@@ -1,5 +1,5 @@
 target_sources(mast
-        PRIVATE
+    PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}/element_property_card_1D.cpp
         ${CMAKE_CURRENT_LIST_DIR}/element_property_card_1D.h
         ${CMAKE_CURRENT_LIST_DIR}/element_property_card_2D.cpp
@@ -22,3 +22,7 @@ target_sources(mast
         ${CMAKE_CURRENT_LIST_DIR}/solid_1d_section_element_property_card.h
         ${CMAKE_CURRENT_LIST_DIR}/solid_2d_section_element_property_card.cpp
         ${CMAKE_CURRENT_LIST_DIR}/solid_2d_section_element_property_card.h)
+
+# Install MAST headers for this directory.
+install(DIRECTORY ./ DESTINATION include/property_cards
+        FILES_MATCHING PATTERN "*.h")

@@ -1,6 +1,5 @@
-
 target_sources(mast
-        PRIVATE
+    PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}/complex_solver_base.cpp
         ${CMAKE_CURRENT_LIST_DIR}/complex_solver_base.h
         ${CMAKE_CURRENT_LIST_DIR}/first_order_newmark_transient_solver.cpp
@@ -13,3 +12,7 @@ target_sources(mast
         ${CMAKE_CURRENT_LIST_DIR}/slepc_eigen_solver.h
         ${CMAKE_CURRENT_LIST_DIR}/transient_solver_base.cpp
         ${CMAKE_CURRENT_LIST_DIR}/transient_solver_base.h)
+
+# Install MAST headers for this directory.
+install(DIRECTORY ./ DESTINATION include/solver
+        FILES_MATCHING PATTERN "*.h")

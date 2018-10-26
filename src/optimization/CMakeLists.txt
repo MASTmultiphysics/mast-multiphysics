@@ -46,3 +46,7 @@ endif()
 # include(solver/CMakeLists.txt)
 #
 # See: https://crascit.com/2016/01/31/enhanced-source-file-handling-with-target_sources/
+
+# Install MAST headers for this directory.
+install(DIRECTORY ./ DESTINATION include/optimization
+        FILES_MATCHING PATTERN "*.h")

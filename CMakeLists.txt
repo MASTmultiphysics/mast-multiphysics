@@ -10,6 +10,9 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Configure installation sub-directories.
+include(GNUInstallDirs)
+
 # Build options with defaults.
 option(ENABLE_GCMMA   "Build with GCMMA interface"  OFF)
 option(ENABLE_DOT     "Build with DOT interface"    OFF)
@@ -32,7 +35,6 @@ find_package(SLEPc REQUIRED)
 find_package(libMesh REQUIRED)
 find_package(Boost REQUIRED) # Boost is currently only utilized in src/optimization/function_evaluation (not counting tests).
                              # We possibly could refactor to move finding Boost libraries closer to source where Boost is used.
-
 
 # MAIN TARGETS
 add_subdirectory(src)
