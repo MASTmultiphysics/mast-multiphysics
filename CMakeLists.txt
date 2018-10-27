@@ -40,7 +40,7 @@ find_package(Boost REQUIRED) # Boost is currently only utilized in src/optimizat
 add_subdirectory(src)
 
 # EXAMPLES
-add_subdirectory(ex)
+add_subdirectory(examples)
 
 # DOCUMENTATION
 if(BUILD_DOC)
