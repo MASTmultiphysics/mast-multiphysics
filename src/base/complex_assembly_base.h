@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -37,8 +37,7 @@ namespace MAST {
     
     
     class ComplexAssemblyBase:
-    public MAST::AssemblyBase,
-    public libMesh::NonlinearImplicitSystem::ComputeResidualandJacobian {
+    public MAST::AssemblyBase {
     public:
         
         /*!
@@ -55,63 +54,10 @@ namespace MAST {
 
         
         /*!
-         *   tells the object to assembly the system of equations for the 
-         *   real part when residual_and_jacobian are called.
-         */
-        void set_assemble_real_part() {
-            _if_assemble_real = true;
-        }
-        
-        
-        
-        /*!
-         *   tells the object to assembly the system of equations for the
-         *   complex part when residual_and_jacobian are called.
-         */
-        void set_assemble_imag_part() {
-            _if_assemble_real = false;
-        }
-
-        
-        /*!
          *   calculates the L2 norm of the residual complex system of equations.
          */
-        Real residual_l2_norm();
-        
-        /*!
-         *   attaches a system to this discipline, and vice-a-versa
-         */
-        virtual void
-        attach_discipline_and_system(MAST::PhysicsDisciplineBase& discipline,
-                                     MAST::SystemInitialization& system)  {
-            
-            libmesh_error_msg("Error! Invalid function call for ComplexAssemblyBase.");
-        }
-        
-        
-        /*!
-         *   attaches a system to this discipline, and vice-a-versa
-         */
-        virtual void
-        attach_discipline_and_system(MAST::PhysicsDisciplineBase& discipline,
-                                     MAST::ComplexSolverBase& solver,
-                                     MAST::SystemInitialization& sys);
-
-        
-        /*!
-         *   Reattaches to the same system that was attached earlier.
-         *
-         *   This cannot be called if the clear_discipline_and_system() method
-         *   has been called.
-         */
-        virtual void
-        reattach_to_system();
-        
-        /*!
-         *   clears association with a system to this discipline, and vice-a-versa
-         */
-        virtual void
-        clear_discipline_and_system( );
+        Real residual_l2_norm(const libMesh::NumericVector<Real>& real,
+                              const libMesh::NumericVector<Real>& imag);
         
         
         /*!
@@ -148,24 +94,13 @@ namespace MAST {
         const libMesh::NumericVector<Real>& base_sol(bool if_sens = false) const;
         
         
-        /*!
-         *    function that assembles the matrices and vectors quantities for
-         *    nonlinear solution
-         */
-        virtual void
-        residual_and_jacobian (const libMesh::NumericVector<Real>& X,
-                               libMesh::NumericVector<Real>* R,
-                               libMesh::SparseMatrix<Real>*  J,
-                               libMesh::NonlinearImplicitSystem& S);
-        
         void
         residual_and_jacobian_field_split (const libMesh::NumericVector<Real>& X_R,
                                            const libMesh::NumericVector<Real>& X_I,
                                            libMesh::NumericVector<Real>& R_R,
                                            libMesh::NumericVector<Real>& R_I,
                                            libMesh::SparseMatrix<Real>&  J_R,
-                                           libMesh::SparseMatrix<Real>&  J_I,
-                                           libMesh::NonlinearImplicitSystem& S);
+                                           libMesh::SparseMatrix<Real>&  J_I);
 
         /*!
          *   Assembles the residual and Jacobian of the N complex system of equations
@@ -179,58 +114,24 @@ namespace MAST {
         residual_and_jacobian_blocked (const libMesh::NumericVector<Real>& X,
                                        libMesh::NumericVector<Real>& R,
                                        libMesh::SparseMatrix<Real>&  J,
-                                       libMesh::NonlinearImplicitSystem& S,
                                        MAST::Parameter* p = nullptr);
 
         /**
          * Assembly function.  This function will be called
          * to assemble the RHS of the sensitivity equations (which is -1 times
          * sensitivity of system residual) prior to a solve and must
-         * be provided by the user in a derived class. The method provides dR/dp_i
-         * for \par i ^th parameter in the vector \par parameters.
+         * be provided by the user in a derived class. The method provides dR/dp
+         * for \par f parameter.
          *
          * If the routine is not able to provide sensitivity for this parameter,
          * then it should return false, and the system will attempt to use
          * finite differencing.
          */
         virtual bool
-        sensitivity_assemble (const libMesh::ParameterVector& parameters,
-                              const unsigned int i,
+        sensitivity_assemble (const MAST::FunctionBase& f,
                               libMesh::NumericVector<Real>& sensitivity_rhs);
         
     protected:
-        
-        /*!
-         *   performs the element calculations over \par elem, and returns
-         *   the element vector and matrix quantities in \par mat and
-         *   \par vec, respectively. \par if_jac tells the method to also
-         *   assemble the Jacobian, in addition to the residual vector.
-         */
-        virtual void _elem_calculations(MAST::ElementBase& elem,
-                                        bool if_jac,
-                                        ComplexVectorX& vec,
-                                        ComplexMatrixX& mat) = 0;
-        
-        /*!
-         *   performs the element sensitivity calculations over \par elem,
-         *   and returns the element residual sensitivity in \par vec .
-         */
-        virtual void _elem_sensitivity_calculations(MAST::ElementBase& elem,
-                                                    bool if_jac,
-                                                    ComplexVectorX& vec,
-                                                    ComplexMatrixX& mat) = 0;
-        
-                
-        /*!
-         *   flag tells the solver of the current solution type being sought
-         */
-        bool _if_assemble_real;
-
-
-        /*!
-         *   pointer to complex solver
-         */
-        MAST::ComplexSolverBase* _complex_solver;
         
         /*!
          *   base solution about which this problem is defined. This

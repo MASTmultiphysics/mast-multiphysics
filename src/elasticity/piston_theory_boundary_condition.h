@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -199,7 +199,7 @@ namespace MAST {
         /*!
          *   @returns a smart-pointer to the pressure function
          */
-        std::auto_ptr<MAST::FieldFunction<Real> >
+        std::unique_ptr<MAST::FieldFunction<Real> >
         get_pressure_function(const MAST::FieldFunction<Real>& dwdx,
                               const MAST::FieldFunction<Real>& dwdt) const;
 
@@ -208,7 +208,7 @@ namespace MAST {
         /*!
          *   @returns a smart-pointer to the pressure function
          */
-        std::auto_ptr<MAST::FieldFunction<Real> >
+        std::unique_ptr<MAST::FieldFunction<Real> >
         get_dpdx_function(const MAST::FieldFunction<Real>& dwdx,
                           const MAST::FieldFunction<Real>& dwdt) const;
 
@@ -217,7 +217,7 @@ namespace MAST {
         /*!
          *   @returns a smart-pointer to the pressure function
          */
-        std::auto_ptr<MAST::FieldFunction<Real> >
+        std::unique_ptr<MAST::FieldFunction<Real> >
         get_dpdxdot_function(const MAST::FieldFunction<Real>& dwdx,
                              const MAST::FieldFunction<Real>& dwdt) const;
 

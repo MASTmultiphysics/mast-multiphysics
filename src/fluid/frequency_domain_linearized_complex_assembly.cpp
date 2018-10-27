@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -22,14 +22,13 @@
 #include "fluid/frequency_domain_linearized_complex_assembly.h"
 #include "fluid/conservative_fluid_discipline.h"
 #include "fluid/frequency_domain_linearized_conservative_fluid_elem.h"
-#include "property_cards/element_property_card_base.h"
-#include "base/physics_discipline_base.h"
+#include "base/assembly_base.h"
 
 
 
-MAST::FrequencyDomainLinearizedComplexAssembly::
-FrequencyDomainLinearizedComplexAssembly():
-MAST::ComplexAssemblyBase(),
+MAST::FrequencyDomainLinearizedComplexAssemblyElemOperations::
+FrequencyDomainLinearizedComplexAssemblyElemOperations():
+MAST::ComplexAssemblyElemOperations(),
 _frequency(nullptr) {
     
 }
@@ -37,8 +36,8 @@ _frequency(nullptr) {
 
 
 
-MAST::FrequencyDomainLinearizedComplexAssembly::
-~FrequencyDomainLinearizedComplexAssembly() {
+MAST::FrequencyDomainLinearizedComplexAssemblyElemOperations::
+~FrequencyDomainLinearizedComplexAssemblyElemOperations() {
     
 }
 
@@ -46,7 +45,7 @@ MAST::FrequencyDomainLinearizedComplexAssembly::
 
 
 void
-MAST::FrequencyDomainLinearizedComplexAssembly::
+MAST::FrequencyDomainLinearizedComplexAssemblyElemOperations::
 set_frequency_function(MAST::FrequencyFunction& f) {
     
     // make sure that is hasn't been set
@@ -59,25 +58,24 @@ set_frequency_function(MAST::FrequencyFunction& f) {
 
 
 void
-MAST::FrequencyDomainLinearizedComplexAssembly::clear_discipline_and_system() {
+MAST::FrequencyDomainLinearizedComplexAssemblyElemOperations::
+clear_frequency_function() {
 
     _frequency = nullptr;
-    
-    // call the parent's function
-    MAST::ComplexAssemblyBase::clear_discipline_and_system();
 }
 
 
 
 void
-MAST::FrequencyDomainLinearizedComplexAssembly::
-_elem_calculations(MAST::ElementBase& elem,
-                   bool if_jac,
-                   ComplexVectorX& vec,
-                   ComplexMatrixX& mat) {
+MAST::FrequencyDomainLinearizedComplexAssemblyElemOperations::
+elem_calculations(bool if_jac,
+                  ComplexVectorX& vec,
+                  ComplexMatrixX& mat) {
     
+    libmesh_assert(_physics_elem);
+
     MAST::FrequencyDomainLinearizedConservativeFluidElem& e =
-    dynamic_cast<MAST::FrequencyDomainLinearizedConservativeFluidElem&>(elem);
+    dynamic_cast<MAST::FrequencyDomainLinearizedConservativeFluidElem&>(*_physics_elem);
     
     vec.setZero();
     mat.setZero();
@@ -90,37 +88,43 @@ _elem_calculations(MAST::ElementBase& elem,
 
 
 void
-MAST::FrequencyDomainLinearizedComplexAssembly::
-_elem_sensitivity_calculations(MAST::ElementBase& elem,
-                               bool if_jac,
-                               ComplexVectorX& vec,
-                               ComplexMatrixX& mat) {
+MAST::FrequencyDomainLinearizedComplexAssemblyElemOperations::
+elem_sensitivity_calculations(const MAST::FunctionBase& f,
+                              ComplexVectorX& vec) {
     
-    
+    libmesh_assert(_physics_elem);
+
     MAST::FrequencyDomainLinearizedConservativeFluidElem& e =
-    dynamic_cast<MAST::FrequencyDomainLinearizedConservativeFluidElem&>(elem);
+    dynamic_cast<MAST::FrequencyDomainLinearizedConservativeFluidElem&>(*_physics_elem);
     
     vec.setZero();
-    mat.setZero();
+    ComplexMatrixX
+    dummy = ComplexMatrixX::Zero(vec.size(), vec.size());
     
     // assembly of the flux terms
-    e.internal_residual_sensitivity(if_jac, vec, mat);
-    e.side_external_residual_sensitivity(if_jac, vec, mat, _discipline->side_loads());
+    e.internal_residual_sensitivity(f, false, vec, dummy);
+    e.side_external_residual_sensitivity(f, false, vec, dummy, _discipline->side_loads());
 }
 
 
 
-std::auto_ptr<MAST::ElementBase>
-MAST::FrequencyDomainLinearizedComplexAssembly::_build_elem(const libMesh::Elem& elem) {
+void
+MAST::FrequencyDomainLinearizedComplexAssemblyElemOperations::
+init(const libMesh::Elem& elem) {
     
-    
+    libmesh_assert(!_physics_elem);
+    libmesh_assert(_system);
+    libmesh_assert(_assembly);
+
     const MAST::FlightCondition& p =
-    dynamic_cast<MAST::ConservativeFluidDiscipline*>(_discipline)->flight_condition();
+    dynamic_cast<MAST::ConservativeFluidDiscipline&>
+    (_assembly->discipline()).flight_condition();
     
-    MAST::FrequencyDomainLinearizedConservativeFluidElem* rval =
-    new MAST::FrequencyDomainLinearizedConservativeFluidElem(*_system, elem, p);
-    rval->freq   = _frequency;
+    FrequencyDomainLinearizedConservativeFluidElem
+    *freq_elem =
+    new MAST::FrequencyDomainLinearizedConservativeFluidElem(*_system, *_assembly, elem, p);
+    freq_elem->freq   = _frequency;
     
-    return std::auto_ptr<MAST::ElementBase>(rval);
+    _physics_elem = freq_elem;
 }
 

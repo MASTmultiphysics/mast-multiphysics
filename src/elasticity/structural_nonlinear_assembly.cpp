@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -22,604 +22,85 @@
 #include "elasticity/structural_nonlinear_assembly.h"
 #include "elasticity/structural_element_base.h"
 #include "elasticity/structural_assembly.h"
-#include "property_cards/element_property_card_base.h"
+#include "property_cards/element_property_card_1D.h"
 #include "base/physics_discipline_base.h"
-#include "base/system_initialization.h"
-#include "base/mesh_field_function.h"
-#include "numerics/utility.h"
-#include "base/real_output_function.h"
-#include "base/nonlinear_system.h"
-
-
-// libMesh includes
-#include "libmesh/numeric_vector.h"
-#include "libmesh/sparse_matrix.h"
-#include "libmesh/dof_map.h"
-#include "libmesh/petsc_nonlinear_solver.h"
-#include "libmesh/petsc_vector.h"
-#include "libmesh/parameter_vector.h"
+#include "level_set/level_set_intersection.h"
 
 
 
-MAST::StructuralNonlinearAssembly::
-StructuralNonlinearAssembly():
-MAST::NonlinearImplicitAssembly() {
+MAST::StructuralNonlinearAssemblyElemOperations::StructuralNonlinearAssemblyElemOperations():
+MAST::NonlinearImplicitAssemblyElemOperations(),
+_incompatible_sol_assembly(nullptr) {
     
 }
 
 
 
-MAST::StructuralNonlinearAssembly::
-~StructuralNonlinearAssembly() {
+MAST::StructuralNonlinearAssemblyElemOperations::
+~StructuralNonlinearAssemblyElemOperations() {
     
 }
 
 
 
 void
-MAST::StructuralNonlinearAssembly::
-residual_and_jacobian (const libMesh::NumericVector<Real>& X,
-                       libMesh::NumericVector<Real>* R,
-                       libMesh::SparseMatrix<Real>*  J,
-                       libMesh::NonlinearImplicitSystem& S) {
+MAST::StructuralNonlinearAssemblyElemOperations::set_elem_solution(const RealVectorX& sol) {
     
-    MAST::NonlinearSystem& nonlin_sys = _system->system();
+    unsigned int
+    n = (unsigned int)sol.size();
     
-    // make sure that the system for which this object was created,
-    // and the system passed through the function call are the same
-    libmesh_assert_equal_to(&S, &(nonlin_sys));
+    RealVectorX
+    zero = RealVectorX::Zero(n);
     
-    if (R) R->zero();
-    if (J) J->zero();
+    _physics_elem->set_solution    (sol);
+    _physics_elem->set_velocity    (zero); // set to zero vector for a quasi-steady analysis
+    _physics_elem->set_acceleration(zero); // set to zero vector for a quasi-steady analysis
     
-    // iterate over each element, initialize it and get the relevant
-    // analysis quantities
-    RealVectorX vec, sol;
-    RealMatrixX mat;
-    
-    std::vector<libMesh::dof_id_type> dof_indices;
-    const libMesh::DofMap& dof_map = nonlin_sys.get_dof_map();
-    std::auto_ptr<MAST::ElementBase> physics_elem;
-    
-    std::auto_ptr<libMesh::NumericVector<Real> > localized_solution;
-    localized_solution.reset(_build_localized_vector(nonlin_sys,
-                                                     X).release());
-    
-    
-    // if a solution function is attached, initialize it
-    if (_sol_function)
-        _sol_function->init( X);
-    
-    
-    libMesh::MeshBase::const_element_iterator       el     =
-    nonlin_sys.get_mesh().active_local_elements_begin();
-    const libMesh::MeshBase::const_element_iterator end_el =
-    nonlin_sys.get_mesh().active_local_elements_end();
-    
-    
-    for ( ; el != end_el; ++el) {
-        
-        const libMesh::Elem* elem = *el;
-        
-        dof_map.dof_indices (elem, dof_indices);
-        
-        physics_elem.reset(_build_elem(*elem).release());
 
-        MAST::StructuralElementBase& p_elem =
-        dynamic_cast<MAST::StructuralElementBase&>(*physics_elem);
-
-        
-        // get the solution
-        unsigned int ndofs = (unsigned int)dof_indices.size();
-        sol.setZero(ndofs);
-        vec.setZero(ndofs);
-        mat.setZero(ndofs, ndofs);
-        
-        for (unsigned int i=0; i<dof_indices.size(); i++)
-            sol(i) = (*localized_solution)(dof_indices[i]);
-        
-        physics_elem->set_solution    (sol);
-        physics_elem->set_velocity    (vec); // set to zero vector for a quasi-steady analysis
-        physics_elem->set_acceleration(vec); // set to zero vector for a quasi-steady analysis
-        
+    if (_incompatible_sol_assembly) {
         
         // set the incompatible mode solution if required by the
         // element
-        if (p_elem.if_incompatible_modes()) {
-            // check if the vector exists in the map
-            if (!_incompatible_sol.count(elem))
-                _incompatible_sol[elem] = RealVectorX::Zero(p_elem.incompatible_mode_size());
-            p_elem.set_incompatible_mode_solution(_incompatible_sol[elem]);
-        }
         
-        if (_sol_function)
-            physics_elem->attach_active_solution_function(*_sol_function);
+        MAST::StructuralElementBase& s_elem =
+        dynamic_cast<MAST::StructuralElementBase&>(*_physics_elem);
         
-        //_check_element_numerical_jacobian(*physics_elem, sol);
-        
-        // perform the element level calculations
-        _elem_calculations(*physics_elem,
-                           J!=nullptr?true:false,
-                           vec, mat);
-        
-        physics_elem->detach_active_solution_function();
-        
-        // copy to the libMesh matrix for further processing
-        DenseRealVector v;
-        DenseRealMatrix m;
-        if (R)
-            MAST::copy(v, vec);
-        if (J)
-            MAST::copy(m, mat);
-        
-        // constrain the quantities to account for hanging dofs,
-        // Dirichlet constraints, etc.
-        if (R && J)
-            dof_map.constrain_element_matrix_and_vector(m, v, dof_indices);
-        else if (R)
-            dof_map.constrain_element_vector(v, dof_indices);
-        else
-            dof_map.constrain_element_matrix(m, dof_indices);
-        
-        // add to the global matrices
-        if (R) R->add_vector(v, dof_indices);
-        if (J) J->add_matrix(m, dof_indices);
+        if (s_elem.if_incompatible_modes())
+            _incompatible_sol_assembly->set_elem_incompatible_sol(s_elem);
     }
-    
-    
-    // call the post assembly object, if provided by user
-    if (_post_assembly)
-        _post_assembly->post_assembly(X, R, J, S);
-
-    // if a solution function is attached, clear it
-    if (_sol_function)
-        _sol_function->clear();
-    
-    if (R) R->close();
-    if (J) J->close();
 }
-
-
-
-
-
-bool
-MAST::StructuralNonlinearAssembly::
-sensitivity_assemble (const libMesh::ParameterVector& parameters,
-                      const unsigned int i,
-                      libMesh::NumericVector<Real>& sensitivity_rhs) {
-    
-    MAST::NonlinearSystem& nonlin_sys = _system->system();
-    
-    sensitivity_rhs.zero();
-    
-    // iterate over each element, initialize it and get the relevant
-    // analysis quantities
-    RealVectorX vec, sol;
-    RealMatrixX mat;
-    
-    std::vector<libMesh::dof_id_type> dof_indices;
-    const libMesh::DofMap& dof_map = nonlin_sys.get_dof_map();
-    std::auto_ptr<MAST::ElementBase> physics_elem;
-    
-    std::auto_ptr<libMesh::NumericVector<Real> > localized_solution;
-    localized_solution.reset(_build_localized_vector(nonlin_sys,
-                                                     *nonlin_sys.solution).release());
-    
-    // if a solution function is attached, initialize it
-    if (_sol_function)
-        _sol_function->init( *nonlin_sys.solution);
-    
-    libMesh::MeshBase::const_element_iterator       el     =
-    nonlin_sys.get_mesh().active_local_elements_begin();
-    const libMesh::MeshBase::const_element_iterator end_el =
-    nonlin_sys.get_mesh().active_local_elements_end();
-    
-    for ( ; el != end_el; ++el) {
-        
-        const libMesh::Elem* elem = *el;
-        
-        dof_map.dof_indices (elem, dof_indices);
-        
-        physics_elem.reset(_build_elem(*elem).release());
-        
-        MAST::StructuralElementBase& p_elem =
-        dynamic_cast<MAST::StructuralElementBase&>(*physics_elem);
-
-        // get the solution
-        unsigned int ndofs = (unsigned int)dof_indices.size();
-        sol.setZero(ndofs);
-        vec.setZero(ndofs);
-        mat.setZero(ndofs, ndofs);
-        
-        for (unsigned int i=0; i<dof_indices.size(); i++)
-            sol(i) = (*localized_solution)(dof_indices[i]);
-        
-        physics_elem->sensitivity_param = _discipline->get_parameter(&(parameters[i].get()));
-        physics_elem->set_solution    (sol);
-        physics_elem->set_velocity    (vec); // set to zero vector for a quasi-steady analysis
-        physics_elem->set_acceleration(vec); // set to zero vector for a quasi-steady analysis
-        
-        // set the incompatible mode solution if required by the
-        // element
-        if (p_elem.if_incompatible_modes()) {
-            // check if the vector exists in the map
-            if (!_incompatible_sol.count(elem))
-                _incompatible_sol[elem] = RealVectorX::Zero(p_elem.incompatible_mode_size());
-            p_elem.set_incompatible_mode_solution(_incompatible_sol[elem]);
-        }
-
-        if (_sol_function)
-            physics_elem->attach_active_solution_function(*_sol_function);
-        
-        // perform the element level calculations
-        _elem_sensitivity_calculations(*physics_elem, false, vec, mat);
-        
-        // the sensitivity method provides sensitivity of the residual.
-        // Hence, this is multiplied with -1 to make it the RHS of the
-        // sensitivity equations.
-        vec *= -1.;
-        
-        physics_elem->detach_active_solution_function();
-        
-        // copy to the libMesh matrix for further processing
-        DenseRealVector v;
-        MAST::copy(v, vec);
-        
-        // constrain the quantities to account for hanging dofs,
-        // Dirichlet constraints, etc.
-        dof_map.constrain_element_vector(v, dof_indices);
-        
-        // add to the global matrices
-        sensitivity_rhs.add_vector(v, dof_indices);
-    }
-    
-    // if a solution function is attached, initialize it
-    if (_sol_function)
-        _sol_function->clear();
-    
-    sensitivity_rhs.close();
-    
-    return true;
-}
-
-
 
 
 
 void
-MAST::StructuralNonlinearAssembly::StructuralNonlinearAssembly::
-update_incompatible_solution(libMesh::NumericVector<Real>& X,
-                             libMesh::NumericVector<Real>& dX) {
+MAST::StructuralNonlinearAssemblyElemOperations::
+init(const libMesh::Elem& elem) {
     
-    
-    // iterate over each element and ask the 3D elements to update
-    // their local solutions
-    
-    MAST::NonlinearSystem& nonlin_sys = _system->system();
-    
-    
-    // iterate over each element, initialize it and get the relevant
-    // analysis quantities
-    RealVectorX sol, dsol;
-    
-    std::vector<libMesh::dof_id_type> dof_indices;
-    const libMesh::DofMap& dof_map = _system->system().get_dof_map();
-    std::auto_ptr<MAST::ElementBase> physics_elem;
-    
-    std::auto_ptr<libMesh::NumericVector<Real> >
-    localized_solution(_build_localized_vector(nonlin_sys,
-                                               X).release()),
-    localized_dsolution(_build_localized_vector(nonlin_sys,
-                                                dX).release());
-    
-    
-    // if a solution function is attached, initialize it
-    if (_sol_function)
-        _sol_function->init( X);
-    
-    
-    libMesh::MeshBase::const_element_iterator       el     =
-    nonlin_sys.get_mesh().active_local_elements_begin();
-    const libMesh::MeshBase::const_element_iterator end_el =
-    nonlin_sys.get_mesh().active_local_elements_end();
-    
-    
-    for ( ; el != end_el; ++el) {
-        
-        const libMesh::Elem* elem = *el;
-        
-        physics_elem.reset(_build_elem(*elem).release());
-        
-        MAST::StructuralElementBase& p_elem =
-        dynamic_cast<MAST::StructuralElementBase&>(*physics_elem);
+    libmesh_assert(!_physics_elem);
+    libmesh_assert(_system);
+    libmesh_assert(_assembly);
 
-        if (p_elem.if_incompatible_modes()) {
-            
-            dof_map.dof_indices (elem, dof_indices);
-            
-            // get the solution
-            unsigned int ndofs = (unsigned int)dof_indices.size();
-            sol.setZero(ndofs);
-            dsol.setZero(ndofs);
-            
-            for (unsigned int i=0; i<dof_indices.size(); i++) {
-                sol(i)  = (*localized_solution) (dof_indices[i]);
-                dsol(i) = (*localized_dsolution)(dof_indices[i]);
-            }
-            
-            p_elem.set_solution(sol);
-            p_elem.set_incompatible_mode_solution(_incompatible_sol[elem]);
-            
-            if (_sol_function)
-                p_elem.attach_active_solution_function(*_sol_function);
-            
-            // perform the element level calculations
-            p_elem.update_incompatible_mode_solution(dsol);
-            
-            p_elem.detach_active_solution_function();
-        }
-    }
-    
-    
-    // if a solution function is attached, clear it
-    if (_sol_function)
-        _sol_function->clear();
-}
-
-
-
-
-void
-MAST::StructuralNonlinearAssembly::
-calculate_outputs(const libMesh::NumericVector<Real>& X) {
-
-    
-    // look through the outputs for structural compliance. If present,
-    // then evaluate it separately
-    MAST::VolumeOutputMapType::iterator
-    it    = _discipline->volume_output().begin(),
-    end   = _discipline->volume_output().end();
-    
-    
-    for ( ; it != end; it++)
-        if (it->second->type() == MAST::STRUCTURAL_COMPLIANCE) {
-            
-            MAST::NonlinearSystem& sys = _system->system();
-            
-            MAST::RealOutputFunction& output =
-            dynamic_cast<MAST::RealOutputFunction&>(*it->second);
-            
-            _calculate_compliance(X, sys, output);
-        }
-    
-    // now call the parent's method for calculation of the other outputs
-    MAST::NonlinearImplicitAssembly::calculate_outputs(X);
-    
-}
-
-
-
-
-
-
-void
-MAST::StructuralNonlinearAssembly::
-calculate_output_sensitivity(libMesh::ParameterVector& params,
-                             const bool if_total_sensitivity,
-                             const libMesh::NumericVector<Real>& X) {
-
-
-    // look through the outputs for structural compliance. If present,
-    // then evaluate it separately
-    MAST::VolumeOutputMapType::iterator
-    it    = _discipline->volume_output().begin(),
-    end   = _discipline->volume_output().end();
-    
-    std::auto_ptr<libMesh::NumericVector<Real> >
-    localized_solution_sensitivity;
-    
-    for ( ; it != end; it++)
-        if (it->second->type() == MAST::STRUCTURAL_COMPLIANCE) {
-            
-            MAST::NonlinearSystem& sys = _system->system();
-            
-            MAST::RealOutputFunction& output =
-            dynamic_cast<MAST::RealOutputFunction&>(*it->second);
-            
-            for ( unsigned int i=0; i<params.size(); i++) {
-                
-                const MAST::FunctionBase* f =
-                _discipline->get_parameter(&(params[i].get()));
-                
-                if (!if_total_sensitivity)
-                    _calculate_compliance(X,
-                                          sys,
-                                          output,
-                                          f);
-                else {
-                    
-                    localized_solution_sensitivity.reset
-                    (_build_localized_vector(sys,
-                                             sys.get_sensitivity_solution(i)).release());
-                    
-                    
-                    _calculate_compliance(X,
-                                          sys,
-                                          output,
-                                          f,
-                                          localized_solution_sensitivity.get());
-                }
-            }
-        }
-    
-    // now call the parent's method for calculation of the other outputs
-    MAST::NonlinearImplicitAssembly::
-    calculate_output_sensitivity(params,
-                                 if_total_sensitivity,
-                                 X);
-    
-}
-
-
-
-
-
-
-void
-MAST::StructuralNonlinearAssembly::
-_calculate_compliance (const libMesh::NumericVector<Real>& X,
-                       libMesh::NonlinearImplicitSystem& S,
-                       MAST::RealOutputFunction& output,
-                       const MAST::FunctionBase* f,
-                       const libMesh::NumericVector<Real>* dX) {
-
-
-    MAST::NonlinearSystem& nonlin_sys = _system->system();
-    
-    // make sure that the system for which this object was created,
-    // and the system passed through the function call are the same
-    libmesh_assert_equal_to(&S, &(nonlin_sys));
-    
-    // iterate over each element, initialize it and get the relevant
-    // analysis quantities
-    RealVectorX vec, sol, dsol;
-    RealMatrixX mat;
-    Real        val;
-    
-    std::vector<libMesh::dof_id_type> dof_indices;
-    const libMesh::DofMap& dof_map = _system->system().get_dof_map();
-    std::auto_ptr<MAST::ElementBase> physics_elem;
-    
-    std::auto_ptr<libMesh::NumericVector<Real> >
-    localized_solution,
-    localized_solution_sens;
-    localized_solution.reset(_build_localized_vector(nonlin_sys,
-                                                     X).release());
-    if (f)
-        localized_solution_sens.reset(_build_localized_vector(nonlin_sys,
-                                                              *dX).release());
-
-    
-    // if a solution function is attached, initialize it
-    if (_sol_function)
-        _sol_function->init( X);
-    
-    
-    libMesh::MeshBase::const_element_iterator       el     =
-    nonlin_sys.get_mesh().active_local_elements_begin();
-    const libMesh::MeshBase::const_element_iterator end_el =
-    nonlin_sys.get_mesh().active_local_elements_end();
-    
-    
-    for ( ; el != end_el; ++el) {
-        
-        const libMesh::Elem* elem = *el;
-        
-        dof_map.dof_indices (elem, dof_indices);
-        
-        physics_elem.reset(_build_elem(*elem).release());
-        
-        MAST::StructuralElementBase& p_elem =
-        dynamic_cast<MAST::StructuralElementBase&>(*physics_elem);
-        
-        
-        // get the solution
-        unsigned int ndofs = (unsigned int)dof_indices.size();
-        sol.setZero (ndofs);
-        dsol.setZero(ndofs);
-        vec.setZero (ndofs);
-        mat.setZero (ndofs, ndofs);
-        
-        for (unsigned int i=0; i<dof_indices.size(); i++)
-            sol(i) = (*localized_solution)(dof_indices[i]);
-
-        physics_elem->set_solution(sol, false);  // primal solution
-
-        if (f) {
-            
-            for (unsigned int i=0; i<dof_indices.size(); i++)
-                dsol(i) = (*localized_solution_sens)(dof_indices[i]);
-            
-            physics_elem->set_solution(dsol, true);  // sensitivity solution
-            physics_elem->sensitivity_param = f;
-        }
-        
-        // set the incompatible mode solution if required by the
-        // element
-        if (p_elem.if_incompatible_modes()) {
-            // check if the vector exists in the map
-            if (!_incompatible_sol.count(elem))
-                _incompatible_sol[elem] = RealVectorX::Zero(p_elem.incompatible_mode_size());
-            p_elem.set_incompatible_mode_solution(_incompatible_sol[elem]);
-        }
-        
-        if (_sol_function)
-            physics_elem->attach_active_solution_function(*_sol_function);
-
-        // if no parameter has been specified, then only evaluate
-        // the output. Otherwise, calculate the sensitivity
-        if (!f) {
-            
-            // perform the element level calculations
-            _elem_calculations(*physics_elem,
-                               true,
-                               vec, mat);
-            
-            
-            output.add_value(sol.dot(mat * sol));
-        }
-        else {
-            
-            // perform the element level calculations
-            _elem_calculations(*physics_elem,
-                               true,
-                               vec, mat);
-            val = sol.dot(mat * dsol) + dsol.dot(mat *  sol);
-            output.add_sensitivity(f, val);
-            
-            _elem_sensitivity_calculations(*physics_elem, true, vec, mat);
-            output.add_sensitivity(f, sol.dot(mat * sol));
-        }
-        
-        physics_elem->detach_active_solution_function();
-        
-    }
-    
-    
-    // if a solution function is attached, clear it
-    if (_sol_function)
-        _sol_function->clear();
-}
-
-
-
-
-std::auto_ptr<MAST::ElementBase>
-MAST::StructuralNonlinearAssembly::_build_elem(const libMesh::Elem& elem) {
-    
-    
     const MAST::ElementPropertyCardBase& p =
-    dynamic_cast<const MAST::ElementPropertyCardBase&>(_discipline->get_property_card(elem));
+    dynamic_cast<const MAST::ElementPropertyCardBase&>
+    (_discipline->get_property_card(elem));
     
-    MAST::ElementBase* rval =
-    MAST::build_structural_element(*_system, elem, p).release();
-    
-    return std::auto_ptr<MAST::ElementBase>(rval);
+    _physics_elem =
+    MAST::build_structural_element(*_system, *_assembly, elem, p).release();
 }
 
 
 
 
 void
-MAST::StructuralNonlinearAssembly::
-_elem_calculations(MAST::ElementBase& elem,
-                   bool if_jac,
-                   RealVectorX& vec,
-                   RealMatrixX& mat) {
+MAST::StructuralNonlinearAssemblyElemOperations::
+elem_calculations(bool if_jac,
+                  RealVectorX& vec,
+                  RealMatrixX& mat) {
+    
+    libmesh_assert(_physics_elem);
     
     MAST::StructuralElementBase& e =
-    dynamic_cast<MAST::StructuralElementBase&>(elem);
+    dynamic_cast<MAST::StructuralElementBase&>(*_physics_elem);
     
     vec.setZero();
     mat.setZero();
@@ -642,13 +123,13 @@ _elem_calculations(MAST::ElementBase& elem,
 
 
 void
-MAST::StructuralNonlinearAssembly::
-_elem_linearized_jacobian_solution_product(MAST::ElementBase& elem,
-                                           RealVectorX& vec) {
+MAST::StructuralNonlinearAssemblyElemOperations::
+elem_linearized_jacobian_solution_product(RealVectorX& vec) {
     
+    libmesh_assert(_physics_elem);
 
     MAST::StructuralElementBase& e =
-    dynamic_cast<MAST::StructuralElementBase&>(elem);
+    dynamic_cast<MAST::StructuralElementBase&>(*_physics_elem);
     
     vec.setZero();
     RealMatrixX
@@ -671,106 +152,92 @@ _elem_linearized_jacobian_solution_product(MAST::ElementBase& elem,
 
 
 void
-MAST::StructuralNonlinearAssembly::
-_elem_sensitivity_calculations(MAST::ElementBase& elem,
-                               bool if_jac,
-                               RealVectorX& vec,
-                               RealMatrixX& mat) {
+MAST::StructuralNonlinearAssemblyElemOperations::
+elem_sensitivity_calculations(const MAST::FunctionBase& f,
+                              RealVectorX& vec) {
     
+    libmesh_assert(_physics_elem);
+
     MAST::StructuralElementBase& e =
-    dynamic_cast<MAST::StructuralElementBase&>(elem);
+    dynamic_cast<MAST::StructuralElementBase&>(*_physics_elem);
     
     vec.setZero();
-    mat.setZero();
     RealMatrixX
     dummy = RealMatrixX::Zero(vec.size(), vec.size());
     
-    e.internal_residual_sensitivity(if_jac, vec, mat);
-    e.side_external_residual_sensitivity(if_jac,
+    e.internal_residual_sensitivity(f, false, vec, dummy);
+    e.side_external_residual_sensitivity(f, false,
                                          vec,
                                          dummy,
-                                         mat,
+                                         dummy,
                                          _discipline->side_loads());
-    e.volume_external_residual_sensitivity(if_jac,
+    e.volume_external_residual_sensitivity(f, false,
                                            vec,
                                            dummy,
-                                           mat,
+                                           dummy,
                                            _discipline->volume_loads());
 }
 
 
 
 void
-MAST::StructuralNonlinearAssembly::
-_elem_second_derivative_dot_solution_assembly(MAST::ElementBase& elem,
-                                              RealMatrixX& m) {
-    MAST::StructuralElementBase& e =
-    dynamic_cast<MAST::StructuralElementBase&>(elem);
-    m.setZero();
+MAST::StructuralNonlinearAssemblyElemOperations::
+elem_topology_sensitivity_calculations(const MAST::FunctionBase& f,
+                                       const MAST::LevelSetIntersection& intersect,
+                                       const MAST::FieldFunction<RealVectorX>& vel,
+                                       RealVectorX& vec) {
+    
+    libmesh_assert(_physics_elem);
+    libmesh_assert(f.is_topology_parameter());
+    const libMesh::Elem& elem = _physics_elem->elem();
 
+    // sensitivity only exists at the boundary. So, we proceed with calculation
+    // only if this element has an intersection in the interior, or with a side.
+    if (intersect.if_elem_has_boundary()) {
+        
+        MAST::StructuralElementBase& e =
+        dynamic_cast<MAST::StructuralElementBase&>(*_physics_elem);
+        
+        vec.setZero();
+        RealMatrixX
+        dummy = RealMatrixX::Zero(vec.size(), vec.size());
+        
+        if (intersect.has_side_on_interface(elem)) {
+            e.internal_residual_boundary_velocity(f,
+                                                  intersect.get_side_on_interface(elem),
+                                                  vel,
+                                                  false,
+                                                  vec,
+                                                  dummy);
+            e.volume_external_residual_boundary_velocity(f,
+                                                         intersect.get_side_on_interface(elem),
+                                                         vel,
+                                                         _discipline->volume_loads(),
+                                                         false,
+                                                         vec,
+                                                         dummy);
+        }
+        /*e.side_external_residual_sensitivity(f, false,
+         vec,
+         dummy,
+         dummy,
+         _discipline->side_loads());*/
+    }
+}
+
+
+
+void
+MAST::StructuralNonlinearAssemblyElemOperations::
+elem_second_derivative_dot_solution_assembly(RealMatrixX& m) {
+    
+    libmesh_assert(_physics_elem);
+    
+    MAST::StructuralElementBase& e =
+    dynamic_cast<MAST::StructuralElementBase&>(*_physics_elem);
+    m.setZero();
+    
     e.internal_residual_jac_dot_state_sensitivity(m);
 }
-
-
-
-
-void
-MAST::StructuralNonlinearAssembly::
-attach_discipline_and_system(MAST::PhysicsDisciplineBase& discipline,
-                             MAST::SystemInitialization& system) {
-    
-    // call the parent's method firts
-    MAST::NonlinearImplicitAssembly::attach_discipline_and_system(discipline,
-                                                                  system);
-    
-    // get the nonlinear solver SNES object from System and
-    // add a monitor to it so that it can be used to update the
-    // incompatible mode solution after each update
-    
-    libMesh::PetscNonlinearSolver<Real> &petsc_nonlinear_solver =
-    *(dynamic_cast<libMesh::PetscNonlinearSolver<Real>*>
-      (dynamic_cast<MAST::NonlinearSystem&>(system.system()).nonlinear_solver.get()));
-
-
-    // initialize the solver before getting the snes object
-    if (libMesh::on_command_line("--solver_system_names"))
-        petsc_nonlinear_solver.init((system.system().name()+"_").c_str());
-    
-    // get the SNES object
-    SNES snes = petsc_nonlinear_solver.snes();
-    
-    PetscErrorCode ierr =
-    SNESMonitorSet(snes,
-                   _snes_structural_nonlinear_assembly_monitor_function,
-                   (void*)this,
-                   PETSC_NULL);
-    
-    libmesh_assert(!ierr);
-}
-
-
-
-void
-MAST::StructuralNonlinearAssembly::
-clear_discipline_and_system( ) {
-    
-    // next, remove the monitor function from the snes object
-    libMesh::PetscNonlinearSolver<Real> &petsc_nonlinear_solver =
-    *(dynamic_cast<libMesh::PetscNonlinearSolver<Real>*>
-      (dynamic_cast<MAST::NonlinearSystem&>(_system->system()).nonlinear_solver.get()));
-    
-    // get the SNES object
-    SNES snes = petsc_nonlinear_solver.snes();
-    
-    PetscErrorCode ierr =
-    SNESMonitorCancel(snes);
-    libmesh_assert(!ierr);
-    
-    // call the parent's method firts
-    MAST::NonlinearImplicitAssembly::clear_discipline_and_system();
-    
-    
-}
-
 
 

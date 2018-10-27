@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -30,6 +30,7 @@
 #include "fluid/conservative_fluid_system_initialization.h"
 #include "fluid/conservative_fluid_discipline.h"
 #include "fluid/frequency_domain_linearized_complex_assembly.h"
+#include "base/complex_assembly_base.h"
 #include "solver/complex_solver_base.h"
 #include "fluid/flight_condition.h"
 #include "base/parameter.h"
@@ -42,23 +43,22 @@
 #include "libmesh/mesh_generation.h"
 #include "libmesh/exodusII_io.h"
 #include "libmesh/numeric_vector.h"
-#include "libmesh/parameter_vector.h"
 #include "libmesh/getpot.h"
 #include "libmesh/string_to_enum.h"
 
 
 
-extern libMesh::LibMeshInit* __init;
 
 
 
 
 MAST::PanelInviscidSmallDisturbanceFrequencyDomain2DAnalysis::
-PanelInviscidSmallDisturbanceFrequencyDomain2DAnalysis() {
+PanelInviscidSmallDisturbanceFrequencyDomain2DAnalysis(const libMesh::Parallel::Communicator& comm_in):
+libMesh::ParallelObject (comm_in) {
     
     
     // initialize the libMesh object
-    _mesh              = new libMesh::ParallelMesh(__init->comm());
+    _mesh              = new libMesh::ParallelMesh(this->comm());
     _eq_sys            = new libMesh::EquationSystems(*_mesh);
     
     // add the system to be used for analysis
@@ -98,7 +98,7 @@ PanelInviscidSmallDisturbanceFrequencyDomain2DAnalysis() {
     x_divs           (nx_divs),
     y_divs           (ny_divs);
     
-    std::auto_ptr<MeshInitializer::CoordinateDivisions>
+    std::unique_ptr<MeshInitializer::CoordinateDivisions>
     x_coord_divs    (new MeshInitializer::CoordinateDivisions),
     y_coord_divs    (new MeshInitializer::CoordinateDivisions);
     
@@ -146,8 +146,6 @@ PanelInviscidSmallDisturbanceFrequencyDomain2DAnalysis() {
     MAST::PanelMesh2D().init(0.,               // t/c
                              false,            // if cos bump
                              0,                // n max bumps
-                             panel_bc_id,
-                             symmetry_bc_id,
                              divs,
                              *_mesh,
                              elem_type);
@@ -166,22 +164,15 @@ PanelInviscidSmallDisturbanceFrequencyDomain2DAnalysis() {
     _eq_sys->print_info();
     
     // create the oundary conditions for slip-wall and far-field
-    _far_field     = new MAST::BoundaryConditionBase(MAST::FAR_FIELD),
+    _far_field     = new MAST::BoundaryConditionBase(MAST::FAR_FIELD);
     _symm_wall     = new MAST::BoundaryConditionBase(MAST::SYMMETRY_WALL);
     _slip_wall     = new MAST::BoundaryConditionBase(MAST::SLIP_WALL);
     
     _flight_cond    =  new MAST::FlightCondition;
-    for (unsigned int i=0; i<3; i++) {
-        
-        _flight_cond->body_roll_axis(i)     = infile(    "body_roll_axis", 0., i);
-        _flight_cond->body_pitch_axis(i)    = infile(   "body_pitch_axis", 0., i);
-        _flight_cond->body_yaw_axis(i)      = infile(     "body_yaw_axis", 0., i);
-        _flight_cond->body_euler_angles(i)  = infile( "body_euler_angles", 0., i);
-        _flight_cond->body_angular_rates(i) = infile("body_angular_rates", 0., i);
-    }
-    
+    for (unsigned int i=0; i<3; i++)
+        _flight_cond->flow_unit_vector(i)   = infile(    "flow_unit_vector", 0., i);
+
     _flight_cond->ref_chord       = infile("ref_c",    1.);
-    _flight_cond->altitude        = infile( "alt",     0.);
     _flight_cond->mach            = infile("mach",     .5);
     _flight_cond->gas_property.cp = infile(  "cp",  1003.);
     _flight_cond->gas_property.cv = infile(  "cv",   716.);
@@ -195,7 +186,7 @@ PanelInviscidSmallDisturbanceFrequencyDomain2DAnalysis() {
     
     // define parameters
     _omega             = new MAST::Parameter("omega",     100.);
-    _velocity          = new MAST::Parameter("velocity",  _flight_cond->velocity_magnitude);
+    _velocity          = new MAST::Parameter("velocity",  _flight_cond->velocity_magnitude());
     _b_ref             = new MAST::Parameter("b_ref",       1.);
     
     
@@ -215,10 +206,11 @@ PanelInviscidSmallDisturbanceFrequencyDomain2DAnalysis() {
                                                      *_b_ref_f);
     
     // initialize the motion object
+    RealVectorX tmp;
     _motion            = new MAST::RigidSurfaceMotion;
     _motion->init(*_freq_function,                 // frequency function
-                  _flight_cond->body_yaw_axis,     // plunge vector
-                  _flight_cond->body_pitch_axis,   // pitch axis
+                  tmp,                             // plunge vector
+                  tmp,                             // pitch axis
                   RealVectorX::Zero(3),            // hinge location
                   1.,                              // plunge amplitude
                   0.,                              // pitch amplitude
@@ -276,47 +268,6 @@ MAST::PanelInviscidSmallDisturbanceFrequencyDomain2DAnalysis::
 
 
 
-MAST::Parameter*
-MAST::PanelInviscidSmallDisturbanceFrequencyDomain2DAnalysis::
-get_parameter(const std::string &nm) {
-    
-    MAST::Parameter *rval = nullptr;
-    
-    // look through the vector of parameters to see if the name is available
-    std::vector<MAST::Parameter*>::iterator
-    it   =  _params_for_sensitivity.begin(),
-    end  =  _params_for_sensitivity.end();
-    
-    bool
-    found = false;
-    
-    for ( ; it != end; it++) {
-        
-        if (nm == (*it)->name()) {
-            rval    = *it;
-            found   = true;
-        }
-    }
-    
-    // if the param was not found, then print the message
-    if (!found) {
-        libMesh::out
-        << std::endl
-        << "Parameter not found by name: " << nm << std::endl
-        << "Valid names are: "
-        << std::endl;
-        for (it = _params_for_sensitivity.begin(); it != end; it++)
-            libMesh::out << "   " << (*it)->name() << std::endl;
-        libMesh::out << std::endl;
-    }
-    
-    return rval;
-}
-
-
-
-
-
 void
 MAST::PanelInviscidSmallDisturbanceFrequencyDomain2DAnalysis::
 solve(bool if_write_output) {
@@ -338,19 +289,18 @@ solve(bool if_write_output) {
     _sys->solution->swap(base_sol);
     
     // create the nonlinear assembly object
-    MAST::FrequencyDomainLinearizedComplexAssembly   assembly;
+    MAST::ComplexAssemblyBase                                     assembly;
+    MAST::FrequencyDomainLinearizedComplexAssemblyElemOperations  elem_ops;
     
     // complex solver for solution of small-disturbance system of eqs.
     MAST::ComplexSolverBase                          solver;
     
     // now solve the system
-    assembly.attach_discipline_and_system(*_discipline,
-                                          solver,
-                                          *_fluid_sys);
+    assembly.set_discipline_and_system(*_discipline, *_fluid_sys);
     assembly.set_base_solution(base_sol);
-    assembly.set_frequency_function(*_freq_function);
+    elem_ops.set_frequency_function(*_freq_function);
     
-    solver.solve_block_matrix();
+    solver.solve_block_matrix(elem_ops, assembly);
     
     if (if_write_output) {
         
@@ -396,7 +346,7 @@ solve(bool if_write_output) {
         
         
         // first calculate the real and imaginary vectors
-        std::auto_ptr<libMesh::NumericVector<Real> >
+        std::unique_ptr<libMesh::NumericVector<Real> >
         re(_sys->solution->zero_clone().release()),
         im(_sys->solution->zero_clone().release());
         
@@ -453,22 +403,21 @@ sensitivity_solve(MAST::Parameter& p, bool if_write_output) {
 
     // tell the discipline about the parameter with respect to this
     // sensitivity will be calculated
-    _discipline->add_parameter(p);
     
     // create the nonlinear assembly object
-    MAST::FrequencyDomainLinearizedComplexAssembly   assembly;
+    MAST::ComplexAssemblyBase                                    assembly;
+    MAST::FrequencyDomainLinearizedComplexAssemblyElemOperations elem_ops;
     
     // complex solver for solution of small-disturbance system of eqs.
     MAST::ComplexSolverBase                          solver;
     
     // now solve the system
-    assembly.attach_discipline_and_system(*_discipline,
-                                          solver,
-                                          *_fluid_sys);
+    assembly.set_discipline_and_system(*_discipline,
+                                       *_fluid_sys);
     assembly.set_base_solution(base_sol);
-    assembly.set_frequency_function(*_freq_function);
+    elem_ops.set_frequency_function(*_freq_function);
     
-    solver.solve_block_matrix(&p);
+    solver.solve_block_matrix(elem_ops, assembly, &p);
     
     if (if_write_output) {
         
@@ -499,8 +448,5 @@ sensitivity_solve(MAST::Parameter& p, bool if_write_output) {
     
     
     assembly.clear_discipline_and_system();
-    _discipline->remove_parameter(p);
-
-    
 }
 

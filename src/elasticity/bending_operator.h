@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -40,6 +40,8 @@ namespace MAST {
     class FunctionBase;
     class SensitivityParameters;
     class FEMOperatorMatrix;
+    class FEBase;
+    template <typename ValType> class FieldFunction;
     
     
     enum BendingOperatorType {
@@ -65,23 +67,39 @@ namespace MAST {
         virtual bool include_transverse_shear_energy() const = 0;
         
         /*!
-         *   initialze the bending strain operator for the specified quadrature point
-         */
-        virtual void
-        initialize_bending_strain_operator (const libMesh::FEBase& fe,
-                                            const unsigned int qp,
-                                            MAST::FEMOperatorMatrix& Bmat) = 0;
-        
-        /*!
          *   calculate the transverse shear component for the element
          */
         virtual void
         calculate_transverse_shear_residual(bool request_jacobian,
                                             RealVectorX& local_f,
-                                            RealMatrixX& local_jac,
-                                            const MAST::FunctionBase* sens_params )
+                                            RealMatrixX& local_jac)
         { libmesh_error(); }
+
         
+        /*!
+         *   calculate the transverse shear component for the element
+         */
+        virtual void
+        calculate_transverse_shear_residual_sensitivity(const MAST::FunctionBase& p,
+                                                        bool request_jacobian,
+                                                        RealVectorX& local_f,
+                                                        RealMatrixX& local_jac)
+        { libmesh_error(); }
+
+
+        /*!
+         *   calculate the transverse shear component for the element
+         */
+        virtual void
+        calculate_transverse_shear_residual_boundary_velocity
+        (const MAST::FunctionBase& p,
+         const unsigned int s,
+         const MAST::FieldFunction<RealVectorX>& vel_f,
+         bool request_jacobian,
+         RealVectorX& local_f,
+         RealMatrixX& local_jac)
+        { libmesh_error(); }
+
         
     protected:
         
@@ -113,11 +131,21 @@ namespace MAST {
          *   initialze the bending strain operator for the specified quadrature point
          */
         virtual void
-        initialize_bending_strain_operator_for_yz (const libMesh::FEBase& fe,
+        initialize_bending_strain_operator (const MAST::FEBase& fe,
+                                            const unsigned int qp,
+                                            MAST::FEMOperatorMatrix& Bmat_v,
+                                            MAST::FEMOperatorMatrix& Bmat_w) = 0;
+
+        /*!
+         *   initialze the bending strain operator for the specified quadrature point
+         */
+        virtual void
+        initialize_bending_strain_operator_for_yz (const MAST::FEBase& fe,
                                                    const unsigned int qp,
                                                    const Real y,
                                                    const Real z,
-                                                   MAST::FEMOperatorMatrix& Bmat) = 0;
+                                                   MAST::FEMOperatorMatrix& Bmat_v,
+                                                   MAST::FEMOperatorMatrix& Bmat_w) = 0;
         
     };
     
@@ -135,7 +163,15 @@ namespace MAST {
          *   initialze the bending strain operator for the specified quadrature point
          */
         virtual void
-        initialize_bending_strain_operator_for_z (const libMesh::FEBase& fe,
+        initialize_bending_strain_operator (const MAST::FEBase& fe,
+                                            const unsigned int qp,
+                                            MAST::FEMOperatorMatrix& Bmat) = 0;
+
+        /*!
+         *   initialze the bending strain operator for the specified quadrature point
+         */
+        virtual void
+        initialize_bending_strain_operator_for_z (const MAST::FEBase& fe,
                                                   const unsigned int qp,
                                                   const Real z,
                                                   MAST::FEMOperatorMatrix& Bmat) = 0;
@@ -146,10 +182,15 @@ namespace MAST {
     /*!
      *   builds a bending operator and returns it in a smart-pointer
      */
-    std::auto_ptr<MAST::BendingOperator>
-    build_bending_operator(MAST::BendingOperatorType type,
-                           MAST::StructuralElementBase& elem,
-                           const std::vector<libMesh::Point>& pts);
+    std::unique_ptr<MAST::BendingOperator1D>
+    build_bending_operator_1D(MAST::BendingOperatorType type,
+                              MAST::StructuralElementBase& elem,
+                              const std::vector<libMesh::Point>& pts);
+
+    std::unique_ptr<MAST::BendingOperator2D>
+    build_bending_operator_2D(MAST::BendingOperatorType type,
+                              MAST::StructuralElementBase& elem,
+                              const std::vector<libMesh::Point>& pts);
 
 }
 

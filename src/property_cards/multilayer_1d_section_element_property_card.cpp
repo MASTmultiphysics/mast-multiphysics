@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -241,7 +241,7 @@ MAST::Multilayer1DSectionElementPropertyCard::depends_on(const MAST::FunctionBas
 
 
 
-std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::Multilayer1DSectionElementPropertyCard::
 stiffness_A_matrix(const MAST::ElementBase& e) {
     
@@ -251,7 +251,7 @@ stiffness_A_matrix(const MAST::ElementBase& e) {
         layer_mats[i] = _layers[i]->stiffness_A_matrix(e).release();
     
     // now create the integrated object
-    std::auto_ptr<MAST::FieldFunction<RealMatrixX> > rval
+    std::unique_ptr<MAST::FieldFunction<RealMatrixX> > rval
     (new MAST::Multilayer1DSectionProperty::Matrix
      (layer_mats));
     
@@ -260,7 +260,7 @@ stiffness_A_matrix(const MAST::ElementBase& e) {
 
 
 
-std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::Multilayer1DSectionElementPropertyCard::
 stiffness_B_matrix(const MAST::ElementBase& e) {
     
@@ -270,7 +270,7 @@ stiffness_B_matrix(const MAST::ElementBase& e) {
         layer_mats[i] = _layers[i]->stiffness_B_matrix(e).release();
     
     // now create the integrated object
-    std::auto_ptr<MAST::FieldFunction<RealMatrixX> > rval
+    std::unique_ptr<MAST::FieldFunction<RealMatrixX> > rval
     (new MAST::Multilayer1DSectionProperty::Matrix
      (layer_mats));
     
@@ -279,7 +279,7 @@ stiffness_B_matrix(const MAST::ElementBase& e) {
 
 
 
-std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::Multilayer1DSectionElementPropertyCard::
 stiffness_D_matrix(const MAST::ElementBase& e) {
     
@@ -289,7 +289,7 @@ stiffness_D_matrix(const MAST::ElementBase& e) {
         layer_mats[i] = _layers[i]->stiffness_D_matrix(e).release();
     
     // now create the integrated object
-    std::auto_ptr<MAST::FieldFunction<RealMatrixX> > rval
+    std::unique_ptr<MAST::FieldFunction<RealMatrixX> > rval
     (new MAST::Multilayer1DSectionProperty::Matrix
      (layer_mats));
     
@@ -298,7 +298,7 @@ stiffness_D_matrix(const MAST::ElementBase& e) {
 
 
 
-std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::Multilayer1DSectionElementPropertyCard::
 damping_matrix(const MAST::ElementBase& e) {
     
@@ -308,7 +308,7 @@ damping_matrix(const MAST::ElementBase& e) {
         layer_mats[i] = _layers[i]->damping_matrix(e).release();
     
     // now create the integrated object
-    std::auto_ptr<MAST::FieldFunction<RealMatrixX> > rval
+    std::unique_ptr<MAST::FieldFunction<RealMatrixX> > rval
     (new MAST::Multilayer1DSectionProperty::Matrix
      (layer_mats));
     
@@ -317,7 +317,7 @@ damping_matrix(const MAST::ElementBase& e) {
 
 
 
-std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::Multilayer1DSectionElementPropertyCard::
 inertia_matrix(const MAST::ElementBase& e) {
     
@@ -327,7 +327,7 @@ inertia_matrix(const MAST::ElementBase& e) {
         layer_mats[i] = _layers[i]->inertia_matrix(e).release();
     
     // now create the integrated object
-    std::auto_ptr<MAST::FieldFunction<RealMatrixX> > rval
+    std::unique_ptr<MAST::FieldFunction<RealMatrixX> > rval
     (new MAST::Multilayer1DSectionProperty::Matrix
      (layer_mats));
     
@@ -336,7 +336,7 @@ inertia_matrix(const MAST::ElementBase& e) {
 
 
 
-std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::Multilayer1DSectionElementPropertyCard::
 thermal_expansion_A_matrix(const MAST::ElementBase& e) {
     
@@ -346,7 +346,7 @@ thermal_expansion_A_matrix(const MAST::ElementBase& e) {
         layer_mats[i] = _layers[i]->thermal_expansion_A_matrix(e).release();
     
     // now create the integrated object
-    std::auto_ptr<MAST::FieldFunction<RealMatrixX> > rval
+    std::unique_ptr<MAST::FieldFunction<RealMatrixX> > rval
     (new MAST::Multilayer1DSectionProperty::Matrix
      (layer_mats));
     
@@ -355,7 +355,7 @@ thermal_expansion_A_matrix(const MAST::ElementBase& e) {
 
 
 
-std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::Multilayer1DSectionElementPropertyCard::
 thermal_expansion_B_matrix(const MAST::ElementBase& e) {
     
@@ -365,7 +365,7 @@ thermal_expansion_B_matrix(const MAST::ElementBase& e) {
         layer_mats[i] = _layers[i]->thermal_expansion_B_matrix(e).release();
     
     // now create the integrated object
-    std::auto_ptr<MAST::FieldFunction<RealMatrixX> > rval
+    std::unique_ptr<MAST::FieldFunction<RealMatrixX> > rval
     (new MAST::Multilayer1DSectionProperty::Matrix
      (layer_mats));
     
@@ -374,7 +374,7 @@ thermal_expansion_B_matrix(const MAST::ElementBase& e) {
 
 
 
-std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::Multilayer1DSectionElementPropertyCard::
 transverse_shear_stiffness_matrix(const MAST::ElementBase& e) {
     
@@ -384,7 +384,7 @@ transverse_shear_stiffness_matrix(const MAST::ElementBase& e) {
         layer_mats[i] = _layers[i]->transverse_shear_stiffness_matrix(e).release();
     
     // now create the integrated object
-    std::auto_ptr<MAST::FieldFunction<RealMatrixX> > rval
+    std::unique_ptr<MAST::FieldFunction<RealMatrixX> > rval
     (new MAST::Multilayer1DSectionProperty::Matrix
      (layer_mats));
     
@@ -393,7 +393,7 @@ transverse_shear_stiffness_matrix(const MAST::ElementBase& e) {
 
 
 
-std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::Multilayer1DSectionElementPropertyCard::
 prestress_A_matrix( MAST::ElementBase& e) {
     
@@ -403,7 +403,7 @@ prestress_A_matrix( MAST::ElementBase& e) {
         layer_mats[i] = _layers[i]->prestress_A_matrix(e).release();
     
     // now create the integrated object
-    std::auto_ptr<MAST::FieldFunction<RealMatrixX> > rval
+    std::unique_ptr<MAST::FieldFunction<RealMatrixX> > rval
     (new MAST::Multilayer1DSectionProperty::Matrix
      (layer_mats));
     
@@ -412,7 +412,7 @@ prestress_A_matrix( MAST::ElementBase& e) {
 
 
 
-std::auto_ptr<MAST::FieldFunction<RealMatrixX> >
+std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::Multilayer1DSectionElementPropertyCard::
 prestress_B_matrix( MAST::ElementBase& e) {
     
@@ -422,7 +422,7 @@ prestress_B_matrix( MAST::ElementBase& e) {
         layer_mats[i] = _layers[i]->prestress_B_matrix(e).release();
     
     // now create the integrated object
-    std::auto_ptr<MAST::FieldFunction<RealMatrixX> > rval
+    std::unique_ptr<MAST::FieldFunction<RealMatrixX> > rval
     (new MAST::Multilayer1DSectionProperty::Matrix
      (layer_mats));
     

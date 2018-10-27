@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -21,10 +21,6 @@
 // MAST includes
 #include "fluid/conservative_fluid_system_initialization.h"
 #include "base/nonlinear_system.h"
-
-
-// libMesh includes
-#include "libmesh/function_base.h"
 
 
 MAST::ConservativeFluidSystemInitialization::
@@ -65,55 +61,6 @@ MAST::ConservativeFluidSystemInitialization::
     
 }
 
-
-
-
-void
-MAST::ConservativeFluidSystemInitialization::
-initialize_solution(const RealVectorX& conservative_sol) {
-    
-    // make sure that the dimension of the sol vector matches the dimension
-    // specified for this system
-    libmesh_assert_equal_to(conservative_sol.size(), _vars.size());
-    
-    // now create a function and use it for initialization
-    class SolutionFunction:
-    public libMesh::FunctionBase<Real> {
-    public:
-        SolutionFunction(const RealVectorX& s):
-        libMesh::FunctionBase<Real>() {
-            _sol.resize((unsigned int)s.size());
-            for (unsigned int i=0; i<s.size(); i++) _sol(i) = s(i);
-        }
-
-        
-        SolutionFunction(const DenseRealVector& sol):
-        libMesh::FunctionBase<Real>(),
-        _sol(sol) { }
-        
-      virtual libMesh::UniquePtr<libMesh::FunctionBase<Real> > clone () const {
-	libMesh::FunctionBase<Real> *rval = new SolutionFunction(_sol);
-            return libMesh::UniquePtr<libMesh::FunctionBase<Real> >(rval);
-        }
-
-        // this should not get called
-        virtual Real operator()
-        (const libMesh::Point& p, const Real time) {libmesh_assert(false);}
-        
-        virtual void
-        operator() (const libMesh::Point& p,
-                    const Real time,
-                    libMesh::DenseVector<Real>& output) {
-            output = _sol;
-        }
-    protected:
-        DenseRealVector _sol;
-    };
-    
-    SolutionFunction sol_func(conservative_sol);
-
-    _system.project_solution(&sol_func);
-}
 
 
 

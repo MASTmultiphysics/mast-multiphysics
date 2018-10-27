@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -68,28 +68,62 @@ MAST::MeshFieldFunction::operator() (const libMesh::Point& p,
     // make sure that the object was initialized
     libmesh_assert(_function);
     
+    unsigned int
+    n_vars = _system->n_vars();
+
     DenseRealVector v1;
     (*_function)(p, t, v1);
     
     // make sure that the mesh function was able to find the element
     // and a solution
-    libmesh_assert(v1.size());
+    libmesh_assert_equal_to(v1.size(), n_vars);
     
     // now copy this to the output vector
-    v = RealVectorX::Zero(v1.size());
-    for (unsigned int i=0; i<v1.size(); i++)
+    v = RealVectorX::Zero(n_vars);
+    for (unsigned int i=0; i<n_vars; i++)
         v(i) = v1(i);
 }
+
+
+
+void
+MAST::MeshFieldFunction::gradient (const libMesh::Point& p,
+                                   const Real t,
+                                   RealMatrixX& v) const {
+    
+    // if the element has provided a quadrature point solution,
+    // then use it
+    if (_use_qp_sol) {
+        v = _qp_sol;
+        return;
+    }
+    
+    // make sure that the object was initialized
+    libmesh_assert(_function);
+    
+    unsigned int
+    n_vars = _system->n_vars();
+    
+    std::vector<libMesh::Gradient> v1;
+    _function->gradient(p, t, v1);
+    
+    // make sure that the mesh function was able to find the element
+    // and a solution
+    libmesh_assert_equal_to(v1.size(), n_vars);
+    
+    // now copy this to the output vector
+    v = RealMatrixX::Zero(n_vars, 3); // assume 3-dimensional by default
+    for (unsigned int i=0; i<n_vars; i++)
+        for (unsigned int j=0; j<3; j++)
+            v(i, j) = v1[i](j);
+}
+
 
 
 void
 MAST::MeshFieldFunction::perturbation(const libMesh::Point& p,
                                       const Real t,
                                       RealVectorX& v) const {
-    
-    // get the pointer to the mesh function from the master
-    const MAST::MeshFieldFunction* master =
-    dynamic_cast<const MAST::MeshFieldFunction*>(this);
     
     // if the element has provided a quadrature point solution,
     // then use it
@@ -101,16 +135,19 @@ MAST::MeshFieldFunction::perturbation(const libMesh::Point& p,
     // make sure that the object was initialized
     libmesh_assert(_perturbed_function);
     
+    unsigned int
+    n_vars = _system->n_vars();
+
     DenseRealVector v1;
     (*_perturbed_function)(p, t, v1);
     
     // make sure that the mesh function was able to find the element
     // and a solution
-    libmesh_assert(v1.size());
-    
+    libmesh_assert_equal_to(v1.size(), n_vars);
+
     // now copy this to the output vector
-    v = RealVectorX::Zero(v1.size());
-    for (unsigned int i=0; i<v1.size(); i++)
+    v = RealVectorX::Zero(n_vars);
+    for (unsigned int i=0; i<n_vars; i++)
         v(i) = v1(i);
 }
 
@@ -157,12 +194,12 @@ init(const libMesh::NumericVector<Real>& sol,
     sol.localize(*_sol, send_list);*/
     _sol->init(sol.size(), true, libMesh::SERIAL);
     sol.localize(*_sol);
-    
+
     // finally, create the mesh interpolation function
     _function = new libMesh::MeshFunction(system.get_equation_systems(),
-                                                       *_sol,
-                                                       system.get_dof_map(),
-                                                       _system->vars());
+                                          *_sol,
+                                          system.get_dof_map(),
+                                          _system->vars());
     _function->init();
     
     if (dsol) {
@@ -176,7 +213,7 @@ init(const libMesh::NumericVector<Real>& sol,
                             libMesh::GHOSTED);
          dsol->localize(*_dsol, send_list);*/
         _dsol->init(dsol->size(), true, libMesh::SERIAL);
-        dsol->localize(*_sol);
+        dsol->localize(*_dsol);
         
         
         // finally, create the mesh interpolation function
@@ -226,12 +263,6 @@ void
 MAST::MeshFieldFunction::
 set_element_quadrature_point_solution(RealVectorX& sol) {
     
-    // this is to be done for the master only
-    const MAST::MeshFieldFunction* master_const =
-    dynamic_cast<const MAST::MeshFieldFunction*>(this);
-    MAST::MeshFieldFunction* master =
-    const_cast<MAST::MeshFieldFunction*>(master_const);
-
     _use_qp_sol = true;
     _qp_sol     = sol;
 }
@@ -241,12 +272,6 @@ set_element_quadrature_point_solution(RealVectorX& sol) {
 void
 MAST::MeshFieldFunction::
 clear_element_quadrature_point_solution() {
-
-    // this is to be done for the master only
-    const MAST::MeshFieldFunction* master_const =
-    dynamic_cast<const MAST::MeshFieldFunction*>(this);
-    MAST::MeshFieldFunction* master =
-    const_cast<MAST::MeshFieldFunction*>(master_const);
     
     _use_qp_sol = false;
     _qp_sol.setZero();

@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -46,8 +46,8 @@ namespace MAST {
     class ConservativeFluidSystemInitialization;
     class ConservativeFluidDiscipline;
     class StructuralSystemInitialization;
-    class StructuralDiscipline;
     class Parameter;
+    class PhysicsDisciplineBase;
     class ConstantFieldFunction;
     class IsotropicMaterialPropertyCard;
     class Solid1DSectionElementPropertyCard;
@@ -65,10 +65,11 @@ namespace MAST {
     class FSIBoundaryConditionUpdates;
     class AugmentGhostElementSendListObj;
     
-    struct BeamEulerFSIAnalysis {
+    struct BeamEulerFSIAnalysis:
+    public libMesh::ParallelObject {
         
         
-        BeamEulerFSIAnalysis();
+        BeamEulerFSIAnalysis(const libMesh::Parallel::Communicator& comm_in);
         
         
         ~BeamEulerFSIAnalysis();
@@ -95,7 +96,7 @@ namespace MAST {
          *  solves the sensitivity of system and returns the sensitiivty of
          *  flutter speed
          */
-        Real sensitivity_solve(MAST::Parameter& p);
+        Real sensitivity_solve(const MAST::Parameter& p);
         
         // parameters to control the time step size
         unsigned int _max_time_steps;
@@ -124,7 +125,7 @@ namespace MAST {
         
         // initialize the system to the right set of variables
         MAST::StructuralSystemInitialization*    _structural_sys_init;
-        MAST::StructuralDiscipline*              _structural_discipline;
+        MAST::PhysicsDisciplineBase*              _structural_discipline;
         
         
         // initialize the system to the right set of variables

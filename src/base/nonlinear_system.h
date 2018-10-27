@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -38,9 +38,12 @@ namespace MAST {
     // Forward declerations
     class Parameter;
     class SlepcEigenSolver;
-    class EigenSystemAssembly;
+    class AssemblyBase;
     class PhysicsDisciplineBase;
-    class OutputAssemblyBase;
+    class AssemblyElemOperations;
+    class OutputAssemblyElemOperations;
+    class FunctionBase;
+    class EigenproblemAssembly;
     
     
     /*!
@@ -64,7 +67,24 @@ namespace MAST {
         
         
         virtual ~NonlinearSystem();
+
         
+        enum Operation {
+            NONLINEAR_SOLVE,
+            EIGENPROBLEM_SOLVE,
+            FORWARD_SENSITIVITY_SOLVE,
+            ADJOINT_SOLVE,
+            NONE
+        };
+        
+        
+        /*!
+         *   @returns the current operation of the system
+         */
+        MAST::NonlinearSystem::Operation operation() {
+            
+            return _operation;
+        }
         
         /*!
          *    flag to also initialize the B matrix. Must be called before
@@ -87,69 +107,71 @@ namespace MAST {
          * the system, so that, e.g., \p assemble() may be used.
          */
         virtual void reinit () libmesh_override;
-        
-        
-        /**
-         *   calculates and stores the sensitivity RHS in System::add_sensitivity_rhs(0).
-         *   This assumes that \p parameters is of size 1. For solving sensitivity
-         *   wrt multiple parameters, the user should call this method multiple 
-         *   times with the parameter vector modified.
-         *   The RHS is \f$ - \frac{\partial R(U,p)}{\partial p}\f$
+
+
+        /*!
+         *  solves the nonlinear problem with the specified assembly operation
+         *  object
          */
-        virtual void
-        assemble_residual_derivatives
-        (const libMesh::ParameterVector & parameters) override;
+        virtual void solve(MAST::AssemblyElemOperations& elem_ops,
+                           MAST::AssemblyBase&           assembly);
         
         
-        /**
-         * Calls user qoi derivative function.
+        /*!
+         *   Solves the sensitivity problem for the provided parameter.
+         *   The Jacobian will be assembled before adjoint solve if
+         *   \par if_assemble_jacobian is \p true.
          */
-        virtual void
-        assemble_qoi_derivative (const libMesh::QoISet & qoi_indices = libMesh::QoISet(),
-                                 bool include_liftfunc = true,
-                                 bool apply_constraints = true) libmesh_override;
+        virtual void sensitivity_solve(MAST::AssemblyElemOperations&   elem_ops,
+                                       MAST::AssemblyBase&             assembly,
+                                       const MAST::FunctionBase&       p,
+                                       bool if_assemble_jacobian = true);
 
         
         /*!
-         *   solves the adjoint problem for the provided output function
+         *   solves the adjoint problem for the provided output function.
+         *   The Jacobian will be assembled before adjoint solve if
+         *   \par if_assemble_jacobian is \p true.
          */
-        void adjoint_solve(MAST::OutputAssemblyBase& output);
+        virtual void adjoint_solve(MAST::AssemblyElemOperations&       elem_ops,
+                                   MAST::OutputAssemblyElemOperations& output,
+                                   MAST::AssemblyBase&                 assembly,
+                                   bool if_assemble_jacobian           = true);
         
         
         /**
          * Assembles & solves the eigen system.
          */
-        virtual void eigenproblem_solve () ;
+        virtual void eigenproblem_solve(MAST::AssemblyElemOperations& elem_ops,
+                                        MAST::EigenproblemAssembly&   assembly);
         
         /**
-         * Solves the sensitivity system, for the provided parameters. The return
-         * parameters are irrelevant for EigenSystem. Sensitivity of eigenvalues
-         * are returned in \p sens.
-         *
-         * This method is only implemented in some derived classes.
+         * Solves the sensitivity system, for the provided parameters.
+         * Sensitivity of eigenvalues are returned in \p sens. This is more
+         * If only a subset of sensitivities are needed, then the indices
+         * can be passed in the last argument. If the last argument is not
+         * provided, then sensitivity of all eigenvalues will be computed and
+         * returned in \p sens. 
          */
         virtual void
-        eigenproblem_sensitivity_solve (const libMesh::ParameterVector& parameters,
-                                        std::vector<Real>& sens) ;
-        
-        
-        /*!
-         *  Assembles the matrix_A and matrix_B for eigensolution
-         */
-        virtual void assemble_eigensystem();
+        eigenproblem_sensitivity_solve (MAST::AssemblyElemOperations& elem_ops,
+                                        MAST::EigenproblemAssembly& assembly,
+                                        const MAST::FunctionBase& f,
+                                        std::vector<Real>& sens,
+                                        const std::vector<unsigned int>* indices=nullptr);
 
         
         /*!
-         *  Assembles the sensitivity of matrix_A and matrix_B with respect to the
-         *  specified parameter
+         * gets the real and imaginary parts of the ith eigenvalue for the
+         * eigenproblem \f$ {\bf A} {\bf x} = \lambda {\bf B} {\bf x} \f$, and
+         * the associated eigenvector.
          */
         virtual void
-        assemble_eigensystem_sensitivity(const libMesh::ParameterVector& parameters,
-                                         const unsigned int p);
-        
+        get_eigenvalue (unsigned int i, Real&  re, Real&  im);
+
         
         /*!
-         * @returns real and imaginary parts of the ith eigenvalue for the
+         * gets the real and imaginary parts of the ith eigenvalue for the
          * eigenproblem \f$ {\bf A} {\bf x} = \lambda {\bf B} {\bf x} \f$, and
          * the associated eigenvector.
          *
@@ -219,19 +241,6 @@ namespace MAST {
         
         
         /**
-         * Register a user object to use in assembling the system matrix sensitivities
-         */
-        void
-        attach_eigenproblem_assemble_object(MAST::EigenSystemAssembly& assemble);
-        
-        
-        /**
-         *    clears the user specified function/object for use in assembling
-         *    the system matrix sensitivities
-         */
-        void reset_eigenproblem_assemble_object();
-        
-        /**
          * The system matrix for standard eigenvalue problems.
          */
         libMesh::SparseMatrix<Real> *matrix_A;
@@ -246,7 +255,12 @@ namespace MAST {
          * The EigenSolver, definig which interface, i.e solver
          * package to use.
          */
-        std::auto_ptr<MAST::SlepcEigenSolver> eigen_solver;
+        std::unique_ptr<MAST::SlepcEigenSolver> eigen_solver;
+        
+        /*!
+         *  The LinearSolver for solution of the linear equations
+         */
+        std::unique_ptr<libMesh::LinearSolver<Real>> linear_solver;
         
         /**
          * Loop over the dofs on each processor to initialize the list
@@ -260,6 +274,24 @@ namespace MAST {
          */
         unsigned int n_global_non_condensed_dofs() const;
         
+        
+        /*!
+         *   writes the specified vector with the specified name in a directory.
+         */
+        void write_out_vector(libMesh::NumericVector<Real>& vec,
+                              const std::string & directory_name,
+                              const std::string & data_name,
+                              const bool write_binary_vectors);
+
+        
+        /*!
+         *   reads the specified vector with the specified name in a directory.
+         */
+        void read_in_vector(libMesh::NumericVector<Real>& vec,
+                            const std::string & directory_name,
+                            const std::string & data_name,
+                            const bool read_binary_vectors);
+
     protected:
         
         
@@ -329,16 +361,10 @@ namespace MAST {
          */
         libMesh::EigenProblemType          _eigen_problem_type;
         
-        /**
-         * Object that assembles the sensitivity of eigen_system.
-         */
-        MAST::EigenSystemAssembly *        _eigenproblem_assemble_system_object;
-
         /*!
-         *    OutputAssemblyBase object for which the adjoint calculation
-         *    is being solved
+         *   current operation of the system
          */
-        MAST::OutputAssemblyBase*       _output;
+        MAST::NonlinearSystem::Operation  _operation;
         
         /**
          * Vector storing the local dof indices that will not be condensed.

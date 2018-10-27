@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -23,7 +23,7 @@
 
 // MAST includes
 #include "base/mast_data_types.h"
-
+#include "base/nonlinear_implicit_assembly_elem_operations.h"
 
 // libMesh includes
 #include "libmesh/numeric_vector.h"
@@ -32,38 +32,50 @@
 namespace MAST {
     
     // Forward declerations
-    class TransientAssembly;
+    class TransientAssemblyElemOperations;
     class ElementBase;
     class NonlinearSystem;
     
     
-    class TransientSolverBase {
+    class TransientSolverBase:
+    public MAST::NonlinearImplicitAssemblyElemOperations {
     public:
-        TransientSolverBase();
+        /*!
+         *   constructor requires the number of iterations to store for
+         *   the derived solver.
+         */
+        TransientSolverBase(unsigned int o,
+                            unsigned int n);
         
         virtual ~TransientSolverBase();
 
-        /*!
-         *   Attaches the assembly object that provides the x_dot, M and J
-         *   quantities for the element
-         */
-        void set_assembly(MAST::TransientAssembly& assembly);
+        
+        virtual void
+        set_assembly(MAST::AssemblyBase &assembly);
+        
+        
+        virtual void clear_assembly();
 
         /*!
-         *   Clears the assembly object
+         *   Attaches the assembly elem operations object that provides the
+         *   x_dot, M and J quantities for the element
          */
-        void clear_assembly();
+        virtual void set_elem_operation_object(MAST::TransientAssemblyElemOperations& elem_ops);
+
+        virtual MAST::TransientAssemblyElemOperations&
+        get_elem_operation_object();
+        
+        
+        /*!
+         *   Clears the assembly elem operations object
+         */
+        virtual void clear_elem_operation_object();
         
         /*!
          *   time step
          */
         Real dt;
 
-        /*!
-         *    @returns the highest order time derivative that the solver 
-         *    will handle
-         */
-        virtual int ode_order() const = 0;
         
         /*!
          *    @returns a reference to the localized solution from
@@ -74,7 +86,14 @@ namespace MAST {
          */
         libMesh::NumericVector<Real>&
         solution(unsigned int prev_iter = 0) const;
-        
+
+        /*!
+         *   @returns a reference to the localized solution sensitivity. The
+         *   \p prev_iter parameter is similar to the solution() method.
+         */
+        libMesh::NumericVector<Real>&
+        solution_sensitivity(unsigned int prev_iter = 0) const;
+
         /*!
          *    @returns a reference to the localized velocity from
          *    iteration number = current - prev_iter. So, \par prev_iter = 0
@@ -87,6 +106,14 @@ namespace MAST {
 
         
         /*!
+         *   @returns a reference to the localized velocity sensitivity. The
+         *   \p prev_iter parameter is similar to the velocity() method.
+         */
+        libMesh::NumericVector<Real>&
+        velocity_sensitivity(unsigned int prev_iter = 0) const;
+
+        
+        /*!
          *    @returns a reference to the localized acceleration from
          *    iteration number = current - prev_iter. So, \par prev_iter = 0
          *    gives the current acceleration estimate. Note that \par prev_iter
@@ -95,6 +122,13 @@ namespace MAST {
          */
         libMesh::NumericVector<Real>&
         acceleration(unsigned int prev_iter = 0) const;
+        
+        /*!
+         *   @returns a reference to the localized acceleration sensitivity. The
+         *   \p prev_iter parameter is similar to the acceleration() method.
+         */
+        libMesh::NumericVector<Real>&
+        acceleration_sensitivity(unsigned int prev_iter = 0) const;
 
         
         /*!
@@ -129,8 +163,14 @@ namespace MAST {
         /*!
          *   solves the current time step for solution and velocity
          */
-        virtual void solve() = 0;
+        virtual void solve(MAST::AssemblyBase& assembly);
         
+        /*!
+         *    solvers the current time step for sensitivity wrt \p f
+         */
+        virtual void sensitivity_solve(MAST::AssemblyBase& assembly,
+                                       const MAST::FunctionBase& f);
+
         
         /*!
          *    To be used only for initial conditions.
@@ -139,7 +179,15 @@ namespace MAST {
          *    Then advances the time step so that the solver is ready for 
          *    time integration.
          */
-        void solve_highest_derivative_and_advance_time_step();
+        void solve_highest_derivative_and_advance_time_step(MAST::AssemblyBase& assembly);
+        
+        /*!
+         *    solves for the sensitivity of highest derivative and advances
+         *    the time-step.
+         */
+        void
+        solve_highest_derivative_and_advance_time_step_with_sensitivity(MAST::AssemblyBase& assembly,
+                                                                        const MAST::FunctionBase& f);
 
 
         
@@ -148,6 +196,13 @@ namespace MAST {
          *   solution, and so on.
          */
         virtual void advance_time_step();
+        
+        /*!
+         *   advances the time step and copies the current sensitivity solution
+         *   to old sensitivity solution, and so on. Does not influence the
+         *   primary solution.
+         */
+        virtual void advance_time_step_with_sensitivity();
 
         
         /*!
@@ -171,92 +226,70 @@ namespace MAST {
         (const libMesh::NumericVector<Real>& current_sol,
          std::vector<libMesh::NumericVector<Real>*>& qtys);
 
+
         /*!
-         *    TransientAssembly needs to be able to call the assembly routines
-         *    of this class.
+         *    provides the element with the transient data for calculations
          */
-        friend class MAST::TransientAssembly;
+        virtual void
+        set_element_data(const std::vector<libMesh::dof_id_type>& dof_indices,
+                         const std::vector<libMesh::NumericVector<Real>*>& sols) = 0;
+        
+        
+        /*!
+         *    provides the element with the sensitivity of transient data for
+         *    calculations
+         */
+        virtual void
+        set_element_sensitivity_data(const std::vector<libMesh::dof_id_type>& dof_indices,
+                                     const std::vector<libMesh::NumericVector<Real>*>& sols) = 0;
+
+        /*!
+         *    provides the element with the transient data for calculations
+         */
+        virtual void
+        set_element_perturbed_data
+        (const std::vector<libMesh::dof_id_type>& dof_indices,
+         const std::vector<libMesh::NumericVector<Real>*>& sols) = 0;
 
         
+        /*!
+         *   calls the method from TransientAssemblyElemOperations
+         */
+        virtual void
+        init(const libMesh::Elem& elem);
+
+        /*!
+         *   calls the method from TransientAssemblyElemOperations
+         */
+        virtual void clear_elem();
+                
     protected:
         
         /*!
          *    flag to check if this is the first time step.
          */
-        bool  _first_step;
+        bool  _first_step, _first_sensitivity_step;
+        
         
         /*!
-         *    @returns the number of iterations for which solution and velocity
+         *    the highest order time derivative that the solver
+         *    will handle
+         */
+        const unsigned int _ode_order;
+        
+        /*!
+         *    the number of iterations for which solution and velocity
          *    are to be stored.
          */
-        virtual unsigned int _n_iters_to_store() const = 0;
+        const unsigned int _n_iters_to_store;
         
-        /*!
-         *    provides the element with the transient data for calculations
-         */
-        virtual void
-        _set_element_data(const std::vector<libMesh::dof_id_type>& dof_indices,
-                          const std::vector<libMesh::NumericVector<Real>*>& sols,
-                          MAST::ElementBase& elem) = 0;
-
-        /*!
-         *    provides the element with the transient data for calculations
-         */
-        virtual void
-        _set_element_perturbed_data
-        (const std::vector<libMesh::dof_id_type>& dof_indices,
-         const std::vector<libMesh::NumericVector<Real>*>& sols,
-         MAST::ElementBase& elem) = 0;
-
-        
-        /*!
-         *   performs the element calculations over \par elem, and returns
-         *   the element vector and matrix quantities in \par mat and
-         *   \par vec, respectively. \par if_jac tells the method to also
-         *   assemble the Jacobian, in addition to the residual vector.
-         */
-        virtual void
-        _elem_calculations(MAST::ElementBase& elem,
-                           const std::vector<libMesh::dof_id_type>& dof_indices,
-                           bool if_jac,
-                           RealVectorX& vec,
-                           RealMatrixX& mat) = 0;
-        
-        /*!
-         *   performs the element calculations over \par elem, and returns
-         *   the element vector quantity in \par vec. The vector quantity only
-         *   include the \f$ [J] \{dX\} f$ components, so the inherited classes
-         *   must ensure that no component of constant forces (traction/body
-         *   forces/etc.) are added to this vector.
-         */
-        virtual void
-        _elem_linearized_jacobian_solution_product(MAST::ElementBase& elem,
-                                                   const std::vector<libMesh::dof_id_type>& dof_indices,
-                                                   RealVectorX& vec) = 0;
-
-        
-        /*!
-         *   performs the element sensitivity calculations over \par elem,
-         *   and returns the element residual sensitivity in \par vec .
-         */
-        virtual void
-        _elem_sensitivity_calculations(MAST::ElementBase& elem,
-                                       const std::vector<libMesh::dof_id_type>& dof_indices,
-                                       RealVectorX& vec) = 0;
         
         /*!
          *   Associated TransientAssembly object that provides the 
          *   element level quantities
          */
-        MAST::TransientAssembly* _assembly;
-        
-        /*!
-         *   NonlinearImplicitSystem for which this object is
-         *   calculating the solution
-         */
-        MAST::NonlinearSystem* _system;
-        
-        
+        MAST::TransientAssemblyElemOperations* _assembly_ops;
+                
         /*!
          *    flag if the current procedure is to evaluate the highest ode
          *    derivative solution, or to evaluate solution at current time step.

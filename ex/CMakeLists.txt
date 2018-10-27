@@ -1,0 +1,2 @@
+add_subdirectory(ex1_axial_bar_extension)
+add_subdirectory(ex3_plate_static)

@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -17,33 +17,33 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#ifndef __mast__structural_transient_assembly__
-#define __mast__structural_transient_assembly__
+#ifndef __mast__structural_transient_assembly_elem_operations_h__
+#define __mast__structural_transient_assembly_elem_operations_h__
 
 
 // MAST includes
-#include "base/transient_assembly.h"
+#include "base/transient_assembly_elem_operations.h"
 
 
 
 namespace MAST {
     
     
-    class StructuralTransientAssembly:
-    public MAST::TransientAssembly {
+    class StructuralTransientAssemblyElemOperations:
+    public MAST::TransientAssemblyElemOperations {
     public:
         
         /*!
          *   constructor associates this assembly object with the system
          */
-        StructuralTransientAssembly();
+        StructuralTransientAssemblyElemOperations();
         
         
         /*!
          *   destructor resets the association of this assembly object with
          *   the system
          */
-        virtual ~StructuralTransientAssembly();
+        virtual ~StructuralTransientAssemblyElemOperations();
         
         //**************************************************************
         //these methods are provided for use by the solvers
@@ -54,13 +54,12 @@ namespace MAST {
          *   This call for first order ode should not be used for this
          *   transient assembly
          */
-        virtual void _elem_calculations(MAST::ElementBase& elem,
-                                        bool if_jac,
-                                        RealVectorX& f_m,
-                                        RealVectorX& f_x,
-                                        RealMatrixX& f_m_jac_x_dot,
-                                        RealMatrixX& f_m_jac,
-                                        RealMatrixX& f_x_jac);
+        virtual void elem_calculations(bool if_jac,
+                                       RealVectorX& f_m,
+                                       RealVectorX& f_x,
+                                       RealMatrixX& f_m_jac_x_dot,
+                                       RealMatrixX& f_m_jac,
+                                       RealMatrixX& f_x_jac);
         
         /*!
          *   performs the element calculations over \par elem, and returns
@@ -68,15 +67,14 @@ namespace MAST {
          *   \par vec, respectively. \par if_jac tells the method to also
          *   assemble the Jacobian, in addition to the residual vector.
          */
-        virtual void _elem_calculations(MAST::ElementBase& elem,
-                                        bool if_jac,
-                                        RealVectorX& f_m,
-                                        RealVectorX& f_x,
-                                        RealMatrixX& f_m_jac_xddot,
-                                        RealMatrixX& f_m_jac_xdot,
-                                        RealMatrixX& f_m_jac,
-                                        RealMatrixX& f_x_jac_xdot,
-                                        RealMatrixX& f_x_jac);
+        virtual void elem_calculations(bool if_jac,
+                                       RealVectorX& f_m,
+                                       RealVectorX& f_x,
+                                       RealMatrixX& f_m_jac_xddot,
+                                       RealMatrixX& f_m_jac_xdot,
+                                       RealMatrixX& f_m_jac,
+                                       RealMatrixX& f_x_jac_xdot,
+                                       RealMatrixX& f_x_jac);
         
         /*!
          *   Calculates the product of Jacobian-solution, and Jacobian-velocity
@@ -87,34 +85,35 @@ namespace MAST {
          *    df_m(x,\dot{x})/d\dot{x} \cdot d{\dot x} \f$
          */
         virtual void
-        _linearized_jacobian_solution_product(MAST::ElementBase& elem,
-                                              RealVectorX& f);
+        linearized_jacobian_solution_product(RealVectorX& f);
 
         
         /*!
          *   performs the element sensitivity calculations over \par elem,
-         *   and returns the element residual sensitivity in \par vec .
+         *   and returns the component of  element residual sensitivity in
+         *   \par f_m and \par f_x.
          */
-        virtual void _elem_sensitivity_calculations(MAST::ElementBase& elem,
-                                                    RealVectorX& vec);
+        virtual void elem_sensitivity_calculations(const MAST::FunctionBase& f,
+                                                   RealVectorX& f_m,
+                                                   RealVectorX& f_x);
         
         /*!
          *   calculates \f$ d ([J] \{\Delta X\})/ dX  \f$ over \par elem,
          *   and returns the matrix in \par vec .
          */
         virtual void
-        _elem_second_derivative_dot_solution_assembly(MAST::ElementBase& elem,
-                                                      RealMatrixX& mat);
+        elem_second_derivative_dot_solution_assembly(RealMatrixX& mat);
+
+        /*!
+         *   initializes the object for the geometric element \p elem. This
+         *   expects the object to be in a cleared state, so the user should
+         *   call \p clear_elem() between successive initializations.
+         */
+        virtual void
+        init(const libMesh::Elem& elem);
 
     protected:
         
-        
-        /*!
-         *   @returns a smart-pointer to a newly created element for
-         *   calculation of element quantities.
-         */
-        virtual std::auto_ptr<MAST::ElementBase>
-        _build_elem(const libMesh::Elem& elem);
         
     };
     
@@ -122,5 +121,5 @@ namespace MAST {
 }
 
 
-#endif // __mast__structural_transient_assembly__
+#endif // __mast__structural_transient_assembly_elem_operations_h__
 

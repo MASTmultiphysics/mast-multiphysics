@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -39,11 +39,10 @@ namespace MAST {
     class FunctionBase;
     class FunctionSetBase;
     class ElementPropertyCardBase;
-    template <typename T> class ConstantFunction;
     class SystemInitialization;
     class Parameter;
     class PointLoadCondition;
-    class OutputFunctionBase;
+    class NonlinearSystem;
     
     
     // typedefs
@@ -52,8 +51,6 @@ namespace MAST {
     typedef std::map<libMesh::subdomain_id_type, const MAST::ElementPropertyCardBase*>      PropertyCardMapType;
     typedef std::map<libMesh::boundary_id_type, MAST::DirichletBoundaryCondition*>  DirichletBCMapType;
     typedef std::set<MAST::PointLoadCondition*> PointLoadSetType;
-    typedef std::multimap<libMesh::subdomain_id_type, MAST::OutputFunctionBase*> VolumeOutputMapType;
-    typedef std::multimap<libMesh::boundary_id_type, MAST::OutputFunctionBase*> SideOutputMapType;
     
     class PhysicsDisciplineBase {
     public:
@@ -148,40 +145,6 @@ namespace MAST {
 
         
         /*!
-         *    @returns a const reference to the volume outputs
-         */
-        const MAST::VolumeOutputMapType& volume_output() const{
-            return _vol_output_map;
-        }
-
-        
-        /*!
-         *    @returns a  reference to the volume outputs
-         */
-        MAST::VolumeOutputMapType& volume_output() {
-            
-            return _vol_output_map;
-        }
-
-        
-        /*!
-         *    @returns a const reference to the side outputs
-         */
-        const MAST::SideOutputMapType& side_output() const{
-            return _side_output_map;
-        }
-        
-        
-        /*!
-         *    @returns a  reference to the side outputs
-         */
-        MAST::SideOutputMapType& side_output() {
-            
-            return _side_output_map;
-        }
-
-        
-        /*!
          *    @returns a const reference to the point load boundary conditions
          */
         const MAST::PointLoadSetType& point_loads() const{
@@ -198,13 +161,6 @@ namespace MAST {
         
         
         /*!
-         *    adds the output to this discipline for evaluation
-         */
-        void add_volume_output(libMesh::subdomain_id_type bid,
-                               MAST::OutputFunctionBase& output);
-        
-        
-        /*!
          *    constrain dofs on a subdomain to zero
          */
         void constrain_subdomain_dofs_for_var(const libMesh::subdomain_id_type sid,
@@ -214,13 +170,13 @@ namespace MAST {
         /*!
          *    initializes the system for dirichlet boundary conditions
          */
-        void init_system_dirichlet_bc(libMesh::System& sys) const;
+        void init_system_dirichlet_bc(MAST::NonlinearSystem& sys) const;
 
         
         /*!
          *    clears the system dirichlet boundary conditions
          */
-        void clear_system_dirichlet_bc(libMesh::System& sys) const;
+        void clear_system_dirichlet_bc(MAST::NonlinearSystem& sys) const;
 
         
         /*!
@@ -244,23 +200,8 @@ namespace MAST {
         /*!
          *    get property card for the specified subdomain id \par i
          */
-        const MAST::ElementPropertyCardBase& get_property_card(const unsigned int i) const;
+        const MAST::ElementPropertyCardBase& get_property_card(const unsigned int sid) const;
         
-        /*!
-         *   Adds the parameter and function pairing
-         */
-        void add_parameter(MAST::Parameter& f);
-        
-        /*!
-         *   Removes the parameter and function pairing
-         */
-        void remove_parameter(MAST::Parameter& f);
-        
-
-        /*!
-         *   Returns the function corresponding to a parameter
-         */
-        const MAST::FunctionBase* get_parameter(const Real* par) const;
         
         
     protected:
@@ -274,12 +215,6 @@ namespace MAST {
          *   map of element property cards for each element
          */
         MAST::PropertyCardMapType _element_property;
-        
-        /*!
-         *   map of sensitivity parameters and the corresponding functions that
-         *   are directly dependent on these parameters
-         */
-        std::map<const Real*, const MAST::FunctionBase*> _parameter_map;
         
         /*!
          *   side boundary condition map of boundary id and load
@@ -306,16 +241,6 @@ namespace MAST {
          *   point loads
          */
         MAST::PointLoadSetType _point_loads;
-        
-        /*!
-         *   volume output functions
-         */
-        MAST::VolumeOutputMapType _vol_output_map;
-
-        /*!
-         *   side output functions
-         */
-        MAST::SideOutputMapType _side_output_map;
     };
     
 }

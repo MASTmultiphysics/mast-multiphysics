@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -118,13 +118,13 @@ MAST::FlagMesh3D::process_mesh( ) {
             
             for (unsigned int i_side=0; i_side<(*e_it)->n_sides(); i_side++) {
                 
-                libMesh::UniquePtr<libMesh::Elem> side_elem ((*e_it)->side(i_side).release());
+                std::unique_ptr<const libMesh::Elem> side_elem ((*e_it)->side_ptr(i_side).release());
                 std::vector<bool> side_on_panel(side_elem->n_nodes());
                 std::fill(side_on_panel.begin(), side_on_panel.end(), false);
                 
                 for (unsigned int i_node=0; i_node<side_elem->n_nodes(); i_node++) {
                     
-                    const libMesh::Node& n = *(side_elem->get_node(i_node));
+                    const libMesh::Node& n = *(side_elem->node_ptr(i_node));
                     if ((n(2) >= -_flag_th) &&
                         (n(2) <= _flag_th) &&
                         (n(1) >= _y_flag_left) &&

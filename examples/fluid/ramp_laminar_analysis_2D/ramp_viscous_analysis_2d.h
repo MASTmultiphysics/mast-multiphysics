@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -38,6 +38,7 @@
 #include "libmesh/nonlinear_implicit_system.h"
 #include "libmesh/fe_type.h"
 #include "libmesh/dof_map.h"
+#include "libmesh/parallel_object.h"
 
 
 
@@ -62,10 +63,11 @@ namespace MAST {
      *   -snes_type newtonls -snes_max_it 1 -snes_linesearch_type bt -snes_linesearch_max_it 2
      *   -snes_ls_view -snes_monitor -snes_log
      */
-    struct RampLaminarAnalysis2D {
+    struct RampLaminarAnalysis2D:
+    public libMesh::ParallelObject {
         
         
-        RampLaminarAnalysis2D();
+        RampLaminarAnalysis2D(const libMesh::Parallel::Communicator& comm_in);
         
         
         ~RampLaminarAnalysis2D();

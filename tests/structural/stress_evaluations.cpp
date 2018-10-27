@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -190,7 +190,7 @@ void check_stress (ValType& v, const RealVectorX& x0) {
     const libMesh::Elem& elem = **(v._mesh->local_elements_begin());
     
     // now create the structural element
-    std::auto_ptr<MAST::StructuralElementBase>
+    std::unique_ptr<MAST::StructuralElementBase>
     e(MAST::build_structural_element(*v._structural_sys,
                                      elem,
                                      *v._p_card).release());
@@ -489,7 +489,7 @@ BOOST_AUTO_TEST_CASE   (VonMisesStress) {
     // and the von Mises stress functional
     // this simulates a case with 4 different stress values for an element
     
-    std::auto_ptr<libMesh::Elem> elem(new libMesh::Edge2);
+    std::unique_ptr<libMesh::Elem> elem(new libMesh::Edge2);
     MAST::Parameter f("a", 0.);
     libMesh::Point     p;
     RealVectorX

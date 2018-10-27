@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -17,14 +17,30 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+// C++ includes
+#include <sys/stat.h>
+#include <string>
+#include <boost/algorithm/string.hpp>
+
 // MAST includes
 #include "optimization/function_evaluation.h"
 
 
 void
-MAST::FunctionEvaluation::output(unsigned int iter, const std::vector<Real> &x,
-                                 Real obj, const std::vector<Real> &fval,
-                                 bool if_write_to_optim_file) const {
+MAST::FunctionEvaluation::attach_optimization_interface(MAST::OptimizationInterface& opt) {
+    
+    libmesh_assert(!_optimization_interface);
+    
+    _optimization_interface = &opt;
+}
+
+
+void
+MAST::FunctionEvaluation::output(unsigned int iter,
+                                 const std::vector<Real> &x,
+                                 Real obj,
+                                 const std::vector<Real> &fval,
+                                 bool if_write_to_optim_file) {
     
     libmesh_assert_equal_to(x.size(), _n_vars);
     libmesh_assert_equal_to(fval.size(), _n_eq + _n_ineq);
@@ -110,6 +126,15 @@ MAST::FunctionEvaluation::output(unsigned int iter, const std::vector<Real> &x,
     {
         // write header for the first iteration
         if (iter == 0) {
+
+            // number of desing variables
+            *_output
+            << std::setw(10) << "n_dv" << std::setw(10) << _n_vars << std::endl;
+            *_output
+            << std::setw(10) << "n_eq" << std::setw(10) << _n_eq << std::endl;
+            *_output
+            << std::setw(10) << "n_ineq" << std::setw(10) << _n_ineq << std::endl;
+
             *_output << std::setw(10) << "Iter";
             for (unsigned int i=0; i < x.size(); i++) {
                 std::stringstream x; x << "x_" << i;
@@ -135,6 +160,81 @@ MAST::FunctionEvaluation::output(unsigned int iter, const std::vector<Real> &x,
 
 
 
+void
+MAST::FunctionEvaluation::initialize_dv_from_output_file(const std::string& nm,
+                                                         const unsigned int iter,
+                                                         std::vector<Real> &x) {
+    
+    struct stat stat_info;
+    int stat_result = stat(nm.c_str(), &stat_info);
+    
+    if (stat_result != 0)
+        libmesh_error_msg("File does not exist: " + nm);
+    
+    if (!std::ifstream(nm))
+        libmesh_error_msg("File missing: " + nm);
+    
+    std::ifstream input;
+    input.open(nm, std::ofstream::in);
+    
+    
+    std::string
+    line;
+    unsigned int
+    ndv        = 0,
+    nineq      = 0,
+    neq        = 0,
+    it_num     = 0;
+    
+    std::vector<std::string> results;
+    
+    // number of desing variables
+    std::getline(input, line);
+    boost::trim(line);
+    boost::split(results, line, boost::is_any_of(" \t"), boost::token_compress_on);
+    libmesh_assert_equal_to(results[0],   "n_dv");
+    ndv = stod(results[1]);
+    libmesh_assert_equal_to(  ndv, x.size());
+    
+    
+    // number of equality constraint
+    std::getline(input, line);
+    boost::trim(line);
+    boost::split(results, line, boost::is_any_of(" \t"), boost::token_compress_on);
+    libmesh_assert_equal_to(results[0],   "n_eq");
+    neq = stod(results[1]);
+    libmesh_assert_equal_to(  neq, _n_eq);
+    
+    
+    // number of inequality constriants
+    std::getline(input, line);
+    boost::trim(line);
+    boost::split(results, line, boost::is_any_of(" \t"), boost::token_compress_on);
+    libmesh_assert_equal_to(results[0],   "n_ineq");
+    nineq = stod(results[1]);
+    //libmesh_assert_equal_to(  nineq, _n_ineq);
+    
+    
+    // skip all lines before iter.
+    while (!input.eof() && it_num < iter+1) {
+        std::getline(input, line);
+        it_num++;
+    }
+    
+    // make sure that the iteration number is what we are looking for
+    std::getline(input, line);
+    boost::trim(line);
+    boost::split(results, line, boost::is_any_of(" \t"), boost::token_compress_on);
+    
+    libmesh_assert_greater(results.size(), ndv+1);
+    
+    it_num = stoi(results[0]);
+    libmesh_assert_equal_to(it_num, iter);
+    
+    // make sure that the file has data
+    for (unsigned int i=0; i<ndv; i++)
+        x[i] = stod(results[i+1]);
+}
 
 
 bool
@@ -227,35 +327,48 @@ MAST::FunctionEvaluation::verify_gradients(const std::vector<Real>& dvars) {
     << std::endl;
     
     bool accurate_sens = true;
-    
-    for (unsigned int i=0; i<_n_vars; i++)
+
+    libMesh::out
+    << std::setw(10) << "DV"
+    << std::setw(30) << "Analytical"
+    << std::setw(30) << "Numerical" << std::endl;
+
+    for (unsigned int i=0; i<_n_vars; i++) {
+        libMesh::out
+        << std::setw(10) << i
+        << std::setw(30) << obj_grad[i]
+        << std::setw(30) << obj_grad_fd[i];
         if (fabs((obj_grad[i] - obj_grad_fd[i])/obj_grad[i]) > tol) {
-            libMesh::out
-            << " Mismatched sensitivity: DV:  "  << i << "   "
-            << obj_grad[i] << "    " << obj_grad_fd[i] << std::endl;
+            libMesh::out << " : Mismatched sensitivity";
             accurate_sens = false;
         }
+        libMesh::out << std::endl;
+    }
     
     
     
     libMesh::out
     << " *** Constraint function gradients: analytical vs numerical"
     << std::endl;
-    
+
+    libMesh::out
+    << std::setw(10) << "DV"
+    << std::setw(30) << "Analytical"
+    << std::setw(30) << "Numerical" << std::endl;
+
     for (unsigned int j=0; j<_n_eq+_n_ineq; j++) {
         
         libMesh::out << "  Constraint: " << j << std::endl;
         for (unsigned int i=0; i<_n_vars; i++) {
             libMesh::out
-            << " DV:  "  << i << "   "
-            << grads[i*(_n_eq+_n_ineq)+j] << "    "
-            << grads_fd[i*(_n_eq+_n_ineq)+j];
+            << std::setw(10) << i
+            << std::setw(30) << grads[i*(_n_eq+_n_ineq)+j]
+            << std::setw(30) << grads_fd[i*(_n_eq+_n_ineq)+j];
             if (fabs((grads[i*(_n_eq+_n_ineq)+j] - grads_fd[i*(_n_eq+_n_ineq)+j])/grads[i*(_n_eq+_n_ineq)+j]) > tol) {
-                libMesh::out << "    Mismatched sensitivity" << std::endl;
+                libMesh::out << " : Mismatched sensitivity";
                 accurate_sens = false;
             }
-            else
-                libMesh::out << std::endl;
+            libMesh::out << std::endl;
         }
     }
     // print the message that all sensitivity data satisfied limits.
@@ -269,4 +382,83 @@ MAST::FunctionEvaluation::verify_gradients(const std::vector<Real>& dvars) {
 }
 
 
+
+void
+MAST::FunctionEvaluation::sanitize_parallel() {
+
+    unsigned int
+    N                  = this->n_vars(),
+    N_EQ               = this->n_eq(),
+    N_INEQ             = this->n_ineq(),
+    n_rel_change_iters = this->n_iters_relative_change();
+    
+    // make sure all processors have the same values
+    libmesh_assert(this->comm().verify(N));
+    libmesh_assert(this->comm().verify(N_EQ));
+    libmesh_assert(this->comm().verify(N_INEQ));
+    libmesh_assert(this->comm().verify(n_rel_change_iters));
+}
+
+
+
+void
+MAST::FunctionEvaluation::_init_dvar_wrapper(std::vector<Real>& x,
+                                             std::vector<Real>& xmin,
+                                             std::vector<Real>& xmax) {
+
+    this->init_dvar(x, xmin, xmax);
+    
+    libmesh_assert(this->comm().verify(x));
+    libmesh_assert(this->comm().verify(xmin));
+    libmesh_assert(this->comm().verify(xmax));
+}
+
+
+
+void
+MAST::FunctionEvaluation::_evaluate_wrapper(const std::vector<Real>& dvars,
+                                            Real& obj,
+                                            bool eval_obj_grad,
+                                            std::vector<Real>& obj_grad,
+                                            std::vector<Real>& fvals,
+                                            std::vector<bool>& eval_grads,
+                                            std::vector<Real>& grads) {
+    
+    // verify that all values going into the function are consistent
+    // across all processors
+    libmesh_assert(this->comm().verify(dvars));
+    libmesh_assert(this->comm().verify(eval_obj_grad));
+    
+    this->evaluate(dvars,
+                   obj,
+                   eval_obj_grad,
+                   obj_grad,
+                   fvals,
+                   eval_grads,
+                   grads);
+    
+    // verify that all output values coming out of all functions are
+    // consistent across all processors
+    libmesh_assert(this->comm().verify(obj));
+    libmesh_assert(this->comm().verify(obj_grad));
+    libmesh_assert(this->comm().verify(fvals));
+    libmesh_assert(this->comm().verify(grads));
+}
+
+
+
+void
+MAST::FunctionEvaluation::_output_wrapper(unsigned int iter,
+                                          const std::vector<Real>& x,
+                                          Real obj,
+                                          const std::vector<Real>& fval,
+                                          bool if_write_to_optim_file) {
+    
+    // verify that all values going into the function are consistent
+    // across all processors
+    libmesh_assert(this->comm().verify(iter));
+    libmesh_assert(this->comm().verify(x));
+    
+    this->output(iter, x, obj, fval, if_write_to_optim_file);
+}
 

@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -25,9 +25,10 @@ MAST::Local1DElem::Local1DElem(const libMesh::Elem& elem,
                                const libMesh::Point& y):
 MAST::LocalElemBase(elem),
 _local_y(y) {
-    
+
+    libmesh_assert(false); // to be revisited.
     _create_local_elem();
-    libmesh_assert_greater(_local_y.size(), 0.);
+    libmesh_assert_greater(_local_y.norm(), 0.);
 }
 
 
@@ -48,15 +49,24 @@ MAST::Local1DElem::_create_local_elem() {
     
     libmesh_assert(_elem.dim() == 1);
     
+    const libMesh::Elem*
+    ref_elem = nullptr;
+    
+    // if the element has a parent, initialize to the parent
+    if (_elem.parent())
+        ref_elem = _elem.parent();
+    else
+        ref_elem = &_elem;
+    
     // first node is the origin of the new cs
     // calculate the coordinate system for the plane of the element
     libMesh::Point v1, v2, v3, p;
-    v1 = *_elem.get_node(1); v1 -= *_elem.get_node(0); v1 /= v1.size(); // local x
+    v1 = *ref_elem->node_ptr(1); v1 -= *ref_elem->node_ptr(0); v1 /= v1.norm(); // local x
     v2 = _local_y;                           // vector in local x-y plane
     v3 = v1.cross(v2);                       // local z
-    libmesh_assert_greater(v3.size(), 0.);   // 0. implies x == y
-    v3 /= v3.size();
-    v2 = v3.cross(v1); v2 /= v2.size();      // local y
+    libmesh_assert_greater(v3.norm(), 0.);   // 0. implies x == y
+    v3 /= v3.norm();
+    v2 = v3.cross(v1); v2 /= v2.norm();      // local y
     
     _T_mat  = RealMatrixX::Zero(3,3);
     
@@ -64,7 +74,7 @@ MAST::Local1DElem::_create_local_elem() {
     _local_nodes.resize(_elem.n_nodes());
     for (unsigned int i=0; i<_elem.n_nodes(); i++) {
         _local_nodes[i] = new libMesh::Node;
-        _local_nodes[i]->set_id() = _elem.get_node(i)->id();
+        _local_nodes[i]->set_id() = _elem.node_ptr(i)->id();
         _local_elem->set_node(i) = _local_nodes[i];
     }
     
@@ -81,8 +91,8 @@ MAST::Local1DElem::_create_local_elem() {
     
     // now calculate the new coordinates with respect to the origin
     for (unsigned int i=0; i<_local_nodes.size(); i++) {
-        p = *_elem.get_node(i);
-        p -= *_elem.get_node(0); // local wrt origin
+        p = *_elem.node_ptr(i);
+        p -= *ref_elem->node_ptr(0); // local wrt origin
         for (unsigned int j=0; j<3; j++)
             for (unsigned int k=0; k<3; k++)
                 (*_local_nodes[i])(j) += _T_mat(k,j)*p(k);
@@ -99,7 +109,7 @@ domain_surface_normal_in_global_coordinates(const libMesh::Point& p,
     for (unsigned int i=0; i<3; i++)
         n_global(i) = _local_y(i);
     
-    n_global /= _local_y.size();
+    n_global /= _local_y.norm();
 }
 
 

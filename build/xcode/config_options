@@ -1,0 +1,29 @@
+cmake -G Xcode ../ -Dlibmesh_dir=~/Documents/codes/numerical/libmesh \
+-Dpetsc_dir=~/Documents/codes/numerical/petsc \
+-Dslepc_dir=~/Documents/codes/numerical/slepc \
+-Dboost_include_dir=/opt/local/include \
+-Deigen_include_dir=/opt/local/include/eigen3 \
+-Dmpi_include_dir=/opt/local/include/openmpi-clang \
+-Dmpi_lib_dir=/opt/local/lib/openmpi-clang \
+-Dlapack_lib_dir=/usr/lib \
+-Dblas_lib_dir=/usr/lib -Dboost_lib_dir=/opt/local/lib \
+-Dgcmma_lib_file=gcmma \
+-Dgcmma_lib_dir=~/Documents/codes/numerical/optimization_codes/gcmma/build \
+-Ddot_lib_file=dot \
+-Ddot_lib_dir=~/Documents/codes/numerical/optimization_codes/dot/build \
+-Dnpsol_lib_file=npsol \
+-Dnpsol_lib_dir=~/Documents/codes/numerical/optimization_codes/npsol/build \
+-Dfortran_lib_file=libgfortran.4.dylib \
+-Dfortran_lib_dir=/opt/local/lib/libgcc \
+-Dboost_test_lib=boost_unit_test_framework-mt \
+-DCMAKE_Fortran_COMPILER=mpif90-openmpi-clang \
+-DCMAKE_BUILD_TYPE=Release \
+-DCMAKE_CXX_FLAGS=-std=c++14 \
+-DENABLE_GCMMA=ON \
+-DENABLE_DOT=ON \
+-DENABLE_CYTHON=ON \
+-Dpython_include_dir=/opt/local/Library/Frameworks/Python.framework/Versions/3.7/include/python3.7m \
+-Dpython_lib_dir=/opt/local/Library/Frameworks/Python.framework/Versions/3.7/lib \
+-Dpython_lib_file=libpython3.7.dylib \
+-Dpython_include_dir=/opt/local/Library/Frameworks/Python.framework/Versions/3.7/include/python3.7m \
+-DCYTHON=/opt/local/bin/cython-3.7

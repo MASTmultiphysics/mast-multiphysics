@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -21,33 +21,21 @@
 #define __mast__structural_assembly__
 
 // MAST includes
-#include "base/mast_data_types.h"
-
-// libMesh includes
-#include "libmesh/petsc_nonlinear_solver.h"
+#include "base/assembly_base.h"
 
 
 
 namespace MAST {
 
     // Forward declerations
-    class PhysicsDisciplineBase;
-    class SystemInitialization;
-
-    // monitor function for PETSc solver so that
-    // the incompatible solution can be updated after each converged iterate
-    PetscErrorCode
-    _snes_structural_nonlinear_assembly_monitor_function(SNES snes,
-                                                         PetscInt its,
-                                                         PetscReal norm2,
-                                                         void* ctx);
-    
+    class StructuralElementBase;
 
     /*!
      *   This class provides some routines that are common to
      *   structural assembly routines.
      */
-    class StructuralAssembly {
+    class StructuralAssembly:
+    MAST::AssemblyBase::SolverMonitor {
         
     public:
         
@@ -55,17 +43,32 @@ namespace MAST {
         
         virtual ~StructuralAssembly();
         
+        virtual void init(MAST::AssemblyBase& assembly);
+        
+        virtual void clear();
+
+        void set_elem_incompatible_sol(MAST::StructuralElementBase& elem);
+        
+        void update_incompatible_solution(libMesh::NumericVector<Real>& X,
+                                          libMesh::NumericVector<Real>& dX);
         
     protected:
         
         
-        /*!
-         *   assembles the point loas
-         */
-        void _assemble_point_loads(MAST::PhysicsDisciplineBase& discipline,
-                                   MAST::SystemInitialization& system,
-                                   libMesh::NumericVector<Real>& res);
+//        /*!
+//         *   assembles the point loas
+//         */
+//        void _assemble_point_loads(MAST::PhysicsDisciplineBase& discipline,
+//                                   MAST::SystemInitialization& system,
+//                                   libMesh::NumericVector<Real>& res);
+
+        MAST::AssemblyBase* _assembly;
         
+        /*!
+         *   map of local incompatible mode solution per 3D elements
+         */
+        std::map<const libMesh::Elem*, RealVectorX> _incompatible_sol;
+
     };
 }
 

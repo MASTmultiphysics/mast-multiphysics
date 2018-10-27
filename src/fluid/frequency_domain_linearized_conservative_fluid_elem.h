@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -37,9 +37,10 @@ namespace MAST {
     public:
 
         FrequencyDomainLinearizedConservativeFluidElem
-        (MAST::SystemInitialization& sys,
-         const libMesh::Elem& elem,
-         const MAST::FlightCondition& f);
+        (MAST::SystemInitialization&   sys,
+         MAST::AssemblyBase&           assembly,
+         const libMesh::Elem&          elem,
+         const MAST::FlightCondition&  f);
         
         
         virtual ~FrequencyDomainLinearizedConservativeFluidElem();
@@ -59,7 +60,8 @@ namespace MAST {
          *   Jacobian is retured in \par jac.
          */
         virtual bool
-        internal_residual_sensitivity (bool request_jacobian,
+        internal_residual_sensitivity (const MAST::FunctionBase& p,
+                                       bool request_jacobian,
                                        ComplexVectorX& f,
                                        ComplexMatrixX& jac);
 
@@ -80,7 +82,8 @@ namespace MAST {
          *   Jacobian is retured in \par jac.
          */
         virtual bool
-        side_external_residual_sensitivity (bool request_jacobian,
+        side_external_residual_sensitivity (const MAST::FunctionBase& p,
+                                            bool request_jacobian,
                                             ComplexVectorX& f,
                                             ComplexMatrixX& jac,
                                             std::multimap<libMesh::boundary_id_type, MAST::BoundaryConditionBase*>& bc);
@@ -103,7 +106,7 @@ namespace MAST {
                                    ComplexVectorX& f,
                                    ComplexMatrixX& jac,
                                    const unsigned int s,
-                                   MAST::BoundaryConditionBase& p);
+                                   MAST::BoundaryConditionBase& bc);
 
         
         /*!
@@ -112,11 +115,12 @@ namespace MAST {
          *    Jacobian is returned in \par jac.
          */
         virtual bool
-        slip_wall_surface_residual_sensitivity(bool request_jacobian,
+        slip_wall_surface_residual_sensitivity(const MAST::FunctionBase& p,
+                                               bool request_jacobian,
                                                ComplexVectorX& f,
                                                ComplexMatrixX& jac,
                                                const unsigned int s,
-                                               MAST::BoundaryConditionBase& p);
+                                               MAST::BoundaryConditionBase& bc);
 
     };
 }

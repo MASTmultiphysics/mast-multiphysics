@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -26,7 +26,7 @@
 
 // MAST includes
 #include "base/mast_data_types.h"
-#include "base/output_function_base.h"
+#include "base/output_assembly_elem_operations.h"
 
 
 namespace MAST {
@@ -44,7 +44,7 @@ namespace MAST {
      *   magnitude of the force vector. The user must provide the
      */
     class SurfaceIntegratedPressureOutput:
-    public MAST::OutputFunctionBase {
+    public MAST::OutputAssemblyElemOperations {
         
     public:
         
@@ -57,8 +57,7 @@ namespace MAST {
         /*!
          *    default constructor
          */
-        SurfaceIntegratedPressureOutput(MAST::OutputQuantityType t,
-                                        MAST::SurfaceIntegratedPressureOutput::OutputMode o,
+        SurfaceIntegratedPressureOutput(MAST::SurfaceIntegratedPressureOutput::OutputMode o,
                                         const RealVectorX& n_vec = RealVectorX::Zero(3,1));
         
         virtual ~SurfaceIntegratedPressureOutput();

@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -25,6 +25,7 @@
 #include "fluid/primitive_fluid_solution.h"
 #include "fluid/small_disturbance_primitive_fluid_solution.h"
 #include "fluid/flight_condition.h"
+#include "mesh/fe_base.h"
 
 // Basic include files
 #include "libmesh/mesh.h"
@@ -100,7 +101,7 @@ get_infinity_vars( RealVectorX& vars_inf ) const {
 void
 MAST::FluidElemBase::
 update_solution_at_quadrature_point(const unsigned int qp,
-                                    const libMesh::FEBase& fe,
+                                    const MAST::FEBase& fe,
                                     const RealVectorX& elem_solution,
                                     RealVectorX& conservative_sol,
                                     PrimitiveSolution& primitive_sol,
@@ -1642,7 +1643,7 @@ calculate_entropy_variable_jacobian(const MAST::PrimitiveSolution& sol,
 bool
 MAST::FluidElemBase::
 calculate_barth_tau_matrix (const unsigned int qp,
-                            const libMesh::FEBase& fe,
+                            const MAST::FEBase& fe,
                             const MAST::PrimitiveSolution& sol,
                             RealMatrixX& tau,
                             std::vector<RealMatrixX >& tau_sens) {
@@ -1666,7 +1667,7 @@ calculate_barth_tau_matrix (const unsigned int qp,
     for (unsigned int i_node=0; i_node<dphi.size(); i_node++)
     {
         nvec = dphi[i_node][qp];
-        nval = nvec.size();
+        nval = nvec.norm();
         if (nval > 0.) {
             
             nvec /= nval;
@@ -1681,7 +1682,23 @@ calculate_barth_tau_matrix (const unsigned int qp,
             tmp1 += nval * l_eig_vec_inv_tr;  // sum_inode  | A_i |
         }
     }
-    
+
+    // add the viscous contribution
+    if (if_viscous()) {
+
+        for (unsigned int i_node=0; i_node<dphi.size(); i_node++) {
+            
+            nvec = dphi[i_node][qp];
+            
+            for (unsigned int i=0; i<dim; i++)
+                for (unsigned int j=0; j<dim; j++) {
+                
+                    calculate_diffusion_flux_jacobian(i, j, sol, l_eig_vec);
+                    tmp1 += l_eig_vec * nvec(i) * nvec(j);
+                }
+        }
+    }
+
     
     // now invert the tmp matrix to get the tau matrix
     RealVectorX
@@ -1704,7 +1721,7 @@ calculate_barth_tau_matrix (const unsigned int qp,
 bool
 MAST::FluidElemBase::
 calculate_aliabadi_tau_matrix (const unsigned int qp,
-                               const libMesh::FEBase& fe,
+                               const MAST::FEBase& fe,
                                const MAST::PrimitiveSolution& sol,
                                RealMatrixX& tau,
                                std::vector<RealMatrixX >& tau_sens) {
@@ -1844,7 +1861,7 @@ calculate_aliabadi_tau_matrix (const unsigned int qp,
 
 void
 MAST::FluidElemBase::
-calculate_dxidX (const unsigned int qp, const libMesh::FEBase& fe,
+calculate_dxidX (const unsigned int qp, const MAST::FEBase& fe,
                  RealMatrixX& dxi_dX,
                  RealMatrixX& dX_dxi) {
     
@@ -1926,7 +1943,7 @@ calculate_dxidX (const unsigned int qp, const libMesh::FEBase& fe,
 
 void MAST::FluidElemBase::
 calculate_hartmann_discontinuity_operator (const unsigned int qp,
-                                           const libMesh::FEBase& fe,
+                                           const MAST::FEBase& fe,
                                            const MAST::PrimitiveSolution& sol,
                                            const RealVectorX& elem_solution,
                                            const std::vector<MAST::FEMOperatorMatrix>& dB_mat,
@@ -1989,7 +2006,7 @@ calculate_hartmann_discontinuity_operator (const unsigned int qp,
 
 void MAST::FluidElemBase::
 calculate_aliabadi_discontinuity_operator(const unsigned int qp,
-                                          const libMesh::FEBase& fe,
+                                          const MAST::FEBase& fe,
                                           const MAST::PrimitiveSolution& sol,
                                           const RealVectorX& elem_solution,
                                           const std::vector<MAST::FEMOperatorMatrix>& dB_mat,
@@ -2124,7 +2141,7 @@ void
 MAST::FluidElemBase::
 calculate_small_disturbance_aliabadi_discontinuity_operator
 (const unsigned int qp,
- const libMesh::FEBase& fe,
+ const MAST::FEBase& fe,
  const MAST::PrimitiveSolution& sol,
  const SmallPerturbationPrimitiveSolution<ValType>& dsol,
  const RealVectorX& elem_solution,
@@ -2225,7 +2242,7 @@ calculate_small_disturbance_aliabadi_discontinuity_operator
 
 void MAST::FluidElemBase::
 calculate_differential_operator_matrix (const unsigned int qp,
-                                        const libMesh::FEBase& fe,
+                                        const MAST::FEBase& fe,
                                         const RealVectorX& elem_solution,
                                         const MAST::PrimitiveSolution& sol,
                                         const MAST::FEMOperatorMatrix& B_mat,
@@ -2251,7 +2268,7 @@ calculate_differential_operator_matrix (const unsigned int qp,
     
     const std::vector<std::vector<Real> >& phi =
     fe.get_phi(); // assuming that all variables have the same interpolation
-    const unsigned int n_phi = phi.size();
+    const unsigned int n_phi = (unsigned int) phi.size();
     std::vector<RealMatrixX > tau_sens(n1);
     for (unsigned int i_cvar=0; i_cvar<n1; i_cvar++)
         tau_sens[i_cvar].setZero(n1, n1);
@@ -2317,7 +2334,7 @@ template void
 MAST::FluidElemBase::
 calculate_small_disturbance_aliabadi_discontinuity_operator<Real>
 (const unsigned int qp,
- const libMesh::FEBase& fe,
+ const MAST::FEBase& fe,
  const MAST::PrimitiveSolution& sol,
  const SmallPerturbationPrimitiveSolution<Real>& dsol,
  const RealVectorX& elem_solution,
@@ -2331,7 +2348,7 @@ template void
 MAST::FluidElemBase::
 calculate_small_disturbance_aliabadi_discontinuity_operator<Complex>
 (const unsigned int qp,
- const libMesh::FEBase& fe,
+ const MAST::FEBase& fe,
  const MAST::PrimitiveSolution& sol,
  const SmallPerturbationPrimitiveSolution<Complex>& dsol,
  const RealVectorX& elem_solution,

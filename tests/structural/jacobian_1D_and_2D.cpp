@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -63,7 +63,7 @@ void check_internal_force_jacobian (ValType& v,
     const libMesh::Elem& elem = **(v._mesh->local_elements_begin());
     
     // now create the structural element
-    std::auto_ptr<MAST::StructuralElementBase>
+    std::unique_ptr<MAST::StructuralElementBase>
     e(MAST::build_structural_element(*v._structural_sys,
                                      elem,
                                      *v._p_card).release());

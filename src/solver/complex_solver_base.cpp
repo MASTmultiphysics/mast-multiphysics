@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -37,9 +37,9 @@
 
 
 MAST::ComplexSolverBase::ComplexSolverBase():
-_assembly(nullptr),
-tol(1.0e-3),
-max_iters(20) {
+_assembly  (nullptr),
+tol        (1.0e-3),
+max_iters  (20) {
     
 }
 
@@ -51,26 +51,10 @@ MAST::ComplexSolverBase::~ComplexSolverBase() {
 
 
 
-
-void
-MAST::ComplexSolverBase::set_assembly(MAST::ComplexAssemblyBase& assembly) {
-    
-    _assembly = &assembly;
-}
-
-
-
-void
-MAST::ComplexSolverBase::clear_assembly() {
-    
-    _assembly = nullptr;
-}
-
-
-
-
 libMesh::NumericVector<Real>&
 MAST::ComplexSolverBase::real_solution(bool if_sens) {
+    
+    libmesh_assert(_assembly);
     
     MAST::NonlinearSystem& sys = _assembly->system();
     
@@ -91,6 +75,8 @@ MAST::ComplexSolverBase::real_solution(bool if_sens) {
 const libMesh::NumericVector<Real>&
 MAST::ComplexSolverBase::real_solution(bool if_sens) const {
     
+    libmesh_assert(_assembly);
+
     MAST::NonlinearSystem& sys = _assembly->system();
     
     std::string nm;
@@ -109,6 +95,8 @@ MAST::ComplexSolverBase::real_solution(bool if_sens) const {
 libMesh::NumericVector<Real>&
 MAST::ComplexSolverBase::imag_solution(bool if_sens) {
     
+    libmesh_assert(_assembly);
+
     MAST::NonlinearSystem& sys = _assembly->system();
     
     std::string nm;
@@ -127,6 +115,8 @@ MAST::ComplexSolverBase::imag_solution(bool if_sens) {
 const libMesh::NumericVector<Real>&
 MAST::ComplexSolverBase::imag_solution(bool if_sens) const {
     
+    libmesh_assert(_assembly);
+
     MAST::NonlinearSystem& sys = _assembly->system();
     
     std::string nm;
@@ -143,97 +133,16 @@ MAST::ComplexSolverBase::imag_solution(bool if_sens) const {
 
 
 
-void
-MAST::ComplexSolverBase::solve() {
-    
-    
-    //  The complex system of equations
-    //     (J_R + i J_I) (x_R + i x_I) + (r_R + i r_I) = 0
-    //  is rewritten as
-    //     [ J_R   -J_I] {x_R}  +  {r_R}  = {0}
-    //     [ J_I    J_R] {x_I}  +  {r_I}  = {0}
-    //
-    
-    
-    // continue iterations till the L2 residual of both real and imaginary
-    // parts is satisfied
-    
-    bool
-    if_cont = true,
-    if_re   = true;  // keeps track of whether real or imag part is being solved
-    
-    Real
-    res_l2  = 0.;
-    
-    unsigned int
-    iters   = 0;
-    
-    MAST::NonlinearSystem& sys = _assembly->system();
-    
-    
-    while (if_cont) {
-        
-        // tell the assembly object to now assemble
-        if (if_re) {
-            
-            // swap the solution with the real part
-            *(sys.solution) =  this->real_solution();
-            _assembly->set_assemble_real_part();
-            libMesh::out << "Solving Real Part: " << std::endl;
-        }
-        else {
-            
-            *(sys.solution) =  this->imag_solution();
-            _assembly->set_assemble_imag_part();
-            libMesh::out << "Solving Imaginary Part: " << std::endl;
-        }
-        sys.solution->close();
-        
-        // tell implicit system to solve
-        sys.solve();
-        
-        // now copy the solution vector back
-        if (if_re) {
-            
-            this->real_solution() = (*sys.solution);
-            this->real_solution().close();
-            if_re = false;
-        }
-        else {
-            
-            this->imag_solution() = (*sys.solution);
-            this->imag_solution().close();
-            if_re = true;
-        }
-        
-        // check the residual
-        res_l2  =  _assembly->residual_l2_norm();
-        libMesh::out
-        << "Iter: " << iters
-        << "   Complex Residual L2-norm: " << res_l2 << std::endl;
-        
-        
-        // increment the iteration counter
-        iters++;
-        
-        
-        if (res_l2 <= tol ||
-            iters  >= max_iters) {
-            
-            libMesh::out
-            << "Terminating complex solver iterations!" << std::endl;
-            if_cont = false;
-        }
-    }
-    
-}
-
-
 
 
 void
-MAST::ComplexSolverBase::solve_pc_fieldsplit() {
+MAST::ComplexSolverBase::solve_pc_fieldsplit(MAST::AssemblyElemOperations& elem_ops,
+                                             MAST::ComplexAssemblyBase& assemble) {
     
+    libmesh_assert(!_assembly);
+    _assembly = &assemble;
+    assemble.set_elem_operation_object(elem_ops);
+
     START_LOG("complex_solve()", "PetscFieldSplitSolver");
     
     // get reference to the system
@@ -285,7 +194,7 @@ MAST::ComplexSolverBase::solve_pc_fieldsplit() {
     
     
     // clone vectors for use as system RHS
-    std::auto_ptr<libMesh::NumericVector<Real> >
+    std::unique_ptr<libMesh::NumericVector<Real> >
     res_R(new libMesh::PetscVector<Real>(res_vec_R, sys.comm())),
     res_I(new libMesh::PetscVector<Real>(res_vec_I, sys.comm())),
     sol_R(new libMesh::PetscVector<Real>(sol_vec_R, sys.comm())),
@@ -302,8 +211,7 @@ MAST::ComplexSolverBase::solve_pc_fieldsplit() {
                                                  *res_R,
                                                  *res_I,
                                                  *sys.matrix,    // J_R
-                                                 *sys.matrix_B,  // J_I
-                                                 sys);
+                                                 *sys.matrix_B); // J_I
     
     // restore the subvectors
     //ierr = VecRestoreSubVector(res, is[0], &res_vec_R); CHKERRABORT(sys.comm().get(), ierr);
@@ -349,8 +257,7 @@ MAST::ComplexSolverBase::solve_pc_fieldsplit() {
                                                  *res_R,
                                                  *res_I,
                                                  *sys.matrix,    // J_R
-                                                 *sys.matrix_B,  // J_I
-                                                 sys);
+                                                 *sys.matrix_B); // J_I
     
     // copy solutions for output
     /*this->real_solution() = *sol_R;
@@ -373,12 +280,21 @@ MAST::ComplexSolverBase::solve_pc_fieldsplit() {
     ierr = VecDestroy(&sol);
     
     STOP_LOG("complex_solve()", "PetscFieldSplitSolver");
+
+    _assembly = nullptr;
+    assemble.clear_elem_operation_object();
 }
 
 
 
 void
-MAST::ComplexSolverBase::solve_block_matrix(MAST::Parameter* p)  {
+MAST::ComplexSolverBase::solve_block_matrix(MAST::AssemblyElemOperations& elem_ops,
+                                            MAST::ComplexAssemblyBase& assemble,
+                                            MAST::Parameter* p)  {
+    
+    libmesh_assert(!_assembly);
+    _assembly = &assemble;
+    assemble.set_elem_operation_object(elem_ops);
     
     START_LOG("solve_block_matrix()", "ComplexSolve");
     
@@ -458,10 +374,10 @@ MAST::ComplexSolverBase::solve_block_matrix(MAST::Parameter* p)  {
     ierr = MatCreateVecs(mat, &sol_vec, PETSC_NULL);               CHKERRABORT(sys.comm().get(), ierr);
     
     
-    std::auto_ptr<libMesh::SparseMatrix<Real> >
+    std::unique_ptr<libMesh::SparseMatrix<Real> >
     jac_mat(new libMesh::PetscMatrix<Real>(mat, sys.comm()));
     
-    std::auto_ptr<libMesh::NumericVector<Real> >
+    std::unique_ptr<libMesh::NumericVector<Real> >
     res(new libMesh::PetscVector<Real>(res_vec, sys.comm())),
     sol(new libMesh::PetscVector<Real>(sol_vec, sys.comm()));
     
@@ -493,9 +409,8 @@ MAST::ComplexSolverBase::solve_block_matrix(MAST::Parameter* p)  {
     _assembly->residual_and_jacobian_blocked(*sol,
                                              *res,
                                              *jac_mat,
-                                             sys,
                                              p);
-    
+    res->scale(-1.);
     
     // now initialize the KSP and ask for solution.
     KSP        ksp;
@@ -525,12 +440,6 @@ MAST::ComplexSolverBase::solve_block_matrix(MAST::Parameter* p)  {
 
     STOP_LOG("KSPSolve", "ComplexSolve");
     
-    // evaluate the residual again
-    //_assembly->residual_and_jacobian_blocked(*sol,
-    //                                         *res,
-    //                                         *jac_mat,
-    //                                         sys);
-    
     
     // copy the solution to separate real and imaginary vectors
     libMesh::NumericVector<Real>
@@ -556,6 +465,9 @@ MAST::ComplexSolverBase::solve_block_matrix(MAST::Parameter* p)  {
     ierr = VecDestroy(&sol_vec);              CHKERRABORT(sys.comm().get(), ierr);
     
     STOP_LOG("solve_block_matrix()", "ComplexSolve");
+    
+    _assembly = nullptr;
+    assemble.clear_elem_operation_object();
 }
 
 

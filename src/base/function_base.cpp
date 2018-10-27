@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -21,6 +21,24 @@
 #include "base/function_base.h"
 
 
+MAST::FunctionBase::FunctionBase(const std::string& nm,
+                                 const bool is_field_func):
+_name                      (nm),
+_is_field_func             (is_field_func),
+_is_shape_parameter        (false),
+_is_topology_parameter     (false) {
+    
+}
+
+
+
+MAST::FunctionBase::FunctionBase(const MAST::FunctionBase& f):
+_name                      (f._name),
+_is_field_func             (f._is_field_func),
+_is_shape_parameter        (f._is_shape_parameter),
+_is_topology_parameter     (f._is_topology_parameter) {
+    
+}
 
 
 

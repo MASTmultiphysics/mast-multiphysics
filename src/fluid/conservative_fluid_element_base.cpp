@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -22,23 +22,28 @@
 #include "fluid/primitive_fluid_solution.h"
 #include "fluid/small_disturbance_primitive_fluid_solution.h"
 #include "fluid/flight_condition.h"
-#include "base/boundary_condition_base.h"
-#include "numerics/fem_operator_matrix.h"
-#include "base/system_initialization.h"
-#include "elasticity/normal_rotation_function_base.h"
 #include "fluid/surface_integrated_pressure_output.h"
+#include "elasticity/normal_rotation_function_base.h"
+#include "base/boundary_condition_base.h"
+#include "base/system_initialization.h"
 #include "base/nonlinear_system.h"
+#include "base/assembly_base.h"
+#include "numerics/fem_operator_matrix.h"
+#include "mesh/fe_base.h"
 
 
 MAST::ConservativeFluidElementBase::
-ConservativeFluidElementBase(MAST::SystemInitialization& sys,
-                             const libMesh::Elem& elem,
-                             const MAST::FlightCondition& f):
+ConservativeFluidElementBase(MAST::SystemInitialization&    sys,
+                             MAST::AssemblyBase&            assembly,
+                             const libMesh::Elem&           elem,
+                             const MAST::FlightCondition&   f):
 MAST::FluidElemBase(elem.dim(), f),
-MAST::ElementBase(sys, elem) {
+MAST::ElementBase(sys, assembly, elem) {
     
     // initialize the finite element data structures
-    _init_fe_and_qrule(elem, &_fe, &_qrule);
+    _fe = assembly.build_fe().release();
+    _fe->set_evaluate_second_order_derivatives(if_viscous());
+    _fe->init(elem);
 }
 
 
@@ -98,9 +103,11 @@ MAST::ConservativeFluidElementBase::internal_residual (bool request_jacobian,
     }
     
     
-    std::vector<MAST::FEMOperatorMatrix> dBmat(dim);
-    MAST::FEMOperatorMatrix Bmat;
-    MAST::PrimitiveSolution      primitive_sol;
+    std::vector<MAST::FEMOperatorMatrix>              dBmat(dim);
+    std::vector<std::vector<MAST::FEMOperatorMatrix>> d2Bmat(dim);
+    MAST::FEMOperatorMatrix                           Bmat;
+    MAST::PrimitiveSolution                           primitive_sol;
+    for (unsigned int i=0; i<dim; i++) d2Bmat[i].resize(dim);
     
     
     for (unsigned int qp=0; qp<JxW.size(); qp++) {
@@ -122,6 +129,8 @@ MAST::ConservativeFluidElementBase::internal_residual (bool request_jacobian,
         _initialize_fem_gradient_operator(qp, dim, *_fe, dBmat);
         
         if (if_viscous()) {
+        
+            _initialize_fem_second_derivative_operator(qp, dim, *_fe, d2Bmat);
             
             calculate_conservative_variable_jacobian(primitive_sol,
                                                      dcons_dprim,
@@ -136,6 +145,7 @@ MAST::ConservativeFluidElementBase::internal_residual (bool request_jacobian,
         
         AiBi_adv.setZero();
         for (unsigned int i_dim=0; i_dim<dim; i_dim++) {
+            
             calculate_advection_flux_jacobian(i_dim, primitive_sol, Ai_adv[i_dim]);
             calculate_advection_flux_jacobian_sensitivity_for_conservative_variable
             (i_dim, primitive_sol, Ai_sens[i_dim]);
@@ -195,6 +205,21 @@ MAST::ConservativeFluidElementBase::internal_residual (bool request_jacobian,
         
         // stabilization term
         f += JxW[qp] * LS.transpose() * (AiBi_adv * _sol);
+        if (if_viscous()) {
+            
+            for (unsigned int i_dim=0; i_dim<dim; i_dim++)
+                for (unsigned int j_dim=0; j_dim<dim; j_dim++) {
+                    
+                    
+                    calculate_diffusion_flux_jacobian(i_dim,
+                                                      j_dim,
+                                                      primitive_sol,
+                                                      mat1_n1n1);
+                    
+                    d2Bmat[i_dim][j_dim].vector_mult(vec1_n1, _sol);
+                    f -= JxW[qp] * LS.transpose() * (mat1_n1n1 * vec1_n1);
+                }
+        }
         
         
         if (request_jacobian) {
@@ -240,6 +265,21 @@ MAST::ConservativeFluidElementBase::internal_residual (bool request_jacobian,
             
             // stabilization term
             jac  += JxW[qp] * LS.transpose() * AiBi_adv;                          // A_i dB_i
+            if (if_viscous()) {
+                
+                for (unsigned int i_dim=0; i_dim<dim; i_dim++)
+                    for (unsigned int j_dim=0; j_dim<dim; j_dim++) {
+                        
+                        
+                        calculate_diffusion_flux_jacobian(i_dim,
+                                                          j_dim,
+                                                          primitive_sol,
+                                                          mat1_n1n1);
+                        
+                        d2Bmat[i_dim][j_dim].left_multiply(mat3_n1n2, mat1_n1n1);
+                        jac -= JxW[qp] * LS.transpose() * mat3_n1n2;
+                    }
+            }
 
             // linearization of the Jacobian terms
             jac += JxW[qp] * LS.transpose() * A_sens; // LS^T tau d^2F^adv_i / dx dU  (Ai sensitivity)
@@ -470,7 +510,8 @@ side_external_residual (bool request_jacobian,
         
         // check to see if any of the specified boundary ids has a boundary
         // condition associated with them
-        std::vector<libMesh::boundary_id_type> bc_ids = binfo.boundary_ids(&_elem, n);
+        std::vector<libMesh::boundary_id_type> bc_ids;
+        binfo.boundary_ids(&_elem, n, bc_ids);
         std::vector<libMesh::boundary_id_type>::const_iterator bc_it = bc_ids.begin();
         
         for ( ; bc_it != bc_ids.end(); bc_it++) {
@@ -571,7 +612,8 @@ linearized_side_external_residual (bool request_jacobian,
         
         // check to see if any of the specified boundary ids has a boundary
         // condition associated with them
-        std::vector<libMesh::boundary_id_type> bc_ids = binfo.boundary_ids(&_elem, n);
+        std::vector<libMesh::boundary_id_type> bc_ids;
+        binfo.boundary_ids(&_elem, n, bc_ids);
         std::vector<libMesh::boundary_id_type>::const_iterator bc_it = bc_ids.begin();
         
         for ( ; bc_it != bc_ids.end(); bc_it++) {
@@ -664,7 +706,8 @@ linearized_side_external_residual (bool request_jacobian,
 
 bool
 MAST::ConservativeFluidElementBase::
-side_external_residual_sensitivity (bool request_jacobian,
+side_external_residual_sensitivity (const MAST::FunctionBase& p,
+                                    bool request_jacobian,
                                     RealVectorX& f,
                                     RealMatrixX& jac,
                                     std::multimap<libMesh::boundary_id_type, MAST::BoundaryConditionBase*>& bc) {
@@ -689,7 +732,8 @@ side_external_residual_sensitivity (bool request_jacobian,
         
         // check to see if any of the specified boundary ids has a boundary
         // condition associated with them
-        std::vector<libMesh::boundary_id_type> bc_ids = binfo.boundary_ids(&_elem, n);
+        std::vector<libMesh::boundary_id_type> bc_ids;
+        binfo.boundary_ids(&_elem, n, bc_ids);
         std::vector<libMesh::boundary_id_type>::const_iterator bc_it = bc_ids.begin();
         
         for ( ; bc_it != bc_ids.end(); bc_it++) {
@@ -702,21 +746,21 @@ side_external_residual_sensitivity (bool request_jacobian,
                 // apply all the types of loading
                 switch (it.first->second->type()) {
                     case MAST::SYMMETRY_WALL:
-                        symmetry_surface_residual_sensitivity(request_jacobian,
+                        symmetry_surface_residual_sensitivity(p, request_jacobian,
                                                               f, jac,
                                                               n,
                                                               *it.first->second);
                         break;
                         
                     case MAST::SLIP_WALL:
-                        slip_wall_surface_residual_sensitivity(request_jacobian,
+                        slip_wall_surface_residual_sensitivity(p, request_jacobian,
                                                                f, jac,
                                                                n,
                                                                *it.first->second);
                         break;
                         
                     case MAST::FAR_FIELD:
-                        far_field_surface_residual_sensitivity(request_jacobian,
+                        far_field_surface_residual_sensitivity(p, request_jacobian,
                                                                f, jac,
                                                                n,
                                                                *it.first->second);
@@ -744,7 +788,8 @@ side_external_residual_sensitivity (bool request_jacobian,
 
 bool
 MAST::ConservativeFluidElementBase::
-internal_residual_sensitivity (bool request_jacobian,
+internal_residual_sensitivity (const MAST::FunctionBase& p,
+                               bool request_jacobian,
                                RealVectorX& f,
                                RealMatrixX& jac) {
     
@@ -755,7 +800,8 @@ internal_residual_sensitivity (bool request_jacobian,
 
 bool
 MAST::ConservativeFluidElementBase::
-velocity_residual_sensitivity (bool request_jacobian,
+velocity_residual_sensitivity (const MAST::FunctionBase& p,
+                               bool request_jacobian,
                                RealVectorX& f,
                                RealMatrixX& jac) {
     
@@ -765,6 +811,114 @@ velocity_residual_sensitivity (bool request_jacobian,
 
 
 
+
+void
+MAST::ConservativeFluidElementBase::side_integrated_force(const unsigned int s,
+                                                          RealVectorX& f,
+                                                          RealMatrixX* dfdX) {
+    
+    // prepare the side finite element
+    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe());
+    fe->init_for_side(_elem, s, if_viscous()); // viscous requires derivatives of shape functions
+    
+    const std::vector<Real> &JxW                 = fe->get_JxW();
+    const std::vector<libMesh::Point>& normals   = fe->get_normals();
+    
+    const unsigned int
+    dim    = _elem.dim(),
+    n1     = dim+2,
+    n2     = _fe->n_shape_functions()*n1;
+    
+    RealVectorX
+    temp_grad = RealVectorX::Zero(dim),
+    dpdX      = RealVectorX::Zero(n1),
+    vec1_n1   = RealVectorX::Zero(n1),
+    vec2_n2   = RealVectorX::Zero(n2);
+    
+    RealMatrixX
+    stress          = RealMatrixX::Zero(  dim,   dim),
+    dprim_dcons     = RealMatrixX::Zero(   n1,    n1),
+    mat2_n1n2       = RealMatrixX::Zero(   n1,    n2),
+    mat1_n1n1       = RealMatrixX::Zero(   n1,    n1);
+
+    
+    libMesh::Point pt;
+    std::vector<MAST::FEMOperatorMatrix> dBmat(dim);
+    MAST::FEMOperatorMatrix Bmat;
+    
+    // create objects to calculate the primitive solution, flux, and Jacobian
+    MAST::PrimitiveSolution      primitive_sol;
+    
+    for (unsigned int qp=0; qp<JxW.size(); qp++) {
+        
+        // initialize the Bmat operator for this term
+        _initialize_fem_interpolation_operator(qp, dim, *fe, Bmat);
+        Bmat.right_multiply(vec1_n1, _sol);
+        
+        // initialize the primitive solution
+        primitive_sol.zero();
+        primitive_sol.init(dim,
+                           vec1_n1,
+                           flight_condition->gas_property.cp,
+                           flight_condition->gas_property.cv,
+                           if_viscous());
+        
+        //
+        // first add the pressure term
+        //
+        for (unsigned int i_dim=0; i_dim<dim; i_dim++)
+            f(i_dim) += JxW[qp] * primitive_sol.p * normals[qp](i_dim);
+
+        //
+        // next, add the contribution from viscous stress
+        //
+        if (if_viscous()) {
+            
+            _initialize_fem_gradient_operator(qp, dim, *_fe, dBmat);
+            
+            calculate_conservative_variable_jacobian(primitive_sol,
+                                                     mat1_n1n1,
+                                                     dprim_dcons);
+            calculate_diffusion_tensors(_sol,
+                                        dBmat,
+                                        dprim_dcons,
+                                        primitive_sol,
+                                        stress,
+                                        temp_grad);
+            
+            for (unsigned int i_dim=0; i_dim<dim; i_dim++)
+                f.topRows(dim) -= JxW[qp] * stress.col(i_dim) * normals[qp](i_dim);
+        }
+        
+
+        // adjoints, if requested
+        if (dfdX) {
+            
+            calculate_pressure_derivative_wrt_conservative_variables(primitive_sol,
+                                                                     dpdX);
+            for (unsigned int i_dim=0; i_dim<dim; i_dim++) {
+                
+                Bmat.vector_mult_transpose(vec2_n2, dpdX);
+                dfdX->row(i_dim) += JxW[qp] * vec2_n2 * normals[qp](i_dim);
+            }
+
+            if (if_viscous()) {
+                
+                for (unsigned int i_dim=0; i_dim<dim; i_dim++)
+                    for (unsigned int j_dim=0; j_dim<dim; j_dim++) {
+                    
+                    calculate_diffusion_flux_jacobian(i_dim,
+                                                      j_dim,
+                                                      primitive_sol,
+                                                      mat1_n1n1);
+                    
+                    dBmat[j_dim].left_multiply(mat2_n1n2, mat1_n1n1);
+                    dfdX->topRows(dim) -= JxW[qp] * mat2_n1n2.middleRows(1,dim) * normals[qp](i_dim);
+                }
+            }
+        }
+    }
+}
 
 
 
@@ -775,15 +929,12 @@ symmetry_surface_residual(bool request_jacobian,
                           RealVectorX& f,
                           RealMatrixX& jac,
                           const unsigned int s,
-                          MAST::BoundaryConditionBase& p) {
+                          MAST::BoundaryConditionBase& bc) {
     
     // prepare the side finite element
-    libMesh::FEBase *fe_ptr    = nullptr;
-    libMesh::QBase  *qrule_ptr = nullptr;
-    _get_side_fe_and_qrule(_elem, s, &fe_ptr, &qrule_ptr, false);
-    std::auto_ptr<libMesh::FEBase> fe(fe_ptr);
-    std::auto_ptr<libMesh::QBase>  qrule(qrule_ptr);
-    
+    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe());
+    fe->init_for_side(_elem, s, false);
+
     const std::vector<Real> &JxW                 = fe->get_JxW();
     const std::vector<libMesh::Point>& normals   = fe->get_normals();
     
@@ -860,11 +1011,12 @@ symmetry_surface_residual(bool request_jacobian,
 
 bool
 MAST::ConservativeFluidElementBase::
-symmetry_surface_residual_sensitivity(bool request_jacobian,
+symmetry_surface_residual_sensitivity(const MAST::FunctionBase& p,
+                                      bool request_jacobian,
                                       RealVectorX& f,
                                       RealMatrixX& jac,
                                       const unsigned int s,
-                                      MAST::BoundaryConditionBase& p) {
+                                      MAST::BoundaryConditionBase& bc) {
     
     return false;
 }
@@ -879,7 +1031,7 @@ slip_wall_surface_residual(bool request_jacobian,
                            RealVectorX& f,
                            RealMatrixX& jac,
                            const unsigned int s,
-                           MAST::BoundaryConditionBase& p) {
+                           MAST::BoundaryConditionBase& bc) {
     
     // inviscid boundary condition without any diffusive component
     // conditions enforced are
@@ -888,12 +1040,9 @@ slip_wall_surface_residual(bool request_jacobian,
     // qi ni = 0       (since heat flux occurs only on no-slip wall and far-field bc)
     
     // prepare the side finite element
-    libMesh::FEBase *fe_ptr    = nullptr;
-    libMesh::QBase  *qrule_ptr = nullptr;
-    _get_side_fe_and_qrule(_elem, s, &fe_ptr, &qrule_ptr, false);
-    std::auto_ptr<libMesh::FEBase> fe(fe_ptr);
-    std::auto_ptr<libMesh::QBase>  qrule(qrule_ptr);
-    
+    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe());
+    fe->init_for_side(_elem, s, false);
+
     const std::vector<Real> &JxW                 = fe->get_JxW();
     const std::vector<libMesh::Point>& normals   = fe->get_normals();
     const std::vector<libMesh::Point>& qpoint    = fe->get_xyz();
@@ -936,12 +1085,12 @@ slip_wall_surface_residual(bool request_jacobian,
     MAST::NormalRotationFunctionBase<RealVectorX>
     *n_rot = nullptr;
     
-    if (p.contains("velocity"))
-        vel = &p.get<MAST::FieldFunction<RealVectorX> >("velocity");
-    if (p.contains("normal_rotation")) {
+    if (bc.contains("velocity"))
+        vel = &bc.get<MAST::FieldFunction<RealVectorX> >("velocity");
+    if (bc.contains("normal_rotation")) {
         
         MAST::FieldFunction<RealVectorX>&
-        tmp = p.get<MAST::FieldFunction<RealVectorX> >("normal_rotation");
+        tmp = bc.get<MAST::FieldFunction<RealVectorX> >("normal_rotation");
         n_rot = dynamic_cast<MAST::NormalRotationFunctionBase<RealVectorX>*>(&tmp);
     }
 
@@ -1027,7 +1176,7 @@ linearized_slip_wall_surface_residual(bool request_jacobian,
                                       RealVectorX& f,
                                       RealMatrixX& jac,
                                       const unsigned int s,
-                                      MAST::BoundaryConditionBase& p) {
+                                      MAST::BoundaryConditionBase& bc) {
     
     // inviscid boundary condition without any diffusive component
     // conditions enforced are
@@ -1036,12 +1185,9 @@ linearized_slip_wall_surface_residual(bool request_jacobian,
     // qi ni = 0       (since heat flux occurs only on no-slip wall and far-field bc)
     
     // prepare the side finite element
-    libMesh::FEBase *fe_ptr    = nullptr;
-    libMesh::QBase  *qrule_ptr = nullptr;
-    _get_side_fe_and_qrule(_elem, s, &fe_ptr, &qrule_ptr, false);
-    std::auto_ptr<libMesh::FEBase> fe(fe_ptr);
-    std::auto_ptr<libMesh::QBase>  qrule(qrule_ptr);
-    
+    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe());
+    fe->init_for_side(_elem, s, false);
+
     const std::vector<Real> &JxW                 = fe->get_JxW();
     const std::vector<libMesh::Point>& normals   = fe->get_normals();
     const std::vector<libMesh::Point>& qpoint    = fe->get_xyz();
@@ -1088,12 +1234,12 @@ linearized_slip_wall_surface_residual(bool request_jacobian,
     MAST::NormalRotationFunctionBase<RealVectorX>
     *n_rot = nullptr;
     
-    if (p.contains("velocity"))
-        vel = &p.get<MAST::FieldFunction<RealVectorX> >("velocity");
-    if (p.contains("normal_rotation")) {
+    if (bc.contains("velocity"))
+        vel = &bc.get<MAST::FieldFunction<RealVectorX> >("velocity");
+    if (bc.contains("normal_rotation")) {
         
         MAST::FieldFunction<RealVectorX>&
-        tmp = p.get<MAST::FieldFunction<RealVectorX> >("normal_rotation");
+        tmp = bc.get<MAST::FieldFunction<RealVectorX> >("normal_rotation");
         n_rot = dynamic_cast<MAST::NormalRotationFunctionBase<RealVectorX>*>(&tmp);
     }
     
@@ -1223,7 +1369,7 @@ noslip_wall_surface_residual(bool request_jacobian,
                              RealVectorX& f,
                              RealMatrixX& jac,
                              const unsigned int s,
-                             MAST::BoundaryConditionBase& p) {
+                             MAST::BoundaryConditionBase& bc) {
     
     // inviscid boundary condition without any diffusive component
     // conditions enforced are
@@ -1232,15 +1378,11 @@ noslip_wall_surface_residual(bool request_jacobian,
     // qi ni = 0       (since heat flux occurs only on no-slip wall and far-field bc)
     
     // prepare the side finite element
-    libMesh::FEBase *fe_ptr    = nullptr;
-    libMesh::QBase  *qrule_ptr = nullptr;
-    _get_side_fe_and_qrule(_elem, s, &fe_ptr, &qrule_ptr, true);
-    std::auto_ptr<libMesh::FEBase> fe(fe_ptr);
-    std::auto_ptr<libMesh::QBase>  qrule(qrule_ptr);
-    
+    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe());
+    fe->init_for_side(_elem, s, true);
+
     const std::vector<Real> &JxW                 = fe->get_JxW();
     const std::vector<libMesh::Point>& normals   = fe->get_normals();
-    const std::vector<libMesh::Point>& qpoint    = fe->get_xyz();
     
     const unsigned int
     dim    = _elem.dim(),
@@ -1284,12 +1426,12 @@ noslip_wall_surface_residual(bool request_jacobian,
     MAST::NormalRotationFunctionBase<RealVectorX>
     *n_rot = nullptr;
     
-    if (p.contains("velocity"))
-        vel = &p.get<MAST::FieldFunction<RealVectorX> >("velocity");
-    if (p.contains("normal_rotation")) {
+    if (bc.contains("velocity"))
+        vel = &bc.get<MAST::FieldFunction<RealVectorX> >("velocity");
+    if (bc.contains("normal_rotation")) {
         
         MAST::FieldFunction<RealVectorX>&
-        tmp = p.get<MAST::FieldFunction<RealVectorX> >("normal_rotation");
+        tmp = bc.get<MAST::FieldFunction<RealVectorX> >("normal_rotation");
         n_rot = dynamic_cast<MAST::NormalRotationFunctionBase<RealVectorX>*>(&tmp);
     }
 
@@ -1411,11 +1553,12 @@ noslip_wall_surface_residual(bool request_jacobian,
 
 bool
 MAST::ConservativeFluidElementBase::
-slip_wall_surface_residual_sensitivity(bool request_jacobian,
+slip_wall_surface_residual_sensitivity(const MAST::FunctionBase& p,
+                                       bool request_jacobian,
                                        RealVectorX& f,
                                        RealMatrixX& jac,
                                        const unsigned int s,
-                                       MAST::BoundaryConditionBase& p) {
+                                       MAST::BoundaryConditionBase& bc) {
     
     return false;
 }
@@ -1428,19 +1571,16 @@ far_field_surface_residual(bool request_jacobian,
                            RealVectorX& f,
                            RealMatrixX& jac,
                            const unsigned int s,
-                           MAST::BoundaryConditionBase& p) {
+                           MAST::BoundaryConditionBase& bc) {
     
     // conditions enforced are:
     // -- f_adv_i ni =  f_adv = f_adv(+) + f_adv(-)     (flux vector splitting for advection)
     // -- f_diff_i ni  = f_diff                         (evaluation of diffusion flux based on domain solution)
 
     // prepare the side finite element
-    libMesh::FEBase *fe_ptr    = nullptr;
-    libMesh::QBase  *qrule_ptr = nullptr;
-    _get_side_fe_and_qrule(_elem, s, &fe_ptr, &qrule_ptr, false);
-    std::auto_ptr<libMesh::FEBase> fe(fe_ptr);
-    std::auto_ptr<libMesh::QBase>  qrule(qrule_ptr);
-    
+    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe());
+    fe->init_for_side(_elem, s, false);
+
     const std::vector<Real> &JxW                 = fe->get_JxW();
     const std::vector<libMesh::Point>& normals   = fe->get_normals();
     
@@ -1557,11 +1697,12 @@ far_field_surface_residual(bool request_jacobian,
 
 bool
 MAST::ConservativeFluidElementBase::
-far_field_surface_residual_sensitivity(bool request_jacobian,
+far_field_surface_residual_sensitivity(const MAST::FunctionBase& p,
+                                       bool request_jacobian,
                                        RealVectorX& f,
                                        RealMatrixX& jac,
                                        const unsigned int s,
-                                       MAST::BoundaryConditionBase& p) {
+                                       MAST::BoundaryConditionBase& bc) {
     
     return false;
 }
@@ -1569,93 +1710,17 @@ far_field_surface_residual_sensitivity(bool request_jacobian,
 
 
 
-bool
-MAST::ConservativeFluidElementBase::
-volume_output_quantity (bool request_derivative,
-                        bool request_sensitivity,
-                        std::multimap<libMesh::subdomain_id_type, MAST::OutputFunctionBase*>& output) {
-
-    // no volume outputs to be evaluated for fluid element
-    
-    return (request_derivative || request_sensitivity);
-}
-
-
-
-
-bool
-MAST::ConservativeFluidElementBase::
-side_output_quantity (bool request_derivative,
-                      bool request_sensitivity,
-                      std::multimap<libMesh::boundary_id_type, MAST::OutputFunctionBase*>& output) {
-    
-    
-    typedef std::multimap<libMesh::boundary_id_type, MAST::OutputFunctionBase*> maptype;
-    
-    // iterate over the boundary ids given in the provided force map
-    std::pair<maptype::const_iterator, maptype::const_iterator> it;
-    
-    const libMesh::BoundaryInfo& binfo = *_system.system().get_mesh().boundary_info;
-    
-    // for each boundary id, check if any of the sides on the element
-    // has the associated boundary
-    
-    for (unsigned short int n=0; n<_elem.n_sides(); n++) {
-        
-        // if no boundary ids have been specified for the side, then
-        // move to the next side.
-        if (!binfo.n_boundary_ids(&_elem, n))
-            continue;
-        
-        // check to see if any of the specified boundary ids has a boundary
-        // condition associated with them
-        std::vector<libMesh::boundary_id_type> bc_ids = binfo.boundary_ids(&_elem, n);
-        std::vector<libMesh::boundary_id_type>::const_iterator bc_it = bc_ids.begin();
-        
-        for ( ; bc_it != bc_ids.end(); bc_it++) {
-            
-            // find the loads on this boundary and evaluate the f and jac
-            it = output.equal_range(*bc_it);
-            
-            for ( ; it.first != it.second; it.first++) {
-                
-                // apply all the types of loading
-                switch (it.first->second->type()) {
-                    case MAST::SURFACE_INTEGRATED_LIFT:
-                        _calculate_surface_integrated_load(request_derivative,
-                                                           request_sensitivity,
-                                                           n,
-                                                           *it.first->second);
-                        break;
-                        
-                    default:
-                        // should not get here
-                        libmesh_error();
-                        break;
-                }
-            }
-        }
-    }
-
-    return (request_derivative || request_sensitivity);
-}
-
-
-
 
 void
 MAST::ConservativeFluidElementBase::
 _calculate_surface_integrated_load(bool request_derivative,
-                                   bool request_sensitivity,
+                                   const MAST::FunctionBase* p,
                                    const unsigned int s,
-                                   MAST::OutputFunctionBase& output) {
+                                   MAST::OutputAssemblyElemOperations& output) {
     
     // prepare the side finite element
-    libMesh::FEBase *fe_ptr    = nullptr;
-    libMesh::QBase  *qrule_ptr = nullptr;
-    _get_side_fe_and_qrule(_elem, s, &fe_ptr, &qrule_ptr, false);
-    std::auto_ptr<libMesh::FEBase> fe(fe_ptr);
-    std::auto_ptr<libMesh::QBase>  qrule(qrule_ptr);
+    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe());
+    fe->init_for_side(_elem, s, false);
     
     const std::vector<Real> &JxW                 = fe->get_JxW();
     const std::vector<libMesh::Point>& normals   = fe->get_normals();
@@ -1714,7 +1779,7 @@ _calculate_surface_integrated_load(bool request_derivative,
         
 
         // calculate the sensitivity, if requested
-        if (request_sensitivity) {
+        if (p) {
             
             // calculate the solution sensitivity
             Bmat.right_multiply(vec1_n1, _sol_sens);
@@ -1739,7 +1804,7 @@ void
 MAST::ConservativeFluidElementBase::
 _initialize_fem_interpolation_operator(const unsigned int qp,
                                        const unsigned int dim,
-                                       const libMesh::FEBase& fe,
+                                       const MAST::FEBase& fe,
                                        MAST::FEMOperatorMatrix& Bmat) {
     
     const std::vector<std::vector<Real> >& phi_fe = fe.get_phi();
@@ -1763,7 +1828,7 @@ void
 MAST::ConservativeFluidElementBase::
 _initialize_fem_gradient_operator(const unsigned int qp,
                                   const unsigned int dim,
-                                  const libMesh::FEBase& fe,
+                                  const MAST::FEBase& fe,
                                   std::vector<MAST::FEMOperatorMatrix>& dBmat) {
     
     libmesh_assert(dBmat.size() == dim);
@@ -1779,6 +1844,33 @@ _initialize_fem_gradient_operator(const unsigned int qp,
         for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
             phi(i_nd) = dphi[i_nd][qp](i_dim);
         dBmat[i_dim].reinit(dim+2, phi); //  dU/dx_i
+    }
+}
+
+
+void
+MAST::ConservativeFluidElementBase::
+_initialize_fem_second_derivative_operator(const unsigned int qp,
+                                           const unsigned int dim,
+                                           const MAST::FEBase& fe,
+                                           std::vector<std::vector<MAST::FEMOperatorMatrix>>& d2Bmat) {
+    
+    libmesh_assert(d2Bmat.size() == dim);
+    for (unsigned int i=0; i<dim; i++)
+        libmesh_assert(d2Bmat[i].size() == dim);
+    
+    const std::vector<std::vector<libMesh::RealTensorValue> >& d2phi = fe.get_d2phi();
+    
+    const unsigned int n_phi = (unsigned int)d2phi.size();
+    RealVectorX phi = RealVectorX::Zero(n_phi);
+    
+    // now set the shape function values
+    for (unsigned int i_dim=0; i_dim<dim; i_dim++)
+        for (unsigned int j_dim=0; j_dim<dim; j_dim++) {
+        
+        for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
+            phi(i_nd) = d2phi[i_nd][qp](i_dim, j_dim);
+        d2Bmat[i_dim][j_dim].reinit(dim+2, phi); //  d2U/dx_i dx_j
     }
 }
 

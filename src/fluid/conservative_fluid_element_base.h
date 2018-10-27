@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -33,6 +33,7 @@ namespace MAST {
     class LocalElemBase;
     class BoundaryConditionBase;
     class FEMOperatorMatrix;
+    class OutputAssemblyElemOperations;
 
     
     /*!
@@ -45,8 +46,9 @@ namespace MAST {
         
     public:
         
-        ConservativeFluidElementBase(MAST::SystemInitialization& sys,
-                                     const libMesh::Elem& elem,
+        ConservativeFluidElementBase(MAST::SystemInitialization&  sys,
+                                     MAST::AssemblyBase&          assembly,
+                                     const libMesh::Elem&         elem,
                                      const MAST::FlightCondition& f);
         
         virtual ~ConservativeFluidElementBase();
@@ -113,14 +115,16 @@ namespace MAST {
          *   sensitivity of the internal force contribution to system residual
          */
         virtual bool
-        internal_residual_sensitivity (bool request_jacobian,
+        internal_residual_sensitivity (const MAST::FunctionBase& p,
+                                       bool request_jacobian,
                                        RealVectorX& f,
                                        RealMatrixX& jac);
         /*!
          *   sensitivity of the damping force contribution to system residual
          */
         virtual bool
-        velocity_residual_sensitivity (bool request_jacobian,
+        velocity_residual_sensitivity (const MAST::FunctionBase& p,
+                                       bool request_jacobian,
                                        RealVectorX& f,
                                        RealMatrixX& jac);
         
@@ -128,34 +132,19 @@ namespace MAST {
          *   sensitivity of the side external force contribution to system residual
          */
         bool
-        side_external_residual_sensitivity (bool request_jacobian,
+        side_external_residual_sensitivity (const MAST::FunctionBase& p,
+                                            bool request_jacobian,
                                             RealVectorX& f,
                                             RealMatrixX& jac,
                                             std::multimap<libMesh::boundary_id_type, MAST::BoundaryConditionBase*>& bc);
         
         /*!
-         *   evaluates an output quantity requested in the map over the
-         *   boundary of the element that may coincide with the boundary
-         *   identified in the map. The derivative with respect to the
-         *   state variables is provided if \p request_derivative is true.
+         *   surface integrated force
          */
-        virtual bool
-        volume_output_quantity (bool request_derivative,
-                                bool request_sensitivity,
-                                std::multimap<libMesh::subdomain_id_type, MAST::OutputFunctionBase*>& output);
-        
-        
-        /*!
-         *   evaluates an output quantity requested in the map over the
-         *   boundary of the element that may coincide with the boundary
-         *   identified in the map. The derivative with respect to the
-         *   state variables is provided if \p request_derivative is true.
-         */
-        virtual bool
-        side_output_quantity (bool request_derivative,
-                              bool request_sensitivity,
-                              std::multimap<libMesh::boundary_id_type, MAST::OutputFunctionBase*>& output);
-
+        virtual void
+        side_integrated_force(const unsigned int s,
+                              RealVectorX& f,
+                              RealMatrixX* dfdX = nullptr);
         
     protected:
         
@@ -168,16 +157,17 @@ namespace MAST {
                                                RealVectorX& f,
                                                RealMatrixX& jac,
                                                const unsigned int s,
-                                               MAST::BoundaryConditionBase& p);
+                                               MAST::BoundaryConditionBase& bc);
         
         /*!
          *
          */
-        virtual bool symmetry_surface_residual_sensitivity(bool request_jacobian,
+        virtual bool symmetry_surface_residual_sensitivity(const MAST::FunctionBase& p,
+                                                           bool request_jacobian,
                                                            RealVectorX& f,
                                                            RealMatrixX& jac,
                                                            const unsigned int s,
-                                                           MAST::BoundaryConditionBase& p);
+                                                           MAST::BoundaryConditionBase& bc);
         
         /*!
          *
@@ -186,7 +176,7 @@ namespace MAST {
                                                 RealVectorX& f,
                                                 RealMatrixX& jac,
                                                 const unsigned int s,
-                                                MAST::BoundaryConditionBase& p);
+                                                MAST::BoundaryConditionBase& bc);
 
         
         /*!
@@ -197,7 +187,7 @@ namespace MAST {
                                               RealVectorX& f,
                                               RealMatrixX& jac,
                                               const unsigned int s,
-                                              MAST::BoundaryConditionBase& p);
+                                              MAST::BoundaryConditionBase& bc);
 
         
         /*!
@@ -207,17 +197,18 @@ namespace MAST {
                                                   RealVectorX& f,
                                                   RealMatrixX& jac,
                                                   const unsigned int s,
-                                                  MAST::BoundaryConditionBase& p);
+                                                  MAST::BoundaryConditionBase& bc);
 
         
         /*!
          *
          */
-        virtual bool slip_wall_surface_residual_sensitivity(bool request_jacobian,
+        virtual bool slip_wall_surface_residual_sensitivity(const MAST::FunctionBase& p,
+                                                            bool request_jacobian,
                                                             RealVectorX& f,
                                                             RealMatrixX& jac,
                                                             const unsigned int s,
-                                                            MAST::BoundaryConditionBase& p);
+                                                            MAST::BoundaryConditionBase& bc);
         
         /*!
          *
@@ -226,32 +217,33 @@ namespace MAST {
                                                 RealVectorX& f,
                                                 RealMatrixX& jac,
                                                 const unsigned int s,
-                                                MAST::BoundaryConditionBase& p);
+                                                MAST::BoundaryConditionBase& bc);
         
         /*!
          *
          */
-        virtual bool far_field_surface_residual_sensitivity(bool request_jacobian,
+        virtual bool far_field_surface_residual_sensitivity(const MAST::FunctionBase& p,
+                                                            bool request_jacobian,
                                                             RealVectorX& f,
                                                             RealMatrixX& jac,
                                                             const unsigned int s,
-                                                            MAST::BoundaryConditionBase& p);
+                                                            MAST::BoundaryConditionBase& bc);
         
         
         /*!
          *   calculates the surface integrated force vector
          */
         void _calculate_surface_integrated_load(bool request_derivative,
-                                                bool request_sensitivity,
+                                                const MAST::FunctionBase* p,
                                                 const unsigned int s,
-                                                MAST::OutputFunctionBase& output);
+                                                MAST::OutputAssemblyElemOperations& output);
         
 
         /*!
          */
         void _initialize_fem_interpolation_operator(const unsigned int qp,
                                                     const unsigned int dim,
-                                                    const libMesh::FEBase& fe,
+                                                    const MAST::FEBase& fe,
                                                     MAST::FEMOperatorMatrix& Bmat);
         
         
@@ -266,8 +258,17 @@ namespace MAST {
          */
         void _initialize_fem_gradient_operator(const unsigned int qp,
                                                const unsigned int dim,
-                                               const libMesh::FEBase& fe,
+                                               const MAST::FEBase& fe,
                                                std::vector<MAST::FEMOperatorMatrix>& dBmat);
+
+        /*!
+         *   d2Bmat[i][j] is the derivative d2B/dxi dxj
+         */
+        void
+        _initialize_fem_second_derivative_operator(const unsigned int qp,
+                                                   const unsigned int dim,
+                                                   const MAST::FEBase& fe,
+                                                   std::vector<std::vector<MAST::FEMOperatorMatrix>>& d2Bmat);
         
     };
 }

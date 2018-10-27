@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -20,270 +20,84 @@
 // MAST includes
 #include "elasticity/structural_modal_eigenproblem_assembly.h"
 #include "elasticity/structural_element_base.h"
-#include "property_cards/element_property_card_base.h"
+#include "elasticity/structural_assembly.h"
+#include "property_cards/element_property_card_1D.h"
 #include "base/physics_discipline_base.h"
-#include "base/nonlinear_system.h"
-#include "numerics/utility.h"
 #include "base/system_initialization.h"
-
-// libMesh includes
-#include "libmesh/numeric_vector.h"
-#include "libmesh/sparse_matrix.h"
-#include "libmesh/dof_map.h"
-#include "libmesh/parameter_vector.h"
+#include "base/assembly_base.h"
+#include "level_set/level_set_intersection.h"
 
 
-MAST::StructuralModalEigenproblemAssembly::
-StructuralModalEigenproblemAssembly():
-MAST::EigenproblemAssembly() { }
+
+MAST::StructuralModalEigenproblemAssemblyElemOperations::
+StructuralModalEigenproblemAssemblyElemOperations():
+MAST::EigenproblemAssemblyElemOperations() { }
 
 
 
 
-MAST::StructuralModalEigenproblemAssembly::
-~StructuralModalEigenproblemAssembly()
+MAST::StructuralModalEigenproblemAssemblyElemOperations::
+~StructuralModalEigenproblemAssemblyElemOperations()
 { }
 
 
 
+
 void
-MAST::StructuralModalEigenproblemAssembly::
-eigenproblem_assemble(libMesh::SparseMatrix<Real> *A,
-                      libMesh::SparseMatrix<Real> *B)  {
+MAST::StructuralModalEigenproblemAssemblyElemOperations::
+set_elem_solution(const RealVectorX& sol) {
     
-    MAST::NonlinearSystem& eigen_sys =
-    dynamic_cast<MAST::NonlinearSystem&>(_system->system());
+    unsigned int
+    n = (unsigned int)sol.size();
     
-    libMesh::SparseMatrix<Real>
-    &matrix_A = *A,
-    &matrix_B = *B;
+    RealVectorX
+    zero = RealVectorX::Zero(n);
     
-    matrix_A.zero();
-    matrix_B.zero();
+    _physics_elem->set_solution    (sol);
+    _physics_elem->set_velocity    (zero); // set to zero vector for a quasi-steady analysis
+    _physics_elem->set_acceleration(zero); // set to zero vector for a quasi-steady analysis
     
-    // build localized solutions if needed
-    std::auto_ptr<libMesh::NumericVector<Real> >
-    localized_solution;
     
-    if (_base_sol)
-        localized_solution.reset(_build_localized_vector(eigen_sys,
-                                                         *_base_sol).release());
-    
-    // iterate over each element, initialize it and get the relevant
-    // analysis quantities
-    RealVectorX sol, dummy;
-    RealMatrixX mat_A, mat_B;
-    std::vector<libMesh::dof_id_type> dof_indices;
-    const libMesh::DofMap& dof_map = eigen_sys.get_dof_map();
-    std::auto_ptr<MAST::ElementBase> physics_elem;
-    
-    libMesh::MeshBase::const_element_iterator       el     =
-    eigen_sys.get_mesh().active_local_elements_begin();
-    const libMesh::MeshBase::const_element_iterator end_el =
-    eigen_sys.get_mesh().active_local_elements_end();
-    
-    for ( ; el != end_el; ++el) {
-        
-        const libMesh::Elem* elem = *el;
-
-        dof_map.dof_indices (elem, dof_indices);
-        
-        physics_elem.reset(_build_elem(*elem).release());
-        
-        // get the solution
-        unsigned int ndofs = (unsigned int)dof_indices.size();
-        sol.setZero(ndofs);
-        dummy.setZero(ndofs);
-        mat_A.setZero(ndofs, ndofs);
-        mat_B.setZero(ndofs, ndofs);
-        
-        // if the base solution is provided, then tell the element about it
-        if (_base_sol) {
-            for (unsigned int i=0; i<dof_indices.size(); i++)
-                sol(i) = (*localized_solution)(dof_indices[i]);
-        }
-        
-        physics_elem->set_solution(sol);
-        physics_elem->set_velocity(dummy);
-        physics_elem->set_acceleration(dummy);
-        
+    if (_incompatible_sol_assembly) {
         
         // set the incompatible mode solution if required by the
         // element
-        MAST::StructuralElementBase& p_elem =
-        dynamic_cast<MAST::StructuralElementBase&>(*physics_elem);
-        if (p_elem.if_incompatible_modes()) {
-            // check if the vector exists in the map
-            if (!_incompatible_sol.count(elem))
-                _incompatible_sol[elem] = RealVectorX::Zero(p_elem.incompatible_mode_size());
-            p_elem.set_incompatible_mode_solution(_incompatible_sol[elem]);
-        }
-
-        _elem_calculations(*physics_elem, mat_A, mat_B);
         
-        // copy to the libMesh matrix for further processing
-        DenseRealMatrix A, B;
-        MAST::copy(A, mat_A);
-        MAST::copy(B, mat_B);
+        MAST::StructuralElementBase& s_elem =
+        dynamic_cast<MAST::StructuralElementBase&>(*_physics_elem);
         
-        // constrain the element matrices.
-        dof_map.constrain_element_matrix(A, dof_indices);
-        dof_map.constrain_element_matrix(B, dof_indices);
-        
-        // add to the global matrices
-        matrix_A.add_matrix (A, dof_indices); // load independent
-        matrix_B.add_matrix (B, dof_indices); // load dependent
+        if (s_elem.if_incompatible_modes())
+            _incompatible_sol_assembly->set_elem_incompatible_sol(s_elem);
     }
-    
-    // finalize the data structures
-    A->close();
-    B->close();
 }
 
 
 
 
-
-bool
-MAST::StructuralModalEigenproblemAssembly::
-eigenproblem_sensitivity_assemble (const libMesh::ParameterVector& parameters,
-                                   const unsigned int i,
-                                   libMesh::SparseMatrix<Real>* sensitivity_A,
-                                   libMesh::SparseMatrix<Real>* sensitivity_B)  {
+void
+MAST::StructuralModalEigenproblemAssemblyElemOperations::
+set_elem_solution_sensitivity(const RealVectorX& sol) {
     
-    MAST::NonlinearSystem& eigen_sys =
-    dynamic_cast<MAST::NonlinearSystem&>(_system->system());
+    unsigned int
+    n = (unsigned int)sol.size();
     
+    RealVectorX
+    zero = RealVectorX::Zero(n);
     
-    libMesh::SparseMatrix<Real>
-    &matrix_A = *sensitivity_A,
-    &matrix_B = *sensitivity_B;
-    
-    matrix_A.zero();
-    matrix_B.zero();
-    
-    // build localized solutions if needed
-    std::auto_ptr<libMesh::NumericVector<Real> >
-    localized_solution,
-    localized_solution_sens;
-    
-    if (_base_sol) {
-        localized_solution.reset(_build_localized_vector(eigen_sys,
-                                                         *_base_sol).release());
-        
-        // make sure that the sensitivity was also provided
-        libmesh_assert(_base_sol_sensitivity);
-        localized_solution_sens.reset(_build_localized_vector(eigen_sys,
-                                                              *_base_sol_sensitivity).release());
-    }
-
-    // iterate over each element, initialize it and get the relevant
-    // analysis quantities
-    RealVectorX sol, dummy;
-    RealMatrixX mat_A, mat_B;
-    std::vector<libMesh::dof_id_type> dof_indices;
-    const libMesh::DofMap& dof_map = eigen_sys.get_dof_map();
-    std::auto_ptr<MAST::ElementBase> physics_elem;
-    
-    libMesh::MeshBase::const_element_iterator       el     =
-    eigen_sys.get_mesh().active_local_elements_begin();
-    const libMesh::MeshBase::const_element_iterator end_el =
-    eigen_sys.get_mesh().active_local_elements_end();
-    
-    for ( ; el != end_el; ++el) {
-        
-        const libMesh::Elem* elem = *el;
-        
-        dof_map.dof_indices (elem, dof_indices);
-        
-        physics_elem.reset(_build_elem(*elem).release());
-        
-        // get the solution
-        unsigned int ndofs = (unsigned int)dof_indices.size();
-        sol.setZero(ndofs);
-        dummy.setZero(ndofs);
-        mat_A.setZero(ndofs, ndofs);
-        mat_B.setZero(ndofs, ndofs);
-        
-        // if the base solution is provided, then tell the element about it
-        if (_base_sol) {
-            
-            for (unsigned int i=0; i<dof_indices.size(); i++)
-                sol(i) = (*localized_solution)(dof_indices[i]);
-        }
-        
-        physics_elem->sensitivity_param = _discipline->get_parameter(&(parameters[i].get()));
-        physics_elem->set_solution(sol);
-        physics_elem->set_velocity(dummy);
-        physics_elem->set_acceleration(dummy);
-        
-        // set the element's base solution sensitivity
-        if (_base_sol) {
-            
-            for (unsigned int i=0; i<dof_indices.size(); i++)
-                sol(i) = (*localized_solution_sens)(dof_indices[i]);
-        }
-        physics_elem->set_solution(sol, true);
-        
-        // set the incompatible mode solution if required by the
-        // element
-        MAST::StructuralElementBase& p_elem =
-        dynamic_cast<MAST::StructuralElementBase&>(*physics_elem);
-        if (p_elem.if_incompatible_modes()) {
-            // check if the vector exists in the map
-            if (!_incompatible_sol.count(elem))
-                _incompatible_sol[elem] = RealVectorX::Zero(p_elem.incompatible_mode_size());
-            p_elem.set_incompatible_mode_solution(_incompatible_sol[elem]);
-        }
-        
-        _elem_sensitivity_calculations(*physics_elem, mat_A, mat_B);
-        
-        // copy to the libMesh matrix for further processing
-        DenseRealMatrix A, B;
-        MAST::copy(A, mat_A);
-        MAST::copy(B, mat_B);
-        
-        // constrain the element matrices.
-        dof_map.constrain_element_matrix(A, dof_indices);
-        dof_map.constrain_element_matrix(B, dof_indices);
-        
-        // add to the global matrices
-        matrix_A.add_matrix (A, dof_indices); // load independent
-        matrix_B.add_matrix (B, dof_indices); // load dependent
-    }
-    
-    // finalize the data structures
-    sensitivity_A->close();
-    sensitivity_B->close();
-
-    return true;
-}
-
-
-
-std::auto_ptr<MAST::ElementBase>
-MAST::StructuralModalEigenproblemAssembly::_build_elem(const libMesh::Elem& elem) {
-    
-    
-    const MAST::ElementPropertyCardBase& p =
-    dynamic_cast<const MAST::ElementPropertyCardBase&>(_discipline->get_property_card(elem));
-    
-    MAST::ElementBase* rval =
-    MAST::build_structural_element(*_system, elem, p).release();
-    
-    return std::auto_ptr<MAST::ElementBase>(rval);
+    _physics_elem->set_solution    (sol, true);
 }
 
 
 
 void
-MAST::StructuralModalEigenproblemAssembly::
-_elem_calculations(MAST::ElementBase& elem,
-                   RealMatrixX& mat_A,
-                   RealMatrixX& mat_B) {
+MAST::StructuralModalEigenproblemAssemblyElemOperations::
+elem_calculations(RealMatrixX& mat_A,
+                  RealMatrixX& mat_B) {
+    
+    libmesh_assert(_physics_elem);
     
     MAST::StructuralElementBase& e =
-    dynamic_cast<MAST::StructuralElementBase&>(elem);
+    dynamic_cast<MAST::StructuralElementBase&>(*_physics_elem);
     
     RealVectorX vec = RealVectorX::Zero(mat_A.rows()); // dummy vector
     RealMatrixX mat = RealMatrixX::Zero(mat_A.rows(), mat_A.cols()); // dummy matrix
@@ -298,17 +112,21 @@ _elem_calculations(MAST::ElementBase& elem,
     // calculate the mass matrix components
     e.inertial_residual(true, vec, mat_B, mat, mat_A);
 }
-        
+
 
 
 
 void
-MAST::StructuralModalEigenproblemAssembly::
-_elem_sensitivity_calculations(MAST::ElementBase& elem,
-                               RealMatrixX& mat_A,
-                               RealMatrixX& mat_B) {
+MAST::StructuralModalEigenproblemAssemblyElemOperations::
+elem_sensitivity_calculations(const MAST::FunctionBase& f,
+                              bool base_sol,
+                              RealMatrixX& mat_A,
+                              RealMatrixX& mat_B) {
+    
+    libmesh_assert(_physics_elem);
+
     MAST::StructuralElementBase& e =
-    dynamic_cast<MAST::StructuralElementBase&>(elem);
+    dynamic_cast<MAST::StructuralElementBase&>(*_physics_elem);
     
     RealVectorX vec = RealVectorX::Zero(mat_A.rows()); // dummy vector
     RealMatrixX mat = RealMatrixX::Zero(mat_A.rows(), mat_A.cols()); // dummy matrix
@@ -316,17 +134,99 @@ _elem_sensitivity_calculations(MAST::ElementBase& elem,
     mat_B.setZero();
     
     // calculate the Jacobian components
-    e.internal_residual_sensitivity(true, vec, mat_A);
-    e.side_external_residual_sensitivity(true, vec, mat, mat_A, _discipline->side_loads());
-    e.volume_external_residual_sensitivity(true, vec, mat, mat_A, _discipline->volume_loads());
+    e.internal_residual_sensitivity(f, true, vec, mat_A);
+    e.side_external_residual_sensitivity(f, true, vec, mat, mat_A, _discipline->side_loads());
+    e.volume_external_residual_sensitivity(f, true, vec, mat, mat_A, _discipline->volume_loads());
     
     // calculate the mass matrix components
-    e.inertial_residual_sensitivity(true, vec, mat_B, mat, mat_A);
+    e.inertial_residual_sensitivity(f, true, vec, mat_B, mat, mat_A);
     
     // if the linearization is about a base state, then the sensitivity of
     // the base state will influence the sensitivity of the Jacobian
-    if (_base_sol)
+    if (base_sol)
         e.internal_residual_jac_dot_state_sensitivity(mat_A);
 }
 
+
+
+
+void
+MAST::StructuralModalEigenproblemAssemblyElemOperations::
+elem_topology_sensitivity_calculations(const MAST::FunctionBase& f,
+                                       bool base_sol,
+                                       const MAST::LevelSetIntersection& intersect,
+                                       const MAST::FieldFunction<RealVectorX>& vel,
+                                       RealMatrixX& mat_A,
+                                       RealMatrixX& mat_B) {
+    
+    libmesh_assert(_physics_elem);
+    libmesh_assert(f.is_topology_parameter());
+    const libMesh::Elem& elem = _physics_elem->elem();
+    
+    RealVectorX vec = RealVectorX::Zero(mat_A.rows()); // dummy vector
+    RealMatrixX mat = RealMatrixX::Zero(mat_A.rows(), mat_A.cols()); // dummy matrix
+    mat_A.setZero();
+    mat_B.setZero();
+
+    // sensitivity only exists at the boundary. So, we proceed with calculation
+    // only if this element has an intersection in the interior, or with a side.
+    if (intersect.if_elem_has_boundary()) {
+        
+        MAST::StructuralElementBase& e =
+        dynamic_cast<MAST::StructuralElementBase&>(*_physics_elem);
+        
+        if (intersect.has_side_on_interface(elem)) {
+            e.internal_residual_boundary_velocity(f,
+                                                  intersect.get_side_on_interface(elem),
+                                                  vel,
+                                                  true,
+                                                  vec,
+                                                  mat_A);
+            e.volume_external_residual_boundary_velocity(f,
+                                                         intersect.get_side_on_interface(elem),
+                                                         vel,
+                                                         _discipline->volume_loads(),
+                                                         true,
+                                                         vec,
+                                                         mat_A);
+            
+            e.inertial_residual_boundary_velocity(f,
+                                                  intersect.get_side_on_interface(elem),
+                                                  vel,
+                                                  true,
+                                                  vec,
+                                                  mat_B,
+                                                  mat,
+                                                  mat_A);
+
+            // if the linearization is about a base state, then the sensitivity of
+            // the base state will influence the sensitivity of the Jacobian
+            if (base_sol)
+                libmesh_assert(false); // to be implemented
+                //e.internal_residual_jac_dot_state_sensitivity(mat_A);
+            
+        }
+        
+    }
+}
+
+
+
+
+
+void
+MAST::StructuralModalEigenproblemAssemblyElemOperations::
+init(const libMesh::Elem& elem) {
+
+    libmesh_assert(!_physics_elem);
+    libmesh_assert(_system);
+    libmesh_assert(_assembly);
+
+    const MAST::ElementPropertyCardBase& p =
+    dynamic_cast<const MAST::ElementPropertyCardBase&>
+    (_discipline->get_property_card(elem));
+    
+    _physics_elem =
+    MAST::build_structural_element(*_system, *_assembly, elem, p).release();
+}
 

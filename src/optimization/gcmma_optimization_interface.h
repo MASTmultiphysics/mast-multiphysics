@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -29,6 +29,8 @@ extern "C" {
                         double *XMIN, double *XMAX,
                         double *DF0DX, double *DFDX);
     extern void asympg_(int *ITER, int *M, int *N,
+                        double *ALBEFA, double *GHINIT,
+                        double *GHDECR, double *GHINCR,
                         double *XVAL, double *XMIN, double *XMAX,
                         double *XOLD1, double *XOLD2,
                         double *XLOW, double *XUPP,
@@ -73,12 +75,29 @@ namespace MAST {
         
         virtual ~GCMMAOptimizationInterface()
         { }
+
+        virtual void
+        set_real_parameter(const std::string& nm, Real val);
         
+        virtual void
+        set_integer_parameter(const std::string& nm, int val);
+
         virtual void optimize();
         
         
     protected:
         
+        void _output_iteration_data(unsigned int i,
+                                    const std::vector<Real>& XVAL,
+                                    const std::vector<Real>& XMIN,
+                                    const std::vector<Real>& XMAX,
+                                    const std::vector<Real>& XLOW,
+                                    const std::vector<Real>& XUPP,
+                                    const std::vector<Real>& ALFA,
+                                    const std::vector<Real>& BETA);
+        
+        Real           _constr_penalty;
+        unsigned int   _max_inner_iters;
     };
 }
 

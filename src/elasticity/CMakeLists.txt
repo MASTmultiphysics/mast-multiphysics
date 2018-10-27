@@ -1,0 +1,61 @@
+target_sources(mast
+    PRIVATE
+        ${CMAKE_CURRENT_LIST_DIR}/bending_operator.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/bending_operator.h
+        ${CMAKE_CURRENT_LIST_DIR}/bending_structural_element.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/bending_structural_element.h
+        ${CMAKE_CURRENT_LIST_DIR}/bernoulli_bending_operator.h
+        ${CMAKE_CURRENT_LIST_DIR}/complex_normal_rotation_mesh_function.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/complex_normal_rotation_mesh_function.h
+        ${CMAKE_CURRENT_LIST_DIR}/dkt_bending_operator.h
+        ${CMAKE_CURRENT_LIST_DIR}/fluid_structure_assembly_elem_operations.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/fluid_structure_assembly_elem_operations.h
+        ${CMAKE_CURRENT_LIST_DIR}/fsi_generalized_aero_force_assembly.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/fsi_generalized_aero_force_assembly.h
+        ${CMAKE_CURRENT_LIST_DIR}/mindlin_bending_operator.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/mindlin_bending_operator.h
+        ${CMAKE_CURRENT_LIST_DIR}/normal_rotation_function_base.h
+        ${CMAKE_CURRENT_LIST_DIR}/normal_rotation_mesh_function.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/normal_rotation_mesh_function.h
+        ${CMAKE_CURRENT_LIST_DIR}/piston_theory_boundary_condition.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/piston_theory_boundary_condition.h
+        ${CMAKE_CURRENT_LIST_DIR}/solid_element_3d.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/solid_element_3d.h
+        ${CMAKE_CURRENT_LIST_DIR}/stress_assembly.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/stress_assembly.h
+        ${CMAKE_CURRENT_LIST_DIR}/stress_output_base.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/stress_output_base.h
+        ${CMAKE_CURRENT_LIST_DIR}/stress_temperature_adjoint.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/stress_temperature_adjoint.h
+        ${CMAKE_CURRENT_LIST_DIR}/structural_assembly.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/structural_assembly.h
+        ${CMAKE_CURRENT_LIST_DIR}/structural_buckling_eigenproblem_assembly.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/structural_buckling_eigenproblem_assembly.h
+        ${CMAKE_CURRENT_LIST_DIR}/structural_buckling_eigenproblem_elem_operations.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/structural_buckling_eigenproblem_elem_operations.h
+        ${CMAKE_CURRENT_LIST_DIR}/structural_element_1d.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/structural_element_1d.h
+        ${CMAKE_CURRENT_LIST_DIR}/structural_element_2d.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/structural_element_2d.h
+        ${CMAKE_CURRENT_LIST_DIR}/structural_element_base.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/structural_element_base.h
+        ${CMAKE_CURRENT_LIST_DIR}/structural_fluid_interaction_assembly.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/structural_fluid_interaction_assembly.h
+        ${CMAKE_CURRENT_LIST_DIR}/structural_modal_eigenproblem_assembly.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/structural_modal_eigenproblem_assembly.h
+        ${CMAKE_CURRENT_LIST_DIR}/structural_near_null_vector_space.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/structural_near_null_vector_space.h
+        ${CMAKE_CURRENT_LIST_DIR}/structural_nonlinear_assembly.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/structural_nonlinear_assembly.h
+        ${CMAKE_CURRENT_LIST_DIR}/structural_system.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/structural_system.h
+        ${CMAKE_CURRENT_LIST_DIR}/structural_system_initialization.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/structural_system_initialization.h
+        ${CMAKE_CURRENT_LIST_DIR}/structural_transient_assembly.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/structural_transient_assembly.h
+        ${CMAKE_CURRENT_LIST_DIR}/timoshenko_bending_operator.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/timoshenko_bending_operator.h)
+
+# Install MAST headers for this directory.
+install(DIRECTORY ./ DESTINATION include/elasticity
+        FILES_MATCHING PATTERN "*.h")

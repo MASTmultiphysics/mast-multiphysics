@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -135,19 +135,19 @@
 //    
 //    
 //    // Primitive solution for use
-//    std::auto_ptr<PrimitiveSolution> _primitive_sol;
+//    std::unique_ptr<PrimitiveSolution> _primitive_sol;
 //    
 //    // Flight condition data structure for initialization of element
-//    std::auto_ptr<FlightCondition> _flight_condition;
+//    std::unique_ptr<FlightCondition> _flight_condition;
 //    
 //    // Conservative solution for use
-//    std::auto_ptr<DenseRealVector> _cons_sol;
+//    std::unique_ptr<DenseRealVector> _cons_sol;
 //    
 //    // dummy infile
-//    std::auto_ptr<GetPot> _dummy_infile;
+//    std::unique_ptr<GetPot> _dummy_infile;
 //    
 //    // Element class for use
-//    std::auto_ptr<FluidElemBase> _fluid_elem;
+//    std::unique_ptr<FluidElemBase> _fluid_elem;
 //    
 //};
 

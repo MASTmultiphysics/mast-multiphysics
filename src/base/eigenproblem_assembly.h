@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2017  Manav Bhatia
+ * Copyright (C) 2013-2018  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -22,10 +22,14 @@
 
 // MAST includes
 #include "base/assembly_base.h"
-#include "base/eigensystem_assembly.h"
 
+// libMesh includes
+#include "libmesh/sparse_matrix.h"
 
 namespace MAST {
+    
+    // Forward declerations
+    class EigenproblemAssemblyElemOperations;
     
     
     /*!
@@ -34,8 +38,7 @@ namespace MAST {
      */
     
     class EigenproblemAssembly:
-    public MAST::AssemblyBase,
-    public MAST::EigenSystemAssembly {
+    public MAST::AssemblyBase {
         
     public:
         
@@ -50,29 +53,6 @@ namespace MAST {
          */
         virtual ~EigenproblemAssembly();
         
-
-        /*!
-         *   attaches a system to this discipline, and vice-a-versa
-         */
-        virtual void
-        attach_discipline_and_system(MAST::PhysicsDisciplineBase& discipline,
-                                     MAST::SystemInitialization& system);
-        
-        
-        /*!
-         *   Reattaches to the same system that was attached earlier.
-         *
-         *   This cannot be called if the clear_discipline_and_system() method
-         *   has been called.
-         */
-        virtual void
-        reattach_to_system();
-
-        /*!
-         *   clears association with a system to this discipline, and vice-a-versa
-         */
-        virtual void
-        clear_discipline_and_system( );
 
         /*!
          *    @returns a reference to the A matrix of the EigenSystem
@@ -98,16 +78,14 @@ namespace MAST {
         /**
          * Assembly function.  This function will be called
          * to assemble the sensitivity of eigenproblem matrices.
-         * The method provides dA/dp_i and dB/dpi for \par i ^th parameter
-         * in the vector \par parameters.
+         * The method provides dA/dp and dB/dp for \par f parameter.
          *
          * If the routine is not able to provide sensitivity for this parameter,
          * then it should return false, and the system will attempt to use
          * finite differencing.
          */
         virtual bool
-        eigenproblem_sensitivity_assemble (const libMesh::ParameterVector& parameters,
-                                           const unsigned int i,
+        eigenproblem_sensitivity_assemble (const MAST::FunctionBase& f,
                                            libMesh::SparseMatrix<Real>* sensitivity_A,
                                            libMesh::SparseMatrix<Real>* sensitivity_B);
         
@@ -156,26 +134,6 @@ namespace MAST {
         
         
     protected:
-        
-        /*!
-         *   performs the element calculations over \par elem, and returns
-         *   the element matrices for the eigenproblem
-         *   \f$ A x = \lambda B x \f$.
-         */
-        virtual void
-        _elem_calculations(MAST::ElementBase& elem,
-                           RealMatrixX& mat_A,
-                           RealMatrixX& mat_B) = 0;
-        
-        /*!
-         *   performs the element sensitivity calculations over \par elem,
-         *   and returns the element matrices for the eigenproblem
-         *   \f$ A x = \lambda B x \f$.
-         */
-        virtual void
-        _elem_sensitivity_calculations(MAST::ElementBase& elem,
-                                       RealMatrixX& mat_A,
-                                       RealMatrixX& mat_B) = 0;
         
         /*!
          *   base solution about which this eigenproblem is defined. This
