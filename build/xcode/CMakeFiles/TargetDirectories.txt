@@ -1,5 +1,0 @@
-/Users/manav/Documents/codes/inhouse/mast/mast_master/build/xcode/CMakeFiles/mast_tests.dir
-/Users/manav/Documents/codes/inhouse/mast/mast_master/build/xcode/CMakeFiles/example_driver.dir
-/Users/manav/Documents/codes/inhouse/mast/mast_master/build/xcode/CMakeFiles/mast.dir
-/Users/manav/Documents/codes/inhouse/mast/mast_master/build/xcode/CMakeFiles/ALL_BUILD.dir
-/Users/manav/Documents/codes/inhouse/mast/mast_master/build/xcode/CMakeFiles/ZERO_CHECK.dir
