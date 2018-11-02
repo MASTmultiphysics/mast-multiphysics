@@ -292,6 +292,10 @@ namespace MAST {
                             const std::string & data_name,
                             const bool read_binary_vectors);
 
+        void
+        project_vector_without_dirichlet (libMesh::NumericVector<Real> & new_vector,
+                                          libMesh::FunctionBase<Real>& f) const;
+        
     protected:
         
         

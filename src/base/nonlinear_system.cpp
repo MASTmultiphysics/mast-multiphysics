@@ -44,6 +44,9 @@
 #include "libmesh/mesh_tools.h"
 #include "libmesh/utility.h"
 #include "libmesh/libmesh_version.h"
+#include "libmesh/generic_projector.h"
+#include "libmesh/wrapped_functor.h"
+#include "libmesh/fem_context.h"
 
 
 MAST::NonlinearSystem::NonlinearSystem(libMesh::EquationSystems& es,
@@ -953,3 +956,72 @@ MAST::NonlinearSystem::read_in_vector(libMesh::NumericVector<Real>& vec,
     this->get_mesh().fix_broken_node_and_element_numbering();
 }
 
+
+
+void
+MAST::NonlinearSystem::
+project_vector_without_dirichlet (libMesh::NumericVector<Real> & new_vector,
+                                  libMesh::FunctionBase<Real>& f) const {
+    
+    LOG_SCOPE ("project_vector_without_dirichlet()", "NonlinearSystem");
+    
+    libMesh::ConstElemRange active_local_range
+    (this->get_mesh().active_local_elements_begin(),
+     this->get_mesh().active_local_elements_end() );
+    
+    libMesh::VectorSetAction<Real> setter(new_vector);
+    
+    const unsigned int n_variables = this->n_vars();
+    
+    std::vector<unsigned int> vars(n_variables);
+    for (unsigned int i=0; i != n_variables; ++i)
+        vars[i] = i;
+    
+    // Use a typedef to make the calling sequence for parallel_for() a bit more readable
+    typedef
+    libMesh::GenericProjector<libMesh::FEMFunctionWrapper<Real>, libMesh::FEMFunctionWrapper<libMesh::Gradient>,
+    Real, libMesh::VectorSetAction<Real>> FEMProjector;
+    
+    libMesh::WrappedFunctor<Real>     f_fem(f);
+    libMesh::FEMFunctionWrapper<Real> fw(f_fem);
+    
+    libMesh::Threads::parallel_for
+    (active_local_range,
+     FEMProjector(*this, fw, nullptr, setter, vars));
+    
+    // Also, load values into the SCALAR dofs
+    // Note: We assume that all SCALAR dofs are on the
+    // processor with highest ID
+    if (this->processor_id() == (this->n_processors()-1))
+    {
+        // FIXME: Do we want to first check for SCALAR vars before building this? [PB]
+        libMesh::FEMContext context( *this );
+        
+        const libMesh::DofMap & dof_map = this->get_dof_map();
+        for (unsigned int var=0; var<this->n_vars(); var++)
+            if (this->variable(var).type().family == libMesh::SCALAR)
+            {
+                // FIXME: We reinit with an arbitrary element in case the user
+                //        doesn't override FEMFunctionBase::component. Is there
+                //        any use case we're missing? [PB]
+                libMesh::Elem * el = const_cast<libMesh::Elem *>(*(this->get_mesh().active_local_elements_begin()));
+                context.pre_fe_reinit(*this, el);
+                
+                std::vector<libMesh::dof_id_type> SCALAR_indices;
+                dof_map.SCALAR_dof_indices (SCALAR_indices, var);
+                const unsigned int n_SCALAR_dofs =
+                libMesh::cast_int<unsigned int>(SCALAR_indices.size());
+                
+                for (unsigned int i=0; i<n_SCALAR_dofs; i++)
+                {
+                    const libMesh::dof_id_type global_index = SCALAR_indices[i];
+                    const unsigned int component_index =
+                    this->variable_scalar_number(var,i);
+                    
+                    new_vector.set(global_index, f_fem.component(context, component_index, libMesh::Point(), this->time));
+                }
+            }
+    }
+    
+    new_vector.close();
+}
