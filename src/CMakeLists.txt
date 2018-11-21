@@ -15,12 +15,14 @@ target_include_directories(mast
             ${PETSc_INCLUDE_DIRS}
             ${SLEPc_INCLUDE_DIRS}
             ${libMesh_INCLUDE_DIRS}
+            ${EIGEN3_INCLUDE_DIR}
             ${Boost_INCLUDE_DIRS}) # Could possibly move this into src/optimization since it is closer to where Boost is actually used.
 
 # Add libraries.
 target_link_libraries(mast
         PUBLIC
             ${MPI_CXX_LIBRARIES}
+            ${LAPACK_LIBRARIES}
             ${PETSc_LIBRARIES}
             ${SLEPc_LIBRARIES}
             ${libMesh_LIBRARIES})
