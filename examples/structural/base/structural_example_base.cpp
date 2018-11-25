@@ -912,7 +912,7 @@ MAST::Examples::StructuralExampleBase::transient_solve() {
     MAST::StructuralTransientAssemblyElemOperations   elem_ops;
     MAST::StressAssembly                              stress_assembly;
     MAST::StressStrainOutputBase                      stress_elem_ops;
-    MAST::SecondOrderNewmarkTransientSolver solver;
+    MAST::SecondOrderNewmarkTransientSolver           solver;
 
     stress_elem_ops.set_participating_elements_to_all();
     assembly.set_discipline_and_system(*_discipline, *_sys_init);

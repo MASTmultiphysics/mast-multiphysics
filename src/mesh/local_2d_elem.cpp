@@ -25,7 +25,6 @@
 MAST::Local2DElem::Local2DElem(const libMesh::Elem& elem):
 MAST::LocalElemBase(elem) {
     
-    libmesh_assert(false); // to be revisited.
    _create_local_elem();
 }
 

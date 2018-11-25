@@ -460,7 +460,7 @@ residual_and_jacobian_blocked (const libMesh::NumericVector<Real>& X,
     // localize the base solution, if it was provided
     if (_base_sol)
         localized_base_solution.reset(build_localized_vector(nonlin_sys,
-                                                              *_base_sol).release());
+                                                             *_base_sol).release());
     
     
 

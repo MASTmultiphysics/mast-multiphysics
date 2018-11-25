@@ -26,7 +26,6 @@ MAST::Local1DElem::Local1DElem(const libMesh::Elem& elem,
 MAST::LocalElemBase(elem),
 _local_y(y) {
 
-    libmesh_assert(false); // to be revisited.
     _create_local_elem();
     libmesh_assert_greater(_local_y.norm(), 0.);
 }

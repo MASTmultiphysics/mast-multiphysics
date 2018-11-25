@@ -31,10 +31,12 @@ namespace MAST {
     // forward declerations
     class ComplexSolverBase;
     class ComplexAssemblyBase;
+    class ComplexAssemblyElemOperations;
     class PressureFunction;
     class FrequencyDomainPressureFunction;
     class ComplexMeshFieldFunction;
     class StructuralFluidInteractionAssembly;
+    class FluidStructureAssemblyElemOperations;
     class Parameter;
     
     class FSIGeneralizedAeroForceAssembly:
@@ -64,11 +66,13 @@ namespace MAST {
          *   a non-null pointer only when structural_comm is a valid 
          *   communicator.
          */
-        void init(MAST::ComplexSolverBase*                complex_solver,
-                  MAST::ComplexAssemblyBase*              complex_assembly,
-                  MAST::PressureFunction*                 pressure_func,
-                  MAST::FrequencyDomainPressureFunction*  freq_pressure_func,
-                  MAST::ComplexMeshFieldFunction*         displ_func);
+        void init(MAST::FluidStructureAssemblyElemOperations&  fsi_elem_ops,
+                  MAST::ComplexSolverBase&                     complex_solver,
+                  MAST::ComplexAssemblyBase&                   complex_assembly,
+                  MAST::ComplexAssemblyElemOperations&         fluid_elem_ops,
+                  MAST::PressureFunction&                      pressure_func,
+                  MAST::FrequencyDomainPressureFunction&       freq_pressure_func,
+                  MAST::ComplexMeshFieldFunction&              displ_func);
         
         
         /*!

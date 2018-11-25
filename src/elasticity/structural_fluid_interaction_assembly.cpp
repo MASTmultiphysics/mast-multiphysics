@@ -59,7 +59,7 @@ MAST::StructuralFluidInteractionAssembly::
 void
 MAST::StructuralFluidInteractionAssembly::
 clear_discipline_and_system( ) {
-
+    
     _base_sol             = nullptr;
     _base_sol_sensitivity = nullptr;
     
@@ -80,7 +80,7 @@ MAST::StructuralFluidInteractionAssembly::set_base_solution(const libMesh::Numer
         _base_sol             = &sol;
     }
     else {
-
+        
         libmesh_assert(!_base_sol_sensitivity);
         _base_sol_sensitivity = &sol;
     }
@@ -107,11 +107,13 @@ assemble_reduced_order_quantity
 (std::vector<libMesh::NumericVector<Real>*>& basis,
  std::map<MAST::StructuralQuantityType, RealMatrixX*>& mat_qty_map) {
     
+    libmesh_assert(_elem_ops);
+    
     MAST::NonlinearSystem& nonlin_sys = _system->system();
     
     unsigned int
     n_basis = (unsigned int)basis.size();
-
+    
     // initialize the quantities to zero matrices
     std::map<MAST::StructuralQuantityType, RealMatrixX*>::iterator
     it  = mat_qty_map.begin(),
@@ -119,7 +121,7 @@ assemble_reduced_order_quantity
     
     for ( ; it != end; it++)
         *it->second = RealMatrixX::Zero(n_basis, n_basis);
-
+    
     // iterate over each element, initialize it and get the relevant
     // analysis quantities
     RealVectorX vec, sol;
@@ -132,7 +134,7 @@ assemble_reduced_order_quantity
     std::unique_ptr<libMesh::NumericVector<Real> > localized_solution;
     if (_base_sol)
         localized_solution.reset(build_localized_vector(nonlin_sys,
-                                                         *_base_sol).release());
+                                                        *_base_sol).release());
     
     // also create localized solution vectos for the bassis vectors
     std::vector<libMesh::NumericVector<Real>*> localized_basis(n_basis);
@@ -185,7 +187,7 @@ assemble_reduced_order_quantity
         _elem_ops->set_elem_velocity(vec);     // set to zero value
         _elem_ops->set_elem_acceleration(vec); // set to zero value
         
-
+        
         // now iterative over all qty types in the map and assemble them
         it   = mat_qty_map.begin();
         end  = mat_qty_map.end();
@@ -218,7 +220,7 @@ assemble_reduced_order_quantity
     // delete the localized basis vectors
     for (unsigned int i=0; i<basis.size(); i++)
         delete localized_basis[i];
-
+    
     // sum the matrix and provide it to each processor
     it  = mat_qty_map.begin();
     end = mat_qty_map.end();
@@ -253,7 +255,7 @@ assemble_reduced_order_quantity_sensitivity
     
     for ( ; it != end; it++)
         *it->second = RealMatrixX::Zero(n_basis, n_basis);
-
+    
     // iterate over each element, initialize it and get the relevant
     // analysis quantities
     RealVectorX vec, sol, dsol;
@@ -273,9 +275,9 @@ assemble_reduced_order_quantity_sensitivity
         libmesh_assert(_base_sol_sensitivity);
         
         localized_solution.reset(build_localized_vector(nonlin_sys,
-                                                         *_base_sol).release());
+                                                        *_base_sol).release());
         localized_solution_sens.reset(build_localized_vector(nonlin_sys,
-                                                              *_base_sol_sensitivity).release());
+                                                             *_base_sol_sensitivity).release());
     }
     
     // also create localized solution vectos for the bassis vectors
@@ -296,7 +298,7 @@ assemble_reduced_order_quantity_sensitivity
     
     MAST::FluidStructureAssemblyElemOperations
     &ops = dynamic_cast<MAST::FluidStructureAssemblyElemOperations&>(*_elem_ops);
-
+    
     for ( ; el != end_el; ++el) {
         
         const libMesh::Elem* elem = *el;
@@ -311,9 +313,9 @@ assemble_reduced_order_quantity_sensitivity
         vec.setZero(ndofs);
         mat.setZero(ndofs, ndofs);
         basis_mat.setZero(ndofs, n_basis);
-
+        
         _elem_ops->init(*elem);
-
+        
         for (unsigned int i=0; i<dof_indices.size(); i++) {
             
             if (_base_sol) {
@@ -343,7 +345,7 @@ assemble_reduced_order_quantity_sensitivity
             
             ops.set_qty_to_evaluate(it->first);
             ops.elem_sensitivity_calculations(f, true, vec, mat);
-
+            
             DenseRealMatrix m;
             MAST::copy(m, mat);
             dof_map.constrain_element_matrix(m, dof_indices);

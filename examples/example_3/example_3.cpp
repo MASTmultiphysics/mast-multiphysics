@@ -27,6 +27,7 @@
 #include "elasticity/structural_modal_eigenproblem_assembly.h"
 #include "elasticity/structural_near_null_vector_space.h"
 #include "elasticity/fsi_generalized_aero_force_assembly.h"
+#include "elasticity/fluid_structure_assembly_elem_operations.h"
 #include "boundary_condition/dirichlet_boundary_condition.h"
 #include "property_cards/solid_1d_section_element_property_card.h"
 #include "property_cards/isotropic_material_property_card.h"
@@ -46,443 +47,442 @@
 #include "libmesh/nonlinear_solver.h"
 
 int main(int argc, char* argv[]) {
-  libMesh::LibMeshInit init(argc, argv);
-
-  const unsigned int
-  dim                 = 2,
-  nx_divs             = 3,
-  ny_divs             = 1,
-  panel_bc_id         = 10,
-  symmetry_bc_id      = 11,
-  n_modes             = 10,    // number of structural modes
-  n_k_divs            = 10,    // number of reduced frequency divisions
-  max_bisection_iters = 10;    // number of bisection search iterations for root
-
-  const Real
-  k_upper             = 0.75,  // reduced frequencies
-  k_lower             = 0.05,
-  tol                 = 1e-4;  // convergence of flutter solver
-
-
-  //////////////////////////////////////////////////////////////////////
-  //    SETUP THE FLUID DATA
-  //////////////////////////////////////////////////////////////////////
-
-  libMesh::ElemType
-  elem_type           = libMesh::QUAD4;
-  libMesh::FEFamily
-  fe_family           = libMesh::LAGRANGE;
-  libMesh::Order
-  fe_order            = libMesh::FIRST;
-
-  //libMesh::FEFamily
-  //fe_family           = libMesh::SZABAB;
-
-  // setting up fluid mesh
-  std::vector<Real>
-  x_div_loc           = {-1.5, 0., 0.3, 1.8},
-  x_relative_dx       = {20., 1., 1., 20.},
-  y_div_loc           = {0., 1.5},
-  y_relative_dx       = {1., 20.};
-
-  std::vector<unsigned int>
-  x_divs              = {20, 10, 20},
-  y_divs              = {20};      
-
-  Real length = x_div_loc[2]-x_div_loc[1];
-
-  MAST::MeshInitializer::CoordinateDivisions
-  x_coord_divs,
-  y_coord_divs;
-
-  x_coord_divs.init(nx_divs, x_div_loc, x_relative_dx, x_divs);
-  y_coord_divs.init(ny_divs, y_div_loc, y_relative_dx, y_divs);
-
-  std::vector<MAST::MeshInitializer::CoordinateDivisions*>
-  divs = {&x_coord_divs, &y_coord_divs};
-
-  // initialize the fluid mesh
-  libMesh::ParallelMesh
-  fluid_mesh(init.comm());
-
-  // initialize the mesh
-  MAST::PanelMesh2D().init(0.,               // t/c
-                           false,            // if cos bump
-                           0,                // n max bumps
-                           divs,
-                           fluid_mesh,
-                           elem_type);
-
-  // initialize equation system
-  libMesh::EquationSystems
-  fluid_eq_sys(fluid_mesh);
-  
-  // add the system to be used for fluid analysis
-  MAST::NonlinearSystem
-  &fluid_sys = fluid_eq_sys.add_system<MAST::NonlinearSystem>("fluid");
-
-  // fluid properties, boundary conditions
-  MAST::ConservativeFluidDiscipline 
-  fluid_discipline(fluid_eq_sys);
-
-  // variables
-  MAST::ConservativeFluidSystemInitialization 
-  fluid_sys_init(fluid_sys, 
-                 fluid_sys.name(), 
-                 libMesh::FEType(fe_order, fe_family), dim);
-
-  // keep fluid boundary on all partitions
-  // TODO: 
-  MAST::AugmentGhostElementSendListObj augment_send_list_obj(fluid_sys);
-  fluid_sys.get_dof_map().attach_extra_send_list_object(augment_send_list_obj);
-
-  fluid_eq_sys.init();
-
-  // print the information
-  fluid_mesh.print_info();
-  fluid_eq_sys.print_info();
-  
-  // create the boundary conditions for slip-wall and far-field
-  MAST::BoundaryConditionBase 
-  far_field(MAST::FAR_FIELD),
-  symm_wall(MAST::SYMMETRY_WALL),
-  slip_wall(MAST::SLIP_WALL);
-
-  // tell the physics about boundary conditions
-  fluid_discipline.add_side_load(   panel_bc_id, slip_wall);
-  fluid_discipline.add_side_load(symmetry_bc_id, symm_wall);
-  for (unsigned int i=1; i<=3; i++)
-    fluid_discipline.add_side_load(i, far_field);
-
-  // set fluid properties
-  MAST::FlightCondition flight_cond;
-  flight_cond.flow_unit_vector << 1, 0, 0;
-  flight_cond.ref_chord        = length;
-  flight_cond.mach             = 0.5;
-  flight_cond.gas_property.cp  = 1003.;
-  flight_cond.gas_property.cv  = 716.;
-  flight_cond.gas_property.T   = 300.;
-  flight_cond.gas_property.rho = 1.05;
-  flight_cond.init();
-
-  // tell the discipline about the fluid values
-  fluid_discipline.set_flight_condition(flight_cond);
-  
-  // define parameters
-  MAST::Parameter 
-  omega    (   "omega", 0.),
-  velocity ("velocity", flight_cond.velocity_magnitude()),
-  b_ref    (   "b_ref", length);
-  
-  
-  // now define the constant field functions based on this
-  MAST::ConstantFieldFunction 
-  omega_f    (   "omega", omega),
-  velocity_f ("velocity", velocity),
-  b_ref_f    (   "b_ref", b_ref);
-  
-  // TODO: replace with interpolation
-  MAST::PressureFunction
-  pressure_function(fluid_sys_init, flight_cond);
-  pressure_function.set_calculate_cp(true);
-
-  MAST::FrequencyDomainPressureFunction
-  freq_domain_pressure_function(fluid_sys_init, flight_cond);
-  freq_domain_pressure_function.set_calculate_cp(true);
-  
-  //////////////////////////////////////////////////////////////////////
-  //    SETUP THE STRUCTURAL DATA
-  //////////////////////////////////////////////////////////////////////
-
-  x_div_loc = {0.0, 0.3};
-  x_relative_dx = {1., 1.};
-  x_divs = {10};
-
-  MAST::MeshInitializer::CoordinateDivisions
-  x_coord_divs_struct;
-  x_coord_divs_struct.init(1, x_div_loc, x_relative_dx, x_divs);
-
-  divs = {&x_coord_divs_struct};
-
-  // create the mesh
-  libMesh::SerialMesh structural_mesh(init.comm());
-
-  MAST::MeshInitializer().init(divs, structural_mesh, libMesh::EDGE2);
-
-  // create the equation system
-  libMesh::EquationSystems structural_eq_sys(structural_mesh);
-
-  // create the libmesh system
-  MAST::NonlinearSystem
-  &structural_sys = structural_eq_sys.add_system<MAST::NonlinearSystem>("structural");
-  structural_sys.set_eigenproblem_type(libMesh::GHEP);
-
-  // initialize the system to the right set of variables
-  MAST::PhysicsDisciplineBase
-  structural_discipline(structural_eq_sys);
-
-  MAST::StructuralSystemInitialization
-  structural_sys_init(structural_sys, 
-                       structural_sys.name(), 
-                       libMesh::FEType(fe_order, fe_family));
-
-  // create and add the boundary condition and loads
-  MAST::DirichletBoundaryCondition 
-  dirichlet_left,
-  dirichlet_right;
-  std::vector<unsigned int> constrained_vars = {0, 1, 2, 3}; // u, v, w, tx
-  dirichlet_left.init (0, constrained_vars);
-  dirichlet_right.init(1, constrained_vars);
-
-  structural_discipline.add_dirichlet_bc(0, dirichlet_left);
-  structural_discipline.add_dirichlet_bc(1, dirichlet_right);
-  structural_discipline.init_system_dirichlet_bc(structural_sys);
-
-  MAST::ConstrainBeamDofs constraint_beam_dofs(structural_sys);
-  structural_sys.attach_constraint_object(constraint_beam_dofs);
-
-  // initialize the equation system
-  structural_eq_sys.init();
-
-  // print information
-  structural_mesh.print_info();
-  structural_eq_sys.print_info();
-
-  // TODO: replace this functionality in conservative_fluid_element
-  MAST::ComplexMeshFieldFunction 
-  displ(structural_sys_init, "frequency_domain_displacement");
-
-  MAST::ComplexNormalRotationMeshFunction
-  normal_rot("frequency_domain_normal_rotation", displ);
-
-  slip_wall.add(displ);
-  slip_wall.add(normal_rot);
-
-  // set up structural eigenvalue problem
-  structural_sys.eigen_solver->set_position_of_spectrum(libMesh::LARGEST_MAGNITUDE);
-  structural_sys.set_exchange_A_and_B(true);
-  structural_sys.set_n_requested_eigenvalues(n_modes);
-
-  // create the property functions and add them to the material property card
-  MAST::Parameter
-  thy        ("thy", 0.0015),
-  thz        ("thz", 1.00),
-  rho        ("rho", 2.7e3),
-  E          ("E", 72.e9),
-  nu         ("nu", 0.33),
-  kappa      ("kappa", 5./6.),
-  zero       ("zero", 0.);
-
-  MAST::ConstantFieldFunction
-  thy_f      ("hy", thy),
-  thz_f      ("hz", thz),
-  rho_f      ("rho", rho),
-  E_f        ("E", E),
-  nu_f       ("nu", nu),
-  kappa_f    ("kappa", kappa),
-  hyoff_f    ("hy_off", zero),
-  hzoff_f    ("hz_off", zero);
-
-  MAST::IsotropicMaterialPropertyCard 
-  m_card;
-  m_card.add(rho_f);
-  m_card.add(E_f);
-  m_card.add(nu_f);
-  m_card.add(kappa_f);
-
-  MAST::Solid1DSectionElementPropertyCard
-  p_card;
-  p_card.set_bending_model(MAST::TIMOSHENKO);
-
-  // tell the card about the orientation
-  p_card.y_vector() = libMesh::Point(0., 1., 0.);
-
-  // add the section properties to the card
-  p_card.add(thy_f);
-  p_card.add(thz_f);
-  p_card.add(hyoff_f);
-  p_card.add(hzoff_f);
-  
-  // tell the section property about the material property
-  p_card.set_material(m_card);
-  
-  p_card.init();
+    libMesh::LibMeshInit init(argc, argv);
     
-  structural_discipline.set_property_for_subdomain(0, p_card);
-
-  // pressure boundary condition for the beam
-  MAST::BoundaryConditionBase pressure(MAST::SURFACE_PRESSURE);
-  pressure.add(pressure_function);
-  pressure.add(freq_domain_pressure_function);
-  structural_discipline.add_volume_load(0, pressure);
-
-  //////////////////////////////////////////////////////////////////////
-  //    SETUP THE FLUTTER SOLVER
-  //////////////////////////////////////////////////////////////////////
-
-  // initialize the frequency function
-  MAST::FrequencyFunction 
-  freq_function("freq", omega_f, velocity_f, b_ref_f);
-  freq_function.if_nondimensional(true);
-
-  /////////////////////////////////////////////////////////////////
-  //  INITIALIZE FLUID SOLUTION
-  /////////////////////////////////////////////////////////////////
-  // the modal and flutter problems are solved on rank 0, while
-  // the fluid solution is setup on the global communicator
-  
-  // initialize the solution
-  RealVectorX s(4);
-  s << flight_cond.rho(), 
-       flight_cond.rho_u1(), 
-       flight_cond.rho_u2(),
-       flight_cond.rho_e();
-
-  // create the vector for storing the base solution.
-  // we will swap this out with the system solution, initialize and
-  // then swap it back.
-  libMesh::NumericVector<Real>& base_sol =
-  fluid_sys.add_vector("fluid_base_solution");
-  fluid_sys.solution->swap(base_sol);
-  fluid_sys_init.initialize_solution(s);
-  fluid_sys.solution->swap(base_sol);
-
-  // create the nonlinear assembly object
-  MAST::FrequencyDomainLinearizedComplexAssemblyElemOperations 
-  elem_ops;
-
-  MAST::ComplexAssemblyBase
-  complex_assembly;
-
-  // now set up the assembly objects
-  elem_ops.set_discipline_and_system(fluid_discipline, fluid_sys_init);
-
-  complex_assembly.set_discipline_and_system(fluid_discipline, fluid_sys_init);
-  complex_assembly.set_base_solution(base_sol);
-  elem_ops.set_frequency_function(freq_function);
-
-  pressure_function.init(base_sol);
-
-  ////////////////////////////////////////////////////////////
-  // STRUCTURAL MODAL EIGENSOLUTION
-  ////////////////////////////////////////////////////////////
+    const unsigned int
+    dim                 = 2,
+    nx_divs             = 3,
+    ny_divs             = 1,
+    panel_bc_id         = 4,
+    symmetry_bc_id      = 5,
+    n_modes             = 10,    // number of structural modes
+    n_k_divs            = 10,    // number of reduced frequency divisions
+    max_bisection_iters = 10;    // number of bisection search iterations for root
     
-  MAST::EigenproblemAssembly modal_assembly;
-  MAST::StructuralModalEigenproblemAssemblyElemOperations modal_elem_ops;
+    const Real
+    k_upper             = 0.75,  // reduced frequencies
+    k_lower             = 0.05,
+    tol                 = 1e-4;  // convergence of flutter solver
+    
+    
+    //////////////////////////////////////////////////////////////////////
+    //    SETUP THE FLUID DATA
+    //////////////////////////////////////////////////////////////////////
+    
+    libMesh::ElemType
+    elem_type           = libMesh::QUAD4;
+    libMesh::FEFamily
+    fe_family           = libMesh::LAGRANGE;
+    libMesh::Order
+    fe_order            = libMesh::FIRST;
+    
+    //libMesh::FEFamily
+    //fe_family           = libMesh::SZABAB;
+    
+    // setting up fluid mesh
+    std::vector<Real>
+    x_div_loc           = {-1.5, 0., 0.3, 1.8},
+    x_relative_dx       = {20., 1., 1., 20.},
+    y_div_loc           = {0., 1.5},
+    y_relative_dx       = {1., 20.};
+    
+    std::vector<unsigned int>
+    x_divs              = {20, 10, 20},
+    y_divs              = {20};
+    
+    Real length = x_div_loc[2]-x_div_loc[1];
+    
+    MAST::MeshInitializer::CoordinateDivisions
+    x_coord_divs,
+    y_coord_divs;
+    
+    x_coord_divs.init(nx_divs, x_div_loc, x_relative_dx, x_divs);
+    y_coord_divs.init(ny_divs, y_div_loc, y_relative_dx, y_divs);
+    
+    std::vector<MAST::MeshInitializer::CoordinateDivisions*>
+    divs = {&x_coord_divs, &y_coord_divs};
+    
+    // initialize the fluid mesh
+    libMesh::ParallelMesh
+    fluid_mesh(init.comm());
+    
+    // initialize the mesh
+    MAST::PanelMesh2D().init(0.,               // t/c
+                             false,            // if cos bump
+                             0,                // n max bumps
+                             divs,
+                             fluid_mesh,
+                             elem_type);
+    
+    // initialize equation system
+    libMesh::EquationSystems
+    fluid_eq_sys(fluid_mesh);
+    
+    // add the system to be used for fluid analysis
+    MAST::NonlinearSystem
+    &fluid_sys = fluid_eq_sys.add_system<MAST::NonlinearSystem>("fluid");
+    
+    // fluid properties, boundary conditions
+    MAST::ConservativeFluidDiscipline
+    fluid_discipline(fluid_eq_sys);
+    
+    // variables
+    MAST::ConservativeFluidSystemInitialization
+    fluid_sys_init(fluid_sys,
+                   fluid_sys.name(),
+                   libMesh::FEType(fe_order, fe_family), dim);
+    
+    // keep fluid boundary on all partitions
+    // TODO:
+    MAST::AugmentGhostElementSendListObj augment_send_list_obj(fluid_sys);
+    fluid_sys.get_dof_map().attach_extra_send_list_object(augment_send_list_obj);
+    
+    fluid_eq_sys.init();
+    
+    // print the information
+    fluid_mesh.print_info();
+    fluid_eq_sys.print_info();
+    
+    // create the boundary conditions for slip-wall and far-field
+    MAST::BoundaryConditionBase
+    far_field(MAST::FAR_FIELD),
+    symm_wall(MAST::SYMMETRY_WALL),
+    slip_wall(MAST::SLIP_WALL);
+    
+    // tell the physics about boundary conditions
+    fluid_discipline.add_side_load(   panel_bc_id, slip_wall);
+    fluid_discipline.add_side_load(symmetry_bc_id, symm_wall);
+    for (unsigned int i=1; i<=3; i++)
+        fluid_discipline.add_side_load(i, far_field);
+    
+    // set fluid properties
+    MAST::FlightCondition flight_cond;
+    flight_cond.flow_unit_vector << 1, 0, 0;
+    flight_cond.ref_chord        = length;
+    flight_cond.mach             = 0.5;
+    flight_cond.gas_property.cp  = 1003.;
+    flight_cond.gas_property.cv  = 716.;
+    flight_cond.gas_property.T   = 300.;
+    flight_cond.gas_property.rho = 1.05;
+    flight_cond.init();
+    
+    // tell the discipline about the fluid values
+    fluid_discipline.set_flight_condition(flight_cond);
+    
+    // define parameters
+    MAST::Parameter
+    omega    (   "omega", 0.),
+    velocity ("velocity", flight_cond.velocity_magnitude()),
+    b_ref    (   "b_ref", length);
+    
+    
+    // now define the constant field functions based on this
+    MAST::ConstantFieldFunction
+    omega_f    (   "omega", omega),
+    velocity_f ("velocity", velocity),
+    b_ref_f    (   "b_ref", b_ref);
+    
+    // TODO: replace with interpolation
+    MAST::PressureFunction
+    pressure_function(fluid_sys_init, flight_cond);
+    pressure_function.set_calculate_cp(true);
+    
+    MAST::FrequencyDomainPressureFunction
+    freq_domain_pressure_function(fluid_sys_init, flight_cond);
+    freq_domain_pressure_function.set_calculate_cp(true);
+    
+    //////////////////////////////////////////////////////////////////////
+    //    SETUP THE STRUCTURAL DATA
+    //////////////////////////////////////////////////////////////////////
+    
+    x_div_loc = {0.0, 0.3};
+    x_relative_dx = {1., 1.};
+    x_divs = {10};
+    
+    MAST::MeshInitializer::CoordinateDivisions
+    x_coord_divs_struct;
+    x_coord_divs_struct.init(1, x_div_loc, x_relative_dx, x_divs);
+    
+    divs = {&x_coord_divs_struct};
+    
+    // create the mesh
+    libMesh::SerialMesh structural_mesh(init.comm());
+    
+    MAST::MeshInitializer().init(divs, structural_mesh, libMesh::EDGE2);
+    
+    // create the equation system
+    libMesh::EquationSystems structural_eq_sys(structural_mesh);
+    
+    // create the libmesh system
+    MAST::NonlinearSystem
+    &structural_sys = structural_eq_sys.add_system<MAST::NonlinearSystem>("structural");
+    structural_sys.set_eigenproblem_type(libMesh::GHEP);
+    
+    // initialize the system to the right set of variables
+    MAST::PhysicsDisciplineBase
+    structural_discipline(structural_eq_sys);
+    
+    MAST::StructuralSystemInitialization
+    structural_sys_init(structural_sys,
+                        structural_sys.name(),
+                        libMesh::FEType(fe_order, fe_family));
+    
+    // create and add the boundary condition and loads
+    MAST::DirichletBoundaryCondition
+    dirichlet_left,
+    dirichlet_right;
+    std::vector<unsigned int> constrained_vars = {0, 1, 2, 3}; // u, v, w, tx
+    dirichlet_left.init (0, constrained_vars);
+    dirichlet_right.init(1, constrained_vars);
+    
+    structural_discipline.add_dirichlet_bc(0, dirichlet_left);
+    structural_discipline.add_dirichlet_bc(1, dirichlet_right);
+    structural_discipline.init_system_dirichlet_bc(structural_sys);
+    
+    MAST::ConstrainBeamDofs constraint_beam_dofs(structural_sys);
+    structural_sys.attach_constraint_object(constraint_beam_dofs);
+    
+    // initialize the equation system
+    structural_eq_sys.init();
+    
+    // print information
+    structural_mesh.print_info();
+    structural_eq_sys.print_info();
+    
+    // TODO: replace this functionality in conservative_fluid_element
+    MAST::ComplexMeshFieldFunction
+    displ(structural_sys_init, "frequency_domain_displacement");
+    
+    MAST::ComplexNormalRotationMeshFunction
+    normal_rot("frequency_domain_normal_rotation", displ);
+    
+    slip_wall.add(displ);
+    slip_wall.add(normal_rot);
+    
+    // set up structural eigenvalue problem
+    structural_sys.eigen_solver->set_position_of_spectrum(libMesh::LARGEST_MAGNITUDE);
+    structural_sys.set_exchange_A_and_B(true);
+    structural_sys.set_n_requested_eigenvalues(n_modes);
+    
+    // create the property functions and add them to the material property card
+    MAST::Parameter
+    thy        ("thy", 0.0015),
+    thz        ("thz", 1.00),
+    rho        ("rho", 2.7e3),
+    E          ("E", 72.e9),
+    nu         ("nu", 0.33),
+    kappa      ("kappa", 5./6.),
+    zero       ("zero", 0.);
+    
+    MAST::ConstantFieldFunction
+    thy_f      ("hy", thy),
+    thz_f      ("hz", thz),
+    rho_f      ("rho", rho),
+    E_f        ("E", E),
+    nu_f       ("nu", nu),
+    kappa_f    ("kappa", kappa),
+    hyoff_f    ("hy_off", zero),
+    hzoff_f    ("hz_off", zero);
+    
+    MAST::IsotropicMaterialPropertyCard
+    m_card;
+    m_card.add(rho_f);
+    m_card.add(E_f);
+    m_card.add(nu_f);
+    m_card.add(kappa_f);
+    
+    MAST::Solid1DSectionElementPropertyCard
+    p_card;
+    p_card.set_bending_model(MAST::TIMOSHENKO);
+    
+    // tell the card about the orientation
+    p_card.y_vector() = libMesh::Point(0., 1., 0.);
+    
+    // add the section properties to the card
+    p_card.add(thy_f);
+    p_card.add(thz_f);
+    p_card.add(hyoff_f);
+    p_card.add(hzoff_f);
+    
+    // tell the section property about the material property
+    p_card.set_material(m_card);
+    
+    p_card.init();
+    
+    structural_discipline.set_property_for_subdomain(0, p_card);
+    
+    // pressure boundary condition for the beam
+    MAST::BoundaryConditionBase pressure(MAST::SURFACE_PRESSURE);
+    pressure.add(pressure_function);
+    pressure.add(freq_domain_pressure_function);
+    structural_discipline.add_volume_load(0, pressure);
+    
+    //////////////////////////////////////////////////////////////////////
+    //    SETUP THE FLUTTER SOLVER
+    //////////////////////////////////////////////////////////////////////
+    
+    // initialize the frequency function
+    MAST::FrequencyFunction
+    freq_function("freq", omega_f, velocity_f, b_ref_f);
+    freq_function.if_nondimensional(true);
+    
+    /////////////////////////////////////////////////////////////////
+    //  INITIALIZE FLUID SOLUTION
+    /////////////////////////////////////////////////////////////////
+    // the modal and flutter problems are solved on rank 0, while
+    // the fluid solution is setup on the global communicator
+    
+    // initialize the solution
+    RealVectorX s(4);
+    s << flight_cond.rho(),
+    flight_cond.rho_u1(),
+    flight_cond.rho_u2(),
+    flight_cond.rho_e();
+    
+    // create the vector for storing the base solution.
+    // we will swap this out with the system solution, initialize and
+    // then swap it back.
+    libMesh::NumericVector<Real>& base_sol =
+    fluid_sys.add_vector("fluid_base_solution");
+    fluid_sys.solution->swap(base_sol);
+    fluid_sys_init.initialize_solution(s);
+    fluid_sys.solution->swap(base_sol);
+    
+    // create the nonlinear assembly object
+    MAST::FrequencyDomainLinearizedComplexAssemblyElemOperations fluid_elem_ops;
+    MAST::ComplexAssemblyBase                                    complex_assembly;
+    
+    // now set up the assembly objects
+    fluid_elem_ops.set_discipline_and_system(fluid_discipline, fluid_sys_init);
+    complex_assembly.set_discipline_and_system(fluid_discipline, fluid_sys_init);
+    complex_assembly.set_base_solution(base_sol);
+    fluid_elem_ops.set_frequency_function(freq_function);
+    
+    pressure_function.init(base_sol);
+    
+    ////////////////////////////////////////////////////////////
+    // STRUCTURAL MODAL EIGENSOLUTION
+    ////////////////////////////////////////////////////////////
+    
+    MAST::EigenproblemAssembly modal_assembly;
+    MAST::StructuralModalEigenproblemAssemblyElemOperations modal_elem_ops;
+    
+    modal_assembly.set_discipline_and_system(structural_discipline, structural_sys_init);
+    modal_elem_ops.set_discipline_and_system(structural_discipline, structural_sys_init);
+    
+    structural_sys.initialize_condensed_dofs(structural_discipline);
+    
+    MAST::StructuralNearNullVectorSpace nsp;
+    structural_sys.nonlinear_solver->nearnullspace_object = &nsp;
+    
+    structural_sys.eigenproblem_solve(modal_elem_ops, modal_assembly);
+    modal_assembly.clear_discipline_and_system();
+    modal_elem_ops.clear_discipline_and_system();
+    
+    // Get the number of converged eigen pairs.
+    unsigned int
+    nconv = std::min(structural_sys.get_n_converged_eigenvalues(),
+                     structural_sys.get_n_requested_eigenvalues());
+    
+    std::vector<libMesh::NumericVector<Real>*> basis(nconv, nullptr);
+    
+    libMesh::ExodusII_IO writer(structural_mesh);
+    
+    for (unsigned int i=0; i<nconv; i++) {
+        
+        // create a vector to store the basis
+        basis[i] = structural_sys.solution->zero_clone().release();
+        
+        // now write the eigenvalue
+        Real
+        re = 0.,
+        im = 0.;
+        structural_sys.get_eigenpair(i, re, im, *basis[i]);
+        
+        libMesh::out
+        << std::setw(35) << std::fixed << std::setprecision(15)
+        << re << std::endl;
+        
+        // We write the file in the ExodusII format.
+        // copy the solution for output
+        structural_sys.solution->swap(*basis[i]);
+        writer.write_timestep("modes.exo",
+                              structural_eq_sys,
+                              i+1, i);
+        structural_sys.solution->swap(*basis[i]);
+    }
+    
+    ///////////////////////////////////////////////////////////////////
+    // FLUTTER SOLUTION
+    ///////////////////////////////////////////////////////////////////
+    
+    MAST::UGFlutterSolver flutter_solver;
+    
+    // solver for complex solution
+    MAST::ComplexSolverBase solver;
+    
+    MAST::FSIGeneralizedAeroForceAssembly      fsi_assembly;
+    MAST::FluidStructureAssemblyElemOperations fsi_elem_ops;
+    fsi_assembly.set_discipline_and_system(structural_discipline, structural_sys_init);
+    fsi_elem_ops.set_discipline_and_system(structural_discipline, structural_sys_init);
 
-  modal_assembly.set_discipline_and_system(structural_discipline, structural_sys_init);
-  modal_elem_ops.set_discipline_and_system(structural_discipline, structural_sys_init);
-
-  structural_sys.initialize_condensed_dofs(structural_discipline);
-
-  MAST::StructuralNearNullVectorSpace nsp;
-  structural_sys.nonlinear_solver->nearnullspace_object = &nsp;
-
-  structural_sys.eigenproblem_solve(modal_elem_ops, modal_assembly);
-  modal_assembly.clear_discipline_and_system();
-  modal_elem_ops.clear_discipline_and_system();
-
-  // Get the number of converged eigen pairs.
-  unsigned int
-  nconv = std::min(structural_sys.get_n_converged_eigenvalues(),
-                   structural_sys.get_n_requested_eigenvalues());
-
-  std::vector<libMesh::NumericVector<Real>*> basis(nconv, nullptr);
-
-  libMesh::ExodusII_IO writer(structural_mesh);
-
-  for (unsigned int i=0; i<nconv; i++) {
-      
-      // create a vector to store the basis
-      basis[i] = structural_sys.solution->zero_clone().release();
-      
-      // now write the eigenvalue
-      Real
-      re = 0.,
-      im = 0.;
-      structural_sys.get_eigenpair(i, re, im, *basis[i]);
-      
-      libMesh::out
-      << std::setw(35) << std::fixed << std::setprecision(15)
-      << re << std::endl;
-      
-      // We write the file in the ExodusII format.
-      // copy the solution for output
-      structural_sys.solution->swap(*basis[i]);
-      writer.write_timestep("modes.exo",
-                             structural_eq_sys,
-                             i+1, i);
-      structural_sys.solution->swap(*basis[i]);
-  }
-
-  ///////////////////////////////////////////////////////////////////
-  // FLUTTER SOLUTION
-  ///////////////////////////////////////////////////////////////////
-
-  MAST::UGFlutterSolver flutter_solver;
-
-  // solver for complex solution
-  MAST::ComplexSolverBase solver;
-  
-
-  MAST::FSIGeneralizedAeroForceAssembly fsi_assembly;
-  fsi_assembly.set_discipline_and_system(structural_discipline,
-                                            structural_sys_init);
-
-  fsi_assembly.init(&solver,                       // fluid complex solver
-                    &complex_assembly,
-                    &pressure_function,
-                    &freq_domain_pressure_function,
-                    &displ);
-
-  flutter_solver.attach_assembly(fsi_assembly);
-  flutter_solver.initialize(omega,
-                            b_ref,
-                            flight_cond.rho(),
-                            k_lower,            // lower kr
-                            k_upper,            // upper kr
-                            n_k_divs,           // number of divisions
-                            basis);             // basis vectors
-
-  std::ostringstream oss;
-  oss << "flutter_output_" << init.comm().rank() << ".txt";
-  if (init.comm().rank() == 0)
-    flutter_solver.set_output_file(oss.str());
-
-  // find the roots for the specified divisions
-  flutter_solver.scan_for_roots();
-  flutter_solver.print_crossover_points();
-  
-  // now ask the flutter solver to return the critical flutter root,
-  // which is the flutter cross-over point at the lowest velocity
-  std::pair<bool, MAST::FlutterRootBase*>
-  sol = flutter_solver.find_critical_root(tol, max_bisection_iters);
-  
-  flutter_solver.print_sorted_roots();
-  fsi_assembly.clear_discipline_and_system();
-  flutter_solver.clear_assembly_object();
-
-  // make sure solution was found
-  libmesh_assert(sol.first);
-  
-  MAST::plot_structural_flutter_solution("structural_flutter_mode.exo",
-                                         structural_sys,
-                                         sol.second->eig_vec_right,
-                                         basis);
-
-  MAST::plot_fluid_flutter_solution("fluid_flutter_mode.exo",
-                                    structural_sys,
-                                    fluid_sys,
-                                    displ,
-                                    solver,
-                                    sol.second->eig_vec_right,
-                                    basis);
-
-  complex_assembly.clear_discipline_and_system();
-
-  // delete the basis vectors
-  for (unsigned int i=0; i<basis.size(); i++)
-      if (basis[i]) delete basis[i];
-
-  return 0;
+    fsi_assembly.init(fsi_elem_ops,
+                      solver,                       // fluid complex solver
+                      complex_assembly,
+                      fluid_elem_ops,
+                      pressure_function,
+                      freq_domain_pressure_function,
+                      displ);
+    
+    flutter_solver.attach_assembly(fsi_assembly);
+    flutter_solver.initialize(omega,
+                              b_ref,
+                              flight_cond.rho(),
+                              k_lower,            // lower kr
+                              k_upper,            // upper kr
+                              n_k_divs,           // number of divisions
+                              basis);             // basis vectors
+    
+    std::ostringstream oss;
+    oss << "flutter_output_" << init.comm().rank() << ".txt";
+    if (init.comm().rank() == 0)
+        flutter_solver.set_output_file(oss.str());
+    
+    // find the roots for the specified divisions
+    flutter_solver.scan_for_roots();
+    flutter_solver.print_crossover_points();
+    
+    // now ask the flutter solver to return the critical flutter root,
+    // which is the flutter cross-over point at the lowest velocity
+    std::pair<bool, MAST::FlutterRootBase*>
+    sol = flutter_solver.find_critical_root(tol, max_bisection_iters);
+    
+    flutter_solver.print_sorted_roots();
+    fsi_assembly.clear_discipline_and_system();
+    fsi_elem_ops.clear_discipline_and_system();
+    flutter_solver.clear_assembly_object();
+    
+    // make sure solution was found
+    libmesh_assert(sol.first);
+    
+    MAST::plot_structural_flutter_solution("structural_flutter_mode.exo",
+                                           structural_sys,
+                                           sol.second->eig_vec_right,
+                                           basis);
+    
+    MAST::plot_fluid_flutter_solution("fluid_flutter_mode.exo",
+                                      structural_sys,
+                                      fluid_sys,
+                                      displ,
+                                      solver,
+                                      sol.second->eig_vec_right,
+                                      basis);
+    
+    complex_assembly.clear_discipline_and_system();
+    
+    // delete the basis vectors
+    for (unsigned int i=0; i<basis.size(); i++)
+        if (basis[i]) delete basis[i];
+    
+    return 0;
 }

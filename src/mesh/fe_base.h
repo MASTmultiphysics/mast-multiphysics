@@ -73,7 +73,7 @@ namespace MAST {
          *   provides an interface for elements where a local element is used
          *   as a surrogate for the geometric element, as is the case for
          *   1D and 2D elements that can live in 3D space. This is applicable
-         *   problems arising from heat conduction and structural problems.
+         *   to problems arising from heat conduction and structural problems.
          */
         virtual void init(const MAST::LocalElemBase& elem,
                           const std::vector<libMesh::Point>* pts = nullptr);
