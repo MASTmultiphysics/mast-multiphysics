@@ -1,7 +1,7 @@
-add_executable(ex1_axial_bar_extension
-    ex1_axial_bar_extension.cpp)
+add_executable(example_1
+               ex1_axial_bar_extension.cpp)
 
-target_link_libraries(ex1_axial_bar_extension mast)
+target_link_libraries(example_1 mast)
 
-install(TARGETS ex1_axial_bar_extension
+install(TARGETS example_1
     RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/examples)

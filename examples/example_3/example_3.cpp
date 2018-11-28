@@ -478,9 +478,6 @@ int main(int argc, char* argv[]) {
     sol = flutter_solver.find_critical_root(tol, max_bisection_iters);
     
     flutter_solver.print_sorted_roots();
-    fsi_assembly.clear_discipline_and_system();
-    fsi_elem_ops.clear_discipline_and_system();
-    flutter_solver.clear_assembly_object();
     
     // make sure solution was found
     libmesh_assert(sol.first);
@@ -498,6 +495,9 @@ int main(int argc, char* argv[]) {
                                       sol.second->eig_vec_right,
                                       basis);
     
+    fsi_assembly.clear_discipline_and_system();
+    fsi_elem_ops.clear_discipline_and_system();
+    flutter_solver.clear_assembly_object();
     complex_assembly.clear_discipline_and_system();
     
     // delete the basis vectors
