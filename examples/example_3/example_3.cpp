@@ -6,6 +6,7 @@
 #include "examples/fluid/meshing/mesh_initializer.h"
 #include "examples/base/augment_ghost_elem_send_list.h"
 #include "examples/base/plot_results.h"
+#include "examples/base/input_wrapper.h"
 #include "constrain_beam_dofs.h"
 #include "base/nonlinear_system.h"
 #include "base/parameter.h"
@@ -36,6 +37,9 @@
 
 // libMesh includes
 #include "libmesh/libmesh.h"
+#include "libmesh/string_to_enum.h"
+#include "libmesh/enum_order.h"
+#include "libmesh/enum_fe_family.h"
 #include "libmesh/enum_elem_type.h"    // ElemType
 #include "libmesh/fe_type.h"           // FEFamily, Order
 #include "libmesh/serial_mesh.h"
@@ -47,50 +51,63 @@
 #include "libmesh/nonlinear_solver.h"
 
 int main(int argc, char* argv[]) {
+
     libMesh::LibMeshInit init(argc, argv);
-    
+
+    // initialize the wrapper to read input parameters. This will check
+    // if the executable parameters included a parameter of type
+    // input=<filename>. If included, then the input parameters will be read
+    // from this filename. Otherwise, the parameters will be read from the
+    // executable arguments. The wrapper uses default values for parameters
+    // if none are provided.
+    MAST::Examples::GetPotWrapper
+    input(argc, argv, "input");
+
     const unsigned int
     dim                 = 2,
     nx_divs             = 3,
     ny_divs             = 1,
-    panel_bc_id         = 4,
-    symmetry_bc_id      = 5,
-    n_modes             = 10,    // number of structural modes
-    n_k_divs            = 10,    // number of reduced frequency divisions
-    max_bisection_iters = 10;    // number of bisection search iterations for root
+    panel_bc_id         = 4,     // this is the id of the boundary set for panel
+    symmetry_bc_id      = 5,     // this is the id of the boundary set for remaining region on the bottom
+    n_modes             = input("n_modes", "number of structural modes to use for creation of reduced order flutter eigenproblem", 8),
+    n_divs_ff_to_panel  = input("n_divs_farfield_to_panel", "number of element divisions from far-field to panel", 30),
+    n_divs_panel        = input("n_divs_panel", "number of element divisions on panel", 10),
+    n_k_divs            = input("n_k_divs", "number of divisions between upper and lower reduced frequencies for search of flutter root", 10),
+    max_bisection_iters = input("flutter_max_bisection_it", "maximum number of bisection iterations to search flutter root after initial sweep of reduced frequencies", 10);
     
     const Real
-    k_upper             = 0.75,  // reduced frequencies
-    k_lower             = 0.05,
-    tol                 = 1e-4;  // convergence of flutter solver
+    k_upper             = input("k_upper", "upper value of reduced frequency for flutter solver", 0.75),
+    k_lower             = input("k_lower", "lower value of reduced frequency for flutter solver", 0.00),
+    tol                 = input(  "g_tol", "tolerace for convergence of damping of flutter root", 1e-4),
+    length              = input("panel_l",                                     "length of panel",  0.3),
+    ff_to_panel_l       = input("farfield_to_l_ratio", "Ratio of distance of farfield boundary to panel length",  5.0),
+    ff_to_panel_e_size  = input("farfield_to_panel_elem_size_ratio", "Ratio of element size at far-field to element size at panel",  20.0);
     
     
     //////////////////////////////////////////////////////////////////////
     //    SETUP THE FLUID DATA
     //////////////////////////////////////////////////////////////////////
-    
-    libMesh::ElemType
-    elem_type           = libMesh::QUAD4;
-    libMesh::FEFamily
-    fe_family           = libMesh::LAGRANGE;
+    std::string s;
+    s                   = input("fe_order", "order of finite element shape basis functions",     "first");
     libMesh::Order
-    fe_order            = libMesh::FIRST;
-    
-    //libMesh::FEFamily
-    //fe_family           = libMesh::SZABAB;
+    fe_order            = libMesh::Utility::string_to_enum<libMesh::Order>(s);
+    s                   = input("fluid_elem_type",  "type of geometric element in the fluid mesh",     "quad4");
+    libMesh::ElemType
+    elem_type           = libMesh::Utility::string_to_enum<libMesh::ElemType>(s);
+    s                   = input("fe_family",      "family of finite element shape functions", "lagrange");
+    libMesh::FEFamily
+    fe_family           = libMesh::Utility::string_to_enum<libMesh::FEFamily>(s);
     
     // setting up fluid mesh
     std::vector<Real>
-    x_div_loc           = {-1.5, 0., 0.3, 1.8},
-    x_relative_dx       = {20., 1., 1., 20.},
-    y_div_loc           = {0., 1.5},
-    y_relative_dx       = {1., 20.};
+    x_div_loc           = {-length*ff_to_panel_l, 0., length, length*(1.+ff_to_panel_l)},
+    x_relative_dx       = {ff_to_panel_e_size, 1., 1., ff_to_panel_e_size},
+    y_div_loc           = {0., length*ff_to_panel_l},
+    y_relative_dx       = {1., ff_to_panel_e_size};
     
     std::vector<unsigned int>
-    x_divs              = {20, 10, 20},
-    y_divs              = {20};
-    
-    Real length = x_div_loc[2]-x_div_loc[1];
+    x_divs              = {n_divs_ff_to_panel, n_divs_panel, n_divs_ff_to_panel},
+    y_divs              = {n_divs_ff_to_panel};
     
     MAST::MeshInitializer::CoordinateDivisions
     x_coord_divs,
@@ -159,11 +176,11 @@ int main(int argc, char* argv[]) {
     MAST::FlightCondition flight_cond;
     flight_cond.flow_unit_vector << 1, 0, 0;
     flight_cond.ref_chord        = length;
-    flight_cond.mach             = 0.5;
-    flight_cond.gas_property.cp  = 1003.;
-    flight_cond.gas_property.cv  = 716.;
-    flight_cond.gas_property.T   = 300.;
-    flight_cond.gas_property.rho = 1.05;
+    flight_cond.mach             = input("fluid_mach", "fluid Mach number",                           0.5);
+    flight_cond.gas_property.cp  = input("fluid_cp",   "fluid specific heat at constant pressure",  1003.);
+    flight_cond.gas_property.cv  = input("fluid_cv",   "fluid specific heat at constant volume",     716.);
+    flight_cond.gas_property.T   = input("fluid_T",    "fluid absolute temperature",                 300.);
+    flight_cond.gas_property.rho = input("fluid_rho",  "fluid density",                              1.35);
     flight_cond.init();
     
     // tell the discipline about the fluid values
@@ -195,9 +212,9 @@ int main(int argc, char* argv[]) {
     //    SETUP THE STRUCTURAL DATA
     //////////////////////////////////////////////////////////////////////
     
-    x_div_loc = {0.0, 0.3};
+    x_div_loc = {0.0, length};
     x_relative_dx = {1., 1.};
-    x_divs = {10};
+    x_divs = {n_divs_panel};
     
     MAST::MeshInitializer::CoordinateDivisions
     x_coord_divs_struct;
@@ -208,7 +225,10 @@ int main(int argc, char* argv[]) {
     // create the mesh
     libMesh::SerialMesh structural_mesh(init.comm());
     
-    MAST::MeshInitializer().init(divs, structural_mesh, libMesh::EDGE2);
+    if (elem_type == libMesh::QUAD4)
+        MAST::MeshInitializer().init(divs, structural_mesh, libMesh::EDGE2);
+    else if (elem_type == libMesh::QUAD8 || elem_type == libMesh::QUAD9)
+        MAST::MeshInitializer().init(divs, structural_mesh, libMesh::EDGE3);
     
     // create the equation system
     libMesh::EquationSystems structural_eq_sys(structural_mesh);
@@ -266,11 +286,11 @@ int main(int argc, char* argv[]) {
     
     // create the property functions and add them to the material property card
     MAST::Parameter
-    thy        ("thy", 0.0015),
+    thy        ("thy", input("str_thickness",  "thickness of beam",            0.0015)),
     thz        ("thz", 1.00),
-    rho        ("rho", 2.7e3),
-    E          ("E", 72.e9),
-    nu         ("nu", 0.33),
+    rho        ("rho", input("str_rho",  "structural material density",         2.7e3)),
+    E          ("E",   input("str_E",    "structural material Young's modulus", 72.e9)),
+    nu         ("nu",  input("str_nu",   "structural material Poisson's ratio",  0.33)),
     kappa      ("kappa", 5./6.),
     zero       ("zero", 0.);
     
@@ -333,8 +353,8 @@ int main(int argc, char* argv[]) {
     // the fluid solution is setup on the global communicator
     
     // initialize the solution
-    RealVectorX s(4);
-    s << flight_cond.rho(),
+    RealVectorX fluid_ff_vars(4);
+    fluid_ff_vars << flight_cond.rho(),
     flight_cond.rho_u1(),
     flight_cond.rho_u2(),
     flight_cond.rho_e();
@@ -345,7 +365,7 @@ int main(int argc, char* argv[]) {
     libMesh::NumericVector<Real>& base_sol =
     fluid_sys.add_vector("fluid_base_solution");
     fluid_sys.solution->swap(base_sol);
-    fluid_sys_init.initialize_solution(s);
+    fluid_sys_init.initialize_solution(fluid_ff_vars);
     fluid_sys.solution->swap(base_sol);
     
     // create the nonlinear assembly object
