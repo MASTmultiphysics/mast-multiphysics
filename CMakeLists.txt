@@ -7,7 +7,7 @@ project(MAST
 # PROJECT WIDE SETUP
 # Get CMake modules and set language standards.
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake)
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Configure installation sub-directories.

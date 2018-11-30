@@ -1,0 +1,50 @@
+language: cpp
+dist: xenial
+
+cache:
+  directories:
+  - ${HOME}/.cache
+
+before_install:
+- sudo apt-get install -y gfortran wget m4
+- sudo apt-get install -y openmpi-bin libopenmpi-dev
+- sudo apt-get install -y libpetsc3.6 libpetsc3.6.2-dev
+- sudo apt-get install -y libslepc3.6 libslepc3.6.1-dev libparpack2-dev
+- sudo apt-get install -y libboost-all-dev
+- sudo apt-get install -y libeigen3-dev
+
+install:
+- export CC=mpicc
+- export CXX=mpic++
+- export FC=mpifort
+- export F77=mpif77
+- export PETSC_DIR=/usr/lib/petscdir/3.6.2/x86_64-linux-gnu-real
+- export SLEPC_DIR=/usr/lib/slepcdir/3.6.1/x86_64-linux-gnu-real
+- export HDF5_DIR=/usr/lib/x86_64-linux-gnu/hdf5/openmpi
+- export libMesh_DIR=${HOME}/.cache/libmesh
+- if [ ! -f ${libMesh_DIR}/include/libmesh/libmesh.h ]; then
+    mkdir ${libMesh_DIR};
+    cd ${libMesh_DIR};
+    wget https://github.com/libMesh/libmesh/releases/download/v1.3.1/libmesh-1.3.1.tar.gz;
+    tar -xf libmesh-1.3.1.tar.gz;
+    cd libmesh-1.3.1;
+    mkdir build;
+    cd build;
+    ../configure --prefix=${libMesh_DIR} --with-methods="opt dbg" --disable-examples --disable-metaphysicl;
+    make -j 2;
+    make install;
+  fi
+
+
+before_script:
+- cd ${TRAVIS_BUILD_DIR}
+- echo ${PWD}
+- ls
+- echo ${libMesh_DIR}
+- echo ${PETSC_DIR}
+- echo ${SLEPC_DIR}
+- mkdir build
+- cd build
+- cmake ..
+
+script: make
