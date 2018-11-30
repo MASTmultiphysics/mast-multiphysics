@@ -25,6 +25,9 @@ set(libMesh_DIR "libMesh_DIR" CACHE PATH "Directory containing libMesh include/ 
 set(PETSc_DIR   "PETSc_DIR"   CACHE PATH "Directory containing PETSc include/ and lib/")
 set(SLEPc_DIR   "SLEPc_DIR"   CACHE PATH "Directory containing SLEPc include/ and lib/")
 
+# Optional dependency paths.
+set(Eigen_DIR "${libMesh_DIR}/include" CACHE PATH "Directory containing Eigen/ if not using libMesh provided Eigen.")
+
 # EXTERNALLY PROVIDED CONTENT
 # None. Use this if we pull something in during the build in the future.
 
@@ -33,6 +36,7 @@ find_package(MPI REQUIRED)
 find_package(PETSc REQUIRED)
 find_package(SLEPc REQUIRED)
 find_package(libMesh REQUIRED)
+find_package(Eigen REQUIRED)
 find_package(Boost REQUIRED) # Boost is currently only utilized in src/optimization/function_evaluation (not counting tests).
                              # We possibly could refactor to move finding Boost libraries closer to source where Boost is used.
 

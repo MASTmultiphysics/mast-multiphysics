@@ -54,6 +54,7 @@ before_script:
     -DlibMesh_DIR=${libMesh_DIR}
     -DPETSc_DIR=${PETSC_DIR}
     -DSLEPc_DIR=${SLEPC_DIR}
+    -DEigen_DIR=/usr/include/eigen3
     -DBOOST_ROOT=/usr
     -DBUILD_DOC=OFF
     -DENABLE_DOT=OFF
