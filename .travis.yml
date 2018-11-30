@@ -37,6 +37,7 @@ install:
 
 
 before_script:
+- export MAST_INSTALL_DIR=${HOME}/mast
 - cd ${TRAVIS_BUILD_DIR}
 - echo ${PWD}
 - ls
@@ -46,5 +47,17 @@ before_script:
 - mkdir build
 - cd build
 - cmake ..
+    -DCMAKE_INSTALL_PREFIX=${MAST_INSTALL_DIR}
+    -DCMAKE_C_COMPILER=${CC}
+    -DCMAKE_CXX_COMPILER=${CXX}
+    -DCMAKE_Fortran_COMPILER=${FC}
+    -DlibMesh_DIR=${libMesh_DIR}
+    -DPETSc_DIR=${PETSC_DIR}
+    -DSLEPc_DIR=${SLEPC_DIR}
+    -DBOOST_ROOT=/usr
+    -DBUILD_DOC=OFF
+    -DENABLE_DOT=OFF
+    -DENABLE_GCMMA=OFF
+    -DENABLE_NPSOL=OFF
 
 script: make
