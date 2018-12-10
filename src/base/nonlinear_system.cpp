@@ -92,7 +92,9 @@ MAST::NonlinearSystem::clear() {
     matrix_B = nullptr;
     
     // clear the solver
-    eigen_solver->clear();
+    if (eigen_solver.get()) {
+      eigen_solver->clear();
+    }
     
     libMesh::NonlinearImplicitSystem::clear();
 }

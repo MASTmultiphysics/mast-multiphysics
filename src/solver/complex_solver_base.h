@@ -34,7 +34,6 @@ namespace MAST {
     class ComplexAssemblyBase;
     class ElementBase;
     class Parameter;
-    class AssemblyElemOperations;
     
     /*!
      *   uses a Gauss-Siedel method to solve the complex system of equations
@@ -57,10 +56,21 @@ namespace MAST {
         
         
         /*!
+         *   sets the assembly object for this solver
+         */
+        void set_assembly(MAST::ComplexAssemblyBase&    assemble);
+        
+        
+        /*!
+         *   clears the assembly object from this solver
+         */
+        void clear_assembly();
+
+        
+        /*!
          *  solves the complex system of equations using PCFieldSplit
          */
-        virtual void solve_pc_fieldsplit(MAST::AssemblyElemOperations& elem_ops,
-                                         MAST::ComplexAssemblyBase&    assemble);
+        virtual void solve_pc_fieldsplit();
 
         
         /*!
@@ -69,9 +79,7 @@ namespace MAST {
          *  Otherwise, the sensitivity of the system is solved with respect
          *  to the parameter p
          */
-        virtual void solve_block_matrix(MAST::AssemblyElemOperations& elem_ops,
-                                        MAST::ComplexAssemblyBase&    assemble,
-                                        MAST::Parameter*              p = nullptr);
+        virtual void solve_block_matrix(MAST::Parameter* p = nullptr);
 
         
         /*!

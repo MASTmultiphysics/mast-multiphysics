@@ -27,7 +27,7 @@ before_script:
     -DlibMesh_DIR=/usr/local
     -DPETSc_DIR=/usr/lib/petscdir/3.6.2/x86_64-linux-gnu-real
     -DSLEPc_DIR=/usr/lib/slepcdir/3.6.1/x86_64-linux-gnu-real
-    -DEigen_DIR=/usr/include/eigen3
+    -DEIGEN3_ROOT=/usr/include/eigen3
     -DBOOST_ROOT=/usr
     -DBUILD_DOC=OFF
     -DENABLE_DOT=OFF

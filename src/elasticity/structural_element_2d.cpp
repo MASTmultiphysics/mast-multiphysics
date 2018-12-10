@@ -26,7 +26,7 @@
 #include "property_cards/material_property_card_base.h"
 #include "numerics/fem_operator_matrix.h"
 #include "mesh/fe_base.h"
-#include "mesh/local_3d_elem.h"
+#include "mesh/local_2d_elem.h"
 #include "base/system_initialization.h"
 #include "base/boundary_condition_base.h"
 #include "base/parameter.h"
@@ -43,7 +43,7 @@ MAST::BendingStructuralElem(sys, assembly, elem, p),
 _bending_operator(nullptr) {
 
     // now initialize the finite element data structures
-    _local_elem    = new MAST::Local3DElem(elem);
+    _local_elem    = new MAST::Local2DElem(elem);
     _fe            = assembly.build_fe().release();
     _fe->init(*_local_elem);
 
