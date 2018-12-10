@@ -27,9 +27,6 @@ set(PETSc_DIR   "PETSc_DIR"   CACHE PATH "Directory containing PETSc include/ an
 set(SLEPc_DIR   "SLEPc_DIR"   CACHE PATH "Directory containing SLEPc include/ and lib/")
 set(EIGEN3_ROOT "Eigen_DIR"   CACHE PATH "Directory containing eigen header files")
 
-# Optional dependency paths.
-set(Eigen_DIR "${libMesh_DIR}/include" CACHE PATH "Directory containing Eigen/ if not using libMesh provided Eigen.")
-
 # EXTERNALLY PROVIDED CONTENT
 # None. Use this if we pull something in during the build in the future.
 
