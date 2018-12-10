@@ -25,7 +25,10 @@ set(MAST_ROOT_DIR ${CMAKE_CURRENT_LIST_DIR})
 set(libMesh_DIR "libMesh_DIR" CACHE PATH "Directory containing libMesh include/ and lib/")
 set(PETSc_DIR   "PETSc_DIR"   CACHE PATH "Directory containing PETSc include/ and lib/")
 set(SLEPc_DIR   "SLEPc_DIR"   CACHE PATH "Directory containing SLEPc include/ and lib/")
-set(EIGEN3_ROOT "Eigen-DIR" CACHE STRING "Directory containing eigen header files")
+set(EIGEN3_ROOT "Eigen_DIR"   CACHE PATH "Directory containing eigen header files")
+
+# Optional dependency paths.
+set(Eigen_DIR "${libMesh_DIR}/include" CACHE PATH "Directory containing Eigen/ if not using libMesh provided Eigen.")
 
 # EXTERNALLY PROVIDED CONTENT
 # None. Use this if we pull something in during the build in the future.
