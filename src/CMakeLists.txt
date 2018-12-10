@@ -15,6 +15,7 @@ target_include_directories(mast
             ${PETSc_INCLUDE_DIRS}
             ${SLEPc_INCLUDE_DIRS}
             ${libMesh_INCLUDE_DIRS}
+            ${Eigen_INCLUDE_DIRS}
             ${Boost_INCLUDE_DIRS}) # Could possibly move this into src/optimization since it is closer to where Boost is actually used.
 
 # Add libraries.

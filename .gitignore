@@ -1,6 +1,7 @@
 # CMake build files.
 build/dbg/
 build/opt/
+build
 src/base/mast_config.h
 
 # CLion IDE files.
