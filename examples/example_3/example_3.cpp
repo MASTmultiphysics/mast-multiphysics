@@ -52,6 +52,12 @@
 
 int main(int argc, char* argv[]) {
 
+    // BEGIN_TRANSLATE Panel flutter using V-g solver and Euler aerodynamics
+    //
+    // This example solves for the flutter speed of a semi-infinite (2D)
+    // panel with
+    //
+    // Initialize libMesh library.
     libMesh::LibMeshInit init(argc, argv);
 
     // initialize the wrapper to read input parameters. This will check
@@ -504,5 +510,6 @@ int main(int argc, char* argv[]) {
     for (unsigned int i=0; i<basis.size(); i++)
         if (basis[i]) delete basis[i];
     
+    // END_TRANSLATE
     return 0;
 }

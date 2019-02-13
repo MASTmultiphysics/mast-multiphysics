@@ -1,5 +1,5 @@
 add_executable(example_2
-               ex2_plate_static.cpp)
+               example_2.cpp)
 
 target_link_libraries(example_2 mast)
 
