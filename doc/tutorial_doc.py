@@ -67,6 +67,10 @@ if __name__ == "__main__":
     # the call should be something like $PYTHON tutorial_doc.py $SOURCE_DIR
     assert(len(sys.argv) == 3)
 
+    # terminal output to show during CMake execution.
+    print(sys.argv[0])
+    print("Processing examples/example_XX/* files.")
+
     examples_dir = sys.argv[1]
     doc_dir      = sys.argv[2]
 
