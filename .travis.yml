@@ -8,6 +8,7 @@ before_install:
 - sudo apt-get install -y libslepc3.6 libslepc3.6.1-dev libparpack2-dev
 - sudo apt-get install -y libboost-all-dev
 - sudo apt-get install -y libeigen3-dev
+- sudo apt-get install -y doxygen graphviz
 
 install:
 - cd ${HOME}
@@ -29,9 +30,11 @@ before_script:
     -DSLEPc_DIR=/usr/lib/slepcdir/3.6.1/x86_64-linux-gnu-real
     -DEIGEN3_ROOT=/usr/include/eigen3
     -DBOOST_ROOT=/usr
-    -DBUILD_DOC=OFF
+    -DBUILD_DOC=ON
     -DENABLE_DOT=OFF
     -DENABLE_GCMMA=OFF
     -DENABLE_NPSOL=OFF
 
-script: make -j 2
+script:
+- make -j 2
+- make -j 2 doc_doxygen
