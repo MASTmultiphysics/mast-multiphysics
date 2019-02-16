@@ -1,0 +1,40 @@
+/*!
+ * \mainpage
+ *
+ * Multidisciplinary-design Adaptation and Sensitivity Toolkit (MAST) is being
+ * developed at the Computational Dynamics and Design Laboratory through
+ * research efforts with a focus on design of nonlinear multiphysics systems
+ * that exhibit dynamic responses. Due to the need for computational efficiency
+ * and reliability in design, specialized mechanisms have been implemented to
+ * efficiently quantify the static and dynamic stability characteristics of
+ * such systems. Significant effort has been made towards the design of
+ * object-oriented data-structures that allow easy extensibility of the
+ * solvers. The framework implements sensitivity analysis for all solver
+ * components with interfaces to multiple optimization softwares. MAST
+ * leverages open-source libraries to enable efficient high-performance
+ * computations.
+ *
+ *
+ *   MAST leverages the following libraries:
+ *
+ *   - libMesh for finite element analysis capabilities,
+ *   - PETSc for linear and nonlinear solvers.
+ *   - SLEPc for eigensolvers,
+ *   - Eigen for dense matrix and vector operations.
+ *
+ *  # Contact
+ *
+ * This discussion group is used to communicate on topics and issues pertaining to MAST:
+ *
+ * https://groups.google.com/forum/#!forum/mast-multiphysics
+ *
+ *  # Disclaimer
+ *
+ * MAST home-page and software are provided as is. Therefore, the MAST
+ * authors cannot be held responsible for any harm resulting from the use
+ * of the homepage or the software. In particular, the MAST authors cannot be
+ * held responsible for content of web pages of other authors linked to or
+ * from the MAST homepage tree.
+ *
+*/
+

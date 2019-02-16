@@ -1,0 +1,18 @@
+
+/*!
+
+\page SpackInstall Installation using spack
+
+How to install MAST using spack
+
+\code{.cpp}
+int c;
+float d;
+class myc {
+  public:
+    myc();
+};
+\endcode
+
+*/
+

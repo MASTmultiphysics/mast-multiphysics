@@ -1,8 +1,3 @@
-/*
-* This example solves an axial bar extension problem. It is based on the
-* example of the same name in the MAST source repository.
-* (examples/structural/bar_extension).
-*/
 
 // C/C++ includes.
 #include <iostream>
@@ -29,6 +24,12 @@
 
 int main(int argc, const char** argv)
 {
+    // BEGIN_TRANSLATE Extension of bar
+    //
+    // This example solves an axial bar extension problem. It is based on the
+    // example of the same name in the MAST source repository.
+    // (examples/structural/bar_extension).
+    //
     // Initialize libMesh library.
     libMesh::LibMeshInit init(argc, argv);
 
@@ -142,5 +143,6 @@ int main(int argc, const char** argv)
     nonlinear_system.solve(elem_ops, assembly);
     nonlinear_system.solution->print_global();
 
+    // END_TRANSLATE
     return 0;
 }
