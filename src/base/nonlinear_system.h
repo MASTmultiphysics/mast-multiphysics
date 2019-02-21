@@ -85,7 +85,16 @@ namespace MAST {
             
             return _operation;
         }
+
         
+        /*!
+         *   sets the current operation of the system
+         */
+        void set_operation(MAST::NonlinearSystem::Operation op) {
+            
+            _operation = op;
+        }
+
         /*!
          *    flag to also initialize the B matrix. Must be called before
          *    EquationsSystems::init(). This is false by default.
