@@ -68,12 +68,6 @@ namespace MAST {
         _solve_NR_iterate(libMesh::NumericVector<Real>       &X,
                           MAST::Parameter                    &p);
         
-        virtual void
-        _dXdp(const libMesh::NumericVector<Real> &X,
-              const MAST::Parameter              &p,
-              libMesh::NumericVector<Real>       &dfdp,
-              libMesh::NumericVector<Real>       &dXdp);
-        
         /*!
          *  updates \f$ t_1 \f$ for the current iterate \p X and \p p, and
          *  stores these values to \p _t0_X and \p _t0_p for next computation.

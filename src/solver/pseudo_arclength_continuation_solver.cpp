@@ -141,8 +141,16 @@ _update_search_direction(const libMesh::NumericVector<Real> &X,
                                *f,                false, // do not update f
                                dfdp,              true,  // update dfdp
                                dXdp,              true,  // update dXdp
-                               *_t0_X, _t0_p, 1.,  // dgdX = t0^X, dgdp = t0^p, g = 1
+                               *_t0_X, _t0_p,  -1.,  // dgdX = t0^X, dgdp = t0^p, g = -1
                                t1_X, t1_p);
+
+    // now scale the vector for unit magnitude
+    Real
+    val = std::sqrt(t1_p*t1_p + std::pow(t1_X.l2_norm(), 2));
+    
+    t1_X.scale(1./val);
+    t1_X.close();
+    t1_p /= val;
 
     // store values for next iterate
     _t0_X->zero();
