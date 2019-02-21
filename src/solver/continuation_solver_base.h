@@ -152,7 +152,7 @@ namespace MAST {
         _g(const libMesh::NumericVector<Real> &X,
            const MAST::Parameter              &p) = 0;
 
-        bool _initialized;
+        bool                           _initialized;
         
         MAST::AssemblyElemOperations   *_elem_ops;
         MAST::AssemblyBase             *_assembly;

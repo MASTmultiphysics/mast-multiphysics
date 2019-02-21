@@ -18,7 +18,7 @@
  */
 
 // MAST includes
-#include "solver/arclength_continuation_solver.h"
+#include "solver/continuation_solver_base.h"
 #include "base/nonlinear_system.h"
 #include "base/assembly_base.h"
 #include "base/assembly_elem_operation.h"
@@ -28,7 +28,7 @@
 #include "libmesh/linear_solver.h"
 
 
-MAST::ArclengthContinuationSolver::ArclengthContinuationSolver():
+MAST::ContinuationSolverBase::ContinuationSolverBase():
 _initialized (false),
 max_it       (20),
 abs_tol      (1.e-8),
@@ -43,14 +43,14 @@ _p0          (0.) {
 
 
 
-MAST::ArclengthContinuationSolver::~ArclengthContinuationSolver() {
+MAST::ContinuationSolverBase::~ContinuationSolverBase() {
     
 }
 
 
 
 void
-MAST::ArclengthContinuationSolver::
+MAST::ContinuationSolverBase::
 set_assembly_and_load_parameter(MAST::AssemblyElemOperations&   elem_ops,
                                 MAST::AssemblyBase&             assembly,
                                 MAST::Parameter&                p) {
@@ -66,7 +66,7 @@ set_assembly_and_load_parameter(MAST::AssemblyElemOperations&   elem_ops,
 
 
 void
-MAST::ArclengthContinuationSolver::clear_assembly_and_load_parameters() {
+MAST::ContinuationSolverBase::clear_assembly_and_load_parameters() {
 
     _elem_ops  =  nullptr;
     _assembly  =  nullptr;
@@ -77,7 +77,7 @@ MAST::ArclengthContinuationSolver::clear_assembly_and_load_parameters() {
 
 
 void
-MAST::ArclengthContinuationSolver::solve()  {
+MAST::ContinuationSolverBase::solve()  {
     
     libmesh_assert(_initialized);
     
@@ -87,7 +87,7 @@ MAST::ArclengthContinuationSolver::solve()  {
     libMesh::NumericVector<Real>
     &X = *_assembly->system().solution;
 
-    _p0     = *_p();
+    _p0     = (*_p)();
     _X0.reset(X.clone().release());
     
     Real
@@ -123,13 +123,13 @@ MAST::ArclengthContinuationSolver::solve()  {
     << std::setw(15) << norm
     << std::setw(20) << "relative res-l2: "
     << std::setw(15) << norm/norm0
-    << "Terminated"  << std::endl;
+    << std::setw(20) << "Terminated"  << std::endl;
     
 }
 
 
 void
-MAST::ArclengthContinuationSolver::
+MAST::ContinuationSolverBase::
 _solve_schur_factorization(const libMesh::NumericVector<Real>  &X,
                            const MAST::Parameter               &p,
                            libMesh::SparseMatrix<Real>         &jac,
@@ -165,8 +165,8 @@ _solve_schur_factorization(const libMesh::NumericVector<Real>  &X,
     //
     //   Substitute in second equation
     //     dg/dp  dp - dg/dX inv(df/dX) ( f + df/dp dp) = -g
-    // =>  [dg/dp - dg/dX inv(df/dX) df/dp ] dp =
-    //          -g + dg/dX inv(df/dX) f
+    // =>  [dg/dp - dg/dX inv(df/dX) df/dp ] dp = -g + dg/dX inv(df/dX) f
+    // =>  [dg/dp + dg/dX dX/dp ] dp = -g + dg/dX r1
     //
     //   1.  solve   r1        =  inv(df/dX) f
     //   2.  solve   dXdp      = -inv(df/dX) df/dp
@@ -188,8 +188,7 @@ _solve_schur_factorization(const libMesh::NumericVector<Real>  &X,
     *pc  = system.request_matrix("Preconditioner");
     
     Real
-    a    = 0.,
-    dp   = 0.;
+    a    = 0.;
     
     //////////////////////////////////////////////////////////
     //         STEP 1:  r1  = inv(df/dX) f
@@ -216,13 +215,13 @@ _solve_schur_factorization(const libMesh::NumericVector<Real>  &X,
 
 
     //////////////////////////////////////////////////////////
-    //         STEP 2:  dXdp  = inv(df/dX) df/dp
+    //         STEP 2:  dXdp  = - inv(df/dX) df/dp
     //////////////////////////////////////////////////////////
     system.set_operation(MAST::NonlinearSystem::FORWARD_SENSITIVITY_SOLVE);
     if (update_dfdp)
         _assembly->sensitivity_assemble(p, dfdp);
 
-    if (update_dXdp) {
+    if (update_dfdp || update_dXdp) {
         
         rval = system.linear_solver->solve (jac, pc,
                                             dXdp,
@@ -245,7 +244,7 @@ _solve_schur_factorization(const libMesh::NumericVector<Real>  &X,
     //         STEP 3:  a   = dg/dp + dg/dX dXdp
     //////////////////////////////////////////////////////////
     a   = dgdp + dgdX.dot(dXdp);
-    
+    libmesh_assert_greater(a, 0.);
     
     //////////////////////////////////////////////////////////
     //         STEP 4:  a  dp     = -g + dg/dX r1
@@ -257,11 +256,11 @@ _solve_schur_factorization(const libMesh::NumericVector<Real>  &X,
     //////////////////////////////////////////////////////////
     r1->zero();
     r1->add(1., f);
-    r1->add(dp, *dfdp);
+    r1->add(dp, dfdp);
     r1->scale(-1.);
     r1->close();
     rval = system.linear_solver->solve (jac, pc,
-                                        *dX,
+                                        dX,
                                         *r1,
                                         solver_params.second,
                                         solver_params.first);
@@ -280,7 +279,7 @@ _solve_schur_factorization(const libMesh::NumericVector<Real>  &X,
 
 
 Real
-MAST::ArclengthContinuationSolver::
+MAST::ContinuationSolverBase::
 _res_norm(const libMesh::NumericVector<Real>                  &X,
           const MAST::Parameter                               &p) {
     
@@ -295,7 +294,7 @@ _res_norm(const libMesh::NumericVector<Real>                  &X,
     val = 0.;
 
     std::unique_ptr<libMesh::NumericVector<Real>>
-    f(X.clone().release());
+    f(X.zero_clone().release());
 
     system.set_operation(MAST::NonlinearSystem::NONLINEAR_SOLVE);
     _assembly->set_elem_operation_object(*_elem_ops);

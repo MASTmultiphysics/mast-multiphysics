@@ -133,7 +133,6 @@ _dXdp(const libMesh::NumericVector<Real> &X,
     solver_params = system.get_linear_solve_parameters(),
     rval;
 
-    dfdp.zero();
     dXdp.zero();
     
     rval = system.linear_solver->solve (*system.matrix, pc,
