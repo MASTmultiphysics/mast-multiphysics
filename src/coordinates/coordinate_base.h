@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -41,7 +41,7 @@ namespace MAST {
         CoordinateBase(const std::string& nm);
 
         /*!
-         *   prepares the matrix \mat that transforms stress and strain tensors
+         *   prepares the matrix \p mat that transforms stress and strain tensors
          *   represented in a 6x1 vector from the coordinate system in _orient
          *   to the global coordinate system. Note that the shear straints in
          *   the strain tensor vector should be represented in the tensor quantities,

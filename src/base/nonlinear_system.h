@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -120,7 +120,7 @@ namespace MAST {
         /*!
          *   Solves the sensitivity problem for the provided parameter.
          *   The Jacobian will be assembled before adjoint solve if
-         *   \par if_assemble_jacobian is \p true.
+         *   \p if_assemble_jacobian is \p true.
          */
         virtual void sensitivity_solve(MAST::AssemblyElemOperations&   elem_ops,
                                        MAST::AssemblyBase&             assembly,
@@ -131,7 +131,7 @@ namespace MAST {
         /*!
          *   solves the adjoint problem for the provided output function.
          *   The Jacobian will be assembled before adjoint solve if
-         *   \par if_assemble_jacobian is \p true.
+         *   \p if_assemble_jacobian is \p true.
          */
         virtual void adjoint_solve(MAST::AssemblyElemOperations&       elem_ops,
                                    MAST::OutputAssemblyElemOperations& output,

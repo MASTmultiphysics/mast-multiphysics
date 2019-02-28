@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -99,7 +99,7 @@ namespace MAST {
 
         /*!
          *   returns the output quantity derivative with respect to
-         *   state vector in \par dq_dX.
+         *   state vector in \p dq_dX.
          *   This method calculates the quantity
          *    \f[ \frac{\partial q(X, p)}{\partial X} \f] for this
          *    output function. This is returned for the element for which

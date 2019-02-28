@@ -75,7 +75,7 @@ namespace MAST {
         
         /*!
          *    calculates the value of the function at the specified point,
-         *    \par p, and time, \par t, and returns it in \p v.
+         *    \p p, and time, \p t, and returns it in \p v.
          */
         virtual void operator() (const libMesh::Point& p,
                                  const Real t,
@@ -88,7 +88,7 @@ namespace MAST {
         
         /*!
          *    calculates the value of the function at the specified point,
-         *    \par p, and time, \par t, and returns it in \p v.
+         *    \p p, and time, \p t, and returns it in \p v.
          */
         virtual void derivative (const MAST::FunctionBase& f,
                                  const libMesh::Point& p,

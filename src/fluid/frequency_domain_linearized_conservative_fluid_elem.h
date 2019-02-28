@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -56,8 +56,8 @@ namespace MAST {
 
         /*!
          *   sensitivity of internal force contribution to system residual. 
-         *   If \par request_jacobian is true, then the sensitivity of 
-         *   Jacobian is retured in \par jac.
+         *   If \p request_jacobian is true, then the sensitivity of 
+         *   Jacobian is retured in \p jac.
          */
         virtual bool
         internal_residual_sensitivity (const MAST::FunctionBase& p,
@@ -78,8 +78,8 @@ namespace MAST {
         
         /*!
          *   sensitivity of internal force contribution to system residual.
-         *   If \par request_jacobian is true, then the sensitivity of
-         *   Jacobian is retured in \par jac.
+         *   If \p request_jacobian is true, then the sensitivity of
+         *   Jacobian is retured in \p jac.
          */
         virtual bool
         side_external_residual_sensitivity (const MAST::FunctionBase& p,
@@ -111,8 +111,8 @@ namespace MAST {
         
         /*!
          *    sensitivity of residual of the slip wall that may be oscillating.
-         *    If \par request_jacobian is true, then the sensitivity of the 
-         *    Jacobian is returned in \par jac.
+         *    If \p request_jacobian is true, then the sensitivity of the 
+         *    Jacobian is returned in \p jac.
          */
         virtual bool
         slip_wall_surface_residual_sensitivity(const MAST::FunctionBase& p,

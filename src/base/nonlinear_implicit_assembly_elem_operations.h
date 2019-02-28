@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -42,9 +42,9 @@ namespace MAST {
         
         
         /*!
-         *   performs the element calculations over \par elem, and returns
-         *   the element vector and matrix quantities in \par mat and
-         *   \par vec, respectively. \par if_jac tells the method to also
+         *   performs the element calculations over \p elem, and returns
+         *   the element vector and matrix quantities in \p mat and
+         *   \p vec, respectively. \p if_jac tells the method to also
          *   assemble the Jacobian, in addition to the residual vector.
          */
         virtual void elem_calculations(bool if_jac,
@@ -53,9 +53,9 @@ namespace MAST {
         
         
         /*!
-         *   performs the element calculations over \par elem, and returns
-         *   the element vector quantity in \par vec. The vector quantity only
-         *   include the \f$ [J] \{dX\} f$ components, so the inherited classes
+         *   performs the element calculations over \p elem, and returns
+         *   the element vector quantity in \p vec. The vector quantity only
+         *   include the \f$ [J] \{dX\} \f$ components, so the inherited classes
          *   must ensure that no component of constant forces (traction/body
          *   forces/etc.) are added to this vector.
          */
@@ -64,24 +64,24 @@ namespace MAST {
         
         
         /*!
-         *   performs the element sensitivity calculations over \par elem,
-         *   and returns the element residual sensitivity in \par vec .
+         *   performs the element sensitivity calculations over \p elem,
+         *   and returns the element residual sensitivity in \p vec .
          */
         virtual void
         elem_sensitivity_calculations(const MAST::FunctionBase& f,
                                       RealVectorX& vec) = 0;
 
         /*!
-         *   performs the element shape sensitivity calculations over \par elem,
-         *   and returns the element residual sensitivity in \par vec .
+         *   performs the element shape sensitivity calculations over \p elem,
+         *   and returns the element residual sensitivity in \p vec .
          */
         virtual void
         elem_shape_sensitivity_calculations(const MAST::FunctionBase& f,
                                             RealVectorX& vec) = 0;
 
         /*!
-         *   performs the element topology sensitivity calculations over \par elem,
-         *   and returns the element residual sensitivity in \par vec .
+         *   performs the element topology sensitivity calculations over \p elem,
+         *   and returns the element residual sensitivity in \p vec .
          */
         virtual void
         elem_topology_sensitivity_calculations(const MAST::FunctionBase& f,
@@ -90,8 +90,8 @@ namespace MAST {
                                                RealVectorX& vec) = 0;
 
         /*!
-         *   calculates \f$ d ([J] \{\Delta X\})/ dX  \f$ over \par elem,
-         *   and returns the matrix in \par vec .
+         *   calculates \f$ d ([J] \{\Delta X\})/ dX  \f$ over \p elem,
+         *   and returns the matrix in \p vec .
          */
         virtual void
         elem_second_derivative_dot_solution_assembly(RealMatrixX& mat) = 0;

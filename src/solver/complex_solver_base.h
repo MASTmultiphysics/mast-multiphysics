@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -75,7 +75,7 @@ namespace MAST {
         
         /*!
          *  solves the complex system of equations using block matrices. If 
-         *  no argument is specified for \par p, then the system is solved. 
+         *  no argument is specified for \p p, then the system is solved. 
          *  Otherwise, the sensitivity of the system is solved with respect
          *  to the parameter p
          */
@@ -84,7 +84,7 @@ namespace MAST {
         
         /*!
          *  @returns a reference to the real part of the solution. If 
-         *  \par if_sens is true, the the sensitivity vector is returned. Note,
+         *  \p if_sens is true, the the sensitivity vector is returned. Note,
          *  that the sensitivity can be requested only after a sensitivity 
          *  solve.
          */
@@ -93,7 +93,7 @@ namespace MAST {
         
         /*!
          *  @returns a constant reference to the real part of the solution. If
-         *  \par if_sens is true, the the sensitivity vector is returned. Note,
+         *  \p if_sens is true, the the sensitivity vector is returned. Note,
          *  that the sensitivity can be requested only after a sensitivity
          *  solve.
          */
@@ -102,7 +102,7 @@ namespace MAST {
         
         /*!
          *  @returns a reference to the imaginary part of the solution. If
-         *  \par if_sens is true, the the sensitivity vector is returned. Note,
+         *  \p if_sens is true, the the sensitivity vector is returned. Note,
          *  that the sensitivity can be requested only after a sensitivity
          *  solve.
          */
@@ -111,7 +111,7 @@ namespace MAST {
         
         /*!
          *  @returns a constant reference to the imaginary part of the solution.
-         *  If \par if_sens is true, the the sensitivity vector is returned.
+         *  If \p if_sens is true, the the sensitivity vector is returned.
          *  Note, that the sensitivity can be requested only after a sensitivity
          *  solve.
          */

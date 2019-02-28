@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -516,7 +516,7 @@ namespace MAST {
 
         /*!
          *   calculates and returns the sensitivity of von Mises p-norm
-         *   functional for the element \par e.
+         *   functional for the element \p e.
          */
         void
         von_Mises_p_norm_functional_sensitivity_for_elem
@@ -527,7 +527,7 @@ namespace MAST {
         
         /*!
          *   calculates and returns the boundary sensitivity of von Mises p-norm
-         *   functional for the element \par e.
+         *   functional for the element \p e.
          */
         void
         von_Mises_p_norm_functional_boundary_sensitivity_for_elem

@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -47,7 +47,7 @@ namespace MAST {
         
         /*!
          *   initiate the motion object with oscillation data. 
-         *   \par pitch_phase is the phase angle by which pitch leads
+         *   \p pitch_phase is the phase angle by which pitch leads
          *   plunge.
          */
         void init(MAST::FrequencyFunction& freq,
@@ -72,7 +72,7 @@ namespace MAST {
 
         /*!
          *   provides a function for the definition of surface displacement,
-         *   \par w, and rotation of the surface normal in \par dn_rot
+         *   \p w, and rotation of the surface normal in \p dn_rot
          */
         virtual void
         freq_domain_motion(const libMesh::Point& p,

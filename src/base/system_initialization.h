@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -41,8 +41,8 @@ namespace MAST {
     class SystemInitialization {
     public:
         /*!
-         *   initialize the variables in the provided system \par sys
-         *   of \par order and \par family. Uses \par prefix for
+         *   initialize the variables in the provided system \p sys
+         *   of \p order and \p family. Uses \p prefix for
          *   all variables name.
          */
         SystemInitialization (MAST::NonlinearSystem& sys,
@@ -60,7 +60,7 @@ namespace MAST {
         unsigned int n_vars() const;
         
         /*!
-         *   @returns the FEType object for variable \par i,
+         *   @returns the FEType object for variable \p i,
          *   that defines the finite element family and order.
          */
         const libMesh::FEType& fetype(unsigned int i) const;
@@ -100,13 +100,13 @@ namespace MAST {
 
         /*!
          *    initializes the FE solution vector to the constant
-         *    solution provided in \par sol.
+         *    solution provided in \p sol.
          */
         void initialize_solution(const RealVectorX& sol);
 
         /*!
          *    initializes the FE solution vector to the function
-         *    solution provided in \par sol.
+         *    solution provided in \p sol.
          */
         void initialize_solution(const MAST::FieldFunction<RealVectorX>& sol);
 

@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -69,7 +69,7 @@ namespace MAST {
         set_elem_solution_sensitivity(const RealVectorX& sol);
 
         /*!
-         *   performs the element calculations over \par elem, and returns
+         *   performs the element calculations over \p elem, and returns
          *   the element matrices for the eigenproblem
          *   \f$ A x = \lambda B x \f$.
          */
@@ -78,7 +78,7 @@ namespace MAST {
                           RealMatrixX& mat_B);
         
         /*!
-         *   performs the element sensitivity calculations over \par elem,
+         *   performs the element sensitivity calculations over \p elem,
          *   and returns the element matrices for the eigenproblem
          *   \f$ A x = \lambda B x \f$.
          */
@@ -89,7 +89,7 @@ namespace MAST {
                                       RealMatrixX& mat_B);
 
         /*!
-         *   performs the element topology sensitivity calculations over \par elem.
+         *   performs the element topology sensitivity calculations over \p elem.
          */
         virtual void
         elem_topology_sensitivity_calculations(const MAST::FunctionBase& f,

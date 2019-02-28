@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -86,7 +86,7 @@ namespace MAST {
         
         
         /*!
-         *   returns the \par n th root in terms of ascending velocity that is
+         *   returns the \p n th root in terms of ascending velocity that is
          *   found by the solver
          */
         const MAST::FlutterRootBase& get_root(const unsigned int n) const;
@@ -117,13 +117,13 @@ namespace MAST {
         
         /*!
          *   Calculate the sensitivity of the flutter root with respect to the
-         *   \par f parameter. If the base solution has a sensitivity
+         *   \p f parameter. If the base solution has a sensitivity
          *   with respect to the parameter, then that should be provided
-         *   through \par dXdp. The sensitivity solution also requires
+         *   through \p dXdp. The sensitivity solution also requires
          *   sensitivity of the eigenvalue wrt velocity, which is
          *   defined as a parameter. Hence, the sensitivity of the
          *   static solution is also required wrt the velocity parameter.
-         *   If \par dXdV is \par nullptr, then zero value is assumed.
+         *   If \p dXdV is \p nullptr, then zero value is assumed.
          */
         virtual void
         calculate_sensitivity(MAST::FlutterRootBase& root,
@@ -133,7 +133,7 @@ namespace MAST {
         
         
         /*!
-         *   Prints the sorted roots to the \par output
+         *   Prints the sorted roots to the \p output
          */
         virtual void print_sorted_roots();
         
@@ -180,7 +180,7 @@ namespace MAST {
         
         /*!
          *    Assembles the reduced order system structural and aerodynmaic
-         *    matrices for specified reduced freq \par kr.
+         *    matrices for specified reduced freq \p kr.
          */
         void _initialize_matrices(Real kr,
                                   ComplexMatrixX& A,
@@ -189,7 +189,7 @@ namespace MAST {
         
         /*!
          *    Assembles the reduced order system structural and aerodynmaic
-         *    matrices for specified flight velocity \par U_inf.
+         *    matrices for specified flight velocity \p U_inf.
          */
         void
         _initialize_matrix_sensitivity_for_param(const MAST::FunctionBase& f,

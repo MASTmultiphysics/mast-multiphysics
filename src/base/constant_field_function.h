@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -43,14 +43,14 @@ namespace MAST {
         
         /*!
          *    calculates the value of the function at the specified point,
-         *    \par p, and time, \par t, and returns it in \p v.
+         *    \p p, and time, \p t, and returns it in \p v.
          */
         virtual void operator() (Real& v) const;
         
         
         /*!
          *    calculates the value of the function at the specified point,
-         *    \par p, and time, \par t, and returns it in \p v.
+         *    \p p, and time, \p t, and returns it in \p v.
          */
         virtual void derivative (const MAST::FunctionBase& f,
                                  Real& v) const;
@@ -59,7 +59,7 @@ namespace MAST {
         
         /*!
          *    calculates the value of the function at the specified point,
-         *    \par p, and time, \par t, and returns it in \p v.
+         *    \p p, and time, \p t, and returns it in \p v.
          */
         virtual void operator() (const libMesh::Point& p,
                                  const Real t,
@@ -68,7 +68,7 @@ namespace MAST {
         
         /*!
          *    calculates the value of the function at the specified point,
-         *    \par p, and time, \par t, and returns it in \p v.
+         *    \p p, and time, \p t, and returns it in \p v.
          */
         virtual void derivative (const MAST::FunctionBase& f,
                                  const libMesh::Point& p,
