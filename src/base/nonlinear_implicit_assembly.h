@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -133,7 +133,7 @@ namespace MAST {
          * to assemble the RHS of the sensitivity equations (which is -1 times
          * sensitivity of system residual) prior to a solve and must
          * be provided by the user in a derived class. The method provides dR/dp
-         * for \par f parameter.
+         * for \p f parameter.
          *
          * If the routine is not able to provide sensitivity for this parameter,
          * then it should return false, and the system will attempt to use

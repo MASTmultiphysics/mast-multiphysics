@@ -1,5 +1,5 @@
 MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
-Copyright (C) 2013-2018  Manav Bhatia
+Copyright (C) 2013-2019  Manav Bhatia
 
 [![Build Status](https://travis-ci.com/MASTmultiphysics/mast-multiphysics.svg?branch=master)](https://travis-ci.com/MASTmultiphysics/mast-multiphysics)
 

@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -80,8 +80,8 @@ namespace MAST
         
         
 //        /*!
-//         *   returns value of the property \par val. The string values for 
-//         *   \par val are IYY, IZZ, IYZ
+//         *   returns value of the property \p val. The string values for 
+//         *   \p val are IYY, IZZ, IYZ
 //         */
 //        virtual Real value(const std::string& val) const = 0;
         

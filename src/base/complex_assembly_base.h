@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -63,7 +63,7 @@ namespace MAST {
         /*!
          *   if the problem is defined about a non-zero base solution,
          *   then this method provides the object with the base solution.
-         *   The flag \par if_sens tells the method if \par sol
+         *   The flag \p if_sens tells the method if \p sol
          *   is the sensitivity of the base solution for the current parameter
          *   being solved for
          */
@@ -73,7 +73,7 @@ namespace MAST {
         
         /*!
          *   Clears pointer to the solution vector
-         *   The flag \par if_sens tells the method to clear pointer of the 
+         *   The flag \p if_sens tells the method to clear pointer of the 
          *   solution sensitivity
          */
         void clear_base_solution(bool if_sens = false);
@@ -88,7 +88,7 @@ namespace MAST {
         
         /*!
          *   @returns a const reference to the base solution (or
-         *   its sensitivity when \par if_sens is true) about which
+         *   its sensitivity when \p if_sens is true) about which
          *   the Eigen problem was linearized.
          */
         const libMesh::NumericVector<Real>& base_sol(bool if_sens = false) const;
@@ -104,10 +104,10 @@ namespace MAST {
 
         /*!
          *   Assembles the residual and Jacobian of the N complex system of equations
-         *   split into 2N real system of equations. The solution vector \par X
+         *   split into 2N real system of equations. The solution vector \p X
          *   is the current complex solution with the real and imaginary parts 
          *   of each element stored as adjacent entries. Likewise, the Jaacobian
-         *   matrix has a 2x2 block storage. If \par p is provided, then \par R
+         *   matrix has a 2x2 block storage. If \p p is provided, then \p R
          *   will return the sensitivity of the residual vector.
          */
         void
@@ -121,7 +121,7 @@ namespace MAST {
          * to assemble the RHS of the sensitivity equations (which is -1 times
          * sensitivity of system residual) prior to a solve and must
          * be provided by the user in a derived class. The method provides dR/dp
-         * for \par f parameter.
+         * for \p f parameter.
          *
          * If the routine is not able to provide sensitivity for this parameter,
          * then it should return false, and the system will attempt to use

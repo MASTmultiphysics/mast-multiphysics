@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -117,7 +117,7 @@ namespace MAST {
 
         /*!
          *   returns the output quantity derivative with respect to
-         *   state vector in \par dq_dX.
+         *   state vector in \p dq_dX.
          *   This method calculates the quantity
          *    \f[ \frac{\partial q(X, p)}{\partial X} \f] for this
          *    output function. This is returned for the element for which
@@ -196,7 +196,7 @@ namespace MAST {
 
         /*!
          *    @returns the set of elements for which data will be stored. This
-         *    is set using the \par set_participating_elements() method.
+         *    is set using the \p set_participating_elements() method.
          */
         const std::set<const libMesh::Elem*>&
         get_participating_elements() const;
@@ -204,7 +204,7 @@ namespace MAST {
 
         /*!
          *    @returns the set of subdomain ids for which data will be stored.
-         *    This is set using the \par set_participating_subdomains() method.
+         *    This is set using the \p set_participating_subdomains() method.
          */
         const std::set<libMesh::subdomain_id_type>&
         get_participating_subdomains();
@@ -212,7 +212,7 @@ namespace MAST {
         
         /*!
          *    @returns the set of boundary ids for which data will be stored.
-         *    This is set using the \par set_participating_boundaries() method.
+         *    This is set using the \p set_participating_boundaries() method.
          */
         const std::set<libMesh::boundary_id_type>&
         get_participating_boundaries();

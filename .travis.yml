@@ -9,6 +9,7 @@ before_install:
 - sudo apt-get -qq install -y libboost-all-dev
 - sudo apt-get -qq install -y libeigen3-dev
 - sudo apt-get -qq install -y doxygen graphviz rsync
+- sudo apt-get -qq install -y texlive-latex-base dvi2ps ghostscript
 
 install:
 - cd ${HOME}

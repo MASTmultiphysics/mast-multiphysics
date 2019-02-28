@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -136,12 +136,12 @@ namespace MAST {
         
         /*!
          *   evaluates the sensitivity of the outputs in the attached
-         *   discipline with respect to the parametrs in \par params.
-         *   The base solution should be provided in \par X. If total sensitivity
-         *   is desired, then \par dXdp should contain the sensitivity of
-         *   solution wrt the parameter \par p. If this \par dXdp is zero,
+         *   discipline with respect to the parametrs in \p params.
+         *   The base solution should be provided in \p X. If total sensitivity
+         *   is desired, then \p dXdp should contain the sensitivity of
+         *   solution wrt the parameter \p p. If this \p dXdp is zero,
          *   the calculated sensitivity will be the partial derivarive of
-         *   \par output wrt \par p.
+         *   \p output wrt \p p.
          */
         virtual void
         calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
@@ -151,9 +151,9 @@ namespace MAST {
         
         
         /*!
-         *   Evaluates the total sensitivity of \par output wrt \par p using
-         *   the adjoint solution provided in \par dq_dX for a linearization
-         *   about solution \par X.
+         *   Evaluates the total sensitivity of \p output wrt \p p using
+         *   the adjoint solution provided in \p dq_dX for a linearization
+         *   about solution \p X.
          */
         /*virtual Real
         calculate_output_adjoint_sensitivity(const libMesh::NumericVector<Real>& X,

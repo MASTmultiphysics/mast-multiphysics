@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -35,15 +35,15 @@ namespace MAST {
      *    \f[ r = beta*dt(f_m + f_x )= 0 \f]
      *    where, (for example)
      *    \f{eqnarray*}{
-     *      f_m & = &  int_Omega phi u_dot   \mbox{ [typical mass vector in conduction, for example]}\\
-     *      f_x & = &  int_Omega phi_i u_i - int_Gamma phi q_n \mbox{ [typical conductance and heat flux combination, for example]}
+     *      f_m & = &  \int_\Omega \phi \dot{u}   \mbox{ [typical mass vector in conduction, for example]}\\
+     *      f_x & = &  \int_\Omega \phi_i u_i - \int_\Gamma \phi q_n \mbox{ [typical conductance and heat flux combination, for example]}
      *    \f}
      *
      *    This method assumes
      *    \f{eqnarray*}{
-     *     x     &=& x0 + (1-beta) dt x0_dot + beta dt x_dot \\
-     *    \mbox{or, } x_dot &=& (x-x0)/beta/dt - (1-beta)/beta x0_dot
-     *    }
+     *     x     &=& x_0 + (1-\beta) dt \dot{x_0} + \beta dt \dot{x} \\
+     *    \mbox{or, } \dot{x} &=& (x-x_0)/\beta/dt - (1-\beta)/\beta \dot{x_0}
+     *    \f}
      *    Note that the residual expression multiplies the expression by beta*dt
      *    for convenience in the following expressions
      *
@@ -51,10 +51,10 @@ namespace MAST {
      *    Jacobian is
      *    \f{eqnarray*}{
      *    dr/dx &=& [df_m/dx + df_x/dx +\\
-     *       &&          df_m/dx_dot dx_dot/dx + df_x/dx_dot dx_dot/dx]\\
+     *       &&          df_m/d\dot{x} d\dot{x}/dx + df_x/d\dot{x} d\dot{x}/dx]\\
      *       &=& [(df_m/dx + df_x/dx) +\\
-     *       &&           (df_m/dx_dot + df_x/dx_dot) (1/beta/dt)]
-     *    }
+     *       &&           (df_m/d\dot{x} + df_x/d\dot{x}) (1/\beta/dt)]
+     *    \f}
      *   Note that this form of equations makes it a good candidate for
      *   use as implicit solver, ie, for a nonzero beta.
      */
@@ -130,9 +130,9 @@ namespace MAST {
         
         
         /*!
-         *   performs the element calculations over \par elem, and returns
-         *   the element vector and matrix quantities in \par mat and
-         *   \par vec, respectively. \par if_jac tells the method to also
+         *   performs the element calculations over \p elem, and returns
+         *   the element vector and matrix quantities in \p mat and
+         *   \p vec, respectively. \p if_jac tells the method to also
          *   assemble the Jacobian, in addition to the residual vector.
          */
         virtual void
@@ -141,9 +141,9 @@ namespace MAST {
                           RealMatrixX& mat);
         
         /*!
-         *   performs the element calculations over \par elem, and returns
-         *   the element vector quantity in \par vec. The vector quantity only
-         *   include the \f$ [J] \{dX\} f$ components, so the inherited classes
+         *   performs the element calculations over \p elem, and returns
+         *   the element vector quantity in \p vec. The vector quantity only
+         *   include the \f$ [J] \{dX\} \f$ components, so the inherited classes
          *   must ensure that no component of constant forces (traction/body
          *   forces/etc.) are added to this vector.
          */
@@ -151,24 +151,24 @@ namespace MAST {
         elem_linearized_jacobian_solution_product(RealVectorX& vec);
         
         /*!
-         *   performs the element sensitivity calculations over \par elem,
-         *   and returns the element residual sensitivity in \par vec .
+         *   performs the element sensitivity calculations over \p elem,
+         *   and returns the element residual sensitivity in \p vec .
          */
         virtual void
         elem_sensitivity_calculations(const MAST::FunctionBase& f,
                                       RealVectorX& vec);
 
         /*!
-         *   performs the element shape sensitivity calculations over \par elem,
-         *   and returns the element residual sensitivity in \par vec .
+         *   performs the element shape sensitivity calculations over \p elem,
+         *   and returns the element residual sensitivity in \p vec .
          */
         virtual void
         elem_shape_sensitivity_calculations(const MAST::FunctionBase& f,
                                             RealVectorX& vec);
         
         /*!
-         *   performs the element topology sensitivity calculations over \par elem,
-         *   and returns the element residual sensitivity in \par vec .
+         *   performs the element topology sensitivity calculations over \p elem,
+         *   and returns the element residual sensitivity in \p vec .
          */
         virtual void
         elem_topology_sensitivity_calculations(const MAST::FunctionBase& f,
@@ -177,8 +177,8 @@ namespace MAST {
                                                RealVectorX& vec);
 
         /*!
-         *   calculates \f$ d ([J] \{\Delta X\})/ dX  \f$ over \par elem,
-         *   and returns the matrix in \par vec .
+         *   calculates \f$ d ([J] \{\Delta X\})/ dX  \f$ over \p elem,
+         *   and returns the matrix in \p vec .
          */
         virtual void
         elem_second_derivative_dot_solution_assembly(RealMatrixX& mat) {

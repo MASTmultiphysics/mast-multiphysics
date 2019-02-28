@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -79,8 +79,8 @@ namespace MAST {
         
         /*!
          *    @returns a reference to the localized solution from
-         *    iteration number = current - prev_iter. So, \par prev_iter = 0
-         *    gives the current solution estimate. Note that \par prev_iter
+         *    iteration number = current - prev_iter. So, \p prev_iter = 0
+         *    gives the current solution estimate. Note that \p prev_iter
          *    cannot be greater than the total number of iterations that this
          *    solver stores solutions for.
          */
@@ -96,8 +96,8 @@ namespace MAST {
 
         /*!
          *    @returns a reference to the localized velocity from
-         *    iteration number = current - prev_iter. So, \par prev_iter = 0
-         *    gives the current velocity estimate. Note that \par prev_iter
+         *    iteration number = current - prev_iter. So, \p prev_iter = 0
+         *    gives the current velocity estimate. Note that \p prev_iter
          *    cannot be greater than the total number of iterations that this
          *    solver stores solutions for.
          */
@@ -115,8 +115,8 @@ namespace MAST {
         
         /*!
          *    @returns a reference to the localized acceleration from
-         *    iteration number = current - prev_iter. So, \par prev_iter = 0
-         *    gives the current acceleration estimate. Note that \par prev_iter
+         *    iteration number = current - prev_iter. So, \p prev_iter = 0
+         *    gives the current acceleration estimate. Note that \p prev_iter
          *    cannot be greater than the total number of iterations that this
          *    solver stores solutions for.
          */
@@ -219,7 +219,7 @@ namespace MAST {
          *    \param current_sol  the perturbation in current displacement 
          *    \f$ \Delta X \f$
          *    \param qtys upon returning, this vector is populated such that the
-         *    ith element of the vector is \f$ (d (d^iX/dt^i)/ dX) dX \Delta X$
+         *    ith element of the vector is \f$ (d (d^iX/dt^i)/ dX) dX \Delta X \f$
          */
         virtual void
         build_perturbed_local_quantities

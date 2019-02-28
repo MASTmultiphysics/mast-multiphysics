@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -44,7 +44,7 @@ namespace MAST {
         
         /*!
          *   Calculates the surface normal of the element at the given point
-         *   \par p, where the finite element provided surface normal is
+         *   \p p, where the finite element provided surface normal is
          *   \p n_local. The calculated surface normal in the global
          *   coordinate system is \p n_global. For 1D or 2D elements, the flux
          *   loads can be defined over the entire domain of the element. This,

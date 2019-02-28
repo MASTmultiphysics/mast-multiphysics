@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -105,7 +105,7 @@ namespace MAST {
         
         /*!
          *  @returns a constant reference to the element solution 
-         *  (or its derivative if \par if_sens is true) in the local
+         *  (or its derivative if \p if_sens is true) in the local
          *  element coordinate system
          */
         const RealVectorX& local_solution(bool if_sens = false) const {
@@ -141,7 +141,7 @@ namespace MAST {
                                       RealMatrixX& jac);
 
         /*!
-         *   calculates the term on side \par s:
+         *   calculates the term on side \p s:
          *   \f$ \int_\Gamma a(\delta u, u) v_n ~d\Gamma \f$.
          *
          */

@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -122,7 +122,7 @@ namespace MAST {
             }
             
             /*!
-             *   @returns location of division point \par i
+             *   @returns location of division point \p i
              */
             Real div_location(unsigned int i) const {
                 libmesh_assert(_n_divs > 0);
@@ -132,7 +132,7 @@ namespace MAST {
 
             
             /*!
-             *   @returns relative mesh size at point \par i
+             *   @returns relative mesh size at point \p i
              */
             Real relative_mesh_size(unsigned int i) const {
                 libmesh_assert(_n_divs > 0);
@@ -142,7 +142,7 @@ namespace MAST {
 
             
             /*!
-             *   @returns number of elements in division \par i
+             *   @returns number of elements in division \p i
              */
             Real n_elements_in_div(unsigned int i) const {
                 libmesh_assert(_n_divs > 0);
