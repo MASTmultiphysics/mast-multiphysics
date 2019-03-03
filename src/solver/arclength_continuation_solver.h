@@ -61,7 +61,9 @@ namespace MAST {
         
         /*!
          * \f[
-         *    g(X, p, ds) =  (x-x0)  dX/ds +   (p-p0) dp/ds  -  ds = 0
+         *    g(X, p, ds) =  X_\text{scale} * (X-X0)  (dX/ds)_\text{scaled} +
+         *                   p_\text{scale} * (p-p0)  (dp/ds)_\text{scaled}  -
+         *                   ds_\text{scaled} = 0
          * \f]
          */
         virtual Real
@@ -70,9 +72,11 @@ namespace MAST {
         
         /*!
          * \f{eqnarray*}{
-         *    g(X, p, ds) & = & (x-x0)  dX/ds +   (p-p0) dp/ds  -  ds = 0 \\
-         *    dg/dp       & = & dp/ds \\
-         *    dg/dX       & = & dX/ds
+         *    g(X, p, ds) & = & X_\text{scale} * (X-X0)  (dX/ds)_\text{scaled} +
+         *                      p_\text{scale} * (p-p0)  (dp/ds)_\text{scaled}  -
+         *                      ds_\text{scaled} = 0 \\
+         *    dg/dp       & = & p_\text{scale} * (dp/ds)_\text{scaled} \\
+         *    dg/dX       & = & X_\text{scale} * (dX/ds)_\text{scaled}
          * \f}
          */
         void

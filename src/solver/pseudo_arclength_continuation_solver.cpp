@@ -59,14 +59,19 @@ MAST::PseudoArclengthContinuationSolver::initialize(Real dp) {
     _t0_X->scale(-1.);
     _t0_X->close();
     
-    arc_length = std::sqrt(dp*dp + std::pow(_t0_X->l2_norm(), 2));
+    // initialize scaling factors
+    _X_scale   = 1./_t0_X->l2_norm();
+    _p_scale   = 1./std::fabs(dp);
+
+    arc_length = std::sqrt(std::pow(_p_scale, 2) * dp*dp +
+                           std::pow(_X_scale, 2) * std::pow(_t0_X->l2_norm(), 2));
 
     libmesh_assert_greater(arc_length, 0.);
     
     // scale _t0_X such that {t0_X, t0_p} is a unit vector
-    _t0_X->scale(1./arc_length);
+    _t0_X->scale(_X_scale/arc_length);
     _t0_X->close();
-    _t0_p = dp/arc_length;
+    _t0_p = _p_scale*dp/arc_length;
     
     _initialized = true;
 }
@@ -96,20 +101,25 @@ _solve_NR_iterate(libMesh::NumericVector<Real>       &X,
     
     _update_search_direction(X, p,
                              jac,
-                             *dfdp,
-                             *dXdp,
+                             /**dfdp,
+                             *dXdp,*/
                              *t1_X,
                              t1_p);
     
     
     _g(X, p, *t1_X, t1_p, g);
     
+    // scale the values so that they are in the scaled coordinates
+    t1_X->scale(_X_scale);
+    t1_X->close();
+    t1_p *= _p_scale;
+    
     _solve_schur_factorization(X, p,
                                jac,                          false, // do not update jac
                                *f,                           true,  // update f
-                               *dfdp,                        false, // do not update dfdp
-                               *dXdp,                        false, // do not update dXdp
-                               *t1_X, t1_p, g,           // dgdX = t1^X, dgdp = t1^p
+                               *dfdp,                        true,  // update dfdp
+                               *dXdp,                        true,  // update dXdp
+                               *t1_X, t1_p, g,           // dgdX = X_scale * t1^X, dgdp = p_scale *t1^p
                                *dX, dp);
     
     // update the solution and load parameter
@@ -125,22 +135,38 @@ MAST::PseudoArclengthContinuationSolver::
 _update_search_direction(const libMesh::NumericVector<Real> &X,
                          const MAST::Parameter              &p,
                          libMesh::SparseMatrix<Real>        &jac,
-                         libMesh::NumericVector<Real>       &dfdp,
-                         libMesh::NumericVector<Real>       &dXdp,
+                         /*libMesh::NumericVector<Real>       &dfdp,
+                         libMesh::NumericVector<Real>       &dXdp,*/
                          libMesh::NumericVector<Real>       &t1_X,
                          Real                               &t1_p) {
     
     libmesh_assert(_initialized);
 
     std::unique_ptr<libMesh::NumericVector<Real>>
-    f(X.zero_clone().release());
+    f(X.zero_clone().release()),
+    dfdp(X.zero_clone().release()),
+    dXdp(X.zero_clone().release());
+
+    MAST::NonlinearSystem
+    &system    = _assembly->system();
+
+    system.set_operation(MAST::NonlinearSystem::FORWARD_SENSITIVITY_SOLVE);
+    _assembly->set_elem_operation_object(*_elem_ops);
+
+    _assembly->sensitivity_assemble(p, *dfdp);
+    dfdp->scale(_X_scale/_p_scale);
+    dfdp->close();
+
+    _assembly->clear_elem_operation_object();
+    system.set_operation(MAST::NonlinearSystem::NONE);
+
 
     // first update the search direction
     _solve_schur_factorization(X, p,
                                jac,               true,  // update jac
                                *f,                false, // do not update f
-                               dfdp,              true,  // update dfdp
-                               dXdp,              true,  // update dXdp
+                               *dfdp,             false, // do not update dfdp
+                               *dXdp,             true,  // update dXdp
                                *_t0_X, _t0_p,  -1.,  // dgdX = t0^X, dgdp = t0^p, g = -1
                                t1_X, t1_p);
 
@@ -167,8 +193,8 @@ MAST::PseudoArclengthContinuationSolver::_g(const libMesh::NumericVector<Real> &
     
     std::unique_ptr<libMesh::NumericVector<Real>>
     f(X.zero_clone().release()),
-    dfdp(X.zero_clone().release()),
-    dXdp(X.zero_clone().release()),
+    /*dfdp(X.zero_clone().release()),
+    dXdp(X.zero_clone().release()),*/
     t1_X(X.zero_clone().release());
     
     Real
@@ -177,8 +203,8 @@ MAST::PseudoArclengthContinuationSolver::_g(const libMesh::NumericVector<Real> &
 
     _update_search_direction(X, p,
                              *_assembly->system().matrix,
-                             *dfdp,
-                             *dXdp,
+                             /**dfdp,
+                             *dXdp,*/
                              *t1_X,
                              t1_p);
     
@@ -203,6 +229,7 @@ MAST::PseudoArclengthContinuationSolver::_g(const libMesh::NumericVector<Real> &
     dX->add(-1., *_X0);
     dX->close();
     
-    g    = dX->dot(t1_X) + (p() - _p0) * t1_p - arc_length;
+    g    = (_X_scale *  dX->dot(t1_X) +
+            _p_scale * (p() - _p0) * t1_p) - arc_length;
 }
 

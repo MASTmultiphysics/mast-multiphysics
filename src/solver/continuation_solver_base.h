@@ -159,7 +159,9 @@ namespace MAST {
         MAST::Parameter                *_p;
 
         Real
-        _p0;
+        _p0,
+        _X_scale,
+        _p_scale;
         
         std::unique_ptr<libMesh::NumericVector<Real>>
         _X0;

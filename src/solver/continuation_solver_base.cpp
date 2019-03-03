@@ -37,7 +37,9 @@ arc_length   (0.),
 _elem_ops    (nullptr),
 _assembly    (nullptr),
 _p           (nullptr),
-_p0          (0.) {
+_p0          (0.),
+_X_scale     (0.),
+_p_scale     (0.){
     
 }
 

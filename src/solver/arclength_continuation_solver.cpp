@@ -58,8 +58,13 @@ MAST::ArclengthContinuationSolver::initialize(Real dp) {
     dX->add(-1., *system.solution);
     dX->scale(-1.);
     dX->close();
+
+    // initialize scaling factors
+    _X_scale   = 1./dX->l2_norm();
+    _p_scale   = 1./std::fabs(dp);
     
-    arc_length = std::sqrt(dp*dp + std::pow(dX->l2_norm(), 2));
+    arc_length = std::sqrt(std::pow(_p_scale, 2) * dp*dp +
+                           std::pow(_X_scale, 2) * std::pow(dX->l2_norm(), 2));
     
     libmesh_assert_greater(arc_length, 0.);
     
@@ -190,8 +195,9 @@ MAST::ArclengthContinuationSolver::_g(const libMesh::NumericVector<Real> &X,
     // update the constraint data
     _dXdp(X, p, dfdp, dXdp);
     
+    // this includes scaling of X and p
     Real
-    dpds = std::sqrt(1./ (dXdp.dot(dXdp) + 1.));
+    dpds = std::sqrt(1./ ( std::pow(_X_scale/_p_scale,2) * dXdp.dot(dXdp) + 1.));
     
     std::unique_ptr<libMesh::NumericVector<Real>>
     dX(X.clone().release());
@@ -199,13 +205,17 @@ MAST::ArclengthContinuationSolver::_g(const libMesh::NumericVector<Real> &X,
     dX->add(-1., *_X0);
     dX->close();
     
-    g    = dX->dot(dXdp) * dpds + (p() - _p0) * dpds - arc_length;
-    dgdp = dpds;
+    // (dX/ds)_scaled = (dX/dp)_scaled * (dp/ds)_scaled
+    //                = (dX_scaled/dX) * dX/dp * (dp/dp_scaled) * (dp/ds)_scaled
+    //                = X_scale/p_scale * dX/dp * (dp/ds)_scaled
+    g    = (_X_scale * (dX->dot(dXdp) * dpds * _X_scale/_p_scale) +
+            _p_scale * (p() - _p0)    * dpds) - arc_length;
+    dgdp = _p_scale * dpds;
     
     if (dgdX) {
         
         dgdX->zero();
-        dgdX->add(dpds, dXdp);
+        dgdX->add(_X_scale * (dpds * _X_scale/_p_scale), dXdp);
         dgdX->close();
     }
 }
