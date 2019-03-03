@@ -29,7 +29,8 @@
 
 
 MAST::ArclengthContinuationSolver::ArclengthContinuationSolver():
-MAST::ContinuationSolverBase() {
+MAST::ContinuationSolverBase(),
+_dpds_sign  (1.) {
     
 }
 
@@ -46,6 +47,7 @@ MAST::ArclengthContinuationSolver::initialize(Real dp) {
     libmesh_assert(_elem_ops);
     
     (*_p)() += dp;
+    if (dp < 0.) _dpds_sign = -1.;
     
     MAST::NonlinearSystem&
     system = _assembly->system();
@@ -197,7 +199,7 @@ MAST::ArclengthContinuationSolver::_g(const libMesh::NumericVector<Real> &X,
     
     // this includes scaling of X and p
     Real
-    dpds = std::sqrt(1./ ( std::pow(_X_scale/_p_scale,2) * dXdp.dot(dXdp) + 1.));
+    dpds = _dpds_sign * std::sqrt(1./ ( std::pow(_X_scale/_p_scale,2) * dXdp.dot(dXdp) + 1.));
     
     std::unique_ptr<libMesh::NumericVector<Real>>
     dX(X.clone().release());

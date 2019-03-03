@@ -87,6 +87,9 @@ namespace MAST {
            Real                               &g,
            Real                               &dgdp,
            libMesh::NumericVector<Real>       *dgdX);
+        
+        Real
+        _dpds_sign;
     };
 }
 
