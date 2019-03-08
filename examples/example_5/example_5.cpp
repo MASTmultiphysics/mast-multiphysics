@@ -274,6 +274,8 @@ protected:
     bool                                      _initialized;
     MAST::Examples::GetPotWrapper&            _input;
     
+    Real                                      _length;
+    Real                                      _height;
     Real                                      _obj_scaling;
     Real                                      _stress_lim;
     Real                                      _p_val, _vm_rho;
@@ -323,8 +325,7 @@ protected:
 
     void _init_fetype() {
         
-        // FEType to initialize the system
-        // get the order and type of element
+        // FEType to initialize the system. Get the order and type of element.
         std::string
         order_str   = _input("fe_order", "order of finite element shape basis functions",    "first"),
         family_str  = _input("fe_family",      "family of finite element shape functions", "lagrange");
@@ -348,9 +349,8 @@ protected:
         nx_divs = _input("nx_divs", "number of elements along x-axis", 10),
         ny_divs = _input("ny_divs", "number of elements along y-axis", 10);
         
-        Real
-        length  = _input("length", "length of domain along x-axis", 0.3),
-        height  = _input("height", "length of domain along y-axis", 0.3);
+        _length = _input("length", "length of domain along x-axis", 0.3),
+        _height = _input("height", "length of domain along y-axis", 0.3);
         
         std::string
         t = _input("elem_type", "type of geometric element in the mesh", "quad4");
@@ -368,14 +368,12 @@ protected:
         // initialize the mesh with one element
         libMesh::MeshTools::Generation::build_square(*_mesh,
                                                      nx_divs, ny_divs,
-                                                     0, length,
-                                                     0, height,
+                                                     0, _length,
+                                                     0, _height,
                                                      e_type);
-        
+
+        // mesh on which the level-set function is defined
         _level_set_mesh = new libMesh::SerialMesh(this->comm());
-        
-        // identify the element type from the input file or from the order
-        // of the element
         
         nx_divs = _input("level_set_nx_divs", "number of elements of level-set mesh along x-axis", 10);
         ny_divs = _input("level_set_ny_divs", "number of elements of level-set mesh along y-axis", 10);
@@ -384,8 +382,8 @@ protected:
         // initialize the mesh with one element
         libMesh::MeshTools::Generation::build_square(*_level_set_mesh,
                                                      nx_divs, ny_divs,
-                                                     0, length,
-                                                     0, height,
+                                                     0, _length,
+                                                     0, _height,
                                                      e_type);
     }
     
@@ -410,18 +408,13 @@ protected:
                                                                    _sys->name(),
                                                                    _fetype);
         _discipline     = new MAST::PhysicsDisciplineBase(*_eq_sys);
-
-        // FEType to initialize the system
-        // get the order and type of element
-        std::string
-        order_str   = _input( "level_set_fe_order", "order of finite element shape basis functions for level set method",    "first");
-        
-        libMesh::Order
-        o  = libMesh::Utility::string_to_enum<libMesh::Order>(order_str);
-        _level_set_fetype = libMesh::FEType(o, libMesh::LAGRANGE);
         
         
-        // now initialize the level set related data structures
+        // Initialize the system for level set function.
+        // A level set function is defined on a coarser mesh than the structural
+        // mesh.
+        // A level set function is assumed to be a first-order Lagrange finite element
+        _level_set_fetype      = libMesh::FEType(libMesh::FIRST, libMesh::LAGRANGE);
         _level_set_eq_sys      = new libMesh::EquationSystems(*_level_set_mesh);
         _level_set_sys         = &(_level_set_eq_sys->add_system<MAST::NonlinearSystem>("level_set"));
         _level_set_sys_init    = new MAST::LevelSetSystemInitialization(*_level_set_sys,
@@ -429,11 +422,18 @@ protected:
                                                                         _level_set_fetype);
         _level_set_discipline  = new MAST::LevelSetDiscipline(*_eq_sys);
         
+        // A system with level set function is defined on the strucutral mesh
+        // for the purpose of plotting.
         _level_set_sys_on_str_mesh      = &(_eq_sys->add_system<MAST::NonlinearSystem>("level_set"));
-        _indicator_sys                  = &(_eq_sys->add_system<MAST::NonlinearSystem>("indicator"));
         _level_set_sys_init_on_str_mesh = new MAST::LevelSetSystemInitialization(*_level_set_sys_on_str_mesh,
                                                                                  _level_set_sys->name(),
                                                                                  _level_set_fetype);
+        
+        //  an indicator function is used to locate unconnected free-floating
+        // domains of material. The indicator function solves a heat condution
+        // problem. Regions with uniformly zero temperature are marked as
+        // unconnected domains.
+        _indicator_sys                  = &(_eq_sys->add_system<MAST::NonlinearSystem>("indicator"));
         _indicator_sys_init             = new MAST::HeatConductionSystemInitialization(*_indicator_sys,
                                                                                        _indicator_sys->name(),
                                                                                        _fetype);
@@ -477,7 +477,6 @@ protected:
     
     void _init_eq_sys() {
         
-        // first call the parent method
         _eq_sys->init();
         _sys->eigen_solver->set_position_of_spectrum(libMesh::LARGEST_MAGNITUDE);
         _sys->set_exchange_A_and_B(true);
@@ -490,13 +489,12 @@ protected:
     void _init_loads() {
         
         Real
-        length  = _input("length", "length of domain along x-axis", 0.3),
         frac    = _input("load_length_fraction", "fraction of boundary length on which pressure will act", 0.2),
         p_val   =  _input("pressure", "pressure on side of domain",   2.e4);
         
         FluxLoad
-        *press_f         = new FluxLoad( "pressure", p_val, length, frac),
-        *flux_f          = new FluxLoad("heat_flux", -2.e6, length, frac);
+        *press_f         = new FluxLoad( "pressure", p_val, _length, frac),
+        *flux_f          = new FluxLoad("heat_flux", -2.e6, _length, frac);
         
         // initialize the load
         MAST::BoundaryConditionBase
@@ -617,25 +615,18 @@ protected:
         nx_m    = _input("level_set_nx_divs", "number of elements of level-set mesh along x-axis", 10),
         ny_m    = _input("level_set_ny_divs", "number of elements of level-set mesh along y-axis", 10);
         
-        Real
-        length  = _input("length", "length of domain along x-axis", 0.3),
-        height  = _input("height", "length of domain along y-axis", 0.3);
-        
-        Phi phi(length, height, nx_m, ny_m, nx_h, ny_h);
+        Phi phi(_length, _height, nx_m, ny_m, nx_h, ny_h);
         _level_set_sys_init->initialize_solution(phi);
     }
 
     
     void _init_phi_dvs() {
         
-        libmesh_assert(_initialized);
         // this assumes that level set is defined using lagrange shape functions
         libmesh_assert_equal_to(_level_set_fetype.family, libMesh::LAGRANGE);
         
         Real
         tol     = 1.e-6,
-        length  = _input("length", "length of domain along x-axis", 0.3),
-        height  = _input("height", "length of domain along y-axis", 0.3),
         frac    = _input("load_length_fraction", "fraction of boundary length on which pressure will act", 0.2);
         
         unsigned int
@@ -668,9 +659,9 @@ protected:
             dof_id                     = n.dof_number(0, 0, 0);
             
             // only if node is not on the upper edge
-            if ((std::fabs(n(1)-height) > tol) ||
-                (n(0) > length*.5*(1.+frac))   ||
-                (n(0) < length*.5*(1.-frac))) {
+            if ((std::fabs(n(1)-_height) > tol) ||
+                (n(0) > _length*.5*(1.+frac))   ||
+                (n(0) < _length*.5*(1.-frac))) {
                 
                 std::ostringstream oss;
                 oss << "dv_" << _n_vars;
@@ -803,6 +794,8 @@ public:
     MAST::FunctionEvaluation             (comm_in),
     _initialized                         (false),
     _input                               (input),
+    _length                              (0.),
+    _height                              (0.),
     _obj_scaling                         (0.),
     _stress_lim                          (0.),
     _p_val                               (0.),
@@ -857,15 +850,7 @@ public:
         // function value
         this->_init_phi_dvs();
         
-        unsigned int
-        max_inner_iters        = _input("max_inner_iters", "maximum inner iterations in GCMMA", 15);
-        
-        Real
-        constr_penalty         = _input("constraint_penalty", "constraint penalty in GCMMA", 50.),
-        length                 = _input("length", "length of domain along x-axis", 0.3),
-        height                 = _input("height", "length of domain along y-axis", 0.3);
-        
-        _obj_scaling           = 100./length/height;
+        _obj_scaling           = 100./_length/_height;
         _stress_lim            = _input("vm_stress_limit", "limit von-mises stress value", 2.e8);
         _p_val                 = _input("constraint_aggregation_p_val", "value of p in p-norm stress aggregation", 2.0);
         _vm_rho                = _input("constraint_aggregation_rho_val", "value of rho in p-norm stress aggregation", 2.0);
