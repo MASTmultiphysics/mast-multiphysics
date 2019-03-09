@@ -44,7 +44,6 @@
 #include "libmesh/enum_fe_family.h"
 #include "libmesh/enum_elem_type.h"    // ElemType
 #include "libmesh/fe_type.h"           // FEFamily, Order
-#include "libmesh/serial_mesh.h"
 #include "libmesh/parallel_mesh.h"
 #include "libmesh/equation_systems.h"
 #include "libmesh/dof_map.h"
@@ -81,7 +80,12 @@ protected:
     // This will initialize the mesh
     void _init_mesh(bool mesh, bool bc) {
         
-        _mesh              = new libMesh::ParallelMesh(_init.comm());
+        if (mesh) {
+            
+            libmesh_assert(!_mesh);
+            
+            _mesh              = new libMesh::ParallelMesh(_init.comm());
+        }
 
         // The mesh is created using classes written in MAST. The particular
         // mesh to be used can be selected using the input parameter
@@ -120,6 +124,8 @@ protected:
         
         if (mesh) {
             
+            _dim                 = 2;
+
             const unsigned int
             radial_divs         = _input("n_radial_elems", "number of elements in the radial direction from cylinder to far-field", 20),
             quarter_divs        = _input("n_quarter_elems", "number of elements in the quarter arc along the circumferencial direction", 20);
@@ -178,6 +184,8 @@ protected:
     void _init_cylinder(bool mesh, bool bc) {
         
         if (mesh) {
+
+            _dim                 = 2;
 
             const unsigned int
             radial_divs         = _input("n_radial_elems", "number of elements in the radial direction from cylinder to far-field", 20),
@@ -287,23 +295,23 @@ protected:
             // create the boundary conditions for slip-wall, symmetry and far-field
             MAST::BoundaryConditionBase
             *far_field   = new MAST::BoundaryConditionBase(MAST::FAR_FIELD),
+            *symmetry    = new MAST::BoundaryConditionBase(MAST::SYMMETRY_WALL),
             // if a viscous analysis is requested then set the wall to be a no-slip
             // wall. Otherwise, use a slip wall for inviscid analysis
             *wall        = new MAST::BoundaryConditionBase(if_viscous?
                                                            MAST::NO_SLIP_WALL:
                                                            MAST::SLIP_WALL);
             
-            // Cylinder surface is boundary id 3 ...
-            _discipline->add_side_load(   4, *wall);
-            // boundary id 1 is far field
-            _discipline->add_side_load(   0, *far_field);
-            _discipline->add_side_load(   2, *far_field);
-            _discipline->add_side_load(   5, *far_field);
+            // wing surface is boundary id 4 ...
+            _discipline->add_side_load(   4, *wall);      // wing surface
+            _discipline->add_side_load(   0, *symmetry);  // root
+            _discipline->add_side_load(   2, *far_field); // radial  far-field
+            _discipline->add_side_load(   5, *far_field); // spanwise farfield
 
             // store the pointers for later deletion in the destructor
             _boundary_conditions.insert(far_field);
+            _boundary_conditions.insert(symmetry);
             _boundary_conditions.insert(wall);
-            
         }
 
     }
@@ -442,7 +450,6 @@ public:
         // initialize the mesh. Details of parameters for each mesh are
         // described above.
         _init_mesh(true, false);
-        _mesh->write("mesh.exo");
         
         // create equation system
         _eq_sys = new libMesh::EquationSystems(*_mesh);
@@ -467,18 +474,6 @@ public:
                                                                     libMesh::FEType(fe_order, fe_family),
                                                                     _dim);
         
-        // initialize the boundary conditions before initialization of the
-        // equation system
-        _init_mesh(false, true);
-        
-        // initialize the equation system
-        _eq_sys->init();
-        
-        // print the information
-        _mesh->print_info();
-        _eq_sys->print_info();
-
-        
         // set fluid properties
         _flight_cond = new MAST::FlightCondition;
         _flight_cond->flow_unit_vector(0)  =
@@ -499,23 +494,19 @@ public:
         // tell the discipline about the fluid values
         _discipline->set_flight_condition(*_flight_cond);
 
-        // initialize the fluid solution
-        RealVectorX f(_dim+2);
-        f(0)      = _flight_cond->rho();
-        f(1)      = _flight_cond->rho_u1();
-        f(2)      = _flight_cond->rho_u2();
-        if (_dim > 2)
-            f(3)  = _flight_cond->rho_u3();
-        f(_dim+1) = _flight_cond->rho_e();
+        // initialize the boundary conditions before initialization of the
+        // equation system
+        _init_mesh(false, true);
+        
+        // initialize the equation system
+        _eq_sys->init();
+        
+        // print the information
+        _mesh->print_info();
+        _eq_sys->print_info();
 
-        // create the vector for storing the base solution.
-        // we will swap this out with the system solution, initialize and
-        // then swap it back.
-        libMesh::NumericVector<Real>& base_sol =
-        _sys->add_vector("fluid_base_solution");
-        _sys->solution->swap(base_sol);
-        _sys_init->initialize_solution(f);
-        _sys->solution->swap(base_sol);
+        // initialize the fluid solution
+        _init_solution();
     }
     
     
@@ -540,7 +531,7 @@ public:
     void compute_flow() {
         
         bool
-        output     = _input("if_output", "if write output to a file", false);
+        output     = _input("if_output", "if write output to a file", true);
         std::string
         output_name = _input("output_file_root", "prefix of output file names", "output"),
         transient_output_name = output_name + "_transient.exo";

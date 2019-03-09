@@ -27,7 +27,8 @@ target_link_libraries(mast
             ${LAPACK_LIBRARIES}
             ${PETSc_LIBRARIES}
             ${SLEPc_LIBRARIES}
-            ${libMesh_LIBRARIES})
+            debug ${libMesh_dbg_LIBRARIES}
+            optimized ${libMesh_opt_LIBRARIES})
 
 # NOTE: Use of PUBLIC keyword above means other CMake target (like an example)
 #       that target_link_library(XXXX mast) will inheret these properties.
