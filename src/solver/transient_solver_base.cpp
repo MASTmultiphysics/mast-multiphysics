@@ -111,10 +111,11 @@ set_elem_operation_object(MAST::TransientAssemblyElemOperations &assembly_ops) {
             nm = "transient_solution_";
             nm += iter.str();
             sys.add_vector(nm);
+
+            nm = "transient_solution_sensitivity_";
+            nm += iter.str();
+            sys.add_vector(nm);
         }
-        nm = "transient_solution_sensitivity_";
-        nm += iter.str();
-        sys.add_vector(nm);
 
         // add the velocity
         nm = "transient_velocity_";
@@ -224,11 +225,16 @@ MAST::TransientSolverBase::solution_sensitivity(unsigned int prev_iter) const {
     // make sure that the vectors have been initialized
     std::ostringstream oss;
     oss << prev_iter;
-    
-    std::string
-    nm = "transient_solution_sensitivity_" + oss.str();
-    
-    return _system->system().get_vector(nm);
+
+    if (prev_iter) {
+        // get references to the solution
+        std::string
+        nm = "transient_solution_sensitivity_" + oss.str();
+        
+        return _system->system().get_vector(nm);
+    }
+    else
+        return _system->system().add_sensitivity_solution();
 }
 
 
@@ -515,9 +521,8 @@ solve_highest_derivative_and_advance_time_step_with_sensitivity(MAST::AssemblyBa
     }
     
     // finally, update the system time
+    sys.time          += dt;
     _first_sensitivity_step        = false;
-    
-    this->solve_highest_derivative_and_advance_time_step(assembly);
 }
 
 
@@ -597,6 +602,62 @@ build_local_quantities(const libMesh::NumericVector<Real>& current_sol,
         }
     }
 }
+
+
+
+void
+MAST::TransientSolverBase::
+build_sensitivity_local_quantities(unsigned int prev_iter,
+                                   std::vector<libMesh::NumericVector<Real>*>& sol) {
+    
+    // make sure that the system has been specified
+    libmesh_assert(_system);
+    libmesh_assert_less_equal(prev_iter, _n_iters_to_store);
+    
+    MAST::NonlinearSystem
+    &sys = _system->system();
+    
+    // make sure there are no solutions in sol
+    libmesh_assert(!sol.size());
+    
+    // resize the vector to store the quantities
+    sol.resize(_ode_order+1);
+    
+    const std::vector<libMesh::dof_id_type>&
+    send_list = sys.get_dof_map().get_send_list();
+    
+    
+    for ( unsigned int i=0; i<=_ode_order; i++) {
+        
+        sol[i] = libMesh::NumericVector<Real>::build(sys.comm()).release();
+        sol[i]->init(sys.n_dofs(),
+                     sys.n_local_dofs(),
+                     send_list,
+                     false,
+                     libMesh::GHOSTED);
+        
+        switch (i) {
+                
+            case 0:
+                solution_sensitivity(prev_iter).localize(*sol[i], send_list);
+                break;
+                
+            case 1:
+                velocity_sensitivity(prev_iter).localize(*sol[i], send_list);
+                break;
+                
+            case 2:
+                acceleration_sensitivity(prev_iter).localize(*sol[i], send_list);
+                break;
+                
+            default:
+                // should not get here
+                libmesh_error();
+                break;
+        }
+    }
+}
+
 
 
 
@@ -729,11 +790,14 @@ MAST::TransientSolverBase::advance_time_step() {
 void
 MAST::TransientSolverBase::advance_time_step_with_sensitivity() {
     
+    MAST::NonlinearSystem
+    &sys = _system->system();
+
     // first ask the solver to update the velocity and acceleration vector
-    update_delta_velocity(this->velocity_sensitivity(), this->solution_sensitivity());
+    update_sensitivity_velocity(this->velocity_sensitivity(), this->solution_sensitivity());
     
     if (_ode_order > 1)
-        update_delta_acceleration(this->acceleration_sensitivity(), this->solution_sensitivity());
+        update_sensitivity_acceleration(this->acceleration_sensitivity(), this->solution_sensitivity());
     
     // next, move all the solutions and velocities into older
     // time step locations
@@ -755,9 +819,8 @@ MAST::TransientSolverBase::advance_time_step_with_sensitivity() {
     }
     
     // finally, update the system time
+    sys.time          += dt;
     _first_sensitivity_step   = false;
-
-    this->advance_time_step();
 }
 
 

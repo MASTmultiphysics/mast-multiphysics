@@ -10,6 +10,8 @@ target_sources(mast
         ${CMAKE_CURRENT_LIST_DIR}/second_order_newmark_transient_solver.h
         ${CMAKE_CURRENT_LIST_DIR}/slepc_eigen_solver.cpp
         ${CMAKE_CURRENT_LIST_DIR}/slepc_eigen_solver.h
+        ${CMAKE_CURRENT_LIST_DIR}/stabilized_first_order_transient_sensitivity_solver.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/stabilized_first_order_transient_sensitivity_solver.h
         ${CMAKE_CURRENT_LIST_DIR}/transient_solver_base.cpp
         ${CMAKE_CURRENT_LIST_DIR}/transient_solver_base.h)
 

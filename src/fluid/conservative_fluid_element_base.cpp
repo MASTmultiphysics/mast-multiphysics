@@ -803,6 +803,7 @@ MAST::ConservativeFluidElementBase::
 velocity_residual_sensitivity (const MAST::FunctionBase& p,
                                bool request_jacobian,
                                RealVectorX& f,
+                               RealMatrixX& jac_xdot,
                                RealMatrixX& jac) {
     
     return request_jacobian;
@@ -919,6 +920,84 @@ MAST::ConservativeFluidElementBase::side_integrated_force(const unsigned int s,
         }
     }
 }
+
+
+void
+MAST::ConservativeFluidElementBase::
+side_integrated_force_sensitivity(const MAST::FunctionBase& p,
+                                  const unsigned int s,
+                                  RealVectorX& f) {
+    
+    // prepare the side finite element
+    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe());
+    fe->init_for_side(_elem, s, if_viscous()); // viscous requires derivatives of shape functions
+    
+    const std::vector<Real> &JxW                 = fe->get_JxW();
+    const std::vector<libMesh::Point>& normals   = fe->get_normals();
+    
+    const unsigned int
+    dim    = _elem.dim(),
+    n1     = dim+2,
+    n2     = _fe->n_shape_functions()*n1;
+    
+    RealVectorX
+    temp_grad = RealVectorX::Zero(dim),
+    dpdX      = RealVectorX::Zero(n1),
+    vec1_n1   = RealVectorX::Zero(n1),
+    vec2_n2   = RealVectorX::Zero(n2);
+    
+    RealMatrixX
+    stress          = RealMatrixX::Zero(  dim,   dim),
+    dprim_dcons     = RealMatrixX::Zero(   n1,    n1),
+    mat2_n1n2       = RealMatrixX::Zero(   n1,    n2),
+    mat1_n1n1       = RealMatrixX::Zero(   n1,    n1);
+    
+    
+    libMesh::Point pt;
+    std::vector<MAST::FEMOperatorMatrix> dBmat(dim);
+    MAST::FEMOperatorMatrix Bmat;
+    
+    // create objects to calculate the primitive solution, flux, and Jacobian
+    MAST::PrimitiveSolution                             primitive_sol;
+    MAST::SmallPerturbationPrimitiveSolution<Real>      linearized_primitive_sol;
+    
+    for (unsigned int qp=0; qp<JxW.size(); qp++) {
+        
+        // initialize the Bmat operator for this term
+        _initialize_fem_interpolation_operator(qp, dim, *fe, Bmat);
+        Bmat.right_multiply(vec1_n1, _sol);
+        
+        // initialize the primitive solution
+        primitive_sol.zero();
+        primitive_sol.init(dim,
+                           vec1_n1,
+                           flight_condition->gas_property.cp,
+                           flight_condition->gas_property.cv,
+                           if_viscous());
+        
+        // now initialize the linearized solution
+        Bmat.right_multiply(vec1_n1, _sol_sens);
+        linearized_primitive_sol.zero();
+        linearized_primitive_sol.init(primitive_sol, vec1_n1);
+        
+        //
+        // first add the pressure term
+        //
+        for (unsigned int i_dim=0; i_dim<dim; i_dim++)
+            f(i_dim) += JxW[qp] * linearized_primitive_sol.dp * normals[qp](i_dim);
+        
+        //
+        // next, add the contribution from viscous stress
+        //
+        if (if_viscous()) {
+            // to be implemented
+            libmesh_error();
+        }
+    }
+}
+
+
+
 
 
 
@@ -1704,6 +1783,92 @@ far_field_surface_residual_sensitivity(const MAST::FunctionBase& p,
                                        const unsigned int s,
                                        MAST::BoundaryConditionBase& bc) {
     
+    
+    // conditions enforced are:
+    // -- f_adv_i ni =  f_adv = f_adv(+) + f_adv(-)     (flux vector splitting for advection)
+    // -- f_diff_i ni  = f_diff                         (evaluation of diffusion flux based on domain solution)
+    
+    // prepare the side finite element
+    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe());
+    fe->init_for_side(_elem, s, false);
+    
+    const std::vector<Real> &JxW                 = fe->get_JxW();
+    const std::vector<libMesh::Point>& normals   = fe->get_normals();
+    
+    const unsigned int
+    dim    = _elem.dim(),
+    n1     = dim+2,
+    n2     = _fe->n_shape_functions()*n1;
+    
+    RealVectorX
+    vec1_n1   = RealVectorX::Zero(n1),
+    vec2_n1   = RealVectorX::Zero(n1),
+    vec3_n2   = RealVectorX::Zero(n2),
+    flux      = RealVectorX::Zero(n1),
+    eig_val   = RealVectorX::Zero(n1),
+    dnormal   = RealVectorX::Zero(dim);
+    
+    RealMatrixX
+    mat1_n1n1        = RealMatrixX::Zero( n1, n1),
+    mat2_n1n2        = RealMatrixX::Zero( n1, n2),
+    mat3_n2n2        = RealMatrixX::Zero( n2, n2),
+    leig_vec         = RealMatrixX::Zero( n1, n1),
+    leig_vec_inv_tr  = RealMatrixX::Zero( n1, n1);
+    
+    libMesh::Point pt;
+    MAST::FEMOperatorMatrix Bmat;
+    
+    // create objects to calculate the primitive solution, flux, and Jacobian
+    MAST::PrimitiveSolution      primitive_sol;
+    
+    
+    for (unsigned int qp=0; qp<JxW.size(); qp++) {
+        
+        
+        // first update the variables at the current quadrature point
+        // initialize the Bmat operator for this term
+        _initialize_fem_interpolation_operator(qp, dim, *fe, Bmat);
+        Bmat.right_multiply(vec1_n1, _sol);
+        
+        // initialize the primitive solution
+        primitive_sol.zero();
+        primitive_sol.init(dim,
+                           vec1_n1,
+                           flight_condition->gas_property.cp,
+                           flight_condition->gas_property.cv,
+                           if_viscous());
+        
+        this->calculate_advection_left_eigenvector_and_inverse_for_normal
+        (primitive_sol,
+         normals[qp],
+         eig_val,
+         leig_vec,
+         leig_vec_inv_tr);
+        
+        // for all eigenalues that are less than 0, the characteristics are coming into the domain, hence,
+        // evaluate them using the given solution.
+        mat1_n1n1 = leig_vec_inv_tr;
+        for (unsigned int j=0; j<n1; j++)
+            if (eig_val(j) < 0)
+                mat1_n1n1.col(j) *= eig_val(j); // L^-T [omaga]_{-}
+            else
+                mat1_n1n1.col(j) *= 0.0;
+        
+        mat1_n1n1 *= leig_vec.transpose(); // A_{-} = L^-T [omaga]_{-} L^T
+        
+        //////////////////////////////////////////////////
+        // sens wrt mach for a 2D case
+        vec2_n1.setZero();
+        //vec2_n1(1)       = flight_condition->rho_u1_sens_mach();
+        //vec2_n1(2)       = flight_condition->rho_u2_sens_mach();
+        //vec2_n1(3)       = flight_condition->rho_e_sens_mach();
+        //////////////////////////////////////////////////
+        
+        flux = mat1_n1n1 * vec2_n1;  // f_{-} = A_{-} B U
+        Bmat.vector_mult_transpose(vec3_n2, flux); // B^T f_{-}   (this is flux coming into the solution domain)
+        f += JxW[qp] * vec3_n2;
+    }
+
     return false;
 }
 

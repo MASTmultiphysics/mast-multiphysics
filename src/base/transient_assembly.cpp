@@ -223,10 +223,8 @@ linearized_jacobian_solution_product (const libMesh::NumericVector<Real>& X,
         vec.setZero(ndofs);
 
         
-        solver.set_element_data(dof_indices,
-                                            local_qtys);
-        solver.set_element_perturbed_data(dof_indices,
-                                                      local_perturbed_qtys);
+        solver.set_element_data(dof_indices, local_qtys);
+        solver.set_element_perturbed_data(dof_indices, local_perturbed_qtys);
         
 //        if (_sol_function)
 //            physics_elem->attach_active_solution_function(*_sol_function);
@@ -282,15 +280,18 @@ sensitivity_assemble (const MAST::FunctionBase& f,
     
     // iterate over each element, initialize it and get the relevant
     // analysis quantities
-    RealVectorX vec, sol;
+    RealVectorX vec, vec2;
+    std::vector<RealVectorX> prev_local_sols;
     
     std::vector<libMesh::dof_id_type> dof_indices;
     const libMesh::DofMap& dof_map = nonlin_sys.get_dof_map();
     
     
     std::vector<libMesh::NumericVector<Real>*>
-    local_qtys;
+    local_qtys,
+    prev_local_qtys;
     solver.build_local_quantities(*nonlin_sys.solution, local_qtys);
+    solver.build_sensitivity_local_quantities(1, prev_local_qtys);
 
     // if a solution function is attached, initialize it
     if (_sol_function)
@@ -311,16 +312,20 @@ sensitivity_assemble (const MAST::FunctionBase& f,
         
         // get the solution
         unsigned int ndofs = (unsigned int)dof_indices.size();
-        sol.setZero(ndofs);
         vec.setZero(ndofs);
+        vec2.setZero(ndofs);
         
         solver.set_element_data(dof_indices, local_qtys);
+        solver.extract_element_sensitivity_data(dof_indices, prev_local_qtys, prev_local_sols);
         
         //        if (_sol_function)
         //            physics_elem->attach_active_solution_function(*_sol_function);
         
         // perform the element level calculations
+        solver.elem_sensitivity_contribution_previous_timestep(prev_local_sols, vec2);
         solver.elem_sensitivity_calculations(f, vec);
+        
+        vec += vec2;
         
         //        physics_elem->detach_active_solution_function();
         solver.clear_elem();
@@ -337,8 +342,11 @@ sensitivity_assemble (const MAST::FunctionBase& f,
         sensitivity_rhs.add_vector(v, dof_indices);
     }
     
-    for (unsigned int i=0; i<local_qtys.size(); i++)
+    for (unsigned int i=0; i<local_qtys.size(); i++) {
+        
         delete local_qtys[i];
+        delete prev_local_qtys[i];
+    }
 
     // if a solution function is attached, initialize it
     if (_sol_function)

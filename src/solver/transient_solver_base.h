@@ -142,7 +142,21 @@ namespace MAST {
          */
         virtual void update_acceleration(libMesh::NumericVector<Real>& acc,
                                          const libMesh::NumericVector<Real>& sol) = 0;
+
+        /*!
+         *    update the transient sensitivity velocity based on the
+         *    current sensitivity solution
+         */
+        virtual void update_sensitivity_velocity(libMesh::NumericVector<Real>& vel,
+                                                 const libMesh::NumericVector<Real>& sol) = 0;
         
+        /*!
+         *    update the transient sensitivity acceleration based on the
+         *    current sensitivity solution
+         */
+        virtual void update_sensitivity_acceleration(libMesh::NumericVector<Real>& acc,
+                                                     const libMesh::NumericVector<Real>& sol) = 0;
+
         
         /*!
          *    update the perturbation in transient velocity based on the
@@ -214,12 +228,23 @@ namespace MAST {
                                std::vector<libMesh::NumericVector<Real>*>& qtys);
 
         /*!
+         *    localizes the relevant solutions for system assembly. The
+         *    calling function has to delete the pointers to these vectors.
+         *    \p prev_iter = 0 implies the current iterate, while increasing
+         *    values will identify decreasing iterations for which data
+         *    is stored. 
+         */
+        virtual void
+        build_sensitivity_local_quantities(unsigned int prev_iter,
+                                           std::vector<libMesh::NumericVector<Real>*>& qtys);
+
+        /*!
          *    localizes the relevant perturbations in solutions for system
          *    assembly. 
          *    \param current_sol  the perturbation in current displacement 
          *    \f$ \Delta X \f$
          *    \param qtys upon returning, this vector is populated such that the
-         *    ith element of the vector is \f$ (d (d^iX/dt^i)/ dX) dX \Delta X \f$
+         *    ith element of the vector is \f$ (d (d^iX/dt^i)/ dX) dX \Delta X$
          */
         virtual void
         build_perturbed_local_quantities
@@ -240,9 +265,18 @@ namespace MAST {
          *    calculations
          */
         virtual void
-        set_element_sensitivity_data(const std::vector<libMesh::dof_id_type>& dof_indices,
-                                     const std::vector<libMesh::NumericVector<Real>*>& sols) = 0;
+        extract_element_sensitivity_data(const std::vector<libMesh::dof_id_type>& dof_indices,
+                                         const std::vector<libMesh::NumericVector<Real>*>& sols,
+                                         std::vector<RealVectorX>& local_sols) = 0;
 
+        /*!
+         *   computes the contribution for this element from previous
+         *   time step
+         */
+        virtual void
+        elem_sensitivity_contribution_previous_timestep(const std::vector<RealVectorX>& prev_sols,
+                                                        RealVectorX& vec) = 0;
+        
         /*!
          *    provides the element with the transient data for calculations
          */

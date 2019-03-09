@@ -35,15 +35,15 @@ namespace MAST {
      *    \f[ r = beta*dt(f_m + f_x )= 0 \f]
      *    where, (for example)
      *    \f{eqnarray*}{
-     *      f_m & = &  \int_\Omega \phi \dot{u}   \mbox{ [typical mass vector in conduction, for example]}\\
-     *      f_x & = &  \int_\Omega \phi_i u_i - \int_\Gamma \phi q_n \mbox{ [typical conductance and heat flux combination, for example]}
+     *      f_m & = &  int_Omega phi u_dot   \mbox{ [typical mass vector in conduction, for example]}\\
+     *      f_x & = &  int_Omega phi_i u_i - int_Gamma phi q_n \mbox{ [typical conductance and heat flux combination, for example]}
      *    \f}
      *
      *    This method assumes
      *    \f{eqnarray*}{
-     *     x     &=& x_0 + (1-\beta) dt \dot{x_0} + \beta dt \dot{x} \\
-     *    \mbox{or, } \dot{x} &=& (x-x_0)/\beta/dt - (1-\beta)/\beta \dot{x_0}
-     *    \f}
+     *     x     &=& x0 + (1-beta) dt x0_dot + beta dt x_dot \\
+     *    \mbox{or, } x_dot &=& (x-x0)/beta/dt - (1-beta)/beta x0_dot
+     *    }
      *    Note that the residual expression multiplies the expression by beta*dt
      *    for convenience in the following expressions
      *
@@ -51,10 +51,10 @@ namespace MAST {
      *    Jacobian is
      *    \f{eqnarray*}{
      *    dr/dx &=& [df_m/dx + df_x/dx +\\
-     *       &&          df_m/d\dot{x} d\dot{x}/dx + df_x/d\dot{x} d\dot{x}/dx]\\
+     *       &&          df_m/dx_dot dx_dot/dx + df_x/dx_dot dx_dot/dx]\\
      *       &=& [(df_m/dx + df_x/dx) +\\
-     *       &&           (df_m/d\dot{x} + df_x/d\dot{x}) (1/\beta/dt)]
-     *    \f}
+     *       &&           (df_m/dx_dot + df_x/dx_dot) (1/beta/dt)]
+     *    }
      *   Note that this form of equations makes it a good candidate for
      *   use as implicit solver, ie, for a nonzero beta.
      */
@@ -87,6 +87,23 @@ namespace MAST {
         }
         
         /*!
+         *    update the transient sensitivity velocity based on the
+         *    current sensitivity solution
+         */
+        virtual void update_sensitivity_velocity(libMesh::NumericVector<Real>& vel,
+                                                 const libMesh::NumericVector<Real>& sol);
+        
+        /*!
+         *    update the transient sensitivity acceleration based on the
+         *    current sensitivity solution
+         */
+        virtual void update_sensitivity_acceleration(libMesh::NumericVector<Real>& acc,
+                                                     const libMesh::NumericVector<Real>& sol) {
+            // should not get here for first order ode
+            libmesh_error();
+        }
+
+        /*!
          *    update the perturbation in transient velocity based on the
          *    current perturbed solution
          */
@@ -117,8 +134,9 @@ namespace MAST {
          *    calculations
          */
         virtual void
-        set_element_sensitivity_data(const std::vector<libMesh::dof_id_type>& dof_indices,
-                                     const std::vector<libMesh::NumericVector<Real>*>& sols);
+        extract_element_sensitivity_data(const std::vector<libMesh::dof_id_type>& dof_indices,
+                                         const std::vector<libMesh::NumericVector<Real>*>& sols,
+                                         std::vector<RealVectorX>& local_sols);
 
         /*!
          *    provides the element with the transient data for calculations
@@ -143,7 +161,7 @@ namespace MAST {
         /*!
          *   performs the element calculations over \p elem, and returns
          *   the element vector quantity in \p vec. The vector quantity only
-         *   include the \f$ [J] \{dX\} \f$ components, so the inherited classes
+         *   include the \f$ [J] \{dX\} f$ components, so the inherited classes
          *   must ensure that no component of constant forces (traction/body
          *   forces/etc.) are added to this vector.
          */
@@ -157,6 +175,14 @@ namespace MAST {
         virtual void
         elem_sensitivity_calculations(const MAST::FunctionBase& f,
                                       RealVectorX& vec);
+
+        /*!
+         *   computes the contribution for this element from previous
+         *   time step
+         */
+        virtual void
+        elem_sensitivity_contribution_previous_timestep(const std::vector<RealVectorX>& prev_sols,
+                                                        RealVectorX& vec);
 
         /*!
          *   performs the element shape sensitivity calculations over \p elem,

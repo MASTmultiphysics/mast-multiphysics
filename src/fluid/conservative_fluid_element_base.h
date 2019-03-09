@@ -126,6 +126,7 @@ namespace MAST {
         velocity_residual_sensitivity (const MAST::FunctionBase& p,
                                        bool request_jacobian,
                                        RealVectorX& f,
+                                       RealMatrixX& jac_xdot,
                                        RealMatrixX& jac);
         
         /*!
@@ -145,7 +146,12 @@ namespace MAST {
         side_integrated_force(const unsigned int s,
                               RealVectorX& f,
                               RealMatrixX* dfdX = nullptr);
+
         
+        virtual void
+        side_integrated_force_sensitivity(const MAST::FunctionBase& p,
+                                          const unsigned int s,
+                                          RealVectorX& f);
     protected:
         
         

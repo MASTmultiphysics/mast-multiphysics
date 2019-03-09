@@ -175,7 +175,6 @@ int main(int argc, char* argv[]) {
                    libMesh::FEType(fe_order, fe_family), dim);
     
     // keep fluid boundary on all partitions
-    // TODO:
     MAST::AugmentGhostElementSendListObj augment_send_list_obj(fluid_sys);
     fluid_sys.get_dof_map().attach_extra_send_list_object(augment_send_list_obj);
     
