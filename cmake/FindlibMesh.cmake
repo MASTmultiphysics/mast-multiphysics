@@ -22,7 +22,7 @@ find_library(libMesh_dbg_LIBRARY
 # If debug library is not available then set it to the optimized library
 if(NOT libMesh_dbg_LIBRARY)
    message("Did not fine libmesh_dbg using libmesh_opt for debug version.")
-   set(libMesh_dbg_LIBRARY  ${libMesh_opt_LIBRARY})
+   set(libMesh_dbg_LIBRARY  ${libMesh_opt_LIBRARY} CACHE)
 endif()
 
 

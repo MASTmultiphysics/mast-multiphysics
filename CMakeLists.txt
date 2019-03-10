@@ -1,7 +1,7 @@
 # PREAMBLE
 cmake_minimum_required(VERSION 3.2)
 project(MAST
-        VERSION 0.1
+        VERSION 0.3
         LANGUAGES C CXX)
 
 # PROJECT WIDE SETUP
@@ -39,8 +39,8 @@ find_package(PETSc REQUIRED)
 find_package(SLEPc REQUIRED)
 find_package(libMesh REQUIRED)
 find_package(Eigen3 REQUIRED)
-find_package(Boost REQUIRED) # Boost is currently only utilized in src/optimization/function_evaluation (not counting tests).
-                             # We possibly could refactor to move finding Boost libraries closer to source where Boost is used.
+find_package(Boost COMPONENTS unit_test_framework REQUIRED)
+
 if (ENABLE_NLOPT)
    find_package(NLOpt REQUIRED)
 endif()
@@ -55,3 +55,8 @@ add_subdirectory(examples)
 if(BUILD_DOC)
     add_subdirectory(doc)
 endif()
+
+# TESTS
+add_subdirectory(tests)
+enable_testing()
+

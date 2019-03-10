@@ -152,8 +152,6 @@ namespace MAST {
         side_integrated_force_sensitivity(const MAST::FunctionBase& p,
                                           const unsigned int s,
                                           RealVectorX& f);
-    protected:
-        
         
         
         /*!
@@ -235,7 +233,9 @@ namespace MAST {
                                                             const unsigned int s,
                                                             MAST::BoundaryConditionBase& bc);
         
+    protected:
         
+
         /*!
          *   calculates the surface integrated force vector
          */

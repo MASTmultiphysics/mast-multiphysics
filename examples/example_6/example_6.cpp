@@ -127,12 +127,12 @@ protected:
             _dim                 = 2;
 
             const unsigned int
-            radial_divs         = _input("n_radial_elems", "number of elements in the radial direction from cylinder to far-field", 20),
+            radial_divs         = _input("n_radial_elems", "number of elements in the radial direction from airfoil to far-field", 20),
             quarter_divs        = _input("n_quarter_elems", "number of elements in the quarter arc along the circumferencial direction", 20);
             
             const Real
             r                   = _input("radius", "radius of the cylinder", 0.1),
-            l_by_r              = _input("l_by_r", "far-field distance to cylinder radius ratio", 5.),
+            l_by_r              = _input("l_by_r", "far-field distance to airfoil radius ratio", 5.),
             h_ff_by_h_r         = _input("h_far_field_by_h_r", "relative element size at far-field boundary to element size at cylinder", 50.);
             
             std::string
@@ -168,7 +168,7 @@ protected:
                                                            MAST::NO_SLIP_WALL:
                                                            MAST::SLIP_WALL);
             
-            // Cylinder surface is boundary id 3 ...
+            // airfoil surface is boundary id 3 ...
             _discipline->add_side_load(   3, *wall);
             // boundary id 1 is far field
             _discipline->add_side_load(   1, *far_field);
@@ -176,7 +176,6 @@ protected:
             // store the pointers for later deletion in the destructor
             _boundary_conditions.insert(far_field);
             _boundary_conditions.insert(wall);
-            
         }
     }
 
@@ -486,7 +485,7 @@ public:
         _flight_cond->gas_property.cp  = input("cp",   "fluid specific heat at constant pressure",  1003.);
         _flight_cond->gas_property.cv  = input("cv",   "fluid specific heat at constant volume",     716.);
         _flight_cond->gas_property.T   = input("T",    "fluid absolute temperature",                 300.);
-        _flight_cond->gas_property.rho = input("rho",  "fluid density",                              1.35);
+        _flight_cond->gas_property.rho = input("rho",  "fluid density",                              1.05);
         _flight_cond->gas_property.if_viscous =
         _input("if_viscous", "if the flow analysis should include viscosity", false);
         _flight_cond->init();
@@ -588,7 +587,7 @@ public:
         // integration scheme updates the velocity and acceleration at
         // each subsequent iterate
         solver.solve_highest_derivative_and_advance_time_step(assembly);
-        
+        libMesh::out << "hellotoyou\n";
         // loop over time steps
         while (t_step < n_steps) {
             
