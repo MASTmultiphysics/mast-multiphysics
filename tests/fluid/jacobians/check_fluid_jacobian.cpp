@@ -67,71 +67,76 @@ BOOST_FIXTURE_TEST_SUITE(ConservativeFluidElemJacobians, BuildFluidElem)
 
 
 // sensitivity wrt rho is all zero. Hence, the first one tested is wrt u1
+BOOST_AUTO_TEST_CASE(FarFieldJacobian) {
+
+    struct Check {
+        Real            frac;
+        Real            tol;
+        unsigned int    side;
+        BuildFluidElem* e;
+        void compute(bool jac, RealVectorX& f, RealMatrixX& j) {
+            e->_fluid_elem->far_field_surface_residual(jac, f, j, side,
+                                                       *e->_far_field_bc);
+        }
+    };
+
+    Check val;
+    val.frac = _tol*1.e-1;
+    val.tol  = _tol;
+    val.e    = this;
+
+    // check for each side.
+    for (val.side=0; val.side<_fluid_elem->elem().n_sides(); val.side++)
+        BOOST_CHECK(check_jacobian(val));
+    
+}
+
+
 BOOST_AUTO_TEST_CASE(SlipWallJacobian) {
     
-    Real
-    frac  = 1.e-7,
-    delta = 0.;
-    
-    unsigned int
-    n = _sys->n_dofs();
-    
-    RealMatrixX
-    jac0    = RealMatrixX::Zero(n, n),
-    jac_fd  = RealMatrixX::Zero(n, n);
-    
-    RealVectorX
-    v0      = RealVectorX::Zero(n),
-    x       = RealVectorX::Zero(n),
-    x0      = RealVectorX::Zero(n),
-    f0      = RealVectorX::Zero(n),
-    f       = RealVectorX::Zero(n);
-    
-    init_solution_for_elem(x0);
-    
-    // velocity is set to assuming a linear variation of the state from zero
-    // over dt = 1.e-2
-    v0 = x0/1.e-2;
-    
-    _fluid_elem->set_solution(x0);
-    _fluid_elem->set_velocity(v0);
-    _fluid_elem->far_field_surface_residual(true,
-                                            f0,
-                                            jac0,
-                                            0,
-                                            *_far_field_bc);
-    
-    for (unsigned int i=0; i<n; i++) {
-        
-        x = x0;
-        
-        if (fabs(x0(i)) > 0.) {
-            delta = x0(i)*frac;
+    struct Check {
+        Real            frac;
+        Real            tol;
+        unsigned int    side;
+        BuildFluidElem* e;
+        void compute(bool jac, RealVectorX& f, RealMatrixX& j) {
+            e->_fluid_elem->slip_wall_surface_residual(jac, f, j, side,
+                                                       *e->_slip_wall_bc);
         }
-        else {
-            delta = frac;
+    };
+    
+    Check val;
+    val.frac = _tol*1.e-1;
+    val.tol  = _tol;
+    val.e    = this;
+    
+    // check for each side.
+    for (val.side=0; val.side<_fluid_elem->elem().n_sides(); val.side++)
+        BOOST_CHECK(check_jacobian(val));
+    
+}
+
+
+BOOST_AUTO_TEST_CASE(InternalResidualJacobian) {
+    
+    struct Check {
+        Real            frac;
+        Real            tol;
+        BuildFluidElem* e;
+        void compute(bool jac, RealVectorX& f, RealMatrixX& j) {
+            e->_fluid_elem->internal_residual(jac, f, j);
         }
-        
-        
-        x(i) += delta;
-        
-        _fluid_elem->set_solution(x);
-        _fluid_elem->set_velocity(v0);
-        
-        // get the new residual
-        f.setZero();
-        _fluid_elem->far_field_surface_residual(false,
-                                                f,
-                                                jac0,
-                                                0,
-                                                *_far_field_bc);
-        
-        // set the i^th column of the finite-differenced Jacobian
-        jac_fd.col(i) = (f-f0)/delta;
-    }
+    };
     
+    Check val;
+    val.frac = _tol*1.e-1;
+    // a smaller tolerance is required for the internal resisudal since
+    // an exact Jacobian is not computed for the stabilization terms
+    val.tol  = 1.e-2;
+    val.e    = this;
     
-    BOOST_CHECK(MAST::compare_matrix(jac0, jac_fd, _tol));
+    BOOST_CHECK(check_jacobian(val));
+    
 }
 
 BOOST_AUTO_TEST_SUITE_END()

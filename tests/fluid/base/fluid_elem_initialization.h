@@ -31,6 +31,7 @@
 #include "fluid/flight_condition.h"
 #include "fluid/integrated_force_output.h"
 #include "solver/first_order_newmark_transient_solver.h"
+#include "base/test_comparisons.h"
 
 // libMesh includes
 #include "libmesh/libmesh.h"
@@ -64,7 +65,8 @@ struct BuildFluidElem {
     MAST::FirstOrderNewmarkTransientSolver*        _transient_solver;
     MAST::ConservativeFluidElementBase*            _fluid_elem;
     MAST::BoundaryConditionBase*                   _far_field_bc;
-    
+    MAST::BoundaryConditionBase*                   _slip_wall_bc;
+
     libMesh::FEType                                _fetype;
     
     std::set<MAST::BoundaryConditionBase*>         _boundary_conditions;
@@ -82,7 +84,8 @@ struct BuildFluidElem {
     _elem_ops       (nullptr),
     _transient_solver(nullptr),
     _fluid_elem     (nullptr),
-    _far_field_bc   (nullptr) {
+    _far_field_bc   (nullptr),
+    _slip_wall_bc   (nullptr)  {
         
         
         // initialize the mesh. Details of parameters for each mesh are
@@ -91,7 +94,7 @@ struct BuildFluidElem {
         
         _dim               = 2;
         libMesh::MeshTools::Generation::build_square(*_mesh, 1, 1);
-
+        
         // create equation system
         _eq_sys = new libMesh::EquationSystems(*_mesh);
         
@@ -111,7 +114,8 @@ struct BuildFluidElem {
                                                                     _dim);
         
         _far_field_bc = new MAST::BoundaryConditionBase(MAST::FAR_FIELD);
-        
+        _slip_wall_bc = new MAST::BoundaryConditionBase(MAST::SLIP_WALL);
+
         // set fluid properties
         _flight_cond = new MAST::FlightCondition;
         _flight_cond->flow_unit_vector(0)  = 1.;
@@ -135,7 +139,7 @@ struct BuildFluidElem {
         _assembly = new MAST::TransientAssembly;
         _elem_ops = new MAST::ConservativeFluidTransientAssemblyElemOperations;
         _transient_solver = new MAST::FirstOrderNewmarkTransientSolver;
-
+        
         _assembly->set_discipline_and_system(*_discipline, *_sys_init);
         _elem_ops->set_discipline_and_system(*_discipline, *_sys_init);
         _transient_solver->set_discipline_and_system(*_discipline, *_sys_init);
@@ -150,19 +154,20 @@ struct BuildFluidElem {
     
     ~BuildFluidElem() {
         
-        delete _eq_sys;
-        delete _mesh;
-        
-        delete _discipline;
-        delete _sys_init;
-        delete _flight_cond;
-        
         delete _assembly;
         delete _elem_ops;
         delete _transient_solver;
         delete _fluid_elem;
         
         delete _far_field_bc;
+        delete _slip_wall_bc;
+
+        delete _eq_sys;
+        delete _mesh;
+        
+        delete _discipline;
+        delete _sys_init;
+        delete _flight_cond;
     }
     
     
@@ -170,7 +175,7 @@ struct BuildFluidElem {
         
         unsigned int
         n_shape = _sys->n_dofs()/(_dim+2);
-
+        
         s = RealVectorX::Zero(_sys->n_dofs());
         
         for (unsigned int i=0; i<n_shape; i++) {
@@ -183,6 +188,64 @@ struct BuildFluidElem {
             s((_dim+1)*n_shape+i) = _flight_cond->rho_e();
         }
     }
+    
+    template <typename ValType>
+    bool check_jacobian(ValType& val) {
+        
+        Real
+        delta = 0.;
+        
+        unsigned int
+        n = _sys->n_dofs();
+        
+        RealMatrixX
+        jac0    = RealMatrixX::Zero(n, n),
+        jac_fd  = RealMatrixX::Zero(n, n);
+        
+        RealVectorX
+        v0      = RealVectorX::Zero(n),
+        x       = RealVectorX::Zero(n),
+        x0      = RealVectorX::Zero(n),
+        f0      = RealVectorX::Zero(n),
+        f       = RealVectorX::Zero(n);
+        
+        init_solution_for_elem(x0);
+        
+        // velocity is set to assuming a linear variation of the state from zero
+        // over dt = 1.e-2
+        v0 = x0/1.e-2;
+        
+        _fluid_elem->set_solution(x0);
+        _fluid_elem->set_velocity(v0);
+        
+        val.compute(true, f0, jac0);
+        
+        for (unsigned int i=0; i<n; i++) {
+            
+            x = x0;
+            
+            if (fabs(x0(i)) > 0.)
+                delta = x0(i)*val.frac;
+            else
+                delta = val.frac;
+            
+            
+            x(i) += delta;
+            
+            _fluid_elem->set_solution(x);
+            _fluid_elem->set_velocity(v0);
+            
+            // get the new residual
+            f.setZero();
+            val.compute(false, f, jac0);
+            
+            // set the i^th column of the finite-differenced Jacobian
+            jac_fd.col(i) = (f-f0)/delta;
+        }
+        
+        return MAST::compare_matrix(jac0, jac_fd, val.tol);
+    }
+    
 };
 
 #endif // __mast_fluid_elem_initialization_h__
