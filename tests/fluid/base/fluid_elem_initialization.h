@@ -203,6 +203,7 @@ struct BuildFluidElem {
         jac_fd  = RealMatrixX::Zero(n, n);
         
         RealVectorX
+        v       = RealVectorX::Zero(n),
         v0      = RealVectorX::Zero(n),
         x       = RealVectorX::Zero(n),
         x0      = RealVectorX::Zero(n),
@@ -223,17 +224,28 @@ struct BuildFluidElem {
         for (unsigned int i=0; i<n; i++) {
             
             x = x0;
+            v = v0;
             
-            if (fabs(x0(i)) > 0.)
-                delta = x0(i)*val.frac;
-            else
-                delta = val.frac;
+            if (!val.jac_xdot) {
+                if (fabs(x0(i)) > 0.)
+                    delta = x0(i)*val.frac;
+                else
+                    delta = val.frac;
+                
+                x(i) += delta;
+            }
+            else {
+                if (fabs(v0(i)) > 0.)
+                    delta = v0(i)*val.frac;
+                else
+                    delta = val.frac;
+                
+                v(i) += delta;
+            }
             
-            
-            x(i) += delta;
             
             _fluid_elem->set_solution(x);
-            _fluid_elem->set_velocity(v0);
+            _fluid_elem->set_velocity(v);
             
             // get the new residual
             f.setZero();
@@ -243,7 +255,7 @@ struct BuildFluidElem {
             jac_fd.col(i) = (f-f0)/delta;
         }
         
-        return MAST::compare_matrix(jac0, jac_fd, val.tol);
+        return MAST::compare_matrix(jac_fd, jac0, val.tol);
     }
     
 };

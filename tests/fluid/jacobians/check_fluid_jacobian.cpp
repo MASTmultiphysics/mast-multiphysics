@@ -70,6 +70,7 @@ BOOST_FIXTURE_TEST_SUITE(ConservativeFluidElemJacobians, BuildFluidElem)
 BOOST_AUTO_TEST_CASE(FarFieldJacobian) {
 
     struct Check {
+        bool            jac_xdot;
         Real            frac;
         Real            tol;
         unsigned int    side;
@@ -81,9 +82,10 @@ BOOST_AUTO_TEST_CASE(FarFieldJacobian) {
     };
 
     Check val;
-    val.frac = _tol*1.e-1;
-    val.tol  = _tol;
-    val.e    = this;
+    val.jac_xdot = false;
+    val.frac     = _tol*1.e-1;
+    val.tol      = _tol;
+    val.e        = this;
 
     // check for each side.
     for (val.side=0; val.side<_fluid_elem->elem().n_sides(); val.side++)
@@ -95,6 +97,7 @@ BOOST_AUTO_TEST_CASE(FarFieldJacobian) {
 BOOST_AUTO_TEST_CASE(SlipWallJacobian) {
     
     struct Check {
+        bool            jac_xdot;
         Real            frac;
         Real            tol;
         unsigned int    side;
@@ -106,10 +109,11 @@ BOOST_AUTO_TEST_CASE(SlipWallJacobian) {
     };
     
     Check val;
-    val.frac = _tol*1.e-1;
-    val.tol  = _tol;
-    val.e    = this;
-    
+    val.jac_xdot = false;
+    val.frac     = _tol*1.e-1;
+    val.tol      = _tol;
+    val.e        = this;
+
     // check for each side.
     for (val.side=0; val.side<_fluid_elem->elem().n_sides(); val.side++)
         BOOST_CHECK(check_jacobian(val));
@@ -120,6 +124,7 @@ BOOST_AUTO_TEST_CASE(SlipWallJacobian) {
 BOOST_AUTO_TEST_CASE(InternalResidualJacobian) {
     
     struct Check {
+        bool            jac_xdot;
         Real            frac;
         Real            tol;
         BuildFluidElem* e;
@@ -129,14 +134,64 @@ BOOST_AUTO_TEST_CASE(InternalResidualJacobian) {
     };
     
     Check val;
-    val.frac = _tol*1.e-1;
+    val.jac_xdot = false;
+    val.frac     = _tol*1.e-1;
     // a smaller tolerance is required for the internal resisudal since
     // an exact Jacobian is not computed for the stabilization terms
     val.tol  = 1.e-2;
-    val.e    = this;
+    val.e        = this;
     
     BOOST_CHECK(check_jacobian(val));
     
 }
+
+
+BOOST_AUTO_TEST_CASE(VelocityResidualXJacobian) {
+    
+    struct Check {
+        bool            jac_xdot;
+        Real            frac;
+        Real            tol;
+        BuildFluidElem* e;
+        void compute(bool jac, RealVectorX& f, RealMatrixX& j) {
+            RealMatrixX jj = j; // dummy for jac wrt x_dot
+            e->_fluid_elem->velocity_residual(jac, f, jj, j);
+        }
+    };
+    
+    Check val;
+    val.jac_xdot = false;
+    val.frac     = _tol*1.e-1;
+    val.tol      = _tol;
+    val.e        = this;
+
+    BOOST_CHECK(check_jacobian(val));
+    
+}
+
+
+BOOST_AUTO_TEST_CASE(VelocityResidualXdotJacobian) {
+    
+    struct Check {
+        bool            jac_xdot;
+        Real            frac;
+        Real            tol;
+        BuildFluidElem* e;
+        void compute(bool jac, RealVectorX& f, RealMatrixX& j) {
+            RealMatrixX jj = j; // dummy for jac wrt x
+            e->_fluid_elem->velocity_residual(jac, f, j, jj);
+        }
+    };
+    
+    Check val;
+    val.jac_xdot = true;
+    val.frac     = _tol*1.e-1;
+    val.tol      = _tol;
+    val.e        = this;
+
+    BOOST_CHECK(check_jacobian(val));
+    
+}
+
 
 BOOST_AUTO_TEST_SUITE_END()
