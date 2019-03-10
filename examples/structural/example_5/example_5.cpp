@@ -60,8 +60,9 @@
 #include "libmesh/petsc_nonlinear_solver.h"
 
 
-
-
+//
+// BEGIN_TRANSLATE 2D Level-set topology optimization
+//
 class Phi:
 public MAST::FieldFunction<RealVectorX> {
     
@@ -124,24 +125,6 @@ public:
         
         libmesh_assert_less_equal(t, 1);
         libmesh_assert_equal_to(v.size(), 1);
-        
-        
-        /*// circle
-         //v(0) = -(pow(p(0)-_l1*.5, 2) + pow(p(1)-_l2*.5, 2) - pow(_r, 2));
-         
-         // waves
-         Real
-         c  = 0.5,
-         pi = acos(-1.),
-         x  = p(0)-.5*_l1,
-         y  = p(1)-.5*_l2,
-         r  = pow(pow(x,2)+pow(y,2),.5);
-         //v(0) = 1.*cos(nx*r*_pi/_l1);
-         v(0) = cos(2.*_nx*pi*x/_l1)+cos(2.*_ny*pi*y/_l2)+c;
-         
-         // linear
-         //v(0) = (p(0)-_l1*0.5)*(-10.);
-         //v(0) = (p(0)+p(1)-_l1)*(-10.);*/
         
         // the libMesh solution projection routine for Lagrange elements
         // will query the function value at the nodes. So, we figure
@@ -933,10 +916,10 @@ public:
     
     
     
-    /*!
-     *   initializes the design variable vector, called by the
-     *   optimization interface.
-     */
+    //
+    //   initializes the design variable vector, called by the
+    //   optimization interface.
+    //
     void init_dvar(std::vector<Real>& x,
                    std::vector<Real>& xmin,
                    std::vector<Real>& xmax) {
@@ -967,10 +950,10 @@ public:
     }
     
 
-    /*!
-     *   \p grads(k): Derivative of f_i(x) with respect
-     *   to x_j, where k = (j-1)*M + i.
-     */
+    //
+    //   \p grads(k): Derivative of f_i(x) with respect
+    //   to x_j, where k = (j-1)*M + i.
+    //
     void evaluate(const std::vector<Real>& dvars,
                   Real& obj,
                   bool eval_obj_grad,
@@ -990,10 +973,10 @@ public:
         _level_set_function->init(*_level_set_sys_init, *_level_set_sys->solution);
         _sys->solution->zero();
         
-        /**********************************************************************
-         * DO NOT zero out the gradient vector, since GCMMA needs it for the  *
-         * subproblem solution                                                *
-         **********************************************************************/
+        //*********************************************************************
+        // DO NOT zero out the gradient vector, since GCMMA needs it for the  *
+        // subproblem solution                                                *
+        //*********************************************************************
         MAST::LevelSetNonlinearImplicitAssembly                  nonlinear_assembly;
         MAST::LevelSetNonlinearImplicitAssembly                  level_set_assembly;
         MAST::LevelSetEigenproblemAssembly                       eigen_assembly;
@@ -1176,9 +1159,6 @@ public:
 
     
     
-    //void level_set_solve();
-    
-    
     void output(unsigned int iter,
                 const std::vector<Real>& x,
                 Real obj,
@@ -1226,90 +1206,6 @@ public:
 
 };
 
-
-//
-//
-//void
-//TopologyOptimizationLevelSet2D::level_set_solve() {
-//
-//    libmesh_assert(_initialized);
-//
-//    bool
-//    output      = _input("if_output", "if write output to a file", false),
-//    propagate   = _input("if_propagate", "if propagate level set, or reinitialize it", true);
-//
-//
-//    std::string
-//    output_name = _input("output_file_root", "prefix of output file names", "output");
-//    output_name += "_level_set.exo";
-//
-//    // create the nonlinear assembly object
-//    std::unique_ptr<MAST::TransientAssembly> level_set_assembly;
-//    if (propagate)
-//        level_set_assembly.reset(new MAST::TransientAssembly);
-//    else {
-//        MAST::LevelSetReinitializationTransientAssembly
-//        *assembly = new MAST::LevelSetReinitializationTransientAssembly;
-//
-//        libMesh::NumericVector<Real>
-//        &base_sol = _level_set_sys->add_vector("base_sol");
-//        base_sol  = *_level_set_sys->solution;
-//
-//        assembly->set_reference_solution(base_sol);
-//        _level_set_discipline->set_level_set_propagation_mode(false);
-//        level_set_assembly.reset(assembly);
-//    }
-//    MAST::LevelSetTransientAssemblyElemOperations            level_set_elem_ops;
-//
-//    // Transient solver for time integration
-//    MAST::FirstOrderNewmarkTransientSolver  level_set_solver;
-//
-//    // now solve the system
-//    level_set_assembly->set_discipline_and_system(*_level_set_discipline,
-//                                                  *_level_set_sys_init);
-//
-//    // file to write the solution for visualization
-//    libMesh::ExodusII_IO exodus_writer(*_mesh);
-//
-//    // time solver parameters
-//    unsigned int
-//    t_step                         = 0,
-//    n_steps                        = _input("level_set_n_transient_steps", "number of transient time-steps", 100);
-//    level_set_solver.dt            = _input("level_set_dt", "time-step size",    1.e-3);
-//    level_set_solver.beta          = 0.5;
-//
-//    // set the previous state to be same as the current state to account for
-//    // zero velocity as the initial condition
-//    level_set_solver.solution(1).zero();
-//    level_set_solver.solution(1).add(1., level_set_solver.solution());
-//    level_set_solver.solution(1).close();
-//
-//
-//    // loop over time steps
-//    while (t_step <= n_steps) {
-//
-//        libMesh::out
-//        << "Time step: " << t_step
-//        << " :  t = " << _level_set_sys->time
-//        << std::endl;
-//
-//        // write the time-step
-//        if (output) {
-//
-//            exodus_writer.write_timestep(output_name,
-//                                         *_eq_sys,
-//                                         t_step+1,
-//                                         _level_set_sys->time);
-//        }
-//
-//        level_set_solver.solve(*level_set_assembly);
-//
-//        level_set_solver.advance_time_step();
-//        t_step++;
-//    }
-//
-//    level_set_assembly->clear_discipline_and_system();
-//}
 
 int main(int argc, char* argv[]) {
 
