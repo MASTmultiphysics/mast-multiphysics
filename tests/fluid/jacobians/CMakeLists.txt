@@ -14,6 +14,5 @@ target_link_libraries(fluid_jacobian
                       mast
                       ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
 
-add_test(NAME "Check Fluid Jacobian"
-          COMMAND fluid_jacobian)
+add_test(fluid_jacobian_test fluid_jacobian)
 

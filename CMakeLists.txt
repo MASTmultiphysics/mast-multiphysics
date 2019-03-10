@@ -57,6 +57,6 @@ if(BUILD_DOC)
 endif()
 
 # TESTS
-add_subdirectory(tests)
 enable_testing()
+add_subdirectory(tests)
 
