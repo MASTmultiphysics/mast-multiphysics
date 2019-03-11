@@ -67,6 +67,8 @@ namespace MAST {
         
     protected:
         
+        unsigned int   _iter;
+        
         /*!
          *   NLOpt algorithm to use
          */

@@ -56,6 +56,7 @@ _mast_nlopt_ineq_constr_mfunc (unsigned m,
 
 MAST::NLOptOptimizationInterface::NLOptOptimizationInterface(nlopt_algorithm alg):
 MAST::OptimizationInterface(),
+_iter (0),
 _alg  (alg) {
     
 }
@@ -72,6 +73,7 @@ MAST::NLOptOptimizationInterface::optimize() {
     m_eq               = _feval->n_eq(),
     m_ineq             = _feval->n_ineq(),
     n_rel_change_iters = _feval->n_iters_relative_change();
+    _iter              = 0;
     
     // equality constraints are not currently handled in this API
     libmesh_assert_equal_to(m_eq, 0);
@@ -157,7 +159,13 @@ MAST::NLOptOptimizationInterface::objective_evaluation(unsigned n,
     eval_grads(n_constr, false);
     
     Real
-    f0val;
+    f0val = 0.;
+
+    // output the data
+    if (!grad) {
+        _feval->_output_wrapper(_iter, xvals, f0val, fvals, true);
+        _iter++;
+    }
     
     _feval->_evaluate_wrapper(xvals,
                               f0val, grad!=nullptr, df0dx,
@@ -202,7 +210,21 @@ inequality_constraint_evaluation(unsigned m,
                               f0val, false, df0dx,
                               fvals, eval_grads, dfdx);
     
-    if (gradient)
-        for (unsigned int i=0; i<n; i++) gradient[i] = dfdx[i];
+    if (gradient) {
+
+        //
+        //  NLOpt requires the derivatives to be in this form
+        //  \partial c_i/\partial x_j is stored in grad[i*n + j]
+        //
+        //   However, the function evaluation returns the following:
+        //   grads(k): Derivative of f_i(x) with respect
+        //   to x_j, where k = (j-1)*M + i.
+        //
+        //   Therefore, we translate the values into the proper order
+
+        for (unsigned int i=0; i<m; i++)
+            for (unsigned int j=0; j<n; j++)
+                gradient[i*n+j] = dfdx[j*m+i];
+    }
 }
 
