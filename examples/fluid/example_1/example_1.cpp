@@ -55,6 +55,15 @@
 //
 // BEGIN_TRANSLATE Flow analysis
 //
+//   This example computes the steady-state flow about rigid shapes.
+//   A Newmark time integration is used for time-stepping. Since a time-accurate
+//   flow solution is not sought the Newton-Raphson scheme at each time-step
+//   is only partially converged. The following options can be used to
+//   tune the SNES solver in PETSc to accomplish this:
+//   ```
+//   -snes_linesearch_type basic -snes_linesearch_damping 1.0 -snes_linesearch_max_it 1 -snes_max_it 2
+//   ```
+//
 //  This class stores all the data structures necessary to setup a flow
 //  analysis
 class FlowAnalysis {
@@ -329,6 +338,7 @@ protected:
             
             const Real
             length              = _input("panel_l",                                     "length of panel",  0.3),
+            tc                  = _input("t_by_c",                                      "length of panel",  0.05),
             ff_to_panel_l       = _input("farfield_to_l_ratio", "Ratio of distance of farfield boundary to panel length",  5.0),
             ff_to_panel_e_size  = _input("farfield_to_panel_elem_size_ratio", "Ratio of element size at far-field to element size at panel",  20.0);
 
@@ -358,9 +368,9 @@ protected:
             divs = {&x_coord_divs, &y_coord_divs};
             
             // initialize the mesh
-            MAST::PanelMesh2D().init(0.,               // t/c
+            MAST::PanelMesh2D().init(tc,               // t/c
                                      false,            // if cos bump
-                                     0,                // n max bumps
+                                     1,                // n max bumps
                                      divs,
                                      *_mesh,
                                      elem_type);
@@ -443,6 +453,7 @@ public:
     _sys            (nullptr),
     _sys_init       (nullptr),
     _discipline     (nullptr),
+    _flight_cond    (nullptr),
     _output         (nullptr) {
 
 
@@ -580,6 +591,9 @@ public:
         n_iters_change_dt = _input("n_iters_change_dt", "number of time-steps before dt is changed", 4),
         n_steps           = _input("n_transient_steps", "number of transient time-steps", 100);
         solver.dt         = _input("dt", "time-step size",    1.e-3);
+        // the default parameter adds some numerical damping to improve
+        // convergence towards steady state solution.
+        solver.beta       = _input("beta", "Newmark solver beta parameter ",  0.7);
         libMesh::out << "q_dyn = " << _flight_cond->q0() << std::endl;
         
         // ask the solver to update the initial condition for d2(X)/dt2
@@ -587,7 +601,7 @@ public:
         // integration scheme updates the velocity and acceleration at
         // each subsequent iterate
         solver.solve_highest_derivative_and_advance_time_step(assembly);
-        libMesh::out << "hellotoyou\n";
+
         // loop over time steps
         while (t_step < n_steps) {
             
