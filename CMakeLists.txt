@@ -41,8 +41,23 @@ find_package(libMesh REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(Boost COMPONENTS unit_test_framework REQUIRED)
 
+# Find optional packages.
+if (ENABLE_GCMMA)
+    find_package(GCMMA REQUIRED)
+endif()
+
+if (ENABLE_DOT)
+    find_package(DOT REQUIRED)
+endif()
+
 if (ENABLE_NLOPT)
    find_package(NLOpt REQUIRED)
+endif()
+
+# gfortran lib is required if GCMMA/DOT are used, since these are written
+# in fortran
+if (ENABLE_GCMMA OR ENABLE_DOT)
+find_package(GFortranLibs REQUIRED)
 endif()
 
 # MAIN TARGETS

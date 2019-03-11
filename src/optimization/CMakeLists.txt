@@ -13,7 +13,7 @@ if(ENABLE_DOT)
     # TODO: Create FindDOT CMake module and add target_link_libraries(mast PRIVATE ${DOT_LIBRARIES})
 endif()
 
-if(ENABLE_GCMMA)
+if(ENABLE_GCMMA AND GCMMA_FOUND)
     target_sources(mast
             PRIVATE
             ${CMAKE_CURRENT_LIST_DIR}/gcmma_optimization_interface.cpp
@@ -29,7 +29,7 @@ if(ENABLE_NPSOL)
     # TODO: Create FindNPSOL CMake module and add target_link_libraries(mast PRIVATE ${NPSOL_LIBRARIES})
 endif()
 
-if(ENABLE_NLOPT)
+if(ENABLE_NLOPT AND NLOPT_FOUND)
     target_sources(mast
             PRIVATE
             ${CMAKE_CURRENT_LIST_DIR}/nlopt_optimization_interface.cpp

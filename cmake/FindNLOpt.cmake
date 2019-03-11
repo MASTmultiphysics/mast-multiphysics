@@ -18,7 +18,13 @@ include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(NLOPT
                                   REQUIRED_VARS NLOPT_LIBRARY NLOPT_INCLUDE_DIR)
 
-mark_as_advanced(NLOPT_INCLUDE_DIR NLOPT_LIBRARY)
+if (NLOPT_FOUND)
+    set (MAST_ENABLE_NLOPT 1)
+else()
+    set (MAST_ENABLE_NLOPT 0)
+endif()
+
+mark_as_advanced(NLOPT_INCLUDE_DIR NLOPT_LIBRARY NLOPT_FOUND MAST_ENABLE_NLOPT)
 
 set(NLOPT_LIBRARIES ${NLOPT_LIBRARY})
 set(NLOPT_INCLUDE_DIRS ${NLOPT_INCLUDE_DIR})

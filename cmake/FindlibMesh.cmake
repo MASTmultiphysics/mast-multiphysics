@@ -47,7 +47,11 @@ find_package_handle_standard_args(libMesh
         REQUIRED_VARS libMesh_dbg_LIBRARY libMesh_opt_LIBRARY libMesh_INCLUDE_DIR
         VERSION_VAR libMesh_VERSION)
 
-mark_as_advanced(libMesh_INCLUDE_DIR libMesh_LIBRARY libMesh_VERSION)
+mark_as_advanced(libMesh_INCLUDE_DIR
+                 libMesh_dbg_LIBRARY
+                 libMesh_opt_LIBRARY
+                 libMesh_VERSION
+                 libMesh_FOUND)
 
 set(libMesh_dbg_LIBRARIES ${libMesh_dbg_LIBRARY})
 set(libMesh_opt_LIBRARIES ${libMesh_opt_LIBRARY})

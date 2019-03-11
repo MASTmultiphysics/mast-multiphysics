@@ -23,12 +23,15 @@ target_include_directories(mast
 target_link_libraries(mast
         PUBLIC
             ${MPI_CXX_LIBRARIES}
+            ${GCMMA_LIBRARY}
+            ${DOT_LIBRARY}
             ${NLOPT_LIBRARY}
             ${LAPACK_LIBRARIES}
             ${PETSc_LIBRARIES}
             ${SLEPc_LIBRARIES}
             debug ${libMesh_dbg_LIBRARIES}
-            optimized ${libMesh_opt_LIBRARIES})
+            optimized ${libMesh_opt_LIBRARIES}
+            ${LIBGFORTRAN_LIBRARIES})
 
 # NOTE: Use of PUBLIC keyword above means other CMake target (like an example)
 #       that target_link_library(XXXX mast) will inheret these properties.
