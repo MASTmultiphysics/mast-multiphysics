@@ -20,7 +20,6 @@
 // MAST includes
 #include "base/elem_base.h"
 #include "base/system_initialization.h"
-#include "mesh/local_elem_base.h"
 #include "base/nonlinear_system.h"
 #include "mesh/fe_base.h"
 
