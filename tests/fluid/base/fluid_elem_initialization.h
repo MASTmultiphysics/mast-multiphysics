@@ -31,6 +31,7 @@
 #include "fluid/flight_condition.h"
 #include "fluid/integrated_force_output.h"
 #include "solver/first_order_newmark_transient_solver.h"
+#include "mesh/geom_elem.h"
 #include "base/test_comparisons.h"
 
 // libMesh includes
@@ -63,6 +64,7 @@ struct BuildFluidElem {
     MAST::TransientAssembly*                       _assembly;
     MAST::ConservativeFluidTransientAssemblyElemOperations* _elem_ops;
     MAST::FirstOrderNewmarkTransientSolver*        _transient_solver;
+    MAST::GeomElem*                                _geom_elem;
     MAST::ConservativeFluidElementBase*            _fluid_elem;
     MAST::BoundaryConditionBase*                   _far_field_bc;
     MAST::BoundaryConditionBase*                   _slip_wall_bc;
@@ -144,9 +146,11 @@ struct BuildFluidElem {
         _elem_ops->set_discipline_and_system(*_discipline, *_sys_init);
         _transient_solver->set_discipline_and_system(*_discipline, *_sys_init);
         _transient_solver->set_elem_operation_object(*_elem_ops);
+        _geom_elem = new MAST::GeomElem;
+        _geom_elem->init(**_mesh->elements_begin(), *_sys_init);
         _fluid_elem = new MAST::ConservativeFluidElementBase(*_sys_init,
                                                              *_assembly,
-                                                             **_mesh->elements_begin(),
+                                                             *_geom_elem,
                                                              *_flight_cond);
         
     }
@@ -158,6 +162,7 @@ struct BuildFluidElem {
         delete _elem_ops;
         delete _transient_solver;
         delete _fluid_elem;
+        delete _geom_elem;
         
         delete _far_field_bc;
         delete _slip_wall_bc;

@@ -26,6 +26,7 @@
 #include "base/transient_assembly_elem_operations.h"
 #include "solver/transient_solver_base.h"
 #include "numerics/utility.h"
+#include "mesh/geom_elem.h"
 
 // libMesh includes
 #include "libmesh/nonlinear_solver.h"
@@ -107,7 +108,10 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
         
         dof_map.dof_indices (elem, dof_indices);
         
-        solver.init(*elem);
+        MAST::GeomElem geom_elem;
+        geom_elem.init(*elem, *_system);
+        
+        solver.init(geom_elem);
         
         // get the solution
         unsigned int ndofs = (unsigned int)dof_indices.size();
@@ -215,9 +219,12 @@ linearized_jacobian_solution_product (const libMesh::NumericVector<Real>& X,
         const libMesh::Elem* elem = *el;
         
         dof_map.dof_indices (elem, dof_indices);
+
+        MAST::GeomElem geom_elem;
+        geom_elem.init(*elem, *_system);
         
-        _elem_ops->init(*elem);
-        
+        _elem_ops->init(geom_elem);
+
         // get the solution
         unsigned int ndofs = (unsigned int)dof_indices.size();
         vec.setZero(ndofs);
@@ -308,7 +315,10 @@ sensitivity_assemble (const MAST::FunctionBase& f,
         
         dof_map.dof_indices (elem, dof_indices);
         
-        _elem_ops->init(*elem);
+        MAST::GeomElem geom_elem;
+        geom_elem.init(*elem, *_system);
+        
+        _elem_ops->init(geom_elem);
         
         // get the solution
         unsigned int ndofs = (unsigned int)dof_indices.size();

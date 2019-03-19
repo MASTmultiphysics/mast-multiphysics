@@ -28,6 +28,7 @@
 #include "base/nonlinear_system.h"
 #include "base/parameter.h"
 #include "numerics/utility.h"
+#include "mesh/geom_elem.h"
 
 // libMesh includes
 #include "libmesh/dof_map.h"
@@ -155,7 +156,10 @@ eigenproblem_assemble(libMesh::SparseMatrix<Real> *A,
         for (unsigned int i=0; i<dof_indices.size(); i++)
             sol(i) = (*localized_solution1)(dof_indices[i]);
     
-        ops.init(*elem);
+        MAST::GeomElem geom_elem;
+        geom_elem.init(*elem, *_system);
+        
+        ops.init(geom_elem);
         ops.set_elem_solution(sol);
         ops.elem_calculations(mat_A, dummy);
 

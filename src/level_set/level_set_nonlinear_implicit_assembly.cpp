@@ -22,6 +22,7 @@
 #include "level_set/level_set_intersection.h"
 #include "level_set/interface_dof_handler.h"
 #include "level_set/level_set_void_solution.h"
+#include "level_set/level_set_intersected_elem.h"
 #include "level_set/sub_cell_fe.h"
 #include "base/system_initialization.h"
 #include "base/nonlinear_system.h"
@@ -414,7 +415,10 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
                 
                 // the Jacobian is based on the homogenizaton method to maintain
                 // a well conditioned global Jacobian.
-                ops.init(*elem);
+                MAST::GeomElem geom_elem;
+                geom_elem.init(*elem, *_system);
+                
+                ops.init(geom_elem);
                 ops.set_elem_solution(sol);
                 ops.elem_calculations(true, vec, mat);
                 ops.clear_elem();
@@ -462,7 +466,10 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
                     
                     const libMesh::Elem* sub_elem = *hi_sub_elem_it;
                     
-                    ops.init(*sub_elem);
+                    MAST::LevelSetIntersectedElem geom_elem;
+                    geom_elem.init(*sub_elem, *_system, *_intersection);
+                    
+                    ops.init(geom_elem);
                     ops.set_elem_solution(sol);
                     
                     ops.elem_calculations(J!=nullptr?true:false, sub_elem_vec, sub_elem_mat);
@@ -612,7 +619,10 @@ sensitivity_assemble (const MAST::FunctionBase& f,
                 
                 const libMesh::Elem* sub_elem = *hi_sub_elem_it;
                 
-                ops.init(*sub_elem);
+                MAST::LevelSetIntersectedElem geom_elem;
+                geom_elem.init(*sub_elem, *_system, *_intersection);
+                
+                ops.init(geom_elem);
                 ops.set_elem_solution(sol);
                 
                 //        if (_sol_function)
@@ -626,7 +636,6 @@ sensitivity_assemble (const MAST::FunctionBase& f,
                 if (f.is_topology_parameter()) {
                     
                     ops.elem_topology_sensitivity_calculations(f,
-                                                               *_intersection,
                                                                *_velocity,
                                                                vec2);
                     vec1 += vec2;
@@ -642,7 +651,10 @@ sensitivity_assemble (const MAST::FunctionBase& f,
                     vec2.setZero(ndofs);
                     mat.setZero(ndofs, ndofs);
                     
-                    ops.init(*elem);
+                    MAST::GeomElem geom_elem;
+                    geom_elem.init(*elem, *_system);
+                    
+                    ops.init(geom_elem);
                     ops.set_elem_solution(sol);
                     ops.elem_calculations(true, vec2, mat);
                     ops.clear_elem();
@@ -781,8 +793,10 @@ calculate_output(const libMesh::NumericVector<Real>& X,
                 
                 //                if (_sol_function)
                 //                    physics_elem->attach_active_solution_function(*_sol_function);
+                MAST::LevelSetIntersectedElem geom_elem;
+                geom_elem.init(*sub_elem, *_system, *_intersection);
                 
-                output.init(*sub_elem);
+                output.init(geom_elem);
                 output.set_elem_solution(sol);
                 output.evaluate();
                 output.clear_elem();
@@ -906,8 +920,10 @@ calculate_output_derivative(const libMesh::NumericVector<Real>& X,
                 
                 //        if (_sol_function)
                 //            physics_elem->attach_active_solution_function(*_sol_function);
+                MAST::LevelSetIntersectedElem geom_sub_elem;
+                geom_sub_elem.init(*sub_elem, *_system, *_intersection);
                 
-                output.init(*sub_elem);
+                output.init(geom_sub_elem);
                 output.set_elem_solution(sol);
                 output.output_derivative_for_elem(vec1);
                 output.clear_elem();
@@ -917,7 +933,10 @@ calculate_output_derivative(const libMesh::NumericVector<Real>& X,
                     vec2.setZero(ndofs);
                     mat.setZero(ndofs, ndofs);
                     
-                    ops.init(*elem);
+                    MAST::GeomElem geom_elem;
+                    geom_elem.init(*elem, *_system);
+                    
+                    ops.init(geom_elem);
                     ops.set_elem_solution(sol);
                     ops.elem_calculations(true, vec2, mat);
                     ops.clear_elem();
@@ -1063,13 +1082,15 @@ calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
                 
                 // if (_sol_function)
                 //   physics_elem->attach_active_solution_function(*_sol_function);
+                MAST::LevelSetIntersectedElem geom_elem;
+                geom_elem.init(*sub_elem, *_system, *_intersection);
                 
-                output.init(*sub_elem);
+                output.init(geom_elem);
                 output.set_elem_solution(sol);
                 output.set_elem_solution_sensitivity(dsol);
                 output.evaluate_sensitivity(p);
                 if (p.is_topology_parameter())
-                    output.evaluate_topology_sensitivity(p, *_intersection, *_velocity);
+                    output.evaluate_topology_sensitivity(p, *_velocity);
                 
                 output.clear_elem();
             }
@@ -1227,7 +1248,10 @@ _adjoint_sensitivity_dot_product (const MAST::FunctionBase& f,
                     vec2.setZero(ndofs);
                     mat.setZero(ndofs, ndofs);
                     
-                    ops.init(*elem);
+                    MAST::GeomElem geom_elem;
+                    geom_elem.init(*elem, *_system);
+ 
+                    ops.init(geom_elem);
                     ops.set_elem_solution(sol);
                     ops.elem_calculations(true, vec2, mat);
                     ops.clear_elem();
@@ -1258,7 +1282,10 @@ _adjoint_sensitivity_dot_product (const MAST::FunctionBase& f,
                 
                 const libMesh::Elem* sub_elem = *hi_sub_elem_it;
                 
-                ops.init(*sub_elem);
+                MAST::LevelSetIntersectedElem geom_elem;
+                geom_elem.init(*sub_elem, *_intersection);
+ 
+                ops.init(geom_elem);
                 ops.set_elem_solution(sol);
                 
                 //        if (_sol_function)
@@ -1303,17 +1330,4 @@ _adjoint_sensitivity_dot_product (const MAST::FunctionBase& f,
     return true;
 }
 */
-
-
-std::unique_ptr<MAST::FEBase>
-MAST::LevelSetNonlinearImplicitAssembly::build_fe() {
-    
-    libmesh_assert(_system);
-    libmesh_assert(_intersection);
-    
-    std::unique_ptr<MAST::FEBase>
-    fe(new MAST::SubCellFE(*_system, *_intersection));
-    
-    return fe;
-}
 

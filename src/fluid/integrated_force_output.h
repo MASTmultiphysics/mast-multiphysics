@@ -36,9 +36,15 @@ namespace MAST {
         virtual ~IntegratedForceOutput();
         
         /*!
+         *   virtual function, nothing to be done for fluids
+         */
+        virtual void
+        set_elem_data(MAST::GeomElem& elem) const {}
+
+        /*!
          *   initialize for the element.
          */
-        virtual void init(const libMesh::Elem& elem);
+        virtual void init(const MAST::GeomElem& elem);
 
         /*!
          *   zeroes the output quantity values stored inside this object
@@ -144,7 +150,6 @@ namespace MAST {
          */
         virtual void
         evaluate_topology_sensitivity(const MAST::FunctionBase& f,
-                                      const MAST::LevelSetIntersection& intersect,
                                       const MAST::FieldFunction<RealVectorX>& vel) {
             libmesh_error(); // not yet implemented
         }

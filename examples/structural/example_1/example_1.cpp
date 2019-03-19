@@ -134,7 +134,7 @@ int main(int argc, const char** argv)
     section.add(hzoff_f);
 
     // Specify a section orientation point and add it to the section.
-    libMesh::Point orientation;
+    RealVectorX orientation = RealVectorX::Zero(3);
     orientation(1) = 1.0;
     section.y_vector() = orientation;
 

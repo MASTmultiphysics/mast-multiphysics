@@ -51,32 +51,20 @@ namespace MAST {
          *   This assumes that \p elem is the sub-cell and that the original
          *   element will be available as the parent of this element.
          */
-        virtual void init(const libMesh::Elem& elem,
+        virtual void init(const MAST::GeomElem& elem,
+                          bool init_grads,
                           const std::vector<libMesh::Point>* pts = nullptr);
         
         /*!
          *   This assumes that \p elem is the sub-cell and that the original
          *   element will be available as the parent of this element.
          */
-        virtual void init_for_side(const libMesh::Elem& elem,
-                                   unsigned int s,
-                                   bool if_calculate_dphi);
-
-        /*!
-         *   provides an interface for elements where a local element is used
-         *   as a surrogate for the geometric element, as is the case for
-         *   1D and 2D elements that can live in 3D space. This is applicable
-         *   problems arising from heat conduction and structural problems.
-         */
-        virtual void init_for_side(const MAST::LocalElemBase& elem,
+        virtual void init_for_side(const MAST::GeomElem& elem,
                                    unsigned int s,
                                    bool if_calculate_dphi);
 
         virtual const std::vector<Real>&
         get_JxW() const;
-
-        virtual const std::vector<libMesh::Point>&
-        get_normals() const;
 
         virtual const std::vector<libMesh::Point>&
         get_qpoints() const;
@@ -85,9 +73,8 @@ namespace MAST {
 
       
         const MAST::LevelSetIntersection& _intersection;
-        libMesh::FEBase*                  _subcell_fe;
-        libMesh::QBase*                   _subcell_qrule;
-        
+
+        std::vector<Real>   _subcell_JxW;
     };
 }
 

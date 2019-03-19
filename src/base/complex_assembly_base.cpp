@@ -22,12 +22,13 @@
 #include "base/complex_assembly_base.h"
 #include "base/system_initialization.h"
 #include "base/physics_discipline_base.h"
-#include "numerics/utility.h"
 #include "base/mesh_field_function.h"
-#include "solver/complex_solver_base.h"
 #include "base/parameter.h"
 #include "base/nonlinear_system.h"
 #include "base/complex_assembly_elem_operations.h"
+#include "mesh/geom_elem.h"
+#include "numerics/utility.h"
+#include "solver/complex_solver_base.h"
 
 
 // libMesh includes
@@ -163,7 +164,10 @@ MAST::ComplexAssemblyBase::residual_l2_norm(const libMesh::NumericVector<Real>& 
         
         dof_map.dof_indices (elem, dof_indices);
         
-        ops.init(*elem);
+        MAST::GeomElem geom_elem;
+        geom_elem.init(*elem, *_system);
+        
+        ops.init(geom_elem);
         
         // get the solution
         unsigned int ndofs = (unsigned int)dof_indices.size();
@@ -305,8 +309,11 @@ residual_and_jacobian_field_split (const libMesh::NumericVector<Real>& X_R,
         
         dof_map.dof_indices (elem, dof_indices);
         
-        ops.init(*elem);
+        MAST::GeomElem geom_elem;
+        geom_elem.init(*elem, *_system);
         
+        ops.init(geom_elem);
+
         // get the solution
         unsigned int ndofs = (unsigned int)dof_indices.size();
         sol.setZero(ndofs);
@@ -483,8 +490,11 @@ residual_and_jacobian_blocked (const libMesh::NumericVector<Real>& X,
         
         dof_map.dof_indices (elem, dof_indices);
         
-        ops.init(*elem);
+        MAST::GeomElem geom_elem;
+        geom_elem.init(*elem, *_system);
         
+        ops.init(geom_elem);
+
         // get the solution
         unsigned int ndofs = (unsigned int)dof_indices.size();
         sol.setZero(ndofs);

@@ -141,7 +141,7 @@ elem_second_derivative_dot_solution_assembly(RealMatrixX& m) {
 
 void
 MAST::ConservativeFluidTransientAssemblyElemOperations::
-init(const libMesh::Elem& elem) {
+init(const MAST::GeomElem& elem) {
     
     libmesh_assert(!_physics_elem);
     libmesh_assert(_system);

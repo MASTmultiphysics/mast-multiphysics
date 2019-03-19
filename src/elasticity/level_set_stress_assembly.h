@@ -76,16 +76,6 @@ namespace MAST {
                                   const libMesh::NumericVector<Real>& X);
         
 
-        /*!
-         *   @returns a MAST::FEBase object for calculation of finite element
-         *   quantities. For all standard applications this is a wrapper
-         *   around the libMesh::FEBase class, which is specialized for
-         *   cut-cell applications where a sub-finite element is created
-         *   for element integration.
-         */
-        virtual std::unique_ptr<MAST::FEBase>
-        build_fe();
-
     protected:
 
         MAST::FieldFunction<Real>            *_level_set;

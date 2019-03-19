@@ -110,7 +110,7 @@ elem_sensitivity_calculations(const MAST::FunctionBase& f,
 
 void
 MAST::FrequencyDomainLinearizedComplexAssemblyElemOperations::
-init(const libMesh::Elem& elem) {
+init(const MAST::GeomElem& elem) {
     
     libmesh_assert(!_physics_elem);
     libmesh_assert(_system);

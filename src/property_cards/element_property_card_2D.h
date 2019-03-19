@@ -52,8 +52,7 @@ namespace MAST
         /*!
          *   returns the bending model to be used for the 2D element.
          */
-        MAST::BendingOperatorType bending_model(const libMesh::Elem& elem,
-                                         const libMesh::FEType& fe) const;
+        MAST::BendingOperatorType bending_model(const MAST::GeomElem& elem) const;
         
         
         /*!
@@ -61,9 +60,8 @@ namespace MAST
          *    this element should use. This is elevated by two orders for a DKT
          *    element
          */
-        virtual int extra_quadrature_order(const libMesh::Elem& elem,
-                                           const libMesh::FEType& fe) const {
-            if (this->bending_model(elem, fe) == MAST::DKT)
+        virtual int extra_quadrature_order(const MAST::GeomElem& elem) const {
+            if (this->bending_model(elem) == MAST::DKT)
                 return 2;
             else
                 return 0;

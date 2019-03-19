@@ -25,6 +25,7 @@
 #include "base/nonlinear_system.h"
 #include "base/nonlinear_implicit_assembly_elem_operations.h"
 #include "numerics/utility.h"
+#include "mesh/geom_elem.h"
 
 // libMesh includes
 #include "libmesh/nonlinear_solver.h"
@@ -112,8 +113,11 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
         
         dof_map.dof_indices (elem, dof_indices);
         
-        ops.init(*elem);
+        MAST::GeomElem geom_elem;
+        geom_elem.init(*elem, *_system);
         
+        ops.init(geom_elem);
+
         // get the solution
         unsigned int ndofs = (unsigned int)dof_indices.size();
         sol.setZero(ndofs);
@@ -241,8 +245,11 @@ linearized_jacobian_solution_product (const libMesh::NumericVector<Real>& X,
         
         dof_map.dof_indices (elem, dof_indices);
         
-        ops.init(*elem);
+        MAST::GeomElem geom_elem;
+        geom_elem.init(*elem, *_system);
         
+        ops.init(geom_elem);
+
         // get the solution
         unsigned int ndofs = (unsigned int)dof_indices.size();
         sol.setZero(ndofs);
@@ -349,8 +356,11 @@ second_derivative_dot_solution_assembly (const libMesh::NumericVector<Real>& X,
         
         dof_map.dof_indices (elem, dof_indices);
         
-        ops.init(*elem);
+        MAST::GeomElem geom_elem;
+        geom_elem.init(*elem, *_system);
         
+        ops.init(geom_elem);
+
         // get the solution
         unsigned int ndofs = (unsigned int)dof_indices.size();
         sol.setZero(ndofs);
@@ -441,8 +451,11 @@ sensitivity_assemble (const MAST::FunctionBase& f,
         
         dof_map.dof_indices (elem, dof_indices);
         
-        ops.init(*elem);
+        MAST::GeomElem geom_elem;
+        geom_elem.init(*elem, *_system);
         
+        ops.init(geom_elem);
+
         // get the solution
         unsigned int ndofs = (unsigned int)dof_indices.size();
         sol.setZero(ndofs);

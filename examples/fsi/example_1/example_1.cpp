@@ -340,7 +340,8 @@ int main(int argc, char* argv[]) {
     p_card.set_bending_model(MAST::TIMOSHENKO);
     
     // tell the card about the orientation
-    p_card.y_vector() = libMesh::Point(0., 1., 0.);
+    p_card.y_vector()    = RealVectorX::Zero(3);
+    p_card.y_vector()(1) = 1.;
     
     // add the section properties to the card
     p_card.add(thy_f);

@@ -27,6 +27,7 @@
 #include "level_set/level_set_intersection.h"
 #include "level_set/interface_dof_handler.h"
 #include "level_set/sub_cell_fe.h"
+#include "level_set/level_set_intersected_elem.h"
 
 
 // libMesh includes
@@ -174,9 +175,11 @@ update_stress_strain_data(MAST::StressStrainOutputBase&       ops,
             for (; hi_sub_elem_it != hi_sub_elem_end; hi_sub_elem_it++ ) {
                 
                 const libMesh::Elem* sub_elem = *hi_sub_elem_it;
+                MAST::LevelSetIntersectedElem geom_elem;
+                geom_elem.init(*sub_elem, *_system, *_intersection);
                 
                 // clear before calculating the data
-                ops.init(*sub_elem);
+                ops.init(geom_elem);
                 ops.set_elem_solution(sol);
                 ops.evaluate();
                 ops.clear_elem();
@@ -230,16 +233,3 @@ update_stress_strain_data(MAST::StressStrainOutputBase&       ops,
     this->clear_elem_operation_object();
 }
 
-
-std::unique_ptr<MAST::FEBase>
-MAST::LevelSetStressAssembly::build_fe() {
-
-    libmesh_assert(_elem_ops);
-    libmesh_assert(_system);
-    libmesh_assert(_intersection);
-    
-    std::unique_ptr<MAST::FEBase>
-    fe(new MAST::SubCellFE(*_system, *_intersection));
-
-    return fe;
-}

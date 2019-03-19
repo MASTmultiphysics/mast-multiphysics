@@ -60,7 +60,7 @@ namespace MAST {
          */
         HeatConductionElementBase(MAST::SystemInitialization& sys,
                                   MAST::AssemblyBase& assembly,
-                                  const libMesh::Elem& elem,
+                                  const MAST::GeomElem& elem,
                                   const MAST::ElementPropertyCardBase& p);
         
         

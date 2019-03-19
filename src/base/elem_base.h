@@ -38,7 +38,7 @@ namespace MAST {
     // Forward declerations
     class FunctionBase;
     class SystemInitialization;
-    class LocalElemBase;
+    class GeomElem;
     class NonlinearSystem;
     class FEBase;
     class AssemblyBase;
@@ -81,7 +81,7 @@ namespace MAST {
          */
         ElementBase(MAST::SystemInitialization&     sys,
                     MAST::AssemblyBase&             assembly,
-                    const libMesh::Elem&            elem);
+                    const MAST::GeomElem&           elem);
         
         
         /*!
@@ -114,16 +114,8 @@ namespace MAST {
         /*!
          *   @returns a constant reference to the element
          */
-        const libMesh::Elem& elem() const {
+        const MAST::GeomElem& elem() const {
             return _elem;
-        }
-        
-        
-        /*!
-         *   @returns a constant reference to the finite element object
-         */
-        MAST::FEBase& fe()  {
-            return *_fe;
         }
         
         
@@ -223,7 +215,7 @@ namespace MAST {
         /*!
          *   geometric element for which the computations are performed
          */
-        const libMesh::Elem& _elem;
+        const MAST::GeomElem&      _elem;
         
         /*!
          *   pointer to the active solution mesh field function. If this 
@@ -322,11 +314,6 @@ namespace MAST {
          */
         RealVectorX _delta_accel_sens;
 
-        
-        /*!
-         *   element finite element for computations
-         */
-        MAST::FEBase *_fe;
     };
 }
 

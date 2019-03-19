@@ -70,6 +70,12 @@ namespace MAST {
         void clear();
         
         /*!
+         *   @return a reference to the element on which the intersection is
+         *   defined
+         */
+        const libMesh::Elem& elem() const;
+        
+        /*!
          *   @returns mode of intersection
          */
         MAST::LevelSet2DIntersectionMode
@@ -160,6 +166,24 @@ namespace MAST {
         
     protected:
         
+        /*!
+         *   creates a first order element from the given high-order element.
+         *   For a QUAD9 a QUAD4 is obtained by only using the corner nodes.
+         *   Note that this does not create any new nodes. The element can be
+         *   deleted after use.
+         */
+        std::unique_ptr<libMesh::Elem>
+        _first_order_elem(const libMesh::Elem& e);
+        
+        /*!
+         *   initializes on a reference element that is a first-order
+         *   counterpart of the given high-order element. For two-dimensional
+         *   elements this is a QUAD4.
+         */
+        void _init_on_first_order_ref_elem(const MAST::FieldFunction<Real>& phi,
+                                           const libMesh::Elem& e,
+                                           const Real t);
+
         
         void _add_node_local_coords
         ( const libMesh::Elem& e,

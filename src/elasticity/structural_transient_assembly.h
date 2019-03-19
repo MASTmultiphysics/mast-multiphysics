@@ -104,13 +104,21 @@ namespace MAST {
         virtual void
         elem_second_derivative_dot_solution_assembly(RealMatrixX& mat);
 
+
+        /*!
+         *   sets the structural element y-vector if 1D element is used.
+         */
+        virtual void
+        set_elem_data(MAST::GeomElem& elem) const;
+
+
         /*!
          *   initializes the object for the geometric element \p elem. This
          *   expects the object to be in a cleared state, so the user should
          *   call \p clear_elem() between successive initializations.
          */
         virtual void
-        init(const libMesh::Elem& elem);
+        init(const MAST::GeomElem& elem);
 
     protected:
         

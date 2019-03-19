@@ -27,6 +27,7 @@
 #include "base/assembly_elem_operation.h"
 #include "base/output_assembly_elem_operations.h"
 #include "mesh/fe_base.h"
+#include "mesh/geom_elem.h"
 #include "numerics/utility.h"
 
 
@@ -223,19 +224,6 @@ MAST::AssemblyBase::detach_solution_function() {
 
 
 
-std::unique_ptr<MAST::FEBase>
-MAST::AssemblyBase::build_fe() {
-
-    libmesh_assert(_system);
-
-    std::unique_ptr<MAST::FEBase>
-    fe(new MAST::FEBase(*_system));
-    
-    return fe;
-}
-
-
-
 
 void
 MAST::AssemblyBase::calculate_output(const libMesh::NumericVector<Real>& X,
@@ -288,7 +276,10 @@ MAST::AssemblyBase::calculate_output(const libMesh::NumericVector<Real>& X,
         //if (_sol_function)
         //    physics_elem->attach_active_solution_function(*_sol_function);
         
-        output.init(*elem);
+        MAST::GeomElem geom_elem;
+        geom_elem.init(*elem, *_system);
+        
+        output.init(geom_elem);
         output.set_elem_solution(sol);
         output.evaluate();
         output.clear_elem();
@@ -363,7 +354,10 @@ calculate_output_derivative(const libMesh::NumericVector<Real>& X,
 //        if (_sol_function)
 //            physics_elem->attach_active_solution_function(*_sol_function);
         
-        output.init(*elem);
+        MAST::GeomElem geom_elem;
+        geom_elem.init(*elem, *_system);
+        
+        output.init(geom_elem);
         output.set_elem_solution(sol);
         output.output_derivative_for_elem(vec);
         output.clear_elem();
@@ -451,7 +445,10 @@ calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
         //        if (_sol_function)
         //            physics_elem->attach_active_solution_function(*_sol_function);
         
-        output.init(*elem);
+        MAST::GeomElem geom_elem;
+        geom_elem.init(*elem, *_system);
+        
+        output.init(geom_elem);
         output.set_elem_solution(sol);
         output.set_elem_solution_sensitivity(dsol);
         output.evaluate_sensitivity(p);

@@ -825,9 +825,16 @@ MAST::TransientSolverBase::advance_time_step_with_sensitivity() {
 
 
 
+void
+MAST::TransientSolverBase::set_elem_data(MAST::GeomElem &elem) const {
+    
+    libmesh_assert(_assembly_ops);
+    _assembly_ops->set_elem_data(elem);
+}
+
 
 void
-MAST::TransientSolverBase::init(const libMesh::Elem &elem) {
+MAST::TransientSolverBase::init(const MAST::GeomElem &elem) {
     
     libmesh_assert(_assembly_ops);
     _assembly_ops->init(elem);

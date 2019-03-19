@@ -48,7 +48,7 @@ namespace MAST {
         
         ConservativeFluidElementBase(MAST::SystemInitialization&  sys,
                                      MAST::AssemblyBase&          assembly,
-                                     const libMesh::Elem&         elem,
+                                     const MAST::GeomElem&         elem,
                                      const MAST::FlightCondition& f);
         
         virtual ~ConservativeFluidElementBase();

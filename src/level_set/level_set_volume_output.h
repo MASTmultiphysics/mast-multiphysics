@@ -40,11 +40,17 @@ namespace MAST {
         virtual ~LevelSetVolume();
         
         /*!
+         *   virtual function, nothing to be done for level set
+         */
+        virtual void
+        set_elem_data(MAST::GeomElem& elem) const { }
+
+        /*!
          *   initializes the object for calculation of element quantities for
          *   the specified \p elem.
          */
         virtual void
-        init(const libMesh::Elem& elem);
+        init(const MAST::GeomElem& elem);
 
         /*!
          *   zeroes the output quantity values stored inside this object
@@ -146,7 +152,6 @@ namespace MAST {
          *    boundary \f$ \int_\Gamma V_n~d\Gamma \f$
          */
         virtual void evaluate_topology_sensitivity(const MAST::FunctionBase& f,
-                                                   const MAST::LevelSetIntersection& intersect,
                                                    const MAST::FieldFunction<RealVectorX>& vel);
 
     protected:

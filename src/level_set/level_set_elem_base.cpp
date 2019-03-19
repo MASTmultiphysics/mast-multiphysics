@@ -28,6 +28,7 @@
 #include "base/nonlinear_system.h"
 #include "base/assembly_base.h"
 #include "mesh/fe_base.h"
+#include "mesh/geom_elem.h"
 #include "property_cards/element_property_card_base.h"
 #include "property_cards/element_property_card_1D.h"
 
@@ -35,14 +36,11 @@
 MAST::LevelSetElementBase::
 LevelSetElementBase(MAST::SystemInitialization&             sys,
                     MAST::AssemblyBase&                     assembly,
-                    const libMesh::Elem&                    elem):
+                    const MAST::GeomElem&                   elem):
 MAST::ElementBase(sys, assembly, elem),
 _phi_vel          (nullptr),
 _if_propagation   (true) {
     
-    // now initialize the finite element data structures
-    _fe = assembly.build_fe().release();
-    _fe->init(_elem);
 }
 
 
@@ -70,10 +68,12 @@ MAST::LevelSetElementBase::internal_residual (bool request_jacobian,
     
     libmesh_assert(_phi_vel);
     
-    const std::vector<Real>& JxW           = _fe->get_JxW();
-    const std::vector<libMesh::Point>& xyz = _fe->get_xyz();
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_fe(true, false));
+    
+    const std::vector<Real>& JxW           = fe->get_JxW();
+    const std::vector<libMesh::Point>& xyz = fe->get_xyz();
     const unsigned int
-    n_phi  = _fe->n_shape_functions(),
+    n_phi  = fe->n_shape_functions(),
     dim    = _elem.dim();
     
     RealMatrixX
@@ -99,11 +99,11 @@ MAST::LevelSetElementBase::internal_residual (bool request_jacobian,
     for (unsigned int qp=0; qp<JxW.size(); qp++) {
         
         // initialize the Bmat operator for this term
-        _initialize_fem_operators(qp, *_fe, Bmat, dBmat);
+        _initialize_fem_operators(qp, *fe, Bmat, dBmat);
         
         _velocity_and_source(qp, xyz[qp], _time, Bmat, dBmat, vel, source);
-        _tau(qp, Bmat, dBmat, vel, tau);
-        _dc_operator(qp, dBmat, vel, dc);
+        _tau(*fe, qp, Bmat, dBmat, vel, tau);
+        _dc_operator(*fe, qp, dBmat, vel, dc);
         
         // calculate the flux for each dimension and add its weighted
         // component to the residual
@@ -163,10 +163,12 @@ MAST::LevelSetElementBase::velocity_residual (bool request_jacobian,
 
     libmesh_assert(_phi_vel);
 
-    const std::vector<Real>& JxW           = _fe->get_JxW();
-    const std::vector<libMesh::Point>& xyz = _fe->get_xyz();
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_fe(true, false));
+
+    const std::vector<Real>& JxW           = fe->get_JxW();
+    const std::vector<libMesh::Point>& xyz = fe->get_xyz();
     const unsigned int
-    n_phi  = _fe->n_shape_functions(),
+    n_phi  = fe->n_shape_functions(),
     dim    = _elem.dim();
     
     RealMatrixX
@@ -191,10 +193,10 @@ MAST::LevelSetElementBase::velocity_residual (bool request_jacobian,
     for (unsigned int qp=0; qp<JxW.size(); qp++) {
         
         // initialize the Bmat operator for this term
-        _initialize_fem_operators(qp, *_fe, Bmat, dBmat);
+        _initialize_fem_operators(qp, *fe, Bmat, dBmat);
         
         _velocity_and_source(qp, xyz[qp], _time, Bmat, dBmat, vel, source);
-        _tau(qp, Bmat, dBmat, vel, tau);
+        _tau(*fe, qp, Bmat, dBmat, vel, tau);
         
         // calculate the flux for each dimension and add its weighted
         // component to the residual
@@ -311,7 +313,9 @@ velocity_residual_sensitivity (bool request_jacobian,
 Real
 MAST::LevelSetElementBase::volume() {
     
-    const std::vector<Real>& JxW           = _fe->get_JxW();
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_fe(true, false));
+
+    const std::vector<Real>& JxW           = fe->get_JxW();
     const unsigned int
     dim    = _elem.dim();
     
@@ -328,7 +332,7 @@ MAST::LevelSetElementBase::volume() {
     for (unsigned int qp=0; qp<JxW.size(); qp++) {
         
         // initialize the Bmat operator for this term
-        _initialize_fem_operators(qp, *_fe, Bmat, dBmat);
+        _initialize_fem_operators(qp, *fe, Bmat, dBmat);
         Bmat.right_multiply(phi, _sol);
         if (phi(0) > 0.) vol += JxW[qp];
     }
@@ -341,8 +345,7 @@ MAST::LevelSetElementBase::volume() {
 Real
 MAST::LevelSetElementBase::volume_boundary_velocity_on_side(unsigned int s) {
     
-    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe());
-    fe->init_for_side(_elem, s, true);
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_side_fe(s, true));
 
     const std::vector<Real>& JxW           =  fe->get_JxW();
     const unsigned int
@@ -365,7 +368,7 @@ MAST::LevelSetElementBase::volume_boundary_velocity_on_side(unsigned int s) {
     for (unsigned int qp=0; qp<JxW.size(); qp++) {
         
         // initialize the Bmat operator for this term
-        _initialize_fem_operators(qp, *_fe, Bmat, dBmat);
+        _initialize_fem_operators(qp, *fe, Bmat, dBmat);
 
         // first calculate gradient of phi
         for (unsigned int i=0; i<dim; i++) {
@@ -450,14 +453,15 @@ MAST::LevelSetElementBase::_velocity_and_source(const unsigned int qp,
 
 
 void
-MAST::LevelSetElementBase::_tau(unsigned int qp,
+MAST::LevelSetElementBase::_tau(const MAST::FEBase& fe,
+                                unsigned int qp,
                                 const MAST::FEMOperatorMatrix& Bmat,
                                 const std::vector<MAST::FEMOperatorMatrix>& dBmat,
                                 const RealVectorX& vel,
                                 RealMatrixX& tau) {
     
-    const std::vector<std::vector<libMesh::RealVectorValue> >& dphi = _fe->get_dphi();
-    const unsigned int n_phi = (unsigned int)_fe->n_shape_functions();
+    const std::vector<std::vector<libMesh::RealVectorValue> >& dphi = fe.get_dphi();
+    const unsigned int n_phi = (unsigned int)fe.n_shape_functions();
     RealVectorX
     phi = RealVectorX::Zero(n_phi);
 
@@ -491,7 +495,8 @@ MAST::LevelSetElementBase::_tau(unsigned int qp,
 
 
 void
-MAST::LevelSetElementBase::_dc_operator(const unsigned int qp,
+MAST::LevelSetElementBase::_dc_operator(const MAST::FEBase& fe,
+                                        const unsigned int qp,
                                         const std::vector<MAST::FEMOperatorMatrix>& dB_mat,
                                         const RealVectorX& vel,
                                         Real& dc) {
@@ -508,7 +513,7 @@ MAST::LevelSetElementBase::_dc_operator(const unsigned int qp,
     dxi_dX             = RealMatrixX::Zero(dim, dim);
 
     
-    _calculate_dxidX(qp, dxi_dX);
+    _calculate_dxidX(fe, qp, dxi_dX);
 
     for (unsigned int i=0; i<dim; i++) {
 
@@ -538,7 +543,8 @@ MAST::LevelSetElementBase::_dc_operator(const unsigned int qp,
 
 void
 MAST::LevelSetElementBase::
-_calculate_dxidX (const unsigned int qp,
+_calculate_dxidX (const MAST::FEBase& fe,
+                  const unsigned int qp,
                   RealMatrixX& dxi_dX) {
     
     
@@ -559,13 +565,13 @@ _calculate_dxidX (const unsigned int qp,
                     switch (j_dim)
                     {
                         case 0:
-                            val  = _fe->get_dxidx()[qp];
+                            val  = fe.get_dxidx()[qp];
                             break;
                         case 1:
-                            val = _fe->get_dxidy()[qp];
+                            val = fe.get_dxidy()[qp];
                             break;
                         case 2:
-                            val = _fe->get_dxidz()[qp];
+                            val = fe.get_dxidz()[qp];
                             break;
                     }
                 }
@@ -575,13 +581,13 @@ _calculate_dxidX (const unsigned int qp,
                     switch (j_dim)
                     {
                         case 0:
-                            val = _fe->get_detadx()[qp];
+                            val = fe.get_detadx()[qp];
                             break;
                         case 1:
-                            val = _fe->get_detady()[qp];
+                            val = fe.get_detady()[qp];
                             break;
                         case 2:
-                            val = _fe->get_detadz()[qp];
+                            val = fe.get_detadz()[qp];
                             break;
                     }
                 }
@@ -591,13 +597,13 @@ _calculate_dxidX (const unsigned int qp,
                     switch (j_dim)
                     {
                         case 0:
-                            val = _fe->get_dzetadx()[qp];
+                            val = fe.get_dzetadx()[qp];
                             break;
                         case 1:
-                            val = _fe->get_dzetady()[qp];
+                            val = fe.get_dzetady()[qp];
                             break;
                         case 2:
-                            val = _fe->get_dzetadz()[qp];
+                            val = fe.get_dzetadz()[qp];
                             break;
                     }
                 }

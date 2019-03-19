@@ -27,20 +27,18 @@
 
 MAST::ElementBase::ElementBase(MAST::SystemInitialization& sys,
                                MAST::AssemblyBase& assembly,
-                               const libMesh::Elem& elem):
+                               const MAST::GeomElem& elem):
 _system                 (sys),
 _assembly               (assembly),
 _elem                   (elem),
 _active_sol_function    (nullptr),
-_time                   (_system.system().time),
-_fe                     (nullptr) {
+_time                   (_system.system().time) {
     
 }
 
 
 MAST::ElementBase::~ElementBase() {
 
-    if (_fe)     delete _fe;
 }
 
 

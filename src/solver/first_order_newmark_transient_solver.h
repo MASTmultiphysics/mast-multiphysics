@@ -198,7 +198,6 @@ namespace MAST {
          */
         virtual void
         elem_topology_sensitivity_calculations(const MAST::FunctionBase& f,
-                                               const MAST::LevelSetIntersection& intersect,
                                                const MAST::FieldFunction<RealVectorX>& vel,
                                                RealVectorX& vec);
 

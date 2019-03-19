@@ -36,6 +36,7 @@ namespace MAST {
     class FunctionBase;
     class SystemInitialization;
     class PhysicsDisciplineBase;
+    class GeomElem;
     
     class AssemblyElemOperations {
         
@@ -85,11 +86,19 @@ namespace MAST {
         virtual void clear_assembly();
         
         /*!
+         *   some analyses may want to set additional element data before
+         *   initialization of the GeomElem. This method provides that
+         *   interface.
+         */
+        virtual void
+        set_elem_data(MAST::GeomElem& elem) const = 0;
+        
+        /*!
          *   initializes the object for calculation of element quantities for
          *   the specified \p elem.
          */
         virtual void
-        init(const libMesh::Elem& elem) = 0;
+        init(const MAST::GeomElem& elem) = 0;
         
         /*!
          *   clears the element initialization

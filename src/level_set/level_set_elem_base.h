@@ -28,7 +28,6 @@ namespace MAST {
     
     // Forward declerations
     class ElementPropertyCardBase;
-    class LocalElemBase;
     class BoundaryConditionBase;
     class FEMOperatorMatrix;
     template <typename ValType> class FieldFunction;
@@ -43,7 +42,7 @@ namespace MAST {
          */
         LevelSetElementBase(MAST::SystemInitialization&             sys,
                             MAST::AssemblyBase&                     assembly,
-                            const libMesh::Elem&                    elem);
+                            const MAST::GeomElem&                   elem);
         
         
         virtual ~LevelSetElementBase();
@@ -176,7 +175,8 @@ namespace MAST {
         /*!
          *   initializes the tau operator
          */
-        void _tau(unsigned int qp,
+        void _tau(const MAST::FEBase& fe,
+                  unsigned int qp,
                   const MAST::FEMOperatorMatrix& Bmat,
                   const std::vector<MAST::FEMOperatorMatrix>& dBmat,
                   const RealVectorX& vel,
@@ -186,13 +186,16 @@ namespace MAST {
         
         
         void
-        _dc_operator(const unsigned int qp,
+        _dc_operator(const MAST::FEBase& fe,
+                     const unsigned int qp,
                      const std::vector<MAST::FEMOperatorMatrix>& dB_mat,
                      const RealVectorX& vel,
                      Real& dc);
         
         void
-        _calculate_dxidX (const unsigned int qp, RealMatrixX& dxi_dX);
+        _calculate_dxidX (const MAST::FEBase& fe,
+                          const unsigned int qp,
+                          RealMatrixX& dxi_dX);
         
         /*!
          *    When \p mass = false, initializes the FEM operator matrix to the

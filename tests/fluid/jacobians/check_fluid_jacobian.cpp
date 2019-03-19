@@ -88,7 +88,7 @@ BOOST_AUTO_TEST_CASE(FarFieldJacobian) {
     val.e        = this;
 
     // check for each side.
-    for (val.side=0; val.side<_fluid_elem->elem().n_sides(); val.side++)
+    for (val.side=0; val.side<_fluid_elem->elem().get_reference_elem().n_sides(); val.side++)
         BOOST_CHECK(check_jacobian(val));
     
 }
@@ -115,7 +115,7 @@ BOOST_AUTO_TEST_CASE(SlipWallJacobian) {
     val.e        = this;
 
     // check for each side.
-    for (val.side=0; val.side<_fluid_elem->elem().n_sides(); val.side++)
+    for (val.side=0; val.side<_fluid_elem->elem().get_reference_elem().n_sides(); val.side++)
         BOOST_CHECK(check_jacobian(val));
     
 }

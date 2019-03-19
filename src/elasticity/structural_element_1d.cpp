@@ -31,36 +31,21 @@
 #include "base/constant_field_function.h"
 #include "base/assembly_base.h"
 #include "mesh/fe_base.h"
-#include "mesh/local_1d_elem.h"
+#include "mesh/geom_elem.h"
 
 
 MAST::StructuralElement1D::StructuralElement1D(MAST::SystemInitialization& sys,
                                                MAST::AssemblyBase& assembly,
-                                               const libMesh::Elem& elem,
+                                               const MAST::GeomElem& elem,
                                                const MAST::ElementPropertyCardBase& p):
-MAST::BendingStructuralElem(sys, assembly, elem, p),
-_bending_operator(nullptr) {
+MAST::BendingStructuralElem(sys, assembly, elem, p)  {
     
-    const MAST::ElementPropertyCard1D& p_card =
-    dynamic_cast<const MAST::ElementPropertyCard1D&>(p);
-    
-    _local_elem    = new MAST::Local1DElem(elem, p_card.y_vector());
-    _fe            = assembly.build_fe().release();
-    _fe->init(*_local_elem);
-    
-    MAST::BendingOperatorType bending_model =
-    _property.bending_model(_elem, _fe->get_fe_type());
-    _bending_operator = MAST::build_bending_operator_1D(bending_model,
-                                                        *this,
-                                                        _fe->get_qpoints()).release();
 }
 
 
 
 MAST::StructuralElement1D::~StructuralElement1D() {
     
-    delete _local_elem;
-    if (_bending_operator)   delete _bending_operator;
 }
 
 
@@ -178,8 +163,7 @@ MAST::StructuralElement1D::calculate_stress(bool request_derivative,
                                             const MAST::FunctionBase* p,
                                             MAST::StressStrainOutputBase& output) {
     
-    std::unique_ptr<MAST::FEBase>   fe(_assembly.build_fe());
-    fe->init(*_local_elem);
+    std::unique_ptr<MAST::FEBase>   fe(_elem.init_fe(true, false));
 
     const unsigned int
     qp_loc_fe_size = (unsigned int)fe->get_qpoints().size(),
@@ -213,8 +197,7 @@ MAST::StructuralElement1D::calculate_stress(bool request_derivative,
     }
 
     
-    MAST::BendingOperatorType bending_model =
-    _property.bending_model(_elem, _fe->get_fe_type());
+    MAST::BendingOperatorType bending_model = _property.bending_model(_elem);
     
     std::unique_ptr<MAST::BendingOperator1D>
     bend(MAST::build_bending_operator_1D(bending_model,
@@ -294,7 +277,7 @@ MAST::StructuralElement1D::calculate_stress(bool request_derivative,
 
     
     bool if_vk = (_property.strain_type() == MAST::NONLINEAR_STRAIN),
-    if_bending = (_property.bending_model(_elem, fe->get_fe_type()) != MAST::NO_BENDING);
+    if_bending = (_property.bending_model(_elem) != MAST::NO_BENDING);
     
     // a reference to the stress output data structure
     MAST::StressStrainOutputBase& stress_output =
@@ -410,7 +393,7 @@ MAST::StructuralElement1D::calculate_stress(bool request_derivative,
             // exists, and we only need to append sensitivity/derivative
             // data to it
             if (!request_derivative && !p)
-                data = &(stress_output.add_stress_strain_at_qp_location(&_elem,
+                data = &(stress_output.add_stress_strain_at_qp_location(_elem,
                                                                         qp,
                                                                         qp_loc[qp],
                                                                         xyz[qp_loc_index],
@@ -418,7 +401,7 @@ MAST::StructuralElement1D::calculate_stress(bool request_derivative,
                                                                         strain_3D,
                                                                         JxW[qp_loc_index]));
             else
-                data = &(stress_output.get_stress_strain_data_for_elem_at_qp(&_elem,
+                data = &(stress_output.get_stress_strain_data_for_elem_at_qp(_elem,
                                                                              qp));
             
             // calculate the derivative if requested
@@ -541,7 +524,7 @@ MAST::StructuralElement1D::calculate_stress(bool request_derivative,
     // make sure that the number of data points for this element is
     // the same as the number of requested points
     libmesh_assert(qp_loc.size() ==
-                   stress_output.n_stress_strain_data_for_elem(&_elem));
+                   stress_output.n_stress_strain_data_for_elem(_elem));
     
     // if either derivative or sensitivity was requested, it was provided
     // by this routine
@@ -557,10 +540,14 @@ MAST::StructuralElement1D::internal_residual (bool request_jacobian,
                                               RealVectorX& f,
                                               RealMatrixX& jac)
 {
-    const std::vector<Real>& JxW           = _fe->get_JxW();
-    const std::vector<libMesh::Point>& xyz = _fe->get_xyz();
+    std::unique_ptr<MAST::FEBase>   fe(_elem.init_fe(true,
+                                                     false,
+                                                     _property.extra_quadrature_order(_elem)));
+
+    const std::vector<Real>& JxW           = fe->get_JxW();
+    const std::vector<libMesh::Point>& xyz = fe->get_xyz();
     const unsigned int
-    n_phi    = (unsigned int)_fe->get_phi().size(),
+    n_phi    = (unsigned int)fe->get_phi().size(),
     n1       = this->n_direct_strain_components(),
     n2       = 6*n_phi,
     n3       = this->n_von_karman_strain_components();
@@ -603,8 +590,18 @@ MAST::StructuralElement1D::internal_residual (bool request_jacobian,
     Bmat_v_vk.reinit(n3, _system.n_vars(), n_phi); // only dv/dx and dv/dy
     Bmat_w_vk.reinit(n3, _system.n_vars(), n_phi); // only dw/dx and dw/dy
     
-    bool if_vk = (_property.strain_type() == MAST::NONLINEAR_STRAIN),
-    if_bending = (_property.bending_model(_elem, _fe->get_fe_type()) != MAST::NO_BENDING);
+    bool if_vk = (_property.strain_type() == MAST::NONLINEAR_STRAIN);
+
+    MAST::BendingOperatorType
+    bending_model = _property.bending_model(_elem);
+
+    std::unique_ptr<MAST::BendingOperator1D> bend;
+    
+    if (bending_model != MAST::NO_BENDING)
+        bend.reset(MAST::build_bending_operator_1D(bending_model,
+                                                   *this,
+                                                   fe->get_qpoints()).release());
+
     
     std::unique_ptr<MAST::FieldFunction<RealMatrixX > >
     mat_stiff_A  = _property.stiffness_A_matrix(*this),
@@ -616,15 +613,16 @@ MAST::StructuralElement1D::internal_residual (bool request_jacobian,
         // get the material matrix
         (*mat_stiff_A)(xyz[qp], _time, material_A_mat);
         
-        if (if_bending) {
+        if (bend.get()) {
             (*mat_stiff_B)(xyz[qp], _time, material_B_mat);
             (*mat_stiff_D)(xyz[qp], _time, material_D_mat);
         }
         
         // now calculte the quantity for these matrices
-        _internal_residual_operation(if_bending, if_vk, n2, qp, *_fe, JxW,
+        _internal_residual_operation(if_vk, n2, qp, *fe, JxW,
                                      request_jacobian, 
                                      local_f, local_jac,
+                                     bend.get(),
                                      Bmat_mem, Bmat_bend_v, Bmat_bend_w,
                                      Bmat_v_vk, Bmat_w_vk,
                                      stress, stress_l, vk_dvdxi_mat, vk_dwdxi_mat,
@@ -639,10 +637,10 @@ MAST::StructuralElement1D::internal_residual (bool request_jacobian,
     
     // now calculate the transverse shear contribution if appropriate for the
     // element
-    if (if_bending && _bending_operator->include_transverse_shear_energy())
-        _bending_operator->calculate_transverse_shear_residual(request_jacobian,
-                                                               local_f,
-                                                               local_jac);
+    if (bend.get() && bend->include_transverse_shear_energy())
+        bend->calculate_transverse_shear_residual(request_jacobian,
+                                                  local_f,
+                                                  local_jac);
     
     
     // now transform to the global coorodinate system
@@ -681,10 +679,14 @@ MAST::StructuralElement1D::internal_residual_sensitivity (const MAST::FunctionBa
     if (!calculate)
         return false;
     
-    const std::vector<Real>& JxW           = _fe->get_JxW();
-    const std::vector<libMesh::Point>& xyz = _fe->get_xyz();
+    std::unique_ptr<MAST::FEBase>   fe(_elem.init_fe(true,
+                                                     false,
+                                                     _property.extra_quadrature_order(_elem)));
+
+    const std::vector<Real>& JxW           = fe->get_JxW();
+    const std::vector<libMesh::Point>& xyz = fe->get_xyz();
     const unsigned int
-    n_phi = (unsigned int)_fe->get_phi().size(),
+    n_phi = (unsigned int)fe->get_phi().size(),
     n1    = this->n_direct_strain_components(),
     n2    = 6*n_phi,
     n3    = this->n_von_karman_strain_components();
@@ -727,9 +729,18 @@ MAST::StructuralElement1D::internal_residual_sensitivity (const MAST::FunctionBa
     Bmat_v_vk.reinit(n3, _system.n_vars(), n_phi); // only dv/dx and dv/dy
     Bmat_w_vk.reinit(n3, _system.n_vars(), n_phi); // only dw/dx and dw/dy
     
-    bool if_vk = (_property.strain_type() == MAST::NONLINEAR_STRAIN),
-    if_bending = (_property.bending_model(_elem, _fe->get_fe_type()) != MAST::NO_BENDING);
+    bool if_vk = (_property.strain_type() == MAST::NONLINEAR_STRAIN);
     
+    MAST::BendingOperatorType
+    bending_model = _property.bending_model(_elem);
+    
+    std::unique_ptr<MAST::BendingOperator1D> bend;
+    
+    if (bending_model != MAST::NO_BENDING)
+        bend.reset(MAST::build_bending_operator_1D(bending_model,
+                                                   *this,
+                                                   fe->get_qpoints()).release());
+
     std::unique_ptr<MAST::FieldFunction<RealMatrixX > >
     mat_stiff_A = _property.stiffness_A_matrix(*this),
     mat_stiff_B = _property.stiffness_B_matrix(*this),
@@ -741,15 +752,16 @@ MAST::StructuralElement1D::internal_residual_sensitivity (const MAST::FunctionBa
         // get the material matrix
         mat_stiff_A->derivative(p, xyz[qp], _time, material_A_mat);
         
-        if (if_bending) {
+        if (bend.get()) {
             mat_stiff_B->derivative(p, xyz[qp], _time, material_B_mat);
             mat_stiff_D->derivative(p, xyz[qp], _time, material_D_mat);
         }
         
         // now calculte the quantity for these matrices
-        _internal_residual_operation(if_bending, if_vk, n2, qp, *_fe, JxW,
+        _internal_residual_operation(if_vk, n2, qp, *fe, JxW,
                                      request_jacobian,
                                      local_f, local_jac,
+                                     bend.get(),
                                      Bmat_mem, Bmat_bend_v, Bmat_bend_w,
                                      Bmat_v_vk, Bmat_w_vk,
                                      stress, stress_l, vk_dvdxi_mat, vk_dwdxi_mat,
@@ -762,11 +774,11 @@ MAST::StructuralElement1D::internal_residual_sensitivity (const MAST::FunctionBa
     
     // now calculate the transverse shear contribution if appropriate for the
     // element
-    if (if_bending && _bending_operator->include_transverse_shear_energy())
-        _bending_operator->calculate_transverse_shear_residual_sensitivity(p,
-                                                                           request_jacobian,
-                                                                           local_f,
-                                                                           local_jac);
+    if (bend.get() && bend->include_transverse_shear_energy())
+        bend->calculate_transverse_shear_residual_sensitivity(p,
+                                                              request_jacobian,
+                                                              local_f,
+                                                              local_jac);
     
     // now transform to the global coorodinate system
     transform_vector_to_global_system(local_f, vec3_n2);
@@ -787,10 +799,14 @@ bool
 MAST::StructuralElement1D::
 internal_residual_jac_dot_state_sensitivity (RealMatrixX& jac) {
     
-    const std::vector<Real>& JxW            = _fe->get_JxW();
-    const std::vector<libMesh::Point>& xyz  = _fe->get_xyz();
+    std::unique_ptr<MAST::FEBase>   fe(_elem.init_fe(true,
+                                                     false,
+                                                     _property.extra_quadrature_order(_elem)));
+
+    const std::vector<Real>& JxW            = fe->get_JxW();
+    const std::vector<libMesh::Point>& xyz  = fe->get_xyz();
     const unsigned int
-    n_phi = (unsigned int)_fe->get_phi().size(),
+    n_phi = (unsigned int)fe->get_phi().size(),
     n1    = this->n_direct_strain_components(),
     n2    = 6*n_phi,
     n3    = this->n_von_karman_strain_components();
@@ -832,9 +848,18 @@ internal_residual_jac_dot_state_sensitivity (RealMatrixX& jac) {
     Bmat_v_vk.reinit(n3, _system.n_vars(), n_phi); // only dv/dx and dv/dy
     Bmat_w_vk.reinit(n3, _system.n_vars(), n_phi); // only dw/dx and dw/dy
     
-    bool if_vk = (_property.strain_type() == MAST::NONLINEAR_STRAIN),
-    if_bending = (_property.bending_model(_elem, _fe->get_fe_type()) != MAST::NO_BENDING);
+    bool if_vk = (_property.strain_type() == MAST::NONLINEAR_STRAIN);
     
+    MAST::BendingOperatorType
+    bending_model = _property.bending_model(_elem);
+    
+    std::unique_ptr<MAST::BendingOperator1D> bend;
+    
+    if (bending_model != MAST::NO_BENDING)
+        bend.reset(MAST::build_bending_operator_1D(bending_model,
+                                                   *this,
+                                                   fe->get_qpoints()).release());
+
     // without the nonlinear strain, this matrix is zero.
     if (!if_vk)
         return false;
@@ -854,7 +879,7 @@ internal_residual_jac_dot_state_sensitivity (RealMatrixX& jac) {
         (*mat_stiff_D)(xyz[qp], _time, material_D_mat);
         
         // now calculte the quantity for these matrices
-        this->initialize_direct_strain_operator(qp, *_fe, Bmat_mem);
+        this->initialize_direct_strain_operator(qp, *fe, Bmat_mem);
         
         // first handle constant throught the thickness stresses: membrane and vonKarman
         Bmat_mem.vector_mult(vec1_n1, _local_sol_sens);
@@ -865,10 +890,10 @@ internal_residual_jac_dot_state_sensitivity (RealMatrixX& jac) {
         
         // get the bending strain operator
         vec2_n1.setZero(); // used to store vk strain, if applicable
-        if (if_bending) {
-            _bending_operator->initialize_bending_strain_operator(*_fe, qp,
-                                                                  Bmat_bend_v,
-                                                                  Bmat_bend_w);
+        if (bend.get()) {
+            bend->initialize_bending_strain_operator(*fe, qp,
+                                                     Bmat_bend_v,
+                                                     Bmat_bend_w);
             
             //  evaluate the bending stress and add that to the stress vector
             // for evaluation in the nonlinear stress term
@@ -884,14 +909,14 @@ internal_residual_jac_dot_state_sensitivity (RealMatrixX& jac) {
             if (if_vk) {  // get the vonKarman strain operator if needed
                 
                 this->initialize_von_karman_strain_operator(qp,
-                                                            *_fe,
+                                                            *fe,
                                                             vec2_n1,
                                                             vk_dvdxi_mat,
                                                             vk_dwdxi_mat,
                                                             Bmat_v_vk,
                                                             Bmat_w_vk);
                 this->initialize_von_karman_strain_operator_sensitivity(qp,
-                                                                        *_fe,
+                                                                        *fe,
                                                                         vk_dvdxi_mat_sens,
                                                                         vk_dwdxi_mat_sens);
                 // sensitivity of von Karman strain
@@ -1046,8 +1071,7 @@ internal_residual_jac_dot_state_sensitivity (RealMatrixX& jac) {
 
 void
 MAST::StructuralElement1D::
-_internal_residual_operation(bool if_bending,
-                             bool if_vk,
+_internal_residual_operation(bool if_vk,
                              const unsigned int n2,
                              const unsigned int qp,
                              const MAST::FEBase& fe,
@@ -1055,6 +1079,7 @@ _internal_residual_operation(bool if_bending,
                              bool request_jacobian,
                              RealVectorX& local_f,
                              RealMatrixX& local_jac,
+                             MAST::BendingOperator1D* bend,
                              MAST::FEMOperatorMatrix& Bmat_mem,
                              MAST::FEMOperatorMatrix& Bmat_bend_v,
                              MAST::FEMOperatorMatrix& Bmat_bend_w,
@@ -1091,10 +1116,10 @@ _internal_residual_operation(bool if_bending,
     
     // get the bending strain operator
     vec2_n1.setZero(); // used to store vk strain, if applicable
-    if (if_bending) {
-        _bending_operator->initialize_bending_strain_operator(fe, qp,
-                                                              Bmat_bend_v,
-                                                              Bmat_bend_w);
+    if (bend) {
+        bend->initialize_bending_strain_operator(fe, qp,
+                                                 Bmat_bend_v,
+                                                 Bmat_bend_w);
         
         //  evaluate the bending stress and add that to the stress vector
         // for evaluation in the nonlinear stress term
@@ -1134,7 +1159,7 @@ _internal_residual_operation(bool if_bending,
     Bmat_mem.vector_mult_transpose(vec3_n2, vec1_n1);
     local_f += JxW[qp] * vec3_n2;
     
-    if (if_bending) {
+    if (bend) {
         if (if_vk) {
             // von Karman strain: direct stress
             vec4_2 = vk_dvdxi_mat.transpose() * vec1_n1;
@@ -1176,7 +1201,7 @@ _internal_residual_operation(bool if_bending,
         Bmat_mem.right_multiply_transpose(mat2_n2n2, mat1_n1n2);
         local_jac += JxW[qp] * mat2_n2n2;
                 
-        if (if_bending) {
+        if (bend) {
             if (if_vk) {
                 // membrane - vk: v-displacement
                 mat3 = RealMatrixX::Zero(vk_dvdxi_mat.rows(), n2);
@@ -1364,11 +1389,15 @@ MAST::StructuralElement1D::prestress_residual (bool request_jacobian,
 {
     if (!_property.if_prestressed())
         return false;
-    
-    const std::vector<Real>& JxW           = _fe->get_JxW();
-    const std::vector<libMesh::Point>& xyz = _fe->get_xyz();
+
+    std::unique_ptr<MAST::FEBase>   fe(_elem.init_fe(true,
+                                                     false,
+                                                     _property.extra_quadrature_order(_elem)));
+
+    const std::vector<Real>& JxW           = fe->get_JxW();
+    const std::vector<libMesh::Point>& xyz = fe->get_xyz();
     const unsigned int
-    n_phi = (unsigned int)_fe->get_phi().size(),
+    n_phi = (unsigned int)fe->get_phi().size(),
     n1    = this->n_direct_strain_components(),
     n2    =6*n_phi,
     n3    = this->n_von_karman_strain_components();
@@ -1406,9 +1435,18 @@ MAST::StructuralElement1D::prestress_residual (bool request_jacobian,
     Bmat_v_vk.reinit(n3, _system.n_vars(), n_phi); // only dv/dx and dv/dy
     Bmat_w_vk.reinit(n3, _system.n_vars(), n_phi); // only dw/dx and dw/dy
     
-    bool if_vk = (_property.strain_type() == MAST::NONLINEAR_STRAIN),
-    if_bending = (_property.bending_model(_elem, _fe->get_fe_type()) != MAST::NO_BENDING);
+    bool if_vk = (_property.strain_type() == MAST::NONLINEAR_STRAIN);
     
+    MAST::BendingOperatorType
+    bending_model = _property.bending_model(_elem);
+    
+    std::unique_ptr<MAST::BendingOperator1D> bend;
+    
+    if (bending_model != MAST::NO_BENDING)
+        bend.reset(MAST::build_bending_operator_1D(bending_model,
+                                                   *this,
+                                                   fe->get_qpoints()).release());
+
     std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
     prestress_A = _property.prestress_A_matrix(*this),
     prestress_B = _property.prestress_B_matrix(*this);
@@ -1421,18 +1459,18 @@ MAST::StructuralElement1D::prestress_residual (bool request_jacobian,
         _convert_prestress_A_mat_to_vector(prestress_mat_A, prestress_vec_A);
         _convert_prestress_B_mat_to_vector(prestress_mat_B, prestress_vec_B);
         
-        this->initialize_direct_strain_operator(qp, *_fe, Bmat_mem);
+        this->initialize_direct_strain_operator(qp, *fe, Bmat_mem);
         
         // get the bending strain operator if needed
         vec2_n1.setZero(); // used to store vk strain, if applicable
-        if (if_bending) {
-            _bending_operator->initialize_bending_strain_operator(*_fe, qp,
-                                                                  Bmat_bend_v,
-                                                                  Bmat_bend_w);
+        if (bend.get()) {
+            bend->initialize_bending_strain_operator(*fe, qp,
+                                                     Bmat_bend_v,
+                                                     Bmat_bend_w);
             
             if (if_vk)  // get the vonKarman strain operator if needed
                 this->initialize_von_karman_strain_operator(qp,
-                                                            *_fe,
+                                                            *fe,
                                                             vec2_n1,
                                                             vk_dvdxi_mat,
                                                             vk_dwdxi_mat,
@@ -1446,7 +1484,7 @@ MAST::StructuralElement1D::prestress_residual (bool request_jacobian,
         Bmat_mem.vector_mult_transpose(vec3_n2, prestress_vec_A);
         local_f += JxW[qp] * vec3_n2; // epsilon_mem * sigma_0
         
-        if (if_bending) {
+        if (bend.get()) {
             if (if_vk) {
                 // von Karman strain: v-displacement
                 vec4_n3 = vk_dvdxi_mat.transpose() * prestress_vec_A;
@@ -1467,7 +1505,7 @@ MAST::StructuralElement1D::prestress_residual (bool request_jacobian,
         }
         
         if (request_jacobian) {
-            if (if_bending && if_vk) {
+            if (bend.get() && if_vk) {
                 // v-displacement
                 mat3 = RealMatrixX::Zero(2, n2);
                 Bmat_v_vk.left_multiply(mat3, prestress_mat_A);
@@ -1508,10 +1546,14 @@ MAST::StructuralElement1D::prestress_residual_sensitivity (const MAST::FunctionB
     if (!_property.if_prestressed())
         return false;
     
-    const std::vector<Real>& JxW           = _fe->get_JxW();
-    const std::vector<libMesh::Point>& xyz = _fe->get_xyz();
+    std::unique_ptr<MAST::FEBase>   fe(_elem.init_fe(true,
+                                                     false,
+                                                     _property.extra_quadrature_order(_elem)));
+
+    const std::vector<Real>& JxW           = fe->get_JxW();
+    const std::vector<libMesh::Point>& xyz = fe->get_xyz();
     const unsigned int
-    n_phi = (unsigned int)_fe->get_phi().size(),
+    n_phi = (unsigned int)fe->get_phi().size(),
     n1    = this->n_direct_strain_components(),
     n2    = 6*n_phi,
     n3    = this->n_von_karman_strain_components();
@@ -1549,9 +1591,18 @@ MAST::StructuralElement1D::prestress_residual_sensitivity (const MAST::FunctionB
     Bmat_v_vk.reinit(n3, _system.n_vars(), n_phi); // only dv/dx and dv/dy
     Bmat_w_vk.reinit(n3, _system.n_vars(), n_phi); // only dw/dx and dw/dy
     
-    bool if_vk = (_property.strain_type() == MAST::NONLINEAR_STRAIN),
-    if_bending = (_property.bending_model(_elem, _fe->get_fe_type()) != MAST::NO_BENDING);
+    bool if_vk = (_property.strain_type() == MAST::NONLINEAR_STRAIN);
     
+    MAST::BendingOperatorType
+    bending_model = _property.bending_model(_elem);
+    
+    std::unique_ptr<MAST::BendingOperator1D> bend;
+    
+    if (bending_model != MAST::NO_BENDING)
+        bend.reset(MAST::build_bending_operator_1D(bending_model,
+                                                   *this,
+                                                   fe->get_qpoints()).release());
+
     std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
     prestress_A = _property.prestress_A_matrix(*this),
     prestress_B = _property.prestress_B_matrix(*this);
@@ -1564,18 +1615,18 @@ MAST::StructuralElement1D::prestress_residual_sensitivity (const MAST::FunctionB
         _convert_prestress_A_mat_to_vector(prestress_mat_A, prestress_vec_A);
         _convert_prestress_B_mat_to_vector(prestress_mat_B, prestress_vec_B);
         
-        this->initialize_direct_strain_operator(qp, *_fe, Bmat_mem);
+        this->initialize_direct_strain_operator(qp, *fe, Bmat_mem);
         
         // get the bending strain operator if needed
         vec2_n1.setZero(); // used to store vk strain, if applicable
-        if (if_bending) {
-            _bending_operator->initialize_bending_strain_operator(*_fe, qp,
-                                                                  Bmat_bend_v,
-                                                                  Bmat_bend_w);
+        if (bend.get()) {
+            bend->initialize_bending_strain_operator(*fe, qp,
+                                                     Bmat_bend_v,
+                                                     Bmat_bend_w);
             
             if (if_vk)  // get the vonKarman strain operator if needed
                 this->initialize_von_karman_strain_operator(qp,
-                                                            *_fe,
+                                                            *fe,
                                                             vec2_n1,
                                                             vk_dvdxi_mat,
                                                             vk_dwdxi_mat,
@@ -1589,7 +1640,7 @@ MAST::StructuralElement1D::prestress_residual_sensitivity (const MAST::FunctionB
         Bmat_mem.vector_mult_transpose(vec3_n2, prestress_vec_A);
         local_f += JxW[qp] * vec3_n2; // epsilon_mem * sigma_0
         
-        if (if_bending) {
+        if (bend.get()) {
             if (if_vk) {
                 // von Karman strain: v-displacement
                 vec4_n3 = vk_dvdxi_mat.transpose() * prestress_vec_A;
@@ -1610,7 +1661,7 @@ MAST::StructuralElement1D::prestress_residual_sensitivity (const MAST::FunctionB
         }
         
         if (request_jacobian) {
-            if (if_bending && if_vk) {
+            if (bend.get() && if_vk) {
                 // v-displacement
                 mat3 = RealMatrixX::Zero(2, n2);
                 Bmat_v_vk.left_multiply(mat3, prestress_mat_A);
@@ -1652,13 +1703,12 @@ surface_pressure_residual(bool request_jacobian,
     libmesh_assert(!follower_forces); // not implemented yet for follower forces
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe());
-    fe->init_for_side(*_local_elem, side, false);
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_side_fe(side, false));
 
     const std::vector<Real> &JxW                    = fe->get_JxW();
     const std::vector<libMesh::Point>& qpoint       = fe->get_xyz();
     const std::vector<std::vector<Real> >& phi      = fe->get_phi();
-    const std::vector<libMesh::Point>& face_normals = fe->get_normals();
+    const std::vector<libMesh::Point>& face_normals = fe->get_normals_for_local_coordinate();
     const unsigned int
     n_phi  = (unsigned int)phi.size(),
     n1     = 3,
@@ -1732,13 +1782,12 @@ surface_pressure_residual_sensitivity(const MAST::FunctionBase& p,
     libmesh_assert(!follower_forces); // not implemented yet for follower forces
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe());
-    fe->init_for_side(*_local_elem, side, false);
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_side_fe(side, false));
 
     const std::vector<Real> &JxW                    = fe->get_JxW();
     const std::vector<libMesh::Point>& qpoint       = fe->get_xyz();
     const std::vector<std::vector<Real> >& phi      = fe->get_phi();
-    const std::vector<libMesh::Point>& face_normals = fe->get_normals();
+    const std::vector<libMesh::Point>& face_normals = fe->get_normals_for_local_coordinate();
     const unsigned int
     n_phi  = (unsigned int)phi.size(),
     n1     = 3,
@@ -1811,10 +1860,14 @@ MAST::StructuralElement1D::thermal_residual (bool request_jacobian,
                                              RealMatrixX& jac,
                                              MAST::BoundaryConditionBase& bc)
 {
-    const std::vector<Real>& JxW           = _fe->get_JxW();
-    const std::vector<libMesh::Point>& xyz = _fe->get_xyz();
+    std::unique_ptr<MAST::FEBase>   fe(_elem.init_fe(true,
+                                                     false,
+                                                     _property.extra_quadrature_order(_elem)));
+
+    const std::vector<Real>& JxW           = fe->get_JxW();
+    const std::vector<libMesh::Point>& xyz = fe->get_xyz();
     const unsigned int
-    n_phi = (unsigned int)_fe->get_phi().size(),
+    n_phi = (unsigned int)fe->get_phi().size(),
     n1    = this->n_direct_strain_components(),
     n2    = 6*n_phi,
     n3    = this->n_von_karman_strain_components();
@@ -1855,9 +1908,18 @@ MAST::StructuralElement1D::thermal_residual (bool request_jacobian,
     Bmat_v_vk.reinit(n3, _system.n_vars(), n_phi); // only dv/dx and dv/dy
     Bmat_w_vk.reinit(n3, _system.n_vars(), n_phi); // only dw/dx and dw/dy
     
-    bool if_vk = (_property.strain_type() == MAST::NONLINEAR_STRAIN),
-    if_bending = (_property.bending_model(_elem, _fe->get_fe_type()) != MAST::NO_BENDING);
+    bool if_vk = (_property.strain_type() == MAST::NONLINEAR_STRAIN);
     
+    MAST::BendingOperatorType
+    bending_model = _property.bending_model(_elem);
+    
+    std::unique_ptr<MAST::BendingOperator1D> bend;
+    
+    if (bending_model != MAST::NO_BENDING)
+        bend.reset(MAST::build_bending_operator_1D(bending_model,
+                                                   *this,
+                                                   fe->get_qpoints()).release());
+
     std::unique_ptr<MAST::FieldFunction<RealMatrixX > >
     expansion_A = _property.thermal_expansion_A_matrix(*this),
     expansion_B = _property.thermal_expansion_B_matrix(*this);
@@ -1890,17 +1952,17 @@ MAST::StructuralElement1D::thermal_residual (bool request_jacobian,
         stress(0,0) = vec1_n1(0); // sigma_xx
         vec2_n1 = material_exp_B_mat * delta_t; // [C]{alpha (T - T0)} (with bending strain)
         
-        this->initialize_direct_strain_operator(qp, *_fe, Bmat_mem);
+        this->initialize_direct_strain_operator(qp, *fe, Bmat_mem);
         
         // membrane strain
         Bmat_mem.vector_mult_transpose(vec3_n2, vec1_n1);
         local_f += JxW[qp] * vec3_n2;
         
-        if (if_bending) {
+        if (bend.get()) {
             // bending strain
-            _bending_operator->initialize_bending_strain_operator(*_fe, qp,
-                                                                  Bmat_bend_v,
-                                                                  Bmat_bend_w);
+            bend->initialize_bending_strain_operator(*fe, qp,
+                                                     Bmat_bend_v,
+                                                     Bmat_bend_w);
             Bmat_bend_v.vector_mult_transpose(vec3_n2, vec2_n1);
             local_f += JxW[qp] * vec3_n2;
             Bmat_bend_w.vector_mult_transpose(vec3_n2, vec2_n1);
@@ -1910,7 +1972,7 @@ MAST::StructuralElement1D::thermal_residual (bool request_jacobian,
             if (if_vk) {
                 // get the vonKarman strain operator if needed
                 this->initialize_von_karman_strain_operator(qp,
-                                                            *_fe,
+                                                            *fe,
                                                             vec2_n1, // epsilon_vk
                                                             vk_dvdxi_mat,
                                                             vk_dwdxi_mat,
@@ -1967,10 +2029,14 @@ MAST::StructuralElement1D::thermal_residual_sensitivity (const MAST::FunctionBas
                                                          RealMatrixX& jac,
                                                          MAST::BoundaryConditionBase& bc)
 {
-    const std::vector<Real>& JxW           = _fe->get_JxW();
-    const std::vector<libMesh::Point>& xyz = _fe->get_xyz();
+    std::unique_ptr<MAST::FEBase>   fe(_elem.init_fe(true,
+                                                     false,
+                                                     _property.extra_quadrature_order(_elem)));
+
+    const std::vector<Real>& JxW           = fe->get_JxW();
+    const std::vector<libMesh::Point>& xyz = fe->get_xyz();
     const unsigned int
-    n_phi = (unsigned int)_fe->get_phi().size(),
+    n_phi = (unsigned int)fe->get_phi().size(),
     n1    = this->n_direct_strain_components(),
     n2    = 6*n_phi,
     n3    = this->n_von_karman_strain_components();
@@ -2011,9 +2077,18 @@ MAST::StructuralElement1D::thermal_residual_sensitivity (const MAST::FunctionBas
     Bmat_v_vk.reinit(n3, _system.n_vars(), n_phi); // only dv/dx and dv/dy
     Bmat_w_vk.reinit(n3, _system.n_vars(), n_phi); // only dw/dx and dw/dy
     
-    bool if_vk = (_property.strain_type() == MAST::NONLINEAR_STRAIN),
-    if_bending = (_property.bending_model(_elem, _fe->get_fe_type()) != MAST::NO_BENDING);
+    bool if_vk = (_property.strain_type() == MAST::NONLINEAR_STRAIN);
     
+    MAST::BendingOperatorType
+    bending_model = _property.bending_model(_elem);
+    
+    std::unique_ptr<MAST::BendingOperator1D> bend;
+    
+    if (bending_model != MAST::NO_BENDING)
+        bend.reset(MAST::build_bending_operator_1D(bending_model,
+                                                   *this,
+                                                   fe->get_qpoints()).release());
+
     std::unique_ptr<MAST::FieldFunction<RealMatrixX > >
     expansion_A = _property.thermal_expansion_A_matrix(*this),
     expansion_B = _property.thermal_expansion_B_matrix(*this);
@@ -2052,17 +2127,17 @@ MAST::StructuralElement1D::thermal_residual_sensitivity (const MAST::FunctionBas
         vec2_n1 += vec5_n1;  // sensitivity of the thermal membrane force
         
         
-        this->initialize_direct_strain_operator(qp, *_fe, Bmat_mem);
+        this->initialize_direct_strain_operator(qp, *fe, Bmat_mem);
         
         // membrane strain
         Bmat_mem.vector_mult_transpose(vec3_n2, vec1_n1);
         local_f += JxW[qp] * vec3_n2;
         
-        if (if_bending) {
+        if (bend.get()) {
             // bending strain
-            _bending_operator->initialize_bending_strain_operator(*_fe, qp,
-                                                                  Bmat_bend_v,
-                                                                  Bmat_bend_w);
+            bend->initialize_bending_strain_operator(*fe, qp,
+                                                     Bmat_bend_v,
+                                                     Bmat_bend_w);
             Bmat_bend_v.vector_mult_transpose(vec3_n2, vec2_n1);
             local_f += JxW[qp] * vec3_n2;
             Bmat_bend_w.vector_mult_transpose(vec3_n2, vec2_n1);
@@ -2072,7 +2147,7 @@ MAST::StructuralElement1D::thermal_residual_sensitivity (const MAST::FunctionBas
             if (if_vk) {
                 // get the vonKarman strain operator if needed
                 this->initialize_von_karman_strain_operator(qp,
-                                                            *_fe,
+                                                            *fe,
                                                             vec2_n1, // epsilon_vk
                                                             vk_dvdxi_mat,
                                                             vk_dwdxi_mat,
@@ -2134,10 +2209,11 @@ piston_theory_residual(bool request_jacobian,
     
     libmesh_assert(!follower_forces); // not implemented yet for follower forces
     
-    
-    const std::vector<Real> &JxW                = _fe->get_JxW();
-    const std::vector<libMesh::Point>& qpoint   = _fe->get_xyz();
-    const std::vector<std::vector<Real> >& phi  = _fe->get_phi();
+    std::unique_ptr<MAST::FEBase>   fe(_elem.init_fe(true, false));
+
+    const std::vector<Real> &JxW                = fe->get_JxW();
+    const std::vector<libMesh::Point>& qpoint   = fe->get_xyz();
+    const std::vector<std::vector<Real> >& phi  = fe->get_phi();
     const unsigned int
     n_phi = (unsigned int)phi.size(),
     n1    = this->n_direct_strain_components(),
@@ -2220,7 +2296,7 @@ piston_theory_residual(bool request_jacobian,
         // get the operators for dv/dx and dw/dx. We will use the
         // von Karman strain operators for this
         initialize_von_karman_strain_operator(qp,
-                                              *_fe,
+                                              *fe,
                                               dummy,
                                               dvdx,
                                               dwdx,
@@ -2325,10 +2401,11 @@ piston_theory_residual_sensitivity(const MAST::FunctionBase& p,
     
     libmesh_assert(!follower_forces); // not implemented yet for follower forces
     
-    
-    const std::vector<Real> &JxW                = _fe->get_JxW();
-    const std::vector<libMesh::Point>& qpoint   = _fe->get_xyz();
-    const std::vector<std::vector<Real> >& phi  = _fe->get_phi();
+    std::unique_ptr<MAST::FEBase>   fe(_elem.init_fe(true, false));
+
+    const std::vector<Real> &JxW                = fe->get_JxW();
+    const std::vector<libMesh::Point>& qpoint   = fe->get_xyz();
+    const std::vector<std::vector<Real> >& phi  = fe->get_phi();
     const unsigned int
     n_phi = (unsigned int)phi.size(),
     n1    = this->n_direct_strain_components(),
@@ -2411,7 +2488,7 @@ piston_theory_residual_sensitivity(const MAST::FunctionBase& p,
         // get the operators for dv/dx and dw/dx. We will use the
         // von Karman strain operators for this
         initialize_von_karman_strain_operator(qp,
-                                              *_fe,
+                                              *fe,
                                               dummy,
                                               dvdx,
                                               dwdx,
@@ -2538,7 +2615,7 @@ linearized_frequency_domain_surface_pressure_residual
     const std::vector<Real> &JxW                    = fe->get_JxW();
     const std::vector<libMesh::Point>& qpoint       = fe->get_xyz();
     const std::vector<std::vector<Real> >& phi      = fe->get_phi();
-    const std::vector<libMesh::Point>& face_normals = fe->get_normals();
+    const std::vector<libMesh::Point>& face_normals = fe->get_normals_for_local_coordinate();
     
     const unsigned int
     n_phi = (unsigned int)phi.size(),

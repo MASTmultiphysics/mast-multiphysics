@@ -19,18 +19,18 @@
 
 // MAST includes
 #include "property_cards/element_property_card_1D.h"
-
+#include "mesh/geom_elem.h"
 
 MAST::BendingOperatorType
-MAST::ElementPropertyCard1D::bending_model(const libMesh::Elem& elem,
-                                           const libMesh::FEType& fe) const {
+MAST::ElementPropertyCard1D::bending_model(const MAST::GeomElem& elem) const {
     // for an EDGE2 element, default bending is Bernoulli. For all other elements
     // the default is Timoshenko. Otherwise it returns the model set for
     // this card.
-    switch (elem.type()) {
+    switch (elem.get_reference_elem().type()) {
         case libMesh::EDGE2:
-            if ((fe.family == libMesh::LAGRANGE) &&
-                (fe.order  == libMesh::FIRST) &&
+            // assuming that all variables have the same interpolation
+            if ((elem.get_fe_type(0).family == libMesh::LAGRANGE) &&
+                (elem.get_fe_type(0).order  == libMesh::FIRST) &&
                 (_bending_model == MAST::DEFAULT_BENDING))
                 return MAST::BERNOULLI;
             else

@@ -25,6 +25,7 @@
 #include "base/elem_base.h"
 #include "base/system_initialization.h"
 #include "base/nonlinear_system.h"
+#include "mesh/geom_elem.h"
 
 
 // libMesh includes
@@ -49,7 +50,7 @@ MAST::IntegratedForceOutput::~IntegratedForceOutput()  {
 
 
 void
-MAST::IntegratedForceOutput::init(const libMesh::Elem& elem) {
+MAST::IntegratedForceOutput::init(const MAST::GeomElem& elem) {
     
     libmesh_assert(!_physics_elem);
     libmesh_assert(_system);
@@ -109,13 +110,13 @@ MAST::IntegratedForceOutput::evaluate() {
     MAST::ConservativeFluidElementBase& e =
     dynamic_cast<MAST::ConservativeFluidElementBase&>(*_physics_elem);
 
-    const libMesh::Elem&
+    const MAST::GeomElem&
     elem = _physics_elem->elem();
     
     RealVectorX
     f  = RealVectorX::Zero(3);
     
-    for (unsigned short int n=0; n<elem.n_sides(); n++)
+    for (unsigned short int n=0; n<elem.n_sides_quadrature_elem(); n++)
         if (this->if_evaluate_for_boundary(elem, n)) {
             
             e.side_integrated_force(n, f);
@@ -133,13 +134,13 @@ MAST::IntegratedForceOutput::evaluate_sensitivity(const MAST::FunctionBase& p) {
     MAST::ConservativeFluidElementBase& e =
     dynamic_cast<MAST::ConservativeFluidElementBase&>(*_physics_elem);
     
-    const libMesh::Elem&
+    const MAST::GeomElem&
     elem = _physics_elem->elem();
-    
+
     RealVectorX
     df  = RealVectorX::Zero(3);
     
-    for (unsigned short int n=0; n<elem.n_sides(); n++)
+    for (unsigned short int n=0; n<elem.n_sides_quadrature_elem(); n++)
         if (this->if_evaluate_for_boundary(elem, n)) {
             
             e.side_integrated_force_sensitivity(p, n, df);
@@ -157,16 +158,16 @@ MAST::IntegratedForceOutput::output_derivative_for_elem(RealVectorX& dq_dX) {
     MAST::ConservativeFluidElementBase& e =
     dynamic_cast<MAST::ConservativeFluidElementBase&>(*_physics_elem);
     
-    const libMesh::Elem&
+    const MAST::GeomElem&
     elem = _physics_elem->elem();
-    
+
     RealVectorX
     f    = RealVectorX::Zero(3);
     
     RealMatrixX
     dfdX = RealMatrixX::Zero(3, dq_dX.size());
     
-    for (unsigned short int n=0; n<elem.n_sides(); n++)
+    for (unsigned short int n=0; n<elem.n_sides_quadrature_elem(); n++)
         if (this->if_evaluate_for_boundary(elem, n)) {
             
             e.side_integrated_force(n, f, &dfdX);

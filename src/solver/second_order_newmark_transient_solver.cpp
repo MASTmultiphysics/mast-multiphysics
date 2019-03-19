@@ -465,7 +465,6 @@ elem_shape_sensitivity_calculations(const MAST::FunctionBase& f,
 void
 MAST::SecondOrderNewmarkTransientSolver::
 elem_topology_sensitivity_calculations(const MAST::FunctionBase& f,
-                                       const MAST::LevelSetIntersection& intersect,
                                        const MAST::FieldFunction<RealVectorX>& vel,
                                        RealVectorX& vec) {
     libmesh_assert(false); // to be implemented

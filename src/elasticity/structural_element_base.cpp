@@ -27,8 +27,9 @@
 #include "base/boundary_condition_base.h"
 #include "base/nonlinear_system.h"
 #include "base/assembly_base.h"
-#include "property_cards/element_property_card_1D.h"
-#include "mesh/local_elem_base.h"
+#include "base/field_function_base.h"
+#include "property_cards/element_property_card_base.h"
+#include "mesh/geom_elem.h"
 #include "mesh/fe_base.h"
 #include "numerics/fem_operator_matrix.h"
 #include "numerics/utility.h"
@@ -36,10 +37,9 @@
 
 MAST::StructuralElementBase::StructuralElementBase(MAST::SystemInitialization& sys,
                                                    MAST::AssemblyBase& assembly,
-                                                   const libMesh::Elem& elem,
+                                                   const MAST::GeomElem& elem,
                                                    const MAST::ElementPropertyCardBase& p):
 MAST::ElementBase(sys, assembly, elem),
-_local_elem       (nullptr),
 follower_forces   (false),
 _property         (p),
 _incompatible_sol (nullptr) {
@@ -52,14 +52,6 @@ MAST::StructuralElementBase::~StructuralElementBase() {
 
 }
 
-
-MAST::LocalElemBase&
-MAST::StructuralElementBase::local_elem() {
-    
-    libmesh_assert(_local_elem);
-    
-    return *_local_elem;
-}
 
 
 void
@@ -238,11 +230,9 @@ MAST::StructuralElementBase::linearized_internal_residual (bool request_jacobian
     // It is assumed that the structural elements implement the Jacobians.
     // Hence, the residual for the linearized problem will be calculated
     // using the Jacobian.
-
-    const std::vector<std::vector<Real> >& phi = _fe->get_phi();
     
     const unsigned int
-    n_phi    = (unsigned int)phi.size(),
+    n_phi    = (unsigned int)f.size(),
     n2       =6*n_phi;
 
     RealVectorX
@@ -271,9 +261,11 @@ MAST::StructuralElementBase::inertial_residual (bool request_jacobian,
                                                 RealMatrixX& jac_xdot,
                                                 RealMatrixX& jac) {
     
-    const std::vector<Real>& JxW               = _fe->get_JxW();
-    const std::vector<libMesh::Point>& xyz     = _fe->get_xyz();
-    const std::vector<std::vector<Real> >& phi = _fe->get_phi();
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_fe(false, false));
+
+    const std::vector<Real>& JxW               = fe->get_JxW();
+    const std::vector<libMesh::Point>& xyz     = fe->get_xyz();
+    const std::vector<std::vector<Real> >& phi = fe->get_phi();
     
     const unsigned int
     n_phi    = (unsigned int)phi.size(),
@@ -302,7 +294,7 @@ MAST::StructuralElementBase::inertial_residual (bool request_jacobian,
         (*mat_inertia)(xyz[0], _time, material_mat);
         
         Real vol = 0.;
-        const unsigned int nshp = _fe->n_shape_functions();
+        const unsigned int nshp = fe->n_shape_functions();
         for (unsigned int i=0; i<JxW.size(); i++)
             vol += JxW[i];
         vol /= (1.* nshp);
@@ -376,10 +368,8 @@ linearized_inertial_residual (bool request_jacobian,
     // Hence, the residual for the linearized problem will be calculated
     // using the Jacobian.
     
-    const std::vector<std::vector<Real> >& phi = _fe->get_phi();
-    
     const unsigned int
-    n_phi    = (unsigned int)phi.size(),
+    n_phi    = (unsigned int)f.size(),
     n2       =6*n_phi;
     
     RealVectorX
@@ -418,9 +408,11 @@ MAST::StructuralElementBase::inertial_residual_sensitivity (const MAST::Function
                                                             RealMatrixX& jac_xdot,
                                                             RealMatrixX& jac) {
     
-    const std::vector<Real>& JxW               = _fe->get_JxW();
-    const std::vector<libMesh::Point>& xyz     = _fe->get_xyz();
-    const std::vector<std::vector<Real> >& phi = _fe->get_phi();
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_fe(false, false));
+
+    const std::vector<Real>& JxW               = fe->get_JxW();
+    const std::vector<libMesh::Point>& xyz     = fe->get_xyz();
+    const std::vector<std::vector<Real> >& phi = fe->get_phi();
     
     const unsigned int
     n_phi    = (unsigned int)phi.size(),
@@ -450,7 +442,7 @@ MAST::StructuralElementBase::inertial_residual_sensitivity (const MAST::Function
         mat_inertia->derivative(p, xyz[0], _time, material_mat);
         
         Real vol = 0.;
-        const unsigned int nshp = _fe->n_shape_functions();
+        const unsigned int nshp = fe->n_shape_functions();
         for (unsigned int i=0; i<JxW.size(); i++)
             vol += JxW[i];
         vol /= (1.* nshp);
@@ -524,13 +516,12 @@ inertial_residual_boundary_velocity (const MAST::FunctionBase& p,
                                      RealMatrixX& jac) {
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe().release());
-    fe->init_for_side(*_local_elem, s, true);
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_side_fe(s, false));
 
     std::vector<Real> JxW_Vn                        = fe->get_JxW();
     const std::vector<libMesh::Point>& xyz          = fe->get_xyz();
     const std::vector<std::vector<Real> >& phi      = fe->get_phi();
-    const std::vector<libMesh::Point>& face_normals = fe->get_normals();
+    const std::vector<libMesh::Point>& face_normals = fe->get_normals_for_local_coordinate();
 
     const unsigned int
     n_phi    = (unsigned int)phi.size(),
@@ -643,72 +634,55 @@ side_external_residual(bool request_jacobian,
                        RealMatrixX& jac,
                        std::multimap<libMesh::boundary_id_type, MAST::BoundaryConditionBase*>& bc) {
     
-    typedef std::multimap<libMesh::boundary_id_type, MAST::BoundaryConditionBase*> maptype;
+    std::map<unsigned int, std::vector<MAST::BoundaryConditionBase*>> loads;
+    _elem.external_side_loads_for_quadrature_elem(bc, loads);
     
-    // iterate over the boundary ids given in the provided force map
-    std::pair<maptype::const_iterator, maptype::const_iterator> it;
+    std::map<unsigned int, std::vector<MAST::BoundaryConditionBase*>>::const_iterator
+    it   = loads.begin(),
+    end  = loads.end();
     
-    const libMesh::BoundaryInfo& binfo = *_system.system().get_mesh().boundary_info;
-    
-    // for each boundary id, check if any of the sides on the element
-    // has the associated boundary
-    
-    for (unsigned short int n=0; n<_elem.n_sides(); n++) {
+    for ( ; it != end; it++) {
         
-        // if no boundary ids have been specified for the side, then
-        // move to the next side.
-        if (!binfo.n_boundary_ids(&_elem, n))
-            continue;
+        std::vector<MAST::BoundaryConditionBase*>::const_iterator
+        bc_it  = it->second.begin(),
+        bc_end = it->second.end();
         
-        // check to see if any of the specified boundary ids has a boundary
-        // condition associated with them
-        std::vector<libMesh::boundary_id_type> bc_ids;
-        binfo.boundary_ids(&_elem, n, bc_ids);
-        std::vector<libMesh::boundary_id_type>::const_iterator bc_it = bc_ids.begin();
-        
-        for ( ; bc_it != bc_ids.end(); bc_it++) {
+        for ( ; bc_it != bc_end; bc_it++) {
             
-            // find the loads on this boundary and evaluate the f and jac
-            it = bc.equal_range(*bc_it);
-            
-            for ( ; it.first != it.second; it.first++) {
-                
-                // apply all the types of loading
-                switch (it.first->second->type()) {
-                    case MAST::SURFACE_PRESSURE:
-                        surface_pressure_residual(request_jacobian,
-                                                  f, jac,
-                                                  n,
-                                                  *it.first->second);
-                        break;
-
-                        
-                    case MAST::PISTON_THEORY:
-                        piston_theory_residual(request_jacobian,
-                                               f,
-                                               jac_xdot,
-                                               jac,
-                                               n,
-                                               *it.first->second);
-                        break;
-
-                        
-                    case MAST::DIRICHLET:
-                        // nothing to be done here
-                        break;
-                        
-                    default:
-                        // not implemented yet
-                        libmesh_error();
-                        break;
-                }
+            // apply all the types of loading
+            switch ((*bc_it)->type()) {
+                    
+                case MAST::SURFACE_PRESSURE:
+                    surface_pressure_residual(request_jacobian,
+                                              f, jac,
+                                              it->first,
+                                              **bc_it);
+                    break;
+                    
+                    
+                case MAST::PISTON_THEORY:
+                    piston_theory_residual(request_jacobian,
+                                           f,
+                                           jac_xdot,
+                                           jac,
+                                           it->first,
+                                           **bc_it);
+                    break;
+                    
+                    
+                case MAST::DIRICHLET:
+                    // nothing to be done here
+                    break;
+                    
+                default:
+                    // not implemented yet
+                    libmesh_error();
+                    break;
             }
         }
     }
     return request_jacobian;
 }
-
-
 
 bool
 MAST::StructuralElementBase::
@@ -719,49 +693,34 @@ linearized_side_external_residual
  RealMatrixX& jac,
  std::multimap<libMesh::boundary_id_type, MAST::BoundaryConditionBase*>& bc) {
 
-    typedef std::multimap<libMesh::boundary_id_type, MAST::BoundaryConditionBase*> maptype;
+    std::map<unsigned int, std::vector<MAST::BoundaryConditionBase*>> loads;
+    _elem.external_side_loads_for_quadrature_elem(bc, loads);
     
-    // iterate over the boundary ids given in the provided force map
-    std::pair<maptype::const_iterator, maptype::const_iterator> it;
+    std::map<unsigned int, std::vector<MAST::BoundaryConditionBase*>>::const_iterator
+    it   = loads.begin(),
+    end  = loads.end();
     
-    const libMesh::BoundaryInfo& binfo = *_system.system().get_mesh().boundary_info;
-    
-    // for each boundary id, check if any of the sides on the element
-    // has the associated boundary
-    
-    for (unsigned short int n=0; n<_elem.n_sides(); n++) {
+    for ( ; it != end; it++) {
         
-        // if no boundary ids have been specified for the side, then
-        // move to the next side.
-        if (!binfo.n_boundary_ids(&_elem, n))
-            continue;
+        std::vector<MAST::BoundaryConditionBase*>::const_iterator
+        bc_it  = it->second.begin(),
+        bc_end = it->second.end();
         
-        // check to see if any of the specified boundary ids has a boundary
-        // condition associated with them
-        std::vector<libMesh::boundary_id_type> bc_ids;
-        binfo.boundary_ids(&_elem, n, bc_ids);
-        std::vector<libMesh::boundary_id_type>::const_iterator bc_it = bc_ids.begin();
-        
-        for ( ; bc_it != bc_ids.end(); bc_it++) {
+        for ( ; bc_it != bc_end; bc_it++) {
             
-            // find the loads on this boundary and evaluate the f and jac
-            it = bc.equal_range(*bc_it);
-            
-            for ( ; it.first != it.second; it.first++) {
-                
-                // apply all the types of loading
-                switch (it.first->second->type()) {
-                    case MAST::DIRICHLET:
-                        // nothing to be done here
-                        break;
-                        
-                    case MAST::SURFACE_PRESSURE:
-                    case MAST::PISTON_THEORY:
-                    default:
-                        // not implemented yet
-                        libmesh_error();
-                        break;
-                }
+            // apply all the types of loading
+            switch ((*bc_it)->type()) {
+
+                case MAST::DIRICHLET:
+                    // nothing to be done here
+                    break;
+                    
+                case MAST::SURFACE_PRESSURE:
+                case MAST::PISTON_THEORY:
+                default:
+                    // not implemented yet
+                    libmesh_error();
+                    break;
             }
         }
     }
@@ -778,58 +737,42 @@ linearized_frequency_domain_side_external_residual
  ComplexMatrixX& jac,
  std::multimap<libMesh::boundary_id_type, MAST::BoundaryConditionBase*>& bc) {
     
-    typedef std::multimap<libMesh::boundary_id_type, MAST::BoundaryConditionBase*> maptype;
+    std::map<unsigned int, std::vector<MAST::BoundaryConditionBase*>> loads;
+    _elem.external_side_loads_for_quadrature_elem(bc, loads);
     
-    // iterate over the boundary ids given in the provided force map
-    std::pair<maptype::const_iterator, maptype::const_iterator> it;
+    std::map<unsigned int, std::vector<MAST::BoundaryConditionBase*>>::const_iterator
+    it   = loads.begin(),
+    end  = loads.end();
     
-    const libMesh::BoundaryInfo& binfo = *_system.system().get_mesh().boundary_info;
-    
-    // for each boundary id, check if any of the sides on the element
-    // has the associated boundary
-    
-    for (unsigned short int n=0; n<_elem.n_sides(); n++) {
+    for ( ; it != end; it++) {
         
-        // if no boundary ids have been specified for the side, then
-        // move to the next side.
-        if (!binfo.n_boundary_ids(&_elem, n))
-            continue;
+        std::vector<MAST::BoundaryConditionBase*>::const_iterator
+        bc_it  = it->second.begin(),
+        bc_end = it->second.end();
         
-        // check to see if any of the specified boundary ids has a boundary
-        // condition associated with them
-        std::vector<libMesh::boundary_id_type> bc_ids;
-        binfo.boundary_ids(&_elem, n, bc_ids);
-        std::vector<libMesh::boundary_id_type>::const_iterator bc_it = bc_ids.begin();
-        
-        for ( ; bc_it != bc_ids.end(); bc_it++) {
+        for ( ; bc_it != bc_end; bc_it++) {
             
-            // find the loads on this boundary and evaluate the f and jac
-            it = bc.equal_range(*bc_it);
-            
-            for ( ; it.first != it.second; it.first++) {
-                
-                // apply all the types of loading
-                switch (it.first->second->type()) {
-
-                    case MAST::SURFACE_PRESSURE:
-                        
-                        linearized_frequency_domain_surface_pressure_residual
-                        (request_jacobian,
-                         f, jac,
-                         n,
-                         *it.first->second);
-                        break;
-                        
-                        
-                    case MAST::DIRICHLET:
-                        // nothing to be done here
-                        break;
-                        
-                    default:
-                        // not implemented yet
-                        libmesh_error();
-                        break;
-                }
+            // apply all the types of loading
+            switch ((*bc_it)->type()) {
+                    
+                case MAST::SURFACE_PRESSURE:
+                    
+                    linearized_frequency_domain_surface_pressure_residual
+                    (request_jacobian,
+                     f, jac,
+                     it->first,
+                     **bc_it);
+                    break;
+                    
+                    
+                case MAST::DIRICHLET:
+                    // nothing to be done here
+                    break;
+                    
+                default:
+                    // not implemented yet
+                    libmesh_error();
+                    break;
             }
         }
     }
@@ -854,7 +797,7 @@ volume_external_residual (bool request_jacobian,
     // for each boundary id, check if any of the sides on the element
     // has the associated boundary
     
-    libMesh::subdomain_id_type sid = _elem.subdomain_id();
+    libMesh::subdomain_id_type sid = _elem.get_reference_elem().subdomain_id();
     // find the loads on this boundary and evaluate the f and jac
     it =bc.equal_range(sid);
     
@@ -911,7 +854,7 @@ linearized_volume_external_residual (bool request_jacobian,
     // for each boundary id, check if any of the sides on the element
     // has the associated boundary
     
-    libMesh::subdomain_id_type sid = _elem.subdomain_id();
+    libMesh::subdomain_id_type sid = _elem.get_reference_elem().subdomain_id();
     // find the loads on this boundary and evaluate the f and jac
     it =bc.equal_range(sid);
     
@@ -971,7 +914,7 @@ linearized_frequency_domain_volume_external_residual
     // for each boundary id, check if any of the sides on the element
     // has the associated boundary
     
-    libMesh::subdomain_id_type sid = _elem.subdomain_id();
+    libMesh::subdomain_id_type sid = _elem.get_reference_elem().subdomain_id();
     // find the loads on this boundary and evaluate the f and jac
     it =bc.equal_range(sid);
     
@@ -1015,67 +958,52 @@ side_external_residual_sensitivity(const MAST::FunctionBase& p,
                                    RealMatrixX& jac,
                                    std::multimap<libMesh::boundary_id_type, MAST::BoundaryConditionBase*>& bc) {
     
-    typedef std::multimap<libMesh::boundary_id_type, MAST::BoundaryConditionBase*> maptype;
+    std::map<unsigned int, std::vector<MAST::BoundaryConditionBase*>> loads;
+    _elem.external_side_loads_for_quadrature_elem(bc, loads);
     
-    // iterate over the boundary ids given in the provided force map
-    std::pair<maptype::const_iterator, maptype::const_iterator> it;
+    std::map<unsigned int, std::vector<MAST::BoundaryConditionBase*>>::const_iterator
+    it   = loads.begin(),
+    end  = loads.end();
     
-    const libMesh::BoundaryInfo& binfo = *_system.system().get_mesh().boundary_info;
-    
-    // for each boundary id, check if any of the sides on the element
-    // has the associated boundary
-    
-    for (unsigned short int n=0; n<_elem.n_sides(); n++) {
+    for ( ; it != end; it++) {
         
-        // if no boundary ids have been specified for the side, then
-        // move to the next side.
-        if (!binfo.n_boundary_ids(&_elem, n))
-            continue;
+        std::vector<MAST::BoundaryConditionBase*>::const_iterator
+        bc_it  = it->second.begin(),
+        bc_end = it->second.end();
         
-        // check to see if any of the specified boundary ids has a boundary
-        // condition associated with them
-        std::vector<libMesh::boundary_id_type> bc_ids;
-        binfo.boundary_ids(&_elem, n, bc_ids);
-        std::vector<libMesh::boundary_id_type>::const_iterator bc_it = bc_ids.begin();
-        
-        for ( ; bc_it != bc_ids.end(); bc_it++) {
+        for ( ; bc_it != bc_end; bc_it++) {
             
-            // find the loads on this boundary and evaluate the f and jac
-            it = bc.equal_range(*bc_it);
-            
-            for ( ; it.first != it.second; it.first++) {
-                
-                // apply all the types of loading
-                switch (it.first->second->type()) {
-                    case MAST::SURFACE_PRESSURE:
-                        surface_pressure_residual_sensitivity(p,
-                                                              request_jacobian,
-                                                              f, jac,
-                                                              n,
-                                                              *it.first->second);
-                        break;
-                        
-                        
-                    case MAST::PISTON_THEORY:
-                        piston_theory_residual_sensitivity(p,
-                                                           request_jacobian,
-                                                           f,
-                                                           jac_xdot,
-                                                           jac,
-                                                           n,
-                                                           *it.first->second);
-                        break;
-                        
-                        
-                    case MAST::DIRICHLET:
-                        // nothing to be done here
-                        break;
-                        
-                    default:
-                        // not implemented yet
-                        libmesh_error();
-                        break;
-                }
+            // apply all the types of loading
+            switch ((*bc_it)->type()) {
+
+                case MAST::SURFACE_PRESSURE:
+                    surface_pressure_residual_sensitivity(p,
+                                                          request_jacobian,
+                                                          f, jac,
+                                                          it->first,
+                                                          **bc_it);
+                    break;
+                    
+                    
+                case MAST::PISTON_THEORY:
+                    piston_theory_residual_sensitivity(p,
+                                                       request_jacobian,
+                                                       f,
+                                                       jac_xdot,
+                                                       jac,
+                                                       it->first,
+                                                       **bc_it);
+                    break;
+                    
+                    
+                case MAST::DIRICHLET:
+                    // nothing to be done here
+                    break;
+                    
+                default:
+                    // not implemented yet
+                    libmesh_error();
+                    break;
             }
         }
     }
@@ -1100,7 +1028,7 @@ volume_external_residual_sensitivity (const MAST::FunctionBase& p,
     // for each boundary id, check if any of the sides on the element
     // has the associated boundary
     
-    libMesh::subdomain_id_type sid = _elem.subdomain_id();
+    libMesh::subdomain_id_type sid = _elem.get_reference_elem().subdomain_id();
     // find the loads on this boundary and evaluate the f and jac
     it =bc.equal_range(sid);
     
@@ -1160,7 +1088,7 @@ volume_external_residual_boundary_velocity(const MAST::FunctionBase& p,
     // for each boundary id, check if any of the sides on the element
     // has the associated boundary
     
-    libMesh::subdomain_id_type sid = _elem.subdomain_id();
+    libMesh::subdomain_id_type sid = _elem.get_reference_elem().subdomain_id();
     // find the loads on this boundary and evaluate the f and jac
     it =bc.equal_range(sid);
     
@@ -1209,10 +1137,11 @@ surface_pressure_residual(bool request_jacobian,
     libmesh_assert(_elem.dim() < 3); // only applicable for lower dimensional elements
     libmesh_assert(!follower_forces); // not implemented yet for follower forces
     
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_fe(false, false));
     
-    const std::vector<Real> &JxW                = _fe->get_JxW();
-    const std::vector<libMesh::Point>& qpoint   = _fe->get_xyz();
-    const std::vector<std::vector<Real> >& phi  = _fe->get_phi();
+    const std::vector<Real> &JxW                = fe->get_JxW();
+    const std::vector<libMesh::Point>& qpoint   = fe->get_xyz();
+    const std::vector<std::vector<Real> >& phi  = fe->get_phi();
     const unsigned int
     n_phi = (unsigned int)phi.size(),
     n1    =3,
@@ -1284,10 +1213,11 @@ surface_pressure_residual_sensitivity(const MAST::FunctionBase& p,
     libmesh_assert(_elem.dim() < 3); // only applicable for lower dimensional elements
     libmesh_assert(!follower_forces); // not implemented yet for follower forces
     
-    
-    const std::vector<Real> &JxW                = _fe->get_JxW();
-    const std::vector<libMesh::Point>& qpoint   = _fe->get_xyz();
-    const std::vector<std::vector<Real> >& phi  = _fe->get_phi();
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_fe(false, false));
+
+    const std::vector<Real> &JxW                = fe->get_JxW();
+    const std::vector<libMesh::Point>& qpoint   = fe->get_xyz();
+    const std::vector<std::vector<Real> >& phi  = fe->get_phi();
     const unsigned int
     n_phi = (unsigned int)phi.size(),
     n1    =3,
@@ -1360,12 +1290,11 @@ surface_pressure_boundary_velocity(const MAST::FunctionBase& p,
     libmesh_assert(!follower_forces); // not implemented yet for follower forces
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe());
-    fe->init_for_side(_elem, s, true);
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_side_fe(s, false));
 
     std::vector<Real> JxW_Vn                        = fe->get_JxW();
     const std::vector<libMesh::Point>& xyz          = fe->get_xyz();
-    const std::vector<libMesh::Point>& face_normals = fe->get_normals();
+    const std::vector<libMesh::Point>& face_normals = fe->get_normals_for_local_coordinate();
     const std::vector<std::vector<Real> >& phi      = fe->get_phi();
 
     const unsigned int
@@ -1454,10 +1383,11 @@ linearized_surface_pressure_residual(bool request_jacobian,
     MAST::FieldFunction<Real>&
     press_fn  = bc.get<MAST::FieldFunction<Real> >("pressure");
     
-    
-    const std::vector<Real> &JxW                 = _fe->get_JxW();
-    const std::vector<libMesh::Point>& qpoint    = _fe->get_xyz();
-    const std::vector<std::vector<Real> >& phi   = _fe->get_phi();
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_fe(false, false));
+
+    const std::vector<Real> &JxW                 = fe->get_JxW();
+    const std::vector<libMesh::Point>& qpoint    = fe->get_xyz();
+    const std::vector<std::vector<Real> >& phi   = fe->get_phi();
     const unsigned int
     n_phi = (unsigned int)phi.size(),
     n1    = 3,
@@ -1533,10 +1463,11 @@ linearized_frequency_domain_surface_pressure_residual
     MAST::FieldFunction<Complex>&
     dpress_fn  = bc.get<MAST::FieldFunction<Complex> >("frequency_domain_pressure");
     
-    
-    const std::vector<Real> &JxW                 = _fe->get_JxW();
-    const std::vector<libMesh::Point>& qpoint    = _fe->get_xyz();
-    const std::vector<std::vector<Real> >& phi   = _fe->get_phi();
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_fe(false, false));
+
+    const std::vector<Real> &JxW                 = fe->get_JxW();
+    const std::vector<libMesh::Point>& qpoint    = fe->get_xyz();
+    const std::vector<std::vector<Real> >& phi   = fe->get_phi();
     const unsigned int
     n_phi = (unsigned int)phi.size(),
     n1    = 3,
@@ -1594,16 +1525,6 @@ linearized_frequency_domain_surface_pressure_residual
 
 
 
-const RealMatrixX&
-MAST::StructuralElementBase::_Tmatrix() const {
-    
-    libmesh_assert(_local_elem);
-    
-    return _local_elem->T_matrix();
-}
-
-
-
 template <typename ValType>
 void
 MAST::StructuralElementBase::
@@ -1616,24 +1537,29 @@ transform_matrix_to_global_system(const ValType& local_mat,
     libmesh_assert_equal_to(global_mat.rows(), global_mat.cols());
     libmesh_assert_equal_to( local_mat.rows(), global_mat.rows());
     
-    const unsigned int n_dofs = _fe->n_shape_functions();
-
-    ValType mat(6*n_dofs, 6*n_dofs);
-    
-    mat.setZero();
-    global_mat.setZero();
-    
-    const RealMatrixX& Tmat = _Tmatrix();
-    // now initialize the global T matrix
-    for (unsigned int i=0; i<n_dofs; i++)
-        for (unsigned int j=0; j<3; j++)
-            for (unsigned int k=0; k<3; k++) {
-                mat(j*n_dofs+i, k*n_dofs+i) = Tmat(j,k); // for u,v,w
-                mat((j+3)*n_dofs+i, (k+3)*n_dofs+i) = Tmat(j,k); // for tx,ty,tz
-            }
-    
-    // right multiply with T^tr, and left multiply with T.
-    global_mat = mat * local_mat * mat.transpose();
+    if (_elem.use_local_elem()) {
+        
+        const unsigned int n_dofs = local_mat.rows();
+        
+        ValType mat(6*n_dofs, 6*n_dofs);
+        
+        mat.setZero();
+        global_mat.setZero();
+        
+        const RealMatrixX& Tmat = _elem.T_matrix();
+        // now initialize the global T matrix
+        for (unsigned int i=0; i<n_dofs; i++)
+            for (unsigned int j=0; j<3; j++)
+                for (unsigned int k=0; k<3; k++) {
+                    mat(j*n_dofs+i, k*n_dofs+i) = Tmat(j,k); // for u,v,w
+                    mat((j+3)*n_dofs+i, (k+3)*n_dofs+i) = Tmat(j,k); // for tx,ty,tz
+                }
+        
+        // right multiply with T^tr, and left multiply with T.
+        global_mat = mat * local_mat * mat.transpose();
+    }
+    else
+        global_mat = local_mat;
 }
 
 
@@ -1648,22 +1574,27 @@ transform_vector_to_local_system(const ValType& global_vec,
     libmesh_assert_less(_elem.dim(), 3);
     libmesh_assert_equal_to( local_vec.size(),  global_vec.size());
     
-    const unsigned int n_dofs = _fe->n_shape_functions();
-    RealMatrixX mat  = RealMatrixX::Zero(6*n_dofs, 6*n_dofs);
-    
-    local_vec.setZero();
+    if (_elem.use_local_elem()) {
 
-    const RealMatrixX& Tmat = _Tmatrix();
-    // now initialize the global T matrix
-    for (unsigned int i=0; i<n_dofs; i++)
-        for (unsigned int j=0; j<3; j++)
-            for (unsigned int k=0; k<3; k++) {
-                mat(j*n_dofs+i, k*n_dofs+i) = Tmat(j,k); // for u,v,w
-                mat((j+3)*n_dofs+i, (k+3)*n_dofs+i) = Tmat(j,k); // for tx,ty,tz
-            }
-    
-    // left multiply with T^tr
-    local_vec = mat.transpose() * global_vec;
+        const unsigned int n_dofs = global_vec.size();
+        RealMatrixX mat  = RealMatrixX::Zero(6*n_dofs, 6*n_dofs);
+        
+        local_vec.setZero();
+        
+        const RealMatrixX& Tmat = _elem.T_matrix();
+        // now initialize the global T matrix
+        for (unsigned int i=0; i<n_dofs; i++)
+            for (unsigned int j=0; j<3; j++)
+                for (unsigned int k=0; k<3; k++) {
+                    mat(j*n_dofs+i, k*n_dofs+i) = Tmat(j,k); // for u,v,w
+                    mat((j+3)*n_dofs+i, (k+3)*n_dofs+i) = Tmat(j,k); // for tx,ty,tz
+                }
+        
+        // left multiply with T^tr
+        local_vec = mat.transpose() * global_vec;
+    }
+    else
+        local_vec = global_vec;
 }
 
 
@@ -1678,23 +1609,28 @@ transform_vector_to_global_system(const ValType& local_vec,
     libmesh_assert_less(_elem.dim(), 3);
     libmesh_assert_equal_to( local_vec.size(),  global_vec.size());
     
-    const unsigned int n_dofs = _fe->n_shape_functions();
-
-    RealMatrixX mat  = RealMatrixX::Zero(6*n_dofs, 6*n_dofs);
-
-    global_vec.setZero();
-    
-    const RealMatrixX& Tmat = _Tmatrix();
-    // now initialize the global T matrix
-    for (unsigned int i=0; i<n_dofs; i++)
-        for (unsigned int j=0; j<3; j++)
-            for (unsigned int k=0; k<3; k++) {
-                mat(j*n_dofs+i, k*n_dofs+i) = Tmat(j,k); // for u,v,w
-                mat((j+3)*n_dofs+i, (k+3)*n_dofs+i) = Tmat(j,k); // for tx,ty,tz
-            }
-    
-    // left multiply with T
-    global_vec = mat* local_vec;
+    if (_elem.use_local_elem()) {
+        
+        const unsigned int n_dofs = local_vec.size();
+        
+        RealMatrixX mat  = RealMatrixX::Zero(6*n_dofs, 6*n_dofs);
+        
+        global_vec.setZero();
+        
+        const RealMatrixX& Tmat = _elem.T_matrix();
+        // now initialize the global T matrix
+        for (unsigned int i=0; i<n_dofs; i++)
+            for (unsigned int j=0; j<3; j++)
+                for (unsigned int k=0; k<3; k++) {
+                    mat(j*n_dofs+i, k*n_dofs+i) = Tmat(j,k); // for u,v,w
+                    mat((j+3)*n_dofs+i, (k+3)*n_dofs+i) = Tmat(j,k); // for tx,ty,tz
+                }
+        
+        // left multiply with T
+        global_vec = mat* local_vec;
+    }
+    else
+        global_vec = local_vec;
 }
 
 
@@ -1704,7 +1640,7 @@ transform_vector_to_global_system(const ValType& local_vec,
 std::unique_ptr<MAST::StructuralElementBase>
 MAST::build_structural_element(MAST::SystemInitialization& sys,
                                MAST::AssemblyBase& assembly,
-                               const libMesh::Elem& elem,
+                               const MAST::GeomElem& elem,
                                const MAST::ElementPropertyCardBase& p) {
     
     std::unique_ptr<MAST::StructuralElementBase> e;

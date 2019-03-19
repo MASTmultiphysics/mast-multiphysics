@@ -38,6 +38,7 @@ namespace MAST {
     // Forward declerations
     class FunctionBase;
     class ElementBase;
+    class GeomElem;
     class LevelSetIntersection;
     template <typename ValType> class FieldFunction;
 
@@ -161,7 +162,6 @@ namespace MAST {
          */
         virtual void
         evaluate_topology_sensitivity(const MAST::FunctionBase& f,
-                                      const MAST::LevelSetIntersection& intersect,
                                       const MAST::FieldFunction<RealVectorX>& vel) = 0;
 
         /*!
@@ -222,14 +222,14 @@ namespace MAST {
          *    checks to see if the object has been told about the subset of
          *    elements and if the specified element is in the subset.
          */
-        virtual bool if_evaluate_for_element(const libMesh::Elem& elem) const;
+        virtual bool if_evaluate_for_element(const MAST::GeomElem& elem) const;
 
         
         /*!
          *    checks to see if the specified side of the element
          *    needs evaluation of the output contribution.
          */
-        virtual bool if_evaluate_for_boundary(const libMesh::Elem& elem,
+        virtual bool if_evaluate_for_boundary(const MAST::GeomElem& elem,
                                               const unsigned int s) const;
 
         

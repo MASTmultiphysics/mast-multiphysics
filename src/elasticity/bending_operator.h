@@ -41,6 +41,7 @@ namespace MAST {
     class SensitivityParameters;
     class FEMOperatorMatrix;
     class FEBase;
+    class GeomElem;
     template <typename ValType> class FieldFunction;
     
     
@@ -111,7 +112,7 @@ namespace MAST {
         /*!
          *    element for which bending operator is created
          */
-        const libMesh::Elem& _elem;
+        const MAST::GeomElem&        _elem;
     };
     
     

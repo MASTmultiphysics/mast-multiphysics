@@ -30,6 +30,7 @@ namespace MAST {
     // Forward declerations
     class BoundaryConditionBase;
     class FEMOperatorMatrix;
+    class GeomElem;
     
     
     class BendingStructuralElem:
@@ -38,7 +39,7 @@ namespace MAST {
     public:
         BendingStructuralElem(MAST::SystemInitialization& sys,
                               MAST::AssemblyBase& assembly,
-                              const libMesh::Elem& elem,
+                              const MAST::GeomElem& elem,
                               const MAST::ElementPropertyCardBase& p);
         
         /*!

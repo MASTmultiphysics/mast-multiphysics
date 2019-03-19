@@ -52,6 +52,14 @@ MAST::LevelSetIntersection::~LevelSetIntersection() {
 }
 
 
+const libMesh::Elem&
+MAST::LevelSetIntersection::elem() const {
+    
+    libmesh_assert(_initialized);
+    
+    return *_elem;
+}
+
 
 MAST::LevelSet2DIntersectionMode
 MAST::LevelSetIntersection::get_intersection_mode() const {
@@ -214,6 +222,65 @@ void
 MAST::LevelSetIntersection::init(const MAST::FieldFunction<Real>& phi,
                                  const libMesh::Elem& e,
                                  const Real t) {
+
+    // make sure that this has not been initialized already
+    libmesh_assert(!_initialized);
+    libmesh_assert_equal_to(e.dim(), 2); // this is only for 2D elements
+    _elem      =  &e;
+    
+    switch (e.type()) {
+        case libMesh::QUAD4:
+            _init_on_first_order_ref_elem(phi, e, t);
+            break;
+
+        case libMesh::QUAD9: {
+            
+            std::unique_ptr<libMesh::Elem>
+            quad4(_first_order_elem(e));
+            _init_on_first_order_ref_elem(phi, *quad4, t);
+        }
+            break;
+            
+        default:
+            // currently only QUAD4/9 are handled.
+            libmesh_error();
+    }
+}
+
+
+
+std::unique_ptr<libMesh::Elem>
+MAST::LevelSetIntersection::_first_order_elem(const libMesh::Elem &e) {
+    
+    std::unique_ptr<libMesh::Elem>
+    first_order_elem;
+    
+    switch (e.type()) {
+        case libMesh::QUAD9: {
+            
+            first_order_elem.reset(libMesh::Elem::build(libMesh::QUAD4).release());
+            
+            for (unsigned int i=0; i<4; i++)
+                first_order_elem->set_node(i) = const_cast<libMesh::Node*>(e.node_ptr(i));
+        }
+            break;
+            
+        default:
+            // currently only QUAD4/9 are handled.
+            libmesh_error();
+    }
+    
+    return first_order_elem;
+}
+
+
+
+
+void
+MAST::LevelSetIntersection::
+_init_on_first_order_ref_elem(const MAST::FieldFunction<Real>& phi,
+                              const libMesh::Elem& e,
+                              const Real t) {
     
     // make sure that this has not been initialized already
     libmesh_assert(!_initialized);

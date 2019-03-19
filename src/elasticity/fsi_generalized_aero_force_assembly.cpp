@@ -35,6 +35,7 @@
 #include "property_cards/element_property_card_base.h"
 #include "solver/complex_solver_base.h"
 #include "numerics/utility.h"
+#include "mesh/geom_elem.h"
 
 
 // libMesh includes
@@ -203,8 +204,11 @@ assemble_generalized_aerodynamic_force_matrix
             
             dof_map.dof_indices (elem, dof_indices);
             
-            ops.init(*elem);
+            MAST::GeomElem geom_elem;
+            geom_elem.init(*elem, *_system);
             
+            ops.init(geom_elem);
+
             // get the solution
             unsigned int ndofs = (unsigned int)dof_indices.size();
             sol.setZero(ndofs);
