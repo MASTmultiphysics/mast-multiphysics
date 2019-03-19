@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -42,6 +42,7 @@ namespace MAST {
                             const MAST::ElementPropertyCardBase& p);
         
         
+        virtual ~StructuralElement3D();
         
         /*!
          *   Calculates the inertial force and the Jacobian matrices
@@ -62,7 +63,7 @@ namespace MAST {
                                        RealMatrixX& jac);
         
         /*!
-         *   calculates the term on side \par s:
+         *   calculates the term on side \p s:
          *   \f$ \int_\Gamma a(\delta u, u) v_n ~d\Gamma \f$.
          *
          */
@@ -116,7 +117,7 @@ namespace MAST {
          *  incompatible modes
          */
         virtual bool if_incompatible_modes() const {
-            return true;
+            return false;
         }
 
         

@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -43,9 +43,8 @@ namespace MAST {
     class LocalElemBase {
     public:
         LocalElemBase(const libMesh::Elem& elem):
-        _elem(elem),
-        _local_elem(nullptr),
-        _T_mat_function(nullptr)
+        _elem        (elem),
+        _local_elem  (nullptr)
         { }
         
         
@@ -79,14 +78,6 @@ namespace MAST {
         
         
         /*!
-         *    returns the transformation matrix for this element. This is used
-         *    to map the coordinates from local to global coordinate system
-         */
-        const MAST::FieldFunction<RealMatrixX>&
-        T_matrix_function();
-        
-        
-        /*!
          *    Local elements are defined for 1D and 2D elements that exist in
          *    3D space. These elements have a local coordinate system associated
          *    with the local coordinate. This method accepts the point defined
@@ -99,7 +90,7 @@ namespace MAST {
         
         /*!
          *   Calculates the side surface normal of the element at the given
-         *   point \par p, where the finite element provided surface normal is
+         *   point \p p, where the finite element provided surface normal is
          *   \p n_local. The calculated surface normal in the global
          *   coordinate system is \p n_global.
          *
@@ -114,7 +105,7 @@ namespace MAST {
 
         /*!
          *   Calculates the surface normal of the element at the given point
-         *   \par p, where the finite element provided surface normal is
+         *   \p p, where the finite element provided surface normal is
          *   \p n_local. The calculated surface normal in the global
          *   coordinate system is \p n_global. For 1D or 2D elements, the flux
          *   loads can be defined over the entire domain of the element. This,
@@ -154,42 +145,8 @@ namespace MAST {
          *    obtained as  a_j  = T  an_i
          */
         RealMatrixX _T_mat;
-
-        
-        MAST::FieldFunction<RealMatrixX>* _T_mat_function;
     };
 
-
-    
-    
-    /*!
-     *   Presently, this function is defined for planar elements. 
-     *   Extensions to curved elements is to be added in the near future.
-     */
-    class TransformMatrixFunction:
-    public MAST::FieldFunction<RealMatrixX> {
-        
-    public:
-        
-        TransformMatrixFunction(const RealMatrixX& Tmat);
-        
-        virtual ~TransformMatrixFunction() {}
-        
-        virtual void operator() (const libMesh::Point& p,
-                                 const Real t,
-                                 RealMatrixX& v) const;
-        
-        
-        virtual void derivative (const MAST::FunctionBase& f,
-                                 const libMesh::Point& p,
-                                 const Real t,
-                                 RealMatrixX& v) const;
-        
-    protected:
-        
-
-        const RealMatrixX& _Tmat;
-    };
 }
 
 #endif // __mast__local_elem_base__

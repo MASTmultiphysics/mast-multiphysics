@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -137,6 +137,13 @@ namespace MAST
         virtual std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
         thermal_capacitance_matrix(const MAST::ElementBase& e) const;
         
+        virtual const MAST::FieldFunction<Real>&
+        section(const MAST::ElementBase& e) const {
+            libmesh_error();
+            MAST::FieldFunction<Real>* ptr = nullptr;
+            return *ptr;
+        }
+
     protected:
         
         /*!

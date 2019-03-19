@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -65,10 +65,10 @@ namespace MAST {
         
         /*!
          *   sets the shape function values for the block corresponding to
-         *   \par interpolated_var and \par discrete_var. This means that the row
-         *   \par interpolated_var, the value in columns
-         *   \par discrete_vars*n_discrete_dofs_per_var - (discrete_vars+1)*n_discrete_dofs_per_var-1)
-         *    will be set equal to \par shape_func .
+         *   \p interpolated_var and \p discrete_var. This means that the row
+         *   \p interpolated_var, the value in columns
+         *   \p discrete_vars*n_discrete_dofs_per_var - (discrete_vars+1)*n_discrete_dofs_per_var-1)
+         *    will be set equal to \p shape_func .
          */
         void set_shape_function(unsigned int interpolated_var,
                                 unsigned int discrete_var,

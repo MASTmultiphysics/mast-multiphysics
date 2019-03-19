@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -131,7 +131,7 @@ namespace MAST {
         
         
         /*!
-         *   Prints the sorted roots to the \par output
+         *   Prints the sorted roots to the \p output
          */
         virtual void print_sorted_roots() = 0;
         

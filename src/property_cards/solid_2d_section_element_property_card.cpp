@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -1154,7 +1154,7 @@ prestress_A_matrix( MAST::ElementBase& e) const {
     libmesh_assert(false);
     // = new MAST::Solid2DSectionProperty::PrestressAMatrix
     // (this->get<MAST::FieldFunction<RealMatrixX> >("prestress"),
-    // e.local_elem().T_matrix_function(),
+    // e.local_elem().T_matrix(),
     // this->get<FieldFunction<Real> >("h"));
     
     return std::unique_ptr<MAST::FieldFunction<RealMatrixX> > (rval);
@@ -1170,7 +1170,7 @@ prestress_B_matrix( MAST::ElementBase& e) const {
     libmesh_assert(false);
     // = new MAST::Solid2DSectionProperty::PrestressBMatrix
     // (this->get<MAST::FieldFunction<RealMatrixX> >("prestress"),
-    // e.local_elem().T_matrix_function(),
+    // e.local_elem().T_matrix(),
     // this->get<FieldFunction<Real> >("h"),
     // this->get<FieldFunction<Real> >("off"));
     

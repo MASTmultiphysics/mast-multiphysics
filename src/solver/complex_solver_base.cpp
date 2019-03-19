@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -37,9 +37,9 @@
 
 
 MAST::ComplexSolverBase::ComplexSolverBase():
-_assembly  (nullptr),
 tol        (1.0e-3),
-max_iters  (20) {
+max_iters  (20),
+_assembly  (nullptr) {
     
 }
 
@@ -47,6 +47,54 @@ max_iters  (20) {
 
 MAST::ComplexSolverBase::~ComplexSolverBase() {
     
+}
+
+
+
+void
+MAST::ComplexSolverBase::set_assembly(MAST::ComplexAssemblyBase &assemble) {
+
+    libmesh_assert(!_assembly);
+    
+    _assembly = &assemble;
+}
+
+
+
+void
+MAST::ComplexSolverBase::clear_assembly() {
+    
+    MAST::NonlinearSystem& sys = _assembly->system();
+    
+    // remove the real part of the vector
+    std::string nm;
+    nm = sys.name();
+    nm += "real_sol";
+    
+    if (sys.have_vector(nm))
+        sys.remove_vector(nm);
+    
+    // and its sensitivity
+    nm += "_sens";
+    
+    if (sys.have_vector(nm))
+        sys.remove_vector(nm);
+
+    // remove the imaginary part of the vector
+    nm = sys.name();
+    nm += "imag_sol";
+    
+    if (sys.have_vector(nm))
+        sys.remove_vector(nm);
+    
+    // and its sensitivity
+    nm += "_sens";
+    
+    if (sys.have_vector(nm))
+        sys.remove_vector(nm);
+
+    
+    _assembly = nullptr;
 }
 
 
@@ -136,12 +184,9 @@ MAST::ComplexSolverBase::imag_solution(bool if_sens) const {
 
 
 void
-MAST::ComplexSolverBase::solve_pc_fieldsplit(MAST::AssemblyElemOperations& elem_ops,
-                                             MAST::ComplexAssemblyBase& assemble) {
+MAST::ComplexSolverBase::solve_pc_fieldsplit() {
     
-    libmesh_assert(!_assembly);
-    _assembly = &assemble;
-    assemble.set_elem_operation_object(elem_ops);
+    libmesh_assert(_assembly);
 
     START_LOG("complex_solve()", "PetscFieldSplitSolver");
     
@@ -280,21 +325,14 @@ MAST::ComplexSolverBase::solve_pc_fieldsplit(MAST::AssemblyElemOperations& elem_
     ierr = VecDestroy(&sol);
     
     STOP_LOG("complex_solve()", "PetscFieldSplitSolver");
-
-    _assembly = nullptr;
-    assemble.clear_elem_operation_object();
 }
 
 
 
 void
-MAST::ComplexSolverBase::solve_block_matrix(MAST::AssemblyElemOperations& elem_ops,
-                                            MAST::ComplexAssemblyBase& assemble,
-                                            MAST::Parameter* p)  {
+MAST::ComplexSolverBase::solve_block_matrix(MAST::Parameter* p)  {
     
-    libmesh_assert(!_assembly);
-    _assembly = &assemble;
-    assemble.set_elem_operation_object(elem_ops);
+    libmesh_assert(_assembly);
     
     START_LOG("solve_block_matrix()", "ComplexSolve");
     
@@ -465,9 +503,6 @@ MAST::ComplexSolverBase::solve_block_matrix(MAST::AssemblyElemOperations& elem_o
     ierr = VecDestroy(&sol_vec);              CHKERRABORT(sys.comm().get(), ierr);
     
     STOP_LOG("solve_block_matrix()", "ComplexSolve");
-    
-    _assembly = nullptr;
-    assemble.clear_elem_operation_object();
 }
 
 

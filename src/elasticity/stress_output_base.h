@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -368,25 +368,6 @@ namespace MAST {
 
         
         
-        /*!
-         *   some simulations frequently deal with 1D/2D elements in 3D space,
-         *   which requires use of MAST::LocalElemFE.
-         */
-        virtual bool
-        if_use_local_elem() const {
-            
-            return true;
-        }
-        
-        
-        /*!
-         *   sets additional data for local elem FE.
-         */
-        virtual void
-        set_local_fe_data(MAST::LocalElemFE& fe,
-                          const libMesh::Elem& e) const;
-
-        
         bool stress_plot_mode() const {
             return _if_stress_plot_mode;
         }
@@ -535,7 +516,7 @@ namespace MAST {
 
         /*!
          *   calculates and returns the sensitivity of von Mises p-norm
-         *   functional for the element \par e.
+         *   functional for the element \p e.
          */
         void
         von_Mises_p_norm_functional_sensitivity_for_elem
@@ -546,7 +527,7 @@ namespace MAST {
         
         /*!
          *   calculates and returns the boundary sensitivity of von Mises p-norm
-         *   functional for the element \par e.
+         *   functional for the element \p e.
          */
         void
         von_Mises_p_norm_functional_boundary_sensitivity_for_elem

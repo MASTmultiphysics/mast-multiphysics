@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -38,7 +38,7 @@ namespace MAST {
         { }
         
         /*!
-         *    computes the eigensolution for A x = \lambda B x. A & B will be
+         *    computes the eigensolution for \f$A x = \lambda B x\f$. A & B will be
          *    overwritten
          */
         virtual void compute(const ComplexMatrixX& A,
@@ -85,6 +85,18 @@ namespace MAST {
         void scale_eigenvectors_to_identity_innerproduct() {
             libmesh_assert(info_val == 0);
             
+            // scale the right eigenvectors so that they all have unit norm
+            Real l2 = 0.;
+            
+            for (unsigned int i=0; i<this->VR.cols(); i++) {
+                
+                l2 = this->VR.col(i).norm();
+                libmesh_assert(l2 > 0.);
+                
+                // scale all right eigenvectors to unit length
+                this->VR.col(i) /= l2;
+            }
+            
             // this product should be an identity matrix
             ComplexMatrixX r = this->VL.conjugate().transpose() * _B * this->VR;
             
@@ -94,7 +106,7 @@ namespace MAST {
             for (unsigned int i=0; i<_B.cols(); i++) {
                 val = r(i,i);
                 if (std::abs(val) > 0.)
-                    this->VR.col(i) *= (1./val);
+                    this->VL.col(i) *= (1./val);
             }
         }
         

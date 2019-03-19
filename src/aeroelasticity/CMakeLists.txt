@@ -1,5 +1,5 @@
 target_sources(mast
-        PRIVATE
+    PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}/flutter_root_base.cpp
         ${CMAKE_CURRENT_LIST_DIR}/flutter_root_base.h
         ${CMAKE_CURRENT_LIST_DIR}/flutter_root_crossover_base.cpp
@@ -34,3 +34,7 @@ target_sources(mast
         ${CMAKE_CURRENT_LIST_DIR}/ug_flutter_solution.h
         ${CMAKE_CURRENT_LIST_DIR}/ug_flutter_solver.cpp
         ${CMAKE_CURRENT_LIST_DIR}/ug_flutter_solver.h)
+
+# Install MAST headers for this directory.
+install(DIRECTORY ./ DESTINATION include/aeroelasticity
+        FILES_MATCHING PATTERN "*.h")

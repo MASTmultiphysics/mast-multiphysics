@@ -1,0 +1,333 @@
+
+/*!
+
+\page SourceInstall Installation on Mac OS with MacPorts
+
+This installs some dependencies using MacPorts followed by installation of
+PETSc, SLEPc, libMesh and MAST using source.
+
+1.  Install Xcode from Mac App Store.
+
+2.  Install the command line tools to support the rest of the install process. Use Terminal app and type:
+```
+$ xcode-select --install
+```
+
+3.  Download and install [XQuartz](https://www.xquartz.org)
+
+4.  Download and install [MacPorts](https://www.macports.org/install.php)
+
+5.  Once installed, open a fresh terminal window and use the following commands to install the dependencies:
+```
+$ sudo port install hdf5
+$ sudo port install boost
+$ sudo port install eigen3
+$ sudo port install cmake
+$ sudo port install openmpi-clang
+```
+
+6.  The following assumes that PETSc, SLEPc, libMesh and MAST will be installed in the directory: `{CODES}`
+If this directory is `~/Documents/codes/` (Note that in Unix `~/` is the users home directory), then
+create it using the following commands:
+```
+$ cd ~/Documents
+$ mkdir codes
+$ cd codes
+```
+In the following steps, replace `{CODES}` with the directory path.
+
+7.  Download [PETSc](https://www.mcs.anl.gov/petsc/download/index.html). This will download the
+code to `~/Downloads` directory. Find the file name using command line
+```
+$ ls -lt ~/Downloads
+```
+This will list all files in `~/Downloads` starting with the latest file.
+The PETSc file will likely have the following format: `petsc-*.tar.gz`, where `*` is replaced with the version number.
+The next step assumes that the file name is `{PETSC_FILE}.tar.gz`, where `{PETSC_FILE}` is the initial part of the file
+name preceding `.tar.gz`.
+
+8.  Create a directory where PETSc will be built; move `{PETSC_FILE}.tar.gz` to this directory and extract it.
+```
+$ cd {CODES}
+$ mkdir petsc
+$ cd petsc
+$ mv ~/Downloads/{PETSC_FILE}.tar.gz ./
+```
+Replace `{PETSC_FILE}` with the name found in step 7.
+```
+$ tar -zxf {PETSC_FILE}.tar.gz
+```
+This will create a directory by the name of `{PETSC_FILE}`.
+
+9.  Configure PETSc:
+```
+$ cd {PETSC_FILE}
+```
+Create a text file containing the configuration options for PETSc. The following commands use `emacs` as the
+text editor to accomplish this task:
+```
+$ emacs petsc_config_options
+```
+this will open emacs to edit file `petsc_config_options`
+
+Copy and paste the PETSc configuration [options](#petsc-options). Then save these changes
+by typing `<ctrl>x<ctrl>s`, where `<ctrl>` is the `Control` key. This is `Control` followed by `x`, then
+`Control` followed by `s`.
+Exit the editor by typing `<ctrl>x<ctrl>c`. This is `Control` followed by `x`, then `Control` followed by `c`.
+Change the permission of this file to allow execution:
+```
+$ chmod +x petsc_config_options
+```
+Configure petsc by executing this file:
+```
+$ ./petsc_config_options
+```
+This will take some time, during which it will verify all configuration options, download, configure, build
+and install the external libraries specified in the configuration options.
+Note that once PETSc finishes configuration, it will list the options in the Terminal window. At the bottom should
+be the command to build PETSc.
+
+10. Build PETSc by using the instructions provided by PETSc at the end of previous step. Following is the likely format
+suggested by PETSc, where `{PETSC_FILE}` is the name identified in 8. In case of any differences, follow PETSc's
+instructions.
+```
+$  make PETSC_DIR={CODES}/petsc/{PETSC_FILE} PETSC_ARCH=arch-darwin-c-opt all
+```
+This will take some time to go through building the library. At the end, PETSc will print the command to install the
+library built in this step.
+
+11. Install PETSc by using the instructions from PETSc in previous step. Again, replace `{PETSC_FILE}` with the name
+identified in step 8 and in case of any differences, follow the instructions from PETSc.
+```
+$ make PETSC_DIR={CODES}/petsc/{PETSC_FILE} PETSC_ARCH=arch-darwin-c-opt install
+```
+This should install all the hearder files in `{CODES}/petsc/include` and the libraries in `{CODES}/petsc/lib`.
+
+12. Download [SLEPc](http://slepc.upv.es/download/). This will download the file in `~/Downloads` and use the same
+procedure from step 7 to identify the file name:
+```
+$ ls -lt ~/Downloads
+```
+The SLEPc file name should be of the following format: `{SLEPC_FILE}.tar.gz`
+
+13. Create a directory for building and installation of SLEPc. Move the file there and unpack it. In the following commands,
+replace `{SLEPC_FILE}` with the file name identified in the previous step.
+```
+$ cd {CODES}
+$ mkdir slepc
+$ cd slepc
+$ mv ~/Downloads/{SLEPC_FILE}.tar.gz ./
+$ tar -zxf {SLEPC_FILE}.tar.gz
+```
+This should extract the code in the directory `{SLEPC_FILE}`.
+
+14. Configure SLEPc. In the following commands, relace `{CODES}` with the full path identified in step 6.
+```
+$ PETSC_DIR={CODES}/petsc ./configure --prefix=${PWD}/../
+```
+This will verify the PETSc installation and configure SLEPc for installation in `{CODES}/slepc`. It will
+also print the commands to be used for building SLEPc. Use these in the next step.
+
+15. Build SLEPc:
+```
+$ make SLEPC_DIR=$PWD PETSC_DIR={CODES}/petsc
+```
+This will build SLEPc and at the end will print the command to be used for installation of SLEPc.
+
+16. Install using the instructions from SLEPc at the end of previous step:
+```
+$ make SLEPC_DIR={CODES}/slepc/{SLEPC_FILE} PETSC_DIR={CODES}/petsc install
+```
+
+17. Download [libMesh](http://libmesh.github.io/installation.html):
+```
+$ cd {CODES}
+$ mkdir libmesh
+$ cd libmesh
+$ git clone git://github.com/libMesh/libmesh.git      [this will use git to clone the remote repository from GitHub to {CODES}/libmesh/libmesh ]
+$ cd libmesh
+```
+
+18. Configure libMesh.
+```
+$ emacs libmesh_config_options
+```
+Copy and paste the contents of the configuration [options](#libmesh-options). Replace
+`{CODES}` with its full path identified above.
+Save:  `<ctrl>x<ctrl>s`
+Exit:  `<ctrl>x<ctrl>c`
+Make this file executable, and then run it.
+```
+$ chmod +x libmesh_config_options
+$ ./libmesh_config_options
+```
+This will verify the installation of PETSc, SLEPc, and other dependencies, and configure the build
+options for libMesh. It will print all configured options on the Terminal. Verify that it is able to
+identify the correct versions for all dependencies (exodus, hdf5, metis, nemesis, parmetis, petsc,
+slepc, mpi, etc.)
+
+19. Build libMesh:
+```
+$ make -j N
+```
+Replace `N` with the number of cores on your machine to enable parallel build.
+This will build all components of libMesh.
+
+20. Install libMesh:
+```
+$ make install -j N
+```
+Replace `N` with the number of cores on your machine to enable parallel build.
+
+21. Download MAST
+```
+$ cd {CODES}
+$ mkdir mast
+$ cd mast
+$ git clone https://github.com/MASTmultiphysics/mast-multiphysics.git
+```
+
+22. Configure MAST
+```
+$ cd ../
+$ mkdir dbg
+$ cd dbg
+```
+Create a file with configuration options for MAST
+```
+$ emacs mast_config_options
+```
+Copy and paste the MAST configuration [options](#mast-options). Replace
+`{CODES}` with the full path
+Save: `<ctrl>x<ctrl>s`
+Exit: `<ctrl>x<ctrl>c`
+Make this file executable and run it:
+```
+$ chmod +x mast_config_options
+$ ./mast_config_options
+```
+
+23. Build MAST:
+```
+$ make example_2 -j N
+```
+Replace N with the number of cores on your machine to enable parallel build.
+
+24. Test MAST by running example_2:
+```
+$ ./examples/example_2/example_2 -ksp_type preonly -pc_type lu
+```
+
+
+
+*   PETSC configuration options: (copy and past the content and replace
+`{CODES}` with its path defined above)
+{: #petsc-options}
+```
+python2.7 ./configure                                  \
+--prefix=${PWD}/../                                    \
+--CC=mpicc-openmpi-clang                               \
+--CXX=mpicxx-openmpi-clang                             \
+--FC=mpif90-openmpi-clang                              \
+--with-fortran=0                                       \
+--with-mpiexec=/opt/local/bin/mpiexec-openmpi-clang    \
+--with-shared-libraries=1                              \
+--with-x=1 --with-x-dir=/opt/X11                       \
+--with-debugging=0                                     \
+--with-lapack-lib=/usr/lib/liblapack.dylib             \
+--with-blas-lib=/usr/lib/libblas.dylib                 \
+--download-superlu=yes                                 \
+--download-superlu_dist=yes                            \
+--download-suitesparse=yes                             \
+--download-mumps=yes                                   \
+--download-scalapack=yes                               \
+--download-parmetis=yes                                \
+--download-metis=yes                                   \
+--download-hypre=yes                                   \
+--download-ml=yes
+```
+
+
+
+*  libMesh configuration options: (copy and past the content and replace
+`{CODES}` with its path defined above)
+{: #libmesh-options}
+```
+PETSC_DIR={CODES}/petsc                              \
+SLEPC_DIR={CODES}/slepc                              \
+FC=mpif90-openmpi-clang                              \
+F77=mpif90-openmpi-clang                             \
+CC=mpicc-openmpi-clang                               \
+CXX=mpicxx-openmpi-clang                             \
+./configure --prefix=${PWD}/../                      \
+--enable-mpi                                         \
+--disable-unique-id                                  \
+--enable-dependency-tracking                         \
+--enable-fortran                                     \
+--enable-shared                                      \
+--enable-exceptions                                  \
+--disable-openmp                                     \
+--disable-default-comm-world                         \
+--enable-tracefiles                                  \
+--enable-amr                                         \
+--enable-vsmoother                                   \
+--enable-periodic                                    \
+--enable-dirichlet                                   \
+--enable-parmesh                                     \
+--enable-nodeconstraint                              \
+--enable-ghosted                                     \
+--enable-pfem                                        \
+--enable-ifem                                        \
+--enable-second                                      \
+--enable-xdr                                         \
+--enable-reference-counting                          \
+--enable-perflog                                     \
+--enable-examples                                    \
+--enable-boost                                       \
+--disable-trilinos                                   \
+--disable-tbb                                        \
+--enable-sfc                                         \
+--disable-tecplot                                    \
+--disable-tecio                                      \
+--enable-metis                                       \
+--enable-parmetis                                    \
+--enable-tetgen                                      \
+--enable-triangle                                    \
+--disable-vtk                                        \
+--enable-hdf5                                        \
+--enable-libHilbert                                  \
+--enable-nanoflann                                   \
+--enable-exodus                                      \
+--enable-netcdf                                      \
+--enable-petsc                                       \
+--enable-slepc                                       \
+--with-mpi=/opt/local                                \
+--with-tbb=/opt/local/include/tbb                    \
+--with-tbb-lib=/opt/local/lib                        \
+--with-metis=internal                                \
+--with-hdf5=/opt/local/                              \
+--with-methods="opt dbg"
+```
+
+
+
+*  MAST configuration options: (copy and past the content and replace
+`{CODES}` with its path defined above)
+{: #mast-options}
+```
+export CODES_PATH={CODES}                                \
+cmake  ../mast-multiphysics                              \
+-DMPI_C_COMPILER=mpicc-openmpi-clang                     \
+-DMPI_CXX_COMPILER=mpicxx-openmpi-clang                  \
+-DCMAKE_C_COMPILER=mpicc-openmpi-clang                   \
+-DCMAKE_CXX_COMPILER=mpicxx-openmpi-clang                \
+-DCMAKE_Fortran_COMPILER=mpif90-openmpi-clang            \
+-DlibMesh_DIR=${CODES_PATH}/libmesh                      \
+-DPETSc_DIR=${CODES_PATH}/petsc                          \
+-DSLEPc_DIR=${CODES_PATH}/slepc                          \
+-DBOOST_ROOT=/opt/local                                  \
+-DCMAKE_BUILD_TYPE=Debug
+```
+
+*/
+

@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -67,7 +67,24 @@ namespace MAST {
         
         
         virtual ~NonlinearSystem();
+
         
+        enum Operation {
+            NONLINEAR_SOLVE,
+            EIGENPROBLEM_SOLVE,
+            FORWARD_SENSITIVITY_SOLVE,
+            ADJOINT_SOLVE,
+            NONE
+        };
+        
+        
+        /*!
+         *   @returns the current operation of the system
+         */
+        MAST::NonlinearSystem::Operation operation() {
+            
+            return _operation;
+        }
         
         /*!
          *    flag to also initialize the B matrix. Must be called before
@@ -103,23 +120,23 @@ namespace MAST {
         /*!
          *   Solves the sensitivity problem for the provided parameter.
          *   The Jacobian will be assembled before adjoint solve if
-         *   \par if_assemble_jacobian is \p true.
+         *   \p if_assemble_jacobian is \p true.
          */
-        void sensitivity_solve(MAST::AssemblyElemOperations&   elem_ops,
-                               MAST::AssemblyBase&             assembly,
-                               const MAST::FunctionBase&       p,
-                               bool if_assemble_jacobian = true);
+        virtual void sensitivity_solve(MAST::AssemblyElemOperations&   elem_ops,
+                                       MAST::AssemblyBase&             assembly,
+                                       const MAST::FunctionBase&       p,
+                                       bool if_assemble_jacobian = true);
 
         
         /*!
          *   solves the adjoint problem for the provided output function.
          *   The Jacobian will be assembled before adjoint solve if
-         *   \par if_assemble_jacobian is \p true.
+         *   \p if_assemble_jacobian is \p true.
          */
-        void adjoint_solve(MAST::AssemblyElemOperations&       elem_ops,
-                           MAST::OutputAssemblyElemOperations& output,
-                           MAST::AssemblyBase&                 assembly,
-                           bool if_assemble_jacobian           = true);
+        virtual void adjoint_solve(MAST::AssemblyElemOperations&       elem_ops,
+                                   MAST::OutputAssemblyElemOperations& output,
+                                   MAST::AssemblyBase&                 assembly,
+                                   bool if_assemble_jacobian           = true);
         
         
         /**
@@ -275,6 +292,10 @@ namespace MAST {
                             const std::string & data_name,
                             const bool read_binary_vectors);
 
+        void
+        project_vector_without_dirichlet (libMesh::NumericVector<Real> & new_vector,
+                                          libMesh::FunctionBase<Real>& f) const;
+        
     protected:
         
         
@@ -343,6 +364,11 @@ namespace MAST {
          * The type of the eigenvalue problem.
          */
         libMesh::EigenProblemType          _eigen_problem_type;
+        
+        /*!
+         *   current operation of the system
+         */
+        MAST::NonlinearSystem::Operation  _operation;
         
         /**
          * Vector storing the local dof indices that will not be condensed.

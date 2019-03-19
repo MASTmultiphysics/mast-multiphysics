@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -128,8 +128,8 @@ MAST::StressTemperatureAdjoint::output_derivative_for_elem(RealVectorX& dq_dX) {
         
         if (_stress.get_thermal_load_for_elem(_physics_elem->elem())) {
             
-            std::unique_ptr<MAST::FEBase> fe(_thermal_assembly->build_fe(p_elem->elem()));
-            fe->init(p_elem->elem());
+            std::unique_ptr<MAST::FEBase> fe(_thermal_assembly->build_fe());
+            fe->init(p_elem->local_elem());
 
             p_elem->calculate_stress_temperature_derivative(*fe, _stress);
             p_elem->thermal_residual_temperature_derivative(*fe, mat);

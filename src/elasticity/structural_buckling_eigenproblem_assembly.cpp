@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -24,7 +24,6 @@
 #include "property_cards/element_property_card_1D.h"
 #include "base/physics_discipline_base.h"
 #include "base/system_initialization.h"
-#include "mesh/local_elem_fe.h"
 #include "base/assembly_base.h"
 #include "base/nonlinear_system.h"
 #include "base/parameter.h"

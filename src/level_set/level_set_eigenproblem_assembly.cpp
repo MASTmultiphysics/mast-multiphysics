@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -26,7 +26,6 @@
 #include "base/mesh_field_function.h"
 #include "base/eigenproblem_assembly_elem_operations.h"
 #include "base/elem_base.h"
-#include "mesh/local_elem_fe.h"
 #include "numerics/utility.h"
 
 
@@ -43,8 +42,7 @@ LevelSetEigenproblemAssembly():
 MAST::EigenproblemAssembly(),
 _level_set     (nullptr),
 _intersection  (nullptr),
-_velocity      (nullptr),
-_analysis_mode (false) {
+_velocity      (nullptr) {
     
 }
 
@@ -121,7 +119,6 @@ MAST::LevelSetEigenproblemAssembly::
 eigenproblem_assemble(libMesh::SparseMatrix<Real>* A,
                       libMesh::SparseMatrix<Real>* B) {
     
-    _analysis_mode = true;
     libmesh_assert(_system);
     libmesh_assert(_discipline);
     libmesh_assert(_elem_ops);
@@ -233,7 +230,6 @@ eigenproblem_sensitivity_assemble(const MAST::FunctionBase& f,
                                   libMesh::SparseMatrix<Real>* sensitivity_A,
                                   libMesh::SparseMatrix<Real>* sensitivity_B) {
 
-    _analysis_mode = false;
     libmesh_assert(_system);
     libmesh_assert(_discipline);
     libmesh_assert(_elem_ops);
@@ -372,39 +368,14 @@ eigenproblem_sensitivity_assemble(const MAST::FunctionBase& f,
 
 
 std::unique_ptr<MAST::FEBase>
-MAST::LevelSetEigenproblemAssembly::build_fe(const libMesh::Elem& elem) {
+MAST::LevelSetEigenproblemAssembly::build_fe() {
     
     libmesh_assert(_elem_ops);
     libmesh_assert(_system);
     libmesh_assert(_intersection);
     
-    std::unique_ptr<MAST::FEBase> fe;
-    
-    if (_elem_ops->if_use_local_elem() &&
-        elem.dim() < 3) {
-        
-        if (_analysis_mode) {
-            
-            MAST::LocalElemFE*
-            local_fe = new MAST::LocalElemFE(*_system);
-            _elem_ops->set_local_fe_data(*local_fe, elem);
-            fe.reset(local_fe);
-        }
-        else {
-            
-            MAST::SubCellFE*
-            local_fe = new MAST::SubCellFE(*_system, *_intersection);
-            // FIXME: we would ideally like to send this to the elem ops object for
-            // setting of any local data. But the code has not been setup to do that
-            // for SubCellFE.
-            //_elem_ops->set_local_fe_data(*local_fe);
-            fe.reset(local_fe);
-        }
-    }
-    else {
-        
-        fe.reset(new MAST::SubCellFE(*_system, *_intersection));
-    }
+    std::unique_ptr<MAST::FEBase>
+    fe(new MAST::SubCellFE(*_system, *_intersection));
     
     return fe;
 }

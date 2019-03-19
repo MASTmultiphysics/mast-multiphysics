@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -33,16 +33,54 @@ namespace MAST {
         class GetPotWrapper {
             
         public:
+
+            /*!
+             *   Identifies if an input file name is provided in
+             *   \p argc by the parameter name \p input. If found,
+             *   the input parameters are extracted from the input file,
+             *   otherwise they are obtained from \p argc.
+             */
+            GetPotWrapper(const int argc,
+                          const char* const* argv,
+                          const std::string& input):
+            _input   (nullptr),
+            _print   (false) {
+                
+                GetPot command_line(argc, argv);
+                std::string
+                input_name   = command_line(input,    "");
+
+                if (input_name == "")
+                    _input = new GetPot(argc, argv);
+                else
+                    _input = new GetPot(input_name);
+                
+                _print = (*_input)("print_params", false);
+            }
+
+
+            /*!
+             *   creates a wrapper around the input arguments given to
+             *   the executable in \p argc and \p argv
+             */
             GetPotWrapper(const int argc, const char* const* argv):
             _input   (new GetPot(argc, argv)),
             _print   (false) {}
             
+            /*!
+             *   creates a wrapper for the input arguments in the input file
+             *   named \p file.
+             */
             GetPotWrapper(const std::string&  file):
             _input   (new GetPot(file)),
             _print   (false) {
                 
             }
             
+            /*!
+             *   creates a wrapper for the input arguments in the input stream
+             *   \p input.
+             */
             GetPotWrapper(std::ifstream&     input):
             _input   (new GetPot(input)),
             _print   (false) {

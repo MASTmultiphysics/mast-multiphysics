@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -19,6 +19,7 @@
 
 // MAST includes
 #include "elasticity/structural_near_null_vector_space.h"
+#include "base/nonlinear_system.h"
 
 // libMesh includes
 #include "libmesh/function_base.h"
@@ -141,6 +142,8 @@ MAST::StructuralNearNullVectorSpace::
 operator()(std::vector<libMesh::NumericVector<Real>*>&sp,
            libMesh::NonlinearImplicitSystem& s) {
     
+
+    MAST::NonlinearSystem& sys = dynamic_cast<MAST::NonlinearSystem&>(s);
     
     // make sure that the vector coming in is of zero-size
     libmesh_assert_equal_to(sp.size(), 0);
@@ -164,16 +167,11 @@ operator()(std::vector<libMesh::NumericVector<Real>*>&sp,
         sp[i] = &s.add_vector(nm[i]);
         sp[i]->zero();
         
-        s.solution->swap(*sp[i]);
-        
         MAST::StructuralModes sol(i);
-        s.project_solution(&sol);
-        
+        sys.project_vector_without_dirichlet(*sp[i], sol);
         
         //libMesh::ExodusII_IO(s.get_mesh()).write_equation_systems("output.exo",
         //                                                          s.get_equation_systems());
-
-        s.solution->swap(*sp[i]);
         
     }
 }

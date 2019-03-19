@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -341,6 +341,8 @@ MAST::Examples::StructuralExampleBase::static_solve() {
     
     libmesh_assert(_initialized);
     
+    _eq_sys->print_info();
+    
     bool
     output     = (*_input)(_prefix+"if_output", "if write output to a file", false),
     nonlinear  = (*_input)(_prefix+"if_nonlinear", "flag to turn on/off nonlinear strain", false);
@@ -366,10 +368,15 @@ MAST::Examples::StructuralExampleBase::static_solve() {
     stress_elem_ops.set_discipline_and_system(*_discipline, *_sys_init);
 
     MAST::Examples::ThermalJacobianScaling
-    &jac_scaling = dynamic_cast<MAST::Examples::ThermalJacobianScaling&>
-    (this->get_field_function("thermal_jacobian_scaling"));
-    jac_scaling.set_assembly(assembly);
+    *jac_scaling = nullptr;
     
+    if (this->has_field_function("thermal_jacobian_scaling")) {
+        
+        jac_scaling = &(dynamic_cast<MAST::Examples::ThermalJacobianScaling&>
+        (this->get_field_function("thermal_jacobian_scaling")));
+        jac_scaling->set_assembly(assembly);
+    }
+
     // initialize the solution before solving
     this->initialize_solution();
     
@@ -381,7 +388,8 @@ MAST::Examples::StructuralExampleBase::static_solve() {
     // now iterate over the load steps
     for (unsigned int i=0; i<n_steps; i++) {
         
-        jac_scaling.set_enable(true);
+        if (jac_scaling)
+            jac_scaling->set_enable(true);
         assembly.reset_residual_norm_history();
         
         // update the load values
@@ -403,8 +411,9 @@ MAST::Examples::StructuralExampleBase::static_solve() {
                                          (1.*i)/(1.*(n_steps-1)));
         }
     }
-    
-    jac_scaling.set_enable(false);
+
+    if (jac_scaling)
+        jac_scaling->set_enable(false);
     _sys->nonlinear_solver->nearnullspace_object = nullptr;
 }
 
@@ -746,9 +755,14 @@ MAST::Examples::StructuralExampleBase::modal_solve_with_nonlinear_load_stepping(
     modal_elem_ops.set_discipline_and_system(*_discipline, *_sys_init);
 
     MAST::Examples::ThermalJacobianScaling
-    &jac_scaling = dynamic_cast<MAST::Examples::ThermalJacobianScaling&>
-    (this->get_field_function("thermal_jacobian_scaling"));
-    jac_scaling.set_assembly(nonlinear_assembly);
+    *jac_scaling = nullptr;
+    
+    if (this->has_field_function("thermal_jacobian_scaling")) {
+        
+        jac_scaling = &(dynamic_cast<MAST::Examples::ThermalJacobianScaling&>
+                        (this->get_field_function("thermal_jacobian_scaling")));
+        jac_scaling->set_assembly(nonlinear_assembly);
+    }
 
     
     libMesh::ExodusII_IO exodus_writer(*_mesh);
@@ -769,7 +783,8 @@ MAST::Examples::StructuralExampleBase::modal_solve_with_nonlinear_load_stepping(
     // now iterate over the load steps
     for (int i_step=0; i_step<n_steps; i_step++) {
 
-        jac_scaling.set_enable(true);
+        if (jac_scaling)
+            jac_scaling->set_enable(true);
         nonlinear_assembly.reset_residual_norm_history();
 
         Real
@@ -874,7 +889,8 @@ MAST::Examples::StructuralExampleBase::modal_solve_with_nonlinear_load_stepping(
     for (unsigned int i=0; i<n_eig_req; i++)
         delete mode_writer[i];
 
-    jac_scaling.set_enable(false);
+    if (jac_scaling)
+        jac_scaling->set_enable(false);
 }
 
 
@@ -896,7 +912,7 @@ MAST::Examples::StructuralExampleBase::transient_solve() {
     MAST::StructuralTransientAssemblyElemOperations   elem_ops;
     MAST::StressAssembly                              stress_assembly;
     MAST::StressStrainOutputBase                      stress_elem_ops;
-    MAST::SecondOrderNewmarkTransientSolver solver;
+    MAST::SecondOrderNewmarkTransientSolver           solver;
 
     stress_elem_ops.set_participating_elements_to_all();
     assembly.set_discipline_and_system(*_discipline, *_sys_init);

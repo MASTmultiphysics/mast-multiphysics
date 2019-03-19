@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -35,7 +35,7 @@
 #include "elasticity/structural_nonlinear_assembly.h"
 #include "elasticity/structural_modal_eigenproblem_assembly.h"
 #include "elasticity/stress_output_base.h"
-#include "elasticity/stress_assembly.h"
+#include "elasticity/level_set_stress_assembly.h"
 #include "elasticity/structural_system_initialization.h"
 #include "heat_conduction/heat_conduction_system_initialization.h"
 #include "heat_conduction/heat_conduction_nonlinear_assembly.h"
@@ -48,6 +48,7 @@
 #include "solver/first_order_newmark_transient_solver.h"
 #include "property_cards/material_property_card_base.h"
 #include "property_cards/element_property_card_2D.h"
+#include "optimization/optimization_interface.h"
 
 // libMesh includes
 #include "libmesh/serial_mesh.h"
@@ -223,6 +224,7 @@ MAST::Examples::TopologyOptimizationLevelSet2D::
 TopologyOptimizationLevelSet2D(const libMesh::Parallel::Communicator& comm_in):
 MAST::Examples::StructuralExample2D  (comm_in),
 MAST::FunctionEvaluation             (comm_in),
+_obj_scaling                         (0.),
 _stress_lim                          (0.),
 _p_val                               (0.),
 _vm_rho                              (0.),
@@ -296,6 +298,8 @@ void
 MAST::Examples::TopologyOptimizationLevelSet2D::init(MAST::Examples::GetPotWrapper& input,
                                                      const std::string& prefix) {
     
+    libmesh_assert(_optimization_interface);
+    
     // let all other data structures be initialized
     MAST::Examples::StructuralExample2D::init(input, prefix);
 
@@ -312,7 +316,19 @@ MAST::Examples::TopologyOptimizationLevelSet2D::init(MAST::Examples::GetPotWrapp
     // next, define a new parameter to define design variable for nodal level-set
     // function value
     this->_init_phi_dvs();
+
+    unsigned int
+    max_inner_iters        = (*_input)(_prefix+"max_inner_iters", "maximum inner iterations in GCMMA", 15);
     
+    Real
+    constr_penalty         = (*_input)(_prefix+"constraint_penalty", "constraint penalty in GCMMA", 50.),
+    length                 = (*_input)(_prefix+"length", "length of domain along x-axis", 0.3),
+    height                 = (*_input)(_prefix+"height", "length of domain along y-axis", 0.3);
+
+    _optimization_interface->set_real_parameter   ("constraint_penalty",  constr_penalty);
+    _optimization_interface->set_integer_parameter(   "max_inner_iters", max_inner_iters);
+    
+    _obj_scaling           = 100./length/height;
     _stress_lim            = (*_input)(_prefix+"vm_stress_limit", "limit von-mises stress value", 2.e8);
     _p_val                 = (*_input)(_prefix+"constraint_aggregation_p_val", "value of p in p-norm stress aggregation", 2.0);
     _vm_rho                = (*_input)(_prefix+"constraint_aggregation_rho_val", "value of rho in p-norm stress aggregation", 2.0);
@@ -399,7 +415,7 @@ MAST::Examples::TopologyOptimizationLevelSet2D::evaluate(const std::vector<Real>
     MAST::LevelSetNonlinearImplicitAssembly                  nonlinear_assembly;
     MAST::LevelSetNonlinearImplicitAssembly                  level_set_assembly;
     MAST::LevelSetEigenproblemAssembly                       eigen_assembly;
-    MAST::StressAssembly                                     stress_assembly;
+    MAST::LevelSetStressAssembly                             stress_assembly;
     MAST::StructuralNonlinearAssemblyElemOperations          nonlinear_elem_ops;
     MAST::HeatConductionNonlinearAssemblyElemOperations      conduction_elem_ops;
     MAST::StructuralModalEigenproblemAssemblyElemOperations  modal_elem_ops;
@@ -428,8 +444,8 @@ MAST::Examples::TopologyOptimizationLevelSet2D::evaluate(const std::vector<Real>
         _indicator_sys->solve(conduction_elem_ops, nonlinear_assembly);
         r = dynamic_cast<libMesh::PetscNonlinearSolver<Real>&>
         (*_indicator_sys->nonlinear_solver).get_converged_reason();
-        nonlinear_assembly.clear_discipline_and_system();
         nonlinear_assembly.clear_level_set_function();
+        nonlinear_assembly.clear_discipline_and_system();
     }
     // if the solver diverged due to linear solve, then there is a problem with
     // this geometry and we need to return with a high value set for the
@@ -466,6 +482,7 @@ MAST::Examples::TopologyOptimizationLevelSet2D::evaluate(const std::vector<Real>
     eigen_assembly.set_level_set_function(*_level_set_function);
     eigen_assembly.set_level_set_velocity_function(*_level_set_vel);
     stress_assembly.set_discipline_and_system(*_discipline, *_sys_init);
+    stress_assembly.init(*_level_set_function, nonlinear_assembly.get_dof_handler());
     level_set_assembly.set_discipline_and_system(*_level_set_discipline, *_level_set_sys_init);
     level_set_assembly.set_level_set_function(*_level_set_function);
     level_set_assembly.set_level_set_velocity_function(*_level_set_vel);
@@ -488,7 +505,7 @@ MAST::Examples::TopologyOptimizationLevelSet2D::evaluate(const std::vector<Real>
     // evaluate the objective
     //////////////////////////////////////////////////////////////////////
     level_set_assembly.calculate_output(*_level_set_sys->solution, volume);
-    obj       = volume.output_total();
+    obj       = volume.output_total() * _obj_scaling;
 
     //////////////////////////////////////////////////////////////////////
     // evaluate the stress constraint
@@ -609,7 +626,7 @@ _evaluate_volume_sensitivity(MAST::LevelSetVolume& volume,
                                                      *dphi,
                                                      *_dv_params[i].second,
                                                      volume);
-        obj_grad[i] = volume.output_sensitivity_total(*_dv_params[i].second);
+        obj_grad[i] = _obj_scaling * volume.output_sensitivity_total(*_dv_params[i].second);
     }
 }
 
@@ -1086,6 +1103,6 @@ MAST::Examples::TopologyOptimizationLevelSet2D::output(unsigned int iter,
         _sys->solution->zero();
     }
     
-    MAST::FunctionEvaluation::output(iter, x, obj, fval, if_write_to_optim_file);
+    MAST::FunctionEvaluation::output(iter, x, obj/_obj_scaling, fval, if_write_to_optim_file);
 }
 

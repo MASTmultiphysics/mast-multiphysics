@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -122,6 +122,9 @@ MAST::StructuralAssembly::set_elem_incompatible_sol(MAST::StructuralElementBase 
 void
 MAST::StructuralAssembly::init(MAST::AssemblyBase& assembly) {
 
+    // should be cleared before initialization
+    libmesh_assert(!_assembly);
+    
     _assembly = &assembly;
     
     // get the nonlinear solver SNES object from System and

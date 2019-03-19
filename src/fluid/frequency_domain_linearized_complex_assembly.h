@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -62,9 +62,9 @@ namespace MAST {
         virtual void clear_frequency_function();
 
         /*!
-         *   performs the element calculations over \par elem, and returns
-         *   the element vector and matrix quantities in \par mat and
-         *   \par vec, respectively. \par if_jac tells the method to also
+         *   performs the element calculations over \p elem, and returns
+         *   the element vector and matrix quantities in \p mat and
+         *   \p vec, respectively. \p if_jac tells the method to also
          *   assemble the Jacobian, in addition to the residual vector.
          */
         virtual void elem_calculations(bool if_jac,
@@ -72,8 +72,8 @@ namespace MAST {
                                        ComplexMatrixX& mat);
         
         /*!
-         *   performs the element sensitivity calculations over \par elem,
-         *   and returns the element residual sensitivity in \par vec .
+         *   performs the element sensitivity calculations over \p elem,
+         *   and returns the element residual sensitivity in \p vec .
          */
         virtual void elem_sensitivity_calculations(const MAST::FunctionBase& f,
                                                    ComplexVectorX& vec);
@@ -85,26 +85,6 @@ namespace MAST {
          */
         virtual void
         init(const libMesh::Elem& elem);
-
-        /*!
-         *   some simulations frequently deal with 1D/2D elements in 3D space,
-         *   which requires use of MAST::LocalElemFE.
-         */
-        virtual bool
-        if_use_local_elem() const {
-            
-            return false;
-        }
-
-        /*!
-         *   sets additional data for local elem FE.
-         */
-        virtual void
-        set_local_fe_data(MAST::LocalElemFE& fe,
-                          const libMesh::Elem& e) const {
-            
-            // nothing to be done here.
-        }
 
     protected:
         

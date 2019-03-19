@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -95,9 +95,9 @@ calculate_transverse_shear_residual(bool request_jacobian,
     // transverse shear
     
     std::unique_ptr<MAST::FEBase>
-    fe(_structural_elem.assembly().build_fe(_elem));
+    fe(_structural_elem.assembly().build_fe());
     fe->set_extra_quadrature_order(-_shear_quadrature_reduction);
-    fe->init(_elem);
+    fe->init(_structural_elem.local_elem());
     
     
     const std::vector<std::vector<libMesh::RealVectorValue> >& dphi = fe->get_dphi();
@@ -165,9 +165,9 @@ calculate_transverse_shear_residual_sensitivity(const MAST::FunctionBase &p,
     // transverse shear
     
     std::unique_ptr<MAST::FEBase>
-    fe(_structural_elem.assembly().build_fe(_elem));
+    fe(_structural_elem.assembly().build_fe());
     fe->set_extra_quadrature_order(-_shear_quadrature_reduction);
-    fe->init(_elem);
+    fe->init(_structural_elem.local_elem());
     
     
     const std::vector<std::vector<libMesh::RealVectorValue> >& dphi = fe->get_dphi();

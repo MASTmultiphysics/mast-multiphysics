@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -55,22 +55,6 @@ namespace MAST {
             _base_sol = f;
         }
         
-        /*!
-         *   some simulations frequently deal with 1D/2D elements in 3D space,
-         *   which requires use of MAST::LocalElemFE.
-         */
-        virtual bool
-        if_use_local_elem() const {
-            return true;
-        }
-        
-
-        /*!
-         *   sets additional data for local elem FE.
-         */
-        virtual void set_local_fe_data(MAST::LocalElemFE& fe,
-                                       const libMesh::Elem& e) const;
-
         virtual void elem_calculations(bool if_jac,
                                        RealVectorX& vec,
                                        RealMatrixX& mat);

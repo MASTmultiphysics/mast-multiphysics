@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -30,7 +30,14 @@
 
 namespace MAST {
     
-    
+    /*!
+     *   This class builds a 2D mesh for computation of flow above a panel.
+     *   Only the upper side of the panel is modeled in the mesh. The class
+     *   uses libMesh::build_square() to create a 2D mesh with the specified
+     *   element type and then morphs that into the mesh for panel flow studies.
+     *   The boundary ids are identified as: 1 for right, 2 for top, 3 for left,
+     *   4 for panel and 5 for remainign portion of the bottom boundary. 
+     */
     class PanelMesh2D: public MAST::MeshInitializer
     {
     public:

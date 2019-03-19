@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -19,6 +19,7 @@
 
 // MAST includes
 #include "mesh/fe_base.h"
+#include "mesh/local_elem_base.h"
 #include "base/system_initialization.h"
 #include "base/nonlinear_system.h"
 
@@ -28,6 +29,8 @@ _sys                           (sys),
 _extra_quadrature_order        (0),
 _init_second_order_derivatives (false),
 _initialized                   (false),
+_elem                          (nullptr),
+_local_elem                    (nullptr),
 _fe                            (nullptr),
 _qrule                         (nullptr) {
     
@@ -101,6 +104,32 @@ MAST::FEBase::init(const libMesh::Elem& elem,
 
 
 void
+MAST::FEBase::init(const MAST::LocalElemBase& elem,
+                   const std::vector<libMesh::Point>* pts) {
+    
+    libmesh_assert(!_initialized);
+    
+    _local_elem = &elem;
+    
+    // now that this element has been initialized, use it to initialize
+    // the FE object.
+    this->init(_local_elem->local_elem(), pts);
+    
+    // now initialize the global xyz locations
+    const std::vector<libMesh::Point>
+    local_xyz    = _fe->get_xyz();
+    
+    unsigned int
+    n = (unsigned int) local_xyz.size();
+    _global_xyz.resize(n);
+    
+    for (unsigned int i=0; i<n; i++)
+        _local_elem->global_coordinates_location(local_xyz[i], _global_xyz[i]);
+}
+
+
+
+void
 MAST::FEBase::init_for_side(const libMesh::Elem& elem,
                             unsigned int s,
                             bool if_calculate_dphi) {
@@ -137,6 +166,38 @@ MAST::FEBase::init_for_side(const libMesh::Elem& elem,
 }
 
 
+void
+MAST::FEBase::init_for_side(const MAST::LocalElemBase& elem,
+                            unsigned int s,
+                            bool if_calculate_dphi) {
+    
+    libmesh_assert(!_initialized);
+    
+    _local_elem = &elem;
+    
+    // now that this element has been initialized, use it to initialize
+    // the FE object.
+    this->init_for_side(_local_elem->local_elem(), s, if_calculate_dphi);
+    
+    // now initialize the global xyz locations and normals
+    const std::vector<libMesh::Point>
+    &local_xyz     = _fe->get_xyz(),
+    &local_normals = _fe->get_normals();
+    
+    unsigned int
+    n = (unsigned int) local_xyz.size();
+    _global_xyz.resize(n);
+    _global_normals.resize(n);
+    
+    for (unsigned int i=0; i<n; i++) {
+        
+        _local_elem->global_coordinates_location(local_xyz[i], _global_xyz[i]);
+        _local_elem->global_coordinates_normal(local_normals[i], _global_normals[i]);
+    }
+}
+
+
+
 libMesh::FEType
 MAST::FEBase::get_fe_type() const {
 
@@ -157,7 +218,10 @@ const std::vector<libMesh::Point>&
 MAST::FEBase::get_xyz() const {
     
     libmesh_assert(_initialized);
-    return _fe->get_xyz();
+    if (_local_elem)
+        return _global_xyz;
+    else
+        return _fe->get_xyz();
 }
 
 
@@ -317,7 +381,10 @@ const std::vector<libMesh::Point>&
 MAST::FEBase::get_normals() const {
     
     libmesh_assert(_initialized);
-    return _fe->get_normals();
+    if (_local_elem)
+        return _global_normals;
+    else
+        return _fe->get_normals();
 }
 
 

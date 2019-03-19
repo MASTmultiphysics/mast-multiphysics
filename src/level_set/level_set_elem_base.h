@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -228,12 +228,6 @@ namespace MAST {
          */
         RealVectorX    _ref_sol;
     };
-    
-    
-    std::unique_ptr<MAST::FEBase>
-    build_level_set_fe(MAST::SystemInitialization& sys,
-                       const libMesh::Elem& elem,
-                       const MAST::ElementPropertyCardBase& p);
     
 }
 

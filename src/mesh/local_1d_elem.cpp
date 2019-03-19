@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -25,7 +25,7 @@ MAST::Local1DElem::Local1DElem(const libMesh::Elem& elem,
                                const libMesh::Point& y):
 MAST::LocalElemBase(elem),
 _local_y(y) {
-    
+
     _create_local_elem();
     libmesh_assert_greater(_local_y.norm(), 0.);
 }
@@ -48,10 +48,19 @@ MAST::Local1DElem::_create_local_elem() {
     
     libmesh_assert(_elem.dim() == 1);
     
+    const libMesh::Elem*
+    ref_elem = nullptr;
+    
+    // if the element has a parent, initialize to the parent
+    if (_elem.parent())
+        ref_elem = _elem.parent();
+    else
+        ref_elem = &_elem;
+    
     // first node is the origin of the new cs
     // calculate the coordinate system for the plane of the element
     libMesh::Point v1, v2, v3, p;
-    v1 = *_elem.node_ptr(1); v1 -= *_elem.node_ptr(0); v1 /= v1.norm(); // local x
+    v1 = *ref_elem->node_ptr(1); v1 -= *ref_elem->node_ptr(0); v1 /= v1.norm(); // local x
     v2 = _local_y;                           // vector in local x-y plane
     v3 = v1.cross(v2);                       // local z
     libmesh_assert_greater(v3.norm(), 0.);   // 0. implies x == y
@@ -82,7 +91,7 @@ MAST::Local1DElem::_create_local_elem() {
     // now calculate the new coordinates with respect to the origin
     for (unsigned int i=0; i<_local_nodes.size(); i++) {
         p = *_elem.node_ptr(i);
-        p -= *_elem.node_ptr(0); // local wrt origin
+        p -= *ref_elem->node_ptr(0); // local wrt origin
         for (unsigned int j=0; j<3; j++)
             for (unsigned int k=0; k<3; k++)
                 (*_local_nodes[i])(j) += _T_mat(k,j)*p(k);

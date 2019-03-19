@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -23,6 +23,7 @@
 #include "level_set/level_set_intersection.h"
 #include "base/system_initialization.h"
 #include "base/nonlinear_system.h"
+#include "mesh/local_elem_base.h"
 
 
 // libMesh includes
@@ -53,7 +54,8 @@ MAST::SubCellFE::init(const libMesh::Elem& elem,
 
     // if there was no intersection, then move back to the parent class's
     // method
-    if (!_intersection.if_intersection_through_elem()) {
+    if (!_intersection.if_intersection_through_elem() ||
+        elem.parent() == nullptr) {
         MAST::FEBase::init(elem, pts);
         return;
     }
@@ -174,7 +176,8 @@ MAST::SubCellFE::init_for_side(const libMesh::Elem& elem,
                                unsigned int s,
                                bool if_calculate_dphi) {
     
-    if (!_intersection.if_intersection_through_elem()) {
+    if (!_intersection.if_intersection_through_elem() ||
+        elem.parent() == nullptr) {
         
         // if there was no intersection, then move back to the parent class's
         // method.
@@ -284,6 +287,42 @@ MAST::SubCellFE::init_for_side(const libMesh::Elem& elem,
 
     
     _initialized = true;
+}
+
+
+void
+MAST::SubCellFE::init_for_side(const MAST::LocalElemBase& elem,
+                            unsigned int s,
+                            bool if_calculate_dphi) {
+    
+    libmesh_assert(!_initialized);
+    
+    _local_elem = &elem;
+    
+    // now that this element has been initialized, use it to initialize
+    // the FE object.
+    this->init_for_side(_local_elem->local_elem(), s, if_calculate_dphi);
+    
+    // now initialize the global xyz locations and normals
+    const std::vector<libMesh::Point>
+    &local_xyz     = _fe->get_xyz(),
+    *local_normals = nullptr;
+    
+    if (_local_elem->local_elem().parent())
+        local_normals  = &(_subcell_fe->get_normals());
+    else
+        local_normals =  &(_fe->get_normals());
+    
+    unsigned int
+    n = (unsigned int) local_xyz.size();
+    _global_xyz.resize(n);
+    _global_normals.resize(n);
+    
+    for (unsigned int i=0; i<n; i++) {
+        
+        _local_elem->global_coordinates_location(local_xyz[i], _global_xyz[i]);
+        _local_elem->global_coordinates_normal((*local_normals)[i], _global_normals[i]);
+    }
 }
 
 

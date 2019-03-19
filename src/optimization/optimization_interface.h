@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -48,11 +48,15 @@ namespace MAST {
         
 
         virtual void
-        attach_function_evaluation_object (MAST::FunctionEvaluation& feval) {
-            _feval = &feval;
-        }
+        attach_function_evaluation_object (MAST::FunctionEvaluation& feval);
         
-        
+
+        virtual void
+        set_real_parameter    (const std::string& nm, Real val) {}
+
+        virtual void
+        set_integer_parameter (const std::string& nm, int val) {}
+
     protected:
         
         MAST::FunctionEvaluation* _feval;

@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -122,7 +122,7 @@ namespace MAST  {
                                    std::vector<Real>& xmax);
             
             /*!
-             *   \par grads(k): Derivative of f_i(x) with respect
+             *   \p grads(k): Derivative of f_i(x) with respect
              *   to x_j, where k = (j-1)*M + i.
              */
             virtual void evaluate(const std::vector<Real>& dvars,
@@ -169,6 +169,7 @@ namespace MAST  {
              const std::vector<bool>& eval_grads,
              std::vector<Real>& grads);
             
+            Real                                      _obj_scaling;
             Real                                      _stress_lim;
             Real                                      _p_val, _vm_rho;
             Real                                      _ref_eig_val;

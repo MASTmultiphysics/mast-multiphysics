@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -35,6 +35,7 @@ _max_iters                       (10),
 _max_mesh_elem_id                (max_elem_id),
 _max_mesh_node_id                (max_node_id),
 _max_elem_divs                   (4),
+_elem                            (nullptr),
 _initialized                     (false),
 _if_elem_on_positive_phi         (false),
 _if_elem_on_negative_phi         (false),
@@ -138,6 +139,27 @@ MAST::LevelSetIntersection::if_intersection_through_elem() const {
 
 
 Real
+MAST::LevelSetIntersection::get_positive_phi_volume_fraction() const {
+    
+    libmesh_assert(_initialized);
+
+    std::vector<const libMesh::Elem*>::const_iterator
+    it      =  _positive_phi_elems.begin(),
+    end     =  _positive_phi_elems.end();
+    
+    Real
+    v   = 0.,
+    v0  = _elem->volume();
+    
+    for ( ; it != end; it++)
+        v += (*it)->volume();
+    
+    return v/v0;
+}
+
+
+
+Real
 MAST::LevelSetIntersection::get_node_phi_value(const libMesh::Node* n) const {
     
     libmesh_assert(_initialized);
@@ -156,6 +178,7 @@ MAST::LevelSetIntersection::clear() {
     
     _tol                        = 1.e-8;
     _max_iters                  = 10;
+    _elem                       = nullptr;
     _initialized                = false;
     _if_elem_on_positive_phi    = false;
     _if_elem_on_negative_phi    = false;
@@ -195,6 +218,7 @@ MAST::LevelSetIntersection::init(const MAST::FieldFunction<Real>& phi,
     // make sure that this has not been initialized already
     libmesh_assert(!_initialized);
     libmesh_assert_equal_to(e.dim(), 2); // this is only for 2D elements
+    _elem      =  &e;
     
     // this assumes that the phi=0 interface is not fully contained inside
     // the element. That is, the interface is assumed to intersect with the
@@ -411,6 +435,27 @@ MAST::LevelSetIntersection::get_sub_elems_negative_phi() const {
 
     return _negative_phi_elems;
 }
+
+
+void
+MAST::LevelSetIntersection::
+get_nodes_on_negative_phi(std::set<const libMesh::Node*>& nodes) const {
+    
+    nodes.clear();
+    
+    // iterate over the nodes and return the ones that had a negative phi
+    // value
+    std::map<const libMesh::Node*, std::pair<Real, bool>>::const_iterator
+    it    = _node_phi_vals.begin(),
+    end   = _node_phi_vals.end();
+    
+    for ( ; it != end; it++) {
+        
+        if (it->second.first < 0.)
+            nodes.insert(it->first);
+    }
+}
+
 
 
 bool

@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -524,7 +524,7 @@ slip_wall_surface_residual(bool request_jacobian,
     // qi ni = 0       (since heat flux occurs only on no-slip wall and far-field bc)
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem));
+    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe());
     fe->init_for_side(_elem, s, false);
 
     const std::vector<Real> &JxW                 = fe->get_JxW();
@@ -755,7 +755,7 @@ slip_wall_surface_residual_sensitivity(const MAST::FunctionBase& p,
     // qi ni = 0       (since heat flux occurs only on no-slip wall and far-field bc)
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem));
+    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe());
     fe->init_for_side(_elem, s, false);
 
     const std::vector<Real> &JxW                 = fe->get_JxW();

@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -22,16 +22,16 @@
 #include "elasticity/structural_element_1d.h"
 #include "elasticity/structural_element_2d.h"
 #include "elasticity/solid_element_3d.h"
+#include "elasticity/stress_output_base.h"
 #include "base/system_initialization.h"
 #include "base/boundary_condition_base.h"
 #include "base/nonlinear_system.h"
 #include "base/assembly_base.h"
 #include "property_cards/element_property_card_1D.h"
 #include "mesh/local_elem_base.h"
-#include "mesh/local_elem_fe.h"
+#include "mesh/fe_base.h"
 #include "numerics/fem_operator_matrix.h"
 #include "numerics/utility.h"
-#include "elasticity/stress_output_base.h"
 
 
 MAST::StructuralElementBase::StructuralElementBase(MAST::SystemInitialization& sys,
@@ -39,18 +39,27 @@ MAST::StructuralElementBase::StructuralElementBase(MAST::SystemInitialization& s
                                                    const libMesh::Elem& elem,
                                                    const MAST::ElementPropertyCardBase& p):
 MAST::ElementBase(sys, assembly, elem),
-follower_forces(false),
-_property        (p),
-_incompatible_sol(nullptr) {
+_local_elem       (nullptr),
+follower_forces   (false),
+_property         (p),
+_incompatible_sol (nullptr) {
     
 }
 
 
 
 MAST::StructuralElementBase::~StructuralElementBase() {
-    
+
 }
 
+
+MAST::LocalElemBase&
+MAST::StructuralElementBase::local_elem() {
+    
+    libmesh_assert(_local_elem);
+    
+    return *_local_elem;
+}
 
 
 void
@@ -515,8 +524,8 @@ inertial_residual_boundary_velocity (const MAST::FunctionBase& p,
                                      RealMatrixX& jac) {
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem).release());
-    fe->init_for_side(_elem, s, true);
+    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe().release());
+    fe->init_for_side(*_local_elem, s, true);
 
     std::vector<Real> JxW_Vn                        = fe->get_JxW();
     const std::vector<libMesh::Point>& xyz          = fe->get_xyz();
@@ -1351,7 +1360,7 @@ surface_pressure_boundary_velocity(const MAST::FunctionBase& p,
     libmesh_assert(!follower_forces); // not implemented yet for follower forces
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe(_elem).release());
+    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe());
     fe->init_for_side(_elem, s, true);
 
     std::vector<Real> JxW_Vn                        = fe->get_JxW();
@@ -1585,6 +1594,13 @@ linearized_frequency_domain_surface_pressure_residual
 
 
 
+const RealMatrixX&
+MAST::StructuralElementBase::_Tmatrix() const {
+    
+    libmesh_assert(_local_elem);
+    
+    return _local_elem->T_matrix();
+}
 
 
 
@@ -1713,46 +1729,6 @@ MAST::build_structural_element(MAST::SystemInitialization& sys,
     
     return e;
 }
-
-
-std::unique_ptr<MAST::FEBase>
-MAST::build_structural_fe(MAST::SystemInitialization& sys,
-                          const libMesh::Elem& elem,
-                          const MAST::ElementPropertyCardBase& p) {
-
-    std::unique_ptr<MAST::FEBase> rval;
-    
-    switch (elem.dim()) {
-            
-        case 1: {
-            
-            MAST::LocalElemFE
-            *fe = new MAST::LocalElemFE(sys);
-            fe->set_1d_y_vector
-            (dynamic_cast<const MAST::ElementPropertyCard1D&>(p).y_vector());
-            rval.reset(fe);
-        }
-            break;
-
-        case 2: {
-            
-            rval.reset(new MAST::LocalElemFE(sys));
-        }
-            break;
-
-        case 3: {
-            
-            rval.reset(new MAST::FEBase(sys));
-        }
-            break;
-            
-        default:
-            libmesh_error(); // should not get here.
-    }
-    
-    return rval;
-}
-
 
 
 

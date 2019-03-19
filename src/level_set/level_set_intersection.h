@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -87,6 +87,12 @@ namespace MAST {
          */
         unsigned int edge_on_boundary() const;
 
+
+        /*!
+         *  @returns the area/volume fraction of element on positive phi of
+         *  the element
+         */
+        Real get_positive_phi_volume_fraction() const;
         
         /*!
          *   @returns value of phi on element node. This can only be the
@@ -135,6 +141,9 @@ namespace MAST {
         const std::vector<const libMesh::Elem*>&
         get_sub_elems_negative_phi() const;
 
+        void
+        get_nodes_on_negative_phi(std::set<const libMesh::Node*>& nodes) const;
+        
         /*!
          *   @returns the id of side that is on the interface. In case the
          *   element does not have a side on the interface, then a negative
@@ -180,7 +189,7 @@ namespace MAST {
         const unsigned int                           _max_mesh_elem_id;
         const unsigned int                           _max_mesh_node_id;
         const unsigned int                           _max_elem_divs;
-        
+        const libMesh::Elem*                         _elem;
         bool                                         _initialized;
 
         /*!

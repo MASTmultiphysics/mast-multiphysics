@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -779,24 +779,5 @@ MAST::TransientSolverBase::clear_elem() {
     libmesh_assert(_assembly_ops);
     _assembly_ops->clear_elem();
 }
-
-
-
-bool
-MAST::TransientSolverBase::if_use_local_elem() const {
-    
-    libmesh_assert(_assembly_ops);
-    return _assembly_ops->if_use_local_elem();
-}
-
-
-void
-MAST::TransientSolverBase::set_local_fe_data(MAST::LocalElemFE& fe,
-                                             const libMesh::Elem& e) const {
-    
-    libmesh_assert(_assembly_ops);
-    _assembly_ops->set_local_fe_data(fe, e);
-}
-
 
 

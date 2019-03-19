@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -99,7 +99,7 @@ namespace MAST {
 
         /*!
          *   returns the output quantity derivative with respect to
-         *   state vector in \par dq_dX.
+         *   state vector in \p dq_dX.
          *   This method calculates the quantity
          *    \f[ \frac{\partial q(X, p)}{\partial X} \f] for this
          *    output function. This is returned for the element for which
@@ -148,21 +148,6 @@ namespace MAST {
         virtual void evaluate_topology_sensitivity(const MAST::FunctionBase& f,
                                                    const MAST::LevelSetIntersection& intersect,
                                                    const MAST::FieldFunction<RealVectorX>& vel);
-
-        /*!
-         *   some simulations frequently deal with 1D/2D elements in 3D space,
-         *   which requires use of MAST::LocalElemFE.
-         */
-        virtual bool
-        if_use_local_elem() const;
-        
-        
-        /*!
-         *   sets additional data for local elem FE.
-         */
-        virtual void
-        set_local_fe_data(MAST::LocalElemFE& fe,
-                          const libMesh::Elem& e) const;
 
     protected:
 

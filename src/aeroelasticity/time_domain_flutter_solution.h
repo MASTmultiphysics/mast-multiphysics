@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -56,7 +56,7 @@ namespace MAST {
         
         /*!
          *   number of unstable roots in this solution. Only roots with damping
-         *   greater than \par tol will be considered unstable.
+         *   greater than \p tol will be considered unstable.
          */
         unsigned int n_unstable_roots_in_upper_complex_half (Real tol) const;
         

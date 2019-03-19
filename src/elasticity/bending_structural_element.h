@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -60,19 +60,6 @@ namespace MAST {
         
     protected:
         
-        
-        virtual const RealMatrixX&
-        _Tmatrix() const {
-            
-            // should be implemented in 1D and 2D elements
-            return _Tmat;
-        }
-        
-        /*!
-         *   Transformation matrix to be used for various operations
-         *   in 1D and 2D structural elements
-         */
-        RealMatrixX      _Tmat;
     };
 }
 

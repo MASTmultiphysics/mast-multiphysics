@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -34,6 +34,7 @@ namespace MAST {
 
     // forward declerations
     class SystemInitialization;
+    class LocalElemBase;
     
     class FEBase {
     
@@ -69,6 +70,15 @@ namespace MAST {
                           const std::vector<libMesh::Point>* pts = nullptr);
 
         /*!
+         *   provides an interface for elements where a local element is used
+         *   as a surrogate for the geometric element, as is the case for
+         *   1D and 2D elements that can live in 3D space. This is applicable
+         *   to problems arising from heat conduction and structural problems.
+         */
+        virtual void init(const MAST::LocalElemBase& elem,
+                          const std::vector<libMesh::Point>* pts = nullptr);
+        
+        /*!
          *   Initializes the quadrature and finite element for element side
          *   integration. The last argument
          *   \p if_calculate_dphi tells the function to request the
@@ -78,6 +88,17 @@ namespace MAST {
         virtual void init_for_side(const libMesh::Elem& elem,
                                    unsigned int s,
                                    bool if_calculate_dphi);
+
+        /*!
+         *   provides an interface for elements where a local element is used
+         *   as a surrogate for the geometric element, as is the case for
+         *   1D and 2D elements that can live in 3D space. This is applicable
+         *   problems arising from heat conduction and structural problems.
+         */
+        virtual void init_for_side(const MAST::LocalElemBase& elem,
+                                   unsigned int s,
+                                   bool if_calculate_dphi);
+
         
         libMesh::FEType
         get_fe_type() const;
@@ -161,9 +182,12 @@ namespace MAST {
         bool                              _init_second_order_derivatives;
         bool                              _initialized;
         const libMesh::Elem*              _elem;
+        const MAST::LocalElemBase         *_local_elem;
         libMesh::FEBase*                  _fe;
         libMesh::QBase*                   _qrule;
         std::vector<libMesh::Point>       _qpoints;
+        std::vector<libMesh::Point>       _global_xyz;
+        std::vector<libMesh::Point>       _global_normals;
     };
 }
 

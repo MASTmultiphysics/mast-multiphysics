@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -37,6 +37,9 @@
 
 
 namespace MAST {
+
+    // Forward declerations
+    class OptimizationInterface;
     
     class FunctionEvaluation:
     public libMesh::ParallelObject {
@@ -44,17 +47,21 @@ namespace MAST {
     public:
         
         FunctionEvaluation(const libMesh::Parallel::Communicator& comm_in):
-        libMesh::ParallelObject(comm_in),
-        _n_vars(0),
-        _n_eq(0),
-        _n_ineq(0),
-        _max_iters(0),
-        _n_rel_change_iters(5),
-        _tol(1.0e-6),
-        _output(nullptr)
+        libMesh::ParallelObject (comm_in),
+        _n_vars                 (0),
+        _n_eq                   (0),
+        _n_ineq                 (0),
+        _max_iters              (0),
+        _n_rel_change_iters     (5),
+        _tol                    (1.0e-6),
+        _output                 (nullptr),
+        _optimization_interface (nullptr)
         { }
         
         virtual ~FunctionEvaluation() { }
+        
+        
+        void attach_optimization_interface(MAST::OptimizationInterface& opt);
         
         
         unsigned int n_vars() const {
@@ -92,7 +99,7 @@ namespace MAST {
                                std::vector<Real>& xmax) = 0;
         
         /*!
-         *   \par grads(k): Derivative of f_i(x) with respect
+         *   \p grads(k): Derivative of f_i(x) with respect
          *   to x_j, where k = (j-1)*M + i.
          */
         virtual void evaluate(const std::vector<Real>& dvars,
@@ -139,8 +146,8 @@ namespace MAST {
          *   optimization history output file. This will verify that the
          *   optimization setup (number of DVs, constraints, etc.) are the
          *   same as the initialized data for this object and then
-         *   read the dv values from \par iter iteration into
-         *   \par x. 
+         *   read the dv values from \p iter iteration into
+         *   \p x. 
          */
         void initialize_dv_from_output_file(const std::string& nm,
                                             const unsigned int iter,
@@ -255,6 +262,8 @@ namespace MAST {
         Real _tol;
         
         std::ofstream* _output;
+        
+        MAST::OptimizationInterface        *_optimization_interface;
     };
 
 

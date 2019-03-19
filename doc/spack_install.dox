@@ -1,0 +1,73 @@
+
+/*!
+
+\page SpackInstall Installation using Spack
+
+[Spack](https://spack.io) is a python-based package manager that can install
+all dependencies. MAST is installed from source.
+
+1. Install Spack using instructions
+\code{bash}
+$ git clone https://github.com/spack/spack.git
+$ . spack/share/spack/setup-env.sh
+\endcode
+
+2. Install MAST and all dependencies
+\code{bash}
+$ spack install                                                  \
+ ^libmesh +exodusii+hdf5+metis+boost+eigen+slepc                \
+ ^eigen ~fftw~metis~mpfr                                        \
+ ^petsc ~complex~debug+double+hdf5+hypre~int64+metis+mpi+mumps+shared+suite-sparse+superlu-dist+trilinos \
+ ^intel-mkl %gcc@8.2.0
+\endcode
+
+3. Create symbolic link to all packages on in a directory for MAST installation.
+Replace `{SPACK_CODES}` with the directory where you want these links created.
+\code{bash}
+$ spack view -v -d true symlink {SPACK_CODES}                    \
+ ^libmesh +exodusii+hdf5+metis+boost+eigen+slepc                \
+ ^eigen ~fftw~metis~mpfr                                        \
+ ^petsc ~complex~debug+double+hdf5+hypre~int64+metis+mpi+mumps+shared+suite-sparse+superlu-dist+trilinos \
+ ^intel-mkl %gcc@8.2.0
+\endcode
+
+4. Download MAST in directory where it will be built. The directory is called
+`{CODES}` in the following and should be replaced.
+\code{bash}
+$ cd {CODES}
+$ mkdir mast
+$ cd mast
+$ git clone https://github.com/MASTmultiphysics/mast-multiphysics.git
+\endcode
+
+5. Configure MAST
+\code{bash}
+$ cd ../
+$ mkdir dbg
+$ cd dbg
+$ export SPACK_VIEW_DIR={SPACK_CODES}                            \
+  cmake  ../mast-multiphysics                                    \
+  -DMPI_C_COMPILER=${SPACK_VIEW_DIR}/mpiccc                      \
+  -DMPI_CXX_COMPILER=${SPACK_VIEW_DIR}/mpicxx                    \
+  -DCMAKE_C_COMPILER=${SPACK_VIEW_DIR}/mpiccc                    \
+  -DCMAKE_CXX_COMPILER=${SPACK_VIEW_DIR}/mpicxx                  \
+  -DCMAKE_Fortran_COMPILER=${SPACK_VIEW_DIR}/mpif90              \
+  -DlibMesh_DIR=${SPACK_VIEW_DIR}                                \
+  -DPETSc_DIR=${SPACK_VIEW_DIR}                                  \
+  -DSLEPc_DIR=${SPACK_VIEW_DIR}                                  \
+  -DBOOST_ROOT=${SPACK_VIEW_DIR}/include                         \
+  -DCMAKE_BUILD_TYPE=Debug
+\endcode
+
+6. Build MAST:
+\code{bash}
+$ make example_driver -j N
+\endcode
+Replace N with the number of cores on your machine to enable parallel build.
+
+7. Test MAST by running example_2:
+\code{bash}
+$ ./examples/example_2/example_2 -ksp_type preonly -pc_type lu
+\endcode
+
+*/

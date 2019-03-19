@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -46,7 +46,7 @@ namespace MAST {
         init(const libMesh::Elem& elem);
         
         /*!
-         *   performs the element calculations over \par elem, and returns
+         *   performs the element calculations over \p elem, and returns
          *   the element matrices for the eigenproblem
          *   \f$ A x = \lambda B x \f$.
          */
@@ -55,7 +55,7 @@ namespace MAST {
                           RealMatrixX& mat_B);
         
         /*!
-         *   performs the element sensitivity calculations over \par elem,
+         *   performs the element sensitivity calculations over \p elem,
          *   and returns the element matrices for the eigenproblem
          *   \f$ A x = \lambda B x \f$.
          */
@@ -64,25 +64,6 @@ namespace MAST {
                                       bool base_sol,
                                       RealMatrixX& mat_A,
                                       RealMatrixX& mat_B);
-        
-
-        /*!
-         *   some simulations frequently deal with 1D/2D elements in 3D space,
-         *   which requires use of MAST::LocalElemFE.
-         */
-        virtual bool
-        if_use_local_elem() const {
-            
-            return true;
-        }
-        
-        /*!
-         *   sets additional data for local elem FE.
-         */
-        virtual void
-        set_local_fe_data(MAST::LocalElemFE& fe,
-                          const libMesh::Elem& e) const;
-        
         
     protected:
         

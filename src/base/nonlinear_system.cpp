@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -44,6 +44,9 @@
 #include "libmesh/mesh_tools.h"
 #include "libmesh/utility.h"
 #include "libmesh/libmesh_version.h"
+#include "libmesh/generic_projector.h"
+#include "libmesh/wrapped_functor.h"
+#include "libmesh/fem_context.h"
 
 
 MAST::NonlinearSystem::NonlinearSystem(libMesh::EquationSystems& es,
@@ -60,7 +63,8 @@ _n_requested_eigenpairs               (0),
 _n_converged_eigenpairs               (0),
 _n_iterations                         (0),
 _is_generalized_eigenproblem          (false),
-_eigen_problem_type                   (libMesh::NHEP) {
+_eigen_problem_type                   (libMesh::NHEP),
+_operation                            (MAST::NonlinearSystem::NONE) {
     
 }
 
@@ -88,7 +92,9 @@ MAST::NonlinearSystem::clear() {
     matrix_B = nullptr;
     
     // clear the solver
-    eigen_solver->clear();
+    if (eigen_solver.get()) {
+      eigen_solver->clear();
+    }
     
     libMesh::NonlinearImplicitSystem::clear();
 }
@@ -191,6 +197,9 @@ void
 MAST::NonlinearSystem::solve(MAST::AssemblyElemOperations& elem_ops,
                              MAST::AssemblyBase&  assembly) {
     
+    libmesh_assert(_operation == MAST::NonlinearSystem::NONE);
+    
+    _operation = MAST::NonlinearSystem::NONLINEAR_SOLVE;
     assembly.set_elem_operation_object(elem_ops);
     
     libMesh::NonlinearImplicitSystem::ComputeResidualandJacobian
@@ -205,6 +214,7 @@ MAST::NonlinearSystem::solve(MAST::AssemblyElemOperations& elem_ops,
     this->nonlinear_solver->residual_and_jacobian_object = old_ptr;
     
     assembly.clear_elem_operation_object();
+    _operation = MAST::NonlinearSystem::NONE;
 }
 
 
@@ -213,6 +223,10 @@ void
 MAST::NonlinearSystem::eigenproblem_solve(MAST::AssemblyElemOperations& elem_ops,
                                           MAST::EigenproblemAssembly& assembly) {
     
+    libmesh_assert(_operation == MAST::NonlinearSystem::NONE);
+    
+    _operation = MAST::NonlinearSystem::EIGENPROBLEM_SOLVE;
+
     START_LOG("eigensolve()", "NonlinearSystem");
     
     assembly.set_elem_operation_object(elem_ops);
@@ -347,7 +361,7 @@ MAST::NonlinearSystem::eigenproblem_solve(MAST::AssemblyElemOperations& elem_ops
     assembly.clear_elem_operation_object();
     
     STOP_LOG("eigensolve()", "NonlinearSystem");
-    
+    _operation = MAST::NonlinearSystem::NONE;
 }
 
 
@@ -712,6 +726,10 @@ MAST::NonlinearSystem::sensitivity_solve(MAST::AssemblyElemOperations& elem_ops,
                                          MAST::AssemblyBase&           assembly,
                                          const MAST::FunctionBase&     p,
                                          bool                          if_assemble_jacobian) {
+
+    libmesh_assert(_operation == MAST::NonlinearSystem::NONE);
+    
+    _operation = MAST::NonlinearSystem::FORWARD_SENSITIVITY_SOLVE;
     
     // Log how long the linear solve takes.
     LOG_SCOPE("sensitivity_solve()", "NonlinearSystem");
@@ -750,6 +768,10 @@ MAST::NonlinearSystem::sensitivity_solve(MAST::AssemblyElemOperations& elem_ops,
 #endif
     
     assembly.clear_elem_operation_object();
+    
+    _operation = MAST::NonlinearSystem::NONE;
+    
+
 }
 
 
@@ -761,6 +783,10 @@ MAST::NonlinearSystem::adjoint_solve(MAST::AssemblyElemOperations&       elem_op
                                      bool if_assemble_jacobian) {
     
 
+    libmesh_assert(_operation == MAST::NonlinearSystem::NONE);
+    
+    _operation = MAST::NonlinearSystem::ADJOINT_SOLVE;
+    
     // Log how long the linear solve takes.
     LOG_SCOPE("adjoint_solve()", "NonlinearSystem");
     
@@ -768,14 +794,15 @@ MAST::NonlinearSystem::adjoint_solve(MAST::AssemblyElemOperations&       elem_op
     &dsol  = this->add_adjoint_solution(),
     &rhs   = this->add_adjoint_rhs();
 
-    if (if_assemble_jacobian) {
-        assembly.set_elem_operation_object(elem_ops);
+    assembly.set_elem_operation_object(elem_ops);
+
+    if (if_assemble_jacobian)
         assembly.residual_and_jacobian(*solution, nullptr, matrix, *this);
-        assembly.clear_elem_operation_object();
-    }
     
     assembly.calculate_output_derivative(*solution, output, rhs);
-    
+
+    assembly.clear_elem_operation_object();
+
     rhs.scale(-1.);
     
     // Our iteration counts and residuals will be sums of the individual
@@ -794,6 +821,8 @@ MAST::NonlinearSystem::adjoint_solve(MAST::AssemblyElemOperations&       elem_op
 #ifdef LIBMESH_ENABLE_CONSTRAINTS
     this->get_dof_map().enforce_adjoint_constraints_exactly(dsol, 0);
 #endif
+    
+    _operation = MAST::NonlinearSystem::NONE;
 }
 
 
@@ -929,3 +958,72 @@ MAST::NonlinearSystem::read_in_vector(libMesh::NumericVector<Real>& vec,
     this->get_mesh().fix_broken_node_and_element_numbering();
 }
 
+
+
+void
+MAST::NonlinearSystem::
+project_vector_without_dirichlet (libMesh::NumericVector<Real> & new_vector,
+                                  libMesh::FunctionBase<Real>& f) const {
+    
+    LOG_SCOPE ("project_vector_without_dirichlet()", "NonlinearSystem");
+    
+    libMesh::ConstElemRange active_local_range
+    (this->get_mesh().active_local_elements_begin(),
+     this->get_mesh().active_local_elements_end() );
+    
+    libMesh::VectorSetAction<Real> setter(new_vector);
+    
+    const unsigned int n_variables = this->n_vars();
+    
+    std::vector<unsigned int> vars(n_variables);
+    for (unsigned int i=0; i != n_variables; ++i)
+        vars[i] = i;
+    
+    // Use a typedef to make the calling sequence for parallel_for() a bit more readable
+    typedef
+    libMesh::GenericProjector<libMesh::FEMFunctionWrapper<Real>, libMesh::FEMFunctionWrapper<libMesh::Gradient>,
+    Real, libMesh::VectorSetAction<Real>> FEMProjector;
+    
+    libMesh::WrappedFunctor<Real>     f_fem(f);
+    libMesh::FEMFunctionWrapper<Real> fw(f_fem);
+    
+    libMesh::Threads::parallel_for
+    (active_local_range,
+     FEMProjector(*this, fw, nullptr, setter, vars));
+    
+    // Also, load values into the SCALAR dofs
+    // Note: We assume that all SCALAR dofs are on the
+    // processor with highest ID
+    if (this->processor_id() == (this->n_processors()-1))
+    {
+        // FIXME: Do we want to first check for SCALAR vars before building this? [PB]
+        libMesh::FEMContext context( *this );
+        
+        const libMesh::DofMap & dof_map = this->get_dof_map();
+        for (unsigned int var=0; var<this->n_vars(); var++)
+            if (this->variable(var).type().family == libMesh::SCALAR)
+            {
+                // FIXME: We reinit with an arbitrary element in case the user
+                //        doesn't override FEMFunctionBase::component. Is there
+                //        any use case we're missing? [PB]
+                libMesh::Elem * el = const_cast<libMesh::Elem *>(*(this->get_mesh().active_local_elements_begin()));
+                context.pre_fe_reinit(*this, el);
+                
+                std::vector<libMesh::dof_id_type> SCALAR_indices;
+                dof_map.SCALAR_dof_indices (SCALAR_indices, var);
+                const unsigned int n_SCALAR_dofs =
+                libMesh::cast_int<unsigned int>(SCALAR_indices.size());
+                
+                for (unsigned int i=0; i<n_SCALAR_dofs; i++)
+                {
+                    const libMesh::dof_id_type global_index = SCALAR_indices[i];
+                    const unsigned int component_index =
+                    this->variable_scalar_number(var,i);
+                    
+                    new_vector.set(global_index, f_fem.component(context, component_index, libMesh::Point(), this->time));
+                }
+            }
+    }
+    
+    new_vector.close();
+}

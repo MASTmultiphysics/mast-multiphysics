@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -24,9 +24,9 @@
 #include "base/elem_base.h"
 #include "base/physics_discipline_base.h"
 #include "base/nonlinear_system.h"
-#include "mesh/local_elem_fe.h"
 #include "base/assembly_elem_operation.h"
 #include "base/output_assembly_elem_operations.h"
+#include "mesh/fe_base.h"
 #include "numerics/utility.h"
 
 
@@ -224,25 +224,12 @@ MAST::AssemblyBase::detach_solution_function() {
 
 
 std::unique_ptr<MAST::FEBase>
-MAST::AssemblyBase::build_fe(const libMesh::Elem& elem) {
+MAST::AssemblyBase::build_fe() {
 
-    libmesh_assert(_elem_ops);
+    libmesh_assert(_system);
 
-    std::unique_ptr<MAST::FEBase> fe;
-
-    if (_elem_ops->if_use_local_elem() &&
-        elem.dim() < 3) {
-        
-        MAST::LocalElemFE*
-        local_fe = new MAST::LocalElemFE(*_system);
-        _elem_ops->set_local_fe_data(*local_fe, elem);
-        
-        fe.reset(local_fe);
-    }
-    else {
-        
-        fe.reset(new MAST::FEBase(*_system));
-    }
+    std::unique_ptr<MAST::FEBase>
+    fe(new MAST::FEBase(*_system));
     
     return fe;
 }
@@ -256,9 +243,10 @@ MAST::AssemblyBase::calculate_output(const libMesh::NumericVector<Real>& X,
     
     libmesh_assert(_discipline);
     libmesh_assert(_system);
-
-    this->set_elem_operation_object(output);
+    
     MAST::NonlinearSystem& nonlin_sys = _system->system();
+    output.set_assembly(*this);
+    
     output.zero_for_analysis();
     
     // iterate over each element, initialize it and get the relevant
@@ -312,7 +300,7 @@ MAST::AssemblyBase::calculate_output(const libMesh::NumericVector<Real>& X,
     if (_sol_function)
         _sol_function->clear();
     
-    this->clear_elem_operation_object();
+    output.clear_assembly();
 }
 
 
@@ -328,10 +316,9 @@ calculate_output_derivative(const libMesh::NumericVector<Real>& X,
     libmesh_assert(_system);
 
     output.zero_for_sensitivity();
-
-    this->set_elem_operation_object(output);
-
+    
     MAST::NonlinearSystem& nonlin_sys = _system->system();
+    output.set_assembly(*this);
     
     dq_dX.zero();
     
@@ -394,7 +381,8 @@ calculate_output_derivative(const libMesh::NumericVector<Real>& X,
         _sol_function->clear();
     
     dq_dX.close();
-    this->clear_elem_operation_object();
+    
+    output.clear_assembly();
 }
 
 
@@ -411,9 +399,8 @@ calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
 
     output.zero_for_sensitivity();
 
-    this->set_elem_operation_object(output);
-
     MAST::NonlinearSystem& nonlin_sys = _system->system();
+    output.set_assembly(*this);
     
     // iterate over each element, initialize it and get the relevant
     // analysis quantities
@@ -477,7 +464,7 @@ calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
     if (_sol_function)
         _sol_function->clear();
     
-    this->clear_elem_operation_object();
+    output.clear_assembly();
 }
 
 

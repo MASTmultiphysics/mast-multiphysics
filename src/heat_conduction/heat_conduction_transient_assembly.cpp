@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -22,7 +22,6 @@
 #include "heat_conduction/heat_conduction_elem_base.h"
 #include "property_cards/element_property_card_1D.h"
 #include "base/physics_discipline_base.h"
-#include "mesh/local_elem_fe.h"
 #include "base/assembly_base.h"
 
 
@@ -115,21 +114,5 @@ init(const libMesh::Elem& elem) {
     
     _physics_elem =
     new MAST::HeatConductionElementBase(*_system, *_assembly, elem, p);
-}
-
-
-void
-MAST::HeatConductionTransientAssemblyElemOperations::
-set_local_fe_data(MAST::LocalElemFE& fe,
-                  const libMesh::Elem& e) const {
-    
-    if (e.dim() == 1) {
-        
-        const MAST::ElementPropertyCard1D&
-        p_card = dynamic_cast<const MAST::ElementPropertyCard1D&>
-        (_discipline->get_property_card(e));
-        
-        fe.set_1d_y_vector(p_card.y_vector());
-    }
 }
 

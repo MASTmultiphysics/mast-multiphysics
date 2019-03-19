@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -80,7 +80,7 @@ namespace MAST {
                                                    RealMatrixX& jac);
         
         /*!
-         *   calculates the term on side \par s:
+         *   calculates the term on side \p s:
          *   \f$ \int_\Gamma a(\delta u, u) v_n ~d\Gamma \f$.
          *
          */
@@ -325,7 +325,7 @@ namespace MAST {
                                                        MAST::FEMOperatorMatrix& Bmat);
         
         /*!
-         *   initialze the von Karman strain in \par vK_strain, the operator
+         *   initialze the von Karman strain in \p vK_strain, the operator
          *   matrices needed for Jacobian calculation.
          *   vk_strain = [dw/dx 0; 0 dw/dy; dw/dy dw/dx]
          *   Bmat_vk   = [dw/dx; dw/dy]

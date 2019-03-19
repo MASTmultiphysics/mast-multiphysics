@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -90,7 +90,7 @@ namespace MAST {
         /**
          * Assembly function.  This function will be called
          * to assemble the sensitivity of eigenproblem matrices.
-         * The method provides dA/dp and dB/dp for \par f parameter.
+         * The method provides dA/dp and dB/dp for \p f parameter.
          *
          * If the routine is not able to provide sensitivity for this parameter,
          * then it should return false, and the system will attempt to use
@@ -109,7 +109,7 @@ namespace MAST {
          *   for element integration.
          */
         virtual std::unique_ptr<MAST::FEBase>
-        build_fe(const libMesh::Elem& e);
+        build_fe();
         
     protected:
         
@@ -118,8 +118,6 @@ namespace MAST {
         MAST::LevelSetIntersection           *_intersection;
         
         MAST::FieldFunction<RealVectorX>     *_velocity;
-        
-        bool                                  _analysis_mode;
     };
 }
 

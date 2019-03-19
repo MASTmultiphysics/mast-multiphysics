@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -196,6 +196,26 @@ MAST::Examples::ExampleBase::get_field_function(const std::string& nm) {
     }
     
     return **it;
+}
+
+
+
+bool
+MAST::Examples::ExampleBase::has_field_function(const std::string& nm) const {
+    
+    std::set<MAST::FunctionBase*>::iterator
+    it   =  _field_functions.begin(),
+    end  =  _field_functions.end();
+    
+    for ( ; it != end; it++) {
+        if ((*it)->name() == nm)
+            break;
+    }
+    
+    if (it == end)
+        return false;
+    else
+        return true;
 }
 
 

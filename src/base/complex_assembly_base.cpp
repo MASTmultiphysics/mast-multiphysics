@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -460,7 +460,7 @@ residual_and_jacobian_blocked (const libMesh::NumericVector<Real>& X,
     // localize the base solution, if it was provided
     if (_base_sol)
         localized_base_solution.reset(build_localized_vector(nonlin_sys,
-                                                              *_base_sol).release());
+                                                             *_base_sol).release());
     
     
 

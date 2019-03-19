@@ -11,15 +11,18 @@ add_library(mast)
 target_include_directories(mast
         PUBLIC
             ${CMAKE_CURRENT_LIST_DIR}
+            ${MPI_CXX_INCLUDE_PATH}
             ${PETSc_INCLUDE_DIRS}
             ${SLEPc_INCLUDE_DIRS}
             ${libMesh_INCLUDE_DIRS}
+            ${EIGEN3_INCLUDE_DIR}
             ${Boost_INCLUDE_DIRS}) # Could possibly move this into src/optimization since it is closer to where Boost is actually used.
 
 # Add libraries.
 target_link_libraries(mast
         PUBLIC
             ${MPI_CXX_LIBRARIES}
+            ${LAPACK_LIBRARIES}
             ${PETSc_LIBRARIES}
             ${SLEPc_LIBRARIES}
             ${libMesh_LIBRARIES})
@@ -50,3 +53,7 @@ add_subdirectory(solver)
 #       code that is using it. (There is a documented limitation with CMake
 #       that prevents this with using add_subdirectory).
 
+# MAST library installation.
+install(TARGETS mast
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})

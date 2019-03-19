@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -34,7 +34,6 @@ namespace MAST {
     class ComplexAssemblyBase;
     class ElementBase;
     class Parameter;
-    class AssemblyElemOperations;
     
     /*!
      *   uses a Gauss-Siedel method to solve the complex system of equations
@@ -57,26 +56,35 @@ namespace MAST {
         
         
         /*!
+         *   sets the assembly object for this solver
+         */
+        void set_assembly(MAST::ComplexAssemblyBase&    assemble);
+        
+        
+        /*!
+         *   clears the assembly object from this solver
+         */
+        void clear_assembly();
+
+        
+        /*!
          *  solves the complex system of equations using PCFieldSplit
          */
-        virtual void solve_pc_fieldsplit(MAST::AssemblyElemOperations& elem_ops,
-                                         MAST::ComplexAssemblyBase&    assemble);
+        virtual void solve_pc_fieldsplit();
 
         
         /*!
          *  solves the complex system of equations using block matrices. If 
-         *  no argument is specified for \par p, then the system is solved. 
+         *  no argument is specified for \p p, then the system is solved. 
          *  Otherwise, the sensitivity of the system is solved with respect
          *  to the parameter p
          */
-        virtual void solve_block_matrix(MAST::AssemblyElemOperations& elem_ops,
-                                        MAST::ComplexAssemblyBase&    assemble,
-                                        MAST::Parameter*              p = nullptr);
+        virtual void solve_block_matrix(MAST::Parameter* p = nullptr);
 
         
         /*!
          *  @returns a reference to the real part of the solution. If 
-         *  \par if_sens is true, the the sensitivity vector is returned. Note,
+         *  \p if_sens is true, the the sensitivity vector is returned. Note,
          *  that the sensitivity can be requested only after a sensitivity 
          *  solve.
          */
@@ -85,7 +93,7 @@ namespace MAST {
         
         /*!
          *  @returns a constant reference to the real part of the solution. If
-         *  \par if_sens is true, the the sensitivity vector is returned. Note,
+         *  \p if_sens is true, the the sensitivity vector is returned. Note,
          *  that the sensitivity can be requested only after a sensitivity
          *  solve.
          */
@@ -94,7 +102,7 @@ namespace MAST {
         
         /*!
          *  @returns a reference to the imaginary part of the solution. If
-         *  \par if_sens is true, the the sensitivity vector is returned. Note,
+         *  \p if_sens is true, the the sensitivity vector is returned. Note,
          *  that the sensitivity can be requested only after a sensitivity
          *  solve.
          */
@@ -103,7 +111,7 @@ namespace MAST {
         
         /*!
          *  @returns a constant reference to the imaginary part of the solution.
-         *  If \par if_sens is true, the the sensitivity vector is returned.
+         *  If \p if_sens is true, the the sensitivity vector is returned.
          *  Note, that the sensitivity can be requested only after a sensitivity
          *  solve.
          */

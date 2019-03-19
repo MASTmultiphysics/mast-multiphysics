@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -31,8 +31,8 @@
 namespace MAST {
     
     // Forward declerations
+    class LocalElemBase;
     class ElementPropertyCardBase;
-    class LocalElemFE;
     class BoundaryConditionBase;
     class FEMOperatorMatrix;
     class StressStrainOutputBase;
@@ -52,7 +52,9 @@ namespace MAST {
                               const MAST::ElementPropertyCardBase& p);
         
         virtual ~StructuralElementBase();
+
         
+        virtual MAST::LocalElemBase& local_elem();
 
         /*!
          *   stores \p vec as solution for element level calculations,
@@ -103,7 +105,7 @@ namespace MAST {
         
         /*!
          *  @returns a constant reference to the element solution 
-         *  (or its derivative if \par if_sens is true) in the local
+         *  (or its derivative if \p if_sens is true) in the local
          *  element coordinate system
          */
         const RealVectorX& local_solution(bool if_sens = false) const {
@@ -139,7 +141,7 @@ namespace MAST {
                                       RealMatrixX& jac);
 
         /*!
-         *   calculates the term on side \par s:
+         *   calculates the term on side \p s:
          *   \f$ \int_\Gamma a(\delta u, u) v_n ~d\Gamma \f$.
          *
          */
@@ -703,11 +705,10 @@ namespace MAST {
          *   1D/2D elements.
          */
         virtual const RealMatrixX&
-        _Tmatrix() const {
-            
-            // should be implemented in 1D and 2D elements
-            libmesh_assert(false);
-        }
+        _Tmatrix() const;
+        
+        
+        MAST::LocalElemBase*                _local_elem;
         
         /*!
          *   element property
@@ -804,11 +805,6 @@ namespace MAST {
                              const libMesh::Elem& elem,
                              const MAST::ElementPropertyCardBase& p);
     
-    std::unique_ptr<MAST::FEBase>
-    build_structural_fe(MAST::SystemInitialization& sys,
-                        const libMesh::Elem& elem,
-                        const MAST::ElementPropertyCardBase& p);
-
 }
 
 

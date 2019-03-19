@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -176,7 +176,7 @@ namespace MAST {
         
         /*!
          *    Calculates the residual vector and Jacobian due to surface flux
-         *    on element side \par s.
+         *    on element side \p s.
          */
         virtual void surface_flux_residual(bool request_jacobian,
                                            RealVectorX& f,
@@ -196,7 +196,7 @@ namespace MAST {
         
         /*!
          *    Calculates the residual vector sensitivity and Jacobian due to
-         *    surface flux on element side \par s.
+         *    surface flux on element side \p s.
          */
         virtual void surface_flux_residual_sensitivity(const MAST::FunctionBase& p,
                                                        RealVectorX& f,
@@ -391,13 +391,10 @@ namespace MAST {
          *   element property
          */
         const MAST::ElementPropertyCardBase& _property;
-        
-    };
 
-    std::unique_ptr<MAST::FEBase>
-    build_conduction_fe(MAST::SystemInitialization& sys,
-                        const libMesh::Elem& elem,
-                        const MAST::ElementPropertyCardBase& p);
+        
+        MAST::LocalElemBase                  *_local_elem;
+    };
 
 }
 

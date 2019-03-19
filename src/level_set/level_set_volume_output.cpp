@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -193,21 +193,5 @@ MAST::LevelSetVolume::evaluate_topology_sensitivity(const MAST::FunctionBase& f,
             _dvol_dp += e.volume_boundary_velocity_on_side
             (_intersection.get_side_on_interface(_physics_elem->elem()));
     }
-}
-
-
-bool
-MAST::LevelSetVolume::if_use_local_elem() const {
-
-    return false;
-}
-
-
-
-void
-MAST::LevelSetVolume::set_local_fe_data(MAST::LocalElemFE& fe,
-                                        const libMesh::Elem& e) const {
-
-    libmesh_assert(false); // should not get called
 }
 

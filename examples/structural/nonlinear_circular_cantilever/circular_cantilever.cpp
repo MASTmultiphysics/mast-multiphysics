@@ -1,207 +1,136 @@
-//
-//// C++ includes
-//#include <iostream>
-//
-//
-//// MAST includes
-//#include "elasticity/structural_system_initialization.h"
-//#include "base/nonlinear_implicit_assembly.h"
-//#include "elasticity/structural_nonlinear_assembly.h"
-//#include "base/physics_discipline_base.h"
-//#include "base/parameter.h"
-//#include "base/constant_field_function.h"
-//#include "boundary_condition/dirichlet_boundary_condition.h"
-//#include "property_cards/isotropic_material_property_card.h"
-//#include "property_cards/isotropic_element_property_card_3D.h"
-//#include "base/nonlinear_system.h"
-//
-//
-//// libMesh includes
-//#include "libmesh/libmesh.h"
-//#include "libmesh/parallel_mesh.h"
-//#include "libmesh/mesh_generation.h"
-//#include "libmesh/nonlinear_implicit_system.h"
-//#include "libmesh/exodusII_io.h"
-//#include "libmesh/numeric_vector.h"
-//
-//
-//class StructuralSystemInitializationUVW:
-//public MAST::SystemInitialization  {
-//    
-//public:
-//    StructuralSystemInitializationUVW(MAST::NonlinearSystem& sys,
-//                                      const std::string& prefix,
-//                                      const libMesh::FEType& fe_type):
-//    MAST::SystemInitialization(sys, prefix) {
-//        
-//        _vars.resize(3);
-//        
-//        std::string nm = prefix + "_ux";
-//        _vars[0] = sys.add_variable(nm, fe_type);
-//        
-//        nm = prefix + "_uy";
-//        _vars[1] = sys.add_variable(nm, fe_type);
-//        
-//        nm = prefix + "_uz";
-//        _vars[2] = sys.add_variable(nm, fe_type);
-//    }
-//    
-//    
-//    virtual ~StructuralSystemInitializationUVW() { }
-//    
-//protected:
-//    
-//};
-//
-//
-//int main_1(int argc, const char * argv[]) {
-//    
-//    // initialize the libMesh object
-//    libMesh::LibMeshInit              init(argc, argv);
-//    libMesh::ParallelMesh             mesh(init.comm());
-//    libMesh::EquationSystems          eq_sys(mesh);
-//    
-//    // add the system to be used for analysis
-//    MAST::NonlinearSystem& sys = eq_sys.add_system<MAST::NonlinearSystem>("structural");
-//    
-//    // initialize the mesh
-//    const unsigned int
-//    nx           = 10, // elems along length
-//    ny           = 4,  // elems in thickness direction
-//    nz           = 4,  // elems in width direction
-//    n_load_steps = 10;
-//    libMesh::MeshTools::Generation::build_cube(mesh,
-//                                               nx, ny, nz,
-//                                               0.,  1.,
-//                                               -.5, .5,
-//                                               -.5, .5);
-//    
-//    // modify the mesh to a circular arc of 45 degrees
-//    const Real
-//    r = 100.,
-//    pi    = acos(-1.),
-//    theta = pi/180.*45.;
-//    
-//    libMesh::MeshBase::node_iterator
-//    node_it  = mesh.nodes_begin(),
-//    node_end = mesh.nodes_end();
-//    
-//    Real eta = 0.;
-//    std::set<libMesh::Node*> end_nodes;
-//    
-//    for ( ; node_it != node_end; node_it++) {
-//        libMesh::Point& pt = **node_it;
-//        eta = pt(0);
-//        pt(0) = (r+pt(1))*cos(pi/2.-theta*eta);
-//        pt(1) = (r+pt(1))*sin(pi/2.-theta*eta);
-//        
-//        // also prepare the set of nodes on the right side for
-//        // application of point force
-//        if (eta == 1.)
-//            end_nodes.insert(*node_it);
-//    }
-//    
-//    
-//    // variable type
-//    libMesh::FEType fe_type(libMesh::FIRST,
-//                            libMesh::LAGRANGE);
-//    
-//    MAST::PhysicsDisciplineBase        structural_discipline(eq_sys);
-//    StructuralSystemInitializationUVW structural_sys(sys,
-//                                                     sys.name(),
-//                                                     fe_type);
-//    
-//    
-//    // add the Dirichlet boundary condition on left boundary
-//    MAST::DirichletBoundaryCondition   dirichlet;
-//    dirichlet.init(4, structural_sys.vars());
-//    
-//    // add the boundary condition to the physics
-//    structural_discipline.add_dirichlet_bc(4, dirichlet);
-//    
-//    // tell the system about the constraints. This needs to happen
-//    // before the equation system initialization
-//    structural_discipline.init_system_dirichlet_bc(sys);
-//    
-//    // initialize the equation system for analysis
-//    eq_sys.init();
-//    
-//    // print the information
-//    mesh.print_info();
-//    eq_sys.print_info();
-//    
-//    // add a flux load on the right boundary
-//    // this parameter defines the constant value of the flux
-//    MAST::Parameter p ("p", 5.0);
-//    
-//    // define the field function for boudnary condition
-//    MAST::ConstantFieldFunction press("pressure", p);
-//    
-//    // create a flux boundary condition based on this
-//    MAST::BoundaryConditionBase flux_load(MAST::SURFACE_PRESSURE);
-//    flux_load.add(press);
-//    
-//    // tell the physics about this load
-//    structural_discipline.add_side_load(1, flux_load);
-//    
-//    
-//    // initialize the material properties. First the parameters, which
-//    // are used to define the properties to be constants
-//    MAST::Parameter
-//    E  (  "E",  10.0e6),   // Young's modulus
-//    nu (  "nu",   0.0);   // Poisson's ratio
-//    
-//    
-//    // define material property based on the parameter
-//    MAST::ConstantFieldFunction
-//    E_f ("E",  E),
-//    nu_f("nu", nu);
-//    
-//    
-//    // add them to a material property card
-//    MAST::IsotropicMaterialPropertyCard       materials;
-//    materials.add( E_f);
-//    materials.add(nu_f);
-//    
-//    
-//    // add to a section property card
-//    MAST::IsotropicElementPropertyCard3D section_property;
-//    
-//    // tell the section property to use the material property card
-//    section_property.set_material(materials);
-//    
-//    // tell the conduction physics about the section properties
-//    structural_discipline.set_property_for_subdomain(0, section_property);
-//    
-//    // create the nonlinear assembly object
-//    MAST::NonlinearImplicitAssembly                   assembly;
-//    MAST::StructuralNonlinearAssemblyElemOperations   elem_ops;
-//
-//    // write the solution for visualization
-//    libMesh::ExodusII_IO out(mesh);
-//
-//    // now solve the system
-//    for (unsigned int i=0; i<n_load_steps; i++) {
-//
-//        p = 600.*(i+1)/n_load_steps;
-//        
-//        assembly.set_discipline_and_system(elem_ops,
-//                                              structural_discipline,
-//                                              structural_sys);
-//        
-//        MAST::NonlinearSystem&  nonlin_sys   =
-//        assembly.system();
-//        
-//        nonlin_sys.solve();
-//        
-//        assembly.clear_discipline_and_system();
-//        
-//        sys.solution->print();
-//        
-//        out.write_timestep("out.exo", eq_sys, i, (i+1.)/n_load_steps);
-//    }
-//    
-//    
-//    return 0;
-//}
-//
+/*
+ * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
+ * Copyright (C) 2013-2019  Manav Bhatia
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ */
+
+
+// MAST includes
+#include "examples/structural/nonlinear_circular_cantilever/circular_cantilever.h"
+#include "examples/structural/base/thermal_stress_jacobian_scaling_function.h"
+#include "examples/base/multilinear_interpolation.h"
+#include "examples/base/input_wrapper.h"
+#include "base/nonlinear_system.h"
+#include "base/constant_field_function.h"
+#include "base/parameter.h"
+#include "base/physics_discipline_base.h"
+#include "property_cards/isotropic_element_property_card_3D.h"
+#include "boundary_condition/dirichlet_boundary_condition.h"
+
+// libMesh includes
+#include "libmesh/serial_mesh.h"
+#include "libmesh/string_to_enum.h"
+#include "libmesh/mesh_generation.h"
+
+
+
+MAST::Examples::StructuralExample3D::
+StructuralExample3D(const libMesh::Parallel::Communicator& comm_in):
+MAST::Examples::StructuralExampleBase(comm_in) {
+    
+}
+
+
+MAST::Examples::StructuralExample3D::~StructuralExample3D() {
+    
+}
+
+
+
+void
+MAST::Examples::StructuralExample3D::_init_mesh() {
+    
+    _mesh = new libMesh::SerialMesh(this->comm());
+    
+    // identify the element type from the input file or from the order
+    // of the element
+    
+    unsigned int
+    nx_divs = (*_input)(_prefix+"nx_divs", "number of elements along x-axis", 10),
+    ny_divs = (*_input)(_prefix+"ny_divs", "number of elements along x-axis", 5),
+    nz_divs = (*_input)(_prefix+"nz_divs", "number of elements along y-axis", 5);
+    
+    Real
+    length  = (*_input)(_prefix+ "length", "length of domain along x-axis", 0.3),
+    width   = (*_input)(_prefix+  "width", "length of domain along y-axis", 0.005),
+    height  = (*_input)(_prefix+ "height", "length of domain along y-axis", 0.01);
+    
+    std::string
+    t = (*_input)(_prefix+"elem_type", "type of geometric element in the mesh", "hex8");
+    
+    libMesh::ElemType
+    e_type = libMesh::Utility::string_to_enum<libMesh::ElemType>(t);
+    
+    // if high order FE is used, libMesh requires atleast a second order
+    // geometric element.
+    if (_fetype.order > 1 && e_type == libMesh::HEX8)
+        e_type = libMesh::HEX27;
+    else if (_fetype.order > 1 && e_type == libMesh::TET4)
+        e_type = libMesh::TET10;
+    
+    // initialize the mesh with one element
+    libMesh::MeshTools::Generation::build_cube(*_mesh,
+                                               nx_divs, ny_divs, nz_divs,
+                                               0, length,
+                                               0, width,
+                                               0, height,
+                                               e_type);
+}
+
+
+
+void
+MAST::Examples::StructuralExample3D::_init_dirichlet_conditions() {
+    
+    // side id associations based on libMesh's indexing for hex8 and
+    // cube mesh generation
+    //this->_init_boundary_dirichlet_constraint(0, "back_constraint");
+    //this->_init_boundary_dirichlet_constraint(1, "bottom_constraint");
+    //this->_init_boundary_dirichlet_constraint(2, "right_constraint");
+    //this->_init_boundary_dirichlet_constraint(3, "top_constraint");
+    this->_init_boundary_dirichlet_constraint(4, "left_constraint");
+    //this->_init_boundary_dirichlet_constraint(5, "front_constraint");
+
+    _discipline->init_system_dirichlet_bc(*_sys);
+}
+
+
+
+
+void
+MAST::Examples::StructuralExample3D::_init_section_property() {
+    
+    MAST::IsotropicElementPropertyCard3D
+    *p_card   = new MAST::IsotropicElementPropertyCard3D;
+    
+    _p_card   = p_card;
+    
+    // set nonlinear strain if requested
+    bool
+    nonlinear = (*_input)(_prefix+"if_nonlinear", "flag to turn on/off nonlinear strain", false);
+    if (nonlinear) p_card->set_strain(MAST::NONLINEAR_STRAIN);
+    
+    p_card->set_material(*_m_card);
+    _discipline->set_property_for_subdomain(0, *p_card);
+}
+
+
+void
+MAST::Examples::StructuralExample3D::_init_loads() {
+    
+    _init_pressure_load(true, 3);
+    //_init_temperature_load();
+}

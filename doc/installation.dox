@@ -1,0 +1,38 @@
+
+/*!
+
+\page InstallationPage Installation instructions
+
+MAST runs on various flavors of Unix and can leverage MPI for
+distributed memory parallelism. The required list of dependencies includes
+    - hdf5
+    - boost
+    - eigen3
+    - cmake
+    - MPI
+    - PETSc
+    - SLEPc
+    - libMesh
+
+These dependencies can be installed from an automated
+package manager before proceeding with installation of MAST. It is
+recommended that PETSc be installed with support for direct sparse
+solvers, such as MUMPS, SuperLU_dist or Pardiso.
+
+Given that a large number of dependencies are required for MAST, it is strongly
+recommended that an automated package manager be used to install the dependencies
+listed above.
+    - On Mac OS [Macports](https://www.macports.org) and
+    [HomeBrew](https://brew.sh) have been used with good success to install all
+    dependencies except libMesh since no recipe/port has been created for libMesh
+    in these package managers (as of Feb 2019).
+    - [Spack](https://spack.io) is a python-based package manager that can install
+    MAST and all dependencies.
+
+Specific instructions for installation are provided in these pages
+- \subpage SourceInstall 
+- \subpage SpackInstall
+
+
+*/
+
