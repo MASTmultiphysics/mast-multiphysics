@@ -30,6 +30,7 @@
 #include "base/nonlinear_system.h"
 #include "base/transient_assembly.h"
 #include "base/boundary_condition_base.h"
+#include "boundary_condition/dirichlet_boundary_condition.h"
 #include "fluid/conservative_fluid_system_initialization.h"
 #include "fluid/conservative_fluid_discipline.h"
 #include "fluid/conservative_fluid_transient_assembly.h"
@@ -140,9 +141,9 @@ protected:
             quarter_divs        = _input("n_quarter_elems", "number of elements in the quarter arc along the circumferencial direction", 20);
             
             const Real
-            r                   = _input("radius", "radius of the cylinder", 0.1),
+            r                   = _input("chord", "chord of the airfoil", 0.1),
             l_by_r              = _input("l_by_r", "far-field distance to airfoil radius ratio", 5.),
-            h_ff_by_h_r         = _input("h_far_field_by_h_r", "relative element size at far-field boundary to element size at cylinder", 50.);
+            h_ff_by_h_r         = _input("h_far_field_by_h_r", "relative element size at far-field boundary to element size at airfoil", 50.);
             
             std::string
             t = _input("elem_type", "type of geometric element in the mesh", "quad4");
@@ -227,6 +228,16 @@ protected:
             
             // this assumes a viscous analysis
             libmesh_assert(_flight_cond->gas_property.if_viscous);
+
+            MAST::DirichletBoundaryCondition
+            *dirichlet = new MAST::DirichletBoundaryCondition;
+            std::vector<unsigned int> constrained_vars(2);
+            constrained_vars[0] = _sys_init->vars()[1];
+            constrained_vars[1] = _sys_init->vars()[2];
+            dirichlet->init (3, constrained_vars);
+            _discipline->add_dirichlet_bc(3, *dirichlet);
+            _discipline->init_system_dirichlet_bc(*_sys);
+
             
             // create the boundary conditions for slip-wall, symmetry and far-field
             MAST::BoundaryConditionBase
@@ -239,6 +250,7 @@ protected:
             _discipline->add_side_load(   1, *far_field);
 
             // store the pointers for later deletion in the destructor
+            _boundary_conditions.insert(dirichlet);
             _boundary_conditions.insert(far_field);
             _boundary_conditions.insert(wall);
 
