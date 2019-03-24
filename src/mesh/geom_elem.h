@@ -49,7 +49,7 @@ namespace MAST {
      *          a standard FE analysis a quadrature is performed on this element.
      *        - a quadrature element is the element that is a subset of the
      *          reference element on which the quadrature points are defined. In a
-     *          standard FE analysis the reference and quadrature elements are the same.
+     *          standard FE analysfis the reference and quadrature elements are the same.
      *        - a local reference element is the element transformed in a coordinate
      *          system that is defined in along the 1D element or in the plane of
      *          the 2D element.
@@ -66,22 +66,23 @@ namespace MAST {
         /*!
          *   @return a reference to element in the mesh.
          */
-        const libMesh::Elem& get_reference_elem() const;
+        virtual const libMesh::Elem&
+        get_reference_elem() const;
 
         /*!
          *   @return a reference to element in the mesh.
          */
-        const libMesh::Elem& get_reference_local_elem() const;
+        virtual const libMesh::Elem& get_reference_local_elem() const;
 
         /*!
          *   @return a reference to quadrature element.
          */
-        const libMesh::Elem& get_quadrature_elem() const;
+        virtual const libMesh::Elem& get_quadrature_elem() const;
 
         /*!
          *   @return a reference to quadrature element.
          */
-        const libMesh::Elem& get_quadrature_local_elem() const;
+        virtual const libMesh::Elem& get_quadrature_local_elem() const;
 
         /*!
          *   @return dimension of the element. 

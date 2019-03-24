@@ -176,6 +176,7 @@ update_stress_strain_data(MAST::StressStrainOutputBase&       ops,
                 
                 const libMesh::Elem* sub_elem = *hi_sub_elem_it;
                 MAST::LevelSetIntersectedElem geom_elem;
+                ops.set_elem_data(elem->dim(), geom_elem);
                 geom_elem.init(*sub_elem, *_system, *_intersection);
                 
                 // clear before calculating the data

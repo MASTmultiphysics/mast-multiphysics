@@ -245,6 +245,7 @@ update_void_solution(libMesh::NumericVector<Real>& X,
 
             // the Jacobian is based on the homogenization method
             MAST::GeomElem geom_elem;
+            elem_ops.set_elem_data(elem->dim(), geom_elem);
             geom_elem.init(*elem, _assembly->system_init());
             
             elem_ops.init(geom_elem);
@@ -268,6 +269,7 @@ update_void_solution(libMesh::NumericVector<Real>& X,
                 const libMesh::Elem* sub_elem = *hi_sub_elem_it;
                 
                 MAST::LevelSetIntersectedElem geom_elem;
+                ops.set_elem_data(elem->dim(), geom_elem);
                 geom_elem.init(*sub_elem, *_intersection);
              
                 ops.init(geom_elem);

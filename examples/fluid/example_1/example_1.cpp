@@ -553,7 +553,14 @@ public:
         MAST::FirstOrderNewmarkTransientSolver                   solver;
         RealVectorX
         nvec = RealVectorX::Zero(3);
-        nvec(1) = 1.;
+        nvec(0) =
+        _input("force_unit_vector", "unit vector defining direction of integrated force output", 1., 0);
+        nvec(1) =
+        _input("force_unit_vector", "unit vector defining direction of integrated force output", 0., 1);
+        nvec(2) =
+        _input("force_unit_vector", "unit vector defining direction of integrated force output", 0., 2);
+
+
         MAST::IntegratedForceOutput                              force(nvec);
         std::set<libMesh::boundary_id_type> bids;
         bids.insert(3);
@@ -594,8 +601,18 @@ public:
         // the default parameter adds some numerical damping to improve
         // convergence towards steady state solution.
         solver.beta       = _input("beta", "Newmark solver beta parameter ",  0.7);
-        libMesh::out << "q_dyn = " << _flight_cond->q0() << std::endl;
-        
+
+        // print the fluid values:
+        libMesh::out
+        << std::setw(15) << "rho: " << std::setw(20) << _flight_cond->rho() << std::endl
+        << std::setw(15) << "T: " << std::setw(20) << _flight_cond->gas_property.T << std::endl
+        << std::setw(15) << "Mach: " << std::setw(20) << _flight_cond->mach << std::endl
+        << std::setw(15) << "gamma: " << std::setw(20) << _flight_cond->gas_property.gamma << std::endl
+        << std::setw(15) << "R: " << std::setw(20) << _flight_cond->gas_property.R << std::endl
+        << std::setw(15) << "a: " << std::setw(20) << _flight_cond->gas_property.a << std::endl
+        << std::setw(15) << "q_dyn: " << std::setw(20) << _flight_cond->q0() << std::endl
+        << std::endl;
+
         // ask the solver to update the initial condition for d2(X)/dt2
         // This is recommended only for the initial time step, since the time
         // integration scheme updates the velocity and acceleration at

@@ -30,7 +30,6 @@ namespace MAST {
     
     // Forward declerations
     class ElementPropertyCardBase;
-    class LocalElemBase;
     class BoundaryConditionBase;
     class FEMOperatorMatrix;
     class OutputAssemblyElemOperations;

@@ -91,7 +91,8 @@ namespace MAST {
          *   interface.
          */
         virtual void
-        set_elem_data(MAST::GeomElem& elem) const = 0;
+        set_elem_data(unsigned int dim,
+                      MAST::GeomElem& elem) const = 0;
         
         /*!
          *   initializes the object for calculation of element quantities for

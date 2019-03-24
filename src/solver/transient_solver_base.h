@@ -290,7 +290,8 @@ namespace MAST {
          *   calls the physics object
          */
         virtual void
-        set_elem_data(MAST::GeomElem& elem) const;
+        set_elem_data(unsigned int dim,
+                      MAST::GeomElem& elem) const;
 
         /*!
          *   calls the method from TransientAssemblyElemOperations

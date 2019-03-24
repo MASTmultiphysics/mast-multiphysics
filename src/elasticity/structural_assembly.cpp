@@ -218,6 +218,7 @@ MAST::StructuralAssembly::update_incompatible_solution(libMesh::NumericVector<Re
         MAST::AssemblyElemOperations& ops = _assembly->get_elem_ops();
         
         MAST::GeomElem geom_elem;
+        ops.set_elem_data(elem->dim(), geom_elem);
         geom_elem.init(*elem, _assembly->system_init());
         
         ops.init(geom_elem);

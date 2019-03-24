@@ -841,7 +841,7 @@ public:
         _level_set_function    = new PhiMeshFunction;
         _output                = new libMesh::ExodusII_IO(*_mesh);
         
-        _n_eig_vals            = _input("n_eig", "number of eigenvalues to constrain", 5);
+        _n_eig_vals            = _input("n_eig", "number of eigenvalues to constrain", 0);
         if (_n_eig_vals) {
             // set only if the user requested eigenvalue constraints
             _ref_eig_val           = _input("eigenvalue_low_bound", "lower bound enforced on eigenvalue constraints", 1.e3);

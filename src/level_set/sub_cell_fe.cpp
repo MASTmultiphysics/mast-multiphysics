@@ -52,7 +52,7 @@ MAST::SubCellFE::init(const MAST::GeomElem& elem,
     // if there was no intersection, then move back to the parent class's
     // method
     if (!_intersection.if_intersection_through_elem()) {
-        MAST::FEBase::init(elem, pts);
+        MAST::FEBase::init(elem, init_grads, pts);
         return;
     }
     
@@ -61,6 +61,8 @@ MAST::SubCellFE::init(const MAST::GeomElem& elem,
     // this method does not allow quadrature points to be spcified.
     libmesh_assert(!pts);
 
+    _elem    = &elem;
+    
     // the quadrature element is the subcell on which the quadrature is to be
     // performed and the reference element is the element inside which the
     // subcell is defined
@@ -174,6 +176,7 @@ MAST::SubCellFE::init(const MAST::GeomElem& elem,
     subcell_fe->attach_quadrature_rule(subcell_qrule.get());
     subcell_fe->reinit(q_elem);
     _subcell_JxW = subcell_fe->get_JxW();
+    _qpoints     = local_fe->get_xyz();
     
     // transform the normal and
     if (elem.use_local_elem()) {
@@ -229,6 +232,8 @@ MAST::SubCellFE::init_for_side(const MAST::GeomElem& elem,
 
     libmesh_assert(!_initialized);
 
+    _elem     = &elem;
+    
     // the quadrature element is the subcell on which the quadrature is to be
     // performed and the reference element is the element inside which the
     // subcell is defined
@@ -321,6 +326,7 @@ MAST::SubCellFE::init_for_side(const MAST::GeomElem& elem,
     subcell_fe->attach_quadrature_rule(subcell_qrule.get());
     subcell_fe->reinit(q_elem, s);
     _subcell_JxW = subcell_fe->get_JxW();
+    _qpoints     = local_fe->get_xyz();
 
     // normals in the coordinate system attached to the reference element
     _local_normals = subcell_fe->get_normals();

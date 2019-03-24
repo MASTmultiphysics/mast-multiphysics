@@ -184,6 +184,7 @@ assemble_reduced_order_quantity
         //            physics_elem->attach_active_solution_function(*_sol_function);
         
         MAST::GeomElem geom_elem;
+        _elem_ops->set_elem_data(elem->dim(), geom_elem);
         geom_elem.init(*elem, *_system);
         
         _elem_ops->init(geom_elem);
@@ -319,6 +320,7 @@ assemble_reduced_order_quantity_sensitivity
         basis_mat.setZero(ndofs, n_basis);
         
         MAST::GeomElem geom_elem;
+        _elem_ops->set_elem_data(elem->dim(), geom_elem);
         geom_elem.init(*elem, *_system);
         _elem_ops->init(geom_elem);
         

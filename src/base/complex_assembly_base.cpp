@@ -165,6 +165,7 @@ MAST::ComplexAssemblyBase::residual_l2_norm(const libMesh::NumericVector<Real>& 
         dof_map.dof_indices (elem, dof_indices);
         
         MAST::GeomElem geom_elem;
+        ops.set_elem_data(elem->dim(), geom_elem);
         geom_elem.init(*elem, *_system);
         
         ops.init(geom_elem);
@@ -310,6 +311,7 @@ residual_and_jacobian_field_split (const libMesh::NumericVector<Real>& X_R,
         dof_map.dof_indices (elem, dof_indices);
         
         MAST::GeomElem geom_elem;
+        ops.set_elem_data(elem->dim(), geom_elem);
         geom_elem.init(*elem, *_system);
         
         ops.init(geom_elem);
@@ -491,6 +493,7 @@ residual_and_jacobian_blocked (const libMesh::NumericVector<Real>& X,
         dof_map.dof_indices (elem, dof_indices);
         
         MAST::GeomElem geom_elem;
+        ops.set_elem_data(elem->dim(), geom_elem);
         geom_elem.init(*elem, *_system);
         
         ops.init(geom_elem);

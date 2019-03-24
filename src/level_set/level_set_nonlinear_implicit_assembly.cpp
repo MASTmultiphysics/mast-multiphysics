@@ -416,6 +416,7 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
                 // the Jacobian is based on the homogenizaton method to maintain
                 // a well conditioned global Jacobian.
                 MAST::GeomElem geom_elem;
+                ops.set_elem_data(elem->dim(), geom_elem);
                 geom_elem.init(*elem, *_system);
                 
                 ops.init(geom_elem);
@@ -652,6 +653,7 @@ sensitivity_assemble (const MAST::FunctionBase& f,
                     mat.setZero(ndofs, ndofs);
                     
                     MAST::GeomElem geom_elem;
+                    ops.set_elem_data(elem->dim(), geom_elem);
                     geom_elem.init(*elem, *_system);
                     
                     ops.init(geom_elem);
@@ -934,6 +936,7 @@ calculate_output_derivative(const libMesh::NumericVector<Real>& X,
                     mat.setZero(ndofs, ndofs);
                     
                     MAST::GeomElem geom_elem;
+                    ops.set_elem_data(elem->dim(), geom_elem);
                     geom_elem.init(*elem, *_system);
                     
                     ops.init(geom_elem);
@@ -1249,6 +1252,7 @@ _adjoint_sensitivity_dot_product (const MAST::FunctionBase& f,
                     mat.setZero(ndofs, ndofs);
                     
                     MAST::GeomElem geom_elem;
+                    ops.set_elem_data(elem->dim(), geom_elem);
                     geom_elem.init(*elem, *_system);
  
                     ops.init(geom_elem);

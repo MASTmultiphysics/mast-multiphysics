@@ -72,11 +72,13 @@ MAST::StructuralNonlinearAssemblyElemOperations::set_elem_solution(const RealVec
 
 
 void
-MAST::StructuralNonlinearAssemblyElemOperations::set_elem_data(MAST::GeomElem& elem) const {
+MAST::StructuralNonlinearAssemblyElemOperations::
+set_elem_data(unsigned int dim,
+              MAST::GeomElem& elem) const {
     
     libmesh_assert(!_physics_elem);
     
-    if (elem.dim() == 1) {
+    if (dim == 1) {
         
         const MAST::ElementPropertyCard1D& p =
         dynamic_cast<const MAST::ElementPropertyCard1D&>(_discipline->get_property_card(elem));

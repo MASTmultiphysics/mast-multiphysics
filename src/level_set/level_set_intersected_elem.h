@@ -45,12 +45,12 @@ namespace MAST {
         /*!
          *   @return a reference to quadrature element.
          */
-        const libMesh::Elem& get_quadrature_elem() const;
+        virtual const libMesh::Elem& get_quadrature_elem() const;
         
         /*!
          *   @return a reference to quadrature element.
          */
-        const libMesh::Elem& get_quadrature_local_elem() const;
+        virtual const libMesh::Elem& get_quadrature_local_elem() const;
 
         /*!
          *   @return \p true if the element has a zero level set boundary

@@ -205,6 +205,7 @@ assemble_generalized_aerodynamic_force_matrix
             dof_map.dof_indices (elem, dof_indices);
             
             MAST::GeomElem geom_elem;
+            ops.set_elem_data(elem->dim(), geom_elem);
             geom_elem.init(*elem, *_system);
             
             ops.init(geom_elem);

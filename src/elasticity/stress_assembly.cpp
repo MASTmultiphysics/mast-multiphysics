@@ -162,6 +162,7 @@ update_stress_strain_data(MAST::StressStrainOutputBase&       ops,
         // clear before calculating the data
         ops.clear();
         MAST::GeomElem geom_elem;
+        ops.set_elem_data(elem->dim(), geom_elem);
         geom_elem.init(*elem, *_system);
         
         ops.init(geom_elem);
@@ -297,6 +298,7 @@ update_stress_strain_sensitivity_data(MAST::StressStrainOutputBase&       ops,
         // presence of stress data, which is cleared after each element.
         ops.clear();
         MAST::GeomElem geom_elem;
+        ops.set_elem_data(elem->dim(), geom_elem);
         geom_elem.init(*elem, *_system);
         
         ops.init(geom_elem);

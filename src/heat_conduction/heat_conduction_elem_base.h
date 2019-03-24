@@ -28,7 +28,6 @@ namespace MAST {
     
     // Forward declerations
     class ElementPropertyCardBase;
-    class LocalElemBase;
     class BoundaryConditionBase;
     class FEMOperatorMatrix;
     template <typename ValType> class FieldFunction;
@@ -391,9 +390,6 @@ namespace MAST {
          *   element property
          */
         const MAST::ElementPropertyCardBase& _property;
-
-        
-        MAST::LocalElemBase                  *_local_elem;
     };
 
 }

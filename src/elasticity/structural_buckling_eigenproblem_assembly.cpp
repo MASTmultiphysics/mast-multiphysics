@@ -157,6 +157,7 @@ eigenproblem_assemble(libMesh::SparseMatrix<Real> *A,
             sol(i) = (*localized_solution1)(dof_indices[i]);
     
         MAST::GeomElem geom_elem;
+        ops.set_elem_data(elem->dim(), geom_elem);
         geom_elem.init(*elem, *_system);
         
         ops.init(geom_elem);

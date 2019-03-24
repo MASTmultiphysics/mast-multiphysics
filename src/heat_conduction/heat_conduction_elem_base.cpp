@@ -46,7 +46,6 @@ _property         (p) {
 
 MAST::HeatConductionElementBase::~HeatConductionElementBase() {
     
-    delete _local_elem;
 }
 
 

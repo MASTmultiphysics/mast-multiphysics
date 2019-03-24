@@ -388,7 +388,7 @@ MAST::StressStrainOutputBase::output_sensitivity_for_elem(const MAST::FunctionBa
     Real val = 0.;
     
     this->von_Mises_p_norm_functional_sensitivity_for_elem
-    (p, _physics_elem->elem().get_reference_elem().id(), val);
+    (p, _physics_elem->elem().get_quadrature_elem().id(), val);
     
     return val;
 }
@@ -430,18 +430,20 @@ MAST::StressStrainOutputBase::output_derivative_for_elem(RealVectorX& dq_dX) {
                                           *this);
         
         this->von_Mises_p_norm_functional_state_derivartive_for_elem
-        (_physics_elem->elem().get_reference_elem().id(), dq_dX);
+        (_physics_elem->elem().get_quadrature_elem().id(), dq_dX);
     }
 }
 
 
 
 void
-MAST::StressStrainOutputBase::set_elem_data(MAST::GeomElem& elem) const {
+MAST::StressStrainOutputBase::
+set_elem_data(unsigned int dim,
+              MAST::GeomElem& elem) const {
     
     libmesh_assert(!_physics_elem);
     
-    if (elem.dim() == 1) {
+    if (dim == 1) {
         
         const MAST::ElementPropertyCard1D& p =
         dynamic_cast<const MAST::ElementPropertyCard1D&>(_discipline->get_property_card(elem));
@@ -586,18 +588,18 @@ add_stress_strain_at_qp_location(const MAST::GeomElem& e,
     
     // check if the specified element exists in the map. If not, add it
     std::map<const libMesh::dof_id_type, std::vector<MAST::StressStrainOutputBase::Data*> >::iterator
-    it = _stress_data.find(e.get_reference_elem().id());
+    it = _stress_data.find(e.get_quadrature_elem().id());
     
     // if the element does not exist in the map, add it to the map.
     if (it == _stress_data.end())
         it =
         _stress_data.insert(std::pair<const libMesh::dof_id_type, std::vector<MAST::StressStrainOutputBase::Data*> >
-                            (e.get_reference_elem().id(),
+                            (e.get_quadrature_elem().id(),
                              std::vector<MAST::StressStrainOutputBase::Data*>())).first;
     else
         // this assumes that the previous qp data is provided and
         // therefore, this qp number should be == size of the vector.
-        libmesh_assert_equal_to(qp, it->second.size());
+    libmesh_assert_equal_to(qp, it->second.size());
     
     it->second.push_back(d);
     
@@ -634,14 +636,14 @@ add_stress_strain_at_boundary_qp_location(const MAST::GeomElem& e,
     
     // check if the specified element exists in the map. If not, add it
     std::map<const libMesh::dof_id_type, std::vector<MAST::StressStrainOutputBase::Data*> >::iterator
-    it = _boundary_stress_data.find(e.get_reference_elem().id());
+    it = _boundary_stress_data.find(e.get_quadrature_elem().id());
     
     // if the element does not exist in the map, add it to the map.
     if (it == _boundary_stress_data.end())
         it =
         _boundary_stress_data.insert
         (std::pair<const libMesh::dof_id_type, std::vector<MAST::StressStrainOutputBase::Data*> >
-         (e.get_reference_elem().id(),
+         (e.get_quadrature_elem().id(),
           std::vector<MAST::StressStrainOutputBase::Data*>())).first;
     else
         // this assumes that the previous qp data is provided and
@@ -671,7 +673,7 @@ n_stress_strain_data_for_elem(const MAST::GeomElem& e) const {
     unsigned int n = 0;
     
     std::map<const libMesh::dof_id_type, std::vector<MAST::StressStrainOutputBase::Data*> >::const_iterator
-    it = _stress_data.find(e.get_reference_elem().id());
+    it = _stress_data.find(e.get_quadrature_elem().id());
     
     if ( it != _stress_data.end())
         n = (unsigned int)it->second.size();
@@ -688,7 +690,7 @@ n_boundary_stress_strain_data_for_elem(const MAST::GeomElem& e) const {
     unsigned int n = 0;
     
     std::map<const libMesh::dof_id_type, std::vector<MAST::StressStrainOutputBase::Data*> >::const_iterator
-    it = _boundary_stress_data.find(e.get_reference_elem().id());
+    it = _boundary_stress_data.find(e.get_quadrature_elem().id());
     
     if ( it != _boundary_stress_data.end())
         n = (unsigned int)it->second.size();
@@ -704,7 +706,7 @@ get_stress_strain_data_for_elem(const MAST::GeomElem& e) const {
     
     // check if the specified element exists in the map. If not, add it
     std::map<const libMesh::dof_id_type, std::vector<MAST::StressStrainOutputBase::Data*> >::const_iterator
-    it = _stress_data.find(e.get_reference_elem().id());
+    it = _stress_data.find(e.get_quadrature_elem().id());
 
     // make sure that the specified elem exists in the map
     libmesh_assert(it != _stress_data.end());
@@ -722,7 +724,7 @@ get_stress_strain_data_for_elem_at_qp(const MAST::GeomElem& e,
     
     // check if the specified element exists in the map. If not, add it
     std::map<const libMesh::dof_id_type, std::vector<MAST::StressStrainOutputBase::Data*> >::const_iterator
-    it = _stress_data.find(e.get_reference_elem().id());
+    it = _stress_data.find(e.get_quadrature_elem().id());
     
     // make sure that the specified elem exists in the map
     libmesh_assert(it != _stress_data.end());

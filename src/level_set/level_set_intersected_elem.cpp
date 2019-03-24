@@ -105,11 +105,8 @@ MAST::LevelSetIntersectedElem::init(const libMesh::Elem& elem,
     _ref_elem      = &intersection.elem();
     _sys_init      = &sys_init;
     
-    if (use_local_elem()) {
-        // not implemented yet
-        libmesh_error();
-        _init_local_elem();
-    }
+    // initialize the local element if needed. (not implemented yet)
+    //_init_local_elem();
 }
 
 

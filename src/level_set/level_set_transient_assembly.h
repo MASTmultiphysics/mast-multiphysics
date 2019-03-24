@@ -113,7 +113,8 @@ namespace MAST {
          *   virtual function, nothing to be done here.
          */
         virtual void
-        set_elem_data(MAST::GeomElem& elem) const { }
+        set_elem_data(unsigned int dim,
+                      MAST::GeomElem& elem) const { }
 
         
         /*!

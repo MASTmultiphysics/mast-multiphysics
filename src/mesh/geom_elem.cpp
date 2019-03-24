@@ -133,9 +133,8 @@ MAST::GeomElem::init(const libMesh::Elem& elem,
     _ref_elem = &elem;
     _sys_init = &sys_init;
     
-    // check if a local element needs to be initialized
-    if (use_local_elem())
-        _init_local_elem();
+    // initialize the local element if needed. 
+    _init_local_elem();
 }
 
 
