@@ -1,10 +1,6 @@
 
 # Define the target
-add_executable(fluid_jacobian)
-
-target_sources(fluid_jacobian
-                PRIVATE
-                ${CMAKE_CURRENT_LIST_DIR}/check_fluid_jacobian.cpp)
+add_executable(fluid_jacobian  check_fluid_jacobian.cpp)
 
 target_include_directories(fluid_jacobian
                            PRIVATE
