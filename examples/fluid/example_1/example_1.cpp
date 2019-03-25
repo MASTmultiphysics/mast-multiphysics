@@ -30,6 +30,7 @@
 #include "base/nonlinear_system.h"
 #include "base/transient_assembly.h"
 #include "base/boundary_condition_base.h"
+#include "base/field_function_base.h"
 #include "boundary_condition/dirichlet_boundary_condition.h"
 #include "fluid/conservative_fluid_system_initialization.h"
 #include "fluid/conservative_fluid_discipline.h"
@@ -51,6 +52,7 @@
 #include "libmesh/numeric_vector.h"
 #include "libmesh/exodusII_io.h"
 #include "libmesh/nonlinear_solver.h"
+#include "libmesh/periodic_boundary.h"
 
 
 //
@@ -86,17 +88,11 @@ protected:
     libMesh::FEType                                _fetype;
 
     std::set<MAST::BoundaryConditionBase*>         _boundary_conditions;
+    std::set<libMesh::PeriodicBoundary*>           _periodic_boundaries;
 
     // This will initialize the mesh
     void _init_mesh(bool mesh, bool bc) {
         
-        if (mesh) {
-            
-            libmesh_assert(!_mesh);
-            
-            _mesh              = new libMesh::ParallelMesh(_init.comm());
-        }
-
         // The mesh is created using classes written in MAST. The particular
         // mesh to be used can be selected using the input parameter
         // ` mesh=val `, where `val` can be one of the following:
@@ -105,13 +101,14 @@ protected:
         //   - `naca0012_wing` for flow over swept wing with NACA0012 section
         //   - `panel_2D` for 2D flow analysis over a panel
         //   - `panel_3D` for 3D flow analysis over a panel
+        //   - `mfu`      for 3D flow analysis over a minimal flow unit
         //
         // The meshing and boundary conditions for each flow analysis case
         // can be modified using suitable parameters, which are described in this
         // example.
         std::string
         s  = _input("mesh",
-                    "type of mesh to be analyzed {naca0012, cylinder, naca0012_wing, panel_2D, panel_3D}",
+                    "type of mesh to be analyzed {naca0012, cylinder, naca0012_wing, panel_2D, panel_3D, mfu}",
                     "naca0012");
 
         if (s == "naca0012")
@@ -124,6 +121,8 @@ protected:
             _init_panel_2D(mesh, bc);
         else if (s == "panel_3d")
             _init_panel_3D(mesh, bc);
+        else if (s == "mfu")
+            _init_minimal_flow_unit(mesh, bc);
         else
             libmesh_error_msg("unknown mesh type");
     }
@@ -336,6 +335,116 @@ protected:
 
     }
 
+    
+    void _init_minimal_flow_unit(bool mesh, bool bc) {
+        
+        if (mesh) {
+            
+            libmesh_assert(_sys);
+            
+            _dim  = 3;
+            
+            const unsigned int
+            streamline_divs  = _input("streamline_divs", "number of elements along the streamwise direction", 20),
+            crossflow_divs   = _input("crossflow_divs", "number of elements along the crossflow direction",   20),
+            height_divs      = _input("height_divs", "number of elements along the height", 20);
+            
+            const Real
+            pi               = acos(-1.),
+            length           = _input("length", "streamwise length of flow unit", pi),
+            width            = _input("width", "crossflow width of the flow unit", 0.34*pi),
+            height           = _input("height", "distance between upper and lower walls", 2.);
+            
+
+            // initialize the periodic boundary conditions
+            // libMesh numbering:
+            //  0  -> back    -- along z
+            //  1  -> bottom  -- along y
+            //  2  -> right   -- along x
+            //  3  -> top     -- along y
+            //  4  -> left    -- along x
+            //  5  -> front   -- along z
+            
+            libMesh::PeriodicBoundary
+            *periodic_streamwise = new libMesh::PeriodicBoundary(libMesh::Point(length, 0., 0.)),
+            *periodic_crossflow  = new libMesh::PeriodicBoundary(libMesh::Point(0.,  width, 0.));
+            
+            // left,right along x-axis
+            periodic_streamwise->myboundary     = 4;
+            periodic_streamwise->pairedboundary = 2;
+
+            // bottom-top along y-axis
+            periodic_crossflow->myboundary      = 1;
+            periodic_crossflow->pairedboundary  = 3;
+
+            _sys->get_dof_map().add_periodic_boundary(*periodic_streamwise);
+            _sys->get_dof_map().add_periodic_boundary(*periodic_crossflow);
+
+            
+            
+            std::string
+            t = _input("elem_type", "type of geometric element in the mesh", "hex8");
+            
+            libMesh::ElemType
+            e_type = libMesh::Utility::string_to_enum<libMesh::ElemType>(t);
+            
+            // initialize the mesh
+            libMesh::MeshTools::Generation::build_cube(*_mesh,
+                                                       streamline_divs,
+                                                       crossflow_divs,
+                                                       height_divs,
+                                                       -length/2., length/2.,
+                                                       -width/2.,   width/2.,
+                                                       -height/2., height/2.,
+                                                       e_type);
+            
+        }
+        
+        if (bc) {
+            
+            libmesh_assert(_flight_cond);
+            
+            // this assumes a viscous analysis
+            libmesh_assert(_flight_cond->gas_property.if_viscous);
+            
+            // libMesh numbering:
+            //  0  -> back    -- along z
+            //  1  -> bottom  -- along y
+            //  2  -> right   -- along x
+            //  3  -> top     -- along y
+            //  4  -> left    -- along x
+            //  5  -> front   -- along z
+
+            MAST::DirichletBoundaryCondition
+            *dirichlet_bottom = new MAST::DirichletBoundaryCondition,
+            *dirichlet_top    = new MAST::DirichletBoundaryCondition;
+            
+            std::vector<unsigned int> constrained_vars(3);
+            constrained_vars[0] = _sys_init->vars()[1];
+            constrained_vars[1] = _sys_init->vars()[2];
+            constrained_vars[2] = _sys_init->vars()[3];
+            dirichlet_bottom->init (0, constrained_vars);
+            dirichlet_top->init    (5, constrained_vars);
+            _discipline->add_dirichlet_bc(0, *dirichlet_bottom);
+            _discipline->add_dirichlet_bc(5, *dirichlet_top);
+            _discipline->init_system_dirichlet_bc(*_sys);
+            
+            // create the boundary conditions for slip-wall, symmetry and far-field
+            MAST::BoundaryConditionBase
+            *wall        = new MAST::BoundaryConditionBase(MAST::NO_SLIP_WALL);
+
+            // libMesh defines back/front along the z-axis
+            _discipline->add_side_load(   0, *wall);      // back
+            _discipline->add_side_load(   5, *wall);      // front
+            
+            // store the pointers for later deletion in the destructor
+            _boundary_conditions.insert(wall);
+            _boundary_conditions.insert(dirichlet_top);
+            _boundary_conditions.insert(dirichlet_bottom);
+        }
+        
+    }
+
     void _init_panel_2D(bool mesh, bool bc) {
         
         if (mesh) {
@@ -425,17 +534,68 @@ protected:
         
         if (!restart) {
             
-            unsigned int
-            n = _mesh->mesh_dimension();
-            RealVectorX s = RealVectorX::Zero(n+2);
+            bool
+            random = _input("random_initial_perturbations", "randomly perturb the initial velocity field", false);
+
+            RealVectorX s = RealVectorX::Zero(_dim+2);
             s(0) = _flight_cond->rho();
             s(1) = _flight_cond->rho_u1();
             s(2) = _flight_cond->rho_u2();
-            if (n > 2)
+            if (_dim > 2)
                 s(3) = _flight_cond->rho_u3();
-            s(n+1) = _flight_cond->rho_e();
-            
-            _sys_init->initialize_solution(s);
+            s(_dim+1) = _flight_cond->rho_e();
+
+            if (!random)
+                // uniform solution
+                _sys_init->initialize_solution(s);
+            else {
+                
+                Real
+                amplitude = _input("perturb_amplitude", "maximum amplitude of velocity perturbation as fraction of velocity magnitude", 0.1),
+                delta     = amplitude * _flight_cond->velocity_magnitude();
+                
+                class RandomVelocityPerturbationSolution:
+                public MAST::FieldFunction<RealVectorX> {
+                    
+                protected:
+                    
+                    unsigned int                 _dim;
+                    Real                         _delta;
+                    const MAST::FlightCondition &_flt;
+                    
+                public:
+                    
+                    RandomVelocityPerturbationSolution(unsigned int dim, Real delta, const MAST::FlightCondition& flt):
+                    MAST::FieldFunction<RealVectorX>("sol"), _dim(dim), _delta(delta), _flt(flt) { }
+                    
+                    virtual ~RandomVelocityPerturbationSolution() { }
+                    
+                    virtual void
+                    operator()(const libMesh::Point& p, const Real t, RealVectorX& v) const {
+                        RealVectorX
+                        r     = _delta * _flt.rho() * RealVectorX::Random(_dim);
+                        v     = RealVectorX::Zero(_dim+2);
+                        v(0) = _flt.rho();
+                        v(1) = _flt.rho_u1() + r(0);
+                        v(2) = _flt.rho_u2() + r(1);
+                        if (_dim > 2)
+                            v(3) = _flt.rho_u3() + r(2);
+                        
+                        // updated KE
+                        Real
+                        ke = 0.;
+                        for (unsigned int i=0; i<_dim; i++) ke += std::pow(v(i+1)/v(0), 2);
+                        ke = 0.5 * v(0) * std::pow(ke, 0.5);
+                        
+                        // update the kinetic energy with the random perturbation
+                        v(_dim+1) = (_flt.rho_e() - _flt.q0() + ke);
+                    }
+                };
+                
+                _sys_init->initialize_solution(RandomVelocityPerturbationSolution(_dim,
+                                                                                  delta,
+                                                                                  *_flight_cond));
+            }
         }
         else {
             
@@ -469,15 +629,17 @@ public:
     _output         (nullptr) {
 
 
-        // initialize the mesh. Details of parameters for each mesh are
-        // described above.
-        _init_mesh(true, false);
+        _mesh              = new libMesh::ParallelMesh(_init.comm());
         
         // create equation system
         _eq_sys = new libMesh::EquationSystems(*_mesh);
         
         // add the system to be used for fluid analysis
         _sys = &(_eq_sys->add_system<MAST::NonlinearSystem>("fluid"));
+        
+        // initialize the mesh. Details of parameters for each mesh are
+        // described above.
+        _init_mesh(true, false);
         
         // create the discipline where boundary conditions will be stored
         _discipline = new MAST::ConservativeFluidDiscipline(*_eq_sys);
@@ -543,11 +705,21 @@ public:
         
         delete _output;
 
-        std::set<MAST::BoundaryConditionBase*>::iterator
-        it   = _boundary_conditions.begin(),
-        end  = _boundary_conditions.end();
-        for ( ; it!=end; it++)
-            delete *it;
+        {
+            std::set<MAST::BoundaryConditionBase*>::iterator
+            it   = _boundary_conditions.begin(),
+            end  = _boundary_conditions.end();
+            for ( ; it!=end; it++)
+                delete *it;
+        }
+
+        {
+            std::set<libMesh::PeriodicBoundary*>::iterator
+            it   = _periodic_boundaries.begin(),
+            end  = _periodic_boundaries.end();
+            for ( ; it!=end; it++)
+                delete *it;
+        }
     }
     
     void compute_flow() {
