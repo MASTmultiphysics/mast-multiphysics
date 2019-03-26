@@ -262,6 +262,8 @@ MAST::LevelSetIntersection::_first_order_elem(const libMesh::Elem &e) {
             
             for (unsigned int i=0; i<4; i++)
                 first_order_elem->set_node(i) = const_cast<libMesh::Node*>(e.node_ptr(i));
+            
+            first_order_elem->set_id() = e.id();
         }
             break;
             
@@ -285,7 +287,7 @@ _init_on_first_order_ref_elem(const MAST::FieldFunction<Real>& phi,
     // make sure that this has not been initialized already
     libmesh_assert(!_initialized);
     libmesh_assert_equal_to(e.dim(), 2); // this is only for 2D elements
-    _elem      =  &e;
+    libmesh_assert(_elem);
     
     // this assumes that the phi=0 interface is not fully contained inside
     // the element. That is, the interface is assumed to intersect with the
@@ -309,9 +311,10 @@ _init_on_first_order_ref_elem(const MAST::FieldFunction<Real>& phi,
     bool
     on_level_set = false;
     
-    for (unsigned int i=0; i<e.n_nodes(); i++) {
+    // the shape function values are checked on all nodes of the reference elem
+    for (unsigned int i=0; i<_elem->n_nodes(); i++) {
         
-        const libMesh::Node& n = e.node_ref(i);
+        const libMesh::Node& n = _elem->node_ref(i);
         phi(n, t, val);
         on_level_set      = fabs(val) <= _tol;
         _node_phi_vals[&n] = std::pair<Real, bool>(val, on_level_set);
@@ -335,7 +338,7 @@ _init_on_first_order_ref_elem(const MAST::FieldFunction<Real>& phi,
         // element is completely on the positive side with no intersection
         
         _mode = MAST::NO_INTERSECTION;
-        _positive_phi_elems.push_back(&e);
+        _positive_phi_elems.push_back(_elem);
         _if_elem_on_positive_phi         = true;
         _if_elem_on_negative_phi         = false;
         _initialized = true;
@@ -347,7 +350,7 @@ _init_on_first_order_ref_elem(const MAST::FieldFunction<Real>& phi,
         // element is completely on the negative side, with no intersection
         
         _mode = MAST::NO_INTERSECTION;
-        _negative_phi_elems.push_back(&e);
+        _negative_phi_elems.push_back(_elem);
         _if_elem_on_positive_phi         = false;
         _if_elem_on_negative_phi         = true;
         _initialized = true;
@@ -387,12 +390,12 @@ _init_on_first_order_ref_elem(const MAST::FieldFunction<Real>& phi,
         
         if (min_val <= _tol &&
             max_val <= _tol ) { // element is on the negative side
-            _negative_phi_elems.push_back(&e);
+            _negative_phi_elems.push_back(_elem);
         }
         else {
             
             libmesh_assert_greater(max_val, _tol);
-            _positive_phi_elems.push_back(&e);
+            _positive_phi_elems.push_back(_elem);
         }
         
         std::vector<std::pair<libMesh::Point, libMesh::Point> >
@@ -431,14 +434,14 @@ _init_on_first_order_ref_elem(const MAST::FieldFunction<Real>& phi,
             // It is on the negative side if the minimum value of the function
             // is negative.
             if (max_val > _tol)
-                _positive_phi_elems.push_back(&e);
+                _positive_phi_elems.push_back(_elem);
             else if (min_val < _tol)
-                _negative_phi_elems.push_back(&e);
+                _negative_phi_elems.push_back(_elem);
             
             std::vector<std::pair<libMesh::Point, libMesh::Point> >
             side_nondim_points;
             _add_node_local_coords(e, side_nondim_points, _node_local_coords);
-            _elem_sides_on_interface[&e] = i;
+            _elem_sides_on_interface[_elem] = i;
             _initialized                 = true;
             return;
         }

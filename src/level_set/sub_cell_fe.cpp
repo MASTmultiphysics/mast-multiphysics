@@ -101,9 +101,16 @@ MAST::SubCellFE::init(const MAST::GeomElem& elem,
     subcell_qrule(fe_type.default_quadrature_rule
                   (q_elem->dim(),
                    _sys.system().extra_quadrature_order+_extra_quadrature_order).release());
+    // subcell and local FE are always going to be initialized for linear
+    // shape functions. This is because we create linear sub-elements
+    // and since libmesh does not allow high-order FE on linear elements.
+    // We will initialize the quadrature point locations on these sub elements
+    // and then map it back to the high-order element
+    libMesh::FEType
+    linear_fetype(libMesh::FIRST, libMesh::LAGRANGE);
     std::unique_ptr<libMesh::FEBase>
-    local_fe  (libMesh::FEBase::build(q_elem->dim(), fe_type).release()),
-    subcell_fe(libMesh::FEBase::build(q_elem->dim(), fe_type).release());
+    local_fe  (libMesh::FEBase::build(q_elem->dim(), linear_fetype).release()),
+    subcell_fe(libMesh::FEBase::build(q_elem->dim(), linear_fetype).release());
 
     // quadrature points in the non-dimensional coordinate system of
     // reference element are obtained from the local_fe
@@ -265,9 +272,17 @@ MAST::SubCellFE::init_for_side(const MAST::GeomElem& elem,
                   (q_elem->dim()-1,
                    _sys.system().extra_quadrature_order+_extra_quadrature_order).release());
 
+    // subcell and local FE are always going to be initialized for linear
+    // shape functions. This is because we create linear sub-elements
+    // and since libmesh does not allow high-order FE on linear elements.
+    // We will initialize the quadrature point locations on these sub elements
+    // and then map it back to the high-order element
+    libMesh::FEType
+    linear_fetype(libMesh::FIRST, libMesh::LAGRANGE);
+
     std::unique_ptr<libMesh::FEBase>
-    local_fe  (libMesh::FEBase::build(q_elem->dim(), fe_type).release()),
-    subcell_fe(libMesh::FEBase::build(q_elem->dim(), fe_type).release());
+    local_fe  (libMesh::FEBase::build(q_elem->dim(), linear_fetype).release()),
+    subcell_fe(libMesh::FEBase::build(q_elem->dim(), linear_fetype).release());
 
     // quadrature points in the non-dimensional coordinate system of
     // reference element are obtained from the local_fe

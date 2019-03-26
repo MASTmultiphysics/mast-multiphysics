@@ -138,8 +138,8 @@ MAST::MaterialPatch::_quad4_material_levels(const libMesh::Elem& elem,
         
         const libMesh::Elem& e = **e_it;
         //MAST::plot_elem(e);
-        // currently only implemented for quad4 elements
-        libmesh_assert_equal_to(e.type(), libMesh::QUAD4);
+        // currently only implemented for quad4 and quad9 elements
+        libmesh_assert((e.type() == libMesh::QUAD4) || (e.type() == libMesh::QUAD9));
         
         const libMesh::Point
         p = e.centroid() - node;
