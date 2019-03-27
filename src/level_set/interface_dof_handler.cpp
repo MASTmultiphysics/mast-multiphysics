@@ -77,7 +77,7 @@ MAST::LevelSetInterfaceDofHandler::init(const MAST::SystemInitialization& sys_in
         intersection.init(phi, *elem, system.time);
         if (intersection.if_elem_has_boundary()) {
             
-            intersection.get_nodes_on_negative_phi(negative_phi_nodes);
+            intersection.get_corner_nodes_on_negative_phi(negative_phi_nodes);
             
             std::set<const libMesh::Node*>::const_iterator
             nd_it   = negative_phi_nodes.begin(),

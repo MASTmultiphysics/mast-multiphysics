@@ -509,17 +509,37 @@ MAST::LevelSetIntersection::get_sub_elems_negative_phi() const {
 
 void
 MAST::LevelSetIntersection::
-get_nodes_on_negative_phi(std::set<const libMesh::Node*>& nodes) const {
+get_corner_nodes_on_negative_phi(std::set<const libMesh::Node*>& nodes) const {
     
     nodes.clear();
     
-    // iterate over the nodes and return the ones that had a negative phi
+    // iterate over the corner nodes and return the ones that had a negative phi
     // value
+    unsigned int
+    n_corner_nodes = 0;
+    
+    switch (_elem->type()) {
+        case libMesh::QUAD4:
+        case libMesh::QUAD8:
+        case libMesh::QUAD9:
+            n_corner_nodes = 4;
+            break;
+            
+        default:
+            libmesh_error(); // other cases not yet handled
+    }
+    
     std::map<const libMesh::Node*, std::pair<Real, bool>>::const_iterator
-    it    = _node_phi_vals.begin(),
+    it,
     end   = _node_phi_vals.end();
     
-    for ( ; it != end; it++) {
+    for (unsigned int i=0; i<n_corner_nodes; i++) {
+        
+        const libMesh::Node* nd = _elem->node_ptr(i);
+        
+        it = _node_phi_vals.find(nd);
+        
+        libmesh_assert(it != end);
         
         if (it->second.first < 0.)
             nodes.insert(it->first);

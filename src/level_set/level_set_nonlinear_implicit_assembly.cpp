@@ -386,7 +386,7 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
             DenseRealMatrix m(ndofs, ndofs);
             //dof_map.constrain_element_matrix(m, dof_indices);
             for (unsigned int i=0; i<ndofs; i++)
-                m(i,i) = 1.e-6;
+                m(i,i) = 1.e-16;
             J->add_matrix(m, dof_indices);
         }
         

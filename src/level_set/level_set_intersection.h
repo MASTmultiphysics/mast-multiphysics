@@ -148,7 +148,7 @@ namespace MAST {
         get_sub_elems_negative_phi() const;
 
         void
-        get_nodes_on_negative_phi(std::set<const libMesh::Node*>& nodes) const;
+        get_corner_nodes_on_negative_phi(std::set<const libMesh::Node*>& nodes) const;
         
         /*!
          *   @returns the id of side that is on the interface. In case the
