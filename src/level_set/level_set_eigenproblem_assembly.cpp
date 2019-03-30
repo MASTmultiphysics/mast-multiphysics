@@ -73,8 +73,7 @@ set_level_set_function(MAST::FieldFunction<Real>& level_set) {
     libmesh_assert(_system);
     
     _level_set    = &level_set;
-    _intersection = new MAST::LevelSetIntersection(_system->system().get_mesh().max_elem_id(),
-                                                   _system->system().get_mesh().max_node_id());
+    _intersection = new MAST::LevelSetIntersection();
 }
 
 
@@ -164,7 +163,9 @@ eigenproblem_assemble(libMesh::SparseMatrix<Real>* A,
         
         const libMesh::Elem* elem = *el;
         
-        _intersection->init(*_level_set, *elem, eigen_sys.time);
+        _intersection->init(*_level_set, *elem, eigen_sys.time,
+                            eigen_sys.get_mesh().max_elem_id(),
+                            eigen_sys.get_mesh().max_node_id());
         
         dof_map.dof_indices (elem, dof_indices);
         
@@ -286,7 +287,9 @@ eigenproblem_sensitivity_assemble(const MAST::FunctionBase& f,
         
         const libMesh::Elem* elem = *el;
         
-        _intersection->init(*_level_set, *elem, eigen_sys.time);
+        _intersection->init(*_level_set, *elem, eigen_sys.time,
+                            eigen_sys.get_mesh().max_elem_id(),
+                            eigen_sys.get_mesh().max_node_id());
         
         
         if (_intersection->if_elem_has_positive_phi_region()) {

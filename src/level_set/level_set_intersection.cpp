@@ -28,12 +28,11 @@
 
 
 
-MAST::LevelSetIntersection::LevelSetIntersection(unsigned int max_elem_id,
-                                                 unsigned int max_node_id):
+MAST::LevelSetIntersection::LevelSetIntersection():
 _tol                             (1.e-8),
 _max_iters                       (10),
-_max_mesh_elem_id                (max_elem_id),
-_max_mesh_node_id                (max_node_id),
+_max_mesh_elem_id                (0),
+_max_mesh_node_id                (0),
 _max_elem_divs                   (4),
 _elem                            (nullptr),
 _initialized                     (false),
@@ -191,6 +190,8 @@ MAST::LevelSetIntersection::clear() {
     _if_elem_on_positive_phi    = false;
     _if_elem_on_negative_phi    = false;
     _mode                       = MAST::NO_INTERSECTION;
+    _max_mesh_elem_id           = 0;
+    _max_mesh_node_id           = 0;
     _node_num_on_boundary       = 0;
     _edge_num_on_boundary       = 0;
     _positive_phi_elems.clear();
@@ -221,11 +222,17 @@ MAST::LevelSetIntersection::clear() {
 void
 MAST::LevelSetIntersection::init(const MAST::FieldFunction<Real>& phi,
                                  const libMesh::Elem& e,
-                                 const Real t) {
+                                 const Real t,
+                                 unsigned int max_elem_id,
+                                 unsigned int max_node_id) {
 
     // make sure that this has not been initialized already
     libmesh_assert(!_initialized);
     libmesh_assert_equal_to(e.dim(), 2); // this is only for 2D elements
+    
+    _max_mesh_elem_id = max_elem_id;
+    _max_mesh_node_id = max_node_id;
+    
     _elem      =  &e;
     
     switch (e.type()) {

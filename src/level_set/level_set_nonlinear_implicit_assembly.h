@@ -52,6 +52,12 @@ namespace MAST {
         
         
         /*!
+         *   @return flag if using dof_handler or not
+         */
+        bool if_use_dof_handler() const;
+        
+        
+        /*!
          *   attaches level set function to \p this
          */
         virtual void
@@ -172,6 +178,8 @@ namespace MAST {
                                           const libMesh::NumericVector<Real>& dq_dX);
         */
         
+        bool                                  _enable_dof_handler;
+
         MAST::FieldFunction<Real>            *_level_set;
 
         MAST::FieldFunction<RealVectorX>     *_indicator;

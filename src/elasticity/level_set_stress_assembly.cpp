@@ -53,17 +53,15 @@ MAST::LevelSetStressAssembly::~LevelSetStressAssembly() {
 
 void
 MAST::LevelSetStressAssembly::init(MAST::FieldFunction<Real>& level_set,
-                                   MAST::LevelSetInterfaceDofHandler& dof_handler) {
+                                   MAST::LevelSetInterfaceDofHandler* dof_handler) {
     
     libmesh_assert(!_level_set);
     libmesh_assert(!_intersection);
-    libmesh_assert(!_dof_handler);
     libmesh_assert(_system);
     
     _level_set    = &level_set;
-    _dof_handler  = &dof_handler;
-    _intersection = new MAST::LevelSetIntersection(_system->system().get_mesh().max_elem_id(),
-                                                   _system->system().get_mesh().max_node_id());
+    _intersection = new MAST::LevelSetIntersection();
+    _dof_handler  = dof_handler;
 }
 
 
@@ -145,7 +143,9 @@ update_stress_strain_data(MAST::StressStrainOutputBase&       ops,
         
         const libMesh::Elem* elem = *el;
         
-        _intersection->init(*_level_set, *elem, structural_sys.time);
+        _intersection->init(*_level_set, *elem, structural_sys.time,
+                            structural_sys.get_mesh().max_elem_id(),
+                            structural_sys.get_mesh().max_node_id());
         
         // clear data structure since each element will account for all
         // sub elements only
@@ -162,7 +162,7 @@ update_stress_strain_data(MAST::StressStrainOutputBase&       ops,
             for (unsigned int i=0; i<dof_indices.size(); i++)
                 sol(i) = (*localized_solution)(dof_indices[i]);
             
-            if (false)//_dof_handler->if_factor_element(*elem))
+            if (_dof_handler && _dof_handler->if_factor_element(*elem))
                 _dof_handler->solution_of_factored_element(*elem, sol);
 
             const std::vector<const libMesh::Elem *> &

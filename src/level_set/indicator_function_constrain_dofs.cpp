@@ -86,7 +86,9 @@ MAST::IndicatorFunctionConstrainDofs::constrain() {
     for ( ; el != end_el; ++el) {
         
         const libMesh::Elem* elem = *el;
-        _intersection->init(_level_set, *elem, nonlin_sys.time);
+        _intersection->init(_level_set, *elem, nonlin_sys.time,
+                            nonlin_sys.get_mesh().max_elem_id(),
+                            nonlin_sys.get_mesh().max_node_id());
 
         nd_vals.setZero(elem->n_nodes());
         for (unsigned int i=0; i<elem->n_nodes(); i++) {

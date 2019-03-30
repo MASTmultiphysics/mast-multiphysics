@@ -55,14 +55,15 @@ namespace MAST {
         
     public:
         
-        LevelSetIntersection(unsigned int max_elem_id,
-                             unsigned int max_node_id);
+        LevelSetIntersection();
         
         virtual ~LevelSetIntersection();
 
         void init(const MAST::FieldFunction<Real>& phi,
                   const libMesh::Elem& e,
-                  const Real t);
+                  const Real t,
+                  unsigned int max_elem_id,
+                  unsigned int max_node_id);
 
         /*!
          *   clears the data structures
@@ -210,8 +211,8 @@ namespace MAST {
         Real                                         _tol;
         
         unsigned int                                 _max_iters;
-        const unsigned int                           _max_mesh_elem_id;
-        const unsigned int                           _max_mesh_node_id;
+        unsigned int                                 _max_mesh_elem_id;
+        unsigned int                                 _max_mesh_node_id;
         const unsigned int                           _max_elem_divs;
         const libMesh::Elem*                         _elem;
         bool                                         _initialized;

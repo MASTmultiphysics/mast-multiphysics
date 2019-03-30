@@ -44,6 +44,7 @@
 MAST::LevelSetNonlinearImplicitAssembly::
 LevelSetNonlinearImplicitAssembly():
 MAST::NonlinearImplicitAssembly(),
+_enable_dof_handler      (false),
 _level_set               (nullptr),
 _indicator               (nullptr),
 _intersection            (nullptr),
@@ -57,11 +58,9 @@ _velocity                (nullptr) {
 
 MAST::LevelSetNonlinearImplicitAssembly::~LevelSetNonlinearImplicitAssembly() {
  
-    if (_intersection) {
-        delete _intersection;
-        delete _dof_handler;
-        delete _void_solution_monitor;
-    }
+    if (_intersection)          delete _intersection;
+    if (_dof_handler)           delete _dof_handler;
+    if (_void_solution_monitor) delete _void_solution_monitor;
 }
 
 
@@ -73,10 +72,17 @@ MAST::LevelSetNonlinearImplicitAssembly::get_intersection() {
 }
 
 
+bool
+MAST::LevelSetNonlinearImplicitAssembly::if_use_dof_handler() const {
+    return _enable_dof_handler;
+}
+
+
 MAST::LevelSetInterfaceDofHandler&
 MAST::LevelSetNonlinearImplicitAssembly::get_dof_handler() {
     
     libmesh_assert(_level_set);
+    libmesh_assert(_dof_handler);
     return *_dof_handler;
 }
 
@@ -90,12 +96,13 @@ set_level_set_function(MAST::FieldFunction<Real>& level_set) {
     libmesh_assert(_system);
     
     _level_set    = &level_set;
-    _intersection = new MAST::LevelSetIntersection(_system->system().get_mesh().max_elem_id(),
-                                                   _system->system().get_mesh().max_node_id());
-    _dof_handler  = new MAST::LevelSetInterfaceDofHandler();
-    _dof_handler->init(*_system, *_intersection, *_level_set);
-    _void_solution_monitor = new MAST::LevelSetVoidSolution();
-    _void_solution_monitor->init(*this, *_intersection, *_dof_handler);
+    _intersection = new MAST::LevelSetIntersection();
+    if (_enable_dof_handler) {
+        _dof_handler  = new MAST::LevelSetInterfaceDofHandler();
+        _dof_handler->init(*_system, *_intersection, *_level_set);
+        _void_solution_monitor = new MAST::LevelSetVoidSolution();
+        _void_solution_monitor->init(*this, *_intersection, *_dof_handler);
+    }
 }
 
 
@@ -361,7 +368,9 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
         
         const libMesh::Elem* elem = *el;
         
-        _intersection->init(*_level_set, *elem, nonlin_sys.time);
+        _intersection->init(*_level_set, *elem, nonlin_sys.time,
+                            nonlin_sys.get_mesh().max_elem_id(),
+                            nonlin_sys.get_mesh().max_node_id());
         dof_map.dof_indices (elem, dof_indices);
         
         // use the indicator if it was provided
@@ -386,7 +395,8 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
             DenseRealMatrix m(ndofs, ndofs);
             //dof_map.constrain_element_matrix(m, dof_indices);
             for (unsigned int i=0; i<ndofs; i++)
-                m(i,i) = 1.e-16;
+                m(i,i) = 1.e-14;
+            dof_map.constrain_element_matrix(m, dof_indices);
             J->add_matrix(m, dof_indices);
         }
         
@@ -406,12 +416,12 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
             
             // if the element has been marked for factorization then
             // get the void solution from the storage
-            if (_dof_handler->if_factor_element(*elem))
+            if (_dof_handler && _dof_handler->if_factor_element(*elem))
                 _dof_handler->solution_of_factored_element(*elem, sol);
             
             // if the element has been marked for factorization,
             // get the factorized jacobian and residual contributions
-            if (_dof_handler->if_factor_element(*elem)) {
+            if (_dof_handler && _dof_handler->if_factor_element(*elem)) {
                 
                 // the Jacobian is based on the homogenizaton method to maintain
                 // a well conditioned global Jacobian.
@@ -579,7 +589,9 @@ sensitivity_assemble (const MAST::FunctionBase& f,
         
         const libMesh::Elem* elem = *el;
         
-        _intersection->init(*_level_set, *elem, nonlin_sys.time);
+        _intersection->init(*_level_set, *elem, nonlin_sys.time,
+                            nonlin_sys.get_mesh().max_elem_id(),
+                            nonlin_sys.get_mesh().max_node_id());
 
         dof_map.dof_indices (elem, dof_indices);
         
@@ -607,7 +619,7 @@ sensitivity_assemble (const MAST::FunctionBase& f,
 
             // if the element has been marked for factorization then
             // get the void solution from the storage
-            if (_dof_handler->if_factor_element(*elem))
+            if (_dof_handler && _dof_handler->if_factor_element(*elem))
                 _dof_handler->solution_of_factored_element(*elem, sol);
 
             const std::vector<const libMesh::Elem *> &
@@ -649,7 +661,7 @@ sensitivity_assemble (const MAST::FunctionBase& f,
                 // we will factor the residual and replace it in the
                 // residual vector. For this we need to compute the
                 // element Jacobian matrix
-                if (_dof_handler->if_factor_element(*elem)) {
+                if (_dof_handler && _dof_handler->if_factor_element(*elem)) {
 
                     vec2.setZero(ndofs);
                     mat.setZero(ndofs, ndofs);
@@ -764,7 +776,9 @@ calculate_output(const libMesh::NumericVector<Real>& X,
             }
         }
         
-        _intersection->init(*_level_set, *elem, nonlin_sys.time);
+        _intersection->init(*_level_set, *elem, nonlin_sys.time,
+                            nonlin_sys.get_mesh().max_elem_id(),
+                            nonlin_sys.get_mesh().max_node_id());
         
         if (nd_indicator.maxCoeff() > tol &&
             _intersection->if_elem_has_positive_phi_region()) {
@@ -780,7 +794,7 @@ calculate_output(const libMesh::NumericVector<Real>& X,
 
             // if the element has been marked for factorization then
             // get the void solution from the storage
-            if (_dof_handler->if_factor_element(*elem))
+            if (_dof_handler && _dof_handler->if_factor_element(*elem))
                 _dof_handler->solution_of_factored_element(*elem, sol);
 
             const std::vector<const libMesh::Elem *> &
@@ -880,7 +894,9 @@ calculate_output_derivative(const libMesh::NumericVector<Real>& X,
         
         const libMesh::Elem* elem = *el;
 
-        _intersection->init(*_level_set, *elem, nonlin_sys.time);
+        _intersection->init(*_level_set, *elem, nonlin_sys.time,
+                            nonlin_sys.get_mesh().max_elem_id(),
+                            nonlin_sys.get_mesh().max_node_id());
 
         // use the indicator if it was provided
         if (_indicator) {
@@ -909,7 +925,7 @@ calculate_output_derivative(const libMesh::NumericVector<Real>& X,
             
             // if the element has been marked for factorization then
             // get the void solution from the storage
-            if (_dof_handler->if_factor_element(*elem))
+            if (_dof_handler && _dof_handler->if_factor_element(*elem))
                 _dof_handler->solution_of_factored_element(*elem, sol);
 
             const std::vector<const libMesh::Elem *> &
@@ -934,7 +950,7 @@ calculate_output_derivative(const libMesh::NumericVector<Real>& X,
                 output.output_derivative_for_elem(vec1);
                 output.clear_elem();
 
-                if (_dof_handler->if_factor_element(*elem)) {
+                if (_dof_handler && _dof_handler->if_factor_element(*elem)) {
                     
                     vec2.setZero(ndofs);
                     mat.setZero(ndofs, ndofs);
@@ -1052,7 +1068,9 @@ calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
             }
         }
 
-        _intersection->init(*_level_set, *elem, nonlin_sys.time);
+        _intersection->init(*_level_set, *elem, nonlin_sys.time,
+                            nonlin_sys.get_mesh().max_elem_id(),
+                            nonlin_sys.get_mesh().max_node_id());
          
         if (nd_indicator.maxCoeff() > tol &&
             _intersection->if_elem_has_positive_phi_region()) {
@@ -1072,7 +1090,7 @@ calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
             
             // if the element has been marked for factorization then
             // get the void solution from the storage
-            if (_dof_handler->if_factor_element(*elem))
+            if (_dof_handler && _dof_handler->if_factor_element(*elem))
                 _dof_handler->solution_of_factored_element(*elem, sol);
 
             const std::vector<const libMesh::Elem *> &

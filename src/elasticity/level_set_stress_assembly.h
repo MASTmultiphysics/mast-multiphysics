@@ -51,11 +51,12 @@ namespace MAST {
         
         
         /*!
-         *   attaches level set function to \p this
+         *   attaches level set function to \p this. If \p dof_handler is
+         *   provided then its solution will be used in computing stress.
          */
         virtual void
         init(MAST::FieldFunction<Real>& level_set,
-             MAST::LevelSetInterfaceDofHandler& dof_handler);
+             MAST::LevelSetInterfaceDofHandler* dof_handler = nullptr);
 
         
         /*!

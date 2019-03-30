@@ -244,7 +244,9 @@ update_void_solution(libMesh::NumericVector<Real>& X,
 
             // get the intersection and compute the residual and jacobian
             // with contribution from all elements.
-            _intersection->init(phi, *elem, sys.time);
+            _intersection->init(phi, *elem, sys.time,
+                                sys.get_mesh().max_elem_id(),
+                                sys.get_mesh().max_node_id());
 
             // the Jacobian is based on the homogenization method
             MAST::GeomElem geom_elem;
