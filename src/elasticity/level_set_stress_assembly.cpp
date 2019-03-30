@@ -162,7 +162,7 @@ update_stress_strain_data(MAST::StressStrainOutputBase&       ops,
             for (unsigned int i=0; i<dof_indices.size(); i++)
                 sol(i) = (*localized_solution)(dof_indices[i]);
             
-            if (_dof_handler->if_factor_element(*elem))
+            if (false)//_dof_handler->if_factor_element(*elem))
                 _dof_handler->solution_of_factored_element(*elem, sol);
 
             const std::vector<const libMesh::Elem *> &
@@ -202,6 +202,10 @@ update_stress_strain_data(MAST::StressStrainOutputBase&       ops,
             e_it    =  output_map.begin(),
             e_end   =  output_map.end();
             
+            RealVectorX
+            max_vals = RealVectorX::Zero(13);
+            
+            // get the max of all quantities
             for ( ; e_it != e_end; e_it++) {
                 
                 get_max_stress_strain_values(e_it->second,
@@ -210,20 +214,29 @@ update_stress_strain_data(MAST::StressStrainOutputBase&       ops,
                                              max_vm_stress,
                                              nullptr);
                 
-                // set the values in the system
-                // stress value
-                dof_id     =   elem->dof_number(sys_num, stress_vars[12], 0);
-                stress_sys.solution->set(dof_id, max_vm_stress);
                 
                 for (unsigned int i=0; i<6; i++) {
-                    // strain value
-                    dof_id     =   elem->dof_number(sys_num, stress_vars[i], 0);
-                    stress_sys.solution->set(dof_id, max_strain_vals(i));
-                    
-                    // stress value
-                    dof_id     =   elem->dof_number(sys_num, stress_vars[i+6], 0);
-                    stress_sys.solution->set(dof_id, max_stress_vals(i));
+                    if (std::fabs(max_strain_vals(i)) > std::fabs(max_vals(i)))
+                        max_vals(i)     = max_strain_vals(i);
+                    if (std::fabs(max_stress_vals(i)) > std::fabs(max_vals(i+6)))
+                        max_vals(i+6)   = max_stress_vals(i);
                 }
+                max_vals(12) = std::max(max_vm_stress, max_vals(12));
+            }
+            
+            // set the values in the system
+            // stress value
+            dof_id     =   elem->dof_number(sys_num, stress_vars[12], 0);
+            stress_sys.solution->set(dof_id, max_vals(12));
+            
+            for (unsigned int i=0; i<6; i++) {
+                // strain value
+                dof_id     =   elem->dof_number(sys_num, stress_vars[i], 0);
+                stress_sys.solution->set(dof_id, max_vals(i));
+                
+                // stress value
+                dof_id     =   elem->dof_number(sys_num, stress_vars[i+6], 0);
+                stress_sys.solution->set(dof_id, max_vals(i+6));
             }
         }
         
