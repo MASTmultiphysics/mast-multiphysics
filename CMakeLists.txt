@@ -39,7 +39,7 @@ find_package(PETSc REQUIRED)
 find_package(SLEPc REQUIRED)
 find_package(libMesh REQUIRED)
 find_package(Eigen3 REQUIRED)
-find_package(Boost COMPONENTS unit_test_framework REQUIRED)
+find_package(Boost COMPONENTS iostreams system filesystem unit_test_framework REQUIRED)
 
 # Find optional packages.
 if (ENABLE_GCMMA)
