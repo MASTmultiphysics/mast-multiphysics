@@ -24,22 +24,20 @@
 #include "base/mast_data_types.h"
 #include "base/mast_config.h"
 
-#if MAST_ENABLE_MATPLOTLIB == 1
-
-#include "matplotlibcpp.h"
-namespace plt = matplotlibcpp;
-
 // libMesh includes
 #include "libmesh/elem.h"
 #include "libmesh/node.h"
 
+#if MAST_ENABLE_GNUPLOT == 1
+
+#include "gnuplot-iostream.h"
 
 namespace MAST {
     
-    void plot_elem(const libMesh::Elem& elem);
-    void plot_node(const libMesh::Node& node);
+    void plot_elem(Gnuplot& gp, const libMesh::Elem& elem);
+    void plot_node(Gnuplot& gp, const libMesh::Node& node);
 }
 
-#endif // MAST_ENABLE_MATPLOTLIB == 0
+#endif // MAST_ENABLE_GNUPLOT
 
 #endif // __mast_plot_h__
