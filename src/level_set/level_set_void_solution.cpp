@@ -154,21 +154,24 @@ MAST::LevelSetVoidSolution::init(MAST::AssemblyBase& assembly,
 void
 MAST::LevelSetVoidSolution::clear() {
     
-    // next, remove the monitor function from the snes object
-    libMesh::PetscNonlinearSolver<Real> &petsc_nonlinear_solver =
-    *(dynamic_cast<libMesh::PetscNonlinearSolver<Real>*>
-      (dynamic_cast<MAST::NonlinearSystem&>(_assembly->system()).nonlinear_solver.get()));
-    
-    // get the SNES object
-    SNES snes = petsc_nonlinear_solver.snes();
-    
-    PetscErrorCode ierr =
-    SNESMonitorCancel(snes);
-    libmesh_assert(!ierr);
-    
-    _assembly     = nullptr;
-    _intersection = nullptr;
-    _dof_handler  = nullptr;
+    if (_assembly)  {
+        
+        // next, remove the monitor function from the snes object
+        libMesh::PetscNonlinearSolver<Real> &petsc_nonlinear_solver =
+        *(dynamic_cast<libMesh::PetscNonlinearSolver<Real>*>
+          (dynamic_cast<MAST::NonlinearSystem&>(_assembly->system()).nonlinear_solver.get()));
+        
+        // get the SNES object
+        SNES snes = petsc_nonlinear_solver.snes();
+        
+        PetscErrorCode ierr =
+        SNESMonitorCancel(snes);
+        libmesh_assert(!ierr);
+        
+        _assembly     = nullptr;
+        _intersection = nullptr;
+        _dof_handler  = nullptr;
+    }
 }
 
 
