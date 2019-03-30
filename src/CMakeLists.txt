@@ -29,6 +29,9 @@ target_link_libraries(mast
             ${LAPACK_LIBRARIES}
             ${PETSc_LIBRARIES}
             ${SLEPc_LIBRARIES}
+            ${Boost_IOSTREAMS_LIBRARY}
+            ${Boost_FILESYSTEM_LIBRARY}
+            ${Boost_SYSTEM_LIBRARY}
             debug ${libMesh_dbg_LIBRARIES}
             optimized ${libMesh_opt_LIBRARIES}
             ${LIBGFORTRAN_LIBRARIES})
@@ -50,6 +53,7 @@ add_subdirectory(numerics)
 add_subdirectory(optimization)
 add_subdirectory(property_cards)
 add_subdirectory(solver)
+add_subdirectory(utility)
 
 # NOTE: There is an argument to be made for why we might want to switch the
 #       add_subdirectory(<dir>) above to include(<dir>/CMakeLists.txt).
