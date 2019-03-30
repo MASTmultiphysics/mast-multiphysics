@@ -318,7 +318,11 @@ _init_on_first_order_ref_elem(const MAST::FieldFunction<Real>& phi,
         phi(n, t, val);
         on_level_set      = fabs(val) <= _tol;
         _node_phi_vals[&n] = std::pair<Real, bool>(val, on_level_set);
-        if (on_level_set) {
+        // only check the corner nodes for intersection to maintain the
+        // assumption of simple intersections on quad4. This will be
+        // consistent for a quad4 reference elem, but for a quad8/9 elem
+        // this helps in simplifying the process. 
+        if (i < e.n_nodes() && on_level_set) {
             _node_num_on_boundary = i;
             n_node_intersection++;
         }
@@ -479,6 +483,8 @@ _init_on_first_order_ref_elem(const MAST::FieldFunction<Real>& phi,
     // storage implementation is storing this for element ids. So, we provide
     // a unique element ID for each new element.
     //
+    
+    libmesh_assert_less_equal(_new_elems.size(), _max_elem_divs);
     
     for (unsigned int i=0; i<_new_elems.size(); i++) {
         
