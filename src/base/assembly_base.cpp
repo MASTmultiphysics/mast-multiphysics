@@ -368,8 +368,7 @@ calculate_output_derivative(const libMesh::NumericVector<Real>& X,
         MAST::copy(v, vec);
         dof_map.constrain_element_vector(v, dof_indices);
         dq_dX.add_vector(v, dof_indices);
-
-//        physics_elem->detach_active_solution_function();
+        dof_indices.clear();
     }
     
     // if a solution function is attached, clear it

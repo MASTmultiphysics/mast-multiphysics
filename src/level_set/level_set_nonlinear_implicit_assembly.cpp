@@ -513,6 +513,7 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
             // add to the global matrices
             if (R) R->add_vector(v, dof_indices);
             if (J) J->add_matrix(m, dof_indices);
+            dof_indices.clear();
         }
         
         _intersection->clear();
@@ -555,6 +556,7 @@ sensitivity_assemble (const MAST::FunctionBase& f,
     RealVectorX
     vec1,
     vec2,
+    vec_total,
     sol,
     res_factored_u,
     nd_indicator = RealVectorX::Ones(1),
@@ -611,6 +613,7 @@ sensitivity_assemble (const MAST::FunctionBase& f,
             // get the solution
             unsigned int ndofs = (unsigned int)dof_indices.size();
             sol.setZero(ndofs);
+            vec_total.setZero(ndofs);
             vec1.setZero(ndofs);
             vec2.setZero(ndofs);
             
@@ -688,21 +691,25 @@ sensitivity_assemble (const MAST::FunctionBase& f,
                     for (unsigned int i=0; i<material_rows.size(); i++)
                         vec1(material_rows[i])   = res_factored_u(i);
                 }
+
+                vec_total += vec1;
                 
+
                 //        physics_elem->detach_active_solution_function();
                 ops.clear_elem();
-                
-                // copy to the libMesh matrix for further processing
-                DenseRealVector v;
-                MAST::copy(v, vec1);
-                
-                // constrain the quantities to account for hanging dofs,
-                // Dirichlet constraints, etc.
-                dof_map.constrain_element_vector(v, dof_indices);
-                
-                // add to the global matrices
-                sensitivity_rhs.add_vector(v, dof_indices);
             }
+
+            // copy to the libMesh matrix for further processing
+            DenseRealVector v;
+            MAST::copy(v, vec_total);
+            
+            // constrain the quantities to account for hanging dofs,
+            // Dirichlet constraints, etc.
+            dof_map.constrain_element_vector(v, dof_indices);
+            
+            // add to the global matrices
+            sensitivity_rhs.add_vector(v, dof_indices);
+            dof_indices.clear();
         }
 
         _intersection->clear();
@@ -858,6 +865,7 @@ calculate_output_derivative(const libMesh::NumericVector<Real>& X,
     RealVectorX
     vec1,
     vec2,
+    vec_total,
     sol,
     res_factored_u,
     nd_indicator = RealVectorX::Ones(1),
@@ -919,6 +927,7 @@ calculate_output_derivative(const libMesh::NumericVector<Real>& X,
             sol.setZero(ndofs);
             vec1.setZero(ndofs);
             vec2.setZero(ndofs);
+            vec_total.setZero(ndofs);
             
             for (unsigned int i=0; i<dof_indices.size(); i++)
                 sol(i) = (*localized_solution)(dof_indices[i]);
@@ -978,12 +987,14 @@ calculate_output_derivative(const libMesh::NumericVector<Real>& X,
                         vec1(material_rows[i])   = res_factored_u(i);
                 }
 
-                DenseRealVector v;
-                MAST::copy(v, vec1);
-                dof_map.constrain_element_vector(v, dof_indices);
-                dq_dX.add_vector(v, dof_indices);
+                vec_total += vec1;
             }
-            //        physics_elem->detach_active_solution_function();
+
+            DenseRealVector v;
+            MAST::copy(v, vec_total);
+            dof_map.constrain_element_vector(v, dof_indices);
+            dq_dX.add_vector(v, dof_indices);
+            dof_indices.clear();
         }
         
         _intersection->clear();

@@ -253,6 +253,7 @@ linearized_jacobian_solution_product (const libMesh::NumericVector<Real>& X,
         
         // add to the global matrices
         JdX.add_vector(v, dof_indices);
+        dof_indices.clear();
     }
     
     // delete pointers to the local solutions
@@ -353,6 +354,7 @@ sensitivity_assemble (const MAST::FunctionBase& f,
         
         // add to the global matrices
         sensitivity_rhs.add_vector(v, dof_indices);
+        dof_indices.clear();
     }
     
     for (unsigned int i=0; i<local_qtys.size(); i++) {

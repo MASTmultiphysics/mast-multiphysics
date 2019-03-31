@@ -218,6 +218,7 @@ MAST::ComplexAssemblyBase::residual_l2_norm(const libMesh::NumericVector<Real>& 
         MAST::copy(v, vec_re);
         dof_map.constrain_element_vector(v, dof_indices);
         residual_im->add_vector(v, dof_indices);
+        dof_indices.clear();
     }
     
     
@@ -383,6 +384,7 @@ residual_and_jacobian_field_split (const libMesh::NumericVector<Real>& X_R,
         dof_map.constrain_element_matrix_and_vector(m, v, dof_indices);
         R_I.add_vector(v, dof_indices);
         J_I.add_matrix(m, dof_indices);
+        dof_indices.clear();
     }
     
     

@@ -164,6 +164,7 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
         // add to the global matrices
         if (R) R->add_vector(v, dof_indices);
         if (J) J->add_matrix(m, dof_indices);
+        dof_indices.clear();
     }
     
     // call the post assembly object, if provided by user
@@ -288,6 +289,7 @@ linearized_jacobian_solution_product (const libMesh::NumericVector<Real>& X,
         
         // add to the global matrices
         JdX.add_vector(v, dof_indices);
+        dof_indices.clear();
     }
     
     
@@ -488,6 +490,7 @@ sensitivity_assemble (const MAST::FunctionBase& f,
         
         // add to the global matrices
         sensitivity_rhs.add_vector(v, dof_indices);
+        dof_indices.clear();
     }
     
     // if a solution function is attached, initialize it

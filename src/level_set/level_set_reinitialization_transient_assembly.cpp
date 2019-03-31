@@ -171,6 +171,7 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
         // add to the global matrices
         if (R) R->add_vector(v, dof_indices);
         if (J) J->add_matrix(m, dof_indices);
+        dof_indices.clear();
     }
     
     // delete pointers to the local solutions

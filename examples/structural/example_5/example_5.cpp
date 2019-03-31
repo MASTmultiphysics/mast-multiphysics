@@ -47,7 +47,9 @@
 #include "property_cards/isotropic_material_property_card.h"
 #include "property_cards/solid_2d_section_element_property_card.h"
 #include "optimization/nlopt_optimization_interface.h"
+#include "optimization/gcmma_optimization_interface.h"
 #include "optimization/function_evaluation.h"
+#include "level_set/level_set_intersection.h"
 
 // libMesh includes
 #include "libmesh/fe_type.h"
@@ -58,6 +60,8 @@
 #include "libmesh/dof_map.h"
 #include "libmesh/exodusII_io.h"
 #include "libmesh/petsc_nonlinear_solver.h"
+#include "libmesh/mesh_refinement.h"
+#include "libmesh/error_vector.h"
 
 
 //
@@ -276,7 +280,7 @@ protected:
     MAST::NonlinearSystem*                    _level_set_sys_on_str_mesh;
     MAST::NonlinearSystem*                    _indicator_sys;
     
-    MAST::SystemInitialization*               _sys_init;
+    MAST::StructuralSystemInitialization*     _sys_init;
     MAST::LevelSetSystemInitialization*       _level_set_sys_init_on_str_mesh;
     MAST::LevelSetSystemInitialization*       _level_set_sys_init;
     MAST::HeatConductionSystemInitialization* _indicator_sys_init;
@@ -949,7 +953,27 @@ public:
         }
     }
     
+    void
+    _compute_element_errors(libMesh::ErrorVector& error) {
+        
+        MAST::LevelSetIntersection intersection;
 
+        libMesh::MeshBase::const_element_iterator
+        it  = _mesh->active_elements_begin(),
+        end = _mesh->active_elements_end();
+        
+        for ( ; it != end; it++) {
+            
+            const libMesh::Elem* elem = *it;
+            intersection.init( *_level_set_function, *elem, _sys->time,
+                              _mesh->max_elem_id(),
+                              _mesh->max_node_id());
+            if (intersection.if_intersection_through_elem())
+                error[elem->id()] = 1.-intersection.get_positive_phi_volume_fraction();
+            intersection.clear();
+        }
+    }
+    
     //
     //   \p grads(k): Derivative of f_i(x) with respect
     //   to x_j, where k = (j-1)*M + i.
@@ -996,7 +1020,7 @@ public:
         // first constrain the indicator function and solve
         /////////////////////////////////////////////////////////////////////
         SNESConvergedReason r;
-        {
+        /*{
             libMesh::out << "Indicator Function" << std::endl;
             nonlinear_assembly.set_discipline_and_system(*_indicator_discipline, *_indicator_sys_init);
             conduction_elem_ops.set_discipline_and_system(*_indicator_discipline, *_indicator_sys_init);
@@ -1029,7 +1053,7 @@ public:
         // system
         /////////////////////////////////////////////////////////////////////
         MAST::MeshFieldFunction indicator(*_indicator_sys_init, "indicator");
-        indicator.init(*_indicator_sys->solution);
+        indicator.init(*_indicator_sys->solution);*/
         //MAST::IndicatorFunctionConstrainDofs constrain(*_sys_init, *_level_set_function, indicator);
         //MAST::LevelSetConstrainDofs constrain(*_sys_init, *_level_set_function);
         //_sys->attach_constraint_object(constrain);
@@ -1047,7 +1071,7 @@ public:
         eigen_assembly.set_level_set_function(*_level_set_function);
         eigen_assembly.set_level_set_velocity_function(*_level_set_vel);
         stress_assembly.set_discipline_and_system(*_discipline, *_sys_init);
-        stress_assembly.init(*_level_set_function, nonlinear_assembly.get_dof_handler());
+        stress_assembly.init(*_level_set_function, nonlinear_assembly.if_use_dof_handler()?&nonlinear_assembly.get_dof_handler():nullptr);
         level_set_assembly.set_discipline_and_system(*_level_set_discipline, *_level_set_sys_init);
         level_set_assembly.set_level_set_function(*_level_set_function);
         level_set_assembly.set_level_set_velocity_function(*_level_set_vel);
@@ -1056,7 +1080,57 @@ public:
         //nonlinear_assembly.plot_sub_elems(true, false, true);
         
         
+        libMesh::MeshRefinement refine(*_mesh);
         
+        bool
+        continue_refining    = true;
+        Real
+        threshold            = 0.05;
+        unsigned int
+        n_refinements        = 0,
+        max_refinements      = 1;
+        
+        while (n_refinements < max_refinements && continue_refining) {
+            
+            // The ErrorVector is a particular StatisticsVector
+            // for computing error information on a finite element mesh.
+            libMesh::ErrorVector error(_mesh->max_elem_id(), _mesh);
+            _compute_element_errors(error);
+            
+            if (error.maximum() > threshold) {
+                
+                // This takes the error in error and decides which elements
+                // will be coarsened or refined.  Any element within 20% of the
+                // maximum error on any element will be refined, and any
+                // element within 7% of the minimum error on any element might
+                // be coarsened. Note that the elements flagged for refinement
+                // will be refined, but those flagged for coarsening _might_ be
+                // coarsened.
+                //refine.refine_fraction() = 0.80;
+                //refine.coarsen_fraction() = 0.07;
+                //refine.absolute_global_tolerance() = 0.8;
+                refine.max_h_level()      = max_refinements;
+                refine.refine_fraction()  = 1.;
+                refine.coarsen_fraction() = 0.5;
+                refine.flag_elements_by_error_tolerance (error);
+                refine.refine_and_coarsen_elements();
+                _eq_sys->reinit ();
+
+                libMesh::out
+                << "max error:    " << error.maximum() 
+                << ",  median error: " << error.median() << std::endl;
+                _mesh->print_info();
+                
+                std::ostringstream oss;
+                oss << "mesh_" << n_refinements << ".exo";
+                _mesh->write("mesh.exo");
+                
+                
+                n_refinements++;
+            }
+            else
+                continue_refining = false;
+        }
         
         MAST::LevelSetVolume                            volume(level_set_assembly.get_intersection());
         MAST::StressStrainOutputBase                    stress;
@@ -1064,7 +1138,7 @@ public:
         stress.set_discipline_and_system(*_discipline, *_sys_init);
         volume.set_participating_elements_to_all();
         stress.set_participating_elements_to_all();
-        stress.set_aggregation_coefficients(_p_val, _vm_rho, _stress_lim);
+        stress.set_aggregation_coefficients(_p_val, _vm_rho, _stress_lim) ;
         
         //////////////////////////////////////////////////////////////////////
         // evaluate the objective
@@ -1172,6 +1246,9 @@ public:
         modes_name   = output_name + "modes.exo";
         output_name += "_optim.exo";
         
+        std::ostringstream oss;
+        oss << "output_optim_" << iter << "_.exo";
+        
         // copy DVs to level set function
         for (unsigned int i=0; i<_n_vars; i++)
             if (_dv_params[i].first >= _level_set_sys->solution->first_local_index() &&
@@ -1185,7 +1262,8 @@ public:
         std::vector<Real> f(this->n_ineq(), 0.), grads;
         this->evaluate(x, obj, false, grads, f, eval_grads, grads);
         
-        _output->write_timestep(output_name, *_eq_sys, iter+1, (1.*iter));
+        //_output->write_timestep(output_name, *_eq_sys, iter+1, (1.*iter));
+        libMesh::ExodusII_IO(*_mesh).write_equation_systems(oss.str(), *_eq_sys);
         
         if (_n_eig_vals) {
             
@@ -1216,7 +1294,8 @@ int main(int argc, char* argv[]) {
 
     TopologyOptimizationLevelSet2D top_opt(init.comm(), input);
     
-    MAST::NLOptOptimizationInterface optimizer(NLOPT_LD_SLSQP);
+    //MAST::NLOptOptimizationInterface optimizer(NLOPT_LD_SLSQP);
+    MAST::GCMMAOptimizationInterface optimizer;
 
     optimizer.attach_function_evaluation_object(top_opt);
     optimizer.optimize();
