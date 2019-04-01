@@ -17,6 +17,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+// C++ includes
+#include <iomanip>
 
 // MAST includes
 #include "examples/base/input_wrapper.h"
@@ -166,9 +168,9 @@ public:
         }
         
         if (n == 2)
-            v(0) = -0.01;
+            v(0) = -0.001;
         else
-            v(0) = 0.01;
+            v(0) = 0.001;
     }
 protected:
     Real
@@ -676,7 +678,7 @@ protected:
                 // set value at the material points to a small positive number
                 if (dof_id >= _level_set_sys->solution->first_local_index() &&
                     dof_id <  _level_set_sys->solution->last_local_index())
-                    _level_set_sys->solution->set(dof_id, 0.01);
+                    _level_set_sys->solution->set(dof_id, 0.001);
             }
         }
         
@@ -933,8 +935,8 @@ public:
         xmin.resize(_n_vars);
         xmax.resize(_n_vars);
         
-        std::fill(xmin.begin(), xmin.end(),   -1.);
-        std::fill(xmax.begin(), xmax.end(),    1.);
+        std::fill(xmin.begin(), xmin.end(),   -1.e-3);
+        std::fill(xmax.begin(), xmax.end(),    1.e-3);
         
         // now, check if the user asked to initialize dvs from a previous file
         std::string
@@ -1081,14 +1083,29 @@ public:
         
         
         libMesh::MeshRefinement refine(*_mesh);
-        
+        libMesh::out << "before coarsening" << std::endl;
+        _mesh->print_info();
+
+        {
+            libMesh::ErrorVector error(_mesh->max_elem_id(), _mesh);
+            refine.refine_fraction()  = 0.;
+            refine.coarsen_fraction() = 1.;
+            refine.max_h_level() = 0;
+            refine.flag_elements_by_error_fraction(error);
+            if (refine.coarsen_elements())
+                _eq_sys->reinit();
+        }
+
+        libMesh::out << "after coarsening" << std::endl;
+        _mesh->print_info();
+
         bool
         continue_refining    = true;
         Real
         threshold            = 0.05;
         unsigned int
         n_refinements        = 0,
-        max_refinements      = 1;
+        max_refinements      = _input("max_refinements","maximum refinements", 0);
         
         while (n_refinements < max_refinements && continue_refining) {
             
@@ -1113,12 +1130,13 @@ public:
                 refine.refine_fraction()  = 1.;
                 refine.coarsen_fraction() = 0.5;
                 refine.flag_elements_by_error_tolerance (error);
-                refine.refine_and_coarsen_elements();
-                _eq_sys->reinit ();
+                if (refine.refine_and_coarsen_elements())
+                    _eq_sys->reinit ();
 
                 libMesh::out
+                << "After refinement: " << n_refinements << std::endl
                 << "max error:    " << error.maximum() 
-                << ",  median error: " << error.median() << std::endl;
+                << ",  mean error: " << error.mean() << std::endl;
                 _mesh->print_info();
                 
                 std::ostringstream oss;
@@ -1241,13 +1259,16 @@ public:
         
         libmesh_assert_equal_to(x.size(), _n_vars);
         
+        Real
+        sys_time     = _sys->time;
+        
         std::string
         output_name  = _input("output_file_root", "prefix of output file names", "output"),
         modes_name   = output_name + "modes.exo";
         output_name += "_optim.exo";
         
         std::ostringstream oss;
-        oss << "output_optim_" << iter << "_.exo";
+        oss << "output_optim.e-s." << std::setfill('0') << std::setw(5) << iter ;
         
         // copy DVs to level set function
         for (unsigned int i=0; i<_n_vars; i++)
@@ -1263,6 +1284,8 @@ public:
         this->evaluate(x, obj, false, grads, f, eval_grads, grads);
         
         //_output->write_timestep(output_name, *_eq_sys, iter+1, (1.*iter));
+        _sys->time = iter;
+        _sys_init->get_stress_sys().time = iter;
         libMesh::ExodusII_IO(*_mesh).write_equation_systems(oss.str(), *_eq_sys);
         
         if (_n_eig_vals) {
@@ -1278,6 +1301,9 @@ public:
             }
             _sys->solution->zero();
         }
+        
+        // set the value of time back to its original value
+        _sys->time = sys_time;
         
         MAST::FunctionEvaluation::output(iter, x, obj/_obj_scaling, fval, if_write_to_optim_file);
     }
@@ -1296,6 +1322,21 @@ int main(int argc, char* argv[]) {
     
     //MAST::NLOptOptimizationInterface optimizer(NLOPT_LD_SLSQP);
     MAST::GCMMAOptimizationInterface optimizer;
+
+    unsigned int
+    max_inner_iters        = input("max_inner_iters", "maximum inner iterations in GCMMA", 15);
+    
+    Real
+    constr_penalty         = input("constraint_penalty", "constraint penalty in GCMMA", 50.),
+    initial_rel_step       = input("initial_rel_step", "initial step size in GCMMA", 5.e-1),
+    asymptote_reduction    = input("asymptote_reduction", "reduction of aymptote in GCMMA", 0.7),
+    asymptote_expansion    = input("asymptote_expansion", "expansion of asymptote in GCMMA", 1.4);
+
+    optimizer.set_real_parameter   ("constraint_penalty",  constr_penalty);
+    optimizer.set_real_parameter   ("initial_rel_step",  initial_rel_step);
+    optimizer.set_real_parameter   ("asymptote_reduction",  asymptote_reduction);
+    optimizer.set_real_parameter   ("asymptote_expansion",  asymptote_expansion);
+    optimizer.set_integer_parameter(   "max_inner_iters", max_inner_iters);
 
     optimizer.attach_function_evaluation_object(top_opt);
     optimizer.optimize();
