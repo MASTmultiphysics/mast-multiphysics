@@ -25,8 +25,11 @@
 
 MAST::GCMMAOptimizationInterface::GCMMAOptimizationInterface():
 MAST::OptimizationInterface(),
-_constr_penalty  (5.e1),
-_max_inner_iters (15)   {
+_constr_penalty       (5.e1),
+_initial_rel_step     (5.e-1),
+_asymptote_reduction  (0.7),
+_asymptote_expansion  (1.2),
+_max_inner_iters      (15)   {
     
 #if MAST_ENABLE_GCMMA == 0
     libmesh_error_msg("MAST configured without GCMMA support.");
@@ -42,6 +45,24 @@ MAST::GCMMAOptimizationInterface::set_real_parameter(const std::string &nm, Real
         libmesh_assert_greater(val, 0.);
         
         _constr_penalty = val;
+    }
+    else if (nm == "initial_rel_step") {
+        
+        libmesh_assert_greater(val, 0.);
+        
+        _initial_rel_step = val;
+    }
+    else if (nm == "asymptote_reduction") {
+        
+        libmesh_assert_greater(val, 0.);
+        
+        _asymptote_reduction = val;
+    }
+    else if (nm == "asymptote_expansion") {
+        
+        libmesh_assert_greater(val, 0.);
+        
+        _asymptote_expansion = val;
     }
     else
         libMesh::out
@@ -93,9 +114,9 @@ MAST::GCMMAOptimizationInterface::optimize() {
     
     Real
     ALBEFA  = 0.1,
-    GHINIT  = 0.5,
-    GHDECR  = 0.7,
-    GHINCR  = 1.2,
+    GHINIT  = _initial_rel_step,
+    GHDECR  = _asymptote_reduction,
+    GHINCR  = _asymptote_expansion,
     F0VAL   = 0.,
     F0NEW   = 0.,
     F0APP   = 0.,

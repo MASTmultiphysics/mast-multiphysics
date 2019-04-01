@@ -97,6 +97,9 @@ namespace MAST {
                                     const std::vector<Real>& BETA);
         
         Real           _constr_penalty;
+        Real           _initial_rel_step;
+        Real           _asymptote_reduction;
+        Real           _asymptote_expansion;
         unsigned int   _max_inner_iters;
     };
 }
