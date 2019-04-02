@@ -328,7 +328,7 @@ protected:
     
     
     
-    void _init_mesh()  {
+    void _init_mesh_inplane()  {
         
         _mesh = new libMesh::SerialMesh(this->comm());
         
@@ -377,7 +377,31 @@ protected:
     }
     
     
-    
+    void _init_mesh_bracket() {
+
+        {
+            unsigned int
+            nx_divs = _input("nx_divs", "number of elements along x-axis", 10),
+            ny_divs = _input("ny_divs", "number of elements along y-axis", 10);
+            
+            if (nx_divs%10 != 0 || ny_divs%10 != 0) libmesh_error();
+        }
+        
+        {
+            unsigned int
+            nx_divs = _input("level_set_nx_divs", "number of elements of level-set mesh along x-axis", 10),
+            ny_divs = _input("level_set_ny_divs", "number of elements of level-set mesh along y-axis", 10);
+            
+            if (nx_divs%10 != 0 || ny_divs%10 != 0) libmesh_error();
+            
+        }
+
+        _init_mesh_inplane();
+        _delete_elems_from_bracket_mesh(*_mesh);
+        _delete_elems_from_bracket_mesh(*_level_set_mesh);
+    }
+
+
     void _init_system_and_discipline() {
         
         
@@ -430,7 +454,7 @@ protected:
     }
     
     
-    void _init_dirichlet_conditions() {
+    void _init_dirichlet_conditions_inplane() {
         
         ///////////////////////////////////////////////////////////////////////
         // initialize Dirichlet conditions for structural system
@@ -474,8 +498,32 @@ protected:
     }
     
     
+    void _init_dirichlet_conditions_bracket() {
+        
+        ///////////////////////////////////////////////////////////////////////
+        // initialize Dirichlet conditions for structural system
+        ///////////////////////////////////////////////////////////////////////
+        MAST::DirichletBoundaryCondition
+        *dirichlet  = new MAST::DirichletBoundaryCondition;   // bottom boundary
+        dirichlet->init(0, _sys_init->vars());
+        _discipline->add_dirichlet_bc(0,  *dirichlet);
+        
+        _discipline->init_system_dirichlet_bc(*_sys);
+
+        ///////////////////////////////////////////////////////////////////////
+        // initialize Dirichlet conditions for indicator system
+        ///////////////////////////////////////////////////////////////////////
+        dirichlet  = new MAST::DirichletBoundaryCondition;   // bottom boundary
+        dirichlet->init(0, _indicator_sys_init->vars());
+        _indicator_discipline->add_dirichlet_bc(0,  *dirichlet);
+        _boundary_conditions.insert(dirichlet);
+        
+        _indicator_discipline->init_system_dirichlet_bc(*_indicator_sys);
+    }
     
-    void _init_loads() {
+    
+    
+    void _init_loads_inplane() {
         
         Real
         frac    = _input("load_length_fraction", "fraction of boundary length on which pressure will act", 0.2),
@@ -495,12 +543,58 @@ protected:
         
         f_load->add(*flux_f);
         _indicator_discipline->add_side_load(2, *f_load);
-
+        
         _field_functions.insert(press_f);
         _field_functions.insert(flux_f);
     }
     
     
+    
+    class BracketLoad:
+    public MAST::FieldFunction<Real> {
+    public:
+        BracketLoad(const std::string& nm, Real p, Real l1, Real fraction):
+        MAST::FieldFunction<Real>(nm), _p(p), _l1(l1), _frac(fraction) { }
+        virtual ~BracketLoad() {}
+        virtual void operator() (const libMesh::Point& p, const Real t, Real& v) const {
+            if (fabs(p(0) >= _l1*(1.-_frac))) v = _p;
+            else v = 0.;
+        }
+        virtual void derivative(const MAST::FunctionBase& f, const libMesh::Point& p, const Real t, Real& v) const {
+            v = 0.;
+        }
+    protected:
+        Real _p, _l1, _frac;
+    };
+    
+    
+    
+    void _init_loads_bracket() {
+        
+        Real
+        length  = _input("length", "length of domain along x-axis", 0.3),
+        frac    = _input("load_length_fraction", "fraction of boundary length on which pressure will act", 0.125),
+        p_val   = _input("pressure", "pressure on side of domain",   5.e7);
+        
+        BracketLoad
+        *press_f         = new BracketLoad( "pressure", p_val, length, frac),
+        *flux_f          = new BracketLoad("heat_flux", -2.e6, length, frac);
+        
+        // initialize the load
+        MAST::BoundaryConditionBase
+        *p_load          = new MAST::BoundaryConditionBase(MAST::SURFACE_PRESSURE),
+        *f_load          = new MAST::BoundaryConditionBase(MAST::HEAT_FLUX);
+        
+        p_load->add(*press_f);
+        _discipline->add_side_load(5, *p_load);
+        
+        f_load->add(*flux_f);
+        _indicator_discipline->add_side_load(5, *f_load);
+        
+        _field_functions.insert(press_f);
+        _field_functions.insert(flux_f);
+    }
+
     
     void _init_material() {
         
@@ -609,7 +703,7 @@ protected:
     }
 
     
-    void _init_phi_dvs() {
+    void _init_phi_dvs_inplane() {
         
         // this assumes that level set is defined using lagrange shape functions
         libmesh_assert_equal_to(_level_set_fetype.family, libMesh::LAGRANGE);
@@ -686,6 +780,176 @@ protected:
     }
     
     
+    
+    void _init_phi_dvs_bracket() {
+        
+        libmesh_assert(_initialized);
+        // this assumes that level set is defined using lagrange shape functions
+        libmesh_assert_equal_to(_level_set_fetype.family, libMesh::LAGRANGE);
+        
+        Real
+        tol     = 1.e-6,
+        length  = _input("length", "length of domain along x-axis", 0.3),
+        height  = _input("height", "length of domain along y-axis", 0.3),
+        l_frac  = 0.4,//_input("length_fraction", "fraction of length along x-axis that is in the bracket", 0.4),
+        h_frac  = 0.4,//_input( "height_fraction", "fraction of length along y-axis that is in the bracket", 0.4),
+        x_lim   = length * l_frac,
+        y_lim   =  height * (1.-h_frac),
+        frac    = _input("load_length_fraction", "fraction of boundary length on which pressure will act", 0.125);
+        
+        unsigned int
+        dof_id  = 0;
+        
+        Real
+        val     = 0.;
+        
+        // all ranks will have DVs defined for all variables. So, we should be
+        // operating on a replicated mesh
+        libmesh_assert(_level_set_mesh->is_replicated());
+        
+        std::vector<Real> local_phi(_level_set_sys->solution->size());
+        _level_set_sys->solution->localize(local_phi);
+        
+        // iterate over all the node values
+        libMesh::MeshBase::const_node_iterator
+        it  = _level_set_mesh->nodes_begin(),
+        end = _level_set_mesh->nodes_end();
+        
+        // maximum number of dvs is the number of nodes on the level set function
+        // mesh. We will evaluate the actual number of dvs
+        _dv_params.reserve(_level_set_mesh->n_nodes());
+        _n_vars = 0;
+        
+        for ( ; it!=end; it++) {
+            
+            const libMesh::Node& n = **it;
+            
+            dof_id                     = n.dof_number(0, 0, 0);
+            
+            if (n(1) <= y_lim && n(0) >= length*(1.-frac)) {
+                
+                // set value at the constrained points to a small positive number
+                // material here
+                if (dof_id >= _level_set_sys->solution->first_local_index() &&
+                    dof_id <  _level_set_sys->solution->last_local_index())
+                    _level_set_sys->solution->set(dof_id, 0.001);
+            }
+            else {
+                
+                std::ostringstream oss;
+                oss << "dv_" << _n_vars;
+                val = local_phi[dof_id];
+                
+                // on the boundary, set everything to be zero, so that there
+                // is always a boundary there that the optimizer can move
+                if (n(0) < tol                     ||  // left boundary
+                    std::fabs(n(0) - length) < tol ||  // right boundary
+                    std::fabs(n(1) - height) < tol ||  // top boundary
+                    (n(0) >= x_lim && n(1) <= y_lim)) {
+                    
+                    if (dof_id >= _level_set_sys->solution->first_local_index() &&
+                        dof_id <  _level_set_sys->solution->last_local_index())
+                        _level_set_sys->solution->set(dof_id, 0.);
+                    val = 0.;
+                }
+                
+                _dv_params.push_back(std::pair<unsigned int, MAST::Parameter*>());
+                _dv_params[_n_vars].first  = dof_id;
+                _dv_params[_n_vars].second = new MAST::Parameter(oss.str(), val);
+                _dv_params[_n_vars].second->set_as_topology_parameter(true);
+                
+                _n_vars++;
+            }
+        }
+        
+        _level_set_sys->solution->close();
+    }
+    
+    
+    void _delete_elems_from_bracket_mesh(libMesh::MeshBase &mesh) {
+        
+        Real
+        tol     = 1.e-6,
+        x       = -1.,
+        y       = -1.,
+        length  = _input("length", "length of domain along x-axis", 0.3),
+        width   = _input( "width", "length of domain along y-axis", 0.3),
+        l_frac  = 0.4,
+        w_frac  = 0.4,
+        x_lim   = length * l_frac,
+        y_lim   =  width * (1.-w_frac);
+        
+        // now, remove elements that are outside of the L-bracket domain
+        libMesh::MeshBase::element_iterator
+        e_it   = mesh.elements_begin(),
+        e_end  = mesh.elements_end();
+        
+        for ( ; e_it!=e_end; e_it++) {
+            
+            libMesh::Elem* elem = *e_it;
+            x = length;
+            y = 0.;
+            for (unsigned int i=0; i<elem->n_nodes(); i++) {
+                const libMesh::Node& n = elem->node_ref(i);
+                if (x > n(0)) x = n(0);
+                if (y < n(1)) y = n(1);
+            }
+            
+            // delete element if the lowest x,y locations are outside of the bracket
+            // domain
+            if (x >= x_lim && y<= y_lim)
+                mesh.delete_elem(elem);
+        }
+        
+        mesh.prepare_for_use();
+        
+        // add the two additional boundaries to the boundary info so that
+        // we can apply loads on them
+        bool
+        facing_right = false,
+        facing_down  = false;
+        
+        e_it   = mesh.elements_begin();
+        e_end  = mesh.elements_end();
+        
+        for ( ; e_it != e_end; e_it++) {
+            
+            libMesh::Elem* elem = *e_it;
+            
+            if (!elem->on_boundary()) continue;
+            
+            for (unsigned int i=0; i<elem->n_sides(); i++) {
+                
+                if (elem->neighbor_ptr(i)) continue;
+                
+                std::unique_ptr<libMesh::Elem> s(elem->side_ptr(i).release());
+                
+                const libMesh::Point p = s->centroid();
+                
+                facing_right = true;
+                facing_down  = true;
+                for (unsigned int j=0; j<s->n_nodes(); j++) {
+                    const libMesh::Node& n = s->node_ref(j);
+                    
+                    if (n(0) < x_lim ||  n(1) > y_lim) {
+                        facing_right = false;
+                        facing_down  = false;
+                    }
+                    else if (std::fabs(n(0) - p(0)) > tol)
+                        facing_right = false;
+                    else if (std::fabs(n(1) - p(1)) > tol)
+                        facing_down = false;
+                }
+                
+                if (facing_right) mesh.boundary_info->add_side(elem, i, 4);
+                if (facing_down) mesh.boundary_info->add_side(elem, i, 5);
+            }
+        }
+        
+        mesh.boundary_info->sideset_name(4) = "facing_right";
+        mesh.boundary_info->sideset_name(5) = "facing_down";
+    }
+
     
     void _evaluate_volume_sensitivity(MAST::LevelSetVolume& volume,
                                       MAST::LevelSetNonlinearImplicitAssembly& assembly,
@@ -774,6 +1038,59 @@ protected:
                     grads[_n_ineq*i+j+1] = -sens[j]/_ref_eig_val;
             }
         }
+    }
+
+    void _init_mesh() {
+
+        // The mesh is created using classes written in MAST. The particular
+        // mesh to be used can be selected using the input parameter
+        // ` mesh=val `, where `val` can be one of the following:
+        //   - `inplane` inplane structure with load on top and left and right boundaries constrained
+        //   - `bracket` L-bracket
+        //
+        std::string
+        s  = _input("mesh", "type of mesh to be analyzed {inplane, bracket}", "inplane");
+
+        if (s == "inplane")
+            _init_mesh_inplane();
+        else if (s == "bracket")
+            _init_mesh_bracket();
+    }
+
+    
+    void _init_dirichlet_conditions() {
+        
+        std::string
+        s  = _input("mesh", "type of mesh to be analyzed {inplane, bracket}", "inplane");
+
+        if (s == "inplane")
+            _init_dirichlet_conditions_inplane();
+        else if (s == "bracket")
+            _init_dirichlet_conditions_bracket();
+    }
+
+    
+    void _init_loads() {
+        
+        std::string
+        s  = _input("mesh", "type of mesh to be analyzed {inplane, bracket}", "inplane");
+
+        if (s == "inplane")
+            _init_loads_inplane();
+        else if (s == "bracket")
+            _init_loads_bracket();
+    }
+
+    
+    void _init_phi_dvs() {
+        
+        std::string
+        s  = _input("mesh", "type of mesh to be analyzed {inplane, bracket}", "inplane");
+        
+        if (s == "inplane")
+            _init_phi_dvs_inplane();
+        else if (s == "bracket")
+            _init_phi_dvs_bracket();
     }
 
 public:
