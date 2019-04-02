@@ -208,7 +208,6 @@ MAST::GCMMAOptimizationInterface::optimize() {
     for (unsigned int i=0; i<N; i++)
         if (max_x < fabs(XVAL[i]))
             max_x = fabs(XVAL[i]);
-    std::fill(C.begin(), C.end(), std::max(1.e0*max_x, _constr_penalty));
     
     int INNMAX=_max_inner_iters, ITER=0, ITE=0, INNER=0, ICONSE=0;
     /*
@@ -217,6 +216,11 @@ MAST::GCMMAOptimizationInterface::optimize() {
     bool terminate = false, inner_terminate=false;
     while (!terminate) {
         
+        std::fill(C.begin(), C.end(), std::max(1.e0*max_x, _constr_penalty));
+        GHINIT  = _initial_rel_step,
+        GHDECR  = _asymptote_reduction,
+        GHINCR  = _asymptote_expansion,
+
         ITER=ITER+1;
         ITE=ITE+1;
         /*
@@ -266,6 +270,27 @@ MAST::GCMMAOptimizationInterface::optimize() {
                                       F0NEW, false, DF0DX,
                                       FNEW, eval_grads, DFDX);
             
+            ///////////////////////////////////////////////////////////////
+            // if the solution is poor, backtrack
+            std::vector<Real> XMMA_new(XMMA);
+            Real frac = 0.02;
+            while (FNEW[0] > 1.e2) {
+                libMesh::out << "*** Backtracking: frac = "
+                << frac
+                << "  constr: " << FNEW[0]
+                << std::endl;
+                for (unsigned int i=0; i<XMMA.size(); i++)
+                    XMMA_new[i] = XOLD1[i] + frac*(XMMA[i]-XOLD1[i]);
+                
+                _feval->_evaluate_wrapper(XMMA_new,
+                                          F0NEW, false, DF0DX,
+                                          FNEW, eval_grads, DFDX);
+                frac *= frac;
+            }
+            for (unsigned int i=0; i<XMMA.size(); i++)
+                XMMA[i] = XMMA_new[i];
+            ///////////////////////////////////////////////////////////////
+
             if (INNER >= INNMAX) {
                 libMesh::out
                 << "** Max Inner Iter Reached: Terminating! Inner Iter = "

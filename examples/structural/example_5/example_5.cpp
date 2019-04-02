@@ -1622,6 +1622,34 @@ public:
         // set the value of time back to its original value
         _sys->time = sys_time;
         
+        // increment the parameter values
+        unsigned int
+        update_freq = _input("update_freq_optim_params", "number of iterations after which the optimization parameters are updated", 50),
+        factor = iter/update_freq ;
+        if (factor > 0 && iter%update_freq == 0) {
+            
+            Real
+            p_val           = _input("constraint_aggregation_p_val", "value of p in p-norm stress aggregation", 2.0),
+            vm_rho          = _input("constraint_aggregation_rho_val", "value of rho in p-norm stress aggregation", 2.0),
+            constr_penalty  = _input("constraint_penalty", "constraint penalty in GCMMA",      50.),
+            max_penalty     = _input("max_constraint_penalty", "maximum constraint penalty in GCMMA",      1.e7),
+            initial_step    = _input("initial_rel_step", "initial relative step length in GCMMA",      0.5),
+            min_step        = _input("minimum_rel_step", "minimum relative step length in GCMMA",      0.001);
+            
+            constr_penalty = std::min(constr_penalty*pow(10, factor), max_penalty);
+            initial_step   = std::max(initial_step-0.01*factor, min_step);
+            _p_val         = std::min(p_val+2*factor, 10.);
+            _vm_rho        = std::min(vm_rho+factor*0.5, 2.);
+            libMesh::out
+            << "Updated values: c = " << constr_penalty
+            << "  step = " << initial_step
+            << "  p = " << _p_val
+            << "  rho = " << _vm_rho << std::endl;
+            
+            _optimization_interface->set_real_parameter   ( "constraint_penalty",   constr_penalty);
+            _optimization_interface->set_real_parameter   ("initial_rel_step",        initial_step);
+        }
+
         MAST::FunctionEvaluation::output(iter, x, obj/_obj_scaling, fval, if_write_to_optim_file);
     }
 
