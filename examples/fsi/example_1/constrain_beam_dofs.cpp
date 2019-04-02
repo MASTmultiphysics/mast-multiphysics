@@ -21,7 +21,7 @@
 #include <set>
 
 // MAST includes
-#include "examples/fsi/beam_flutter_solution/constrain_beam_dofs.h"
+#include "examples/fsi/example_1/constrain_beam_dofs.h"
 #include "base/nonlinear_system.h"
 
 // libMesh includes
