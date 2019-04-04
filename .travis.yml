@@ -34,7 +34,7 @@ before_script:
     -DBUILD_DOC=ON
     -DENABLE_DOT=OFF
     -DENABLE_GCMMA=OFF
-    -DENABLE_NPSOL=OFF
+    -DENABLE_SNOPT=OFF
 
 script:
 - make -j 2

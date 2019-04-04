@@ -18,15 +18,13 @@ if(ENABLE_GCMMA AND GCMMA_FOUND)
             PRIVATE
             ${CMAKE_CURRENT_LIST_DIR}/gcmma_optimization_interface.cpp
             ${CMAKE_CURRENT_LIST_DIR}/gcmma_optimization_interface.h)
-    # TODO: Create FindGCMMA CMake module and add target_link_libraries(mast PRIVATE ${GCMMA_LIBRARIES})
 endif()
 
-if(ENABLE_NPSOL)
+if(ENABLE_SNOPT AND SNOPT_FOUND)
     target_sources(mast
             PRIVATE
             ${CMAKE_CURRENT_LIST_DIR}/npsol_optimization_interface.cpp
             ${CMAKE_CURRENT_LIST_DIR}/npsol_optimization_interface.h)
-    # TODO: Create FindNPSOL CMake module and add target_link_libraries(mast PRIVATE ${NPSOL_LIBRARIES})
 endif()
 
 if(ENABLE_NLOPT AND NLOPT_FOUND)
@@ -34,7 +32,6 @@ if(ENABLE_NLOPT AND NLOPT_FOUND)
             PRIVATE
             ${CMAKE_CURRENT_LIST_DIR}/nlopt_optimization_interface.cpp
             ${CMAKE_CURRENT_LIST_DIR}/nlopt_optimization_interface.h)
-            # TODO: Create FindNLOPT CMake module and add target_link_libraries(mast PRIVATE ${NLOPT_LIBRARIES})
 endif()
 
 # Note: In order to add the target_link_libraries(mast ...) inside in this directory, I think the add_subdirectory()

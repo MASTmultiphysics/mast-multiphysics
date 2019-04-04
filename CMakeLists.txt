@@ -16,7 +16,7 @@ include(GNUInstallDirs)
 # Build options with defaults.
 option(ENABLE_GCMMA   "Build with GCMMA interface"  OFF)
 option(ENABLE_DOT     "Build with DOT interface"    OFF)
-option(ENABLE_NPSOL   "Build with NPSOL interface"  OFF)
+option(ENABLE_SNOPT   "Build with SNOPT interface"  OFF)
 option(ENABLE_NLOPT   "Build with NLOPT interface"  OFF)
 option(ENABLE_CYTHON  "Build with CYTHON interface" OFF)
 option(BUILD_DOC      "Build documentation"         OFF)
@@ -27,6 +27,8 @@ set(libMesh_DIR "libMesh_DIR" CACHE PATH "Directory containing libMesh include/ 
 set(PETSc_DIR   "PETSc_DIR"   CACHE PATH "Directory containing PETSc include/ and lib/")
 set(SLEPc_DIR   "SLEPc_DIR"   CACHE PATH "Directory containing SLEPc include/ and lib/")
 set(EIGEN3_ROOT "Eigen_DIR"   CACHE PATH "Directory containing eigen header files")
+set(DOT_DIR "DOT_DIR"   CACHE PATH "Directory containing DOT lib/")
+set(SNOPT_DIR "SNOpt_DIR"   CACHE PATH "Directory containing SNOPT lib/")
 set(NLOPT_DIR "NLOpt_DIR"   CACHE PATH "Directory containing NLOpt include/ and lib/")
 
 # EXTERNALLY PROVIDED CONTENT
@@ -50,13 +52,17 @@ if (ENABLE_DOT)
     find_package(DOT REQUIRED)
 endif()
 
+if (ENABLE_SNOPT)
+    find_package(SNOPT REQUIRED)
+endif()
+
 if (ENABLE_NLOPT)
    find_package(NLOpt REQUIRED)
 endif()
 
 # gfortran lib is required if GCMMA/DOT are used, since these are written
 # in fortran
-if (ENABLE_GCMMA OR ENABLE_DOT)
+if (ENABLE_GCMMA OR ENABLE_DOT OR ENABLE_SNOPT)
 find_package(GFortranLibs REQUIRED)
 endif()
 

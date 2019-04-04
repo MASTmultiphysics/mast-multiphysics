@@ -30,6 +30,7 @@
 
 // MAST includes
 #include "base/mast_data_types.h"
+#include "base/mast_config.h"
 
 
 // libMesh includes
@@ -159,7 +160,7 @@ namespace MAST {
         virtual bool verify_gradients(const std::vector<Real>& dvars);
         
         
-#if MAST_ENABLE_NPSOL == 1
+#if MAST_ENABLE_SNOPT == 1
         typedef void (*funobj) (int*    mode,
                                 int*    n,
                                 double* x,
@@ -180,7 +181,7 @@ namespace MAST {
 
         /*!
          *  @returns a pointer to the function that evaluates the objective
-         *  used for NPSOL interface
+         *  used for SNOPT interface
          */
         virtual funobj
         get_objective_evaluation_function() {
@@ -194,7 +195,7 @@ namespace MAST {
         
         /*!
          *  @returns a pointer to the function that evaluates the constraint
-         *  used for NPSOL interface
+         *  used for SNOPT interface
          */
         virtual funcon
         get_constraint_evaluation_function() {

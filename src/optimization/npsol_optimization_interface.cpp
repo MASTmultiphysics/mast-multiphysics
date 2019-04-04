@@ -24,15 +24,53 @@
 
 extern "C" {
     
-    extern void npsol_(int*    N,
-                       int*    NCLIN,
-                       int*    NCNLN,
-                       int*    LDA,
-                       int*    LDJ,
-                       int*    LDR,
+    extern void sninit_(int* iPrint,
+                        int* iSumm,
+                        const char* cw,
+                        int* lencw,
+                        int* iw,
+                        int* leniw,
+                        double* rw,
+                        int* lenrw);
+
+    extern void sninitf_(const char* printfile,
+                         const char* summary_file,
+                         int* iPrint,
+                         int* iSumm,
+                         const char* cw,
+                         int* lencw,
+                         int* iw,
+                         int* leniw,
+                         double* rw,
+                         int* lenrw);
+
+    extern void snspec_(int* iSpecs,
+                        int* INFO,
+                        const char* cw,
+                        int* lencw,
+                        int* iw,
+                        int* leniw,
+                        double* rw,
+                        int* lenrw);
+
+    extern void snspecf_(const char* specsfile,
+                         int* INFO,
+                         const char* cw,
+                         int* lencw,
+                         int* iw,
+                         int* leniw,
+                         double* rw,
+                         int* lenrw);
+
+    extern void npopt_(int*    n,
+                       int*    nclin,
+                       int*    ncnln,
+                       int*    ldA,
+                       int*    ldgg,
+                       int*    ldH,
                        double* A,
-                       double* BL,
-                       double* BU,
+                       double* bl,
+                       double* bu,
                        void    (*)(int*    mode,
                                    int*    ncnln,
                                    int*    n,
@@ -48,20 +86,20 @@ extern "C" {
                                    double* f,
                                    double* g,
                                    int*    nstate),
-                       int*    INFORM,
-                       int*    ITER,
-                       int*    ISTATE,
-                       double* C,
-                       double* CJAC,
-                       double* CLAMBDA,
-                       double* F,
-                       double* G,
-                       double* R,
-                       double* X,
-                       int*    IW,
-                       int*    LENIW,
-                       double* W,
-                       int*    LENW);
+                       int*    INFO,
+                       int*    majIts,
+                       int*    iState,
+                       double* fCon,
+                       double* gCon,
+                       double* cMul,
+                       double* fObj,
+                       double* gObj,
+                       double* Hess,
+                       double* x,
+                       int*    iw,
+                       int*    leniw,
+                       double* re,
+                       int*    lenrw);
     
     extern void npoptn_(const char*, int );
 }
@@ -74,8 +112,8 @@ MAST::OptimizationInterface(),
 _funobj(nullptr),
 _funcon(nullptr) {
     
-#if MAST_ENABLE_NPSOL == 0
-    libmesh_error_msg("MAST configured without NPSOL support.");
+#if MAST_ENABLE_SNOPT == 0
+    libmesh_error_msg("MAST configured without SNOPT support.");
 #endif
 }
 
@@ -85,7 +123,7 @@ void
 MAST::NPSOLOptimizationInterface::
 attach_function_evaluation_object (MAST::FunctionEvaluation& feval) {
     
-#if MAST_ENABLE_NPSOL == 1
+#if MAST_ENABLE_SNOPT == 1
     MAST::OptimizationInterface::attach_function_evaluation_object(feval);
     
     // make sure that these pointers haven't already been provided
@@ -102,12 +140,15 @@ attach_function_evaluation_object (MAST::FunctionEvaluation& feval) {
 void
 MAST::NPSOLOptimizationInterface::optimize() {
     
-#if MAST_ENABLE_NPSOL == 1
+#if MAST_ENABLE_SNOPT == 1
     // make sure that functions have been provided
     libmesh_assert(_funobj);
     libmesh_assert(_funcon);
     
     int
+    iPrint = 9,
+    iSumm  = 6,
+    lencw  = 500,
     N      =  _feval->n_vars(),
     NCLIN  =  0,
     NCNLN  =  _feval->n_eq()+_feval->n_ineq(),
@@ -126,8 +167,8 @@ MAST::NPSOLOptimizationInterface::optimize() {
                            // 7 => function derivatives seem to be incorrect
                            // 9 => input parameter invalid
     ITER   = 0,            // iter count
-    LENIW  = 3*N + NCLIN + 2*NCNLN,
-    LENW   = 2*N*N + N*NCLIN + 2*N*NCNLN + 20*N + 11*NCLIN + 21*NCNLN;
+    LENIW  = std::max(200*(NCTOTL+N) ,1000),
+    LENW   = std::max(400*(NCTOTL+N), 1000);
     
     Real
     F      =  0.;          // on exit: final objective
@@ -175,13 +216,22 @@ MAST::NPSOLOptimizationInterface::optimize() {
         BU[i+N] =     0.;
     }
     
-    std::string nm;
+    std::string cw(lencw,' ');
 //    nm = "List";
 //    npoptn_(nm.c_str(), (int)nm.length());
 //    nm = "Verify level 3";
 //    npoptn_(nm.c_str(), (int)nm.length());
     
-    npsol_(&N,
+    sninit_(&iPrint,
+            &iSumm,
+            cw.c_str(),
+            &lencw,
+            &IW[0],
+            &LENIW,
+            &W[0],
+            &LENW);
+    
+    npopt_(&N,
            &NCLIN,
            &NCNLN,
            &LDA,
@@ -207,6 +257,6 @@ MAST::NPSOLOptimizationInterface::optimize() {
            &W[0],
            &LENW);
     
-#endif // MAST_ENABLE_NPSOL 1
+#endif // MAST_ENABLE_SNOPT 1
 }
 

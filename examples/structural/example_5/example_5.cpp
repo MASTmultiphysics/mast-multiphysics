@@ -50,6 +50,7 @@
 #include "property_cards/solid_2d_section_element_property_card.h"
 #include "optimization/nlopt_optimization_interface.h"
 #include "optimization/gcmma_optimization_interface.h"
+#include "optimization/npsol_optimization_interface.h"
 #include "optimization/function_evaluation.h"
 #include "level_set/level_set_intersection.h"
 
@@ -65,6 +66,24 @@
 #include "libmesh/mesh_refinement.h"
 #include "libmesh/error_vector.h"
 
+
+void
+_optim_obj(int*    mode,
+           int*    n,
+           double* x,
+           double* f,
+           double* g,
+           int*    nstate);
+void
+_optim_con(int*    mode,
+           int*    ncnln,
+           int*    n,
+           int*    ldJ,
+           int*    needc,
+           double* x,
+           double* c,
+           double* cJac,
+           int*    nstate);
 
 //
 // BEGIN_TRANSLATE 2D Level-set topology optimization
@@ -1140,7 +1159,8 @@ public:
         _init_material();
         _init_loads();
         _init_section_property();
-        
+        _initialized = true;
+
         
         // ask structure to use Mindlin bending operator
         dynamic_cast<MAST::ElementPropertyCard2D&>(*_p_card).set_bending_model(MAST::MINDLIN);
@@ -1179,7 +1199,6 @@ public:
         output_name += "_optim_history.txt";
         this->set_output_file(output_name);
         
-        _initialized = true;
     }
     
     
@@ -1600,10 +1619,10 @@ public:
         std::vector<Real> f(this->n_ineq(), 0.), grads;
         this->evaluate(x, obj, false, grads, f, eval_grads, grads);
         
-        //_output->write_timestep(output_name, *_eq_sys, iter+1, (1.*iter));
         _sys->time = iter;
         _sys_init->get_stress_sys().time = iter;
-        libMesh::ExodusII_IO(*_mesh).write_equation_systems(oss.str(), *_eq_sys);
+        // "1" is the number of time-steps in the file, as opposed to the time-step number.
+        libMesh::ExodusII_IO(*_mesh).write_timestep(oss.str(), *_eq_sys, 1, (1.*iter));
         
         if (_n_eig_vals) {
             
@@ -1653,8 +1672,146 @@ public:
         MAST::FunctionEvaluation::output(iter, x, obj/_obj_scaling, fval, if_write_to_optim_file);
     }
 
+    MAST::FunctionEvaluation::funobj
+    get_objective_evaluation_function() {
+    
+        return _optim_obj;
+    }
+
+    MAST::FunctionEvaluation::funcon
+    get_constraint_evaluation_function() {
+    
+        return _optim_con;
+    }
+
+    
 };
 
+
+//#if MAST_ENABLE_SNOPT == 1
+
+TopologyOptimizationLevelSet2D* _my_func_eval = nullptr;
+
+void
+_optim_obj(int*    mode,
+           int*    n,
+           double* x,
+           double* f,
+           double* g,
+           int*    nstate) {
+
+
+    // make sure that the global variable has been setup
+    libmesh_assert(_my_func_eval);
+
+    // initialize the local variables
+    Real
+    obj = 0.;
+
+    unsigned int
+    n_vars  =  _my_func_eval->n_vars(),
+    n_con   =  _my_func_eval->n_eq()+_my_func_eval->n_ineq();
+
+    libmesh_assert_equal_to(*n, n_vars);
+
+    std::vector<Real>
+    dvars   (*n,    0.),
+    obj_grad(*n,    0.),
+    fvals   (n_con, 0.),
+    grads   (0);
+
+    std::vector<bool>
+    eval_grads(n_con);
+    std::fill(eval_grads.begin(), eval_grads.end(), false);
+
+    // copy the dvars
+    for (unsigned int i=0; i<n_vars; i++)
+        dvars[i] = x[i];
+
+
+    _my_func_eval->evaluate(dvars,
+                            obj,
+                            true,       // request the derivatives of obj
+                            obj_grad,
+                            fvals,
+                            eval_grads,
+                            grads);
+
+
+    // now copy them back as necessary
+    *f  = obj;
+    for (unsigned int i=0; i<n_vars; i++)
+        g[i] = obj_grad[i];
+}
+
+
+
+
+
+
+void
+_optim_con(int*    mode,
+           int*    ncnln,
+           int*    n,
+           int*    ldJ,
+           int*    needc,
+           double* x,
+           double* c,
+           double* cJac,
+           int*    nstate) {
+
+
+    // make sure that the global variable has been setup
+    libmesh_assert(_my_func_eval);
+
+    // initialize the local variables
+    Real
+    obj = 0.;
+
+    unsigned int
+    n_vars  =  _my_func_eval->n_vars(),
+    n_con   =  _my_func_eval->n_eq()+_my_func_eval->n_ineq();
+
+    libmesh_assert_equal_to(    *n, n_vars);
+    libmesh_assert_equal_to(*ncnln, n_con);
+
+    std::vector<Real>
+    dvars   (*n,    0.),
+    obj_grad(*n,    0.),
+    fvals   (n_con, 0.),
+    grads   (n_vars*n_con, 0.);
+
+    std::vector<bool>
+    eval_grads(n_con);
+    std::fill(eval_grads.begin(), eval_grads.end(), true);
+
+    // copy the dvars
+    for (unsigned int i=0; i<n_vars; i++)
+        dvars[i] = x[i];
+
+
+    _my_func_eval->evaluate(dvars,
+                            obj,
+                            true,       // request the derivatives of obj
+                            obj_grad,
+                            fvals,
+                            eval_grads,
+                            grads);
+
+
+    // now copy them back as necessary
+
+    // first the constraint functions
+    for (unsigned int i=0; i<n_con; i++)
+        c[i] = fvals[i];
+
+    // next, the constraint gradients
+    for (unsigned int i=0; i<n_con*n_vars; i++)
+        cJac[i] = grads[i];
+
+
+}
+//#endif
 
 int main(int argc, char* argv[]) {
 
@@ -1664,11 +1821,13 @@ int main(int argc, char* argv[]) {
     input(argc, argv, "input");
 
     TopologyOptimizationLevelSet2D top_opt(init.comm(), input);
+    _my_func_eval = &top_opt;
     
     //MAST::NLOptOptimizationInterface optimizer(NLOPT_LD_SLSQP);
-    MAST::GCMMAOptimizationInterface optimizer;
+    //MAST::GCMMAOptimizationInterface optimizer;
+    MAST::NPSOLOptimizationInterface optimizer;
 
-    unsigned int
+    /*unsigned int
     max_inner_iters        = input("max_inner_iters", "maximum inner iterations in GCMMA", 15);
     
     Real
@@ -1682,7 +1841,7 @@ int main(int argc, char* argv[]) {
     optimizer.set_real_parameter   ("asymptote_reduction",  asymptote_reduction);
     optimizer.set_real_parameter   ("asymptote_expansion",  asymptote_expansion);
     optimizer.set_integer_parameter(   "max_inner_iters", max_inner_iters);
-
+     */
     optimizer.attach_function_evaluation_object(top_opt);
     optimizer.optimize();
     

@@ -26,6 +26,7 @@ target_link_libraries(mast
             ${GCMMA_LIBRARY}
             ${DOT_LIBRARY}
             ${NLOPT_LIBRARY}
+            ${SNOPT_LIBRARY}
             ${LAPACK_LIBRARIES}
             ${PETSc_LIBRARIES}
             ${SLEPc_LIBRARIES}
