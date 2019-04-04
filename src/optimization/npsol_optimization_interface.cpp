@@ -145,6 +145,8 @@ MAST::NPSOLOptimizationInterface::optimize() {
     libmesh_assert(_funobj);
     libmesh_assert(_funcon);
     
+    _feval->sanitize_parallel();
+
     int
     iPrint = 9,
     iSumm  = 6,
@@ -203,7 +205,7 @@ MAST::NPSOLOptimizationInterface::optimize() {
     
     
     // now setup the lower and upper limits for the variables and constraints
-    _feval->init_dvar(X, xmin, xmax);
+    _feval->_init_dvar_wrapper(X, xmin, xmax);
     for (unsigned int i=0; i<N; i++) {
         BL[i] = xmin[i];
         BU[i] = xmax[i];
@@ -216,7 +218,7 @@ MAST::NPSOLOptimizationInterface::optimize() {
         BU[i+N] =     0.;
     }
     
-    std::string cw(lencw,' ');
+    std::string cw(lencw*8,' ');
 //    nm = "List";
 //    npoptn_(nm.c_str(), (int)nm.length());
 //    nm = "Verify level 3";

@@ -1729,13 +1729,13 @@ _optim_obj(int*    mode,
         dvars[i] = x[i];
 
 
-    _my_func_eval->evaluate(dvars,
-                            obj,
-                            true,       // request the derivatives of obj
-                            obj_grad,
-                            fvals,
-                            eval_grads,
-                            grads);
+    _my_func_eval->_evaluate_wrapper(dvars,
+                                     obj,
+                                     true,       // request the derivatives of obj
+                                     obj_grad,
+                                     fvals,
+                                     eval_grads,
+                                     grads);
 
 
     // now copy them back as necessary
@@ -1790,13 +1790,13 @@ _optim_con(int*    mode,
         dvars[i] = x[i];
 
 
-    _my_func_eval->evaluate(dvars,
-                            obj,
-                            true,       // request the derivatives of obj
-                            obj_grad,
-                            fvals,
-                            eval_grads,
-                            grads);
+    _my_func_eval->_evaluate_wrapper(dvars,
+                                     obj,
+                                     true,       // request the derivatives of obj
+                                     obj_grad,
+                                     fvals,
+                                     eval_grads,
+                                     grads);
 
 
     // now copy them back as necessary
