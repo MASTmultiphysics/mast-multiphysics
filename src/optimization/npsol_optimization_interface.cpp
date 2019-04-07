@@ -115,6 +115,55 @@ _funcon(nullptr) {
 #if MAST_ENABLE_SNOPT == 0
     libmesh_error_msg("MAST configured without SNOPT support.");
 #endif
+    
+    _exit_message[0] = "Finished successfully";
+    _exit_message[10] = " The problem appears to be infeasible 20 The problem appears to be unbounded 30 Resource limit error";
+    _exit_message[40] = " Terminated after numerical difficulties 50 Error in the user-supplied functions";
+    _exit_message[60] = " Undefined user-supplied functions";
+    _exit_message[70] = " User requested termination";
+    _exit_message[80] = " Insufficient storage allocated";
+    _exit_message[90] = " Input arguments out of range";
+    _exit_message[100] = " Finished successfully (associated with SNOPT auxiliary routines) 110 Errors while processing MPS data";
+    _exit_message[120] = " Errors while estimating Jacobian structure";
+    _exit_message[130] = " Errors while reading the Specs file";
+    _exit_message[140] = " System error";
+    
+    _info_message[1]   = "optimality conditions satisfied";
+    _info_message[2]   = "feasible point found";
+    _info_message[3]   = "requested accuracy could not be achieved";
+    _info_message[11]  = "infeasible linear constraints";
+    _info_message[12]  = "infeasible linear equality constraints";
+    _info_message[13]  = "nonlinear infeasibilities minimized";
+    _info_message[14]  = "linear infeasibilities minimized";
+    _info_message[15]  = "infeasible linear constraints in QP subproblem";
+    _info_message[16]  = "infeasible nonelastic constraints";
+    _info_message[21]  = "unbounded objective";
+    _info_message[22]  = "constraint violation limit reached";
+    _info_message[31]  = "iteration limit reached";
+    _info_message[32]  = "major iteration limit reached";
+    _info_message[33]  = "the superbasics limit is too small";
+    _info_message[41]  = "current point cannot be improved";
+    _info_message[42]  = "singular basis";
+    _info_message[43]  = "cannot satisfy the general constraints";
+    _info_message[44]  = "ill-conditioned null-space basis";
+    _info_message[51]  = "incorrect objective derivatives";
+    _info_message[52]  = "incorrect constraint derivatives";
+    _info_message[56]  = "irregular or badly scaled problem functions";
+    _info_message[61]  = "undefined function at the first feasible point";
+    _info_message[62]  = "undefined function at the initial point";
+    _info_message[63]  = "unable to proceed into undefined region";
+    _info_message[71]  = "terminated during function evaluation";
+    _info_message[72]  = "terminated during constraint evaluation";
+    _info_message[73]  = "terminated during objective evaluation";
+    _info_message[74]  = "terminated from monitor routine";
+    _info_message[81]  = "work arrays must have at least 500 elements";
+    _info_message[82]  = "not enough character storage";
+    _info_message[83]  = "not enough integer storage";
+    _info_message[84]  = "not enough real storage";
+    _info_message[91]  = "invalid input argument";
+    _info_message[92]  = "basis file dimensions do not match this problem";
+    _info_message[141] = "wrong number of basic variables";
+    _info_message[142] = "error in basis package";
 }
 
 
@@ -149,6 +198,7 @@ MAST::NPSOLOptimizationInterface::optimize() {
 
     int
     iPrint = 9,
+    iSpec  = 4,
     iSumm  = 6,
     lencw  = 500,
     N      =  _feval->n_vars(),
@@ -233,6 +283,10 @@ MAST::NPSOLOptimizationInterface::optimize() {
             &W[0],
             &LENW);
     
+    snspec_(&iSpec, &INFORM, cw.c_str(), &lencw, &IW[0], &LENIW, &W[0], &LENW);
+    
+    if (INFORM != 101) libmesh_error();
+    
     npopt_(&N,
            &NCLIN,
            &NCNLN,
@@ -259,6 +313,26 @@ MAST::NPSOLOptimizationInterface::optimize() {
            &W[0],
            &LENW);
     
+    _print_termination_message(INFORM);
+    
 #endif // MAST_ENABLE_SNOPT 1
 }
+
+
+void
+MAST::NPSOLOptimizationInterface::_print_termination_message(const int INFORM) {
+    
+    int
+    exit = (INFORM%10)*10; // remove the last signifncant digit
+    
+    libmesh_assert(_exit_message.count(exit));
+    libmesh_assert(_info_message.count(INFORM));
+    
+    libMesh::out
+    << "SNOPT EXIT :" << exit << std::endl
+    << "   " << _exit_message[exit] << std::endl
+    << "      INFO :" << INFORM << std::endl
+    << "   " << _info_message[INFORM] << std::endl << std::endl;
+}
+
 

@@ -1731,7 +1731,7 @@ _optim_obj(int*    mode,
 
     _my_func_eval->_evaluate_wrapper(dvars,
                                      obj,
-                                     true,       // request the derivatives of obj
+                                     *mode>0,       // request the derivatives of obj
                                      obj_grad,
                                      fvals,
                                      eval_grads,
@@ -1740,8 +1740,12 @@ _optim_obj(int*    mode,
 
     // now copy them back as necessary
     *f  = obj;
-    for (unsigned int i=0; i<n_vars; i++)
-        g[i] = obj_grad[i];
+    if (*mode > 0) {
+        for (unsigned int i=0; i<n_vars; i++)
+            g[i] = obj_grad[i];
+    }
+
+    if (obj > 1.e5) *mode = -1;
 }
 
 
@@ -1783,7 +1787,7 @@ _optim_con(int*    mode,
 
     std::vector<bool>
     eval_grads(n_con);
-    std::fill(eval_grads.begin(), eval_grads.end(), true);
+    std::fill(eval_grads.begin(), eval_grads.end(), *mode>0);
 
     // copy the dvars
     for (unsigned int i=0; i<n_vars; i++)
@@ -1792,7 +1796,7 @@ _optim_con(int*    mode,
 
     _my_func_eval->_evaluate_wrapper(dvars,
                                      obj,
-                                     true,       // request the derivatives of obj
+                                     false,       // request the derivatives of obj
                                      obj_grad,
                                      fvals,
                                      eval_grads,
@@ -1805,11 +1809,13 @@ _optim_con(int*    mode,
     for (unsigned int i=0; i<n_con; i++)
         c[i] = fvals[i];
 
-    // next, the constraint gradients
-    for (unsigned int i=0; i<n_con*n_vars; i++)
-        cJac[i] = grads[i];
-
-
+    if (*mode > 0) {
+        // next, the constraint gradients
+        for (unsigned int i=0; i<n_con*n_vars; i++)
+            cJac[i] = grads[i];
+    }
+    
+    if (obj > 1.e5) *mode = -1;
 }
 //#endif
 
@@ -1841,7 +1847,7 @@ int main(int argc, char* argv[]) {
     optimizer.set_real_parameter   ("asymptote_reduction",  asymptote_reduction);
     optimizer.set_real_parameter   ("asymptote_expansion",  asymptote_expansion);
     optimizer.set_integer_parameter(   "max_inner_iters", max_inner_iters);
-     */
+    */
     optimizer.attach_function_evaluation_object(top_opt);
     optimizer.optimize();
     
