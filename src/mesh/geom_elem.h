@@ -194,7 +194,7 @@ namespace MAST {
         /*!O
          *   @return the 3x3 transformation matrix to transform a vector from
          *   the element to global coordinate system:
-         *   \f$ v_\text{global} = T v_\text{elem} \f$.
+         *   \f$ v_{global} = T v_{elem} \f$.
          */
         const RealMatrixX& T_matrix() const;
         
