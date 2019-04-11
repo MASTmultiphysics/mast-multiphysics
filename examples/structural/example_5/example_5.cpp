@@ -188,9 +188,9 @@ public:
         }
         
         if (n == 2)
-            v(0) = -0.001;
+            v(0) = -1.e0;
         else
-            v(0) = 0.001;
+            v(0) = 1.e0;
     }
 protected:
     Real
@@ -793,7 +793,7 @@ protected:
                 // set value at the material points to a small positive number
                 if (dof_id >= _level_set_sys->solution->first_local_index() &&
                     dof_id <  _level_set_sys->solution->last_local_index())
-                    _level_set_sys->solution->set(dof_id, 0.001);
+                    _level_set_sys->solution->set(dof_id, 1.e0);
             }
         }
         
@@ -853,7 +853,7 @@ protected:
                 // material here
                 if (dof_id >= _level_set_sys->solution->first_local_index() &&
                     dof_id <  _level_set_sys->solution->last_local_index())
-                    _level_set_sys->solution->set(dof_id, 0.001);
+                    _level_set_sys->solution->set(dof_id, 1.e0);
             }
             else {
                 
@@ -1284,8 +1284,8 @@ public:
         xmin.resize(_n_vars);
         xmax.resize(_n_vars);
         
-        std::fill(xmin.begin(), xmin.end(),   -1.e-3);
-        std::fill(xmax.begin(), xmax.end(),    1.e-3);
+        std::fill(xmin.begin(), xmin.end(),   -1.e0);
+        std::fill(xmax.begin(), xmax.end(),    1.e0);
         
         // now, check if the user asked to initialize dvs from a previous file
         std::string
