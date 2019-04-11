@@ -29,6 +29,7 @@
 #include "level_set/level_set_nonlinear_implicit_assembly.h"
 #include "level_set/level_set_reinitialization_transient_assembly.h"
 #include "level_set/level_set_volume_output.h"
+#include "level_set/level_set_perimeter_output.h"
 #include "level_set/level_set_boundary_velocity.h"
 #include "level_set/indicator_function_constrain_dofs.h"
 #include "level_set/level_set_constrain_dofs.h"
@@ -285,6 +286,7 @@ protected:
     Real                                      _length;
     Real                                      _height;
     Real                                      _obj_scaling;
+    Real                                      _perimeter_penalty;
     Real                                      _stress_lim;
     Real                                      _p_val, _vm_rho;
     Real                                      _ref_eig_val;
@@ -970,7 +972,8 @@ protected:
     }
 
     
-    void _evaluate_volume_sensitivity(MAST::LevelSetVolume& volume,
+    void _evaluate_volume_sensitivity(MAST::LevelSetVolume&    volume,
+                                      MAST::LevelSetPerimeter& perimeter,
                                       MAST::LevelSetNonlinearImplicitAssembly& assembly,
                                       std::vector<Real>& obj_grad) {
         
@@ -990,11 +993,19 @@ protected:
             
             _level_set_vel->init(*_level_set_sys_init, *_level_set_sys->solution, *dphi);
             
+            assembly.set_evaluate_output_on_negative_phi(false);
             assembly.calculate_output_direct_sensitivity(*_level_set_sys->solution,
                                                          *dphi,
                                                          *_dv_params[i].second,
                                                          volume);
-            obj_grad[i] = _obj_scaling * volume.output_sensitivity_total(*_dv_params[i].second);
+            assembly.set_evaluate_output_on_negative_phi(true);
+            assembly.calculate_output_direct_sensitivity(*_level_set_sys->solution,
+                                                         *dphi,
+                                                         *_dv_params[i].second,
+                                                         perimeter);
+            assembly.set_evaluate_output_on_negative_phi(false);
+            obj_grad[i] = _obj_scaling * (volume.output_sensitivity_total(*_dv_params[i].second) +
+                                          _perimeter_penalty * perimeter.output_sensitivity_total(*_dv_params[i].second));
         }
     }
     
@@ -1122,6 +1133,7 @@ public:
     _length                              (0.),
     _height                              (0.),
     _obj_scaling                         (0.),
+    _perimeter_penalty                   (0.),
     _stress_lim                          (0.),
     _p_val                               (0.),
     _vm_rho                              (0.),
@@ -1177,6 +1189,7 @@ public:
         this->_init_phi_dvs();
         
         _obj_scaling           = 100./_length/_height;
+        _perimeter_penalty     = _input("perimeter_penalty", "penalty value for perimeter in the objective function", 0.);
         _stress_lim            = _input("vm_stress_limit", "limit von-mises stress value", 2.e8);
         _p_val                 = _input("constraint_aggregation_p_val", "value of p in p-norm stress aggregation", 2.0);
         _vm_rho                = _input("constraint_aggregation_rho_val", "value of rho in p-norm stress aggregation", 2.0);
@@ -1487,18 +1500,26 @@ public:
         }
         
         MAST::LevelSetVolume                            volume(level_set_assembly.get_intersection());
+        MAST::LevelSetPerimeter                         perimeter(level_set_assembly.get_intersection());
         MAST::StressStrainOutputBase                    stress;
         volume.set_discipline_and_system(*_level_set_discipline, *_level_set_sys_init);
+        perimeter.set_discipline_and_system(*_level_set_discipline, *_level_set_sys_init);
         stress.set_discipline_and_system(*_discipline, *_sys_init);
         volume.set_participating_elements_to_all();
+        perimeter.set_participating_elements_to_all();
         stress.set_participating_elements_to_all();
         stress.set_aggregation_coefficients(_p_val, _vm_rho, _stress_lim) ;
         
         //////////////////////////////////////////////////////////////////////
         // evaluate the objective
         //////////////////////////////////////////////////////////////////////
+        level_set_assembly.set_evaluate_output_on_negative_phi(false);
         level_set_assembly.calculate_output(*_level_set_sys->solution, volume);
-        obj       = volume.output_total() * _obj_scaling;
+        level_set_assembly.set_evaluate_output_on_negative_phi(true);
+        level_set_assembly.calculate_output(*_level_set_sys->solution, perimeter);
+        level_set_assembly.set_evaluate_output_on_negative_phi(false);
+        obj       = _obj_scaling * (volume.output_total() +
+                                    _perimeter_penalty * perimeter.output_total() );
         
         //////////////////////////////////////////////////////////////////////
         // evaluate the stress constraint
@@ -1560,7 +1581,7 @@ public:
         // evaluate the objective sensitivities, if requested
         //////////////////////////////////////////////////////////////////////
         if (eval_obj_grad)
-            _evaluate_volume_sensitivity(volume, level_set_assembly, obj_grad);
+            _evaluate_volume_sensitivity(volume, perimeter, level_set_assembly, obj_grad);
         
         //////////////////////////////////////////////////////////////////////
         // check to see if the sensitivity of constraint is requested
@@ -1830,10 +1851,10 @@ int main(int argc, char* argv[]) {
     _my_func_eval = &top_opt;
     
     //MAST::NLOptOptimizationInterface optimizer(NLOPT_LD_SLSQP);
-    //MAST::GCMMAOptimizationInterface optimizer;
-    MAST::NPSOLOptimizationInterface optimizer;
+    MAST::GCMMAOptimizationInterface optimizer;
+    //MAST::NPSOLOptimizationInterface optimizer;
 
-    /*unsigned int
+    unsigned int
     max_inner_iters        = input("max_inner_iters", "maximum inner iterations in GCMMA", 15);
     
     Real
@@ -1847,7 +1868,7 @@ int main(int argc, char* argv[]) {
     optimizer.set_real_parameter   ("asymptote_reduction",  asymptote_reduction);
     optimizer.set_real_parameter   ("asymptote_expansion",  asymptote_expansion);
     optimizer.set_integer_parameter(   "max_inner_iters", max_inner_iters);
-    */
+    
     optimizer.attach_function_evaluation_object(top_opt);
     optimizer.optimize();
     

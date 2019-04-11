@@ -341,6 +341,40 @@ MAST::LevelSetElementBase::volume() {
 }
 
 
+Real
+MAST::LevelSetElementBase::perimeter() {
+    
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_fe(true, false));
+    
+    const std::vector<Real>& JxW           = fe->get_JxW();
+    const unsigned int
+    dim    = _elem.dim();
+    
+    RealVectorX
+    phi      = RealVectorX::Zero(1);
+    
+    Real
+    d        = 1.e-1,
+    pi       = acos(-1.),
+    per      = 0.;
+    
+    std::vector<MAST::FEMOperatorMatrix> dBmat(dim);
+    MAST::FEMOperatorMatrix Bmat;
+    
+    
+    for (unsigned int qp=0; qp<JxW.size(); qp++) {
+        
+        // initialize the Bmat operator for this term
+        _initialize_fem_operators(qp, *fe, Bmat, dBmat);
+        Bmat.right_multiply(phi, _sol);
+        per += 1./pi/d/(1.+pow(phi(0)/d, 2)) * JxW[qp];
+    }
+    
+    return per;
+}
+
+
+
 
 Real
 MAST::LevelSetElementBase::volume_boundary_velocity_on_side(unsigned int s) {
@@ -394,6 +428,63 @@ MAST::LevelSetElementBase::volume_boundary_velocity_on_side(unsigned int s) {
     }
     
     return dvoldp;
+}
+
+
+Real
+MAST::LevelSetElementBase::perimeter_boundary_velocity_on_side(unsigned int s) {
+    
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_side_fe(s, true));
+    
+    const std::vector<Real>& JxW           =  fe->get_JxW();
+    const unsigned int
+    dim    = _elem.dim();
+    
+    RealVectorX
+    phi      = RealVectorX::Zero(1),
+    gradphi  = RealVectorX::Zero(dim),
+    dphidp   = RealVectorX::Zero(1),
+    vel      = RealVectorX::Zero(dim);
+    
+    Real
+    d        = 1.e-1,
+    pi       = acos(-1.),
+    vn       = 0.,
+    dperdp   = 0.;
+    
+    std::vector<MAST::FEMOperatorMatrix> dBmat(dim);
+    MAST::FEMOperatorMatrix Bmat;
+    
+    
+    for (unsigned int qp=0; qp<JxW.size(); qp++) {
+        
+        // initialize the Bmat operator for this term
+        _initialize_fem_operators(qp, *fe, Bmat, dBmat);
+        
+        // first calculate gradient of phi
+        for (unsigned int i=0; i<dim; i++) {
+            dBmat[i].right_multiply(phi, _sol);
+            gradphi(i) = phi(0);
+        }
+        
+        // initialize the Bmat operator for this term
+        _initialize_fem_operators(qp, *fe, Bmat, dBmat);
+        Bmat.right_multiply(phi,         _sol);
+        Bmat.right_multiply(dphidp, _sol_sens);
+        
+        // at boundary, phi(x) = 0
+        // so,  dphi/dp + grad(phi) . V = 0
+        //      dphi/dp + grad(phi) . (-grad(phi)/|grad(phi)|  Vn) = 0   [since V = -grad(phi)/|grad(phi)| Vn]
+        //      dphi/dp -(grad(phi) .  grad(phi))/|grad(phi)|  Vn  = 0
+        //      Vn  =  (dphi/dp) |grad(phi)|  / |grad(phi)|^2 = (dphi/dp) / |grad(phi)|
+        vn      =  dphidp(0) / gradphi.norm();
+        
+        // per     =  int_omega delta(phi) dOmega
+        // dper/dp =  int_Gamma delta(phi) Vn dGamma
+        dperdp += 1./pi/d/(1.+pow(phi(0)/d, 2)) * vn * JxW[qp];
+    }
+    
+    return dperdp;
 }
 
 

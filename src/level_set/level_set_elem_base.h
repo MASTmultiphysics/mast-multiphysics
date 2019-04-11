@@ -149,6 +149,22 @@ namespace MAST {
         Real
         volume();
 
+        /*!
+         *   Approximates the integral of the Dirac delta function to approximate
+         *   the perimeter. The approximation of Dirac delta function is obtained
+         *   from the derivative of an approximation to the Heaviside function
+         *   \f[ H_d(\phi) \approx \frac{1}{2} \left( 1 + \frac{2}{\pi} \arctan(\phi/d) \right).  \f]
+         *   Then, the derivative defines the Dirac delta function
+         *   \f[ \delta_d(\phi) = \frac{dH_d(\phi)}{d\phi} = \frac{1}{\pi d} \frac{1}{1+(\phi/d)^2} .  \f]
+         *   Sensitivity analysis requires the derivative of this function with
+         *   respect to a variable, which is expressed as
+         *   \f[ \frac{d\delta_d(\phi)}{d\alpha} = \frac{-2 \phi}{\pi d^3} \frac{1}{\left(1+(\phi/d)^2\right)^2} \frac{d\phi}{d\alpha}.  \f]
+         *
+         *   @returns the computed integral of \f$ \delta_d(\phi) \f$
+         */
+        Real
+        perimeter();
+
         
         /*!
          *   @returns the contribution of the side to
@@ -157,7 +173,16 @@ namespace MAST {
          */
         Real
         volume_boundary_velocity_on_side(unsigned int s);
-        
+
+        /*!
+         *   @returns the contribution of the side to
+         *   \f$ \int_\Gamma \delta_d(\phi) V_n d\Gamma \f$, where \f$ V_n \f$
+         *   is the boundary normal velocity evaluated from the solution and
+         *   sensitivity.
+         */
+        Real
+        perimeter_boundary_velocity_on_side(unsigned int s);
+
         
     protected:
 

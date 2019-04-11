@@ -49,7 +49,13 @@ namespace MAST {
          *   the system
          */
         virtual ~LevelSetNonlinearImplicitAssembly();
-        
+
+        /*!
+         *  sets the flag on whether or not to evaluate the output on
+         *  negative level set function
+         */
+        void set_evaluate_output_on_negative_phi(bool f);
+
         
         /*!
          *   @return flag if using dof_handler or not
@@ -179,6 +185,8 @@ namespace MAST {
         */
         
         bool                                  _enable_dof_handler;
+        
+        bool                                  _evaluate_output_on_negative_phi;
 
         MAST::FieldFunction<Real>            *_level_set;
 
