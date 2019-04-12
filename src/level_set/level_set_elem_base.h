@@ -165,6 +165,14 @@ namespace MAST {
         Real
         perimeter();
 
+        /*!
+         *   computes the partial derivative of the integral of the Dirac
+         *   delta function using the solution and sensitivity solution
+         *   set for this element. 
+         */
+        Real
+        perimeter_sensitivity();
+
         
         /*!
          *   @returns the contribution of the side to

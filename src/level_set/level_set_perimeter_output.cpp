@@ -172,7 +172,7 @@ MAST::LevelSetPerimeter::evaluate_sensitivity(const MAST::FunctionBase& f) {
 
 void
 MAST::LevelSetPerimeter::evaluate_topology_sensitivity(const MAST::FunctionBase& f,
-                                                    const MAST::FieldFunction<RealVectorX>& vel) {
+                                                       const MAST::FieldFunction<RealVectorX>& vel) {
     
     // here we ignore the velocity, since the element is able to compute that
     // and provide the sensitivity from level set sensitivity values.
@@ -186,15 +186,19 @@ MAST::LevelSetPerimeter::evaluate_topology_sensitivity(const MAST::FunctionBase&
     
     // sensitivity only exists at the boundary. So, we proceed with calculation
     // only if this element has an intersection in the interior, or with a side.
-    if (this->if_evaluate_for_element(elem) &&
-        elem.if_elem_has_level_set_boundary() &&
-        elem.if_subelem_has_side_on_level_set_boundary()) {
-        
+    if (this->if_evaluate_for_element(elem)) {
+
         MAST::LevelSetElementBase&
         e = dynamic_cast<MAST::LevelSetElementBase&>(*_physics_elem);
-        
-        _dper_dp += e.perimeter_boundary_velocity_on_side
-        (elem.get_subelem_side_on_level_set_boundary());
+
+        _dper_dp += e.perimeter_sensitivity();
+
+        if (elem.if_elem_has_level_set_boundary() &&
+            elem.if_subelem_has_side_on_level_set_boundary()) {
+            
+            _dper_dp += e.perimeter_boundary_velocity_on_side
+            (elem.get_subelem_side_on_level_set_boundary());
+        }
     }
 }
 

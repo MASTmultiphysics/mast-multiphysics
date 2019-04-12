@@ -374,6 +374,41 @@ MAST::LevelSetElementBase::perimeter() {
 }
 
 
+Real
+MAST::LevelSetElementBase::perimeter_sensitivity() {
+    
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_fe(true, false));
+    
+    const std::vector<Real>& JxW           = fe->get_JxW();
+    const unsigned int
+    dim    = _elem.dim();
+    
+    RealVectorX
+    phi      = RealVectorX::Zero(1),
+    dphidp   = RealVectorX::Zero(1);
+    
+    Real
+    d        = 1.e-1,
+    pi       = acos(-1.),
+    dper_dp  = 0.;
+    
+    std::vector<MAST::FEMOperatorMatrix> dBmat(dim);
+    MAST::FEMOperatorMatrix Bmat;
+    
+    
+    for (unsigned int qp=0; qp<JxW.size(); qp++) {
+        
+        // initialize the Bmat operator for this term
+        _initialize_fem_operators(qp, *fe, Bmat, dBmat);
+        Bmat.right_multiply(phi,         _sol);
+        Bmat.right_multiply(dphidp, _sol_sens);
+        dper_dp -= 2.*phi(0)/pi/pow(d,3)/pow(1.+pow(phi(0)/d, 2),2) * dphidp(0) * JxW[qp];
+    }
+    
+    return dper_dp;
+}
+
+
 
 
 Real
