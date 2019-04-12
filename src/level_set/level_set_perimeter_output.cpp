@@ -124,7 +124,7 @@ MAST::LevelSetPerimeter::output_sensitivity_for_elem(const MAST::FunctionBase& p
         MAST::LevelSetElementBase&
         e = dynamic_cast<MAST::LevelSetElementBase&>(*_physics_elem);
         
-        return e.perimeter_boundary_velocity_on_side(elem.get_subelem_side_on_level_set_boundary());
+        return e.perimeter_sensitivity();
     }
     else
     return 0.;
@@ -192,13 +192,6 @@ MAST::LevelSetPerimeter::evaluate_topology_sensitivity(const MAST::FunctionBase&
         e = dynamic_cast<MAST::LevelSetElementBase&>(*_physics_elem);
 
         _dper_dp += e.perimeter_sensitivity();
-
-        if (elem.if_elem_has_level_set_boundary() &&
-            elem.if_subelem_has_side_on_level_set_boundary()) {
-            
-            _dper_dp += e.perimeter_boundary_velocity_on_side
-            (elem.get_subelem_side_on_level_set_boundary());
-        }
     }
 }
 

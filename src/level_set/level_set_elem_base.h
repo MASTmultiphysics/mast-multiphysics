@@ -182,16 +182,6 @@ namespace MAST {
         Real
         volume_boundary_velocity_on_side(unsigned int s);
 
-        /*!
-         *   @returns the contribution of the side to
-         *   \f$ \int_\Gamma \delta_d(\phi) V_n d\Gamma \f$, where \f$ V_n \f$
-         *   is the boundary normal velocity evaluated from the solution and
-         *   sensitivity.
-         */
-        Real
-        perimeter_boundary_velocity_on_side(unsigned int s);
-
-        
     protected:
 
         /*!
