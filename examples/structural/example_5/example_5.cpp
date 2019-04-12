@@ -451,6 +451,7 @@ protected:
         _level_set_fetype      = libMesh::FEType(libMesh::FIRST, libMesh::LAGRANGE);
         _level_set_eq_sys      = new libMesh::EquationSystems(*_level_set_mesh);
         _level_set_sys         = &(_level_set_eq_sys->add_system<MAST::NonlinearSystem>("level_set"));
+        _level_set_sys->extra_quadrature_order = 2;
         _level_set_sys_init    = new MAST::LevelSetSystemInitialization(*_level_set_sys,
                                                                         _level_set_sys->name(),
                                                                         _level_set_fetype);
