@@ -354,7 +354,7 @@ MAST::LevelSetElementBase::perimeter() {
     phi      = RealVectorX::Zero(1);
     
     Real
-    d        = 1.e0,
+    d        = 1.e-1,
     pi       = acos(-1.),
     per      = 0.;
     
@@ -388,7 +388,7 @@ MAST::LevelSetElementBase::perimeter_sensitivity() {
     dphidp   = RealVectorX::Zero(1);
     
     Real
-    d        = 1.e0,
+    d        = 1.e-1,
     pi       = acos(-1.),
     dper_dp  = 0.;
     

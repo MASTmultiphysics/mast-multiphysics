@@ -44,7 +44,7 @@
 MAST::LevelSetNonlinearImplicitAssembly::
 LevelSetNonlinearImplicitAssembly():
 MAST::NonlinearImplicitAssembly(),
-_enable_dof_handler              (false),
+_enable_dof_handler              (true),
 _evaluate_output_on_negative_phi (false),
 _level_set                       (nullptr),
 _indicator                       (nullptr),
