@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -25,6 +25,7 @@
 #include "base/elem_base.h"
 #include "base/system_initialization.h"
 #include "base/nonlinear_system.h"
+#include "mesh/geom_elem.h"
 
 
 // libMesh includes
@@ -33,8 +34,9 @@
 
 MAST::IntegratedForceOutput::IntegratedForceOutput(const RealVectorX& nvec):
 MAST::OutputAssemblyElemOperations(),
-_n_vec   (nvec),
-_force   (0.) {
+_n_vec      (nvec),
+_force      (0.),
+_force_sens (0.) {
     
     _n_vec /= _n_vec.norm();
 }
@@ -48,7 +50,7 @@ MAST::IntegratedForceOutput::~IntegratedForceOutput()  {
 
 
 void
-MAST::IntegratedForceOutput::init(const libMesh::Elem& elem) {
+MAST::IntegratedForceOutput::init(const MAST::GeomElem& elem) {
     
     libmesh_assert(!_physics_elem);
     libmesh_assert(_system);
@@ -67,7 +69,8 @@ MAST::IntegratedForceOutput::init(const libMesh::Elem& elem) {
 void
 MAST::IntegratedForceOutput::zero_for_analysis()  {
     
-    _force = 0.;
+    _force      = 0.;
+    _force_sens = 0.;
 }
 
 
@@ -75,6 +78,7 @@ void
 MAST::IntegratedForceOutput::zero_for_sensitivity() {
     
     // nothing to be done here
+    _force_sens = 0.;
 }
 
 
@@ -82,6 +86,16 @@ Real
 MAST::IntegratedForceOutput::output_total()  {
 
     Real val = _force;
+    _system->system().comm().sum(val);
+    return val;
+}
+
+
+
+Real
+MAST::IntegratedForceOutput::output_sensitivity_total(const MAST::FunctionBase& p)  {
+    
+    Real val = _force_sens;
     _system->system().comm().sum(val);
     return val;
 }
@@ -96,19 +110,44 @@ MAST::IntegratedForceOutput::evaluate() {
     MAST::ConservativeFluidElementBase& e =
     dynamic_cast<MAST::ConservativeFluidElementBase&>(*_physics_elem);
 
-    const libMesh::Elem&
+    const MAST::GeomElem&
     elem = _physics_elem->elem();
     
     RealVectorX
     f  = RealVectorX::Zero(3);
     
-    for (unsigned short int n=0; n<elem.n_sides(); n++)
+    for (unsigned short int n=0; n<elem.n_sides_quadrature_elem(); n++)
         if (this->if_evaluate_for_boundary(elem, n)) {
             
             e.side_integrated_force(n, f);
             _force += f.dot(_n_vec);
         }
 }
+
+
+
+void
+MAST::IntegratedForceOutput::evaluate_sensitivity(const MAST::FunctionBase& p) {
+    
+    libmesh_assert(_physics_elem);
+    
+    MAST::ConservativeFluidElementBase& e =
+    dynamic_cast<MAST::ConservativeFluidElementBase&>(*_physics_elem);
+    
+    const MAST::GeomElem&
+    elem = _physics_elem->elem();
+
+    RealVectorX
+    df  = RealVectorX::Zero(3);
+    
+    for (unsigned short int n=0; n<elem.n_sides_quadrature_elem(); n++)
+        if (this->if_evaluate_for_boundary(elem, n)) {
+            
+            e.side_integrated_force_sensitivity(p, n, df);
+            _force_sens += df.dot(_n_vec);
+        }
+}
+
 
 
 void
@@ -119,16 +158,16 @@ MAST::IntegratedForceOutput::output_derivative_for_elem(RealVectorX& dq_dX) {
     MAST::ConservativeFluidElementBase& e =
     dynamic_cast<MAST::ConservativeFluidElementBase&>(*_physics_elem);
     
-    const libMesh::Elem&
+    const MAST::GeomElem&
     elem = _physics_elem->elem();
-    
+
     RealVectorX
     f    = RealVectorX::Zero(3);
     
     RealMatrixX
     dfdX = RealMatrixX::Zero(3, dq_dX.size());
     
-    for (unsigned short int n=0; n<elem.n_sides(); n++)
+    for (unsigned short int n=0; n<elem.n_sides_quadrature_elem(); n++)
         if (this->if_evaluate_for_boundary(elem, n)) {
             
             e.side_integrated_force(n, f, &dfdX);

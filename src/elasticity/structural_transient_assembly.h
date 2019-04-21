@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -62,9 +62,9 @@ namespace MAST {
                                        RealMatrixX& f_x_jac);
         
         /*!
-         *   performs the element calculations over \par elem, and returns
-         *   the element vector and matrix quantities in \par mat and
-         *   \par vec, respectively. \par if_jac tells the method to also
+         *   performs the element calculations over \p elem, and returns
+         *   the element vector and matrix quantities in \p mat and
+         *   \p vec, respectively. \p if_jac tells the method to also
          *   assemble the Jacobian, in addition to the residual vector.
          */
         virtual void elem_calculations(bool if_jac,
@@ -89,20 +89,29 @@ namespace MAST {
 
         
         /*!
-         *   performs the element sensitivity calculations over \par elem,
+         *   performs the element sensitivity calculations over \p elem,
          *   and returns the component of  element residual sensitivity in
-         *   \par f_m and \par f_x.
+         *   \p f_m and \p f_x.
          */
         virtual void elem_sensitivity_calculations(const MAST::FunctionBase& f,
                                                    RealVectorX& f_m,
                                                    RealVectorX& f_x);
         
         /*!
-         *   calculates \f$ d ([J] \{\Delta X\})/ dX  \f$ over \par elem,
-         *   and returns the matrix in \par vec .
+         *   calculates \f$ d ([J] \{\Delta X\})/ dX  \f$ over \p elem,
+         *   and returns the matrix in \p vec .
          */
         virtual void
         elem_second_derivative_dot_solution_assembly(RealMatrixX& mat);
+
+
+        /*!
+         *   sets the structural element y-vector if 1D element is used.
+         */
+        virtual void
+        set_elem_data(unsigned int dim,
+                      MAST::GeomElem& elem) const;
+
 
         /*!
          *   initializes the object for the geometric element \p elem. This
@@ -110,7 +119,7 @@ namespace MAST {
          *   call \p clear_elem() between successive initializations.
          */
         virtual void
-        init(const libMesh::Elem& elem);
+        init(const MAST::GeomElem& elem);
 
     protected:
         

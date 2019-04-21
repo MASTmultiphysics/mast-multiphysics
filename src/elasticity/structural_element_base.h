@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -31,7 +31,7 @@
 namespace MAST {
     
     // Forward declerations
-    class LocalElemBase;
+    class GeomElem;
     class ElementPropertyCardBase;
     class BoundaryConditionBase;
     class FEMOperatorMatrix;
@@ -48,14 +48,12 @@ namespace MAST {
          */
         StructuralElementBase(MAST::SystemInitialization& sys,
                               MAST::AssemblyBase& assembly,
-                              const libMesh::Elem& elem,
+                              const MAST::GeomElem& elem,
                               const MAST::ElementPropertyCardBase& p);
         
         virtual ~StructuralElementBase();
 
         
-        virtual MAST::LocalElemBase& local_elem();
-
         /*!
          *   stores \p vec as solution for element level calculations,
          *   or its sensitivity if \p if_sens is true.
@@ -105,7 +103,7 @@ namespace MAST {
         
         /*!
          *  @returns a constant reference to the element solution 
-         *  (or its derivative if \par if_sens is true) in the local
+         *  (or its derivative if \p if_sens is true) in the local
          *  element coordinate system
          */
         const RealVectorX& local_solution(bool if_sens = false) const {
@@ -141,7 +139,7 @@ namespace MAST {
                                       RealMatrixX& jac);
 
         /*!
-         *   calculates the term on side \par s:
+         *   calculates the term on side \p s:
          *   \f$ \int_\Gamma a(\delta u, u) v_n ~d\Gamma \f$.
          *
          */
@@ -696,19 +694,6 @@ namespace MAST {
                                                         bool request_jacobian,
                                                         RealVectorX& f,
                                                         RealMatrixX& jac) = 0;
-
-        /*!
-         *   @returns a constant reference to transformation matrix needed
-         *   for mapping of 1D and 2D matrices from coordinate system defined
-         *   in the local space to the global space. This is not relevant for
-         *   3D continuum elements and therefore is implemented only for
-         *   1D/2D elements.
-         */
-        virtual const RealMatrixX&
-        _Tmatrix() const;
-        
-        
-        MAST::LocalElemBase*                _local_elem;
         
         /*!
          *   element property
@@ -802,7 +787,7 @@ namespace MAST {
     std::unique_ptr<MAST::StructuralElementBase>
     build_structural_element(MAST::SystemInitialization& sys,
                              MAST::AssemblyBase& assembly,
-                             const libMesh::Elem& elem,
+                             const MAST::GeomElem& elem,
                              const MAST::ElementPropertyCardBase& p);
     
 }

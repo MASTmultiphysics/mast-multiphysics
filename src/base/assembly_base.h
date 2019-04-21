@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -186,7 +186,7 @@ namespace MAST {
          * to assemble the RHS of the sensitivity equations (which is -1 times
          * sensitivity of system residual) prior to a solve and must
          * be provided by the user in a derived class. The method provides dR/dp
-         * for \par f parameter.
+         * for \p f parameter.
          *
          * If the routine is not able to provide sensitivity for this parameter,
          * then it should return false, and the system will attempt to use
@@ -217,12 +217,12 @@ namespace MAST {
         
         /*!
          *   evaluates the sensitivity of the outputs in the attached
-         *   discipline with respect to the parametrs in \par params.
-         *   The base solution should be provided in \par X. If total sensitivity
-         *   is desired, then \par dXdp should contain the sensitivity of
-         *   solution wrt the parameter \par p. If this \par dXdp is zero,
+         *   discipline with respect to the parametrs in \p params.
+         *   The base solution should be provided in \p X. If total sensitivity
+         *   is desired, then \p dXdp should contain the sensitivity of
+         *   solution wrt the parameter \p p. If this \p dXdp is zero,
          *   the calculated sensitivity will be the partial derivarive of
-         *   \par output wrt \par p.
+         *   \p output wrt \p p.
          */
         virtual void
         calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
@@ -232,9 +232,9 @@ namespace MAST {
 
         
         /*!
-         *   Evaluates the total sensitivity of \par output wrt \par p using
-         *   the adjoint solution provided in \par dq_dX for a linearization
-         *   about solution \par X.
+         *   Evaluates the total sensitivity of \p output wrt \p p using
+         *   the adjoint solution provided in \p dq_dX for a linearization
+         *   about solution \p X.
          */
         virtual Real
         calculate_output_adjoint_sensitivity(const libMesh::NumericVector<Real>& X,
@@ -255,17 +255,6 @@ namespace MAST {
                                const libMesh::NumericVector<Real>& global) const;
         
         
-        /*!
-         *   @returns a MAST::FEBase object for calculation of finite element
-         *   quantities. For all standard applications this is a wrapper
-         *   around the libMesh::FEBase class, which is specialized for
-         *   cut-cell applications where a sub-finite element is created
-         *   for element integration.
-         */
-        virtual std::unique_ptr<MAST::FEBase>
-        build_fe();
-        
-
     protected:
         
         /*!

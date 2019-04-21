@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -62,9 +62,9 @@ namespace MAST {
         virtual void clear_frequency_function();
 
         /*!
-         *   performs the element calculations over \par elem, and returns
-         *   the element vector and matrix quantities in \par mat and
-         *   \par vec, respectively. \par if_jac tells the method to also
+         *   performs the element calculations over \p elem, and returns
+         *   the element vector and matrix quantities in \p mat and
+         *   \p vec, respectively. \p if_jac tells the method to also
          *   assemble the Jacobian, in addition to the residual vector.
          */
         virtual void elem_calculations(bool if_jac,
@@ -72,19 +72,26 @@ namespace MAST {
                                        ComplexMatrixX& mat);
         
         /*!
-         *   performs the element sensitivity calculations over \par elem,
-         *   and returns the element residual sensitivity in \par vec .
+         *   performs the element sensitivity calculations over \p elem,
+         *   and returns the element residual sensitivity in \p vec .
          */
         virtual void elem_sensitivity_calculations(const MAST::FunctionBase& f,
                                                    ComplexVectorX& vec);
         
+        /*!
+         *   virtual function, but nothing to be done for fluids.
+         */
+        virtual void
+        set_elem_data(unsigned int dim,
+                      MAST::GeomElem& elem) const { }
+
         /*!
          *   initializes the object for the geometric element \p elem. This
          *   expects the object to be in a cleared state, so the user should
          *   call \p clear_elem() between successive initializations.
          */
         virtual void
-        init(const libMesh::Elem& elem);
+        init(const MAST::GeomElem& elem);
 
     protected:
         

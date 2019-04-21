@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -43,6 +43,7 @@ namespace MAST {
     class Parameter;
     class PointLoadCondition;
     class NonlinearSystem;
+    class GeomElem;
     
     
     // typedefs
@@ -195,10 +196,10 @@ namespace MAST {
         /*!
          *    get property card for the specified element
          */
-        const MAST::ElementPropertyCardBase& get_property_card(const libMesh::Elem& elem) const;
+        const MAST::ElementPropertyCardBase& get_property_card(const MAST::GeomElem& elem) const;
         
         /*!
-         *    get property card for the specified subdomain id \par i
+         *    get property card for the specified subdomain id \p i
          */
         const MAST::ElementPropertyCardBase& get_property_card(const unsigned int sid) const;
         

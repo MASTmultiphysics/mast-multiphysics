@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -20,27 +20,24 @@
 // MAST includes
 #include "base/elem_base.h"
 #include "base/system_initialization.h"
-#include "mesh/local_elem_base.h"
 #include "base/nonlinear_system.h"
 #include "mesh/fe_base.h"
 
 
 MAST::ElementBase::ElementBase(MAST::SystemInitialization& sys,
                                MAST::AssemblyBase& assembly,
-                               const libMesh::Elem& elem):
+                               const MAST::GeomElem& elem):
 _system                 (sys),
 _assembly               (assembly),
 _elem                   (elem),
 _active_sol_function    (nullptr),
-_time                   (_system.system().time),
-_fe                     (nullptr) {
+_time                   (_system.system().time) {
     
 }
 
 
 MAST::ElementBase::~ElementBase() {
 
-    if (_fe)     delete _fe;
 }
 
 

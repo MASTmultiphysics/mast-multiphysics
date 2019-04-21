@@ -9,6 +9,7 @@ before_install:
 - sudo apt-get -qq install -y libboost-all-dev
 - sudo apt-get -qq install -y libeigen3-dev
 - sudo apt-get -qq install -y doxygen graphviz rsync
+- sudo apt-get -qq install -y texlive-latex-base dvi2ps ghostscript
 
 install:
 - cd ${HOME}
@@ -33,7 +34,7 @@ before_script:
     -DBUILD_DOC=ON
     -DENABLE_DOT=OFF
     -DENABLE_GCMMA=OFF
-    -DENABLE_NPSOL=OFF
+    -DENABLE_SNOPT=OFF
 
 script:
 - make -j 2

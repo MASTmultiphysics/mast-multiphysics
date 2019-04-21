@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -19,19 +19,19 @@
 
 // MAST includes
 #include "property_cards/element_property_card_2D.h"
-
+#include "mesh/geom_elem.h"
 
 
 MAST::BendingOperatorType
-MAST::ElementPropertyCard2D::bending_model(const libMesh::Elem& elem,
-                                           const libMesh::FEType& fe) const {
+MAST::ElementPropertyCard2D::bending_model(const MAST::GeomElem& elem) const {
     // for a TRI3 element, default bending is DKT. For all other elements
     // the default is Mindlin. Otherwise it returns the model set for
     // this card.
-    switch (elem.type()) {
+    switch (elem.get_reference_elem().type()) {
         case libMesh::TRI3:
-            if ((fe.family == libMesh::LAGRANGE) &&
-                (fe.order  == libMesh::FIRST) &&
+            // assuming that all variables have the same interpolation
+            if ((elem.get_fe_type(0).family == libMesh::LAGRANGE) &&
+                (elem.get_fe_type(0).order  == libMesh::FIRST) &&
                 (_bending_model == MAST::DEFAULT_BENDING))
                 return MAST::DKT;
             else

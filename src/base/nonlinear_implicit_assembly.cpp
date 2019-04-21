@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -25,6 +25,7 @@
 #include "base/nonlinear_system.h"
 #include "base/nonlinear_implicit_assembly_elem_operations.h"
 #include "numerics/utility.h"
+#include "mesh/geom_elem.h"
 
 // libMesh includes
 #include "libmesh/nonlinear_solver.h"
@@ -112,8 +113,12 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
         
         dof_map.dof_indices (elem, dof_indices);
         
-        ops.init(*elem);
+        MAST::GeomElem geom_elem;
+        ops.set_elem_data(elem->dim(), geom_elem);
+        geom_elem.init(*elem, *_system);
         
+        ops.init(geom_elem);
+
         // get the solution
         unsigned int ndofs = (unsigned int)dof_indices.size();
         sol.setZero(ndofs);
@@ -159,6 +164,7 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
         // add to the global matrices
         if (R) R->add_vector(v, dof_indices);
         if (J) J->add_matrix(m, dof_indices);
+        dof_indices.clear();
     }
     
     // call the post assembly object, if provided by user
@@ -241,8 +247,12 @@ linearized_jacobian_solution_product (const libMesh::NumericVector<Real>& X,
         
         dof_map.dof_indices (elem, dof_indices);
         
-        ops.init(*elem);
+        MAST::GeomElem geom_elem;
+        ops.set_elem_data(elem->dim(), geom_elem);
+        geom_elem.init(*elem, *_system);
         
+        ops.init(geom_elem);
+
         // get the solution
         unsigned int ndofs = (unsigned int)dof_indices.size();
         sol.setZero(ndofs);
@@ -279,6 +289,7 @@ linearized_jacobian_solution_product (const libMesh::NumericVector<Real>& X,
         
         // add to the global matrices
         JdX.add_vector(v, dof_indices);
+        dof_indices.clear();
     }
     
     
@@ -349,8 +360,12 @@ second_derivative_dot_solution_assembly (const libMesh::NumericVector<Real>& X,
         
         dof_map.dof_indices (elem, dof_indices);
         
-        ops.init(*elem);
+        MAST::GeomElem geom_elem;
+        ops.set_elem_data(elem->dim(), geom_elem);
+        geom_elem.init(*elem, *_system);
         
+        ops.init(geom_elem);
+
         // get the solution
         unsigned int ndofs = (unsigned int)dof_indices.size();
         sol.setZero(ndofs);
@@ -441,8 +456,12 @@ sensitivity_assemble (const MAST::FunctionBase& f,
         
         dof_map.dof_indices (elem, dof_indices);
         
-        ops.init(*elem);
+        MAST::GeomElem geom_elem;
+        ops.set_elem_data(elem->dim(), geom_elem);
+        geom_elem.init(*elem, *_system);
         
+        ops.init(geom_elem);
+
         // get the solution
         unsigned int ndofs = (unsigned int)dof_indices.size();
         sol.setZero(ndofs);
@@ -471,6 +490,7 @@ sensitivity_assemble (const MAST::FunctionBase& f,
         
         // add to the global matrices
         sensitivity_rhs.add_vector(v, dof_indices);
+        dof_indices.clear();
     }
     
     // if a solution function is attached, initialize it

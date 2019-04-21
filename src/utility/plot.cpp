@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -20,41 +20,42 @@
 // MAST includes
 #include "utility/plot.h"
 
-#if MAST_ENABLE_MATPLOTLIB == 1
+#if MAST_ENABLE_GNUPLOT == 1
 
 void
-MAST::plot_elem(const libMesh::Elem& elem) {
+MAST::plot_elem(Gnuplot& gp,
+                const libMesh::Elem& elem) {
     
     // currently only for 2D.
     libmesh_assert_equal_to(elem.dim(), 2);
-
+    
     unsigned int
     n_nodes = elem.n_nodes();
-
-    std::vector<Real>
-    x(n_nodes+1, 0.),
-    y(n_nodes+1, 0.);
-
+    
+    std::vector<std::tuple<Real, Real>>
+    xy(n_nodes+1);
+    
     for (unsigned int i=0; i<=n_nodes; i++) {
-        x[i] = (*elem.node_ptr(i%n_nodes))(0);
-        y[i] = (*elem.node_ptr(i%n_nodes))(1);
+        std::get<0>(xy[i]) = (*elem.node_ptr(i%n_nodes))(0);
+        std::get<1>(xy[i]) = (*elem.node_ptr(i%n_nodes))(1);
     }
 
-    plt::plot(x, y);
-    plt::pause(0.01);
+    gp << "plot '-' with lines \n";
+    gp.send1d(xy);
 }
 
 
 void
-MAST::plot_node(const libMesh::Node& node) {
-
-    std::vector<Real>
-    x (1, node(0)),
-    y (1, node(1));
+MAST::plot_node(Gnuplot& gp, const libMesh::Node& node) {
     
-    plt::plot(x, y, "*");
-    plt::pause(0.01);
+    std::vector<std::tuple<Real, Real>>
+    xy(1);
+    
+    std::get<0>(xy[0]) = node(0);
+    std::get<1>(xy[0]) = node(1);
+    
+    gp << "plot '-' with points \n";
+    gp.send1d(xy);
 }
 
-#endif // MAST_ENABLE_MATPLOTLIB == 1
-
+#endif

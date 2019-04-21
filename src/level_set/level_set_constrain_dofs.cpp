@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -38,8 +38,7 @@ _sys                             (sys),
 _level_set                       (level_set),
 _intersection                    (nullptr) {
     
-    _intersection = new MAST::LevelSetIntersection(sys.system().get_mesh().max_elem_id(),
-                                                   sys.system().get_mesh().max_node_id());
+    _intersection = new MAST::LevelSetIntersection();
 }
 
 
@@ -82,7 +81,9 @@ MAST::LevelSetConstrainDofs::constrain() {
         
         const libMesh::Elem* elem = *el;
         
-        _intersection->init(_level_set, *elem, nonlin_sys.time);
+        _intersection->init(_level_set, *elem, nonlin_sys.time,
+                            nonlin_sys.get_mesh().max_elem_id(),
+                            nonlin_sys.get_mesh().max_node_id());
         
         dof_indices.clear();
         dof_map.dof_indices(elem, dof_indices);

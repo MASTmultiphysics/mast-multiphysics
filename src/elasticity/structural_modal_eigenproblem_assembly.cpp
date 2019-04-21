@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -24,8 +24,9 @@
 #include "property_cards/element_property_card_1D.h"
 #include "base/physics_discipline_base.h"
 #include "base/system_initialization.h"
+#include "base/function_base.h"
 #include "base/assembly_base.h"
-#include "level_set/level_set_intersection.h"
+#include "level_set/level_set_intersected_elem.h"
 
 
 
@@ -154,15 +155,16 @@ void
 MAST::StructuralModalEigenproblemAssemblyElemOperations::
 elem_topology_sensitivity_calculations(const MAST::FunctionBase& f,
                                        bool base_sol,
-                                       const MAST::LevelSetIntersection& intersect,
                                        const MAST::FieldFunction<RealVectorX>& vel,
                                        RealMatrixX& mat_A,
                                        RealMatrixX& mat_B) {
     
     libmesh_assert(_physics_elem);
     libmesh_assert(f.is_topology_parameter());
-    const libMesh::Elem& elem = _physics_elem->elem();
     
+    const MAST::LevelSetIntersectedElem
+    &elem = dynamic_cast<const MAST::LevelSetIntersectedElem&>(_physics_elem->elem());
+
     RealVectorX vec = RealVectorX::Zero(mat_A.rows()); // dummy vector
     RealMatrixX mat = RealMatrixX::Zero(mat_A.rows(), mat_A.cols()); // dummy matrix
     mat_A.setZero();
@@ -170,53 +172,65 @@ elem_topology_sensitivity_calculations(const MAST::FunctionBase& f,
 
     // sensitivity only exists at the boundary. So, we proceed with calculation
     // only if this element has an intersection in the interior, or with a side.
-    if (intersect.if_elem_has_boundary()) {
+    if (elem.if_elem_has_level_set_boundary() &&
+        elem.if_subelem_has_side_on_level_set_boundary()) {
         
         MAST::StructuralElementBase& e =
         dynamic_cast<MAST::StructuralElementBase&>(*_physics_elem);
         
-        if (intersect.has_side_on_interface(elem)) {
-            e.internal_residual_boundary_velocity(f,
-                                                  intersect.get_side_on_interface(elem),
-                                                  vel,
-                                                  true,
-                                                  vec,
-                                                  mat_A);
-            e.volume_external_residual_boundary_velocity(f,
-                                                         intersect.get_side_on_interface(elem),
-                                                         vel,
-                                                         _discipline->volume_loads(),
-                                                         true,
-                                                         vec,
-                                                         mat_A);
-            
-            e.inertial_residual_boundary_velocity(f,
-                                                  intersect.get_side_on_interface(elem),
-                                                  vel,
-                                                  true,
-                                                  vec,
-                                                  mat_B,
-                                                  mat,
-                                                  mat_A);
-
-            // if the linearization is about a base state, then the sensitivity of
-            // the base state will influence the sensitivity of the Jacobian
-            if (base_sol)
-                libmesh_assert(false); // to be implemented
-                //e.internal_residual_jac_dot_state_sensitivity(mat_A);
-            
-        }
+        e.internal_residual_boundary_velocity(f,
+                                              elem.get_subelem_side_on_level_set_boundary(),
+                                              vel,
+                                              true,
+                                              vec,
+                                              mat_A);
+        e.volume_external_residual_boundary_velocity(f,
+                                                     elem.get_subelem_side_on_level_set_boundary(),
+                                                     vel,
+                                                     _discipline->volume_loads(),
+                                                     true,
+                                                     vec,
+                                                     mat_A);
         
+        e.inertial_residual_boundary_velocity(f,
+                                              elem.get_subelem_side_on_level_set_boundary(),
+                                              vel,
+                                              true,
+                                              vec,
+                                              mat_B,
+                                              mat,
+                                              mat_A);
+        
+        // if the linearization is about a base state, then the sensitivity of
+        // the base state will influence the sensitivity of the Jacobian
+        if (base_sol)
+            libmesh_assert(false); // to be implemented
+        //e.internal_residual_jac_dot_state_sensitivity(mat_A);
     }
 }
 
 
 
+void
+MAST::StructuralModalEigenproblemAssemblyElemOperations::
+set_elem_data(unsigned int dim,
+              MAST::GeomElem& elem) const {
+    
+    libmesh_assert(!_physics_elem);
+    
+    if (dim == 1) {
+        
+        const MAST::ElementPropertyCard1D& p =
+        dynamic_cast<const MAST::ElementPropertyCard1D&>(_discipline->get_property_card(elem));
+        
+        elem.set_local_y_vector(p.y_vector());
+    }
+}
 
 
 void
 MAST::StructuralModalEigenproblemAssemblyElemOperations::
-init(const libMesh::Elem& elem) {
+init(const MAST::GeomElem& elem) {
 
     libmesh_assert(!_physics_elem);
     libmesh_assert(_system);

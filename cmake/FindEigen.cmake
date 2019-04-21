@@ -18,6 +18,6 @@ include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(Eigen
         REQUIRED_VARS Eigen_INCLUDE_DIR)
 
-mark_as_advanced(Eigen_INCLUDE_DIR)
+mark_as_advanced(Eigen_INCLUDE_DIR Eigen_FOUND)
 
 set(Eigen_INCLUDE_DIRS ${Eigen_INCLUDE_DIR})

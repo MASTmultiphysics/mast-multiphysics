@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -79,8 +79,8 @@ namespace MAST {
         
         /*!
          *    @returns a reference to the localized solution from
-         *    iteration number = current - prev_iter. So, \par prev_iter = 0
-         *    gives the current solution estimate. Note that \par prev_iter
+         *    iteration number = current - prev_iter. So, \p prev_iter = 0
+         *    gives the current solution estimate. Note that \p prev_iter
          *    cannot be greater than the total number of iterations that this
          *    solver stores solutions for.
          */
@@ -96,8 +96,8 @@ namespace MAST {
 
         /*!
          *    @returns a reference to the localized velocity from
-         *    iteration number = current - prev_iter. So, \par prev_iter = 0
-         *    gives the current velocity estimate. Note that \par prev_iter
+         *    iteration number = current - prev_iter. So, \p prev_iter = 0
+         *    gives the current velocity estimate. Note that \p prev_iter
          *    cannot be greater than the total number of iterations that this
          *    solver stores solutions for.
          */
@@ -115,8 +115,8 @@ namespace MAST {
         
         /*!
          *    @returns a reference to the localized acceleration from
-         *    iteration number = current - prev_iter. So, \par prev_iter = 0
-         *    gives the current acceleration estimate. Note that \par prev_iter
+         *    iteration number = current - prev_iter. So, \p prev_iter = 0
+         *    gives the current acceleration estimate. Note that \p prev_iter
          *    cannot be greater than the total number of iterations that this
          *    solver stores solutions for.
          */
@@ -142,7 +142,21 @@ namespace MAST {
          */
         virtual void update_acceleration(libMesh::NumericVector<Real>& acc,
                                          const libMesh::NumericVector<Real>& sol) = 0;
+
+        /*!
+         *    update the transient sensitivity velocity based on the
+         *    current sensitivity solution
+         */
+        virtual void update_sensitivity_velocity(libMesh::NumericVector<Real>& vel,
+                                                 const libMesh::NumericVector<Real>& sol) = 0;
         
+        /*!
+         *    update the transient sensitivity acceleration based on the
+         *    current sensitivity solution
+         */
+        virtual void update_sensitivity_acceleration(libMesh::NumericVector<Real>& acc,
+                                                     const libMesh::NumericVector<Real>& sol) = 0;
+
         
         /*!
          *    update the perturbation in transient velocity based on the
@@ -214,6 +228,17 @@ namespace MAST {
                                std::vector<libMesh::NumericVector<Real>*>& qtys);
 
         /*!
+         *    localizes the relevant solutions for system assembly. The
+         *    calling function has to delete the pointers to these vectors.
+         *    \p prev_iter = 0 implies the current iterate, while increasing
+         *    values will identify decreasing iterations for which data
+         *    is stored. 
+         */
+        virtual void
+        build_sensitivity_local_quantities(unsigned int prev_iter,
+                                           std::vector<libMesh::NumericVector<Real>*>& qtys);
+
+        /*!
          *    localizes the relevant perturbations in solutions for system
          *    assembly. 
          *    \param current_sol  the perturbation in current displacement 
@@ -240,9 +265,18 @@ namespace MAST {
          *    calculations
          */
         virtual void
-        set_element_sensitivity_data(const std::vector<libMesh::dof_id_type>& dof_indices,
-                                     const std::vector<libMesh::NumericVector<Real>*>& sols) = 0;
+        extract_element_sensitivity_data(const std::vector<libMesh::dof_id_type>& dof_indices,
+                                         const std::vector<libMesh::NumericVector<Real>*>& sols,
+                                         std::vector<RealVectorX>& local_sols) = 0;
 
+        /*!
+         *   computes the contribution for this element from previous
+         *   time step
+         */
+        virtual void
+        elem_sensitivity_contribution_previous_timestep(const std::vector<RealVectorX>& prev_sols,
+                                                        RealVectorX& vec) = 0;
+        
         /*!
          *    provides the element with the transient data for calculations
          */
@@ -253,10 +287,17 @@ namespace MAST {
 
         
         /*!
+         *   calls the physics object
+         */
+        virtual void
+        set_elem_data(unsigned int dim,
+                      MAST::GeomElem& elem) const;
+
+        /*!
          *   calls the method from TransientAssemblyElemOperations
          */
         virtual void
-        init(const libMesh::Elem& elem);
+        init(const MAST::GeomElem& elem);
 
         /*!
          *   calls the method from TransientAssemblyElemOperations

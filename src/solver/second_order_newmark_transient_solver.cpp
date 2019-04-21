@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -81,18 +81,23 @@ set_element_data(const std::vector<libMesh::dof_id_type>& dof_indices,
 
 void
 MAST::SecondOrderNewmarkTransientSolver::
-set_element_sensitivity_data(const std::vector<libMesh::dof_id_type>& dof_indices,
-                             const std::vector<libMesh::NumericVector<Real>*>& sols){
+extract_element_sensitivity_data(const std::vector<libMesh::dof_id_type>& dof_indices,
+                                 const std::vector<libMesh::NumericVector<Real>*>& sols,
+                                 std::vector<RealVectorX>& local_sols) {
     
     libmesh_assert_equal_to(sols.size(), 3);
     
     const unsigned int n_dofs = (unsigned int)dof_indices.size();
     
-    // get the current state and velocity estimates
-    // also get the current discrete velocity replacement
+    local_sols.resize(3);
+    
     RealVectorX
-    sol          = RealVectorX::Zero(n_dofs),
-    vel          = RealVectorX::Zero(n_dofs),
+    &sol         = local_sols[0],
+    &vel         = local_sols[1],
+    &accel       = local_sols[2];
+    
+    sol          = RealVectorX::Zero(n_dofs);
+    vel          = RealVectorX::Zero(n_dofs);
     accel        = RealVectorX::Zero(n_dofs);
     
     
@@ -109,9 +114,7 @@ set_element_sensitivity_data(const std::vector<libMesh::dof_id_type>& dof_indice
         accel(i)        = acc_global(dof_indices[i]);
     }
     
-    _assembly_ops->set_elem_solution_sensitivity(sol);
-    _assembly_ops->set_elem_velocity_sensitivity(vel);
-    _assembly_ops->set_elem_acceleration_sensitivity(accel);
+    
 }
 
 
@@ -186,6 +189,50 @@ update_acceleration(libMesh::NumericVector<Real>& vec,
     &prev_sol = this->solution(1),
     &prev_vel = this->velocity(1),
     &prev_acc = this->acceleration(1);
+    
+    // first calculate the acceleration
+    vec.zero();
+    vec.add(             1,       sol);
+    vec.add(            -1., prev_sol);
+    vec.scale(1./beta/dt/dt);
+    vec.add(    -1./beta/dt, prev_vel);
+    vec.add(-(.5-beta)/beta, prev_acc);
+    vec.close();
+}
+
+
+
+void
+MAST::SecondOrderNewmarkTransientSolver::
+update_sensitivity_velocity(libMesh::NumericVector<Real>& vec,
+                            const libMesh::NumericVector<Real>& sol) {
+    
+    const libMesh::NumericVector<Real>
+    &prev_sol = this->solution_sensitivity(1),
+    &prev_vel = this->velocity_sensitivity(1),
+    &prev_acc = this->acceleration_sensitivity(1);
+    
+    // first calculate the acceleration
+    vec.zero();
+    vec.add(                   1.,      sol);
+    vec.add(                  -1., prev_sol);
+    vec.scale(gamma/beta/dt);
+    vec.add(        1.-gamma/beta, prev_vel);
+    vec.add((1.-gamma/2./beta)*dt, prev_acc);
+    vec.close();
+}
+
+
+
+void
+MAST::SecondOrderNewmarkTransientSolver::
+update_sensitivity_acceleration(libMesh::NumericVector<Real>& vec,
+                                const libMesh::NumericVector<Real>& sol) {
+    
+    const libMesh::NumericVector<Real>
+    &prev_sol = this->solution_sensitivity(1),
+    &prev_vel = this->velocity_sensitivity(1),
+    &prev_acc = this->acceleration_sensitivity(1);
     
     // first calculate the acceleration
     vec.zero();
@@ -370,6 +417,39 @@ elem_sensitivity_calculations(const MAST::FunctionBase& f,
 }
 
 
+void
+MAST::SecondOrderNewmarkTransientSolver::
+elem_sensitivity_contribution_previous_timestep(const std::vector<RealVectorX>& prev_sols,
+                                                RealVectorX& vec) {
+    
+    // make sure that the assembly object is provided
+    libmesh_assert(_assembly_ops);
+    libmesh_assert_equal_to(prev_sols.size(), 3);
+    
+    unsigned int n_dofs = (unsigned int)vec.size();
+    
+    const RealVectorX
+    &sol          = prev_sols[0],
+    &vel          = prev_sols[1],
+    &accel        = prev_sols[2];
+    RealVectorX
+    dummy_vec     = RealVectorX::Zero(n_dofs);
+    
+    RealMatrixX
+    f_m_jac_xdot  = RealMatrixX::Zero(n_dofs, n_dofs),
+    dummy_mat     = RealMatrixX::Zero(n_dofs, n_dofs);
+    
+    // perform the element assembly
+    _assembly_ops->elem_calculations(true,
+                                     dummy_vec,           // mass vector
+                                     dummy_vec,           // forcing vector
+                                     f_m_jac_xdot,        // Jac of mass wrt x_dot
+                                     dummy_mat,           // Jac of mass wrt x
+                                     dummy_mat);          // Jac of forcing vector wrt x
+    
+    libmesh_assert(false); // this expression is in error and needs to be set
+    vec  -= f_m_jac_xdot * ( (1./beta/dt)*sol + (1.-beta)/beta * vel);
+}
 
 
 void
@@ -385,7 +465,6 @@ elem_shape_sensitivity_calculations(const MAST::FunctionBase& f,
 void
 MAST::SecondOrderNewmarkTransientSolver::
 elem_topology_sensitivity_calculations(const MAST::FunctionBase& f,
-                                       const MAST::LevelSetIntersection& intersect,
                                        const MAST::FieldFunction<RealVectorX>& vel,
                                        RealVectorX& vec) {
     libmesh_assert(false); // to be implemented

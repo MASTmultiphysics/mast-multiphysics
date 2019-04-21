@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -41,6 +41,9 @@ namespace MAST {
         attach_function_evaluation_object (MAST::FunctionEvaluation& feval);
 
     protected:
+
+        void  _print_termination_message(const int INFORM);
+
         
         void (*_funobj) (int*    mode,
                          int*    n,
@@ -58,7 +61,9 @@ namespace MAST {
                          double* c,
                          double* cJac,
                          int*    nstate);
-        
+
+        std::map<int, std::string> _exit_message;
+        std::map<int, std::string> _info_message;
     };
 }
 

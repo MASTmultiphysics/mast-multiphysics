@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -24,8 +24,8 @@
 #include "elasticity/structural_assembly.h"
 #include "property_cards/element_property_card_1D.h"
 #include "base/physics_discipline_base.h"
-#include "level_set/level_set_intersection.h"
-
+#include "level_set/level_set_intersected_elem.h"
+#include "mesh/geom_elem.h"
 
 
 MAST::StructuralNonlinearAssemblyElemOperations::StructuralNonlinearAssemblyElemOperations():
@@ -71,10 +71,27 @@ MAST::StructuralNonlinearAssemblyElemOperations::set_elem_solution(const RealVec
 }
 
 
+void
+MAST::StructuralNonlinearAssemblyElemOperations::
+set_elem_data(unsigned int dim,
+              MAST::GeomElem& elem) const {
+    
+    libmesh_assert(!_physics_elem);
+    
+    if (dim == 1) {
+        
+        const MAST::ElementPropertyCard1D& p =
+        dynamic_cast<const MAST::ElementPropertyCard1D&>(_discipline->get_property_card(elem));
+        
+        elem.set_local_y_vector(p.y_vector());
+    }
+}
+
+
 
 void
 MAST::StructuralNonlinearAssemblyElemOperations::
-init(const libMesh::Elem& elem) {
+init(const MAST::GeomElem& elem) {
     
     libmesh_assert(!_physics_elem);
     libmesh_assert(_system);
@@ -183,17 +200,19 @@ elem_sensitivity_calculations(const MAST::FunctionBase& f,
 void
 MAST::StructuralNonlinearAssemblyElemOperations::
 elem_topology_sensitivity_calculations(const MAST::FunctionBase& f,
-                                       const MAST::LevelSetIntersection& intersect,
                                        const MAST::FieldFunction<RealVectorX>& vel,
                                        RealVectorX& vec) {
     
     libmesh_assert(_physics_elem);
     libmesh_assert(f.is_topology_parameter());
-    const libMesh::Elem& elem = _physics_elem->elem();
+    
+    const MAST::LevelSetIntersectedElem
+    &elem = dynamic_cast<const MAST::LevelSetIntersectedElem&>(_physics_elem->elem());
 
     // sensitivity only exists at the boundary. So, we proceed with calculation
     // only if this element has an intersection in the interior, or with a side.
-    if (intersect.if_elem_has_boundary()) {
+    if (elem.if_elem_has_level_set_boundary() &&
+        elem.if_subelem_has_side_on_level_set_boundary()) {
         
         MAST::StructuralElementBase& e =
         dynamic_cast<MAST::StructuralElementBase&>(*_physics_elem);
@@ -202,21 +221,19 @@ elem_topology_sensitivity_calculations(const MAST::FunctionBase& f,
         RealMatrixX
         dummy = RealMatrixX::Zero(vec.size(), vec.size());
         
-        if (intersect.has_side_on_interface(elem)) {
-            e.internal_residual_boundary_velocity(f,
-                                                  intersect.get_side_on_interface(elem),
-                                                  vel,
-                                                  false,
-                                                  vec,
-                                                  dummy);
-            e.volume_external_residual_boundary_velocity(f,
-                                                         intersect.get_side_on_interface(elem),
-                                                         vel,
-                                                         _discipline->volume_loads(),
-                                                         false,
-                                                         vec,
-                                                         dummy);
-        }
+        e.internal_residual_boundary_velocity(f,
+                                              elem.get_subelem_side_on_level_set_boundary(),
+                                              vel,
+                                              false,
+                                              vec,
+                                              dummy);
+        e.volume_external_residual_boundary_velocity(f,
+                                                     elem.get_subelem_side_on_level_set_boundary(),
+                                                     vel,
+                                                     _discipline->volume_loads(),
+                                                     false,
+                                                     vec,
+                                                     dummy);
         /*e.side_external_residual_sensitivity(f, false,
          vec,
          dummy,

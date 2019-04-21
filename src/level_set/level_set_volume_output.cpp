@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -21,6 +21,7 @@
 #include "level_set/level_set_volume_output.h"
 #include "level_set/level_set_elem_base.h"
 #include "level_set/level_set_intersection.h"
+#include "level_set/level_set_intersected_elem.h"
 #include "base/system_initialization.h"
 #include "base/nonlinear_system.h"
 #include "base/assembly_base.h"
@@ -45,7 +46,7 @@ MAST::LevelSetVolume::~LevelSetVolume() {
 
 
 void
-MAST::LevelSetVolume::init(const libMesh::Elem& elem) {
+MAST::LevelSetVolume::init(const MAST::GeomElem& elem) {
     
     libmesh_assert(!_physics_elem);
     libmesh_assert(_system);
@@ -113,16 +114,17 @@ Real
 MAST::LevelSetVolume::output_sensitivity_for_elem(const MAST::FunctionBase& p) {
 
     libmesh_assert(_physics_elem);
-    const libMesh::Elem& elem = _physics_elem->elem();
+    const MAST::LevelSetIntersectedElem
+    &elem = dynamic_cast<const MAST::LevelSetIntersectedElem&> (_physics_elem->elem());
     
-    if (this->if_evaluate_for_element(_physics_elem->elem()) &&
-        _intersection.if_elem_has_boundary() &&
-        _intersection.has_side_on_interface(elem)) {
+    if (this->if_evaluate_for_element(elem) &&
+        elem.if_elem_has_level_set_boundary() &&
+        elem.if_subelem_has_side_on_level_set_boundary()) {
 
         MAST::LevelSetElementBase&
         e = dynamic_cast<MAST::LevelSetElementBase&>(*_physics_elem);
         
-        return e.volume_boundary_velocity_on_side(_intersection.get_side_on_interface(elem));
+        return e.volume_boundary_velocity_on_side(elem.get_subelem_side_on_level_set_boundary());
     }
     else
         return 0.;
@@ -170,7 +172,6 @@ MAST::LevelSetVolume::evaluate_sensitivity(const MAST::FunctionBase& f) {
 
 void
 MAST::LevelSetVolume::evaluate_topology_sensitivity(const MAST::FunctionBase& f,
-                                                    const MAST::LevelSetIntersection& intersect,
                                                     const MAST::FieldFunction<RealVectorX>& vel) {
     
     // here we ignore the velocity, since the element is able to compute that
@@ -179,19 +180,21 @@ MAST::LevelSetVolume::evaluate_topology_sensitivity(const MAST::FunctionBase& f,
     
     libmesh_assert(_physics_elem);
     libmesh_assert(f.is_topology_parameter());
-    libmesh_assert_equal_to(&intersect, &_intersection);
+
+    const MAST::LevelSetIntersectedElem
+    &elem = dynamic_cast<const MAST::LevelSetIntersectedElem&> (_physics_elem->elem());
 
     // sensitivity only exists at the boundary. So, we proceed with calculation
     // only if this element has an intersection in the interior, or with a side. 
-    if (this->if_evaluate_for_element(_physics_elem->elem()) &&
-        _intersection.if_elem_has_boundary()) {
+    if (this->if_evaluate_for_element(elem) &&
+        elem.if_elem_has_level_set_boundary() &&
+        elem.if_subelem_has_side_on_level_set_boundary()) {
         
         MAST::LevelSetElementBase&
         e = dynamic_cast<MAST::LevelSetElementBase&>(*_physics_elem);
         
-        if (_intersection.has_side_on_interface(_physics_elem->elem()))
-            _dvol_dp += e.volume_boundary_velocity_on_side
-            (_intersection.get_side_on_interface(_physics_elem->elem()));
+        _dvol_dp += e.volume_boundary_velocity_on_side
+        (elem.get_subelem_side_on_level_set_boundary());
     }
 }
 

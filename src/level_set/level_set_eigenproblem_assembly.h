@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -90,7 +90,7 @@ namespace MAST {
         /**
          * Assembly function.  This function will be called
          * to assemble the sensitivity of eigenproblem matrices.
-         * The method provides dA/dp and dB/dp for \par f parameter.
+         * The method provides dA/dp and dB/dp for \p f parameter.
          *
          * If the routine is not able to provide sensitivity for this parameter,
          * then it should return false, and the system will attempt to use
@@ -100,16 +100,6 @@ namespace MAST {
         eigenproblem_sensitivity_assemble (const MAST::FunctionBase& f,
                                            libMesh::SparseMatrix<Real>* sensitivity_A,
                                            libMesh::SparseMatrix<Real>* sensitivity_B);
-
-        /*!
-         *   @returns a MAST::FEBase object for calculation of finite element
-         *   quantities. For all standard applications this is a wrapper
-         *   around the libMesh::FEBase class, which is specialized for
-         *   cut-cell applications where a sub-finite element is created
-         *   for element integration.
-         */
-        virtual std::unique_ptr<MAST::FEBase>
-        build_fe();
         
     protected:
         

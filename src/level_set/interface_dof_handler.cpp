@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -74,10 +74,12 @@ MAST::LevelSetInterfaceDofHandler::init(const MAST::SystemInitialization& sys_in
     for ( ; el != end_el; ++el) {
         
         const libMesh::Elem* elem = *el;
-        intersection.init(phi, *elem, system.time);
+        intersection.init(phi, *elem, system.time,
+                          system.get_mesh().max_elem_id(),
+                          system.get_mesh().max_node_id());
         if (intersection.if_elem_has_boundary()) {
             
-            intersection.get_nodes_on_negative_phi(negative_phi_nodes);
+            intersection.get_corner_nodes_on_negative_phi(negative_phi_nodes);
             
             std::set<const libMesh::Node*>::const_iterator
             nd_it   = negative_phi_nodes.begin(),

@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -22,6 +22,7 @@
 #include "base/elem_base.h"
 #include "base/system_initialization.h"
 #include "base/nonlinear_system.h"
+#include "mesh/geom_elem.h"
 
 // libMesh includes
 #include "libmesh/boundary_info.h"
@@ -117,19 +118,30 @@ MAST::OutputAssemblyElemOperations::get_participating_boundaries() {
 
 bool
 MAST::OutputAssemblyElemOperations::
-if_evaluate_for_element(const libMesh::Elem& elem) const {
+if_evaluate_for_element(const MAST::GeomElem& elem) const {
 
-
+    const libMesh::Elem &ref_e = elem.get_reference_elem();
+    
+    // three modes are supported:
+    //   - evaluate on all elems, in which case every element will be evaluated
+    //   - evaluate for all elements with a subdomain id (note that with mesh
+    //          adaptivity all childrent inherit the subdomain id of the parent)
+    //   - evaluate elements in a group
+    
     if (_if_evaluate_on_all_elems)
         return true;
-    else if (_sub_domain_ids.count(elem.subdomain_id()))
+    else if (_sub_domain_ids.count(ref_e.subdomain_id()))
         return true;
 
+    // in the third case, if mesh adaptivity is used then the current element
+    // might be a child of the original element. In this case we check whether
+    // the parent was specified in the subset.
+    //
     // check to see if the element has a parent. If yes, then use that element
     // pointer otherwise use the element given in the function call.
     const libMesh::Elem
-    *e = elem.parent();
-    if (!e) e = &elem;
+    *e = ref_e.parent();
+    if (!e) e = &ref_e;
     
     if (_elem_subset.count(e))
         return true;
@@ -140,24 +152,17 @@ if_evaluate_for_element(const libMesh::Elem& elem) const {
     
 bool
 MAST::OutputAssemblyElemOperations::
-if_evaluate_for_boundary(const libMesh::Elem& elem,
+if_evaluate_for_boundary(const MAST::GeomElem& elem,
                          const unsigned int s) const {
 
-    const libMesh::BoundaryInfo
-    &binfo = *_system->system().get_mesh().boundary_info;
-
-    // if no boundary ids have been specified for the side, then
-    // move to the next side.
-    if (!binfo.n_boundary_ids(&elem, s))
-        return false;
-    
-    // check to see if any of the specified boundary ids is included
-    // for this element
     std::vector<libMesh::boundary_id_type> bc_ids;
-    binfo.boundary_ids(&elem, s, bc_ids);
-    std::vector<libMesh::boundary_id_type>::const_iterator bc_it = bc_ids.begin();
+    elem.get_boundary_ids_on_quadrature_elem_side(s, bc_ids);
     
-    for ( ; bc_it != bc_ids.end(); bc_it++)
+    std::vector<libMesh::boundary_id_type>::const_iterator
+    bc_it  = bc_ids.begin(),
+    bc_end = bc_ids.end();
+    
+    for ( ; bc_it != bc_end; bc_it++)
         if (_bids.count(*bc_it))
             return true;
     

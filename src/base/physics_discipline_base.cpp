@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -23,6 +23,7 @@
 #include "base/parameter.h"
 #include "base/nonlinear_system.h"
 #include "boundary_condition/dirichlet_boundary_condition.h"
+#include "mesh/geom_elem.h"
 
 // libMesh includes
 #include "libmesh/dof_map.h"
@@ -157,10 +158,10 @@ MAST::PhysicsDisciplineBase::get_property_card(const unsigned int sid) const {
 
 
 const MAST::ElementPropertyCardBase&
-MAST::PhysicsDisciplineBase::get_property_card(const libMesh::Elem& elem) const {
+MAST::PhysicsDisciplineBase::get_property_card(const MAST::GeomElem& elem) const {
     
     MAST::PropertyCardMapType::const_iterator
-    elem_p_it = _element_property.find(elem.subdomain_id());
+    elem_p_it = _element_property.find(elem.get_reference_elem().subdomain_id());
     libmesh_assert(elem_p_it != _element_property.end());
     
     return *elem_p_it->second;

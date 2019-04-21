@@ -46,6 +46,9 @@ target_sources(mast
         ${CMAKE_CURRENT_LIST_DIR}/transient_assembly_elem_operations.cpp
         ${CMAKE_CURRENT_LIST_DIR}/transient_assembly_elem_operations.h)
 
+configure_file(${CMAKE_CURRENT_LIST_DIR}/mast_config.h.in
+               ${CMAKE_CURRENT_LIST_DIR}/mast_config.h)
+
 # Install MAST headers for this directory.
 install(DIRECTORY ./ DESTINATION include/base
         FILES_MATCHING PATTERN "*.h")

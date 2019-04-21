@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -28,6 +28,8 @@
 #include "base/boundary_condition_base.h"
 #include "property_cards/element_property_card_1D.h"
 #include "level_set/level_set_intersection.h"
+#include "level_set/level_set_intersected_elem.h"
+#include "mesh/geom_elem.h"
 
 
 MAST::StressStrainOutputBase::Data::Data(const RealVectorX& stress,
@@ -336,7 +338,6 @@ MAST::StressStrainOutputBase::evaluate_sensitivity(const MAST::FunctionBase &f) 
 void
 MAST::StressStrainOutputBase::
 evaluate_topology_sensitivity(const MAST::FunctionBase &f,
-                              const MAST::LevelSetIntersection &intersect,
                               const MAST::FieldFunction<RealVectorX> &vel) {
     
     // the primal data should have been calculated
@@ -345,19 +346,20 @@ evaluate_topology_sensitivity(const MAST::FunctionBase &f,
     if (!_if_stress_plot_mode)
         libmesh_assert(_primal_data_initialized);
     
-    const libMesh::Elem& elem = _physics_elem->elem();
+    const MAST::LevelSetIntersectedElem
+    &elem = dynamic_cast<const MAST::LevelSetIntersectedElem&>(_physics_elem->elem());
 
     // sensitivity only exists at the boundary. So, we proceed with calculation
     // only if this element has an intersection in the interior, or with a side.
 
     if (this->if_evaluate_for_element(elem)    &&
-        intersect.if_elem_has_boundary()       &&
-        intersect.has_side_on_interface(elem)) {
+        elem.if_elem_has_level_set_boundary()       &&
+        elem.if_subelem_has_side_on_level_set_boundary()) {
         
         // ask for the values
         dynamic_cast<MAST::StructuralElementBase*>
         (_physics_elem)->calculate_stress_boundary_velocity(f, *this,
-                                                            intersect.get_side_on_interface(elem),
+                                                            elem.get_subelem_side_on_level_set_boundary(),
                                                             vel);
     }
 }
@@ -385,7 +387,9 @@ MAST::StressStrainOutputBase::output_sensitivity_for_elem(const MAST::FunctionBa
     
     Real val = 0.;
     
-    this->von_Mises_p_norm_functional_sensitivity_for_elem(p, _physics_elem->elem().id(), val);
+    this->von_Mises_p_norm_functional_sensitivity_for_elem
+    (p, _physics_elem->elem().get_quadrature_elem().id(), val);
+    
     return val;
 }
 
@@ -425,17 +429,32 @@ MAST::StressStrainOutputBase::output_derivative_for_elem(RealVectorX& dq_dX) {
                                           nullptr,
                                           *this);
         
-        this->von_Mises_p_norm_functional_state_derivartive_for_elem(_physics_elem->elem(),
-                                                                     dq_dX);
+        this->von_Mises_p_norm_functional_state_derivartive_for_elem
+        (_physics_elem->elem().get_quadrature_elem().id(), dq_dX);
     }
 }
 
 
 
+void
+MAST::StressStrainOutputBase::
+set_elem_data(unsigned int dim,
+              MAST::GeomElem& elem) const {
+    
+    libmesh_assert(!_physics_elem);
+    
+    if (dim == 1) {
+        
+        const MAST::ElementPropertyCard1D& p =
+        dynamic_cast<const MAST::ElementPropertyCard1D&>(_discipline->get_property_card(elem));
+        
+        elem.set_local_y_vector(p.y_vector());
+    }
+}
 
 
 void
-MAST::StressStrainOutputBase::init(const libMesh::Elem& elem) {
+MAST::StressStrainOutputBase::init(const MAST::GeomElem& elem) {
     
     libmesh_assert(!_physics_elem);
     libmesh_assert(_assembly);
@@ -545,7 +564,7 @@ MAST::StressStrainOutputBase::clear_sensitivity_data() {
 
 MAST::StressStrainOutputBase::Data&
 MAST::StressStrainOutputBase::
-add_stress_strain_at_qp_location(const libMesh::Elem* e,
+add_stress_strain_at_qp_location(const MAST::GeomElem& e,
                                  const unsigned int qp,
                                  const libMesh::Point& quadrature_pt,
                                  const libMesh::Point& physical_pt,
@@ -556,7 +575,7 @@ add_stress_strain_at_qp_location(const libMesh::Elem* e,
     // if the element subset has been provided, then make sure that this
     // element exists in the subdomain.
     if (_elem_subset.size())
-        libmesh_assert(_elem_subset.count(e));
+        libmesh_assert(_elem_subset.count(&e.get_reference_elem()));
     
     
     MAST::StressStrainOutputBase::Data* d =
@@ -569,17 +588,18 @@ add_stress_strain_at_qp_location(const libMesh::Elem* e,
     
     // check if the specified element exists in the map. If not, add it
     std::map<const libMesh::dof_id_type, std::vector<MAST::StressStrainOutputBase::Data*> >::iterator
-    it = _stress_data.find(e->id());
+    it = _stress_data.find(e.get_quadrature_elem().id());
     
     // if the element does not exist in the map, add it to the map.
     if (it == _stress_data.end())
         it =
         _stress_data.insert(std::pair<const libMesh::dof_id_type, std::vector<MAST::StressStrainOutputBase::Data*> >
-                            (e->id(), std::vector<MAST::StressStrainOutputBase::Data*>())).first;
+                            (e.get_quadrature_elem().id(),
+                             std::vector<MAST::StressStrainOutputBase::Data*>())).first;
     else
         // this assumes that the previous qp data is provided and
         // therefore, this qp number should be == size of the vector.
-        libmesh_assert_equal_to(qp, it->second.size());
+    libmesh_assert_equal_to(qp, it->second.size());
     
     it->second.push_back(d);
     
@@ -591,7 +611,7 @@ add_stress_strain_at_qp_location(const libMesh::Elem* e,
 
 MAST::StressStrainOutputBase::Data&
 MAST::StressStrainOutputBase::
-add_stress_strain_at_boundary_qp_location(const libMesh::Elem* e,
+add_stress_strain_at_boundary_qp_location(const MAST::GeomElem& e,
                                           const unsigned int s,
                                           const unsigned int qp,
                                           const libMesh::Point& quadrature_pt,
@@ -603,7 +623,7 @@ add_stress_strain_at_boundary_qp_location(const libMesh::Elem* e,
     // if the element subset has been provided, then make sure that this
     // element exists in the subdomain.
     if (_elem_subset.size())
-        libmesh_assert(_elem_subset.count(e));
+        libmesh_assert(_elem_subset.count(&e.get_reference_elem()));
     
     
     MAST::StressStrainOutputBase::Data* d =
@@ -616,13 +636,15 @@ add_stress_strain_at_boundary_qp_location(const libMesh::Elem* e,
     
     // check if the specified element exists in the map. If not, add it
     std::map<const libMesh::dof_id_type, std::vector<MAST::StressStrainOutputBase::Data*> >::iterator
-    it = _boundary_stress_data.find(e->id());
+    it = _boundary_stress_data.find(e.get_quadrature_elem().id());
     
     // if the element does not exist in the map, add it to the map.
     if (it == _boundary_stress_data.end())
         it =
-        _boundary_stress_data.insert(std::pair<const libMesh::dof_id_type, std::vector<MAST::StressStrainOutputBase::Data*> >
-                                     (e->id(), std::vector<MAST::StressStrainOutputBase::Data*>())).first;
+        _boundary_stress_data.insert
+        (std::pair<const libMesh::dof_id_type, std::vector<MAST::StressStrainOutputBase::Data*> >
+         (e.get_quadrature_elem().id(),
+          std::vector<MAST::StressStrainOutputBase::Data*>())).first;
     else
         // this assumes that the previous qp data is provided and
         // therefore, this qp number should be == size of the vector.
@@ -646,12 +668,12 @@ MAST::StressStrainOutputBase::get_stress_strain_data() const {
 
 unsigned int
 MAST::StressStrainOutputBase::
-n_stress_strain_data_for_elem(const libMesh::Elem* e) const {
+n_stress_strain_data_for_elem(const MAST::GeomElem& e) const {
     
     unsigned int n = 0;
     
     std::map<const libMesh::dof_id_type, std::vector<MAST::StressStrainOutputBase::Data*> >::const_iterator
-    it = _stress_data.find(e->id());
+    it = _stress_data.find(e.get_quadrature_elem().id());
     
     if ( it != _stress_data.end())
         n = (unsigned int)it->second.size();
@@ -663,12 +685,12 @@ n_stress_strain_data_for_elem(const libMesh::Elem* e) const {
 
 unsigned int
 MAST::StressStrainOutputBase::
-n_boundary_stress_strain_data_for_elem(const libMesh::Elem* e) const {
+n_boundary_stress_strain_data_for_elem(const MAST::GeomElem& e) const {
     
     unsigned int n = 0;
     
     std::map<const libMesh::dof_id_type, std::vector<MAST::StressStrainOutputBase::Data*> >::const_iterator
-    it = _boundary_stress_data.find(e->id());
+    it = _boundary_stress_data.find(e.get_quadrature_elem().id());
     
     if ( it != _boundary_stress_data.end())
         n = (unsigned int)it->second.size();
@@ -680,11 +702,11 @@ n_boundary_stress_strain_data_for_elem(const libMesh::Elem* e) const {
 
 const std::vector<MAST::StressStrainOutputBase::Data*>&
 MAST::StressStrainOutputBase::
-get_stress_strain_data_for_elem(const libMesh::Elem *e) const {
+get_stress_strain_data_for_elem(const MAST::GeomElem& e) const {
     
     // check if the specified element exists in the map. If not, add it
     std::map<const libMesh::dof_id_type, std::vector<MAST::StressStrainOutputBase::Data*> >::const_iterator
-    it = _stress_data.find(e->id());
+    it = _stress_data.find(e.get_quadrature_elem().id());
 
     // make sure that the specified elem exists in the map
     libmesh_assert(it != _stress_data.end());
@@ -696,13 +718,13 @@ get_stress_strain_data_for_elem(const libMesh::Elem *e) const {
 
 MAST::StressStrainOutputBase::Data&
 MAST::StressStrainOutputBase::
-get_stress_strain_data_for_elem_at_qp(const libMesh::Elem* e,
+get_stress_strain_data_for_elem_at_qp(const MAST::GeomElem& e,
                                       const unsigned int qp) {
 
     
     // check if the specified element exists in the map. If not, add it
     std::map<const libMesh::dof_id_type, std::vector<MAST::StressStrainOutputBase::Data*> >::const_iterator
-    it = _stress_data.find(e->id());
+    it = _stress_data.find(e.get_quadrature_elem().id());
     
     // make sure that the specified elem exists in the map
     libmesh_assert(it != _stress_data.end());
@@ -715,7 +737,7 @@ get_stress_strain_data_for_elem_at_qp(const libMesh::Elem* e,
 
 
 MAST::BoundaryConditionBase*
-MAST::StressStrainOutputBase::get_thermal_load_for_elem(const libMesh::Elem& elem) {
+MAST::StressStrainOutputBase::get_thermal_load_for_elem(const MAST::GeomElem& elem) {
 
     MAST::BoundaryConditionBase *rval = nullptr;
  
@@ -730,7 +752,7 @@ MAST::StressStrainOutputBase::get_thermal_load_for_elem(const libMesh::Elem& ele
     std::pair<std::multimap<libMesh::subdomain_id_type, MAST::BoundaryConditionBase*>::const_iterator,
     std::multimap<libMesh::subdomain_id_type, MAST::BoundaryConditionBase*>::const_iterator> it;
     
-    it =  vol_loads.equal_range(elem.subdomain_id());
+    it =  vol_loads.equal_range(elem.get_reference_elem().subdomain_id());
     
     // FIXME: that this assumes that only one temperature boundary condition
     // is applied for an element.
@@ -998,7 +1020,7 @@ von_Mises_p_norm_functional_boundary_sensitivity_for_elem
 
 void
 MAST::StressStrainOutputBase::
-von_Mises_p_norm_functional_state_derivartive_for_elem(const libMesh::Elem& e,
+von_Mises_p_norm_functional_state_derivartive_for_elem(const libMesh::dof_id_type e_id,
                                                        RealVectorX& dq_dX) const {
     
     libmesh_assert(!_if_stress_plot_mode);
@@ -1022,7 +1044,7 @@ von_Mises_p_norm_functional_state_derivartive_for_elem(const libMesh::Elem& e,
     
     // iterate over all element data
     std::map<const libMesh::dof_id_type, std::vector<MAST::StressStrainOutputBase::Data*> >::const_iterator
-    map_it   =  _stress_data.find(e.id()),
+    map_it   =  _stress_data.find(e_id),
     map_end  =  _stress_data.end();
 
     // make sure that the data exists

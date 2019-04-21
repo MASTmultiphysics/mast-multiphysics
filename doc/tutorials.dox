@@ -3,8 +3,13 @@
 
 \page TutorialsPage Tutorials for MAST
 
-  - \subpage example_1
-  - \subpage example_2
-  - \subpage example_3 
+  Several examples have been implemented in MAST, some of which have been
+  ported as tutorials listed below. 
+
+  - \subpage structural_example_1
+  - \subpage structural_example_2
+  - \subpage structural_example_5
+  - \subpage fluid_example_1
+  - \subpage fsi_example_1
 
 */

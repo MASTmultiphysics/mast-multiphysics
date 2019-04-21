@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -106,8 +106,27 @@ elem_sensitivity_calculations(const MAST::FunctionBase& f,
                               RealVectorX& f_m,
                               RealVectorX& f_x) {
     
-    libmesh_error(); // to be implemented
+    libmesh_assert(_physics_elem);
     
+    MAST::ConservativeFluidElementBase& e =
+    dynamic_cast<MAST::ConservativeFluidElementBase&>(*_physics_elem);
+    
+    unsigned int
+    n       =  (unsigned int)f_m.size();
+    
+    RealMatrixX
+    dummy   =  RealMatrixX::Zero(n, n);
+    
+    f_m.setZero();
+    f_x.setZero();
+    
+    // assembly of the flux terms
+    e.internal_residual_sensitivity(f, false, f_x, dummy);
+    e.side_external_residual_sensitivity(f, false, f_x, dummy, _discipline->side_loads());
+    
+    //assembly of the capacitance term
+    e.velocity_residual_sensitivity(f, false, f_m, dummy, dummy);
+
 }
 
 
@@ -122,7 +141,7 @@ elem_second_derivative_dot_solution_assembly(RealMatrixX& m) {
 
 void
 MAST::ConservativeFluidTransientAssemblyElemOperations::
-init(const libMesh::Elem& elem) {
+init(const MAST::GeomElem& elem) {
     
     libmesh_assert(!_physics_elem);
     libmesh_assert(_system);

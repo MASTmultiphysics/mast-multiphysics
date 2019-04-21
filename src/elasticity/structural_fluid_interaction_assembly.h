@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -66,7 +66,7 @@ namespace MAST {
         /*!
          *   if the eigenproblem is defined about a non-zero base solution,
          *   then this method provides the object with the base solution.
-         *   The flag \par if_sens tells the method if \par sol
+         *   The flag \p if_sens tells the method if \p sol
          *   is the sensitivity of the base solution for the current parameter
          *   being solved for
          */
@@ -76,7 +76,7 @@ namespace MAST {
         
         /*!
          *   Clears the pointer to base solution.
-         *   The flag \par if_sens tells the method to clear the pointer to the
+         *   The flag \p if_sens tells the method to clear the pointer to the
          *   sensitivity vector instead.
          */
         void clear_base_solution(bool if_sens = false);
@@ -90,7 +90,7 @@ namespace MAST {
         
         /*!
          *   @returns a const reference to the base solution (or
-         *   its sensitivity when \par if_sens is true) about which
+         *   its sensitivity when \p if_sens is true) about which
          *   the Eigen problem was linearized.
          */
         const libMesh::NumericVector<Real>&
@@ -99,7 +99,7 @@ namespace MAST {
         
         /*!
          *   calculates the reduced order matrix given the basis provided in
-         *   \par basis. \par X is the steady state solution about which
+         *   \p basis. \p X is the steady state solution about which
          *   the quantity is calculated.
          */
         virtual void
@@ -111,9 +111,9 @@ namespace MAST {
         
         /*!
          *   calculates the sensitivity of reduced order matrix given the basis 
-         *   provided in \par basis. \par X is the steady state solution about which
-         *   the quantity is calculated, and \par dX_dp is the sensitivity of 
-         *   \par X wrt the parameter identified as \par parameters[i]
+         *   provided in \p basis. \p X is the steady state solution about which
+         *   the quantity is calculated, and \p dX_dp is the sensitivity of 
+         *   \p X wrt the parameter identified as \p parameters[i]
          */
         virtual void
         assemble_reduced_order_quantity_sensitivity

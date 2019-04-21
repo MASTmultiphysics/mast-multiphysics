@@ -16,16 +16,26 @@ target_include_directories(mast
             ${SLEPc_INCLUDE_DIRS}
             ${libMesh_INCLUDE_DIRS}
             ${EIGEN3_INCLUDE_DIR}
+            ${NLOPT_INCLUDE_DIR}
             ${Boost_INCLUDE_DIRS}) # Could possibly move this into src/optimization since it is closer to where Boost is actually used.
 
 # Add libraries.
 target_link_libraries(mast
         PUBLIC
             ${MPI_CXX_LIBRARIES}
+            ${GCMMA_LIBRARY}
+            ${DOT_LIBRARY}
+            ${NLOPT_LIBRARY}
+            ${SNOPT_LIBRARY}
             ${LAPACK_LIBRARIES}
             ${PETSc_LIBRARIES}
             ${SLEPc_LIBRARIES}
-            ${libMesh_LIBRARIES})
+            ${Boost_IOSTREAMS_LIBRARY}
+            ${Boost_FILESYSTEM_LIBRARY}
+            ${Boost_SYSTEM_LIBRARY}
+            debug ${libMesh_dbg_LIBRARIES}
+            optimized ${libMesh_opt_LIBRARIES}
+            ${LIBGFORTRAN_LIBRARIES})
 
 # NOTE: Use of PUBLIC keyword above means other CMake target (like an example)
 #       that target_link_library(XXXX mast) will inheret these properties.
@@ -44,6 +54,7 @@ add_subdirectory(numerics)
 add_subdirectory(optimization)
 add_subdirectory(property_cards)
 add_subdirectory(solver)
+add_subdirectory(utility)
 
 # NOTE: There is an argument to be made for why we might want to switch the
 #       add_subdirectory(<dir>) above to include(<dir>/CMakeLists.txt).

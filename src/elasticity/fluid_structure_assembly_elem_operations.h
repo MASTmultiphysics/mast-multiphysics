@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -40,12 +40,19 @@ namespace MAST {
         }
         
         /*!
+         *   sets the structural element y-vector if 1D element is used. 
+         */
+        virtual void
+        set_elem_data(unsigned int dim,
+                      MAST::GeomElem& elem) const;
+
+        /*!
          *   initializes the object for the geometric element \p elem. This
          *   expects the object to be in a cleared state, so the user should
          *   call \p clear_elem() between successive initializations.
          */
         virtual void
-        init(const libMesh::Elem& elem);
+        init(const MAST::GeomElem& elem);
         
         /*!
          *   if set to \p true, the sensitivity calculation will include the

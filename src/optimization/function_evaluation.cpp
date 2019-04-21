@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -243,11 +243,12 @@ MAST::FunctionEvaluation::verify_gradients(const std::vector<Real>& dvars) {
     
     // first call theh evaluate method to get the analytical sensitivities
     Real
-    delta           = 1.e-5,
+    delta           = 1.e-4,
     tol             = 1.e-3,
     obj             = 0.,
-    obj_fd          = 0.;
-    
+    obj_fd_p        = 0.,  // at x+h
+    obj_fd_m        = 0.;  // at x-h
+
     bool
     eval_obj_grad   = true;
     
@@ -257,7 +258,8 @@ MAST::FunctionEvaluation::verify_gradients(const std::vector<Real>& dvars) {
     obj_grad   (_n_vars),
     obj_grad_fd(_n_vars),
     fvals      (_n_ineq + _n_eq),
-    fvals_fd   (_n_ineq + _n_eq),
+    fvals_fd_p (_n_ineq + _n_eq),  // at x+h
+    fvals_fd_m (_n_ineq + _n_eq),  // at x-h
     grads      (_n_vars*(_n_ineq + _n_eq)),
     grads_fd   (_n_vars*(_n_ineq + _n_eq));
     
@@ -270,7 +272,8 @@ MAST::FunctionEvaluation::verify_gradients(const std::vector<Real>& dvars) {
     std::fill(    obj_grad.begin(),     obj_grad.end(),   0.);
     std::fill( obj_grad_fd.begin(),  obj_grad_fd.end(),   0.);
     std::fill(       fvals.begin(),        fvals.end(),   0.);
-    std::fill(    fvals_fd.begin(),     fvals_fd.end(),   0.);
+    std::fill(  fvals_fd_p.begin(),   fvals_fd_p.end(),   0.);
+    std::fill(  fvals_fd_m.begin(),   fvals_fd_m.end(),   0.);
     std::fill(       grads.begin(),        grads.end(),   0.);
     std::fill(    grads_fd.begin(),     grads_fd.end(),   0.);
     std::fill(  eval_grads.begin(),   eval_grads.end(), true);
@@ -298,26 +301,44 @@ MAST::FunctionEvaluation::verify_gradients(const std::vector<Real>& dvars) {
         // copy the original vector
         dvars_fd =  dvars;
         
-        // now perturb it
+        // central difference approx
+        // du/dx = ((u2-u1)/(x2-x1) + (u1-u0)/(x1-x0))/2
+        //       = ((u2-u1)/h + (u1-u0)/h)/2
+        //       = (u2-u0)/2h
+        
+        // now perturb it: first the positive value
         dvars_fd[i] += delta;
         
         // call the evaluate routine
-        obj_fd       = 0.;
-        std::fill(    fvals_fd.begin(),     fvals_fd.end(),   0.);
+        obj_fd_p     = 0.;
+        obj_fd_m     = 0.;
+        std::fill(  fvals_fd_p.begin(),   fvals_fd_p.end(),   0.);
+        std::fill(  fvals_fd_m.begin(),   fvals_fd_m.end(),   0.);
         this->evaluate(dvars_fd,
-                       obj_fd,
+                       obj_fd_p,
                        eval_obj_grad,
                        obj_grad_fd,
-                       fvals_fd,
+                       fvals_fd_p,
                        eval_grads,
                        grads_fd);
+
+        // now perturb it: first the positive value
+        dvars_fd[i] -= 2*delta;
         
+        this->evaluate(dvars_fd,
+                       obj_fd_m,
+                       eval_obj_grad,
+                       obj_grad_fd,
+                       fvals_fd_m,
+                       eval_grads,
+                       grads_fd);
+
         // objective gradient
-        obj_grad_fd[i]  = (obj_fd-obj)/delta;
+        obj_grad_fd[i]  = (obj_fd_p-obj_fd_m)/2./delta;
         
         // constraint gradient
         for (unsigned int j=0; j<_n_eq+_n_ineq; j++)
-            grads_fd[i*(_n_eq+_n_ineq)+j]  = (fvals_fd[j]-fvals[j])/delta;
+            grads_fd[i*(_n_eq+_n_ineq)+j]  = (fvals_fd_p[j]-fvals_fd_m[j])/2./delta;
     }
     
     

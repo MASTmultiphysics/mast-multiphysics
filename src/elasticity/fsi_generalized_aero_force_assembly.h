@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -60,9 +60,9 @@ namespace MAST {
          *    initializes for the given fluid and structural components. The
          *    structural and fluid communicator objects should provide valid 
          *    MPI communicators on ranks that store the respective 
-         *    disciplinary data structures. \par complex_solver and
-         *    \par pressure_function should be non-null pointers only on nodes
-         *    with a valid fluid communicator. \par motion_func should be
+         *    disciplinary data structures. \p complex_solver and
+         *    \p pressure_function should be non-null pointers only on nodes
+         *    with a valid fluid communicator. \p motion_func should be
          *   a non-null pointer only when structural_comm is a valid 
          *   communicator.
          */
@@ -84,7 +84,7 @@ namespace MAST {
         
         /*!
          *   calculates the reduced order matrix given the basis provided in
-         *   \par basis. \par X is the steady state solution about which
+         *   \p basis. \p X is the steady state solution about which
          *   the quantity is calculated.
          */
         virtual void

@@ -2,9 +2,10 @@ target_sources(mast
         PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}/function_evaluation.cpp
         ${CMAKE_CURRENT_LIST_DIR}/function_evaluation.h
+        ${CMAKE_CURRENT_LIST_DIR}/optimization_interface.cpp
         ${CMAKE_CURRENT_LIST_DIR}/optimization_interface.h)
 
-if(${ENABLE_DOT})
+if(ENABLE_DOT)
     target_sources(mast
             PRIVATE
             ${CMAKE_CURRENT_LIST_DIR}/dot_optimization_interface.cpp
@@ -12,20 +13,25 @@ if(${ENABLE_DOT})
     # TODO: Create FindDOT CMake module and add target_link_libraries(mast PRIVATE ${DOT_LIBRARIES})
 endif()
 
-if(${ENABLE_GCMMA})
+if(ENABLE_GCMMA AND GCMMA_FOUND)
     target_sources(mast
             PRIVATE
             ${CMAKE_CURRENT_LIST_DIR}/gcmma_optimization_interface.cpp
             ${CMAKE_CURRENT_LIST_DIR}/gcmma_optimization_interface.h)
-    # TODO: Create FindGCMMA CMake module and add target_link_libraries(mast PRIVATE ${GCMMA_LIBRARIES})
 endif()
 
-if(${ENABLE_NPSOL})
+if(ENABLE_SNOPT AND SNOPT_FOUND)
     target_sources(mast
             PRIVATE
             ${CMAKE_CURRENT_LIST_DIR}/npsol_optimization_interface.cpp
             ${CMAKE_CURRENT_LIST_DIR}/npsol_optimization_interface.h)
-    # TODO: Create FindNPSOL CMake module and add target_link_libraries(mast PRIVATE ${NPSOL_LIBRARIES})
+endif()
+
+if(ENABLE_NLOPT AND NLOPT_FOUND)
+    target_sources(mast
+            PRIVATE
+            ${CMAKE_CURRENT_LIST_DIR}/nlopt_optimization_interface.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/nlopt_optimization_interface.h)
 endif()
 
 # Note: In order to add the target_link_libraries(mast ...) inside in this directory, I think the add_subdirectory()

@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -28,27 +28,25 @@
 
 // MAST includes
 #include "base/mast_data_types.h"
-#include "optimization/function_evaluation.h"
 
 // libMesh includes
 #include "libmesh/libmesh.h"
 
 
-libMesh::LibMeshInit     *__init         = nullptr;
-MAST::FunctionEvaluation *__my_func_eval = nullptr;
+libMesh::LibMeshInit     *_mast_init         = nullptr;
 
 struct GlobalTestFixture {
     
     GlobalTestFixture() {
         
         // create the libMeshInit function
-        __init = new libMesh::LibMeshInit(boost::unit_test::framework::master_test_suite().argc,
-                                          boost::unit_test::framework::master_test_suite().argv);
+        _mast_init = new libMesh::LibMeshInit(boost::unit_test::framework::master_test_suite().argc,
+                                              boost::unit_test::framework::master_test_suite().argv);
     }
     
     ~GlobalTestFixture() {
         
-        delete __init;
+        delete _mast_init;
     }
     
 };

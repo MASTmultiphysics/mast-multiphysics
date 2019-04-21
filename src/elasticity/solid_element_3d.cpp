@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -24,8 +24,9 @@
 #include "base/system_initialization.h"
 #include "base/nonlinear_system.h"
 #include "base/assembly_base.h"
+#include "base/field_function_base.h"
 #include "numerics/fem_operator_matrix.h"
-#include "mesh/local_3d_elem.h"
+#include "mesh/geom_elem.h"
 #include "mesh/fe_base.h"
 #include "property_cards/element_property_card_base.h"
 
@@ -33,20 +34,15 @@
 MAST::StructuralElement3D::
 StructuralElement3D(MAST::SystemInitialization& sys,
                     MAST::AssemblyBase& assembly,
-                    const libMesh::Elem& elem,
+                    const MAST::GeomElem& elem,
                     const MAST::ElementPropertyCardBase& p):
 MAST::StructuralElementBase(sys, assembly, elem, p) {
     
-    // now initialize the finite element data structures
-    _fe         = assembly.build_fe().release();
-    _local_elem = new MAST::Local3DElem(elem);
-    _fe->init(*_local_elem);
 }
 
 
 MAST::StructuralElement3D::~StructuralElement3D() {
     
-    delete _local_elem;
 }
 
 
@@ -57,9 +53,12 @@ MAST::StructuralElement3D::inertial_residual (bool request_jacobian,
                                               RealMatrixX& jac_xdot,
                                               RealMatrixX& jac) {
     
-    const std::vector<Real>& JxW               = _fe->get_JxW();
-    const std::vector<libMesh::Point>& xyz     = _fe->get_xyz();
-    const std::vector<std::vector<Real> >& phi = _fe->get_phi();
+    std::unique_ptr<MAST::FEBase>
+    fe(_elem.init_fe(true, false));
+    
+    const std::vector<Real>& JxW               = fe->get_JxW();
+    const std::vector<libMesh::Point>& xyz     = fe->get_xyz();
+    const std::vector<std::vector<Real> >& phi = fe->get_phi();
     
     const unsigned int
     n_phi    = (unsigned int)phi.size(),
@@ -88,7 +87,7 @@ MAST::StructuralElement3D::inertial_residual (bool request_jacobian,
         (*mat_inertia)(xyz[0], _time, material_mat);
         
         Real vol = 0.;
-        const unsigned int nshp = _fe->n_shape_functions();
+        const unsigned int nshp = fe->n_shape_functions();
         for (unsigned int i=0; i<JxW.size(); i++)
             vol += JxW[i];
         vol /= (1.* nshp);
@@ -138,14 +137,18 @@ bool
 MAST::StructuralElement3D::internal_residual(bool request_jacobian,
                                              RealVectorX& f,
                                              RealMatrixX& jac) {
-    
-    const std::vector<Real>& JxW            = _fe->get_JxW();
-    const std::vector<libMesh::Point>& xyz  = _fe->get_xyz();
+
+    std::unique_ptr<MAST::FEBase>
+    fe(_elem.init_fe(true, false));
+
+    const std::vector<Real>& JxW            = fe->get_JxW();
+    const std::vector<libMesh::Point>& xyz  = fe->get_xyz();
     const unsigned int
-    n_phi              = (unsigned int)_fe->n_shape_functions(),
+    n_phi              = (unsigned int)fe->n_shape_functions(),
     n1                 =6,
     n2                 =3*n_phi,
-    n3                 =30;
+    n3                 =30,
+    n_nodes            =_elem.get_reference_elem().n_nodes();
     
     RealMatrixX
     material_mat,
@@ -189,13 +192,13 @@ MAST::StructuralElement3D::internal_residual(bool request_jacobian,
     Bmat_nl_w,
     Bmat_inc;
     // six stress components, related to three displacements
-    Bmat_lin.reinit(n1, 3, _elem.n_nodes());
-    Bmat_nl_x.reinit(3, 3, _elem.n_nodes());
-    Bmat_nl_y.reinit(3, 3, _elem.n_nodes());
-    Bmat_nl_z.reinit(3, 3, _elem.n_nodes());
-    Bmat_nl_u.reinit(3, 3, _elem.n_nodes());
-    Bmat_nl_v.reinit(3, 3, _elem.n_nodes());
-    Bmat_nl_w.reinit(3, 3, _elem.n_nodes());
+    Bmat_lin.reinit(n1, 3, n_nodes);
+    Bmat_nl_x.reinit(3, 3, n_nodes);
+    Bmat_nl_y.reinit(3, 3, n_nodes);
+    Bmat_nl_z.reinit(3, 3, n_nodes);
+    Bmat_nl_u.reinit(3, 3, n_nodes);
+    Bmat_nl_v.reinit(3, 3, n_nodes);
+    Bmat_nl_w.reinit(3, 3, n_nodes);
     Bmat_inc.reinit(n1, n3, 1);            // six stress-strain components
 
     /*
@@ -270,7 +273,7 @@ MAST::StructuralElement3D::internal_residual(bool request_jacobian,
         (*mat_stiff)(xyz[qp], _time, material_mat);
         
         this->initialize_green_lagrange_strain_operator(qp,
-                                                        *_fe,
+                                                        *fe,
                                                         local_disp,
                                                         strain,
                                                         mat_x, mat_y, mat_z,
@@ -427,14 +430,17 @@ void
 MAST::StructuralElement3D::
 update_incompatible_mode_solution(const RealVectorX& dsol) {
     
-    
-    const std::vector<Real>& JxW            = _fe->get_JxW();
-    const std::vector<libMesh::Point>& xyz  = _fe->get_xyz();
+    std::unique_ptr<MAST::FEBase>
+    fe(_elem.init_fe(true, false));
+
+    const std::vector<Real>& JxW            = fe->get_JxW();
+    const std::vector<libMesh::Point>& xyz  = fe->get_xyz();
     const unsigned int
-    n_phi              = (unsigned int)_fe->n_shape_functions(),
+    n_phi              = (unsigned int)fe->n_shape_functions(),
     n1                 =6,
     n2                 =3*n_phi,
-    n3                 =30;
+    n3                 =30,
+    n_nodes            = _elem.get_reference_elem().n_nodes();
     
     RealMatrixX
     material_mat,
@@ -478,18 +484,18 @@ update_incompatible_mode_solution(const RealVectorX& dsol) {
     Bmat_nl_w,
     Bmat_inc;
     // six stress components, related to three displacements
-    Bmat_lin.reinit(n1, 3, _elem.n_nodes());
-    Bmat_nl_x.reinit(3, 3, _elem.n_nodes());
-    Bmat_nl_y.reinit(3, 3, _elem.n_nodes());
-    Bmat_nl_z.reinit(3, 3, _elem.n_nodes());
-    Bmat_nl_u.reinit(3, 3, _elem.n_nodes());
-    Bmat_nl_v.reinit(3, 3, _elem.n_nodes());
-    Bmat_nl_w.reinit(3, 3, _elem.n_nodes());
+    Bmat_lin.reinit(n1, 3, n_nodes);
+    Bmat_nl_x.reinit(3, 3, n_nodes);
+    Bmat_nl_y.reinit(3, 3, n_nodes);
+    Bmat_nl_z.reinit(3, 3, n_nodes);
+    Bmat_nl_u.reinit(3, 3, n_nodes);
+    Bmat_nl_v.reinit(3, 3, n_nodes);
+    Bmat_nl_w.reinit(3, 3, n_nodes);
     Bmat_inc.reinit(n1, n3, 1);            // six stress-strain components
     
     
     // initialize the incompatible mode mapping at element mid-point
-    _init_incompatible_fe_mapping(_elem);
+    _init_incompatible_fe_mapping(_elem.get_reference_elem());
 
     ///////////////////////////////////////////////////////////////////
     // first for loop to evaluate alpha
@@ -499,7 +505,7 @@ update_incompatible_mode_solution(const RealVectorX& dsol) {
         (*mat_stiff)(xyz[qp], _time, material_mat);
         
         this->initialize_green_lagrange_strain_operator(qp,
-                                                        *_fe,
+                                                        *fe,
                                                         local_disp,
                                                         strain,
                                                         mat_x, mat_y, mat_z,
@@ -603,13 +609,13 @@ surface_pressure_residual(bool request_jacobian,
     libmesh_assert(!follower_forces); // not implemented yet for follower forces
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe());
-    fe->init_for_side(_elem, side, false);
+    std::unique_ptr<MAST::FEBase>
+    fe(_elem.init_side_fe(side, false));
 
     const std::vector<Real> &JxW                    = fe->get_JxW();
     const std::vector<libMesh::Point>& qpoint       = fe->get_xyz();
     const std::vector<std::vector<Real> >& phi      = fe->get_phi();
-    const std::vector<libMesh::Point>& face_normals = fe->get_normals();
+    const std::vector<libMesh::Point>& face_normals = fe->get_normals_for_reference_coordinate();
     const unsigned int
     n_phi  = (unsigned int)phi.size(),
     n1     = 3,
@@ -671,13 +677,13 @@ surface_pressure_residual_sensitivity(const MAST::FunctionBase& p,
     libmesh_assert(!follower_forces); // not implemented yet for follower forces
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe());
-    fe->init_for_side(_elem, side, false);
+    std::unique_ptr<MAST::FEBase>
+    fe(_elem.init_side_fe(side, false));
 
     const std::vector<Real> &JxW                    = fe->get_JxW();
     const std::vector<libMesh::Point>& qpoint       = fe->get_xyz();
     const std::vector<std::vector<Real> >& phi      = fe->get_phi();
-    const std::vector<libMesh::Point>& face_normals = fe->get_normals();
+    const std::vector<libMesh::Point>& face_normals = fe->get_normals_for_reference_coordinate();
     const unsigned int
     n_phi  = (unsigned int)phi.size(),
     n1     = 3,
@@ -733,13 +739,17 @@ MAST::StructuralElement3D::thermal_residual(bool request_jacobian,
                                             RealMatrixX& jac,
                                             MAST::BoundaryConditionBase& bc) {
     
-    const std::vector<Real>& JxW            = _fe->get_JxW();
-    const std::vector<libMesh::Point>& xyz  = _fe->get_xyz();
+    std::unique_ptr<MAST::FEBase>
+    fe(_elem.init_fe(true, false));
+
+    const std::vector<Real>& JxW            = fe->get_JxW();
+    const std::vector<libMesh::Point>& xyz  = fe->get_xyz();
     
     const unsigned int
-    n_phi = (unsigned int)_fe->get_phi().size(),
-    n1    = 6,
-    n2    = 3*n_phi;
+    n_phi   = (unsigned int)fe->get_phi().size(),
+    n1      = 6,
+    n2      = 3*n_phi,
+    n_nodes = _elem.get_reference_elem().n_nodes();
     
     RealMatrixX
     material_exp_A_mat,
@@ -769,13 +779,13 @@ MAST::StructuralElement3D::thermal_residual(bool request_jacobian,
     Bmat_nl_v,
     Bmat_nl_w;
     // six stress components, related to three displacements
-    Bmat_lin.reinit(n1, 3, _elem.n_nodes());
-    Bmat_nl_x.reinit(3, 3, _elem.n_nodes());
-    Bmat_nl_y.reinit(3, 3, _elem.n_nodes());
-    Bmat_nl_z.reinit(3, 3, _elem.n_nodes());
-    Bmat_nl_u.reinit(3, 3, _elem.n_nodes());
-    Bmat_nl_v.reinit(3, 3, _elem.n_nodes());
-    Bmat_nl_w.reinit(3, 3, _elem.n_nodes());
+    Bmat_lin.reinit(n1, 3, n_nodes);
+    Bmat_nl_x.reinit(3, 3, n_nodes);
+    Bmat_nl_y.reinit(3, 3, n_nodes);
+    Bmat_nl_z.reinit(3, 3, n_nodes);
+    Bmat_nl_u.reinit(3, 3, n_nodes);
+    Bmat_nl_v.reinit(3, 3, n_nodes);
+    Bmat_nl_w.reinit(3, 3, n_nodes);
 
     std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
     mat = _property.thermal_expansion_A_matrix(*this);
@@ -796,7 +806,7 @@ MAST::StructuralElement3D::thermal_residual(bool request_jacobian,
         vec1_n1 = material_exp_A_mat * delta_t; // [C]{alpha (T - T0)}
         
         this->initialize_green_lagrange_strain_operator(qp,
-                                                        *_fe,
+                                                        *fe,
                                                         local_disp,
                                                         strain,
                                                         mat_x, mat_y, mat_z,
@@ -924,8 +934,7 @@ MAST::StructuralElement3D::calculate_stress(bool request_derivative,
                                             const MAST::FunctionBase* p,
                                             MAST::StressStrainOutputBase& output) {
     
-    std::unique_ptr<MAST::FEBase>   fe(_assembly.build_fe());
-    fe->init(_elem);
+    std::unique_ptr<MAST::FEBase>   fe(_elem.init_fe(true, false));
     std::vector<libMesh::Point>     qp_loc = fe->get_qpoints();
 
 
@@ -938,7 +947,8 @@ MAST::StructuralElement3D::calculate_stress(bool request_derivative,
     n_phi              = (unsigned int)fe->n_shape_functions(),
     n1                 =6,
     n2                 =3*n_phi,
-    n3                 =30;
+    n3                 =30,
+    n_nodes            = _elem.get_reference_elem().n_nodes() ;
     
     RealMatrixX
     material_mat,
@@ -969,13 +979,13 @@ MAST::StructuralElement3D::calculate_stress(bool request_derivative,
     Bmat_nl_w,
     Bmat_inc;
     // six stress components, related to three displacements
-    Bmat_lin.reinit(n1, 3, _elem.n_nodes());
-    Bmat_nl_x.reinit(3, 3, _elem.n_nodes());
-    Bmat_nl_y.reinit(3, 3, _elem.n_nodes());
-    Bmat_nl_z.reinit(3, 3, _elem.n_nodes());
-    Bmat_nl_u.reinit(3, 3, _elem.n_nodes());
-    Bmat_nl_v.reinit(3, 3, _elem.n_nodes());
-    Bmat_nl_w.reinit(3, 3, _elem.n_nodes());
+    Bmat_lin.reinit(n1, 3, n_nodes);
+    Bmat_nl_x.reinit(3, 3, n_nodes);
+    Bmat_nl_y.reinit(3, 3, n_nodes);
+    Bmat_nl_z.reinit(3, 3, n_nodes);
+    Bmat_nl_u.reinit(3, 3, n_nodes);
+    Bmat_nl_v.reinit(3, 3, n_nodes);
+    Bmat_nl_w.reinit(3, 3, n_nodes);
     Bmat_inc.reinit(n1, n3, 1);            // six stress-strain components
     
     // a reference to the stress output data structure
@@ -983,7 +993,7 @@ MAST::StructuralElement3D::calculate_stress(bool request_derivative,
     dynamic_cast<MAST::StressStrainOutputBase&>(output);
     
     // initialize the incompatible mode mapping at element mid-point
-    _init_incompatible_fe_mapping(_elem);
+    _init_incompatible_fe_mapping(_elem.get_reference_elem());
     
     ///////////////////////////////////////////////////////////////////////
     // second for loop to calculate the residual and stiffness contributions
@@ -1020,7 +1030,7 @@ MAST::StructuralElement3D::calculate_stress(bool request_derivative,
         // exists, and we only need to append sensitivity/derivative
         // data to it
         if (!request_derivative && !p)
-            data = &(stress_output.add_stress_strain_at_qp_location(&_elem,
+            data = &(stress_output.add_stress_strain_at_qp_location(_elem,
                                                                     qp,
                                                                     qp_loc[qp],
                                                                     xyz[qp],
@@ -1028,8 +1038,7 @@ MAST::StructuralElement3D::calculate_stress(bool request_derivative,
                                                                     strain,
                                                                     JxW[qp]));
         else
-            data = &(stress_output.get_stress_strain_data_for_elem_at_qp(&_elem,
-                                                                         qp));
+            data = &(stress_output.get_stress_strain_data_for_elem_at_qp(_elem, qp));
 
         
         if (request_derivative) {
@@ -1244,10 +1253,10 @@ initialize_green_lagrange_strain_operator(const unsigned int qp,
 
 void
 MAST::StructuralElement3D::
-initialize_incompatible_strain_operator(const unsigned int qp,
+initialize_incompatible_strain_operator(const unsigned int  qp,
                                         const MAST::FEBase& fe,
-                                        FEMOperatorMatrix& Bmat,
-                                        RealMatrixX& G_mat) {
+                                        FEMOperatorMatrix&  Bmat,
+                                        RealMatrixX&        G_mat) {
     
     RealVectorX phi_vec = RealVectorX::Zero(1);
     
@@ -1263,8 +1272,10 @@ initialize_incompatible_strain_operator(const unsigned int qp,
     dshapedeta = fe.get_dphideta(),
     dshapedphi = fe.get_dphidzeta();
     
+    const libMesh::Elem& e = _elem.get_reference_elem();
+    
     // calculate the deformed xyz coordinates
-    const unsigned int n_nodes = _elem.n_nodes();
+    const unsigned int n_nodes = e.n_nodes();
     RealVectorX
     xdef     = RealVectorX::Zero(n_nodes),
     ydef     = RealVectorX::Zero(n_nodes),
@@ -1272,10 +1283,10 @@ initialize_incompatible_strain_operator(const unsigned int qp,
     phivec   = RealVectorX::Zero(n_nodes);
     
     // set the current values of nodal coordinates
-    for (unsigned int i_node=0; i_node<_elem.n_nodes(); i_node++) {
-        xdef(i_node) = _elem.point(i_node)(0);// + _sol(i_node*3+0);
-        ydef(i_node) = _elem.point(i_node)(1);// + _sol(i_node*3+1);
-        zdef(i_node) = _elem.point(i_node)(2);// + _sol(i_node*3+2);
+    for (unsigned int i_node=0; i_node<n_nodes; i_node++) {
+        xdef(i_node) = e.point(i_node)(0);// + _sol(i_node*3+0);
+        ydef(i_node) = e.point(i_node)(1);// + _sol(i_node*3+1);
+        zdef(i_node) = e.point(i_node)(2);// + _sol(i_node*3+2);
     }
     
     // calculate dxyz/dxi
@@ -1397,32 +1408,31 @@ MAST::StructuralElement3D::_init_incompatible_fe_mapping( const libMesh::Elem& e
     dshapedphi = fe->get_dphidzeta();
 
     // calculate the deformed xyz coordinates
-    const unsigned int n_nodes = _elem.n_nodes();
     RealVectorX
-    xdef     = RealVectorX::Zero(n_nodes),
-    ydef     = RealVectorX::Zero(n_nodes),
-    zdef     = RealVectorX::Zero(n_nodes),
-    phi      = RealVectorX::Zero(n_nodes);
+    xdef     = RealVectorX::Zero(e.n_nodes()),
+    ydef     = RealVectorX::Zero(e.n_nodes()),
+    zdef     = RealVectorX::Zero(e.n_nodes()),
+    phi      = RealVectorX::Zero(e.n_nodes());
     
     // set the current values of nodal coordinates
-    for (unsigned int i_node=0; i_node<_elem.n_nodes(); i_node++) {
-        xdef(i_node) = _elem.point(i_node)(0);// + _local_sol(i_node*3+0);
-        ydef(i_node) = _elem.point(i_node)(1);// + _local_sol(i_node*3+1);
-        zdef(i_node) = _elem.point(i_node)(2);// + _local_sol(i_node*3+2);
+    for (unsigned int i_node=0; i_node<e.n_nodes(); i_node++) {
+        xdef(i_node) = e.point(i_node)(0);// + _local_sol(i_node*3+0);
+        ydef(i_node) = e.point(i_node)(1);// + _local_sol(i_node*3+1);
+        zdef(i_node) = e.point(i_node)(2);// + _local_sol(i_node*3+2);
     }
     
     // calculate dxyz/dxi
     // make sure that the number of shape functions is the same as the number
     // of nodes. Meaning that this formulation is limited to Lagrange
     // elemnts only.
-    libmesh_assert_equal_to(dshapedxi.size(), n_nodes);
+    libmesh_assert_equal_to(dshapedxi.size(), e.n_nodes());
     
     RealMatrixX
     jac = RealMatrixX::Zero(3,3),
     T0  = RealMatrixX::Zero(6,6);
 
     // first derivatives wrt xi
-    for (unsigned int i_node=0; i_node<n_nodes; i_node++)
+    for (unsigned int i_node=0; i_node<e.n_nodes(); i_node++)
         phi(i_node)  =  dshapedxi[i_node][0];
 
     jac(0,0) =  phi.dot(xdef);
@@ -1431,7 +1441,7 @@ MAST::StructuralElement3D::_init_incompatible_fe_mapping( const libMesh::Elem& e
     
 
     // second, derivatives wrt eta
-    for (unsigned int i_node=0; i_node<n_nodes; i_node++)
+    for (unsigned int i_node=0; i_node<e.n_nodes(); i_node++)
         phi(i_node)  =  dshapedeta[i_node][0];
 
     jac(1,0) =  phi.dot(xdef);
@@ -1439,7 +1449,7 @@ MAST::StructuralElement3D::_init_incompatible_fe_mapping( const libMesh::Elem& e
     jac(1,2) =  phi.dot(zdef);
     
     // lastly, derivatives wrt phi
-    for (unsigned int i_node=0; i_node<n_nodes; i_node++)
+    for (unsigned int i_node=0; i_node<e.n_nodes(); i_node++)
         phi(i_node)  =  dshapedphi[i_node][0];
 
     jac(2,0) =  phi.dot(xdef);

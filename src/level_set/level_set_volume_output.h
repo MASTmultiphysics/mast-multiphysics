@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -40,11 +40,18 @@ namespace MAST {
         virtual ~LevelSetVolume();
         
         /*!
+         *   virtual function, nothing to be done for level set
+         */
+        virtual void
+        set_elem_data(unsigned int dim,
+                      MAST::GeomElem& elem) const { }
+
+        /*!
          *   initializes the object for calculation of element quantities for
          *   the specified \p elem.
          */
         virtual void
-        init(const libMesh::Elem& elem);
+        init(const MAST::GeomElem& elem);
 
         /*!
          *   zeroes the output quantity values stored inside this object
@@ -99,7 +106,7 @@ namespace MAST {
 
         /*!
          *   returns the output quantity derivative with respect to
-         *   state vector in \par dq_dX.
+         *   state vector in \p dq_dX.
          *   This method calculates the quantity
          *    \f[ \frac{\partial q(X, p)}{\partial X} \f] for this
          *    output function. This is returned for the element for which
@@ -146,7 +153,6 @@ namespace MAST {
          *    boundary \f$ \int_\Gamma V_n~d\Gamma \f$
          */
         virtual void evaluate_topology_sensitivity(const MAST::FunctionBase& f,
-                                                   const MAST::LevelSetIntersection& intersect,
                                                    const MAST::FieldFunction<RealVectorX>& vel);
 
     protected:

@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -25,6 +25,7 @@
 #include "elasticity/bending_operator.h"
 #include "numerics/fem_operator_matrix.h"
 #include "mesh/fe_base.h"
+#include "mesh/geom_elem.h"
 
 // libMesh includes
 #include "libmesh/point.h"
@@ -39,7 +40,7 @@ namespace MAST {
         BernoulliBendingOperator(MAST::StructuralElementBase& elem,
                                  const std::vector<libMesh::Point>& qpts):
         MAST::BendingOperator1D(elem),
-        _length(_elem.volume()),
+        _length(_elem.get_reference_elem().volume()),
         _qpts(qpts)
         { }
         

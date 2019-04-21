@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -23,6 +23,7 @@
 #include "property_cards/element_property_card_1D.h"
 #include "base/physics_discipline_base.h"
 #include "base/assembly_base.h"
+#include "mesh/geom_elem.h"
 
 
 MAST::HeatConductionTransientAssemblyElemOperations::
@@ -103,7 +104,24 @@ elem_second_derivative_dot_solution_assembly(RealMatrixX& m) {
 
 void
 MAST::HeatConductionTransientAssemblyElemOperations::
-init(const libMesh::Elem& elem) {
+set_elem_data(unsigned int dim,
+              MAST::GeomElem& elem) const {
+    
+    libmesh_assert(!_physics_elem);
+    
+    if (dim == 1) {
+        
+        const MAST::ElementPropertyCard1D& p =
+        dynamic_cast<const MAST::ElementPropertyCard1D&>(_discipline->get_property_card(elem));
+        
+        elem.set_local_y_vector(p.y_vector());
+    }
+}
+
+
+void
+MAST::HeatConductionTransientAssemblyElemOperations::
+init(const MAST::GeomElem& elem) {
     
     libmesh_assert(!_physics_elem);
     libmesh_assert(_system);

@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -30,6 +30,7 @@ namespace MAST {
     // Forward declerations
     class BoundaryConditionBase;
     class FEMOperatorMatrix;
+    class GeomElem;
     
     
     class BendingStructuralElem:
@@ -38,7 +39,7 @@ namespace MAST {
     public:
         BendingStructuralElem(MAST::SystemInitialization& sys,
                               MAST::AssemblyBase& assembly,
-                              const libMesh::Elem& elem,
+                              const MAST::GeomElem& elem,
                               const MAST::ElementPropertyCardBase& p);
         
         /*!

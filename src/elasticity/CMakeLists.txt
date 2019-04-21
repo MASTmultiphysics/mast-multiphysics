@@ -12,6 +12,8 @@ target_sources(mast
         ${CMAKE_CURRENT_LIST_DIR}/fluid_structure_assembly_elem_operations.h
         ${CMAKE_CURRENT_LIST_DIR}/fsi_generalized_aero_force_assembly.cpp
         ${CMAKE_CURRENT_LIST_DIR}/fsi_generalized_aero_force_assembly.h
+        ${CMAKE_CURRENT_LIST_DIR}/level_set_stress_assembly.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/level_set_stress_assembly.h
         ${CMAKE_CURRENT_LIST_DIR}/mindlin_bending_operator.cpp
         ${CMAKE_CURRENT_LIST_DIR}/mindlin_bending_operator.h
         ${CMAKE_CURRENT_LIST_DIR}/normal_rotation_function_base.h

@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -78,7 +78,7 @@ namespace MAST {
         /**
          * Assembly function.  This function will be called
          * to assemble the sensitivity of eigenproblem matrices.
-         * The method provides dA/dp and dB/dp for \par f parameter.
+         * The method provides dA/dp and dB/dp for \p f parameter.
          *
          * If the routine is not able to provide sensitivity for this parameter,
          * then it should return false, and the system will attempt to use
@@ -93,7 +93,7 @@ namespace MAST {
         /*!
          *   if the eigenproblem is defined about a non-zero base solution,
          *   then this method provides the object with the base solution.
-         *   The flag \par if_sens tells the method if \par sol
+         *   The flag \p if_sens tells the method if \p sol
          *   is the sensitivity of the base solution for the current parameter
          *   being solved for
          */
@@ -103,7 +103,7 @@ namespace MAST {
         
         /*!
          *   Clears the pointer to the solution.
-         *   The flag \par if_sens tells the method to clear the pointer 
+         *   The flag \p if_sens tells the method to clear the pointer 
          *   the solution sensitivity vector.
          */
         void clear_base_solution(bool if_sens = false);
@@ -118,7 +118,7 @@ namespace MAST {
         
         /*!
          *   @returns a const reference to the base solution (or
-         *   its sensitivity when \par if_sens is true) about which
+         *   its sensitivity when \p if_sens is true) about which
          *   the Eigen problem was linearized.
          */
         const libMesh::NumericVector<Real>&
@@ -127,7 +127,7 @@ namespace MAST {
 
         /*!
          *   @returns a non-const reference to the base solution (or
-         *   its sensitivity when \par if_sens is true) about which
+         *   its sensitivity when \p if_sens is true) about which
          *   the Eigen problem was linearized.
          */
         libMesh::NumericVector<Real>& base_sol(bool if_sens = false);

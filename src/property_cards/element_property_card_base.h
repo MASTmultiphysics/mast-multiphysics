@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -25,16 +25,13 @@
 #include "base/function_set_base.h"
 #include "elasticity/bending_operator.h"
 
-// libMesh includes
-#include "libmesh/elem.h"
-#include "libmesh/fe_type.h"
-
 
 namespace MAST
 {
     // Forward decleration
     class MaterialPropertyCardBase;
     class ElementBase;
+    class GeomElem;
     template <typename ValType> class FieldFunction;
     
     
@@ -65,16 +62,14 @@ namespace MAST
          *   reimplemented in the derived classes
          */
         virtual MAST::BendingOperatorType
-        bending_model(const libMesh::Elem& elem,
-                      const libMesh::FEType& fe) const = 0;
+        bending_model(const MAST::GeomElem& elem) const = 0;
         
         /*!
          *    returns the extra quadrature order (on top of the system) that
          *    this element should use. By default this is zero, and can be
          *    changed by the derived classes
          */
-        virtual int extra_quadrature_order(const libMesh::Elem& elem,
-                                           const libMesh::FEType& fe) const = 0;
+        virtual int extra_quadrature_order(const MAST::GeomElem& elem) const = 0;
         
 
         virtual std::unique_ptr<MAST::FieldFunction<RealMatrixX> >

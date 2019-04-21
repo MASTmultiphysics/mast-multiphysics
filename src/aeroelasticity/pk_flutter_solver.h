@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -78,7 +78,7 @@ namespace MAST {
         
         
         /*!
-         *   returns the \par n th root in terms of ascending velocity that is
+         *   returns the \p n th root in terms of ascending velocity that is
          *   found by the solver
          */
         const MAST::FlutterRootBase& get_root(const unsigned int n) const;
@@ -108,7 +108,7 @@ namespace MAST {
 
         
         /*!
-         *   Prints the sorted roots to the \par output
+         *   Prints the sorted roots to the \p output
          */
         virtual void print_sorted_roots();
         
@@ -129,7 +129,7 @@ namespace MAST {
         
         /*!
          *   Calculate the sensitivity of the flutter root with respect to the
-         *   parameter \par f
+         *   parameter \p f
          */
         virtual void calculate_sensitivity(MAST::FlutterRootBase& root,
                                            const MAST::FunctionBase& f);
@@ -164,7 +164,7 @@ namespace MAST {
          *   performs an eigensolution at the specified reduced frequency, and
          *   sort the roots based on the provided solution pointer. If the
          *   pointer is nullptr, then no sorting is performed
-         *   solve the eigenproblem  \f\[ L x = lambda R x \f\]
+         *   solve the eigenproblem  \f[ L x = \lambda R x \f]
          */
         virtual std::unique_ptr<MAST::FlutterSolutionBase>
         _analyze(const Real k_red,
@@ -186,7 +186,7 @@ namespace MAST {
         
         /*!
          *    Assembles the reduced order system structural and aerodynmaic
-         *    matrices for specified flight velocity \par U_inf.
+         *    matrices for specified flight velocity \p U_inf.
          */
         void
         _initialize_matrix_sensitivity_for_param(const MAST::FunctionBase& f,

@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -28,12 +28,11 @@
 
 
 
-MAST::LevelSetIntersection::LevelSetIntersection(unsigned int max_elem_id,
-                                                 unsigned int max_node_id):
+MAST::LevelSetIntersection::LevelSetIntersection():
 _tol                             (1.e-8),
 _max_iters                       (10),
-_max_mesh_elem_id                (max_elem_id),
-_max_mesh_node_id                (max_node_id),
+_max_mesh_elem_id                (0),
+_max_mesh_node_id                (0),
 _max_elem_divs                   (4),
 _elem                            (nullptr),
 _initialized                     (false),
@@ -51,6 +50,14 @@ MAST::LevelSetIntersection::~LevelSetIntersection() {
     this->clear();
 }
 
+
+const libMesh::Elem&
+MAST::LevelSetIntersection::elem() const {
+    
+    libmesh_assert(_initialized);
+    
+    return *_elem;
+}
 
 
 MAST::LevelSet2DIntersectionMode
@@ -183,6 +190,8 @@ MAST::LevelSetIntersection::clear() {
     _if_elem_on_positive_phi    = false;
     _if_elem_on_negative_phi    = false;
     _mode                       = MAST::NO_INTERSECTION;
+    _max_mesh_elem_id           = 0;
+    _max_mesh_node_id           = 0;
     _node_num_on_boundary       = 0;
     _edge_num_on_boundary       = 0;
     _positive_phi_elems.clear();
@@ -213,12 +222,79 @@ MAST::LevelSetIntersection::clear() {
 void
 MAST::LevelSetIntersection::init(const MAST::FieldFunction<Real>& phi,
                                  const libMesh::Elem& e,
-                                 const Real t) {
+                                 const Real t,
+                                 unsigned int max_elem_id,
+                                 unsigned int max_node_id) {
+
+    // make sure that this has not been initialized already
+    libmesh_assert(!_initialized);
+    libmesh_assert_equal_to(e.dim(), 2); // this is only for 2D elements
+    
+    _max_mesh_elem_id = max_elem_id;
+    _max_mesh_node_id = max_node_id;
+    
+    _elem      =  &e;
+    
+    switch (e.type()) {
+        case libMesh::QUAD4:
+            _init_on_first_order_ref_elem(phi, e, t);
+            break;
+
+        case libMesh::QUAD9: {
+            
+            std::unique_ptr<libMesh::Elem>
+            quad4(_first_order_elem(e));
+            _init_on_first_order_ref_elem(phi, *quad4, t);
+        }
+            break;
+            
+        default:
+            // currently only QUAD4/9 are handled.
+            libmesh_error();
+    }
+}
+
+
+
+std::unique_ptr<libMesh::Elem>
+MAST::LevelSetIntersection::_first_order_elem(const libMesh::Elem &e) {
+    
+    std::unique_ptr<libMesh::Elem>
+    first_order_elem;
+    
+    switch (e.type()) {
+        case libMesh::QUAD9: {
+            
+            first_order_elem.reset(libMesh::Elem::build(libMesh::QUAD4).release());
+            
+            for (unsigned int i=0; i<4; i++)
+                first_order_elem->set_node(i) = const_cast<libMesh::Node*>(e.node_ptr(i));
+            
+            first_order_elem->set_id() = e.id();
+        }
+            break;
+            
+        default:
+            // currently only QUAD4/9 are handled.
+            libmesh_error();
+    }
+    
+    return first_order_elem;
+}
+
+
+
+
+void
+MAST::LevelSetIntersection::
+_init_on_first_order_ref_elem(const MAST::FieldFunction<Real>& phi,
+                              const libMesh::Elem& e,
+                              const Real t) {
     
     // make sure that this has not been initialized already
     libmesh_assert(!_initialized);
     libmesh_assert_equal_to(e.dim(), 2); // this is only for 2D elements
-    _elem      =  &e;
+    libmesh_assert(_elem);
     
     // this assumes that the phi=0 interface is not fully contained inside
     // the element. That is, the interface is assumed to intersect with the
@@ -242,13 +318,18 @@ MAST::LevelSetIntersection::init(const MAST::FieldFunction<Real>& phi,
     bool
     on_level_set = false;
     
-    for (unsigned int i=0; i<e.n_nodes(); i++) {
+    // the shape function values are checked on all nodes of the reference elem
+    for (unsigned int i=0; i<_elem->n_nodes(); i++) {
         
-        const libMesh::Node& n = e.node_ref(i);
+        const libMesh::Node& n = _elem->node_ref(i);
         phi(n, t, val);
         on_level_set      = fabs(val) <= _tol;
         _node_phi_vals[&n] = std::pair<Real, bool>(val, on_level_set);
-        if (on_level_set) {
+        // only check the corner nodes for intersection to maintain the
+        // assumption of simple intersections on quad4. This will be
+        // consistent for a quad4 reference elem, but for a quad8/9 elem
+        // this helps in simplifying the process. 
+        if (i < e.n_nodes() && on_level_set) {
             _node_num_on_boundary = i;
             n_node_intersection++;
         }
@@ -268,7 +349,7 @@ MAST::LevelSetIntersection::init(const MAST::FieldFunction<Real>& phi,
         // element is completely on the positive side with no intersection
         
         _mode = MAST::NO_INTERSECTION;
-        _positive_phi_elems.push_back(&e);
+        _positive_phi_elems.push_back(_elem);
         _if_elem_on_positive_phi         = true;
         _if_elem_on_negative_phi         = false;
         _initialized = true;
@@ -280,7 +361,7 @@ MAST::LevelSetIntersection::init(const MAST::FieldFunction<Real>& phi,
         // element is completely on the negative side, with no intersection
         
         _mode = MAST::NO_INTERSECTION;
-        _negative_phi_elems.push_back(&e);
+        _negative_phi_elems.push_back(_elem);
         _if_elem_on_positive_phi         = false;
         _if_elem_on_negative_phi         = true;
         _initialized = true;
@@ -320,12 +401,12 @@ MAST::LevelSetIntersection::init(const MAST::FieldFunction<Real>& phi,
         
         if (min_val <= _tol &&
             max_val <= _tol ) { // element is on the negative side
-            _negative_phi_elems.push_back(&e);
+            _negative_phi_elems.push_back(_elem);
         }
         else {
             
             libmesh_assert_greater(max_val, _tol);
-            _positive_phi_elems.push_back(&e);
+            _positive_phi_elems.push_back(_elem);
         }
         
         std::vector<std::pair<libMesh::Point, libMesh::Point> >
@@ -364,14 +445,14 @@ MAST::LevelSetIntersection::init(const MAST::FieldFunction<Real>& phi,
             // It is on the negative side if the minimum value of the function
             // is negative.
             if (max_val > _tol)
-                _positive_phi_elems.push_back(&e);
+                _positive_phi_elems.push_back(_elem);
             else if (min_val < _tol)
-                _negative_phi_elems.push_back(&e);
+                _negative_phi_elems.push_back(_elem);
             
             std::vector<std::pair<libMesh::Point, libMesh::Point> >
             side_nondim_points;
             _add_node_local_coords(e, side_nondim_points, _node_local_coords);
-            _elem_sides_on_interface[&e] = i;
+            _elem_sides_on_interface[_elem] = i;
             _initialized                 = true;
             return;
         }
@@ -410,6 +491,8 @@ MAST::LevelSetIntersection::init(const MAST::FieldFunction<Real>& phi,
     // a unique element ID for each new element.
     //
     
+    libmesh_assert_less_equal(_new_elems.size(), _max_elem_divs);
+    
     for (unsigned int i=0; i<_new_elems.size(); i++) {
         
         _new_elems[i]->subdomain_id() = e.subdomain_id();
@@ -439,17 +522,37 @@ MAST::LevelSetIntersection::get_sub_elems_negative_phi() const {
 
 void
 MAST::LevelSetIntersection::
-get_nodes_on_negative_phi(std::set<const libMesh::Node*>& nodes) const {
+get_corner_nodes_on_negative_phi(std::set<const libMesh::Node*>& nodes) const {
     
     nodes.clear();
     
-    // iterate over the nodes and return the ones that had a negative phi
+    // iterate over the corner nodes and return the ones that had a negative phi
     // value
+    unsigned int
+    n_corner_nodes = 0;
+    
+    switch (_elem->type()) {
+        case libMesh::QUAD4:
+        case libMesh::QUAD8:
+        case libMesh::QUAD9:
+            n_corner_nodes = 4;
+            break;
+            
+        default:
+            libmesh_error(); // other cases not yet handled
+    }
+    
     std::map<const libMesh::Node*, std::pair<Real, bool>>::const_iterator
-    it    = _node_phi_vals.begin(),
+    it,
     end   = _node_phi_vals.end();
     
-    for ( ; it != end; it++) {
+    for (unsigned int i=0; i<n_corner_nodes; i++) {
+        
+        const libMesh::Node* nd = _elem->node_ptr(i);
+        
+        it = _node_phi_vals.find(nd);
+        
+        libmesh_assert(it != end);
         
         if (it->second.first < 0.)
             nodes.insert(it->first);

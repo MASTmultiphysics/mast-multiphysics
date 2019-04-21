@@ -14,8 +14,12 @@ target_sources(mast
         ${CMAKE_CURRENT_LIST_DIR}/level_set_eigenproblem_assembly.h
         ${CMAKE_CURRENT_LIST_DIR}/level_set_elem_base.cpp
         ${CMAKE_CURRENT_LIST_DIR}/level_set_elem_base.h
+        ${CMAKE_CURRENT_LIST_DIR}/level_set_intersected_elem.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/level_set_intersected_elem.h
         ${CMAKE_CURRENT_LIST_DIR}/level_set_intersection.cpp
         ${CMAKE_CURRENT_LIST_DIR}/level_set_intersection.h
+        ${CMAKE_CURRENT_LIST_DIR}/level_set_perimeter_output.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/level_set_perimeter_output.h
         ${CMAKE_CURRENT_LIST_DIR}/level_set_nonlinear_implicit_assembly.cpp
         ${CMAKE_CURRENT_LIST_DIR}/level_set_nonlinear_implicit_assembly.h
         ${CMAKE_CURRENT_LIST_DIR}/level_set_reinitialization_transient_assembly.cpp

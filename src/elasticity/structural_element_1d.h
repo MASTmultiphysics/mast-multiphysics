@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -40,7 +40,7 @@ namespace MAST {
     public:
         StructuralElement1D(MAST::SystemInitialization& sys,
                             MAST::AssemblyBase& assembly,
-                            const libMesh::Elem& elem,
+                            const MAST::GeomElem& elem,
                             const MAST::ElementPropertyCardBase& p);
         
         
@@ -80,7 +80,7 @@ namespace MAST {
                                                    RealMatrixX& jac);
         
         /*!
-         *   calculates the term on side \par s:
+         *   calculates the term on side \p s:
          *   \f$ \int_\Gamma a(\delta u, u) v_n ~d\Gamma \f$.
          *
          */
@@ -325,7 +325,7 @@ namespace MAST {
                                                        MAST::FEMOperatorMatrix& Bmat);
         
         /*!
-         *   initialze the von Karman strain in \par vK_strain, the operator
+         *   initialze the von Karman strain in \p vK_strain, the operator
          *   matrices needed for Jacobian calculation.
          *   vk_strain = [dw/dx 0; 0 dw/dy; dw/dy dw/dx]
          *   Bmat_vk   = [dw/dx; dw/dy]
@@ -357,8 +357,7 @@ namespace MAST {
          *   matrices. The temperature vector and matrix entities are provided for
          *   integration
          */
-        virtual void _internal_residual_operation(bool if_bending,
-                                                  bool if_vk,
+        virtual void _internal_residual_operation(bool if_vk,
                                                   const unsigned int n2,
                                                   const unsigned int qp,
                                                   const MAST::FEBase& fe,
@@ -366,6 +365,7 @@ namespace MAST {
                                                   bool request_jacobian,
                                                   RealVectorX& local_f,
                                                   RealMatrixX& local_jac,
+                                                  MAST::BendingOperator1D* bend_op,
                                                   MAST::FEMOperatorMatrix& Bmat_mem,
                                                   MAST::FEMOperatorMatrix& Bmat_bend_v,
                                                   MAST::FEMOperatorMatrix& Bmat_bend_w,
@@ -401,13 +401,6 @@ namespace MAST {
          */
         void _convert_prestress_B_mat_to_vector(const RealMatrixX& mat,
                                                 RealVectorX& vec) const;
-
-        
-        /*!
-         *    bending operator used for this elmeent
-         */
-        MAST::BendingOperator1D *_bending_operator;
-        
 
     };
 }

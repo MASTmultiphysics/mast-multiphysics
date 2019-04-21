@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -93,8 +93,7 @@ namespace MAST
          *   reimplemented in the derived classes
          */
         virtual MAST::BendingOperatorType
-        bending_model(const libMesh::Elem& elem,
-                      const libMesh::FEType& fe) const {
+        bending_model(const MAST::GeomElem& elem) const {
             libmesh_assert(false);
         }
         
@@ -103,9 +102,9 @@ namespace MAST
          *    this element should use. By default this is zero, and can be
          *    changed by the derived classes
          */
-        virtual int extra_quadrature_order(const libMesh::Elem& elem,
-                                           const libMesh::FEType& fe) const {
+        virtual int extra_quadrature_order(const MAST::GeomElem& elem) const {
             libmesh_assert(false);
+            return 0;
         }
         
         /*!

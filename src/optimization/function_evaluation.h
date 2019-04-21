@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -30,6 +30,7 @@
 
 // MAST includes
 #include "base/mast_data_types.h"
+#include "base/mast_config.h"
 
 
 // libMesh includes
@@ -99,7 +100,7 @@ namespace MAST {
                                std::vector<Real>& xmax) = 0;
         
         /*!
-         *   \par grads(k): Derivative of f_i(x) with respect
+         *   \p grads(k): Derivative of f_i(x) with respect
          *   to x_j, where k = (j-1)*M + i.
          */
         virtual void evaluate(const std::vector<Real>& dvars,
@@ -146,8 +147,8 @@ namespace MAST {
          *   optimization history output file. This will verify that the
          *   optimization setup (number of DVs, constraints, etc.) are the
          *   same as the initialized data for this object and then
-         *   read the dv values from \par iter iteration into
-         *   \par x. 
+         *   read the dv values from \p iter iteration into
+         *   \p x. 
          */
         void initialize_dv_from_output_file(const std::string& nm,
                                             const unsigned int iter,
@@ -159,7 +160,7 @@ namespace MAST {
         virtual bool verify_gradients(const std::vector<Real>& dvars);
         
         
-#if MAST_ENABLE_NPSOL == 1
+#if MAST_ENABLE_SNOPT == 1
         typedef void (*funobj) (int*    mode,
                                 int*    n,
                                 double* x,
@@ -180,7 +181,7 @@ namespace MAST {
 
         /*!
          *  @returns a pointer to the function that evaluates the objective
-         *  used for NPSOL interface
+         *  used for SNOPT interface
          */
         virtual funobj
         get_objective_evaluation_function() {
@@ -194,7 +195,7 @@ namespace MAST {
         
         /*!
          *  @returns a pointer to the function that evaluates the constraint
-         *  used for NPSOL interface
+         *  used for SNOPT interface
          */
         virtual funcon
         get_constraint_evaluation_function() {

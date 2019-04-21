@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -27,6 +27,7 @@
 #include "base/assembly_elem_operation.h"
 #include "base/output_assembly_elem_operations.h"
 #include "mesh/fe_base.h"
+#include "mesh/geom_elem.h"
 #include "numerics/utility.h"
 
 
@@ -223,19 +224,6 @@ MAST::AssemblyBase::detach_solution_function() {
 
 
 
-std::unique_ptr<MAST::FEBase>
-MAST::AssemblyBase::build_fe() {
-
-    libmesh_assert(_system);
-
-    std::unique_ptr<MAST::FEBase>
-    fe(new MAST::FEBase(*_system));
-    
-    return fe;
-}
-
-
-
 
 void
 MAST::AssemblyBase::calculate_output(const libMesh::NumericVector<Real>& X,
@@ -288,7 +276,11 @@ MAST::AssemblyBase::calculate_output(const libMesh::NumericVector<Real>& X,
         //if (_sol_function)
         //    physics_elem->attach_active_solution_function(*_sol_function);
         
-        output.init(*elem);
+        MAST::GeomElem geom_elem;
+        output.set_elem_data(elem->dim(), geom_elem);
+        geom_elem.init(*elem, *_system);
+        
+        output.init(geom_elem);
         output.set_elem_solution(sol);
         output.evaluate();
         output.clear_elem();
@@ -363,7 +355,11 @@ calculate_output_derivative(const libMesh::NumericVector<Real>& X,
 //        if (_sol_function)
 //            physics_elem->attach_active_solution_function(*_sol_function);
         
-        output.init(*elem);
+        MAST::GeomElem geom_elem;
+        output.set_elem_data(elem->dim(), geom_elem);
+        geom_elem.init(*elem, *_system);
+        
+        output.init(geom_elem);
         output.set_elem_solution(sol);
         output.output_derivative_for_elem(vec);
         output.clear_elem();
@@ -372,8 +368,7 @@ calculate_output_derivative(const libMesh::NumericVector<Real>& X,
         MAST::copy(v, vec);
         dof_map.constrain_element_vector(v, dof_indices);
         dq_dX.add_vector(v, dof_indices);
-
-//        physics_elem->detach_active_solution_function();
+        dof_indices.clear();
     }
     
     // if a solution function is attached, clear it
@@ -451,7 +446,11 @@ calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
         //        if (_sol_function)
         //            physics_elem->attach_active_solution_function(*_sol_function);
         
-        output.init(*elem);
+        MAST::GeomElem geom_elem;
+        output.set_elem_data(elem->dim(), geom_elem);
+        geom_elem.init(*elem, *_system);
+        
+        output.init(geom_elem);
         output.set_elem_solution(sol);
         output.set_elem_solution_sensitivity(dsol);
         output.evaluate_sensitivity(p);

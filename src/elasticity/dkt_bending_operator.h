@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -23,6 +23,7 @@
 // MAST includes
 #include "elasticity/bending_operator.h"
 #include "mesh/fe_base.h"
+#include "mesh/geom_elem.h"
 
 // libMesh includes
 #include "libmesh/elem.h"
@@ -40,12 +41,15 @@ namespace MAST
     public:
         DKTBendingOperator(MAST::StructuralElementBase& elem,
                            const std::vector<libMesh::Point>& pts):
-        MAST::BendingOperator2D(elem),
-        _fe(nullptr),
-        _tri6(nullptr),
-        _nodes(3)
+        MAST::BendingOperator2D  (elem),
+        _fe                      (nullptr),
+        _tri6                    (nullptr),
+        _nodes                   (3)
         {
-            libmesh_assert(_elem.type() == libMesh::TRI3);
+            const libMesh::Elem
+            &e  = _elem.get_reference_elem();
+            
+            libmesh_assert(e.type() == libMesh::TRI3);
             
             _tri6 = new libMesh::Tri6;
             
@@ -55,23 +59,23 @@ namespace MAST
             
             // first edge
             libMesh::Point p;
-            p = *_elem.node_ptr(0); p += _elem.point(1); p*= 0.5;
+            p = *e.node_ptr(0); p += e.point(1); p*= 0.5;
             (*_nodes[0]) = p;
             _nodes[0]->set_id(3);
             
             // second edge
-            p = *_elem.node_ptr(1); p += _elem.point(2); p*= 0.5;
+            p = *e.node_ptr(1); p += e.point(2); p*= 0.5;
             (*_nodes[1]) = p;
             _nodes[1]->set_id(4);
             
             // third edge
-            p = *_elem.node_ptr(2); p += _elem.point(0); p*= 0.5;
+            p = *e.node_ptr(2); p += e.point(0); p*= 0.5;
             (*_nodes[2]) = p;
             _nodes[2]->set_id(5);
             
             // first three nodes are same as that of the original element
             for (unsigned int i=0; i<3; i++) {
-                _tri6->set_node(  i) = const_cast<libMesh::Node*>(_elem.node_ptr(i));
+                _tri6->set_node(  i) = const_cast<libMesh::Node*>(e.node_ptr(i));
                 _tri6->set_node(i+3) = _nodes[i];
             }
             
@@ -277,12 +281,15 @@ MAST::DKTBendingOperator::_get_edge_normal_sine_cosine(unsigned int i,
                                                        Real& sine,
                                                        Real& cosine)
 {
+    const libMesh::Elem
+    &e  = _elem.get_reference_elem();
+
     libMesh::Point vec0, vec1, vec2, vec3;
     
     // calculate the normal to the element
-    vec0 = *_elem.node_ptr(0);
-    vec1 = *_elem.node_ptr(1);
-    vec2 = *_elem.node_ptr(2);
+    vec0 = *e.node_ptr(0);
+    vec1 = *e.node_ptr(1);
+    vec2 = *e.node_ptr(2);
     
     vec1 -= vec0;
     vec2 -= vec0;
@@ -293,8 +300,8 @@ MAST::DKTBendingOperator::_get_edge_normal_sine_cosine(unsigned int i,
     
     // cross product of the length vector with the surface normal will
     // give the needed vector
-    vec3 = *_elem.node_ptr(i);
-    vec2 = *_elem.node_ptr(j);
+    vec3 = *e.node_ptr(i);
+    vec2 = *e.node_ptr(j);
     
     vec2 -= vec3;
     vec3 = vec2.cross(vec1);

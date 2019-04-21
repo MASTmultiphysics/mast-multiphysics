@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -38,7 +38,7 @@ namespace MAST {
     public:
         StructuralElement3D(MAST::SystemInitialization& sys,
                             MAST::AssemblyBase& assembly,
-                            const libMesh::Elem& elem,
+                            const MAST::GeomElem& elem,
                             const MAST::ElementPropertyCardBase& p);
         
         
@@ -63,7 +63,7 @@ namespace MAST {
                                        RealMatrixX& jac);
         
         /*!
-         *   calculates the term on side \par s:
+         *   calculates the term on side \p s:
          *   \f$ \int_\Gamma a(\delta u, u) v_n ~d\Gamma \f$.
          *
          */

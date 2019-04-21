@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -59,7 +59,7 @@ namespace MAST {
        
         /*!
          *    calculates the value of the function at the specified point,
-         *    \par p, and time, \par t, and returns it in \p v.
+         *    \p p, and time, \p t, and returns it in \p v.
          */
         virtual void operator() (const libMesh::Point& p,
                                  const Real t,
@@ -67,7 +67,7 @@ namespace MAST {
         
         /*!
          *    calculates the gradient of value of the function at the specified
-         *    point, \par p, and time, \par t, and returns it in \p g.
+         *    point, \p p, and time, \p t, and returns it in \p g.
          *    g(i,j) = dv(i)/dx(j)
          */
         virtual void gradient(const libMesh::Point& p,
@@ -76,7 +76,7 @@ namespace MAST {
 
         /*!
          *    calculates the value of perturbation in the function at
-         *    the specified point, \par p, and time, \par t, and returns it
+         *    the specified point, \p p, and time, \p t, and returns it
          *    in \p v.
          */
         virtual void perturbation (const libMesh::Point& p,
@@ -86,7 +86,7 @@ namespace MAST {
         
         /*!
          *    calculates the value of the function at the specified point,
-         *    \par p, and time, \par t, and returns it in \p v.
+         *    \p p, and time, \p t, and returns it in \p v.
          */
         virtual void derivative (const MAST::FunctionBase& f,
                                  const libMesh::Point& p,
@@ -96,7 +96,7 @@ namespace MAST {
         
         /*!
          *   initializes the data structures to perform the interpolation 
-         *   function of \par sol. If \p dsol is provided, then it is used
+         *   function of \p sol. If \p dsol is provided, then it is used
          *   as the perturbation of \p sol.
          */
         void init(const libMesh::NumericVector<Real>& sol,

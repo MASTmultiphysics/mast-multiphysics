@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2018  Manav Bhatia
+ * Copyright (C) 2013-2019  Manav Bhatia
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -107,6 +107,21 @@ namespace MAST {
         Real rho_e() const
         {
             return gas_property.rho * gas_property.cv * gas_property.T + q0();
+        }
+
+        Real rho_u1_sens_mach() const {
+            
+            return this->rho_u1()/mach;
+        }
+        
+        Real rho_u2_sens_mach() const {
+            
+            return this->rho_u2()/mach;
+        }
+        
+        Real rho_e_sens_mach() const
+        {
+            return 2.*q0()/mach;
         }
     };
     
