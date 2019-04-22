@@ -46,18 +46,26 @@ find_package(Boost COMPONENTS iostreams system filesystem unit_test_framework RE
 # Find optional packages.
 if (ENABLE_GCMMA)
     find_package(GCMMA REQUIRED)
+else()
+    set (MAST_ENABLE_GCMMA 0)
 endif()
 
 if (ENABLE_DOT)
     find_package(DOT REQUIRED)
+else()
+    set (MAST_ENABLE_DOT 0)
 endif()
 
 if (ENABLE_SNOPT)
     find_package(SNOPT REQUIRED)
+else()
+    set (MAST_ENABLE_SNOPT 0)
 endif()
 
 if (ENABLE_NLOPT)
    find_package(NLOpt REQUIRED)
+else()
+    set (MAST_ENABLE_NLOPT 0)
 endif()
 
 # gfortran lib is required if GCMMA/DOT are used, since these are written

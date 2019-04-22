@@ -29,11 +29,11 @@
 
 
 MAST::ContinuationSolverBase::ContinuationSolverBase():
-_initialized (false),
 max_it       (20),
 abs_tol      (1.e-8),
 rel_tol      (1.e-8),
 arc_length   (0.),
+_initialized (false),
 _elem_ops    (nullptr),
 _assembly    (nullptr),
 _p           (nullptr),

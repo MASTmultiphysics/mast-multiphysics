@@ -1,6 +1,6 @@
 # since an optimizer is required for optimization we turn this on only if
 # NLOPT was enabled for MAST
-if(ENABLE_NLOPT)
+if(ENABLE_NLOPT OR ENABLE_SNOPT OR ENABLE_GCMMA)
     add_executable(structural_example_5
                    example_5.cpp)
 

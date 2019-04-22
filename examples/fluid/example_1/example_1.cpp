@@ -31,6 +31,7 @@
 #include "base/transient_assembly.h"
 #include "base/boundary_condition_base.h"
 #include "base/field_function_base.h"
+#include "base/parameter.h"
 #include "boundary_condition/dirichlet_boundary_condition.h"
 #include "fluid/conservative_fluid_system_initialization.h"
 #include "fluid/conservative_fluid_discipline.h"
@@ -38,6 +39,7 @@
 #include "fluid/flight_condition.h"
 #include "fluid/integrated_force_output.h"
 #include "solver/first_order_newmark_transient_solver.h"
+#include "solver/stabilized_first_order_transient_sensitivity_solver.h"
 
 // libMesh includes
 #include "libmesh/libmesh.h"
@@ -613,6 +615,34 @@ protected:
 
     }
 
+    
+    void _init_sensitivity_solution() {
+        
+        bool
+        restart = _input("restart_simulation", "restart simulation from solution", false);
+        
+        if (!restart) {
+            
+            unsigned int
+            n = _mesh->mesh_dimension();
+            RealVectorX s = RealVectorX::Zero(n+2);
+            s(0) = 0.;
+            s(1) = _flight_cond->rho_u1_sens_mach();
+            s(2) = _flight_cond->rho_u2_sens_mach();
+            //if (n > 2)
+            //    s(3) = _flight_cond->rho_u3_sens_mach();
+            s(n+1) = _flight_cond->rho_e_sens_mach();
+            
+            _sys_init->initialize_solution(s);
+        }
+        else {
+            
+            _sys->solution->zero();
+            _sys->solution->close();
+        }
+    }
+
+    
 public:
 
     FlowAnalysis(libMesh::LibMeshInit& init,
@@ -864,7 +894,219 @@ public:
             t_step++;
         }
     }
+    
+    
+    
+    void
+    compute_transient_sensitivity(MAST::Parameter& p) {
+        
+        bool
+        output                = _input("if_output", "if write output to a file", false);
+        std::string
+        output_name           = _input("output_file_root", "prefix of output file names", "output"),
+        transient_output_name = output_name + "_transient_sensitivity_" + p.name() + ".exo";
+        
+        // the output from analysis should have been saved for sensitivity
+        libmesh_assert(output);
+        
+        // create the nonlinear assembly object
+        MAST::TransientAssembly                                  assembly;
+        MAST::ConservativeFluidTransientAssemblyElemOperations   elem_ops;
+        MAST::FirstOrderNewmarkTransientSolver                   solver;
+        RealVectorX
+        nvec = RealVectorX::Zero(3);
+        nvec(1) = 1.;
+        MAST::IntegratedForceOutput                              force(nvec);
+        std::set<libMesh::boundary_id_type> bids;
+        bids.insert(3);
+        force.set_participating_boundaries(bids);
+        
+        assembly.set_discipline_and_system(*_discipline, *_sys_init);
+        elem_ops.set_discipline_and_system(*_discipline, *_sys_init);
+        force.set_discipline_and_system(*_discipline, *_sys_init);
+        solver.set_discipline_and_system(*_discipline, *_sys_init);
+        solver.set_elem_operation_object(elem_ops);
+        
+        // initialize the solution to zero, or to something that the
+        // user may have provided
+        _init_solution();
+        _sys->solution->swap(solver.solution_sensitivity());
+        _init_sensitivity_solution();
+        _sys->solution->swap(solver.solution_sensitivity());
+        
+        // file to write the solution for visualization
+        libMesh::ExodusII_IO exodus_writer(*_mesh);
+        
+        // file to write the solution for visualization
+        libMesh::ExodusII_IO transient_output(*_mesh);
+        std::ofstream force_output;
+        force_output.open("force.txt");
+        force_output
+        << std::setw(10) << "t"
+        << std::setw(30) << "force"
+        << std::setw(30) << "force_sens" << std::endl;
+        
+        unsigned int
+        t_step            = 0,
+        n_steps           = _input("n_transient_steps", "number of transient time-steps", 100);
+        solver.dt         = _input("dt", "time-step size",    1.e-3);
+        _sys->time        = _input("t_initial", "initial time-step",    0.);
+        
+        // ask the solver to update the initial condition for d2(X)/dt2
+        // This is recommended only for the initial time step, since the time
+        // integration scheme updates the velocity and acceleration at
+        // each subsequent iterate
+        solver.solve_highest_derivative_and_advance_time_step_with_sensitivity(assembly, p);
+        
+        // loop over time steps
+        while (t_step < n_steps) {
+            
+            libMesh::out
+            << "Time step: " << t_step
+            << " :  t = " << _sys->time
+            << " :  xdot-L2 = " << solver.velocity().l2_norm()
+            << std::endl;
+            
+            // write the time-step
+            if (output) {
+                
+                _sys->solution->swap(solver.solution_sensitivity());
+                exodus_writer.write_timestep(transient_output_name,
+                                             *_eq_sys,
+                                             t_step+1,
+                                             _sys->time);
+                _sys->solution->swap(solver.solution_sensitivity());
+            }
+            
+            std::ostringstream oss;
+            oss << output_name << "_sol_t_" << t_step;
+            _sys->read_in_vector(*_sys->solution, "data", oss.str(), true);
+            oss << "_sens_t";
+            _sys->write_out_vector(/*solver.dt, _sys->time,*/ solver.solution_sensitivity(), "data", oss.str(), true);
+            
+            // solve for the sensitivity time-step
+            force.zero_for_analysis();
+            assembly.calculate_output(solver.solution(), force);
+            assembly.calculate_output_direct_sensitivity(solver.solution(), solver.solution_sensitivity(), p, force);
+            force_output
+            << std::setw(10) << _sys->time
+            << std::setw(30) << force.output_total()
+            << std::setw(30) << force.output_sensitivity_total(p) << std::endl;
+            
+            solver.sensitivity_solve(assembly, p);
+            solver.advance_time_step_with_sensitivity();
+            
+            // update time step counter
+            t_step++;
+        }
+        
+    }
+    
+
+    void
+    compute_transient_stabilized_sensitivity(MAST::Parameter& p) {
+        
+        bool
+        output                = _input("if_output", "if write output to a file", false);
+        std::string
+        output_name           = _input("output_file_root", "prefix of output file names", "output"),
+        transient_output_name = output_name + "_transient_sensitivity_" + p.name() + ".exo",
+        nonlinear_sol_root    = output_name+std::string("_sol_t_"),
+        nonlinear_sol_dir     = _input("nonlinear_sol_dir", "directory containing the location of nonlinear solutions", "");
+        
+        // the output from analysis should have been saved for sensitivity
+        libmesh_assert(output);
+        
+        // create the nonlinear assembly object
+        MAST::TransientAssembly                                     assembly;
+        MAST::ConservativeFluidTransientAssemblyElemOperations      elem_ops;
+        MAST::StabilizedFirstOrderNewmarkTransientSensitivitySolver solver;
+        RealVectorX
+        nvec = RealVectorX::Zero(3);
+        nvec(1) = 1.;
+        MAST::IntegratedForceOutput                              force(nvec);
+        std::set<libMesh::boundary_id_type> bids;
+        bids.insert(3);
+        force.set_participating_boundaries(bids);
+        
+        assembly.set_discipline_and_system(*_discipline, *_sys_init);
+        elem_ops.set_discipline_and_system(*_discipline, *_sys_init);
+        force.set_discipline_and_system(*_discipline, *_sys_init);
+        solver.set_discipline_and_system(*_discipline, *_sys_init);
+        solver.set_elem_operation_object(elem_ops);
+        
+        // file to write the solution for visualization
+        libMesh::ExodusII_IO exodus_writer(*_mesh);
+        
+        // file to write the solution for visualization
+        libMesh::ExodusII_IO transient_output(*_mesh);
+        std::ofstream force_output;
+        force_output.open("force.txt");
+        force_output
+        << std::setw(10) << "t"
+        << std::setw(30) << "force"
+        << std::setw(30) << "force_sens" << std::endl;
+        
+        unsigned int
+        t_step            = 0,
+        n_steps           = _input("n_transient_steps", "number of transient time-steps", 100);
+        solver.dt         = _input("dt", "time-step size",    1.e-3);
+        _sys->time        = _input("t_initial", "initial time-step",    0.);
+        solver.max_amp    = _input("max_amp", "maximum amplitude for the stabilized sensitivity solver",   1.);
+        solver.beta       = _input("sensitivity_beta", "beta for stabilized sensitivity solver",   1.);
+        solver.max_index  = n_steps;
+        solver.set_nolinear_solution_location(nonlinear_sol_root, nonlinear_sol_dir);
+        
+        // ask the solver to update the initial condition for d2(X)/dt2
+        // This is recommended only for the initial time step, since the time
+        // integration scheme updates the velocity and acceleration at
+        // each subsequent iterate
+        
+        // loop over time steps
+        while (t_step < n_steps) {
+            
+            libMesh::out
+            << "Time step: " << t_step
+            << " :  t = " << _sys->time
+            << " :  xdot-L2 = " << solver.velocity().l2_norm()
+            << std::endl;
+            
+            // write the time-step
+            if (output) {
+                
+                _sys->solution->swap(solver.solution_sensitivity());
+                exodus_writer.write_timestep(transient_output_name,
+                                             *_eq_sys,
+                                             t_step+1,
+                                             _sys->time);
+                _sys->solution->swap(solver.solution_sensitivity());
+            }
+            
+            std::ostringstream oss;
+            oss << output_name << "_sol_t_" << t_step;
+            oss << "_sens_t";
+            _sys->write_out_vector(/*solver.dt, _sys->time,*/ solver.solution_sensitivity(), "data", oss.str(), true);
+            
+            // solve for the sensitivity time-step
+            force.zero_for_analysis();
+            assembly.calculate_output(solver.solution(), force);
+            assembly.calculate_output_direct_sensitivity(solver.solution(), solver.solution_sensitivity(), p, force);
+            force_output
+            << std::setw(10) << _sys->time
+            << std::setw(30) << force.output_total()
+            << std::setw(30) << force.output_sensitivity_total(p) << std::endl;
+            
+            solver.sensitivity_solve(assembly, p);
+            
+            // update time step counter
+            t_step++;
+        }
+        
+    }
+    
+    
 };
+
 
 
 int main(int argc, const char** argv)
