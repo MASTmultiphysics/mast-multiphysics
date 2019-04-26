@@ -49,7 +49,6 @@
 #include "solver/slepc_eigen_solver.h"
 #include "property_cards/isotropic_material_property_card.h"
 #include "property_cards/solid_2d_section_element_property_card.h"
-#include "optimization/nlopt_optimization_interface.h"
 #include "optimization/gcmma_optimization_interface.h"
 #include "optimization/npsol_optimization_interface.h"
 #include "optimization/function_evaluation.h"
@@ -1326,6 +1325,45 @@ public:
         }
     }
     
+    class ElemFlag: public libMesh::MeshRefinement::ElementFlagging {
+    public:
+        ElemFlag(libMesh::MeshBase& mesh, MAST::FieldFunction<Real>& phi, unsigned int max_h):
+        _mesh(mesh), _phi(phi), _max_h(max_h) {}
+        virtual ~ElemFlag() {}
+        virtual void flag_elements () {
+            
+            MAST::LevelSetIntersection intersection;
+            
+            libMesh::MeshBase::element_iterator
+            it  = _mesh.active_elements_begin(),
+            end = _mesh.active_elements_end();
+            
+            for ( ; it != end; it++) {
+                
+                libMesh::Elem* elem = *it;
+                intersection.init( _phi, *elem, 0.,
+                                  _mesh.max_elem_id(),
+                                  _mesh.max_node_id());
+                if (intersection.if_intersection_through_elem()) {
+                    
+                    Real vol_frac = intersection.get_positive_phi_volume_fraction();
+                    if (vol_frac < 0.5 && elem->level() < _max_h)
+                        elem->set_refinement_flag(libMesh::Elem::REFINE);
+                    else if (vol_frac > 0.90)
+                        elem->set_refinement_flag(libMesh::Elem::COARSEN);
+                    }
+                else
+                    elem->set_refinement_flag(libMesh::Elem::COARSEN);
+                intersection.clear();
+            }
+        }
+        
+    protected:
+        libMesh::MeshBase& _mesh;
+        MAST::FieldFunction<Real>& _phi;
+        unsigned int _max_h;
+    };
+    
     //
     //   \p grads(k): Derivative of f_i(x) with respect
     //   to x_j, where k = (j-1)*M + i.
@@ -1433,7 +1471,7 @@ public:
         
         
         libMesh::MeshRefinement refine(*_mesh);
-        libMesh::out << "before coarsening" << std::endl;
+        /*libMesh::out << "before coarsening" << std::endl;
         _mesh->print_info();
 
         {
@@ -1445,8 +1483,8 @@ public:
             if (refine.coarsen_elements())
                 _eq_sys->reinit();
         }
-
-        libMesh::out << "after coarsening" << std::endl;
+        */
+        libMesh::out << "before refinement" << std::endl;
         _mesh->print_info();
 
         bool
@@ -1463,42 +1501,32 @@ public:
             // for computing error information on a finite element mesh.
             libMesh::ErrorVector error(_mesh->max_elem_id(), _mesh);
             _compute_element_errors(error);
-            
+            libMesh::out
+            << "After refinement: " << n_refinements << std::endl
+            << "max error:    " << error.maximum()
+            << ",  mean error: " << error.mean() << std::endl;
+
             if (error.maximum() > threshold) {
                 
-                // This takes the error in error and decides which elements
-                // will be coarsened or refined.  Any element within 20% of the
-                // maximum error on any element will be refined, and any
-                // element within 7% of the minimum error on any element might
-                // be coarsened. Note that the elements flagged for refinement
-                // will be refined, but those flagged for coarsening _might_ be
-                // coarsened.
-                //refine.refine_fraction() = 0.80;
-                //refine.coarsen_fraction() = 0.07;
-                //refine.absolute_global_tolerance() = 0.8;
+                ElemFlag flag(*_mesh, *_level_set_function, max_refinements);
                 refine.max_h_level()      = max_refinements;
                 refine.refine_fraction()  = 1.;
                 refine.coarsen_fraction() = 0.5;
-                refine.flag_elements_by_error_tolerance (error);
+                refine.flag_elements_by (flag);
                 if (refine.refine_and_coarsen_elements())
                     _eq_sys->reinit ();
 
-                libMesh::out
-                << "After refinement: " << n_refinements << std::endl
-                << "max error:    " << error.maximum() 
-                << ",  mean error: " << error.mean() << std::endl;
                 _mesh->print_info();
-                
-                std::ostringstream oss;
-                oss << "mesh_" << n_refinements << ".exo";
-                _mesh->write("mesh.exo");
-                
                 
                 n_refinements++;
             }
             else
                 continue_refining = false;
         }
+
+        std::ostringstream oss;
+        oss << "mesh_" << n_refinements << ".exo";
+        _mesh->write("mesh.exo");
         
         MAST::LevelSetVolume                            volume(level_set_assembly.get_intersection());
         MAST::LevelSetPerimeter                         perimeter(level_set_assembly.get_intersection());
@@ -1694,6 +1722,7 @@ public:
         MAST::FunctionEvaluation::output(iter, x, obj/_obj_scaling, fval, if_write_to_optim_file);
     }
 
+#if MAST_ENABLE_SNOPT == 1
     MAST::FunctionEvaluation::funobj
     get_objective_evaluation_function() {
     
@@ -1705,14 +1734,15 @@ public:
     
         return _optim_con;
     }
-
+#endif
     
 };
 
 
-//#if MAST_ENABLE_SNOPT == 1
-
 TopologyOptimizationLevelSet2D* _my_func_eval = nullptr;
+
+#if MAST_ENABLE_SNOPT == 1
+
 
 void
 _optim_obj(int*    mode,
@@ -1839,7 +1869,8 @@ _optim_con(int*    mode,
     
     if (obj > 1.e5) *mode = -1;
 }
-//#endif
+#endif
+
 
 int main(int argc, char* argv[]) {
 
