@@ -83,7 +83,7 @@ MAST::Examples::CylinderMesh2D::mesh(const Real r,
     
     
     Real
-    tol = 1.e-8;
+    tol = 1.e-8*r;
 
     //create a map of old to new node
     std::map<libMesh::Node*, libMesh::Node*>

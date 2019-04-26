@@ -134,7 +134,7 @@ MAST::Examples::NACA0012WingMesh3D::mesh(const Real root_chord,
         n_end   = mesh.nodes_end();
         
         Real
-        tol = 1.e-8;
+        tol = 1.e-8*root_chord;
         
         {
             for ( ; n_it != n_end; n_it++) {
