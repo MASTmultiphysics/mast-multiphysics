@@ -1,5 +1,7 @@
 target_sources(mast
     PRIVATE
+        ${CMAKE_CURRENT_LIST_DIR}/filter_base.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/filter_base.h
         ${CMAKE_CURRENT_LIST_DIR}/indicator_function_constrain_dofs.cpp
         ${CMAKE_CURRENT_LIST_DIR}/indicator_function_constrain_dofs.h
         ${CMAKE_CURRENT_LIST_DIR}/interface_dof_handler.cpp
