@@ -33,6 +33,8 @@
 #include "level_set/level_set_boundary_velocity.h"
 #include "level_set/indicator_function_constrain_dofs.h"
 #include "level_set/level_set_constrain_dofs.h"
+#include "level_set/level_set_intersection.h"
+#include "level_set/filter_base.h"
 #include "elasticity/structural_nonlinear_assembly.h"
 #include "elasticity/structural_modal_eigenproblem_assembly.h"
 #include "elasticity/stress_output_base.h"
@@ -52,7 +54,7 @@
 #include "optimization/gcmma_optimization_interface.h"
 #include "optimization/npsol_optimization_interface.h"
 #include "optimization/function_evaluation.h"
-#include "level_set/level_set_intersection.h"
+
 
 // libMesh includes
 #include "libmesh/fe_type.h"
@@ -311,6 +313,8 @@ protected:
     MAST::PhysicsDisciplineBase*              _indicator_discipline;
     MAST::LevelSetDiscipline*                 _level_set_discipline;
     
+    MAST::FilterBase*                         _filter;
+    
     MAST::MaterialPropertyCardBase*           _m_card;
     MAST::ElementPropertyCardBase*            _p_card;
     
@@ -355,8 +359,8 @@ protected:
         // identify the element type from the input file or from the order
         // of the element
         unsigned int
-        nx_divs = _input("nx_divs", "number of elements along x-axis", 10),
-        ny_divs = _input("ny_divs", "number of elements along y-axis", 10);
+        nx_divs = _input("nx_divs", "number of elements along x-axis", 20),
+        ny_divs = _input("ny_divs", "number of elements along y-axis", 20);
         
         _length = _input("length", "length of domain along x-axis", 0.3),
         _height = _input("height", "length of domain along y-axis", 0.3);
@@ -401,8 +405,8 @@ protected:
 
         {
             unsigned int
-            nx_divs = _input("nx_divs", "number of elements along x-axis", 10),
-            ny_divs = _input("ny_divs", "number of elements along y-axis", 10);
+            nx_divs = _input("nx_divs", "number of elements along x-axis", 20),
+            ny_divs = _input("ny_divs", "number of elements along y-axis", 20);
             
             if (nx_divs%10 != 0 || ny_divs%10 != 0) libmesh_error();
         }
@@ -713,9 +717,9 @@ protected:
         // initialize solution of the level set problem
         unsigned int
         nx_h    = _input("initial_level_set_n_holes_in_x",
-                            "number of holes along x-direction for initial level-set field", 2.),
+                            "number of holes along x-direction for initial level-set field", 6),
         ny_h    = _input("initial_level_set_n_holes_in_y",
-                            "number of holes along y-direction for initial level-set field", 2.),
+                            "number of holes along y-direction for initial level-set field", 6),
         nx_m    = _input("level_set_nx_divs", "number of elements of level-set mesh along x-axis", 10),
         ny_m    = _input("level_set_ny_divs", "number of elements of level-set mesh along y-axis", 10);
         
@@ -980,27 +984,30 @@ protected:
         // iterate over each DV, create a sensitivity vector and calculate the
         // volume sensitivity explicitly
         std::unique_ptr<libMesh::NumericVector<Real>>
-        dphi(_level_set_sys->solution->zero_clone().release());
+        dphi_base(_level_set_sys->solution->zero_clone().release()),
+        dphi_filtered(_level_set_sys->solution->zero_clone().release());
         
         for (unsigned int i=0; i<_n_vars; i++) {
             
-            dphi->zero();
+            dphi_base->zero();
+            dphi_filtered->zero();
             // set the value only if the dof corresponds to a local node
-            if (_dv_params[i].first >=  dphi->first_local_index() &&
-                _dv_params[i].first <   dphi->last_local_index())
-                dphi->set(_dv_params[i].first, 1.);
-            dphi->close();
+            if (_dv_params[i].first >=  dphi_base->first_local_index() &&
+                _dv_params[i].first <   dphi_base->last_local_index())
+                dphi_base->set(_dv_params[i].first, 1.);
+            dphi_base->close();
+            _filter->compute_filtered_values(*dphi_base, *dphi_filtered);
             
-            _level_set_vel->init(*_level_set_sys_init, *_level_set_sys->solution, *dphi);
+            _level_set_vel->init(*_level_set_sys_init, *_level_set_sys->solution, *dphi_filtered);
             
             assembly.set_evaluate_output_on_negative_phi(false);
             assembly.calculate_output_direct_sensitivity(*_level_set_sys->solution,
-                                                         *dphi,
+                                                         *dphi_filtered,
                                                          *_dv_params[i].second,
                                                          volume);
             assembly.set_evaluate_output_on_negative_phi(true);
             assembly.calculate_output_direct_sensitivity(*_level_set_sys->solution,
-                                                         *dphi,
+                                                         *dphi_filtered,
                                                          *_dv_params[i].second,
                                                          perimeter);
             assembly.set_evaluate_output_on_negative_phi(false);
@@ -1027,21 +1034,27 @@ protected:
         _sys->adjoint_solve(nonlinear_elem_ops, stress, nonlinear_assembly, false);
         
         std::unique_ptr<libMesh::NumericVector<Real>>
-        dphi(_level_set_sys->solution->zero_clone().release());
-        
+        dphi_base(_level_set_sys->solution->zero_clone().release()),
+        dphi_filtered(_level_set_sys->solution->zero_clone().release());
+
         //////////////////////////////////////////////////////////////////
         // indices used by GCMMA follow this rule:
         // grad_k = dfi/dxj  ,  where k = j*NFunc + i
         //////////////////////////////////////////////////////////////////
         for (unsigned int i=0; i<_n_vars; i++) {
             
-            dphi->zero();
-            dphi->set(_dv_params[i].first, 1.);
-            dphi->close();
-            
+            dphi_base->zero();
+            dphi_filtered->zero();
+            // set the value only if the dof corresponds to a local node
+            if (_dv_params[i].first >=  dphi_base->first_local_index() &&
+                _dv_params[i].first <   dphi_base->last_local_index())
+                dphi_base->set(_dv_params[i].first, 1.);
+            dphi_base->close();
+            _filter->compute_filtered_values(*dphi_base, *dphi_filtered);
+
             // initialize the level set perturbation function to create a velocity
             // field
-            _level_set_vel->init(*_level_set_sys_init, *_level_set_sys->solution, *dphi);
+            _level_set_vel->init(*_level_set_sys_init, *_level_set_sys->solution, *dphi_filtered);
             
             //////////////////////////////////////////////////////////////////////
             // stress sensitivity
@@ -1121,6 +1134,11 @@ protected:
             _init_phi_dvs_inplane();
         else if (s == "bracket")
             _init_phi_dvs_bracket();
+
+        Real
+        filter_radius          = _input("filter_radius", "radius of geometric filter for level set field", 0.015);
+        _filter                = new MAST::FilterBase(*_level_set_sys, filter_radius);
+        _level_set_sys->add_vector("base_values");
     }
 
 public:
@@ -1154,6 +1172,7 @@ public:
     _discipline                          (nullptr),
     _indicator_discipline                (nullptr),
     _level_set_discipline                (nullptr),
+    _filter                              (nullptr),
     _m_card                              (nullptr),
     _p_card                              (nullptr),
     _level_set_function                  (nullptr),
@@ -1259,6 +1278,7 @@ public:
         delete _indicator_sys_init;
         delete _indicator_discipline;
         delete _level_set_discipline;
+        delete _filter;
         delete _level_set_eq_sys;
         delete _level_set_mesh;
         delete _output;
@@ -1379,11 +1399,15 @@ public:
         libMesh::out << "New Evaluation" << std::endl;
         
         // copy DVs to level set function
+        libMesh::NumericVector<Real>
+        &base_phi = _level_set_sys->get_vector("base_values");
+        
         for (unsigned int i=0; i<_n_vars; i++)
-            if (_dv_params[i].first >= _level_set_sys->solution->first_local_index() &&
-                _dv_params[i].first <  _level_set_sys->solution->last_local_index())
-                _level_set_sys->solution->set(_dv_params[i].first, dvars[i]);
-        _level_set_sys->solution->close();
+            if (_dv_params[i].first >= base_phi.first_local_index() &&
+                _dv_params[i].first <  base_phi.last_local_index())
+                base_phi.set(_dv_params[i].first, dvars[i]);
+        base_phi.close();
+        _filter->compute_filtered_values(base_phi, *_level_set_sys->solution);
         _level_set_function->init(*_level_set_sys_init, *_level_set_sys->solution);
         _sys->solution->zero();
         
@@ -1493,7 +1517,7 @@ public:
         threshold            = 0.05;
         unsigned int
         n_refinements        = 0,
-        max_refinements      = _input("max_refinements","maximum refinements", 0);
+        max_refinements      = _input("max_refinements","maximum refinements", 3);
         
         while (n_refinements < max_refinements && continue_refining) {
             
@@ -1657,11 +1681,15 @@ public:
         oss << "output_optim.e-s." << std::setfill('0') << std::setw(5) << iter ;
         
         // copy DVs to level set function
+        libMesh::NumericVector<Real>
+        &base_phi = _level_set_sys->get_vector("base_values");
+        
         for (unsigned int i=0; i<_n_vars; i++)
-            if (_dv_params[i].first >= _level_set_sys->solution->first_local_index() &&
-                _dv_params[i].first <  _level_set_sys->solution->last_local_index())
-                _level_set_sys->solution->set(_dv_params[i].first, x[i]);
-        _level_set_sys->solution->close();
+            if (_dv_params[i].first >= base_phi.first_local_index() &&
+                _dv_params[i].first <  base_phi.last_local_index())
+                base_phi.set(_dv_params[i].first, x[i]);
+        base_phi.close();
+        _filter->compute_filtered_values(base_phi, *_level_set_sys->solution);
         _level_set_function->init(*_level_set_sys_init, *_level_set_sys->solution);
         _level_set_sys_init_on_str_mesh->initialize_solution(_level_set_function->get_mesh_function());
         
@@ -1891,9 +1919,9 @@ int main(int argc, char* argv[]) {
     
     Real
     constr_penalty         = input("constraint_penalty", "constraint penalty in GCMMA", 50.),
-    initial_rel_step       = input("initial_rel_step", "initial step size in GCMMA", 5.e-1),
+    initial_rel_step       = input("initial_rel_step", "initial step size in GCMMA", 1.e-2),
     asymptote_reduction    = input("asymptote_reduction", "reduction of aymptote in GCMMA", 0.7),
-    asymptote_expansion    = input("asymptote_expansion", "expansion of asymptote in GCMMA", 1.4);
+    asymptote_expansion    = input("asymptote_expansion", "expansion of asymptote in GCMMA", 1.2);
 
     optimizer.set_real_parameter   ("constraint_penalty",  constr_penalty);
     optimizer.set_real_parameter   ("initial_rel_step",  initial_rel_step);
