@@ -43,8 +43,6 @@ MAST::FilterBase::~FilterBase() {
 }
 
 
-#include <iomanip>
-
 template <>
 void
 MAST::FilterBase::
@@ -70,7 +68,9 @@ compute_filtered_values<libMesh::NumericVector<Real>>(const libMesh::NumericVect
         vec_end = map_it->second.end();
         
         for ( ; vec_it != vec_end; vec_it++)
-            output.add(map_it->first, input_vals[vec_it->first] * vec_it->second);
+            if (map_it->first >= input.first_local_index() &&
+                map_it->first <  input.last_local_index())
+                output.add(map_it->first, input_vals[vec_it->first] * vec_it->second);
     }
     
     output.close();
