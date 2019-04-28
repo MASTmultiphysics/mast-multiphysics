@@ -56,6 +56,9 @@ compute_filtered_values<libMesh::NumericVector<Real>>(const libMesh::NumericVect
     
     output.zero();
     
+    std::vector<Real> input_vals(input.size(), 0.);
+    input.localize(input_vals);
+    
     std::map<unsigned int, std::vector<std::pair<unsigned int, Real>>>::const_iterator
     map_it   = _filter_map.begin(),
     map_end  = _filter_map.end();
@@ -67,7 +70,7 @@ compute_filtered_values<libMesh::NumericVector<Real>>(const libMesh::NumericVect
         vec_end = map_it->second.end();
         
         for ( ; vec_it != vec_end; vec_it++)
-            output.add(map_it->first, input.el(vec_it->first) * vec_it->second);
+            output.add(map_it->first, input_vals[vec_it->first] * vec_it->second);
     }
     
     output.close();
