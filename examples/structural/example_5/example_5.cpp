@@ -162,9 +162,8 @@ public:
         // interior evenly.
         
         const Real
-        tol     = 1.e-6*std::min(_l1, _l2),
-        dx_mesh = _l1/(1.*_nx_mesh),
-        dy_mesh = _l2/(1.*_ny_mesh);
+        dx_mesh = _l1/(1.*_nx_holes),
+        dy_mesh = _l2/(1.*_ny_holes);
         
         std::set<Real>::const_iterator
         x_it_low = _x_axis_hole_locations.lower_bound(p(0)-dx_mesh),
@@ -174,7 +173,7 @@ public:
         n = 0;
         // see if the x-location needs a hole
         for ( ; x_it_low != _x_axis_hole_locations.end(); x_it_low++) {
-            if (std::fabs(*x_it_low - p(0)) <= dx_mesh*0.5) {
+            if (std::fabs(*x_it_low - p(0)) <= dx_mesh*0.25) {
                 n++;
                 break;
             }
@@ -182,7 +181,7 @@ public:
         
         // now check the y-location
         for ( ; y_it_low != _y_axis_hole_locations.end(); y_it_low++) {
-            if (std::fabs(*y_it_low - p(1)) <= dy_mesh*0.5) {
+            if (std::fabs(*y_it_low - p(1)) <= dy_mesh*0.25) {
                 n++;
                 break;
             }
