@@ -40,7 +40,8 @@ namespace MAST {
     public:
         
         FilterBase(libMesh::System& sys,
-                   const Real radius);
+                   const Real radius,
+                   const std::set<unsigned int>& dv_dof_ids);
         
         
         virtual ~FilterBase();
@@ -69,6 +70,12 @@ namespace MAST {
          */
         Real _radius;
         
+        /*!
+         *   dof ids that are design variables. If a id is not in this set, then
+         *   the dof value assumes its value from the input
+         */
+        const std::set<unsigned int>&   _dv_dof_ids;
+
         /*!
          *   Algebraic relation between filtered level set values and the
          *   design variables \f$ \tilde{\phi}_i = B_{ij} \phi_j \f$

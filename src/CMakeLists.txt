@@ -5,7 +5,7 @@
 # - This has the advantage of keeping definitions localized.
 
 # Define the target.
-add_library(mast)
+add_library(mast SHARED)
 
 # Add include directories.
 target_include_directories(mast

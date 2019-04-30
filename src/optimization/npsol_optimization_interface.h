@@ -20,6 +20,9 @@
 #ifndef __MAST_npsol_optimization_interface_h__
 #define __MAST_npsol_optimization_interface_h__
 
+// C++ includes
+#include <map>
+
 // MAST includes
 #include "optimization/optimization_interface.h"
 

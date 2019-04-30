@@ -28,9 +28,11 @@
 
 
 MAST::FilterBase::FilterBase(libMesh::System& sys,
-                             const Real radius):
+                             const Real radius,
+                             const std::set<unsigned int>& dv_dof_ids):
 _level_set_system  (sys),
-_radius            (radius) {
+_radius            (radius),
+_dv_dof_ids        (dv_dof_ids) {
     
     libmesh_assert_greater(radius, 0.);
     
@@ -67,10 +69,16 @@ compute_filtered_values<libMesh::NumericVector<Real>>(const libMesh::NumericVect
         vec_it  = map_it->second.begin(),
         vec_end = map_it->second.end();
         
-        for ( ; vec_it != vec_end; vec_it++)
+        for ( ; vec_it != vec_end; vec_it++) {
             if (map_it->first >= input.first_local_index() &&
-                map_it->first <  input.last_local_index())
-                output.add(map_it->first, input_vals[vec_it->first] * vec_it->second);
+                map_it->first <  input.last_local_index()) {
+                
+                if (_dv_dof_ids.count(map_it->first))
+                    output.add(map_it->first, input_vals[vec_it->first] * vec_it->second);
+                else
+                    output.set(map_it->first, input_vals[map_it->first]);
+            }
+        }
     }
     
     output.close();
@@ -100,8 +108,12 @@ compute_filtered_values<std::vector<Real>>(const std::vector<Real>& input,
         vec_it  = map_it->second.begin(),
         vec_end = map_it->second.end();
         
-        for ( ; vec_it != vec_end; vec_it++)
-            output[map_it->first] += input[vec_it->first] * vec_it->second;
+        for ( ; vec_it != vec_end; vec_it++) {
+            if (_dv_dof_ids.count(map_it->first))
+                output[map_it->first] += input[vec_it->first] * vec_it->second;
+            else
+                output[map_it->first] += input[map_it->first];
+        }
     }
 }
 

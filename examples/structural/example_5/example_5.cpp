@@ -329,7 +329,7 @@ protected:
     std::vector<MAST::Parameter*>             _dv_parameters;
     std::set<MAST::FunctionBase*>             _field_functions;
     std::set<MAST::BoundaryConditionBase*>    _boundary_conditions;
-    
+    std::set<unsigned int>                    _dv_dof_ids;
     
     std::vector<std::pair<unsigned int, MAST::Parameter*>>  _dv_params;
     
@@ -733,8 +733,8 @@ protected:
         libmesh_assert_equal_to(_level_set_fetype.family, libMesh::LAGRANGE);
         
         Real
-        tol     = 1.e-6,
-        frac    = _input("load_length_fraction", "fraction of boundary length on which pressure will act", 0.2);
+        frac          = _input("load_length_fraction", "fraction of boundary length on which pressure will act", 0.2),
+        filter_radius = _input("filter_radius", "radius of geometric filter for level set field", 0.015);
         
         unsigned int
         dof_id  = 0;
@@ -766,10 +766,17 @@ protected:
             dof_id                     = n.dof_number(0, 0, 0);
             
             // only if node is not on the upper edge
-            if ((std::fabs(n(1)-_height) > tol) ||
-                (n(0) > _length*.5*(1.+frac))   ||
-                (n(0) < _length*.5*(1.-frac))) {
+            if ((n(1)+filter_radius >= _height) &&
+                (n(0)-filter_radius <= _length*.5*(1.+frac))   &&
+                (n(0)+filter_radius >= _length*.5*(1.-frac))) {
                 
+                // set value at the material points to a small positive number
+                if (dof_id >= _level_set_sys->solution->first_local_index() &&
+                    dof_id <  _level_set_sys->solution->last_local_index())
+                    _level_set_sys->solution->set(dof_id, 1.e0);
+            }
+            else {
+
                 std::ostringstream oss;
                 oss << "dv_" << _n_vars;
                 val  = local_phi[dof_id];
@@ -792,12 +799,6 @@ protected:
                 
                 _n_vars++;
             }
-            else {
-                // set value at the material points to a small positive number
-                if (dof_id >= _level_set_sys->solution->first_local_index() &&
-                    dof_id <  _level_set_sys->solution->last_local_index())
-                    _level_set_sys->solution->set(dof_id, 1.e0);
-            }
         }
         
         _level_set_sys->solution->close();
@@ -812,14 +813,15 @@ protected:
         libmesh_assert_equal_to(_level_set_fetype.family, libMesh::LAGRANGE);
         
         Real
-        tol     = 1.e-6,
-        length  = _input("length", "length of domain along x-axis", 0.3),
-        height  = _input("height", "length of domain along y-axis", 0.3),
-        l_frac  = 0.4,//_input("length_fraction", "fraction of length along x-axis that is in the bracket", 0.4),
-        h_frac  = 0.4,//_input( "height_fraction", "fraction of length along y-axis that is in the bracket", 0.4),
-        x_lim   = length * l_frac,
-        y_lim   =  height * (1.-h_frac),
-        frac    = _input("load_length_fraction", "fraction of boundary length on which pressure will act", 0.125);
+        tol           = 1.e-6,
+        length        = _input("length", "length of domain along x-axis", 0.3),
+        height        = _input("height", "length of domain along y-axis", 0.3),
+        l_frac        = 0.4,//_input("length_fraction", "fraction of length along x-axis that is in the bracket", 0.4),
+        h_frac        = 0.4,//_input( "height_fraction", "fraction of length along y-axis that is in the bracket", 0.4),
+        x_lim         = length * l_frac,
+        y_lim         =  height * (1.-h_frac),
+        frac          = _input("load_length_fraction", "fraction of boundary length on which pressure will act", 0.125),
+        filter_radius = _input("filter_radius", "radius of geometric filter for level set field", 0.015);
         
         unsigned int
         dof_id  = 0;
@@ -850,7 +852,7 @@ protected:
             
             dof_id                     = n.dof_number(0, 0, 0);
             
-            if (n(1) <= y_lim && n(0) >= length*(1.-frac)) {
+            if ((n(1)-filter_radius) <= y_lim && (n(0)+filter_radius) >= length*(1.-frac)) {
                 
                 // set value at the constrained points to a small positive number
                 // material here
@@ -881,6 +883,7 @@ protected:
                 _dv_params[_n_vars].first  = dof_id;
                 _dv_params[_n_vars].second = new MAST::Parameter(oss.str(), val);
                 _dv_params[_n_vars].second->set_as_topology_parameter(true);
+                _dv_dof_ids.insert(dof_id);
                 
                 _n_vars++;
             }
@@ -1136,7 +1139,7 @@ protected:
 
         Real
         filter_radius          = _input("filter_radius", "radius of geometric filter for level set field", 0.015);
-        _filter                = new MAST::FilterBase(*_level_set_sys, filter_radius);
+        _filter                = new MAST::FilterBase(*_level_set_sys, filter_radius, _dv_dof_ids);
         _level_set_sys->add_vector("base_values");
     }
 
