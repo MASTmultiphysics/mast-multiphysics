@@ -1140,7 +1140,9 @@ protected:
         Real
         filter_radius          = _input("filter_radius", "radius of geometric filter for level set field", 0.015);
         _filter                = new MAST::FilterBase(*_level_set_sys, filter_radius, _dv_dof_ids);
-        _level_set_sys->add_vector("base_values");
+        libMesh::NumericVector<Real>& vec = _level_set_sys->add_vector("base_values");
+        vec = *_level_set_sys->solution;
+        vec.close();
     }
 
 public:
