@@ -84,12 +84,12 @@ namespace MAST {
         
         /*!
          * \f[
-         *    g(X, p, ds) =  X_\text{scale} * (X-X0)  (dX/ds)_\text{scaled} +
-         *                   p_\text{scale} * (p-p0)  (dp/ds)_\text{scaled}  -  ds = 0,
+         *    g(X, p, ds) =  X_{scale} * (X-X0)  (dX/ds)_{scaled} +
+         *                   p_{scale} * (p-p0)  (dp/ds)_{scaled}  -  ds = 0,
          * \f]
          *  where,
-         *  \f$ t_1^{X} = (dX/ds)_\text{scaled} \f$ and
-         *  \f$ t_1^{p} = (dp/ds)_\text{scaled} \f$.
+         *  \f$ t_1^{X} = (dX/ds)_{scaled} \f$ and
+         *  \f$ t_1^{p} = (dp/ds)_{scaled} \f$.
          */
         virtual Real
         _g(const libMesh::NumericVector<Real> &X,
@@ -99,13 +99,13 @@ namespace MAST {
         /*!
          * \f{eqnarray*}{
          *    g(X, p, ds) & = & (Y-Y_0)^T t_1 - ds = 0 \\
-         *    Y           & = & \{ X_\text{scale} X^T, p_\text{scale} p\}^T
-         *    dg/dp       & = & p_\text{scale} t_1^p \\
-         *    dg/dX       & = & X_\text{scale} t_1^X,
+         *    Y           & = & \{ X_{scale} X^T, p_{scale} p\}^T \\
+         *    dg/dp       & = & p_{scale} t_1^p \\
+         *    dg/dX       & = & X_{scale} t_1^X,
          * \f}
          *  where \f$  \f$,
-         *  \f$ t_1^{X} = (dX/ds)_\text{scaled} \f$ and
-         *  \f$ t_1^{p} = (dp/ds)_\text{scaled} \f$.
+         *  \f$ t_1^{X} = (dX/ds)_{scaled} \f$ and
+         *  \f$ t_1^{p} = (dp/ds)_{scaled} \f$.
          */
         void
         _g(const libMesh::NumericVector<Real> &X,

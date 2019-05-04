@@ -60,6 +60,9 @@
 //
 // BEGIN_TRANSLATE Flow analysis
 //
+//   \tableofcontents
+//
+//
 //   This example computes the steady-state flow about rigid shapes.
 //   A Newmark time integration is used for time-stepping. Since a time-accurate
 //   flow solution is not sought the Newton-Raphson scheme at each time-step
@@ -92,6 +95,8 @@ protected:
     std::set<MAST::BoundaryConditionBase*>         _boundary_conditions;
     std::set<libMesh::PeriodicBoundary*>           _periodic_boundaries;
 
+    //
+    // \section mesh Mesh generation
     // This will initialize the mesh
     void _init_mesh(bool mesh, bool bc) {
         
@@ -129,6 +134,7 @@ protected:
             libmesh_error_msg("unknown mesh type");
     }
     
+    // \subsection naca0012_mesh NACA0012
     // If \p mesh is \p true then the mesh will be initialized. If \p bc
     // is true then the boundary conditions will be initialized
     void _init_naca0012(bool mesh, bool bc) {
@@ -190,7 +196,7 @@ protected:
         }
     }
 
-    
+    // \subsection cylinder_mesh Cylinder
     void _init_cylinder(bool mesh, bool bc) {
         
         if (mesh) {
@@ -258,6 +264,7 @@ protected:
         }
     }
 
+    // \subsection naca0012_wing_mesh NACA0012 Wing
     void _init_naca0012_wing(bool mesh, bool bc) {
      
         if (mesh) {
@@ -337,7 +344,7 @@ protected:
 
     }
 
-    
+    // \subsection mfu_mesh Minimal Flow Unit
     void _init_minimal_flow_unit(bool mesh, bool bc) {
         
         if (mesh) {
@@ -447,6 +454,7 @@ protected:
         
     }
 
+    // \subsection panel_2d_mesh Two-dimensional Panel Flow
     void _init_panel_2D(bool mesh, bool bc) {
         
         if (mesh) {
@@ -528,7 +536,12 @@ protected:
     
         libmesh_error(); // to be implemented
     }
-    
+
+    //
+    // \section fluid_sol_init Initialization of solution
+    //
+    // \subsection initial_sol Initial solution
+    //
     void _init_solution() {
         
         bool
@@ -616,6 +629,7 @@ protected:
     }
 
     
+    // \subsection initial_sens_sol Initial sensitivity solution
     void _init_sensitivity_solution() {
         
         bool
@@ -645,6 +659,9 @@ protected:
     
 public:
 
+    // \section flow_analysis_class Example class
+    // \subsection flow_analysis_class_constructor Constructor
+    //
     FlowAnalysis(libMesh::LibMeshInit& init,
                  MAST::Examples::GetPotWrapper& input):
     _init           (init),
@@ -723,7 +740,7 @@ public:
         _init_solution();
     }
     
-    
+    // \subsection flow_analysis_class_destructor Destructor
     ~FlowAnalysis() {
         
         delete _eq_sys;
@@ -752,6 +769,8 @@ public:
         }
     }
     
+    // \section flow_computation Computation
+    // \subsection flow_transient_analysis  Transient analysis
     void compute_flow() {
         
         bool
@@ -896,7 +915,7 @@ public:
     }
     
     
-    
+    // \subsection flow_transient_sensitivity_analysis  Transient sensitivity analysis
     void
     compute_transient_sensitivity(MAST::Parameter& p) {
         
@@ -1003,6 +1022,7 @@ public:
     }
     
 
+    // \subsection flow_transient_stabilized_sensitivity_analysis  Transient stabilized sensitivity analysis
     void
     compute_transient_stabilized_sensitivity(MAST::Parameter& p) {
         
@@ -1108,7 +1128,7 @@ public:
 };
 
 
-
+// \section flow_driver Main function
 int main(int argc, const char** argv)
 {
     

@@ -339,12 +339,19 @@ MAST::SubCellFE::init_for_side(const MAST::GeomElem& elem,
     // JxW and surface normals, since the area and normals need to come
     // from the element on which the integration is being performed.
     subcell_fe->attach_quadrature_rule(subcell_qrule.get());
-    subcell_fe->reinit(q_elem, s);
-    _subcell_JxW = subcell_fe->get_JxW();
-    _qpoints     = local_fe->get_xyz();
-
-    // normals in the coordinate system attached to the reference element
-    _local_normals = subcell_fe->get_normals();
+    try {
+        subcell_fe->reinit(q_elem, s);
+        _subcell_JxW = subcell_fe->get_JxW();
+        _qpoints     = local_fe->get_xyz();
+        // normals in the coordinate system attached to the reference element
+        _local_normals = subcell_fe->get_normals();
+    }
+    catch (...) {
+        unsigned int npts = subcell_qrule->n_points();
+        _subcell_JxW.resize(npts, 0.);
+        _qpoints.resize(npts);
+        _local_normals.resize(npts);
+    }
     
     // transform the normal and
     if (elem.use_local_elem()) {
