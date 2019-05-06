@@ -2,6 +2,7 @@
 # NLOPT was enabled for MAST
 if(ENABLE_NLOPT OR ENABLE_SNOPT OR ENABLE_GCMMA)
     add_executable(structural_example_5
+                   ${MAST_ROOT_DIR}/examples/fluid/meshing/cylinder.cpp
                    example_5.cpp)
 
     target_include_directories(structural_example_5 PRIVATE

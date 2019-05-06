@@ -22,6 +22,7 @@
 
 // MAST includes
 #include "examples/base/input_wrapper.h"
+#include "examples/fluid/meshing/cylinder.h"
 #include "level_set/level_set_discipline.h"
 #include "level_set/level_set_system_initialization.h"
 #include "level_set/level_set_eigenproblem_assembly.h"
@@ -94,13 +95,17 @@ class Phi:
 public MAST::FieldFunction<RealVectorX> {
     
 public:
-    Phi(Real l1,
+    Phi(Real x0,
+        Real y0,
+        Real l1,
         Real l2,
         Real nx_mesh,
         Real ny_mesh,
         Real nx_holes,
         Real ny_holes):
     MAST::FieldFunction<RealVectorX>("Phi"),
+    _x0  (x0),
+    _y0  (y0),
     _l1  (l1),
     _l2  (l2),
     _nx_mesh  (nx_mesh),
@@ -112,37 +117,37 @@ public:
         // initialize the locations at which the holes will be nucleated
         // first, along the x-axis
         if (_nx_holes == 1)
-            _x_axis_hole_locations.insert(l1 * 0.5);
+            _x_axis_hole_locations.insert(_x0 + l1 * 0.5);
         else if (_nx_holes >= 2) {
             
             // add holes at the beginning and end
-            _x_axis_hole_locations.insert(0.);
-            _x_axis_hole_locations.insert(_l1);
+            _x_axis_hole_locations.insert(_x0);
+            _x_axis_hole_locations.insert(_x0+_l1);
             
             // now, add holes at uniformly spaced locations
             // in the domain
             Real
             dx = _l1/(1.*(_nx_holes-1));
             for (unsigned int i=2; i<_nx_holes; i++)
-                _x_axis_hole_locations.insert(dx*(i-1));
+                _x_axis_hole_locations.insert(_x0+dx*(i-1));
         }
         
         
         // now, along the y-axis
         if (_ny_holes == 1)
-            _y_axis_hole_locations.insert(l2 * 0.5);
+            _y_axis_hole_locations.insert(_y0+l2 * 0.5);
         else if (_ny_holes >= 2) {
             
             // add holes at the beginning and end
-            _y_axis_hole_locations.insert(0.);
-            _y_axis_hole_locations.insert(_l2);
+            _y_axis_hole_locations.insert(_y0);
+            _y_axis_hole_locations.insert(_y0+_l2);
             
             // now, add holes at uniformly spaced locations
             // in the domain
             Real
             dx = _l2/(1.*(_ny_holes-1));
             for (unsigned int i=2; i<_ny_holes; i++)
-                _y_axis_hole_locations.insert(dx*(i-1));
+                _y_axis_hole_locations.insert(_y0+dx*(i-1));
         }
     }
     virtual ~Phi() {}
@@ -194,6 +199,8 @@ public:
     }
 protected:
     Real
+    _x0,
+    _y0,
     _l1,
     _l2,
     _nx_mesh,
@@ -424,6 +431,88 @@ protected:
         _delete_elems_from_bracket_mesh(*_level_set_mesh);
     }
 
+    
+    void _init_mesh_eye_bar() {
+        
+        _mesh = new libMesh::SerialMesh(this->comm());
+
+        // identify the element type from the input file or from the order
+        // of the element
+        unsigned int
+        n_radial_divs  = _input("n_radial_divs", "number of elements along radial direction", 20),
+        n_quarter_divs = _input("n_quarter_divs", "number of elements along height", 20);
+        
+        Real
+        radius   = 1.5,
+        h_ratio  = _input("h_ratio", "ratio of radial element size at cylinder and at edge", 2);
+        _height  = 8.;
+        _length  = _height*2;
+        
+        std::string
+        t = _input("elem_type", "type of geometric element in the mesh", "quad4");
+        
+        libMesh::ElemType
+        e_type = libMesh::Utility::string_to_enum<libMesh::ElemType>(t);
+        
+        // if high order FE is used, libMesh requires atleast a second order
+        // geometric element.
+        if (_fetype.order > 1 && e_type == libMesh::QUAD4)
+            e_type = libMesh::QUAD9;
+        else if (_fetype.order > 1 && e_type == libMesh::TRI3)
+            e_type = libMesh::TRI6;
+        
+        MAST::Examples::CylinderMesh2D cylinder;
+        cylinder.mesh(radius, _height/2.,
+                      n_radial_divs, n_quarter_divs, h_ratio,
+                      *_mesh, e_type,
+                      true, _height, n_quarter_divs*2);
+        
+        // add the boundary ids for Dirichlet conditions
+        libMesh::MeshBase::const_element_iterator
+        e_it   = _mesh->elements_begin(),
+        e_end  = _mesh->elements_end();
+        
+        Real
+        tol  = radius * 1.e-8;
+        
+        for (; e_it != e_end; e_it++) {
+            
+            libMesh::Elem* elem = *e_it;
+            
+            std::unique_ptr<libMesh::Elem> edge(elem->side_ptr(1));
+            libMesh::Point p = edge->centroid();
+            
+            if (std::fabs(p(0)-_height*1.5) < tol &&
+                std::fabs(p(1)) <= 1.) // on the right edge
+                _mesh->boundary_info->add_side(elem, 1, 0);
+            
+            // check for the circumference of the circle where load will be
+            // applied
+            edge.reset(elem->side_ptr(3).release());
+            p = edge->centroid();
+            
+            if ((std::fabs(p.norm()-radius) < 1.e-2) &&
+                p(0) < 0.) // left semi-circle
+                _mesh->boundary_info->add_side(elem, 3, 5);
+        }
+        
+        _mesh->boundary_info->sideset_name(0) = "dirichlet";
+        _mesh->boundary_info->sideset_name(5) = "load";
+
+        // mesh on which the level-set function is defined
+        _level_set_mesh = new libMesh::SerialMesh(this->comm());
+        
+        n_radial_divs  = _input("level_set_n_radial_divs", "number of elements along radial direction", 10),
+        n_quarter_divs = _input("level_set_n_quarter_divs", "number of elements along height", 10);
+        e_type  = libMesh::QUAD4;
+        
+        // initialize the mesh with one element
+        cylinder.mesh(radius, _height/2,
+                      n_radial_divs, n_quarter_divs, h_ratio,
+                      *_level_set_mesh, e_type,
+                      true, _height, n_quarter_divs*2);
+    }
+
 
     void _init_system_and_discipline() {
         
@@ -547,6 +636,31 @@ protected:
     
     
     
+    void _init_dirichlet_conditions_eye_bar() {
+        
+        ///////////////////////////////////////////////////////////////////////
+        // initialize Dirichlet conditions for structural system
+        ///////////////////////////////////////////////////////////////////////
+        MAST::DirichletBoundaryCondition
+        *dirichlet  = new MAST::DirichletBoundaryCondition;   // right boundary
+        dirichlet->init(0, _sys_init->vars());
+        _discipline->add_dirichlet_bc(0,  *dirichlet);
+        
+        _discipline->init_system_dirichlet_bc(*_sys);
+        
+        ///////////////////////////////////////////////////////////////////////
+        // initialize Dirichlet conditions for indicator system
+        ///////////////////////////////////////////////////////////////////////
+        dirichlet  = new MAST::DirichletBoundaryCondition;   // right boundary
+        dirichlet->init(0, _indicator_sys_init->vars());
+        _indicator_discipline->add_dirichlet_bc(0,  *dirichlet);
+        _boundary_conditions.insert(dirichlet);
+        
+        _indicator_discipline->init_system_dirichlet_bc(*_indicator_sys);
+    }
+
+    
+    
     void _init_loads_inplane() {
         
         Real
@@ -617,6 +731,41 @@ protected:
         
         _field_functions.insert(press_f);
         _field_functions.insert(flux_f);
+    }
+
+    
+    
+    class EyebarLoad:
+    public MAST::FieldFunction<Real> {
+    public:
+        EyebarLoad():
+        MAST::FieldFunction<Real>("pressure") { }
+        virtual ~EyebarLoad() {}
+        virtual void operator() (const libMesh::Point& p, const Real t, Real& v) const {
+            if (p(0) <= 0.) v = (-std::pow(p(1), 2) + std::pow(1.5, 2))*1.e6;
+            else v = 0.;
+        }
+        virtual void derivative(const MAST::FunctionBase& f, const libMesh::Point& p, const Real t, Real& v) const {
+            v = 0.;
+        }
+    protected:
+    };
+
+    
+    
+    void _init_loads_eye_bar() {
+        
+        EyebarLoad
+        *press_f         = new EyebarLoad();
+        
+        // initialize the load
+        MAST::BoundaryConditionBase
+        *p_load          = new MAST::BoundaryConditionBase(MAST::SURFACE_PRESSURE);
+        
+        p_load->add(*press_f);
+        _discipline->add_side_load(5, *p_load);
+        
+        _field_functions.insert(press_f);
     }
 
     
@@ -721,9 +870,20 @@ protected:
                             "number of holes along y-direction for initial level-set field", 6),
         nx_m    = _input("level_set_nx_divs", "number of elements of level-set mesh along x-axis", 10),
         ny_m    = _input("level_set_ny_divs", "number of elements of level-set mesh along y-axis", 10);
+
+        std::string
+        s  = _input("mesh", "type of mesh to be analyzed {inplane, bracket}", "inplane");
+
+        std::unique_ptr<Phi> phi;
         
-        Phi phi(_length, _height, nx_m, ny_m, nx_h, ny_h);
-        _level_set_sys_init->initialize_solution(phi);
+        if (s == "inplane" || s == "bracket")
+            phi.reset(new Phi(0., 0., _length, _height, nx_m, ny_m, nx_h, ny_h));
+        else if (s == "eye_bar")
+            phi.reset(new Phi(-0.5*_height, -0.5*_height, _length, _height, nx_m, ny_m, nx_h, ny_h));
+        else
+            libmesh_error();
+        
+        _level_set_sys_init->initialize_solution(*phi);
     }
 
     
@@ -875,8 +1035,8 @@ protected:
                     
                     if (dof_id >= _level_set_sys->solution->first_local_index() &&
                         dof_id <  _level_set_sys->solution->last_local_index())
-                        _level_set_sys->solution->set(dof_id, 0.);
-                    val = 0.;
+                        _level_set_sys->solution->set(dof_id, -1.0);
+                    val = -1.0;
                 }
                 
                 _dv_params.push_back(std::pair<unsigned int, MAST::Parameter*>());
@@ -891,6 +1051,89 @@ protected:
         
         _level_set_sys->solution->close();
     }
+    
+    
+    void _init_phi_dvs_eye_bar() {
+        
+        libmesh_assert(_initialized);
+        // this assumes that level set is defined using lagrange shape functions
+        libmesh_assert_equal_to(_level_set_fetype.family, libMesh::LAGRANGE);
+        
+        Real
+        tol           = 1.e-6,
+        filter_radius = _input("filter_radius", "radius of geometric filter for level set field", 0.015);
+        
+        unsigned int
+        dof_id  = 0;
+        
+        Real
+        val     = 0.;
+        
+        // all ranks will have DVs defined for all variables. So, we should be
+        // operating on a replicated mesh
+        libmesh_assert(_level_set_mesh->is_replicated());
+        
+        std::vector<Real> local_phi(_level_set_sys->solution->size());
+        _level_set_sys->solution->localize(local_phi);
+        
+        // iterate over all the node values
+        libMesh::MeshBase::const_node_iterator
+        it  = _level_set_mesh->nodes_begin(),
+        end = _level_set_mesh->nodes_end();
+        
+        // maximum number of dvs is the number of nodes on the level set function
+        // mesh. We will evaluate the actual number of dvs
+        _dv_params.reserve(_level_set_mesh->n_nodes());
+        _n_vars = 0;
+        
+        for ( ; it!=end; it++) {
+            
+            const libMesh::Node& n = **it;
+            
+            dof_id                     = n.dof_number(0, 0, 0);
+            
+            if (((n.norm() <= 1.5+filter_radius) && n(0) <= 0.) ||  // circle
+                (std::fabs(n(0)-_height*1.5) < filter_radius &&  // right edge
+                 std::fabs(n(1)) <= 1.+filter_radius)) { // dirichlet constraint
+                
+                // set value at the constrained points to a small positive number
+                // material here
+                if (dof_id >= _level_set_sys->solution->first_local_index() &&
+                    dof_id <  _level_set_sys->solution->last_local_index())
+                    _level_set_sys->solution->set(dof_id, 1.e0);
+            }
+            else {
+                
+                std::ostringstream oss;
+                oss << "dv_" << _n_vars;
+                val = local_phi[dof_id];
+                
+                // on the boundary, set everything to be zero, so that there
+                // is always a boundary there that the optimizer can move
+                if (std::fabs(n(0)+_height*0.5) < tol    ||  // left boundary
+                    std::fabs(n(1)-_height*0.5) < tol    ||  // top boundary
+                    std::fabs(n(1)+_height*0.5) < tol    ||  // bottom boundary
+                    std::fabs(n(0)-_height*1.5) < tol) {     // right boundary
+                    
+                    if (dof_id >= _level_set_sys->solution->first_local_index() &&
+                        dof_id <  _level_set_sys->solution->last_local_index())
+                        _level_set_sys->solution->set(dof_id, -1.);
+                    val = -1.;
+                }
+                
+                _dv_params.push_back(std::pair<unsigned int, MAST::Parameter*>());
+                _dv_params[_n_vars].first  = dof_id;
+                _dv_params[_n_vars].second = new MAST::Parameter(oss.str(), val);
+                _dv_params[_n_vars].second->set_as_topology_parameter(true);
+                _dv_dof_ids.insert(dof_id);
+                
+                _n_vars++;
+            }
+        }
+        
+        _level_set_sys->solution->close();
+    }
+
     
     
     void _delete_elems_from_bracket_mesh(libMesh::MeshBase &mesh) {
@@ -1100,6 +1343,10 @@ protected:
             _init_mesh_inplane();
         else if (s == "bracket")
             _init_mesh_bracket();
+        else if (s == "eye_bar")
+            _init_mesh_eye_bar();
+        else
+            libmesh_error();
     }
 
     
@@ -1112,6 +1359,10 @@ protected:
             _init_dirichlet_conditions_inplane();
         else if (s == "bracket")
             _init_dirichlet_conditions_bracket();
+        else if (s == "eye_bar")
+            _init_dirichlet_conditions_eye_bar();
+        else
+            libmesh_error();
     }
 
     
@@ -1124,6 +1375,10 @@ protected:
             _init_loads_inplane();
         else if (s == "bracket")
             _init_loads_bracket();
+        else if (s == "eye_bar")
+            _init_loads_eye_bar();
+        else
+            libmesh_error();
     }
 
     
@@ -1136,6 +1391,10 @@ protected:
             _init_phi_dvs_inplane();
         else if (s == "bracket")
             _init_phi_dvs_bracket();
+        else if (s == "eye_bar")
+            _init_phi_dvs_eye_bar();
+        else
+            libmesh_error();
 
         Real
         filter_radius          = _input("filter_radius", "radius of geometric filter for level set field", 0.015);
