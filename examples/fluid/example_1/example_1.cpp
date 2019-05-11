@@ -925,7 +925,9 @@ public:
         output                = _input("if_output", "if write output to a file", false);
         std::string
         output_name           = _input("output_file_root", "prefix of output file names", "output"),
-        transient_output_name = output_name + "_transient_sensitivity_" + p.name() + ".exo";
+        transient_output_name = output_name + "_transient_sensitivity_" + p.name() + ".exo",
+        nonlinear_sol_root    = output_name+std::string("_sol_t_"),
+        nonlinear_sol_dir     = _input("nonlinear_sol_dir", "directory containing the location of nonlinear solutions", "");
         
         // the output from analysis should have been saved for sensitivity
         libmesh_assert(output);
@@ -1007,8 +1009,8 @@ public:
             }
             
             std::ostringstream oss;
-            oss << output_name << "_sol_t_" << t_step;
-            _sys->read_in_vector(*_sys->solution, "data", oss.str(), true);
+            oss << nonlinear_sol_root << t_step;
+            _sys->read_in_vector(*_sys->solution, nonlinear_sol_dir, oss.str(), true);
             oss << "_sens_t";
             _sys->write_out_vector(/*solver.dt, _sys->time,*/ solver.solution_sensitivity(), "data", oss.str(), true);
             
