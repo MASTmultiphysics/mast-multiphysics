@@ -1800,9 +1800,13 @@ far_field_surface_residual_sensitivity(const MAST::FunctionBase& p,
         //////////////////////////////////////////////////
         // sens wrt mach for a 2D case
         vec2_n1.setZero();
-        //vec2_n1(1)       = flight_condition->rho_u1_sens_mach();
-        //vec2_n1(2)       = flight_condition->rho_u2_sens_mach();
-        //vec2_n1(3)       = flight_condition->rho_e_sens_mach();
+//        vec2_n1(1)       = flight_condition->rho_u1_sens_mach();
+//        vec2_n1(2)       = flight_condition->rho_u2_sens_mach();
+//        vec2_n1(3)       = flight_condition->rho_e_sens_mach();
+        vec2_n1(0)       = flight_condition->rho_sens_rho();
+        vec2_n1(1)       = flight_condition->rho_u1_sens_rho();
+        vec2_n1(2)       = flight_condition->rho_u2_sens_rho();
+        vec2_n1(3)       = flight_condition->rho_e_sens_rho();
         //////////////////////////////////////////////////
         
         flux = mat1_n1n1 * vec2_n1;  // f_{-} = A_{-} B U

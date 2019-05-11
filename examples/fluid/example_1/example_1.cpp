@@ -225,7 +225,8 @@ protected:
                                                   quarter_divs,
                                                   h_ff_by_h_r,
                                                   *_mesh,
-                                                  e_type);
+                                                  e_type,
+                                                  false, 0, 0);
 
         }
         
@@ -683,6 +684,7 @@ public:
         
         // add the system to be used for fluid analysis
         _sys = &(_eq_sys->add_system<MAST::NonlinearSystem>("fluid"));
+        _sys->set_init_B_matrix();
         
         // initialize the mesh. Details of parameters for each mesh are
         // described above.
@@ -934,7 +936,13 @@ public:
         MAST::FirstOrderNewmarkTransientSolver                   solver;
         RealVectorX
         nvec = RealVectorX::Zero(3);
-        nvec(1) = 1.;
+        nvec(0) =
+        _input("force_unit_vector", "unit vector defining direction of integrated force output", 1., 0);
+        nvec(1) =
+        _input("force_unit_vector", "unit vector defining direction of integrated force output", 0., 1);
+        nvec(2) =
+        _input("force_unit_vector", "unit vector defining direction of integrated force output", 0., 2);
+
         MAST::IntegratedForceOutput                              force(nvec);
         std::set<libMesh::boundary_id_type> bids;
         bids.insert(3);
@@ -970,12 +978,13 @@ public:
         n_steps           = _input("n_transient_steps", "number of transient time-steps", 100);
         solver.dt         = _input("dt", "time-step size",    1.e-3);
         _sys->time        = _input("t_initial", "initial time-step",    0.);
-        
+        solver.beta       = _input("beta", "Newmark solver beta parameter ",  0.5);
+
         // ask the solver to update the initial condition for d2(X)/dt2
         // This is recommended only for the initial time step, since the time
         // integration scheme updates the velocity and acceleration at
         // each subsequent iterate
-        solver.solve_highest_derivative_and_advance_time_step_with_sensitivity(assembly, p);
+        //solver.solve_highest_derivative_and_advance_time_step_with_sensitivity(assembly, p);
         
         // loop over time steps
         while (t_step < n_steps) {
@@ -1043,7 +1052,14 @@ public:
         MAST::StabilizedFirstOrderNewmarkTransientSensitivitySolver solver;
         RealVectorX
         nvec = RealVectorX::Zero(3);
-        nvec(1) = 1.;
+        nvec(0) =
+        _input("force_unit_vector", "unit vector defining direction of integrated force output", 1., 0);
+        nvec(1) =
+        _input("force_unit_vector", "unit vector defining direction of integrated force output", 0., 1);
+        nvec(2) =
+        _input("force_unit_vector", "unit vector defining direction of integrated force output", 0., 2);
+
+
         MAST::IntegratedForceOutput                              force(nvec);
         std::set<libMesh::boundary_id_type> bids;
         bids.insert(3);
@@ -1068,7 +1084,7 @@ public:
         << std::setw(30) << "force_sens" << std::endl;
         
         unsigned int
-        t_step            = 0,
+        t_step            = _input("initial_transient_step", "first transient step from the transient solution to be used for sensitivity", 0),
         n_steps           = _input("n_transient_steps", "number of transient time-steps", 100);
         solver.dt         = _input("dt", "time-step size",    1.e-3);
         _sys->time        = _input("t_initial", "initial time-step",    0.);
@@ -1144,8 +1160,22 @@ int main(int argc, const char** argv)
     MAST::Examples::GetPotWrapper
     input(argc, argv, "input");
 
+    bool
+    analysis    = input("if_analysis", "whether or not to perform analysis", true),
+    sensitivity = input("if_sensitivity", "whether or not to perform sensitivity analysis", false),
+    stabilized  = input("if_stabilized_sensitivity", "flag to use standard or stabilized sensitivity analysis", false);
+
     FlowAnalysis flow(init, input);
-    flow.compute_flow();
+    if (analysis)
+        flow.compute_flow();
+    
+    if (sensitivity) {
+    MAST::Parameter p("dummy", 0.);
+        if (!stabilized)
+            flow.compute_transient_sensitivity(p);
+        else
+            flow.compute_transient_stabilized_sensitivity(p);
+    }
     
     // END_TRANSLATE
     return 0;

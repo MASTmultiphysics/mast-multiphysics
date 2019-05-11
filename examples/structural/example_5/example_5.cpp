@@ -1811,9 +1811,9 @@ public:
                 continue_refining = false;
         }
 
-        std::ostringstream oss;
-        oss << "mesh_" << n_refinements << ".exo";
-        _mesh->write("mesh.exo");
+        //std::ostringstream oss;
+        //oss << "mesh_" << n_refinements << ".exo";
+        //_mesh->write("mesh.exo");
         
         MAST::LevelSetVolume                            volume(level_set_assembly.get_intersection());
         MAST::LevelSetPerimeter                         perimeter(level_set_assembly.get_intersection());

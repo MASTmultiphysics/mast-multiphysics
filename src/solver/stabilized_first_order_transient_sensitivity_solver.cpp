@@ -219,7 +219,7 @@ sensitivity_solve(MAST::AssemblyBase& assembly,
         else
             amp = _compute_eig_amplification_factor(*M0, M1);
         
-        if (amp <= this->max_amp ||  _index1 >= max_index) {
+        if (amp <= this->max_amp ||  _index1 > max_index) {
             
             continue_it = false;
             

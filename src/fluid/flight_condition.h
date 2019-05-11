@@ -109,6 +109,26 @@ namespace MAST {
             return gas_property.rho * gas_property.cv * gas_property.T + q0();
         }
 
+        Real rho_sens_rho() const {
+            
+            return 1.;
+        }
+
+        Real rho_u1_sens_rho() const {
+            
+            return this->rho_u1() / this->rho();
+        }
+        
+        Real rho_u2_sens_rho() const {
+            
+            return this->rho_u2() / this->rho();;
+        }
+        
+        Real rho_e_sens_rho() const
+        {
+            return this->rho_e() / this->rho();;
+        }
+
         Real rho_u1_sens_mach() const {
             
             return this->rho_u1()/mach;
