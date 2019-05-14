@@ -287,6 +287,53 @@ calculate_diffusion_tensors(const RealVectorX& elem_sol,
 
 
 
+void
+MAST::FluidElemBase::
+calculate_diffusion_tensors_sensitivity(const RealVectorX& elem_sol,
+                                        const RealVectorX& elem_sol_sens,
+                                        const std::vector<MAST::FEMOperatorMatrix>& dB_mat,
+                                        const RealMatrixX& dprim_dcons,
+                                        const MAST::PrimitiveSolution& psol,
+                                        const MAST::SmallPerturbationPrimitiveSolution<Real>& dsol,
+                                        RealMatrixX& stress_tensor_sens,
+                                        RealVectorX& temp_gradient_sens) {
+    
+    const unsigned int n1 = dim+2;
+    
+    RealVectorX
+    dprim_dx               = RealVectorX::Zero(n1),
+    dcons_dx               = RealVectorX::Zero(n1),
+    dprim_sens_dx          = RealVectorX::Zero(n1),
+    dcons_sens_dx          = RealVectorX::Zero(n1);
+    
+    stress_tensor_sens.setZero();
+    temp_gradient_sens.setZero();
+    
+    for (unsigned int i_dim=0; i_dim<dim; i_dim++) {
+        
+        dB_mat[i_dim].vector_mult(dcons_dx, elem_sol); // dUcons/dx_i
+        dprim_dx = dprim_dcons * dcons_dx; // dUprim/dx_i
+
+        dB_mat[i_dim].vector_mult(dcons_sens_dx, elem_sol_sens); // dUcons/dx_i
+        dprim_sens_dx = dprim_dcons * dcons_sens_dx; // dUprim/dx_i
+        
+        for (unsigned int j_dim=0; j_dim<dim; j_dim++) {
+            
+            stress_tensor_sens(i_dim, j_dim) += (dsol.dmu * dprim_dx(j_dim+1) +
+                                                 psol.mu  * dprim_sens_dx(j_dim+1)); // mu * duj/dxi
+            stress_tensor_sens(j_dim, i_dim) += (dsol.dmu * dprim_dx(j_dim+1) +
+                                                 psol.mu  * dprim_sens_dx(j_dim+1)); // mu * dui/dxj
+            
+            stress_tensor_sens(j_dim, j_dim) += (dsol.dlambda * dprim_dx(i_dim+1) +
+                                                 psol.lambda * dprim_sens_dx(i_dim+1));  // + delta_ij lambda duk/dxk
+        }
+        
+        temp_gradient_sens(i_dim) = dprim_sens_dx(n1-1); // dT/dx_i
+    }
+}
+
+
+
 
 void
 MAST::FluidElemBase::

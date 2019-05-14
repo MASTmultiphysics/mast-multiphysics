@@ -707,6 +707,12 @@ side_external_residual_sensitivity (const MAST::FunctionBase& p,
                                                            f, jac,
                                                            it->first,
                                                            **bc_it);
+
+                case MAST::NO_SLIP_WALL:
+                    noslip_wall_surface_residual_sensitivity(p, request_jacobian,
+                                                             f, jac,
+                                                             it->first,
+                                                             **bc_it);
                     break;
                     
                 case MAST::FAR_FIELD:
@@ -888,13 +894,13 @@ side_integrated_force_sensitivity(const MAST::FunctionBase& p,
     n2     = fe->n_shape_functions()*n1;
     
     RealVectorX
-    temp_grad = RealVectorX::Zero(dim),
-    dpdX      = RealVectorX::Zero(n1),
-    vec1_n1   = RealVectorX::Zero(n1),
-    vec2_n2   = RealVectorX::Zero(n2);
+    temp_grad_sens = RealVectorX::Zero(dim),
+    dpdX           = RealVectorX::Zero(n1),
+    vec1_n1        = RealVectorX::Zero(n1),
+    vec2_n2        = RealVectorX::Zero(n2);
     
     RealMatrixX
-    stress          = RealMatrixX::Zero(  dim,   dim),
+    stress_sens     = RealMatrixX::Zero(  dim,   dim),
     dprim_dcons     = RealMatrixX::Zero(   n1,    n1),
     mat2_n1n2       = RealMatrixX::Zero(   n1,    n2),
     mat1_n1n1       = RealMatrixX::Zero(   n1,    n1);
@@ -925,7 +931,7 @@ side_integrated_force_sensitivity(const MAST::FunctionBase& p,
         // now initialize the linearized solution
         Bmat.right_multiply(vec1_n1, _sol_sens);
         linearized_primitive_sol.zero();
-        linearized_primitive_sol.init(primitive_sol, vec1_n1);
+        linearized_primitive_sol.init(primitive_sol, vec1_n1, if_viscous());
         
         //
         // first add the pressure term
@@ -937,8 +943,23 @@ side_integrated_force_sensitivity(const MAST::FunctionBase& p,
         // next, add the contribution from viscous stress
         //
         if (if_viscous()) {
-            // to be implemented
-            libmesh_error();
+
+            _initialize_fem_gradient_operator(qp, dim, *fe, dBmat);
+            
+            calculate_conservative_variable_jacobian(primitive_sol,
+                                                     mat1_n1n1,
+                                                     dprim_dcons);
+            calculate_diffusion_tensors_sensitivity(_sol,
+                                                    _sol_sens,
+                                                    dBmat,
+                                                    dprim_dcons,
+                                                    primitive_sol,
+                                                    linearized_primitive_sol,
+                                                    stress_sens,
+                                                    temp_grad_sens);
+            
+            for (unsigned int i_dim=0; i_dim<dim; i_dim++)
+                f.topRows(dim) -= JxW[qp] * stress_sens.col(i_dim) * normals[qp](i_dim);
         }
     }
 }
@@ -1286,7 +1307,7 @@ linearized_slip_wall_surface_residual(bool request_jacobian,
         
         // initialize the small-disturbance primitive sol
         sd_primitive_sol.zero();
-        sd_primitive_sol.init(primitive_sol, vec2_n1);
+        sd_primitive_sol.init(primitive_sol, vec2_n1, if_viscous());
         
         ////////////////////////////////////////////////////////////
         //   Calculation of the surface velocity term. For a
@@ -1384,6 +1405,17 @@ linearized_slip_wall_surface_residual(bool request_jacobian,
 
 
 
+bool
+MAST::ConservativeFluidElementBase::
+noslip_wall_surface_residual_sensitivity(const MAST::FunctionBase& p,
+                                         bool request_jacobian,
+                                         RealVectorX& f,
+                                         RealMatrixX& jac,
+                                         const unsigned int s,
+                                         MAST::BoundaryConditionBase& bc) {
+    
+    return false;
+}
 
 
 bool
@@ -1896,7 +1928,7 @@ _calculate_surface_integrated_load(bool request_derivative,
             // initialize the perturbation in primite solution, which will
             // give us sensitivity of pressure
             primitive_sol_sens.zero();
-            primitive_sol_sens.init(primitive_sol, vec1_n1);
+            primitive_sol_sens.init(primitive_sol, vec1_n1, if_viscous());
             
             for (unsigned int i_dim=0; i_dim<dim; i_dim++)
                 load_sens(i_dim) += JxW[qp] *

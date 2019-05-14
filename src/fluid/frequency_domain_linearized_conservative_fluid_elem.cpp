@@ -594,7 +594,7 @@ slip_wall_surface_residual(bool request_jacobian,
 
         // initialize the small-disturbance primitive sol
         sd_primitive_sol.zero();
-        sd_primitive_sol.init(primitive_sol, vec2_n1);
+        sd_primitive_sol.init(primitive_sol, vec2_n1, if_viscous());
         
         ////////////////////////////////////////////////////////////
         //   Calculation of the surface velocity term. For a
@@ -825,7 +825,7 @@ slip_wall_surface_residual_sensitivity(const MAST::FunctionBase& p,
         
         // initialize the small-disturbance primitive sol
         sd_primitive_sol.zero();
-        sd_primitive_sol.init(primitive_sol, vec2_n1);
+        sd_primitive_sol.init(primitive_sol, vec2_n1, if_viscous());
         
         ////////////////////////////////////////////////////////////
         //   Calculation of the surface velocity term. For a

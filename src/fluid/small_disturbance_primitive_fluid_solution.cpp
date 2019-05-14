@@ -50,6 +50,9 @@ void MAST::SmallPerturbationPrimitiveSolution<ValType>::zero() {
     dk            = 0.;
     dentropy      = 0.;
     dmach         = 0.;
+    dk_thermal    = 0.;
+    dmu           = 0.;
+    dlambda       = 0.;
     primitive_sol = nullptr;
 }
 
@@ -58,7 +61,8 @@ template <typename ValType>
 void
 MAST::SmallPerturbationPrimitiveSolution<ValType>::
 init(const MAST::PrimitiveSolution& sol,
-     const typename VectorType<ValType>::return_type& delta_sol) {
+     const typename VectorType<ValType>::return_type& delta_sol,
+     bool if_viscous) {
     
     primitive_sol = &sol;
     
@@ -105,6 +109,17 @@ init(const MAST::PrimitiveSolution& sol,
     dmach =  dk/sqrt(2.0*sol.k)/sol.a - sqrt(2.*sol.k)/pow(sol.a,2) * da;
     dentropy = (dp/pow(sol.rho,gamma) - gamma*sol.p/pow(sol.rho,gamma+1.)*drho)
     / (sol.p/pow(sol.rho,gamma)) ;
+    
+    // viscous quantities
+    if (if_viscous)
+    {
+        const Real
+        T  = primitive_sol->T;
+        
+        dmu = 1.458e-6 * dT * (1.5*pow(T, 0.5)/(T+110.4) - pow(T, 1.5)/pow(T+110.4, 2));
+        dlambda = -2./3.*dmu;
+        dk_thermal = dmu*primitive_sol->cp/primitive_sol->Pr;
+    }
 }
 
 
