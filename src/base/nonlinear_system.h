@@ -119,6 +119,14 @@ namespace MAST {
 
 
         /*!
+         *   calls NonlinearImplicitSystem::set_solver_parameters() before
+         *   accessing the values.
+         */
+        virtual std::pair<unsigned int, Real>
+        get_linear_solve_parameters();
+
+        
+        /*!
          *  solves the nonlinear problem with the specified assembly operation
          *  object
          */

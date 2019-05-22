@@ -641,12 +641,18 @@ protected:
             unsigned int
             n = _mesh->mesh_dimension();
             RealVectorX s = RealVectorX::Zero(n+2);
-            s(0) = 0.;
+            /*s(0) = 0.;
             s(1) = _flight_cond->rho_u1_sens_mach();
             s(2) = _flight_cond->rho_u2_sens_mach();
             //if (n > 2)
             //    s(3) = _flight_cond->rho_u3_sens_mach();
-            s(n+1) = _flight_cond->rho_e_sens_mach();
+            s(n+1) = _flight_cond->rho_e_sens_mach();*/
+            s(0) = _flight_cond->rho_sens_rho();
+            s(1) = _flight_cond->rho_u1_sens_rho();
+            s(2) = _flight_cond->rho_u2_sens_rho();
+            //if (n > 2)
+            //    s(3) = _flight_cond->rho_u3_sens_mach();
+            s(n+1) = _flight_cond->rho_e_sens_rho();
             
             _sys_init->initialize_solution(s);
         }
@@ -986,7 +992,7 @@ public:
         // This is recommended only for the initial time step, since the time
         // integration scheme updates the velocity and acceleration at
         // each subsequent iterate
-        //solver.solve_highest_derivative_and_advance_time_step_with_sensitivity(assembly, p);
+        solver.solve_highest_derivative_and_advance_time_step_with_sensitivity(assembly, p);
         
         // loop over time steps
         while (t_step < n_steps) {

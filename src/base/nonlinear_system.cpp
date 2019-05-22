@@ -197,6 +197,12 @@ void MAST::NonlinearSystem::reinit () {
     }
 }
 
+std::pair<unsigned int, Real>
+MAST::NonlinearSystem::get_linear_solve_parameters() {
+    
+    this->set_solver_parameters();
+    return libMesh::NonlinearImplicitSystem::get_linear_solve_parameters();
+}
 
 
 void
