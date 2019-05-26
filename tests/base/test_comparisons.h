@@ -20,6 +20,9 @@
 #ifndef __mast_test_comparisons_h__
 #define __mast_test_comparisons_h__
 
+// C++ includes
+#include <iomanip>
+
 // MAST includes
 #include "base/mast_data_types.h"
 
@@ -114,16 +117,26 @@ namespace MAST {
         libmesh_assert_equal_to(m0_cols,  m.cols());
         
         
-        bool pass = true;
+        bool
+        pass = true;
         for (unsigned int i=0; i<m0_rows; i++) {
             for (unsigned int j=0; j<m0_cols; j++)
                 if (!MAST::compare(m0(i,j), m(i,j), tol)) {
-                    BOOST_TEST_MESSAGE("Failed comparison at (i,j) = ("
-                                       << i << ", " << j << ") : "
-                                       << "expected: " << m0(i,j) << "  , "
-                                       << "computed: " << m(i,j) << " : "
-                                       << "diff: " << m0(i,j) - m(i,j) << " , "
-                                       << "tol: " << tol);
+                    if (pass) {
+                        BOOST_TEST_MESSAGE("Failed comparison\n"
+                                           << std::setw(5) << "i"
+                                           << std::setw(5) << "j"
+                                           << std::setw(20) << "expected"
+                                           << std::setw(20) << "computed"
+                                           << std::setw(20) << "diff"
+                                           << std::setw(20) << "tol");
+                    }
+                    BOOST_TEST_MESSAGE(std::setw(5) << i
+                                       << std::setw(5) << j
+                                       << std::setw(20) << m0(i,j)
+                                       << std::setw(20) << m(i,j)
+                                       << std::setw(20) << m0(i,j) - m(i,j)
+                                       << std::setw(20) << tol);
                     pass = false;
                 }
         }

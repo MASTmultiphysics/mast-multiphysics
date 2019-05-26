@@ -30,6 +30,7 @@
 #include "fluid/conservative_fluid_transient_assembly.h"
 #include "fluid/flight_condition.h"
 #include "fluid/integrated_force_output.h"
+#include "fluid/primitive_fluid_solution.h"
 #include "solver/first_order_newmark_transient_solver.h"
 #include "mesh/geom_elem.h"
 #include "base/test_comparisons.h"
@@ -69,6 +70,9 @@ struct BuildFluidElem {
     MAST::BoundaryConditionBase*                   _far_field_bc;
     MAST::BoundaryConditionBase*                   _slip_wall_bc;
 
+    bool                                           _initialized;
+    bool                                           _if_viscous;
+    Real                                           _delta;
     libMesh::FEType                                _fetype;
     
     std::set<MAST::BoundaryConditionBase*>         _boundary_conditions;
@@ -87,9 +91,15 @@ struct BuildFluidElem {
     _transient_solver(nullptr),
     _fluid_elem     (nullptr),
     _far_field_bc   (nullptr),
-    _slip_wall_bc   (nullptr)  {
+    _slip_wall_bc   (nullptr),
+    _initialized    (false),
+    _if_viscous     (false),
+    _delta          (0.) {
         
+    }
         
+    void init(bool if_viscous) {
+    
         // initialize the mesh. Details of parameters for each mesh are
         // described above.
         _mesh              = new libMesh::ReplicatedMesh(_init.comm());
@@ -128,7 +138,7 @@ struct BuildFluidElem {
         _flight_cond->gas_property.cv      = 716.;
         _flight_cond->gas_property.T       = 300.;
         _flight_cond->gas_property.rho     = 1.05;
-        _flight_cond->gas_property.if_viscous = false;
+        _flight_cond->gas_property.if_viscous = if_viscous;
         _flight_cond->init();
         
         // tell the discipline about the fluid values
@@ -153,50 +163,86 @@ struct BuildFluidElem {
                                                              *_geom_elem,
                                                              *_flight_cond);
         
+        _initialized = true;
     }
     
     
     ~BuildFluidElem() {
         
-        delete _assembly;
-        delete _elem_ops;
-        delete _transient_solver;
-        delete _fluid_elem;
-        delete _geom_elem;
-        
-        delete _far_field_bc;
-        delete _slip_wall_bc;
-
-        delete _eq_sys;
-        delete _mesh;
-        
-        delete _discipline;
-        delete _sys_init;
-        delete _flight_cond;
+        if (_initialized) {
+            
+            delete _assembly;
+            delete _elem_ops;
+            delete _transient_solver;
+            delete _fluid_elem;
+            delete _geom_elem;
+            
+            delete _far_field_bc;
+            delete _slip_wall_bc;
+            
+            delete _eq_sys;
+            delete _mesh;
+            
+            delete _discipline;
+            delete _sys_init;
+            delete _flight_cond;
+        }
     }
     
     
     void init_solution_for_elem(RealVectorX& s) {
         
+        libmesh_assert(_initialized);
+        
         unsigned int
         n_shape = _sys->n_dofs()/(_dim+2);
+        
+        // random vector in [-1, 1] used to perturb the state vector
+        // to invoke gradients, leading to stresses and flux terms
+        RealVectorX
+        rand = RealVectorX::Random(n_shape);
         
         s = RealVectorX::Zero(_sys->n_dofs());
         
         for (unsigned int i=0; i<n_shape; i++) {
             
-            s(i)                  = _flight_cond->rho();
-            s(n_shape+i)          = _flight_cond->rho_u1();
-            s(2*n_shape+i)        = _flight_cond->rho_u2();
+            s(i)                  = _flight_cond->rho()    * (1. + _delta * rand(i));
+            s(n_shape+i)          = _flight_cond->rho_u1() * (1. + _delta * rand(i));
+            s(2*n_shape+i)        = _flight_cond->rho_u2() * (1. + _delta * rand(i));
             if (_dim > 2)
-                s(3*n_shape+i)    = _flight_cond->rho_u3();
-            s((_dim+1)*n_shape+i) = _flight_cond->rho_e();
+                s(3*n_shape+i)    = _flight_cond->rho_u3() * (1. + _delta * rand(i));
+            s((_dim+1)*n_shape+i) = _flight_cond->rho_e()  * (1. + _delta * rand(i));
         }
+    }
+
+
+
+    void init_primitive_sol(MAST::PrimitiveSolution& s) {
+     
+        libmesh_assert(_initialized);
+        
+        RealVectorX
+        c_sol = RealVectorX::Zero(_dim+2);
+        
+        c_sol(0)                  = _flight_cond->rho();
+        c_sol(1)                  = _flight_cond->rho_u1();
+        c_sol(2)                  = _flight_cond->rho_u2();
+        if (_dim > 2)
+            c_sol(3)    = _flight_cond->rho_u3();
+        c_sol(_dim+1) = _flight_cond->rho_e();
+        
+        s.zero();
+        s.init(_dim, c_sol,
+               _flight_cond->gas_property.cp,
+               _flight_cond->gas_property.cv,
+               _flight_cond->gas_property.if_viscous);
     }
     
     template <typename ValType>
     bool check_jacobian(ValType& val) {
         
+        libmesh_assert(_initialized);
+
         Real
         delta = 0.;
         
@@ -208,12 +254,15 @@ struct BuildFluidElem {
         jac_fd  = RealMatrixX::Zero(n, n);
         
         RealVectorX
-        v       = RealVectorX::Zero(n),
+        v_low   = RealVectorX::Zero(n),
+        v_hi    = RealVectorX::Zero(n),
         v0      = RealVectorX::Zero(n),
-        x       = RealVectorX::Zero(n),
+        x_low   = RealVectorX::Zero(n),
+        x_hi    = RealVectorX::Zero(n),
         x0      = RealVectorX::Zero(n),
         f0      = RealVectorX::Zero(n),
-        f       = RealVectorX::Zero(n);
+        f_low   = RealVectorX::Zero(n),
+        f_hi    = RealVectorX::Zero(n);
         
         init_solution_for_elem(x0);
         
@@ -228,36 +277,46 @@ struct BuildFluidElem {
         
         for (unsigned int i=0; i<n; i++) {
             
-            x = x0;
-            v = v0;
+            x_low = x0;
+            x_hi  = x0;
+            v_low = v0;
+            v_hi  = v0;
             
             if (!val.jac_xdot) {
                 if (fabs(x0(i)) > 0.)
                     delta = x0(i)*val.frac;
                 else
-                    delta = val.frac;
+                    delta = val.delta;
                 
-                x(i) += delta;
+                x_low(i) -= delta;
+                x_hi(i)  += delta;
             }
             else {
                 if (fabs(v0(i)) > 0.)
                     delta = v0(i)*val.frac;
                 else
-                    delta = val.frac;
+                    delta = val.delta;
                 
-                v(i) += delta;
+                v_low(i) -= delta;
+                v_hi(i)  += delta;
             }
             
             
-            _fluid_elem->set_solution(x);
-            _fluid_elem->set_velocity(v);
+            // get the new residual
+            _fluid_elem->set_solution(x_low);
+            _fluid_elem->set_velocity(v_low);
+            f_low.setZero();
+            val.compute(false, f_low, jac0);
+            
             
             // get the new residual
-            f.setZero();
-            val.compute(false, f, jac0);
+            _fluid_elem->set_solution(x_hi);
+            _fluid_elem->set_velocity(v_hi);
+            f_hi.setZero();
+            val.compute(false, f_hi, jac0);
             
             // set the i^th column of the finite-differenced Jacobian
-            jac_fd.col(i) = (f-f0)/delta;
+            jac_fd.col(i) = (f_hi-f_low)/2./delta;
         }
         
         return MAST::compare_matrix(jac_fd, jac0, val.tol);
