@@ -165,7 +165,7 @@ BOOST_AUTO_TEST_CASE(FarFieldResSens) {
         res_up -= res_lo;
         res_up /= (2.*_frac*rho0);
         
-        BOOST_CHECK(MAST::compare_vector(res_sens, res_up, _tol));
+        BOOST_CHECK(MAST::compare_vector(res_up, res_sens, _tol));
     }
 }
 
@@ -193,6 +193,38 @@ BOOST_AUTO_TEST_CASE(SlipWallJacobian) {
     val.e        = this;
     this->init(false);
 
+    // check for each side.
+    for (val.side=0; val.side<_fluid_elem->elem().get_reference_elem().n_sides(); val.side++)
+        BOOST_CHECK(check_jacobian(val));
+    
+}
+
+
+
+BOOST_AUTO_TEST_CASE(NoSlipWallJacobian) {
+    
+    struct Check {
+        bool            jac_xdot;
+        Real            frac;
+        Real            delta;
+        Real            tol;
+        unsigned int    side;
+        BuildFluidElem* e;
+        void compute(bool jac, RealVectorX& f, RealMatrixX& j) {
+            e->_fluid_elem->noslip_wall_surface_residual(jac, f, j, side,
+                                                         *e->_noslip_wall_bc);
+        }
+    };
+    
+    Check val;
+    val.jac_xdot = false;
+    val.frac     = _frac;
+    val.delta    = _delta;
+    val.tol      = _tol;
+    val.e        = this;
+    this->_delta = 0.e-4;
+    this->init(true);
+    
     // check for each side.
     for (val.side=0; val.side<_fluid_elem->elem().get_reference_elem().n_sides(); val.side++)
         BOOST_CHECK(check_jacobian(val));

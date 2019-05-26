@@ -1510,6 +1510,7 @@ noslip_wall_surface_residual(bool request_jacobian,
         for (unsigned int i_dim=0; i_dim<dim; i_dim++)
             ni(i_dim) = normals[qp](i_dim);
         
+        primitive_sol.get_uvec(uvec);
 
         /*////////////////////////////////////////////////////////////
         //   Calculation of the surface velocity term.
@@ -1521,7 +1522,6 @@ noslip_wall_surface_residual(bool request_jacobian,
         // needs to be applied through transpiration boundary
         // condition
         
-        primitive_sol.get_uvec(uvec);
         
         if (motion) { // get the surface motion data
             
@@ -1553,23 +1553,25 @@ noslip_wall_surface_residual(bool request_jacobian,
                                     stress,
                                     temp_grad);
 
-        temp_grad.setZero(); // assuming adiabatic for now
+        // assuming adiabatic and non-moving wall
+        uvec.setZero();
+        temp_grad.setZero();
         
         for (unsigned int i_dim=0; i_dim<dim; i_dim++) {
             
-            calculate_diffusion_flux(i_dim,
-                                     primitive_sol,
-                                     stress,
-                                     temp_grad,
-                                     vec1_n1);
-            //flux -= ni(i_dim) * vec1_n1;
+            // stress
+            flux.segment(1, dim) -= ni(i_dim) * stress.col(i_dim);
+            flux(n1-1)           -= ni(i_dim) * stress.col(i_dim).dot(uvec.segment(0,dim));
         }
         
+        // temperature. If adiabatic, temp grad is set to zero
+        flux(n1-1)           -= primitive_sol.k_thermal * temp_grad.dot(ni.segment(0,dim));
+
         
         Bmat.vector_mult_transpose(vec2_n2, flux);
         f += JxW[qp] * vec2_n2;
 
-        if ( true) { //request_jacobian ) {
+        if ( request_jacobian ) {
             
             this->calculate_advection_flux_jacobian_for_moving_solid_wall_boundary
             (primitive_sol,
@@ -1586,14 +1588,16 @@ noslip_wall_surface_residual(bool request_jacobian,
                 
                 for (unsigned int j_dim=0; j_dim<dim; j_dim++) {
                     
-                    calculate_diffusion_flux_jacobian(i_dim,
-                                                      j_dim,
-                                                      primitive_sol,
-                                                      mat1_n1n1);
-                    
+                    calculate_diffusion_flux_jacobian_primitive_vars(i_dim,
+                                                                     j_dim,
+                                                                     uvec,
+                                                                     true, // curretly assuming adiabatic
+                                                                     primitive_sol,
+                                                                     mat1_n1n1);
+                    mat1_n1n1 *= dprim_dcons;
                     dBmat[j_dim].left_multiply(mat2_n1n2, mat1_n1n1);                     // Kij dB_j
-                    dBmat[i_dim].right_multiply_transpose(mat3_n2n2, mat2_n1n2);          // dB_i^T Kij dB_j
-                                                                                          //jac -= JxW[qp]*mat3_n2n2;
+                    Bmat.right_multiply_transpose(mat3_n2n2, mat2_n1n2);                  // B^T Kij dB_j
+                    jac -= JxW[qp] * mat3_n2n2 * ni(i_dim);                               //jac -= JxW[qp]*mat3_n2n2;
                 }
             }
         }

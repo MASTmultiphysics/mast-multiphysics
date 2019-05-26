@@ -175,7 +175,22 @@ protected:
             
             bool
             if_viscous = _flight_cond->gas_property.if_viscous;
-            
+
+            if (if_viscous) {
+
+                MAST::DirichletBoundaryCondition
+                *dirichlet = new MAST::DirichletBoundaryCondition;
+
+                std::vector<unsigned int> constrained_vars(2);
+                constrained_vars[0] = _sys_init->vars()[1];
+                constrained_vars[1] = _sys_init->vars()[2];
+                dirichlet->init (3, constrained_vars);
+                _discipline->add_dirichlet_bc(3, *dirichlet);
+                _discipline->init_system_dirichlet_bc(*_sys);
+
+                _boundary_conditions.insert(dirichlet);
+            }
+
             // create the boundary conditions for slip-wall, symmetry and far-field
             MAST::BoundaryConditionBase
             *far_field   = new MAST::BoundaryConditionBase(MAST::FAR_FIELD),
@@ -234,23 +249,32 @@ protected:
 
             libmesh_assert(_flight_cond);
             
-            // this assumes a viscous analysis
-            libmesh_assert(_flight_cond->gas_property.if_viscous);
-
-            MAST::DirichletBoundaryCondition
-            *dirichlet = new MAST::DirichletBoundaryCondition;
-            std::vector<unsigned int> constrained_vars(2);
-            constrained_vars[0] = _sys_init->vars()[1];
-            constrained_vars[1] = _sys_init->vars()[2];
-            dirichlet->init (3, constrained_vars);
-            _discipline->add_dirichlet_bc(3, *dirichlet);
-            _discipline->init_system_dirichlet_bc(*_sys);
-
+            bool
+            if_viscous = _flight_cond->gas_property.if_viscous;
+            
+            if (if_viscous) {
+                
+                MAST::DirichletBoundaryCondition
+                *dirichlet = new MAST::DirichletBoundaryCondition;
+                
+                std::vector<unsigned int> constrained_vars(2);
+                constrained_vars[0] = _sys_init->vars()[1];
+                constrained_vars[1] = _sys_init->vars()[2];
+                dirichlet->init (3, constrained_vars);
+                _discipline->add_dirichlet_bc(3, *dirichlet);
+                _discipline->init_system_dirichlet_bc(*_sys);
+                
+                _boundary_conditions.insert(dirichlet);
+            }
             
             // create the boundary conditions for slip-wall, symmetry and far-field
             MAST::BoundaryConditionBase
             *far_field   = new MAST::BoundaryConditionBase(MAST::FAR_FIELD),
-            *wall        = new MAST::BoundaryConditionBase(MAST::NO_SLIP_WALL);
+            // if a viscous analysis is requested then set the wall to be a no-slip
+            // wall. Otherwise, use a slip wall for inviscid analysis
+            *wall        = new MAST::BoundaryConditionBase(if_viscous?
+                                                           MAST::NO_SLIP_WALL:
+                                                           MAST::SLIP_WALL);
             
             // Cylinder surface is boundary id 3 ...
             _discipline->add_side_load(   3, *wall);
@@ -258,7 +282,6 @@ protected:
             _discipline->add_side_load(   1, *far_field);
 
             // store the pointers for later deletion in the destructor
-            _boundary_conditions.insert(dirichlet);
             _boundary_conditions.insert(far_field);
             _boundary_conditions.insert(wall);
 

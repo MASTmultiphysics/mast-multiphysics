@@ -213,6 +213,16 @@ namespace MAST {
                                                const MAST::PrimitiveSolution& sol,
                                                RealMatrixX& mat);
         
+        
+        void
+        calculate_diffusion_flux_jacobian_primitive_vars (const unsigned int flux_dim,
+                                                          const unsigned int deriv_dim,
+                                                          const RealVectorX& uvec,
+                                                          const bool zero_kth,
+                                                          const MAST::PrimitiveSolution& sol,
+                                                          RealMatrixX& mat);
+        
+        
         void calculate_advection_flux_jacobian_sensitivity_for_conservative_variable
         (const unsigned int calculate_dim,
          const MAST::PrimitiveSolution& sol,

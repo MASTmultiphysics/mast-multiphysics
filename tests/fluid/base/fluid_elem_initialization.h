@@ -69,6 +69,7 @@ struct BuildFluidElem {
     MAST::ConservativeFluidElementBase*            _fluid_elem;
     MAST::BoundaryConditionBase*                   _far_field_bc;
     MAST::BoundaryConditionBase*                   _slip_wall_bc;
+    MAST::BoundaryConditionBase*                   _noslip_wall_bc;
 
     bool                                           _initialized;
     bool                                           _if_viscous;
@@ -92,6 +93,7 @@ struct BuildFluidElem {
     _fluid_elem     (nullptr),
     _far_field_bc   (nullptr),
     _slip_wall_bc   (nullptr),
+    _noslip_wall_bc (nullptr),
     _initialized    (false),
     _if_viscous     (false),
     _delta          (0.) {
@@ -125,8 +127,9 @@ struct BuildFluidElem {
                                                                     libMesh::FEType(fe_order, fe_family),
                                                                     _dim);
         
-        _far_field_bc = new MAST::BoundaryConditionBase(MAST::FAR_FIELD);
-        _slip_wall_bc = new MAST::BoundaryConditionBase(MAST::SLIP_WALL);
+        _far_field_bc   = new MAST::BoundaryConditionBase(MAST::FAR_FIELD);
+        _slip_wall_bc   = new MAST::BoundaryConditionBase(MAST::SLIP_WALL);
+        _noslip_wall_bc = new MAST::BoundaryConditionBase(MAST::NO_SLIP_WALL);
 
         // set fluid properties
         _flight_cond = new MAST::FlightCondition;
@@ -179,6 +182,7 @@ struct BuildFluidElem {
             
             delete _far_field_bc;
             delete _slip_wall_bc;
+            delete _noslip_wall_bc;
             
             delete _eq_sys;
             delete _mesh;
