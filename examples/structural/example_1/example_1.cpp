@@ -44,9 +44,7 @@ int main(int argc, const char** argv)
 {
     // BEGIN_TRANSLATE Extension of bar
     //
-    // This example solves an axial bar extension problem. It is based on the
-    // example of the same name in the MAST source repository.
-    // (examples/structural/bar_extension).
+    // This example solves an axial bar extension problem. 
     //
     // Initialize libMesh library.
     libMesh::LibMeshInit init(argc, argv);

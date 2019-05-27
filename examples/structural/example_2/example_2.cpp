@@ -96,8 +96,6 @@ int main(int argc, const char** argv)
     libMesh::ReplicatedMesh mesh(init.comm());
     libMesh::MeshTools::Generation::build_square(mesh, 30, 30, 0.0, length, 0.0, width, libMesh::QUAD9);
     mesh.print_info();
-    // mesh.boundary_info->print_info();
-    // mesh.write("ex3_plate_structural_mesh.exo");
 
     // change the mesh to a circular arc of specified radius
     libMesh::MeshBase::node_iterator
@@ -245,11 +243,7 @@ int main(int argc, const char** argv)
     unsigned int
     dof_num = nd->dof_number(0, 2, 0);
     
-    
-    
     // Solve the system and print displacement degrees-of-freedom to screen.
-    //nonlinear_system.solve(elem_ops, assembly);
-    // nonlinear_system.solution->print_global();
     unsigned int
     n_temp_steps  = 15,
     n_press_steps = 500;

@@ -73,6 +73,8 @@ int main(int argc, char* argv[]) {
 
     // BEGIN_TRANSLATE Panel flutter using V-g solver and Euler aerodynamics
     //
+    //   \tableofcontents
+    //
     // This example solves for the flutter speed of a semi-infinite (2D)
     // panel with
     //
@@ -110,7 +112,7 @@ int main(int argc, char* argv[]) {
     
     
     //////////////////////////////////////////////////////////////////////
-    //    SETUP THE FLUID DATA
+    //  \section fluid_init Initialize Fluid Solver
     //////////////////////////////////////////////////////////////////////
     std::string s;
     s                   = input("fe_order", "order of finite element shape basis functions",     "first");
@@ -233,7 +235,7 @@ int main(int argc, char* argv[]) {
     freq_domain_pressure_function.set_calculate_cp(true);
     
     //////////////////////////////////////////////////////////////////////
-    //    SETUP THE STRUCTURAL DATA
+    //  \section structural_init Initialize Structural Solver
     //////////////////////////////////////////////////////////////////////
     
     x_div_loc = {0.0, length};
@@ -363,7 +365,7 @@ int main(int argc, char* argv[]) {
     structural_discipline.add_volume_load(0, pressure);
     
     //////////////////////////////////////////////////////////////////////
-    //    SETUP THE FLUTTER SOLVER
+    //  \section flutter_init Initialize Flutter Solver
     //////////////////////////////////////////////////////////////////////
     
     // initialize the frequency function
@@ -406,7 +408,8 @@ int main(int argc, char* argv[]) {
     pressure_function.init(base_sol);
     
     ////////////////////////////////////////////////////////////
-    // STRUCTURAL MODAL EIGENSOLUTION
+    //  \section solution Solution
+    //  \subsection modal_sol Structural Modal Solution
     ////////////////////////////////////////////////////////////
     
     MAST::EigenproblemAssembly modal_assembly;
@@ -458,7 +461,7 @@ int main(int argc, char* argv[]) {
     }
     
     ///////////////////////////////////////////////////////////////////
-    // FLUTTER SOLUTION
+    //  \subsection flutter_sol Flutter Solution
     ///////////////////////////////////////////////////////////////////
     
     MAST::UGFlutterSolver flutter_solver;
@@ -507,6 +510,7 @@ int main(int argc, char* argv[]) {
     // make sure solution was found
     libmesh_assert(sol.first);
     
+    //  \subsection plot_flutter Plot Flutter Solution
     MAST::plot_structural_flutter_solution("structural_flutter_mode.exo",
                                            structural_sys,
                                            sol.second->eig_vec_right,
@@ -520,6 +524,7 @@ int main(int argc, char* argv[]) {
                                       sol.second->eig_vec_right,
                                       basis);
     
+    // cleanup the data structures
     fsi_assembly.clear_discipline_and_system();
     fsi_elem_ops.clear_discipline_and_system();
     flutter_solver.clear_assembly_object();

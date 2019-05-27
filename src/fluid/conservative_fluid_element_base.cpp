@@ -168,13 +168,13 @@ MAST::ConservativeFluidElementBase::internal_residual (bool request_jacobian,
                                                LS_sens);
         
         // discontinuity capturing operator for this quadrature point
-        calculate_aliabadi_discontinuity_operator(qp,
+        /*calculate_aliabadi_discontinuity_operator(qp,
                                                   *fe,
                                                   primitive_sol,
                                                   _sol,
                                                   dBmat,
                                                   AiBi_adv,
-                                                  dc);
+                                                  dc);*/
         
         // assemble the residual due to flux operator
         for (unsigned int i_dim=0; i_dim<dim; i_dim++) {

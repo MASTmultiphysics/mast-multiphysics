@@ -91,169 +91,14 @@ _optim_con(int*    mode,
 //
 // BEGIN_TRANSLATE 2D Level-set topology optimization
 //
-class Phi:
-public MAST::FieldFunction<RealVectorX> {
-    
-public:
-    Phi(Real x0,
-        Real y0,
-        Real l1,
-        Real l2,
-        Real nx_mesh,
-        Real ny_mesh,
-        Real nx_holes,
-        Real ny_holes):
-    MAST::FieldFunction<RealVectorX>("Phi"),
-    _x0  (x0),
-    _y0  (y0),
-    _l1  (l1),
-    _l2  (l2),
-    _nx_mesh  (nx_mesh),
-    _ny_mesh  (ny_mesh),
-    _nx_holes (nx_holes),
-    _ny_holes (ny_holes),
-    _pi  (acos(-1.)) {
-        
-        // initialize the locations at which the holes will be nucleated
-        // first, along the x-axis
-        if (_nx_holes == 1)
-            _x_axis_hole_locations.insert(_x0 + l1 * 0.5);
-        else if (_nx_holes >= 2) {
-            
-            // add holes at the beginning and end
-            _x_axis_hole_locations.insert(_x0);
-            _x_axis_hole_locations.insert(_x0+_l1);
-            
-            // now, add holes at uniformly spaced locations
-            // in the domain
-            Real
-            dx = _l1/(1.*(_nx_holes-1));
-            for (unsigned int i=2; i<_nx_holes; i++)
-                _x_axis_hole_locations.insert(_x0+dx*(i-1));
-        }
-        
-        
-        // now, along the y-axis
-        if (_ny_holes == 1)
-            _y_axis_hole_locations.insert(_y0+l2 * 0.5);
-        else if (_ny_holes >= 2) {
-            
-            // add holes at the beginning and end
-            _y_axis_hole_locations.insert(_y0);
-            _y_axis_hole_locations.insert(_y0+_l2);
-            
-            // now, add holes at uniformly spaced locations
-            // in the domain
-            Real
-            dx = _l2/(1.*(_ny_holes-1));
-            for (unsigned int i=2; i<_ny_holes; i++)
-                _y_axis_hole_locations.insert(_y0+dx*(i-1));
-        }
-    }
-    virtual ~Phi() {}
-    virtual void operator()(const libMesh::Point& p,
-                            const Real t,
-                            RealVectorX& v) const {
-        
-        libmesh_assert_less_equal(t, 1);
-        libmesh_assert_equal_to(v.size(), 1);
-        
-        // the libMesh solution projection routine for Lagrange elements
-        // will query the function value at the nodes. So, we figure
-        // out which nodes should have zero values set to them.
-        // if there is one hole in any direction, it will be in the
-        // center of the domain. If there are more than 1, then two of
-        // the holes will be on the boundary and others will fill the
-        // interior evenly.
-        
-        const Real
-        dx_mesh = _l1/(1.*_nx_holes),
-        dy_mesh = _l2/(1.*_ny_holes);
-        
-        std::set<Real>::const_iterator
-        x_it_low = _x_axis_hole_locations.lower_bound(p(0)-dx_mesh),
-        y_it_low = _y_axis_hole_locations.lower_bound(p(1)-dy_mesh);
-        
-        unsigned int
-        n = 0;
-        // see if the x-location needs a hole
-        for ( ; x_it_low != _x_axis_hole_locations.end(); x_it_low++) {
-            if (std::fabs(*x_it_low - p(0)) <= dx_mesh*0.25) {
-                n++;
-                break;
-            }
-        }
-        
-        // now check the y-location
-        for ( ; y_it_low != _y_axis_hole_locations.end(); y_it_low++) {
-            if (std::fabs(*y_it_low - p(1)) <= dy_mesh*0.25) {
-                n++;
-                break;
-            }
-        }
-        
-        if (n == 2)
-            v(0) = -1.e0;
-        else
-            v(0) = 1.e0;
-    }
-protected:
-    Real
-    _x0,
-    _y0,
-    _l1,
-    _l2,
-    _nx_mesh,
-    _ny_mesh,
-    _nx_holes,
-    _ny_holes,
-    _pi;
-    std::set<Real> _x_axis_hole_locations;
-    std::set<Real> _y_axis_hole_locations;
-};
-
-class Vel: public MAST::FieldFunction<Real> {
-public:
-    Vel(): MAST::FieldFunction<Real>("vel") {}
-    
-    virtual void operator() (const libMesh::Point& p,
-                             const Real t,
-                             Real& v) const {
-        
-        // waves
-        Real
-        nt = 8.,
-        th = atan2(p(0)-.15, p(1)-.15);
-        v  = sin(nt*th/2.);
-        
-        // constant
-        // v    = 1.;
-    }
-    
-protected:
-    
-};
-
-
-class FluxLoad:
-public MAST::FieldFunction<Real> {
-public:
-    FluxLoad(const std::string& nm, Real p, Real l1, Real fraction):
-    MAST::FieldFunction<Real>(nm), _p(p), _l1(l1), _frac(fraction) { }
-    virtual ~FluxLoad() {}
-    virtual void operator() (const libMesh::Point& p, const Real t, Real& v) const {
-        if (fabs(p(0)-_l1*0.5) <= 0.5*_frac*_l1) v = _p;
-        else v = 0.;
-    }
-    virtual void derivative(const MAST::FunctionBase& f, const libMesh::Point& p, const Real t, Real& v) const {
-        v = 0.;
-    }
-protected:
-    Real _p, _l1, _frac;
-};
-
-
-
+//   \tableofcontents
+//
+//  This example computes the optimal topology of a structure subject to
+//  specified boundary conditions (Dirichlet and Neumann). A level-set function
+//  is used to implicitly define the geometry inside a mesh using the
+//  immersed boundary approach.
+//
+//  Level Set Mesh Function
 class PhiMeshFunction:
 public MAST::FieldFunction<Real> {
 public:
@@ -279,8 +124,6 @@ public:
 protected:
     MAST::MeshFieldFunction *_phi;
 };
-
-
 
 class TopologyOptimizationLevelSet2D:
 public MAST::FunctionEvaluation {
@@ -339,31 +182,44 @@ protected:
     std::set<unsigned int>                    _dv_dof_ids;
     
     std::vector<std::pair<unsigned int, MAST::Parameter*>>  _dv_params;
-    
-    
 
-    void _init_fetype() {
+public:
+    
+    //  \section init_mesh Mesh Generation
+    //  This creates the mesh for the specified problem type.
+    //
+    void _init_mesh() {
         
-        // FEType to initialize the system. Get the order and type of element.
+        // The mesh is created using classes written in MAST. The particular
+        // mesh to be used can be selected using the input parameter
+        // ` mesh=val `, where `val` can be one of the following:
+        //   - `inplane` inplane structure with load on top and left and right boundaries constrained
+        //   - `bracket` L-bracket
+        //
         std::string
-        order_str   = _input("fe_order", "order of finite element shape basis functions",    "first"),
-        family_str  = _input("fe_family",      "family of finite element shape functions", "lagrange");
+        s  = _input("mesh", "type of mesh to be analyzed {inplane, bracket}", "inplane");
         
-        libMesh::Order
-        o  = libMesh::Utility::string_to_enum<libMesh::Order>(order_str);
-        libMesh::FEFamily
-        fe = libMesh::Utility::string_to_enum<libMesh::FEFamily>(family_str);
-        _fetype = libMesh::FEType(o, fe);
+        if (s == "inplane")
+            _init_mesh_inplane();
+        else if (s == "bracket")
+            _init_mesh_bracket();
+        else if (s == "eye_bar")
+            _init_mesh_eye_bar();
+        else
+            libmesh_error();
     }
-    
-    
-    
+
+    //
+    //  \subsection inplane_mesh Inplane problem
+    //
     void _init_mesh_inplane()  {
         
         _mesh = new libMesh::SerialMesh(this->comm());
         
+        //
         // identify the element type from the input file or from the order
         // of the element
+        //
         unsigned int
         nx_divs = _input("nx_divs", "number of elements along x-axis", 20),
         ny_divs = _input("ny_divs", "number of elements along y-axis", 20);
@@ -377,21 +233,27 @@ protected:
         libMesh::ElemType
         e_type = libMesh::Utility::string_to_enum<libMesh::ElemType>(t);
         
+        //
         // if high order FE is used, libMesh requires atleast a second order
         // geometric element.
+        //
         if (_fetype.order > 1 && e_type == libMesh::QUAD4)
             e_type = libMesh::QUAD9;
         else if (_fetype.order > 1 && e_type == libMesh::TRI3)
             e_type = libMesh::TRI6;
         
+        //
         // initialize the mesh with one element
+        //
         libMesh::MeshTools::Generation::build_square(*_mesh,
                                                      nx_divs, ny_divs,
                                                      0, _length,
                                                      0, _height,
                                                      e_type);
-
+        
+        //
         // mesh on which the level-set function is defined
+        //
         _level_set_mesh = new libMesh::SerialMesh(this->comm());
         
         nx_divs = _input("level_set_nx_divs", "number of elements of level-set mesh along x-axis", 10);
@@ -406,7 +268,9 @@ protected:
                                                      e_type);
     }
     
-    
+    //
+    //  \subsection bracket_mesh Bracket
+    //
     void _init_mesh_bracket() {
 
         {
@@ -431,13 +295,108 @@ protected:
         _delete_elems_from_bracket_mesh(*_level_set_mesh);
     }
 
+    void _delete_elems_from_bracket_mesh(libMesh::MeshBase &mesh) {
+        
+        Real
+        tol     = 1.e-6,
+        x       = -1.,
+        y       = -1.,
+        length  = _input("length", "length of domain along x-axis", 0.3),
+        width   = _input( "width", "length of domain along y-axis", 0.3),
+        l_frac  = 0.4,
+        w_frac  = 0.4,
+        x_lim   = length * l_frac,
+        y_lim   =  width * (1.-w_frac);
+        
+        //
+        // now, remove elements that are outside of the L-bracket domain
+        //
+        libMesh::MeshBase::element_iterator
+        e_it   = mesh.elements_begin(),
+        e_end  = mesh.elements_end();
+        
+        for ( ; e_it!=e_end; e_it++) {
+            
+            libMesh::Elem* elem = *e_it;
+            x = length;
+            y = 0.;
+            for (unsigned int i=0; i<elem->n_nodes(); i++) {
+                const libMesh::Node& n = elem->node_ref(i);
+                if (x > n(0)) x = n(0);
+                if (y < n(1)) y = n(1);
+            }
+          
+            //
+            // delete element if the lowest x,y locations are outside of the bracket
+            // domain
+            //
+            if (x >= x_lim && y<= y_lim)
+                mesh.delete_elem(elem);
+        }
+        
+        mesh.prepare_for_use();
+        
+        //
+        // add the two additional boundaries to the boundary info so that
+        // we can apply loads on them
+        //
+        bool
+        facing_right = false,
+        facing_down  = false;
+        
+        e_it   = mesh.elements_begin();
+        e_end  = mesh.elements_end();
+        
+        for ( ; e_it != e_end; e_it++) {
+            
+            libMesh::Elem* elem = *e_it;
+            
+            if (!elem->on_boundary()) continue;
+            
+            for (unsigned int i=0; i<elem->n_sides(); i++) {
+                
+                if (elem->neighbor_ptr(i)) continue;
+                
+                std::unique_ptr<libMesh::Elem> s(elem->side_ptr(i).release());
+                
+                const libMesh::Point p = s->centroid();
+                
+                facing_right = true;
+                facing_down  = true;
+                for (unsigned int j=0; j<s->n_nodes(); j++) {
+                    const libMesh::Node& n = s->node_ref(j);
+                    
+                    if (n(0) < x_lim ||  n(1) > y_lim) {
+                        facing_right = false;
+                        facing_down  = false;
+                    }
+                    else if (std::fabs(n(0) - p(0)) > tol)
+                        facing_right = false;
+                    else if (std::fabs(n(1) - p(1)) > tol)
+                        facing_down = false;
+                }
+                
+                if (facing_right) mesh.boundary_info->add_side(elem, i, 4);
+                if (facing_down) mesh.boundary_info->add_side(elem, i, 5);
+            }
+        }
+        
+        mesh.boundary_info->sideset_name(4) = "facing_right";
+        mesh.boundary_info->sideset_name(5) = "facing_down";
+    }
+
     
+    //
+    //  \subsection eyebar_mesh Eyebar
+    //
     void _init_mesh_eye_bar() {
         
         _mesh = new libMesh::SerialMesh(this->comm());
 
+        //
         // identify the element type from the input file or from the order
         // of the element
+        //
         unsigned int
         n_radial_divs  = _input("n_radial_divs", "number of elements along radial direction", 20),
         n_quarter_divs = _input("n_quarter_divs", "number of elements along height", 20);
@@ -454,8 +413,10 @@ protected:
         libMesh::ElemType
         e_type = libMesh::Utility::string_to_enum<libMesh::ElemType>(t);
         
+        //
         // if high order FE is used, libMesh requires atleast a second order
         // geometric element.
+        //
         if (_fetype.order > 1 && e_type == libMesh::QUAD4)
             e_type = libMesh::QUAD9;
         else if (_fetype.order > 1 && e_type == libMesh::TRI3)
@@ -467,7 +428,9 @@ protected:
                       *_mesh, e_type,
                       true, _height, n_quarter_divs*2);
         
+        //
         // add the boundary ids for Dirichlet conditions
+        //
         libMesh::MeshBase::const_element_iterator
         e_it   = _mesh->elements_begin(),
         e_end  = _mesh->elements_end();
@@ -506,39 +469,51 @@ protected:
         n_quarter_divs = _input("level_set_n_quarter_divs", "number of elements along height", 10);
         e_type  = libMesh::QUAD4;
         
+        //
         // initialize the mesh with one element
+        //
         cylinder.mesh(radius, _height/2,
                       n_radial_divs, n_quarter_divs, h_ratio,
                       *_level_set_mesh, e_type,
                       true, _height, n_quarter_divs*2);
     }
 
-
+    //
+    //  \section system_discipline  System and Discipline
+    //
     void _init_system_and_discipline() {
         
-        
+        //
         // make sure that the mesh has been initialized
+        //
         libmesh_assert(_mesh);
         
+        //
         // create the equation system
+        //
         _eq_sys    = new  libMesh::EquationSystems(*_mesh);
         
+        //
         // create the libmesh system and set the preferences for structural
         // eigenvalue problems
+        //
         _sys       = &(_eq_sys->add_system<MAST::NonlinearSystem>("structural"));
         _sys->set_eigenproblem_type(libMesh::GHEP);
         
+        //
         // initialize the system to the right set of variables
+        //
         _sys_init       = new MAST::StructuralSystemInitialization(*_sys,
                                                                    _sys->name(),
                                                                    _fetype);
         _discipline     = new MAST::PhysicsDisciplineBase(*_eq_sys);
         
-        
+        //
         // Initialize the system for level set function.
         // A level set function is defined on a coarser mesh than the structural
         // mesh.
         // A level set function is assumed to be a first-order Lagrange finite element
+        //
         _level_set_fetype      = libMesh::FEType(libMesh::FIRST, libMesh::LAGRANGE);
         _level_set_eq_sys      = new libMesh::EquationSystems(*_level_set_mesh);
         _level_set_sys         = &(_level_set_eq_sys->add_system<MAST::NonlinearSystem>("level_set"));
@@ -548,25 +523,79 @@ protected:
                                                                         _level_set_fetype);
         _level_set_discipline  = new MAST::LevelSetDiscipline(*_eq_sys);
         
+        //
         // A system with level set function is defined on the strucutral mesh
         // for the purpose of plotting.
+        //
         _level_set_sys_on_str_mesh      = &(_eq_sys->add_system<MAST::NonlinearSystem>("level_set"));
         _level_set_sys_init_on_str_mesh = new MAST::LevelSetSystemInitialization(*_level_set_sys_on_str_mesh,
                                                                                  _level_set_sys->name(),
                                                                                  _level_set_fetype);
         
+        //
         //  an indicator function is used to locate unconnected free-floating
         // domains of material. The indicator function solves a heat condution
         // problem. Regions with uniformly zero temperature are marked as
         // unconnected domains.
+        //
         _indicator_sys                  = &(_eq_sys->add_system<MAST::NonlinearSystem>("indicator"));
         _indicator_sys_init             = new MAST::HeatConductionSystemInitialization(*_indicator_sys,
                                                                                        _indicator_sys->name(),
                                                                                        _fetype);
         _indicator_discipline           = new MAST::PhysicsDisciplineBase(*_eq_sys);
     }
+
     
+    void _init_eq_sys() {
+        
+        _eq_sys->init();
+        _sys->eigen_solver->set_position_of_spectrum(libMesh::LARGEST_MAGNITUDE);
+        _sys->set_exchange_A_and_B(true);
+        
+        _level_set_eq_sys->init();
+    }
     
+
+    //
+    //   variables added to the mesh
+    //
+    void _init_fetype() {
+        
+        // FEType to initialize the system. Get the order and type of element.
+        std::string
+        order_str   = _input("fe_order", "order of finite element shape basis functions",    "first"),
+        family_str  = _input("fe_family",      "family of finite element shape functions", "lagrange");
+        
+        libMesh::Order
+        o  = libMesh::Utility::string_to_enum<libMesh::Order>(order_str);
+        libMesh::FEFamily
+        fe = libMesh::Utility::string_to_enum<libMesh::FEFamily>(family_str);
+        _fetype = libMesh::FEType(o, fe);
+    }
+    
+
+    
+    //
+    //  \section dirichlet Dirichlet Constraints
+    //
+    void _init_dirichlet_conditions() {
+        
+        std::string
+        s  = _input("mesh", "type of mesh to be analyzed {inplane, bracket}", "inplane");
+        
+        if (s == "inplane")
+            _init_dirichlet_conditions_inplane();
+        else if (s == "bracket")
+            _init_dirichlet_conditions_bracket();
+        else if (s == "eye_bar")
+            _init_dirichlet_conditions_eye_bar();
+        else
+            libmesh_error();
+    }
+    
+    //
+    //  \subsection inplane_dirichlet Inplane
+    //
     void _init_dirichlet_conditions_inplane() {
         
         ///////////////////////////////////////////////////////////////////////
@@ -600,17 +629,9 @@ protected:
     }
     
     
-    
-    void _init_eq_sys() {
-        
-        _eq_sys->init();
-        _sys->eigen_solver->set_position_of_spectrum(libMesh::LARGEST_MAGNITUDE);
-        _sys->set_exchange_A_and_B(true);
-
-        _level_set_eq_sys->init();
-    }
-    
-    
+    //
+    //  \subsection bracket_dirichlet Bracket
+    //
     void _init_dirichlet_conditions_bracket() {
         
         ///////////////////////////////////////////////////////////////////////
@@ -635,7 +656,9 @@ protected:
     }
     
     
-    
+    //
+    //  \subsection eyebar_dirichlet Eyebar
+    //
     void _init_dirichlet_conditions_eye_bar() {
         
         ///////////////////////////////////////////////////////////////////////
@@ -660,7 +683,47 @@ protected:
     }
 
     
+
+    //
+    //  \section loading Loading
+    //
+    //
+    void _init_loads() {
+        
+        std::string
+        s  = _input("mesh", "type of mesh to be analyzed {inplane, bracket}", "inplane");
+        
+        if (s == "inplane")
+            _init_loads_inplane();
+        else if (s == "bracket")
+            _init_loads_bracket();
+        else if (s == "eye_bar")
+            _init_loads_eye_bar();
+        else
+            libmesh_error();
+    }
     
+    
+    //  \subsection inplane_loading Inplane
+    //
+    class FluxLoad:
+    public MAST::FieldFunction<Real> {
+    public:
+        FluxLoad(const std::string& nm, Real p, Real l1, Real fraction):
+        MAST::FieldFunction<Real>(nm), _p(p), _l1(l1), _frac(fraction) { }
+        virtual ~FluxLoad() {}
+        virtual void operator() (const libMesh::Point& p, const Real t, Real& v) const {
+            if (fabs(p(0)-_l1*0.5) <= 0.5*_frac*_l1) v = _p;
+            else v = 0.;
+        }
+        virtual void derivative(const MAST::FunctionBase& f, const libMesh::Point& p, const Real t, Real& v) const {
+            v = 0.;
+        }
+    protected:
+        Real _p, _l1, _frac;
+    };
+    
+
     void _init_loads_inplane() {
         
         Real
@@ -687,7 +750,9 @@ protected:
     }
     
     
-    
+    //
+    //  \subsection bracket_loading Bracket
+    //
     class BracketLoad:
     public MAST::FieldFunction<Real> {
     public:
@@ -718,7 +783,9 @@ protected:
         *press_f         = new BracketLoad( "pressure", p_val, length, frac),
         *flux_f          = new BracketLoad("heat_flux", -2.e6, length, frac);
         
+        //
         // initialize the load
+        //
         MAST::BoundaryConditionBase
         *p_load          = new MAST::BoundaryConditionBase(MAST::SURFACE_PRESSURE),
         *f_load          = new MAST::BoundaryConditionBase(MAST::HEAT_FLUX);
@@ -734,7 +801,9 @@ protected:
     }
 
     
-    
+    //
+    //  \subsection eyebar_loading Eyebar
+    //
     class EyebarLoad:
     public MAST::FieldFunction<Real> {
     public:
@@ -748,7 +817,6 @@ protected:
         virtual void derivative(const MAST::FunctionBase& f, const libMesh::Point& p, const Real t, Real& v) const {
             v = 0.;
         }
-    protected:
     };
 
     
@@ -769,6 +837,14 @@ protected:
     }
 
     
+    //
+    //   \section properties Properties
+    //
+    //
+    //
+    //   \subsection material_properties Material Properties
+    //
+
     void _init_material() {
         
         Real
@@ -819,7 +895,10 @@ protected:
     }
 
     
-    
+    //
+    //   \subsection section_properties Section Properties
+    //
+
     void _init_section_property(){
         
         
@@ -858,11 +937,152 @@ protected:
         _indicator_discipline->set_property_for_subdomain(0, *p_card);
     }
     
+
+    //
+    //   \section initial_solution Initial Level Set
+    //
+    //
+    class Phi:
+    public MAST::FieldFunction<RealVectorX> {
+        
+    public:
+        Phi(Real x0,
+            Real y0,
+            Real l1,
+            Real l2,
+            Real nx_mesh,
+            Real ny_mesh,
+            Real nx_holes,
+            Real ny_holes):
+        MAST::FieldFunction<RealVectorX>("Phi"),
+        _x0  (x0),
+        _y0  (y0),
+        _l1  (l1),
+        _l2  (l2),
+        _nx_mesh  (nx_mesh),
+        _ny_mesh  (ny_mesh),
+        _nx_holes (nx_holes),
+        _ny_holes (ny_holes),
+        _pi  (acos(-1.)) {
+            
+            //
+            // initialize the locations at which the holes will be nucleated
+            // first, along the x-axis
+            //
+            if (_nx_holes == 1)
+                _x_axis_hole_locations.insert(_x0 + l1 * 0.5);
+            else if (_nx_holes >= 2) {
+                
+                // add holes at the beginning and end
+                _x_axis_hole_locations.insert(_x0);
+                _x_axis_hole_locations.insert(_x0+_l1);
+              
+                //
+                // now, add holes at uniformly spaced locations
+                // in the domain
+                //
+                Real
+                dx = _l1/(1.*(_nx_holes-1));
+                for (unsigned int i=2; i<_nx_holes; i++)
+                    _x_axis_hole_locations.insert(_x0+dx*(i-1));
+            }
+            
+            //
+            // now, along the y-axis
+            //
+            if (_ny_holes == 1)
+                _y_axis_hole_locations.insert(_y0+l2 * 0.5);
+            else if (_ny_holes >= 2) {
+              
+                //
+                // add holes at the beginning and end
+                //
+                _y_axis_hole_locations.insert(_y0);
+                _y_axis_hole_locations.insert(_y0+_l2);
+                
+                //
+                // now, add holes at uniformly spaced locations
+                // in the domain
+                //
+                Real
+                dx = _l2/(1.*(_ny_holes-1));
+                for (unsigned int i=2; i<_ny_holes; i++)
+                    _y_axis_hole_locations.insert(_y0+dx*(i-1));
+            }
+        }
+        virtual ~Phi() {}
+        virtual void operator()(const libMesh::Point& p,
+                                const Real t,
+                                RealVectorX& v) const {
+            
+            libmesh_assert_less_equal(t, 1);
+            libmesh_assert_equal_to(v.size(), 1);
+            
+            //
+            // the libMesh solution projection routine for Lagrange elements
+            // will query the function value at the nodes. So, we figure
+            // out which nodes should have zero values set to them.
+            // if there is one hole in any direction, it will be in the
+            // center of the domain. If there are more than 1, then two of
+            // the holes will be on the boundary and others will fill the
+            // interior evenly.
+            //
+            const Real
+            dx_mesh = _l1/(1.*_nx_holes),
+            dy_mesh = _l2/(1.*_ny_holes);
+            
+            std::set<Real>::const_iterator
+            x_it_low = _x_axis_hole_locations.lower_bound(p(0)-dx_mesh),
+            y_it_low = _y_axis_hole_locations.lower_bound(p(1)-dy_mesh);
+            
+            unsigned int
+            n = 0;
+            //
+            // see if the x-location needs a hole
+            //
+            for ( ; x_it_low != _x_axis_hole_locations.end(); x_it_low++) {
+                if (std::fabs(*x_it_low - p(0)) <= dx_mesh*0.25) {
+                    n++;
+                    break;
+                }
+            }
+            
+            //
+            // now check the y-location
+            //
+            for ( ; y_it_low != _y_axis_hole_locations.end(); y_it_low++) {
+                if (std::fabs(*y_it_low - p(1)) <= dy_mesh*0.25) {
+                    n++;
+                    break;
+                }
+            }
+            
+            if (n == 2)
+                v(0) = -1.e0;
+            else
+                v(0) = 1.e0;
+        }
+    protected:
+        Real
+        _x0,
+        _y0,
+        _l1,
+        _l2,
+        _nx_mesh,
+        _ny_mesh,
+        _nx_holes,
+        _ny_holes,
+        _pi;
+        std::set<Real> _x_axis_hole_locations;
+        std::set<Real> _y_axis_hole_locations;
+    };
     
     
     void initialize_solution() {
         
+        //
         // initialize solution of the level set problem
+        //
         unsigned int
         nx_h    = _input("initial_level_set_n_holes_in_x",
                             "number of holes along x-direction for initial level-set field", 6),
@@ -885,11 +1105,38 @@ protected:
         
         _level_set_sys_init->initialize_solution(*phi);
     }
-
     
+    
+    void _init_phi_dvs() {
+        
+        std::string
+        s  = _input("mesh", "type of mesh to be analyzed {inplane, bracket}", "inplane");
+        
+        if (s == "inplane")
+            _init_phi_dvs_inplane();
+        else if (s == "bracket")
+            _init_phi_dvs_bracket();
+        else if (s == "eye_bar")
+            _init_phi_dvs_eye_bar();
+        else
+            libmesh_error();
+        
+        Real
+        filter_radius          = _input("filter_radius", "radius of geometric filter for level set field", 0.015);
+        _filter                = new MAST::FilterBase(*_level_set_sys, filter_radius, _dv_dof_ids);
+        libMesh::NumericVector<Real>& vec = _level_set_sys->add_vector("base_values");
+        vec = *_level_set_sys->solution;
+        vec.close();
+    }
+    
+    //
+    //  \subsection inplane_initial_level_set Inplane
+    //
     void _init_phi_dvs_inplane() {
         
+        //
         // this assumes that level set is defined using lagrange shape functions
+        //
         libmesh_assert_equal_to(_level_set_fetype.family, libMesh::LAGRANGE);
         
         Real
@@ -902,8 +1149,10 @@ protected:
         Real
         val     = 0.;
         
+        //
         // all ranks will have DVs defined for all variables. So, we should be
         // operating on a replicated mesh
+        //
         libmesh_assert(_level_set_mesh->is_replicated());
         
         std::vector<Real> local_phi(_level_set_sys->solution->size());
@@ -914,8 +1163,10 @@ protected:
         it  = _level_set_mesh->nodes_begin(),
         end = _level_set_mesh->nodes_end();
         
+        //
         // maximum number of dvs is the number of nodes on the level set function
         // mesh. We will evaluate the actual number of dvs
+        //
         _dv_params.reserve(_level_set_mesh->n_nodes());
         _n_vars = 0;
         
@@ -941,17 +1192,6 @@ protected:
                 oss << "dv_" << _n_vars;
                 val  = local_phi[dof_id];
                 
-                //            // on the traction free boundary, set everything to be zero, so that there
-                //            // is always a boundary there that the optimizer can move
-                //            if (n(1) < tol                     ||
-                //                std::fabs(n(1) - height) < tol) {
-                //
-                //                if (dof_id >= _level_set_sys->solution->first_local_index() &&
-                //                    dof_id <  _level_set_sys->solution->last_local_index())
-                //                    _level_set_sys->solution->set(dof_id, 0.);
-                //                val = 0.;
-                //            }
-                
                 _dv_params.push_back(std::pair<unsigned int, MAST::Parameter*>());
                 _dv_params[_n_vars].first  = dof_id;
                 _dv_params[_n_vars].second = new MAST::Parameter(oss.str(), val);
@@ -965,11 +1205,15 @@ protected:
     }
     
     
-    
+    //
+    //  \subsection bracket_initial_level_set Bracket
+    //
     void _init_phi_dvs_bracket() {
         
         libmesh_assert(_initialized);
+        //
         // this assumes that level set is defined using lagrange shape functions
+        //
         libmesh_assert_equal_to(_level_set_fetype.family, libMesh::LAGRANGE);
         
         Real
@@ -989,20 +1233,26 @@ protected:
         Real
         val     = 0.;
         
+        //
         // all ranks will have DVs defined for all variables. So, we should be
         // operating on a replicated mesh
+        //
         libmesh_assert(_level_set_mesh->is_replicated());
         
         std::vector<Real> local_phi(_level_set_sys->solution->size());
         _level_set_sys->solution->localize(local_phi);
         
+        //
         // iterate over all the node values
+        //
         libMesh::MeshBase::const_node_iterator
         it  = _level_set_mesh->nodes_begin(),
         end = _level_set_mesh->nodes_end();
         
+        //
         // maximum number of dvs is the number of nodes on the level set function
         // mesh. We will evaluate the actual number of dvs
+        //
         _dv_params.reserve(_level_set_mesh->n_nodes());
         _n_vars = 0;
         
@@ -1013,9 +1263,11 @@ protected:
             dof_id                     = n.dof_number(0, 0, 0);
             
             if ((n(1)-filter_radius) <= y_lim && (n(0)+filter_radius) >= length*(1.-frac)) {
-                
+          
+                //
                 // set value at the constrained points to a small positive number
                 // material here
+                //
                 if (dof_id >= _level_set_sys->solution->first_local_index() &&
                     dof_id <  _level_set_sys->solution->last_local_index())
                     _level_set_sys->solution->set(dof_id, 1.e0);
@@ -1026,8 +1278,10 @@ protected:
                 oss << "dv_" << _n_vars;
                 val = local_phi[dof_id];
                 
+                //
                 // on the boundary, set everything to be zero, so that there
                 // is always a boundary there that the optimizer can move
+                //
                 if (n(0) < tol                     ||  // left boundary
                     std::fabs(n(0) - length) < tol ||  // right boundary
                     std::fabs(n(1) - height) < tol ||  // top boundary
@@ -1053,10 +1307,15 @@ protected:
     }
     
     
+    //
+    //  \subsection eyebar_initial_level_set Eyebar
+    //
     void _init_phi_dvs_eye_bar() {
         
         libmesh_assert(_initialized);
+        //
         // this assumes that level set is defined using lagrange shape functions
+        //
         libmesh_assert_equal_to(_level_set_fetype.family, libMesh::LAGRANGE);
         
         Real
@@ -1069,20 +1328,26 @@ protected:
         Real
         val     = 0.;
         
+        //
         // all ranks will have DVs defined for all variables. So, we should be
         // operating on a replicated mesh
+        //
         libmesh_assert(_level_set_mesh->is_replicated());
         
         std::vector<Real> local_phi(_level_set_sys->solution->size());
         _level_set_sys->solution->localize(local_phi);
         
+        //
         // iterate over all the node values
+        //
         libMesh::MeshBase::const_node_iterator
         it  = _level_set_mesh->nodes_begin(),
         end = _level_set_mesh->nodes_end();
         
+        //
         // maximum number of dvs is the number of nodes on the level set function
         // mesh. We will evaluate the actual number of dvs
+        //
         _dv_params.reserve(_level_set_mesh->n_nodes());
         _n_vars = 0;
         
@@ -1095,21 +1360,25 @@ protected:
             if (((n.norm() <= 1.5+filter_radius) && n(0) <= 0.) ||  // circle
                 (std::fabs(n(0)-_height*1.5) < filter_radius &&  // right edge
                  std::fabs(n(1)) <= 1.+filter_radius)) { // dirichlet constraint
-                
-                // set value at the constrained points to a small positive number
-                // material here
-                if (dof_id >= _level_set_sys->solution->first_local_index() &&
-                    dof_id <  _level_set_sys->solution->last_local_index())
-                    _level_set_sys->solution->set(dof_id, 1.e0);
-            }
+                    
+                    //
+                    // set value at the constrained points to a small positive number
+                    // material here
+                    //
+                    if (dof_id >= _level_set_sys->solution->first_local_index() &&
+                        dof_id <  _level_set_sys->solution->last_local_index())
+                        _level_set_sys->solution->set(dof_id, 1.e0);
+                }
             else {
                 
                 std::ostringstream oss;
                 oss << "dv_" << _n_vars;
                 val = local_phi[dof_id];
                 
+                //
                 // on the boundary, set everything to be zero, so that there
                 // is always a boundary there that the optimizer can move
+                //
                 if (std::fabs(n(0)+_height*0.5) < tol    ||  // left boundary
                     std::fabs(n(1)-_height*0.5) < tol    ||  // top boundary
                     std::fabs(n(1)+_height*0.5) < tol    ||  // bottom boundary
@@ -1135,425 +1404,8 @@ protected:
     }
 
     
-    
-    void _delete_elems_from_bracket_mesh(libMesh::MeshBase &mesh) {
-        
-        Real
-        tol     = 1.e-6,
-        x       = -1.,
-        y       = -1.,
-        length  = _input("length", "length of domain along x-axis", 0.3),
-        width   = _input( "width", "length of domain along y-axis", 0.3),
-        l_frac  = 0.4,
-        w_frac  = 0.4,
-        x_lim   = length * l_frac,
-        y_lim   =  width * (1.-w_frac);
-        
-        // now, remove elements that are outside of the L-bracket domain
-        libMesh::MeshBase::element_iterator
-        e_it   = mesh.elements_begin(),
-        e_end  = mesh.elements_end();
-        
-        for ( ; e_it!=e_end; e_it++) {
-            
-            libMesh::Elem* elem = *e_it;
-            x = length;
-            y = 0.;
-            for (unsigned int i=0; i<elem->n_nodes(); i++) {
-                const libMesh::Node& n = elem->node_ref(i);
-                if (x > n(0)) x = n(0);
-                if (y < n(1)) y = n(1);
-            }
-            
-            // delete element if the lowest x,y locations are outside of the bracket
-            // domain
-            if (x >= x_lim && y<= y_lim)
-                mesh.delete_elem(elem);
-        }
-        
-        mesh.prepare_for_use();
-        
-        // add the two additional boundaries to the boundary info so that
-        // we can apply loads on them
-        bool
-        facing_right = false,
-        facing_down  = false;
-        
-        e_it   = mesh.elements_begin();
-        e_end  = mesh.elements_end();
-        
-        for ( ; e_it != e_end; e_it++) {
-            
-            libMesh::Elem* elem = *e_it;
-            
-            if (!elem->on_boundary()) continue;
-            
-            for (unsigned int i=0; i<elem->n_sides(); i++) {
-                
-                if (elem->neighbor_ptr(i)) continue;
-                
-                std::unique_ptr<libMesh::Elem> s(elem->side_ptr(i).release());
-                
-                const libMesh::Point p = s->centroid();
-                
-                facing_right = true;
-                facing_down  = true;
-                for (unsigned int j=0; j<s->n_nodes(); j++) {
-                    const libMesh::Node& n = s->node_ref(j);
-                    
-                    if (n(0) < x_lim ||  n(1) > y_lim) {
-                        facing_right = false;
-                        facing_down  = false;
-                    }
-                    else if (std::fabs(n(0) - p(0)) > tol)
-                        facing_right = false;
-                    else if (std::fabs(n(1) - p(1)) > tol)
-                        facing_down = false;
-                }
-                
-                if (facing_right) mesh.boundary_info->add_side(elem, i, 4);
-                if (facing_down) mesh.boundary_info->add_side(elem, i, 5);
-            }
-        }
-        
-        mesh.boundary_info->sideset_name(4) = "facing_right";
-        mesh.boundary_info->sideset_name(5) = "facing_down";
-    }
-
-    
-    void _evaluate_volume_sensitivity(MAST::LevelSetVolume&    volume,
-                                      MAST::LevelSetPerimeter& perimeter,
-                                      MAST::LevelSetNonlinearImplicitAssembly& assembly,
-                                      std::vector<Real>& obj_grad) {
-        
-        // iterate over each DV, create a sensitivity vector and calculate the
-        // volume sensitivity explicitly
-        std::unique_ptr<libMesh::NumericVector<Real>>
-        dphi_base(_level_set_sys->solution->zero_clone().release()),
-        dphi_filtered(_level_set_sys->solution->zero_clone().release());
-        
-        for (unsigned int i=0; i<_n_vars; i++) {
-            
-            dphi_base->zero();
-            dphi_filtered->zero();
-            // set the value only if the dof corresponds to a local node
-            if (_dv_params[i].first >=  dphi_base->first_local_index() &&
-                _dv_params[i].first <   dphi_base->last_local_index())
-                dphi_base->set(_dv_params[i].first, 1.);
-            dphi_base->close();
-            _filter->compute_filtered_values(*dphi_base, *dphi_filtered);
-            
-            _level_set_vel->init(*_level_set_sys_init, *_level_set_sys->solution, *dphi_filtered);
-            
-            assembly.set_evaluate_output_on_negative_phi(false);
-            assembly.calculate_output_direct_sensitivity(*_level_set_sys->solution,
-                                                         *dphi_filtered,
-                                                         *_dv_params[i].second,
-                                                         volume);
-            assembly.set_evaluate_output_on_negative_phi(true);
-            assembly.calculate_output_direct_sensitivity(*_level_set_sys->solution,
-                                                         *dphi_filtered,
-                                                         *_dv_params[i].second,
-                                                         perimeter);
-            assembly.set_evaluate_output_on_negative_phi(false);
-            obj_grad[i] = _obj_scaling * (volume.output_sensitivity_total(*_dv_params[i].second) +
-                                          _perimeter_penalty * perimeter.output_sensitivity_total(*_dv_params[i].second));
-        }
-    }
-    
-
-
-    
-    void
-    _evaluate_constraint_sensitivity
-    (MAST::StressStrainOutputBase& stress,
-     MAST::AssemblyElemOperations& nonlinear_elem_ops,
-     MAST::LevelSetNonlinearImplicitAssembly& nonlinear_assembly,
-     MAST::StructuralModalEigenproblemAssemblyElemOperations& eigen_elem_ops,
-     MAST::LevelSetEigenproblemAssembly& eigen_assembly,
-     const std::vector<bool>& eval_grads,
-     std::vector<Real>& grads) {
-        
-        unsigned int n_conv = std::min(_n_eig_vals, _sys->get_n_converged_eigenvalues());
-        
-        _sys->adjoint_solve(nonlinear_elem_ops, stress, nonlinear_assembly, false);
-        
-        std::unique_ptr<libMesh::NumericVector<Real>>
-        dphi_base(_level_set_sys->solution->zero_clone().release()),
-        dphi_filtered(_level_set_sys->solution->zero_clone().release());
-
-        //////////////////////////////////////////////////////////////////
-        // indices used by GCMMA follow this rule:
-        // grad_k = dfi/dxj  ,  where k = j*NFunc + i
-        //////////////////////////////////////////////////////////////////
-        for (unsigned int i=0; i<_n_vars; i++) {
-            
-            dphi_base->zero();
-            dphi_filtered->zero();
-            // set the value only if the dof corresponds to a local node
-            if (_dv_params[i].first >=  dphi_base->first_local_index() &&
-                _dv_params[i].first <   dphi_base->last_local_index())
-                dphi_base->set(_dv_params[i].first, 1.);
-            dphi_base->close();
-            _filter->compute_filtered_values(*dphi_base, *dphi_filtered);
-
-            // initialize the level set perturbation function to create a velocity
-            // field
-            _level_set_vel->init(*_level_set_sys_init, *_level_set_sys->solution, *dphi_filtered);
-            
-            //////////////////////////////////////////////////////////////////////
-            // stress sensitivity
-            //////////////////////////////////////////////////////////////////////
-            grads[_n_ineq*i+0] = 1./_stress_lim*
-            nonlinear_assembly.calculate_output_adjoint_sensitivity(*_sys->solution,
-                                                                    _sys->get_adjoint_solution(),
-                                                                    *_dv_params[i].second,
-                                                                    nonlinear_elem_ops,
-                                                                    stress);
-            stress.clear_sensitivity_data();
-            
-            //////////////////////////////////////////////////////////////////////
-            // eigenvalue sensitivity, only if the values were requested
-            //////////////////////////////////////////////////////////////////////
-            if (_n_eig_vals) {
-                
-                std::vector<Real> sens;
-                _sys->eigenproblem_sensitivity_solve(eigen_elem_ops,
-                                                     eigen_assembly,
-                                                     *_dv_params[i].second,
-                                                     sens);
-                for (unsigned int j=0; j<n_conv; j++)
-                    grads[_n_ineq*i+j+1] = -sens[j]/_ref_eig_val;
-            }
-        }
-    }
-
-    void _init_mesh() {
-
-        // The mesh is created using classes written in MAST. The particular
-        // mesh to be used can be selected using the input parameter
-        // ` mesh=val `, where `val` can be one of the following:
-        //   - `inplane` inplane structure with load on top and left and right boundaries constrained
-        //   - `bracket` L-bracket
-        //
-        std::string
-        s  = _input("mesh", "type of mesh to be analyzed {inplane, bracket}", "inplane");
-
-        if (s == "inplane")
-            _init_mesh_inplane();
-        else if (s == "bracket")
-            _init_mesh_bracket();
-        else if (s == "eye_bar")
-            _init_mesh_eye_bar();
-        else
-            libmesh_error();
-    }
-
-    
-    void _init_dirichlet_conditions() {
-        
-        std::string
-        s  = _input("mesh", "type of mesh to be analyzed {inplane, bracket}", "inplane");
-
-        if (s == "inplane")
-            _init_dirichlet_conditions_inplane();
-        else if (s == "bracket")
-            _init_dirichlet_conditions_bracket();
-        else if (s == "eye_bar")
-            _init_dirichlet_conditions_eye_bar();
-        else
-            libmesh_error();
-    }
-
-    
-    void _init_loads() {
-        
-        std::string
-        s  = _input("mesh", "type of mesh to be analyzed {inplane, bracket}", "inplane");
-
-        if (s == "inplane")
-            _init_loads_inplane();
-        else if (s == "bracket")
-            _init_loads_bracket();
-        else if (s == "eye_bar")
-            _init_loads_eye_bar();
-        else
-            libmesh_error();
-    }
-
-    
-    void _init_phi_dvs() {
-        
-        std::string
-        s  = _input("mesh", "type of mesh to be analyzed {inplane, bracket}", "inplane");
-        
-        if (s == "inplane")
-            _init_phi_dvs_inplane();
-        else if (s == "bracket")
-            _init_phi_dvs_bracket();
-        else if (s == "eye_bar")
-            _init_phi_dvs_eye_bar();
-        else
-            libmesh_error();
-
-        Real
-        filter_radius          = _input("filter_radius", "radius of geometric filter for level set field", 0.015);
-        _filter                = new MAST::FilterBase(*_level_set_sys, filter_radius, _dv_dof_ids);
-        libMesh::NumericVector<Real>& vec = _level_set_sys->add_vector("base_values");
-        vec = *_level_set_sys->solution;
-        vec.close();
-    }
-
-public:
-    
-    TopologyOptimizationLevelSet2D(const libMesh::Parallel::Communicator& comm_in,
-                                   MAST::Examples::GetPotWrapper& input):
-    MAST::FunctionEvaluation             (comm_in),
-    _initialized                         (false),
-    _input                               (input),
-    _length                              (0.),
-    _height                              (0.),
-    _obj_scaling                         (0.),
-    _perimeter_penalty                   (0.),
-    _stress_lim                          (0.),
-    _p_val                               (0.),
-    _vm_rho                              (0.),
-    _ref_eig_val                         (0.),
-    _n_eig_vals                          (0),
-    _mesh                                (nullptr),
-    _level_set_mesh                      (nullptr),
-    _eq_sys                              (nullptr),
-    _level_set_eq_sys                    (nullptr),
-    _sys                                 (nullptr),
-    _level_set_sys                       (nullptr),
-    _level_set_sys_on_str_mesh           (nullptr),
-    _indicator_sys                       (nullptr),
-    _sys_init                            (nullptr),
-    _level_set_sys_init_on_str_mesh      (nullptr),
-    _level_set_sys_init                  (nullptr),
-    _indicator_sys_init                  (nullptr),
-    _discipline                          (nullptr),
-    _indicator_discipline                (nullptr),
-    _level_set_discipline                (nullptr),
-    _filter                              (nullptr),
-    _m_card                              (nullptr),
-    _p_card                              (nullptr),
-    _level_set_function                  (nullptr),
-    _level_set_vel                       (nullptr),
-    _output                              (nullptr) {
-        
-        libmesh_assert(!_initialized);
-        
-        // call the initialization routines for each component
-        _init_fetype();
-        _init_mesh();
-        _init_system_and_discipline();
-        _init_dirichlet_conditions();
-        _init_eq_sys();
-        _init_material();
-        _init_loads();
-        _init_section_property();
-        _initialized = true;
-
-        
-        // ask structure to use Mindlin bending operator
-        dynamic_cast<MAST::ElementPropertyCard2D&>(*_p_card).set_bending_model(MAST::MINDLIN);
-        
-        /////////////////////////////////////////////////
-        // now initialize the design data.
-        /////////////////////////////////////////////////
-        
-        // first, initialize the level set functions over the domain
-        this->initialize_solution();
-        
-        // next, define a new parameter to define design variable for nodal level-set
-        // function value
-        this->_init_phi_dvs();
-        
-        _obj_scaling           = 100./_length/_height;
-        _perimeter_penalty     = _input("perimeter_penalty", "penalty value for perimeter in the objective function", 0.);
-        _stress_lim            = _input("vm_stress_limit", "limit von-mises stress value", 2.e8);
-        _p_val                 = _input("constraint_aggregation_p_val", "value of p in p-norm stress aggregation", 2.0);
-        _vm_rho                = _input("constraint_aggregation_rho_val", "value of rho in p-norm stress aggregation", 2.0);
-        _level_set_vel         = new MAST::LevelSetBoundaryVelocity(2);
-        _level_set_function    = new PhiMeshFunction;
-        _output                = new libMesh::ExodusII_IO(*_mesh);
-        
-        _n_eig_vals            = _input("n_eig", "number of eigenvalues to constrain", 0);
-        if (_n_eig_vals) {
-            // set only if the user requested eigenvalue constraints
-            _ref_eig_val           = _input("eigenvalue_low_bound", "lower bound enforced on eigenvalue constraints", 1.e3);
-            _sys->set_n_requested_eigenvalues(_n_eig_vals);
-        }
-        
-        // two inequality constraints: stress and eigenvalue.
-        _n_ineq = 1+_n_eig_vals;
-        
-        std::string
-        output_name = _input("output_file_root", "prefix of output file names", "output");
-        output_name += "_optim_history.txt";
-        this->set_output_file(output_name);
-        
-    }
-    
-    
-    ~TopologyOptimizationLevelSet2D() {
-
-        {
-            std::set<MAST::BoundaryConditionBase*>::iterator
-            it   = _boundary_conditions.begin(),
-            end  = _boundary_conditions.end();
-            for ( ; it!=end; it++)
-                delete *it;
-        }
-        
-        {
-            std::set<MAST::FunctionBase*>::iterator
-            it   = _field_functions.begin(),
-            end  = _field_functions.end();
-            for ( ; it!=end; it++)
-                delete *it;
-        }
-        
-        {
-            std::map<std::string, MAST::Parameter*>::iterator
-            it   = _parameters.begin(),
-            end  = _parameters.end();
-            for ( ; it!=end; it++)
-                delete it->second;
-        }
-
-        if (!_initialized)
-            return;
-        
-        delete _m_card;
-        delete _p_card;
-        
-        delete _eq_sys;
-        delete _mesh;
-        
-        delete _discipline;
-        delete _sys_init;
-        
-        delete _level_set_function;
-        delete _level_set_vel;
-        delete _level_set_sys_init;
-        delete _indicator_sys_init;
-        delete _indicator_discipline;
-        delete _level_set_discipline;
-        delete _filter;
-        delete _level_set_eq_sys;
-        delete _level_set_mesh;
-        delete _output;
-        delete _level_set_sys_init_on_str_mesh;
-        
-        for (unsigned int i=0; i<_dv_params.size(); i++)
-            delete _dv_params[i].second;
-    }
-
-    
-    
-    
+    //
+    //   \subsection design_variable_init   Design Variables
     //
     //   initializes the design variable vector, called by the
     //   optimization interface.
@@ -1562,15 +1414,16 @@ public:
                    std::vector<Real>& xmin,
                    std::vector<Real>& xmax) {
         
-        // one DV for each element
         x.resize(_n_vars);
         xmin.resize(_n_vars);
         xmax.resize(_n_vars);
         
         std::fill(xmin.begin(), xmin.end(),   -1.e0);
         std::fill(xmax.begin(), xmax.end(),    1.e0);
-        
+
+        //
         // now, check if the user asked to initialize dvs from a previous file
+        //
         std::string
         nm    =  _input("restart_optimization_file", "filename with optimization history for restart", "");
         
@@ -1586,12 +1439,18 @@ public:
                 x[i] = (*_dv_params[i].second)();
         }
     }
-    
+
+    //
+    //  \section analysis Function Evaluation and Sensitivity
+    //
+    //
+    //   \subsection element_error_metric Element Error Metric
+    //
     void
     _compute_element_errors(libMesh::ErrorVector& error) {
         
         MAST::LevelSetIntersection intersection;
-
+        
         libMesh::MeshBase::const_element_iterator
         it  = _mesh->active_elements_begin(),
         end = _mesh->active_elements_end();
@@ -1634,7 +1493,7 @@ public:
                         elem->set_refinement_flag(libMesh::Elem::REFINE);
                     else if (vol_frac > 0.90)
                         elem->set_refinement_flag(libMesh::Elem::COARSEN);
-                    }
+                }
                 else
                     elem->set_refinement_flag(libMesh::Elem::COARSEN);
                 intersection.clear();
@@ -1647,9 +1506,9 @@ public:
         unsigned int _max_h;
     };
     
+
     //
-    //   \p grads(k): Derivative of f_i(x) with respect
-    //   to x_j, where k = (j-1)*M + i.
+    //  \subsection function_evaluation Function Evaluation
     //
     void evaluate(const std::vector<Real>& dvars,
                   Real& obj,
@@ -1686,13 +1545,14 @@ public:
         MAST::HeatConductionNonlinearAssemblyElemOperations      conduction_elem_ops;
         MAST::StructuralModalEigenproblemAssemblyElemOperations  modal_elem_ops;
         
+        //
         // reinitialize the dof constraints before solution of the linear system
         // FIXME: we should be able to clear the constraint object from the
         // system before it goes out of scope, but libMesh::System does not
         // have a clear method. So, we are going to leave it as is, hoping
         // that libMesh::System will not attempt to use it (most likely, we
         // shoudl be ok).
-        
+        //
         /////////////////////////////////////////////////////////////////////
         // first constrain the indicator function and solve
         /////////////////////////////////////////////////////////////////////
@@ -1730,12 +1590,12 @@ public:
         // system
         /////////////////////////////////////////////////////////////////////
         MAST::MeshFieldFunction indicator(*_indicator_sys_init, "indicator");
-        indicator.init(*_indicator_sys->solution);*/
-        //MAST::IndicatorFunctionConstrainDofs constrain(*_sys_init, *_level_set_function, indicator);
-        //MAST::LevelSetConstrainDofs constrain(*_sys_init, *_level_set_function);
-        //_sys->attach_constraint_object(constrain);
-        //_sys->reinit_constraints();
-        //_sys->initialize_condensed_dofs(*_discipline);
+        indicator.init(*_indicator_sys->solution);
+        MAST::IndicatorFunctionConstrainDofs constrain(*_sys_init, *_level_set_function, indicator);
+        MAST::LevelSetConstrainDofs constrain(*_sys_init, *_level_set_function);
+        _sys->attach_constraint_object(constrain);
+        _sys->reinit_constraints();
+        _sys->initialize_condensed_dofs(*_discipline);*/
         
         /////////////////////////////////////////////////////////////////////
         // first constrain the indicator function and solve
@@ -1758,19 +1618,7 @@ public:
         
         
         libMesh::MeshRefinement refine(*_mesh);
-        /*libMesh::out << "before coarsening" << std::endl;
-        _mesh->print_info();
-
-        {
-            libMesh::ErrorVector error(_mesh->max_elem_id(), _mesh);
-            refine.refine_fraction()  = 0.;
-            refine.coarsen_fraction() = 1.;
-            refine.max_h_level() = 0;
-            refine.flag_elements_by_error_fraction(error);
-            if (refine.coarsen_elements())
-                _eq_sys->reinit();
-        }
-        */
+        
         libMesh::out << "before refinement" << std::endl;
         _mesh->print_info();
 
@@ -1811,9 +1659,6 @@ public:
                 continue_refining = false;
         }
 
-        //std::ostringstream oss;
-        //oss << "mesh_" << n_refinements << ".exo";
-        //_mesh->write("mesh.exo");
         
         MAST::LevelSetVolume                            volume(level_set_assembly.get_intersection());
         MAST::LevelSetPerimeter                         perimeter(level_set_assembly.get_intersection());
@@ -1862,9 +1707,6 @@ public:
         nonlinear_assembly.calculate_output(*_sys->solution, stress);
         fvals[0]  =  stress.output_total()/_stress_lim - 1.;  // g = sigma/sigma0-1 <= 0
         
-        //stress_assembly.update_stress_strain_data(stress, *_sys->solution);
-        //libMesh::ExodusII_IO(*_mesh).write_equation_systems("indicator.exo", *_eq_sys);
-        //libMesh::ExodusII_IO(*_level_set_mesh).write_equation_systems("phi.exo", *_level_set_eq_sys);
         
         if (_n_eig_vals) {
             
@@ -1918,12 +1760,134 @@ public:
                                              eval_grads,
                                              grads);
         
+        //
         // also the stress data for plotting
+        //
         stress_assembly.update_stress_strain_data(stress, *_sys->solution);
     }
 
+    //
+    //  \subsection volume_sensitivity Sensitivity of Material Volume
+    //
+    void _evaluate_volume_sensitivity(MAST::LevelSetVolume&    volume,
+                                      MAST::LevelSetPerimeter& perimeter,
+                                      MAST::LevelSetNonlinearImplicitAssembly& assembly,
+                                      std::vector<Real>& obj_grad) {
+        
+        //
+        // iterate over each DV, create a sensitivity vector and calculate the
+        // volume sensitivity explicitly
+        //
+        std::unique_ptr<libMesh::NumericVector<Real>>
+        dphi_base(_level_set_sys->solution->zero_clone().release()),
+        dphi_filtered(_level_set_sys->solution->zero_clone().release());
+        
+        for (unsigned int i=0; i<_n_vars; i++) {
+            
+            dphi_base->zero();
+            dphi_filtered->zero();
+            //
+            // set the value only if the dof corresponds to a local node
+            //
+            if (_dv_params[i].first >=  dphi_base->first_local_index() &&
+                _dv_params[i].first <   dphi_base->last_local_index())
+                dphi_base->set(_dv_params[i].first, 1.);
+            dphi_base->close();
+            _filter->compute_filtered_values(*dphi_base, *dphi_filtered);
+            
+            _level_set_vel->init(*_level_set_sys_init, *_level_set_sys->solution, *dphi_filtered);
+            
+            assembly.set_evaluate_output_on_negative_phi(false);
+            assembly.calculate_output_direct_sensitivity(*_level_set_sys->solution,
+                                                         *dphi_filtered,
+                                                         *_dv_params[i].second,
+                                                         volume);
+            assembly.set_evaluate_output_on_negative_phi(true);
+            assembly.calculate_output_direct_sensitivity(*_level_set_sys->solution,
+                                                         *dphi_filtered,
+                                                         *_dv_params[i].second,
+                                                         perimeter);
+            assembly.set_evaluate_output_on_negative_phi(false);
+            obj_grad[i] = _obj_scaling * (volume.output_sensitivity_total(*_dv_params[i].second) +
+                                          _perimeter_penalty * perimeter.output_sensitivity_total(*_dv_params[i].second));
+        }
+    }
     
     
+    
+    //
+    //  \subsection stress_sensitivity Sensitivity of Stress and Eigenvalues
+    //
+    void
+    _evaluate_constraint_sensitivity
+    (MAST::StressStrainOutputBase& stress,
+     MAST::AssemblyElemOperations& nonlinear_elem_ops,
+     MAST::LevelSetNonlinearImplicitAssembly& nonlinear_assembly,
+     MAST::StructuralModalEigenproblemAssemblyElemOperations& eigen_elem_ops,
+     MAST::LevelSetEigenproblemAssembly& eigen_assembly,
+     const std::vector<bool>& eval_grads,
+     std::vector<Real>& grads) {
+        
+        unsigned int n_conv = std::min(_n_eig_vals, _sys->get_n_converged_eigenvalues());
+        
+        _sys->adjoint_solve(nonlinear_elem_ops, stress, nonlinear_assembly, false);
+        
+        std::unique_ptr<libMesh::NumericVector<Real>>
+        dphi_base(_level_set_sys->solution->zero_clone().release()),
+        dphi_filtered(_level_set_sys->solution->zero_clone().release());
+        
+        //////////////////////////////////////////////////////////////////
+        // indices used by GCMMA follow this rule:
+        // grad_k = dfi/dxj  ,  where k = j*NFunc + i
+        //////////////////////////////////////////////////////////////////
+        for (unsigned int i=0; i<_n_vars; i++) {
+            
+            dphi_base->zero();
+            dphi_filtered->zero();
+            //
+            // set the value only if the dof corresponds to a local node
+            //
+            if (_dv_params[i].first >=  dphi_base->first_local_index() &&
+                _dv_params[i].first <   dphi_base->last_local_index())
+                dphi_base->set(_dv_params[i].first, 1.);
+            dphi_base->close();
+            _filter->compute_filtered_values(*dphi_base, *dphi_filtered);
+            
+            //
+            // initialize the level set perturbation function to create a velocity
+            // field
+            _level_set_vel->init(*_level_set_sys_init, *_level_set_sys->solution, *dphi_filtered);
+            
+            //////////////////////////////////////////////////////////////////////
+            // stress sensitivity
+            //////////////////////////////////////////////////////////////////////
+            grads[_n_ineq*i+0] = 1./_stress_lim*
+            nonlinear_assembly.calculate_output_adjoint_sensitivity(*_sys->solution,
+                                                                    _sys->get_adjoint_solution(),
+                                                                    *_dv_params[i].second,
+                                                                    nonlinear_elem_ops,
+                                                                    stress);
+            stress.clear_sensitivity_data();
+            
+            //////////////////////////////////////////////////////////////////////
+            // eigenvalue sensitivity, only if the values were requested
+            //////////////////////////////////////////////////////////////////////
+            if (_n_eig_vals) {
+                
+                std::vector<Real> sens;
+                _sys->eigenproblem_sensitivity_solve(eigen_elem_ops,
+                                                     eigen_assembly,
+                                                     *_dv_params[i].second,
+                                                     sens);
+                for (unsigned int j=0; j<n_conv; j++)
+                    grads[_n_ineq*i+j+1] = -sens[j]/_ref_eig_val;
+            }
+        }
+    }
+
+    //
+    //  \subsection design_output  Output of Design Iterate
+    //
     void output(unsigned int iter,
                 const std::vector<Real>& x,
                 Real obj,
@@ -1943,7 +1907,9 @@ public:
         std::ostringstream oss;
         oss << "output_optim.e-s." << std::setfill('0') << std::setw(5) << iter ;
         
+        //
         // copy DVs to level set function
+        //
         libMesh::NumericVector<Real>
         &base_phi = _level_set_sys->get_vector("base_values");
         
@@ -1979,10 +1945,14 @@ public:
             _sys->solution->zero();
         }
         
+        //
         // set the value of time back to its original value
+        //
         _sys->time = sys_time;
         
+        //
         // increment the parameter values
+        //
         unsigned int
         update_freq = _input("update_freq_optim_params", "number of iterations after which the optimization parameters are updated", 50),
         factor = iter/update_freq ;
@@ -2027,8 +1997,178 @@ public:
     }
 #endif
     
+    
+    //
+    // \section initialization  Initialization
+    //
+    //   \subsection constructor  Constructor
+    //
+    
+    TopologyOptimizationLevelSet2D(const libMesh::Parallel::Communicator& comm_in,
+                                   MAST::Examples::GetPotWrapper& input):
+    MAST::FunctionEvaluation             (comm_in),
+    _initialized                         (false),
+    _input                               (input),
+    _length                              (0.),
+    _height                              (0.),
+    _obj_scaling                         (0.),
+    _perimeter_penalty                   (0.),
+    _stress_lim                          (0.),
+    _p_val                               (0.),
+    _vm_rho                              (0.),
+    _ref_eig_val                         (0.),
+    _n_eig_vals                          (0),
+    _mesh                                (nullptr),
+    _level_set_mesh                      (nullptr),
+    _eq_sys                              (nullptr),
+    _level_set_eq_sys                    (nullptr),
+    _sys                                 (nullptr),
+    _level_set_sys                       (nullptr),
+    _level_set_sys_on_str_mesh           (nullptr),
+    _indicator_sys                       (nullptr),
+    _sys_init                            (nullptr),
+    _level_set_sys_init_on_str_mesh      (nullptr),
+    _level_set_sys_init                  (nullptr),
+    _indicator_sys_init                  (nullptr),
+    _discipline                          (nullptr),
+    _indicator_discipline                (nullptr),
+    _level_set_discipline                (nullptr),
+    _filter                              (nullptr),
+    _m_card                              (nullptr),
+    _p_card                              (nullptr),
+    _level_set_function                  (nullptr),
+    _level_set_vel                       (nullptr),
+    _output                              (nullptr) {
+        
+        libmesh_assert(!_initialized);
+        
+        //
+        // call the initialization routines for each component
+        //
+        _init_fetype();
+        _init_mesh();
+        _init_system_and_discipline();
+        _init_dirichlet_conditions();
+        _init_eq_sys();
+        _init_material();
+        _init_loads();
+        _init_section_property();
+        _initialized = true;
+        
+        //
+        // ask structure to use Mindlin bending operator
+        //
+        dynamic_cast<MAST::ElementPropertyCard2D&>(*_p_card).set_bending_model(MAST::MINDLIN);
+        
+        /////////////////////////////////////////////////
+        // now initialize the design data.
+        /////////////////////////////////////////////////
+        
+        //
+        // first, initialize the level set functions over the domain
+        //
+        this->initialize_solution();
+        
+        //
+        // next, define a new parameter to define design variable for nodal level-set
+        // function value
+        //
+        this->_init_phi_dvs();
+        
+        _obj_scaling           = 100./_length/_height;
+        _perimeter_penalty     = _input("perimeter_penalty", "penalty value for perimeter in the objective function", 0.);
+        _stress_lim            = _input("vm_stress_limit", "limit von-mises stress value", 2.e8);
+        _p_val                 = _input("constraint_aggregation_p_val", "value of p in p-norm stress aggregation", 2.0);
+        _vm_rho                = _input("constraint_aggregation_rho_val", "value of rho in p-norm stress aggregation", 2.0);
+        _level_set_vel         = new MAST::LevelSetBoundaryVelocity(2);
+        _level_set_function    = new PhiMeshFunction;
+        _output                = new libMesh::ExodusII_IO(*_mesh);
+        
+        _n_eig_vals            = _input("n_eig", "number of eigenvalues to constrain", 0);
+        if (_n_eig_vals) {
+            //
+            // set only if the user requested eigenvalue constraints
+            //
+            _ref_eig_val           = _input("eigenvalue_low_bound", "lower bound enforced on eigenvalue constraints", 1.e3);
+            _sys->set_n_requested_eigenvalues(_n_eig_vals);
+        }
+        
+        //
+        // two inequality constraints: stress and eigenvalue.
+        //
+        _n_ineq = 1+_n_eig_vals;
+        
+        std::string
+        output_name = _input("output_file_root", "prefix of output file names", "output");
+        output_name += "_optim_history.txt";
+        this->set_output_file(output_name);
+        
+    }
+    
+    //
+    //   \subsection destructor  Destructor
+    //
+    ~TopologyOptimizationLevelSet2D() {
+        
+        {
+            std::set<MAST::BoundaryConditionBase*>::iterator
+            it   = _boundary_conditions.begin(),
+            end  = _boundary_conditions.end();
+            for ( ; it!=end; it++)
+                delete *it;
+        }
+        
+        {
+            std::set<MAST::FunctionBase*>::iterator
+            it   = _field_functions.begin(),
+            end  = _field_functions.end();
+            for ( ; it!=end; it++)
+                delete *it;
+        }
+        
+        {
+            std::map<std::string, MAST::Parameter*>::iterator
+            it   = _parameters.begin(),
+            end  = _parameters.end();
+            for ( ; it!=end; it++)
+                delete it->second;
+        }
+        
+        if (!_initialized)
+            return;
+        
+        delete _m_card;
+        delete _p_card;
+        
+        delete _eq_sys;
+        delete _mesh;
+        
+        delete _discipline;
+        delete _sys_init;
+        
+        delete _level_set_function;
+        delete _level_set_vel;
+        delete _level_set_sys_init;
+        delete _indicator_sys_init;
+        delete _indicator_discipline;
+        delete _level_set_discipline;
+        delete _filter;
+        delete _level_set_eq_sys;
+        delete _level_set_mesh;
+        delete _output;
+        delete _level_set_sys_init_on_str_mesh;
+        
+        for (unsigned int i=0; i<_dv_params.size(); i++)
+            delete _dv_params[i].second;
+    }
+    
+
 };
 
+
+//
+//   \subsection wrappers_snopt  Wrappers for SNOPT
+//
 
 TopologyOptimizationLevelSet2D* _my_func_eval = nullptr;
 
@@ -2043,11 +2183,14 @@ _optim_obj(int*    mode,
            double* g,
            int*    nstate) {
 
-
+    //
     // make sure that the global variable has been setup
+    //
     libmesh_assert(_my_func_eval);
 
+    //
     // initialize the local variables
+    //
     Real
     obj = 0.;
 
@@ -2066,8 +2209,10 @@ _optim_obj(int*    mode,
     std::vector<bool>
     eval_grads(n_con);
     std::fill(eval_grads.begin(), eval_grads.end(), false);
-
+    
+    //
     // copy the dvars
+    //
     for (unsigned int i=0; i<n_vars; i++)
         dvars[i] = x[i];
 
@@ -2080,8 +2225,9 @@ _optim_obj(int*    mode,
                                      eval_grads,
                                      grads);
 
-
+    //
     // now copy them back as necessary
+    //
     *f  = obj;
     if (*mode > 0) {
         for (unsigned int i=0; i<n_vars; i++)
@@ -2107,11 +2253,14 @@ _optim_con(int*    mode,
            double* cJac,
            int*    nstate) {
 
-
+    //
     // make sure that the global variable has been setup
+    //
     libmesh_assert(_my_func_eval);
 
+    //
     // initialize the local variables
+    //
     Real
     obj = 0.;
 
@@ -2132,7 +2281,9 @@ _optim_con(int*    mode,
     eval_grads(n_con);
     std::fill(eval_grads.begin(), eval_grads.end(), *mode>0);
 
+    //
     // copy the dvars
+    //
     for (unsigned int i=0; i<n_vars; i++)
         dvars[i] = x[i];
 
@@ -2145,15 +2296,18 @@ _optim_con(int*    mode,
                                      eval_grads,
                                      grads);
 
-
+    //
     // now copy them back as necessary
-
+    //
     // first the constraint functions
+    //
     for (unsigned int i=0; i<n_con; i++)
         c[i] = fvals[i];
 
     if (*mode > 0) {
+        //
         // next, the constraint gradients
+        //
         for (unsigned int i=0; i<n_con*n_vars; i++)
             cJac[i] = grads[i];
     }
@@ -2162,6 +2316,9 @@ _optim_con(int*    mode,
 }
 #endif
 
+//
+//   \subsection main Main function
+//
 
 int main(int argc, char* argv[]) {
 
