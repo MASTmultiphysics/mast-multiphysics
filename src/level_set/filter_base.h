@@ -49,10 +49,13 @@ namespace MAST {
         /*!
          *   computes the filtered output from the provided input.
          */
-        template <typename ValType>
-        void compute_filtered_values(const ValType& input,
-                                     ValType& output) const;
-    
+        void compute_filtered_values(const libMesh::NumericVector<Real>& input,
+                                     libMesh::NumericVector<Real>& output) const;
+
+        
+        void compute_filtered_values(const std::vector<Real>& input,
+                                     std::vector<Real>& output) const;
+
     protected:
         
         /*!

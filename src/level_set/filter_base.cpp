@@ -45,11 +45,9 @@ MAST::FilterBase::~FilterBase() {
 }
 
 
-template <>
 void
-MAST::FilterBase::
-compute_filtered_values<libMesh::NumericVector<Real>>(const libMesh::NumericVector<Real>& input,
-                                                      libMesh::NumericVector<Real>& output) const {
+MAST::FilterBase::compute_filtered_values(const libMesh::NumericVector<Real>& input,
+                                          libMesh::NumericVector<Real>& output) const {
     
     libmesh_assert_equal_to(input.size(), _filter_map.size());
     libmesh_assert_equal_to(output.size(), _filter_map.size());
@@ -87,11 +85,9 @@ compute_filtered_values<libMesh::NumericVector<Real>>(const libMesh::NumericVect
 
 
 
-template <>
 void
-MAST::FilterBase::
-compute_filtered_values<std::vector<Real>>(const std::vector<Real>& input,
-                                           std::vector<Real>& output) const {
+MAST::FilterBase::compute_filtered_values(const std::vector<Real>& input,
+                                          std::vector<Real>& output) const {
     
     libmesh_assert_equal_to(input.size(), _filter_map.size());
     libmesh_assert_equal_to(output.size(), _filter_map.size());

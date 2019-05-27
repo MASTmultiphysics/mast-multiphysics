@@ -36,14 +36,14 @@ namespace MAST {
     
     /*!
      *    the equation set is:
-     *    \f[
-     *        \left\{ \begin{array}{c} f(x, p) \\ g(x, p) \end{array} \right\}
-     *         = \left\{ \begin{array}{c} 0 \\ 0 \end{array} \right\}
-     *     \f]
+     *    \f$
+     *        \left\{ \begin{array}{c} f(x, p) \\ g(x, p) \end{array} \right\} =
+     *        \left\{ \begin{array}{c} 0       \\ 0       \end{array} \right\}
+     *     \f$
      *    the N-R updates are calculated such that
      *    \f[
      *         \left[ \begin{array}{cc}
-     *            df/dx & df/dp \\ [ dg/dx    dg/dp ] \end{array}\right]
+     *            df/dx & df/dp \\ dg/dx  &  dg/dp \end{array}\right]
      *          \left\{ \begin{array}{c} dx \\ dp \end{array} \right\}  =
      *          - \left\{ \begin{array}{c} f(x0, p0) \\ g(x0, p0) \end{array} \right\}
      *    \f]
@@ -118,7 +118,7 @@ namespace MAST {
          *   solves for the linear system of equation.
          *    \f[
          *         \left[ \begin{array}{cc}
-         *            df/dx & df/dp \\ [ dg/dx    dg/dp ] \end{array}\right]
+         *            df/dx & df/dp \\ dg/dx  &  dg/dp \end{array}\right]
          *          \left\{ \begin{array}{c} dx \\ dp \end{array} \right\}  =
          *          - \left\{ \begin{array}{c} f \\ g \end{array} \right\}
          *    \f]
