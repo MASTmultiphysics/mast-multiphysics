@@ -22,7 +22,6 @@
 #include "property_cards/material_property_card_base.h"
 #include "base/field_function_base.h"
 #include "base/elem_base.h"
-#include "mesh/local_elem_base.h"
 
 
 namespace MAST {

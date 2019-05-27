@@ -1,1 +1,0 @@
-# MAST Documentation (and Website)

@@ -23,6 +23,7 @@
 #include "elasticity/stress_output_base.h"
 #include "elasticity/structural_system_initialization.h"
 #include "base/nonlinear_system.h"
+#include "mesh/geom_elem.h"
 
 // libMesh includes
 #include "libmesh/system.h"
@@ -160,7 +161,11 @@ update_stress_strain_data(MAST::StressStrainOutputBase&       ops,
         
         // clear before calculating the data
         ops.clear();
-        ops.init(*elem);
+        MAST::GeomElem geom_elem;
+        ops.set_elem_data(elem->dim(), geom_elem);
+        geom_elem.init(*elem, *_system);
+        
+        ops.init(geom_elem);
         ops.set_elem_solution(sol);
         ops.evaluate();
         ops.clear_elem();
@@ -292,7 +297,11 @@ update_stress_strain_sensitivity_data(MAST::StressStrainOutputBase&       ops,
         // before calculating sensitivity since the sensitivity assumes the
         // presence of stress data, which is cleared after each element.
         ops.clear();
-        ops.init(*elem);
+        MAST::GeomElem geom_elem;
+        ops.set_elem_data(elem->dim(), geom_elem);
+        geom_elem.init(*elem, *_system);
+        
+        ops.init(geom_elem);
         ops.set_stress_plot_mode(true);
         ops.set_elem_solution(sol);
         ops.set_elem_solution_sensitivity(dsol);

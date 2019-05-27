@@ -287,6 +287,53 @@ calculate_diffusion_tensors(const RealVectorX& elem_sol,
 
 
 
+void
+MAST::FluidElemBase::
+calculate_diffusion_tensors_sensitivity(const RealVectorX& elem_sol,
+                                        const RealVectorX& elem_sol_sens,
+                                        const std::vector<MAST::FEMOperatorMatrix>& dB_mat,
+                                        const RealMatrixX& dprim_dcons,
+                                        const MAST::PrimitiveSolution& psol,
+                                        const MAST::SmallPerturbationPrimitiveSolution<Real>& dsol,
+                                        RealMatrixX& stress_tensor_sens,
+                                        RealVectorX& temp_gradient_sens) {
+    
+    const unsigned int n1 = dim+2;
+    
+    RealVectorX
+    dprim_dx               = RealVectorX::Zero(n1),
+    dcons_dx               = RealVectorX::Zero(n1),
+    dprim_sens_dx          = RealVectorX::Zero(n1),
+    dcons_sens_dx          = RealVectorX::Zero(n1);
+    
+    stress_tensor_sens.setZero();
+    temp_gradient_sens.setZero();
+    
+    for (unsigned int i_dim=0; i_dim<dim; i_dim++) {
+        
+        dB_mat[i_dim].vector_mult(dcons_dx, elem_sol); // dUcons/dx_i
+        dprim_dx = dprim_dcons * dcons_dx; // dUprim/dx_i
+
+        dB_mat[i_dim].vector_mult(dcons_sens_dx, elem_sol_sens); // dUcons/dx_i
+        dprim_sens_dx = dprim_dcons * dcons_sens_dx; // dUprim/dx_i
+        
+        for (unsigned int j_dim=0; j_dim<dim; j_dim++) {
+            
+            stress_tensor_sens(i_dim, j_dim) += (dsol.dmu * dprim_dx(j_dim+1) +
+                                                 psol.mu  * dprim_sens_dx(j_dim+1)); // mu * duj/dxi
+            stress_tensor_sens(j_dim, i_dim) += (dsol.dmu * dprim_dx(j_dim+1) +
+                                                 psol.mu  * dprim_sens_dx(j_dim+1)); // mu * dui/dxj
+            
+            stress_tensor_sens(j_dim, j_dim) += (dsol.dlambda * dprim_dx(i_dim+1) +
+                                                 psol.lambda * dprim_sens_dx(i_dim+1));  // + delta_ij lambda duk/dxk
+        }
+        
+        temp_gradient_sens(i_dim) = dprim_sens_dx(n1-1); // dT/dx_i
+    }
+}
+
+
+
 
 void
 MAST::FluidElemBase::
@@ -520,6 +567,190 @@ calculate_advection_flux_jacobian(const unsigned int calculate_dim,
 }
 
 
+
+
+
+void
+MAST::FluidElemBase::
+calculate_diffusion_flux_jacobian_primitive_vars (const unsigned int flux_dim,
+                                                  const unsigned int deriv_dim,
+                                                  const RealVectorX& uvec,
+                                                  const bool zero_kth,
+                                                  const MAST::PrimitiveSolution& sol,
+                                                  RealMatrixX& mat) {
+    
+    const unsigned int n1 = 2 + dim;
+    
+    mat.setZero();
+    
+    const Real
+    u1 = uvec(0),
+    u2 = dim>1?uvec(1):0.,
+    u3 = dim>2?uvec(2):0.,
+    mu = sol.mu,
+    lambda = sol.lambda,
+    kth = zero_kth?0.:sol.k_thermal;
+    
+    switch (flux_dim)
+    {
+        case 0:
+        {
+            switch (deriv_dim)
+            {
+                case 0: // K11
+                {
+                    switch (dim)
+                    {
+                        case 3:
+                        {
+                            mat(3,3) = mu;
+                            
+                            mat(n1-1,3) = u3*mu;
+                        }
+                            
+                        case 2:
+                        {
+                            mat(2,2) = mu;
+                            
+                            mat(n1-1,2) = u2*mu;
+                        }
+                            
+                        case 1:
+                        {
+                            mat(1,1) = (lambda+2.*mu);
+                            
+                            mat(n1-1,1) = u1*(lambda+2.*mu);
+                            mat(n1-1,n1-1) = kth;
+                        }
+                    }
+                }
+                    break;
+                    
+                case 1: // K12
+                {
+                    mat(1,2) = lambda;
+                    
+                    mat(2,1) = mu;
+                    
+                    mat(n1-1,1) = u2*mu;
+                    mat(n1-1,2) = u1*lambda;
+                }
+                    break;
+                    
+                case 2: // K13
+                {
+                    mat(1,3) = lambda;
+                    
+                    mat(3,1) = mu;
+                    
+                    mat(n1-1,1) = u3*mu;
+                    mat(n1-1,3) = u1*lambda;
+                }
+                    break;
+            }
+        }
+            break;
+            
+        case 1:
+        {
+            switch (deriv_dim)
+            {
+                case 0: // K21
+                {
+                    mat(1,2) = mu;
+                    
+                    mat(2,1) = lambda;
+                    
+                    mat(n1-1,1) = u2*lambda;
+                    mat(n1-1,2) = u1*mu;
+                }
+                    break;
+                    
+                case 1: // K22
+                {
+                    switch (dim)
+                    {
+                        case 3:
+                        {
+                            mat(3,3) = mu;
+                            
+                            mat(n1-1,3) = u3*mu;
+                        }
+                            
+                        case 2:
+                        case 1:
+                        {
+                            mat(1,1) = mu;
+                            
+                            mat(2,2) = (lambda+2.*mu);
+                            
+                            mat(n1-1,1) = u1*mu;
+                            mat(n1-1,2) = u2*(lambda+2.*mu);
+                            mat(n1-1,n1-1) = kth;
+                        }
+                    }
+                }
+                    break;
+                    
+                case 2: // K23
+                {
+                    mat(2,3) = lambda;
+                    
+                    mat(3,2) = mu;
+                    
+                    mat(n1-1,2) = u3*mu;
+                    mat(n1-1,3) = u2*lambda;
+                }
+                    break;
+            }
+        }
+            break;
+            
+        case 2:
+        {
+            switch (deriv_dim)
+            {
+                case 0: // K31
+                {
+                    mat(1,3) = mu;
+                    
+                    mat(3,1) = lambda;
+                    
+                    mat(n1-1,1) = u3*lambda;
+                    mat(n1-1,3) = u1*mu;
+                }
+                    break;
+                    
+                case 1: // K32
+                {
+                    mat(2,3) = mu;
+                    
+                    mat(3,2) = lambda;
+                    
+                    mat(n1-1,2) = u3*lambda;
+                    mat(n1-1,3) = u2*mu;
+                }
+                    break;
+                    
+                case 2: // K33
+                {
+                    mat(1,1) = mu;
+                    
+                    mat(2,2) = mu;
+                    
+                    mat(3,3) = (lambda+2.*mu);
+                    
+                    mat(n1-1,1) = u1*mu;
+                    mat(n1-1,2) = u2*mu;
+                    mat(n1-1,3) = u3*(lambda+2.*mu);
+                    mat(n1-1,n1-1) = kth;
+                }
+                    break;
+            }
+        }
+            break;
+    }
+}
 
 
 

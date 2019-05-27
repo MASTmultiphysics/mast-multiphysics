@@ -94,10 +94,15 @@ namespace MAST {
         virtual void
         elem_topology_sensitivity_calculations(const MAST::FunctionBase& f,
                                                bool base_sol,
-                                               const MAST::LevelSetIntersection& intersect,
                                                const MAST::FieldFunction<RealVectorX>& vel,
                                                RealMatrixX& mat_A,
                                                RealMatrixX& mat_B);
+
+        /*!
+         *   sets the structural element y-vector if 1D element is used.
+         */
+        virtual void
+        set_elem_data(unsigned int dim, MAST::GeomElem& elem) const;
 
         /*!
          *   initializes the object for the geometric element \p elem. This
@@ -105,7 +110,7 @@ namespace MAST {
          *   call \p clear_elem() between successive initializations.
          */
         virtual void
-        init(const libMesh::Elem& elem);
+        init(const MAST::GeomElem& elem);
 
     protected:
         

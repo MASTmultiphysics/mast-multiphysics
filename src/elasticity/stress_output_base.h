@@ -263,9 +263,16 @@ namespace MAST {
          
         
         /*!
+         *   sets the structural element y-vector if 1D element is used.
+         */
+        virtual void
+        set_elem_data(unsigned int dim,
+                      MAST::GeomElem& elem) const;
+
+        /*!
          *   initialize for the element.
          */
-        virtual void init(const libMesh::Elem& elem);
+        virtual void init(const MAST::GeomElem& elem);
 
         /*!
          *   zeroes the output quantity values stored inside this object
@@ -325,7 +332,6 @@ namespace MAST {
          */
         virtual void
         evaluate_topology_sensitivity(const MAST::FunctionBase& f,
-                                      const MAST::LevelSetIntersection& intersect,
                                       const MAST::FieldFunction<RealVectorX>& vel);
         
         /*!
@@ -394,7 +400,7 @@ namespace MAST {
          *   present.
          */
         MAST::BoundaryConditionBase*
-        get_thermal_load_for_elem(const libMesh::Elem& elem);
+        get_thermal_load_for_elem(const MAST::GeomElem& elem);
 
         
         /*!
@@ -402,7 +408,7 @@ namespace MAST {
          *   stored for the given element.
          */
         unsigned int
-        n_stress_strain_data_for_elem(const libMesh::Elem* e) const;
+        n_stress_strain_data_for_elem(const MAST::GeomElem& e) const;
 
         
         /*!
@@ -410,7 +416,7 @@ namespace MAST {
          *   stored for the boundary of element.
          */
         unsigned int
-        n_boundary_stress_strain_data_for_elem(const libMesh::Elem* e) const;
+        n_boundary_stress_strain_data_for_elem(const GeomElem& e) const;
 
         
         
@@ -419,7 +425,7 @@ namespace MAST {
          *   to \p Data.
          */
         virtual MAST::StressStrainOutputBase::Data&
-        add_stress_strain_at_qp_location(const libMesh::Elem* e,
+        add_stress_strain_at_qp_location(const MAST::GeomElem& e,
                                          const unsigned int qp,
                                          const libMesh::Point& quadrature_pt,
                                          const libMesh::Point& physical_pt,
@@ -433,7 +439,7 @@ namespace MAST {
          *   element \p e. @returns a reference to \p Data.
          */
         virtual MAST::StressStrainOutputBase::Data&
-        add_stress_strain_at_boundary_qp_location(const libMesh::Elem* e,
+        add_stress_strain_at_boundary_qp_location(const MAST::GeomElem& e,
                                                   const unsigned int s,
                                                   const unsigned int qp,
                                                   const libMesh::Point& quadrature_pt,
@@ -456,7 +462,7 @@ namespace MAST {
          *    @returns the vector of stress/strain data for specified elem.
          */
         virtual const std::vector<MAST::StressStrainOutputBase::Data*>&
-        get_stress_strain_data_for_elem(const libMesh::Elem* e) const;
+        get_stress_strain_data_for_elem(const MAST::GeomElem& e) const;
 
         
         /*!
@@ -464,7 +470,7 @@ namespace MAST {
          *    the specified quadrature point.
          */
         virtual MAST::StressStrainOutputBase::Data&
-        get_stress_strain_data_for_elem_at_qp(const libMesh::Elem* e,
+        get_stress_strain_data_for_elem_at_qp(const MAST::GeomElem& e,
                                               const unsigned int qp);
 
         
@@ -549,7 +555,7 @@ namespace MAST {
          *    d\Omega \f]
          */
         void von_Mises_p_norm_functional_state_derivartive_for_elem
-        (const libMesh::Elem& e,
+        (const libMesh::dof_id_type e_id,
          RealVectorX& dq_dX) const;
 
         

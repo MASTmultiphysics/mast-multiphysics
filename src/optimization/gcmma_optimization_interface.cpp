@@ -25,8 +25,11 @@
 
 MAST::GCMMAOptimizationInterface::GCMMAOptimizationInterface():
 MAST::OptimizationInterface(),
-_constr_penalty  (5.e1),
-_max_inner_iters (15)   {
+_constr_penalty       (5.e1),
+_initial_rel_step     (5.e-1),
+_asymptote_reduction  (0.7),
+_asymptote_expansion  (1.2),
+_max_inner_iters      (15)   {
     
 #if MAST_ENABLE_GCMMA == 0
     libmesh_error_msg("MAST configured without GCMMA support.");
@@ -42,6 +45,24 @@ MAST::GCMMAOptimizationInterface::set_real_parameter(const std::string &nm, Real
         libmesh_assert_greater(val, 0.);
         
         _constr_penalty = val;
+    }
+    else if (nm == "initial_rel_step") {
+        
+        libmesh_assert_greater(val, 0.);
+        
+        _initial_rel_step = val;
+    }
+    else if (nm == "asymptote_reduction") {
+        
+        libmesh_assert_greater(val, 0.);
+        
+        _asymptote_reduction = val;
+    }
+    else if (nm == "asymptote_expansion") {
+        
+        libmesh_assert_greater(val, 0.);
+        
+        _asymptote_expansion = val;
     }
     else
         libMesh::out
@@ -93,9 +114,9 @@ MAST::GCMMAOptimizationInterface::optimize() {
     
     Real
     ALBEFA  = 0.1,
-    GHINIT  = 0.5,
-    GHDECR  = 0.7,
-    GHINCR  = 1.2,
+    GHINIT  = _initial_rel_step,
+    GHDECR  = _asymptote_reduction,
+    GHINCR  = _asymptote_expansion,
     F0VAL   = 0.,
     F0NEW   = 0.,
     F0APP   = 0.,
@@ -187,7 +208,6 @@ MAST::GCMMAOptimizationInterface::optimize() {
     for (unsigned int i=0; i<N; i++)
         if (max_x < fabs(XVAL[i]))
             max_x = fabs(XVAL[i]);
-    std::fill(C.begin(), C.end(), std::max(1.e0*max_x, _constr_penalty));
     
     int INNMAX=_max_inner_iters, ITER=0, ITE=0, INNER=0, ICONSE=0;
     /*
@@ -196,6 +216,11 @@ MAST::GCMMAOptimizationInterface::optimize() {
     bool terminate = false, inner_terminate=false;
     while (!terminate) {
         
+        std::fill(C.begin(), C.end(), std::max(1.e0*max_x, _constr_penalty));
+        GHINIT  = _initial_rel_step,
+        GHDECR  = _asymptote_reduction,
+        GHINCR  = _asymptote_expansion,
+
         ITER=ITER+1;
         ITE=ITE+1;
         /*
@@ -245,6 +270,27 @@ MAST::GCMMAOptimizationInterface::optimize() {
                                       F0NEW, false, DF0DX,
                                       FNEW, eval_grads, DFDX);
             
+            ///////////////////////////////////////////////////////////////
+            // if the solution is poor, backtrack
+            std::vector<Real> XMMA_new(XMMA);
+            Real frac = 0.02;
+            while (FNEW[0] > 1.e2) {
+                libMesh::out << "*** Backtracking: frac = "
+                << frac
+                << "  constr: " << FNEW[0]
+                << std::endl;
+                for (unsigned int i=0; i<XMMA.size(); i++)
+                    XMMA_new[i] = XOLD1[i] + frac*(XMMA[i]-XOLD1[i]);
+                
+                _feval->_evaluate_wrapper(XMMA_new,
+                                          F0NEW, false, DF0DX,
+                                          FNEW, eval_grads, DFDX);
+                frac *= frac;
+            }
+            for (unsigned int i=0; i<XMMA.size(); i++)
+                XMMA[i] = XMMA_new[i];
+            ///////////////////////////////////////////////////////////////
+
             if (INNER >= INNMAX) {
                 libMesh::out
                 << "** Max Inner Iter Reached: Terminating! Inner Iter = "

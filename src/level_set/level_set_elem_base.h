@@ -28,7 +28,6 @@ namespace MAST {
     
     // Forward declerations
     class ElementPropertyCardBase;
-    class LocalElemBase;
     class BoundaryConditionBase;
     class FEMOperatorMatrix;
     template <typename ValType> class FieldFunction;
@@ -43,7 +42,7 @@ namespace MAST {
          */
         LevelSetElementBase(MAST::SystemInitialization&             sys,
                             MAST::AssemblyBase&                     assembly,
-                            const libMesh::Elem&                    elem);
+                            const MAST::GeomElem&                   elem);
         
         
         virtual ~LevelSetElementBase();
@@ -150,6 +149,30 @@ namespace MAST {
         Real
         volume();
 
+        /*!
+         *   Approximates the integral of the Dirac delta function to approximate
+         *   the perimeter. The approximation of Dirac delta function is obtained
+         *   from the derivative of an approximation to the Heaviside function
+         *   \f[ H_d(\phi) \approx \frac{1}{2} \left( 1 + \frac{2}{\pi} \arctan(\phi/d) \right).  \f]
+         *   Then, the derivative defines the Dirac delta function
+         *   \f[ \delta_d(\phi) = \frac{dH_d(\phi)}{d\phi} = \frac{1}{\pi d} \frac{1}{1+(\phi/d)^2} .  \f]
+         *   Sensitivity analysis requires the derivative of this function with
+         *   respect to a variable, which is expressed as
+         *   \f[ \frac{d\delta_d(\phi)}{d\alpha} = \frac{-2 \phi}{\pi d^3} \frac{1}{\left(1+(\phi/d)^2\right)^2} \frac{d\phi}{d\alpha}.  \f]
+         *
+         *   @returns the computed integral of \f$ \delta_d(\phi) \f$
+         */
+        Real
+        perimeter();
+
+        /*!
+         *   computes the partial derivative of the integral of the Dirac
+         *   delta function using the solution and sensitivity solution
+         *   set for this element. 
+         */
+        Real
+        perimeter_sensitivity();
+
         
         /*!
          *   @returns the contribution of the side to
@@ -158,8 +181,7 @@ namespace MAST {
          */
         Real
         volume_boundary_velocity_on_side(unsigned int s);
-        
-        
+
     protected:
 
         /*!
@@ -176,7 +198,8 @@ namespace MAST {
         /*!
          *   initializes the tau operator
          */
-        void _tau(unsigned int qp,
+        void _tau(const MAST::FEBase& fe,
+                  unsigned int qp,
                   const MAST::FEMOperatorMatrix& Bmat,
                   const std::vector<MAST::FEMOperatorMatrix>& dBmat,
                   const RealVectorX& vel,
@@ -186,13 +209,16 @@ namespace MAST {
         
         
         void
-        _dc_operator(const unsigned int qp,
+        _dc_operator(const MAST::FEBase& fe,
+                     const unsigned int qp,
                      const std::vector<MAST::FEMOperatorMatrix>& dB_mat,
                      const RealVectorX& vel,
                      Real& dc);
         
         void
-        _calculate_dxidX (const unsigned int qp, RealMatrixX& dxi_dX);
+        _calculate_dxidX (const MAST::FEBase& fe,
+                          const unsigned int qp,
+                          RealMatrixX& dxi_dX);
         
         /*!
          *    When \p mass = false, initializes the FEM operator matrix to the

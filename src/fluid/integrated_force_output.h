@@ -36,9 +36,16 @@ namespace MAST {
         virtual ~IntegratedForceOutput();
         
         /*!
+         *   virtual function, nothing to be done for fluids
+         */
+        virtual void
+        set_elem_data(unsigned int dim,
+                      MAST::GeomElem& elem) const {}
+
+        /*!
          *   initialize for the element.
          */
-        virtual void init(const libMesh::Elem& elem);
+        virtual void init(const MAST::GeomElem& elem);
 
         /*!
          *   zeroes the output quantity values stored inside this object
@@ -93,9 +100,7 @@ namespace MAST {
          *    respect to parameter \f$ p \f$. This returns the quantity
          *   accumulated over all elements.
          */
-        virtual Real output_sensitivity_total(const MAST::FunctionBase& p) {
-            libmesh_error(); // not yet implemented
-        }
+        virtual Real output_sensitivity_total(const MAST::FunctionBase& p);
         
         
         /*!
@@ -126,9 +131,7 @@ namespace MAST {
          *    This is only done on the current element for which this
          *    object has been initialized.
          */
-        virtual void evaluate_sensitivity(const MAST::FunctionBase& f) {
-            libmesh_error(); // not yet implemented
-        }
+        virtual void evaluate_sensitivity(const MAST::FunctionBase& p);
         
         /*!
          *    this evaluates all relevant shape sensitivity components on
@@ -148,7 +151,6 @@ namespace MAST {
          */
         virtual void
         evaluate_topology_sensitivity(const MAST::FunctionBase& f,
-                                      const MAST::LevelSetIntersection& intersect,
                                       const MAST::FieldFunction<RealVectorX>& vel) {
             libmesh_error(); // not yet implemented
         }
@@ -165,6 +167,11 @@ namespace MAST {
          *    integrated value of the force
          */
         Real            _force;
+
+        /*!
+         *    integrated value of the sensitivity of force
+         */
+        Real            _force_sens;
     };
 }
 

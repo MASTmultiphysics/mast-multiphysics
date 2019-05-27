@@ -40,7 +40,7 @@ namespace MAST {
     public:
         StructuralElement1D(MAST::SystemInitialization& sys,
                             MAST::AssemblyBase& assembly,
-                            const libMesh::Elem& elem,
+                            const MAST::GeomElem& elem,
                             const MAST::ElementPropertyCardBase& p);
         
         
@@ -357,8 +357,7 @@ namespace MAST {
          *   matrices. The temperature vector and matrix entities are provided for
          *   integration
          */
-        virtual void _internal_residual_operation(bool if_bending,
-                                                  bool if_vk,
+        virtual void _internal_residual_operation(bool if_vk,
                                                   const unsigned int n2,
                                                   const unsigned int qp,
                                                   const MAST::FEBase& fe,
@@ -366,6 +365,7 @@ namespace MAST {
                                                   bool request_jacobian,
                                                   RealVectorX& local_f,
                                                   RealMatrixX& local_jac,
+                                                  MAST::BendingOperator1D* bend_op,
                                                   MAST::FEMOperatorMatrix& Bmat_mem,
                                                   MAST::FEMOperatorMatrix& Bmat_bend_v,
                                                   MAST::FEMOperatorMatrix& Bmat_bend_w,
@@ -401,13 +401,6 @@ namespace MAST {
          */
         void _convert_prestress_B_mat_to_vector(const RealMatrixX& mat,
                                                 RealVectorX& vec) const;
-
-        
-        /*!
-         *    bending operator used for this elmeent
-         */
-        MAST::BendingOperator1D *_bending_operator;
-        
 
     };
 }

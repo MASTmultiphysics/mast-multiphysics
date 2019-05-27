@@ -138,8 +138,8 @@ MAST::MaterialPatch::_quad4_material_levels(const libMesh::Elem& elem,
         
         const libMesh::Elem& e = **e_it;
         //MAST::plot_elem(e);
-        // currently only implemented for quad4 elements
-        libmesh_assert_equal_to(e.type(), libMesh::QUAD4);
+        // currently only implemented for quad4 and quad9 elements
+        libmesh_assert((e.type() == libMesh::QUAD4) || (e.type() == libMesh::QUAD9));
         
         const libMesh::Point
         p = e.centroid() - node;
@@ -160,6 +160,11 @@ MAST::MaterialPatch::_quad4_material_levels(const libMesh::Elem& elem,
             libmesh_error(); // shoudl not get here for quads.
     }
 
+    // make sure all four elements were found
+    for (unsigned int i=0; i<patch_elems.size(); i++) {
+        libmesh_assert(patch_elems[i]);
+    }
+    
     // now identify the nodes on the outer periphery of the patch
     // starting with node 0 of the element in the third quadrant.
     unsigned int
@@ -171,24 +176,56 @@ MAST::MaterialPatch::_quad4_material_levels(const libMesh::Elem& elem,
     periphery_nodes;
     periphery_nodes.reserve(n_periphery_nodes);
 
-    if (patch_elems[0]) {
-        periphery_nodes.push_back(patch_elems[0]->node_ptr(0));
-        periphery_nodes.push_back(patch_elems[0]->node_ptr(1));
-    }
-    if (patch_elems[1]) {
-        periphery_nodes.push_back(patch_elems[1]->node_ptr(1));
-        periphery_nodes.push_back(patch_elems[1]->node_ptr(2));
-    }
-    if (patch_elems[2]) {
-        periphery_nodes.push_back(patch_elems[2]->node_ptr(2));
-        periphery_nodes.push_back(patch_elems[2]->node_ptr(3));
-    }
-    if (patch_elems[3]) {
-        periphery_nodes.push_back(patch_elems[3]->node_ptr(3));
-        periphery_nodes.push_back(patch_elems[3]->node_ptr(0));
-    }
+    libMesh::Point
+    p1, p2;
     
+    // bottom-left corner
+    periphery_nodes.push_back(patch_elems[0]->node_ptr(0));
+
+    // bottom
+    p1 = patch_elems[0]->point(1) - node;
+    p2 = patch_elems[1]->point(0) - node;
+    if (p1.norm() < p2.norm())
+        periphery_nodes.push_back(patch_elems[0]->node_ptr(1));
+    else
+        periphery_nodes.push_back(patch_elems[1]->node_ptr(0));
+
+    // bottom-right corner
+    periphery_nodes.push_back(patch_elems[1]->node_ptr(1));
+
+    // right
+    p1 = patch_elems[1]->point(2) - node;
+    p2 = patch_elems[2]->point(1) - node;
+    if (p1.norm() < p2.norm())
+        periphery_nodes.push_back(patch_elems[1]->node_ptr(2));
+    else
+        periphery_nodes.push_back(patch_elems[2]->node_ptr(1));
+    
+    // top-right corner
+    periphery_nodes.push_back(patch_elems[2]->node_ptr(2));
+    
+    // top
+    p1 = patch_elems[2]->point(3) - node;
+    p2 = patch_elems[3]->point(2) - node;
+    if (p1.norm() < p2.norm())
+        periphery_nodes.push_back(patch_elems[2]->node_ptr(3));
+    else
+        periphery_nodes.push_back(patch_elems[3]->node_ptr(2));
+    
+    // top left corner
+    periphery_nodes.push_back(patch_elems[3]->node_ptr(3));
+    
+    // left
+    p1 = patch_elems[3]->point(0) - node;
+    p2 = patch_elems[0]->point(3) - node;
+    if (p1.norm() < p2.norm())
+        periphery_nodes.push_back(patch_elems[3]->node_ptr(0));
+    else
+        periphery_nodes.push_back(patch_elems[0]->node_ptr(3));
+
     n_periphery_nodes = periphery_nodes.size();
+    
+    libmesh_assert_equal_to(n_periphery_nodes, 8);
     
     // now, look at the number of sign changes across this periphery nodes
     // It should be an even number nad the number of levels is half the
@@ -204,7 +241,7 @@ MAST::MaterialPatch::_quad4_material_levels(const libMesh::Elem& elem,
         
         phi(*periphery_nodes[(i+1)%n_periphery_nodes], t, v2);
         
-        if (v1 * v2 < 0.)
+        if ((v1  < 0. && v2 >= 0.) || (v1 >= 0. && v2  < 0.))
             n_sign_changes++;
 
         v1 = v2;

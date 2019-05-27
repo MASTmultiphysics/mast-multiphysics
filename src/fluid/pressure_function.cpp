@@ -137,7 +137,7 @@ operator() (const libMesh::Point& p,
                sol,
                _flt_cond.gas_property.cp,
                _flt_cond.gas_property.cv,
-               false);
+               _flt_cond.gas_property.if_viscous);
     
     if (_if_cp)
         press     = p_sol.c_pressure(_flt_cond.p0(), _flt_cond.q0());
@@ -189,9 +189,10 @@ perturbation(const libMesh::Point& p,
                sol,
                _flt_cond.gas_property.cp,
                _flt_cond.gas_property.cv,
-               false);
+               _flt_cond.gas_property.if_viscous);
     delta_p_sol.init(p_sol,
-                     dsol);
+                     dsol,
+                     _flt_cond.gas_property.if_viscous);
     
     if (_if_cp)
         dpress    = delta_p_sol.c_pressure(_flt_cond.q0());

@@ -24,15 +24,53 @@
 
 extern "C" {
     
-    extern void npsol_(int*    N,
-                       int*    NCLIN,
-                       int*    NCNLN,
-                       int*    LDA,
-                       int*    LDJ,
-                       int*    LDR,
+    extern void sninit_(int* iPrint,
+                        int* iSumm,
+                        const char* cw,
+                        int* lencw,
+                        int* iw,
+                        int* leniw,
+                        double* rw,
+                        int* lenrw);
+
+    extern void sninitf_(const char* printfile,
+                         const char* summary_file,
+                         int* iPrint,
+                         int* iSumm,
+                         const char* cw,
+                         int* lencw,
+                         int* iw,
+                         int* leniw,
+                         double* rw,
+                         int* lenrw);
+
+    extern void snspec_(int* iSpecs,
+                        int* INFO,
+                        const char* cw,
+                        int* lencw,
+                        int* iw,
+                        int* leniw,
+                        double* rw,
+                        int* lenrw);
+
+    extern void snspecf_(const char* specsfile,
+                         int* INFO,
+                         const char* cw,
+                         int* lencw,
+                         int* iw,
+                         int* leniw,
+                         double* rw,
+                         int* lenrw);
+
+    extern void npopt_(int*    n,
+                       int*    nclin,
+                       int*    ncnln,
+                       int*    ldA,
+                       int*    ldgg,
+                       int*    ldH,
                        double* A,
-                       double* BL,
-                       double* BU,
+                       double* bl,
+                       double* bu,
                        void    (*)(int*    mode,
                                    int*    ncnln,
                                    int*    n,
@@ -48,20 +86,20 @@ extern "C" {
                                    double* f,
                                    double* g,
                                    int*    nstate),
-                       int*    INFORM,
-                       int*    ITER,
-                       int*    ISTATE,
-                       double* C,
-                       double* CJAC,
-                       double* CLAMBDA,
-                       double* F,
-                       double* G,
-                       double* R,
-                       double* X,
-                       int*    IW,
-                       int*    LENIW,
-                       double* W,
-                       int*    LENW);
+                       int*    INFO,
+                       int*    majIts,
+                       int*    iState,
+                       double* fCon,
+                       double* gCon,
+                       double* cMul,
+                       double* fObj,
+                       double* gObj,
+                       double* Hess,
+                       double* x,
+                       int*    iw,
+                       int*    leniw,
+                       double* re,
+                       int*    lenrw);
     
     extern void npoptn_(const char*, int );
 }
@@ -74,9 +112,58 @@ MAST::OptimizationInterface(),
 _funobj(nullptr),
 _funcon(nullptr) {
     
-#if MAST_ENABLE_NPSOL == 0
-    libmesh_error_msg("MAST configured without NPSOL support.");
+#if MAST_ENABLE_SNOPT == 0
+    libmesh_error_msg("MAST configured without SNOPT support.");
 #endif
+    
+    _exit_message[0] = "Finished successfully";
+    _exit_message[10] = " The problem appears to be infeasible 20 The problem appears to be unbounded 30 Resource limit error";
+    _exit_message[40] = " Terminated after numerical difficulties 50 Error in the user-supplied functions";
+    _exit_message[60] = " Undefined user-supplied functions";
+    _exit_message[70] = " User requested termination";
+    _exit_message[80] = " Insufficient storage allocated";
+    _exit_message[90] = " Input arguments out of range";
+    _exit_message[100] = " Finished successfully (associated with SNOPT auxiliary routines) 110 Errors while processing MPS data";
+    _exit_message[120] = " Errors while estimating Jacobian structure";
+    _exit_message[130] = " Errors while reading the Specs file";
+    _exit_message[140] = " System error";
+    
+    _info_message[1]   = "optimality conditions satisfied";
+    _info_message[2]   = "feasible point found";
+    _info_message[3]   = "requested accuracy could not be achieved";
+    _info_message[11]  = "infeasible linear constraints";
+    _info_message[12]  = "infeasible linear equality constraints";
+    _info_message[13]  = "nonlinear infeasibilities minimized";
+    _info_message[14]  = "linear infeasibilities minimized";
+    _info_message[15]  = "infeasible linear constraints in QP subproblem";
+    _info_message[16]  = "infeasible nonelastic constraints";
+    _info_message[21]  = "unbounded objective";
+    _info_message[22]  = "constraint violation limit reached";
+    _info_message[31]  = "iteration limit reached";
+    _info_message[32]  = "major iteration limit reached";
+    _info_message[33]  = "the superbasics limit is too small";
+    _info_message[41]  = "current point cannot be improved";
+    _info_message[42]  = "singular basis";
+    _info_message[43]  = "cannot satisfy the general constraints";
+    _info_message[44]  = "ill-conditioned null-space basis";
+    _info_message[51]  = "incorrect objective derivatives";
+    _info_message[52]  = "incorrect constraint derivatives";
+    _info_message[56]  = "irregular or badly scaled problem functions";
+    _info_message[61]  = "undefined function at the first feasible point";
+    _info_message[62]  = "undefined function at the initial point";
+    _info_message[63]  = "unable to proceed into undefined region";
+    _info_message[71]  = "terminated during function evaluation";
+    _info_message[72]  = "terminated during constraint evaluation";
+    _info_message[73]  = "terminated during objective evaluation";
+    _info_message[74]  = "terminated from monitor routine";
+    _info_message[81]  = "work arrays must have at least 500 elements";
+    _info_message[82]  = "not enough character storage";
+    _info_message[83]  = "not enough integer storage";
+    _info_message[84]  = "not enough real storage";
+    _info_message[91]  = "invalid input argument";
+    _info_message[92]  = "basis file dimensions do not match this problem";
+    _info_message[141] = "wrong number of basic variables";
+    _info_message[142] = "error in basis package";
 }
 
 
@@ -85,7 +172,7 @@ void
 MAST::NPSOLOptimizationInterface::
 attach_function_evaluation_object (MAST::FunctionEvaluation& feval) {
     
-#if MAST_ENABLE_NPSOL == 1
+#if MAST_ENABLE_SNOPT == 1
     MAST::OptimizationInterface::attach_function_evaluation_object(feval);
     
     // make sure that these pointers haven't already been provided
@@ -102,12 +189,18 @@ attach_function_evaluation_object (MAST::FunctionEvaluation& feval) {
 void
 MAST::NPSOLOptimizationInterface::optimize() {
     
-#if MAST_ENABLE_NPSOL == 1
+#if MAST_ENABLE_SNOPT == 1
     // make sure that functions have been provided
     libmesh_assert(_funobj);
     libmesh_assert(_funcon);
     
+    _feval->sanitize_parallel();
+
     int
+    iPrint = 9,
+    iSpec  = 4,
+    iSumm  = 6,
+    lencw  = 500,
     N      =  _feval->n_vars(),
     NCLIN  =  0,
     NCNLN  =  _feval->n_eq()+_feval->n_ineq(),
@@ -126,8 +219,8 @@ MAST::NPSOLOptimizationInterface::optimize() {
                            // 7 => function derivatives seem to be incorrect
                            // 9 => input parameter invalid
     ITER   = 0,            // iter count
-    LENIW  = 3*N + NCLIN + 2*NCNLN,
-    LENW   = 2*N*N + N*NCLIN + 2*N*NCNLN + 20*N + 11*NCLIN + 21*NCNLN;
+    LENIW  = std::max(200*(NCTOTL+N) ,1000),
+    LENW   = std::max(400*(NCTOTL+N), 1000);
     
     Real
     F      =  0.;          // on exit: final objective
@@ -162,7 +255,7 @@ MAST::NPSOLOptimizationInterface::optimize() {
     
     
     // now setup the lower and upper limits for the variables and constraints
-    _feval->init_dvar(X, xmin, xmax);
+    _feval->_init_dvar_wrapper(X, xmin, xmax);
     for (unsigned int i=0; i<N; i++) {
         BL[i] = xmin[i];
         BU[i] = xmax[i];
@@ -175,13 +268,26 @@ MAST::NPSOLOptimizationInterface::optimize() {
         BU[i+N] =     0.;
     }
     
-    std::string nm;
+    std::string cw(lencw*8,' ');
 //    nm = "List";
 //    npoptn_(nm.c_str(), (int)nm.length());
 //    nm = "Verify level 3";
 //    npoptn_(nm.c_str(), (int)nm.length());
     
-    npsol_(&N,
+    sninit_(&iPrint,
+            &iSumm,
+            cw.c_str(),
+            &lencw,
+            &IW[0],
+            &LENIW,
+            &W[0],
+            &LENW);
+    
+    snspec_(&iSpec, &INFORM, cw.c_str(), &lencw, &IW[0], &LENIW, &W[0], &LENW);
+    
+    if (INFORM != 101) libmesh_error();
+    
+    npopt_(&N,
            &NCLIN,
            &NCNLN,
            &LDA,
@@ -207,6 +313,26 @@ MAST::NPSOLOptimizationInterface::optimize() {
            &W[0],
            &LENW);
     
-#endif // MAST_ENABLE_NPSOL 1
+    _print_termination_message(INFORM);
+    
+#endif // MAST_ENABLE_SNOPT 1
 }
+
+
+void
+MAST::NPSOLOptimizationInterface::_print_termination_message(const int INFORM) {
+    
+    int
+    exit = (INFORM%10)*10; // remove the last signifncant digit
+    
+    libmesh_assert(_exit_message.count(exit));
+    libmesh_assert(_info_message.count(INFORM));
+    
+    libMesh::out
+    << "SNOPT EXIT :" << exit << std::endl
+    << "   " << _exit_message[exit] << std::endl
+    << "      INFO :" << INFORM << std::endl
+    << "   " << _info_message[INFORM] << std::endl << std::endl;
+}
+
 

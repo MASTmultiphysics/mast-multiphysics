@@ -25,7 +25,7 @@
 #include "base/nonlinear_system.h"
 #include "base/assembly_elem_operation.h"
 #include "elasticity/structural_element_base.h"
-
+#include "mesh/geom_elem.h"
 
 // libMesh includes
 #include "libmesh/petsc_nonlinear_solver.h"
@@ -107,14 +107,16 @@ MAST::StructuralAssembly::~StructuralAssembly() {
 void
 MAST::StructuralAssembly::set_elem_incompatible_sol(MAST::StructuralElementBase &elem) {
     
+    const libMesh::Elem& e = elem.elem().get_reference_elem();
+
     if (elem.if_incompatible_modes()) {
         
         // init the solution if it is not currently set
-        if (!_incompatible_sol.count(&elem.elem()))
-            _incompatible_sol[&elem.elem()] = RealVectorX::Zero(elem.incompatible_mode_size());
+        if (!_incompatible_sol.count(&e))
+            _incompatible_sol[&e] = RealVectorX::Zero(elem.incompatible_mode_size());
         
         // use the solution currently available 
-        elem.set_incompatible_mode_solution(_incompatible_sol[&elem.elem()]);
+        elem.set_incompatible_mode_solution(_incompatible_sol[&e]);
     }
 }
 
@@ -215,8 +217,12 @@ MAST::StructuralAssembly::update_incompatible_solution(libMesh::NumericVector<Re
         const libMesh::Elem* elem         = *el;
         MAST::AssemblyElemOperations& ops = _assembly->get_elem_ops();
         
-        ops.init(*elem);
+        MAST::GeomElem geom_elem;
+        ops.set_elem_data(elem->dim(), geom_elem);
+        geom_elem.init(*elem, _assembly->system_init());
         
+        ops.init(geom_elem);
+
         MAST::StructuralElementBase& p_elem =
         dynamic_cast<MAST::StructuralElementBase&>(ops.get_physics_elem());
         

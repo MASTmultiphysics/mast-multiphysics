@@ -49,6 +49,18 @@ namespace MAST {
          *   the system
          */
         virtual ~LevelSetNonlinearImplicitAssembly();
+
+        /*!
+         *  sets the flag on whether or not to evaluate the output on
+         *  negative level set function
+         */
+        void set_evaluate_output_on_negative_phi(bool f);
+
+        
+        /*!
+         *   @return flag if using dof_handler or not
+         */
+        bool if_use_dof_handler() const;
         
         
         /*!
@@ -164,16 +176,6 @@ namespace MAST {
                                              const bool include_partial_sens = true);
          */
         
-        /*!
-         *   @returns a MAST::FEBase object for calculation of finite element
-         *   quantities. For all standard applications this is a wrapper
-         *   around the libMesh::FEBase class, which is specialized for
-         *   cut-cell applications where a sub-finite element is created
-         *   for element integration.
-         */
-        virtual std::unique_ptr<MAST::FEBase>
-        build_fe();
-
     protected:
 
         /*Real
@@ -182,6 +184,10 @@ namespace MAST {
                                           const libMesh::NumericVector<Real>& dq_dX);
         */
         
+        bool                                  _enable_dof_handler;
+        
+        bool                                  _evaluate_output_on_negative_phi;
+
         MAST::FieldFunction<Real>            *_level_set;
 
         MAST::FieldFunction<RealVectorX>     *_indicator;

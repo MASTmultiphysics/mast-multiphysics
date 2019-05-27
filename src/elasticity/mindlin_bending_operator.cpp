@@ -23,10 +23,9 @@
 #include "elasticity/structural_element_base.h"
 #include "property_cards/element_property_card_base.h"
 #include "numerics/fem_operator_matrix.h"
-#include "mesh/local_elem_base.h"
 #include "base/nonlinear_system.h"
 #include "mesh/fe_base.h"
-#include "mesh/local_2d_elem.h"
+#include "mesh/geom_elem.h"
 #include "base/assembly_base.h"
 #include "base/field_function_base.h"
 
@@ -102,10 +101,8 @@ calculate_transverse_shear_residual(bool request_jacobian,
     // transverse shear
     
     std::unique_ptr<MAST::FEBase>
-    fe(_structural_elem.assembly().build_fe());
-    fe->set_extra_quadrature_order(-_shear_quadrature_reduction);
-    fe->init(_structural_elem.local_elem());
-    
+    fe(_elem.init_fe(true, false, -_shear_quadrature_reduction));
+
     const std::vector<std::vector<libMesh::RealVectorValue> >& dphi = fe->get_dphi();
     const std::vector<std::vector<Real> >& phi = fe->get_phi();
     const std::vector<Real>& JxW = fe->get_JxW();
@@ -173,9 +170,7 @@ calculate_transverse_shear_residual_sensitivity(const MAST::FunctionBase& p,
     // transverse shear
     
     std::unique_ptr<MAST::FEBase>
-    fe(_structural_elem.assembly().build_fe());
-    fe->set_extra_quadrature_order(-_shear_quadrature_reduction);
-    fe->init(_structural_elem.local_elem());
+    fe(_elem.init_fe(true, false, -_shear_quadrature_reduction));
     
     const std::vector<std::vector<libMesh::RealVectorValue> >& dphi = fe->get_dphi();
     const std::vector<std::vector<Real> >& phi = fe->get_phi();
@@ -244,14 +239,12 @@ calculate_transverse_shear_residual_boundary_velocity
     // transverse shear
     
     std::unique_ptr<MAST::FEBase>
-    fe(_structural_elem.assembly().build_fe());
-    fe->set_extra_quadrature_order(-_shear_quadrature_reduction);
-    fe->init_for_side(_structural_elem.local_elem(), s, true);
+    fe(_elem.init_side_fe(s, true, -_shear_quadrature_reduction));
 
     const std::vector<std::vector<libMesh::RealVectorValue> >& dphi = fe->get_dphi();
     const std::vector<std::vector<Real> >& phi                      = fe->get_phi();
     const std::vector<libMesh::Point>& xyz                          = fe->get_xyz();
-    const std::vector<libMesh::Point>& face_normals                 = fe->get_normals();
+    const std::vector<libMesh::Point>& face_normals                 = fe->get_normals_for_local_coordinate();
     std::vector<Real> JxW_Vn                                        = fe->get_JxW();
 
     const unsigned int

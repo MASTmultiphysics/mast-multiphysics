@@ -23,8 +23,10 @@
 #include "base/system_initialization.h"
 #include "base/elem_base.h"
 #include "base/physics_discipline_base.h"
-#include "numerics/utility.h"
 #include "base/eigenproblem_assembly_elem_operations.h"
+#include "mesh/geom_elem.h"
+#include "numerics/utility.h"
+
 
 // libMesh includes
 #include "libmesh/numeric_vector.h"
@@ -134,8 +136,12 @@ eigenproblem_assemble(libMesh::SparseMatrix<Real>* A,
         
         dof_map.dof_indices (elem, dof_indices);
         
-        ops.init(*elem);
+        MAST::GeomElem geom_elem;
+        ops.set_elem_data(elem->dim(), geom_elem);
+        geom_elem.init(*elem, *_system);
         
+        ops.init(geom_elem);
+
         // get the solution
         unsigned int ndofs = (unsigned int)dof_indices.size();
         sol.setZero(ndofs);
@@ -232,8 +238,12 @@ eigenproblem_sensitivity_assemble(const MAST::FunctionBase& f,
         
         dof_map.dof_indices (elem, dof_indices);
         
-        ops.init(*elem);
+        MAST::GeomElem geom_elem;
+        ops.set_elem_data(elem->dim(), geom_elem);
+        geom_elem.init(*elem, *_system);
         
+        ops.init(geom_elem);
+
         // get the solution
         unsigned int ndofs = (unsigned int)dof_indices.size();
         sol.setZero(ndofs);

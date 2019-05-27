@@ -157,6 +157,22 @@ namespace MAST {
         MAST::FieldFunction<Real>*                  _phi;
         
         std::map<const libMesh::Elem*, RealVectorX> _elem_sol;
+        
+        /*!
+         *   map of nodes on each element that will be added as independent
+         *   dofs.
+         */
+        std::map<const libMesh::Elem*, std::set<const libMesh::Node*>> _elem_void_nodes;
+
+        /*!
+         *   map of elements that each node will provide a new dof for
+         */
+        std::map<const libMesh::Node*, std::set<const libMesh::Elem*>> _void_node_elems;
+        
+        /*!
+         *   new dof ids for each elem/old_dof pair.
+         */
+        std::map<const libMesh::Elem*, std::map<libMesh::dof_id_type, libMesh::dof_id_type>> _dof_ids;
     };
 }
 
