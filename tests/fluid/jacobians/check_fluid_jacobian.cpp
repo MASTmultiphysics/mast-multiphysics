@@ -21,7 +21,7 @@
 #define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_MODULE MAST_TESTS
 #include <boost/test/unit_test.hpp>
-
+#include <boost/version.hpp>
 
 // C++ includes
 #include <memory>
@@ -57,8 +57,11 @@ struct GlobalTestFixture {
 };
 
 
+#if BOOST_VERSION > 105800
 BOOST_TEST_GLOBAL_FIXTURE( GlobalTestFixture );
-
+#else
+BOOST_GLOBAL_FIXTURE( GlobalTestFixture );
+#endif
 
 
 // Test includes

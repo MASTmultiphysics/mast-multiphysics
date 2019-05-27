@@ -27,24 +27,24 @@
 namespace MAST {
     
     /*!
-     *   constraint equation is defined along the path \f$ s \f$ as
-     *   \f[ g(X, p, ds) = (Y - \tilde{Y})^T t_1 = 0 , \f]
-     *   where, \f$ Y = \{X^T  p\}^T \f$, \f$ X \f$ is the solution,
+     *   The constraint equation is defined along the path \f$ s \f$ as
+     *   \f[ g(X, p, ds) = (Y - \tilde{Y} )^T t_1 = 0 , \f]
+     *   where, \f$ Y = \{ X^T  p \}^T \f$, \f$ X \f$ is the solution,
      *   \f$ p \f$ is the load parameter, \f$\tilde{Y} \f$ is the predictor based on
-     *   the search direction \f$t_1 \f$. Given that the predictor is defined
+     *   the search direction \f$ t_1 \f$. Given that the predictor is defined
      *   as \f$ \tilde{Y} = Y_0 - ds t_1 \f$, with \f$ ds \f$ as the step size,
      *   the constraint is rewritten as
-     *   \f[ (Y - Y_0 - ds * t_1)^T t_1 = 0, \f]
-     *   or, assuming \f$\| t_1 \| = 1 \f$,
-     *   \f[ Y^T t_1 - Y_0^T t_1 - ds  = 0. \f]
+     *   \f[ (Y - Y_0 - ds * t_1)^T t_1 = 0 , \f]
+     *   or, assuming \f$ \| t_1 \| = 1 \f$,
+     *   \f[ Y^T t_1 - Y_0^T t_1 - ds  = 0 . \f]
      *
      *   The search direction is evaluated based on:
-     *   \f[   \left[ \beging{array}{cc} df/dx & df/dp \\
+     *   \f[   \left[ \begin{array}{cc} df/dx & df/dp \\
      *              t_0^X &  t_0^p \end{array} \right]
      *          \left\{ \begin{array}{c} t_1^X \\ t_1^p \end{array} \right\} =
      *         \left\{ \begin{array}{c} 0 \\ 1 \end{array} \right\}
      *    \f]
-     *    \f$ t_1 \f$ is then scaled to unit norm.
+     *    and, \f$ t_1 \f$ is then scaled to unit norm.
      */
     class PseudoArclengthContinuationSolver:
     public MAST::ContinuationSolverBase {
