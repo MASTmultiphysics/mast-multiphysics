@@ -435,7 +435,7 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
                 // the Jacobian is based on the homogenizaton method to maintain
                 // a well conditioned global Jacobian.
                 MAST::GeomElem geom_elem;
-                ops.set_elem_data(elem->dim(), geom_elem);
+                ops.set_elem_data(elem->dim(), *elem, geom_elem);
                 geom_elem.init(*elem, *_system);
                 
                 ops.init(geom_elem);
@@ -487,7 +487,7 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
                     const libMesh::Elem* sub_elem = *hi_sub_elem_it;
                     
                     MAST::LevelSetIntersectedElem geom_elem;
-                    ops.set_elem_data(elem->dim(), geom_elem);
+                    ops.set_elem_data(elem->dim(), *elem, geom_elem);
                     geom_elem.init(*sub_elem, *_system, *_intersection);
                     
                     ops.init(geom_elem);
@@ -646,7 +646,7 @@ sensitivity_assemble (const MAST::FunctionBase& f,
                 const libMesh::Elem* sub_elem = *hi_sub_elem_it;
                 
                 MAST::LevelSetIntersectedElem geom_elem;
-                ops.set_elem_data(elem->dim(), geom_elem);
+                ops.set_elem_data(elem->dim(), *elem, geom_elem);
                 geom_elem.init(*sub_elem, *_system, *_intersection);
                 
                 ops.init(geom_elem);
@@ -679,7 +679,7 @@ sensitivity_assemble (const MAST::FunctionBase& f,
                     mat.setZero(ndofs, ndofs);
                     
                     MAST::GeomElem geom_elem;
-                    ops.set_elem_data(elem->dim(), geom_elem);
+                    ops.set_elem_data(elem->dim(), *elem, geom_elem);
                     geom_elem.init(*elem, *_system);
                     
                     ops.init(geom_elem);
@@ -827,7 +827,7 @@ calculate_output(const libMesh::NumericVector<Real>& X,
                 //                if (_sol_function)
                 //                    physics_elem->attach_active_solution_function(*_sol_function);
                 MAST::LevelSetIntersectedElem geom_elem;
-                output.set_elem_data(elem->dim(), geom_elem);
+                output.set_elem_data(elem->dim(), *elem, geom_elem);
                 geom_elem.init(*sub_elem, *_system, *_intersection);
                 
                 output.init(geom_elem);
@@ -869,7 +869,7 @@ calculate_output(const libMesh::NumericVector<Real>& X,
                 //                if (_sol_function)
                 //                    physics_elem->attach_active_solution_function(*_sol_function);
                 MAST::LevelSetIntersectedElem geom_elem;
-                output.set_elem_data(elem->dim(), geom_elem);
+                output.set_elem_data(elem->dim(), *elem, geom_elem);
                 geom_elem.init(*sub_elem, *_system, *_intersection);
                 
                 output.init(geom_elem);
@@ -1001,7 +1001,7 @@ calculate_output_derivative(const libMesh::NumericVector<Real>& X,
                 //        if (_sol_function)
                 //            physics_elem->attach_active_solution_function(*_sol_function);
                 MAST::LevelSetIntersectedElem geom_sub_elem;
-                output.set_elem_data(elem->dim(), geom_sub_elem);
+                output.set_elem_data(elem->dim(), *elem, geom_sub_elem);
                 geom_sub_elem.init(*sub_elem, *_system, *_intersection);
                 
                 output.init(geom_sub_elem);
@@ -1054,7 +1054,7 @@ calculate_output_derivative(const libMesh::NumericVector<Real>& X,
                 //        if (_sol_function)
                 //            physics_elem->attach_active_solution_function(*_sol_function);
                 MAST::LevelSetIntersectedElem geom_sub_elem;
-                output.set_elem_data(elem->dim(), geom_sub_elem);
+                output.set_elem_data(elem->dim(), *elem, geom_sub_elem);
                 geom_sub_elem.init(*sub_elem, *_system, *_intersection);
                 
                 output.init(geom_sub_elem);
@@ -1068,7 +1068,7 @@ calculate_output_derivative(const libMesh::NumericVector<Real>& X,
                     mat.setZero(ndofs, ndofs);
                     
                     MAST::GeomElem geom_elem;
-                    ops.set_elem_data(elem->dim(), geom_elem);
+                    ops.set_elem_data(elem->dim(), *elem, geom_elem);
                     geom_elem.init(*elem, *_system);
                     
                     ops.init(geom_elem);
@@ -1221,7 +1221,7 @@ calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
                 // if (_sol_function)
                 //   physics_elem->attach_active_solution_function(*_sol_function);
                 MAST::LevelSetIntersectedElem geom_elem;
-                output.set_elem_data(elem->dim(), geom_elem);
+                output.set_elem_data(elem->dim(), *elem, geom_elem);
                 geom_elem.init(*sub_elem, *_system, *_intersection);
                 
                 output.init(geom_elem);
@@ -1272,7 +1272,7 @@ calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
                 // if (_sol_function)
                 //   physics_elem->attach_active_solution_function(*_sol_function);
                 MAST::LevelSetIntersectedElem geom_elem;
-                output.set_elem_data(elem->dim(), geom_elem);
+                output.set_elem_data(elem->dim(), *elem, geom_elem);
                 geom_elem.init(*sub_elem, *_system, *_intersection);
                 
                 output.init(geom_elem);

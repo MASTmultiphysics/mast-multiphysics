@@ -137,7 +137,7 @@ eigenproblem_assemble(libMesh::SparseMatrix<Real>* A,
         dof_map.dof_indices (elem, dof_indices);
         
         MAST::GeomElem geom_elem;
-        ops.set_elem_data(elem->dim(), geom_elem);
+        ops.set_elem_data(elem->dim(), *elem, geom_elem);
         geom_elem.init(*elem, *_system);
         
         ops.init(geom_elem);
@@ -239,7 +239,7 @@ eigenproblem_sensitivity_assemble(const MAST::FunctionBase& f,
         dof_map.dof_indices (elem, dof_indices);
         
         MAST::GeomElem geom_elem;
-        ops.set_elem_data(elem->dim(), geom_elem);
+        ops.set_elem_data(elem->dim(), *elem, geom_elem);
         geom_elem.init(*elem, *_system);
         
         ops.init(geom_elem);

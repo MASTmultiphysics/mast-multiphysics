@@ -246,7 +246,6 @@ _solve_schur_factorization(const libMesh::NumericVector<Real>  &X,
     //         STEP 3:  a   = dg/dp + dg/dX dXdp
     //////////////////////////////////////////////////////////
     a   = dgdp + dgdX.dot(dXdp);
-    libmesh_assert_greater(a, 0.);
     
     //////////////////////////////////////////////////////////
     //         STEP 4:  a  dp     = -g + dg/dX r1

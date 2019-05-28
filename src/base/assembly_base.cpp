@@ -277,7 +277,7 @@ MAST::AssemblyBase::calculate_output(const libMesh::NumericVector<Real>& X,
         //    physics_elem->attach_active_solution_function(*_sol_function);
         
         MAST::GeomElem geom_elem;
-        output.set_elem_data(elem->dim(), geom_elem);
+        output.set_elem_data(elem->dim(), *elem, geom_elem);
         geom_elem.init(*elem, *_system);
         
         output.init(geom_elem);
@@ -356,7 +356,7 @@ calculate_output_derivative(const libMesh::NumericVector<Real>& X,
 //            physics_elem->attach_active_solution_function(*_sol_function);
         
         MAST::GeomElem geom_elem;
-        output.set_elem_data(elem->dim(), geom_elem);
+        output.set_elem_data(elem->dim(), *elem, geom_elem);
         geom_elem.init(*elem, *_system);
         
         output.init(geom_elem);
@@ -447,7 +447,7 @@ calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
         //            physics_elem->attach_active_solution_function(*_sol_function);
         
         MAST::GeomElem geom_elem;
-        output.set_elem_data(elem->dim(), geom_elem);
+        output.set_elem_data(elem->dim(), *elem, geom_elem);
         geom_elem.init(*elem, *_system);
         
         output.init(geom_elem);

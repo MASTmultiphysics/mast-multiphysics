@@ -13,6 +13,8 @@ target_sources(mast
         ${CMAKE_CURRENT_LIST_DIR}/complex_mesh_field_function.h
         ${CMAKE_CURRENT_LIST_DIR}/constant_field_function.cpp
         ${CMAKE_CURRENT_LIST_DIR}/constant_field_function.h
+        ${CMAKE_CURRENT_LIST_DIR}/dof_coupling_base.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/dof_coupling_base.h
         ${CMAKE_CURRENT_LIST_DIR}/eigenproblem_assembly.cpp
         ${CMAKE_CURRENT_LIST_DIR}/eigenproblem_assembly.h
         ${CMAKE_CURRENT_LIST_DIR}/eigenproblem_assembly_elem_operations.cpp
@@ -24,7 +26,6 @@ target_sources(mast
         ${CMAKE_CURRENT_LIST_DIR}/function_base.h
         ${CMAKE_CURRENT_LIST_DIR}/function_set_base.cpp
         ${CMAKE_CURRENT_LIST_DIR}/function_set_base.h
-#        ${CMAKE_CURRENT_LIST_DIR}/mast_config.h.in
         ${CMAKE_CURRENT_LIST_DIR}/mast_data_types.h
         ${CMAKE_CURRENT_LIST_DIR}/mesh_field_function.cpp
         ${CMAKE_CURRENT_LIST_DIR}/mesh_field_function.h
