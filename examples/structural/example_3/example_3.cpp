@@ -45,35 +45,10 @@
 #include "solver/arclength_continuation_solver.h"
 #include "solver/pseudo_arclength_continuation_solver.h"
 
-class Pressure: public MAST::FieldFunction<Real> {
-public:
-    Pressure(MAST::Parameter& p, Real r, Real x0, Real y0):
-    MAST::FieldFunction<Real>("pressure"), _p(p), _r(r), _x0(x0), _y0(y0) {}
-    virtual void operator()(const libMesh::Point& p, const Real t, Real& v) const {
-        if (std::sqrt(std::pow(p(0)-_x0, 2) + std::pow(p(1)-_y0, 2)) <= _r)
-        //if (std::sqrt(0*std::pow(p(0)-_x0, 2) + std::pow(p(1)-_y0, 2)) <= _r)
-            v = _p();
-        else
-            v = 0.;
-    }
-    virtual void derivative(const MAST::FunctionBase& f,
-                            const libMesh::Point& p, const Real t, Real& v) const {
-        if (&f == &_p &&
-            std::sqrt(std::pow(p(0)-_x0, 2) + std::pow(p(1)-_y0, 2)) <= _r)
-            //std::sqrt(0*std::pow(p(0)-_x0, 2) + std::pow(p(1)-_y0, 2)) <= _r)
-            v = 1.;
-        else
-            v = 0.;
-    }
-
-protected:
-    MAST::Parameter& _p;
-    Real _r, _x0, _y0;
-};
 
 int main(int argc, const char** argv)
 {
-    // BEGIN_TRANSLATE Bending of plate
+    // BEGIN_TRANSLATE Tie Constraints
     //
     // This example solves a cantilever rectangular plate with a uniformly
     // distributed load on the top of the plate.
@@ -81,7 +56,7 @@ int main(int argc, const char** argv)
     //
     // Initialize libMesh library.
     libMesh::LibMeshInit init(argc, argv);
-
+    
     // Create Mesh object on default MPI communicator and generate a 2D mesh of QUAD4 elements. We discretize with
     // 12 elements in the x-direction (0.0 to 36.0 inches) and 40 elements in the y-direction (0.0 to 120.0 inches).
     //   Note that in libMesh, all meshes are parallel by default in the sense that the equations on the mesh are
@@ -96,7 +71,7 @@ int main(int argc, const char** argv)
     libMesh::ReplicatedMesh mesh(init.comm());
     libMesh::MeshTools::Generation::build_square(mesh, 30, 30, 0.0, length, 0.0, width, libMesh::QUAD9);
     mesh.print_info();
-
+    
     // change the mesh to a circular arc of specified radius
     libMesh::MeshBase::node_iterator
     n_it   = mesh.nodes_begin(),
@@ -127,25 +102,25 @@ int main(int argc, const char** argv)
     // Create EquationSystems object, which is a container for multiple systems of equations that are
     // defined on a given mesh.
     libMesh::EquationSystems equation_systems(mesh);
-
+    
     // Add system of type MAST::NonlinearSystem (which wraps libMesh::NonlinearImplicitSystem) to the
     // EquationSystems container.
     //   We name the system "structural" and also get a reference to the system so we can easily reference it later.
     MAST::NonlinearSystem & system = equation_systems.add_system<MAST::NonlinearSystem>("structural");
-
+    
     // Create a finite element type for the system. Here we use first order Lagrangian-type finite elements.
     libMesh::FEType fetype(libMesh::FIRST, libMesh::LAGRANGE);
-
+    
     // Initialize the system to the correct set of variables for a structural analysis. In libMesh this is analogous
     // to adding variables (each with specific finite element type/order to the system for a particular system
     // of equations.
     MAST::StructuralSystemInitialization structural_system(system,
                                                            system.name(),
                                                            fetype);
-
+    
     // Initialize a new structural discipline using equation_systems.
     MAST::PhysicsDisciplineBase discipline(equation_systems);
-
+    
     // Create and add boundary conditions to the structural system. A Dirichlet BC adds fixed displacement BCs. Here we
     // use the side boundary ID numbering created by the libMesh generator to clamp the edge of the mesh along x=0.0.
     // We apply the BC to all variables on each node in the subdomain ID 0, which clamps this edge.
@@ -160,13 +135,13 @@ int main(int argc, const char** argv)
     discipline.add_dirichlet_bc(2, clamped_edge2);     // Attach boundary condition to discipline
     //discipline.add_dirichlet_bc(3, clamped_edge3);     // Attach boundary condition to discipline
     discipline.init_system_dirichlet_bc(system);      // Initialize the BC in the system.
-
+    
     // Initialize the equation system since we now know the size of our system matrices (based on mesh, element type,
     // variables in the structural_system) as well as the setup of dirichlet boundary conditions. This initialization
     // process is basically a pre-processing step to preallocate storage and spread it across processors.
     equation_systems.init();
     equation_systems.print_info();
-
+    
     // Create parameters.
     MAST::Parameter thickness("th", .0127);//0.001);
     MAST::Parameter E("E", 3.10275e9);//72.e9);
@@ -177,7 +152,7 @@ int main(int argc, const char** argv)
     MAST::Parameter zero("zero", 0.0);
     MAST::Parameter pressure("p", 10.0*0);
     MAST::Parameter temperature("T", 0.0);
-
+    
     // Create ConstantFieldFunctions used to spread parameters throughout the model.
     MAST::ConstantFieldFunction th_f("h", thickness);
     MAST::ConstantFieldFunction E_f("E", E);
@@ -186,21 +161,20 @@ int main(int argc, const char** argv)
     MAST::ConstantFieldFunction kappa_f("kappa", kappa);
     MAST::ConstantFieldFunction alpha_f("alpha_expansion", alpha);
     MAST::ConstantFieldFunction off_f("off", zero);
-    //MAST::ConstantFieldFunction pressure_f("pressure", pressure);
+    MAST::ConstantFieldFunction pressure_f("pressure", pressure);
     MAST::ConstantFieldFunction temperature_f("temperature", temperature);
     MAST::ConstantFieldFunction ref_temp_f("ref_temperature", zero);
-    Pressure pressure_f(pressure, width/10., length/2., width/2.);
     
     // Initialize load.
     MAST::BoundaryConditionBase surface_pressure(MAST::SURFACE_PRESSURE);
     surface_pressure.add(pressure_f);
     discipline.add_volume_load(0, surface_pressure);
-
+    
     MAST::BoundaryConditionBase temperature_load(MAST::TEMPERATURE);
     temperature_load.add(temperature_f);
     temperature_load.add(ref_temp_f);
     discipline.add_volume_load(0, temperature_load);
-
+    
     // Create the material property card ("card" is NASTRAN lingo) and the relevant parameters to it. An isotropic
     // material needs elastic modulus (E) and Poisson ratio (nu) to describe its behavior.
     MAST::IsotropicMaterialPropertyCard material;
@@ -209,19 +183,19 @@ int main(int argc, const char** argv)
     material.add(kappa_f);
     material.add(alpha_f);
     material.add(rho_f);
-
+    
     // Create the section property card. Attach all property values.
     MAST::Solid2DSectionElementPropertyCard section;
     section.add(th_f);
     section.add(off_f);
     section.set_strain(MAST::NONLINEAR_STRAIN);
-
+    
     // Attach material to the card.
     section.set_material(material);
-
+    
     // Initialize the specify the subdomain in the mesh that it applies to.
     discipline.set_property_for_subdomain(0, section);
-
+    
     // Create nonlinear assembly object and set the discipline and
     // structural_system. Create reference to system.
     MAST::NonlinearImplicitAssembly assembly;
@@ -229,96 +203,16 @@ int main(int argc, const char** argv)
     assembly.set_discipline_and_system(discipline, structural_system);
     elem_ops.set_discipline_and_system(discipline, structural_system);
     MAST::NonlinearSystem& nonlinear_system = assembly.system();
-
+    
     // Zero the solution before solving.
     nonlinear_system.solution->zero();
-
-    // Write output to Exodus.
-    libMesh::ExodusII_IO exodus_io(mesh);
     
-    libMesh::Point pt(length/2., width/2., R);
-    const libMesh::Node
-    *nd = mesh.sub_point_locator()->operator()(pt)->node_ptr(0);
-    std::cout << *nd << std::endl;
-    unsigned int
-    dof_num = nd->dof_number(0, 2, 0);
+    // Solve the system
+    nonlinear_system.solve(elem_ops, assembly);
     
-    // Solve the system and print displacement degrees-of-freedom to screen.
-    unsigned int
-    n_temp_steps  = 10,
-    n_press_steps = 30;
-    Real
-    dt = 1./(n_temp_steps+n_press_steps-1.);
-    std::ofstream out;
-    if (mesh.comm().rank() == 0) {
-        out.open("load.txt", std::ofstream::out);
-        out
-        << std::setw(10) << "iter"
-        << std::setw(25) << "temperature"
-        << std::setw(25) << "pressure"
-        << std::setw(25) << "displ" << std::endl;
-    }
-    std::vector<Real> vec1;
-    std::vector<unsigned int> vec2 = {dof_num};
-    {
-        MAST::PseudoArclengthContinuationSolver solver;
-        solver.set_assembly_and_load_parameter(elem_ops, assembly, temperature);
-        solver.initialize(1);
-        solver.arc_length *= 2;
-        
-        for (unsigned int i=0; i<n_temp_steps; i++) {
-            solver.solve();
-            //temperature() += 1;
-            //nonlinear_system.solve(elem_ops, assembly);
-            std::cout
-            << "  iter: " << i
-            << "  temperature: " << temperature()
-            << "  pressure: "    << pressure() << std::endl;
-            system.solution->localize(vec1, vec2);
-            if (mesh.comm().rank() == 0) {
-                out
-                << std::setw(10) << i
-                << std::setw(25) << temperature()
-                << std::setw(25) << pressure()
-                << std::setw(25) << vec1[0] << std::endl;
-            }
-            system.time += dt;
-            exodus_io.write_timestep("ex3_plate_static.exo",
-                                     equation_systems,
-                                     i+1,
-                                     system.time);
-        }
-    }
-
-    
-    {
-        MAST::PseudoArclengthContinuationSolver solver;
-        solver.set_assembly_and_load_parameter(elem_ops, assembly, pressure);
-        solver.initialize(-5.e3*-1);
-        solver.arc_length *= 4;
-        solver.max_it      = 80;
-        
-        for (unsigned int i=0+n_temp_steps; i<n_press_steps+n_temp_steps; i++) {
-            solver.solve();
-            std::cout
-            << "  iter: " << i
-            << "  temperature: " << temperature()
-            << "  pressure: "    << pressure() << std::endl;
-            system.solution->localize(vec1, vec2);
-            if (mesh.comm().rank() == 0) {
-                out
-                << std::setw(10) << i
-                << std::setw(25) << temperature()
-                << std::setw(25) << pressure()
-                << std::setw(25) << vec1[0] << std::endl;
-            }
-            system.time += dt;
-            exodus_io.write_timestep("ex3_plate_static.exo",
-                                     equation_systems,
-                                     i+1,
-                                     system.time);
-        }
-    }
+    // output the solution to exo file.
+    libMesh::ExodusII_IO(mesh).write_equation_systems("plate_tie_constr.exo",
+                                                      equation_systems);
 
     // END_TRANSLATE
     return 0;

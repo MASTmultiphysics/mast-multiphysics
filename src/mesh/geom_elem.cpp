@@ -445,6 +445,7 @@ MAST::GeomElem::_init_local_elem_2d() {
     v2 = v3.cross(v1); v2 /= v2.norm();      // local y
     
     // copy the surface normal
+    _domain_surface_normal = RealVectorX::Zero(3);
     for (unsigned int i=0; i<3; i++)
         _domain_surface_normal(i) = v3(i);
     

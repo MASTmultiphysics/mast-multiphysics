@@ -102,7 +102,9 @@ namespace MAST {
          *   sets the structural element y-vector if 1D element is used.
          */
         virtual void
-        set_elem_data(unsigned int dim, MAST::GeomElem& elem) const;
+        set_elem_data(unsigned int dim,
+                      const libMesh::Elem& ref_elem,
+                      MAST::GeomElem& elem) const;
 
         /*!
          *   initializes the object for the geometric element \p elem. This

@@ -128,7 +128,7 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
         dof_map.dof_indices (elem, dof_indices);
         
         MAST::GeomElem geom_elem;
-        solver.set_elem_data(elem->dim(), geom_elem);
+        solver.set_elem_data(elem->dim(), *elem, geom_elem);
         geom_elem.init(*elem, *_system);
         solver.init(geom_elem);
         

@@ -1539,7 +1539,8 @@ transform_matrix_to_global_system(const ValType& local_mat,
     
     if (_elem.use_local_elem()) {
         
-        const unsigned int n_dofs = local_mat.rows();
+        // assuming same shape function for all 6 dofs.
+        const unsigned int n_dofs = local_mat.rows()/6;
         
         ValType mat(6*n_dofs, 6*n_dofs);
         
@@ -1576,7 +1577,8 @@ transform_vector_to_local_system(const ValType& global_vec,
     
     if (_elem.use_local_elem()) {
 
-        const unsigned int n_dofs = global_vec.size();
+        // assuming same shape function for all 6 dofs.
+        const unsigned int n_dofs = global_vec.size()/6;
         RealMatrixX mat  = RealMatrixX::Zero(6*n_dofs, 6*n_dofs);
         
         local_vec.setZero();
@@ -1611,7 +1613,8 @@ transform_vector_to_global_system(const ValType& local_vec,
     
     if (_elem.use_local_elem()) {
         
-        const unsigned int n_dofs = local_vec.size();
+        // assuming same shape function for all 6 dofs.
+        const unsigned int n_dofs = local_vec.size()/6;
         
         RealMatrixX mat  = RealMatrixX::Zero(6*n_dofs, 6*n_dofs);
         

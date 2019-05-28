@@ -196,6 +196,11 @@ namespace MAST {
         /*!
          *    get property card for the specified element
          */
+        const MAST::ElementPropertyCardBase& get_property_card(const libMesh::Elem& elem) const;
+
+        /*!
+         *    get property card for the specified element
+         */
         const MAST::ElementPropertyCardBase& get_property_card(const MAST::GeomElem& elem) const;
         
         /*!

@@ -114,7 +114,7 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
         dof_map.dof_indices (elem, dof_indices);
         
         MAST::GeomElem geom_elem;
-        ops.set_elem_data(elem->dim(), geom_elem);
+        ops.set_elem_data(elem->dim(), *elem, geom_elem);
         geom_elem.init(*elem, *_system);
         
         ops.init(geom_elem);
@@ -248,7 +248,7 @@ linearized_jacobian_solution_product (const libMesh::NumericVector<Real>& X,
         dof_map.dof_indices (elem, dof_indices);
         
         MAST::GeomElem geom_elem;
-        ops.set_elem_data(elem->dim(), geom_elem);
+        ops.set_elem_data(elem->dim(), *elem, geom_elem);
         geom_elem.init(*elem, *_system);
         
         ops.init(geom_elem);
@@ -361,7 +361,7 @@ second_derivative_dot_solution_assembly (const libMesh::NumericVector<Real>& X,
         dof_map.dof_indices (elem, dof_indices);
         
         MAST::GeomElem geom_elem;
-        ops.set_elem_data(elem->dim(), geom_elem);
+        ops.set_elem_data(elem->dim(), *elem, geom_elem);
         geom_elem.init(*elem, *_system);
         
         ops.init(geom_elem);
@@ -457,7 +457,7 @@ sensitivity_assemble (const MAST::FunctionBase& f,
         dof_map.dof_indices (elem, dof_indices);
         
         MAST::GeomElem geom_elem;
-        ops.set_elem_data(elem->dim(), geom_elem);
+        ops.set_elem_data(elem->dim(), *elem, geom_elem);
         geom_elem.init(*elem, *_system);
         
         ops.init(geom_elem);

@@ -44,6 +44,7 @@ namespace MAST {
          */
         virtual void
         set_elem_data(unsigned int dim,
+                      const libMesh::Elem& ref_elem,
                       MAST::GeomElem& elem) const;
 
         /*!

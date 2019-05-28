@@ -158,6 +158,17 @@ MAST::PhysicsDisciplineBase::get_property_card(const unsigned int sid) const {
 
 
 const MAST::ElementPropertyCardBase&
+MAST::PhysicsDisciplineBase::get_property_card(const libMesh::Elem& elem) const {
+    
+    MAST::PropertyCardMapType::const_iterator
+    elem_p_it = _element_property.find(elem.subdomain_id());
+    libmesh_assert(elem_p_it != _element_property.end());
+    
+    return *elem_p_it->second;
+}
+
+
+const MAST::ElementPropertyCardBase&
 MAST::PhysicsDisciplineBase::get_property_card(const MAST::GeomElem& elem) const {
     
     MAST::PropertyCardMapType::const_iterator
