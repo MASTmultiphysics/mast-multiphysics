@@ -152,6 +152,13 @@ namespace MAST {
 
             
             /*!
+             *   @ returns true if sensitivity data is available for function
+             *   \p f .
+             */
+            bool
+            has_stress_sensitivity(const MAST::FunctionBase& f) const;
+
+            /*!
              *   @ returns the sensitivity of the data with respect to a 
              *   function
              */

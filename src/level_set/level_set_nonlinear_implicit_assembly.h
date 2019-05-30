@@ -31,6 +31,7 @@ namespace MAST {
     class LevelSetIntersection;
     class LevelSetInterfaceDofHandler;
     class LevelSetVoidSolution;
+    class FilterBase;
     
     
     class LevelSetNonlinearImplicitAssembly:
@@ -67,7 +68,8 @@ namespace MAST {
          *   attaches level set function to \p this
          */
         virtual void
-        set_level_set_function(MAST::FieldFunction<Real>& level_set);
+        set_level_set_function(MAST::FieldFunction<Real>& level_set,
+                               const MAST::FilterBase& filter);
 
         
         /*!
@@ -151,13 +153,14 @@ namespace MAST {
          *   discipline with respect to the parametrs in \p params.
          *   The base solution should be provided in \p X. If total sensitivity
          *   is desired, then \p dXdp should contain the sensitivity of
-         *   solution wrt the parameter \p p. If this \p dXdp is zero,
+         *   solution wrt the parameter \p p, otherwise it can be set to
+         *   nullptr. If \p dXdp is nullptr,
          *   the calculated sensitivity will be the partial derivarive of
          *   \p output wrt \p p.
          */
         virtual void
         calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
-                                            const libMesh::NumericVector<Real>& dXdp,
+                                            const libMesh::NumericVector<Real>* dXdp,
                                             const MAST::FunctionBase& p,
                                             MAST::OutputAssemblyElemOperations& output);
         
@@ -199,6 +202,8 @@ namespace MAST {
         MAST::LevelSetVoidSolution           *_void_solution_monitor;
 
         MAST::FieldFunction<RealVectorX>     *_velocity;
+        
+        const MAST::FilterBase               *_filter;
 
     };
 }

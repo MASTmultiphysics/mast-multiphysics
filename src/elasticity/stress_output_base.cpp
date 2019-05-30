@@ -133,6 +133,17 @@ MAST::StressStrainOutputBase::Data::set_sensitivity(const MAST::FunctionBase& f,
 }
 
 
+bool
+MAST::StressStrainOutputBase::Data::
+has_stress_sensitivity(const MAST::FunctionBase& f) const {
+    
+    // make sure that the data exists
+    std::map<const MAST::FunctionBase*, RealVectorX>::const_iterator
+    it = _stress_sensitivity.find(&f);
+    
+    return it != _stress_sensitivity.end();
+}
+
 
 const RealVectorX&
 MAST::StressStrainOutputBase::Data::
@@ -225,6 +236,9 @@ dvon_Mises_stress_dp(const MAST::FunctionBase& f) const {
     
     // make sure that the data is available
     libmesh_assert_equal_to(_stress.size(), 6);
+    
+    if (!this->has_stress_sensitivity(f))
+        return 0.;
     
     // get the stress sensitivity data
     const RealVectorX dstress_dp = this->get_stress_sensitivity(f);

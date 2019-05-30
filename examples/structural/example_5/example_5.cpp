@@ -36,6 +36,7 @@
 #include "level_set/level_set_constrain_dofs.h"
 #include "level_set/level_set_intersection.h"
 #include "level_set/filter_base.h"
+#include "level_set/level_set_parameter.h"
 #include "elasticity/structural_nonlinear_assembly.h"
 #include "elasticity/structural_modal_eigenproblem_assembly.h"
 #include "elasticity/stress_output_base.h"
@@ -43,7 +44,6 @@
 #include "elasticity/structural_system_initialization.h"
 #include "heat_conduction/heat_conduction_system_initialization.h"
 #include "heat_conduction/heat_conduction_nonlinear_assembly.h"
-#include "base/parameter.h"
 #include "base/constant_field_function.h"
 #include "base/nonlinear_system.h"
 #include "base/transient_assembly.h"
@@ -1194,7 +1194,7 @@ public:
                 
                 _dv_params.push_back(std::pair<unsigned int, MAST::Parameter*>());
                 _dv_params[_n_vars].first  = dof_id;
-                _dv_params[_n_vars].second = new MAST::Parameter(oss.str(), val);
+                _dv_params[_n_vars].second = new MAST::LevelSetParameter(oss.str(), val, &n);
                 _dv_params[_n_vars].second->set_as_topology_parameter(true);
                 
                 _n_vars++;
@@ -1295,7 +1295,7 @@ public:
                 
                 _dv_params.push_back(std::pair<unsigned int, MAST::Parameter*>());
                 _dv_params[_n_vars].first  = dof_id;
-                _dv_params[_n_vars].second = new MAST::Parameter(oss.str(), val);
+                _dv_params[_n_vars].second = new MAST::LevelSetParameter(oss.str(), val, &n);
                 _dv_params[_n_vars].second->set_as_topology_parameter(true);
                 _dv_dof_ids.insert(dof_id);
                 
@@ -1392,7 +1392,7 @@ public:
                 
                 _dv_params.push_back(std::pair<unsigned int, MAST::Parameter*>());
                 _dv_params[_n_vars].first  = dof_id;
-                _dv_params[_n_vars].second = new MAST::Parameter(oss.str(), val);
+                _dv_params[_n_vars].second = new MAST::LevelSetParameter(oss.str(), val, &n);
                 _dv_params[_n_vars].second->set_as_topology_parameter(true);
                 _dv_dof_ids.insert(dof_id);
                 
@@ -1601,7 +1601,7 @@ public:
         // first constrain the indicator function and solve
         /////////////////////////////////////////////////////////////////////
         nonlinear_assembly.set_discipline_and_system(*_discipline, *_sys_init);
-        nonlinear_assembly.set_level_set_function(*_level_set_function);
+        nonlinear_assembly.set_level_set_function(*_level_set_function, *_filter);
         nonlinear_assembly.set_level_set_velocity_function(*_level_set_vel);
         //nonlinear_assembly.set_indicator_function(indicator);
         eigen_assembly.set_discipline_and_system(*_discipline, *_sys_init);
@@ -1610,7 +1610,7 @@ public:
         stress_assembly.set_discipline_and_system(*_discipline, *_sys_init);
         stress_assembly.init(*_level_set_function, nonlinear_assembly.if_use_dof_handler()?&nonlinear_assembly.get_dof_handler():nullptr);
         level_set_assembly.set_discipline_and_system(*_level_set_discipline, *_level_set_sys_init);
-        level_set_assembly.set_level_set_function(*_level_set_function);
+        level_set_assembly.set_level_set_function(*_level_set_function, *_filter);
         level_set_assembly.set_level_set_velocity_function(*_level_set_vel);
         nonlinear_elem_ops.set_discipline_and_system(*_discipline, *_sys_init);
         modal_elem_ops.set_discipline_and_system(*_discipline, *_sys_init);
@@ -1799,12 +1799,12 @@ public:
             
             assembly.set_evaluate_output_on_negative_phi(false);
             assembly.calculate_output_direct_sensitivity(*_level_set_sys->solution,
-                                                         *dphi_filtered,
+                                                         dphi_filtered.get(),
                                                          *_dv_params[i].second,
                                                          volume);
             assembly.set_evaluate_output_on_negative_phi(true);
             assembly.calculate_output_direct_sensitivity(*_level_set_sys->solution,
-                                                         *dphi_filtered,
+                                                         dphi_filtered.get(),
                                                          *_dv_params[i].second,
                                                          perimeter);
             assembly.set_evaluate_output_on_negative_phi(false);

@@ -27,7 +27,8 @@
 
 // libMesh includes
 #include "libmesh/system.h"
-
+#include "libmesh/node.h"
+#include "libmesh/elem.h"
 
 
 namespace MAST {
@@ -56,6 +57,17 @@ namespace MAST {
         void compute_filtered_values(const std::vector<Real>& input,
                                      std::vector<Real>& output) const;
 
+        /*!
+         *   function identifies if the given element is within the domain of
+         *   influence of this specified level set design variable. Currently,
+         *   this is identified based on the filter radius, the distance of
+         *   element nodes from the specified level set design variable location
+         *   and the element sizes.
+         */
+        bool if_elem_in_domain_of_influence(const libMesh::Elem& elem,
+                                            const libMesh::Node& level_set_node) const;
+        
+
     protected:
         
         /*!
@@ -72,6 +84,12 @@ namespace MAST {
          *   radius of the filter.
          */
         Real _radius;
+        
+        
+        /*!
+         *   largest element size in the level set mesh
+         */
+        Real _level_set_fe_size;
         
         /*!
          *   dof ids that are design variables. If a id is not in this set, then

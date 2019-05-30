@@ -295,7 +295,7 @@ evaluate_q_sens_for_previous_interval(MAST::AssemblyBase& assembly,
         dx->close();
         
         output.zero_for_analysis();
-        assembly.calculate_output_direct_sensitivity(sol, *dx, p, output);
+        assembly.calculate_output_direct_sensitivity(sol, dx.get(), p, output);
         
         q  += output.output_sensitivity_total(p) * this->dt;
     }
