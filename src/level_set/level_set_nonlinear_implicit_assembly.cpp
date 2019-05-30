@@ -24,6 +24,8 @@
 #include "level_set/level_set_void_solution.h"
 #include "level_set/level_set_intersected_elem.h"
 #include "level_set/sub_cell_fe.h"
+#include "level_set/filter_base.h"
+#include "level_set/level_set_parameter.h"
 #include "base/system_initialization.h"
 #include "base/nonlinear_system.h"
 #include "base/mesh_field_function.h"
@@ -51,7 +53,8 @@ _indicator                       (nullptr),
 _intersection                    (nullptr),
 _dof_handler                     (nullptr),
 _void_solution_monitor           (nullptr),
-_velocity                        (nullptr) {
+_velocity                        (nullptr),
+_filter                          (nullptr) {
     
 }
 
@@ -98,13 +101,15 @@ MAST::LevelSetNonlinearImplicitAssembly::get_dof_handler() {
 
 void
 MAST::LevelSetNonlinearImplicitAssembly::
-set_level_set_function(MAST::FieldFunction<Real>& level_set) {
+set_level_set_function(MAST::FieldFunction<Real>& level_set,
+                       const MAST::FilterBase& filter) {
 
     libmesh_assert(!_level_set);
     libmesh_assert(!_intersection);
     libmesh_assert(_system);
     
     _level_set    = &level_set;
+    _filter       = &filter;
     _intersection = new MAST::LevelSetIntersection();
     if (_enable_dof_handler) {
         _dof_handler  = new MAST::LevelSetInterfaceDofHandler();
@@ -132,6 +137,7 @@ void
 MAST::LevelSetNonlinearImplicitAssembly::clear_level_set_function() {
     
     _level_set = nullptr;
+    _filter    = nullptr;
     
     if (_intersection) {
         delete _intersection;
@@ -553,6 +559,14 @@ sensitivity_assemble (const MAST::FunctionBase& f,
     // we need the velocity for topology parameter
     if (f.is_topology_parameter()) libmesh_assert(_velocity);
 
+    // we need the velocity for topology parameter
+    const MAST::LevelSetParameter
+    *p_ls = nullptr;
+    if (f.is_topology_parameter()) {
+        libmesh_assert(_velocity);
+        p_ls = dynamic_cast<const MAST::LevelSetParameter*>(&f);
+    }
+
     MAST::NonlinearSystem& nonlin_sys = _system->system();
     
     sensitivity_rhs.zero();
@@ -600,6 +614,10 @@ sensitivity_assemble (const MAST::FunctionBase& f,
         
         const libMesh::Elem* elem = *el;
         
+        if (f.is_topology_parameter() &&
+            !_filter->if_elem_in_domain_of_influence(*elem, *(p_ls->level_set_node())))
+            continue;
+
         _intersection->init(*_level_set, *elem, nonlin_sys.time,
                             nonlin_sys.get_mesh().max_elem_id(),
                             nonlin_sys.get_mesh().max_node_id());
@@ -1117,7 +1135,7 @@ calculate_output_derivative(const libMesh::NumericVector<Real>& X,
 void
 MAST::LevelSetNonlinearImplicitAssembly::
 calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
-                                    const libMesh::NumericVector<Real>& dXdp,
+                                    const libMesh::NumericVector<Real>* dXdp,
                                     const MAST::FunctionBase& p,
                                     MAST::OutputAssemblyElemOperations& output) {
     
@@ -1126,7 +1144,12 @@ calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
     libmesh_assert(_level_set);
     
     // we need the velocity for topology parameter
-    if (p.is_topology_parameter()) libmesh_assert(_velocity);
+    const MAST::LevelSetParameter
+    *p_ls = nullptr;
+    if (p.is_topology_parameter()) {
+        libmesh_assert(_velocity);
+        p_ls = dynamic_cast<const MAST::LevelSetParameter*>(&p);
+    }
 
     output.zero_for_sensitivity();
 
@@ -1153,8 +1176,9 @@ calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
     localized_solution_sens;
     localized_solution.reset(build_localized_vector(nonlin_sys,
                                                     X).release());
-    localized_solution_sens.reset(build_localized_vector(nonlin_sys,
-                                                         dXdp).release());
+    if (dXdp)
+        localized_solution_sens.reset(build_localized_vector(nonlin_sys,
+                                                             *dXdp).release());
 
     
     // if a solution function is attached, initialize it
@@ -1171,6 +1195,11 @@ calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
     for ( ; el != end_el; ++el) {
         
         const libMesh::Elem* elem = *el;
+        
+        if (p.is_topology_parameter() &&
+            !dXdp &&
+            !_filter->if_elem_in_domain_of_influence(*elem, *(p_ls->level_set_node())))
+            continue;
         
         // use the indicator if it was provided
         if (_indicator) {
@@ -1199,7 +1228,8 @@ calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
             
             for (unsigned int i=0; i<dof_indices.size(); i++) {
                 sol(i)  = (*localized_solution)(dof_indices[i]);
-                dsol(i) = (*localized_solution_sens)(dof_indices[i]);
+                if (dXdp)
+                    dsol(i) = (*localized_solution_sens)(dof_indices[i]);
             }
             
             // if the element has been marked for factorization then
@@ -1249,7 +1279,8 @@ calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
             
             for (unsigned int i=0; i<dof_indices.size(); i++) {
                 sol(i)  = (*localized_solution)(dof_indices[i]);
-                dsol(i) = (*localized_solution_sens)(dof_indices[i]);
+                if (dXdp)
+                    dsol(i) = (*localized_solution_sens)(dof_indices[i]);
             }
             
             // if the element has been marked for factorization then

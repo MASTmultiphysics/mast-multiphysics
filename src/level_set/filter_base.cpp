@@ -32,6 +32,7 @@ MAST::FilterBase::FilterBase(libMesh::System& sys,
                              const std::set<unsigned int>& dv_dof_ids):
 _level_set_system  (sys),
 _radius            (radius),
+_level_set_fe_size (0.),
 _dv_dof_ids        (dv_dof_ids) {
     
     libmesh_assert_greater(radius, 0.);
@@ -114,6 +115,35 @@ MAST::FilterBase::compute_filtered_values(const std::vector<Real>& input,
 }
 
 
+bool
+MAST::FilterBase::
+if_elem_in_domain_of_influence(const libMesh::Elem& elem,
+                               const libMesh::Node& level_set_node) const {
+    
+    Real
+    d    = 0.;
+    
+    libMesh::Point
+    pt;
+    
+    // first get the largest distance from the node to the element nodes
+    for (unsigned int i=0; i<elem.n_nodes(); i++) {
+        pt  = elem.point(i);
+        pt -= level_set_node;
+        
+        if (pt.norm() > d + _level_set_fe_size)
+            d = pt.norm();
+    }
+    
+    // if this distance is outside the domain of influence, then this
+    // element is not influenced by the design variable
+    if (d > _radius)
+        return false;
+    else
+        return true;
+}
+
+
 
 void
 MAST::FilterBase::_init() {
@@ -175,5 +205,18 @@ MAST::FilterBase::_init() {
             vec[i].second /= sum;
             libmesh_assert_less_equal(vec[i].second, 1.);
         }
+    }
+    
+    // compute the largest element size
+    libMesh::MeshBase::const_element_iterator
+    e_it          = mesh.elements_begin(),
+    e_end         = mesh.elements_end();
+    
+    for ( ; e_it != e_end; e_it++) {
+        const libMesh::Elem* e = *e_it;
+        d_12 = e->hmax();
+        
+        if (_level_set_fe_size < d_12)
+            _level_set_fe_size = d_12;
     }
 }

@@ -220,13 +220,13 @@ namespace MAST {
          *   discipline with respect to the parametrs in \p params.
          *   The base solution should be provided in \p X. If total sensitivity
          *   is desired, then \p dXdp should contain the sensitivity of
-         *   solution wrt the parameter \p p. If this \p dXdp is zero,
-         *   the calculated sensitivity will be the partial derivarive of
-         *   \p output wrt \p p.
+         *   solution wrt the parameter \p p, otherwise it can be set to
+         *   nullptr. If \p dXdp is zero, the calculated sensitivity will be
+         *   the partial derivarive of \p output wrt \p p.
          */
         virtual void
         calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
-                                            const libMesh::NumericVector<Real>& dXdp,
+                                            const libMesh::NumericVector<Real>* dXdp,
                                             const MAST::FunctionBase& p,
                                             MAST::OutputAssemblyElemOperations& output);
 

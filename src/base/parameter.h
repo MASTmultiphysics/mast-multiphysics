@@ -28,7 +28,9 @@
 namespace MAST {
     
     /*!
-     *    This is a function that does not change.
+     *    This is a scalar function whose value can be changed and
+     *    one that can be used as a design variable in sensitivity
+     *    analysis and optimization across the code.
      */
     class Parameter:
     public MAST::FunctionBase {
@@ -48,7 +50,7 @@ namespace MAST {
         { }
         
 
-        ~Parameter() {
+        virtual ~Parameter() {
 
             delete _val;
         }

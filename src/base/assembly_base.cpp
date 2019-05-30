@@ -385,7 +385,7 @@ calculate_output_derivative(const libMesh::NumericVector<Real>& X,
 void
 MAST::AssemblyBase::
 calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
-                                    const libMesh::NumericVector<Real>& dXdp,
+                                    const libMesh::NumericVector<Real>* dXdp,
                                     const MAST::FunctionBase& p,
                                     MAST::OutputAssemblyElemOperations& output) {
 
@@ -412,8 +412,9 @@ calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
     localized_solution_sens;
     localized_solution.reset(build_localized_vector(nonlin_sys,
                                                     X).release());
-    localized_solution_sens.reset(build_localized_vector(nonlin_sys,
-                                                         dXdp).release());
+    if (dXdp)
+        localized_solution_sens.reset(build_localized_vector(nonlin_sys,
+                                                             *dXdp).release());
 
     
     // if a solution function is attached, initialize it
@@ -440,7 +441,8 @@ calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
         
         for (unsigned int i=0; i<dof_indices.size(); i++) {
             sol(i)  = (*localized_solution)(dof_indices[i]);
-            dsol(i) = (*localized_solution_sens)(dof_indices[i]);
+            if (dXdp)
+                dsol(i) = (*localized_solution_sens)(dof_indices[i]);
         }
         
         //        if (_sol_function)
@@ -497,9 +499,7 @@ calculate_output_adjoint_sensitivity(const libMesh::NumericVector<Real>& X,
 
         // calculate the partial sensitivity of the output, which is done
         // with zero solution vector
-        std::unique_ptr<libMesh::NumericVector<Real>>
-        zero_X(X.zero_clone().release());
-        this->calculate_output_direct_sensitivity(X, *zero_X, p, output);
+        this->calculate_output_direct_sensitivity(X, nullptr, p, output);
 
         dq_dp += output.output_sensitivity_total(p);
     }
