@@ -292,6 +292,7 @@ MAST::ContinuationSolverBase::_solve(const libMesh::NumericVector<Real>  &X,
     
     // finish assembling the residual vector if it was not updated by
     // the residual and jacobian routine
+    res->close();
     res->scale(-1.);
     res->close();
 
@@ -361,7 +362,7 @@ MAST::ContinuationSolverBase::_solve(const libMesh::NumericVector<Real>  &X,
     std::vector<Real> val(1, 0.);
     std::vector<libMesh::numeric_index_type> dofs(1, total_m-1);
     sol->localize(val, dofs);
-    dp = sol->el(total_m-1);
+    dp = val[0];
     
     // destroy the objects
     ierr = KSPDestroy(&ksp);
