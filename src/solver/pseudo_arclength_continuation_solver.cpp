@@ -101,8 +101,6 @@ _solve_NR_iterate(libMesh::NumericVector<Real>       &X,
     
     _update_search_direction(X, p,
                              jac,
-                             /**dfdp,
-                             *dXdp,*/
                              *t1_X,
                              t1_p);
     
@@ -114,13 +112,18 @@ _solve_NR_iterate(libMesh::NumericVector<Real>       &X,
     t1_X->close();
     t1_p *= _p_scale;
     
-    _solve_schur_factorization(X, p,
+    _solve(X, p,
+           *f,                           true,  // update f
+           *dfdp,                        true,  // update dfdp
+           *t1_X, t1_p, g,           // dgdX = X_scale * t1^X, dgdp = p_scale *t1^p
+           *dX, dp);
+    /*_solve_schur_factorization(X, p,
                                jac,                          false, // do not update jac
                                *f,                           true,  // update f
                                *dfdp,                        true,  // update dfdp
                                *dXdp,                        true,  // update dXdp
                                *t1_X, t1_p, g,           // dgdX = X_scale * t1^X, dgdp = p_scale *t1^p
-                               *dX, dp);
+                               *dX, dp);*/
     
     // update the solution and load parameter
     p() += dp;
@@ -135,8 +138,6 @@ MAST::PseudoArclengthContinuationSolver::
 _update_search_direction(const libMesh::NumericVector<Real> &X,
                          const MAST::Parameter              &p,
                          libMesh::SparseMatrix<Real>        &jac,
-                         /*libMesh::NumericVector<Real>       &dfdp,
-                         libMesh::NumericVector<Real>       &dXdp,*/
                          libMesh::NumericVector<Real>       &t1_X,
                          Real                               &t1_p) {
     
@@ -162,13 +163,18 @@ _update_search_direction(const libMesh::NumericVector<Real> &X,
 
 
     // first update the search direction
-    _solve_schur_factorization(X, p,
+    _solve(X, p,
+           *f,                false, // do not update f
+           *dfdp,             false, // do not update dfdp
+           *_t0_X, _t0_p,  -1.,  // dgdX = t0^X, dgdp = t0^p, g = -1
+           t1_X, t1_p);
+    /*_solve_schur_factorization(X, p,
                                jac,               true,  // update jac
                                *f,                false, // do not update f
                                *dfdp,             false, // do not update dfdp
                                *dXdp,             true,  // update dXdp
                                *_t0_X, _t0_p,  -1.,  // dgdX = t0^X, dgdp = t0^p, g = -1
-                               t1_X, t1_p);
+                               t1_X, t1_p);*/
 
     // now scale the vector for unit magnitude
     Real
@@ -193,8 +199,6 @@ MAST::PseudoArclengthContinuationSolver::_g(const libMesh::NumericVector<Real> &
     
     std::unique_ptr<libMesh::NumericVector<Real>>
     f(X.zero_clone().release()),
-    /*dfdp(X.zero_clone().release()),
-    dXdp(X.zero_clone().release()),*/
     t1_X(X.zero_clone().release());
     
     Real
@@ -203,8 +207,6 @@ MAST::PseudoArclengthContinuationSolver::_g(const libMesh::NumericVector<Real> &
 
     _update_search_direction(X, p,
                              *_assembly->system().matrix,
-                             /**dfdp,
-                             *dXdp,*/
                              *t1_X,
                              t1_p);
     

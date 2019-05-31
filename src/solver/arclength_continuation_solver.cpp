@@ -26,7 +26,7 @@
 
 // libMesh includes
 #include "libmesh/linear_solver.h"
-
+#include "libmesh/dof_map.h"
 
 MAST::ArclengthContinuationSolver::ArclengthContinuationSolver():
 MAST::ContinuationSolverBase(),
@@ -98,13 +98,18 @@ _solve_NR_iterate(libMesh::NumericVector<Real>       &X,
     
     _g(X, p, *dfdp, *dXdp, g, dgdp, dgdX.get());
     
-    _solve_schur_factorization(X, p,
+    _solve(X, p,
+           *f,                           true,  // update f
+           *dfdp,                        false, // update dfdp
+           *dgdX, dgdp, g,
+           *dX, dp);
+    /*_solve_schur_factorization(X, p,
                                jac,                          true,  // update jac
                                *f,                           true,  // update f
                                *dfdp,                        false, // update dfdp
                                *dXdp,                        false, // update dXdp
                                *dgdX, dgdp, g,
-                               *dX, dp);
+                               *dX, dp);*/
 
     // update the solution and load parameter
     p() += dp;
@@ -154,7 +159,7 @@ _dXdp(const libMesh::NumericVector<Real> &X,
     // The linear solver may not have fit our constraints exactly
 #ifdef LIBMESH_ENABLE_CONSTRAINTS
     system.get_dof_map().enforce_constraints_exactly (system,
-                                                      dXdp,
+                                                      &dXdp,
                                                       /* homogeneous = */ true);
 #endif
     
