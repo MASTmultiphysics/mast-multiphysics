@@ -60,7 +60,8 @@ namespace MAST {
         residual_and_jacobian (const libMesh::NumericVector<Real>& X,
                                libMesh::NumericVector<Real>* R,
                                libMesh::SparseMatrix<Real>*  J,
-                               libMesh::NonlinearImplicitSystem& S);
+                               libMesh::NonlinearImplicitSystem& S,
+                               bool close_matrix = true);
         
         /*!
          *    calculates the product of the Jacobian and a perturbation in solution

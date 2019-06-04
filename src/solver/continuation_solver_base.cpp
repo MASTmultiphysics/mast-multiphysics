@@ -247,6 +247,11 @@ MAST::ContinuationSolverBase::_solve(const libMesh::NumericVector<Real>  &X,
                                        0, (PetscInt*)&n_nz[0],
                                        0, (PetscInt*)&n_oz[0]);    CHKERRABORT(comm.get(), ierr);
     
+    // now add the block entries
+    ierr = MatSetOption(mat,
+                        MAT_NEW_NONZERO_ALLOCATION_ERR,
+                        PETSC_TRUE);                               CHKERRABORT(comm.get(), ierr);
+
     // now create the vectors
     Vec              res_vec, sol_vec;
     
@@ -275,7 +280,8 @@ MAST::ContinuationSolverBase::_solve(const libMesh::NumericVector<Real>  &X,
     _assembly->residual_and_jacobian(X,
                                      update_f?res.get():nullptr,
                                      jac_mat.get(),
-                                     system);
+                                     system,
+                                     false);
 
     _assembly->clear_elem_operation_object();
     system.set_operation(MAST::NonlinearSystem::NONE);
@@ -296,10 +302,6 @@ MAST::ContinuationSolverBase::_solve(const libMesh::NumericVector<Real>  &X,
     res->scale(-1.);
     res->close();
 
-    // now add the block entries
-    ierr = MatSetOption(mat,
-                        MAT_NEW_NONZERO_ALLOCATION_ERR,
-                        PETSC_FALSE);                               CHKERRABORT(comm.get(), ierr);
 
     // first set the data for the last column
     for (unsigned int i=dof_map.first_dof(rank);
@@ -314,11 +316,6 @@ MAST::ContinuationSolverBase::_solve(const libMesh::NumericVector<Real>  &X,
         jac_mat->set(total_m-1, total_m-1, dgdp);
 
     jac_mat->close();
-
-    ierr = MatSetOption(mat,
-                        MAT_NEW_NONZERO_ALLOCATION_ERR,
-                        PETSC_TRUE);                               CHKERRABORT(comm.get(), ierr);
-
     
     
     /////////////////////////////////////////////////////////////////
