@@ -108,6 +108,33 @@ namespace MAST {
         Real
         arc_length;
         
+        /*!
+         *   minimum step size allowed with adaptivity
+         */
+        Real
+        min_step;
+        
+        /*!
+         *   maximum step size allowed with adaptivity
+         */
+        Real
+        max_step;
+        
+        /*!
+         *   exponent used in step size update.
+         */
+        Real
+        step_size_change_exponent;
+
+        /*!
+         *   desired N-R iterations per load-step. Step-size is chanegd
+         *   if actual number of N-R iterates is different from this value
+         *   using the expression \f$ \Delta s \left(\frac{N_{desired}}{N_{actual}}\right)^p \f$,
+         *   where, p is the exponent. 
+         */
+        unsigned int
+        step_desired_iters;
+        
     protected:
 
         virtual void

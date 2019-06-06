@@ -35,17 +35,21 @@
 
 
 MAST::ContinuationSolverBase::ContinuationSolverBase():
-max_it       (20),
-abs_tol      (1.e-8),
-rel_tol      (1.e-8),
-arc_length   (0.),
-_initialized (false),
-_elem_ops    (nullptr),
-_assembly    (nullptr),
-_p           (nullptr),
-_p0          (0.),
-_X_scale     (0.),
-_p_scale     (0.){
+max_it                    (20),
+abs_tol                   (1.e-8),
+rel_tol                   (1.e-8),
+arc_length                (0.),
+min_step                  (0.5),
+max_step                  (20),
+step_size_change_exponent (0.5),
+step_desired_iters        (5),
+_initialized              (false),
+_elem_ops                 (nullptr),
+_assembly                 (nullptr),
+_p                        (nullptr),
+_p0                       (0.),
+_X_scale                  (0.),
+_p_scale                  (0.) {
     
 }
 
@@ -132,6 +136,23 @@ MAST::ContinuationSolverBase::solve()  {
     << std::setw(20) << "relative res-l2: "
     << std::setw(15) << norm/norm0
     << std::setw(20) << "Terminated"  << std::endl;
+    
+    if (iter) {
+        Real
+        factor   = std::pow((1.*step_desired_iters)/(1.*iter), step_size_change_exponent);
+        if (factor > 1.) {
+            arc_length = std::min(max_step, factor*arc_length);
+            libMesh::out
+            << std::setw(30) << "increased step-size: "
+            << std::setw(15) << arc_length << std::endl;
+        }
+        else if (factor < 1.) {
+            arc_length = std::max(min_step, factor*arc_length);
+            libMesh::out
+            << std::setw(30) << "reduced step-size: "
+            << std::setw(15) << arc_length << std::endl;
+        }
+    }
     
 }
 
