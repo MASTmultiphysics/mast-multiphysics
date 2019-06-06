@@ -105,7 +105,7 @@ int main(int argc, char* argv[])
     ny     = input("ny", "number of elements along the y-axis" , 20);
 
     libMesh::ReplicatedMesh mesh(init.comm());
-    libMesh::MeshTools::Generation::build_square(mesh, nx, ny, 0.0, length, 0.0, width, libMesh::QUAD4);
+    libMesh::MeshTools::Generation::build_square(mesh, nx, ny, 0.0, length, 0.0, width, libMesh::QUAD9);
     mesh.print_info();
 
     // if a finite radius is defined, change the mesh to a circular arc of specified radius
@@ -159,7 +159,7 @@ int main(int argc, char* argv[])
     MAST::NonlinearSystem & system = equation_systems.add_system<MAST::NonlinearSystem>("structural");
 
     // Create a finite element type for the system. Here we use first order Lagrangian-type finite elements.
-    libMesh::FEType fetype(libMesh::FIRST, libMesh::LAGRANGE);
+    libMesh::FEType fetype(libMesh::SECOND, libMesh::LAGRANGE);
 
     // Initialize the system to the correct set of variables for a structural analysis. In libMesh this is analogous
     // to adding variables (each with specific finite element type/order to the system for a particular system
@@ -349,15 +349,12 @@ int main(int argc, char* argv[])
         // load step
         solver.set_assembly_and_load_parameter(elem_ops, assembly, pressure);
         
-        // initial search direction is defined usign a pressure of 5e3.
+        // initial search direction is defined usign a pressure of 2e3.
         solver.initialize(2.e3);
         
         // the arch length is chanegd to a factor of 4 for each load step.
         solver.arc_length *= 3;
 
-        // maximum number of Newton iterations per load step
-        solver.max_it      = 80;
-        
         for (unsigned int i=0+n_temp_steps; i<n_press_steps+n_temp_steps; i++) {
             solver.solve();
             std::cout

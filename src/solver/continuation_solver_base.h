@@ -135,6 +135,11 @@ namespace MAST {
         unsigned int
         step_desired_iters;
         
+        /*!
+         *   flag to use Schur-factorizaiton (default) or monolithic solver
+         */
+        bool schur_factorization;
+        
     protected:
 
         virtual void

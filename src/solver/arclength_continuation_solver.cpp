@@ -98,18 +98,20 @@ _solve_NR_iterate(libMesh::NumericVector<Real>       &X,
     
     _g(X, p, *dfdp, *dXdp, g, dgdp, dgdX.get());
     
-    _solve(X, p,
-           *f,                           true,  // update f
-           *dfdp,                        false, // update dfdp
-           *dgdX, dgdp, g,
-           *dX, dp);
-    /*_solve_schur_factorization(X, p,
-                               jac,                          true,  // update jac
-                               *f,                           true,  // update f
-                               *dfdp,                        false, // update dfdp
-                               *dXdp,                        false, // update dXdp
-                               *dgdX, dgdp, g,
-                               *dX, dp);*/
+    if (!schur_factorization)
+        _solve(X, p,
+               *f,                           true,  // update f
+               *dfdp,                        false, // update dfdp
+               *dgdX, dgdp, g,
+               *dX, dp);
+    else
+        _solve_schur_factorization(X, p,
+                                   jac,                          true,  // update jac
+                                   *f,                           true,  // update f
+                                   *dfdp,                        false, // update dfdp
+                                   *dXdp,                        false, // update dXdp
+                                   *dgdX, dgdp, g,
+                                   *dX, dp);
 
     // update the solution and load parameter
     p() += dp;

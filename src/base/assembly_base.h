@@ -73,6 +73,11 @@ namespace MAST {
         };
         
         /*!
+         *   flag to control the closing fo the Jacobian after assembly
+         */
+        bool close_matrix;
+        
+        /*!
          *   @returns a const reference to the PhysicsDisciplineBase object
          *   associated with this object
          */
@@ -177,8 +182,7 @@ namespace MAST {
         residual_and_jacobian (const libMesh::NumericVector<Real>& X,
                                libMesh::NumericVector<Real>* R,
                                libMesh::SparseMatrix<Real>*  J,
-                               libMesh::NonlinearImplicitSystem& S,
-                               bool close_matrix = true) {
+                               libMesh::NonlinearImplicitSystem& S) {
             libmesh_assert(false); // implement in the derived class
         }
 

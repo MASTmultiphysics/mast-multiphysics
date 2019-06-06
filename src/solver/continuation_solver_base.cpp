@@ -49,7 +49,8 @@ _assembly                 (nullptr),
 _p                        (nullptr),
 _p0                       (0.),
 _X_scale                  (0.),
-_p_scale                  (0.) {
+_p_scale                  (0.),
+schur_factorization       (true) {
     
 }
 
@@ -298,12 +299,13 @@ MAST::ContinuationSolverBase::_solve(const libMesh::NumericVector<Real>  &X,
     
     // now compute the jacobian
     system.set_operation(MAST::NonlinearSystem::NONLINEAR_SOLVE);
+    _assembly->close_matrix = false;
     _assembly->residual_and_jacobian(X,
                                      update_f?res.get():nullptr,
                                      jac_mat.get(),
-                                     system,
-                                     false);
-
+                                     system);
+    _assembly->close_matrix = true;
+    
     _assembly->clear_elem_operation_object();
     system.set_operation(MAST::NonlinearSystem::NONE);
     
@@ -446,7 +448,7 @@ _solve_schur_factorization(const libMesh::NumericVector<Real>  &X,
     
     
     std::unique_ptr<libMesh::NumericVector<Real>>
-    r1(X.clone().release());
+    r1(X.zero_clone().release());
     
     libMesh::SparseMatrix<Real>
     *pc  = system.request_matrix("Preconditioner");

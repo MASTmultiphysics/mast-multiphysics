@@ -112,18 +112,20 @@ _solve_NR_iterate(libMesh::NumericVector<Real>       &X,
     t1_X->close();
     t1_p *= _p_scale;
     
-    _solve(X, p,
-           *f,                           true,  // update f
-           *dfdp,                        true,  // update dfdp
-           *t1_X, t1_p, g,           // dgdX = X_scale * t1^X, dgdp = p_scale *t1^p
-           *dX, dp);
-    /*_solve_schur_factorization(X, p,
-                               jac,                          false, // do not update jac
-                               *f,                           true,  // update f
-                               *dfdp,                        true,  // update dfdp
-                               *dXdp,                        true,  // update dXdp
-                               *t1_X, t1_p, g,           // dgdX = X_scale * t1^X, dgdp = p_scale *t1^p
-                               *dX, dp);*/
+    if (!schur_factorization)
+        _solve(X, p,
+               *f,                           true,  // update f
+               *dfdp,                        true,  // update dfdp
+               *t1_X, t1_p, g,           // dgdX = X_scale * t1^X, dgdp = p_scale *t1^p
+               *dX, dp);
+    else
+        _solve_schur_factorization(X, p,
+                                   jac,                          false, // do not update jac
+                                   *f,                           true,  // update f
+                                   *dfdp,                        true,  // update dfdp
+                                   *dXdp,                        true,  // update dXdp
+                                   *t1_X, t1_p, g,           // dgdX = X_scale * t1^X, dgdp = p_scale *t1^p
+                                   *dX, dp);
     
     // update the solution and load parameter
     p() += dp;
@@ -163,18 +165,20 @@ _update_search_direction(const libMesh::NumericVector<Real> &X,
 
 
     // first update the search direction
-    _solve(X, p,
-           *f,                false, // do not update f
-           *dfdp,             false, // do not update dfdp
-           *_t0_X, _t0_p,  -1.,  // dgdX = t0^X, dgdp = t0^p, g = -1
-           t1_X, t1_p);
-    /*_solve_schur_factorization(X, p,
-                               jac,               true,  // update jac
-                               *f,                false, // do not update f
-                               *dfdp,             false, // do not update dfdp
-                               *dXdp,             true,  // update dXdp
-                               *_t0_X, _t0_p,  -1.,  // dgdX = t0^X, dgdp = t0^p, g = -1
-                               t1_X, t1_p);*/
+    if (!schur_factorization)
+        _solve(X, p,
+               *f,                false, // do not update f
+               *dfdp,             false, // do not update dfdp
+               *_t0_X, _t0_p,  -1.,  // dgdX = t0^X, dgdp = t0^p, g = -1
+               t1_X, t1_p);
+    else
+        _solve_schur_factorization(X, p,
+                                   jac,               true,  // update jac
+                                   *f,                false, // do not update f
+                                   *dfdp,             false, // do not update dfdp
+                                   *dXdp,             true,  // update dXdp
+                                   *_t0_X, _t0_p,  -1.,  // dgdX = t0^X, dgdp = t0^p, g = -1
+                                   t1_X, t1_p);
 
     // now scale the vector for unit magnitude
     Real

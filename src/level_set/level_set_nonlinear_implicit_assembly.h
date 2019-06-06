@@ -118,8 +118,7 @@ namespace MAST {
         residual_and_jacobian (const libMesh::NumericVector<Real>& X,
                                libMesh::NumericVector<Real>* R,
                                libMesh::SparseMatrix<Real>*  J,
-                               libMesh::NonlinearImplicitSystem& S,
-                               bool close_matrix = true);
+                               libMesh::NonlinearImplicitSystem& S);
 
         
         virtual bool

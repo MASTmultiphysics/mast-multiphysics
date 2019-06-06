@@ -56,8 +56,7 @@ MAST::TransientAssembly::
 residual_and_jacobian (const libMesh::NumericVector<Real>& X,
                        libMesh::NumericVector<Real>* R,
                        libMesh::SparseMatrix<Real>*  J,
-                       libMesh::NonlinearImplicitSystem& S,
-                       bool close_matrix) {
+                       libMesh::NonlinearImplicitSystem& S) {
     
     libmesh_assert(_system);
     libmesh_assert(_discipline);
