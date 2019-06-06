@@ -37,6 +37,7 @@
 
 
 MAST::AssemblyBase::AssemblyBase():
+close_matrix      (true),
 _elem_ops         (nullptr),
 _discipline       (nullptr),
 _system           (nullptr),
@@ -152,6 +153,7 @@ void
 MAST::AssemblyBase::
 clear_discipline_and_system() {
     
+    close_matrix   = true;
     _discipline    = nullptr;
     _system        = nullptr;
 }

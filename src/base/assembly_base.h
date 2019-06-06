@@ -73,6 +73,11 @@ namespace MAST {
         };
         
         /*!
+         *   flag to control the closing fo the Jacobian after assembly
+         */
+        bool close_matrix;
+        
+        /*!
          *   @returns a const reference to the PhysicsDisciplineBase object
          *   associated with this object
          */

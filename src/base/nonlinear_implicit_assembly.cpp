@@ -183,7 +183,7 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
         if (_first_iter_res_l2_norm < 0.)
             _first_iter_res_l2_norm = _res_l2_norm;
     }
-    if (J) J->close();
+    if (J && close_matrix) J->close();
 }
 
 

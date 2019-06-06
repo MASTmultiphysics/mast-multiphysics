@@ -108,6 +108,38 @@ namespace MAST {
         Real
         arc_length;
         
+        /*!
+         *   minimum step size allowed with adaptivity
+         */
+        Real
+        min_step;
+        
+        /*!
+         *   maximum step size allowed with adaptivity
+         */
+        Real
+        max_step;
+        
+        /*!
+         *   exponent used in step size update.
+         */
+        Real
+        step_size_change_exponent;
+
+        /*!
+         *   desired N-R iterations per load-step. Step-size is chanegd
+         *   if actual number of N-R iterates is different from this value
+         *   using the expression \f$ \Delta s \left(\frac{N_{desired}}{N_{actual}}\right)^p \f$,
+         *   where, p is the exponent. 
+         */
+        unsigned int
+        step_desired_iters;
+        
+        /*!
+         *   flag to use Schur-factorizaiton (default) or monolithic solver
+         */
+        bool schur_factorization;
+        
     protected:
 
         virtual void
@@ -115,7 +147,31 @@ namespace MAST {
                           MAST::Parameter                    &p) = 0;
 
         /*!
-         *   solves for the linear system of equation.
+         *   solves for the linear system of equation as a monolithic system
+         *    \f[
+         *         \left[ \begin{array}{cc}
+         *            df/dx & df/dp \\ dg/dx  &  dg/dp \end{array}\right]
+         *          \left\{ \begin{array}{c} dx \\ dp \end{array} \right\}  =
+         *          - \left\{ \begin{array}{c} f \\ g \end{array} \right\}
+         *    \f]
+         *   \p dX and \p dp are returned from the solution
+         */
+        void
+        _solve(const libMesh::NumericVector<Real>  &X,
+               const MAST::Parameter               &p,
+               libMesh::NumericVector<Real>        &f,
+               bool                                update_f,
+               libMesh::NumericVector<Real>        &dfdp,
+               bool                                update_dfdp,
+               const libMesh::NumericVector<Real>  &dgdX,
+               const Real                          dgdp,
+               const Real                          g,
+               libMesh::NumericVector<Real>        &dX,
+               Real                                &dp);
+
+
+        /*!
+         *   solves for the linear system of equation using Schur factorization.
          *    \f[
          *         \left[ \begin{array}{cc}
          *            df/dx & df/dp \\ dg/dx  &  dg/dp \end{array}\right]
