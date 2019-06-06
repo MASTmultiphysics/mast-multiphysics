@@ -30,7 +30,8 @@
 
 MAST::PseudoArclengthContinuationSolver::PseudoArclengthContinuationSolver():
 MAST::ContinuationSolverBase(),
-_t0_p   (0.) {
+_t0_p       (0.),
+_t0_p_orig  (0.) {
     
 }
 
@@ -52,6 +53,7 @@ MAST::PseudoArclengthContinuationSolver::initialize(Real dp) {
     system = _assembly->system();
     
     _t0_X.reset(system.solution->clone().release());
+    _t0_X_orig.reset(system.solution->zero_clone().release());
     
     _assembly->system().solve(*_elem_ops, *_assembly);
     
@@ -72,6 +74,8 @@ MAST::PseudoArclengthContinuationSolver::initialize(Real dp) {
     _t0_X->scale(_X_scale/arc_length);
     _t0_X->close();
     _t0_p = _p_scale*dp/arc_length;
+
+    _save_iteration_data();
     
     _initialized = true;
 }
@@ -239,3 +243,25 @@ MAST::PseudoArclengthContinuationSolver::_g(const libMesh::NumericVector<Real> &
             _p_scale * (p() - _p0) * t1_p) - arc_length;
 }
 
+
+void
+MAST::PseudoArclengthContinuationSolver::_save_iteration_data() {
+    
+    // copy for possible reuse in resetting step
+    _t0_X_orig->zero();
+    _t0_X_orig->add(1., *_t0_X);
+    _t0_X_orig->close();
+    _t0_p_orig = _t0_p;
+}
+
+
+void
+MAST::PseudoArclengthContinuationSolver::_reset_iterations() {
+    
+    libmesh_assert(_initialized);
+    
+    _t0_X->zero();
+    _t0_X->add(1., *_t0_X_orig);
+    _t0_X->close();
+    _t0_p = _t0_p_orig;
+}

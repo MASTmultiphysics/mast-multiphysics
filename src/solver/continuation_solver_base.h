@@ -208,6 +208,16 @@ namespace MAST {
         _g(const libMesh::NumericVector<Real> &X,
            const MAST::Parameter              &p) = 0;
 
+        /*!
+         *   method saves any data for possible resuse if the solution step is restarted
+         */
+        virtual void _save_iteration_data() = 0;
+
+        /*!
+         *   method resets any data if a soltion step is restarted
+         */
+        virtual void _reset_iterations() = 0;
+        
         bool                           _initialized;
         
         MAST::AssemblyElemOperations   *_elem_ops;

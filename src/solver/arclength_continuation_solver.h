@@ -88,6 +88,18 @@ namespace MAST {
            Real                               &dgdp,
            libMesh::NumericVector<Real>       *dgdX);
         
+        /*!
+         *   method saves any data for possible resuse if the solution step
+         *   is restarted. Nothing to be done for this solver. 
+         */
+        virtual void _save_iteration_data() {}
+
+        /*!
+         *   method resets any data if a soltion step is restarted. Nothing to
+         *   be done here. 
+         */
+        virtual void _reset_iterations() {}
+
         Real
         _dpds_sign;
     };

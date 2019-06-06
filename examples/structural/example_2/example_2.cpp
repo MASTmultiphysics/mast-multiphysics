@@ -297,6 +297,7 @@ int main(int argc, char* argv[])
     if (n_temp_steps) {
         
         MAST::PseudoArclengthContinuationSolver solver;
+        solver.schur_factorization = input("if_schur_factorization", "use Schur-factorization in continuation solver", true);
 
         // specify temperature as the load parameter to be changed per
         // load step
@@ -344,6 +345,7 @@ int main(int argc, char* argv[])
     if (n_press_steps) {
         
         MAST::PseudoArclengthContinuationSolver solver;
+        solver.schur_factorization = input("if_schur_factorization", "use Schur-factorization in continuation solver", true);
         
         // specify pressure as the load parameter to be changed per
         // load step
