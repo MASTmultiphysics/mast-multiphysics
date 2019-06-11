@@ -39,8 +39,8 @@ max_it                    (10),
 abs_tol                   (1.e-8),
 rel_tol                   (1.e-8),
 arc_length                (0.),
-min_step                  (0.5),
-max_step                  (20),
+min_step                  (2.),
+max_step                  (20.),
 step_size_change_exponent (0.5),
 step_desired_iters        (5),
 _initialized              (false),
@@ -129,21 +129,25 @@ MAST::ContinuationSolverBase::solve()  {
         
         if (norm < abs_tol)       cont = false;
         if (norm/norm0 < rel_tol) cont = false;
-        if (iter >= max_it &&
-            arc_length > min_step)   {
-            
-            libMesh::out
-            << "   Retrying with smaller step-size" << std::endl;
-            
-            // reanalyze with a smaller step-size
-            iter = 0;
-            arc_length =  std::max(min_step, .5*arc_length);
-            X.zero();
-            X.add(1., *_X0);
-            X.close();
-            *_p = _p0;
-            _reset_iterations();
-            cont = true;
+        if (iter >= max_it) {
+            if (arc_length > min_step)   {
+                
+                // reduce step-size if possible, otherwise terminate
+                libMesh::out
+                << "   Retrying with smaller step-size" << std::endl;
+                
+                // reanalyze with a smaller step-size
+                iter = 0;
+                arc_length =  std::max(min_step, .5*arc_length);
+                X.zero();
+                X.add(1., *_X0);
+                X.close();
+                *_p = _p0;
+                _reset_iterations();
+                cont = true;
+            }
+            else
+                cont = false;
         }
     }
         

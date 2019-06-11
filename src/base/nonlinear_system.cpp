@@ -999,10 +999,9 @@ project_vector_without_dirichlet (libMesh::NumericVector<Real> & new_vector,
     libMesh::WrappedFunctor<Real>     f_fem(f);
     libMesh::FEMFunctionWrapper<Real> fw(f_fem);
     
-    libMesh::Threads::parallel_for
-    (active_local_range,
-     FEMProjector(*this, fw, nullptr, setter, vars));
-    
+    FEMProjector projector(*this, fw, nullptr, setter, vars);
+    projector.project(active_local_range);
+
     // Also, load values into the SCALAR dofs
     // Note: We assume that all SCALAR dofs are on the
     // processor with highest ID
