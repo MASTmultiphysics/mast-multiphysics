@@ -37,6 +37,7 @@
 #include "elasticity/structural_system_initialization.h"
 #include "base/physics_discipline_base.h"
 #include "boundary_condition/dirichlet_boundary_condition.h"
+#include "boundary_condition/point_load_condition.h"
 #include "base/parameter.h"
 #include "base/constant_field_function.h"
 #include "property_cards/isotropic_material_property_card.h"
@@ -46,30 +47,24 @@
 #include "solver/arclength_continuation_solver.h"
 #include "solver/pseudo_arclength_continuation_solver.h"
 
-class Pressure: public MAST::FieldFunction<Real> {
+class PointLoad: public MAST::FieldFunction<RealVectorX> {
 public:
-    Pressure(MAST::Parameter& p, Real r, Real x0, Real y0):
-    MAST::FieldFunction<Real>("pressure"), _p(p), _r(r), _x0(x0), _y0(y0) {}
-    virtual void operator()(const libMesh::Point& p, const Real t, Real& v) const {
-        if (std::sqrt(std::pow(p(0)-_x0, 2) + std::pow(p(1)-_y0, 2)) <= _r)
-        //if (std::sqrt(0*std::pow(p(0)-_x0, 2) + std::pow(p(1)-_y0, 2)) <= _r)
-            v = _p();
-        else
-            v = 0.;
+    PointLoad(MAST::Parameter& p):
+    MAST::FieldFunction<RealVectorX>("load"), _p(p) {}
+    virtual void operator()(const libMesh::Point& p, const Real t, RealVectorX& v) const {
+        v = RealVectorX::Zero(6);
+        // force in z direction
+        v(2) = _p();
     }
     virtual void derivative(const MAST::FunctionBase& f,
-                            const libMesh::Point& p, const Real t, Real& v) const {
-        if (&f == &_p &&
-            std::sqrt(std::pow(p(0)-_x0, 2) + std::pow(p(1)-_y0, 2)) <= _r)
-            //std::sqrt(0*std::pow(p(0)-_x0, 2) + std::pow(p(1)-_y0, 2)) <= _r)
-            v = 1.;
-        else
-            v = 0.;
+                            const libMesh::Point& p, const Real t, RealVectorX& v) const {
+        v = RealVectorX::Zero(6);
+        if (&f == &_p)
+            v(2) = 1.;
     }
 
 protected:
     MAST::Parameter& _p;
-    Real _r, _x0, _y0;
 };
 
 int main(int argc, char* argv[])
@@ -96,8 +91,8 @@ int main(int argc, char* argv[])
     //   as compared to a "DistributedMesh" where the mesh is "chunked" up and distributed across processes, each
     //   having their own piece.
     Real
-    length = input("length", "length of the plate" ,.254*2),
-    width  = input("width", "length of the plate" ,.254*2),
+    length = input("length", "length of the plate" ,.508),
+    width  = input("width", "length of the plate"  ,.508),
     R      = input("radius", "radius of the circle where the circumference defines the curved plate", 2.540);
     
     unsigned int
@@ -108,23 +103,45 @@ int main(int argc, char* argv[])
     libMesh::MeshTools::Generation::build_square(mesh, nx, ny, 0.0, length, 0.0, width, libMesh::QUAD9);
     mesh.print_info();
 
+    // get the node for which the displacement will be written to the
+    // load.txt file.
+    libMesh::Point
+    pt(length/2., width/2., 0.), // location of mid-point before shift
+    pt0,
+    dr1, dr2;
+    const libMesh::Node
+    *nd = nullptr;
+
     // if a finite radius is defined, change the mesh to a circular arc of specified radius
-    if (R > 0.) {
-        libMesh::MeshBase::node_iterator
-        n_it   = mesh.nodes_begin(),
-        n_end  = mesh.nodes_end();
-        for ( ; n_it != n_end; n_it++) {
-            // compute angle based on y-location
+    libMesh::MeshBase::node_iterator
+    n_it   = mesh.nodes_begin(),
+    n_end  = mesh.nodes_end();
+
+    // initialize the pointer to a node
+    nd   = *n_it;
+    pt0  = *nd;
+    
+    for ( ; n_it != n_end; n_it++) {
+        
+        dr1  = pt0;
+        dr1 -= pt;
+        
+        dr2  = **n_it;
+        dr2 -= pt;
+        
+        if (dr2.norm() < dr1.norm()) {
+
+            nd  = *n_it;
+            pt0 = *nd;
+        }
+        
+        // compute angle based on y-location
+        if (R > 0.) {
             Real a  = asin(((**n_it)(1)-width*.5)/R);
             (**n_it)(2) = cos(a)*R;
         }
     }
-
-    // get the node for which the displacement will be written to the
-    // load.txt file.
-    libMesh::Point pt(length/2., width/2., R);
-    const libMesh::Node
-    *nd = mesh.sub_point_locator()->operator()(pt)->node_ptr(0);
+    
     std::cout << *nd << std::endl;
     
     // also, create a boundary id for this node since we will constrain the
@@ -209,7 +226,7 @@ int main(int argc, char* argv[])
     MAST::Parameter kappa      ("kappa", input("kappa",          "shear correction factor",  5./6.));
     MAST::Parameter alpha      ("alpha", input("alpha", "coefficient of thermal expansion", 1.5e-5));
     MAST::Parameter zero       ("zero", 0.0);
-    MAST::Parameter pressure   ("p",     input(    "p",     "initial pressure",                  0));
+    MAST::Parameter pressure   ("p",     input(    "p",     "initial point load",                0));
     MAST::Parameter temperature("T",     input( "temp",  "initial temperature",                0.0));
 
     // Create ConstantFieldFunctions used to spread parameters throughout the model.
@@ -220,15 +237,15 @@ int main(int argc, char* argv[])
     MAST::ConstantFieldFunction kappa_f("kappa", kappa);
     MAST::ConstantFieldFunction alpha_f("alpha_expansion", alpha);
     MAST::ConstantFieldFunction off_f("off", zero);
-    //MAST::ConstantFieldFunction pressure_f("pressure", pressure);
     MAST::ConstantFieldFunction temperature_f("temperature", temperature);
     MAST::ConstantFieldFunction ref_temp_f("ref_temperature", zero);
-    Pressure pressure_f(pressure, width/10., length/2., width/2.);
+    PointLoad load_f(pressure);
     
-    // Initialize load.
-    MAST::BoundaryConditionBase surface_pressure(MAST::SURFACE_PRESSURE);
-    surface_pressure.add(pressure_f);
-    discipline.add_volume_load(0, surface_pressure);
+    // Initialize point load.
+    MAST::PointLoadCondition point_load(MAST::POINT_LOAD);
+    point_load.add(load_f);
+    point_load.add_node(*nd);
+    discipline.add_point_load(point_load);
 
     MAST::BoundaryConditionBase temperature_load(MAST::TEMPERATURE);
     temperature_load.add(temperature_f);
@@ -298,6 +315,7 @@ int main(int argc, char* argv[])
         
         MAST::PseudoArclengthContinuationSolver solver;
         solver.schur_factorization = input("if_schur_factorization", "use Schur-factorization in continuation solver", true);
+        solver.min_step            = input("min_step", "minimum arc-length step-size for continuation solver",          10.);
 
         // specify temperature as the load parameter to be changed per
         // load step
@@ -346,16 +364,17 @@ int main(int argc, char* argv[])
         
         MAST::PseudoArclengthContinuationSolver solver;
         solver.schur_factorization = input("if_schur_factorization", "use Schur-factorization in continuation solver", true);
-        
+        solver.min_step            = input("min_step", "minimum arc-length step-size for continuation solver",          10.);
+
         // specify pressure as the load parameter to be changed per
         // load step
         solver.set_assembly_and_load_parameter(elem_ops, assembly, pressure);
         
         // initial search direction is defined usign a pressure of 2e3.
-        solver.initialize(2.e3);
+        solver.initialize(-1.e1);
         
         // the arch length is chanegd to a factor of 4 for each load step.
-        solver.arc_length *= 3;
+        solver.arc_length *= 10;
 
         for (unsigned int i=0+n_temp_steps; i<n_press_steps+n_temp_steps; i++) {
             solver.solve();
