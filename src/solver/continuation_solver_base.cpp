@@ -43,14 +43,14 @@ min_step                  (2.),
 max_step                  (20.),
 step_size_change_exponent (0.5),
 step_desired_iters        (5),
+schur_factorization       (true),
 _initialized              (false),
 _elem_ops                 (nullptr),
 _assembly                 (nullptr),
 _p                        (nullptr),
 _p0                       (0.),
 _X_scale                  (0.),
-_p_scale                  (0.),
-schur_factorization       (true) {
+_p_scale                  (0.) {
     
 }
 
