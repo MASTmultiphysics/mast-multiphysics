@@ -297,6 +297,7 @@ int main(int argc, char* argv[])
 
     // write the header to the load.txt file
     Real
+    max_temp = input("max_temp", "maximum temperature", 0.),
     dt = 1./(n_temp_steps+n_press_steps-1.);
     std::ofstream out;
     if (mesh.comm().rank() == 0) {
@@ -323,7 +324,7 @@ int main(int argc, char* argv[])
         
         // the initial deformation direction is identified with a
         // unit change in temperature.
-        solver.initialize(1);
+        solver.initialize(temperature());
         // with the search direction defined, we define the arc length
         // per load step to be a factor of 2 greater than the initial step.
         solver.arc_length *= 2;
@@ -355,6 +356,12 @@ int main(int argc, char* argv[])
                                      equation_systems,
                                      i+1,
                                      system.time);
+            
+            if (temperature() > max_temp) {
+                temperature = max_temp;
+                nonlinear_system.solve(elem_ops, assembly);
+                break;
+            }
         }
     }
 
