@@ -168,13 +168,14 @@ MAST::ConservativeFluidElementBase::internal_residual (bool request_jacobian,
                                                LS_sens);
         
         // discontinuity capturing operator for this quadrature point
-        /*calculate_aliabadi_discontinuity_operator(qp,
-                                                  *fe,
-                                                  primitive_sol,
-                                                  _sol,
-                                                  dBmat,
-                                                  AiBi_adv,
-                                                  dc);*/
+        if (flight_condition->enable_shock_capturing)
+            calculate_aliabadi_discontinuity_operator(qp,
+                                                      *fe,
+                                                      primitive_sol,
+                                                      _sol,
+                                                      dBmat,
+                                                      AiBi_adv,
+                                                      dc);
         
         // assemble the residual due to flux operator
         for (unsigned int i_dim=0; i_dim<dim; i_dim++) {
@@ -1640,7 +1641,8 @@ far_field_surface_residual(bool request_jacobian,
 
     const std::vector<Real> &JxW                 = fe->get_JxW();
     const std::vector<libMesh::Point>& normals   = fe->get_normals_for_reference_coordinate();
-    
+    const std::vector<libMesh::Point>& qpoint    = fe->get_xyz();
+
     const unsigned int
     dim    = _elem.dim(),
     n1     = dim+2,
@@ -1702,7 +1704,10 @@ far_field_surface_residual(bool request_jacobian,
         
         mat1_n1n1 *= leig_vec.transpose(); // A_{-} = L^-T [omaga]_{-} L^T
         
-        this->get_infinity_vars( vec2_n1 );
+        if (flight_condition->inf_sol.get())
+            (*flight_condition->inf_sol)(qpoint[qp], _time, vec2_n1);
+        else
+            this->get_infinity_vars( vec2_n1 );
         flux = mat1_n1n1 * vec2_n1;  // f_{-} = A_{-} B U
         
         Bmat.vector_mult_transpose(vec3_n2, flux); // B^T f_{-}   (this is flux coming into the solution domain)
