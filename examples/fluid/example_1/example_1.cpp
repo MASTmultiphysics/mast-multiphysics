@@ -772,7 +772,7 @@ protected:
                                                        _flight_cond->gas_property.T,
                                                        beta*acos(-1)/180.,
                                                        frac*length);
-                _flight_cond->sol.reset(f_sol);
+                _flight_cond->inf_sol.reset(f_sol);
                 
                 _sys_init->initialize_solution(*f_sol);
             }
