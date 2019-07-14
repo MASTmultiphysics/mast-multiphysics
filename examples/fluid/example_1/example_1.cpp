@@ -56,6 +56,176 @@
 #include "libmesh/nonlinear_solver.h"
 #include "libmesh/periodic_boundary.h"
 
+/*!
+ *    class computes the far-field solutions in zones 1, 2, 3 based on the
+ *    initial shock angle \p beta. Note, that \p beta is the same as
+ *    \p sigma in Nathan, et al's 2018 paper. The relations are based on
+ *    standard theory concerning oblique shocks.
+ */
+class ShockImpingementSolutions:
+public MAST::FieldFunction<RealVectorX> {
+public:
+    
+    /*!
+     *    Initializes the far-field solutions in zones 1, 2, 3 based on the
+     *    initial shock angle \p beta. Note, that \p beta is the same as
+     *    \p sigma in Nathan, et al's 2018 paper. \p cp, \p cv are the
+     *    coefficients at constant pressure and volume. \p M1 is the Mach
+     *    number in zone 1 (before shock), \p rho1 is the fluid density in
+     *    zone 1, \p T1 is the fluid temprature (absolute value) in zone 1,
+     *    \p beta is the shock angle. \p x is the physical location along
+     *    the x-axis where the shock impinges the panel.
+     */
+    ShockImpingementSolutions(Real cp,
+                              Real cv,
+                              Real M1,
+                              Real rho1,
+                              Real T1,
+                              Real beta,
+                              Real x0):
+    MAST::FieldFunction<RealVectorX>("fluid_solution"),
+    _x0      (x0),
+    _beta1   (beta),
+    _beta2   (0.),
+    _theta1  (0.) {
+        /*gamma     = 1.4;
+         R         = 1003-716;
+         M1        = 2.0;
+         rho1      = 1.35;
+         T1        = 300;
+         beta_deg  = 34.799;
+         beta      = beta_deg * pi / 180.;
+         */
+        
+        libmesh_assert_greater(M1, 1.);
+        
+        Real
+        gamma       = cp/cv,
+        R           = cp-cv,
+        p1          = rho1 * R * T1,
+        M2          = _M2(gamma, beta, M1),
+        rho2        = _rho2(rho1, gamma, beta, M1),
+        p2          = _p2(p1, gamma, beta, M1),
+        T2          = p2/rho2/R;
+        
+        _theta1     = _theta(gamma, beta, M1);
+        _beta2      = _find_beta(gamma, _theta1, beta, M2);
+        
+        // expected theta after shock is the same as first theta. Now we find beta that gives us the theta for that
+        Real
+        M3          = _M2(gamma, _beta2, M2),
+        rho3        = _rho2(rho2, gamma, _beta2, M2),
+        p3          = _p2(p2, gamma, _beta2, M2),
+        T3          = p3/rho3/R,
+        a           = 0.,
+        u1          = 0.,
+        u2          = 0.;
+        libMesh::out << "p3/p1: " << p3/p1 << std::endl;
+        
+        _sol1 = RealVectorX::Zero(4);
+        _sol2 = RealVectorX::Zero(4);
+        _sol3 = RealVectorX::Zero(4);
+        
+        // zone 1
+        a        = sqrt(gamma*R*T1);
+        u1       = a*M1;
+        u2       = 0.;
+        _sol1(0)  = rho1;
+        _sol1(1)  = rho1 * u1;
+        _sol1(2)  = rho1 * u2;
+        _sol1(3)  = rho1 * (cv*T1 + .5*(u1*u1 + u2*u2));
+        
+        // zone 2
+        a        =  sqrt(gamma*R*T2);
+        u1       =  a*M2*cos(_theta1);
+        u2       = -a*M2*sin(_theta1);
+        _sol2(0)  = rho2;
+        _sol2(1)  = rho2 * u1;
+        _sol2(2)  = rho2 * u2;
+        _sol2(3)  = rho2 * (cv*T2 + .5*(u1*u1 + u2*u2));
+        
+        // zone 3
+        a        = sqrt(gamma*R*T3);
+        u1       = a*M3;
+        u2       = 0.;
+        _sol3(0)  = rho3;
+        _sol3(1)  = rho3 * u1;
+        _sol3(2)  = rho3 * u2;
+        _sol3(3)  = rho3 * (cv*T3 + .5*(u1*u1 + u2*u2));
+    }
+    
+    /*!
+     *    identifies the far-field solution based on spatial location \p p
+     */
+    virtual void operator() (const libMesh::Point& p,
+                             const Real t,
+                             RealVectorX& v) const {
+        
+        if (p(0) <= _x0) {
+            if (p(1) <= tan(_beta1)*(_x0-p(0)))
+                v = _sol1;
+            else
+                v = _sol2;
+        }
+        else {
+            if (p(1) <= tan(_beta2-_theta1)*(p(0)-_x0))
+                v = _sol3;
+            else
+                v = _sol2;
+        }
+    }
+    
+protected:
+    
+    Real _theta(Real gamma, Real beta, Real M1) {
+        return atan( 2./tan(beta) * ((pow(M1*sin(beta),2) - 1.) / (pow(M1,2)*(gamma+cos(2.*beta))+2)) );
+    }
+    
+    Real _p2(Real p1, Real gamma, Real beta, Real M1) {
+        return p1 * (1. + 2*gamma/(gamma+1.) * (pow(M1*sin(beta),2) -1));
+    }
+    
+    Real _rho2(Real rho1, Real gamma, Real beta, Real M1) {
+        return rho1 * ((gamma+1.)*pow(M1*sin(beta),2)/ ((gamma-1.) * pow(M1*sin(beta),2) + 2.));
+    }
+    
+    Real _M2(Real gamma, Real beta, Real M1) {
+        
+        Real thetav = _theta(gamma, beta, M1);
+        return 1./(sin(beta-thetav)) *
+        sqrt((1.+(gamma-1.)/2. * pow(M1*sin(beta),2))/(gamma*pow(M1*sin(beta),2)-(gamma-1.)/2.));
+    }
+    
+    Real _find_beta(Real gamma, Real theta0, Real betav0, Real M1) {
+        
+        bool cont = true;
+        Real
+        betav    = betav0,
+        delta    = 1.e-4,
+        tol      = 1.e-6,
+        res      = 0.,
+        dbeta    = 0.,
+        jac      = 0.;
+        
+        while (cont) {
+            res        = _theta(gamma, betav, M1) - theta0;
+            if (fabs(res) > tol) {
+                
+                jac     = (_theta(gamma, betav+delta, M1)- _theta(gamma, betav, M1))/delta;
+                dbeta   = -res/jac;
+                betav   = betav + dbeta;
+            }
+            else
+                cont = false;
+        }
+        
+        return betav;
+    }
+    
+    Real _x0, _beta1, _beta2, _theta1;
+    RealVectorX _sol1, _sol2, _sol3;
+};
+
 
 //
 // BEGIN_TRANSLATE Flow analysis
@@ -573,8 +743,8 @@ protected:
         
         if (!restart) {
             
-            bool
-            random = _input("random_initial_perturbations", "randomly perturb the initial velocity field", false);
+            std::string
+            type = _input("initial_solution", "initial solution field (uniform, random, shock)", "uniform");
 
             RealVectorX s = RealVectorX::Zero(_dim+2);
             s(0) = _flight_cond->rho();
@@ -584,10 +754,29 @@ protected:
                 s(3) = _flight_cond->rho_u3();
             s(_dim+1) = _flight_cond->rho_e();
 
-            if (!random)
+            if (type == "uniform")
                 // uniform solution
                 _sys_init->initialize_solution(s);
-            else {
+            else if (type == "shock") {
+
+                Real
+                beta   = _input("beta", "initial shock angle (deg)", 34.799),
+                frac   = _input("shock_location_fraction", "location of shock location on panel as a fraction of panel length", 0.5),
+                length = _input("panel_l",                                     "length of panel",  0.3);
+;
+                ShockImpingementSolutions
+                *f_sol = new ShockImpingementSolutions(_flight_cond->gas_property.cp,
+                                                       _flight_cond->gas_property.cv,
+                                                       _flight_cond->mach,
+                                                       _flight_cond->gas_property.rho,
+                                                       _flight_cond->gas_property.T,
+                                                       beta*acos(-1)/180.,
+                                                       frac*length);
+                _flight_cond->inf_sol.reset(f_sol);
+                
+                _sys_init->initialize_solution(*f_sol);
+            }
+            else if (type == "random") {
                 
                 Real
                 amplitude = _input("perturb_amplitude", "maximum amplitude of velocity perturbation as fraction of velocity magnitude", 0.1),
@@ -635,6 +824,8 @@ protected:
                                                                                   delta,
                                                                                   *_flight_cond));
             }
+            else
+                libmesh_error_msg("Unknown initial solution type: "+type);
         }
         else {
             

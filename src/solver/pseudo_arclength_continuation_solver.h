@@ -113,9 +113,19 @@ namespace MAST {
            libMesh::NumericVector<Real>       &t1_X,
            Real                               &t1_p,
            Real                               &g);
-        
-        std::unique_ptr<libMesh::NumericVector<Real>>  _t0_X;
-        Real                                           _t0_p;
+
+        /*!
+         *   method saves any data for possible resuse if the solution step is restarted
+         */
+        virtual void _save_iteration_data();
+
+        /*!
+         *   method resets any data if a solution step is restarted
+         */
+        virtual void _reset_iterations();
+
+        std::unique_ptr<libMesh::NumericVector<Real>>  _t0_X, _t0_X_orig;
+        Real                                           _t0_p, _t0_p_orig;
     };
 }
 

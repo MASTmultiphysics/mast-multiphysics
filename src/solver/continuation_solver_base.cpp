@@ -35,22 +35,22 @@
 
 
 MAST::ContinuationSolverBase::ContinuationSolverBase():
-max_it                    (20),
+max_it                    (10),
 abs_tol                   (1.e-8),
 rel_tol                   (1.e-8),
 arc_length                (0.),
-min_step                  (0.5),
-max_step                  (20),
+min_step                  (2.),
+max_step                  (20.),
 step_size_change_exponent (0.5),
 step_desired_iters        (5),
+schur_factorization       (true),
 _initialized              (false),
 _elem_ops                 (nullptr),
 _assembly                 (nullptr),
 _p                        (nullptr),
 _p0                       (0.),
 _X_scale                  (0.),
-_p_scale                  (0.),
-schur_factorization       (true) {
+_p_scale                  (0.) {
     
 }
 
@@ -109,6 +109,9 @@ MAST::ContinuationSolverBase::solve()  {
     
     bool
     cont    = true;
+
+    // save data for possible reuse if the iterations are restarted.
+    _save_iteration_data();
     
     while (cont) {
         
@@ -126,7 +129,26 @@ MAST::ContinuationSolverBase::solve()  {
         
         if (norm < abs_tol)       cont = false;
         if (norm/norm0 < rel_tol) cont = false;
-        if (iter >= max_it)       cont = false;
+        if (iter >= max_it) {
+            if (arc_length > min_step)   {
+                
+                // reduce step-size if possible, otherwise terminate
+                libMesh::out
+                << "   Retrying with smaller step-size" << std::endl;
+                
+                // reanalyze with a smaller step-size
+                iter = 0;
+                arc_length =  std::max(min_step, .5*arc_length);
+                X.zero();
+                X.add(1., *_X0);
+                X.close();
+                *_p = _p0;
+                _reset_iterations();
+                cont = true;
+            }
+            else
+                cont = false;
+        }
     }
         
     libMesh::out
@@ -140,7 +162,7 @@ MAST::ContinuationSolverBase::solve()  {
     
     if (iter) {
         Real
-        factor   = std::pow((1.*step_desired_iters)/(1.*iter), step_size_change_exponent);
+        factor   = std::pow((1.*step_desired_iters)/(1.*iter+1.), step_size_change_exponent);
         if (factor > 1.) {
             arc_length = std::min(max_step, factor*arc_length);
             libMesh::out

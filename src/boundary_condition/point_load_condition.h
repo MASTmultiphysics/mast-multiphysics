@@ -45,19 +45,24 @@ namespace MAST {
         
         virtual ~PointLoadCondition();
         
+
+        /*!
+         *   adds the node on which this object defines a point load
+         */
+        void add_node(const libMesh::Node& nd);
         
         /*!
          *   @returns the set of nodes on which the load is 
          *   specified as a constant reference
          */
-        const std::set<libMesh::Node*>& get_nodes() const;
+        const std::set<const libMesh::Node*>& get_nodes() const;
         
 
         /*!
          *   @returns the set of nodes on which the load is
          *   specified as a writable reference
          */
-        std::set<libMesh::Node*>& get_nodes();
+        std::set<const libMesh::Node*>& get_nodes();
 
         
     protected:
@@ -66,7 +71,7 @@ namespace MAST {
         /*!
          *   set of nodes on which load is specified
          */
-        std::set<libMesh::Node*> _nodes;
+        std::set<const libMesh::Node*> _nodes;
         
     };
 }

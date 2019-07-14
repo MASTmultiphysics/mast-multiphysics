@@ -107,7 +107,7 @@ MAST::PhysicsDisciplineBase::add_volume_load(libMesh::subdomain_id_type sid,
 void
 MAST::PhysicsDisciplineBase::add_point_load(MAST::PointLoadCondition& load) {
 
-    libmesh_assert(_point_loads.count(&load));
+    libmesh_assert(!_point_loads.count(&load));
     
     _point_loads.insert(&load);
 }

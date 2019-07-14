@@ -23,6 +23,7 @@
 // MAST includes
 #include "base/mast_data_types.h"
 #include "fluid/gas_property.h"
+#include "base/field_function_base.h"
 
 
 // Eigen includes
@@ -34,13 +35,22 @@ namespace MAST {
         
     public:
         FlightCondition():
-        flow_unit_vector(RealVectorX::Zero(3)),
-        ref_chord(0.)
+        enable_shock_capturing (true),
+        flow_unit_vector       (RealVectorX::Zero(3)),
+        mach                   (0.),
+        ref_chord              (0.)
         {}
         
         virtual ~FlightCondition()
         {}
 
+        /*!
+         *  flag to turn on/off artificial dissipation for
+         *  shock capturing terms in fluid flow analysis. This is
+         *  \p true by default.
+         */
+        bool enable_shock_capturing;
+        
         /*!
          *   direction along which flow is defined
          */
@@ -52,11 +62,6 @@ namespace MAST {
         Real mach;
         
         /*!
-         *  Velocity magnitude, whose direction is evaluated from the Euler angles.
-         */
-        Real velocity_magnitude() const {return mach * gas_property.a;}
-        
-        /*!
          *   Ambient air properties
          */
         GasProperty gas_property;
@@ -65,6 +70,11 @@ namespace MAST {
          *   reference chord
          */
         Real ref_chord;
+        
+        /*!
+         *  Velocity magnitude, whose direction is evaluated from the Euler angles.
+         */
+        Real velocity_magnitude() const {return mach * gas_property.a;}
         
         /*!
          *   returns the flight dynamic pressure
@@ -143,6 +153,8 @@ namespace MAST {
         {
             return 2.*q0()/mach;
         }
+
+        std::unique_ptr<MAST::FieldFunction<RealVectorX>> inf_sol;
     };
     
     
