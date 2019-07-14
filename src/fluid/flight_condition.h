@@ -35,9 +35,10 @@ namespace MAST {
         
     public:
         FlightCondition():
+        enable_shock_capturing (true),
         flow_unit_vector       (RealVectorX::Zero(3)),
+        mach                   (0.),
         ref_chord              (0.)
-        enable_shock_capturing (true)
         {}
         
         virtual ~FlightCondition()
@@ -61,11 +62,6 @@ namespace MAST {
         Real mach;
         
         /*!
-         *  Velocity magnitude, whose direction is evaluated from the Euler angles.
-         */
-        Real velocity_magnitude() const {return mach * gas_property.a;}
-        
-        /*!
          *   Ambient air properties
          */
         GasProperty gas_property;
@@ -74,6 +70,11 @@ namespace MAST {
          *   reference chord
          */
         Real ref_chord;
+        
+        /*!
+         *  Velocity magnitude, whose direction is evaluated from the Euler angles.
+         */
+        Real velocity_magnitude() const {return mach * gas_property.a;}
         
         /*!
          *   returns the flight dynamic pressure
