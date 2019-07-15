@@ -11,7 +11,7 @@ def sanitize_comment(l):
 
 def if_line_is_comment(l):
     ln = l.strip()
-    if ((len(ln) > 0 and ln[0] == "*") or (len(ln) > 1 and ln[0:2] == "//")):
+    if ((len(ln) > 1 and ln[0:1] == "* ") or (len(ln) > 1 and ln[0:2] == "//")):
         return True
     else:
         return False
