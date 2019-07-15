@@ -54,7 +54,7 @@ namespace MAST {
 
         
         void
-        add_slave_boundary_and_master_subdomain_coupling(unsigned int master_b_id,
+        add_slave_boundary_and_master_subdomain_coupling(unsigned int master_id,
                                                          unsigned int slave_b_id,
                                                          Real tol);
         

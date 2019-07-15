@@ -74,7 +74,7 @@ namespace MAST {
         
         KinematicCouplingConstraint(MAST::SystemInitialization& sys_init,
                                     const libMesh::Node& slave_node,
-                                    std::set<const libMesh::Node*>& master_nodes,
+                                    const std::set<const libMesh::Node*>& master_nodes,
                                     bool constrain_rotations);
         
         virtual ~KinematicCouplingConstraint();
