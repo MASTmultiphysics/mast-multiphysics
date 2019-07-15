@@ -59,7 +59,7 @@ namespace MAST {
          *   nodes. Otherwise, the constraint acts as a pinned connection.
          */
         void
-        add_master_and_slave(std::set<const libMesh::Node*>& master,
+        add_master_and_slave(const std::set<const libMesh::Node*>& master,
                              const libMesh::Node&            slave,
                              bool                            constrain_rotations);
         
@@ -69,17 +69,23 @@ namespace MAST {
          */
         void
         add_master_and_slave
-        (std::vector<std::pair<const libMesh::Node*, std::set<const libMesh::Node*>>>& couplings,
+        (const std::vector<std::pair<const libMesh::Node*, std::set<const libMesh::Node*>>>& couplings,
          bool constrain_rotations);
         
         
+        /*!
+         *   initializes the dof constraint rows in the DofMap object associated
+         *   with the system.
+         */
+        void add_dof_constraints_to_dof_map();
+
         /*!
          * Provides the vector of constraints and right-hand-side value pairs
          * to be added to the system.
          */
         virtual void
         get_constraint_rows(std::vector<std::tuple<libMesh::dof_id_type, libMesh::DofConstraintRow, Real>>& constrs);
-
+        
         
     protected:
         

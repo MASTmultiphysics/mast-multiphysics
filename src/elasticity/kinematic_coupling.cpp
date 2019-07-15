@@ -50,7 +50,7 @@ MAST::KinematicCoupling::~KinematicCoupling() {
 void
 MAST::KinematicCoupling::
 add_master_and_slave
-(std::vector<std::pair<const libMesh::Node*, std::set<const libMesh::Node*>>>& couplings,
+(const std::vector<std::pair<const libMesh::Node*, std::set<const libMesh::Node*>>>& couplings,
  bool constrain_rotations) {
     
     for (unsigned int i=0; i<couplings.size(); i++)
@@ -62,7 +62,7 @@ add_master_and_slave
 
 void
 MAST::KinematicCoupling::
-add_master_and_slave(std::set<const libMesh::Node*>& master,
+add_master_and_slave(const std::set<const libMesh::Node*>& master,
                      const libMesh::Node&            slave,
                      bool                            constrain_rotations) {
     
@@ -78,6 +78,26 @@ add_master_and_slave(std::set<const libMesh::Node*>& master,
     _slave_node_constraints[&slave] = constr;
 }
 
+
+
+void
+MAST::KinematicCoupling::add_dof_constraints_to_dof_map() {
+    
+    libMesh::DofMap
+    &dof_map = _system_init.system().get_dof_map();
+    
+    std::vector<std::tuple<libMesh::dof_id_type, libMesh::DofConstraintRow, Real>>
+    constrs;
+    
+    this->get_constraint_rows(constrs);
+    
+    std::vector<std::tuple<libMesh::dof_id_type, libMesh::DofConstraintRow, Real>>::iterator
+    it   = constrs.begin(),
+    end  = constrs.end();
+    
+    for ( ; it != end; it++)
+        dof_map.add_constraint_row(std::get<0>(*it), std::get<1>(*it), std::get<2>(*it), true);
+}
 
 
 void
@@ -98,7 +118,7 @@ get_constraint_rows
     for ( ; it != end; it++)
         idx += it->second->n_constrain_nodes();
 
-    constrs.resize(idx);
+    constrs.reserve(idx);
 
     it   = _slave_node_constraints.begin();
     
@@ -109,7 +129,7 @@ get_constraint_rows
         
         it->second->get_dof_constraint_row(constraints);
         
-        for (unsigned int i=0; i<constrs.size(); i++)
+        for (unsigned int i=0; i<constraints.size(); i++)
             constrs.push_back(constraints[i]);
     }
 

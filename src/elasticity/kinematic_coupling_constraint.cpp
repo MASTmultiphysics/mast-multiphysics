@@ -26,7 +26,7 @@
 MAST::KinematicCouplingConstraint::
 KinematicCouplingConstraint(MAST::SystemInitialization& sys_init,
                             const libMesh::Node& slave_node,
-                            std::set<const libMesh::Node*>& master_nodes,
+                            const std::set<const libMesh::Node*>& master_nodes,
                             bool constrain_rotations):
 _sys_init              (sys_init),
 _slave                 (&slave_node),
@@ -145,7 +145,7 @@ get_dof_constraint_row(std::vector<std::tuple
             // -1 is used since the constraint reads
             //     slave dof = avg of master dofs
             // or, slave dof - avg of master dofs = 0
-            c_row[idx] = -val;
+            c_row[idx] = -val * -1.;
             
             // for translation dofs a contribution is needed from the
             // rotation of the master nodes

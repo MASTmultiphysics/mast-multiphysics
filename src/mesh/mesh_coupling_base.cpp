@@ -150,8 +150,8 @@ MAST::MeshCouplingBase::
 add_slave_boundary_and_master_subdomain_coupling(unsigned int master_b_id,
                                                  unsigned int slave_b_id,
                                                  Real tol) {
+
     
-    libmesh_assert(false); // to be implemented
 }
 
 

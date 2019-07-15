@@ -49,7 +49,7 @@
 
 int main(int argc, const char** argv)
 {
-    // BEGIN_TRANSLATE Tie Constraints
+    // BEGIN_TRANSLATE Nonlinear thermoelastic plate bending
     //
     // This example solves a cantilever rectangular plate with a uniformly
     // distributed load on the top of the plate.
