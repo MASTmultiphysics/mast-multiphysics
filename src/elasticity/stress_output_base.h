@@ -467,6 +467,11 @@ namespace MAST {
 
         
         /*!
+         *   @returns the maximum von Mises stress of all stored components
+         */
+        Real get_maximum_von_mises_stress() const;
+        
+        /*!
          *    @returns the vector of stress/strain data for specified elem.
          */
         virtual const std::vector<MAST::StressStrainOutputBase::Data*>&

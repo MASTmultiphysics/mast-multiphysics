@@ -275,7 +275,7 @@ MAST::OutputAssemblyElemOperations(),
 _p_norm                   (2.),
 _rho                      (1.),
 _sigma0                   (0.),
-_exp_arg_lim              (4.),
+_exp_arg_lim              (1.e2),
 _primal_data_initialized  (false),
 _JxW_val                  (0.),
 _sigma_vm_int             (0.),
@@ -677,6 +677,37 @@ const std::map<const libMesh::dof_id_type, std::vector<MAST::StressStrainOutputB
 MAST::StressStrainOutputBase::get_stress_strain_data() const {
     
     return _stress_data;
+}
+
+
+
+Real
+MAST::StressStrainOutputBase::get_maximum_von_mises_stress() const {
+    
+    std::map<const libMesh::dof_id_type, std::vector<MAST::StressStrainOutputBase::Data*>>::const_iterator
+    it  = _stress_data.begin(),
+    end = _stress_data.end();
+    
+    Real
+    vm     = 0.,
+    max_vm = 0.;
+    
+    for ( ; it != end; it++) {
+        
+        std::vector<MAST::StressStrainOutputBase::Data*>::const_iterator
+        s_it  = it->second.begin(),
+        s_end = it->second.end();
+        
+        for ( ; s_it != s_end; s_it++) {
+            vm = (*s_it)->von_Mises_stress();
+            max_vm =  vm>max_vm?vm:max_vm;
+        }
+    }
+
+    // now, identify the max stress on all ranks.
+    _system->system().comm().max(max_vm);
+    
+    return max_vm;
 }
 
 

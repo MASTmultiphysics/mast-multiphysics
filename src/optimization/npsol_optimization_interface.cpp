@@ -219,8 +219,8 @@ MAST::NPSOLOptimizationInterface::optimize() {
                            // 7 => function derivatives seem to be incorrect
                            // 9 => input parameter invalid
     ITER   = 0,            // iter count
-    LENIW  = std::max(200*(NCTOTL+N) ,1000),
-    LENW   = std::max(400*(NCTOTL+N), 1000);
+    LENIW  = std::max(600*(NCTOTL+N) ,1000),
+    LENW   = std::max(1200*(NCTOTL+N), 1000);
     
     Real
     F      =  0.;          // on exit: final objective
