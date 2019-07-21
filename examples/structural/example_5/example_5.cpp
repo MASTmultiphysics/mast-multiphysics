@@ -298,11 +298,11 @@ public:
     void _delete_elems_from_bracket_mesh(libMesh::MeshBase &mesh) {
         
         Real
-        tol     = 1.e-6,
+        tol     = 1.e-12,
         x       = -1.,
         y       = -1.,
         length  = _input("length", "length of domain along x-axis", 0.3),
-        width   = _input( "width", "length of domain along y-axis", 0.3),
+        width   = _input( "height", "length of domain along y-axis", 0.3),
         l_frac  = 0.4,
         w_frac  = 0.4,
         x_lim   = length * l_frac,
@@ -1217,7 +1217,7 @@ public:
         libmesh_assert_equal_to(_level_set_fetype.family, libMesh::LAGRANGE);
         
         Real
-        tol           = 1.e-6,
+        tol           = 1.e-12,
         length        = _input("length", "length of domain along x-axis", 0.3),
         height        = _input("height", "length of domain along y-axis", 0.3),
         l_frac        = 0.4,//_input("length_fraction", "fraction of length along x-axis that is in the bracket", 0.4),
@@ -1706,7 +1706,9 @@ public:
         
         nonlinear_assembly.calculate_output(*_sys->solution, stress);
         fvals[0]  =  stress.output_total()/_stress_lim - 1.;  // g = sigma/sigma0-1 <= 0
-        
+        libMesh::out
+        << "max: " << stress.get_maximum_von_mises_stress()
+        << "  functional: " << stress.output_total() << std::endl;
         
         if (_n_eig_vals) {
             
@@ -1902,7 +1904,6 @@ public:
         std::string
         output_name  = _input("output_file_root", "prefix of output file names", "output"),
         modes_name   = output_name + "modes.exo";
-        output_name += "_optim.exo";
         
         std::ostringstream oss;
         oss << "output_optim.e-s." << std::setfill('0') << std::setw(5) << iter ;
@@ -2174,6 +2175,8 @@ TopologyOptimizationLevelSet2D* _my_func_eval = nullptr;
 
 #if MAST_ENABLE_SNOPT == 1
 
+unsigned int
+it_num = 0;
 
 void
 _optim_obj(int*    mode,
@@ -2230,6 +2233,11 @@ _optim_obj(int*    mode,
     //
     *f  = obj;
     if (*mode > 0) {
+        
+        // output data to the file
+        _my_func_eval->_output_wrapper(it_num, dvars, obj, fvals, true);
+        it_num++;
+
         for (unsigned int i=0; i<n_vars; i++)
             g[i] = obj_grad[i];
     }
@@ -2331,26 +2339,47 @@ int main(int argc, char* argv[]) {
     _my_func_eval = &top_opt;
     
     //MAST::NLOptOptimizationInterface optimizer(NLOPT_LD_SLSQP);
-    MAST::GCMMAOptimizationInterface optimizer;
-    //MAST::NPSOLOptimizationInterface optimizer;
-
-    unsigned int
-    max_inner_iters        = input("max_inner_iters", "maximum inner iterations in GCMMA", 15);
+    std::unique_ptr<MAST::OptimizationInterface>
+    optimizer;
     
-    Real
-    constr_penalty         = input("constraint_penalty", "constraint penalty in GCMMA", 50.),
-    initial_rel_step       = input("initial_rel_step", "initial step size in GCMMA", 1.e-2),
-    asymptote_reduction    = input("asymptote_reduction", "reduction of aymptote in GCMMA", 0.7),
-    asymptote_expansion    = input("asymptote_expansion", "expansion of asymptote in GCMMA", 1.2);
+    std::string
+    s          = input("optimizer", "optimizer to use in the example", "gcmma");
 
-    optimizer.set_real_parameter   ("constraint_penalty",  constr_penalty);
-    optimizer.set_real_parameter   ("initial_rel_step",  initial_rel_step);
-    optimizer.set_real_parameter   ("asymptote_reduction",  asymptote_reduction);
-    optimizer.set_real_parameter   ("asymptote_expansion",  asymptote_expansion);
-    optimizer.set_integer_parameter(   "max_inner_iters", max_inner_iters);
+    if (s == "gcmma") {
+
+        optimizer.reset(new MAST::GCMMAOptimizationInterface);
+        
+        unsigned int
+        max_inner_iters        = input("max_inner_iters", "maximum inner iterations in GCMMA", 15);
+        
+        Real
+        constr_penalty         = input("constraint_penalty", "constraint penalty in GCMMA", 50.),
+        initial_rel_step       = input("initial_rel_step", "initial step size in GCMMA", 1.e-2),
+        asymptote_reduction    = input("asymptote_reduction", "reduction of aymptote in GCMMA", 0.7),
+        asymptote_expansion    = input("asymptote_expansion", "expansion of asymptote in GCMMA", 1.2);
+        
+        optimizer->set_real_parameter   ("constraint_penalty",  constr_penalty);
+        optimizer->set_real_parameter   ("initial_rel_step",  initial_rel_step);
+        optimizer->set_real_parameter   ("asymptote_reduction",  asymptote_reduction);
+        optimizer->set_real_parameter   ("asymptote_expansion",  asymptote_expansion);
+        optimizer->set_integer_parameter(   "max_inner_iters", max_inner_iters);
+    }
+    else if (s == "snopt") {
+        
+        optimizer.reset(new MAST::NPSOLOptimizationInterface);
+    }
+    else {
+        
+        libMesh::out
+        << "Unrecognized optimizer specified: " << s << std::endl;
+        libmesh_error();
+    }
     
-    optimizer.attach_function_evaluation_object(top_opt);
-    optimizer.optimize();
+    if (optimizer.get()) {
+        
+        optimizer->attach_function_evaluation_object(top_opt);
+        optimizer->optimize();
+    }
     
     // END_TRANSLATE
     return 0;
