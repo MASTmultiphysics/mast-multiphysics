@@ -243,19 +243,20 @@ namespace MAST {
         /*!
          *   sets the \f$p-\f$norm for calculation of stress functional
          */
-        void set_aggregation_coefficients(Real p, Real rho, Real sigma0) {
+        void set_aggregation_coefficients(Real p1, Real p2, Real rho, Real sigma0) {
             
-            _p_norm =  p;
-            _rho    =  rho;
-            _sigma0 =  sigma0;
+            _p_norm_stress =  p1;
+            _p_norm_weight =  p2;
+            _rho           =  rho;
+            _sigma0        =  sigma0;
         }
         
         /*!
          *   @returns the \f$p-\f$norm for calculation of stress functional
          */
-        Real get_p_val() {
+        Real get_p_stress_val() {
             
-            return _p_norm;
+            return _p_norm_stress;
         }
         
         
@@ -579,7 +580,7 @@ namespace MAST {
          *   \f$ p-\f$norm to be used for calculation of output stress function.
          *    Default value is 2.0.
          */
-        Real _p_norm;
+        Real _p_norm_stress, _p_norm_weight;
         
         /*!
          *   exponent used in scaling volume based on stress value.

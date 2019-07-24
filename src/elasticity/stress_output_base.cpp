@@ -272,7 +272,8 @@ dvon_Mises_stress_dp(const MAST::FunctionBase& f) const {
 
 MAST::StressStrainOutputBase::StressStrainOutputBase():
 MAST::OutputAssemblyElemOperations(),
-_p_norm                   (2.),
+_p_norm_stress            (2.),
+_p_norm_weight            (1),
 _rho                      (1.),
 _sigma0                   (0.),
 _exp_arg_lim              (1.e2),
@@ -856,12 +857,12 @@ von_Mises_p_norm_functional_for_all_elems() {
             
             // we do not use absolute value here, since von Mises stress
             // is >= 0.
-            sp              =  pow(e_val/_sigma0, _p_norm);
+            sp              =  pow(e_val/_sigma0, _p_norm_weight);
             if (_rho * sp > _exp_arg_lim)
                 exp_sp          =  exp(_exp_arg_lim);
             else
                 exp_sp          =  exp(_rho * sp);
-            _sigma_vm_int  +=  sp * exp_sp * JxW;
+            _sigma_vm_int  +=  pow(e_val/_sigma0, _p_norm_stress) * exp_sp * JxW;
             _JxW_val       +=  exp_sp * JxW;
         }
     }
@@ -871,7 +872,7 @@ von_Mises_p_norm_functional_for_all_elems() {
     _system->system().comm().sum(_sigma_vm_int);
     _system->system().comm().sum(_JxW_val);
 
-    _sigma_vm_p_norm         = _sigma0 * pow(_sigma_vm_int/_JxW_val, 1./_p_norm);
+    _sigma_vm_p_norm         = _sigma0 * pow(_sigma_vm_int/_JxW_val, 1./_p_norm_stress);
     _primal_data_initialized = true;
 }
 
@@ -954,8 +955,10 @@ von_Mises_p_norm_functional_sensitivity_for_elem
     libmesh_assert_greater(_sigma0, 0.);
     
     Real
-    sp            = 0.,
-    sp1           = 0.,
+    sp_stress     = 0.,
+    sp1_stress    = 0.,
+    sp_weight     = 0.,
+    sp1_weight    = 0.,
     exp_sp        = 0.,
     e_val         = 0.,
     de_val        = 0.,
@@ -985,22 +988,26 @@ von_Mises_p_norm_functional_sensitivity_for_elem
         
         // we do not use absolute value here, since von Mises stress
         // is >= 0.
-        sp           =  pow(e_val/_sigma0, _p_norm);
-        sp1          =  pow(e_val/_sigma0, _p_norm-1.);
-        if (_rho*sp > _exp_arg_lim) {
+        sp_stress       =  pow(e_val/_sigma0, _p_norm_stress);
+        sp1_stress      =  pow(e_val/_sigma0, _p_norm_stress-1.);
+        sp_weight       =  pow(e_val/_sigma0, _p_norm_weight);
+        sp1_weight      =  pow(e_val/_sigma0, _p_norm_weight-1.);
+        if (_rho*sp_weight > _exp_arg_lim) {
             exp_sp       =  exp(_exp_arg_lim);
             denom_sens  +=  0.;
-            num_sens    += _p_norm * sp1 * exp_sp * de_val/_sigma0 * JxW;
+            num_sens    += _p_norm_stress * sp1_stress * exp_sp * de_val/_sigma0 * JxW;
         }
         else {
-            exp_sp       =  exp(_rho * sp);
-            denom_sens  +=  exp_sp * _rho * _p_norm * sp1 * de_val/_sigma0 * JxW;
-            num_sens    += (1. + sp * _rho) * _p_norm * sp1 * exp_sp * de_val/_sigma0 * JxW;
+            exp_sp       =  exp(_rho * sp_weight);
+            denom_sens  +=  exp_sp * _rho * _p_norm_weight * sp1_weight * de_val/_sigma0 * JxW;
+            num_sens    += (de_val/_sigma0 * JxW * exp_sp *
+                            (_p_norm_stress * sp1_stress +
+                             sp_stress * _rho * _p_norm_weight * sp1_weight));
         }
             
     }
     
-    dsigma_vm_val_df = _sigma0/_p_norm * pow(_sigma_vm_int/_JxW_val, 1./_p_norm - 1.) *
+    dsigma_vm_val_df = _sigma0/_p_norm_stress * pow(_sigma_vm_int/_JxW_val, 1./_p_norm_stress - 1.) *
     (num_sens / _JxW_val - _sigma_vm_int / pow(_JxW_val, 2.) * denom_sens);
 }
 
@@ -1048,16 +1055,16 @@ von_Mises_p_norm_functional_boundary_sensitivity_for_elem
         
         // we do not use absolute value here, since von Mises stress
         // is >= 0.
-        sp           =  pow(e_val/_sigma0, _p_norm);
+        sp           =  pow(e_val/_sigma0, _p_norm_weight);
         if (_rho*sp > _exp_arg_lim)
             exp_sp       =  exp(_exp_arg_lim);
         else
             exp_sp       =  exp(_rho * sp);
         denom_sens  +=  exp_sp * JxW_Vn;
-        num_sens    +=  sp * exp_sp * JxW_Vn;
+        num_sens    +=  pow(e_val/_sigma0, _p_norm_stress) * exp_sp * JxW_Vn;
     }
     
-    dsigma_vm_val_df = _sigma0/_p_norm * pow(_sigma_vm_int/_JxW_val, 1./_p_norm - 1.) *
+    dsigma_vm_val_df = _sigma0/_p_norm_stress * pow(_sigma_vm_int/_JxW_val, 1./_p_norm_stress - 1.) *
     (num_sens / _JxW_val - _sigma_vm_int / pow(_JxW_val, 2.) * denom_sens);
 }
 
@@ -1068,14 +1075,15 @@ void
 MAST::StressStrainOutputBase::
 von_Mises_p_norm_functional_state_derivartive_for_elem(const libMesh::dof_id_type e_id,
                                                        RealVectorX& dq_dX) const {
-    
     libmesh_assert(!_if_stress_plot_mode);
     libmesh_assert(_primal_data_initialized);
     libmesh_assert_greater(_sigma0, 0.);
     
     Real
-    sp            = 0.,
-    sp1           = 0.,
+    sp_stress     = 0.,
+    sp1_stress    = 0.,
+    sp_weight     = 0.,
+    sp1_weight    = 0.,
     exp_sp        = 0.,
     e_val         = 0.,
     JxW           = 0.;
@@ -1110,23 +1118,27 @@ von_Mises_p_norm_functional_state_derivartive_for_elem(const libMesh::dof_id_typ
         
         // we do not use absolute value here, since von Mises stress
         // is >= 0.
-        sp           =  pow(e_val/_sigma0, _p_norm);
-        sp1          =  pow(e_val/_sigma0, _p_norm-1.);
-        if (_rho*sp > _exp_arg_lim) {
+        sp_stress       =  pow(e_val/_sigma0, _p_norm_stress);
+        sp1_stress      =  pow(e_val/_sigma0, _p_norm_stress-1.);
+        sp_weight       =  pow(e_val/_sigma0, _p_norm_weight);
+        sp1_weight      =  pow(e_val/_sigma0, _p_norm_weight-1.);
+        if (_rho*sp_weight > _exp_arg_lim) {
             
             exp_sp       =  exp(_exp_arg_lim);
             denom_sens  +=  0. * de_val;
-            num_sens    +=  1. * _p_norm * sp1 * exp_sp/_sigma0 * JxW * de_val;
+            num_sens    +=  1. * _p_norm_stress * sp1_stress * exp_sp/_sigma0 * JxW * de_val;
         }
         else {
             
-            exp_sp       =  exp(_rho * sp);
-            denom_sens  +=  exp_sp * _rho * _p_norm * sp1/_sigma0 * JxW * de_val;
-            num_sens    += (1. + sp * _rho) * _p_norm * sp1 * exp_sp/_sigma0 * JxW * de_val;
+            exp_sp       =  exp(_rho * sp_weight);
+            denom_sens  +=  exp_sp * _rho * _p_norm_weight * sp1_weight/_sigma0 * JxW * de_val;
+            num_sens    += (de_val/_sigma0 * JxW * exp_sp *
+                            (_p_norm_stress * sp1_stress +
+                             sp_stress * _rho * _p_norm_weight * sp1_weight));
         }
     }
     
-    dq_dX = _sigma0/_p_norm * pow(_sigma_vm_int/_JxW_val, 1./_p_norm - 1.) *
+    dq_dX = _sigma0/_p_norm_stress * pow(_sigma_vm_int/_JxW_val, 1./_p_norm_stress - 1.) *
     (num_sens / _JxW_val - _sigma_vm_int / pow(_JxW_val, 2.) * denom_sens);
 }
 

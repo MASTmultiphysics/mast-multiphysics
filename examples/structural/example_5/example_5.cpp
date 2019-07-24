@@ -1669,7 +1669,7 @@ public:
         volume.set_participating_elements_to_all();
         perimeter.set_participating_elements_to_all();
         stress.set_participating_elements_to_all();
-        stress.set_aggregation_coefficients(_p_val, _vm_rho, _stress_lim) ;
+        stress.set_aggregation_coefficients(_p_val, 1., _vm_rho, _stress_lim) ;
         
         //////////////////////////////////////////////////////////////////////
         // evaluate the objective
@@ -2076,7 +2076,7 @@ public:
         //
         this->_init_phi_dvs();
         
-        _obj_scaling           = 100./_length/_height;
+        _obj_scaling           = 1./_length/_height;
         _perimeter_penalty     = _input("perimeter_penalty", "penalty value for perimeter in the objective function", 0.);
         _stress_lim            = _input("vm_stress_limit", "limit von-mises stress value", 2.e8);
         _p_val                 = _input("constraint_aggregation_p_val", "value of p in p-norm stress aggregation", 2.0);
