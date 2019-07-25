@@ -138,7 +138,7 @@ MAST::SmoothRampStressStrainOutput::functional_sensitivity_for_elem
         
         dsigma_vm_val_df    +=
         pow(1. + pow(e_val/_sigma0, _p_norm_stress), 1./_p_norm_stress-1.) *
-        pow(e_val/_sigma0, _p_norm_stress-1.) * de_val * JxW;
+        pow(e_val/_sigma0, _p_norm_stress-1.) * de_val/_sigma0 * JxW;
     }
 }
 
@@ -189,7 +189,7 @@ MAST::SmoothRampStressStrainOutput::functional_boundary_sensitivity_for_elem
 
 void
 MAST::SmoothRampStressStrainOutput::functional_state_derivartive_for_elem(const libMesh::dof_id_type e_id,
-                                                                  RealVectorX& dq_dX) const {
+                                                                          RealVectorX& dq_dX) const {
     libmesh_assert(!_if_stress_plot_mode);
     libmesh_assert(_primal_data_initialized);
     libmesh_assert_greater(_sigma0, 0.);
@@ -226,7 +226,7 @@ MAST::SmoothRampStressStrainOutput::functional_state_derivartive_for_elem(const 
         
         dq_dX    +=
         pow(1. + pow(e_val/_sigma0, _p_norm_stress), 1./_p_norm_stress-1.) *
-        pow(e_val/_sigma0, _p_norm_stress-1.) * de_val * JxW;
+        pow(e_val/_sigma0, _p_norm_stress-1.) * de_val/_sigma0 * JxW;
     }
 }
 
