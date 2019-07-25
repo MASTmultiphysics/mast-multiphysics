@@ -496,8 +496,7 @@ namespace MAST {
          *   \f[  \left( \frac{\int_\Omega (\sigma_{VM}(\Omega))^p ~
          *    d\Omega}{\int_\Omega ~ d\Omega} \right)^{\frac{1}{p}} \f]
          */
-        void
-        von_Mises_p_norm_functional_for_all_elems();
+        virtual void functional_for_all_elems();
         
         
         /*!
@@ -510,8 +509,7 @@ namespace MAST {
          *    \int_\Omega p (\sigma_{VM}(\Omega))^{p-1} \frac{d \sigma_{VM}(\Omega)}{d\alpha} ~
          *    d\Omega \f]
          */
-        void
-        von_Mises_p_norm_functional_sensitivity_for_all_elems
+        virtual void functional_sensitivity_for_all_elems
         (const MAST::FunctionBase& f,
          Real& dsigma_vm_val_df) const;
 
@@ -528,8 +526,7 @@ namespace MAST {
          *    d\Omega \right)^{\frac{1}{p}}}{\left(  \int_\Omega ~ d\Omega \right)^{\frac{1+p}{p}}}
          *    \int_\Gamma  V_n ~d\Gamma \f]
          */
-        void
-        von_Mises_p_norm_functional_boundary_sensitivity_for_all_elems
+        virtual void functional_boundary_sensitivity_for_all_elems
         (const MAST::FunctionBase& f,
          Real& dsigma_vm_val_df) const;
 
@@ -538,8 +535,7 @@ namespace MAST {
          *   calculates and returns the sensitivity of von Mises p-norm
          *   functional for the element \p e.
          */
-        void
-        von_Mises_p_norm_functional_sensitivity_for_elem
+        virtual void functional_sensitivity_for_elem
         (const MAST::FunctionBase& f,
          const libMesh::dof_id_type e_id,
          Real& dsigma_vm_val_df) const;
@@ -549,8 +545,7 @@ namespace MAST {
          *   calculates and returns the boundary sensitivity of von Mises p-norm
          *   functional for the element \p e.
          */
-        void
-        von_Mises_p_norm_functional_boundary_sensitivity_for_elem
+        virtual void functional_boundary_sensitivity_for_elem
         (const MAST::FunctionBase& f,
          const libMesh::dof_id_type e_id,
          Real& dsigma_vm_val_df) const;
@@ -568,7 +563,7 @@ namespace MAST {
          *    \int_\Omega p (\sigma_{VM}(\Omega))^{p-1} \frac{d \sigma_{VM}(\Omega)}{dX} ~
          *    d\Omega \f]
          */
-        void von_Mises_p_norm_functional_state_derivartive_for_elem
+        virtual void functional_state_derivartive_for_elem
         (const libMesh::dof_id_type e_id,
          RealVectorX& dq_dX) const;
 

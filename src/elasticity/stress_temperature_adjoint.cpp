@@ -141,7 +141,7 @@ MAST::StressTemperatureAdjoint::output_derivative_for_elem(RealVectorX& dq_dX) {
             p_elem->thermal_residual_temperature_derivative(*fe, mat);
         }
         
-        _stress.von_Mises_p_norm_functional_state_derivartive_for_elem(e.id(), dq_dX);
+        _stress.functional_state_derivartive_for_elem(e.id(), dq_dX);
         dq_dX += str_adj.transpose() * mat;
     }
 }

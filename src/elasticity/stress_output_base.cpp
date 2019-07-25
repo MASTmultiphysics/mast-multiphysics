@@ -388,7 +388,7 @@ MAST::StressStrainOutputBase::output_total() {
     
     // if this has not been initialized, then we should do so now
     if (!_primal_data_initialized)
-        this->von_Mises_p_norm_functional_for_all_elems();
+        this->functional_for_all_elems();
     
     return _sigma_vm_p_norm;
 }
@@ -402,7 +402,7 @@ MAST::StressStrainOutputBase::output_sensitivity_for_elem(const MAST::FunctionBa
     
     Real val = 0.;
     
-    this->von_Mises_p_norm_functional_sensitivity_for_elem
+    this->functional_sensitivity_for_elem
     (p, _physics_elem->elem().get_quadrature_elem().id(), val);
     
     return val;
@@ -420,9 +420,9 @@ MAST::StressStrainOutputBase::output_sensitivity_total(const MAST::FunctionBase&
     val   = 0.,
     val_b = 0.;
     
-    this->von_Mises_p_norm_functional_sensitivity_for_all_elems(p, val);
+    this->functional_sensitivity_for_all_elems(p, val);
     if (p.is_topology_parameter())
-        this->von_Mises_p_norm_functional_boundary_sensitivity_for_all_elems(p, val_b);
+        this->functional_boundary_sensitivity_for_all_elems(p, val_b);
     return val+val_b;
 }
 
@@ -444,7 +444,7 @@ MAST::StressStrainOutputBase::output_derivative_for_elem(RealVectorX& dq_dX) {
                                           nullptr,
                                           *this);
         
-        this->von_Mises_p_norm_functional_state_derivartive_for_elem
+        this->functional_state_derivartive_for_elem
         (_physics_elem->elem().get_quadrature_elem().id(), dq_dX);
     }
 }
@@ -819,8 +819,7 @@ MAST::StressStrainOutputBase::get_thermal_load_for_elem(const MAST::GeomElem& el
 
 
 void
-MAST::StressStrainOutputBase::
-von_Mises_p_norm_functional_for_all_elems() {
+MAST::StressStrainOutputBase::functional_for_all_elems() {
     
     libmesh_assert(!_if_stress_plot_mode);
     libmesh_assert(!_primal_data_initialized);
@@ -879,8 +878,7 @@ von_Mises_p_norm_functional_for_all_elems() {
 
 
 void
-MAST::StressStrainOutputBase::
-von_Mises_p_norm_functional_sensitivity_for_all_elems
+MAST::StressStrainOutputBase::functional_sensitivity_for_all_elems
 (const MAST::FunctionBase& f,
  Real& dsigma_vm_val_df) const {
     
@@ -899,7 +897,7 @@ von_Mises_p_norm_functional_sensitivity_for_all_elems
     
     for ( ; map_it != map_end; map_it++) {
         
-        this->von_Mises_p_norm_functional_sensitivity_for_elem(f, map_it->first, val);
+        this->functional_sensitivity_for_elem(f, map_it->first, val);
         dsigma_vm_val_df += val;
     }
     
@@ -912,8 +910,7 @@ von_Mises_p_norm_functional_sensitivity_for_all_elems
 
 
 void
-MAST::StressStrainOutputBase::
-von_Mises_p_norm_functional_boundary_sensitivity_for_all_elems
+MAST::StressStrainOutputBase::functional_boundary_sensitivity_for_all_elems
 (const MAST::FunctionBase& f,
  Real& dsigma_vm_val_df) const {
     
@@ -932,7 +929,7 @@ von_Mises_p_norm_functional_boundary_sensitivity_for_all_elems
     
     for ( ; map_it != map_end; map_it++) {
         
-        this->von_Mises_p_norm_functional_boundary_sensitivity_for_elem(f, map_it->first, val);
+        this->functional_boundary_sensitivity_for_elem(f, map_it->first, val);
         dsigma_vm_val_df += val;
     }
 
@@ -944,8 +941,7 @@ von_Mises_p_norm_functional_boundary_sensitivity_for_all_elems
 
 
 void
-MAST::StressStrainOutputBase::
-von_Mises_p_norm_functional_sensitivity_for_elem
+MAST::StressStrainOutputBase::functional_sensitivity_for_elem
 (const MAST::FunctionBase& f,
  const libMesh::dof_id_type e_id,
  Real& dsigma_vm_val_df) const {
@@ -1016,8 +1012,7 @@ von_Mises_p_norm_functional_sensitivity_for_elem
 
 
 void
-MAST::StressStrainOutputBase::
-von_Mises_p_norm_functional_boundary_sensitivity_for_elem
+MAST::StressStrainOutputBase::functional_boundary_sensitivity_for_elem
 (const MAST::FunctionBase& f,
  const libMesh::dof_id_type e_id,
  Real& dsigma_vm_val_df) const {
@@ -1072,9 +1067,8 @@ von_Mises_p_norm_functional_boundary_sensitivity_for_elem
 
 
 void
-MAST::StressStrainOutputBase::
-von_Mises_p_norm_functional_state_derivartive_for_elem(const libMesh::dof_id_type e_id,
-                                                       RealVectorX& dq_dX) const {
+MAST::StressStrainOutputBase::functional_state_derivartive_for_elem(const libMesh::dof_id_type e_id,
+                                                                    RealVectorX& dq_dX) const {
     libmesh_assert(!_if_stress_plot_mode);
     libmesh_assert(_primal_data_initialized);
     libmesh_assert_greater(_sigma0, 0.);
