@@ -14,6 +14,7 @@ target_include_directories(mast
             ${MPI_CXX_INCLUDE_PATH}
             ${PETSc_INCLUDE_DIRS}
             ${SLEPc_INCLUDE_DIRS}
+            ${HDF5_INCLUDE_DIRS}
             ${libMesh_INCLUDE_DIRS}
             ${EIGEN3_INCLUDE_DIR}
             ${NLOPT_INCLUDE_DIR}
@@ -30,6 +31,7 @@ target_link_libraries(mast
             ${LAPACK_LIBRARIES}
             ${PETSc_LIBRARIES}
             ${SLEPc_LIBRARIES}
+            ${HDF5_LIBRARIES}
             ${Boost_IOSTREAMS_LIBRARY}
             ${Boost_FILESYSTEM_LIBRARY}
             ${Boost_SYSTEM_LIBRARY}
