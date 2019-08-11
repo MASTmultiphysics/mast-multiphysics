@@ -39,8 +39,10 @@
 #include "level_set/level_set_parameter.h"
 #include "elasticity/structural_nonlinear_assembly.h"
 #include "elasticity/structural_modal_eigenproblem_assembly.h"
-#include "elasticity/stress_output_base.h"
+#include "elasticity/ks_stress_output.h"
+#include "elasticity/smooth_ramp_stress_output.h"
 #include "elasticity/level_set_stress_assembly.h"
+#include "elasticity/compliance_output.h"
 #include "elasticity/structural_system_initialization.h"
 #include "heat_conduction/heat_conduction_system_initialization.h"
 #include "heat_conduction/heat_conduction_nonlinear_assembly.h"
@@ -136,6 +138,7 @@ protected:
     Real                                      _length;
     Real                                      _height;
     Real                                      _obj_scaling;
+    Real                                      _stress_penalty;
     Real                                      _perimeter_penalty;
     Real                                      _stress_lim;
     Real                                      _p_val, _vm_rho;
@@ -199,7 +202,7 @@ public:
         std::string
         s  = _input("mesh", "type of mesh to be analyzed {inplane, bracket}", "inplane");
         
-        if (s == "inplane")
+        if (s == "inplane" || s == "truss")
             _init_mesh_inplane();
         else if (s == "bracket")
             _init_mesh_bracket();
@@ -581,10 +584,12 @@ public:
     void _init_dirichlet_conditions() {
         
         std::string
-        s  = _input("mesh", "type of mesh to be analyzed {inplane, bracket}", "inplane");
+        s  = _input("mesh", "type of mesh to be analyzed {inplane, truss, bracket, eye_bar}", "inplane");
         
         if (s == "inplane")
             _init_dirichlet_conditions_inplane();
+        else if (s == "truss")
+            _init_dirichlet_conditions_truss();
         else if (s == "bracket")
             _init_dirichlet_conditions_bracket();
         else if (s == "eye_bar")
@@ -628,6 +633,75 @@ public:
         _indicator_discipline->init_system_dirichlet_bc(*_indicator_sys);
     }
     
+    //
+    //  \subsection truss_dirichlet Truss
+    //
+    void _init_dirichlet_conditions_truss() {
+        
+        Real
+        dirichlet_length_fraction = _input("truss_dirichlet_length_fraction", "length fraction of the truss boundary where dirichlet condition is applied", 0.05);
+        
+        // identify the boundaries for dirichlet condition
+        libMesh::MeshBase::const_element_iterator
+        e_it   = _mesh->elements_begin(),
+        e_end  = _mesh->elements_end();
+        
+        for ( ; e_it != e_end; e_it++) {
+            
+            const libMesh::Elem* e = *e_it;
+            
+            if ((*e->node_ptr(0))(1) < 1.e-8 &&
+                e->centroid()(0) <= _length*dirichlet_length_fraction)
+                _mesh->boundary_info->add_side(e, 0, 6);
+            else if ((*e->node_ptr(1))(1) < 1.e-8 &&
+                     e->centroid()(0) >= _length*(1.-dirichlet_length_fraction))
+                _mesh->boundary_info->add_side(e, 0, 7);
+            
+            if ((*e->node_ptr(0))(0) < 1.e-8 &&
+                (*e->node_ptr(0))(1) < 1.e-8 &&
+                e->centroid()(0) <= _length*dirichlet_length_fraction)
+                _mesh->boundary_info->add_side(e, 0, 8);
+        }
+        
+        _mesh->boundary_info->sideset_name(6) = "left_dirichlet";
+        _mesh->boundary_info->sideset_name(7) = "right_dirichlet";
+        
+        ///////////////////////////////////////////////////////////////////////
+        // initialize Dirichlet conditions for structural system
+        ///////////////////////////////////////////////////////////////////////
+        std::vector<unsigned int> vars = {1, 2, 3, 4, 5};
+        MAST::DirichletBoundaryCondition
+        *dirichlet  = new MAST::DirichletBoundaryCondition;   // left support
+        dirichlet->init(6, vars);
+        _discipline->add_dirichlet_bc(6,  *dirichlet);
+        
+        dirichlet  = new MAST::DirichletBoundaryCondition;   // right support
+        dirichlet->init(7, vars);
+        _discipline->add_dirichlet_bc(7,  *dirichlet);
+
+        vars = {0};
+        dirichlet  = new MAST::DirichletBoundaryCondition;   // left support
+        dirichlet->init(8, vars);
+        _discipline->add_dirichlet_bc(8,  *dirichlet);
+
+        _discipline->init_system_dirichlet_bc(*_sys);
+        
+        ///////////////////////////////////////////////////////////////////////
+        // initialize Dirichlet conditions for indicator system
+        ///////////////////////////////////////////////////////////////////////
+        dirichlet  = new MAST::DirichletBoundaryCondition;   // right boundary
+        dirichlet->init(6, _indicator_sys_init->vars());
+        _indicator_discipline->add_dirichlet_bc(6,  *dirichlet);
+        _boundary_conditions.insert(dirichlet);
+        
+        dirichlet   = new MAST::DirichletBoundaryCondition;   // left boundary
+        dirichlet->init(7, _indicator_sys_init->vars());
+        _indicator_discipline->add_dirichlet_bc(7,  *dirichlet);
+        _boundary_conditions.insert(dirichlet);
+        
+        _indicator_discipline->init_system_dirichlet_bc(*_indicator_sys);
+    }
+
     
     //
     //  \subsection bracket_dirichlet Bracket
@@ -691,9 +765,9 @@ public:
     void _init_loads() {
         
         std::string
-        s  = _input("mesh", "type of mesh to be analyzed {inplane, bracket}", "inplane");
+        s  = _input("mesh", "type of mesh to be analyzed {inplane, truss, bracket, eye_bar}", "inplane");
         
-        if (s == "inplane")
+        if (s == "inplane" || s == "truss")
             _init_loads_inplane();
         else if (s == "bracket")
             _init_loads_bracket();
@@ -1092,11 +1166,11 @@ public:
         ny_m    = _input("level_set_ny_divs", "number of elements of level-set mesh along y-axis", 10);
 
         std::string
-        s  = _input("mesh", "type of mesh to be analyzed {inplane, bracket}", "inplane");
+        s  = _input("mesh", "type of mesh to be analyzed {inplane, truss, bracket, eyebar}", "inplane");
 
         std::unique_ptr<Phi> phi;
         
-        if (s == "inplane" || s == "bracket")
+        if (s == "inplane" || s == "truss" || s == "bracket")
             phi.reset(new Phi(0., 0., _length, _height, nx_m, ny_m, nx_h, ny_h));
         else if (s == "eye_bar")
             phi.reset(new Phi(-0.5*_height, -0.5*_height, _length, _height, nx_m, ny_m, nx_h, ny_h));
@@ -1110,9 +1184,9 @@ public:
     void _init_phi_dvs() {
         
         std::string
-        s  = _input("mesh", "type of mesh to be analyzed {inplane, bracket}", "inplane");
+        s  = _input("mesh", "type of mesh to be analyzed {inplane, truss, bracket, eye_bar}", "inplane");
         
-        if (s == "inplane")
+        if (s == "inplane" || s == "truss")
             _init_phi_dvs_inplane();
         else if (s == "bracket")
             _init_phi_dvs_bracket();
@@ -1204,6 +1278,80 @@ public:
         _level_set_sys->solution->close();
     }
     
+    //
+    //  \subsection truss_initial_level_set Truss
+    //
+    void _init_phi_dvs_truss() {
+        
+        //
+        // this assumes that level set is defined using lagrange shape functions
+        //
+        libmesh_assert_equal_to(_level_set_fetype.family, libMesh::LAGRANGE);
+        
+        Real
+        frac          = _input("load_length_fraction", "fraction of boundary length on which pressure will act", 0.2),
+        filter_radius = _input("filter_radius", "radius of geometric filter for level set field", 0.015);
+        
+        unsigned int
+        dof_id  = 0;
+        
+        Real
+        val     = 0.;
+        
+        //
+        // all ranks will have DVs defined for all variables. So, we should be
+        // operating on a replicated mesh
+        //
+        libmesh_assert(_level_set_mesh->is_replicated());
+        
+        std::vector<Real> local_phi(_level_set_sys->solution->size());
+        _level_set_sys->solution->localize(local_phi);
+        
+        // iterate over all the node values
+        libMesh::MeshBase::const_node_iterator
+        it  = _level_set_mesh->nodes_begin(),
+        end = _level_set_mesh->nodes_end();
+        
+        //
+        // maximum number of dvs is the number of nodes on the level set function
+        // mesh. We will evaluate the actual number of dvs
+        //
+        _dv_params.reserve(_level_set_mesh->n_nodes());
+        _n_vars = 0;
+        
+        for ( ; it!=end; it++) {
+            
+            const libMesh::Node& n = **it;
+            
+            dof_id                     = n.dof_number(0, 0, 0);
+            
+            // only if node is not on the upper edge
+            if ((n(1)-filter_radius <= 0.) &&
+                (n(0)-filter_radius <= _length*.5*(1.+frac))   &&
+                (n(0)+filter_radius >= _length*.5*(1.-frac))) {
+                
+                // set value at the material points to a small positive number
+                if (dof_id >= _level_set_sys->solution->first_local_index() &&
+                    dof_id <  _level_set_sys->solution->last_local_index())
+                    _level_set_sys->solution->set(dof_id, 1.e0);
+            }
+            else {
+                
+                std::ostringstream oss;
+                oss << "dv_" << _n_vars;
+                val  = local_phi[dof_id];
+                
+                _dv_params.push_back(std::pair<unsigned int, MAST::Parameter*>());
+                _dv_params[_n_vars].first  = dof_id;
+                _dv_params[_n_vars].second = new MAST::LevelSetParameter(oss.str(), val, &n);
+                _dv_params[_n_vars].second->set_as_topology_parameter(true);
+                
+                _n_vars++;
+            }
+        }
+        
+        _level_set_sys->solution->close();
+    }
     
     //
     //  \subsection bracket_initial_level_set Bracket
@@ -1662,7 +1810,8 @@ public:
         
         MAST::LevelSetVolume                            volume(level_set_assembly.get_intersection());
         MAST::LevelSetPerimeter                         perimeter(level_set_assembly.get_intersection());
-        MAST::StressStrainOutputBase                    stress;
+        MAST::SmoothRampStressStrainOutput                    stress;
+        MAST::ComplianceOutput                          compliance;
         volume.set_discipline_and_system(*_level_set_discipline, *_level_set_sys_init);
         perimeter.set_discipline_and_system(*_level_set_discipline, *_level_set_sys_init);
         stress.set_discipline_and_system(*_discipline, *_sys_init);
@@ -1670,18 +1819,9 @@ public:
         perimeter.set_participating_elements_to_all();
         stress.set_participating_elements_to_all();
         stress.set_aggregation_coefficients(_p_val, 1., _vm_rho, _stress_lim) ;
-        
-        //////////////////////////////////////////////////////////////////////
-        // evaluate the objective
-        //////////////////////////////////////////////////////////////////////
-        level_set_assembly.set_evaluate_output_on_negative_phi(false);
-        level_set_assembly.calculate_output(*_level_set_sys->solution, volume);
-        level_set_assembly.set_evaluate_output_on_negative_phi(true);
-        level_set_assembly.calculate_output(*_level_set_sys->solution, perimeter);
-        level_set_assembly.set_evaluate_output_on_negative_phi(false);
-        obj       = _obj_scaling * (volume.output_total() +
-                                    _perimeter_penalty * perimeter.output_total() );
-        
+        compliance.set_participating_elements_to_all();
+        compliance.set_discipline_and_system(*_discipline, *_sys_init);
+
         //////////////////////////////////////////////////////////////////////
         // evaluate the stress constraint
         //////////////////////////////////////////////////////////////////////
@@ -1704,12 +1844,37 @@ public:
             return;
         }
         
-        nonlinear_assembly.calculate_output(*_sys->solution, stress);
-        fvals[0]  =  stress.output_total()/_stress_lim - 1.;  // g = sigma/sigma0-1 <= 0
-        libMesh::out
-        << "max: " << stress.get_maximum_von_mises_stress()
-        << "  functional: " << stress.output_total() << std::endl;
+        //nonlinear_assembly.calculate_output(*_sys->solution, stress);
+        nonlinear_assembly.calculate_output(*_sys->solution, compliance);
         
+        //////////////////////////////////////////////////////////////////////
+        // evaluate the objective
+        //////////////////////////////////////////////////////////////////////
+        level_set_assembly.set_evaluate_output_on_negative_phi(false);
+        level_set_assembly.calculate_output(*_level_set_sys->solution, volume);
+        level_set_assembly.set_evaluate_output_on_negative_phi(true);
+        level_set_assembly.calculate_output(*_level_set_sys->solution, perimeter);
+        level_set_assembly.set_evaluate_output_on_negative_phi(false);
+
+        Real
+        //max_vm = stress.get_maximum_von_mises_stress(),
+        //vm_agg = stress.output_total(),
+        vol    = volume.output_total(),
+        per    = perimeter.output_total(),
+        comp   = compliance.output_total();
+        
+        obj       = _obj_scaling * (comp + _perimeter_penalty * per);
+        //_obj_scaling    * (vol+ _perimeter_penalty * per) +
+        //_stress_penalty * (vm_agg);///_stress_lim - 1.);
+        
+        //fvals[0]  =  stress.output_total()/_stress_lim - 1.;  // g = sigma/sigma0-1 <= 0
+        //fvals[0]  =  stress.output_total();  // g = sigma/sigma0-1 <= 0
+        fvals[0]  = vol/_length/_height - 0.3; // vol/vol0 - a <=
+        libMesh::out << "volume: " << vol    << "  perim: "  << per    << std::endl;
+        //libMesh::out << "max: "    << max_vm << "  constr: " << vm_agg///_stress_lim - 1.
+        //<< std::endl;
+        libMesh::out << "compliance: " << comp << std::endl;
+
         if (_n_eig_vals) {
             
             //////////////////////////////////////////////////////////////////////
@@ -1740,8 +1905,29 @@ public:
         //////////////////////////////////////////////////////////////////////
         // evaluate the objective sensitivities, if requested
         //////////////////////////////////////////////////////////////////////
-        if (eval_obj_grad)
-            _evaluate_volume_sensitivity(volume, perimeter, level_set_assembly, obj_grad);
+        if (eval_obj_grad) {
+            
+            std::vector<Real>
+            grad1(obj_grad.size(), 0.);
+            
+            _evaluate_volume_sensitivity(nullptr, &perimeter, level_set_assembly, obj_grad);
+            
+            /*_evaluate_constraint_sensitivity(stress,
+                                             nonlinear_elem_ops,
+                                             nonlinear_assembly,
+                                             modal_elem_ops,
+                                             eigen_assembly,
+                                             enable_grad,
+                                             stress_grad);*/
+            
+            _evaluate_compliance_sensitivity(compliance,
+                                             nonlinear_elem_ops,
+                                             nonlinear_assembly,
+                                             grad1);
+            
+            for (unsigned int i=0; i<obj_grad.size(); i++)
+                obj_grad[i] += _obj_scaling * grad1[i];
+        }
         
         //////////////////////////////////////////////////////////////////////
         // check to see if the sensitivity of constraint is requested
@@ -1754,13 +1940,16 @@ public:
         // evaluate the sensitivities for constraints
         //////////////////////////////////////////////////////////////////////
         if (if_grad_sens)
-            _evaluate_constraint_sensitivity(stress,
-                                             nonlinear_elem_ops,
-                                             nonlinear_assembly,
-                                             modal_elem_ops,
-                                             eigen_assembly,
-                                             eval_grads,
-                                             grads);
+            /*_evaluate_stress_sensitivity(stress,
+                                         nonlinear_elem_ops,
+                                         nonlinear_assembly,
+                                         modal_elem_ops,
+                                         eigen_assembly,
+                                         eval_grads,
+                                         grads);*/
+            
+            _evaluate_volume_sensitivity(&volume, nullptr, level_set_assembly, grads);
+
         
         //
         // also the stress data for plotting
@@ -1771,10 +1960,12 @@ public:
     //
     //  \subsection volume_sensitivity Sensitivity of Material Volume
     //
-    void _evaluate_volume_sensitivity(MAST::LevelSetVolume&    volume,
-                                      MAST::LevelSetPerimeter& perimeter,
+    void _evaluate_volume_sensitivity(MAST::LevelSetVolume*    volume,
+                                      MAST::LevelSetPerimeter* perimeter,
                                       MAST::LevelSetNonlinearImplicitAssembly& assembly,
-                                      std::vector<Real>& obj_grad) {
+                                      std::vector<Real>& grad) {
+        
+        std::fill(grad.begin(), grad.end(), 0.);
         
         //
         // iterate over each DV, create a sensitivity vector and calculate the
@@ -1798,20 +1989,34 @@ public:
             _filter->compute_filtered_values(*dphi_base, *dphi_filtered);
             
             _level_set_vel->init(*_level_set_sys_init, *_level_set_sys->solution, *dphi_filtered);
+
+            // if the volume output was specified then compute the sensitivity
+            // and add to the grad vector
+            if (volume) {
+                
+                assembly.set_evaluate_output_on_negative_phi(false);
+                assembly.calculate_output_direct_sensitivity(*_level_set_sys->solution,
+                                                             dphi_filtered.get(),
+                                                             *_dv_params[i].second,
+                                                             *volume);
+                
+                //grad[i] = _obj_scaling * volume->output_sensitivity_total(*_dv_params[i].second);
+                grad[i] = volume->output_sensitivity_total(*_dv_params[i].second)/_length/_height;
+            }
             
-            assembly.set_evaluate_output_on_negative_phi(false);
-            assembly.calculate_output_direct_sensitivity(*_level_set_sys->solution,
-                                                         dphi_filtered.get(),
-                                                         *_dv_params[i].second,
-                                                         volume);
-            assembly.set_evaluate_output_on_negative_phi(true);
-            assembly.calculate_output_direct_sensitivity(*_level_set_sys->solution,
-                                                         dphi_filtered.get(),
-                                                         *_dv_params[i].second,
-                                                         perimeter);
-            assembly.set_evaluate_output_on_negative_phi(false);
-            obj_grad[i] = _obj_scaling * (volume.output_sensitivity_total(*_dv_params[i].second) +
-                                          _perimeter_penalty * perimeter.output_sensitivity_total(*_dv_params[i].second));
+            // if the perimeter output was specified then compute the sensitivity
+            // and add to the grad vector
+            if (perimeter) {
+                assembly.set_evaluate_output_on_negative_phi(true);
+                assembly.calculate_output_direct_sensitivity(*_level_set_sys->solution,
+                                                             dphi_filtered.get(),
+                                                             *_dv_params[i].second,
+                                                             *perimeter);
+                assembly.set_evaluate_output_on_negative_phi(false);
+                
+                grad[i] += _obj_scaling * _perimeter_penalty *
+                perimeter->output_sensitivity_total(*_dv_params[i].second);
+            }
         }
     }
     
@@ -1821,13 +2026,12 @@ public:
     //  \subsection stress_sensitivity Sensitivity of Stress and Eigenvalues
     //
     void
-    _evaluate_constraint_sensitivity
+    _evaluate_stress_sensitivity
     (MAST::StressStrainOutputBase& stress,
      MAST::AssemblyElemOperations& nonlinear_elem_ops,
      MAST::LevelSetNonlinearImplicitAssembly& nonlinear_assembly,
      MAST::StructuralModalEigenproblemAssemblyElemOperations& eigen_elem_ops,
      MAST::LevelSetEigenproblemAssembly& eigen_assembly,
-     const std::vector<bool>& eval_grads,
      std::vector<Real>& grads) {
         
         unsigned int n_conv = std::min(_n_eig_vals, _sys->get_n_converged_eigenvalues());
@@ -1863,7 +2067,7 @@ public:
             //////////////////////////////////////////////////////////////////////
             // stress sensitivity
             //////////////////////////////////////////////////////////////////////
-            grads[_n_ineq*i+0] = 1./_stress_lim*
+            grads[1*i+0] = //1./_stress_lim*
             nonlinear_assembly.calculate_output_adjoint_sensitivity(*_sys->solution,
                                                                     _sys->get_adjoint_solution(),
                                                                     *_dv_params[i].second,
@@ -1884,6 +2088,54 @@ public:
                 for (unsigned int j=0; j<n_conv; j++)
                     grads[_n_ineq*i+j+1] = -sens[j]/_ref_eig_val;
             }
+        }
+    }
+
+    
+    void
+    _evaluate_compliance_sensitivity
+    (MAST::ComplianceOutput& compliance,
+     MAST::AssemblyElemOperations& nonlinear_elem_ops,
+     MAST::LevelSetNonlinearImplicitAssembly& nonlinear_assembly,
+     std::vector<Real>& grads) {
+        
+        // Adjoint solution for compliance = - X
+        
+        std::unique_ptr<libMesh::NumericVector<Real>>
+        dphi_base(_level_set_sys->solution->zero_clone().release()),
+        dphi_filtered(_level_set_sys->solution->zero_clone().release());
+        
+        //////////////////////////////////////////////////////////////////
+        // indices used by GCMMA follow this rule:
+        // grad_k = dfi/dxj  ,  where k = j*NFunc + i
+        //////////////////////////////////////////////////////////////////
+        for (unsigned int i=0; i<_n_vars; i++) {
+            
+            dphi_base->zero();
+            dphi_filtered->zero();
+            //
+            // set the value only if the dof corresponds to a local node
+            //
+            if (_dv_params[i].first >=  dphi_base->first_local_index() &&
+                _dv_params[i].first <   dphi_base->last_local_index())
+                dphi_base->set(_dv_params[i].first, 1.);
+            dphi_base->close();
+            _filter->compute_filtered_values(*dphi_base, *dphi_filtered);
+            
+            //
+            // initialize the level set perturbation function to create a velocity
+            // field
+            _level_set_vel->init(*_level_set_sys_init, *_level_set_sys->solution, *dphi_filtered);
+            
+            //////////////////////////////////////////////////////////////////////
+            // compliance sensitivity
+            //////////////////////////////////////////////////////////////////////
+            grads[i] = -1. *
+            nonlinear_assembly.calculate_output_adjoint_sensitivity(*_sys->solution,
+                                                                    *_sys->solution,
+                                                                    *_dv_params[i].second,
+                                                                    nonlinear_elem_ops,
+                                                                    compliance);
         }
     }
 
@@ -2013,6 +2265,7 @@ public:
     _length                              (0.),
     _height                              (0.),
     _obj_scaling                         (0.),
+    _stress_penalty                      (0.),
     _perimeter_penalty                   (0.),
     _stress_lim                          (0.),
     _p_val                               (0.),
@@ -2077,6 +2330,7 @@ public:
         this->_init_phi_dvs();
         
         _obj_scaling           = 1./_length/_height;
+        _stress_penalty        = _input("stress_penalty", "penalty value for stress_constraint", 0.);
         _perimeter_penalty     = _input("perimeter_penalty", "penalty value for perimeter in the objective function", 0.);
         _stress_lim            = _input("vm_stress_limit", "limit von-mises stress value", 2.e8);
         _p_val                 = _input("constraint_aggregation_p_val", "value of p in p-norm stress aggregation", 2.0);
@@ -2378,6 +2632,10 @@ int main(int argc, char* argv[]) {
     if (optimizer.get()) {
         
         optimizer->attach_function_evaluation_object(top_opt);
+
+        //std::vector<Real> xx1(top_opt.n_vars()), xx2(top_opt.n_vars());
+        //top_opt.init_dvar(xx1, xx2, xx2);
+        //top_opt.verify_gradients(xx1);
         optimizer->optimize();
     }
     
