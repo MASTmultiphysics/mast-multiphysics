@@ -147,11 +147,97 @@ add_master_and_slave_boundary_coupling(unsigned int master_b_id,
 
 void
 MAST::MeshCouplingBase::
-add_slave_boundary_and_master_subdomain_coupling(unsigned int master_b_id,
+add_slave_boundary_and_master_subdomain_coupling(unsigned int master_id,
                                                  unsigned int slave_b_id,
                                                  Real tol) {
 
+    // iterate on all nodes and check with boundary info about
+    // current ids on it.
+    libMesh::MeshBase& mesh = _sys_init.system().get_mesh();
     
+    std::unique_ptr<libMesh::PointLocatorBase>
+    pt_locator(mesh.sub_point_locator());
+    
+    libMesh::PointLocatorTree
+    &locator_tree = dynamic_cast<libMesh::PointLocatorTree&>(*pt_locator);
+    
+    libMesh::MeshBase::const_element_iterator
+    e_it   =  mesh.local_elements_begin(),
+    e_end  =  mesh.local_elements_end();
+    
+    std::set<const libMesh::Node*> slave_nodes;
+    
+    for ( ; e_it != e_end; e_it++) {
+        
+        // iterate on sides and check if it is on specified boundary id
+        for (unsigned int slave_side=0;
+             slave_side < (*e_it)->n_sides();
+             slave_side++) {
+            
+            // check if the side is on the specified boundary
+            if (_check_if_side_on_boundary(mesh, **e_it, slave_side, slave_b_id)) {
+                
+                std::unique_ptr<const libMesh::Elem>
+                slave_side_ptr((*e_it)->side_ptr(slave_side));
+                
+                // check for coupling of nodes on this side
+                for (unsigned int slave_n_id=0;
+                     slave_n_id < slave_side_ptr->n_nodes();
+                     slave_n_id++) {
+                    
+                    const libMesh::Node*
+                    slave_node = slave_side_ptr->node_ptr(slave_n_id);
+                    
+                    // if the node has not already been constrained, then
+                    // identify the constraint on it
+                    if (!slave_nodes.count(slave_node)) {
+                        
+                        std::set<const libMesh::Node*> master_nodes;
+                        
+                        std::set<const libMesh::Elem*>
+                        elems = locator_tree.perform_fuzzy_linear_search(*slave_node, nullptr, tol);
+                        
+                        // make sure some elements were found for this node
+                        libmesh_assert(elems.size());
+                        
+                        // now check which of these elements have the master
+                        // subdomain id.
+                        std::set<const libMesh::Elem*>::const_iterator
+                        master_e_it   = elems.begin(),
+                        master_e_end  = elems.end();
+                        
+                        for (; master_e_it!=master_e_end; master_e_it++) {
+                            
+                            const libMesh::Elem* master_e = *master_e_it;
+                            
+                            if (master_e->subdomain_id() == master_id) {
+                                
+                                // check for coupling of nodes on this side
+                                for (unsigned int master_n_id=0;
+                                     master_n_id < master_e->n_nodes();
+                                     master_n_id++) {
+                                    
+                                    libMesh::Point
+                                    d = *master_e->node_ptr(master_n_id) - *slave_node;
+                                    
+                                    if (d.norm() <= tol)
+                                        master_nodes.insert(master_e->node_ptr(master_n_id));
+                                }
+                            }
+                        }
+                        
+                        // add this slave/master information to the data
+                        _node_couplings.push_back
+                        (std::pair<const libMesh::Node*, std::set<const libMesh::Node*>>
+                         (slave_node, master_nodes));
+                        
+                        // register this slave node as having been processed
+                        slave_nodes.insert(slave_node);
+                    }
+                }
+            }
+        }
+    }
 }
 
 
