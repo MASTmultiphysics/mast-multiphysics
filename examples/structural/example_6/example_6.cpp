@@ -956,6 +956,7 @@ public:
         filter_radius = _input("filter_radius", "radius of geometric filter for level set field", 0.015);
         
         unsigned int
+        sys_num = _density_sys->number(),
         dof_id  = 0;
         
         Real
@@ -986,7 +987,7 @@ public:
             
             const libMesh::Node& n = **it;
 
-            dof_id                     = n.dof_number(0, 0, 0);
+            dof_id                     = n.dof_number(sys_num, 0, 0);
             
             // only if node is not on the upper edge
             if ((n(1)+filter_radius >= _height) &&
@@ -1031,6 +1032,7 @@ public:
         filter_radius = _input("filter_radius", "radius of geometric filter for level set field", 0.015);
         
         unsigned int
+        sys_num = _density_sys->number(),
         dof_id  = 0;
         
         Real
@@ -1061,7 +1063,7 @@ public:
             
             const libMesh::Node& n = **it;
 
-            dof_id                     = n.dof_number(0, 0, 0);
+            dof_id                     = n.dof_number(sys_num, 0, 0);
             
             // only if node is not on the upper edge
             if ((n(1)-filter_radius <= 0.) &&
@@ -1115,6 +1117,7 @@ public:
         filter_radius = _input("filter_radius", "radius of geometric filter for level set field", 0.015);
         
         unsigned int
+        sys_num = _density_sys->number(),
         dof_id  = 0;
         
         Real
@@ -1145,7 +1148,7 @@ public:
             
             const libMesh::Node& n = **it;
 
-            dof_id                     = n.dof_number(0, 0, 0);
+            dof_id                     = n.dof_number(sys_num, 0, 0);
             
             if ((n(1)-filter_radius) <= y_lim && (n(0)+filter_radius) >= length*(1.-frac)) {
           
@@ -1209,6 +1212,7 @@ public:
         filter_radius = _input("filter_radius", "radius of geometric filter for level set field", 0.015);
         
         unsigned int
+        sys_num = _density_sys->number(),
         dof_id  = 0;
         
         Real
@@ -1240,7 +1244,7 @@ public:
             
             const libMesh::Node& n = **it;
             
-            dof_id                     = n.dof_number(0, 0, 0);
+            dof_id                     = n.dof_number(sys_num, 0, 0);
             
             
             
@@ -1272,7 +1276,7 @@ public:
                     
                     if (dof_id >= _density_sys->solution->first_local_index() &&
                         dof_id <  _density_sys->solution->last_local_index())
-                        _density_sys->solution->set(dof_id, -1.);
+                        _density_sys->solution->set(dof_id, 1.e-4);
                     val = -1.;
                 }
                 
@@ -1304,7 +1308,7 @@ public:
         xmin.resize(_n_vars);
         xmax.resize(_n_vars);
         
-        std::fill(xmin.begin(), xmin.end(),   -1.e0);
+        std::fill(xmin.begin(), xmin.end(),    1.e-4);
         std::fill(xmax.begin(), xmax.end(),    1.e0);
 
         //
@@ -1457,9 +1461,14 @@ public:
         //////////////////////////////////////////////////////////////////////
         // evaluate the sensitivities for constraints
         //////////////////////////////////////////////////////////////////////
-        if (if_grad_sens)
+        if (if_grad_sens) {
+            
             _evaluate_volume(nullptr, &grads);
-
+            for (unsigned int i=0; i<grads.size(); i++) {
+                grads[i] /= (_length*_height);
+            }
+        }
+        
         
         _density_function->clear();
     }
@@ -1503,8 +1512,8 @@ public:
             _density_sys->solution->localize(*local_sol, send_list);
             
             libMesh::MeshBase::element_iterator
-            it    =  _mesh->local_elements_begin(),
-            end   =  _mesh->local_elements_end();
+            it    =  _mesh->active_local_elements_begin(),
+            end   =  _mesh->active_local_elements_end();
             
             Real
             rho = 0.;
@@ -1547,6 +1556,7 @@ public:
                 
                 dphi_base->zero();
                 dphi_filtered->zero();
+                local_dsol->zero();
                 //
                 // set the value only if the dof corresponds to a local node
                 //
@@ -1562,8 +1572,8 @@ public:
                 sys_num = _density_sys->number();
                 
                 libMesh::MeshBase::element_iterator
-                it    =  _mesh->local_elements_begin(),
-                end   =  _mesh->local_elements_end();
+                it    =  _mesh->active_local_elements_begin(),
+                end   =  _mesh->active_local_elements_end();
                 
                 Real
                 drho = 0.;
@@ -1588,9 +1598,9 @@ public:
                     // use this density value to compute the volume
                     (*grad)[i]  +=  e.volume() * drho;
                 }
+                
+                this->comm().sum((*grad)[i]);
             }
-            
-            this->comm().sum(*grad);
         }
     }
     
@@ -2157,10 +2167,10 @@ int main(int argc, char* argv[]) {
         
         optimizer->attach_function_evaluation_object(top_opt);
 
-        std::vector<Real> xx1(top_opt.n_vars()), xx2(top_opt.n_vars());
-        top_opt.init_dvar(xx1, xx2, xx2);
-        top_opt.verify_gradients(xx1);
-        //optimizer->optimize();
+        //std::vector<Real> xx1(top_opt.n_vars()), xx2(top_opt.n_vars());
+        //top_opt.init_dvar(xx1, xx2, xx2);
+        //top_opt.verify_gradients(xx1);
+        optimizer->optimize();
     }
     
     // END_TRANSLATE

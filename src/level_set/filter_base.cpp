@@ -121,23 +121,23 @@ if_elem_in_domain_of_influence(const libMesh::Elem& elem,
                                const libMesh::Node& level_set_node) const {
     
     Real
-    d    = 0.;
+    d    = 1.e12; // arbitrarily large value to initialize the search
     
     libMesh::Point
     pt;
     
-    // first get the largest distance from the node to the element nodes
+    // first get the smallest distance from the node to the element nodes
     for (unsigned int i=0; i<elem.n_nodes(); i++) {
         pt  = elem.point(i);
         pt -= level_set_node;
         
-        if (pt.norm() > d + _level_set_fe_size)
+        if (pt.norm() < d)
             d = pt.norm();
     }
     
     // if this distance is outside the domain of influence, then this
     // element is not influenced by the design variable
-    if (d > _radius)
+    if (d > _radius + _level_set_fe_size)
         return false;
     else
         return true;

@@ -127,6 +127,26 @@ protected:
     MAST::MeshFieldFunction *_phi;
 };
 
+
+class ElementParameterDependence:
+public MAST::AssemblyBase::ElemParameterDependence {
+public:
+    ElementParameterDependence(const MAST::FilterBase& filter):
+    MAST::AssemblyBase::ElemParameterDependence(true), _filter(filter) {}
+    virtual ~ElementParameterDependence() {}
+    virtual bool if_elem_depends_on_parameter(const libMesh::Elem& e,
+                                              const MAST::FunctionBase& p) const {
+        const MAST::LevelSetParameter
+        &p_ls = dynamic_cast<const MAST::LevelSetParameter&>(p);
+        
+        return _filter.if_elem_in_domain_of_influence(e, *p_ls.level_set_node());
+    }
+    
+private:
+    const MAST::FilterBase& _filter;
+};
+
+
 class TopologyOptimizationLevelSet2D:
 public MAST::FunctionEvaluation {
     
@@ -179,7 +199,6 @@ protected:
     
     std::vector<MAST::Parameter*>             _params_for_sensitivity;
     std::map<std::string, MAST::Parameter*>   _parameters;
-    std::vector<MAST::Parameter*>             _dv_parameters;
     std::set<MAST::FunctionBase*>             _field_functions;
     std::set<MAST::BoundaryConditionBase*>    _boundary_conditions;
     std::set<unsigned int>                    _dv_dof_ids;
@@ -1975,6 +1994,9 @@ public:
         dphi_base(_level_set_sys->solution->zero_clone().release()),
         dphi_filtered(_level_set_sys->solution->zero_clone().release());
         
+        ElementParameterDependence dep(*_filter);
+        assembly.attach_elem_parameter_dependence_object(dep);
+        
         for (unsigned int i=0; i<_n_vars; i++) {
             
             dphi_base->zero();
@@ -2018,6 +2040,8 @@ public:
                 perimeter->output_sensitivity_total(*_dv_params[i].second);
             }
         }
+        
+        assembly.clear_elem_parameter_dependence_object();
     }
     
     
@@ -2041,7 +2065,10 @@ public:
         std::unique_ptr<libMesh::NumericVector<Real>>
         dphi_base(_level_set_sys->solution->zero_clone().release()),
         dphi_filtered(_level_set_sys->solution->zero_clone().release());
-        
+
+        ElementParameterDependence dep(*_filter);
+        nonlinear_assembly.attach_elem_parameter_dependence_object(dep);
+
         //////////////////////////////////////////////////////////////////
         // indices used by GCMMA follow this rule:
         // grad_k = dfi/dxj  ,  where k = j*NFunc + i
@@ -2089,6 +2116,8 @@ public:
                     grads[_n_ineq*i+j+1] = -sens[j]/_ref_eig_val;
             }
         }
+        
+        nonlinear_assembly.clear_elem_parameter_dependence_object();
     }
 
     
@@ -2105,6 +2134,9 @@ public:
         dphi_base(_level_set_sys->solution->zero_clone().release()),
         dphi_filtered(_level_set_sys->solution->zero_clone().release());
         
+        ElementParameterDependence dep(*_filter);
+        nonlinear_assembly.attach_elem_parameter_dependence_object(dep);
+
         //////////////////////////////////////////////////////////////////
         // indices used by GCMMA follow this rule:
         // grad_k = dfi/dxj  ,  where k = j*NFunc + i
@@ -2137,6 +2169,8 @@ public:
                                                                     nonlinear_elem_ops,
                                                                     compliance);
         }
+        
+        nonlinear_assembly.clear_elem_parameter_dependence_object();
     }
 
     //
