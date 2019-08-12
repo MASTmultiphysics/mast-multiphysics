@@ -40,6 +40,8 @@
 #include "elasticity/kinematic_coupling.h"
 #include "elasticity/structural_system_initialization.h"
 #include "elasticity/structural_nonlinear_assembly.h"
+#include "elasticity/stress_output_base.h"
+#include "elasticity/stress_assembly.h"
 #include "boundary_condition/dirichlet_boundary_condition.h"
 #include "property_cards/isotropic_material_property_card.h"
 #include "property_cards/solid_2d_section_element_property_card.h"
@@ -129,7 +131,7 @@ void init_mesh(libMesh::ReplicatedMesh& mesh) {
         for (unsigned int i=0; i<e->n_nodes(); i++)
             new_e->set_node(i) = node_map[e->node_ptr(i)];
         
-        // set subdomain ID
+        // set subdomain ID to 1 
         new_e->subdomain_id() = e->subdomain_id()+1;
         
         // set boundary IDs
@@ -250,7 +252,16 @@ int main(int argc, const char** argv)
     // as the slave to the boundary ID 1 as the master. A geometric search
     // will be used to identify node couplings within a circular radius of 0.005 m.
     MAST::MeshCouplingBase mesh_coupling(structural_system);
-    mesh_coupling.add_master_and_slave_boundary_coupling(1, 7, .005);
+    // This call will lead to a master-slave boundary-to-boundary coupling.
+    // This can be uncommented and the next boundary-to-subdomain call can be
+    // commented to enable this call. 
+    //mesh_coupling.add_master_and_slave_boundary_coupling(1, 7, .005);
+    
+    // the mesh can also be coupled using slave-boundary to master-subdomain
+    // coupling. 
+    mesh_coupling.add_slave_boundary_and_master_subdomain_coupling(0, 7, .005);
+    
+    
     // The \p KinematicCoupling class uses the search results to create the
     // kinematic constraints (or tie-constraints) for libMesh::DofMap
     MAST::KinematicCoupling kin_coupling(structural_system);
@@ -292,7 +303,8 @@ int main(int argc, const char** argv)
     MAST::ConstantFieldFunction temperature_f("temperature", temperature);
     MAST::ConstantFieldFunction ref_temp_f("ref_temperature", zero);
     
-    // Initialize load.
+    // Initialize load. The same pressure is applied to both sub-domains
+    // 1 and 2.
     MAST::BoundaryConditionBase surface_pressure1(MAST::SURFACE_PRESSURE);
     MAST::BoundaryConditionBase surface_pressure2(MAST::SURFACE_PRESSURE);
     surface_pressure1.add(pressure1_f);
@@ -341,6 +353,16 @@ int main(int argc, const char** argv)
     nonlinear_system.solution->zero();
     nonlinear_system.solve(elem_ops, assembly);
 
+    // post-process the stress for plotting. This is done through the
+    // output and stress assembly classes.
+    MAST::StressStrainOutputBase stress;
+    MAST::StressAssembly         stress_assembly;
+    stress.set_discipline_and_system         (discipline, structural_system);
+    stress_assembly.set_discipline_and_system(discipline, structural_system);
+    stress.set_participating_elements_to_all();
+    stress_assembly.update_stress_strain_data(stress, *system.solution);
+
+    
     //
     // Following is a the displacement contour of the panel with the
     // undeformed mesh plotted for reference. The displacement continuity
