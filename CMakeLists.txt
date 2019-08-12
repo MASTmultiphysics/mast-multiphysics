@@ -39,25 +39,34 @@ find_package(MPI REQUIRED)
 find_package(LAPACK REQUIRED)
 find_package(PETSc REQUIRED)
 find_package(SLEPc REQUIRED)
+find_package(HDF5 REQUIRED)
 find_package(libMesh REQUIRED)
 find_package(Eigen3 REQUIRED)
+# Note: for some reason, letting CMake find a package configuration file for Boost from
+#       a CMake/Spack-based installation of Boost causes trouble. Some of the include 
+#       directories seem to be missing in this case. We disable the search for a 
+#       Boost CMake configuration in the FindBoost module for now.
+set(Boost_NO_BOOST_CMAKE ON) 
 find_package(Boost COMPONENTS iostreams system filesystem unit_test_framework REQUIRED)
 
 # Find optional packages.
 if (ENABLE_GCMMA)
     find_package(GCMMA REQUIRED)
+    find_package(GFortranLibs REQUIRED)
 else()
     set (MAST_ENABLE_GCMMA 0)
 endif()
 
 if (ENABLE_DOT)
     find_package(DOT REQUIRED)
+    find_package(GFortranLibs REQUIRED)
 else()
     set (MAST_ENABLE_DOT 0)
 endif()
 
 if (ENABLE_SNOPT)
     find_package(SNOPT REQUIRED)
+    find_package(GFortranLibs REQUIRED)
 else()
     set (MAST_ENABLE_SNOPT 0)
 endif()
@@ -66,12 +75,6 @@ if (ENABLE_NLOPT)
    find_package(NLOpt REQUIRED)
 else()
     set (MAST_ENABLE_NLOPT 0)
-endif()
-
-# gfortran lib is required if GCMMA/DOT are used, since these are written
-# in fortran
-if (ENABLE_GCMMA OR ENABLE_DOT OR ENABLE_SNOPT)
-find_package(GFortranLibs REQUIRED)
 endif()
 
 # MAIN TARGETS
