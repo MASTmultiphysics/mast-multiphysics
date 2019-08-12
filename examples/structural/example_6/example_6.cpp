@@ -167,7 +167,8 @@ protected:
     Real                                      _perimeter_penalty;
     Real                                      _stress_lim;
     Real                                      _p_val, _vm_rho;
-    Real                                      _vf; // volume fraction
+    Real                                      _vf;      // volume fraction
+    Real                                      _rho_min; // lower limit on density
 
     libMesh::UnstructuredMesh*                _mesh;
     
@@ -805,9 +806,10 @@ public:
 
     void _init_material() {
         
+        _rho_min  = _input("rho_min", "lower limit on density variable", 1.e-8);
+
         Real
         Eval      = _input("E", "modulus of elasticity", 72.e9),
-        rho_min   = _input("rho_min", "lower limit on density variable", 1.e-4),
         penalty   = _input("rho_pentlay", "SIMP modulus of elasticity penalty", 4.),
         rhoval    = _input("rho", "material density", 2700.),
         nu_val    = _input("nu", "Poisson's ratio",  0.33),
@@ -831,7 +833,7 @@ public:
         *cp_f    = new MAST::ConstantFieldFunction(   "cp",     *cp);
 
         ElasticityFunction
-        *E_f = new ElasticityFunction(Eval, rho_min, penalty,
+        *E_f = new ElasticityFunction(Eval, _rho_min, penalty,
                                       *_density_function,
                                       *_density_sens_function);
         
@@ -1276,7 +1278,7 @@ public:
                     
                     if (dof_id >= _density_sys->solution->first_local_index() &&
                         dof_id <  _density_sys->solution->last_local_index())
-                        _density_sys->solution->set(dof_id, 1.e-4);
+                        _density_sys->solution->set(dof_id, _rho_min);
                     val = -1.;
                 }
                 
@@ -1308,7 +1310,7 @@ public:
         xmin.resize(_n_vars);
         xmax.resize(_n_vars);
         
-        std::fill(xmin.begin(), xmin.end(),    1.e-4);
+        std::fill(xmin.begin(), xmin.end(),    _rho_min);
         std::fill(xmax.begin(), xmax.end(),    1.e0);
 
         //
@@ -1830,6 +1832,7 @@ public:
     _p_val                               (0.),
     _vm_rho                              (0.),
     _vf                                  (0.),
+    _rho_min                             (0.),
     _mesh                                (nullptr),
     _eq_sys                              (nullptr),
     _sys                                 (nullptr),
