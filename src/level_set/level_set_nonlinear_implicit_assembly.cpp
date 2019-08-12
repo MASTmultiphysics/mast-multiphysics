@@ -614,8 +614,10 @@ sensitivity_assemble (const MAST::FunctionBase& f,
         
         const libMesh::Elem* elem = *el;
         
-        if (f.is_topology_parameter() &&
-            !_filter->if_elem_in_domain_of_influence(*elem, *(p_ls->level_set_node())))
+        // no sensitivity computation assembly is neeed in these cases
+        if (_param_dependence &&
+            // if object is specified and elem does not depend on it
+            !_param_dependence->if_elem_depends_on_parameter(*elem, f))
             continue;
 
         _intersection->init(*_level_set, *elem, nonlin_sys.time,
@@ -1196,9 +1198,14 @@ calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
         
         const libMesh::Elem* elem = *el;
         
-        if (p.is_topology_parameter() &&
-            !dXdp &&
-            !_filter->if_elem_in_domain_of_influence(*elem, *(p_ls->level_set_node())))
+        // no sensitivity computation assembly is neeed in these cases
+        if (_param_dependence &&
+            // if object is specified and elem does not depend on it
+            !_param_dependence->if_elem_depends_on_parameter(*elem, p) &&
+            // and if no sol_sens is given
+            (!dXdp ||
+             // or if it can be ignored for elem
+             (dXdp && _param_dependence->override_flag)))
             continue;
         
         // use the indicator if it was provided

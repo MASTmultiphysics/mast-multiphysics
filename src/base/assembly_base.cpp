@@ -42,7 +42,8 @@ _elem_ops         (nullptr),
 _discipline       (nullptr),
 _system           (nullptr),
 _sol_function     (nullptr),
-_solver_monitor   (nullptr) {
+_solver_monitor   (nullptr),
+_param_dependence (nullptr) {
     
 }
 
@@ -122,11 +123,32 @@ MAST::AssemblyBase::set_solver_monitor(MAST::AssemblyBase::SolverMonitor& monito
 }
 
 
+
+void
+MAST::AssemblyBase::attach_elem_parameter_dependence_object
+(MAST::AssemblyBase::ElemParameterDependence& dep) {
+
+    libmesh_assert(!_param_dependence);
+    
+    _param_dependence = &dep;
+}
+
+
+
+void
+MAST::AssemblyBase::clear_elem_parameter_dependence_object() {
+    
+    _param_dependence = nullptr;
+}
+
+
+
 MAST::AssemblyBase::SolverMonitor*
 MAST::AssemblyBase::get_solver_monitor() {
     
     return _solver_monitor;
 }
+
 
 void
 MAST::AssemblyBase::clear_solver_monitor() {
@@ -153,9 +175,10 @@ void
 MAST::AssemblyBase::
 clear_discipline_and_system() {
     
-    close_matrix   = true;
-    _discipline    = nullptr;
-    _system        = nullptr;
+    close_matrix      = true;
+    _discipline       = nullptr;
+    _system           = nullptr;
+    _param_dependence = nullptr;
 }
 
 
@@ -434,6 +457,16 @@ calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
         
         const libMesh::Elem* elem = *el;
         
+        // no sensitivity computation assembly is neeed in these cases
+        if (_param_dependence &&
+            // if object is specified and elem does not depend on it
+            !_param_dependence->if_elem_depends_on_parameter(*elem, p) &&
+            // and if no sol_sens is given
+            (!dXdp ||
+             // or if it can be ignored for elem
+             (dXdp && _param_dependence->override_flag)))
+            continue;
+            
         dof_map.dof_indices (elem, dof_indices);
         
         // get the solution
