@@ -1011,7 +1011,8 @@ public:
                 _dv_params[_n_vars].first  = dof_id;
                 _dv_params[_n_vars].second = new MAST::LevelSetParameter(oss.str(), val, &n);
                 _dv_params[_n_vars].second->set_as_topology_parameter(true);
-                
+                _dv_dof_ids.insert(dof_id);
+
                 _n_vars++;
             }
         }
@@ -1087,7 +1088,8 @@ public:
                 _dv_params[_n_vars].first  = dof_id;
                 _dv_params[_n_vars].second = new MAST::LevelSetParameter(oss.str(), val, &n);
                 _dv_params[_n_vars].second->set_as_topology_parameter(true);
-                
+                _dv_dof_ids.insert(dof_id);
+
                 _n_vars++;
             }
         }
@@ -2157,7 +2159,7 @@ int main(int argc, char* argv[]) {
     }
     else if (s == "snopt") {
         
-        //optimizer.reset(new MAST::NPSOLOptimizationInterface);
+        optimizer.reset(new MAST::NPSOLOptimizationInterface);
     }
     else {
         
