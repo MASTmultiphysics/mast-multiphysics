@@ -403,6 +403,37 @@ MAST::FunctionEvaluation::verify_gradients(const std::vector<Real>& dvars) {
 }
 
 
+void
+MAST::FunctionEvaluation::parametric_line_study(const std::string& nm,
+                                                const unsigned int iter1,
+                                                const unsigned int iter2,
+                                                unsigned int divs) {
+
+    std::vector<Real>
+    dv1(_n_vars, 0.),
+    dv2(_n_vars, 0.),
+    dv (_n_vars, 0.),
+    fval(_n_ineq+_n_eq, 0.);
+    
+    this->initialize_dv_from_output_file(nm, iter1, dv1);
+    this->initialize_dv_from_output_file(nm, iter2, dv2);
+    
+    Real
+    f   = 0.,
+    obj = 0.;
+
+    for (unsigned int i=0; i<=divs; i++) {
+        
+        f = (1.*i)/(1.*divs);
+        for (unsigned int j=0; j<_n_vars; j++) {
+            dv[j] = (1.-f) * dv1[j] + f * dv2[j];
+        }
+        
+        this->_output_wrapper(i, dv, obj, fval, true);
+    }
+}
+
+
 
 void
 MAST::FunctionEvaluation::sanitize_parallel() {
