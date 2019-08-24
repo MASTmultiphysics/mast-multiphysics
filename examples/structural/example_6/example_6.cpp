@@ -1281,7 +1281,7 @@ public:
                     if (dof_id >= _density_sys->solution->first_local_index() &&
                         dof_id <  _density_sys->solution->last_local_index())
                         _density_sys->solution->set(dof_id, _rho_min);
-                    val = -1.;
+                    val = _rho_min;
                 }
                 
                 _dv_params.push_back(std::pair<unsigned int, MAST::Parameter*>());
@@ -1401,9 +1401,9 @@ public:
         if (r == SNES_DIVERGED_LINEAR_SOLVE ||
             _sys->final_nonlinear_residual() > 1.e-1) {
             
-            obj = 1.e10;
+            obj = 1.e11;
             for (unsigned int i=0; i<_n_ineq; i++)
-                fvals[i] = 1.e10;
+                fvals[i] = 1.e11;
             return;
         }
         
@@ -2035,7 +2035,7 @@ _optim_obj(int*    mode,
             g[i] = obj_grad[i];
     }
 
-    if (obj > 1.e5) *mode = -1;
+    if (obj > 1.e10) *mode = -1;
 }
 
 
@@ -2113,7 +2113,7 @@ _optim_con(int*    mode,
             cJac[i] = grads[i];
     }
     
-    if (obj > 1.e5) *mode = -1;
+    if (obj > 1.e10) *mode = -1;
 }
 #endif
 
