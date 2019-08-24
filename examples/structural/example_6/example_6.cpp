@@ -102,6 +102,7 @@ public:
     _rho(rho),
     _drho(drho) { }
     virtual ~ElasticityFunction(){}
+    void set_penalty_val(Real penalty) {_penalty = penalty;}
     
     virtual bool depends_on(const MAST::FunctionBase& f) const { return true;}
     virtual void operator() (const libMesh::Point& p, const Real t, Real& v) const {
@@ -170,6 +171,7 @@ protected:
     Real                                      _vf;      // volume fraction
     Real                                      _rho_min; // lower limit on density
 
+    ElasticityFunction*                       _Ef;
     libMesh::UnstructuredMesh*                _mesh;
     
     libMesh::EquationSystems*                 _eq_sys;
@@ -832,17 +834,16 @@ public:
         *k_f     = new MAST::ConstantFieldFunction( "k_th",      *k),
         *cp_f    = new MAST::ConstantFieldFunction(   "cp",     *cp);
 
-        ElasticityFunction
-        *E_f = new ElasticityFunction(Eval, _rho_min, penalty,
-                                      *_density_function,
-                                      *_density_sens_function);
+        _Ef      = new ElasticityFunction(Eval, _rho_min, penalty,
+                                          *_density_function,
+                                          *_density_sens_function);
         
         _parameters[  rho->name()]     = rho;
         _parameters[   nu->name()]     = nu;
         _parameters[kappa->name()]     = kappa;
         _parameters[    k->name()]     = k;
         _parameters[   cp->name()]     = cp;
-        _field_functions.insert(E_f);
+        _field_functions.insert(_Ef);
         _field_functions.insert(rho_f);
         _field_functions.insert(nu_f);
         _field_functions.insert(kappa_f);
@@ -850,7 +851,7 @@ public:
         _field_functions.insert(cp_f);
 
         _m_card = new MAST::IsotropicMaterialPropertyCard;
-        _m_card->add(*E_f);
+        _m_card->add(*_Ef);
         _m_card->add(*rho_f);
         _m_card->add(*nu_f);
         _m_card->add(*kappa_f);
@@ -1377,7 +1378,7 @@ public:
         stress_assembly.set_discipline_and_system(*_discipline, *_sys_init);
         nonlinear_elem_ops.set_discipline_and_system(*_discipline, *_sys_init);
         
-        MAST::SmoothRampStressStrainOutput              stress;
+        MAST::StressStrainOutputBase                    stress;
         MAST::ComplianceOutput                          compliance;
         stress.set_discipline_and_system(*_discipline, *_sys_init);
         stress.set_participating_elements_to_all();
@@ -1390,6 +1391,13 @@ public:
         //////////////////////////////////////////////////////////////////////
         
         libMesh::out << "Static Solve" << std::endl;
+
+        Real
+        penalty          = _input("rho_pentlay", "SIMP modulus of elasticity penalty", 4.),
+        stress_penalty   = _input("stress_rho_pentlay", "SIMP modulus of elasticity penalty for stress evaluation", 0.5);
+        // set the elasticity penalty for solution
+        _Ef->set_penalty_val(penalty);
+        
         _sys->solve(nonlinear_elem_ops, nonlinear_assembly);
         SNESConvergedReason
         r = dynamic_cast<libMesh::PetscNonlinearSolver<Real>&>
@@ -1407,52 +1415,54 @@ public:
             return;
         }
         
-        //nonlinear_assembly.calculate_output(*_sys->solution, stress);
-        nonlinear_assembly.calculate_output(*_sys->solution, compliance);
+        // evaluate compliance
+        //nonlinear_assembly.calculate_output(*_sys->solution, compliance);
+
+        // set the elasticity penalty for stress evaluation
+        _Ef->set_penalty_val(stress_penalty);
+        nonlinear_assembly.calculate_output(*_sys->solution, stress);
         
         //////////////////////////////////////////////////////////////////////
         // evaluate the objective
         //////////////////////////////////////////////////////////////////////
         Real
-        //max_vm = stress.get_maximum_von_mises_stress(),
-        //vm_agg = stress.output_total(),
+        max_vm = stress.get_maximum_von_mises_stress(),
+        vm_agg = stress.output_total(),
         vol    = 0.,
         comp   = compliance.output_total();
         
         _evaluate_volume(&vol, nullptr);
         
-        obj       = _obj_scaling * comp;
+        //obj       = _obj_scaling * comp;
+        obj         = _obj_scaling * vol;
         //_obj_scaling    * (vol+ _perimeter_penalty * per) +
         //_stress_penalty * (vm_agg);///_stress_lim - 1.);
         
-        //fvals[0]  =  stress.output_total()/_stress_lim - 1.;  // g = sigma/sigma0-1 <= 0
+        fvals[0]  =  stress.output_total()/_stress_lim - 1.;  // g = sigma/sigma0-1 <= 0
         //fvals[0]  =  stress.output_total();  // g = sigma/sigma0-1 <= 0
-        fvals[0]  = vol/_length/_height - _vf; // vol/vol0 - a <=
+        //fvals[0]  = vol/_length/_height - _vf; // vol/vol0 - a <=
         libMesh::out << "volume: " << vol << std::endl;
-        //libMesh::out << "max: "    << max_vm << "  constr: " << vm_agg///_stress_lim - 1.
-        //<< std::endl;
+        libMesh::out << "max: "    << max_vm << "  constr: " << vm_agg///_stress_lim - 1.
+        << std::endl;
         libMesh::out << "compliance: " << comp << std::endl;
-
-        //
-        // also the stress data for plotting
-        //
-        stress_assembly.update_stress_strain_data(stress, *_sys->solution);
 
         //////////////////////////////////////////////////////////////////////
         // evaluate the objective sensitivities, if requested
         //////////////////////////////////////////////////////////////////////
         if (eval_obj_grad) {
             
-            std::vector<Real>
-            grad1(obj_grad.size(), 0.);
-            
-            _evaluate_compliance_sensitivity(compliance,
-                                             nonlinear_elem_ops,
-                                             nonlinear_assembly,
-                                             grad1);
-            
-            for (unsigned int i=0; i<obj_grad.size(); i++)
-                obj_grad[i] += _obj_scaling * grad1[i];
+            _evaluate_volume(nullptr, &obj_grad);
+            for (unsigned int i=0; i<grads.size(); i++) obj_grad[i] /= (_length*_height);
+//            std::vector<Real>
+//            grad1(obj_grad.size(), 0.);
+//
+//            _evaluate_compliance_sensitivity(compliance,
+//                                             nonlinear_elem_ops,
+//                                             nonlinear_assembly,
+//                                             grad1);
+//
+//            for (unsigned int i=0; i<obj_grad.size(); i++)
+//                obj_grad[i] += _obj_scaling * grad1[i];
         }
         
         //////////////////////////////////////////////////////////////////////
@@ -1467,12 +1477,20 @@ public:
         //////////////////////////////////////////////////////////////////////
         if (if_grad_sens) {
             
-            _evaluate_volume(nullptr, &grads);
-            for (unsigned int i=0; i<grads.size(); i++) {
-                grads[i] /= (_length*_height);
-            }
+            _evaluate_stress_sensitivity(penalty,
+                                         stress,
+                                         nonlinear_elem_ops,
+                                         nonlinear_assembly,
+                                         grads);
+
+            //_evaluate_volume(nullptr, &grads);
+            //for (unsigned int i=0; i<grads.size(); i++) grads[i] /= (_length*_height);
         }
         
+        //
+        // also the stress data for plotting
+        //
+        stress_assembly.update_stress_strain_data(stress, *_sys->solution);
         
         _density_function->clear();
     }
@@ -1615,7 +1633,8 @@ public:
     //
     void
     _evaluate_stress_sensitivity
-    (MAST::StressStrainOutputBase& stress,
+    (const Real                    penalty,
+     MAST::StressStrainOutputBase& stress,
      MAST::AssemblyElemOperations& nonlinear_elem_ops,
      MAST::NonlinearImplicitAssembly& nonlinear_assembly,
      std::vector<Real>& grads) {
@@ -1651,7 +1670,11 @@ public:
             //////////////////////////////////////////////////////////////////////
             // stress sensitivity
             //////////////////////////////////////////////////////////////////////
-            grads[1*i+0] = //1./_stress_lim*
+            // set the elasticity penalty for solution, which is needed for
+            // computation of the residual sensitivity
+            _Ef->set_penalty_val(penalty);
+
+            grads[1*i+0] = 1./_stress_lim*
             nonlinear_assembly.calculate_output_adjoint_sensitivity(*_sys->solution,
                                                                     _sys->get_adjoint_solution(),
                                                                     *_dv_params[i].second,
