@@ -1182,8 +1182,8 @@ public:
                     
                     if (dof_id >= _density_sys->solution->first_local_index() &&
                         dof_id <  _density_sys->solution->last_local_index())
-                        _density_sys->solution->set(dof_id, -1.0);
-                    val = -1.0;
+                        _density_sys->solution->set(dof_id, _rho_min);
+                    val = _rho_min;
                 }
                 
                 _dv_params.push_back(std::pair<unsigned int, MAST::Parameter*>());
