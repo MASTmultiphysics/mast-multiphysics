@@ -1289,7 +1289,8 @@ public:
                 _dv_params[_n_vars].first  = dof_id;
                 _dv_params[_n_vars].second = new MAST::LevelSetParameter(oss.str(), val, &n);
                 _dv_params[_n_vars].second->set_as_topology_parameter(true);
-                
+                _dv_dof_ids.insert(dof_id);
+
                 _n_vars++;
             }
         }
@@ -1364,7 +1365,8 @@ public:
                 _dv_params[_n_vars].first  = dof_id;
                 _dv_params[_n_vars].second = new MAST::LevelSetParameter(oss.str(), val, &n);
                 _dv_params[_n_vars].second->set_as_topology_parameter(true);
-                
+                _dv_dof_ids.insert(dof_id);
+
                 _n_vars++;
             }
         }
@@ -1829,7 +1831,7 @@ public:
         
         MAST::LevelSetVolume                            volume(level_set_assembly.get_intersection());
         MAST::LevelSetPerimeter                         perimeter(level_set_assembly.get_intersection());
-        MAST::SmoothRampStressStrainOutput                    stress;
+        MAST::StressStrainOutputBase                    stress;
         MAST::ComplianceOutput                          compliance;
         volume.set_discipline_and_system(*_level_set_discipline, *_level_set_sys_init);
         perimeter.set_discipline_and_system(*_level_set_discipline, *_level_set_sys_init);
@@ -1863,8 +1865,8 @@ public:
             return;
         }
         
-        //nonlinear_assembly.calculate_output(*_sys->solution, stress);
-        nonlinear_assembly.calculate_output(*_sys->solution, compliance);
+        nonlinear_assembly.calculate_output(*_sys->solution, stress);
+        //nonlinear_assembly.calculate_output(*_sys->solution, compliance);
         
         //////////////////////////////////////////////////////////////////////
         // evaluate the objective
@@ -1876,22 +1878,23 @@ public:
         level_set_assembly.set_evaluate_output_on_negative_phi(false);
 
         Real
-        //max_vm = stress.get_maximum_von_mises_stress(),
-        //vm_agg = stress.output_total(),
+        max_vm = stress.get_maximum_von_mises_stress(),
+        vm_agg = stress.output_total(),
+        vf     = _input("volume_fraction", "volume fraction", 0.3),
         vol    = volume.output_total(),
         per    = perimeter.output_total(),
         comp   = compliance.output_total();
         
-        obj       = _obj_scaling * (comp + _perimeter_penalty * per);
+        obj       = _obj_scaling * (vol + _perimeter_penalty * per);
         //_obj_scaling    * (vol+ _perimeter_penalty * per) +
         //_stress_penalty * (vm_agg);///_stress_lim - 1.);
         
-        //fvals[0]  =  stress.output_total()/_stress_lim - 1.;  // g = sigma/sigma0-1 <= 0
-        //fvals[0]  =  stress.output_total();  // g = sigma/sigma0-1 <= 0
-        fvals[0]  = vol/_length/_height - 0.3; // vol/vol0 - a <=
+        fvals[0]  =  stress.output_total()/_stress_lim - 1.;  // g = sigma/sigma0-1 <= 0
+        //fvals[0]  =  stress.output_total()/_length/_height;  // g <= 0 for the smooth ramp function
+        //fvals[0]  = vol/_length/_height - vf; // vol/vol0 - a <=
         libMesh::out << "volume: " << vol    << "  perim: "  << per    << std::endl;
-        //libMesh::out << "max: "    << max_vm << "  constr: " << vm_agg///_stress_lim - 1.
-        //<< std::endl;
+        libMesh::out << "max: "    << max_vm << "  constr: " << vm_agg/_stress_lim - 1.
+        << std::endl;
         libMesh::out << "compliance: " << comp << std::endl;
 
         if (_n_eig_vals) {
@@ -1929,7 +1932,7 @@ public:
             std::vector<Real>
             grad1(obj_grad.size(), 0.);
             
-            _evaluate_volume_sensitivity(nullptr, &perimeter, level_set_assembly, obj_grad);
+            _evaluate_volume_sensitivity(&volume, &perimeter, level_set_assembly, obj_grad);
             
             /*_evaluate_constraint_sensitivity(stress,
                                              nonlinear_elem_ops,
@@ -1939,13 +1942,13 @@ public:
                                              enable_grad,
                                              stress_grad);*/
             
-            _evaluate_compliance_sensitivity(compliance,
+            /*_evaluate_compliance_sensitivity(compliance,
                                              nonlinear_elem_ops,
                                              nonlinear_assembly,
                                              grad1);
             
             for (unsigned int i=0; i<obj_grad.size(); i++)
-                obj_grad[i] += _obj_scaling * grad1[i];
+                obj_grad[i] += _obj_scaling * grad1[i];*/
         }
         
         //////////////////////////////////////////////////////////////////////
@@ -1959,15 +1962,14 @@ public:
         // evaluate the sensitivities for constraints
         //////////////////////////////////////////////////////////////////////
         if (if_grad_sens)
-            /*_evaluate_stress_sensitivity(stress,
+            _evaluate_stress_sensitivity(stress,
                                          nonlinear_elem_ops,
                                          nonlinear_assembly,
                                          modal_elem_ops,
                                          eigen_assembly,
-                                         eval_grads,
-                                         grads);*/
+                                         grads);
             
-            _evaluate_volume_sensitivity(&volume, nullptr, level_set_assembly, grads);
+            //_evaluate_volume_sensitivity(&volume, nullptr, level_set_assembly, grads);
 
         
         //
@@ -2022,8 +2024,8 @@ public:
                                                              *_dv_params[i].second,
                                                              *volume);
                 
-                //grad[i] = _obj_scaling * volume->output_sensitivity_total(*_dv_params[i].second);
-                grad[i] = volume->output_sensitivity_total(*_dv_params[i].second)/_length/_height;
+                grad[i] = _obj_scaling * volume->output_sensitivity_total(*_dv_params[i].second);
+                //grad[i] = volume->output_sensitivity_total(*_dv_params[i].second)/_length/_height;
             }
             
             // if the perimeter output was specified then compute the sensitivity
@@ -2094,7 +2096,7 @@ public:
             //////////////////////////////////////////////////////////////////////
             // stress sensitivity
             //////////////////////////////////////////////////////////////////////
-            grads[1*i+0] = //1./_stress_lim*
+            grads[1*i+0] = 1./_stress_lim*
             nonlinear_assembly.calculate_output_adjoint_sensitivity(*_sys->solution,
                                                                     _sys->get_adjoint_solution(),
                                                                     *_dv_params[i].second,
@@ -2267,7 +2269,7 @@ public:
             _optimization_interface->set_real_parameter   ("initial_rel_step",        initial_step);
         }
 
-        MAST::FunctionEvaluation::output(iter, x, obj/_obj_scaling, fval, if_write_to_optim_file);
+        MAST::FunctionEvaluation::output(iter, x, obj/_obj_scaling, f, if_write_to_optim_file);
     }
 
 #if MAST_ENABLE_SNOPT == 1
@@ -2671,6 +2673,7 @@ int main(int argc, char* argv[]) {
         //top_opt.init_dvar(xx1, xx2, xx2);
         //top_opt.verify_gradients(xx1);
         optimizer->optimize();
+        //top_opt.parametric_line_study("output_compliance.txt", 0, 88, 1000);
     }
     
     // END_TRANSLATE
