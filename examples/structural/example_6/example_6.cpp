@@ -812,7 +812,7 @@ public:
 
         Real
         Eval      = _input("E", "modulus of elasticity", 72.e9),
-        penalty   = _input("rho_pentlay", "SIMP modulus of elasticity penalty", 4.),
+        penalty   = _input("rho_penalty", "SIMP modulus of elasticity penalty", 4.),
         rhoval    = _input("rho", "material density", 2700.),
         nu_val    = _input("nu", "Poisson's ratio",  0.33),
         kappa_val = _input("kappa", "shear correction factor",  5./6.),
@@ -1393,8 +1393,8 @@ public:
         libMesh::out << "Static Solve" << std::endl;
 
         Real
-        penalty          = _input("rho_pentlay", "SIMP modulus of elasticity penalty", 4.),
-        stress_penalty   = _input("stress_rho_pentlay", "SIMP modulus of elasticity penalty for stress evaluation", 0.5);
+        penalty          = _input("rho_penalty", "SIMP modulus of elasticity penalty", 4.),
+        stress_penalty   = _input("stress_rho_penalty", "SIMP modulus of elasticity penalty for stress evaluation", 0.5);
         // set the elasticity penalty for solution
         _Ef->set_penalty_val(penalty);
         
@@ -1478,6 +1478,7 @@ public:
         if (if_grad_sens) {
             
             _evaluate_stress_sensitivity(penalty,
+                                         stress_penalty,
                                          stress,
                                          nonlinear_elem_ops,
                                          nonlinear_assembly,
@@ -1634,6 +1635,7 @@ public:
     void
     _evaluate_stress_sensitivity
     (const Real                    penalty,
+     const Real                    stress_penalty,
      MAST::StressStrainOutputBase& stress,
      MAST::AssemblyElemOperations& nonlinear_elem_ops,
      MAST::NonlinearImplicitAssembly& nonlinear_assembly,
@@ -1679,7 +1681,16 @@ public:
                                                                     _sys->get_adjoint_solution(),
                                                                     *_dv_params[i].second,
                                                                     nonlinear_elem_ops,
-                                                                    stress);
+                                                                    stress,
+                                                                    false);
+            
+            _Ef->set_penalty_val(stress_penalty);
+            nonlinear_assembly.calculate_output_direct_sensitivity(*_sys->solution,
+                                                                   nullptr,
+                                                                   *_dv_params[i].second,
+                                                                   stress);
+            grads[1*i+0] += 1./_stress_lim* stress.output_sensitivity_total(*_dv_params[i].second);
+            
             stress.clear_sensitivity_data();
             _density_sens_function->clear();
         }
