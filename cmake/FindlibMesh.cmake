@@ -21,7 +21,7 @@ find_library(libMesh_dbg_LIBRARY
 
 # If debug library is not available then set it to the optimized library
 if(NOT libMesh_dbg_LIBRARY)
-   message("Did not fine libmesh_dbg using libmesh_opt for debug version.")
+   message("-- WARN: Did not find libmesh_dbg using libmesh_opt for debug version.")
     find_library(libMesh_dbg_LIBRARY
                  NAMES mesh_opt
                  HINTS ${libMesh_DIR}/lib)
@@ -34,9 +34,15 @@ if(libMesh_INCLUDE_DIR)
     file(STRINGS "${HEADER}" major REGEX "define +LIBMESH_MAJOR_VERSION")
     file(STRINGS "${HEADER}" minor REGEX "define +LIBMESH_MINOR_VERSION")
     file(STRINGS "${HEADER}" patch REGEX "define +LIBMESH_MICRO_VERSION")
-    string(REGEX REPLACE ".+([0-9]+)" "\\1" major ${major})
-    string(REGEX REPLACE ".+([0-9]+)" "\\1" minor ${minor})
-    string(REGEX REPLACE ".+([0-9]+)" "\\1" patch ${patch})
+    string(REGEX MATCH "#define LIBMESH_MAJOR_VERSION *([0-9]*)" _ ${major})
+    set(major ${CMAKE_MATCH_1})
+    string(REGEX MATCH "#define LIBMESH_MINOR_VERSION *([0-9]*)" _ ${minor})
+    set(minor ${CMAKE_MATCH_1})
+    string(REGEX MATCH "#define LIBMESH_MICRO_VERSION *([0-9]*)" _ ${patch})
+    set(patch ${CMAKE_MATCH_1})
+    #string(REGEX REPLACE ".+([0-9]+)" "\\1" major ${major})
+    #string(REGEX REPLACE ".+([0-9]+)" "\\1" minor ${minor})
+    #string(REGEX REPLACE ".+([0-9]+)" "\\1" patch ${patch})
     string(STRIP "${major}" major)
     string(STRIP "${minor}" minor)
     string(STRIP "${patch}" patch)
