@@ -25,7 +25,9 @@ option(BUILD_DOC      "Build documentation"         OFF)
 set(MAST_ROOT_DIR ${CMAKE_CURRENT_LIST_DIR})
 set(libMesh_DIR "libMesh_DIR" CACHE PATH "Directory containing libMesh include/ and lib/")
 set(PETSc_DIR   "PETSc_DIR"   CACHE PATH "Directory containing PETSc include/ and lib/")
+set(PETSc_ARCH  "PETSc_ARCH"  CACHE STRING "Configuration/build of PETSc that should be used.")
 set(SLEPc_DIR   "SLEPc_DIR"   CACHE PATH "Directory containing SLEPc include/ and lib/")
+set(SLEPc_ARCH  "SLEPc_ARCH"  CACHE STRING "Configuration/build of SLEPc that should be used.")
 set(EIGEN3_ROOT "Eigen_DIR"   CACHE PATH "Directory containing eigen header files")
 set(DOT_DIR "DOT_DIR"   CACHE PATH "Directory containing DOT lib/")
 set(SNOPT_DIR "SNOpt_DIR"   CACHE PATH "Directory containing SNOPT lib/")
@@ -37,6 +39,8 @@ set(NLOPT_DIR "NLOpt_DIR"   CACHE PATH "Directory containing NLOpt include/ and 
 # FIND DEPENDENCIES
 find_package(MPI REQUIRED)
 find_package(LAPACK REQUIRED)
+message("-- Found BLAS libs: ${BLAS_LIBRARIES}")
+message("-- Found LAPACK libs: ${LAPACK_LIBRARIES}")
 find_package(PETSc REQUIRED)
 find_package(SLEPc REQUIRED)
 find_package(HDF5 REQUIRED)
@@ -48,6 +52,8 @@ find_package(Eigen3 REQUIRED)
 #       Boost CMake configuration in the FindBoost module for now.
 set(Boost_NO_BOOST_CMAKE ON) 
 find_package(Boost COMPONENTS iostreams system filesystem unit_test_framework REQUIRED)
+message("-- Found Boost include: ${Boost_INCLUDE_DIRS}") # To ensure the found Boost is what user expected
+message("-- Found Boost libs:    ${Boost_LIBRARY_DIRS}") # To ensure the found Boost is what user expected
 
 # Find optional packages.
 if (ENABLE_GCMMA)

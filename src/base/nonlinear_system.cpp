@@ -999,7 +999,7 @@ project_vector_without_dirichlet (libMesh::NumericVector<Real> & new_vector,
     libMesh::WrappedFunctor<Real>     f_fem(f);
     libMesh::FEMFunctionWrapper<Real> fw(f_fem);
     
-#if (LIBMESH_MAJOR_VERSION == 1 && LIBMESH_MINOR_VERSION < 4)
+#if (LIBMESH_MAJOR_VERSION == 1 && LIBMESH_MINOR_VERSION < 5)
     libMesh::Threads::parallel_for
     (active_local_range,
      FEMProjector(*this, fw, nullptr, setter, vars));
