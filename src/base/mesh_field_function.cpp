@@ -32,7 +32,22 @@ MeshFieldFunction(MAST::SystemInitialization& sys,
 MAST::FieldFunction<RealVectorX>(nm),
 _use_qp_sol(false),
 _qp_sol(),
-_system(&sys),
+_sys(&sys.system()),
+_sol(nullptr),
+_dsol(nullptr),
+_function(nullptr),
+_perturbed_function(nullptr)
+{ }
+
+
+
+MAST::MeshFieldFunction::
+MeshFieldFunction(libMesh::System& sys,
+                  const std::string& nm):
+MAST::FieldFunction<RealVectorX>(nm),
+_use_qp_sol(false),
+_qp_sol(),
+_sys(&sys),
 _sol(nullptr),
 _dsol(nullptr),
 _function(nullptr),
@@ -69,7 +84,7 @@ MAST::MeshFieldFunction::operator() (const libMesh::Point& p,
     libmesh_assert(_function);
     
     unsigned int
-    n_vars = _system->n_vars();
+    n_vars = _sys->n_vars();
 
     DenseRealVector v1;
     (*_function)(p, t, v1);
@@ -102,7 +117,7 @@ MAST::MeshFieldFunction::gradient (const libMesh::Point& p,
     libmesh_assert(_function);
     
     unsigned int
-    n_vars = _system->n_vars();
+    n_vars = _sys->n_vars();
     
     std::vector<libMesh::Gradient> v1;
     _function->gradient(p, t, v1);
@@ -136,7 +151,7 @@ MAST::MeshFieldFunction::perturbation(const libMesh::Point& p,
     libmesh_assert(_perturbed_function);
     
     unsigned int
-    n_vars = _system->n_vars();
+    n_vars = _sys->n_vars();
 
     DenseRealVector v1;
     (*_perturbed_function)(p, t, v1);
@@ -177,14 +192,9 @@ init(const libMesh::NumericVector<Real>& sol,
     // first make sure that the object is not already initialized
     libmesh_assert(!_function);
     
-    MAST::NonlinearSystem& system = _system->system();
-    
     // next, clone this solution and localize to the sendlist
-    _sol = libMesh::NumericVector<Real>::build(system.comm()).release();
+    _sol = libMesh::NumericVector<Real>::build(_sys->comm()).release();
 
-    const std::vector<libMesh::dof_id_type>& send_list =
-    system.get_dof_map().get_send_list();
-    
     // initialize and then localize the vector with the provided solution
     /*_sol->init(system.n_dofs(),
                        system.n_local_dofs(),
@@ -196,15 +206,18 @@ init(const libMesh::NumericVector<Real>& sol,
     sol.localize(*_sol);
 
     // finally, create the mesh interpolation function
-    _function = new libMesh::MeshFunction(system.get_equation_systems(),
+    std::vector<unsigned int> vars;
+    _sys->get_all_variable_numbers(vars);
+    
+    _function = new libMesh::MeshFunction(_sys->get_equation_systems(),
                                           *_sol,
-                                          system.get_dof_map(),
-                                          _system->vars());
+                                          _sys->get_dof_map(),
+                                          vars);
     _function->init();
     
     if (dsol) {
 
-        _dsol = libMesh::NumericVector<Real>::build(system.comm()).release();
+        _dsol = libMesh::NumericVector<Real>::build(_sys->comm()).release();
 
         /*_dsol->init(system.n_dofs(),
                             system.n_local_dofs(),
@@ -218,10 +231,10 @@ init(const libMesh::NumericVector<Real>& sol,
         
         // finally, create the mesh interpolation function
         _perturbed_function =
-        new libMesh::MeshFunction(system.get_equation_systems(),
+        new libMesh::MeshFunction(_sys->get_equation_systems(),
                                   *_dsol,
-                                  system.get_dof_map(),
-                                  _system->vars());
+                                  _sys->get_dof_map(),
+                                  vars);
         _perturbed_function->init();
 
     }

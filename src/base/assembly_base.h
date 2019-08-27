@@ -73,6 +73,31 @@ namespace MAST {
         };
         
         /*!
+         *   Inherited objects from this class can be provided by the user
+         *   provide assessment of whether or not an element is influenced by
+         *   a give parameter. If provided, the sensitivity assembly funcitons
+         *   will use this to avoid computing sensitivity on elements where the
+         *   parameter has no influence. For some cases in direct sensitivity
+         *   a user may want to avoid computing this data even if a solution
+         *   sensitivity vector is provided when this solution is known to be
+         *   zero on the element. In this case, the override flag can be
+         *   set to \p true.
+         */
+        class ElemParameterDependence {
+        public:
+            ElemParameterDependence(bool o_flag): override_flag(o_flag) {}
+            virtual ~ElemParameterDependence() {}
+            virtual bool if_elem_depends_on_parameter(const libMesh::Elem& e,
+                                                      const MAST::FunctionBase& p) const = 0;
+            /*!
+             *  if \p true, assume zero solution sensitivity when elem does
+             *  not dependent on parameter. This can be useful for spatial
+             *  association of parameter, for example, in topology optimization.
+             */
+            bool override_flag;
+        };
+        
+        /*!
          *   flag to control the closing fo the Jacobian after assembly
          */
         bool close_matrix;
@@ -102,6 +127,19 @@ namespace MAST {
         virtual void
         set_discipline_and_system(MAST::PhysicsDisciplineBase& discipline,
                                   MAST::SystemInitialization& system);
+
+        /*!
+         *   This object, if provided by user, will be used to reduce
+         *   unnecessary computations in sensitivity analysis assembly operations.
+         *   This association is cleard when \p clear_discipline_and_system()
+         *   is called.
+         */
+        void
+        attach_elem_parameter_dependence_object(MAST::AssemblyBase::ElemParameterDependence& dep);
+
+        
+        void
+        clear_elem_parameter_dependence_object();
 
         
         /*!
@@ -289,6 +327,13 @@ namespace MAST {
          *   nonlinear solvers, if provided
          */
         MAST::AssemblyBase::SolverMonitor *_solver_monitor;
+        
+        /*!
+         *   If provided by user, this object is used by sensitiivty analysis
+         *   to check for whether or the current design parameter influences
+         *   an element. This can be used to enhance computational efficiency.
+         */
+        MAST::AssemblyBase::ElemParameterDependence *_param_dependence;
     };
         
 }

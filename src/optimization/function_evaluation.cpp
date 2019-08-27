@@ -243,7 +243,7 @@ MAST::FunctionEvaluation::verify_gradients(const std::vector<Real>& dvars) {
     
     // first call theh evaluate method to get the analytical sensitivities
     Real
-    delta           = 1.e-4,
+    delta           = 1.e-5,
     tol             = 1.e-3,
     obj             = 0.,
     obj_fd_p        = 0.,  // at x+h
@@ -400,6 +400,37 @@ MAST::FunctionEvaluation::verify_gradients(const std::vector<Real>& dvars) {
         << std::endl;
     
     return accurate_sens;
+}
+
+
+void
+MAST::FunctionEvaluation::parametric_line_study(const std::string& nm,
+                                                const unsigned int iter1,
+                                                const unsigned int iter2,
+                                                unsigned int divs) {
+
+    std::vector<Real>
+    dv1(_n_vars, 0.),
+    dv2(_n_vars, 0.),
+    dv (_n_vars, 0.),
+    fval(_n_ineq+_n_eq, 0.);
+    
+    this->initialize_dv_from_output_file(nm, iter1, dv1);
+    this->initialize_dv_from_output_file(nm, iter2, dv2);
+    
+    Real
+    f   = 0.,
+    obj = 0.;
+
+    for (unsigned int i=0; i<=divs; i++) {
+        
+        f = (1.*i)/(1.*divs);
+        for (unsigned int j=0; j<_n_vars; j++) {
+            dv[j] = (1.-f) * dv1[j] + f * dv2[j];
+        }
+        
+        this->_output_wrapper(i, dv, obj, fval, true);
+    }
 }
 
 

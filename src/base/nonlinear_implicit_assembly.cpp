@@ -516,6 +516,12 @@ sensitivity_assemble (const MAST::FunctionBase& f,
         
         const libMesh::Elem* elem = *el;
         
+        // no sensitivity computation assembly is neeed in these cases
+        if (_param_dependence &&
+            // if object is specified and elem does not depend on it
+            !_param_dependence->if_elem_depends_on_parameter(*elem, f))
+            continue;
+
         dof_map.dof_indices (elem, dof_indices);
         
         MAST::GeomElem geom_elem;

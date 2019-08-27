@@ -17,6 +17,9 @@
 * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
+// C++ includes
+#include <iomanip>
+
 // MAST includes
 #include "level_set/filter_base.h"
 
@@ -121,23 +124,23 @@ if_elem_in_domain_of_influence(const libMesh::Elem& elem,
                                const libMesh::Node& level_set_node) const {
     
     Real
-    d    = 0.;
+    d    = 1.e12; // arbitrarily large value to initialize the search
     
     libMesh::Point
     pt;
     
-    // first get the largest distance from the node to the element nodes
+    // first get the smallest distance from the node to the element nodes
     for (unsigned int i=0; i<elem.n_nodes(); i++) {
         pt  = elem.point(i);
         pt -= level_set_node;
         
-        if (pt.norm() > d + _level_set_fe_size)
+        if (pt.norm() < d)
             d = pt.norm();
     }
     
     // if this distance is outside the domain of influence, then this
     // element is not influenced by the design variable
-    if (d > _radius)
+    if (d > _radius + _level_set_fe_size)
         return false;
     else
         return true;
@@ -220,3 +223,40 @@ MAST::FilterBase::_init() {
             _level_set_fe_size = d_12;
     }
 }
+
+
+void
+MAST::FilterBase::print(std::ostream& o) const {
+    
+    o << "Filter radius: " << _radius << std::endl;
+
+    o
+    << std::setw(20) << "Filtered ID"
+    << std::setw(20) << "Dependent Vars" << std::endl;
+    
+    std::map<unsigned int, std::vector<std::pair<unsigned int, Real>>>::const_iterator
+    map_it   = _filter_map.begin(),
+    map_end  = _filter_map.end();
+    
+    for ( ; map_it != map_end; map_it++) {
+        
+        o
+        << std::setw(20) << map_it->first;
+        
+        std::vector<std::pair<unsigned int, Real>>::const_iterator
+        vec_it  = map_it->second.begin(),
+        vec_end = map_it->second.end();
+        
+        for ( ; vec_it != vec_end; vec_it++) {
+            
+            if (_dv_dof_ids.count(map_it->first))
+                o
+                << " : " << std::setw(8) << vec_it->first
+                << " (" << std::setw(8) << vec_it->second << " )";
+            else
+                libMesh::out << " : " << map_it->first;
+        }
+        libMesh::out << std::endl;
+    }
+}
+

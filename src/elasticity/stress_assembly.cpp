@@ -53,7 +53,7 @@ get_max_stress_strain_values(const std::vector<MAST::StressStrainOutputBase::Dat
     max_stress    = RealVectorX::Zero(6);
     max_vm        = 0.;
     
-    // if there is only one data point, the simply copy the value to the output
+    // if there is only one data point, then simply copy the value to the output
     // routines
     if (data.size() == 1) {
         if (p == nullptr) {

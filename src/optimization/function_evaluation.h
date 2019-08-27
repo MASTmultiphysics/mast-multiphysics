@@ -158,6 +158,16 @@ namespace MAST {
          *  verifies the gradients at the specified design point
          */
         virtual bool verify_gradients(const std::vector<Real>& dvars);
+
+        /*!
+         *  computes a parametric evaluation along a line from \p iter1 to
+         *  \p iter2 in file \p nm with \p divs runs between the two.
+         */
+        virtual void
+        parametric_line_study(const std::string& nm,
+                              const unsigned int iter1,
+                              const unsigned int iter2,
+                              unsigned int divs);
         
         
 #if MAST_ENABLE_SNOPT == 1

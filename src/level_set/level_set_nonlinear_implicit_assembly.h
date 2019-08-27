@@ -42,7 +42,7 @@ namespace MAST {
         /*!
          *   constructor associates this assembly object with the system
          */
-        LevelSetNonlinearImplicitAssembly();
+        LevelSetNonlinearImplicitAssembly(bool enable_dof_handler);
         
         
         /*!

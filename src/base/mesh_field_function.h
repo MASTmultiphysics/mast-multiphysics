@@ -27,6 +27,7 @@
 // libMesh includes
 #include "libmesh/numeric_vector.h"
 #include "libmesh/mesh_function.h"
+#include "libmesh/system.h"
 
 
 
@@ -49,7 +50,13 @@ namespace MAST {
          */
         MeshFieldFunction(MAST::SystemInitialization& sys,
                           const std::string& nm);
+
         
+        /*!
+         *   constructor
+         */
+        MeshFieldFunction(libMesh::System& sys, const std::string& nm);
+
         
         /*!
          *   destructor
@@ -162,7 +169,7 @@ namespace MAST {
         /*!
          *  current system for which solution is to be interpolated
          */
-        MAST::SystemInitialization* _system;
+        libMesh::System* _sys;
         
         /*!
          *   current solution that is going to be interpolated

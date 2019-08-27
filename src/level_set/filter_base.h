@@ -68,6 +68,13 @@ namespace MAST {
                                             const libMesh::Node& level_set_node) const;
         
 
+        
+        /*!
+         *  prints the filter data.
+         */
+        virtual void print(std::ostream& o) const;
+        
+        
     protected:
         
         /*!
