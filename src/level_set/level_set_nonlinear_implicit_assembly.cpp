@@ -46,7 +46,7 @@
 MAST::LevelSetNonlinearImplicitAssembly::
 LevelSetNonlinearImplicitAssembly():
 MAST::NonlinearImplicitAssembly(),
-_enable_dof_handler              (false),
+_enable_dof_handler              (true),
 _evaluate_output_on_negative_phi (false),
 _level_set                       (nullptr),
 _indicator                       (nullptr),
@@ -347,12 +347,14 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
     vec,
     sol,
     sub_elem_vec,
+    extra_elem_vec,
     res_factored_u,
     nd_indicator = RealVectorX::Ones(1),
     indicator    = RealVectorX::Zero(1);
     RealMatrixX
     mat,
     sub_elem_mat,
+    extra_elem_mat,
     jac_factored_uu;
     
     std::vector<libMesh::dof_id_type>
@@ -379,6 +381,12 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
     MAST::NonlinearImplicitAssemblyElemOperations
     &ops = dynamic_cast<MAST::NonlinearImplicitAssemblyElemOperations&>(*_elem_ops);
     
+    Real
+    extra_stiffness_factor = 1.e-4;
+    
+    bool
+    add_extra_stiffness = true;
+    
     for ( ; el != end_el; ++el) {
         
         const libMesh::Elem* elem = *el;
@@ -400,35 +408,41 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
 
         unsigned int ndofs = (unsigned int)dof_indices.size();
 
-        // Petsc needs that every diagonal term be provided some contribution,
-        // even if zero. Otherwise, it complains about lack of diagonal entry.
-        // So, if the element is NOT completely on the positive side, we still
-        // add a zero matrix to get around this issue.
-        if ((_intersection->if_elem_on_negative_phi() ||
-             nd_indicator.maxCoeff() < tol) && J) {
+        // in order to maintain numerical conditioning a small stiffness is added
+        // to all elements. Since this does not change through the course
+        // of the problem, it does not impact sensitivity analysis. The only
+        // elements where this is not added are the ones that have been marked
+        // for factorization by the dof_handler object.
+        vec.setZero(ndofs);
+        mat.setZero(ndofs, ndofs);
+        extra_elem_vec.setZero(ndofs);
+        extra_elem_mat.setZero(ndofs, ndofs);
+        add_extra_stiffness = true;
+        sol.setZero(ndofs);
+        for (unsigned int i=0; i<dof_indices.size(); i++)
+            sol(i) = (*localized_solution)(dof_indices[i]);
+
+        {
+            MAST::GeomElem geom_elem;
+            ops.set_elem_data(elem->dim(), *elem, geom_elem);
+            geom_elem.init(*elem, *_system);
             
-            DenseRealMatrix m(ndofs, ndofs);
-            //dof_map.constrain_element_matrix(m, dof_indices);
-            for (unsigned int i=0; i<ndofs; i++)
-                m(i,i) = 1.e-14;
-            dof_map.constrain_element_matrix(m, dof_indices);
-            J->add_matrix(m, dof_indices);
+            ops.init(geom_elem);
+            
+            ops.set_elem_solution(sol);
+            ops.elem_calculations(J!=nullptr?true:false, extra_elem_vec, extra_elem_mat);
+            ops.clear_elem();
+            extra_elem_mat *= extra_stiffness_factor;
+            extra_elem_vec *= extra_stiffness_factor;
         }
         
         
         if (nd_indicator.maxCoeff() > tol &&
             _intersection->if_elem_has_positive_phi_region()) {
             
-            // get the solution
-            sol.setZero(ndofs);
-            vec.setZero(ndofs);
             sub_elem_vec.setZero(ndofs);
-            mat.setZero(ndofs, ndofs);
             sub_elem_mat.setZero(ndofs, ndofs);
 
-            for (unsigned int i=0; i<dof_indices.size(); i++)
-                sol(i) = (*localized_solution)(dof_indices[i]);
-            
             // if the element has been marked for factorization then
             // get the void solution from the storage
             if (_dof_handler && _dof_handler->if_factor_element(*elem))
@@ -448,12 +462,13 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
                 ops.set_elem_solution(sol);
                 ops.elem_calculations(true, vec, mat);
                 ops.clear_elem();
-                mat *= _intersection->get_positive_phi_volume_fraction();
+                mat *= (_intersection->get_positive_phi_volume_fraction() + extra_stiffness_factor);
                 // the residual based on homogenization is used for factorized
                 // elements since the factorization depends on exact Jacobian
                 // and the homogenization based Jacobian is not exact linearization
                 // of residual based on sub cells.
-                vec *= _intersection->get_positive_phi_volume_fraction();
+                vec *= (_intersection->get_positive_phi_volume_fraction() + extra_stiffness_factor);
+                add_extra_stiffness = false;
 
                 _dof_handler->element_factored_residual_and_jacobian(*elem,
                                                                      mat,
@@ -507,29 +522,34 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
                     ops.clear_elem();
                 }
             }
-            
-            // copy to the libMesh matrix for further processing
-            DenseRealVector v;
-            DenseRealMatrix m;
-            if (R)
-                MAST::copy(v, vec);
-            if (J)
-                MAST::copy(m, mat);
-            
-            // constrain the quantities to account for hanging dofs,
-            // Dirichlet constraints, etc.
-            if (R && J)
-                dof_map.constrain_element_matrix_and_vector(m, v, dof_indices);
-            else if (R)
-                dof_map.constrain_element_vector(v, dof_indices);
-            else
-                dof_map.constrain_element_matrix(m, dof_indices);
-            
-            // add to the global matrices
-            if (R) R->add_vector(v, dof_indices);
-            if (J) J->add_matrix(m, dof_indices);
-            dof_indices.clear();
         }
+
+        if (add_extra_stiffness) {
+            mat += extra_elem_mat;
+            vec += extra_elem_vec;
+        }
+        
+        // copy to the libMesh matrix for further processing
+        DenseRealVector v;
+        DenseRealMatrix m;
+        if (R)
+            MAST::copy(v, vec);
+        if (J)
+            MAST::copy(m, mat);
+        
+        // constrain the quantities to account for hanging dofs,
+        // Dirichlet constraints, etc.
+        if (R && J)
+            dof_map.constrain_element_matrix_and_vector(m, v, dof_indices);
+        else if (R)
+            dof_map.constrain_element_vector(v, dof_indices);
+        else
+            dof_map.constrain_element_matrix(m, dof_indices);
+        
+        // add to the global matrices
+        if (R) R->add_vector(v, dof_indices);
+        if (J) J->add_matrix(m, dof_indices);
+        dof_indices.clear();
         
         _intersection->clear();
     }

@@ -134,6 +134,9 @@ MAST::MaterialPatch::_quad4_material_levels(const libMesh::Elem& elem,
     e_it   = elem_neighbors.begin(),
     e_end  = elem_neighbors.end();
     
+    std::map<Real, const libMesh::Elem*>
+    elem_angle_map;
+    
     for ( ; e_it != e_end; e_it++) {
         
         const libMesh::Elem& e = **e_it;
@@ -141,28 +144,23 @@ MAST::MaterialPatch::_quad4_material_levels(const libMesh::Elem& elem,
         // currently only implemented for quad4 and quad9 elements
         libmesh_assert((e.type() == libMesh::QUAD4) || (e.type() == libMesh::QUAD9));
         
+        // position vector from node to element centroid
         const libMesh::Point
         p = e.centroid() - node;
-        
-        if ( p(0) > 0. && p(1) > 0. )
-            // first quadrant
-            patch_elems[2] = &e;
-        else if ( p(0) < 0. && p(1) > 0. )
-            // second quadrant
-            patch_elems[3] = &e;
-        else if ( p(0) < 0. && p(1) < 0. )
-            // third quadrant
-            patch_elems[0] = &e;
-        else if ( p(0) > 0. && p(1) < 0. )
-            // fourth quadrant
-            patch_elems[1] = &e;
-        else
-            libmesh_error(); // shoudl not get here for quads.
+
+        elem_angle_map[atan2(p(1), p(0))] = &e;
     }
 
-    // make sure all four elements were found
-    for (unsigned int i=0; i<patch_elems.size(); i++) {
-        libmesh_assert(patch_elems[i]);
+    // now that we have the elements ordered in terms of ascending angle
+    // with the x-axis, we should set them in the patch_elems vector
+    std::map<Real, const libMesh::Elem*>::const_iterator
+    el_it  = elem_angle_map.begin(),
+    el_end = elem_angle_map.end();
+    
+    unsigned int i=0;
+    for ( ; el_it != el_end; el_it++) {
+        patch_elems[i] = el_it->second;
+        i++;
     }
     
     // now identify the nodes on the outer periphery of the patch
