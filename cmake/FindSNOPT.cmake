@@ -5,7 +5,7 @@
 
 # Find the libraries.
 find_library(SNOPT_LIBRARY
-             NAMES snopt
+             NAMES snopt7
              HINTS ${SNOPT_DIR}/lib)
 
 # Set variables.
