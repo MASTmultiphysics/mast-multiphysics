@@ -1706,8 +1706,8 @@ public:
         // DO NOT zero out the gradient vector, since GCMMA needs it for the  *
         // subproblem solution                                                *
         //*********************************************************************
-        MAST::LevelSetNonlinearImplicitAssembly                  nonlinear_assembly;
-        MAST::LevelSetNonlinearImplicitAssembly                  level_set_assembly;
+        MAST::LevelSetNonlinearImplicitAssembly                  nonlinear_assembly(true);
+        MAST::LevelSetNonlinearImplicitAssembly                  level_set_assembly(false);
         MAST::LevelSetEigenproblemAssembly                       eigen_assembly;
         MAST::LevelSetStressAssembly                             stress_assembly;
         MAST::StructuralNonlinearAssemblyElemOperations          nonlinear_elem_ops;
@@ -2671,9 +2671,10 @@ int main(int argc, char* argv[]) {
 
         //std::vector<Real> xx1(top_opt.n_vars()), xx2(top_opt.n_vars());
         //top_opt.init_dvar(xx1, xx2, xx2);
+        //top_opt.initialize_dv_from_output_file("output1.txt", 24, xx1);
         //top_opt.verify_gradients(xx1);
         optimizer->optimize();
-        //top_opt.parametric_line_study("output_compliance.txt", 0, 88, 1000);
+        //top_opt.parametric_line_study("output2.txt", 0, 8, 100);
     }
     
     // END_TRANSLATE
