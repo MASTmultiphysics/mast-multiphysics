@@ -57,7 +57,7 @@ struct GlobalTestFixture {
 };
 
 
-#if BOOST_VERSION > 105800
+#if BOOST_VERSION > 106100
 BOOST_TEST_GLOBAL_FIXTURE( GlobalTestFixture );
 #else
 BOOST_GLOBAL_FIXTURE( GlobalTestFixture );
