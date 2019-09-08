@@ -856,7 +856,7 @@ MAST::StressStrainOutputBase::functional_for_all_elems() {
             
             // we do not use absolute value here, since von Mises stress
             // is >= 0.
-            sp              =  pow(e_val/_sigma0, _p_norm_weight);
+            sp              =  pow((e_val-_sigma0)/_sigma0, _p_norm_weight);
             if (_rho * sp > _exp_arg_lim)
                 exp_sp          =  exp(_exp_arg_lim);
             else
@@ -986,8 +986,8 @@ MAST::StressStrainOutputBase::functional_sensitivity_for_elem
         // is >= 0.
         sp_stress       =  pow(e_val/_sigma0, _p_norm_stress);
         sp1_stress      =  pow(e_val/_sigma0, _p_norm_stress-1.);
-        sp_weight       =  pow(e_val/_sigma0, _p_norm_weight);
-        sp1_weight      =  pow(e_val/_sigma0, _p_norm_weight-1.);
+        sp_weight       =  pow((e_val-_sigma0)/_sigma0, _p_norm_weight);
+        sp1_weight      =  pow((e_val-_sigma0)/_sigma0, _p_norm_weight-1.);
         if (_rho*sp_weight > _exp_arg_lim) {
             exp_sp       =  exp(_exp_arg_lim);
             denom_sens  +=  0.;
@@ -1050,7 +1050,7 @@ MAST::StressStrainOutputBase::functional_boundary_sensitivity_for_elem
         
         // we do not use absolute value here, since von Mises stress
         // is >= 0.
-        sp           =  pow(e_val/_sigma0, _p_norm_weight);
+        sp           =  pow((e_val-_sigma0)/_sigma0, _p_norm_weight);
         if (_rho*sp > _exp_arg_lim)
             exp_sp       =  exp(_exp_arg_lim);
         else
@@ -1114,8 +1114,8 @@ MAST::StressStrainOutputBase::functional_state_derivartive_for_elem(const libMes
         // is >= 0.
         sp_stress       =  pow(e_val/_sigma0, _p_norm_stress);
         sp1_stress      =  pow(e_val/_sigma0, _p_norm_stress-1.);
-        sp_weight       =  pow(e_val/_sigma0, _p_norm_weight);
-        sp1_weight      =  pow(e_val/_sigma0, _p_norm_weight-1.);
+        sp_weight       =  pow((e_val-_sigma0)/_sigma0, _p_norm_weight);
+        sp1_weight      =  pow((e_val-_sigma0)/_sigma0, _p_norm_weight-1.);
         if (_rho*sp_weight > _exp_arg_lim) {
             
             exp_sp       =  exp(_exp_arg_lim);
