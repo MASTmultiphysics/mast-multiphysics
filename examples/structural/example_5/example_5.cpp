@@ -1057,51 +1057,19 @@ public:
         _nx_holes (nx_holes),
         _ny_holes (ny_holes),
         _pi  (acos(-1.)) {
+
+            Real
+            dx = _l1/(1.*_nx_holes);
             
-            //
-            // initialize the locations at which the holes will be nucleated
-            // first, along the x-axis
-            //
-            if (_nx_holes == 1)
-                _x_axis_hole_locations.insert(_x0 + l1 * 0.5);
-            else if (_nx_holes >= 2) {
-                
-                // add holes at the beginning and end
-                _x_axis_hole_locations.insert(_x0);
-                _x_axis_hole_locations.insert(_x0+_l1);
-              
-                //
-                // now, add holes at uniformly spaced locations
-                // in the domain
-                //
-                Real
-                dx = _l1/(1.*(_nx_holes-1));
-                for (unsigned int i=2; i<_nx_holes; i++)
-                    _x_axis_hole_locations.insert(_x0+dx*(i-1));
-            }
+            for (unsigned int i=0; i<_nx_holes; i++)
+                _x_axis_hole_locations.insert(_x0+(i+.5)*dx);
             
             //
             // now, along the y-axis
             //
-            if (_ny_holes == 1)
-                _y_axis_hole_locations.insert(_y0+l2 * 0.5);
-            else if (_ny_holes >= 2) {
-              
-                //
-                // add holes at the beginning and end
-                //
-                _y_axis_hole_locations.insert(_y0);
-                _y_axis_hole_locations.insert(_y0+_l2);
-                
-                //
-                // now, add holes at uniformly spaced locations
-                // in the domain
-                //
-                Real
-                dx = _l2/(1.*(_ny_holes-1));
-                for (unsigned int i=2; i<_ny_holes; i++)
-                    _y_axis_hole_locations.insert(_y0+dx*(i-1));
-            }
+            dx = _l2/(1.*_ny_holes);
+            for (unsigned int i=0; i<_ny_holes; i++)
+                _y_axis_hole_locations.insert(_y0+(i+0.5)*dx);
         }
         virtual ~Phi() {}
         virtual void operator()(const libMesh::Point& p,
@@ -1934,14 +1902,6 @@ public:
             
             _evaluate_volume_sensitivity(&volume, &perimeter, level_set_assembly, obj_grad);
             
-            /*_evaluate_constraint_sensitivity(stress,
-                                             nonlinear_elem_ops,
-                                             nonlinear_assembly,
-                                             modal_elem_ops,
-                                             eigen_assembly,
-                                             enable_grad,
-                                             stress_grad);*/
-            
             /*_evaluate_compliance_sensitivity(compliance,
                                              nonlinear_elem_ops,
                                              nonlinear_assembly,
@@ -2674,7 +2634,7 @@ int main(int argc, char* argv[]) {
         //top_opt.initialize_dv_from_output_file("output1.txt", 24, xx1);
         //top_opt.verify_gradients(xx1);
         optimizer->optimize();
-        //top_opt.parametric_line_study("output2.txt", 0, 8, 100);
+        //top_opt.parametric_line_study("output1.txt", 0, 450, 500);
     }
     
     // END_TRANSLATE
