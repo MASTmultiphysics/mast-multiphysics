@@ -390,7 +390,7 @@ MAST::GCMMAOptimizationInterface::_output_iteration_data(unsigned int i,
     libmesh_assert_equal_to(ALFA.size(), _feval->n_vars());
     libmesh_assert_equal_to(BETA.size(), _feval->n_vars());
 
-    libMesh::out
+    /*libMesh::out
     << "****************************************************\n"
     << "             GCMMA: ASYMPTOTE DATA                  \n"
     << "****************************************************\n"
@@ -414,5 +414,6 @@ MAST::GCMMAOptimizationInterface::_output_iteration_data(unsigned int i,
         << std::setw(20) << BETA[j]
         << std::setw(20) << XUPP[j]
         << std::setw(20) << XMAX[j] << std::endl;
+     */
 }
 
