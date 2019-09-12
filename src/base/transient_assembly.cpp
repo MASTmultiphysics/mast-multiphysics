@@ -37,7 +37,8 @@
 
 
 MAST::TransientAssembly::TransientAssembly():
-MAST::AssemblyBase() {
+MAST::AssemblyBase       (),
+_post_assembly           (nullptr) {
 
 }
 
@@ -48,6 +49,13 @@ MAST::TransientAssembly::~TransientAssembly() {
 }
 
 
+
+void
+MAST::TransientAssembly::
+set_post_assembly_operation(MAST::TransientAssembly::PostAssemblyOperation& post) {
+    
+    _post_assembly = &post;
+}
 
 
 
@@ -151,6 +159,10 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
         if (J) J->add_matrix(m, dof_indices);
     }
     
+    // call the post assembly object, if provided by user
+    if (_post_assembly)
+        _post_assembly->post_assembly(X, R, J, S);
+
     // delete pointers to the local solutions
     for (unsigned int i=0; i<local_qtys.size(); i++)
         delete local_qtys[i];
