@@ -1485,9 +1485,6 @@ MAST::Solid1DSectionElementPropertyCard::I() {
 }
 
 
-
-
-
 void
 MAST::Solid1DSectionElementPropertyCard::clear() {
     

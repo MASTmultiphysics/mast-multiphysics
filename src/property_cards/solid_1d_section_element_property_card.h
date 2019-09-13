@@ -17,6 +17,50 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+/*
+ * Below is a description of the cross sections that are implemented and the 
+ * number of parameters which are used to define them.
+ * 
+ * Cross Section                # Parameters
+ * --------------------         ------------
+ * Square                       1
+ * ROD                          1
+ * Equilaterial Triangle        1
+ * Regular Hexagon              1
+ * BAR                          2
+ * TUBE                         2
+ * Ellipse                      2
+ * Square Box                   2
+ * BOX                          4   TODO
+ * CHAN                         4   TODO
+ * CROSS                        4   TODO
+ * H                            4   TODO
+ * L                            4   TODO
+ * HAT (Open)                   4   TODO
+ * I1                           4   TODO
+ * T                            4   TODO
+ * Z                            4   TODO
+ * PI                           5   TODO
+ * HAT1 (Closed)                5   TODO
+ * BOX1                         6   TODO
+ * I                            6   TODO
+ * GBOX                         6   TODO
+ * Arbitrary I-Beam             8   TODO
+ * Arbitrary Section            Variable^
+ * 
+ *  ^   The arbitrary cross section is define via either specifying section 
+ *      properties directly, via a matrix of vertices, or via a 2D 
+ *      libMesh:MeshBase object which represents the cross section.
+ * 
+ * Note that thin-walled typtically means the thickness of the wall is less 
+ * than 1/10 of the radius (1/20 of the diameter) of the circular tube. For 
+ * rectangular tubes, define this as less than 1/20 of the shorest side.
+ * 
+ * References
+ * ----------
+ * https://structx.com/geometric_properties.html
+ */
+
 #ifndef __mast__solid_1d_section_element_property_card__
 #define __mast__solid_1d_section_element_property_card__
 
