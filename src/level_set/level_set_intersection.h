@@ -138,7 +138,7 @@ namespace MAST {
 
         /*!
          *  @returns \p true if there is any portion of the element (interior
-         *  or edge) that is on the positive side of the level set function.
+         *  or edge) is on the positive side of the level set function.
          */
         bool if_elem_has_positive_phi_region() const;
         
@@ -153,8 +153,8 @@ namespace MAST {
         
         /*!
          *   @returns the id of side that is on the interface. In case the
-         *   element does not have a side on the interface, then a negative
-         *   value is returned. 
+         *   element does not have a side on the interface, then an error is
+         *   thrown. 
          */
         unsigned int
         get_side_on_interface(const libMesh::Elem& e) const;
@@ -164,6 +164,31 @@ namespace MAST {
 
         const libMesh::Point&
         get_nondimensional_coordinate_for_node(const libMesh::Node& n) const;
+
+
+        /*!
+         *   identifies if the node from the subelements is a new node or
+         *   an existing node from the parent element.
+         */
+        bool if_node_is_new(const libMesh::Node& node) const;
+
+        
+        /*!
+         *   identifies if the new node is on an edge along the level-set method
+         *   in the interior of the element (as opposed to on the edges of the
+         *   original element).
+         */
+        bool if_interior_node(const libMesh::Node& node) const;
+
+        
+        /*!
+         *    for new nodes required to create the subelements this method
+         *    returns the nodes on an edge that bound the given node. An
+         *    error is thrown if the node is not a
+         */
+        std::pair<const libMesh::Node*, const libMesh::Node*>
+        get_bounding_nodes_for_node(const libMesh::Node& node) const;
+        
         
     protected:
         
@@ -245,6 +270,8 @@ namespace MAST {
         std::vector<libMesh::Elem*>                  _new_elems;
         std::map<const libMesh::Node*, libMesh::Point> _node_local_coords;
         std::map<const libMesh::Node*, std::pair<Real, bool> > _node_phi_vals;
+        std::set<const libMesh::Node*>               _interior_nodes;
+        std::map<const libMesh::Node*, std::pair<const libMesh::Node*, const libMesh::Node*>> _bounding_nodes;
     };
     
 }
