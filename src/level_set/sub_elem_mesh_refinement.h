@@ -73,6 +73,11 @@ namespace MAST {
                                    bool positive_phi,
                                    const std::vector<const libMesh::Elem*>& elems);
         
+        void _process_negative_element(unsigned int negative_level_set_subdomain_offset,
+                                       unsigned level_set_boundary_id,
+                                       libMesh::Elem& e,
+                                       MAST::LevelSetIntersection& intersect);
+        
         /*!
          *  \returns a node between the bounding nodes at the specified
          *  location. If a node already exists between these bounding nodes the

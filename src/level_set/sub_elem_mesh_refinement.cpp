@@ -115,7 +115,6 @@ MAST::SubElemMeshRefinement::process_mesh(const MAST::FieldFunction<Real>& phi,
                                   false,
                                   intersect.get_sub_elems_negative_phi());
             
-            //elem->set_refinement_flag(libMesh::Elem::INACTIVE);
             // since the element has been partitioned, we set its subdomain
             // id with an offset so that the assembly routines can choose to
             // ignore them
@@ -123,7 +122,27 @@ MAST::SubElemMeshRefinement::process_mesh(const MAST::FieldFunction<Real>& phi,
             elem->subdomain_id() += inactive_subdomain_offset;
             mesh_changed = true;
         }
-        else if (!intersect.if_elem_has_positive_phi_region()) {
+        else if ((intersect.get_intersection_mode() == MAST::COLINEAR_EDGE ||
+                  intersect.get_intersection_mode() == MAST::THROUGH_NODE) &&
+                 intersect.get_sub_elems_negative_phi().size() == 1) {
+
+            if (strong_discontinuity) {
+                _process_negative_element(negative_level_set_subdomain_offset,
+                                          level_set_boundary_id,
+                                          *elem,
+                                          intersect);
+                
+                _old_elems.push_back(std::make_pair(elem, elem->subdomain_id()));
+                elem->subdomain_id() += inactive_subdomain_offset;
+            }
+            else {
+                
+                _old_elems.push_back(std::make_pair(elem, elem->subdomain_id()));
+                elem->subdomain_id() += negative_level_set_subdomain_offset;
+
+            }
+        }
+        else if (intersect.if_elem_on_negative_phi()) {
             // if the element has no positive region, then we set its
             // subdomain id to that of negative level set offset
             
@@ -353,7 +372,7 @@ MAST::SubElemMeshRefinement::_process_sub_elements(bool strong_discontinuity,
                 child_node = _add_node(*sub_e_node,
                                        strong_discontinuity,
                                        positive_phi,
-                                       child->processor_id(),
+                                       e.processor_id(),
                                        bounding_nodes);
                 child->set_node(j) = child_node;
                 
@@ -426,11 +445,96 @@ MAST::SubElemMeshRefinement::_process_sub_elements(bool strong_discontinuity,
         child_node = _add_node(*sub_e_node,
                                strong_discontinuity,
                                positive_phi,
-                               child->processor_id(),
+                               e.processor_id(),
                                bounding_nodes);
         
         child->set_node(node_num) = child_node;
     }
+}
+
+
+
+
+void
+MAST::SubElemMeshRefinement::_process_negative_element(unsigned int negative_level_set_subdomain_offset,
+                                                       unsigned level_set_boundary_id,
+                                                       libMesh::Elem& e,
+                                                       MAST::LevelSetIntersection& intersect) {
+    
+    libmesh_assert(!_initialized);
+    
+    const unsigned int
+    nei = e.n_extra_integers();
+    
+    std::set<libMesh::Node*>
+    side_nodes;
+    
+    // get the nodes on the side with the interface that will be replaced
+    // with new nodes on the negative phi
+    if (intersect.get_intersection_mode() == MAST::THROUGH_NODE)
+        side_nodes.insert(e.node_ptr(intersect.node_on_boundary()));
+    else if (intersect.get_intersection_mode() == MAST::COLINEAR_EDGE) {
+        
+        unsigned int i = intersect.edge_on_boundary();
+        std::unique_ptr<libMesh::Elem> side(e.side_ptr(i));
+        for (unsigned int j=0; j<side->n_nodes(); j++)
+            side_nodes.insert(side->node_ptr(j));
+    }
+    else {
+        // should not get here
+        libmesh_assert(false);
+    }
+    
+    
+    libMesh::Elem
+    *child = libMesh::Elem::build(e.type()).release();
+    
+    // set nodes for this new element
+    for (unsigned int j=0; j<e.n_nodes(); j++) {
+        
+        libMesh::Node
+        *e_node = e.node_ptr(j);
+        
+        if (!side_nodes.count(e_node))
+            child->set_node(j) = e_node;
+        else {
+
+            std::pair<const libMesh::Node*, const libMesh::Node*>
+            bounding_nodes = std::make_pair(e_node, e_node);
+            
+            libMesh::Node*
+            child_node = _add_node(*e_node,
+                                   true,    // this method only deals with strong discontinuity
+                                   false,   // and with nodes on negative level set
+                                   e.processor_id(),
+                                   bounding_nodes);
+            child->set_node(j) = child_node;
+        }
+    }
+    
+    // set flags for this child element
+    //child->set_refinement_flag(libMesh::Elem::JUST_REFINED);
+    child->set_p_level(e.p_level());
+    child->set_p_refinement_flag(e.p_refinement_flag());
+    child->set_n_systems(e.n_systems());
+    // we need to offset the subdomain id for an element type that is
+    // not the same as the parent element since exodus output requires
+    // different subdomain ids for different element types.
+    if (child->type() == e.type())
+        child->subdomain_id() = e.subdomain_id() + negative_level_set_subdomain_offset;
+    else
+        child->subdomain_id() = e.subdomain_id()+1 + negative_level_set_subdomain_offset;
+    
+    _negative_level_set_ids.insert(child->subdomain_id());
+    
+    libmesh_assert_equal_to (child->n_extra_integers(),
+                             e.n_extra_integers());
+    for (unsigned int j=0; j != nei; ++j)
+        child->set_extra_integer(j, e.get_extra_integer(j));
+    
+    _mesh.add_elem(child);
+    
+    _new_elems.push_back(child);
 }
 
 
@@ -461,7 +565,6 @@ MAST::SubElemMeshRefinement::_add_node(const libMesh::Point& p,
             // are the same
             node_pair.first = _mesh.add_point(p, libMesh::DofObject::invalid_id, processor_id);
             _new_nodes.push_back(node_pair.first);
-            (*node_pair.first)(2) += 0.01;
             
             libmesh_assert(node_pair.first);
 
@@ -483,7 +586,6 @@ MAST::SubElemMeshRefinement::_add_node(const libMesh::Point& p,
                 // level set
                 node_pair.first = _mesh.add_point(p, libMesh::DofObject::invalid_id, processor_id);
                 _new_nodes.push_back(node_pair.first);
-                (*node_pair.first)(2) += 0.02;
 
                 libmesh_assert(node_pair.first);
                 
@@ -502,7 +604,6 @@ MAST::SubElemMeshRefinement::_add_node(const libMesh::Point& p,
                 // level set
                 node_pair.second = _mesh.add_point(p, libMesh::DofObject::invalid_id, processor_id);
                 _new_nodes.push_back(node_pair.second);
-                (*node_pair.second)(2) += 0.03;
 
                 libmesh_assert(node_pair.second);
                 
