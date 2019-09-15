@@ -113,11 +113,20 @@ MAST::LevelSetIntersection::if_elem_on_negative_phi() const {
 
 
 bool
+MAST::LevelSetIntersection::if_elem_has_negative_phi_region() const {
+    
+    libmesh_assert(_initialized);
+    
+    return !_if_elem_on_positive_phi;
+}
+
+
+bool
 MAST::LevelSetIntersection::if_elem_has_positive_phi_region() const {
 
     libmesh_assert(_initialized);
     
-    return (_if_elem_on_positive_phi || !_if_elem_on_negative_phi);
+    return !_if_elem_on_negative_phi;
 }
 
 
@@ -347,8 +356,7 @@ _init_on_first_order_ref_elem(const MAST::FieldFunction<Real>& phi,
 
     // if the sign of function on all nodes is the same, then it is assumed
     // that the element is not intersected
-    if (min_val > _tol &&
-        max_val > _tol) {
+    if (min_val > _tol) {
         // element is completely on the positive side with no intersection
         
         _mode = MAST::NO_INTERSECTION;
@@ -358,8 +366,7 @@ _init_on_first_order_ref_elem(const MAST::FieldFunction<Real>& phi,
         _initialized = true;
         return;
     }
-    else if (min_val < _tol &&
-             max_val < _tol) {
+    else if (max_val < -_tol) {
         
         // element is completely on the negative side, with no intersection
         
@@ -370,12 +377,9 @@ _init_on_first_order_ref_elem(const MAST::FieldFunction<Real>& phi,
         _initialized = true;
         return;
     }
-    else if (min_val < _tol &&
-             max_val > _tol) {
+    else {
         // if it did not get caught in the previous two cases, then there is
         // an intersection.
-        // If it got here, then there is an intersection in the domain and the
-        // element is not on the positive side completely.
         
         _if_elem_on_positive_phi         = false;
         _if_elem_on_negative_phi         = false;

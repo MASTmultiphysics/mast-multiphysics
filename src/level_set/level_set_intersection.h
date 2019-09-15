@@ -138,10 +138,17 @@ namespace MAST {
 
         /*!
          *  @returns \p true if there is any portion of the element (interior
-         *  or edge) is on the positive side of the level set function.
+         *  edge, or node) that is on the positive side of the level set function.
          */
         bool if_elem_has_positive_phi_region() const;
+
         
+        /*!
+         *  @returns \p true if there is any portion of the element (interior
+         *  edge, or node) that is on the negative side of the level set function.
+         */
+        bool if_elem_has_negative_phi_region() const;
+
         const std::vector<const libMesh::Elem*>&
         get_sub_elems_positive_phi() const;
         
