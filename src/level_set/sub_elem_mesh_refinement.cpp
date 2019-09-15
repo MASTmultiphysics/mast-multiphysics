@@ -86,13 +86,37 @@ MAST::SubElemMeshRefinement::process_mesh(const MAST::FieldFunction<Real>& phi,
         e_it    =  _mesh.active_elements_begin(),
         e_end   =  _mesh.active_elements_end();
     }
+
+    // first we need to identify all the elements that will be refined.
+    // Then we will iterate over all of them. Otherwise, the addition of
+    // new elemnts can invalidate the element iterators.
+    std::vector<libMesh::Elem*>
+    elems_to_partition;
     
+    for ( ; e_it != e_end; e_it++) {
+        
+        libMesh::Elem* elem = *e_it;
+        
+        intersect.init(phi, *elem, time, _mesh.max_elem_id(), _mesh.max_node_id());
+
+        if (intersect.if_intersection_through_elem() ||
+            ((intersect.get_intersection_mode() == MAST::COLINEAR_EDGE ||
+              intersect.get_intersection_mode() == MAST::THROUGH_NODE) &&
+             intersect.get_sub_elems_negative_phi().size() == 1) ||
+            intersect.if_elem_on_negative_phi())
+            elems_to_partition.push_back(elem);
+        
+        intersect.clear();
+    }
+    
+    
+    // now we process only the selected elements
     bool
     mesh_changed = false;
     
-    for (  ; e_it != e_end; e_it++) {
+    for (unsigned int i=0; i<elems_to_partition.size(); i++) {
         
-        libMesh::Elem* elem = *e_it;
+        libMesh::Elem* elem = elems_to_partition[i];
         
         intersect.init(phi, *elem, time, _mesh.max_elem_id(), _mesh.max_node_id());
         
@@ -548,8 +572,12 @@ MAST::SubElemMeshRefinement::_add_node(const libMesh::Point& p,
     
     libmesh_assert(!_initialized);
     
+    unsigned int
+    id1 = std::min(bounding_nodes.first->id(), bounding_nodes.second->id()),
+    id2 = std::max(bounding_nodes.first->id(), bounding_nodes.second->id());
+    
     std::pair<libMesh::Node*, libMesh::Node*>&
-    node_pair = _node_map->add(bounding_nodes.first->id(), bounding_nodes.second->id());
+    node_pair = _node_map->add(id1, id2);
 
     // if a weak discontinuity is requested, and if the node has already been
     // created, then make sure that both nodes are the same
