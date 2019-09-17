@@ -37,6 +37,7 @@
 #include "level_set/level_set_intersection.h"
 #include "level_set/filter_base.h"
 #include "level_set/level_set_parameter.h"
+#include "level_set/sub_elem_mesh_refinement.h"
 #include "elasticity/structural_nonlinear_assembly.h"
 #include "elasticity/structural_modal_eigenproblem_assembly.h"
 #include "elasticity/ks_stress_output.h"
@@ -168,6 +169,8 @@ protected:
     libMesh::UnstructuredMesh*                _mesh;
     libMesh::UnstructuredMesh*                _level_set_mesh;
     
+    MAST::SubElemMeshRefinement*              _mesh_refinement;
+    
     libMesh::EquationSystems*                 _eq_sys;
     libMesh::EquationSystems*                 _level_set_eq_sys;
     
@@ -187,8 +190,8 @@ protected:
     
     MAST::FilterBase*                         _filter;
     
-    MAST::MaterialPropertyCardBase*           _m_card;
-    MAST::ElementPropertyCardBase*            _p_card;
+    MAST::MaterialPropertyCardBase            *_m_card1, *_m_card2;
+    MAST::ElementPropertyCardBase             *_p_card1, *_p_card2;
     
     PhiMeshFunction*                          _level_set_function;
     MAST::LevelSetBoundaryVelocity*           _level_set_vel;
@@ -521,6 +524,9 @@ public:
         //
         _sys       = &(_eq_sys->add_system<MAST::NonlinearSystem>("structural"));
         _sys->set_eigenproblem_type(libMesh::GHEP);
+
+        _mesh_refinement = new MAST::SubElemMeshRefinement(*_mesh, *_sys);
+        _sys->attach_constraint_object(*_mesh_refinement);
         
         //
         // initialize the system to the right set of variables
@@ -951,6 +957,7 @@ public:
         
         MAST::Parameter
         *E         = new MAST::Parameter("E",          Eval),
+        *E_v       = new MAST::Parameter("E_v",  Eval*1.e-8),
         *rho       = new MAST::Parameter("rho",      rhoval),
         *nu        = new MAST::Parameter("nu",       nu_val),
         *kappa     = new MAST::Parameter("kappa", kappa_val),
@@ -959,6 +966,7 @@ public:
         
         MAST::ConstantFieldFunction
         *E_f     = new MAST::ConstantFieldFunction(    "E",      *E),
+        *E_v_f   = new MAST::ConstantFieldFunction(    "E",    *E_v),
         *rho_f   = new MAST::ConstantFieldFunction(  "rho",    *rho),
         *nu_f    = new MAST::ConstantFieldFunction(   "nu",     *nu),
         *kappa_f = new MAST::ConstantFieldFunction("kappa",  *kappa),
@@ -966,25 +974,36 @@ public:
         *cp_f    = new MAST::ConstantFieldFunction(   "cp",     *cp);
         
         _parameters[    E->name()]     = E;
+        _parameters[  E_v->name()]     = E_v;
         _parameters[  rho->name()]     = rho;
         _parameters[   nu->name()]     = nu;
         _parameters[kappa->name()]     = kappa;
         _parameters[    k->name()]     = k;
         _parameters[   cp->name()]     = cp;
         _field_functions.insert(E_f);
+        _field_functions.insert(E_v_f);
         _field_functions.insert(rho_f);
         _field_functions.insert(nu_f);
         _field_functions.insert(kappa_f);
         _field_functions.insert(k_f);
         _field_functions.insert(cp_f);
 
-        _m_card = new MAST::IsotropicMaterialPropertyCard;
-        _m_card->add(*E_f);
-        _m_card->add(*rho_f);
-        _m_card->add(*nu_f);
-        _m_card->add(*kappa_f);
-        _m_card->add(*k_f);
-        _m_card->add(*cp_f);
+        _m_card1 = new MAST::IsotropicMaterialPropertyCard;
+        _m_card2 = new MAST::IsotropicMaterialPropertyCard;
+        _m_card1->add(*E_f);
+        _m_card1->add(*rho_f);
+        _m_card1->add(*nu_f);
+        _m_card1->add(*kappa_f);
+        _m_card1->add(*k_f);
+        _m_card1->add(*cp_f);
+        
+        // material for void
+        _m_card2->add(*E_v_f);
+        _m_card2->add(*rho_f);
+        _m_card2->add(*nu_f);
+        _m_card2->add(*kappa_f);
+        _m_card2->add(*k_f);
+        _m_card2->add(*cp_f);
     }
 
     
@@ -1014,20 +1033,41 @@ public:
         _field_functions.insert(hoff_f);
         
         MAST::Solid2DSectionElementPropertyCard
-        *p_card   = new MAST::Solid2DSectionElementPropertyCard;
+        *p_card1   = new MAST::Solid2DSectionElementPropertyCard,
+        *p_card2   = new MAST::Solid2DSectionElementPropertyCard;
         
-        _p_card   = p_card;
-        
+        _p_card1   = p_card1;
+        _p_card2   = p_card2;
+
         // set nonlinear strain if requested
         bool
         nonlinear = _input("if_nonlinear", "flag to turn on/off nonlinear strain", false);
-        if (nonlinear) p_card->set_strain(MAST::NONLINEAR_STRAIN);
+        if (nonlinear) _p_card1->set_strain(MAST::NONLINEAR_STRAIN);
+        _p_card2->set_strain(MAST::LINEAR_STRAIN);
+
+        p_card1->add(*th_f);
+        p_card1->add(*hoff_f);
+        p_card1->set_material(*_m_card1);
+
+        // property card for void
+        p_card2->add(*th_f);
+        p_card2->add(*hoff_f);
+        p_card2->set_material(*_m_card2);
         
-        p_card->add(*th_f);
-        p_card->add(*hoff_f);
-        p_card->set_material(*_m_card);
-        _discipline->set_property_for_subdomain(0, *p_card);
-        _indicator_discipline->set_property_for_subdomain(0, *p_card);
+        _discipline->set_property_for_subdomain(0, *p_card1);
+        _discipline->set_property_for_subdomain(1, *p_card1);
+        
+        // inactive
+        _discipline->set_property_for_subdomain(3, *p_card2);
+
+        // negative level set
+        _discipline->set_property_for_subdomain(6, *p_card2);
+        _discipline->set_property_for_subdomain(7, *p_card2);
+
+        _indicator_discipline->set_property_for_subdomain(0, *p_card1);
+        _indicator_discipline->set_property_for_subdomain(1, *p_card1);
+        _indicator_discipline->set_property_for_subdomain(3, *p_card2);
+        _indicator_discipline->set_property_for_subdomain(4, *p_card2);
     }
     
 
@@ -1669,15 +1709,30 @@ public:
         _filter->compute_filtered_values(base_phi, *_level_set_sys->solution);
         _level_set_function->init(*_level_set_sys_init, *_level_set_sys->solution);
         _sys->solution->zero();
+
+        if (_mesh_refinement->initialized()) {
+            
+            _mesh_refinement->clear_mesh();
+            _eq_sys->reinit();
+        }
+
+        if (_mesh_refinement->process_mesh(*_level_set_function,
+                                           true, // strong discontinuity
+                                           0.,
+                                           6,   // negative_level_set_subdomain_offset
+                                           3,   // inactive_subdomain_offset
+                                           8))  // level_set_boundary_id
+            _eq_sys->reinit();
+
         
         //*********************************************************************
         // DO NOT zero out the gradient vector, since GCMMA needs it for the  *
         // subproblem solution                                                *
         //*********************************************************************
-        MAST::LevelSetNonlinearImplicitAssembly                  nonlinear_assembly(true);
+        MAST::NonlinearImplicitAssembly                          nonlinear_assembly/*(true)*/;
         MAST::LevelSetNonlinearImplicitAssembly                  level_set_assembly(false);
         MAST::LevelSetEigenproblemAssembly                       eigen_assembly;
-        MAST::LevelSetStressAssembly                             stress_assembly;
+        MAST::StressAssembly                                     stress_assembly;
         MAST::StructuralNonlinearAssemblyElemOperations          nonlinear_elem_ops;
         MAST::HeatConductionNonlinearAssemblyElemOperations      conduction_elem_ops;
         MAST::StructuralModalEigenproblemAssemblyElemOperations  modal_elem_ops;
@@ -1738,14 +1793,16 @@ public:
         // first constrain the indicator function and solve
         /////////////////////////////////////////////////////////////////////
         nonlinear_assembly.set_discipline_and_system(*_discipline, *_sys_init);
-        nonlinear_assembly.set_level_set_function(*_level_set_function, *_filter);
-        nonlinear_assembly.set_level_set_velocity_function(*_level_set_vel);
+        nonlinear_assembly.diagonal_elem_subdomain_id = {3};
+        nonlinear_assembly.exclude_subdomain_id       = {6, 7};
+        //nonlinear_assembly.set_level_set_function(*_level_set_function, *_filter);
+        //nonlinear_assembly.set_level_set_velocity_function(*_level_set_vel);
         //nonlinear_assembly.set_indicator_function(indicator);
         eigen_assembly.set_discipline_and_system(*_discipline, *_sys_init);
         eigen_assembly.set_level_set_function(*_level_set_function);
         eigen_assembly.set_level_set_velocity_function(*_level_set_vel);
         stress_assembly.set_discipline_and_system(*_discipline, *_sys_init);
-        stress_assembly.init(*_level_set_function, nonlinear_assembly.if_use_dof_handler()?&nonlinear_assembly.get_dof_handler():nullptr);
+        //stress_assembly.init(*_level_set_function, nonlinear_assembly.if_use_dof_handler()?&nonlinear_assembly.get_dof_handler():nullptr);
         level_set_assembly.set_discipline_and_system(*_level_set_discipline, *_level_set_sys_init);
         level_set_assembly.set_level_set_function(*_level_set_function, *_filter);
         level_set_assembly.set_level_set_velocity_function(*_level_set_vel);
@@ -1754,7 +1811,7 @@ public:
         //nonlinear_assembly.plot_sub_elems(true, false, true);
         
         
-        libMesh::MeshRefinement refine(*_mesh);
+        /*libMesh::MeshRefinement refine(*_mesh);
         
         libMesh::out << "before refinement" << std::endl;
         _mesh->print_info();
@@ -1794,7 +1851,7 @@ public:
             }
             else
                 continue_refining = false;
-        }
+        }*/
 
         
         MAST::LevelSetVolume                            volume(level_set_assembly.get_intersection());
@@ -1806,7 +1863,8 @@ public:
         stress.set_discipline_and_system(*_discipline, *_sys_init);
         volume.set_participating_elements_to_all();
         perimeter.set_participating_elements_to_all();
-        stress.set_participating_elements_to_all();
+        //stress.set_participating_elements_to_all();
+        stress.set_participating_subdomains(std::set<libMesh::subdomain_id_type>({0, 1}));
         stress.set_aggregation_coefficients(_p_val, 1., _vm_rho, _stress_lim) ;
         compliance.set_participating_elements_to_all();
         compliance.set_discipline_and_system(*_discipline, *_sys_init);
@@ -2015,7 +2073,7 @@ public:
     _evaluate_stress_sensitivity
     (MAST::StressStrainOutputBase& stress,
      MAST::AssemblyElemOperations& nonlinear_elem_ops,
-     MAST::LevelSetNonlinearImplicitAssembly& nonlinear_assembly,
+     MAST::NonlinearImplicitAssembly& nonlinear_assembly,
      MAST::StructuralModalEigenproblemAssemblyElemOperations& eigen_elem_ops,
      MAST::LevelSetEigenproblemAssembly& eigen_assembly,
      std::vector<Real>& grads) {
@@ -2270,6 +2328,7 @@ public:
     _n_eig_vals                          (0),
     _mesh                                (nullptr),
     _level_set_mesh                      (nullptr),
+    _mesh_refinement                     (nullptr),
     _eq_sys                              (nullptr),
     _level_set_eq_sys                    (nullptr),
     _sys                                 (nullptr),
@@ -2284,8 +2343,10 @@ public:
     _indicator_discipline                (nullptr),
     _level_set_discipline                (nullptr),
     _filter                              (nullptr),
-    _m_card                              (nullptr),
-    _p_card                              (nullptr),
+    _m_card1                             (nullptr),
+    _m_card2                             (nullptr),
+    _p_card1                             (nullptr),
+    _p_card2                             (nullptr),
     _level_set_function                  (nullptr),
     _level_set_vel                       (nullptr),
     _output                              (nullptr) {
@@ -2308,8 +2369,9 @@ public:
         //
         // ask structure to use Mindlin bending operator
         //
-        dynamic_cast<MAST::ElementPropertyCard2D&>(*_p_card).set_bending_model(MAST::MINDLIN);
-        
+        dynamic_cast<MAST::ElementPropertyCard2D&>(*_p_card1).set_bending_model(MAST::MINDLIN);
+        dynamic_cast<MAST::ElementPropertyCard2D&>(*_p_card2).set_bending_model(MAST::MINDLIN);
+
         /////////////////////////////////////////////////
         // now initialize the design data.
         /////////////////////////////////////////////////
@@ -2335,6 +2397,13 @@ public:
         _level_set_function    = new PhiMeshFunction;
         _output                = new libMesh::ExodusII_IO(*_mesh);
         
+        
+        MAST::BoundaryConditionBase
+        *bc = new MAST::BoundaryConditionBase(MAST::BOUNDARY_VELOCITY);
+        bc->add(*_level_set_vel);
+        _discipline->add_side_load(8, *bc);
+        _boundary_conditions.insert(bc);
+
         _n_eig_vals            = _input("n_eig", "number of eigenvalues to constrain", 0);
         if (_n_eig_vals) {
             //
@@ -2388,10 +2457,13 @@ public:
         if (!_initialized)
             return;
         
-        delete _m_card;
-        delete _p_card;
-        
+        delete _m_card1;
+        delete _m_card2;
+        delete _p_card1;
+        delete _p_card2;
+
         delete _eq_sys;
+        delete _mesh_refinement;
         delete _mesh;
         
         delete _discipline;
@@ -2629,11 +2701,11 @@ int main(int argc, char* argv[]) {
         
         optimizer->attach_function_evaluation_object(top_opt);
 
-        //std::vector<Real> xx1(top_opt.n_vars()), xx2(top_opt.n_vars());
-        //top_opt.init_dvar(xx1, xx2, xx2);
+        std::vector<Real> xx1(top_opt.n_vars()), xx2(top_opt.n_vars());
+        top_opt.init_dvar(xx1, xx2, xx2);
         //top_opt.initialize_dv_from_output_file("output1.txt", 24, xx1);
-        //top_opt.verify_gradients(xx1);
-        optimizer->optimize();
+        top_opt.verify_gradients(xx1);
+        //optimizer->optimize();
         //top_opt.parametric_line_study("output1.txt", 0, 450, 500);
     }
     
