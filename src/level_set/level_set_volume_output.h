@@ -150,6 +150,15 @@ namespace MAST {
         }
         
         /*!
+         *    this evaluates all relevant topological sensitivity components on
+         *    the element.
+         *    This is only done on the current element for which this
+         *    object has been initialized.
+         */
+        virtual void
+        evaluate_topology_sensitivity(const MAST::FunctionBase& f);
+
+        /*!
          *    This evaluates the contribution to the topology sensitivity on the
          *    boundary \f$ \int_\Gamma V_n~d\Gamma \f$
          */

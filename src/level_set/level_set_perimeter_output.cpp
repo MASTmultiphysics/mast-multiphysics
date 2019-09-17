@@ -172,6 +172,13 @@ MAST::LevelSetPerimeter::evaluate_sensitivity(const MAST::FunctionBase& f) {
 
 
 void
+MAST::LevelSetPerimeter::evaluate_topology_sensitivity(const MAST::FunctionBase& f) {
+    
+    libmesh_assert(false);
+}
+
+
+void
 MAST::LevelSetPerimeter::evaluate_topology_sensitivity(const MAST::FunctionBase& f,
                                                        const MAST::FieldFunction<RealVectorX>& vel) {
     

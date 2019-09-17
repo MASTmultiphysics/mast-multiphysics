@@ -60,6 +60,7 @@
 #include "libmesh/petsc_nonlinear_solver.h"
 #include "libmesh/mesh_refinement.h"
 #include "libmesh/error_vector.h"
+#include "libmesh/parallel_implementation.h"
 
 
 void

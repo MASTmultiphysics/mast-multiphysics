@@ -37,6 +37,7 @@ namespace MAST {
     class SystemInitialization;
     class PhysicsDisciplineBase;
     class GeomElem;
+    template <typename ValType> class FieldFunction;
     
     class AssemblyElemOperations {
         
@@ -166,6 +167,16 @@ namespace MAST {
          */
         virtual void set_elem_perturbed_acceleration(const RealVectorX& accel);
 
+        
+        /*!
+         *   searches through the side load data and populates the data
+         *   with the boundary id and velocity function on the
+         *   boundary. Returns a null pointer for velocity if no boundary is
+         *   specified for this elem.
+         */
+        virtual std::pair<const MAST::FieldFunction<RealVectorX>*, unsigned int>
+        get_elem_boundary_velocity_data();
+        
         
     protected:
 

@@ -151,6 +151,17 @@ namespace MAST {
          *    object has been initialized.
          */
         virtual void
+        evaluate_topology_sensitivity(const MAST::FunctionBase& f) {
+            libmesh_error(); // not yet implemented
+        }
+
+        /*!
+         *    this evaluates all relevant topological sensitivity components on
+         *    the element.
+         *    This is only done on the current element for which this
+         *    object has been initialized.
+         */
+        virtual void
         evaluate_topology_sensitivity(const MAST::FunctionBase& f,
                                       const MAST::FieldFunction<RealVectorX>& vel) {
             libmesh_error(); // not yet implemented

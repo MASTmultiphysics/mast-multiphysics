@@ -21,6 +21,10 @@
 #include "base/assembly_elem_operation.h"
 #include "base/elem_base.h"
 #include "base/assembly_base.h"
+#include "base/physics_discipline_base.h"
+#include "base/boundary_condition_base.h"
+#include "base/field_function_base.h"
+#include "mesh/geom_elem.h"
 #include "mesh/fe_base.h"
 
 
@@ -195,3 +199,51 @@ MAST::AssemblyElemOperations::clear_elem() {
         
     _physics_elem = nullptr;
 }
+
+
+std::pair<const MAST::FieldFunction<RealVectorX>*, unsigned int>
+MAST::AssemblyElemOperations::
+get_elem_boundary_velocity_data() {
+    
+    libmesh_assert(_physics_elem);
+
+    std::pair<const MAST::FieldFunction<RealVectorX>*, unsigned int>
+    val = std::make_pair(nullptr, 0);
+    
+    std::map<unsigned int, std::vector<MAST::BoundaryConditionBase*>> loads;
+    _physics_elem->elem().external_side_loads_for_quadrature_elem(_discipline->side_loads(),
+                                                                  loads);
+    
+    std::map<unsigned int, std::vector<MAST::BoundaryConditionBase*>>::const_iterator
+    it   = loads.begin(),
+    end  = loads.end();
+    
+    for ( ; it != end; it++) {
+        
+        std::vector<MAST::BoundaryConditionBase*>::const_iterator
+        bc_it  = it->second.begin(),
+        bc_end = it->second.end();
+        
+        for ( ; bc_it != bc_end; bc_it++) {
+            
+            // apply all the types of loading
+            switch ((*bc_it)->type()) {
+                    
+                case MAST::BOUNDARY_VELOCITY: {
+                    
+                    val.first  = &((*bc_it)->get<MAST::FieldFunction<RealVectorX>>("phi_vel"));
+                    val.second = it->first;
+                }
+                    break;
+                    
+                    
+                default:
+                    // nothing to be done here
+                    break;
+            }
+        }
+    }
+    
+    return val;
+}
+

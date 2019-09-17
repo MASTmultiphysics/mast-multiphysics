@@ -670,6 +670,7 @@ side_external_residual(bool request_jacobian,
                     break;
                     
                     
+                case MAST::BOUNDARY_VELOCITY:
                 case MAST::DIRICHLET:
                     // nothing to be done here
                     break;
@@ -711,6 +712,7 @@ linearized_side_external_residual
             // apply all the types of loading
             switch ((*bc_it)->type()) {
 
+                case MAST::BOUNDARY_VELOCITY:
                 case MAST::DIRICHLET:
                     // nothing to be done here
                     break;
@@ -765,6 +767,7 @@ linearized_frequency_domain_side_external_residual
                     break;
                     
                     
+                case MAST::BOUNDARY_VELOCITY:
                 case MAST::DIRICHLET:
                     // nothing to be done here
                     break;
@@ -996,6 +999,7 @@ side_external_residual_sensitivity(const MAST::FunctionBase& p,
                     break;
                     
                     
+                case MAST::BOUNDARY_VELOCITY:
                 case MAST::DIRICHLET:
                     // nothing to be done here
                     break;

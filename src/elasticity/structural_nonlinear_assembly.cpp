@@ -201,6 +201,49 @@ elem_sensitivity_calculations(const MAST::FunctionBase& f,
 void
 MAST::StructuralNonlinearAssemblyElemOperations::
 elem_topology_sensitivity_calculations(const MAST::FunctionBase& f,
+                                       RealVectorX& vec) {
+    
+    libmesh_assert(_physics_elem);
+    libmesh_assert(f.is_topology_parameter());
+    
+    std::pair<const MAST::FieldFunction<RealVectorX>*, unsigned int>
+    val = this->get_elem_boundary_velocity_data();
+    
+    if (val.first) {
+
+        MAST::StructuralElementBase& e =
+        dynamic_cast<MAST::StructuralElementBase&>(*_physics_elem);
+        
+        vec.setZero();
+        RealMatrixX
+        dummy = RealMatrixX::Zero(vec.size(), vec.size());
+        
+        e.internal_residual_boundary_velocity(f,
+                                              val.second,
+                                              *val.first,
+                                              false,
+                                              vec,
+                                              dummy);
+        e.volume_external_residual_boundary_velocity(f,
+                                                     val.second,
+                                                     *val.first,
+                                                     _discipline->volume_loads(),
+                                                     false,
+                                                     vec,
+                                                     dummy);
+        /*e.side_external_residual_sensitivity(f, false,
+         vec,
+         dummy,
+         dummy,
+         _discipline->side_loads());*/
+    }
+}
+
+
+
+void
+MAST::StructuralNonlinearAssemblyElemOperations::
+elem_topology_sensitivity_calculations(const MAST::FunctionBase& f,
                                        const MAST::FieldFunction<RealVectorX>& vel,
                                        RealVectorX& vec) {
     

@@ -172,6 +172,14 @@ MAST::LevelSetVolume::evaluate_sensitivity(const MAST::FunctionBase& f) {
 
 
 void
+MAST::LevelSetVolume::evaluate_topology_sensitivity(const MAST::FunctionBase& f) {
+    
+    libmesh_assert(false);
+}
+
+
+
+void
 MAST::LevelSetVolume::evaluate_topology_sensitivity(const MAST::FunctionBase& f,
                                                     const MAST::FieldFunction<RealVectorX>& vel) {
     

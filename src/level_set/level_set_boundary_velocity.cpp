@@ -22,7 +22,7 @@
 
 
 MAST::LevelSetBoundaryVelocity::LevelSetBoundaryVelocity(const unsigned int dim):
-MAST::FieldFunction<RealVectorX>("phi"),
+MAST::FieldFunction<RealVectorX>("phi_vel"),
 _dim(dim),
 _phi(nullptr) {
     
@@ -40,7 +40,7 @@ MAST::LevelSetBoundaryVelocity::init(MAST::SystemInitialization& sys,
                                      const libMesh::NumericVector<Real>& dsol) {
     
     if (!_phi)
-        _phi = new MAST::MeshFieldFunction(sys, "phi");
+        _phi = new MAST::MeshFieldFunction(sys, "phi_vel");
     else
         _phi->clear();
     _phi->init(sol, &dsol);
@@ -53,9 +53,6 @@ MAST::LevelSetBoundaryVelocity::operator() (const libMesh::Point& p,
                                             RealVectorX& v) const {
     
     libmesh_assert(_phi);
-    
-    Real
-    tol    = 1.e-6;
     
     RealVectorX
     val      = RealVectorX::Zero(1),

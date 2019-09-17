@@ -32,7 +32,7 @@
 #include "mesh/geom_elem.h"
 
 // libMesh includes
-#include "libmesh/parallel.h"
+#include "libmesh/parallel_implementation.h"
 
 MAST::ComplianceOutput::ComplianceOutput():
 MAST::OutputAssemblyElemOperations(),
@@ -148,6 +148,46 @@ MAST::ComplianceOutput::evaluate_sensitivity(const MAST::FunctionBase &f) {
         
         // ask for the values
         _dcompliance_dp -= vec.dot(e.sol(true));
+    }
+}
+
+
+
+void
+MAST::ComplianceOutput::
+evaluate_topology_sensitivity(const MAST::FunctionBase &f) {
+    
+    // the primal data should have been calculated
+    libmesh_assert(_physics_elem);
+    libmesh_assert(f.is_topology_parameter());
+    
+    if (this->if_evaluate_for_element(_physics_elem->elem())) {
+        
+        std::pair<const MAST::FieldFunction<RealVectorX>*, unsigned int>
+        val = this->get_elem_boundary_velocity_data();
+        
+        if (val.first) {
+
+            MAST::StructuralElementBase& e =
+            dynamic_cast<MAST::StructuralElementBase&>(*_physics_elem);
+            
+            RealVectorX
+            vec   = RealVectorX::Zero(e.sol().size());
+            
+            RealMatrixX
+            dummy = RealMatrixX::Zero(vec.size(), vec.size());
+            
+            e.volume_external_residual_boundary_velocity(f,
+                                                         val.second,
+                                                         *val.first,
+                                                         _discipline->volume_loads(),
+                                                         false,
+                                                         vec,
+                                                         dummy);
+            
+            // compute the contribution of this element to compliance
+            _dcompliance_dp -= vec.dot(e.sol());
+        }
     }
 }
 

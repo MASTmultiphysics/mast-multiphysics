@@ -44,7 +44,8 @@ namespace MAST {
         FAR_FIELD,
         EXHAUST,
         ISOTHERMAL,
-        ADIABATIC
+        ADIABATIC,
+        BOUNDARY_VELOCITY
     };
     
     
