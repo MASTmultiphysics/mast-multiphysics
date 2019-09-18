@@ -19,34 +19,44 @@
 
 /*
  * Below is a description of the cross sections that are implemented and the 
- * number of parameters which are used to define them.
+ * number of parameters which are used to define them. These sections are based
+ * on sections available in NASTRAN, ASTROS, and Abaqus. Other custom sections,
+ * not found in these softwares are included as well.
  * 
- * Cross Section                # Parameters
- * --------------------         ------------
- * Square                       1
- * ROD                          1
- * Equilaterial Triangle        1
- * Regular Hexagon              1
- * BAR                          2
- * TUBE                         2
- * Ellipse                      2
- * Square Box                   2
- * BOX                          4   TODO
- * CHAN                         4   TODO
- * CROSS                        4   TODO
- * H                            4   TODO
- * L                            4   TODO
- * HAT (Open)                   4   TODO
- * I1                           4   TODO
- * T                            4   TODO
- * Z                            4   TODO
- * PI                           5   TODO
- * HAT1 (Closed)                5   TODO
- * BOX1                         6   TODO
- * I                            6   TODO
- * GBOX                         6   TODO
- * Arbitrary I-Beam             8   TODO
- * Arbitrary Section            Variable^
+ * Cross Section                # Parameters        Reference
+ * --------------------         ------------        ---------
+ * Square                        1                  Custom
+ * ROD                           1                  NASTRAN
+ * Equilaterial Triangle         1                  Custom
+ * Regular Hexagon               1                  Custom
+ * BAR                           2                  NASTRAN
+ * TUBE                          2                  NASTRAN
+ * TUBE2                         2                  NASTRAN
+ * Ellipse                       2                  Custom
+ * Square Box                    2                  Custom
+ * Trapezoid                     3                  Abaqus	TODO
+ * HEXA                          3                  NASTRAN	TODO
+ * BOX                           4                  NASTRAN                  
+ * CHAN                          4                  NASTRAN
+ * CHAN1                         4                  NASTRAN
+ * CHAN2                         4                  NASTRAN
+ * CROSS                         4                  NASTRAN
+ * H                             4                  NASTRAN
+ * L                             4                  NASTRAN
+ * HAT (Open)                    4                  NASTRAN
+ * I1                            4                  NASTRAN
+ * T                             4                  NASTRAN
+ * T1                            4                  NASTRAN
+ * T2                            4                  NASTRAN
+ * Z                             4                  NASTRAN
+ * Pi                            5                  Custom
+ * HAT1 (Closed)                 5                  NASTRAN
+ * BOX1                          6                  NASTRAN	TODO
+ * I                             6                  NASTRAN
+ * GBOX                          6                  ASTROS
+ * Arbitrary I-Beam              8                  Custom	TODO
+ * DBOX                         10                  NASTRAN	TODO
+ * Arbitrary Section            Variable^           Custom
  * 
  *  ^   The arbitrary cross section is define via either specifying section 
  *      properties directly, via a matrix of vertices, or via a 2D 

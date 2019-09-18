@@ -18,7 +18,6 @@
  */
 
 // MAST includes
-#include "property_cards/solid_1d_1parameter_section_element_property_card.h"
 #include "property_cards/solid_1d_rod_section_element_property_card.h"
 
 
@@ -74,6 +73,12 @@ void MAST::Solid1DRodSectionElementPropertyCard::init() {
     &DIM1     =  this->get<MAST::FieldFunction<Real> >("DIM1"),
     &hy_off =  this->get<MAST::FieldFunction<Real> >("hy_off"),
     &hz_off =  this->get<MAST::FieldFunction<Real> >("hz_off");
+    
+    // Check that dimensions are physically correct
+    Real DIM1v; DIM1(DIM1v);
+    if (DIM1v<=0){
+        libmesh_error_msg("DIM1<=0");
+    }
     
     _A.reset(new MAST::Solid1D1ParameterSectionProperty::Area(MAST::Solid1DRodSectionProperty::calcA,
                                                               MAST::Solid1DRodSectionProperty::calcdA,

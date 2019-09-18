@@ -22,8 +22,68 @@ target_sources(mast
         ${CMAKE_CURRENT_LIST_DIR}/solid_1d_section_element_property_card.h
 	${CMAKE_CURRENT_LIST_DIR}/solid_1d_1parameter_section_element_property_card.cpp
         ${CMAKE_CURRENT_LIST_DIR}/solid_1d_1parameter_section_element_property_card.h
+	${CMAKE_CURRENT_LIST_DIR}/solid_1d_2parameter_section_element_property_card.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/solid_1d_2parameter_section_element_property_card.h
+	${CMAKE_CURRENT_LIST_DIR}/solid_1d_4parameter_section_element_property_card.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/solid_1d_4parameter_section_element_property_card.h
+	${CMAKE_CURRENT_LIST_DIR}/solid_1d_5parameter_section_element_property_card.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/solid_1d_5parameter_section_element_property_card.h
+	${CMAKE_CURRENT_LIST_DIR}/solid_1d_6parameter_section_element_property_card.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/solid_1d_6parameter_section_element_property_card.h
+	${CMAKE_CURRENT_LIST_DIR}/solid_1d_8parameter_section_element_property_card.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/solid_1d_8parameter_section_element_property_card.h
 	${CMAKE_CURRENT_LIST_DIR}/solid_1d_rod_section_element_property_card.cpp
         ${CMAKE_CURRENT_LIST_DIR}/solid_1d_rod_section_element_property_card.h
+	${CMAKE_CURRENT_LIST_DIR}/solid_1d_bar_section_element_property_card.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/solid_1d_bar_section_element_property_card.h
+	${CMAKE_CURRENT_LIST_DIR}/solid_1d_squarebox_section_element_property_card.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/solid_1d_squarebox_section_element_property_card.h
+	${CMAKE_CURRENT_LIST_DIR}/solid_1d_ellipse_section_element_property_card.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/solid_1d_ellipse_section_element_property_card.h
+	${CMAKE_CURRENT_LIST_DIR}/solid_1d_square_section_element_property_card.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/solid_1d_square_section_element_property_card.h
+	${CMAKE_CURRENT_LIST_DIR}/solid_1d_reghexagon_section_element_property_card.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/solid_1d_reghexagon_section_element_property_card.h
+	${CMAKE_CURRENT_LIST_DIR}/solid_1d_eqltriangle_section_element_property_card.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/solid_1d_eqltriangle_section_element_property_card.h
+	${CMAKE_CURRENT_LIST_DIR}/solid_1d_tube_section_element_property_card.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/solid_1d_tube_section_element_property_card.h
+	${CMAKE_CURRENT_LIST_DIR}/solid_1d_tube2_section_element_property_card.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/solid_1d_tube2_section_element_property_card.h
+	${CMAKE_CURRENT_LIST_DIR}/solid_1d_chan_section_element_property_card.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/solid_1d_chan_section_element_property_card.h
+	${CMAKE_CURRENT_LIST_DIR}/solid_1d_T_section_element_property_card.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/solid_1d_T_section_element_property_card.h
+	${CMAKE_CURRENT_LIST_DIR}/solid_1d_I1_section_element_property_card.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/solid_1d_I1_section_element_property_card.h
+	${CMAKE_CURRENT_LIST_DIR}/solid_1d_H_section_element_property_card.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/solid_1d_H_section_element_property_card.h
+	${CMAKE_CURRENT_LIST_DIR}/solid_1d_T1_section_element_property_card.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/solid_1d_T1_section_element_property_card.h
+	${CMAKE_CURRENT_LIST_DIR}/solid_1d_T2_section_element_property_card.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/solid_1d_T2_section_element_property_card.h
+	${CMAKE_CURRENT_LIST_DIR}/solid_1d_chan1_section_element_property_card.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/solid_1d_chan1_section_element_property_card.h
+	${CMAKE_CURRENT_LIST_DIR}/solid_1d_chan2_section_element_property_card.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/solid_1d_chan2_section_element_property_card.h
+	${CMAKE_CURRENT_LIST_DIR}/solid_1d_cross_section_element_property_card.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/solid_1d_cross_section_element_property_card.h
+	${CMAKE_CURRENT_LIST_DIR}/solid_1d_Z_section_element_property_card.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/solid_1d_Z_section_element_property_card.h
+	${CMAKE_CURRENT_LIST_DIR}/solid_1d_hat_section_element_property_card.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/solid_1d_hat_section_element_property_card.h
+	${CMAKE_CURRENT_LIST_DIR}/solid_1d_box_section_element_property_card.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/solid_1d_box_section_element_property_card.h
+	${CMAKE_CURRENT_LIST_DIR}/solid_1d_hollowellipse_section_element_property_card.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/solid_1d_hollowellipse_section_element_property_card.h
+	${CMAKE_CURRENT_LIST_DIR}/solid_1d_hat1_section_element_property_card.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/solid_1d_hat1_section_element_property_card.h
+	${CMAKE_CURRENT_LIST_DIR}/solid_1d_pi_section_element_property_card.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/solid_1d_pi_section_element_property_card.h
+	${CMAKE_CURRENT_LIST_DIR}/solid_1d_I_section_element_property_card.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/solid_1d_I_section_element_property_card.h
+	${CMAKE_CURRENT_LIST_DIR}/solid_1d_gbox_section_element_property_card.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/solid_1d_gbox_section_element_property_card.h
         ${CMAKE_CURRENT_LIST_DIR}/solid_2d_section_element_property_card.cpp
         ${CMAKE_CURRENT_LIST_DIR}/solid_2d_section_element_property_card.h)
 
