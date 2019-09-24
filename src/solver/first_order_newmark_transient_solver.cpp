@@ -76,19 +76,22 @@ set_element_data(const std::vector<libMesh::dof_id_type>& dof_indices,
 
 void
 MAST::FirstOrderNewmarkTransientSolver::
-set_element_sensitivity_data(const std::vector<libMesh::dof_id_type>& dof_indices,
-                             const std::vector<libMesh::NumericVector<Real>*>& sols) {
+extract_element_sensitivity_data(const std::vector<libMesh::dof_id_type>& dof_indices,
+                                 const std::vector<libMesh::NumericVector<Real>*>& sols,
+                                 std::vector<RealVectorX>& local_sols) {
     
     libmesh_assert_equal_to(sols.size(), 2);
     
     const unsigned int n_dofs = (unsigned int)dof_indices.size();
     
-    // get the current state and velocity estimates
-    // also get the current discrete velocity replacement
-    RealVectorX
-    sol          = RealVectorX::Zero(n_dofs),
-    vel          = RealVectorX::Zero(n_dofs);
+    local_sols.resize(2);
     
+    RealVectorX
+    &sol         = local_sols[0],
+    &vel         = local_sols[1];
+    
+    sol          = RealVectorX::Zero(n_dofs);
+    vel          = RealVectorX::Zero(n_dofs);
     
     const libMesh::NumericVector<Real>
     &sol_global = *sols[0],
@@ -102,8 +105,6 @@ set_element_sensitivity_data(const std::vector<libMesh::dof_id_type>& dof_indice
         vel(i)          = vel_global(dof_indices[i]);
     }
     
-    _assembly_ops->set_elem_solution_sensitivity(sol);
-    _assembly_ops->set_elem_velocity_sensitivity(vel);
 }
 
 
@@ -152,6 +153,27 @@ update_velocity(libMesh::NumericVector<Real>&       vec,
     const libMesh::NumericVector<Real>
     &prev_sol = this->solution(1),
     &prev_vel = this->velocity(1);
+    
+    vec.zero();
+    vec.add( 1.,      sol);
+    vec.add(-1., prev_sol);
+    vec.scale(1./beta/dt);
+    vec.close();
+    vec.add(-(1.-beta)/beta, prev_vel);
+    
+    vec.close();
+}
+
+
+
+void
+MAST::FirstOrderNewmarkTransientSolver::
+update_sensitivity_velocity(libMesh::NumericVector<Real>&       vec,
+                            const libMesh::NumericVector<Real>& sol) {
+    
+    const libMesh::NumericVector<Real>
+    &prev_sol = this->solution_sensitivity(1),
+    &prev_vel = this->velocity_sensitivity(1);
     
     vec.zero();
     vec.add( 1.,      sol);
@@ -292,8 +314,42 @@ elem_sensitivity_calculations(const MAST::FunctionBase& f,
                                                  f_m,           // mass vector
                                                  f_x);          // forcing vector
     
-    // system residual
+    // sensitivity of system residual involving mass and internal force term
     vec  = (f_m + f_x);
+}
+
+
+
+void
+MAST::FirstOrderNewmarkTransientSolver::
+elem_sensitivity_contribution_previous_timestep(const std::vector<RealVectorX>& prev_sols,
+                                                RealVectorX& vec) {
+    
+    // make sure that the assembly object is provided
+    libmesh_assert(_assembly_ops);
+    libmesh_assert_equal_to(prev_sols.size(), 2);
+    
+    unsigned int n_dofs = (unsigned int)vec.size();
+    
+    const RealVectorX
+    &sol          = prev_sols[0],
+    &vel          = prev_sols[1];
+    RealVectorX
+    dummy_vec     = RealVectorX::Zero(n_dofs);
+    
+    RealMatrixX
+    f_m_jac_xdot  = RealMatrixX::Zero(n_dofs, n_dofs),
+    dummy_mat     = RealMatrixX::Zero(n_dofs, n_dofs);
+    
+    // perform the element assembly
+    _assembly_ops->elem_calculations(true,
+                                     dummy_vec,           // mass vector
+                                     dummy_vec,           // forcing vector
+                                     f_m_jac_xdot,        // Jac of mass wrt x_dot
+                                     dummy_mat,           // Jac of mass wrt x
+                                     dummy_mat);          // Jac of forcing vector wrt x
+
+    vec  = -1.*(f_m_jac_xdot * ( (1./beta/dt)*sol + (1.-beta)/beta * vel));
 }
 
 
@@ -311,7 +367,6 @@ elem_shape_sensitivity_calculations(const MAST::FunctionBase& f,
 void
 MAST::FirstOrderNewmarkTransientSolver::
 elem_topology_sensitivity_calculations(const MAST::FunctionBase& f,
-                                       const MAST::LevelSetIntersection& intersect,
                                        const MAST::FieldFunction<RealVectorX>& vel,
                                        RealVectorX& vec) {
     libmesh_assert(false); // to be implemented

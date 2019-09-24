@@ -28,7 +28,6 @@ namespace MAST {
     
     // Forward declerations
     class ElementPropertyCardBase;
-    class LocalElemBase;
     class BoundaryConditionBase;
     class FEMOperatorMatrix;
     template <typename ValType> class FieldFunction;
@@ -60,7 +59,7 @@ namespace MAST {
          */
         HeatConductionElementBase(MAST::SystemInitialization& sys,
                                   MAST::AssemblyBase& assembly,
-                                  const libMesh::Elem& elem,
+                                  const MAST::GeomElem& elem,
                                   const MAST::ElementPropertyCardBase& p);
         
         
@@ -364,9 +363,7 @@ namespace MAST {
         /*!
          *    When \p mass = false, initializes the FEM operator matrix to the
          *    shape functions as
-         *    \f[  B = \left[ \begin{array}{c}
-         *    {\bf N} \\ {\bf N} \\ {\bf N}
-         *    \end{array} \right] \f]
+         *    \f[  B = \left[ \begin{array}{c} {\bf N} \end{array} \right] \f]
          */
         void _initialize_mass_fem_operator(const unsigned int qp,
                                            const MAST::FEBase& fe,
@@ -377,9 +374,7 @@ namespace MAST {
          *    For \p mass = true, the FEM operator matrix is initilized to
          *    the weak form of the Laplacian
          *    \f[  dB[0] = \frac{\partial {\bf N}}{\partial x} \f]
-         *
          *    \f[  dB[1] = \frac{\partial {\bf N}}{\partial y} \f]
-         *
          *    \f[  dB[2] = \frac{\partial {\bf N}}{\partial z} \f]
          */
         void _initialize_fem_gradient_operator(const unsigned int qp,
@@ -391,9 +386,6 @@ namespace MAST {
          *   element property
          */
         const MAST::ElementPropertyCardBase& _property;
-
-        
-        MAST::LocalElemBase                  *_local_elem;
     };
 
 }

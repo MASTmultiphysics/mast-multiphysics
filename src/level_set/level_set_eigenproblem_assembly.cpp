@@ -21,13 +21,14 @@
 #include "level_set/level_set_eigenproblem_assembly.h"
 #include "level_set/level_set_intersection.h"
 #include "level_set/sub_cell_fe.h"
+#include "level_set/level_set_intersected_elem.h"
 #include "base/system_initialization.h"
 #include "base/nonlinear_system.h"
 #include "base/mesh_field_function.h"
 #include "base/eigenproblem_assembly_elem_operations.h"
 #include "base/elem_base.h"
 #include "numerics/utility.h"
-
+#include "mesh/geom_elem.h"
 
 // libMesh includes
 #include "libmesh/nonlinear_solver.h"
@@ -72,8 +73,7 @@ set_level_set_function(MAST::FieldFunction<Real>& level_set) {
     libmesh_assert(_system);
     
     _level_set    = &level_set;
-    _intersection = new MAST::LevelSetIntersection(_system->system().get_mesh().max_elem_id(),
-                                                   _system->system().get_mesh().max_node_id());
+    _intersection = new MAST::LevelSetIntersection();
 }
 
 
@@ -163,7 +163,9 @@ eigenproblem_assemble(libMesh::SparseMatrix<Real>* A,
         
         const libMesh::Elem* elem = *el;
         
-        _intersection->init(*_level_set, *elem, eigen_sys.time);
+        _intersection->init(*_level_set, *elem, eigen_sys.time,
+                            eigen_sys.get_mesh().max_elem_id(),
+                            eigen_sys.get_mesh().max_node_id());
         
         dof_map.dof_indices (elem, dof_indices);
         
@@ -194,7 +196,11 @@ eigenproblem_assemble(libMesh::SparseMatrix<Real>* A,
                 
                 //const libMesh::Elem* sub_elem = *hi_sub_elem_it;
                 
-                ops.init(*elem);
+                MAST::GeomElem geom_elem;
+                ops.set_elem_data(elem->dim(), *elem, geom_elem);
+                geom_elem.init(*elem, *_system);
+                
+                ops.init(geom_elem);
                 ops.set_elem_solution(sol);
                 ops.elem_calculations(mat_A, mat_B);
                 ops.clear_elem();
@@ -281,7 +287,9 @@ eigenproblem_sensitivity_assemble(const MAST::FunctionBase& f,
         
         const libMesh::Elem* elem = *el;
         
-        _intersection->init(*_level_set, *elem, eigen_sys.time);
+        _intersection->init(*_level_set, *elem, eigen_sys.time,
+                            eigen_sys.get_mesh().max_elem_id(),
+                            eigen_sys.get_mesh().max_node_id());
         
         
         if (_intersection->if_elem_has_positive_phi_region()) {
@@ -319,7 +327,11 @@ eigenproblem_sensitivity_assemble(const MAST::FunctionBase& f,
                 
                 const libMesh::Elem* sub_elem = *hi_sub_elem_it;
                 
-                ops.init(*sub_elem);
+                MAST::LevelSetIntersectedElem geom_elem;
+                ops.set_elem_data(elem->dim(), *elem, geom_elem);
+                geom_elem.init(*sub_elem, *_system, *_intersection);
+                
+                ops.init(geom_elem);
                 ops.set_elem_solution(sol);
                 if (_base_sol)
                     ops.set_elem_solution_sensitivity(dsol);
@@ -332,7 +344,6 @@ eigenproblem_sensitivity_assemble(const MAST::FunctionBase& f,
                 if (f.is_topology_parameter()) {
                     ops.elem_topology_sensitivity_calculations(f,
                                                                _base_sol!=nullptr,
-                                                               *_intersection,
                                                                *_velocity,
                                                                mat2_A,
                                                                mat2_B);
@@ -363,21 +374,6 @@ eigenproblem_sensitivity_assemble(const MAST::FunctionBase& f,
     sensitivity_B->close();
 
     return true;
-}
-
-
-
-std::unique_ptr<MAST::FEBase>
-MAST::LevelSetEigenproblemAssembly::build_fe() {
-    
-    libmesh_assert(_elem_ops);
-    libmesh_assert(_system);
-    libmesh_assert(_intersection);
-    
-    std::unique_ptr<MAST::FEBase>
-    fe(new MAST::SubCellFE(*_system, *_intersection));
-    
-    return fe;
 }
 
 

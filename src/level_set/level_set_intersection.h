@@ -55,19 +55,26 @@ namespace MAST {
         
     public:
         
-        LevelSetIntersection(unsigned int max_elem_id,
-                             unsigned int max_node_id);
+        LevelSetIntersection();
         
         virtual ~LevelSetIntersection();
 
         void init(const MAST::FieldFunction<Real>& phi,
                   const libMesh::Elem& e,
-                  const Real t);
+                  const Real t,
+                  unsigned int max_elem_id,
+                  unsigned int max_node_id);
 
         /*!
          *   clears the data structures
          */
         void clear();
+        
+        /*!
+         *   @return a reference to the element on which the intersection is
+         *   defined
+         */
+        const libMesh::Elem& elem() const;
         
         /*!
          *   @returns mode of intersection
@@ -142,7 +149,7 @@ namespace MAST {
         get_sub_elems_negative_phi() const;
 
         void
-        get_nodes_on_negative_phi(std::set<const libMesh::Node*>& nodes) const;
+        get_corner_nodes_on_negative_phi(std::set<const libMesh::Node*>& nodes) const;
         
         /*!
          *   @returns the id of side that is on the interface. In case the
@@ -160,6 +167,24 @@ namespace MAST {
         
     protected:
         
+        /*!
+         *   creates a first order element from the given high-order element.
+         *   For a QUAD9 a QUAD4 is obtained by only using the corner nodes.
+         *   Note that this does not create any new nodes. The element can be
+         *   deleted after use.
+         */
+        std::unique_ptr<libMesh::Elem>
+        _first_order_elem(const libMesh::Elem& e);
+        
+        /*!
+         *   initializes on a reference element that is a first-order
+         *   counterpart of the given high-order element. For two-dimensional
+         *   elements this is a QUAD4.
+         */
+        void _init_on_first_order_ref_elem(const MAST::FieldFunction<Real>& phi,
+                                           const libMesh::Elem& e,
+                                           const Real t);
+
         
         void _add_node_local_coords
         ( const libMesh::Elem& e,
@@ -186,8 +211,8 @@ namespace MAST {
         Real                                         _tol;
         
         unsigned int                                 _max_iters;
-        const unsigned int                           _max_mesh_elem_id;
-        const unsigned int                           _max_mesh_node_id;
+        unsigned int                                 _max_mesh_elem_id;
+        unsigned int                                 _max_mesh_node_id;
         const unsigned int                           _max_elem_divs;
         const libMesh::Elem*                         _elem;
         bool                                         _initialized;

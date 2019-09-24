@@ -18,3 +18,6 @@ build2
 
 # Visual Studio Code settings.
 .vscode/
+
+# Spack files.
+spconfig.py

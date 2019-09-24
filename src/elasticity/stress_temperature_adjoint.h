@@ -60,7 +60,7 @@ namespace MAST {
          *    checks to see if the object has been told about the subset of
          *    elements and if the specified element is in the subset.
          */
-        virtual bool if_evaluate_for_element(const libMesh::Elem& elem) const {
+        virtual bool if_evaluate_for_element(const MAST::GeomElem& elem) const {
             return _stress.if_evaluate_for_element(elem);
         }
         
@@ -76,7 +76,7 @@ namespace MAST {
         
 
         virtual MAST::StressStrainOutputBase::Data&
-        add_stress_strain_at_qp_location(const libMesh::Elem* e,
+        add_stress_strain_at_qp_location(const MAST::GeomElem& e,
                                          const unsigned int qp,
                                          const libMesh::Point& quadrature_pt,
                                          const libMesh::Point& physical_pt,
@@ -92,7 +92,7 @@ namespace MAST {
          *   element \p e. @returns a reference to \p Data.
          */
         virtual MAST::StressStrainOutputBase::Data&
-        add_stress_strain_at_boundary_qp_location(const libMesh::Elem* e,
+        add_stress_strain_at_boundary_qp_location(const MAST::GeomElem& e,
                                                   const unsigned int s,
                                                   const unsigned int qp,
                                                   const libMesh::Point& quadrature_pt,
@@ -108,7 +108,7 @@ namespace MAST {
          *    the specified quadrature point.
          */
         virtual MAST::StressStrainOutputBase::Data&
-        get_stress_strain_data_for_elem_at_qp(const libMesh::Elem* e,
+        get_stress_strain_data_for_elem_at_qp(const MAST::GeomElem& e,
                                               const unsigned int qp) {
             libmesh_error(); // should not get called
         }
@@ -127,7 +127,7 @@ namespace MAST {
          *    @returns the vector of stress/strain data for specified elem.
          */
         virtual const std::vector<MAST::StressStrainOutputBase::Data*>&
-        get_stress_strain_data_for_elem(const libMesh::Elem* e) const {
+        get_stress_strain_data_for_elem(const MAST::GeomElem& e) const {
             libmesh_error(); // should not get called
         }
 

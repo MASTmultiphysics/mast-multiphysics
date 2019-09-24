@@ -29,6 +29,7 @@
 #include "elasticity/normal_rotation_function_base.h"
 #include "base/nonlinear_system.h"
 #include "mesh/fe_base.h"
+#include "mesh/geom_elem.h"
 #include "base/assembly_base.h"
 
 
@@ -36,7 +37,7 @@
 MAST::FrequencyDomainLinearizedConservativeFluidElem::
 FrequencyDomainLinearizedConservativeFluidElem(MAST::SystemInitialization& sys,
                                                MAST::AssemblyBase& assembly,
-                                               const libMesh::Elem& elem,
+                                               const MAST::GeomElem& elem,
                                                const MAST::FlightCondition& f):
 MAST::ConservativeFluidElementBase(sys, assembly, elem, f),
 freq(nullptr) {
@@ -70,9 +71,7 @@ internal_residual (bool request_jacobian,
     //const std::vector<Real>& JxW                  = _fe->get_JxW();
     //const std::vector<std::vector<Real> >& phi    = _fe->get_phi();
     const unsigned int
-    dim    = _elem.dim(),
-    n1     = dim+2,
-    n2     = _fe->n_shape_functions()*n1;
+    n2     = f.size();
     //nphi   = _fe->n_shape_functions();
     
     RealMatrixX
@@ -152,9 +151,7 @@ internal_residual_sensitivity (const MAST::FunctionBase& p,
     //const std::vector<Real>& JxW                  = _fe->get_JxW();
     //const std::vector<std::vector<Real> >& phi    = _fe->get_phi();
     const unsigned int
-    dim    = _elem.dim(),
-    n1     = dim+2,
-    n2     = _fe->n_shape_functions()*n1;
+    n2     = f.size();
     //nphi   = _fe->n_shape_functions();
     
     RealMatrixX
@@ -241,7 +238,7 @@ side_external_residual (bool request_jacobian,
     const unsigned int
     dim     = _elem.dim(),
     n1      = dim+2,
-    n2      = _fe->n_shape_functions()*n1;
+    n2      = f.size();
     
     RealMatrixX
     f_jac_x = RealMatrixX::Zero(n2, n2);
@@ -254,106 +251,90 @@ side_external_residual (bool request_jacobian,
     freq->nondimensionalizing_factor(b_V);
 
     
-    typedef std::multimap<libMesh::boundary_id_type, MAST::BoundaryConditionBase*> maptype;
+    std::map<unsigned int, std::vector<MAST::BoundaryConditionBase*>> loads;
+    _elem.external_side_loads_for_quadrature_elem(bc, loads);
     
-    // iterate over the boundary ids given in the provided force map
-    std::pair<maptype::const_iterator, maptype::const_iterator> it;
+    std::map<unsigned int, std::vector<MAST::BoundaryConditionBase*>>::const_iterator
+    it   = loads.begin(),
+    end  = loads.end();
     
-    const libMesh::BoundaryInfo& binfo = *_system.system().get_mesh().boundary_info;
-    
-    // for each boundary id, check if any of the sides on the element
-    // has the associated boundary
-    
-    for (unsigned short int n=0; n<_elem.n_sides(); n++) {
+    for ( ; it != end; it++) {
         
-        // if no boundary ids have been specified for the side, then
-        // move to the next side.
-        if (!binfo.n_boundary_ids(&_elem, n))
-            continue;
+        std::vector<MAST::BoundaryConditionBase*>::const_iterator
+        bc_it  = it->second.begin(),
+        bc_end = it->second.end();
         
-        // check to see if any of the specified boundary ids has a boundary
-        // condition associated with them
-        std::vector<libMesh::boundary_id_type> bc_ids;
-        binfo.boundary_ids(&_elem, n, bc_ids);
-        std::vector<libMesh::boundary_id_type>::const_iterator bc_it = bc_ids.begin();
-        
-        for ( ; bc_it != bc_ids.end(); bc_it++) {
+        for ( ; bc_it != bc_end; bc_it++) {
             
-            // find the loads on this boundary and evaluate the f and jac
-            it = bc.equal_range(*bc_it);
-            
-            for ( ; it.first != it.second; it.first++) {
-                
-                // apply all the types of loading
-                switch (it.first->second->type()) {
-                    case MAST::SYMMETRY_WALL: {
-                        
-                        f_jac_x.setZero();
-                        local_f.setZero();
-                        
-                        // We always need the Jacobian, since it is used to
-                        // calculate the residual
-                        
-                         MAST::ConservativeFluidElementBase::
-                         symmetry_surface_residual(true,
-                                                   local_f,
-                                                   f_jac_x,
-                                                   n,
-                                                   *it.first->second);
-                        
-                        // multiply jacobian with the nondimensionalizing
-                        // factor (V/b for flutter analysis)
-                        if (request_jacobian)
-                            jac  += f_jac_x.cast<Complex>() * b_V;
-                        f    += f_jac_x.cast<Complex>() * b_V * _complex_sol;
-                    }
-                        break;
-                        
-                    case MAST::SLIP_WALL: {
-                        
-                        // this calculates the Jacobian and residual contribution
-                        // including the nondimensionalizing factor.
-                        this->slip_wall_surface_residual(request_jacobian,
-                                                         f,
-                                                         jac,
-                                                         n,
-                                                         *it.first->second);
-                    }
-                        break;
-                        
-                    case MAST::FAR_FIELD: {
-                        
-                        f_jac_x.setZero();
-                        local_f.setZero();
-
-                        // We always need the Jacobian, since it is used to
-                        // calculate the residual
-
-                        MAST::ConservativeFluidElementBase::
-                        far_field_surface_residual(true,
-                                                   local_f,
-                                                   f_jac_x,
-                                                   n,
-                                                   *it.first->second);
-                        
-                        // multiply jacobian with the nondimensionalizing
-                        // factor (V/b for flutter analysis)
-                        if (request_jacobian)
-                            jac  += f_jac_x.cast<Complex>() * b_V;
-                        
-                        f    += f_jac_x.cast<Complex>() * b_V * _complex_sol;
-                    }
-                        break;
-                        
-                    case MAST::DIRICHLET:
-                        // nothing to be done here
-                        break;
-                        
-                    default:
-                        // not implemented yet
-                        libmesh_error();
-                        break;
+            // apply all the types of loading
+            switch ((*bc_it)->type()) {
+                case MAST::SYMMETRY_WALL: {
+                    
+                    f_jac_x.setZero();
+                    local_f.setZero();
+                    
+                    // We always need the Jacobian, since it is used to
+                    // calculate the residual
+                    
+                    MAST::ConservativeFluidElementBase::
+                    symmetry_surface_residual(true,
+                                              local_f,
+                                              f_jac_x,
+                                              it->first,
+                                              **bc_it);
+                    
+                    // multiply jacobian with the nondimensionalizing
+                    // factor (V/b for flutter analysis)
+                    if (request_jacobian)
+                        jac  += f_jac_x.cast<Complex>() * b_V;
+                    f    += f_jac_x.cast<Complex>() * b_V * _complex_sol;
                 }
+                    break;
+                    
+                case MAST::SLIP_WALL: {
+                    
+                    // this calculates the Jacobian and residual contribution
+                    // including the nondimensionalizing factor.
+                    this->slip_wall_surface_residual(request_jacobian,
+                                                     f,
+                                                     jac,
+                                                     it->first,
+                                                     **bc_it);
+                }
+                    break;
+                    
+                case MAST::FAR_FIELD: {
+                    
+                    f_jac_x.setZero();
+                    local_f.setZero();
+                    
+                    // We always need the Jacobian, since it is used to
+                    // calculate the residual
+                    
+                    MAST::ConservativeFluidElementBase::
+                    far_field_surface_residual(true,
+                                               local_f,
+                                               f_jac_x,
+                                               it->first,
+                                               **bc_it);
+                    
+                    // multiply jacobian with the nondimensionalizing
+                    // factor (V/b for flutter analysis)
+                    if (request_jacobian)
+                        jac  += f_jac_x.cast<Complex>() * b_V;
+                    
+                    f    += f_jac_x.cast<Complex>() * b_V * _complex_sol;
+                }
+                    break;
+                    
+                case MAST::DIRICHLET:
+                    // nothing to be done here
+                    break;
+                    
+                default:
+                    // not implemented yet
+                    libmesh_error();
+                    break;
             }
         }
     }
@@ -383,7 +364,7 @@ side_external_residual_sensitivity (const MAST::FunctionBase& p,
     const unsigned int
     dim     = _elem.dim(),
     n1      = dim+2,
-    n2      = _fe->n_shape_functions()*n1;
+    n2      = f.size();
     
     RealMatrixX
     f_jac_x = RealMatrixX::Zero(n2, n2);
@@ -395,111 +376,93 @@ side_external_residual_sensitivity (const MAST::FunctionBase& p,
     b_V     = 0.;
     freq->nondimensionalizing_factor(b_V);
     
+    std::map<unsigned int, std::vector<MAST::BoundaryConditionBase*>> loads;
+    _elem.external_side_loads_for_quadrature_elem(bc, loads);
     
-    typedef std::multimap<libMesh::boundary_id_type, MAST::BoundaryConditionBase*> maptype;
+    std::map<unsigned int, std::vector<MAST::BoundaryConditionBase*>>::const_iterator
+    it   = loads.begin(),
+    end  = loads.end();
     
-    // iterate over the boundary ids given in the provided force map
-    std::pair<maptype::const_iterator, maptype::const_iterator> it;
-    
-    const libMesh::BoundaryInfo& binfo = *_system.system().get_mesh().boundary_info;
-    
-    // for each boundary id, check if any of the sides on the element
-    // has the associated boundary
-    
-    for (unsigned short int n=0; n<_elem.n_sides(); n++) {
+    for ( ; it != end; it++) {
         
-        // if no boundary ids have been specified for the side, then
-        // move to the next side.
-        if (!binfo.n_boundary_ids(&_elem, n))
-            continue;
+        std::vector<MAST::BoundaryConditionBase*>::const_iterator
+        bc_it  = it->second.begin(),
+        bc_end = it->second.end();
         
-        // check to see if any of the specified boundary ids has a boundary
-        // condition associated with them
-        std::vector<libMesh::boundary_id_type> bc_ids;
-        binfo.boundary_ids(&_elem, n, bc_ids);
-        std::vector<libMesh::boundary_id_type>::const_iterator bc_it = bc_ids.begin();
-        
-        for ( ; bc_it != bc_ids.end(); bc_it++) {
+        for ( ; bc_it != bc_end; bc_it++) {
             
-            // find the loads on this boundary and evaluate the f and jac
-            it = bc.equal_range(*bc_it);
-            
-            for ( ; it.first != it.second; it.first++) {
-                
-                // apply all the types of loading
-                switch (it.first->second->type()) {
-                    case MAST::SYMMETRY_WALL: {
-                        
-                        f_jac_x.setZero();
-                        local_f.setZero();
-                        
-                        // We always need the Jacobian, since it is used to
-                        // calculate the residual
-                        
-                        MAST::ConservativeFluidElementBase::
-                        symmetry_surface_residual(true,
-                                                  local_f,
-                                                  f_jac_x,
-                                                  n,
-                                                  *it.first->second);
-                        
-                        // multiply jacobian with the nondimensionalizing
-                        // factor (V/b for flutter analysis)
-                        //if (request_jacobian)
-                        //    jac  += f_jac_x.cast<Complex>() * b_V;
-                        f    += f_jac_x.cast<Complex>() * b_V * _complex_sol_sens;
-                    }
-                        break;
-                        
-                    case MAST::SLIP_WALL: {
-                        
-                        // this calculates the Jacobian and residual contribution
-                        // including the nondimensionalizing factor.
-                        this->slip_wall_surface_residual_sensitivity(p, request_jacobian,
-                                                                     f,
-                                                                     jac,
-                                                                     n,
-                                                                     *it.first->second);
-                    }
-                        break;
-                        
-                    case MAST::FAR_FIELD: {
-                        
-                        f_jac_x.setZero();
-                        local_f.setZero();
-                        
-                        // We always need the Jacobian, since it is used to
-                        // calculate the residual
-                        
-                        MAST::ConservativeFluidElementBase::
-                        far_field_surface_residual(true,
-                                                   local_f,
-                                                   f_jac_x,
-                                                   n,
-                                                   *it.first->second);
-                        
-                        // multiply jacobian with the nondimensionalizing
-                        // factor (V/b for flutter analysis)
-                        //if (request_jacobian)
-                        //    jac  += f_jac_x.cast<Complex>() * b_V;
-                        
-                        f    += f_jac_x.cast<Complex>() * b_V * _complex_sol_sens;
-                    }
-                        break;
-                        
-                    case MAST::DIRICHLET:
-                        // nothing to be done here
-                        break;
-                        
-                    default:
-                        // not implemented yet
-                        libmesh_error();
-                        break;
+            // apply all the types of loading
+            switch ((*bc_it)->type()) {
+                case MAST::SYMMETRY_WALL: {
+                    
+                    f_jac_x.setZero();
+                    local_f.setZero();
+                    
+                    // We always need the Jacobian, since it is used to
+                    // calculate the residual
+                    
+                    MAST::ConservativeFluidElementBase::
+                    symmetry_surface_residual(true,
+                                              local_f,
+                                              f_jac_x,
+                                              it->first,
+                                              **bc_it);
+                    
+                    // multiply jacobian with the nondimensionalizing
+                    // factor (V/b for flutter analysis)
+                    //if (request_jacobian)
+                    //    jac  += f_jac_x.cast<Complex>() * b_V;
+                    f    += f_jac_x.cast<Complex>() * b_V * _complex_sol_sens;
                 }
+                    break;
+                    
+                case MAST::SLIP_WALL: {
+                    
+                    // this calculates the Jacobian and residual contribution
+                    // including the nondimensionalizing factor.
+                    this->slip_wall_surface_residual_sensitivity(p, request_jacobian,
+                                                                 f,
+                                                                 jac,
+                                                                 it->first,
+                                                                 **bc_it);
+                }
+                    break;
+                    
+                case MAST::FAR_FIELD: {
+                    
+                    f_jac_x.setZero();
+                    local_f.setZero();
+                    
+                    // We always need the Jacobian, since it is used to
+                    // calculate the residual
+                    
+                    MAST::ConservativeFluidElementBase::
+                    far_field_surface_residual(true,
+                                               local_f,
+                                               f_jac_x,
+                                               it->first,
+                                               **bc_it);
+                    
+                    // multiply jacobian with the nondimensionalizing
+                    // factor (V/b for flutter analysis)
+                    //if (request_jacobian)
+                    //    jac  += f_jac_x.cast<Complex>() * b_V;
+                    
+                    f    += f_jac_x.cast<Complex>() * b_V * _complex_sol_sens;
+                }
+                    break;
+                    
+                case MAST::DIRICHLET:
+                    // nothing to be done here
+                    break;
+                    
+                default:
+                    // not implemented yet
+                    libmesh_error();
+                    break;
             }
         }
     }
-    
     
     return request_jacobian;
 }
@@ -524,17 +487,16 @@ slip_wall_surface_residual(bool request_jacobian,
     // qi ni = 0       (since heat flux occurs only on no-slip wall and far-field bc)
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe());
-    fe->init_for_side(_elem, s, false);
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_side_fe(s, false));
 
     const std::vector<Real> &JxW                 = fe->get_JxW();
-    const std::vector<libMesh::Point>& normals   = fe->get_normals();
+    const std::vector<libMesh::Point>& normals   = fe->get_normals_for_reference_coordinate();
     const std::vector<libMesh::Point>& qpoint    = fe->get_xyz();
     
     const unsigned int
     dim        = _elem.dim(),
     n1         = dim+2,
-    n2         = _fe->n_shape_functions()*n1;
+    n2         = fe->n_shape_functions()*n1;
     
     RealVectorX
     vec1_n1    = RealVectorX::Zero(n1),
@@ -632,7 +594,7 @@ slip_wall_surface_residual(bool request_jacobian,
 
         // initialize the small-disturbance primitive sol
         sd_primitive_sol.zero();
-        sd_primitive_sol.init(primitive_sol, vec2_n1);
+        sd_primitive_sol.init(primitive_sol, vec2_n1, if_viscous());
         
         ////////////////////////////////////////////////////////////
         //   Calculation of the surface velocity term. For a
@@ -755,17 +717,16 @@ slip_wall_surface_residual_sensitivity(const MAST::FunctionBase& p,
     // qi ni = 0       (since heat flux occurs only on no-slip wall and far-field bc)
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe());
-    fe->init_for_side(_elem, s, false);
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_side_fe(s, false));
 
     const std::vector<Real> &JxW                 = fe->get_JxW();
-    const std::vector<libMesh::Point>& normals   = fe->get_normals();
+    const std::vector<libMesh::Point>& normals   = fe->get_normals_for_reference_coordinate();
     const std::vector<libMesh::Point>& qpoint    = fe->get_xyz();
     
     const unsigned int
     dim        = _elem.dim(),
     n1         = dim+2,
-    n2         = _fe->n_shape_functions()*n1;
+    n2         = fe->n_shape_functions()*n1;
     
     RealVectorX
     vec1_n1    = RealVectorX::Zero(n1),
@@ -864,7 +825,7 @@ slip_wall_surface_residual_sensitivity(const MAST::FunctionBase& p,
         
         // initialize the small-disturbance primitive sol
         sd_primitive_sol.zero();
-        sd_primitive_sol.init(primitive_sol, vec2_n1);
+        sd_primitive_sol.init(primitive_sol, vec2_n1, if_viscous());
         
         ////////////////////////////////////////////////////////////
         //   Calculation of the surface velocity term. For a

@@ -27,6 +27,7 @@
 #include "base/assembly_elem_operation.h"
 #include "base/output_assembly_elem_operations.h"
 #include "mesh/fe_base.h"
+#include "mesh/geom_elem.h"
 #include "numerics/utility.h"
 
 
@@ -36,11 +37,13 @@
 
 
 MAST::AssemblyBase::AssemblyBase():
+close_matrix      (true),
 _elem_ops         (nullptr),
 _discipline       (nullptr),
 _system           (nullptr),
 _sol_function     (nullptr),
-_solver_monitor   (nullptr) {
+_solver_monitor   (nullptr),
+_param_dependence (nullptr) {
     
 }
 
@@ -120,11 +123,32 @@ MAST::AssemblyBase::set_solver_monitor(MAST::AssemblyBase::SolverMonitor& monito
 }
 
 
+
+void
+MAST::AssemblyBase::attach_elem_parameter_dependence_object
+(MAST::AssemblyBase::ElemParameterDependence& dep) {
+
+    libmesh_assert(!_param_dependence);
+    
+    _param_dependence = &dep;
+}
+
+
+
+void
+MAST::AssemblyBase::clear_elem_parameter_dependence_object() {
+    
+    _param_dependence = nullptr;
+}
+
+
+
 MAST::AssemblyBase::SolverMonitor*
 MAST::AssemblyBase::get_solver_monitor() {
     
     return _solver_monitor;
 }
+
 
 void
 MAST::AssemblyBase::clear_solver_monitor() {
@@ -151,8 +175,10 @@ void
 MAST::AssemblyBase::
 clear_discipline_and_system() {
     
-    _discipline    = nullptr;
-    _system        = nullptr;
+    close_matrix      = true;
+    _discipline       = nullptr;
+    _system           = nullptr;
+    _param_dependence = nullptr;
 }
 
 
@@ -223,19 +249,6 @@ MAST::AssemblyBase::detach_solution_function() {
 
 
 
-std::unique_ptr<MAST::FEBase>
-MAST::AssemblyBase::build_fe() {
-
-    libmesh_assert(_system);
-
-    std::unique_ptr<MAST::FEBase>
-    fe(new MAST::FEBase(*_system));
-    
-    return fe;
-}
-
-
-
 
 void
 MAST::AssemblyBase::calculate_output(const libMesh::NumericVector<Real>& X,
@@ -288,7 +301,11 @@ MAST::AssemblyBase::calculate_output(const libMesh::NumericVector<Real>& X,
         //if (_sol_function)
         //    physics_elem->attach_active_solution_function(*_sol_function);
         
-        output.init(*elem);
+        MAST::GeomElem geom_elem;
+        output.set_elem_data(elem->dim(), *elem, geom_elem);
+        geom_elem.init(*elem, *_system);
+        
+        output.init(geom_elem);
         output.set_elem_solution(sol);
         output.evaluate();
         output.clear_elem();
@@ -363,7 +380,11 @@ calculate_output_derivative(const libMesh::NumericVector<Real>& X,
 //        if (_sol_function)
 //            physics_elem->attach_active_solution_function(*_sol_function);
         
-        output.init(*elem);
+        MAST::GeomElem geom_elem;
+        output.set_elem_data(elem->dim(), *elem, geom_elem);
+        geom_elem.init(*elem, *_system);
+        
+        output.init(geom_elem);
         output.set_elem_solution(sol);
         output.output_derivative_for_elem(vec);
         output.clear_elem();
@@ -372,8 +393,7 @@ calculate_output_derivative(const libMesh::NumericVector<Real>& X,
         MAST::copy(v, vec);
         dof_map.constrain_element_vector(v, dof_indices);
         dq_dX.add_vector(v, dof_indices);
-
-//        physics_elem->detach_active_solution_function();
+        dof_indices.clear();
     }
     
     // if a solution function is attached, clear it
@@ -390,7 +410,7 @@ calculate_output_derivative(const libMesh::NumericVector<Real>& X,
 void
 MAST::AssemblyBase::
 calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
-                                    const libMesh::NumericVector<Real>& dXdp,
+                                    const libMesh::NumericVector<Real>* dXdp,
                                     const MAST::FunctionBase& p,
                                     MAST::OutputAssemblyElemOperations& output) {
 
@@ -417,8 +437,9 @@ calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
     localized_solution_sens;
     localized_solution.reset(build_localized_vector(nonlin_sys,
                                                     X).release());
-    localized_solution_sens.reset(build_localized_vector(nonlin_sys,
-                                                         dXdp).release());
+    if (dXdp)
+        localized_solution_sens.reset(build_localized_vector(nonlin_sys,
+                                                             *dXdp).release());
 
     
     // if a solution function is attached, initialize it
@@ -436,6 +457,16 @@ calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
         
         const libMesh::Elem* elem = *el;
         
+        // no sensitivity computation assembly is neeed in these cases
+        if (_param_dependence &&
+            // if object is specified and elem does not depend on it
+            !_param_dependence->if_elem_depends_on_parameter(*elem, p) &&
+            // and if no sol_sens is given
+            (!dXdp ||
+             // or if it can be ignored for elem
+             (dXdp && _param_dependence->override_flag)))
+            continue;
+            
         dof_map.dof_indices (elem, dof_indices);
         
         // get the solution
@@ -445,13 +476,18 @@ calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
         
         for (unsigned int i=0; i<dof_indices.size(); i++) {
             sol(i)  = (*localized_solution)(dof_indices[i]);
-            dsol(i) = (*localized_solution_sens)(dof_indices[i]);
+            if (dXdp)
+                dsol(i) = (*localized_solution_sens)(dof_indices[i]);
         }
         
         //        if (_sol_function)
         //            physics_elem->attach_active_solution_function(*_sol_function);
         
-        output.init(*elem);
+        MAST::GeomElem geom_elem;
+        output.set_elem_data(elem->dim(), *elem, geom_elem);
+        geom_elem.init(*elem, *_system);
+        
+        output.init(geom_elem);
         output.set_elem_solution(sol);
         output.set_elem_solution_sensitivity(dsol);
         output.evaluate_sensitivity(p);
@@ -498,9 +534,7 @@ calculate_output_adjoint_sensitivity(const libMesh::NumericVector<Real>& X,
 
         // calculate the partial sensitivity of the output, which is done
         // with zero solution vector
-        std::unique_ptr<libMesh::NumericVector<Real>>
-        zero_X(X.zero_clone().release());
-        this->calculate_output_direct_sensitivity(X, *zero_X, p, output);
+        this->calculate_output_direct_sensitivity(X, nullptr, p, output);
 
         dq_dp += output.output_sensitivity_total(p);
     }

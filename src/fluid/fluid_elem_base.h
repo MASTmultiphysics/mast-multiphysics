@@ -139,6 +139,20 @@ namespace MAST {
                                     const MAST::PrimitiveSolution& psol,
                                     RealMatrixX& stress_tensor,
                                     RealVectorX& temp_gradient);
+
+        
+        /*!
+         *    calculates and returns the stress tensor in \p stress_tensor.
+         */
+        void
+        calculate_diffusion_tensors_sensitivity(const RealVectorX& elem_sol,
+                                                const RealVectorX& elem_sol_sens,
+                                                const std::vector<MAST::FEMOperatorMatrix>& dB_mat,
+                                                const RealMatrixX& dprim_dcons,
+                                                const MAST::PrimitiveSolution& psol,
+                                                const MAST::SmallPerturbationPrimitiveSolution<Real>& dsol,
+                                                RealMatrixX& stress_tensor_sens,
+                                                RealVectorX& temp_gradient_sens);
         
         void
         calculate_conservative_variable_jacobian(const MAST::PrimitiveSolution& sol,
@@ -198,6 +212,16 @@ namespace MAST {
                                                const unsigned int deriv_dim,
                                                const MAST::PrimitiveSolution& sol,
                                                RealMatrixX& mat);
+        
+        
+        void
+        calculate_diffusion_flux_jacobian_primitive_vars (const unsigned int flux_dim,
+                                                          const unsigned int deriv_dim,
+                                                          const RealVectorX& uvec,
+                                                          const bool zero_kth,
+                                                          const MAST::PrimitiveSolution& sol,
+                                                          RealMatrixX& mat);
+        
         
         void calculate_advection_flux_jacobian_sensitivity_for_conservative_variable
         (const unsigned int calculate_dim,

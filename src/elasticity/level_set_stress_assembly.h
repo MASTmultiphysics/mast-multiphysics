@@ -51,11 +51,12 @@ namespace MAST {
         
         
         /*!
-         *   attaches level set function to \p this
+         *   attaches level set function to \p this. If \p dof_handler is
+         *   provided then its solution will be used in computing stress.
          */
         virtual void
         init(MAST::FieldFunction<Real>& level_set,
-             MAST::LevelSetInterfaceDofHandler& dof_handler);
+             MAST::LevelSetInterfaceDofHandler* dof_handler = nullptr);
 
         
         /*!
@@ -75,16 +76,6 @@ namespace MAST {
         update_stress_strain_data(MAST::StressStrainOutputBase&       ops,
                                   const libMesh::NumericVector<Real>& X);
         
-
-        /*!
-         *   @returns a MAST::FEBase object for calculation of finite element
-         *   quantities. For all standard applications this is a wrapper
-         *   around the libMesh::FEBase class, which is specialized for
-         *   cut-cell applications where a sub-finite element is created
-         *   for element integration.
-         */
-        virtual std::unique_ptr<MAST::FEBase>
-        build_fe();
 
     protected:
 

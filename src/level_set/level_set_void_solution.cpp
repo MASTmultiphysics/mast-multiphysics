@@ -21,11 +21,13 @@
 #include "level_set/level_set_void_solution.h"
 #include "level_set/interface_dof_handler.h"
 #include "level_set/level_set_intersection.h"
+#include "level_set/level_set_intersected_elem.h"
 #include "base/physics_discipline_base.h"
 #include "base/system_initialization.h"
 #include "base/nonlinear_system.h"
 #include "base/nonlinear_implicit_assembly_elem_operations.h"
 #include "base/elem_base.h"
+#include "mesh/geom_elem.h"
 
 // libMesh includes
 #include "libmesh/petsc_nonlinear_solver.h"
@@ -152,21 +154,24 @@ MAST::LevelSetVoidSolution::init(MAST::AssemblyBase& assembly,
 void
 MAST::LevelSetVoidSolution::clear() {
     
-    // next, remove the monitor function from the snes object
-    libMesh::PetscNonlinearSolver<Real> &petsc_nonlinear_solver =
-    *(dynamic_cast<libMesh::PetscNonlinearSolver<Real>*>
-      (dynamic_cast<MAST::NonlinearSystem&>(_assembly->system()).nonlinear_solver.get()));
-    
-    // get the SNES object
-    SNES snes = petsc_nonlinear_solver.snes();
-    
-    PetscErrorCode ierr =
-    SNESMonitorCancel(snes);
-    libmesh_assert(!ierr);
-    
-    _assembly     = nullptr;
-    _intersection = nullptr;
-    _dof_handler  = nullptr;
+    if (_assembly)  {
+        
+        // next, remove the monitor function from the snes object
+        libMesh::PetscNonlinearSolver<Real> &petsc_nonlinear_solver =
+        *(dynamic_cast<libMesh::PetscNonlinearSolver<Real>*>
+          (dynamic_cast<MAST::NonlinearSystem&>(_assembly->system()).nonlinear_solver.get()));
+        
+        // get the SNES object
+        SNES snes = petsc_nonlinear_solver.snes();
+        
+        PetscErrorCode ierr =
+        SNESMonitorCancel(snes);
+        libmesh_assert(!ierr);
+        
+        _assembly     = nullptr;
+        _intersection = nullptr;
+        _dof_handler  = nullptr;
+    }
 }
 
 
@@ -239,10 +244,16 @@ update_void_solution(libMesh::NumericVector<Real>& X,
 
             // get the intersection and compute the residual and jacobian
             // with contribution from all elements.
-            _intersection->init(phi, *elem, sys.time);
+            _intersection->init(phi, *elem, sys.time,
+                                sys.get_mesh().max_elem_id(),
+                                sys.get_mesh().max_node_id());
 
             // the Jacobian is based on the homogenization method
-            elem_ops.init(*elem);
+            MAST::GeomElem geom_elem;
+            elem_ops.set_elem_data(elem->dim(), *elem, geom_elem);
+            geom_elem.init(*elem, _assembly->system_init());
+            
+            elem_ops.init(geom_elem);
             elem_ops.set_elem_solution(sol);
             elem_ops.elem_calculations(true, res, jac);
             elem_ops.clear_elem();
@@ -262,7 +273,11 @@ update_void_solution(libMesh::NumericVector<Real>& X,
                 
                 const libMesh::Elem* sub_elem = *hi_sub_elem_it;
                 
-                elem_ops.init(*sub_elem);
+                MAST::LevelSetIntersectedElem geom_elem;
+                ops.set_elem_data(elem->dim(), *elem, geom_elem);
+                geom_elem.init(*sub_elem, *_intersection);
+             
+                ops.init(geom_elem);
                 elem_ops.set_elem_solution(sol);
                 
                 // if the element has been marked for factorization,

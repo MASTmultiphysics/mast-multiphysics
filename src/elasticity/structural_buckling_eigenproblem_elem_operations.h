@@ -38,12 +38,20 @@ namespace MAST {
         virtual ~StructuralBucklingEigenproblemElemOperations();
         
         /*!
+         *   sets the structural element y-vector if 1D element is used.
+         */
+        virtual void
+        set_elem_data(unsigned int dim,
+                      const libMesh::Elem& ref_elem,
+                      MAST::GeomElem& elem) const;
+
+        /*!
          *   initializes the object for the geometric element \p elem. This
          *   expects the object to be in a cleared state, so the user should
          *   call \p clear_elem() between successive initializations.
          */
         virtual void
-        init(const libMesh::Elem& elem);
+        init(const MAST::GeomElem& elem);
         
         /*!
          *   performs the element calculations over \p elem, and returns

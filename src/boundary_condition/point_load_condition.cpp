@@ -37,14 +37,21 @@ MAST::PointLoadCondition::~PointLoadCondition() { }
 
 
 
-const std::set<libMesh::Node*>&
+void
+MAST::PointLoadCondition::add_node(const libMesh::Node& nd) {
+    
+    _nodes.insert(&nd);
+}
+
+
+const std::set<const libMesh::Node*>&
 MAST::PointLoadCondition::get_nodes() const {
     
     return _nodes;
 }
 
 
-std::set<libMesh::Node*>&
+std::set<const libMesh::Node*>&
 MAST::PointLoadCondition::get_nodes() {
     
     return _nodes;

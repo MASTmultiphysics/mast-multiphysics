@@ -19,7 +19,7 @@
 
 // MAST includes
 #include "mesh/fe_base.h"
-#include "mesh/local_elem_base.h"
+#include "mesh/geom_elem.h"
 #include "base/system_initialization.h"
 #include "base/nonlinear_system.h"
 
@@ -30,7 +30,6 @@ _extra_quadrature_order        (0),
 _init_second_order_derivatives (false),
 _initialized                   (false),
 _elem                          (nullptr),
-_local_elem                    (nullptr),
 _fe                            (nullptr),
 _qrule                         (nullptr) {
     
@@ -62,11 +61,14 @@ MAST::FEBase::set_evaluate_second_order_derivatives(bool f) {
 
 
 void
-MAST::FEBase::init(const libMesh::Elem& elem,
+MAST::FEBase::init(const MAST::GeomElem& elem,
+                   bool init_grads,
                    const std::vector<libMesh::Point>* pts) {
     
     libmesh_assert(!_initialized);
     
+    
+    _elem   = &elem;
     const unsigned int
     nv      = _sys.n_vars();
     libMesh::FEType
@@ -76,67 +78,72 @@ MAST::FEBase::init(const libMesh::Elem& elem,
     for (unsigned int i=1; i != nv; ++i)
         libmesh_assert(fe_type == _sys.fetype(i));
     
+    const libMesh::Elem*
+    q_elem = nullptr;
+    
+    if (elem.use_local_elem())
+        q_elem = &elem.get_quadrature_local_elem();
+    else
+        q_elem = &elem.get_quadrature_elem();
+    
     // Create an adequate quadrature rule
-    _fe = libMesh::FEBase::build(elem.dim(), fe_type).release();
+    _fe = libMesh::FEBase::build(q_elem->dim(), fe_type).release();
     _fe->get_phi();
     _fe->get_xyz();
     _fe->get_JxW();
-    _fe->get_dphi();
-    _fe->get_dphidxi();
-    _fe->get_dphideta();
-    _fe->get_dphidzeta();
+    if (init_grads) {
+        _fe->get_dphi();
+        _fe->get_dphidxi();
+        _fe->get_dphideta();
+        _fe->get_dphidzeta();
+    }
     if (_init_second_order_derivatives) _fe->get_d2phi();
     
     if (pts == nullptr) {
         _qrule = fe_type.default_quadrature_rule
-        (elem.dim(),
+        (q_elem->dim(),
          _sys.system().extra_quadrature_order+_extra_quadrature_order).release();  // system extra quadrature
         _fe->attach_quadrature_rule(_qrule);
-        _fe->reinit(&elem);
+        _fe->reinit(q_elem);
     }
     else {
-        _fe->reinit(&elem, pts);
+        _fe->reinit(q_elem, pts);
         _qpoints = *pts;
     }
 
+    // now initialize the global xyz locations if the element uses a locally
+    // defined element.
+    if (elem.use_local_elem()) {
+        
+        const std::vector<libMesh::Point>
+        local_xyz    = _fe->get_xyz();
+        
+        unsigned int
+        n = (unsigned int) local_xyz.size();
+        _global_xyz.resize(n);
+        
+        for (unsigned int i=0; i<n; i++)
+            elem.transform_point_to_global_coordinate(local_xyz[i], _global_xyz[i]);
+    }
+    
     _initialized = true;
 }
 
 
-void
-MAST::FEBase::init(const MAST::LocalElemBase& elem,
-                   const std::vector<libMesh::Point>* pts) {
-    
-    libmesh_assert(!_initialized);
-    
-    _local_elem = &elem;
-    
-    // now that this element has been initialized, use it to initialize
-    // the FE object.
-    this->init(_local_elem->local_elem(), pts);
-    
-    // now initialize the global xyz locations
-    const std::vector<libMesh::Point>
-    local_xyz    = _fe->get_xyz();
-    
-    unsigned int
-    n = (unsigned int) local_xyz.size();
-    _global_xyz.resize(n);
-    
-    for (unsigned int i=0; i<n; i++)
-        _local_elem->global_coordinates_location(local_xyz[i], _global_xyz[i]);
-}
 
 
 
 void
-MAST::FEBase::init_for_side(const libMesh::Elem& elem,
+MAST::FEBase::init_for_side(const MAST::GeomElem& elem,
                             unsigned int s,
                             bool if_calculate_dphi) {
 
     libmesh_assert(!_initialized);
 
-    unsigned int nv = _sys.n_vars();
+    _elem = &elem;
+    
+    const unsigned int
+    nv    = _sys.n_vars();
     
     libmesh_assert (nv);
     libMesh::FEType fe_type = _sys.fetype(0); // all variables are assumed to be of same type
@@ -144,10 +151,18 @@ MAST::FEBase::init_for_side(const libMesh::Elem& elem,
     for (unsigned int i=1; i != nv; ++i)
         libmesh_assert(fe_type == _sys.fetype(i));
     
+    const libMesh::Elem*
+    q_elem = nullptr;
+    
+    if (elem.use_local_elem())
+        q_elem = &elem.get_quadrature_local_elem();
+    else
+        q_elem = &elem.get_quadrature_elem();
+
     // Create an adequate quadrature rule
-    _fe     = libMesh::FEBase::build(elem.dim(), fe_type).release();
+    _fe     = libMesh::FEBase::build(q_elem->dim(), fe_type).release();
     _qrule  = fe_type.default_quadrature_rule
-    (elem.dim()-1,
+    (q_elem->dim()-1,
      _sys.system().extra_quadrature_order+_extra_quadrature_order).release();  // system extra quadrature
     _fe->attach_quadrature_rule(_qrule);
     _fe->get_phi();
@@ -160,41 +175,36 @@ MAST::FEBase::init_for_side(const libMesh::Elem& elem,
         if (_init_second_order_derivatives) _fe->get_d2phi();
     }
     
-    _fe->reinit(&elem, s);
+    _fe->reinit(q_elem, s);
 
+
+    // now initialize the global xyz locations and normals
+    _local_normals = _fe->get_normals();
+    if (elem.use_local_elem()) {
+
+        const std::vector<libMesh::Point>
+        &local_xyz     = _fe->get_xyz();
+        
+        unsigned int
+        n = (unsigned int) local_xyz.size();
+        _global_xyz.resize(n);
+        _global_normals.resize(n);
+        
+        for (unsigned int i=0; i<n; i++) {
+            
+            elem.transform_point_to_global_coordinate(local_xyz[i], _global_xyz[i]);
+            elem.transform_vector_to_global_coordinate(_local_normals[i], _global_normals[i]);
+        }
+    }
+    else {
+        _global_normals = _local_normals;
+        _global_xyz     = _fe->get_xyz();
+    }
+
+    
     _initialized = true;
 }
 
-
-void
-MAST::FEBase::init_for_side(const MAST::LocalElemBase& elem,
-                            unsigned int s,
-                            bool if_calculate_dphi) {
-    
-    libmesh_assert(!_initialized);
-    
-    _local_elem = &elem;
-    
-    // now that this element has been initialized, use it to initialize
-    // the FE object.
-    this->init_for_side(_local_elem->local_elem(), s, if_calculate_dphi);
-    
-    // now initialize the global xyz locations and normals
-    const std::vector<libMesh::Point>
-    &local_xyz     = _fe->get_xyz(),
-    &local_normals = _fe->get_normals();
-    
-    unsigned int
-    n = (unsigned int) local_xyz.size();
-    _global_xyz.resize(n);
-    _global_normals.resize(n);
-    
-    for (unsigned int i=0; i<n; i++) {
-        
-        _local_elem->global_coordinates_location(local_xyz[i], _global_xyz[i]);
-        _local_elem->global_coordinates_normal(local_normals[i], _global_normals[i]);
-    }
-}
 
 
 
@@ -218,7 +228,7 @@ const std::vector<libMesh::Point>&
 MAST::FEBase::get_xyz() const {
     
     libmesh_assert(_initialized);
-    if (_local_elem)
+    if (_elem->use_local_elem())
         return _global_xyz;
     else
         return _fe->get_xyz();
@@ -378,13 +388,18 @@ MAST::FEBase::get_dphidzeta() const {
 
 
 const std::vector<libMesh::Point>&
-MAST::FEBase::get_normals() const {
+MAST::FEBase::get_normals_for_reference_coordinate() const {
     
     libmesh_assert(_initialized);
-    if (_local_elem)
-        return _global_normals;
-    else
-        return _fe->get_normals();
+    return _global_normals;
+}
+
+
+const std::vector<libMesh::Point>&
+MAST::FEBase::get_normals_for_local_coordinate() const {
+
+    libmesh_assert(_initialized);
+    return _local_normals;
 }
 
 

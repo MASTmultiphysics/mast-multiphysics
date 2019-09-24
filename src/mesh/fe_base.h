@@ -34,7 +34,7 @@ namespace MAST {
 
     // forward declerations
     class SystemInitialization;
-    class LocalElemBase;
+    class GeomElem;
     
     class FEBase {
     
@@ -66,17 +66,10 @@ namespace MAST {
          *   using the method set_extra_quadrature_order(). This can be a
          *   positive or negative value.
          */
-        virtual void init(const libMesh::Elem& elem,
+        virtual void init(const MAST::GeomElem& elem,
+                          bool init_grads,
                           const std::vector<libMesh::Point>* pts = nullptr);
-
-        /*!
-         *   provides an interface for elements where a local element is used
-         *   as a surrogate for the geometric element, as is the case for
-         *   1D and 2D elements that can live in 3D space. This is applicable
-         *   to problems arising from heat conduction and structural problems.
-         */
-        virtual void init(const MAST::LocalElemBase& elem,
-                          const std::vector<libMesh::Point>* pts = nullptr);
+        
         
         /*!
          *   Initializes the quadrature and finite element for element side
@@ -85,20 +78,10 @@ namespace MAST {
          *   \p fe object to also initialize the calculation of shape function
          *   derivatives
          */
-        virtual void init_for_side(const libMesh::Elem& elem,
+        virtual void init_for_side(const MAST::GeomElem& elem,
                                    unsigned int s,
                                    bool if_calculate_dphi);
-
-        /*!
-         *   provides an interface for elements where a local element is used
-         *   as a surrogate for the geometric element, as is the case for
-         *   1D and 2D elements that can live in 3D space. This is applicable
-         *   problems arising from heat conduction and structural problems.
-         */
-        virtual void init_for_side(const MAST::LocalElemBase& elem,
-                                   unsigned int s,
-                                   bool if_calculate_dphi);
-
+        
         
         libMesh::FEType
         get_fe_type() const;
@@ -106,6 +89,10 @@ namespace MAST {
         virtual const std::vector<Real>&
         get_JxW() const;
         
+        /*!
+         *   physical location of the quadrature point in the global coordinate
+         *   system for the reference element
+         */
         virtual const std::vector<libMesh::Point>&
         get_xyz() const;
 
@@ -166,9 +153,21 @@ namespace MAST {
         virtual const std::vector<std::vector<Real> >&
         get_dphidzeta() const;
 
+        /*!
+         *   normals defined in the global coordinate system for the
+         *   reference element
+         */
         virtual const std::vector<libMesh::Point>&
-        get_normals() const;
+        get_normals_for_reference_coordinate() const;
+
+        /*!
+         *   normals defined in the coordinate system for the
+         *   local reference element.
+         */
+        virtual const std::vector<libMesh::Point>&
+        get_normals_for_local_coordinate() const;
         
+
         virtual const std::vector<libMesh::Point>&
         get_qpoints() const;
         
@@ -181,12 +180,12 @@ namespace MAST {
         unsigned int                      _extra_quadrature_order;
         bool                              _init_second_order_derivatives;
         bool                              _initialized;
-        const libMesh::Elem*              _elem;
-        const MAST::LocalElemBase         *_local_elem;
+        const MAST::GeomElem*             _elem;
         libMesh::FEBase*                  _fe;
         libMesh::QBase*                   _qrule;
         std::vector<libMesh::Point>       _qpoints;
         std::vector<libMesh::Point>       _global_xyz;
+        std::vector<libMesh::Point>       _local_normals;
         std::vector<libMesh::Point>       _global_normals;
     };
 }

@@ -85,7 +85,16 @@ namespace MAST {
             
             return _operation;
         }
+
         
+        /*!
+         *   sets the current operation of the system
+         */
+        void set_operation(MAST::NonlinearSystem::Operation op) {
+            
+            _operation = op;
+        }
+
         /*!
          *    flag to also initialize the B matrix. Must be called before
          *    EquationsSystems::init(). This is false by default.
@@ -109,6 +118,14 @@ namespace MAST {
         virtual void reinit () libmesh_override;
 
 
+        /*!
+         *   calls NonlinearImplicitSystem::set_solver_parameters() before
+         *   accessing the values.
+         */
+        virtual std::pair<unsigned int, Real>
+        get_linear_solve_parameters();
+
+        
         /*!
          *  solves the nonlinear problem with the specified assembly operation
          *  object

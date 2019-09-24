@@ -45,7 +45,7 @@ namespace MAST {
     public:
         StructuralElement2D(MAST::SystemInitialization& sys,
                             MAST::AssemblyBase& assembly,
-                            const libMesh::Elem& elem,
+                            const MAST::GeomElem& elem,
                             const MAST::ElementPropertyCardBase& p);
         
         virtual ~StructuralElement2D();
@@ -342,8 +342,7 @@ namespace MAST {
          *   integration
          */
         virtual void
-        _internal_residual_operation(bool                       if_bending,
-                                     bool                       if_vk,
+        _internal_residual_operation(bool                       if_vk,
                                      const unsigned int         n2,
                                      const unsigned int         qp,
                                      const MAST::FEBase&        fe,
@@ -353,6 +352,7 @@ namespace MAST {
                                      RealMatrixX&               local_jac,
                                      RealVectorX&               local_disp,
                                      RealVectorX&               strain_mem,
+                                     MAST::BendingOperator2D*   bend,
                                      FEMOperatorMatrix&         Bmat_lin,
                                      FEMOperatorMatrix&         Bmat_nl_x,
                                      FEMOperatorMatrix&         Bmat_nl_y,
@@ -392,10 +392,6 @@ namespace MAST {
         void _convert_prestress_B_mat_to_vector(const RealMatrixX& mat,
                                                 RealVectorX& vec) const;
 
-        /*!
-         *    bending operator used for this elmeent
-         */
-        MAST::BendingOperator2D *_bending_operator;
     };
 }
 

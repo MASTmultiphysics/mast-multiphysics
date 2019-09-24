@@ -27,6 +27,7 @@
 #include "base/nonlinear_system.h"
 #include "base/assembly_elem_operation.h"
 #include "numerics/utility.h"
+#include "mesh/geom_elem.h"
 
 // libMesh includes
 #include "libmesh/numeric_vector.h"
@@ -182,7 +183,11 @@ assemble_reduced_order_quantity
         //        if (_sol_function)
         //            physics_elem->attach_active_solution_function(*_sol_function);
         
-        _elem_ops->init(*elem);
+        MAST::GeomElem geom_elem;
+        _elem_ops->set_elem_data(elem->dim(), *elem, geom_elem);
+        geom_elem.init(*elem, *_system);
+        
+        _elem_ops->init(geom_elem);
         _elem_ops->set_elem_solution(sol);
         _elem_ops->set_elem_velocity(vec);     // set to zero value
         _elem_ops->set_elem_acceleration(vec); // set to zero value
@@ -314,7 +319,10 @@ assemble_reduced_order_quantity_sensitivity
         mat.setZero(ndofs, ndofs);
         basis_mat.setZero(ndofs, n_basis);
         
-        _elem_ops->init(*elem);
+        MAST::GeomElem geom_elem;
+        _elem_ops->set_elem_data(elem->dim(), *elem, geom_elem);
+        geom_elem.init(*elem, *_system);
+        _elem_ops->init(geom_elem);
         
         for (unsigned int i=0; i<dof_indices.size(); i++) {
             

@@ -44,7 +44,10 @@ namespace MAST {
                       const unsigned int quarter_divs,
                       const Real elem_size_ratio,
                       libMesh::UnstructuredMesh& mesh,
-                      libMesh::ElemType etype);
+                      libMesh::ElemType etype,
+                      bool  add_downstream_block,
+                      const Real downstream_block_length,
+                      const unsigned int downstream_block_divs);
             
         protected:
             

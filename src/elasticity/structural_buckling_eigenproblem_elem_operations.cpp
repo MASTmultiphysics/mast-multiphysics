@@ -25,6 +25,7 @@
 #include "base/physics_discipline_base.h"
 #include "base/system_initialization.h"
 #include "base/assembly_base.h"
+#include "mesh/geom_elem.h"
 
 MAST::StructuralBucklingEigenproblemElemOperations::
 StructuralBucklingEigenproblemElemOperations():
@@ -41,7 +42,25 @@ MAST::StructuralBucklingEigenproblemElemOperations::
 
 
 void
-MAST::StructuralBucklingEigenproblemElemOperations::init(const libMesh::Elem& elem) {
+MAST::StructuralBucklingEigenproblemElemOperations::
+set_elem_data(unsigned int dim,
+              const libMesh::Elem& ref_elem,
+              MAST::GeomElem& elem) const {
+    
+    libmesh_assert(!_physics_elem);
+    
+    if (dim == 1) {
+        
+        const MAST::ElementPropertyCard1D& p =
+        dynamic_cast<const MAST::ElementPropertyCard1D&>(_discipline->get_property_card(ref_elem));
+        
+        elem.set_local_y_vector(p.y_vector());
+    }
+}
+
+
+void
+MAST::StructuralBucklingEigenproblemElemOperations::init(const MAST::GeomElem& elem) {
     
     libmesh_assert(!_physics_elem);
     libmesh_assert(_system);

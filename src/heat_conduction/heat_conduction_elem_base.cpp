@@ -28,50 +28,24 @@
 #include "base/nonlinear_system.h"
 #include "base/assembly_base.h"
 #include "mesh/fe_base.h"
-#include "mesh/local_1d_elem.h"
-#include "mesh/local_2d_elem.h"
-#include "mesh/local_3d_elem.h"
+#include "mesh/geom_elem.h"
 #include "property_cards/element_property_card_base.h"
-#include "property_cards/element_property_card_1D.h"
 
 
 MAST::HeatConductionElementBase::
 HeatConductionElementBase(MAST::SystemInitialization&          sys,
                           MAST::AssemblyBase&                  assembly,
-                          const libMesh::Elem&                 elem,
+                          const MAST::GeomElem&                 elem,
                           const MAST::ElementPropertyCardBase& p):
-MAST::ElementBase(sys, assembly, elem),
-_property       (p),
-_local_elem     (nullptr) {
+MAST::ElementBase (sys, assembly, elem),
+_property         (p) {
 
-    // now initialize the finite element data structures
-    switch (elem.dim()) {
-        case 1: {
-            const MAST::ElementPropertyCard1D& p_card =
-            dynamic_cast<const MAST::ElementPropertyCard1D&>(p);
-            
-            _local_elem    = new MAST::Local1DElem(elem, p_card.y_vector());
-        }
-            break;
-        case 2:
-            _local_elem    = new MAST::Local3DElem(elem);
-            break;
-        case 3:
-            _local_elem    = new MAST::Local3DElem(elem);
-            break;
-        default:
-            libmesh_error(); // should not get here
-    }
-    
-    _fe = assembly.build_fe().release();
-    _fe->init(*_local_elem);
 }
 
 
 
 MAST::HeatConductionElementBase::~HeatConductionElementBase() {
     
-    delete _local_elem;
 }
 
 
@@ -82,10 +56,12 @@ MAST::HeatConductionElementBase::internal_residual (bool request_jacobian,
                                                     RealVectorX& f,
                                                     RealMatrixX& jac) {
     
-    const std::vector<Real>& JxW           = _fe->get_JxW();
-    const std::vector<libMesh::Point>& xyz = _fe->get_xyz();
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_fe(true, false));
+
+    const std::vector<Real>& JxW           = fe->get_JxW();
+    const std::vector<libMesh::Point>& xyz = fe->get_xyz();
     const unsigned int
-    n_phi  = _fe->n_shape_functions(),
+    n_phi  = fe->n_shape_functions(),
     dim    = _elem.dim();
     
     RealMatrixX
@@ -107,7 +83,7 @@ MAST::HeatConductionElementBase::internal_residual (bool request_jacobian,
     for (unsigned int qp=0; qp<JxW.size(); qp++) {
 
         // initialize the Bmat operator for this term
-        _initialize_mass_fem_operator(qp, *_fe, Bmat);
+        _initialize_mass_fem_operator(qp, *fe, Bmat);
         Bmat.right_multiply(vec1, _sol);
 
         if (_active_sol_function)
@@ -116,7 +92,7 @@ MAST::HeatConductionElementBase::internal_residual (bool request_jacobian,
         
         (*conductance)(xyz[qp], _time, material_mat);
 
-        _initialize_fem_gradient_operator(qp, dim, *_fe, dBmat);
+        _initialize_fem_gradient_operator(qp, dim, *fe, dBmat);
         
         // calculate the flux for each dimension and add its weighted
         // component to the residual
@@ -184,11 +160,13 @@ MAST::HeatConductionElementBase::velocity_residual (bool request_jacobian,
                                                     RealMatrixX& jac) {
     MAST::FEMOperatorMatrix Bmat;
     
-    const std::vector<Real>& JxW                 = _fe->get_JxW();
-    const std::vector<libMesh::Point>& xyz       = _fe->get_xyz();
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_fe(false, false));
+
+    const std::vector<Real>& JxW                 = fe->get_JxW();
+    const std::vector<libMesh::Point>& xyz       = fe->get_xyz();
     
     const unsigned int
-    n_phi      = _fe->n_shape_functions(),
+    n_phi      = fe->n_shape_functions(),
     dim        = _elem.dim();
     
     RealMatrixX
@@ -203,7 +181,7 @@ MAST::HeatConductionElementBase::velocity_residual (bool request_jacobian,
     
     for (unsigned int qp=0; qp<JxW.size(); qp++) {
         
-        _initialize_mass_fem_operator(qp, *_fe, Bmat);
+        _initialize_mass_fem_operator(qp, *fe, Bmat);
         Bmat.right_multiply(vec1, _sol);               //  B * T
         
         if (_active_sol_function)
@@ -254,68 +232,52 @@ side_external_residual (bool request_jacobian,
                         RealMatrixX& jac,
                         std::multimap<libMesh::boundary_id_type, MAST::BoundaryConditionBase*>& bc) {
     
-    typedef std::multimap<libMesh::boundary_id_type, MAST::BoundaryConditionBase*> maptype;
+    std::map<unsigned int, std::vector<MAST::BoundaryConditionBase*>> loads;
+    _elem.external_side_loads_for_quadrature_elem(bc, loads);
     
-    // iterate over the boundary ids given in the provided force map
-    std::pair<maptype::const_iterator, maptype::const_iterator> it;
+    std::map<unsigned int, std::vector<MAST::BoundaryConditionBase*>>::const_iterator
+    it   = loads.begin(),
+    end  = loads.end();
     
-    const libMesh::BoundaryInfo& binfo = *_system.system().get_mesh().boundary_info;
-    
-    // for each boundary id, check if any of the sides on the element
-    // has the associated boundary
-    
-    for (unsigned short int n=0; n<_elem.n_sides(); n++) {
+    for ( ; it != end; it++) {
         
-        // if no boundary ids have been specified for the side, then
-        // move to the next side.
-        if (!binfo.n_boundary_ids(&_elem, n))
-            continue;
+        std::vector<MAST::BoundaryConditionBase*>::const_iterator
+        bc_it  = it->second.begin(),
+        bc_end = it->second.end();
         
-        // check to see if any of the specified boundary ids has a boundary
-        // condition associated with them
-        std::vector<libMesh::boundary_id_type> bc_ids;
-        binfo.boundary_ids(&_elem, n, bc_ids);
-        std::vector<libMesh::boundary_id_type>::const_iterator bc_it = bc_ids.begin();
-        
-        for ( ; bc_it != bc_ids.end(); bc_it++) {
+        for ( ; bc_it != bc_end; bc_it++) {
             
-            // find the loads on this boundary and evaluate the f and jac
-            it = bc.equal_range(*bc_it);
-            
-            for ( ; it.first != it.second; it.first++) {
-                
-                // apply all the types of loading
-                switch (it.first->second->type()) {
-                    case MAST::HEAT_FLUX:
-                        surface_flux_residual(request_jacobian,
-                                              f, jac,
-                                              n,
-                                              *it.first->second);
-                        break;
-                        
-                    case MAST::CONVECTION_HEAT_FLUX:
-                        surface_convection_residual(request_jacobian,
-                                                    f, jac,
-                                                    n,
-                                                    *it.first->second);
-                        break;
-                        
-                    case MAST::SURFACE_RADIATION_HEAT_FLUX:
-                        surface_radiation_residual(request_jacobian,
-                                                   f, jac,
-                                                   n,
-                                                   *it.first->second);
-                        break;
-                        
-                    case MAST::DIRICHLET:
-                        // nothing to be done here
-                        break;
-                        
-                    default:
-                        // not implemented yet
-                        libmesh_error();
-                        break;
-                }
+            // apply all the types of loading
+            switch ((*bc_it)->type()) {
+                case MAST::HEAT_FLUX:
+                    surface_flux_residual(request_jacobian,
+                                          f, jac,
+                                          it->first,
+                                          **bc_it);
+                    break;
+                    
+                case MAST::CONVECTION_HEAT_FLUX:
+                    surface_convection_residual(request_jacobian,
+                                                f, jac,
+                                                it->first,
+                                                **bc_it);
+                    break;
+                    
+                case MAST::SURFACE_RADIATION_HEAT_FLUX:
+                    surface_radiation_residual(request_jacobian,
+                                               f, jac,
+                                               it->first,
+                                               **bc_it);
+                    break;
+                    
+                case MAST::DIRICHLET:
+                    // nothing to be done here
+                    break;
+                    
+                default:
+                    // not implemented yet
+                    libmesh_error();
+                    break;
             }
         }
     }
@@ -340,7 +302,7 @@ volume_external_residual (bool request_jacobian,
     // for each boundary id, check if any of the sides on the element
     // has the associated boundary
     
-    libMesh::subdomain_id_type sid = _elem.subdomain_id();
+    libMesh::subdomain_id_type sid = _elem.get_reference_elem().subdomain_id();
     // find the loads on this boundary and evaluate the f and jac
     it =bc.equal_range(sid);
     
@@ -388,69 +350,52 @@ side_external_residual_sensitivity (const MAST::FunctionBase& p,
                                     RealVectorX& f,
                                     std::multimap<libMesh::boundary_id_type, MAST::BoundaryConditionBase*>& bc) {
     
+    std::map<unsigned int, std::vector<MAST::BoundaryConditionBase*>> loads;
+    _elem.external_side_loads_for_quadrature_elem(bc, loads);
     
-    typedef std::multimap<libMesh::boundary_id_type, MAST::BoundaryConditionBase*> maptype;
+    std::map<unsigned int, std::vector<MAST::BoundaryConditionBase*>>::const_iterator
+    it   = loads.begin(),
+    end  = loads.end();
     
-    // iterate over the boundary ids given in the provided force map
-    std::pair<maptype::const_iterator, maptype::const_iterator> it;
-    
-    const libMesh::BoundaryInfo& binfo = *_system.system().get_mesh().boundary_info;
-    
-    // for each boundary id, check if any of the sides on the element
-    // has the associated boundary
-    
-    for (unsigned short int n=0; n<_elem.n_sides(); n++) {
+    for ( ; it != end; it++) {
         
-        // if no boundary ids have been specified for the side, then
-        // move to the next side.
-        if (!binfo.n_boundary_ids(&_elem, n))
-            continue;
+        std::vector<MAST::BoundaryConditionBase*>::const_iterator
+        bc_it  = it->second.begin(),
+        bc_end = it->second.end();
         
-        // check to see if any of the specified boundary ids has a boundary
-        // condition associated with them
-        std::vector<libMesh::boundary_id_type> bc_ids;
-        binfo.boundary_ids(&_elem, n, bc_ids);
-        std::vector<libMesh::boundary_id_type>::const_iterator bc_it = bc_ids.begin();
-        
-        for ( ; bc_it != bc_ids.end(); bc_it++) {
+        for ( ; bc_it != bc_end; bc_it++) {
             
-            // find the loads on this boundary and evaluate the f and jac
-            it = bc.equal_range(*bc_it);
-            
-            for ( ; it.first != it.second; it.first++) {
-                
-                // apply all the types of loading
-                switch (it.first->second->type()) {
-                    case MAST::HEAT_FLUX:
-                        surface_flux_residual_sensitivity(p,
-                                                          f,
-                                                          n,
-                                                          *it.first->second);
-                        break;
-                        
-                    case MAST::CONVECTION_HEAT_FLUX:
-                        surface_convection_residual_sensitivity(p,
-                                                                f,
-                                                                n,
-                                                                *it.first->second);
-                        break;
-                        
-                    case MAST::SURFACE_RADIATION_HEAT_FLUX:
-                        surface_radiation_residual_sensitivity(p,
-                                                               f,
-                                                               n,
-                                                               *it.first->second);
-                        break;
-                        
-                    case MAST::DIRICHLET:
-                        // nothing to be done here
-                        break;
-                        
-                    default:
-                        // not implemented yet
-                        libmesh_error();
-                        break;
-                }
+            // apply all the types of loading
+            switch ((*bc_it)->type()) {
+                case MAST::HEAT_FLUX:
+                    surface_flux_residual_sensitivity(p,
+                                                      f,
+                                                      it->first,
+                                                      **bc_it);
+                    break;
+                    
+                case MAST::CONVECTION_HEAT_FLUX:
+                    surface_convection_residual_sensitivity(p,
+                                                            f,
+                                                            it->first,
+                                                            **bc_it);
+                    break;
+                    
+                case MAST::SURFACE_RADIATION_HEAT_FLUX:
+                    surface_radiation_residual_sensitivity(p,
+                                                           f,
+                                                           it->first,
+                                                           **bc_it);
+                    break;
+                    
+                case MAST::DIRICHLET:
+                    // nothing to be done here
+                    break;
+                    
+                default:
+                    // not implemented yet
+                    libmesh_error();
+                    break;
             }
         }
     }
@@ -473,7 +418,7 @@ volume_external_residual_sensitivity (const MAST::FunctionBase& p,
     // for each boundary id, check if any of the sides on the element
     // has the associated boundary
     
-    libMesh::subdomain_id_type sid = _elem.subdomain_id();
+    libMesh::subdomain_id_type sid = _elem.get_reference_elem().subdomain_id();
     // find the loads on this boundary and evaluate the f and jac
     it =bc.equal_range(sid);
     
@@ -532,7 +477,7 @@ volume_external_residual_boundary_velocity(const MAST::FunctionBase& p,
     // for each boundary id, check if any of the sides on the element
     // has the associated boundary
     
-    libMesh::subdomain_id_type sid = _elem.subdomain_id();
+    libMesh::subdomain_id_type sid = _elem.get_reference_elem().subdomain_id();
     // find the loads on this boundary and evaluate the f and jac
     it =bc.equal_range(sid);
     
@@ -589,10 +534,12 @@ MAST::HeatConductionElementBase::
 internal_residual_sensitivity (const MAST::FunctionBase& p,
                                RealVectorX& f) {
     
-    const std::vector<Real>& JxW           = _fe->get_JxW();
-    const std::vector<libMesh::Point>& xyz = _fe->get_xyz();
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_fe(true, false));
+
+    const std::vector<Real>& JxW           = fe->get_JxW();
+    const std::vector<libMesh::Point>& xyz = fe->get_xyz();
     const unsigned int
-    n_phi  = _fe->n_shape_functions(),
+    n_phi  = fe->n_shape_functions(),
     dim    = _elem.dim();
     
     RealMatrixX
@@ -614,7 +561,7 @@ internal_residual_sensitivity (const MAST::FunctionBase& p,
     for (unsigned int qp=0; qp<JxW.size(); qp++) {
         
         // initialize the Bmat operator for this term
-        _initialize_mass_fem_operator(qp, *_fe, Bmat);
+        _initialize_mass_fem_operator(qp, *fe, Bmat);
         Bmat.right_multiply(vec1, _sol);
         
         if (_active_sol_function)
@@ -623,7 +570,7 @@ internal_residual_sensitivity (const MAST::FunctionBase& p,
         
         conductance->derivative(p, xyz[qp], _time, material_mat);
         
-        _initialize_fem_gradient_operator(qp, dim, *_fe, dBmat);
+        _initialize_fem_gradient_operator(qp, dim, *fe, dBmat);
         
         // calculate the flux for each dimension and add its weighted
         // component to the residual
@@ -658,12 +605,11 @@ internal_residual_boundary_velocity (const MAST::FunctionBase& p,
                                      const MAST::FieldFunction<RealVectorX>& vel_f) {
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe());
-    fe->init_for_side(*_local_elem, s, true);
-    
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_side_fe(s, true));
+
     std::vector<Real> JxW_Vn                        = fe->get_JxW();
     const std::vector<libMesh::Point>& xyz          = fe->get_xyz();
-    const std::vector<libMesh::Point>& face_normals = fe->get_normals();
+    const std::vector<libMesh::Point>& face_normals = fe->get_normals_for_local_coordinate();
 
     const unsigned int
     n_phi  = fe->n_shape_functions(),
@@ -745,11 +691,13 @@ velocity_residual_sensitivity (const MAST::FunctionBase& p,
     
     MAST::FEMOperatorMatrix Bmat;
     
-    const std::vector<Real>& JxW                 = _fe->get_JxW();
-    const std::vector<libMesh::Point>& xyz       = _fe->get_xyz();
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_fe(false, false));
+
+    const std::vector<Real>& JxW                 = fe->get_JxW();
+    const std::vector<libMesh::Point>& xyz       = fe->get_xyz();
     
     const unsigned int
-    n_phi      = _fe->n_shape_functions(),
+    n_phi      = fe->n_shape_functions(),
     dim        = _elem.dim();
     
     RealMatrixX
@@ -764,7 +712,7 @@ velocity_residual_sensitivity (const MAST::FunctionBase& p,
     
     for (unsigned int qp=0; qp<JxW.size(); qp++) {
         
-        _initialize_mass_fem_operator(qp, *_fe, Bmat);
+        _initialize_mass_fem_operator(qp, *fe, Bmat);
         Bmat.right_multiply(vec1, _sol);               //  B * T
         
         if (_active_sol_function)
@@ -796,12 +744,11 @@ velocity_residual_boundary_velocity (const MAST::FunctionBase& p,
                                      const MAST::FieldFunction<RealVectorX>& vel_f) {
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe());
-    fe->init_for_side(*_local_elem, s, true);
-    
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_side_fe(s, false));
+
     std::vector<Real> JxW_Vn                        = fe->get_JxW();
     const std::vector<libMesh::Point>& xyz          = fe->get_xyz();
-    const std::vector<libMesh::Point>& face_normals = fe->get_normals();
+    const std::vector<libMesh::Point>& face_normals = fe->get_normals_for_local_coordinate();
 
     MAST::FEMOperatorMatrix Bmat;
     
@@ -869,8 +816,7 @@ surface_flux_residual(bool request_jacobian,
                       MAST::BoundaryConditionBase& bc) {
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe());
-    fe->init_for_side(*_local_elem, s, false);
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_side_fe(s, false));
 
     
     // get the function from this boundary condition
@@ -915,10 +861,11 @@ surface_flux_residual(bool request_jacobian,
     const MAST::FieldFunction<Real>& func =
     bc.get<MAST::FieldFunction<Real> >("heat_flux");
     
-    
-    const std::vector<Real> &JxW                 = _fe->get_JxW();
-    const std::vector<libMesh::Point>& qpoint    = _fe->get_xyz();
-    const std::vector<std::vector<Real> >& phi   = _fe->get_phi();
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_fe(false, false));
+
+    const std::vector<Real> &JxW                 = fe->get_JxW();
+    const std::vector<libMesh::Point>& qpoint    = fe->get_xyz();
+    const std::vector<std::vector<Real> >& phi   = fe->get_phi();
     const unsigned int n_phi                     = (unsigned int)phi.size();
     
     RealVectorX phi_vec  = RealVectorX::Zero(n_phi);
@@ -948,9 +895,8 @@ surface_flux_residual_sensitivity(const MAST::FunctionBase& p,
                                   MAST::BoundaryConditionBase& bc) {
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe());
-    fe->init_for_side(*_local_elem, s, false);
-    
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_side_fe(s, false));
+
     
     // get the function from this boundary condition
     const MAST::FieldFunction<Real>
@@ -995,10 +941,11 @@ surface_flux_residual_sensitivity(const MAST::FunctionBase& p,
     const MAST::FieldFunction<Real>& func =
     bc.get<MAST::FieldFunction<Real> >("heat_flux");
     
-    
-    const std::vector<Real> &JxW                 = _fe->get_JxW();
-    const std::vector<libMesh::Point>& qpoint    = _fe->get_xyz();
-    const std::vector<std::vector<Real> >& phi   = _fe->get_phi();
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_fe(false, false));
+
+    const std::vector<Real> &JxW                 = fe->get_JxW();
+    const std::vector<libMesh::Point>& qpoint    = fe->get_xyz();
+    const std::vector<std::vector<Real> >& phi   = fe->get_phi();
     const unsigned int n_phi                     = (unsigned int)phi.size();
     
     RealVectorX phi_vec  = RealVectorX::Zero(n_phi);
@@ -1029,12 +976,11 @@ surface_flux_boundary_velocity(const MAST::FunctionBase& p,
     
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe());
-    fe->init_for_side(*_local_elem, s, true);
-    
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_side_fe(s, false));
+
     std::vector<Real> JxW_Vn                        = fe->get_JxW();
     const std::vector<libMesh::Point>& xyz          = fe->get_xyz();
-    const std::vector<libMesh::Point>& face_normals = fe->get_normals();
+    const std::vector<libMesh::Point>& face_normals = fe->get_normals_for_local_coordinate();
     const std::vector<std::vector<Real> >& phi      = fe->get_phi();
     const unsigned int
     n_phi    = (unsigned int)phi.size(),
@@ -1086,8 +1032,7 @@ surface_convection_residual(bool request_jacobian,
                             MAST::BoundaryConditionBase& bc) {
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe());
-    fe->init_for_side(*_local_elem, s, false);
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_side_fe(s, false));
 
     // get the function from this boundary condition
     const MAST::FieldFunction<Real>
@@ -1150,9 +1095,11 @@ surface_convection_residual(bool request_jacobian,
     &coeff = bc.get<MAST::FieldFunction<Real> >("convection_coeff"),
     &T_amb = bc.get<MAST::FieldFunction<Real> >("ambient_temperature");
     
-    const std::vector<Real> &JxW               = _fe->get_JxW();
-    const std::vector<libMesh::Point>& qpoint  = _fe->get_xyz();
-    const std::vector<std::vector<Real> >& phi = _fe->get_phi();
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_fe(false, false));
+
+    const std::vector<Real> &JxW               = fe->get_JxW();
+    const std::vector<libMesh::Point>& qpoint  = fe->get_xyz();
+    const std::vector<std::vector<Real> >& phi = fe->get_phi();
     const unsigned int n_phi                   = (unsigned int)phi.size();
     
     
@@ -1200,9 +1147,8 @@ surface_convection_residual_sensitivity(const MAST::FunctionBase& p,
                                         MAST::BoundaryConditionBase& bc) {
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe());
-    fe->init_for_side(*_local_elem, s, false);
-    
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_side_fe(s, false));
+
     // get the function from this boundary condition
     const MAST::FieldFunction<Real>
     &coeff   = bc.get<MAST::FieldFunction<Real> >("convection_coeff"),
@@ -1260,10 +1206,12 @@ surface_convection_residual_sensitivity(const MAST::FunctionBase& p,
     const MAST::FieldFunction<Real>
     &coeff = bc.get<MAST::FieldFunction<Real> >("convection_coeff"),
     &T_amb = bc.get<MAST::FieldFunction<Real> >("ambient_temperature");
-    
-    const std::vector<Real> &JxW               = _fe->get_JxW();
-    const std::vector<libMesh::Point>& qpoint  = _fe->get_xyz();
-    const std::vector<std::vector<Real> >& phi = _fe->get_phi();
+
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_fe(false, false));
+
+    const std::vector<Real> &JxW               = fe->get_JxW();
+    const std::vector<libMesh::Point>& qpoint  = fe->get_xyz();
+    const std::vector<std::vector<Real> >& phi = fe->get_phi();
     const unsigned int n_phi                   = (unsigned int)phi.size();
     
     
@@ -1308,12 +1256,11 @@ surface_convection_boundary_velocity(const MAST::FunctionBase& p,
                                      MAST::BoundaryConditionBase& bc) {
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe());
-    fe->init_for_side(*_local_elem, s, true);
-    
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_side_fe(s, false));
+
     std::vector<Real> JxW_Vn                        = fe->get_JxW();
     const std::vector<libMesh::Point>& xyz          = fe->get_xyz();
-    const std::vector<libMesh::Point>& face_normals = fe->get_normals();
+    const std::vector<libMesh::Point>& face_normals = fe->get_normals_for_local_coordinate();
     const std::vector<std::vector<Real> >& phi      = fe->get_phi();
 
     // get the function from this boundary condition
@@ -1380,8 +1327,7 @@ surface_radiation_residual(bool request_jacobian,
                            MAST::BoundaryConditionBase& bc) {
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe());
-    fe->init_for_side(*_local_elem, s, false);
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_side_fe(s, false));
 
     // get the function from this boundary condition
     const MAST::FieldFunction<Real>
@@ -1450,10 +1396,11 @@ surface_radiation_residual(bool request_jacobian,
     &T_ref_zero = bc.get<MAST::Parameter>("reference_zero_temperature"),
     &sb_const   = bc.get<MAST::Parameter>("stefan_bolzmann_constant");
     
-    
-    const std::vector<Real> &JxW               = _fe->get_JxW();
-    const std::vector<libMesh::Point>& qpoint  = _fe->get_xyz();
-    const std::vector<std::vector<Real> >& phi = _fe->get_phi();
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_fe(false, false));
+
+    const std::vector<Real> &JxW               = fe->get_JxW();
+    const std::vector<libMesh::Point>& qpoint  = fe->get_xyz();
+    const std::vector<std::vector<Real> >& phi = fe->get_phi();
     const unsigned int n_phi                   = (unsigned int)phi.size();
     
     RealVectorX phi_vec  = RealVectorX::Zero(n_phi);
@@ -1500,9 +1447,8 @@ surface_radiation_residual_sensitivity(const MAST::FunctionBase& p,
 
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe());
-    fe->init_for_side(*_local_elem, s, false);
-    
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_side_fe(s, false));
+
     // get the function from this boundary condition
     const MAST::FieldFunction<Real>
     &emissivity = bc.get<MAST::FieldFunction<Real> >("emissivity"),
@@ -1564,10 +1510,11 @@ surface_radiation_residual_sensitivity(const MAST::FunctionBase& p,
     &T_ref_zero = bc.get<MAST::Parameter>("reference_zero_temperature"),
     &sb_const   = bc.get<MAST::Parameter>("stefan_bolzmann_constant");
     
-    
-    const std::vector<Real> &JxW               = _fe->get_JxW();
-    const std::vector<libMesh::Point>& qpoint  = _fe->get_xyz();
-    const std::vector<std::vector<Real> >& phi = _fe->get_phi();
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_fe(false, false));
+
+    const std::vector<Real> &JxW               = fe->get_JxW();
+    const std::vector<libMesh::Point>& qpoint  = fe->get_xyz();
+    const std::vector<std::vector<Real> >& phi = fe->get_phi();
     const unsigned int n_phi                   = (unsigned int)phi.size();
     
     RealVectorX phi_vec  = RealVectorX::Zero(n_phi);
@@ -1604,12 +1551,11 @@ surface_radiation_boundary_velocity(const MAST::FunctionBase& p,
                                     MAST::BoundaryConditionBase& bc) {
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe());
-    fe->init_for_side(*_local_elem, s, true);
-    
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_side_fe(s, false));
+
     std::vector<Real> JxW_Vn                        = fe->get_JxW();
     const std::vector<libMesh::Point>& xyz          = fe->get_xyz();
-    const std::vector<libMesh::Point>& face_normals = fe->get_normals();
+    const std::vector<libMesh::Point>& face_normals = fe->get_normals_for_local_coordinate();
     const std::vector<std::vector<Real> >& phi      = fe->get_phi();
 
     // get the function from this boundary condition
@@ -1684,10 +1630,11 @@ volume_heat_source_residual(bool request_jacobian,
     &func       = bc.get<MAST::FieldFunction<Real> >("heat_source"),
     &section    = _property.section(*this);
     
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_fe(false, false));
     
-    const std::vector<Real> &JxW                 = _fe->get_JxW();
-    const std::vector<libMesh::Point>& qpoint    = _fe->get_xyz();
-    const std::vector<std::vector<Real> >& phi   = _fe->get_phi();
+    const std::vector<Real> &JxW                 = fe->get_JxW();
+    const std::vector<libMesh::Point>& qpoint    = fe->get_xyz();
+    const std::vector<std::vector<Real> >& phi   = fe->get_phi();
     const unsigned int n_phi                     = (unsigned int)phi.size();
     
     RealVectorX phi_vec  = RealVectorX::Zero(n_phi);
@@ -1720,10 +1667,11 @@ volume_heat_source_residual_sensitivity(const MAST::FunctionBase& p,
     &func       = bc.get<MAST::FieldFunction<Real> >("heat_source"),
     &section    = _property.section(*this);
     
-    
-    const std::vector<Real> &JxW                 = _fe->get_JxW();
-    const std::vector<libMesh::Point>& qpoint    = _fe->get_xyz();
-    const std::vector<std::vector<Real> >& phi   = _fe->get_phi();
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_fe(false, false));
+
+    const std::vector<Real> &JxW                 = fe->get_JxW();
+    const std::vector<libMesh::Point>& qpoint    = fe->get_xyz();
+    const std::vector<std::vector<Real> >& phi   = fe->get_phi();
     const unsigned int n_phi                     = (unsigned int)phi.size();
     
     RealVectorX phi_vec  = RealVectorX::Zero(n_phi);
@@ -1755,12 +1703,11 @@ volume_heat_source_boundary_velocity(const MAST::FunctionBase& p,
                                      MAST::BoundaryConditionBase& bc) {
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_assembly.build_fe());
-    fe->init_for_side(*_local_elem, s, true);
-    
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_side_fe(s, false));
+
     std::vector<Real> JxW_Vn                        = fe->get_JxW();
     const std::vector<libMesh::Point>& xyz          = fe->get_xyz();
-    const std::vector<libMesh::Point>& face_normals = fe->get_normals();
+    const std::vector<libMesh::Point>& face_normals = fe->get_normals_for_local_coordinate();
     const std::vector<std::vector<Real> >& phi      = fe->get_phi();
 
     // get the function from this boundary condition

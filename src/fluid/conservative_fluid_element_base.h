@@ -30,7 +30,6 @@ namespace MAST {
     
     // Forward declerations
     class ElementPropertyCardBase;
-    class LocalElemBase;
     class BoundaryConditionBase;
     class FEMOperatorMatrix;
     class OutputAssemblyElemOperations;
@@ -48,7 +47,7 @@ namespace MAST {
         
         ConservativeFluidElementBase(MAST::SystemInitialization&  sys,
                                      MAST::AssemblyBase&          assembly,
-                                     const libMesh::Elem&         elem,
+                                     const MAST::GeomElem&         elem,
                                      const MAST::FlightCondition& f);
         
         virtual ~ConservativeFluidElementBase();
@@ -126,6 +125,7 @@ namespace MAST {
         velocity_residual_sensitivity (const MAST::FunctionBase& p,
                                        bool request_jacobian,
                                        RealVectorX& f,
+                                       RealMatrixX& jac_xdot,
                                        RealMatrixX& jac);
         
         /*!
@@ -145,9 +145,12 @@ namespace MAST {
         side_integrated_force(const unsigned int s,
                               RealVectorX& f,
                               RealMatrixX* dfdX = nullptr);
+
         
-    protected:
-        
+        virtual void
+        side_integrated_force_sensitivity(const MAST::FunctionBase& p,
+                                          const unsigned int s,
+                                          RealVectorX& f);
         
         
         /*!
@@ -193,6 +196,16 @@ namespace MAST {
         /*!
          *
          */
+        virtual bool noslip_wall_surface_residual_sensitivity(const MAST::FunctionBase& p,
+                                                              bool request_jacobian,
+                                                              RealVectorX& f,
+                                                              RealMatrixX& jac,
+                                                              const unsigned int s,
+                                                              MAST::BoundaryConditionBase& bc);
+
+        /*!
+         *
+         */
         virtual bool noslip_wall_surface_residual(bool request_jacobian,
                                                   RealVectorX& f,
                                                   RealMatrixX& jac,
@@ -229,7 +242,9 @@ namespace MAST {
                                                             const unsigned int s,
                                                             MAST::BoundaryConditionBase& bc);
         
+    protected:
         
+
         /*!
          *   calculates the surface integrated force vector
          */

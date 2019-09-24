@@ -246,8 +246,9 @@ MAST::FunctionEvaluation::verify_gradients(const std::vector<Real>& dvars) {
     delta           = 1.e-5,
     tol             = 1.e-3,
     obj             = 0.,
-    obj_fd          = 0.;
-    
+    obj_fd_p        = 0.,  // at x+h
+    obj_fd_m        = 0.;  // at x-h
+
     bool
     eval_obj_grad   = true;
     
@@ -257,7 +258,8 @@ MAST::FunctionEvaluation::verify_gradients(const std::vector<Real>& dvars) {
     obj_grad   (_n_vars),
     obj_grad_fd(_n_vars),
     fvals      (_n_ineq + _n_eq),
-    fvals_fd   (_n_ineq + _n_eq),
+    fvals_fd_p (_n_ineq + _n_eq),  // at x+h
+    fvals_fd_m (_n_ineq + _n_eq),  // at x-h
     grads      (_n_vars*(_n_ineq + _n_eq)),
     grads_fd   (_n_vars*(_n_ineq + _n_eq));
     
@@ -270,7 +272,8 @@ MAST::FunctionEvaluation::verify_gradients(const std::vector<Real>& dvars) {
     std::fill(    obj_grad.begin(),     obj_grad.end(),   0.);
     std::fill( obj_grad_fd.begin(),  obj_grad_fd.end(),   0.);
     std::fill(       fvals.begin(),        fvals.end(),   0.);
-    std::fill(    fvals_fd.begin(),     fvals_fd.end(),   0.);
+    std::fill(  fvals_fd_p.begin(),   fvals_fd_p.end(),   0.);
+    std::fill(  fvals_fd_m.begin(),   fvals_fd_m.end(),   0.);
     std::fill(       grads.begin(),        grads.end(),   0.);
     std::fill(    grads_fd.begin(),     grads_fd.end(),   0.);
     std::fill(  eval_grads.begin(),   eval_grads.end(), true);
@@ -298,26 +301,44 @@ MAST::FunctionEvaluation::verify_gradients(const std::vector<Real>& dvars) {
         // copy the original vector
         dvars_fd =  dvars;
         
-        // now perturb it
+        // central difference approx
+        // du/dx = ((u2-u1)/(x2-x1) + (u1-u0)/(x1-x0))/2
+        //       = ((u2-u1)/h + (u1-u0)/h)/2
+        //       = (u2-u0)/2h
+        
+        // now perturb it: first the positive value
         dvars_fd[i] += delta;
         
         // call the evaluate routine
-        obj_fd       = 0.;
-        std::fill(    fvals_fd.begin(),     fvals_fd.end(),   0.);
+        obj_fd_p     = 0.;
+        obj_fd_m     = 0.;
+        std::fill(  fvals_fd_p.begin(),   fvals_fd_p.end(),   0.);
+        std::fill(  fvals_fd_m.begin(),   fvals_fd_m.end(),   0.);
         this->evaluate(dvars_fd,
-                       obj_fd,
+                       obj_fd_p,
                        eval_obj_grad,
                        obj_grad_fd,
-                       fvals_fd,
+                       fvals_fd_p,
                        eval_grads,
                        grads_fd);
+
+        // now perturb it: first the positive value
+        dvars_fd[i] -= 2*delta;
         
+        this->evaluate(dvars_fd,
+                       obj_fd_m,
+                       eval_obj_grad,
+                       obj_grad_fd,
+                       fvals_fd_m,
+                       eval_grads,
+                       grads_fd);
+
         // objective gradient
-        obj_grad_fd[i]  = (obj_fd-obj)/delta;
+        obj_grad_fd[i]  = (obj_fd_p-obj_fd_m)/2./delta;
         
         // constraint gradient
         for (unsigned int j=0; j<_n_eq+_n_ineq; j++)
-            grads_fd[i*(_n_eq+_n_ineq)+j]  = (fvals_fd[j]-fvals[j])/delta;
+            grads_fd[i*(_n_eq+_n_ineq)+j]  = (fvals_fd_p[j]-fvals_fd_m[j])/2./delta;
     }
     
     
@@ -379,6 +400,37 @@ MAST::FunctionEvaluation::verify_gradients(const std::vector<Real>& dvars) {
         << std::endl;
     
     return accurate_sens;
+}
+
+
+void
+MAST::FunctionEvaluation::parametric_line_study(const std::string& nm,
+                                                const unsigned int iter1,
+                                                const unsigned int iter2,
+                                                unsigned int divs) {
+
+    std::vector<Real>
+    dv1(_n_vars, 0.),
+    dv2(_n_vars, 0.),
+    dv (_n_vars, 0.),
+    fval(_n_ineq+_n_eq, 0.);
+    
+    this->initialize_dv_from_output_file(nm, iter1, dv1);
+    this->initialize_dv_from_output_file(nm, iter2, dv2);
+    
+    Real
+    f   = 0.,
+    obj = 0.;
+
+    for (unsigned int i=0; i<=divs; i++) {
+        
+        f = (1.*i)/(1.*divs);
+        for (unsigned int j=0; j<_n_vars; j++) {
+            dv[j] = (1.-f) * dv1[j] + f * dv2[j];
+        }
+        
+        this->_output_wrapper(i, dv, obj, fval, true);
+    }
 }
 
 

@@ -62,6 +62,21 @@ namespace MAST {
                                          const libMesh::NumericVector<Real>& sol);
         
         /*!
+         *    update the transient sensitivity velocity based on the
+         *    current sensitivity solution
+         */
+        virtual void update_sensitivity_velocity(libMesh::NumericVector<Real>& vel,
+                                                 const libMesh::NumericVector<Real>& sol);
+        
+        /*!
+         *    update the transient sensitivity acceleration based on the
+         *    current sensitivity solution
+         */
+        virtual void update_sensitivity_acceleration(libMesh::NumericVector<Real>& acc,
+                                                     const libMesh::NumericVector<Real>& sol);
+        
+
+        /*!
          *    update the perturbation in transient velocity based on the
          *    current perturbed solution
          */
@@ -90,8 +105,9 @@ namespace MAST {
          *    calculations
          */
         virtual void
-        set_element_sensitivity_data(const std::vector<libMesh::dof_id_type>& dof_indices,
-                                     const std::vector<libMesh::NumericVector<Real>*>& sols);
+        extract_element_sensitivity_data(const std::vector<libMesh::dof_id_type>& dof_indices,
+                                         const std::vector<libMesh::NumericVector<Real>*>& sols,
+                                         std::vector<RealVectorX>& local_sols);
 
         /*!
          *    provides the element with the transient data for calculations
@@ -116,7 +132,7 @@ namespace MAST {
         /*!
          *   performs the element calculations over \p elem, and returns
          *   the element vector quantity in \p vec. The vector quantity only
-         *   include the \f$ [J] \{dX\} \f$ components, so the inherited classes
+         *   include the \f$ [J] \{dX\} f$ components, so the inherited classes
          *   must ensure that no component of constant forces (traction/body
          *   forces/etc.) are added to this vector.
          */
@@ -130,6 +146,15 @@ namespace MAST {
         virtual void
         elem_sensitivity_calculations(const MAST::FunctionBase& f,
                                       RealVectorX& vec);
+
+        
+        /*!
+         *   computes the contribution for this element from previous
+         *   time step
+         */
+        virtual void
+        elem_sensitivity_contribution_previous_timestep(const std::vector<RealVectorX>& prev_sols,
+                                                        RealVectorX& vec);
         
         /*!
          *   performs the element shape sensitivity calculations over \p elem,
@@ -145,7 +170,6 @@ namespace MAST {
          */
         virtual void
         elem_topology_sensitivity_calculations(const MAST::FunctionBase& f,
-                                               const MAST::LevelSetIntersection& intersect,
                                                const MAST::FieldFunction<RealVectorX>& vel,
                                                RealVectorX& vec);
 

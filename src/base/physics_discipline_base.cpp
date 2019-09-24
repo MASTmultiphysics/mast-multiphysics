@@ -23,6 +23,7 @@
 #include "base/parameter.h"
 #include "base/nonlinear_system.h"
 #include "boundary_condition/dirichlet_boundary_condition.h"
+#include "mesh/geom_elem.h"
 
 // libMesh includes
 #include "libmesh/dof_map.h"
@@ -106,7 +107,7 @@ MAST::PhysicsDisciplineBase::add_volume_load(libMesh::subdomain_id_type sid,
 void
 MAST::PhysicsDisciplineBase::add_point_load(MAST::PointLoadCondition& load) {
 
-    libmesh_assert(_point_loads.count(&load));
+    libmesh_assert(!_point_loads.count(&load));
     
     _point_loads.insert(&load);
 }
@@ -161,6 +162,17 @@ MAST::PhysicsDisciplineBase::get_property_card(const libMesh::Elem& elem) const 
     
     MAST::PropertyCardMapType::const_iterator
     elem_p_it = _element_property.find(elem.subdomain_id());
+    libmesh_assert(elem_p_it != _element_property.end());
+    
+    return *elem_p_it->second;
+}
+
+
+const MAST::ElementPropertyCardBase&
+MAST::PhysicsDisciplineBase::get_property_card(const MAST::GeomElem& elem) const {
+    
+    MAST::PropertyCardMapType::const_iterator
+    elem_p_it = _element_property.find(elem.get_reference_elem().subdomain_id());
     libmesh_assert(elem_p_it != _element_property.end());
     
     return *elem_p_it->second;

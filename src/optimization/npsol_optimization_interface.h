@@ -20,6 +20,9 @@
 #ifndef __MAST_npsol_optimization_interface_h__
 #define __MAST_npsol_optimization_interface_h__
 
+// C++ includes
+#include <map>
+
 // MAST includes
 #include "optimization/optimization_interface.h"
 
@@ -41,6 +44,9 @@ namespace MAST {
         attach_function_evaluation_object (MAST::FunctionEvaluation& feval);
 
     protected:
+
+        void  _print_termination_message(const int INFORM);
+
         
         void (*_funobj) (int*    mode,
                          int*    n,
@@ -58,7 +64,9 @@ namespace MAST {
                          double* c,
                          double* cJac,
                          int*    nstate);
-        
+
+        std::map<int, std::string> _exit_message;
+        std::map<int, std::string> _info_message;
     };
 }
 

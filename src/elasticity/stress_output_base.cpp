@@ -28,6 +28,8 @@
 #include "base/boundary_condition_base.h"
 #include "property_cards/element_property_card_1D.h"
 #include "level_set/level_set_intersection.h"
+#include "level_set/level_set_intersected_elem.h"
+#include "mesh/geom_elem.h"
 
 
 MAST::StressStrainOutputBase::Data::Data(const RealVectorX& stress,
@@ -131,6 +133,17 @@ MAST::StressStrainOutputBase::Data::set_sensitivity(const MAST::FunctionBase& f,
 }
 
 
+bool
+MAST::StressStrainOutputBase::Data::
+has_stress_sensitivity(const MAST::FunctionBase& f) const {
+    
+    // make sure that the data exists
+    std::map<const MAST::FunctionBase*, RealVectorX>::const_iterator
+    it = _stress_sensitivity.find(&f);
+    
+    return it != _stress_sensitivity.end();
+}
+
 
 const RealVectorX&
 MAST::StressStrainOutputBase::Data::
@@ -224,6 +237,9 @@ dvon_Mises_stress_dp(const MAST::FunctionBase& f) const {
     // make sure that the data is available
     libmesh_assert_equal_to(_stress.size(), 6);
     
+    if (!this->has_stress_sensitivity(f))
+        return 0.;
+    
     // get the stress sensitivity data
     const RealVectorX dstress_dp = this->get_stress_sensitivity(f);
     
@@ -256,10 +272,11 @@ dvon_Mises_stress_dp(const MAST::FunctionBase& f) const {
 
 MAST::StressStrainOutputBase::StressStrainOutputBase():
 MAST::OutputAssemblyElemOperations(),
-_p_norm                   (2.),
+_p_norm_stress            (2.),
+_p_norm_weight            (1),
 _rho                      (1.),
 _sigma0                   (0.),
-_exp_arg_lim              (4.),
+_exp_arg_lim              (1.e2),
 _primal_data_initialized  (false),
 _JxW_val                  (0.),
 _sigma_vm_int             (0.),
@@ -336,7 +353,6 @@ MAST::StressStrainOutputBase::evaluate_sensitivity(const MAST::FunctionBase &f) 
 void
 MAST::StressStrainOutputBase::
 evaluate_topology_sensitivity(const MAST::FunctionBase &f,
-                              const MAST::LevelSetIntersection &intersect,
                               const MAST::FieldFunction<RealVectorX> &vel) {
     
     // the primal data should have been calculated
@@ -345,19 +361,20 @@ evaluate_topology_sensitivity(const MAST::FunctionBase &f,
     if (!_if_stress_plot_mode)
         libmesh_assert(_primal_data_initialized);
     
-    const libMesh::Elem& elem = _physics_elem->elem();
+    const MAST::LevelSetIntersectedElem
+    &elem = dynamic_cast<const MAST::LevelSetIntersectedElem&>(_physics_elem->elem());
 
     // sensitivity only exists at the boundary. So, we proceed with calculation
     // only if this element has an intersection in the interior, or with a side.
 
     if (this->if_evaluate_for_element(elem)    &&
-        intersect.if_elem_has_boundary()       &&
-        intersect.has_side_on_interface(elem)) {
+        elem.if_elem_has_level_set_boundary()       &&
+        elem.if_subelem_has_side_on_level_set_boundary()) {
         
         // ask for the values
         dynamic_cast<MAST::StructuralElementBase*>
         (_physics_elem)->calculate_stress_boundary_velocity(f, *this,
-                                                            intersect.get_side_on_interface(elem),
+                                                            elem.get_subelem_side_on_level_set_boundary(),
                                                             vel);
     }
 }
@@ -371,7 +388,7 @@ MAST::StressStrainOutputBase::output_total() {
     
     // if this has not been initialized, then we should do so now
     if (!_primal_data_initialized)
-        this->von_Mises_p_norm_functional_for_all_elems();
+        this->functional_for_all_elems();
     
     return _sigma_vm_p_norm;
 }
@@ -385,7 +402,9 @@ MAST::StressStrainOutputBase::output_sensitivity_for_elem(const MAST::FunctionBa
     
     Real val = 0.;
     
-    this->von_Mises_p_norm_functional_sensitivity_for_elem(p, _physics_elem->elem().id(), val);
+    this->functional_sensitivity_for_elem
+    (p, _physics_elem->elem().get_quadrature_elem().id(), val);
+    
     return val;
 }
 
@@ -401,9 +420,9 @@ MAST::StressStrainOutputBase::output_sensitivity_total(const MAST::FunctionBase&
     val   = 0.,
     val_b = 0.;
     
-    this->von_Mises_p_norm_functional_sensitivity_for_all_elems(p, val);
+    this->functional_sensitivity_for_all_elems(p, val);
     if (p.is_topology_parameter())
-        this->von_Mises_p_norm_functional_boundary_sensitivity_for_all_elems(p, val_b);
+        this->functional_boundary_sensitivity_for_all_elems(p, val_b);
     return val+val_b;
 }
 
@@ -425,17 +444,33 @@ MAST::StressStrainOutputBase::output_derivative_for_elem(RealVectorX& dq_dX) {
                                           nullptr,
                                           *this);
         
-        this->von_Mises_p_norm_functional_state_derivartive_for_elem(_physics_elem->elem(),
-                                                                     dq_dX);
+        this->functional_state_derivartive_for_elem
+        (_physics_elem->elem().get_quadrature_elem().id(), dq_dX);
     }
 }
 
 
 
+void
+MAST::StressStrainOutputBase::
+set_elem_data(unsigned int dim,
+              const libMesh::Elem& ref_elem,
+              MAST::GeomElem& elem) const {
+    
+    libmesh_assert(!_physics_elem);
+    
+    if (dim == 1) {
+        
+        const MAST::ElementPropertyCard1D& p =
+        dynamic_cast<const MAST::ElementPropertyCard1D&>(_discipline->get_property_card(ref_elem));
+        
+        elem.set_local_y_vector(p.y_vector());
+    }
+}
 
 
 void
-MAST::StressStrainOutputBase::init(const libMesh::Elem& elem) {
+MAST::StressStrainOutputBase::init(const MAST::GeomElem& elem) {
     
     libmesh_assert(!_physics_elem);
     libmesh_assert(_assembly);
@@ -545,7 +580,7 @@ MAST::StressStrainOutputBase::clear_sensitivity_data() {
 
 MAST::StressStrainOutputBase::Data&
 MAST::StressStrainOutputBase::
-add_stress_strain_at_qp_location(const libMesh::Elem* e,
+add_stress_strain_at_qp_location(const MAST::GeomElem& e,
                                  const unsigned int qp,
                                  const libMesh::Point& quadrature_pt,
                                  const libMesh::Point& physical_pt,
@@ -556,7 +591,7 @@ add_stress_strain_at_qp_location(const libMesh::Elem* e,
     // if the element subset has been provided, then make sure that this
     // element exists in the subdomain.
     if (_elem_subset.size())
-        libmesh_assert(_elem_subset.count(e));
+        libmesh_assert(_elem_subset.count(&e.get_reference_elem()));
     
     
     MAST::StressStrainOutputBase::Data* d =
@@ -569,17 +604,18 @@ add_stress_strain_at_qp_location(const libMesh::Elem* e,
     
     // check if the specified element exists in the map. If not, add it
     std::map<const libMesh::dof_id_type, std::vector<MAST::StressStrainOutputBase::Data*> >::iterator
-    it = _stress_data.find(e->id());
+    it = _stress_data.find(e.get_quadrature_elem().id());
     
     // if the element does not exist in the map, add it to the map.
     if (it == _stress_data.end())
         it =
         _stress_data.insert(std::pair<const libMesh::dof_id_type, std::vector<MAST::StressStrainOutputBase::Data*> >
-                            (e->id(), std::vector<MAST::StressStrainOutputBase::Data*>())).first;
+                            (e.get_quadrature_elem().id(),
+                             std::vector<MAST::StressStrainOutputBase::Data*>())).first;
     else
         // this assumes that the previous qp data is provided and
         // therefore, this qp number should be == size of the vector.
-        libmesh_assert_equal_to(qp, it->second.size());
+    libmesh_assert_equal_to(qp, it->second.size());
     
     it->second.push_back(d);
     
@@ -591,7 +627,7 @@ add_stress_strain_at_qp_location(const libMesh::Elem* e,
 
 MAST::StressStrainOutputBase::Data&
 MAST::StressStrainOutputBase::
-add_stress_strain_at_boundary_qp_location(const libMesh::Elem* e,
+add_stress_strain_at_boundary_qp_location(const MAST::GeomElem& e,
                                           const unsigned int s,
                                           const unsigned int qp,
                                           const libMesh::Point& quadrature_pt,
@@ -603,7 +639,7 @@ add_stress_strain_at_boundary_qp_location(const libMesh::Elem* e,
     // if the element subset has been provided, then make sure that this
     // element exists in the subdomain.
     if (_elem_subset.size())
-        libmesh_assert(_elem_subset.count(e));
+        libmesh_assert(_elem_subset.count(&e.get_reference_elem()));
     
     
     MAST::StressStrainOutputBase::Data* d =
@@ -616,13 +652,15 @@ add_stress_strain_at_boundary_qp_location(const libMesh::Elem* e,
     
     // check if the specified element exists in the map. If not, add it
     std::map<const libMesh::dof_id_type, std::vector<MAST::StressStrainOutputBase::Data*> >::iterator
-    it = _boundary_stress_data.find(e->id());
+    it = _boundary_stress_data.find(e.get_quadrature_elem().id());
     
     // if the element does not exist in the map, add it to the map.
     if (it == _boundary_stress_data.end())
         it =
-        _boundary_stress_data.insert(std::pair<const libMesh::dof_id_type, std::vector<MAST::StressStrainOutputBase::Data*> >
-                                     (e->id(), std::vector<MAST::StressStrainOutputBase::Data*>())).first;
+        _boundary_stress_data.insert
+        (std::pair<const libMesh::dof_id_type, std::vector<MAST::StressStrainOutputBase::Data*> >
+         (e.get_quadrature_elem().id(),
+          std::vector<MAST::StressStrainOutputBase::Data*>())).first;
     else
         // this assumes that the previous qp data is provided and
         // therefore, this qp number should be == size of the vector.
@@ -644,14 +682,45 @@ MAST::StressStrainOutputBase::get_stress_strain_data() const {
 
 
 
+Real
+MAST::StressStrainOutputBase::get_maximum_von_mises_stress() const {
+    
+    std::map<const libMesh::dof_id_type, std::vector<MAST::StressStrainOutputBase::Data*>>::const_iterator
+    it  = _stress_data.begin(),
+    end = _stress_data.end();
+    
+    Real
+    vm     = 0.,
+    max_vm = 0.;
+    
+    for ( ; it != end; it++) {
+        
+        std::vector<MAST::StressStrainOutputBase::Data*>::const_iterator
+        s_it  = it->second.begin(),
+        s_end = it->second.end();
+        
+        for ( ; s_it != s_end; s_it++) {
+            vm = (*s_it)->von_Mises_stress();
+            max_vm =  vm>max_vm?vm:max_vm;
+        }
+    }
+
+    // now, identify the max stress on all ranks.
+    _system->system().comm().max(max_vm);
+    
+    return max_vm;
+}
+
+
+
 unsigned int
 MAST::StressStrainOutputBase::
-n_stress_strain_data_for_elem(const libMesh::Elem* e) const {
+n_stress_strain_data_for_elem(const MAST::GeomElem& e) const {
     
     unsigned int n = 0;
     
     std::map<const libMesh::dof_id_type, std::vector<MAST::StressStrainOutputBase::Data*> >::const_iterator
-    it = _stress_data.find(e->id());
+    it = _stress_data.find(e.get_quadrature_elem().id());
     
     if ( it != _stress_data.end())
         n = (unsigned int)it->second.size();
@@ -663,12 +732,12 @@ n_stress_strain_data_for_elem(const libMesh::Elem* e) const {
 
 unsigned int
 MAST::StressStrainOutputBase::
-n_boundary_stress_strain_data_for_elem(const libMesh::Elem* e) const {
+n_boundary_stress_strain_data_for_elem(const MAST::GeomElem& e) const {
     
     unsigned int n = 0;
     
     std::map<const libMesh::dof_id_type, std::vector<MAST::StressStrainOutputBase::Data*> >::const_iterator
-    it = _boundary_stress_data.find(e->id());
+    it = _boundary_stress_data.find(e.get_quadrature_elem().id());
     
     if ( it != _boundary_stress_data.end())
         n = (unsigned int)it->second.size();
@@ -680,11 +749,11 @@ n_boundary_stress_strain_data_for_elem(const libMesh::Elem* e) const {
 
 const std::vector<MAST::StressStrainOutputBase::Data*>&
 MAST::StressStrainOutputBase::
-get_stress_strain_data_for_elem(const libMesh::Elem *e) const {
+get_stress_strain_data_for_elem(const MAST::GeomElem& e) const {
     
     // check if the specified element exists in the map. If not, add it
     std::map<const libMesh::dof_id_type, std::vector<MAST::StressStrainOutputBase::Data*> >::const_iterator
-    it = _stress_data.find(e->id());
+    it = _stress_data.find(e.get_quadrature_elem().id());
 
     // make sure that the specified elem exists in the map
     libmesh_assert(it != _stress_data.end());
@@ -696,13 +765,13 @@ get_stress_strain_data_for_elem(const libMesh::Elem *e) const {
 
 MAST::StressStrainOutputBase::Data&
 MAST::StressStrainOutputBase::
-get_stress_strain_data_for_elem_at_qp(const libMesh::Elem* e,
+get_stress_strain_data_for_elem_at_qp(const MAST::GeomElem& e,
                                       const unsigned int qp) {
 
     
     // check if the specified element exists in the map. If not, add it
     std::map<const libMesh::dof_id_type, std::vector<MAST::StressStrainOutputBase::Data*> >::const_iterator
-    it = _stress_data.find(e->id());
+    it = _stress_data.find(e.get_quadrature_elem().id());
     
     // make sure that the specified elem exists in the map
     libmesh_assert(it != _stress_data.end());
@@ -715,7 +784,7 @@ get_stress_strain_data_for_elem_at_qp(const libMesh::Elem* e,
 
 
 MAST::BoundaryConditionBase*
-MAST::StressStrainOutputBase::get_thermal_load_for_elem(const libMesh::Elem& elem) {
+MAST::StressStrainOutputBase::get_thermal_load_for_elem(const MAST::GeomElem& elem) {
 
     MAST::BoundaryConditionBase *rval = nullptr;
  
@@ -730,7 +799,7 @@ MAST::StressStrainOutputBase::get_thermal_load_for_elem(const libMesh::Elem& ele
     std::pair<std::multimap<libMesh::subdomain_id_type, MAST::BoundaryConditionBase*>::const_iterator,
     std::multimap<libMesh::subdomain_id_type, MAST::BoundaryConditionBase*>::const_iterator> it;
     
-    it =  vol_loads.equal_range(elem.subdomain_id());
+    it =  vol_loads.equal_range(elem.get_reference_elem().subdomain_id());
     
     // FIXME: that this assumes that only one temperature boundary condition
     // is applied for an element.
@@ -750,8 +819,7 @@ MAST::StressStrainOutputBase::get_thermal_load_for_elem(const libMesh::Elem& ele
 
 
 void
-MAST::StressStrainOutputBase::
-von_Mises_p_norm_functional_for_all_elems() {
+MAST::StressStrainOutputBase::functional_for_all_elems() {
     
     libmesh_assert(!_if_stress_plot_mode);
     libmesh_assert(!_primal_data_initialized);
@@ -788,12 +856,12 @@ von_Mises_p_norm_functional_for_all_elems() {
             
             // we do not use absolute value here, since von Mises stress
             // is >= 0.
-            sp              =  pow(e_val/_sigma0, _p_norm);
+            sp              =  pow((e_val-_sigma0)/_sigma0, _p_norm_weight);
             if (_rho * sp > _exp_arg_lim)
                 exp_sp          =  exp(_exp_arg_lim);
             else
                 exp_sp          =  exp(_rho * sp);
-            _sigma_vm_int  +=  sp * exp_sp * JxW;
+            _sigma_vm_int  +=  pow(e_val/_sigma0, _p_norm_stress) * exp_sp * JxW;
             _JxW_val       +=  exp_sp * JxW;
         }
     }
@@ -803,15 +871,14 @@ von_Mises_p_norm_functional_for_all_elems() {
     _system->system().comm().sum(_sigma_vm_int);
     _system->system().comm().sum(_JxW_val);
 
-    _sigma_vm_p_norm         = _sigma0 * pow(_sigma_vm_int/_JxW_val, 1./_p_norm);
+    _sigma_vm_p_norm         = _sigma0 * pow(_sigma_vm_int/_JxW_val, 1./_p_norm_stress);
     _primal_data_initialized = true;
 }
 
 
 
 void
-MAST::StressStrainOutputBase::
-von_Mises_p_norm_functional_sensitivity_for_all_elems
+MAST::StressStrainOutputBase::functional_sensitivity_for_all_elems
 (const MAST::FunctionBase& f,
  Real& dsigma_vm_val_df) const {
     
@@ -830,7 +897,7 @@ von_Mises_p_norm_functional_sensitivity_for_all_elems
     
     for ( ; map_it != map_end; map_it++) {
         
-        this->von_Mises_p_norm_functional_sensitivity_for_elem(f, map_it->first, val);
+        this->functional_sensitivity_for_elem(f, map_it->first, val);
         dsigma_vm_val_df += val;
     }
     
@@ -843,8 +910,7 @@ von_Mises_p_norm_functional_sensitivity_for_all_elems
 
 
 void
-MAST::StressStrainOutputBase::
-von_Mises_p_norm_functional_boundary_sensitivity_for_all_elems
+MAST::StressStrainOutputBase::functional_boundary_sensitivity_for_all_elems
 (const MAST::FunctionBase& f,
  Real& dsigma_vm_val_df) const {
     
@@ -863,7 +929,7 @@ von_Mises_p_norm_functional_boundary_sensitivity_for_all_elems
     
     for ( ; map_it != map_end; map_it++) {
         
-        this->von_Mises_p_norm_functional_boundary_sensitivity_for_elem(f, map_it->first, val);
+        this->functional_boundary_sensitivity_for_elem(f, map_it->first, val);
         dsigma_vm_val_df += val;
     }
 
@@ -875,8 +941,7 @@ von_Mises_p_norm_functional_boundary_sensitivity_for_all_elems
 
 
 void
-MAST::StressStrainOutputBase::
-von_Mises_p_norm_functional_sensitivity_for_elem
+MAST::StressStrainOutputBase::functional_sensitivity_for_elem
 (const MAST::FunctionBase& f,
  const libMesh::dof_id_type e_id,
  Real& dsigma_vm_val_df) const {
@@ -886,8 +951,10 @@ von_Mises_p_norm_functional_sensitivity_for_elem
     libmesh_assert_greater(_sigma0, 0.);
     
     Real
-    sp            = 0.,
-    sp1           = 0.,
+    sp_stress     = 0.,
+    sp1_stress    = 0.,
+    sp_weight     = 0.,
+    sp1_weight    = 0.,
     exp_sp        = 0.,
     e_val         = 0.,
     de_val        = 0.,
@@ -917,22 +984,26 @@ von_Mises_p_norm_functional_sensitivity_for_elem
         
         // we do not use absolute value here, since von Mises stress
         // is >= 0.
-        sp           =  pow(e_val/_sigma0, _p_norm);
-        sp1          =  pow(e_val/_sigma0, _p_norm-1.);
-        if (_rho*sp > _exp_arg_lim) {
+        sp_stress       =  pow(e_val/_sigma0, _p_norm_stress);
+        sp1_stress      =  pow(e_val/_sigma0, _p_norm_stress-1.);
+        sp_weight       =  pow((e_val-_sigma0)/_sigma0, _p_norm_weight);
+        sp1_weight      =  pow((e_val-_sigma0)/_sigma0, _p_norm_weight-1.);
+        if (_rho*sp_weight > _exp_arg_lim) {
             exp_sp       =  exp(_exp_arg_lim);
             denom_sens  +=  0.;
-            num_sens    += _p_norm * sp1 * exp_sp * de_val/_sigma0 * JxW;
+            num_sens    += _p_norm_stress * sp1_stress * exp_sp * de_val/_sigma0 * JxW;
         }
         else {
-            exp_sp       =  exp(_rho * sp);
-            denom_sens  +=  exp_sp * _rho * _p_norm * sp1 * de_val/_sigma0 * JxW;
-            num_sens    += (1. + sp * _rho) * _p_norm * sp1 * exp_sp * de_val/_sigma0 * JxW;
+            exp_sp       =  exp(_rho * sp_weight);
+            denom_sens  +=  exp_sp * _rho * _p_norm_weight * sp1_weight * de_val/_sigma0 * JxW;
+            num_sens    += (de_val/_sigma0 * JxW * exp_sp *
+                            (_p_norm_stress * sp1_stress +
+                             sp_stress * _rho * _p_norm_weight * sp1_weight));
         }
             
     }
     
-    dsigma_vm_val_df = _sigma0/_p_norm * pow(_sigma_vm_int/_JxW_val, 1./_p_norm - 1.) *
+    dsigma_vm_val_df = _sigma0/_p_norm_stress * pow(_sigma_vm_int/_JxW_val, 1./_p_norm_stress - 1.) *
     (num_sens / _JxW_val - _sigma_vm_int / pow(_JxW_val, 2.) * denom_sens);
 }
 
@@ -941,8 +1012,7 @@ von_Mises_p_norm_functional_sensitivity_for_elem
 
 
 void
-MAST::StressStrainOutputBase::
-von_Mises_p_norm_functional_boundary_sensitivity_for_elem
+MAST::StressStrainOutputBase::functional_boundary_sensitivity_for_elem
 (const MAST::FunctionBase& f,
  const libMesh::dof_id_type e_id,
  Real& dsigma_vm_val_df) const {
@@ -980,16 +1050,16 @@ von_Mises_p_norm_functional_boundary_sensitivity_for_elem
         
         // we do not use absolute value here, since von Mises stress
         // is >= 0.
-        sp           =  pow(e_val/_sigma0, _p_norm);
+        sp           =  pow((e_val-_sigma0)/_sigma0, _p_norm_weight);
         if (_rho*sp > _exp_arg_lim)
             exp_sp       =  exp(_exp_arg_lim);
         else
             exp_sp       =  exp(_rho * sp);
         denom_sens  +=  exp_sp * JxW_Vn;
-        num_sens    +=  sp * exp_sp * JxW_Vn;
+        num_sens    +=  pow(e_val/_sigma0, _p_norm_stress) * exp_sp * JxW_Vn;
     }
     
-    dsigma_vm_val_df = _sigma0/_p_norm * pow(_sigma_vm_int/_JxW_val, 1./_p_norm - 1.) *
+    dsigma_vm_val_df = _sigma0/_p_norm_stress * pow(_sigma_vm_int/_JxW_val, 1./_p_norm_stress - 1.) *
     (num_sens / _JxW_val - _sigma_vm_int / pow(_JxW_val, 2.) * denom_sens);
 }
 
@@ -997,17 +1067,17 @@ von_Mises_p_norm_functional_boundary_sensitivity_for_elem
 
 
 void
-MAST::StressStrainOutputBase::
-von_Mises_p_norm_functional_state_derivartive_for_elem(const libMesh::Elem& e,
-                                                       RealVectorX& dq_dX) const {
-    
+MAST::StressStrainOutputBase::functional_state_derivartive_for_elem(const libMesh::dof_id_type e_id,
+                                                                    RealVectorX& dq_dX) const {
     libmesh_assert(!_if_stress_plot_mode);
     libmesh_assert(_primal_data_initialized);
     libmesh_assert_greater(_sigma0, 0.);
     
     Real
-    sp            = 0.,
-    sp1           = 0.,
+    sp_stress     = 0.,
+    sp1_stress    = 0.,
+    sp_weight     = 0.,
+    sp1_weight    = 0.,
     exp_sp        = 0.,
     e_val         = 0.,
     JxW           = 0.;
@@ -1022,7 +1092,7 @@ von_Mises_p_norm_functional_state_derivartive_for_elem(const libMesh::Elem& e,
     
     // iterate over all element data
     std::map<const libMesh::dof_id_type, std::vector<MAST::StressStrainOutputBase::Data*> >::const_iterator
-    map_it   =  _stress_data.find(e.id()),
+    map_it   =  _stress_data.find(e_id),
     map_end  =  _stress_data.end();
 
     // make sure that the data exists
@@ -1042,23 +1112,27 @@ von_Mises_p_norm_functional_state_derivartive_for_elem(const libMesh::Elem& e,
         
         // we do not use absolute value here, since von Mises stress
         // is >= 0.
-        sp           =  pow(e_val/_sigma0, _p_norm);
-        sp1          =  pow(e_val/_sigma0, _p_norm-1.);
-        if (_rho*sp > _exp_arg_lim) {
+        sp_stress       =  pow(e_val/_sigma0, _p_norm_stress);
+        sp1_stress      =  pow(e_val/_sigma0, _p_norm_stress-1.);
+        sp_weight       =  pow((e_val-_sigma0)/_sigma0, _p_norm_weight);
+        sp1_weight      =  pow((e_val-_sigma0)/_sigma0, _p_norm_weight-1.);
+        if (_rho*sp_weight > _exp_arg_lim) {
             
             exp_sp       =  exp(_exp_arg_lim);
             denom_sens  +=  0. * de_val;
-            num_sens    +=  1. * _p_norm * sp1 * exp_sp/_sigma0 * JxW * de_val;
+            num_sens    +=  1. * _p_norm_stress * sp1_stress * exp_sp/_sigma0 * JxW * de_val;
         }
         else {
             
-            exp_sp       =  exp(_rho * sp);
-            denom_sens  +=  exp_sp * _rho * _p_norm * sp1/_sigma0 * JxW * de_val;
-            num_sens    += (1. + sp * _rho) * _p_norm * sp1 * exp_sp/_sigma0 * JxW * de_val;
+            exp_sp       =  exp(_rho * sp_weight);
+            denom_sens  +=  exp_sp * _rho * _p_norm_weight * sp1_weight/_sigma0 * JxW * de_val;
+            num_sens    += (de_val/_sigma0 * JxW * exp_sp *
+                            (_p_norm_stress * sp1_stress +
+                             sp_stress * _rho * _p_norm_weight * sp1_weight));
         }
     }
     
-    dq_dX = _sigma0/_p_norm * pow(_sigma_vm_int/_JxW_val, 1./_p_norm - 1.) *
+    dq_dX = _sigma0/_p_norm_stress * pow(_sigma_vm_int/_JxW_val, 1./_p_norm_stress - 1.) *
     (num_sens / _JxW_val - _sigma_vm_int / pow(_JxW_val, 2.) * denom_sens);
 }
 

@@ -27,6 +27,7 @@
 #include "level_set/level_set_intersection.h"
 #include "level_set/interface_dof_handler.h"
 #include "level_set/sub_cell_fe.h"
+#include "level_set/level_set_intersected_elem.h"
 
 
 // libMesh includes
@@ -52,17 +53,15 @@ MAST::LevelSetStressAssembly::~LevelSetStressAssembly() {
 
 void
 MAST::LevelSetStressAssembly::init(MAST::FieldFunction<Real>& level_set,
-                                   MAST::LevelSetInterfaceDofHandler& dof_handler) {
+                                   MAST::LevelSetInterfaceDofHandler* dof_handler) {
     
     libmesh_assert(!_level_set);
     libmesh_assert(!_intersection);
-    libmesh_assert(!_dof_handler);
     libmesh_assert(_system);
     
     _level_set    = &level_set;
-    _dof_handler  = &dof_handler;
-    _intersection = new MAST::LevelSetIntersection(_system->system().get_mesh().max_elem_id(),
-                                                   _system->system().get_mesh().max_node_id());
+    _intersection = new MAST::LevelSetIntersection();
+    _dof_handler  = dof_handler;
 }
 
 
@@ -144,7 +143,9 @@ update_stress_strain_data(MAST::StressStrainOutputBase&       ops,
         
         const libMesh::Elem* elem = *el;
         
-        _intersection->init(*_level_set, *elem, structural_sys.time);
+        _intersection->init(*_level_set, *elem, structural_sys.time,
+                            structural_sys.get_mesh().max_elem_id(),
+                            structural_sys.get_mesh().max_node_id());
         
         // clear data structure since each element will account for all
         // sub elements only
@@ -161,7 +162,7 @@ update_stress_strain_data(MAST::StressStrainOutputBase&       ops,
             for (unsigned int i=0; i<dof_indices.size(); i++)
                 sol(i) = (*localized_solution)(dof_indices[i]);
             
-            if (_dof_handler->if_factor_element(*elem))
+            if (_dof_handler && _dof_handler->if_factor_element(*elem))
                 _dof_handler->solution_of_factored_element(*elem, sol);
 
             const std::vector<const libMesh::Elem *> &
@@ -174,9 +175,12 @@ update_stress_strain_data(MAST::StressStrainOutputBase&       ops,
             for (; hi_sub_elem_it != hi_sub_elem_end; hi_sub_elem_it++ ) {
                 
                 const libMesh::Elem* sub_elem = *hi_sub_elem_it;
+                MAST::LevelSetIntersectedElem geom_elem;
+                ops.set_elem_data(elem->dim(), *elem, geom_elem);
+                geom_elem.init(*sub_elem, *_system, *_intersection);
                 
                 // clear before calculating the data
-                ops.init(*sub_elem);
+                ops.init(geom_elem);
                 ops.set_elem_solution(sol);
                 ops.evaluate();
                 ops.clear_elem();
@@ -198,6 +202,10 @@ update_stress_strain_data(MAST::StressStrainOutputBase&       ops,
             e_it    =  output_map.begin(),
             e_end   =  output_map.end();
             
+            RealVectorX
+            max_vals = RealVectorX::Zero(13);
+            
+            // get the max of all quantities
             for ( ; e_it != e_end; e_it++) {
                 
                 get_max_stress_strain_values(e_it->second,
@@ -206,20 +214,29 @@ update_stress_strain_data(MAST::StressStrainOutputBase&       ops,
                                              max_vm_stress,
                                              nullptr);
                 
-                // set the values in the system
-                // stress value
-                dof_id     =   elem->dof_number(sys_num, stress_vars[12], 0);
-                stress_sys.solution->set(dof_id, max_vm_stress);
                 
                 for (unsigned int i=0; i<6; i++) {
-                    // strain value
-                    dof_id     =   elem->dof_number(sys_num, stress_vars[i], 0);
-                    stress_sys.solution->set(dof_id, max_strain_vals(i));
-                    
-                    // stress value
-                    dof_id     =   elem->dof_number(sys_num, stress_vars[i+6], 0);
-                    stress_sys.solution->set(dof_id, max_stress_vals(i));
+                    if (std::fabs(max_strain_vals(i)) > std::fabs(max_vals(i)))
+                        max_vals(i)     = max_strain_vals(i);
+                    if (std::fabs(max_stress_vals(i)) > std::fabs(max_vals(i+6)))
+                        max_vals(i+6)   = max_stress_vals(i);
                 }
+                max_vals(12) = std::max(max_vm_stress, max_vals(12));
+            }
+            
+            // set the values in the system
+            // stress value
+            dof_id     =   elem->dof_number(sys_num, stress_vars[12], 0);
+            stress_sys.solution->set(dof_id, max_vals(12));
+            
+            for (unsigned int i=0; i<6; i++) {
+                // strain value
+                dof_id     =   elem->dof_number(sys_num, stress_vars[i], 0);
+                stress_sys.solution->set(dof_id, max_vals(i));
+                
+                // stress value
+                dof_id     =   elem->dof_number(sys_num, stress_vars[i+6], 0);
+                stress_sys.solution->set(dof_id, max_vals(i+6));
             }
         }
         
@@ -230,16 +247,3 @@ update_stress_strain_data(MAST::StressStrainOutputBase&       ops,
     this->clear_elem_operation_object();
 }
 
-
-std::unique_ptr<MAST::FEBase>
-MAST::LevelSetStressAssembly::build_fe() {
-
-    libmesh_assert(_elem_ops);
-    libmesh_assert(_system);
-    libmesh_assert(_intersection);
-    
-    std::unique_ptr<MAST::FEBase>
-    fe(new MAST::SubCellFE(*_system, *_intersection));
-
-    return fe;
-}

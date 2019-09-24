@@ -44,7 +44,8 @@ namespace MAST {
         
         
         void init(const MAST::PrimitiveSolution& sol,
-                  const typename VectorType<ValType>::return_type& delta_sol);
+                  const typename VectorType<ValType>::return_type& delta_sol,
+                  bool if_viscous);
         
         
         void print(std::ostream& out) const;
@@ -80,6 +81,12 @@ namespace MAST {
         ValType dentropy;
         
         ValType dmach;
+        
+        ValType dk_thermal;
+        
+        ValType dmu;
+        
+        ValType dlambda;
         
         const MAST::PrimitiveSolution* primitive_sol;
     };

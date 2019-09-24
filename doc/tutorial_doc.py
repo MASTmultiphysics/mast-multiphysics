@@ -11,17 +11,17 @@ def sanitize_comment(l):
 
 def if_line_is_comment(l):
     ln = l.strip()
-    if ((len(ln) > 0 and ln[0] == "*") or (len(ln) > 1 and ln[0:2] == "//")):
+    if ((len(ln) > 1 and ln[0:1] == "* ") or (len(ln) > 1 and ln[0:2] == "//")):
         return True
     else:
         return False
 
 
-def parse_example(d, examples_dir, doc_dir):
+def parse_example(physics, d, physics_dir, doc_dir):
     # the examples are structured such that each directory has one main file named example_XX.cpp,
     # where, XX is the number of the example.
-    source_abs_path = os.path.join(examples_dir, d, d+".cpp")
-    output_abs_path = os.path.join(     doc_dir, d+".dox")
+    source_abs_path = os.path.join( physics_dir, d, d+".cpp")
+    output_abs_path = os.path.join(     doc_dir, physics+"_"+d+".dox")
     assert(os.path.isfile(source_abs_path))
 
     # now read the file and translate the documentation
@@ -35,9 +35,9 @@ def parse_example(d, examples_dir, doc_dir):
         if "BEGIN_TRANSLATE" in l:
             ln = l.split("BEGIN_TRANSLATE")
             if len(ln) > 1:
-                example_output_file.write("/*! \n * \page " + d + ln[1] + " \n")
+                example_output_file.write("/*! \n * \page " + physics+"_"+d + ln[1] + " \n")
             else:
-                example_output_file.write("/*! \n * \page " + d + " \n")
+                example_output_file.write("/*! \n * \page " + physics+"_"+d + " \n")
             translate = True
         elif "END_TRANSLATE" in l:
             if code_mode:
@@ -69,7 +69,7 @@ if __name__ == "__main__":
 
     # terminal output to show during CMake execution.
     print(sys.argv[0])
-    print("Processing examples/example_XX/* files.")
+    print("Processing examples/*/example_XX/* files.")
 
     examples_dir = sys.argv[1]
     doc_dir      = sys.argv[2]
@@ -82,8 +82,11 @@ if __name__ == "__main__":
     assert(os.path.isdir(doc_dir))
 
     # get the list of example directories to be processed
-    for ex in os.listdir(examples_dir):
-        ex_dir = os.path.join(examples_dir, ex)
-        if ("example_" in ex and os.path.isdir(ex_dir)):
-            parse_example(ex, examples_dir, doc_dir)
+    for physics in os.listdir(examples_dir):
+        if (os.path.isdir(os.path.join(examples_dir, physics))):
+            physics_dir = os.path.join(examples_dir, physics)
+            for ex in os.listdir(physics_dir):
+                ex_dir = os.path.join(physics_dir, ex)
+                if ("example_" in ex and os.path.isdir(ex_dir)):
+                    parse_example(physics, ex, physics_dir, doc_dir)
 

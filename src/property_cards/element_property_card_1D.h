@@ -61,8 +61,7 @@ namespace MAST
         /*!
          *   returns the bending model to be used for the 2D element.
          */
-        virtual MAST::BendingOperatorType bending_model(const libMesh::Elem& elem,
-                                                        const libMesh::FEType& fe) const;
+        virtual MAST::BendingOperatorType bending_model(const MAST::GeomElem& elem) const;
         
         
         /*!
@@ -70,9 +69,8 @@ namespace MAST
          *    this element should use. This is elevated by two orders for a DKT
          *    element
          */
-        virtual int extra_quadrature_order(const libMesh::Elem& elem,
-                                           const libMesh::FEType& fe) const {
-            if (this->bending_model(elem, fe) == MAST::BERNOULLI)
+        virtual int extra_quadrature_order(const MAST::GeomElem& elem) const {
+            if (this->bending_model(elem) == MAST::BERNOULLI)
                 return 2;
             else
                 return 0;
@@ -89,7 +87,7 @@ namespace MAST
          *   vector in the x-y plane of the element. This should not be the same
          *   as the element x-axis.
          */
-        libMesh::Point& y_vector() {
+        RealVectorX& y_vector() {
             return _local_y;
         }
         
@@ -98,7 +96,7 @@ namespace MAST
          *   constant reference to vector in the x-y plane of the element. 
          *   This should not be the same as the element x-axis.
          */
-        const libMesh::Point& y_vector() const {
+        const RealVectorX& y_vector() const {
             return _local_y;
         }
         
@@ -185,7 +183,7 @@ namespace MAST
         /*!
          *   vector in the x-y plane.
          */
-        libMesh::Point _local_y;
+        RealVectorX _local_y;
         
     };
     

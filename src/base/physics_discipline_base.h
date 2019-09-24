@@ -43,6 +43,7 @@ namespace MAST {
     class Parameter;
     class PointLoadCondition;
     class NonlinearSystem;
+    class GeomElem;
     
     
     // typedefs
@@ -196,6 +197,11 @@ namespace MAST {
          *    get property card for the specified element
          */
         const MAST::ElementPropertyCardBase& get_property_card(const libMesh::Elem& elem) const;
+
+        /*!
+         *    get property card for the specified element
+         */
+        const MAST::ElementPropertyCardBase& get_property_card(const MAST::GeomElem& elem) const;
         
         /*!
          *    get property card for the specified subdomain id \p i

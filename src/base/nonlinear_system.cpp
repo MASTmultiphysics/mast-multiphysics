@@ -124,7 +124,6 @@ MAST::NonlinearSystem::init_data () {
     
     
     libMesh::DofMap& dof_map = this->get_dof_map();
-    dof_map.compute_sparsity(this->get_mesh());
     
     // build the system matrix
     matrix_A = libMesh::SparseMatrix<Real>::build(this->comm()).release();
@@ -171,16 +170,23 @@ void MAST::NonlinearSystem::reinit () {
     if (_is_generalized_eigenproblem || _initialize_B_matrix)
         matrix_B->clear();
     
-    libMesh::DofMap& dof_map = this->get_dof_map();
+    eigen_solver.reset(new MAST::SlepcEigenSolver(this->comm()));
+    if (libMesh::on_command_line("--solver_system_names")) {
+        
+        EPS eps =  eigen_solver.get()->eps();
+        std::string nm = this->name() + "_";
+        EPSSetOptionsPrefix(eps, nm.c_str());
+    }
+    eigen_solver->set_eigenproblem_type(_eigen_problem_type);
     
-    // Clear the sparsity pattern
-    dof_map.clear_sparsity();
     
-    // Compute the sparsity pattern for the current
-    // mesh and DOF distribution.  This also updates
-    // both matrices, \p DofMap now knows them
-    dof_map.compute_sparsity(this->get_mesh());
-    
+    linear_solver.reset(new libMesh::PetscLinearSolver<Real>(this->comm()));
+    if (libMesh::on_command_line("--solver_system_names")) {
+        
+        std::string nm = this->name() + "_";
+        linear_solver->init(nm.c_str());
+    }
+
     matrix_A->init();
     matrix_A->zero();
     
@@ -191,6 +197,12 @@ void MAST::NonlinearSystem::reinit () {
     }
 }
 
+std::pair<unsigned int, Real>
+MAST::NonlinearSystem::get_linear_solve_parameters() {
+    
+    this->set_solver_parameters();
+    return libMesh::NonlinearImplicitSystem::get_linear_solve_parameters();
+}
 
 
 void
@@ -987,10 +999,15 @@ project_vector_without_dirichlet (libMesh::NumericVector<Real> & new_vector,
     libMesh::WrappedFunctor<Real>     f_fem(f);
     libMesh::FEMFunctionWrapper<Real> fw(f_fem);
     
+#if (LIBMESH_MAJOR_VERSION == 1 && LIBMESH_MINOR_VERSION < 5)
     libMesh::Threads::parallel_for
     (active_local_range,
      FEMProjector(*this, fw, nullptr, setter, vars));
-    
+#else
+    FEMProjector projector(*this, fw, nullptr, setter, vars);
+    projector.project(active_local_range);
+#endif
+
     // Also, load values into the SCALAR dofs
     // Note: We assume that all SCALAR dofs are on the
     // processor with highest ID

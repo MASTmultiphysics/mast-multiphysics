@@ -152,6 +152,13 @@ namespace MAST {
 
             
             /*!
+             *   @ returns true if sensitivity data is available for function
+             *   \p f .
+             */
+            bool
+            has_stress_sensitivity(const MAST::FunctionBase& f) const;
+
+            /*!
              *   @ returns the sensitivity of the data with respect to a 
              *   function
              */
@@ -236,19 +243,20 @@ namespace MAST {
         /*!
          *   sets the \f$p-\f$norm for calculation of stress functional
          */
-        void set_aggregation_coefficients(Real p, Real rho, Real sigma0) {
+        void set_aggregation_coefficients(Real p1, Real p2, Real rho, Real sigma0) {
             
-            _p_norm =  p;
-            _rho    =  rho;
-            _sigma0 =  sigma0;
+            _p_norm_stress =  p1;
+            _p_norm_weight =  p2;
+            _rho           =  rho;
+            _sigma0        =  sigma0;
         }
         
         /*!
          *   @returns the \f$p-\f$norm for calculation of stress functional
          */
-        Real get_p_val() {
+        Real get_p_stress_val() {
             
-            return _p_norm;
+            return _p_norm_stress;
         }
         
         
@@ -263,9 +271,17 @@ namespace MAST {
          
         
         /*!
+         *   sets the structural element y-vector if 1D element is used.
+         */
+        virtual void
+        set_elem_data(unsigned int dim,
+                      const libMesh::Elem& ref_elem,
+                      MAST::GeomElem& elem) const;
+
+        /*!
          *   initialize for the element.
          */
-        virtual void init(const libMesh::Elem& elem);
+        virtual void init(const MAST::GeomElem& elem);
 
         /*!
          *   zeroes the output quantity values stored inside this object
@@ -325,7 +341,6 @@ namespace MAST {
          */
         virtual void
         evaluate_topology_sensitivity(const MAST::FunctionBase& f,
-                                      const MAST::LevelSetIntersection& intersect,
                                       const MAST::FieldFunction<RealVectorX>& vel);
         
         /*!
@@ -394,7 +409,7 @@ namespace MAST {
          *   present.
          */
         MAST::BoundaryConditionBase*
-        get_thermal_load_for_elem(const libMesh::Elem& elem);
+        get_thermal_load_for_elem(const MAST::GeomElem& elem);
 
         
         /*!
@@ -402,7 +417,7 @@ namespace MAST {
          *   stored for the given element.
          */
         unsigned int
-        n_stress_strain_data_for_elem(const libMesh::Elem* e) const;
+        n_stress_strain_data_for_elem(const MAST::GeomElem& e) const;
 
         
         /*!
@@ -410,7 +425,7 @@ namespace MAST {
          *   stored for the boundary of element.
          */
         unsigned int
-        n_boundary_stress_strain_data_for_elem(const libMesh::Elem* e) const;
+        n_boundary_stress_strain_data_for_elem(const GeomElem& e) const;
 
         
         
@@ -419,7 +434,7 @@ namespace MAST {
          *   to \p Data.
          */
         virtual MAST::StressStrainOutputBase::Data&
-        add_stress_strain_at_qp_location(const libMesh::Elem* e,
+        add_stress_strain_at_qp_location(const MAST::GeomElem& e,
                                          const unsigned int qp,
                                          const libMesh::Point& quadrature_pt,
                                          const libMesh::Point& physical_pt,
@@ -433,7 +448,7 @@ namespace MAST {
          *   element \p e. @returns a reference to \p Data.
          */
         virtual MAST::StressStrainOutputBase::Data&
-        add_stress_strain_at_boundary_qp_location(const libMesh::Elem* e,
+        add_stress_strain_at_boundary_qp_location(const MAST::GeomElem& e,
                                                   const unsigned int s,
                                                   const unsigned int qp,
                                                   const libMesh::Point& quadrature_pt,
@@ -453,10 +468,15 @@ namespace MAST {
 
         
         /*!
+         *   @returns the maximum von Mises stress of all stored components
+         */
+        Real get_maximum_von_mises_stress() const;
+        
+        /*!
          *    @returns the vector of stress/strain data for specified elem.
          */
         virtual const std::vector<MAST::StressStrainOutputBase::Data*>&
-        get_stress_strain_data_for_elem(const libMesh::Elem* e) const;
+        get_stress_strain_data_for_elem(const MAST::GeomElem& e) const;
 
         
         /*!
@@ -464,7 +484,7 @@ namespace MAST {
          *    the specified quadrature point.
          */
         virtual MAST::StressStrainOutputBase::Data&
-        get_stress_strain_data_for_elem_at_qp(const libMesh::Elem* e,
+        get_stress_strain_data_for_elem_at_qp(const MAST::GeomElem& e,
                                               const unsigned int qp);
 
         
@@ -476,8 +496,7 @@ namespace MAST {
          *   \f[  \left( \frac{\int_\Omega (\sigma_{VM}(\Omega))^p ~
          *    d\Omega}{\int_\Omega ~ d\Omega} \right)^{\frac{1}{p}} \f]
          */
-        void
-        von_Mises_p_norm_functional_for_all_elems();
+        virtual void functional_for_all_elems();
         
         
         /*!
@@ -490,8 +509,7 @@ namespace MAST {
          *    \int_\Omega p (\sigma_{VM}(\Omega))^{p-1} \frac{d \sigma_{VM}(\Omega)}{d\alpha} ~
          *    d\Omega \f]
          */
-        void
-        von_Mises_p_norm_functional_sensitivity_for_all_elems
+        virtual void functional_sensitivity_for_all_elems
         (const MAST::FunctionBase& f,
          Real& dsigma_vm_val_df) const;
 
@@ -508,8 +526,7 @@ namespace MAST {
          *    d\Omega \right)^{\frac{1}{p}}}{\left(  \int_\Omega ~ d\Omega \right)^{\frac{1+p}{p}}}
          *    \int_\Gamma  V_n ~d\Gamma \f]
          */
-        void
-        von_Mises_p_norm_functional_boundary_sensitivity_for_all_elems
+        virtual void functional_boundary_sensitivity_for_all_elems
         (const MAST::FunctionBase& f,
          Real& dsigma_vm_val_df) const;
 
@@ -518,8 +535,7 @@ namespace MAST {
          *   calculates and returns the sensitivity of von Mises p-norm
          *   functional for the element \p e.
          */
-        void
-        von_Mises_p_norm_functional_sensitivity_for_elem
+        virtual void functional_sensitivity_for_elem
         (const MAST::FunctionBase& f,
          const libMesh::dof_id_type e_id,
          Real& dsigma_vm_val_df) const;
@@ -529,8 +545,7 @@ namespace MAST {
          *   calculates and returns the boundary sensitivity of von Mises p-norm
          *   functional for the element \p e.
          */
-        void
-        von_Mises_p_norm_functional_boundary_sensitivity_for_elem
+        virtual void functional_boundary_sensitivity_for_elem
         (const MAST::FunctionBase& f,
          const libMesh::dof_id_type e_id,
          Real& dsigma_vm_val_df) const;
@@ -548,8 +563,8 @@ namespace MAST {
          *    \int_\Omega p (\sigma_{VM}(\Omega))^{p-1} \frac{d \sigma_{VM}(\Omega)}{dX} ~
          *    d\Omega \f]
          */
-        void von_Mises_p_norm_functional_state_derivartive_for_elem
-        (const libMesh::Elem& e,
+        virtual void functional_state_derivartive_for_elem
+        (const libMesh::dof_id_type e_id,
          RealVectorX& dq_dX) const;
 
         
@@ -560,7 +575,7 @@ namespace MAST {
          *   \f$ p-\f$norm to be used for calculation of output stress function.
          *    Default value is 2.0.
          */
-        Real _p_norm;
+        Real _p_norm_stress, _p_norm_weight;
         
         /*!
          *   exponent used in scaling volume based on stress value.

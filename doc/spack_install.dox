@@ -14,8 +14,8 @@ $ . spack/share/spack/setup-env.sh
 
 2. Install MAST and all dependencies
 \code{bash}
-$ spack install                                                  \
- ^libmesh +exodusii+hdf5+metis+boost+eigen+slepc                \
+$ spack install                                                 \
+  libmesh +exodusii+hdf5+metis+boost+eigen+slepc                \
  ^eigen ~fftw~metis~mpfr                                        \
  ^petsc ~complex~debug+double+hdf5+hypre~int64+metis+mpi+mumps+shared+suite-sparse+superlu-dist+trilinos \
  ^intel-mkl %gcc@8.2.0
@@ -24,8 +24,8 @@ $ spack install                                                  \
 3. Create symbolic link to all packages on in a directory for MAST installation.
 Replace `{SPACK_CODES}` with the directory where you want these links created.
 \code{bash}
-$ spack view -v -d true symlink {SPACK_CODES}                    \
- ^libmesh +exodusii+hdf5+metis+boost+eigen+slepc                \
+$ spack view -v -d true symlink {SPACK_CODES}                   \
+  libmesh +exodusii+hdf5+metis+boost+eigen+slepc                \
  ^eigen ~fftw~metis~mpfr                                        \
  ^petsc ~complex~debug+double+hdf5+hypre~int64+metis+mpi+mumps+shared+suite-sparse+superlu-dist+trilinos \
  ^intel-mkl %gcc@8.2.0
@@ -42,16 +42,15 @@ $ git clone https://github.com/MASTmultiphysics/mast-multiphysics.git
 
 5. Configure MAST
 \code{bash}
-$ cd ../
 $ mkdir dbg
 $ cd dbg
 $ export SPACK_VIEW_DIR={SPACK_CODES}                            \
   cmake  ../mast-multiphysics                                    \
-  -DMPI_C_COMPILER=${SPACK_VIEW_DIR}/mpiccc                      \
-  -DMPI_CXX_COMPILER=${SPACK_VIEW_DIR}/mpicxx                    \
-  -DCMAKE_C_COMPILER=${SPACK_VIEW_DIR}/mpiccc                    \
-  -DCMAKE_CXX_COMPILER=${SPACK_VIEW_DIR}/mpicxx                  \
-  -DCMAKE_Fortran_COMPILER=${SPACK_VIEW_DIR}/mpif90              \
+  -DMPI_C_COMPILER=${SPACK_VIEW_DIR}/bin/mpicc                   \
+  -DMPI_CXX_COMPILER=${SPACK_VIEW_DIR}/bin/mpicxx                \
+  -DCMAKE_C_COMPILER=${SPACK_VIEW_DIR}/bin/mpicc                 \
+  -DCMAKE_CXX_COMPILER=${SPACK_VIEW_DIR}/bin/mpicxx              \
+  -DCMAKE_Fortran_COMPILER=${SPACK_VIEW_DIR}/bin/mpif90          \
   -DlibMesh_DIR=${SPACK_VIEW_DIR}                                \
   -DPETSc_DIR=${SPACK_VIEW_DIR}                                  \
   -DSLEPc_DIR=${SPACK_VIEW_DIR}                                  \
@@ -61,13 +60,13 @@ $ export SPACK_VIEW_DIR={SPACK_CODES}                            \
 
 6. Build MAST:
 \code{bash}
-$ make example_driver -j N
+$ make -j N
 \endcode
 Replace N with the number of cores on your machine to enable parallel build.
 
 7. Test MAST by running example_2:
 \code{bash}
-$ ./examples/example_2/example_2 -ksp_type preonly -pc_type lu
+$ ./examples/structural/example_1/structural_example_1 -ksp_type preonly -pc_type lu
 \endcode
 
 */

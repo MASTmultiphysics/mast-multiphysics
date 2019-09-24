@@ -30,6 +30,7 @@
 
 // MAST includes
 #include "base/mast_data_types.h"
+#include "base/mast_config.h"
 
 
 // libMesh includes
@@ -157,9 +158,19 @@ namespace MAST {
          *  verifies the gradients at the specified design point
          */
         virtual bool verify_gradients(const std::vector<Real>& dvars);
+
+        /*!
+         *  computes a parametric evaluation along a line from \p iter1 to
+         *  \p iter2 in file \p nm with \p divs runs between the two.
+         */
+        virtual void
+        parametric_line_study(const std::string& nm,
+                              const unsigned int iter1,
+                              const unsigned int iter2,
+                              unsigned int divs);
         
         
-#if MAST_ENABLE_NPSOL == 1
+#if MAST_ENABLE_SNOPT == 1
         typedef void (*funobj) (int*    mode,
                                 int*    n,
                                 double* x,
@@ -180,7 +191,7 @@ namespace MAST {
 
         /*!
          *  @returns a pointer to the function that evaluates the objective
-         *  used for NPSOL interface
+         *  used for SNOPT interface
          */
         virtual funobj
         get_objective_evaluation_function() {
@@ -194,7 +205,7 @@ namespace MAST {
         
         /*!
          *  @returns a pointer to the function that evaluates the constraint
-         *  used for NPSOL interface
+         *  used for SNOPT interface
          */
         virtual funcon
         get_constraint_evaluation_function() {

@@ -24,7 +24,9 @@
 #include "base/mesh_field_function.h"
 #include "base/nonlinear_system.h"
 #include "base/nonlinear_implicit_assembly_elem_operations.h"
+#include "boundary_condition/point_load_condition.h"
 #include "numerics/utility.h"
+#include "mesh/geom_elem.h"
 
 // libMesh includes
 #include "libmesh/nonlinear_solver.h"
@@ -112,8 +114,12 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
         
         dof_map.dof_indices (elem, dof_indices);
         
-        ops.init(*elem);
+        MAST::GeomElem geom_elem;
+        ops.set_elem_data(elem->dim(), *elem, geom_elem);
+        geom_elem.init(*elem, *_system);
         
+        ops.init(geom_elem);
+
         // get the solution
         unsigned int ndofs = (unsigned int)dof_indices.size();
         sol.setZero(ndofs);
@@ -159,6 +165,68 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
         // add to the global matrices
         if (R) R->add_vector(v, dof_indices);
         if (J) J->add_matrix(m, dof_indices);
+        dof_indices.clear();
+    }
+
+    
+    // add the point loads if any in the discipline
+    if (R && _discipline->point_loads().size()) {
+        
+        const MAST::PointLoadSetType&
+        loads = _discipline->point_loads();
+        
+        vec = RealVectorX::Zero(_system->n_vars());
+        
+        MAST::PointLoadSetType::const_iterator
+        it    = loads.begin(),
+        end   = loads.end();
+        
+        const libMesh::dof_id_type
+        first_dof  = dof_map.first_dof(nonlin_sys.comm().rank()),
+        last_dof   = dof_map.last_dof(nonlin_sys.comm().rank());
+
+        for ( ; it != end; it++) {
+            
+            // get the point load function
+            const MAST::FieldFunction<RealVectorX>
+            &func = (*it)->get<MAST::FieldFunction<RealVectorX>>("load");
+            
+            // get the nodes on which this object defines the load
+            const std::set<const libMesh::Node*>
+            nodes = (*it)->get_nodes();
+            
+            std::set<const libMesh::Node*>::const_iterator
+            n_it    = nodes.begin(),
+            n_end   = nodes.end();
+            
+            for (; n_it != n_end; n_it++) {
+                
+                // load at the node
+                vec.setZero();
+                func(**n_it, nonlin_sys.time, vec);
+                // multiply with -1 to be consistent with res(X) = 0, which
+                // requires taking the force vector on RHS to the LHS
+                vec *= -1.;
+                
+                dof_map.dof_indices(*n_it, dof_indices);
+
+                libmesh_assert_equal_to(dof_indices.size(), vec.rows());
+
+                // zero the components of the vector if they do not
+                // belong to this processor
+                for (unsigned int i=0; i<dof_indices.size(); i++)
+                    if (dof_indices[i] <   first_dof  ||
+                        dof_indices[i] >=  last_dof)
+                        vec(i) = 0.;
+
+                DenseRealVector v;
+                MAST::copy(v, vec);
+                
+                dof_map.constrain_element_vector(v, dof_indices);
+                R->add_vector(v, dof_indices);
+                dof_indices.clear();
+            }
+        }
     }
     
     // call the post assembly object, if provided by user
@@ -177,7 +245,7 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
         if (_first_iter_res_l2_norm < 0.)
             _first_iter_res_l2_norm = _res_l2_norm;
     }
-    if (J) J->close();
+    if (J && close_matrix) J->close();
 }
 
 
@@ -241,8 +309,12 @@ linearized_jacobian_solution_product (const libMesh::NumericVector<Real>& X,
         
         dof_map.dof_indices (elem, dof_indices);
         
-        ops.init(*elem);
+        MAST::GeomElem geom_elem;
+        ops.set_elem_data(elem->dim(), *elem, geom_elem);
+        geom_elem.init(*elem, *_system);
         
+        ops.init(geom_elem);
+
         // get the solution
         unsigned int ndofs = (unsigned int)dof_indices.size();
         sol.setZero(ndofs);
@@ -279,6 +351,7 @@ linearized_jacobian_solution_product (const libMesh::NumericVector<Real>& X,
         
         // add to the global matrices
         JdX.add_vector(v, dof_indices);
+        dof_indices.clear();
     }
     
     
@@ -349,8 +422,12 @@ second_derivative_dot_solution_assembly (const libMesh::NumericVector<Real>& X,
         
         dof_map.dof_indices (elem, dof_indices);
         
-        ops.init(*elem);
+        MAST::GeomElem geom_elem;
+        ops.set_elem_data(elem->dim(), *elem, geom_elem);
+        geom_elem.init(*elem, *_system);
         
+        ops.init(geom_elem);
+
         // get the solution
         unsigned int ndofs = (unsigned int)dof_indices.size();
         sol.setZero(ndofs);
@@ -439,10 +516,20 @@ sensitivity_assemble (const MAST::FunctionBase& f,
         
         const libMesh::Elem* elem = *el;
         
+        // no sensitivity computation assembly is neeed in these cases
+        if (_param_dependence &&
+            // if object is specified and elem does not depend on it
+            !_param_dependence->if_elem_depends_on_parameter(*elem, f))
+            continue;
+
         dof_map.dof_indices (elem, dof_indices);
         
-        ops.init(*elem);
+        MAST::GeomElem geom_elem;
+        ops.set_elem_data(elem->dim(), *elem, geom_elem);
+        geom_elem.init(*elem, *_system);
         
+        ops.init(geom_elem);
+
         // get the solution
         unsigned int ndofs = (unsigned int)dof_indices.size();
         sol.setZero(ndofs);
@@ -471,8 +558,67 @@ sensitivity_assemble (const MAST::FunctionBase& f,
         
         // add to the global matrices
         sensitivity_rhs.add_vector(v, dof_indices);
+        dof_indices.clear();
     }
     
+    // add the point loads if any in the discipline
+    if (_discipline->point_loads().size()) {
+        
+        const MAST::PointLoadSetType&
+        loads = _discipline->point_loads();
+        
+        vec = RealVectorX::Zero(_system->n_vars());
+        
+        MAST::PointLoadSetType::const_iterator
+        it    = loads.begin(),
+        end   = loads.end();
+        
+        const libMesh::dof_id_type
+        first_dof  = dof_map.first_dof(nonlin_sys.comm().rank()),
+        last_dof   = dof_map.last_dof(nonlin_sys.comm().rank());
+        
+        for ( ; it != end; it++) {
+            
+            // get the point load function
+            const MAST::FieldFunction<RealVectorX>
+            &func = (*it)->get<MAST::FieldFunction<RealVectorX>>("load");
+            
+            // get the nodes on which this object defines the load
+            const std::set<const libMesh::Node*>
+            nodes = (*it)->get_nodes();
+            
+            std::set<const libMesh::Node*>::const_iterator
+            n_it    = nodes.begin(),
+            n_end   = nodes.end();
+            
+            for (; n_it != n_end; n_it++) {
+                
+                // load at the node
+                vec.setZero();
+                func.derivative(f, **n_it, nonlin_sys.time, vec);
+                vec *= -1.;
+                
+                dof_map.dof_indices(*n_it, dof_indices);
+                
+                libmesh_assert_equal_to(dof_indices.size(), vec.rows());
+
+                // zero the components of the vector if they do not
+                // belong to this processor
+                for (unsigned int i=0; i<dof_indices.size(); i++)
+                    if (dof_indices[i] <   first_dof  ||
+                        dof_indices[i] >=  last_dof)
+                        vec(i) = 0.;
+
+                DenseRealVector v;
+                MAST::copy(v, vec);
+                
+                dof_map.constrain_element_vector(v, dof_indices);
+                sensitivity_rhs.add_vector(v, dof_indices);
+                dof_indices.clear();
+            }
+        }
+    }
+
     // if a solution function is attached, initialize it
     if (_sol_function)
         _sol_function->clear();
