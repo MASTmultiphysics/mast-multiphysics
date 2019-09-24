@@ -25,8 +25,7 @@
 #include "libmesh/enum_eigen_solver_type.h"
 
 
-MAST::SlepcEigenSolver::SlepcEigenSolver(const libMesh::Parallel::Communicator & comm_in
-                                         LIBMESH_CAN_DEFAULT_TO_COMMWORLD):
+MAST::SlepcEigenSolver::SlepcEigenSolver(const libMesh::Parallel::Communicator & comm_in):
 libMesh::SlepcEigenSolver<Real>(comm_in) {
     
 }

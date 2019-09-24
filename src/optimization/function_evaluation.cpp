@@ -25,6 +25,9 @@
 // MAST includes
 #include "optimization/function_evaluation.h"
 
+// libMesh includes
+#include "libmesh/parallel_implementation.h"
+
 
 void
 MAST::FunctionEvaluation::attach_optimization_interface(MAST::OptimizationInterface& opt) {
