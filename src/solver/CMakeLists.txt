@@ -8,6 +8,8 @@ target_sources(mast
         ${CMAKE_CURRENT_LIST_DIR}/continuation_solver_base.h
         ${CMAKE_CURRENT_LIST_DIR}/first_order_newmark_transient_solver.cpp
         ${CMAKE_CURRENT_LIST_DIR}/first_order_newmark_transient_solver.h
+        ${CMAKE_CURRENT_LIST_DIR}/generalized_alpha_transient_solver.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/generalized_alpha_transient_solver.h
         ${CMAKE_CURRENT_LIST_DIR}/multiphysics_nonlinear_solver.cpp
         ${CMAKE_CURRENT_LIST_DIR}/multiphysics_nonlinear_solver.h
         ${CMAKE_CURRENT_LIST_DIR}/pseudo_arclength_continuation_solver.cpp

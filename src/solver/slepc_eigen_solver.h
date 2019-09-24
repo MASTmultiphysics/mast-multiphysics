@@ -40,8 +40,7 @@ namespace MAST {
     public libMesh::SlepcEigenSolver<Real> {
       
     public:
-        SlepcEigenSolver(const libMesh::Parallel::Communicator & comm_in
-                         LIBMESH_CAN_DEFAULT_TO_COMMWORLD);
+        SlepcEigenSolver(const libMesh::Parallel::Communicator & comm_in);
         
         /**
          * This function returns the real and imaginary part of the
