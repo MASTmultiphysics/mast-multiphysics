@@ -59,7 +59,7 @@ macro(_eigen3_check_version)
   if(NOT EIGEN3_VERSION_OK)
 
     message(STATUS "Eigen3 version ${EIGEN3_VERSION} found in ${EIGEN3_INCLUDE_DIR}, "
-                   "but at least version ${Eigen3_FIND_VERSION} is required")
+            "but at least version ${Eigen3_FIND_VERSION} is required")
   endif(NOT EIGEN3_VERSION_OK)
 endmacro(_eigen3_check_version)
 
@@ -71,7 +71,7 @@ if (EIGEN3_INCLUDE_DIR)
   set(Eigen3_FOUND ${EIGEN3_VERSION_OK})
 
 else (EIGEN3_INCLUDE_DIR)
-  
+
   # search first if an Eigen3Config.cmake is available in the system,
   # if successful this would set EIGEN3_INCLUDE_DIR and the rest of
   # the script will work as usual
@@ -79,15 +79,15 @@ else (EIGEN3_INCLUDE_DIR)
 
   if(NOT EIGEN3_INCLUDE_DIR)
     find_path(EIGEN3_INCLUDE_DIR NAMES signature_of_eigen3_matrix_library
-        HINTS
-        ENV EIGEN3_ROOT 
-        ENV EIGEN3_ROOT_DIR
-        ${EIGEN3_ROOT}/include
-        PATHS
-        ${CMAKE_INSTALL_PREFIX}/include
-        ${KDE4_INCLUDE_DIR}
-        PATH_SUFFIXES eigen3 eigen
-      )
+            HINTS
+            ${EIGEN3_ROOT}/include
+            ENV EIGEN3_ROOT
+            ENV EIGEN3_ROOT_DIR
+            PATHS
+            ${CMAKE_INSTALL_PREFIX}/include
+            ${KDE4_INCLUDE_DIR}
+            PATH_SUFFIXES eigen3 eigen
+            )
   endif(NOT EIGEN3_INCLUDE_DIR)
 
   if(EIGEN3_INCLUDE_DIR)
@@ -104,5 +104,5 @@ endif(EIGEN3_INCLUDE_DIR)
 if(EIGEN3_FOUND AND NOT TARGET Eigen3::Eigen)
   add_library(Eigen3::Eigen INTERFACE IMPORTED)
   set_target_properties(Eigen3::Eigen PROPERTIES
-    INTERFACE_INCLUDE_DIRECTORIES "${EIGEN3_INCLUDE_DIR}")
+          INTERFACE_INCLUDE_DIRECTORIES "${EIGEN3_INCLUDE_DIR}")
 endif()
