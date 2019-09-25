@@ -110,29 +110,29 @@ set_elem_operation_object(MAST::TransientAssemblyElemOperations &assembly_ops) {
             
             nm = "transient_solution_";
             nm += iter.str();
-            sys.add_vector(nm);
+            sys.add_vector(nm, true, libMesh::GHOSTED);
 
             nm = "transient_solution_sensitivity_";
             nm += iter.str();
-            sys.add_vector(nm);
+            sys.add_vector(nm, true, libMesh::GHOSTED);
         }
 
         // add the velocity
         nm = "transient_velocity_";
         nm += iter.str();
-        sys.add_vector(nm);
+        sys.add_vector(nm, true, libMesh::GHOSTED);
         nm = "transient_velocity_sensitivity_";
         nm += iter.str();
-        sys.add_vector(nm);
+        sys.add_vector(nm, true, libMesh::GHOSTED);
 
         if (_ode_order > 1) {
             // add the acceleration
             nm = "transient_acceleration_";
             nm += iter.str();
-            sys.add_vector(nm);
+            sys.add_vector(nm, true, libMesh::GHOSTED);
             nm = "transient_acceleration_sensitivity_";
             nm += iter.str();
-            sys.add_vector(nm);
+            sys.add_vector(nm, true, libMesh::GHOSTED);
         }
     }
     
@@ -211,7 +211,7 @@ MAST::TransientSolverBase::solution(unsigned int prev_iter) const {
         return _system->system().get_vector(nm);
     }
     else
-        return *_system->system().solution;
+        return *_system->system().current_local_solution;
 }
 
 
@@ -405,6 +405,8 @@ solve_highest_derivative_and_advance_time_step(MAST::AssemblyBase& assembly) {
 #ifdef LIBMESH_ENABLE_CONSTRAINTS
     sys.get_dof_map().enforce_constraints_exactly(sys, vec, /* homogeneous = */ true);
 #endif
+    
+    sys.update();
     
     // next, move all the solutions and velocities into older
     // time step locations
@@ -756,10 +758,11 @@ MAST::TransientSolverBase::advance_time_step() {
     &sys = _system->system();
     
     // first ask the solver to update the velocity and acceleration vector
-    update_velocity(this->velocity(), *sys.solution);
+    sys.update();
+    update_velocity(this->velocity(), *sys.current_local_solution);
 
     if (_ode_order > 1)
-        update_acceleration(this->acceleration(), *sys.solution);
+        update_acceleration(this->acceleration(), *sys.current_local_solution);
 
     // next, move all the solutions and velocities into older
     // time step locations
