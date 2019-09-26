@@ -129,6 +129,58 @@ namespace MAST
         
         
         /*!
+         *   return the material property. This needs to be reimplemented
+         *   for individual card type, and should be used only for isotropic
+         *   cards.
+         * 
+         *   Added by DJN. Reference cplusplus.com/forum/beginner/10639
+         */
+        virtual void set_material(MAST::MaterialPropertyCardBase& mat) {
+            libmesh_error_msg("Not Implemented, this needs to be reimplemented for individual card type.");
+        }
+        
+        
+        /*!
+         *   vector in the x-y plane of the element. This should not be the same
+         *   as the element x-axis.
+         *   Only used by 1D sections. Added for polymorphism enhancement.
+         *   Added by DJN.
+         */
+        virtual RealVectorX& y_vector() {
+            libmesh_error_msg("Not Implemented, this needs to be reimplemented for individual card type.");
+        }
+        
+
+        /*!
+         *   constant reference to vector in the x-y plane of the element. 
+         *   This should not be the same as the element x-axis.
+         *   Only used by 1D sections. Added for polymorphism enhancement.
+         *   Added by DJN. 
+         */
+        virtual const RealVectorX& y_vector() const {
+            libmesh_error_msg("Not Implemented, this needs to be reimplemented for individual card type.");
+        }
+        
+        /*!
+         * Only used by 1D sections. Added for polymorphism enhancement.
+         * 
+         * Added by DJN.
+         */
+        virtual void init() {
+            libmesh_error_msg("Not Implemented, this needs to be reimplemented for individual card type.");
+        }
+        
+        /*!
+         * Only used by 1D sections. Added for polymorphism enhancement.
+         * 
+         * Added by DJN.
+         */
+        virtual void init(Real A, Real Izz, Real Iyy, Real J, Real T){
+            libmesh_error_msg("Not Implemented, this needs to be reimplemented for individual card type.");
+        }
+        
+        
+        /*!
          *   dimension of the element for which this property is defined
          */
         virtual unsigned int dim() const = 0;
