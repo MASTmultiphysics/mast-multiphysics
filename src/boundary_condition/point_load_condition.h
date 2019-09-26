@@ -25,6 +25,9 @@
 
 // MAST includes
 #include "base/boundary_condition_base.h"
+#include "base/field_function_base.h"
+#include "base/parameter.h"
+// #include "base/mast_data_types.h"
 
 // libMesh includes
 #include "libmesh/node.h"
@@ -72,6 +75,32 @@ namespace MAST {
          *   set of nodes on which load is specified
          */
         std::set<const libMesh::Node*> _nodes;
+        
+    };
+    
+    
+    /**
+     * This class is used in the conjuction with the class above. Added by DJN
+     * to enhance compatability with NASTRAN interface.
+     */
+    class PointLoad: public MAST::FieldFunction<RealVectorX>
+    {
+    public:
+        PointLoad(MAST::Parameter magnitude, RealVectorX direction);
+        
+        virtual ~PointLoad();
+        
+        virtual void operator()(const libMesh::Point& p, const Real t, 
+                                RealVectorX& v) const;
+        
+        virtual void derivative(const MAST::FunctionBase& f, 
+                                const libMesh::Point& p, const Real t, 
+                                RealVectorX& v) const;
+        
+    protected:
+        
+        MAST::Parameter    _magnitude;
+        RealVectorX        _direction;
         
     };
 }
