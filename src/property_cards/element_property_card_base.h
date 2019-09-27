@@ -161,6 +161,7 @@ namespace MAST
             libmesh_error_msg("Not Implemented, this needs to be reimplemented for individual card type.");
         }
         
+
         /*!
          * Only used by 1D sections. Added for polymorphism enhancement.
          * 
@@ -170,6 +171,7 @@ namespace MAST
             libmesh_error_msg("Not Implemented, this needs to be reimplemented for individual card type.");
         }
         
+
         /*!
          * Only used by 1D sections. Added for polymorphism enhancement.
          * 
@@ -179,7 +181,7 @@ namespace MAST
             libmesh_error_msg("Not Implemented, this needs to be reimplemented for individual card type.");
         }
         
-        
+
         /*!
          *   dimension of the element for which this property is defined
          */
