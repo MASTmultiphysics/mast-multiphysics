@@ -247,7 +247,9 @@ MAST::StructuralElement1D::calculate_stress(bool request_derivative,
     strain_3D   = RealVectorX::Zero(6),
     stress_3D   = RealVectorX::Zero(6),
     dstrain_dp  = RealVectorX::Zero(n1),
-    dstress_dp  = RealVectorX::Zero(n1);
+    dstress_dp  = RealVectorX::Zero(n1),
+    vec1        = RealVectorX::Zero(n2),
+    vec2        = RealVectorX::Zero(n2);
 
     MAST::FEMOperatorMatrix
     Bmat_mem,
@@ -433,8 +435,12 @@ MAST::StructuralElement1D::calculate_stress(bool request_derivative,
                 dstress_dX  = material_mat * dstrain_dX;
                 
                 // copy to the 3D structure
-                dstress_dX_3D.row(0)  = dstress_dX.row(0);
-                dstrain_dX_3D.row(0)  = dstrain_dX.row(0);
+                vec1 = dstress_dX.row(0);
+                this->transform_vector_to_global_system(vec1, vec2);
+                dstress_dX_3D.row(0)  = vec2;
+                vec1 = dstrain_dX.row(0);
+                this->transform_vector_to_global_system(vec1, vec2);
+                dstrain_dX_3D.row(0)  =  vec2;
                 
                 if (request_derivative)
                     data->set_derivatives(dstress_dX_3D, dstrain_dX_3D);
@@ -461,7 +467,7 @@ MAST::StructuralElement1D::calculate_stress(bool request_derivative,
                         temp_func->derivative(*p, xyz[qp_loc_index], _time, dtemp);
                         ref_temp_func->derivative(*p, xyz[qp_loc_index], _time, dref_t);
                         alpha_func->derivative(*p, xyz[qp_loc_index], _time, dalpha);
-                        dstrain_dp(0)  -=  alpha*(dtemp-dref_t) - dalpha*(temp-ref_t);
+                        dstrain_dp(0)  -=  alpha*(dtemp-dref_t) + dalpha*(temp-ref_t);
                     }
                     
                     // include the dependence of strain on the thickness
@@ -2098,7 +2104,7 @@ MAST::StructuralElement1D::thermal_residual_sensitivity (const MAST::FunctionBas
     &temp_func     = bc.get<MAST::FieldFunction<Real> >("temperature"),
     &ref_temp_func = bc.get<MAST::FieldFunction<Real> >("ref_temperature");
     
-    Real t, t0, t_sens;
+    Real t, t0, t_sens, t0_sens;
     
     for (unsigned int qp=0; qp<JxW.size(); qp++) {
         
@@ -2112,8 +2118,9 @@ MAST::StructuralElement1D::thermal_residual_sensitivity (const MAST::FunctionBas
         temp_func(xyz[qp], _time, t);
         temp_func.derivative(p, xyz[qp], _time, t_sens);
         ref_temp_func(xyz[qp], _time, t0);
+        ref_temp_func.derivative(p, xyz[qp], _time, t0_sens);
         delta_t(0)      = t-t0;
-        delta_t_sens(0) = t_sens;
+        delta_t_sens(0) = t_sens-t0_sens;
         
         // now prepare the membrane force sensitivity
         vec1_n1 = material_exp_A_mat * delta_t_sens; // [C]{alpha (dT/dp)} (with membrane strain)
