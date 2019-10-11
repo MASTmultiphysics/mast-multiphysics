@@ -81,6 +81,7 @@ namespace MAST {
          *   initializes the algebraic data structures
          */
         void _init();
+        void _init2();
         
         /*!
          *   system on which the level set discrete function is defined
