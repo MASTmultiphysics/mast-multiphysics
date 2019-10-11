@@ -31,6 +31,7 @@
 
 MAST::SubElemMeshRefinement::SubElemMeshRefinement(libMesh::MeshBase& mesh,
                                                    libMesh::System&   sys):
+libMesh::System::Constraint          (),
 _initialized                         (false),
 _strong_discontinuity                (false),
 _negative_level_set_subdomain_offset (0),
