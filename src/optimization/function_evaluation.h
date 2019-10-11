@@ -49,6 +49,7 @@ namespace MAST {
         
         FunctionEvaluation(const libMesh::Parallel::Communicator& comm_in):
         libMesh::ParallelObject (comm_in),
+        _iter                   (0),
         _n_vars                 (0),
         _n_eq                   (0),
         _n_ineq                 (0),
@@ -259,6 +260,8 @@ namespace MAST {
                                      bool if_write_to_optim_file);
 
     protected:
+        
+        unsigned int _iter;
         
         unsigned int _n_vars;
         

@@ -483,6 +483,12 @@ MAST::FunctionEvaluation::_evaluate_wrapper(const std::vector<Real>& dvars,
     libmesh_assert(this->comm().verify(dvars));
     libmesh_assert(this->comm().verify(eval_obj_grad));
     
+    _output_wrapper(_iter,
+                    dvars,
+                    obj,
+                    fvals,
+                    true);
+
     this->evaluate(dvars,
                    obj,
                    eval_obj_grad,
@@ -513,6 +519,7 @@ MAST::FunctionEvaluation::_output_wrapper(unsigned int iter,
     libmesh_assert(this->comm().verify(iter));
     libmesh_assert(this->comm().verify(x));
     
-    this->output(iter, x, obj, fval, if_write_to_optim_file);
+    this->output(_iter, x, obj, fval, if_write_to_optim_file);
+    _iter++;
 }
 
