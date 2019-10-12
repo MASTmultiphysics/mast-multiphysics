@@ -22,13 +22,10 @@
 
 // MAST includes
 #include "examples/base/input_wrapper.h"
-#include "examples/fluid/meshing/cylinder.h"
 #include "level_set/level_set_discipline.h"
 #include "level_set/level_set_system_initialization.h"
 #include "level_set/level_set_eigenproblem_assembly.h"
-#include "level_set/level_set_transient_assembly.h"
 #include "level_set/level_set_nonlinear_implicit_assembly.h"
-#include "level_set/level_set_reinitialization_transient_assembly.h"
 #include "level_set/level_set_volume_output.h"
 #include "level_set/level_set_perimeter_output.h"
 #include "level_set/level_set_boundary_velocity.h"
@@ -58,6 +55,10 @@
 #include "optimization/gcmma_optimization_interface.h"
 #include "optimization/npsol_optimization_interface.h"
 #include "optimization/function_evaluation.h"
+#include "examples/structural/base/bracket_2d_model.h"
+#include "examples/structural/base/inplane_2d_model.h"
+#include "examples/structural/base/truss_2d_model.h"
+#include "examples/structural/base/eyebar_2d_model.h"
 
 
 // libMesh includes
@@ -65,7 +66,6 @@
 #include "libmesh/serial_mesh.h"
 #include "libmesh/equation_systems.h"
 #include "libmesh/string_to_enum.h"
-#include "libmesh/mesh_generation.h"
 #include "libmesh/dof_map.h"
 #include "libmesh/exodusII_io.h"
 #include "libmesh/petsc_nonlinear_solver.h"
@@ -148,10 +148,11 @@ private:
 };
 
 
-class TopologyOptimizationLevelSet2D:
+template <typename T>
+class TopologyOptimizationLevelSet:
 public MAST::FunctionEvaluation {
     
-protected:
+public:
     
     bool                                      _initialized;
     MAST::Examples::GetPotWrapper&            _input;
@@ -208,7 +209,6 @@ protected:
     
     std::vector<std::pair<unsigned int, MAST::Parameter*>>  _dv_params;
 
-public:
     
     //  \section  ex_5_init_mesh Mesh Generation
     //  This creates the mesh for the specified problem type.
@@ -957,7 +957,7 @@ public:
         
         MAST::Parameter
         *E         = new MAST::Parameter("E",          Eval),
-        *E_v       = new MAST::Parameter("E_v",  Eval*1.e-8),
+        *E_v       = new MAST::Parameter("E_v",          0.),
         *rho       = new MAST::Parameter("rho",      rhoval),
         *nu        = new MAST::Parameter("nu",       nu_val),
         *kappa     = new MAST::Parameter("kappa", kappa_val),
@@ -1644,6 +1644,8 @@ public:
         }
     }
     
+    
+    
     class ElemFlag: public libMesh::MeshRefinement::ElementFlagging {
     public:
         ElemFlag(libMesh::MeshBase& mesh, MAST::FieldFunction<Real>& phi, unsigned int max_h):
@@ -1914,6 +1916,7 @@ public:
         obj       = _obj_scaling * (vol + _perimeter_penalty * per);
         //_obj_scaling    * (vol+ _perimeter_penalty * per) +
         //_stress_penalty * (vm_agg);///_stress_lim - 1.);
+        //obj       = _obj_scaling * (comp + _perimeter_penalty * per);
         
         fvals[0]  =  stress.output_total()/_stress_lim - 1.;  // g = sigma/sigma0-1 <= 0
         //fvals[0]  =  stress.output_total()/_length/_height;  // g <= 0 for the smooth ramp function
@@ -1959,6 +1962,7 @@ public:
             grad1(obj_grad.size(), 0.);
             
             _evaluate_volume_sensitivity(&volume, &perimeter, level_set_assembly, obj_grad);
+            //_evaluate_volume_sensitivity(nullptr, &perimeter, level_set_assembly, obj_grad);
             
             /*_evaluate_compliance_sensitivity(compliance,
                                              nonlinear_elem_ops,
@@ -2145,7 +2149,7 @@ public:
     _evaluate_compliance_sensitivity
     (MAST::ComplianceOutput& compliance,
      MAST::AssemblyElemOperations& nonlinear_elem_ops,
-     MAST::LevelSetNonlinearImplicitAssembly& nonlinear_assembly,
+     MAST::NonlinearImplicitAssembly& nonlinear_assembly,
      std::vector<Real>& grads) {
         
         // Adjoint solution for compliance = - X
@@ -2192,6 +2196,9 @@ public:
         
         nonlinear_assembly.clear_elem_parameter_dependence_object();
     }
+    
+    
+    void set_n_vars(const unsigned int n_vars) {_n_vars = n_vars;}
 
     //
     //  \subsection ex_5_design_output  Output of Design Iterate
@@ -2311,7 +2318,7 @@ public:
     //   \subsection ex_5_constructor  Constructor
     //
     
-    TopologyOptimizationLevelSet2D(const libMesh::Parallel::Communicator& comm_in,
+    TopologyOptimizationLevelSet(const libMesh::Parallel::Communicator& comm_in,
                                    MAST::Examples::GetPotWrapper& input):
     MAST::FunctionEvaluation             (comm_in),
     _initialized                         (false),
@@ -2356,13 +2363,25 @@ public:
         //
         // call the initialization routines for each component
         //
+        
+        std::string
+        s  = _input("mesh", "type of mesh to be analyzed {inplane, bracket, truss, eyebar}",
+                    "inplane");
+
+        _mesh = new libMesh::SerialMesh(this->comm());
+        _level_set_mesh = new libMesh::SerialMesh(this->comm());
+
+        
         _init_fetype();
-        _init_mesh();
+        T::init_analysis_mesh(*this, *_mesh);
+        T::init_level_set_mesh(*this, *_level_set_mesh);
         _init_system_and_discipline();
-        _init_dirichlet_conditions();
+        T::init_analysis_dirichlet_conditions(*this);
+        T::init_indicator_dirichlet_conditions(*this);
         _init_eq_sys();
         _init_material();
-        _init_loads();
+        T::init_structural_loads(*this);
+        T::init_indicator_loads(*this);
         _init_section_property();
         _initialized = true;
         
@@ -2379,13 +2398,21 @@ public:
         //
         // first, initialize the level set functions over the domain
         //
-        this->initialize_solution();
+        T::initialize_level_set_solution(*this);
         
         //
         // next, define a new parameter to define design variable for nodal level-set
         // function value
         //
-        this->_init_phi_dvs();
+        T::init_level_set_dvs(*this);
+        
+        Real
+        filter_radius          = _input("filter_radius", "radius of geometric filter for level set field", 0.015);
+        _filter                = new MAST::FilterBase(*_level_set_sys, filter_radius, _dv_dof_ids);
+        libMesh::NumericVector<Real>& vec = _level_set_sys->add_vector("base_values");
+        vec = *_level_set_sys->solution;
+        vec.close();
+
         
         _obj_scaling           = 1./_length/_height;
         _stress_penalty        = _input("stress_penalty", "penalty value for stress_constraint", 0.);
@@ -2428,7 +2455,7 @@ public:
     //
     //   \subsection ex_5_destructor  Destructor
     //
-    ~TopologyOptimizationLevelSet2D() {
+    ~TopologyOptimizationLevelSet() {
         
         {
             std::set<MAST::BoundaryConditionBase*>::iterator
@@ -2493,7 +2520,7 @@ public:
 //   \subsection ex_5_wrappers_snopt  Wrappers for SNOPT
 //
 
-TopologyOptimizationLevelSet2D* _my_func_eval = nullptr;
+MAST::FunctionEvaluation* _my_func_eval = nullptr;
 
 #if MAST_ENABLE_SNOPT == 1
 
@@ -2657,7 +2684,7 @@ int main(int argc, char* argv[]) {
     MAST::Examples::GetPotWrapper
     input(argc, argv, "input");
 
-    TopologyOptimizationLevelSet2D top_opt(init.comm(), input);
+    TopologyOptimizationLevelSet<MAST::Examples::Bracket2DModel> top_opt(init.comm(), input);
     _my_func_eval = &top_opt;
     
     //MAST::NLOptOptimizationInterface optimizer(NLOPT_LD_SLSQP);

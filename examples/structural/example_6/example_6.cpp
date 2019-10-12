@@ -46,6 +46,10 @@
 #include "optimization/gcmma_optimization_interface.h"
 #include "optimization/npsol_optimization_interface.h"
 #include "optimization/function_evaluation.h"
+#include "examples/structural/base/bracket_2d_model.h"
+#include "examples/structural/base/inplane_2d_model.h"
+#include "examples/structural/base/truss_2d_model.h"
+#include "examples/structural/base/eyebar_2d_model.h"
 
 
 // libMesh includes
@@ -154,11 +158,11 @@ private:
 };
 
 
-
-class TopologyOptimizationSIMP2D:
+template <typename T>
+class TopologyOptimizationSIMP:
 public MAST::FunctionEvaluation {
     
-protected:
+public:
     
     bool                                      _initialized;
     MAST::Examples::GetPotWrapper&            _input;
@@ -1751,6 +1755,8 @@ public:
         nonlinear_assembly.clear_elem_parameter_dependence_object();
     }
 
+    void set_n_vars(const unsigned int n_vars) {_n_vars = n_vars;}
+
     //
     //  \subsection  ex_6_design_output  Output of Design Iterate
     //
@@ -1856,7 +1862,7 @@ public:
     //   \subsection  ex_6_constructor  Constructor
     //
     
-    TopologyOptimizationSIMP2D(const libMesh::Parallel::Communicator& comm_in,
+    TopologyOptimizationSIMP(const libMesh::Parallel::Communicator& comm_in,
                                    MAST::Examples::GetPotWrapper& input):
     MAST::FunctionEvaluation             (comm_in),
     _initialized                         (false),
@@ -1887,9 +1893,9 @@ public:
         // call the initialization routines for each component
         //
         _init_fetype();
-        _init_mesh();
+        T::init_analysis_mesh(*this, *_mesh);
         _init_system_and_discipline();
-        _init_dirichlet_conditions();
+        T::init_analysis_dirichlet_conditions(*this);
         _init_eq_sys();
         
         // density function is used by elasticity modulus function. So, we
@@ -1898,7 +1904,7 @@ public:
         _density_sens_function   = new MAST::MeshFieldFunction(*_density_sys, "rho");
 
         _init_material();
-        _init_loads();
+        T::init_structural_loads(*this);
         _init_section_property();
         _initialized = true;
         
@@ -1912,15 +1918,28 @@ public:
         /////////////////////////////////////////////////
         
         //
-        // first, initialize the level set functions over the domain
+        // initialize density field to a constant value of the specified
+        // volume fraction
         //
-        this->initialize_solution();
-        
+        _vf    = _input("volume_fraction", "upper limit for the voluem fraction", 0.5);
+
+        _density_sys->solution->zero();
+        _density_sys->solution->add(_vf);
+        _density_sys->solution->close();
+
         //
         // next, define a new parameter to define design variable for nodal level-set
         // function value
         //
-        this->_init_phi_dvs();
+        T::init_simp_dvs(*this);
+        
+        Real
+        filter_radius          = _input("filter_radius", "radius of geometric filter for level set field", 0.015);
+        _filter                = new MAST::FilterBase(*_density_sys, filter_radius, _dv_dof_ids);
+        libMesh::NumericVector<Real>& vec = _density_sys->add_vector("base_values");
+        vec = *_density_sys->solution;
+        vec.close();
+
         
         _obj_scaling           = 1./_length/_height;
         _stress_penalty        = _input("stress_penalty", "penalty value for stress_constraint", 0.);
@@ -1945,7 +1964,7 @@ public:
     //
     //   \subsection  ex_6_destructor  Destructor
     //
-    ~TopologyOptimizationSIMP2D() {
+    ~TopologyOptimizationSIMP() {
         
         {
             std::set<MAST::BoundaryConditionBase*>::iterator
@@ -2000,7 +2019,7 @@ public:
 //   \subsection  ex_6_wrappers_snopt  Wrappers for SNOPT
 //
 
-TopologyOptimizationSIMP2D* _my_func_eval = nullptr;
+MAST::FunctionEvaluation* _my_func_eval = nullptr;
 
 #if MAST_ENABLE_SNOPT == 1
 
@@ -2164,7 +2183,7 @@ int main(int argc, char* argv[]) {
     MAST::Examples::GetPotWrapper
     input(argc, argv, "input");
 
-    TopologyOptimizationSIMP2D top_opt(init.comm(), input);
+    TopologyOptimizationSIMP<MAST::Examples::Bracket2DModel> top_opt(init.comm(), input);
     _my_func_eval = &top_opt;
     
     //MAST::NLOptOptimizationInterface optimizer(NLOPT_LD_SLSQP);
