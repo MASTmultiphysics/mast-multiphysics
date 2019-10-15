@@ -483,12 +483,6 @@ MAST::FunctionEvaluation::_evaluate_wrapper(const std::vector<Real>& dvars,
     libmesh_assert(this->comm().verify(dvars));
     libmesh_assert(this->comm().verify(eval_obj_grad));
     
-    _output_wrapper(_iter,
-                    dvars,
-                    obj,
-                    fvals,
-                    true);
-
     this->evaluate(dvars,
                    obj,
                    eval_obj_grad,
