@@ -56,6 +56,9 @@ namespace Examples {
 struct Eyebar2DModel {
     
     template <typename Opt>
+    static Real reference_volume(Opt& opt);
+
+    template <typename Opt>
     static void init_analysis_mesh(Opt& opt, libMesh::UnstructuredMesh& mesh);
     
     template <typename Opt>
@@ -107,6 +110,17 @@ struct Eyebar2DModel {
 
 }
 }
+
+
+template <typename Opt>
+Real
+MAST::Examples::Eyebar2DModel::
+reference_volume(Opt& opt) {
+    
+    return 16.*8. - acos(-1.) * 1.5*1.5;
+}
+
+    
 
 
 template <typename Opt>

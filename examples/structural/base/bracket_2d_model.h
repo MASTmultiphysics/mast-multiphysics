@@ -53,6 +53,9 @@ namespace Examples {
 struct Bracket2DModel {
     
     template <typename Opt>
+    static Real reference_volume(Opt& opt);
+
+    template <typename Opt>
     static void init_analysis_mesh(Opt& opt, libMesh::UnstructuredMesh& mesh);
     
     template <typename Opt>
@@ -105,14 +108,28 @@ struct Bracket2DModel {
 
 
 template <typename Opt>
+Real
+MAST::Examples::Bracket2DModel::
+reference_volume(Opt& opt) {
+    
+    Real
+    length  = opt._input("length", "length of domain along x-axis", 0.3),
+    height  = opt._input("height", "length of domain along y-axis", 0.3);
+    
+    return length * height;
+}
+
+    
+    
+template <typename Opt>
 void
 MAST::Examples::Bracket2DModel::
 init_analysis_mesh(Opt& opt,
                    libMesh::UnstructuredMesh& mesh) {
     
     Real
-    length  = (opt._input("length", "length of domain along x-axis", 0.3)),
-    height  = (opt._input("height", "length of domain along y-axis", 0.3));
+    length  = opt._input("length", "length of domain along x-axis", 0.3),
+    height  = opt._input("height", "length of domain along y-axis", 0.3);
     
     unsigned int
     nx_divs = opt._input("nx_divs", "number of elements along x-axis", 20),
@@ -155,8 +172,8 @@ init_level_set_mesh(Opt& opt,
                     libMesh::UnstructuredMesh& mesh) {
     
     Real
-    length  = (opt._input("length", "length of domain along x-axis", 0.3)),
-    height  = (opt._input("height", "length of domain along y-axis", 0.3));
+    length  = opt._input("length", "length of domain along x-axis", 0.3),
+    height  = opt._input("height", "length of domain along y-axis", 0.3);
     
     unsigned int
     nx_divs = opt._input("level_set_nx_divs", "number of elements of level-set mesh along x-axis", 10),
@@ -216,7 +233,7 @@ void
 MAST::Examples::Bracket2DModel::init_structural_loads(Opt& opt) {
     
     Real
-    length  = (opt._input("length", "length of domain along x-axis", 0.3)),
+    length  = opt._input("length", "length of domain along x-axis", 0.3),
     frac    = opt._input("loadlength_fraction", "fraction of boundary length on which pressure will act", 0.125),
     p_val   = opt._input("pressure", "pressure on side of domain",   5.e7);
     
@@ -241,7 +258,7 @@ void
 MAST::Examples::Bracket2DModel::init_indicator_loads(Opt& opt) {
     
     Real
-    length  = (opt._input("length", "length of domain along x-axis", 0.3)),
+    length  = opt._input("length", "length of domain along x-axis", 0.3),
     frac    = opt._input("loadlength_fraction", "fraction of boundary length on which pressure will act", 0.125);
     
     BracketLoad

@@ -55,6 +55,9 @@ namespace Examples {
 struct Inplane2DModel {
     
     template <typename Opt>
+    static Real reference_volume(Opt& opt);
+
+    template <typename Opt>
     static void init_analysis_mesh(Opt& opt, libMesh::UnstructuredMesh& mesh);
     
     template <typename Opt>
@@ -110,6 +113,20 @@ struct Inplane2DModel {
 }
 }
 
+
+template <typename Opt>
+Real
+MAST::Examples::Inplane2DModel::
+reference_volume(Opt& opt) {
+    
+    Real
+    length  = opt._input("length", "length of domain along x-axis", 0.3),
+    height  = opt._input("height", "length of domain along y-axis", 0.3);
+    
+    return length * height;
+}
+
+    
 
 template <typename Opt>
 void
