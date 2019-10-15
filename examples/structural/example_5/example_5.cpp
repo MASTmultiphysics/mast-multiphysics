@@ -42,6 +42,7 @@
 #include "elasticity/level_set_stress_assembly.h"
 #include "elasticity/compliance_output.h"
 #include "elasticity/structural_system_initialization.h"
+#include "elasticity/structural_near_null_vector_space.h"
 #include "heat_conduction/heat_conduction_system_initialization.h"
 #include "heat_conduction/heat_conduction_nonlinear_assembly.h"
 #include "base/constant_field_function.h"
@@ -156,9 +157,9 @@ public:
     
     bool                                      _initialized;
     MAST::Examples::GetPotWrapper&            _input;
-    
-    Real                                      _length;
-    Real                                      _height;
+
+    std::string                               _problem;
+    Real                                      _volume;
     Real                                      _obj_scaling;
     Real                                      _stress_penalty;
     Real                                      _perimeter_penalty;
@@ -184,7 +185,9 @@ public:
     MAST::LevelSetSystemInitialization*       _level_set_sys_init_on_str_mesh;
     MAST::LevelSetSystemInitialization*       _level_set_sys_init;
     MAST::HeatConductionSystemInitialization* _indicator_sys_init;
-    
+     
+    MAST::StructuralNearNullVectorSpace*      _nsp;
+
     MAST::PhysicsDisciplineBase*              _discipline;
     MAST::PhysicsDisciplineBase*              _indicator_discipline;
     MAST::LevelSetDiscipline*                 _level_set_discipline;
@@ -1893,12 +1896,11 @@ public:
             return;
         }
         
-        nonlinear_assembly.calculate_output(*_sys->solution, stress);
-        //nonlinear_assembly.calculate_output(*_sys->solution, compliance);
+        //////////////////////////////////////////////////////////////////////
+        // evaluate the functions
+        //////////////////////////////////////////////////////////////////////
+
         
-        //////////////////////////////////////////////////////////////////////
-        // evaluate the objective
-        //////////////////////////////////////////////////////////////////////
         level_set_assembly.set_evaluate_output_on_negative_phi(false);
         level_set_assembly.calculate_output(*_level_set_sys->solution, volume);
         level_set_assembly.set_evaluate_output_on_negative_phi(true);
@@ -1906,27 +1908,41 @@ public:
         level_set_assembly.set_evaluate_output_on_negative_phi(false);
 
         Real
-        max_vm = stress.get_maximum_von_mises_stress(),
-        vm_agg = stress.output_total(),
-        vf     = _input("volume_fraction", "volume fraction", 0.3),
+        max_vm = 0.,
+        vm_agg = 0.,
         vol    = volume.output_total(),
         per    = perimeter.output_total(),
-        comp   = compliance.output_total();
-        
-        obj       = _obj_scaling * (vol + _perimeter_penalty * per);
-        //_obj_scaling    * (vol+ _perimeter_penalty * per) +
-        //_stress_penalty * (vm_agg);///_stress_lim - 1.);
-        //obj       = _obj_scaling * (comp + _perimeter_penalty * per);
-        
-        fvals[0]  =  stress.output_total()/_stress_lim - 1.;  // g = sigma/sigma0-1 <= 0
-        //fvals[0]  =  stress.output_total()/_length/_height;  // g <= 0 for the smooth ramp function
-        //fvals[0]  = vol/_length/_height - vf; // vol/vol0 - a <=
-        libMesh::out << "volume: " << vol    << "  perim: "  << per    << std::endl;
-        libMesh::out << "max: "    << max_vm << "  constr: " << vm_agg/_stress_lim - 1.
-        << std::endl;
-        libMesh::out << "compliance: " << comp << std::endl;
+        comp   = 0.;
 
-        if (_n_eig_vals) {
+        libMesh::out << "volume: " << vol    << "  perim: "  << per    << std::endl;
+        
+        // evaluate the output based on specified problem type
+        if (_problem == "compliance_volume") {
+            
+            Real
+            vf     = _input("volume_fraction", "volume fraction", 0.3);
+
+            nonlinear_assembly.calculate_output(*_sys->solution, compliance);
+            comp      = compliance.output_total();
+            obj       = _obj_scaling * (comp + _perimeter_penalty * per);
+            fvals[0]  = vol/_volume - vf; // vol/vol0 - a <=
+            libMesh::out << "compliance: " << comp << std::endl;
+        }
+        else if (_problem == "volume_stress") {
+            
+            // set the elasticity penalty for stress evaluation
+            nonlinear_assembly.calculate_output(*_sys->solution, stress);
+            max_vm    = stress.get_maximum_von_mises_stress();
+            vm_agg    = stress.output_total();
+            obj       = _obj_scaling * (vol + _perimeter_penalty * per);
+            fvals[0]  =  stress.output_total()/_stress_lim - 1.;  // g = sigma/sigma0-1 <= 0
+            //fvals[0]  =  stress.output_total()/_length/_height;  // g <= 0 for the smooth ramp function
+            libMesh::out
+            << "  max: "    << max_vm
+            << "  constr: " << vm_agg
+            << std::endl;
+        }
+        else if (_problem == "volume_eigenvalue" && _n_eig_vals) {
             
             //////////////////////////////////////////////////////////////////////
             // evaluate the eigenvalue constraint
@@ -1952,25 +1968,39 @@ public:
             for (unsigned int i=0; i<_n_eig_vals; i++)
                 fvals[i+1] = -eig[i]/_ref_eig_val + 1.;
         }
-        
+        else
+            libmesh_error();
+
         //////////////////////////////////////////////////////////////////////
         // evaluate the objective sensitivities, if requested
         //////////////////////////////////////////////////////////////////////
         if (eval_obj_grad) {
             
-            std::vector<Real>
-            grad1(obj_grad.size(), 0.);
-            
-            _evaluate_volume_sensitivity(&volume, &perimeter, level_set_assembly, obj_grad);
-            //_evaluate_volume_sensitivity(nullptr, &perimeter, level_set_assembly, obj_grad);
-            
-            /*_evaluate_compliance_sensitivity(compliance,
-                                             nonlinear_elem_ops,
-                                             nonlinear_assembly,
-                                             grad1);
-            
-            for (unsigned int i=0; i<obj_grad.size(); i++)
-                obj_grad[i] += _obj_scaling * grad1[i];*/
+            if (_problem == "compliance_volume") {
+                
+                std::vector<Real>
+                grad1(obj_grad.size(), 0.);
+
+                _evaluate_volume_sensitivity(nullptr, &perimeter, level_set_assembly, obj_grad);
+
+                _evaluate_compliance_sensitivity(compliance,
+                                                 nonlinear_elem_ops,
+                                                 nonlinear_assembly,
+                                                 grad1);
+
+                for (unsigned int i=0; i<obj_grad.size(); i++) {
+                    obj_grad[i] += grad1[i];
+                    obj_grad[i] *= _obj_scaling;
+                }
+            }
+            else if (_problem == "volume_stress") {
+                
+                _evaluate_volume_sensitivity(&volume, &perimeter, level_set_assembly, obj_grad);
+                for (unsigned int i=0; i<obj_grad.size(); i++)
+                    obj_grad[i] *= _obj_scaling;
+            }
+            else
+                libmesh_error();
         }
         
         //////////////////////////////////////////////////////////////////////
@@ -1983,16 +2013,24 @@ public:
         //////////////////////////////////////////////////////////////////////
         // evaluate the sensitivities for constraints
         //////////////////////////////////////////////////////////////////////
-        if (if_grad_sens)
-            _evaluate_stress_sensitivity(stress,
-                                         nonlinear_elem_ops,
-                                         nonlinear_assembly,
-                                         modal_elem_ops,
-                                         eigen_assembly,
-                                         grads);
-            
-            //_evaluate_volume_sensitivity(&volume, nullptr, level_set_assembly, grads);
+        if (if_grad_sens) {
 
+            if (_problem == "compliance_volume") {
+                
+                _evaluate_volume_sensitivity(&volume, nullptr, level_set_assembly, grads);
+            }
+            else if (_problem == "volume_stress") {
+                
+                _evaluate_stress_sensitivity(stress,
+                                             nonlinear_elem_ops,
+                                             nonlinear_assembly,
+                                             modal_elem_ops,
+                                             eigen_assembly,
+                                             grads);
+            }
+            else
+                libmesh_error();
+        }
         
         //
         // also the stress data for plotting
@@ -2046,7 +2084,7 @@ public:
                                                              *_dv_params[i].second,
                                                              *volume);
                 
-                grad[i] = _obj_scaling * volume->output_sensitivity_total(*_dv_params[i].second);
+                grad[i] = volume->output_sensitivity_total(*_dv_params[i].second);
                 //grad[i] = volume->output_sensitivity_total(*_dv_params[i].second)/_length/_height;
             }
             
@@ -2060,7 +2098,7 @@ public:
                                                              *perimeter);
                 assembly.set_evaluate_output_on_negative_phi(false);
                 
-                grad[i] += _obj_scaling * _perimeter_penalty *
+                grad[i] += _perimeter_penalty *
                 perimeter->output_sensitivity_total(*_dv_params[i].second);
             }
         }
@@ -2323,8 +2361,8 @@ public:
     MAST::FunctionEvaluation             (comm_in),
     _initialized                         (false),
     _input                               (input),
-    _length                              (0.),
-    _height                              (0.),
+    _problem                             (),
+    _volume                              (0.),
     _obj_scaling                         (0.),
     _stress_penalty                      (0.),
     _perimeter_penalty                   (0.),
@@ -2346,6 +2384,7 @@ public:
     _level_set_sys_init_on_str_mesh      (nullptr),
     _level_set_sys_init                  (nullptr),
     _indicator_sys_init                  (nullptr),
+    _nsp                                 (nullptr),
     _discipline                          (nullptr),
     _indicator_discipline                (nullptr),
     _level_set_discipline                (nullptr),
@@ -2368,7 +2407,7 @@ public:
         s  = _input("mesh", "type of mesh to be analyzed {inplane, bracket, truss, eyebar}",
                     "inplane");
 
-        _mesh = new libMesh::SerialMesh(this->comm());
+        _mesh           = new libMesh::SerialMesh(this->comm());
         _level_set_mesh = new libMesh::SerialMesh(this->comm());
 
         
@@ -2385,6 +2424,9 @@ public:
         _init_section_property();
         _initialized = true;
         
+        _nsp  = new MAST::StructuralNearNullVectorSpace;
+        _sys->nonlinear_solver->nearnullspace_object = _nsp;
+
         //
         // ask structure to use Mindlin bending operator
         //
@@ -2414,7 +2456,9 @@ public:
         vec.close();
 
         
-        _obj_scaling           = 1./_length/_height;
+        _problem               = _input("problem_type", "{compliance_volume, volume_stress}", "compliance_volume");
+        _volume                = T::reference_volume(*this);
+        _obj_scaling           = 1./_volume;
         _stress_penalty        = _input("stress_penalty", "penalty value for stress_constraint", 0.);
         _perimeter_penalty     = _input("perimeter_penalty", "penalty value for perimeter in the objective function", 0.);
         _stress_lim            = _input("vm_stress_limit", "limit von-mises stress value", 2.e8);
@@ -2484,6 +2528,8 @@ public:
         if (!_initialized)
             return;
         
+        delete _nsp;
+
         delete _m_card1;
         delete _m_card2;
         delete _p_card1;
@@ -2684,12 +2730,40 @@ int main(int argc, char* argv[]) {
     MAST::Examples::GetPotWrapper
     input(argc, argv, "input");
 
-    TopologyOptimizationLevelSet<MAST::Examples::Bracket2DModel> top_opt(init.comm(), input);
-    _my_func_eval = &top_opt;
+
+    std::unique_ptr<MAST::FunctionEvaluation>
+    top_opt;
     
-    //MAST::NLOptOptimizationInterface optimizer(NLOPT_LD_SLSQP);
-    std::unique_ptr<MAST::OptimizationInterface>
-    optimizer;
+    std::string
+    mesh = input("mesh", "inplane2d, bracket2d, truss2d, eyebar2d", "inplane2d");
+    
+    if (mesh == "inplane2d") {
+        top_opt.reset
+        (new TopologyOptimizationLevelSet<MAST::Examples::Inplane2DModel>
+         (init.comm(), input));
+    }
+    else if (mesh == "bracket2d") {
+        top_opt.reset
+        (new TopologyOptimizationLevelSet<MAST::Examples::Bracket2DModel>
+         (init.comm(), input));
+    }
+    else if (mesh == "eyebar2d") {
+        top_opt.reset
+        (new TopologyOptimizationLevelSet<MAST::Examples::Eyebar2DModel>
+         (init.comm(), input));
+    }
+    else if (mesh == "truss2d") {
+        top_opt.reset
+        (new TopologyOptimizationLevelSet<MAST::Examples::Truss2DModel>
+         (init.comm(), input));
+    }
+    else
+        libmesh_error();
+    
+    _my_func_eval = top_opt.get();
+
+    
+    std::unique_ptr<MAST::OptimizationInterface> optimizer;
     
     std::string
     s          = input("optimizer", "optimizer to use in the example", "gcmma");
@@ -2726,14 +2800,18 @@ int main(int argc, char* argv[]) {
     
     if (optimizer.get()) {
         
-        optimizer->attach_function_evaluation_object(top_opt);
+        optimizer->attach_function_evaluation_object(*top_opt);
 
-        std::vector<Real> xx1(top_opt.n_vars()), xx2(top_opt.n_vars());
-        top_opt.init_dvar(xx1, xx2, xx2);
-        //top_opt.initialize_dv_from_output_file("output1.txt", 24, xx1);
-        top_opt.verify_gradients(xx1);
-        //optimizer->optimize();
-        //top_opt.parametric_line_study("output1.txt", 0, 450, 500);
+        bool
+        verify_grads = input("verify_gradients", "If true, the gradients of objective and constraints will be verified without optimization", false);
+        if (verify_grads) {
+            
+            std::vector<Real> xx1(top_opt->n_vars()), xx2(top_opt->n_vars());
+            top_opt->init_dvar(xx1, xx2, xx2);
+            top_opt->verify_gradients(xx1);
+        }
+        else
+            optimizer->optimize();
     }
     
     // END_TRANSLATE
