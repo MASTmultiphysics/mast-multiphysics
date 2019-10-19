@@ -375,7 +375,7 @@ MAST::SubElemMeshRefinement::constrain() {
             dof_b_node2 = dof_indices[0];
 
             // now create and add the constraint
-            if (!dof_map.is_constrained_dof(dof_indices[i])) {
+            if (!dof_map.is_constrained_dof(dof_node)) {
                 
                 // the constraint assumes linear variation of the value
                 // between the bounding nodes
