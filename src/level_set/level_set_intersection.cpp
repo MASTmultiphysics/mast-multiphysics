@@ -189,6 +189,13 @@ MAST::LevelSetIntersection::get_node_phi_value(const libMesh::Node* n) const {
 
 
 
+bool
+MAST::LevelSetIntersection::if_hanging_node(const libMesh::Node* n) const {
+    
+    return _hanging_node.count(n);
+}
+
+
 void
 MAST::LevelSetIntersection::clear() {
     
@@ -207,6 +214,7 @@ MAST::LevelSetIntersection::clear() {
     _negative_phi_elems.clear();
     _elem_sides_on_interface.clear();
     _node_local_coords.clear();
+    _hanging_node.clear();
     
     std::vector<libMesh::Elem*>::iterator
     e_it  = _new_elems.begin(),
@@ -1109,6 +1117,7 @@ MAST::LevelSetIntersection::_find_quad4_intersections
             
             e2->set_node(0) = _new_nodes[0];
             e2->set_node(1) = _new_nodes[2];
+            _hanging_node.insert(_new_nodes[2]);
             e2->set_node(2) = const_cast<libMesh::Node*>(e.node_ptr((ref_side+3)%n_nodes));
             e2->set_node(3) = const_cast<libMesh::Node*>(e.node_ptr(ref_side));
             

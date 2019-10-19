@@ -218,6 +218,9 @@ MAST::SubElemMeshRefinement::process_mesh(const MAST::FieldFunction<Real>& phi,
 bool
 MAST::SubElemMeshRefinement::clear_mesh() {
     
+    // clear the data structure
+    _hanging_node.clear();
+    
     // modify the original element subdomain
     for (unsigned int i=0; i<_old_elems.size(); i++)
         _old_elems[i].first->subdomain_id() = _old_elems[i].second;
@@ -317,6 +320,76 @@ MAST::SubElemMeshRefinement::constrain() {
             }
         }
     }
+    
+    // now add constriant for the nodes identified as hanging node
+    std::set<std::pair<const libMesh::Node*, std::pair<const libMesh::Node*, const libMesh::Node*>>>::iterator
+    n_it  = _hanging_node.begin(),
+    n_end = _hanging_node.end();
+    
+    libMesh::Point
+    p;
+    
+    Real
+    d = 0.;
+    
+    unsigned int
+    dof_b_node1,
+    dof_b_node2,
+    dof_node;
+    
+    for ( ; n_it != n_end; n_it++) {
+        
+        const std::pair<const libMesh::Node*, std::pair<const libMesh::Node*, const libMesh::Node*>>
+        &v   =  *n_it;
+
+        // obtain the fraction of the node from the bounding nodes
+        // distance of node from first
+        p  = *v.first - *v.second.first;
+        d  = p.norm();
+        // distance between the bounding nodes
+        p  = *v.second.second - *v.second.first;
+        d  /= p.norm();
+        
+
+        // we iterate over the variables in the system
+        // and add a constraint for each node
+        for (unsigned int i=0; i<_system.n_vars(); i++) {
+            
+            // identify the dofs for the ith variable on each node
+            // first, the node for which the constraint will be added
+            dof_indices.clear();
+            dof_map.dof_indices(v.first, dof_indices, i);
+            libmesh_assert_equal_to(dof_indices.size(), 1);
+            dof_node = dof_indices[0];
+
+            // next, the first bounding node
+            dof_indices.clear();
+            dof_map.dof_indices(v.second.first, dof_indices, i);
+            libmesh_assert_equal_to(dof_indices.size(), 1);
+            dof_b_node1 = dof_indices[0];
+
+            // next, the second bounding node
+            dof_indices.clear();
+            dof_map.dof_indices(v.second.second, dof_indices, i);
+            libmesh_assert_equal_to(dof_indices.size(), 1);
+            dof_b_node2 = dof_indices[0];
+
+            // now create and add the constraint
+            if (!dof_map.is_constrained_dof(dof_indices[i])) {
+                
+                // the constraint assumes linear variation of the value
+                // between the bounding nodes
+                // the constraint reads
+                //      un = (1-d) ub1 + d ub2
+                // or,  un - (1-d) ub1 - d ub2 = 0
+                libMesh::DofConstraintRow c_row;
+                c_row[dof_b_node1] = (1.-d);
+                c_row[dof_b_node2] =     d;
+                
+                dof_map.add_constraint_row(dof_node, c_row, true);
+            }
+        }
+    }
 }
 
 
@@ -401,6 +474,10 @@ MAST::SubElemMeshRefinement::_process_sub_elements(bool strong_discontinuity,
                                        bounding_nodes);
                 child->set_node(j) = child_node;
                 
+                // identify this node to as a hanging node
+                if (intersect.if_hanging_node(sub_e_node))
+                    _hanging_node.insert(std::make_pair(child_node, bounding_nodes));
+                    
                 // keep track for nodes for the addition of interior nodes
                 intersection_object_to_mesh_node_map[sub_e_node] = child_node;
             }

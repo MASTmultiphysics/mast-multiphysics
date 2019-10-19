@@ -107,6 +107,14 @@ namespace MAST {
          */
         Real get_node_phi_value(const libMesh::Node* n) const;
         
+
+        /*!
+         * The case of two adjacent edges results in a new node on an edge that is not coincident
+         * with the level set interface. This will end up as a hanging node if added to the mesh.
+         * @returns true if this node \p n is the hanging node.
+         */
+        bool if_hanging_node(const libMesh::Node* n) const;
+        
         /*!
          *   @returns true if the intersection is through the element, or
          *   has colinear edge.
@@ -279,6 +287,7 @@ namespace MAST {
         std::map<const libMesh::Node*, std::pair<Real, bool> > _node_phi_vals;
         std::set<const libMesh::Node*>               _interior_nodes;
         std::map<const libMesh::Node*, std::pair<const libMesh::Node*, const libMesh::Node*>> _bounding_nodes;
+        std::set<const libMesh::Node*>               _hanging_node;
     };
     
 }

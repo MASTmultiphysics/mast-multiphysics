@@ -114,6 +114,7 @@ namespace MAST {
         std::vector<libMesh::Node*> _new_nodes;
         std::vector<libMesh::Elem*> _new_elems;
         std::vector<std::pair<libMesh::Elem*, unsigned int>> _old_elems;
+        std::set<std::pair<const libMesh::Node*, std::pair<const libMesh::Node*, const libMesh::Node*>>>    _hanging_node;
     };
 }
 
