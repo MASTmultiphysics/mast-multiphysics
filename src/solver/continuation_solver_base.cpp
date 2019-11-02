@@ -103,15 +103,16 @@ MAST::ContinuationSolverBase::solve()  {
     _p0     = (*_p)();
     _X0.reset(X.clone().release());
     
+
+    // save data for possible reuse if the iterations are restarted.
+    _save_iteration_data();
+
     Real
     norm0   = _res_norm(X, *_p),
     norm    = norm0;
     
     bool
     cont    = true;
-
-    // save data for possible reuse if the iterations are restarted.
-    _save_iteration_data();
     
     while (cont) {
         
