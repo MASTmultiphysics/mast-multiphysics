@@ -49,6 +49,7 @@
 
 
 // libMesh includes
+#include "libmesh/parallel.h"
 #include "libmesh/fe_type.h"
 #include "libmesh/serial_mesh.h"
 #include "libmesh/equation_systems.h"

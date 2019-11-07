@@ -30,6 +30,7 @@
 
 // libMesh includes
 #include "libmesh/boundary_info.h"
+#include "libmesh/parallel.h"
 
 
 MAST::IntegratedForceOutput::IntegratedForceOutput(const RealVectorX& nvec):

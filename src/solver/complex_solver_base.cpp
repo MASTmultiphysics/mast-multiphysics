@@ -25,6 +25,7 @@
 
 
 // libMesh includes
+#include "libmesh/libmesh_logging.h"
 #include "libmesh/numeric_vector.h"
 #include "libmesh/system.h"
 #include "libmesh/petsc_matrix.h"

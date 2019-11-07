@@ -47,6 +47,7 @@
 #include "libmesh/generic_projector.h"
 #include "libmesh/wrapped_functor.h"
 #include "libmesh/fem_context.h"
+#include "libmesh/parallel.h"
 
 
 MAST::NonlinearSystem::NonlinearSystem(libMesh::EquationSystems& es,

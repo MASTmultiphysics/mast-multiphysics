@@ -23,6 +23,7 @@
 
 // libMesh includes.
 #include <libmesh/libmesh.h>
+#include <libmesh/parallel.h>
 #include <libmesh/replicated_mesh.h>
 #include <libmesh/mesh_generation.h>
 #include <libmesh/equation_systems.h>

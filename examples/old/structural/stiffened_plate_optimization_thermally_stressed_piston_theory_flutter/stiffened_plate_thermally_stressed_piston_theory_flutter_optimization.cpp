@@ -40,6 +40,7 @@
 #include "examples/base/plot_results.h"
 
 // libMesh includes
+#include "libmesh/parallel.h"
 #include "libmesh/parallel_mesh.h"
 #include "libmesh/exodusII_io.h"
 #include "libmesh/numeric_vector.h"

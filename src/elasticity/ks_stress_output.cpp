@@ -31,7 +31,8 @@
 #include "level_set/level_set_intersected_elem.h"
 #include "mesh/geom_elem.h"
 
-
+// libMesh includes.
+#include "libmesh/parallel.h"
 
 MAST::KSStressStrainOutput::KSStressStrainOutput():
 MAST::StressStrainOutputBase() {

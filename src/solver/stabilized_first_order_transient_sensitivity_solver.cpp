@@ -29,6 +29,7 @@
 #include "base/output_assembly_elem_operations.h"
 
 // libMesh includes
+#include "libmesh/libmesh_logging.h"
 #include "libmesh/sparse_matrix.h"
 #include "libmesh/numeric_vector.h"
 #include "libmesh/linear_solver.h"
