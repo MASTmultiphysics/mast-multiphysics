@@ -1,27 +1,38 @@
 language: cpp
-dist: xenial
+
+matrix:
+    include:
+        - os: linux
+          dist: xenial
+          env: LIBMESH_VERSION=1.3.1
+        - os: linux
+          dist: xenial
+          env: LIBMESH_VERSION=1.4.1
+        - os: linux
+          dist: xenial
+          env: LIBMESH_VERSION=1.5.0
 
 before_install:
-- sudo apt-get -qq install -y gfortran wget m4
-- sudo apt-get -qq install -y openmpi-bin libopenmpi-dev
-- sudo apt-get -qq install -y libpetsc3.6 libpetsc3.6.2-dev
-- sudo apt-get -qq install -y libslepc3.6 libslepc3.6.1-dev libparpack2-dev
-- sudo apt-get -qq install -y libboost-all-dev
-- sudo apt-get -qq install -y libeigen3-dev
-- sudo apt-get -qq install -y doxygen graphviz rsync
-- sudo apt-get -qq install -y texlive-latex-base dvi2ps ghostscript
+  - sudo apt-get -qq install -y gfortran wget m4
+  - sudo apt-get -qq install -y openmpi-bin libopenmpi-dev
+  - sudo apt-get -qq install -y libpetsc3.6 libpetsc3.6.2-dev
+  - sudo apt-get -qq install -y libslepc3.6 libslepc3.6.1-dev libparpack2-dev
+  - sudo apt-get -qq install -y libboost-all-dev
+  - sudo apt-get -qq install -y libeigen3-dev
+  - sudo apt-get -qq install -y doxygen graphviz rsync
+  - sudo apt-get -qq install -y texlive-latex-base dvi2ps ghostscript
 
 install:
-- cd ${HOME}
-- wget -nv https://github.com/MASTmultiphysics/mast-ci-packages/releases/download/libmesh-1.3.1-1.deb/libmesh-1.3.1-1.deb
-- sudo apt install ./libmesh-1.3.1-1.deb
+  - cd ${HOME}
+  - wget -nv https://github.com/MASTmultiphysics/mast-ci-packages/releases/download/libmesh-${LIBMESH_VERSION}-1.deb/libmesh-${LIBMESH_VERSION}-1.deb
+  - sudo apt install ./libmesh-${LIBMESH_VERSION}-1.deb
 
 before_script:
-- export MAST_INSTALL_DIR=${HOME}/mast
-- cd ${TRAVIS_BUILD_DIR}
-- mkdir build
-- cd build
-- cmake ..
+  - export MAST_INSTALL_DIR=${HOME}/mast
+  - cd ${TRAVIS_BUILD_DIR}
+  - mkdir build
+  - cd build
+  - cmake ..
     -DCMAKE_INSTALL_PREFIX=${MAST_INSTALL_DIR}
     -DCMAKE_C_COMPILER=mpicc
     -DCMAKE_CXX_COMPILER=mpic++
@@ -37,13 +48,13 @@ before_script:
     -DENABLE_SNOPT=OFF
 
 script:
-- make -j 2
-- make -j 2 doc_doxygen
-- cd ${TRAVIS_BUILD_DIR}
+  - make -j 2
+  - make -j 2 doc_doxygen
+  - cd ${TRAVIS_BUILD_DIR}
 
 deploy:
-    provider: script
-    script: bash doc/deploy_docs.sh
-    skip_cleanup: true
-    on:
-        branch: master
+  provider: script
+  script: bash doc/deploy_docs.sh
+  skip_cleanup: true
+  on:
+    branch: master
