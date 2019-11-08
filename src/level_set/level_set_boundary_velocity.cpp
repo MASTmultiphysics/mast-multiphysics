@@ -34,16 +34,17 @@ MAST::LevelSetBoundaryVelocity::~LevelSetBoundaryVelocity() {
         delete _phi;
 }
 
+
 void
 MAST::LevelSetBoundaryVelocity::init(MAST::SystemInitialization& sys,
                                      const libMesh::NumericVector<Real>& sol,
-                                     const libMesh::NumericVector<Real>& dsol) {
+                                     const libMesh::NumericVector<Real>* dsol) {
     
     if (!_phi)
         _phi = new MAST::MeshFieldFunction(sys, "phi_vel");
     else
         _phi->clear();
-    _phi->init(sol, &dsol);
+    _phi->init(sol, dsol);
 }
 
 
@@ -51,6 +52,14 @@ void
 MAST::LevelSetBoundaryVelocity::operator() (const libMesh::Point& p,
                                             const Real t,
                                             RealVectorX& v) const {
+    this->velocity(p, t, v);
+}
+
+
+void
+MAST::LevelSetBoundaryVelocity::velocity(const libMesh::Point& p,
+                                         const Real t,
+                                         RealVectorX& v) const {
     
     libmesh_assert(_phi);
     
@@ -92,4 +101,148 @@ MAST::LevelSetBoundaryVelocity::operator() (const libMesh::Point& p,
     //
     v = -dval(0)/grad.squaredNorm()*grad;
 }
+
+
+
+
+void
+MAST::LevelSetBoundaryVelocity::
+search_nearest_interface_point(const libMesh::Point& p,
+                               const Real t,
+                               const Real length,
+                               RealVectorX& v) const {
+    
+    libmesh_assert(_phi);
+    
+    RealVectorX
+    phi      = RealVectorX::Zero(1),
+    grad_phi = RealVectorX::Zero(_dim),
+    dval     = RealVectorX::Zero(1),
+    p_ref    = RealVectorX::Zero(3),
+    dv0      = RealVectorX::Zero(4),
+    dv1      = RealVectorX::Zero(4),
+    gradL    = RealVectorX::Zero(4);
+    
+    RealMatrixX
+    gradmat  = RealMatrixX::Zero(1, _dim),
+    coeffs   = RealMatrixX::Zero(3, 3);
+
+    libMesh::Point
+    p_opt = p;
+    
+    p_ref(0) = p(0);
+    p_ref(1) = p(1);
+    p_ref(2) = p(2);
+
+    // The point is identified from a constrained optimization problem.
+    //      p*  = argmin { .5 * || p* - p ||^2:  phi(p*) = 0 }
+    //  This is formulated as a constrained minimization problem:
+    //      (p*, l)  = argmin { .5 * || p* - p ||^2 + l * phi(p*) },
+    //  where the Lagrangian is defined as
+    //      L (p*, l) = .5 * || p* - p ||^2 + l * phi(p*)
+    //                = .5 * ((px* - px)^2 + (py* - py)^2 + (pz* - pz)^2) + l * phi(p*)
+    //   The first order optimality for this provides
+    //      grad ( L (p*, l)) = { (p*-p) + l * grad(phi(p*));  phi(p*) } = 0
+    //   We solve this using Newton-Raphson with an approximate Hessian
+    //
+    
+    bool
+    if_cont = true;
+
+    unsigned int
+    n_iters   = 0,
+    max_iters = 100;
+    
+    Real
+    tol  = 1.e-8,
+    L0   = 1.e12,
+    L1   = 0.;
+    
+    // initialize the design point
+    dv0.topRows(3) = p_ref;
+    dv0(3) = 1.; // arbitrary value of Lagrange multiplier
+    
+    while (if_cont) {
+        
+        // compute the gradient of Lagrangian
+        (*_phi)        (p_opt, t,     phi);
+        _phi->gradient (p_opt, t, gradmat);
+
+        // this defines the gradient of Lagrangian
+        gradL.topRows(3) = (dv0.topRows(3)-p_ref) + dv0(3) * gradmat.row(0).transpose();
+        gradL(3)         = phi(0);
+        
+        // approximate hessian
+        coeffs.setZero(4,4);
+        for (unsigned int i=0; i<3; i++) {
+            coeffs(i,i) = 1.;
+            coeffs(3,i) = coeffs(i,3) = gradmat(0,i);
+        }
+
+        Eigen::FullPivLU<RealMatrixX> solver(coeffs);
+        dv0 -= solver.solve(gradL);
+        // update the design points and check for convergence
+        p_opt(0) = dv0(0);
+        p_opt(1) = dv0(1);
+        p_opt(2) = dv0(2);
+        
+        L1        = _evaluate_point_search_obj(p, t, dv0);
+
+        if (n_iters == max_iters) {
+            
+            if_cont = false;
+            libMesh::out
+            << "Warning: nearest interface point search did not converge."
+            << std::endl;
+        }
+        if (std::fabs(L1) <= tol) if_cont = false;
+        if (std::fabs((L1-L0)/L0) <= tol) if_cont = false;
+        
+        L0 = L1;
+        n_iters++;
+    }
+    
+    v.setZero();
+    v.topRows(_dim) = dv0.topRows(_dim);
+}
+
+
+
+
+void
+MAST::LevelSetBoundaryVelocity::normal_at_point(const libMesh::Point& p,
+                                                const Real t,
+                                                RealVectorX& n) const {
+    
+    libmesh_assert(_phi);
+    
+    RealMatrixX
+    gradmat  = RealMatrixX::Zero(1, _dim);
+    
+    n.setZero();
+    
+    // the velocity is identified using the level set function gradient
+    // and its sensitivity
+    _phi->gradient(p, t, gradmat);
+    n.topRows(3) = -gradmat.row(0);
+    
+    n /= n.norm();
+}
+
+
+
+
+Real
+MAST::LevelSetBoundaryVelocity::
+_evaluate_point_search_obj(const libMesh::Point& p,
+                           const Real t,
+                           const RealVectorX& dv) const {
+    
+    libMesh::Point p1(dv(0), dv(1), dv(2));
+    RealVectorX phi;
+    (*_phi)(p1, t,     phi);
+    p1 -= p;
+    return .5 * p1.norm_sq() + dv(3)*phi(0);
+}
+
 

@@ -36,14 +36,38 @@ namespace MAST {
         
         void init(MAST::SystemInitialization& sys,
                   const libMesh::NumericVector<Real>& sol,
-                  const libMesh::NumericVector<Real>& dsol);
+                  const libMesh::NumericVector<Real>* dsol);
         
         virtual void operator() (const libMesh::Point& p,
                                  const Real t,
                                  RealVectorX& v) const;
+
+        void velocity(const libMesh::Point& p,
+                      const Real t,
+                      RealVectorX& v) const;
+
+        /*!
+         * serches for a point \p pt in the vicinity of \p p on the level set interface, where
+         * level set function is zero. \p length is a reference length that is used to identify
+         * the step-size for the search. If the interface point is expected to be within a few elements,
+         * then this length coudl be the element edge length.
+         */
+        void search_nearest_interface_point(const libMesh::Point& p,
+                                            const Real t,
+                                            const Real length,
+                                            RealVectorX& pt) const;
+
+        void normal_at_point(const libMesh::Point& p,
+                             const Real t,
+                             RealVectorX& n) const;
+
         
     protected:
         
+        Real _evaluate_point_search_obj(const libMesh::Point& p,
+                                        const Real t,
+                                        const RealVectorX& dv) const;
+
         unsigned int             _dim;
         MAST::MeshFieldFunction *_phi;
     };
