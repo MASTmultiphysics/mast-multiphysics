@@ -114,8 +114,7 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
         
         dof_map.dof_indices (elem, dof_indices);
         
-        if ((diagonal_elem_subdomain_id.count(elem->subdomain_id()) ||
-             exclude_subdomain_id.count(elem->subdomain_id()))) {
+        if (diagonal_elem_subdomain_id.count(elem->subdomain_id())) {
 
             if (J) {
                 
@@ -325,8 +324,7 @@ linearized_jacobian_solution_product (const libMesh::NumericVector<Real>& X,
         
         const libMesh::Elem* elem = *el;
         
-        if (diagonal_elem_subdomain_id.count(elem->subdomain_id()) ||
-            exclude_subdomain_id.count(elem->subdomain_id()))
+        if (diagonal_elem_subdomain_id.count(elem->subdomain_id()))
             continue;
             
         dof_map.dof_indices (elem, dof_indices);
@@ -442,8 +440,7 @@ second_derivative_dot_solution_assembly (const libMesh::NumericVector<Real>& X,
         
         const libMesh::Elem* elem = *el;
         
-        if (diagonal_elem_subdomain_id.count(elem->subdomain_id()) ||
-            exclude_subdomain_id.count(elem->subdomain_id()))
+        if (diagonal_elem_subdomain_id.count(elem->subdomain_id()))
             continue;
 
         dof_map.dof_indices (elem, dof_indices);
@@ -542,8 +539,7 @@ sensitivity_assemble (const MAST::FunctionBase& f,
         
         const libMesh::Elem* elem = *el;
     
-        if (diagonal_elem_subdomain_id.count(elem->subdomain_id()) ||
-            exclude_subdomain_id.count(elem->subdomain_id()))
+        if (diagonal_elem_subdomain_id.count(elem->subdomain_id()))
             continue;
 
         // no sensitivity computation assembly is neeed in these cases

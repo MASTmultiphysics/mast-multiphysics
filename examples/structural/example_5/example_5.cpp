@@ -1798,8 +1798,7 @@ public:
         // first constrain the indicator function and solve
         /////////////////////////////////////////////////////////////////////
         nonlinear_assembly.set_discipline_and_system(*_discipline, *_sys_init);
-        nonlinear_assembly.diagonal_elem_subdomain_id = {3};
-        nonlinear_assembly.exclude_subdomain_id       = {6, 7};
+        //nonlinear_assembly.diagonal_elem_subdomain_id = {3, 6, 7};
         //nonlinear_assembly.set_level_set_function(*_level_set_function, *_filter);
         //nonlinear_assembly.set_level_set_velocity_function(*_level_set_vel);
         //nonlinear_assembly.set_indicator_function(indicator);
@@ -1824,7 +1823,7 @@ public:
         bool
         continue_refining    = true;
         Real
-        threshold            = 0.05;
+        threshold            = _input("refinement_threshold","threshold for element to be refined", 0.1);
         unsigned int
         n_refinements        = 0,
         max_refinements      = _input("max_refinements","maximum refinements", 3);
@@ -1857,6 +1856,13 @@ public:
             else
                 continue_refining = false;
         }*/
+        /*if (_mesh_refinement->process_mesh(*_level_set_function,
+                                           true, // strong discontinuity
+                                           0.,
+                                           6,   // negative_level_set_subdomain_offset
+                                           3,   // inactive_subdomain_offset
+                                           8))  // level_set_boundary_id
+            _eq_sys->reinit();*/
 
         
         MAST::LevelSetVolume                            volume(level_set_assembly.get_intersection());
@@ -2072,7 +2078,7 @@ public:
             dphi_base->close();
             _filter->compute_filtered_values(*dphi_base, *dphi_filtered);
             
-            _level_set_vel->init(*_level_set_sys_init, *_level_set_sys->solution, *dphi_filtered);
+            _level_set_vel->init(*_level_set_sys_init, *_level_set_sys->solution, dphi_filtered.get());
 
             // if the volume output was specified then compute the sensitivity
             // and add to the grad vector
@@ -2151,7 +2157,7 @@ public:
             //
             // initialize the level set perturbation function to create a velocity
             // field
-            _level_set_vel->init(*_level_set_sys_init, *_level_set_sys->solution, *dphi_filtered);
+            _level_set_vel->init(*_level_set_sys_init, *_level_set_sys->solution, dphi_filtered.get());
             
             //////////////////////////////////////////////////////////////////////
             // stress sensitivity
@@ -2219,7 +2225,7 @@ public:
             //
             // initialize the level set perturbation function to create a velocity
             // field
-            _level_set_vel->init(*_level_set_sys_init, *_level_set_sys->solution, *dphi_filtered);
+            _level_set_vel->init(*_level_set_sys_init, *_level_set_sys->solution, dphi_filtered.get());
             
             //////////////////////////////////////////////////////////////////////
             // compliance sensitivity

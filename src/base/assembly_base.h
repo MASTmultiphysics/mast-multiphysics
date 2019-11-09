@@ -70,11 +70,6 @@ namespace MAST {
          */
         std::set<unsigned int> diagonal_elem_subdomain_id;
         
-        /*!
-         * element subdomain ids that are excluded from element level computations in a global
-         * assembly.
-         */
-        std::set<unsigned int> exclude_subdomain_id;
 
         class SolverMonitor {
         public:
