@@ -209,6 +209,7 @@ public:
     std::set<MAST::FunctionBase*>             _field_functions;
     std::set<MAST::BoundaryConditionBase*>    _boundary_conditions;
     std::set<unsigned int>                    _dv_dof_ids;
+    std::set<unsigned int>                    _dirichlet_bc_ids;
     
     std::vector<std::pair<unsigned int, MAST::Parameter*>>  _dv_params;
 
@@ -1687,7 +1688,82 @@ public:
         MAST::FieldFunction<Real>& _phi;
         unsigned int _max_h;
     };
+
     
+    
+    void mark_shifted_boundary(unsigned int b_id) {
+
+        // remove the previous information for boundary id
+        _mesh->boundary_info->remove_id(100);
+        
+        MAST::LevelSetIntersection intersection;
+        
+        libMesh::MeshBase::element_iterator
+        it  = _mesh->active_local_elements_begin(),
+        end = _mesh->active_local_elements_end();
+
+        std::set<unsigned int> sides;
+        std::vector<libMesh::boundary_id_type> bids;
+
+        std::map<unsigned int, unsigned int> neighbor_side_pairs;
+        neighbor_side_pairs[0] = 2;
+        neighbor_side_pairs[1] = 3;
+        neighbor_side_pairs[2] = 0;
+        neighbor_side_pairs[3] = 1;
+        
+        for ( ; it != end; it++) {
+            
+            libMesh::Elem* elem = *it;
+            intersection.init(*_level_set_function, *elem, 0.,
+                              _mesh->max_elem_id(),
+                              _mesh->max_node_id());
+            if (intersection.if_intersection_through_elem()) {
+                // set the shifted boundary to one which is
+                // completely inside the material without any intersection
+                // on the edge
+                 
+                sides.clear();
+                intersection.get_material_sides_without_intersection(sides);
+                
+                // add this side in the boundary info object
+                std::set<unsigned int>::const_iterator
+                it  = sides.begin(),
+                end = sides.end();
+                for (; it != end; it++) {
+
+                    bids.clear();
+                    _mesh->boundary_info->boundary_ids(elem, *it, bids);
+                    
+                    // if this side has been ideitied as a dirichlet condition
+                    // then we do not include it in the set
+                    bool set_id = true;
+                    for (unsigned int i=0; i<bids.size(); i++)
+                        if (_dirichlet_bc_ids.count(bids[i])) {
+                            set_id = false;
+                            break;
+                        }
+                            
+                    if (set_id) {
+                        
+                        // find the topological neighbor and the side number
+                        // for the neighbor
+                        libMesh::Elem* e = elem->neighbor_ptr(*it);
+                        libmesh_assert(e);
+                        
+                        _mesh->boundary_info->add_side(e, neighbor_side_pairs[*it], b_id);
+                    }
+                }
+                
+                // any element with an intersection will be included in the void
+                // set since its interaction is included using the sifted boundary
+                // method.
+                elem->subdomain_id() = 3;
+            }
+            else if (intersection.if_elem_on_negative_phi())
+                elem->subdomain_id() = 3;
+            intersection.clear();
+        }
+    }
 
     //
     //  \subsection ex_5_function_evaluation Function Evaluation
@@ -1715,7 +1791,10 @@ public:
         _level_set_function->init(*_level_set_sys_init, *_level_set_sys->solution);
         _sys->solution->zero();
 
-        if (_mesh_refinement->initialized()) {
+        this->mark_shifted_boundary(100);
+        _level_set_vel->init(*_level_set_sys_init, *_level_set_sys->solution, nullptr);
+        
+        /*if (_mesh_refinement->initialized()) {
             
             _mesh_refinement->clear_mesh();
             _eq_sys->reinit();
@@ -1727,7 +1806,7 @@ public:
                                            6,   // negative_level_set_subdomain_offset
                                            3,   // inactive_subdomain_offset
                                            8))  // level_set_boundary_id
-            _eq_sys->reinit();
+            _eq_sys->reinit();*/
 
         
         //*********************************************************************
@@ -1798,7 +1877,7 @@ public:
         // first constrain the indicator function and solve
         /////////////////////////////////////////////////////////////////////
         nonlinear_assembly.set_discipline_and_system(*_discipline, *_sys_init);
-        //nonlinear_assembly.diagonal_elem_subdomain_id = {3, 6, 7};
+        nonlinear_assembly.diagonal_elem_subdomain_id = {3, 6, 7};
         //nonlinear_assembly.set_level_set_function(*_level_set_function, *_filter);
         //nonlinear_assembly.set_level_set_velocity_function(*_level_set_vel);
         //nonlinear_assembly.set_indicator_function(indicator);
@@ -2474,7 +2553,8 @@ public:
         _level_set_function    = new PhiMeshFunction;
         _output                = new libMesh::ExodusII_IO(*_mesh);
         
-        
+        T::init_structural_shifted_boudnary_load(*this, 100);
+
         MAST::BoundaryConditionBase
         *bc = new MAST::BoundaryConditionBase(MAST::BOUNDARY_VELOCITY);
         bc->add(*_level_set_vel);

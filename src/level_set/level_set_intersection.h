@@ -205,6 +205,14 @@ namespace MAST {
         get_bounding_nodes_for_node(const libMesh::Node& node) const;
         
         
+        /*!
+         *    identifies the sides of the element that are completely on the material side without
+         *    any intersection on them.
+         */
+        void
+        get_material_sides_without_intersection(std::set<unsigned int>& sides) const;
+
+        
     protected:
         
         /*!

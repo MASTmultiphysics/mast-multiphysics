@@ -69,6 +69,9 @@ struct Bracket2DModel {
     
     template <typename Opt>
     static void init_structural_loads(Opt& opt);
+
+    template <typename Opt>
+    static void init_structural_shifted_boudnary_load(Opt& opt, unsigned int bid);
     
     template <typename Opt>
     static void init_indicator_loads(Opt& opt);
@@ -224,6 +227,7 @@ init_indicator_dirichlet_conditions(Opt& opt) {
     opt._boundary_conditions.insert(dirichlet);
     
     opt._indicator_discipline->init_system_dirichlet_bc(*opt._indicator_sys);
+    opt._dirichlet_bc_ids.insert(0);
 }
 
 
@@ -250,6 +254,33 @@ MAST::Examples::Bracket2DModel::init_structural_loads(Opt& opt) {
     opt._discipline->add_side_load(5, *p_load);
     
     opt._field_functions.insert(press_f);
+}
+
+
+template <typename Opt>
+void
+MAST::Examples::Bracket2DModel::init_structural_shifted_boudnary_load(Opt& opt,
+                                                                      unsigned int bid) {
+
+    class ZeroTraction: public MAST::FieldFunction<RealVectorX> {
+    public:
+        ZeroTraction(): MAST::FieldFunction<RealVectorX>("traction") {}
+        virtual ~ZeroTraction() {}
+        virtual void operator() (const libMesh::Point& pt, const Real t, RealVectorX& v) const
+        {v.setZero(3);}
+    };
+    
+    ZeroTraction
+    *trac_f = new ZeroTraction;
+    
+    MAST::BoundaryConditionBase
+    *load          = new MAST::BoundaryConditionBase(MAST::SURFACE_TRACTION_SHIFTED_BOUNDARY);
+    
+    load->add(*opt._level_set_vel);
+    load->add(*trac_f);
+    opt._discipline->add_side_load(bid, *load);
+    
+    opt._field_functions.insert(trac_f);
 }
 
 

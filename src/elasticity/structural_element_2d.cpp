@@ -32,6 +32,7 @@
 #include "base/parameter.h"
 #include "base/constant_field_function.h"
 #include "base/assembly_base.h"
+#include "level_set/level_set_boundary_velocity.h"
 
 
 MAST::StructuralElement2D::
@@ -247,6 +248,60 @@ initialize_green_lagrange_strain_operator(const unsigned int qp,
     else
         Bmat_lin.vector_mult(epsilon, local_disp);
 }
+
+
+
+void
+MAST::StructuralElement2D::
+initialize_strain_operator_gradient(const unsigned int qp,
+                                    const MAST::FEBase& fe,
+                                    const RealVectorX& local_disp,
+                                    RealMatrixX& epsilon_grad,
+                                    std::vector<MAST::FEMOperatorMatrix>& dBmat_lin) {
+    
+    epsilon_grad.setZero();
+
+    const std::vector<std::vector<libMesh::RealTensorValue> >&
+    d2phi = fe.get_d2phi();
+
+    unsigned int n_phi = (unsigned int)d2phi.size();
+    RealVectorX
+    phi      = RealVectorX::Zero(n_phi),
+    depsilon = RealVectorX::Zero(3);
+    
+    // make sure all matrices are the right size
+    libmesh_assert_equal_to(epsilon_grad.rows(), 3);
+    libmesh_assert_equal_to(epsilon_grad.cols(), 2);
+    libmesh_assert_equal_to(dBmat_lin.size(), 2);
+    
+    
+    for (unsigned int i=0; i<2; i++) {
+
+        libmesh_assert_equal_to(dBmat_lin[i].m(), 3);
+        libmesh_assert_equal_to(dBmat_lin[i].n(), 6*n_phi);
+        
+        // now set the shape function values
+        // d2N/dxdxi
+        for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
+            phi(i_nd) = d2phi[i_nd][qp](0, i);
+        
+        // linear strain operator
+        dBmat_lin[i].set_shape_function(0, 0, phi); //  epsilon_xx = du/dx
+        dBmat_lin[i].set_shape_function(2, 1, phi); //  gamma_xy = dv/dx + ...
+        
+        // d2N/dydxi
+        for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
+            phi(i_nd) = d2phi[i_nd][qp](1, i);
+        
+        // linear strain operator
+        dBmat_lin[i].set_shape_function(1, 1, phi); //  epsilon_yy = dv/dy
+        dBmat_lin[i].set_shape_function(2, 0, phi); //  gamma_xy = du/dy + ...
+        
+        dBmat_lin[i].vector_mult(depsilon, local_disp);
+        epsilon_grad.col(i) = depsilon;
+    }
+}
+
 
 
 bool
@@ -664,7 +719,7 @@ calculate_stress_boundary_velocity(const MAST::FunctionBase& p,
                                    const unsigned int s,
                                    const MAST::FieldFunction<RealVectorX>& vel_f) {
     
-    std::unique_ptr<MAST::FEBase>   fe(_elem.init_side_fe(s, true));
+    std::unique_ptr<MAST::FEBase>   fe(_elem.init_side_fe(s, true, false));
 
     const unsigned int
     qp_loc_fe_size = (unsigned int)fe->get_qpoints().size(),
@@ -2301,6 +2356,219 @@ MAST::StructuralElement2D::prestress_residual_sensitivity (const MAST::FunctionB
 
 bool
 MAST::StructuralElement2D::
+surface_traction_residual(bool request_jacobian,
+                          RealVectorX &f,
+                          RealMatrixX &jac,
+                          const unsigned int side,
+                          MAST::BoundaryConditionBase& bc) {
+    
+    libmesh_assert(!follower_forces); // not implemented yet for follower forces
+    
+    // prepare the side finite element
+    std::unique_ptr<MAST::FEBase>   fe(_elem.init_side_fe(side, false, false));
+
+    const std::vector<Real> &JxW                    = fe->get_JxW();
+    const std::vector<libMesh::Point>& qpoint       = fe->get_xyz();
+    const std::vector<std::vector<Real> >& phi      = fe->get_phi();
+    const unsigned int
+    n_phi  = (unsigned int)phi.size(),
+    n1     = 3,
+    n2     = 6*n_phi;
+    
+    
+    // get the function from this boundary condition
+    const MAST::FieldFunction<RealVectorX>& trac_func =
+    bc.get<MAST::FieldFunction<RealVectorX> >("traction");
+    
+    // get the thickness function to calculate the force
+    const MAST::FieldFunction<Real>& t_func =
+    _property.get<MAST::FieldFunction<Real> >("h");
+    
+    FEMOperatorMatrix Bmat;
+    RealVectorX
+    trac    = RealVectorX::Zero(3);
+    Real
+    t_val   = 0.;
+    
+    RealVectorX
+    phi_vec     = RealVectorX::Zero(n_phi),
+    force       = RealVectorX::Zero(2*n1),
+    local_f     = RealVectorX::Zero(n2),
+    vec_n2      = RealVectorX::Zero(n2);
+    
+    for (unsigned int qp=0; qp<qpoint.size(); qp++) {
+        
+        // now set the shape function values
+        for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
+            phi_vec(i_nd) = phi[i_nd][qp];
+        
+        Bmat.reinit(2*n1, phi_vec);
+        
+        // get pressure and thickness values
+        trac_func(qpoint[qp], _time, trac);
+        t_func   (qpoint[qp], _time, t_val);
+        
+        // calculate force
+        for (unsigned int i_dim=0; i_dim<n1; i_dim++)
+            force(i_dim) = trac(i_dim)*t_val;
+        
+        Bmat.vector_mult_transpose(vec_n2, force);
+        
+        local_f += JxW[qp] * vec_n2;
+    }
+    
+    // now transform to the global system and add
+    transform_vector_to_global_system(local_f, vec_n2);
+    f -= vec_n2;
+    
+    
+    return (request_jacobian);
+}
+
+
+
+
+bool
+MAST::StructuralElement2D::
+surface_traction_residual_shifted_boundary(bool request_jacobian,
+                                           RealVectorX &f,
+                                           RealMatrixX &jac,
+                                           const unsigned int side,
+                                           MAST::BoundaryConditionBase& bc) {
+    
+    libmesh_assert(!follower_forces); // not implemented yet for follower forces
+    
+    // prepare the side finite element
+    std::unique_ptr<MAST::FEBase>   fe(_elem.init_side_fe(side, true, true));
+
+    const std::vector<Real> &JxW                    = fe->get_JxW();
+    const std::vector<libMesh::Point>& qpoint       = fe->get_xyz();
+    const std::vector<std::vector<Real> >& phi      = fe->get_phi();
+    const std::vector<libMesh::Point>& face_normals = fe->get_normals_for_local_coordinate();
+    const unsigned int
+    n_phi  = (unsigned int)phi.size(),
+    n1     = 3,
+    n2     = 6*n_phi;
+    
+    
+    // get the function from this boundary condition at the projected point
+    const MAST::FieldFunction<RealVectorX>& trac_func =
+    bc.get<MAST::FieldFunction<RealVectorX> >("traction");
+    const MAST::LevelSetBoundaryVelocity& interface =
+    bc.get<LevelSetBoundaryVelocity>("phi_vel");
+
+    // get the thickness function to calculate the force
+    const MAST::FieldFunction<Real>& t_func =
+    _property.get<MAST::FieldFunction<Real> >("h");
+    
+    FEMOperatorMatrix Bmat;
+    
+    RealVectorX
+    trac        = RealVectorX::Zero(3),
+    stress      = RealVectorX::Zero(3),
+    dnormal     = RealVectorX::Zero(3),
+    normal      = RealVectorX::Zero(3),
+    bnd_pt      = RealVectorX::Zero(3),
+    phi_vec     = RealVectorX::Zero(n_phi),
+    force       = RealVectorX::Zero(2*n1),
+    local_f     = RealVectorX::Zero(n2),
+    vec_n2      = RealVectorX::Zero(n2);
+
+    RealMatrixX
+    normal_mat  = RealMatrixX::Zero(2,n1),
+    stress_grad = RealMatrixX::Zero(n1,2),
+    mat1_n1n2   = RealMatrixX::Zero(2*n1, n2),
+    mat2_n2n2   = RealMatrixX::Zero(n2, n2),
+    local_jac   = RealMatrixX::Zero(n2, n2),
+    dstress_dX  = RealMatrixX::Zero(n1,n2),
+    *dstress_mat= request_jacobian?&dstress_dX:nullptr;
+    
+    Real
+    t_val   = 0.,
+    elem_h  = _elem.get_reference_elem().hmax();
+    
+    libMesh::Point
+    pt;
+    
+    std::vector<RealMatrixX>
+    stress_grad_dX(2, RealMatrixX::Zero(n1,n2)),
+    *stress_grad_mat = request_jacobian?&stress_grad_dX:nullptr;
+    
+    
+    for (unsigned int qp=0; qp<qpoint.size(); qp++) {
+        
+        // now set the shape function values
+        for ( unsigned int i_nd=0; i_nd<n_phi; i_nd++ )
+            phi_vec(i_nd) = phi[i_nd][qp];
+        
+        Bmat.reinit(2*n1, phi_vec);
+        
+        // get pressure and thickness values
+        trac_func   (qpoint[qp], _time,   trac);
+        interface.search_nearest_interface_point(qpoint[qp], _time, elem_h, bnd_pt);
+        pt(0) = bnd_pt(0); pt(1) = bnd_pt(1); pt(1) = bnd_pt(1);
+        interface.normal_at_point(pt, _time, normal);
+        t_func      (qpoint[qp], _time,  t_val);
+        
+        // compute difference in normal vector
+        for (unsigned int i_dim=0; i_dim<n1; i_dim++)
+            dnormal(i_dim) = face_normals[qp](i_dim) - normal(i_dim);
+        _surface_normal_voigt_notation(dnormal, normal_mat);
+
+        // compute stress
+        _compute_stress(*fe, qp, stress, dstress_mat);
+        
+        // contribution from dnormal
+        force.topRows(2) = trac.topRows(2) + normal_mat * stress;
+        
+        // contribution from gradient of stress, which uses the
+        // surface normal at the mapped point
+        _surface_normal_voigt_notation(normal, normal_mat);
+        _compute_stress_gradient(*fe, qp, stress_grad, stress_grad_mat);
+        
+        for (unsigned int i_dim=0; i_dim<2; i_dim++)
+            force.topRows(2) -= normal_mat * stress_grad.col(i_dim) * (bnd_pt(i_dim) - qpoint[qp](i_dim));
+        
+        Bmat.vector_mult_transpose(vec_n2, force);
+        
+        local_f += t_val * JxW[qp] * vec_n2;
+        
+        if (request_jacobian) {
+            
+            // contribution from the stress
+            _surface_normal_voigt_notation(dnormal, normal_mat);
+            mat1_n1n2.topLeftCorner(2, n2) = normal_mat * dstress_dX;
+            
+            // contribution from the stress gradient
+            _surface_normal_voigt_notation(normal, normal_mat);
+            for (unsigned int i_dim=0; i_dim<2; i_dim++) {
+                
+                mat1_n1n2.topLeftCorner(2, n2) -=
+                (bnd_pt(i_dim) - qpoint[qp](i_dim)) * normal_mat * stress_grad_dX[i_dim];
+            }
+
+            Bmat.right_multiply_transpose(mat2_n2n2, mat1_n1n2);
+            local_jac += t_val * JxW[qp] * mat2_n2n2;
+        }
+    }
+    
+    // now transform to the global system and add
+    transform_vector_to_global_system(local_f, vec_n2);
+    f -= vec_n2;
+
+    if (request_jacobian) {
+        transform_matrix_to_global_system(local_jac, mat2_n2n2);
+        jac -= mat2_n2n2;
+    }
+
+    
+    return request_jacobian;
+}
+
+
+
+bool
+MAST::StructuralElement2D::
 surface_pressure_residual(bool request_jacobian,
                           RealVectorX &f,
                           RealMatrixX &jac,
@@ -2310,7 +2578,7 @@ surface_pressure_residual(bool request_jacobian,
     libmesh_assert(!follower_forces); // not implemented yet for follower forces
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase>   fe(_elem.init_side_fe(side, false));
+    std::unique_ptr<MAST::FEBase>   fe(_elem.init_side_fe(side, false, false));
 
     const std::vector<Real> &JxW                    = fe->get_JxW();
     const std::vector<libMesh::Point>& qpoint       = fe->get_xyz();
@@ -2386,7 +2654,7 @@ surface_pressure_residual_sensitivity(const MAST::FunctionBase& p,
     libmesh_assert(!follower_forces); // not implemented yet for follower forces
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase>   fe(_elem.init_side_fe(side, false));
+    std::unique_ptr<MAST::FEBase>   fe(_elem.init_side_fe(side, false, false));
 
     const std::vector<Real> &JxW                    = fe->get_JxW();
     const std::vector<libMesh::Point>& qpoint       = fe->get_xyz();
@@ -3615,3 +3883,552 @@ piston_theory_residual_sensitivity(const MAST::FunctionBase& p,
     
     return request_jacobian;
 }
+
+
+
+
+
+
+void
+MAST::StructuralElement2D::_compute_stress(MAST::FEBase& fe,
+                                           unsigned int qp,
+                                           RealVectorX& stress,
+                                           RealMatrixX* dstress_dX) {
+    
+    /*
+     MAST::BendingOperatorType bending_model =
+    _property.bending_model(_elem);
+    
+    std::unique_ptr<MAST::BendingOperator2D>
+    bend(MAST::build_bending_operator_2D(bending_model,
+                                         *this,
+                                         qp_loc_fe).release());
+    */
+        
+    std::vector<Real> JxW                     = fe.get_JxW();
+    const std::vector<libMesh::Point>& xyz    = fe.get_xyz();
+
+    const unsigned int
+    n_phi    = (unsigned int)fe.n_shape_functions(),
+    n1       = this->n_direct_strain_components(),
+    n2       = 6*n_phi,
+    n3       = this->n_von_karman_strain_components();
+    
+    /*
+     Real
+    z     =  0.,
+    z_off =  0.,
+    temp  =  0.,
+    ref_t =  0.,
+    alpha =  0.,
+    dtemp =  0.,
+    dref_t=  0.,
+    dalpha=  0.;
+     */
+    
+    RealMatrixX
+    material_mat,
+    vk_dwdxi_mat = RealMatrixX::Zero(n1,n3),
+    dstrain_dX   = RealMatrixX::Zero(n1,n2),
+    mat_n1n2     = RealMatrixX::Zero(n1,n2),
+    eye          = RealMatrixX::Identity(n1, n1),
+    mat_x        = RealMatrixX::Zero(3,2),
+    mat_y        = RealMatrixX::Zero(3,2),
+    dstrain_dX_3D= RealMatrixX::Zero(6,n2),
+    dstress_dX_3D= RealMatrixX::Zero(6,n2);
+    
+    RealVectorX
+    strain      = RealVectorX::Zero(n1),
+    strain_vk   = RealVectorX::Zero(n1),
+    strain_bend = RealVectorX::Zero(n1),
+    strain_3D   = RealVectorX::Zero(6),
+    stress_3D   = RealVectorX::Zero(6),
+    dstrain_dp  = RealVectorX::Zero(n1),
+    dstress_dp  = RealVectorX::Zero(n1),
+    vec1        = RealVectorX::Zero(n2),
+    vec2        = RealVectorX::Zero(n2);
+    
+    
+    FEMOperatorMatrix
+    Bmat_lin,
+    Bmat_nl_x,
+    Bmat_nl_y,
+    Bmat_nl_u,
+    Bmat_nl_v,
+    Bmat_bend,
+    Bmat_vk;
+    
+    Bmat_lin.reinit (n1, _system.n_vars(), n_phi); // three stress-strain components
+    Bmat_nl_x.reinit(2, _system.n_vars(), n_phi);
+    Bmat_nl_y.reinit(2, _system.n_vars(), n_phi);
+    Bmat_nl_u.reinit(2, _system.n_vars(), n_phi);
+    Bmat_nl_v.reinit(2, _system.n_vars(), n_phi);
+    Bmat_bend.reinit(n1, _system.n_vars(), n_phi);
+    Bmat_vk.reinit  (n3, _system.n_vars(), n_phi); // only dw/dx and dw/dy
+
+    // TODO: remove this const-cast, which may need change in API of
+    // material card
+    const MAST::FieldFunction<RealMatrixX >&
+    mat_stiff  =
+    const_cast<MAST::MaterialPropertyCardBase&>(_property.get_material()).
+    stiffness_matrix(2);
+    
+    /*
+    // get the thickness values for the bending strain calculation
+    const MAST::FieldFunction<Real>
+    &h      =  _property.get<MAST::FieldFunction<Real> >("h"),
+    &h_off  =  _property.get<MAST::FieldFunction<Real> >("off");
+    
+    
+    bool if_vk = (_property.strain_type() == MAST::NONLINEAR_STRAIN),
+    if_bending = (_property.bending_model(_elem) != MAST::NO_BENDING);
+    
+    
+    // check to see if the element has any thermal loads specified
+    // The object returns null
+    MAST::BoundaryConditionBase *thermal_load =
+    stress_output.get_thermal_load_for_elem(_elem);
+    
+    const MAST::FieldFunction<Real>
+    *temp_func     = nullptr,
+    *ref_temp_func = nullptr,
+    *alpha_func    = nullptr;
+    
+    // get pointers to the temperature, if thermal load is specified
+    if (thermal_load) {
+        temp_func     =
+        &(thermal_load->get<MAST::FieldFunction<Real> >("temperature"));
+        ref_temp_func =
+        &(thermal_load->get<MAST::FieldFunction<Real> >("ref_temperature"));
+        alpha_func    =
+        &(_property.get_material().get<MAST::FieldFunction<Real> >("alpha_expansion"));
+    }
+    */
+    
+    ///////////////////////////////////////////////////////////////////////
+    // get the material matrix
+    mat_stiff(xyz[qp], _time, material_mat);
+    
+    this->initialize_green_lagrange_strain_operator(qp,
+                                                    fe,
+                                                    _local_sol,
+                                                    strain,
+                                                    mat_x,
+                                                    mat_y,
+                                                    Bmat_lin,
+                                                    Bmat_nl_x,
+                                                    Bmat_nl_y,
+                                                    Bmat_nl_u,
+                                                    Bmat_nl_v);
+    
+    /*
+     // if thermal load was specified, then set the thermal strain
+     // component of the total strain
+     if (thermal_load) {
+         (*temp_func)    (xyz[qp_loc_index], _time, temp);
+         (*ref_temp_func)(xyz[qp_loc_index], _time, ref_t);
+         (*alpha_func)   (xyz[qp_loc_index], _time, alpha);
+         strain(0)  -=  alpha*(temp-ref_t);  // epsilon-xx
+         strain(1)  -=  alpha*(temp-ref_t);  // epsilon-yy
+     }
+
+     if (if_bending) {
+        
+        // von Karman strain
+        if (if_vk) {  // get the vonKarman strain operator if needed
+            
+            this->initialize_von_karman_strain_operator(qp,
+                                                        fe,
+                                                        strain_vk,
+                                                        vk_dwdxi_mat,
+                                                        Bmat_vk);
+            strain += strain_vk;
+        }
+        
+        // add to this the bending strain
+        // TODO: add coupling due to h_offset
+        h    (xyz[qp], _time,     z);
+        h_off(xyz[qp], _time, z_off);
+        // TODO: this assumes isotropic section. Multilayered sections need
+        // special considerations
+        bend->initialize_bending_strain_operator_for_z(fe,
+                                                       qp,
+                                                       qp_loc[qp](2) * z/2.+z_off,
+                                                       Bmat_bend);
+        Bmat_bend.vector_mult(strain_bend, _local_sol);
+        
+        
+        // add stress due to bending.
+        strain += strain_bend;
+    }*/
+            
+    // note that this assumes linear material laws
+    stress = material_mat * strain;
+    
+    // calculate the derivative if requested
+    if (dstress_dX) {
+        
+        Bmat_lin.left_multiply(dstrain_dX, eye);
+        
+        /*if (_property.strain_type() == MAST::NONLINEAR_STRAIN) {
+            
+            Bmat_nl_x.left_multiply(mat_n1n2, mat_x);
+            dstrain_dX += mat_n1n2;
+            Bmat_nl_y.left_multiply(mat_n1n2, mat_y);
+            dstrain_dX += mat_n1n2;
+        }
+        
+        if (if_bending) {
+            
+            // von Karman strain
+            if (if_vk) {
+                
+                Bmat_vk.left_multiply(mat_n1n2, vk_dwdxi_mat);
+                dstrain_dX   +=  mat_n1n2;
+            }
+            
+            // bending strain
+            Bmat_bend.left_multiply(mat_n1n2, eye);
+            dstrain_dX  +=   mat_n1n2;
+        }
+        */
+        
+        // note: this assumes linear material laws
+        *dstress_dX  = material_mat * dstrain_dX;
+        
+        /*
+         if (p) {
+            // sensitivity of the response, s, is
+            //   ds/dp   = partial s/partial p  +
+            //             partial s/partial X   dX/dp
+            //   the first part of the sensitivity is obtained from
+            //
+            // the first term includes direct sensitivity of the stress
+            // with respect to the parameter, while holding the solution
+            // constant. This should include influence of shape changes,
+            // if the parameter is shape-dependent.
+            // TODO: include shape sensitivity.
+            // presently, only material parameter is included
+            
+            
+            dstrain_dp  =  RealVectorX::Zero(n1);
+            
+            // if thermal load was specified, then set the thermal strain
+            // component of the total strain
+            if (thermal_load) {
+                temp_func->derivative(*p, xyz[qp_loc_index], _time, dtemp);
+                ref_temp_func->derivative(*p, xyz[qp_loc_index], _time, dref_t);
+                alpha_func->derivative(*p, xyz[qp_loc_index], _time, dalpha);
+                dstrain_dp(0)  -=  alpha*(dtemp-dref_t) + dalpha*(temp-ref_t); // epsilon-xx
+                dstrain_dp(1)  -=  alpha*(dtemp-dref_t) + dalpha*(temp-ref_t); // epsilon-yy
+            }
+            
+            
+            
+            if (if_bending) {
+                
+                // add to this the bending strain
+                h.derivative    (*p,
+                                 xyz[qp_loc_index], _time,     z);
+                h_off.derivative(*p,
+                                 xyz[qp_loc_index], _time, z_off);
+                // TODO: this assumes isotropic section. Multilayered sections need
+                // special considerations
+                bend->initialize_bending_strain_operator_for_z(*fe,
+                                                               qp_loc_index,
+                                                               qp_loc[qp](2) * z/2.+z_off,
+                                                               Bmat_bend);
+                Bmat_bend.vector_mult(strain_bend, _local_sol);
+                
+                
+                // add stress due to bending.
+                dstrain_dp += strain_bend;
+            }
+            
+            
+            // now use this to calculate the stress sensitivity.
+            dstress_dp  =  material_mat * dstrain_dp;
+            
+            // get the material matrix sensitivity
+            mat_stiff.derivative(*p,
+                                 xyz[qp_loc_index],
+                                 _time,
+                                 material_mat);
+            
+            // partial sensitivity of strain is zero unless it is a
+            // shape parameter.
+            // TODO: shape sensitivity of strain operator
+            
+            // now use this to calculate the stress sensitivity.
+            dstress_dp +=  material_mat * strain;
+            
+            //
+            // use the derivative data to evaluate the second term in the
+            // sensitivity
+            //
+            dstress_dp  += dstress_dX * _local_sol_sens;
+            dstrain_dp  += dstrain_dX * _local_sol_sens;
+            
+            // copy the 3D object
+            stress_3D(0) = dstress_dp(0);  // sigma-xx
+            stress_3D(1) = dstress_dp(1);  // sigma-yy
+            stress_3D(3) = dstress_dp(2);  // tau-xy
+            strain_3D(0) = dstrain_dp(0);  // epsilon-xx
+            strain_3D(1) = dstrain_dp(1);  // epsilon-yy
+            strain_3D(3) = dstrain_dp(2);  // gamma-xy
+            
+            // tell the data object about the sensitivity values
+            data->set_sensitivity(*p,
+                                  stress_3D,
+                                  strain_3D);
+        }
+         */
+    }
+}
+
+
+
+void
+MAST::StructuralElement2D::
+_compute_stress_gradient(MAST::FEBase& fe,
+                         unsigned int qp,
+                         RealMatrixX& stress_grad,
+                         std::vector<RealMatrixX>* dstress_grad_dX) {
+    
+    /*
+     MAST::BendingOperatorType bending_model =
+    _property.bending_model(_elem);
+    
+    std::unique_ptr<MAST::BendingOperator2D>
+    bend(MAST::build_bending_operator_2D(bending_model,
+                                         *this,
+                                         qp_loc_fe).release());
+    */
+        
+    std::vector<Real> JxW                     = fe.get_JxW();
+    const std::vector<libMesh::Point>& xyz    = fe.get_xyz();
+
+    const unsigned int
+    n_phi    = (unsigned int)fe.n_shape_functions(),
+    n1       = this->n_direct_strain_components(),
+    n2       = 6*n_phi,
+    n3       = this->n_von_karman_strain_components();
+    
+    /*
+     Real
+    z     =  0.,
+    z_off =  0.,
+    temp  =  0.,
+    ref_t =  0.,
+    alpha =  0.,
+    dtemp =  0.,
+    dref_t=  0.,
+    dalpha=  0.;
+     */
+    
+    RealMatrixX
+    material_mat,
+    vk_dwdxi_mat = RealMatrixX::Zero(n1,n3),
+    dstrain      = RealMatrixX::Zero(n1,2),
+    dstrain_dX   = RealMatrixX::Zero(n1,n2),
+    mat_n1n2     = RealMatrixX::Zero(n1,n2),
+    eye          = RealMatrixX::Identity(n1, n1),
+    mat_x        = RealMatrixX::Zero(3,2),
+    mat_y        = RealMatrixX::Zero(3,2),
+    dstrain_dX_3D= RealMatrixX::Zero(6,n2),
+    dstress_dX_3D= RealMatrixX::Zero(6,n2);
+    
+    RealVectorX
+    strain_vk   = RealVectorX::Zero(n1),
+    strain_bend = RealVectorX::Zero(n1),
+    strain_3D   = RealVectorX::Zero(6),
+    stress_3D   = RealVectorX::Zero(6),
+    dstrain_dp  = RealVectorX::Zero(n1),
+    dstress_dp  = RealVectorX::Zero(n1),
+    vec1        = RealVectorX::Zero(n2),
+    vec2        = RealVectorX::Zero(n2);
+    
+    
+    FEMOperatorMatrix
+    Bmat_nl_x,
+    Bmat_nl_y,
+    Bmat_nl_u,
+    Bmat_nl_v,
+    Bmat_bend,
+    Bmat_vk;
+
+    std::vector<FEMOperatorMatrix>
+    dBmat_lin(2);
+
+    for (unsigned int i=0; i<2; i++)
+        dBmat_lin[i].reinit (n1, _system.n_vars(), n_phi); // three stress-strain components
+
+    /*
+    Bmat_nl_x.reinit(2, _system.n_vars(), n_phi);
+    Bmat_nl_y.reinit(2, _system.n_vars(), n_phi);
+    Bmat_nl_u.reinit(2, _system.n_vars(), n_phi);
+    Bmat_nl_v.reinit(2, _system.n_vars(), n_phi);
+    Bmat_bend.reinit(n1, _system.n_vars(), n_phi);
+    Bmat_vk.reinit  (n3, _system.n_vars(), n_phi); // only dw/dx and dw/dy
+     */
+    
+    // TODO: remove this const-cast, which may need change in API of
+    // material card
+    const MAST::FieldFunction<RealMatrixX >&
+    mat_stiff  =
+    const_cast<MAST::MaterialPropertyCardBase&>(_property.get_material()).
+    stiffness_matrix(2);
+    
+    /*
+    // get the thickness values for the bending strain calculation
+    const MAST::FieldFunction<Real>
+    &h      =  _property.get<MAST::FieldFunction<Real> >("h"),
+    &h_off  =  _property.get<MAST::FieldFunction<Real> >("off");
+    
+    
+    bool if_vk = (_property.strain_type() == MAST::NONLINEAR_STRAIN),
+    if_bending = (_property.bending_model(_elem) != MAST::NO_BENDING);
+    
+    
+    // check to see if the element has any thermal loads specified
+    // The object returns null
+    MAST::BoundaryConditionBase *thermal_load =
+    stress_output.get_thermal_load_for_elem(_elem);
+    
+    const MAST::FieldFunction<Real>
+    *temp_func     = nullptr,
+    *ref_temp_func = nullptr,
+    *alpha_func    = nullptr;
+    
+    // get pointers to the temperature, if thermal load is specified
+    if (thermal_load) {
+        temp_func     =
+        &(thermal_load->get<MAST::FieldFunction<Real> >("temperature"));
+        ref_temp_func =
+        &(thermal_load->get<MAST::FieldFunction<Real> >("ref_temperature"));
+        alpha_func    =
+        &(_property.get_material().get<MAST::FieldFunction<Real> >("alpha_expansion"));
+    }
+    */
+    
+    ///////////////////////////////////////////////////////////////////////
+    // get the material matrix
+    mat_stiff(xyz[qp], _time, material_mat);
+    
+    this->initialize_strain_operator_gradient(qp,
+                                              fe,
+                                              _local_sol,
+                                              dstrain,
+                                              dBmat_lin);
+    
+    /*
+     // if thermal load was specified, then set the thermal strain
+     // component of the total strain
+     if (thermal_load) {
+         (*temp_func)    (xyz[qp_loc_index], _time, temp);
+         (*ref_temp_func)(xyz[qp_loc_index], _time, ref_t);
+         (*alpha_func)   (xyz[qp_loc_index], _time, alpha);
+         strain(0)  -=  alpha*(temp-ref_t);  // epsilon-xx
+         strain(1)  -=  alpha*(temp-ref_t);  // epsilon-yy
+     }
+
+     if (if_bending) {
+        
+        // von Karman strain
+        if (if_vk) {  // get the vonKarman strain operator if needed
+            
+            this->initialize_von_karman_strain_operator(qp,
+                                                        fe,
+                                                        strain_vk,
+                                                        vk_dwdxi_mat,
+                                                        Bmat_vk);
+            strain += strain_vk;
+        }
+        
+        // add to this the bending strain
+        // TODO: add coupling due to h_offset
+        h    (xyz[qp], _time,     z);
+        h_off(xyz[qp], _time, z_off);
+        // TODO: this assumes isotropic section. Multilayered sections need
+        // special considerations
+        bend->initialize_bending_strain_operator_for_z(fe,
+                                                       qp,
+                                                       qp_loc[qp](2) * z/2.+z_off,
+                                                       Bmat_bend);
+        Bmat_bend.vector_mult(strain_bend, _local_sol);
+        
+        
+        // add stress due to bending.
+        strain += strain_bend;
+    }*/
+            
+    // note that this assumes linear material laws
+    stress_grad = material_mat * dstrain;
+    
+    // calculate the derivative if requested
+    if (dstress_grad_dX) {
+        
+        for (unsigned int i=0; i<2; i++) {
+            
+            dBmat_lin[i].left_multiply(dstrain_dX, eye);
+            
+            /*if (_property.strain_type() == MAST::NONLINEAR_STRAIN) {
+             
+             Bmat_nl_x.left_multiply(mat_n1n2, mat_x);
+             dstrain_dX += mat_n1n2;
+             Bmat_nl_y.left_multiply(mat_n1n2, mat_y);
+             dstrain_dX += mat_n1n2;
+             }
+             
+             if (if_bending) {
+             
+             // von Karman strain
+             if (if_vk) {
+             
+             Bmat_vk.left_multiply(mat_n1n2, vk_dwdxi_mat);
+             dstrain_dX   +=  mat_n1n2;
+             }
+             
+             // bending strain
+             Bmat_bend.left_multiply(mat_n1n2, eye);
+             dstrain_dX  +=   mat_n1n2;
+             }
+             */
+            
+            // note: this assumes linear material laws
+            (*dstress_grad_dX)[i]  = material_mat * dstrain_dX;
+        }
+    }
+}
+
+
+void
+MAST::StructuralElement2D::_surface_normal_voigt_notation(const RealVectorX& normal,
+                                                          RealMatrixX& normal_mat) {
+    
+    libmesh_assert_equal_to(normal.size(), 3);
+    libmesh_assert_equal_to(normal_mat.rows(), 2);
+    libmesh_assert_equal_to(normal_mat.cols(), 3);
+    
+    /*
+    // for a 3D stress-tensor the relation will be
+    normal_mat = RealMatrixX::Zero(3, 6);
+    // nx
+    normal_mat(0,0) = normal_mat(1,3) = normal_mat(2,5) = normal(0);
+    // ny
+    normal_mat(0,3) = normal_mat(1,1) = normal_mat(2,4) = normal(1);
+    // nz
+    normal_mat(0,5) = normal_mat(1,4) = normal_mat(2,2) = normal(2);
+    */
+    
+    // for a 2D stress tensor the relation will be
+    normal_mat = RealMatrixX::Zero(2, 3);
+    
+    // nx
+    normal_mat(0,0) = normal_mat(1,2) = normal(0);
+
+    // ny
+    normal_mat(0,2) = normal_mat(1,1) = normal(1);
+}
+
+

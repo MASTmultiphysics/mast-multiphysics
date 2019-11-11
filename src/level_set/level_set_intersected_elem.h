@@ -110,6 +110,7 @@ namespace MAST {
         virtual std::unique_ptr<MAST::FEBase>
         init_side_fe(unsigned int s,
                      bool init_grads,
+                     bool init_second_order_derivative,
                      int extra_quadrature_order = 0) const;
 
         

@@ -158,11 +158,13 @@ MAST::GeomElem::init_fe(bool init_grads,
 std::unique_ptr<MAST::FEBase>
 MAST::GeomElem::init_side_fe(unsigned int s,
                              bool init_grads,
+                             bool init_second_order_derivative,
                              int extra_quadrature_order) const {
  
     std::unique_ptr<MAST::FEBase> fe(new MAST::FEBase(*_sys_init));
     fe->set_extra_quadrature_order(extra_quadrature_order);
-    
+    fe->set_evaluate_second_order_derivatives(init_second_order_derivative);
+
     fe->init_for_side(*this, s, init_grads);
     
     return fe;

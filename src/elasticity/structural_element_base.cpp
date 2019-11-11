@@ -516,7 +516,7 @@ inertial_residual_boundary_velocity (const MAST::FunctionBase& p,
                                      RealMatrixX& jac) {
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_elem.init_side_fe(s, false));
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_side_fe(s, false, false));
 
     std::vector<Real> JxW_Vn                        = fe->get_JxW();
     const std::vector<libMesh::Point>& xyz          = fe->get_xyz();
@@ -657,6 +657,22 @@ side_external_residual(bool request_jacobian,
                                               f, jac,
                                               it->first,
                                               **bc_it);
+                    break;
+
+
+                case MAST::SURFACE_TRACTION:
+                    surface_traction_residual(request_jacobian,
+                                              f, jac,
+                                              it->first,
+                                              **bc_it);
+                    break;
+
+                    
+                case MAST::SURFACE_TRACTION_SHIFTED_BOUNDARY:
+                    surface_traction_residual_shifted_boundary(request_jacobian,
+                                                               f, jac,
+                                                               it->first,
+                                                               **bc_it);
                     break;
                     
                     
@@ -1294,7 +1310,7 @@ surface_pressure_boundary_velocity(const MAST::FunctionBase& p,
     libmesh_assert(!follower_forces); // not implemented yet for follower forces
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_elem.init_side_fe(s, false));
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_side_fe(s, false, false));
 
     std::vector<Real> JxW_Vn                        = fe->get_JxW();
     const std::vector<libMesh::Point>& xyz          = fe->get_xyz();

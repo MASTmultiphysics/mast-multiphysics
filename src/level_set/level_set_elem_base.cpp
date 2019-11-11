@@ -414,7 +414,7 @@ MAST::LevelSetElementBase::perimeter_sensitivity() {
 Real
 MAST::LevelSetElementBase::volume_boundary_velocity_on_side(unsigned int s) {
     
-    std::unique_ptr<MAST::FEBase> fe(_elem.init_side_fe(s, true));
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_side_fe(s, true, false));
 
     const std::vector<Real>& JxW           =  fe->get_JxW();
     const unsigned int

@@ -605,7 +605,7 @@ internal_residual_boundary_velocity (const MAST::FunctionBase& p,
                                      const MAST::FieldFunction<RealVectorX>& vel_f) {
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_elem.init_side_fe(s, true));
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_side_fe(s, true, false));
 
     std::vector<Real> JxW_Vn                        = fe->get_JxW();
     const std::vector<libMesh::Point>& xyz          = fe->get_xyz();
@@ -744,7 +744,7 @@ velocity_residual_boundary_velocity (const MAST::FunctionBase& p,
                                      const MAST::FieldFunction<RealVectorX>& vel_f) {
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_elem.init_side_fe(s, false));
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_side_fe(s, false, false));
 
     std::vector<Real> JxW_Vn                        = fe->get_JxW();
     const std::vector<libMesh::Point>& xyz          = fe->get_xyz();
@@ -816,7 +816,7 @@ surface_flux_residual(bool request_jacobian,
                       MAST::BoundaryConditionBase& bc) {
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_elem.init_side_fe(s, false));
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_side_fe(s, false, false));
 
     
     // get the function from this boundary condition
@@ -895,7 +895,7 @@ surface_flux_residual_sensitivity(const MAST::FunctionBase& p,
                                   MAST::BoundaryConditionBase& bc) {
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_elem.init_side_fe(s, false));
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_side_fe(s, false, false));
 
     
     // get the function from this boundary condition
@@ -976,7 +976,7 @@ surface_flux_boundary_velocity(const MAST::FunctionBase& p,
     
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_elem.init_side_fe(s, false));
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_side_fe(s, false, false));
 
     std::vector<Real> JxW_Vn                        = fe->get_JxW();
     const std::vector<libMesh::Point>& xyz          = fe->get_xyz();
@@ -1032,7 +1032,7 @@ surface_convection_residual(bool request_jacobian,
                             MAST::BoundaryConditionBase& bc) {
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_elem.init_side_fe(s, false));
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_side_fe(s, false, false));
 
     // get the function from this boundary condition
     const MAST::FieldFunction<Real>
@@ -1147,7 +1147,7 @@ surface_convection_residual_sensitivity(const MAST::FunctionBase& p,
                                         MAST::BoundaryConditionBase& bc) {
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_elem.init_side_fe(s, false));
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_side_fe(s, false, false));
 
     // get the function from this boundary condition
     const MAST::FieldFunction<Real>
@@ -1256,7 +1256,7 @@ surface_convection_boundary_velocity(const MAST::FunctionBase& p,
                                      MAST::BoundaryConditionBase& bc) {
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_elem.init_side_fe(s, false));
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_side_fe(s, false, false));
 
     std::vector<Real> JxW_Vn                        = fe->get_JxW();
     const std::vector<libMesh::Point>& xyz          = fe->get_xyz();
@@ -1327,7 +1327,7 @@ surface_radiation_residual(bool request_jacobian,
                            MAST::BoundaryConditionBase& bc) {
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_elem.init_side_fe(s, false));
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_side_fe(s, false, false));
 
     // get the function from this boundary condition
     const MAST::FieldFunction<Real>
@@ -1447,7 +1447,7 @@ surface_radiation_residual_sensitivity(const MAST::FunctionBase& p,
 
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_elem.init_side_fe(s, false));
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_side_fe(s, false, false));
 
     // get the function from this boundary condition
     const MAST::FieldFunction<Real>
@@ -1551,7 +1551,7 @@ surface_radiation_boundary_velocity(const MAST::FunctionBase& p,
                                     MAST::BoundaryConditionBase& bc) {
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_elem.init_side_fe(s, false));
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_side_fe(s, false, false));
 
     std::vector<Real> JxW_Vn                        = fe->get_JxW();
     const std::vector<libMesh::Point>& xyz          = fe->get_xyz();
@@ -1703,7 +1703,7 @@ volume_heat_source_boundary_velocity(const MAST::FunctionBase& p,
                                      MAST::BoundaryConditionBase& bc) {
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_elem.init_side_fe(s, false));
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_side_fe(s, false, false));
 
     std::vector<Real> JxW_Vn                        = fe->get_JxW();
     const std::vector<libMesh::Point>& xyz          = fe->get_xyz();

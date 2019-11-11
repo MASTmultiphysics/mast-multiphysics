@@ -610,7 +610,7 @@ surface_pressure_residual(bool request_jacobian,
     
     // prepare the side finite element
     std::unique_ptr<MAST::FEBase>
-    fe(_elem.init_side_fe(side, false));
+    fe(_elem.init_side_fe(side, false, false));
 
     const std::vector<Real> &JxW                    = fe->get_JxW();
     const std::vector<libMesh::Point>& qpoint       = fe->get_xyz();
@@ -678,7 +678,7 @@ surface_pressure_residual_sensitivity(const MAST::FunctionBase& p,
     
     // prepare the side finite element
     std::unique_ptr<MAST::FEBase>
-    fe(_elem.init_side_fe(side, false));
+    fe(_elem.init_side_fe(side, false, false));
 
     const std::vector<Real> &JxW                    = fe->get_JxW();
     const std::vector<libMesh::Point>& qpoint       = fe->get_xyz();

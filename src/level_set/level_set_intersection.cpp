@@ -1698,3 +1698,42 @@ MAST::LevelSetIntersection::get_bounding_nodes_for_node(const libMesh::Node& nod
     
     return it->second;
 }
+
+
+void
+MAST::LevelSetIntersection::
+get_material_sides_without_intersection(std::set<unsigned int>& sides) const {
+    
+    libmesh_assert_equal_to(sides.size(), 0);
+
+    std::map<const libMesh::Node*, std::pair<Real, bool> >::const_iterator
+    it,
+    end = _node_phi_vals.end();
+
+    for (unsigned int i=0; i<_elem->n_sides(); i++) {
+        
+        std::unique_ptr<const libMesh::Elem> side(_elem->side_ptr(i).release());
+       
+        // check to see if all nodes of this side are on the material side
+        bool
+        on_material = true;
+        for (unsigned int j=0; j<side->n_nodes(); j++) {
+    
+            it = _node_phi_vals.find(side->node_ptr(j));
+            // the node level set value should be in the code
+            libmesh_assert(it != end);
+            
+            // neither on level set nor on positive side
+            if (!(it->second.second || it->second.first > _tol)) {
+                
+                on_material = false;
+                break;
+            }
+        }
+        
+        // if the on_material flag is still true then the side is added to
+        // the set
+        if (on_material)
+            sides.insert(i);
+    }
+}

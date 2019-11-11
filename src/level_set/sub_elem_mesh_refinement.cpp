@@ -297,6 +297,10 @@ MAST::SubElemMeshRefinement::constrain() {
     const libMesh::MeshBase::const_element_iterator end_el =
     _system.get_mesh().active_local_elements_end();
     
+    const libMesh::dof_id_type
+    first_dof  = dof_map.first_dof(_mesh.comm().rank()),
+    last_dof   = dof_map.end_dof(_mesh.comm().rank());
+
     std::vector<libMesh::dof_id_type>
     dof_indices;
 
@@ -312,7 +316,8 @@ MAST::SubElemMeshRefinement::constrain() {
             // constrain all dofs if they have not already been constrained.
             for (unsigned int i=0; i<dof_indices.size(); i++) {
                 
-                if (!dof_map.is_constrained_dof(dof_indices[i])) {
+                if ((dof_indices[i] >=   first_dof  || dof_indices[i] <  last_dof) &&
+                    !dof_map.is_constrained_dof(dof_indices[i])) {
                     
                     libMesh::DofConstraintRow c_row;
                     dof_map.add_constraint_row(dof_indices[i], c_row, true);
@@ -375,7 +380,8 @@ MAST::SubElemMeshRefinement::constrain() {
             dof_b_node2 = dof_indices[0];
 
             // now create and add the constraint
-            if (!dof_map.is_constrained_dof(dof_node)) {
+            if ((dof_node >=   first_dof  || dof_node <  last_dof) &&
+                !dof_map.is_constrained_dof(dof_node)) {
                 
                 // the constraint assumes linear variation of the value
                 // between the bounding nodes

@@ -180,7 +180,7 @@ search_nearest_interface_point(const libMesh::Point& p,
         }
 
         Eigen::FullPivLU<RealMatrixX> solver(coeffs);
-        dv0 -= solver.solve(gradL);
+        dv0 -= 0.5*solver.solve(gradL);
         // update the design points and check for convergence
         p_opt(0) = dv0(0);
         p_opt(1) = dv0(1);
