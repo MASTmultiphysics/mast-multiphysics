@@ -13,7 +13,7 @@ doc/example_3.dox
 
 # CLion IDE files.
 .idea/
-cmake-build-debug/
+cmake-build-debug*/
 build2
 
 # Visual Studio Code settings.

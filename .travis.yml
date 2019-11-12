@@ -13,19 +13,10 @@ matrix:
           env: LIBMESH_VERSION=1.5.0
 
 before_install:
-  - sudo apt-get -qq install -y gfortran wget m4
-  - sudo apt-get -qq install -y openmpi-bin libopenmpi-dev
-  - sudo apt-get -qq install -y libpetsc3.6 libpetsc3.6.2-dev
-  - sudo apt-get -qq install -y libslepc3.6 libslepc3.6.1-dev libparpack2-dev
-  - sudo apt-get -qq install -y libboost-all-dev
-  - sudo apt-get -qq install -y libeigen3-dev
-  - sudo apt-get -qq install -y doxygen graphviz rsync
-  - sudo apt-get -qq install -y texlive-latex-base dvi2ps ghostscript
+  - ci/build_dependencies.sh
 
 install:
-  - cd ${HOME}
-  - wget -nv https://github.com/MASTmultiphysics/mast-ci-packages/releases/download/libmesh-${LIBMESH_VERSION}-1.deb/libmesh-${LIBMESH_VERSION}-1.deb
-  - sudo apt install ./libmesh-${LIBMESH_VERSION}-1.deb
+  - ci/get_libmesh.sh
 
 before_script:
   - export MAST_INSTALL_DIR=${HOME}/mast
