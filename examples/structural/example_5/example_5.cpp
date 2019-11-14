@@ -1694,7 +1694,7 @@ public:
     void mark_shifted_boundary(unsigned int b_id) {
 
         // remove the previous information for boundary id
-        _mesh->boundary_info->remove_id(100);
+        _mesh->boundary_info->remove_id(b_id);
         
         MAST::LevelSetIntersection intersection;
         
@@ -1714,6 +1714,10 @@ public:
         for ( ; it != end; it++) {
             
             libMesh::Elem* elem = *it;
+            
+            // begin by setting all subdomain id to 0.
+            elem->subdomain_id() = 0;
+            
             intersection.init(*_level_set_function, *elem, 0.,
                               _mesh->max_elem_id(),
                               _mesh->max_node_id());
@@ -2103,7 +2107,7 @@ public:
             if (_problem == "compliance_volume") {
                 
                 _evaluate_volume_sensitivity(&volume, nullptr, level_set_assembly, grads);
-                for (unsigned int i=0; i<grads[i]; i++)
+                for (unsigned int i=0; i<grads.size(); i++)
                     grads[i] /= _volume;
             }
             else if (_problem == "volume_stress") {
