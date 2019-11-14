@@ -166,6 +166,19 @@ namespace MAST {
 
 
         /*!
+         *    Calculates the sensitivity of element vector and matrix quantities for surface traction
+         *    boundary condition.
+         */
+        virtual bool
+        surface_traction_residual_sensitivity(const MAST::FunctionBase& p,
+                                              bool request_jacobian,
+                                              RealVectorX& f,
+                                              RealMatrixX& jac,
+                                              const unsigned int side,
+                                              MAST::BoundaryConditionBase& bc);
+
+
+        /*!
          *    Calculates the sensitivity of force vector and Jacobian due to surface traction and
          *    sensitiity due to boundary movement.
          */
@@ -175,6 +188,18 @@ namespace MAST {
                                                    RealMatrixX& jac,
                                                    const unsigned int side,
                                                    MAST::BoundaryConditionBase& bc);
+
+        /*!
+         *    Calculates the sensitivity of force vector and Jacobian due to surface traction and
+         *    sensitiity due to boundary movement.
+         */
+        virtual bool
+        surface_traction_residual_shifted_boundary_sensitivity(const MAST::FunctionBase& p,
+                                                               bool request_jacobian,
+                                                               RealVectorX& f,
+                                                               RealMatrixX& jac,
+                                                               const unsigned int side,
+                                                               MAST::BoundaryConditionBase& bc);
 
 
         /*!
@@ -375,7 +400,11 @@ namespace MAST {
         void _compute_stress(MAST::FEBase& fe, unsigned int qp,
                              RealVectorX& stress,
                              RealMatrixX* dstress_dX);
+
         
+        void _compute_stress_sensitivity(const MAST::FunctionBase& f,
+                                         MAST::FEBase& fe, unsigned int qp,
+                                         RealVectorX& stress);
 
         /*!
          * computes the gradient of stress in Voigt notation in \p stress_grad where the three
@@ -387,7 +416,12 @@ namespace MAST {
                                       unsigned int qp,
                                       RealMatrixX& stress_grad,
                                       std::vector<RealMatrixX>* dstress_grad_dX);
-        
+
+        void _compute_stress_gradient_sensitivity(const MAST::FunctionBase& f,
+                                                  MAST::FEBase& fe,
+                                                  unsigned int qp,
+                                                  RealMatrixX& stress_grad);
+
         /*!
          *   creates a matrix that can be multiplied with the Voigt notation of stress to compute the
          *   surface normal traction
