@@ -32,7 +32,8 @@
 
 MAST::StructuralModalEigenproblemAssemblyElemOperations::
 StructuralModalEigenproblemAssemblyElemOperations():
-MAST::EigenproblemAssemblyElemOperations() { }
+MAST::EigenproblemAssemblyElemOperations(),
+_incompatible_sol_assembly(nullptr) { }
 
 
 
