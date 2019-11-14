@@ -167,6 +167,38 @@ MAST::MeshFieldFunction::perturbation(const libMesh::Point& p,
 }
 
 
+void
+MAST::MeshFieldFunction::perturbation_gradient (const libMesh::Point& p,
+                                                const Real t,
+                                                RealMatrixX& v) const {
+    
+    // if the element has provided a quadrature point solution,
+    // then use it
+    if (_use_qp_sol) {
+        v = _qp_sol;
+        return;
+    }
+    
+    // make sure that the object was initialized
+    libmesh_assert(_function);
+    
+    unsigned int
+    n_vars = _sys->n_vars();
+    
+    std::vector<libMesh::Gradient> v1;
+    _perturbed_function->gradient(p, t, v1);
+    
+    // make sure that the mesh function was able to find the element
+    // and a solution
+    libmesh_assert_equal_to(v1.size(), n_vars);
+    
+    // now copy this to the output vector
+    v = RealMatrixX::Zero(n_vars, 3); // assume 3-dimensional by default
+    for (unsigned int i=0; i<n_vars; i++)
+        for (unsigned int j=0; j<3; j++)
+            v(i, j) = v1[i](j);
+}
+
 
 
 void

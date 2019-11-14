@@ -208,6 +208,31 @@ search_nearest_interface_point(const libMesh::Point& p,
 
 
 
+void
+MAST::LevelSetBoundaryVelocity::
+search_nearest_interface_point_derivative(const MAST::FunctionBase& f,
+                                          const libMesh::Point& p,
+                                          const Real t,
+                                          const Real length,
+                                          RealVectorX& v) const {
+    
+    libmesh_assert(_phi);
+
+    // velocity at this interface point is given by the normal velocity
+    // So, we first find the point and then compute its velocity
+    
+    this->search_nearest_interface_point(p, t, length, v);
+    
+    libMesh::Point
+    pt(v(0), v(1), v(2));
+    
+    // now compute the velocity at this point.
+    v.setZero();
+    this->velocity(pt, t, v);
+}
+
+
+
 
 void
 MAST::LevelSetBoundaryVelocity::normal_at_point(const libMesh::Point& p,
@@ -229,6 +254,34 @@ MAST::LevelSetBoundaryVelocity::normal_at_point(const libMesh::Point& p,
     n /= n.norm();
 }
 
+
+
+void
+MAST::LevelSetBoundaryVelocity::normal_derivative_at_point(const MAST::FunctionBase& f,
+                                                           const libMesh::Point& p,
+                                                           const Real t,
+                                                           RealVectorX& n) const {
+    
+    libmesh_assert(_phi);
+    
+    RealMatrixX
+    gradmat  = RealMatrixX::Zero(1, _dim),
+    dgrad    = RealMatrixX::Zero(1, _dim);
+    
+    n.setZero();
+    
+    // the velocity is identified using the level set function gradient
+    // and its sensitivity
+    _phi->gradient(p, t, gradmat);
+    _phi->perturbation_gradient(p, t, dgrad);
+    
+    RealVectorX
+    v  = gradmat.row(0),
+    dv = dgrad.row(0);
+    
+    n.topRows(3) = (-dv/v.norm() +
+                    + 0.5/std::pow(v.norm(),1.5)* v.dot(dv) * v);
+}
 
 
 

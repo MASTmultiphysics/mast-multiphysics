@@ -1004,6 +1004,24 @@ side_external_residual_sensitivity(const MAST::FunctionBase& p,
                     break;
                     
                     
+                case MAST::SURFACE_TRACTION:
+                    surface_traction_residual_sensitivity(p,
+                                                          request_jacobian,
+                                                          f, jac,
+                                                          it->first,
+                                                          **bc_it);
+                    break;
+                    
+                    
+                case MAST::SURFACE_TRACTION_SHIFTED_BOUNDARY:
+                    surface_traction_residual_shifted_boundary_sensitivity(p,
+                                                                           request_jacobian,
+                                                                           f, jac,
+                                                                           it->first,
+                                                                           **bc_it);
+                    break;
+                    
+                    
                 case MAST::PISTON_THEORY:
                     piston_theory_residual_sensitivity(p,
                                                        request_jacobian,

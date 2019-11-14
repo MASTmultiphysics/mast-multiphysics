@@ -57,10 +57,28 @@ namespace MAST {
                                             const Real length,
                                             RealVectorX& pt) const;
 
+        /*!
+         * serches for a point \p pt in the vicinity of \p p on the level set interface, where
+         * level set function is zero. \p length is a reference length that is used to identify
+         * the step-size for the search. If the interface point is expected to be within a few elements,
+         * then this length coudl be the element edge length.
+         */
+        void search_nearest_interface_point_derivative(const MAST::FunctionBase& f,
+                                                       const libMesh::Point& p,
+                                                       const Real t,
+                                                       const Real length,
+                                                       RealVectorX& pt) const;
+
         void normal_at_point(const libMesh::Point& p,
                              const Real t,
                              RealVectorX& n) const;
+        
 
+        void normal_derivative_at_point(const MAST::FunctionBase& f,
+                                        const libMesh::Point& p,
+                                        const Real t,
+                                        RealVectorX& n) const;
+        
         
     protected:
         
