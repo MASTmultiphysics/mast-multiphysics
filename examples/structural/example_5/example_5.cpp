@@ -2103,6 +2103,8 @@ public:
             if (_problem == "compliance_volume") {
                 
                 _evaluate_volume_sensitivity(&volume, nullptr, level_set_assembly, grads);
+                for (unsigned int i=0; i<grads[i]; i++)
+                    grads[i] /= _volume;
             }
             else if (_problem == "volume_stress") {
                 
@@ -2170,7 +2172,6 @@ public:
                                                              *volume);
                 
                 grad[i] = volume->output_sensitivity_total(*_dv_params[i].second);
-                //grad[i] = volume->output_sensitivity_total(*_dv_params[i].second)/_length/_height;
             }
             
             // if the perimeter output was specified then compute the sensitivity
