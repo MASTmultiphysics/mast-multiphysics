@@ -292,6 +292,8 @@ MAST::Examples::Truss2DModel::init_structural_shifted_boudnary_load(Opt& opt,
         virtual ~ZeroTraction() {}
         virtual void operator() (const libMesh::Point& pt, const Real t, RealVectorX& v) const
         {v.setZero(3);}
+        virtual void derivative(const MAST::FunctionBase& f, const libMesh::Point& pt, const Real t, RealVectorX& v) const
+        {v.setZero(3);}
     };
     
     ZeroTraction

@@ -209,7 +209,8 @@ public:
     std::set<MAST::FunctionBase*>             _field_functions;
     std::set<MAST::BoundaryConditionBase*>    _boundary_conditions;
     std::set<unsigned int>                    _dv_dof_ids;
-    
+    std::set<unsigned int>                    _dirichlet_bc_ids;
+
     std::vector<std::pair<unsigned int, MAST::Parameter*>>  _dv_params;
 
 public:

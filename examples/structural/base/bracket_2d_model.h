@@ -266,7 +266,8 @@ MAST::Examples::Bracket2DModel::init_structural_shifted_boudnary_load(Opt& opt,
     public:
         ZeroTraction(): MAST::FieldFunction<RealVectorX>("traction") {}
         virtual ~ZeroTraction() {}
-        virtual void operator() (const libMesh::Point& pt, const Real t, RealVectorX& v) const
+        virtual void operator() (const libMesh::Point& pt, const Real t, RealVectorX& v) const        {v.setZero(3);}
+        virtual void derivative(const MAST::FunctionBase& f, const libMesh::Point& pt, const Real t, RealVectorX& v) const
         {v.setZero(3);}
     };
     
