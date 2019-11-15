@@ -21,7 +21,7 @@ elif [ "${TRAVIS_OS_NAME}" = osx ]; then # macOS 10.14, XCode 10.2
   mkdir "Code/spack-mstc/spack"
   cd "Code/spack-mstc/spack" || exit
   wget -nv https://github.com/MASTmultiphysics/mast-ci-packages/releases/download/libmesh_macos_xcode12.2/libmesh_multiple_versions_macos_xcode_10.2.zip
-  unzip -qq libmesh_macos_xcode10.2.zip
+  unzip -qq libmesh_multiple_versions_macos_xcode_10.2.zip
 
   #command -v opt/spack/darwin-mojave-x86_64/clang-10.0.1-apple/gcc-9.1.0-4amtftgtal2cnomzekpogzanzv6weadk/bin/gfortran
   #opt/spack/darwin-mojave-x86_64/clang-10.0.1-apple/gcc-9.1.0-4amtftgtal2cnomzekpogzanzv6weadk/bin/gfortran  --version
