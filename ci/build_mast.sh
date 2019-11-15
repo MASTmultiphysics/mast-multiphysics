@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 
 # Steps common to all OS/toolchains.
-export MAST_INSTALL_DIR=${HOME}/mast
-cd ${TRAVIS_BUILD_DIR}
-mkdir build
-cd build
+export MAST_INSTALL_DIR=${HOME}/mast || exit
+cd ${TRAVIS_BUILD_DIR} || exit
+mkdir build || exit
+cd build || exit
 
 if [ "${TRAVIS_OS_NAME}" = linux ]; then # Ubuntu Linux
 
@@ -22,14 +22,14 @@ if [ "${TRAVIS_OS_NAME}" = linux ]; then # Ubuntu Linux
       -DBUILD_DOC=ON \
       -DENABLE_DOT=OFF \
       -DENABLE_GCMMA=OFF \
-      -DENABLE_SNOPT=OFF
+      -DENABLE_SNOPT=OFF || exit
 
     # Build doxygen documentation or build MAST library/examples.
     if [ ${CI_BUILD_DOCS} ]; then
-      make doc_doxygen
+      make doc_doxygen || exit
     else
-      make -j 2
-      make install
+      make -j 2 || exit
+      make install || exit
     fi
 
   # elif [ "${TRAVIS_DIST}" = bionic ]; then # Ubuntu 18.04 Bionic Beaver
@@ -73,14 +73,13 @@ elif [ "${TRAVIS_OS_NAME}" = osx ]; then # macOS 10.14, XCode 10.2
     -DENABLE_SNOPT=OFF \
     -DENABLE_NLOPT=OFF \
     -DENABLE_CYTHON=OFF \
-    -DBUILD_DOC=OFF
-  make -j 2
-  make install
+    -DBUILD_DOC=OFF || exit
+  make -j 2 || exit
+  make install || exit
 
 else
   echo "INVALID OS: ${TRAVIS_OS_NAME}"
   exit 1
 fi
-
 
 cd ${TRAVIS_BUILD_DIR} || exit

@@ -25,7 +25,9 @@ if [ "${TRAVIS_OS_NAME}" = linux ]; then # Ubuntu Linux
     exit 1
   fi
 
-elif [ "${TRAVIS_OS_NAME}" = osx ]; then # macOS 10.14, XCode
+elif [ "${TRAVIS_OS_NAME}" = osx ]; then # macOS 10.14, XCode 10.2
+  # Currently we don't do anything here since we get all dependencies for macOS
+  # from the binary download with "ci/get_libmesh.sh" in the next stage.
   echo "Hello From OSX"
 
 else

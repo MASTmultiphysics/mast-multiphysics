@@ -2,27 +2,35 @@ language: cpp
 
 matrix:
     include:
-      - os: osx
-        osx_image: xcode10.2
-        env: LIBMESH_VERSION=1.4.1
-      - os: linux
-        dist: xenial
-        env: LIBMESH_VERSION=1.4.1
-      - os: linux
-        dist: xenial
-        env: CI_BUILD_DOCS=true LIBMESH_VERSION=1.4.1
-#        - os: linux
-#          dist: xenial
-#          env: LIBMESH_VERSION=1.3.1
-#        - os: osx
-#          osx_image: xcode10.2
-#          env: LIBMESH_VERSION=1.3.1
-#        - os: linux
-#          dist: xenial
-#          env: LIBMESH_VERSION=1.5.0
+      # macOS/Linux builds - libMesh version 1.5.0
       - os: osx
         osx_image: xcode10.2
         env: LIBMESH_VERSION=1.5.0
+      - os: linux
+        dist: xenial
+        env: LIBMESH_VERSION=1.5.0
+
+      # Doxygen documentation build
+      # - this job also progresses to deployment when on master branch
+      - os: linux
+        dist: xenial
+        env: CI_BUILD_DOCS=true CI_DEPLOY_DOCS=true LIBMESH_VERSION=1.4.1
+
+      # macOS/Linux builds - libMesh version 1.4.1
+      - os: osx
+        osx_image: xcode10.2
+        env: LIBMESH_VERSION=1.4.1
+      - os: linux
+        dist: xenial
+        env: LIBMESH_VERSION=1.4.1
+
+      # macOS/Linux builds - libMesh version 1.3.1
+      - os: osx
+        osx_image: xcode10.2
+        env: LIBMESH_VERSION=1.3.1
+      - os: linux
+        dist: xenial
+        env: LIBMESH_VERSION=1.3.1
 
 before_install:
   - ci/build_dependencies.sh
@@ -36,7 +44,8 @@ script:
 
 deploy:
   provider: script
-  script: bash doc/deploy_docs.sh
+  script: bash ci/deploy_docs.sh
   skip_cleanup: true
   on:
     branch: master
+    condition: ${CI_DEPLOY_DOCS} = true
