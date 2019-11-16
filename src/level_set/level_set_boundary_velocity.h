@@ -55,7 +55,8 @@ namespace MAST {
         void search_nearest_interface_point(const libMesh::Point& p,
                                             const Real t,
                                             const Real length,
-                                            RealVectorX& pt) const;
+                                            RealVectorX& pt,
+                                            bool allow_sub_search = true) const;
 
         /*!
          * serches for a point \p pt in the vicinity of \p p on the level set interface, where

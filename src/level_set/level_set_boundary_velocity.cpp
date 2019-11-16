@@ -110,7 +110,8 @@ MAST::LevelSetBoundaryVelocity::
 search_nearest_interface_point(const libMesh::Point& p,
                                const Real t,
                                const Real length,
-                               RealVectorX& v) const {
+                               RealVectorX& v,
+                               bool allow_sub_search) const {
     
     libmesh_assert(_phi);
     
@@ -151,7 +152,7 @@ search_nearest_interface_point(const libMesh::Point& p,
 
     unsigned int
     n_iters   = 0,
-    max_iters = 100;
+    max_iters = 25;
     
     Real
     tol  = 1.e-8,
@@ -183,18 +184,24 @@ search_nearest_interface_point(const libMesh::Point& p,
         Eigen::FullPivLU<RealMatrixX> solver(coeffs);
         dv0 -= damp*solver.solve(gradL);
         // update the design points and check for convergence
-        p_opt(0) = dv0(0);
-        p_opt(1) = dv0(1);
-        p_opt(2) = dv0(2);
-        
+        p_opt(0) = dv0(0); p_opt(1) = dv0(1); p_opt(2) = dv0(2);
         L1        = _evaluate_point_search_obj(p, t, dv0);
 
         if (n_iters == max_iters) {
             
-            libMesh::Point dp = p_opt - p;
+            // instead, find the point closes to the latest point returned
+            // by the failed search. Do not allow another sub-search here
+            if (allow_sub_search)
+                this->search_nearest_interface_point(p_opt, t, length, v, false);
+
+            p_opt(0) = v(0); p_opt(1) = v(1); p_opt(2) = v(2);
+            dv0.topRows(3) = v;
+            (*_phi)        (p_opt, t,     phi);
+
             if_cont = false;
+            libMesh::Point dp = p_opt - p;
             libMesh::out
-            << "Warning: nearest interface point search did not converge."
+            << "Warning: nearest interface point search did not converge. Point found from sub-search. "
             << std::endl;
             libMesh::out
             << "  given pt: ("
@@ -204,8 +211,8 @@ search_nearest_interface_point(const libMesh::Point& p,
             << ").  phi = " << phi(0)
             << "  d/h =  " << dp.norm()/length << std::endl;
         }
-        if (std::fabs(L1) <= tol) if_cont = false;
-        if (std::fabs((L1-L0)/L0) <= tol) if_cont = false;
+        if (std::fabs(gradL.norm()) <= tol) if_cont = false;
+        if (std::fabs((L1-L0)/L0) <= tol)   if_cont = false;
         
         L0 = L1;
         n_iters++;
