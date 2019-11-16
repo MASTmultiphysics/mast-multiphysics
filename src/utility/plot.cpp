@@ -46,13 +46,13 @@ MAST::plot_elem(Gnuplot& gp,
 
 
 void
-MAST::plot_node(Gnuplot& gp, const libMesh::Node& node) {
+MAST::plot_node(Gnuplot& gp, const libMesh::Point& pt) {
     
     std::vector<std::tuple<Real, Real>>
     xy(1);
     
-    std::get<0>(xy[0]) = node(0);
-    std::get<1>(xy[0]) = node(1);
+    std::get<0>(xy[0]) = pt(0);
+    std::get<1>(xy[0]) = pt(1);
     
     gp << "plot '-' with points \n";
     gp.send1d(xy);
