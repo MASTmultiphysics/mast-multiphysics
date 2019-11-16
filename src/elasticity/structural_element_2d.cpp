@@ -2583,7 +2583,7 @@ surface_traction_residual_shifted_boundary(bool request_jacobian,
         
         // first find the projected point corresponding to this boundary location
         interface.search_nearest_interface_point(qpoint[qp], _time, elem_h, bnd_pt);
-        pt(0) = bnd_pt(0); pt(1) = bnd_pt(1); pt(1) = bnd_pt(1);
+        pt(0) = bnd_pt(0); pt(1) = bnd_pt(1); pt(2) = bnd_pt(2);
         // now evaluate the traction and normal at this projected point
         trac_func   (pt, _time,   trac);
         interface.normal_at_point(pt, _time, normal);
@@ -2730,7 +2730,7 @@ surface_traction_residual_shifted_boundary_sensitivity(const MAST::FunctionBase&
         // first find the projected point corresponding to this boundary location
         interface.search_nearest_interface_point(qpoint[qp], _time, elem_h, bnd_pt);
         interface.search_nearest_interface_point_derivative(p, qpoint[qp], _time, elem_h, bnd_pt_sens);
-        pt(0) = bnd_pt(0); pt(1) = bnd_pt(1); pt(1) = bnd_pt(1);
+        pt(0) = bnd_pt(0); pt(1) = bnd_pt(1); pt(2) = bnd_pt(2);
 
         // now evaluate the traction and normal at this projected point
         trac_func(pt, _time,   trac);
