@@ -1895,7 +1895,6 @@ public:
         level_set_assembly.set_level_set_velocity_function(*_level_set_vel);
         nonlinear_elem_ops.set_discipline_and_system(*_discipline, *_sys_init);
         modal_elem_ops.set_discipline_and_system(*_discipline, *_sys_init);
-        //nonlinear_assembly.plot_sub_elems(true, false, true);
         
         
         /*libMesh::MeshRefinement refine(*_mesh);
