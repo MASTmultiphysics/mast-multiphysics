@@ -156,6 +156,7 @@ search_nearest_interface_point(const libMesh::Point& p,
     Real
     tol  = 1.e-8,
     L0   = 1.e12,
+    damp = 0.6,
     L1   = 0.;
     
     // initialize the design point
@@ -180,7 +181,7 @@ search_nearest_interface_point(const libMesh::Point& p,
         }
 
         Eigen::FullPivLU<RealMatrixX> solver(coeffs);
-        dv0 -= 0.5*solver.solve(gradL);
+        dv0 -= damp*solver.solve(gradL);
         // update the design points and check for convergence
         p_opt(0) = dv0(0);
         p_opt(1) = dv0(1);
@@ -190,10 +191,18 @@ search_nearest_interface_point(const libMesh::Point& p,
 
         if (n_iters == max_iters) {
             
+            libMesh::Point dp = p_opt - p;
             if_cont = false;
             libMesh::out
             << "Warning: nearest interface point search did not converge."
             << std::endl;
+            libMesh::out
+            << "  given pt: ("
+            << p(0) << " , " << p(1) << " , " << p(2)
+            << ") -> mapped pt: ("
+            << p_opt(0) << " , " << p_opt(1) << " , " << p_opt(2)
+            << ").  phi = " << phi(0)
+            << "  d/h =  " << dp.norm()/length << std::endl;
         }
         if (std::fabs(L1) <= tol) if_cont = false;
         if (std::fabs((L1-L0)/L0) <= tol) if_cont = false;
