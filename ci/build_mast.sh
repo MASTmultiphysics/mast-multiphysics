@@ -43,28 +43,37 @@ if [ "${TRAVIS_OS_NAME}" = linux ]; then # Ubuntu Linux
 
     # Now do a build/install of a Debug version (-DCMAKE_BUILD_TYPE=Debug).
     echo "TEST DEBUG BUILD..."
-    cd ../build_dbg || exit
-    cmake .. \
-      -DCMAKE_BUILD_TYPE=DEBUG \
-      -DCMAKE_INSTALL_PREFIX="${MAST_INSTALL_DIR}" \
-      -DCMAKE_C_COMPILER=mpicc \
-      -DCMAKE_CXX_COMPILER=mpic++ \
-      -DCMAKE_Fortran_COMPILER=mpifort \
-      -DlibMesh_DIR=/usr/local \
-      -DPETSc_DIR=/usr/lib/petscdir/3.6.2/x86_64-linux-gnu-real \
-      -DSLEPc_DIR=/usr/lib/slepcdir/3.6.1/x86_64-linux-gnu-real \
-      -DEIGEN3_ROOT=/usr/include/eigen3 \
-      -DBOOST_ROOT=/usr \
-      -DBUILD_DOC=ON \
-      -DENABLE_DOT=OFF \
-      -DENABLE_GCMMA=OFF \
-      -DENABLE_SNOPT=OFF || exit
 
-    if [ ${CI_BUILD_DOCS} ]; then
-      echo "No CI documentation for a Debug build."
+    if [ "${LIBMESH_VERSION}" = "1.3.1" ]; then # No Debug build for libMesh < 1.5.0
+      echo "-- NO DEBUG BUILD WITH libMesh < 1.5.0"
+    elif [ "${LIBMESH_VERSION}" = "1.4.1" ]; then
+      echo "-- NO DEBUG BUILD WITH libMesh < 1.5.0"
     else
-      make -j 2 || exit
-    fi
+
+      cd ../build_dbg || exit
+      cmake .. \
+        -DCMAKE_BUILD_TYPE=Debug \
+        -DCMAKE_INSTALL_PREFIX="${MAST_INSTALL_DIR}" \
+        -DCMAKE_C_COMPILER=mpicc \
+        -DCMAKE_CXX_COMPILER=mpic++ \
+        -DCMAKE_Fortran_COMPILER=mpifort \
+        -DlibMesh_DIR=/usr/local \
+        -DPETSc_DIR=/usr/lib/petscdir/3.6.2/x86_64-linux-gnu-real \
+        -DSLEPc_DIR=/usr/lib/slepcdir/3.6.1/x86_64-linux-gnu-real \
+        -DEIGEN3_ROOT=/usr/include/eigen3 \
+        -DBOOST_ROOT=/usr \
+        -DBUILD_DOC=ON \
+        -DENABLE_DOT=OFF \
+        -DENABLE_GCMMA=OFF \
+        -DENABLE_SNOPT=OFF || exit
+
+      if [ ${CI_BUILD_DOCS} ]; then
+        echo "No CI documentation for a Debug build."
+      else
+        make -j 2 || exit
+      fi
+
+    fi # No Debug build for libMesh < 1.5.0
 
   # elif [ "${TRAVIS_DIST}" = bionic ]; then # Ubuntu 18.04 Bionic Beaver
 
