@@ -71,7 +71,8 @@ struct Bracket2DModel {
     static void init_structural_loads(Opt& opt);
 
     template <typename Opt>
-    static void init_structural_shifted_boudnary_load(Opt& opt, unsigned int bid);
+    static MAST::BoundaryConditionBase&
+    init_structural_shifted_boudnary_load(Opt& opt, unsigned int bid);
     
     template <typename Opt>
     static void init_indicator_loads(Opt& opt);
@@ -252,13 +253,14 @@ MAST::Examples::Bracket2DModel::init_structural_loads(Opt& opt) {
     
     p_load->add(*press_f);
     opt._discipline->add_side_load(5, *p_load);
-    
+    opt._boundary_conditions.insert(p_load);
+
     opt._field_functions.insert(press_f);
 }
 
 
 template <typename Opt>
-void
+MAST::BoundaryConditionBase&
 MAST::Examples::Bracket2DModel::init_structural_shifted_boudnary_load(Opt& opt,
                                                                       unsigned int bid) {
 
@@ -280,8 +282,10 @@ MAST::Examples::Bracket2DModel::init_structural_shifted_boudnary_load(Opt& opt,
     load->add(*opt._level_set_vel);
     load->add(*trac_f);
     opt._discipline->add_side_load(bid, *load);
-    
+    opt._boundary_conditions.insert(load);
+
     opt._field_functions.insert(trac_f);
+    return *load;
 }
 
 
@@ -304,7 +308,8 @@ MAST::Examples::Bracket2DModel::init_indicator_loads(Opt& opt) {
     
     f_load->add(*flux_f);
     opt._indicator_discipline->add_side_load(5, *f_load);
-    
+    opt._boundary_conditions.insert(f_load);
+
     opt._field_functions.insert(flux_f);
 }
 
