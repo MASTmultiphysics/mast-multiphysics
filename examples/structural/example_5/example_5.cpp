@@ -204,6 +204,7 @@ public:
     libMesh::FEType                           _fetype;
     libMesh::FEType                           _level_set_fetype;
     
+    MAST::BoundaryConditionBase*              _shifted_boundary_load;
     std::vector<MAST::Parameter*>             _params_for_sensitivity;
     std::map<std::string, MAST::Parameter*>   _parameters;
     std::set<MAST::FunctionBase*>             _field_functions;
@@ -2010,7 +2011,11 @@ public:
             Real
             vf     = _input("volume_fraction", "volume fraction", 0.3);
 
+            // if the shifted boundary is implementing a traction-free condition
+            // compliance does not need contribution from shifted boundary load
+            _discipline->remove_side_load(100, *_shifted_boundary_load);
             nonlinear_assembly.calculate_output(*_sys->solution, compliance);
+            _discipline->add_side_load(100, *_shifted_boundary_load);
             comp      = compliance.output_total();
             obj       = _obj_scaling * (comp + _perimeter_penalty * per);
             fvals[0]  = vol/_volume - vf; // vol/vol0 - a <=
@@ -2280,7 +2285,12 @@ public:
      std::vector<Real>& grads) {
         
         // Adjoint solution for compliance = - X
-        
+        // if the shifted boundary is implementing a traction-free condition
+        // compliance does not need contribution from shifted boundary load
+        _discipline->remove_side_load(100, *_shifted_boundary_load);
+        _sys->adjoint_solve(nonlinear_elem_ops, compliance, nonlinear_assembly, false);
+        _discipline->add_side_load(100, *_shifted_boundary_load);
+
         std::unique_ptr<libMesh::NumericVector<Real>>
         dphi_base(_level_set_sys->solution->zero_clone().release()),
         dphi_filtered(_level_set_sys->solution->zero_clone().release());
@@ -2313,9 +2323,9 @@ public:
             //////////////////////////////////////////////////////////////////////
             // compliance sensitivity
             //////////////////////////////////////////////////////////////////////
-            grads[i] = -1. *
+            grads[i] = 1. *
             nonlinear_assembly.calculate_output_adjoint_sensitivity(*_sys->solution,
-                                                                    *_sys->solution,
+                                                                    _sys->get_adjoint_solution(),
                                                                     *_dv_params[i].second,
                                                                     nonlinear_elem_ops,
                                                                     compliance);
@@ -2484,7 +2494,8 @@ public:
     _p_card2                             (nullptr),
     _level_set_function                  (nullptr),
     _level_set_vel                       (nullptr),
-    _output                              (nullptr) {
+    _output                              (nullptr),
+    _shifted_boundary_load               (nullptr) {
         
         libmesh_assert(!_initialized);
         
@@ -2557,7 +2568,7 @@ public:
         _level_set_function    = new PhiMeshFunction;
         _output                = new libMesh::ExodusII_IO(*_mesh);
         
-        T::init_structural_shifted_boudnary_load(*this, 100);
+        _shifted_boundary_load = &T::init_structural_shifted_boudnary_load(*this, 100);
 
         MAST::BoundaryConditionBase
         *bc = new MAST::BoundaryConditionBase(MAST::BOUNDARY_VELOCITY);
