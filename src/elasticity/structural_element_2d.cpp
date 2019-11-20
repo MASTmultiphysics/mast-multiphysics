@@ -2749,10 +2749,10 @@ surface_traction_residual_shifted_boundary_sensitivity(const MAST::FunctionBase&
 
         // add to this the contribution of the normal sensitivity and stress
         for (unsigned int i_dim=0; i_dim<n1; i_dim++)
-            dnormal(i_dim) = - normal_sens(i_dim);
+            dnormal(i_dim) =  normal_sens(i_dim);
         _surface_normal_voigt_notation(dnormal, normal_mat);
         _compute_stress(*fe, qp, stress, nullptr);
-        force.topRows(2) += normal_mat * stress;
+        force.topRows(2) -= normal_mat * stress;
         
         // contribution from sensitivity normal with gradient of stress
         _compute_stress_gradient(*fe, qp, stress_grad, stress_grad_mat);
@@ -4852,7 +4852,9 @@ _compute_stress_gradient_sensitivity(const MAST::FunctionBase& p,
                                          *this,
                                          qp_loc_fe).release());
     */
-        
+      
+    stress_grad.setZero();
+    
     std::vector<Real> JxW                     = fe.get_JxW();
     const std::vector<libMesh::Point>& xyz    = fe.get_xyz();
 
