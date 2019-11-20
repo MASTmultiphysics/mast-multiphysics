@@ -93,7 +93,13 @@ namespace MAST {
          */
         void add_side_load(libMesh::boundary_id_type bid,
                            MAST::BoundaryConditionBase& load);
-        
+
+        /*!
+         *   remove the specified side loads for the boudnary with tag \p b_id
+         */
+        void remove_side_load(libMesh::boundary_id_type bid,
+                              MAST::BoundaryConditionBase& load);
+
         /*!
          *  adds the specified Dirichlet boundary condition for the boundary
          *  with tag \p b_id
@@ -122,6 +128,13 @@ namespace MAST {
          */
         void add_volume_load(libMesh::subdomain_id_type bid,
                              MAST::BoundaryConditionBase& load);
+
+        /*!
+         *   remove the specified volume loads for the elements with
+         *   subdomain tag \p s_id
+         */
+        void remove_volume_load(libMesh::subdomain_id_type bid,
+                                MAST::BoundaryConditionBase& load);
 
         
         /*!
