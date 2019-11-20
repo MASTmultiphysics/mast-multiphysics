@@ -157,7 +157,7 @@ search_nearest_interface_point(const libMesh::Point& p,
     Real
     tol  = 1.e-8,
     L0   = 1.e12,
-    damp = 0.6,
+    damp = 0.5,
     L1   = 0.;
     
     // initialize the design point
@@ -191,12 +191,12 @@ search_nearest_interface_point(const libMesh::Point& p,
             
             // instead, find the point closes to the latest point returned
             // by the failed search. Do not allow another sub-search here
-            if (allow_sub_search)
-                this->search_nearest_interface_point(p_opt, t, length, v, false);
+            //if (allow_sub_search)
+            //    this->search_nearest_interface_point(p_opt, t, length, v, false);
 
-            p_opt(0) = v(0); p_opt(1) = v(1); p_opt(2) = v(2);
-            dv0.topRows(3) = v;
-            (*_phi)        (p_opt, t,     phi);
+            //p_opt(0) = v(0); p_opt(1) = v(1); p_opt(2) = v(2);
+            //dv0.topRows(3) = v;
+            //(*_phi)        (p_opt, t,     phi);
 
             if_cont = false;
             libMesh::Point dp = p_opt - p;
@@ -294,9 +294,8 @@ MAST::LevelSetBoundaryVelocity::normal_derivative_at_point(const MAST::FunctionB
     RealVectorX
     v  = gradmat.row(0),
     dv = dgrad.row(0);
-    
-    n.topRows(3) = (-dv/v.norm() +
-                    + 0.5/std::pow(v.norm(),1.5)* v.dot(dv) * v);
+
+    n.topRows(3) = (-dv/v.norm() +  v.dot(dv)/v.dot(v) * v);
 }
 
 
