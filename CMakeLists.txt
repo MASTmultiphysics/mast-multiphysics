@@ -1,5 +1,5 @@
 # PREAMBLE
-cmake_minimum_required(VERSION 3.2)
+cmake_minimum_required(VERSION 3.12)
 project(MAST
         VERSION 0.3
         LANGUAGES C CXX)
@@ -54,6 +54,7 @@ set(Boost_NO_BOOST_CMAKE ON)
 find_package(Boost COMPONENTS iostreams system filesystem unit_test_framework REQUIRED)
 message("-- Found Boost include: ${Boost_INCLUDE_DIRS}") # To ensure the found Boost is what user expected
 message("-- Found Boost libs:    ${Boost_LIBRARY_DIRS}") # To ensure the found Boost is what user expected
+find_package(Python3    REQUIRED    COMPONENTS Development)
 
 # Find optional packages.
 if (ENABLE_GCMMA)

@@ -18,7 +18,8 @@ target_include_directories(mast
             ${libMesh_INCLUDE_DIRS}
             ${EIGEN3_INCLUDE_DIR}
             ${NLOPT_INCLUDE_DIR}
-            ${Boost_INCLUDE_DIRS}) # Could possibly move this into src/optimization since it is closer to where Boost is actually used.
+            ${Boost_INCLUDE_DIRS}
+            ${Python3_INCLUDE_DIRS}) # Could possibly move this into src/optimization since it is closer to where Boost is actually used.
 
 # Add libraries.
 target_link_libraries(mast
@@ -37,7 +38,8 @@ target_link_libraries(mast
             ${Boost_SYSTEM_LIBRARY}
             debug ${libMesh_dbg_LIBRARIES}
             optimized ${libMesh_opt_LIBRARIES}
-            ${LIBGFORTRAN_LIBRARIES})
+            ${LIBGFORTRAN_LIBRARIES}
+            ${Python3_LIBRARIES})
 
 # NOTE: Use of PUBLIC keyword above means other CMake target (like an example)
 #       that target_link_library(XXXX mast) will inheret these properties.
