@@ -118,6 +118,9 @@ search_nearest_interface_point(const libMesh::Point& p,
     RealVectorX
     phi      = RealVectorX::Zero(1),
     grad_phi = RealVectorX::Zero(_dim),
+    grad0    = RealVectorX::Zero(3),
+    grad1    = RealVectorX::Zero(3),
+    z        = RealVectorX::Zero(3),
     dval     = RealVectorX::Zero(1),
     p_ref    = RealVectorX::Zero(3),
     dv0      = RealVectorX::Zero(4),
@@ -125,6 +128,7 @@ search_nearest_interface_point(const libMesh::Point& p,
     gradL    = RealVectorX::Zero(4);
     
     RealMatrixX
+    hess     = RealMatrixX::Zero(3,    3),
     gradmat  = RealMatrixX::Zero(1, _dim),
     coeffs   = RealMatrixX::Zero(3, 3);
 
@@ -152,17 +156,18 @@ search_nearest_interface_point(const libMesh::Point& p,
 
     unsigned int
     n_iters   = 0,
-    max_iters = 25;
+    max_iters = 40;
     
     Real
     tol  = 1.e-8,
     L0   = 1.e12,
-    damp = 0.5,
+    damp = 0.7,
     L1   = 0.;
     
     // initialize the design point
     dv0.topRows(3) = p_ref;
     dv0(3) = 1.; // arbitrary value of Lagrange multiplier
+    dv1    = dv0;
     
     while (if_cont) {
         
@@ -180,23 +185,37 @@ search_nearest_interface_point(const libMesh::Point& p,
             coeffs(i,i) = 1.;
             coeffs(3,i) = coeffs(i,3) = gradmat(0,i);
         }
+        coeffs.topLeftCorner(3, 3) += hess;
 
         Eigen::FullPivLU<RealMatrixX> solver(coeffs);
-        dv0 -= damp*solver.solve(gradL);
+        dv1 = dv0 - damp*solver.solve(gradL);
         // update the design points and check for convergence
-        p_opt(0) = dv0(0); p_opt(1) = dv0(1); p_opt(2) = dv0(2);
-        L1        = _evaluate_point_search_obj(p, t, dv0);
+        p_opt(0)  = dv1(0); p_opt(1) = dv1(1); p_opt(2) = dv1(2);
+        L1        = _evaluate_point_search_obj(p, t, dv1);
 
+        // update Jacobian
+        grad1 = gradmat.row(0);
+        z     = (dv1.topRows(3)-dv0.topRows(3)) - hess * (grad1-grad0);
+        hess +=  (z*z.transpose())/z.dot(grad1-grad0);
+        grad0 = grad1;
+        dv0   = dv1;
+        // reduce the step if the gradient is upated
+        if (z.norm())
+            damp = 0.4;
+        else
+            damp = 0.7;
+        
         if (n_iters == max_iters) {
             
-            // instead, find the point closes to the latest point returned
+            // instead, find the point closest to the latest point returned
             // by the failed search. Do not allow another sub-search here
-            //if (allow_sub_search)
-            //    this->search_nearest_interface_point(p_opt, t, length, v, false);
-
-            //p_opt(0) = v(0); p_opt(1) = v(1); p_opt(2) = v(2);
-            //dv0.topRows(3) = v;
-            //(*_phi)        (p_opt, t,     phi);
+            if (allow_sub_search) {
+                this->search_nearest_interface_point(p_opt, t, length, v, false);
+                
+                p_opt(0) = v(0); p_opt(1) = v(1); p_opt(2) = v(2);
+                dv0.topRows(3) = v;
+                (*_phi)        (p_opt, t,     phi);
+            }
 
             if_cont = false;
             libMesh::Point dp = p_opt - p;
@@ -295,7 +314,7 @@ MAST::LevelSetBoundaryVelocity::normal_derivative_at_point(const MAST::FunctionB
     v  = gradmat.row(0),
     dv = dgrad.row(0);
 
-    n.topRows(3) = (-dv/v.norm() +  v.dot(dv)/v.dot(v) * v);
+    n.topRows(3) = (-dv/v.norm() +  v.dot(dv)/std::pow(v.dot(v),1.5) * v);
 }
 
 
