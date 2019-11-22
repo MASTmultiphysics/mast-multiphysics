@@ -84,10 +84,7 @@ else()
 endif()
 
 if (ENABLE_NASTRANIO)
-    find_package(Python3 REQUIRED COMPONENTS Development Interpreter)
-    message(STATUS "  Python3_EXECUTABLE:  ${Python3_EXECUTABLE}")
-    message(STATUS "  Python3_INCLUDE_DIR: ${Python3_INCLUDE_DIR}")
-    message(STATUS "  Python3_LIBRARY_RELEASE: ${Python3_LIBRARY_RELEASE}")
+    find_package(Python3 REQUIRED)# COMPONENTS Development Interpreter)
 
     execute_process(COMMAND ${Python3_EXECUTABLE} -c "import pyNastran"
         RESULT_VARIABLE PYNASTRAN_ERROR)
@@ -96,8 +93,6 @@ if (ENABLE_NASTRANIO)
     else()
         message(STATUS "  pyNastran package found")
     endif()
-
-#    message(STATUS "  Python3_EXECUTABLE: ${Python3_EXECUTABLE}")
 endif()
 
 # MAIN TARGETS

@@ -18,7 +18,7 @@ if [ "${TRAVIS_OS_NAME}" = linux ]; then # Ubuntu Linux
     # First let us build/install a Release (optimized) version of MAST (-DCMAKE_BUILD_TYPE=Release).
     echo "TEST RELEASE/OPTIMIZED BUILD..."
     cd build_rel || exit
-    /opt/cmake .. \
+    /opt/cmake/bin/cmake .. \
       -DCMAKE_BUILD_TYPE=Release \
       -DCMAKE_INSTALL_PREFIX="${MAST_INSTALL_DIR}" \
       -DCMAKE_C_COMPILER=mpicc \
@@ -52,7 +52,7 @@ if [ "${TRAVIS_OS_NAME}" = linux ]; then # Ubuntu Linux
     else
 
       cd ../build_dbg || exit
-      /opt/cmake .. \
+      /opt/cmake/bin/cmake .. \
         -DCMAKE_BUILD_TYPE=Debug \
         -DCMAKE_INSTALL_PREFIX="${MAST_INSTALL_DIR}" \
         -DCMAKE_C_COMPILER=mpicc \
@@ -117,6 +117,7 @@ elif [ "${TRAVIS_OS_NAME}" = osx ]; then # macOS 10.14, XCode 10.2
     -DEIGEN3_ROOT=/Users/travis/Code/spack-mstc/spack/opt/spack/darwin-mojave-x86_64/clang-10.0.1-apple/eigen-3.3.7-bd2r4aqrkox7dpebj2r3gqvgpqzwuh7x \
     -DLAPACK_LIBRARIES=/Users/travis/Code/spack-mstc/spack/opt/spack/darwin-mojave-x86_64/clang-10.0.1-apple/openblas-0.3.7-xqeap7iegoomce3es67cd7exlnq3neue/lib/libopenblas.dylib \
     -DBLAS_LIBRARIES=/Users/travis/Code/spack-mstc/spack/opt/spack/darwin-mojave-x86_64/clang-10.0.1-apple/openblas-0.3.7-xqeap7iegoomce3es67cd7exlnq3neue/lib/libopenblas.dylib \
+    -DPython3_DIR=/Users/travis/Code/spack-mstc/spack/opt/spack/darwin-mojave-x86_64/clang-10.0.1-apple/python-3.7.4-wiaaasdpryqnn6l46xcmj3ekqvruyx7d \
     -DENABLE_GCMMA=OFF \
     -DENABLE_DOT=OFF \
     -DENABLE_SNOPT=OFF \
@@ -144,6 +145,7 @@ elif [ "${TRAVIS_OS_NAME}" = osx ]; then # macOS 10.14, XCode 10.2
     -DEIGEN3_ROOT=/Users/travis/Code/spack-mstc/spack/opt/spack/darwin-mojave-x86_64/clang-10.0.1-apple/eigen-3.3.7-bd2r4aqrkox7dpebj2r3gqvgpqzwuh7x \
     -DLAPACK_LIBRARIES=/Users/travis/Code/spack-mstc/spack/opt/spack/darwin-mojave-x86_64/clang-10.0.1-apple/openblas-0.3.7-xqeap7iegoomce3es67cd7exlnq3neue/lib/libopenblas.dylib \
     -DBLAS_LIBRARIES=/Users/travis/Code/spack-mstc/spack/opt/spack/darwin-mojave-x86_64/clang-10.0.1-apple/openblas-0.3.7-xqeap7iegoomce3es67cd7exlnq3neue/lib/libopenblas.dylib \
+    -DPython3_DIR=/Users/travis/Code/spack-mstc/spack/opt/spack/darwin-mojave-x86_64/clang-10.0.1-apple/python-3.7.4-wiaaasdpryqnn6l46xcmj3ekqvruyx7d \
     -DENABLE_GCMMA=OFF \
     -DENABLE_DOT=OFF \
     -DENABLE_SNOPT=OFF \
