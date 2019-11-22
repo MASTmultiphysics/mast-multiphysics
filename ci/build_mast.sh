@@ -32,7 +32,8 @@ if [ "${TRAVIS_OS_NAME}" = linux ]; then # Ubuntu Linux
       -DBUILD_DOC=ON \
       -DENABLE_DOT=OFF \
       -DENABLE_GCMMA=OFF \
-      -DENABLE_SNOPT=OFF || exit
+      -DENABLE_SNOPT=OFF \
+      -DENABLE_NASTRANIO=ON || exit
 
     if [ ${CI_BUILD_DOCS} ]; then
       make doc_doxygen || exit
@@ -51,7 +52,7 @@ if [ "${TRAVIS_OS_NAME}" = linux ]; then # Ubuntu Linux
     else
 
       cd ../build_dbg || exit
-      cmake .. \
+      /opt/cmake .. \
         -DCMAKE_BUILD_TYPE=Debug \
         -DCMAKE_INSTALL_PREFIX="${MAST_INSTALL_DIR}" \
         -DCMAKE_C_COMPILER=mpicc \
@@ -65,7 +66,8 @@ if [ "${TRAVIS_OS_NAME}" = linux ]; then # Ubuntu Linux
         -DBUILD_DOC=ON \
         -DENABLE_DOT=OFF \
         -DENABLE_GCMMA=OFF \
-        -DENABLE_SNOPT=OFF || exit
+        -DENABLE_SNOPT=OFF\
+        -DENABLE_NASTRANIO=ON || exit
 
       if [ ${CI_BUILD_DOCS} ]; then
         echo "No CI documentation for a Debug build."
@@ -120,7 +122,8 @@ elif [ "${TRAVIS_OS_NAME}" = osx ]; then # macOS 10.14, XCode 10.2
     -DENABLE_SNOPT=OFF \
     -DENABLE_NLOPT=OFF \
     -DENABLE_CYTHON=OFF \
-    -DBUILD_DOC=OFF || exit
+    -DBUILD_DOC=OFF \
+    -DENABLE_NASTRANIO=ON || exit
   make -j 2 || exit
   make install || exit
 
@@ -146,7 +149,8 @@ elif [ "${TRAVIS_OS_NAME}" = osx ]; then # macOS 10.14, XCode 10.2
     -DENABLE_SNOPT=OFF \
     -DENABLE_NLOPT=OFF \
     -DENABLE_CYTHON=OFF \
-    -DBUILD_DOC=OFF || exit
+    -DBUILD_DOC=OFF \
+    -DENABLE_NASTRANIO=ON || exit
   make -j 2 || exit
 
 else
