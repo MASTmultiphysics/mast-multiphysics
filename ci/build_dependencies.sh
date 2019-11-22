@@ -13,6 +13,12 @@ if [ "${TRAVIS_OS_NAME}" = linux ]; then # Ubuntu Linux
     sudo apt-get -qq install -y doxygen graphviz rsync
     sudo apt-get -qq install -y texlive-latex-base dvi2ps ghostscript
 
+    # Update to later CMake release.
+    cd ${HOME} || exit
+    wget https://github.com/Kitware/CMake/releases/download/v3.15.5/cmake-3.15.5-Linux-x86_64.sh || exit
+    sudo mkdir /opt/cmake || exit
+    sudo sh cmake-3.15.5-Linux-x86_64.sh --prefix=/opt/cmake || exit
+
   # elif [ "${TRAVIS_DIST}" = bionic ]; then # Ubuntu 18.04 Bionic Beaver
   #  sudo apt-get -qq update
   #  sudo apt-get -qq install -y gfortran wget m4

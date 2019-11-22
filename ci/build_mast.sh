@@ -18,7 +18,7 @@ if [ "${TRAVIS_OS_NAME}" = linux ]; then # Ubuntu Linux
     # First let us build/install a Release (optimized) version of MAST (-DCMAKE_BUILD_TYPE=Release).
     echo "TEST RELEASE/OPTIMIZED BUILD..."
     cd build_rel || exit
-    cmake .. \
+    /opt/cmake .. \
       -DCMAKE_BUILD_TYPE=Release \
       -DCMAKE_INSTALL_PREFIX="${MAST_INSTALL_DIR}" \
       -DCMAKE_C_COMPILER=mpicc \
