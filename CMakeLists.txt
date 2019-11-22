@@ -14,14 +14,14 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 include(GNUInstallDirs)
 
 # Build options with defaults.
-option(ENABLE_GCMMA   "Build with GCMMA interface"  OFF)
-option(ENABLE_DOT     "Build with DOT interface"    OFF)
-option(ENABLE_SNOPT   "Build with SNOPT interface"  OFF)
-option(ENABLE_NLOPT   "Build with NLOPT interface"  OFF)
-option(ENABLE_CYTHON  "Build with CYTHON interface" OFF)
-option(BUILD_DOC      "Build documentation"         OFF)
+option(ENABLE_GCMMA     "Build with GCMMA interface"  OFF)
+option(ENABLE_DOT       "Build with DOT interface"    OFF)
+option(ENABLE_SNOPT     "Build with SNOPT interface"  OFF)
+option(ENABLE_NLOPT     "Build with NLOPT interface"  OFF)
+option(ENABLE_NASTRANIO "Build with support for reading Nastran meshes" OFF)
+option(BUILD_DOC        "Build documentation"         OFF)
 
-# Required dependency paths.
+# Dependency paths - these paths help CMake find dependencies.
 set(MAST_ROOT_DIR ${CMAKE_CURRENT_LIST_DIR})
 set(libMesh_DIR "libMesh_DIR" CACHE PATH "Directory containing libMesh include/ and lib/")
 set(PETSc_DIR   "PETSc_DIR"   CACHE PATH "Directory containing PETSc include/ and lib/")
@@ -29,9 +29,9 @@ set(PETSc_ARCH  "PETSc_ARCH"  CACHE STRING "Configuration/build of PETSc that sh
 set(SLEPc_DIR   "SLEPc_DIR"   CACHE PATH "Directory containing SLEPc include/ and lib/")
 set(SLEPc_ARCH  "SLEPc_ARCH"  CACHE STRING "Configuration/build of SLEPc that should be used.")
 set(EIGEN3_ROOT "Eigen_DIR"   CACHE PATH "Directory containing eigen header files")
-set(DOT_DIR "DOT_DIR"   CACHE PATH "Directory containing DOT lib/")
-set(SNOPT_DIR "SNOpt_DIR"   CACHE PATH "Directory containing SNOPT lib/")
-set(NLOPT_DIR "NLOpt_DIR"   CACHE PATH "Directory containing NLOpt include/ and lib/")
+set(DOT_DIR     "DOT_DIR"     CACHE PATH "Directory containing DOT lib/")
+set(SNOPT_DIR   "SNOpt_DIR"   CACHE PATH "Directory containing SNOPT lib/")
+set(NLOPT_DIR   "NLOpt_DIR"   CACHE PATH "Directory containing NLOpt include/ and lib/")
 
 # EXTERNALLY PROVIDED CONTENT
 # None. Use this if we pull something in during the build in the future.
@@ -54,7 +54,6 @@ set(Boost_NO_BOOST_CMAKE ON)
 find_package(Boost COMPONENTS iostreams system filesystem unit_test_framework REQUIRED)
 message("-- Found Boost include: ${Boost_INCLUDE_DIRS}") # To ensure the found Boost is what user expected
 message("-- Found Boost libs:    ${Boost_LIBRARY_DIRS}") # To ensure the found Boost is what user expected
-find_package(Python3    REQUIRED    COMPONENTS Development)
 
 # Find optional packages.
 if (ENABLE_GCMMA)
@@ -82,6 +81,10 @@ if (ENABLE_NLOPT)
    find_package(NLOpt REQUIRED)
 else()
     set (MAST_ENABLE_NLOPT 0)
+endif()
+
+if (ENABLE_NASTRANIO)
+    find_package(Python3 REQUIRED COMPONENTS Development)
 endif()
 
 # MAIN TARGETS
