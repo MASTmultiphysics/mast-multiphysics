@@ -86,6 +86,7 @@ endif()
 if (ENABLE_NASTRANIO)
     find_package(Python3 REQUIRED)# COMPONENTS Development Interpreter)
 
+    # Make sure Python has pyNastran.
     execute_process(COMMAND ${Python3_EXECUTABLE} -c "import pyNastran"
         RESULT_VARIABLE PYNASTRAN_ERROR)
     if(PYNASTRAN_ERROR)
@@ -93,6 +94,16 @@ if (ENABLE_NASTRANIO)
     else()
         message(STATUS "  pyNastran package found")
     endif()
+
+    # Make sure Python has NumPy.
+    execute_process(COMMAND ${Python3_EXECUTABLE} -c "import numpy"
+        RESULT_VARIABLE NUMPY_ERROR)
+    if(NUMPY_ERROR)
+        message(FATAL_ERROR "Error finding pyNastran package for Python3_EXECUTABLE!")
+    else()
+        message(STATUS "  Numpy package found")
+    endif()
+
 endif()
 
 # MAIN TARGETS

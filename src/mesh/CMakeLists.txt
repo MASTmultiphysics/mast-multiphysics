@@ -7,9 +7,9 @@ target_sources(mast
         ${CMAKE_CURRENT_LIST_DIR}/mesh_coupling_base.cpp
         ${CMAKE_CURRENT_LIST_DIR}/mesh_coupling_base.h)
 
-# Only add NastranIO sources if we are building Nastran mesh support. Also add Python includes
-# and libraries to mast target.
+# Only add NastranIO/Python data to mast target if we are building Nastran mesh support.
 if(ENABLE_NASTRANIO)
+    # Add sources to mast target.
     target_sources(mast
         PRIVATE
             ${CMAKE_CURRENT_LIST_DIR}/pynastranIO.h
@@ -17,7 +17,24 @@ if(ENABLE_NASTRANIO)
             ${CMAKE_CURRENT_LIST_DIR}/NastranIO.cpp
             ${CMAKE_CURRENT_LIST_DIR}/NastranIO.h)
 
-    target_include_directories(mast PUBLIC ${Python3_INCLUDE_DIRS})
+    # Find Numpy header path.
+    execute_process(
+        COMMAND "${Python3_EXECUTABLE}" -c "import numpy; print(numpy.get_include(), end='')"
+            RESULT_VARIABLE NUMPY_ERROR
+            OUTPUT_VARIABLE NUMPY_INCLUDE_PATH
+            ERROR_QUIET
+            OUTPUT_STRIP_TRAILING_WHITESPACE)
+    if(NUMPY_ERROR)
+        message(FATAL_ERROR "Error finding Numpy header path for Python3_EXECUTABLE!")
+    else()
+        message(STATUS "  Numpy header path: ${NUMPY_INCLUDE_PATH}")
+    endif()
+
+    # Add header/library to mast target.
+    target_include_directories(mast
+        PUBLIC
+            ${Python3_INCLUDE_DIRS}
+            ${NUMPY_INCLUDE_PATH})
     target_link_libraries(mast PUBLIC ${Python3_LIBRARIES})
 endif()
 
