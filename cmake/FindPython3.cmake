@@ -42,7 +42,7 @@ find_program(Python3_EXECUTABLE
 get_filename_component(Python3_BIN_DIR ${Python3_EXECUTABLE} DIRECTORY)
 get_filename_component(Python3_ROOT_DIR ${Python3_BIN_DIR} DIRECTORY)
 # Also, get name of Python interpreter that we actually found above.
-# Stored in Python_NAME.
+# Stored in Python3_NAME.
 get_filename_component(Python3_NAME ${Python3_EXECUTABLE} NAME)
 
 # Find the Python headers.
@@ -56,7 +56,7 @@ find_path(Python3_INCLUDE_DIR Python.h
 # find modules/site-packages.
 # -- Currently we search relative to Python_ROOT_DIR we found above.
 find_library(Python3_LIBRARY
-        NAMES ${Python3_NAME}
+        NAMES ${Python3_NAME} ${Python3_NAME}m
         HINTS ${Python3_ROOT_DIR}/lib)
 get_filename_component(Python3_LIBRARY_DIR ${Python3_LIBRARY} DIRECTORY)
 
@@ -69,6 +69,12 @@ get_filename_component(Python3_LIBRARY_DIR ${Python3_LIBRARY} DIRECTORY)
 #         HINTS
 #         ${Python_LIBRARY_DIR}/${Python_NAME}/site-packages)
 
+# Output what we found.
+message(STATUS "  Python3_EXECUTABLE:  ${Python3_EXECUTABLE}")
+message(STATUS "  Python3_INCLUDE_DIR: ${Python3_INCLUDE_DIR}")
+message(STATUS "  Python3_LIBRARY:     ${Python3_LIBRARY}")
+message(STATUS "  Python3 Modules:     ${Python3_MODULEDIR}")
+
 # Set standard CMake variables and output status.
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(Python3
@@ -77,11 +83,6 @@ find_package_handle_standard_args(Python3
         Python3_LIBRARY
         Python3_INCLUDE_DIR)
   #      mpi4py_INCLUDE_DIR)
-message(STATUS "  Python3_EXECUTABLE:  ${Python3_EXECUTABLE}")
-message(STATUS "  Python3_INCLUDE_DIR: ${Python3_INCLUDE_DIR}")
-message(STATUS "  Python3_LIBRARY:     ${Python3_LIBRARY}")
-message(STATUS "  Python3 Modules:     ${Python3_MODULEDIR}")
-#
 #message("--       mpi4py Headers: ${mpi4py_INCLUDE_DIR}")
 
 # Advance cache variables.
