@@ -20,18 +20,11 @@ if [ "${TRAVIS_OS_NAME}" = linux ]; then # Ubuntu Linux
     sudo apt-get -qq install -y texlive-latex-base dvi2ps ghostscript
     sudo apt-get -qq install -y python3.6 python3.6-dev libpython3.6
 
+    # Get pip working with external Python 3.6.
     wget https://bootstrap.pypa.io/get-pip.py || exit
     sudo python3.6 get-pip.py || exit
 
-    sudo which python
-    sudo which python3
-    sudo which python3.6
-    python --version
-    python3 --version
-    python3.6 --version
-    sudo which pip
-    sudo which pip3
-    #sudo pip3 install numpy
+    sudo python3.6 -m pip install numpy scipy docopt colorama pandas h5py matplotlib cpylog pyNastran
 
     # Update to later CMake release.
     wget https://github.com/Kitware/CMake/releases/download/v3.15.5/cmake-3.15.5-Linux-x86_64.sh || exit
