@@ -17,7 +17,7 @@
 #include "Python.h"
 
 
-void printElementMap(std::map<std::string, std::vector<std::vector<int>>> elementMap)
+void MAST::printElementMap(std::map<std::string, std::vector<std::vector<int>>> elementMap)
 {
     // Iterate through element types
     for (const auto& item : elementMap)
@@ -39,7 +39,7 @@ void printElementMap(std::map<std::string, std::vector<std::vector<int>>> elemen
 }
 
 
-void printNodeCoords(std::vector<std::vector<double>> nodes)
+void MAST::printNodeCoords(std::vector<std::vector<double>> nodes)
 {
     // Iterate through nodes
     for (const auto& node : nodes)
@@ -49,7 +49,7 @@ void printNodeCoords(std::vector<std::vector<double>> nodes)
 }
 
 
-NastranIO::NastranIO (libMesh::MeshBase& mesh, const bool pythonPreinitialized):
+MAST::NastranIO::NastranIO (libMesh::MeshBase& mesh, const bool pythonPreinitialized):
 libMesh::MeshInput<libMesh::MeshBase> (mesh),
 _pythonPreinitialized(pythonPreinitialized)
 {
@@ -61,7 +61,7 @@ _pythonPreinitialized(pythonPreinitialized)
 }
 
 
-NastranIO::~NastranIO ()
+MAST::NastranIO::~NastranIO ()
 {
     if((pythonInitialized) and (not _pythonPreinitialized))
     {
@@ -70,30 +70,30 @@ NastranIO::~NastranIO ()
 }
 
 
-std::map<uint64_t, libMesh::Node*> NastranIO::getNastran2libMeshNodeMap()
+std::map<uint64_t, libMesh::Node*> MAST::NastranIO::getNastran2libMeshNodeMap()
 {
     return nastran2libMeshNodeMap;
 }
 
 
-std::map<const libMesh::Node*, uint64_t> NastranIO::getlibMesh2NastranNodeMap()
+std::map<const libMesh::Node*, uint64_t> MAST::NastranIO::getlibMesh2NastranNodeMap()
 {
     return libMesh2NastranNodeMap;
 }
 
-std::map<uint64_t, libMesh::Elem*> NastranIO::getNastran2libMeshElemMap()
+std::map<uint64_t, libMesh::Elem*> MAST::NastranIO::getNastran2libMeshElemMap()
 {
     return nastran2libMeshElemMap;
 }
 
 
-std::map<libMesh::Elem*, uint64_t> NastranIO::getlibMesh2NastranElemMap()
+std::map<libMesh::Elem*, uint64_t> MAST::NastranIO::getlibMesh2NastranElemMap()
 {
     return libMesh2NastranElemMap;
 }
 
 
-std::map<int, std::set<int>> NastranIO::getPID2subdomainIDsMap()
+std::map<int, std::set<int>> MAST::NastranIO::getPID2subdomainIDsMap()
 {
     std::map<int, std::set<int>> pid2SubdomainIDsMap;
     for (const auto& item : pid_elemType2subdomainMap)
@@ -107,12 +107,12 @@ std::map<int, std::set<int>> NastranIO::getPID2subdomainIDsMap()
 }
 
 
-std::map<std::pair<int,int>, int> NastranIO::getPIDElemtype2SubdomainIDMap()
+std::map<std::pair<int,int>, int> MAST::NastranIO::getPIDElemtype2SubdomainIDMap()
 {
     return pid_elemType2subdomainMap;
 }
 
-void NastranIO::read_nodes(BDFModel* model, libMesh::MeshBase& the_mesh)
+void MAST::NastranIO::read_nodes(BDFModel* model, libMesh::MeshBase& the_mesh)
 {
     // Get the nodes from the bulk data file
     std::vector<std::vector<double>> nodes = getNodes(model);
@@ -135,7 +135,7 @@ void NastranIO::read_nodes(BDFModel* model, libMesh::MeshBase& the_mesh)
 }
 
 
-void NastranIO::read_elements(BDFModel* model, libMesh::MeshBase& the_mesh)
+void MAST::NastranIO::read_elements(BDFModel* model, libMesh::MeshBase& the_mesh)
 {
     // Reserve space in the mesh for the nodes and elements
     the_mesh.reserve_elem(model->nElems);
@@ -203,7 +203,7 @@ void NastranIO::read_elements(BDFModel* model, libMesh::MeshBase& the_mesh)
 }
 
 
-void NastranIO::read (const std::string & fname)
+void MAST::NastranIO::read (const std::string & fname)
 {
     // Get a reference to the mesh we are reading
     libMesh::MeshBase& the_mesh = MeshInput<libMesh::MeshBase>::mesh();
@@ -224,7 +224,7 @@ void NastranIO::read (const std::string & fname)
     read_elements(model, the_mesh);
 }
 
-void NastranIO::read(BDFModel* model)
+void MAST::NastranIO::read(BDFModel* model)
 {
     // Get a reference to the mesh we are reading
     libMesh::MeshBase& the_mesh = MeshInput<libMesh::MeshBase>::mesh();
@@ -244,7 +244,7 @@ void NastranIO::read(BDFModel* model)
     
     
     
-void NastranIO::initializePython()
+void MAST::NastranIO::initializePython()
 {
     // StackOverFlow, "Use generated header file from Cython"
     int status = PyImport_AppendInittab("pynastranIO", PyInit_pynastran_io);
@@ -261,7 +261,7 @@ void NastranIO::initializePython()
 }
 
 
-void NastranIO::finalizePython()
+void MAST::NastranIO::finalizePython()
 {
     Py_Finalize();
     pythonInitialized = false;
