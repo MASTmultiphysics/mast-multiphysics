@@ -13,7 +13,7 @@
 #include "libmesh/elem.h"
 
 // Local includes
-#include "mesh/NastranIO.h"
+#include "mesh/nastran_io.h"
 #include "Python.h"
 
 
@@ -247,7 +247,7 @@ void NastranIO::read(BDFModel* model)
 void NastranIO::initializePython()
 {
     // StackOverFlow, "Use generated header file from Cython"
-    int status = PyImport_AppendInittab("pynastranIO", PyInit_pynastranIO);
+    int status = PyImport_AppendInittab("pynastranIO", PyInit_pynastran_io);
     if(status==1){
         libmesh_error_msg("ERROR: During Python import for pynastranIO.");
     }

@@ -13,8 +13,8 @@
 #include "libmesh/elem.h"
 
 #include "Python.h"
-#include "mesh/NastranIO.h"
-#include "mesh/pynastranIO.h"
+#include "mesh/nastran_io.h"
+#include "mesh/pynastran_io.h"
 
 void printElementMap(std::map<std::string, std::vector<std::vector<int>>> elementMap);
 
