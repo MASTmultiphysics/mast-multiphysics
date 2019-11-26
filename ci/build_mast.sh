@@ -34,7 +34,8 @@ if [ "${TRAVIS_OS_NAME}" = linux ]; then # Ubuntu Linux
       -DENABLE_DOT=OFF \
       -DENABLE_GCMMA=OFF \
       -DENABLE_SNOPT=OFF \
-      -DENABLE_NASTRANIO=ON || exit
+      -DENABLE_NASTRANIO=ON \
+      -DENABLE_CYTHON=ON || exit
 
     if [ ${CI_BUILD_DOCS} ]; then
       make doc_doxygen || exit
@@ -69,7 +70,8 @@ if [ "${TRAVIS_OS_NAME}" = linux ]; then # Ubuntu Linux
         -DENABLE_DOT=OFF \
         -DENABLE_GCMMA=OFF \
         -DENABLE_SNOPT=OFF\
-        -DENABLE_NASTRANIO=ON || exit
+        -DENABLE_NASTRANIO=ON \
+        -DENABLE_CYTHON=ON || exit
 
       if [ ${CI_BUILD_DOCS} ]; then
         echo "No CI documentation for a Debug build."
@@ -126,7 +128,9 @@ elif [ "${TRAVIS_OS_NAME}" = osx ]; then # macOS 10.14, XCode 10.2
     -DENABLE_NLOPT=OFF \
     -DENABLE_CYTHON=OFF \
     -DBUILD_DOC=OFF \
-    -DENABLE_NASTRANIO=ON || exit
+    -DENABLE_NASTRANIO=ON \
+    -DENABLE_CYTHON=ON || exit
+
   make -j 2 || exit
   make install || exit
 
@@ -154,7 +158,9 @@ elif [ "${TRAVIS_OS_NAME}" = osx ]; then # macOS 10.14, XCode 10.2
     -DENABLE_NLOPT=OFF \
     -DENABLE_CYTHON=OFF \
     -DBUILD_DOC=OFF \
-    -DENABLE_NASTRANIO=ON || exit
+    -DENABLE_NASTRANIO=ON \
+    -DENABLE_CYTHON=ON || exit
+
   make -j 2 || exit
 
 else

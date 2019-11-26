@@ -25,6 +25,7 @@ if [ "${TRAVIS_OS_NAME}" = linux ]; then # Ubuntu Linux
     sudo python3.6 get-pip.py || exit
 
     sudo python3.6 -m pip install numpy scipy docopt colorama pandas h5py matplotlib cpylog pyNastran
+    sudo python3.6 -m pip install Cython --install-option="--no-cython-compile"
 
     # Update to later CMake release.
     wget https://github.com/Kitware/CMake/releases/download/v3.15.5/cmake-3.15.5-Linux-x86_64.sh || exit

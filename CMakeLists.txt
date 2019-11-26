@@ -19,6 +19,7 @@ option(ENABLE_DOT       "Build with DOT interface"    OFF)
 option(ENABLE_SNOPT     "Build with SNOPT interface"  OFF)
 option(ENABLE_NLOPT     "Build with NLOPT interface"  OFF)
 option(ENABLE_NASTRANIO "Build with support for reading Nastran meshes" OFF)
+option(ENABLE_CYTHON    "Build with support for Cython development"     OFF)
 option(BUILD_DOC        "Build documentation"         OFF)
 
 # Dependency paths - these paths help CMake find dependencies.
@@ -84,7 +85,7 @@ else()
 endif()
 
 if (ENABLE_NASTRANIO)
-    find_package(Python3 REQUIRED)# COMPONENTS Development Interpreter)
+    find_package(Python3 REQUIRED)
 
     # Make sure Python has pyNastran.
     execute_process(COMMAND ${Python3_EXECUTABLE} -c "import pyNastran"
@@ -103,7 +104,6 @@ if (ENABLE_NASTRANIO)
     else()
         message(STATUS "  Numpy package found")
     endif()
-
 endif()
 
 # MAIN TARGETS

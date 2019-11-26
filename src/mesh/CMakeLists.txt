@@ -7,8 +7,35 @@ target_sources(mast
         ${CMAKE_CURRENT_LIST_DIR}/mesh_coupling_base.cpp
         ${CMAKE_CURRENT_LIST_DIR}/mesh_coupling_base.h)
 
-# Only add NastranIO/Python data to mast target if we are building Nastran mesh support.
+# Only add NastranIO/Python data to `mast` target if we are building Nastran mesh support.
 if(ENABLE_NASTRANIO)
+
+    # Cython is currently not required unless you want to make changes in pynastranIO.pyx
+    # and generate new pynastranIO.h/.cpp. If you want to modify pynastranIO.pyx, make sure
+    # to set ENABLE_CYTHON=ON and CMake will ensure Cython is executed to generate updated
+    # bindings prior to all `mast` target builds.
+    if (ENABLE_CYTHON)
+
+        # Make sure we have the Cython compiler.
+        find_package(Cython REQUIRED)
+
+        # Define the target to run Cython.
+        add_custom_target(cython_pynastran
+            DEPENDS
+                ${CMAKE_CURRENT_LIST_DIR}/pynastranIO.pyx
+                COMMAND
+                ${Cython_EXECUTABLE} ${CMAKE_CURRENT_LIST_DIR}/pynastranIO.pyx --cplus -3 -Werror #-Wextra
+            WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
+            BYPRODUCTS
+                ${CMAKE_CURRENT_LIST_DIR}/pynastranIO.h
+                ${CMAKE_CURRENT_LIST_DIR}/pynastranIO.cpp
+            COMMENT
+                "Running Cython to generate pyNastran bindings.")
+
+        # Make the MAST library target `mast` dependency on running Cython.
+        add_dependencies(mast cython_pynastran)
+    endif()
+
     # Add sources to mast target.
     target_sources(mast
         PRIVATE
