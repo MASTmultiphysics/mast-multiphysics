@@ -25,6 +25,7 @@
 #include "base/parameter.h"
 
 // libMesh includes
+#include "libmesh/libmesh_logging.h"
 #include "libmesh/numeric_vector.h"
 #include "libmesh/equation_systems.h"
 #include "libmesh/sparse_matrix.h"

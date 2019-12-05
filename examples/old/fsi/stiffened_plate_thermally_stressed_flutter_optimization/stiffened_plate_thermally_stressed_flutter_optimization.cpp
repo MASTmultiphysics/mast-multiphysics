@@ -57,6 +57,7 @@
 
 
 // libMesh includes
+#include "libmesh/parallel.h"
 #include "libmesh/parallel_mesh.h"
 #include "libmesh/mesh_generation.h"
 #include "libmesh/exodusII_io.h"

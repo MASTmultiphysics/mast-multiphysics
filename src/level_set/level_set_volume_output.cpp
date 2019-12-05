@@ -27,6 +27,7 @@
 #include "base/assembly_base.h"
 #include "base/function_base.h"
 
+#include "libmesh/parallel.h"
 
 MAST::LevelSetVolume::LevelSetVolume(MAST::LevelSetIntersection& intersection):
 MAST::OutputAssemblyElemOperations(),
