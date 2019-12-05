@@ -16,7 +16,7 @@ git config --global user.name "Travis CI"
 # HTML and other desired files.
 mkdir ${TRAVIS_BUILD_DIR}/website
 cd ${TRAVIS_BUILD_DIR}/website
-rsync -r ${TRAVIS_BUILD_DIR}/build/doc/doxygen/html/ .
+rsync -r ${TRAVIS_BUILD_DIR}/build_rel/doc/doxygen/html/ .
 cp ${TRAVIS_BUILD_DIR}/doc/README.md .
 
 # Initialize empty git repository. Add all files. Commit.
