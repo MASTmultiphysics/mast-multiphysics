@@ -160,6 +160,7 @@ namespace MAST {
             libmesh_error(); // not yet implemented
         }
         
+        
         /*!
          *   @returns the output quantity sensitivity for parameter.
          *   This method calculates the partial derivative of quantity
@@ -177,6 +178,16 @@ namespace MAST {
          *   is initialized.
          */
         virtual void output_derivative_for_elem(RealVectorX& dq_dX);
+        
+        virtual void evaluate_for_node(const RealVectorX& Xnode,
+                                       const RealVectorX& Fpnode) override;
+        
+        virtual void output_derivative_for_node(const RealVectorX& Xnode, 
+            const RealVectorX& Fpnode, RealVectorX& dq_dX) override;
+            
+        virtual void evaluate_sensitivity_for_node(const MAST::FunctionBase& f,
+            const RealVectorX& Xnode, const RealVectorX& Fpnode, 
+            const RealVectorX& dpF_fpparam_node) override;
         
         
     protected:

@@ -29,7 +29,7 @@
 #include "mesh/fe_base.h"
 #include "mesh/geom_elem.h"
 #include "numerics/utility.h"
-
+#include "boundary_condition/point_load_condition.h"
 
 // libMesh includes
 #include "libmesh/numeric_vector.h"
@@ -325,6 +325,53 @@ MAST::AssemblyBase::calculate_output(const libMesh::NumericVector<Real>& X,
         //physics_elem->detach_active_solution_function();
     }
     
+    /**
+     * Now we need to iterate over node for node based operations such as 
+     * the compliance due to point loads, a weighted sum of displacements,
+     * etc.
+     */
+    
+    // If point loads exist, assumble a vector of them
+    std::unique_ptr<libMesh::NumericVector<Real>> Fp = 
+        nonlin_sys.solution->zero_clone();
+    calculate_point_load_vector(*Fp);
+    
+    std::unique_ptr<libMesh::NumericVector<Real> > localized_Fp;
+    localized_Fp.reset(build_localized_vector(nonlin_sys, *Fp).release());
+    
+    /**
+     *  Now that we have point loads, we can now pass this information along
+     *  with the displacements to the output object.
+     */
+    libMesh::MeshBase::node_iterator nd = 
+        nonlin_sys.get_mesh().local_nodes_begin();
+        
+    const libMesh::MeshBase::node_iterator end_nd = 
+        nonlin_sys.get_mesh().local_nodes_end();
+    
+    for ( ; nd != end_nd; ++nd)
+    {
+        libMesh::Node* node = *nd;
+        
+        // Get the global DOFs belonging to this node
+        dof_map.dof_indices(node, dof_indices);
+        
+        // get the solution for this node
+        unsigned int ndofs = (unsigned int)dof_indices.size();
+        sol.setZero(ndofs);
+        RealVectorX fpt = RealVectorX::Zero(ndofs);
+        for (unsigned int i=0; i<dof_indices.size(); i++)
+        {
+            sol(i) = (*localized_solution)(dof_indices[i]);
+            fpt(i) = (*localized_Fp)(dof_indices[i]);
+        }
+        
+        output.set_node_data(node);
+        output.evaluate_for_node(sol, fpt);
+        output.clear_node();
+        dof_indices.clear();
+    }
+    
     // if a solution function is attached, clear it
     if (_sol_function)
         _sol_function->clear();
@@ -420,6 +467,59 @@ calculate_output_derivative(const libMesh::NumericVector<Real>& X,
         dof_indices.clear();
     }
     
+    /**
+     * Now we need to iterate over node for node based operations such as 
+     * the compliance due to point loads, a weighted sum of displacements,
+     * etc.
+     */
+    
+    // If point loads exist, assumble a vector of them
+    std::unique_ptr<libMesh::NumericVector<Real>> Fp = 
+        nonlin_sys.solution->zero_clone();
+    calculate_point_load_vector(*Fp);
+    
+    std::unique_ptr<libMesh::NumericVector<Real> > localized_Fp;
+    localized_Fp.reset(build_localized_vector(nonlin_sys, *Fp).release());
+    
+    /**
+     *  Now that we have point loads, we can now pass this information along
+     *  with the displacements to the output object.
+     */
+    libMesh::MeshBase::node_iterator nd = 
+        nonlin_sys.get_mesh().local_nodes_begin();
+        
+    const libMesh::MeshBase::node_iterator end_nd = 
+        nonlin_sys.get_mesh().local_nodes_end();
+    
+    for ( ; nd != end_nd; ++nd)
+    {
+        libMesh::Node* node = *nd;
+        
+        // Get the global DOFs belonging to this node
+        dof_map.dof_indices(node, dof_indices);
+        
+        // get the solution for this node
+        unsigned int ndofs = (unsigned int)dof_indices.size();
+        sol.setZero(ndofs);
+        RealVectorX fpt = RealVectorX::Zero(ndofs);
+        vec.setZero(ndofs);
+        for (unsigned int i=0; i<dof_indices.size(); i++)
+        {
+            sol(i) = (*localized_solution)(dof_indices[i]);
+            fpt(i) = (*localized_Fp)(dof_indices[i]);
+        }
+        
+        output.set_node_data(node);
+        output.output_derivative_for_node(sol, fpt, vec);
+        output.clear_node();
+        
+        DenseRealVector v;
+        MAST::copy(v, vec);
+        dof_map.constrain_element_vector(v, dof_indices);
+        dq_dX.add_vector(v, dof_indices);
+        dof_indices.clear();
+    }
+        
     // if a solution function is attached, clear it
     if (_sol_function)
         _sol_function->clear();
@@ -428,7 +528,6 @@ calculate_output_derivative(const libMesh::NumericVector<Real>& X,
     
     output.clear_assembly();
 }
-
 
 
 void
@@ -542,6 +641,64 @@ calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
         //        physics_elem->detach_active_solution_function();
     }
     
+    /**
+     * Now we need to iterate over node for node based operations such as 
+     * the compliance due to point loads, a weighted sum of displacements,
+     * etc.
+     */
+    
+    // If point loads exist, assumble a vector of them
+    std::unique_ptr<libMesh::NumericVector<Real>> Fp = 
+        nonlin_sys.solution->zero_clone();
+    calculate_point_load_vector(*Fp);
+    
+    std::unique_ptr<libMesh::NumericVector<Real> > localized_Fp;
+    localized_Fp.reset(build_localized_vector(nonlin_sys, *Fp).release());
+    
+    // If the point loads exist, assemble of vector of their derivatives
+    std::unique_ptr<libMesh::NumericVector<Real>> dFp = 
+        nonlin_sys.solution->zero_clone();
+    calculate_point_load_derivative_vector(p, *dFp);
+    
+    std::unique_ptr<libMesh::NumericVector<Real> > localized_dFp;
+    localized_dFp.reset(build_localized_vector(nonlin_sys, *dFp).release());
+        
+    /**
+     *  Now that we have point loads, we can now pass this information along
+     *  with the displacements to the output object.
+     */
+    libMesh::MeshBase::node_iterator nd = 
+        nonlin_sys.get_mesh().local_nodes_begin();
+        
+    const libMesh::MeshBase::node_iterator end_nd = 
+        nonlin_sys.get_mesh().local_nodes_end();
+    
+    for ( ; nd != end_nd; ++nd)
+    {
+        libMesh::Node* node = *nd;
+        
+        // Get the global DOFs belonging to this node
+        dof_map.dof_indices(node, dof_indices);
+        
+        // get the solution for this node
+        unsigned int ndofs = (unsigned int)dof_indices.size();
+        sol.setZero(ndofs);
+        RealVectorX fpt = RealVectorX::Zero(ndofs);
+        RealVectorX dfpt = RealVectorX::Zero(ndofs);
+        for (unsigned int i=0; i<dof_indices.size(); i++)
+        {
+            sol(i) =  (*localized_solution)(dof_indices[i]);
+            fpt(i) =  (*localized_Fp)(dof_indices[i]);
+            dfpt(i) = (*localized_dFp)(dof_indices[i]);
+        }
+        
+        output.set_node_data(node);
+        output.evaluate_sensitivity_for_node(p, sol, fpt, dfpt);
+        output.clear_node();
+        
+        dof_indices.clear();
+    }
+    
     // if a solution function is attached, clear it
     if (_sol_function)
         _sol_function->clear();
@@ -558,7 +715,7 @@ calculate_output_adjoint_sensitivity(const libMesh::NumericVector<Real>& X,
                                      bool if_localize_sol,
                                      const libMesh::NumericVector<Real>& adj_sol,
                                      const MAST::FunctionBase& p,
-                                     MAST::AssemblyElemOperations&       elem_ops,
+                                     MAST::AssemblyElemOperations& elem_ops,
                                      MAST::OutputAssemblyElemOperations& output,
                                      const bool include_partial_sens) {
 
@@ -588,7 +745,6 @@ calculate_output_adjoint_sensitivity(const libMesh::NumericVector<Real>& X,
 
     return dq_dp;
 }
-
 
 
 void
@@ -638,3 +794,132 @@ MAST::AssemblyBase::calculate_output_adjoint_sensitivity_multiple_parameters_no_
     }
 }
 
+
+void MAST::AssemblyBase::calculate_point_load_vector(
+    libMesh::NumericVector<Real>& Fp)
+{
+    Fp.zero();
+    if (_discipline->point_loads().size())
+    {
+        const MAST::PointLoadSetType& loads = _discipline->point_loads();
+        
+        RealVectorX vec = RealVectorX::Zero(_system->n_vars());
+        
+        MAST::PointLoadSetType::const_iterator it  = loads.begin();
+        MAST::PointLoadSetType::const_iterator end = loads.end();
+        
+        std::vector<libMesh::dof_id_type> dof_indices;
+        const libMesh::DofMap& dof_map = _system->system().get_dof_map();
+        
+        const libMesh::dof_id_type
+        first_dof  = dof_map.first_dof(_system->system().comm().rank()),
+        end_dof	   = dof_map.end_dof(_system->system().comm().rank());
+
+        for ( ; it != end; it++) 
+        {
+            // get the point load function
+            const MAST::FieldFunction<RealVectorX> &func = 
+                (*it)->get<MAST::FieldFunction<RealVectorX>>("load");
+            
+            // get the nodes on which this object defines the load
+            const std::set<const libMesh::Node*> nodes = (*it)->get_nodes();
+            
+            std::set<const libMesh::Node*>::const_iterator
+            n_it    = nodes.begin(),
+            n_end   = nodes.end();
+            
+            for (; n_it != n_end; n_it++) 
+            {
+                
+                // load at the node
+                vec.setZero();
+                func(**n_it, _system->system().time, vec);
+                
+                dof_map.dof_indices(*n_it, dof_indices);
+
+                libmesh_assert_equal_to(dof_indices.size(), vec.rows());
+
+                // zero the components of the vector if they do not
+                // belong to this processor
+                for (unsigned int i=0; i<dof_indices.size(); i++)
+                {
+                    if (dof_indices[i] <   first_dof  || dof_indices[i] >=  end_dof)
+                        vec(i) = 0.;
+                }
+
+                DenseRealVector v;
+                MAST::copy(v, vec);
+                
+                dof_map.constrain_element_vector(v, dof_indices);
+                Fp.add_vector(v, dof_indices);
+                dof_indices.clear();
+            }
+        }
+    }
+    Fp.close();
+}
+
+
+void MAST::AssemblyBase::calculate_point_load_derivative_vector(
+     const MAST::FunctionBase& p, libMesh::NumericVector<Real>& dpFp_dpparam)
+{
+    dpFp_dpparam.zero();
+    if (_discipline->point_loads().size())
+    {
+        const MAST::PointLoadSetType& loads = _discipline->point_loads();
+        
+        RealVectorX vec = RealVectorX::Zero(_system->n_vars());
+        
+        MAST::PointLoadSetType::const_iterator it  = loads.begin();
+        MAST::PointLoadSetType::const_iterator end = loads.end();
+        
+        std::vector<libMesh::dof_id_type> dof_indices;
+        const libMesh::DofMap& dof_map = _system->system().get_dof_map();
+        
+        const libMesh::dof_id_type
+        first_dof  = dof_map.first_dof(_system->system().comm().rank()),
+        end_dof	   = dof_map.end_dof(_system->system().comm().rank());
+
+        for ( ; it != end; it++) 
+        {
+            // get the point load function
+            const MAST::FieldFunction<RealVectorX> &func = 
+                (*it)->get<MAST::FieldFunction<RealVectorX>>("load");
+            
+            // get the nodes on which this object defines the load
+            const std::set<const libMesh::Node*> nodes = (*it)->get_nodes();
+            
+            std::set<const libMesh::Node*>::const_iterator
+            n_it    = nodes.begin(),
+            n_end   = nodes.end();
+            
+            for (; n_it != n_end; n_it++) 
+            {
+                
+                // load at the node
+                vec.setZero();
+                func.derivative(p, **n_it, _system->system().time, vec);
+                
+                dof_map.dof_indices(*n_it, dof_indices);
+
+                libmesh_assert_equal_to(dof_indices.size(), vec.rows());
+
+                // zero the components of the vector if they do not
+                // belong to this processor
+                for (unsigned int i=0; i<dof_indices.size(); i++)
+                {
+                    if (dof_indices[i] <   first_dof  || dof_indices[i] >=  end_dof)
+                        vec(i) = 0.;
+                }
+
+                DenseRealVector v;
+                MAST::copy(v, vec);
+                
+                dof_map.constrain_element_vector(v, dof_indices);
+                dpFp_dpparam.add_vector(v, dof_indices);
+                dof_indices.clear();
+            }
+        }
+    }
+    dpFp_dpparam.close();
+}

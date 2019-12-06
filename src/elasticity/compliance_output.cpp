@@ -102,6 +102,18 @@ MAST::ComplianceOutput::evaluate() {
 }
 
 
+void MAST::ComplianceOutput::evaluate_for_node(const RealVectorX& Xnode,
+                                               const RealVectorX& Fpnode)
+{    
+    // make sure that this has not been initialized and calculated for all nodes
+    libmesh_assert(_node);
+    
+    if (this->if_evaluate_for_node(*_node)) 
+    {
+        _compliance += Xnode.dot(Fpnode);
+    }
+}
+
 
 void
 MAST::ComplianceOutput::evaluate_sensitivity(const MAST::FunctionBase &f) {
@@ -151,6 +163,19 @@ MAST::ComplianceOutput::evaluate_sensitivity(const MAST::FunctionBase &f) {
     }
 }
 
+
+void MAST::ComplianceOutput::evaluate_sensitivity_for_node(
+    const MAST::FunctionBase& f, const RealVectorX& Xnode, 
+    const RealVectorX& Fpnode, const RealVectorX& dpF_fpparam_node)
+{
+    // make sure that this has not been initialized and calculated for all nodes
+    libmesh_assert(_node);
+    
+    if (this->if_evaluate_for_node(*_node)) 
+    {
+        _dcompliance_dp += dpF_fpparam_node.dot(Xnode);
+    }
+}
 
 
 void
@@ -269,6 +294,7 @@ MAST::ComplianceOutput::output_derivative_for_elem(RealVectorX& dq_dX) {
     libmesh_assert(_physics_elem);
     
      // since compliance = -X^T F,  derivative wrt X = -F.
+    // NOTE: By DJN, it looks like this is assumnig dF_dX == 0.
     
     if (this->if_evaluate_for_element(_physics_elem->elem())) {
         
@@ -295,6 +321,28 @@ MAST::ComplianceOutput::output_derivative_for_elem(RealVectorX& dq_dX) {
     }
 }
 
+
+void MAST::ComplianceOutput::output_derivative_for_node(
+    const RealVectorX& Xnode, const RealVectorX& Fpnode, RealVectorX& dq_dX)
+{
+    // make sure that this has not been initialized and calculated for all nodes
+    libmesh_assert(_node);
+    
+    // since compliance = -X^T F,  derivative wrt X = -F.
+    // NOTE: By DJN, asssumes dFp_dX == 0.
+    
+    if (this->if_evaluate_for_node(*_node)) 
+    {
+        dq_dX.setZero();
+        
+        for (uint i=0; i<Fpnode.size(); i++)
+        {
+            dq_dX(i) = Fpnode(i);
+        }
+        
+        dq_dX *= -1.;
+    }
+}
 
 
 void

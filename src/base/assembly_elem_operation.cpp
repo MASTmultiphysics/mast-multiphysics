@@ -37,14 +37,15 @@ _system           (nullptr),
 _discipline       (nullptr),
 _assembly         (nullptr),
 _physics_elem     (nullptr),
+_node             (nullptr),
 _skip_comm_sum    (false) {
-    
 }
 
 
 MAST::AssemblyElemOperations::~AssemblyElemOperations() {
     
     this->clear_elem();
+    this->clear_node();
 }
 
 
@@ -248,3 +249,12 @@ get_elem_boundary_velocity_data() {
     return val;
 }
 
+
+void
+MAST::AssemblyElemOperations::clear_node() {
+    
+//     if (_node)
+//         delete _node;
+        
+    _node = nullptr;
+}
