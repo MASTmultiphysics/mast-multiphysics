@@ -331,6 +331,19 @@ namespace MAST {
                                const libMesh::NumericVector<Real>& global) const;
         
         
+        /*!
+         *  Calculates the vector of point loads. 
+         */
+        virtual void calculate_point_load_vector(libMesh::NumericVector<Real>& Fp);
+        
+        
+        /*!
+         *  Calculates the vector of point load derivatives.
+         */
+        virtual void calculate_point_load_derivative_vector(
+            const MAST::FunctionBase& p, 
+            libMesh::NumericVector<Real>& dpFp_dpparam);
+        
     protected:
         
         /*!

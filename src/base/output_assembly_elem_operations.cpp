@@ -68,6 +68,15 @@ MAST::OutputAssemblyElemOperations::set_participating_elements_to_all() {
 }
 
 
+void MAST::OutputAssemblyElemOperations::set_participating_nodes_to_all()
+{
+    // this object should be in a clean state before this method is called
+    libmesh_assert(!_node_subset.size());
+    
+    _if_evaluate_on_all_nodes = true;
+}
+
+
 void
 MAST::OutputAssemblyElemOperations::
 set_participating_elements(const std::set<const libMesh::Elem*>& elems) {
@@ -81,7 +90,16 @@ set_participating_elements(const std::set<const libMesh::Elem*>& elems) {
 }
     
 
-
+void MAST::OutputAssemblyElemOperations::set_participating_nodes(
+    const std::set<const libMesh::Node*>& nodes)
+{
+    // this object should be in a clean state before this method is called
+    libmesh_assert(!_node_subset.size());
+    
+    _node_subset              = nodes;
+    _if_evaluate_on_all_nodes = false;
+}
+    
 
 void
 MAST::OutputAssemblyElemOperations::
@@ -97,6 +115,14 @@ const std::set<const libMesh::Elem*>&
 MAST::OutputAssemblyElemOperations::get_participating_elements() const {
     
     return _elem_subset;
+}
+
+
+
+const std::set<const libMesh::Node*>&
+MAST::OutputAssemblyElemOperations::get_participating_nodes() const {
+    
+    return _node_subset;
 }
     
 
@@ -147,6 +173,29 @@ if_evaluate_for_element(const MAST::GeomElem& elem) const {
         return true;
     else
         return false;
+}
+    
+    
+bool MAST::OutputAssemblyElemOperations::if_evaluate_for_node(
+    const libMesh::Node& node) const 
+{    
+    // two modes are supported:
+    //   - evaluate on all elems, in which case every element will be evaluated
+    //   - evaluate elements in a group
+    // TODO: Does anything need to be done here to handle adaptivity?
+    
+    if (_if_evaluate_on_all_nodes)
+    {
+        return true;
+    }
+    else if (_node_subset.count(&node))
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
 }
     
     

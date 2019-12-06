@@ -30,6 +30,8 @@
 
 // libMesh includes
 #include "libmesh/elem.h"
+#include "libmesh/node.h"
+
 
 
 
@@ -125,8 +127,24 @@ namespace MAST {
          *   this
          */
         virtual void output_derivative_for_elem(RealVectorX& dq_dX) = 0;
-
         
+        
+        /*!
+         *  returns the output quantity derivative with respect to
+         *  state vector in \p dq_dX.
+         *   This method calculates the quantity
+         *    \f[ \frac{\partial q(X, p)}{\partial X} \f] for this
+         *    output function. This is returned for the node for which
+         *   this
+         */
+        virtual void output_derivative_for_node(const RealVectorX& Xnode, 
+                                                const RealVectorX& Fpnode,
+                                                RealVectorX& dq_dX)
+        {
+            // do nothing by default, this should be setup as needed in
+            // derived output classes
+        }
+
         /*!
          *    this is the abstract interface to be implemented by derived
          *    classes. This method calculates the quantity \f$ q(X, p) \f$.
@@ -137,6 +155,14 @@ namespace MAST {
          *    \p output_for_elem() or \p output_total().
          */
         virtual void evaluate() = 0;
+        
+        virtual void evaluate_for_node(const RealVectorX& Xnode,
+                                       const RealVectorX& Fpnode)
+        {
+            // do nothing by default, this should be setup as needed in
+            // derived output classses
+        }
+        
 
         /*!
          *    this evaluates all relevant sensitivity components on
@@ -145,7 +171,17 @@ namespace MAST {
          *    object has been initialized.
          */
         virtual void evaluate_sensitivity(const MAST::FunctionBase& f) = 0;
+        
+        
+        virtual void evaluate_sensitivity_for_node(const MAST::FunctionBase& f,
+            const RealVectorX& Xnode, const RealVectorX& Fpnode, 
+            const RealVectorX& dpF_fpparam_node)
+        {
+            // do nothing by default, this should be setup as needed in 
+            // derived outptu classes
+        }
 
+    
         /*!
          *    this evaluates all relevant shape sensitivity components on
          *    the element.
@@ -196,6 +232,23 @@ namespace MAST {
          *   This will allow volume contribution from all elements.
          */
         void set_participating_elements_to_all();
+        
+        
+        /*!
+         *  sets the nodes for which this object will evalulate and store
+         *  the output data. This allows teh user to specify a smaller subset
+         *  of nodes that will be grouped together in the output for output
+         *  evaluation. If this method is not called, then the object will
+         *  store data for all nodes in the subdomain.
+         */
+        void set_participating_nodes(const std::set<const libMesh::Node*>& nodes);
+        
+        
+        /*!
+         *  This will allow point contribution (i.e. point loads) from all nodes.
+         */
+        void set_participating_nodes_to_all();
+        
 
         /*!
          *   The assembly will integration over boudnaries with ids specified in
@@ -209,6 +262,14 @@ namespace MAST {
          */
         const std::set<const libMesh::Elem*>&
         get_participating_elements() const;
+
+
+        /*!
+         *    @returns the set of nodes for which data will be stored. This
+         *    is set using the \p set_participating_nodes() method.
+         */
+        const std::set<const libMesh::Node*>& 
+        get_participating_nodes() const;
         
 
         /*!
@@ -232,6 +293,13 @@ namespace MAST {
          *    elements and if the specified element is in the subset.
          */
         virtual bool if_evaluate_for_element(const MAST::GeomElem& elem) const;
+        
+        
+        /*!
+         *  checks to see if the object has been told about the subset of
+         *  nodes and if the specified node is in the subset.
+         */
+        virtual bool if_evaluate_for_node(const libMesh::Node& node) const;
 
         
         /*!
@@ -250,12 +318,22 @@ namespace MAST {
         bool _if_evaluate_on_all_elems;
         
         /*!
+         *  if true, evalulates on all nodes.
+         */
+        bool _if_evaluate_on_all_nodes;
+        
+        /*!
          *    set of elements for which the data will be stored. If this is
          *    empty, then data for all elements will be stored.
          */
         std::set<const libMesh::Elem*> _elem_subset;
-
         
+        /*!
+         *  set of nodes for which the data will eb stored. If this is empty
+         *  then data for all nodes will be stored.
+         */
+        std::set<const libMesh::Node*> _node_subset;
+
         /*!
          *    set of subdomain ids for which data will be processed.
          */

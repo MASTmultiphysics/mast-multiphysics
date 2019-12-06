@@ -26,6 +26,7 @@
 
 // libMesh includes
 #include "libmesh/elem.h"
+#include "libmesh/node.h"
 
 namespace MAST {
     
@@ -97,6 +98,17 @@ namespace MAST {
                       MAST::GeomElem& elem) const = 0;
         
         /*!
+         *  some outputs may need to include node operations in their
+         *  calculation. This method allows a node to be set for the current
+         *  output operation, so that it can be checked if the current node
+         *  should be included in output calculation.
+         */
+        virtual void set_node_data(libMesh::Node* node)
+        {
+            _node = node;
+        }
+        
+        /*!
          *   initializes the object for calculation of element quantities for
          *   the specified \p elem.
          */
@@ -107,6 +119,11 @@ namespace MAST {
          *   clears the element initialization
          */
         virtual void clear_elem();
+        
+        /*!
+         *  clears the node initialization
+         */
+        virtual void clear_node();
         
         /*!
          *   @returns a reference to the physics element. The object must have
@@ -200,6 +217,8 @@ namespace MAST {
          *   the global comm().sum() calls be skipped to avoid blocking MPI calls.
          */
         bool                              _skip_comm_sum;
+
+        libMesh::Node                    *_node;
     };
 }
 
