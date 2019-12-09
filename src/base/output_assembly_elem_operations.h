@@ -174,8 +174,8 @@ namespace MAST {
         
         
         virtual void evaluate_sensitivity_for_node(const MAST::FunctionBase& f,
-            const RealVectorX& Xnode, const RealVectorX& Fpnode, 
-            const RealVectorX& dpF_fpparam_node)
+            const RealVectorX& Xnode, const RealVectorX& dXnode_dparam, 
+            const RealVectorX& Fpnode, const RealVectorX& dpF_fpparam_node)
         {
             // do nothing by default, this should be setup as needed in 
             // derived outptu classes

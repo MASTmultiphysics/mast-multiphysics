@@ -1,24 +1,5 @@
-/*
- * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2020  Manav Bhatia and MAST authors
- *
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
- *
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
- */
-
-#ifndef __mast__compliance_output__
-#define __mast__compliance_output__
+#ifndef __mast__displacement_output__
+#define __mast__displacement_output__
 
 // C++ includes
 #include <map>
@@ -41,9 +22,11 @@ namespace MAST {
     
     
     /*!
-     *   Computes the compliance as \f$ \frac{1}{2} U^T K U \f$.
+     *  Retrieves weighted sum of displacements at user-specified DOFs.
+     *  This is useful for weighted-sum multiobjected optimization method.
+     *  Special case of this is retieving displacement at a single DOF.
      */
-    class ComplianceOutput:
+    class DisplacementOutput:
     public MAST::OutputAssemblyElemOperations {
         
     public:
@@ -51,9 +34,9 @@ namespace MAST {
         /*!
          *    default constructor
          */
-        ComplianceOutput();
+        DisplacementOutput(const std::vector<Real> w);
         
-        virtual ~ComplianceOutput();
+        virtual ~DisplacementOutput();
         
         
         /*!
@@ -111,39 +94,27 @@ namespace MAST {
          */
         virtual void evaluate_shape_sensitivity(const MAST::FunctionBase& f) {
             
-            libmesh_assert(false); // to be implemented
+            libmesh_error_msg("evaluate_shape_sensitivity not implemented "
+                "for displacement output."); // to be implemented
         }
         
         /*!
-         *    this evaluates all relevant topological sensitivity components on
-         *    the element.
-         *    This is only done on the current element for which this
-         *    object has been initialized.
-         */
-        virtual void
-        evaluate_topology_sensitivity(const MAST::FunctionBase& f);
-
-        /*!
-         *    This evaluates the contribution to the topology sensitivity on the
-         *    boundary. Given that the integral is nonlinear due to the \f$p-\f$norm,
-         *    the expression is quite involved:
-         *   \f[  \frac{ \frac{1}{p} \left( \int_\Omega (\sigma_{VM}(\Omega))^p ~
-         *    d\Omega \right)^{\frac{1}{p}-1}}{\left(  \int_\Omega ~ d\Omega \right)^{\frac{1}{p}}}
-         *    \int_\Gamma  V_n \sigma_{VM}^p  ~d\Gamma +
-         *    \frac{ \frac{-1}{p} \left( \int_\Omega (\sigma_{VM}(\Omega))^p ~
-         *    d\Omega \right)^{\frac{1}{p}}}{\left(  \int_\Omega ~ d\Omega \right)^{\frac{1+p}{p}}}
-         *    \int_\Gamma  V_n ~d\Gamma \f]
+         * 
          */
         virtual void
         evaluate_topology_sensitivity(const MAST::FunctionBase& f,
-                                      const MAST::FieldFunction<RealVectorX>& vel);
+                                      const MAST::FieldFunction<RealVectorX>& vel){
+            libmesh_error_msg("evalulate_topology_sensitivity not implemented "
+                "for displacement output");
+        }
         
         /*!
          *   should not get called for this output. Use output_total() instead.
          */
         virtual Real output_for_elem() {
             //
-            libmesh_error();
+            libmesh_error_msg("output_for_elem() should not get called for "
+                "DisplacementOutput. Use output_total() instead.");
         }
         
         /*!
@@ -152,14 +123,12 @@ namespace MAST {
         virtual Real output_total();
         
         /*!
-         *   @returns the sensitivity of p-norm von Mises stress for the
-         *   \f$p-\f$norm identified using \p set_p_val(). The returned quantity
-         *   is evaluated for the element for which this object is initialized.
+         * 
          */
         virtual Real output_sensitivity_for_elem(const MAST::FunctionBase& p) {
-            libmesh_error(); // not yet implemented
+            libmesh_error_msg("output_sensitivity_for_elem not implemented "
+                "for DispalcementOutput"); // not yet implemented
         }
-        
         
         /*!
          *   @returns the output quantity sensitivity for parameter.
@@ -172,9 +141,8 @@ namespace MAST {
         
         
         /*!
-         *   This method calculates the partial derivative of the output
-         *   quantity with respect to the parameter 
-         *   \f[ \frac{\partial q(X, p)}{\partial X} \f]
+         *   calculates the derivative of p-norm von Mises stress for the
+         *   \f$p-\f$norm identified using \p set_p_val(). The quantity is
          *   evaluated over the current element for which this object
          *   is initialized.
          */
@@ -183,38 +151,22 @@ namespace MAST {
         virtual void evaluate_for_node(const RealVectorX& Xnode,
                                        const RealVectorX& Fpnode) override;
         
-        /*!
-         *   This method calculates the partial derivative of the output
-         *   quantity with respect to the parameter 
-         *   \f[ \frac{\partial q(X, p)}{\partial X} \f]
-         *   evaluated over the current node for which this object
-         *   is initialized.
-         */
         virtual void output_derivative_for_node(const RealVectorX& Xnode, 
             const RealVectorX& Fpnode, RealVectorX& dq_dX) override;
-        
-        /*!
-         * This method calculates the total derivative of the output quantity
-         * with respect to the parameter 
-         * \f[ \frac{\delta q(X, p)}{\delta p} \f]
-         * 
-         * If \f$ dXnode_dparam \f$ is a nullptr, then this method instead
-         * calculates the partial derivative of the output quantity with 
-         * respect to the parameter
-         * \f[ \frac{\partial q(X, p)}{\partial p} \f]
-         * 
-         * Evaluated over the current node for which this object is initialized.
-         */
+            
         virtual void evaluate_sensitivity_for_node(const MAST::FunctionBase& f,
             const RealVectorX& Xnode, const RealVectorX& dXnode_dparam,
             const RealVectorX& Fpnode, const RealVectorX& dpF_fpparam_node) override;
-        
+            
+        virtual void get_weights(std::vector<Real>& w);
+                
         
     protected:
     
-        Real _compliance;
-        Real _dcompliance_dp;
+        Real _displacement;
+        Real _ddisplacement_dp;
+        const std::vector<Real> _w; // Weights for weighted sum of displacements
     };
 }
 
-#endif // __mast__compliance_output__
+#endif // __mast__displacement_output__

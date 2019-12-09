@@ -166,14 +166,18 @@ MAST::ComplianceOutput::evaluate_sensitivity(const MAST::FunctionBase &f) {
 
 void MAST::ComplianceOutput::evaluate_sensitivity_for_node(
     const MAST::FunctionBase& f, const RealVectorX& Xnode, 
-    const RealVectorX& Fpnode, const RealVectorX& dpF_fpparam_node)
+    const RealVectorX& dXnode_dparam, const RealVectorX& Fpnode, 
+    const RealVectorX& dpF_fpparam_node)
 {
     // make sure that this has not been initialized and calculated for all nodes
     libmesh_assert(_node);
     
     if (this->if_evaluate_for_node(*_node)) 
     {
-        _dcompliance_dp += dpF_fpparam_node.dot(Xnode);
+        RealVectorX dpr_dpXnode = RealVectorX::Zero(Xnode.size());
+        output_derivative_for_node(Xnode, Fpnode, dpr_dpXnode);
+        
+        _dcompliance_dp += dpF_fpparam_node.dot(Xnode) + dpr_dpXnode.dot(dXnode_dparam);
     }
 }
 
@@ -290,7 +294,7 @@ MAST::ComplianceOutput::output_sensitivity_total(const MAST::FunctionBase& p) {
 void
 MAST::ComplianceOutput::output_derivative_for_elem(RealVectorX& dq_dX) {
     
-    // make sure that this has not been initialized ana calculated for all elems
+    // make sure that this has not been initialized and calculated for all elems
     libmesh_assert(_physics_elem);
     
      // since compliance = -X^T F,  derivative wrt X = -F.
@@ -340,7 +344,7 @@ void MAST::ComplianceOutput::output_derivative_for_node(
             dq_dX(i) = Fpnode(i);
         }
         
-        dq_dX *= -1.;
+        //dq_dX *= -1.;
     }
 }
 

@@ -683,17 +683,20 @@ calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
         // get the solution for this node
         unsigned int ndofs = (unsigned int)dof_indices.size();
         sol.setZero(ndofs);
+        dsol.setZero(ndofs);
         RealVectorX fpt = RealVectorX::Zero(ndofs);
         RealVectorX dfpt = RealVectorX::Zero(ndofs);
         for (unsigned int i=0; i<dof_indices.size(); i++)
         {
             sol(i) =  (*localized_solution)(dof_indices[i]);
+            if (dXdp)
+                dsol(i) = (*localized_solution_sens)(dof_indices[i]);
             fpt(i) =  (*localized_Fp)(dof_indices[i]);
             dfpt(i) = (*localized_dFp)(dof_indices[i]);
         }
         
         output.set_node_data(node);
-        output.evaluate_sensitivity_for_node(p, sol, fpt, dfpt);
+        output.evaluate_sensitivity_for_node(p, sol, dsol, fpt, dfpt);
         output.clear_node();
         
         dof_indices.clear();
