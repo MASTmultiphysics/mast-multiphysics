@@ -10,6 +10,8 @@ target_sources(mast
         ${CMAKE_CURRENT_LIST_DIR}/compliance_output.cpp
         ${CMAKE_CURRENT_LIST_DIR}/compliance_output.h
         ${CMAKE_CURRENT_LIST_DIR}/dkt_bending_operator.h
+        ${CMAKE_CURRENT_LIST_DIR}/external_force_output.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/external_force_output.h
         ${CMAKE_CURRENT_LIST_DIR}/fluid_structure_assembly_elem_operations.cpp
         ${CMAKE_CURRENT_LIST_DIR}/fluid_structure_assembly_elem_operations.h
         ${CMAKE_CURRENT_LIST_DIR}/fsi_generalized_aero_force_assembly.cpp

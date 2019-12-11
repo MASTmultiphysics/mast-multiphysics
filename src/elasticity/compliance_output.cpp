@@ -303,23 +303,26 @@ MAST::ComplianceOutput::output_derivative_for_elem(RealVectorX& dq_dX) {
     if (this->if_evaluate_for_element(_physics_elem->elem())) {
         
         MAST::StructuralElementBase& e =
-        dynamic_cast<MAST::StructuralElementBase&>(*_physics_elem);
+            dynamic_cast<MAST::StructuralElementBase&>(*_physics_elem);
         
         dq_dX.setZero();
         
-        RealMatrixX
-        dummy = RealMatrixX::Zero(dq_dX.size(), dq_dX.size());
+        RealMatrixX dummy = RealMatrixX::Zero(dq_dX.size(), dq_dX.size());
         
-        e.side_external_residual(false,
+        RealMatrixX dpfext_dpu = RealMatrixX::Zero(dq_dX.size(), dq_dX.size());
+        
+        e.side_external_residual(true,
                                  dq_dX,
                                  dummy,
-                                 dummy,
+                                 dpfext_dpu,
                                  _discipline->side_loads());
-        e.volume_external_residual(false,
+        e.volume_external_residual(true,
                                    dq_dX,
                                    dummy,
-                                   dummy,
+                                   dpfext_dpu,
                                    _discipline->volume_loads());
+        
+        dq_dX += dpfext_dpu.transpose() * e.sol();
         
         dq_dX *= -1.;
     }
@@ -343,6 +346,8 @@ void MAST::ComplianceOutput::output_derivative_for_node(
         {
             dq_dX(i) = Fpnode(i);
         }
+        
+        // TODO: Handle the case when point loads act as follower loads and are then dependent on displacement.
         
         //dq_dX *= -1.;
     }
