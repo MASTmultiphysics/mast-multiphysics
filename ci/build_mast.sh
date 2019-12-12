@@ -39,6 +39,8 @@ if [ "${TRAVIS_OS_NAME}" = linux ]; then # Ubuntu Linux
 
     if [ ${CI_BUILD_DOCS} ]; then
       make doc_doxygen || exit
+      cd ${TRAVIS_BUILD_DIR} || exit
+      ci/prepare_docs.sh || exit
     else
       make -j 2 || exit
       make install || exit
