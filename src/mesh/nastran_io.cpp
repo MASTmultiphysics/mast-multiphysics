@@ -1,23 +1,23 @@
-// C++ includes
+// C++ includes.
 #include <vector>
 #include <map>
 
-//libMesh includes
-#include "libmesh/point.h"
-#include "libmesh/elem.h"
-#include "libmesh/string_to_enum.h"
-#include "libmesh/boundary_info.h"
-#include "libmesh/utility.h"
-#include "libmesh/libmesh_common.h"
-#include "libmesh/mesh_input.h"
-#include "libmesh/elem.h"
+// libMesh includes.
+#include <libmesh/point.h>
+#include <libmesh/elem.h>
+#include <libmesh/string_to_enum.h>
+#include <libmesh/boundary_info.h>
+#include <libmesh/utility.h>
+#include <libmesh/libmesh_common.h>
+#include <libmesh/mesh_input.h>
+#include <libmesh/elem.h>
 
-// Local includes
+// MAST includes.
 #include "mesh/nastran_io.h"
-#include "Python.h"
+#include "external/fort.hpp"
 
 
-void MAST::printElementMap(std::map<std::string, std::vector<std::vector<int>>> elementMap)
+MAST::NastranIO::NastranIO (libMesh::MeshBase& mesh, const bool python_preinit):
 {
     // Iterate through element types
     for (const auto& item : elementMap)
@@ -49,11 +49,10 @@ void MAST::printNodeCoords(std::vector<std::vector<double>> nodes)
 }
 
 
-MAST::NastranIO::NastranIO (libMesh::MeshBase& mesh, const bool pythonPreinitialized):
 libMesh::MeshInput<libMesh::MeshBase> (mesh),
-_pythonPreinitialized(pythonPreinitialized)
+_pythonPreinitialized(python_preinit)
 {
-    // Initialize Python if it hasn't already been initialized
+    // Initialize Python if it hasn't already been initialized.
     if ((not pythonInitialized) and (not _pythonPreinitialized))
     {
         initializePython();
@@ -203,7 +202,25 @@ void MAST::NastranIO::read_elements(BDFModel* model, libMesh::MeshBase& the_mesh
 }
 
 
-void MAST::NastranIO::read (const std::string & fname)
+void MAST::NastranIO::read_node_boundaries(BDFModel* model, libMesh::MeshBase& the_mesh)
+{
+    // Currently we simply translate all the SPC ID's that show up inside the BDF
+    // over into node boundaries in libMesh.
+
+    std::map<std::string, std::vector<int>> SPCs = getSPCs(model);
+    uint j=1;
+    for (const auto& spc : SPCs)
+    {
+        for (uint i=0; i<spc.second.size(); i++)
+        {
+           the_mesh.boundary_info->add_node(nastran2libMeshNodeMap[spc.second[i]], j);
+        }
+        j++;
+    }
+}
+
+
+void MAST::NastranIO::read (const std::string& filename)
 {
     // Get a reference to the mesh we are reading
     libMesh::MeshBase& the_mesh = MeshInput<libMesh::MeshBase>::mesh();
@@ -212,7 +229,7 @@ void MAST::NastranIO::read (const std::string & fname)
     the_mesh.clear();
     
     // Read the Nastran BDF using pyNastran
-    BDFModel* model = buildBDFModel(fname);
+    BDFModel* model = buildBDFModel(filename);
     
     // Set the dimensions of the mesh
     the_mesh.set_mesh_dimension(model->nDims);
@@ -222,6 +239,12 @@ void MAST::NastranIO::read (const std::string & fname)
     
     // Add elements from the model to the mesh
     read_elements(model, the_mesh);
+
+    // Add nodal boundary conditions defined as SPCs from the model to the mesh
+    read_node_boundaries(model, the_mesh);
+
+    // Prepare mesh for use.
+    the_mesh.prepare_for_use();
 }
 
 void MAST::NastranIO::read(BDFModel* model)
@@ -247,15 +270,19 @@ void MAST::NastranIO::read(BDFModel* model)
 void MAST::NastranIO::initializePython()
 {
     // StackOverFlow, "Use generated header file from Cython"
-    int status = PyImport_AppendInittab("pynastranIO", PyInit_pynastran_io);
-    if(status==1){
-        libmesh_error_msg("ERROR: During Python import for pynastranIO.");
+    // - related to using multi-stage imports
+    int status = PyImport_AppendInittab("pynastran_io", PyInit_pynastran_io);
+    if(status==-1){
+        libmesh_error_msg("ERROR: During Python import for pynastran_io.");
     }
     Py_Initialize();
-    PyObject* pynastran_module = PyImport_ImportModule("pynastranIO");
+
+    PyObject* pynastran_module = PyImport_ImportModule("pynastran_io");
+
     if(pynastran_module==NULL){
+        PyErr_Print(); // Prints out error that occurred back in the Python interpreter.
         Py_Finalize();
-        libmesh_error_msg("ERROR: During Python initialization for pynastranIO.");
+        libmesh_error_msg("ERROR: During Python initialization for pynastran_io.");
     }
     pythonInitialized = true;
 }
@@ -266,7 +293,21 @@ void MAST::NastranIO::finalizePython()
     Py_Finalize();
     pythonInitialized = false;
 }
-    
-    
-    
-    
+
+
+void MAST::NastranIO::print_pid_to_subdomain_id_map() {
+    fort::table table;
+    table << fort::header << "Nastran Property ID" << "libMesh/MAST Subdomain ID" << fort::endr;
+
+    std::string sid_str; // must reduce std::set of libMesh subdomain IDs to string for table output.
+    for (const auto& id_pair: getPID2subdomainIDsMap()) {
+        table << std::to_string(id_pair.first);
+        for (const auto& sid: id_pair.second) {
+            sid_str.append(std::to_string(sid) + " ");
+        }
+        table << sid_str << fort::endr;
+    }
+    libMesh::out << std::endl << "DOMAIN MAPPING" << std::endl;
+    libMesh::out << table.to_string() << std::endl;
+}
+

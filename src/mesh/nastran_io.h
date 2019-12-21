@@ -1,20 +1,23 @@
 #ifndef __mast_nastran_io_h__
 #define __mast_nastran_io_h__
 
-
-// C++ Includes
+// C++ includes.
 #include <iostream>
 #include <map>
 #include <list>
 
-// libMesh Includes
-#include "libmesh/libmesh_common.h"
-#include "libmesh/mesh_input.h"
-#include "libmesh/elem.h"
+// libMesh includes.
+#include <libmesh/libmesh_common.h>
+#include <libmesh/mesh_input.h>
+#include <libmesh/elem.h>
 
-#include "Python.h"
+// Python includes.
+#include <Python.h>
+
+// MAST includes.
 #include "mesh/nastran_io.h"
 #include "mesh/pynastran_io.h"
+
 
 namespace MAST {
 
@@ -23,15 +26,28 @@ namespace MAST {
     void printNodeCoords(std::vector<std::vector<double>> nodes);
 
     /**
-     * The NastranIO class is a preliminary implementation for reading NASTRAN
-     * mesh files using pyNastran with BDF files as input.
+     * Nastran BDF mesh input.
+     * The NastranIO class is a preliminary implementation for reading NASTRAN mesh information
+     * using pyNastran with BDF data as input. Currently nodes, elements, & node boundary condition
+     * definition are supported.
+     *
+     * Nodal BCs are mapped into libMesh node boundary sets based on
+     * SPC IDs and nodes assigned to them in the BDF file.
      */
     class NastranIO : public libMesh::MeshInput<libMesh::MeshBase>
     {
     public:
-        explicit
-        NastranIO(libMesh::MeshBase& mesh, const bool pythonPreinitialized=false);
+        /**
+         * Constructor.
+         * @param mesh a libMesh mesh object.
+         * @param python_preinit bool describing if Python has been already initialized somewhere
+         *                       in the current program (by another C++/Python interface).
+         */
+        explicit NastranIO(libMesh::MeshBase& mesh, const bool python_preinit=false);
 
+        /**
+         * Destructor.
+         */
         virtual ~NastranIO ();
 
         virtual void read (const std::string & name) override;
@@ -46,6 +62,16 @@ namespace MAST {
         std::map<std::pair<int,int>, int> getPIDElemtype2SubdomainIDMap();
         std::map<int, std::set<int>> getPID2subdomainIDsMap();
 
+        /**
+         * Print map between Nastran property ID's (PID) to libMesh subdomain
+         * ID's (SID) to libMesh::out. Note that some PID will correspond to
+         * multiple SID since libMesh requires all elements in a subdomain to
+         * be the same type, but Nastran allows property assignment to multiple
+         * element types from the same property card (ie. one PSHELL card
+         * providing properties to both CQUAD4 and CTRIA3).
+         */
+        void print_pid_to_subdomain_id_map();
+
     private:
 
         const bool  _pythonPreinitialized = false;
@@ -59,6 +85,7 @@ namespace MAST {
 
         void read_nodes(BDFModel* model, libMesh::MeshBase& the_mesh);
         void read_elements(BDFModel* model, libMesh::MeshBase& the_mesh);
+        void read_node_boundaries(BDFModel* model, libMesh::MeshBase& the_mesh);
 
         // Map from NASTRAN Elements to Equivalent libMesh Elements
         // TODO: Not yet complete, need to add all NASTRAN elements which we need support for.

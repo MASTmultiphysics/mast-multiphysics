@@ -205,6 +205,22 @@ cdef public map[string, int] getNumberOfElementTypes(BDFModel model):
     return elementTypes
 
 
+cdef public map[string, vector[int]] getSPCs(BDFModel model):
+    """
+    Create a map of subcase SPCs and the nodes that belong to that SPC. Useful for creating boundaries in libMesh.
+    """
+    cdef map[string, vector[int]] SPCs
+
+    for subcase_num, spcs in model.myBDF.spcs.items():
+        i = 1
+        for spc in spcs:
+            name = "Subcase-%i_%s_%i"%(subcase_num, spc.type, i)
+            SPCs[name.encode("utf-8")] = spc.nodes
+            i+=1
+
+    return SPCs
+
+
 cdef perturbZeroLengthBushings(BDFModel model):
     """
     As of November 18, 2019, MAST does not support the specification of the elemental x-axis which is required when 
