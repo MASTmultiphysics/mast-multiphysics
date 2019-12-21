@@ -1739,23 +1739,24 @@ public:
                     bids.clear();
                     _mesh->boundary_info->boundary_ids(elem, *it, bids);
                     
-                    // if this side has been ideitied as a dirichlet condition
+                    // if this side has been identied as a dirichlet condition
                     // then we do not include it in the set
                     bool set_id = true;
-                    for (unsigned int i=0; i<bids.size(); i++)
-                        if (_dirichlet_bc_ids.count(bids[i])) {
-                            set_id = false;
-                            break;
-                        }
+                    //for (unsigned int i=0; i<bids.size(); i++)
+                    //    if (_dirichlet_bc_ids.count(bids[i])) {
+                    //        set_id = false;
+                    //        break;
+                    //    }
                             
                     if (set_id) {
                         
                         // find the topological neighbor and the side number
                         // for the neighbor
                         libMesh::Elem* e = elem->neighbor_ptr(*it);
-                        libmesh_assert(e);
-                        
-                        _mesh->boundary_info->add_side(e, neighbor_side_pairs[*it], b_id);
+                        // the side may be on the boundary, in which case
+                        // no boundary should be set.
+                        if (e)
+                            _mesh->boundary_info->add_side(e, neighbor_side_pairs[*it], b_id);
                     }
                 }
                 
@@ -1796,8 +1797,9 @@ public:
         _level_set_function->init(*_level_set_sys_init, *_level_set_sys->solution);
         _sys->solution->zero();
 
-        this->mark_shifted_boundary(100);
-        _level_set_vel->init(*_level_set_sys_init, *_level_set_sys->solution, nullptr);
+        _level_set_vel->init(*_level_set_sys_init,
+                             *_level_set_function,
+                             *_level_set_sys->solution, nullptr);
         
         /*if (_mesh_refinement->initialized()) {
             
@@ -1818,10 +1820,10 @@ public:
         // DO NOT zero out the gradient vector, since GCMMA needs it for the  *
         // subproblem solution                                                *
         //*********************************************************************
-        MAST::NonlinearImplicitAssembly                          nonlinear_assembly/*(true)*/;
+        MAST::LevelSetNonlinearImplicitAssembly                  nonlinear_assembly(true);
         MAST::LevelSetNonlinearImplicitAssembly                  level_set_assembly(false);
         MAST::LevelSetEigenproblemAssembly                       eigen_assembly;
-        MAST::StressAssembly                                     stress_assembly;
+        MAST::LevelSetStressAssembly                             stress_assembly;
         MAST::StructuralNonlinearAssemblyElemOperations          nonlinear_elem_ops;
         MAST::HeatConductionNonlinearAssemblyElemOperations      conduction_elem_ops;
         MAST::StructuralModalEigenproblemAssemblyElemOperations  modal_elem_ops;
@@ -1882,15 +1884,14 @@ public:
         // first constrain the indicator function and solve
         /////////////////////////////////////////////////////////////////////
         nonlinear_assembly.set_discipline_and_system(*_discipline, *_sys_init);
-        nonlinear_assembly.diagonal_elem_subdomain_id = {3, 6, 7};
-        //nonlinear_assembly.set_level_set_function(*_level_set_function, *_filter);
-        //nonlinear_assembly.set_level_set_velocity_function(*_level_set_vel);
+        nonlinear_assembly.set_level_set_function(*_level_set_function, *_filter);
+        nonlinear_assembly.set_level_set_velocity_function(*_level_set_vel);
         //nonlinear_assembly.set_indicator_function(indicator);
         eigen_assembly.set_discipline_and_system(*_discipline, *_sys_init);
         eigen_assembly.set_level_set_function(*_level_set_function);
         eigen_assembly.set_level_set_velocity_function(*_level_set_vel);
         stress_assembly.set_discipline_and_system(*_discipline, *_sys_init);
-        //stress_assembly.init(*_level_set_function, nonlinear_assembly.if_use_dof_handler()?&nonlinear_assembly.get_dof_handler():nullptr);
+        stress_assembly.init(*_level_set_function, nonlinear_assembly.if_use_dof_handler()?&nonlinear_assembly.get_dof_handler():nullptr);
         level_set_assembly.set_discipline_and_system(*_level_set_discipline, *_level_set_sys_init);
         level_set_assembly.set_level_set_function(*_level_set_function, *_filter);
         level_set_assembly.set_level_set_velocity_function(*_level_set_vel);
@@ -1898,7 +1899,7 @@ public:
         modal_elem_ops.set_discipline_and_system(*_discipline, *_sys_init);
         
         
-        /*libMesh::MeshRefinement refine(*_mesh);
+        libMesh::MeshRefinement refine(*_mesh);
         
         libMesh::out << "before refinement" << std::endl;
         _mesh->print_info();
@@ -1938,7 +1939,7 @@ public:
             }
             else
                 continue_refining = false;
-        }*/
+        }
         /*if (_mesh_refinement->process_mesh(*_level_set_function,
                                            true, // strong discontinuity
                                            0.,
@@ -1957,8 +1958,7 @@ public:
         stress.set_discipline_and_system(*_discipline, *_sys_init);
         volume.set_participating_elements_to_all();
         perimeter.set_participating_elements_to_all();
-        //stress.set_participating_elements_to_all();
-        stress.set_participating_subdomains(std::set<libMesh::subdomain_id_type>({0, 1}));
+        stress.set_participating_elements_to_all();
         stress.set_aggregation_coefficients(_p_val, 1., _vm_rho, _stress_lim) ;
         compliance.set_participating_elements_to_all();
         compliance.set_discipline_and_system(*_discipline, *_sys_init);
@@ -2013,9 +2013,7 @@ public:
 
             // if the shifted boundary is implementing a traction-free condition
             // compliance does not need contribution from shifted boundary load
-            _discipline->remove_side_load(100, *_shifted_boundary_load);
             nonlinear_assembly.calculate_output(*_sys->solution, compliance);
-            _discipline->add_side_load(100, *_shifted_boundary_load);
             comp      = compliance.output_total();
             obj       = _obj_scaling * (comp + _perimeter_penalty * per);
             fvals[0]  = vol/_volume - vf; // vol/vol0 - a <=
@@ -2167,7 +2165,10 @@ public:
             dphi_base->close();
             _filter->compute_filtered_values(*dphi_base, *dphi_filtered);
             
-            _level_set_vel->init(*_level_set_sys_init, *_level_set_sys->solution, dphi_filtered.get());
+            _level_set_vel->init(*_level_set_sys_init,
+                                 *_level_set_function,
+                                 *_level_set_sys->solution,
+                                 dphi_filtered.get());
 
             // if the volume output was specified then compute the sensitivity
             // and add to the grad vector
@@ -2245,7 +2246,10 @@ public:
             //
             // initialize the level set perturbation function to create a velocity
             // field
-            _level_set_vel->init(*_level_set_sys_init, *_level_set_sys->solution, dphi_filtered.get());
+            _level_set_vel->init(*_level_set_sys_init,
+                                 *_level_set_function,
+                                 *_level_set_sys->solution,
+                                 dphi_filtered.get());
             
             //////////////////////////////////////////////////////////////////////
             // stress sensitivity
@@ -2287,9 +2291,7 @@ public:
         // Adjoint solution for compliance = - X
         // if the shifted boundary is implementing a traction-free condition
         // compliance does not need contribution from shifted boundary load
-        _discipline->remove_side_load(100, *_shifted_boundary_load);
         _sys->adjoint_solve(nonlinear_elem_ops, compliance, nonlinear_assembly, false);
-        _discipline->add_side_load(100, *_shifted_boundary_load);
 
         std::unique_ptr<libMesh::NumericVector<Real>>
         dphi_base(_level_set_sys->solution->zero_clone().release()),
@@ -2318,7 +2320,10 @@ public:
             //
             // initialize the level set perturbation function to create a velocity
             // field
-            _level_set_vel->init(*_level_set_sys_init, *_level_set_sys->solution, dphi_filtered.get());
+            _level_set_vel->init(*_level_set_sys_init,
+                                 *_level_set_function,
+                                 *_level_set_sys->solution,
+                                 dphi_filtered.get());
             
             //////////////////////////////////////////////////////////////////////
             // compliance sensitivity
@@ -2568,8 +2573,6 @@ public:
         _level_set_function    = new PhiMeshFunction;
         _output                = new libMesh::ExodusII_IO(*_mesh);
         
-        _shifted_boundary_load = &T::init_structural_shifted_boudnary_load(*this, 100);
-
         MAST::BoundaryConditionBase
         *bc = new MAST::BoundaryConditionBase(MAST::BOUNDARY_VELOCITY);
         bc->add(*_level_set_vel);
