@@ -22,7 +22,7 @@ option(ENABLE_NASTRANIO "Build with support for reading Nastran meshes" OFF)
 option(ENABLE_CYTHON    "Build with support for Cython development"     OFF)
 option(BUILD_DOC        "Build documentation"         OFF)
 
-# Dependency paths - these paths help CMake find dependencies.
+# Dependency paths (optional) - these paths help CMake find dependencies.
 set(MAST_ROOT_DIR ${CMAKE_CURRENT_LIST_DIR})
 set(libMesh_DIR "libMesh_DIR" CACHE PATH "Directory containing libMesh include/ and lib/")
 set(PETSc_DIR   "PETSc_DIR"   CACHE PATH "Directory containing PETSc include/ and lib/")
