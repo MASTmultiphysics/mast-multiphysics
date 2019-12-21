@@ -19,12 +19,17 @@
 
 // MAST includes
 #include "level_set/level_set_boundary_velocity.h"
+#include "level_set/level_set_intersection.h"
+#include "base/system_initialization.h"
+#include "base/nonlinear_system.h"
 
 
 MAST::LevelSetBoundaryVelocity::LevelSetBoundaryVelocity(const unsigned int dim):
 MAST::FieldFunction<RealVectorX>("phi_vel"),
-_dim(dim),
-_phi(nullptr) {
+_dim            (dim),
+_phi            (nullptr),
+_mesh           (nullptr),
+_level_set_func (nullptr) {
     
 }
 
@@ -37,6 +42,7 @@ MAST::LevelSetBoundaryVelocity::~LevelSetBoundaryVelocity() {
 
 void
 MAST::LevelSetBoundaryVelocity::init(MAST::SystemInitialization& sys,
+                                     const MAST::FieldFunction<Real>& phi_func,
                                      const libMesh::NumericVector<Real>& sol,
                                      const libMesh::NumericVector<Real>* dsol) {
     
@@ -45,6 +51,8 @@ MAST::LevelSetBoundaryVelocity::init(MAST::SystemInitialization& sys,
     else
         _phi->clear();
     _phi->init(sol, dsol);
+    _mesh            = &sys.system().get_mesh();
+    _level_set_func  = &phi_func;
 }
 
 
@@ -104,14 +112,71 @@ MAST::LevelSetBoundaryVelocity::velocity(const libMesh::Point& p,
 
 
 
+#include <fstream>
+void
+MAST::LevelSetBoundaryVelocity::
+search_nearest_interface_point(const libMesh::Elem& e,
+                               const unsigned int side,
+                               const libMesh::Point& p,
+                               const Real t,
+                               RealVectorX& pt) const {
+    
+    MAST::LevelSetIntersection intersection;
+    
+    const libMesh::Elem*
+    elem = e.neighbor_ptr(side);
+    
+    libmesh_assert(elem);
+    
+    intersection.init(*_level_set_func,
+                      *elem, 0.,
+                      _mesh->max_elem_id(),
+                      _mesh->max_node_id());
+
+    libMesh::Point p2;
+    intersection.get_nearest_intersection_point(p, p2);
+    pt(0) = p2(0); pt(1) = p2(1); pt(2) = p2(2);
+//    std::fstream o;
+//    o.open("pts.csv", std::fstream::app);
+//    o << p(0) << " , " << p(1) << " , 0 \n";
+//    o << pt(0) << " , " << pt(1) << " , 0 \n";
+}
+
 
 void
 MAST::LevelSetBoundaryVelocity::
-search_nearest_interface_point(const libMesh::Point& p,
-                               const Real t,
-                               const Real length,
-                               RealVectorX& v,
-                               bool allow_sub_search) const {
+search_nearest_interface_point_derivative(const MAST::FunctionBase& f,
+                                          const libMesh::Elem& e,
+                                          const unsigned int side,
+                                          const libMesh::Point& p,
+                                          const Real t,
+                                          RealVectorX& v) const {
+    
+    libmesh_assert(_phi);
+
+    // velocity at this interface point is given by the normal velocity
+    // So, we first find the point and then compute its velocity
+    
+    this->search_nearest_interface_point(e, side, p, t, v);
+    
+    libMesh::Point
+    pt(v(0), v(1), v(2));
+    
+    // now compute the velocity at this point.
+    v.setZero();
+    this->velocity(pt, t, v);
+}
+
+
+
+
+void
+MAST::LevelSetBoundaryVelocity::
+search_nearest_interface_point_old(const libMesh::Point& p,
+                                   const Real t,
+                                   const Real length,
+                                   RealVectorX& v,
+                                   bool allow_sub_search) const {
     
     libmesh_assert(_phi);
     
@@ -125,6 +190,7 @@ search_nearest_interface_point(const libMesh::Point& p,
     p_ref    = RealVectorX::Zero(3),
     dv0      = RealVectorX::Zero(4),
     dv1      = RealVectorX::Zero(4),
+    dx       = RealVectorX::Zero(4),
     gradL    = RealVectorX::Zero(4);
     
     RealMatrixX
@@ -156,12 +222,12 @@ search_nearest_interface_point(const libMesh::Point& p,
 
     unsigned int
     n_iters   = 0,
-    max_iters = 40;
+    max_iters = 80;
     
     Real
     tol  = 1.e-8,
     L0   = 1.e12,
-    damp = 0.7,
+    damp = 0.5,
     L1   = 0.;
     
     // initialize the design point
@@ -188,29 +254,63 @@ search_nearest_interface_point(const libMesh::Point& p,
         coeffs.topLeftCorner(3, 3) += hess;
 
         Eigen::FullPivLU<RealMatrixX> solver(coeffs);
-        dv1 = dv0 - damp*solver.solve(gradL);
-        // update the design points and check for convergence
+
+        bool
+        continue_search = true;
+        dx = - solver.solve(gradL);
+        Real
+        factor = 1.;
+        unsigned int
+        n_it   = 0,
+        max_it = 10;
+        
+        
+        // some searches may end up outside the mesh, and libMesh will through
+        // an exception. So, we catch the exception  and take a smaller step.
+        while (continue_search) {
+            try {
+                
+                // update the design points and check for convergence
+                dv1 = dv0 + damp*factor * dx;
+                L1        = _evaluate_point_search_obj(p, t, dv1);
+                continue_search = false;
+            }
+            catch (...) {
+                
+                factor *= 0.5;
+                n_it ++;
+                if (n_it == max_it) {
+                    // could not find a point inside the mesh. returning
+                    // the reference point.
+                    v.topRows(_dim) = dv0.topRows(_dim);
+                    return;
+                }
+                else
+                    continue_search = true;
+            }
+        }
+
         p_opt(0)  = dv1(0); p_opt(1) = dv1(1); p_opt(2) = dv1(2);
         L1        = _evaluate_point_search_obj(p, t, dv1);
 
         // update Jacobian
         grad1 = gradmat.row(0);
         z     = (dv1.topRows(3)-dv0.topRows(3)) - hess * (grad1-grad0);
-        hess +=  (z*z.transpose())/z.dot(grad1-grad0);
+        //hess +=  (z*z.transpose())/z.dot(grad1-grad0);
         grad0 = grad1;
         dv0   = dv1;
         // reduce the step if the gradient is upated
-        if (z.norm())
-            damp = 0.4;
+        /*if (z.norm())
+            damp = 0.3;
         else
-            damp = 0.7;
-        
+            damp = 0.5;
+        */
         if (n_iters == max_iters) {
             
             // instead, find the point closest to the latest point returned
             // by the failed search. Do not allow another sub-search here
             if (allow_sub_search) {
-                this->search_nearest_interface_point(p_opt, t, length, v, false);
+                this->search_nearest_interface_point_old(p_opt, t, length, v, false);
                 
                 p_opt(0) = v(0); p_opt(1) = v(1); p_opt(2) = v(2);
                 dv0.topRows(3) = v;
@@ -245,18 +345,18 @@ search_nearest_interface_point(const libMesh::Point& p,
 
 void
 MAST::LevelSetBoundaryVelocity::
-search_nearest_interface_point_derivative(const MAST::FunctionBase& f,
-                                          const libMesh::Point& p,
-                                          const Real t,
-                                          const Real length,
-                                          RealVectorX& v) const {
+search_nearest_interface_point_derivative_old(const MAST::FunctionBase& f,
+                                              const libMesh::Point& p,
+                                              const Real t,
+                                              const Real length,
+                                              RealVectorX& v) const {
     
     libmesh_assert(_phi);
 
     // velocity at this interface point is given by the normal velocity
     // So, we first find the point and then compute its velocity
     
-    this->search_nearest_interface_point(p, t, length, v);
+    this->search_nearest_interface_point_old(p, t, length, v);
     
     libMesh::Point
     pt(v(0), v(1), v(2));

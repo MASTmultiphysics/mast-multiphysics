@@ -2582,7 +2582,11 @@ surface_traction_residual_shifted_boundary(bool request_jacobian,
         Bmat.reinit(2*n1, phi_vec);
         
         // first find the projected point corresponding to this boundary location
-        interface.search_nearest_interface_point(qpoint[qp], _time, elem_h, bnd_pt);
+        interface.search_nearest_interface_point(_elem.get_reference_elem(),
+                                                 side,
+                                                 qpoint[qp],
+                                                 _time,
+                                                 bnd_pt);
         pt(0) = bnd_pt(0); pt(1) = bnd_pt(1); pt(2) = bnd_pt(2);
         // now evaluate the traction and normal at this projected point
         trac_func   (pt, _time,   trac);
@@ -2610,7 +2614,15 @@ surface_traction_residual_shifted_boundary(bool request_jacobian,
             force.topRows(2) -= normal_mat * stress_grad.col(i_dim) * (bnd_pt(i_dim) - qpoint[qp](i_dim));
         
         Bmat.vector_mult_transpose(vec_n2, force);
-        
+
+        /*libMesh::out
+        << "id: " << _elem.get_reference_elem().id() << std::endl
+        << "qp: " << qpoint[qp](0) << "  " << qpoint[qp](1) << std::endl
+        << "x-mapped: " << bnd_pt(0) << "  " << bnd_pt(1) << std::endl
+        << "trac " << trac(0) << "  " << trac(1) << std::endl
+        << "normal: " << normal(0) << "  " << normal(1) << std::endl
+        << "force: " << force.transpose() << std::endl << std::endl;*/
+
         local_f += t_val * JxW[qp] * vec_n2;
         
         if (request_jacobian) {
@@ -2728,8 +2740,17 @@ surface_traction_residual_shifted_boundary_sensitivity(const MAST::FunctionBase&
         Bmat.reinit(2*n1, phi_vec);
         
         // first find the projected point corresponding to this boundary location
-        interface.search_nearest_interface_point(qpoint[qp], _time, elem_h, bnd_pt);
-        interface.search_nearest_interface_point_derivative(p, qpoint[qp], _time, elem_h, bnd_pt_sens);
+        interface.search_nearest_interface_point(_elem.get_reference_elem(),
+                                                 side,
+                                                 qpoint[qp],
+                                                 _time,
+                                                 bnd_pt);
+        interface.search_nearest_interface_point_derivative(p,
+                                                            _elem.get_reference_elem(),
+                                                            side,
+                                                            qpoint[qp],
+                                                            _time,
+                                                            bnd_pt_sens);
         pt(0) = bnd_pt(0); pt(1) = bnd_pt(1); pt(2) = bnd_pt(2);
 
         // now evaluate the traction and normal at this projected point
@@ -2775,6 +2796,18 @@ surface_traction_residual_shifted_boundary_sensitivity(const MAST::FunctionBase&
         local_f += t_val * JxW[qp] * vec_n2;
 
         
+        /*libMesh::out
+        << "id: " << _elem.get_reference_elem().id() << std::endl
+        << "qp: " << qpoint[qp](0) << "  " << qpoint[qp](1) << std::endl
+        << "x-mapped: " << bnd_pt(0) << "  " << bnd_pt(1) << std::endl
+        << "x-mapped_sens: " << bnd_pt_sens(0) << "  " << bnd_pt_sens(1) << std::endl
+        << "trac " << trac(0) << "  " << trac(1) << std::endl
+        << "trac_sens: " << dtrac(0) << "  " << dtrac(1) << std::endl
+        << "normal: " << normal(0) << "  " << normal(1) << std::endl
+        << "normal_sens: " << normal_sens(0) << "  " << normal_sens(1) << std::endl
+        << "force: " << force.transpose() << std::endl << std::endl;*/
+
+
         // also include contribution from sensitivity of thickness
         for (unsigned int i_dim=0; i_dim<n1; i_dim++)
             dnormal(i_dim) = face_normals[qp](i_dim) - normal(i_dim);

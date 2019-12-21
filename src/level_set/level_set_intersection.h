@@ -213,6 +213,9 @@ namespace MAST {
         get_material_sides_without_intersection(std::set<unsigned int>& sides) const;
 
         
+        void get_nearest_intersection_point(const libMesh::Point& p,
+                                            libMesh::Point& pt);
+        
     protected:
         
         /*!
@@ -265,6 +268,8 @@ namespace MAST {
         const libMesh::Elem*                         _elem;
         bool                                         _initialized;
 
+        const MAST::FieldFunction<Real>*             _phi;
+        
         /*!
          *   \p true if element is completely on the positive side of level set
          *   with no intersection

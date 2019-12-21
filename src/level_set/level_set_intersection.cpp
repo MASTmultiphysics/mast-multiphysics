@@ -36,6 +36,7 @@ _max_mesh_node_id                (0),
 _max_elem_divs                   (4),
 _elem                            (nullptr),
 _initialized                     (false),
+_phi                             (nullptr),
 _if_elem_on_positive_phi         (false),
 _if_elem_on_negative_phi         (false),
 _mode                            (MAST::NO_INTERSECTION),
@@ -203,6 +204,7 @@ MAST::LevelSetIntersection::clear() {
     _max_iters                  = 10;
     _elem                       = nullptr;
     _initialized                = false;
+    _phi                        = nullptr;
     _if_elem_on_positive_phi    = false;
     _if_elem_on_negative_phi    = false;
     _mode                       = MAST::NO_INTERSECTION;
@@ -254,6 +256,7 @@ MAST::LevelSetIntersection::init(const MAST::FieldFunction<Real>& phi,
     _max_mesh_node_id = max_node_id;
     
     _elem      =  &e;
+    _phi       =  &phi;
     
     switch (e.type()) {
         case libMesh::QUAD4:
@@ -1735,5 +1738,55 @@ get_material_sides_without_intersection(std::set<unsigned int>& sides) const {
         // the set
         if (on_material)
             sides.insert(i);
+    }
+}
+
+
+void
+MAST::LevelSetIntersection::
+get_nearest_intersection_point(const libMesh::Point &p,
+                               libMesh::Point &pt) {
+    
+    libmesh_assert(_initialized);
+    
+    // check the element nodes for closest node
+    std::map<const libMesh::Node*, std::pair<Real, bool> >::const_iterator
+    it   = _node_phi_vals.begin(),
+    end  = _node_phi_vals.end();
+    
+    libMesh::Point
+    dp;
+    
+    Real
+    v    = 0.,
+    dist = 1.e12;
+    
+    for ( ; it != end; it++) {
+        
+        if (it->second.second) { // on level set
+            
+            dp = *it->first - p;
+            
+            if (dp.norm() < dist) {
+                pt   = *it->first;
+                dist = dp.norm();
+            }
+        }
+    }
+    
+    // check the new nodes for possible candidates
+    for (unsigned int i=0; i<_new_nodes.size(); i++) {
+        
+        (*_phi)(*_new_nodes[i], 0., v);
+        
+        if (std::fabs(v) <= _tol) {
+            
+            dp = *_new_nodes[i] - p;
+
+            if (dp.norm() < dist) {
+                pt   = *_new_nodes[i];
+                dist = dp.norm();
+            }
+        }
     }
 }

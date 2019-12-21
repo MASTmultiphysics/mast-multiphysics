@@ -35,6 +35,7 @@ namespace MAST {
         virtual ~LevelSetBoundaryVelocity();
         
         void init(MAST::SystemInitialization& sys,
+                  const MAST::FieldFunction<Real>& phi,
                   const libMesh::NumericVector<Real>& sol,
                   const libMesh::NumericVector<Real>* dsol);
         
@@ -46,17 +47,19 @@ namespace MAST {
                       const Real t,
                       RealVectorX& v) const;
 
-        /*!
-         * serches for a point \p pt in the vicinity of \p p on the level set interface, where
-         * level set function is zero. \p length is a reference length that is used to identify
-         * the step-size for the search. If the interface point is expected to be within a few elements,
-         * then this length coudl be the element edge length.
-         */
-        void search_nearest_interface_point(const libMesh::Point& p,
+        void search_nearest_interface_point(const libMesh::Elem& e,
+                                            const unsigned int side,
+                                            const libMesh::Point& p,
                                             const Real t,
-                                            const Real length,
-                                            RealVectorX& pt,
-                                            bool allow_sub_search = true) const;
+                                            RealVectorX& pt) const;
+
+        void search_nearest_interface_point_derivative(const MAST::FunctionBase& f,
+                                                       const libMesh::Elem& e,
+                                                       const unsigned int side,
+                                                       const libMesh::Point& p,
+                                                       const Real t,
+                                                       RealVectorX& v) const;
+
 
         /*!
          * serches for a point \p pt in the vicinity of \p p on the level set interface, where
@@ -64,11 +67,23 @@ namespace MAST {
          * the step-size for the search. If the interface point is expected to be within a few elements,
          * then this length coudl be the element edge length.
          */
-        void search_nearest_interface_point_derivative(const MAST::FunctionBase& f,
-                                                       const libMesh::Point& p,
-                                                       const Real t,
-                                                       const Real length,
-                                                       RealVectorX& pt) const;
+        void search_nearest_interface_point_old(const libMesh::Point& p,
+                                                const Real t,
+                                                const Real length,
+                                                RealVectorX& pt,
+                                                bool allow_sub_search = true) const;
+
+        /*!
+         * serches for a point \p pt in the vicinity of \p p on the level set interface, where
+         * level set function is zero. \p length is a reference length that is used to identify
+         * the step-size for the search. If the interface point is expected to be within a few elements,
+         * then this length coudl be the element edge length.
+         */
+        void search_nearest_interface_point_derivative_old(const MAST::FunctionBase& f,
+                                                           const libMesh::Point& p,
+                                                           const Real t,
+                                                           const Real length,
+                                                           RealVectorX& v) const;
 
         void normal_at_point(const libMesh::Point& p,
                              const Real t,
@@ -87,8 +102,10 @@ namespace MAST {
                                         const Real t,
                                         const RealVectorX& dv) const;
 
-        unsigned int             _dim;
-        MAST::MeshFieldFunction *_phi;
+        unsigned int                     _dim;
+        MAST::MeshFieldFunction*         _phi;
+        libMesh::MeshBase*               _mesh;
+        const MAST::FieldFunction<Real>* _level_set_func;
     };
 }
 
