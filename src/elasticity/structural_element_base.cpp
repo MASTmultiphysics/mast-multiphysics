@@ -36,10 +36,9 @@
 
 
 MAST::StructuralElementBase::StructuralElementBase(MAST::SystemInitialization& sys,
-                                                   MAST::AssemblyBase& assembly,
                                                    const MAST::GeomElem& elem,
                                                    const MAST::ElementPropertyCardBase& p):
-MAST::ElementBase(sys, assembly, elem),
+MAST::ElementBase(sys, elem),
 follower_forces   (false),
 _property         (p),
 _incompatible_sol (nullptr) {
@@ -1680,7 +1679,6 @@ transform_vector_to_global_system(const ValType& local_vec,
 
 std::unique_ptr<MAST::StructuralElementBase>
 MAST::build_structural_element(MAST::SystemInitialization& sys,
-                               MAST::AssemblyBase& assembly,
                                const MAST::GeomElem& elem,
                                const MAST::ElementPropertyCardBase& p) {
     
@@ -1688,15 +1686,15 @@ MAST::build_structural_element(MAST::SystemInitialization& sys,
     
     switch (elem.dim()) {
         case 1:
-            e.reset(new MAST::StructuralElement1D(sys, assembly, elem, p));
+            e.reset(new MAST::StructuralElement1D(sys, elem, p));
             break;
             
         case 2:
-            e.reset(new MAST::StructuralElement2D(sys, assembly, elem, p));
+            e.reset(new MAST::StructuralElement2D(sys, elem, p));
             break;
             
         case 3:
-            e.reset(new MAST::StructuralElement3D(sys, assembly, elem, p));
+            e.reset(new MAST::StructuralElement3D(sys, elem, p));
             break;
             
         default:

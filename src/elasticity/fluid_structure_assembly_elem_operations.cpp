@@ -69,7 +69,7 @@ MAST::FluidStructureAssemblyElemOperations::init(const MAST::GeomElem& elem) {
     dynamic_cast<const MAST::ElementPropertyCardBase&>(_discipline->get_property_card(elem));
     
     _physics_elem =
-    MAST::build_structural_element(*_system, *_assembly, elem, p).release();
+    MAST::build_structural_element(*_system, elem, p).release();
 }
 
 

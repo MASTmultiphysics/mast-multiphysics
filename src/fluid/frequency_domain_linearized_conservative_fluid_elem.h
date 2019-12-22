@@ -38,7 +38,6 @@ namespace MAST {
 
         FrequencyDomainLinearizedConservativeFluidElem
         (MAST::SystemInitialization&   sys,
-         MAST::AssemblyBase&           assembly,
          const MAST::GeomElem&          elem,
          const MAST::FlightCondition&  f);
         

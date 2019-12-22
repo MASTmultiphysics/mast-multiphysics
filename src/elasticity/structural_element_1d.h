@@ -39,7 +39,6 @@ namespace MAST {
         
     public:
         StructuralElement1D(MAST::SystemInitialization& sys,
-                            MAST::AssemblyBase& assembly,
                             const MAST::GeomElem& elem,
                             const MAST::ElementPropertyCardBase& p);
         

@@ -53,7 +53,7 @@ MAST::LevelSetVolume::init(const MAST::GeomElem& elem) {
     libmesh_assert(_system);
     libmesh_assert(_assembly);
     
-    _physics_elem = new MAST::LevelSetElementBase(*_system, *_assembly, elem);
+    _physics_elem = new MAST::LevelSetElementBase(*_system, elem);
 }
 
 

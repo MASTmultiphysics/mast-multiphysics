@@ -34,10 +34,9 @@
 
 MAST::HeatConductionElementBase::
 HeatConductionElementBase(MAST::SystemInitialization&          sys,
-                          MAST::AssemblyBase&                  assembly,
                           const MAST::GeomElem&                 elem,
                           const MAST::ElementPropertyCardBase& p):
-MAST::ElementBase (sys, assembly, elem),
+MAST::ElementBase (sys, elem),
 _property         (p) {
 
 }

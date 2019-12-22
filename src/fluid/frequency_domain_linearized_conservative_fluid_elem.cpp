@@ -36,10 +36,9 @@
 
 MAST::FrequencyDomainLinearizedConservativeFluidElem::
 FrequencyDomainLinearizedConservativeFluidElem(MAST::SystemInitialization& sys,
-                                               MAST::AssemblyBase& assembly,
                                                const MAST::GeomElem& elem,
                                                const MAST::FlightCondition& f):
-MAST::ConservativeFluidElementBase(sys, assembly, elem, f),
+MAST::ConservativeFluidElementBase(sys, elem, f),
 freq(nullptr) {
     
     

@@ -131,7 +131,7 @@ init(const MAST::GeomElem& elem) {
     discipline = dynamic_cast<const MAST::LevelSetDiscipline&>(*_discipline);
     
     MAST::LevelSetElementBase
-    *e = new MAST::LevelSetElementBase(*_system, *_assembly, elem);
+    *e = new MAST::LevelSetElementBase(*_system, elem);
     
     if (discipline.has_velocity_function())
         e->set_velocity_function(discipline.get_velocity_function());

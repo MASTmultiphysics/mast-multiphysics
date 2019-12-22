@@ -33,10 +33,9 @@
 
 MAST::StructuralElement3D::
 StructuralElement3D(MAST::SystemInitialization& sys,
-                    MAST::AssemblyBase& assembly,
                     const MAST::GeomElem& elem,
                     const MAST::ElementPropertyCardBase& p):
-MAST::StructuralElementBase(sys, assembly, elem, p) {
+MAST::StructuralElementBase(sys, elem, p) {
     
 }
 

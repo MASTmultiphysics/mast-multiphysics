@@ -71,7 +71,7 @@ MAST::StructuralBucklingEigenproblemElemOperations::init(const MAST::GeomElem& e
     (_discipline->get_property_card(elem));
     
     _physics_elem =
-    MAST::build_structural_element(*_system, *_assembly, elem, p).release();
+    MAST::build_structural_element(*_system, elem, p).release();
 }
 
 

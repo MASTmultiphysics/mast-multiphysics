@@ -37,10 +37,9 @@
 
 MAST::StructuralElement2D::
 StructuralElement2D(MAST::SystemInitialization& sys,
-                    MAST::AssemblyBase& assembly,
                     const MAST::GeomElem& elem,
                     const MAST::ElementPropertyCardBase& p):
-MAST::BendingStructuralElem(sys, assembly, elem, p) {
+MAST::BendingStructuralElem(sys, elem, p) {
 
 }
 

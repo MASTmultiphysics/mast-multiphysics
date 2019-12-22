@@ -132,6 +132,6 @@ init(const MAST::GeomElem& elem) {
     dynamic_cast<const MAST::ElementPropertyCardBase&>(_discipline->get_property_card(elem));
     
     _physics_elem =
-    new MAST::HeatConductionElementBase(*_system, *_assembly, elem, p);
+    new MAST::HeatConductionElementBase(*_system, elem, p);
 }
 

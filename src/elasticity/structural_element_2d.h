@@ -44,7 +44,6 @@ namespace MAST {
         
     public:
         StructuralElement2D(MAST::SystemInitialization& sys,
-                            MAST::AssemblyBase& assembly,
                             const MAST::GeomElem& elem,
                             const MAST::ElementPropertyCardBase& p);
         

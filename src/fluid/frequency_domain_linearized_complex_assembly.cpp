@@ -122,7 +122,7 @@ init(const MAST::GeomElem& elem) {
     
     FrequencyDomainLinearizedConservativeFluidElem
     *freq_elem =
-    new MAST::FrequencyDomainLinearizedConservativeFluidElem(*_system, *_assembly, elem, p);
+    new MAST::FrequencyDomainLinearizedConservativeFluidElem(*_system, elem, p);
     freq_elem->freq   = _frequency;
     
     _physics_elem = freq_elem;

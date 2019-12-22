@@ -35,11 +35,10 @@
 
 MAST::ConservativeFluidElementBase::
 ConservativeFluidElementBase(MAST::SystemInitialization&    sys,
-                             MAST::AssemblyBase&            assembly,
                              const MAST::GeomElem&           elem,
                              const MAST::FlightCondition&   f):
 MAST::FluidElemBase(elem.dim(), f),
-MAST::ElementBase(sys, assembly, elem) {
+MAST::ElementBase(sys, elem) {
     
 }
 

@@ -25,10 +25,8 @@
 
 
 MAST::ElementBase::ElementBase(MAST::SystemInitialization& sys,
-                               MAST::AssemblyBase& assembly,
                                const MAST::GeomElem& elem):
 _system                 (sys),
-_assembly               (assembly),
 _elem                   (elem),
 _active_sol_function    (nullptr),
 _time                   (_system.system().time) {
