@@ -93,7 +93,7 @@ initialize_element_volume_fractions() {
         geom_elem.init(*e, *_level_set_sys);
         MAST::LevelSetElementBase  level_set_elem(*_level_set_sys, geom_elem);
         level_set_elem.set_solution(phi);
-        v = level_set_elem.homogenized_volume_fraction();
+        v = level_set_elem.homogenized_volume_fraction(_width);
         
         // store the value for this elmeent
         _elem_volume_fraction[e] = v;
@@ -162,7 +162,7 @@ initialize_element_volume_fraction_sensitivity(const MAST::FunctionBase& f) {
             MAST::LevelSetElementBase  level_set_elem(*_level_set_sys, geom_elem);
             level_set_elem.set_solution(phi);
             level_set_elem.set_solution(phi_sens, true);
-            v = level_set_elem.homogenized_volume_fraction_sensitivity();
+            v = level_set_elem.homogenized_volume_fraction_sensitivity(_width);
             
             // store the value for this elmeent
             _elem_volume_fraction_sensitivity[e] = v;
