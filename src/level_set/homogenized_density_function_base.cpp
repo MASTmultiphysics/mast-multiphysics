@@ -45,9 +45,10 @@ MAST::HomogenizedDensityFunctionBase::init(MAST::SystemInitialization& level_set
     
     libmesh_assert(!_level_set_sys);
     
-    _level_set_sys = &level_set_sys;
-    _analysis_mesh = &analysis_mesh;
-    _level_set     = &level_set;
+    _level_set_sys     = &level_set_sys;
+    _analysis_mesh     = &analysis_mesh;
+    _level_set         = &level_set;
+    _sub_point_locator.reset(_analysis_mesh->sub_point_locator().release());
 }
 
 
@@ -66,11 +67,10 @@ operator() (const libMesh::Point& p, const Real t, Real& v) const {
     
     std::map<const libMesh::Elem*, Real>::const_iterator
     it = _elem_volume_fraction.find(e);
-    
-    v = 0.;
-    
-    if (it != _elem_volume_fraction.end())
-        v = it->second;
+
+    libmesh_assert(it != _elem_volume_fraction.end());
+
+    v = it->second;
 }
     
 
@@ -92,9 +92,36 @@ derivative(const MAST::FunctionBase& f,
     std::map<const libMesh::Elem*, Real>::const_iterator
     it = _elem_volume_fraction_sensitivity.find(e);
     
-    v = 0.;
+    libmesh_assert(it != _elem_volume_fraction.end());
     
-    if (it != _elem_volume_fraction_sensitivity.end())
-        v = it->second;
+    v = it->second;
+}
+
+
+Real
+MAST::HomogenizedDensityFunctionBase::
+get_elem_volume_fraction(const libMesh::Elem& e) const {
+    
+    std::map<const libMesh::Elem*, Real>::const_iterator
+    it = _elem_volume_fraction.find(&e);
+    
+    libmesh_assert(it != _elem_volume_fraction.end());
+    
+    return it->second;
+}
+
+
+
+Real
+MAST::HomogenizedDensityFunctionBase::
+get_elem_volume_fraction_sensitivity(const MAST::FunctionBase& f,
+                                     const libMesh::Elem& e) const {
+    
+    std::map<const libMesh::Elem*, Real>::const_iterator
+    it = _elem_volume_fraction_sensitivity.find(&e);
+    
+    libmesh_assert (it != _elem_volume_fraction_sensitivity.end());
+    
+    return it->second;
 }
 

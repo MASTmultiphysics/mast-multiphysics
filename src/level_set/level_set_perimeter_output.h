@@ -42,7 +42,7 @@ namespace MAST {
         
         public:
         
-        LevelSetPerimeter(MAST::LevelSetIntersection& intersection);
+        LevelSetPerimeter();
         
         virtual ~LevelSetPerimeter();
         
@@ -174,7 +174,6 @@ namespace MAST {
         
     protected:
         
-        const MAST::LevelSetIntersection&   _intersection;
         Real                                _per;
         Real                                _dper_dp;
     };

@@ -1949,8 +1949,8 @@ public:
             _eq_sys->reinit();*/
 
         
-        MAST::LevelSetVolume                            volume(level_set_assembly.get_intersection());
-        MAST::LevelSetPerimeter                         perimeter(level_set_assembly.get_intersection());
+        MAST::LevelSetVolume                            volume;
+        MAST::LevelSetPerimeter                         perimeter;
         MAST::StressStrainOutputBase                    stress;
         MAST::ComplianceOutput                          compliance;
         volume.set_discipline_and_system(*_level_set_discipline, *_level_set_sys_init);

@@ -27,15 +27,12 @@
 
 namespace MAST {
     
-    // Forward declerations
-    class LevelSetIntersection;
-    
     class LevelSetVolume:
     public MAST::OutputAssemblyElemOperations {
       
     public:
         
-        LevelSetVolume(MAST::LevelSetIntersection& intersection);
+        LevelSetVolume();
 
         virtual ~LevelSetVolume();
         
@@ -167,7 +164,6 @@ namespace MAST {
 
     protected:
 
-        const MAST::LevelSetIntersection&   _intersection;
         Real                                _vol;
         Real                                _dvol_dp;
     };

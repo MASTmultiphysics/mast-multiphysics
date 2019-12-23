@@ -44,7 +44,8 @@ namespace MAST {
          */
         virtual void initialize_element_volume_fractions();
         
-        virtual void initialize_element_volume_fraction_sensitivity();
+        virtual void
+        initialize_element_volume_fraction_sensitivity(const MAST::FunctionBase& f);
         
     protected:
         

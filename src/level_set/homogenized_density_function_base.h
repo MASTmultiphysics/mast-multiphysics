@@ -54,9 +54,24 @@ namespace MAST {
         virtual void derivative(const MAST::FunctionBase& f,
                                 const libMesh::Point& p, const Real t, Real& v) const;
 
+        const std::map<const libMesh::Elem*, Real>&
+        get_elem_volume_fraction_map() const { return _elem_volume_fraction;}
+        
+        const std::map<const libMesh::Elem*, Real>&
+        get_elem_volume_fraction_sensitivity_map() const
+        { return _elem_volume_fraction_sensitivity;}
+
+        Real
+        get_elem_volume_fraction(const libMesh::Elem& e) const;
+
+        Real
+        get_elem_volume_fraction_sensitivity(const MAST::FunctionBase& f,
+                                             const libMesh::Elem& e) const;
+
         virtual void initialize_element_volume_fractions() = 0;
         
-        virtual void initialize_element_volume_fraction_sensitivity() = 0;
+        virtual void
+        initialize_element_volume_fraction_sensitivity(const MAST::FunctionBase& f) = 0;
         
         virtual void
         clear_element_volume_fractions() { _elem_volume_fraction.clear(); }

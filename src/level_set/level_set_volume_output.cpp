@@ -20,7 +20,6 @@
 // MAST includes
 #include "level_set/level_set_volume_output.h"
 #include "level_set/level_set_elem_base.h"
-#include "level_set/level_set_intersection.h"
 #include "level_set/level_set_intersected_elem.h"
 #include "base/system_initialization.h"
 #include "base/nonlinear_system.h"
@@ -29,9 +28,8 @@
 
 #include "libmesh/parallel.h"
 
-MAST::LevelSetVolume::LevelSetVolume(MAST::LevelSetIntersection& intersection):
+MAST::LevelSetVolume::LevelSetVolume():
 MAST::OutputAssemblyElemOperations(),
-_intersection  (intersection),
 _vol           (0.),
 _dvol_dp       (0.) {
     

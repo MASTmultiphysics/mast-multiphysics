@@ -29,9 +29,8 @@
 
 #include "libmesh/parallel.h"
 
-MAST::LevelSetPerimeter::LevelSetPerimeter(MAST::LevelSetIntersection& intersection):
+MAST::LevelSetPerimeter::LevelSetPerimeter():
 MAST::OutputAssemblyElemOperations(),
-_intersection  (intersection),
 _per           (0.),
 _dper_dp       (0.) {
     

@@ -67,7 +67,7 @@ initialize_element_volume_fractions() {
 
 void
 MAST::IntersectedElemHomogenizedDensityFunction::
-initialize_element_volume_fraction_sensitivity() {
+initialize_element_volume_fraction_sensitivity(const MAST::FunctionBase& f) {
 
     libmesh_assert(_analysis_mesh);
     libmesh_assert(_intersection);

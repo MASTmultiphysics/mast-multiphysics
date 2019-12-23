@@ -69,8 +69,8 @@ initialize_element_volume_fractions() {
     v = 0.;
     
     libMesh::MeshBase::const_element_iterator
-    e_it  =  _analysis_mesh->local_elements_begin(),
-    e_end  =  _analysis_mesh->local_elements_begin();
+    e_it   =  _analysis_mesh->active_local_elements_begin(),
+    e_end  =  _analysis_mesh->active_local_elements_end();
     
     for ( ; e_it != e_end; e_it++) {
 
@@ -102,7 +102,7 @@ initialize_element_volume_fractions() {
 
 void
 MAST::HeavisideElemHomogenizedDensityFunction::
-initialize_element_volume_fraction_sensitivity() {
+initialize_element_volume_fraction_sensitivity(const MAST::FunctionBase& f) {
     
     libmesh_assert(_analysis_mesh);
     libmesh_assert(_elem_volume_fraction_sensitivity.empty());
@@ -127,8 +127,8 @@ initialize_element_volume_fraction_sensitivity() {
     v = 0.;
     
     libMesh::MeshBase::const_element_iterator
-    e_it  =  _analysis_mesh->local_elements_begin(),
-    e_end  =  _analysis_mesh->local_elements_begin();
+    e_it   =  _analysis_mesh->active_local_elements_begin(),
+    e_end  =  _analysis_mesh->active_local_elements_end();
     
     for ( ; e_it != e_end; e_it++) {
 
@@ -143,7 +143,7 @@ initialize_element_volume_fraction_sensitivity() {
             
             (*_level_set)(*e->node_ptr(i), 0., v);
             phi(i) = v;
-            _level_set->perturbation(*e->node_ptr(i), 0., v);
+            _level_set->derivative(f, *e->node_ptr(i), 0., v);
             phi_sens(i) = v;
         }
         
