@@ -162,7 +162,6 @@ struct BuildFluidElem {
         _geom_elem = new MAST::GeomElem;
         _geom_elem->init(**_mesh->elements_begin(), *_sys_init);
         _fluid_elem = new MAST::ConservativeFluidElementBase(*_sys_init,
-                                                             *_assembly,
                                                              *_geom_elem,
                                                              *_flight_cond);
         
