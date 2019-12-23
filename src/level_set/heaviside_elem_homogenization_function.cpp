@@ -20,6 +20,8 @@
 // MAST includes
 #include "level_set/heaviside_elem_homogenization_function.h"
 #include "level_set/level_set_elem_base.h"
+#include "level_set/filter_base.h"
+#include "level_set/level_set_parameter.h"
 #include "base/system_initialization.h"
 #include "base/nonlinear_system.h"
 #include "mesh/geom_elem.h"
@@ -106,7 +108,8 @@ initialize_element_volume_fraction_sensitivity(const MAST::FunctionBase& f) {
     
     libmesh_assert(_analysis_mesh);
     libmesh_assert(_elem_volume_fraction_sensitivity.empty());
-
+    libmesh_assert(f.is_topology_parameter());
+    
     // make sure that the system uses Lagrange shape functions for
     // the level set.
     libmesh_assert(_level_set_sys->system().variable_type(0).family == libMesh::LAGRANGE);
@@ -126,6 +129,9 @@ initialize_element_volume_fraction_sensitivity(const MAST::FunctionBase& f) {
     Real
     v = 0.;
     
+    const MAST::LevelSetParameter
+    &p_ls = dynamic_cast<const MAST::LevelSetParameter&>(f);
+    
     libMesh::MeshBase::const_element_iterator
     e_it   =  _analysis_mesh->active_local_elements_begin(),
     e_end  =  _analysis_mesh->active_local_elements_end();
@@ -134,30 +140,35 @@ initialize_element_volume_fraction_sensitivity(const MAST::FunctionBase& f) {
 
         const libMesh::Elem* e = *e_it;
 
-        n_nodes = e->n_nodes();
-        phi.setZero(n_nodes);
-        phi_sens.setZero(n_nodes);
-
-        // get the nodal values for this element
-        for (unsigned int i=0; i<n_nodes; i++) {
+        if (_filter->if_elem_in_domain_of_influence(*e, *p_ls.level_set_node())) {
             
-            (*_level_set)(*e->node_ptr(i), 0., v);
-            phi(i) = v;
-            _level_set->derivative(f, *e->node_ptr(i), 0., v);
-            phi_sens(i) = v;
+            n_nodes = e->n_nodes();
+            phi.setZero(n_nodes);
+            phi_sens.setZero(n_nodes);
+            
+            // get the nodal values for this element
+            for (unsigned int i=0; i<n_nodes; i++) {
+                
+                (*_level_set)(*e->node_ptr(i), 0., v);
+                phi(i) = v;
+                _level_set->derivative(f, *e->node_ptr(i), 0., v);
+                phi_sens(i) = v;
+            }
+            
+            // compute the integral of Heaviside function to approximate the
+            // volume fraction
+            MAST::GeomElem             geom_elem;
+            geom_elem.init(*e, *_level_set_sys);
+            MAST::LevelSetElementBase  level_set_elem(*_level_set_sys, geom_elem);
+            level_set_elem.set_solution(phi);
+            level_set_elem.set_solution(phi_sens, true);
+            v = level_set_elem.homogenized_volume_fraction_sensitivity();
+            
+            // store the value for this elmeent
+            _elem_volume_fraction_sensitivity[e] = v;
         }
-        
-        // compute the integral of Heaviside function to approximate the
-        // volume fraction
-        MAST::GeomElem             geom_elem;
-        geom_elem.init(*e, *_level_set_sys);
-        MAST::LevelSetElementBase  level_set_elem(*_level_set_sys, geom_elem);
-        level_set_elem.set_solution(phi);
-        level_set_elem.set_solution(phi_sens, true);
-        v = level_set_elem.homogenized_volume_fraction_sensitivity();
-        
-        // store the value for this elmeent
-        _elem_volume_fraction_sensitivity[e] = v;
+        else
+            _elem_volume_fraction_sensitivity[e] = 0.;
     }
 }
 

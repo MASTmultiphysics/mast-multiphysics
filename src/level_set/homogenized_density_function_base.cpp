@@ -19,7 +19,8 @@
 
 // MAST includes
 #include "level_set/homogenized_density_function_base.h"
-
+#include "level_set/level_set_parameter.h"
+#include "level_set/filter_base.h"
 
 
 MAST::HomogenizedDensityFunctionBase::
@@ -27,7 +28,8 @@ HomogenizedDensityFunctionBase(const std::string& nm):
 MAST::FieldFunction<Real>  (nm),
 _level_set_sys   (nullptr),
 _analysis_mesh   (nullptr),
-_level_set       (nullptr) {
+_level_set       (nullptr),
+_filter          (nullptr) {
     
 }
 
@@ -41,13 +43,15 @@ MAST::HomogenizedDensityFunctionBase::
 void
 MAST::HomogenizedDensityFunctionBase::init(MAST::SystemInitialization& level_set_sys,
                                            libMesh::MeshBase&          analysis_mesh,
-                                           MAST::FieldFunction<Real>&  level_set) {
+                                           MAST::FieldFunction<Real>&  level_set,
+                                           MAST::FilterBase&           filter) {
     
     libmesh_assert(!_level_set_sys);
     
     _level_set_sys     = &level_set_sys;
     _analysis_mesh     = &analysis_mesh;
     _level_set         = &level_set;
+    _filter            = &filter;
     _sub_point_locator.reset(_analysis_mesh->sub_point_locator().release());
 }
 

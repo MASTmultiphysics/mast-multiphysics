@@ -45,7 +45,8 @@ namespace MAST {
 
         virtual void init(MAST::SystemInitialization& level_set_sys,
                           libMesh::MeshBase&          analysis_mesh,
-                          MAST::FieldFunction<Real>&  level_set);
+                          MAST::FieldFunction<Real>&  level_set,
+                          MAST::FilterBase&           filter);
         
         virtual bool depends_on(const MAST::FunctionBase& f) const { return true;}
         
@@ -86,6 +87,8 @@ namespace MAST {
         libMesh::MeshBase                    *_analysis_mesh;
         
         MAST::FieldFunction<Real>            *_level_set;
+        
+        MAST::FilterBase                     *_filter;
         
         std::map<const libMesh::Elem*, Real> _elem_volume_fraction;
         
