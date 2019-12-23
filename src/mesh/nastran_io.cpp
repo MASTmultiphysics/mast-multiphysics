@@ -7,108 +7,78 @@
 #include <libmesh/elem.h>
 #include <libmesh/string_to_enum.h>
 #include <libmesh/boundary_info.h>
-#include <libmesh/utility.h>
+// #include <libmesh/utility.h>
 #include <libmesh/libmesh_common.h>
 #include <libmesh/mesh_input.h>
-#include <libmesh/elem.h>
+// #include <libmesh/elem.h>
 
 // MAST includes.
 #include "mesh/nastran_io.h"
 #include "external/fort.hpp"
 
 
-MAST::NastranIO::NastranIO (libMesh::MeshBase& mesh, const bool python_preinit):
-{
-    // Iterate through element types
-    for (const auto& item : elementMap)
-    {
-        libMesh::out << "Element Type: " << item.first << std::endl;
-        
-        // Iterate through elements
-        for (const auto& elem : item.second)
-        {
-            libMesh::out << "Element ID: " << elem[0] << "\tPID: " << elem[1] << "\tNodes: ";
-            // Iterate through nodes
-            for (uint j=2; j<elem.size(); j++)
-            {
-                libMesh::out << elem[j] << "\t";
-            }
-            libMesh::out << "" << std::endl;
-        }
-    }
-}
-
-
-void MAST::printNodeCoords(std::vector<std::vector<double>> nodes)
-{
-    // Iterate through nodes
-    for (const auto& node : nodes)
-    {
-        libMesh::out << "Node # " << node[0] << ":\t" << node[1] << "\t" << node[2] << "\t" << node[3] << "\t" << std::endl;
-    }
-}
-
-
+MAST::NastranIO::NastranIO(libMesh::MeshBase& mesh, const bool python_preinit):
 libMesh::MeshInput<libMesh::MeshBase> (mesh),
-_pythonPreinitialized(python_preinit)
+python_preinitialized(python_preinit)
 {
     // Initialize Python if it hasn't already been initialized.
-    if ((not pythonInitialized) and (not _pythonPreinitialized))
+    if ((!python_initialized) && (!python_preinitialized))
     {
-        initializePython();
+        initialize_python();
     }
 }
 
 
-MAST::NastranIO::~NastranIO ()
+MAST::NastranIO::~NastranIO()
 {
-    if((pythonInitialized) and (not _pythonPreinitialized))
+    if((python_initialized) && (!python_preinitialized))
     {
-        finalizePython();
+        finalize_python();
     }
 }
 
 
-std::map<uint64_t, libMesh::Node*> MAST::NastranIO::getNastran2libMeshNodeMap()
+std::map<uint64_t, libMesh::Node*> MAST::NastranIO::get_nastran_to_libmesh_node_map()
 {
-    return nastran2libMeshNodeMap;
+    return nastran_to_libmesh_node_map;
 }
 
 
-std::map<const libMesh::Node*, uint64_t> MAST::NastranIO::getlibMesh2NastranNodeMap()
+std::map<const libMesh::Node*, uint64_t> MAST::NastranIO::get_libmesh_to_nastran_node_map()
 {
-    return libMesh2NastranNodeMap;
-}
-
-std::map<uint64_t, libMesh::Elem*> MAST::NastranIO::getNastran2libMeshElemMap()
-{
-    return nastran2libMeshElemMap;
+    return libmesh_to_nastran_node_map;
 }
 
 
-std::map<libMesh::Elem*, uint64_t> MAST::NastranIO::getlibMesh2NastranElemMap()
+std::map<uint64_t, libMesh::Elem*> MAST::NastranIO::get_nastran_to_libmesh_elem_map()
 {
-    return libMesh2NastranElemMap;
+    return nastran_to_libmesh_elem_map;
 }
 
 
-std::map<int, std::set<int>> MAST::NastranIO::getPID2subdomainIDsMap()
+std::map<libMesh::Elem*, uint64_t> MAST::NastranIO::get_libmesh_to_nastran_elem_map()
 {
-    std::map<int, std::set<int>> pid2SubdomainIDsMap;
-    for (const auto& item : pid_elemType2subdomainMap)
+    return libmesh_to_nastran_elem_map;
+}
+
+
+std::map<int, std::set<int>> MAST::NastranIO::get_nastran_property_to_libmesh_subdomains_map()
+{
+    std::map<int, std::set<int>> property_id_to_subdomain_id_map;
+    for (const auto& item : nastran_pid_elemtype_to_libmesh_subdomain_map)
     {
         int pid = item.first.first;
         int sid = item.second;
-        pid2SubdomainIDsMap[pid].insert(sid);
+        property_id_to_subdomain_id_map[pid].insert(sid);
     }
     
-    return pid2SubdomainIDsMap;
+    return property_id_to_subdomain_id_map;
 }
 
 
-std::map<std::pair<int,int>, int> MAST::NastranIO::getPIDElemtype2SubdomainIDMap()
+std::map<std::pair<int,int>, int> MAST::NastranIO::get_nastran_pid_elemtype_to_libmesh_subdomain_map()
 {
-    return pid_elemType2subdomainMap;
+    return nastran_pid_elemtype_to_libmesh_subdomain_map;
 }
 
 void MAST::NastranIO::read_nodes(BDFModel* model, libMesh::MeshBase& the_mesh)
@@ -126,8 +96,8 @@ void MAST::NastranIO::read_nodes(BDFModel* model, libMesh::MeshBase& the_mesh)
         double x=node[1], y=node[2], z=node[3];
         uint64_t nid=node[0];
         the_mesh.add_point(libMesh::Point(x, y, z), nid);
-        nastran2libMeshNodeMap[nid] = the_mesh.node_ptr(nid);
-        libMesh2NastranNodeMap[the_mesh.node_ptr(nid)] = nid;
+        nastran_to_libmesh_node_map[nid] = the_mesh.node_ptr(nid);
+        libmesh_to_nastran_node_map[the_mesh.node_ptr(nid)] = nid;
         i++;
     }
     
@@ -151,13 +121,15 @@ void MAST::NastranIO::read_elements(BDFModel* model, libMesh::MeshBase& the_mesh
     {
         // Determine the appropriate libMesh element type
         libMesh::ElemType elem_type;
-        if (nastranToLibMeshElem.find(item.first) == nastranToLibMeshElem.end())
+        if (nastran_to_libmesh_elem_type_map.find(item.first) ==
+            nastran_to_libmesh_elem_type_map.end())
         {
-            libmesh_error_msg("ERROR: " << item.first << " not found in nastranToLibMeshElem map in NastranIO.h");
+            libmesh_error_msg("ERROR: " << item.first
+                 << " not found in nastran_to_libmesh_elem_type_map map in nastran_io.h");
         }
         else
         {
-            elem_type = nastranToLibMeshElem[item.first];
+            elem_type = nastran_to_libmesh_elem_type_map[item.first];
         }
         
         // Loop through all elements that belong to this element type on inner loop
@@ -167,8 +139,8 @@ void MAST::NastranIO::read_elements(BDFModel* model, libMesh::MeshBase& the_mesh
             libMesh::Elem * elem = the_mesh.add_elem(libMesh::Elem::build(elem_type).release());
             const libMesh::dof_id_type eid = item.second[i][0];
             elem->set_id(k);
-            nastran2libMeshElemMap[eid] = the_mesh.elem_ptr(k);
-            libMesh2NastranElemMap[the_mesh.elem_ptr(k)] = eid;
+            nastran_to_libmesh_elem_map[eid] = the_mesh.elem_ptr(k);
+            libmesh_to_nastran_elem_map[the_mesh.elem_ptr(k)] = eid;
             elem->set_id(eid);
             
             // Determine element type and property ID
@@ -178,21 +150,22 @@ void MAST::NastranIO::read_elements(BDFModel* model, libMesh::MeshBase& the_mesh
             // multiple element types in one subdomain.
             const libMesh::subdomain_id_type pid = item.second[i][1];
             const int elemtype = int(elem->type());
-            if (pid_elemType2subdomainMap.find({pid, elemtype}) == pid_elemType2subdomainMap.end())
+            if (nastran_pid_elemtype_to_libmesh_subdomain_map.find({pid, elemtype}) ==
+                nastran_pid_elemtype_to_libmesh_subdomain_map.end())
             {   // If the {pid, elemtype} pair is not yet defined in the map, define it.
-                pid_elemType2subdomainMap[{pid, elemtype}] = z;
+                nastran_pid_elemtype_to_libmesh_subdomain_map[{pid, elemtype}] = z;
                 z++;
             }
             
             // Set the element subdomain
-            const libMesh::subdomain_id_type sid = pid_elemType2subdomainMap[{pid, elemtype}];
+            const libMesh::subdomain_id_type sid = nastran_pid_elemtype_to_libmesh_subdomain_map[{pid, elemtype}];
             elem->subdomain_id() = sid;
             
             // Set the nodes which belong to this element
             for (uint j=2; j<(item.second[i].size()); j++)
             {
                 uint node_num = item.second[i][j];
-                libMesh::dof_id_type nid = nastran2libMeshNodeMap[node_num]->id();
+                libMesh::dof_id_type nid = nastran_to_libmesh_node_map[node_num]->id();
                 elem->set_node(j-2) = the_mesh.node_ptr(nid);
             }
             
@@ -213,7 +186,7 @@ void MAST::NastranIO::read_node_boundaries(BDFModel* model, libMesh::MeshBase& t
     {
         for (uint i=0; i<spc.second.size(); i++)
         {
-           the_mesh.boundary_info->add_node(nastran2libMeshNodeMap[spc.second[i]], j);
+           the_mesh.boundary_info->add_node(nastran_to_libmesh_node_map[spc.second[i]], j);
         }
         j++;
     }
@@ -247,6 +220,7 @@ void MAST::NastranIO::read (const std::string& filename)
     the_mesh.prepare_for_use();
 }
 
+
 void MAST::NastranIO::read(BDFModel* model)
 {
     // Get a reference to the mesh we are reading
@@ -265,9 +239,8 @@ void MAST::NastranIO::read(BDFModel* model)
     read_elements(model, the_mesh);
 }
     
-    
-    
-void MAST::NastranIO::initializePython()
+
+void MAST::NastranIO::initialize_python()
 {
     // StackOverFlow, "Use generated header file from Cython"
     // - related to using multi-stage imports
@@ -284,14 +257,14 @@ void MAST::NastranIO::initializePython()
         Py_Finalize();
         libmesh_error_msg("ERROR: During Python initialization for pynastran_io.");
     }
-    pythonInitialized = true;
+    python_initialized = true;
 }
 
 
-void MAST::NastranIO::finalizePython()
+void MAST::NastranIO::finalize_python()
 {
     Py_Finalize();
-    pythonInitialized = false;
+    python_initialized = false;
 }
 
 
@@ -300,7 +273,7 @@ void MAST::NastranIO::print_pid_to_subdomain_id_map() {
     table << fort::header << "Nastran Property ID" << "libMesh/MAST Subdomain ID" << fort::endr;
 
     std::string sid_str; // must reduce std::set of libMesh subdomain IDs to string for table output.
-    for (const auto& id_pair: getPID2subdomainIDsMap()) {
+    for (const auto& id_pair: get_nastran_property_to_libmesh_subdomains_map()) {
         table << std::to_string(id_pair.first);
         for (const auto& sid: id_pair.second) {
             sid_str.append(std::to_string(sid) + " ");
@@ -311,3 +284,35 @@ void MAST::NastranIO::print_pid_to_subdomain_id_map() {
     libMesh::out << table.to_string() << std::endl;
 }
 
+
+void MAST::printElementMap(std::map<std::string, std::vector<std::vector<int>>> elementMap)
+{
+    // Iterate through element types
+    for (const auto& item : elementMap)
+    {
+        libMesh::out << "Element Type: " << item.first << std::endl;
+
+        // Iterate through elements
+        for (const auto& elem : item.second)
+        {
+            libMesh::out << "Element ID: " << elem[0] << "\tPID: " << elem[1] << "\tNodes: ";
+            // Iterate through nodes
+            for (uint j=2; j<elem.size(); j++)
+            {
+                libMesh::out << elem[j] << "\t";
+            }
+            libMesh::out << "" << std::endl;
+        }
+    }
+}
+
+
+void MAST::printNodeCoords(std::vector<std::vector<double>> nodes)
+{
+    // Iterate through nodes
+    for (const auto& node : nodes)
+    {
+        libMesh::out << "Node # " << node[0] << ":\t" << node[1] << "\t" << node[2] << "\t" << node[3] << "\t" << std::endl;
+    }
+}
+    
