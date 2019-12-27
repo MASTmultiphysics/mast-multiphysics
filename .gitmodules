@@ -1,0 +1,3 @@
+[submodule "doc/assets"]
+	path = doc/assets
+	url = https://github.com/MASTmultiphysics/mast-assets.git
