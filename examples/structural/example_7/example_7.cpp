@@ -9,6 +9,7 @@
 #include <libmesh/equation_systems.h>
 #include <libmesh/fe_type.h>
 #include <libmesh/exodusII_io.h>
+#include <libmesh/numeric_vector.h>
 
 // MAST includes.
 #include "mesh/nastran_io.h"
