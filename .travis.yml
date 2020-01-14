@@ -40,7 +40,6 @@ install:
 
 script:
   - ci/build_mast.sh
-  -
 
 deploy:
   provider: script

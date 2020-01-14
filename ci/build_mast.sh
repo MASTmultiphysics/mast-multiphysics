@@ -18,7 +18,7 @@ if [ "${TRAVIS_OS_NAME}" = linux ]; then # Ubuntu Linux
     # First let us build/install a Release (optimized) version of MAST (-DCMAKE_BUILD_TYPE=Release).
     echo "TEST RELEASE/OPTIMIZED BUILD..."
     cd build_rel || exit
-    cmake .. \
+    /opt/cmake/bin/cmake .. \
       -DCMAKE_BUILD_TYPE=Release \
       -DCMAKE_INSTALL_PREFIX="${MAST_INSTALL_DIR}" \
       -DCMAKE_C_COMPILER=mpicc \
@@ -28,14 +28,19 @@ if [ "${TRAVIS_OS_NAME}" = linux ]; then # Ubuntu Linux
       -DPETSc_DIR=/usr/lib/petscdir/3.6.2/x86_64-linux-gnu-real \
       -DSLEPc_DIR=/usr/lib/slepcdir/3.6.1/x86_64-linux-gnu-real \
       -DEIGEN3_ROOT=/usr/include/eigen3 \
+      -DPython3_DIR=/usr \
       -DBOOST_ROOT=/usr \
       -DBUILD_DOC=ON \
       -DENABLE_DOT=OFF \
       -DENABLE_GCMMA=OFF \
-      -DENABLE_SNOPT=OFF || exit
+      -DENABLE_SNOPT=OFF \
+      -DENABLE_NASTRANIO=ON \
+      -DENABLE_CYTHON=ON || exit
 
     if [ ${CI_BUILD_DOCS} ]; then
       make doc_doxygen || exit
+      cd ${TRAVIS_BUILD_DIR} || exit
+      ci/prepare_docs.sh || exit
     else
       make -j 2 || exit
       make install || exit
@@ -51,7 +56,7 @@ if [ "${TRAVIS_OS_NAME}" = linux ]; then # Ubuntu Linux
     else
 
       cd ../build_dbg || exit
-      cmake .. \
+      /opt/cmake/bin/cmake .. \
         -DCMAKE_BUILD_TYPE=Debug \
         -DCMAKE_INSTALL_PREFIX="${MAST_INSTALL_DIR}" \
         -DCMAKE_C_COMPILER=mpicc \
@@ -61,11 +66,14 @@ if [ "${TRAVIS_OS_NAME}" = linux ]; then # Ubuntu Linux
         -DPETSc_DIR=/usr/lib/petscdir/3.6.2/x86_64-linux-gnu-real \
         -DSLEPc_DIR=/usr/lib/slepcdir/3.6.1/x86_64-linux-gnu-real \
         -DEIGEN3_ROOT=/usr/include/eigen3 \
+        -DPython3_DIR=/usr \
         -DBOOST_ROOT=/usr \
         -DBUILD_DOC=ON \
         -DENABLE_DOT=OFF \
         -DENABLE_GCMMA=OFF \
-        -DENABLE_SNOPT=OFF || exit
+        -DENABLE_SNOPT=OFF\
+        -DENABLE_NASTRANIO=ON \
+        -DENABLE_CYTHON=ON || exit
 
       if [ ${CI_BUILD_DOCS} ]; then
         echo "No CI documentation for a Debug build."
@@ -115,12 +123,16 @@ elif [ "${TRAVIS_OS_NAME}" = osx ]; then # macOS 10.14, XCode 10.2
     -DEIGEN3_ROOT=/Users/travis/Code/spack-mstc/spack/opt/spack/darwin-mojave-x86_64/clang-10.0.1-apple/eigen-3.3.7-bd2r4aqrkox7dpebj2r3gqvgpqzwuh7x \
     -DLAPACK_LIBRARIES=/Users/travis/Code/spack-mstc/spack/opt/spack/darwin-mojave-x86_64/clang-10.0.1-apple/openblas-0.3.7-xqeap7iegoomce3es67cd7exlnq3neue/lib/libopenblas.dylib \
     -DBLAS_LIBRARIES=/Users/travis/Code/spack-mstc/spack/opt/spack/darwin-mojave-x86_64/clang-10.0.1-apple/openblas-0.3.7-xqeap7iegoomce3es67cd7exlnq3neue/lib/libopenblas.dylib \
+    -DPython3_DIR=/Users/travis/Code/spack-mstc/spack/opt/spack/darwin-mojave-x86_64/clang-10.0.1-apple/python-3.7.4-hh7odiqwzpw2nnfdcfzjxvb3ggyzwvfk \
     -DENABLE_GCMMA=OFF \
     -DENABLE_DOT=OFF \
     -DENABLE_SNOPT=OFF \
     -DENABLE_NLOPT=OFF \
     -DENABLE_CYTHON=OFF \
-    -DBUILD_DOC=OFF || exit
+    -DBUILD_DOC=OFF \
+    -DENABLE_NASTRANIO=ON \
+    -DENABLE_CYTHON=ON || exit
+
   make -j 2 || exit
   make install || exit
 
@@ -141,12 +153,16 @@ elif [ "${TRAVIS_OS_NAME}" = osx ]; then # macOS 10.14, XCode 10.2
     -DEIGEN3_ROOT=/Users/travis/Code/spack-mstc/spack/opt/spack/darwin-mojave-x86_64/clang-10.0.1-apple/eigen-3.3.7-bd2r4aqrkox7dpebj2r3gqvgpqzwuh7x \
     -DLAPACK_LIBRARIES=/Users/travis/Code/spack-mstc/spack/opt/spack/darwin-mojave-x86_64/clang-10.0.1-apple/openblas-0.3.7-xqeap7iegoomce3es67cd7exlnq3neue/lib/libopenblas.dylib \
     -DBLAS_LIBRARIES=/Users/travis/Code/spack-mstc/spack/opt/spack/darwin-mojave-x86_64/clang-10.0.1-apple/openblas-0.3.7-xqeap7iegoomce3es67cd7exlnq3neue/lib/libopenblas.dylib \
+    -DPython3_DIR=/Users/travis/Code/spack-mstc/spack/opt/spack/darwin-mojave-x86_64/clang-10.0.1-apple/python-3.7.4-hh7odiqwzpw2nnfdcfzjxvb3ggyzwvfk \
     -DENABLE_GCMMA=OFF \
     -DENABLE_DOT=OFF \
     -DENABLE_SNOPT=OFF \
     -DENABLE_NLOPT=OFF \
     -DENABLE_CYTHON=OFF \
-    -DBUILD_DOC=OFF || exit
+    -DBUILD_DOC=OFF \
+    -DENABLE_NASTRANIO=ON \
+    -DENABLE_CYTHON=ON || exit
+
   make -j 2 || exit
 
 else
