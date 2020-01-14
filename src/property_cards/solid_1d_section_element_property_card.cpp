@@ -928,14 +928,16 @@ InertiaMatrix::operator() (const libMesh::Point& p,
     m(3,3) = Ip;
     
     // rotational velocities
-    m(0,4) = Ay;  m(4,0) = Ay;   // w-displacement
-    m(0,5) = -Az; m(5,0) = -Az;  // v-displacement
-    
-    // bending rotation inertia
-    for (unsigned int i=0; i<2; i++)
-        for (unsigned int j=0; j<2; j++)
-            m(4+i,4+j) = I(i,j)*1.e-6;
-    
+    // theta-y rotation
+    m(0,4) =  Ay; m(4,0) =  Ay;
+    m(4,4) =  I(1,1); // I11 is defined about y-y axis for theta-y
+
+    // theta-z rotation
+    m(0,5) =  Az; m(5,0) =  Az;
+    m(5,5) =  I(0,0); // I00 is defined about z-z axis for theta-z
+
+    m(4,5) =  m(5,4) = I(0,1);
+
     m *= rho;
 }
 
@@ -972,18 +974,21 @@ InertiaMatrix::derivative (               const MAST::FunctionBase& f,
     dm(3,3) = dIp;
     
     // rotational velocities
-    m(0,4) = Ay;  m(4,0) = Ay;   // w-displacement
-    dm(0,4) = dAy;  dm(4,0) = dAy;   // w-displacement
-    m(0,5) = -Az; m(5,0) = -Az;  // v-displacement
-    dm(0,5) = -dAz; m(5,0) = -dAz;  // v-displacement
-    
-    // bending rotation inertia
-    for (unsigned int i=0; i<2; i++)
-        for (unsigned int j=0; j<2; j++) {
-            m(4+i,4+j) = I(i,j)*1.e-6;
-            dm(4+i,4+j) = dI(i,j)*1.e-6;
-        }
-    
+    // theta-y rotation
+    m(0,4) =  Ay; m(4,0) =  Ay;
+    m(4,4) =  I(1,1);
+    dm(0,4) = dAy;  dm(4,0) = dAy;
+    dm(4,4) =  dI(1,1);
+
+    // theta-z rotation
+    m(0,5) =  Az; m(5,0) =  Az;
+    m(5,5) =  I(0,0);
+    dm(0,5) = dAz; dm(5,0) = dAz;  // v-displacement
+    dm(5,5) = dI(0,0);
+
+    m(4,5) =  m(5,4) = I(0,1);
+    dm(4,5) =  dm(5,4) = dI(0,1);
+
     m *= drho;
     m += rho*dm;
 }
