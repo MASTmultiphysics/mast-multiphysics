@@ -10,6 +10,7 @@ add_library(mast SHARED)
 # Add include directories.
 target_include_directories(mast
         PUBLIC
+            ${CMAKE_SOURCE_DIR}/contrib
             ${CMAKE_CURRENT_LIST_DIR}
             ${MPI_CXX_INCLUDE_PATH}
             ${PETSc_INCLUDE_DIRS}
@@ -48,7 +49,6 @@ add_subdirectory(base)
 add_subdirectory(boundary_condition)
 add_subdirectory(coordinates)
 add_subdirectory(elasticity)
-add_subdirectory(external)
 add_subdirectory(fluid)
 add_subdirectory(heat_conduction)
 add_subdirectory(level_set)
@@ -66,6 +66,13 @@ add_subdirectory(utility)
 #       This would enable us to call target_link_libraries() closer to to the
 #       code that is using it. (There is a documented limitation with CMake
 #       that prevents this with using add_subdirectory).
+
+# Add third party contrib folder sources.
+target_sources(mast
+    PUBLIC
+        ${CMAKE_SOURCE_DIR}/contrib/libfort/fort.c
+        ${CMAKE_SOURCE_DIR}/contrib/libfort/fort.h
+        ${CMAKE_SOURCE_DIR}/contrib/libfort/fort.hpp)
 
 # MAST library installation.
 install(TARGETS mast

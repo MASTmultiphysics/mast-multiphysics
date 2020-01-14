@@ -14,7 +14,7 @@
 
 // MAST includes.
 #include "mesh/nastran_io.h"
-#include "external/fort.hpp"
+#include "libfort/fort.hpp"
 
 
 MAST::NastranIO::NastranIO(libMesh::MeshBase& mesh, const bool python_preinit):

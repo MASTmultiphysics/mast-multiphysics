@@ -24,7 +24,7 @@
 #include "property_cards/isotropic_material_property_card.h"
 #include "property_cards/solid_1d_section_element_property_card.h"
 #include "base/eigenproblem_assembly.h"
-#include "external/fort.hpp"
+#include "libfort/fort.hpp"
 
 
 int main(int argc, const char** argv) {

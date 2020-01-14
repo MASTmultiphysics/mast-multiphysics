@@ -106,6 +106,11 @@ if (ENABLE_NASTRANIO)
     endif()
 endif()
 
+# THIRD PARTY/CONTRIB
+# - This directory contains files developed by third parties and are included in the
+#   MAST source for convenience.
+add_subdirectory(contrib)
+
 # MAIN TARGETS
 add_subdirectory(src)
 
