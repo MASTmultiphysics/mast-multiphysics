@@ -33,7 +33,7 @@
 MAST::HeavisideElemHomogenizedDensityFunction::
 HeavisideElemHomogenizedDensityFunction(const std::string& nm):
 MAST::HomogenizedDensityFunctionBase(nm),
-_width          (0.01) {
+_width          (0.1) {
     
 }
 

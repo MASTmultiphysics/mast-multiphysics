@@ -31,8 +31,9 @@
 
 MAST::LevelSetPerimeter::LevelSetPerimeter():
 MAST::OutputAssemblyElemOperations(),
-_per           (0.),
-_dper_dp       (0.) {
+_per                       (0.),
+_dper_dp                   (0.),
+_heaviside_smooth_delta    (0.1) {
     
 }
 
@@ -88,7 +89,7 @@ MAST::LevelSetPerimeter::output_for_elem() {
         MAST::LevelSetElementBase&
         e = dynamic_cast<MAST::LevelSetElementBase&>(*_physics_elem);
         
-        return e.perimeter();
+        return e.perimeter(_heaviside_smooth_delta);
     }
     else
     return 0.;
@@ -124,7 +125,7 @@ MAST::LevelSetPerimeter::output_sensitivity_for_elem(const MAST::FunctionBase& p
         MAST::LevelSetElementBase&
         e = dynamic_cast<MAST::LevelSetElementBase&>(*_physics_elem);
         
-        return e.perimeter_sensitivity();
+        return e.perimeter_sensitivity(_heaviside_smooth_delta);
     }
     else
     return 0.;
@@ -156,7 +157,7 @@ MAST::LevelSetPerimeter::evaluate() {
         MAST::LevelSetElementBase&
         e = dynamic_cast<MAST::LevelSetElementBase&>(*_physics_elem);
         
-        _per += e.perimeter();
+        _per += e.perimeter(_heaviside_smooth_delta);
     }
 }
 
@@ -198,7 +199,7 @@ MAST::LevelSetPerimeter::evaluate_topology_sensitivity(const MAST::FunctionBase&
         MAST::LevelSetElementBase&
         e = dynamic_cast<MAST::LevelSetElementBase&>(*_physics_elem);
 
-        _dper_dp += e.perimeter_sensitivity();
+        _dper_dp += e.perimeter_sensitivity(_heaviside_smooth_delta);
     }
 }
 

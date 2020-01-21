@@ -1243,6 +1243,7 @@ public:
         //
         // also the stress data for plotting
         //
+        _Ef->set_penalty_val(stress_penalty);
         stress_assembly.update_stress_strain_data(stress, *_sys->solution);
         
         _density_function->clear();

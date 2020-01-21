@@ -47,6 +47,12 @@ namespace MAST {
         virtual ~LevelSetPerimeter();
         
         /*!
+         *  Sets the value of the heaviside smooth delta, which is the width +/- d of the level set function
+         *  about which the approximate Heaviside function is smoothed. The default value is 0.1
+         */
+        void set_heaviside_smoothing_delta(Real d=0.1) { _heaviside_smooth_delta = d;}
+        
+        /*!
          *   virtual function, nothing to be done for level set
          */
         virtual void
@@ -176,6 +182,7 @@ namespace MAST {
         
         Real                                _per;
         Real                                _dper_dp;
+        Real                                _heaviside_smooth_delta;
     };
     
 }

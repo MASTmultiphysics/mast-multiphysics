@@ -39,7 +39,7 @@ namespace MAST {
          *   width over which the approximate Heaviside function is smoothed. Note that this is the
          *   width fo the level-set function value, and not necessarily the width of the geometric element.
          *   For level-set functions that are initialized to have a unit gradient norm, these two would
-         *   coincide. The default value is 0.01.
+         *   coincide. The default value is 0.1.
          */
         void set_smoothing_width(Real w) { _width = w;}
         

@@ -34,6 +34,9 @@
 // libMesh includes
 #include "libmesh/parallel.h"
 
+// libMesh includes
+#include "libmesh/parallel.h"
+
 
 MAST::SmoothRampStressStrainOutput::SmoothRampStressStrainOutput():
 MAST::StressStrainOutputBase() {

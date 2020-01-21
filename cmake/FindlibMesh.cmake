@@ -19,11 +19,22 @@ find_library(libMesh_dbg_LIBRARY
              NAMES mesh_dbg
              HINTS ${libMesh_DIR}/lib)
 
+find_library(timpi_opt_LIBRARY
+            NAMES timpi_opt
+            HINTS ${libMesh_DIR}/lib)
+
+find_library(timpi_dbg_LIBRARY
+            NAMES timpi_dbg
+            HINTS ${libMesh_DIR}/lib)
+
 # If debug library is not available then set it to the optimized library
 if(NOT libMesh_dbg_LIBRARY)
    message("-- WARN: Did not find libmesh_dbg using libmesh_opt for debug version.")
     find_library(libMesh_dbg_LIBRARY
                  NAMES mesh_opt
+                 HINTS ${libMesh_DIR}/lib)
+    find_library(timpi_dbg_LIBRARY
+                 NAMES timpi_opt
                  HINTS ${libMesh_DIR}/lib)
 endif()
 
@@ -52,15 +63,24 @@ endif()
 # Set variables.
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(libMesh
-        REQUIRED_VARS libMesh_dbg_LIBRARY libMesh_opt_LIBRARY libMesh_INCLUDE_DIR
+        REQUIRED_VARS
+        libMesh_dbg_LIBRARY
+        libMesh_opt_LIBRARY
+        timpi_dbg_LIBRARY
+        timpi_opt_LIBRARY
+        libMesh_INCLUDE_DIR
         VERSION_VAR libMesh_VERSION)
 
 mark_as_advanced(libMesh_INCLUDE_DIR
                  libMesh_dbg_LIBRARY
                  libMesh_opt_LIBRARY
+                 timpi_dbg_LIBRARY
+                 timpi_opt_LIBRARY
                  libMesh_VERSION
                  libMesh_FOUND)
 
 set(libMesh_dbg_LIBRARIES ${libMesh_dbg_LIBRARY})
 set(libMesh_opt_LIBRARIES ${libMesh_opt_LIBRARY})
+set(timpi_dbg_LIBRARIES ${timpi_dbg_LIBRARY})
+set(timpi_opt_LIBRARIES ${timpi_opt_LIBRARY})
 set(libMesh_INCLUDE_DIRS ${libMesh_INCLUDE_DIR})
