@@ -86,7 +86,7 @@ _optim_con(int*    mode,
            int*    nstate);
 
 //
-// BEGIN_TRANSLATE 2D SIMP topology optimization
+// BEGIN_TRANSLATE SIMP topology optimization
 //
 //   \tableofcontents
 //

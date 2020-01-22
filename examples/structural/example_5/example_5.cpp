@@ -93,7 +93,7 @@ _optim_con(int*    mode,
            int*    nstate);
 
 //
-// BEGIN_TRANSLATE 2D Level-set topology optimization
+// BEGIN_TRANSLATE Level-set topology optimization
 //
 //   \tableofcontents
 //
