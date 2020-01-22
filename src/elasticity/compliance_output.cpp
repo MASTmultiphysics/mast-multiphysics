@@ -32,7 +32,7 @@
 #include "mesh/geom_elem.h"
 
 // libMesh includes
-#include "libmesh/parallel_implementation.h"
+#include "libmesh/parallel.h"
 
 MAST::ComplianceOutput::ComplianceOutput():
 MAST::OutputAssemblyElemOperations(),
