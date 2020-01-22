@@ -216,7 +216,7 @@ public:
 
     
     //
-    //  \section system_discipline  System and Discipline
+    //  \section ex_5_system_discipline  System and Discipline
     //
     void _init_system_and_discipline() {
         
@@ -315,11 +315,11 @@ public:
     
     
     //
-    //   \section properties Properties
+    //   \section ex_5_properties Properties
     //
     //
     //
-    //   \subsection material_properties Material Properties
+    //   \subsection ex_5_material_properties Material Properties
     //
 
     void _init_material() {

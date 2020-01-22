@@ -214,7 +214,7 @@ public:
 
     
     //
-    //  \section system_discipline  System and Discipline
+    //  \section ex_6_system_discipline  System and Discipline
     //
     void _init_system_and_discipline() {
         
