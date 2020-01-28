@@ -12,6 +12,7 @@
 #include <libmesh/mesh_input.h>
 // #include <libmesh/elem.h>
 
+#include "base/mast_config.h"
 #if MAST_ENABLE_NASTRANIO == 1
 
 // MAST includes.

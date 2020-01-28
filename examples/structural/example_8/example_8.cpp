@@ -497,8 +497,8 @@ public:
         xmin.resize(_n_vars);
         xmax.resize(_n_vars);
         
-        std::fill(xmin.begin(), xmin.end(),   -1.e0);
-        std::fill(xmax.begin(), xmax.end(),    1.e0);
+        std::fill(xmin.begin(), xmin.end(),   -1.e1);
+        std::fill(xmax.begin(), xmax.end(),    1.e1);
 
         //
         // now, check if the user asked to initialize dvs from a previous file

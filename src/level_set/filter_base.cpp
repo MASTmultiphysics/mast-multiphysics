@@ -27,7 +27,9 @@
 #include "libmesh/mesh_base.h"
 #include "libmesh/node.h"
 #include "libmesh/numeric_vector.h"
+#ifdef LIBMESH_HAVE_NANOFLANN
 #include "libmesh/nanoflann.hpp"
+#endif
 
 
 MAST::FilterBase::FilterBase(libMesh::System& sys,
@@ -40,8 +42,11 @@ _dv_dof_ids        (dv_dof_ids) {
     
     libmesh_assert_greater(radius, 0.);
     
-    //_init(); // linear filter search
+#ifdef LIBMESH_HAVE_NANOFLANN
     _init2();  // KD-tree search using NanoFlann
+#else
+    _init(); // linear filter search
+#endif
 }
 
 
@@ -148,7 +153,7 @@ if_elem_in_domain_of_influence(const libMesh::Elem& elem,
 }
 
 
-
+#ifdef LIBMESH_HAVE_NANOFLANN
 // Nanoflann uses "duck typing" to allow users to define their own adaptors...
 template <unsigned int Dim>
 class NanoflannMeshAdaptor
@@ -323,7 +328,7 @@ MAST::FilterBase::_init2() {
             _level_set_fe_size = d_12;
     }
 }
-
+#endif
 
 
 void
