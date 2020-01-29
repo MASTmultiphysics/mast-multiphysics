@@ -630,10 +630,10 @@ MAST::SubElemMeshRefinement::_process_negative_element(unsigned int negative_lev
     
     _negative_level_set_ids.insert(child->subdomain_id());
     
+#if (LIBMESH_MAJOR_VERSION == 1 && LIBMESH_MINOR_VERSION >= 5)
     libmesh_assert_equal_to (child->n_extra_integers(),
                              e.n_extra_integers());
 
-#if (LIBMESH_MAJOR_VERSION == 1 && LIBMESH_MINOR_VERSION >= 5)
     for (unsigned int j=0; j != e.n_extra_integers(); ++j)
         child->set_extra_integer(j, e.get_extra_integer(j));
 #endif
