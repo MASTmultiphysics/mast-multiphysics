@@ -411,9 +411,6 @@ MAST::SubElemMeshRefinement::_process_sub_elements(bool strong_discontinuity,
 
     libmesh_assert(!_initialized);
     
-    const unsigned int
-    nei = e.n_extra_integers();
-    
     std::map<const libMesh::Node*, const libMesh::Node*>
     intersection_object_to_mesh_node_map;
 
@@ -513,7 +510,7 @@ MAST::SubElemMeshRefinement::_process_sub_elements(bool strong_discontinuity,
 #if (LIBMESH_MAJOR_VERSION == 1 && LIBMESH_MINOR_VERSION >= 5)
         libmesh_assert_equal_to (child->n_extra_integers(),
                                  e.n_extra_integers());
-        for (unsigned int j=0; j != nei; ++j)
+        for (unsigned int j=0; j != e.n_extra_integers(); ++j)
             child->set_extra_integer(j, e.get_extra_integer(j));
 #endif
         _mesh.add_elem(child);
