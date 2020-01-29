@@ -510,11 +510,12 @@ MAST::SubElemMeshRefinement::_process_sub_elements(bool strong_discontinuity,
             _negative_level_set_ids.insert(child->subdomain_id());
         }
         
+#if (LIBMESH_MAJOR_VERSION == 1 && LIBMESH_MINOR_VERSION >= 5)
         libmesh_assert_equal_to (child->n_extra_integers(),
                                  e.n_extra_integers());
         for (unsigned int j=0; j != nei; ++j)
             child->set_extra_integer(j, e.get_extra_integer(j));
-        
+#endif
         _mesh.add_elem(child);
 
         if (intersect.has_side_on_interface(*sub_e))
@@ -570,9 +571,6 @@ MAST::SubElemMeshRefinement::_process_negative_element(unsigned int negative_lev
                                                        MAST::LevelSetIntersection& intersect) {
     
     libmesh_assert(!_initialized);
-    
-    const unsigned int
-    nei = e.n_extra_integers();
     
     std::set<libMesh::Node*>
     side_nodes;
@@ -637,9 +635,11 @@ MAST::SubElemMeshRefinement::_process_negative_element(unsigned int negative_lev
     
     libmesh_assert_equal_to (child->n_extra_integers(),
                              e.n_extra_integers());
-    for (unsigned int j=0; j != nei; ++j)
+
+#if (LIBMESH_MAJOR_VERSION == 1 && LIBMESH_MINOR_VERSION >= 5)
+    for (unsigned int j=0; j != e.n_extra_integers(); ++j)
         child->set_extra_integer(j, e.get_extra_integer(j));
-    
+#endif
     _mesh.add_elem(child);
     
     _new_elems.push_back(child);
