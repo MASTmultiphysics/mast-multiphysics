@@ -62,7 +62,7 @@ MAST::IntegratedForceOutput::init(const MAST::GeomElem& elem) {
     (_assembly->discipline()).flight_condition();
     
     _physics_elem =
-    new MAST::ConservativeFluidElementBase(*_system, *_assembly, elem, p);
+    new MAST::ConservativeFluidElementBase(*_system, elem, p);
 }
 
 

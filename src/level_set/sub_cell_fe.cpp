@@ -300,6 +300,7 @@ MAST::SubCellFE::init_for_side(const MAST::GeomElem& elem,
     _fe->get_JxW();
     if (if_calculate_dphi)
         _fe->get_dphi();
+    if (_init_second_order_derivatives) _fe->get_d2phi();
     
 
     //////////////////////////////////////////////////////////////

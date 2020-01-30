@@ -32,7 +32,8 @@
 
 MAST::StructuralModalEigenproblemAssemblyElemOperations::
 StructuralModalEigenproblemAssemblyElemOperations():
-MAST::EigenproblemAssemblyElemOperations() { }
+MAST::EigenproblemAssemblyElemOperations(),
+_incompatible_sol_assembly(nullptr) { }
 
 
 
@@ -155,6 +156,62 @@ void
 MAST::StructuralModalEigenproblemAssemblyElemOperations::
 elem_topology_sensitivity_calculations(const MAST::FunctionBase& f,
                                        bool base_sol,
+                                       RealMatrixX& mat_A,
+                                       RealMatrixX& mat_B) {
+    
+    libmesh_assert(_physics_elem);
+    libmesh_assert(f.is_topology_parameter());
+    
+    RealVectorX vec = RealVectorX::Zero(mat_A.rows()); // dummy vector
+    RealMatrixX mat = RealMatrixX::Zero(mat_A.rows(), mat_A.cols()); // dummy matrix
+    mat_A.setZero();
+    mat_B.setZero();
+    
+    std::pair<const MAST::FieldFunction<RealVectorX>*, unsigned int>
+    val = this->get_elem_boundary_velocity_data();
+    
+    if (val.first) {
+
+        MAST::StructuralElementBase& e =
+        dynamic_cast<MAST::StructuralElementBase&>(*_physics_elem);
+        
+        e.internal_residual_boundary_velocity(f,
+                                              val.second,
+                                              *val.first,
+                                              true,
+                                              vec,
+                                              mat_A);
+        e.volume_external_residual_boundary_velocity(f,
+                                                     val.second,
+                                                     *val.first,
+                                                     _discipline->volume_loads(),
+                                                     true,
+                                                     vec,
+                                                     mat_A);
+        
+        e.inertial_residual_boundary_velocity(f,
+                                              val.second,
+                                              *val.first,
+                                              true,
+                                              vec,
+                                              mat_B,
+                                              mat,
+                                              mat_A);
+        
+        // if the linearization is about a base state, then the sensitivity of
+        // the base state will influence the sensitivity of the Jacobian
+        if (base_sol)
+            libmesh_assert(false); // to be implemented
+        //e.internal_residual_jac_dot_state_sensitivity(mat_A);
+    }
+}
+
+
+
+void
+MAST::StructuralModalEigenproblemAssemblyElemOperations::
+elem_topology_sensitivity_calculations(const MAST::FunctionBase& f,
+                                       bool base_sol,
                                        const MAST::FieldFunction<RealVectorX>& vel,
                                        RealMatrixX& mat_A,
                                        RealMatrixX& mat_B) {
@@ -242,6 +299,6 @@ init(const MAST::GeomElem& elem) {
     (_discipline->get_property_card(elem));
     
     _physics_elem =
-    MAST::build_structural_element(*_system, *_assembly, elem, p).release();
+    MAST::build_structural_element(*_system, elem, p).release();
 }
 

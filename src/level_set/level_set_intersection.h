@@ -107,6 +107,14 @@ namespace MAST {
          */
         Real get_node_phi_value(const libMesh::Node* n) const;
         
+
+        /*!
+         * The case of two adjacent edges results in a new node on an edge that is not coincident
+         * with the level set interface. This will end up as a hanging node if added to the mesh.
+         * @returns true if this node \p n is the hanging node.
+         */
+        bool if_hanging_node(const libMesh::Node* n) const;
+        
         /*!
          *   @returns true if the intersection is through the element, or
          *   has colinear edge.
@@ -138,10 +146,17 @@ namespace MAST {
 
         /*!
          *  @returns \p true if there is any portion of the element (interior
-         *  or edge) that is on the positive side of the level set function.
+         *  edge, or node) that is on the positive side of the level set function.
          */
         bool if_elem_has_positive_phi_region() const;
+
         
+        /*!
+         *  @returns \p true if there is any portion of the element (interior
+         *  edge, or node) that is on the negative side of the level set function.
+         */
+        bool if_elem_has_negative_phi_region() const;
+
         const std::vector<const libMesh::Elem*>&
         get_sub_elems_positive_phi() const;
         
@@ -153,8 +168,8 @@ namespace MAST {
         
         /*!
          *   @returns the id of side that is on the interface. In case the
-         *   element does not have a side on the interface, then a negative
-         *   value is returned. 
+         *   element does not have a side on the interface, then an error is
+         *   thrown. 
          */
         unsigned int
         get_side_on_interface(const libMesh::Elem& e) const;
@@ -164,6 +179,42 @@ namespace MAST {
 
         const libMesh::Point&
         get_nondimensional_coordinate_for_node(const libMesh::Node& n) const;
+
+
+        /*!
+         *   identifies if the node from the subelements is a new node or
+         *   an existing node from the parent element.
+         */
+        bool if_node_is_new(const libMesh::Node& node) const;
+
+        
+        /*!
+         *   identifies if the new node is on an edge along the level-set method
+         *   in the interior of the element (as opposed to on the edges of the
+         *   original element).
+         */
+        bool if_interior_node(const libMesh::Node& node) const;
+
+        
+        /*!
+         *    for new nodes required to create the subelements this method
+         *    returns the nodes on an edge that bound the given node. An
+         *    error is thrown if the node is not a
+         */
+        std::pair<const libMesh::Node*, const libMesh::Node*>
+        get_bounding_nodes_for_node(const libMesh::Node& node) const;
+        
+        
+        /*!
+         *    identifies the sides of the element that are completely on the material side without
+         *    any intersection on them.
+         */
+        void
+        get_material_sides_without_intersection(std::set<unsigned int>& sides) const;
+
+        
+        void get_nearest_intersection_point(const libMesh::Point& p,
+                                            libMesh::Point& pt);
         
     protected:
         
@@ -217,6 +268,8 @@ namespace MAST {
         const libMesh::Elem*                         _elem;
         bool                                         _initialized;
 
+        const MAST::FieldFunction<Real>*             _phi;
+        
         /*!
          *   \p true if element is completely on the positive side of level set
          *   with no intersection
@@ -245,6 +298,9 @@ namespace MAST {
         std::vector<libMesh::Elem*>                  _new_elems;
         std::map<const libMesh::Node*, libMesh::Point> _node_local_coords;
         std::map<const libMesh::Node*, std::pair<Real, bool> > _node_phi_vals;
+        std::set<const libMesh::Node*>               _interior_nodes;
+        std::map<const libMesh::Node*, std::pair<const libMesh::Node*, const libMesh::Node*>> _bounding_nodes;
+        std::set<const libMesh::Node*>               _hanging_node;
     };
     
 }

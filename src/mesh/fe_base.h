@@ -44,6 +44,8 @@ namespace MAST {
         
         virtual ~FEBase();
         
+        bool initialized() const { return _initialized;}
+        
         /*!
          *   this is used, in addition to \p  libMesh::System::extra_quadrature_order
          *   to set the quadrature rule.

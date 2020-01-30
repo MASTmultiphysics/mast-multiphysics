@@ -11,6 +11,9 @@
 #include <libmesh/mesh_input.h>
 #include <libmesh/elem.h>
 
+#include "base/mast_config.h"
+#if MAST_ENABLE_NASTRANIO == 1
+
 // Python includes.
 #include <Python.h>
 
@@ -201,4 +204,5 @@ class NastranIO : public libMesh::MeshInput<libMesh::MeshBase> {
     void printNodeCoords(std::vector<std::vector<double>> nodes);
 }
 
+#endif //  MAST_ENABLE_NASTRANIO
 #endif // __mast_nastran_io_h__

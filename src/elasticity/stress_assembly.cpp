@@ -165,6 +165,8 @@ update_stress_strain_data(MAST::StressStrainOutputBase&       ops,
         ops.set_elem_data(elem->dim(), *elem, geom_elem);
         geom_elem.init(*elem, *_system);
         
+        if (!ops.if_evaluate_for_element(geom_elem)) continue;
+            
         ops.init(geom_elem);
         ops.set_elem_solution(sol);
         ops.evaluate();
@@ -301,6 +303,8 @@ update_stress_strain_sensitivity_data(MAST::StressStrainOutputBase&       ops,
         ops.set_elem_data(elem->dim(), *elem, geom_elem);
         geom_elem.init(*elem, *_system);
         
+        if (!ops.if_evaluate_for_element(geom_elem)) continue;
+
         ops.init(geom_elem);
         ops.set_stress_plot_mode(true);
         ops.set_elem_solution(sol);

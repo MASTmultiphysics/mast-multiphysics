@@ -36,10 +36,9 @@
 
 MAST::FrequencyDomainLinearizedConservativeFluidElem::
 FrequencyDomainLinearizedConservativeFluidElem(MAST::SystemInitialization& sys,
-                                               MAST::AssemblyBase& assembly,
                                                const MAST::GeomElem& elem,
                                                const MAST::FlightCondition& f):
-MAST::ConservativeFluidElementBase(sys, assembly, elem, f),
+MAST::ConservativeFluidElementBase(sys, elem, f),
 freq(nullptr) {
     
     
@@ -487,7 +486,7 @@ slip_wall_surface_residual(bool request_jacobian,
     // qi ni = 0       (since heat flux occurs only on no-slip wall and far-field bc)
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_elem.init_side_fe(s, false));
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_side_fe(s, false, false));
 
     const std::vector<Real> &JxW                 = fe->get_JxW();
     const std::vector<libMesh::Point>& normals   = fe->get_normals_for_reference_coordinate();
@@ -717,7 +716,7 @@ slip_wall_surface_residual_sensitivity(const MAST::FunctionBase& p,
     // qi ni = 0       (since heat flux occurs only on no-slip wall and far-field bc)
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_elem.init_side_fe(s, false));
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_side_fe(s, false, false));
 
     const std::vector<Real> &JxW                 = fe->get_JxW();
     const std::vector<libMesh::Point>& normals   = fe->get_normals_for_reference_coordinate();

@@ -29,6 +29,8 @@ namespace MAST {
     enum BoundaryConditionType {
         
         SURFACE_PRESSURE,
+        SURFACE_TRACTION,
+        SURFACE_TRACTION_SHIFTED_BOUNDARY,
         POINT_LOAD,
         POINT_MOMENT,
         PISTON_THEORY,
@@ -44,7 +46,8 @@ namespace MAST {
         FAR_FIELD,
         EXHAUST,
         ISOTHERMAL,
-        ADIABATIC
+        ADIABATIC,
+        BOUNDARY_VELOCITY
     };
     
     

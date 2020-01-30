@@ -38,7 +38,6 @@ namespace MAST {
         
     public:
         BendingStructuralElem(MAST::SystemInitialization& sys,
-                              MAST::AssemblyBase& assembly,
                               const MAST::GeomElem& elem,
                               const MAST::ElementPropertyCardBase& p);
         

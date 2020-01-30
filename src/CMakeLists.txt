@@ -37,7 +37,9 @@ target_link_libraries(mast
             ${Boost_FILESYSTEM_LIBRARY}
             ${Boost_SYSTEM_LIBRARY}
             debug ${libMesh_dbg_LIBRARIES}
+            debug ${timpi_dbg_LIBRARIES}
             optimized ${libMesh_opt_LIBRARIES}
+            optimized ${timpi_opt_LIBRARIES}
             ${LIBGFORTRAN_LIBRARIES})
 
 # NOTE: Use of PUBLIC keyword above means other CMake target (like an example)

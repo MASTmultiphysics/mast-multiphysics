@@ -35,7 +35,7 @@
 namespace MAST {
     
     void plot_elem(Gnuplot& gp, const libMesh::Elem& elem);
-    void plot_node(Gnuplot& gp, const libMesh::Node& node);
+    void plot_node(Gnuplot& gp, const libMesh::Point& point);
 }
 
 #endif // MAST_ENABLE_GNUPLOT

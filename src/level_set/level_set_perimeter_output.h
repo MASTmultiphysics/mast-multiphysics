@@ -42,9 +42,15 @@ namespace MAST {
         
         public:
         
-        LevelSetPerimeter(MAST::LevelSetIntersection& intersection);
+        LevelSetPerimeter();
         
         virtual ~LevelSetPerimeter();
+        
+        /*!
+         *  Sets the value of the heaviside smooth delta, which is the width +/- d of the level set function
+         *  about which the approximate Heaviside function is smoothed. The default value is 0.1
+         */
+        void set_heaviside_smoothing_delta(Real d=0.1) { _heaviside_smooth_delta = d;}
         
         /*!
          *   virtual function, nothing to be done for level set
@@ -157,6 +163,15 @@ namespace MAST {
         }
         
         /*!
+         *    this evaluates all relevant topological sensitivity components on
+         *    the element.
+         *    This is only done on the current element for which this
+         *    object has been initialized.
+         */
+        virtual void
+        evaluate_topology_sensitivity(const MAST::FunctionBase& f);
+
+        /*!
          *    This evaluates the contribution to the topology sensitivity on the
          *    boundary \f$ \int_\Gamma V_n~d\Gamma \f$
          */
@@ -165,9 +180,9 @@ namespace MAST {
         
     protected:
         
-        const MAST::LevelSetIntersection&   _intersection;
         Real                                _per;
         Real                                _dper_dp;
+        Real                                _heaviside_smooth_delta;
     };
     
 }

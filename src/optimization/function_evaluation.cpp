@@ -23,11 +23,10 @@
 #include <boost/algorithm/string.hpp>
 
 // MAST includes
-#include "optimization/function_evaluation.h"
+#include "optimization/function_evaluation.h" 
 
 // libMesh includes
-#include "libmesh/parallel_implementation.h"
-
+#include "libmesh/parallel.h"
 
 void
 MAST::FunctionEvaluation::attach_optimization_interface(MAST::OptimizationInterface& opt) {
@@ -514,6 +513,7 @@ MAST::FunctionEvaluation::_output_wrapper(unsigned int iter,
     libmesh_assert(this->comm().verify(iter));
     libmesh_assert(this->comm().verify(x));
     
-    this->output(iter, x, obj, fval, if_write_to_optim_file);
+    this->output(_iter, x, obj, fval, if_write_to_optim_file);
+    _iter++;
 }
 

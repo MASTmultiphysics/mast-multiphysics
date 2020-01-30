@@ -36,6 +36,7 @@ _max_mesh_node_id                (0),
 _max_elem_divs                   (4),
 _elem                            (nullptr),
 _initialized                     (false),
+_phi                             (nullptr),
 _if_elem_on_positive_phi         (false),
 _if_elem_on_negative_phi         (false),
 _mode                            (MAST::NO_INTERSECTION),
@@ -113,11 +114,20 @@ MAST::LevelSetIntersection::if_elem_on_negative_phi() const {
 
 
 bool
+MAST::LevelSetIntersection::if_elem_has_negative_phi_region() const {
+    
+    libmesh_assert(_initialized);
+    
+    return !_if_elem_on_positive_phi;
+}
+
+
+bool
 MAST::LevelSetIntersection::if_elem_has_positive_phi_region() const {
 
     libmesh_assert(_initialized);
     
-    return (_if_elem_on_positive_phi || !_if_elem_on_negative_phi);
+    return !_if_elem_on_negative_phi;
 }
 
 
@@ -180,6 +190,13 @@ MAST::LevelSetIntersection::get_node_phi_value(const libMesh::Node* n) const {
 
 
 
+bool
+MAST::LevelSetIntersection::if_hanging_node(const libMesh::Node* n) const {
+    
+    return _hanging_node.count(n);
+}
+
+
 void
 MAST::LevelSetIntersection::clear() {
     
@@ -187,6 +204,7 @@ MAST::LevelSetIntersection::clear() {
     _max_iters                  = 10;
     _elem                       = nullptr;
     _initialized                = false;
+    _phi                        = nullptr;
     _if_elem_on_positive_phi    = false;
     _if_elem_on_negative_phi    = false;
     _mode                       = MAST::NO_INTERSECTION;
@@ -198,6 +216,7 @@ MAST::LevelSetIntersection::clear() {
     _negative_phi_elems.clear();
     _elem_sides_on_interface.clear();
     _node_local_coords.clear();
+    _hanging_node.clear();
     
     std::vector<libMesh::Elem*>::iterator
     e_it  = _new_elems.begin(),
@@ -216,6 +235,9 @@ MAST::LevelSetIntersection::clear() {
 
     _new_nodes.clear();
     _new_elems.clear();
+    
+    _interior_nodes.clear();
+    _bounding_nodes.clear();
 }
 
 
@@ -234,6 +256,7 @@ MAST::LevelSetIntersection::init(const MAST::FieldFunction<Real>& phi,
     _max_mesh_node_id = max_node_id;
     
     _elem      =  &e;
+    _phi       =  &phi;
     
     switch (e.type()) {
         case libMesh::QUAD4:
@@ -344,8 +367,7 @@ _init_on_first_order_ref_elem(const MAST::FieldFunction<Real>& phi,
 
     // if the sign of function on all nodes is the same, then it is assumed
     // that the element is not intersected
-    if (min_val > _tol &&
-        max_val > _tol) {
+    if (min_val > _tol) {
         // element is completely on the positive side with no intersection
         
         _mode = MAST::NO_INTERSECTION;
@@ -355,8 +377,7 @@ _init_on_first_order_ref_elem(const MAST::FieldFunction<Real>& phi,
         _initialized = true;
         return;
     }
-    else if (min_val < _tol &&
-             max_val < _tol) {
+    else if (max_val < -_tol) {
         
         // element is completely on the negative side, with no intersection
         
@@ -367,12 +388,9 @@ _init_on_first_order_ref_elem(const MAST::FieldFunction<Real>& phi,
         _initialized = true;
         return;
     }
-    else if (min_val < _tol &&
-             max_val > _tol) {
+    else {
         // if it did not get caught in the previous two cases, then there is
         // an intersection.
-        // If it got here, then there is an intersection in the domain and the
-        // element is not on the positive side completely.
         
         _if_elem_on_positive_phi         = false;
         _if_elem_on_negative_phi         = false;
@@ -917,6 +935,8 @@ MAST::LevelSetIntersection::_find_quad4_intersections
         nd->set_id(_max_mesh_node_id + node_id_incr);
         node_id_incr++;
         _new_nodes.push_back(nd);
+        _bounding_nodes[nd] = std::make_pair(_elem->node_ptr(ref_side%n_nodes),
+                                             _elem->node_ptr((ref_side+1)%n_nodes));
         side_p0 = side_nondim_points[ref_side%n_nodes].first;
         side_p1 = side_nondim_points[ref_side%n_nodes].second;
         _node_local_coords[nd] = side_p0 + xi_ref * (side_p1 - side_p0);
@@ -958,6 +978,8 @@ MAST::LevelSetIntersection::_find_quad4_intersections
             nd->set_id(_max_mesh_node_id + node_id_incr);
             node_id_incr++;
             _new_nodes.push_back(nd);
+            _bounding_nodes[nd] = std::make_pair(_elem->node_ptr((ref_side+2)%n_nodes),
+                                                 _elem->node_ptr((ref_side+3)%n_nodes));
             side_p0 = side_nondim_points[(ref_side+2)%n_nodes].first;
             side_p1 = side_nondim_points[(ref_side+2)%n_nodes].second;
             _node_local_coords[nd] = side_p0 + xi_other * (side_p1 - side_p0);
@@ -1032,6 +1054,8 @@ MAST::LevelSetIntersection::_find_quad4_intersections
             nd->set_id(_max_mesh_node_id + node_id_incr);
             node_id_incr++;
             _new_nodes.push_back(nd);
+            _bounding_nodes[nd] = std::make_pair(_elem->node_ptr((ref_side+1)%n_nodes),
+                                                 _elem->node_ptr((ref_side+2)%n_nodes));
             side_p0 = side_nondim_points[(ref_side+1)%n_nodes].first;
             side_p1 = side_nondim_points[(ref_side+1)%n_nodes].second;
             _node_local_coords[nd] = side_p0 + xi_other * (side_p1 - side_p0);
@@ -1045,6 +1069,8 @@ MAST::LevelSetIntersection::_find_quad4_intersections
             nd->set_id(_max_mesh_node_id + node_id_incr);
             node_id_incr++;
             _new_nodes.push_back(nd);
+            _bounding_nodes[nd] = std::make_pair(_elem->node_ptr((ref_side+2)%n_nodes),
+                                                 _elem->node_ptr((ref_side+3)%n_nodes));
             side_p0 = side_nondim_points[(ref_side+2)%n_nodes].first;
             side_p1 = side_nondim_points[(ref_side+2)%n_nodes].second;
             _node_local_coords[nd] = side_p1 + xi_ref * (side_p0 - side_p1);
@@ -1094,6 +1120,7 @@ MAST::LevelSetIntersection::_find_quad4_intersections
             
             e2->set_node(0) = _new_nodes[0];
             e2->set_node(1) = _new_nodes[2];
+            _hanging_node.insert(_new_nodes[2]);
             e2->set_node(2) = const_cast<libMesh::Node*>(e.node_ptr((ref_side+3)%n_nodes));
             e2->set_node(3) = const_cast<libMesh::Node*>(e.node_ptr(ref_side));
             
@@ -1318,6 +1345,8 @@ MAST::LevelSetIntersection::_find_quad4_intersections
             nd->set_id(_max_mesh_node_id + node_id_incr);
             node_id_incr++;
             _new_nodes.push_back(nd);
+            _bounding_nodes[nd] = std::make_pair(_elem->node_ptr((ref_side+1)%n_nodes),
+                                                 _elem->node_ptr((ref_side+2)%n_nodes));
             side_p0 = side_nondim_points[(ref_side+1)%n_nodes].first;
             side_p1 = side_nondim_points[(ref_side+1)%n_nodes].second;
             _node_local_coords[nd] = side_p0 + xi_other * (side_p1 - side_p0);
@@ -1433,6 +1462,8 @@ MAST::LevelSetIntersection::_find_quad4_intersections
                 nd->set_id(_max_mesh_node_id + node_id_incr);
                 node_id_incr++;
                 _new_nodes.push_back(nd);
+                _bounding_nodes[nd] = std::make_pair(_elem->node_ptr((ref_side+i)%n_nodes),
+                                                     _elem->node_ptr((ref_side+i+1)%n_nodes));
                 side_p0 = side_nondim_points[(ref_side+i)%n_nodes].first;
                 side_p1 = side_nondim_points[(ref_side+i)%n_nodes].second;
                 _node_local_coords[nd] = side_p0 + xi_other * (side_p1 - side_p0);
@@ -1628,3 +1659,134 @@ MAST::LevelSetIntersection::get_nondimensional_coordinate_for_node
     return it->second;
 }
 
+
+
+bool
+MAST::LevelSetIntersection::if_node_is_new(const libMesh::Node& node) const {
+    
+    libmesh_assert(_initialized);
+
+    for (unsigned int i=0; i<_new_nodes.size(); i++)
+        if (&node == _new_nodes[i])
+            return true;
+    
+    // if it gets here then the node was not created by this intersection
+    // operation
+    return false;
+}
+
+
+
+bool
+MAST::LevelSetIntersection::if_interior_node(const libMesh::Node& node) const {
+    
+    libmesh_assert(_initialized);
+
+    return _interior_nodes.count(&node);
+}
+
+
+
+std::pair<const libMesh::Node*, const libMesh::Node*>
+MAST::LevelSetIntersection::get_bounding_nodes_for_node(const libMesh::Node& node) const {
+    
+    libmesh_assert(_initialized);
+
+    libmesh_assert(this->if_node_is_new(node));
+    
+    std::map<const libMesh::Node*, std::pair<const libMesh::Node*, const libMesh::Node*>>::const_iterator
+    it  = _bounding_nodes.find(&node);
+    
+    libmesh_assert(it != _bounding_nodes.end());
+    
+    return it->second;
+}
+
+
+void
+MAST::LevelSetIntersection::
+get_material_sides_without_intersection(std::set<unsigned int>& sides) const {
+    
+    libmesh_assert_equal_to(sides.size(), 0);
+
+    std::map<const libMesh::Node*, std::pair<Real, bool> >::const_iterator
+    it,
+    end = _node_phi_vals.end();
+
+    for (unsigned int i=0; i<_elem->n_sides(); i++) {
+        
+        std::unique_ptr<const libMesh::Elem> side(_elem->side_ptr(i).release());
+       
+        // check to see if all nodes of this side are on the material side
+        bool
+        on_material = true;
+        for (unsigned int j=0; j<side->n_nodes(); j++) {
+    
+            it = _node_phi_vals.find(side->node_ptr(j));
+            // the node level set value should be in the code
+            libmesh_assert(it != end);
+            
+            // neither on level set nor on positive side
+            if (!(it->second.second || it->second.first > _tol)) {
+                
+                on_material = false;
+                break;
+            }
+        }
+        
+        // if the on_material flag is still true then the side is added to
+        // the set
+        if (on_material)
+            sides.insert(i);
+    }
+}
+
+
+void
+MAST::LevelSetIntersection::
+get_nearest_intersection_point(const libMesh::Point &p,
+                               libMesh::Point &pt) {
+    
+    libmesh_assert(_initialized);
+    
+    // check the element nodes for closest node
+    std::map<const libMesh::Node*, std::pair<Real, bool> >::const_iterator
+    it   = _node_phi_vals.begin(),
+    end  = _node_phi_vals.end();
+    
+    libMesh::Point
+    dp;
+    
+    Real
+    v    = 0.,
+    dist = 1.e12;
+    
+    for ( ; it != end; it++) {
+        
+        if (it->second.second) { // on level set
+            
+            dp = *it->first - p;
+            
+            if (dp.norm() < dist) {
+                pt   = *it->first;
+                dist = dp.norm();
+            }
+        }
+    }
+    
+    // check the new nodes for possible candidates
+    for (unsigned int i=0; i<_new_nodes.size(); i++) {
+        
+        (*_phi)(*_new_nodes[i], 0., v);
+        
+        if (std::fabs(v) <= _tol) {
+            
+            dp = *_new_nodes[i] - p;
+
+            if (dp.norm() < dist) {
+                pt   = *_new_nodes[i];
+                dist = dp.norm();
+            }
+        }
+    }
+}

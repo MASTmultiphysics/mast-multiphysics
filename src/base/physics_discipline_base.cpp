@@ -57,6 +57,24 @@ MAST::PhysicsDisciplineBase::add_side_load(libMesh::boundary_id_type bid,
 
 
 
+void
+MAST::PhysicsDisciplineBase::remove_side_load(libMesh::boundary_id_type bid,
+                                              MAST::BoundaryConditionBase& load) {
+    // make sure that this boundary and load have been applied
+    std::pair<MAST::SideBCMapType::const_iterator, MAST::SideBCMapType::const_iterator> it =
+    _side_bc_map.equal_range(bid);
+    
+    for ( ; it.first != it.second; it.first++)
+        if (it.first->second == &load) {
+            
+            _side_bc_map.erase(it.first);
+            break;
+        }
+}
+
+
+
+
 
 void
 MAST::PhysicsDisciplineBase::add_dirichlet_bc(libMesh::boundary_id_type bid,
@@ -99,6 +117,22 @@ MAST::PhysicsDisciplineBase::add_volume_load(libMesh::subdomain_id_type sid,
         libmesh_assert(it.first->second != &load);
     
     _vol_bc_map.insert(MAST::VolumeBCMapType::value_type(sid, &load));
+}
+
+
+void
+MAST::PhysicsDisciplineBase::remove_volume_load(libMesh::subdomain_id_type sid,
+                                                MAST::BoundaryConditionBase& load) {
+    std::pair<MAST::VolumeBCMapType::iterator, MAST::VolumeBCMapType::iterator> it =
+    _vol_bc_map.equal_range(sid);
+    
+    for ( ; it.first != it.second; it.first++) {
+        if (it.first->second == &load) {
+           
+            _vol_bc_map.erase(it.first);
+            break;
+        }
+    }
 }
 
 

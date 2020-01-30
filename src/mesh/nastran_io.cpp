@@ -12,6 +12,9 @@
 #include <libmesh/mesh_input.h>
 // #include <libmesh/elem.h>
 
+#include "base/mast_config.h"
+#if MAST_ENABLE_NASTRANIO == 1
+
 // MAST includes.
 #include "mesh/nastran_io.h"
 #include "libfort/fort.hpp"
@@ -316,3 +319,4 @@ void MAST::printNodeCoords(std::vector<std::vector<double>> nodes)
     }
 }
     
+#endif // MAST_ENABLE_NASTRANIO

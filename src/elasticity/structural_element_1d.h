@@ -39,7 +39,6 @@ namespace MAST {
         
     public:
         StructuralElement1D(MAST::SystemInitialization& sys,
-                            MAST::AssemblyBase& assembly,
                             const MAST::GeomElem& elem,
                             const MAST::ElementPropertyCardBase& p);
         
@@ -160,7 +159,55 @@ namespace MAST {
 
     protected:
         
-        
+        /*!
+         *    Calculates the force vector and Jacobian due to surface traction.
+         */
+        virtual bool
+        surface_traction_residual(bool request_jacobian,
+                                  RealVectorX& f,
+                                  RealMatrixX& jac,
+                                  const unsigned int side,
+                                  MAST::BoundaryConditionBase& bc){ return false;}
+
+
+        /*!
+         *    Calculates the sensitivity of element vector and matrix quantities for surface traction
+         *    boundary condition.
+         */
+        virtual bool
+        surface_traction_residual_sensitivity(const MAST::FunctionBase& p,
+                                              bool request_jacobian,
+                                              RealVectorX& f,
+                                              RealMatrixX& jac,
+                                              const unsigned int side,
+                                              MAST::BoundaryConditionBase& bc) {}
+
+
+        /*!
+         *    Calculates the sensitivity of force vector and Jacobian due to surface traction and
+         *    sensitiity due to boundary movement.
+         */
+        virtual bool
+        surface_traction_residual_shifted_boundary(bool request_jacobian,
+                                                   RealVectorX& f,
+                                                   RealMatrixX& jac,
+                                                   const unsigned int side,
+                                                   MAST::BoundaryConditionBase& bc) {}
+
+        /*!
+         *    Calculates the sensitivity of force vector and Jacobian due to surface traction and
+         *    sensitiity due to boundary movement.
+         */
+        virtual bool
+        surface_traction_residual_shifted_boundary_sensitivity(const MAST::FunctionBase& p,
+                                                               bool request_jacobian,
+                                                               RealVectorX& f,
+                                                               RealMatrixX& jac,
+                                                               const unsigned int side,
+                                                               MAST::BoundaryConditionBase& bc) {}
+
+
+
         /*!
          *    Calculates the force vector and Jacobian due to surface pressure.
          */

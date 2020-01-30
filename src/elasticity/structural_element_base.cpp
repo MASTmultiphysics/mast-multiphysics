@@ -36,10 +36,9 @@
 
 
 MAST::StructuralElementBase::StructuralElementBase(MAST::SystemInitialization& sys,
-                                                   MAST::AssemblyBase& assembly,
                                                    const MAST::GeomElem& elem,
                                                    const MAST::ElementPropertyCardBase& p):
-MAST::ElementBase(sys, assembly, elem),
+MAST::ElementBase(sys, elem),
 follower_forces   (false),
 _property         (p),
 _incompatible_sol (nullptr) {
@@ -516,7 +515,7 @@ inertial_residual_boundary_velocity (const MAST::FunctionBase& p,
                                      RealMatrixX& jac) {
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_elem.init_side_fe(s, false));
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_side_fe(s, false, false));
 
     std::vector<Real> JxW_Vn                        = fe->get_JxW();
     const std::vector<libMesh::Point>& xyz          = fe->get_xyz();
@@ -658,6 +657,22 @@ side_external_residual(bool request_jacobian,
                                               it->first,
                                               **bc_it);
                     break;
+
+
+                case MAST::SURFACE_TRACTION:
+                    surface_traction_residual(request_jacobian,
+                                              f, jac,
+                                              it->first,
+                                              **bc_it);
+                    break;
+
+                    
+                case MAST::SURFACE_TRACTION_SHIFTED_BOUNDARY:
+                    surface_traction_residual_shifted_boundary(request_jacobian,
+                                                               f, jac,
+                                                               it->first,
+                                                               **bc_it);
+                    break;
                     
                     
                 case MAST::PISTON_THEORY:
@@ -670,6 +685,7 @@ side_external_residual(bool request_jacobian,
                     break;
                     
                     
+                case MAST::BOUNDARY_VELOCITY:
                 case MAST::DIRICHLET:
                     // nothing to be done here
                     break;
@@ -711,6 +727,7 @@ linearized_side_external_residual
             // apply all the types of loading
             switch ((*bc_it)->type()) {
 
+                case MAST::BOUNDARY_VELOCITY:
                 case MAST::DIRICHLET:
                     // nothing to be done here
                     break;
@@ -765,6 +782,7 @@ linearized_frequency_domain_side_external_residual
                     break;
                     
                     
+                case MAST::BOUNDARY_VELOCITY:
                 case MAST::DIRICHLET:
                     // nothing to be done here
                     break;
@@ -985,6 +1003,24 @@ side_external_residual_sensitivity(const MAST::FunctionBase& p,
                     break;
                     
                     
+                case MAST::SURFACE_TRACTION:
+                    surface_traction_residual_sensitivity(p,
+                                                          request_jacobian,
+                                                          f, jac,
+                                                          it->first,
+                                                          **bc_it);
+                    break;
+                    
+                    
+                case MAST::SURFACE_TRACTION_SHIFTED_BOUNDARY:
+                    surface_traction_residual_shifted_boundary_sensitivity(p,
+                                                                           request_jacobian,
+                                                                           f, jac,
+                                                                           it->first,
+                                                                           **bc_it);
+                    break;
+                    
+                    
                 case MAST::PISTON_THEORY:
                     piston_theory_residual_sensitivity(p,
                                                        request_jacobian,
@@ -996,6 +1032,7 @@ side_external_residual_sensitivity(const MAST::FunctionBase& p,
                     break;
                     
                     
+                case MAST::BOUNDARY_VELOCITY:
                 case MAST::DIRICHLET:
                     // nothing to be done here
                     break;
@@ -1290,7 +1327,7 @@ surface_pressure_boundary_velocity(const MAST::FunctionBase& p,
     libmesh_assert(!follower_forces); // not implemented yet for follower forces
     
     // prepare the side finite element
-    std::unique_ptr<MAST::FEBase> fe(_elem.init_side_fe(s, false));
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_side_fe(s, false, false));
 
     std::vector<Real> JxW_Vn                        = fe->get_JxW();
     const std::vector<libMesh::Point>& xyz          = fe->get_xyz();
@@ -1642,7 +1679,6 @@ transform_vector_to_global_system(const ValType& local_vec,
 
 std::unique_ptr<MAST::StructuralElementBase>
 MAST::build_structural_element(MAST::SystemInitialization& sys,
-                               MAST::AssemblyBase& assembly,
                                const MAST::GeomElem& elem,
                                const MAST::ElementPropertyCardBase& p) {
     
@@ -1650,15 +1686,15 @@ MAST::build_structural_element(MAST::SystemInitialization& sys,
     
     switch (elem.dim()) {
         case 1:
-            e.reset(new MAST::StructuralElement1D(sys, assembly, elem, p));
+            e.reset(new MAST::StructuralElement1D(sys, elem, p));
             break;
             
         case 2:
-            e.reset(new MAST::StructuralElement2D(sys, assembly, elem, p));
+            e.reset(new MAST::StructuralElement2D(sys, elem, p));
             break;
             
         case 3:
-            e.reset(new MAST::StructuralElement3D(sys, assembly, elem, p));
+            e.reset(new MAST::StructuralElement3D(sys, elem, p));
             break;
             
         default:

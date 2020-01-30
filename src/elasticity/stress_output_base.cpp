@@ -354,6 +354,34 @@ MAST::StressStrainOutputBase::evaluate_sensitivity(const MAST::FunctionBase &f) 
 
 void
 MAST::StressStrainOutputBase::
+evaluate_topology_sensitivity(const MAST::FunctionBase &f) {
+    
+    // the primal data should have been calculated
+    libmesh_assert(_physics_elem);
+    libmesh_assert(f.is_topology_parameter());
+    if (!_if_stress_plot_mode)
+        libmesh_assert(_primal_data_initialized);
+    
+    // sensitivity only exists at the boundary. So, we proceed with calculation
+    // only if this element has an intersection in the interior, or with a side.
+    
+    if (this->if_evaluate_for_element(_physics_elem->elem())) {
+        
+        std::pair<const MAST::FieldFunction<RealVectorX>*, unsigned int>
+        val = this->get_elem_boundary_velocity_data();
+        
+        if (val.first)
+            dynamic_cast<MAST::StructuralElementBase*>
+            (_physics_elem)->calculate_stress_boundary_velocity(f, *this,
+                                                                val.second,
+                                                                *val.first);
+    }
+}
+
+
+
+void
+MAST::StressStrainOutputBase::
 evaluate_topology_sensitivity(const MAST::FunctionBase &f,
                               const MAST::FieldFunction<RealVectorX> &vel) {
     
@@ -482,7 +510,7 @@ MAST::StressStrainOutputBase::init(const MAST::GeomElem& elem) {
     dynamic_cast<const MAST::ElementPropertyCardBase&>(_discipline->get_property_card(elem));
     
     _physics_elem =
-    MAST::build_structural_element(*_system, *_assembly, elem, p).release();
+    MAST::build_structural_element(*_system, elem, p).release();
 }
 
 

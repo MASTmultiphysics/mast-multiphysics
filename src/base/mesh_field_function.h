@@ -99,7 +99,16 @@ namespace MAST {
                                  const libMesh::Point& p,
                                  const Real t,
                                  RealVectorX& v) const;
-        
+
+
+        /*!
+         *    calculates the value of the function at the specified point,
+         *    \p p, and time, \p t, and returns it in \p v.
+         */
+        virtual void perturbation_gradient (const libMesh::Point& p,
+                                            const Real t,
+                                            RealMatrixX& v) const;
+
         
         /*!
          *   initializes the data structures to perform the interpolation 

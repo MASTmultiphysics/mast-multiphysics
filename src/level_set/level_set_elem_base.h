@@ -41,7 +41,6 @@ namespace MAST {
          *   Constructor
          */
         LevelSetElementBase(MAST::SystemInitialization&             sys,
-                            MAST::AssemblyBase&                     assembly,
                             const MAST::GeomElem&                   elem);
         
         
@@ -149,6 +148,24 @@ namespace MAST {
         Real
         volume();
 
+        
+        /*!
+         *   Approximates the volume fraction of the element based on integration of approximated
+         *   Heaviside function over the element. \p delta is the width over which the function
+         *   is smoothed.
+         */
+        Real
+        homogenized_volume_fraction(Real delta=0.1);
+
+        
+        /*!
+         *   Sensitivity of the homogenized volume fraction for the specified level set value and
+         *   its sensitivity.
+         */
+        Real
+        homogenized_volume_fraction_sensitivity(Real delta=0.1);
+
+        
         /*!
          *   Approximates the integral of the Dirac delta function to approximate
          *   the perimeter. The approximation of Dirac delta function is obtained
@@ -163,7 +180,7 @@ namespace MAST {
          *   @returns the computed integral of \f$ \delta_d(\phi) \f$
          */
         Real
-        perimeter();
+        perimeter(Real delta=0.1);
 
         /*!
          *   computes the partial derivative of the integral of the Dirac
@@ -171,7 +188,7 @@ namespace MAST {
          *   set for this element. 
          */
         Real
-        perimeter_sensitivity();
+        perimeter_sensitivity(Real delta=0.1);
 
         
         /*!

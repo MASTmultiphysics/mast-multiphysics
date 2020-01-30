@@ -72,7 +72,7 @@ init(const MAST::GeomElem& elem) {
     (_discipline->get_property_card(elem));
     
     _physics_elem =
-    new MAST::HeatConductionElementBase(*_system, *_assembly, elem, p);
+    new MAST::HeatConductionElementBase(*_system, elem, p);
 }
 
 
@@ -115,6 +115,42 @@ elem_sensitivity_calculations(const MAST::FunctionBase& f,
     e.internal_residual_sensitivity(f, vec);
     e.side_external_residual_sensitivity(f, vec, _discipline->side_loads());
     e.volume_external_residual_sensitivity(f, vec, _discipline->volume_loads());
+}
+
+
+void
+MAST::HeatConductionNonlinearAssemblyElemOperations::
+elem_topology_sensitivity_calculations(const MAST::FunctionBase& f,
+                                       RealVectorX& vec) {
+    
+    libmesh_assert(_physics_elem);
+    libmesh_assert(f.is_topology_parameter());
+    
+    std::pair<const MAST::FieldFunction<RealVectorX>*, unsigned int>
+    val = this->get_elem_boundary_velocity_data();
+    
+    if (val.first) {
+        
+        MAST::HeatConductionElementBase& e =
+        dynamic_cast<MAST::HeatConductionElementBase&>(*_physics_elem);
+        
+        vec.setZero();
+        RealMatrixX
+        dummy = RealMatrixX::Zero(vec.size(), vec.size());
+        
+        e.internal_residual_boundary_velocity(f, vec,
+                                              val.second,
+                                              *val.first);
+        e.volume_external_residual_boundary_velocity(f, vec,
+                                                     val.second,
+                                                     *val.first,
+                                                     _discipline->volume_loads());
+        /*e.side_external_residual_sensitivity(f, false,
+         vec,
+         dummy,
+         dummy,
+         _discipline->side_loads());*/
+    }
 }
 
 

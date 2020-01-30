@@ -29,11 +29,11 @@
 
 #include "libmesh/parallel.h"
 
-MAST::LevelSetPerimeter::LevelSetPerimeter(MAST::LevelSetIntersection& intersection):
+MAST::LevelSetPerimeter::LevelSetPerimeter():
 MAST::OutputAssemblyElemOperations(),
-_intersection  (intersection),
-_per           (0.),
-_dper_dp       (0.) {
+_per                       (0.),
+_dper_dp                   (0.),
+_heaviside_smooth_delta    (0.1) {
     
 }
 
@@ -53,7 +53,7 @@ MAST::LevelSetPerimeter::init(const MAST::GeomElem& elem) {
     libmesh_assert(_system);
     libmesh_assert(_assembly);
     
-    _physics_elem = new MAST::LevelSetElementBase(*_system, *_assembly, elem);
+    _physics_elem = new MAST::LevelSetElementBase(*_system, elem);
 }
 
 
@@ -89,7 +89,7 @@ MAST::LevelSetPerimeter::output_for_elem() {
         MAST::LevelSetElementBase&
         e = dynamic_cast<MAST::LevelSetElementBase&>(*_physics_elem);
         
-        return e.perimeter();
+        return e.perimeter(_heaviside_smooth_delta);
     }
     else
     return 0.;
@@ -125,7 +125,7 @@ MAST::LevelSetPerimeter::output_sensitivity_for_elem(const MAST::FunctionBase& p
         MAST::LevelSetElementBase&
         e = dynamic_cast<MAST::LevelSetElementBase&>(*_physics_elem);
         
-        return e.perimeter_sensitivity();
+        return e.perimeter_sensitivity(_heaviside_smooth_delta);
     }
     else
     return 0.;
@@ -157,7 +157,7 @@ MAST::LevelSetPerimeter::evaluate() {
         MAST::LevelSetElementBase&
         e = dynamic_cast<MAST::LevelSetElementBase&>(*_physics_elem);
         
-        _per += e.perimeter();
+        _per += e.perimeter(_heaviside_smooth_delta);
     }
 }
 
@@ -169,6 +169,13 @@ MAST::LevelSetPerimeter::evaluate_sensitivity(const MAST::FunctionBase& f) {
     // the sensitivity is calculated for topology variables
 }
 
+
+
+void
+MAST::LevelSetPerimeter::evaluate_topology_sensitivity(const MAST::FunctionBase& f) {
+    
+    libmesh_assert(false);
+}
 
 
 void
@@ -192,7 +199,7 @@ MAST::LevelSetPerimeter::evaluate_topology_sensitivity(const MAST::FunctionBase&
         MAST::LevelSetElementBase&
         e = dynamic_cast<MAST::LevelSetElementBase&>(*_physics_elem);
 
-        _dper_dp += e.perimeter_sensitivity();
+        _dper_dp += e.perimeter_sensitivity(_heaviside_smooth_delta);
     }
 }
 

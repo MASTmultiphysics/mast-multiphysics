@@ -114,58 +114,75 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
         
         dof_map.dof_indices (elem, dof_indices);
         
-        MAST::GeomElem geom_elem;
-        ops.set_elem_data(elem->dim(), *elem, geom_elem);
-        geom_elem.init(*elem, *_system);
-        
-        ops.init(geom_elem);
+        if (diagonal_elem_subdomain_id.count(elem->subdomain_id())) {
 
-        // get the solution
-        unsigned int ndofs = (unsigned int)dof_indices.size();
-        sol.setZero(ndofs);
-        vec.setZero(ndofs);
-        mat.setZero(ndofs, ndofs);
-        
-        for (unsigned int i=0; i<dof_indices.size(); i++)
-            sol(i) = (*localized_solution)(dof_indices[i]);
-        
-        ops.set_elem_solution(sol);
-        
-        
-//        if (_sol_function)
-//            physics_elem->attach_active_solution_function(*_sol_function);
-        
-        //_check_element_numerical_jacobian(*physics_elem, sol);
-        
-        // perform the element level calculations
-        ops.elem_calculations(J!=nullptr?true:false,
-                                              vec, mat);
-        
-//        physics_elem->detach_active_solution_function();
-
-        ops.clear_elem();
-        
-        // copy to the libMesh matrix for further processing
-        DenseRealVector v;
-        DenseRealMatrix m;
-        if (R)
-            MAST::copy(v, vec);
-        if (J)
-            MAST::copy(m, mat);
-
-        // constrain the quantities to account for hanging dofs,
-        // Dirichlet constraints, etc.
-        if (R && J)
-            dof_map.constrain_element_matrix_and_vector(m, v, dof_indices);
-        else if (R)
-            dof_map.constrain_element_vector(v, dof_indices);
-        else
-            dof_map.constrain_element_matrix(m, dof_indices);
-        
-        // add to the global matrices
-        if (R) R->add_vector(v, dof_indices);
-        if (J) J->add_matrix(m, dof_indices);
-        dof_indices.clear();
+            if (J) {
+                
+                unsigned int ndofs = (unsigned int)dof_indices.size();
+                mat.setIdentity(ndofs, ndofs);
+                mat *= 1.e-24;
+                DenseRealMatrix m;
+                MAST::copy(m, mat);
+                dof_map.constrain_element_matrix(m, dof_indices);
+                J->add_matrix(m, dof_indices);
+                dof_indices.clear();
+            }
+        }
+        else {
+                        
+            MAST::GeomElem geom_elem;
+            ops.set_elem_data(elem->dim(), *elem, geom_elem);
+            geom_elem.init(*elem, *_system);
+            
+            ops.init(geom_elem);
+            
+            // get the solution
+            unsigned int ndofs = (unsigned int)dof_indices.size();
+            sol.setZero(ndofs);
+            vec.setZero(ndofs);
+            mat.setZero(ndofs, ndofs);
+            
+            for (unsigned int i=0; i<dof_indices.size(); i++)
+                sol(i) = (*localized_solution)(dof_indices[i]);
+            
+            ops.set_elem_solution(sol);
+            
+            
+            //        if (_sol_function)
+            //            physics_elem->attach_active_solution_function(*_sol_function);
+            
+            //_check_element_numerical_jacobian(*physics_elem, sol);
+            
+            // perform the element level calculations
+            ops.elem_calculations(J!=nullptr?true:false,
+                                  vec, mat);
+            
+            //        physics_elem->detach_active_solution_function();
+            
+            ops.clear_elem();
+            
+            // copy to the libMesh matrix for further processing
+            DenseRealVector v;
+            DenseRealMatrix m;
+            if (R)
+                MAST::copy(v, vec);
+            if (J)
+                MAST::copy(m, mat);
+            
+            // constrain the quantities to account for hanging dofs,
+            // Dirichlet constraints, etc.
+            if (R && J)
+                dof_map.constrain_element_matrix_and_vector(m, v, dof_indices);
+            else if (R)
+                dof_map.constrain_element_vector(v, dof_indices);
+            else
+                dof_map.constrain_element_matrix(m, dof_indices);
+            
+            // add to the global matrices
+            if (R) R->add_vector(v, dof_indices);
+            if (J) J->add_matrix(m, dof_indices);
+            dof_indices.clear();
+        }
     }
 
     
@@ -307,6 +324,9 @@ linearized_jacobian_solution_product (const libMesh::NumericVector<Real>& X,
         
         const libMesh::Elem* elem = *el;
         
+        if (diagonal_elem_subdomain_id.count(elem->subdomain_id()))
+            continue;
+            
         dof_map.dof_indices (elem, dof_indices);
         
         MAST::GeomElem geom_elem;
@@ -420,6 +440,9 @@ second_derivative_dot_solution_assembly (const libMesh::NumericVector<Real>& X,
         
         const libMesh::Elem* elem = *el;
         
+        if (diagonal_elem_subdomain_id.count(elem->subdomain_id()))
+            continue;
+
         dof_map.dof_indices (elem, dof_indices);
         
         MAST::GeomElem geom_elem;
@@ -490,7 +513,7 @@ sensitivity_assemble (const MAST::FunctionBase& f,
     
     // iterate over each element, initialize it and get the relevant
     // analysis quantities
-    RealVectorX vec, sol;
+    RealVectorX vec, vec1, sol;
     
     std::vector<libMesh::dof_id_type> dof_indices;
     const libMesh::DofMap& dof_map = nonlin_sys.get_dof_map();
@@ -515,7 +538,10 @@ sensitivity_assemble (const MAST::FunctionBase& f,
     for ( ; el != end_el; ++el) {
         
         const libMesh::Elem* elem = *el;
-        
+    
+        if (diagonal_elem_subdomain_id.count(elem->subdomain_id()))
+            continue;
+
         // no sensitivity computation assembly is neeed in these cases
         if (_param_dependence &&
             // if object is specified and elem does not depend on it
@@ -534,7 +560,8 @@ sensitivity_assemble (const MAST::FunctionBase& f,
         unsigned int ndofs = (unsigned int)dof_indices.size();
         sol.setZero(ndofs);
         vec.setZero(ndofs);
-        
+        vec1.setZero(ndofs);
+
         for (unsigned int i=0; i<dof_indices.size(); i++)
             sol(i) = (*localized_solution)(dof_indices[i]);
         
@@ -544,6 +571,11 @@ sensitivity_assemble (const MAST::FunctionBase& f,
 //            physics_elem->attach_active_solution_function(*_sol_function);
         
         ops.elem_sensitivity_calculations(f, vec);
+        if (f.is_topology_parameter()) {
+            ops.elem_topology_sensitivity_calculations(f, vec1);
+            vec += vec1;
+        }
+        
         
 //        physics_elem->detach_active_solution_function();
         ops.clear_elem();

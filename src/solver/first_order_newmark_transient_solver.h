@@ -198,6 +198,15 @@ namespace MAST {
          */
         virtual void
         elem_topology_sensitivity_calculations(const MAST::FunctionBase& f,
+                                               RealVectorX& vec);
+
+
+        /*!
+         *   performs the element topology sensitivity calculations over \p elem,
+         *   and returns the element residual sensitivity in \p vec .
+         */
+        virtual void
+        elem_topology_sensitivity_calculations(const MAST::FunctionBase& f,
                                                const MAST::FieldFunction<RealVectorX>& vel,
                                                RealVectorX& vec);
 

@@ -2,10 +2,16 @@ target_sources(mast
     PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}/filter_base.cpp
         ${CMAKE_CURRENT_LIST_DIR}/filter_base.h
+        ${CMAKE_CURRENT_LIST_DIR}/heaviside_elem_homogenization_function.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/heaviside_elem_homogenization_function.h
+        ${CMAKE_CURRENT_LIST_DIR}/homogenized_density_function_base.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/homogenized_density_function_base.h
         ${CMAKE_CURRENT_LIST_DIR}/indicator_function_constrain_dofs.cpp
         ${CMAKE_CURRENT_LIST_DIR}/indicator_function_constrain_dofs.h
         ${CMAKE_CURRENT_LIST_DIR}/interface_dof_handler.cpp
         ${CMAKE_CURRENT_LIST_DIR}/interface_dof_handler.h
+        ${CMAKE_CURRENT_LIST_DIR}/intersected_elem_homogenization_function.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/intersected_elem_homogenization_function.h
         ${CMAKE_CURRENT_LIST_DIR}/level_set_boundary_velocity.cpp
         ${CMAKE_CURRENT_LIST_DIR}/level_set_boundary_velocity.h
         ${CMAKE_CURRENT_LIST_DIR}/level_set_constrain_dofs.cpp
@@ -37,7 +43,11 @@ target_sources(mast
         ${CMAKE_CURRENT_LIST_DIR}/material_patch.cpp
         ${CMAKE_CURRENT_LIST_DIR}/material_patch.h
         ${CMAKE_CURRENT_LIST_DIR}/sub_cell_fe.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/sub_cell_fe.h)
+        ${CMAKE_CURRENT_LIST_DIR}/sub_cell_fe.h
+        ${CMAKE_CURRENT_LIST_DIR}/sub_elem_mesh_refinement.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/sub_elem_mesh_refinement.h
+        ${CMAKE_CURRENT_LIST_DIR}/sub_elem_node_map.h
+        ${CMAKE_CURRENT_LIST_DIR}/sub_elem_node_map.cpp)
 
 # Install MAST headers for this directory.
 install(DIRECTORY ./ DESTINATION include/level_set

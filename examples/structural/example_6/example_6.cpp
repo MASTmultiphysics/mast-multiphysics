@@ -32,6 +32,7 @@
 #include "elasticity/level_set_stress_assembly.h"
 #include "elasticity/compliance_output.h"
 #include "elasticity/structural_system_initialization.h"
+#include "elasticity/structural_near_null_vector_space.h"
 #include "base/parameter.h"
 #include "base/constant_field_function.h"
 #include "base/mesh_field_function.h"
@@ -46,10 +47,13 @@
 #include "optimization/gcmma_optimization_interface.h"
 #include "optimization/npsol_optimization_interface.h"
 #include "optimization/function_evaluation.h"
+#include "examples/structural/base/bracket_2d_model.h"
+#include "examples/structural/base/inplane_2d_model.h"
+#include "examples/structural/base/truss_2d_model.h"
+#include "examples/structural/base/eyebar_2d_model.h"
 
 
 // libMesh includes
-#include "libmesh/parallel.h"
 #include "libmesh/fe_type.h"
 #include "libmesh/serial_mesh.h"
 #include "libmesh/equation_systems.h"
@@ -60,6 +64,7 @@
 #include "libmesh/petsc_nonlinear_solver.h"
 #include "libmesh/mesh_refinement.h"
 #include "libmesh/error_vector.h"
+#include "libmesh/parallel.h"
 
 
 void
@@ -81,7 +86,7 @@ _optim_con(int*    mode,
            int*    nstate);
 
 //
-// BEGIN_TRANSLATE 2D SIMP topology optimization
+// BEGIN_TRANSLATE SIMP topology optimization
 //
 //   \tableofcontents
 //
@@ -153,17 +158,17 @@ private:
 };
 
 
-
-class TopologyOptimizationSIMP2D:
+template <typename T>
+class TopologyOptimizationSIMP:
 public MAST::FunctionEvaluation {
     
-protected:
+public:
     
     bool                                      _initialized;
     MAST::Examples::GetPotWrapper&            _input;
     
-    Real                                      _length;
-    Real                                      _height;
+    std::string                               _problem;
+    Real                                      _volume;
     Real                                      _obj_scaling;
     Real                                      _stress_penalty;
     Real                                      _perimeter_penalty;
@@ -183,7 +188,9 @@ protected:
     MAST::StructuralSystemInitialization*     _sys_init;
     
     MAST::PhysicsDisciplineBase*              _discipline;
-    
+
+    MAST::StructuralNearNullVectorSpace*      _nsp;
+
     MAST::FilterBase*                         _filter;
     
     MAST::MaterialPropertyCardBase*           _m_card;
@@ -201,266 +208,13 @@ protected:
     std::set<MAST::FunctionBase*>             _field_functions;
     std::set<MAST::BoundaryConditionBase*>    _boundary_conditions;
     std::set<unsigned int>                    _dv_dof_ids;
-    
+    std::set<unsigned int>                    _dirichlet_bc_ids;
+
     std::vector<std::pair<unsigned int, MAST::Parameter*>>  _dv_params;
 
-public:
-    
-    //  \section  ex_6_init_mesh Mesh Generation
-    //  This creates the mesh for the specified problem type.
-    //
-    void _init_mesh() {
-        
-        // The mesh is created using classes written in MAST. The particular
-        // mesh to be used can be selected using the input parameter
-        // ` mesh=val `, where `val` can be one of the following:
-        //   - `inplane` inplane structure with load on top and left and right boundaries constrained
-        //   - `bracket` L-bracket
-        //
-        std::string
-        s  = _input("mesh", "type of mesh to be analyzed {inplane, bracket}", "inplane");
-        
-        if (s == "inplane" || s == "truss")
-            _init_mesh_inplane();
-        else if (s == "bracket")
-            _init_mesh_bracket();
-        else if (s == "eye_bar")
-            _init_mesh_eye_bar();
-        else
-            libmesh_error();
-    }
-
-    //
-    //  \subsection  ex_6_inplane_mesh Inplane problem
-    //
-    void _init_mesh_inplane()  {
-        
-        _mesh = new libMesh::SerialMesh(this->comm());
-        
-        //
-        // identify the element type from the input file or from the order
-        // of the element
-        //
-        unsigned int
-        nx_divs = _input("nx_divs", "number of elements along x-axis", 20),
-        ny_divs = _input("ny_divs", "number of elements along y-axis", 20);
-        
-        _length = _input("length", "length of domain along x-axis", 0.3),
-        _height = _input("height", "length of domain along y-axis", 0.3);
-        
-        std::string
-        t = _input("elem_type", "type of geometric element in the mesh", "quad4");
-        
-        libMesh::ElemType
-        e_type = libMesh::Utility::string_to_enum<libMesh::ElemType>(t);
-        
-        //
-        // if high order FE is used, libMesh requires atleast a second order
-        // geometric element.
-        //
-        if (_fetype.order > 1 && e_type == libMesh::QUAD4)
-            e_type = libMesh::QUAD9;
-        else if (_fetype.order > 1 && e_type == libMesh::TRI3)
-            e_type = libMesh::TRI6;
-        
-        //
-        // initialize the mesh with one element
-        //
-        libMesh::MeshTools::Generation::build_square(*_mesh,
-                                                     nx_divs, ny_divs,
-                                                     0, _length,
-                                                     0, _height,
-                                                     e_type);
-    }
     
     //
-    //  \subsection  ex_6_bracket_mesh Bracket
-    //
-    void _init_mesh_bracket() {
-
-        {
-            unsigned int
-            nx_divs = _input("nx_divs", "number of elements along x-axis", 20),
-            ny_divs = _input("ny_divs", "number of elements along y-axis", 20);
-            
-            if (nx_divs%10 != 0 || ny_divs%10 != 0) libmesh_error();
-        }
-        
-        _init_mesh_inplane();
-        _delete_elems_from_bracket_mesh(*_mesh);
-    }
-
-    
-    void _delete_elems_from_bracket_mesh(libMesh::MeshBase &mesh) {
-        
-        Real
-        tol     = 1.e-12,
-        x       = -1.,
-        y       = -1.,
-        length  = _input("length", "length of domain along x-axis", 0.3),
-        width   = _input( "height", "length of domain along y-axis", 0.3),
-        l_frac  = 0.4,
-        w_frac  = 0.4,
-        x_lim   = length * l_frac,
-        y_lim   =  width * (1.-w_frac);
-        
-        //
-        // now, remove elements that are outside of the L-bracket domain
-        //
-        libMesh::MeshBase::element_iterator
-        e_it   = mesh.elements_begin(),
-        e_end  = mesh.elements_end();
-        
-        for ( ; e_it!=e_end; e_it++) {
-            
-            libMesh::Elem* elem = *e_it;
-            x = length;
-            y = 0.;
-            for (unsigned int i=0; i<elem->n_nodes(); i++) {
-                const libMesh::Node& n = elem->node_ref(i);
-                if (x > n(0)) x = n(0);
-                if (y < n(1)) y = n(1);
-            }
-          
-            //
-            // delete element if the lowest x,y locations are outside of the bracket
-            // domain
-            //
-            if (x >= x_lim && y<= y_lim)
-                mesh.delete_elem(elem);
-        }
-        
-        mesh.prepare_for_use();
-        
-        //
-        // add the two additional boundaries to the boundary info so that
-        // we can apply loads on them
-        //
-        bool
-        facing_right = false,
-        facing_down  = false;
-        
-        e_it   = mesh.elements_begin();
-        e_end  = mesh.elements_end();
-        
-        for ( ; e_it != e_end; e_it++) {
-            
-            libMesh::Elem* elem = *e_it;
-            
-            if (!elem->on_boundary()) continue;
-            
-            for (unsigned int i=0; i<elem->n_sides(); i++) {
-                
-                if (elem->neighbor_ptr(i)) continue;
-                
-                std::unique_ptr<libMesh::Elem> s(elem->side_ptr(i).release());
-                
-                const libMesh::Point p = s->centroid();
-                
-                facing_right = true;
-                facing_down  = true;
-                for (unsigned int j=0; j<s->n_nodes(); j++) {
-                    const libMesh::Node& n = s->node_ref(j);
-                    
-                    if (n(0) < x_lim ||  n(1) > y_lim) {
-                        facing_right = false;
-                        facing_down  = false;
-                    }
-                    else if (std::fabs(n(0) - p(0)) > tol)
-                        facing_right = false;
-                    else if (std::fabs(n(1) - p(1)) > tol)
-                        facing_down = false;
-                }
-                
-                if (facing_right) mesh.boundary_info->add_side(elem, i, 4);
-                if (facing_down) mesh.boundary_info->add_side(elem, i, 5);
-            }
-        }
-        
-        mesh.boundary_info->sideset_name(4) = "facing_right";
-        mesh.boundary_info->sideset_name(5) = "facing_down";
-    }
-
-    
-    //
-    //  \subsection  ex_6_eyebar_mesh Eyebar
-    //
-    void _init_mesh_eye_bar() {
-        
-        _mesh = new libMesh::SerialMesh(this->comm());
-
-        //
-        // identify the element type from the input file or from the order
-        // of the element
-        //
-        unsigned int
-        n_radial_divs  = _input("n_radial_divs", "number of elements along radial direction", 20),
-        n_quarter_divs = _input("n_quarter_divs", "number of elements along height", 20);
-        
-        Real
-        radius   = 1.5,
-        h_ratio  = _input("h_ratio", "ratio of radial element size at cylinder and at edge", 2);
-        _height  = 8.;
-        _length  = _height*2;
-        
-        std::string
-        t = _input("elem_type", "type of geometric element in the mesh", "quad4");
-        
-        libMesh::ElemType
-        e_type = libMesh::Utility::string_to_enum<libMesh::ElemType>(t);
-        
-        //
-        // if high order FE is used, libMesh requires atleast a second order
-        // geometric element.
-        //
-        if (_fetype.order > 1 && e_type == libMesh::QUAD4)
-            e_type = libMesh::QUAD9;
-        else if (_fetype.order > 1 && e_type == libMesh::TRI3)
-            e_type = libMesh::TRI6;
-        
-        MAST::Examples::CylinderMesh2D cylinder;
-        cylinder.mesh(radius, _height/2.,
-                      n_radial_divs, n_quarter_divs, h_ratio,
-                      *_mesh, e_type,
-                      true, _height, n_quarter_divs*2);
-        
-        //
-        // add the boundary ids for Dirichlet conditions
-        //
-        libMesh::MeshBase::const_element_iterator
-        e_it   = _mesh->elements_begin(),
-        e_end  = _mesh->elements_end();
-        
-        Real
-        tol  = radius * 1.e-8;
-        
-        for (; e_it != e_end; e_it++) {
-            
-            libMesh::Elem* elem = *e_it;
-            
-            std::unique_ptr<libMesh::Elem> edge(elem->side_ptr(1));
-            libMesh::Point p = edge->centroid();
-            
-            if (std::fabs(p(0)-_height*1.5) < tol &&
-                std::fabs(p(1)) <= 1.) // on the right edge
-                _mesh->boundary_info->add_side(elem, 1, 0);
-            
-            // check for the circumference of the circle where load will be
-            // applied
-            edge.reset(elem->side_ptr(3).release());
-            p = edge->centroid();
-            
-            if ((std::fabs(p.norm()-radius) < 1.e-2) &&
-                p(0) < 0.) // left semi-circle
-                _mesh->boundary_info->add_side(elem, 3, 5);
-        }
-        
-        _mesh->boundary_info->sideset_name(0) = "dirichlet";
-        _mesh->boundary_info->sideset_name(5) = "load";
-    }
-
-    //
-    //  \section  ex_6_system_discipline  System and Discipline
+    //  \section ex_6_system_discipline  System and Discipline
     //
     void _init_system_and_discipline() {
         
@@ -525,286 +279,14 @@ public:
         fe = libMesh::Utility::string_to_enum<libMesh::FEFamily>(family_str);
         _fetype = libMesh::FEType(o, fe);
     }
-    
-
-    
-    //
-    //  \section  ex_6_dirichlet Dirichlet Constraints
-    //
-    void _init_dirichlet_conditions() {
         
-        std::string
-        s  = _input("mesh", "type of mesh to be analyzed {inplane, truss, bracket, eye_bar}", "inplane");
-        
-        if (s == "inplane")
-            _init_dirichlet_conditions_inplane();
-        else if (s == "truss")
-            _init_dirichlet_conditions_truss();
-        else if (s == "bracket")
-            _init_dirichlet_conditions_bracket();
-        else if (s == "eye_bar")
-            _init_dirichlet_conditions_eye_bar();
-        else
-            libmesh_error();
-    }
     
     //
-    //  \subsection  ex_6_inplane_dirichlet Inplane
-    //
-    void _init_dirichlet_conditions_inplane() {
-        
-        ///////////////////////////////////////////////////////////////////////
-        // initialize Dirichlet conditions for structural system
-        ///////////////////////////////////////////////////////////////////////
-        MAST::DirichletBoundaryCondition
-        *dirichlet  = new MAST::DirichletBoundaryCondition;   // right boundary
-        dirichlet->init(1, _sys_init->vars());
-        _discipline->add_dirichlet_bc(1,  *dirichlet);
-
-        dirichlet  = new MAST::DirichletBoundaryCondition;   // right boundary
-        dirichlet->init(3, _sys_init->vars());
-        _discipline->add_dirichlet_bc(3,  *dirichlet);
-
-        _discipline->init_system_dirichlet_bc(*_sys);
-    }
-    
-    //
-    //  \subsection  ex_6_truss_dirichlet Truss
-    //
-    void _init_dirichlet_conditions_truss() {
-        
-        Real
-        dirichlet_length_fraction = _input("truss_dirichlet_length_fraction", "length fraction of the truss boundary where dirichlet condition is applied", 0.05);
-        
-        // identify the boundaries for dirichlet condition
-        libMesh::MeshBase::const_element_iterator
-        e_it   = _mesh->elements_begin(),
-        e_end  = _mesh->elements_end();
-        
-        for ( ; e_it != e_end; e_it++) {
-            
-            const libMesh::Elem* e = *e_it;
-            
-            if ((*e->node_ptr(0))(1) < 1.e-8 &&
-                e->centroid()(0) <= _length*dirichlet_length_fraction)
-                _mesh->boundary_info->add_side(e, 0, 6);
-            else if ((*e->node_ptr(1))(1) < 1.e-8 &&
-                     e->centroid()(0) >= _length*(1.-dirichlet_length_fraction))
-                _mesh->boundary_info->add_side(e, 0, 7);
-            
-            if ((*e->node_ptr(0))(0) < 1.e-8 &&
-                (*e->node_ptr(0))(1) < 1.e-8 &&
-                e->centroid()(0) <= _length*dirichlet_length_fraction)
-                _mesh->boundary_info->add_side(e, 0, 8);
-        }
-        
-        _mesh->boundary_info->sideset_name(6) = "left_dirichlet";
-        _mesh->boundary_info->sideset_name(7) = "right_dirichlet";
-        
-        ///////////////////////////////////////////////////////////////////////
-        // initialize Dirichlet conditions for structural system
-        ///////////////////////////////////////////////////////////////////////
-        std::vector<unsigned int> vars = {1, 2, 3, 4, 5};
-        MAST::DirichletBoundaryCondition
-        *dirichlet  = new MAST::DirichletBoundaryCondition;   // left support
-        dirichlet->init(6, vars);
-        _discipline->add_dirichlet_bc(6,  *dirichlet);
-        
-        dirichlet  = new MAST::DirichletBoundaryCondition;   // right support
-        dirichlet->init(7, vars);
-        _discipline->add_dirichlet_bc(7,  *dirichlet);
-
-        vars = {0};
-        dirichlet  = new MAST::DirichletBoundaryCondition;   // left support
-        dirichlet->init(8, vars);
-        _discipline->add_dirichlet_bc(8,  *dirichlet);
-
-        _discipline->init_system_dirichlet_bc(*_sys);
-    }
-
-    
-    //
-    //  \subsection  ex_6_bracket_dirichlet Bracket
-    //
-    void _init_dirichlet_conditions_bracket() {
-        
-        ///////////////////////////////////////////////////////////////////////
-        // initialize Dirichlet conditions for structural system
-        ///////////////////////////////////////////////////////////////////////
-        MAST::DirichletBoundaryCondition
-        *dirichlet  = new MAST::DirichletBoundaryCondition;   // bottom boundary
-        dirichlet->init(0, _sys_init->vars());
-        _discipline->add_dirichlet_bc(0,  *dirichlet);
-        
-        _discipline->init_system_dirichlet_bc(*_sys);
-    }
-    
-    
-    //
-    //  \subsection  ex_6_eyebar_dirichlet Eyebar
-    //
-    void _init_dirichlet_conditions_eye_bar() {
-        
-        ///////////////////////////////////////////////////////////////////////
-        // initialize Dirichlet conditions for structural system
-        ///////////////////////////////////////////////////////////////////////
-        MAST::DirichletBoundaryCondition
-        *dirichlet  = new MAST::DirichletBoundaryCondition;   // right boundary
-        dirichlet->init(0, _sys_init->vars());
-        _discipline->add_dirichlet_bc(0,  *dirichlet);
-        
-        _discipline->init_system_dirichlet_bc(*_sys);
-    }
-
-    
-
-    //
-    //  \section  ex_6_loading Loading
-    //
-    //
-    void _init_loads() {
-        
-        std::string
-        s  = _input("mesh", "type of mesh to be analyzed {inplane, truss, bracket, eye_bar}", "inplane");
-        
-        if (s == "inplane" || s == "truss")
-            _init_loads_inplane();
-        else if (s == "bracket")
-            _init_loads_bracket();
-        else if (s == "eye_bar")
-            _init_loads_eye_bar();
-        else
-            libmesh_error();
-    }
-    
-    
-    //  \subsection  ex_6_inplane_loading Inplane
-    //
-    class FluxLoad:
-    public MAST::FieldFunction<Real> {
-    public:
-        FluxLoad(const std::string& nm, Real p, Real l1, Real fraction):
-        MAST::FieldFunction<Real>(nm), _p(p), _l1(l1), _frac(fraction) { }
-        virtual ~FluxLoad() {}
-        virtual void operator() (const libMesh::Point& p, const Real t, Real& v) const {
-            if (fabs(p(0)-_l1*0.5) <= 0.5*_frac*_l1) v = _p;
-            else v = 0.;
-        }
-        virtual void derivative(const MAST::FunctionBase& f, const libMesh::Point& p, const Real t, Real& v) const {
-            v = 0.;
-        }
-    protected:
-        Real _p, _l1, _frac;
-    };
-    
-
-    void _init_loads_inplane() {
-        
-        Real
-        frac    = _input("load_length_fraction", "fraction of boundary length on which pressure will act", 0.2),
-        p_val   =  _input("pressure", "pressure on side of domain",   2.e4);
-        
-        FluxLoad
-        *press_f         = new FluxLoad( "pressure", p_val, _length, frac);
-        
-        // initialize the load
-        MAST::BoundaryConditionBase
-        *p_load          = new MAST::BoundaryConditionBase(MAST::SURFACE_PRESSURE);
-        
-        p_load->add(*press_f);
-        _discipline->add_side_load(2, *p_load);
-        
-        _field_functions.insert(press_f);
-    }
-    
-    
-    //
-    //  \subsection  ex_6_bracket_loading Bracket
-    //
-    class BracketLoad:
-    public MAST::FieldFunction<Real> {
-    public:
-        BracketLoad(const std::string& nm, Real p, Real l1, Real fraction):
-        MAST::FieldFunction<Real>(nm), _p(p), _l1(l1), _frac(fraction) { }
-        virtual ~BracketLoad() {}
-        virtual void operator() (const libMesh::Point& p, const Real t, Real& v) const {
-            if (fabs(p(0) >= _l1*(1.-_frac))) v = _p;
-            else v = 0.;
-        }
-        virtual void derivative(const MAST::FunctionBase& f, const libMesh::Point& p, const Real t, Real& v) const {
-            v = 0.;
-        }
-    protected:
-        Real _p, _l1, _frac;
-    };
-    
-    
-    
-    void _init_loads_bracket() {
-        
-        Real
-        length  = _input("length", "length of domain along x-axis", 0.3),
-        frac    = _input("load_length_fraction", "fraction of boundary length on which pressure will act", 0.125),
-        p_val   = _input("pressure", "pressure on side of domain",   5.e7);
-        
-        BracketLoad
-        *press_f         = new BracketLoad( "pressure", p_val, length, frac);
-        
-        //
-        // initialize the load
-        //
-        MAST::BoundaryConditionBase
-        *p_load          = new MAST::BoundaryConditionBase(MAST::SURFACE_PRESSURE);
-        
-        p_load->add(*press_f);
-        _discipline->add_side_load(5, *p_load);
-        
-        _field_functions.insert(press_f);
-    }
-
-    
-    //
-    //  \subsection  ex_6_eyebar_loading Eyebar
-    //
-    class EyebarLoad:
-    public MAST::FieldFunction<Real> {
-    public:
-        EyebarLoad():
-        MAST::FieldFunction<Real>("pressure") { }
-        virtual ~EyebarLoad() {}
-        virtual void operator() (const libMesh::Point& p, const Real t, Real& v) const {
-            if (p(0) <= 0.) v = (-std::pow(p(1), 2) + std::pow(1.5, 2))*1.e6;
-            else v = 0.;
-        }
-        virtual void derivative(const MAST::FunctionBase& f, const libMesh::Point& p, const Real t, Real& v) const {
-            v = 0.;
-        }
-    };
-
-    
-    
-    void _init_loads_eye_bar() {
-        
-        EyebarLoad
-        *press_f         = new EyebarLoad();
-        
-        // initialize the load
-        MAST::BoundaryConditionBase
-        *p_load          = new MAST::BoundaryConditionBase(MAST::SURFACE_PRESSURE);
-        
-        p_load->add(*press_f);
-        _discipline->add_side_load(5, *p_load);
-        
-        _field_functions.insert(press_f);
-    }
-
-    
-    //
-    //   \section  ex_6_properties Properties
+    //   \section ex_6_properties Properties
     //
     //
     //
-    //   \subsection  ex_6_material_properties Material Properties
+    //   \subsection ex_6_material_properties Material Properties
     //
 
     void _init_material() {
@@ -922,384 +404,7 @@ public:
         _density_sys->solution->close();
     }
     
-    
-    void _init_phi_dvs() {
         
-        std::string
-        s  = _input("mesh", "type of mesh to be analyzed {inplane, truss, bracket, eye_bar}", "inplane");
-        
-        if (s == "inplane" || s == "truss")
-            _init_phi_dvs_inplane();
-        else if (s == "bracket")
-            _init_phi_dvs_bracket();
-        else if (s == "eye_bar")
-            _init_phi_dvs_eye_bar();
-        else
-            libmesh_error();
-        
-        Real
-        filter_radius          = _input("filter_radius", "radius of geometric filter for level set field", 0.015);
-        _filter                = new MAST::FilterBase(*_density_sys, filter_radius, _dv_dof_ids);
-        libMesh::NumericVector<Real>& vec = _density_sys->add_vector("base_values");
-        vec = *_density_sys->solution;
-        vec.close();
-    }
-    
-    //
-    //  \subsection  ex_6_inplane_initial_level_set Inplane
-    //
-    void _init_phi_dvs_inplane() {
-        
-        //
-        // this assumes that density variable has a constant value per element
-        //
-        libmesh_assert_equal_to(_density_fetype.family, libMesh::LAGRANGE);
-
-        Real
-        frac          = _input("load_length_fraction", "fraction of boundary length on which pressure will act", 0.2),
-        filter_radius = _input("filter_radius", "radius of geometric filter for level set field", 0.015);
-        
-        unsigned int
-        sys_num = _density_sys->number(),
-        dof_id  = 0;
-        
-        Real
-        val     = 0.;
-        
-        //
-        // all ranks will have DVs defined for all variables. So, we should be
-        // operating on a replicated mesh
-        //
-        libmesh_assert(_mesh->is_replicated());
-        
-        std::vector<Real> local_phi(_density_sys->solution->size());
-        _density_sys->solution->localize(local_phi);
-        
-        // iterate over all the element values
-        libMesh::MeshBase::const_node_iterator
-        it  = _mesh->nodes_begin(),
-        end = _mesh->nodes_end();
-        
-        //
-        // maximum number of dvs is the number of nodes on the level set function
-        // mesh. We will evaluate the actual number of dvs
-        //
-        _dv_params.reserve(_mesh->n_elem());
-        _n_vars = 0;
-        
-        for ( ; it!=end; it++) {
-            
-            const libMesh::Node& n = **it;
-
-            dof_id                     = n.dof_number(sys_num, 0, 0);
-            
-            // only if node is not on the upper edge
-            if ((n(1)+filter_radius >= _height) &&
-                (n(0)-filter_radius <= _length*.5*(1.+frac))   &&
-                (n(0)+filter_radius >= _length*.5*(1.-frac))) {
-                
-                // set value at the material points to a small positive number
-                if (dof_id >= _density_sys->solution->first_local_index() &&
-                    dof_id <  _density_sys->solution->last_local_index())
-                    _density_sys->solution->set(dof_id, 1.e0);
-            }
-            else {
-
-                std::ostringstream oss;
-                oss << "dv_" << _n_vars;
-                val  = local_phi[dof_id];
-                
-                _dv_params.push_back(std::pair<unsigned int, MAST::Parameter*>());
-                _dv_params[_n_vars].first  = dof_id;
-                _dv_params[_n_vars].second = new MAST::LevelSetParameter(oss.str(), val, &n);
-                _dv_params[_n_vars].second->set_as_topology_parameter(true);
-                _dv_dof_ids.insert(dof_id);
-
-                _n_vars++;
-            }
-        }
-        
-        _density_sys->solution->close();
-    }
-    
-    //
-    //  \subsection  ex_6_truss_initial_level_set Truss
-    //
-    void _init_phi_dvs_truss() {
-        
-        //
-        // this assumes that density variable has a constant value per element
-        //
-        libmesh_assert_equal_to(_density_fetype.family, libMesh::LAGRANGE);
-
-        Real
-        frac          = _input("load_length_fraction", "fraction of boundary length on which pressure will act", 0.2),
-        filter_radius = _input("filter_radius", "radius of geometric filter for level set field", 0.015);
-        
-        unsigned int
-        sys_num = _density_sys->number(),
-        dof_id  = 0;
-        
-        Real
-        val     = 0.;
-        
-        //
-        // all ranks will have DVs defined for all variables. So, we should be
-        // operating on a replicated mesh
-        //
-        libmesh_assert(_mesh->is_replicated());
-        
-        std::vector<Real> local_phi(_density_sys->solution->size());
-        _density_sys->solution->localize(local_phi);
-        
-        // iterate over all the element values
-        libMesh::MeshBase::const_node_iterator
-        it  = _mesh->nodes_begin(),
-        end = _mesh->nodes_end();
-
-        //
-        // maximum number of dvs is the number of nodes on the level set function
-        // mesh. We will evaluate the actual number of dvs
-        //
-        _dv_params.reserve(_mesh->n_elem());
-        _n_vars = 0;
-        
-        for ( ; it!=end; it++) {
-            
-            const libMesh::Node& n = **it;
-
-            dof_id                     = n.dof_number(sys_num, 0, 0);
-            
-            // only if node is not on the upper edge
-            if ((n(1)-filter_radius <= 0.) &&
-                (n(0)-filter_radius <= _length*.5*(1.+frac))   &&
-                (n(0)+filter_radius >= _length*.5*(1.-frac))) {
-                
-                // set value at the material points to a small positive number
-                if (dof_id >= _density_sys->solution->first_local_index() &&
-                    dof_id <  _density_sys->solution->last_local_index())
-                    _density_sys->solution->set(dof_id, 1.e0);
-            }
-            else {
-                
-                std::ostringstream oss;
-                oss << "dv_" << _n_vars;
-                val  = local_phi[dof_id];
-                
-                _dv_params.push_back(std::pair<unsigned int, MAST::Parameter*>());
-                _dv_params[_n_vars].first  = dof_id;
-                _dv_params[_n_vars].second = new MAST::LevelSetParameter(oss.str(), val, &n);
-                _dv_params[_n_vars].second->set_as_topology_parameter(true);
-                _dv_dof_ids.insert(dof_id);
-
-                _n_vars++;
-            }
-        }
-        
-        _density_sys->solution->close();
-    }
-    
-    //
-    //  \subsection  ex_6_bracket_initial_level_set Bracket
-    //
-    void _init_phi_dvs_bracket() {
-        
-        libmesh_assert(_initialized);
-
-        //
-        // this assumes that density variable has a constant value per element
-        //
-        libmesh_assert_equal_to(_density_fetype.family, libMesh::LAGRANGE);
-
-        Real
-        tol           = 1.e-12,
-        length        = _input("length", "length of domain along x-axis", 0.3),
-        height        = _input("height", "length of domain along y-axis", 0.3),
-        l_frac        = 0.4,//_input("length_fraction", "fraction of length along x-axis that is in the bracket", 0.4),
-        h_frac        = 0.4,//_input( "height_fraction", "fraction of length along y-axis that is in the bracket", 0.4),
-        x_lim         = length * l_frac,
-        y_lim         =  height * (1.-h_frac),
-        frac          = _input("load_length_fraction", "fraction of boundary length on which pressure will act", 0.125),
-        filter_radius = _input("filter_radius", "radius of geometric filter for level set field", 0.015);
-        
-        unsigned int
-        sys_num = _density_sys->number(),
-        dof_id  = 0;
-        
-        Real
-        val     = 0.;
-        
-        //
-        // all ranks will have DVs defined for all variables. So, we should be
-        // operating on a replicated mesh
-        //
-        libmesh_assert(_mesh->is_replicated());
-        
-        std::vector<Real> local_phi(_density_sys->solution->size());
-        _density_sys->solution->localize(local_phi);
-        
-        // iterate over all the element values
-        libMesh::MeshBase::const_node_iterator
-        it  = _mesh->nodes_begin(),
-        end = _mesh->nodes_end();
-
-        //
-        // maximum number of dvs is the number of nodes on the level set function
-        // mesh. We will evaluate the actual number of dvs
-        //
-        _dv_params.reserve(_mesh->n_elem());
-        _n_vars = 0;
-        
-        for ( ; it!=end; it++) {
-            
-            const libMesh::Node& n = **it;
-
-            dof_id                     = n.dof_number(sys_num, 0, 0);
-            
-            if ((n(1)-filter_radius) <= y_lim && (n(0)+filter_radius) >= length*(1.-frac)) {
-          
-                //
-                // set value at the constrained points to a small positive number
-                // material here
-                //
-                if (dof_id >= _density_sys->solution->first_local_index() &&
-                    dof_id <  _density_sys->solution->last_local_index())
-                    _density_sys->solution->set(dof_id, 1.e0);
-            }
-            else {
-                
-                std::ostringstream oss;
-                oss << "dv_" << _n_vars;
-                val = local_phi[dof_id];
-                
-                //
-                // on the boundary, set everything to be zero, so that there
-                // is always a boundary there that the optimizer can move
-                //
-                if (n(0) < tol                     ||  // left boundary
-                    std::fabs(n(0) - length) < tol ||  // right boundary
-                    std::fabs(n(1) - height) < tol ||  // top boundary
-                    (n(0) >= x_lim && n(1) <= y_lim)) {
-                    
-                    if (dof_id >= _density_sys->solution->first_local_index() &&
-                        dof_id <  _density_sys->solution->last_local_index())
-                        _density_sys->solution->set(dof_id, _rho_min);
-                    val = _rho_min;
-                }
-                
-                _dv_params.push_back(std::pair<unsigned int, MAST::Parameter*>());
-                _dv_params[_n_vars].first  = dof_id;
-                _dv_params[_n_vars].second = new MAST::LevelSetParameter(oss.str(), val, &n);
-                _dv_params[_n_vars].second->set_as_topology_parameter(true);
-                _dv_dof_ids.insert(dof_id);
-                
-                _n_vars++;
-            }
-        }
-        
-        _density_sys->solution->close();
-    }
-    
-    
-    //
-    //  \subsection  ex_6_eyebar_initial_level_set Eyebar
-    //
-    void _init_phi_dvs_eye_bar() {
-        
-        libmesh_assert(_initialized);
-
-        //
-        // this assumes that density variable has a constant value per element
-        //
-        libmesh_assert_equal_to(_density_fetype.family, libMesh::LAGRANGE);
-
-        Real
-        tol           = 1.e-6,
-        filter_radius = _input("filter_radius", "radius of geometric filter for level set field", 0.015);
-        
-        unsigned int
-        sys_num = _density_sys->number(),
-        dof_id  = 0;
-        
-        Real
-        val     = 0.;
-        
-        //
-        // all ranks will have DVs defined for all variables. So, we should be
-        // operating on a replicated mesh
-        //
-        libmesh_assert(_mesh->is_replicated());
-        
-        std::vector<Real> local_phi(_density_sys->solution->size());
-        _density_sys->solution->localize(local_phi);
-        
-        // iterate over all the element values
-        // iterate over all the element values
-        libMesh::MeshBase::const_node_iterator
-        it  = _mesh->nodes_begin(),
-        end = _mesh->nodes_end();
-
-        //
-        // maximum number of dvs is the number of nodes on the level set function
-        // mesh. We will evaluate the actual number of dvs
-        //
-        _dv_params.reserve(_mesh->n_elem());
-        _n_vars = 0;
-        
-        for ( ; it!=end; it++) {
-            
-            const libMesh::Node& n = **it;
-            
-            dof_id                     = n.dof_number(sys_num, 0, 0);
-            
-            
-            
-            if (((n.norm() <= 1.5+filter_radius) && n(0) <= 0.) ||  // circle
-                (std::fabs(n(0)-_height*1.5) < filter_radius &&  // right edge
-                 std::fabs(n(1)) <= 1.+filter_radius)) { // dirichlet constraint
-                    
-                    //
-                    // set value at the constrained points to material
-                    //
-                    if (dof_id >= _density_sys->solution->first_local_index() &&
-                        dof_id <  _density_sys->solution->last_local_index())
-                        _density_sys->solution->set(dof_id, 1.e0);
-                }
-            else {
-                
-                std::ostringstream oss;
-                oss << "dv_" << _n_vars;
-                val = local_phi[dof_id];
-                
-                //
-                // on the boundary, set everything to be zero, so that there
-                // is always a boundary there that the optimizer can move
-                //
-                if (std::fabs(n(0)+_height*0.5) < tol    ||  // left boundary
-                    std::fabs(n(1)-_height*0.5) < tol    ||  // top boundary
-                    std::fabs(n(1)+_height*0.5) < tol    ||  // bottom boundary
-                    std::fabs(n(0)-_height*1.5) < tol) {     // right boundary
-                    
-                    if (dof_id >= _density_sys->solution->first_local_index() &&
-                        dof_id <  _density_sys->solution->last_local_index())
-                        _density_sys->solution->set(dof_id, _rho_min);
-                    val = _rho_min;
-                }
-                
-                _dv_params.push_back(std::pair<unsigned int, MAST::Parameter*>());
-                _dv_params[_n_vars].first  = dof_id;
-                _dv_params[_n_vars].second = new MAST::LevelSetParameter(oss.str(), val, &n);
-                _dv_params[_n_vars].second->set_as_topology_parameter(true);
-                _dv_dof_ids.insert(dof_id);
-                
-                _n_vars++;
-            }
-        }
-        
-        _density_sys->solution->close();
-    }
-
-    
     //
     //   \subsection  ex_6_design_variable_init   Design Variables
     //
@@ -1416,54 +521,66 @@ public:
             return;
         }
         
-        // evaluate compliance
-        //nonlinear_assembly.calculate_output(*_sys->solution, compliance);
-
-        // set the elasticity penalty for stress evaluation
-        _Ef->set_penalty_val(stress_penalty);
-        nonlinear_assembly.calculate_output(*_sys->solution, stress);
-        
-        //////////////////////////////////////////////////////////////////////
-        // evaluate the objective
-        //////////////////////////////////////////////////////////////////////
         Real
-        max_vm = stress.get_maximum_von_mises_stress(),
-        vm_agg = stress.output_total(),
+        max_vm = 0.,
+        vm_agg = 0.,
         vol    = 0.,
-        comp   = compliance.output_total();
+        comp   = 0.;
         
+        // evaluate the volume for used in the problem setup
         _evaluate_volume(&vol, nullptr);
-        
-        //obj       = _obj_scaling * comp;
-        obj         = _obj_scaling * vol;
-        //_obj_scaling    * (vol+ _perimeter_penalty * per) +
-        //_stress_penalty * (vm_agg);///_stress_lim - 1.);
-        
-        fvals[0]  =  stress.output_total()/_stress_lim - 1.;  // g = sigma/sigma0-1 <= 0
-        //fvals[0]  =  stress.output_total();  // g = sigma/sigma0-1 <= 0
-        //fvals[0]  = vol/_length/_height - _vf; // vol/vol0 - a <=
         libMesh::out << "volume: " << vol << std::endl;
-        libMesh::out << "max: "    << max_vm << "  constr: " << vm_agg///_stress_lim - 1.
-        << std::endl;
-        libMesh::out << "compliance: " << comp << std::endl;
+
+        // evaluate the output based on specified problem type
+        if (_problem == "compliance_volume") {
+            
+            nonlinear_assembly.calculate_output(*_sys->solution, compliance);
+            comp      = compliance.output_total();
+            obj       = _obj_scaling * comp;
+            fvals[0]  = vol/_volume - _vf; // vol/vol0 - a <=
+            libMesh::out << "compliance: " << comp << std::endl;
+        }
+        else if (_problem == "volume_stress") {
+            
+            // set the elasticity penalty for stress evaluation
+            _Ef->set_penalty_val(stress_penalty);
+            nonlinear_assembly.calculate_output(*_sys->solution, stress);
+            max_vm    = stress.get_maximum_von_mises_stress();
+            vm_agg    = stress.output_total();
+            obj       = _obj_scaling * vol;
+            fvals[0]  =  stress.output_total()/_stress_lim - 1.;  // g = sigma/sigma0-1 <= 0
+            libMesh::out
+            << "  max: "    << max_vm
+            << "  constr: " << vm_agg
+            << std::endl;
+        }
+        else
+            libmesh_error();
+        
 
         //////////////////////////////////////////////////////////////////////
         // evaluate the objective sensitivities, if requested
         //////////////////////////////////////////////////////////////////////
         if (eval_obj_grad) {
             
-            _evaluate_volume(nullptr, &obj_grad);
-            for (unsigned int i=0; i<grads.size(); i++) obj_grad[i] /= (_length*_height);
-//            std::vector<Real>
-//            grad1(obj_grad.size(), 0.);
-//
-//            _evaluate_compliance_sensitivity(compliance,
-//                                             nonlinear_elem_ops,
-//                                             nonlinear_assembly,
-//                                             grad1);
-//
-//            for (unsigned int i=0; i<obj_grad.size(); i++)
-//                obj_grad[i] += _obj_scaling * grad1[i];
+            if (_problem == "compliance_volume") {
+                
+                _evaluate_compliance_sensitivity(compliance,
+                                                 nonlinear_elem_ops,
+                                                 nonlinear_assembly,
+                                                 obj_grad);
+                
+                for (unsigned int i=0; i<obj_grad.size(); i++)
+                    obj_grad[i] *= _obj_scaling;
+            }
+            else if (_problem == "volume_stress") {
+                
+                _evaluate_volume(nullptr, &obj_grad);
+                for (unsigned int i=0; i<grads.size(); i++)
+                    obj_grad[i] *= _obj_scaling;
+            }
+            else
+                libmesh_error();
         }
         
         //////////////////////////////////////////////////////////////////////
@@ -1478,20 +595,29 @@ public:
         //////////////////////////////////////////////////////////////////////
         if (if_grad_sens) {
             
-            _evaluate_stress_sensitivity(penalty,
-                                         stress_penalty,
-                                         stress,
-                                         nonlinear_elem_ops,
-                                         nonlinear_assembly,
-                                         grads);
-
-            //_evaluate_volume(nullptr, &grads);
-            //for (unsigned int i=0; i<grads.size(); i++) grads[i] /= (_length*_height);
+            if (_problem == "compliance_volume") {
+                
+                _evaluate_volume(nullptr, &grads);
+                for (unsigned int i=0; i<grads.size(); i++)
+                    grads[i] /= _volume;
+            }
+            else if (_problem == "volume_stress") {
+                
+                _evaluate_stress_sensitivity(penalty,
+                                             stress_penalty,
+                                             stress,
+                                             nonlinear_elem_ops,
+                                             nonlinear_assembly,
+                                             grads);
+            }
+            else
+                libmesh_error();
         }
         
         //
         // also the stress data for plotting
         //
+        _Ef->set_penalty_val(stress_penalty);
         stress_assembly.update_stress_strain_data(stress, *_sys->solution);
         
         _density_function->clear();
@@ -1750,6 +876,8 @@ public:
         nonlinear_assembly.clear_elem_parameter_dependence_object();
     }
 
+    void set_n_vars(const unsigned int n_vars) {_n_vars = n_vars;}
+
     //
     //  \subsection  ex_6_design_output  Output of Design Iterate
     //
@@ -1831,7 +959,7 @@ public:
             _optimization_interface->set_real_parameter   ("initial_rel_step",        initial_step);
         }
 
-        MAST::FunctionEvaluation::output(iter, x, obj/_obj_scaling, fval, if_write_to_optim_file);
+        MAST::FunctionEvaluation::output(iter, x, obj/_obj_scaling, f, if_write_to_optim_file);
     }
 
 #if MAST_ENABLE_SNOPT == 1
@@ -1855,13 +983,13 @@ public:
     //   \subsection  ex_6_constructor  Constructor
     //
     
-    TopologyOptimizationSIMP2D(const libMesh::Parallel::Communicator& comm_in,
+    TopologyOptimizationSIMP(const libMesh::Parallel::Communicator& comm_in,
                                    MAST::Examples::GetPotWrapper& input):
     MAST::FunctionEvaluation             (comm_in),
     _initialized                         (false),
     _input                               (input),
-    _length                              (0.),
-    _height                              (0.),
+    _problem                             (""),
+    _volume                              (0.),
     _obj_scaling                         (0.),
     _stress_penalty                      (0.),
     _perimeter_penalty                   (0.),
@@ -1875,6 +1003,7 @@ public:
     _sys                                 (nullptr),
     _sys_init                            (nullptr),
     _discipline                          (nullptr),
+    _nsp                                 (nullptr),
     _filter                              (nullptr),
     _m_card                              (nullptr),
     _p_card                              (nullptr),
@@ -1885,19 +1014,24 @@ public:
         //
         // call the initialization routines for each component
         //
+        _mesh    =  new libMesh::SerialMesh(this->comm());
+
         _init_fetype();
-        _init_mesh();
+        T::init_analysis_mesh(*this, *_mesh);
         _init_system_and_discipline();
-        _init_dirichlet_conditions();
+        T::init_analysis_dirichlet_conditions(*this);
         _init_eq_sys();
-        
+
+        _nsp  = new MAST::StructuralNearNullVectorSpace;
+        _sys->nonlinear_solver->nearnullspace_object = _nsp;
+
         // density function is used by elasticity modulus function. So, we
         // initialize this here
         _density_function        = new MAST::MeshFieldFunction(*_density_sys, "rho");
         _density_sens_function   = new MAST::MeshFieldFunction(*_density_sys, "rho");
 
         _init_material();
-        _init_loads();
+        T::init_structural_loads(*this);
         _init_section_property();
         _initialized = true;
         
@@ -1911,17 +1045,32 @@ public:
         /////////////////////////////////////////////////
         
         //
-        // first, initialize the level set functions over the domain
+        // initialize density field to a constant value of the specified
+        // volume fraction
         //
-        this->initialize_solution();
-        
+        _vf    = _input("volume_fraction", "upper limit for the voluem fraction", 0.5);
+
+        _density_sys->solution->zero();
+        _density_sys->solution->add(_vf);
+        _density_sys->solution->close();
+
         //
         // next, define a new parameter to define design variable for nodal level-set
         // function value
         //
-        this->_init_phi_dvs();
+        T::init_simp_dvs(*this);
         
-        _obj_scaling           = 1./_length/_height;
+        Real
+        filter_radius          = _input("filter_radius", "radius of geometric filter for level set field", 0.015);
+        _filter                = new MAST::FilterBase(*_density_sys, filter_radius, _dv_dof_ids);
+        libMesh::NumericVector<Real>& vec = _density_sys->add_vector("base_values");
+        vec = *_density_sys->solution;
+        vec.close();
+
+
+        _problem               = _input("problem_type", "{compliance_volume, volume_stress}", "compliance_volume");
+        _volume                = T::reference_volume(*this);
+        _obj_scaling           = 1./_volume;
         _stress_penalty        = _input("stress_penalty", "penalty value for stress_constraint", 0.);
         _perimeter_penalty     = _input("perimeter_penalty", "penalty value for perimeter in the objective function", 0.);
         _stress_lim            = _input("vm_stress_limit", "limit von-mises stress value", 2.e8);
@@ -1944,7 +1093,7 @@ public:
     //
     //   \subsection  ex_6_destructor  Destructor
     //
-    ~TopologyOptimizationSIMP2D() {
+    ~TopologyOptimizationSIMP() {
         
         {
             std::set<MAST::BoundaryConditionBase*>::iterator
@@ -1972,6 +1121,8 @@ public:
         
         if (!_initialized)
             return;
+
+        delete _nsp;
         
         delete _m_card;
         delete _p_card;
@@ -1999,7 +1150,7 @@ public:
 //   \subsection  ex_6_wrappers_snopt  Wrappers for SNOPT
 //
 
-TopologyOptimizationSIMP2D* _my_func_eval = nullptr;
+MAST::FunctionEvaluation* _my_func_eval = nullptr;
 
 #if MAST_ENABLE_SNOPT == 1
 
@@ -2163,8 +1314,36 @@ int main(int argc, char* argv[]) {
     MAST::Examples::GetPotWrapper
     input(argc, argv, "input");
 
-    TopologyOptimizationSIMP2D top_opt(init.comm(), input);
-    _my_func_eval = &top_opt;
+    std::unique_ptr<MAST::FunctionEvaluation>
+    top_opt;
+    
+    std::string
+    mesh = input("mesh", "inplane2d, bracket2d, truss2d, eyebar2d", "inplane2d");
+    
+    if (mesh == "inplane2d") {
+        top_opt.reset
+        (new TopologyOptimizationSIMP<MAST::Examples::Inplane2DModel>
+         (init.comm(), input));
+    }
+    else if (mesh == "bracket2d") {
+        top_opt.reset
+        (new TopologyOptimizationSIMP<MAST::Examples::Bracket2DModel>
+         (init.comm(), input));
+    }
+    else if (mesh == "eyebar2d") {
+        top_opt.reset
+        (new TopologyOptimizationSIMP<MAST::Examples::Eyebar2DModel>
+         (init.comm(), input));
+    }
+    else if (mesh == "truss2d") {
+        top_opt.reset
+        (new TopologyOptimizationSIMP<MAST::Examples::Truss2DModel>
+         (init.comm(), input));
+    }
+    else
+        libmesh_error();
+    
+    _my_func_eval = top_opt.get();
     
     //MAST::NLOptOptimizationInterface optimizer(NLOPT_LD_SLSQP);
     std::unique_ptr<MAST::OptimizationInterface>
@@ -2205,12 +1384,18 @@ int main(int argc, char* argv[]) {
     
     if (optimizer.get()) {
         
-        optimizer->attach_function_evaluation_object(top_opt);
+        optimizer->attach_function_evaluation_object(*top_opt);
 
-        //std::vector<Real> xx1(top_opt.n_vars()), xx2(top_opt.n_vars());
-        //top_opt.init_dvar(xx1, xx2, xx2);
-        //top_opt.verify_gradients(xx1);
-        optimizer->optimize();
+        bool
+        verify_grads = input("verify_gradients", "If true, the gradients of objective and constraints will be verified without optimization", false);
+        if (verify_grads) {
+            
+            std::vector<Real> xx1(top_opt->n_vars()), xx2(top_opt->n_vars());
+            top_opt->init_dvar(xx1, xx2, xx2);
+            top_opt->verify_gradients(xx1);
+        }
+        else
+            optimizer->optimize();
     }
     
     // END_TRANSLATE

@@ -155,6 +155,46 @@ MAST::ComplianceOutput::evaluate_sensitivity(const MAST::FunctionBase &f) {
 
 void
 MAST::ComplianceOutput::
+evaluate_topology_sensitivity(const MAST::FunctionBase &f) {
+    
+    // the primal data should have been calculated
+    libmesh_assert(_physics_elem);
+    libmesh_assert(f.is_topology_parameter());
+    
+    if (this->if_evaluate_for_element(_physics_elem->elem())) {
+        
+        std::pair<const MAST::FieldFunction<RealVectorX>*, unsigned int>
+        val = this->get_elem_boundary_velocity_data();
+        
+        if (val.first) {
+
+            MAST::StructuralElementBase& e =
+            dynamic_cast<MAST::StructuralElementBase&>(*_physics_elem);
+            
+            RealVectorX
+            vec   = RealVectorX::Zero(e.sol().size());
+            
+            RealMatrixX
+            dummy = RealMatrixX::Zero(vec.size(), vec.size());
+            
+            e.volume_external_residual_boundary_velocity(f,
+                                                         val.second,
+                                                         *val.first,
+                                                         _discipline->volume_loads(),
+                                                         false,
+                                                         vec,
+                                                         dummy);
+            
+            // compute the contribution of this element to compliance
+            _dcompliance_dp -= vec.dot(e.sol());
+        }
+    }
+}
+
+
+
+void
+MAST::ComplianceOutput::
 evaluate_topology_sensitivity(const MAST::FunctionBase &f,
                               const MAST::FieldFunction<RealVectorX> &vel) {
     
@@ -280,7 +320,7 @@ MAST::ComplianceOutput::init(const MAST::GeomElem& elem) {
     dynamic_cast<const MAST::ElementPropertyCardBase&>(_discipline->get_property_card(elem));
     
     _physics_elem =
-    MAST::build_structural_element(*_system, *_assembly, elem, p).release();
+    MAST::build_structural_element(*_system, elem, p).release();
 }
 
 

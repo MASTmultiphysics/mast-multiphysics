@@ -1,12 +1,16 @@
-add_executable(structural_example_7
-        example_7.cpp)
+if(ENABLE_NASTRANIO)
 
-target_link_libraries(structural_example_7 mast)
+    add_executable(structural_example_7
+            example_7.cpp)
 
-install(TARGETS structural_example_7
-        RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/examples)
+    target_link_libraries(structural_example_7 mast)
 
-configure_file(${CMAKE_CURRENT_LIST_DIR}/example_7_acoss_mesh.bdf ${CMAKE_CURRENT_BINARY_DIR} COPYONLY)
+    install(TARGETS structural_example_7
+            RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/examples)
 
-add_test(NAME structural_example_7_mpi
-    COMMAND ${MPIEXEC_EXECUTABLE} -np 2 $<TARGET_FILE:structural_example_7> -ksp_type "preonly" -pc_type "lu")
+    configure_file(${CMAKE_CURRENT_LIST_DIR}/example_7_acoss_mesh.bdf ${CMAKE_CURRENT_BINARY_DIR} COPYONLY)
+
+    add_test(NAME structural_example_7_mpi
+        COMMAND ${MPIEXEC_EXECUTABLE} -np 2 $<TARGET_FILE:structural_example_7> -ksp_type "preonly" -pc_type "lu")
+
+endif()

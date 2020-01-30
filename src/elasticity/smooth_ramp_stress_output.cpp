@@ -35,6 +35,7 @@
 #include "libmesh/parallel.h"
 
 
+
 MAST::SmoothRampStressStrainOutput::SmoothRampStressStrainOutput():
 MAST::StressStrainOutputBase() {
     

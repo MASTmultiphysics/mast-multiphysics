@@ -104,6 +104,10 @@ if (ENABLE_NASTRANIO)
     else()
         message(STATUS "  Numpy package found")
     endif()
+    
+    set (MAST_ENABLE_NASTRANIO 1)
+else()
+    set (MAST_ENABLE_NASTRANIO 0)
 endif()
 
 # THIRD PARTY/CONTRIB

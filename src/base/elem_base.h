@@ -80,7 +80,6 @@ namespace MAST {
          *   performed.
          */
         ElementBase(MAST::SystemInitialization&     sys,
-                    MAST::AssemblyBase&             assembly,
                     const MAST::GeomElem&           elem);
         
         
@@ -95,13 +94,6 @@ namespace MAST {
          */
         MAST::SystemInitialization& system_initialization() {
             return _system;
-        }
-
-        /*!
-         *   @returns a reference to the libMesh::System object
-         */
-        MAST::AssemblyBase& assembly() {
-            return _assembly;
         }
 
         
@@ -206,11 +198,6 @@ namespace MAST {
          *   SystemInitialization object associated with this element
          */
         MAST::SystemInitialization& _system;
-        
-        /*!
-         *    Assembly object
-         */
-        MAST::AssemblyBase&        _assembly;
         
         /*!
          *   geometric element for which the computations are performed
