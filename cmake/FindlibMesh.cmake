@@ -37,24 +37,42 @@ find_library(timpi_dbg_LIBRARY
              NAMES timpi_dbg
              HINTS ${libMesh_DIR}/lib)
             
-# If debug library is not available then set it to the optimized library
+# If debug library is not available, then set it to the development library if available, else set it to the optimized library.
 if(NOT libMesh_dbg_LIBRARY)
     if(NOT libMesh_dev_LIBRARY)
-        message(WARNING "Did not find libmesh_dbg or libmesh_devel, using libmesh_opt for debug and devel versions.")
-        find_library(libMesh_dbg_LIBRARY
-                     NAMES mesh_opt
-                     HINTS ${libMesh_DIR}/lib)
-        find_library(libMesh_dev_LIBRARY
-                     NAMES mesh_opt
-                     HINTS ${libMesh_DIR}/lib)
+        if(libMesh_opt_LIBRARY)
+            message(WARNING "Did not find libmesh_dbg or libmesh_devel, using libmesh_opt for debug version.")
+            SET(libMesh_dbg_LIBRARY ${libMesh_opt_LIBRARY})
+        else()
+            message(FATAL_ERROR "Could not find any libMesh libraries.")
+        endif()
     else()
         message(WARNING "Did not find libmesh_dbg using libmesh_devel for debug version.")
-        find_library(libMesh_dbg_LIBRARY
-                     NAMES mesh_devel
-                     HINTS ${libMesh_DIR}/lib)
+        SET(libMesh_dbg_LIBRARY ${libMesh_dev_LIBRARY})
     endif()
 endif()
 
+# If development library is not available, then set it to the debug library if available, else set it to the optimized library.
+if(NOT libMesh_dev_LIBRARY)
+    if(NOT libMesh_dbg_LIBRARY)
+        message(WARNING "Did not find libMesh_devel libmesh_dbg, using libmesh_opt for development version.")
+        SET(libMesh_dev_LIBRARY ${libMesh_opt_LIBRARY})
+    else()
+        message(WARNING "Did not find libMesh_devel, using libmesh_dbg for devel versions.")
+        SET(libMesh_dev_LIBRARY ${libMesh_dbg_LIBRARY})
+    endif()
+endif()
+
+# If optimized library is not available, then set it to the development library if available, else set it to the debug library.
+if(NOT libMesh_opt_LIBRARY)
+    if(NOT libMesh_devel_LIBRARY)
+        message(WARNING "Did not find libmesh_opt or libmesh_devel, using libmesh_dbg for optimized version.")
+        SET(libMesh_opt_LIBRARY ${libMesh_dbg_LIBRARY})
+    else()
+        message(WARNING "Did not find libmesh_opt, using libmesh_devel for optimized version.")
+        SET(libMesh_opt_LIBRARY ${libMesh_dev_LIBRARY})
+    endif()
+endif()
 
 if (NOT timpi_opt_LIBRARY)
     SET(timpi_opt_LIBRARY ${libMesh_opt_LIBRARY})

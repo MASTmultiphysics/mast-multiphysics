@@ -22,25 +22,52 @@ target_include_directories(mast
             ${Boost_INCLUDE_DIRS}) # Could possibly move this into src/optimization since it is closer to where Boost is actually used.
 
 # Add libraries.
-target_link_libraries(mast
-        PUBLIC
-            ${MPI_CXX_LIBRARIES}
-            ${GCMMA_LIBRARY}
-            ${DOT_LIBRARY}
-            ${NLOPT_LIBRARY}
-            ${SNOPT_LIBRARY}
-            ${LAPACK_LIBRARIES}
-            ${PETSc_LIBRARIES}
-            ${SLEPc_LIBRARIES}
-            ${HDF5_LIBRARIES}
-            ${Boost_IOSTREAMS_LIBRARY}
-            ${Boost_FILESYSTEM_LIBRARY}
-            ${Boost_SYSTEM_LIBRARY}
-            debug ${libMesh_dbg_LIBRARIES}
-            debug ${timpi_dbg_LIBRARIES}
-            optimized ${libMesh_opt_LIBRARIES}
-            optimized ${timpi_opt_LIBRARIES}
-            ${LIBGFORTRAN_LIBRARIES})
+if("${CMAKE_BUILD_TYPE}" STREQUAL "RelWithDebInfo" OR "${USE_LIBMESH_DEVEL}")
+    message(STATUS "Attempting to use libmesh_devel library.")
+    target_link_libraries(mast
+            PUBLIC
+                ${MPI_CXX_LIBRARIES}
+                ${GCMMA_LIBRARY}
+                ${DOT_LIBRARY}
+                ${NLOPT_LIBRARY}
+                ${SNOPT_LIBRARY}
+                ${LAPACK_LIBRARIES}
+                ${PETSc_LIBRARIES}
+                ${SLEPc_LIBRARIES}
+                ${HDF5_LIBRARIES}
+                ${Boost_IOSTREAMS_LIBRARY}
+                ${Boost_FILESYSTEM_LIBRARY}
+                ${Boost_SYSTEM_LIBRARY}
+                ${libMesh_dev_LIBRARIES}
+                ${timpi_dev_LIBRARIES}
+                ${LIBGFORTRAN_LIBRARIES})
+else()
+    if("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
+        message(STATUS "Attempting to use libmesh_debug library.")
+    else()
+        message(STATUS "Attempting to use libmesh_opt library.")
+    endif()
+    target_link_libraries(mast
+            PUBLIC
+                ${MPI_CXX_LIBRARIES}
+                ${GCMMA_LIBRARY}
+                ${DOT_LIBRARY}
+                ${NLOPT_LIBRARY}
+                ${SNOPT_LIBRARY}
+                ${LAPACK_LIBRARIES}
+                ${PETSc_LIBRARIES}
+                ${SLEPc_LIBRARIES}
+                ${HDF5_LIBRARIES}
+                ${Boost_IOSTREAMS_LIBRARY}
+                ${Boost_FILESYSTEM_LIBRARY}
+                ${Boost_SYSTEM_LIBRARY}
+                debug ${libMesh_dbg_LIBRARIES}
+                debug ${timpi_dbg_LIBRARIES}
+                optimized ${libMesh_opt_LIBRARIES}
+                optimized ${timpi_opt_LIBRARIES}
+                ${LIBGFORTRAN_LIBRARIES})
+endif()
+
 
 # NOTE: Use of PUBLIC keyword above means other CMake target (like an example)
 #       that target_link_library(XXXX mast) will inheret these properties.
