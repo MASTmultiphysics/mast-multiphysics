@@ -34,6 +34,7 @@
 #include "elasticity/structural_system_initialization.h"
 #include "base/physics_discipline_base.h"
 #include "boundary_condition/dirichlet_boundary_condition.h"
+#include "boundary_condition/point_load_condition.h"
 #include "base/parameter.h"
 #include "base/constant_field_function.h"
 #include "property_cards/isotropic_material_property_card.h"
@@ -102,7 +103,7 @@ int main(int argc, const char** argv)
     MAST::Parameter E("E", 72.0e9);
     MAST::Parameter nu("nu", 0.33);
     MAST::Parameter zero("zero", 0.0);
-    MAST::Parameter pressure("p", 2.0e4);
+    MAST::Parameter load_mag("p", 24.0);
 
     // Create ConstantFieldFunctions used to spread parameters throughout the model.
     MAST::ConstantFieldFunction thy_f("hy", thickness_y);
@@ -111,13 +112,16 @@ int main(int argc, const char** argv)
     MAST::ConstantFieldFunction nu_f("nu", nu);
     MAST::ConstantFieldFunction hyoff_f("hy_off", zero);
     MAST::ConstantFieldFunction hzoff_f("hz_off", zero);
-    MAST::ConstantFieldFunction pressure_f("pressure", pressure);
 
-    // Initialize load.
-    // TODO - Switch this to a concentrated/point load on the right end of the bar.
-    MAST::BoundaryConditionBase right_end_pressure(MAST::SURFACE_PRESSURE);
-    right_end_pressure.add(pressure_f);
-    discipline.add_side_load(1, right_end_pressure);
+    // Apply concentrated load to end of bar.
+    MAST::PointLoadCondition right_end_load(MAST::POINT_LOAD);
+    RealVectorX load_dir = RealVectorX::Zero(6);
+    load_dir(0) = 1.0;
+    libMesh::Node& load_node = mesh.node(5);
+    MAST::PointLoad load_f(load_mag, load_dir);
+    right_end_load.add(load_f);
+    right_end_load.add_node(load_node);
+    discipline.add_point_load(right_end_load);
 
     // Create the material property card ("card" is NASTRAN lingo) and the relevant parameters to it. An isotropic
     // material needs elastic modulus (E) and Poisson ratio (nu) to describe its behavior.

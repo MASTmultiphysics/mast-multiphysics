@@ -27,7 +27,6 @@
 #include "base/boundary_condition_base.h"
 #include "base/field_function_base.h"
 #include "base/parameter.h"
-// #include "base/mast_data_types.h"
 
 // libMesh includes
 #include "libmesh/node.h"
@@ -86,8 +85,8 @@ namespace MAST {
     class PointLoad: public MAST::FieldFunction<RealVectorX>
     {
     public:
-        PointLoad(MAST::Parameter magnitude, RealVectorX direction);
-        
+        PointLoad(MAST::Parameter& magnitude, RealVectorX& direction);
+
         virtual ~PointLoad();
         
         virtual void operator()(const libMesh::Point& p, const Real t, 
@@ -99,7 +98,7 @@ namespace MAST {
         
     protected:
         
-        MAST::Parameter    _magnitude;
+        MAST::Parameter&    _magnitude;
         RealVectorX        _direction;
         
     };

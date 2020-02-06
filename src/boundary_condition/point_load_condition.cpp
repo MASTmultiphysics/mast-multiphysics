@@ -59,10 +59,9 @@ MAST::PointLoadCondition::get_nodes() {
 
 
 
-MAST::PointLoad::PointLoad(MAST::Parameter magnitude, RealVectorX direction):
+MAST::PointLoad::PointLoad(MAST::Parameter& magnitude, RealVectorX& direction):
 MAST::FieldFunction<RealVectorX>("load"), _magnitude(magnitude),
 _direction(direction) {}
-
 
 MAST::PointLoad::~PointLoad() { }
 
