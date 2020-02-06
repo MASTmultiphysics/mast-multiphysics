@@ -20,4 +20,4 @@ set_tests_properties(Element_1D_Structural_Basic_Tests_mpi
         FIXTURES_SETUP     Element_1D_Structural_Basic_Tests_mpi)
 
                      
-#add_subdirectory(edge2)
+add_subdirectory(edge2)
