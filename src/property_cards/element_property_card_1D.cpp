@@ -23,6 +23,12 @@
 
 MAST::BendingOperatorType
 MAST::ElementPropertyCard1D::bending_model(const MAST::GeomElem& elem) const {
+    
+    // Ensure a valid bending_model is chosen, raise error if not
+    if ((_bending_model == MAST::DKT) or (_bending_model == MAST::MINDLIN)){
+        libmesh_error_msg("Invalid bending model for 1D element. Should be either MAST::BERNOULLI, MAST::TIMOSHENKO, MAST::NO_BENDING, OR MAST::DEFAULT_BENDING; " << __PRETTY_FUNCTION__ << " in " << __FILE__ << " at line number " << __LINE__);
+    }
+    
     // for an EDGE2 element, default bending is Bernoulli. For all other elements
     // the default is Timoshenko. Otherwise it returns the model set for
     // this card.
@@ -34,7 +40,7 @@ MAST::ElementPropertyCard1D::bending_model(const MAST::GeomElem& elem) const {
                 (_bending_model == MAST::DEFAULT_BENDING))
                 return MAST::BERNOULLI;
             else
-                return MAST::TIMOSHENKO;
+                return _bending_model; // Fixed bug. See github issue #41
             break;
             
         default:

@@ -33,6 +33,8 @@
 #include "mesh/fe_base.h"
 #include "mesh/geom_elem.h"
 
+#define eps 2.2204460492503131e-16 //numpy.spacing(1), used to avoid singular stiffness matrices
+
 
 MAST::StructuralElement1D::StructuralElement1D(MAST::SystemInitialization& sys,
                                                const MAST::GeomElem& elem,
@@ -655,6 +657,19 @@ MAST::StructuralElement1D::internal_residual (bool request_jacobian,
     if (request_jacobian) {
         transform_matrix_to_global_system(local_jac, mat2_n2n2);
         jac += mat2_n2n2;
+        if (not bend)
+        {   // If no bending, add small value to diagonal of Jacobian to avoid singularity
+            // See githhub issue #41
+            double k_eps = eps*(jac.diagonal().maxCoeff());
+            for (uint i=0; i<jac.rows(); i++) 
+            {
+                if (std::abs(jac(i,i))<2.2204460492503131e-16)
+                {   // Only add value to zero-valued diagonals.
+                    jac(i,i) += k_eps;
+                    //f(i) += k_eps*_local_sol(i);
+                }
+            }
+        }
     }
     
     return request_jacobian;
