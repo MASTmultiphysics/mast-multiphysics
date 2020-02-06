@@ -35,7 +35,7 @@
 extern libMesh::LibMeshInit* p_global_init;
 
 
-TEST_CASE("edge2_linear_extension_structural",
+TEST_CASE("edge2_linear_extension_bending_shear_structural",
           "[1D],[structural],[edge],[edge2],[linear]")
 {
     const int n_elems = 1;
@@ -87,10 +87,10 @@ TEST_CASE("edge2_linear_extension_structural",
     MAST::Parameter k("k_param",     237.0);          // Thermal Conductivity
     
     // Define Section Properties as MAST Parameters
-    MAST::Parameter thickness_y("thy_param", 0.06);   // Section thickness in y-direction
-    MAST::Parameter thickness_z("thz_param", 0.04);   // Section thickness in z-direction
-    MAST::Parameter offset_y("offy_param", 0.035);    // Section offset in y-direction
-    MAST::Parameter offset_z("offz_param", 0.026);    // Section offset in z-direction
+    MAST::Parameter thickness_y("thy_param", 0.8);   // Section thickness in y-direction
+    MAST::Parameter thickness_z("thz_param", 0.7);   // Section thickness in z-direction
+    MAST::Parameter offset_y("offy_param", 0.5);    // Section offset in y-direction
+    MAST::Parameter offset_z("offz_param", 0.4);    // Section offset in z-direction
     MAST::Parameter kappa_zz("kappa_zz", 5.0/6.0);    // Shear coefficient
     MAST::Parameter kappa_yy("kappa_yy", 2.0/6.0);    // Shear coefficient
     
@@ -134,12 +134,16 @@ TEST_CASE("edge2_linear_extension_structural",
     section.set_material(material);
     
     // Specify a section orientation point and add it to the section.
+    // FIXME: Orientation isn't affecting the element's jacobian for some reason
     RealVectorX orientation = RealVectorX::Zero(3);
-    orientation(1) = 1.0;
+    orientation(2) = 1.0;
     section.y_vector() = orientation;
     
     // Set the strain type to linear for the section
     section.set_strain(MAST::LINEAR_STRAIN);
+    
+    // Set the bending operator to Euler-Bernoulli
+    section.set_bending_model(MAST::TIMOSHENKO);
     
     // Now initialize the section
     section.init();
@@ -207,17 +211,9 @@ TEST_CASE("edge2_linear_extension_structural",
      *  extension and/or bending. 
      */
     
-    // Set shear coefficient to zero to disable transverse shear stiffness
-    kappa_zz = 0.0;
-    kappa_yy = 0.0;
-    
     // Set the offset to zero to disable extension-bending coupling
     offset_y = 0.0;
     offset_z = 0.0;
-    
-    // Set the bending operator to no_bending to disable bending stiffness
-    // NOTE: This also disables the transverse shear stiffness
-    section.set_bending_model(MAST::NO_BENDING);
     
     // Calculate residual and jacobian
     RealVectorX residual = RealVectorX::Zero(n_dofs);
@@ -225,7 +221,9 @@ TEST_CASE("edge2_linear_extension_structural",
     elem->internal_residual(true, residual, jacobian0);
             
     double val_margin = (jacobian0.array().abs()).mean() * 1.490116119384766e-08;
-        
+    
+    libMesh::out << "J =\n" << jacobian0 << std::endl;
+    
     SECTION("internal_jacobian_finite_difference_check")                   
     {
         // Approximate Jacobian with Finite Difference
@@ -262,36 +260,50 @@ TEST_CASE("edge2_linear_extension_structural",
     {
         /**
          * Number of zero eigenvalues should equal the number of rigid body
-         * modes.  For 1D extension (including torsion), we have 1 rigid 
-         * translations along the element's x-axis and 1 rigid rotation about 
-         * the element's x-axis, for a total of 2 rigid body modes.
+         * modes.  With extension (including torsion) and bending about y and 
+         * z axes, we have 6 rigid body modes (3 translations, 3 rotations).
          * 
          * Note that the use of reduced integration can result in more rigid
          * body modes than expected.
          */
         SelfAdjointEigenSolver<RealMatrixX> eigensolver(jacobian0, false);
         RealVectorX eigenvalues = eigensolver.eigenvalues();
+        libMesh::out << "Eigenvalues are:\n" << eigenvalues << std::endl;
         uint nz = 0;
         for (uint i=0; i<eigenvalues.size(); i++)
         {
-            if (std::abs(eigenvalues(i))<1e-10)
+            if (std::abs(eigenvalues(i))<0.0001220703125)
             {
                 nz++;
             }
         }
-        REQUIRE( nz == 2);
+        REQUIRE( nz == 6);
         
         /**
          * All non-zero eigenvalues should be positive.
          */
-        REQUIRE(eigenvalues.minCoeff()>(-1e-10));
+        REQUIRE(eigenvalues.minCoeff()>(-0.0001220703125));
     }
     
     
-//     SECTION("internal_jacobian_orientation_invariant")
-//     {
-//         
-//     }
+    SECTION("internal_jacobian_orientation_invariant")
+    {
+        section.clear();
+        RealVectorX orientation = RealVectorX::Zero(3);
+        orientation(2) = 1.0;
+        section.y_vector() = orientation;
+        section.init();
+        discipline.set_property_for_subdomain(0, section);
+        
+        RealVectorX residual = RealVectorX::Zero(n_dofs);
+        RealMatrixX jacobian = RealMatrixX::Zero(n_dofs, n_dofs);
+        elem->internal_residual(true, residual, jacobian);
+                
+        std::vector<double> test =  eigen_matrix_to_std_vector(jacobian);
+        std::vector<double> truth = eigen_matrix_to_std_vector(jacobian0);
+
+        REQUIRE_THAT( test, Catch::Approx<double>(truth).margin(val_margin) );
+    }
     
     
     SECTION("internal_jacobian_displacement_invariant")

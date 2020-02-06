@@ -1,3 +1,7 @@
+// We need access to the protected thermal_residual method to test it
+// NOTE: Be careful with this, it could cause unexpected problems
+#define protected public
+
 // C++ Stanard Includes
 #include <math.h>
 
@@ -26,6 +30,7 @@
 #include "base/nonlinear_system.h"
 #include "elasticity/structural_element_base.h"
 #include "mesh/geom_elem.h"
+#include "base/boundary_condition_base.h"
 
 // Custom includes
 #include "test_helpers.h"
@@ -34,9 +39,15 @@
 
 extern libMesh::LibMeshInit* p_global_init;
 
+// TODO: Implement patch test
+// TODO: Implement thermoelastic residual / Jacboian testing
+// TODO: Implement surface pressure residual / Jacobian
+// TODO: Implement piston theory residual / Jacobian testing
+// TODO: Implement other elements (Tri3, Tri6, Quad8, etc.)
 
-TEST_CASE("edge2_linear_extension_structural",
-          "[1D],[structural],[edge],[edge2],[linear]")
+
+TEST_CASE("edge2_linear_structural_thermal_jacobian",
+          "[1D],[thermoelastic],[edge],[edge2],[linear],[protected]")
 {
     const int n_elems = 1;
     const int n_nodes = 2;
@@ -87,12 +98,17 @@ TEST_CASE("edge2_linear_extension_structural",
     MAST::Parameter k("k_param",     237.0);          // Thermal Conductivity
     
     // Define Section Properties as MAST Parameters
-    MAST::Parameter thickness_y("thy_param", 0.06);   // Section thickness in y-direction
-    MAST::Parameter thickness_z("thz_param", 0.04);   // Section thickness in z-direction
-    MAST::Parameter offset_y("offy_param", 0.035);    // Section offset in y-direction
-    MAST::Parameter offset_z("offz_param", 0.026);    // Section offset in z-direction
+    MAST::Parameter thickness_y("thy_param", 0.8);   // Section thickness in y-direction
+    MAST::Parameter thickness_z("thz_param", 0.7);   // Section thickness in z-direction
+    MAST::Parameter offset_y("offy_param", 0.5);    // Section offset in y-direction
+    MAST::Parameter offset_z("offz_param", 0.4);    // Section offset in z-direction
     MAST::Parameter kappa_zz("kappa_zz", 5.0/6.0);    // Shear coefficient
     MAST::Parameter kappa_yy("kappa_yy", 2.0/6.0);    // Shear coefficient
+    
+    // Define the Thermoelastic Properties
+    // Define the Uniform Temperature and Uniform Reference Temperature
+    MAST::Parameter temperature("T", 400.0);
+    MAST::Parameter ref_temperature("T0", 0.0);
     
     // Create field functions to dsitribute these constant parameters throughout the model
     MAST::ConstantFieldFunction E_f("E", E);
@@ -105,6 +121,8 @@ TEST_CASE("edge2_linear_extension_structural",
     MAST::ConstantFieldFunction offsety_f("hy_off", offset_y);
     MAST::ConstantFieldFunction thicknessz_f("hz", thickness_z);
     MAST::ConstantFieldFunction offsetz_f("hz_off", offset_z);
+    MAST::ConstantFieldFunction temperature_f("temperature", temperature);
+    MAST::ConstantFieldFunction ref_temperature_f("ref_temperature", ref_temperature);
     MAST::ConstantFieldFunction kappa_zz_f("Kappazz", kappa_zz);
     MAST::ConstantFieldFunction kappa_yy_f("Kappayy", kappa_yy);
     
@@ -134,15 +152,20 @@ TEST_CASE("edge2_linear_extension_structural",
     section.set_material(material);
     
     // Specify a section orientation point and add it to the section.
+    // FIXME: Orientation isn't affecting the element's jacobian for some reason
     RealVectorX orientation = RealVectorX::Zero(3);
-    orientation(1) = 1.0;
+    orientation(2) = 1.0;
     section.y_vector() = orientation;
     
     // Set the strain type to linear for the section
     section.set_strain(MAST::LINEAR_STRAIN);
     
+    // Set the bending operator to Euler-Bernoulli
+    section.set_bending_model(MAST::TIMOSHENKO);
+    
     // Now initialize the section
     section.init();
+    
     
     /**
      *  Now we setup the structural system we will be solving.
@@ -163,6 +186,14 @@ TEST_CASE("edge2_linear_extension_structural",
     
     equation_systems.init();
     //equation_systems.print_info();
+    
+    /**
+     * Setup the temperature change boundary condition
+     */
+    MAST::BoundaryConditionBase temperature_load(MAST::TEMPERATURE);
+    temperature_load.add(temperature_f);
+    temperature_load.add(ref_temperature_f);
+    discipline.add_volume_load(0, temperature_load);
     
     MAST::NonlinearImplicitAssembly assembly;
     assembly.set_discipline_and_system(discipline, structural_system);
@@ -188,49 +219,33 @@ TEST_CASE("edge2_linear_extension_structural",
     
     const Real V0 = reference_elem->volume();
     
-    /**
-     *  Below, we start building the Jacobian up for a very basic element that 
-     *  is already in an isoparametric format.  The following four steps:
-     *      Extension Only Stiffness
-     *      Extension & Bending Stiffness
-     *      Extension, Bending, & Transverse Shear Stiffness
-     *      Extension, Bending, & Extension-Bending Coupling Stiffness
-     *      Extension, Bending, Transverse Shear & Extension-Bending Coupling Stiffness
-     * 
-     *  Testing the Jacobian incrementally this way allows errors in the
-     *  Jacobian to be located more precisely.
-     * 
-     *  It would probably be even better to test each stiffness contribution 
-     *  separately, but currently, we don't have a way to disable extension
-     *  stiffness and transverse shear stiffness doesn't exist without bending 
-     *  and extension-bending coupling stiffness don't make sense without both
-     *  extension and/or bending. 
-     */
-    
-    // Set shear coefficient to zero to disable transverse shear stiffness
-    kappa_zz = 0.0;
-    kappa_yy = 0.0;
-    
-    // Set the offset to zero to disable extension-bending coupling
-    offset_y = 0.0;
-    offset_z = 0.0;
-    
-    // Set the bending operator to no_bending to disable bending stiffness
-    // NOTE: This also disables the transverse shear stiffness
-    section.set_bending_model(MAST::NO_BENDING);
-    
     // Calculate residual and jacobian
     RealVectorX residual = RealVectorX::Zero(n_dofs);
     RealMatrixX jacobian0 = RealMatrixX::Zero(n_dofs, n_dofs);
-    elem->internal_residual(true, residual, jacobian0);
+    elem->thermal_residual(true, residual, jacobian0, temperature_load);
             
     double val_margin = (jacobian0.array().abs()).mean() * 1.490116119384766e-08;
+    
+    libMesh::out << "R=\n" << residual << std::endl;
+    libMesh::out << "J =\n" << jacobian0 << std::endl;
+    
+    SECTION("thermal_jacobian_is_zero_matrix")
+    {
+        // Approximate Jacobian with Finite Difference
+        RealMatrixX zero_matrix = RealMatrixX::Zero(n_dofs, n_dofs);
         
-    SECTION("internal_jacobian_finite_difference_check")                   
+        std::vector<double> test =  eigen_matrix_to_std_vector(jacobian0);
+        std::vector<double> truth = eigen_matrix_to_std_vector(zero_matrix);
+        
+        REQUIRE_THAT( test, Catch::Approx<double>(truth).margin(0.0) );
+    }
+    
+    
+    SECTION("thermal_jacobian_finite_difference_check")                   
     {
         // Approximate Jacobian with Finite Difference
         RealMatrixX jacobian_fd = RealMatrixX::Zero(n_dofs, n_dofs);
-        approximate_internal_jacobian_with_finite_difference(*elem, elem_solution, jacobian_fd);
+        approximate_thermal_jacobian_with_finite_difference(*elem, elem_solution, jacobian_fd, temperature_load);
         
         //double val_margin = (jacobian_fd.array().abs()).maxCoeff() * 1.490116119384766e-08;
         val_margin = (jacobian_fd.array().abs()).mean() * 1.490116119384766e-08;
@@ -242,7 +257,7 @@ TEST_CASE("edge2_linear_extension_structural",
     }
     
     
-    SECTION("internal_jacobian_symmetry_check")
+    SECTION("thermal_jacobian_symmetry_check")
     {
         // Element stiffness matrix should be symmetric
         std::vector<double> test =  eigen_matrix_to_std_vector(jacobian0);
@@ -251,50 +266,55 @@ TEST_CASE("edge2_linear_extension_structural",
     }
     
     
-    SECTION("internal_jacobian_determinant_check")
+    SECTION("thermal_jacobian_determinant_check")
     {
-        // Determinant of undeformed element stiffness matrix should be zero
+        // Determinant of linear thermoelastic jacobian should be zero
         REQUIRE( jacobian0.determinant() == Approx(0.0).margin(1e-06) );
     }
     
     
-    SECTION("internal_jacobian_eigenvalue_check")
+    SECTION("thermal_jacobian_eigenvalue_check")
     {
         /**
-         * Number of zero eigenvalues should equal the number of rigid body
-         * modes.  For 1D extension (including torsion), we have 1 rigid 
-         * translations along the element's x-axis and 1 rigid rotation about 
-         * the element's x-axis, for a total of 2 rigid body modes.
-         * 
-         * Note that the use of reduced integration can result in more rigid
-         * body modes than expected.
+         * Linear thermoelastic Jacobian should be independent of the 
+         * displacements and thus should be a zero matrix.
          */
         SelfAdjointEigenSolver<RealMatrixX> eigensolver(jacobian0, false);
         RealVectorX eigenvalues = eigensolver.eigenvalues();
+        libMesh::out << "Eigenvalues are:\n" << eigenvalues << std::endl;
         uint nz = 0;
         for (uint i=0; i<eigenvalues.size(); i++)
         {
-            if (std::abs(eigenvalues(i))<1e-10)
+            if (std::abs(eigenvalues(i))<0.0001220703125)
             {
                 nz++;
             }
         }
-        REQUIRE( nz == 2);
-        
-        /**
-         * All non-zero eigenvalues should be positive.
-         */
-        REQUIRE(eigenvalues.minCoeff()>(-1e-10));
+        REQUIRE( nz == 12);
     }
     
     
-//     SECTION("internal_jacobian_orientation_invariant")
-//     {
-//         
-//     }
+    SECTION("thermal_jacobian_orientation_invariant")
+    {
+        section.clear();
+        RealVectorX orientation = RealVectorX::Zero(3);
+        orientation(2) = 1.0;
+        section.y_vector() = orientation;
+        section.init();
+        discipline.set_property_for_subdomain(0, section);
+        
+        RealVectorX residual = RealVectorX::Zero(n_dofs);
+        RealMatrixX jacobian = RealMatrixX::Zero(n_dofs, n_dofs);
+        elem->thermal_residual(true, residual, jacobian, temperature_load);
+                
+        std::vector<double> test =  eigen_matrix_to_std_vector(jacobian);
+        std::vector<double> truth = eigen_matrix_to_std_vector(jacobian0);
+
+        REQUIRE_THAT( test, Catch::Approx<double>(truth).margin(val_margin) );
+    }
     
     
-    SECTION("internal_jacobian_displacement_invariant")
+    SECTION("thermal_jacobian_displacement_invariant")
     {
         // Calculate residual and jacobian at arbitrary displacement
         RealVectorX elem_sol = RealVectorX::Zero(n_dofs);
@@ -305,7 +325,7 @@ TEST_CASE("edge2_linear_extension_structural",
         
         RealVectorX residual = RealVectorX::Zero(n_dofs);
         RealMatrixX jacobian = RealMatrixX::Zero(n_dofs, n_dofs);
-        elem->internal_residual(true, residual, jacobian);
+        elem->thermal_residual(true, residual, jacobian, temperature_load);
                 
         std::vector<double> test =  eigen_matrix_to_std_vector(jacobian);
         std::vector<double> truth = eigen_matrix_to_std_vector(jacobian0);
@@ -313,7 +333,7 @@ TEST_CASE("edge2_linear_extension_structural",
         REQUIRE_THAT( test, Catch::Approx<double>(truth).margin(val_margin) );
     }
     
-    SECTION("internal_jacobian_shifted_x_invariant")
+    SECTION("thermal_jacobian_shifted_x_invariant")
     {
         // Shifted in x-direction
         transform_element(mesh, X0, 5.2, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0);
@@ -322,7 +342,7 @@ TEST_CASE("edge2_linear_extension_structural",
         // Calculate residual and jacobian
         RealVectorX residual = RealVectorX::Zero(n_dofs);
         RealMatrixX jacobian = RealMatrixX::Zero(n_dofs, n_dofs);
-        elem->internal_residual(true, residual, jacobian);
+        elem->thermal_residual(true, residual, jacobian, temperature_load);
                 
         std::vector<double> test =  eigen_matrix_to_std_vector(jacobian);
         std::vector<double> truth = eigen_matrix_to_std_vector(jacobian0);
@@ -330,7 +350,7 @@ TEST_CASE("edge2_linear_extension_structural",
         REQUIRE_THAT( test, Catch::Approx<double>(truth).margin(val_margin) );
     }
     
-    SECTION("internal_jacobian_shifted_y_invariant")
+    SECTION("thermal_jacobian_shifted_y_invariant")
     {
         // Shifted in y-direction
         transform_element(mesh, X0, 0.0, -11.5, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0);
@@ -339,7 +359,7 @@ TEST_CASE("edge2_linear_extension_structural",
         // Calculate residual and jacobian
         RealVectorX residual = RealVectorX::Zero(n_dofs);
         RealMatrixX jacobian = RealMatrixX::Zero(n_dofs, n_dofs);
-        elem->internal_residual(true, residual, jacobian);
+        elem->thermal_residual(true, residual, jacobian, temperature_load);
         
         std::vector<double> test =  eigen_matrix_to_std_vector(jacobian);
         std::vector<double> truth = eigen_matrix_to_std_vector(jacobian0);
@@ -347,7 +367,7 @@ TEST_CASE("edge2_linear_extension_structural",
         REQUIRE_THAT( test, Catch::Approx<double>(truth).margin(val_margin) );
     }
     
-    SECTION("internal_jacobian_shifted_z_invariant")
+    SECTION("thermal_jacobian_shifted_z_invariant")
     {
         // Shifted in y-direction
         transform_element(mesh, X0, 0.0, 0.0, 7.6, 1.0, 1.0, 0.0, 0.0, 0.0);
@@ -356,7 +376,7 @@ TEST_CASE("edge2_linear_extension_structural",
         // Calculate residual and jacobian
         RealVectorX residual = RealVectorX::Zero(n_dofs);
         RealMatrixX jacobian = RealMatrixX::Zero(n_dofs, n_dofs);
-        elem->internal_residual(true, residual, jacobian);
+        elem->thermal_residual(true, residual, jacobian, temperature_load);
         
         std::vector<double> test =  eigen_matrix_to_std_vector(jacobian);
         std::vector<double> truth = eigen_matrix_to_std_vector(jacobian0);
@@ -365,7 +385,7 @@ TEST_CASE("edge2_linear_extension_structural",
     }
     
     
-    SECTION("internal_jacobian_aligned_y")
+    SECTION("thermal_jacobian_aligned_y")
     {
         /*
          * NOTE: We could try to use the transform_element method here, but the
@@ -384,11 +404,11 @@ TEST_CASE("edge2_linear_extension_structural",
         // Calculate residual and jacobian
         RealVectorX residual = RealVectorX::Zero(n_dofs);
         RealMatrixX jacobian = RealMatrixX::Zero(n_dofs, n_dofs);
-        elem->internal_residual(true, residual, jacobian);
+        elem->thermal_residual(true, residual, jacobian, temperature_load);
         
         // Approximate Jacobian with Finite Difference
         RealMatrixX jacobian_fd = RealMatrixX::Zero(n_dofs, n_dofs);
-        approximate_internal_jacobian_with_finite_difference(*elem, elem_solution, jacobian_fd);
+        approximate_thermal_jacobian_with_finite_difference(*elem, elem_solution, jacobian_fd, temperature_load);
         
         // This is necessary because MAST manually (hard-coded) adds a small 
         // value to the diagonal to prevent singularities at inactive DOFs
@@ -414,7 +434,7 @@ TEST_CASE("edge2_linear_extension_structural",
         REQUIRE( jacobian.determinant() == Approx(0.0).margin(1e-06) );
     }
     
-    SECTION("internal_jacobian_aligned_z")
+    SECTION("thermal_jacobian_aligned_z")
     {
         /*
          * NOTE: We could try to use the transform_element method here, but the
@@ -433,11 +453,11 @@ TEST_CASE("edge2_linear_extension_structural",
         // Calculate residual and jacobian
         RealVectorX residual = RealVectorX::Zero(n_dofs);
         RealMatrixX jacobian = RealMatrixX::Zero(n_dofs, n_dofs);
-        elem->internal_residual(true, residual, jacobian);
+        elem->thermal_residual(true, residual, jacobian, temperature_load);
         
         // Approximate Jacobian with Finite Difference
         RealMatrixX jacobian_fd = RealMatrixX::Zero(n_dofs, n_dofs);
-        approximate_internal_jacobian_with_finite_difference(*elem, elem_solution, jacobian_fd);
+        approximate_thermal_jacobian_with_finite_difference(*elem, elem_solution, jacobian_fd, temperature_load);
         
         // This is necessary because MAST manually (hard-coded) adds a small 
         // value to the diagonal to prevent singularities at inactive DOFs
@@ -463,7 +483,7 @@ TEST_CASE("edge2_linear_extension_structural",
         REQUIRE( jacobian.determinant() == Approx(0.0).margin(1e-06) );
     }
     
-    SECTION("internal_jacobian_rotated_about_z")
+    SECTION("thermal_jacobian_rotated_about_z")
     {
         // Rotated 63.4 about z-axis at element's centroid
         transform_element(mesh, X0, 0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 63.4);
@@ -472,11 +492,11 @@ TEST_CASE("edge2_linear_extension_structural",
         // Calculate residual and jacobian
         RealVectorX residual = RealVectorX::Zero(n_dofs);
         RealMatrixX jacobian = RealMatrixX::Zero(n_dofs, n_dofs);
-        elem->internal_residual(true, residual, jacobian);
+        elem->thermal_residual(true, residual, jacobian, temperature_load);
         
         // Approximate Jacobian with Finite Difference
         RealMatrixX jacobian_fd = RealMatrixX::Zero(n_dofs, n_dofs);
-        approximate_internal_jacobian_with_finite_difference(*elem, elem_solution, jacobian_fd);
+        approximate_thermal_jacobian_with_finite_difference(*elem, elem_solution, jacobian_fd, temperature_load);
         
         // This is necessary because MAST manually (hard-coded) adds a small 
         // value to the diagonal to prevent singularities at inactive DOFs
@@ -502,7 +522,7 @@ TEST_CASE("edge2_linear_extension_structural",
         REQUIRE( jacobian.determinant() == Approx(0.0).margin(1e-06) );
     }
     
-    SECTION("internal_jacobian_rotated_about_y")
+    SECTION("thermal_jacobian_rotated_about_y")
     {
         // Rotated 35.8 about y-axis at element's centroid
         transform_element(mesh, X0, 0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 35.8, 0.0);
@@ -511,11 +531,11 @@ TEST_CASE("edge2_linear_extension_structural",
         // Calculate residual and jacobian
         RealVectorX residual = RealVectorX::Zero(n_dofs);
         RealMatrixX jacobian = RealMatrixX::Zero(n_dofs, n_dofs);
-        elem->internal_residual(true, residual, jacobian);
+        elem->thermal_residual(true, residual, jacobian, temperature_load);
         
         // Approximate Jacobian with Finite Difference
         RealMatrixX jacobian_fd = RealMatrixX::Zero(n_dofs, n_dofs);
-        approximate_internal_jacobian_with_finite_difference(*elem, elem_solution, jacobian_fd);
+        approximate_thermal_jacobian_with_finite_difference(*elem, elem_solution, jacobian_fd, temperature_load);
         
         // This is necessary because MAST manually (hard-coded) adds a small 
         // value to the diagonal to prevent singularities at inactive DOFs
@@ -541,7 +561,7 @@ TEST_CASE("edge2_linear_extension_structural",
         REQUIRE( jacobian.determinant() == Approx(0.0).margin(1e-06) );
     }
     
-    SECTION("internal_jacobian_scaled_x")
+    SECTION("thermal_jacobian_scaled_x")
     {
         // Rotated 63.4 about z-axis at element's centroid
         transform_element(mesh, X0, 0.0, 0.0, 0.0, 3.2, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0);
@@ -550,11 +570,11 @@ TEST_CASE("edge2_linear_extension_structural",
         // Calculate residual and jacobian
         RealVectorX residual = RealVectorX::Zero(n_dofs);
         RealMatrixX jacobian = RealMatrixX::Zero(n_dofs, n_dofs);
-        elem->internal_residual(true, residual, jacobian);
+        elem->thermal_residual(true, residual, jacobian, temperature_load);
         
         // Approximate Jacobian with Finite Difference
         RealMatrixX jacobian_fd = RealMatrixX::Zero(n_dofs, n_dofs);
-        approximate_internal_jacobian_with_finite_difference(*elem, elem_solution, jacobian_fd);
+        approximate_thermal_jacobian_with_finite_difference(*elem, elem_solution, jacobian_fd, temperature_load);
         
         // This is necessary because MAST manually (hard-coded) adds a small 
         // value to the diagonal to prevent singularities at inactive DOFs
@@ -580,7 +600,7 @@ TEST_CASE("edge2_linear_extension_structural",
         REQUIRE( jacobian.determinant() == Approx(0.0).margin(1e-06) );
     }
     
-    SECTION("internal_jacobian_arbitrary_transformation")
+    SECTION("thermal_jacobian_arbitrary_transformation")
     {
         // Arbitrary transformations applied to the element
         transform_element(mesh, X0, -5.0, 7.8, -13.1, 2.7, 6.4, 20.0, 47.8, -70.1);
@@ -589,11 +609,11 @@ TEST_CASE("edge2_linear_extension_structural",
         // Calculate residual and jacobian
         RealVectorX residual = RealVectorX::Zero(n_dofs);
         RealMatrixX jacobian = RealMatrixX::Zero(n_dofs, n_dofs);
-        elem->internal_residual(true, residual, jacobian);
+        elem->thermal_residual(true, residual, jacobian, temperature_load);
         
         // Approximate Jacobian with Finite Difference
         RealMatrixX jacobian_fd = RealMatrixX::Zero(n_dofs, n_dofs);
-        approximate_internal_jacobian_with_finite_difference(*elem, elem_solution, jacobian_fd);
+        approximate_thermal_jacobian_with_finite_difference(*elem, elem_solution, jacobian_fd, temperature_load);
         
         // This is necessary because MAST manually (hard-coded) adds a small 
         // value to the diagonal to prevent singularities at inactive DOFs
@@ -619,7 +639,7 @@ TEST_CASE("edge2_linear_extension_structural",
         REQUIRE( jacobian.determinant() == Approx(0.0).margin(1e-06) );
     }
     
-    SECTION("internal_jacobian_arbitrary_with_displacements")
+    SECTION("thermal_jacobian_arbitrary_with_displacements")
     {
         // Arbitrary transformations applied to the element
         transform_element(mesh, X0, 4.1, -6.3, 7.5, 4.2, 1.5, -18.0, -24.8, 
@@ -637,11 +657,11 @@ TEST_CASE("edge2_linear_extension_structural",
         // Calculate residual and jacobian
         RealVectorX residual = RealVectorX::Zero(n_dofs);
         RealMatrixX jacobian = RealMatrixX::Zero(n_dofs, n_dofs);
-        elem->internal_residual(true, residual, jacobian);
+        elem->thermal_residual(true, residual, jacobian, temperature_load);
         
         // Approximate Jacobian with Finite Difference
         RealMatrixX jacobian_fd = RealMatrixX::Zero(n_dofs, n_dofs);
-        approximate_internal_jacobian_with_finite_difference(*elem, elem_solution, jacobian_fd);
+        approximate_thermal_jacobian_with_finite_difference(*elem, elem_solution, jacobian_fd, temperature_load);
         
         // This is necessary because MAST manually (hard-coded) adds a small 
         // value to the diagonal to prevent singularities at inactive DOFs

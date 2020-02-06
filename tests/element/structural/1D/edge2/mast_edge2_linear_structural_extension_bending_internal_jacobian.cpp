@@ -35,7 +35,7 @@
 extern libMesh::LibMeshInit* p_global_init;
 
 
-TEST_CASE("edge2_linear_extension_structural",
+TEST_CASE("edge2_linear_extension_bending_structural",
           "[1D],[structural],[edge],[edge2],[linear]")
 {
     const int n_elems = 1;
@@ -134,12 +134,16 @@ TEST_CASE("edge2_linear_extension_structural",
     section.set_material(material);
     
     // Specify a section orientation point and add it to the section.
+    // FIXME: Orientation isn't affecting the element's jacobian for some reason
     RealVectorX orientation = RealVectorX::Zero(3);
-    orientation(1) = 1.0;
+    orientation(2) = 1.0;
     section.y_vector() = orientation;
     
     // Set the strain type to linear for the section
     section.set_strain(MAST::LINEAR_STRAIN);
+    
+    // Set the bending operator to Euler-Bernoulli
+    section.set_bending_model(MAST::BERNOULLI);
     
     // Now initialize the section
     section.init();
@@ -215,17 +219,15 @@ TEST_CASE("edge2_linear_extension_structural",
     offset_y = 0.0;
     offset_z = 0.0;
     
-    // Set the bending operator to no_bending to disable bending stiffness
-    // NOTE: This also disables the transverse shear stiffness
-    section.set_bending_model(MAST::NO_BENDING);
-    
     // Calculate residual and jacobian
     RealVectorX residual = RealVectorX::Zero(n_dofs);
     RealMatrixX jacobian0 = RealMatrixX::Zero(n_dofs, n_dofs);
     elem->internal_residual(true, residual, jacobian0);
             
     double val_margin = (jacobian0.array().abs()).mean() * 1.490116119384766e-08;
-        
+    
+    libMesh::out << "J =\n" << jacobian0 << std::endl;
+    
     SECTION("internal_jacobian_finite_difference_check")                   
     {
         // Approximate Jacobian with Finite Difference
@@ -262,15 +264,15 @@ TEST_CASE("edge2_linear_extension_structural",
     {
         /**
          * Number of zero eigenvalues should equal the number of rigid body
-         * modes.  For 1D extension (including torsion), we have 1 rigid 
-         * translations along the element's x-axis and 1 rigid rotation about 
-         * the element's x-axis, for a total of 2 rigid body modes.
+         * modes.  With extension (including torsion) and bending about y and 
+         * z axes, we have 6 rigid body modes (3 translations, 3 rotations).
          * 
          * Note that the use of reduced integration can result in more rigid
          * body modes than expected.
          */
         SelfAdjointEigenSolver<RealMatrixX> eigensolver(jacobian0, false);
         RealVectorX eigenvalues = eigensolver.eigenvalues();
+        libMesh::out << "Eigenvalues are:\n" << eigenvalues << std::endl;
         uint nz = 0;
         for (uint i=0; i<eigenvalues.size(); i++)
         {
@@ -279,7 +281,7 @@ TEST_CASE("edge2_linear_extension_structural",
                 nz++;
             }
         }
-        REQUIRE( nz == 2);
+        REQUIRE( nz == 6);
         
         /**
          * All non-zero eigenvalues should be positive.
@@ -288,10 +290,24 @@ TEST_CASE("edge2_linear_extension_structural",
     }
     
     
-//     SECTION("internal_jacobian_orientation_invariant")
-//     {
-//         
-//     }
+    SECTION("internal_jacobian_orientation_invariant")
+    {
+        section.clear();
+        RealVectorX orientation = RealVectorX::Zero(3);
+        orientation(2) = 1.0;
+        section.y_vector() = orientation;
+        section.init();
+        discipline.set_property_for_subdomain(0, section);
+        
+        RealVectorX residual = RealVectorX::Zero(n_dofs);
+        RealMatrixX jacobian = RealMatrixX::Zero(n_dofs, n_dofs);
+        elem->internal_residual(true, residual, jacobian);
+                
+        std::vector<double> test =  eigen_matrix_to_std_vector(jacobian);
+        std::vector<double> truth = eigen_matrix_to_std_vector(jacobian0);
+
+        REQUIRE_THAT( test, Catch::Approx<double>(truth).margin(val_margin) );
+    }
     
     
     SECTION("internal_jacobian_displacement_invariant")
