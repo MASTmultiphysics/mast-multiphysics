@@ -1,8 +1,8 @@
 # PREAMBLE
 cmake_minimum_required(VERSION 3.13)
 project(MAST
-        VERSION 0.3
-        LANGUAGES C CXX)
+    VERSION 2.0.1
+    LANGUAGES C CXX)
 
 # PROJECT WIDE SETUP
 # Get CMake modules and set language standards.
@@ -129,4 +129,3 @@ add_subdirectory(tests)
 
 # EXAMPLES
 add_subdirectory(examples)
-

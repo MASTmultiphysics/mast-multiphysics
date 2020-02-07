@@ -8,34 +8,34 @@
 
 # Find the headers.
 find_path(libMesh_INCLUDE_DIR libmesh/libmesh_config.h
-          HINTS ${libMesh_DIR}/include)
+    HINTS ${libMesh_DIR}/include)
 
 # Find the optimized libraries.
 find_library(libMesh_opt_LIBRARY
-             NAMES mesh_opt
-             HINTS ${libMesh_DIR}/lib)
+     NAMES mesh_opt
+     HINTS ${libMesh_DIR}/lib)
 
 find_library(timpi_opt_LIBRARY
-             NAMES timpi_opt
-             HINTS ${libMesh_DIR}/lib)
+     NAMES timpi_opt
+     HINTS ${libMesh_DIR}/lib)
 
 # Find the development libraries.
 find_library(libMesh_dev_LIBRARY
-             NAMES mesh_devel
-             HINTS ${libMesh_DIR}/lib)
+     NAMES mesh_devel
+     HINTS ${libMesh_DIR}/lib)
 
 find_library(timpi_dev_LIBRARY
-             NAMES timpi_devel
-             HINTS ${libMesh_DIR}/lib)
+     NAMES timpi_devel
+     HINTS ${libMesh_DIR}/lib)
 
 # Find the debug libraries.
 find_library(libMesh_dbg_LIBRARY
-             NAMES mesh_dbg
-             HINTS ${libMesh_DIR}/lib)
+     NAMES mesh_dbg
+     HINTS ${libMesh_DIR}/lib)
 
 find_library(timpi_dbg_LIBRARY
-             NAMES timpi_dbg
-             HINTS ${libMesh_DIR}/lib)
+     NAMES timpi_dbg
+     HINTS ${libMesh_DIR}/lib)
             
 # If debug library is not available, then set it to the development library if available, else set it to the optimized library.
 if(NOT libMesh_dbg_LIBRARY)
@@ -110,7 +110,7 @@ endif()
 # Set variables.
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(libMesh
-        REQUIRED_VARS
+    REQUIRED_VARS
         libMesh_dbg_LIBRARY
         libMesh_dev_LIBRARY
         libMesh_opt_LIBRARY
