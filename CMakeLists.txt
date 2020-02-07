@@ -1,8 +1,8 @@
 # PREAMBLE
 cmake_minimum_required(VERSION 3.13)
 project(MAST
-        VERSION 0.3
-        LANGUAGES C CXX)
+    VERSION 2.0.1
+    LANGUAGES C CXX)
 
 # PROJECT WIDE SETUP
 # Get CMake modules and set language standards.
@@ -40,8 +40,8 @@ set(NLOPT_DIR   "NLOpt_DIR"   CACHE PATH "Directory containing NLOpt include/ an
 # FIND DEPENDENCIES
 find_package(MPI REQUIRED)
 find_package(LAPACK REQUIRED)
-message("-- Found BLAS libs: ${BLAS_LIBRARIES}")
-message("-- Found LAPACK libs: ${LAPACK_LIBRARIES}")
+message(STATUS "Found BLAS libs: ${BLAS_LIBRARIES}")
+message(STATUS "Found LAPACK libs: ${LAPACK_LIBRARIES}")
 find_package(PETSc REQUIRED)
 find_package(SLEPc REQUIRED)
 find_package(HDF5 REQUIRED)
@@ -53,8 +53,8 @@ find_package(Eigen3 REQUIRED)
 #       Boost CMake configuration in the FindBoost module for now.
 set(Boost_NO_BOOST_CMAKE ON) 
 find_package(Boost COMPONENTS iostreams system filesystem unit_test_framework REQUIRED)
-message("-- Found Boost include: ${Boost_INCLUDE_DIRS}") # To ensure the found Boost is what user expected
-message("-- Found Boost libs:    ${Boost_LIBRARY_DIRS}") # To ensure the found Boost is what user expected
+message(STATUS "Found Boost include: ${Boost_INCLUDE_DIRS}") # To ensure the found Boost is what user expected
+message(STATUS "Found Boost libs:    ${Boost_LIBRARY_DIRS}") # To ensure the found Boost is what user expected
 
 # Find optional packages.
 if (ENABLE_GCMMA)
@@ -126,4 +126,3 @@ add_subdirectory(tests)
 
 # EXAMPLES
 add_subdirectory(examples)
-
