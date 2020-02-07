@@ -16,7 +16,6 @@ TEST_CASE("function_set_base",
     
     // Ensure field functions can be added
     REQUIRE_NOTHROW( f_set.add(dummy_f) );
-    f_set.add(dummy_f);
     
     SECTION("function_set_contains")
     {

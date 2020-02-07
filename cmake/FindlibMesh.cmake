@@ -125,7 +125,7 @@ mark_as_advanced(libMesh_INCLUDE_DIR
                  libMesh_dev_LIBRARY
                  libMesh_opt_LIBRARY
                  timpi_dbg_LIBRARY
-                 timpi_dbg_LIBRARY
+                 timpi_dev_LIBRARY
                  timpi_opt_LIBRARY
                  libMesh_VERSION
                  libMesh_FOUND)
