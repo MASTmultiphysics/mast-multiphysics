@@ -576,7 +576,7 @@ build_local_quantities(const libMesh::NumericVector<Real>& current_sol,
                     // calculate the velocity and localize it
                     // we use the localized sol since libMesh vector
                     // algebra needs it for ghosted vectors.
-                    update_velocity(vel, *sol[i]);
+                    update_velocity(vel, *sol[0]);
                 
                 vel.localize(*sol[i], send_list);
             }
@@ -591,7 +591,7 @@ build_local_quantities(const libMesh::NumericVector<Real>& current_sol,
                     // calculate the acceleration and localize it
                     // we use the localized sol since libMesh vector
                     // algebra needs it for ghosted vectors.
-                    update_acceleration(acc, *sol[i]);
+                    update_acceleration(acc, *sol[0]);
                 
                 acc.localize(*sol[i], send_list);
             }
