@@ -15,6 +15,9 @@ if [ "${TRAVIS_OS_NAME}" = linux ]; then # Ubuntu Linux
     exit 1
   fi
 
+  sudo ldconfig # Don't remove this, it is necessary to update the cache of shared libraries to those that were just
+                # unpacked in the previous steps. For some reason `apt install` doesn't do this.
+
 elif [ "${TRAVIS_OS_NAME}" = osx ]; then # macOS 10.14, XCode 10.2
   mkdir "Code" || exit
   mkdir "Code/spack-mstc" || exit

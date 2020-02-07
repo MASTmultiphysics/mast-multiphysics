@@ -2,11 +2,13 @@
 
 # Steps common to all OS/toolchains.
 export MAST_INSTALL_DIR=${HOME}/mast || exit
-cd ${TRAVIS_BUILD_DIR} || exit
+cd "${TRAVIS_BUILD_DIR}" || exit
 
 # Create directories to test both Release (optimized) and Debug build.
 mkdir build_rel || exit
 mkdir build_dbg || exit
+export REL_BUILD_DIR=${TRAVIS_BUILD_DIR}/build_rel
+export DBG_BUILD_DIR=${TRAVIS_BUILD_DIR}/build_dbg
 
 # Outer if chooses Linux/macOS based on Travis CI worker.
 if [ "${TRAVIS_OS_NAME}" = linux ]; then # Ubuntu Linux
@@ -17,7 +19,7 @@ if [ "${TRAVIS_OS_NAME}" = linux ]; then # Ubuntu Linux
 
     # First let us build/install a Release (optimized) version of MAST (-DCMAKE_BUILD_TYPE=Release).
     echo "TEST RELEASE/OPTIMIZED BUILD..."
-    cd build_rel || exit
+    cd "${REL_BUILD_DIR}" || exit
     /opt/cmake/bin/cmake .. \
       -DCMAKE_BUILD_TYPE=Release \
       -DCMAKE_INSTALL_PREFIX="${MAST_INSTALL_DIR}" \
@@ -39,11 +41,13 @@ if [ "${TRAVIS_OS_NAME}" = linux ]; then # Ubuntu Linux
 
     if [ ${CI_BUILD_DOCS} ]; then
       make doc_doxygen || exit
-      cd ${TRAVIS_BUILD_DIR} || exit
+      cd "${TRAVIS_BUILD_DIR}" || exit
       ci/prepare_docs.sh || exit
     else
       make -j 2 || exit
       make install || exit
+      cd "${REL_BUILD_DIR}/tests" || exit
+      ctest --force-new-ctest-process --output-on-failure || exit
     fi
 
     # Now do a build/install of a Debug version (-DCMAKE_BUILD_TYPE=Debug).
@@ -55,7 +59,7 @@ if [ "${TRAVIS_OS_NAME}" = linux ]; then # Ubuntu Linux
       echo "-- NO DEBUG BUILD WITH libMesh < 1.5.0"
     else
 
-      cd ../build_dbg || exit
+      cd "${DBG_BUILD_DIR}" || exit
       /opt/cmake/bin/cmake .. \
         -DCMAKE_BUILD_TYPE=Debug \
         -DCMAKE_INSTALL_PREFIX="${MAST_INSTALL_DIR}" \
@@ -79,6 +83,8 @@ if [ "${TRAVIS_OS_NAME}" = linux ]; then # Ubuntu Linux
         echo "No CI documentation for a Debug build."
       else
         make -j 2 || exit
+        cd "${DBG_BUILD_DIR}/tests" || exit
+        ctest --force-new-ctest-process --output-on-failure || exit
       fi
 
     fi # No Debug build for libMesh < 1.5.0
@@ -108,13 +114,14 @@ elif [ "${TRAVIS_OS_NAME}" = osx ]; then # macOS 10.14, XCode 10.2
 
   # First let us build/install a Release (optimized) version of MAST (-DCMAKE_BUILD_TYPE=Release).
   echo "TEST RELEASE/OPTIMIZED BUILD..."
-  cd build_rel || exit
+  cd "${REL_BUILD_DIR}" || exit
   /Users/travis/Code/spack-mstc/spack/opt/spack/darwin-mojave-x86_64/clang-10.0.1-apple/cmake-3.14.4-vlzpkvowre6hweutogn563ouzkb73jsq/bin/cmake .. \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX="${MAST_INSTALL_DIR}" \
     -DCMAKE_C_COMPILER=/Users/travis/Code/spack-mstc/spack/opt/spack/darwin-mojave-x86_64/clang-10.0.1-apple/openmpi-3.1.4-sep4omvhokkexyojwrahdckfugactovb/bin/mpicc \
     -DCMAKE_CXX_COMPILER=/Users/travis/Code/spack-mstc/spack/opt/spack/darwin-mojave-x86_64/clang-10.0.1-apple/openmpi-3.1.4-sep4omvhokkexyojwrahdckfugactovb/bin/mpic++ \
     -DCMAKE_Fortran_COMPILER=/Users/travis/Code/spack-mstc/spack/opt/spack/darwin-mojave-x86_64/clang-10.0.1-apple/openmpi-3.1.4-sep4omvhokkexyojwrahdckfugactovb/bin/mpif90 \
+    -DMPIEXEC_EXECUTABLE=/Users/travis/Code/spack-mstc/spack/opt/spack/darwin-mojave-x86_64/clang-10.0.1-apple/openmpi-3.1.4-sep4omvhokkexyojwrahdckfugactovb/bin/mpiexec \
     -DlibMesh_DIR="${libMesh_DIR}" \
     -DPETSc_DIR="${PETSc_DIR}" \
     -DSLEPc_DIR="${SLEPc_DIR}" \
@@ -136,15 +143,19 @@ elif [ "${TRAVIS_OS_NAME}" = osx ]; then # macOS 10.14, XCode 10.2
   make -j 2 || exit
   make install || exit
 
+  cd "${REL_BUILD_DIR}/tests" || exit
+  ctest --force-new-ctest-process --output-on-failure || exit
+
   # Now do a build/install of a Debug version (-DCMAKE_BUILD_TYPE=Debug).
   echo "TEST DEBUG BUILD..."
-  cd ../build_dbg || exit
+  cd "${DBG_BUILD_DIR}" || exit
   /Users/travis/Code/spack-mstc/spack/opt/spack/darwin-mojave-x86_64/clang-10.0.1-apple/cmake-3.14.4-vlzpkvowre6hweutogn563ouzkb73jsq/bin/cmake .. \
     -DCMAKE_BUILD_TYPE=Debug \
     -DCMAKE_INSTALL_PREFIX="${MAST_INSTALL_DIR}" \
     -DCMAKE_C_COMPILER=/Users/travis/Code/spack-mstc/spack/opt/spack/darwin-mojave-x86_64/clang-10.0.1-apple/openmpi-3.1.4-sep4omvhokkexyojwrahdckfugactovb/bin/mpicc \
     -DCMAKE_CXX_COMPILER=/Users/travis/Code/spack-mstc/spack/opt/spack/darwin-mojave-x86_64/clang-10.0.1-apple/openmpi-3.1.4-sep4omvhokkexyojwrahdckfugactovb/bin/mpic++ \
     -DCMAKE_Fortran_COMPILER=/Users/travis/Code/spack-mstc/spack/opt/spack/darwin-mojave-x86_64/clang-10.0.1-apple/openmpi-3.1.4-sep4omvhokkexyojwrahdckfugactovb/bin/mpif90 \
+    -DMPIEXEC_EXECUTABLE=/Users/travis/Code/spack-mstc/spack/opt/spack/darwin-mojave-x86_64/clang-10.0.1-apple/openmpi-3.1.4-sep4omvhokkexyojwrahdckfugactovb/bin/mpiexec \
     -DlibMesh_DIR="${libMesh_DIR}" \
     -DPETSc_DIR="${PETSc_DIR}" \
     -DSLEPc_DIR="${SLEPc_DIR}" \
@@ -164,10 +175,12 @@ elif [ "${TRAVIS_OS_NAME}" = osx ]; then # macOS 10.14, XCode 10.2
     -DENABLE_CYTHON=ON || exit
 
   make -j 2 || exit
+  cd "${DBG_BUILD_DIR}/tests" || exit
+  ctest --force-new-ctest-process --output-on-failure || exit
 
 else
   echo "INVALID OS: ${TRAVIS_OS_NAME}"
   exit 1
 fi
 
-cd ${TRAVIS_BUILD_DIR} || exit
+cd "${TRAVIS_BUILD_DIR}" || exit
