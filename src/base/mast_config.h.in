@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2019  Manav Bhatia
+ * Copyright (C) 2013-2020  Manav Bhatia and MAST authors
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -25,8 +25,6 @@
 #define MAST_ENABLE_DOT   @MAST_ENABLE_DOT@
 
 #define MAST_ENABLE_SNOPT @MAST_ENABLE_SNOPT@
-
-#define MAST_ENABLE_NASTRANIO @MAST_ENABLE_NASTRANIO@
 
 #define MAST_ENABLE_CYTHON @MAST_ENABLE_CYTHON@
 

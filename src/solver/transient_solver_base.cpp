@@ -1,6 +1,6 @@
 /*
  * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
- * Copyright (C) 2013-2019  Manav Bhatia
+ * Copyright (C) 2013-2020  Manav Bhatia and MAST authors
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -111,11 +111,11 @@ set_elem_operation_object(MAST::TransientAssemblyElemOperations &assembly_ops) {
             nm = "transient_solution_";
             nm += iter.str();
             sys.add_vector(nm, true, libMesh::GHOSTED);
-
-            nm = "transient_solution_sensitivity_";
-            nm += iter.str();
-            sys.add_vector(nm, true, libMesh::GHOSTED);
         }
+
+        nm = "transient_solution_sensitivity_";
+        nm += iter.str();
+        sys.add_vector(nm, true, libMesh::GHOSTED);
 
         // add the velocity
         nm = "transient_velocity_";
@@ -226,15 +226,11 @@ MAST::TransientSolverBase::solution_sensitivity(unsigned int prev_iter) const {
     std::ostringstream oss;
     oss << prev_iter;
 
-    if (prev_iter) {
-        // get references to the solution
-        std::string
-        nm = "transient_solution_sensitivity_" + oss.str();
-        
-        return _system->system().get_vector(nm);
-    }
-    else
-        return _system->system().add_sensitivity_solution();
+    // get references to the solution
+    std::string
+    nm = "transient_solution_sensitivity_" + oss.str();
+    
+    return _system->system().get_vector(nm);
 }
 
 
@@ -578,7 +574,9 @@ build_local_quantities(const libMesh::NumericVector<Real>& current_sol,
 
                 if (!_if_highest_derivative_solution)
                     // calculate the velocity and localize it
-                    update_velocity(vel, current_sol);
+                    // we use the localized sol since libMesh vector
+                    // algebra needs it for ghosted vectors.
+                    update_velocity(vel, *sol[0]);
                 
                 vel.localize(*sol[i], send_list);
             }
@@ -591,7 +589,9 @@ build_local_quantities(const libMesh::NumericVector<Real>& current_sol,
                 
                 if (!_if_highest_derivative_solution)
                     // calculate the acceleration and localize it
-                    update_acceleration(acc, current_sol);
+                    // we use the localized sol since libMesh vector
+                    // algebra needs it for ghosted vectors.
+                    update_acceleration(acc, *sol[0]);
                 
                 acc.localize(*sol[i], send_list);
             }
