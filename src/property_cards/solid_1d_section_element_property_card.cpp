@@ -546,9 +546,7 @@ namespace MAST {
                 _A(p, t, A);
                 _Kappa(p, t, Kappa);
                 _material_stiffness(p, t, m);
-                libMesh::out << "G =\n" << m << std::endl;
-                libMesh::out << "A = " << A << std::endl;
-                libMesh::out << "K =\n" << Kappa << std::endl;
+
                 m *= A;
                 
                 m(0,0) *= Kappa(0,0);
