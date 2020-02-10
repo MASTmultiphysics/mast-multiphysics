@@ -960,6 +960,7 @@ public:
 
         // initialize the fluid solution
         _init_solution();
+        _sys->update();
     }
     
     // \subsection flow_analysis_class_destructor Destructor
@@ -1179,6 +1180,7 @@ public:
         // initialize the solution to zero, or to something that the
         // user may have provided
         _init_solution();
+        _sys->update();
         _sys->solution->swap(solver.solution_sensitivity());
         _init_sensitivity_solution();
         _sys->solution->swap(solver.solution_sensitivity());
@@ -1200,7 +1202,7 @@ public:
         n_steps           = _input("n_transient_steps", "number of transient time-steps", 100);
         solver.dt         = _input("dt", "time-step size",    1.e-3);
         _sys->time        = _input("t_initial", "initial time-step",    0.);
-        solver.beta       = _input("beta", "Newmark solver beta parameter ",  0.5);
+        solver.beta       = _input("beta", "Newmark solver beta parameter ",  0.7);
 
         // ask the solver to update the initial condition for d2(X)/dt2
         // This is recommended only for the initial time step, since the time
@@ -1231,6 +1233,7 @@ public:
             std::ostringstream oss;
             oss << nonlinear_sol_root << t_step;
             _sys->read_in_vector(*_sys->solution, nonlinear_sol_dir, oss.str(), true);
+            _sys->update();
             oss << "_sens_t";
             _sys->write_out_vector(/*solver.dt, _sys->time,*/ solver.solution_sensitivity(), "data", oss.str(), true);
             
@@ -1293,6 +1296,12 @@ public:
         solver.set_discipline_and_system(*_discipline, *_sys_init);
         solver.set_elem_operation_object(elem_ops);
         
+        _init_solution();
+        _sys->update();
+        _sys->solution->swap(solver.solution_sensitivity());
+        _init_sensitivity_solution();
+        _sys->solution->swap(solver.solution_sensitivity());
+
         // file to write the solution for visualization
         libMesh::ExodusII_IO exodus_writer(*_mesh);
         

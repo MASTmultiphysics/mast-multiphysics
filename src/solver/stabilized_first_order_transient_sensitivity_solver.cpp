@@ -145,6 +145,7 @@ sensitivity_solve(MAST::AssemblyBase& assembly,
         std::ostringstream oss;
         oss << _sol_name_root << _index1;
         sys.read_in_vector(sol, _sol_dir, oss.str(), true);
+        sys.update();
 
         // assemble the Jacobian matrix
         _assemble_mass = false;
@@ -285,7 +286,8 @@ evaluate_q_sens_for_previous_interval(MAST::AssemblyBase& assembly,
         std::ostringstream oss;
         oss << _sol_name_root << _index1;
         sys.read_in_vector(sol, _sol_dir, oss.str(), true);
-        
+        sys.update();
+
         sys.time  = _t0 + this->dt * ( i - _index0);
         
         eta = (sys.time-_t0)/(t1-_t0);
