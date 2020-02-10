@@ -154,8 +154,7 @@ update_velocity(libMesh::NumericVector<Real>&       vec,
     &prev_sol = this->solution(1),
     &prev_vel = this->velocity(1);
     
-    vec.zero();
-    vec.add( 1.,      sol);
+    vec = sol;
     vec.add(-1., prev_sol);
     vec.scale(1./beta/dt);
     vec.close();
@@ -175,8 +174,7 @@ update_sensitivity_velocity(libMesh::NumericVector<Real>&       vec,
     &prev_sol = this->solution_sensitivity(1),
     &prev_vel = this->velocity_sensitivity(1);
     
-    vec.zero();
-    vec.add( 1.,      sol);
+    vec = sol;
     vec.add(-1., prev_sol);
     vec.scale(1./beta/dt);
     vec.close();
@@ -192,8 +190,8 @@ MAST::FirstOrderNewmarkTransientSolver::
 update_delta_velocity(libMesh::NumericVector<Real>&       vec,
                        const libMesh::NumericVector<Real>& sol) {
     
-    vec.zero();
-    vec.add( 1./beta/dt,      sol);
+    vec = sol;
+    vec.scale( 1./beta/dt);
     vec.close();
 }
 
