@@ -230,26 +230,57 @@ add_test(NAME Orthotropic_Material_1D_Thermoelastic
          COMMAND $<TARGET_FILE:mast_catch_tests> constant_orthotropic_thermoelastic_material_1d)
 set_tests_properties(Orthotropic_Material_1D_Thermoelastic
                     PROPERTIES 
+                    LABELS "SEQ"
                     FIXTURES_REQUIRED   ConstantFieldFunction)
+                    
+add_test(NAME Orthotropic_Material_1D_Thermoelastic_mpi
+         COMMAND ${MPIEXEC_EXECUTABLE} -np 2 $<TARGET_FILE:mast_catch_tests> constant_orthotropic_thermoelastic_material_1d)
+set_tests_properties(Orthotropic_Material_1D_Thermoelastic_mpi
+                    PROPERTIES 
+                    LABELS "MPI"
+                    FIXTURES_REQUIRED   ConstantFieldFunction_mpi)
                     
 add_test(NAME Orthotropic_Material_1D_Structural
          COMMAND $<TARGET_FILE:mast_catch_tests> constant_orthotropic_structural_material_1d)
 set_tests_properties(Orthotropic_Material_1D_Structural
                      PROPERTIES 
+                     LABELS "SEQ"
                      FIXTURES_REQUIRED   ConstantFieldFunction)
 
+add_test(NAME Orthotropic_Material_1D_Structural_mpi
+         COMMAND ${MPIEXEC_EXECUTABLE} -np 2 $<TARGET_FILE:mast_catch_tests> constant_orthotropic_structural_material_1d)
+set_tests_properties(Orthotropic_Material_1D_Structural_mpi
+                     PROPERTIES 
+                     LABELS "MPI"
+                     FIXTURES_REQUIRED   ConstantFieldFunction_mpi)
+                     
 add_test(NAME Orthotropic_Material_1D_Heat_Transfer
          COMMAND $<TARGET_FILE:mast_catch_tests> constant_orthotropic_heat_transfer_material_1d)
 set_tests_properties(Orthotropic_Material_1D_Heat_Transfer
                      PROPERTIES 
+                     LABELS "SEQ"
                      FIXTURES_REQUIRED   ConstantFieldFunction)
+                     
+add_test(NAME Orthotropic_Material_1D_Heat_Transfer_mpi
+         COMMAND ${MPIEXEC_EXECUTABLE} -np 2 $<TARGET_FILE:mast_catch_tests> constant_orthotropic_heat_transfer_material_1d)
+set_tests_properties(Orthotropic_Material_1D_Heat_Transfer_mpi
+                     PROPERTIES 
+                     LABELS "MPI"
+                     FIXTURES_REQUIRED   ConstantFieldFunction_mpi)
                     
 add_test(NAME Orthotropic_Material_1D_Transient_Heat_Transfer
          COMMAND $<TARGET_FILE:mast_catch_tests> constant_orthotropic_transient_heat_transfer_material_1d)
 set_tests_properties(Orthotropic_Material_1D_Transient_Heat_Transfer
                      PROPERTIES 
+                     LABELS "SEQ"
                      FIXTURES_REQUIRED   ConstantFieldFunction)
 
+add_test(NAME Orthotropic_Material_1D_Transient_Heat_Transfer_mpi
+         COMMAND ${MPIEXEC_EXECUTABLE} -np 2 $<TARGET_FILE:mast_catch_tests> constant_orthotropic_transient_heat_transfer_material_1d)
+set_tests_properties(Orthotropic_Material_1D_Transient_Heat_Transfer_mpi
+                     PROPERTIES 
+                     LABELS "MPI"
+                     FIXTURES_REQUIRED   ConstantFieldFunction_mpi)
                      
 # 2D Orthotropic Material Tests
 #-----------------------------------------------------------------------------
@@ -257,26 +288,58 @@ add_test(NAME Orthotropic_Material_2D_Thermoelastic
          COMMAND $<TARGET_FILE:mast_catch_tests> constant_orthotropic_thermoelastic_material_2d)
 set_tests_properties(Orthotropic_Material_2D_Thermoelastic
                     PROPERTIES 
+                    LABELS "SEQ"
                     FIXTURES_REQUIRED   ConstantFieldFunction)
+                    
+add_test(NAME Orthotropic_Material_2D_Thermoelastic_mpi
+         COMMAND ${MPIEXEC_EXECUTABLE} -np 2 $<TARGET_FILE:mast_catch_tests> constant_orthotropic_thermoelastic_material_2d)
+set_tests_properties(Orthotropic_Material_2D_Thermoelastic_mpi
+                    PROPERTIES 
+                    LABELS "MPI"
+                    FIXTURES_REQUIRED   ConstantFieldFunction_mpi)
                     
 add_test(NAME Orthotropic_Material_2D_Structural
          COMMAND $<TARGET_FILE:mast_catch_tests> constant_orthotropic_structural_material_2d)
 set_tests_properties(Orthotropic_Material_2D_Structural
                      PROPERTIES 
+                     LABELS "SEQ"
                      FIXTURES_REQUIRED   ConstantFieldFunction)
 
+add_test(NAME Orthotropic_Material_2D_Structural_mpi
+         COMMAND ${MPIEXEC_EXECUTABLE} -np 2 $<TARGET_FILE:mast_catch_tests> constant_orthotropic_structural_material_2d)
+set_tests_properties(Orthotropic_Material_2D_Structural_mpi
+                     PROPERTIES 
+                     LABELS "MPI"
+                     FIXTURES_REQUIRED   ConstantFieldFunction_mpi)
+                     
 add_test(NAME Orthotropic_Material_2D_Heat_Transfer
          COMMAND $<TARGET_FILE:mast_catch_tests> constant_orthotropic_heat_transfer_material_2d)
 set_tests_properties(Orthotropic_Material_2D_Heat_Transfer
                      PROPERTIES 
+                     LABELS "SEQ"
                      FIXTURES_REQUIRED   ConstantFieldFunction)
+
+add_test(NAME Orthotropic_Material_2D_Heat_Transfer_mpi
+         COMMAND ${MPIEXEC_EXECUTABLE} -np 2 $<TARGET_FILE:mast_catch_tests> constant_orthotropic_heat_transfer_material_2d)
+set_tests_properties(Orthotropic_Material_2D_Heat_Transfer_mpi
+                     PROPERTIES 
+                     LABELS "MPI"
+                     FIXTURES_REQUIRED   ConstantFieldFunction_mpi)
                     
 add_test(NAME Orthotropic_Material_2D_Transient_Heat_Transfer
          COMMAND $<TARGET_FILE:mast_catch_tests> constant_orthotropic_transient_heat_transfer_material_2d)
 set_tests_properties(Orthotropic_Material_2D_Transient_Heat_Transfer
                      PROPERTIES 
+                     LABELS "SEQ"
                      FIXTURES_REQUIRED   ConstantFieldFunction)
 
+add_test(NAME Orthotropic_Material_2D_Transient_Heat_Transfer_mpi
+         COMMAND ${MPIEXEC_EXECUTABLE} -np 2 $<TARGET_FILE:mast_catch_tests> constant_orthotropic_transient_heat_transfer_material_2d)
+set_tests_properties(Orthotropic_Material_2D_Transient_Heat_Transfer_mpi
+                     PROPERTIES 
+                     LABELS "MPI"
+                     FIXTURES_REQUIRED   ConstantFieldFunction_mpi)
+                     
                      
 # 3D Orthotropic Material Tests
 #-----------------------------------------------------------------------------
@@ -284,32 +347,72 @@ add_test(NAME Orthotropic_Material_3D_Thermoelastic
          COMMAND $<TARGET_FILE:mast_catch_tests> constant_orthotropic_thermoelastic_material_3d)
 set_tests_properties(Orthotropic_Material_3D_Thermoelastic
                     PROPERTIES 
+                    LABELS "SEQ"
                     FIXTURES_REQUIRED   ConstantFieldFunction)
 
+add_test(NAME Orthotropic_Material_3D_Thermoelastic_mpi
+         COMMAND ${MPIEXEC_EXECUTABLE} -np 2 $<TARGET_FILE:mast_catch_tests> constant_orthotropic_thermoelastic_material_3d)
+set_tests_properties(Orthotropic_Material_3D_Thermoelastic_mpi
+                    PROPERTIES 
+                    LABELS "MPI"
+                    FIXTURES_REQUIRED   ConstantFieldFunction_mpi)
+                    
 add_test(NAME Orthotropic_Material_3D_Structural
          COMMAND $<TARGET_FILE:mast_catch_tests> constant_orthotropic_structural_material_3d)
 set_tests_properties(Orthotropic_Material_3D_Structural
                      PROPERTIES 
+                     LABELS "SEQ"
                      FIXTURES_REQUIRED  ConstantFieldFunction)
 
+add_test(NAME Orthotropic_Material_3D_Structural_mpi
+         COMMAND ${MPIEXEC_EXECUTABLE} -np 2 $<TARGET_FILE:mast_catch_tests> constant_orthotropic_structural_material_3d)
+set_tests_properties(Orthotropic_Material_3D_Structural_mpi
+                     PROPERTIES 
+                     LABELS "MPI"
+                     FIXTURES_REQUIRED  ConstantFieldFunction_mpi)
+                     
 add_test(NAME Orthotropic_Material_3D_Heat_Transfer
          COMMAND $<TARGET_FILE:mast_catch_tests> constant_orthotropic_heat_transfer_material_3d)
 set_tests_properties(Orthotropic_Material_3D_Heat_Transfer
                      PROPERTIES 
+                     LABELS "SEQ"
                      FIXTURES_REQUIRED  ConstantFieldFunction)
+                     
+add_test(NAME Orthotropic_Material_3D_Heat_Transfer_mpi
+         COMMAND ${MPIEXEC_EXECUTABLE} -np 2 $<TARGET_FILE:mast_catch_tests> constant_orthotropic_heat_transfer_material_3d)
+set_tests_properties(Orthotropic_Material_3D_Heat_Transfer_mpi
+                     PROPERTIES 
+                     LABELS "MPI"
+                     FIXTURES_REQUIRED  ConstantFieldFunction_mpi)
                      
 add_test(NAME Orthotropic_Material_3D_Transient_Heat_Transfer
          COMMAND $<TARGET_FILE:mast_catch_tests> constant_orthotropic_transient_heat_transfer_material_3d)
 set_tests_properties(Orthotropic_Material_3D_Transient_Heat_Transfer
                      PROPERTIES 
+                     LABELS "SEQ"
                      FIXTURES_REQUIRED   ConstantFieldFunction)
 
+add_test(NAME Orthotropic_Material_3D_Transient_Heat_Transfer_mpi
+         COMMAND ${MPIEXEC_EXECUTABLE} -np 2 $<TARGET_FILE:mast_catch_tests> constant_orthotropic_transient_heat_transfer_material_3d)
+set_tests_properties(Orthotropic_Material_3D_Transient_Heat_Transfer_mpi
+                     PROPERTIES 
+                     LABELS "MPI"
+                     FIXTURES_REQUIRED   ConstantFieldFunction_mpi)
+                     
 add_test(NAME Orthotropic_Material_3D_Dynamic
          COMMAND $<TARGET_FILE:mast_catch_tests> constant_orthotropic_dynamic_material_3d)
 set_tests_properties(Orthotropic_Material_3D_Dynamic
                      PROPERTIES 
+                     LABELS "SEQ"
                      FIXTURES_REQUIRED  ConstantFieldFunction)
 
+add_test(NAME Orthotropic_Material_3D_Dynamic_mpi
+         COMMAND ${MPIEXEC_EXECUTABLE} -np 2 $<TARGET_FILE:mast_catch_tests> constant_orthotropic_dynamic_material_3d)
+set_tests_properties(Orthotropic_Material_3D_Dynamic_mpi
+                     PROPERTIES 
+                     LABELS "MPI"
+                     FIXTURES_REQUIRED  ConstantFieldFunction_mpi)
+    
          
 # # ============================================================================
 # #                          ANISOTROPIC MATERIAL TESTS
