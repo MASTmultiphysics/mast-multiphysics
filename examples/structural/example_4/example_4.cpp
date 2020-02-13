@@ -323,7 +323,6 @@ int main(int argc, const char** argv)
     MAST::IsotropicMaterialPropertyCard material;
     material.add(E_f);
     material.add(nu_f);
-    material.add(kappa_f);
     material.add(alpha_f);
     material.add(rho_f);
     
@@ -331,6 +330,7 @@ int main(int argc, const char** argv)
     MAST::Solid2DSectionElementPropertyCard section;
     section.add(th_f);
     section.add(off_f);
+    section.add(kappa_f);
     
     // Attach material to the card.
     section.set_material(material);

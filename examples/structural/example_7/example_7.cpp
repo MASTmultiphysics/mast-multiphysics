@@ -163,6 +163,8 @@ int main(int argc, const char** argv) {
     MAST::Parameter E("E", 18.5e6); // lbf/in^2
     MAST::Parameter nu("nu", 0.3); // no unit
     MAST::Parameter rho("rho", 0.000142); // lbf*s^2/in^4 (0.055 lb/in^3 * 0.00259)
+    MAST::Parameter kappa_yy("kappa_yy", 5./6.); // shear coefficient yy
+    MAST::Parameter kappa_zz("kappa_zz", 5./6.); // shear coefficient zz
     MAST::Parameter zero("zero", 0.0);
 
     // Create ConstantFieldFunctions used to spread parameters throughout the model.
@@ -173,6 +175,8 @@ int main(int argc, const char** argv) {
     MAST::ConstantFieldFunction rho_f("rho", rho);
     MAST::ConstantFieldFunction hyoff_f("hy_off", zero);
     MAST::ConstantFieldFunction hzoff_f("hz_off", zero);
+    MAST::ConstantFieldFunction kappa_yy_f("Kappayy", kappa_yy);
+    MAST::ConstantFieldFunction kappa_zz_f("Kappazz", kappa_zz);
 
     // Create the material property card ("card" is NASTRAN lingo) and add the relevant field
     // functions to it. An isotropic material in dynamics needs elastic modulus (E),
@@ -191,6 +195,8 @@ int main(int argc, const char** argv) {
     section.add(thz_f);
     section.add(hyoff_f);
     section.add(hzoff_f);
+    section.add(kappa_yy_f);
+    section.add(kappa_zz_f);
 
     // Specify a section orientation point and add it to the section.
     //  -- Currently this orientation is arbitrary and we assume all beam sections are oriented

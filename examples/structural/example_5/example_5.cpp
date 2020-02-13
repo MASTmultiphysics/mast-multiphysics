@@ -328,7 +328,6 @@ public:
         Eval      = _input("E", "modulus of elasticity", 72.e9),
         rhoval    = _input("rho", "material density", 2700.),
         nu_val    = _input("nu", "Poisson's ratio",  0.33),
-        kappa_val = _input("kappa", "shear correction factor",  5./6.),
         kval      = _input("k", "thermal conductivity",  1.e-2),
         cpval     = _input("cp", "thermal capacitance",  864.);
         
@@ -338,7 +337,6 @@ public:
         *E_v       = new MAST::Parameter("E_v",          0.),
         *rho       = new MAST::Parameter("rho",      rhoval),
         *nu        = new MAST::Parameter("nu",       nu_val),
-        *kappa     = new MAST::Parameter("kappa", kappa_val),
         *k         = new MAST::Parameter("k",          kval),
         *cp        = new MAST::Parameter("cp",        cpval);
         
@@ -347,7 +345,6 @@ public:
         *E_v_f   = new MAST::ConstantFieldFunction(    "E",    *E_v),
         *rho_f   = new MAST::ConstantFieldFunction(  "rho",    *rho),
         *nu_f    = new MAST::ConstantFieldFunction(   "nu",     *nu),
-        *kappa_f = new MAST::ConstantFieldFunction("kappa",  *kappa),
         *k_f     = new MAST::ConstantFieldFunction( "k_th",      *k),
         *cp_f    = new MAST::ConstantFieldFunction(   "cp",     *cp);
         
@@ -355,14 +352,12 @@ public:
         _parameters[  E_v->name()]     = E_v;
         _parameters[  rho->name()]     = rho;
         _parameters[   nu->name()]     = nu;
-        _parameters[kappa->name()]     = kappa;
         _parameters[    k->name()]     = k;
         _parameters[   cp->name()]     = cp;
         _field_functions.insert(E_f);
         _field_functions.insert(E_v_f);
         _field_functions.insert(rho_f);
         _field_functions.insert(nu_f);
-        _field_functions.insert(kappa_f);
         _field_functions.insert(k_f);
         _field_functions.insert(cp_f);
 
@@ -371,7 +366,6 @@ public:
         _m_card1->add(*E_f);
         _m_card1->add(*rho_f);
         _m_card1->add(*nu_f);
-        _m_card1->add(*kappa_f);
         _m_card1->add(*k_f);
         _m_card1->add(*cp_f);
         
@@ -379,7 +373,6 @@ public:
         _m_card2->add(*E_v_f);
         _m_card2->add(*rho_f);
         _m_card2->add(*nu_f);
-        _m_card2->add(*kappa_f);
         _m_card2->add(*k_f);
         _m_card2->add(*cp_f);
     }
@@ -394,20 +387,25 @@ public:
         
         
         Real
+        kappa_val = _input("kappa", "shear correction factor",  5./6.),
         th_v      =  _input("th", "thickness of 2D element",  0.001);
         
         MAST::Parameter
         *th       = new MAST::Parameter("th", th_v),
+        *kappa    = new MAST::Parameter("kappa", kappa_val),
         *zero     = new MAST::Parameter("zero", 0.);
         
         MAST::ConstantFieldFunction
         *th_f     = new MAST::ConstantFieldFunction("h",       *th),
+        *kappa_f  = new MAST::ConstantFieldFunction("kappa",  *kappa),
         *hoff_f   = new MAST::ConstantFieldFunction("off",   *zero);
         
         
         _parameters[th->name()]    = th;
+        _parameters[kappa->name()] = kappa;
         _parameters[zero->name()]  = zero;
         _field_functions.insert(th_f);
+        _field_functions.insert(kappa_f);
         _field_functions.insert(hoff_f);
         
         MAST::Solid2DSectionElementPropertyCard
@@ -424,11 +422,13 @@ public:
         _p_card2->set_strain(MAST::LINEAR_STRAIN);
 
         p_card1->add(*th_f);
+        p_card1->add(*kappa_f);
         p_card1->add(*hoff_f);
         p_card1->set_material(*_m_card1);
 
         // property card for void
         p_card2->add(*th_f);
+        p_card2->add(*kappa_f);
         p_card2->add(*hoff_f);
         p_card2->set_material(*_m_card2);
         
