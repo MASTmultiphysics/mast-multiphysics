@@ -56,8 +56,7 @@ namespace MAST {
         class TransverseShearStiffnessMatrix: public MAST::FieldFunction<RealMatrixX> {
         public:
             TransverseShearStiffnessMatrix(const MAST::FieldFunction<Real>& E,
-                                           const MAST::FieldFunction<Real>& nu,
-                                           const MAST::FieldFunction<Real>& kappa);
+                                           const MAST::FieldFunction<Real>& nu);
             
             
             virtual ~TransverseShearStiffnessMatrix() { }
@@ -75,7 +74,6 @@ namespace MAST {
             
             const MAST::FieldFunction<Real>& _E;
             const MAST::FieldFunction<Real>& _nu;
-            const MAST::FieldFunction<Real>& _kappa;
         };
         
         
@@ -322,16 +320,13 @@ StiffnessMatrix1D::derivative( const MAST::FunctionBase &f,
 MAST::IsotropicMaterialProperty::
 TransverseShearStiffnessMatrix::
 TransverseShearStiffnessMatrix(const MAST::FieldFunction<Real>& E,
-                               const MAST::FieldFunction<Real>& nu,
-                               const MAST::FieldFunction<Real>& kappa):
+                               const MAST::FieldFunction<Real>& nu):
 MAST::FieldFunction<RealMatrixX>("TransverseShearStiffnessMatrix"),
 _E(E),
-_nu(nu),
-_kappa(kappa)
+_nu(nu)
 {
     _functions.insert(&E);
     _functions.insert(&nu);
-    _functions.insert(&kappa);
 }
 
 
@@ -342,10 +337,10 @@ TransverseShearStiffnessMatrix::operator() (const libMesh::Point& p,
                                             const Real t,
                                             RealMatrixX& m) const {
     m = RealMatrixX::Zero(2,2);
-    Real E, nu, kappa, G;
-    _E(p, t, E); _nu(p, t, nu); _kappa(p, t, kappa);
+    Real E, nu, G;
+    _E(p, t, E); _nu(p, t, nu);
     G = E/2./(1.+nu);
-    m(0,0) = G*kappa;
+    m(0,0) = G;
     m(1,1) = m(0,0);
 }
 
@@ -359,28 +354,23 @@ TransverseShearStiffnessMatrix::derivative(          const MAST::FunctionBase& f
                                            RealMatrixX& m) const {
     RealMatrixX dm;
     m = RealMatrixX::Zero(2,2); dm = RealMatrixX::Zero(2, 2);
-    Real E, nu, kappa, dEdf, dnudf, dkappadf, G;
+    Real E, nu, dEdf, dnudf, G, dG;
     _E    (p, t, E);         _E.derivative( f, p, t, dEdf);
     _nu   (p, t, nu);       _nu.derivative( f, p, t, dnudf);
-    _kappa(p, t, kappa); _kappa.derivative( f, p, t, dkappadf);
-    G = E/2./(1.+nu);
+    G = E/2./(1.+nu);       
+    dG = (1./2./(1.+nu) * dEdf) + (-E/2./pow(1.+nu,2) * dnudf);
     
+    dm(0,0) = dm(1,1) = dG;
     
-    // parM/parE * parE/parf
-    dm(0,0) = 1./2./(1.+nu)*kappa;
-    dm(1,1) = dm(0,0);
-    m += dEdf * dm;
-    
-    
-    // parM/parnu * parnu/parf
-    dm(0,0) = -E/2./pow(1.+nu,2)*kappa;
-    dm(1,1) = dm(0,0);
-    m += dnudf*dm;
-    
-    // parM/parnu * parkappa/parf
-    
-    dm(0,0) = G; dm(1,1) = G;
-    m += dkappadf*dm;
+//     // parM/parE * parE/parf
+//     dm(0,0) = 1./2./(1.+nu);
+//     dm(1,1) = dm(0,0);
+//     m += dEdf * dm;
+//     
+//     // parM/parnu * parnu/parf
+//     dm(0,0) = -E/2./pow(1.+nu,2);
+//     dm(1,1) = dm(0,0);
+//     m += dnudf*dm;
 }
 
 
@@ -407,18 +397,32 @@ MAST::IsotropicMaterialProperty::
 StiffnessMatrix2D::operator() (const libMesh::Point& p,
                                const Real t,
                                RealMatrixX& m) const {
-    libmesh_assert(_plane_stress); // currently only implemented for plane stress
+    // libmesh_assert(_plane_stress); // currently only implemented for plane stress
     m = RealMatrixX::Zero(3,3);
     Real E, nu;
     _E(p, t, E); _nu(p, t, nu);
-    for (unsigned int i=0; i<2; i++) {
-        for (unsigned int j=0; j<2; j++)
-            if (i == j) // diagonal: direct stress
-                m(i,i) = E/(1.-nu*nu);
-            else // offdiagonal: direct stress
-                m(i,j) = E*nu/(1.-nu*nu);
+    if (_plane_stress)
+    {
+        for (unsigned int i=0; i<2; i++) {
+            for (unsigned int j=0; j<2; j++)
+                if (i == j) // diagonal: direct stress
+                    m(i,i) = E/(1.-nu*nu);
+                else // offdiagonal: direct stress
+                    m(i,j) = E*nu/(1.-nu*nu);
+        }
+        m(2,2) = E/2./(1.+nu); // diagonal: shear stress
     }
-    m(2,2) = E/2./(1.+nu); // diagonal: shear stress
+    else // plane_strain
+    {
+        for (unsigned int i=0; i<2; i++) {
+            for (unsigned int j=0; j<2; j++)
+                if (i == j) // diagonal: direct stress
+                    m(i,i) = E*(1.-nu)/((1.+nu)*(1.-2.*nu));
+                else // offdiagonal: direct stress
+                    m(i,j) = E*nu/((1.+nu)*(1.-2.*nu));
+        }
+        m(2,2) = E/2./(1.+nu); // diagonal: shear stress
+    }
 }
 
 
@@ -430,34 +434,62 @@ StiffnessMatrix2D::derivative (  const MAST::FunctionBase& f,
                                const libMesh::Point& p,
                                const Real t,
                                RealMatrixX& m) const {
-    libmesh_assert(_plane_stress); // currently only implemented for plane stress
+    // libmesh_assert(_plane_stress); // currently only implemented for plane stress
     RealMatrixX dm;
     m = RealMatrixX::Zero(3,3); dm = RealMatrixX::Zero(3, 3);
     Real E, nu, dEdf, dnudf;
     _E  (p, t, E);   _E.derivative( f, p, t, dEdf);
     _nu (p, t, nu); _nu.derivative( f, p, t, dnudf);
     
-    // parM/parE * parE/parf
-    for (unsigned int i=0; i<2; i++) {
-        for (unsigned int j=0; j<2; j++)
-            if (i == j) // diagonal: direct stress
-                dm(i,i) = 1./(1.-nu*nu);
-            else // offdiagonal: direct stress
-                dm(i,j) = 1.*nu/(1.-nu*nu);
+    if (_plane_stress)
+    {
+        // parM/parE * parE/parf
+        for (unsigned int i=0; i<2; i++) {
+            for (unsigned int j=0; j<2; j++)
+                if (i == j) // diagonal: direct stress
+                    dm(i,i) = 1./(1.-nu*nu);
+                else // offdiagonal: direct stress
+                    dm(i,j) = 1.*nu/(1.-nu*nu);
+        }
+        dm(2,2) = 1./2./(1.+nu); // diagonal: shear stress
+        m += dEdf * dm;
+        
+        // parM/parnu * parnu/parf
+        for (unsigned int i=0; i<2; i++) {
+            for (unsigned int j=0; j<2; j++)
+                if (i == j) // diagonal: direct stress
+                    dm(i,i) = E/pow(1.-nu*nu, 2)*2.*nu;
+                else // offdiagonal: direct stress
+                    dm(i,j) = E/(1.-nu*nu) + E*nu/pow(1.-nu*nu,2)*2.*nu;
+        }
+        dm(2,2) = -E/2./pow(1.+nu,2); // diagonal: shear stress
+        m+= dnudf*dm;
     }
-    dm(2,2) = 1./2./(1.+nu); // diagonal: shear stress
-    m += dEdf * dm;
-    
-    // parM/parnu * parnu/parf
-    for (unsigned int i=0; i<2; i++) {
-        for (unsigned int j=0; j<2; j++)
-            if (i == j) // diagonal: direct stress
-                dm(i,i) = E/pow(1.-nu*nu, 2)*2.*nu;
-            else // offdiagonal: direct stress
-                dm(i,j) = E/(1.-nu*nu) + E*nu/pow(1.-nu*nu,2)*2.*nu;
+    else // plane_strain
+    {
+        // parM/parE * parE/parf
+        for (unsigned int i=0; i<2; i++) {
+            for (unsigned int j=0; j<2; j++)
+                if (i == j) // diagonal: direct stress
+                    dm(i,i) = 1.*(1.-nu)/((1.+nu)*(1.-2.*nu));
+                else // offdiagonal: direct stress
+                    dm(i,j) = 1.*nu/((1.+nu)*(1.-2.*nu));
+        }
+        dm(2,2) = 1./2./(1.+nu); // diagonal: shear stress
+        m += dEdf*dm;
+        
+        
+        // parM/parnu * parnu/parf
+        for (unsigned int i=0; i<2; i++) {
+            for (unsigned int j=0; j<2; j++)
+                if (i == j) // diagonal: direct stress
+                    dm(i,i) = E*2.*nu*(2.-nu)/pow(2.*nu*nu+nu-1., 2);
+                else // offdiagonal: direct stress
+                    dm(i,j) = (2.*nu*nu*E+E)/pow(2*nu*nu+nu-1., 2);
+        }
+        dm(2,2) = -E/2./pow(1.+nu, 2); // diagonal: shear stress
+        m += dnudf*dm;
     }
-    dm(2,2) = -E/2./pow(1.+nu,2); // diagonal: shear stress
-    m+= dnudf*dm;
 }
 
 
@@ -804,7 +836,7 @@ MAST::IsotropicMaterialPropertyCard::stiffness_matrix(const unsigned int dim,
             
         default:
             // should not get here
-            libmesh_error();
+            libmesh_error_msg("Should not get here; " << __PRETTY_FUNCTION__ << " in " << __FILE__ << " at line number " << __LINE__);
     }
 }
 
@@ -842,8 +874,7 @@ MAST::IsotropicMaterialPropertyCard::inertia_matrix(const unsigned int dim) {
         default:
             // implemented only for 3D since the 2D and 1D elements
             // calculate it themselves
-            libmesh_error();
-            
+            libmesh_error_msg("Implemented only for 3D since the 2D and 1D elements calculate it themselves; " << __PRETTY_FUNCTION__ << " in " << __FILE__ << " at line number " << __LINE__);
     }
 }
 
@@ -894,7 +925,7 @@ MAST::IsotropicMaterialPropertyCard::thermal_expansion_matrix(const unsigned int
 
  
         default:
-            libmesh_error();
+            libmesh_error_msg("Should not get here; " << __PRETTY_FUNCTION__ << " in " << __FILE__ << " at line number " << __LINE__);
     }
 
     
@@ -910,8 +941,7 @@ MAST::IsotropicMaterialPropertyCard::transverse_shear_stiffness_matrix() {
         _transverse_shear_mat =
         new MAST::IsotropicMaterialProperty::TransverseShearStiffnessMatrix
         (this->get<MAST::FieldFunction<Real> >("E"),
-         this->get<MAST::FieldFunction<Real> >("nu"),
-         this->get<MAST::FieldFunction<Real> >("kappa"));
+         this->get<MAST::FieldFunction<Real> >("nu"));
     
     return *_transverse_shear_mat;
 }
@@ -967,7 +997,7 @@ MAST::IsotropicMaterialPropertyCard::capacitance_matrix(const unsigned int dim) 
             
         default:
             // should not get here
-            libmesh_error();
+            libmesh_error_msg("Should not get here; " << __PRETTY_FUNCTION__ << " in " << __FILE__ << " at line number " << __LINE__);
     }
 }
 
@@ -1018,10 +1048,9 @@ MAST::IsotropicMaterialPropertyCard::conductance_matrix(const unsigned int dim) 
             
         default:
             // should not get here
-            libmesh_error();
+            libmesh_error_msg("Should not get here; " << __PRETTY_FUNCTION__ << " in " << __FILE__ << " at line number " << __LINE__);
     }
 }
-
 
 
 

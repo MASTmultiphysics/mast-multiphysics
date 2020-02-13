@@ -176,6 +176,11 @@ namespace MAST
         }
         
         
+        virtual bool get_warping_only() const
+        {
+            return _warping_only;
+        }
+        
     protected:
         
         /*!
@@ -187,6 +192,8 @@ namespace MAST
          *    flag to use a diagonal mass matrix. By default, this is false
          */
         bool _diagonal_mass;
+        
+        bool _warping_only = false;
     };
     
 }
