@@ -16,7 +16,7 @@ target_link_libraries(mast_catch_tests mast)
 
 add_subdirectory(base)
 #add_subdirectory(boundary_condition)
-#add_subdirectory(material)
+add_subdirectory(material)
 #add_subdirectory(property)
 #add_subdirectory(element)
 
