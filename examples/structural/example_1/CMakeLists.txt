@@ -13,7 +13,7 @@ set_tests_properties(structural_example_1
     PROPERTIES
         LABELS "SHORT;SEQ")
 
-# Test multiple processors, parallel direct solver using external MUMPS package.
+# Test multiple processors, parallel direct linear solver using external MUMPS package.
 add_test(NAME structural_example_1_mpi
     COMMAND ${MPIEXEC_EXECUTABLE} -np 2 $<TARGET_FILE:structural_example_1>
             -ksp_type preonly -pc_type lu -pc_factor_mat_solver_package mumps -options_view)
