@@ -108,12 +108,14 @@ namespace MAST {
         class TransverseStiffnessMatrix: public MAST::FieldFunction<RealMatrixX> {
         public:
             TransverseStiffnessMatrix(const MAST::FieldFunction<RealMatrixX>& mat,
-                                      const MAST::FieldFunction<Real>& h):
+                                      const MAST::FieldFunction<Real>& h,
+                                      const MAST::FieldFunction<Real>& kappa):
             MAST::FieldFunction<RealMatrixX>("TransverseStiffnessMatrix2D"),
             _material_stiffness(mat),
-            _h(h) {
+            _h(h), _kappa(kappa) {
                 _functions.insert(&mat);
                 _functions.insert(&h);
+                _functions.insert(&kappa);
             }
             
             
@@ -122,10 +124,13 @@ namespace MAST {
             virtual void operator() (const libMesh::Point& p,
                                      const Real t,
                                      RealMatrixX& m) const {
-                Real h;
+                Real h, kappa;
                 _h(p, t, h);
+                _kappa(p, t, kappa);
                 _material_stiffness(p, t, m);
+                //m = m*h*kappa;
                 m *= h;
+                m *= kappa;
             }
             
             virtual void derivative (    const MAST::FunctionBase& f,
@@ -133,18 +138,21 @@ namespace MAST {
                                      const Real t,
                                      RealMatrixX& m) const {
                 RealMatrixX dm;
-                Real h, dh;
-                _h(p, t, h); _h.derivative( f, p, t, dh);
+                Real h, dh, kappa, dkappa;
+                _h(p, t, h);        _h.derivative(f, p, t, dh);
+                _kappa(p, t, kappa);    _kappa.derivative(f, p, t, dkappa); 
                 _material_stiffness(p, t, m); _material_stiffness.derivative( f, p, t, dm);
                 
-                m *= dh;
-                m += h*dm;
+                // dm = dm*h*kappa + m*dh*kappa + m*h*dkappa
+                m *= (dh*kappa + h*dkappa);
+                m += dm*h*kappa;
             }
             
         protected:
             
             const MAST::FieldFunction<RealMatrixX>& _material_stiffness;
             const MAST::FieldFunction<Real>& _h;
+            const MAST::FieldFunction<Real>& _kappa;
         };
         
         
@@ -561,7 +569,7 @@ InertiaMatrix::operator() (const libMesh::Point& p,
     m(3,3) = pow(h,3)/12. + h*pow(off,2);  // rotary inertia
     m(4,4) = pow(h,3)/12. + h*pow(off,2);  // rotary inertia
     m(5,5) = pow(h,3)/12.*1.0e-6; // neglect the rotary inertia wrt theta_z
-    
+    // FIXME: The line above, a small value in m(5,5) can cause many artificial eigenvalues around the true one. Resulting in difficult to interpret modal
     m *= rho;
 }
 
@@ -589,6 +597,7 @@ InertiaMatrix::derivative (               const MAST::FunctionBase& f,
     m(3,3) = drhodf*pow(h,3)/12.+rho*pow(h,2)/4.*dhdf;  // rotary inertia
     m(4,4) = drhodf*pow(h,3)/12.+rho*pow(h,2)/4.*dhdf;  // rotary inertia
     m(5,5) = (drhodf*pow(h,3)/12.+rho*pow(h,2)/4.*dhdf)*1.0e-6; // neglect the rotary inertia wrt theta_z
+    // FIXME: The line above, a small value in m(5,5) can cause many artificial eigenvalues around the true one. Resulting in difficult to interpret modal
 }
 
 
@@ -1036,7 +1045,20 @@ stiffness_A_matrix(const MAST::ElementBase& e) const {
     
     MAST::FieldFunction<RealMatrixX>* rval =
     new MAST::Solid2DSectionProperty::ExtensionStiffnessMatrix
-    (_material->stiffness_matrix(2),
+    (_material->stiffness_matrix(2, _if_plane_stress),
+     this->get<const FieldFunction<Real> >("h"));
+    
+    return std::unique_ptr<MAST::FieldFunction<RealMatrixX> > (rval);
+}
+
+
+std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
+MAST::Solid2DSectionElementPropertyCard::
+stiffness_A_matrix() const {
+    
+    MAST::FieldFunction<RealMatrixX>* rval =
+    new MAST::Solid2DSectionProperty::ExtensionStiffnessMatrix
+    (_material->stiffness_matrix(2, _if_plane_stress),
      this->get<const FieldFunction<Real> >("h"));
     
     return std::unique_ptr<MAST::FieldFunction<RealMatrixX> > (rval);
@@ -1049,7 +1071,21 @@ stiffness_B_matrix(const MAST::ElementBase& e) const {
     
     MAST::FieldFunction<RealMatrixX>* rval =
     new MAST::Solid2DSectionProperty::ExtensionBendingStiffnessMatrix
-    (_material->stiffness_matrix(2),
+    (_material->stiffness_matrix(2, _if_plane_stress),
+     this->get<FieldFunction<Real> >("h"),
+     this->get<FieldFunction<Real> >("off"));
+    
+    return std::unique_ptr<MAST::FieldFunction<RealMatrixX> > (rval);
+}
+
+
+std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
+MAST::Solid2DSectionElementPropertyCard::
+stiffness_B_matrix() const {
+    
+    MAST::FieldFunction<RealMatrixX>* rval =
+    new MAST::Solid2DSectionProperty::ExtensionBendingStiffnessMatrix
+    (_material->stiffness_matrix(2, _if_plane_stress),
      this->get<FieldFunction<Real> >("h"),
      this->get<FieldFunction<Real> >("off"));
     
@@ -1064,7 +1100,22 @@ stiffness_D_matrix(const MAST::ElementBase& e) const {
     
     MAST::FieldFunction<RealMatrixX>* rval =
     new MAST::Solid2DSectionProperty::BendingStiffnessMatrix
-    (_material->stiffness_matrix(2),
+    (_material->stiffness_matrix(2, _if_plane_stress),
+     this->get<FieldFunction<Real> >("h"),
+     this->get<FieldFunction<Real> >("off"));
+    
+    return std::unique_ptr<MAST::FieldFunction<RealMatrixX> > (rval);
+}
+
+
+std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
+MAST::Solid2DSectionElementPropertyCard::
+stiffness_D_matrix() const {
+    
+    
+    MAST::FieldFunction<RealMatrixX>* rval =
+    new MAST::Solid2DSectionProperty::BendingStiffnessMatrix
+    (_material->stiffness_matrix(2, _if_plane_stress),
      this->get<FieldFunction<Real> >("h"),
      this->get<FieldFunction<Real> >("off"));
     
@@ -1098,6 +1149,21 @@ inertia_matrix(const MAST::ElementBase& e) const {
 }
 
 
+std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
+MAST::Solid2DSectionElementPropertyCard::
+inertia_matrix() const {
+    
+    
+    MAST::FieldFunction<RealMatrixX>* rval =
+    new MAST::Solid2DSectionProperty::InertiaMatrix
+    (_material->get<FieldFunction<Real> >("rho"),
+     this->get<FieldFunction<Real> >("h"),
+     this->get<FieldFunction<Real> >("off"));
+    
+    return std::unique_ptr<MAST::FieldFunction<RealMatrixX> > (rval);
+}
+
+
 
 std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::Solid2DSectionElementPropertyCard::
@@ -1105,13 +1171,26 @@ thermal_expansion_A_matrix(const MAST::ElementBase& e) const {
     
     MAST::FieldFunction<RealMatrixX>* rval =
     new MAST::Solid2DSectionProperty::ThermalExpansionAMatrix
-    (_material->stiffness_matrix(2),
+    (_material->stiffness_matrix(2, _if_plane_stress),
      _material->thermal_expansion_matrix(2),
      this->get<FieldFunction<Real> >("h"));
     
     return std::unique_ptr<MAST::FieldFunction<RealMatrixX> > (rval);
 }
 
+
+std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
+MAST::Solid2DSectionElementPropertyCard::
+thermal_expansion_A_matrix() const {
+    
+    MAST::FieldFunction<RealMatrixX>* rval =
+    new MAST::Solid2DSectionProperty::ThermalExpansionAMatrix
+    (_material->stiffness_matrix(2, _if_plane_stress),
+     _material->thermal_expansion_matrix(2),
+     this->get<FieldFunction<Real> >("h"));
+    
+    return std::unique_ptr<MAST::FieldFunction<RealMatrixX> > (rval);
+}
 
 
 std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
@@ -1121,7 +1200,23 @@ thermal_expansion_B_matrix(const MAST::ElementBase& e) const {
     
     MAST::FieldFunction<RealMatrixX>* rval =
     new MAST::Solid2DSectionProperty::ThermalExpansionBMatrix
-    (_material->stiffness_matrix(2),
+    (_material->stiffness_matrix(2, _if_plane_stress),
+     _material->thermal_expansion_matrix(2),
+     this->get<FieldFunction<Real> >("h"),
+     this->get<FieldFunction<Real> >("off"));
+    
+    return std::unique_ptr<MAST::FieldFunction<RealMatrixX> > (rval);
+}
+
+
+std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
+MAST::Solid2DSectionElementPropertyCard::
+thermal_expansion_B_matrix() const {
+    
+    
+    MAST::FieldFunction<RealMatrixX>* rval =
+    new MAST::Solid2DSectionProperty::ThermalExpansionBMatrix
+    (_material->stiffness_matrix(2, _if_plane_stress),
      _material->thermal_expansion_matrix(2),
      this->get<FieldFunction<Real> >("h"),
      this->get<FieldFunction<Real> >("off"));
@@ -1138,7 +1233,25 @@ transverse_shear_stiffness_matrix(const MAST::ElementBase& e) const {
     MAST::FieldFunction<RealMatrixX>* rval =
     new MAST::Solid2DSectionProperty::TransverseStiffnessMatrix
     (_material->transverse_shear_stiffness_matrix(),
-     this->get<FieldFunction<Real> >("h"));
+     this->get<FieldFunction<Real> >("h"),
+     this->get<FieldFunction<Real> >("kappa")
+    );
+    
+    return std::unique_ptr<MAST::FieldFunction<RealMatrixX> > (rval);
+}
+
+
+std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
+MAST::Solid2DSectionElementPropertyCard::
+transverse_shear_stiffness_matrix() const {
+    
+    
+    MAST::FieldFunction<RealMatrixX>* rval =
+    new MAST::Solid2DSectionProperty::TransverseStiffnessMatrix
+    (_material->transverse_shear_stiffness_matrix(),
+     this->get<FieldFunction<Real> >("h"),
+     this->get<FieldFunction<Real> >("kappa")
+    );
     
     return std::unique_ptr<MAST::FieldFunction<RealMatrixX> > (rval);
 }
@@ -1192,6 +1305,19 @@ thermal_conductance_matrix(const MAST::ElementBase& e) const {
 }
 
 
+std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
+MAST::Solid2DSectionElementPropertyCard::
+thermal_conductance_matrix() const {
+    
+    
+    MAST::FieldFunction<RealMatrixX>* rval =
+    new MAST::Solid2DSectionProperty::ThermalConductanceMatrix
+    (_material->conductance_matrix(2),
+     this->get<FieldFunction<Real> >("h"));
+    
+    return std::unique_ptr<MAST::FieldFunction<RealMatrixX> > (rval);
+}
+
 
 std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::Solid2DSectionElementPropertyCard::
@@ -1207,10 +1333,22 @@ thermal_capacitance_matrix(const MAST::ElementBase& e) const {
 }
 
 
+std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
+MAST::Solid2DSectionElementPropertyCard::
+thermal_capacitance_matrix() const {
+    
+    
+    MAST::FieldFunction<RealMatrixX>* rval =
+    new MAST::Solid2DSectionProperty::ThermalCapacitanceMatrix
+    (_material->capacitance_matrix(2),
+     this->get<FieldFunction<Real> >("h"));
+    
+    return std::unique_ptr<MAST::FieldFunction<RealMatrixX> > (rval);
+}
+
 const MAST::FieldFunction<Real>&
 MAST::Solid2DSectionElementPropertyCard::
 section(const MAST::ElementBase& e) const {
     
     return this->get<FieldFunction<Real>>("h");
 }
-

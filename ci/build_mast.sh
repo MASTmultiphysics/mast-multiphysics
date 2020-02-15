@@ -51,7 +51,7 @@ if [ "${TRAVIS_OS_NAME}" = linux ]; then # Ubuntu Linux
       else
         make -j 2 || exit
         cd "${DBG_BUILD_DIR}/tests" || exit
-        ctest --force-new-ctest-process --output-on-failure || exit
+        ctest --force-new-ctest-process --output-on-failure --timeout 10
       fi
 
     fi # No Debug build for libMesh < 1.5.0
@@ -86,7 +86,7 @@ if [ "${TRAVIS_OS_NAME}" = linux ]; then # Ubuntu Linux
       make -j 2 || exit
       make install || exit
       cd "${REL_BUILD_DIR}/tests" || exit
-      ctest --force-new-ctest-process --output-on-failure || exit
+      ctest --force-new-ctest-process --output-on-failure --timeout 10
     fi
 
   # elif [ "${TRAVIS_DIST}" = bionic ]; then # Ubuntu 18.04 Bionic Beaver
@@ -142,7 +142,7 @@ elif [ "${TRAVIS_OS_NAME}" = osx ]; then # macOS 10.14, XCode 10.2
 
   make -j 2 || exit
   cd "${DBG_BUILD_DIR}/tests" || exit
-  ctest --force-new-ctest-process --output-on-failure || exit
+  ctest --force-new-ctest-process --output-on-failure --timeout 10
 
   # Now build/install a Release (optimized) version of MAST (-DCMAKE_BUILD_TYPE=Release).
   echo "TEST RELEASE/OPTIMIZED BUILD..."
@@ -176,7 +176,7 @@ elif [ "${TRAVIS_OS_NAME}" = osx ]; then # macOS 10.14, XCode 10.2
   make install || exit
 
   cd "${REL_BUILD_DIR}/tests" || exit
-  ctest --force-new-ctest-process --output-on-failure || exit
+  ctest --force-new-ctest-process --output-on-failure --timeout 10
 
 else
   echo "INVALID OS: ${TRAVIS_OS_NAME}"

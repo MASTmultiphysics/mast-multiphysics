@@ -103,6 +103,8 @@ int main(int argc, const char** argv)
     MAST::Parameter nu("nu", 0.33);
     MAST::Parameter zero("zero", 0.0);
     MAST::Parameter pressure("p", 2.0e4);
+    MAST::Parameter kappa_yy("kappa_yy", 5./6.);
+    MAST::Parameter kappa_zz("kappa_zz", 5./6.);
 
     // Create ConstantFieldFunctions used to spread parameters throughout the model.
     MAST::ConstantFieldFunction thy_f("hy", thickness_y);
@@ -112,6 +114,8 @@ int main(int argc, const char** argv)
     MAST::ConstantFieldFunction hyoff_f("hy_off", zero);
     MAST::ConstantFieldFunction hzoff_f("hz_off", zero);
     MAST::ConstantFieldFunction pressure_f("pressure", pressure);
+    MAST::ConstantFieldFunction kappa_yy_f("Kappayy", kappa_yy);
+    MAST::ConstantFieldFunction kappa_zz_f("Kappazz", kappa_zz);
 
     // Initialize load.
     // TODO - Switch this to a concentrated/point load on the right end of the bar.
@@ -131,6 +135,8 @@ int main(int argc, const char** argv)
     section.add(thz_f);
     section.add(hyoff_f);
     section.add(hzoff_f);
+    section.add(kappa_yy_f);
+    section.add(kappa_zz_f);
 
     // Specify a section orientation point and add it to the section.
     RealVectorX orientation = RealVectorX::Zero(3);

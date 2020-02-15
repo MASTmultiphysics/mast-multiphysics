@@ -88,27 +88,48 @@ namespace MAST {
         
         virtual std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
         stiffness_A_matrix(const MAST::ElementBase& e) const;
+
+        virtual std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
+        stiffness_A_matrix() const;
         
         virtual std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
         stiffness_B_matrix(const MAST::ElementBase& e) const;
+
+	virtual std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
+        stiffness_B_matrix() const;
         
         virtual std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
         stiffness_D_matrix(const MAST::ElementBase& e) const;
+
+	virtual std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
+        stiffness_D_matrix() const;
         
         virtual std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
         damping_matrix(const MAST::ElementBase& e) const;
         
         virtual std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
         inertia_matrix(const MAST::ElementBase& e) const;
+
+	virtual std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
+        inertia_matrix() const;
         
         virtual std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
         thermal_expansion_A_matrix(const MAST::ElementBase& e) const;
+
+        virtual std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
+        thermal_expansion_A_matrix() const;
         
         virtual std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
         thermal_expansion_B_matrix(const MAST::ElementBase& e) const;
+
+        virtual std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
+        thermal_expansion_B_matrix() const;
         
         virtual std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
         transverse_shear_stiffness_matrix(const MAST::ElementBase& e) const;
+
+	virtual std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
+        transverse_shear_stiffness_matrix() const;
         
         virtual std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
         prestress_A_matrix( MAST::ElementBase& e) const;
@@ -120,12 +141,27 @@ namespace MAST {
         virtual std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
         thermal_conductance_matrix(const MAST::ElementBase& e) const;
         
+        virtual std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
+        thermal_conductance_matrix() const;
         
         virtual std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
         thermal_capacitance_matrix(const MAST::ElementBase& e) const;
+
+        virtual std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
+        thermal_capacitance_matrix() const;
         
         virtual const MAST::FieldFunction<Real>&
         section(const MAST::ElementBase& e) const;
+        
+        void set_warping_only(const bool warping_only)
+        {
+            _warping_only = warping_only;
+        }
+        
+        virtual bool get_warping_only() const 
+        {
+            return _warping_only;
+        }
 
     protected:
         
@@ -133,6 +169,7 @@ namespace MAST {
          *   material property card
          */
         MAST::MaterialPropertyCardBase *_material;
+
     };
     
 }

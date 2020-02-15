@@ -317,7 +317,8 @@ int main(int argc, char* argv[]) {
     rho        ("rho", input("str_rho",  "structural material density",         2.7e3)),
     E          ("E",   input("str_E",    "structural material Young's modulus", 72.e9)),
     nu         ("nu",  input("str_nu",   "structural material Poisson's ratio",  0.33)),
-    kappa      ("kappa", 5./6.),
+    kappa_yy   ("kappa_yy", 5./6.),
+    kappa_zz   ("kappa_zz", 5./6.),
     zero       ("zero", 0.);
     
     MAST::ConstantFieldFunction
@@ -326,7 +327,8 @@ int main(int argc, char* argv[]) {
     rho_f      ("rho", rho),
     E_f        ("E", E),
     nu_f       ("nu", nu),
-    kappa_f    ("kappa", kappa),
+    kappa_yy_f ("Kappayy", kappa_yy),
+    kappa_zz_f ("Kappazz", kappa_zz),
     hyoff_f    ("hy_off", zero),
     hzoff_f    ("hz_off", zero);
     
@@ -335,7 +337,6 @@ int main(int argc, char* argv[]) {
     m_card.add(rho_f);
     m_card.add(E_f);
     m_card.add(nu_f);
-    m_card.add(kappa_f);
     
     MAST::Solid1DSectionElementPropertyCard
     p_card;
@@ -350,6 +351,8 @@ int main(int argc, char* argv[]) {
     p_card.add(thz_f);
     p_card.add(hyoff_f);
     p_card.add(hzoff_f);
+    p_card.add(kappa_yy_f);
+    p_card.add(kappa_zz_f);
     
     // tell the section property about the material property
     p_card.set_material(m_card);

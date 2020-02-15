@@ -30,8 +30,8 @@ namespace MAST {
         class StiffnessMatrix1D: public MAST::FieldFunction<RealMatrixX> {
         public:
             
-            StiffnessMatrix1D( const MAST::FieldFunction<Real>& E,
-                              const MAST::FieldFunction<Real>& nu);
+            StiffnessMatrix1D(const MAST::FieldFunction<Real>& E11,
+                              const MAST::FieldFunction<Real>& G12);
             
             virtual ~StiffnessMatrix1D() { }
             
@@ -46,17 +46,15 @@ namespace MAST {
             
         protected:
             
-            const MAST::FieldFunction<Real>& _E;
-            const MAST::FieldFunction<Real>& _nu;
+            const MAST::FieldFunction<Real>& _E11;
+            const MAST::FieldFunction<Real>& _G12;
         };
         
         
         
         class TransverseShearStiffnessMatrix: public MAST::FieldFunction<RealMatrixX> {
         public:
-            TransverseShearStiffnessMatrix(const MAST::FieldFunction<Real>& E,
-                                           const MAST::FieldFunction<Real>& nu,
-                                           const MAST::FieldFunction<Real>& kappa);
+            TransverseShearStiffnessMatrix(const MAST::FieldFunction<Real>& G12);
             
             
             virtual ~TransverseShearStiffnessMatrix() { }
@@ -72,9 +70,7 @@ namespace MAST {
             
         protected:
             
-            const MAST::FieldFunction<Real>& _E;
-            const MAST::FieldFunction<Real>& _nu;
-            const MAST::FieldFunction<Real>& _kappa;
+            const MAST::FieldFunction<Real>& _G12;
         };
         
         
@@ -82,7 +78,10 @@ namespace MAST {
         public:
             StiffnessMatrix2D(const MAST::FieldFunction<Real>& E11,
                               const MAST::FieldFunction<Real>& E22,
+                              const MAST::FieldFunction<Real>& E33,
                               const MAST::FieldFunction<Real>& nu12,
+                              const MAST::FieldFunction<Real>& nu23,
+                              const MAST::FieldFunction<Real>& nu31,
                               const MAST::FieldFunction<Real>& G12,
                               bool plane_stress);
             
@@ -102,7 +101,10 @@ namespace MAST {
             
             const MAST::FieldFunction<Real>& _E11;
             const MAST::FieldFunction<Real>& _E22;
+            const MAST::FieldFunction<Real>& _E33;
             const MAST::FieldFunction<Real>& _nu12;
+            const MAST::FieldFunction<Real>& _nu23;
+            const MAST::FieldFunction<Real>& _nu31;
             const MAST::FieldFunction<Real>& _G12;
             bool _plane_stress;
         };
@@ -115,7 +117,7 @@ namespace MAST {
                               const MAST::FieldFunction<Real>& E22,
                               const MAST::FieldFunction<Real>& E33,
                               const MAST::FieldFunction<Real>& nu12,
-                              const MAST::FieldFunction<Real>& nu13,
+                              const MAST::FieldFunction<Real>& nu31,
                               const MAST::FieldFunction<Real>& nu23,
                               const MAST::FieldFunction<Real>& G12,
                               const MAST::FieldFunction<Real>& G13,
@@ -136,7 +138,7 @@ namespace MAST {
         protected:
             
             const MAST::FieldFunction<Real> &_E11,  &_E22,  &_E33;
-            const MAST::FieldFunction<Real> &_nu12, &_nu13, &_nu23;
+            const MAST::FieldFunction<Real> &_nu12, &_nu31, &_nu23;
             const MAST::FieldFunction<Real> &_G12,  &_G13,  &_G23;
 
         };
@@ -336,14 +338,14 @@ namespace MAST {
 
 
 MAST::OrthotropicMaterialProperty::
-StiffnessMatrix1D::StiffnessMatrix1D(const MAST::FieldFunction<Real>& E,
-                                     const MAST::FieldFunction<Real>& nu ):
+StiffnessMatrix1D::StiffnessMatrix1D(const MAST::FieldFunction<Real>& E11,
+                                     const MAST::FieldFunction<Real>& G12):
 MAST::FieldFunction<RealMatrixX>("StiffnessMatrix1D"),
-_E(E),
-_nu(nu)
+_E11(E11),
+_G12(G12)
 {
-    _functions.insert(&E);
-    _functions.insert(&nu);
+    _functions.insert(&E11);
+    _functions.insert(&G12);
 }
 
 
@@ -355,11 +357,11 @@ StiffnessMatrix1D::operator() (const libMesh::Point& p,
                                const Real t,
                                RealMatrixX& m) const {
     m  = RealMatrixX::Zero(2,2);
-    Real E, nu, G;
-    _E(p, t, E); _nu(p, t, nu);
-    G = E/2./(1.+nu);
-    m(0,0) = E;
-    m(1,1) = G;
+    Real E11, G12;
+    _E11(p, t, E11); 
+    _G12(p, t, G12);
+    m(0,0) = E11;
+    m(1,1) = G12;
 }
 
 
@@ -373,35 +375,21 @@ StiffnessMatrix1D::derivative( const MAST::FunctionBase &f,
     
     RealMatrixX dm;
     m = RealMatrixX::Zero(2,2); dm = RealMatrixX::Zero(2,2);
-    Real E, nu, dEdf, dnudf;
-    _E(p, t, E);     _E.derivative( f, p, t, dEdf);
-    _nu(p, t, nu);  _nu.derivative( f, p, t, dnudf);
+    Real E11, G12, dE11df,dG12df;
+    _E11(p, t, E11);     _E11.derivative(f, p, t, dE11df);
+    _G12(p, t, G12);    _G12.derivative(f, p, t, dG12df);
     
-    // parM/parE * parE/parf
-    dm(0,0) = 1.;
-    dm(1,1) = 1./2./(1.+nu);
-    m += dEdf * dm;
-    
-    
-    // parM/parnu * parnu/parf
-    dm(0,0) = 0.;
-    dm(1,1) = -E/2./pow(1.+nu,2);
-    m+= dnudf*dm;
+    m(0,0) = dE11df;
+    m(1,1) = dG12df;
 }
 
 
 MAST::OrthotropicMaterialProperty::
-TransverseShearStiffnessMatrix::TransverseShearStiffnessMatrix(const MAST::FieldFunction<Real>& E,
-                                                               const MAST::FieldFunction<Real>& nu,
-                                                               const MAST::FieldFunction<Real>& kappa):
+TransverseShearStiffnessMatrix::TransverseShearStiffnessMatrix(const MAST::FieldFunction<Real>& G12):
 MAST::FieldFunction<RealMatrixX>("TransverseShearStiffnessMatrix"),
-_E(E),
-_nu(nu),
-_kappa(kappa)
+_G12(G12)
 {
-    _functions.insert(&E);
-    _functions.insert(&nu);
-    _functions.insert(&kappa);
+    _functions.insert(&G12);
 }
 
 
@@ -411,46 +399,54 @@ MAST::OrthotropicMaterialProperty::
 TransverseShearStiffnessMatrix::operator() (const libMesh::Point& p,
                                             const Real t,
                                             RealMatrixX& m) const {
+    // TODO: Allow for use of G1z and G2z for compatibility with Nastran input.
+    /*!
+     *  m = [G1z,  0.
+     *        0., G2z];
+     * 
+     * If G1z and G2z are not available from test data, then G12 is a valid
+     * approximate value for these.
+     * 
+     * Reference: Nastran PSHELL and MAT8 documentation.
+     */
     m = RealMatrixX::Zero(2,2);
-    Real E, nu, kappa, G;
-    _E(p, t, E); _nu(p, t, nu); _kappa(p, t, kappa);
-    G = E/2./(1.+nu);
-    m(0,0) = G*kappa;
-    m(1,1) = m(0,0);
+    Real G12;
+    _G12(p, t, G12);
+    m(0,0) = G12;
+    m(1,1) = G12;
 }
 
 
 
 void
 MAST::OrthotropicMaterialProperty::
-TransverseShearStiffnessMatrix::derivative(          const MAST::FunctionBase& f,
+TransverseShearStiffnessMatrix::derivative(const MAST::FunctionBase& f,
                                            const libMesh::Point& p,
                                            const Real t,
                                            RealMatrixX& m) const {
     RealMatrixX dm;
-    m = RealMatrixX::Zero(2,2); dm = RealMatrixX::Zero(2, 2);
-    Real E, nu, kappa, dEdf, dnudf, dkappadf, G;
-    _E    (p, t, E);         _E.derivative( f, p, t, dEdf);
-    _nu   (p, t, nu);       _nu.derivative( f, p, t, dnudf);
-    _kappa(p, t, kappa); _kappa.derivative( f, p, t, dkappadf);
-    G = E/2./(1.+nu);
+    m = RealMatrixX::Zero(2,2);      dm = RealMatrixX::Zero(2, 2);
+    
+    Real G12, dG12;
+    _G12(p, t, G12);        _G12.derivative(f, p, t, dG12);
+    m(0,0) = dG12;
+    m(1,1) = dG12;
     
     
-    // parM/parE * parE/parf
-    dm(0,0) = 1./2./(1.+nu)*kappa;
-    dm(1,1) = dm(0,0);
-    m += dEdf * dm;
-    
-    
-    // parM/parnu * parnu/parf
-    dm(0,0) = -E/2./pow(1.+nu,2)*kappa;
-    dm(1,1) = dm(0,0);
-    m+= dnudf*dm;
-    
-    // parM/parnu * parkappa/parf
-    
-    dm(0,0) = G; dm(1,1) = G;
-    dm += dkappadf*dm;
+//     // parM/parE * parE/parf
+//     dm(0,0) = 1./2./(1.+nu)*kappa;
+//     dm(1,1) = dm(0,0);
+//     m += dEdf * dm;
+//     
+//     // parM/parnu * parnu/parf
+//     dm(0,0) = -E/2./pow(1.+nu,2)*kappa;
+//     dm(1,1) = dm(0,0);
+//     m+= dnudf*dm;
+//     
+//     // parM/parnu * parkappa/parf
+//     
+//     dm(0,0) = G; dm(1,1) = G;
+//     dm += dkappadf*dm;
 }
 
 
@@ -459,13 +455,19 @@ TransverseShearStiffnessMatrix::derivative(          const MAST::FunctionBase& f
 MAST::OrthotropicMaterialProperty::
 StiffnessMatrix2D::StiffnessMatrix2D(const MAST::FieldFunction<Real>& E11,
                                      const MAST::FieldFunction<Real>& E22,
+                                     const MAST::FieldFunction<Real>& E33,
                                      const MAST::FieldFunction<Real>& nu12,
+                                     const MAST::FieldFunction<Real>& nu23,
+                                     const MAST::FieldFunction<Real>& nu31,
                                      const MAST::FieldFunction<Real>& G12,
                                      bool plane_stress ):
 MAST::FieldFunction<RealMatrixX>("StiffnessMatrix2D"),
 _E11(E11),
 _E22(E22),
+_E33(E33),
 _nu12(nu12),
+_nu23(nu23),
+_nu31(nu31),
 _G12(G12),
 _plane_stress(plane_stress)
 {
@@ -483,25 +485,54 @@ MAST::OrthotropicMaterialProperty::
 StiffnessMatrix2D::operator() (const libMesh::Point& p,
                                const Real t,
                                RealMatrixX& m) const {
-    libmesh_assert(_plane_stress); // currently only implemented for plane stress
+    // https://www.efunda.com/formulae/solid_mechanics/mat_mechanics/hooke_orthotropic.cfm
+    // Applying plane strain and plane stress assumptions to the 3D matrix at
+    // the website above, results in the same matrix for both. So, I think
+    // plane stress, and plane strain, may be equivalent for orthotropic 
+    // materials.
+    // libmesh_assert(_plane_stress); // currently only implemented for plane stress
     m = RealMatrixX::Zero(3,3);
-    Real E11, E22, nu12, nu21, G12, D;
+    Real E11, E22, E33, nu12, nu23, nu31, nu21, G12, D;
     _E11  (p, t,  E11);
     _E22  (p, t,  E22);
+    _E33  (p, t,  E33);
     _nu12 (p, t, nu12);
+    _nu23 (p, t, nu23);
+    _nu31 (p, t, nu31);
     _G12  (p, t,  G12);
     nu21 = nu12 * E22/E11;
-    D = (1. - nu12*nu21);
+    
+    if (_plane_stress) // plane stress
+    {
+        D = (1. - nu12*nu21);
 
-    m(0,0)  =      E11;
-    m(0,1)  = nu21*E11;
-    
-    m(1,0)  = nu12*E22;
-    m(1,1)  =      E22;
-    
-    m.topLeftCorner(2, 2) /= D;
-    
-    m(2,2)  = G12;
+        m(0,0)  =      E11;
+        m(0,1)  = nu21*E11;
+        
+        m(1,0)  = nu12*E22;
+        m(1,1)  =      E22;
+        
+        m.topLeftCorner(2, 2) /= D;
+        
+        m(2,2)  = G12;
+    }
+    else // plane strain
+    {
+        m(0,0) = -((E11*E11)*E33*(E22-E33*(nu23*nu23)))/((E22*E22)*E33
+                *(nu12*nu12)+E11*(E33*E33)*(nu23*nu23)+(E11*E11)*E22
+                *(nu31*nu31)-E11*E22*E33+E11*E22*E33*nu12*nu23*nu31*2.0);
+        
+        m(1,1) = -(E11*(E22*E22)*(E33-E11*(nu31*nu31)))/((E22*E22)*E33
+                *(nu12*nu12)+E11*(E33*E33)*(nu23*nu23)+(E11*E11)*E22
+                *(nu31*nu31)-E11*E22*E33+E11*E22*E33*nu12*nu23*nu31*2.0);
+        
+        m(2,2) = G12;
+        
+        m(0,1) = m(1,0) = -(E11*E22*E33*(E22*nu12+E11*nu23*nu31))
+                        /((E22*E22)*E33*(nu12*nu12)+E11*(E33*E33)*(nu23*nu23)
+                        +(E11*E11)*E22*(nu31*nu31)-E11*E22*E33+E11*E22*E33
+                        *nu12*nu23*nu31*2.0);
+    }
 }
 
 
@@ -513,36 +544,120 @@ StiffnessMatrix2D::derivative (  const MAST::FunctionBase& f,
                                const libMesh::Point& p,
                                const Real t,
                                RealMatrixX& m) const {
-    libmesh_assert(_plane_stress); // currently only implemented for plane stress
+    // https://www.efunda.com/formulae/solid_mechanics/mat_mechanics/hooke_orthotropic.cfm
+    // Applying plane strain and plane stress assumptions to the 3D matrix at
+    // the website above, results in the same matrix for both. So, I think
+    // plane stress, and plane strain, may be equivalent for orthotropic 
+    // materials.
+    // libmesh_assert(_plane_stress); // currently only implemented for plane stress
     RealMatrixX dm;
     m = RealMatrixX::Zero(3,3); dm = RealMatrixX::Zero(3, 3);
-    Real E11, E22, nu12, nu21, dE11df, dE22df, dnu12df, dnu21df, D, dDdf, dG12df;
+    Real E11, E22, E33, nu12, nu23, nu31, nu21, D;
+    Real dE11df, dE22df, dE33df, dnu12df, dnu23df, dnu31df, dnu21df, dDdf, dG12df;
     _E11   (p, t,  E11);   _E11.derivative( f, p, t, dE11df);
     _E22   (p, t,  E22);   _E22.derivative( f, p, t, dE22df);
+    _E33   (p, t,  E33);   _E33.derivative( f, p, t, dE33df);
     _nu12  (p, t, nu12);  _nu12.derivative( f, p, t, dnu12df);
+    _nu23  (p, t, nu12);  _nu23.derivative( f, p, t, dnu12df);
+    _nu31  (p, t, nu12);  _nu31.derivative( f, p, t, dnu12df);
     _G12.derivative( f, p, t, dG12df);
     
-    nu21    = nu12 * E22/E11;
-    dnu21df = dnu12df * E22/E11 + nu12 * dE22df/E11 - nu12 * E22/E11/E11*dE11df;
-    D    = (1. - nu12*nu21);
-    dDdf = (- dnu12df*nu21 - nu12*dnu21df);
-    
-    m(0,0)  =      E11;
-    m(0,1)  = nu21*E11;
-    
-    m(1,0)  = nu12*E22;
-    m(1,1)  =      E22;
-    
-    m.topLeftCorner(2, 2) *= -dDdf/D/D;
-    m(2,2)  = dG12df;
-    
-    dm(0,0)  =      dE11df;
-    dm(0,1)  = nu21*dE11df + dnu21df*E11;
-    
-    dm(1,0)  = nu12*dE22df + dnu12df*E22;
-    dm(1,1)  =      dE22df;
+    if (_plane_stress)
+    {
+        nu21    = nu12 * E22/E11;
+        dnu21df = dnu12df * E22/E11 + nu12 * dE22df/E11 - nu12 * E22/E11/E11*dE11df;
+        D    = (1. - nu12*nu21);
+        dDdf = (- dnu12df*nu21 - nu12*dnu21df);
+        
+        m(0,0)  =      E11;
+        m(0,1)  = nu21*E11;
+        
+        m(1,0)  = nu12*E22;
+        m(1,1)  =      E22;
+        
+        m.topLeftCorner(2, 2) *= -dDdf/D/D;
+        m(2,2)  = dG12df;
+        
+        dm(0,0)  =      dE11df;
+        dm(0,1)  = nu21*dE11df + dnu21df*E11;
+        
+        dm(1,0)  = nu12*dE22df + dnu12df*E22;
+        dm(1,1)  =      dE22df;
 
-    m.topLeftCorner(2, 2) += dm.topLeftCorner(3, 3)/D;
+        m.topLeftCorner(2, 2) += dm.topLeftCorner(3, 3)/D;
+    }
+    else
+    {
+        m(0,0) = 1.0/pow((E22*E22)*E33*(nu12*nu12)+E11*(E33*E33)*(nu23*nu23) 
+            + (E11*E11)*E22*(nu31*nu31)-E11*E22*E33+E11*E22*E33*nu12*nu23*nu31*2.0,2.0)
+            *(E11*(E11*(E22*E22)*(E33*E33)*dE11df+E11*(E33*E33*E33*E33)*dE11df
+            *(nu23*nu23*nu23*nu23)-E11*E22*(E33*E33*E33)*dE11df*(nu23*nu23)*2.0)
+            +nu31*(E11*((E11*E11*E11)*(E22*E22)*E33*dnu31df*2.0+(E11*E11)*(E22*E22)
+            *(E33*E33)*dnu12df*nu23*2.0-(E11*E11)*E22*(E33*E33*E33)*dnu12df
+            *(nu23*nu23*nu23)*2.0-(E11*E11*E11)*E22*(E33*E33)*dnu31df
+            *(nu23*nu23)*2.0)+E11*nu12*((E11*E11)*(E22*E22)*(E33*E33)*dnu23df*2.0
+            -(E11*E11)*(E33*E33*E33)*dE22df*(nu23*nu23*nu23)*2.0+(E11*E11)*E22*(E33*E33)
+            *dE33df*(nu23*nu23*nu23)*2.0+(E11*E11)*E22*(E33*E33*E33)*dnu23df
+            *(nu23*nu23)*2.0-E11*(E22*E22)*(E33*E33)*dE11df*nu23*2.0+E11*E22
+            *(E33*E33*E33)*dE11df*(nu23*nu23*nu23)*2.0))+E11*nu12*(E11*(E22*E22*E22)
+            *(E33*E33)*dnu12df*2.0-E11*(E22*E22)*(E33*E33*E33)*dnu12df*(nu23*nu23)
+            *2.0+(E11*E11)*(E22*E22)*(E33*E33)*dnu31df*nu23*2.0-(E11*E11)*E22*(E33*E33*E33)
+            *dnu31df*(nu23*nu23*nu23)*2.0)-E11*(nu31*nu31)*((E11*E11*E11)*(E22*E22)
+            *dE33df+(E11*E11*E11)*(E33*E33)*dE22df*(nu23*nu23)-(E11*E11*E11)*E22*E33
+            *dE33df*(nu23*nu23)*2.0-(E11*E11*E11)*E22*(E33*E33)*dnu23df*nu23*2.0)+
+            E11*(nu12*nu12)*((E22*E22*E22)*(E33*E33)*dE11df*-2.0+E11*(E22*E22)*(E33*E33)
+            *dE22df+(E22*E22)*(E33*E33*E33)*dE11df*(nu23*nu23)*2.0+E11*(E22*E22)
+            *(E33*E33)*dE33df*(nu23*nu23)-E11*E22*(E33*E33*E33)*dE22df*(nu23*nu23)
+            *2.0+E11*(E22*E22)*(E33*E33*E33)*dnu23df*nu23*2.0));
+    
+        m(1,1) = 1.0/pow((E22*E22)*E33*(nu12*nu12)+E11*(E33*E33)*(nu23*nu23)+(E11*E11)
+            *E22*(nu31*nu31)-E11*E22*E33+E11*E22*E33*nu12*nu23*nu31*2.0,2.0)
+            *(E22*((E11*E11)*E22*(E33*E33)*dE22df+(E11*E11*E11*E11)*E22*dE22df
+            *(nu31*nu31*nu31*nu31)-(E11*E11*E11)*E22*E33*dE22df*(nu31*nu31)*2.0)
+            +nu23*(E22*((E11*E11)*E22*(E33*E33*E33)*dnu23df*2.0+(E11*E11)*(E22*E22)
+            *(E33*E33)*dnu12df*nu31*2.0-(E11*E11*E11)*(E22*E22)*E33*dnu12df
+            *(nu31*nu31*nu31)*2.0-(E11*E11*E11)*E22*(E33*E33)*dnu23df*(nu31*nu31)
+            *2.0)+E22*nu12*((E11*E11)*(E22*E22)*(E33*E33)*dnu31df*2.0-(E11*E11*E11)
+            *(E22*E22)*dE33df*(nu31*nu31*nu31)*2.0+(E11*E11)*(E22*E22)*E33*dE11df
+            *(nu31*nu31*nu31)*2.0+(E11*E11*E11)*(E22*E22)*E33*dnu31df*(nu31*nu31)*2.0
+            -(E11*E11)*E22*(E33*E33)*dE22df*nu31*2.0+(E11*E11*E11)*E22*E33*dE22df
+            *(nu31*nu31*nu31)*2.0))+E22*nu12*(E11*(E22*E22*E22)*(E33*E33)*dnu12df*2.0
+            -(E11*E11)*(E22*E22*E22)*E33*dnu12df*(nu31*nu31)*2.0+(E11*E11)*(E22*E22)
+            *(E33*E33)*dnu23df*nu31*2.0-(E11*E11*E11)*(E22*E22)*E33*dnu23df
+            *(nu31*nu31*nu31)*2.0)-E22*(nu12*nu12)*((E22*E22*E22)*(E33*E33)*dE11df
+            +(E11*E11)*(E22*E22*E22)*dE33df*(nu31*nu31)-E11*(E22*E22*E22)*E33*dE11df
+            *(nu31*nu31)*2.0-(E11*E11)*(E22*E22*E22)*E33*dnu31df*nu31*2.0)+E22
+            *(nu23*nu23)*((E11*E11)*(E33*E33*E33)*dE22df*-2.0+(E11*E11)*E22*(E33*E33)
+            *dE33df+(E11*E11*E11)*(E33*E33)*dE22df*(nu31*nu31)*2.0+(E11*E11)*E22
+            *(E33*E33)*dE11df*(nu31*nu31)-(E11*E11*E11)*E22*E33*dE33df*(nu31*nu31)
+            *2.0+(E11*E11*E11)*E22*(E33*E33)*dnu31df*nu31*2.0));
+        
+        m(2,2) = dG12df;
+        
+        m(0,1) = m(1,0) = -1.0/pow((E22*E22)*E33*(nu12*nu12)+E11*(E33*E33)
+            *(nu23*nu23)+(E11*E11)*E22*(nu31*nu31)-E11*E22*E33+E11*E22*E33*nu12*nu23
+            *nu31*2.0,2.0)*(-nu31*((E33*E33)*((E11*E11*E11)*(E22*E22)*dnu23df+(E11*E11)
+            *(E22*E22)*dE11df*nu23+(E11*E11*E11)*E22*dE33df*(nu23*nu23*nu23))
+            -(E33*E33*E33)*((E11*E11*E11)*dE22df*(nu23*nu23*nu23)+(E11*E11)*E22*dE11df
+            *(nu23*nu23*nu23)-(E11*E11*E11)*E22*dnu23df*(nu23*nu23)))
+            +(nu31*nu31*nu31)*((E11*E11*E11*E11)*(E22*E22)*E33*dnu23df+(E11*E11*E11*E11)
+            *(E22*E22)*dE33df*nu23)-(nu12*nu12)*((E33*E33)*(E11*(E22*E22*E22*E22)
+            *dnu12df+(E11*E11)*(E22*E22*E22)*dnu31df*nu23)-(E33*E33)*nu31*(-(E11*E11)
+            *(E22*E22*E22)*dnu23df+E11*(E22*E22*E22)*dE11df*nu23*2.0+(E11*E11)*(E22*E22)
+            *dE22df*nu23))+(nu31*nu31)*(E33*((E11*E11*E11)*(E22*E22*E22)*dnu12df
+            -(E11*E11*E11*E11)*(E22*E22)*dnu31df*nu23)-(E11*E11*E11)*(E22*E22)*(E33*E33)
+            *dnu12df*(nu23*nu23)*2.0)+nu12*((nu31*nu31)*(-E33*((E11*E11)
+            *(E22*E22*E22)*dE11df-(E11*E11*E11)*(E22*E22)*dE22df)+(E11*E11*E11)*(E22*E22*E22)
+            *dE33df+(E11*E11)*(E22*E22)*(E33*E33)*dE11df*(nu23*nu23)*2.0)-(E33*E33)
+            *((E11*E11)*(E22*E22)*dE22df+(E11*E11)*(E22*E22)*dE33df*(nu23*nu23))
+            +(E33*E33*E33)*((E11*E11)*E22*dE22df*(nu23*nu23)*2.0-(E11*E11)*(E22*E22)
+            *dnu23df*nu23*2.0)-nu31*((E11*E11*E11)*(E22*E22*E22)*E33*dnu31df*2.0
+            +(E11*E11)*(E22*E22*E22)*(E33*E33)*dnu12df*nu23*2.0))+(E33*E33*E33)
+            *((E11*E11*E11)*E22*dnu31df*(nu23*nu23*nu23)+(E11*E11)*(E22*E22)*dnu12df
+            *(nu23*nu23))-(E33*E33)*((E11*E11)*(E22*E22*E22)*dnu12df+(E11*E11*E11)
+            *(E22*E22)*dnu31df*nu23)+(E22*E22*E22*E22)*(E33*E33)*dE11df
+            *(nu12*nu12*nu12));
+    }
 }
 
 
@@ -552,7 +667,7 @@ StiffnessMatrix3D::StiffnessMatrix3D(const MAST::FieldFunction<Real>& E11,
                                      const MAST::FieldFunction<Real>& E22,
                                      const MAST::FieldFunction<Real>& E33,
                                      const MAST::FieldFunction<Real>& nu12,
-                                     const MAST::FieldFunction<Real>& nu13,
+                                     const MAST::FieldFunction<Real>& nu31,
                                      const MAST::FieldFunction<Real>& nu23,
                                      const MAST::FieldFunction<Real>& G12,
                                      const MAST::FieldFunction<Real>& G13,
@@ -562,7 +677,7 @@ _E11(E11),
 _E22(E22),
 _E33(E33),
 _nu12(nu12),
-_nu13(nu13),
+_nu31(nu31),
 _nu23(nu23),
 _G12(G12),
 _G13(G13),
@@ -572,7 +687,7 @@ _G23(G23)
     _functions.insert(&E22);
     _functions.insert(&E33);
     _functions.insert(&nu12);
-    _functions.insert(&nu13);
+    _functions.insert(&nu31);
     _functions.insert(&nu23);
     _functions.insert(&G12);
     _functions.insert(&G13);
@@ -594,13 +709,13 @@ StiffnessMatrix3D::operator() (const libMesh::Point& p,
     _E22  (p, t,  E22);
     _E33  (p, t,  E33);
     _nu12(p, t, nu12);
-    _nu13(p, t, nu13);
+    _nu31(p, t, nu31);
     _nu23(p, t, nu23);
     _G12  (p, t,  G12);
     _G13  (p, t,  G13);
     _G23  (p, t,  G23);
     nu21 = nu12 * E22/E11;
-    nu31 = nu13 * E33/E11;
+    nu13 = nu31 * E11/E33;
     nu32 = nu23 * E33/E22;
     D = 1.- nu12*nu21 - nu13*nu31 - nu23*nu32 - nu12*nu23*nu31 - nu13*nu21*nu32;
     
@@ -652,15 +767,15 @@ StiffnessMatrix3D::derivative (  const MAST::FunctionBase& f,
     _E22   (p, t,  E22);   _E22.derivative( f, p, t, dE22df);
     _E33   (p, t,  E33);   _E33.derivative( f, p, t, dE33df);
     _nu12  (p, t, nu12); _nu12.derivative( f, p, t, dnu12df);
-    _nu13  (p, t, nu13); _nu13.derivative( f, p, t, dnu13df);
+    _nu31  (p, t, nu31); _nu31.derivative( f, p, t, dnu31df);
     _nu23  (p, t, nu23); _nu23.derivative( f, p, t, dnu23df);
     _G12.derivative( f, p, t,  dG12df);
     _G13.derivative( f, p, t,  dG13df);
     _G23.derivative( f, p, t,  dG23df);
     nu21    = nu12 * E22/E11;
     dnu21df = dnu12df * E22/E11 + nu12 * dE22df/E11 - nu12 * E22/E11/E11*dE11df;
-    nu31    = nu13 * E33/E11;
-    dnu31df = dnu13df * E33/E11 + nu13 * dE33df/E11 - nu13 * E33/E11/E11*dE11df;
+    nu13    = nu31 * E11/E33;
+    dnu13df = dnu31df * E11/E33 + nu31 * dE11df/E33 - nu31 * E11/E33/E33*dE33df;
     nu32    = nu23 * E33/E22;
     dnu32df = dnu23df * E33/E22 + nu23 * dE33df/E22 - nu23 * E33/E22/E22*dE22df;
     D    = 1.- nu12*nu21 - nu13*nu31 - nu23*nu32 - nu12*nu23*nu31 - nu13*nu21*nu32;
@@ -948,8 +1063,8 @@ MAST::OrthotropicMaterialPropertyCard::stiffness_matrix(const unsigned int dim,
             
             if (!_stiff_mat_1d)
                 _stiff_mat_1d = new MAST::OrthotropicMaterialProperty::StiffnessMatrix1D
-                (this->get<MAST::FieldFunction<Real> >("E"),
-                 this->get<MAST::FieldFunction<Real> >("nu"));
+                (this->get<MAST::FieldFunction<Real> >("E11"),
+                 this->get<MAST::FieldFunction<Real> >("G12"));
             
             return *_stiff_mat_1d;
         }
@@ -961,7 +1076,10 @@ MAST::OrthotropicMaterialPropertyCard::stiffness_matrix(const unsigned int dim,
                 _stiff_mat_2d = new MAST::OrthotropicMaterialProperty::StiffnessMatrix2D
                 (this->get<MAST::FieldFunction<Real> >("E11"),
                  this->get<MAST::FieldFunction<Real> >("E22"),
+                 this->get<MAST::FieldFunction<Real> >("E33"),
                  this->get<MAST::FieldFunction<Real> >("nu12"),
+                 this->get<MAST::FieldFunction<Real> >("nu23"),
+                 this->get<MAST::FieldFunction<Real> >("nu31"),
                  this->get<MAST::FieldFunction<Real> >("G12"),
                  plane_stress);
             
@@ -977,7 +1095,7 @@ MAST::OrthotropicMaterialPropertyCard::stiffness_matrix(const unsigned int dim,
                  this->get<MAST::FieldFunction<Real> >("E22"),
                  this->get<MAST::FieldFunction<Real> >("E33"),
                  this->get<MAST::FieldFunction<Real> >("nu12"),
-                 this->get<MAST::FieldFunction<Real> >("nu13"),
+                 this->get<MAST::FieldFunction<Real> >("nu31"),
                  this->get<MAST::FieldFunction<Real> >("nu23"),
                  this->get<MAST::FieldFunction<Real> >("G12"),
                  this->get<MAST::FieldFunction<Real> >("G13"),
@@ -1092,9 +1210,7 @@ MAST::OrthotropicMaterialPropertyCard::transverse_shear_stiffness_matrix() {
     if (!_transverse_shear_mat)
         _transverse_shear_mat =
         new MAST::OrthotropicMaterialProperty::TransverseShearStiffnessMatrix
-        (this->get<MAST::FieldFunction<Real> >("E11"),
-         this->get<MAST::FieldFunction<Real> >("nu12"),
-         this->get<MAST::FieldFunction<Real> >("kappa"));
+        (this->get<MAST::FieldFunction<Real> >("G12"));
     
     return *_transverse_shear_mat;
 
@@ -1208,7 +1324,6 @@ MAST::OrthotropicMaterialPropertyCard::conductance_matrix(const unsigned int dim
             libmesh_error();
     }
 }
-
 
 
 
