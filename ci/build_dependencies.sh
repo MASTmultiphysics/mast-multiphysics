@@ -5,7 +5,7 @@ if [ "${TRAVIS_OS_NAME}" = linux ]; then # Ubuntu Linux
   if [ "${TRAVIS_DIST}" = xenial ]; then # Ubuntu 16.04 Xenial Xerus
     cd ${HOME} || exit
 
-    # Python 3.6 apt repository (since its not neatly included in Ubuntu 16.04)
+    # Python 3.7 apt repository (since its not neatly included in Ubuntu 16.04)
     sudo add-apt-repository -y ppa:deadsnakes/ppa
 
     # Regular libMesh/MAST dependencies.
@@ -14,18 +14,19 @@ if [ "${TRAVIS_OS_NAME}" = linux ]; then # Ubuntu Linux
     sudo apt-get -qq install -y openmpi-bin libopenmpi-dev
     sudo apt-get -qq install -y libpetsc3.6 libpetsc3.6.2-dev
     sudo apt-get -qq install -y libslepc3.6 libslepc3.6.1-dev libparpack2-dev
+    sudo apt-get -qq install -y libnetcdf11 libnetcdf-dev
     sudo apt-get -qq install -y libboost-all-dev
     sudo apt-get -qq install -y libeigen3-dev
     sudo apt-get -qq install -y doxygen graphviz rsync
     sudo apt-get -qq install -y texlive-latex-base dvi2ps ghostscript
-    sudo apt-get -qq install -y python3.6 python3.6-dev libpython3.6
+    sudo apt-get -qq install -y python3.7 python3.7-dev libpython3.7
 
-    # Get pip working with external Python 3.6.
+    # Get pip working with external Python 3.7.
     wget https://bootstrap.pypa.io/get-pip.py || exit
-    sudo python3.6 get-pip.py || exit
+    sudo python3.7 get-pip.py || exit
 
-    sudo python3.6 -m pip install numpy scipy docopt colorama pandas h5py matplotlib cpylog pyNastran
-    sudo python3.6 -m pip install Cython --install-option="--no-cython-compile"
+    sudo python3.7 -m pip install numpy scipy docopt colorama pandas h5py matplotlib cpylog pyNastran
+    sudo python3.7 -m pip install Cython --install-option="--no-cython-compile"
 
     # Update to later CMake release.
     wget https://github.com/Kitware/CMake/releases/download/v3.15.5/cmake-3.15.5-Linux-x86_64.sh || exit
