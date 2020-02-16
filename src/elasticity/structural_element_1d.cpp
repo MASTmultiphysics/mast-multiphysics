@@ -903,11 +903,11 @@ internal_residual_jac_dot_state_sensitivity (RealMatrixX& jac) {
             //  evaluate the bending stress and add that to the stress vector
             // for evaluation in the nonlinear stress term
             Bmat_bend_v.vector_mult(vec2_n1, _local_sol_sens);
-            vec1_n1 = material_B_mat * vec2_n1;
+            vec1_n1 = material_B_mat(0,0) * vec2_n1;
             stress(0,0)   += vec1_n1(0);
 
             Bmat_bend_w.vector_mult(vec2_n1, _local_sol_sens);
-            vec1_n1 = material_B_mat * vec2_n1;
+            vec1_n1 = material_B_mat(0,1) * vec2_n1;
             stress(0,0)   += vec1_n1(0);
 
             
@@ -938,131 +938,81 @@ internal_residual_jac_dot_state_sensitivity (RealMatrixX& jac) {
         
         // now calculate the matrix
         // membrane - vk: v-displacement
-        mat3 = RealMatrixX::Zero(vk_dvdxi_mat.rows(), n2);
-        Bmat_v_vk.left_multiply(mat3, vk_dvdxi_mat_sens);
-        mat3 = material_A_mat * mat3;
-        Bmat_mem.right_multiply_transpose(mat2_n2n2, mat3);
-        local_jac += JxW[qp] * mat2_n2n2;
+        Bmat_mem.right_multiply_transpose(mat2_n2n2, Bmat_v_vk);
+        local_jac += JxW[qp] * vk_dvdxi_mat_sens(0,0) * material_A_mat(0,0) * mat2_n2n2;
         
         // membrane - vk: w-displacement
-        mat3 = RealMatrixX::Zero(vk_dwdxi_mat.rows(), n2);
-        Bmat_w_vk.left_multiply(mat3, vk_dwdxi_mat_sens);
-        mat3 = material_A_mat * mat3;
-        Bmat_mem.right_multiply_transpose(mat2_n2n2, mat3);
-        local_jac += JxW[qp] * mat2_n2n2;
+        Bmat_mem.right_multiply_transpose(mat2_n2n2, Bmat_w_vk);
+        local_jac += JxW[qp] * vk_dwdxi_mat_sens(0,0) * material_A_mat(0,0) * mat2_n2n2;
         
         // vk - membrane: v-displacement
-        Bmat_mem.left_multiply(mat1_n1n2, material_A_mat);
-        mat3 = vk_dvdxi_mat_sens.transpose() * mat1_n1n2;
-        Bmat_v_vk.right_multiply_transpose(mat2_n2n2, mat3);
-        local_jac += JxW[qp] * mat2_n2n2;
+        Bmat_v_vk.right_multiply_transpose(mat2_n2n2, Bmat_mem);
+        local_jac += JxW[qp] * vk_dvdxi_mat_sens(0,0) * material_A_mat(0,0) * mat2_n2n2;
         
         // vk - membrane: w-displacement
-        Bmat_mem.left_multiply(mat1_n1n2, material_A_mat);
-        mat3 = vk_dwdxi_mat_sens.transpose() * mat1_n1n2;
-        Bmat_w_vk.right_multiply_transpose(mat2_n2n2, mat3);
-        local_jac += JxW[qp] * mat2_n2n2;
+        Bmat_w_vk.right_multiply_transpose(mat2_n2n2, Bmat_mem);
+        local_jac += JxW[qp] * vk_dwdxi_mat_sens(0,0) * material_A_mat(0,0) * mat2_n2n2;
         
         // vk - vk: v-displacement
-        mat3 = RealMatrixX::Zero(2, n2);
-        Bmat_v_vk.left_multiply(mat3, stress);
-        Bmat_v_vk.right_multiply_transpose(mat2_n2n2, mat3);
-        local_jac += JxW[qp] * mat2_n2n2;
+        Bmat_v_vk.right_multiply_transpose(mat2_n2n2, Bmat_v_vk);
+        local_jac += JxW[qp] * stress(0,0) * mat2_n2n2;
         
-        mat3 = RealMatrixX::Zero(vk_dvdxi_mat.rows(), n2);
-        Bmat_v_vk.left_multiply(mat3, vk_dvdxi_mat);
-        mat3 = vk_dvdxi_mat_sens.transpose() * material_A_mat * mat3;
-        Bmat_v_vk.right_multiply_transpose(mat2_n2n2, mat3);
-        local_jac += JxW[qp] * mat2_n2n2;
+        Bmat_v_vk.right_multiply_transpose(mat2_n2n2, Bmat_v_vk);
+        local_jac += JxW[qp] * vk_dvdxi_mat_sens(0,0) * vk_dvdxi_mat(0,0) * material_A_mat(0,0) * mat2_n2n2;
         
-        mat3 = RealMatrixX::Zero(vk_dvdxi_mat.rows(), n2);
-        Bmat_v_vk.left_multiply(mat3, vk_dvdxi_mat_sens);
-        mat3 = vk_dvdxi_mat.transpose() * material_A_mat * mat3;
-        Bmat_v_vk.right_multiply_transpose(mat2_n2n2, mat3);
-        local_jac += JxW[qp] * mat2_n2n2;
+        Bmat_v_vk.right_multiply_transpose(mat2_n2n2, Bmat_v_vk);
+        local_jac += JxW[qp] * vk_dvdxi_mat(0,0) * vk_dvdxi_mat_sens(0,0) * material_A_mat(0,0) * mat2_n2n2;
         
         // vk - vk: w-displacement
-        mat3 = RealMatrixX::Zero(2, n2);
-        Bmat_w_vk.left_multiply(mat3, stress);
-        Bmat_w_vk.right_multiply_transpose(mat2_n2n2, mat3);
-        local_jac += JxW[qp] * mat2_n2n2;
+        Bmat_w_vk.right_multiply_transpose(mat2_n2n2, Bmat_w_vk);
+        local_jac += JxW[qp] * stress(0,0) * mat2_n2n2;
         
-        mat3 = RealMatrixX::Zero(vk_dwdxi_mat.rows(), n2);
-        Bmat_w_vk.left_multiply(mat3, vk_dwdxi_mat);
-        mat3 = vk_dwdxi_mat_sens.transpose() * material_A_mat * mat3;
-        Bmat_w_vk.right_multiply_transpose(mat2_n2n2, mat3);
-        local_jac += JxW[qp] * mat2_n2n2;
+        Bmat_w_vk.right_multiply_transpose(mat2_n2n2, Bmat_w_vk);
+        local_jac += JxW[qp] * vk_dwdxi_mat(0,0) * vk_dwdxi_mat_sens(0,0) * material_A_mat(0,0) * mat2_n2n2;
         
-        mat3 = RealMatrixX::Zero(vk_dwdxi_mat.rows(), n2);
-        Bmat_w_vk.left_multiply(mat3, vk_dwdxi_mat_sens);
-        mat3 = vk_dwdxi_mat.transpose() * material_A_mat * mat3;
-        Bmat_w_vk.right_multiply_transpose(mat2_n2n2, mat3);
-        local_jac += JxW[qp] * mat2_n2n2;
+        Bmat_w_vk.right_multiply_transpose(mat2_n2n2, Bmat_w_vk);
+        local_jac += JxW[qp] * vk_dwdxi_mat(0,0) * vk_dwdxi_mat_sens(0,0) * material_A_mat(0,0) * mat2_n2n2;
         
         // coupling of v, w-displacements
-        mat3 = RealMatrixX::Zero(vk_dwdxi_mat.rows(), n2);
-        Bmat_w_vk.left_multiply(mat3, vk_dwdxi_mat_sens);
-        mat3 = vk_dvdxi_mat.transpose() * material_A_mat * mat3;
-        Bmat_v_vk.right_multiply_transpose(mat2_n2n2, mat3);
-        local_jac += JxW[qp] * mat2_n2n2;
+        Bmat_v_vk.right_multiply_transpose(mat2_n2n2, Bmat_w_vk);
+        local_jac += JxW[qp] * vk_dvdxi_mat(0,0) * vk_dwdxi_mat_sens(0,0) * material_A_mat(0,0) * mat2_n2n2;
         
-        mat3 = RealMatrixX::Zero(vk_dwdxi_mat.rows(), n2);
-        Bmat_w_vk.left_multiply(mat3, vk_dwdxi_mat);
-        mat3 = vk_dvdxi_mat_sens.transpose() * material_A_mat * mat3;
-        Bmat_v_vk.right_multiply_transpose(mat2_n2n2, mat3);
-        local_jac += JxW[qp] * mat2_n2n2;
+        Bmat_v_vk.right_multiply_transpose(mat2_n2n2, Bmat_w_vk);
+        local_jac += JxW[qp] * vk_dvdxi_mat_sens(0,0) * vk_dwdxi_mat(0,0) * material_A_mat(0,0) * mat2_n2n2;
         
-        mat3 = RealMatrixX::Zero(vk_dvdxi_mat.rows(), n2);
-        Bmat_v_vk.left_multiply(mat3, vk_dvdxi_mat_sens);
-        mat3 = vk_dwdxi_mat.transpose() * material_A_mat * mat3;
-        Bmat_w_vk.right_multiply_transpose(mat2_n2n2, mat3);
-        local_jac += JxW[qp] * mat2_n2n2;
+        Bmat_w_vk.right_multiply_transpose(mat2_n2n2, Bmat_v_vk);
+        local_jac += JxW[qp] * vk_dwdxi_mat(0,0) * vk_dvdxi_mat_sens(0,0) * material_A_mat(0,0) * mat2_n2n2;
         
-        mat3 = RealMatrixX::Zero(vk_dvdxi_mat.rows(), n2);
-        Bmat_v_vk.left_multiply(mat3, vk_dvdxi_mat);
-        mat3 = vk_dwdxi_mat_sens.transpose() * material_A_mat * mat3;
-        Bmat_w_vk.right_multiply_transpose(mat2_n2n2, mat3);
-        local_jac += JxW[qp] * mat2_n2n2;
+        Bmat_w_vk.right_multiply_transpose(mat2_n2n2, Bmat_v_vk);
+        local_jac += JxW[qp] * vk_dwdxi_mat_sens(0,0) * vk_dvdxi_mat(0,0) * material_A_mat(0,0) * mat2_n2n2;
         
         // bending - vk: v-displacement
-        mat3 = RealMatrixX::Zero(vk_dvdxi_mat.rows(), n2);
-        Bmat_v_vk.left_multiply(mat3, vk_dvdxi_mat_sens);
-        mat3 = material_B_mat.transpose() * mat3;
-        Bmat_bend_v.right_multiply_transpose(mat2_n2n2, mat3);
-        local_jac += JxW[qp] * mat2_n2n2;
-        Bmat_bend_w.right_multiply_transpose(mat2_n2n2, mat3);
-        local_jac += JxW[qp] * mat2_n2n2;
+        Bmat_bend_v.right_multiply_transpose(mat2_n2n2, Bmat_v_vk);
+        local_jac += JxW[qp] * vk_dvdxi_mat_sens(0,0) * material_B_mat(0,0) * mat2_n2n2;
+        
+        Bmat_bend_w.right_multiply_transpose(mat2_n2n2, Bmat_v_vk);
+        local_jac += JxW[qp] * vk_dvdxi_mat_sens(0,0) * material_B_mat(0,1) * mat2_n2n2;
 
         // bending - vk: w-displacement
-        mat3 = RealMatrixX::Zero(vk_dwdxi_mat.rows(), n2);
-        Bmat_w_vk.left_multiply(mat3, vk_dwdxi_mat_sens);
-        mat3 = material_B_mat.transpose() * mat3;
-        Bmat_bend_v.right_multiply_transpose(mat2_n2n2, mat3);
-        local_jac += JxW[qp] * mat2_n2n2;
-        Bmat_bend_w.right_multiply_transpose(mat2_n2n2, mat3);
-        local_jac += JxW[qp] * mat2_n2n2;
+        Bmat_bend_v.right_multiply_transpose(mat2_n2n2, Bmat_w_vk);
+        local_jac += JxW[qp] * vk_dwdxi_mat_sens(0,0) * material_B_mat(0,0) * mat2_n2n2;
+        
+        Bmat_bend_w.right_multiply_transpose(mat2_n2n2, Bmat_w_vk);
+        local_jac += JxW[qp] * vk_dwdxi_mat_sens(0,0) * material_B_mat(0,1) * mat2_n2n2;
 
         // vk - bending: v-displacement
-        Bmat_bend_v.left_multiply(mat1_n1n2, material_B_mat);
-        mat3 = vk_dvdxi_mat_sens.transpose() * mat1_n1n2;
-        Bmat_v_vk.right_multiply_transpose(mat2_n2n2, mat3);
-        local_jac += JxW[qp] * mat2_n2n2;
+        Bmat_v_vk.right_multiply_transpose(mat2_n2n2, Bmat_bend_v);
+        local_jac += JxW[qp] * vk_dvdxi_mat_sens(0,0) * material_B_mat(0,1) * mat2_n2n2;
 
-        Bmat_bend_v.left_multiply(mat1_n1n2, material_B_mat);
-        mat3 = vk_dwdxi_mat_sens.transpose() * mat1_n1n2;
-        Bmat_w_vk.right_multiply_transpose(mat2_n2n2, mat3);
-        local_jac += JxW[qp] * mat2_n2n2;
+        Bmat_w_vk.right_multiply_transpose(mat2_n2n2, Bmat_bend_v);
+        local_jac += JxW[qp] * vk_dwdxi_mat_sens(0,0) * material_B_mat(0,0) * mat2_n2n2;
 
         // vk - bending: w-displacement
-        Bmat_bend_w.left_multiply(mat1_n1n2, material_B_mat);
-        mat3 = vk_dvdxi_mat_sens.transpose() * mat1_n1n2;
-        Bmat_v_vk.right_multiply_transpose(mat2_n2n2, mat3);
-        local_jac += JxW[qp] * mat2_n2n2;
+        Bmat_v_vk.right_multiply_transpose(mat2_n2n2, Bmat_bend_w);
+        local_jac += JxW[qp] * vk_dvdxi_mat_sens(0,0) * material_B_mat(0,1) * mat2_n2n2;
         
-        Bmat_bend_w.left_multiply(mat1_n1n2, material_B_mat);
-        mat3 = vk_dwdxi_mat_sens.transpose() * mat1_n1n2;
-        Bmat_w_vk.right_multiply_transpose(mat2_n2n2, mat3);
-        local_jac += JxW[qp] * mat2_n2n2;
+        Bmat_w_vk.right_multiply_transpose(mat2_n2n2, Bmat_bend_w);
+        local_jac += JxW[qp] * vk_dwdxi_mat_sens(0,0) * material_B_mat(0,1) * mat2_n2n2;
     }
     
     transform_matrix_to_global_system(local_jac, mat2_n2n2);
@@ -1114,10 +1064,10 @@ _internal_residual_operation(bool if_vk,
     vec2_n1 = material_A_mat * vec1_n1; // linear direct stress
     
     // copy the stress values to a matrix
-    stress_l(0,0) = vec2_n1(0); // sigma_xx
-    stress(0,0)   = vec2_n1(0);
-    stress(1,1)   = vec1_n1(0); // temporary storage of the axial strain
-    stress(0,1)   = vec2_n1(1); // temporary storage of the torsion force
+    stress_l(0,0) = vec2_n1(0); // f_xx_lin = EA du/dx
+    stress(0,0)   = vec2_n1(0); // f_xx     = EA du/dx
+    stress(1,1)   = vec1_n1(0); // temporary storage of the axial strain, e_xx = du/dx
+    stress(0,1)   = vec2_n1(1); // temporary storage of the torsion force, f_txtx = GJ dtheta_x/dx
     
     // get the bending strain operator
     vec2_n1.setZero(); // used to store vk strain, if applicable
@@ -1129,14 +1079,14 @@ _internal_residual_operation(bool if_vk,
         //  evaluate the bending stress and add that to the stress vector
         // for evaluation in the nonlinear stress term
         Bmat_bend_v.vector_mult(vec2_n1, _local_sol);
-        vec1_n1 = material_B_mat * vec2_n1;
-        stress_l(0,0) += vec1_n1(0);
-        stress(0,0)   += vec1_n1(0);
+        vec1_n1 = material_B_mat(0,0) * vec2_n1;
+        stress_l(0,0) += vec1_n1(0); // f_xx_lin -= E Az dtheta_z/dx  (negative sign in Bmat_bend_v)
+        stress(0,0)   += vec1_n1(0); // f_xx     -= E Az dtheta_z/dx  (negative sign in Bmat_bend_v)
 
         Bmat_bend_w.vector_mult(vec2_n1, _local_sol);
-        vec1_n1 = material_B_mat * vec2_n1;
-        stress_l(0,0) += vec1_n1(0);
-        stress(0,0)   += vec1_n1(0);
+        vec1_n1 = material_B_mat(0,1) * vec2_n1;
+        stress_l(0,0) += vec1_n1(0);  // f_xx_lin += E Ay dtheta_y/dx
+        stress(0,0)   += vec1_n1(0);  // f_xx     += E Ay dtheta_y/dx
 
         if (if_vk) {  // get the vonKarman strain operator if needed
             
@@ -1148,15 +1098,17 @@ _internal_residual_operation(bool if_vk,
                                                         Bmat_v_vk,
                                                         Bmat_w_vk);
             vec1_n1 = material_A_mat * vec2_n1;
-            stress(0,0) += vec1_n1(0); // total strain that multiplies with the membrane strain
-            stress(1,1) += vec2_n1(0); // add the two strains to get the direct strain
+            // total strain that multiplies with the membrane strain
+            stress(0,0) += vec1_n1(0); // f_xx     += E A 1/2 ((dv/dx)^2 + (dw/dx)^2)
+            // add the two strains to get the direct strain
+            stress(1,1) += vec2_n1(0); // e_xx += 1/2 ((dv/dx)^2 + (dw/dx)^2)
         }
     }
     
     // copy the stress to use here.
     vec1_n1.setZero();
-    vec1_n1(0)   = stress(0,0);
-    vec1_n1(1)   = stress(0,1); // use the torsion strain from the temporary location
+    vec1_n1(0)   = stress(0,0); // f_xx
+    vec1_n1(1)   = stress(0,1); // use the torsion strain from the temporary location, f_txtx
     stress(0, 1) = 0.;   // zero out the temporary value storing the torsion strain
     
     // now the internal force vector
@@ -1167,196 +1119,147 @@ _internal_residual_operation(bool if_vk,
     if (bend) {
         if (if_vk) {
             // von Karman strain: direct stress
-            vec4_2 = vk_dvdxi_mat.transpose() * vec1_n1;
-            Bmat_v_vk.vector_mult_transpose(vec3_n2, vec4_2);
-            local_f += JxW[qp] * vec3_n2;
+            Bmat_v_vk.vector_mult_transpose(vec3_n2, vec1_n1);
+            local_f += JxW[qp] * vk_dvdxi_mat(0,0) * vec3_n2; // d(dv)/dx dv/dx f_xx
             
             // von Karman strain: direct stress
-            vec4_2 = vk_dwdxi_mat.transpose() * vec1_n1;
-            Bmat_w_vk.vector_mult_transpose(vec3_n2, vec4_2);
-            local_f += JxW[qp] * vec3_n2;
+            Bmat_w_vk.vector_mult_transpose(vec3_n2, vec1_n1);
+            local_f += JxW[qp] * vk_dwdxi_mat(0,0) * vec3_n2; // d(dw)/dx dw/dx f_xx
         }
         
         // use the direct strain from the temprary storage
-        vec2_n1(0)  = stress(1,1);
+        vec2_n1(0)  = stress(1,1); // e_xx = du/dx + 1/2 ((dv/dx)^2 + (dw/dx)^2_
         stress(1,1) = 0.;
         // now coupling with the bending strain
         // B_bend^T [B] B_mem
-        vec1_n1 = material_B_mat.transpose() * vec2_n1;
-        Bmat_bend_v.vector_mult_transpose(vec3_n2, vec1_n1);
-        local_f += JxW[qp] * vec3_n2;
-        Bmat_bend_w.vector_mult_transpose(vec3_n2, vec1_n1);
-        local_f += JxW[qp] * vec3_n2;
+        Bmat_bend_v.vector_mult_transpose(vec3_n2, vec2_n1);
+        local_f += JxW[qp] * material_B_mat(0,0) * vec3_n2; // d(dtheta_z)/dx E Az e_xx
+        
+        Bmat_bend_w.vector_mult_transpose(vec3_n2, vec2_n1);
+        local_f += JxW[qp] * material_B_mat(0,1) * vec3_n2; // d(dtheta_y)/dx E Ay e_xx
 
         // now bending stress
+        // v-v
         Bmat_bend_v.vector_mult(vec2_n1, _local_sol);
-        vec1_n1 = material_D_mat * vec2_n1;
-        Bmat_bend_v.vector_mult_transpose(vec3_n2, vec1_n1);
-        local_f += JxW[qp] * vec3_n2;
-
+        Bmat_bend_v.vector_mult_transpose(vec3_n2, vec2_n1);  // d(dtheta_z)/dx E Izz dtheta_z/dx
+        local_f += JxW[qp] * material_D_mat(0,0) * vec3_n2;
+        
+        // w-v
+        Bmat_bend_v.vector_mult(vec2_n1, _local_sol);
+        Bmat_bend_w.vector_mult_transpose(vec3_n2, vec2_n1);  // d(dtheta_y)/dx E Iyz dtheta_z/dx
+        local_f += JxW[qp] * material_D_mat(1,0) * vec3_n2;
+        
+        // w-w
         Bmat_bend_w.vector_mult(vec2_n1, _local_sol);
-        vec1_n1 = material_D_mat * vec2_n1;
-        Bmat_bend_w.vector_mult_transpose(vec3_n2, vec1_n1);
-        local_f += JxW[qp] * vec3_n2;
+        Bmat_bend_w.vector_mult_transpose(vec3_n2, vec2_n1);  // d(dtheta_y)/dx E Iyy dtheta_y/dx
+        local_f += JxW[qp] * material_D_mat(1,1) * vec3_n2;
+        
+        // v-w
+        Bmat_bend_w.vector_mult(vec2_n1, _local_sol);
+        Bmat_bend_v.vector_mult_transpose(vec3_n2, vec2_n1);  // d(dtheta_y)/dx E Iyz dtheta_z/dx
+        local_f += JxW[qp] * material_D_mat(0,1) * vec3_n2;
     }
     
     if (request_jacobian) {
         // membrane - membrane
         Bmat_mem.left_multiply(mat1_n1n2, material_A_mat);
         Bmat_mem.right_multiply_transpose(mat2_n2n2, mat1_n1n2);
-        local_jac += JxW[qp] * mat2_n2n2;
+        local_jac += JxW[qp] * mat2_n2n2; // d(du)/dx E A d(Du)/dx
                 
         if (bend) {
             if (if_vk) {
                 // membrane - vk: v-displacement
-                mat3 = RealMatrixX::Zero(vk_dvdxi_mat.rows(), n2);
-                Bmat_v_vk.left_multiply(mat3, vk_dvdxi_mat);
-                mat3 = material_A_mat * mat3;
-                Bmat_mem.right_multiply_transpose(mat2_n2n2, mat3);
-                local_jac += JxW[qp] * mat2_n2n2;
-                
+                Bmat_mem.right_multiply_transpose(mat2_n2n2, Bmat_v_vk);
+                local_jac += JxW[qp] * vk_dvdxi_mat(0,0) * material_A_mat(0,0) * mat2_n2n2; // d(du)/dx E A (dv/dx) d(Dv)/dx
+
                 // membrane - vk: w-displacement
-                mat3 = RealMatrixX::Zero(vk_dwdxi_mat.rows(), n2);
-                Bmat_w_vk.left_multiply(mat3, vk_dwdxi_mat);
-                mat3 = material_A_mat * mat3;
-                Bmat_mem.right_multiply_transpose(mat2_n2n2, mat3);
-                local_jac += JxW[qp] * mat2_n2n2;
-                
+                Bmat_mem.right_multiply_transpose(mat2_n2n2, Bmat_w_vk);
+                local_jac += JxW[qp] * vk_dwdxi_mat(0,0) * material_A_mat(0,0) * mat2_n2n2; // d(du)/dx E A (dw/dx) d(Dw)/dx
+
                 // vk - membrane: v-displacement
-                Bmat_mem.left_multiply(mat1_n1n2, material_A_mat);
-                mat3 = vk_dvdxi_mat.transpose() * mat1_n1n2;
-                Bmat_v_vk.right_multiply_transpose(mat2_n2n2, mat3);
-                local_jac += JxW[qp] * mat2_n2n2;
+                Bmat_v_vk.right_multiply_transpose(mat2_n2n2, Bmat_mem);
+                local_jac += JxW[qp] * vk_dvdxi_mat(0,0) * material_A_mat(0,0) * mat2_n2n2; // d(dv)/dx (dv/dx) E A d(Du)/dx
                 
                 // vk - membrane: w-displacement
-                Bmat_mem.left_multiply(mat1_n1n2, material_A_mat);
-                mat3 = vk_dwdxi_mat.transpose() * mat1_n1n2;
-                Bmat_w_vk.right_multiply_transpose(mat2_n2n2, mat3);
-                local_jac += JxW[qp] * mat2_n2n2;
+                Bmat_w_vk.right_multiply_transpose(mat2_n2n2, Bmat_mem);
+                local_jac += JxW[qp] * vk_dwdxi_mat(0,0) * material_A_mat(0,0) * mat2_n2n2; // d(dw)/dx (dv/dx) E A d(Du)/dx
                 
-                // if only the first order term of the Jacobian is needed, for
-                // example for linearized buckling analysis, then the linear
-                // stress combined with the variation of the von Karman strain
-                // is included. Otherwise, all terms are included
-                /*if (if_ignore_ho_jac) {
-                    // vk - vk: v-displacement: first order term
-                    mat3 = RealMatrixX::Zero(2, n2);
-                    Bmat_v_vk.left_multiply(mat3, stress_l);
-                    Bmat_v_vk.right_multiply_transpose(mat2_n2n2, mat3);
-                    local_jac += JxW[qp] * mat2_n2n2;
-                    
-                    // vk - vk: v-displacement: first order term
-                    mat3 = RealMatrixX::Zero(2, n2);
-                    Bmat_w_vk.left_multiply(mat3, stress_l);
-                    Bmat_w_vk.right_multiply_transpose(mat2_n2n2, mat3);
-                    local_jac += JxW[qp] * mat2_n2n2;
-                }
-                else*/ {
-                    // vk - vk: v-displacement
-                    mat3 = RealMatrixX::Zero(2, n2);
-                    Bmat_v_vk.left_multiply(mat3, stress);
-                    Bmat_v_vk.right_multiply_transpose(mat2_n2n2, mat3);
-                    local_jac += JxW[qp] * mat2_n2n2;
-                    
-                    mat3 = RealMatrixX::Zero(vk_dvdxi_mat.rows(), n2);
-                    Bmat_v_vk.left_multiply(mat3, vk_dvdxi_mat);
-                    mat3 = vk_dvdxi_mat.transpose() * material_A_mat * mat3;
-                    Bmat_v_vk.right_multiply_transpose(mat2_n2n2, mat3);
-                    local_jac += JxW[qp] * mat2_n2n2;
-                    
-                    // vk - vk: w-displacement
-                    mat3 = RealMatrixX::Zero(2, n2);
-                    Bmat_w_vk.left_multiply(mat3, stress);
-                    Bmat_w_vk.right_multiply_transpose(mat2_n2n2, mat3);
-                    local_jac += JxW[qp] * mat2_n2n2;
-                    
-                    mat3 = RealMatrixX::Zero(vk_dwdxi_mat.rows(), n2);
-                    Bmat_w_vk.left_multiply(mat3, vk_dwdxi_mat);
-                    mat3 = vk_dwdxi_mat.transpose() * material_A_mat * mat3;
-                    Bmat_w_vk.right_multiply_transpose(mat2_n2n2, mat3);
-                    local_jac += JxW[qp] * mat2_n2n2;
-                    
-                    // coupling of v, w-displacements
-                    mat3 = RealMatrixX::Zero(vk_dwdxi_mat.rows(), n2);
-                    Bmat_w_vk.left_multiply(mat3, vk_dwdxi_mat);
-                    mat3 = vk_dvdxi_mat.transpose() * material_A_mat * mat3;
-                    Bmat_v_vk.right_multiply_transpose(mat2_n2n2, mat3);
-                    local_jac += JxW[qp] * mat2_n2n2;
-                    
-                    mat3 = RealMatrixX::Zero(vk_dvdxi_mat.rows(), n2);
-                    Bmat_v_vk.left_multiply(mat3, vk_dvdxi_mat);
-                    mat3 = vk_dwdxi_mat.transpose() * material_A_mat * mat3;
-                    Bmat_w_vk.right_multiply_transpose(mat2_n2n2, mat3);
-                    local_jac += JxW[qp] * mat2_n2n2;
-                    
-                }
+                // vk - vk: v-displacement
+                Bmat_v_vk.right_multiply_transpose(mat2_n2n2, Bmat_v_vk);
+                local_jac += JxW[qp] * stress(0,0) * mat2_n2n2; // d(dv)/dx f_xx d(Dv)/dx
+                
+                Bmat_v_vk.right_multiply_transpose(mat2_n2n2, Bmat_v_vk);
+                local_jac += JxW[qp] * vk_dvdxi_mat(0,0) * vk_dvdxi_mat(0,0) * material_A_mat(0,0) * mat2_n2n2; // d(dv)/dx dv/dx E A dv/dx d(Dv)/dx
+                
+                // vk - vk: w-displacement
+                Bmat_w_vk.right_multiply_transpose(mat2_n2n2, Bmat_w_vk);
+                local_jac += JxW[qp] * stress(0,0) * mat2_n2n2; // d(dw)/dx f_xx d(Dw)/dx
+                
+                Bmat_w_vk.right_multiply_transpose(mat2_n2n2, Bmat_w_vk);
+                local_jac += JxW[qp] * vk_dwdxi_mat(0,0) * vk_dwdxi_mat(0,0) * material_A_mat(0,0) * mat2_n2n2; // d(dw)/dx dw/dx E A dw/dx d(Dw)/dx
+                
+                // coupling of v, w-displacements
+                Bmat_v_vk.right_multiply_transpose(mat2_n2n2, Bmat_w_vk);
+                local_jac += JxW[qp] * vk_dvdxi_mat(0,0) * vk_dwdxi_mat(0,0) * material_A_mat(0,0) * mat2_n2n2; // d(dv)/dx dv/dx E A dw/dx d(Dw)/dx
+                
+                Bmat_w_vk.right_multiply_transpose(mat2_n2n2, Bmat_v_vk);
+                local_jac += JxW[qp] * vk_dwdxi_mat(0,0) * vk_dvdxi_mat(0,0) * material_A_mat(0,0) * mat2_n2n2; // d(dw)/dx dw/dx E A dv/dx d(Dv)/dx
                 
                 // bending - vk: v-displacement
-                mat3 = RealMatrixX::Zero(vk_dvdxi_mat.rows(), n2);
-                Bmat_v_vk.left_multiply(mat3, vk_dvdxi_mat);
-                mat3 = material_B_mat.transpose() * mat3;
-                Bmat_bend_v.right_multiply_transpose(mat2_n2n2, mat3);
-                local_jac += JxW[qp] * mat2_n2n2;
-                Bmat_bend_w.right_multiply_transpose(mat2_n2n2, mat3);
-                local_jac += JxW[qp] * mat2_n2n2;
+                Bmat_bend_v.right_multiply_transpose(mat2_n2n2, Bmat_v_vk);
+                local_jac += JxW[qp] * vk_dvdxi_mat(0,0) * material_B_mat(0,0) * mat2_n2n2;// d(dtheta_z)/dx E Az dv/dx d(Dv)/dx
+                
+                Bmat_bend_w.right_multiply_transpose(mat2_n2n2, Bmat_v_vk);
+                local_jac += JxW[qp] * vk_dvdxi_mat(0,0) * material_B_mat(0,1) * mat2_n2n2;// d(dtheta_y)/dx E Ay dv/dx d(Dv)/dx
 
                 // bending - vk: w-displacement
-                mat3 = RealMatrixX::Zero(vk_dwdxi_mat.rows(), n2);
-                Bmat_w_vk.left_multiply(mat3, vk_dwdxi_mat);
-                mat3 = material_B_mat.transpose() * mat3;
-                Bmat_bend_v.right_multiply_transpose(mat2_n2n2, mat3);
-                local_jac += JxW[qp] * mat2_n2n2;
-                Bmat_bend_w.right_multiply_transpose(mat2_n2n2, mat3);
-                local_jac += JxW[qp] * mat2_n2n2;
+                Bmat_bend_v.right_multiply_transpose(mat2_n2n2, Bmat_w_vk);
+                local_jac += JxW[qp] * vk_dwdxi_mat(0,0) * material_B_mat(0,0) * mat2_n2n2;// d(dtheta_z)/dx E Az dw/dx d(Dw)/dx
+                
+                Bmat_bend_w.right_multiply_transpose(mat2_n2n2, Bmat_w_vk);
+                local_jac += JxW[qp] * vk_dwdxi_mat(0,0) * material_B_mat(0,1) * mat2_n2n2;// d(dtheta_y)/dx E Ay dw/dx d(Dw)/dx
                 
                 // vk - bending: v-displacement
-                Bmat_bend_v.left_multiply(mat1_n1n2, material_B_mat);
-                mat3 = vk_dvdxi_mat.transpose() * mat1_n1n2;
-                Bmat_v_vk.right_multiply_transpose(mat2_n2n2, mat3);
-                local_jac += JxW[qp] * mat2_n2n2;
+                Bmat_v_vk.right_multiply_transpose(mat2_n2n2, Bmat_bend_v);
+                local_jac += JxW[qp] * vk_dvdxi_mat(0,0) * material_B_mat(0,0) * mat2_n2n2;// d(dv)/dx dv/dx  E Az d(Dtheta_z)/dx
 
-                Bmat_bend_v.left_multiply(mat1_n1n2, material_B_mat);
-                mat3 = vk_dwdxi_mat.transpose() * mat1_n1n2;
-                Bmat_w_vk.right_multiply_transpose(mat2_n2n2, mat3);
-                local_jac += JxW[qp] * mat2_n2n2;
+                Bmat_w_vk.right_multiply_transpose(mat2_n2n2, Bmat_bend_v);
+                local_jac += JxW[qp] * vk_dwdxi_mat(0,0) * material_B_mat(0,0) * mat2_n2n2;// d(dw)/dx dw/dx  E Az d(Dtheta_z)/dx
 
                 // vk - bending: w-displacement
-                Bmat_bend_w.left_multiply(mat1_n1n2, material_B_mat);
-                mat3 = vk_dvdxi_mat.transpose() * mat1_n1n2;
-                Bmat_v_vk.right_multiply_transpose(mat2_n2n2, mat3);
-                local_jac += JxW[qp] * mat2_n2n2;
+                Bmat_v_vk.right_multiply_transpose(mat2_n2n2, Bmat_bend_w);
+                local_jac += JxW[qp] * vk_dvdxi_mat(0,0) * material_B_mat(0,1) * mat2_n2n2;// d(dv)/dx dv/dx  E Ay d(Dtheta_y)/dx
 
-                Bmat_bend_w.left_multiply(mat1_n1n2, material_B_mat);
-                mat3 = vk_dwdxi_mat.transpose() * mat1_n1n2;
-                Bmat_w_vk.right_multiply_transpose(mat2_n2n2, mat3);
-                local_jac += JxW[qp] * mat2_n2n2;
+                Bmat_w_vk.right_multiply_transpose(mat2_n2n2, Bmat_bend_w);
+                local_jac += JxW[qp] * vk_dwdxi_mat(0,0) * material_B_mat(0,1) * mat2_n2n2;// d(dw)/dx dw/dx  E Ay d(Dtheta_y)/dx
             }
             
             // bending - membrane
-            mat3 = material_B_mat.transpose();
-            Bmat_mem.left_multiply(mat1_n1n2, mat3);
-            Bmat_bend_v.right_multiply_transpose(mat2_n2n2, mat1_n1n2);
-            local_jac += JxW[qp] * mat2_n2n2;
-            Bmat_bend_w.right_multiply_transpose(mat2_n2n2, mat1_n1n2);
-            local_jac += JxW[qp] * mat2_n2n2;
+            Bmat_bend_v.right_multiply_transpose(mat2_n2n2, Bmat_mem);
+            local_jac += JxW[qp] * material_B_mat(0,0) * mat2_n2n2; // d(dtheta_z)/dx E Az d(Du)/dx
+            
+            Bmat_bend_w.right_multiply_transpose(mat2_n2n2, Bmat_mem);
+            local_jac += JxW[qp] * material_B_mat(0,1) * mat2_n2n2; // d(dtheta_y)/dx E Ay d(Du)/dx
 
             // membrane - bending
-            Bmat_bend_v.left_multiply(mat1_n1n2, material_B_mat);
-            Bmat_mem.right_multiply_transpose(mat2_n2n2, mat1_n1n2);
-            local_jac += JxW[qp] * mat2_n2n2;
+            Bmat_mem.right_multiply_transpose(mat2_n2n2, Bmat_bend_v);
+            local_jac += JxW[qp] * material_B_mat(0, 0) * mat2_n2n2; // d(Du)/dx E Az d(dtheta_z)/dx
 
-            Bmat_bend_w.left_multiply(mat1_n1n2, material_B_mat);
-            Bmat_mem.right_multiply_transpose(mat2_n2n2, mat1_n1n2);
-            local_jac += JxW[qp] * mat2_n2n2;
+            Bmat_mem.right_multiply_transpose(mat2_n2n2, Bmat_bend_w);
+            local_jac += JxW[qp] * material_B_mat(0, 1) * mat2_n2n2; // d(Du)/dx E Ay d(dtheta_y)/dx
 
             // bending - bending
-            Bmat_bend_v.left_multiply(mat1_n1n2, material_D_mat);
-            Bmat_bend_v.right_multiply_transpose(mat2_n2n2, mat1_n1n2);
-            local_jac += JxW[qp] * mat2_n2n2;
+            Bmat_bend_v.right_multiply_transpose(mat2_n2n2, Bmat_bend_v);
+            local_jac += JxW[qp] * material_D_mat(0,0) * mat2_n2n2; // d(Dtheta_z)/dx E Izz d(dtheta_z)/dx
 
-            Bmat_bend_w.left_multiply(mat1_n1n2, material_D_mat);
-            Bmat_bend_w.right_multiply_transpose(mat2_n2n2, mat1_n1n2);
-            local_jac += JxW[qp] * mat2_n2n2;
+            Bmat_bend_w.right_multiply_transpose(mat2_n2n2, Bmat_bend_w);
+            local_jac += JxW[qp] * material_D_mat(1,1) * mat2_n2n2;// d(Dtheta_y)/dx E Iyy d(dtheta_y)/dx
+            
+            Bmat_bend_w.right_multiply_transpose(mat2_n2n2, Bmat_bend_v);
+            local_jac += JxW[qp] * material_D_mat(1, 0) * mat2_n2n2;// d(Dtheta_z)/dx E Iyz d(dtheta_y)/dx
+
+            Bmat_bend_v.right_multiply_transpose(mat2_n2n2, Bmat_bend_w);
+            local_jac += JxW[qp] * material_D_mat(0, 1) * mat2_n2n2;// d(Dtheta_y)/dx E Iyz d(dtheta_z)/dx
         }
     }
 }
