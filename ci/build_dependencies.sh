@@ -5,7 +5,7 @@ if [ "${TRAVIS_OS_NAME}" = linux ]; then # Ubuntu Linux
   if [ "${TRAVIS_DIST}" = xenial ]; then # Ubuntu 16.04 Xenial Xerus
     cd ${HOME} || exit
 
-    # Python 3.6 apt repository (since its not neatly included in Ubuntu 16.04)
+    # Python 3.7 apt repository (since its not neatly included in Ubuntu 16.04)
     sudo add-apt-repository -y ppa:deadsnakes/ppa
 
     # Regular libMesh/MAST dependencies.
@@ -21,7 +21,7 @@ if [ "${TRAVIS_OS_NAME}" = linux ]; then # Ubuntu Linux
     sudo apt-get -qq install -y texlive-latex-base dvi2ps ghostscript
     sudo apt-get -qq install -y python3.7 python3.7-dev libpython3.7
 
-    # Get pip working with external Python 3.6.
+    # Get pip working with external Python 3.7.
     wget https://bootstrap.pypa.io/get-pip.py || exit
     sudo python3.7 get-pip.py || exit
 
