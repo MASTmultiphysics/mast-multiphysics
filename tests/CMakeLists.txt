@@ -15,9 +15,9 @@ target_link_libraries(mast_catch_tests mast)
 # TODO: May be better to use Catch2's built in CMake support rather than manually adding through ctest
 
 add_subdirectory(base)
-add_subdirectory(material)
 add_subdirectory(boundary_condition)
-#add_subdirectory(property)
+add_subdirectory(material)
+add_subdirectory(property)
 #add_subdirectory(element)
 
 message(NOTICE "It is recommended to run 'make check' instead of 'make test'. Alternatively, for 'ctest' or \
