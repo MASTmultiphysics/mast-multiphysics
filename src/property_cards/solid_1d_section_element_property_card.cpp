@@ -1619,9 +1619,7 @@ MAST::Solid1DSectionElementPropertyCard::Gam() {
 
 void
 MAST::Solid1DSectionElementPropertyCard::clear() {
-    
-    libmesh_assert(!_initialized);
-    
+
     _A.reset();
     _Ay.reset();
     _Az.reset();
