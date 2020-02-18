@@ -1926,7 +1926,7 @@ transverse_shear_stiffness_matrix() const {
     MAST::FieldFunction<RealMatrixX>* rval =
     new MAST::Solid1DSectionProperty::TransverseStiffnessMatrix
     (_material->transverse_shear_stiffness_matrix(),
-     *_A);
+     *_A, *_Kappa);
     
     return std::unique_ptr<MAST::FieldFunction<RealMatrixX> > (rval);
 }
