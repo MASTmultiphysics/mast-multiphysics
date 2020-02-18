@@ -15,8 +15,8 @@ target_link_libraries(mast_catch_tests mast)
 # TODO: May be better to use Catch2's built in CMake support rather than manually adding through ctest
 
 add_subdirectory(base)
-#add_subdirectory(boundary_condition)
 add_subdirectory(material)
+add_subdirectory(boundary_condition)
 #add_subdirectory(property)
 #add_subdirectory(element)
 
@@ -54,21 +54,3 @@ endif()
 # having to run the entire "make check" command.
 add_custom_target(test_graph
     COMMAND python ${CMAKE_CURRENT_LIST_DIR}/GenerateTestDependencyGraph.py ${CMAKE_CURRENT_LIST_DIR}/CMakeLists.txt)
-
-
-# TODO: Add the tests below back in later.
-# add_test(NAME MAST::IsotropicMaterial_Constant_Structural_1D 
-#          COMMAND mast_catch_tests constant_isotropic_structural_material_1d)
-# set_tests_properties(MAST::IsotropicMaterial_Constant_Structural_1D
-#                      PROPERTIES FIXTURES_REQUIRED MAST::ConstantFieldFunction)
-#     
-# add_test(NAME MAST::IsotropicMaterial_Constant_HeatTransfer_1D 
-#          COMMAND mast_catch_tests constant_isotropic_heat_transfer_material_1d)
-# set_tests_properties(MAST::IsotropicMaterial_Constant_HeatTransfer_1D
-#                      PROPERTIES FIXTURES_REQUIRED MAST::ConstantFieldFunction)
-#                     
-#                     
-# add_test(NAME MAST::IsotropicMaterial_Constant_HeatTransfer_2D
-#          COMMAND mast_catch_tests constant_isotropic_heat_transfer_material_2d)
-# set_tests_properties(MAST::IsotropicMaterial_Constant_HeatTransfer_2D
-#                     PROPERTIES FIXTURES_REQUIRED MAST::ConstantFieldFunction)
