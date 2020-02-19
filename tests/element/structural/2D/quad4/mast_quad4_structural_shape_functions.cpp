@@ -1,3 +1,7 @@
+// NOTE: Be careful with this, it could cause issues.  Needed to access
+// protected members to modify them for finite difference sensitivity check.
+#define protected public
+
 #include "catch.hpp"
 
 // libMesh includes
@@ -218,7 +222,10 @@ TEST_CASE("quad4_structural_shape_functions",
         {
             pts.push_back(libMesh::Point(X(0,i), X(1,i), X(2,i)));
         }
-        fe->init(geom_elem, true, &pts);  // FIXME: Causing a memory leak here?
+        delete fe->_fe;
+        fe->_fe = nullptr;
+        fe->_initialized = false;
+        fe->init(geom_elem, true, &pts);
         
         // Get the shape function values at the node points defined above
         const std::vector<std::vector<Real>>& phi = fe->get_phi();
@@ -229,7 +236,7 @@ TEST_CASE("quad4_structural_shape_functions",
         {
             for (uint j=0; j<phi.size(); j++) // Iterative Over Shape Functions
             {
-                libMesh::out << "phi[" << j << "][" << i << "] = " << phi[j][i] << std::endl;
+                //libMesh::out << "phi[" << j << "][" << i << "] = " << phi[j][i] << std::endl;
                 if (i==j)
                 {
                     REQUIRE( phi[j][i] == Approx(1.0) );
@@ -297,7 +304,10 @@ TEST_CASE("quad4_structural_shape_functions",
         {
             pts.push_back(libMesh::Point(q_pts[i](0)+delta, q_pts[i](1), q_pts[i](2)));
         }
-        fe->init(geom_elem, true, &pts);  // FIXME: Causing a memory leak here?
+        delete fe->_fe;
+        fe->_fe = nullptr;
+        fe->_initialized = false;
+        fe->init(geom_elem, true, &pts);
         const std::vector<std::vector<Real>>& phi_xih = fe->get_phi();
         for (uint i=0; i<n_qps; i++)
         {
@@ -312,7 +322,10 @@ TEST_CASE("quad4_structural_shape_functions",
         {
             pts[i] = libMesh::Point(q_pts[i](0)-delta, q_pts[i](1), q_pts[i](2));
         }
-        fe->init(geom_elem, true, &pts);  // FIXME: Causing a memory leak here?
+        delete fe->_fe;
+        fe->_fe = nullptr;
+        fe->_initialized = false;
+        fe->init(geom_elem, true, &pts);
         const std::vector<std::vector<Real>>& phi_xin = fe->get_phi();
         for (uint i=0; i<n_qps; i++)
         {
@@ -331,8 +344,8 @@ TEST_CASE("quad4_structural_shape_functions",
                 dphi_dxi_fd(j,i) = (phi_xi_h(j,i) - phi_xi_n(j,i))/(2.0*delta) ;
             }
         }
-        libMesh::out << "dphi_dxi:\n" << dphi_dxi_0 << std::endl;
-        libMesh::out << "dphi_dxi_fd:\n" << dphi_dxi_fd << std::endl;
+        //libMesh::out << "dphi_dxi:\n" << dphi_dxi_0 << std::endl;
+        //libMesh::out << "dphi_dxi_fd:\n" << dphi_dxi_fd << std::endl;
         
         std::vector<double> dPhi_dxi =    eigen_matrix_to_std_vector(dphi_dxi_0);
         std::vector<double> dPhi_dxi_fd = eigen_matrix_to_std_vector(dphi_dxi_fd);
@@ -373,7 +386,10 @@ TEST_CASE("quad4_structural_shape_functions",
         {
             pts.push_back(libMesh::Point(q_pts[i](0), q_pts[i](1)+delta, q_pts[i](2)));
         }
-        fe->init(geom_elem, true, &pts);  // FIXME: Causing a memory leak here?
+        delete fe->_fe;
+        fe->_fe = nullptr;
+        fe->_initialized = false;
+        fe->init(geom_elem, true, &pts);
         const std::vector<std::vector<Real>>& phi_etah = fe->get_phi();
         for (uint i=0; i<n_qps; i++)
         {
@@ -388,7 +404,10 @@ TEST_CASE("quad4_structural_shape_functions",
         {
             pts[i] = libMesh::Point(q_pts[i](0), q_pts[i](1)-delta, q_pts[i](2));
         }
-        fe->init(geom_elem, true, &pts);  // FIXME: Causing a memory leak here?
+        delete fe->_fe;
+        fe->_fe = nullptr;
+        fe->_initialized = false;
+        fe->init(geom_elem, true, &pts);
         const std::vector<std::vector<Real>>& phi_etan = fe->get_phi();
         for (uint i=0; i<n_qps; i++)
         {
@@ -407,8 +426,8 @@ TEST_CASE("quad4_structural_shape_functions",
                 dphi_deta_fd(j,i) = (phi_eta_h(j,i) - phi_eta_n(j,i))/(2.0*delta) ;
             }
         }
-        libMesh::out << "dphi_deta:\n" << dphi_deta_0 << std::endl;
-        libMesh::out << "dphi_deta_fd:\n" << dphi_deta_fd << std::endl;
+        //libMesh::out << "dphi_deta:\n" << dphi_deta_0 << std::endl;
+        //libMesh::out << "dphi_deta_fd:\n" << dphi_deta_fd << std::endl;
         
         std::vector<double> dPhi_deta =    eigen_matrix_to_std_vector(dphi_deta_0);
         std::vector<double> dPhi_deta_fd = eigen_matrix_to_std_vector(dphi_deta_fd);
