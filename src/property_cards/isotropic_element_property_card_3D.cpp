@@ -431,6 +431,17 @@ stiffness_A_matrix(const MAST::ElementBase& e) const {
 }
 
 
+std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
+MAST::IsotropicElementPropertyCard3D::
+stiffness_A_matrix() const {
+    
+    MAST::FieldFunction<RealMatrixX>* rval =
+    new MAST::IsotropicElementProperty3D::StiffnessMatrix
+    (_material->stiffness_matrix(3));
+    
+    return std::unique_ptr<MAST::FieldFunction<RealMatrixX> >(rval);
+}
+
 
 std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::IsotropicElementPropertyCard3D::
@@ -442,6 +453,14 @@ stiffness_B_matrix(const MAST::ElementBase& e) const {
 }
 
 
+std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
+MAST::IsotropicElementPropertyCard3D::
+stiffness_B_matrix() const {
+    
+    libmesh_assert(false);
+    
+    return std::unique_ptr<MAST::FieldFunction<RealMatrixX> >(nullptr);
+}
 
 
 std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
@@ -453,6 +472,15 @@ stiffness_D_matrix(const MAST::ElementBase& e) const {
     return std::unique_ptr<MAST::FieldFunction<RealMatrixX> >(nullptr);
 }
 
+
+std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
+MAST::IsotropicElementPropertyCard3D::
+stiffness_D_matrix() const {
+    
+    libmesh_assert(false);
+    
+    return std::unique_ptr<MAST::FieldFunction<RealMatrixX> >(nullptr);
+}
 
 
 std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
@@ -477,10 +505,34 @@ inertia_matrix(const MAST::ElementBase& e) const {
 }
 
 
+std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
+MAST::IsotropicElementPropertyCard3D::
+inertia_matrix() const {
+    
+    MAST::FieldFunction<RealMatrixX>* rval =
+    new MAST::IsotropicElementProperty3D::InertiaMatrix
+    (_material->inertia_matrix(3));
+    
+    return std::unique_ptr<MAST::FieldFunction<RealMatrixX> >(rval);
+}
+
 
 std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::IsotropicElementPropertyCard3D::
 thermal_expansion_A_matrix(const MAST::ElementBase& e) const {
+    
+    MAST::FieldFunction<RealMatrixX>* rval =
+    new MAST::IsotropicElementProperty3D::ThermalExpansionMatrix
+    (_material->stiffness_matrix(3),
+     _material->thermal_expansion_matrix(3));
+    
+    return std::unique_ptr<MAST::FieldFunction<RealMatrixX> >(rval);
+}
+
+
+std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
+MAST::IsotropicElementPropertyCard3D::
+thermal_expansion_A_matrix() const {
     
     MAST::FieldFunction<RealMatrixX>* rval =
     new MAST::IsotropicElementProperty3D::ThermalExpansionMatrix
@@ -499,6 +551,14 @@ thermal_expansion_B_matrix(const MAST::ElementBase& e) const {
     return this->thermal_expansion_A_matrix(e);
 }
 
+
+std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
+MAST::IsotropicElementPropertyCard3D::
+thermal_expansion_B_matrix() const {
+    
+    // for 3D elements, there is no difference between the A and B matrices
+    return this->thermal_expansion_A_matrix();
+}
 
 
 std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
@@ -545,6 +605,18 @@ thermal_conductance_matrix(const MAST::ElementBase& e) const {
 
 std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
 MAST::IsotropicElementPropertyCard3D::
+thermal_conductance_matrix() const {
+    
+    MAST::FieldFunction<RealMatrixX>* rval =
+    new MAST::IsotropicElementProperty3D::ThermalConductanceMatrix
+    (_material->conductance_matrix(3));
+    
+    return std::unique_ptr<MAST::FieldFunction<RealMatrixX> >(rval);
+}
+
+
+std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
+MAST::IsotropicElementPropertyCard3D::
 thermal_capacitance_matrix(const MAST::ElementBase& e) const {
     
     MAST::FieldFunction<RealMatrixX>* rval =
@@ -554,4 +626,15 @@ thermal_capacitance_matrix(const MAST::ElementBase& e) const {
     return std::unique_ptr<MAST::FieldFunction<RealMatrixX> >(rval);
 }
 
+
+std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
+MAST::IsotropicElementPropertyCard3D::
+thermal_capacitance_matrix() const {
+    
+    MAST::FieldFunction<RealMatrixX>* rval =
+    new MAST::IsotropicElementProperty3D::ThermalCapacitanceMatrix
+    (_material->capacitance_matrix(3));
+    
+    return std::unique_ptr<MAST::FieldFunction<RealMatrixX> >(rval);
+}
 
