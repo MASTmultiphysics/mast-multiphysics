@@ -255,6 +255,22 @@ namespace MAST {
         
         virtual void init();
         
+        virtual const std::vector<libMesh::Point> get_geom_points(const libMesh::Point& p, const Real t, const uint n=201) const override;
+        
+        virtual const std::vector<libMesh::Point> get_geom_points_derivative(const MAST::FunctionBase& f, const libMesh::Point& p, const Real t, const uint n=201) const override;
+                
+        virtual const libMesh::Point get_shear_center(const libMesh::Point& p, const Real t) const override;
+        
+        virtual const libMesh::Point get_shear_center_derivative(MAST::FunctionBase& f, const libMesh::Point& p, const Real t) override;
+        
+        virtual const libMesh::Point get_centroid(const libMesh::Point& p, const Real t) const override;
+        
+        virtual const libMesh::Point get_centroid_derivative(const MAST::FunctionBase& f, const libMesh::Point& p, const Real t) const override;
+        
+        virtual const std::vector<libMesh::Point> get_stress_points(const libMesh::Point& p, const Real t, const libMesh::Point ps) const override;
+        
+        virtual const std::vector<libMesh::Point> get_stress_points_derivative(const MAST::FunctionBase& f, const libMesh::Point& p, const Real t, const libMesh::Point dps) const override;
+        
     protected:
 
         bool _initialized;
