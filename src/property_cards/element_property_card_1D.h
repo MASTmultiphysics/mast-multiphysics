@@ -63,6 +63,8 @@ namespace MAST
          */
         virtual MAST::BendingOperatorType bending_model(const MAST::GeomElem& elem) const;
         
+        //virtual MAST::BendingOperatorType bending_model(const libMesh::Elem& elem) const;
+        
         
         /*!
          *    returns the extra quadrature order (on top of the system) that
