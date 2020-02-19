@@ -34,12 +34,6 @@
 
 extern libMesh::LibMeshInit* p_global_init;
 
-// TODO: Implement patch test
-// TODO: Implement thermoelastic residual / Jacboian testing
-// TODO: Implement surface pressure residual / Jacobian
-// TODO: Implement piston theory residual / Jacobian testing
-// TODO: Implement other elements (Tri3, Tri6, Quad8, etc.)
-
 
 TEST_CASE("edge2_linear_structural",
           "[1D],[structural],[edge],[edge2],[linear]")
@@ -295,7 +289,7 @@ TEST_CASE("edge2_linear_structural",
         orientation(2) = 1.0;
         section.y_vector() = orientation;
         section.init();
-        discipline.set_property_for_subdomain(0, section);
+        //discipline.set_property_for_subdomain(0, section);
         
         RealVectorX residual = RealVectorX::Zero(n_dofs);
         RealMatrixX jacobian = RealMatrixX::Zero(n_dofs, n_dofs);

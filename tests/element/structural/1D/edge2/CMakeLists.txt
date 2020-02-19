@@ -9,6 +9,12 @@ target_sources(mast_catch_tests
         ${CMAKE_CURRENT_LIST_DIR}/mast_edge2_linear_structural_thermal_jacobian.cpp
         ${CMAKE_CURRENT_LIST_DIR}/mast_edge2_nonlinear_structural_thermal_jacobian.cpp)
 
+        
+# TODO: Implement patch test
+# TODO: Implement surface pressure residual / Jacobian
+# TODO: Implement piston theory residual / Jacobian testing
+# TODO: Implement other elements (Edge3, etc.)
+        
 add_test(NAME Element_Edge2_Linear_Structural_Extension
     COMMAND $<TARGET_FILE:mast_catch_tests> -w NoTests "edge2_linear_extension_structural")
 set_tests_properties(Element_Edge2_Linear_Structural_Extension

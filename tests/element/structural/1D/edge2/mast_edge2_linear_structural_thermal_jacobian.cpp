@@ -39,12 +39,6 @@
 
 extern libMesh::LibMeshInit* p_global_init;
 
-// TODO: Implement patch test
-// TODO: Implement thermoelastic residual / Jacboian testing
-// TODO: Implement surface pressure residual / Jacobian
-// TODO: Implement piston theory residual / Jacobian testing
-// TODO: Implement other elements (Tri3, Tri6, Quad8, etc.)
-
 
 TEST_CASE("edge2_linear_structural_thermal_jacobian",
           "[1D],[thermoelastic],[edge],[edge2],[linear],[protected]")
