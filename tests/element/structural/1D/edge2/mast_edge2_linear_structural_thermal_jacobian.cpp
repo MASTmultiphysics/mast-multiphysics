@@ -301,7 +301,6 @@ TEST_CASE("edge2_linear_structural_thermal_jacobian",
         orientation(2) = 1.0;
         section.y_vector() = orientation;
         section.init();
-        discipline.set_property_for_subdomain(0, section);
         
         RealVectorX residual = RealVectorX::Zero(n_dofs);
         RealMatrixX jacobian = RealMatrixX::Zero(n_dofs, n_dofs);

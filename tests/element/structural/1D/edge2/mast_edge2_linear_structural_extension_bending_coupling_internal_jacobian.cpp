@@ -267,13 +267,14 @@ TEST_CASE("edge2_linear_extension_bending_coupling_structural",
          * Note that the use of reduced integration can result in more rigid
          * body modes than expected.
          */
+        Real eps = 1.4901161193847656e-07;
         SelfAdjointEigenSolver<RealMatrixX> eigensolver(jacobian0, false);
         RealVectorX eigenvalues = eigensolver.eigenvalues();
         libMesh::out << "Eigenvalues are:\n" << eigenvalues << std::endl;
         uint nz = 0;
         for (uint i=0; i<eigenvalues.size(); i++)
         {
-            if (std::abs(eigenvalues(i))<1.4901161193847656e-08)
+            if (std::abs(eigenvalues(i))<eps)
             {
                 nz++;
             }
@@ -284,7 +285,7 @@ TEST_CASE("edge2_linear_extension_bending_coupling_structural",
         /**
          * All non-zero eigenvalues should be positive.
          */
-        REQUIRE(eigenvalues.minCoeff()>(-1e-10));
+        REQUIRE(eigenvalues.minCoeff()>(-eps));
     }
     
     
@@ -295,7 +296,6 @@ TEST_CASE("edge2_linear_extension_bending_coupling_structural",
         orientation(2) = 1.0;
         section.y_vector() = orientation;
         section.init();
-        discipline.set_property_for_subdomain(0, section);
         
         RealVectorX residual = RealVectorX::Zero(n_dofs);
         RealMatrixX jacobian = RealMatrixX::Zero(n_dofs, n_dofs);
