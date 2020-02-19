@@ -152,6 +152,15 @@ namespace MAST
         
         
         /*!
+         *   sets the bending model to be used for the 1D element
+         *   Added by DJN to increase section polymorphism
+         */
+        virtual void set_bending_model(MAST::BendingOperatorType b)  {
+            libmesh_error_msg("Not implemented, this needs to be reimplemented for individual card type; In " << __PRETTY_FUNCTION__ << " in " << __FILE__ << " at line " << __LINE__);
+        }
+        
+        
+        /*!
          *    sets the mass matrix to be diagonal or consistent
          */
         void set_diagonal_mass_matrix(bool m) {

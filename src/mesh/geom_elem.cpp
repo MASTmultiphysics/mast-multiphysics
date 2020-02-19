@@ -125,6 +125,12 @@ MAST::GeomElem::set_local_y_vector(const RealVectorX& y_vec) {
 
 
 void
+MAST::GeomElem::set_bending(bool onoff) {
+    _bending = onoff;;
+}
+
+
+void
 MAST::GeomElem::init(const libMesh::Elem& elem,
                      const MAST::SystemInitialization& sys_init) {
     
@@ -387,6 +393,27 @@ MAST::GeomElem::_init_local_elem_1d() {
     libmesh_assert(_local_y.size());
     libmesh_assert_equal_to(_ref_elem->dim(), 1);
     
+    if (_local_y.size()==0) // if the orientation vector has not been defined
+    {
+        if (!_bending) // if bending is not used in this element
+        {   // then create a random orientation vector that is not collinear 
+            // with the element's local x-axis. Added for github issue #40
+            
+            // Get element x-axis vector
+            libMesh::Point v1;
+            v1 = *_ref_elem->node_ptr(1); v1 -= *_ref_elem->node_ptr(0);
+
+            // Perturb it by an arbitrary value and assign it to the _local_y vector.
+            _local_y = RealVectorX::Zero(3);
+            _local_y(0) = v1(0)+1.000;
+            _local_y(1) = v1(1)-0.625;
+            _local_y(2) = v1(2)+0.275;
+        }
+        else
+        {
+            libmesh_error_msg("ERROR: y_vector (for orientation of 1D element) not defined; In " << __PRETTY_FUNCTION__ << " in " << __FILE__ << " at line " << __LINE__);
+        }
+    }
     
     // first node is the origin of the new cs
     // calculate the coordinate system for the plane of the element
