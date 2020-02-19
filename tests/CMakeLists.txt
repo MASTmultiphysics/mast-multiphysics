@@ -18,7 +18,7 @@ add_subdirectory(base)
 add_subdirectory(boundary_condition)
 add_subdirectory(material)
 add_subdirectory(property)
-#add_subdirectory(element)
+add_subdirectory(element)
 
 message(NOTICE "It is recommended to run 'make check' instead of 'make test'. Alternatively, for 'ctest' or \
 'make test' to output Catch2 error messages when a failure occurs, you must set the environment variable \
@@ -28,7 +28,7 @@ CTEST_OUTPUT_ON_FAILURE=1.")
 # "check" instead. This "check" command will generate a graph to visualize test
 # dependencies, run ctest with output-on-failure enabled so that Catch2 output
 # is available, and then generate a graph to visualize which tests passed, 
-# failed, or where not ran.
+# failed, or were not ran.
 #
 # References 
 # ----------
