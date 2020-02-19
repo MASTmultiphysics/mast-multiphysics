@@ -20,6 +20,8 @@ target_sources(mast
         ${CMAKE_CURRENT_LIST_DIR}/orthotropic_material_property_card.h
         ${CMAKE_CURRENT_LIST_DIR}/solid_1d_section_element_property_card.cpp
         ${CMAKE_CURRENT_LIST_DIR}/solid_1d_section_element_property_card.h
+        ${CMAKE_CURRENT_LIST_DIR}/solid_1d_arbitrary_section_element_property_card.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/solid_1d_arbitrary_section_element_property_card.h
         ${CMAKE_CURRENT_LIST_DIR}/solid_2d_section_element_property_card.cpp
         ${CMAKE_CURRENT_LIST_DIR}/solid_2d_section_element_property_card.h)
 
