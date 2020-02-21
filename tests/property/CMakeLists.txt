@@ -1,9 +1,10 @@
 target_sources(mast_catch_tests
     PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}/mast_solid_1d_section_element_property_card.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/mast_solid_1d_arbitrary_section_element_property_card.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/mast_solid_1d_rod_section_element_property_card.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/mast_solid_1d_arbitrary_section_element_property_card
         ${CMAKE_CURRENT_LIST_DIR}/mast_solid_1d_bar_section_element_property_card.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/mast_solid_1d_rod_section_element_property_card.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/mast_solid_1d_tube_section_element_property_card.cpp
         ${CMAKE_CURRENT_LIST_DIR}/mast_solid_2d_section_element_property_card.cpp
         ${CMAKE_CURRENT_LIST_DIR}/mast_3d_isotropic_element_property_card.cpp)
        
@@ -481,38 +482,43 @@ set_tests_properties(Rod_Element_Property_Card_1D_Dynamic_mpi
 ## ============================================================================
 
 
-# ## ============================================================================
-# # 1D TUBE Cross Section
-# add_test(NAME Tube_Element_Property_Card_1D_Base
-#          COMMAND mast_catch_tests "tube_element_property_card_constant_base_1d")
-# set_tests_properties(Tube_Element_Property_Card_1D_Base
-#                      PROPERTIES
-#                      FIXTURES_REQUIRED Isotropic_Material_1D_Structural)
-#                      
-# add_test(NAME Tube_Element_Property_Card_1D_Heat_Transfer
-#          COMMAND mast_catch_tests "tube_element_property_card_constant_heat_transfer_1d")
-# set_tests_properties(Tube_Element_Property_Card_1D_Heat_Transfer
-#                      PROPERTIES
-#                      FIXTURES_REQUIRED Isotropic_Material_1D_Heat_Transfer)
-# 
-# add_test(NAME Tube_Element_Property_Card_1D_Thermoelastic
-#          COMMAND mast_catch_tests "tube_element_property_card_constant_thermoelastic_1d")
-# set_tests_properties(Tube_Element_Property_Card_1D_Thermoelastic
-#                      PROPERTIES
-#                      FIXTURES_REQUIRED Isotropic_Material_1D_Thermoelastic)
-# 
-# add_test(NAME Tube_Element_Property_Card_1D_Structural
-#          COMMAND mast_catch_tests "tube_element_property_card_constant_structural_1d")
-# set_tests_properties(Tube_Element_Property_Card_1D_Structural
-#                      PROPERTIES
-#                      FIXTURES_REQUIRED  Isotropic_Material_1D_Structural)
-#                      
-# add_test(NAME Tube_Element_Property_Card_1D_Dynamic
-#          COMMAND mast_catch_tests "tube_element_property_card_constant_dynamic_1d")
-# set_tests_properties(Tube_Element_Property_Card_1D_Dynamic
-#                      PROPERTIES
-#                      FIXTURES_REQUIRED Isotropic_Material_1D_Dynamic)
-# ## ============================================================================
+## ============================================================================
+# 1D TUBE Cross Section
+add_test(NAME Tube_Element_Property_Card_1D_Base
+         COMMAND $<TARGET_FILE:mast_catch_tests> "tube_element_property_card_constant_base_1d")
+set_tests_properties(Tube_Element_Property_Card_1D_Base
+                     PROPERTIES
+                     LABELS "SEQ"
+                     FIXTURES_REQUIRED Isotropic_Material_1D_Structural)
+                     
+add_test(NAME Tube_Element_Property_Card_1D_Heat_Transfer
+         COMMAND $<TARGET_FILE:mast_catch_tests> "tube_element_property_card_constant_heat_transfer_1d")
+set_tests_properties(Tube_Element_Property_Card_1D_Heat_Transfer
+                     PROPERTIES
+                     LABELS "SEQ"
+                     FIXTURES_REQUIRED Isotropic_Material_1D_Heat_Transfer)
+
+add_test(NAME Tube_Element_Property_Card_1D_Thermoelastic
+         COMMAND $<TARGET_FILE:mast_catch_tests> "tube_element_property_card_constant_thermoelastic_1d")
+set_tests_properties(Tube_Element_Property_Card_1D_Thermoelastic
+                     PROPERTIES
+                     LABELS "SEQ"
+                     FIXTURES_REQUIRED Isotropic_Material_1D_Thermoelastic)
+
+add_test(NAME Tube_Element_Property_Card_1D_Structural
+         COMMAND $<TARGET_FILE:mast_catch_tests> "tube_element_property_card_constant_structural_1d")
+set_tests_properties(Tube_Element_Property_Card_1D_Structural
+                     PROPERTIES
+                     LABELS "SEQ"
+                     FIXTURES_REQUIRED  Isotropic_Material_1D_Structural)
+                     
+add_test(NAME Tube_Element_Property_Card_1D_Dynamic
+         COMMAND $<TARGET_FILE:mast_catch_tests> "tube_element_property_card_constant_dynamic_1d")
+set_tests_properties(Tube_Element_Property_Card_1D_Dynamic
+                     PROPERTIES
+                     LABELS "SEQ"
+                     FIXTURES_REQUIRED Isotropic_Material_1D_Dynamic)
+## ============================================================================
 
 
 # ## ============================================================================
