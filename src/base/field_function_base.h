@@ -120,6 +120,20 @@ namespace MAST {
             libmesh_error_msg("Must be implemented in derived class; " << __PRETTY_FUNCTION__ << " in " << __FILE__ << " at line " << __LINE__);
         }
         
+        
+        /*!
+         *    calculates the value of the derivative of function with respect to
+         *    the function \p f at the specified point, \p p, and time,
+         *    \p t using finite differences, and returns it in \p v.
+         */
+        virtual void derivative (MAST::FunctionBase& f,
+                                 const libMesh::Point& p,
+                                 const Real t,
+                                 ValType& v) {
+            
+            libmesh_error_msg("Must be implemented in derived class; " << __PRETTY_FUNCTION__ << " in " << __FILE__ << " at line " << __LINE__);
+        }
+        
     protected:
     
     };

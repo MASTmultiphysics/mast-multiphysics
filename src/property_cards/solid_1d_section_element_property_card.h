@@ -141,9 +141,19 @@ namespace MAST {
         
         
         /*!
-         *    returns a reference to the material
+         *    returns a constnant reference to the material
          */
         virtual const MAST::MaterialPropertyCardBase& get_material() const {
+            libmesh_assert(_material); // make sure it has already been set
+            return *_material;
+        }
+        
+        /*!
+         * returns a writable reference to the material
+         * currently only used for some finite difference sensitivities in
+         * Pilkey cross section calculations
+         */
+        virtual MAST::MaterialPropertyCardBase& get_material() {
             libmesh_assert(_material); // make sure it has already been set
             return *_material;
         }

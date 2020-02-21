@@ -105,10 +105,42 @@ namespace MAST {
             }
             
             
-            virtual void derivative (    const MAST::FunctionBase& f,
+            virtual void derivative (const MAST::FunctionBase& f,
                                      const libMesh::Point& p,
                                      const Real t,
                                      Real& m) const {
+                Real hy, hz, dhy, dhz, a, b, da, db;
+                _hy(p, t, hy); _hy.derivative( f, p, t, dhy);
+                _hz(p, t, hz); _hz.derivative( f, p, t, dhz);
+                
+                // shorter side is b, and longer side is a
+                if (hy > hz) {
+                    a = hy; da = dhy;
+                    b = hz; db = dhz;
+                }
+                else {
+                    a = hz; da = dhz;
+                    b = hy; db = dhy;
+                }
+                
+                m =
+                da*pow(b,3)*(1./3.-.21*b/a*(1.-pow(b/a,4)/12.)) +
+                a*3.*pow(b,2)*db*(1./3.-.21*b/a*(1.-pow(b/a,4)/12.)) +
+                a*pow(b,3)*(-.21*db/a*(1.-pow(b/a,4)/12.) +
+                            (.21*b/pow(a,2)*da*(1.-pow(b/a,4)/12.)) +
+                            (-.21*b/a*(-4.*pow(b,3)*db/pow(a,4)/12.+
+                                       4.*pow(b,4)/pow(a,5)*da/12.)));
+            }
+            
+            /*!
+             * Added to be compatible with other sections where the derivative
+             * function is not constant due to using finite differences to 
+             * approximate the sensitivity.
+             */
+            virtual void derivative (MAST::FunctionBase& f,
+                                     const libMesh::Point& p,
+                                     const Real t,
+                                     Real& m) {
                 Real hy, hz, dhy, dhz, a, b, da, db;
                 _hy(p, t, hy); _hy.derivative( f, p, t, dhy);
                 _hz(p, t, hz); _hz.derivative( f, p, t, dhz);
@@ -394,6 +426,19 @@ namespace MAST {
                                      const libMesh::Point& p,
                                      const Real t,
                                      Real& m) const
+            {
+                m = 0.0;
+            }
+            
+            /*!
+             * Added to be compatible with other sections where the derivative
+             * function is not constant due to using finite differences to 
+             * approximate the sensitivity.
+             */
+            virtual void derivative (MAST::FunctionBase& f,
+                                     const libMesh::Point& p,
+                                     const Real t,
+                                     Real& m)
             {
                 m = 0.0;
             }

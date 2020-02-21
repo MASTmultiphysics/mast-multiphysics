@@ -66,7 +66,9 @@ target_sources(mast
         ${CMAKE_CURRENT_LIST_DIR}/structural_transient_assembly.cpp
         ${CMAKE_CURRENT_LIST_DIR}/structural_transient_assembly.h
         ${CMAKE_CURRENT_LIST_DIR}/timoshenko_bending_operator.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/timoshenko_bending_operator.h)
+        ${CMAKE_CURRENT_LIST_DIR}/timoshenko_bending_operator.h
+        ${CMAKE_CURRENT_LIST_DIR}/warping_system_initialization.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/warping_system_initialization.h)
 
 # Install MAST headers for this directory.
 install(DIRECTORY ./ DESTINATION include/elasticity

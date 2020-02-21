@@ -72,11 +72,17 @@ MAST::FEBase::init(const MAST::GeomElem& elem,
     const unsigned int
     nv      = _sys.n_vars();
     libMesh::FEType
+    
     fe_type = _sys.fetype(0); // all variables are assumed to be of same type
+    // TODO: What effect does this assumption have for future MAST developments? What about beams with mixed Lagrange/Hermite interpolation?
     
-    
-    for (unsigned int i=1; i != nv; ++i)
-        libmesh_assert(fe_type == _sys.fetype(i));
+    if (_sys.prefix().compare("warping"))
+    {
+        for (unsigned int i=1; i != nv; ++i)
+        {
+            libmesh_assert(fe_type == _sys.fetype(i));
+        }
+    }
     
     const libMesh::Elem*
     q_elem = nullptr;
