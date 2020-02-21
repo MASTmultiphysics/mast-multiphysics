@@ -58,7 +58,7 @@ namespace MAST {
          */
         virtual void operator() (ValType& v) const {
             
-            libmesh_error(); // must be implemented in derived class
+            libmesh_error_msg("Must be implemented in derived class; " << __PRETTY_FUNCTION__ << " in " << __FILE__ << " at line " << __LINE__);
         }
         
         
@@ -67,7 +67,7 @@ namespace MAST {
          */
         virtual void perturbation (ValType& v) const {
             
-            libmesh_error(); // must be implemented in derived class
+            libmesh_error_msg("Must be implemented in derived class; " << __PRETTY_FUNCTION__ << " in " << __FILE__ << " at line " << __LINE__);
         }
 
         
@@ -78,7 +78,7 @@ namespace MAST {
         virtual void derivative (const MAST::FunctionBase& f,
                                  ValType& v) const {
             
-            libmesh_error(); // must be implemented in derived class
+            libmesh_error_msg("Must be implemented in derived class; " << __PRETTY_FUNCTION__ << " in " << __FILE__ << " at line " << __LINE__);
         }
 
         
@@ -90,7 +90,7 @@ namespace MAST {
                                  const Real t,
                                  ValType& v) const {
             
-            libmesh_error(); // must be implemented in derived class
+            libmesh_error_msg("Must be implemented in derived class; " << __PRETTY_FUNCTION__ << " in " << __FILE__ << " at line " << __LINE__);
         }
         
         
@@ -103,7 +103,7 @@ namespace MAST {
                                    const Real t,
                                    ValType& v) const {
             
-            libmesh_error(); // must be implemented in derived class
+            libmesh_error_msg("Must be implemented in derived class; " << __PRETTY_FUNCTION__ << " in " << __FILE__ << " at line " << __LINE__);
         }
 
         
@@ -117,7 +117,7 @@ namespace MAST {
                                  const Real t,
                                  ValType& v) const {
             
-            libmesh_error(); // must be implemented in derived class
+            libmesh_error_msg("Must be implemented in derived class; " << __PRETTY_FUNCTION__ << " in " << __FILE__ << " at line " << __LINE__);
         }
         
     protected:
