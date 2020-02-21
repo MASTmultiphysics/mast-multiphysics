@@ -26,6 +26,8 @@ target_sources(mast
         ${CMAKE_CURRENT_LIST_DIR}/solid_1d_nparameter_section_element_property_card.h
         ${CMAKE_CURRENT_LIST_DIR}/solid_1d_1parameter_section_element_property_card.cpp
         ${CMAKE_CURRENT_LIST_DIR}/solid_1d_1parameter_section_element_property_card.h
+        ${CMAKE_CURRENT_LIST_DIR}/solid_1d_bar_section_element_property_card.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/solid_1d_bar_section_element_property_card.h
         ${CMAKE_CURRENT_LIST_DIR}/solid_1d_rod_section_element_property_card.cpp
         ${CMAKE_CURRENT_LIST_DIR}/solid_1d_rod_section_element_property_card.h
         ${CMAKE_CURRENT_LIST_DIR}/solid_2d_section_element_property_card.cpp
