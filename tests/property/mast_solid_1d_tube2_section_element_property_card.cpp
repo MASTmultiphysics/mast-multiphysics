@@ -8,7 +8,7 @@
 #include "base/parameter.h"
 #include "base/constant_field_function.h"
 #include "property_cards/isotropic_material_property_card.h"
-#include "property_cards/solid_1d_tube_section_element_property_card.h"
+#include "property_cards/solid_1d_tube2_section_element_property_card.h"
 
 // Custom includes
 #include "test_helpers.h"
@@ -18,7 +18,7 @@ extern libMesh::LibMeshInit* p_global_init;
 #define PI 3.1415926535897932
 
 
-TEST_CASE("tube_element_property_card_constant_base_1d",
+TEST_CASE("tube2_element_property_card_constant_base_1d",
           "[1D],[isotropic],[constant],[property]")
 {
     const uint dim = 1;
@@ -45,14 +45,14 @@ TEST_CASE("tube_element_property_card_constant_base_1d",
 
     // Define Section Properties as MAST Parameters
     MAST::Parameter r_o("DIM1", 1.125);   // Outer radius
-    MAST::Parameter r_i("DIM2", 0.750);   // Inner radius
+    MAST::Parameter tth("DIM2", 0.375);  // Inner radius
     MAST::Parameter offset_y("offy_param", coff_y);     // Section offset in y-direction
     MAST::Parameter offset_z("offz_param", coff_z);     // Section offset in z-direction
 
     // Create field functions to dsitribute these constant parameters throughout the model
     // Section Property Field Functions
     MAST::ConstantFieldFunction DIM1_f("DIM1", r_o);
-    MAST::ConstantFieldFunction DIM2_f("DIM2", r_i);
+    MAST::ConstantFieldFunction DIM2_f("DIM2", tth);
     MAST::ConstantFieldFunction offsety_f("hy_off", offset_y);
     MAST::ConstantFieldFunction offsetz_f("hz_off", offset_z);
     // Material Property Field Functions
@@ -75,7 +75,7 @@ TEST_CASE("tube_element_property_card_constant_base_1d",
     material.add(alpha_f);
 
     // Initialize the section
-    MAST::Solid1DTubeSectionElementPropertyCard section;
+    MAST::Solid1DTube2SectionElementPropertyCard section;
 
 
     // Add the section property constant field functions to the section card
@@ -97,7 +97,7 @@ TEST_CASE("tube_element_property_card_constant_base_1d",
     
     // True values
     const Real ro = r_o();
-    const Real ri = r_i();
+    const Real ri = ro - tth();
     const Real area_true = PI*(pow(ro,2.0) - pow(ri,2.0));
     const Real first_area_moment_z_true = area_true * coff_y;
     const Real first_area_moment_y_true = area_true * coff_z;
@@ -125,7 +125,7 @@ TEST_CASE("tube_element_property_card_constant_base_1d",
     REQUIRE( section.dim() == dim); // Ensure section is 1 dimensional
     REQUIRE( section.depends_on(r_o) );
     REQUIRE( section.depends_on(offset_y) );
-    REQUIRE( section.depends_on(r_i) );
+    REQUIRE( section.depends_on(tth) );
     REQUIRE( section.depends_on(offset_z) );
     REQUIRE( section.depends_on(k) );
     REQUIRE( section.depends_on(cp) );
@@ -139,7 +139,7 @@ TEST_CASE("tube_element_property_card_constant_base_1d",
 }
 
 
-TEST_CASE("tube_element_property_card_constant_base_sensitivity_1d",
+TEST_CASE("tube2_element_property_card_constant_base_sensitivity_1d",
           "[1D],[isotropic],[constant],[property],[sensitivity]")
 {
     const uint dim = 1;
@@ -166,18 +166,18 @@ TEST_CASE("tube_element_property_card_constant_base_sensitivity_1d",
 
     // Define Section Properties as MAST Parameters
     MAST::Parameter r_o("DIM1", 1.125);   // Outer radius
-    MAST::Parameter r_i("DIM2", 0.750);   // Inner radius
+    MAST::Parameter tth("DIM2", 0.375);  // Inner radius
     MAST::Parameter offset_y("offy_param", coff_y);     // Section offset in y-direction
     MAST::Parameter offset_z("offz_param", coff_z);     // Section offset in z-direction
     
     // Define Sensitivity Parameters
-    std::vector<MAST::Parameter*> sens_params = {&r_o, &r_i};
+    std::vector<MAST::Parameter*> sens_params = {&r_o, &tth};
     uint n_s = sens_params.size();
 
     // Create field functions to dsitribute these constant parameters throughout the model
     // Section Property Field Functions
     MAST::ConstantFieldFunction DIM1_f("DIM1", r_o);
-    MAST::ConstantFieldFunction DIM2_f("DIM2", r_i);
+    MAST::ConstantFieldFunction DIM2_f("DIM2", tth);
     MAST::ConstantFieldFunction offsety_f("hy_off", offset_y);
     MAST::ConstantFieldFunction offsetz_f("hz_off", offset_z);
     // Material Property Field Functions
@@ -200,7 +200,7 @@ TEST_CASE("tube_element_property_card_constant_base_sensitivity_1d",
     material.add(alpha_f);
 
     // Initialize the section
-    MAST::Solid1DTubeSectionElementPropertyCard section;
+    MAST::Solid1DTube2SectionElementPropertyCard section;
 
 
     // Add the section property constant field functions to the section card
@@ -222,7 +222,7 @@ TEST_CASE("tube_element_property_card_constant_base_sensitivity_1d",
     
     // True values
     const Real ro = r_o();
-    const Real ri = r_i();
+    const Real ri = ro - tth();
     const Real area_true = PI*(pow(ro,2.0) - pow(ri,2.0));
     const Real first_area_moment_z_true = area_true * coff_y;
     const Real first_area_moment_y_true = area_true * coff_z;
@@ -627,7 +627,7 @@ TEST_CASE("tube_element_property_card_constant_base_sensitivity_1d",
 }
 
 
-TEST_CASE("tube_element_property_card_constant_heat_transfer_1d",
+TEST_CASE("tube2_element_property_card_constant_heat_transfer_1d",
           "[heat_transfer],[1D],[isotropic],[constant],[property]")
 {
     const uint dim = 1;
@@ -654,14 +654,14 @@ TEST_CASE("tube_element_property_card_constant_heat_transfer_1d",
 
     // Define Section Properties as MAST Parameters
     MAST::Parameter r_o("DIM1", 1.125);   // Outer radius
-    MAST::Parameter r_i("DIM2", 0.750);   // Inner radius
+    MAST::Parameter tth("DIM2", 0.375);  // Inner radius
     MAST::Parameter offset_y("offy_param", coff_y);     // Section offset in y-direction
     MAST::Parameter offset_z("offz_param", coff_z);     // Section offset in z-direction
 
     // Create field functions to dsitribute these constant parameters throughout the model
     // Section Property Field Functions
     MAST::ConstantFieldFunction DIM1_f("DIM1", r_o);
-    MAST::ConstantFieldFunction DIM2_f("DIM2", r_i);
+    MAST::ConstantFieldFunction DIM2_f("DIM2", tth);
     MAST::ConstantFieldFunction offsety_f("hy_off", offset_y);
     MAST::ConstantFieldFunction offsetz_f("hz_off", offset_z);
     // Material Property Field Functions
@@ -684,7 +684,7 @@ TEST_CASE("tube_element_property_card_constant_heat_transfer_1d",
     material.add(alpha_f);
 
     // Initialize the section
-    MAST::Solid1DTubeSectionElementPropertyCard section;
+    MAST::Solid1DTube2SectionElementPropertyCard section;
 
 
     // Add the section property constant field functions to the section card
@@ -706,7 +706,7 @@ TEST_CASE("tube_element_property_card_constant_heat_transfer_1d",
     
     // True values
     const Real ro = r_o();
-    const Real ri = r_i();
+    const Real ri = ro - tth();
     const Real area_true = PI*(pow(ro,2.0) - pow(ri,2.0));
     const Real first_area_moment_z_true = area_true * coff_y;
     const Real first_area_moment_y_true = area_true * coff_z;
@@ -803,7 +803,7 @@ TEST_CASE("tube_element_property_card_constant_heat_transfer_1d",
 }
 
 
-TEST_CASE("tube_element_property_card_constant_thermoelastic_1d",
+TEST_CASE("tube2_element_property_card_constant_thermoelastic_1d",
           "[thermoelastic],[1D],[isotropic],[constant],[property]")
 {
     const uint dim = 1;
@@ -830,14 +830,14 @@ TEST_CASE("tube_element_property_card_constant_thermoelastic_1d",
 
     // Define Section Properties as MAST Parameters
     MAST::Parameter r_o("DIM1", 1.125);   // Outer radius
-    MAST::Parameter r_i("DIM2", 0.750);   // Inner radius
+    MAST::Parameter tth("DIM2", 0.375);  // Inner radius
     MAST::Parameter offset_y("offy_param", coff_y);     // Section offset in y-direction
     MAST::Parameter offset_z("offz_param", coff_z);     // Section offset in z-direction
 
     // Create field functions to dsitribute these constant parameters throughout the model
     // Section Property Field Functions
     MAST::ConstantFieldFunction DIM1_f("DIM1", r_o);
-    MAST::ConstantFieldFunction DIM2_f("DIM2", r_i);
+    MAST::ConstantFieldFunction DIM2_f("DIM2", tth);
     MAST::ConstantFieldFunction offsety_f("hy_off", offset_y);
     MAST::ConstantFieldFunction offsetz_f("hz_off", offset_z);
     // Material Property Field Functions
@@ -860,7 +860,7 @@ TEST_CASE("tube_element_property_card_constant_thermoelastic_1d",
     material.add(alpha_f);
 
     // Initialize the section
-    MAST::Solid1DTubeSectionElementPropertyCard section;
+    MAST::Solid1DTube2SectionElementPropertyCard section;
 
 
     // Add the section property constant field functions to the section card
@@ -882,7 +882,7 @@ TEST_CASE("tube_element_property_card_constant_thermoelastic_1d",
     
     // True values
     const Real ro = r_o();
-    const Real ri = r_i();
+    const Real ri = ro - tth();
     const Real area_true = PI*(pow(ro,2.0) - pow(ri,2.0));
     const Real first_area_moment_z_true = area_true * coff_y;
     const Real first_area_moment_y_true = area_true * coff_z;
@@ -995,7 +995,7 @@ TEST_CASE("tube_element_property_card_constant_thermoelastic_1d",
 }
 
 
-TEST_CASE("tube_element_property_card_constant_dynamic_1d",
+TEST_CASE("tube2_element_property_card_constant_dynamic_1d",
           "[dynamic],[1D],[isotropic],[constant],[property]")
 {
     const uint dim = 1;
@@ -1022,14 +1022,14 @@ TEST_CASE("tube_element_property_card_constant_dynamic_1d",
 
     // Define Section Properties as MAST Parameters
     MAST::Parameter r_o("DIM1", 1.125);   // Outer radius
-    MAST::Parameter r_i("DIM2", 0.750);   // Inner radius
+    MAST::Parameter tth("DIM2", 0.375);  // Inner radius
     MAST::Parameter offset_y("offy_param", coff_y);     // Section offset in y-direction
     MAST::Parameter offset_z("offz_param", coff_z);     // Section offset in z-direction
 
     // Create field functions to dsitribute these constant parameters throughout the model
     // Section Property Field Functions
     MAST::ConstantFieldFunction DIM1_f("DIM1", r_o);
-    MAST::ConstantFieldFunction DIM2_f("DIM2", r_i);
+    MAST::ConstantFieldFunction DIM2_f("DIM2", tth);
     MAST::ConstantFieldFunction offsety_f("hy_off", offset_y);
     MAST::ConstantFieldFunction offsetz_f("hz_off", offset_z);
     // Material Property Field Functions
@@ -1052,7 +1052,7 @@ TEST_CASE("tube_element_property_card_constant_dynamic_1d",
     material.add(alpha_f);
 
     // Initialize the section
-    MAST::Solid1DTubeSectionElementPropertyCard section;
+    MAST::Solid1DTube2SectionElementPropertyCard section;
 
 
     // Add the section property constant field functions to the section card
@@ -1074,7 +1074,7 @@ TEST_CASE("tube_element_property_card_constant_dynamic_1d",
     
     // True values
     const Real ro = r_o();
-    const Real ri = r_i();
+    const Real ri = ro - tth();
     const Real area_true = PI*(pow(ro,2.0) - pow(ri,2.0));
     const Real first_area_moment_z_true = area_true * coff_y;
     const Real first_area_moment_y_true = area_true * coff_z;
@@ -1119,6 +1119,7 @@ TEST_CASE("tube_element_property_card_constant_dynamic_1d",
         // Hard-coded value of the section's extension stiffness
         RealMatrixX D_sec_iner_true = RealMatrixX::Zero(6,6);
         
+        
         Real area;
         const MAST::FieldFunction<Real>& Area = section.A();
         Area(point, time, area);
@@ -1161,6 +1162,7 @@ TEST_CASE("tube_element_property_card_constant_dynamic_1d",
         
         D_sec_iner_true *= rho();
 
+
         // Convert the test and truth Eigen::Matrix objects to std::vector
         // since Catch2 has built in methods to compare vectors
         std::vector<double> test =  eigen_matrix_to_std_vector(D_sec_iner);
@@ -1174,7 +1176,7 @@ TEST_CASE("tube_element_property_card_constant_dynamic_1d",
 }
 
 
-TEST_CASE("tube_element_property_card_constant_structural_1d",
+TEST_CASE("tube2_element_property_card_constant_structural_1d",
           "[structural],[1D],[isotropic],[constant],[property]")
 {
     const uint dim = 1;
@@ -1201,14 +1203,14 @@ TEST_CASE("tube_element_property_card_constant_structural_1d",
 
     // Define Section Properties as MAST Parameters
     MAST::Parameter r_o("DIM1", 1.125);   // Outer radius
-    MAST::Parameter r_i("DIM2", 0.750);   // Inner radius
+    MAST::Parameter tth("DIM2", 0.375);  // Inner radius
     MAST::Parameter offset_y("offy_param", coff_y);     // Section offset in y-direction
     MAST::Parameter offset_z("offz_param", coff_z);     // Section offset in z-direction
 
     // Create field functions to dsitribute these constant parameters throughout the model
     // Section Property Field Functions
     MAST::ConstantFieldFunction DIM1_f("DIM1", r_o);
-    MAST::ConstantFieldFunction DIM2_f("DIM2", r_i);
+    MAST::ConstantFieldFunction DIM2_f("DIM2", tth);
     MAST::ConstantFieldFunction offsety_f("hy_off", offset_y);
     MAST::ConstantFieldFunction offsetz_f("hz_off", offset_z);
     // Material Property Field Functions
@@ -1231,7 +1233,7 @@ TEST_CASE("tube_element_property_card_constant_structural_1d",
     material.add(alpha_f);
 
     // Initialize the section
-    MAST::Solid1DTubeSectionElementPropertyCard section;
+    MAST::Solid1DTube2SectionElementPropertyCard section;
 
 
     // Add the section property constant field functions to the section card
@@ -1253,7 +1255,7 @@ TEST_CASE("tube_element_property_card_constant_structural_1d",
     
     // True values
     const Real ro = r_o();
-    const Real ri = r_i();
+    const Real ri = ro - tth();
     const Real area_true = PI*(pow(ro,2.0) - pow(ri,2.0));
     const Real first_area_moment_z_true = area_true * coff_y;
     const Real first_area_moment_y_true = area_true * coff_z;
