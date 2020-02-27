@@ -36,7 +36,7 @@ std::vector<double> eigen_matrix_to_std_vector(RealMatrixX M)
     return vec;
 }
 
-Real get_shoelace_area(RealMatrixX X)
+Real TEST::get_shoelace_area(RealMatrixX X)
 {
     Real true_volume = 0.0;
     uint n_nodes = X.cols();

@@ -17,6 +17,9 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+#ifndef __test__test_helpers__
+#define __test__test_helpers__
+
 #include "base/mast_data_types.h"
 #include "elasticity/structural_element_base.h"
 #include "base/physics_discipline_base.h"
@@ -28,11 +31,14 @@
  */
 std::vector<double> eigen_matrix_to_std_vector(RealMatrixX M);
 
+namespace TEST {
+
 /**
  * Calcualtes the area of a 2D polygon using the shoelace formula.
  */
-Real get_shoelace_area(RealMatrixX X);
+    Real get_shoelace_area(RealMatrixX X);
 
+}
 /**
  * Approximates the internal jacobian using a 6th order accurate central 
  * finite difference scheme.
@@ -93,4 +99,4 @@ void transform_element(libMesh::MeshBase& mesh, const RealMatrixX X0,
                         Real rotation_x, Real rotation_y, Real rotation_z,
                         Real shear_x = 0, Real shear_y = 0);
 
-
+#endif // __test__test_helpers__
