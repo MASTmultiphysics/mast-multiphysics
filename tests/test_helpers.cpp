@@ -30,7 +30,7 @@
 #define pi 3.14159265358979323846
 
 
-std::vector<double> eigen_matrix_to_std_vector(RealMatrixX M)
+std::vector<double> TEST::eigen_matrix_to_std_vector(RealMatrixX M)
 {
     std::vector<double> vec(M.data(), M.data()+M.rows()*M.cols());
     return vec;
@@ -50,7 +50,7 @@ Real TEST::get_shoelace_area(RealMatrixX X)
     return true_volume;
 }
 
-void approximate_internal_jacobian_with_finite_difference(
+void TEST::approximate_internal_jacobian_with_finite_difference(
                                     MAST::StructuralElementBase& elem, 
                                     const RealVectorX& initial_elem_solution, 
                                     RealMatrixX& jacobian)
@@ -105,7 +105,7 @@ void approximate_internal_jacobian_with_finite_difference(
 }
 
 
-void approximate_side_external_jacobian_with_finite_difference(
+void TEST::approximate_side_external_jacobian_with_finite_difference(
                                     MAST::StructuralElementBase& elem, 
                                     MAST::PhysicsDisciplineBase& discipline,
                                     const RealVectorX& initial_elem_solution, 
@@ -147,7 +147,7 @@ void approximate_side_external_jacobian_with_finite_difference(
 }
 
 
-void approximate_volume_external_jacobian_with_finite_difference(
+void TEST::approximate_volume_external_jacobian_with_finite_difference(
                                     MAST::StructuralElementBase& elem, 
                                     MAST::PhysicsDisciplineBase& discipline,
                                     const RealVectorX& initial_elem_solution, 
@@ -189,7 +189,7 @@ void approximate_volume_external_jacobian_with_finite_difference(
 }
 
 
-void approximate_inertial_jacobian_with_finite_difference(
+void TEST::approximate_inertial_jacobian_with_finite_difference(
                                     MAST::StructuralElementBase& elem, 
                                     const RealVectorX& initial_elem_accel, 
                                     RealMatrixX& jacobian)
@@ -244,7 +244,7 @@ void approximate_inertial_jacobian_with_finite_difference(
 }
 
 
-void approximate_thermal_jacobian_with_finite_difference(
+void TEST::approximate_thermal_jacobian_with_finite_difference(
                                     MAST::StructuralElementBase& elem, 
                                     const RealVectorX& initial_elem_solution, 
                                     RealMatrixX& jacobian,
@@ -300,7 +300,7 @@ void approximate_thermal_jacobian_with_finite_difference(
 }
 
 
-void transform_element(libMesh::MeshBase& mesh, const RealMatrixX X0, 
+void TEST::transform_element(libMesh::MeshBase& mesh, const RealMatrixX X0,
                         Real shift_x, Real shift_y, Real shift_z,
                         Real scale_x, Real scale_y,
                         Real rotation_x, Real rotation_y, Real rotation_z,

@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
 #ifndef __test__mast_mesh__
@@ -22,7 +22,6 @@
 
 // MAST includes
 #include "base/mast_data_types.h"
-#include "catch.hpp"
 
 // libMesh includes
 #include "libmesh/libmesh.h"
@@ -32,6 +31,7 @@
 #include "libmesh/edge_edge2.h"
 
 // Test includes
+#include "catch.hpp"
 #include "test_helpers.h"
 
 extern libMesh::LibMeshInit* p_global_init;
@@ -50,7 +50,7 @@ namespace TEST {
         // ---> currently can't run this with DistributedMesh. On second processor this.reference_elem doesn't exist!
 
         TestMeshSingleElement(libMesh::ElemType e_type, RealMatrixX& coordinates):
-                mesh(p_global_init->comm()) {
+            mesh(p_global_init->comm()) {
             n_elems = 1;
             n_nodes = coordinates.cols();
 
@@ -86,6 +86,13 @@ namespace TEST {
             }
 
             mesh.prepare_for_use();
+        };
+
+        void update_coordinates(RealMatrixX& new_coordinates) {
+            for (int i=0; i<n_nodes; i++)
+            {
+                *mesh.node_ptr(i) = libMesh::Point(new_coordinates(0,i), new_coordinates(1,i), new_coordinates(2,i));
+            }
         };
     };
 } // TEST namespace
