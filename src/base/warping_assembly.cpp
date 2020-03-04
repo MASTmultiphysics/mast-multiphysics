@@ -203,9 +203,9 @@ const warping_properties MAST::WarpingAssembly::calculate_warping_properties(
         
     const libMesh::MeshBase::const_element_iterator end_el = nonlin_sys.get_mesh().elements_end();
     
-    Real kappa_x  = 0.0;
-    Real kappa_y  = 0.0;
-    Real kappa_xy = 0.0;
+    Real k_x  = 0.0;
+    Real k_y  = 0.0;
+    Real k_xy = 0.0;
     
     Real inv_kappa_x  = 0.0;
     Real inv_kappa_y  = 0.0;
@@ -255,9 +255,9 @@ const warping_properties MAST::WarpingAssembly::calculate_warping_properties(
             //we(i) = Omega(dof_indices[i]);
             //psie(i) = Psi(dof_indices[i]);
             //phie(i) = Phi(dof_indices[i]);
-            we(i) = (*localized_Omega)(dof_indices[i]);
-            psie(i) = (*localized_Psi)(dof_indices[i]);
-            phie(i) = (*localized_Phi)(dof_indices[i]);
+            we(i) = -(*localized_Omega)(dof_indices[i]);
+            psie(i) = -(*localized_Psi)(dof_indices[i]);
+            phie(i) = -(*localized_Phi)(dof_indices[i]);
         }
         
         // Loop over quadrature points
@@ -302,6 +302,7 @@ const warping_properties MAST::WarpingAssembly::calculate_warping_properties(
             
             RealVectorX v = B*psie - nu/2.0 * d;
             RealVectorX w = B*phie - nu/2.0 * h;
+            
             inv_kappa_x  += JxW[qp] * v.transpose().dot(v) / (delta_s*delta_s);
             inv_kappa_y  += JxW[qp] * w.transpose().dot(w) / (delta_s*delta_s);
             inv_kappa_xy += JxW[qp] * v.transpose().dot(w) / (delta_s*delta_s);
@@ -312,8 +313,16 @@ const warping_properties MAST::WarpingAssembly::calculate_warping_properties(
     // TODO: This isn't quite correct below because it doesn't account for a 
     // changing value of nu like is done above when looping through elements
     // and quadrature points.
-    wp.xs -= F_warp.dot(Phi)/delta_s;
-    wp.ys += F_warp.dot(Psi)/delta_s;
+    libMesh::out << "Ixxc = " << Ixxc << std::endl;
+    libMesh::out << "Iyyc = " << Iyyc << std::endl;
+    libMesh::out << "Ixyc = " << Ixyc << std::endl;
+    libMesh::out << "delta_s = " << delta_s << std::endl;
+    libMesh::out << "x_se_1 = " << wp.xs << std::endl;
+    libMesh::out << "y_se_1 = " << wp.ys << std::endl;
+    wp.xs += -F_warp.dot(Phi)/delta_s;
+    wp.ys +=  F_warp.dot(Psi)/delta_s;
+    libMesh::out << "x_se_2 = " << (-F_warp.dot(Phi)/delta_s) << std::endl;
+    libMesh::out << "y_se_2 = " << (F_warp.dot(Psi)/delta_s) << std::endl;
     //wp.xs -= localized_F_warp->dot(*localized_Phi)/delta_s;
     //wp.ys += localized_F_warp->dot(*localized_Psi)/delta_s;
     
@@ -333,6 +342,7 @@ const warping_properties MAST::WarpingAssembly::calculate_warping_properties(
     Real denom = Ixxc*Iyyc - Ixyc*Ixyc;
     wp.xs_t = (Ixyc * wp.Ixw - Iyyc * wp.Iyw) / denom;
     wp.ys_t = (Ixxc * wp.Ixw - Ixyc * wp.Iyw) / denom;
+    
     wp.gamma = wp.Iw - wp.Qw * wp.Qw / A - wp.ys * wp.Ixw + wp.xs * wp.Iyw;
     
     wp.kappa_x = 1.0/(A*inv_kappa_x);
@@ -347,6 +357,8 @@ const warping_properties MAST::WarpingAssembly::calculate_warping_properties(
     wp.ys_t += yc;
     wp.xs += xc;
     wp.ys += yc;
+    libMesh::out << "wp.xs = " << wp.xs << std::endl;
+    libMesh::out << "wp.ys = " << wp.ys << std::endl;
     
     return wp;
 }
@@ -465,11 +477,11 @@ get_loads(libMesh::NumericVector<Real>& F_warp,
         F_warp.add_vector(vec, dof_indices);
         vec.zero();
         
-        MAST::copy(vec, f_shear_x_e);
+        MAST::copy(vec, -f_shear_x_e);
         F_shearx.add_vector(vec, dof_indices);
         vec.zero();
         
-        MAST::copy(vec, f_shear_y_e);
+        MAST::copy(vec, -f_shear_y_e);
         F_sheary.add_vector(vec, dof_indices);
         vec.zero();
         
