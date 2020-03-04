@@ -297,8 +297,10 @@ MAST::Solid1DTube2SectionElementPropertyCard::get_stress_points_derivative(const
 }
 
 
-void MAST::Solid1DTube2SectionElementPropertyCard::init(const libMesh::LibMeshInit& init) {
-    
+void MAST::Solid1DTube2SectionElementPropertyCard::init(const libMesh::LibMeshInit& init,
+                                                        const uint n_target_elems,
+                                                        const libMesh::ElemType element_type) 
+{
     libmesh_assert(!_initialized);
     
     MAST::FieldFunction<Real>
@@ -321,7 +323,7 @@ void MAST::Solid1DTube2SectionElementPropertyCard::init(const libMesh::LibMeshIn
     }
     
     // Create a cross section model of this section
-    cross_section.reset(new MAST::CrossSection(init, 3500, *this, libMesh::TRI6));
+    cross_section.reset(new MAST::CrossSection(init, n_target_elems, *this, element_type));
     
     _A.reset(new MAST::Solid1D2ParameterSectionProperty::Area(MAST::Solid1DTube2SectionProperty::calcA,
                                                               MAST::Solid1DTube2SectionProperty::calcdA,

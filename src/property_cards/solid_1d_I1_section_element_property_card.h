@@ -103,7 +103,9 @@ namespace MAST {
          */
         virtual ~Solid1DI1SectionElementPropertyCard() { }
         
-        virtual void init(const libMesh::LibMeshInit& init); 
+        virtual void init(const libMesh::LibMeshInit& init,
+                          const uint n_target_elems=3500,
+                          const libMesh::ElemType element_type=libMesh::TRI6);
         
         virtual void create_cross_section(
             const libMesh::LibMeshInit& init,
