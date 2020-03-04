@@ -40,16 +40,18 @@ int main(int argc, const char** argv)
     // Initialize llibMesh Library
     libMesh::LibMeshInit init(argc, argv);
     
-    const uint dim = 1;
+    // The target number of elements to be used in the mesh of the cross 
+    // section.  The section is meshed with triangle which only allows you to
+    // specified a desired area for an individual element and not a number of 
+    // elements, so the number of elements in the section mesh won't match this
+    // exactly.
+    const uint n_target_elements = 3000;
         
     // Define Material Properties as MAST Parameters
-    MAST::Parameter rho("rho_param", 1420.5);         // Density
-    MAST::Parameter E("E_param", 72.0e9);             // Modulus of Elasticity
+    // For a cross section property analysis, only Poisson's ratio is required,
+    // although this could change if a cross section has different properties
+    // throughout the section (i.e. a composite section).
     MAST::Parameter nu("nu_param", 0.33);             // Poisson's ratio
-    MAST::Parameter cp("cp_param",   908.0);          // Specific Heat Capacity
-    MAST::Parameter k("k_param",     237.0);          // Thermal Conductivity
-    
-    const Real G = E() / (2. * (1. + nu()));
     
     // Define Section Properties as MAST Parameters
     MAST::Parameter DIM1("DIM1", 3.234);
@@ -68,20 +70,12 @@ int main(int argc, const char** argv)
     MAST::ConstantFieldFunction offsety_f("hy_off", offset_y);
     MAST::ConstantFieldFunction offsetz_f("hz_off", offset_z);
     // Material Property Field Functions
-    MAST::ConstantFieldFunction rho_f("rho", rho);
-    MAST::ConstantFieldFunction E_f("E", E);
     MAST::ConstantFieldFunction nu_f("nu", nu);
-    MAST::ConstantFieldFunction cp_f("cp", cp);
-    MAST::ConstantFieldFunction k_f("k_th", k);
     
     // Initialize the material
     MAST::IsotropicMaterialPropertyCard material;                   
     
     // Add the material property constant field functions to the material card
-    material.add(rho_f);
-    material.add(k_f);
-    material.add(cp_f);
-    material.add(E_f);
     material.add(nu_f);
     
     // Initialize the section
@@ -102,7 +96,7 @@ int main(int argc, const char** argv)
     section.y_vector() = orientation;
     
     // Now initialize the section
-    section.init(init);
+    section.init(init, n_target_elements);
     
     const libMesh::Point point(4.3, -3.5, -6.7);
     const Real time = 8.22;
@@ -186,6 +180,11 @@ int main(int argc, const char** argv)
     WarpingConstant.derivative(DIM1, point, time, dW);
     properties_out << "Warping Constant" << "W" << std::to_string(W) << fort::endr;
     dproperties_out << "dW" << std::to_string(dW) << fort::endr;
+    
+    // Get shear center
+    const libMesh::Point shear_center = section.get_shear_center(point, time);
+    properties_out << "Shear Center" << "z_sc" << std::to_string(shear_center(0)) << fort::endr;
+    properties_out << "Shear Center" << "y_sc" << std::to_string(shear_center(1)) << fort::endr;
     
     libMesh::out << "\nProperty Values:\n" << properties_out.to_string() << std::endl;
     

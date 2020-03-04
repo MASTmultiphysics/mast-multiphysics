@@ -262,8 +262,10 @@ MAST::Solid1DBarSectionElementPropertyCard::get_stress_points_derivative(const M
 };
 
 
-void MAST::Solid1DBarSectionElementPropertyCard::init(const libMesh::LibMeshInit& init) {
-    
+void MAST::Solid1DBarSectionElementPropertyCard::init(const libMesh::LibMeshInit& init,
+                                                      const uint n_target_elems,
+                                                      const libMesh::ElemType element_type) 
+{
     libmesh_assert(!_initialized);
     
     MAST::FieldFunction<Real>
@@ -283,7 +285,7 @@ void MAST::Solid1DBarSectionElementPropertyCard::init(const libMesh::LibMeshInit
     }
     
     // Create a cross section model of this section
-    cross_section.reset(new MAST::CrossSection(init, 3500, *this, libMesh::TRI6));
+    cross_section.reset(new MAST::CrossSection(init, n_target_elems, *this, element_type));
     
     _A.reset(new MAST::Solid1DnParameterSectionProperty::Area(*cross_section));
     

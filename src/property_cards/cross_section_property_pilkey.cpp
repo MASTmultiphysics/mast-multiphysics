@@ -129,6 +129,11 @@ public:
         ierr = SNESLineSearchSetDamping(linesearch, 1.0);
         CHKERRABORT(_petsc_nonlinear_solver.comm().get(), ierr);
         
+        // Disable the SNES monitor to prevent information about this solve 
+        // being printed to screen
+        ierr = SNESMonitorCancel(_petsc_nonlinear_solver.snes());
+        CHKERRABORT(_petsc_nonlinear_solver.comm().get(), ierr);
+        
         /**
          * Recall that a nonlinear solver essentially linearizes a nonlinear
          * system and does iterative linear solves until it converges to the 
@@ -152,6 +157,17 @@ public:
         CHKERRABORT(_petsc_nonlinear_solver.comm().get(), ierr);
         
         ierr = PCFactorSetMatSolverType(pc, MATSOLVERMUMPS);
+        CHKERRABORT(_petsc_nonlinear_solver.comm().get(), ierr);
+        
+        // Now set these values from options in case the user wants to override
+        // any of this from the command line
+        ierr = SNESSetFromOptions(_petsc_nonlinear_solver.snes());
+        CHKERRABORT(_petsc_nonlinear_solver.comm().get(), ierr);
+        
+        ierr = KSPSetFromOptions(ksp);
+        CHKERRABORT(_petsc_nonlinear_solver.comm().get(), ierr);
+        
+        ierr = PCSetFromOptions(pc);
         CHKERRABORT(_petsc_nonlinear_solver.comm().get(), ierr);
     }
     
@@ -458,11 +474,11 @@ void MAST::CrossSection::_update_warping_geometry(const libMesh::Point& p, const
     if ((geometry_points == _geometry_points) and (hole_list == _hole_list) and (_warping_calculated))
     {
         // Geometry did not change, no need to redo calculations.
-        libMesh::out << "Geometry the same. SKIPPING warping update." << std::endl;
+        //libMesh::out << "Geometry the same. SKIPPING warping update." << std::endl;
     }
     else
     {
-        libMesh::out << "Geometry is different. UPDATING warping." << std::endl;
+        //libMesh::out << "Geometry is different. UPDATING warping." << std::endl;
         // Geometry did change, need to re-run calculations
         _warping_calculated = false;
         _geometry_points = geometry_points;
@@ -474,7 +490,6 @@ void MAST::CrossSection::_update_warping_geometry(const libMesh::Point& p, const
                                                 *_Phi, _A, _Ixxc, _Iyyc, _Ixyc,
                                                 _Cx, _Cy);
         _warping_calculated = true;
-        libMesh::out << "Done updating warping." << std::endl;
     }
 }
 
@@ -1052,6 +1067,7 @@ void MAST::CrossSection::_build_model(const libMesh::Point& p, const Real t)
     _discipline.reset(new MAST::PhysicsDisciplineBase(*_equation_systems));
     
     _equation_systems->init();
+    //_equation_systems->print_info();
     
     _parameters["th"].reset(new MAST::Parameter("th", 1.0));
     _parameters["zero"].reset(new MAST::Parameter("zero", 0.0));
@@ -1088,9 +1104,18 @@ void MAST::CrossSection::_build_model(const libMesh::Point& p, const Real t)
     
     // Shift the mesh so that the global axis lies on the centroid.
     libMesh::Point centroid(_gp.xc, _gp.yc, 0.0);
+    
+    /**
+     *  NOTE: Looping over only the local nodes results an incocrrect shift 
+     * because the mesh is only shifted for the processors share of the mesh, 
+     * instead of the total mesh.
+     */
     for (auto& node_ptr : _mesh->node_ptr_range())
     {
+//         libMesh::out << "NID: " << node_ptr->id() << " PID: " << node_ptr->processor_id() << " Before\n" << *node_ptr << std::endl;
+//         libMesh::out << "centroid = " << centroid << std::endl;
         node_ptr->subtract(centroid);
+//         libMesh::out << "NID: " << node_ptr->id() << " PID: " << node_ptr->processor_id() << " After\n" << *node_ptr << std::endl;
     }
     
     // Zero the solution before solving

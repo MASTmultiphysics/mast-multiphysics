@@ -209,11 +209,13 @@ namespace MAST {
             const libMesh::NumericVector<Real>& Phi, 
             const Real A, const Real Ixxc, const Real Iyyc, const Real Ixyc,
             const Real xc, const Real yc) const;
+            
+        std::unique_ptr<libMesh::NumericVector<Real>> build_localized_vector(
+            const libMesh::System& sys, 
+            const libMesh::NumericVector<Real>& global) const;
         
     protected:
-        
 
-        
         /*!
          *    this object, if non-NULL is user-provided to perform actions
          *    after assembly and before returning to the solver

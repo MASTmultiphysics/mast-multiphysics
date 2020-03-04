@@ -39,7 +39,7 @@ MAST::SystemInitialization(sys, prefix)
     _vars[0] = sys.add_variable(nm, fe_type);
     
     nm = prefix + "_lambda";
-    _vars[1] = sys.add_variable(nm, fe_type.order, libMesh::SCALAR);
+    _vars[1] = sys.add_variable(nm, libMesh::FIRST, libMesh::SCALAR);
 }
 
 

@@ -39,7 +39,6 @@
 #include "libmesh/petsc_matrix.h"
 
 
-
 MAST::WarpingAssembly::
 WarpingAssembly():MAST::AssemblyBase(),
 _post_assembly           (nullptr),
@@ -49,11 +48,9 @@ _first_iter_res_l2_norm  (-1.) {
 }
 
 
-
 MAST::WarpingAssembly::~WarpingAssembly() {
     
 }
-
 
 
 void
@@ -81,10 +78,16 @@ const geometric_properties MAST::WarpingAssembly::calculate_geometric_properties
     geometric_properties gp;
     
     MAST::NonlinearSystem& nonlin_sys = _system->system();
+    
+    /**
+     *  NOTE: Looping over only the local elements results in inncorrect 
+     * properties because the properties are only calculated for the processors
+     * share of the mesh, instead of the total mesh.  I wasn't sure how to sum
+     * the separate parts together, so I loop over all elements instead.
+     */
+    libMesh::MeshBase::const_element_iterator el = nonlin_sys.get_mesh().elements_begin();
         
-    libMesh::MeshBase::const_element_iterator el = nonlin_sys.get_mesh().active_local_elements_begin();
-        
-    const libMesh::MeshBase::const_element_iterator end_el = nonlin_sys.get_mesh().active_local_elements_end();
+    const libMesh::MeshBase::const_element_iterator end_el = nonlin_sys.get_mesh().elements_end();
     
     for ( ; el != end_el; ++el) 
     {
@@ -144,7 +147,7 @@ const geometric_properties MAST::WarpingAssembly::calculate_geometric_properties
             gp.Ixy += JxW[qp] * Nye * Nxe;
         } // end loop over quadrature points
     } // end loop over elements
-
+    
     gp.xc = gp.Qy/gp.A;
     gp.yc = gp.Qx/gp.A;
 
@@ -184,9 +187,21 @@ const warping_properties MAST::WarpingAssembly::calculate_warping_properties(
     const uint w_var = _system->system().variable_number("warping_w");
     const uint lambda_var = _system->system().variable_number("warping_lambda");
     
-    libMesh::MeshBase::const_element_iterator el = nonlin_sys.get_mesh().active_local_elements_begin();
+    std::unique_ptr<libMesh::NumericVector<Real>> localized_F_warp;
+    localized_F_warp.reset(build_localized_vector(nonlin_sys, F_warp).release());
+    
+    std::unique_ptr<libMesh::NumericVector<Real>> localized_Omega;
+    localized_Omega.reset(build_localized_vector(nonlin_sys, Omega).release());
+    
+    std::unique_ptr<libMesh::NumericVector<Real>> localized_Psi;
+    localized_Psi.reset(build_localized_vector(nonlin_sys, Psi).release());
+    
+    std::unique_ptr<libMesh::NumericVector<Real>> localized_Phi;
+    localized_Phi.reset(build_localized_vector(nonlin_sys, Phi).release());
+    
+    libMesh::MeshBase::const_element_iterator el = nonlin_sys.get_mesh().elements_begin();
         
-    const libMesh::MeshBase::const_element_iterator end_el = nonlin_sys.get_mesh().active_local_elements_end();
+    const libMesh::MeshBase::const_element_iterator end_el = nonlin_sys.get_mesh().elements_end();
     
     Real kappa_x  = 0.0;
     Real kappa_y  = 0.0;
@@ -232,13 +247,17 @@ const warping_properties MAST::WarpingAssembly::calculate_warping_properties(
         RealVectorX we =  RealVectorX::Zero(n_nodes);
         RealVectorX psie =  RealVectorX::Zero(n_nodes);
         RealVectorX phie =  RealVectorX::Zero(n_nodes);
+        
         for (uint i=0; i<n_nodes; i++) // Loop over nodes belonging to element
         {
 //             xe(i) = elem->point(i)(0);
 //             ye(i) = elem->point(i)(1);
-            we(i) = Omega(dof_indices[i]);
-            psie(i) = Psi(dof_indices[i]);
-            phie(i) = Phi(dof_indices[i]);
+            //we(i) = Omega(dof_indices[i]);
+            //psie(i) = Psi(dof_indices[i]);
+            //phie(i) = Phi(dof_indices[i]);
+            we(i) = (*localized_Omega)(dof_indices[i]);
+            psie(i) = (*localized_Psi)(dof_indices[i]);
+            phie(i) = (*localized_Phi)(dof_indices[i]);
         }
         
         // Loop over quadrature points
@@ -295,6 +314,9 @@ const warping_properties MAST::WarpingAssembly::calculate_warping_properties(
     // and quadrature points.
     wp.xs -= F_warp.dot(Phi)/delta_s;
     wp.ys += F_warp.dot(Psi)/delta_s;
+    //wp.xs -= localized_F_warp->dot(*localized_Phi)/delta_s;
+    //wp.ys += localized_F_warp->dot(*localized_Psi)/delta_s;
+    
 //     std::unique_ptr<libMesh::NumericVector<Real>> scaled_F_warp = F_warp.clone();
 //     uint i=0;
 //     for (const auto node_ptr : nonlin_sys.get_mesh().node_ptr_range())
@@ -352,9 +374,15 @@ get_loads(libMesh::NumericVector<Real>& F_warp,
     const uint w_var = _system->system().variable_number("warping_w");
     const uint lambda_var = _system->system().variable_number("warping_lambda");
     
+    F_warp.zero();
+    F_shearx.zero();
+    F_sheary.zero();
+    
     for ( ; el != end_el; ++el) 
     {
         const libMesh::Elem* elem = *el;
+        
+        dof_map.dof_indices(elem, dof_indices, w_var);
         
         MAST::GeomElem geom_elem;
         geom_elem.init(*elem, *_system);
@@ -364,8 +392,6 @@ get_loads(libMesh::NumericVector<Real>& F_warp,
             
         const MAST::FieldFunction<Real>& nu_f = property.get_material().get<MAST::FieldFunction<Real>>("nu");
             
-        dof_map.dof_indices(elem, dof_indices, w_var);
-        
         /** Default number of quadrature points for second order triangular 
          * elements is 7.  We only need six for full integration of section 
          * properties. So, we set the number of extra quadrature points to -1 
@@ -432,16 +458,20 @@ get_loads(libMesh::NumericVector<Real>& F_warp,
             f_shear_y_e += JxW[qp] * (  nu/2. * B.transpose() * h + 2.0*(1.0+nu) * N * (Iyyc*Nye - Ixyc*Nxe) );
         } // end loop over quadrature points
         
-        DenseRealVector v;
+        DenseRealVector vec;
+        vec.zero();
         
-        MAST::copy(v, -f_warp_e);
-        F_warp.add_vector(v, dof_indices);
+        MAST::copy(vec, -f_warp_e);
+        F_warp.add_vector(vec, dof_indices);
+        vec.zero();
         
-        MAST::copy(v, f_shear_x_e);
-        F_shearx.add_vector(v, dof_indices);
+        MAST::copy(vec, f_shear_x_e);
+        F_shearx.add_vector(vec, dof_indices);
+        vec.zero();
         
-        MAST::copy(v, f_shear_y_e);
-        F_sheary.add_vector(v, dof_indices);
+        MAST::copy(vec, f_shear_y_e);
+        F_sheary.add_vector(vec, dof_indices);
+        vec.zero();
         
         dof_indices.clear();
     } // end loop over elements
@@ -452,7 +482,6 @@ get_loads(libMesh::NumericVector<Real>& F_warp,
 } // end get_loads() function
 
 
-
 // /**
 //  *  Need w (omega) to calculate:
 //  *      Jt, Ixw, Iyw, xs_t, ys_t, Qw, Iw, Gamma_t
@@ -460,7 +489,6 @@ get_loads(libMesh::NumericVector<Real>& F_warp,
 //  *  Need Psi and Theta to calculate:
 //  *      xs, ys, Gamma, kappa_x, kappa_y, kappa_xy
 //  */
-
 void
 MAST::WarpingAssembly::
 residual_and_jacobian (const libMesh::NumericVector<Real>& X,
@@ -541,8 +569,7 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
         //_check_element_numerical_jacobian(*physics_elem, sol);
         
         // perform the element level calculations
-        ops.elem_calculations(J!=nullptr?true:false,
-                                              vec, mat);
+        ops.elem_calculations(J!=nullptr?true:false, vec, mat);        
         
 //        physics_elem->detach_active_solution_function();
 
@@ -556,14 +583,14 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
         if (J)
             MAST::copy(m, mat);
 
-        // constrain the quantities to account for hanging dofs,
-        // Dirichlet constraints, etc.
-        if (R && J)
-            dof_map.constrain_element_matrix_and_vector(m, v, dof_indices);
-        else if (R)
-            dof_map.constrain_element_vector(v, dof_indices);
-        else
-            dof_map.constrain_element_matrix(m, dof_indices);
+//         // constrain the quantities to account for hanging dofs,
+//         // Dirichlet constraints, etc.
+//         if (R && J)
+//             dof_map.constrain_element_matrix_and_vector(m, v, dof_indices);
+//         else if (R)
+//             dof_map.constrain_element_vector(v, dof_indices);
+//         else
+//             dof_map.constrain_element_matrix(m, dof_indices);
         
         // add to the global matrices
         if (R) R->add_vector(v, dof_indices);
@@ -571,13 +598,14 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
         dof_indices.clear();
     }
     
-    if (J)
+    if ((J))
     {
         uint n = J->n();
         for (uint i=0; i<n-1; i++)
         {
-            J->add(n-1,i,1.0);
-            J->add(i,n-1,1.0);
+            Real val = 1.0/_system->system().comm().size();
+            J->add(n-1,i,val);
+            J->add(i,n-1,val);
         }
         //J->add(J->m()-1, J->n()-1, 1.5e-08);
     }
@@ -605,10 +633,16 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
     }
     
     if (J && close_matrix) J->close();
+    
+    //if (J) 
+    //{
+    //    libMesh::out << std::endl;
+    //    J->print(libMesh::out, true);
+    //    J->print_matlab("/home/neiferd/Kwarp.mat");
+    //    libMesh::out << std::endl;
+    //}
 }
-
-
-
+// 
 
 void
 MAST::WarpingAssembly::
@@ -617,9 +651,8 @@ linearized_jacobian_solution_product (const libMesh::NumericVector<Real>& X,
                                       libMesh::NumericVector<Real>& JdX,
                                       libMesh::NonlinearImplicitSystem& S) 
 {
-    libmesh_error_msg("linearized_jacobian_solution_product not implemented in warping_assembly.cpp");
+    libmesh_error_msg("Not implemented.; " << __PRETTY_FUNCTION__ << " in " << __FILE__ << " at line " << __LINE__);
 }
-
 
 
 void
@@ -629,11 +662,8 @@ second_derivative_dot_solution_assembly (const libMesh::NumericVector<Real>& X,
                                          libMesh::SparseMatrix<Real>& d_JdX_dX,
                                          libMesh::NonlinearImplicitSystem& S) 
 {
-    libmesh_error_msg("second_derivative_dot_solution_assembly not implemented in warping_assembly.cpp");
+    libmesh_error_msg("Not implemented.; " << __PRETTY_FUNCTION__ << " in " << __FILE__ << " at line " << __LINE__);
 }
-
-
-
 
 
 bool
@@ -641,7 +671,7 @@ MAST::WarpingAssembly::
 sensitivity_assemble (const MAST::FunctionBase& f,
                       libMesh::NumericVector<Real>& sensitivity_rhs) 
 {
-    libmesh_error_msg("sensitivity_assemble not implemented in warping_assembly.cpp");
+    libmesh_error_msg("Not implemented.; " << __PRETTY_FUNCTION__ << " in " << __FILE__ << " at line " << __LINE__);
     
     libmesh_assert(_system);
     libmesh_assert(_discipline);
@@ -791,10 +821,28 @@ sensitivity_assemble (const MAST::FunctionBase& f,
     return true;
 }
 
+
+std::unique_ptr<libMesh::NumericVector<Real>> 
+MAST::WarpingAssembly::build_localized_vector(const libMesh::System& sys,
+    const libMesh::NumericVector<Real>& global) const 
+{
+    
+    libMesh::NumericVector<Real>* local = 
+        libMesh::NumericVector<Real>::build(sys.comm()).release();
+
+    local->init(sys.n_dofs(),
+                sys.n_dofs());
+    global.localize(*local);
+    
+    return std::unique_ptr<libMesh::NumericVector<Real> >(local);
+}
+
+
 void MAST::WarpingAssembly::set_force_jacobian_symmetry(bool tf)
 {
     _force_jacobian_symmetry = tf;
 }
+
 
 const bool MAST::WarpingAssembly::get_force_jacobian_symmetry() const
 {
