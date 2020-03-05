@@ -47,8 +47,8 @@ TEST_CASE("constant_orthotropic_thermoelastic_material_1d",
         
         // Convert the test and truth Eigen::Matrix objects to std::vector
         // since Catch2 has built in methods to compare vectors
-        std::vector<double> test =  eigen_matrix_to_std_vector(D_texp);
-        std::vector<double> truth = eigen_matrix_to_std_vector(D_texp_true);
+        std::vector<double> test =  TEST::eigen_matrix_to_std_vector(D_texp);
+        std::vector<double> truth = TEST::eigen_matrix_to_std_vector(D_texp_true);
         
         // Floating point approximations are diffcult to compare since the
         // values typically aren't exactly equal due to numerical error.
@@ -98,8 +98,8 @@ TEST_CASE("constant_orthotropic_structural_material_1d",
         
         // Convert the test and truth Eigen::Matrix objects to std::vector
         // since Catch2 has built in methods to compare vectors
-        std::vector<double> test =  eigen_matrix_to_std_vector(D);
-        std::vector<double> truth = eigen_matrix_to_std_vector(D_true);
+        std::vector<double> test =  TEST::eigen_matrix_to_std_vector(D);
+        std::vector<double> truth = TEST::eigen_matrix_to_std_vector(D_true);
         
         // Floating point approximations are diffcult to compare since the
         // values typically aren't exactly equal due to numerical error.
@@ -154,8 +154,8 @@ TEST_CASE("constant_orthotropic_heat_transfer_material_1d",
         
         // Convert the test and truth Eigen::Matrix objects to std::vector
         // since Catch2 has built in methods to compare vectors
-        std::vector<double> test = eigen_matrix_to_std_vector(D_k);
-        std::vector<double> truth = eigen_matrix_to_std_vector(D_k_true);
+        std::vector<double> test = TEST::eigen_matrix_to_std_vector(D_k);
+        std::vector<double> truth = TEST::eigen_matrix_to_std_vector(D_k_true);
         
         // Floating point approximations are diffcult to compare since the
         // values typically aren't exactly equal due to numerical error.
@@ -215,8 +215,8 @@ TEST_CASE("constant_orthotropic_transient_heat_transfer_material_1d",
         
         // Convert the test and truth Eigen::Matrix objects to std::vector
         // since Catch2 has built in methods to compare vectors
-        std::vector<double> test = eigen_matrix_to_std_vector(D_cp);
-        std::vector<double> truth = eigen_matrix_to_std_vector(D_cp_true);
+        std::vector<double> test = TEST::eigen_matrix_to_std_vector(D_cp);
+        std::vector<double> truth = TEST::eigen_matrix_to_std_vector(D_cp_true);
         
         // Floating point approximations are diffcult to compare since the
         // values typically aren't exactly equal due to numerical error.
@@ -267,8 +267,8 @@ TEST_CASE("constant_orthotropic_thermoelastic_material_2d",
         
         // Convert the test and truth Eigen::Matrix objects to std::vector
         // since Catch2 has built in methods to compare vectors
-        std::vector<double> test =  eigen_matrix_to_std_vector(D_texp);
-        std::vector<double> truth = eigen_matrix_to_std_vector(D_texp_true);
+        std::vector<double> test =  TEST::eigen_matrix_to_std_vector(D_texp);
+        std::vector<double> truth = TEST::eigen_matrix_to_std_vector(D_texp_true);
         
         // Floating point approximations are diffcult to compare since the
         // values typically aren't exactly equal due to numerical error.
@@ -352,8 +352,8 @@ TEST_CASE("constant_orthotropic_structural_material_2d",
         
         // Convert the test and truth Eigen::Matrix objects to std::vector
         // since Catch2 has built in methods to compare vectors
-        std::vector<double> test =  eigen_matrix_to_std_vector(K_mat.transpose());
-        std::vector<double> truth = eigen_matrix_to_std_vector(K_mat);
+        std::vector<double> test =  TEST::eigen_matrix_to_std_vector(K_mat.transpose());
+        std::vector<double> truth = TEST::eigen_matrix_to_std_vector(K_mat);
         
         // Floating point approximations are diffcult to compare since the
         // values typically aren't exactly equal due to numerical error.
@@ -382,8 +382,8 @@ TEST_CASE("constant_orthotropic_structural_material_2d",
         
         // Convert the test and truth Eigen::Matrix objects to std::vector
         // since Catch2 has built in methods to compare vectors
-        test =  eigen_matrix_to_std_vector(K_mat);
-        truth = eigen_matrix_to_std_vector(K_mat_true);
+        test =  TEST::eigen_matrix_to_std_vector(K_mat);
+        truth = TEST::eigen_matrix_to_std_vector(K_mat_true);
         
         // Floating point approximations are diffcult to compare since the
         // values typically aren't exactly equal due to numerical error.
@@ -406,8 +406,8 @@ TEST_CASE("constant_orthotropic_structural_material_2d",
         
         // Convert the test and truth Eigen::Matrix objects to std::vector
         // since Catch2 has built in methods to compare vectors
-        std::vector<double> test =  eigen_matrix_to_std_vector(K_mat.transpose());
-        std::vector<double> truth = eigen_matrix_to_std_vector(K_mat);
+        std::vector<double> test =  TEST::eigen_matrix_to_std_vector(K_mat.transpose());
+        std::vector<double> truth = TEST::eigen_matrix_to_std_vector(K_mat);
         
         // Floating point approximations are diffcult to compare since the
         // values typically aren't exactly equal due to numerical error.
@@ -436,8 +436,8 @@ TEST_CASE("constant_orthotropic_structural_material_2d",
         
         // Convert the test and truth Eigen::Matrix objects to std::vector
         // since Catch2 has built in methods to compare vectors
-        test =  eigen_matrix_to_std_vector(K_mat);
-        truth = eigen_matrix_to_std_vector(K_mat_true);
+        test =  TEST::eigen_matrix_to_std_vector(K_mat);
+        truth = TEST::eigen_matrix_to_std_vector(K_mat_true);
         
         // Floating point approximations are diffcult to compare since the
         // values typically aren't exactly equal due to numerical error.
@@ -524,8 +524,8 @@ TEST_CASE("constant_orthotropic_heat_transfer_material_2d",
         
         // Convert the test and truth Eigen::Matrix objects to std::vector
         // since Catch2 has built in methods to compare vectors
-        std::vector<double> test = eigen_matrix_to_std_vector(D_k);
-        std::vector<double> truth = eigen_matrix_to_std_vector(D_k_true);
+        std::vector<double> test = TEST::eigen_matrix_to_std_vector(D_k);
+        std::vector<double> truth = TEST::eigen_matrix_to_std_vector(D_k_true);
         
         // Floating point approximations are diffcult to compare since the
         // values typically aren't exactly equal due to numerical error.
@@ -585,8 +585,8 @@ TEST_CASE("constant_orthotropic_transient_heat_transfer_material_2d",
         
         // Convert the test and truth Eigen::Matrix objects to std::vector
         // since Catch2 has built in methods to compare vectors
-        std::vector<double> test = eigen_matrix_to_std_vector(D_cp);
-        std::vector<double> truth = eigen_matrix_to_std_vector(D_cp_true);
+        std::vector<double> test = TEST::eigen_matrix_to_std_vector(D_cp);
+        std::vector<double> truth = TEST::eigen_matrix_to_std_vector(D_cp_true);
         
         // Floating point approximations are diffcult to compare since the
         // values typically aren't exactly equal due to numerical error.
@@ -642,8 +642,8 @@ TEST_CASE("constant_orthotropic_thermoelastic_material_3d",
         
         // Convert the test and truth Eigen::Matrix objects to std::vector
         // since Catch2 has built in methods to compare vectors
-        std::vector<double> test =  eigen_matrix_to_std_vector(D_texp);
-        std::vector<double> truth = eigen_matrix_to_std_vector(D_texp_true);
+        std::vector<double> test =  TEST::eigen_matrix_to_std_vector(D_texp);
+        std::vector<double> truth = TEST::eigen_matrix_to_std_vector(D_texp_true);
         
         // Floating point approximations are diffcult to compare since the
         // values typically aren't exactly equal due to numerical error.
@@ -737,8 +737,8 @@ TEST_CASE("constant_orthotropic_structural_material_3d",
         
         // Convert the test and truth Eigen::Matrix objects to std::vector
         // since Catch2 has built in methods to compare vectors
-        std::vector<double> test =  eigen_matrix_to_std_vector(K_mat.transpose());
-        std::vector<double> truth = eigen_matrix_to_std_vector(K_mat);
+        std::vector<double> test =  TEST::eigen_matrix_to_std_vector(K_mat.transpose());
+        std::vector<double> truth = TEST::eigen_matrix_to_std_vector(K_mat);
         
         // Floating point approximations are diffcult to compare since the
         // values typically aren't exactly equal due to numerical error.
@@ -773,8 +773,8 @@ TEST_CASE("constant_orthotropic_structural_material_3d",
         
         // Convert the test and truth Eigen::Matrix objects to std::vector
         // since Catch2 has built in methods to compare vectors
-        test =  eigen_matrix_to_std_vector(K_mat);
-        truth = eigen_matrix_to_std_vector(K_mat_true);
+        test =  TEST::eigen_matrix_to_std_vector(K_mat);
+        truth = TEST::eigen_matrix_to_std_vector(K_mat_true);
         
         // Floating point approximations are diffcult to compare since the
         // values typically aren't exactly equal due to numerical error.
@@ -841,8 +841,8 @@ TEST_CASE("constant_orthotropic_heat_transfer_material_3d",
         
         // Convert the test and truth Eigen::Matrix objects to std::vector
         // since Catch2 has built in methods to compare vectors
-        std::vector<double> test = eigen_matrix_to_std_vector(D_k);
-        std::vector<double> truth = eigen_matrix_to_std_vector(D_k_true);
+        std::vector<double> test = TEST::eigen_matrix_to_std_vector(D_k);
+        std::vector<double> truth = TEST::eigen_matrix_to_std_vector(D_k_true);
         
         // Floating point approximations are diffcult to compare since the
         // values typically aren't exactly equal due to numerical error.
@@ -902,8 +902,8 @@ TEST_CASE("constant_orthotropic_transient_heat_transfer_material_3d",
         
         // Convert the test and truth Eigen::Matrix objects to std::vector
         // since Catch2 has built in methods to compare vectors
-        std::vector<double> test = eigen_matrix_to_std_vector(D_cp);
-        std::vector<double> truth = eigen_matrix_to_std_vector(D_cp_true);
+        std::vector<double> test = TEST::eigen_matrix_to_std_vector(D_cp);
+        std::vector<double> truth = TEST::eigen_matrix_to_std_vector(D_cp_true);
         
         // Floating point approximations are diffcult to compare since the
         // values typically aren't exactly equal due to numerical error.
@@ -958,8 +958,8 @@ TEST_CASE("constant_orthotropic_dynamic_material_3d",
         
         // Convert the test and truth Eigen::Matrix objects to std::vector
         // since Catch2 has built in methods to compare vectors
-        std::vector<double> test = eigen_matrix_to_std_vector(D_inertia);
-        std::vector<double> truth = eigen_matrix_to_std_vector(D_inertia_true);
+        std::vector<double> test = TEST::eigen_matrix_to_std_vector(D_inertia);
+        std::vector<double> truth = TEST::eigen_matrix_to_std_vector(D_inertia_true);
         
         // Floating point approximations are diffcult to compare since the
         // values typically aren't exactly equal due to numerical error.
