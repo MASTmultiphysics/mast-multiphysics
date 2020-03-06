@@ -862,8 +862,8 @@ TEST_CASE("I1_element_property_card_constant_heat_transfer_1d",
         
         // Convert the test and truth Eigen::Matrix objects to std::vector
         // since Catch2 has built in methods to compare vectors
-        std::vector<double> test =  eigen_matrix_to_std_vector(D_sec_conduc);
-        std::vector<double> truth = eigen_matrix_to_std_vector(D_sec_conduc_true);
+        std::vector<double> test =  TEST::eigen_matrix_to_std_vector(D_sec_conduc);
+        std::vector<double> truth = TEST::eigen_matrix_to_std_vector(D_sec_conduc_true);
         
         // Floating point approximations are diffcult to compare since the
         // values typically aren't exactly equal due to numerical error.
@@ -896,8 +896,8 @@ TEST_CASE("I1_element_property_card_constant_heat_transfer_1d",
         
         // Convert the test and truth Eigen::Matrix objects to std::vector
         // since Catch2 has built in methods to compare vectors
-        std::vector<double> test =  eigen_matrix_to_std_vector(D_sec_capac);
-        std::vector<double> truth = eigen_matrix_to_std_vector(D_sec_capac_true);
+        std::vector<double> test =  TEST::eigen_matrix_to_std_vector(D_sec_capac);
+        std::vector<double> truth = TEST::eigen_matrix_to_std_vector(D_sec_capac_true);
         
         // Floating point approximations are diffcult to compare since the
         // values typically aren't exactly equal due to numerical error.
@@ -1054,8 +1054,8 @@ TEST_CASE("I1_element_property_card_constant_thermoelastic_1d",
         
         // Convert the test and truth Eigen::Matrix objects to std::vector
         // since Catch2 has built in methods to compare vectors
-        std::vector<double> test =  eigen_matrix_to_std_vector(D_sec_texpA);
-        std::vector<double> truth = eigen_matrix_to_std_vector(D_sec_texpA_true);
+        std::vector<double> test =  TEST::eigen_matrix_to_std_vector(D_sec_texpA);
+        std::vector<double> truth = TEST::eigen_matrix_to_std_vector(D_sec_texpA_true);
         
         
         // Floating point approximations are diffcult to compare since the
@@ -1104,8 +1104,8 @@ TEST_CASE("I1_element_property_card_constant_thermoelastic_1d",
         
         // Convert the test and truth Eigen::Matrix objects to std::vector
         // since Catch2 has built in methods to compare vectors
-        std::vector<double> test =  eigen_matrix_to_std_vector(D_sec_texpB);
-        std::vector<double> truth = eigen_matrix_to_std_vector(D_sec_texpB_true);
+        std::vector<double> test =  TEST::eigen_matrix_to_std_vector(D_sec_texpB);
+        std::vector<double> truth = TEST::eigen_matrix_to_std_vector(D_sec_texpB_true);
         
         // Floating point approximations are diffcult to compare since the
         // values typically aren't exactly equal due to numerical error.
@@ -1294,8 +1294,8 @@ TEST_CASE("I1_element_property_card_constant_dynamic_1d",
 
         // Convert the test and truth Eigen::Matrix objects to std::vector
         // since Catch2 has built in methods to compare vectors
-        std::vector<double> test =  eigen_matrix_to_std_vector(D_sec_iner);
-        std::vector<double> truth = eigen_matrix_to_std_vector(D_sec_iner_true);
+        std::vector<double> test =  TEST::eigen_matrix_to_std_vector(D_sec_iner);
+        std::vector<double> truth = TEST::eigen_matrix_to_std_vector(D_sec_iner_true);
         
         // Floating point approximations are diffcult to compare since the
         // values typically aren't exactly equal due to numerical error.
@@ -1478,8 +1478,8 @@ TEST_CASE("I1_element_property_card_constant_structural_1d",
         
         // Convert the test and truth Eigen::Matrix objects to std::vector
         // since Catch2 has built in methods to compare vectors
-        std::vector<double> test =  eigen_matrix_to_std_vector(D_sec_ext);
-        std::vector<double> truth = eigen_matrix_to_std_vector(D_sec_ext_true);
+        std::vector<double> test =  TEST::eigen_matrix_to_std_vector(D_sec_ext);
+        std::vector<double> truth = TEST::eigen_matrix_to_std_vector(D_sec_ext_true);
         
         // Floating point approximations are diffcult to compare since the
         // values typically aren't exactly equal due to numerical error.
@@ -1527,8 +1527,8 @@ TEST_CASE("I1_element_property_card_constant_structural_1d",
         
         // Convert the test and truth Eigen::Matrix objects to std::vector
         // since Catch2 has built in methods to compare vectors
-        std::vector<double> test =  eigen_matrix_to_std_vector(D_sec_bnd);
-        std::vector<double> truth = eigen_matrix_to_std_vector(D_sec_bnd_true);
+        std::vector<double> test =  TEST::eigen_matrix_to_std_vector(D_sec_bnd);
+        std::vector<double> truth = TEST::eigen_matrix_to_std_vector(D_sec_bnd_true);
         
         // Floating point approximations are diffcult to compare since the
         // values typically aren't exactly equal due to numerical error.
@@ -1573,8 +1573,8 @@ TEST_CASE("I1_element_property_card_constant_structural_1d",
         
         // Convert the test and truth Eigen::Matrix objects to std::vector
         // since Catch2 has built in methods to compare vectors
-        std::vector<double> test =  eigen_matrix_to_std_vector(D_sec_bndext);
-        std::vector<double> truth = eigen_matrix_to_std_vector(D_sec_bndext_true);
+        std::vector<double> test =  TEST::eigen_matrix_to_std_vector(D_sec_bndext);
+        std::vector<double> truth = TEST::eigen_matrix_to_std_vector(D_sec_bndext_true);
         
         // Floating point approximations are diffcult to compare since the
         // values typically aren't exactly equal due to numerical error.
@@ -1613,8 +1613,8 @@ TEST_CASE("I1_element_property_card_constant_structural_1d",
         
         // Convert the test and truth Eigen::Matrix objects to std::vector
         // since Catch2 has built in methods to compare vectors
-        std::vector<double> test =  eigen_matrix_to_std_vector(D_sec_shr);
-        std::vector<double> truth = eigen_matrix_to_std_vector(D_sec_shr_true);
+        std::vector<double> test =  TEST::eigen_matrix_to_std_vector(D_sec_shr);
+        std::vector<double> truth = TEST::eigen_matrix_to_std_vector(D_sec_shr_true);
         
         // Floating point approximations are diffcult to compare since the
         // values typically aren't exactly equal due to numerical error.
@@ -1648,8 +1648,8 @@ TEST_CASE("I1_element_property_card_constant_structural_1d",
 //         
 //         // Convert the test and truth Eigen::Matrix objects to std::vector
 //         // since Catch2 has built in methods to compare vectors
-//         std::vector<double> test =  eigen_matrix_to_std_vector(D_sec_spring);
-//         std::vector<double> truth = eigen_matrix_to_std_vector(D_sec_spring_true);
+//         std::vector<double> test =  TEST::eigen_matrix_to_std_vector(D_sec_spring);
+//         std::vector<double> truth = TEST::eigen_matrix_to_std_vector(D_sec_spring_true);
 //         
 //         // Floating point approximations are diffcult to compare since the
 //         // values typically aren't exactly equal due to numerical error.

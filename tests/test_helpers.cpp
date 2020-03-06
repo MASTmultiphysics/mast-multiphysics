@@ -399,7 +399,7 @@ void TEST::transform_element(libMesh::MeshBase& mesh, const RealMatrixX X0,
 }
 
 
-Real approximate_field_function_derivative(const MAST::FieldFunction<Real>& f,
+Real TEST::approximate_field_function_derivative(const MAST::FieldFunction<Real>& f,
                                            MAST::Parameter* p,
                                            const libMesh::Point& point,
                                            const Real& time,
@@ -425,7 +425,7 @@ Real approximate_field_function_derivative(const MAST::FieldFunction<Real>& f,
 }
 
 
-RealMatrixX approximate_field_function_derivative(const MAST::FieldFunction<RealMatrixX>& f,
+RealMatrixX TEST::approximate_field_function_derivative(const MAST::FieldFunction<RealMatrixX>& f,
                                            MAST::Parameter* p,
                                            const libMesh::Point& point,
                                            const Real& time,
