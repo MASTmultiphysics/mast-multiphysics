@@ -337,21 +337,7 @@ TEST_CASE("bar_element_property_card_constant_base_sensitivity_1d",
     std::vector<Real> dA_cd(n_s);
     for (uint i=0; i<n_s; i++)
     {
-        (*sens_params[i])() += delta;
-        Area(point, time, f_h);
-        
-        (*sens_params[i])() += delta;
-        Area(point, time, f_2h);
-        
-        (*sens_params[i])() -= 3.0*delta;
-        Area(point, time, f_n);
-        
-        (*sens_params[i])() -= delta;
-        Area(point, time, f_2n);
-        
-        (*sens_params[i])() += 2.0*delta;
-        
-        dA_cd[i] = (f_2n - 8.*f_n + 8*f_h - f_2h)/(12.*delta);
+        dA_cd[i] = approximate_field_function_derivative(Area, sens_params[i], point, time);
         
         libMesh::out << "dA_d" << sens_params[i]->name() << " = " << dA[i] << "\tdA_cd = " << dA_cd[i] << std::endl;
         REQUIRE(dA[i] == Approx(dA_cd[i]));
@@ -403,21 +389,7 @@ TEST_CASE("bar_element_property_card_constant_base_sensitivity_1d",
     std::vector<Real> dAy_cd(n_s);
     for (uint i=0; i<n_s; i++)
     {
-        (*sens_params[i])() += delta;
-        Area_y(point, time, f_h);
-        
-        (*sens_params[i])() += delta;
-        Area_y(point, time, f_2h);
-        
-        (*sens_params[i])() -= 3.0*delta;
-        Area_y(point, time, f_n);
-        
-        (*sens_params[i])() -= delta;
-        Area_y(point, time, f_2n);
-        
-        (*sens_params[i])() += 2.0*delta;
-        
-        dAy_cd[i] = (f_2n - 8.*f_n + 8*f_h - f_2h)/(12.*delta);
+        dAy_cd[i] = approximate_field_function_derivative(Area_y, sens_params[i], point, time);
         
         libMesh::out << "dAy_d" << sens_params[i]->name() << " = " << dAy[i] << "\tdAy_cd = " << dAy_cd[i] << std::endl;
         REQUIRE(dAy[i] == Approx(dAy_cd[i]));
@@ -434,21 +406,7 @@ TEST_CASE("bar_element_property_card_constant_base_sensitivity_1d",
     std::vector<Real> dAz_cd(n_s);
     for (uint i=0; i<n_s; i++)
     {
-        (*sens_params[i])() += delta;
-        Area_z(point, time, f_h);
-        
-        (*sens_params[i])() += delta;
-        Area_z(point, time, f_2h);
-        
-        (*sens_params[i])() -= 3.0*delta;
-        Area_z(point, time, f_n);
-        
-        (*sens_params[i])() -= delta;
-        Area_z(point, time, f_2n);
-        
-        (*sens_params[i])() += 2.0*delta;
-        
-        dAz_cd[i] = (f_2n - 8.*f_n + 8*f_h - f_2h)/(12.*delta);
+        dAz_cd[i] = approximate_field_function_derivative(Area_z, sens_params[i], point, time);
         
         libMesh::out << "dAz_d" << sens_params[i]->name() << " = " << dAz[i] << "\tdAz_cd = " << dAz_cd[i] << std::endl;
         REQUIRE(dAz[i] == Approx(dAz_cd[i]));
@@ -467,21 +425,7 @@ TEST_CASE("bar_element_property_card_constant_base_sensitivity_1d",
     std::vector<RealMatrixX> dI_cd(n_s);
     for (uint i=0; i<n_s; i++)
     {
-        (*sens_params[i])() += delta;
-        Inertia(point, time, fm_h);
-        
-        (*sens_params[i])() += delta;
-        Inertia(point, time, fm_2h);
-        
-        (*sens_params[i])() -= 3.0*delta;
-        Inertia(point, time, fm_n);
-        
-        (*sens_params[i])() -= delta;
-        Inertia(point, time, fm_2n);
-        
-        (*sens_params[i])() += 2.0*delta;
-        
-        dI_cd[i] = (fm_2n - 8.*fm_n + 8*fm_h - fm_2h)/(12.*delta);
+        dI_cd[i] = approximate_field_function_derivative(Inertia, sens_params[i], point, time);
         
         libMesh::out << "dI_d" << sens_params[i]->name() << " =\n" << dI[i] << "\ndI_cd = \n" << dI_cd[i] << std::endl;
         

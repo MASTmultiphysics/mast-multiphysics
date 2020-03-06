@@ -11,6 +11,7 @@
 
 // Custom includes
 #include "test_helpers.h"
+#include "mast_isotropic_material.h"
 
 // TODO: Need to test temperature dependent material property
 // TODO: Need to test stress dependent material property (plasticity)
@@ -18,14 +19,10 @@
 TEST_CASE("constant_isotropic_thermoelastic_material_1d",
           "[isotropic],[material],[constant],[1D],[thermoelastic]")
 {
-    MAST::Parameter alpha("alpha_param", 5.43e-05);   // Coefficient of thermal expansion
-    MAST::ConstantFieldFunction alpha_f("alpha_expansion", alpha);
     
     // Initialize the material
-    MAST::IsotropicMaterialPropertyCard material;      
-    
-    material.add(alpha_f);
-    
+    TEST::Aluminum7075T6 material;
+        
     REQUIRE( material.contains("alpha_expansion") );
     
     SECTION("1D material thermal expansion matrix")
@@ -40,7 +37,7 @@ TEST_CASE("constant_isotropic_thermoelastic_material_1d",
         
         // Hard-coded in the true value of material thermal expansion matrix
         RealMatrixX D_texp_true = RealMatrixX::Zero(2,1);
-        D_texp_true(0,0) = 5.43e-05;
+        D_texp_true(0,0) = material.alpha();
         
         // Convert the test and truth Eigen::Matrix objects to std::vector
         // since Catch2 has built in methods to compare vectors
@@ -58,20 +55,8 @@ TEST_CASE("constant_isotropic_thermoelastic_material_1d",
 TEST_CASE("constant_isotropic_structural_material_1d", 
           "[isotropic],[material],[constant],[1D],[structural]")
 {
-    // Define Material Properties as MAST Parameters
-    MAST::Parameter E("E_param", 72.0e9);             // Modulus of Elasticity
-    MAST::Parameter nu("nu_param", 0.33);             // Poisson's ratio
-    
-    // Create field functions to dsitribute these constant parameters throughout the model
-    MAST::ConstantFieldFunction E_f("E", E);
-    MAST::ConstantFieldFunction nu_f("nu", nu);
-    
     // Initialize the material
-    MAST::IsotropicMaterialPropertyCard material;                   
-    
-    // Add the material property constant field functions to the material card
-    material.add(E_f);                                             
-    material.add(nu_f);
+    TEST::Aluminum7075T6 material;                 
     
     // Ensure that the material properties were added before doing other checks
     REQUIRE( material.contains("E") );
@@ -89,8 +74,8 @@ TEST_CASE("constant_isotropic_structural_material_1d",
         
         // Hard-code in the true value of the material stiffness
         RealMatrixX D_true = RealMatrixX::Zero(2,2);
-        D_true(0,0) = 72.0e9;
-        D_true(1,1) = 2.706766917293233e+10;
+        D_true(0,0) = material.E();
+        D_true(1,1) = material.G();
         
         // Convert the test and truth Eigen::Matrix objects to std::vector
         // since Catch2 has built in methods to compare vectors
@@ -108,24 +93,15 @@ TEST_CASE("constant_isotropic_structural_material_1d",
 TEST_CASE("constant_isotropic_heat_transfer_material_1d", 
           "[isotropic],[material],[1D],[heat_transfer][constant]")
 {
-    // Define Material Properties as MAST Parameters
-    MAST::Parameter k("k_param",     237.0);             // Thermal Conductivity
-    
-    // Create field functions to dsitribute these constant parameters throughout the model
-    MAST::ConstantFieldFunction k_f("k_th", k);
-    
     // Initialize the material
-    MAST::IsotropicMaterialPropertyCard material;
-    
-    // Add the material property constant field functions to the material card
-    material.add(k_f);
+    TEST::Aluminum7075T6 material;
     
     // Ensure that the material properties were added before doing other checks
     REQUIRE( material.contains("k_th") );
     
     SECTION("material depends on the parameters that it should")
     {
-        CHECK( material.depends_on(k) );
+        CHECK( material.depends_on(material.k) );
     }
     
     SECTION("material does not depend on other parameters")
@@ -146,7 +122,7 @@ TEST_CASE("constant_isotropic_heat_transfer_material_1d",
         
         // Hard-coded values for thermal conductivity matrix
         RealMatrixX D_k_true = RealMatrixX::Identity(1,1);
-        D_k_true *= 237.0;
+        D_k_true *= material.k();
         
         // Convert the test and truth Eigen::Matrix objects to std::vector
         // since Catch2 has built in methods to compare vectors
@@ -164,20 +140,8 @@ TEST_CASE("constant_isotropic_heat_transfer_material_1d",
 TEST_CASE("constant_isotropic_transient_heat_transfer_material_1d", 
           "[isotropic],[material],[1D],[heat_transfer],[constant],[transient]")
 {
-    // Define Material Properties as MAST Parameters
-    MAST::Parameter rho("rho_param", 1234.5);            // Density
-    MAST::Parameter cp("cp_param",   908.0);             // Specific Heat Capacity
-    
-    // Create field functions to dsitribute these constant parameters throughout the model
-    MAST::ConstantFieldFunction rho_f("rho", rho);
-    MAST::ConstantFieldFunction cp_f("cp", cp);
-    
     // Initialize the material
-    MAST::IsotropicMaterialPropertyCard material;
-    
-    // Add the material property constant field functions to the material card
-    material.add(rho_f);                                             
-    material.add(cp_f);
+    TEST::Aluminum7075T6 material;
     
     // Ensure that the material properties were added before doing other checks
     REQUIRE( material.contains("rho") );
@@ -185,8 +149,8 @@ TEST_CASE("constant_isotropic_transient_heat_transfer_material_1d",
     
     SECTION("material depends on the parameters that it should")
     {
-        CHECK( material.depends_on(rho) );
-        CHECK( material.depends_on(cp) );
+        CHECK( material.depends_on(material.rho) );
+        CHECK( material.depends_on(material.cp) );
     }
     
     SECTION("material does not depend on other parameters")
@@ -207,7 +171,7 @@ TEST_CASE("constant_isotropic_transient_heat_transfer_material_1d",
         
         // Hard-coded values for thermal conductivity matrix
         RealMatrixX D_cp_true = RealMatrixX::Identity(1,1);
-        D_cp_true *= (908.0 * 1234.5);
+        D_cp_true *= material.rho() * material.cp();
         
         // Convert the test and truth Eigen::Matrix objects to std::vector
         // since Catch2 has built in methods to compare vectors

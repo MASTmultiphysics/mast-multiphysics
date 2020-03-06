@@ -758,12 +758,40 @@ set_tests_properties(L_Element_Property_Card_1D_Base
                      LABELS "SEQ"
                      FIXTURES_REQUIRED Isotropic_Material_1D_Structural)
                      
+add_test(NAME L_Element_Property_Card_1D_Base_mpi
+         COMMAND ${MPIEXEC_EXECUTABLE} -np 2 $<TARGET_FILE:mast_catch_tests> -w NoTests "L_element_property_card_constant_base_1d")
+set_tests_properties(L_Element_Property_Card_1D_Base_mpi
+                     PROPERTIES
+                     LABELS "MPI"
+                     FIXTURES_REQUIRED Isotropic_Material_1D_Structural_mpi)
+                     
+add_test(NAME L_Element_Property_Card_1D_Base_Sensitivity
+         COMMAND $<TARGET_FILE:mast_catch_tests> -w NoTests "L_element_property_card_constant_base_sensitivity_1d")
+set_tests_properties(L_Element_Property_Card_1D_Base_Sensitivity
+                     PROPERTIES
+                     LABELS "SEQ"
+                     FIXTURES_REQUIRED L_Element_Property_Card_1D_Base)
+                     
+add_test(NAME L_Element_Property_Card_1D_Base_Sensitivity_mpi
+         COMMAND ${MPIEXEC_EXECUTABLE} -np 2 $<TARGET_FILE:mast_catch_tests> -w NoTests "L_element_property_card_constant_base_sensitivity_1d")
+set_tests_properties(L_Element_Property_Card_1D_Base_Sensitivity_mpi
+                     PROPERTIES
+                     LABELS "MPI"
+                     FIXTURES_REQUIRED L_Element_Property_Card_1D_Base_mpi)
+                     
 add_test(NAME L_Element_Property_Card_1D_Heat_Transfer
          COMMAND $<TARGET_FILE:mast_catch_tests> -w NoTests "L_element_property_card_constant_heat_transfer_1d")
 set_tests_properties(L_Element_Property_Card_1D_Heat_Transfer
                      PROPERTIES
                      LABELS "SEQ"
                      FIXTURES_REQUIRED Isotropic_Material_1D_Heat_Transfer)
+                     
+add_test(NAME L_Element_Property_Card_1D_Heat_Transfer_mpi
+         COMMAND ${MPIEXEC_EXECUTABLE} -np 2 $<TARGET_FILE:mast_catch_tests> -w NoTests "L_element_property_card_constant_heat_transfer_1d")
+set_tests_properties(L_Element_Property_Card_1D_Heat_Transfer_mpi
+                     PROPERTIES
+                     LABELS "MPI"
+                     FIXTURES_REQUIRED Isotropic_Material_1D_Heat_Transfer_mpi)
 
 add_test(NAME L_Element_Property_Card_1D_Thermoelastic
          COMMAND $<TARGET_FILE:mast_catch_tests> -w NoTests "L_element_property_card_constant_thermoelastic_1d")
@@ -772,6 +800,13 @@ set_tests_properties(L_Element_Property_Card_1D_Thermoelastic
                      LABELS "SEQ"
                      FIXTURES_REQUIRED Isotropic_Material_1D_Thermoelastic)
 
+add_test(NAME L_Element_Property_Card_1D_Thermoelastic_mpi
+         COMMAND ${MPIEXEC_EXECUTABLE} -np 2 $<TARGET_FILE:mast_catch_tests> -w NoTests "L_element_property_card_constant_thermoelastic_1d")
+set_tests_properties(L_Element_Property_Card_1D_Thermoelastic_mpi
+                     PROPERTIES
+                     LABELS "MPI"
+                     FIXTURES_REQUIRED Isotropic_Material_1D_Thermoelastic_mpi)
+                     
 add_test(NAME L_Element_Property_Card_1D_Structural
          COMMAND $<TARGET_FILE:mast_catch_tests> -w NoTests "L_element_property_card_constant_structural_1d")
 set_tests_properties(L_Element_Property_Card_1D_Structural
@@ -779,10 +814,24 @@ set_tests_properties(L_Element_Property_Card_1D_Structural
                      LABELS "SEQ"
                      FIXTURES_REQUIRED  Isotropic_Material_1D_Structural)
                      
+add_test(NAME L_Element_Property_Card_1D_Structural_mpi
+         COMMAND ${MPIEXEC_EXECUTABLE} -np 2 $<TARGET_FILE:mast_catch_tests> -w NoTests "L_element_property_card_constant_structural_1d")
+set_tests_properties(L_Element_Property_Card_1D_Structural_mpi
+                     PROPERTIES
+                     LABELS "MPI"
+                     FIXTURES_REQUIRED  Isotropic_Material_1D_Structural_mpi)
+                     
 add_test(NAME L_Element_Property_Card_1D_Dynamic
          COMMAND $<TARGET_FILE:mast_catch_tests> -w NoTests "L_element_property_card_constant_dynamic_1d")
 set_tests_properties(L_Element_Property_Card_1D_Dynamic
                      PROPERTIES
                      LABELS "SEQ"
                      FIXTURES_REQUIRED Isotropic_Material_1D_Dynamic)
+                     
+add_test(NAME L_Element_Property_Card_1D_Dynamic_mpi
+         COMMAND ${MPIEXEC_EXECUTABLE} -np 2 $<TARGET_FILE:mast_catch_tests> -w NoTests "L_element_property_card_constant_dynamic_1d")
+set_tests_properties(L_Element_Property_Card_1D_Dynamic_mpi
+                     PROPERTIES
+                     LABELS "MPI"
+                     FIXTURES_REQUIRED Isotropic_Material_1D_Dynamic_mpi)
 # ## ============================================================================
