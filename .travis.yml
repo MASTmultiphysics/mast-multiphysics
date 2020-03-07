@@ -2,19 +2,19 @@ language: cpp
 
 matrix:
     include:
-      # macOS/Linux builds - libMesh version 1.5.0
+      # macOS/Linux builds - libMesh version 1.5.1
       - os: osx
         osx_image: xcode10.2
-        env: LIBMESH_VERSION=1.5.0
+        env: LIBMESH_VERSION=1.5.1
       - os: linux
         dist: xenial
-        env: LIBMESH_VERSION=1.5.0
+        env: LIBMESH_VERSION=1.5.1
 
       # Doxygen documentation build
       # - this job also progresses to deployment when on master branch
       - os: linux
         dist: xenial
-        env: CI_BUILD_DOCS=true CI_DEPLOY_DOCS=true LIBMESH_VERSION=1.4.1
+        env: CI_BUILD_DOCS=true CI_DEPLOY_DOCS=true LIBMESH_VERSION=1.5.1
 
       # macOS/Linux builds - libMesh version 1.4.1
       - os: osx
