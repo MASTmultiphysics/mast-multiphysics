@@ -109,15 +109,19 @@ elif [ "${TRAVIS_OS_NAME}" = osx ]; then # macOS 10.14, XCode 10.2
   if [ "${LIBMESH_VERSION}" = "1.3.1" ]; then
     PETSc_DIR=/Users/travis/Code/spack-mstc/spack/opt/spack/darwin-mojave-x86_64/clang-10.0.1-apple/petsc-3.11.4-4ode2ljnkurc55362bc6k6wtlgfjpdmf
     SLEPc_DIR=/Users/travis/Code/spack-mstc/spack/opt/spack/darwin-mojave-x86_64/clang-10.0.1-apple/slepc-3.11.2-nts2wrpmixfsvfev7x5b5e2e4vpct6wy
-    libMesh_DIR=/Users/travis/Code/spack-mstc/spack/opt/spack/darwin-mojave-x86_64/clang-10.0.1-apple/libmesh-1.3.1-gsiac4h5rvdoowg2mjfvwrvmwbbnw5yv
+    libMesh_DIR=/Users/travis/Code/spack-mstc/spack/opt/spack/darwin-mojave-x86_64/clang-10.0.1-apple/libmesh-1.3.1-4h7zpmhjpw6qwodrpoehwaq7fukjwfno
   elif [ "${LIBMESH_VERSION}" = "1.4.1" ]; then
     PETSc_DIR=/Users/travis/Code/spack-mstc/spack/opt/spack/darwin-mojave-x86_64/clang-10.0.1-apple/petsc-3.11.4-4ode2ljnkurc55362bc6k6wtlgfjpdmf
     SLEPc_DIR=/Users/travis/Code/spack-mstc/spack/opt/spack/darwin-mojave-x86_64/clang-10.0.1-apple/slepc-3.11.2-nts2wrpmixfsvfev7x5b5e2e4vpct6wy
-    libMesh_DIR=/Users/travis/Code/spack-mstc/spack/opt/spack/darwin-mojave-x86_64/clang-10.0.1-apple/libmesh-1.4.1-3zx2df3tra2fd6znisp5cthgawkh4zol
+    libMesh_DIR=/Users/travis/Code/spack-mstc/spack/opt/spack/darwin-mojave-x86_64/clang-10.0.1-apple/libmesh-1.4.1-bry6shpqjekanfoepltqyic5ami5umor
   elif [ "${LIBMESH_VERSION}" = "1.5.0" ]; then
     PETSc_DIR=/Users/travis/Code/spack-mstc/spack/opt/spack/darwin-mojave-x86_64/clang-10.0.1-apple/petsc-3.12.1-edmddchkkhtwckfumww3mtghyadytdxj
     SLEPc_DIR=/Users/travis/Code/spack-mstc/spack/opt/spack/darwin-mojave-x86_64/clang-10.0.1-apple/slepc-3.12.0-dbsf3rtgj4hoih6okdja6godorotij22
-    libMesh_DIR=/Users/travis/Code/spack-mstc/spack/opt/spack/darwin-mojave-x86_64/clang-10.0.1-apple/libmesh-1.5.0-dxjeof7unenkr5ivfpdekiuftgyktkeh
+    libMesh_DIR=/Users/travis/Code/spack-mstc/spack/opt/spack/darwin-mojave-x86_64/clang-10.0.1-apple/libmesh-1.5.0-dcgl6zldkp4xvfvfrajghwoy5b24ilrr
+  elif [ "${LIBMESH_VERSION}" = "1.5.1" ]; then
+    PETSc_DIR=/Users/travis/Code/spack-mstc/spack/opt/spack/darwin-mojave-x86_64/clang-10.0.1-apple/petsc-3.12.1-edmddchkkhtwckfumww3mtghyadytdxj
+    SLEPc_DIR=/Users/travis/Code/spack-mstc/spack/opt/spack/darwin-mojave-x86_64/clang-10.0.1-apple/slepc-3.12.0-dbsf3rtgj4hoih6okdja6godorotij22
+    libMesh_DIR=/Users/travis/Code/spack-mstc/spack/opt/spack/darwin-mojave-x86_64/clang-10.0.1-apple/libmesh-1.5.1-5y4kmrrnq6axqa2hv2ag36tjv6mgwknw
   fi
 
   # First let us build/install a Debug version of MAST (-DCMAKE_BUILD_TYPE=Debug).
