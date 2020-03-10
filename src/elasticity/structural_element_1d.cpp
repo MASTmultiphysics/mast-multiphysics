@@ -166,35 +166,50 @@ MAST::StructuralElement1D::calculate_stress(bool request_derivative,
     
     std::unique_ptr<MAST::FEBase>   fe(_elem.init_fe(true, false));
 
-    const unsigned int
-    qp_loc_fe_size = (unsigned int)fe->get_qpoints().size(),
-    n_added_qp     = 4;
+    const unsigned int qp_loc_fe_size = (unsigned int)fe->get_qpoints().size();
+    const std::vector<libMesh::Point>& xyz = fe->get_xyz();
+    const uint n_added_qp     = 4; // Always 4?
 
     std::vector<libMesh::Point>
     qp_loc_fe = fe->get_qpoints(),
     qp_loc(qp_loc_fe_size*n_added_qp);
     
+    // Sensitivity of stress evaluation point
+    std::vector<libMesh::Point> dqp_loc(qp_loc_fe_size*n_added_qp);
     
-    // we will evaluate the stress at upper and lower layers of element,
-    // so we will add two new points for each qp_loc
-    // TODO: move this to element section property class for composite materials
-    for (unsigned int i=0; i<qp_loc_fe.size(); i++) {
+    
+    const uint m = n_added_qp; // was 4, should it always be 4??
+    for (unsigned int i=0; i<qp_loc_fe.size(); i++) 
+    {
+        /**
+        *  Get the stress evaluation points from the section property card.
+        *  These points are relative to the ??? of the cross-section.
+        */
         
-        qp_loc[i*4]        = qp_loc_fe[i];
-        qp_loc[i*4](1)     = +1.;
-        qp_loc[i*4](2)     = +1.; // upper right
+        // TODO: Should points be relative to the shear center instead of the centroid?
+        const libMesh::Point centroid = _property.get_centroid(xyz[i], _time);
+        const std::vector<libMesh::Point> stress_points = _property.get_stress_points(xyz[i], _time, centroid);
         
-        qp_loc[i*4+1]      = qp_loc_fe[i];
-        qp_loc[i*4+1](1)   = -1.;
-        qp_loc[i*4+1](2)   = +1.; // upper left
-
-        qp_loc[i*4+2]      = qp_loc_fe[i];
-        qp_loc[i*4+2](1)   = +1.;
-        qp_loc[i*4+2](2)   = -1.; // lower right
-
-        qp_loc[i*4+3]      = qp_loc_fe[i];
-        qp_loc[i*4+3](1)   = -1.;
-        qp_loc[i*4+3](2)   = -1.; // lower left
+        for (uint j=0; j<n_added_qp; j++)
+        {
+            qp_loc[i*m+j]       = qp_loc_fe[i];
+            qp_loc[i*m+j](1)    = stress_points[j](1); // y-direction
+            qp_loc[i*m+j](2)    = stress_points[j](0); // z-direction
+        }
+        
+        // Below is for sensitivity analysis
+        if (request_derivative && p)
+        {
+            const libMesh::Point dcentroid = _property.get_centroid_derivative(*p, xyz[i], _time);
+            const std::vector<libMesh::Point> dstress_points = _property.get_stress_points_derivative(*p, xyz[i], _time, dcentroid);
+            
+            for (uint j=0; j<n_added_qp; j++)
+            {
+                dqp_loc[i*m+j]      = qp_loc_fe[i];
+                dqp_loc[i*m+j](1)   = dstress_points[j](1); // y-direction
+                dqp_loc[i*m+j](2)   = dstress_points[j](0); // z-direction
+            }
+        }
     }
 
     
@@ -210,7 +225,6 @@ MAST::StructuralElement1D::calculate_stress(bool request_derivative,
 
     
     const std::vector<Real> &JxW              = fe->get_JxW();
-    const std::vector<libMesh::Point>& xyz    = fe->get_xyz();
     const unsigned int
     n_phi    = (unsigned int)fe->n_shape_functions(),
     n1       = this->n_direct_strain_components(),
@@ -271,14 +285,6 @@ MAST::StructuralElement1D::calculate_stress(bool request_derivative,
     mat_stiff  =
     const_cast<MAST::MaterialPropertyCardBase&>(_property.get_material()).stiffness_matrix(1);
 
-    // get the thickness values for the bending strain calculation
-    const MAST::FieldFunction<Real>
-    &hy     =  _property.get<MAST::FieldFunction<Real> >("hy"),
-    &hz     =  _property.get<MAST::FieldFunction<Real> >("hz"),
-    &hy_off =  _property.get<MAST::FieldFunction<Real> >("hy_off"),
-    &hz_off =  _property.get<MAST::FieldFunction<Real> >("hz_off");
-
-    
     bool if_vk = (_property.strain_type() == MAST::NONLINEAR_STRAIN),
     if_bending = (_property.bending_model(_elem) != MAST::NO_BENDING);
     
@@ -351,12 +357,6 @@ MAST::StructuralElement1D::calculate_stress(bool request_derivative,
                     strain += strain_vk;
                 }
                 
-                // add to this the bending strain
-                hy    (xyz[qp_loc_index], _time,     y);
-                hz    (xyz[qp_loc_index], _time,     z);
-                hy_off(xyz[qp_loc_index], _time, y_off);
-                hz_off(xyz[qp_loc_index], _time, z_off);
-                
                 // TODO: this assumes isotropic section. Multilayered sections need
                 // special considerations
                 // This operator depends on the y and z thickness values. Sensitivity
@@ -364,8 +364,8 @@ MAST::StructuralElement1D::calculate_stress(bool request_derivative,
                 // these thickness values
                 bend->initialize_bending_strain_operator_for_yz(*fe,
                                                                 qp_loc_index,
-                                                                qp_loc[qp](1) * y/2.+y_off,
-                                                                qp_loc[qp](2) * z/2.+z_off,
+                                                                qp_loc[qp](1),
+                                                                qp_loc[qp](2),
                                                                 Bmat_bend_v,
                                                                 Bmat_bend_w);
                 Bmat_bend_v.vector_mult(strain_bend, _local_sol);
@@ -474,16 +474,10 @@ MAST::StructuralElement1D::calculate_stress(bool request_derivative,
                     // include the dependence of strain on the thickness
                     if (if_bending) {
                         
-                        // add to this the bending strain
-                        hy.derivative(*p, xyz[qp_loc_index], _time, y);
-                        hz.derivative(*p, xyz[qp_loc_index], _time, z);
-                        hy_off.derivative(*p, xyz[qp_loc_index], _time, y_off);
-                        hz_off.derivative(*p, xyz[qp_loc_index], _time, z_off);
-                        
                         bend->initialize_bending_strain_operator_for_yz(*fe,
                                                                         qp_loc_index,
-                                                                        qp_loc[qp](1) * y/2.+y_off,
-                                                                        qp_loc[qp](2) * z/2.+z_off,
+                                                                        qp_loc[qp](1),
+                                                                        qp_loc[qp](2),
                                                                         Bmat_bend_v,
                                                                         Bmat_bend_w);
                         Bmat_bend_v.vector_mult(strain_bend, _local_sol);
