@@ -313,16 +313,8 @@ const warping_properties MAST::WarpingAssembly::calculate_warping_properties(
     // TODO: This isn't quite correct below because it doesn't account for a 
     // changing value of nu like is done above when looping through elements
     // and quadrature points.
-    libMesh::out << "Ixxc = " << Ixxc << std::endl;
-    libMesh::out << "Iyyc = " << Iyyc << std::endl;
-    libMesh::out << "Ixyc = " << Ixyc << std::endl;
-    libMesh::out << "delta_s = " << delta_s << std::endl;
-    libMesh::out << "x_se_1 = " << wp.xs << std::endl;
-    libMesh::out << "y_se_1 = " << wp.ys << std::endl;
     wp.xs += -F_warp.dot(Phi)/delta_s;
     wp.ys +=  F_warp.dot(Psi)/delta_s;
-    libMesh::out << "x_se_2 = " << (-F_warp.dot(Phi)/delta_s) << std::endl;
-    libMesh::out << "y_se_2 = " << (F_warp.dot(Psi)/delta_s) << std::endl;
     //wp.xs -= localized_F_warp->dot(*localized_Phi)/delta_s;
     //wp.ys += localized_F_warp->dot(*localized_Psi)/delta_s;
     
@@ -357,9 +349,7 @@ const warping_properties MAST::WarpingAssembly::calculate_warping_properties(
     wp.ys_t += yc;
     wp.xs += xc;
     wp.ys += yc;
-    libMesh::out << "wp.xs = " << wp.xs << std::endl;
-    libMesh::out << "wp.ys = " << wp.ys << std::endl;
-    
+
     return wp;
 }
 

@@ -227,10 +227,10 @@ MAST::Solid1DRodSectionElementPropertyCard::get_stress_points(const libMesh::Poi
     hy_off(p, t, offset_y); hz_off(p, t, offset_z);
     
     libMesh::Point offset(offset_z, offset_y);
-    
+        
     return {libMesh::Point(0., DIM1v, 0.) + offset - ps,
             libMesh::Point(DIM1v, 0., 0.) + offset - ps,
-            libMesh::Point(0. -DIM1v, 0.) + offset - ps,
+            libMesh::Point(0., -DIM1v, 0.) + offset - ps,
             libMesh::Point(-DIM1v, 0., 0.) + offset - ps
     };
 }
