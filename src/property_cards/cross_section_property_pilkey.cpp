@@ -64,7 +64,10 @@ public:
         /**
          * Have MUMPS perform the preconditioner factorization.
          */
-        ierr = PCFactorSetMatSolverType(_petsc_linear_solver.pc(), MATSOLVERMUMPS);
+        // TODO: PCFactorSetMatSolverPackage is deprecated and should be replaced
+        // by PCFactorSetMatSolverType. Currently, this old version is used to 
+        // maintain comaptibility with older versions of PETSc.
+        ierr = PCFactorSetMatSolverPackage(_petsc_linear_solver.pc(), MATSOLVERMUMPS);
         CHKERRABORT(_petsc_linear_solver.comm().get(), ierr);
         
         /**
@@ -156,7 +159,10 @@ public:
         ierr = PCSetType(pc, PCLU);
         CHKERRABORT(_petsc_nonlinear_solver.comm().get(), ierr);
         
-        ierr = PCFactorSetMatSolverType(pc, MATSOLVERMUMPS);
+        // TODO: PCFactorSetMatSolverPackage is deprecated and should be replaced
+        // by PCFactorSetMatSolverType. Currently, this old version is used to 
+        // maintain comaptibility with older versions of PETSc.
+        ierr = PCFactorSetMatSolverPackage(pc, MATSOLVERMUMPS);
         CHKERRABORT(_petsc_nonlinear_solver.comm().get(), ierr);
         
         // Now set these values from options in case the user wants to override
