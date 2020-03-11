@@ -12,6 +12,7 @@
 
 // Custom includes
 #include "test_helpers.h"
+#include "mast_solid_1d_bar_section_element_property_card.h"
 
 extern libMesh::LibMeshInit* p_global_init;
 
@@ -24,170 +25,108 @@ TEST_CASE("bar_element_property_card_constant_base_1d",
           "[1D],[isotropic],[constant],[property]")
 {
     const uint dim = 1;
+    const uint n_target_elems = 3000;
     
-    // Define Material Properties as MAST Parameters
-    MAST::Parameter rho("rho_param", 1420.5);         // Density
-    MAST::Parameter E("E_param", 72.0e9);             // Modulus of Elasticity
-    MAST::Parameter nu("nu_param", 0.33);             // Poisson's ratio
-    MAST::Parameter kappa("kappa_param", 5.0/6.0);    // Shear coefficient
-    MAST::Parameter cp("cp_param",   908.0);          // Specific Heat Capacity
-    MAST::Parameter k("k_param",     237.0);          // Thermal Conductivity
-    
-    // Define Section Properties as MAST Parameters
-    MAST::Parameter thickness_y("DIM1", 3.0);   // Section thickness in z-direction
-    MAST::Parameter thickness_z("DIM2", 0.75);   // Section thickness in y-direction
-    MAST::Parameter offset_y("offy_param", 0.287);     // Section offset in y-direction
-    MAST::Parameter offset_z("offz_param", 1.654);     // Section offset in z-direction
-    
-    // Create field functions to dsitribute these constant parameters throughout the model
-    // Section Property Field Functions
-    MAST::ConstantFieldFunction DIM1_f("DIM1", thickness_y);
-    MAST::ConstantFieldFunction DIM2_f("DIM2", thickness_z);
-    MAST::ConstantFieldFunction offsety_f("hy_off", offset_y);
-    MAST::ConstantFieldFunction offsetz_f("hz_off", offset_z);
-    // Material Property Field Functions
-    MAST::ConstantFieldFunction rho_f("rho", rho);
-    MAST::ConstantFieldFunction E_f("E", E);
-    MAST::ConstantFieldFunction nu_f("nu", nu);
-    MAST::ConstantFieldFunction kappa_f("kappa", kappa);
-    MAST::ConstantFieldFunction cp_f("cp", cp);
-    MAST::ConstantFieldFunction k_f("k_th", k);
-    
-    // Initialize the material
-    MAST::IsotropicMaterialPropertyCard material;                   
-    
-    // Add the material property constant field functions to the material card
-    material.add(rho_f);
-    material.add(k_f);
-    material.add(cp_f);
-    material.add(E_f);
-    material.add(nu_f);
-    material.add(kappa_f);
-    
-    // Initialize the section
-    MAST::Solid1DBarSectionElementPropertyCard section;
-    
-    // Add the section property constant field functions to the section card
-    section.add(DIM1_f);
-    section.add(DIM2_f);
-    section.add(offsety_f);
-    section.add(offsetz_f);
-    
-    // Add the material card to the section card
-    section.set_material(material);
-    
-    // Specify a section orientation point and add it to the section.
-    RealVectorX orientation = RealVectorX::Zero(3);
-    orientation(1) = 1.0;
-    section.y_vector() = orientation;
-    
-    // Now initialize the section
-    section.init(*p_global_init);
+    TEST::AluminumBarSection section(n_target_elems);
     
     REQUIRE( section.dim() == dim); // Ensure section is 1 dimensional
-    REQUIRE( section.depends_on(thickness_y) );
-    REQUIRE( section.depends_on(offset_y) );
-    REQUIRE( section.depends_on(thickness_z) );
-    REQUIRE( section.depends_on(offset_z) );
-    REQUIRE( section.depends_on(k) );
-    REQUIRE( section.depends_on(cp) );
-    REQUIRE( section.depends_on(rho) );
+    REQUIRE( section.depends_on(section.DIM1) );
+    REQUIRE( section.depends_on(section.DIM2) );
+    
+    REQUIRE( section.depends_on(section.offset_y) );
+    REQUIRE( section.depends_on(section.offset_z) );
+    
+    REQUIRE( section.depends_on(section.material.k) );
+    REQUIRE( section.depends_on(section.material.cp) );
+    REQUIRE( section.depends_on(section.material.rho) );
+    REQUIRE( section.depends_on(section.material.E) );
+    REQUIRE( section.depends_on(section.material.nu) );
+    REQUIRE( section.depends_on(section.material.alpha) );
+    
     REQUIRE( section.if_isotropic() );
     
-    // True values calculated using the sectionproperties module in python BAR.py
-    const Real area_true = 2.2500000000000004e+00;
-    const Real torsion_constant_true = 3.5540414988249380e-01;
-    const Real first_area_moment_z_true = 6.4574999999999994e-01;
-    const Real first_area_moment_y_true = 3.7214999999999945e+00;
-    const Real second_area_moment_zz_true = 2.9079899999999986e-01;
-    const Real second_area_moment_yy_true = 7.8428609999999814e+00;
-    const Real second_area_moment_zy_true = 1.0680705000000006e+00;
-    const Real second_area_moment_polar_true = 8.1336599999999812e+00;
-    const Real Izzc_true = 1.0546874999999994e-01;
-    const Real Iyyc_true = 1.6875000000000009e+00;
-    const Real Izyc_true = 2.4424906541753444e-15;
-    const Real warping_constant_true = 6.1030611538894504e-02;
-    const Real kappa_z_true = 8.3330248143102326e-01;
-    const Real kappa_y_true = 5.5763491072129889e-01;
-    const Real xs_true = 1.6540000458463804e+00;
-    const Real ys_true = 2.8700000023051281e-01;
-    const Real xst_true = 1.6540000458463804e+00;
-    const Real yst_true = 2.8700000023051281e-01;
-    const libMesh::Point shear_center_true(xs_true, ys_true, 0.);
-    const libMesh::Point centroid_true(1.654, 0.287, 0.);
-    
-    // NOTE: The default 1D section is rectangular
     const libMesh::Point point(4.3, -3.5, -6.7);
     const Real time = 8.22;
     
-    Real area;
-    const MAST::FieldFunction<Real>& Area = section.A();
-    Area(point, time, area);
-    REQUIRE( area == Approx(area_true) );
+    SECTION("section_properties")
+    {
+        Real area;
+        const MAST::FieldFunction<Real>& Area = section.A();
+        Area(point, time, area);
+        CHECK( area == Approx(section.area_true) );
+        
+        Real first_area_moment_y;
+        const MAST::FieldFunction<Real>& Ay = section.Ay();
+        Ay(point, time, first_area_moment_y);
+        CHECK( first_area_moment_y == Approx(section.first_area_moment_y_true) );
+
+        Real first_area_moment_z;
+        const MAST::FieldFunction<Real>& Az = section.Az();
+        Az(point, time, first_area_moment_z);
+        CHECK( first_area_moment_z == Approx(section.first_area_moment_z_true) );
+
+        RealMatrixX I;
+        const MAST::FieldFunction<RealMatrixX>& Inertias = section.I();
+        Inertias(point, time, I);
+        CHECK( I(0,1) == I(1,0) );
+        Real Iyy = I(1,1);
+        Real Izz = I(0,0);
+        Real Izy = I(0,1);
+        CHECK( Izz == Approx(section.second_area_moment_zz_true) );
+        CHECK( Iyy == Approx(section.second_area_moment_yy_true) );
+        CHECK( Izy == Approx(section.second_area_moment_zy_true) );
+        
+        Real Ip;
+        const MAST::FieldFunction<Real>& PolarInertia = section.Ip();
+        PolarInertia(point, time, Ip);
+        CHECK( Ip == Approx(section.second_area_moment_polar_true) );
+
+        Real torsion_constant;
+        const MAST::FieldFunction<Real>& TorsionConstant = section.J();
+        TorsionConstant(point, time, torsion_constant);
+        CHECK( torsion_constant == Approx(section.torsion_constant_true).epsilon(0.005));
+
+        libMesh::Point centroid = section.get_centroid(point, time);
+        CHECK( centroid(0) == Approx(section.centroid_true(0)) );
+        CHECK( centroid(1) == Approx(section.centroid_true(1)) );
+
+        libMesh::Point shear_center = section.get_shear_center(point, time);
+        CHECK(shear_center(0) == Approx(section.xs_true).epsilon(0.005));
+        CHECK(shear_center(1) == Approx(section.ys_true).epsilon(0.005));
+        
+        RealMatrixX shear_coefficients;
+        const MAST::FieldFunction<RealMatrixX>& ShearCoefficientMatrix = section.Kap();
+        ShearCoefficientMatrix(point, time, shear_coefficients);
+        CHECK( shear_coefficients(0,0) == Approx(section.kappa_z_true).epsilon(0.005) );
+        CHECK( shear_coefficients(1,1) == Approx(section.kappa_y_true).epsilon(0.005) );
+        
+        Real warping_constant;
+        const MAST::FieldFunction<Real>& WarpingConstant = section.Gam();
+        WarpingConstant(point, time, warping_constant);
+        CHECK( warping_constant == Approx(section.warping_constant_true).epsilon(0.005) );
+    }
     
-    Real first_area_moment_y;
-    const MAST::FieldFunction<Real>& Ay = section.Ay();
-    Ay(point, time, first_area_moment_y);
-    CHECK( first_area_moment_y == Approx(first_area_moment_y_true) );
+    SECTION("stress_points")
+    {
+        libMesh::Point centroid = section.get_centroid(point, time);
+        CHECK( centroid(0) == Approx(section.centroid_true(0)) );
+        CHECK( centroid(1) == Approx(section.centroid_true(1)) );
+        std::vector<libMesh::Point> stress_points = section.get_stress_points(point, time, centroid);
+        
+        for (uint i=0; i<stress_points.size(); i++)
+        {
+            CHECK( stress_points[i](0) == Approx(section.stress_points_true[i](0)).epsilon(0.005) );
+            CHECK( stress_points[i](1) == Approx(section.stress_points_true[i](1)).epsilon(0.005) );
+            CHECK( stress_points[i](2) == Approx(section.stress_points_true[i](2)).epsilon(0.005) );
+        }
+    }
     
-    Real first_area_moment_z;
-    const MAST::FieldFunction<Real>& Az = section.Az();
-    Az(point, time, first_area_moment_z);
-    CHECK( first_area_moment_z == Approx(first_area_moment_z_true) );
-    
-    RealMatrixX I;
-    const MAST::FieldFunction<RealMatrixX>& Inertias = section.I();
-    Inertias(point, time, I);
-    REQUIRE( I(0,1) == I(1,0) );
-    Real Iyy = I(1,1);
-    Real Izz = I(0,0);
-    Real Izy = I(0,1);
-    REQUIRE( Izz == Approx(second_area_moment_zz_true) );
-    REQUIRE( Iyy == Approx(second_area_moment_yy_true) );
-    REQUIRE( Izy == Approx(second_area_moment_zy_true) );
-    
-    Real Ip;
-    const MAST::FieldFunction<Real>& PolarInertia = section.Ip();
-    PolarInertia(point, time, Ip);
-    REQUIRE( Ip == Approx(second_area_moment_polar_true) );
-    
-    const libMesh::Point p(0.5, 2.1, 1.6);
-    const Real t = 4.657;
-    RealVectorX Ic = section.cross_section->get_second_area_moments_about_centroid(p, t);
-    libMesh::out << "Izz = " << Ic(0) << std::endl;
-    libMesh::out << "Iyy = " << Ic(1) << std::endl;
-    REQUIRE( Ic(0) == Approx(Izzc_true) );
-    REQUIRE( Ic(1) == Approx(Iyyc_true) );
-    REQUIRE( Ic(2) == Approx(Izyc_true).margin(1e-09) );
-    
-    Real torsion_constant;
-    const MAST::FieldFunction<Real>& TorsionConstant = section.J();
-    TorsionConstant(point, time, torsion_constant);
-    REQUIRE( torsion_constant == Approx(torsion_constant_true));
-    
-    Real warping_constant;
-    const MAST::FieldFunction<Real>& WarpingConstant = section.Gam();
-    WarpingConstant(point, time, warping_constant);
-    REQUIRE( warping_constant == Approx(warping_constant_true) );
-    
-    RealMatrixX shear_coefficients;
-    const MAST::FieldFunction<RealMatrixX>& ShearCoefficientMatrix = section.Kap();
-    ShearCoefficientMatrix(point, time, shear_coefficients);
-    REQUIRE( shear_coefficients(0,0) == Approx(kappa_z_true) );
-    REQUIRE( shear_coefficients(1,1) == Approx(kappa_y_true) );
-    
-    libMesh::Point centroid = section.cross_section->get_centroid(p, t);
-    REQUIRE( centroid(0) == Approx(centroid_true(0)) );
-    REQUIRE( centroid(1) == Approx(centroid_true(1)) );
-    
-    libMesh::Point shear_center = section.cross_section->get_shear_center(p, t);
-    REQUIRE(shear_center(0) == Approx(xs_true));
-    REQUIRE(shear_center(1) == Approx(ys_true));
-    
-    REQUIRE_FALSE( section.if_diagonal_mass_matrix() );
-    
-    section.set_diagonal_mass_matrix(true);
-    REQUIRE( section.if_diagonal_mass_matrix() );
+    SECTION("setting_diagonal_mass_matrix")
+    {
+        REQUIRE_FALSE( section.if_diagonal_mass_matrix() );
+        section.set_diagonal_mass_matrix(true);
+        CHECK( section.if_diagonal_mass_matrix() );
+    }
 }
 
 
@@ -198,105 +137,15 @@ TEST_CASE("bar_element_property_card_constant_base_1d",
 TEST_CASE("bar_element_property_card_constant_base_sensitivity_1d",
           "[1D],[isotropic],[constant],[property],[sensitivity]")
 {
-    const uint dim = 1;
+    const uint n_target_elems = 3000;
     
-    // Define Material Properties as MAST Parameters
-    MAST::Parameter rho("rho_param", 1420.5);         // Density
-    MAST::Parameter E("E_param", 72.0e9);             // Modulus of Elasticity
-    MAST::Parameter nu("nu_param", 0.33);             // Poisson's ratio
-    MAST::Parameter kappa("kappa_param", 5.0/6.0);    // Shear coefficient
-    MAST::Parameter cp("cp_param",   908.0);          // Specific Heat Capacity
-    MAST::Parameter k("k_param",     237.0);          // Thermal Conductivity
-    
-    // Define Section Properties as MAST Parameters
-    MAST::Parameter DIM1("DIM1", 3.0);   // Section thickness in z-direction
-    MAST::Parameter DIM2("DIM2", 0.75);   // Section thickness in y-direction
-    MAST::Parameter offset_y("offy_param", 0.287);     // Section offset in y-direction
-    MAST::Parameter offset_z("offz_param", 1.654);     // Section offset in z-direction
+    TEST::AluminumBarSection section(n_target_elems);
     
     // Define Sensitivity Parameters
-    std::vector<MAST::Parameter*> sens_params = {&DIM1, &DIM2};
+    std::vector<MAST::Parameter*> sens_params = {&section.DIM1};
     uint n_s = sens_params.size();
     
-    // Create field functions to dsitribute these constant parameters throughout the model
-    // Section Property Field Functions
-    MAST::ConstantFieldFunction DIM1_f("DIM1", DIM1);
-    MAST::ConstantFieldFunction DIM2_f("DIM2", DIM2);
-    MAST::ConstantFieldFunction offsety_f("hy_off", offset_y);
-    MAST::ConstantFieldFunction offsetz_f("hz_off", offset_z);
-    // Material Property Field Functions
-    MAST::ConstantFieldFunction rho_f("rho", rho);
-    MAST::ConstantFieldFunction E_f("E", E);
-    MAST::ConstantFieldFunction nu_f("nu", nu);
-    MAST::ConstantFieldFunction kappa_f("kappa", kappa);
-    MAST::ConstantFieldFunction cp_f("cp", cp);
-    MAST::ConstantFieldFunction k_f("k_th", k);
-    
-    // Initialize the material
-    MAST::IsotropicMaterialPropertyCard material;                   
-    
-    // Add the material property constant field functions to the material card
-    material.add(rho_f);
-    material.add(k_f);
-    material.add(cp_f);
-    material.add(E_f);
-    material.add(nu_f);
-    material.add(kappa_f);
-    
-    // Initialize the section
-    MAST::Solid1DBarSectionElementPropertyCard section;
-    
-    // Add the section property constant field functions to the section card
-    section.add(DIM1_f);
-    section.add(DIM2_f);
-    section.add(offsety_f);
-    section.add(offsetz_f);
-    
-    // Add the material card to the section card
-    section.set_material(material);
-    
-    // Specify a section orientation point and add it to the section.
-    RealVectorX orientation = RealVectorX::Zero(3);
-    orientation(1) = 1.0;
-    section.y_vector() = orientation;
-    
-    // Now initialize the section
-    section.init(*p_global_init);
-    
-    REQUIRE( section.dim() == dim); // Ensure section is 1 dimensional
-    REQUIRE( section.depends_on(DIM1) );
-    REQUIRE( section.depends_on(offset_y) );
-    REQUIRE( section.depends_on(DIM2) );
-    REQUIRE( section.depends_on(offset_z) );
-    REQUIRE( section.depends_on(k) );
-    REQUIRE( section.depends_on(cp) );
-    REQUIRE( section.depends_on(rho) );
     REQUIRE( section.if_isotropic() );
-    
-    // True values calculated using the sectionproperties module in python BAR.py
-    const Real area_true = 2.2500000000000004e+00;
-    const Real torsion_constant_true = 3.5540414988249380e-01;
-    const Real first_area_moment_z_true = 6.4574999999999994e-01;
-    const Real first_area_moment_y_true = 3.7214999999999945e+00;
-    const Real second_area_moment_zz_true = 2.9079899999999986e-01;
-    const Real second_area_moment_yy_true = 7.8428609999999814e+00;
-    const Real second_area_moment_zy_true = 1.0680705000000006e+00;
-    const Real second_area_moment_polar_true = 8.1336599999999812e+00;
-    const Real Izzc_true = 1.0546874999999994e-01;
-    const Real Iyyc_true = 1.6875000000000009e+00;
-    const Real Izyc_true = 2.4424906541753444e-15;
-    const Real warping_constant_true = 6.1030611538894504e-02;
-    const Real kappa_z_true = 8.3330248143102326e-01;
-    const Real kappa_y_true = 5.5763491072129889e-01;
-    const Real xs_true = 1.6540000458463804e+00;
-    const Real ys_true = 2.8700000023051281e-01;
-    const Real xst_true = 1.6540000458463804e+00;
-    const Real yst_true = 2.8700000023051281e-01;
-    const libMesh::Point shear_center_true(xs_true, ys_true, 0.);
-    
-    const libMesh::Point centroid_true(1.654, 0.287);
-    Real stress_C_x, stress_C_y, stress_D_x, stress_D_y;
-    Real stress_E_x, stress_E_y, stress_F_x, stress_F_y;
     
     const libMesh::Point point(4.3, -3.5, -6.7);
     const Real time = 8.22;
@@ -326,7 +175,6 @@ TEST_CASE("bar_element_property_card_constant_base_sensitivity_1d",
     const Real delta = 1.220703125e-04; // (np.spacing(1))**(0.25)
     
     // Area Sensitivity Check
-    libMesh::out << "\tArea Sensitivity Check..." << std::endl;
     const MAST::FieldFunction<Real>& Area = section.A();
     std::vector<Real> dA(n_s);
     for (uint i=0; i<n_s; i++)
@@ -339,17 +187,16 @@ TEST_CASE("bar_element_property_card_constant_base_sensitivity_1d",
     {
         dA_cd[i] = TEST::approximate_field_function_derivative(Area, sens_params[i], point, time);
         
-        libMesh::out << "dA_d" << sens_params[i]->name() << " = " << dA[i] << "\tdA_cd = " << dA_cd[i] << std::endl;
+        //libMesh::out << "dA_d" << sens_params[i]->name() << " = " << dA[i] << "\tdA_cd = " << dA_cd[i] << std::endl;
         REQUIRE(dA[i] == Approx(dA_cd[i]));
     }
     
     
     // Centroid Sensitivity Check
-    libMesh::out << "\tCentroid Sensitivity Check..." << std::endl;
     std::vector<libMesh::Point> dC(n_s);
     for (uint i=0; i<n_s; i++)
     {
-        dC[i] = section.cross_section->get_centroid_derivative(*sens_params[i], point, time);
+        dC[i] = section.get_centroid_derivative(*sens_params[i], point, time);
     }
     
     libMesh::Point fp_h, fp_2h, fp_n, fp_2n;
@@ -357,16 +204,16 @@ TEST_CASE("bar_element_property_card_constant_base_sensitivity_1d",
     for (uint i=0; i<n_s; i++)
     {
         (*sens_params[i])() += delta;
-        fp_h = section.cross_section->get_centroid(point, time);
+        fp_h = section.get_centroid(point, time);
         
         (*sens_params[i])() += delta;
-        fp_2h = section.cross_section->get_centroid(point, time);
+        fp_2h = section.get_centroid(point, time);
         
         (*sens_params[i])() -= 3.0*delta;
-        fp_n = section.cross_section->get_centroid(point, time);
+        fp_n = section.get_centroid(point, time);
         
         (*sens_params[i])() -= delta;
-        fp_2n = section.cross_section->get_centroid(point, time);
+        fp_2n = section.get_centroid(point, time);
         
         (*sens_params[i])() += 2.0*delta;
         
@@ -378,7 +225,6 @@ TEST_CASE("bar_element_property_card_constant_base_sensitivity_1d",
     }
     
     // First Area Moments Sensitivity Check
-    libMesh::out << "\tFirst Area Moment Y Sensitivity Check..." << std::endl;
     const MAST::FieldFunction<Real>& Area_y = section.Ay();
     std::vector<Real> dAy(n_s);
     for (uint i=0; i<n_s; i++)
@@ -395,7 +241,7 @@ TEST_CASE("bar_element_property_card_constant_base_sensitivity_1d",
         REQUIRE(dAy[i] == Approx(dAy_cd[i]));
     }
     
-    libMesh::out << "\tFirst Area Moment Z Sensitivity Check..." << std::endl;
+    
     const MAST::FieldFunction<Real>& Area_z = section.Az();
     std::vector<Real> dAz(n_s);
     for (uint i=0; i<n_s; i++)
@@ -414,7 +260,6 @@ TEST_CASE("bar_element_property_card_constant_base_sensitivity_1d",
     
     
     // Second Area Moments Sensitivity Check
-    libMesh::out << "\tSecond Area Moments Sensitivity Check..." << std::endl;
     const MAST::FieldFunction<RealMatrixX>& Inertia = section.I();
     std::vector<RealMatrixX> dI(n_s);
     for (uint i=0; i<n_s; i++)
@@ -448,7 +293,6 @@ TEST_CASE("bar_element_property_card_constant_base_sensitivity_1d",
     
     
     // Second Area Polar Moment Sensitivity Check
-    libMesh::out << "\tSecond Area Polar Moment Sensitivity Check..." << std::endl;
     const MAST::FieldFunction<Real>& PolarInertia = section.Ip();
     std::vector<Real> dIp(n_s);
     for (uint i=0; i<n_s; i++)
@@ -459,21 +303,7 @@ TEST_CASE("bar_element_property_card_constant_base_sensitivity_1d",
     std::vector<Real> dIp_cd(n_s);
     for (uint i=0; i<n_s; i++)
     {
-        (*sens_params[i])() += delta;
-        PolarInertia(point, time, f_h);
-        
-        (*sens_params[i])() += delta;
-        PolarInertia(point, time, f_2h);
-        
-        (*sens_params[i])() -= 3.0*delta;
-        PolarInertia(point, time, f_n);
-        
-        (*sens_params[i])() -= delta;
-        PolarInertia(point, time, f_2n);
-        
-        (*sens_params[i])() += 2.0*delta;
-        
-        dIp_cd[i] = (f_2n - 8.*f_n + 8.*f_h - f_2h)/(12.*delta);
+        dIp_cd[i] = TEST::approximate_field_function_derivative(PolarInertia, sens_params[i], point, time);
         
         libMesh::out << "dIp_d" << sens_params[i]->name() << " = " << dIp[i] << "\tdIp_cd = " << dIp_cd[i] << std::endl;
         REQUIRE(dIp[i] == Approx(dIp_cd[i]));
@@ -481,27 +311,26 @@ TEST_CASE("bar_element_property_card_constant_base_sensitivity_1d",
     
     
 //     // Shear Center Sensitivity Check
-//     libMesh::out << "\tShear Center Sensitivity Check..." << std::endl;
 //     std::vector<libMesh::Point> dCs(n_s);
 //     for (uint i=0; i<n_s; i++)
 //     {
-//         dCs[i] = section.cross_section->get_shear_center_derivative(*sens_params[i], point, time);
+//         dCs[i] = section.get_shear_center_derivative(*sens_params[i], point, time);
 //     }
 //     
 //     std::vector<libMesh::Point> dCs_cd(n_s);
 //     for (uint i=0; i<n_s; i++)
 //     {
 //         (*sens_params[i])() += delta;
-//         fp_h = section.cross_section->get_shear_center(point, time);
+//         fp_h = section.get_shear_center(point, time);
 //         
 //         (*sens_params[i])() += delta;
-//         fp_2h = section.cross_section->get_shear_center(point, time);
+//         fp_2h = section.get_shear_center(point, time);
 //         
 //         (*sens_params[i])() -= 3.0*delta;
-//         fp_n = section.cross_section->get_shear_center(point, time);
+//         fp_n = section.get_shear_center(point, time);
 //         
 //         (*sens_params[i])() -= delta;
-//         fp_2n = section.cross_section->get_shear_center(point, time);
+//         fp_2n = section.get_shear_center(point, time);
 //         
 //         (*sens_params[i])() += 2.0*delta;
 //         
@@ -515,7 +344,6 @@ TEST_CASE("bar_element_property_card_constant_base_sensitivity_1d",
     
     // Torsion Constant Sensitivity Check
     // NOTE: The field function below is not made constant because currently a finite difference is used to calculate sensitivity.
-    libMesh::out << "\tTorsion Constant Sensitivity Check..." << std::endl;
     MAST::FieldFunction<Real>& TorsionConstant = section.J();
     std::vector<Real> dJ(n_s);
     for (uint i=0; i<n_s; i++)
@@ -526,21 +354,7 @@ TEST_CASE("bar_element_property_card_constant_base_sensitivity_1d",
     std::vector<Real> dJ_cd(n_s);
     for (uint i=0; i<n_s; i++)
     {
-        (*sens_params[i])() += delta;
-        TorsionConstant(point, time, f_h);
-        
-        (*sens_params[i])() += delta;
-        TorsionConstant(point, time, f_2h);
-        
-        (*sens_params[i])() -= 3.0*delta;
-        TorsionConstant(point, time, f_n);
-        
-        (*sens_params[i])() -= delta;
-        TorsionConstant(point, time, f_2n);
-        
-        (*sens_params[i])() += 2.0*delta;
-        
-        dJ_cd[i] = (f_2n - 8.*f_n + 8*f_h - f_2h)/(12.*delta);
+        dJ_cd[i] = TEST::approximate_field_function_derivative(TorsionConstant, sens_params[i], point, time);
         
         libMesh::out << "dJ_d" << sens_params[i]->name() << " = " << dJ[i] << "\tdJ_cd = " << dJ_cd[i] << std::endl;
         REQUIRE(dJ[i] == Approx(dJ_cd[i]).epsilon(0.1) );
@@ -550,7 +364,6 @@ TEST_CASE("bar_element_property_card_constant_base_sensitivity_1d",
     
     // Shear Coefficient Sensitivity Check
     // NOTE: The field function below is not made constant because currently a finite difference is used to calculate sensitivity.
-    libMesh::out << "\tShear Coefficients Sensitivity Check..." << std::endl;
     MAST::FieldFunction<RealMatrixX>& Kappa = section.Kap();
     std::vector<RealMatrixX> dK(n_s);
     for (uint i=0; i<n_s; i++)
@@ -561,21 +374,7 @@ TEST_CASE("bar_element_property_card_constant_base_sensitivity_1d",
     std::vector<RealMatrixX> dK_cd(n_s);
     for (uint i=0; i<n_s; i++)
     {
-        (*sens_params[i])() += delta;
-        Kappa(point, time, fm_h);
-        
-        (*sens_params[i])() += delta;
-        Kappa(point, time, fm_2h);
-        
-        (*sens_params[i])() -= 3.0*delta;
-        Kappa(point, time, fm_n);
-        
-        (*sens_params[i])() -= delta;
-        Kappa(point, time, fm_2n);
-        
-        (*sens_params[i])() += 2.0*delta;
-        
-        dK_cd[i] = (fm_2n - 8.*fm_n + 8*fm_h - fm_2h)/(12.*delta);
+        dK_cd[i] = TEST::approximate_field_function_derivative(Kappa, sens_params[i], point, time);
         
         libMesh::out << "dK_d" << sens_params[i]->name() << " =\n" << dK[i] << "\ndK_cd = \n" << dK_cd[i] << std::endl;
         
@@ -600,7 +399,6 @@ TEST_CASE("bar_element_property_card_constant_base_sensitivity_1d",
     
     // Warping Constant Sensitivity Check
     // NOTE: The field function below is not made constant because currently a finite difference is used to calculate sensitivity.
-    libMesh::out << "\tWarping Constant Sensitivity Check..." << std::endl;
     MAST::FieldFunction<Real>& WarpingConstant = section.Gam();
     std::vector<Real> dW(n_s);
     for (uint i=0; i<n_s; i++)
@@ -611,21 +409,7 @@ TEST_CASE("bar_element_property_card_constant_base_sensitivity_1d",
     std::vector<Real> dW_cd(n_s);
     for (uint i=0; i<n_s; i++)
     {
-        (*sens_params[i])() += delta;
-        WarpingConstant(point, time, f_h);
-        
-        (*sens_params[i])() += delta;
-        WarpingConstant(point, time, f_2h);
-        
-        (*sens_params[i])() -= 3.0*delta;
-        WarpingConstant(point, time, f_n);
-        
-        (*sens_params[i])() -= delta;
-        WarpingConstant(point, time, f_2n);
-        
-        (*sens_params[i])() += 2.0*delta;
-        
-        dW_cd[i] = (f_2n - 8.*f_n + 8*f_h - f_2h)/(12.*delta);
+        dW_cd[i] = TEST::approximate_field_function_derivative(WarpingConstant, sens_params[i], point, time);
         
         libMesh::out << "dW_d" << sens_params[i]->name() << " = " << dW[i] << "\tdW_cd = " << dW_cd[i] << std::endl;
         REQUIRE(dW[i] == Approx(dW_cd[i]).epsilon(0.1) );
@@ -634,82 +418,32 @@ TEST_CASE("bar_element_property_card_constant_base_sensitivity_1d",
 }
 
 
+
 TEST_CASE("bar_element_property_card_constant_heat_transfer_1d",
           "[heat_transfer],[1D],[isotropic],[constant],[property]")
 {
     const uint dim = 1;
+    const uint n_target_elems = 3000;
     
-    // Define Material Properties as MAST Parameters
-    MAST::Parameter rho("rho_param", 1420.5);         // Density
-    MAST::Parameter cp("cp_param",   908.0);          // Specific Heat Capacity
-    MAST::Parameter k("k_param",     237.0);          // Thermal Conductivity
-    
-    // Define Section Properties as MAST Parameters
-    MAST::Parameter thickness_y("DIM1", 0.04);   // Section thickness in z-direction
-    MAST::Parameter thickness_z("DIM2", 0.06);   // Section thickness in y-direction
-    MAST::Parameter offset_y("offy_param", 0.035);     // Section offset in y-direction
-    MAST::Parameter offset_z("offz_param", 0.026);     // Section offset in z-direction
-    
-    // Create field functions to dsitribute these constant parameters throughout the model
-    // Section Property Field Functions
-    MAST::ConstantFieldFunction DIM1_f("DIM1", thickness_y);
-    MAST::ConstantFieldFunction DIM2_f("DIM2", thickness_z);
-    MAST::ConstantFieldFunction offsety_f("hy_off", offset_y);
-    MAST::ConstantFieldFunction offsetz_f("hz_off", offset_z);
-    // Material Property Field Functions
-    MAST::ConstantFieldFunction rho_f("rho", rho);
-    MAST::ConstantFieldFunction cp_f("cp", cp);
-    MAST::ConstantFieldFunction k_f("k_th", k);
-    
-    // Initialize the material
-    MAST::IsotropicMaterialPropertyCard material;                   
-    
-    // Add the material property constant field functions to the material card
-    material.add(rho_f);
-    material.add(k_f);
-    material.add(cp_f);
-    
-    // Initialize the section
-    MAST::Solid1DBarSectionElementPropertyCard section;
-    
-    // Add the section property constant field functions to the section card
-    section.add(DIM1_f);
-    section.add(DIM2_f);
-    section.add(offsety_f);
-    section.add(offsetz_f);
-    
-    // Add the material card to the section card
-    section.set_material(material);
-    
-//     // Specify a section orientation point and add it to the section.
-//     RealVectorX orientation = RealVectorX::Zero(3);
-//     orientation(1) = 1.0;
-//     section.y_vector() = orientation;
-    
-    // Now initialize the section
-    section.init(*p_global_init);
+    TEST::AluminumBarSection section(n_target_elems);
     
     REQUIRE( section.dim() == dim); // Ensure section is 1 dimensional
-    REQUIRE( section.depends_on(thickness_y) );
-    REQUIRE( section.depends_on(offset_y) );
-    REQUIRE( section.depends_on(thickness_z) );
-    REQUIRE( section.depends_on(offset_z) );
-    REQUIRE( section.depends_on(k) );
-    REQUIRE( section.depends_on(cp) );
-    REQUIRE( section.depends_on(rho) );
+    REQUIRE( section.depends_on(section.DIM1) );
+    REQUIRE( section.depends_on(section.offset_y) );
+    REQUIRE( section.depends_on(section.offset_z) );
+    REQUIRE( section.depends_on(section.material.k) );
+    REQUIRE( section.depends_on(section.material.cp) );
+    REQUIRE( section.depends_on(section.material.rho) );
+    
     REQUIRE( section.if_isotropic() );
     
-    // True values calculated using the sectionproperties module in python BAR.py
-    Real area_true = 2.3999999999999963e-03;
-    
-    // NOTE: The default 1D section is rectangular
     const libMesh::Point point(4.3, -3.5, -6.7);
     const Real time = 8.22;
     
     Real area;
     const MAST::FieldFunction<Real>& Area = section.A();
     Area(point, time, area);
-    REQUIRE( area == Approx(area_true) );
+    REQUIRE( area == Approx(section.area_true) );
     
 
     SECTION("1D section thermal conductance matrix")
@@ -733,17 +467,12 @@ TEST_CASE("bar_element_property_card_constant_heat_transfer_1d",
         
         // Hard-coded value of the section's extension stiffness
         RealMatrixX D_sec_conduc_true = RealMatrixX::Zero(1,1);
-        D_sec_conduc_true(0,0) = 237.0*0.06*0.04;
-        
-        // Convert the test and truth Eigen::Matrix objects to std::vector
-        // since Catch2 has built in methods to compare vectors
-        std::vector<double> test =  TEST::eigen_matrix_to_std_vector(D_sec_conduc);
-        std::vector<double> truth = TEST::eigen_matrix_to_std_vector(D_sec_conduc_true);
+        D_sec_conduc_true(0,0) = section.material.k() * section.area_true;
         
         // Floating point approximations are diffcult to compare since the
         // values typically aren't exactly equal due to numerical error.
         // Therefore, we use the Approx comparison instead of Equals
-        CHECK_THAT( test, Catch::Approx<double>(truth) );
+        CHECK_THAT( TEST::eigen_matrix_to_std_vector(D_sec_conduc), Catch::Approx<double>(TEST::eigen_matrix_to_std_vector(D_sec_conduc_true)) );
     }
     
     SECTION("1D section thermal capacitance matrix")
@@ -767,17 +496,12 @@ TEST_CASE("bar_element_property_card_constant_heat_transfer_1d",
         
         // Hard-coded value of the section's extension stiffness
         RealMatrixX D_sec_capac_true = RealMatrixX::Zero(1,1);
-        D_sec_capac_true(0,0) = 908.0*1420.5*0.06*0.04;
-        
-        // Convert the test and truth Eigen::Matrix objects to std::vector
-        // since Catch2 has built in methods to compare vectors
-        std::vector<double> test =  TEST::eigen_matrix_to_std_vector(D_sec_capac);
-        std::vector<double> truth = TEST::eigen_matrix_to_std_vector(D_sec_capac_true);
+        D_sec_capac_true(0,0) = section.material.rho() * section.material.cp() * section.area_true;
         
         // Floating point approximations are diffcult to compare since the
         // values typically aren't exactly equal due to numerical error.
         // Therefore, we use the Approx comparison instead of Equals
-        CHECK_THAT( test, Catch::Approx<double>(truth) );
+        CHECK_THAT( TEST::eigen_matrix_to_std_vector(D_sec_capac), Catch::Approx<double>(TEST::eigen_matrix_to_std_vector(D_sec_capac_true)) );
     }
 }
 
@@ -786,75 +510,22 @@ TEST_CASE("bar_element_property_card_constant_thermoelastic_1d",
           "[thermoelastic],[1D],[isotropic],[constant],[property]")
 {
     const uint dim = 1;
+    const uint n_target_elems = 3000;
     
-    // Define Material Properties as MAST Parameters
-    MAST::Parameter E("E_param", 72.0e9);             // Modulus of Elasticity
-    MAST::Parameter nu("nu_param", 0.33);             // Poisson's ratio
-    MAST::Parameter alpha("alpha_param", 5.43e-05);   // Coefficient of thermal expansion
-    
-    // Define Section Properties as MAST Parameters
-    MAST::Parameter thickness_y("DIM1", 0.04);   // Section thickness in z-direction
-    MAST::Parameter thickness_z("DIM2", 0.06);   // Section thickness in y-direction
-    MAST::Parameter offset_y("offy_param", 0.035);     // Section offset in y-direction
-    MAST::Parameter offset_z("offz_param", 0.026);     // Section offset in z-direction
-    
-    // Create field functions to dsitribute these constant parameters throughout the model
-    // Section Property Field Functions
-    MAST::ConstantFieldFunction DIM1_f("DIM1", thickness_y);
-    MAST::ConstantFieldFunction DIM2_f("DIM2", thickness_z);
-    MAST::ConstantFieldFunction offsety_f("hy_off", offset_y);
-    MAST::ConstantFieldFunction offsetz_f("hz_off", offset_z);
-    // Material Property Field Functions
-    MAST::ConstantFieldFunction E_f("E", E);
-    MAST::ConstantFieldFunction nu_f("nu", nu);
-    MAST::ConstantFieldFunction alpha_f("alpha_expansion", alpha);
-    
-    // Initialize the material
-    MAST::IsotropicMaterialPropertyCard material;                   
-    
-    // Add the material property constant field functions to the material card
-    material.add(E_f);
-    material.add(nu_f);
-    material.add(alpha_f);
-    
-    // Initialize the section
-    MAST::Solid1DBarSectionElementPropertyCard section;
-    
-    // Add the section property constant field functions to the section card
-    section.add(DIM1_f);
-    section.add(DIM2_f);
-    section.add(offsety_f);
-    section.add(offsetz_f);
-    
-    // Add the material card to the section card
-    section.set_material(material);
-    
-    // Specify a section orientation point and add it to the section.
-    RealVectorX orientation = RealVectorX::Zero(3);
-    orientation(1) = 1.0;
-    section.y_vector() = orientation;
-    
-    // Now initialize the section
-    section.init(*p_global_init);
+    TEST::AluminumBarSection section(n_target_elems);
     
     REQUIRE( section.dim() == dim); // Ensure section is 1 dimensional
-    REQUIRE( section.depends_on(thickness_y) );
-    REQUIRE( section.depends_on(offset_y) );
-    REQUIRE( section.depends_on(thickness_z) );
-    REQUIRE( section.depends_on(offset_z) );
-    REQUIRE( section.depends_on(E) );
-    REQUIRE( section.depends_on(nu) );
-    REQUIRE( section.depends_on(alpha) );
+    REQUIRE( section.depends_on(section.DIM1) );
+    REQUIRE( section.depends_on(section.offset_y) );
+    REQUIRE( section.depends_on(section.offset_z) );
+    REQUIRE( section.depends_on(section.material.k) );
+    REQUIRE( section.depends_on(section.material.cp) );
+    REQUIRE( section.depends_on(section.material.rho) );
+    
     REQUIRE( section.if_isotropic() );
     
-    // True values calculated using the sectionproperties module in python BAR.py
-    // NOTE: The default 1D section is rectangular
     const libMesh::Point point(4.3, -3.5, -6.7);
     const Real time = 8.22;
-    
-    Real area_true = 2.3999999999999963e-03;
-    Real first_area_moment_y_true = 6.2399999999999741e-05;
-    Real first_area_moment_z_true = 8.3999999999999887e-05;
     
     SECTION("1D thermal expansion A matrix")
     {
@@ -872,7 +543,7 @@ TEST_CASE("bar_element_property_card_constant_thermoelastic_1d",
         Real area;
         const MAST::FieldFunction<Real>& Area = section.A();
         Area(point, time, area);
-        CHECK( area == Approx(area_true) );
+        CHECK( area == Approx(section.area_true) );
         
         std::unique_ptr<MAST::FieldFunction<RealMatrixX>> texp_A_mat = section.thermal_expansion_A_matrix();
         
@@ -883,18 +554,12 @@ TEST_CASE("bar_element_property_card_constant_thermoelastic_1d",
                 
         // Hard-coded value of the section's extension stiffness
         RealMatrixX D_sec_texpA_true = RealMatrixX::Zero(2,1);
-        D_sec_texpA_true(0,0) = 9383.04;
-        
-        // Convert the test and truth Eigen::Matrix objects to std::vector
-        // since Catch2 has built in methods to compare vectors
-        std::vector<double> test =  TEST::eigen_matrix_to_std_vector(D_sec_texpA);
-        std::vector<double> truth = TEST::eigen_matrix_to_std_vector(D_sec_texpA_true);
-        
+        D_sec_texpA_true(0,0) = section.material.E() * section.material.alpha() * section.area_true;
         
         // Floating point approximations are diffcult to compare since the
         // values typically aren't exactly equal due to numerical error.
         // Therefore, we use the Approx comparison instead of Equals
-        CHECK_THAT( test, Catch::Approx<double>(truth) );
+        CHECK_THAT( TEST::eigen_matrix_to_std_vector(D_sec_texpA), Catch::Approx<double>(TEST::eigen_matrix_to_std_vector(D_sec_texpA_true)) );
     }
     
     SECTION("1D thermal expansion B matrix")
@@ -913,12 +578,12 @@ TEST_CASE("bar_element_property_card_constant_thermoelastic_1d",
         Real first_area_moment_y;
         const MAST::FieldFunction<Real>& Ay = section.Ay();
         Ay(point, time, first_area_moment_y);
-        CHECK( first_area_moment_y == Approx(first_area_moment_y_true) );
+        CHECK( first_area_moment_y == Approx(section.first_area_moment_y_true) );
         
         Real first_area_moment_z;
         const MAST::FieldFunction<Real>& Az = section.Az();
         Az(point, time, first_area_moment_z);
-        CHECK( first_area_moment_z == Approx(first_area_moment_z_true) );
+        CHECK( first_area_moment_z == Approx(section.first_area_moment_z_true) );
         
         std::unique_ptr<MAST::FieldFunction<RealMatrixX>> texp_B_mat = section.thermal_expansion_B_matrix();
         
@@ -931,19 +596,13 @@ TEST_CASE("bar_element_property_card_constant_thermoelastic_1d",
         
         // Hard-coded value of the section's extension stiffness
         RealMatrixX D_sec_texpB_true = RealMatrixX::Zero(2,1);
-        D_sec_texpB_true(0,0) = 328.40639999999956;
-        D_sec_texpB_true(1,0) = 243.959039999999;
-        
-        
-        // Convert the test and truth Eigen::Matrix objects to std::vector
-        // since Catch2 has built in methods to compare vectors
-        std::vector<double> test =  TEST::eigen_matrix_to_std_vector(D_sec_texpB);
-        std::vector<double> truth = TEST::eigen_matrix_to_std_vector(D_sec_texpB_true);
+        D_sec_texpB_true(0,0) = section.material.E() * section.material.alpha() * section.first_area_moment_z_true;
+        D_sec_texpB_true(1,0) = section.material.E() * section.material.alpha() * section.first_area_moment_y_true;
         
         // Floating point approximations are diffcult to compare since the
         // values typically aren't exactly equal due to numerical error.
         // Therefore, we use the Approx comparison instead of Equals
-        CHECK_THAT( test, Catch::Approx<double>(truth) );
+        CHECK_THAT( TEST::eigen_matrix_to_std_vector(D_sec_texpB), Catch::Approx<double>(TEST::eigen_matrix_to_std_vector(D_sec_texpB_true)) );
     }
 }
 
@@ -952,99 +611,20 @@ TEST_CASE("bar_element_property_card_constant_dynamic_1d",
           "[dynamic],[1D],[isotropic],[constant],[property]")
 {
     const uint dim = 1;
+    const uint n_target_elems = 3000;
     
-    // Define Material Properties as MAST Parameters
-    MAST::Parameter rho("rho_param", 1420.5);         // Density
-    MAST::Parameter E("E_param", 72.0e9);             // Modulus of Elasticity
-    MAST::Parameter nu("nu_param", 0.33);             // Poisson's ratio
-    MAST::Parameter kappa("kappa_param", 5.0/6.0);    // Shear coefficient
-    MAST::Parameter cp("cp_param",   908.0);          // Specific Heat Capacity
-    MAST::Parameter k("k_param",     237.0);          // Thermal Conductivity
-    
-    // Define Section Properties as MAST Parameters
-    MAST::Parameter thickness_y("DIM1", 3.0);   // Section thickness in z-direction
-    MAST::Parameter thickness_z("DIM2", 0.75);   // Section thickness in y-direction
-    MAST::Parameter offset_y("offy_param", 0.287);     // Section offset in y-direction
-    MAST::Parameter offset_z("offz_param", 1.654);     // Section offset in z-direction
-    
-    // Create field functions to dsitribute these constant parameters throughout the model
-    // Section Property Field Functions
-    MAST::ConstantFieldFunction DIM1_f("DIM1", thickness_y);
-    MAST::ConstantFieldFunction DIM2_f("DIM2", thickness_z);
-    MAST::ConstantFieldFunction offsety_f("hy_off", offset_y);
-    MAST::ConstantFieldFunction offsetz_f("hz_off", offset_z);
-    // Material Property Field Functions
-    MAST::ConstantFieldFunction rho_f("rho", rho);
-    MAST::ConstantFieldFunction E_f("E", E);
-    MAST::ConstantFieldFunction nu_f("nu", nu);
-    MAST::ConstantFieldFunction kappa_f("kappa", kappa);
-    MAST::ConstantFieldFunction cp_f("cp", cp);
-    MAST::ConstantFieldFunction k_f("k_th", k);
-    
-    // Initialize the material
-    MAST::IsotropicMaterialPropertyCard material;                   
-    
-    // Add the material property constant field functions to the material card
-    material.add(rho_f);
-    material.add(k_f);
-    material.add(cp_f);
-    material.add(E_f);
-    material.add(nu_f);
-    material.add(kappa_f);
-    
-    // Initialize the section
-    MAST::Solid1DBarSectionElementPropertyCard section;
-    
-    // Add the section property constant field functions to the section card
-    section.add(DIM1_f);
-    section.add(DIM2_f);
-    section.add(offsety_f);
-    section.add(offsetz_f);
-    
-    // Add the material card to the section card
-    section.set_material(material);
-    
-    // Specify a section orientation point and add it to the section.
-    RealVectorX orientation = RealVectorX::Zero(3);
-    orientation(1) = 1.0;
-    section.y_vector() = orientation;
-    
-    // Now initialize the section
-    section.init(*p_global_init);
+    TEST::AluminumBarSection section(n_target_elems);
     
     REQUIRE( section.dim() == dim); // Ensure section is 1 dimensional
-    REQUIRE( section.depends_on(thickness_y) );
-    REQUIRE( section.depends_on(offset_y) );
-    REQUIRE( section.depends_on(thickness_z) );
-    REQUIRE( section.depends_on(offset_z) );
-    REQUIRE( section.depends_on(k) );
-    REQUIRE( section.depends_on(cp) );
-    REQUIRE( section.depends_on(rho) );
+    REQUIRE( section.depends_on(section.DIM1) );
+    REQUIRE( section.depends_on(section.offset_y) );
+    REQUIRE( section.depends_on(section.offset_z) );
+    REQUIRE( section.depends_on(section.material.k) );
+    REQUIRE( section.depends_on(section.material.cp) );
+    REQUIRE( section.depends_on(section.material.rho) );
+    
     REQUIRE( section.if_isotropic() );
     
-    // True values calculated using the sectionproperties module in python BAR.py
-    const Real area_true = 2.2500000000000004e+00;
-    const Real torsion_constant_true = 3.5540414988249380e-01;
-    const Real first_area_moment_z_true = 6.4574999999999994e-01;
-    const Real first_area_moment_y_true = 3.7214999999999945e+00;
-    const Real second_area_moment_zz_true = 2.9079899999999986e-01;
-    const Real second_area_moment_yy_true = 7.8428609999999814e+00;
-    const Real second_area_moment_zy_true = 1.0680705000000006e+00;
-    const Real second_area_moment_polar_true = 8.1336599999999812e+00;
-    const Real Izzc_true = 1.0546874999999994e-01;
-    const Real Iyyc_true = 1.6875000000000009e+00;
-    const Real Izyc_true = 2.4424906541753444e-15;
-    const Real warping_constant_true = 6.1030611538894504e-02;
-    const Real kappa_z_true = 8.3330248143102326e-01;
-    const Real kappa_y_true = 5.5763491072129889e-01;
-    const Real xs_true = 1.6540000458463804e+00;
-    const Real ys_true = 2.8700000023051281e-01;
-    const Real xst_true = 1.6540000458463804e+00;
-    const Real yst_true = 2.8700000023051281e-01;
-    const libMesh::Point shear_center_true(xs_true, ys_true, 0.);
-    const libMesh::Point centroid_true(1.654, 0.287, 0.);
-    
-    // NOTE: The default 1D section is rectangular
     const libMesh::Point point(4.3, -3.5, -6.7);
     const Real time = 8.22;
     
@@ -1074,26 +654,26 @@ TEST_CASE("bar_element_property_card_constant_dynamic_1d",
         Real area;
         const MAST::FieldFunction<Real>& Area = section.A();
         Area(point, time, area);
-        REQUIRE( area == Approx(area_true) );
-        D_sec_iner_true(0,0) = D_sec_iner_true(1,1) = D_sec_iner_true(2,2) = area_true;
+        REQUIRE( area == Approx(section.area_true) );
+        D_sec_iner_true(0,0) = D_sec_iner_true(1,1) = D_sec_iner_true(2,2) = section.area_true;
         
         Real Ip;
         const MAST::FieldFunction<Real>& PolarInertia = section.Ip();
         PolarInertia(point, time, Ip);
-        CHECK( Ip == Approx(second_area_moment_polar_true) );
-        D_sec_iner_true(3,3) = second_area_moment_polar_true;
+        CHECK( Ip == Approx(section.second_area_moment_polar_true) );
+        D_sec_iner_true(3,3) = section.second_area_moment_polar_true;
         
         Real first_area_moment_y;
         const MAST::FieldFunction<Real>& Ay = section.Ay();
         Ay(point, time, first_area_moment_y);
-        CHECK( first_area_moment_y == Approx(first_area_moment_y_true) );
-        D_sec_iner_true(0,4) = D_sec_iner_true(4,0) = first_area_moment_y_true;
+        CHECK( first_area_moment_y == Approx(section.first_area_moment_y_true) );
+        D_sec_iner_true(0,4) = D_sec_iner_true(4,0) = section.first_area_moment_y_true;
         
         Real first_area_moment_z;
         const MAST::FieldFunction<Real>& Az = section.Az();
         Az(point, time, first_area_moment_z);
-        CHECK( first_area_moment_z == Approx(first_area_moment_z_true) );
-        D_sec_iner_true(0,5) = D_sec_iner_true(5,0) = first_area_moment_z_true;
+        CHECK( first_area_moment_z == Approx(section.first_area_moment_z_true) );
+        D_sec_iner_true(0,5) = D_sec_iner_true(5,0) = section.first_area_moment_z_true;
         
         RealMatrixX I;
         const MAST::FieldFunction<RealMatrixX>& Inertias = section.I();
@@ -1102,26 +682,21 @@ TEST_CASE("bar_element_property_card_constant_dynamic_1d",
         Real Iyy = I(1,1);
         Real Izz = I(0,0);
         Real Izy = I(0,1);
-        REQUIRE( Izz == Approx(second_area_moment_zz_true) );
-        REQUIRE( Iyy == Approx(second_area_moment_yy_true) );
-        REQUIRE( Izy == Approx(second_area_moment_zy_true) );
+        REQUIRE( Izz == Approx(section.second_area_moment_zz_true) );
+        REQUIRE( Iyy == Approx(section.second_area_moment_yy_true) );
+        REQUIRE( Izy == Approx(section.second_area_moment_zy_true) );
         
-        D_sec_iner_true(4,4) = Iyy;
+        D_sec_iner_true(4,4) = Iyy; // Should this be Izz?
         D_sec_iner_true(4,5) = Izy;
         D_sec_iner_true(5,4) = Izy;
-        D_sec_iner_true(5,5) = Izz;
+        D_sec_iner_true(5,5) = Izz; // Should this by Iyy?
         
-        D_sec_iner_true *= rho();
-
-        // Convert the test and truth Eigen::Matrix objects to std::vector
-        // since Catch2 has built in methods to compare vectors
-        std::vector<double> test =  TEST::eigen_matrix_to_std_vector(D_sec_iner);
-        std::vector<double> truth = TEST::eigen_matrix_to_std_vector(D_sec_iner_true);
+        D_sec_iner_true *= section.material.rho();
         
         // Floating point approximations are diffcult to compare since the
         // values typically aren't exactly equal due to numerical error.
         // Therefore, we use the Approx comparison instead of Equals
-        CHECK_THAT( test, Catch::Approx<double>(truth) );
+        CHECK_THAT( TEST::eigen_matrix_to_std_vector(D_sec_iner), Catch::Approx<double>(TEST::eigen_matrix_to_std_vector(D_sec_iner_true)) );
     }
 }
 
@@ -1130,95 +705,20 @@ TEST_CASE("bar_element_property_card_constant_structural_1d",
           "[structural],[1D],[isotropic],[constant],[property]")
 {
     const uint dim = 1;
+    const uint n_target_elems = 3000;
     
-    // Define Material Properties as MAST Parameters
-    MAST::Parameter rho("rho_param", 1420.5);         // Density
-    MAST::Parameter E("E_param", 72.0e9);             // Modulus of Elasticity
-    MAST::Parameter nu("nu_param", 0.33);             // Poisson's ratio
-    MAST::Parameter kappa("kappa_param", 5.0/6.0);    // Shear coefficient
-    const Real G = E() / (2.0 * (1.0+nu()));
-    
-    // Define Section Properties as MAST Parameters
-    MAST::Parameter thickness_y("DIM1", 3.0);   // Section thickness in z-direction
-    MAST::Parameter thickness_z("DIM2", 0.75);   // Section thickness in y-direction
-    MAST::Parameter offset_y("offy_param", 0.287);     // Section offset in y-direction
-    MAST::Parameter offset_z("offz_param", 1.654);     // Section offset in z-direction
-    
-    // Create field functions to dsitribute these constant parameters throughout the model
-    // Section Property Field Functions
-    MAST::ConstantFieldFunction DIM1_f("DIM1", thickness_y);
-    MAST::ConstantFieldFunction DIM2_f("DIM2", thickness_z);
-    MAST::ConstantFieldFunction offsety_f("hy_off", offset_y);
-    MAST::ConstantFieldFunction offsetz_f("hz_off", offset_z);
-    // Material Property Field Functions
-    MAST::ConstantFieldFunction rho_f("rho", rho);
-    MAST::ConstantFieldFunction E_f("E", E);
-    MAST::ConstantFieldFunction nu_f("nu", nu);
-    MAST::ConstantFieldFunction kappa_f("kappa", kappa);
-    
-    // Initialize the material
-    MAST::IsotropicMaterialPropertyCard material;                   
-    
-    // Add the material property constant field functions to the material card
-    material.add(rho_f);
-    material.add(E_f);                                             
-    material.add(nu_f);
-    material.add(kappa_f);
-    
-    // Initialize the section
-    MAST::Solid1DBarSectionElementPropertyCard section;
-    
-    // Add the section property constant field functions to the section card
-    section.add(DIM1_f);
-    section.add(DIM2_f);
-    section.add(offsety_f);
-    section.add(offsetz_f);
-    
-    // Add the material card to the section card
-    section.set_material(material);
-    
-    // Specify a section orientation point and add it to the section.
-    RealVectorX orientation = RealVectorX::Zero(3);
-    orientation(1) = 1.0;
-    section.y_vector() = orientation;
-    
-    // Now initialize the section
-    section.init(*p_global_init);
+    TEST::AluminumBarSection section(n_target_elems);
     
     REQUIRE( section.dim() == dim); // Ensure section is 1 dimensional
-    REQUIRE( section.depends_on(thickness_y) );
-    REQUIRE( section.depends_on(offset_y) );
-    REQUIRE( section.depends_on(thickness_z) );
-    REQUIRE( section.depends_on(offset_z) );
-    REQUIRE( section.depends_on(E) );
-    REQUIRE( section.depends_on(nu) );
-    REQUIRE( section.depends_on(kappa) );
-    REQUIRE( section.depends_on(rho) );
+    REQUIRE( section.depends_on(section.DIM1) );
+    REQUIRE( section.depends_on(section.offset_y) );
+    REQUIRE( section.depends_on(section.offset_z) );
+    REQUIRE( section.depends_on(section.material.k) );
+    REQUIRE( section.depends_on(section.material.cp) );
+    REQUIRE( section.depends_on(section.material.rho) );
+    
     REQUIRE( section.if_isotropic() );
     
-    // True values calculated using the sectionproperties module in python BAR.py
-    const Real area_true = 2.2500000000000004e+00;
-    const Real torsion_constant_true = 3.5540414988249380e-01;
-    const Real first_area_moment_z_true = 6.4574999999999994e-01;
-    const Real first_area_moment_y_true = 3.7214999999999945e+00;
-    const Real second_area_moment_zz_true = 2.9079899999999986e-01;
-    const Real second_area_moment_yy_true = 7.8428609999999814e+00;
-    const Real second_area_moment_zy_true = 1.0680705000000006e+00;
-    const Real second_area_moment_polar_true = 8.1336599999999812e+00;
-    const Real Izzc_true = 1.0546874999999994e-01;
-    const Real Iyyc_true = 1.6875000000000009e+00;
-    const Real Izyc_true = 2.4424906541753444e-15;
-    const Real warping_constant_true = 6.1030611538894504e-02;
-    const Real kappa_z_true = 8.3330248143102326e-01;
-    const Real kappa_y_true = 5.5763491072129889e-01;
-    const Real xs_true = 1.6540000458463804e+00;
-    const Real ys_true = 2.8700000023051281e-01;
-    const Real xst_true = 1.6540000458463804e+00;
-    const Real yst_true = 2.8700000023051281e-01;
-    const libMesh::Point shear_center_true(xs_true, ys_true, 0.);
-    const libMesh::Point centroid_true(1.654, 0.287, 0.);
-    
-    // NOTE: The default 1D section is rectangular
     const libMesh::Point point(4.3, -3.5, -6.7);
     const Real time = 8.22;
     
@@ -1258,12 +758,12 @@ TEST_CASE("bar_element_property_card_constant_structural_1d",
         Real area;
         const MAST::FieldFunction<Real>& Area = section.A();
         Area(point, time, area);
-        REQUIRE( area == Approx(area_true) );
+        REQUIRE( area == Approx(section.area_true) );
         
         Real torsion_constant;
         const MAST::FieldFunction<Real>& TorsionConstant = section.J();
         TorsionConstant(point, time, torsion_constant);
-        REQUIRE( torsion_constant == Approx(torsion_constant_true).epsilon(0.05) );
+        REQUIRE( torsion_constant == Approx(section.torsion_constant_true).epsilon(0.05) );
         
         std::unique_ptr<MAST::FieldFunction<RealMatrixX>> extension_stiffness_mat = section.stiffness_A_matrix();
         
@@ -1276,19 +776,13 @@ TEST_CASE("bar_element_property_card_constant_structural_1d",
         
         // Hard-coded value of the section's extension stiffness
         RealMatrixX D_sec_ext_true = RealMatrixX::Zero(2,2);
-        D_sec_ext_true(0,0) = E() * area_true;
-        D_sec_ext_true(1,1) = G   * torsion_constant_true;
-        
-        
-        // Convert the test and truth Eigen::Matrix objects to std::vector
-        // since Catch2 has built in methods to compare vectors
-        std::vector<double> test =  TEST::eigen_matrix_to_std_vector(D_sec_ext);
-        std::vector<double> truth = TEST::eigen_matrix_to_std_vector(D_sec_ext_true);
+        D_sec_ext_true(0,0) = section.material.E() * section.area_true;
+        D_sec_ext_true(1,1) = section.material.G() * section.torsion_constant_true;
         
         // Floating point approximations are diffcult to compare since the
         // values typically aren't exactly equal due to numerical error.
         // Therefore, we use the Approx comparison instead of Equals
-        CHECK_THAT( test, Catch::Approx<double>(truth).epsilon(0.05) );
+        CHECK_THAT( TEST::eigen_matrix_to_std_vector(D_sec_ext), Catch::Approx<double>(TEST::eigen_matrix_to_std_vector(D_sec_ext_true)).epsilon(0.05) );
     }
     
     
@@ -1311,9 +805,9 @@ TEST_CASE("bar_element_property_card_constant_structural_1d",
         Real Izz = I(0,0);
         Real Iyy = I(1,1);
         Real Izy = I(0,1);
-        REQUIRE( Izz == Approx(second_area_moment_zz_true) );
-        REQUIRE( Iyy == Approx(second_area_moment_yy_true) );
-        REQUIRE( Izy == Approx(second_area_moment_zy_true) );
+        REQUIRE( Izz == Approx(section.second_area_moment_zz_true) );
+        REQUIRE( Iyy == Approx(section.second_area_moment_yy_true) );
+        REQUIRE( Izy == Approx(section.second_area_moment_zy_true) );
         
         std::unique_ptr<MAST::FieldFunction<RealMatrixX>> bending_stiffness_mat = section.stiffness_D_matrix();
         
@@ -1324,20 +818,15 @@ TEST_CASE("bar_element_property_card_constant_structural_1d",
         
         // Hard-coded value of the section's extension stiffness
         RealMatrixX D_sec_bnd_true = RealMatrixX::Zero(2,2);
-        D_sec_bnd_true(0,0) = E() * second_area_moment_zz_true;
-        D_sec_bnd_true(1,1) = E() * second_area_moment_yy_true;
-        D_sec_bnd_true(0,1) = E() * second_area_moment_zy_true;
-        D_sec_bnd_true(1,0) = E() * second_area_moment_zy_true;
-        
-        // Convert the test and truth Eigen::Matrix objects to std::vector
-        // since Catch2 has built in methods to compare vectors
-        std::vector<double> test =  TEST::eigen_matrix_to_std_vector(D_sec_bnd);
-        std::vector<double> truth = TEST::eigen_matrix_to_std_vector(D_sec_bnd_true);
+        D_sec_bnd_true(0,0) = section.material.E() * section.second_area_moment_zz_true;
+        D_sec_bnd_true(1,1) = section.material.E() * section.second_area_moment_yy_true;
+        D_sec_bnd_true(0,1) = section.material.E() * section.second_area_moment_zy_true;
+        D_sec_bnd_true(1,0) = section.material.E() * section.second_area_moment_zy_true;
         
         // Floating point approximations are diffcult to compare since the
         // values typically aren't exactly equal due to numerical error.
         // Therefore, we use the Approx comparison instead of Equals
-        CHECK_THAT( test, Catch::Approx<double>(truth) );
+        CHECK_THAT( TEST::eigen_matrix_to_std_vector(D_sec_bnd), Catch::Approx<double>(TEST::eigen_matrix_to_std_vector(D_sec_bnd_true)) );
     }
     
     SECTION("1D extension-bending section stiffness matrix")
@@ -1355,12 +844,12 @@ TEST_CASE("bar_element_property_card_constant_structural_1d",
         Real first_area_moment_y;
         const MAST::FieldFunction<Real>& Ay = section.Ay();
         Ay(point, time, first_area_moment_y);
-        CHECK( first_area_moment_y == Approx(first_area_moment_y_true) );
+        CHECK( first_area_moment_y == Approx(section.first_area_moment_y_true) );
         
         Real first_area_moment_z;
         const MAST::FieldFunction<Real>& Az = section.Az();
         Az(point, time, first_area_moment_z);
-        CHECK( first_area_moment_z == Approx(first_area_moment_z_true) );
+        CHECK( first_area_moment_z == Approx(section.first_area_moment_z_true) );
         
         std::unique_ptr<MAST::FieldFunction<RealMatrixX>> bndext_stiffness_mat = section.stiffness_B_matrix();
         
@@ -1371,19 +860,14 @@ TEST_CASE("bar_element_property_card_constant_structural_1d",
         
         // Hard-coded value of the section's extension stiffness
         RealMatrixX D_sec_bndext_true = RealMatrixX::Zero(2,2);
-        D_sec_bndext_true(0,0) = E() * first_area_moment_z_true;
-        D_sec_bndext_true(0,1) = E() * first_area_moment_y_true;
+        D_sec_bndext_true(0,0) = section.material.E() * section.first_area_moment_z_true;
+        D_sec_bndext_true(0,1) = section.material.E() * section.first_area_moment_y_true;
         // TODO: Add checks for torsion bending coupling when added to MAST.
-        
-        // Convert the test and truth Eigen::Matrix objects to std::vector
-        // since Catch2 has built in methods to compare vectors
-        std::vector<double> test =  TEST::eigen_matrix_to_std_vector(D_sec_bndext);
-        std::vector<double> truth = TEST::eigen_matrix_to_std_vector(D_sec_bndext_true);
         
         // Floating point approximations are diffcult to compare since the
         // values typically aren't exactly equal due to numerical error.
         // Therefore, we use the Approx comparison instead of Equals
-        CHECK_THAT( test, Catch::Approx<double>(truth) );
+        CHECK_THAT( TEST::eigen_matrix_to_std_vector(D_sec_bndext), Catch::Approx<double>(TEST::eigen_matrix_to_std_vector(D_sec_bndext_true)) );
     }
     
     SECTION("1D transverse shear section stiffness matrix")
@@ -1401,7 +885,7 @@ TEST_CASE("bar_element_property_card_constant_structural_1d",
         Real area;
         const MAST::FieldFunction<Real>& Area = section.A();
         Area(point, time, area);
-        REQUIRE( area == Approx(area_true) );
+        REQUIRE( area == Approx(section.area_true) );
         
         std::unique_ptr<MAST::FieldFunction<RealMatrixX>> trans_shear_stiffness_mat = section.transverse_shear_stiffness_matrix();
         
@@ -1412,18 +896,13 @@ TEST_CASE("bar_element_property_card_constant_structural_1d",
         
         // Hard-coded value of the section's extension stiffness
         RealMatrixX D_sec_shr_true = RealMatrixX::Zero(2,2);
-        D_sec_shr_true(0,0) = G*area_true*kappa_z_true;
-        D_sec_shr_true(1,1) = G*area_true*kappa_y_true;
-        
-        // Convert the test and truth Eigen::Matrix objects to std::vector
-        // since Catch2 has built in methods to compare vectors
-        std::vector<double> test =  TEST::eigen_matrix_to_std_vector(D_sec_shr);
-        std::vector<double> truth = TEST::eigen_matrix_to_std_vector(D_sec_shr_true);
+        D_sec_shr_true(0,0) = section.material.G()*section.area_true*section.kappa_z_true;
+        D_sec_shr_true(1,1) = section.material.G()*section.area_true*section.kappa_y_true;
         
         // Floating point approximations are diffcult to compare since the
         // values typically aren't exactly equal due to numerical error.
         // Therefore, we use the Approx comparison instead of Equals
-        CHECK_THAT( test, Catch::Approx<double>(truth) );
+        CHECK_THAT( TEST::eigen_matrix_to_std_vector(D_sec_shr), Catch::Approx<double>(TEST::eigen_matrix_to_std_vector(D_sec_shr_true)).epsilon(0.005) );
     }
     
     
@@ -1450,14 +929,10 @@ TEST_CASE("bar_element_property_card_constant_structural_1d",
 //         // NOTE: Should be all zero's for non-bushing sections
 //         RealMatrixX D_sec_spring_true = RealMatrixX::Zero(4,6);
 //         
-//         // Convert the test and truth Eigen::Matrix objects to std::vector
-//         // since Catch2 has built in methods to compare vectors
-//         std::vector<double> test =  TEST::eigen_matrix_to_std_vector(D_sec_spring);
-//         std::vector<double> truth = TEST::eigen_matrix_to_std_vector(D_sec_spring_true);
 //         
 //         // Floating point approximations are diffcult to compare since the
 //         // values typically aren't exactly equal due to numerical error.
 //         // Therefore, we use the Approx comparison instead of Equals
-//         CHECK_THAT( test, Catch::Approx<double>(truth) );
+//         CHECK_THAT( TEST::eigen_matrix_to_std_vector(D_sec_spring), Catch::Approx<double>(TEST::eigen_matrix_to_std_vector(D_sec_spring_true)) );
 //     }
 }

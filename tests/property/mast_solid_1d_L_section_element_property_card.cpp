@@ -632,7 +632,7 @@ TEST_CASE("L_element_property_card_constant_thermoelastic_1d",
     }
 }
 
-// FIXME: I don't think this one is being run.
+
 TEST_CASE("L_element_property_card_constant_dynamic_1d",
           "[dynamic],[1D],[isotropic],[constant],[property]")
 {
