@@ -33,7 +33,7 @@ TEST_CASE("libmesh_mesh_generation_1d",
     coords << -1.0, 1.0, 0.0,
                0.0, 0.0, 0.0;
 
-    SECTION("replicated_mesh_1d")
+    SECTION("Creation of a single 2-node 1D element (EDGE2) in a libMesh::ReplicatedMesh")
     {
         TEST::TestMeshSingleElement test_mesh(libMesh::EDGE2, coords);
         // Compare element against true volume (actually length for 1D elements)
@@ -50,7 +50,7 @@ TEST_CASE("libmesh_mesh_generation_2d",
               -1.0, -1.0, 1.0,  1.0,
                0.0,  0.0, 0.0,  0.0;
 
-    SECTION("replicated_mesh_2d")
+    SECTION("Creation of a single 4-node 2D element (QUAD4) in a libMesh::ReplicatedMesh")
     {
         TEST::TestMeshSingleElement test_mesh(libMesh::QUAD4, coords);
         // Compare element against true volume (actually area for 2D elements)

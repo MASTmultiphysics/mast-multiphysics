@@ -1,18 +1,27 @@
-/** 
- * define below is needed to be able to access the 
- * initialize_green_lagrange_strain_operator which is protected. Be careful
- * though as the line belong can cause unexpected issues.
+/*
+ * MAST: Multidisciplinary-design Adaptation and Sensitivity Toolkit
+ * Copyright (C) 2013-2020  Manav Bhatia and MAST authors
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
-#define protected public
 
-#include "catch.hpp"
+#define protected public
 
 // libMesh includes
 #include "libmesh/libmesh.h"
-#include "libmesh/replicated_mesh.h"
-#include "libmesh/point.h"
 #include "libmesh/elem.h"
-#include "libmesh/face_quad4.h"
 #include "libmesh/equation_systems.h"
 #include "libmesh/dof_map.h"
 
@@ -23,21 +32,17 @@
 #include "property_cards/solid_2d_section_element_property_card.h"
 #include "elasticity/structural_element_2d.h"
 #include "elasticity/structural_system_initialization.h"
-#include "base/physics_discipline_base.h"
 #include "base/nonlinear_implicit_assembly.h"
 #include "elasticity/structural_nonlinear_assembly.h"
 #include "base/nonlinear_system.h"
-#include "elasticity/structural_element_base.h"
 #include "mesh/geom_elem.h"
 #include "mesh/fe_base.h"
 #include "numerics/fem_operator_matrix.h"
 
-
-
-// Custom includes
+// Test includes
+#include "catch.hpp"
 #include "test_helpers.h"
-
-#define pi 3.14159265358979323846
+#include "element/structural/2D/mast_structural_element_2d.h"
 
 extern libMesh::LibMeshInit* p_global_init;
 
@@ -50,141 +55,23 @@ extern libMesh::LibMeshInit* p_global_init;
 TEST_CASE("quad4_linear_structural_strain_displacement_matrix", 
           "[quad],[quad4],[linear],][structural],[2D],[element]")
 {
-    const int n_elems = 1;
-    const int n_nodes = 4;
-    const uint n_dofs_per_node = 6;
-    
-    // Point Coordinates
-    RealMatrixX temp = RealMatrixX::Zero(3,4);
-    temp << -1.0,  1.0, 1.0, -1.0, 
-            -1.0, -1.0, 1.0,  1.0, 
-             0.0,  0.0, 0.0,  0.0;
-    const RealMatrixX X = temp;
-    
-    /**
-     *  First create the mesh with the one element we are testing.
-     */
-    // Setup the mesh properties
-    libMesh::ReplicatedMesh mesh(p_global_init->comm());
-    mesh.set_mesh_dimension(2);
-    mesh.set_spatial_dimension(2);
-    mesh.reserve_elem(n_elems);
-    mesh.reserve_nodes(n_nodes);
-    
-    // Add nodes to the mesh
-    for (uint i=0; i<n_nodes; i++)
-    {
-        mesh.add_point(libMesh::Point(X(0,i), X(1,i), X(2,i)));
-    }
-    
-    // Add the element to the mesh
-    libMesh::Elem *reference_elem = new libMesh::Quad4;
-    reference_elem->set_id(0);    
-    reference_elem->subdomain_id() = 0;
-    reference_elem = mesh.add_elem(reference_elem);
-    for (int i=0; i<n_nodes; i++)
-    {
-        reference_elem->set_node(i) = mesh.node_ptr(i);
-    }
-    
-    // Prepare the mesh for use
-    mesh.prepare_for_use();
-    //mesh.print_info();
-    
-    const Real elem_volume = reference_elem->volume();
-    // Calculate true volume using 2D shoelace formula
-    Real true_volume = get_shoelace_area(X);
-    
-    // Ensure the libMesh element has the expected volume
-    REQUIRE( elem_volume == true_volume );
-            
-    /**
-     *  Setup the material and section properties to be used in the element
-     */
-    
-    // Define Material Properties as MAST Parameters
-    MAST::Parameter E("E_param", 72.0e9);             // Modulus of Elasticity
-    MAST::Parameter nu("nu_param", 0.33);             // Poisson's ratio
-    MAST::Parameter kappa("kappa_param", 5.0/6.0);    // Shear coefficient
-    
-    // Define Section Properties as MAST Parameters
-    MAST::Parameter thickness("th_param", 0.06);      // Section thickness
-    MAST::Parameter offset("off_param", 0.03);        // Section offset
-    
-    // Create field functions to dsitribute these constant parameters throughout the model
-    MAST::ConstantFieldFunction E_f("E", E);
-    MAST::ConstantFieldFunction nu_f("nu", nu);
-    MAST::ConstantFieldFunction kappa_f("kappa", kappa);
-    MAST::ConstantFieldFunction thickness_f("h", thickness);
-    MAST::ConstantFieldFunction offset_f("off", offset);
-    
-    // Initialize the material
-    MAST::IsotropicMaterialPropertyCard material;                   
-    
-    // Add the material property constant field functions to the material card
-    material.add(E_f);                                             
-    material.add(nu_f);
-    
-    // Initialize the section
-    MAST::Solid2DSectionElementPropertyCard section;
-    
-    // Add the section property constant field functions to the section card
-    section.add(thickness_f);
-    section.add(offset_f);
-    section.add(kappa_f);
-    
-    // Add the material card to the section card
-    section.set_material(material);
-    
-    
+    RealMatrixX coords = RealMatrixX::Zero(3,4);
+    coords << -1.0,  1.0, 1.0, -1.0,
+            -1.0, -1.0, 1.0,  1.0,
+            0.0,  0.0, 0.0,  0.0;
+    TEST::TestStructuralSingleElement2D test_elem(libMesh::QUAD4, coords);
+
+    const Real V0 = test_elem.reference_elem->volume();
+    REQUIRE(test_elem.reference_elem->volume() == TEST::get_shoelace_area(coords));
+
     // Set the strain type to linear for the section
-    section.set_strain(MAST::LINEAR_STRAIN);
-    
-    /**
-     *  Now we setup the structural system we will be solving.
-     */
-    libMesh::EquationSystems equation_systems(mesh);
-    
-    MAST::NonlinearSystem& system = equation_systems.add_system<MAST::NonlinearSystem>("structural");
-    
-    libMesh::FEType fetype(libMesh::FIRST, libMesh::LAGRANGE);
-    
-    MAST::StructuralSystemInitialization structural_system(system, 
-                                                           system.name(), 
-                                                           fetype);
-    
-    MAST::PhysicsDisciplineBase discipline(equation_systems);
-    
-    discipline.set_property_for_subdomain(0, section);
-    
-    equation_systems.init();
-    //equation_systems.print_info();
-    
-    MAST::NonlinearImplicitAssembly assembly;
-    assembly.set_discipline_and_system(discipline, structural_system);
-    
-    // Create the MAST element from the libMesh reference element
-    MAST::GeomElem geom_elem;
-    geom_elem.init(*reference_elem, structural_system);
-    std::unique_ptr<MAST::StructuralElementBase> elem_base = build_structural_element(structural_system, geom_elem, section);
-    
-    // Cast the base structural element as a 2D structural element
-    MAST::StructuralElement2D* elem = (dynamic_cast<MAST::StructuralElement2D*>(elem_base.get()));
-    
-    // Get element DOFs
-    const libMesh::DofMap& dof_map = assembly.system().get_dof_map();
-    std::vector<libMesh::dof_id_type> dof_indices;
-    dof_map.dof_indices (reference_elem, dof_indices);
-    uint n_dofs = uint(dof_indices.size());
-    
-    // Set element's initial solution and solution sensitivity to zero
-    RealVectorX elem_solution = RealVectorX::Zero(n_dofs);
-    elem->set_solution(elem_solution);
-    elem->set_solution(elem_solution, true);
-    
-    std::unique_ptr<MAST::FEBase> fe(geom_elem.init_fe(true, false, 
-                                     section.extra_quadrature_order(geom_elem)));
-    
+    test_elem.section.set_strain(MAST::LINEAR_STRAIN);
+
+
+    std::unique_ptr<MAST::FEBase> fe(test_elem.geom_elem.init_fe(true, false,
+            test_elem.section.extra_quadrature_order(test_elem.geom_elem)));
+
+    const uint n_dofs_per_node = 6;
     MAST::FEMOperatorMatrix
         Bmat_lin,
         Bmat_nl_x,
@@ -195,9 +82,9 @@ TEST_CASE("quad4_linear_structural_strain_displacement_matrix",
         Bmat_vk;
     
     const uint n_phi = (unsigned int)fe->get_phi().size();
-    const uint n1 = elem->n_direct_strain_components();
+    const uint n1 = test_elem.elem->n_direct_strain_components();
     const uint n2 = 6*n_phi;
-    const uint n3 = elem->n_von_karman_strain_components();
+    const uint n3 = test_elem.elem->n_von_karman_strain_components();
     
     RealMatrixX mat_x = RealMatrixX::Zero(3,2);
     RealMatrixX mat_y = RealMatrixX::Zero(3,2);
@@ -210,13 +97,13 @@ TEST_CASE("quad4_linear_structural_strain_displacement_matrix",
      * elem->initialize_green_lagrange_strain_operator method populates the
      * Bmat_lin, Bmat_nl_x, Bmat_nl_y, Bmat_nl_u, and Bmat_nl_v matrices.
      */
-    Bmat_lin.reinit(n1, structural_system.n_vars(), n_phi); // three stress-strain components
-    Bmat_nl_x.reinit(2, structural_system.n_vars(), n_phi);
-    Bmat_nl_y.reinit(2, structural_system.n_vars(), n_phi);
-    Bmat_nl_u.reinit(2, structural_system.n_vars(), n_phi);
-    Bmat_nl_v.reinit(2, structural_system.n_vars(), n_phi);
-    
-    elem->initialize_green_lagrange_strain_operator(qp, *fe, elem_solution,
+    Bmat_lin.reinit(n1, test_elem.structural_system.n_vars(), n_phi); // three stress-strain components
+    Bmat_nl_x.reinit(2, test_elem.structural_system.n_vars(), n_phi);
+    Bmat_nl_y.reinit(2, test_elem.structural_system.n_vars(), n_phi);
+    Bmat_nl_u.reinit(2, test_elem.structural_system.n_vars(), n_phi);
+    Bmat_nl_v.reinit(2, test_elem.structural_system.n_vars(), n_phi);
+
+    test_elem.elem->initialize_green_lagrange_strain_operator(qp, *fe, test_elem.elem_solution,
         strain, mat_x, mat_y, Bmat_lin, Bmat_nl_x, Bmat_nl_y, Bmat_nl_u,
         Bmat_nl_v);
     
@@ -225,14 +112,14 @@ TEST_CASE("quad4_linear_structural_strain_displacement_matrix",
      * bend->initialize_bending_strain_operator method populates the Bmat_bend
      * matrix. This part only exists if bending exists in the model.
      */
-    Bmat_bend.reinit(n1, structural_system.n_vars(), n_phi);
+    Bmat_bend.reinit(n1, test_elem.structural_system.n_vars(), n_phi);
     
     /**
      * elem->initialize_von_karman_strain_operator method populates the Bmat_vk
      * matrix. This part only exists if bending exists in the model AND 
      * nonlinear strains exist in the model.
      */
-    Bmat_vk.reinit(n3, structural_system.n_vars(), n_phi); // only dw/dx and dw/dy
+    Bmat_vk.reinit(n3, test_elem.structural_system.n_vars(), n_phi); // only dw/dx and dw/dy
     
     
     const std::vector<std::vector<libMesh::RealVectorValue>>& dphi = fe->get_dphi();
@@ -240,7 +127,7 @@ TEST_CASE("quad4_linear_structural_strain_displacement_matrix",
     SECTION("Linear in-plane strain displacement matrix size")
     {
         REQUIRE( Bmat_lin.m() == 3 ); // three strains, e_xx, e_yy, e_xy
-        REQUIRE( Bmat_lin.n() == n_nodes * n_dofs_per_node);
+        REQUIRE( Bmat_lin.n() == test_elem.n_nodes * n_dofs_per_node);
     }
     
     SECTION("Linear in-plane strain displacement matrix values")
@@ -269,18 +156,18 @@ TEST_CASE("quad4_linear_structural_strain_displacement_matrix",
          *  dN1dy, dN2dy, dN3dy, dN4dy, dN1dx, dN2dx, dN3dx, dN4dx, 0, ..., 0]
          */
         RealMatrixX Bmat_lin_true = RealMatrixX::Zero(m,n);
-        for (uint i=0; i<n_nodes; i++)
+        for (uint i=0; i<test_elem.n_nodes; i++)
         {
             Bmat_lin_true(0,i)          = dphi[i][qp](0);
-            Bmat_lin_true(2,i+n_nodes)  = dphi[i][qp](0);
+            Bmat_lin_true(2,i+test_elem.n_nodes)  = dphi[i][qp](0);
             
-            Bmat_lin_true(1,i+n_nodes)  = dphi[i][qp](1);
+            Bmat_lin_true(1,i+test_elem.n_nodes)  = dphi[i][qp](1);
             Bmat_lin_true(2,i)          = dphi[i][qp](1);
         }
                 
-        std::vector<double> Bmat_lin_test =    eigen_matrix_to_std_vector(Bmat_lin_mat);
-        std::vector<double> Bmat_lin_required = eigen_matrix_to_std_vector(Bmat_lin_true);
+        std::vector<double> Bmat_lin_test =    TEST::eigen_matrix_to_std_vector(Bmat_lin_mat);
+        std::vector<double> Bmat_lin_required = TEST::eigen_matrix_to_std_vector(Bmat_lin_true);
         
-        REQUIRE_THAT( Bmat_lin_test, Catch::Approx<double>(Bmat_lin_required) );
+        REQUIRE_THAT(Bmat_lin_test, Catch::Approx<double>(Bmat_lin_required));
     }
 }
