@@ -163,8 +163,7 @@ namespace MAST
         virtual const MAST::FieldFunction<Real>*
         section(const MAST::ElementBase& e) const {
 
-            MAST::FieldFunction<Real>* ptr = nullptr;
-            return ptr;
+            return nullptr;
         }
 
     protected:
