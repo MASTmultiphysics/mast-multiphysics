@@ -81,7 +81,7 @@ namespace MAST {
         virtual std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
         thermal_capacitance_matrix(const MAST::ElementBase& e) const;
 
-        virtual const MAST::FieldFunction<Real>&
+        virtual const MAST::FieldFunction<Real>*
         section(const MAST::ElementBase& e) const;
         
         virtual std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
@@ -120,7 +120,7 @@ namespace MAST {
         virtual std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
         thermal_capacitance_matrix() const;
 
-        virtual const MAST::FieldFunction<Real>&
+        virtual const MAST::FieldFunction<Real>*
         section() const;
         
 
