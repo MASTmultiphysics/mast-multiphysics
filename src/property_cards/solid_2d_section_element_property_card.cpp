@@ -1346,9 +1346,9 @@ thermal_capacitance_matrix() const {
     return std::unique_ptr<MAST::FieldFunction<RealMatrixX> > (rval);
 }
 
-const MAST::FieldFunction<Real>&
+const MAST::FieldFunction<Real>*
 MAST::Solid2DSectionElementPropertyCard::
 section(const MAST::ElementBase& e) const {
     
-    return this->get<FieldFunction<Real>>("h");
+    return &(this->get<FieldFunction<Real>>("h"));
 }
