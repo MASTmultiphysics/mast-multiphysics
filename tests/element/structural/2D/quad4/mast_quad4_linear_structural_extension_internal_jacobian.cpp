@@ -26,8 +26,8 @@
 #include "base/parameter.h"
 #include "base/constant_field_function.h"
 #include "property_cards/isotropic_material_property_card.h"
-#include "property_cards/solid_1d_section_element_property_card.h"
-#include "elasticity/structural_element_1d.h"
+#include "property_cards/solid_2d_section_element_property_card.h"
+#include "elasticity/structural_element_2d.h"
 #include "elasticity/structural_system_initialization.h"
 #include "base/nonlinear_implicit_assembly.h"
 #include "elasticity/structural_nonlinear_assembly.h"
@@ -37,26 +37,40 @@
 // Test includes
 #include "catch.hpp"
 #include "test_helpers.h"
-#include "element/structural/1D/mast_structural_element_1d.h"
+#include "element/structural/2D/mast_structural_element_2d.h"
 
 extern libMesh::LibMeshInit* p_global_init;
 
 
-TEST_CASE("edge2_linear_structural",
-          "[1D],[structural],[edge],[edge2],[linear]")
+TEST_CASE("quad4_linear_extension_structural", 
+          "[quad],[quad4],[linear],[structural],[2D]")
 {
-    RealMatrixX coords = RealMatrixX::Zero(3, 2);
-    coords << -1.0, 1.0, 0.0,
-               0.0, 0.0, 0.0;
-    TEST::TestStructuralSingleElement1D test_elem(libMesh::EDGE2, coords);
-    
-    const Real V0 = test_elem.reference_elem->volume();
+    RealMatrixX coords = RealMatrixX::Zero(3,4);
+    coords << -1.0,  1.0, 1.0, -1.0, 
+              -1.0, -1.0, 1.0,  1.0,
+               0.0,  0.0, 0.0,  0.0;
+    TEST::TestStructuralSingleElement2D test_elem(libMesh::QUAD4, coords);
 
+    const Real V0 = test_elem.reference_elem->volume();
+    REQUIRE(test_elem.reference_elem->volume() == TEST::get_shoelace_area(coords));
+
+    // Set the strain type to linear for the section
+    test_elem.section.set_strain(MAST::LINEAR_STRAIN);
+    
+    // Set shear coefficient to zero to disable transverse shear stiffness
+    test_elem.kappa = 0.0;
+    
+    // Set the offset to zero to disable extension-bending coupling
+    test_elem.offset = 0.0;
+
+    // Set the bending operator to no_bending to disable bending stiffness. This also disables
+    // transverse shear stiffness.
+    test_elem.section.set_bending_model(MAST::NO_BENDING);
+    
+    // Update residual and Jacobian storage since we have modified baseline test element properties.
     test_elem.update_residual_and_jacobian0();
 
     double val_margin = (test_elem.jacobian0.array().abs()).mean() * 1.490116119384766e-08;
-    
-    libMesh::out << "J =\n" << test_elem.jacobian0 << std::endl;
 
 
     SECTION("Internal Jacobian (stiffness matrix) finite difference check")
@@ -84,56 +98,15 @@ TEST_CASE("edge2_linear_structural",
     }
 
 
-    SECTION("Internal Jacobian (stiffness matrix) eigenvalue check")
-    {
-        /*
-         * Number of zero eigenvalues should equal the number of rigid body
-         * modes.  With extension (including torsion) and bending about y and
-         * z axes, we have 6 rigid body modes (3 translations, 3 rotations).
-         *
-         * Note that the use of reduced integration can result in more rigid
-         * body modes than expected.
-         */
-        SelfAdjointEigenSolver<RealMatrixX> eigensolver(test_elem.jacobian0, false);
-        RealVectorX eigenvalues = eigensolver.eigenvalues();
-        libMesh::out << "Eigenvalues are:\n" << eigenvalues << std::endl;
-        uint nz = 0;
-        for (uint i=0; i<eigenvalues.size(); i++)
-        {
-            if (std::abs(eigenvalues(i))<0.0001220703125)
-            {
-                nz++;
-            }
-        }
-        REQUIRE( nz == 6);
-
-        /**
-         * All non-zero eigenvalues should be positive.
-         */
-        REQUIRE(eigenvalues.minCoeff()>(-0.0001220703125));
-    }
-
-
-    SECTION("Internal Jacobian (stiffness matrix) is invariant to section orientation")
-    {
-        test_elem.section.clear();
-        RealVectorX orientation = RealVectorX::Zero(3);
-        orientation(2) = 1.0;
-        test_elem.section.y_vector() = orientation;
-        test_elem.section.init();
-        test_elem.update_residual_and_jacobian();
-
-        REQUIRE_THAT(TEST::eigen_matrix_to_std_vector(test_elem.jacobian),
-                     Catch::Approx<double>(TEST::eigen_matrix_to_std_vector(test_elem.jacobian0)).margin(val_margin));
-    }
-
-
     SECTION("Internal Jacobian (stiffness matrix) is invariant to displacement solution")
     {
         RealVectorX elem_sol = RealVectorX::Zero(test_elem.n_dofs);
-        elem_sol << 0.05727841,  0.08896581,  0.09541619, -0.03774913,
-                0.07510557, -0.07122266, -0.00979117, -0.08300009,
-                -0.03453369, -0.05487761, -0.01407677, -0.09268421;
+        elem_sol << -0.04384355,  0.03969142, -0.09470648, -0.05011107,
+                    -0.02989082, -0.01205296,  0.08846868,  0.04522207,
+                     0.06435953, -0.07282706,  0.09307561, -0.06250143,
+                     0.03332844, -0.00040089, -0.00423108, -0.07258241,
+                     0.06636534, -0.08421098, -0.0705489 , -0.06004976,
+                     0.03873095, -0.09194373,  0.00055061,  0.046831;
         test_elem.elem->set_solution(elem_sol);
         test_elem.update_residual_and_jacobian();
 
@@ -175,63 +148,6 @@ TEST_CASE("edge2_linear_structural",
 
         REQUIRE_THAT(TEST::eigen_matrix_to_std_vector(test_elem.jacobian),
                      Catch::Approx<double>(TEST::eigen_matrix_to_std_vector(test_elem.jacobian0)).margin(val_margin));
-    }
-
-
-    SECTION("Internal Jacobian (stiffness matrix) checks for element aligned along y-axis")
-    {
-        /*
-         * NOTE: We could try to use the transform_element method here, but the
-         * issue is that if the sin and cos calculations are not exact, then we
-         * may not be perfectly aligned along the y axis like we want.
-         */
-        RealMatrixX new_coordinates = RealMatrixX::Zero(3,test_elem.n_nodes);
-        new_coordinates << 0.0, 0.0, -1.0, 1.0, 0.0, 0.0;
-        test_elem.update_coordinates(new_coordinates);
-        REQUIRE(test_elem.reference_elem->volume() == Approx(V0));
-        test_elem.update_residual_and_jacobian();
-
-        // Finite difference Jacobian check
-        TEST::approximate_internal_jacobian_with_finite_difference(*test_elem.elem, test_elem.elem_solution, test_elem.jacobian_fd);
-        val_margin = (test_elem.jacobian_fd.array().abs()).mean() * 1.490116119384766e-08;
-        REQUIRE_THAT(TEST::eigen_matrix_to_std_vector(test_elem.jacobian),
-                     Catch::Approx<double>(TEST::eigen_matrix_to_std_vector(test_elem.jacobian_fd)).margin(val_margin));
-
-        // Symmetry check
-        REQUIRE_THAT(TEST::eigen_matrix_to_std_vector(test_elem.jacobian),
-                     Catch::Approx<double>(TEST::eigen_matrix_to_std_vector(test_elem.jacobian.transpose())));
-
-        // Determinant check
-        REQUIRE(test_elem.jacobian.determinant() == Approx(0.0).margin(1e-06));
-    }
-
-
-    SECTION("Internal Jacobian (stiffness matrix) checks for element aligned along z-axis")
-    {
-        /*
-         * NOTE: We could try to use the transform_element method here, but the
-         * issue is that if the sin and cos calculations are not exact, then we
-         * may not be perfectly aligned along the z axis like we want.
-         */
-        RealMatrixX new_coordinates = RealMatrixX::Zero(3,test_elem.n_nodes);
-        new_coordinates << 0.0, 0.0, 0.0, 0.0, -1.0, 1.0;
-        test_elem.update_coordinates(new_coordinates);
-        REQUIRE(test_elem.reference_elem->volume() == Approx(V0));
-        test_elem.update_residual_and_jacobian();
-
-
-        // Finite difference Jacobian check
-        TEST::approximate_internal_jacobian_with_finite_difference(*test_elem.elem, test_elem.elem_solution, test_elem.jacobian_fd);
-        val_margin = (test_elem.jacobian_fd.array().abs()).mean() * 1.490116119384766e-08;
-        REQUIRE_THAT(TEST::eigen_matrix_to_std_vector(test_elem.jacobian),
-                     Catch::Approx<double>(TEST::eigen_matrix_to_std_vector(test_elem.jacobian_fd)).margin(val_margin));
-
-        // Symmetry check
-        REQUIRE_THAT(TEST::eigen_matrix_to_std_vector(test_elem.jacobian),
-                     Catch::Approx<double>(TEST::eigen_matrix_to_std_vector(test_elem.jacobian.transpose())));
-
-        // Determinant check
-        REQUIRE(test_elem.jacobian.determinant() == Approx(0.0).margin(1e-06));
     }
 
 
@@ -281,6 +197,75 @@ TEST_CASE("edge2_linear_structural",
     }
 
 
+    SECTION("Internal Jacobian (stiffness matrix) checks for element rotated about x-axis")
+    {
+        // Rotated 15.8 about x-axis at element's centroid
+        TEST::transform_element(test_elem.mesh, coords, 0.0, 0.0, 0.0,
+                                1.0, 1.0, 15.8, 0.0, 0.0);
+        REQUIRE(test_elem.reference_elem->volume() == Approx(V0));
+        test_elem.update_residual_and_jacobian();
+
+        // Finite difference Jacobian check
+        TEST::approximate_internal_jacobian_with_finite_difference(*test_elem.elem, test_elem.elem_solution, test_elem.jacobian_fd);
+        val_margin = (test_elem.jacobian_fd.array().abs()).mean() * 1.490116119384766e-08;
+        REQUIRE_THAT(TEST::eigen_matrix_to_std_vector(test_elem.jacobian),
+                     Catch::Approx<double>(TEST::eigen_matrix_to_std_vector(test_elem.jacobian_fd)).margin(val_margin));
+
+        // Symmetry check
+        REQUIRE_THAT(TEST::eigen_matrix_to_std_vector(test_elem.jacobian),
+                     Catch::Approx<double>(TEST::eigen_matrix_to_std_vector(test_elem.jacobian.transpose())));
+
+        // Determinant check
+        REQUIRE(test_elem.jacobian.determinant() == Approx(0.0).margin(1e-06));
+    }
+
+
+    SECTION("\"Internal Jacobian (stiffness matrix) checks for element sheared in x-direction\"")
+    {
+        // Shear element in x-direction.
+        TEST::transform_element(test_elem.mesh, coords, 0.0, 0.0, 0.0,
+                                1.0, 1.0, 0.0, 0.0, 0.0, 6.7, 0.0);
+        REQUIRE(test_elem.reference_elem->volume() == Approx(V0));
+        test_elem.update_residual_and_jacobian();
+
+        // Finite difference Jacobian check
+        TEST::approximate_internal_jacobian_with_finite_difference(*test_elem.elem, test_elem.elem_solution, test_elem.jacobian_fd);
+        val_margin = (test_elem.jacobian_fd.array().abs()).mean() * 1.490116119384766e-08;
+        REQUIRE_THAT(TEST::eigen_matrix_to_std_vector(test_elem.jacobian),
+                     Catch::Approx<double>(TEST::eigen_matrix_to_std_vector(test_elem.jacobian_fd)).margin(val_margin));
+
+        // Symmetry check
+        REQUIRE_THAT(TEST::eigen_matrix_to_std_vector(test_elem.jacobian),
+                     Catch::Approx<double>(TEST::eigen_matrix_to_std_vector(test_elem.jacobian.transpose())));
+
+        // Determinant check
+        REQUIRE(test_elem.jacobian.determinant() == Approx(0.0).margin(1e-06));
+    }
+
+
+    SECTION("\"Internal Jacobian (stiffness matrix) checks for element sheared in y-direction\"")
+    {
+        // Shear element in x-direction.
+        TEST::transform_element(test_elem.mesh, coords, 0.0, 0.0, 0.0,
+                                1.0, 1.0, 0.0, 0.0, 0.0, 0.0, -11.2);
+        REQUIRE(test_elem.reference_elem->volume() == Approx(V0));
+        test_elem.update_residual_and_jacobian();
+
+        // Finite difference Jacobian check
+        TEST::approximate_internal_jacobian_with_finite_difference(*test_elem.elem, test_elem.elem_solution, test_elem.jacobian_fd);
+        val_margin = (test_elem.jacobian_fd.array().abs()).mean() * 1.490116119384766e-08;
+        REQUIRE_THAT(TEST::eigen_matrix_to_std_vector(test_elem.jacobian),
+                     Catch::Approx<double>(TEST::eigen_matrix_to_std_vector(test_elem.jacobian_fd)).margin(val_margin));
+
+        // Symmetry check
+        REQUIRE_THAT(TEST::eigen_matrix_to_std_vector(test_elem.jacobian),
+                     Catch::Approx<double>(TEST::eigen_matrix_to_std_vector(test_elem.jacobian.transpose())));
+
+        // Determinant check
+        REQUIRE(test_elem.jacobian.determinant() == Approx(0.0).margin(1e-06));
+    }
+
+
     SECTION("Internal Jacobian (stiffness matrix) checks for element stretched in x-direction")
     {
         TEST::transform_element(test_elem.mesh, coords, 0.0, 0.0, 0.0,
@@ -302,12 +287,33 @@ TEST_CASE("edge2_linear_structural",
         REQUIRE(test_elem.jacobian.determinant() == Approx(0.0).margin(1e-06));
     }
 
+    SECTION("Internal Jacobian (stiffness matrix) checks for element stretched in y-direction")
+    {
+        TEST::transform_element(test_elem.mesh, coords, 0.0, 0.0, 0.0,
+                                1.0, 0.64, 0.0, 0.0, 0.0, 0.0, 0.0);
+        REQUIRE_FALSE(test_elem.reference_elem->volume() == Approx(V0));
+        test_elem.update_residual_and_jacobian();
 
-    SECTION("Internal Jacobian (stiffness matrix) checks for element arbitrarily scaled, stretched, and rotated")
+        // Finite difference Jacobian check
+        TEST::approximate_internal_jacobian_with_finite_difference(*test_elem.elem, test_elem.elem_solution, test_elem.jacobian_fd);
+        val_margin = (test_elem.jacobian_fd.array().abs()).mean() * 1.490116119384766e-08;
+        REQUIRE_THAT(TEST::eigen_matrix_to_std_vector(test_elem.jacobian),
+                     Catch::Approx<double>(TEST::eigen_matrix_to_std_vector(test_elem.jacobian_fd)).margin(val_margin));
+
+        // Symmetry check
+        REQUIRE_THAT(TEST::eigen_matrix_to_std_vector(test_elem.jacobian),
+                     Catch::Approx<double>(TEST::eigen_matrix_to_std_vector(test_elem.jacobian.transpose())));
+
+        // Determinant check
+        REQUIRE(test_elem.jacobian.determinant() == Approx(0.0).margin(1e-06));
+    }
+
+
+    SECTION("Internal Jacobian (stiffness matrix) checks for element arbitrarily scaled, stretched, rotated, and sheared")
     {
         // Apply arbitrary transformation to the element
         TEST::transform_element(test_elem.mesh, coords, -5.0, 7.8, -13.1,
-                                2.7, 6.4, 20.0, 47.8, -70.1);
+                                2.7, 6.4, 20.0, 47.8, -70.1, 5.7, -6.3);
         REQUIRE_FALSE(test_elem.reference_elem->volume() == Approx(V0));
         test_elem.update_residual_and_jacobian();
 
@@ -329,14 +335,17 @@ TEST_CASE("edge2_linear_structural",
     SECTION("Internal Jacobian (stiffness matrix) checks for element arbitrarily scaled, stretched, rotated, and displaced")
     {
         // Apply arbitrary transformation to the element
-        TEST::transform_element(test_elem.mesh, coords, 4.1, -6.3, 7.5,
-                                4.2, 1.5, -18.0, -24.8, 30.1);
+        TEST::transform_element(test_elem.mesh, coords, 4.1, -6.3, 7.5, 4.2, 1.5, -18.0, -24.8,
+                          30.1, -3.2, 5.4);
 
         // Apply arbitrary displacement to the element
         RealVectorX elem_sol = RealVectorX::Zero(test_elem.n_dofs);
-        elem_sol << 0.08158724,  0.07991906, -0.00719128,  0.02025461,
-                -0.04602193,  0.05280159,  0.03700081,  0.04636344,
-                0.05559377,  0.06448206,  0.08919238, -0.03079122;
+        elem_sol << -0.04384355,  0.03969142, -0.09470648, -0.05011107,
+                    -0.02989082, -0.01205296,  0.08846868,  0.04522207,
+                     0.06435953, -0.07282706,  0.09307561, -0.06250143,
+                     0.03332844, -0.00040089, -0.00423108, -0.07258241,
+                     0.06636534, -0.08421098, -0.0705489 , -0.06004976,
+                     0.03873095, -0.09194373,  0.00055061,  0.046831;
         test_elem.elem->set_solution(elem_sol);
 
         REQUIRE_FALSE(test_elem.reference_elem->volume() == Approx(V0));

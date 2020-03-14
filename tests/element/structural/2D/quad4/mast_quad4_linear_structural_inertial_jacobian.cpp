@@ -26,8 +26,8 @@
 #include "base/parameter.h"
 #include "base/constant_field_function.h"
 #include "property_cards/isotropic_material_property_card.h"
-#include "property_cards/solid_1d_section_element_property_card.h"
-#include "elasticity/structural_element_1d.h"
+#include "property_cards/solid_2d_section_element_property_card.h"
+#include "elasticity/structural_element_2d.h"
 #include "elasticity/structural_system_initialization.h"
 #include "base/nonlinear_implicit_assembly.h"
 #include "elasticity/structural_nonlinear_assembly.h"
@@ -37,27 +37,36 @@
 // Test includes
 #include "catch.hpp"
 #include "test_helpers.h"
-#include "element/structural/1D/mast_structural_element_1d.h"
+#include "element/structural/2D/mast_structural_element_2d.h"
 
 extern libMesh::LibMeshInit* p_global_init;
 
 
-TEST_CASE("edge2_linear_structural_inertial_consistent",
-          "[1D],[dynamic],[edge],[edge2],[element]")
+TEST_CASE("quad4_linear_structural_inertial_consistent", 
+          "[quad],[quad4],[dynamic],[2D],[element]")
 {
-    RealMatrixX coords = RealMatrixX::Zero(3, 2);
-    coords << -1.0, 1.0, 0.0,
-               0.0, 0.0, 0.0;
-    TEST::TestStructuralSingleElement1D test_elem(libMesh::EDGE2, coords);
-    
+    RealMatrixX coords = RealMatrixX::Zero(3,4);
+    coords << -1.0,  1.0, 1.0, -1.0,
+              -1.0, -1.0, 1.0,  1.0,
+               0.0,  0.0, 0.0,  0.0;
+    TEST::TestStructuralSingleElement2D test_elem(libMesh::QUAD4, coords);
+
     const Real V0 = test_elem.reference_elem->volume();
+    REQUIRE(test_elem.reference_elem->volume() == TEST::get_shoelace_area(coords));
+
+    // Set the strain type to linear for the section
+    test_elem.section.set_strain(MAST::LINEAR_STRAIN);
+    
+    // Set the bending operator
+    test_elem.section.set_bending_model(MAST::MINDLIN);
 
     // Set mass matrix to consistent & compute inertial residual and Jacobians.
     test_elem.section.set_diagonal_mass_matrix(false);
+    REQUIRE_FALSE(test_elem.section.if_diagonal_mass_matrix());
     test_elem.update_inertial_residual_and_jacobian0();
 
     double val_margin = (test_elem.jacobian_xddot0.array().abs()).mean() * 1.490116119384766e-08;
-    
+
     libMesh::out << "Jac_xddot0:\n" << test_elem.jacobian_xddot0 << std::endl;
 
 
@@ -71,43 +80,52 @@ TEST_CASE("edge2_linear_structural_inertial_consistent",
         REQUIRE_THAT(TEST::eigen_matrix_to_std_vector(test_elem.jacobian_xddot0),
                      Catch::Approx<double>(TEST::eigen_matrix_to_std_vector(test_elem.jacobian_fd)).margin(val_margin));
     }
-    
-    
+
+
     SECTION("Inertial Jacobian (mass matrix) should be symmetric")
     {
         REQUIRE_THAT(TEST::eigen_matrix_to_std_vector(test_elem.jacobian_xddot0),
                      Catch::Approx<double>(TEST::eigen_matrix_to_std_vector(test_elem.jacobian_xddot0.transpose())));
     }
-    
-    
+
+
     SECTION("Determinant of undeformed inertial Jacobian (mass matrix) should be zero")
     {
         REQUIRE(test_elem.jacobian_xddot0.determinant() == Approx(0.0).margin(1e-06));
     }
-    
-    
+
+
     SECTION("Inertial Jacobian (mass matrix) eigenvalues should all be positive")
     {
         SelfAdjointEigenSolver<RealMatrixX> eigensolver(test_elem.jacobian_xddot0, false);
         RealVectorX eigenvalues = eigensolver.eigenvalues();
-        //libMesh::out << "Eigenvalues are:\n" << eigenvalues << std::endl;
+        libMesh::out << "Eigenvalues are:\n" << eigenvalues << std::endl;
         REQUIRE(eigenvalues.minCoeff()>0.0);
     }
 }
 
 
-TEST_CASE("edge2_linear_structural_inertial_lumped",
-          "[1D],[dynamic],[edge],[edge2]")
+TEST_CASE("quad4_linear_structural_inertial_lumped", 
+          "[quad],[quad4],[dynamic],[2D],[element]")
 {
-    RealMatrixX coords = RealMatrixX::Zero(3, 2);
-    coords << -1.0, 1.0, 0.0,
-            0.0, 0.0, 0.0;
-    TEST::TestStructuralSingleElement1D test_elem(libMesh::EDGE2, coords);
+    RealMatrixX coords = RealMatrixX::Zero(3,4);
+    coords << -1.0,  1.0, 1.0, -1.0,
+              -1.0, -1.0, 1.0,  1.0,
+               0.0,  0.0, 0.0,  0.0;
+    TEST::TestStructuralSingleElement2D test_elem(libMesh::QUAD4, coords);
 
     const Real V0 = test_elem.reference_elem->volume();
+    REQUIRE(test_elem.reference_elem->volume() == TEST::get_shoelace_area(coords));
+
+    // Set the strain type to linear for the section
+    test_elem.section.set_strain(MAST::LINEAR_STRAIN);
+
+    // Set the bending operator
+    test_elem.section.set_bending_model(MAST::MINDLIN);
 
     // Set mass matrix to lumped & compute inertial residual and Jacobians.
     test_elem.section.set_diagonal_mass_matrix(true);
+    REQUIRE(test_elem.section.if_diagonal_mass_matrix());
     test_elem.update_inertial_residual_and_jacobian0();
 
     double val_margin = (test_elem.jacobian_xddot0.array().abs()).mean() * 1.490116119384766e-08;
@@ -144,7 +162,7 @@ TEST_CASE("edge2_linear_structural_inertial_lumped",
     {
         SelfAdjointEigenSolver<RealMatrixX> eigensolver(test_elem.jacobian_xddot0, false);
         RealVectorX eigenvalues = eigensolver.eigenvalues();
-        //libMesh::out << "Eigenvalues are:\n" << eigenvalues << std::endl;
+        libMesh::out << "Eigenvalues are:\n" << eigenvalues << std::endl;
         REQUIRE(eigenvalues.minCoeff()>0.0);
     }
 }
