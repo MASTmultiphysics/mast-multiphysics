@@ -334,13 +334,16 @@ MAST::TransientSolverBase::sensitivity_solve(MAST::AssemblyBase& assembly,
     
     // ask the Newton solver to solve for the system solution
     _system->system().sensitivity_solve(*this, assembly, f);
+    
+    this->solution_sensitivity() = assembly.system().get_sensitivity_solution();
 }
 
 
 
 void
 MAST::TransientSolverBase::
-solve_highest_derivative_and_advance_time_step(MAST::AssemblyBase& assembly) {
+solve_highest_derivative_and_advance_time_step(MAST::AssemblyBase& assembly,
+                                               bool increment_time) {
     
     libmesh_assert(_first_step);
     libmesh_assert(_system);
@@ -415,7 +418,7 @@ solve_highest_derivative_and_advance_time_step(MAST::AssemblyBase& assembly) {
     }
     
     // finally, update the system time
-    sys.time          += dt;
+    if (increment_time) sys.time          += dt;
     _first_step        = false;
 }
 
@@ -424,8 +427,9 @@ solve_highest_derivative_and_advance_time_step(MAST::AssemblyBase& assembly) {
 
 void
 MAST::TransientSolverBase::
-solve_highest_derivative_and_advance_time_step_with_sensitivity(MAST::AssemblyBase& assembly,
-                                                                const MAST::FunctionBase& f) {
+solve_highest_derivative_and_advance_time_step_with_sensitivity
+ (MAST::AssemblyBase& assembly,
+  const MAST::FunctionBase& f) {
     
     libmesh_assert(_first_sensitivity_step);
     libmesh_assert(_system);
@@ -731,7 +735,7 @@ build_perturbed_local_quantities(const libMesh::NumericVector<Real>& current_dso
 
 
 void
-MAST::TransientSolverBase::advance_time_step() {
+MAST::TransientSolverBase::advance_time_step(bool increment_time) {
 
     libmesh_assert(_system);
     libmesh_assert(_discipline);
@@ -757,7 +761,7 @@ MAST::TransientSolverBase::advance_time_step() {
     }
 
     // finally, update the system time
-    sys.time          += dt;
+    if (increment_time) sys.time          += dt;
     _first_step        = false;
 }
 

@@ -173,7 +173,8 @@ MAST::HeatConductionElementBase::velocity_residual (bool request_jacobian,
     mat_n2n2        = RealMatrixX::Zero(n_phi, n_phi);
     RealVectorX
     vec1    = RealVectorX::Zero(1),
-    vec2_n2 = RealVectorX::Zero(n_phi);
+    vec2_n2 = RealVectorX::Zero(n_phi),
+    local_f = RealVectorX::Zero(n_phi);
     
     std::unique_ptr<MAST::FieldFunction<RealMatrixX> > capacitance =
     _property.thermal_capacitance_matrix(*this);
@@ -192,9 +193,9 @@ MAST::HeatConductionElementBase::velocity_residual (bool request_jacobian,
         Bmat.right_multiply(vec1, _vel);               //  B * T_dot
         Bmat.vector_mult_transpose(vec2_n2, vec1);     //  B^T * B * T_dot
         
-        f      += JxW[qp] * material_mat(0,0) * vec2_n2; // (rho*cp)*JxW B^T B T_dot
+        local_f    += JxW[qp] * material_mat(0,0) * vec2_n2; // (rho*cp)*JxW B^T B T_dot
         
-        if (request_jacobian) {
+        if (request_jacobian || _property.if_diagonal_mass_matrix()) {
             
             Bmat.right_multiply_transpose(mat_n2n2, Bmat);  // B^T B
             jac_xdot += JxW[qp] * material_mat(0,0) * mat_n2n2;  // B^T B * JxW (rho*cp)
@@ -215,7 +216,27 @@ MAST::HeatConductionElementBase::velocity_residual (bool request_jacobian,
         }
     }
     
-    
+    // diagonalize the matrix and compute the residual based on that.
+    if (_property.if_diagonal_mass_matrix()) {
+
+        for (unsigned int i=0; i<jac_xdot.rows(); i++) {
+            
+            Real a = jac_xdot.row(i).sum();
+            jac_xdot.row(i).setZero();
+            jac_xdot(i,i) = a;
+        }
+
+        f +=  jac_xdot * _vel;
+
+        // if the jacobian was not requested, then zero the matrix.
+        if (!request_jacobian) {
+            jac_xdot.setZero();
+            jac.setZero();
+        }
+    }
+    else
+        f += local_f;
+
     if (_active_sol_function)
         dynamic_cast<MAST::MeshFieldFunction*>
         (_active_sol_function)->clear_element_quadrature_point_solution();
@@ -701,10 +722,13 @@ velocity_residual_sensitivity (const MAST::FunctionBase& p,
     
     RealMatrixX
     material_mat    = RealMatrixX::Zero(dim, dim),
-    mat_n2n2        = RealMatrixX::Zero(n_phi, n_phi);
+    mat_n2n2        = RealMatrixX::Zero(n_phi, n_phi),
+    local_jac_xdot  = RealMatrixX::Zero(n_phi, n_phi);
+    
     RealVectorX
     vec1    = RealVectorX::Zero(1),
-    vec2_n2 = RealVectorX::Zero(n_phi);
+    vec2_n2 = RealVectorX::Zero(n_phi),
+    local_f = RealVectorX::Zero(n_phi);
     
     std::unique_ptr<MAST::FieldFunction<RealMatrixX> > capacitance =
     _property.thermal_capacitance_matrix(*this);
@@ -723,9 +747,28 @@ velocity_residual_sensitivity (const MAST::FunctionBase& p,
         Bmat.right_multiply(vec1, _vel);               //  B * T_dot
         Bmat.vector_mult_transpose(vec2_n2, vec1);     //  B^T * B * T_dot
         
-        f      += JxW[qp] * material_mat(0,0) * vec2_n2; // (rho*cp)*JxW B^T B T_dot
+        local_f   += JxW[qp] * material_mat(0,0) * vec2_n2; // (rho*cp)*JxW B^T B T_dot
+        
+        if (_property.if_diagonal_mass_matrix()) {
+            
+            Bmat.right_multiply_transpose(mat_n2n2, Bmat);  // B^T B
+            local_jac_xdot += JxW[qp] * material_mat(0,0) * mat_n2n2;  // B^T B * JxW (rho*cp)
+        }
     }
     
+    if (_property.if_diagonal_mass_matrix()) {
+        
+        for (unsigned int i=0; i<local_jac_xdot.rows(); i++) {
+            
+            Real a = local_jac_xdot.row(i).sum();
+            local_jac_xdot.row(i).setZero();
+            local_jac_xdot(i,i) = a;
+        }
+
+        f += local_jac_xdot * _vel;
+    }
+    else
+        f += local_f;
     
     if (_active_sol_function)
         dynamic_cast<MAST::MeshFieldFunction*>
@@ -757,10 +800,12 @@ velocity_residual_boundary_velocity (const MAST::FunctionBase& p,
     
     RealMatrixX
     material_mat    = RealMatrixX::Zero(dim, dim),
-    mat_n2n2        = RealMatrixX::Zero(n_phi, n_phi);
+    mat_n2n2        = RealMatrixX::Zero(n_phi, n_phi),
+    local_jac_xdot  = RealMatrixX::Zero(n_phi, n_phi);
     RealVectorX
     vec1    = RealVectorX::Zero(1),
     vec2_n2 = RealVectorX::Zero(n_phi),
+    local_f = RealVectorX::Zero(n_phi),
     vel     = RealVectorX::Zero(dim);
     
     std::unique_ptr<MAST::FieldFunction<RealMatrixX> > capacitance =
@@ -793,9 +838,30 @@ velocity_residual_boundary_velocity (const MAST::FunctionBase& p,
         Bmat.right_multiply(vec1, _vel);               //  B * T_dot
         Bmat.vector_mult_transpose(vec2_n2, vec1);     //  B^T * B * T_dot
         
-        f      += JxW_Vn[qp] * material_mat(0,0) * vec2_n2; // (rho*cp)*JxW B^T B T_dot
+        local_f      += JxW_Vn[qp] * material_mat(0,0) * vec2_n2; // (rho*cp)*JxW B^T B T_dot
+
+        if (_property.if_diagonal_mass_matrix()) {
+            
+            Bmat.right_multiply_transpose(mat_n2n2, Bmat);  // B^T B
+            local_jac_xdot += JxW_Vn[qp] * material_mat(0,0) * mat_n2n2;  // B^T B * JxW (rho*cp)
+        }
     }
     
+    // diagonalize the matrix and compute the residual based on that.
+    if (_property.if_diagonal_mass_matrix()) {
+
+        for (unsigned int i=0; i<local_jac_xdot.rows(); i++) {
+            
+            Real a = local_jac_xdot.row(i).sum();
+            local_jac_xdot.row(i).setZero();
+            local_jac_xdot(i,i) = a;
+        }
+
+        f +=  local_jac_xdot * _vel;
+    }
+    else
+        f += local_f;
+
     
     if (_active_sol_function)
         dynamic_cast<MAST::MeshFieldFunction*>
