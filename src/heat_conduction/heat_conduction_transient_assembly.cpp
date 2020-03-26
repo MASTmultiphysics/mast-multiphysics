@@ -88,8 +88,27 @@ elem_sensitivity_calculations(const MAST::FunctionBase& f,
                               RealVectorX& f_m,
                               RealVectorX& f_x) {
     
-    libmesh_error(); // to be implemented
+    libmesh_assert(_physics_elem);
+
+    MAST::HeatConductionElementBase& e =
+    dynamic_cast<MAST::HeatConductionElementBase&>(*_physics_elem);
     
+    unsigned int
+    n       =  (unsigned int)f_m.size();
+    
+    RealMatrixX
+    dummy   =  RealMatrixX::Zero(n, n);
+
+    f_m.setZero();
+    f_x.setZero();
+    
+    // assembly of the flux terms
+    e.internal_residual_sensitivity(f, f_x);
+    e.side_external_residual_sensitivity(f, f_x, _discipline->side_loads());
+    e.volume_external_residual_sensitivity(f, f_x, _discipline->volume_loads());
+    
+    //assembly of the capacitance term
+    e.velocity_residual_sensitivity(f, f_m);
 }
 
 

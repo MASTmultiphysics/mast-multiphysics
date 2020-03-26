@@ -323,7 +323,10 @@ MAST::FirstOrderNewmarkTransientSolver::
 elem_sensitivity_contribution_previous_timestep(const std::vector<RealVectorX>& prev_sols,
                                                 RealVectorX& vec) {
     
-    // make sure that the assembly object is provided
+    // nothing to be done for highest derivative term
+    if (_if_highest_derivative_solution) return;
+
+        // make sure that the assembly object is provided
     libmesh_assert(_assembly_ops);
     libmesh_assert_equal_to(prev_sols.size(), 2);
     

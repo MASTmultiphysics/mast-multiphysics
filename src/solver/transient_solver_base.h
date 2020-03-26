@@ -191,9 +191,13 @@ namespace MAST {
          *    Initializes the highest derivative solution using the solution 
          *    and its low order time derivatives at the specified time step.
          *    Then advances the time step so that the solver is ready for 
-         *    time integration.
+         *    time integration. If \p increment_time is \p true then
+         *   the value fo time will be incremented in System. This may be useful when calling this
+         *   method inside a sensitivity analysis routine.
          */
-        void solve_highest_derivative_and_advance_time_step(MAST::AssemblyBase& assembly);
+        void
+        solve_highest_derivative_and_advance_time_step(MAST::AssemblyBase& assembly,
+                                                       bool increment_time = true);
         
         /*!
          *    solves for the sensitivity of highest derivative and advances
@@ -207,9 +211,11 @@ namespace MAST {
         
         /*!
          *   advances the time step and copies the current solution to old
-         *   solution, and so on.
+         *   solution, and so on. If \p increment_time is \p true then
+         *   the value fo time will be incremented in System. This may be useful when calling this
+         *   method inside a sensitivity analysis routine.
          */
-        virtual void advance_time_step();
+        virtual void advance_time_step(bool increment_time = true);
         
         /*!
          *   advances the time step and copies the current sensitivity solution
