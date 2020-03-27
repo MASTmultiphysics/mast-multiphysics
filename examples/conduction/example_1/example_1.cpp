@@ -65,18 +65,22 @@ void compute_transient_sensitivity(MAST::PhysicsDisciplineBase& discipline,
 
 int main(int argc, const char** argv)
 {
-    // BEGIN_TRANSLATE Extension of bar
+    // BEGIN_TRANSLATE Transient conduction of a bar
     //
     //   \tableofcontents
     //
     // This example solves an axial bar extension problem.
+    //
+    // \section conduction_ex1_init Initialization
     //
     // Initialize libMesh library.
     libMesh::LibMeshInit init(argc, argv);
 
     MAST::Examples::GetPotWrapper
     input(argc, argv, "input");
-
+    //
+    // \subsection conduction_ex1_init_mesh Initialize Mesh and System
+    //
     // Create Mesh object on default MPI communicator and generate a line mesh (5 elements, 10 units long).
     //   Note that in libMesh, all meshes are parallel by default in the sense that the equations on the mesh are solved in parallel by PETSc.
     //   A "ReplicatedMesh" is one where all MPI processes have the full mesh in memory, as compared to a "DistributedMesh" where the mesh is
@@ -115,6 +119,9 @@ int main(int argc, const char** argv)
     equation_systems.init();
     equation_systems.print_info();
     
+    //
+    // \subsection conduction_ex1_properties Initialize Parameters and Property Cards
+    //
     // Create parameters.
     MAST::Parameter zero("zero", 0.0);
     MAST::Parameter    kappa_yy("kappa_yy", 5./6.);
@@ -139,7 +146,6 @@ int main(int argc, const char** argv)
     MAST::ConstantFieldFunction kappa_zz_f("Kappazz",    kappa_zz);
 
     // Initialize load.
-    // TODO - Switch this to a concentrated/point load on the right end of the bar.
     MAST::BoundaryConditionBase right_end_flux(MAST::HEAT_FLUX);
     right_end_flux.add(q_f);
     discipline.add_side_load(1, right_end_flux);
@@ -175,19 +181,19 @@ int main(int argc, const char** argv)
     section.init();
     discipline.set_property_for_subdomain(0, section);
 
+    // \section conduction_ex1_computation Computation
+    //
     // transient solution
     compute_transient_solution(discipline, conduction_system, input);
     
     // transient solution sensitivity with respect to section y-thickness
     compute_transient_sensitivity(discipline, conduction_system, input, thickness_y);
 
-    // END_TRANSLATE
     return 0;
 }
 
 
-// \section conduction_computation Computation
-// \subsection conduction_transient_analysis  Transient analysis
+// \subsection conduction_ex1_transient_analysis  Transient analysis
 void compute_transient_solution(MAST::PhysicsDisciplineBase& discipline,
                                 MAST::SystemInitialization& sys_init,
                                 MAST::Examples::GetPotWrapper& input) {
@@ -259,7 +265,7 @@ void compute_transient_solution(MAST::PhysicsDisciplineBase& discipline,
 }
 
 
-// \subsection conduction_transient_sensitivity_analysis  Transient sensitivity analysis
+// \subsection conduction_ex1_transient_sensitivity_analysis  Transient sensitivity analysis
 void compute_transient_sensitivity(MAST::PhysicsDisciplineBase& discipline,
                                    MAST::SystemInitialization& sys_init,
                                    MAST::Examples::GetPotWrapper& input,
@@ -341,3 +347,4 @@ void compute_transient_sensitivity(MAST::PhysicsDisciplineBase& discipline,
     
 }
 
+// END_TRANSLATE
