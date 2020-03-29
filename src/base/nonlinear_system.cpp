@@ -224,6 +224,10 @@ MAST::NonlinearSystem::solve(MAST::AssemblyElemOperations& elem_ops,
     
     libMesh::NonlinearImplicitSystem::solve();
     
+    // enforce constraints on the solution since NonlinearImplicitSystem only
+    // enforces the constraints on current_local_solution.
+    this->get_dof_map().enforce_constraints_exactly(*this, this->solution.get());
+    
     this->nonlinear_solver->residual_and_jacobian_object = old_ptr;
     
     assembly.clear_elem_operation_object();

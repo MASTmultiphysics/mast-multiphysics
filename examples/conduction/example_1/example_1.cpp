@@ -111,6 +111,36 @@ int main(int argc, const char** argv)
     // Initialize a new conduction discipline using equation_systems.
     MAST::PhysicsDisciplineBase discipline(equation_systems);
         
+    // Create and add boundary conditions to the conduction system. This Dirichlet BC fixes
+    // the temperature of left end of the bar to a value of 10K. This requires
+    // creation of a FieldFunction that provides the value of the constrained
+    // variable at given spatial location and time.
+    class TempValue: public MAST::FieldFunction<RealVectorX> {
+    public:
+        TempValue(): MAST::FieldFunction<RealVectorX>("Temp") {}
+        virtual ~TempValue() {}
+        virtual void operator() (const libMesh::Point& p,
+                                 const Real t,
+                                 RealVectorX& v) const {
+            v.setZero(1);
+            v(0) = 10;
+        }
+    };
+    TempValue tval;
+    MAST::DirichletBoundaryCondition dirichlet_bc;
+    // Conduction system has one variable, Temperature, which is constrained on
+    // the left boundary.
+    dirichlet_bc.init(0, conduction_system.vars(),
+                      // The object takes a pointer to this function to set the
+                      // value of temperatue on the left boundary
+                      &tval,
+                      // tell the object that a system variable order is to be used
+                      // and that the sytsem has 1 variable in it.
+                      libMesh::SYSTEM_VARIABLE_ORDER, 1);
+    // Tell the discipline that the left boundary is constrained by this object.
+    discipline.add_dirichlet_bc(0, dirichlet_bc);
+    discipline.init_system_dirichlet_bc(system);
+
     // Initialize the equation system since we now know the size of our
     // system matrices (based on mesh, element type, variables in the
     // conduction_system) as well as the setup of dirichlet boundary conditions.
@@ -217,8 +247,7 @@ void compute_transient_solution(MAST::PhysicsDisciplineBase& discipline,
 
     // initialize the solution to zero, or to something that the
     // user may have provided
-    sys.solution->zero();
-    sys.solution->close();
+    sys.get_dof_map().enforce_constraints_exactly(sys, sys.solution.get());
     sys.update();
 
     // file to write the solution for visualization
@@ -289,10 +318,11 @@ void compute_transient_sensitivity(MAST::PhysicsDisciplineBase& discipline,
     solver.set_discipline_and_system(discipline, sys_init);
     solver.set_elem_operation_object(elem_ops);
     
-    // initial condition for solution is zero temperature and initial condition
+    // initial condition for solution is read from disk and initial condition
     // for sensitivity of temperature is also assumed to be zero.
-    sys.solution->zero();
-    sys.solution->close();
+    std::ostringstream oss;
+    oss << output_name << "_sol_t_" << 0;
+    sys.read_in_vector(*sys.solution, nonlinear_sol_dir, oss.str(), true);
     sys.update();
     
     // file to write the solution for visualization
