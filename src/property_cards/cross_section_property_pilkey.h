@@ -24,7 +24,7 @@
 #include "property_cards/solid_2d_section_element_property_card.h"
 #include "base/physics_discipline_base.h"
 
-
+#include "libmesh/petsc_vector.h" // This is necessary for compatibility with libMesh v1.3.1
 
 namespace MAST 
 {
