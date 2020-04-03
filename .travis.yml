@@ -7,13 +7,13 @@ matrix:
         osx_image: xcode10.2
         env: LIBMESH_VERSION=1.5.1
       - os: linux
-        dist: xenial
+        dist: bionic
         env: LIBMESH_VERSION=1.5.1
 
       # Doxygen documentation build
       # - this job also progresses to deployment when on master branch
       - os: linux
-        dist: xenial
+        dist: bionic
         env: CI_BUILD_DOCS=true CI_DEPLOY_DOCS=true LIBMESH_VERSION=1.5.1
 
       # macOS/Linux builds - libMesh version 1.4.1
@@ -21,7 +21,7 @@ matrix:
         osx_image: xcode10.2
         env: LIBMESH_VERSION=1.4.1
       - os: linux
-        dist: xenial
+        dist: bionic
         env: LIBMESH_VERSION=1.4.1
 
       # macOS/Linux builds - libMesh version 1.3.1

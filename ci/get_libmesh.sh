@@ -8,7 +8,9 @@ if [ "${TRAVIS_OS_NAME}" = linux ]; then # Ubuntu Linux
     wget -nv "https://github.com/MASTmultiphysics/mast-ci-packages/releases/download/libmesh-${LIBMESH_VERSION}-1.deb/libmesh-${LIBMESH_VERSION}-1.deb" || exit
     sudo apt install "./libmesh-${LIBMESH_VERSION}-1.deb" || exit
 
-  # elif [ "${TRAVIS_DIST}" = bionic ]; then # Ubuntu 18.04 Bionic Beaver
+   elif [ "${TRAVIS_DIST}" = bionic ]; then # Ubuntu 18.04 Bionic Beaver
+    wget -nv "https://github.com/MASTmultiphysics/mast-ci-packages/releases/download/libmesh_ubuntu18.04/libmesh-${LIBMESH_VERSION}-1.deb" || exit
+    sudo apt install "./libmesh-${LIBMESH_VERSION}-1.deb" || exit
 
   else
     echo "INVALID LINUX DISTRO: ${TRAVIS_DIST}"
