@@ -200,7 +200,7 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
         
         const libMesh::dof_id_type
         first_dof  = dof_map.first_dof(nonlin_sys.comm().rank()),
-        last_dof   = dof_map.last_dof(nonlin_sys.comm().rank());
+        end_dof   = dof_map.end_dof(nonlin_sys.comm().rank());
 
         for ( ; it != end; it++) {
             
@@ -233,7 +233,7 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
                 // belong to this processor
                 for (unsigned int i=0; i<dof_indices.size(); i++)
                     if (dof_indices[i] <   first_dof  ||
-                        dof_indices[i] >=  last_dof)
+                        dof_indices[i] >=  end_dof)
                         vec(i) = 0.;
 
                 DenseRealVector v;
@@ -607,7 +607,7 @@ sensitivity_assemble (const MAST::FunctionBase& f,
         
         const libMesh::dof_id_type
         first_dof  = dof_map.first_dof(nonlin_sys.comm().rank()),
-        last_dof   = dof_map.last_dof(nonlin_sys.comm().rank());
+        end_dof   = dof_map.end_dof(nonlin_sys.comm().rank());
         
         for ( ; it != end; it++) {
             
@@ -638,7 +638,7 @@ sensitivity_assemble (const MAST::FunctionBase& f,
                 // belong to this processor
                 for (unsigned int i=0; i<dof_indices.size(); i++)
                     if (dof_indices[i] <   first_dof  ||
-                        dof_indices[i] >=  last_dof)
+                        dof_indices[i] >=  end_dof)
                         vec(i) = 0.;
 
                 DenseRealVector v;
