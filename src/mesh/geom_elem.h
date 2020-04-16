@@ -110,6 +110,14 @@ namespace MAST {
         void set_local_y_vector(const RealVectorX& y_vec);
         
         /*!
+         * This sets the 1D elements to extension/torsional stiffness only.
+         * This is useful when modeling truss structures (e.g. using CROD
+         * elements in Nastran) which do not require an orientation vector
+         * like beam elements do. By default, 1D elements include bending.
+         */
+        void set_bending(bool onoff);
+        
+        /*!
          *   initialize the object for the specified reference \p elem.
          */
         virtual void init(const libMesh::Elem& elem,
@@ -259,6 +267,12 @@ namespace MAST {
          *    obtained as  a_j  = T  an_i
          */
         RealMatrixX                        _T_mat;
+        
+        /*!
+         * Defines if bending is used in this element or not. True by default
+         * Added for github issue #40
+         */
+        bool                                _bending = true;
     };
 }
 
