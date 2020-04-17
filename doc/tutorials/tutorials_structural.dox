@@ -1,10 +1,5 @@
-
-/*!
-
-\page TutorialsPage Tutorials for MAST
-
-  Several examples have been implemented in MAST, some of which have been
-  ported as tutorials listed below. 
+/**
+\page TutorialsStructural Structural Tutorials
 
   - \subpage structural_example_1
   - \subpage structural_example_2
@@ -14,8 +9,5 @@
   - \subpage structural_example_6
   - \subpage structural_example_8
   - \subpage structural_example_7
-  - \subpage fluid_example_1
-  - \subpage fsi_example_1
-  - \subpage conduction_example_1
 
 */
