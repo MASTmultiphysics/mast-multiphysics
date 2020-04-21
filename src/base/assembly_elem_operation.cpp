@@ -36,7 +36,8 @@ MAST::AssemblyElemOperations::AssemblyElemOperations():
 _system           (nullptr),
 _discipline       (nullptr),
 _assembly         (nullptr),
-_physics_elem     (nullptr) {
+_physics_elem     (nullptr),
+_skip_comm_sum    (false) {
     
 }
 

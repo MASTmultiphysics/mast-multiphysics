@@ -898,8 +898,11 @@ MAST::StressStrainOutputBase::functional_for_all_elems() {
     
     // sum over all processors, since part of the mesh will exist on the
     // other processors.
-    _system->system().comm().sum(_sigma_vm_int);
-    _system->system().comm().sum(_JxW_val);
+    if (!_skip_comm_sum) {
+        
+        _system->system().comm().sum(_sigma_vm_int);
+        _system->system().comm().sum(_JxW_val);
+    }
 
     _sigma_vm_p_norm         = _sigma0 * pow(_sigma_vm_int/_JxW_val, 1./_p_norm_stress);
     _primal_data_initialized = true;
@@ -933,7 +936,8 @@ MAST::StressStrainOutputBase::functional_sensitivity_for_all_elems
     
     // sum over all processors, since part of the mesh will exist on the
     // other processors
-    _system->system().comm().sum(dsigma_vm_val_df);
+    if (!_skip_comm_sum)
+        _system->system().comm().sum(dsigma_vm_val_df);
 }
 
 
@@ -965,7 +969,8 @@ MAST::StressStrainOutputBase::functional_boundary_sensitivity_for_all_elems
 
     // sum over all processors, since part of the mesh will exist on the
     // other processors
-    _system->system().comm().sum(dsigma_vm_val_df);
+    if (!_skip_comm_sum)
+        _system->system().comm().sum(dsigma_vm_val_df);
 }
 
 
