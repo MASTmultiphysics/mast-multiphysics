@@ -139,7 +139,9 @@ namespace MAST {
          *   The Jacobian will be assembled before adjoint solve if
          *   \p if_assemble_jacobian is \p true.
          */
-        virtual void sensitivity_solve(MAST::AssemblyElemOperations&   elem_ops,
+        virtual void sensitivity_solve(const libMesh::NumericVector<Real>& X,
+                                       bool if_localize_sol,
+                                       MAST::AssemblyElemOperations&   elem_ops,
                                        MAST::AssemblyBase&             assembly,
                                        const MAST::FunctionBase&       p,
                                        bool if_assemble_jacobian = true);
@@ -150,7 +152,9 @@ namespace MAST {
          *   The Jacobian will be assembled before adjoint solve if
          *   \p if_assemble_jacobian is \p true.
          */
-        virtual void adjoint_solve(MAST::AssemblyElemOperations&       elem_ops,
+        virtual void adjoint_solve(const libMesh::NumericVector<Real>& X,
+                                   bool if_localize_sol,
+                                   MAST::AssemblyElemOperations&       elem_ops,
                                    MAST::OutputAssemblyElemOperations& output,
                                    MAST::AssemblyBase&                 assembly,
                                    bool if_assemble_jacobian           = true);

@@ -122,12 +122,15 @@ namespace MAST {
 
         
         virtual bool
-        sensitivity_assemble (const MAST::FunctionBase& f,
+        sensitivity_assemble (const libMesh::NumericVector<Real>& X,
+                              bool if_localize_sol,
+                              const MAST::FunctionBase& f,
                               libMesh::NumericVector<Real>& sensitivity_rhs);
         
         
         virtual void
         calculate_output_derivative(const libMesh::NumericVector<Real>& X,
+                                    bool if_localize_sol,
                                     MAST::OutputAssemblyElemOperations& output,
                                     libMesh::NumericVector<Real>& dq_dX);
         
@@ -144,6 +147,7 @@ namespace MAST {
          */
         virtual void
         calculate_output(const libMesh::NumericVector<Real>& X,
+                         bool if_localize_sol,
                          MAST::OutputAssemblyElemOperations& output);
         
         
@@ -160,7 +164,9 @@ namespace MAST {
          */
         virtual void
         calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
+                                            bool if_localize_sol,
                                             const libMesh::NumericVector<Real>* dXdp,
+                                            bool if_localize_sol_sens,
                                             const MAST::FunctionBase& p,
                                             MAST::OutputAssemblyElemOperations& output);
         

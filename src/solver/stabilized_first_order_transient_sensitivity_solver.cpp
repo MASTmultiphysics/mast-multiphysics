@@ -165,7 +165,7 @@ sensitivity_solve(MAST::AssemblyBase& assembly,
         M_avg.close();
         
         // assemble the forcing vector
-        assembly.sensitivity_assemble(f, rhs);
+        assembly.sensitivity_assemble(*sys.solution, true, f, rhs);
         rhs.scale(-1.);
         f_int->add(this->dt, rhs);  // int_0^t F dt
         f_int->close();
@@ -298,7 +298,7 @@ evaluate_q_sens_for_previous_interval(MAST::AssemblyBase& assembly,
         dx->close();
         
         output.zero_for_analysis();
-        assembly.calculate_output_direct_sensitivity(sol, dx.get(), p, output);
+        assembly.calculate_output_direct_sensitivity(sol, true, dx.get(), true, p, output);
         
         q  += output.output_sensitivity_total(p) * this->dt;
     }

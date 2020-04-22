@@ -534,7 +534,7 @@ public:
         // evaluate the output based on specified problem type
         if (_problem == "compliance_volume") {
             
-            nonlinear_assembly.calculate_output(*_sys->solution, compliance);
+            nonlinear_assembly.calculate_output(*_sys->solution, true, compliance);
             comp      = compliance.output_total();
             obj       = _obj_scaling * comp;
             fvals[0]  = vol/_volume - _vf; // vol/vol0 - a <=
@@ -544,7 +544,7 @@ public:
             
             // set the elasticity penalty for stress evaluation
             _Ef->set_penalty_val(stress_penalty);
-            nonlinear_assembly.calculate_output(*_sys->solution, stress);
+            nonlinear_assembly.calculate_output(*_sys->solution, true, stress);
             max_vm    = stress.get_maximum_von_mises_stress();
             vm_agg    = stress.output_total();
             obj       = _obj_scaling * vol;
@@ -768,7 +768,7 @@ public:
      MAST::NonlinearImplicitAssembly& nonlinear_assembly,
      std::vector<Real>& grads) {
         
-        _sys->adjoint_solve(nonlinear_elem_ops, stress, nonlinear_assembly, false);
+        _sys->adjoint_solve(*_sys->solution, true, nonlinear_elem_ops, stress, nonlinear_assembly, false);
         
         std::unique_ptr<libMesh::NumericVector<Real>>
         dphi_base(_density_sys->solution->zero_clone().release()),
@@ -805,6 +805,7 @@ public:
 
             grads[1*i+0] = 1./_stress_lim*
             nonlinear_assembly.calculate_output_adjoint_sensitivity(*_sys->solution,
+                                                                    true,
                                                                     _sys->get_adjoint_solution(),
                                                                     *_dv_params[i].second,
                                                                     nonlinear_elem_ops,
@@ -813,7 +814,9 @@ public:
             
             _Ef->set_penalty_val(stress_penalty);
             nonlinear_assembly.calculate_output_direct_sensitivity(*_sys->solution,
+                                                                   true,
                                                                    nullptr,
+                                                                   false,
                                                                    *_dv_params[i].second,
                                                                    stress);
             grads[1*i+0] += 1./_stress_lim* stress.output_sensitivity_total(*_dv_params[i].second);
@@ -866,6 +869,7 @@ public:
             //////////////////////////////////////////////////////////////////////
             grads[i] = -1. *
             nonlinear_assembly.calculate_output_adjoint_sensitivity(*_sys->solution,
+                                                                    true,
                                                                     *_sys->solution,
                                                                     *_dv_params[i].second,
                                                                     nonlinear_elem_ops,

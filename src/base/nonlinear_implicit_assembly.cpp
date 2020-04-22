@@ -387,7 +387,9 @@ linearized_jacobian_solution_product (const libMesh::NumericVector<Real>& X,
 void
 MAST::NonlinearImplicitAssembly::
 second_derivative_dot_solution_assembly (const libMesh::NumericVector<Real>& X,
+                                         bool if_localize_sol,
                                          const libMesh::NumericVector<Real>& dX,
+                                         bool if_localize_sol_sens,
                                          libMesh::SparseMatrix<Real>& d_JdX_dX,
                                          libMesh::NonlinearImplicitSystem& S) {
     
@@ -412,15 +414,27 @@ second_derivative_dot_solution_assembly (const libMesh::NumericVector<Real>& X,
     std::vector<libMesh::dof_id_type> dof_indices;
     const libMesh::DofMap& dof_map = _system->system().get_dof_map();
     
+    const libMesh::NumericVector<Real>
+    *sol_vec  = nullptr,
+    *dsol_vec = nullptr;
     
     std::unique_ptr<libMesh::NumericVector<Real> >
     localized_solution,
     localized_perturbed_solution;
     
-    localized_solution.reset(build_localized_vector(nonlin_sys,
-                                                     X).release());
-    localized_perturbed_solution.reset(build_localized_vector(nonlin_sys,
-                                                               dX).release());
+    if (if_localize_sol) {
+        localized_solution.reset(build_localized_vector(nonlin_sys, X).release());
+        sol_vec = localized_solution.get();
+    }
+    else
+        sol_vec = &X;
+    
+    if (if_localize_sol_sens) {
+        localized_perturbed_solution.reset(build_localized_vector(nonlin_sys, dX).release());
+        dsol_vec = localized_perturbed_solution.get();
+    }
+    else
+        dsol_vec = &dX;
     
     
     // if a solution function is attached, initialize it
@@ -458,8 +472,8 @@ second_derivative_dot_solution_assembly (const libMesh::NumericVector<Real>& X,
         mat.setZero(ndofs, ndofs);
         
         for (unsigned int i=0; i<dof_indices.size(); i++) {
-            sol (i) = (*localized_solution)          (dof_indices[i]);
-            dsol(i) = (*localized_perturbed_solution)(dof_indices[i]);
+            sol (i) = (*sol_vec)          (dof_indices[i]);
+            dsol(i) = (*dsol_vec)(dof_indices[i]);
         }
         
         ops.set_elem_solution(sol);
@@ -500,7 +514,9 @@ second_derivative_dot_solution_assembly (const libMesh::NumericVector<Real>& X,
 
 bool
 MAST::NonlinearImplicitAssembly::
-sensitivity_assemble (const MAST::FunctionBase& f,
+sensitivity_assemble (const libMesh::NumericVector<Real>& X,
+                      bool if_localize_sol,
+                      const MAST::FunctionBase& f,
                       libMesh::NumericVector<Real>& sensitivity_rhs) {
     
     libmesh_assert(_system);
@@ -518,10 +534,17 @@ sensitivity_assemble (const MAST::FunctionBase& f,
     std::vector<libMesh::dof_id_type> dof_indices;
     const libMesh::DofMap& dof_map = nonlin_sys.get_dof_map();
     
+    const libMesh::NumericVector<Real>
+    *sol_vec = nullptr;
     
     std::unique_ptr<libMesh::NumericVector<Real> > localized_solution;
-    localized_solution.reset(build_localized_vector(nonlin_sys,
-                                                     *nonlin_sys.solution).release());
+    
+    if (if_localize_sol) {
+        localized_solution.reset(build_localized_vector(nonlin_sys, X).release());
+        sol_vec = localized_solution.get();
+    }
+    else
+        sol_vec = &X;
     
     // if a solution function is attached, initialize it
     if (_sol_function)
@@ -563,7 +586,7 @@ sensitivity_assemble (const MAST::FunctionBase& f,
         vec1.setZero(ndofs);
 
         for (unsigned int i=0; i<dof_indices.size(); i++)
-            sol(i) = (*localized_solution)(dof_indices[i]);
+            sol(i) = (*sol_vec)(dof_indices[i]);
         
         ops.set_elem_solution(sol);
         

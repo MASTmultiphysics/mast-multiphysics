@@ -727,7 +727,7 @@ public:
         // evaluate the functions
         //////////////////////////////////////////////////////////////////////
 
-        perimeter_assembly.calculate_output(*_level_set_sys->solution, perimeter);
+        perimeter_assembly.calculate_output(*_level_set_sys->solution, true, perimeter);
         
         Real
         max_vm = 0.,
@@ -748,7 +748,7 @@ public:
 
             // if the shifted boundary is implementing a traction-free condition
             // compliance does not need contribution from shifted boundary load
-            nonlinear_assembly.calculate_output(*_sys->solution, compliance);
+            nonlinear_assembly.calculate_output(*_sys->solution, true, compliance);
             comp      = compliance.output_total();
             obj       = _obj_scaling * (comp + _perimeter_penalty * per);
             fvals[0]  = vol/_volume - vf; // vol/vol0 - a <=
@@ -758,7 +758,7 @@ public:
             
             // set the elasticity penalty for stress evaluation
             _Ef->set_penalty_val(stress_penalty);
-            nonlinear_assembly.calculate_output(*_sys->solution, stress);
+            nonlinear_assembly.calculate_output(*_sys->solution, true, stress);
             max_vm    = stress.get_maximum_von_mises_stress();
             vm_agg    = stress.output_total();
             obj       = _obj_scaling * (vol + _perimeter_penalty * per);
@@ -967,7 +967,9 @@ public:
             // if the perimeter output was specified then compute the sensitivity
             // and add to the grad vector
             assembly.calculate_output_direct_sensitivity(*_level_set_sys->solution,
+                                                         true,
                                                          dphi_filtered.get(),
+                                                         true,
                                                          *_dv_params[i].second,
                                                          perimeter);
             
@@ -990,7 +992,7 @@ public:
      MAST::NonlinearImplicitAssembly& nonlinear_assembly,
      std::vector<Real>& grads) {
         
-        _sys->adjoint_solve(nonlinear_elem_ops, stress, nonlinear_assembly, false);
+        _sys->adjoint_solve(*_sys->solution, true, nonlinear_elem_ops, stress, nonlinear_assembly, false);
         
         std::unique_ptr<libMesh::NumericVector<Real>>
         dphi_base(_level_set_sys->solution->zero_clone().release()),
@@ -1028,6 +1030,7 @@ public:
             
             grads[1*i+0] = 1./_stress_lim*
             nonlinear_assembly.calculate_output_adjoint_sensitivity(*_sys->solution,
+                                                                    true,
                                                                     _sys->get_adjoint_solution(),
                                                                     *_dv_params[i].second,
                                                                     nonlinear_elem_ops,
@@ -1036,7 +1039,9 @@ public:
 
             _Ef->set_penalty_val(stress_penalty);
             nonlinear_assembly.calculate_output_direct_sensitivity(*_sys->solution,
+                                                                   true,
                                                                    nullptr,
+                                                                   false,
                                                                    *_dv_params[i].second,
                                                                    stress);
             grads[1*i+0] += 1./_stress_lim* stress.output_sensitivity_total(*_dv_params[i].second);
@@ -1060,7 +1065,7 @@ public:
         // Adjoint solution for compliance = - X
         // if the shifted boundary is implementing a traction-free condition
         // compliance does not need contribution from shifted boundary load
-        _sys->adjoint_solve(nonlinear_elem_ops, compliance, nonlinear_assembly, false);
+        _sys->adjoint_solve(*_sys->solution, true, nonlinear_elem_ops, compliance, nonlinear_assembly, false);
 
         std::unique_ptr<libMesh::NumericVector<Real>>
         dphi_base(_level_set_sys->solution->zero_clone().release()),
@@ -1094,6 +1099,7 @@ public:
             //////////////////////////////////////////////////////////////////////
             grads[i] = 1. *
             nonlinear_assembly.calculate_output_adjoint_sensitivity(*_sys->solution,
+                                                                    true,
                                                                     _sys->get_adjoint_solution(),
                                                                     *_dv_params[i].second,
                                                                     nonlinear_elem_ops,
