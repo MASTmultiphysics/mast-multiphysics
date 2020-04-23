@@ -119,6 +119,14 @@ namespace MAST {
         }
          
         /*!
+         *   If an output has contrinutions only from local processor then the user can request that
+         *   the global comm().sum() calls be skipped to avoid blocking MPI calls. This is \p false
+         *   by default. Note that this should be done carefully since incorrect usage can lead
+         *   to erroneous results.
+         */
+        void set_skip_comm_sum(bool skip) { _skip_comm_sum = skip;}
+        
+        /*!
          *   sets the element solution
          */
         virtual void
@@ -186,6 +194,12 @@ namespace MAST {
         MAST::AssemblyBase               *_assembly;
         
         MAST::ElementBase                *_physics_elem;
+        
+        /*!
+         *   If an output has contrinutions only from local processor then the user can request that
+         *   the global comm().sum() calls be skipped to avoid blocking MPI calls.
+         */
+        bool                              _skip_comm_sum;
     };
 }
 

@@ -1117,7 +1117,7 @@ public:
             
             // calculate the output quantity
             force.zero_for_analysis();
-            assembly.calculate_output(solver.solution(), force);
+            assembly.calculate_output(solver.solution(), true, force);
             force_output
             << std::setw(10) << tval
             << std::setw(30) << force.output_total() << std::endl;
@@ -1241,8 +1241,10 @@ public:
             
             // solve for the sensitivity time-step
             force.zero_for_analysis();
-            assembly.calculate_output(solver.solution(), force);
-            assembly.calculate_output_direct_sensitivity(solver.solution(), &solver.solution_sensitivity(), p, force);
+            assembly.calculate_output(solver.solution(), true, force);
+            assembly.calculate_output_direct_sensitivity(solver.solution(), true,
+                                                         &solver.solution_sensitivity(), true,
+                                                         p, force);
             force_output
             << std::setw(10) << _sys->time
             << std::setw(30) << force.output_total()
@@ -1359,8 +1361,10 @@ public:
             
             // solve for the sensitivity time-step
             force.zero_for_analysis();
-            assembly.calculate_output(solver.solution(), force);
-            assembly.calculate_output_direct_sensitivity(solver.solution(), &solver.solution_sensitivity(), p, force);
+            assembly.calculate_output(solver.solution(), true, force);
+            assembly.calculate_output_direct_sensitivity(solver.solution(), true,
+                                                         &solver.solution_sensitivity(), true,
+                                                         p, force);
             force_output
             << std::setw(10) << _sys->time
             << std::setw(30) << force.output_total()

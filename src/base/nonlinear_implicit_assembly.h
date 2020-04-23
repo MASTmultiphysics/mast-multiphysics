@@ -123,7 +123,9 @@ namespace MAST {
          */
         virtual void
         second_derivative_dot_solution_assembly(const libMesh::NumericVector<Real>& X,
+                                                bool if_localize_sol,
                                                 const libMesh::NumericVector<Real>& dX,
+                                                bool if_localize_sol_sens,
                                                 libMesh::SparseMatrix<Real>& d_JdX_dX,
                                                 libMesh::NonlinearImplicitSystem& S);
 
@@ -140,7 +142,9 @@ namespace MAST {
          * finite differencing.
          */
         virtual bool
-        sensitivity_assemble (const MAST::FunctionBase& f,
+        sensitivity_assemble (const libMesh::NumericVector<Real>& X,
+                              bool if_localize_sol,
+                              const MAST::FunctionBase& f,
                               libMesh::NumericVector<Real>& sensitivity_rhs);
         
     protected:

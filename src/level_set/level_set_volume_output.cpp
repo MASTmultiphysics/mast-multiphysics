@@ -102,7 +102,8 @@ MAST::LevelSetVolume::output_total() {
     
     // sum over all processors since part of the mesh can live on different
     // processors
-    _system->system().comm().sum(val);
+    if (!_skip_comm_sum)
+        _system->system().comm().sum(val);
     
     return val;
 }
@@ -139,7 +140,8 @@ MAST::LevelSetVolume::output_sensitivity_total(const MAST::FunctionBase& p) {
     
     // sum over all processors since part of the mesh can live on different
     // processors
-    _system->system().comm().sum(val);
+    if (!_skip_comm_sum)
+        _system->system().comm().sum(val);
 
     return val;
 }

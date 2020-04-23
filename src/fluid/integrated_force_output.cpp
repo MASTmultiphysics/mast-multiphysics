@@ -87,7 +87,10 @@ Real
 MAST::IntegratedForceOutput::output_total()  {
 
     Real val = _force;
-    _system->system().comm().sum(val);
+    
+    if (!_skip_comm_sum)
+        _system->system().comm().sum(val);
+    
     return val;
 }
 
@@ -97,7 +100,10 @@ Real
 MAST::IntegratedForceOutput::output_sensitivity_total(const MAST::FunctionBase& p)  {
     
     Real val = _force_sens;
-    _system->system().comm().sum(val);
+    
+    if (!_skip_comm_sum)
+        _system->system().comm().sum(val);
+    
     return val;
 }
 

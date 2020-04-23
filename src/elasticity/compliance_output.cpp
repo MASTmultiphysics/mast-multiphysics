@@ -240,7 +240,10 @@ Real
 MAST::ComplianceOutput::output_total() {
     
     Real val = _compliance;
-    _system->system().comm().sum(val);
+    
+    if (!_skip_comm_sum)
+        _system->system().comm().sum(val);
+    
     return val;
 }
 
@@ -250,7 +253,10 @@ Real
 MAST::ComplianceOutput::output_sensitivity_total(const MAST::FunctionBase& p) {
     
     Real val = _dcompliance_dp;
-    _system->system().comm().sum(val);
+    
+    if (!_skip_comm_sum)
+        _system->system().comm().sum(val);
+
     return val;
 }
 
