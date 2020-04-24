@@ -100,7 +100,7 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
     
     // if a solution function is attached, initialize it
     if (_sol_function)
-        _sol_function->init( X);
+        _sol_function->init( X, false);
     
     // ask the solver to localize the relevant solutions
     solver.build_local_quantities(X, local_qtys);
@@ -216,7 +216,7 @@ linearized_jacobian_solution_product (const libMesh::NumericVector<Real>& X,
     
     // if a solution function is attached, initialize it
     if (_sol_function)
-        _sol_function->init( X);
+        _sol_function->init( X, false);
 
     // ask the solver to localize the relevant solutions
     solver.build_local_quantities(X, local_qtys);
@@ -317,7 +317,7 @@ sensitivity_assemble (const MAST::FunctionBase& f,
 
     // if a solution function is attached, initialize it
     if (_sol_function)
-        _sol_function->init( *nonlin_sys.solution);
+        _sol_function->init( *nonlin_sys.solution, false);
     
     libMesh::MeshBase::const_element_iterator       el     =
     nonlin_sys.get_mesh().active_local_elements_begin();

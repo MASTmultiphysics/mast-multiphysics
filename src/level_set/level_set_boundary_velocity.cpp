@@ -44,28 +44,44 @@ void
 MAST::LevelSetBoundaryVelocity::init(MAST::SystemInitialization& sys,
                                      const MAST::FieldFunction<Real>& phi_func,
                                      const libMesh::NumericVector<Real>& sol,
-                                     const libMesh::NumericVector<Real>* dsol) {
+                                     libMesh::ParallelType p_type,
+                                     bool reuse_vector) {
     
     if (!_phi)
-        _phi = new MAST::MeshFieldFunction(sys, "phi_vel");
+        _phi = new MAST::MeshFieldFunction(sys, "phi_vel", p_type);
     else
         _phi->clear();
-    _phi->init(sol, dsol);
+    _phi->init(sol, reuse_vector);
     _mesh            = &sys.system().get_mesh();
     _level_set_func  = &phi_func;
 }
 
 
+
 void
-MAST::LevelSetBoundaryVelocity::operator() (const libMesh::Point& p,
-                                            const Real t,
-                                            RealVectorX& v) const {
-    this->velocity(p, t, v);
+MAST::LevelSetBoundaryVelocity::init_sens(const MAST::FunctionBase& f,
+                                          const libMesh::NumericVector<Real>& dsol,
+                                          bool reuse_vector) {
+
+    // make sure that the level set function has been initialized
+    libmesh_assert(_phi);
+    
+    _phi->init_sens(f, dsol, reuse_vector);
 }
 
 
 void
-MAST::LevelSetBoundaryVelocity::velocity(const libMesh::Point& p,
+MAST::LevelSetBoundaryVelocity::operator() (const MAST::FunctionBase& f,
+                                            const libMesh::Point& p,
+                                            const Real t,
+                                            RealVectorX& v) const {
+    this->velocity(f, p, t, v);
+}
+
+
+void
+MAST::LevelSetBoundaryVelocity::velocity(const MAST::FunctionBase& f,
+                                         const libMesh::Point& p,
                                          const Real t,
                                          RealVectorX& v) const {
     
@@ -164,7 +180,7 @@ search_nearest_interface_point_derivative(const MAST::FunctionBase& f,
     
     // now compute the velocity at this point.
     v.setZero();
-    this->velocity(pt, t, v);
+    this->velocity(f, pt, t, v);
 }
 
 
@@ -363,7 +379,7 @@ search_nearest_interface_point_derivative_old(const MAST::FunctionBase& f,
     
     // now compute the velocity at this point.
     v.setZero();
-    this->velocity(pt, t, v);
+    this->velocity(f, pt, t, v);
 }
 
 

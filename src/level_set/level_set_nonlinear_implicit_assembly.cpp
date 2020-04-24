@@ -368,7 +368,7 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
     
     // if a solution function is attached, initialize it
     if (_sol_function)
-        _sol_function->init( X);
+        _sol_function->init( X, false);
     
     
     libMesh::MeshBase::const_element_iterator       el     =
@@ -609,7 +609,7 @@ sensitivity_assemble (const libMesh::NumericVector<Real>& X,
     
     // if a solution function is attached, initialize it
     if (_sol_function)
-        _sol_function->init( *nonlin_sys.solution);
+        _sol_function->init( *nonlin_sys.solution, false);
     
     libMesh::MeshBase::const_element_iterator       el     =
     nonlin_sys.get_mesh().active_local_elements_begin();
@@ -806,7 +806,7 @@ calculate_output(const libMesh::NumericVector<Real>& X,
     
     // if a solution function is attached, initialize it
     //if (_sol_function)
-    //    _sol_function->init( X);
+    //    _sol_function->init( X, false);
     
     
     libMesh::MeshBase::const_element_iterator       el     =
@@ -985,7 +985,7 @@ calculate_output_derivative(const libMesh::NumericVector<Real>& X,
     
     // if a solution function is attached, initialize it
     if (_sol_function)
-        _sol_function->init( X);
+        _sol_function->init( X, false);
     
     
     libMesh::MeshBase::const_element_iterator       el     =
@@ -1226,7 +1226,7 @@ calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
     
     // if a solution function is attached, initialize it
     //if (_sol_function)
-    //    _sol_function->init( X);
+    //    _sol_function->init( X, false);
     
     
     libMesh::MeshBase::const_element_iterator       el     =

@@ -37,13 +37,20 @@ namespace MAST {
         void init(MAST::SystemInitialization& sys,
                   const MAST::FieldFunction<Real>& phi,
                   const libMesh::NumericVector<Real>& sol,
-                  const libMesh::NumericVector<Real>* dsol);
-        
-        virtual void operator() (const libMesh::Point& p,
+                  libMesh::ParallelType p_type,
+                  bool reuse_vector);
+
+        void init_sens(const MAST::FunctionBase& f,
+                       const libMesh::NumericVector<Real>& dsol,
+                       bool reuse_vector);
+
+        virtual void operator() (const MAST::FunctionBase& f,
+                                 const libMesh::Point& p,
                                  const Real t,
                                  RealVectorX& v) const;
 
-        void velocity(const libMesh::Point& p,
+        void velocity(const MAST::FunctionBase& f,
+                      const libMesh::Point& p,
                       const Real t,
                       RealVectorX& v) const;
 

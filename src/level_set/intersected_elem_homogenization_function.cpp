@@ -109,7 +109,7 @@ initialize_element_volume_fraction_sensitivity(const MAST::FunctionBase& f) {
 //            ops.clear_elem();
 //        }
 
-        _elem_volume_fraction_sensitivity[elem] =
+        _elem_volume_fraction_sensitivity[&f][elem] =
         _intersection->get_positive_phi_volume_fraction();
         
         _intersection->clear();
