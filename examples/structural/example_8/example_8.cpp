@@ -878,40 +878,33 @@ public:
         
         dphi_vecs.resize(_n_vars, nullptr);
         
-        std::unique_ptr<libMesh::NumericVector<Real>>
-        dphi_base(_level_set_sys->solution->zero_clone().release()),
-        dphi_filtered(_level_set_sys->solution->zero_clone().release());
-        
-        libMesh::NumericVector<Real>
-        *vec = nullptr;
-                
+        // Serial vectors are used for the level
+        // set mesh function since it uses a different mesh than the analysis mesh
+        // and the two can have different partitionings in the paralle environment.
         for (unsigned int i=0; i<_n_vars; i++) {
-            
-            dphi_base->zero();
-            dphi_filtered->zero();
 
-            //
-            // set the value only if the dof corresponds to a local node
-            //
-            if (_dv_params[i].first >=  dphi_base->first_local_index() &&
-                _dv_params[i].first <   dphi_base->last_local_index())
-                dphi_base->set(_dv_params[i].first, 1.);
+            libMesh::NumericVector<Real>
+            *vec = nullptr;
+
+            // non-zero value of the DV perturbation
+            std::map<unsigned int, Real> nonzero_val;
+            nonzero_val[_dv_params[i].first] = 1.;
             
-            dphi_base->close();
-            _filter->compute_filtered_values(*dphi_base, *dphi_filtered);
-            
-            // now clone the vector for storage. Serial vectors are used for the level
-            // set mesh function since it uses a different mesh than the analysis mesh
-            // and the two can have different partitionings in the paralle environment.
             vec = libMesh::NumericVector<Real>::build(_sys->comm()).release();
-            vec->init(dphi_filtered->size(), false, libMesh::SERIAL);
-            dphi_filtered->localize(*vec);
+            vec->init(_level_set_sys->solution->size(), false, libMesh::SERIAL);
+            _filter->compute_filtered_values(nonzero_val, *vec, false);
 
             dphi_vecs[i] = vec;
-            
-            // we will use this localized vector to initialize the mesh function,
+        }
+
+        for ( unsigned int i=0; i<_n_vars; i++)
+            dphi_vecs[i]->close();
+
+        for ( unsigned int i=0; i<_n_vars; i++) {
+
+            // we will use this serialized vector to initialize the mesh function,
             // which is setup to reuse this vector, so we have to store it
-            _level_set_function->init_sens(*_dv_params[i].second, *vec);
+            _level_set_function->init_sens(*_dv_params[i].second, *dphi_vecs[i]);
             _vf->initialize_element_volume_fraction_sensitivity(*_dv_params[i].second);
         }
     }
