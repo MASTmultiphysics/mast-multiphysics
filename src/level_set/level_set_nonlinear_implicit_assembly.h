@@ -125,7 +125,8 @@ namespace MAST {
         sensitivity_assemble (const libMesh::NumericVector<Real>& X,
                               bool if_localize_sol,
                               const MAST::FunctionBase& f,
-                              libMesh::NumericVector<Real>& sensitivity_rhs);
+                              libMesh::NumericVector<Real>& sensitivity_rhs,
+                              bool close_vector = true);
         
         
         virtual void

@@ -1050,35 +1050,55 @@ public:
         // indices used by GCMMA follow this rule:
         // grad_k = dfi/dxj  ,  where k = j*NFunc + i
         //////////////////////////////////////////////////////////////////
+        // first compute the sensitivity contribution from dot product of adjoint vector
+        // and residual sensitivity
+        std::vector<Real>
+        g1(_n_vars, 0.),
+        g2(_n_vars, 0.);
+        std::vector<const MAST::FunctionBase*>
+        p_vec(_n_vars, nullptr);
+        for (unsigned int i=0; i<_n_vars; i++)
+            p_vec[i] = _dv_params[i].second;
+        
+        //////////////////////////////////////////////////////////////////////
+        // stress sensitivity
+        //////////////////////////////////////////////////////////////////////
+        // set the elasticity penalty for solution, which is needed for
+        // computation of the residual sensitivity
+        _Ef->set_penalty_val(penalty);
+        nonlinear_assembly.calculate_output_adjoint_sensitivity_multiple_parameters_no_direct
+        (*_sys->current_local_solution,
+         false,
+         _sys->get_adjoint_solution(),
+         p_vec,
+         nonlinear_elem_ops,
+         stress,
+         g1);
+
+        // we will skip the summation of sensitivity inside the stress object to minimize
+        // communication cost. Instead, we will do it at the end for the constraint vector
+        stress.set_skip_comm_sum(true);
+        _Ef->set_penalty_val(stress_penalty);
         for (unsigned int i=0; i<_n_vars; i++) {
             
-            //////////////////////////////////////////////////////////////////////
-            // stress sensitivity
-            //////////////////////////////////////////////////////////////////////
-            // set the elasticity penalty for solution, which is needed for
-            // computation of the residual sensitivity
-            _Ef->set_penalty_val(penalty);
-            
-            grads[1*i+0] = 1./_stress_lim*
-            nonlinear_assembly.calculate_output_adjoint_sensitivity(*_sys->current_local_solution,
-                                                                    false,
-                                                                    _sys->get_adjoint_solution(),
-                                                                    *_dv_params[i].second,
-                                                                    nonlinear_elem_ops,
-                                                                    stress,
-                                                                    false);
-
-            _Ef->set_penalty_val(stress_penalty);
             nonlinear_assembly.calculate_output_direct_sensitivity(*_sys->current_local_solution,
                                                                    false,
                                                                    nullptr,
                                                                    false,
                                                                    *_dv_params[i].second,
                                                                    stress);
-            grads[1*i+0] += 1./_stress_lim* stress.output_sensitivity_total(*_dv_params[i].second);
-
+            g2[i] = stress.output_sensitivity_total(*_dv_params[i].second);
             stress.clear_sensitivity_data();
         }
+        stress.set_skip_comm_sum(false);
+
+        // now sum the values across processors to sum the partial derivatives for
+        // each parameter
+        _sys->comm().sum(g2);
+        
+        // now compute contribution to the stress constraint
+        for (unsigned int i=0; i<_n_vars; i++)
+            grads[1*i+0] = 1./_stress_lim * (g1[i] + g2[i]);
         
         nonlinear_assembly.clear_elem_parameter_dependence_object();
     }

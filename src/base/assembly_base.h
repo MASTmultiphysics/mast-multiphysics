@@ -246,7 +246,8 @@ namespace MAST {
         sensitivity_assemble (const libMesh::NumericVector<Real>& X,
                               bool if_localize_sol,
                               const MAST::FunctionBase& f,
-                              libMesh::NumericVector<Real>& sensitivity_rhs) {
+                              libMesh::NumericVector<Real>& sensitivity_rhs,
+                              bool close_vector = true) {
             libmesh_assert(false); // implemented in the derived class
         }
 
@@ -300,6 +301,24 @@ namespace MAST {
                                              MAST::AssemblyElemOperations&       elem_ops,
                                              MAST::OutputAssemblyElemOperations& output,
                                              const bool include_partial_sens = true);
+
+        
+        /*!
+         *   Evaluates the dot product between  \p dq_dX and sensitivity of residual about \p X for multiple
+         *   parameter_vectors \p p_vec and returns the results in \p sens. Note that partial derivative of output
+         *   with respect to design variables will not be included.
+         *   The size of \p p_vec and \p sens should be the same and the results
+         *   of \p sens will be overwritten.
+         */
+        virtual void
+        calculate_output_adjoint_sensitivity_multiple_parameters_no_direct
+        (const libMesh::NumericVector<Real>&           X,
+         bool                                          if_localize_sol,
+         const libMesh::NumericVector<Real>&           dq_dX,
+         const std::vector<const MAST::FunctionBase*>& p_vec,
+         MAST::AssemblyElemOperations&                 elem_ops,
+         MAST::OutputAssemblyElemOperations&           output,
+         std::vector<Real>&                            sens);
 
         
         /*!

@@ -553,7 +553,8 @@ MAST::LevelSetNonlinearImplicitAssembly::
 sensitivity_assemble (const libMesh::NumericVector<Real>& X,
                       bool if_localize_sol,
                       const MAST::FunctionBase& f,
-                      libMesh::NumericVector<Real>& sensitivity_rhs) {
+                      libMesh::NumericVector<Real>& sensitivity_rhs,
+                      bool close_vector) {
     
     libmesh_assert(_system);
     libmesh_assert(_discipline);
@@ -757,7 +758,8 @@ sensitivity_assemble (const libMesh::NumericVector<Real>& X,
     if (_sol_function)
         _sol_function->clear();
     
-    sensitivity_rhs.close();
+    if (close_vector)
+        sensitivity_rhs.close();
     
     return true;
 }
