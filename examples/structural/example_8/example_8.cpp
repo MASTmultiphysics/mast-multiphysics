@@ -1164,6 +1164,8 @@ public:
 
         for (unsigned int i=0; i<_n_vars; i++)
             grads[i] = (g1[i] + g2[i]);
+
+        nonlinear_assembly.clear_elem_parameter_dependence_object();
     }
     
     
