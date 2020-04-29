@@ -569,6 +569,221 @@ MAST::StructuralElement3D::internal_residual_sensitivity(const MAST::FunctionBas
                                                          RealVectorX& f,
                                                          RealMatrixX& jac) {
     
+    std::unique_ptr<MAST::FEBase>
+    fe(_elem.init_fe(true, false));
+
+    const std::vector<Real>& JxW            = fe->get_JxW();
+    const std::vector<libMesh::Point>& xyz  = fe->get_xyz();
+    const unsigned int
+    n_phi              = (unsigned int)fe->n_shape_functions(),
+    n1                 =6,
+    n2                 =3*n_phi,
+    n3                 =30,
+    n_nodes            =_elem.get_reference_elem().n_nodes();
+    
+    RealMatrixX
+    material_mat,
+    mat_x        = RealMatrixX::Zero(6,3),
+    mat_y        = RealMatrixX::Zero(6,3),
+    mat_z        = RealMatrixX::Zero(6,3),
+    mat1_n1n2    = RealMatrixX::Zero(n1, n2),
+    mat2_n2n2    = RealMatrixX::Zero(n2, n2),
+    mat3_3n2     = RealMatrixX::Zero(3, n2),
+    mat4_33      = RealMatrixX::Zero(3, 3),
+    mat5_n1n3    = RealMatrixX::Zero(n1, n3),
+    mat6_n2n3    = RealMatrixX::Zero(n2, n3),
+    mat7_3n3     = RealMatrixX::Zero(3, n3),
+    Gmat         = RealMatrixX::Zero(6, n3),
+    K_alphaalpha = RealMatrixX::Zero(n3, n3),
+    K_ualpha     = RealMatrixX::Zero(n2, n3),
+    K_corr       = RealMatrixX::Zero(n2, n2);
+    RealVectorX
+    strain    = RealVectorX::Zero(6),
+    stress    = RealVectorX::Zero(6),
+    vec1_n1   = RealVectorX::Zero(n1),
+    vec2_n2   = RealVectorX::Zero(n2),
+    vec3_3    = RealVectorX::Zero(3),
+    local_disp= RealVectorX::Zero(n2),
+    f_alpha   = RealVectorX::Zero(n3),
+    alpha     = RealVectorX::Zero(n3);//*_incompatible_sol;
+    
+    // copy the values from the global to the local element
+    local_disp.topRows(n2) = _local_sol.topRows(n2);
+    
+    std::unique_ptr<MAST::FieldFunction<RealMatrixX> > mat_stiff =
+    _property.stiffness_A_matrix(*this);
+    
+    MAST::FEMOperatorMatrix
+    Bmat_lin,
+    Bmat_nl_x,
+    Bmat_nl_y,
+    Bmat_nl_z,
+    Bmat_nl_u,
+    Bmat_nl_v,
+    Bmat_nl_w,
+    Bmat_inc;
+    // six stress components, related to three displacements
+    Bmat_lin.reinit(n1, 3, n_nodes);
+    Bmat_nl_x.reinit(3, 3, n_nodes);
+    Bmat_nl_y.reinit(3, 3, n_nodes);
+    Bmat_nl_z.reinit(3, 3, n_nodes);
+    Bmat_nl_u.reinit(3, 3, n_nodes);
+    Bmat_nl_v.reinit(3, 3, n_nodes);
+    Bmat_nl_w.reinit(3, 3, n_nodes);
+    Bmat_inc.reinit(n1, n3, 1);            // six stress-strain components
+    
+    ///////////////////////////////////////////////////////////////////////
+    // second for loop to calculate the residual and stiffness contributions
+    for (unsigned int qp=0; qp<JxW.size(); qp++) {
+        
+        // get the material matrix
+        mat_stiff->derivative(p, xyz[qp], _time, material_mat);
+        
+        this->initialize_green_lagrange_strain_operator(qp,
+                                                        *fe,
+                                                        local_disp,
+                                                        strain,
+                                                        mat_x, mat_y, mat_z,
+                                                        Bmat_lin,
+                                                        Bmat_nl_x,
+                                                        Bmat_nl_y,
+                                                        Bmat_nl_z,
+                                                        Bmat_nl_u,
+                                                        Bmat_nl_v,
+                                                        Bmat_nl_w);
+        //this->initialize_incompatible_strain_operator(qp, *_fe, Bmat_inc, Gmat);
+        
+        // calculate the stress
+        stress = material_mat * (strain + Gmat * alpha);
+        
+        // residual from incompatible modes
+        f_alpha += JxW[qp] * Gmat.transpose() * stress;
+        
+        // calculate contribution to the residual
+        // linear strain operator
+        Bmat_lin.vector_mult_transpose(vec2_n2, stress);
+        f.topRows(n2) += JxW[qp] * vec2_n2;
+        
+        if (_property.strain_type() == MAST::NONLINEAR_STRAIN) {
+            
+            // nonlinear strain operator
+            // x
+            vec3_3 = mat_x.transpose() * stress;
+            Bmat_nl_x.vector_mult_transpose(vec2_n2, vec3_3);
+            f.topRows(n2) += JxW[qp] * vec2_n2;
+            
+            // y
+            vec3_3 = mat_y.transpose() * stress;
+            Bmat_nl_y.vector_mult_transpose(vec2_n2, vec3_3);
+            f.topRows(n2) += JxW[qp] * vec2_n2;
+            
+            // z
+            vec3_3 = mat_z.transpose() * stress;
+            Bmat_nl_z.vector_mult_transpose(vec2_n2, vec3_3);
+            f.topRows(n2) += JxW[qp] * vec2_n2;
+        }
+        
+        if (request_jacobian) {
+            
+            // the strain includes the following expansion
+            // delta_epsilon = B_lin + mat_x B_x + mat_y B_y + mat_z B_z
+            // Hence, the tangent stiffness matrix will include
+            // components from epsilon^T C epsilon
+            
+            ////////////////////////////////////////////////////////
+            // B_lin^T C B_lin
+            Bmat_lin.left_multiply(mat1_n1n2, material_mat);
+            Bmat_lin.right_multiply_transpose(mat2_n2n2, mat1_n1n2);
+            jac.topLeftCorner(n2, n2) += JxW[qp] * mat2_n2n2;
+            
+            if (_property.strain_type() == MAST::NONLINEAR_STRAIN) {
+                
+                // B_x^T mat_x^T C B_lin
+                mat3_3n2 = mat_x.transpose() * mat1_n1n2;
+                Bmat_nl_x.right_multiply_transpose(mat2_n2n2, mat3_3n2);
+                jac.topLeftCorner(n2, n2) += JxW[qp] * mat2_n2n2;
+                
+                // B_y^T mat_y^T C B_lin
+                mat3_3n2 = mat_y.transpose() * mat1_n1n2;
+                Bmat_nl_y.right_multiply_transpose(mat2_n2n2, mat3_3n2);
+                jac.topLeftCorner(n2, n2) += JxW[qp] * mat2_n2n2;
+                
+                // B_z^T mat_z^T C B_lin
+                mat3_3n2 = mat_z.transpose() * mat1_n1n2;
+                Bmat_nl_z.right_multiply_transpose(mat2_n2n2, mat3_3n2);
+                jac.topLeftCorner(n2, n2) += JxW[qp] * mat2_n2n2;
+                
+                ///////////////////////////////////////////////////////
+                for (unsigned int i_dim=0; i_dim<3; i_dim++) {
+                    switch (i_dim) {
+                        case 0:
+                            Bmat_nl_x.left_multiply(mat1_n1n2, mat_x);
+                            break;
+                            
+                        case 1:
+                            Bmat_nl_y.left_multiply(mat1_n1n2, mat_y);
+                            break;
+                            
+                        case 2:
+                            Bmat_nl_z.left_multiply(mat1_n1n2, mat_z);
+                            break;
+                    }
+                    
+                    // B_lin^T C mat_x_i B_x_i
+                    mat1_n1n2 =  material_mat * mat1_n1n2;
+                    Bmat_lin.right_multiply_transpose(mat2_n2n2, mat1_n1n2);
+                    jac.topLeftCorner(n2, n2) += JxW[qp] * mat2_n2n2;
+                    
+                    // B_x^T mat_x^T C mat_x B_x
+                    mat3_3n2 = mat_x.transpose() * mat1_n1n2;
+                    Bmat_nl_x.right_multiply_transpose(mat2_n2n2, mat3_3n2);
+                    jac.topLeftCorner(n2, n2) += JxW[qp] * mat2_n2n2;
+                    
+                    // B_y^T mat_y^T C mat_x B_x
+                    mat3_3n2 = mat_y.transpose() * mat1_n1n2;
+                    Bmat_nl_y.right_multiply_transpose(mat2_n2n2, mat3_3n2);
+                    jac.topLeftCorner(n2, n2) += JxW[qp] * mat2_n2n2;
+                    
+                    // B_z^T mat_z^T C mat_x B_x
+                    mat3_3n2 = mat_z.transpose() * mat1_n1n2;
+                    Bmat_nl_z.right_multiply_transpose(mat2_n2n2, mat3_3n2);
+                    jac.topLeftCorner(n2, n2) += JxW[qp] * mat2_n2n2;
+                    
+                }
+                
+                // use the stress to calculate the final contribution
+                // to the Jacobian stiffness matrix
+                mat4_33(0,0) = stress(0);
+                mat4_33(1,1) = stress(1);
+                mat4_33(2,2) = stress(2);
+                mat4_33(0,1) = mat4_33(1,0) = stress(3);
+                mat4_33(1,2) = mat4_33(2,1) = stress(4);
+                mat4_33(0,2) = mat4_33(2,0) = stress(5);
+                
+                // u-disp
+                Bmat_nl_u.left_multiply(mat3_3n2, mat4_33);
+                Bmat_nl_u.right_multiply_transpose(mat2_n2n2, mat3_3n2);
+                jac.topLeftCorner(n2, n2) += JxW[qp] * mat2_n2n2;
+                
+                // v-disp
+                Bmat_nl_v.left_multiply(mat3_3n2, mat4_33);
+                Bmat_nl_v.right_multiply_transpose(mat2_n2n2, mat3_3n2);
+                jac.topLeftCorner(n2, n2) += JxW[qp] * mat2_n2n2;
+                
+                // w-disp
+                Bmat_nl_w.left_multiply(mat3_3n2, mat4_33);
+                Bmat_nl_w.right_multiply_transpose(mat2_n2n2, mat3_3n2);
+                jac.topLeftCorner(n2, n2) += JxW[qp] * mat2_n2n2;
+            }
+        }
+    }
+    
+    // if jacobian is requested, add a small diagonal value for the
+    // rotational dofs
+    if (request_jacobian)
+        jac.bottomRightCorner(n2, n2) += RealMatrixX::Identity(n2, n2) *
+        1.0e-20 * jac.diagonal().maxCoeff();
+    
     return request_jacobian;
 }
 

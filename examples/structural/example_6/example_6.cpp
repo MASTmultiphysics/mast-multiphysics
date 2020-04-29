@@ -44,10 +44,12 @@
 #include "solver/slepc_eigen_solver.h"
 #include "property_cards/isotropic_material_property_card.h"
 #include "property_cards/solid_2d_section_element_property_card.h"
+#include "property_cards/isotropic_element_property_card_3D.h"
 #include "optimization/gcmma_optimization_interface.h"
 #include "optimization/npsol_optimization_interface.h"
 #include "optimization/function_evaluation.h"
 #include "examples/structural/base/bracket_2d_model.h"
+#include "examples/structural/base/bracket_3d_model.h"
 #include "examples/structural/base/inplane_2d_model.h"
 #include "examples/structural/base/truss_2d_model.h"
 #include "examples/structural/base/eyebar_2d_model.h"
@@ -361,8 +363,8 @@ public:
         _field_functions.insert(kappa_f);
         _field_functions.insert(hoff_f);
         
-        MAST::Solid2DSectionElementPropertyCard
-        *p_card   = new MAST::Solid2DSectionElementPropertyCard;
+        typename T::SectionPropertyCardType
+        *p_card   = new typename T::SectionPropertyCardType;
         
         _p_card   = p_card;
         
@@ -463,14 +465,18 @@ public:
         // this will create a localized vector in _level_set_sys->curret_local_solution
         _density_sys->update();
         
-        // create a serialized vector for use in interpolation
+        // create a localized vector for use in interpolation
         std::unique_ptr<libMesh::NumericVector<Real>>
-        serial_density_sol(libMesh::NumericVector<Real>::build(_sys->comm()).release());
-        serial_density_sol->init(_density_sys->solution->size(), false, libMesh::SERIAL);
-        _density_sys->solution->localize(*serial_density_sol);
+        local_density_sol(libMesh::NumericVector<Real>::build(_sys->comm()).release());
+        local_density_sol->init(_density_sys->n_dofs(),
+                                _density_sys->n_local_dofs(),
+                                _density_sys->get_dof_map().get_send_list(),
+                                false,
+                                libMesh::GHOSTED);
+        _density_sys->solution->localize(*local_density_sol);
 
         _density_function->clear();
-        _density_function->init(*serial_density_sol, true);
+        _density_function->init(*local_density_sol, true);
         _sys->solution->zero();
         
         //////////////////////////////////////////////////////////////////////
@@ -552,7 +558,7 @@ public:
         //////////////////////////////////////////////////////////////////////
         
         // evaluate the volume for used in the problem setup
-        _evaluate_volume(*serial_density_sol, sens_vecs, &vol, nullptr);
+        _evaluate_volume(*local_density_sol, sens_vecs, &vol, nullptr);
         libMesh::out << "volume: " << vol << std::endl;
 
         // evaluate the output based on specified problem type
@@ -599,7 +605,7 @@ public:
             }
             else if (_problem == "volume_stress") {
                 
-                _evaluate_volume(*serial_density_sol, sens_vecs, nullptr, &obj_grad);
+                _evaluate_volume(*local_density_sol, sens_vecs, nullptr, &obj_grad);
                 for (unsigned int i=0; i<grads.size(); i++)
                     obj_grad[i] *= _obj_scaling;
             }
@@ -615,7 +621,7 @@ public:
             
             if (_problem == "compliance_volume") {
                 
-                _evaluate_volume(*serial_density_sol, sens_vecs, nullptr, &grads);
+                _evaluate_volume(*local_density_sol, sens_vecs, nullptr, &grads);
                 for (unsigned int i=0; i<grads.size(); i++)
                     grads[i] /= _volume;
             }
@@ -652,7 +658,7 @@ public:
         
         dphi_vecs.resize(_n_vars, nullptr);
         
-        // Serial vectors are used for the level
+        // localized vectors are used for the level
         // set mesh function since it uses a different mesh than the analysis mesh
         // and the two can have different partitionings in the paralle environment.
         for (unsigned int i=0; i<_n_vars; i++) {
@@ -665,7 +671,11 @@ public:
             nonzero_val[_dv_params[i].first] = 1.;
             
             vec = libMesh::NumericVector<Real>::build(_sys->comm()).release();
-            vec->init(_density_sys->solution->size(), false, libMesh::SERIAL);
+            vec->init(_density_sys->n_dofs(),
+                      _density_sys->n_local_dofs(),
+                      _density_sys->get_dof_map().get_send_list(),
+                      false,
+                      libMesh::GHOSTED);
             _filter->compute_filtered_values(nonzero_val, *vec, false);
 
             dphi_vecs[i] = vec;
@@ -674,7 +684,7 @@ public:
         for ( unsigned int i=0; i<_n_vars; i++)
             dphi_vecs[i]->close();
 
-        // we will use this serialized vector to initialize the mesh function,
+        // we will use this ghosted vector to initialize the mesh function,
         // which is setup to reuse this vector, so we have to store it
         for ( unsigned int i=0; i<_n_vars; i++)
             _density_function->init_sens(*_dv_params[i].second, *dphi_vecs[i], true);
@@ -957,13 +967,17 @@ public:
                 base_phi.set(_dv_params[i].first, x[i]);
         base_phi.close();
         _filter->compute_filtered_values(base_phi, *_density_sys->solution);
-        // create a serialized vector for use in interpolation
+        // create a ghosted vector for use in interpolation
         std::unique_ptr<libMesh::NumericVector<Real>>
-        serial_density_sol(libMesh::NumericVector<Real>::build(_sys->comm()).release());
-        serial_density_sol->init(_density_sys->solution->size(), false, libMesh::SERIAL);
-        _density_sys->solution->localize(*serial_density_sol);
+        local_density_sol(libMesh::NumericVector<Real>::build(_sys->comm()).release());
+        local_density_sol->init(_density_sys->n_dofs(),
+                                _density_sys->n_local_dofs(),
+                                _density_sys->get_dof_map().get_send_list(),
+                                false,
+                                libMesh::GHOSTED);
+        _density_sys->solution->localize(*local_density_sol);
 
-        _density_function->init(*serial_density_sol, true);
+        _density_function->init(*local_density_sol, true);
         
         std::vector<bool> eval_grads(this->n_ineq(), false);
         std::vector<Real> f(this->n_ineq(), 0.), grads;
@@ -1079,17 +1093,12 @@ public:
 
         // density function is used by elasticity modulus function. So, we
         // initialize this here
-        _density_function        = new MAST::MeshFieldFunction(*_density_sys, "rho", libMesh::SERIAL);
+        _density_function        = new MAST::MeshFieldFunction(*_density_sys, "rho", libMesh::GHOSTED);
 
         _init_material();
         T::init_structural_loads(*this);
         _init_section_property();
         _initialized = true;
-        
-        //
-        // ask structure to use Mindlin bending operator
-        //
-        dynamic_cast<MAST::ElementPropertyCard2D&>(*_p_card).set_bending_model(MAST::MINDLIN);
         
         /////////////////////////////////////////////////
         // now initialize the design data.
@@ -1388,6 +1397,11 @@ int main(int argc, char* argv[]) {
     else if (mesh == "truss2d") {
         top_opt.reset
         (new TopologyOptimizationSIMP<MAST::Examples::Truss2DModel>
+         (init.comm(), input));
+    }
+    else if (mesh == "bracket3d") {
+        top_opt.reset
+        (new TopologyOptimizationSIMP<MAST::Examples::Bracket3DModel>
          (init.comm(), input));
     }
     else
