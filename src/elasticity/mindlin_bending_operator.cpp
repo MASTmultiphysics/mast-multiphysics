@@ -277,7 +277,7 @@ calculate_transverse_shear_residual_boundary_velocity
     // modify the JxW_Vn by multiplying the normal velocity to it
     for (unsigned int qp=0; qp<JxW_Vn.size(); qp++) {
         
-        vel_f(xyz[qp], _structural_elem.system().time, vel);
+        vel_f.derivative(p, xyz[qp], _structural_elem.system().time, vel);
         vn = 0.;
         for (unsigned int i=0; i<dim; i++)
             vn += vel(i)*face_normals[qp](i);

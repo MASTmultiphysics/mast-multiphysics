@@ -35,46 +35,35 @@ _level_set_func (nullptr) {
 
 MAST::LevelSetBoundaryVelocity::~LevelSetBoundaryVelocity() {
     
-    if (_phi)
-        delete _phi;
 }
 
 
 void
 MAST::LevelSetBoundaryVelocity::init(MAST::SystemInitialization& sys,
-                                     const MAST::FieldFunction<Real>& phi_func,
-                                     const libMesh::NumericVector<Real>& sol,
-                                     libMesh::ParallelType p_type,
-                                     bool reuse_vector) {
+                                     const MAST::MeshFieldFunction& phi) {
     
-    if (!_phi)
-        _phi = new MAST::MeshFieldFunction(sys, "phi_vel", p_type);
-    else
-        _phi->clear();
-    _phi->init(sol, reuse_vector);
+    libmesh_assert(!_phi);
+    
+    _phi             = &phi;
     _mesh            = &sys.system().get_mesh();
-    _level_set_func  = &phi_func;
 }
 
 
 
 void
-MAST::LevelSetBoundaryVelocity::init_sens(const MAST::FunctionBase& f,
-                                          const libMesh::NumericVector<Real>& dsol,
-                                          bool reuse_vector) {
-
-    // make sure that the level set function has been initialized
-    libmesh_assert(_phi);
+MAST::LevelSetBoundaryVelocity::clear() {
     
-    _phi->init_sens(f, dsol, reuse_vector);
+    _phi            = nullptr;
+    _mesh           = nullptr;
+    _level_set_func = nullptr;
 }
 
 
 void
-MAST::LevelSetBoundaryVelocity::operator() (const MAST::FunctionBase& f,
-                                            const libMesh::Point& p,
-                                            const Real t,
-                                            RealVectorX& v) const {
+MAST::LevelSetBoundaryVelocity::derivative(const MAST::FunctionBase& f,
+                                           const libMesh::Point& p,
+                                           const Real t,
+                                           RealVectorX& v) const {
     this->velocity(f, p, t, v);
 }
 
@@ -108,7 +97,7 @@ MAST::LevelSetBoundaryVelocity::velocity(const MAST::FunctionBase& f,
     //    libMesh::out << "**** !!!  level-set not zero at boundary: " << val(0) << std::endl;
     
     _phi->gradient(p, t, gradmat);
-    _phi->perturbation(p, t, dval);
+    _phi->derivative(f, p, t, dval);
     
     // copy the matrix to the vector for further calculations
     grad = gradmat.row(0);
@@ -127,6 +116,22 @@ MAST::LevelSetBoundaryVelocity::velocity(const MAST::FunctionBase& f,
 }
 
 
+void
+MAST::LevelSetBoundaryVelocity::
+attach_level_set_function(const MAST::FieldFunction<Real>& phi) {
+    
+    libmesh_assert(!_level_set_func);
+    
+    _level_set_func  = &phi;
+}
+
+
+void
+MAST::LevelSetBoundaryVelocity::clear_level_set_function() {
+    
+    _level_set_func = nullptr;
+}
+
 
 #include <fstream>
 void
@@ -136,6 +141,8 @@ search_nearest_interface_point(const libMesh::Elem& e,
                                const libMesh::Point& p,
                                const Real t,
                                RealVectorX& pt) const {
+    
+    libmesh_assert(_level_set_func);
     
     MAST::LevelSetIntersection intersection;
     

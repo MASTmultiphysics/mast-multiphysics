@@ -657,7 +657,7 @@ internal_residual_boundary_velocity (const MAST::FunctionBase& p,
     // modify the JxW_Vn by multiplying the normal velocity to it
     for (unsigned int qp=0; qp<JxW_Vn.size(); qp++) {
         
-        vel_f(xyz[qp], _time, vel);
+        vel_f.derivative(p, xyz[qp], _time, vel);
         vn = 0.;
         for (unsigned int i=0; i<dim; i++)
             vn += vel(i)*face_normals[qp](i);
@@ -817,7 +817,7 @@ velocity_residual_boundary_velocity (const MAST::FunctionBase& p,
     // modify the JxW_Vn by multiplying the normal velocity to it
     for (unsigned int qp=0; qp<JxW_Vn.size(); qp++) {
         
-        vel_f(xyz[qp], _time, vel);
+        vel_f.derivative(p, xyz[qp], _time, vel);
         vn = 0.;
         for (unsigned int i=0; i<dim; i++)
             vn += vel(i)*face_normals[qp](i);
@@ -1070,7 +1070,7 @@ surface_flux_boundary_velocity(const MAST::FunctionBase& p,
     // modify the JxW_Vn by multiplying the normal velocity to it
     for (unsigned int qp=0; qp<JxW_Vn.size(); qp++) {
         
-        vel_f(xyz[qp], _time, vel);
+        vel_f.derivative(p, xyz[qp], _time, vel);
         vn = 0.;
         for (unsigned int i=0; i<dim; i++)
             vn += vel(i)*face_normals[qp](i);
@@ -1370,7 +1370,7 @@ surface_convection_boundary_velocity(const MAST::FunctionBase& p,
     // modify the JxW_Vn by multiplying the normal velocity to it
     for (unsigned int qp=0; qp<JxW_Vn.size(); qp++) {
         
-        vel_f(xyz[qp], _time, vel);
+        vel_f.derivative(p, xyz[qp], _time, vel);
         vn = 0.;
         for (unsigned int i=0; i<dim; i++)
             vn += vel(i)*face_normals[qp](i);
@@ -1682,7 +1682,7 @@ surface_radiation_boundary_velocity(const MAST::FunctionBase& p,
     // modify the JxW_Vn by multiplying the normal velocity to it
     for (unsigned int qp=0; qp<JxW_Vn.size(); qp++) {
         
-        vel_f(xyz[qp], _time, vel);
+        vel_f.derivative(p, xyz[qp], _time, vel);
         vn = 0.;
         for (unsigned int i=0; i<dim; i++)
             vn += vel(i)*face_normals[qp](i);
@@ -1827,7 +1827,7 @@ volume_heat_source_boundary_velocity(const MAST::FunctionBase& p,
     // modify the JxW_Vn by multiplying the normal velocity to it
     for (unsigned int qp=0; qp<JxW_Vn.size(); qp++) {
         
-        vel_f(xyz[qp], _time, vel);
+        vel_f.derivative(p, xyz[qp], _time, vel);
         vn = 0.;
         for (unsigned int i=0; i<dim; i++)
             vn += vel(i)*face_normals[qp](i);
