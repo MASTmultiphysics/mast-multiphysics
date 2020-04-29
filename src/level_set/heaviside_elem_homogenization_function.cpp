@@ -107,7 +107,7 @@ MAST::HeavisideElemHomogenizedDensityFunction::
 initialize_element_volume_fraction_sensitivity(const MAST::FunctionBase& f) {
     
     libmesh_assert(_analysis_mesh);
-    libmesh_assert(_elem_volume_fraction_sensitivity.empty());
+    libmesh_assert(_elem_volume_fraction_sensitivity[&f].empty());
     libmesh_assert(f.is_topology_parameter());
     
     // make sure that the system uses Lagrange shape functions for
@@ -165,10 +165,10 @@ initialize_element_volume_fraction_sensitivity(const MAST::FunctionBase& f) {
             v = level_set_elem.homogenized_volume_fraction_sensitivity(_width);
             
             // store the value for this elmeent
-            _elem_volume_fraction_sensitivity[e] = v;
+            _elem_volume_fraction_sensitivity[&f][e] = v;
         }
         else
-            _elem_volume_fraction_sensitivity[e] = 0.;
+            _elem_volume_fraction_sensitivity[&f][e] = 0.;
     }
 }
 

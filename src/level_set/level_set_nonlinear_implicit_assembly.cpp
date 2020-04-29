@@ -368,7 +368,7 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
     
     // if a solution function is attached, initialize it
     if (_sol_function)
-        _sol_function->init( X);
+        _sol_function->init( X, false);
     
     
     libMesh::MeshBase::const_element_iterator       el     =
@@ -553,7 +553,8 @@ MAST::LevelSetNonlinearImplicitAssembly::
 sensitivity_assemble (const libMesh::NumericVector<Real>& X,
                       bool if_localize_sol,
                       const MAST::FunctionBase& f,
-                      libMesh::NumericVector<Real>& sensitivity_rhs) {
+                      libMesh::NumericVector<Real>& sensitivity_rhs,
+                      bool close_vector) {
     
     libmesh_assert(_system);
     libmesh_assert(_discipline);
@@ -609,7 +610,7 @@ sensitivity_assemble (const libMesh::NumericVector<Real>& X,
     
     // if a solution function is attached, initialize it
     if (_sol_function)
-        _sol_function->init( *nonlin_sys.solution);
+        _sol_function->init( *nonlin_sys.solution, false);
     
     libMesh::MeshBase::const_element_iterator       el     =
     nonlin_sys.get_mesh().active_local_elements_begin();
@@ -757,7 +758,8 @@ sensitivity_assemble (const libMesh::NumericVector<Real>& X,
     if (_sol_function)
         _sol_function->clear();
     
-    sensitivity_rhs.close();
+    if (close_vector)
+        sensitivity_rhs.close();
     
     return true;
 }
@@ -806,7 +808,7 @@ calculate_output(const libMesh::NumericVector<Real>& X,
     
     // if a solution function is attached, initialize it
     //if (_sol_function)
-    //    _sol_function->init( X);
+    //    _sol_function->init( X, false);
     
     
     libMesh::MeshBase::const_element_iterator       el     =
@@ -985,7 +987,7 @@ calculate_output_derivative(const libMesh::NumericVector<Real>& X,
     
     // if a solution function is attached, initialize it
     if (_sol_function)
-        _sol_function->init( X);
+        _sol_function->init( X, false);
     
     
     libMesh::MeshBase::const_element_iterator       el     =
@@ -1226,7 +1228,7 @@ calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
     
     // if a solution function is attached, initialize it
     //if (_sol_function)
-    //    _sol_function->init( X);
+    //    _sol_function->init( X, false);
     
     
     libMesh::MeshBase::const_element_iterator       el     =

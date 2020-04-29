@@ -147,7 +147,7 @@ MAST::ComplexAssemblyBase::residual_l2_norm(const libMesh::NumericVector<Real>& 
     
     // if a solution function is attached, initialize it
     //if (_sol_function)
-    //    _sol_function->init( X);
+    //    _sol_function->init( X, false);
     
     
     libMesh::MeshBase::const_element_iterator       el     =
@@ -294,7 +294,7 @@ residual_and_jacobian_field_split (const libMesh::NumericVector<Real>& X_R,
     
     // if a solution function is attached, initialize it
     //if (_sol_function)
-    //    _sol_function->init( X);
+    //    _sol_function->init( X, false);
     
     
     libMesh::MeshBase::const_element_iterator       el     =
@@ -477,7 +477,7 @@ residual_and_jacobian_blocked (const libMesh::NumericVector<Real>& X,
 
     // if a solution function is attached, initialize it
     //if (_sol_function)
-    //    _sol_function->init( X);
+    //    _sol_function->init( X, false);
     
     
     libMesh::MeshBase::const_element_iterator       el     =

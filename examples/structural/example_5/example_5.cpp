@@ -72,6 +72,7 @@
 #include "libmesh/petsc_nonlinear_solver.h"
 #include "libmesh/mesh_refinement.h"
 #include "libmesh/error_vector.h"
+#include "libmesh/parallel.h"
 
 
 void
@@ -111,11 +112,18 @@ public:
     virtual ~PhiMeshFunction(){ if (_phi) delete _phi;}
     
     void init(MAST::SystemInitialization& sys, const libMesh::NumericVector<Real>& sol) {
-        if (!_phi) _phi = new MAST::MeshFieldFunction(sys, "phi");
+        if (!_phi) _phi = new MAST::MeshFieldFunction(sys, "phi", libMesh::SERIAL);
         else _phi->clear();
-        _phi->init(sol);
+        _phi->init(sol, true);
     }
-    
+
+    void init_sens(const MAST::FunctionBase& f,
+                   const libMesh::NumericVector<Real>& dsol) {
+        
+        libmesh_assert(_phi);
+        _phi->init_sens(f, dsol, true);
+    }
+
     MAST::MeshFieldFunction& get_mesh_function() {return *_phi;}
     
     virtual void operator() (const libMesh::Point& p, const Real t, Real& v) const {
@@ -656,12 +664,32 @@ public:
                 base_phi.set(_dv_params[i].first, dvars[i]);
         base_phi.close();
         _filter->compute_filtered_values(base_phi, *_level_set_sys->solution);
-        _level_set_function->init(*_level_set_sys_init, *_level_set_sys->solution);
+        // this will create a localized vector in _level_set_sys->curret_local_solution
+        _level_set_sys->update();
+        
+        // create a serialized vector for use in interpolation
+        std::unique_ptr<libMesh::NumericVector<Real>>
+        serial_level_set_sol(libMesh::NumericVector<Real>::build(_sys->comm()).release());
+        serial_level_set_sol->init(_level_set_sys->solution->size(), false, libMesh::SERIAL);
+        _level_set_sys->solution->localize(*serial_level_set_sol);
+
+        _level_set_function->init(*_level_set_sys_init, *serial_level_set_sol);
         _sys->solution->zero();
 
-        _level_set_vel->init(*_level_set_sys_init,
-                             *_level_set_function,
-                             *_level_set_sys->solution, nullptr);
+        //////////////////////////////////////////////////////////////////////
+        // check to see if the sensitivity of constraint is requested
+        //////////////////////////////////////////////////////////////////////
+        bool if_grad_sens = false;
+        for (unsigned int i=0; i<eval_grads.size(); i++)
+            if_grad_sens = (if_grad_sens || eval_grads[i]);
+
+        // if sensitivity analysis is requested, then initialize the vectors
+        std::vector<libMesh::NumericVector<Real>*> sens_vecs;
+        if (eval_obj_grad || if_grad_sens)
+            _initialize_sensitivity_data(sens_vecs);
+        
+
+        _level_set_vel->init(*_level_set_sys_init, _level_set_function->get_mesh_function());
         
         /*if (_mesh_refinement->initialized()) {
             
@@ -847,6 +875,9 @@ public:
             return;
         }
         
+        // this will localize the solution vector for later use
+        _sys->update();
+        
         //////////////////////////////////////////////////////////////////////
         // evaluate the functions
         //////////////////////////////////////////////////////////////////////
@@ -875,7 +906,7 @@ public:
 
             // if the shifted boundary is implementing a traction-free condition
             // compliance does not need contribution from shifted boundary load
-            nonlinear_assembly.calculate_output(*_sys->solution, true, compliance);
+            nonlinear_assembly.calculate_output(*_sys->current_local_solution, false, compliance);
             comp      = compliance.output_total();
             obj       = _obj_scaling * (comp + _perimeter_penalty * per);
             fvals[0]  = vol/_volume - vf; // vol/vol0 - a <=
@@ -884,7 +915,7 @@ public:
         else if (_problem == "volume_stress") {
             
             // set the elasticity penalty for stress evaluation
-            nonlinear_assembly.calculate_output(*_sys->solution, true, stress);
+            nonlinear_assembly.calculate_output(*_sys->current_local_solution, false, stress);
             max_vm    = stress.get_maximum_von_mises_stress();
             vm_agg    = stress.output_total();
             obj       = _obj_scaling * (vol + _perimeter_penalty * per);
@@ -934,7 +965,7 @@ public:
                 std::vector<Real>
                 grad1(obj_grad.size(), 0.);
 
-                _evaluate_volume_sensitivity(nullptr, &perimeter, level_set_assembly, obj_grad);
+                _evaluate_volume_sensitivity(sens_vecs, nullptr, &perimeter, level_set_assembly, obj_grad);
 
                 _evaluate_compliance_sensitivity(compliance,
                                                  nonlinear_elem_ops,
@@ -948,21 +979,14 @@ public:
             }
             else if (_problem == "volume_stress") {
                 
-                _evaluate_volume_sensitivity(&volume, &perimeter, level_set_assembly, obj_grad);
+                _evaluate_volume_sensitivity(sens_vecs, &volume, &perimeter, level_set_assembly, obj_grad);
                 for (unsigned int i=0; i<obj_grad.size(); i++)
                     obj_grad[i] *= _obj_scaling;
             }
             else
                 libmesh_error();
         }
-        
-        //////////////////////////////////////////////////////////////////////
-        // check to see if the sensitivity of constraint is requested
-        //////////////////////////////////////////////////////////////////////
-        bool if_grad_sens = false;
-        for (unsigned int i=0; i<eval_grads.size(); i++)
-            if_grad_sens = (if_grad_sens || eval_grads[i]);
-        
+                
         //////////////////////////////////////////////////////////////////////
         // evaluate the sensitivities for constraints
         //////////////////////////////////////////////////////////////////////
@@ -970,7 +994,7 @@ public:
 
             if (_problem == "compliance_volume") {
                 
-                _evaluate_volume_sensitivity(&volume, nullptr, level_set_assembly, grads);
+                _evaluate_volume_sensitivity(sens_vecs, &volume, nullptr, level_set_assembly, grads);
                 for (unsigned int i=0; i<grads.size(); i++)
                     grads[i] /= _volume;
             }
@@ -991,56 +1015,88 @@ public:
         // also the stress data for plotting
         //
         stress_assembly.update_stress_strain_data(stress, *_sys->solution);
+        _clear_sensitivity_data(sens_vecs);
     }
+
+    //
+    // \subsection ex_5_sensitivity_vectors Initialize sensitivity data
+    //
+    void _initialize_sensitivity_data(std::vector<libMesh::NumericVector<Real>*>& dphi_vecs) {
+
+        libmesh_assert_equal_to(dphi_vecs.size(), 0);
+        
+        dphi_vecs.resize(_n_vars, nullptr);
+        
+        // Serial vectors are used for the level
+        // set mesh function since it uses a different mesh than the analysis mesh
+        // and the two can have different partitionings in the paralle environment.
+        for (unsigned int i=0; i<_n_vars; i++) {
+
+            libMesh::NumericVector<Real>
+            *vec = nullptr;
+
+            // non-zero value of the DV perturbation
+            std::map<unsigned int, Real> nonzero_val;
+            nonzero_val[_dv_params[i].first] = 1.;
+            
+            vec = libMesh::NumericVector<Real>::build(_sys->comm()).release();
+            vec->init(_level_set_sys->solution->size(), false, libMesh::SERIAL);
+            _filter->compute_filtered_values(nonzero_val, *vec, false);
+
+            dphi_vecs[i] = vec;
+        }
+
+        for ( unsigned int i=0; i<_n_vars; i++)
+            dphi_vecs[i]->close();
+
+        for ( unsigned int i=0; i<_n_vars; i++) {
+
+            // we will use this serialized vector to initialize the mesh function,
+            // which is setup to reuse this vector, so we have to store it
+            _level_set_function->init_sens(*_dv_params[i].second, *dphi_vecs[i]);
+        }
+    }
+
+    
+    void _clear_sensitivity_data(std::vector<libMesh::NumericVector<Real>*>& dphi_vecs) {
+
+        // delete the vectors that we do not need any more
+        for (unsigned int i=0; i<dphi_vecs.size(); i++)
+            delete dphi_vecs[i];
+        dphi_vecs.clear();
+        _level_set_vel->clear();
+    }
+    
 
     //
     //  \subsection ex_5_volume_sensitivity Sensitivity of Material Volume
     //
-    void _evaluate_volume_sensitivity(MAST::LevelSetVolume*    volume,
+    void _evaluate_volume_sensitivity(const std::vector<libMesh::NumericVector<Real>*>& dphi_vecs,
+                                      MAST::LevelSetVolume*    volume,
                                       MAST::LevelSetPerimeter* perimeter,
                                       MAST::LevelSetNonlinearImplicitAssembly& assembly,
                                       std::vector<Real>& grad) {
         
         std::fill(grad.begin(), grad.end(), 0.);
         
-        //
-        // iterate over each DV, create a sensitivity vector and calculate the
-        // volume sensitivity explicitly
-        //
-        std::unique_ptr<libMesh::NumericVector<Real>>
-        dphi_base(_level_set_sys->solution->zero_clone().release()),
-        dphi_filtered(_level_set_sys->solution->zero_clone().release());
-        
         ElementParameterDependence dep(*_filter);
         assembly.attach_elem_parameter_dependence_object(dep);
         
+        if (volume)    volume->set_skip_comm_sum(true);
+        if (perimeter) perimeter->set_skip_comm_sum(true);
+        
+        
         for (unsigned int i=0; i<_n_vars; i++) {
             
-            dphi_base->zero();
-            dphi_filtered->zero();
-            //
-            // set the value only if the dof corresponds to a local node
-            //
-            if (_dv_params[i].first >=  dphi_base->first_local_index() &&
-                _dv_params[i].first <   dphi_base->last_local_index())
-                dphi_base->set(_dv_params[i].first, 1.);
-            dphi_base->close();
-            _filter->compute_filtered_values(*dphi_base, *dphi_filtered);
-            
-            _level_set_vel->init(*_level_set_sys_init,
-                                 *_level_set_function,
-                                 *_level_set_sys->solution,
-                                 dphi_filtered.get());
-
             // if the volume output was specified then compute the sensitivity
             // and add to the grad vector
             if (volume) {
-                
+
                 assembly.set_evaluate_output_on_negative_phi(false);
-                assembly.calculate_output_direct_sensitivity(*_level_set_sys->solution,
-                                                             true,
-                                                             dphi_filtered.get(),
-                                                             true,
+                assembly.calculate_output_direct_sensitivity(*_level_set_sys->current_local_solution,
+                                                             false,
+                                                             dphi_vecs[i],
+                                                             false,
                                                              *_dv_params[i].second,
                                                              *volume);
                 
@@ -1051,10 +1107,10 @@ public:
             // and add to the grad vector
             if (perimeter) {
                 assembly.set_evaluate_output_on_negative_phi(true);
-                assembly.calculate_output_direct_sensitivity(*_level_set_sys->solution,
-                                                             true,
-                                                             dphi_filtered.get(),
-                                                             true,
+                assembly.calculate_output_direct_sensitivity(*_level_set_sys->current_local_solution,
+                                                             false,
+                                                             dphi_vecs[i],
+                                                             false,
                                                              *_dv_params[i].second,
                                                              *perimeter);
                 assembly.set_evaluate_output_on_negative_phi(false);
@@ -1063,7 +1119,12 @@ public:
                 perimeter->output_sensitivity_total(*_dv_params[i].second);
             }
         }
+
+        _sys->comm().sum(grad);
         
+        if (volume)    volume->set_skip_comm_sum(false);
+        if (perimeter) perimeter->set_skip_comm_sum(false);
+
         assembly.clear_elem_parameter_dependence_object();
     }
     
@@ -1083,13 +1144,13 @@ public:
         
         unsigned int n_conv = std::min(_n_eig_vals, _sys->get_n_converged_eigenvalues());
         
-        _sys->adjoint_solve(*_sys->solution, true,
-                            nonlinear_elem_ops, stress, nonlinear_assembly, false);
+        _sys->adjoint_solve(*_sys->current_local_solution,
+                            false,
+                            nonlinear_elem_ops,
+                            stress,
+                            nonlinear_assembly,
+                            false);
         
-        std::unique_ptr<libMesh::NumericVector<Real>>
-        dphi_base(_level_set_sys->solution->zero_clone().release()),
-        dphi_filtered(_level_set_sys->solution->zero_clone().release());
-
         ElementParameterDependence dep(*_filter);
         nonlinear_assembly.attach_elem_parameter_dependence_object(dep);
 
@@ -1097,37 +1158,42 @@ public:
         // indices used by GCMMA follow this rule:
         // grad_k = dfi/dxj  ,  where k = j*NFunc + i
         //////////////////////////////////////////////////////////////////
+        // first compute the sensitivity contribution from dot product of adjoint vector
+        // and residual sensitivity
+        std::vector<Real>
+        g1(_n_vars, 0.),
+        g2(_n_vars, 0.);
+        std::vector<const MAST::FunctionBase*>
+        p_vec(_n_vars, nullptr);
+        for (unsigned int i=0; i<_n_vars; i++)
+            p_vec[i] = _dv_params[i].second;
+        
+        //////////////////////////////////////////////////////////////////////
+        // stress sensitivity
+        //////////////////////////////////////////////////////////////////////
+        // set the elasticity penalty for solution, which is needed for
+        // computation of the residual sensitivity
+        nonlinear_assembly.calculate_output_adjoint_sensitivity_multiple_parameters_no_direct
+        (*_sys->current_local_solution,
+         false,
+         _sys->get_adjoint_solution(),
+         p_vec,
+         nonlinear_elem_ops,
+         stress,
+         g1);
+
+        // we will skip the summation of sensitivity inside the stress object to minimize
+        // communication cost. Instead, we will do it at the end for the constraint vector
+        stress.set_skip_comm_sum(true);
         for (unsigned int i=0; i<_n_vars; i++) {
             
-            dphi_base->zero();
-            dphi_filtered->zero();
-            //
-            // set the value only if the dof corresponds to a local node
-            //
-            if (_dv_params[i].first >=  dphi_base->first_local_index() &&
-                _dv_params[i].first <   dphi_base->last_local_index())
-                dphi_base->set(_dv_params[i].first, 1.);
-            dphi_base->close();
-            _filter->compute_filtered_values(*dphi_base, *dphi_filtered);
-            
-            //
-            // initialize the level set perturbation function to create a velocity
-            // field
-            _level_set_vel->init(*_level_set_sys_init,
-                                 *_level_set_function,
-                                 *_level_set_sys->solution,
-                                 dphi_filtered.get());
-            
-            //////////////////////////////////////////////////////////////////////
-            // stress sensitivity
-            //////////////////////////////////////////////////////////////////////
-            grads[1*i+0] = 1./_stress_lim*
-            nonlinear_assembly.calculate_output_adjoint_sensitivity(*_sys->solution,
-                                                                    true,
+            nonlinear_assembly.calculate_output_adjoint_sensitivity(*_sys->current_local_solution,
+                                                                    false,
                                                                     _sys->get_adjoint_solution(),
                                                                     *_dv_params[i].second,
                                                                     nonlinear_elem_ops,
                                                                     stress);
+            g2[i] = stress.output_sensitivity_total(*_dv_params[i].second);
             stress.clear_sensitivity_data();
             
             //////////////////////////////////////////////////////////////////////
@@ -1144,7 +1210,16 @@ public:
                     grads[_n_ineq*i+j+1] = -sens[j]/_ref_eig_val;
             }
         }
+        stress.set_skip_comm_sum(false);
+
+        // now sum the values across processors to sum the partial derivatives for
+        // each parameter
+        _sys->comm().sum(g2);
         
+        // now compute contribution to the stress constraint
+        for (unsigned int i=0; i<_n_vars; i++)
+            grads[1*i+0] = 1./_stress_lim * (g1[i] + g2[i]);
+
         nonlinear_assembly.clear_elem_parameter_dependence_object();
     }
 
@@ -1159,13 +1234,13 @@ public:
         // Adjoint solution for compliance = - X
         // if the shifted boundary is implementing a traction-free condition
         // compliance does not need contribution from shifted boundary load
-        _sys->adjoint_solve(*_sys->solution, true,
-                            nonlinear_elem_ops, compliance, nonlinear_assembly, false);
+        _sys->adjoint_solve(*_sys->current_local_solution,
+                            false,
+                            nonlinear_elem_ops,
+                            compliance,
+                            nonlinear_assembly,
+                            false);
 
-        std::unique_ptr<libMesh::NumericVector<Real>>
-        dphi_base(_level_set_sys->solution->zero_clone().release()),
-        dphi_filtered(_level_set_sys->solution->zero_clone().release());
-        
         ElementParameterDependence dep(*_filter);
         nonlinear_assembly.attach_elem_parameter_dependence_object(dep);
 
@@ -1173,39 +1248,50 @@ public:
         // indices used by GCMMA follow this rule:
         // grad_k = dfi/dxj  ,  where k = j*NFunc + i
         //////////////////////////////////////////////////////////////////
+        // first compute the sensitivity contribution from dot product of adjoint vector
+        // and residual sensitivity
+        std::vector<Real>
+        g1(_n_vars, 0.),
+        g2(_n_vars, 0.);
+        std::vector<const MAST::FunctionBase*>
+        p_vec(_n_vars, nullptr);
+        for (unsigned int i=0; i<_n_vars; i++)
+            p_vec[i] = _dv_params[i].second;
+        
+        //////////////////////////////////////////////////////////////////////
+        // compliance sensitivity
+        //////////////////////////////////////////////////////////////////////
+        // set the elasticity penalty for solution, which is needed for
+        // computation of the residual sensitivity
+        nonlinear_assembly.calculate_output_adjoint_sensitivity_multiple_parameters_no_direct
+        (*_sys->current_local_solution,
+         false,
+         _sys->get_adjoint_solution(),
+         p_vec,
+         nonlinear_elem_ops,
+         compliance,
+         g1);
+
+        compliance.set_skip_comm_sum(true);
         for (unsigned int i=0; i<_n_vars; i++) {
             
-            dphi_base->zero();
-            dphi_filtered->zero();
-            //
-            // set the value only if the dof corresponds to a local node
-            //
-            if (_dv_params[i].first >=  dphi_base->first_local_index() &&
-                _dv_params[i].first <   dphi_base->last_local_index())
-                dphi_base->set(_dv_params[i].first, 1.);
-            dphi_base->close();
-            _filter->compute_filtered_values(*dphi_base, *dphi_filtered);
-            
-            //
-            // initialize the level set perturbation function to create a velocity
-            // field
-            _level_set_vel->init(*_level_set_sys_init,
-                                 *_level_set_function,
-                                 *_level_set_sys->solution,
-                                 dphi_filtered.get());
-            
-            //////////////////////////////////////////////////////////////////////
-            // compliance sensitivity
-            //////////////////////////////////////////////////////////////////////
-            grads[i] = 1. *
-            nonlinear_assembly.calculate_output_adjoint_sensitivity(*_sys->solution,
-                                                                    true,
-                                                                    _sys->get_adjoint_solution(),
-                                                                    *_dv_params[i].second,
-                                                                    nonlinear_elem_ops,
-                                                                    compliance);
+            nonlinear_assembly.calculate_output_direct_sensitivity(*_sys->current_local_solution,
+                                                                   false,
+                                                                   nullptr,
+                                                                   false,
+                                                                   *_dv_params[i].second,
+                                                                   compliance);
+            g2[i] = compliance.output_sensitivity_total(*_dv_params[i].second);
         }
-        
+        compliance.set_skip_comm_sum(false);
+
+        // now sum the values across processors to sum the partial derivatives for
+        // each parameter
+        _sys->comm().sum(g2);
+
+        for (unsigned int i=0; i<_n_vars; i++)
+            grads[i] = (g1[i] + g2[i]);
+
         nonlinear_assembly.clear_elem_parameter_dependence_object();
     }
     
@@ -1245,7 +1331,13 @@ public:
                 base_phi.set(_dv_params[i].first, x[i]);
         base_phi.close();
         _filter->compute_filtered_values(base_phi, *_level_set_sys->solution);
-        _level_set_function->init(*_level_set_sys_init, *_level_set_sys->solution);
+        // create a serialized vector for use in interpolation
+        std::unique_ptr<libMesh::NumericVector<Real>>
+        serial_level_set_sol(libMesh::NumericVector<Real>::build(_sys->comm()).release());
+        serial_level_set_sol->init(_level_set_sys->solution->size(), false, libMesh::SERIAL);
+        _level_set_sys->solution->localize(*serial_level_set_sol);
+
+        _level_set_function->init(*_level_set_sys_init, *serial_level_set_sol);
         _level_set_sys_init_on_str_mesh->initialize_solution(_level_set_function->get_mesh_function());
         
         std::vector<bool> eval_grads(this->n_ineq(), false);

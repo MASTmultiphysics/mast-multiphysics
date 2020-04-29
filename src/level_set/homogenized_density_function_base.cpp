@@ -93,12 +93,7 @@ derivative(const MAST::FunctionBase& f,
     
     libmesh_assert(e);
     
-    std::map<const libMesh::Elem*, Real>::const_iterator
-    it = _elem_volume_fraction_sensitivity.find(e);
-    
-    libmesh_assert(it != _elem_volume_fraction.end());
-    
-    v = it->second;
+    v = this->get_elem_volume_fraction_sensitivity(f, *e);
 }
 
 
@@ -121,11 +116,29 @@ MAST::HomogenizedDensityFunctionBase::
 get_elem_volume_fraction_sensitivity(const MAST::FunctionBase& f,
                                      const libMesh::Elem& e) const {
     
+    std::map<const MAST::FunctionBase*, std::map<const libMesh::Elem*, Real>>::const_iterator
+    it_f   = _elem_volume_fraction_sensitivity.find(&f);
+
+    libmesh_assert (it_f != _elem_volume_fraction_sensitivity.end());
+
     std::map<const libMesh::Elem*, Real>::const_iterator
-    it = _elem_volume_fraction_sensitivity.find(&e);
+    it_e = it_f->second.find(&e);
     
-    libmesh_assert (it != _elem_volume_fraction_sensitivity.end());
+    libmesh_assert (it_e != it_f->second.end());
     
-    return it->second;
+    return it_e->second;
 }
 
+
+const std::map<const libMesh::Elem*, Real>*
+MAST::HomogenizedDensityFunctionBase::
+get_elem_volume_fraction_sensitivity_map(const MAST::FunctionBase& f) const
+{
+    std::map<const MAST::FunctionBase*, std::map<const libMesh::Elem*, Real>>::const_iterator
+    it   = _elem_volume_fraction_sensitivity.find(&f);
+    
+    if (it != _elem_volume_fraction_sensitivity.end())
+        return &(it->second);
+    else
+        return nullptr;
+}

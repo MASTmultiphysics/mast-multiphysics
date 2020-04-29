@@ -145,7 +145,7 @@ assemble_reduced_order_quantity
     
     // if a solution function is attached, initialize it
     if (_sol_function && _base_sol)
-        _sol_function->init( *_base_sol);
+        _sol_function->init( *_base_sol, false);
     
     
     libMesh::MeshBase::const_element_iterator       el     =
@@ -293,7 +293,7 @@ assemble_reduced_order_quantity_sensitivity
     
     // if a solution function is attached, initialize it
     if (_sol_function && _base_sol)
-        _sol_function->init( *_base_sol);
+        _sol_function->init( *_base_sol, false);
     
     
     libMesh::MeshBase::const_element_iterator       el     =

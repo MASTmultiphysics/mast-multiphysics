@@ -35,18 +35,31 @@ namespace MAST {
         virtual ~LevelSetBoundaryVelocity();
         
         void init(MAST::SystemInitialization& sys,
-                  const MAST::FieldFunction<Real>& phi,
-                  const libMesh::NumericVector<Real>& sol,
-                  const libMesh::NumericVector<Real>* dsol);
-        
-        virtual void operator() (const libMesh::Point& p,
+                  const MAST::MeshFieldFunction& phi);
+
+        void clear();
+
+        virtual void derivative (const MAST::FunctionBase& f,
+                                 const libMesh::Point& p,
                                  const Real t,
                                  RealVectorX& v) const;
 
-        void velocity(const libMesh::Point& p,
+        void velocity(const MAST::FunctionBase& f,
+                      const libMesh::Point& p,
                       const Real t,
                       RealVectorX& v) const;
 
+        /*!
+         * attaches the level set function \p phi with this object. This is necessary only when the
+         * interface point functions are used.
+         */
+        void attach_level_set_function(const MAST::FieldFunction<Real>& phi);
+
+        /*!
+         * clears the attached level set function
+         */
+        void clear_level_set_function();
+        
         void search_nearest_interface_point(const libMesh::Elem& e,
                                             const unsigned int side,
                                             const libMesh::Point& p,
@@ -103,7 +116,7 @@ namespace MAST {
                                         const RealVectorX& dv) const;
 
         unsigned int                     _dim;
-        MAST::MeshFieldFunction*         _phi;
+        const MAST::MeshFieldFunction*   _phi;
         libMesh::MeshBase*               _mesh;
         const MAST::FieldFunction<Real>* _level_set_func;
     };

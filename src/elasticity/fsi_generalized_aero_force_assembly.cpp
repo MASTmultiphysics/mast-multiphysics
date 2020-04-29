@@ -161,7 +161,7 @@ assemble_generalized_aerodynamic_force_matrix
     
     // if a solution function is attached, initialize it
     if (_sol_function && _base_sol)
-        _sol_function->init( *_base_sol);
+        _sol_function->init( *_base_sol, false);
     
     MAST::FluidStructureAssemblyElemOperations&
     ops = dynamic_cast<MAST::FluidStructureAssemblyElemOperations&>(*_elem_ops);

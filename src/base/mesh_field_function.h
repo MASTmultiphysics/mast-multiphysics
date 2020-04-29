@@ -49,13 +49,16 @@ namespace MAST {
          *   constructor
          */
         MeshFieldFunction(MAST::SystemInitialization& sys,
-                          const std::string& nm);
+                          const std::string& nm,
+                          libMesh::ParallelType p_type);
 
         
         /*!
          *   constructor
          */
-        MeshFieldFunction(libMesh::System& sys, const std::string& nm);
+        MeshFieldFunction(libMesh::System& sys,
+                          const std::string& nm,
+                          libMesh::ParallelType p_type);
 
         
         /*!
@@ -89,17 +92,7 @@ namespace MAST {
         virtual void perturbation (const libMesh::Point& p,
                                    const Real t,
                                    RealVectorX& v) const;
-
         
-        /*!
-         *    calculates the value of the function at the specified point,
-         *    \p p, and time, \p t, and returns it in \p v.
-         */
-        virtual void derivative (const MAST::FunctionBase& f,
-                                 const libMesh::Point& p,
-                                 const Real t,
-                                 RealVectorX& v) const;
-
 
         /*!
          *    calculates the value of the function at the specified point,
@@ -109,14 +102,42 @@ namespace MAST {
                                             const Real t,
                                             RealMatrixX& v) const;
 
-        
+
+        /*!
+         *    calculates the value of the function at the specified point,
+         *    \p p, and time, \p t, and returns it in \p v.
+         */
+        virtual void derivative (const MAST::FunctionBase& f,
+                                 const libMesh::Point& p,
+                                 const Real t,
+                                 RealVectorX& v) const;
+
+        /*!
+         *    calculates the value of the function at the specified point,
+         *    \p p, and time, \p t, and returns it in \p v.
+         */
+        virtual void derivative_gradient (const MAST::FunctionBase& f,
+                                          const libMesh::Point& p,
+                                          const Real t,
+                                          RealMatrixX& v) const;
+
         /*!
          *   initializes the data structures to perform the interpolation 
          *   function of \p sol. If \p dsol is provided, then it is used
-         *   as the perturbation of \p sol.
+         *   as the perturbation of \p sol. if \p reuse_vector is \p true then instead of
+         *   cloning \p sol this vector will be used and it should be of type \p p_type set in the
+         *   constructor of this object. Note that this requires that \p sol not be
+         *   destroyed till this object needs it.
          */
-        void init(const libMesh::NumericVector<Real>& sol,
-                  const libMesh::NumericVector<Real>* dsol = nullptr);
+        void init(const libMesh::NumericVector<Real>& sol, bool reuse_vector);
+
+        
+        /*!
+         *   initializes the the data structures for computation of sensitivity for the specified function.
+         */
+        void init_sens(const MAST::FunctionBase& f,
+                       const libMesh::NumericVector<Real>& dsol,
+                       bool reuse_vector);
 
         
         /*!
@@ -125,7 +146,7 @@ namespace MAST {
         libMesh::MeshFunction& get_function() {
             
             libmesh_assert(_function);
-            return *_function;
+            return *_function->_func;
         }
 
         /*!
@@ -135,7 +156,7 @@ namespace MAST {
         libMesh::MeshFunction& get_perturbed_function() {
             
             libmesh_assert(_perturbed_function);
-            return *_perturbed_function;
+            return *_perturbed_function->_func;
         }
 
         
@@ -162,13 +183,38 @@ namespace MAST {
         void clear();
 
     protected:
-
+        
+        struct SolFunc {
+            SolFunc():
+            _sol        (nullptr),
+            _cloned_sol (nullptr),
+            _func       (nullptr) {}
+            ~SolFunc() {
+                if (_cloned_sol) delete _cloned_sol;
+                delete _func;
+            }
+            
+            bool _reuse_sol;
+            const libMesh::NumericVector<Real>* _sol;
+            libMesh::NumericVector<Real>* _cloned_sol;
+            libMesh::MeshFunction* _func;
+        };
+        
+        
+        void _init_sol_func(bool reuse_sol,
+                            const libMesh::NumericVector<Real>& sol,
+                            MAST::MeshFieldFunction::SolFunc& sol_func);
+        
         /*!
          *  flag is set to true when the quadrature point solution is 
          *  provided by an element
          */
         bool _use_qp_sol;
         
+        /*!
+         *  type of parallel vector required for this mesh function.
+         */
+        libMesh::ParallelType _p_type;
         
         /*!
          *   quadrature point solution of the element
@@ -183,12 +229,18 @@ namespace MAST {
         /*!
          *   current solution that is going to be interpolated
          */
-        libMesh::NumericVector<Real> *_sol, *_dsol;
+        SolFunc*  _function;
+
         
         /*!
-         *   the MeshFunction object that performs the interpolation
+         *   current perturbation solution that is going to be interpolated
          */
-        libMesh::MeshFunction *_function, *_perturbed_function;
+        SolFunc*  _perturbed_function;
+
+        /*!
+         *   solution sensitivity for specified value
+         */
+        std::map<const MAST::FunctionBase*, MAST::MeshFieldFunction::SolFunc*> _function_sens;
     };
 }
 

@@ -284,7 +284,7 @@ MAST::AssemblyBase::calculate_output(const libMesh::NumericVector<Real>& X,
     
     // if a solution function is attached, initialize it
     //if (_sol_function)
-    //    _sol_function->init( X);
+    //    _sol_function->init( X, false);
     
     libMesh::MeshBase::const_element_iterator       el     =
     nonlin_sys.get_mesh().active_local_elements_begin();
@@ -373,7 +373,7 @@ calculate_output_derivative(const libMesh::NumericVector<Real>& X,
     
     // if a solution function is attached, initialize it
     if (_sol_function)
-        _sol_function->init( X);
+        _sol_function->init( X, false);
     
     
     libMesh::MeshBase::const_element_iterator       el     =
@@ -484,7 +484,7 @@ calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
     
     // if a solution function is attached, initialize it
     if (_sol_function)
-        _sol_function->init( X);
+        _sol_function->init( X, false);
     
     
     libMesh::MeshBase::const_element_iterator       el     =
@@ -587,5 +587,51 @@ calculate_output_adjoint_sensitivity(const libMesh::NumericVector<Real>& X,
     }
 
     return dq_dp;
+}
+
+
+
+void
+MAST::AssemblyBase::calculate_output_adjoint_sensitivity_multiple_parameters_no_direct
+ (const libMesh::NumericVector<Real>&           X,
+  bool                                          if_localize_sol,
+  const libMesh::NumericVector<Real>&           dq_dX,
+  const std::vector<const MAST::FunctionBase*>& p_vec,
+  MAST::AssemblyElemOperations&                 elem_ops,
+  MAST::OutputAssemblyElemOperations&           output,
+  std::vector<Real>&                            sens) {
+
+    libmesh_assert(_discipline);
+    libmesh_assert(_system);
+    libmesh_assert_equal_to(sens.size(), p_vec.size());
+    
+    MAST::NonlinearSystem& nonlin_sys = _system->system();
+
+    // zero the sensitivity data first
+    std::fill(sens.begin(), sens.end(), 0.);
+    
+    // first compute all the residual vectors without closing them. later we will close them
+    // and then compute the sensitivity
+    for (unsigned int i=0; i<p_vec.size(); i++) {
+        
+        const MAST::FunctionBase& p = *p_vec[i];
+        
+        libMesh::NumericVector<Real>
+        &dres_dp = nonlin_sys.add_sensitivity_rhs(i);
+        
+        this->set_elem_operation_object(elem_ops);
+        this->sensitivity_assemble(X, if_localize_sol, p, dres_dp, false);
+        this->clear_elem_operation_object();
+    }
+    
+    for (unsigned int i=0; i<p_vec.size(); i++) {
+        
+        const MAST::FunctionBase& p = *p_vec[i];
+        
+        libMesh::NumericVector<Real>
+        &dres_dp = nonlin_sys.add_sensitivity_rhs(i);
+        dres_dp.close();
+        sens[i] = dq_dX.dot(dres_dp);
+    }
 }
 
