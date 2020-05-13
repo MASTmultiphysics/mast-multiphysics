@@ -27,6 +27,7 @@
 #include "libmesh/mesh_communication.h"
 #include "libmesh/partitioner.h"
 #include "libmesh/dof_map.h"
+#include "libmesh/boundary_info.h"
 
 
 MAST::SubElemMeshRefinement::SubElemMeshRefinement(libMesh::MeshBase& mesh,

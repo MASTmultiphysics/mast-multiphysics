@@ -609,15 +609,18 @@ MAST::AssemblyBase::calculate_output_adjoint_sensitivity_multiple_parameters_no_
 
     // zero the sensitivity data first
     std::fill(sens.begin(), sens.end(), 0.);
-    
-    // first compute all the residual vectors without closing them. later we will close them
+
+     // add vectors before computing sensitivity
+    for (unsigned int i=0; i<p_vec.size(); i++) nonlin_sys.add_sensitivity_rhs(i);
+
+        // first compute all the residual vectors without closing them. later we will close them
     // and then compute the sensitivity
     for (unsigned int i=0; i<p_vec.size(); i++) {
         
         const MAST::FunctionBase& p = *p_vec[i];
         
         libMesh::NumericVector<Real>
-        &dres_dp = nonlin_sys.add_sensitivity_rhs(i);
+        &dres_dp = nonlin_sys.get_sensitivity_rhs(i);
         
         this->set_elem_operation_object(elem_ops);
         this->sensitivity_assemble(X, if_localize_sol, p, dres_dp, false);
