@@ -28,6 +28,7 @@
 #include <libmesh/equation_systems.h>
 #include <libmesh/fe_type.h>
 #include <libmesh/numeric_vector.h>
+#include <libmesh/boundary_info.h>
 
 // MAST includes.
 #include "base/nonlinear_system.h"
