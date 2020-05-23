@@ -51,7 +51,8 @@
 #include "examples/structural/base/inplane_2d_model.h"
 #include "examples/structural/base/truss_2d_model.h"
 #include "examples/structural/base/eyebar_2d_model.h"
-#include "base/compute_kernel.h"
+#include "elasticity/elasticity_elem_operations.h"
+#include "base/view.h"
 
 
 // libMesh includes
@@ -1449,10 +1450,10 @@ int main(int argc, char* argv[]) {
             optimizer->optimize();
     }
     
-    MAST::ElasticityElemOperations<MAST::ElasticityComputeKernelTraits<Real, Real, Real>> elem_ops;
-    MAST::ElasticityElemOperations<MAST::ElasticityComputeKernelTraits<Real, Complex, Real>> elem_ops_complex_shape;
-    MAST::ElasticityElemOperations<MAST::ElasticityComputeKernelTraits<Real, Real, Complex>> elem_ops_complex_sol;
-    MAST::ElasticityElemOperations<MAST::ElasticityComputeKernelTraits<Real, Complex, Complex>> elem_ops_complex_sol2;
+    MAST::ElasticityElemOperations<MAST::ElasticityComputeKernelTraits<Real, Real, Real, MAST::ElasticityElemOperationsContext>> elem_ops;
+    MAST::ElasticityElemOperations<MAST::ElasticityComputeKernelTraits<Real, Complex, Real, MAST::ElasticityElemOperationsContext>> elem_ops_complex_shape;
+    MAST::ElasticityElemOperations<MAST::ElasticityComputeKernelTraits<Real, Real, Complex, MAST::ElasticityElemOperationsContext>> elem_ops_complex_sol;
+    MAST::ElasticityElemOperations<MAST::ElasticityComputeKernelTraits<Real, Complex, Complex, MAST::ElasticityElemOperationsContext>> elem_ops_complex_sol2;
 
     // END_TRANSLATE
     return 0;
