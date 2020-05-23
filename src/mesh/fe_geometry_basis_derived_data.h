@@ -10,14 +10,14 @@ namespace MAST {
 
 /*! This provides the derivative of shape functions when the FE basis also forms the basis for geometry interpolation used to interpolate
  nodal locations. Typically, Lagrange shape functoins are used for this purpose */
-template <typename BasisScalarType, typename NodalScalarType, typename ViewTraits>
+template <typename BasisScalarType, typename NodalScalarType, typename ViewTraits, typename ContextType>
 class FEGeometryBasisDerivedData:
-public MAST::FEShapeDataBase<BasisScalarType, NodalScalarType> {
+public MAST::FEShapeDataBase<BasisScalarType, NodalScalarType, ContextType> {
     
 public:
     
     FEGeometryBasisDerivedData(const std::string& nm):
-    MAST::FEShapeDataBase<BasisScalarType, NodalScalarType>(nm) {}
+    MAST::FEShapeDataBase<BasisScalarType, NodalScalarType, ContextType>(nm) {}
     virtual ~FEGeometryBasisDerivedData() {}
     
     virtual inline NodalScalarType         xyz(uint_type qp, uint_type x_i) const override
@@ -52,14 +52,14 @@ protected:
 
 /*! This provides the derivative of shape functions when the FE basis also forms the basis for geometry interpolation used to interpolate
  nodal locations. Typically, Lagrange shape functoins are used for this purpose */
-template <typename BasisScalarType, typename NodalScalarType>
-class FEGeometryBasisDerivedData<BasisScalarType, NodalScalarType, MAST::EigenFEShapeDataViewTraits<NodalScalarType>>:
-public MAST::FEShapeDataBase<BasisScalarType, NodalScalarType> {
+template <typename BasisScalarType, typename NodalScalarType, typename ContextType>
+class FEGeometryBasisDerivedData<BasisScalarType, NodalScalarType, MAST::EigenFEShapeDataViewTraits<NodalScalarType>, ContextType>:
+public MAST::FEShapeDataBase<BasisScalarType, NodalScalarType, ContextType> {
     
 public:
     
     FEGeometryBasisDerivedData(const std::string& nm):
-    MAST::FEShapeDataBase<BasisScalarType, NodalScalarType>(nm) {}
+    MAST::FEShapeDataBase<BasisScalarType, NodalScalarType, ContextType>(nm) {}
     
     virtual ~FEGeometryBasisDerivedData() {}
     

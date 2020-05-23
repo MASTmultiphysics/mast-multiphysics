@@ -8,8 +8,8 @@
 namespace MAST {
 
 /*! Collection of compute kernels with specified dependencies and data views*/
-template <typename Traits>
-class ComputationBase: public MAST::CurrentComputation {
+template <typename Traits, typename ContextType>
+class ComputationBase {
     
 public:
     
@@ -17,9 +17,9 @@ public:
     using nodal_scalar_type = typename Traits::nodal_scalar_type;
     using sol_scalar_type   = typename Traits::sol_scalar_type;
 
-    ComputationBase(): MAST::CurrentComputation() { }
+    ComputationBase() { }
     virtual ~ComputationBase() { }
-    void add_compute_kernel(MAST::ComputeKernelBase& c);
+    void add_compute_kernel(MAST::ComputeKernelBase<ContextType>& c);
     /*! parses through all the compute kernels and their views to prepare a graph of dependency. */
     void prepare();
     void print_graph();

@@ -15,25 +15,27 @@ namespace MAST {
 // Forward declerations
 class FunctionBase;
 
+template <typename ContextType>
 class ComputeKernelBase {
 
 public:
 
     ComputeKernelBase(const std::string& nm): _nm(nm) {}
     virtual ~ComputeKernelBase() {}
-    virtual inline bool depends_on(const MAST::ComputeKernelBase& d) const { return _dependency.count(&d);}
-    virtual inline const std::set<const MAST::ComputeKernelBase*>& get_dependencies() const { return _dependency;}
-    virtual inline void init() {}
-    virtual inline void pre_execute() {}
-    virtual inline void post_execute() {}
-    virtual inline void execute() = 0;
+    virtual inline bool depends_on(const MAST::ComputeKernelBase<ContextType>& d) const
+    { return _dependency.count(&d);}
+    virtual inline const std::set<const MAST::ComputeKernelBase<ContextType>*>& get_dependencies() const
+    { return _dependency;}
+    virtual inline void pre_execute(ContextType& c) {}
+    virtual inline void post_execute(ContextType& c) {}
+    virtual inline void execute(ContextType& c) = 0;
 
 protected:
 
-    virtual inline void _add_dependency(const MAST::ComputeKernelBase& d) { _dependency.insert(&d);}
+    virtual inline void _add_dependency(const MAST::ComputeKernelBase<ContextType>& d) { _dependency.insert(&d);}
 
     const std::string _nm;
-    std::set<const MAST::ComputeKernelBase*> _dependency;
+    std::set<const MAST::ComputeKernelBase<ContextType>*> _dependency;
 };
 
 

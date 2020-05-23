@@ -9,14 +9,15 @@
 
 namespace MAST {
 
-template <typename ScalarType>
-class Quadrature: public MAST::ComputeKernelBase {
+template <typename ScalarType, typename ContextType>
+class Quadrature: public MAST::ComputeKernelBase<ContextType> {
     
 public:
 
     using scalar_type = ScalarType;
     
-    Quadrature(const std::string& nm): MAST::ComputeKernelBase(nm) {}
+    Quadrature(const std::string& nm):
+    MAST::ComputeKernelBase<ContextType>(nm) {}
     virtual ~Quadrature() {}
     virtual inline uint_type dim() const = 0;
     virtual inline uint_type order() const = 0;
@@ -29,14 +30,15 @@ public:
 
 
 /*! This provides a  */
-template <typename ScalarType, typename ViewTraits>
-class MappedQuadrature: public MAST::Quadrature<ScalarType> {
+template <typename ScalarType, typename ViewTraits, typename ContextType>
+class MappedQuadrature: public MAST::Quadrature<ScalarType, ContextType> {
     
 public:
 
     using scalar_type = ScalarType;
     
-    MappedQuadrature(const std::string& nm): MAST::Quadrature<ScalarType>(nm), _dim(0) {}
+    MappedQuadrature(const std::string& nm):
+    MAST::Quadrature<ScalarType, ContextType>(nm), _dim(0) {}
     virtual ~MappedQuadrature() {}
     virtual void set_data(const uint_type dim,
                           const typename ViewTraits::quadrature_point_type points,
@@ -60,17 +62,20 @@ protected:
 
 
 /*! serves as a wrapper around libMesh */
-class libMeshQuadrature: public MAST::Quadrature<Real> {
+template <typename ContextType>
+class libMeshQuadrature: public MAST::Quadrature<Real, ContextType> {
     
 public:
     
+    using scalar_type = typename MAST::Quadrature<Real, ContextType>::scalar_type;
+    
     /*! the quadrature object \p q  is expected to be initialized outside of this class. */
     libMeshQuadrature(const std::string& nm):
-    MAST::Quadrature<Real>(nm),
+    MAST::Quadrature<Real, ContextType>(nm),
     _q  (nullptr)
     {}
     virtual ~libMeshQuadrature() {}
-    virtual inline void execute() override { }
+    virtual inline void execute(ContextType& c) override { }
     const libMesh::QBase& get_libmesh_object() const { return *_q;}
     virtual inline uint_type dim() const override { return _q->get_dim();}
     virtual inline uint_type order() const override { return _q->get_order();}

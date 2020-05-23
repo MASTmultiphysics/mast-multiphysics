@@ -32,20 +32,21 @@ struct EigenFESolDataViewTraits {
 
 
 
-template <typename ScalarType>
-class FEBasis: ComputeKernelBase {
+template <typename ScalarType, typename ContextType>
+class FEBasis: ComputeKernelBase<ContextType> {
     
 public:
 
     using basis_scalar_type = ScalarType;
     
     FEBasis(const std::string& nm):
-    MAST::ComputeKernelBase(nm),
+    MAST::ComputeKernelBase<ContextType>(nm),
     _quadrature   (nullptr)
     { }
     virtual ~FEBasis() {}
 
-    virtual inline void set_quadrature(const MAST::Quadrature<ScalarType>& q) { _quadrature = &q;}
+    virtual inline void set_quadrature(const MAST::Quadrature<ScalarType, ContextType>& q)
+    { _quadrature = &q;}
     virtual inline uint_type dim() const = 0;
     virtual inline uint_type order() const = 0;
     virtual inline uint_type n_basis() const = 0;
@@ -56,19 +57,21 @@ public:
     
 protected:
     
-    const MAST::Quadrature<ScalarType> *_quadrature;
+    const MAST::Quadrature<ScalarType, ContextType> *_quadrature;
 };
 
 
 /*! serves as a wrapper around libMesh FEBase object to provide */
-class libMeshFE: public FEBasis<Real> {
+template <typename ContextType>
+class libMeshFE: public FEBasis<Real, ContextType> {
                                 
 public:
     
-    using scalar_type = Real;
+    using scalar_type       = Real;
+    using basis_scalar_type = typename MAST::FEBasis<Real, ContextType>::basis_scalar_type;
     
     libMeshFE(const std::string& nm):
-    MAST::FEBasis<scalar_type>(nm),
+    MAST::FEBasis<scalar_type, ContextType>(nm),
     _compute_dphi_dxi   (false),
     _fe                 (nullptr)
     { }
@@ -79,10 +82,11 @@ public:
     virtual inline void reinit(const libMesh::FEBase& fe) {
         _fe = &fe;
         const libMesh::FEMap& m = fe.get_fe_map();
-        _dphi_dxi = {&m.get_dphidxi_map(), &m.get_dphideta_map(), &m.get_dphidzeta_map()};
+        this->_dphi_dxi =
+        {&m.get_dphidxi_map(), &m.get_dphideta_map(), &m.get_dphidzeta_map()};
     }
 
-    virtual inline void execute() override { }
+    virtual inline void execute(ContextType& c) override { }
     
     virtual inline uint_type dim() const override { return _fe->get_dim();}
     

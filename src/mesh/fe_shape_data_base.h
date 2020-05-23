@@ -7,13 +7,13 @@
 
 namespace MAST {
 
-template <typename BasisScalarType, typename NodalScalarType>
-class FEShapeDataBase: public MAST::ComputeKernelBase {
+template <typename BasisScalarType, typename NodalScalarType, typename ContextType>
+class FEShapeDataBase: public MAST::ComputeKernelBase<ContextType> {
     
 public:
     
     FEShapeDataBase(const std::string& nm):
-    MAST::ComputeKernelBase(nm),
+    MAST::ComputeKernelBase<ContextType>(nm),
     _compute_xyz       (false),
     _compute_Jac       (false),
     _compute_detJ      (false),
@@ -30,8 +30,9 @@ public:
     inline void   set_compute_detJxW(bool f) { _compute_JxW = f;}
     inline void  set_compute_dphi_dx(bool f) { _compute_dphi_dx = f;}
     inline void   set_compute_normal(bool f) { _compute_normal = f;}
-    inline void  set_fe_basis(MAST::FEBasis<BasisScalarType>& basis) { _fe_basis = &basis;}
-    virtual inline void execute() override { }
+    inline void  set_fe_basis(MAST::FEBasis<BasisScalarType, ContextType>& basis)
+    { _fe_basis = &basis;}
+    virtual inline void execute(ContextType& c) override { }
     //virtual inline void reinit_for_side(MAST::FEBasis<BasisScalarType>& basis, uint_type s) = 0;
     virtual inline uint_type             ref_dim() const { return _fe_basis->dim();}
     virtual inline uint_type         spatial_dim() const { return _spatial_dim;}
@@ -58,7 +59,7 @@ protected:
     bool _compute_normal;
     uint_type _spatial_dim;
     
-    MAST::FEBasis<BasisScalarType> *_fe_basis;
+    MAST::FEBasis<BasisScalarType, ContextType> *_fe_basis;
 };
 
 }

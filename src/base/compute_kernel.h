@@ -105,18 +105,18 @@ public:
 
 
 // Forward decleration
-template <typename> class ComputeKernelDerivative;
+template <typename, typename> class ComputeKernelDerivative;
 
 
-template <typename ValueType>
-class ComputeKernel: public MAST::ComputeKernelBase {
+template <typename ValueType, typename ContextType>
+class ComputeKernel: public MAST::ComputeKernelBase<ContextType> {
 
 public:
     
-    using derivative_kernel_type = MAST::ComputeKernelDerivative<ValueType>;
+    using derivative_kernel_type = MAST::ComputeKernelDerivative<ValueType, ContextType>;
     
     ComputeKernel(const std::string& nm):
-    MAST::ComputeKernelBase(nm),
+    MAST::ComputeKernelBase<ContextType>(nm),
     _derivative_kernel   (nullptr)
     {}
     
@@ -134,7 +134,7 @@ public:
         return *_derivative_kernel;
     }
     
-    virtual inline ValueType value() const = 0;
+    virtual inline ValueType value(ContextType& c) const = 0;
 
 protected:
     
@@ -143,15 +143,15 @@ protected:
 
 
 
-template <typename ValueType>
-class ComputeKernelDerivative: public MAST::ComputeKernelBase {
+template <typename ValueType, typename ContextType>
+class ComputeKernelDerivative: public MAST::ComputeKernelBase<ContextType> {
 
 public:
     
-    using primal_kernel_type   = MAST::ComputeKernel<ValueType>;
+    using primal_kernel_type   = MAST::ComputeKernel<ValueType, ContextType>;
 
     ComputeKernelDerivative (const std::string& nm):
-    MAST::ComputeKernelBase (nm),
+    MAST::ComputeKernelBase<ContextType> (nm),
     _primal_kernel          (nullptr),
     _f                      (nullptr)
     {}
@@ -171,7 +171,7 @@ public:
     }
 
     virtual inline void  set_derivative_paramter(const MAST::FunctionBase& f);
-    virtual inline ValueType value() const = 0;
+    virtual inline ValueType value(ContextType& c) const = 0;
     
 protected:
     
