@@ -1,0 +1,85 @@
+
+
+#ifndef _mast_isotropic_hookean_material_h_
+#define _mast_isotropic_hookean_material_h_
+
+// MAST includes
+#include "mesh/fe_compute_kernel.h"
+
+namespace MAST {
+
+template <typename Traits>
+class IsotropicHookeanMaterial:
+public ComputeKernel<typename Traits::material_value_type, Traits> {
+
+public:
+
+    using scalar_type         = typename Traits::var_scalar_type;
+    using value_type          = typename Traits::material_value_type;
+
+    IsotropicHookeanMaterial(const std::string& nm):
+    MAST::ComputeKernel<typename Traits::material_value_type, Traits>(nm),
+    _E    (nullptr),
+    _nu   (nullptr)
+    { }
+    
+    virtual ~IsotropicHookeanMaterial() { }
+    
+    virtual inline void set_properties(const MAST::ComputeKernel<scalar_type>& E,
+                                       const MAST::ComputeKernel<scalar_type>& nu) {
+        
+        libmesh_assert_msg(!_E && !_nu, "Property kernels should be cleared before setting.");
+        
+        _E   = &E;
+        _nu  = &nu;
+    }
+
+    virtual inline void execute() override { }
+
+
+    virtual inline void execute_derivative(const std::vector<uint_type>& idx) override {
+        
+        libmesh_assert_msg(_E && _nu, "Property kernels should be provided before execute().");
+
+        scalar_type
+        E  = _E->value(),
+        nu = _nu->value(),
+        G  = E/2./(1.+nu);
+
+        MAST::init_view(_matrix, 6, 6, true);
+
+        m(0, 0) = m(1, 1) = m(2, 2) = E*(1.-nu)/(1.-nu-2.*nu*nu);
+        m(0, 1) = m(0, 2) = m(1, 0) = m(1, 2) = m(2, 0) = m(2, 1) = E*nu/(1.-nu-2.*nu*nu);
+        m(3, 3) = m(4, 4) = m(5, 5) = E/2./(1.+nu);
+    }
+
+    virtual inline value_type value() const override {
+        
+        libmesh_assert_msg(_E && _nu, "Property kernels should be provided before execute().");
+
+        scalar_type
+        E  = _E->value(),
+        nu = _nu->value(),
+        G  = E/2./(1.+nu);
+
+        value_type matrix = 
+        
+        MAST::init_view(_matrix, 6, 6, true);
+
+        m(0, 0) = m(1, 1) = m(2, 2) = E*(1.-nu)/(1.-nu-2.*nu*nu);
+        m(0, 1) = m(0, 2) = m(1, 0) = m(1, 2) = m(2, 0) = m(2, 1) = E*nu/(1.-nu-2.*nu*nu);
+        m(3, 3) = m(4, 4) = m(5, 5) = E/2./(1.+nu);
+    }
+
+    virtual inline value_type value_derivative() const override { return _matrix;}
+
+protected:
+
+    const MAST::ComputeKernel<scalar_type> *_E;
+    const MAST::ComputeKernel<scalar_type> *_nu;
+};
+
+}
+
+#endif // _mast_isotropic_hookean_material_h_
+
