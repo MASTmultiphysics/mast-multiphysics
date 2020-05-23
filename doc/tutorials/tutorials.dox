@@ -1,0 +1,25 @@
+/**
+\page TutorialsPage Tutorials
+
+  Several examples have been implemented in MAST, some of which have been
+  ported as descriptive tutorials listed below.
+
+\subpage TutorialsStructural
+  - \ref structural_example_1
+  - \ref structural_example_2
+  - \ref structural_example_3
+  - \ref structural_example_4
+  - \ref structural_example_5
+  - \ref structural_example_6
+  - \ref structural_example_7
+
+\subpage TutorialsFluid
+  - \ref fluid_example_1
+
+\subpage TutorialsFSI
+  - \ref fsi_example_1
+
+\subpage TutorialsHeatTransfer
+  - \ref conduction_example_1
+
+*/
