@@ -29,6 +29,7 @@
 #include "Eigen/Dense"
 using namespace Eigen;
 
+typedef unsigned int uint_type;
 typedef libMesh::Real Real;
 typedef libMesh::Complex Complex;
 
@@ -55,5 +56,24 @@ typedef libMesh::DenseMatrix<Complex> DenseComplexMatrix;
 
 typedef libMesh::DenseVector<Real> DenseRealVector;
 typedef libMesh::DenseVector<Complex> DenseComplexVector;
+
+namespace MAST {
+
+template <typename NodalScalarType, typename SolScalarType>
+struct DeducedScalarType { };
+
+template <>
+struct DeducedScalarType<Real, Real> { using type = Real;};
+
+template <>
+struct DeducedScalarType<std::complex<Real>, Real> { using type = std::complex<Real>;};
+
+template <>
+struct DeducedScalarType<Real, std::complex<Real>> { using type = std::complex<Real>;};
+
+template <>
+struct DeducedScalarType<std::complex<Real>, std::complex<Real>> { using type = std::complex<Real>;};
+
+}
 
 #endif // __mast__data_types__
