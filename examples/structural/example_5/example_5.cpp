@@ -202,8 +202,8 @@ public:
     
     MAST::FilterBase*                         _filter;
     
-    MAST::MaterialPropertyCardBase            *_m_card1, *_m_card2;
-    MAST::ElementPropertyCardBase             *_p_card1, *_p_card2;
+    MAST::MaterialPropertyCardBase            *_m_card;
+    MAST::ElementPropertyCardBase             *_p_card;
     
     PhiMeshFunction*                          _level_set_function;
     MAST::LevelSetBoundaryVelocity*           _level_set_vel;
@@ -369,20 +369,12 @@ public:
         _field_functions.insert(k_f);
         _field_functions.insert(cp_f);
 
-        _m_card1 = new MAST::IsotropicMaterialPropertyCard;
-        _m_card2 = new MAST::IsotropicMaterialPropertyCard;
-        _m_card1->add(*E_f);
-        _m_card1->add(*rho_f);
-        _m_card1->add(*nu_f);
-        _m_card1->add(*k_f);
-        _m_card1->add(*cp_f);
-        
-        // material for void
-        _m_card2->add(*E_v_f);
-        _m_card2->add(*rho_f);
-        _m_card2->add(*nu_f);
-        _m_card2->add(*k_f);
-        _m_card2->add(*cp_f);
+        _m_card  = new MAST::IsotropicMaterialPropertyCard;
+        _m_card->add(*E_f);
+        _m_card->add(*rho_f);
+        _m_card->add(*nu_f);
+        _m_card->add(*k_f);
+        _m_card->add(*cp_f);
     }
 
     
@@ -416,44 +408,26 @@ public:
         _field_functions.insert(kappa_f);
         _field_functions.insert(hoff_f);
         
-        MAST::Solid2DSectionElementPropertyCard
-        *p_card1   = new MAST::Solid2DSectionElementPropertyCard,
-        *p_card2   = new MAST::Solid2DSectionElementPropertyCard;
-        
-        _p_card1   = p_card1;
-        _p_card2   = p_card2;
+         typename T::SectionPropertyCardType
+         *p_card   = new typename T::SectionPropertyCardType;
+
+        _p_card   = p_card;
 
         // set nonlinear strain if requested
         bool
         nonlinear = _input("if_nonlinear", "flag to turn on/off nonlinear strain", false);
-        if (nonlinear) _p_card1->set_strain(MAST::NONLINEAR_STRAIN);
-        _p_card2->set_strain(MAST::LINEAR_STRAIN);
-
-        p_card1->add(*th_f);
-        p_card1->add(*kappa_f);
-        p_card1->add(*hoff_f);
-        p_card1->set_material(*_m_card1);
+        if (nonlinear) _p_card->set_strain(MAST::NONLINEAR_STRAIN);
 
         // property card for void
-        p_card2->add(*th_f);
-        p_card2->add(*kappa_f);
-        p_card2->add(*hoff_f);
-        p_card2->set_material(*_m_card2);
+        p_card->add(*th_f);
+        p_card->add(*kappa_f);
+        p_card->add(*hoff_f);
+        p_card->set_material(*_m_card);
         
-        _discipline->set_property_for_subdomain(0, *p_card1);
-        _discipline->set_property_for_subdomain(1, *p_card1);
-        
-        // inactive
-        _discipline->set_property_for_subdomain(3, *p_card2);
+        _discipline->set_property_for_subdomain(0, *p_card);
 
-        // negative level set
-        _discipline->set_property_for_subdomain(6, *p_card2);
-        _discipline->set_property_for_subdomain(7, *p_card2);
 
-        _indicator_discipline->set_property_for_subdomain(0, *p_card1);
-        _indicator_discipline->set_property_for_subdomain(1, *p_card1);
-        _indicator_discipline->set_property_for_subdomain(3, *p_card2);
-        _indicator_discipline->set_property_for_subdomain(4, *p_card2);
+        _indicator_discipline->set_property_for_subdomain(0, *p_card);
     }
         
     //
@@ -1455,10 +1429,8 @@ public:
     _indicator_discipline                (nullptr),
     _level_set_discipline                (nullptr),
     _filter                              (nullptr),
-    _m_card1                             (nullptr),
-    _m_card2                             (nullptr),
-    _p_card1                             (nullptr),
-    _p_card2                             (nullptr),
+    _m_card                              (nullptr),
+    _p_card                              (nullptr),
     _level_set_function                  (nullptr),
     _level_set_vel                       (nullptr),
     _output                              (nullptr),
@@ -1493,12 +1465,6 @@ public:
         
         _nsp  = new MAST::StructuralNearNullVectorSpace;
         _sys->nonlinear_solver->nearnullspace_object = _nsp;
-
-        //
-        // ask structure to use Mindlin bending operator
-        //
-        dynamic_cast<MAST::ElementPropertyCard2D&>(*_p_card1).set_bending_model(MAST::MINDLIN);
-        dynamic_cast<MAST::ElementPropertyCard2D&>(*_p_card2).set_bending_model(MAST::MINDLIN);
 
         /////////////////////////////////////////////////
         // now initialize the design data.
@@ -1596,10 +1562,8 @@ public:
         
         delete _nsp;
 
-        delete _m_card1;
-        delete _m_card2;
-        delete _p_card1;
-        delete _p_card2;
+        delete _m_card;
+        delete _p_card;
 
         delete _eq_sys;
         delete _mesh_refinement;

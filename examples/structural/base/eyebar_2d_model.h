@@ -51,11 +51,14 @@ class DisciplineBase;
 class BoundaryConditionBase;
 class FunctionBase;
 class Parameter;
+class Solid2DSectionElementPropertyCard;
 
 namespace Examples {
 
 struct Eyebar2DModel {
     
+    using SectionPropertyCardType = MAST::Solid2DSectionElementPropertyCard;
+
     template <typename Opt>
     static Real reference_volume(Opt& opt);
 
@@ -541,7 +544,7 @@ MAST::Examples::Eyebar2DModel::initialize_level_set_solution(Opt& opt) {
     nx_m    = opt._input("level_set_nx_divs", "number of elements of level-set mesh along x-axis", 10),
     ny_m    = opt._input("level_set_ny_divs", "number of elements of level-set mesh along y-axis", 10);
     
-    MAST::Examples::LevelSetNucleationFunction
+    MAST::Examples::LevelSetNucleationFunction2D
     phi(-0.5*height, -0.5*height, length, height, nx_m, ny_m, nx_h, ny_h);
     
     opt._level_set_sys_init->initialize_solution(phi);

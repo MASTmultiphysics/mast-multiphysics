@@ -56,8 +56,9 @@ namespace MAST {
 
         /*!
          *  for large problems it is more efficient to specify only the non-zero entries in the input vector in
-         *  \p nonzero_vals. Here, \p output is expected to be of type SERIAL vector. All ranks in the
+         *  \p nonzero_vals. If \p output is of type SERIAL then all ranks in the
          *  communicator will perform the same operaitons and provide an identical \p output vector.
+         *  If \p output is of type PARALLEL or GHOSTED then only the local contributions will be set.
          *  If \p close_vector is \p true then \p output.close() will be called in this
          *  routines, otherwise not.
          */

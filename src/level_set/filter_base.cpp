@@ -102,7 +102,6 @@ MAST::FilterBase::compute_filtered_values(std::map<unsigned int, Real>& nonzero_
                                           bool close_vector) const {
     
     libmesh_assert_equal_to(output.size(), _filter_map.size());
-    libmesh_assert_equal_to(output.type(), libMesh::SERIAL);
     
     output.zero();
     
@@ -119,10 +118,15 @@ MAST::FilterBase::compute_filtered_values(std::map<unsigned int, Real>& nonzero_
         for ( ; vec_it != vec_end; vec_it++) {
             if (nonzero_input.count(vec_it->first)) {
                 
-                if (_dv_dof_ids.count(map_it->first))
-                    output.add(map_it->first, nonzero_input[vec_it->first] * vec_it->second);
-                else
-                    output.set(map_it->first, nonzero_input[map_it->first]);
+                if (output.type() == libMesh::SERIAL ||
+                    (map_it->first >= output.first_local_index() &&
+                     map_it->first <  output.last_local_index())) {
+                    
+                    if (_dv_dof_ids.count(map_it->first))
+                        output.add(map_it->first, nonzero_input[vec_it->first] * vec_it->second);
+                    else
+                        output.set(map_it->first, nonzero_input[map_it->first]);
+                }
             }
         }
     }

@@ -17,8 +17,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#ifndef __mast_topology_2d_bracket_model__
-#define __mast_topology_2d_bracket_model__
+#ifndef __mast_topology_3d_bracket_model__
+#define __mast_topology_3d_bracket_model__
 
 // MAST includes
 #include "base/mast_data_types.h"
@@ -38,7 +38,6 @@
 #include "libmesh/mesh_generation.h"
 #include "libmesh/elem.h"
 #include "libmesh/node.h"
-#include "libmesh/boundary_info.h"
 
 
 
@@ -49,13 +48,13 @@ class DisciplineBase;
 class BoundaryConditionBase;
 class FunctionBase;
 class Parameter;
-class Solid2DSectionElementPropertyCard;
+class IsotropicElementPropertyCard3D;
 
 namespace Examples {
-struct Bracket2DModel {
+struct Bracket3DModel {
     
-    using SectionPropertyCardType = MAST::Solid2DSectionElementPropertyCard;
-
+    using SectionPropertyCardType = MAST::IsotropicElementPropertyCard3D;
+    
     template <typename Opt>
     static Real reference_volume(Opt& opt);
 
@@ -117,36 +116,39 @@ struct Bracket2DModel {
 
 template <typename Opt>
 Real
-MAST::Examples::Bracket2DModel::
+MAST::Examples::Bracket3DModel::
 reference_volume(Opt& opt) {
     
     Real
     length  = opt._input("length", "length of domain along x-axis", 0.3),
-    height  = opt._input("height", "length of domain along y-axis", 0.3);
+    height  = opt._input("height", "length of domain along y-axis", 0.3),
+    width   = opt._input("width",  "length of domain along z-axis", 0.3);
     
-    return length * height;
+    return length * height * width;
 }
 
     
     
 template <typename Opt>
 void
-MAST::Examples::Bracket2DModel::
+MAST::Examples::Bracket3DModel::
 init_analysis_mesh(Opt& opt,
                    libMesh::UnstructuredMesh& mesh) {
     
     Real
     length  = opt._input("length", "length of domain along x-axis", 0.3),
-    height  = opt._input("height", "length of domain along y-axis", 0.3);
-    
+    height  = opt._input("height", "length of domain along y-axis", 0.3),
+    width   = opt._input("width",  "length of domain along z-axis", 0.3);
+
     unsigned int
     nx_divs = opt._input("nx_divs", "number of elements along x-axis", 20),
-    ny_divs = opt._input("ny_divs", "number of elements along y-axis", 20);
-    
+    ny_divs = opt._input("ny_divs", "number of elements along y-axis", 20),
+    nz_divs = opt._input("nz_divs", "number of elements along z-axis", 20);
+
     if (nx_divs%10 != 0 || ny_divs%10 != 0) libmesh_error();
     
     std::string
-    t = opt._input("elem_type", "type of geometric element in the mesh", "quad4");
+    t = opt._input("elem_type", "type of geometric element in the mesh", "hex8");
     
     libMesh::ElemType
     e_type = libMesh::Utility::string_to_enum<libMesh::ElemType>(t);
@@ -155,19 +157,20 @@ init_analysis_mesh(Opt& opt,
     // if high order FE is used, libMesh requires atleast a second order
     // geometric element.
     //
-    if (opt._fetype.order > 1 && e_type == libMesh::QUAD4)
-        e_type = libMesh::QUAD9;
-    else if (opt._fetype.order > 1 && e_type == libMesh::TRI3)
-        e_type = libMesh::TRI6;
+    if (opt._fetype.order > 1 && e_type == libMesh::HEX8)
+        e_type = libMesh::HEX27;
+    else if (opt._fetype.order > 1 && e_type == libMesh::TET4)
+        e_type = libMesh::TET10;
     
     //
     // initialize the mesh with one element
     //
-    libMesh::MeshTools::Generation::build_square(mesh,
-                                                 nx_divs, ny_divs,
-                                                 0, length,
-                                                 0, height,
-                                                 e_type);
+    libMesh::MeshTools::Generation::build_cube(mesh,
+                                               nx_divs, ny_divs, nz_divs,
+                                               0, length,
+                                               0, height,
+                                               0, width,
+                                               e_type);
     
     _delete_elems_from_bracket_mesh(opt, mesh);
 }
@@ -175,29 +178,32 @@ init_analysis_mesh(Opt& opt,
 
 template <typename Opt>
 void
-MAST::Examples::Bracket2DModel::
+MAST::Examples::Bracket3DModel::
 init_level_set_mesh(Opt& opt,
                     libMesh::UnstructuredMesh& mesh) {
     
     Real
     length  = opt._input("length", "length of domain along x-axis", 0.3),
-    height  = opt._input("height", "length of domain along y-axis", 0.3);
-    
+    height  = opt._input("height", "length of domain along y-axis", 0.3),
+    width   = opt._input("width",  "length of domain along z-axis", 0.3);
+
     unsigned int
     nx_divs = opt._input("level_set_nx_divs", "number of elements of level-set mesh along x-axis", 10),
-    ny_divs = opt._input("level_set_ny_divs", "number of elements of level-set mesh along y-axis", 10);
-    
+    ny_divs = opt._input("level_set_ny_divs", "number of elements of level-set mesh along y-axis", 10),
+    nz_divs = opt._input("level_set_nz_divs", "number of elements of level-set mesh along z-axis", 10);
+
     if (nx_divs%10 != 0 || ny_divs%10 != 0) libmesh_error();
     
     libMesh::ElemType
-    e_type  = libMesh::QUAD4;
+    e_type  = libMesh::HEX8;
     
     // initialize the mesh with one element
-    libMesh::MeshTools::Generation::build_square(mesh,
-                                                 nx_divs, ny_divs,
-                                                 0, length,
-                                                 0, height,
-                                                 e_type);
+    libMesh::MeshTools::Generation::build_cube(mesh,
+                                               nx_divs, ny_divs, nz_divs,
+                                               0, length,
+                                               0, height,
+                                               0, width,
+                                               e_type);
     
     _delete_elems_from_bracket_mesh(opt, mesh);
 }
@@ -206,13 +212,13 @@ init_level_set_mesh(Opt& opt,
 
 template <typename Opt>
 void
-MAST::Examples::Bracket2DModel::
+MAST::Examples::Bracket3DModel::
 init_analysis_dirichlet_conditions(Opt& opt) {
     
     MAST::DirichletBoundaryCondition
     *dirichlet  = new MAST::DirichletBoundaryCondition;   // bottom boundary
-    dirichlet->init(0, opt._sys_init->vars());
-    opt._discipline->add_dirichlet_bc(0,  *dirichlet);
+    dirichlet->init(1, opt._sys_init->vars());
+    opt._discipline->add_dirichlet_bc(1,  *dirichlet);
     opt._boundary_conditions.insert(dirichlet);
     
     opt._discipline->init_system_dirichlet_bc(*opt._sys);
@@ -222,24 +228,24 @@ init_analysis_dirichlet_conditions(Opt& opt) {
 
 template <typename Opt>
 void
-MAST::Examples::Bracket2DModel::
+MAST::Examples::Bracket3DModel::
 init_indicator_dirichlet_conditions(Opt& opt) {
     
     MAST::DirichletBoundaryCondition
     *dirichlet  = new MAST::DirichletBoundaryCondition;   // bottom boundary
-    dirichlet->init(0, opt._indicator_sys_init->vars());
-    opt._indicator_discipline->add_dirichlet_bc(0,  *dirichlet);
+    dirichlet->init(1, opt._indicator_sys_init->vars());
+    opt._indicator_discipline->add_dirichlet_bc(1,  *dirichlet);
     opt._boundary_conditions.insert(dirichlet);
     
     opt._indicator_discipline->init_system_dirichlet_bc(*opt._indicator_sys);
-    opt._dirichlet_bc_ids.insert(0);
+    opt._dirichlet_bc_ids.insert(1);
 }
 
 
 
 template <typename Opt>
 void
-MAST::Examples::Bracket2DModel::init_structural_loads(Opt& opt) {
+MAST::Examples::Bracket3DModel::init_structural_loads(Opt& opt) {
     
     Real
     length  = opt._input("length", "length of domain along x-axis", 0.3),
@@ -256,7 +262,7 @@ MAST::Examples::Bracket2DModel::init_structural_loads(Opt& opt) {
     *p_load          = new MAST::BoundaryConditionBase(MAST::SURFACE_PRESSURE);
     
     p_load->add(*press_f);
-    opt._discipline->add_side_load(5, *p_load);
+    opt._discipline->add_side_load(7, *p_load);
     opt._boundary_conditions.insert(p_load);
 
     opt._field_functions.insert(press_f);
@@ -265,7 +271,7 @@ MAST::Examples::Bracket2DModel::init_structural_loads(Opt& opt) {
 
 template <typename Opt>
 MAST::BoundaryConditionBase&
-MAST::Examples::Bracket2DModel::init_structural_shifted_boudnary_load(Opt& opt,
+MAST::Examples::Bracket3DModel::init_structural_shifted_boudnary_load(Opt& opt,
                                                                       unsigned int bid) {
 
     class ZeroTraction: public MAST::FieldFunction<RealVectorX> {
@@ -295,7 +301,7 @@ MAST::Examples::Bracket2DModel::init_structural_shifted_boudnary_load(Opt& opt,
 
 template <typename Opt>
 void
-MAST::Examples::Bracket2DModel::init_indicator_loads(Opt& opt) {
+MAST::Examples::Bracket3DModel::init_indicator_loads(Opt& opt) {
     
     Real
     length  = opt._input("length", "length of domain along x-axis", 0.3),
@@ -311,7 +317,7 @@ MAST::Examples::Bracket2DModel::init_indicator_loads(Opt& opt) {
     *f_load          = new MAST::BoundaryConditionBase(MAST::HEAT_FLUX);
     
     f_load->add(*flux_f);
-    opt._indicator_discipline->add_side_load(5, *f_load);
+    opt._indicator_discipline->add_side_load(7, *f_load);
     opt._boundary_conditions.insert(f_load);
 
     opt._field_functions.insert(flux_f);
@@ -321,7 +327,7 @@ MAST::Examples::Bracket2DModel::init_indicator_loads(Opt& opt) {
 
 template <typename Opt>
 void
-MAST::Examples::Bracket2DModel::init_level_set_dvs(Opt& opt) {
+MAST::Examples::Bracket3DModel::init_level_set_dvs(Opt& opt) {
     
     libmesh_assert(opt._initialized);
     //
@@ -426,7 +432,7 @@ MAST::Examples::Bracket2DModel::init_level_set_dvs(Opt& opt) {
 
 template <typename Opt>
 void
-MAST::Examples::Bracket2DModel::init_simp_dvs(Opt& opt) {
+MAST::Examples::Bracket3DModel::init_simp_dvs(Opt& opt) {
     
     libmesh_assert(opt._initialized);
     
@@ -530,7 +536,7 @@ MAST::Examples::Bracket2DModel::init_simp_dvs(Opt& opt) {
 
 template <typename Opt>
 void
-MAST::Examples::Bracket2DModel::
+MAST::Examples::Bracket3DModel::
 _delete_elems_from_bracket_mesh(Opt& opt,
                                 libMesh::MeshBase &mesh) {
     
@@ -613,38 +619,42 @@ _delete_elems_from_bracket_mesh(Opt& opt,
                     facing_down = false;
             }
             
-            if (facing_right) mesh.boundary_info->add_side(elem, i, 4);
-            if (facing_down) mesh.boundary_info->add_side(elem, i, 5);
+            if (facing_right) mesh.boundary_info->add_side(elem, i, 6);
+            if (facing_down) mesh.boundary_info->add_side(elem, i, 7);
         }
     }
     
-    mesh.boundary_info->sideset_name(4) = "facing_right";
-    mesh.boundary_info->sideset_name(5) = "facing_down";
+    mesh.boundary_info->sideset_name(6) = "facing_right";
+    mesh.boundary_info->sideset_name(7) = "facing_down";
 }
 
 
 
 template <typename Opt>
 void
-MAST::Examples::Bracket2DModel::initialize_level_set_solution(Opt& opt) {
+MAST::Examples::Bracket3DModel::initialize_level_set_solution(Opt& opt) {
     
     Real
     length  = opt._input("length", "length of domain along x-axis", 0.3),
-    height  = opt._input("height", "length of domain along y-axis", 0.3);
-    
+    height  = opt._input("height", "length of domain along y-axis", 0.3),
+    width   = opt._input("width",  "length of domain along z-axis", 0.3);
+
     unsigned int
     nx_h    = opt._input("initial_level_set_n_holes_in_x",
                          "number of holes along x-direction for initial level-set field", 6),
     ny_h    = opt._input("initial_level_set_n_holes_in_y",
                          "number of holes along y-direction for initial level-set field", 6),
+    nz_h    = opt._input("initial_level_set_n_holes_in_z",
+                         "number of holes along z-direction for initial level-set field", 6),
     nx_m    = opt._input("level_set_nx_divs", "number of elements of level-set mesh along x-axis", 10),
-    ny_m    = opt._input("level_set_ny_divs", "number of elements of level-set mesh along y-axis", 10);
-    
-    MAST::Examples::LevelSetNucleationFunction2D
-    phi(0., 0., length, height, nx_m, ny_m, nx_h, ny_h);
+    ny_m    = opt._input("level_set_ny_divs", "number of elements of level-set mesh along y-axis", 10),
+    nz_m    = opt._input("level_set_nz_divs", "number of elements of level-set mesh along z-axis", 10);
+
+    MAST::Examples::LevelSetNucleationFunction3D
+    phi(0., 0., 0., length, height, width, nx_m, ny_m, nz_m, nx_h, ny_h, nz_h);
     
     opt._level_set_sys_init->initialize_solution(phi);
 }
 
 
-#endif // __mast_topology_2d_bracket_model__
+#endif // __mast_topology_3d_bracket_model__

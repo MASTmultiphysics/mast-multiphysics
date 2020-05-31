@@ -593,14 +593,14 @@ calculate_output_adjoint_sensitivity(const libMesh::NumericVector<Real>& X,
 
 void
 MAST::AssemblyBase::calculate_output_adjoint_sensitivity_multiple_parameters_no_direct
- (const libMesh::NumericVector<Real>&           X,
-  bool                                          if_localize_sol,
-  const libMesh::NumericVector<Real>&           dq_dX,
-  const std::vector<const MAST::FunctionBase*>& p_vec,
-  MAST::AssemblyElemOperations&                 elem_ops,
-  MAST::OutputAssemblyElemOperations&           output,
-  std::vector<Real>&                            sens) {
-
+(const libMesh::NumericVector<Real>&           X,
+ bool                                          if_localize_sol,
+ const libMesh::NumericVector<Real>&           dq_dX,
+ const std::vector<const MAST::FunctionBase*>& p_vec,
+ MAST::AssemblyElemOperations&                 elem_ops,
+ MAST::OutputAssemblyElemOperations&           output,
+ std::vector<Real>&                            sens) {
+    
     libmesh_assert(_discipline);
     libmesh_assert(_system);
     libmesh_assert_equal_to(sens.size(), p_vec.size());
@@ -613,7 +613,7 @@ MAST::AssemblyBase::calculate_output_adjoint_sensitivity_multiple_parameters_no_
      // add vectors before computing sensitivity
     for (unsigned int i=0; i<p_vec.size(); i++) nonlin_sys.add_sensitivity_rhs(i);
 
-        // first compute all the residual vectors without closing them. later we will close them
+    // first compute all the residual vectors without closing them. later we will close them
     // and then compute the sensitivity
     for (unsigned int i=0; i<p_vec.size(); i++) {
         
