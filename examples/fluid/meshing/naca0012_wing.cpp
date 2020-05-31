@@ -33,6 +33,7 @@
 #include "libmesh/elem.h"
 #include "libmesh/cell_prism6.h"
 #include "libmesh/cell_prism18.h"
+#include "libmesh/boundary_info.h"
 
 
 MAST::Examples::NACA0012WingMesh3D::NACA0012WingMesh3D() {

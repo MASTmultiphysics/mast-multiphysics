@@ -39,6 +39,7 @@
 #include "libmesh/mesh_generation.h"
 #include "libmesh/elem.h"
 #include "libmesh/node.h"
+#include "libmesh/boundary_info.h"
 
 
 

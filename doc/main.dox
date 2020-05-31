@@ -1,67 +1,62 @@
-/*!
- * \mainpage
- *
- * Multidisciplinary-design Adaptation and Sensitivity Toolkit (MAST) is being
- * developed at the [Computational Dynamics and Design Laboratory](http://bhatia.ae.msstate.edu)
- * through research efforts with a focus on design of nonlinear multiphysics systems
- * that exhibit dynamic responses.
- *
- *  Following is a brief list of capabilities for the software
- *  - Nonlinear heat conduction
- *    - Temperature dependent material properties
- *    - Radiation boundary conditions
- *    - Convection boundary conditions
- *    - 1D, 2D and 3D elements
- *    - Nonlinear steady-state analysis
- *    - Nonlinear transient analysis
- *  - Structural analysis
- *    - Thermoelastic loading
- *    - Surface pressure loading
- *    - 1D beam (Bernounlli and Timoshenko) and bar elements
- *    - 2D plate (DKT and Mindlin) membrane elements
- *    - Nonlinear von Karman strain
- *    - Nonlinear static analysis
- *    - Modal analysis (about nonlinear steady-state)
- *    - Nonlinear transient analysis
- *    - Preliminary ability to analyze NASTRAN input-deck parsed using [pyNastran](http://pynastran-git.readthedocs.io/en/latest/).
- *  - Fluid analysis
- *    - SU/PG discretization of compressible Euler equations
- *    - Small-disturbance linearized time-domain and frequency-domain solvers for Euler equations
- *    - SU/PG discretization of compressible Navier-Stokes equations (experimental).
- *  - Fluid-structure interaction
- *    - Small-disturbance flutter solution through coupling of structural and fluid discretizations.
- *    - Time-accurate fluid-structure interaction (experimental).
- *  - Aeroelasticity
- *    - U-g flutter solver with mode tracking
- *    - Time-domain flutter solver for piston-theory aerodynamics
- *  - Level-sets
- *    - Hamilton-Jacobi solver 
- *  - Optimization
- *    - Level-set based topology optimization
- *    - Sensitivity analysis for almost all analysis capabilities mentioned above
- *    - Interfaces to optimizers (GCMMA, DOT, NPSOL)
- *
- *
- *  MAST leverages following open-source libraries to enable efficient
- *  high-performance computations:
- *   - [libMesh](http://libmesh.github.io) for finite element analysis capabilities,
- *   - [PETSc](https://www.mcs.anl.gov/petsc/) for linear and nonlinear solvers.
- *   - [SLEPc](http://slepc.upv.es) for eigensolvers,
- *   - [Eigen](http://eigen.tuxfamily.org) for dense matrix and vector operations.
- *
- *  # Contact
- *
- * This discussion group is used to communicate on topics and issues pertaining to MAST:
- *
- * https://groups.google.com/forum/#!forum/mast-multiphysics
- *
- *  # Disclaimer
- *
- * MAST home-page and software are provided as is. Therefore, the MAST
- * authors cannot be held responsible for any harm resulting from the use
- * of the homepage or the software. In particular, the MAST authors cannot be
- * held responsible for content of web pages of other authors linked to or
- * from the MAST homepage tree.
- *
+/**
+\mainpage Overview
+
+The Multidisciplinary-design Adaptation and Sensitivity Toolkit (MAST) is a sensitivity-enabled, multiphysics FEA tool developed to support computational design and engineering analysis.
+
+In addition to analysis of complex, nonlinear physics on large built-up models, MAST supports efficient analytical gradient/sensitivity calculation using direct and adjoint methods. As a result, it is well suited for gradient-based multidisciplinary design optimization processes.
+
+MAST is developed at the [Computational Dynamics and Design Laboratory](http://bhatia.ae.msstate.edu) at Mississippi State University in collaboration with the [Air Force Research Laboratory (AFRL)](https://www.afresearchlab.com) Multidisciplinary Science and Technology Center (MSTC). Many of the capabilities in MAST have been developed through research efforts focusing on design of nonlinear, multiphysics systems that exhibit dynamic responses.
+
+A brief list of capabilities for the software is:
+- 1D, 2D, and 3D analysis in multiple disciplines
+- Nonlinear steady-state and transient analysis
+- Heat Transfer
+  - 1D, 2D, and 3D heat conduction elements
+  - Nonlinear heat conduction
+  - Radiation and convection boundary conditions
+  - Temperature-dependent material properties
+- Structures (Elasticity)
+  - 1D beam (Euler-Bernoulli and Timoshenko) and bar/rod elements
+  - 2D plate (DKT and Mindlin) elements
+  - Multiple 3D elements including hexahedral (brick) and tetrahedral elements
+  - Thermoelastic loading
+  - Surface pressure and concentrated forces
+  - Single-point boundary conditions
+  - Nonlinear von Karman strain
+  - Nonlinear static and transient analysis
+  - Modal vibration analysis (including about a nonlinear equilibrium)
+  - Bifurcation buckling
+  - Advanced continuation and load-stepping in nonlinear analysis
+  - Ability to read meshes defined in Nastran Bulk Data format using [pyNastran](http://pynastran-git.readthedocs.io/en/latest/)
+- Fluids
+  - SU/PG discretization of compressible Euler equations
+  - Small-disturbance linearized time-domain and frequency-domain solvers for Euler equations
+  - SU/PG discretization of compressible Navier-Stokes equations (experimental).
+- Fluid-structure Interaction (FSI)
+  - Small-disturbance flutter solution through coupling of structural and fluid discretizations
+  - Time-accurate fluid-structure interaction (experimental)
+- Aeroelasticity
+  - U-g flutter solver with mode tracking
+  - Time-domain flutter solver for piston-theory aerodynamics
+- Analytical sensitivity analysis for nearly all analysis capabilities
+- Interfaces to multiple optimizers (GCMMA, DOT, NPSOL)
+- Topology Optimization (TO)
+  - Level-set based approaches
+  - Density-based approaches
+
+MAST leverages the following open-source libraries to enable efficient high-performance computations:
+  - [libMesh](http://libmesh.github.io) for finite element analysis capabilities,
+  - [PETSc](https://www.mcs.anl.gov/petsc/) for linear and nonlinear solvers.
+  - [SLEPc](http://slepc.upv.es) for eigensolvers,
+  - [Eigen](http://eigen.tuxfamily.org) for dense matrix and vector operations.
+
+# Contact
+You can contact the MAST developers on topics/issues pertaining to MAST by:
+  - [Opening a GitHub Issue](https://github.com/MASTmultiphysics/mast-multiphysics/issues)
+  - [Google Discussion Group](https://groups.google.com/forum/#!forum/mast-multiphysics)
+
+# Disclaimer
+The MAST software and documentation are provided as is. Therefore the MAST authors cannot be held responsible for any harm resulting from the use of the software or the documentation. In particular, the MAST authors cannot be held responsible for content of web pages of other authors linked to/from the MAST source or documentation.
+
 */
 

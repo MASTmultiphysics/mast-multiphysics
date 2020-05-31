@@ -24,6 +24,7 @@
 // libMesh includes
 #include "libmesh/mesh_serializer.h"
 #include "libmesh/parallel_mesh.h"
+#include "libmesh/boundary_info.h"
 
 
 void

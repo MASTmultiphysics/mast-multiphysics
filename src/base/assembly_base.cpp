@@ -609,10 +609,10 @@ MAST::AssemblyBase::calculate_output_adjoint_sensitivity_multiple_parameters_no_
 
     // zero the sensitivity data first
     std::fill(sens.begin(), sens.end(), 0.);
-    
-    for (unsigned int i=0; i<p_vec.size(); i++)
-        nonlin_sys.add_sensitivity_rhs(i);
-    
+
+     // add vectors before computing sensitivity
+    for (unsigned int i=0; i<p_vec.size(); i++) nonlin_sys.add_sensitivity_rhs(i);
+
     // first compute all the residual vectors without closing them. later we will close them
     // and then compute the sensitivity
     for (unsigned int i=0; i<p_vec.size(); i++) {

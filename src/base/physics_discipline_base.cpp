@@ -31,6 +31,7 @@
 #include "libmesh/fe_interface.h"
 #include "libmesh/dirichlet_boundaries.h"
 #include "libmesh/elem.h"
+#include "libmesh/boundary_info.h"
 
 
 void

@@ -1,7 +1,5 @@
-
-/*!
-
-\page InstallationPage Installation instructions
+/**
+\page Install Installation
 
 MAST runs on various flavors of Unix and can leverage MPI for
 distributed memory parallelism. The required list of dependencies includes
@@ -32,7 +30,8 @@ listed above.
 Specific instructions for installation are provided in these pages
 - \subpage SourceInstall 
 - \subpage SpackInstall
-
+- \subpage InstallUbuntu2004Apt
+- \subpage InstallUbuntu1910Apt
 
 */
 
