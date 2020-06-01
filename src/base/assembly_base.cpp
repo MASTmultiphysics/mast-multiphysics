@@ -556,7 +556,7 @@ Real
 MAST::AssemblyBase::
 calculate_output_adjoint_sensitivity(const libMesh::NumericVector<Real>& X,
                                      bool if_localize_sol,
-                                     const libMesh::NumericVector<Real>& dq_dX,
+                                     const libMesh::NumericVector<Real>& adj_sol,
                                      const MAST::FunctionBase& p,
                                      MAST::AssemblyElemOperations&       elem_ops,
                                      MAST::OutputAssemblyElemOperations& output,
@@ -575,7 +575,7 @@ calculate_output_adjoint_sensitivity(const libMesh::NumericVector<Real>& X,
     this->clear_elem_operation_object();
 
     Real
-    dq_dp = dq_dX.dot(dres_dp);
+    dq_dp = adj_sol.dot(dres_dp);
 
     if (include_partial_sens) {
 
@@ -595,7 +595,7 @@ void
 MAST::AssemblyBase::calculate_output_adjoint_sensitivity_multiple_parameters_no_direct
 (const libMesh::NumericVector<Real>&           X,
  bool                                          if_localize_sol,
- const libMesh::NumericVector<Real>&           dq_dX,
+ const libMesh::NumericVector<Real>&           adj_sol,
  const std::vector<const MAST::FunctionBase*>& p_vec,
  MAST::AssemblyElemOperations&                 elem_ops,
  MAST::OutputAssemblyElemOperations&           output,
@@ -634,7 +634,7 @@ MAST::AssemblyBase::calculate_output_adjoint_sensitivity_multiple_parameters_no_
         libMesh::NumericVector<Real>
         &dres_dp = nonlin_sys.add_sensitivity_rhs(i);
         dres_dp.close();
-        sens[i] = dq_dX.dot(dres_dp);
+        sens[i] = adj_sol.dot(dres_dp);
     }
 }
 
