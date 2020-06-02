@@ -310,7 +310,7 @@ public:
         _level_set_fetype      = libMesh::FEType(libMesh::FIRST, libMesh::LAGRANGE);
         _level_set_eq_sys      = new libMesh::EquationSystems(*_level_set_mesh);
         _level_set_sys         = &(_level_set_eq_sys->add_system<MAST::NonlinearSystem>("level_set"));
-        _level_set_sys->extra_quadrature_order = 4;
+        _level_set_sys->extra_quadrature_order = 0;
         _level_set_sys_init    = new MAST::LevelSetSystemInitialization(*_level_set_sys,
                                                                         _level_set_sys->name(),
                                                                         _level_set_fetype);
@@ -371,6 +371,7 @@ public:
         penalty   = _input("rho_penalty", "penalty parameter of volume fraction", 4.),
         rhoval    = _input("rho", "material density", 2700.),
         nu_val    = _input("nu", "Poisson's ratio",  0.33),
+        alpha_val = _input("alpha", "coefficient of thermal expansion", 1.5e-5),
         kval      = _input("k", "thermal conductivity",  1.e-2),
         cpval     = _input("cp", "thermal capacitance",  864.);
         
@@ -379,13 +380,16 @@ public:
         *rho       = new MAST::Parameter("rho",      rhoval),
         *nu        = new MAST::Parameter("nu",       nu_val),
         *k         = new MAST::Parameter("k",          kval),
-        *cp        = new MAST::Parameter("cp",        cpval);
+        *cp        = new MAST::Parameter("cp",        cpval),
+        *alpha     = new MAST::Parameter("alpha_expansion", alpha_val);
+        
         
         MAST::ConstantFieldFunction
         *rho_f   = new MAST::ConstantFieldFunction(  "rho",    *rho),
         *nu_f    = new MAST::ConstantFieldFunction(   "nu",     *nu),
         *k_f     = new MAST::ConstantFieldFunction( "k_th",      *k),
-        *cp_f    = new MAST::ConstantFieldFunction(   "cp",     *cp);
+        *cp_f    = new MAST::ConstantFieldFunction(   "cp",     *cp),
+        *alpha_f = new MAST::ConstantFieldFunction("alpha_expansion",     *alpha);
 
         _Ef      = new ElasticityFunction(Eval, rho_min, penalty, *_vf);
 
@@ -393,11 +397,13 @@ public:
         _parameters[   nu->name()]     = nu;
         _parameters[    k->name()]     = k;
         _parameters[   cp->name()]     = cp;
+        _parameters[alpha->name()]     = alpha;
         _field_functions.insert(_Ef);
         _field_functions.insert(rho_f);
         _field_functions.insert(nu_f);
         _field_functions.insert(k_f);
         _field_functions.insert(cp_f);
+        _field_functions.insert(alpha_f);
 
         _m_card = new MAST::IsotropicMaterialPropertyCard;
         _m_card->add(*_Ef);
@@ -405,6 +411,7 @@ public:
         _m_card->add(*nu_f);
         _m_card->add(*k_f);
         _m_card->add(*cp_f);
+        _m_card->add(*alpha_f);
     }
 
     
@@ -470,8 +477,8 @@ public:
         xmin.resize(_n_vars);
         xmax.resize(_n_vars);
         
-        std::fill(xmin.begin(), xmin.end(),   -1.e1);
-        std::fill(xmax.begin(), xmax.end(),    1.e1);
+        std::fill(xmin.begin(), xmin.end(),   -1.e0);
+        std::fill(xmax.begin(), xmax.end(),    1.e0);
 
         //
         // now, check if the user asked to initialize dvs from a previous file

@@ -67,7 +67,8 @@ MAST::LevelSetElementBase::internal_residual (bool request_jacobian,
     
     libmesh_assert(_phi_vel);
     
-    std::unique_ptr<MAST::FEBase> fe(_elem.init_fe(true, false));
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_fe(true, false,
+                                                   _system.system().extra_quadrature_order));
     
     const std::vector<Real>& JxW           = fe->get_JxW();
     const std::vector<libMesh::Point>& xyz = fe->get_xyz();
@@ -162,7 +163,8 @@ MAST::LevelSetElementBase::velocity_residual (bool request_jacobian,
 
     libmesh_assert(_phi_vel);
 
-    std::unique_ptr<MAST::FEBase> fe(_elem.init_fe(true, false));
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_fe(true, false,
+                                                   _system.system().extra_quadrature_order));
 
     const std::vector<Real>& JxW           = fe->get_JxW();
     const std::vector<libMesh::Point>& xyz = fe->get_xyz();
@@ -312,7 +314,8 @@ velocity_residual_sensitivity (bool request_jacobian,
 Real
 MAST::LevelSetElementBase::volume() {
     
-    std::unique_ptr<MAST::FEBase> fe(_elem.init_fe(true, false));
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_fe(true, false,
+                                                   _system.system().extra_quadrature_order));
 
     const std::vector<Real>& JxW           = fe->get_JxW();
     const unsigned int
@@ -343,7 +346,8 @@ MAST::LevelSetElementBase::volume() {
 Real
 MAST::LevelSetElementBase::homogenized_volume_fraction(Real delta) {
     
-    std::unique_ptr<MAST::FEBase> fe(_elem.init_fe(true, false));
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_fe(true, false,
+                                                   _system.system().extra_quadrature_order));
     
     const std::vector<Real>& JxW           = fe->get_JxW();
     const unsigned int
@@ -378,7 +382,8 @@ MAST::LevelSetElementBase::homogenized_volume_fraction(Real delta) {
 Real
 MAST::LevelSetElementBase::homogenized_volume_fraction_sensitivity(Real delta) {
     
-    std::unique_ptr<MAST::FEBase> fe(_elem.init_fe(true, false));
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_fe(true, false,
+                                                   _system.system().extra_quadrature_order));
     
     const std::vector<Real>& JxW           = fe->get_JxW();
     const unsigned int
@@ -415,7 +420,8 @@ MAST::LevelSetElementBase::homogenized_volume_fraction_sensitivity(Real delta) {
 Real
 MAST::LevelSetElementBase::perimeter(Real d) {
     
-    std::unique_ptr<MAST::FEBase> fe(_elem.init_fe(true, false));
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_fe(true, false,
+                                                   _system.system().extra_quadrature_order));
     
     const std::vector<Real>& JxW           = fe->get_JxW();
     const unsigned int
@@ -447,7 +453,8 @@ MAST::LevelSetElementBase::perimeter(Real d) {
 Real
 MAST::LevelSetElementBase::perimeter_sensitivity(Real d) {
     
-    std::unique_ptr<MAST::FEBase> fe(_elem.init_fe(true, false));
+    std::unique_ptr<MAST::FEBase> fe(_elem.init_fe(true, false,
+                                                   _system.system().extra_quadrature_order));
     
     const std::vector<Real>& JxW           = fe->get_JxW();
     const unsigned int
