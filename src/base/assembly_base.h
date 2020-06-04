@@ -290,13 +290,13 @@ namespace MAST {
         
         /*!
          *   Evaluates the total sensitivity of \p output wrt \p p using
-         *   the adjoint solution provided in \p dq_dX for a linearization
+         *   the adjoint solution provided in \p adj_sol for a linearization
          *   about solution \p X.
          */
         virtual Real
         calculate_output_adjoint_sensitivity(const libMesh::NumericVector<Real>& X,
                                              bool if_localize_sol,
-                                             const libMesh::NumericVector<Real>& dq_dX,
+                                             const libMesh::NumericVector<Real>& adj_sol,
                                              const MAST::FunctionBase& p,
                                              MAST::AssemblyElemOperations&       elem_ops,
                                              MAST::OutputAssemblyElemOperations& output,
@@ -304,7 +304,7 @@ namespace MAST {
 
         
         /*!
-         *   Evaluates the dot product between  \p dq_dX and sensitivity of residual about \p X for multiple
+         *   Evaluates the dot product between  \p adj_sol and sensitivity of residual about \p X for multiple
          *   parameter_vectors \p p_vec and returns the results in \p sens. Note that partial derivative of output
          *   with respect to design variables will not be included.
          *   The size of \p p_vec and \p sens should be the same and the results
@@ -314,7 +314,7 @@ namespace MAST {
         calculate_output_adjoint_sensitivity_multiple_parameters_no_direct
         (const libMesh::NumericVector<Real>&           X,
          bool                                          if_localize_sol,
-         const libMesh::NumericVector<Real>&           dq_dX,
+         const libMesh::NumericVector<Real>&           adj_sol,
          const std::vector<const MAST::FunctionBase*>& p_vec,
          MAST::AssemblyElemOperations&                 elem_ops,
          MAST::OutputAssemblyElemOperations&           output,

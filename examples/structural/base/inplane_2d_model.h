@@ -85,6 +85,10 @@ struct Inplane2DModel {
     
     template <typename Opt>
     static void
+    init_thermoelastic_loads(Opt& opt);
+
+    template <typename Opt>
+    static void
     init_indicator_loads(Opt& opt);
     
     template <typename Opt>
@@ -297,6 +301,41 @@ MAST::Examples::Inplane2DModel::init_structural_loads(Opt& opt) {
 
     opt._field_functions.insert(press_f);
 }
+
+
+template <typename Opt>
+void
+MAST::Examples::Inplane2DModel::init_thermoelastic_loads(Opt& opt) {
+    
+    Real
+    T_val      = opt._input(    "temperature",           "temperature for thermoelastic load",   0.),
+    T_ref_val  = opt._input("ref_temperature", "reference temperature for thermoelastic load",   0.);
+
+    MAST::Parameter
+    *temperature = new MAST::Parameter("T",     T_val),
+    *ref_temp    = new MAST::Parameter("T_ref", T_ref_val);
+
+    MAST::ConstantFieldFunction
+    *temperature_f = new MAST::ConstantFieldFunction(    "temperature", *temperature),
+    *ref_temp_f    = new MAST::ConstantFieldFunction("ref_temperature",    *ref_temp);
+    
+    // initialize the load
+    MAST::BoundaryConditionBase
+    *t_load          = new MAST::BoundaryConditionBase(MAST::TEMPERATURE);
+
+    t_load->add(*temperature_f);
+    t_load->add(*ref_temp_f);
+    opt._discipline->add_volume_load(0, *t_load);
+
+    opt._boundary_conditions.insert(t_load);
+
+    opt._parameters[temperature->name()] = temperature;
+    opt._parameters[ref_temp->name()]    = ref_temp;
+    opt._field_functions.insert(temperature_f);
+    opt._field_functions.insert(ref_temp_f);
+}
+
+
 
 
 template <typename Opt>

@@ -296,6 +296,7 @@ public:
         penalty   = _input("rho_penalty", "SIMP modulus of elasticity penalty", 4.),
         rhoval    = _input("rho", "material density", 2700.),
         nu_val    = _input("nu", "Poisson's ratio",  0.33),
+        alpha_val = _input("alpha", "coefficient of thermal expansion", 1.5e-5),
         kval      = _input("k", "thermal conductivity",  1.e-2),
         cpval     = _input("cp", "thermal capacitance",  864.);
         
@@ -304,13 +305,15 @@ public:
         *rho       = new MAST::Parameter("rho",      rhoval),
         *nu        = new MAST::Parameter("nu",       nu_val),
         *k         = new MAST::Parameter("k",          kval),
-        *cp        = new MAST::Parameter("cp",        cpval);
-        
+        *cp        = new MAST::Parameter("cp",        cpval),
+        *alpha     = new MAST::Parameter("alpha_expansion", alpha_val);
+
         MAST::ConstantFieldFunction
-        *rho_f   = new MAST::ConstantFieldFunction(  "rho",    *rho),
-        *nu_f    = new MAST::ConstantFieldFunction(   "nu",     *nu),
-        *k_f     = new MAST::ConstantFieldFunction( "k_th",      *k),
-        *cp_f    = new MAST::ConstantFieldFunction(   "cp",     *cp);
+        *rho_f   = new MAST::ConstantFieldFunction(  "rho",                 *rho),
+        *nu_f    = new MAST::ConstantFieldFunction(   "nu",                  *nu),
+        *k_f     = new MAST::ConstantFieldFunction( "k_th",                   *k),
+        *cp_f    = new MAST::ConstantFieldFunction(   "cp",                  *cp),
+        *alpha_f = new MAST::ConstantFieldFunction("alpha_expansion",     *alpha);
 
         _Ef      = new ElasticityFunction(Eval, _rho_min, penalty, *_density_function);
         
@@ -318,11 +321,13 @@ public:
         _parameters[   nu->name()]     = nu;
         _parameters[    k->name()]     = k;
         _parameters[   cp->name()]     = cp;
+        _parameters[alpha->name()]     = alpha;
         _field_functions.insert(_Ef);
         _field_functions.insert(rho_f);
         _field_functions.insert(nu_f);
         _field_functions.insert(k_f);
         _field_functions.insert(cp_f);
+        _field_functions.insert(alpha_f);
 
         _m_card = new MAST::IsotropicMaterialPropertyCard;
         _m_card->add(*_Ef);
@@ -330,6 +335,7 @@ public:
         _m_card->add(*nu_f);
         _m_card->add(*k_f);
         _m_card->add(*cp_f);
+        _m_card->add(*alpha_f);
     }
 
     
@@ -415,7 +421,7 @@ public:
         xmin.resize(_n_vars);
         xmax.resize(_n_vars);
         
-        std::fill(xmin.begin(), xmin.end(),    _rho_min);
+        std::fill(xmin.begin(), xmin.end(),    0.);
         std::fill(xmax.begin(), xmax.end(),    1.e0);
 
         //
@@ -927,7 +933,7 @@ public:
         _sys->comm().sum(g2);
 
         for (unsigned int i=0; i<_n_vars; i++)
-            grads[i] = -(g1[i] + g2[i]);
+            grads[i] = -g1[i] + g2[i];
 
         nonlinear_assembly.clear_elem_parameter_dependence_object();
     }
@@ -1097,6 +1103,7 @@ public:
 
         _init_material();
         T::init_structural_loads(*this);
+        T::init_thermoelastic_loads(*this);
         _init_section_property();
         _initialized = true;
         
