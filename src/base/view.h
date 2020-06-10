@@ -2,6 +2,9 @@
 #ifndef _mast_view_h_
 #define _mast_view_h_
 
+// C++ includes
+#include <map>
+
 // MAST includes
 #include "base/mast_data_types.h"
 
@@ -76,45 +79,99 @@ struct EigenViewType<ScalarType, 1> {
 
 
 
+
+class ViewBase {
+  
+public:
+    ViewBase(const std::string& nm, const std::vector<uint_type>& sizes):
+    _name        (nm),
+    _dim         (sizes.size()),
+    _size        (sizes) {
+        
+        // this should be a vector or higher dimensional data
+        libmesh_assert_greater(_dim, 0);
+        
+        _slice_size.resize(_dim+1, 1);
+        
+        for (uint_type i=_dim-1; i>=0; i++)
+            _slice_size[i] = _slice_size[i+1]*_size[i];
+    }
+    
+    virtual ~ViewBase() {}
+
+    inline const std::string& name() const { return _name;}
+
+    virtual inline void set_outer_sizes(const std::vector<uint_type>& d)
+    {
+        libmesh_assert_equal_to(_outside_size.size(), 0);
+        _outside_size = d;
+        _total_size.resize(d.size()+_size.size(), 0);
+        for (uint_type i=0; i<d.size(); i++) _total_size[i] = d[i];
+        for (uint_type i=0; i<_size.size(); i++) _total_size[i+d.size()] = _size[i];
+    }
+
+    inline uint_type array_index(const std::vector<uint_type>& indices) {
+
+        libmesh_assert_equal_to(indices.size(), _dim);
+        
+        uint_type n = 0;
+        for (uint_type i=0; i<_dim; i++) {
+            libmesh_assert_less(indices[i], _size[i]);
+            n += indices[i] * _slice_size[i+1];
+        }
+
+        libmesh_assert_less(n, _slice_size[0]);
+        
+        return n;
+    }
+    
+    inline virtual void init() = 0;
+    
+protected:
+
+    const std::string            _name;
+    const uint_type              _dim;
+    const std::vector<uint_type> _size;
+    std::vector<uint_type>       _slice_size;
+    std::vector<uint_type>       _outside_size;
+    std::vector<uint_type>       _total_size;
+};
+
+
 template <typename ScalarType>
-class View {
+class View: public MAST::ViewBase {
 
 public:
     
-    View(const std::string& nm, uint_type dim, uint_type n1, ...):
-    _name        (nm),
-    _dim         (dim),
-    _dim_size    (nullptr),
+    View(const std::string& nm, const std::vector<uint_type>& sizes):
+    MAST::ViewBase(nm, sizes),
     _array       (nullptr) {
-        
-        _dim_size   = new uint_type[dim];
 
-        va_list args;
-        va_start (args, n1);
+    }
 
-        uint_type
-        n = 1;
-        
-        for (uint_type i=0; i<dim; i++) {
-            
-            _dim_size[i] = va_arg(args, uint_type);
-            n *= _dim[i];
-        }
+    virtual ~View() { delete _array;}
 
-        _array = new ScalarType[n];
+    virtual inline void init () override {
+
+        libmesh_assert_msg(!_array, "View array already initialized.");
         
-        va_end(args);
-            
-        for (uint_type i=0; i<n; i++)
+        _array = new ScalarType[_slice_size[0]];
+        
+        for (uint_type i=0; i<_slice_size[0]; i++)
             _array[i] = ScalarType{};
     }
-
-    virtual ~View()
-    {
-        delete _dim_size;
-        delete _array;
-    }
     
+    inline ScalarType& operator() (const std::vector<uint_type>& indices) {
+        
+        libmesh_assert_equal_to(indices.size(), _dim);
+        return _array[array_index(indices)];
+    }
+
+    inline const ScalarType operator() (const std::vector<uint_type>& indices) const {
+        
+        libmesh_assert_equal_to(indices.size(), _dim);
+        return _array[array_index(indices)];
+    }
     
     template <typename ViewType> inline ViewType get_view()
     { return MAST::EigenViewType<ScalarType, _dim>::create_view(_dim, _array);}
@@ -128,16 +185,55 @@ public:
     template <typename ViewType> inline const ViewType get_view_slice(const std::vector<uint_type>& idx) const
     { return MAST::EigenViewType<ScalarType, _dim>::create_view_slice<idx.size()>(idx, _dim, _array);}
 
-    
 protected:
     
-    std::string       _name;
-    uint_type         _dim;
-    uint_type        *_dim_size;
-    ScalarType       *_array;
+    ScalarType                  *_array;
 };
 
 
+class ComputationData {
+  
+public:
+    
+    ComputationData(){}
+    
+    virtual ~ComputationData() {}
+    
+    inline void add_data(MAST::ViewBase& v) {
+
+        const std::string& nm = v.name();
+        
+        libmesh_assert_msg(_data_map.find(nm) == _data_map.end(), "Duplicate data name: "+nm);
+        
+        _data_map[nm] = &v;
+    }
+
+     template <typename ScalarType> MAST::View<ScalarType>& get_data(const std::string& nm) {
+        
+        std::map<std::string, MAST::ViewBase*>::iterator
+        it  = _data_map.find(nm),
+        end = _data_map.end();
+        
+        libmesh_assert_msg( it != end, "Invalid data name: "+nm);
+        return static_cast<MAST::View<ScalarType>&>(*it->second);
+    }
+    
+    virtual inline void set_outer_sizes_and_initialize(const std::vector<uint_type>& d)
+    {
+        std::map<std::string, MAST::ViewBase*>::iterator
+        it  = _data_map.begin(),
+        end = _data_map.end();
+
+        for ( ; it != end; it++) {
+            it->second->set_outer_sizes(d);
+            it->second->init();
+        }
+    }
+
+protected:
+    
+    std::map<std::string, ViewBase*> _data_map;
+};
 
 }
 

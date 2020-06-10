@@ -8,53 +8,43 @@
 
 namespace MAST {
 
-template <typename ScalarType>
-struct EigenFEShapeDataViewTraits {
-    
-    using xyz_view_type     = Eigen::Matrix<ScalarType, Dynamic, 3>;
-    using detJ_view_type    = Eigen::Matrix<ScalarType, Dynamic, 1>;
-    using detJxW_view_type  = Eigen::Matrix<ScalarType, Dynamic, 1>;
-    using dx_dxi_view_type  = Eigen::Matrix<ScalarType, Dynamic, 9>;
-    using dxi_dx_view_type  = Eigen::Matrix<ScalarType, Dynamic, 9>;
-    using dphi_dx_view_type = Eigen::Matrix<ScalarType, Dynamic, Dynamic>;
-};
 
-
-
-template <typename ScalarType>
-struct EigenFESolDataViewTraits {
-    
-    using coefficient_view_type = Eigen::Matrix<ScalarType, Dynamic, 1>;
-    using u_view_type           = Eigen::Matrix<ScalarType, Dynamic, Dynamic>;
-    using du_dx_view_type       = Eigen::Matrix<ScalarType, Dynamic, Dynamic>;
-};
-
-
-
-
-template <typename ScalarType, typename ContextType>
+template <typename ScalarType, typename Traits, typename ContextType>
 class FEBasis: ComputeKernelBase<ContextType> {
     
 public:
 
     using basis_scalar_type = ScalarType;
     
-    FEBasis(const std::string& nm):
-    MAST::ComputeKernelBase<ContextType>(nm),
+    FEBasis(const std::string& nm, const bool executable):
+    MAST::ComputeKernelBase<ContextType>(nm, executable),
     _quadrature   (nullptr)
     { }
     virtual ~FEBasis() {}
 
     virtual inline void set_quadrature(const MAST::Quadrature<ScalarType, ContextType>& q)
     { _quadrature = &q;}
+    
     virtual inline uint_type dim() const = 0;
     virtual inline uint_type order() const = 0;
     virtual inline uint_type n_basis() const = 0;
-    virtual inline ScalarType qp_coord(uint_type qp, uint_type x_i) const
-    { return _quadrature->qp_coord(qp, x_i); }
-    virtual inline ScalarType phi(uint_type qp, uint_type phi_i) const = 0;
-    virtual inline ScalarType dphi_dxi(uint_type qp, uint_type phi_i, uint_type xi_i) const = 0;
     
+    virtual inline uint_type n_q_points() const {
+        
+        libmesh_assert_msg(_quadrature, "Quadrature not initialized.");
+        return _quadrature->n_points();
+    }
+    
+    virtual inline ScalarType qp_coord(uint_type qp, uint_type x_i) const
+    {
+        libmesh_assert_msg(_quadrature, "Quadrature not initialized.");
+        return _quadrature->qp_coord(qp, x_i);
+    }
+    
+    virtual inline ScalarType phi(uint_type qp, uint_type phi_i) const = 0;
+    
+    virtual inline ScalarType dphi_dxi(uint_type qp, uint_type phi_i, uint_type xi_i) const = 0;
+
 protected:
     
     const MAST::Quadrature<ScalarType, ContextType> *_quadrature;
@@ -62,16 +52,16 @@ protected:
 
 
 /*! serves as a wrapper around libMesh FEBase object to provide */
-template <typename ContextType>
-class libMeshFE: public FEBasis<Real, ContextType> {
-                                
+template <typename ScalarType, typename ContextType>
+class libMeshFE: public FEBasis<ScalarType, EigenTraits, ContextType> {
+    
 public:
     
-    using scalar_type       = Real;
-    using basis_scalar_type = typename MAST::FEBasis<Real, ContextType>::basis_scalar_type;
+    using scalar_type       = ScalarType;
+    using basis_scalar_type = typename MAST::FEBasis<ScalarType, EigenTraits, ContextType>::basis_scalar_type;
     
     libMeshFE(const std::string& nm):
-    MAST::FEBasis<scalar_type, ContextType>(nm),
+    MAST::FEBasis<scalar_type, EigenTraits, ContextType>(nm, false),
     _compute_dphi_dxi   (false),
     _fe                 (nullptr)
     { }
@@ -80,27 +70,52 @@ public:
     inline void set_compute_dphi_dxi(bool f) { _compute_dphi_dxi = f;}
     
     virtual inline void reinit(const libMesh::FEBase& fe) {
+        
         _fe = &fe;
         const libMesh::FEMap& m = fe.get_fe_map();
-        this->_dphi_dxi =
-        {&m.get_dphidxi_map(), &m.get_dphideta_map(), &m.get_dphidzeta_map()};
+        
+        if (_compute_dphi_dxi)
+            this->_dphi_dxi = {&m.get_dphidxi_map(), &m.get_dphideta_map(), &m.get_dphidzeta_map()};
+        else
+            _dphi_dxi.clear();
     }
+    
+    virtual inline uint_type dim() const override {
+        
+        libmesh_assert_msg(_fe, "FE not initialized.");
 
-    virtual inline void execute(ContextType& c) override { }
+        return _fe->get_dim();
+    }
     
-    virtual inline uint_type dim() const override { return _fe->get_dim();}
+    virtual inline uint_type order() const override {
+
+        libmesh_assert_msg(_fe, "FE not initialized.");
+
+        return _fe->get_order();
+    }
     
-    virtual inline uint_type order() const override {return _fe->get_order();}
-    
-    virtual inline uint_type n_basis() const override { return _fe->n_shape_functions();}
+    virtual inline uint_type n_basis() const override {
+
+        libmesh_assert_msg(_fe, "FE not initialized.");
+        
+        return _fe->n_shape_functions();
+    }
     
     virtual inline basis_scalar_type phi(uint_type qp, uint_type phi_i) const override
-    {return _fe->get_phi()[phi_i][qp];}
+    {
+        libmesh_assert_msg(_fe, "FE not initialized.");
+        
+        return _fe->get_phi()[phi_i][qp];
+    }
     
     virtual inline basis_scalar_type
     dphi_dxi(uint_type qp, uint_type phi_i, uint_type xi_i) const override
-    { return (*_dphi_dxi[xi_i])[phi_i][qp];}
-
+    {
+        libmesh_assert_msg(_compute_dphi_dxi, "FE not initialized with derivatives.");
+        
+        return (*_dphi_dxi[xi_i])[phi_i][qp];
+    }
+    
 protected:
     
     bool _compute_dphi_dxi;

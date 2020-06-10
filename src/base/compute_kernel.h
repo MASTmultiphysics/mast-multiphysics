@@ -20,103 +20,80 @@
 
 namespace MAST {
 
-class ComputeKernelDataBase {
 
-public:
+template <typename ValueType>
+struct IsScalarType {
+    using type = std::false_type;
+};
 
-    ComputeKernelDataBase(const std::string& nm,
-                          const std::vector<uint_type>& d):
-    _name                 (nm),
-    _dim                  (d)
-    { }
 
-    ComputeKernelDataBase(MAST::ComputeKernelDataBase& d):
-    _name                 (d._name),
-    _dim                  (d._dim)
-    { }
+template <>
+struct IsScalarType<Real> {
+    using type = std::true_type;
+};
 
-    virtual ~ComputeKernelDataBase() {}
-    
-    inline uint_type n_dim() const { return _dim.size();}
 
-protected:
-
-    const std::string            _name;
-    const std::vector<uint_type> _dim;
+template <>
+struct IsScalarType<std::complex<Real>> {
+    using type = std::true_type;
 };
 
 
 
-template <typename ScalarType>
-class IndexableComputeKernelData: public MAST::ComputeKernelDataBase {
-    
-public:
-    
-    IndexableComputeKernelData(const std::string& nm,
-                               const std::vector<uint_type>& d):
-    MAST::ComputeKernelDataBase(nm, d),
-    _view                (nullptr)
-    { }
-    
-    IndexableComputeKernelData(MAST::IndexableComputeKernelData<ScalarType>& d):
-    MAST::ComputeKernelDataBase(d) { }
-    
-    virtual ~IndexableComputeKernelData()
-    { if (_view) delete _view; }
+template <typename KernelValueType, typename IsIndexable, typename IsScalarType = typename MAST::IsScalarType<KernelValueType>::type>
+struct KernelReturnType {
+
+};
 
 
-    inline void set_outer_dimensions(std::vector<uint_type> idx,
-                                     uint_type buffer_size=0);
+template <typename KernelValueType>
+struct KernelReturnType<KernelValueType, std::false_type, std::false_type> {
     
-    template <typename ViewType> inline ViewType
-    get_local_view(const std::vector<uint_type>& idx) {
-        
-        // make sure this object has been initialized
-        libmesh_assert(_view);
-        
-        return _view->get_view_slice(idx);
-    }
-    
-protected:
+    using type = KernelValueType;
+};
 
-    MAST::View<ScalarType>       *_view;
-    std::vector<uint_type>       _outer_idx_size;
+
+template <typename KernelValueType>
+struct KernelReturnType<KernelValueType, std::false_type, std::true_type> {
+    
+    using type = KernelValueType;
 };
 
 
 
-/*! provides access to the element solution vector  through a memory view. */
-template <typename SolScalarType>
-class FieldVariable {
-  
-public:
-
-    FieldVariable();
-    virtual ~FieldVariable();
-    /*! partial derivative of u with respect to time at */
-    inline SolScalarType u() = 0;
-    /*! partial derivative of u with respect to time at */
-    inline SolScalarType du_dx(uint_type x_i) = 0;
-    /*! partial derivative of u with respect to time at */
-    inline SolScalarType du_dt() = 0;
-
+template <typename KernelValueType>
+struct KernelReturnType<KernelValueType,  std::true_type, std::false_type> {
+    
+    using type = Eigen::Map<KernelValueType>;
 };
 
+
+template <typename KernelValueType>
+struct KernelReturnType<KernelValueType,  std::true_type, std::true_type> {
+    
+    using type = KernelValueType&;
+};
+
+
+template <typename KernelType, typename KernelViewType = typename KernelType::view_type, typename ContextType>
+KernelViewType build_kernel_view(KernelType& k, ContextType& c) { }
+
+ 
 
 
 // Forward decleration
-template <typename, typename> class ComputeKernelDerivative;
+template <typename> class ComputeKernelDerivative;
 
 
-template <typename ValueType, typename ContextType>
+template <typename ContextType>
 class ComputeKernel: public MAST::ComputeKernelBase<ContextType> {
 
 public:
     
-    using derivative_kernel_type = MAST::ComputeKernelDerivative<ValueType, ContextType>;
+    using derivative_kernel_type = MAST::ComputeKernelDerivative<ContextType>;
     
-    ComputeKernel(const std::string& nm):
-    MAST::ComputeKernelBase<ContextType>(nm),
+    ComputeKernel(const std::string& nm, const bool executable):
+    MAST::ComputeKernelBase<ContextType>(nm, executable),
     _derivative_kernel   (nullptr)
     {}
     
@@ -133,24 +110,22 @@ public:
         libmesh_assert_msg(_derivative_kernel, "Derivative kernel not set");
         return *_derivative_kernel;
     }
-    
-    virtual inline ValueType value(ContextType& c) const = 0;
-
+        
 protected:
     
-    derivative_kernel_type                  *_derivative_kernel;
+    derivative_kernel_type     *_derivative_kernel;
 };
 
 
 
-template <typename ValueType, typename ContextType>
+template <typename ContextType>
 class ComputeKernelDerivative: public MAST::ComputeKernelBase<ContextType> {
 
 public:
     
-    using primal_kernel_type   = MAST::ComputeKernel<ValueType, ContextType>;
+    using primal_kernel_type   = MAST::ComputeKernel<ContextType>;
 
-    ComputeKernelDerivative (const std::string& nm):
+    ComputeKernelDerivative (const std::string& nm, const bool executable):
     MAST::ComputeKernelBase<ContextType> (nm),
     _primal_kernel          (nullptr),
     _f                      (nullptr)
@@ -171,13 +146,14 @@ public:
     }
 
     virtual inline void  set_derivative_paramter(const MAST::FunctionBase& f);
-    virtual inline ValueType value(ContextType& c) const = 0;
     
 protected:
     
     primal_kernel_type *_primal_kernel;
     const MAST::FunctionBase       *_f;
 };
+
+
 
 }
 

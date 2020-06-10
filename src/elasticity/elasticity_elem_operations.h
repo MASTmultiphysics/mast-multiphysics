@@ -13,28 +13,43 @@
 
 namespace MAST {
 
-template <typename BasisScalarType, typename NodalScalarType, typename SolScalarType, typename ContextType>
-struct ElasticityComputeKernelTraits {
+template <typename ScalarType, typename ContextType>
+class ConstantSectionMaterial {
+public:
     
-    using context_type      = ContextType;
-    using basis_scalar_type = BasisScalarType;
-    using nodal_scalar_type = NodalScalarType;
-    using sol_scalar_type   = SolScalarType;
-    using var_scalar_type   = typename MAST::DeducedScalarType<NodalScalarType, SolScalarType>;
-    using res_vector_type   = Eigen::Matrix<var_scalar_type, Dynamic, 1>;
-    using jac_matrix_type   = Eigen::Matrix<var_scalar_type, Dynamic, Dynamic>;
-    using material_val_type = Eigen::Matrix<var_scalar_type, Dynamic, Dynamic>;
-    using quadrature_type   = MAST::libMeshQuadrature<ContextType>;
-    using fe_basis_type     = MAST::libMeshFE<ContextType>;
-    using fe_derived_traits = MAST::EigenFEShapeDataViewTraits<NodalScalarType>;
-    using fe_derived_type   = MAST::FEGeometryBasisDerivedData<BasisScalarType, NodalScalarType, fe_derived_traits, ContextType>;
-    using fe_var_traits     = MAST::EigenFESolDataViewTraits<SolScalarType>;
-    using fe_var_type       = typename MAST::FEVarData<basis_scalar_type, nodal_scalar_type, sol_scalar_type, fe_var_traits, ContextType>;
+    ConstantSectionMaterial(){}
+    virtual ~ConstantSectionMaterial(){}
+    virtual inline void value(const ContextType& c, typename EigenMatrix<ScalarType>::type& m) const {
+        libmesh_assert_equal_to(m.rows(), 3);
+        libmesh_assert_equal_to(m.cols(), 3);
+        m(0,0) = 1.; m(0, 1) = .5;
+        m(1,0) = .5; m(1, 1) = 1.;
+        m(2,2) = 0.75;
+    }
 };
 
 
-class ElasticityElemOperationsContext {
+template <typename BasisScalarType, typename NodalScalarType, typename SolScalarType, typename ContextType>
+struct ElasticityTraits {
     
+    using context_type          = ContextType;
+    using basis_scalar_type     = BasisScalarType;
+    using nodal_scalar_type     = NodalScalarType;
+    using sol_scalar_type       = SolScalarType;
+    using var_scalar_type       = typename MAST::DeducedScalarType<NodalScalarType, SolScalarType>::type;
+    using view_traits           = EigenTraits;
+    using section_property_type = MAST::ConstantSectionMaterial<var_scalar_type, ContextType>;
+    using quadrature_type       = MAST::libMeshQuadrature<ContextType>;
+    using fe_basis_type         = MAST::libMeshFE<BasisScalarType, ContextType>;
+    using fe_derived_type       = MAST::FEGeometryBasisDerivedData<BasisScalarType, NodalScalarType, view_traits, ContextType>;
+    using fe_var_type           = MAST::FEVarData<basis_scalar_type, nodal_scalar_type, sol_scalar_type, view_traits, ContextType>;
+};
+
+
+struct ElasticityElemOperationsContext {
+    
+    ElasticityElemOperationsContext(): qp(0) {}
+    uint_type qp;
 };
 
 
@@ -44,17 +59,15 @@ public MAST::ComputationBase<Traits, typename Traits::context_type> {
     
 public:
     
-    using context_type        = typename Traits::context_type;
-    using value_type          = typename Traits::res_vector_type;
-    using basis_scalar_type   = typename Traits::basis_scalar_type;
-    using nodal_scalar_type   = typename Traits::nodal_scalar_type;
-    using sol_scalar_type     = typename Traits::sol_scalar_type;
-    using quadrature_type     = typename Traits::quadrature_type;
-    using fe_view_traits      = typename Traits::fe_var_traits;
-    using fe_basis_type       = typename Traits::fe_basis_type;
-    using fe_derived_type     = typename Traits::fe_derived_type;
-    using fe_var_type         = typename Traits::fe_var_type;
-    using material_value_type = typename Traits::material_val_type;
+    using context_type           = typename Traits::context_type;
+    using basis_scalar_type      = typename Traits::basis_scalar_type;
+    using nodal_scalar_type      = typename Traits::nodal_scalar_type;
+    using sol_scalar_type        = typename Traits::sol_scalar_type;
+    using quadrature_type        = typename Traits::quadrature_type;
+    using fe_basis_type          = typename Traits::fe_basis_type;
+    using fe_derived_type        = typename Traits::fe_derived_type;
+    using fe_var_type            = typename Traits::fe_var_type;
+    using section_property_type  = typename Traits::section_property_type;
     
     ElasticityElemOperations():
     MAST::ComputationBase<Traits, context_type>(),
@@ -87,7 +100,7 @@ protected:
     fe_basis_type                        *_fe_basis;
     fe_derived_type                      *_fe_derived;
     fe_var_type                          *_fe_var_data;
-    typename MAST::StrainEnergy<Traits, context_type>  *_strain_energy;
+    typename MAST::Element2D::LinearContinuumStrainEnergy<Traits, context_type>  *_strain_energy;
 };
 
 
@@ -114,7 +127,7 @@ init(const MAST::NonlinearSystem& sys,
     _fe_derived->set_fe_basis(*_fe_basis);
     _fe_var_data   = new fe_var_type("u_vars");
     _fe_var_data->set_fe_shape_data(*_fe_derived);
-    _strain_energy = new MAST::StrainEnergy<Traits, context_type>;
+    _strain_energy = new MAST::Element2D::LinearContinuumStrainEnergy<Traits, context_type>;
     _strain_energy->set_fe_var_data(*_fe_var_data);
     //_strain_energy->set_material(*_material);
 }

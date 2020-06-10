@@ -10,42 +10,18 @@ namespace MAST {
 
 /*! This provides the derivative of shape functions when the FE basis also forms the basis for geometry interpolation used to interpolate
  nodal locations. Typically, Lagrange shape functoins are used for this purpose */
-template <typename BasisScalarType, typename NodalScalarType, typename ViewTraits, typename ContextType>
+template <typename BasisScalarType, typename NodalScalarType, typename Traits, typename ContextType>
 class FEGeometryBasisDerivedData:
-public MAST::FEShapeDataBase<BasisScalarType, NodalScalarType, ContextType> {
+public MAST::FEShapeDataBase<BasisScalarType, NodalScalarType, Traits, ContextType> {
     
 public:
     
     FEGeometryBasisDerivedData(const std::string& nm):
-    MAST::FEShapeDataBase<BasisScalarType, NodalScalarType, ContextType>(nm) {}
+    MAST::FEShapeDataBase<BasisScalarType, NodalScalarType, Traits, ContextType>(nm) {}
     virtual ~FEGeometryBasisDerivedData() {}
     
-    virtual inline NodalScalarType         xyz(uint_type qp, uint_type x_i) const override
-    { return _xyz(qp, x_i);}
-    
-    virtual inline NodalScalarType        detJ(uint_type qp) const override
-    { return _detJ(qp);}
-
-    virtual inline NodalScalarType      detJxW(uint_type qp) const override
-    { return _detJxW(qp);}
-
-    virtual inline NodalScalarType      dx_dxi(uint_type qp, uint_type   x_i, uint_type xi_i) const override
-    { return _dx_dxi(qp, x_i, xi_i);}
-
-    virtual inline NodalScalarType      dxi_dx(uint_type qp, uint_type   x_i, uint_type xi_i) const override
-    { return _dxi_dx(qp, x_i, xi_i);}
-
-    virtual inline NodalScalarType     dphi_dx(uint_type qp, uint_type phi_i, uint_type x_i) const override
-    { return _dphi_dx(qp, phi_i, x_i);}
-
 protected:
 
-    typename ViewTraits::xyz_view_type _xyz;
-    typename ViewTraits::detJ_view_type _detJ;
-    typename ViewTraits::detJxW_view_type _detJxW;
-    typename ViewTraits::dx_dxi_view_type _dx_dxi;
-    typename ViewTraits::dxi_dx_view_type _dxi_dx;
-    typename ViewTraits::dphi_dx_view_type _dphi_dx;
 };
 
 
@@ -53,42 +29,36 @@ protected:
 /*! This provides the derivative of shape functions when the FE basis also forms the basis for geometry interpolation used to interpolate
  nodal locations. Typically, Lagrange shape functoins are used for this purpose */
 template <typename BasisScalarType, typename NodalScalarType, typename ContextType>
-class FEGeometryBasisDerivedData<BasisScalarType, NodalScalarType, MAST::EigenFEShapeDataViewTraits<NodalScalarType>, ContextType>:
-public MAST::FEShapeDataBase<BasisScalarType, NodalScalarType, ContextType> {
+class FEGeometryBasisDerivedData<BasisScalarType, NodalScalarType, EigenTraits, ContextType>:
+public MAST::FEShapeDataBase<BasisScalarType, NodalScalarType, EigenTraits, ContextType> {
     
 public:
-    
+            
     FEGeometryBasisDerivedData(const std::string& nm):
-    MAST::FEShapeDataBase<BasisScalarType, NodalScalarType, ContextType>(nm) {}
+    MAST::FEShapeDataBase<BasisScalarType, NodalScalarType, EigenTraits, ContextType>(nm) {}
     
     virtual ~FEGeometryBasisDerivedData() {}
     
-    virtual inline NodalScalarType         xyz(uint_type qp, uint_type x_i) const override
-    { return _xyz(qp, x_i);}
+    virtual inline void reinit(const ContextType& c) override {
+        
+        uint_type
+        nq  = this->n_q_points();
+        const int_type
+        d   = this->spatial_dim();
+        
+        this->_xyz     = EigenMatrix<NodalScalarType>::type::Zero(nq, d);
+        this->_detJ    = EigenVector<NodalScalarType>::type::Zero(nq);
+        this->_detJxW  = EigenVector<NodalScalarType>::type::Zero(nq);
+        this->_dx_dxi  = EigenMatrix<NodalScalarType>::type::Zero(nq, d*d);
+        this->_dxi_dx  = EigenMatrix<NodalScalarType>::type::Zero(nq, d*d);
+        this->_dphi_dx = EigenMatrix<NodalScalarType>::type::Zero(nq, d*d*this->n_basis());
+    }
+
+    virtual inline void reinit_for_side(const ContextType& c, uint_type s) override { }
     
-    virtual inline NodalScalarType        detJ(uint_type qp) const override
-    { return _detJ(qp);}
-
-    virtual inline NodalScalarType      detJxW(uint_type qp) const override
-    { return _detJxW(qp);}
-
-    virtual inline NodalScalarType      dx_dxi(uint_type qp, uint_type   x_i, uint_type xi_i) const override
-    { return _dx_dxi(qp, xi_i*this->spatial_dim()+x_i);}
-
-    virtual inline NodalScalarType      dxi_dx(uint_type qp, uint_type   x_i, uint_type xi_i) const override
-    { return _dxi_dx(qp, xi_i*this->spatial_dim()+x_i);}
-
-    virtual inline NodalScalarType     dphi_dx(uint_type qp, uint_type phi_i, uint_type x_i) const override
-    { return _dphi_dx(qp, x_i*this->spatial_dim()+phi_i);}
-
+    
 protected:
 
-    typename EigenFEShapeDataViewTraits<NodalScalarType>::xyz_view_type _xyz;
-    typename EigenFEShapeDataViewTraits<NodalScalarType>::detJ_view_type _detJ;
-    typename EigenFEShapeDataViewTraits<NodalScalarType>::detJxW_view_type _detJxW;
-    typename EigenFEShapeDataViewTraits<NodalScalarType>::dx_dxi_view_type _dx_dxi;
-    typename EigenFEShapeDataViewTraits<NodalScalarType>::dxi_dx_view_type _dxi_dx;
-    typename EigenFEShapeDataViewTraits<NodalScalarType>::dphi_dx_view_type _dphi_dx;
 };
 
 }

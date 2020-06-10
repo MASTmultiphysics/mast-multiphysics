@@ -7,8 +7,8 @@
 
 namespace MAST {
 
-template <typename ValueType, typename Traits, typename ContextType>
-class FEComputeKernel: public MAST::ComputeKernel<ValueType, ContextType> {
+template <typename Traits, typename ContextType>
+class FEComputeKernel: public MAST::ComputeKernel<ContextType> {
 
 public:
 
@@ -17,7 +17,7 @@ public:
     using sol_scalar_type   = typename Traits::sol_scalar_type;
     
     FEComputeKernel(const std::string& nm):
-    MAST::ComputeKernel<ValueType, ContextType>(nm) { }
+    MAST::ComputeKernel<ContextType>(nm, false) { }
     virtual ~FEComputeKernel() { }
 };
 
