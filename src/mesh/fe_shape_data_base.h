@@ -67,7 +67,7 @@ public:
     inline void   set_compute_detJxW(bool f) {
         
         _compute_JxW = f;
-        if (f) this->set_compute_Jac(true);
+        if (f) this->set_compute_detJ(true);
     }
     
     inline void  set_compute_dphi_dx(bool f) {
@@ -178,7 +178,11 @@ public:
     }
     
     virtual inline NodalScalarType     dphi_dx(uint_type qp, uint_type phi_i, uint_type x_i) const
-    { return _dphi_dx(qp, x_i*this->spatial_dim()+phi_i);}
+    {
+        libmesh_assert_msg(_compute_dphi_dx, "Jacobian inverse computation not requested");
+
+        return _dphi_dx(qp, x_i*this->spatial_dim()+phi_i);
+    }
 
 protected:
 

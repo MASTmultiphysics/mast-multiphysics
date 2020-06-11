@@ -22,8 +22,11 @@ public:
     { }
     virtual ~FEBasis() {}
 
-    virtual inline void set_quadrature(const MAST::Quadrature<ScalarType, ContextType>& q)
-    { _quadrature = &q;}
+    virtual inline void set_quadrature(const MAST::Quadrature<ScalarType, ContextType>& q) {
+        
+        libmesh_assert_msg(!_quadrature, "Quadrature already initialized.");
+        _quadrature = &q;
+    }
     
     virtual inline uint_type dim() const = 0;
     virtual inline uint_type order() const = 0;
@@ -121,6 +124,7 @@ public:
         
         libmesh_assert_msg(_fe, "Object not initialized");
         
+        _fe->get_phi();
         if (_compute_dphi_dxi)
             _fe->get_JxW();
         

@@ -44,9 +44,11 @@ public:
         uint_type
         nq  = this->n_q_points();
         const int_type
-        d   = this->spatial_dim();
+        d   = c.elem->dim();
         const uint_type
         n_nodes = c.n_nodes();
+        
+        this->_spatial_dim = d;
         
         // for this class the number of basis functions should be equal to the number
         // of nodes

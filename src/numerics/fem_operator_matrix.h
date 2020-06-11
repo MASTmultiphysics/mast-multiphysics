@@ -270,10 +270,11 @@ set_shape_function(unsigned int interpolated_var,
     ScalarType* vec =
     _var_shape_functions[discrete_var*_n_interpolated_vars+interpolated_var];
     
-    libmesh_assert_msg(!vec, "Shape function already set");
-    
-    vec = new ScalarType[shape_func.size()];
-    _var_shape_functions[discrete_var*_n_interpolated_vars+interpolated_var] = vec;
+    if (!vec) {
+        
+        vec = new ScalarType[shape_func.size()];
+        _var_shape_functions[discrete_var*_n_interpolated_vars+interpolated_var] = vec;
+    }
     
     for (uint_type i=0; i<_n_dofs_per_var; i++)
         vec[i] = shape_func(i);

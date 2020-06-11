@@ -168,7 +168,16 @@ public:
         _fe_var_data = &fe_data;
     }
 
+    virtual inline uint_type n_dofs() const {
+
+        libmesh_assert_msg(_fe_var_data, "FE data not initialized.");
+        return 2*_fe_var_data->get_fe_shape_data().n_basis();
+    }
+    
     virtual inline void operator() (ContextType& c, vector_type& res, matrix_type* jac = nullptr) const {
+        
+        libmesh_assert_msg(_fe_var_data, "FE data not initialized.");
+        libmesh_assert_msg(_property, "Section property not initialized");
         
         const typename fe_var_type::fe_shape_data_type
         &fe = _fe_var_data->get_fe_shape_data();
