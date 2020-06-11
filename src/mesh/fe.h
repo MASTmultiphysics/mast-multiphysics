@@ -40,7 +40,13 @@ public:
         libmesh_assert_msg(_quadrature, "Quadrature not initialized.");
         return _quadrature->qp_coord(qp, x_i);
     }
-    
+
+    virtual inline ScalarType qp_weight(uint_type qp) const
+    {
+        libmesh_assert_msg(_quadrature, "Quadrature not initialized.");
+        return _quadrature->weight(qp);
+    }
+
     virtual inline ScalarType phi(uint_type qp, uint_type phi_i) const = 0;
     
     virtual inline ScalarType dphi_dxi(uint_type qp, uint_type phi_i, uint_type xi_i) const = 0;
@@ -63,22 +69,71 @@ public:
     libMeshFE(const std::string& nm):
     MAST::FEBasis<scalar_type, EigenTraits, ContextType>(nm, false),
     _compute_dphi_dxi   (false),
+    _own_pointer        (false),
     _fe                 (nullptr)
     { }
-    virtual ~libMeshFE() { }
+
+    virtual ~libMeshFE() {
+        
+        if (_own_pointer)
+            delete _fe;
+    }
     
     inline void set_compute_dphi_dxi(bool f) { _compute_dphi_dxi = f;}
     
-    virtual inline void reinit(const libMesh::FEBase& fe) {
+    virtual inline void init(libMesh::FEBase& fe) {
+
+        libmesh_assert_msg(!_fe, "Object already initialized");
         
-        _fe = &fe;
+        _fe          = &fe;
+        _own_pointer = false;
+
         const libMesh::FEMap& m = fe.get_fe_map();
+        if (_compute_dphi_dxi)
+            this->_dphi_dxi = {&m.get_dphidxi_map(), &m.get_dphideta_map(), &m.get_dphidzeta_map()};
+        else
+            _dphi_dxi.clear();
+    }
+
+
+    virtual inline void init(libMesh::QBase& q, const libMesh::FEType fe_type) {
+        
+        libmesh_assert_msg(!_fe, "Object already initialized");
+
+        _fe = libMesh::FEBase::build(q.get_dim(), fe_type).release();
+        _own_pointer = true;
+        _fe->attach_quadrature_rule(&q);
+    }
+
+    
+    virtual inline void clear() {
+
+        if (_own_pointer)
+            delete _fe;
+        
+        _own_pointer = false;
+        _fe          = nullptr;
+        _dphi_dxi.clear();
+    }
+
+    
+    virtual inline void reinit(const libMesh::Elem& e) {
+        
+        libmesh_assert_msg(_fe, "Object not initialized");
+        
+        if (_compute_dphi_dxi)
+            _fe->get_JxW();
+        
+        _fe->reinit(&e);
+        
+        const libMesh::FEMap& m = _fe->get_fe_map();
         
         if (_compute_dphi_dxi)
             this->_dphi_dxi = {&m.get_dphidxi_map(), &m.get_dphideta_map(), &m.get_dphidzeta_map()};
         else
             _dphi_dxi.clear();
     }
+    
     
     virtual inline uint_type dim() const override {
         
@@ -119,7 +174,8 @@ public:
 protected:
     
     bool _compute_dphi_dxi;
-    const libMesh::FEBase* _fe;
+    bool _own_pointer;
+    libMesh::FEBase* _fe;
     std::vector<const std::vector<std::vector<basis_scalar_type>>*> _dphi_dxi;
 };
 

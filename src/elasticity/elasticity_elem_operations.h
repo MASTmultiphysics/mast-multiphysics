@@ -48,8 +48,28 @@ struct ElasticityTraits {
 
 struct ElasticityElemOperationsContext {
     
-    ElasticityElemOperationsContext(): qp(0) {}
+    ElasticityElemOperationsContext():
+    qp      (0),
+    elem    (nullptr),
+    sys     (nullptr),
+    physics (nullptr),
+    sol     (nullptr) {}
+    
     uint_type qp;
+    const libMesh::Elem* elem;
+    const MAST::NonlinearSystem* sys;
+    const MAST::PhysicsDisciplineBase* physics;
+    const libMesh::NumericVector<Real>* sol;
+
+    inline Real nodal_coord(uint_type nd, uint_type d) const {
+        libmesh_assert_msg(elem, "Element not initialized.");
+        return elem->point(nd)(d);
+    }
+    
+    inline uint_type n_nodes() const {
+        libmesh_assert_msg(elem, "Element not initialized.");
+        return elem->n_nodes();
+    }
 };
 
 
@@ -60,9 +80,7 @@ public MAST::ComputationBase<Traits, typename Traits::context_type> {
 public:
     
     using context_type           = typename Traits::context_type;
-    using basis_scalar_type      = typename Traits::basis_scalar_type;
-    using nodal_scalar_type      = typename Traits::nodal_scalar_type;
-    using sol_scalar_type        = typename Traits::sol_scalar_type;
+    using var_scalar_type        = typename Traits::var_scalar_type;
     using quadrature_type        = typename Traits::quadrature_type;
     using fe_basis_type          = typename Traits::fe_basis_type;
     using fe_derived_type        = typename Traits::fe_derived_type;
@@ -75,17 +93,78 @@ public:
     _sys           (nullptr),
     _physics       (nullptr),
     _X             (nullptr),
+    _quadrature    (nullptr),
+    _fe_basis      (nullptr),
+    _fe_derived    (nullptr),
     _fe_var_data   (nullptr),
     _strain_energy (nullptr)
     { }
-    virtual ~ElasticityElemOperations() {}
+    
+    virtual ~ElasticityElemOperations() { this->clear();}
+    
     virtual void init(const MAST::NonlinearSystem& sys,
                       const MAST::PhysicsDisciplineBase& physics,
-                      const libMesh::NumericVector<Real>& X);
-    virtual void clear() {}
-    virtual void reinit(const libMesh::Elem& e) {}
-    virtual void compute_residual() {}
-    virtual void compute_jacobian() {}
+                      const libMesh::NumericVector<Real>& sol) {
+        
+        libmesh_assert(!_initialized);
+        
+        
+        // setup the volume compute kernels
+        _sys     = &sys;
+        _physics = &physics;
+        _X       = &sol;
+        
+        _quadrature    = new quadrature_type("quadrature");
+        _fe_basis      = new fe_basis_type("fe_basis");
+        _fe_basis->set_quadrature(*_quadrature);
+        _fe_derived    = new fe_derived_type("fe_derived");
+        _fe_derived->set_fe_basis(*_fe_basis);
+        _fe_var_data   = new fe_var_type("u_vars");
+        _fe_var_data->set_fe_shape_data(*_fe_derived);
+        _strain_energy = new MAST::Element2D::LinearContinuumStrainEnergy<Traits, context_type>;
+        _strain_energy->set_fe_var_data(*_fe_var_data);
+        //_strain_energy->set_material(*_material);
+        
+        _quadrature->init_quadrature(libMesh::QGAUSS, 2);
+        libMesh::FEType fe_type(1, libMesh::LAGRANGE);
+        _fe_basis->init(_quadrature->get_libmesh_object(), fe_type);
+        
+        _initialized = true;
+    }
+    
+    virtual void clear() {
+        
+        if (_initialized) {
+         
+            _sys     = nullptr;
+            _physics = nullptr;
+            delete    _quadrature;    _quadrature = nullptr;
+            delete      _fe_basis;      _fe_basis = nullptr;
+            delete    _fe_derived;    _fe_derived = nullptr;
+            delete   _fe_var_data;   _fe_var_data = nullptr;
+            delete _strain_energy; _strain_energy = nullptr;
+        }
+    }
+    
+    virtual void reinit(const libMesh::Elem& e) {
+        
+        libmesh_assert_msg(_initialized, "Object not initialized.");
+        
+        context_type c;
+        c.elem    = &e;
+        c.sys     = _sys;
+        c.physics = _physics;
+        c.sol     = _X;
+        
+        _fe_basis->reinit(e);
+        _fe_derived->reinit(c);
+        _fe_var_data->init(c);
+    }
+    
+    virtual void compute(EigenVector<var_scalar_type>& res,
+                         EigenMatrix<var_scalar_type>* jac) {}
+    virtual void compute_sensitivity(const MAST::FunctionBase& f,
+                                     EigenVector<var_scalar_type>& res) {}
     virtual void compute_complex_step_jacobian() {}
     virtual void compute_auto_diff_jacobian() {}
     
@@ -102,35 +181,6 @@ protected:
     fe_var_type                          *_fe_var_data;
     typename MAST::Element2D::LinearContinuumStrainEnergy<Traits, context_type>  *_strain_energy;
 };
-
-
-template <typename Traits>
-void
-MAST::ElasticityElemOperations<Traits>::
-init(const MAST::NonlinearSystem& sys,
-     const MAST::PhysicsDisciplineBase& physics,
-     const libMesh::NumericVector<Real>& X) {
-    
-    libmesh_assert(!_initialized);
-    
-    
-    // setup the volume compute kernels
-    _sys     = &sys;
-    _physics = &physics;
-    _X       = &X;
-    
-    
-    _quadrature    = new quadrature_type("quadrature");
-    _fe_basis      = new fe_basis_type("fe_basis");
-    _fe_basis->set_quadrature(*_quadrature);
-    _fe_derived    = new fe_derived_type("fe_derived");
-    _fe_derived->set_fe_basis(*_fe_basis);
-    _fe_var_data   = new fe_var_type("u_vars");
-    _fe_var_data->set_fe_shape_data(*_fe_derived);
-    _strain_energy = new MAST::Element2D::LinearContinuumStrainEnergy<Traits, context_type>;
-    _strain_energy->set_fe_var_data(*_fe_var_data);
-    //_strain_energy->set_material(*_material);
-}
 }
 
 #endif // _mast_elasticity_elem_operations_h_

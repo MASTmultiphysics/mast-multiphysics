@@ -6,6 +6,10 @@
 // MAST includes
 #include "base/compute_kernel.h"
 
+// libMesh includes
+#include "libmesh/quadrature.h"
+#include "libmesh/enum_quadrature_type.h"
+
 
 namespace MAST {
 
@@ -72,13 +76,49 @@ public:
     /*! the quadrature object \p q  is expected to be initialized outside of this class. */
     libMeshQuadrature(const std::string& nm):
     MAST::Quadrature<Real, ContextType>(nm, false),
-    _q  (nullptr)
-    {}
+    _own_pointer (false),
+    _q           (nullptr)
+    { }
     
-    virtual ~libMeshQuadrature() {}
+    virtual ~libMeshQuadrature() {
+        
+        if (_q && _own_pointer)
+            delete _q;
+    }
     
-    virtual inline void set_quadrature(const libMesh::QBase& q) { _q = &q; }
+    virtual inline void set_quadrature(libMesh::QBase& q) {
+        
+        libmesh_assert_msg(!_q, "Quadrature already initialized.");
+        
+        _q           = &q;
+        _own_pointer = false;
+    }
+
+    virtual inline void init_quadrature(const libMesh::QuadratureType qt,
+                                        const uint_type dim,
+                                        const libMesh::Order order=libMesh::INVALID_ORDER)
+    {
+        
+        libmesh_assert_msg(!_q, "Quadrature already initialized.");
+
+        _q           = libMesh::QBase::build (qt, dim, order).release();
+        _own_pointer = true;
+    }
     
+    virtual inline void clear() {
+
+        if (_q && _own_pointer)
+            delete _q;
+        
+        _q = nullptr;
+    }
+
+    libMesh::QBase& get_libmesh_object() {
+        
+        libmesh_assert_msg(_q, "Quadrature object not initialized");
+        return *_q;
+    }
+
     const libMesh::QBase& get_libmesh_object() const {
         
         libmesh_assert_msg(_q, "Quadrature object not initialized");
@@ -116,8 +156,9 @@ public:
     }
     
 protected:
-    
-    const libMesh::QBase* _q;
+  
+    bool _own_pointer;
+    libMesh::QBase* _q;
 };
 }
 
