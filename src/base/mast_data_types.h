@@ -33,6 +33,7 @@ typedef unsigned int uint_type;
 typedef int int_type;
 typedef libMesh::Real Real;
 typedef libMesh::Complex Complex;
+#define ComplexStepDelta 1.e-12
 
 typedef Matrix<Real, Dynamic, 1> RealVectorX;
 typedef Matrix<Real, 3, 1> RealVector3;

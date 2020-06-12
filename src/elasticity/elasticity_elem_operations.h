@@ -55,6 +55,15 @@ struct ElasticityElemOperationsContext {
     physics (nullptr),
     sol     (nullptr) {}
     
+    void clear() {
+        
+        qp      = 0;
+        elem    = nullptr;
+        sys     = nullptr;
+        physics = nullptr;
+        sol     = nullptr;
+    }
+    
     uint_type qp;
     const libMesh::Elem* elem;
     const MAST::NonlinearSystem* sys;
@@ -116,6 +125,10 @@ public:
         _sys     = &sys;
         _physics = &physics;
         _X       = &sol;
+
+        _context.sys     = _sys;
+        _context.physics = _physics;
+        _context.sol     = _X;
         
         _quadrature       = new quadrature_type("quadrature");
         _fe_basis         = new fe_basis_type("fe_basis");
@@ -143,6 +156,7 @@ public:
          
             _sys     = nullptr;
             _physics = nullptr;
+            _context.clear();
             delete    _quadrature;    _quadrature = nullptr;
             delete      _fe_basis;      _fe_basis = nullptr;
             delete    _fe_derived;    _fe_derived = nullptr;
@@ -154,12 +168,9 @@ public:
     virtual inline void reinit(const libMesh::Elem& e) {
         
         libmesh_assert_msg(_initialized, "Object not initialized.");
-        
+
         _context.elem    = &e;
-        _context.sys     = _sys;
-        _context.physics = _physics;
-        _context.sol     = _X;
-        
+
         _fe_derived->set_compute_dphi_dx(true);
         _fe_derived->set_compute_dphi_dx(true);
         _fe_derived->set_compute_detJxW(true);
@@ -170,13 +181,15 @@ public:
         _fe_var_data->init(_context, {1, 2});
     }
 
-    virtual inline void resize_residual(vector_type& res) const {
+    template <typename VecType>
+    inline void resize_residual(VecType& res) const {
         
         libmesh_assert_msg(_initialized, "Object not initialized");
         res.setZero(_strain_energy->n_dofs());
     }
 
-    virtual inline void resize_jacobian(matrix_type& jac) const {
+    template <typename MatType>
+    inline void resize_jacobian(MatType& jac) const {
         
         libmesh_assert_msg(_initialized, "Object not initialized");
         jac.setZero(_strain_energy->n_dofs(), _strain_energy->n_dofs());
@@ -192,13 +205,49 @@ public:
     
     virtual inline void compute_sensitivity(const MAST::FunctionBase& f,
                                             vector_type& res) {}
+
+    template <typename T>
+    inline void compute_complex_step_jacobian(typename EigenMatrix<T>::type& jac) {
+     
+        libmesh_assert_msg(false, "Method only called with Real-valued matrices");
+    }
     
-    virtual inline void compute_complex_step_jacobian() {}
+        
+    template <>
+    inline void compute_complex_step_jacobian<Real>(typename EigenMatrix<Real>::type& jac) {
+        
+        libmesh_assert_msg(_initialized, "Object not initialized.");
+        libmesh_assert_msg(_context.elem, "reinit() not called before complex-step computation.");
+
+        vector_type res;
+        this->resize_residual(res);
+        this->resize_jacobian(jac);
+        
+        for (uint_type i=0; i<res.size(); i++) {
+
+            _fe_var_data->clear_coeffs_and_vars();
+            this->resize_residual(res);
+            this->_reinit_for_complex_step_jacobian(i);
+            this->compute(res);
+            jac.col(i) = res.imag();
+        }
+        
+        jac /= (ComplexStepDelta);
+    }
     
     virtual inline void compute_auto_diff_jacobian() {}
     
 protected:
-    
+
+    virtual inline void _reinit_for_complex_step_jacobian(uint_type idx) {
+        
+        libmesh_assert_msg(_initialized, "Object not initialized.");
+        libmesh_assert_msg(_context.elem, "reinit() not called before complex-step computation.");
+
+        _fe_var_data->init_for_complex_step_sens(_context, idx, {1, 2});
+    }
+
+
     bool  _initialized;
     const MAST::NonlinearSystem* _sys;
     const MAST::PhysicsDisciplineBase* _physics;

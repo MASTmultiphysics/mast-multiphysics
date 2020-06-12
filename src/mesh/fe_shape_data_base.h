@@ -181,7 +181,7 @@ public:
     {
         libmesh_assert_msg(_compute_dphi_dx, "Jacobian inverse computation not requested");
 
-        return _dphi_dx(qp, x_i*this->spatial_dim()+phi_i);
+        return _dphi_dx(qp, x_i*this->n_basis()+phi_i);
     }
 
 protected:

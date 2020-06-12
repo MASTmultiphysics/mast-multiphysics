@@ -1362,7 +1362,7 @@ _optim_con(int*    mode,
 int main(int argc, char* argv[]) {
 
     libMesh::LibMeshInit init(argc, argv);
-
+    
     MAST::Examples::GetPotWrapper
     input(argc, argv, "input");
 
@@ -1403,7 +1403,7 @@ int main(int argc, char* argv[]) {
     
     std::string
     s          = input("optimizer", "optimizer to use in the example", "gcmma");
-
+/*
     if (s == "gcmma") {
 
         optimizer.reset(new MAST::GCMMAOptimizationInterface);
@@ -1449,11 +1449,89 @@ int main(int argc, char* argv[]) {
         else
             optimizer->optimize();
     }
+    */
     
-    MAST::ElasticityElemOperations<MAST::ElasticityTraits<Real, Real, Real, MAST::ElasticityElemOperationsContext>> elem_ops;
-    MAST::ElasticityElemOperations<MAST::ElasticityTraits<Real, Complex, Real, MAST::ElasticityElemOperationsContext>> elem_ops_complex_shape;
-    MAST::ElasticityElemOperations<MAST::ElasticityTraits<Real, Real, Complex, MAST::ElasticityElemOperationsContext>> elem_ops_complex_sol;
-    MAST::ElasticityElemOperations<MAST::ElasticityTraits<Real, Complex, Complex, MAST::ElasticityElemOperationsContext>> elem_ops_complex_sol2;
+    TopologyOptimizationSIMP<MAST::Examples::Inplane2DModel>
+    *o = dynamic_cast<TopologyOptimizationSIMP<MAST::Examples::Inplane2DModel>*>(top_opt.get());
+    const libMesh::Elem* e =
+    *(o->_mesh->elements_begin());
+    e->print_info();
+    
+    EigenMatrix<Real>::type jac0;
+    {
+        MAST::ElasticityElemOperations<MAST::ElasticityTraits<Real, Real, Real, MAST::ElasticityElemOperationsContext>> elem_ops;
+
+        elem_ops.init(*o->_sys, *o->_discipline, *o->_sys->solution);
+        elem_ops.reinit(*e);
+        
+        EigenVector<Real>::type v;
+        EigenMatrix<Real>::type jac;
+        elem_ops.resize_residual(v);
+        elem_ops.resize_jacobian(jac);
+        elem_ops.compute(v, &jac);
+        
+        libMesh::out << v << std::endl << jac << std::endl;
+        jac0 = jac;
+    }
+
+    {
+        MAST::ElasticityElemOperations<MAST::ElasticityTraits<Real, Complex, Real, MAST::ElasticityElemOperationsContext>> elem_ops_complex_shape;
+
+        elem_ops_complex_shape.init(*o->_sys, *o->_discipline, *o->_sys->solution);
+        elem_ops_complex_shape.reinit(*e);
+        
+        EigenVector<Complex>::type v;
+        EigenMatrix<Complex>::type jac;
+        EigenMatrix<Real>::type jac1;
+        elem_ops_complex_shape.resize_residual(v);
+        elem_ops_complex_shape.resize_jacobian(jac);
+        elem_ops_complex_shape.compute(v, &jac);
+        elem_ops_complex_shape.compute_complex_step_jacobian<Real>(jac1);
+
+        libMesh::out << v << std::endl << jac << std::endl << jac1 << std::endl;
+        jac1 -= jac0;
+        libMesh::out << jac1 << std::endl << jac1.norm() << std::endl;
+    }
+
+    {
+        MAST::ElasticityElemOperations<MAST::ElasticityTraits<Real, Real, Complex, MAST::ElasticityElemOperationsContext>> elem_ops_complex_sol;
+
+        elem_ops_complex_sol.init(*o->_sys, *o->_discipline, *o->_sys->solution);
+        elem_ops_complex_sol.reinit(*e);
+        
+        EigenVector<Complex>::type v;
+        EigenMatrix<Complex>::type jac;
+        EigenMatrix<Real>::type jac1;
+
+        elem_ops_complex_sol.resize_residual(v);
+        elem_ops_complex_sol.resize_jacobian(jac);
+        elem_ops_complex_sol.compute(v, &jac);
+        elem_ops_complex_sol.compute_complex_step_jacobian<Real>(jac1);
+
+        libMesh::out << v << std::endl << jac << std::endl << jac1 << std::endl;
+        jac1 -= jac0;
+        libMesh::out << jac1 << std::endl << jac1.norm() << std::endl;
+    }
+
+    {
+        MAST::ElasticityElemOperations<MAST::ElasticityTraits<Real, Complex, Complex, MAST::ElasticityElemOperationsContext>> elem_ops_complex_sol2;
+        
+        elem_ops_complex_sol2.init(*o->_sys, *o->_discipline, *o->_sys->solution);
+        elem_ops_complex_sol2.reinit(*e);
+        
+        EigenVector<Complex>::type v;
+        EigenMatrix<Complex>::type jac;
+        EigenMatrix<Real>::type jac1;
+
+        elem_ops_complex_sol2.resize_residual(v);
+        elem_ops_complex_sol2.resize_jacobian(jac);
+        elem_ops_complex_sol2.compute(v, &jac);
+        elem_ops_complex_sol2.compute_complex_step_jacobian<Real>(jac1);
+
+        libMesh::out << v << std::endl << jac << std::endl << jac1 << std::endl;
+        jac1 -= jac0;
+        libMesh::out << jac1 << std::endl << jac1.norm() << std::endl;
+    }
 
     // END_TRANSLATE
     return 0;

@@ -139,7 +139,7 @@ public:
         
         if (this->_compute_dphi_dx) {
 
-            this->_dphi_dx     = EigenMatrix<NodalScalarType>::type::Zero(nq, d*d*this->n_basis());
+            this->_dphi_dx     = EigenMatrix<NodalScalarType>::type::Zero(nq, d*this->n_basis());
             
             for (uint_type i=0; i<nq; i++) {
                 
