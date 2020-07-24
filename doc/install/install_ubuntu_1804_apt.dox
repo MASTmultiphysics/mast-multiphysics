@@ -1,35 +1,43 @@
 /**
-\page InstallUbuntu1910Apt Installation on Ubuntu 19.10 (Eoan)
+\page InstallUbuntu1804Apt Installation on Ubuntu 18.04 (Bionic)
 
-This page describes how to install libMesh/MAST on Ubuntu 19.10 (Eoan Ermine) using dependencies from the standard package manager. It is written for someone who has limited experience compiling software on Linux and contains details a more advanced user likely won't need.
+This page describes how to install libMesh/MAST on Ubuntu 18.04 (Eoan Ermine) using dependencies from the standard package manager. It is written for someone who has limited experience compiling software on Linux and contains details a more advanced user likely won't need.
 
-\note Ubuntu 19.10 went end-of-life in July 2020 and is no longer officially supported by Canonical. Consider updating to Ubuntu 20.04 LTS.
+\section install-ubuntu1804-dependencies Dependencies
 
-\section install-ubuntu1910-dependencies Dependencies
-
-Installing libMesh/MAST on Ubuntu 19.10 (Eoan Ermine) is relatively simple if you are able to use Ubuntu's Advanced Packaging Tool (APT) since all of the dependencies are provided in the standard package repositories. To do so we assume you have `sudo` privileges on your system and it is connected to the internet. If you are not a privileged user, ask an administrator to install these dependencies or consider \ref InstallManualDepsLinux "manually compiling/installing the dependencies" in your home directory.
+Installing libMesh/MAST on Ubuntu 18.04 (Bionic Beaver) is relatively simple if you are able to use Ubuntu's Advanced Packaging Tool (APT) since all of the dependencies are provided in the standard package repositories. To do so we assume you have `sudo` privileges on your system and it is connected to the internet. If you are not a privileged user, ask an administrator to install these dependencies or consider \ref InstallManualDepsLinux "manually compiling/installing the dependencies" in your home directory.
 
 To install all of the dependencies, simply execute the following commands in the terminal/shell. Some of the packages will install a number of required sub-dependencies.
 
 \code{.sh}
-sudo apt-get install -y git
-sudo apt-get install -y cmake
+sudo apt-get install -y git m4
 sudo apt-get install -y gcc gfortran
 sudo apt-get install -y libblas-dev
 sudo apt-get install -y liblapack-dev liblapack-doc liblapack-doc-man
 sudo apt-get install -y mpi-default-dev libopenmpi-dev openmpi-doc
-sudo apt-get install -y petsc-dev libpetsc-real3.11-dev libpetsc3.11-dev-examples libpetsc-real3.11-dbg petsc3.11-doc
-sudo apt-get install -y slepc-dev libslepc-real3.11-dev libslepc3.11-dev-examples slepc3.11-doc
+sudo apt-get install -y petsc-dev libpetsc3.7-dev libpetsc3.7.7 libpetsc3.7.7-dbg libpetsc3.7.7-dev petsc3.7.7-doc
+sudo apt-get install -y slepc-dev libslepc3.7-dev libslepc3.7.4 libslepc3.7.4-dev slepc3.7.4-doc
 sudo apt-get install -y libmetis-dev libmetis5-dbg libmetis-doc
 sudo apt-get install -y libparmetis-dev parmetis-doc
 sudo apt-get install -y libboost-all-dev libboost-doc
 sudo apt-get install -y libeigen3-dev libeigen3-doc
 sudo apt-get install -y libglpk-dev glpk-utils glpk-doc
-sudo apt-get install -y libnlopt-dev libnlopt-cxx-dev
+sudo apt-get install -y libnlopt-dev libnlopt0
 sudo apt-get install -y libvtk6-dev libvtk6.3 vtk6
 \endcode
 
-\section install-ubuntu1910-libmesh libMesh
+\section update-cmake-ubuntu1804 CMake
+We utilize some newer features in CMake and require a more recent version (3.13) than is included in the default APT repositories (3.10) for Ubuntu 18.04. The following code adds Kitware's (CMake maintainers) APT repository and installs the most recent version of CMake.
+
+\code{.sh}
+sudo apt-get install -y apt-transport-https ca-certificates gnupg software-properties-common wget
+wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | gpg --dearmor - | sudo tee /etc/apt/trusted.gpg.d/kitware.gpg >/dev/null
+sudo apt-add-repository 'deb https://apt.kitware.com/ubuntu/ bionic main'
+sudo apt-get update
+sudo apt-get -y install cmake
+\endcode
+
+\section install-ubuntu1804-libmesh libMesh
 
 When using dependencies from Ubuntu 19.10's standard package repository, only a recent version of libMesh can be built. Any official libMesh "release" up to and include v1.5.1 will fail to build with linking errors related to a conflict between the Ubuntu `apt` provided `metis` (which the provided PETSc package requires) and the `metis` that libMesh builds itself. This issue was [resolved](https://github.com/libMesh/libmesh/pull/2427) in libMesh repository commit `df1e2b7` by adding the ability for libMesh to properly use an external `metis`. The MAST developers currently provide a version of libMesh v1.5.1 that have the fixes for the build patched in.
 
@@ -97,7 +105,7 @@ Optional Packages:
   hdf5............................. : no
   laspack.......................... : yes
   libhilbert....................... : yes
-  metaphysicl...................... : no
+  metaphysicl...................... : yes
   metis............................ : yes
   mpi.............................. : yes
   nanoflann........................ : yes
@@ -108,11 +116,11 @@ Optional Packages:
   nlopt............................ : yes
   parmetis......................... : yes
   petsc............................ : yes
-     version....................... : 3.11.3
+     version....................... : 3.7.7
   qhull............................ : yes
   sfcurves......................... : yes
   slepc............................ : yes
-     version....................... : 3.11.2
+     version....................... : 3.7.4
   thread model..................... : pthread
   c++ rtti ........................ : yes
   tecio............................ : yes
@@ -146,7 +154,7 @@ The important directories from the installed contents are:
 - `${libMesh_INSTALL_DIR}/lib` - libraries for libMesh and bundled third-party packages
 - `${libMesh_INSTALL_DIR}/share` - single element reference meshes
 
-\section install-ubuntu1910-mast MAST
+\section install-ubuntu1804-mast MAST
 
 The following instructions describe how to configure and compile the MAST library, some example programs, and the unit tests. In this guide, we don't build support for Cython, the pyNastran interface, interfaces to commercial/licensed optimizers (DOT, SNOPT, GCMMA) or the documentation.
 
