@@ -26,7 +26,8 @@ find_package(Doxygen)
 #    - PYTHON_VERSION_MAJOR  = Python major version found e.g. 2
 #    - PYTHON_VERSION_MINOR  = Python minor version found e.g. 5
 #    - PYTHON_VERSION_PATCH  = Python patch version found e.g. 2
-find_package(PythonInterp 3 REQUIRED)
+find_package(PythonInterp 3 REQUIRED) # Deprecated in CMake 3.12
+#find_package(Python3 COMPONENTS Interpreter)
 
 # Below we specify various "MAST_DOXY_xxxx" CMake variables. Their contents are
 # inserted into the Doxyfile.in by the configure_file() call later.
