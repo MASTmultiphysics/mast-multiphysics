@@ -38,6 +38,7 @@ void
 MAST::PhysicsDisciplineBase::clear_loads() {
     _side_bc_map.clear();
     _vol_bc_map.clear();
+    _point_loads.clear();
 }
 
 
