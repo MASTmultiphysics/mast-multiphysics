@@ -58,4 +58,31 @@ MAST::PointLoadCondition::get_nodes() {
 }
 
 
+MAST::PointLoad::PointLoad(MAST::Parameter& magnitude, RealVectorX direction):
+MAST::FieldFunction<RealVectorX>("load"), _magnitude(magnitude),
+_direction(direction) {}
 
+
+MAST::PointLoad::~PointLoad() { }
+
+
+void MAST::PointLoad::operator()(const libMesh::Point& p, const Real t, 
+                                 RealVectorX& v) const
+{
+    v = _magnitude() * _direction;
+}
+
+
+void MAST::PointLoad::derivative(const MAST::FunctionBase& f, 
+                                 const libMesh::Point& p, const Real t, 
+                                 RealVectorX& v) const 
+{
+    v = RealVectorX::Zero(6);
+    if (&f == &_magnitude)
+    {
+        for (uint64_t i=0; i<_direction.size(); i++)
+        {
+            v(i) = _direction(i);
+        }
+    }
+}
