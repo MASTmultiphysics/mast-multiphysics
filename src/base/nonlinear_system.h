@@ -157,7 +157,9 @@ namespace MAST {
                                    MAST::AssemblyElemOperations&       elem_ops,
                                    MAST::OutputAssemblyElemOperations& output,
                                    MAST::AssemblyBase&                 assembly,
-                                   bool if_assemble_jacobian           = true);
+                                   bool if_assemble_jacobian           = true,
+                                   bool compute_adjoint_rhs            = true,
+                                   unsigned int i                      = 0);
         
         
         /**
