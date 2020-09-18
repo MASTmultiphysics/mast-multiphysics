@@ -23,6 +23,7 @@
 #include "base/parameter.h"
 #include "base/nonlinear_system.h"
 #include "boundary_condition/dirichlet_boundary_condition.h"
+#include "boundary_condition/dirichlet_dof_boundary_condition.h"
 #include "mesh/geom_elem.h"
 
 // libMesh includes
@@ -88,6 +89,13 @@ MAST::PhysicsDisciplineBase::add_dirichlet_bc(libMesh::boundary_id_type bid,
     libmesh_assert(insert_success);
 }
 
+
+void
+MAST::PhysicsDisciplineBase::add_dirichlet_dof_bc(MAST::DOFDirichletBoundaryCondition& load)
+{
+    libmesh_assert(!_dirichlet_dof_bcs.count(&load));
+    _dirichlet_dof_bcs.insert(&load);
+}
 
 
 void
@@ -230,6 +238,21 @@ init_system_dirichlet_bc(MAST::NonlinearSystem& sys) const {
 }
 
 
+void
+MAST::PhysicsDisciplineBase::
+init_system_dirichlet_dof_bc(MAST::NonlinearSystem& sys) {
+    
+    // give the set of all dirichlet dof BCs to the MAST::DOFConstraint object 
+    // (a child class of libMesh::System:Constraint) 
+    _dof_constraint.reset(new MAST::DOFConstraint(_dirichlet_dof_bcs));
+    
+    // tell the MAST::DOFConstraint which system it is acting on
+    _dof_constraint->setNonlinearSystem(sys);
+    
+    // attach the MAST::DOFConstraint object to the system
+    sys.attach_constraint_object(*_dof_constraint);
+    
+}
 
 
 void
