@@ -243,8 +243,11 @@ namespace MAST {
          * finite differencing.
          */
         virtual bool
-        sensitivity_assemble (const MAST::FunctionBase& f,
-                              libMesh::NumericVector<Real>& sensitivity_rhs) {
+        sensitivity_assemble (const libMesh::NumericVector<Real>& X,
+                              bool if_localize_sol,
+                              const MAST::FunctionBase& f,
+                              libMesh::NumericVector<Real>& sensitivity_rhs,
+                              bool close_vector = true) {
             libmesh_assert(false); // implemented in the derived class
         }
 
@@ -253,6 +256,7 @@ namespace MAST {
          */
         virtual void
         calculate_output(const libMesh::NumericVector<Real>& X,
+                         bool if_localize_sol,
                          MAST::OutputAssemblyElemOperations& output);
 
         
@@ -261,6 +265,7 @@ namespace MAST {
          */
         virtual void
         calculate_output_derivative(const libMesh::NumericVector<Real>& X,
+                                    bool if_localize_sol,
                                     MAST::OutputAssemblyElemOperations& output,
                                     libMesh::NumericVector<Real>& dq_dX);
 
@@ -276,23 +281,44 @@ namespace MAST {
          */
         virtual void
         calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
+                                            bool if_localize_sol,
                                             const libMesh::NumericVector<Real>* dXdp,
+                                            bool if_localize_sol_sens,
                                             const MAST::FunctionBase& p,
                                             MAST::OutputAssemblyElemOperations& output);
 
         
         /*!
          *   Evaluates the total sensitivity of \p output wrt \p p using
-         *   the adjoint solution provided in \p dq_dX for a linearization
+         *   the adjoint solution provided in \p adj_sol for a linearization
          *   about solution \p X.
          */
         virtual Real
         calculate_output_adjoint_sensitivity(const libMesh::NumericVector<Real>& X,
-                                             const libMesh::NumericVector<Real>& dq_dX,
+                                             bool if_localize_sol,
+                                             const libMesh::NumericVector<Real>& adj_sol,
                                              const MAST::FunctionBase& p,
                                              MAST::AssemblyElemOperations&       elem_ops,
                                              MAST::OutputAssemblyElemOperations& output,
                                              const bool include_partial_sens = true);
+
+        
+        /*!
+         *   Evaluates the dot product between  \p adj_sol and sensitivity of residual about \p X for multiple
+         *   parameter_vectors \p p_vec and returns the results in \p sens. Note that partial derivative of output
+         *   with respect to design variables will not be included.
+         *   The size of \p p_vec and \p sens should be the same and the results
+         *   of \p sens will be overwritten.
+         */
+        virtual void
+        calculate_output_adjoint_sensitivity_multiple_parameters_no_direct
+        (const libMesh::NumericVector<Real>&           X,
+         bool                                          if_localize_sol,
+         const libMesh::NumericVector<Real>&           adj_sol,
+         const std::vector<const MAST::FunctionBase*>& p_vec,
+         MAST::AssemblyElemOperations&                 elem_ops,
+         MAST::OutputAssemblyElemOperations&           output,
+         std::vector<Real>&                            sens);
 
         
         /*!

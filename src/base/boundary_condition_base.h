@@ -47,7 +47,8 @@ namespace MAST {
         EXHAUST,
         ISOTHERMAL,
         ADIABATIC,
-        BOUNDARY_VELOCITY
+        BOUNDARY_VELOCITY,
+        DOF_DIRICHLET
     };
     
     

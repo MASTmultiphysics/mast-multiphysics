@@ -173,7 +173,8 @@ MAST::HeatConductionElementBase::velocity_residual (bool request_jacobian,
     mat_n2n2        = RealMatrixX::Zero(n_phi, n_phi);
     RealVectorX
     vec1    = RealVectorX::Zero(1),
-    vec2_n2 = RealVectorX::Zero(n_phi);
+    vec2_n2 = RealVectorX::Zero(n_phi),
+    local_f = RealVectorX::Zero(n_phi);
     
     std::unique_ptr<MAST::FieldFunction<RealMatrixX> > capacitance =
     _property.thermal_capacitance_matrix(*this);
@@ -192,9 +193,9 @@ MAST::HeatConductionElementBase::velocity_residual (bool request_jacobian,
         Bmat.right_multiply(vec1, _vel);               //  B * T_dot
         Bmat.vector_mult_transpose(vec2_n2, vec1);     //  B^T * B * T_dot
         
-        f      += JxW[qp] * material_mat(0,0) * vec2_n2; // (rho*cp)*JxW B^T B T_dot
+        local_f    += JxW[qp] * material_mat(0,0) * vec2_n2; // (rho*cp)*JxW B^T B T_dot
         
-        if (request_jacobian) {
+        if (request_jacobian || _property.if_diagonal_mass_matrix()) {
             
             Bmat.right_multiply_transpose(mat_n2n2, Bmat);  // B^T B
             jac_xdot += JxW[qp] * material_mat(0,0) * mat_n2n2;  // B^T B * JxW (rho*cp)
@@ -215,7 +216,27 @@ MAST::HeatConductionElementBase::velocity_residual (bool request_jacobian,
         }
     }
     
-    
+    // diagonalize the matrix and compute the residual based on that.
+    if (_property.if_diagonal_mass_matrix()) {
+
+        for (unsigned int i=0; i<jac_xdot.rows(); i++) {
+            
+            Real a = jac_xdot.row(i).sum();
+            jac_xdot.row(i).setZero();
+            jac_xdot(i,i) = a;
+        }
+
+        f +=  jac_xdot * _vel;
+
+        // if the jacobian was not requested, then zero the matrix.
+        if (!request_jacobian) {
+            jac_xdot.setZero();
+            jac.setZero();
+        }
+    }
+    else
+        f += local_f;
+
     if (_active_sol_function)
         dynamic_cast<MAST::MeshFieldFunction*>
         (_active_sol_function)->clear_element_quadrature_point_solution();
@@ -636,7 +657,7 @@ internal_residual_boundary_velocity (const MAST::FunctionBase& p,
     // modify the JxW_Vn by multiplying the normal velocity to it
     for (unsigned int qp=0; qp<JxW_Vn.size(); qp++) {
         
-        vel_f(xyz[qp], _time, vel);
+        vel_f.derivative(p, xyz[qp], _time, vel);
         vn = 0.;
         for (unsigned int i=0; i<dim; i++)
             vn += vel(i)*face_normals[qp](i);
@@ -701,10 +722,13 @@ velocity_residual_sensitivity (const MAST::FunctionBase& p,
     
     RealMatrixX
     material_mat    = RealMatrixX::Zero(dim, dim),
-    mat_n2n2        = RealMatrixX::Zero(n_phi, n_phi);
+    mat_n2n2        = RealMatrixX::Zero(n_phi, n_phi),
+    local_jac_xdot  = RealMatrixX::Zero(n_phi, n_phi);
+    
     RealVectorX
     vec1    = RealVectorX::Zero(1),
-    vec2_n2 = RealVectorX::Zero(n_phi);
+    vec2_n2 = RealVectorX::Zero(n_phi),
+    local_f = RealVectorX::Zero(n_phi);
     
     std::unique_ptr<MAST::FieldFunction<RealMatrixX> > capacitance =
     _property.thermal_capacitance_matrix(*this);
@@ -723,9 +747,28 @@ velocity_residual_sensitivity (const MAST::FunctionBase& p,
         Bmat.right_multiply(vec1, _vel);               //  B * T_dot
         Bmat.vector_mult_transpose(vec2_n2, vec1);     //  B^T * B * T_dot
         
-        f      += JxW[qp] * material_mat(0,0) * vec2_n2; // (rho*cp)*JxW B^T B T_dot
+        local_f   += JxW[qp] * material_mat(0,0) * vec2_n2; // (rho*cp)*JxW B^T B T_dot
+        
+        if (_property.if_diagonal_mass_matrix()) {
+            
+            Bmat.right_multiply_transpose(mat_n2n2, Bmat);  // B^T B
+            local_jac_xdot += JxW[qp] * material_mat(0,0) * mat_n2n2;  // B^T B * JxW (rho*cp)
+        }
     }
     
+    if (_property.if_diagonal_mass_matrix()) {
+        
+        for (unsigned int i=0; i<local_jac_xdot.rows(); i++) {
+            
+            Real a = local_jac_xdot.row(i).sum();
+            local_jac_xdot.row(i).setZero();
+            local_jac_xdot(i,i) = a;
+        }
+
+        f += local_jac_xdot * _vel;
+    }
+    else
+        f += local_f;
     
     if (_active_sol_function)
         dynamic_cast<MAST::MeshFieldFunction*>
@@ -757,10 +800,12 @@ velocity_residual_boundary_velocity (const MAST::FunctionBase& p,
     
     RealMatrixX
     material_mat    = RealMatrixX::Zero(dim, dim),
-    mat_n2n2        = RealMatrixX::Zero(n_phi, n_phi);
+    mat_n2n2        = RealMatrixX::Zero(n_phi, n_phi),
+    local_jac_xdot  = RealMatrixX::Zero(n_phi, n_phi);
     RealVectorX
     vec1    = RealVectorX::Zero(1),
     vec2_n2 = RealVectorX::Zero(n_phi),
+    local_f = RealVectorX::Zero(n_phi),
     vel     = RealVectorX::Zero(dim);
     
     std::unique_ptr<MAST::FieldFunction<RealMatrixX> > capacitance =
@@ -772,7 +817,7 @@ velocity_residual_boundary_velocity (const MAST::FunctionBase& p,
     // modify the JxW_Vn by multiplying the normal velocity to it
     for (unsigned int qp=0; qp<JxW_Vn.size(); qp++) {
         
-        vel_f(xyz[qp], _time, vel);
+        vel_f.derivative(p, xyz[qp], _time, vel);
         vn = 0.;
         for (unsigned int i=0; i<dim; i++)
             vn += vel(i)*face_normals[qp](i);
@@ -793,9 +838,30 @@ velocity_residual_boundary_velocity (const MAST::FunctionBase& p,
         Bmat.right_multiply(vec1, _vel);               //  B * T_dot
         Bmat.vector_mult_transpose(vec2_n2, vec1);     //  B^T * B * T_dot
         
-        f      += JxW_Vn[qp] * material_mat(0,0) * vec2_n2; // (rho*cp)*JxW B^T B T_dot
+        local_f      += JxW_Vn[qp] * material_mat(0,0) * vec2_n2; // (rho*cp)*JxW B^T B T_dot
+
+        if (_property.if_diagonal_mass_matrix()) {
+            
+            Bmat.right_multiply_transpose(mat_n2n2, Bmat);  // B^T B
+            local_jac_xdot += JxW_Vn[qp] * material_mat(0,0) * mat_n2n2;  // B^T B * JxW (rho*cp)
+        }
     }
     
+    // diagonalize the matrix and compute the residual based on that.
+    if (_property.if_diagonal_mass_matrix()) {
+
+        for (unsigned int i=0; i<local_jac_xdot.rows(); i++) {
+            
+            Real a = local_jac_xdot.row(i).sum();
+            local_jac_xdot.row(i).setZero();
+            local_jac_xdot(i,i) = a;
+        }
+
+        f +=  local_jac_xdot * _vel;
+    }
+    else
+        f += local_f;
+
     
     if (_active_sol_function)
         dynamic_cast<MAST::MeshFieldFunction*>
@@ -821,7 +887,7 @@ surface_flux_residual(bool request_jacobian,
     // get the function from this boundary condition
     const MAST::FieldFunction<Real>
     &func    = bc.get<MAST::FieldFunction<Real> >("heat_flux"),
-    &section = _property.section(*this);
+    *section = _property.section(*this);
     
     const std::vector<Real> &JxW                 = fe->get_JxW();
     const std::vector<libMesh::Point>& qpoint    = fe->get_xyz();
@@ -839,8 +905,9 @@ surface_flux_residual(bool request_jacobian,
         
         // get the value of flux = q_i . n_i
         func(qpoint[qp], _time, flux);
-        section(qpoint[qp], _time, th);
-        
+        if (section) (*section)(qpoint[qp], _time, th);
+        else th  = 1.;
+
         f   +=  JxW[qp] * phi_vec * flux * th;
     }
 }
@@ -900,7 +967,7 @@ surface_flux_residual_sensitivity(const MAST::FunctionBase& p,
     // get the function from this boundary condition
     const MAST::FieldFunction<Real>
     &func    = bc.get<MAST::FieldFunction<Real> >("heat_flux"),
-    &section = _property.section(*this);
+    *section = _property.section(*this);
 
     
     const std::vector<Real> &JxW                 = fe->get_JxW();
@@ -920,8 +987,15 @@ surface_flux_residual_sensitivity(const MAST::FunctionBase& p,
         // get the value of flux = q_i . n_i
         func(qpoint[qp], _time, flux);
         func.derivative(p, qpoint[qp], _time, dflux);
-        section(qpoint[qp], _time, th);
-        section.derivative(p, qpoint[qp], _time, dth);
+        if (section) {
+            
+            (*section)(qpoint[qp], _time, th);
+            section->derivative(p, qpoint[qp], _time, dth);
+        }
+        else {
+            th  = 1.;
+            dth = 0.;
+        }
         
         f   +=  JxW[qp] * phi_vec * (flux*dth + dflux*th);
     }
@@ -996,7 +1070,7 @@ surface_flux_boundary_velocity(const MAST::FunctionBase& p,
     // modify the JxW_Vn by multiplying the normal velocity to it
     for (unsigned int qp=0; qp<JxW_Vn.size(); qp++) {
         
-        vel_f(xyz[qp], _time, vel);
+        vel_f.derivative(p, xyz[qp], _time, vel);
         vn = 0.;
         for (unsigned int i=0; i<dim; i++)
             vn += vel(i)*face_normals[qp](i);
@@ -1037,7 +1111,7 @@ surface_convection_residual(bool request_jacobian,
     const MAST::FieldFunction<Real>
     &coeff   = bc.get<MAST::FieldFunction<Real> >("convection_coeff"),
     &T_amb   = bc.get<MAST::FieldFunction<Real> >("ambient_temperature"),
-    &section = _property.section(*this);
+    *section = _property.section(*this);
 
     const std::vector<Real> &JxW               = fe->get_JxW();
     const std::vector<libMesh::Point>& qpoint  = fe->get_xyz();
@@ -1060,9 +1134,10 @@ surface_convection_residual(bool request_jacobian,
         // value of flux
         coeff(qpoint[qp], _time, h_coeff);
         T_amb(qpoint[qp], _time, amb_temp);
-        section(qpoint[qp], _time, th);
         temp  = phi_vec.dot(_sol);
-        
+        if (section) (*section)(qpoint[qp], _time, th);
+        else th  = 1.;
+
         // normal flux is given as:
         // qi_ni = h_coeff * (T - T_amb)
         //
@@ -1152,7 +1227,7 @@ surface_convection_residual_sensitivity(const MAST::FunctionBase& p,
     const MAST::FieldFunction<Real>
     &coeff   = bc.get<MAST::FieldFunction<Real> >("convection_coeff"),
     &T_amb   = bc.get<MAST::FieldFunction<Real> >("ambient_temperature"),
-    &section = _property.section(*this);
+    *section = _property.section(*this);
     
     const std::vector<Real> &JxW               = fe->get_JxW();
     const std::vector<libMesh::Point>& qpoint  = fe->get_xyz();
@@ -1177,10 +1252,17 @@ surface_convection_residual_sensitivity(const MAST::FunctionBase& p,
         // value of flux
         coeff(qpoint[qp], _time, h_coeff);
         T_amb(qpoint[qp], _time, amb_temp);
-        section(qpoint[qp], _time, th);
         coeff.derivative(p, qpoint[qp], _time, dh_coeff);
         T_amb.derivative(p, qpoint[qp], _time, damb_temp);
-        section.derivative(p, qpoint[qp], _time, dth);
+        if (section) {
+            
+            (*section)(qpoint[qp], _time, th);
+            section->derivative(p, qpoint[qp], _time, dth);
+        }
+        else {
+            th  = 1.;
+            dth = 0.;
+        }
         temp  = phi_vec.dot(_sol);
         
         // normal flux is given as:
@@ -1288,7 +1370,7 @@ surface_convection_boundary_velocity(const MAST::FunctionBase& p,
     // modify the JxW_Vn by multiplying the normal velocity to it
     for (unsigned int qp=0; qp<JxW_Vn.size(); qp++) {
         
-        vel_f(xyz[qp], _time, vel);
+        vel_f.derivative(p, xyz[qp], _time, vel);
         vn = 0.;
         for (unsigned int i=0; i<dim; i++)
             vn += vel(i)*face_normals[qp](i);
@@ -1331,7 +1413,7 @@ surface_radiation_residual(bool request_jacobian,
     // get the function from this boundary condition
     const MAST::FieldFunction<Real>
     &emissivity = bc.get<MAST::FieldFunction<Real> >("emissivity"),
-    &section    = _property.section(*this);
+    *section    = _property.section(*this);
     
     const MAST::Parameter
     &T_amb      = bc.get<MAST::Parameter>("ambient_temperature"),
@@ -1361,9 +1443,10 @@ surface_radiation_residual(bool request_jacobian,
         
         // value of flux
         emissivity(qpoint[qp], _time, emiss);
-        section(qpoint[qp], _time, th);
         temp  = phi_vec.dot(_sol);
-        
+        if (section) (*section)(qpoint[qp], _time, th);
+        else th  = 1.;
+
         f   += JxW[qp] * phi_vec * sbc * emiss * th *
         (pow(temp+zero_ref, 4.) - pow(amb_temp+zero_ref, 4.));
         
@@ -1451,7 +1534,7 @@ surface_radiation_residual_sensitivity(const MAST::FunctionBase& p,
     // get the function from this boundary condition
     const MAST::FieldFunction<Real>
     &emissivity = bc.get<MAST::FieldFunction<Real> >("emissivity"),
-    &section    = _property.section(*this);
+    *section    = _property.section(*this);
     
     const MAST::Parameter
     &T_amb      = bc.get<MAST::Parameter>("ambient_temperature"),
@@ -1482,10 +1565,17 @@ surface_radiation_residual_sensitivity(const MAST::FunctionBase& p,
         // value of flux
         emissivity(qpoint[qp], _time, emiss);
         emissivity.derivative(p, qpoint[qp], _time, demiss);
-        section(qpoint[qp], _time, th);
-        section.derivative(p, qpoint[qp], _time, dth);
         temp  = phi_vec.dot(_sol);
-        
+        if (section) {
+            
+            (*section)(qpoint[qp], _time, th);
+            section->derivative(p, qpoint[qp], _time, dth);
+        }
+        else {
+            th  = 1.;
+            dth = 0.;
+        }
+
         f   += JxW[qp] * phi_vec * sbc * (demiss * th + emiss * dth) *
         (pow(temp+zero_ref, 4.) - pow(amb_temp+zero_ref, 4.));
     }
@@ -1592,7 +1682,7 @@ surface_radiation_boundary_velocity(const MAST::FunctionBase& p,
     // modify the JxW_Vn by multiplying the normal velocity to it
     for (unsigned int qp=0; qp<JxW_Vn.size(); qp++) {
         
-        vel_f(xyz[qp], _time, vel);
+        vel_f.derivative(p, xyz[qp], _time, vel);
         vn = 0.;
         for (unsigned int i=0; i<dim; i++)
             vn += vel(i)*face_normals[qp](i);
@@ -1627,7 +1717,7 @@ volume_heat_source_residual(bool request_jacobian,
     // get the function from this boundary condition
     const MAST::FieldFunction<Real>
     &func       = bc.get<MAST::FieldFunction<Real> >("heat_source"),
-    &section    = _property.section(*this);
+    *section    = _property.section(*this);
     
     std::unique_ptr<MAST::FEBase> fe(_elem.init_fe(false, false));
     
@@ -1647,8 +1737,9 @@ volume_heat_source_residual(bool request_jacobian,
         
         // get the value of heat source
         func(qpoint[qp], _time, source);
-        section(qpoint[qp], _time, th);
-        
+        if (section) (*section)(qpoint[qp], _time, th);
+        else th  = 1.;
+
         f   -=  JxW[qp] * phi_vec * source * th;
     }
 }
@@ -1664,7 +1755,7 @@ volume_heat_source_residual_sensitivity(const MAST::FunctionBase& p,
     // get the function from this boundary condition
     const MAST::FieldFunction<Real>
     &func       = bc.get<MAST::FieldFunction<Real> >("heat_source"),
-    &section    = _property.section(*this);
+    *section    = _property.section(*this);
     
     std::unique_ptr<MAST::FEBase> fe(_elem.init_fe(false, false));
 
@@ -1685,8 +1776,15 @@ volume_heat_source_residual_sensitivity(const MAST::FunctionBase& p,
         // get the value of heat source
         func(qpoint[qp], _time, source);
         func.derivative(p, qpoint[qp], _time, dsource);
-        section(qpoint[qp], _time, th);
-        section.derivative(p, qpoint[qp], _time, dth);
+        if (section) {
+            
+            (*section)(qpoint[qp], _time, th);
+            section->derivative(p, qpoint[qp], _time, dth);
+        }
+        else {
+            th  = 1.;
+            dth = 0.;
+        }
 
         f   -=  JxW[qp] * phi_vec * (dsource * th + source * dth);
     }
@@ -1712,7 +1810,7 @@ volume_heat_source_boundary_velocity(const MAST::FunctionBase& p,
     // get the function from this boundary condition
     const MAST::FieldFunction<Real>
     &func       = bc.get<MAST::FieldFunction<Real> >("heat_source"),
-    &section    = _property.section(*this);
+    *section    = _property.section(*this);
     
     const unsigned int
     n_phi   = (unsigned int)phi.size(),
@@ -1729,7 +1827,7 @@ volume_heat_source_boundary_velocity(const MAST::FunctionBase& p,
     // modify the JxW_Vn by multiplying the normal velocity to it
     for (unsigned int qp=0; qp<JxW_Vn.size(); qp++) {
         
-        vel_f(xyz[qp], _time, vel);
+        vel_f.derivative(p, xyz[qp], _time, vel);
         vn = 0.;
         for (unsigned int i=0; i<dim; i++)
             vn += vel(i)*face_normals[qp](i);
@@ -1744,8 +1842,9 @@ volume_heat_source_boundary_velocity(const MAST::FunctionBase& p,
         
         // get the value of heat source
         func(xyz[qp], _time, source);
-        section(xyz[qp], _time, th);
-        
+        if (section) (*section)(xyz[qp], _time, th);
+        else th  = 1.;
+
         f   -=  JxW_Vn[qp] * phi_vec * source * th;
     }
 }

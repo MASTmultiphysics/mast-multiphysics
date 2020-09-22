@@ -1,0 +1,3 @@
+# Below forces http->https redirection on Apache web server.
+RewriteCond %{HTTPS} !=on
+RewriteRule ^(.*) https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]

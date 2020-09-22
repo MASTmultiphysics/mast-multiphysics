@@ -57,7 +57,8 @@ MAST::FilterBase::~FilterBase() {
 
 void
 MAST::FilterBase::compute_filtered_values(const libMesh::NumericVector<Real>& input,
-                                          libMesh::NumericVector<Real>& output) const {
+                                          libMesh::NumericVector<Real>& output,
+                                          bool close_vector) const {
     
     libmesh_assert_equal_to(input.size(), _filter_map.size());
     libmesh_assert_equal_to(output.size(), _filter_map.size());
@@ -89,7 +90,49 @@ MAST::FilterBase::compute_filtered_values(const libMesh::NumericVector<Real>& in
         }
     }
     
-    output.close();
+    if (close_vector)
+        output.close();
+}
+
+
+
+void
+MAST::FilterBase::compute_filtered_values(std::map<unsigned int, Real>& nonzero_input,
+                                          libMesh::NumericVector<Real>& output,
+                                          bool close_vector) const {
+    
+    libmesh_assert_equal_to(output.size(), _filter_map.size());
+    
+    output.zero();
+    
+    std::map<unsigned int, std::vector<std::pair<unsigned int, Real>>>::const_iterator
+    map_it   = _filter_map.begin(),
+    map_end  = _filter_map.end();
+    
+    for ( ; map_it != map_end; map_it++) {
+        
+        std::vector<std::pair<unsigned int, Real>>::const_iterator
+        vec_it  = map_it->second.begin(),
+        vec_end = map_it->second.end();
+        
+        for ( ; vec_it != vec_end; vec_it++) {
+            if (nonzero_input.count(vec_it->first)) {
+                
+                if (output.type() == libMesh::SERIAL ||
+                    (map_it->first >= output.first_local_index() &&
+                     map_it->first <  output.last_local_index())) {
+                    
+                    if (_dv_dof_ids.count(map_it->first))
+                        output.add(map_it->first, nonzero_input[vec_it->first] * vec_it->second);
+                    else
+                        output.set(map_it->first, nonzero_input[map_it->first]);
+                }
+            }
+        }
+    }
+    
+    if (close_vector)
+        output.close();
 }
 
 

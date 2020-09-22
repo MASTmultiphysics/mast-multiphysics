@@ -1117,7 +1117,7 @@ public:
             
             // calculate the output quantity
             force.zero_for_analysis();
-            assembly.calculate_output(solver.solution(), force);
+            assembly.calculate_output(solver.solution(), true, force);
             force_output
             << std::setw(10) << tval
             << std::setw(30) << force.output_total() << std::endl;
@@ -1208,10 +1208,11 @@ public:
         // This is recommended only for the initial time step, since the time
         // integration scheme updates the velocity and acceleration at
         // each subsequent iterate
+        solver.solve_highest_derivative_and_advance_time_step(assembly, false);
         solver.solve_highest_derivative_and_advance_time_step_with_sensitivity(assembly, p);
         
         // loop over time steps
-        while (t_step < n_steps) {
+        while (t_step < n_steps-1) {
             
             libMesh::out
             << "Time step: " << t_step
@@ -1230,23 +1231,27 @@ public:
                 _sys->solution->swap(solver.solution_sensitivity());
             }
             
-            std::ostringstream oss;
-            oss << nonlinear_sol_root << t_step;
+            std::ostringstream oss, oss_sens;
+            oss << nonlinear_sol_root << t_step+1;
             _sys->read_in_vector(*_sys->solution, nonlinear_sol_dir, oss.str(), true);
+            solver.update_velocity(solver.velocity(), *_sys->solution);
             _sys->update();
-            oss << "_sens_t";
+            oss_sens << nonlinear_sol_root << t_step << "_sens_t";
             _sys->write_out_vector(/*solver.dt, _sys->time,*/ solver.solution_sensitivity(), "data", oss.str(), true);
             
             // solve for the sensitivity time-step
             force.zero_for_analysis();
-            assembly.calculate_output(solver.solution(), force);
-            assembly.calculate_output_direct_sensitivity(solver.solution(), &solver.solution_sensitivity(), p, force);
+            assembly.calculate_output(solver.solution(), true, force);
+            assembly.calculate_output_direct_sensitivity(solver.solution(), true,
+                                                         &solver.solution_sensitivity(), true,
+                                                         p, force);
             force_output
             << std::setw(10) << _sys->time
             << std::setw(30) << force.output_total()
             << std::setw(30) << force.output_sensitivity_total(p) << std::endl;
             
             solver.sensitivity_solve(assembly, p);
+            solver.advance_time_step(false);
             solver.advance_time_step_with_sensitivity();
             
             // update time step counter
@@ -1356,8 +1361,10 @@ public:
             
             // solve for the sensitivity time-step
             force.zero_for_analysis();
-            assembly.calculate_output(solver.solution(), force);
-            assembly.calculate_output_direct_sensitivity(solver.solution(), &solver.solution_sensitivity(), p, force);
+            assembly.calculate_output(solver.solution(), true, force);
+            assembly.calculate_output_direct_sensitivity(solver.solution(), true,
+                                                         &solver.solution_sensitivity(), true,
+                                                         p, force);
             force_output
             << std::setw(10) << _sys->time
             << std::setw(30) << force.output_total()

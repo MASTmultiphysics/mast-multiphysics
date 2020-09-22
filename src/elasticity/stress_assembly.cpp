@@ -151,6 +151,14 @@ update_stress_strain_data(MAST::StressStrainOutputBase&       ops,
         
         const libMesh::Elem* elem = *el;
         
+        // clear before calculating the data
+        ops.clear();
+        MAST::GeomElem geom_elem;
+        ops.set_elem_data(elem->dim(), *elem, geom_elem);
+        geom_elem.init(*elem, *_system);
+        
+        if (!ops.if_evaluate_for_element(geom_elem)) continue;
+
         dof_map.dof_indices (elem, dof_indices);
         
         unsigned int ndofs = (unsigned int)dof_indices.size();
@@ -159,14 +167,6 @@ update_stress_strain_data(MAST::StressStrainOutputBase&       ops,
         for (unsigned int i=0; i<dof_indices.size(); i++)
             sol(i) = (*localized_solution)(dof_indices[i]);
         
-        // clear before calculating the data
-        ops.clear();
-        MAST::GeomElem geom_elem;
-        ops.set_elem_data(elem->dim(), *elem, geom_elem);
-        geom_elem.init(*elem, *_system);
-        
-        if (!ops.if_evaluate_for_element(geom_elem)) continue;
-            
         ops.init(geom_elem);
         ops.set_elem_solution(sol);
         ops.evaluate();
@@ -284,6 +284,16 @@ update_stress_strain_sensitivity_data(MAST::StressStrainOutputBase&       ops,
         
         const libMesh::Elem* elem = *el;
         
+        // clear before calculating the data. We have to calculate the stress
+        // before calculating sensitivity since the sensitivity assumes the
+        // presence of stress data, which is cleared after each element.
+        ops.clear();
+        MAST::GeomElem geom_elem;
+        ops.set_elem_data(elem->dim(), *elem, geom_elem);
+        geom_elem.init(*elem, *_system);
+        
+        if (!ops.if_evaluate_for_element(geom_elem)) continue;
+
         dof_map.dof_indices (elem, dof_indices);
         
         unsigned int ndofs = (unsigned int)dof_indices.size();
@@ -295,16 +305,6 @@ update_stress_strain_sensitivity_data(MAST::StressStrainOutputBase&       ops,
             dsol(i) = (*localized_solution_sens)(dof_indices[i]);
         }
         
-        // clear before calculating the data. We have to calculate the stress
-        // before calculating sensitivity since the sensitivity assumes the
-        // presence of stress data, which is cleared after each element.
-        ops.clear();
-        MAST::GeomElem geom_elem;
-        ops.set_elem_data(elem->dim(), *elem, geom_elem);
-        geom_elem.init(*elem, *_system);
-        
-        if (!ops.if_evaluate_for_element(geom_elem)) continue;
-
         ops.init(geom_elem);
         ops.set_stress_plot_mode(true);
         ops.set_elem_solution(sol);

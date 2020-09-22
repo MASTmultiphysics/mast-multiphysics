@@ -368,7 +368,7 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
     
     // if a solution function is attached, initialize it
     if (_sol_function)
-        _sol_function->init( X);
+        _sol_function->init( X, false);
     
     
     libMesh::MeshBase::const_element_iterator       el     =
@@ -550,8 +550,11 @@ residual_and_jacobian (const libMesh::NumericVector<Real>& X,
 
 bool
 MAST::LevelSetNonlinearImplicitAssembly::
-sensitivity_assemble (const MAST::FunctionBase& f,
-                      libMesh::NumericVector<Real>& sensitivity_rhs) {
+sensitivity_assemble (const libMesh::NumericVector<Real>& X,
+                      bool if_localize_sol,
+                      const MAST::FunctionBase& f,
+                      libMesh::NumericVector<Real>& sensitivity_rhs,
+                      bool close_vector) {
     
     libmesh_assert(_system);
     libmesh_assert(_discipline);
@@ -593,14 +596,21 @@ sensitivity_assemble (const MAST::FunctionBase& f,
     material_rows;
     const libMesh::DofMap& dof_map = nonlin_sys.get_dof_map();
     
+    const libMesh::NumericVector<Real>
+    *sol_vec = nullptr;
     
     std::unique_ptr<libMesh::NumericVector<Real> > localized_solution;
-    localized_solution.reset(build_localized_vector(nonlin_sys,
-                                                    *nonlin_sys.solution).release());
+    
+    if (if_localize_sol) {
+        localized_solution.reset(build_localized_vector(nonlin_sys, X).release());
+        sol_vec = localized_solution.get();
+    }
+    else
+        sol_vec = &X;
     
     // if a solution function is attached, initialize it
     if (_sol_function)
-        _sol_function->init( *nonlin_sys.solution);
+        _sol_function->init( *nonlin_sys.solution, false);
     
     libMesh::MeshBase::const_element_iterator       el     =
     nonlin_sys.get_mesh().active_local_elements_begin();
@@ -647,7 +657,7 @@ sensitivity_assemble (const MAST::FunctionBase& f,
             vec2.setZero(ndofs);
             
             for (unsigned int i=0; i<dof_indices.size(); i++)
-                sol(i) = (*localized_solution)(dof_indices[i]);
+                sol(i) = (*sol_vec)(dof_indices[i]);
 
             // if the element has been marked for factorization then
             // get the void solution from the storage
@@ -748,7 +758,8 @@ sensitivity_assemble (const MAST::FunctionBase& f,
     if (_sol_function)
         _sol_function->clear();
     
-    sensitivity_rhs.close();
+    if (close_vector)
+        sensitivity_rhs.close();
     
     return true;
 }
@@ -759,6 +770,7 @@ sensitivity_assemble (const MAST::FunctionBase& f,
 void
 MAST::LevelSetNonlinearImplicitAssembly::
 calculate_output(const libMesh::NumericVector<Real>& X,
+                 bool if_localize_sol,
                  MAST::OutputAssemblyElemOperations& output) {
     
     libmesh_assert(_system);
@@ -781,15 +793,22 @@ calculate_output(const libMesh::NumericVector<Real>& X,
     std::vector<libMesh::dof_id_type> dof_indices;
     const libMesh::DofMap& dof_map = _system->system().get_dof_map();
     
+    const libMesh::NumericVector<Real>
+    *sol_vec = nullptr;
     
     std::unique_ptr<libMesh::NumericVector<Real> > localized_solution;
-    localized_solution.reset(build_localized_vector(nonlin_sys,
-                                                    X).release());
+    
+    if (if_localize_sol) {
+        localized_solution.reset(build_localized_vector(nonlin_sys, X).release());
+        sol_vec = localized_solution.get();
+    }
+    else
+        sol_vec = &X;
     
     
     // if a solution function is attached, initialize it
     //if (_sol_function)
-    //    _sol_function->init( X);
+    //    _sol_function->init( X, false);
     
     
     libMesh::MeshBase::const_element_iterator       el     =
@@ -826,7 +845,7 @@ calculate_output(const libMesh::NumericVector<Real>& X,
             sol.setZero(ndofs);
             
             for (unsigned int i=0; i<dof_indices.size(); i++)
-                sol(i) = (*localized_solution)(dof_indices[i]);
+                sol(i) = (*sol_vec)(dof_indices[i]);
             
             // if the element has been marked for factorization then
             // get the void solution from the storage
@@ -867,7 +886,7 @@ calculate_output(const libMesh::NumericVector<Real>& X,
             sol.setZero(ndofs);
             
             for (unsigned int i=0; i<dof_indices.size(); i++)
-                sol(i) = (*localized_solution)(dof_indices[i]);
+                sol(i) = (*sol_vec)(dof_indices[i]);
 
             // if the element has been marked for factorization then
             // get the void solution from the storage
@@ -914,6 +933,7 @@ calculate_output(const libMesh::NumericVector<Real>& X,
 void
 MAST::LevelSetNonlinearImplicitAssembly::
 calculate_output_derivative(const libMesh::NumericVector<Real>& X,
+                            bool if_localize_sol,
                             MAST::OutputAssemblyElemOperations& output,
                             libMesh::NumericVector<Real>& dq_dX) {
     
@@ -952,14 +972,22 @@ calculate_output_derivative(const libMesh::NumericVector<Real>& X,
     MAST::NonlinearImplicitAssemblyElemOperations&
     ops = dynamic_cast<MAST::NonlinearImplicitAssemblyElemOperations&>(*_elem_ops);
 
-    std::unique_ptr<libMesh::NumericVector<Real> > localized_solution;
-    localized_solution.reset(build_localized_vector(nonlin_sys,
-                                                    X).release());
+    const libMesh::NumericVector<Real>
+    *sol_vec = nullptr;
     
+    std::unique_ptr<libMesh::NumericVector<Real> > localized_solution;
+    
+    if (if_localize_sol) {
+        localized_solution.reset(build_localized_vector(nonlin_sys, X).release());
+        sol_vec = localized_solution.get();
+    }
+    else
+        sol_vec = &X;
+
     
     // if a solution function is attached, initialize it
     if (_sol_function)
-        _sol_function->init( X);
+        _sol_function->init( X, false);
     
     
     libMesh::MeshBase::const_element_iterator       el     =
@@ -1000,7 +1028,7 @@ calculate_output_derivative(const libMesh::NumericVector<Real>& X,
             vec_total.setZero(ndofs);
             
             for (unsigned int i=0; i<dof_indices.size(); i++)
-                sol(i) = (*localized_solution)(dof_indices[i]);
+                sol(i) = (*sol_vec)(dof_indices[i]);
             
             // if the element has been marked for factorization then
             // get the void solution from the storage
@@ -1053,7 +1081,7 @@ calculate_output_derivative(const libMesh::NumericVector<Real>& X,
             vec_total.setZero(ndofs);
             
             for (unsigned int i=0; i<dof_indices.size(); i++)
-                sol(i) = (*localized_solution)(dof_indices[i]);
+                sol(i) = (*sol_vec)(dof_indices[i]);
             
             // if the element has been marked for factorization then
             // get the void solution from the storage
@@ -1137,7 +1165,9 @@ calculate_output_derivative(const libMesh::NumericVector<Real>& X,
 void
 MAST::LevelSetNonlinearImplicitAssembly::
 calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
+                                    bool if_localize_sol,
                                     const libMesh::NumericVector<Real>* dXdp,
+                                    bool if_localize_sol_sens,
                                     const MAST::FunctionBase& p,
                                     MAST::OutputAssemblyElemOperations& output) {
     
@@ -1173,19 +1203,32 @@ calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
     const libMesh::DofMap& dof_map = _system->system().get_dof_map();
     
     
+    const libMesh::NumericVector<Real>
+    *sol_vec  = nullptr,
+    *dsol_vec = nullptr;
+    
     std::unique_ptr<libMesh::NumericVector<Real> >
     localized_solution,
-    localized_solution_sens;
-    localized_solution.reset(build_localized_vector(nonlin_sys,
-                                                    X).release());
-    if (dXdp)
-        localized_solution_sens.reset(build_localized_vector(nonlin_sys,
-                                                             *dXdp).release());
+    localized_perturbed_solution;
+    
+    if (if_localize_sol) {
+        localized_solution.reset(build_localized_vector(nonlin_sys, X).release());
+        sol_vec = localized_solution.get();
+    }
+    else
+        sol_vec = &X;
+    
+    if (if_localize_sol_sens) {
+        localized_perturbed_solution.reset(build_localized_vector(nonlin_sys, *dXdp).release());
+        dsol_vec = localized_perturbed_solution.get();
+    }
+    else
+        dsol_vec = dXdp;
 
     
     // if a solution function is attached, initialize it
     //if (_sol_function)
-    //    _sol_function->init( X);
+    //    _sol_function->init( X, false);
     
     
     libMesh::MeshBase::const_element_iterator       el     =
@@ -1234,9 +1277,9 @@ calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
             dsol.setZero(ndofs);
             
             for (unsigned int i=0; i<dof_indices.size(); i++) {
-                sol(i)  = (*localized_solution)(dof_indices[i]);
+                sol(i)  = (*sol_vec)(dof_indices[i]);
                 if (dXdp)
-                    dsol(i) = (*localized_solution_sens)(dof_indices[i]);
+                    dsol(i) = (*dsol_vec)(dof_indices[i]);
             }
             
             // if the element has been marked for factorization then
@@ -1285,9 +1328,9 @@ calculate_output_direct_sensitivity(const libMesh::NumericVector<Real>& X,
             dsol.setZero(ndofs);
             
             for (unsigned int i=0; i<dof_indices.size(); i++) {
-                sol(i)  = (*localized_solution)(dof_indices[i]);
+                sol(i)  = (*sol_vec)(dof_indices[i]);
                 if (dXdp)
-                    dsol(i) = (*localized_solution_sens)(dof_indices[i]);
+                    dsol(i) = (*dsol_vec)(dof_indices[i]);
             }
             
             // if the element has been marked for factorization then

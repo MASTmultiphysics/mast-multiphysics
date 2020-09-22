@@ -2117,19 +2117,19 @@ thermal_capacitance_matrix() const {
 }
 
 
-const MAST::FieldFunction<Real>&
+const MAST::FieldFunction<Real>*
 MAST::Solid1DSectionElementPropertyCard::
 section(const MAST::ElementBase& e) const {
     
-    return *_A;
+    return _A.get();
 }
 
 
-const MAST::FieldFunction<Real>&
+const MAST::FieldFunction<Real>*
 MAST::Solid1DSectionElementPropertyCard::
 section() const {
     
-    return *_A;
+    return _A.get();
 }
 
 

@@ -51,8 +51,20 @@ namespace MAST {
          *   computes the filtered output from the provided input.
          */
         void compute_filtered_values(const libMesh::NumericVector<Real>& input,
-                                     libMesh::NumericVector<Real>& output) const;
+                                     libMesh::NumericVector<Real>& output,
+                                     bool close_vector = true) const;
 
+        /*!
+         *  for large problems it is more efficient to specify only the non-zero entries in the input vector in
+         *  \p nonzero_vals. If \p output is of type SERIAL then all ranks in the
+         *  communicator will perform the same operaitons and provide an identical \p output vector.
+         *  If \p output is of type PARALLEL or GHOSTED then only the local contributions will be set.
+         *  If \p close_vector is \p true then \p output.close() will be called in this
+         *  routines, otherwise not.
+         */
+        void compute_filtered_values(std::map<unsigned int, Real>& nonzero_vals,
+                                     libMesh::NumericVector<Real>& output,
+                                     bool close_vector) const;
         
         void compute_filtered_values(const std::vector<Real>& input,
                                      std::vector<Real>& output) const;

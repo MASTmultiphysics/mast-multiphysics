@@ -59,8 +59,6 @@ target_sources(mast
         ${CMAKE_CURRENT_LIST_DIR}/structural_near_null_vector_space.h
         ${CMAKE_CURRENT_LIST_DIR}/structural_nonlinear_assembly.cpp
         ${CMAKE_CURRENT_LIST_DIR}/structural_nonlinear_assembly.h
-        ${CMAKE_CURRENT_LIST_DIR}/structural_system.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/structural_system.h
         ${CMAKE_CURRENT_LIST_DIR}/structural_system_initialization.cpp
         ${CMAKE_CURRENT_LIST_DIR}/structural_system_initialization.h
         ${CMAKE_CURRENT_LIST_DIR}/structural_transient_assembly.cpp

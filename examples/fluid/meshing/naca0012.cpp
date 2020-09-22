@@ -27,6 +27,7 @@
 #include "libmesh/mesh_generation.h"
 #include "libmesh/node.h"
 #include "libmesh/elem.h"
+#include "libmesh/boundary_info.h"
 
 
 MAST::Examples::NACA0012Mesh2D::NACA0012Mesh2D() {

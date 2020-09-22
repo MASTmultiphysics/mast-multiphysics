@@ -1,0 +1,199 @@
+/**
+\page InstallUbuntu2004Apt Installation on Ubuntu 20.04 LTS (Focal)
+This page describes how to install libMesh/MAST on Ubuntu 20.04 LTS (Focal Fossa) using dependencies from the standard package manager. It is written for someone who has limited experience compiling software on Linux and contains details a more advanced user likely won't need.
+
+\section install-ubuntu2004-dependencies Dependencies
+
+Installing libMesh/MAST on Ubuntu 20.04 LTS (Focal Fossa) is relatively simple if you are able to use Ubuntu's Advanced Packaging Tool (APT) since all of the dependencies are provided in the standard package repositories. To do so we assume you have `sudo` privileges on your system and it is connected to the internet. If you are not a privileged user, ask an administrator to install these dependencies or consider \ref InstallManualDepsLinux "manually compiling/installing the dependencies" in your home directory.
+
+To install all of the dependencies, simply execute the following commands in the terminal/shell. Some of the packages will install a number of required sub-dependencies.
+
+\code{.sh}
+sudo apt-get install -y git
+sudo apt-get install -y cmake
+sudo apt-get install -y gcc gfortran
+sudo apt-get install -y libblas-dev
+sudo apt-get install -y liblapack-dev liblapack-doc liblapack-doc-man
+sudo apt-get install -y mpi-default-dev libopenmpi-dev openmpi-doc
+sudo apt-get install -y petsc-dev libpetsc-real3.12-dev libpetsc3.12-dev-examples libpetsc-real3.12-dbg petsc3.12-doc
+sudo apt-get install -y slepc-dev libslepc-real3.12-dev libslepc3.12-dev-examples slepc3.12-doc
+sudo apt-get install -y libmetis-dev libmetis5-dbg libmetis-doc
+sudo apt-get install -y libparmetis-dev parmetis-doc
+sudo apt-get install -y libboost-all-dev libboost-doc
+sudo apt-get install -y libeigen3-dev libeigen3-doc
+sudo apt-get install -y libglpk-dev glpk-utils glpk-doc
+sudo apt-get install -y libnlopt-dev libnlopt-cxx-dev
+sudo apt-get install -y libvtk7-dev libvtk7.1p vtk7
+\endcode
+
+\section install-ubuntu2004-libmesh libMesh
+
+When using dependencies from Ubuntu 20.04's standard package repository, only a recent version of libMesh can be built. Any official libMesh "release" up to and include v1.5.1 will fail to build with linking errors related to a conflict between the Ubuntu `apt` provided `metis` (which the provided PETSc package requires) and the `metis` that libMesh builds itself. This issue was [resolved](https://github.com/libMesh/libmesh/pull/2427) in libMesh repository commit `df1e2b7` by adding the ability for libMesh to properly use an external `metis`. The MAST developers currently provide a version of libMesh v1.5.1 that have the fixes for the build patched in.
+
+As a result, we need to build libMesh from the `v1.5.1_with_build_updates` branch of [jdeaton's fork](https://github.com/jdeaton/libmesh) of the official libMesh [repository](https://github.com/libMesh/libmesh). To do this we first clone the forked repository from GitHub, then checkout the appropriate branch of the code. From the directory where you want to build libMesh, execute the following in the terminal/shell, which will clone libMesh into a new directory `libmesh`:
+
+\code{.sh}
+git clone https://github.com/jdeaton/libmesh.git
+cd libmesh
+git checkout v1.5.1_with_build_updates
+git submodule init
+git submodule update
+\endcode
+
+libMesh compilation/installation follows the common Makefile-based `configure`, `make`, `make install` process that is common on Linux/Unix systems. Before beginning, we set a few environment variables by executing the following commands from inside the `libmesh` directory in the terminal/shell. `libMesh_INSTALL_DIR` specifies where the products of the libMesh build process will be installed. By default, text below specifies a directory that will be alongside `libmesh` named `libmesh_install`. You may change this if you wish. `NP` specifies the number of parallel jobs to use during compilation.
+
+\code{.sh}
+export libMesh_INSTALL_DIR="$(cd ..; pwd)/libmesh_install"
+export NP=4
+\endcode
+
+We recommend compiling libMesh in a dedicated build directory to keep from cluttering the main libMesh repository. From inside the `libmesh` directory, create a build directory and navigate into it with:
+
+\code{.sh}
+mkdir build
+cd build
+\endcode
+
+We can now configure the libMesh build by pasting the entire contents of the following snippet into the shell/terminal. By default, libMesh will configure optimized, development, and debug versions of the library.
+
+\code{.sh}
+PETSC_DIR=/usr/lib/petsc \
+SLEPC_DIR=/usr/lib/slepc \
+../configure \
+  --prefix=${libMesh_INSTALL_DIR} \
+  --disable-strict-lgpl \
+  --enable-triangle=yes \
+  --enable-tetgen=yes \
+  --with-metis=/usr/lib/x86_64-linux-gnu \
+  --with-metis-include=/usr/include \
+  --with-eigen-include=/usr/include \
+  --with-glpk-include=/usr/include \
+  --with-glpk-lib=/usr/lib/x86_64-linux-gnu \
+  --with-nlopt-include=/usr/include \
+  --with-nlopt-lib=/usr/lib/x86_64-linux-gnu \
+  --with-vtk-include=/usr/include/vtk-7.1 \
+  --with-vtk-lib=/usr/lib/x86_64-linux-gnu
+\endcode
+
+If the configuration was successful, you should have the following output under `Optional Packages`:
+
+\code{.sh}
+Optional Packages:
+  boost............................ : yes
+  capnproto........................ : no
+  cppunit.......................... : no
+  curl............................. : no
+  eigen............................ : yes
+  exodus........................... : yes
+     version....................... : v5.22
+  fparser.......................... : yes
+     build from version............ : release
+  glpk............................. : yes
+  gmv.............................. : yes
+  gzstream......................... : yes
+  hdf5............................. : no
+  laspack.......................... : yes
+  libhilbert....................... : yes
+  metaphysicl...................... : yes
+  metis............................ : yes
+  mpi.............................. : yes
+  nanoflann........................ : yes
+  nemesis.......................... : yes
+     version....................... : v5.22
+  netcdf........................... : yes
+     version....................... : 4
+  nlopt............................ : yes
+  parmetis......................... : yes
+  petsc............................ : yes
+     version....................... : 3.12.4
+  qhull............................ : yes
+  sfcurves......................... : yes
+  slepc............................ : yes
+     version....................... : 3.12.2
+  thread model..................... : pthread
+  c++ rtti ........................ : yes
+  tecio............................ : yes
+  tecplot...(vendor binaries)...... : no
+  tetgen........................... : yes
+  triangle......................... : yes
+  trilinos......................... : no
+  vtk.............................. : yes
+     version....................... : 7.1.1
+\endcode
+
+We can now compile the libMesh binaries by executing in the terminal/shell, which will take some time:
+
+\code{.sh}
+make -j ${NP}
+\endcode
+
+Optionally, you can now test compiled libraries by executing `make check` in the terminal/shell. This will compile and run a number of example cases provided in the libMesh source. Note that this will take a long time and since you are using standard, well-maintained dependencies it is probably not necessary.
+
+Finally, we will install the products of the libMesh compilation by simply executing the following, which will place all of the necessary libMesh files for MAST into the directory specified above with `libMesh_INSTALL_DIR`. Optionally, after this is complete, you can test the installed binaries using `make checkinstall`. Again, this takes quite a while and is likely not necessary with this standard installation.
+
+\code{.sh}
+make install
+\endcode
+
+The important directories from the installed contents are:
+- `${libMesh_INSTALL_DIR}/bin` - libMesh utility programs
+- `${libMesh_INSTALL_DIR}/contrib` - third-party utility programs bundled with libMesh
+- `${libMesh_INSTALL_DIR}/examples` - source code for libMesh examples and wrapper scripts to run them
+- `${libMesh_INSTALL_DIR}/include` - development headers for libMesh and bundled third-party packages
+- `${libMesh_INSTALL_DIR}/lib` - libraries for libMesh and bundled third-party packages
+- `${libMesh_INSTALL_DIR}/share` - single element reference meshes
+
+\section install-ubuntu2004-mast MAST
+
+The following instructions describe how to configure and compile the MAST library, some example programs, and the unit tests. In this guide, we don't build support for Cython, the pyNastran interface, interfaces to commercial/licensed optimizers (DOT, SNOPT, GCMMA) or the documentation.
+
+Since MAST is in a state of ongoing development, we will build it from the `master` branch on the [GitHub repository](https://github.com/MASTmultiphysics/mast-multiphysics) so we have the most up-to-date changes. If you have forked MAST, substitute the remote URL for you fork in the `git clone` line.
+
+We begin by cloning the repository from inside the directory of your choice:
+
+\code{.sh}
+git clone https://github.com/MASTmultiphysics/mast-multiphysics
+cd mast-multiphysics
+\endcode
+
+We again recommend building in a dedicated build directory to keep from cluttering the main repository. From inside the `mast-multiphysics` directory, create a build directory and navigate into it with:
+
+\code{.sh}
+mkdir build
+cd build
+\endcode
+
+The build process for MAST differs slightly from libMesh since we utilize CMake to generate Makefiles rather than a `configure` script. This is done by executing the following commands in the terminal/shell from inside the `build` directory. CMake will perform some inspections of your system, locate dependencies, and create the `Makefile`s necessary to build MAST in the `build` directory.
+
+\code{.sh}
+cmake .. \
+  -DCMAKE_BUILD_TYPE=Debug \
+  -DCMAKE_C_COMPILER=mpicc \
+  -DCMAKE_CXX_COMPILER=mpic++ \
+  -DCMAKE_Fortran_COMPILER=mpifort \
+  -DlibMesh_DIR=${libMesh_INSTALL_DIR} \
+  -DPETSc_DIR=/usr/lib/petsc \
+  -DSLEPc_DIR=/usr/lib/slepc \
+  -DEIGEN3_ROOT=/usr/include/eigen3 \
+  -DBOOST_ROOT=/usr \
+  -DBUILD_DOC=OFF \
+  -DENABLE_DOT=OFF \
+  -DENABLE_GCMMA=OFF \
+  -DENABLE_SNOPT=OFF\
+  -DENABLE_NASTRANIO=OFF \
+  -DENABLE_CYTHON=OFF
+\endcode
+
+Note that the above commands create a `Debug` version of the MAST library (using the `*_dbg` versions of libMesh). This is required if you want to utilize a C++ debugger (such as gdb) and includes a significant amount of diagnostic/debug output. For more performance, an optimized/Release version can be built by changing the `-DCMAKE_BUILD_TYPE` CMake variable to `Release`.
+
+After CMake configuration completes, you can build the MAST library (`libmast`), several example problems, and unit tests by simply executing the following in the terminal/shell.
+
+\code{.sh}
+make -j ${NP}
+\endcode
+
+\todo Contact libMesh developers to resolve inability of libMesh configuration process to find Ubuntu repository provided HDF5 headers/libraries (openmpi/serial).
+\todo Update page with next release of libMesh after v1.5.1 that will incorporate changes to deal with metis conflicts.
+\todo Update the guide to include building support for pyNastran, Cython, and generating the documentation locally.
+
+*/

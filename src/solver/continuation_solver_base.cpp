@@ -318,7 +318,7 @@ MAST::ContinuationSolverBase::_solve(const libMesh::NumericVector<Real>  &X,
     _assembly->set_elem_operation_object(*_elem_ops);
     system.set_operation(MAST::NonlinearSystem::FORWARD_SENSITIVITY_SOLVE);
     if (update_dfdp)
-        _assembly->sensitivity_assemble(p, dfdp);
+        _assembly->sensitivity_assemble(*system.solution, true, p, dfdp);
     
     // now compute the jacobian
     system.set_operation(MAST::NonlinearSystem::NONLINEAR_SOLVE);
@@ -508,7 +508,7 @@ _solve_schur_factorization(const libMesh::NumericVector<Real>  &X,
     //////////////////////////////////////////////////////////
     system.set_operation(MAST::NonlinearSystem::FORWARD_SENSITIVITY_SOLVE);
     if (update_dfdp)
-        _assembly->sensitivity_assemble(p, dfdp);
+        _assembly->sensitivity_assemble(*system.solution, true, p, dfdp);
 
     if (update_dfdp || update_dXdp) {
         

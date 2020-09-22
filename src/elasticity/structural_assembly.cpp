@@ -203,7 +203,7 @@ MAST::StructuralAssembly::update_incompatible_solution(libMesh::NumericVector<Re
     
     // if a solution function is attached, initialize it
     //if (_sol_function)
-    //    _sol_function->init( X);
+    //    _sol_function->init( X, false);
     
     
     libMesh::MeshBase::const_element_iterator       el     =

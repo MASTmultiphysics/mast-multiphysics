@@ -92,8 +92,11 @@ MAST::KSStressStrainOutput::functional_for_all_elems() {
     
     // sum over all processors, since part of the mesh will exist on the
     // other processors.
-    _system->system().comm().sum(_sigma_vm_int);
-    _system->system().comm().sum(_JxW_val);
+    if (!_skip_comm_sum) {
+        
+        _system->system().comm().sum(_sigma_vm_int);
+        _system->system().comm().sum(_JxW_val);
+    }
     
     _sigma_vm_p_norm         = 1./_p_norm_stress * log(_sigma_vm_int/_JxW_val);
     _primal_data_initialized = true;

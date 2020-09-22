@@ -13,8 +13,6 @@ export DBG_BUILD_DIR=${TRAVIS_BUILD_DIR}/build_dbg
 # Outer if chooses Linux/macOS based on Travis CI worker.
 if [ "${TRAVIS_OS_NAME}" = linux ]; then # Ubuntu Linux
 
-  # We could test on multiple Ubuntu distributions, which by default supply different versions
-  # of GCC in their default repos. For now we just use 16.04.
   if [ "${TRAVIS_DIST}" = xenial ]; then # Ubuntu 16.04 Xenial Xerus
 
     # First let us build/install a Debug version of MAST (-DCMAKE_BUILD_TYPE=Debug).
@@ -97,7 +95,88 @@ if [ "${TRAVIS_OS_NAME}" = linux ]; then # Ubuntu Linux
       ctest --force-new-ctest-process --output-on-failure -L "SHORT" --timeout 60
     fi
 
-  # elif [ "${TRAVIS_DIST}" = bionic ]; then # Ubuntu 18.04 Bionic Beaver
+  elif [ "${TRAVIS_DIST}" = bionic ]; then # Ubuntu 18.04 Bionic Beaver
+
+    # First let us build/install a Debug version of MAST (-DCMAKE_BUILD_TYPE=Debug).
+    echo "TEST DEBUG BUILD..."
+
+    if [ "${LIBMESH_VERSION}" = "1.3.1" ]; then # No Debug build for libMesh < 1.5.0
+      echo "-- NO DEBUG BUILD WITH libMesh < 1.5.0"
+    elif [ "${LIBMESH_VERSION}" = "1.4.1" ]; then
+      echo "-- NO DEBUG BUILD WITH libMesh < 1.5.0"
+    else
+
+      cd "${DBG_BUILD_DIR}" || exit
+      /opt/cmake/bin/cmake .. \
+        -DCMAKE_BUILD_TYPE=Debug \
+        -DCMAKE_INSTALL_PREFIX="${MAST_INSTALL_DIR}" \
+        -DCMAKE_C_COMPILER=mpicc \
+        -DCMAKE_CXX_COMPILER=mpic++ \
+        -DCMAKE_Fortran_COMPILER=mpifort \
+        -DlibMesh_DIR=/usr/local \
+        -DPETSc_DIR=/usr/lib/petsc \
+        -DSLEPc_DIR=/usr/lib/slepc \
+        -DEIGEN3_ROOT=/usr/include/eigen3 \
+        -DPython3_DIR=/usr \
+        -DBOOST_ROOT=/usr \
+        -DBUILD_DOC=ON \
+        -DENABLE_DOT=OFF \
+        -DENABLE_GCMMA=OFF \
+        -DENABLE_SNOPT=OFF\
+        -DENABLE_NASTRANIO=ON \
+        -DENABLE_CYTHON=ON || exit
+
+      if [ ${CI_BUILD_DOCS} ]; then
+        echo "No CI documentation for a Debug build."
+      else
+        make -j 2 || exit
+        echo "RUNNING UNIT TESTS" || exit
+        cd "${DBG_BUILD_DIR}/tests" || exit
+        ctest --force-new-ctest-process --output-on-failure --timeout 10
+        echo "RUNNING SHORT EXAMPLES" || exit
+        cd "${DBG_BUILD_DIR}/examples"  || exit
+        ctest --force-new-ctest-process --output-on-failure -L "SHORT" --timeout 60
+      fi
+
+    fi # No Debug build for libMesh < 1.5.0
+
+    # Now build/install a Release (optimized) version of MAST (-DCMAKE_BUILD_TYPE=Release).
+    echo "TEST RELEASE/OPTIMIZED BUILD..."
+    cd "${REL_BUILD_DIR}" || exit
+    /opt/cmake/bin/cmake .. \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_INSTALL_PREFIX="${MAST_INSTALL_DIR}" \
+      -DCMAKE_C_COMPILER=mpicc \
+      -DCMAKE_CXX_COMPILER=mpic++ \
+      -DCMAKE_Fortran_COMPILER=mpifort \
+      -DlibMesh_DIR=/usr/local \
+      -DPETSc_DIR=/usr/lib/petsc \
+      -DSLEPc_DIR=/usr/lib/slepc \
+      -DEIGEN3_ROOT=/usr/include/eigen3 \
+      -DPython3_DIR=/usr \
+      -DBOOST_ROOT=/usr \
+      -DBUILD_DOC=ON \
+      -DENABLE_DOT=OFF \
+      -DENABLE_GCMMA=OFF \
+      -DENABLE_SNOPT=OFF \
+      -DENABLE_NASTRANIO=ON \
+      -DENABLE_CYTHON=ON || exit
+
+    if [ ${CI_BUILD_DOCS} ]; then
+      make doc_doxygen || exit
+      cd "${TRAVIS_BUILD_DIR}" || exit
+      ci/prepare_docs.sh || exit
+    else
+      make -j 2 || exit
+      make install || exit
+      echo "RUNNING UNIT TESTS" || exit
+      cd "${REL_BUILD_DIR}/tests" || exit
+      ctest --force-new-ctest-process --output-on-failure --timeout 10
+      echo "RUNNING SHORT EXAMPLES" || exit
+      cd "${REL_BUILD_DIR}/examples"  || exit
+      ctest --force-new-ctest-process --output-on-failure -L "SHORT" --timeout 60
+    fi
+
 
   else
     echo "INVALID LINUX DISTRO: ${TRAVIS_DIST}"

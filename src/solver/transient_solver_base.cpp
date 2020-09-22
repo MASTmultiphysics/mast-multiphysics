@@ -333,14 +333,17 @@ MAST::TransientSolverBase::sensitivity_solve(MAST::AssemblyBase& assembly,
     libmesh_assert_msg(_system, "System pointer is nullptr.");
     
     // ask the Newton solver to solve for the system solution
-    _system->system().sensitivity_solve(*this, assembly, f);
+    _system->system().sensitivity_solve(this->solution(), false, *this, assembly, f);
+    
+    this->solution_sensitivity() = assembly.system().get_sensitivity_solution();
 }
 
 
 
 void
 MAST::TransientSolverBase::
-solve_highest_derivative_and_advance_time_step(MAST::AssemblyBase& assembly) {
+solve_highest_derivative_and_advance_time_step(MAST::AssemblyBase& assembly,
+                                               bool increment_time) {
     
     libmesh_assert(_first_step);
     libmesh_assert(_system);
@@ -415,7 +418,7 @@ solve_highest_derivative_and_advance_time_step(MAST::AssemblyBase& assembly) {
     }
     
     // finally, update the system time
-    sys.time          += dt;
+    if (increment_time) sys.time          += dt;
     _first_step        = false;
 }
 
@@ -424,8 +427,9 @@ solve_highest_derivative_and_advance_time_step(MAST::AssemblyBase& assembly) {
 
 void
 MAST::TransientSolverBase::
-solve_highest_derivative_and_advance_time_step_with_sensitivity(MAST::AssemblyBase& assembly,
-                                                                const MAST::FunctionBase& f) {
+solve_highest_derivative_and_advance_time_step_with_sensitivity
+ (MAST::AssemblyBase& assembly,
+  const MAST::FunctionBase& f) {
     
     libmesh_assert(_first_sensitivity_step);
     libmesh_assert(_system);
@@ -443,7 +447,7 @@ solve_highest_derivative_and_advance_time_step_with_sensitivity(MAST::AssemblyBa
     assembly.set_elem_operation_object(*this);
     assembly.residual_and_jacobian(*sys.solution, nullptr, sys.matrix, sys);
     // this should assembl the sensitivity of the residual
-    assembly.sensitivity_assemble(f, *sys.rhs);
+    assembly.sensitivity_assemble(*sys.solution, true, f, *sys.rhs);
     assembly.clear_elem_operation_object();
 
     // reset the solution flag
@@ -731,7 +735,7 @@ build_perturbed_local_quantities(const libMesh::NumericVector<Real>& current_dso
 
 
 void
-MAST::TransientSolverBase::advance_time_step() {
+MAST::TransientSolverBase::advance_time_step(bool increment_time) {
 
     libmesh_assert(_system);
     libmesh_assert(_discipline);
@@ -757,7 +761,7 @@ MAST::TransientSolverBase::advance_time_step() {
     }
 
     // finally, update the system time
-    sys.time          += dt;
+    if (increment_time) sys.time          += dt;
     _first_step        = false;
 }
 

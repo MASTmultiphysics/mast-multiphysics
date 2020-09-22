@@ -38,6 +38,7 @@
 #include "libmesh/mesh_generation.h"
 #include "libmesh/elem.h"
 #include "libmesh/node.h"
+#include "libmesh/boundary_info.h"
 
 
 
@@ -48,10 +49,13 @@ class DisciplineBase;
 class BoundaryConditionBase;
 class FunctionBase;
 class Parameter;
+class Solid2DSectionElementPropertyCard;
 
 namespace Examples {
 struct Bracket2DModel {
     
+    using SectionPropertyCardType = MAST::Solid2DSectionElementPropertyCard;
+
     template <typename Opt>
     static Real reference_volume(Opt& opt);
 
@@ -69,6 +73,10 @@ struct Bracket2DModel {
     
     template <typename Opt>
     static void init_structural_loads(Opt& opt);
+
+    template <typename Opt>
+    static void
+    init_thermoelastic_loads(Opt& opt);
 
     template <typename Opt>
     static MAST::BoundaryConditionBase&
@@ -256,6 +264,39 @@ MAST::Examples::Bracket2DModel::init_structural_loads(Opt& opt) {
     opt._boundary_conditions.insert(p_load);
 
     opt._field_functions.insert(press_f);
+}
+
+
+template <typename Opt>
+void
+MAST::Examples::Bracket2DModel::init_thermoelastic_loads(Opt& opt) {
+    
+    Real
+    T_val      = opt._input(    "temperature",           "temperature for thermoelastic load",   0.),
+    T_ref_val  = opt._input("ref_temperature", "reference temperature for thermoelastic load",   0.);
+
+    MAST::Parameter
+    *temperature = new MAST::Parameter("T",     T_val),
+    *ref_temp    = new MAST::Parameter("T_ref", T_ref_val);
+
+    MAST::ConstantFieldFunction
+    *temperature_f = new MAST::ConstantFieldFunction(    "temperature", *temperature),
+    *ref_temp_f    = new MAST::ConstantFieldFunction("ref_temperature",    *ref_temp);
+    
+    // initialize the load
+    MAST::BoundaryConditionBase
+    *t_load          = new MAST::BoundaryConditionBase(MAST::TEMPERATURE);
+
+    t_load->add(*temperature_f);
+    t_load->add(*ref_temp_f);
+    opt._discipline->add_volume_load(0, *t_load);
+
+    opt._boundary_conditions.insert(t_load);
+
+    opt._parameters[temperature->name()] = temperature;
+    opt._parameters[ref_temp->name()]    = ref_temp;
+    opt._field_functions.insert(temperature_f);
+    opt._field_functions.insert(ref_temp_f);
 }
 
 
@@ -636,7 +677,7 @@ MAST::Examples::Bracket2DModel::initialize_level_set_solution(Opt& opt) {
     nx_m    = opt._input("level_set_nx_divs", "number of elements of level-set mesh along x-axis", 10),
     ny_m    = opt._input("level_set_ny_divs", "number of elements of level-set mesh along y-axis", 10);
     
-    MAST::Examples::LevelSetNucleationFunction
+    MAST::Examples::LevelSetNucleationFunction2D
     phi(0., 0., length, height, nx_m, ny_m, nx_h, ny_h);
     
     opt._level_set_sys_init->initialize_solution(phi);

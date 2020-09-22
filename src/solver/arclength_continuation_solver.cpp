@@ -138,7 +138,7 @@ _dXdp(const libMesh::NumericVector<Real> &X,
 
     system.set_operation(MAST::NonlinearSystem::FORWARD_SENSITIVITY_SOLVE);
 
-    _assembly->sensitivity_assemble(p, dfdp);
+    _assembly->sensitivity_assemble(*system.solution, true, p, dfdp);
 
     libMesh::SparseMatrix<Real>
     *pc  = system.request_matrix("Preconditioner");

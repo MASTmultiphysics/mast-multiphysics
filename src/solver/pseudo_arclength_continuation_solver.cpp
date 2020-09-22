@@ -160,7 +160,7 @@ _update_search_direction(const libMesh::NumericVector<Real> &X,
     system.set_operation(MAST::NonlinearSystem::FORWARD_SENSITIVITY_SOLVE);
     _assembly->set_elem_operation_object(*_elem_ops);
 
-    _assembly->sensitivity_assemble(p, *dfdp);
+    _assembly->sensitivity_assemble(*system.solution, true, p, *dfdp);
     dfdp->scale(_X_scale/_p_scale);
     dfdp->close();
 

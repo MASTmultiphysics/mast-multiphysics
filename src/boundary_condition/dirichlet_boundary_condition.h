@@ -52,10 +52,23 @@ namespace MAST {
          *   initializes the object for the specified domain id (either boundary,
          *   or subdomain), for the displacement components initialized using
          *   a bitwise operator. This method initializes the components to zero
-         *   value on the domain.
+         *   value on the domain. If \p f_val is not provided then a zero value is
+         *   assumed for all constrained variables. \p FieldFunction should
+         *   implement a method that provides a vector containing the value of constrained
+         *   variables at specified spatial point and time. The order of variables in this vector is
+         *   based on the value of \p index. If \p index = \p libMesh::SYSTEM_VARIABLE_ORDER,
+         *   which is the default, then the \p i^th component of the vector returned by \p f_val
+         *   is the value of the \p i^th system variable. On the other hand, if
+         *   If \p index = \p libMesh::LOCAL_VARIABLE_ORDER, then the \p i^th component
+         *   of the vector returned by \p f_val is the value of the \p i^th component in
+         *   \p constrained_vars. If \p index = \p libMesh::SYSTEM_VARIABLE_ORDER
+         *   then \p n_vars should be set to the number of variables in the system.
          */
         void init(const libMesh::boundary_id_type bid,
-                  const std::vector<unsigned int>& constrained_vars);
+                  const std::vector<unsigned int>& constrained_vars,
+                  MAST::FieldFunction<RealVectorX>* f_val = nullptr,
+                  libMesh::VariableIndexing index = libMesh::SYSTEM_VARIABLE_ORDER,
+                  unsigned int n_sys_vars = 0);
         
         
         /*!

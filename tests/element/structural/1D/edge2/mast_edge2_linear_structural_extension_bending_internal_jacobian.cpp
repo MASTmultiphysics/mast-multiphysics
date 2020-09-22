@@ -38,7 +38,6 @@
 #include "catch.hpp"
 #include "test_helpers.h"
 #include "element/structural/1D/mast_structural_element_1d.h"
-#define pi 3.14159265358979323846
 
 extern libMesh::LibMeshInit* p_global_init;
 

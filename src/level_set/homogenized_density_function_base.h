@@ -58,9 +58,8 @@ namespace MAST {
         const std::map<const libMesh::Elem*, Real>&
         get_elem_volume_fraction_map() const { return _elem_volume_fraction;}
         
-        const std::map<const libMesh::Elem*, Real>&
-        get_elem_volume_fraction_sensitivity_map() const
-        { return _elem_volume_fraction_sensitivity;}
+        const std::map<const libMesh::Elem*, Real>*
+        get_elem_volume_fraction_sensitivity_map(const MAST::FunctionBase& f) const;
 
         Real
         get_elem_volume_fraction(const libMesh::Elem& e) const;
@@ -92,7 +91,8 @@ namespace MAST {
         
         std::map<const libMesh::Elem*, Real> _elem_volume_fraction;
         
-        std::map<const libMesh::Elem*, Real> _elem_volume_fraction_sensitivity;
+        std::map<const MAST::FunctionBase*, std::map<const libMesh::Elem*, Real>>
+        _elem_volume_fraction_sensitivity;
 
         std::unique_ptr<libMesh::PointLocatorBase> _sub_point_locator;
     };
