@@ -382,6 +382,17 @@ namespace MAST {
                                                   MAST::FEMOperatorMatrix& Bmat_nl_y,
                                                   MAST::FEMOperatorMatrix& Bmat_nl_u,
                                                   MAST::FEMOperatorMatrix& Bmat_nl_v);
+        
+        
+        /**
+         * initalizes the strain displacement matrix used in calculation of the
+         * warping function, which is useful for calculation section properties
+         * such as teh Saint-Venant torsion constant or the warping constant.
+         */
+        virtual void
+        initialize_warping_strain_operator(const unsigned int qp,
+                                           const MAST::FEBase& fe,
+                                           RealMatrixX& Bmat_warp);
 
         
         virtual void

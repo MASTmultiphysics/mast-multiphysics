@@ -327,6 +327,7 @@ TEST_CASE("solid_element_property_card_constant_base_sensitivity_1d",
     const Real delta = 1.220703125e-04; // (np.spacing(1))**(0.25)
     
     // Area Sensitivity Check
+    libMesh::out << "\tArea sensitivity check..." << std::endl;
     const MAST::FieldFunction<Real>& Area = section.A();
     std::vector<Real> dA(n_s);
     for (uint i=0; i<n_s; i++)
@@ -353,12 +354,12 @@ TEST_CASE("solid_element_property_card_constant_base_sensitivity_1d",
         
         dA_cd[i] = (f_2n - 8.*f_n + 8*f_h - f_2h)/(12.*delta);
         
-        libMesh::out << "dA_d" << sens_params[i]->name() << " = " << dA[i] << "\tdA_cd = " << dA_cd[i] << std::endl;
         REQUIRE(dA[i] == Approx(dA_cd[i]));
     }
     
     
 //     // Centroid Sensitivity Check
+//     libMesh::out << "\tCentroid sensitivity check..." << std::endl;
 //     std::vector<libMesh::Point> dC(n_s);
 //     for (uint i=0; i<n_s; i++)
 //     {
@@ -385,12 +386,13 @@ TEST_CASE("solid_element_property_card_constant_base_sensitivity_1d",
 //         
 //         dC_cd[i] = (fp_2n - 8.*fp_n + 8*fp_h - fp_2h)/(12.*delta);
 //         
-//         libMesh::out << "dC_d" << sens_params[i]->name() << " = " << dC[i] << "\tdC_cd = " << dC_cd[i] << std::endl;
 //         REQUIRE(dC[i](0) == Approx(dC_cd[i](0)).margin(1.49e-08) );
 //         REQUIRE(dC[i](1) == Approx(dC_cd[i](1)).margin(1.49e-08) );
 //     }
     
+    
     // First Area Moments Sensitivity Check
+    libMesh::out << "\tArea Moment Y sensitivity check..." << std::endl;
     const MAST::FieldFunction<Real>& Area_y = section.Ay();
     std::vector<Real> dAy(n_s);
     for (uint i=0; i<n_s; i++)
@@ -417,11 +419,10 @@ TEST_CASE("solid_element_property_card_constant_base_sensitivity_1d",
         
         dAy_cd[i] = (f_2n - 8.*f_n + 8*f_h - f_2h)/(12.*delta);
         
-        libMesh::out << "dAy_d" << sens_params[i]->name() << " = " << dAy[i] << "\tdAy_cd = " << dAy_cd[i] << std::endl;
         REQUIRE(dAy[i] == Approx(dAy_cd[i]));
     }
     
-    
+    libMesh::out << "\tArea Moment Z sensitivity check..." << std::endl;
     const MAST::FieldFunction<Real>& Area_z = section.Az();
     std::vector<Real> dAz(n_s);
     for (uint i=0; i<n_s; i++)
@@ -448,12 +449,12 @@ TEST_CASE("solid_element_property_card_constant_base_sensitivity_1d",
         
         dAz_cd[i] = (f_2n - 8.*f_n + 8*f_h - f_2h)/(12.*delta);
         
-        libMesh::out << "dAz_d" << sens_params[i]->name() << " = " << dAz[i] << "\tdAz_cd = " << dAz_cd[i] << std::endl;
         REQUIRE(dAz[i] == Approx(dAz_cd[i]));
     }
     
     
     // Second Area Moments Sensitivity Check
+    libMesh::out << "\tSecond Area Moments sensitivity check..." << std::endl;
     const MAST::FieldFunction<RealMatrixX>& Inertia = section.I();
     std::vector<RealMatrixX> dI(n_s);
     for (uint i=0; i<n_s; i++)
@@ -479,9 +480,7 @@ TEST_CASE("solid_element_property_card_constant_base_sensitivity_1d",
         (*sens_params[i])() += 2.0*delta;
         
         dI_cd[i] = (fm_2n - 8.*fm_n + 8*fm_h - fm_2h)/(12.*delta);
-        
-        libMesh::out << "dI_d" << sens_params[i]->name() << " =\n" << dI[i] << "\ndI_cd = \n" << dI_cd[i] << std::endl;
-        
+                
         Real dIzz = dI[i](0,0);
         Real dIyy = dI[i](1,1);
         Real dIyz = dI[i](1,0);
@@ -501,6 +500,7 @@ TEST_CASE("solid_element_property_card_constant_base_sensitivity_1d",
     
     
     // Second Area Polar Moment Sensitivity Check
+    libMesh::out << "\tArea Polar Moment sensitivity check..." << std::endl;
     const MAST::FieldFunction<Real>& PolarInertia = section.Ip();
     std::vector<Real> dIp(n_s);
     for (uint i=0; i<n_s; i++)
@@ -527,12 +527,12 @@ TEST_CASE("solid_element_property_card_constant_base_sensitivity_1d",
         
         dIp_cd[i] = (f_2n - 8.*f_n + 8.*f_h - f_2h)/(12.*delta);
         
-        libMesh::out << "dIp_d" << sens_params[i]->name() << " = " << dIp[i] << "\tdIp_cd = " << dIp_cd[i] << std::endl;
         REQUIRE(dIp[i] == Approx(dIp_cd[i]));
     }
     
     
 //     // Shear Center Sensitivity Check
+//     libMesh::out << "\tShear center sensitivity check..." << std::endl;
 //     std::vector<libMesh::Point> dCs(n_s);
 //     for (uint i=0; i<n_s; i++)
 //     {
@@ -558,7 +558,6 @@ TEST_CASE("solid_element_property_card_constant_base_sensitivity_1d",
 //         
 //         dCs_cd[i] = (fp_2n - 8.*fp_n + 8.*fp_h - fp_2h)/(12.*delta);
 //         
-//         libMesh::out << "dCs_d" << sens_params[i]->name() << " = " << dCs[i] << "\tdCs_cd = " << dCs_cd[i] << std::endl;
 //         REQUIRE(dCs[i](0) == Approx(dCs_cd[i](0)) );
 //         REQUIRE(dCs[i](1) == Approx(dCs_cd[i](1)) );
 //     }
@@ -566,6 +565,7 @@ TEST_CASE("solid_element_property_card_constant_base_sensitivity_1d",
     
     // Torsion Constant Sensitivity Check
     // NOTE: The field function below is not made constant because currently a finite difference is used to calculate sensitivity.
+    libMesh::out << "\tTorsion Constant sensitivity check..." << std::endl;
     MAST::FieldFunction<Real>& TorsionConstant = section.J();
     std::vector<Real> dJ(n_s);
     for (uint i=0; i<n_s; i++)
@@ -592,13 +592,13 @@ TEST_CASE("solid_element_property_card_constant_base_sensitivity_1d",
         
         dJ_cd[i] = (f_2n - 8.*f_n + 8*f_h - f_2h)/(12.*delta);
         
-        libMesh::out << "dJ_d" << sens_params[i]->name() << " = " << dJ[i] << "\tdJ_cd = " << dJ_cd[i] << std::endl;
         REQUIRE(dJ[i] == Approx(dJ_cd[i]).epsilon(0.1) );
         // NOTE: 10% error margin due to 'exact' sensitivity being calculated using finite difference
     }
     
     
 //     // Shear Coefficient Sensitivity Check
+//     libMesh::out << "\tShear Coefficient sensitivity check..." << std::endl;
 //     // NOTE: The field function below is not made constant because currently a finite difference is used to calculate sensitivity.
 //     MAST::FieldFunction<RealMatrixX>& Kappa = section.Kap();
 //     std::vector<RealMatrixX> dK(n_s);
@@ -649,6 +649,7 @@ TEST_CASE("solid_element_property_card_constant_base_sensitivity_1d",
     
     // Warping Constant Sensitivity Check
     // NOTE: The field function below is not made constant because currently a finite difference is used to calculate sensitivity.
+    libMesh::out << "\tWarping Constant sensitivity check..." << std::endl;
     MAST::FieldFunction<Real>& WarpingConstant = section.Gam();
     std::vector<Real> dW(n_s);
     for (uint i=0; i<n_s; i++)
@@ -675,7 +676,6 @@ TEST_CASE("solid_element_property_card_constant_base_sensitivity_1d",
         
         dW_cd[i] = (f_2n - 8.*f_n + 8*f_h - f_2h)/(12.*delta);
         
-        libMesh::out << "dW_d" << sens_params[i]->name() << " = " << dW[i] << "\tdW_cd = " << dW_cd[i] << std::endl;
         REQUIRE(dW[i] == Approx(dW_cd[i]).epsilon(0.1) );
         // NOTE: 10% error margin due to 'exact' sensitivity being calculated using finite difference
     }

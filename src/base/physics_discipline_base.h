@@ -25,6 +25,7 @@
 
 // MAST includes
 #include "base/mast_data_types.h"
+#include "boundary_condition/dirichlet_dof_boundary_condition.h"
 
 // libMesh includes
 #include "libmesh/equation_systems.h"
@@ -35,6 +36,7 @@ namespace MAST {
     // Forward declerations
     class BoundaryConditionBase;
     class DirichletBoundaryCondition;
+    class DOFDirichletBoundaryCondition;
     class PropertyCardBase;
     class FunctionBase;
     class FunctionSetBase;
@@ -52,6 +54,7 @@ namespace MAST {
     typedef std::map<libMesh::subdomain_id_type, const MAST::ElementPropertyCardBase*>      PropertyCardMapType;
     typedef std::map<libMesh::boundary_id_type, MAST::DirichletBoundaryCondition*>  DirichletBCMapType;
     typedef std::set<MAST::PointLoadCondition*> PointLoadSetType;
+    typedef std::set<MAST::DOFDirichletBoundaryCondition*> DOFDirichletBCSetType;
     
     class PhysicsDisciplineBase {
     public:
@@ -106,6 +109,11 @@ namespace MAST {
          */
         void add_dirichlet_bc(libMesh::boundary_id_type bid,
                               MAST::DirichletBoundaryCondition& load);
+                              
+        /*!
+         *  adds the specified Dirichlet DOF boundary condition
+         */
+        void add_dirichlet_dof_bc(MAST::DOFDirichletBoundaryCondition& load);
         
         /*!
          *    @returns a const reference to the side boundary conditions
@@ -172,6 +180,12 @@ namespace MAST {
             return _point_loads;
         }
 
+        /*!
+         *    @returns a reference to the dirichlet dof boundary conditions
+         */
+        MAST::DOFDirichletBCSetType& dirichlet_dof_bc() {
+            return _dirichlet_dof_bcs;
+        }
         
         
         /*!
@@ -185,6 +199,12 @@ namespace MAST {
          *    initializes the system for dirichlet boundary conditions
          */
         void init_system_dirichlet_bc(MAST::NonlinearSystem& sys) const;
+        
+        
+        /*!
+         *  initializes the system for dirichlet dof boundary conditions
+         */
+        void init_system_dirichlet_dof_bc(MAST::NonlinearSystem& sys);
 
         
         /*!
@@ -260,6 +280,12 @@ namespace MAST {
          *   point loads
          */
         MAST::PointLoadSetType _point_loads;
+        
+        /*!
+         *  degree of freedom dirichlet boundary conditions
+         */
+        MAST::DOFDirichletBCSetType _dirichlet_dof_bcs;
+        std::unique_ptr<MAST::DOFConstraint> _dof_constraint;
     };
     
 }

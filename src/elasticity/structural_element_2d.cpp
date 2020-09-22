@@ -250,6 +250,24 @@ initialize_green_lagrange_strain_operator(const unsigned int qp,
 
 
 
+void MAST::StructuralElement2D::initialize_warping_strain_operator(
+    const unsigned int qp, const MAST::FEBase& fe, 
+    RealMatrixX& Bmat_warp)
+{
+    // Get the shape function derivatives
+    const std::vector<std::vector<libMesh::RealVectorValue>>& dphis = fe.get_dphi();
+    
+    unsigned int n_phi = (unsigned int)dphis.size();
+    
+    for (uint i=0; i<n_phi; i++)
+    {
+        Bmat_warp(0,i) = dphis[i][qp](0);
+        Bmat_warp(1,i) = dphis[i][qp](1);
+    }
+}
+
+
+
 void
 MAST::StructuralElement2D::
 initialize_strain_operator_gradient(const unsigned int qp,
@@ -1087,7 +1105,7 @@ MAST::StructuralElement2D::internal_residual (bool request_jacobian,
     const unsigned int
     n_phi    = (unsigned int)fe->get_phi().size(),
     n1       = this->n_direct_strain_components(),
-    n2       =6*n_phi,
+    n2       = 6*n_phi,
     n3       = this->n_von_karman_strain_components();
     
     RealMatrixX
@@ -1115,98 +1133,125 @@ MAST::StructuralElement2D::internal_residual (bool request_jacobian,
     strain     = RealVectorX::Zero(3),
     local_f    = RealVectorX::Zero(n2);
     
-    FEMOperatorMatrix
-    Bmat_lin,
-    Bmat_nl_x,
-    Bmat_nl_y,
-    Bmat_nl_u,
-    Bmat_nl_v,
-    Bmat_bend,
-    Bmat_vk;
     
-    Bmat_lin.reinit(n1, _system.n_vars(), n_phi); // three stress-strain components
-    Bmat_nl_x.reinit(2, _system.n_vars(), n_phi);
-    Bmat_nl_y.reinit(2, _system.n_vars(), n_phi);
-    Bmat_nl_u.reinit(2, _system.n_vars(), n_phi);
-    Bmat_nl_v.reinit(2, _system.n_vars(), n_phi);
-    Bmat_bend.reinit(n1, _system.n_vars(), n_phi);
-    Bmat_vk.reinit(n3, _system.n_vars(), n_phi); // only dw/dx and dw/dy
-    
-    bool if_vk = (_property.strain_type() == MAST::NONLINEAR_STRAIN);
-
-    MAST::BendingOperatorType
-    bending_model = _property.bending_model(_elem);
-    
-    std::unique_ptr<MAST::BendingOperator2D> bend;
-    
-    if (bending_model != MAST::NO_BENDING)
-        bend.reset(MAST::build_bending_operator_2D(bending_model,
-                                                   *this,
-                                                   fe->get_qpoints()).release());
-
-    std::unique_ptr<MAST::FieldFunction<RealMatrixX > >
-    mat_stiff_A  = _property.stiffness_A_matrix(*this),
-    mat_stiff_B  = _property.stiffness_B_matrix(*this),
-    mat_stiff_D  = _property.stiffness_D_matrix(*this);
-    
-    for (unsigned int qp=0; qp<JxW.size(); qp++) {
+    if (_property.get_warping_only()) // Warping analysis only
+    {
+        const uint n2_w = 2;
         
-        // get the material matrix
-        (*mat_stiff_A)(xyz[qp], _time, material_A_mat);
+        mat2_n2n2   = RealMatrixX::Zero(n_phi, n_phi);
+        vec3_n2     = RealVectorX::Zero(n_phi);
         
-        if (bend.get()) {
-            (*mat_stiff_B)(xyz[qp], _time, material_B_mat);
-            (*mat_stiff_D)(xyz[qp], _time, material_D_mat);
+        RealMatrixX Bmat_warp = RealMatrixX::Zero(n2_w, n_phi);
+        
+        local_jac = RealMatrixX::Zero(n_phi, n_phi);
+        local_f = RealMatrixX::Zero(n_phi, 1);
+        RealVectorX v_xyz = RealVectorX::Zero(2, 1);
+        
+        for (unsigned int qp=0; qp<JxW.size(); qp++) 
+        {
+            v_xyz(0) = xyz[qp](1); 
+            v_xyz(1) = -xyz[qp](0);
+            initialize_warping_strain_operator(qp, *fe, Bmat_warp);
+            local_jac += JxW[qp] * (Bmat_warp.transpose() * Bmat_warp);
+            local_f += JxW[qp] * (Bmat_warp.transpose() * v_xyz); // Internal force contribution to residual
         }
-        
-        // now calculte the quantity for these matrices
-        _internal_residual_operation(if_vk,
-                                     n2,
-                                     qp,
-                                     *fe,
-                                     JxW,
-                                     request_jacobian,
-                                     local_f,
-                                     local_jac,
-                                     _local_sol,
-                                     strain,
-                                     bend.get(),
-                                     Bmat_lin,
-                                     Bmat_nl_x,
-                                     Bmat_nl_y,
-                                     Bmat_nl_u,
-                                     Bmat_nl_v,
-                                     Bmat_bend,
-                                     Bmat_vk,
-                                     mat_x,
-                                     mat_y,
-                                     stress,
-                                     vk_dwdxi_mat,
-                                     material_A_mat,
-                                     material_B_mat,
-                                     material_D_mat,
-                                     vec1_n1,
-                                     vec2_n1,
-                                     vec3_n2,
-                                     vec4_n3,
-                                     vec5_n3,
-                                     vec6_n2,
-                                     mat1_n1n2,
-                                     mat2_n2n2,
-                                     mat3,
-                                     mat4_n3n2,
-                                     mat5_3n2);
+        local_f += local_jac * _local_sol; // External force contribution to residual
     }
     
-    
-    // now calculate the transverse shear contribution if appropriate for the
-    // element
-    if (bend.get() &&
-        bend->include_transverse_shear_energy())
-        bend->calculate_transverse_shear_residual(request_jacobian,
-                                                  local_f,
-                                                  local_jac);
-    
+    else // Other structural analysis
+    {
+        FEMOperatorMatrix
+        Bmat_lin,
+        Bmat_nl_x,
+        Bmat_nl_y,
+        Bmat_nl_u,
+        Bmat_nl_v,
+        Bmat_bend,
+        Bmat_vk;
+        
+        Bmat_lin.reinit(n1, _system.n_vars(), n_phi); // three stress-strain components
+        Bmat_nl_x.reinit(2, _system.n_vars(), n_phi);
+        Bmat_nl_y.reinit(2, _system.n_vars(), n_phi);
+        Bmat_nl_u.reinit(2, _system.n_vars(), n_phi);
+        Bmat_nl_v.reinit(2, _system.n_vars(), n_phi);
+        Bmat_bend.reinit(n1, _system.n_vars(), n_phi);
+        Bmat_vk.reinit(n3, _system.n_vars(), n_phi); // only dw/dx and dw/dy
+        
+        bool if_vk = (_property.strain_type() == MAST::NONLINEAR_STRAIN);
+
+        MAST::BendingOperatorType
+        bending_model = _property.bending_model(_elem);
+        
+        std::unique_ptr<MAST::BendingOperator2D> bend;
+        
+        if (bending_model != MAST::NO_BENDING)
+            bend.reset(MAST::build_bending_operator_2D(bending_model,
+                                                    *this,
+                                                    fe->get_qpoints()).release());
+
+        std::unique_ptr<MAST::FieldFunction<RealMatrixX > >
+        mat_stiff_A  = _property.stiffness_A_matrix(*this),
+        mat_stiff_B  = _property.stiffness_B_matrix(*this),
+        mat_stiff_D  = _property.stiffness_D_matrix(*this);
+        
+        for (unsigned int qp=0; qp<JxW.size(); qp++) {
+            
+            // get the material matrix
+            (*mat_stiff_A)(xyz[qp], _time, material_A_mat);
+            
+            if (bend.get()) {
+                (*mat_stiff_B)(xyz[qp], _time, material_B_mat);
+                (*mat_stiff_D)(xyz[qp], _time, material_D_mat);
+            }
+            
+            // now calculte the quantity for these matrices
+            _internal_residual_operation(if_vk,
+                                        n2,
+                                        qp,
+                                        *fe,
+                                        JxW,
+                                        request_jacobian,
+                                        local_f,
+                                        local_jac,
+                                        _local_sol,
+                                        strain,
+                                        bend.get(),
+                                        Bmat_lin,
+                                        Bmat_nl_x,
+                                        Bmat_nl_y,
+                                        Bmat_nl_u,
+                                        Bmat_nl_v,
+                                        Bmat_bend,
+                                        Bmat_vk,
+                                        mat_x,
+                                        mat_y,
+                                        stress,
+                                        vk_dwdxi_mat,
+                                        material_A_mat,
+                                        material_B_mat,
+                                        material_D_mat,
+                                        vec1_n1,
+                                        vec2_n1,
+                                        vec3_n2,
+                                        vec4_n3,
+                                        vec5_n3,
+                                        vec6_n2,
+                                        mat1_n1n2,
+                                        mat2_n2n2,
+                                        mat3,
+                                        mat4_n3n2,
+                                        mat5_3n2);
+        }
+        
+        
+        // now calculate the transverse shear contribution if appropriate for the
+        // element
+        if (bend.get() &&
+            bend->include_transverse_shear_energy())
+            bend->calculate_transverse_shear_residual(request_jacobian,
+                                                    local_f,
+                                                    local_jac);
+    }
     
     // now transform to the global coorodinate system
     transform_vector_to_global_system(local_f, vec3_n2);
@@ -1214,7 +1259,8 @@ MAST::StructuralElement2D::internal_residual (bool request_jacobian,
     
     if (request_jacobian) {
         // for 2D elements
-        if (_elem.dim() == 2) {
+        if ((_elem.dim() == 2) and (not _property.get_warping_only()))
+        {
             // add small values to the diagonal of the theta_z dofs
             for (unsigned int i=0; i<n_phi; i++)
                 local_jac(5*n_phi+i, 5*n_phi+i) = 1.0e-8;

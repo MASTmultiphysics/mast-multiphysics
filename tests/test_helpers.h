@@ -17,8 +17,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#ifndef __test__test_helpers__
-#define __test__test_helpers__
+#ifndef TEST_HELPERS_H_INCLUDED
+#define TEST_HELPERS_H_INCLUDED
 
 #include "base/mast_data_types.h"
 #include "elasticity/structural_element_base.h"
@@ -91,6 +91,7 @@ namespace TEST {
                                         MAST::BoundaryConditionBase& thermal_bc);
 
 
+
     /**
      * Transform an element by applying any combination of: shifts, scales,
      * rotations, and shears. Useful for testing elements of different geometries
@@ -101,5 +102,27 @@ namespace TEST {
                            Real scale_x, Real scale_y,
                            Real rotation_x, Real rotation_y, Real rotation_z,
                            Real shear_x = 0, Real shear_y = 0);
+                           
+   /**
+     * Approximates a Real field function derivative w.r.t. a parameter using a 4th 
+     * order accurate central finite difference scheme.
+     */
+    Real approximate_field_function_derivative(const MAST::FieldFunction<Real>& f,
+                                               MAST::Parameter* p,
+                                               const libMesh::Point& point,
+                                               const Real& time,
+                                               Real delta = 3.4526698e-04);
+
+
+    /**
+     * Approximates a RealMatrixX field function derivative w.r.t. a parameter 
+     * using a 4th order accurate central finite difference scheme.
+     */
+    RealMatrixX approximate_field_function_derivative(const MAST::FieldFunction<RealMatrixX>& f,
+                                               MAST::Parameter* p,
+                                               const libMesh::Point& point,
+                                               const Real& time,
+                                               Real delta = 3.4526698e-04);
 }
-#endif // __test__test_helpers__
+
+#endif // TEST_HELPERS_H_INCLUDED

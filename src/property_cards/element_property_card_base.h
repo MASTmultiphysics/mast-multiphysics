@@ -124,7 +124,146 @@ namespace MAST
          *   cards.
          */
         virtual const MAST::MaterialPropertyCardBase& get_material() const {
-            libmesh_error();
+            libmesh_error_msg("Must be implemented in derived class; " << __PRETTY_FUNCTION__ << " in " << __FILE__ << " at line number " << __LINE__);
+        }
+        
+        
+        /*!
+         *   return the material property. This needs to be reimplemented
+         *   for individual card type, and should be used only for isotropic
+         *   cards.
+         * 
+         *   Added by DJN. Reference cplusplus.com/forum/beginner/10639
+         */
+        virtual const MAST::MaterialPropertyCardBase& set_material(MAST::MaterialPropertyCardBase& mat) const {
+            libmesh_error_msg("Must be implemented in derived class; " << __PRETTY_FUNCTION__ << " in " << __FILE__ << " at line number " << __LINE__);
+        }
+        
+        
+        /*!
+         *   vector in the x-y plane of the element. This should not be the same
+         *   as the element x-axis.
+         *   Only used by 1D sections. Added for polymorphism enhancement.
+         *   Added by DJN.
+         */
+        virtual RealVectorX& y_vector() {
+            libmesh_error_msg("Must be implemented in derived class; " << __PRETTY_FUNCTION__ << " in " << __FILE__ << " at line number " << __LINE__);
+        }
+        
+
+        /*!
+         *   constant reference to vector in the x-y plane of the element. 
+         *   This should not be the same as the element x-axis.
+         *   Only used by 1D sections. Added for polymorphism enhancement.
+         *   Added by DJN. 
+         */
+        virtual const RealVectorX& y_vector() const {
+            libmesh_error_msg("Must be implemented in derived class; " << __PRETTY_FUNCTION__ << " in " << __FILE__ << " at line number " << __LINE__);
+        }
+        
+        
+        /*!
+         * Returns location of shear center of the section
+         */
+        virtual const libMesh::Point get_shear_center(const libMesh::Point& p, const Real t) const
+        {
+            libmesh_error_msg("Must be implemented in derived class; " << __PRETTY_FUNCTION__ << " in " << __FILE__ << " at line number " << __LINE__);
+        }
+        
+        
+        /*!
+         * Returns derivative of location of shear center of the section
+         */
+        virtual const libMesh::Point get_shear_center_derivative(MAST::FunctionBase& f, const libMesh::Point& p, const Real t)
+        {
+            libmesh_error_msg("Must be implemented in derived class; " << __PRETTY_FUNCTION__ << " in " << __FILE__ << " at line number " << __LINE__);
+        }
+        
+        
+        /*!
+         * Returns the location of the centroid of the section
+         */
+        virtual const libMesh::Point get_centroid(const libMesh::Point& p, const Real t) const
+        {
+            libmesh_error_msg("Must be implemented in derived class; " << __PRETTY_FUNCTION__ << " in " << __FILE__ << " at line number " << __LINE__);
+        }
+        
+        
+        /*!
+         * Returns the derivative of the location of the centroid of the section
+         */
+        virtual const libMesh::Point get_centroid_derivative(const MAST::FunctionBase& f, const libMesh::Point& p, const Real t) const
+        {
+            libmesh_error_msg("Must be implemented in derived class; " << __PRETTY_FUNCTION__ << " in " << __FILE__ << " at line number " << __LINE__);
+        }
+        
+        
+        /*!
+         * Returns the points which define the geometry of the cross section.
+         */
+        virtual const std::vector<libMesh::Point> get_geom_points(const libMesh::Point& p, const Real t, const uint n=201) const
+        {
+            libmesh_error_msg("Must be implemented in derived class; " << __PRETTY_FUNCTION__ << " in " << __FILE__ << " at line number " << __LINE__);
+        }
+        
+        
+        /*!
+         * Return the derivative of points which define the geometry of the 
+         * cross section.
+         */
+        virtual const std::vector<libMesh::Point> get_geom_points_derivative(const MAST::FunctionBase& f, const libMesh::Point& p, const Real t, const uint n=201) const 
+        {
+            libmesh_error_msg("Must be implemented in derived class; " << __PRETTY_FUNCTION__ << " in " << __FILE__ << " at line number " << __LINE__);
+        }
+        
+        
+        /*!
+         * Returns a list containing vectors of points which define the 
+         * geometry of each hole in the cross section.
+         */
+        virtual const std::vector<std::vector<libMesh::Point>> get_holes_points(const libMesh::Point& p, const Real t, const uint n=201) const
+        {
+            std::vector<std::vector<libMesh::Point>> empty_hole_list;
+            return empty_hole_list;
+        }
+        
+        
+        /*!
+         * Returns a list containing vectors of points which define the 
+         * hole geometry sensitivity to a parameter
+         */
+        virtual const std::vector<std::vector<libMesh::Point>> get_holes_points_derivative(const MAST::FunctionBase& f, const libMesh::Point& p, const Real t, const uint n=201) const
+        {
+            std::vector<std::vector<libMesh::Point>> empty_hole_list;
+            return empty_hole_list;
+        }
+        
+        
+        /*!
+         * Returns location of stress evaluation points of the section
+         */
+        virtual const std::vector<libMesh::Point> get_stress_points(const libMesh::Point& p, const Real t, const libMesh::Point ps) const
+        {
+            libmesh_error_msg("Must be implemented in derived class; " << __PRETTY_FUNCTION__ << " in " << __FILE__ << " at line number " << __LINE__);
+        }
+        
+        
+        /*!
+         * Returns location of stress evaluation points of the section
+         */
+        virtual const std::vector<libMesh::Point> get_stress_points_derivative(const MAST::FunctionBase& f, const libMesh::Point& p, const Real t, const libMesh::Point dps) const
+        {
+            libmesh_error_msg("Must be implemented in derived class; " << __PRETTY_FUNCTION__ << " in " << __FILE__ << " at line number " << __LINE__);
+        }
+        
+        
+        /*!
+         * Only used by 1D sections. Added for polymorphism enhancement.
+         * 
+         * Added by DJN.
+         */
+        virtual void init() {
+            libmesh_error_msg("Must be implemented in derived class; " << __PRETTY_FUNCTION__ << " in " << __FILE__ << " at line number " << __LINE__);
         }
         
         

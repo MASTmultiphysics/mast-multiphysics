@@ -6,3 +6,4 @@ add_subdirectory(example_5) # topology optimization
 add_subdirectory(example_6) # SIMP topology optimization
 add_subdirectory(example_7) # NastranIO input for Nastran BDF mesh
 add_subdirectory(example_8) # Homogenized level-set topology optimization
+add_subdirectory(example_9) # Cross section property analysis

@@ -26,6 +26,9 @@
 #include "libmesh/point.h"
 #include "libmesh/face_quad4.h"
 
+#include "base/parameter.h"
+#include "base/constant_field_function.h"
+
 
 #define pi 3.14159265358979323846
 
@@ -393,4 +396,56 @@ void TEST::transform_element(libMesh::MeshBase& mesh, const RealMatrixX X0,
     {
         (*mesh.node_ptr(i)) = libMesh::Point(X(0,i), X(1,i), X(2,i));
     }
+}
+
+
+Real TEST::approximate_field_function_derivative(const MAST::FieldFunction<Real>& f,
+                                           MAST::Parameter* p,
+                                           const libMesh::Point& point,
+                                           const Real& time,
+                                           Real delta)
+{
+    Real f_h, f_2h, f_n, f_2n;
+    
+    (*p)() += delta;
+    f(point, time, f_h);
+    
+    (*p)() += delta;
+    f(point, time, f_2h);
+    
+    (*p)() -= 3.0*delta;
+    f(point, time, f_n);
+    
+    (*p)() -= delta;
+    f(point, time, f_2n);
+    
+    (*p)() += 2.0*delta;
+    
+    return (f_2n - 8.*f_n + 8*f_h - f_2h)/(12.*delta);
+}
+
+
+RealMatrixX TEST::approximate_field_function_derivative(const MAST::FieldFunction<RealMatrixX>& f,
+                                           MAST::Parameter* p,
+                                           const libMesh::Point& point,
+                                           const Real& time,
+                                           Real delta)
+{
+    RealMatrixX f_h, f_2h, f_n, f_2n;
+    
+    (*p)() += delta;
+    f(point, time, f_h);
+    
+    (*p)() += delta;
+    f(point, time, f_2h);
+    
+    (*p)() -= 3.0*delta;
+    f(point, time, f_n);
+    
+    (*p)() -= delta;
+    f(point, time, f_2n);
+    
+    (*p)() += 2.0*delta;
+    
+    return (f_2n - 8.*f_n + 8*f_h - f_2h)/(12.*delta);
 }
