@@ -58,10 +58,13 @@ namespace MAST
         /*!
          *    returns the extra quadrature order (on top of the system) that
          *    this element should use. This is elevated by two orders for a DKT
-         *    element
+         *    element and reduced by 1 order for warping analysis of a cross
+         *    section
          */
         virtual int extra_quadrature_order(const MAST::GeomElem& elem) const {
-            if (this->bending_model(elem) == MAST::DKT)
+            if ((this->_warping_only)) // May need to change this if quad elements are every supported in the future for warping
+                return -1; // Full integration for cross sectional property analysis for 1st or 2nd order triangles only requires 3 and 6 integrations points respectively. Defaults are 4 and 7 respectively.
+            else if (this->bending_model(elem) == MAST::DKT)
                 return 2;
             else
                 return 0;

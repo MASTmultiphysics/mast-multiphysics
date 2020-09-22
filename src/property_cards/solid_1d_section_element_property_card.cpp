@@ -105,10 +105,42 @@ namespace MAST {
             }
             
             
-            virtual void derivative (    const MAST::FunctionBase& f,
+            virtual void derivative (const MAST::FunctionBase& f,
                                      const libMesh::Point& p,
                                      const Real t,
                                      Real& m) const {
+                Real hy, hz, dhy, dhz, a, b, da, db;
+                _hy(p, t, hy); _hy.derivative( f, p, t, dhy);
+                _hz(p, t, hz); _hz.derivative( f, p, t, dhz);
+                
+                // shorter side is b, and longer side is a
+                if (hy > hz) {
+                    a = hy; da = dhy;
+                    b = hz; db = dhz;
+                }
+                else {
+                    a = hz; da = dhz;
+                    b = hy; db = dhy;
+                }
+                
+                m =
+                da*pow(b,3)*(1./3.-.21*b/a*(1.-pow(b/a,4)/12.)) +
+                a*3.*pow(b,2)*db*(1./3.-.21*b/a*(1.-pow(b/a,4)/12.)) +
+                a*pow(b,3)*(-.21*db/a*(1.-pow(b/a,4)/12.) +
+                            (.21*b/pow(a,2)*da*(1.-pow(b/a,4)/12.)) +
+                            (-.21*b/a*(-4.*pow(b,3)*db/pow(a,4)/12.+
+                                       4.*pow(b,4)/pow(a,5)*da/12.)));
+            }
+            
+            /*!
+             * Added to be compatible with other sections where the derivative
+             * function is not constant due to using finite differences to 
+             * approximate the sensitivity.
+             */
+            virtual void derivative (MAST::FunctionBase& f,
+                                     const libMesh::Point& p,
+                                     const Real t,
+                                     Real& m) {
                 Real hy, hz, dhy, dhz, a, b, da, db;
                 _hy(p, t, hy); _hy.derivative( f, p, t, dhy);
                 _hz(p, t, hz); _hz.derivative( f, p, t, dhz);
@@ -394,6 +426,19 @@ namespace MAST {
                                      const libMesh::Point& p,
                                      const Real t,
                                      Real& m) const
+            {
+                m = 0.0;
+            }
+            
+            /*!
+             * Added to be compatible with other sections where the derivative
+             * function is not constant due to using finite differences to 
+             * approximate the sensitivity.
+             */
+            virtual void derivative (MAST::FunctionBase& f,
+                                     const libMesh::Point& p,
+                                     const Real t,
+                                     Real& m)
             {
                 m = 0.0;
             }
@@ -2085,4 +2130,227 @@ MAST::Solid1DSectionElementPropertyCard::
 section() const {
     
     return _A.get();
+}
+
+
+const libMesh::Point 
+MAST::Solid1DSectionElementPropertyCard::
+get_shear_center(const libMesh::Point& p, const Real t) const
+{
+    const MAST::FieldFunction<Real>
+    &hy     =  this->get<MAST::FieldFunction<Real> >("hy"),
+    &hz     =  this->get<MAST::FieldFunction<Real> >("hz"),
+    &hy_off =  this->get<MAST::FieldFunction<Real> >("hy_off"),
+    &hz_off =  this->get<MAST::FieldFunction<Real> >("hz_off");
+    
+    Real h_y, h_z, h_y_off, h_z_off;
+    hy(p, t, h_y);
+    hz(p, t, h_z);
+    hy_off(p, t, h_y_off);
+    hz_off(p, t, h_z_off);
+    
+    libMesh::Point offset(h_z_off, h_y_off);
+    
+    libMesh::Point ps(0., 0.);
+    return  ps+offset;
+}
+
+
+const libMesh::Point 
+MAST::Solid1DSectionElementPropertyCard::
+get_shear_center_derivative(MAST::FunctionBase& f, const libMesh::Point& p, 
+                            const Real t)
+{
+    const MAST::FieldFunction<Real>
+    &hy     =  this->get<MAST::FieldFunction<Real> >("hy"),
+    &hz     =  this->get<MAST::FieldFunction<Real> >("hz"),
+    &hy_off =  this->get<MAST::FieldFunction<Real> >("hy_off"),
+    &hz_off =  this->get<MAST::FieldFunction<Real> >("hz_off");
+    
+    Real h_y, h_z, h_y_off, h_z_off;
+    Real dh_y, dh_z, dh_y_off, dh_z_off;
+    
+    hy(p, t, h_y);          hy.derivative(f, p, t, dh_y);
+    hz(p, t, h_z);          hz.derivative(f, p, t, dh_z);
+    hy_off(p, t, h_y_off);  hy_off.derivative(f, p, t, dh_y_off);
+    hz_off(p, t, h_z_off);  hz_off.derivative(f, p, t, dh_z_off);
+    
+    libMesh::Point offset(h_z_off, h_y_off);
+    libMesh::Point doffset(dh_z_off, dh_y_off);
+    
+    return  doffset;
+}
+
+
+const libMesh::Point 
+MAST::Solid1DSectionElementPropertyCard::
+get_centroid(const libMesh::Point& p, const Real t) const
+{
+    const MAST::FieldFunction<Real>
+    &hy     =  this->get<MAST::FieldFunction<Real> >("hy"),
+    &hz     =  this->get<MAST::FieldFunction<Real> >("hz"),
+    &hy_off =  this->get<MAST::FieldFunction<Real> >("hy_off"),
+    &hz_off =  this->get<MAST::FieldFunction<Real> >("hz_off");
+    
+    Real h_y, h_z, h_y_off, h_z_off;
+    hy(p, t, h_y);
+    hz(p, t, h_z);
+    hy_off(p, t, h_y_off);
+    hz_off(p, t, h_z_off);
+    
+    libMesh::Point offset(h_z_off, h_y_off);
+    
+    libMesh::Point ps(0., 0.);
+    return  ps+offset;
+}
+
+
+const libMesh::Point 
+MAST::Solid1DSectionElementPropertyCard::
+get_centroid_derivative(const MAST::FunctionBase& f, const libMesh::Point& p, 
+                        const Real t) const
+{
+    const MAST::FieldFunction<Real>
+    &hy     =  this->get<MAST::FieldFunction<Real> >("hy"),
+    &hz     =  this->get<MAST::FieldFunction<Real> >("hz"),
+    &hy_off =  this->get<MAST::FieldFunction<Real> >("hy_off"),
+    &hz_off =  this->get<MAST::FieldFunction<Real> >("hz_off");
+    
+    Real h_y, h_z, h_y_off, h_z_off;
+    Real dh_y, dh_z, dh_y_off, dh_z_off;
+    
+    hy(p, t, h_y);          hy.derivative(f, p, t, dh_y);
+    hz(p, t, h_z);          hz.derivative(f, p, t, dh_z);
+    hy_off(p, t, h_y_off);  hy_off.derivative(f, p, t, dh_y_off);
+    hz_off(p, t, h_z_off);  hz_off.derivative(f, p, t, dh_z_off);
+    
+    libMesh::Point offset(h_z_off, h_y_off);
+    libMesh::Point doffset(dh_z_off, dh_y_off);
+    
+    return  doffset;
+}
+
+
+const std::vector<libMesh::Point> 
+MAST::Solid1DSectionElementPropertyCard::
+get_geom_points(const libMesh::Point& p, const Real t, const uint n) const
+{
+    const MAST::FieldFunction<Real>
+    &hy     =  this->get<MAST::FieldFunction<Real> >("hy"),
+    &hz     =  this->get<MAST::FieldFunction<Real> >("hz"),
+    &hy_off =  this->get<MAST::FieldFunction<Real> >("hy_off"),
+    &hz_off =  this->get<MAST::FieldFunction<Real> >("hz_off");
+    
+    Real h_y, h_z, h_y_off, h_z_off;
+    hy(p, t, h_y);
+    hz(p, t, h_z);
+    hy_off(p, t, h_y_off);
+    hz_off(p, t, h_z_off);
+    
+    libMesh::Point offset(h_z_off, h_y_off);
+    
+    std::vector<libMesh::Point> geom_points = {
+        libMesh::Point(-0.5*h_z, -0.5*h_y) + offset,
+        libMesh::Point(0.5*h_z, -0.5*h_y) + offset,
+        libMesh::Point(0.5*h_z, 0.5*h_y) + offset,
+        libMesh::Point(-0.5*h_z, 0.5*h_y) + offset
+    };
+    
+    return geom_points;
+}
+
+
+const std::vector<libMesh::Point> 
+MAST::Solid1DSectionElementPropertyCard::
+get_geom_points_derivative(const MAST::FunctionBase& f, const libMesh::Point& p, 
+                           const Real t, const uint n) const
+{
+    const MAST::FieldFunction<Real>
+    &hy     =  this->get<MAST::FieldFunction<Real> >("hy"),
+    &hz     =  this->get<MAST::FieldFunction<Real> >("hz"),
+    &hy_off =  this->get<MAST::FieldFunction<Real> >("hy_off"),
+    &hz_off =  this->get<MAST::FieldFunction<Real> >("hz_off");
+    
+    Real h_y, h_z, h_y_off, h_z_off;
+    Real dh_y, dh_z, dh_y_off, dh_z_off;
+    
+    hy(p, t, h_y);          hy.derivative(f, p, t, dh_y);
+    hz(p, t, h_z);          hz.derivative(f, p, t, dh_z);
+    hy_off(p, t, h_y_off);  hy_off.derivative(f, p, t, dh_y_off);
+    hz_off(p, t, h_z_off);  hz_off.derivative(f, p, t, dh_z_off);
+    
+    libMesh::Point offset(h_z_off, h_y_off);
+    libMesh::Point doffset(dh_z_off, dh_y_off);
+    
+    std::vector<libMesh::Point> geom_points = {
+        libMesh::Point(-0.5*dh_z, -0.5*dh_y) + doffset,
+        libMesh::Point(0.5*dh_z, -0.5*dh_y) + doffset,
+        libMesh::Point(0.5*dh_z, 0.5*dh_y) + doffset,
+        libMesh::Point(-0.5*dh_z, 0.5*dh_y) + doffset
+    };
+    
+    return geom_points;
+}
+
+
+const std::vector<libMesh::Point> 
+MAST::Solid1DSectionElementPropertyCard::
+get_stress_points(const libMesh::Point& p, const Real t, const libMesh::Point ps) const
+{
+    const MAST::FieldFunction<Real>
+    &hy     =  this->get<MAST::FieldFunction<Real> >("hy"),
+    &hz     =  this->get<MAST::FieldFunction<Real> >("hz"),
+    &hy_off =  this->get<MAST::FieldFunction<Real> >("hy_off"),
+    &hz_off =  this->get<MAST::FieldFunction<Real> >("hz_off");
+    
+    Real h_y, h_z, h_y_off, h_z_off;
+    hy(p, t, h_y);
+    hz(p, t, h_z);
+    hy_off(p, t, h_y_off);
+    hz_off(p, t, h_z_off);
+    
+    libMesh::Point offset(h_z_off, h_y_off);
+                
+    std::vector<libMesh::Point> stress_points = {
+        libMesh::Point(0.5*h_z, 0.5*h_y) + offset - ps,
+        libMesh::Point(0.5*h_z, -0.5*h_y) + offset - ps,
+        libMesh::Point(-0.5*h_z, -0.5*h_y) + offset - ps,
+        libMesh::Point(-0.5*h_z, 0.5*h_y) + offset - ps
+    };
+    
+    return stress_points;
+}
+
+
+const std::vector<libMesh::Point> 
+MAST::Solid1DSectionElementPropertyCard::
+get_stress_points_derivative(const MAST::FunctionBase& f, 
+                             const libMesh::Point& p, const Real t,
+                             const libMesh::Point dps) const
+{
+    const MAST::FieldFunction<Real>
+    &hy     =  this->get<MAST::FieldFunction<Real> >("hy"),
+    &hz     =  this->get<MAST::FieldFunction<Real> >("hz"),
+    &hy_off =  this->get<MAST::FieldFunction<Real> >("hy_off"),
+    &hz_off =  this->get<MAST::FieldFunction<Real> >("hz_off");
+    
+    Real h_y, h_z, h_y_off, h_z_off;
+    Real dh_y, dh_z, dh_y_off, dh_z_off;
+    
+    hy(p, t, h_y);          hy.derivative(f, p, t, dh_y);
+    hz(p, t, h_z);          hz.derivative(f, p, t, dh_z);
+    hy_off(p, t, h_y_off);  hy_off.derivative(f, p, t, dh_y_off);
+    hz_off(p, t, h_z_off);  hz_off.derivative(f, p, t, dh_z_off);
+    
+    libMesh::Point offset(h_z_off, h_y_off);
+    libMesh::Point doffset(dh_z_off, dh_y_off);
+                
+    std::vector<libMesh::Point> stress_points = {
+        libMesh::Point(0.5*dh_z, 0.5*dh_y) + doffset - dps,
+        libMesh::Point(0.5*dh_z, -0.5*dh_y) + doffset - dps,
+        libMesh::Point(-0.5*dh_z, -0.5*dh_y) + doffset - dps,
+        libMesh::Point(-0.5*dh_z, 0.5*dh_y) + doffset - dps
+    };
+    
+    return stress_points;
 }

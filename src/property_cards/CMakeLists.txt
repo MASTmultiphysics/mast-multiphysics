@@ -20,8 +20,30 @@ target_sources(mast
         ${CMAKE_CURRENT_LIST_DIR}/orthotropic_material_property_card.h
         ${CMAKE_CURRENT_LIST_DIR}/solid_1d_section_element_property_card.cpp
         ${CMAKE_CURRENT_LIST_DIR}/solid_1d_section_element_property_card.h
+        ${CMAKE_CURRENT_LIST_DIR}/solid_1d_arbitrary_section_element_property_card.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/solid_1d_arbitrary_section_element_property_card.h
+        ${CMAKE_CURRENT_LIST_DIR}/solid_1d_nparameter_section_element_property_card.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/solid_1d_nparameter_section_element_property_card.h
+        ${CMAKE_CURRENT_LIST_DIR}/solid_1d_1parameter_section_element_property_card.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/solid_1d_1parameter_section_element_property_card.h
+        ${CMAKE_CURRENT_LIST_DIR}/solid_1d_2parameter_section_element_property_card.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/solid_1d_2parameter_section_element_property_card.h
+        ${CMAKE_CURRENT_LIST_DIR}/solid_1d_bar_section_element_property_card.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/solid_1d_bar_section_element_property_card.h
+        ${CMAKE_CURRENT_LIST_DIR}/solid_1d_I1_section_element_property_card.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/solid_1d_I1_section_element_property_card.h
+        ${CMAKE_CURRENT_LIST_DIR}/solid_1d_L_section_element_property_card.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/solid_1d_L_section_element_property_card.h
+        ${CMAKE_CURRENT_LIST_DIR}/solid_1d_rod_section_element_property_card.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/solid_1d_rod_section_element_property_card.h
+        ${CMAKE_CURRENT_LIST_DIR}/solid_1d_tube_section_element_property_card.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/solid_1d_tube_section_element_property_card.h
+        ${CMAKE_CURRENT_LIST_DIR}/solid_1d_tube2_section_element_property_card.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/solid_1d_tube2_section_element_property_card.h
         ${CMAKE_CURRENT_LIST_DIR}/solid_2d_section_element_property_card.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/solid_2d_section_element_property_card.h)
+        ${CMAKE_CURRENT_LIST_DIR}/solid_2d_section_element_property_card.h
+        ${CMAKE_CURRENT_LIST_DIR}/cross_section_property_pilkey.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/cross_section_property_pilkey.h)
 
 # Install MAST headers for this directory.
 install(DIRECTORY ./ DESTINATION include/property_cards

@@ -141,9 +141,19 @@ namespace MAST {
         
         
         /*!
-         *    returns a reference to the material
+         *    returns a constnant reference to the material
          */
         virtual const MAST::MaterialPropertyCardBase& get_material() const {
+            libmesh_assert(_material); // make sure it has already been set
+            return *_material;
+        }
+        
+        /*!
+         * returns a writable reference to the material
+         * currently only used for some finite difference sensitivities in
+         * Pilkey cross section calculations
+         */
+        virtual MAST::MaterialPropertyCardBase& get_material() {
             libmesh_assert(_material); // make sure it has already been set
             return *_material;
         }
@@ -254,6 +264,22 @@ namespace MAST {
         virtual void clear();
         
         virtual void init();
+        
+        virtual const std::vector<libMesh::Point> get_geom_points(const libMesh::Point& p, const Real t, const uint n=201) const override;
+        
+        virtual const std::vector<libMesh::Point> get_geom_points_derivative(const MAST::FunctionBase& f, const libMesh::Point& p, const Real t, const uint n=201) const override;
+                
+        virtual const libMesh::Point get_shear_center(const libMesh::Point& p, const Real t) const override;
+        
+        virtual const libMesh::Point get_shear_center_derivative(MAST::FunctionBase& f, const libMesh::Point& p, const Real t) override;
+        
+        virtual const libMesh::Point get_centroid(const libMesh::Point& p, const Real t) const override;
+        
+        virtual const libMesh::Point get_centroid_derivative(const MAST::FunctionBase& f, const libMesh::Point& p, const Real t) const override;
+        
+        virtual const std::vector<libMesh::Point> get_stress_points(const libMesh::Point& p, const Real t, const libMesh::Point ps) const override;
+        
+        virtual const std::vector<libMesh::Point> get_stress_points_derivative(const MAST::FunctionBase& f, const libMesh::Point& p, const Real t, const libMesh::Point dps) const override;
         
     protected:
 

@@ -1,6 +1,13 @@
 target_sources(mast_catch_tests
     PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}/mast_solid_1d_section_element_property_card.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/mast_solid_1d_arbitrary_section_element_property_card
+        ${CMAKE_CURRENT_LIST_DIR}/mast_solid_1d_bar_section_element_property_card.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/mast_solid_1d_I1_section_element_property_card.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/mast_solid_1d_L_section_element_property_card.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/mast_solid_1d_rod_section_element_property_card.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/mast_solid_1d_tube_section_element_property_card.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/mast_solid_1d_tube2_section_element_property_card.cpp
         ${CMAKE_CURRENT_LIST_DIR}/mast_solid_2d_section_element_property_card.cpp
         ${CMAKE_CURRENT_LIST_DIR}/mast_3d_isotropic_element_property_card.cpp)
        
@@ -284,230 +291,547 @@ set_tests_properties(Element_Property_Card_1D_Dynamic_mpi
         FIXTURES_REQUIRED Isotropic_Material_1D_Dynamic_mpi)
 
 
-# ## ============================================================================
-# # 1D Arbitrary Cross Section
-# add_test(NAME Arbitrary_Element_Property_Card_1D_Base
-#          COMMAND mast_catch_tests "arbitrary_element_property_card_constant_base_1d")
-# set_tests_properties(Arbitrary_Element_Property_Card_1D_Base
-#                      PROPERTIES
-#                      FIXTURES_REQUIRED Isotropic_Material_1D_Structural)
-# ## ============================================================================
+## ============================================================================
+# 1D Arbitrary Cross Section
+add_test(NAME Arbitrary_Element_Property_Card_1D_Base
+         COMMAND $<TARGET_FILE:mast_catch_tests> -w NoTests "arbitrary_element_property_card_constant_base_1d")
+set_tests_properties(Arbitrary_Element_Property_Card_1D_Base
+                     PROPERTIES
+                     LABELS "SEQ"
+                     FIXTURES_REQUIRED Isotropic_Material_1D_Structural)
+                     
+add_test(NAME Arbitrary_Element_Property_Card_1D_Base_mpi
+         COMMAND ${MPIEXEC_EXECUTABLE} -np 2 $<TARGET_FILE:mast_catch_tests> -w NoTests "arbitrary_element_property_card_constant_base_1d")
+set_tests_properties(Arbitrary_Element_Property_Card_1D_Base_mpi
+                     PROPERTIES
+                     LABELS "MPI"
+                     FIXTURES_REQUIRED Isotropic_Material_1D_Structural_mpi)
+## ============================================================================
 
 
-# ## ============================================================================
-# # 1D BAR Cross Section
-# add_test(NAME Bar_Element_Property_Card_1D_Base
-#          COMMAND mast_catch_tests "bar_element_property_card_constant_base_1d")
-# set_tests_properties(Bar_Element_Property_Card_1D_Base
-#                      PROPERTIES
-#                      FIXTURES_REQUIRED Isotropic_Material_1D_Structural)
-#                      
-# add_test(NAME Bar_Element_Property_Card_1D_Base_Sensitivity
-#          COMMAND mast_catch_tests "bar_element_property_card_constant_base_sensitivity_1d")
-# set_tests_properties(Bar_Element_Property_Card_1D_Base_Sensitivity
-#                      PROPERTIES
-#                      FIXTURES_REQUIRED Bar_Element_Property_Card_1D_Base)
-#                      
-# add_test(NAME Bar_Element_Property_Card_1D_Heat_Transfer
-#          COMMAND mast_catch_tests "bar_element_property_card_constant_heat_transfer_1d")
-# set_tests_properties(Bar_Element_Property_Card_1D_Heat_Transfer
-#                      PROPERTIES
-#                      FIXTURES_REQUIRED Isotropic_Material_1D_Heat_Transfer)
-# 
-# add_test(NAME Bar_Element_Property_Card_1D_Thermoelastic
-#          COMMAND mast_catch_tests "bar_element_property_card_constant_thermoelastic_1d")
-# set_tests_properties(Bar_Element_Property_Card_1D_Thermoelastic
-#                      PROPERTIES
-#                      FIXTURES_REQUIRED Isotropic_Material_1D_Thermoelastic)
-# 
-# add_test(NAME Bar_Element_Property_Card_1D_Structural
-#          COMMAND mast_catch_tests "bar_element_property_card_constant_structural_1d")
-# set_tests_properties(Bar_Element_Property_Card_1D_Structural
-#                      PROPERTIES
-#                      FIXTURES_REQUIRED  Isotropic_Material_1D_Structural)
-#                      
-# add_test(NAME Bar_Element_Property_Card_1D_Dynamic
-#          COMMAND mast_catch_tests "bar_element_property_card_constant_dynamic_1d")
-# set_tests_properties(Bar_Element_Property_Card_1D_Dynamic
-#                      PROPERTIES
-#                      FIXTURES_REQUIRED Isotropic_Material_1D_Dynamic)
-# ## ============================================================================
+## ============================================================================
+# 1D BAR Cross Section
+add_test(NAME Bar_Element_Property_Card_1D_Base
+         COMMAND $<TARGET_FILE:mast_catch_tests> -w NoTests "bar_element_property_card_constant_base_1d")
+set_tests_properties(Bar_Element_Property_Card_1D_Base
+                     PROPERTIES
+                     LABELS "SEQ"
+                     FIXTURES_REQUIRED Isotropic_Material_1D_Structural)
+                     
+add_test(NAME Bar_Element_Property_Card_1D_Base_mpi
+         COMMAND ${MPIEXEC_EXECUTABLE} -np 2 $<TARGET_FILE:mast_catch_tests> -w NoTests "bar_element_property_card_constant_base_1d")
+set_tests_properties(Bar_Element_Property_Card_1D_Base_mpi
+                     PROPERTIES
+                     LABELS "MPI"
+                     FIXTURES_REQUIRED Isotropic_Material_1D_Structural_mpi)
+                     
+add_test(NAME Bar_Element_Property_Card_1D_Base_Sensitivity
+         COMMAND $<TARGET_FILE:mast_catch_tests> -w NoTests "bar_element_property_card_constant_base_sensitivity_1d")
+set_tests_properties(Bar_Element_Property_Card_1D_Base_Sensitivity
+                     PROPERTIES
+                     LABELS "SEQ"
+                     FIXTURES_REQUIRED Bar_Element_Property_Card_1D_Base)
+                     
+add_test(NAME Bar_Element_Property_Card_1D_Base_Sensitivity_mpi
+         COMMAND ${MPIEXEC_EXECUTABLE} -np 2 $<TARGET_FILE:mast_catch_tests> -w NoTests "bar_element_property_card_constant_base_sensitivity_1d")
+set_tests_properties(Bar_Element_Property_Card_1D_Base_Sensitivity_mpi
+                     PROPERTIES
+                     LABELS "MPI"
+                     FIXTURES_REQUIRED Bar_Element_Property_Card_1D_Base_mpi)
+                     
+add_test(NAME Bar_Element_Property_Card_1D_Heat_Transfer
+         COMMAND $<TARGET_FILE:mast_catch_tests> -w NoTests "bar_element_property_card_constant_heat_transfer_1d")
+set_tests_properties(Bar_Element_Property_Card_1D_Heat_Transfer
+                     PROPERTIES
+                     LABELS "SEQ"
+                     FIXTURES_REQUIRED Isotropic_Material_1D_Heat_Transfer)
+    
+add_test(NAME Bar_Element_Property_Card_1D_Heat_Transfer_mpi
+         COMMAND ${MPIEXEC_EXECUTABLE} -np 2 $<TARGET_FILE:mast_catch_tests> -w NoTests "bar_element_property_card_constant_heat_transfer_1d")
+set_tests_properties(Bar_Element_Property_Card_1D_Heat_Transfer_mpi
+                     PROPERTIES
+                     LABELS "MPI"
+                     FIXTURES_REQUIRED Isotropic_Material_1D_Heat_Transfer_mpi)
+
+add_test(NAME Bar_Element_Property_Card_1D_Thermoelastic
+         COMMAND $<TARGET_FILE:mast_catch_tests> -w NoTests "bar_element_property_card_constant_thermoelastic_1d")
+set_tests_properties(Bar_Element_Property_Card_1D_Thermoelastic
+                     PROPERTIES
+                     LABELS "SEQ"
+                     FIXTURES_REQUIRED Isotropic_Material_1D_Thermoelastic)
+
+add_test(NAME Bar_Element_Property_Card_1D_Thermoelastic_mpi
+         COMMAND ${MPIEXEC_EXECUTABLE} -np 2 $<TARGET_FILE:mast_catch_tests> -w NoTests "bar_element_property_card_constant_thermoelastic_1d")
+set_tests_properties(Bar_Element_Property_Card_1D_Thermoelastic_mpi
+                     PROPERTIES
+                     LABELS "MPI"
+                     FIXTURES_REQUIRED Isotropic_Material_1D_Thermoelastic_mpi)
+                     
+add_test(NAME Bar_Element_Property_Card_1D_Structural
+         COMMAND $<TARGET_FILE:mast_catch_tests> -w NoTests "bar_element_property_card_constant_structural_1d")
+set_tests_properties(Bar_Element_Property_Card_1D_Structural
+                     PROPERTIES
+                     LABELS "SEQ"
+                     FIXTURES_REQUIRED  Isotropic_Material_1D_Structural)
+                     
+add_test(NAME Bar_Element_Property_Card_1D_Structural_mpi
+         COMMAND ${MPIEXEC_EXECUTABLE} -np 2 $<TARGET_FILE:mast_catch_tests> -w NoTests "bar_element_property_card_constant_structural_1d")
+set_tests_properties(Bar_Element_Property_Card_1D_Structural_mpi
+                     PROPERTIES
+                     LABELS "MPI"
+                     FIXTURES_REQUIRED  Isotropic_Material_1D_Structural_mpi)
+                     
+add_test(NAME Bar_Element_Property_Card_1D_Dynamic
+         COMMAND $<TARGET_FILE:mast_catch_tests> -w NoTests "bar_element_property_card_constant_dynamic_1d")
+set_tests_properties(Bar_Element_Property_Card_1D_Dynamic
+                     PROPERTIES
+                     LABELS "SEQ"
+                     FIXTURES_REQUIRED Isotropic_Material_1D_Dynamic)
+                     
+add_test(NAME Bar_Element_Property_Card_1D_Dynamic_mpi
+         COMMAND ${MPIEXEC_EXECUTABLE} -np 2 $<TARGET_FILE:mast_catch_tests> -w NoTests "bar_element_property_card_constant_dynamic_1d")
+set_tests_properties(Bar_Element_Property_Card_1D_Dynamic_mpi
+                     PROPERTIES
+                     LABELS "MPI"
+                     FIXTURES_REQUIRED Isotropic_Material_1D_Dynamic_mpi)
+## ============================================================================
 
 
-# ## ============================================================================
-# # 1D ROD Cross Section
-# add_test(NAME Rod_Element_Property_Card_1D_Base
-#          COMMAND mast_catch_tests "rod_element_property_card_constant_base_1d")
-# set_tests_properties(Rod_Element_Property_Card_1D_Base
-#                      PROPERTIES
-#                      FIXTURES_REQUIRED Isotropic_Material_1D_Structural)
-# 
-# add_test(NAME Rod_Element_Property_Card_1D_Base_Sensitivity
-#          COMMAND mast_catch_tests "rod_element_property_card_constant_base_sensitivity_1d")
-# set_tests_properties(Rod_Element_Property_Card_1D_Base_Sensitivity
-#                      PROPERTIES
-#                      FIXTURES_REQUIRED Rod_Element_Property_Card_1D_Base)
-#                      
-# add_test(NAME Rod_Element_Property_Card_1D_Heat_Transfer
-#          COMMAND mast_catch_tests "rod_element_property_card_constant_heat_transfer_1d")
-# set_tests_properties(Rod_Element_Property_Card_1D_Heat_Transfer
-#                      PROPERTIES
-#                      FIXTURES_REQUIRED Isotropic_Material_1D_Heat_Transfer)
-# 
-# add_test(NAME Rod_Element_Property_Card_1D_Thermoelastic
-#          COMMAND mast_catch_tests "rod_element_property_card_constant_thermoelastic_1d")
-# set_tests_properties(Rod_Element_Property_Card_1D_Thermoelastic
-#                      PROPERTIES
-#                      FIXTURES_REQUIRED Isotropic_Material_1D_Thermoelastic)
-# 
-# add_test(NAME Rod_Element_Property_Card_1D_Structural
-#          COMMAND mast_catch_tests "rod_element_property_card_constant_structural_1d")
-# set_tests_properties(Rod_Element_Property_Card_1D_Structural
-#                      PROPERTIES
-#                      FIXTURES_REQUIRED  Isotropic_Material_1D_Structural)
-#                      
-# add_test(NAME Rod_Element_Property_Card_1D_Dynamic
-#          COMMAND mast_catch_tests "rod_element_property_card_constant_dynamic_1d")
-# set_tests_properties(Rod_Element_Property_Card_1D_Dynamic
-#                      PROPERTIES
-#                      FIXTURES_REQUIRED Isotropic_Material_1D_Dynamic)
-# ## ============================================================================
+## ============================================================================
+# 1D ROD Cross Section
+add_test(NAME Rod_Element_Property_Card_1D_Base
+         COMMAND $<TARGET_FILE:mast_catch_tests> -w NoTests "rod_element_property_card_constant_base_1d")
+set_tests_properties(Rod_Element_Property_Card_1D_Base
+                     PROPERTIES
+                     LABELS "SEQ"
+                     FIXTURES_REQUIRED Isotropic_Material_1D_Structural)
+                     
+add_test(NAME Rod_Element_Property_Card_1D_Base_mpi
+         COMMAND ${MPIEXEC_EXECUTABLE} -np 2 $<TARGET_FILE:mast_catch_tests> -w NoTests "rod_element_property_card_constant_base_1d")
+set_tests_properties(Rod_Element_Property_Card_1D_Base_mpi
+                     PROPERTIES
+                     LABELS "MPI"
+                     FIXTURES_REQUIRED Isotropic_Material_1D_Structural_mpi)
+
+add_test(NAME Rod_Element_Property_Card_1D_Base_Sensitivity
+         COMMAND $<TARGET_FILE:mast_catch_tests> -w NoTests "rod_element_property_card_constant_base_sensitivity_1d")
+set_tests_properties(Rod_Element_Property_Card_1D_Base_Sensitivity
+                     PROPERTIES
+                     LABELS "SEQ"
+                     FIXTURES_REQUIRED Rod_Element_Property_Card_1D_Base)
+                     
+add_test(NAME Rod_Element_Property_Card_1D_Base_Sensitivity_mpi
+         COMMAND ${MPIEXEC_EXECUTABLE} -np 2 $<TARGET_FILE:mast_catch_tests> -w NoTests "rod_element_property_card_constant_base_sensitivity_1d")
+set_tests_properties(Rod_Element_Property_Card_1D_Base_Sensitivity_mpi
+                     PROPERTIES
+                     LABELS "MPI"
+                     FIXTURES_REQUIRED Rod_Element_Property_Card_1D_Base_mpi)
+                     
+add_test(NAME Rod_Element_Property_Card_1D_Heat_Transfer
+         COMMAND $<TARGET_FILE:mast_catch_tests> -w NoTests "rod_element_property_card_constant_heat_transfer_1d")
+set_tests_properties(Rod_Element_Property_Card_1D_Heat_Transfer
+                     PROPERTIES
+                     LABELS "SEQ"
+                     FIXTURES_REQUIRED Isotropic_Material_1D_Heat_Transfer)
+
+add_test(NAME Rod_Element_Property_Card_1D_Heat_Transfer_mpi
+         COMMAND ${MPIEXEC_EXECUTABLE} -np 2 $<TARGET_FILE:mast_catch_tests> -w NoTests "rod_element_property_card_constant_heat_transfer_1d")
+set_tests_properties(Rod_Element_Property_Card_1D_Heat_Transfer_mpi
+                     PROPERTIES
+                     LABELS "MPI"
+                     FIXTURES_REQUIRED Isotropic_Material_1D_Heat_Transfer_mpi)
+                     
+add_test(NAME Rod_Element_Property_Card_1D_Thermoelastic
+         COMMAND $<TARGET_FILE:mast_catch_tests> -w NoTests "rod_element_property_card_constant_thermoelastic_1d")
+set_tests_properties(Rod_Element_Property_Card_1D_Thermoelastic
+                     PROPERTIES
+                     LABELS "SEQ"
+                     FIXTURES_REQUIRED Isotropic_Material_1D_Thermoelastic)
+
+add_test(NAME Rod_Element_Property_Card_1D_Thermoelastic_mpi
+         COMMAND ${MPIEXEC_EXECUTABLE} -np 2 $<TARGET_FILE:mast_catch_tests> -w NoTests "rod_element_property_card_constant_thermoelastic_1d")
+set_tests_properties(Rod_Element_Property_Card_1D_Thermoelastic_mpi
+                     PROPERTIES
+                     LABELS "MPI"
+                     FIXTURES_REQUIRED Isotropic_Material_1D_Thermoelastic_mpi)
+                     
+add_test(NAME Rod_Element_Property_Card_1D_Structural
+         COMMAND $<TARGET_FILE:mast_catch_tests> -w NoTests "rod_element_property_card_constant_structural_1d")
+set_tests_properties(Rod_Element_Property_Card_1D_Structural
+                     PROPERTIES
+                     LABELS "SEQ"
+                     FIXTURES_REQUIRED  Isotropic_Material_1D_Structural)
+                     
+add_test(NAME Rod_Element_Property_Card_1D_Structural_mpi
+         COMMAND ${MPIEXEC_EXECUTABLE} -np 2 $<TARGET_FILE:mast_catch_tests> -w NoTests "rod_element_property_card_constant_structural_1d")
+set_tests_properties(Rod_Element_Property_Card_1D_Structural_mpi
+                     PROPERTIES
+                     LABELS "MPI"
+                     FIXTURES_REQUIRED  Isotropic_Material_1D_Structural_mpi)
+                     
+add_test(NAME Rod_Element_Property_Card_1D_Dynamic
+         COMMAND $<TARGET_FILE:mast_catch_tests> -w NoTests "rod_element_property_card_constant_dynamic_1d")
+set_tests_properties(Rod_Element_Property_Card_1D_Dynamic
+                     PROPERTIES
+                     LABELS "SEQ"
+                     FIXTURES_REQUIRED Isotropic_Material_1D_Dynamic)
+                     
+add_test(NAME Rod_Element_Property_Card_1D_Dynamic_mpi
+         COMMAND ${MPIEXEC_EXECUTABLE} -np 2 $<TARGET_FILE:mast_catch_tests> -w NoTests "rod_element_property_card_constant_dynamic_1d")
+set_tests_properties(Rod_Element_Property_Card_1D_Dynamic_mpi
+                     PROPERTIES
+                     LABELS "MPI"
+                     FIXTURES_REQUIRED Isotropic_Material_1D_Dynamic_mpi)
+## ============================================================================
 
 
-# ## ============================================================================
-# # 1D TUBE Cross Section
-# add_test(NAME Tube_Element_Property_Card_1D_Base
-#          COMMAND mast_catch_tests "tube_element_property_card_constant_base_1d")
-# set_tests_properties(Tube_Element_Property_Card_1D_Base
-#                      PROPERTIES
-#                      FIXTURES_REQUIRED Isotropic_Material_1D_Structural)
-#                      
-# add_test(NAME Tube_Element_Property_Card_1D_Heat_Transfer
-#          COMMAND mast_catch_tests "tube_element_property_card_constant_heat_transfer_1d")
-# set_tests_properties(Tube_Element_Property_Card_1D_Heat_Transfer
-#                      PROPERTIES
-#                      FIXTURES_REQUIRED Isotropic_Material_1D_Heat_Transfer)
-# 
-# add_test(NAME Tube_Element_Property_Card_1D_Thermoelastic
-#          COMMAND mast_catch_tests "tube_element_property_card_constant_thermoelastic_1d")
-# set_tests_properties(Tube_Element_Property_Card_1D_Thermoelastic
-#                      PROPERTIES
-#                      FIXTURES_REQUIRED Isotropic_Material_1D_Thermoelastic)
-# 
-# add_test(NAME Tube_Element_Property_Card_1D_Structural
-#          COMMAND mast_catch_tests "tube_element_property_card_constant_structural_1d")
-# set_tests_properties(Tube_Element_Property_Card_1D_Structural
-#                      PROPERTIES
-#                      FIXTURES_REQUIRED  Isotropic_Material_1D_Structural)
-#                      
-# add_test(NAME Tube_Element_Property_Card_1D_Dynamic
-#          COMMAND mast_catch_tests "tube_element_property_card_constant_dynamic_1d")
-# set_tests_properties(Tube_Element_Property_Card_1D_Dynamic
-#                      PROPERTIES
-#                      FIXTURES_REQUIRED Isotropic_Material_1D_Dynamic)
-# ## ============================================================================
+## ============================================================================
+# 1D TUBE Cross Section
+add_test(NAME Tube_Element_Property_Card_1D_Base
+         COMMAND $<TARGET_FILE:mast_catch_tests> -w NoTests "tube_element_property_card_constant_base_1d")
+set_tests_properties(Tube_Element_Property_Card_1D_Base
+                     PROPERTIES
+                     LABELS "SEQ"
+                     FIXTURES_REQUIRED Isotropic_Material_1D_Structural)
+                     
+add_test(NAME Tube_Element_Property_Card_1D_Base_mpi
+         COMMAND ${MPIEXEC_EXECUTABLE} -np 2 $<TARGET_FILE:mast_catch_tests> -w NoTests "tube_element_property_card_constant_base_1d")
+set_tests_properties(Tube_Element_Property_Card_1D_Base_mpi
+                     PROPERTIES
+                     LABELS "MPI"
+                     FIXTURES_REQUIRED Isotropic_Material_1D_Structural_mpi)
+                     
+add_test(NAME Tube_Element_Property_Card_1D_Base_Sensitivity
+         COMMAND $<TARGET_FILE:mast_catch_tests> -w NoTests "tube_element_property_card_constant_base_sensitivity_1d")
+set_tests_properties(Tube_Element_Property_Card_1D_Base_Sensitivity
+                     PROPERTIES
+                     LABELS "SEQ"
+                     FIXTURES_REQUIRED Tube_Element_Property_Card_1D_Base)
+                     
+add_test(NAME Tube_Element_Property_Card_1D_Base_Sensitivity_mpi
+         COMMAND ${MPIEXEC_EXECUTABLE} -np 2 $<TARGET_FILE:mast_catch_tests> -w NoTests "tube_element_property_card_constant_base_sensitivity_1d")
+set_tests_properties(Tube_Element_Property_Card_1D_Base_Sensitivity_mpi
+                     PROPERTIES
+                     LABELS "MPI"
+                     FIXTURES_REQUIRED Tube_Element_Property_Card_1D_Base_mpi)
+                     
+add_test(NAME Tube_Element_Property_Card_1D_Heat_Transfer
+         COMMAND $<TARGET_FILE:mast_catch_tests> -w NoTests "tube_element_property_card_constant_heat_transfer_1d")
+set_tests_properties(Tube_Element_Property_Card_1D_Heat_Transfer
+                     PROPERTIES
+                     LABELS "SEQ"
+                     FIXTURES_REQUIRED Isotropic_Material_1D_Heat_Transfer)
+                     
+add_test(NAME Tube_Element_Property_Card_1D_Heat_Transfer_mpi
+         COMMAND ${MPIEXEC_EXECUTABLE} -np 2 $<TARGET_FILE:mast_catch_tests> -w NoTests "tube_element_property_card_constant_heat_transfer_1d")
+set_tests_properties(Tube_Element_Property_Card_1D_Heat_Transfer_mpi
+                     PROPERTIES
+                     LABELS "MPI"
+                     FIXTURES_REQUIRED Isotropic_Material_1D_Heat_Transfer_mpi)
+
+add_test(NAME Tube_Element_Property_Card_1D_Thermoelastic
+         COMMAND $<TARGET_FILE:mast_catch_tests> -w NoTests "tube_element_property_card_constant_thermoelastic_1d")
+set_tests_properties(Tube_Element_Property_Card_1D_Thermoelastic
+                     PROPERTIES
+                     LABELS "SEQ"
+                     FIXTURES_REQUIRED Isotropic_Material_1D_Thermoelastic)
+                     
+add_test(NAME Tube_Element_Property_Card_1D_Thermoelastic_mpi
+         COMMAND ${MPIEXEC_EXECUTABLE} -np 2 $<TARGET_FILE:mast_catch_tests> -w NoTests "tube_element_property_card_constant_thermoelastic_1d")
+set_tests_properties(Tube_Element_Property_Card_1D_Thermoelastic_mpi
+                     PROPERTIES
+                     LABELS "MPI"
+                     FIXTURES_REQUIRED Isotropic_Material_1D_Thermoelastic_mpi)
+
+add_test(NAME Tube_Element_Property_Card_1D_Structural
+         COMMAND $<TARGET_FILE:mast_catch_tests> -w NoTests "tube_element_property_card_constant_structural_1d")
+set_tests_properties(Tube_Element_Property_Card_1D_Structural
+                     PROPERTIES
+                     LABELS "SEQ"
+                     FIXTURES_REQUIRED  Isotropic_Material_1D_Structural)
+                     
+add_test(NAME Tube_Element_Property_Card_1D_Structural_mpi
+         COMMAND ${MPIEXEC_EXECUTABLE} -np 2 $<TARGET_FILE:mast_catch_tests> -w NoTests "tube_element_property_card_constant_structural_1d")
+set_tests_properties(Tube_Element_Property_Card_1D_Structural_mpi
+                     PROPERTIES
+                     LABELS "MPI"
+                     FIXTURES_REQUIRED  Isotropic_Material_1D_Structural_mpi)
+                     
+add_test(NAME Tube_Element_Property_Card_1D_Dynamic
+         COMMAND $<TARGET_FILE:mast_catch_tests> -w NoTests "tube_element_property_card_constant_dynamic_1d")
+set_tests_properties(Tube_Element_Property_Card_1D_Dynamic
+                     PROPERTIES
+                     LABELS "SEQ"
+                     FIXTURES_REQUIRED Isotropic_Material_1D_Dynamic)
+                     
+add_test(NAME Tube_Element_Property_Card_1D_Dynamic_mpi
+         COMMAND ${MPIEXEC_EXECUTABLE} -np 2 $<TARGET_FILE:mast_catch_tests> -w NoTests "tube_element_property_card_constant_dynamic_1d")
+set_tests_properties(Tube_Element_Property_Card_1D_Dynamic_mpi
+                     PROPERTIES
+                     LABELS "MPI"
+                     FIXTURES_REQUIRED Isotropic_Material_1D_Dynamic_mpi)
+## ============================================================================
 
 
-# ## ============================================================================
-# # 1D TUBE2 Cross Section
-# add_test(NAME Tube2_Element_Property_Card_1D_Base
-#          COMMAND mast_catch_tests "tube2_element_property_card_constant_base_1d")
-# set_tests_properties(Tube2_Element_Property_Card_1D_Base
-#                      PROPERTIES
-#                      FIXTURES_REQUIRED Isotropic_Material_1D_Structural)
-#                      
-# add_test(NAME Tube2_Element_Property_Card_1D_Heat_Transfer
-#          COMMAND mast_catch_tests "tube2_element_property_card_constant_heat_transfer_1d")
-# set_tests_properties(Tube2_Element_Property_Card_1D_Heat_Transfer
-#                      PROPERTIES
-#                      FIXTURES_REQUIRED Isotropic_Material_1D_Heat_Transfer)
-# 
-# add_test(NAME Tube2_Element_Property_Card_1D_Thermoelastic
-#          COMMAND mast_catch_tests "tube2_element_property_card_constant_thermoelastic_1d")
-# set_tests_properties(Tube2_Element_Property_Card_1D_Thermoelastic
-#                      PROPERTIES
-#                      FIXTURES_REQUIRED Isotropic_Material_1D_Thermoelastic)
-# 
-# add_test(NAME Tube2_Element_Property_Card_1D_Structural
-#          COMMAND mast_catch_tests "tube2_element_property_card_constant_structural_1d")
-# set_tests_properties(Tube2_Element_Property_Card_1D_Structural
-#                      PROPERTIES
-#                      FIXTURES_REQUIRED  Isotropic_Material_1D_Structural)
-#                      
-# add_test(NAME Tube2_Element_Property_Card_1D_Dynamic
-#          COMMAND mast_catch_tests "tube2_element_property_card_constant_dynamic_1d")
-# set_tests_properties(Tube2_Element_Property_Card_1D_Dynamic
-#                      PROPERTIES
-#                      FIXTURES_REQUIRED Isotropic_Material_1D_Dynamic)
-# ## ============================================================================
+## ============================================================================
+# 1D TUBE2 Cross Section
+add_test(NAME Tube2_Element_Property_Card_1D_Base
+         COMMAND $<TARGET_FILE:mast_catch_tests> -w NoTests "tube2_element_property_card_constant_base_1d")
+set_tests_properties(Tube2_Element_Property_Card_1D_Base
+                     PROPERTIES
+                     LABELS "SEQ"
+                     FIXTURES_REQUIRED Isotropic_Material_1D_Structural)
+                     
+add_test(NAME Tube2_Element_Property_Card_1D_Base_mpi
+         COMMAND ${MPIEXEC_EXECUTABLE} -np 2 $<TARGET_FILE:mast_catch_tests> -w NoTests "tube2_element_property_card_constant_base_1d")
+set_tests_properties(Tube2_Element_Property_Card_1D_Base_mpi
+                     PROPERTIES
+                     LABELS "MPI"
+                     FIXTURES_REQUIRED Isotropic_Material_1D_Structural_mpi)
+                     
+add_test(NAME Tube2_Element_Property_Card_1D_Base_Sensitivity
+         COMMAND $<TARGET_FILE:mast_catch_tests> -w NoTests "tube2_element_property_card_constant_base_sensitivity_1d")
+set_tests_properties(Tube2_Element_Property_Card_1D_Base_Sensitivity
+                     PROPERTIES
+                     LABELS "SEQ"
+                     FIXTURES_REQUIRED Tube2_Element_Property_Card_1D_Base)
+                     
+add_test(NAME Tube2_Element_Property_Card_1D_Base_Sensitivity_mpi
+         COMMAND ${MPIEXEC_EXECUTABLE} -np 2 $<TARGET_FILE:mast_catch_tests> -w NoTests "tube2_element_property_card_constant_base_sensitivity_1d")
+set_tests_properties(Tube2_Element_Property_Card_1D_Base_Sensitivity_mpi
+                     PROPERTIES
+                     LABELS "MPI"
+                     FIXTURES_REQUIRED Tube2_Element_Property_Card_1D_Base_mpi)
+                     
+add_test(NAME Tube2_Element_Property_Card_1D_Heat_Transfer
+         COMMAND $<TARGET_FILE:mast_catch_tests> -w NoTests "tube2_element_property_card_constant_heat_transfer_1d")
+set_tests_properties(Tube2_Element_Property_Card_1D_Heat_Transfer
+                     PROPERTIES
+                     LABELS "SEQ"
+                     FIXTURES_REQUIRED Isotropic_Material_1D_Heat_Transfer)
+                     
+add_test(NAME Tube2_Element_Property_Card_1D_Heat_Transfer_mpi
+         COMMAND ${MPIEXEC_EXECUTABLE} -np 2 $<TARGET_FILE:mast_catch_tests> -w NoTests "tube2_element_property_card_constant_heat_transfer_1d")
+set_tests_properties(Tube2_Element_Property_Card_1D_Heat_Transfer_mpi
+                     PROPERTIES
+                     LABELS "MPI"
+                     FIXTURES_REQUIRED Isotropic_Material_1D_Heat_Transfer_mpi)
+
+add_test(NAME Tube2_Element_Property_Card_1D_Thermoelastic
+         COMMAND $<TARGET_FILE:mast_catch_tests> -w NoTests "tube2_element_property_card_constant_thermoelastic_1d")
+set_tests_properties(Tube2_Element_Property_Card_1D_Thermoelastic
+                     PROPERTIES
+                     LABELS "SEQ"
+                     FIXTURES_REQUIRED Isotropic_Material_1D_Thermoelastic)
+                     
+add_test(NAME Tube2_Element_Property_Card_1D_Thermoelastic_mpi
+         COMMAND ${MPIEXEC_EXECUTABLE} -np 2 $<TARGET_FILE:mast_catch_tests> -w NoTests "tube2_element_property_card_constant_thermoelastic_1d")
+set_tests_properties(Tube2_Element_Property_Card_1D_Thermoelastic_mpi
+                     PROPERTIES
+                     LABELS "MPI"
+                     FIXTURES_REQUIRED Isotropic_Material_1D_Thermoelastic_mpi)
+
+add_test(NAME Tube2_Element_Property_Card_1D_Structural
+         COMMAND $<TARGET_FILE:mast_catch_tests> -w NoTests "tube2_element_property_card_constant_structural_1d")
+set_tests_properties(Tube2_Element_Property_Card_1D_Structural
+                     PROPERTIES
+                     LABELS "SEQ"
+                     FIXTURES_REQUIRED  Isotropic_Material_1D_Structural)
+                     
+add_test(NAME Tube2_Element_Property_Card_1D_Structural_mpi
+         COMMAND ${MPIEXEC_EXECUTABLE} -np 2 $<TARGET_FILE:mast_catch_tests> -w NoTests "tube2_element_property_card_constant_structural_1d")
+set_tests_properties(Tube2_Element_Property_Card_1D_Structural_mpi
+                     PROPERTIES
+                     LABELS "MPI"
+                     FIXTURES_REQUIRED  Isotropic_Material_1D_Structural_mpi)
+                     
+add_test(NAME Tube2_Element_Property_Card_1D_Dynamic
+         COMMAND $<TARGET_FILE:mast_catch_tests> -w NoTests "tube2_element_property_card_constant_dynamic_1d")
+set_tests_properties(Tube2_Element_Property_Card_1D_Dynamic
+                     PROPERTIES
+                     LABELS "SEQ"
+                     FIXTURES_REQUIRED Isotropic_Material_1D_Dynamic)
+                     
+add_test(NAME Tube2_Element_Property_Card_1D_Dynamic_mpi
+         COMMAND ${MPIEXEC_EXECUTABLE} -np 2 $<TARGET_FILE:mast_catch_tests> -w NoTests "tube2_element_property_card_constant_dynamic_1d")
+set_tests_properties(Tube2_Element_Property_Card_1D_Dynamic_mpi
+                     PROPERTIES
+                     LABELS "MPI"
+                     FIXTURES_REQUIRED Isotropic_Material_1D_Dynamic_mpi)
+## ============================================================================
 
 
-# ## ============================================================================
-# # 1D I1 Cross Section
-# add_test(NAME I1_Element_Property_Card_1D_Base
-#          COMMAND mast_catch_tests "I1_element_property_card_constant_base_1d")
-# set_tests_properties(I1_Element_Property_Card_1D_Base
-#                      PROPERTIES
-#                      FIXTURES_REQUIRED Isotropic_Material_1D_Structural)
-#                      
-# add_test(NAME I1_Element_Property_Card_1D_Base_Sensitivity
-#          COMMAND mast_catch_tests "I1_element_property_card_constant_base_sensitivity_1d")
-# set_tests_properties(I1_Element_Property_Card_1D_Base_Sensitivity
-#                      PROPERTIES
-#                      FIXTURES_REQUIRED I1_Element_Property_Card_1D_Base)
-#                      
-# add_test(NAME I1_Element_Property_Card_1D_Heat_Transfer
-#          COMMAND mast_catch_tests "I1_element_property_card_constant_heat_transfer_1d")
-# set_tests_properties(I1_Element_Property_Card_1D_Heat_Transfer
-#                      PROPERTIES
-#                      FIXTURES_REQUIRED Isotropic_Material_1D_Heat_Transfer)
-# 
-# add_test(NAME I1_Element_Property_Card_1D_Thermoelastic
-#          COMMAND mast_catch_tests "I1_element_property_card_constant_thermoelastic_1d")
-# set_tests_properties(I1_Element_Property_Card_1D_Thermoelastic
-#                      PROPERTIES
-#                      FIXTURES_REQUIRED Isotropic_Material_1D_Thermoelastic)
-# 
-# add_test(NAME I1_Element_Property_Card_1D_Structural
-#          COMMAND mast_catch_tests "I1_element_property_card_constant_structural_1d")
-# set_tests_properties(I1_Element_Property_Card_1D_Structural
-#                      PROPERTIES
-#                      FIXTURES_REQUIRED  Isotropic_Material_1D_Structural)
-#                      
-# add_test(NAME I1_Element_Property_Card_1D_Dynamic
-#          COMMAND mast_catch_tests "I1_element_property_card_constant_dynamic_1d")
-# ## ============================================================================
+## ============================================================================
+# 1D I1 Cross Section
+add_test(NAME I1_Element_Property_Card_1D_Base
+         COMMAND $<TARGET_FILE:mast_catch_tests> -w NoTests "I1_element_property_card_constant_base_1d")
+set_tests_properties(I1_Element_Property_Card_1D_Base
+                     PROPERTIES
+                     LABELS "SEQ"
+                     FIXTURES_REQUIRED Isotropic_Material_1D_Structural)
+                     
+add_test(NAME I1_Element_Property_Card_1D_Base_mpi
+         COMMAND ${MPIEXEC_EXECUTABLE} -np 2 $<TARGET_FILE:mast_catch_tests> -w NoTests "I1_element_property_card_constant_base_1d")
+set_tests_properties(I1_Element_Property_Card_1D_Base_mpi
+                     PROPERTIES
+                     LABELS "MPI"
+                     FIXTURES_REQUIRED Isotropic_Material_1D_Structural_mpi)
+                     
+add_test(NAME I1_Element_Property_Card_1D_Base_Sensitivity
+         COMMAND $<TARGET_FILE:mast_catch_tests> -w NoTests "I1_element_property_card_constant_base_sensitivity_1d")
+set_tests_properties(I1_Element_Property_Card_1D_Base_Sensitivity
+                     PROPERTIES
+                     LABELS "SEQ"
+                     FIXTURES_REQUIRED I1_Element_Property_Card_1D_Base)
+                     
+add_test(NAME I1_Element_Property_Card_1D_Base_Sensitivity_mpi
+         COMMAND ${MPIEXEC_EXECUTABLE} -np 2 $<TARGET_FILE:mast_catch_tests> -w NoTests "I1_element_property_card_constant_base_sensitivity_1d")
+set_tests_properties(I1_Element_Property_Card_1D_Base_Sensitivity_mpi
+                     PROPERTIES
+                     LABELS "MPI"
+                     FIXTURES_REQUIRED I1_Element_Property_Card_1D_Base_mpi)
+                     
+add_test(NAME I1_Element_Property_Card_1D_Heat_Transfer
+         COMMAND $<TARGET_FILE:mast_catch_tests> -w NoTests "I1_element_property_card_constant_heat_transfer_1d")
+set_tests_properties(I1_Element_Property_Card_1D_Heat_Transfer
+                     PROPERTIES
+                     LABELS "SEQ"
+                     FIXTURES_REQUIRED Isotropic_Material_1D_Heat_Transfer)
+                     
+add_test(NAME I1_Element_Property_Card_1D_Heat_Transfer_mpi
+         COMMAND ${MPIEXEC_EXECUTABLE} -np 2 $<TARGET_FILE:mast_catch_tests> -w NoTests "I1_element_property_card_constant_heat_transfer_1d")
+set_tests_properties(I1_Element_Property_Card_1D_Heat_Transfer_mpi
+                     PROPERTIES
+                     LABELS "MPI"
+                     FIXTURES_REQUIRED Isotropic_Material_1D_Heat_Transfer_mpi)
+
+add_test(NAME I1_Element_Property_Card_1D_Thermoelastic
+         COMMAND $<TARGET_FILE:mast_catch_tests> -w NoTests "I1_element_property_card_constant_thermoelastic_1d")
+set_tests_properties(I1_Element_Property_Card_1D_Thermoelastic
+                     PROPERTIES
+                     LABELS "SEQ"
+                     FIXTURES_REQUIRED Isotropic_Material_1D_Thermoelastic)
+                     
+add_test(NAME I1_Element_Property_Card_1D_Thermoelastic_mpi
+         COMMAND ${MPIEXEC_EXECUTABLE} -np 2 $<TARGET_FILE:mast_catch_tests> -w NoTests "I1_element_property_card_constant_thermoelastic_1d")
+set_tests_properties(I1_Element_Property_Card_1D_Thermoelastic_mpi
+                     PROPERTIES
+                     LABELS "MPI"
+                     FIXTURES_REQUIRED Isotropic_Material_1D_Thermoelastic_mpi)
+
+add_test(NAME I1_Element_Property_Card_1D_Structural
+         COMMAND $<TARGET_FILE:mast_catch_tests> -w NoTests "I1_element_property_card_constant_structural_1d")
+set_tests_properties(I1_Element_Property_Card_1D_Structural
+                     PROPERTIES
+                     LABELS "SEQ"
+                     FIXTURES_REQUIRED  Isotropic_Material_1D_Structural)
+                     
+add_test(NAME I1_Element_Property_Card_1D_Structural_mpi
+         COMMAND ${MPIEXEC_EXECUTABLE} -np 2 $<TARGET_FILE:mast_catch_tests> -w NoTests "I1_element_property_card_constant_structural_1d")
+set_tests_properties(I1_Element_Property_Card_1D_Structural_mpi
+                     PROPERTIES
+                     LABELS "MPI"
+                     FIXTURES_REQUIRED  Isotropic_Material_1D_Structural_mpi)
+                     
+add_test(NAME I1_Element_Property_Card_1D_Dynamic
+         COMMAND $<TARGET_FILE:mast_catch_tests> -w NoTests "I1_element_property_card_constant_dynamic_1d")
+set_tests_properties(I1_Element_Property_Card_1D_Dynamic
+                     PROPERTIES
+                     LABELS "SEQ"
+                     FIXTURES_REQUIRED Isotropic_Material_1D_Dynamic)
+                     
+add_test(NAME I1_Element_Property_Card_1D_Dynamic_mpi
+         COMMAND ${MPIEXEC_EXECUTABLE} -np 2 $<TARGET_FILE:mast_catch_tests> -w NoTests "I1_element_property_card_constant_dynamic_1d")
+set_tests_properties(I1_Element_Property_Card_1D_Dynamic_mpi
+                     PROPERTIES
+                     LABELS "MPI"
+                     FIXTURES_REQUIRED Isotropic_Material_1D_Dynamic_mpi)
+## ============================================================================
                      
 
 # ## ============================================================================
-# # 1D L Cross Section
-# add_test(NAME L_Element_Property_Card_1D_Base
-#          COMMAND mast_catch_tests "L_element_property_card_constant_base_1d")
-# set_tests_properties(L_Element_Property_Card_1D_Base
-#                      PROPERTIES
-#                      FIXTURES_REQUIRED Isotropic_Material_1D_Structural)
-#                      
-# add_test(NAME L_Element_Property_Card_1D_Heat_Transfer
-#          COMMAND mast_catch_tests "L_element_property_card_constant_heat_transfer_1d")
-# set_tests_properties(L_Element_Property_Card_1D_Heat_Transfer
-#                      PROPERTIES
-#                      FIXTURES_REQUIRED Isotropic_Material_1D_Heat_Transfer)
-# 
-# add_test(NAME L_Element_Property_Card_1D_Thermoelastic
-#          COMMAND mast_catch_tests "L_element_property_card_constant_thermoelastic_1d")
-# set_tests_properties(L_Element_Property_Card_1D_Thermoelastic
-#                      PROPERTIES
-#                      FIXTURES_REQUIRED Isotropic_Material_1D_Thermoelastic)
-# 
-# add_test(NAME L_Element_Property_Card_1D_Structural
-#          COMMAND mast_catch_tests "L_element_property_card_constant_structural_1d")
-# set_tests_properties(L_Element_Property_Card_1D_Structural
-#                      PROPERTIES
-#                      FIXTURES_REQUIRED  Isotropic_Material_1D_Structural)
-#                      
-# add_test(NAME L_Element_Property_Card_1D_Dynamic
-#          COMMAND mast_catch_tests "L_element_property_card_constant_dynamic_1d")
-# set_tests_properties(L_Element_Property_Card_1D_Dynamic
-#                      PROPERTIES
-#                      FIXTURES_REQUIRED Isotropic_Material_1D_Dynamic)
+# 1D L Cross Section
+add_test(NAME L_Element_Property_Card_1D_Base
+         COMMAND $<TARGET_FILE:mast_catch_tests> -w NoTests "L_element_property_card_constant_base_1d")
+set_tests_properties(L_Element_Property_Card_1D_Base
+                     PROPERTIES
+                     LABELS "SEQ"
+                     FIXTURES_REQUIRED Isotropic_Material_1D_Structural)
+                     
+add_test(NAME L_Element_Property_Card_1D_Base_mpi
+         COMMAND ${MPIEXEC_EXECUTABLE} -np 2 $<TARGET_FILE:mast_catch_tests> -w NoTests "L_element_property_card_constant_base_1d")
+set_tests_properties(L_Element_Property_Card_1D_Base_mpi
+                     PROPERTIES
+                     LABELS "MPI"
+                     FIXTURES_REQUIRED Isotropic_Material_1D_Structural_mpi)
+                     
+add_test(NAME L_Element_Property_Card_1D_Base_Sensitivity
+         COMMAND $<TARGET_FILE:mast_catch_tests> -w NoTests "L_element_property_card_constant_base_sensitivity_1d")
+set_tests_properties(L_Element_Property_Card_1D_Base_Sensitivity
+                     PROPERTIES
+                     LABELS "SEQ"
+                     FIXTURES_REQUIRED L_Element_Property_Card_1D_Base)
+                     
+add_test(NAME L_Element_Property_Card_1D_Base_Sensitivity_mpi
+         COMMAND ${MPIEXEC_EXECUTABLE} -np 2 $<TARGET_FILE:mast_catch_tests> -w NoTests "L_element_property_card_constant_base_sensitivity_1d")
+set_tests_properties(L_Element_Property_Card_1D_Base_Sensitivity_mpi
+                     PROPERTIES
+                     LABELS "MPI"
+                     FIXTURES_REQUIRED L_Element_Property_Card_1D_Base_mpi)
+                     
+add_test(NAME L_Element_Property_Card_1D_Heat_Transfer
+         COMMAND $<TARGET_FILE:mast_catch_tests> -w NoTests "L_element_property_card_constant_heat_transfer_1d")
+set_tests_properties(L_Element_Property_Card_1D_Heat_Transfer
+                     PROPERTIES
+                     LABELS "SEQ"
+                     FIXTURES_REQUIRED Isotropic_Material_1D_Heat_Transfer)
+                     
+add_test(NAME L_Element_Property_Card_1D_Heat_Transfer_mpi
+         COMMAND ${MPIEXEC_EXECUTABLE} -np 2 $<TARGET_FILE:mast_catch_tests> -w NoTests "L_element_property_card_constant_heat_transfer_1d")
+set_tests_properties(L_Element_Property_Card_1D_Heat_Transfer_mpi
+                     PROPERTIES
+                     LABELS "MPI"
+                     FIXTURES_REQUIRED Isotropic_Material_1D_Heat_Transfer_mpi)
+
+add_test(NAME L_Element_Property_Card_1D_Thermoelastic
+         COMMAND $<TARGET_FILE:mast_catch_tests> -w NoTests "L_element_property_card_constant_thermoelastic_1d")
+set_tests_properties(L_Element_Property_Card_1D_Thermoelastic
+                     PROPERTIES
+                     LABELS "SEQ"
+                     FIXTURES_REQUIRED Isotropic_Material_1D_Thermoelastic)
+
+add_test(NAME L_Element_Property_Card_1D_Thermoelastic_mpi
+         COMMAND ${MPIEXEC_EXECUTABLE} -np 2 $<TARGET_FILE:mast_catch_tests> -w NoTests "L_element_property_card_constant_thermoelastic_1d")
+set_tests_properties(L_Element_Property_Card_1D_Thermoelastic_mpi
+                     PROPERTIES
+                     LABELS "MPI"
+                     FIXTURES_REQUIRED Isotropic_Material_1D_Thermoelastic_mpi)
+                     
+add_test(NAME L_Element_Property_Card_1D_Structural
+         COMMAND $<TARGET_FILE:mast_catch_tests> -w NoTests "L_element_property_card_constant_structural_1d")
+set_tests_properties(L_Element_Property_Card_1D_Structural
+                     PROPERTIES
+                     LABELS "SEQ"
+                     FIXTURES_REQUIRED  Isotropic_Material_1D_Structural)
+                     
+add_test(NAME L_Element_Property_Card_1D_Structural_mpi
+         COMMAND ${MPIEXEC_EXECUTABLE} -np 2 $<TARGET_FILE:mast_catch_tests> -w NoTests "L_element_property_card_constant_structural_1d")
+set_tests_properties(L_Element_Property_Card_1D_Structural_mpi
+                     PROPERTIES
+                     LABELS "MPI"
+                     FIXTURES_REQUIRED  Isotropic_Material_1D_Structural_mpi)
+                     
+add_test(NAME L_Element_Property_Card_1D_Dynamic
+         COMMAND $<TARGET_FILE:mast_catch_tests> -w NoTests "L_element_property_card_constant_dynamic_1d")
+set_tests_properties(L_Element_Property_Card_1D_Dynamic
+                     PROPERTIES
+                     LABELS "SEQ"
+                     FIXTURES_REQUIRED Isotropic_Material_1D_Dynamic)
+                     
+add_test(NAME L_Element_Property_Card_1D_Dynamic_mpi
+         COMMAND ${MPIEXEC_EXECUTABLE} -np 2 $<TARGET_FILE:mast_catch_tests> -w NoTests "L_element_property_card_constant_dynamic_1d")
+set_tests_properties(L_Element_Property_Card_1D_Dynamic_mpi
+                     PROPERTIES
+                     LABELS "MPI"
+                     FIXTURES_REQUIRED Isotropic_Material_1D_Dynamic_mpi)
 # ## ============================================================================
