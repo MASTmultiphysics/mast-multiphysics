@@ -179,9 +179,9 @@ calculate_transverse_shear_residual_sensitivity(const MAST::FunctionBase &p,
     vec_n2    = RealVectorX::Zero(n2),
     vec_2     = RealVectorX::Zero(2);
     RealMatrixX
-    material_trans_shear_mat,
-    mat_n2n2  = RealMatrixX::Zero(n2,n2),
-    mat_2n2   = RealMatrixX::Zero(2,n2);
+    material_trans_shear_mat = RealMatrixX::Zero(2,2),
+    mat_n2n2                 = RealMatrixX::Zero(n2,n2),
+    mat_2n2                  = RealMatrixX::Zero(2,n2);
     
     
     FEMOperatorMatrix

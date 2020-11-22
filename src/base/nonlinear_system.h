@@ -264,12 +264,12 @@ namespace MAST {
         /**
          * The system matrix for standard eigenvalue problems.
          */
-        libMesh::SparseMatrix<Real> *matrix_A;
+        libMesh::SparseMatrix<Real> *matrix_A, *matrix_A_sens;
         
         /**
          * A second system matrix for generalized eigenvalue problems.
          */
-        libMesh::SparseMatrix<Real> *matrix_B;
+        libMesh::SparseMatrix<Real> *matrix_B, *matrix_B_sens;
         
         
         /**
