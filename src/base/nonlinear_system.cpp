@@ -56,7 +56,9 @@ MAST::NonlinearSystem::NonlinearSystem(libMesh::EquationSystems& es,
 libMesh::NonlinearImplicitSystem(es, name, number),
 _initialize_B_matrix                  (false),
 matrix_A                              (nullptr),
+matrix_A_sens                         (nullptr),
 matrix_B                              (nullptr),
+matrix_B_sens                         (nullptr),
 eigen_solver                          (nullptr),
 _condensed_dofs_initialized           (false),
 _exchange_A_and_B                     (false),
@@ -86,11 +88,15 @@ MAST::NonlinearSystem::clear() {
     
     // delete the matricies
     if (matrix_A) delete matrix_A;
+    if (matrix_A_sens) delete matrix_A_sens;
     if (matrix_B) delete matrix_B;
+    if (matrix_B_sens) delete matrix_B_sens;
     
     // nullptr-out the matricies.
     matrix_A = nullptr;
+    matrix_A_sens = nullptr;
     matrix_B = nullptr;
+    matrix_B_sens = nullptr;
     
     // clear the solver
     if (eigen_solver.get()) {
@@ -131,13 +137,23 @@ MAST::NonlinearSystem::init_data () {
     dof_map.attach_matrix(*matrix_A);
     matrix_A->init();
     matrix_A->zero();
-    
+
+    matrix_A_sens = libMesh::SparseMatrix<Real>::build(this->comm()).release();
+    dof_map.attach_matrix(*matrix_A_sens);
+    matrix_A_sens->init();
+    matrix_A_sens->zero();
+
     if (_is_generalized_eigenproblem || _initialize_B_matrix) {
         
         matrix_B = libMesh::SparseMatrix<Real>::build(this->comm()).release();
         dof_map.attach_matrix(*matrix_B);
         matrix_B->init();
         matrix_B->zero();
+
+        matrix_B_sens = libMesh::SparseMatrix<Real>::build(this->comm()).release();
+        dof_map.attach_matrix(*matrix_B_sens);
+        matrix_B_sens->init();
+        matrix_B_sens->zero();
     }
     
     eigen_solver.reset(new MAST::SlepcEigenSolver(this->comm()));
@@ -167,9 +183,12 @@ void MAST::NonlinearSystem::reinit () {
     
     // Clear the matrices
     matrix_A->clear();
-    
-    if (_is_generalized_eigenproblem || _initialize_B_matrix)
+    matrix_A_sens->clear();
+
+    if (_is_generalized_eigenproblem || _initialize_B_matrix) {
         matrix_B->clear();
+        matrix_B_sens->clear();
+    }
     
     eigen_solver.reset(new MAST::SlepcEigenSolver(this->comm()));
     if (libMesh::on_command_line("--solver_system_names")) {
@@ -190,11 +209,15 @@ void MAST::NonlinearSystem::reinit () {
 
     matrix_A->init();
     matrix_A->zero();
-    
+    matrix_A_sens->init();
+    matrix_A_sens->zero();
+
     if (_is_generalized_eigenproblem || _initialize_B_matrix)
     {
         matrix_B->init();
         matrix_B->zero();
+        matrix_B_sens->init();
+        matrix_B_sens->zero();
     }
 }
 
@@ -643,7 +666,7 @@ eigenproblem_sensitivity_solve (MAST::AssemblyElemOperations&    elem_ops,
     }
     
     // calculate sensitivity of matrix quantities
-    assembly.eigenproblem_sensitivity_assemble(f, matrix_A, matrix_B);
+    assembly.eigenproblem_sensitivity_assemble(f, matrix_A_sens, matrix_B_sens);
     
     
     // now calculate sensitivity of each eigenvalue for the parameter
@@ -653,7 +676,7 @@ eigenproblem_sensitivity_solve (MAST::AssemblyElemOperations&    elem_ops,
                 
             case libMesh::HEP: {
                 
-                matrix_A->vector_mult(*tmp, *x_right[i]);
+                matrix_A_sens->vector_mult(*tmp, *x_right[i]);
                 sens[i] = x_right[i]->dot(*tmp);                  // x^H A' x
                 sens[i]-= eig[i] * x_right[i]->dot(*x_right[i]);  // - lambda x^H x
                 sens[i] /= denom[i];                              // x^H x
@@ -662,9 +685,9 @@ eigenproblem_sensitivity_solve (MAST::AssemblyElemOperations&    elem_ops,
                 
             case libMesh::GHEP: {
                 
-                matrix_A->vector_mult(*tmp, *x_right[i]);
+                matrix_A_sens->vector_mult(*tmp, *x_right[i]);
                 sens[i] = x_right[i]->dot(*tmp);              // x^H A' x
-                matrix_B->vector_mult(*tmp, *x_right[i]);
+                matrix_B_sens->vector_mult(*tmp, *x_right[i]);
                 sens[i]-= eig[i] * x_right[i]->dot(*tmp);     // - lambda x^H B' x
                 sens[i] /= denom[i];                          // x^H B x
             }
