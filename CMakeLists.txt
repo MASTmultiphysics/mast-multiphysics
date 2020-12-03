@@ -21,6 +21,8 @@ option(ENABLE_NLOPT     "Build with NLOPT interface"  OFF)
 option(ENABLE_NASTRANIO "Build with support for reading Nastran meshes" OFF)
 option(ENABLE_CYTHON    "Build with support for Cython development"     OFF)
 option(BUILD_DOC        "Build documentation"         OFF)
+option(BUILD_EXAMPLES	"Build examples"	      OFF)
+option(BUILD_TESTS	"Build tests"		      OFF)
 
 # Dependency paths (optional) - these paths help CMake find dependencies.
 set(MAST_ROOT_DIR ${CMAKE_CURRENT_LIST_DIR})
@@ -55,6 +57,24 @@ set(Boost_NO_BOOST_CMAKE ON)
 find_package(Boost COMPONENTS iostreams system filesystem unit_test_framework REQUIRED)
 message(STATUS "Found Boost include: ${Boost_INCLUDE_DIRS}") # To ensure the found Boost is what user expected
 message(STATUS "Found Boost libs:    ${Boost_LIBRARY_DIRS}") # To ensure the found Boost is what user expected
+
+# Define the postfix for Debug builds, following libMesh convention
+if(NOT CMAKE_DEBUG_POSTFIX)
+    set(CMAKE_DEBUG_POSTFIX _dbg)
+endif()
+
+# Define the postfix for Release builds, following libMesh convention
+if(NOT CMAKE_RELEASE_POSTFIX)
+    set(CMAKE_RELEASE_POSTFIX _opt)
+endif()
+
+# Set a general CMAKE_POSTFIX variable based on the build type
+string( TOLOWER "${CMAKE_BUILD_TYPE}" build_type )
+if(build_type MATCHES debug)
+    set(CMAKE_POSTFIX ${CMAKE_DEBUG_POSTFIX})
+elseif(build_type MATCHES release)
+    set(CMAKE_POSTFIX ${CMAKE_RELEASE_POSTFIX})
+endif()
 
 # Find optional packages.
 if (ENABLE_GCMMA)
@@ -121,8 +141,18 @@ if(BUILD_DOC)
 endif()
 
 # TESTS
-enable_testing()
-add_subdirectory(tests)
+if(BUILD_TESTS)
+    enable_testing()
+	add_subdirectory(tests)
+endif()
 
 # EXAMPLES
-add_subdirectory(examples)
+if(BUILD_EXAMPLES)
+    add_subdirectory(examples)
+endif()
+
+# Run Post-Install Commands
+install(CODE "set(ROOT_DIR \"${CMAKE_SOURCE_DIR}\")") # Set variable for the PostInstall.cmake script
+install(CODE "set(CMAKE_INSTALL_LIBDIR \"${CMAKE_INSTALL_LIBDIR}\")") # Set variable for the PostInstall.cmake script
+install(CODE "set(CMAKE_POSTFIX \"${CMAKE_POSTFIX}\")") # Set variable for the PostInstall.cmake script
+install(SCRIPT "${CMAKE_SOURCE_DIR}/PostInstall.cmake") # Run PostInstall.cmake script

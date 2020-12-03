@@ -1,0 +1,11 @@
+prefix=@DEST_DIR@
+exec_prefix=${prefix}
+libdir=${prefix}/@DEST_LIB_DIR@
+includedir=${prefix}/include
+
+Name: libmast
+Description: Multidisciplinary-design Adaptation and Sensitivity Toolkit
+Version: 2
+
+Libs: -L${libdir} @PRIVATE_LIBS@
+Cflags: -I${includedir}
