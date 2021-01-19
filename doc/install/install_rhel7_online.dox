@@ -1,0 +1,1813 @@
+/**
+\page nstallRHEL7SrcOnline Installation on Red Hat Enterprise Linux7 Online
+
+# TODO: There are multiple copy and paste remnants that need to be corrected.
+
+Tested on new installation of Ubuntu 18.04.4 LTS Desktop 64-bit with "Normal Installation" and without "Install Third-Party Software"
+
+This page describes how to install MAST and its dependencies on Ubuntu 18.04 (Bionic Beaver) by compiling most software from source and minimal reliance on the apt package manager. It is written for someone who has limited experience compiling software on Linux and contains details a more advanced user likely won't need.
+
+\note Ubuntu 18.04 is a long-term support (LTS) release goes end-of-life in April 2023 and is no longer officially supported by Canonical afterwards. Consider updating to Ubuntu 20.04 LTS.
+
+\note I do NOT recommend using homebrew (formerly known as linuxbrew).  While it is tempting as it is essentially a package manager that doesn't require "sudo" permissions, it often leads to conflicts when compiling or running software. In my opinion, the trouble it causes (unfortunately) outweighs the benefits of using it.
+
+\note Intel compilers are currently indicating an error in one of the libMesh header files.  This causes the build of libMesh and anything that uses libMesh headers to fail building when using Intel compilers.  For now, I am using GCC to compile libMesh related software.
+
+\section install-ubuntu1804-verions Software Versions
+As of the writing of this documentation, the following version of software was installed by following these instrutions.  This information is provided in the hopes that it could be useful for troubleshooting build issues in the future.
+
+
+# FIXME: Some of these package versions are outdated. Double check and fix.
+| Software | Version | Desc. |
+|:---- |:----: |:---- |
+| Anaconda Python | 3.7.6 | Python interpreter |
+| apt | 1.6.12ubuntu0.1 | Package management software |
+| Arpack | 3.7.0 |
+| Blopex | 1.1.2 |
+| Boost | 1.61.0 |
+| Chaco | 2.2-p2 | Graph partitioning package |
+| Chombo | 3.2 | 
+| cmake | 3.18.0-rc4 | Build tool |
+| cpylog | 1.4.0 | Requirement for pyNastran |
+| curl | 7.58.0 | Download tool |
+| docopt_ng | 0.7.2 | Requirement for pyNastran |
+| Doxygen | 1.8.13 | Documentation generation |
+| Eigen | 3.3.4 |
+| FFTW | 3.3.8 | Fast Fourier Transforms |
+| g++ | 7.5.0 | C++ compiler |
+| gcc | 7.5.0 | C compiler |
+| gfortran | 7.5.0 | Fortran compiler |
+| git | 2.17.1 | Version control |
+| GNU Autoconf | 2.69 | Build Tools |
+| GNU coreutils | 8.28 | Build tools |
+| GNU M4 | 1.4.18 | General purpose macro processor |
+| GNU Make | 4.1 | Build tool |
+| GNU tar | 1.29 | Compress/decompress tool |
+| GNU Wget | 1.19.4 | Download tool |
+| Graphviz | 2.40.1 | Documentaiton generation |
+| HDF5 | 1.10.5 | 
+| Hypre | 2.15.1 | LLNL preconditioner library |
+| hwloc | 1.11.1 |
+| libMesh | 1.5.1 | Discretizes equations |
+| MAST | commit 991ec4b8f1dd0a7efe99bfed3c9b4c0000397e49 | Nonlinear FEA library with analytical sensitivities |
+| Metis | 5.1.0-p5 |
+| ML | 6.2-p4 |
+| MPI4Py | 3.0.1 | Python interface to MPI |
+| MUMPS | 5.1.2-p2 | Parallel sparse direct solver |
+| NetCDF | 4.5.0 |
+| NLOPT | 2.6.2 | Optimization |
+| nptyping | 1.2.0 | Requirement for pyNastran |
+| OpenBLAS | 0.3.6 | BLAS and LAPACK libraries for math |
+| OpenMPI | 3.0.1 | Parallel run support |
+| ParMetis | 4.0.3-p4 |
+| PETSc | 3.11.3 | Solve linear and nonlinear systems of equations |
+| PETSc4Py | 3.11.0 | Python interface to PETSc |
+| PNetCDF | 1.9.0 |
+| Primme | 2.1 |
+| pyNastran | 1.4.0 (commit 76a6915e0144d55cf853dbad034624654671ed60) | Read, edit, write Nastran files |
+| Python | 2.7.17 | Python interpreter |
+| ScaLAPACK | 2.0.2-p1 |
+| SLEPc | 3.11.2 | Solve eigenproblems |
+| SLEPc4Py | 3.11.0 | Python interface to SLEPc |
+| Spai | 3.0-p1 |
+| Sprng | 1.0 |
+| SuiteSparse | 4.4.3 |
+| Sundials | 2.5.0p1 |
+| SuperLU | commit 52fc55d | Sequential direct sparse solver |
+| SuperLU_Dist | 6.1.1 | Parallel sparse direct solver |
+| Triangle | ??? |
+| Trlan | 201009 |
+| typish | 1.7.0 | Requirement for pyNastran |
+| UnZip | 6.00 | Decompression tool |
+| valgrind | 3.13.0 | Memory leak debugging |
+| ZLib | 1.2.11 |
+
+
+\section install-ubuntu1804-configuration User Configuration
+First we will configure some environment variables which will be used in the rest of this script in the build process.  The two primary ones we need to set at the number of cores for compiling packages in parallel and the installation directory for MAST. I recommend setting the number of cores equal to or less than the number of physical cores (ignoring hyperthreading) in your computer.
+
+\code{.sh}
+# Number of cores to use for compiling
+N_CORES=8
+
+# MAST Installation Directory
+ID_MAST="$HOME/Programs/MAST_INSTALL"
+\endcode
+
+Now we will specify the links where MAST and it's dependencies can be downloaded. These links can mostly be left unedited unless you want to try compiling with newer version of dependencies or links become broken in the future. Some of these packages are automatically compiled by and used by PETSc and thus the package versions should correspond to the PETSc version.  The links for the programs compiled by PETSc can be found in the PETSC_ROOT/config/BuildSystem/config/packages/software_name.py files where software_name is replaced by the particular software you are interested in.
+
+Note that particular versions of the software are listed in the downloads below.  This is done to essentially provide a "snapshot" of the current versions of that were working at the time this documetnation was written. While it is possible to use newer packages, you should observe the build process carefully to ensure nothing is broken by the newer
+
+\code{.sh}
+# Download Links Below, Only used if ONLINE_INSTALL=true
+# This may need to be updated in the future, these links correspond to petsc-3.13.3 and slepc-3.13.3
+DL_ANACONDAPYTHON37="https://repo.anaconda.com/archive/Anaconda3-2020.02-Linux-x86_64.sh"
+DL_BZIP2="https://www.sourceware.org/pub/bzip2/bzip2-latest.tar.gz"
+DL_CMAKE="https://github.com/Kitware/CMake/releases/download/v3.18.0/cmake-3.18.0.tar.gz"
+DL_CPYLOG="https://files.pythonhosted.org/packages/2e/a4/84792bd272d3c49ad0f334406e0da6c3c080fd2808a7d10ad8cff701510c/cpylog-1.4.0-py3-none-any.whl#sha256=f51bfd5a9ae798c4221c758eda4bd5a43084d5f51f74ec4b6724a5a4ba750817"
+DL_DOCOPTNG="https://files.pythonhosted.org/packages/69/ac/d8ef8c9d807f70de7166e4e9bb10c402e3f426460ec008d4bea8866236a1/docopt_ng-0.7.2-py2.py3-none-any.whl#sha256=e98145cc02220ac5b1a8ee1c40ca9cc0cbd8e480a1b4928872bde686dc48660b"
+DL_GLPK="ftp://ftp.gnu.org/gnu/glpk/glpk-4.65.tar.gz"
+DL_LIBMESH="https://github.com/libMesh/libmesh.git"
+DL_MAST="https://github.com/MASTmultiphysics/mast-multiphysics/archive/7860f77.tar.gz"
+DL_MPI4PY="https://github.com/mpi4py/mpi4py/archive/3.0.3.tar.gz"
+DL_NLOPT="https://github.com/stevengj/nlopt/archive/v2.6.2.tar.gz"
+DL_NPTYPING="https://files.pythonhosted.org/packages/4f/cd/badb9348b1315f6e6d68e38dbd08cc98a452973574017d7ae60d8c577afd/nptyping-1.2.0-py3-none-any.whl#sha256=9d91bc16f167badc035a40d6fdba4eebeab4ac7d74dfed37f64227544c202ca1"
+DL_OPENBLAS="https://github.com/xianyi/OpenBLAS/releases/download/v0.3.12/OpenBLAS-0.3.12.tar.gz"
+DL_OPENMPI="https://download.open-mpi.org/release/open-mpi/v3.1/openmpi-3.1.4.tar.gz"
+DL_OPENSSL="https://www.openssl.org/source/openssl-1.1.1h.tar.gz"
+DL_PYNASTRAN="https://github.com/SteveDoyle2/pyNastran/archive/9b5b580.tar.gz"
+DL_SEACAS="https://github.com/gsjaardema/seacas/archive/d0f05d3.tar.gz"
+#DL_SEACAS="https://github.com/gsjaardema/seacas/archive/v2020-05-12.tar.gz"
+DL_TYPISH="https://files.pythonhosted.org/packages/8c/cd/ef13e2c6ebe1c4c062d463160207937bf841b58d38d38d47c33384aaae36/typish-1.7.0-py3-none-any.whl#sha256=c97c6fa33e86daab4bde63e8f81deb07c48e1023d588599a3a74e45e15fff811"
+DL_VTK="https://gitlab.kitware.com/vtk/vtk/-/archive/v9.0.1/vtk-v9.0.1.tar.gz"
+
+# PETSc Associated Download Links
+DL_PETSC="https://ftp.mcs.anl.gov/pub/petsc/release-snapshots/petsc-3.14.0.tar.gz"
+DL_BOOST="http://ftp.mcs.anl.gov/pub/petsc/externalpackages/boost_1_61_0.tar.gz"
+DL_CHACO="https://bitbucket.org/petsc/pkg-chaco/get/v2.2-p3.tar.gz"
+DL_CHOMBO="https://bitbucket.org/petsc/pkg-chombo-3.2/get/2469eee.tar.gz"
+DL_EIGEN="https://gitlab.com/libeigen/eigen/-/archive/3.3.7/eigen-3.3.7.tar.gz"
+DL_FFTW="http://ftp.mcs.anl.gov/pub/petsc/externalpackages/fftw-3.3.8.tar.gz"
+DL_HDF5="https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.12/hdf5-1.12.0/src/hdf5-1.12.0.tar.bz2"
+DL_HWLOC="http://www.open-mpi.org/software/hwloc/v2.2/downloads/hwloc-2.2.0.tar.gz"
+DL_HYPRE="https://github.com/hypre-space/hypre/archive/v2.19.0.tar.gz"
+DL_LGRIND="http://ftp.mcs.anl.gov/pub/petsc/externalpackages/lgrind-dev.tar.gz"
+DL_METIS="https://bitbucket.org/petsc/pkg-metis/get/v5.1.0-p10.tar.gz"
+DL_ML="https://bitbucket.org/petsc/pkg-ml/get/v6.2-p4.tar.gz"
+DL_MUMPS="https://bitbucket.org/petsc/pkg-mumps/get/v5.3.3-p2.tar.gz"
+DL_NETCDF="http://ftp.mcs.anl.gov/pub/petsc/externalpackages/netcdf-4.5.0.tar.gz"
+DL_PARMETIS="https://bitbucket.org/petsc/pkg-parmetis/get/v4.0.3-p6.tar.gz"
+DL_PETSC4PY="https://pypi.io/packages/source/p/petsc4py/petsc4py-3.14.0.tar.gz"
+DL_PNETCDF="https://parallel-netcdf.github.io/Release/pnetcdf-1.12.1.tar.gz"
+DL_SCALAPACK="https://bitbucket.org/petsc/pkg-scalapack/get/v2.1.0-p2.tar.gz"
+DL_SPAI="http://ftp.mcs.anl.gov/pub/petsc/externalpackages/spai-3.0-p1.tar.gz"
+DL_SPRNG="http://ftp.mcs.anl.gov/pub/petsc/externalpackages/sprng-1.0.tar.gz"
+DL_SUITESPARSE="https://github.com/DrTimothyAldenDavis/SuiteSparse/archive/v5.7.1.tar.gz"
+DL_SUNDIALS="http://ftp.mcs.anl.gov/pub/petsc/externalpackages/sundials-2.5.0p1.tar.gz"
+DL_SUPERLU="https://github.com/xiaoyeli/superlu/archive/a3d5233.tar.gz"
+DL_SUPERLU_DIST="https://github.com/xiaoyeli/superlu_dist/archive/v6.3.0.tar.gz"
+DL_TRIANGLE="https://bitbucket.org/petsc/pkg-triangle/get/v1.3-p2.tar.gz"
+DL_ZLIB="http://ftp.mcs.anl.gov/pub/petsc/externalpackages/zlib-1.2.11.tar.gz"
+
+# SLEPc Associated Download Links
+DL_SLEPC="https://slepc.upv.es/download/distrib/slepc-3.14.0.tar.gz"
+DL_ARPACK="https://github.com/opencollab/arpack-ng/archive/3.7.0.tar.gz"
+DL_BLOPEX="https://github.com/lobpcg/blopex/archive/6eba31f0e071f134a6e4be8eccfb8d9d7bdd5ac7.tar.gz"
+DL_PRIMME="https://github.com/primme/primme/archive/v3.1.1.tar.gz"
+DL_SLEPC4PY="https://pypi.io/packages/source/s/slepc4py/slepc4py-3.14.0.tar.gz"
+DL_TRLAN="https://codeforge.lbl.gov/frs/download.php/210/trlan-201009.tar.gz"
+
+\endcode
+
+\section install-ubuntu1804-dependencies Dependencies
+
+Installing MAST on Ubuntu 18.04 (Bionic Beaver) is relatively simple if you are able to use Ubuntu's Advanced Packaging Tool (APT) since all of the dependencies are provided in the standard package repositories. To do so we assume you have `sudo` privileges on your system and it is connected to the internet. If you are not a privileged user, ask an administrator to install these dependencies or consider \ref InstallManualDepsLinux "manually compiling/installing the dependencies" in your home directory.
+
+To install all of the dependencies, simply execute the following commands in the terminal/shell. Some of the packages will install a number of required sub-dependencies.
+
+\subsection install-ubuntu1804-dependencies-build Build/Compile Dependencies
+
+First we'll install a minimum number of dependencies using apt. These include compilers, interpreters, and other software commonly used when compiling software. If you do not have priviledges to install software using apt, talk to your system adminstrator.  These are relatively common packages and he/she will likely be able to install them for you.
+
+\code{.sh}
+sudo apt update -y
+sudo apt upgrade -y
+
+sudo apt install -y build-essential   # Required by multiple packages (particularly gcc and g++)
+sudo apt install -y gfortran          # Required for OpenMPI and OpenBLAS
+sudo apt install -y python            # Required for building Boost with PETSc
+sudo apt install -y valgrind          # Optional, but HIGHLY recommended by PETSc for debugging
+sudo apt install -y libbz2-dev        # Required by Boost
+sudo apt install -y python-dev        # Required by Boost
+sudo apt install -y csh               # Required by chombo (for PETSc)
+sudo apt install -y libx11-dev        # Required for PETSc --with-x=1 option
+sudo apt install -y m4                # Required by PNETCDF (for PETSc)
+sudo apt install -y autoconf          # Required by arpack (for SLEPc)
+sudo apt install -y libtool           # Required by arpack (for SLEPc)
+sudo apt install -y libssl-dev        # Required to compile cmake, see cmake instructions below to get around this requirement
+sudo apt install -y doxygen           # Required for MAST documentation buildwh
+sudo apt install -y graphviz          # Required for MAST documentation build
+sudo apt install -y curl              # Optional, alternative to wget
+sudo apt install -y pkg-config		  # Required for arpack (for SLEPc)
+sudo apt install -y libgl1-mesa-dev   # Required for VTK
+sudo apt install -y git               # Required for non-realease versions of libMesh
+\endcode
+
+FIXME: CentOS7  Needed for VTK:  sudo yum install mesa-libGL-devel.x86_64
+
+First, let's ensure some required directories are created.
+
+\code{.sh}
+mkdir -p "$ID_MAST/external_programs"
+mkdir -p "$HOME/.local"
+\endcode
+
+Now, lets add the MAST installation directory to our system path so that we can use newly installed tools along the way.
+
+\code{.sh}
+export PATH="$HOME/.local/bin:$PATH"
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.bashrc"
+
+export CPATH="$CPATH:$HOME/.local/include"
+echo 'export CPATH="$CPATH:$HOME/.local/include"' >> "$HOME/.bashrc"
+
+export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$HOME/.local/lib"
+echo 'export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$HOME/.local/lib"' >> "$HOME/.bashrc"
+
+export PATH="$ID_MAST/bin:$PATH"
+echo 'export PATH="$ID_MAST/bin:$PATH"' >> "$HOME/.bashrc"
+
+export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$ID_MAST/lib"
+echo 'export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$ID_MAST/lib"' >> "$HOME/.bashrc"
+\endcode
+
+\subsection install-ubuntu1804-dependencies-mast MAST Dependencies Download
+
+Next, we'll download all the required packages before beginning the installation process. The primary reason we choose to download these packages all at once is that this method facilities an offline install as well.  For an offline install, you would download these packages on an online computer, move them to an offline computer via an appropriate method (e.g. external HDD --> air gapped PC virus scan --> offline PC), and then specify the directory of all these packages on the offline PC via the "EXT_PKGS" environment variable.  The commands below assume the PC you are installing MAST on is online.  Modify for an offline install as necessary.
+
+\code{.sh}
+cd "$ID_MAST/external_programs"
+wget -O anacondapy37.sh "$DL_ANACONDAPYTHON37"
+wget -O arpack.tar.gz "$DL_ARPACK"
+wget -O blopex.tar.gz "$DL_BLOPEX"
+wget -O boost.tar.gz "$DL_BOOST"
+wget -O bzip2.tar.gz "$DL_BZIP2"
+wget -O chaco.tar.gz "$DL_CHACO"
+wget -O chombo.tar.gz "$DL_CHOMBO"
+wget -O cmake.tar.gz "$DL_CMAKE"
+wget "$DL_CPYLOG"    # Alternatively can use pip download cpylog
+wget "$DL_DOCOPTNG"  # Alternatively can use pip download docopt-ng
+wget -O eigen.tar.gz "$DL_EIGEN"
+wget -O fftw.tar.gz "$DL_FFTW"
+wget -O glpk.tar.gz "$DL_GLPK"
+wget -O hdf5.tar.gz "$DL_HDF5"
+wget -O hwloc.tar.gz "$DL_HWLOC"
+wget -O hypre.tar.gz "$DL_HYPRE"
+#wget -O libmesh.tar.gz "$DL_LIBMESH"
+git clone "$DL_LIBMESH"
+wget -O lgrind.tar.gz "$DL_LGRIND"
+wget -O mast.tar.gz "$DL_MAST"
+wget -O metis.tar.gz "$DL_METIS"
+wget -O ml.tar.gz "$DL_ML"
+wget -O mpi4py.tar.gz "$DL_MPI4PY"
+wget -O mumps.tar.gz "$DL_MUMPS"
+wget -O netcdf.tar.gz "$DL_NETCDF"
+wget -O nlopt.tar.gz "$DL_NLOPT"
+wget "$DL_NPTYPING"  # Alternatively can use pip download nptyping
+wget -O openblas.tar.gz "$DL_OPENBLAS"
+wget -O openmpi.tar.gz "$DL_OPENMPI"
+wget -O openssl.tar.gz "$DL_OPENSSL"
+wget -O parmetis.tar.gz "$DL_PARMETIS"
+wget -O petsc.tar.gz "$DL_PETSC"
+wget -O petsc4py.tar.gz "$DL_PETSC4PY"
+wget -O pnetcdf.tar.gz "$DL_PNETCDF"
+wget -O primme.tar.gz "$DL_PRIMME"
+wget -O pynastran.tar.gz "$DL_PYNASTRAN"
+wget -O scalapack.tar.gz "$DL_SCALAPACK"
+wget -O seacas.tar.gz "$DL_SEACAS"
+wget -O slepc.tar.gz "$DL_SLEPC"
+wget -O slepc4py.tar.gz "$DL_SLEPC4PY"
+wget -O spai.tar.gz "$DL_SPAI"
+wget -O sprng.tar.gz "$DL_SPRNG"
+wget -O suitesparse.tar.gz "$DL_SUITESPARSE"
+wget -O sundials.tar.gz "$DL_SUNDIALS"
+wget -O superlu.tar.gz "$DL_SUPERLU"
+wget -O superlu_dist.tar.gz "$DL_SUPERLU_DIST"
+wget -O trlan.tar.gz "$DL_TRLAN"
+wget -O triangle.tar.gz "$DL_TRIANGLE"
+wget "$DL_TYPISH"    # Alternatively can use pip download typish
+wget -O vtk.tar.gz "$DL_VTK"
+wget -O zlib.tar.gz "$DL_ZLIB"
+EXT_PKGS="$ID_MAST/external_programs"
+\endcode
+
+With all the required software downloded, we can now begin to install dependencies for MAST. 
+
+\subsection install-rhel7-openssl OpenSSL
+
+Install OpenSSL for CMake
+
+\code{.sh}
+# Install OpenSSL - Used by CMake
+cd "$ID_MAST/external_programs"
+mkdir -p openssl
+tar xvzf "$EXT_PKGS"/openssl.tar.gz -C openssl --strip-components 1
+cd openssl
+./config --prefix="$HOME/.local" shared zlib
+make -j "$N_CORES"
+make test # NOTE YET WORKING!
+\endcode
+
+
+\subsection install-ubuntu1804-cmake CMake
+
+MAST requires CMake version 3.13 or newer to compile. The repository version of cmake in Ubuntu 18.04 is only version 3.10.2.  Therefore, we are going to build cmake from source.  Note that if you were unable to install an OpenSSL development package, you can configure CMake without OpenSSL using the "-- -DCMAKE_USE_OPENSSL=OFF" flag.
+
+\code{.sh}
+# Install CMake - Needed by Eigen and MAST
+cd "$ID_MAST/external_programs"
+mkdir -p cmake
+tar xvzf "$EXT_PKGS"/cmake.tar.gz -C cmake --strip-components 1
+cd cmake
+#./bootstrap --prefix="$HOME/.local" --parallel="$N_CORES"
+ ./bootstrap --prefix="$HOME/.local" --parallel="$N_CORES" -- -DCMAKE_USE_OPENSSL=OFF # To install without OpenSSL
+make -j "$N_CORES"
+# make -j "$N_CORES" test # Optional, may take a long time
+make install
+cd "$ID_MAST/external_programs"
+rm -rf cmake/
+\endcode
+
+\subsection install-ubtuntu-1804-libbz2 BZip2
+
+Boost requires the libbz2.so library in order to compile.  If you are not able to install this from a package manager (e.g. due to lack of 'sudo' rights), you can compile it from source.
+
+\code{.sh}
+cd "$ID_MAST/external_programs"
+mkdir -p bzip2
+tar xvzf "$EXT_PKGS"/bzip2.tar.gz -C bzip2 --strip-components 1
+cd bzip2
+export CC="icc" 
+export CXX="icpc" 
+export FC="ifort" 
+export F77="ifort" 
+make -j "$N_CORES" install PREFIX="$HOME/.local"
+make clean
+make -f Makefile-libbz2_so
+mv bzip2-shared "$HOME/.local/bin/"
+mv libbz2.so.* "$HOME/.local/lib/"
+export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$HOME/.local/lib"
+echo 'export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$HOME/.local/lib"' >> "$HOME/.bashrc"
+cd "$ID_MAST/external_programs"
+rm -rf bzip2/
+unset CC
+unset CXX
+unset FC
+unset F77
+\endcode
+
+\subsection install-ubuntu1804-anacondapython37 Anaconda Python 3.7
+
+The pre-installed Python 3 interpretur in Ubuntu 18.04 is only version 3.6.9.  pyNastran requires at least version 3.7.  Therefore, we will install Anaconda Python 3.7 for use in our installation.
+
+\code{.sh}
+cd "$ID_MAST/external_programs"
+bash "$EXT_PKGS"/anacondapy37.sh -b -p "$HOME/Programs/anaconda3"
+\endcode
+
+Note that Ubuntu uses python3 to help with package managment. If we try to completely replace the built-in python3 with Anaconda Python 3 we will run into a lot of issues with Ubuntu software updates and upgrades.  Also note that it is very dangerous to add Anaconda Python to the system path (e.g. adding $HOME/Programs/anaconda3/bin to the PATH environment variable).  This is known to cause a multitude of issues with various programs.
+
+\subsection install-ubuntu1804-pynastran pyNastran
+
+\code{.sh}
+# Install pyNastran
+$HOME/Programs/anaconda3/bin/pip install pynastran
+\endcode
+
+\subsection install-ubuntu1804-openmpi OpenMPI
+
+We'll install OpenMPI which allows for running MAST in parallel either on a local desktop or on different distributed computing systems. Note that when downloading packages, we can use wither wget or curl.
+
+\code{.sh}
+# Install OpenMPI with Intel Compilers
+# https://www.open-mpi.org/faq/?category=building#easy-build
+cd "$ID_MAST/external_programs"
+mkdir -p openmpi_intel
+tar xvzf "$EXT_PKGS"/openmpi.tar.gz -C openmpi_intel --strip-components 1
+cd openmpi_intel
+CC="icc" CXX="icpc" FC="ifort" F77="ifort" ./configure --prefix="$ID_MAST/openmpi_intel"
+
+# Install OpenMPI with GCC-10 compilers
+cd "$ID_MAST/external_programs"
+mkdir -p openmpi_gcc10
+tar xvzf "$EXT_PKGS"/openmpi.tar.gz -C openmpi_gcc10 --strip-components 1
+cd openmpi_gcc10
+CC="$HOME/Programs/GCC-10.2.0/bin/gcc" CXX="$HOME/Programs/GCC-10.2.0/bin/g++" FC="$HOME/Programs/GCC-10.2.0/bin/gfortran" F77="$HOME/Programs/GCC-10.2.0/bin/gfortran" ./configure --prefix="$ID_MAST/openmpi_gcc10"
+\endcode
+
+After configuring OpenMPI, your output should look similar to this:
+
+\code{.sh}
+Open MPI configuration:
+-----------------------
+Version: 3.1.4
+Build MPI C bindings: yes
+Build MPI C++ bindings (deprecated): no
+Build MPI Fortran bindings: mpif.h, use mpi, use mpi_f08
+MPI Build Java bindings (experimental): no
+Build Open SHMEM support: yes
+Debug build: no
+Platform file: (none)
+
+Miscellaneous
+-----------------------
+CUDA support: no
+PMIx support: internal
+ 
+Transports
+-----------------------
+Cisco usNIC: no
+Cray uGNI (Gemini/Aries): no
+Intel Omnipath (PSM2): no
+Intel SCIF: no
+Intel TrueScale (PSM): no
+Mellanox MXM: no
+Open UCX: no
+OpenFabrics OFI Libfabric: no
+OpenFabrics Verbs: no
+Portals4: no
+Shared memory/copy in+copy out: yes
+Shared memory/Linux CMA: yes
+Shared memory/Linux KNEM: no
+Shared memory/XPMEM: no
+TCP: yes
+ 
+Resource Managers
+-----------------------
+Cray Alps: no
+Grid Engine: no
+LSF: no
+Moab: no
+Slurm: yes
+ssh/rsh: yes
+Torque: no
+ 
+OMPIO File Systems
+-----------------------
+Generic Unix FS: yes
+Lustre: no
+PVFS2/OrangeFS: no
+\endcode
+
+Now we complete the OpenMPI installation.  This can take a while to complete.
+
+\code{.sh}
+make -j "$N_CORES" all install
+make -j "$N_CORES" all install # For some reason, sometimes you have to run it twice to work
+export PATH=""$ID_MAST/openmpi_intel"/bin:$PATH"
+\endcode
+
+To test if it appears to be working correctly, try the following command.
+\code{.sh}
+mpirun --version
+\endcode
+
+Its output should look similar to the following.
+
+\code{.sh}
+mpirun (Open MPI) 3.1.4
+
+Report bugs to http://www.open-mpi.org/community/help/
+\endcode
+
+If all looks good, we can now remove the OpenMPI directory and compressed directory since it is no longer needed.
+
+\code{.sh}
+cd "$ID_MAST/external_programs"
+rm -r ./openmpi_intel
+rm openmpi.tar.gz 
+\endcode
+
+OpenMPI has now been installed to the directory specified in the ID_MAST environment variable.
+
+\subsubsection install-ubuntu1804-openmpi-4py MPI4Py (Optional)
+
+We can now install MPI4Py to allow MPI access from Python. This is useful for the Python/Cython interface to MAST.
+
+\code{.sh}
+# Install MPI4Py
+cd "$ID_MAST/external_programs"
+mkdir -p mpi4py
+tar xvzf "$EXT_PKGS"/mpi4py.tar.gz -C mpi4py --strip-components 1
+cd mpi4py
+# NOTE: If you are using Anaconda Python and MPI is using Intel compilers, 
+# you may need to temporarily rename Anaconda's "ld" so that the system's "ld" is used instead.
+# https://bitbucket.org/mpi4py/mpi4py/issues/143/build-failure-with-python-installed-from
+cd "$HOME/Programs/anaconda3/compiler_compat"
+mv ./ld ld.bak
+cd "$ID_MAST/external_programs/mpi4py"
+"$HOME/Programs/anaconda3/bin/python" setup.py build --mpicc="$ID_MAST/openmpi_intel/bin/mpicc"
+"$HOME/Programs/anaconda3/bin/python" setup.py install
+mpiexec -n "$N_CORES" "$HOME/Programs/anaconda3/bin/python" demo/helloworld.py
+\endcode
+
+The output of the helloworld.py demo script should look similar to the below.
+
+\code{.sh}
+Hello, World! I am process 0 of 4 on ubuntu18044vm.
+Hello, World! I am process 1 of 4 on ubuntu18044vm.
+Hello, World! I am process 3 of 4 on ubuntu18044vm.
+Hello, World! I am process 2 of 4 on ubuntu18044vm.
+\endcode
+
+
+\code{.sh}
+# Cleanup
+cd "$HOME/Programs/anaconda3/compiler_compat"
+mv ./ld.bak ld
+cd "$ID_MAST/external_programs"
+rm -r mpi4py
+rm mpi4py.tar.gz
+\endcode
+
+
+\subsection install-ubuntu1804-openblas OpenBLAS
+
+Next, we'll install OpenBLAS which is an optimized version of the BLAS and LAPACK libraries used for a variety of linear algebra computations.  Note that the "-march=native -mtune=native" flags tell the compiler to compile the code with optimizations specific to your CPU which can result in better performance.
+
+\code{.sh}
+# Install OpenBLAS
+# https://github.com/xianyi/OpenBLAS/wiki/User-Manual
+# https://github.com/xianyi/OpenBLAS/wiki/Installation-Guide
+cd "$ID_MAST/external_programs"
+mkdir -p openblas
+tar xvzf "$EXT_PKGS"/openblas.tar.gz -C openblas --strip-components 1
+cd openblas
+export CXX="icpc"
+export CC="icc"
+export FC="ifort"
+export F77="ifort"
+export CFLAGS="-march=native -mtune=native"
+export CXXFLAGS="-march=native -mtune=native"
+export FFLAGS="-march=native -mtune=native"
+make -j "$N_CORES"
+make PREFIX="$ID_MAST" install
+unset CC
+unset CXX
+unset FC
+unset F77
+unset CFLAGS
+unset CXXFLAGS
+unset FFLAGS
+\endcode
+
+OpenBLAS has now been installed to the directory specified in the ID_MAST environment variable.  We can cleanup the no longer needed OpenBLAS files as follows.
+
+\code{.sh}
+cd "$ID_MAST/external_programs"
+rm -r ./openblas
+rm openblas.tar.gz
+\endcode
+
+So far, we've compiled software to allow running in parallel and to perform basic linear algebra calculations.  
+
+\subsection install-ubuntu1804-glpk GNU Linear Programming Kit
+
+Install the GNU Linear Programming kit which can be used by libMesh.
+
+\code{.sh}
+# https://en.wikibooks.org/wiki/GLPK/Linux_OS#Install
+cd "$ID_MAST/external_programs"
+mkdir -p glpk
+tar xvzf "$EXT_PKGS"/glpk.tar.gz -C glpk --strip-components 1
+cd glpk
+export CXX="icpc"
+export CC="icc"
+export FC="ifort"
+export F77="ifort"
+export CFLAGS="-march=native -mtune=native"
+export CXXFLAGS="-march=native -mtune=native"
+export FFLAGS="-march=native -mtune=native"
+./configure --prefix="$ID_MAST" 
+make -j "$N_CORES"
+make check
+unset CC
+unset CXX
+unset FC
+unset F77
+unset CFLAGS
+unset CXXFLAGS
+unset FFLAGS
+\endcode
+
+The output of "make check" should look similar to the below.
+
+\code{.sh}
+GLPSOL: GLPK LP/MIP Solver, v4.65
+Copyright (C) 2000-2017 Andrew Makhorin, Department for Applied
+Informatics, Moscow Aviation Institute, Moscow, Russia. All rights
+reserved. E-mail: <mao@gnu.org>.
+
+This program has ABSOLUTELY NO WARRANTY.
+
+This program is free software; you may re-distribute it under the terms
+of the GNU General Public License version 3 or later.
+./glpsol --mps ./murtagh.mps --max
+GLPSOL: GLPK LP/MIP Solver, v4.65
+Parameter(s) specified in the command line:
+ --mps ./murtagh.mps --max
+Reading problem data from './murtagh.mps'...
+Problem: OILREFI
+Objective: PROFIT
+74 rows, 81 columns, 504 non-zeros
+600 records were read
+One free row was removed
+GLPK Simplex Optimizer, v4.65
+73 rows, 81 columns, 474 non-zeros
+Preprocessing...
+67 rows, 72 columns, 419 non-zeros
+Scaling...
+ A: min|aij| =  3.000e-03  max|aij| =  6.600e+01  ratio =  2.200e+04
+GM: min|aij| =  2.076e-01  max|aij| =  4.817e+00  ratio =  2.320e+01
+EQ: min|aij| =  4.329e-02  max|aij| =  1.000e+00  ratio =  2.310e+01
+Constructing initial basis...
+Size of triangular part is 66
+*     0: obj =  -0.000000000e+00 inf =   0.000e+00 (26)
+*    44: obj =   1.260571241e+02 inf =   8.543e-15 (0)
+OPTIMAL LP SOLUTION FOUND
+Time used:   0.0 secs
+Memory used: 0.2 Mb (191877 bytes)
+\endcode
+
+If the output looks successful, then go ahead and install GLPK.
+
+\code{.sh}
+make install
+\endcode
+
+Finally, we can clean up no longer needed files.
+
+\code{.sh}
+cd "$ID_MAST/external_programs"
+rm -r ./glpk
+rm glpk.tar.gz
+\endcode
+
+
+\subsection install-1804-vtk The Visualization Toolkit (VTK)
+
+\code{.sh}
+#
+cd "$ID_MAST/external_programs"
+mkdir -p vtk
+tar xvzf "$EXT_PKGS"/vtk.tar.gz -C vtk --strip-components 1
+mkdir -p vtk_build
+cd vtk_build
+export CXX="icpc"
+export CC="icc"
+export FC="ifort"
+export F77="ifort"
+cmake -DCMAKE_BUILD_TYPE:STRING=Release \
+-DCMAKE_INSTALL_PREFIX="$ID_MAST" \
+-DVTK_GROUP_ENABLE_MPI=YES \
+-DVTK_USE_MPI:BOOL=ON \
+ ../vtk
+make -j "$N_CORES" # This can take a while
+make install
+unset CC
+unset CXX
+unset FC
+unset F77
+\endcode
+
+Finally, we remove leftover files that are no longer needed.
+
+\code{.sh}
+cd "$ID_MAST/external_programs"
+rm -r ./vtk
+rm -rf ./vtk_build
+rm vtk.tar.gz
+\endcode
+
+\subsection install-rhel7-boost BOOST
+PETSc typically can compile Boost for us if we are using the system Python (typically located at /usr/bin/python) which has the development files installed (e.g. pyconfig.h).  However, if we are compiling using a different Python because we don't have the Python development files for the system Python, we can run into some issues. According to this GitHub issue, https://github.com/boostorg/build/issues/289#issuecomment-361032567, Boost has trouble configuring itself with Anaconda Python. We can work around these issues by manually compiling Boost separate from PETSc.
+
+We can manually direct Boost to where it needs to go by using the "--with-python", "-with-python-root", and "--with-python-version" options.
+
+\code{.sh}
+cd "$ID_MAST/external_programs"
+mkdir -p boost
+tar xvzf "$EXT_PKGS"/boost.tar.gz -C boost --strip-components 1
+cd boost
+export CXX="icpc"
+export CC="icc"
+export FC="ifort"
+export F77="ifort"
+export CFLAGS="-march=native -mtune=native"
+export CXXFLAGS="-march=native -mtune=native"
+export FFLAGS="-march=native -mtune=native"
+export BZIP2_LIBPATH="$HOME/.local/lib" # Run this line if libbz2 is not installed in the default system library directories
+./bootstrap.sh --prefix="$ID_MAST" --with-toolset=intel-linux --with-python="$HOME/Programs/anaconda3/bin/python" --with-python-root="$HOME/Programs/anaconda3 : $HOME/Programs/anaconda3/include/python3.8" --with-python-version=3.8
+./b2 -j "$N_CORES"
+\endcode
+
+You should see results similar to the below.
+
+\code{.sh}
+...failed updating 8 targets...
+...skipped 24 targets...
+...updated 1109 targets...
+\endcode
+
+Don't be concerned about the "failed updating 8 targets" portion. Now finish installing Boost.
+
+\code{.sh}
+./b2 install
+unset CC
+unset CXX
+unset FC
+unset F77
+unset CFLAGS
+unset CXXFLAGS
+unset FFLAGS
+\endcode
+
+With the installation finished, we can cleanup leftover files.
+
+\code{.sh}
+cd "$ID_MAST/external_programs"
+rm -r ./boost
+\endcode
+
+\subsection install-ubuntu1804-petsc PETSc
+
+Next, we'll install PETSc which will allow us to solve a wide range of linear and nonlinear numerical problems. Here we are also compiling PETSc with support for many optional third-party packages. PETSc can take care of automatically building these packages for us. We'll install two versions, an optimized version and a debug version.
+
+One option to pay close attention to is --with-clean.  "--with-clean=1" deletes all existing build files and starts from scratch.  "--with-clean=0" keeps existing build files.  "--with-clean=0" is useful if configure stops due to an error and you want to attempt to restart the configuration from where you left off instead of starting completely over, which can be time consuming.  (Note that I use the system Python 2.7, trying to use Anaconda Python 3.7 results in multiple issues with Boost for some reason.)
+
+Please register to use Chaco at http://www.cs.sandia.gov/web1400/1400_download.html 
+
+\subsubsection install-ubuntu1804-petsc-opt PETSc - Optimized Version
+
+First, we'll build an optimized version of PETSc. 
+
+\code{.sh}
+# Install PETSc with OpenBLAS (optimized version)
+cd "$ID_MAST/external_programs"
+mkdir -p petsc
+tar xvzf "$EXT_PKGS"/petsc.tar.gz -C petsc --strip-components 1
+cd petsc
+unset PETSC_DIR
+unset PETSC_ARCH
+# Run ./configure --help for more information and options
+# Optimized Version of PETSc Below
+petsc_arch_name="$OSTYPE"_opt_c++11_intelmkl_4mast
+/usr/bin/python2.7 ./configure \
+--PETSC_ARCH="$petsc_arch_name" \
+--with-clean=1 \
+--CFLAGS="-O3 -march=native -mtune=native" \
+--CXXFLAGS="-O3 -march=native -mtune=native" \
+--FFLAGS="-O3 -march=native -mtune=native" \
+--with-shared-libraries=1 --with-debugging=0 \
+--with-cxx-dialect=C++11 \
+--with-x=1 \
+--with-mpi-dir="$ID_MAST/openmpi_intel" \
+--with-blaslapack-dir="$MKLROOT" \
+--with-boost=1 --with-boost-dir="$ID_MAST" \
+--download-chaco="$EXT_PKGS/chaco.tar.gz" \
+--download-chombo="$EXT_PKGS/chombo.tar.gz" \
+--download-eigen="$EXT_PKGS/eigen.tar.gz" \
+--download-fftw="$EXT_PKGS/fftw.tar.gz" \
+--download-hdf5="$EXT_PKGS/hdf5.tar.gz" \
+--download-hwloc="$EXT_PKGS/hwloc.tar.gz" \
+--download-hypre="$EXT_PKGS/hypre.tar.gz" \
+--download-lgrind="$EXT_PKGS/lgrind.tar.gz" \
+--download-metis="$EXT_PKGS/metis.tar.gz" \
+--download-ml="$EXT_PKGS/ml.tar.gz" \
+--download-mumps="$EXT_PKGS/mumps.tar.gz" \
+--download-netcdf="$EXT_PKGS/netcdf.tar.gz" \
+--download-parmetis="$EXT_PKGS/parmetis.tar.gz" \
+--download-pnetcdf="$EXT_PKGS/pnetcdf.tar.gz" \
+--download-scalapack="$EXT_PKGS/scalapack.tar.gz" \
+--download-spai="$EXT_PKGS/spai.tar.gz" \
+--download-sprng="$EXT_PKGS/sprng.tar.gz" \
+--download-suitesparse="$EXT_PKGS/suitesparse.tar.gz" \
+--download-sundials="$EXT_PKGS/sundials.tar.gz" \
+--download-superlu="$EXT_PKGS/superlu.tar.gz" \
+--download-superlu_dist="$EXT_PKGS/superlu_dist.tar.gz" \
+--download-triangle="$EXT_PKGS/triangle.tar.gz" \
+--download-zlib="$EXT_PKGS/zlib.tar.gz"
+make PETSC_DIR=`pwd` PETSC_ARCH="$petsc_arch_name" all
+make PETSC_DIR=`pwd` PETSC_ARCH="$petsc_arch_name" check
+PETSC_DIR_OPT=`pwd`
+PETSC_ARCH_OPT="$petsc_arch_name"
+echo "export PETSC_DIR_OPT=`pwd`" >> $HOME/.bashrc
+echo "export PETSC_ARCH_OPT=$petsc_arch_name" >> $HOME/.bashrc
+export PETSC_DIR_OPT=`pwd`
+export PETSC_ARCH_OPT="$petsc_arch_name"
+\endcode
+
+If you run into build issues when running 'make PETSC_DIR=`pwd` PETSC_ARCH="$petsc_arch_name" all', try completely reconfiguring petsc with "--with-clean=1" option and then building again.
+
+\subsubsection install-ubuntu1804-petsc-dbg PETSc - Debug Version
+
+Now, we'll build a debug version of PETSc.
+
+\code{.sh}
+# Debug Version of PETSc with IntelMKL below
+unset PETSC_DIR
+unset PETSC_ARCH
+petsc_arch_name="$OSTYPE"_dbg_c++11_intelmkl_4mast
+/usr/bin/python2.7 ./configure \
+--PETSC_ARCH="$petsc_arch_name" \
+--with-clean=1 \
+--with-shared-libraries=1 --with-debugging=1 \
+--with-cxx-dialect=C++11 \
+--with-x=1 \
+--with-mpi-dir="$ID_MAST/openmpi_intel" \
+--with-blaslapack-dir="$MKLROOT" \
+--with-boost=1 --with-boost-dir="$ID_MAST" \
+--download-chaco="$EXT_PKGS/chaco.tar.gz" \
+--download-eigen="$EXT_PKGS/eigen.tar.gz" \
+--download-fftw="$EXT_PKGS/fftw.tar.gz" \
+--download-hdf5="$EXT_PKGS/hdf5.tar.gz" \
+--download-hwloc="$EXT_PKGS/hwloc.tar.gz" \
+--download-hypre="$EXT_PKGS/hypre.tar.gz" \
+--download-lgrind="$EXT_PKGS/lgrind.tar.gz" \
+--download-metis="$EXT_PKGS/metis.tar.gz" \
+--download-ml="$EXT_PKGS/ml.tar.gz" \
+--download-netcdf="$EXT_PKGS/netcdf.tar.gz" \
+--download-parmetis="$EXT_PKGS/parmetis.tar.gz" \
+--download-pnetcdf="$EXT_PKGS/pnetcdf.tar.gz" \
+--download-scalapack="$EXT_PKGS/scalapack.tar.gz" \
+--download-spai="$EXT_PKGS/spai.tar.gz" \
+--download-sprng="$EXT_PKGS/sprng.tar.gz" \
+--download-suitesparse="$EXT_PKGS/suitesparse.tar.gz" \
+--download-sundials="$EXT_PKGS/sundials.tar.gz" \
+--download-superlu="$EXT_PKGS/superlu.tar.gz" \
+--download-superlu_dist="$EXT_PKGS/superlu_dist.tar.gz" \
+--download-triangle="$EXT_PKGS/triangle.tar.gz" \
+--download-zlib="$EXT_PKGS/zlib.tar.gz"
+\endcode
+
+# --download-mumps="$EXT_PKGS/mumps.tar.gz" \
+# --download-chombo="$EXT_PKGS/chombo.tar.gz" \
+
+
+
+The results of the PETSc configuration should look similar to that below.
+
+\code{.sh}
+Compilers:                                                                                                                                                             
+  C Compiler:         /home/username/Programs/MAST_Programs_08042020/bin/mpicc  -fPIC -Wall -Wwrite-strings -Wno-strict-aliasing -Wno-unknown-pragmas -fstack-protector -fvisibility=hidden -g3 
+    Version: gcc (Ubuntu 7.5.0-3ubuntu1~18.04) 7.5.0
+  C++ Compiler:       /home/username/Programs/MAST_Programs_08042020/bin/mpicxx  -Wall -Wwrite-strings -Wno-strict-aliasing -Wno-unknown-pragmas -fstack-protector -fvisibility=hidden -g  -fPIC  
+    Version: g++ (Ubuntu 7.5.0-3ubuntu1~18.04) 7.5.0
+  Fortran Compiler:   /home/username/Programs/MAST_Programs_08042020/bin/mpif90  -fPIC -Wall -ffree-line-length-0 -Wno-unused-dummy-argument -g  
+    Version: GNU Fortran (Ubuntu 7.5.0-3ubuntu1~18.04) 7.5.0
+Linkers:
+  Shared linker:   /home/username/Programs/MAST_Programs_08042020/bin/mpicc  -shared  -fPIC -Wall -Wwrite-strings -Wno-strict-aliasing -Wno-unknown-pragmas -fstack-protector -fvisibility=hidden -g3
+  Dynamic linker:   /home/username/Programs/MAST_Programs_08042020/bin/mpicc  -shared  -fPIC -Wall -Wwrite-strings -Wno-strict-aliasing -Wno-unknown-pragmas -fstack-protector -fvisibility=hidden -g3
+  Libraries linked against:   -lquadmath -lstdc++ -ldl 
+make:
+  Version:  4.1
+  /usr/bin/make
+BlasLapack:
+  Library:  -Wl,-rpath,/home/username/Programs/MAST_Programs_08042020/lib -L/home/username/Programs/MAST_Programs_08042020/lib -lopenblas
+  uses 4 byte integers
+MPI:
+  Version:  3
+  Includes: -I/home/username/Programs/MAST_Programs_08042020/include
+  Mpiexec: /home/username/Programs/MAST_Programs_08042020/bin/mpiexec --oversubscribe
+  OMPI_VERSION: 3.1.4
+pthread:
+hwloc:
+  Includes: -I/home/username/Programs/MAST_Programs_08042020/external_programs/petsc/linux-gnu_dbg_c++11_openblas_4mast/include
+  Library:  -Wl,-rpath,/home/username/Programs/MAST_Programs_08042020/external_programs/petsc/linux-gnu_dbg_c++11_openblas_4mast/lib -L/home/username/Programs/MAST_Programs_08042020/external_programs/petsc/linux-gnu_dbg_c++11_openblas_4mast/lib -lhwloc
+X:
+  Library:  -lX11
+openblas:
+  Library:  -Wl,-rpath,/home/username/Programs/MAST_Programs_08042020/lib -L/home/username/Programs/MAST_Programs_08042020/lib -lopenblas
+zlib:
+  Includes: -I/home/username/Programs/MAST_Programs_08042020/external_programs/petsc/linux-gnu_dbg_c++11_openblas_4mast/include
+  Library:  -Wl,-rpath,/home/username/Programs/MAST_Programs_08042020/external_programs/petsc/linux-gnu_dbg_c++11_openblas_4mast/lib -L/home/username/Programs/MAST_Programs_08042020/external_programs/petsc/linux-gnu_dbg_c++11_openblas_4mast/lib -lz
+hdf5:
+  Version:  1.12.0
+  Includes: -I/home/username/Programs/MAST_Programs_08042020/external_programs/petsc/linux-gnu_dbg_c++11_openblas_4mast/include
+  Library:  -Wl,-rpath,/home/username/Programs/MAST_Programs_08042020/external_programs/petsc/linux-gnu_dbg_c++11_openblas_4mast/lib -L/home/username/Programs/MAST_Programs_08042020/external_programs/petsc/linux-gnu_dbg_c++11_openblas_4mast/lib -lhdf5hl_fortran -lhdf5_fortran -lhdf5_hl -lhdf5
+netcdf:
+  Version:  4.5.0
+  Includes: -I/home/username/Programs/MAST_Programs_08042020/external_programs/petsc/linux-gnu_dbg_c++11_openblas_4mast/include
+  Library:  -Wl,-rpath,/home/username/Programs/MAST_Programs_08042020/external_programs/petsc/linux-gnu_dbg_c++11_openblas_4mast/lib -L/home/username/Programs/MAST_Programs_08042020/external_programs/petsc/linux-gnu_dbg_c++11_openblas_4mast/lib -lnetcdf
+pnetcdf:
+  Version:  1.12.1
+  Includes: -I/home/username/Programs/MAST_Programs_08042020/external_programs/petsc/linux-gnu_dbg_c++11_openblas_4mast/include
+  Library:  -Wl,-rpath,/home/username/Programs/MAST_Programs_08042020/external_programs/petsc/linux-gnu_dbg_c++11_openblas_4mast/lib -L/home/username/Programs/MAST_Programs_08042020/external_programs/petsc/linux-gnu_dbg_c++11_openblas_4mast/lib -lpnetcdf
+cmake:
+  Version:  3.15.4
+  /home/username/Programs/cmake-3.15.4-Linux-x86_64/bin/cmake
+hypre:
+  Version:  2.18.2
+  Includes: -I/home/username/Programs/MAST_Programs_08042020/external_programs/petsc/linux-gnu_dbg_c++11_openblas_4mast/include
+  Library:  -Wl,-rpath,/home/username/Programs/MAST_Programs_08042020/external_programs/petsc/linux-gnu_dbg_c++11_openblas_4mast/lib -L/home/username/Programs/MAST_Programs_08042020/external_programs/petsc/linux-gnu_dbg_c++11_openblas_4mast/lib -lHYPRE
+Chaco:
+  Library:  -Wl,-rpath,/home/username/Programs/MAST_Programs_08042020/external_programs/petsc/linux-gnu_dbg_c++11_openblas_4mast/lib -L/home/username/Programs/MAST_Programs_08042020/external_programs/petsc/linux-gnu_dbg_c++11_openblas_4mast/lib -lchaco
+Chombo:
+  Includes: -I/home/username/Programs/MAST_Programs_08042020/external_programs/petsc/linux-gnu_dbg_c++11_openblas_4mast/include
+  Library:  -Wl,-rpath,/home/username/Programs/MAST_Programs_08042020/external_programs/petsc/linux-gnu_dbg_c++11_openblas_4mast/lib -L/home/username/Programs/MAST_Programs_08042020/external_programs/petsc/linux-gnu_dbg_c++11_openblas_4mast/lib -lbasetools2d.Linux.64.mpicxx.mpif90.DEBUG -lamrelliptic2d.Linux.64.mpicxx.mpif90.DEBUG -lamrtimedependent2d.Linux.64.mpicxx.mpif90.DEBUG -lamrtools2d.Linux.64.mpicxx.mpif90.DEBUG -lboxtools2d.Linux.64.mpicxx.mpif90.DEBUG
+metis:
+  Version:  5.1.0
+  Includes: -I/home/username/Programs/MAST_Programs_08042020/external_programs/petsc/linux-gnu_dbg_c++11_openblas_4mast/include
+  Library:  -Wl,-rpath,/home/username/Programs/MAST_Programs_08042020/external_programs/petsc/linux-gnu_dbg_c++11_openblas_4mast/lib -L/home/username/Programs/MAST_Programs_08042020/external_programs/petsc/linux-gnu_dbg_c++11_openblas_4mast/lib -lmetis
+eigen:
+  Version:  3.3.7
+  Includes: -I/home/username/Programs/MAST_Programs_08042020/external_programs/petsc/linux-gnu_dbg_c++11_openblas_4mast/include/eigen3
+parmetis:
+  Version:  4.0.3
+  Includes: -I/home/username/Programs/MAST_Programs_08042020/external_programs/petsc/linux-gnu_dbg_c++11_openblas_4mast/include
+  Library:  -Wl,-rpath,/home/username/Programs/MAST_Programs_08042020/external_programs/petsc/linux-gnu_dbg_c++11_openblas_4mast/lib -L/home/username/Programs/MAST_Programs_08042020/external_programs/petsc/linux-gnu_dbg_c++11_openblas_4mast/lib -lparmetis
+regex:
+MUMPS:
+  Version:  5.2.1
+  Includes: -I/home/username/Programs/MAST_Programs_08042020/external_programs/petsc/linux-gnu_dbg_c++11_openblas_4mast/include
+  Library:  -Wl,-rpath,/home/username/Programs/MAST_Programs_08042020/external_programs/petsc/linux-gnu_dbg_c++11_openblas_4mast/lib -L/home/username/Programs/MAST_Programs_08042020/external_programs/petsc/linux-gnu_dbg_c++11_openblas_4mast/lib -lcmumps -ldmumps -lsmumps -lzmumps -lmumps_common -lpord
+scalapack:
+  Library:  -Wl,-rpath,/home/username/Programs/MAST_Programs_08042020/external_programs/petsc/linux-gnu_dbg_c++11_openblas_4mast/lib -L/home/username/Programs/MAST_Programs_08042020/external_programs/petsc/linux-gnu_dbg_c++11_openblas_4mast/lib -lscalapack
+SuiteSparse:
+  Version:  5.7.1
+  Includes: -I/home/username/Programs/MAST_Programs_08042020/external_programs/petsc/linux-gnu_dbg_c++11_openblas_4mast/include
+  Library:  -Wl,-rpath,/home/username/Programs/MAST_Programs_08042020/external_programs/petsc/linux-gnu_dbg_c++11_openblas_4mast/lib -L/home/username/Programs/MAST_Programs_08042020/external_programs/petsc/linux-gnu_dbg_c++11_openblas_4mast/lib -lumfpack -lklu -lcholmod -lbtf -lccolamd -lcolamd -lcamd -lamd -lsuitesparseconfig
+SuperLU:
+  Version:  5.2.1
+  Includes: -I/home/username/Programs/MAST_Programs_08042020/external_programs/petsc/linux-gnu_dbg_c++11_openblas_4mast/include
+  Library:  -Wl,-rpath,/home/username/Programs/MAST_Programs_08042020/external_programs/petsc/linux-gnu_dbg_c++11_openblas_4mast/lib -L/home/username/Programs/MAST_Programs_08042020/external_programs/petsc/linux-gnu_dbg_c++11_openblas_4mast/lib -lsuperlu
+SuperLU_DIST:
+  Version:  6.3.0
+  Includes: -I/home/username/Programs/MAST_Programs_08042020/external_programs/petsc/linux-gnu_dbg_c++11_openblas_4mast/include
+  Library:  -Wl,-rpath,/home/username/Programs/MAST_Programs_08042020/external_programs/petsc/linux-gnu_dbg_c++11_openblas_4mast/lib -L/home/username/Programs/MAST_Programs_08042020/external_programs/petsc/linux-gnu_dbg_c++11_openblas_4mast/lib -lsuperlu_dist
+Triangle:
+  Includes: -I/home/username/Programs/MAST_Programs_08042020/external_programs/petsc/linux-gnu_dbg_c++11_openblas_4mast/include
+  Library:  -Wl,-rpath,/home/username/Programs/MAST_Programs_08042020/external_programs/petsc/linux-gnu_dbg_c++11_openblas_4mast/lib -L/home/username/Programs/MAST_Programs_08042020/external_programs/petsc/linux-gnu_dbg_c++11_openblas_4mast/lib -ltriangle
+ml:
+  Includes: -I/home/username/Programs/MAST_Programs_08042020/external_programs/petsc/linux-gnu_dbg_c++11_openblas_4mast/include
+  Library:  -Wl,-rpath,/home/username/Programs/MAST_Programs_08042020/external_programs/petsc/linux-gnu_dbg_c++11_openblas_4mast/lib -L/home/username/Programs/MAST_Programs_08042020/external_programs/petsc/linux-gnu_dbg_c++11_openblas_4mast/lib -lml
+boost:
+  Includes: -I/home/username/Programs/MAST_Programs_08042020/external_programs/petsc/linux-gnu_dbg_c++11_openblas_4mast/include
+fftw:
+  Includes: -I/home/username/Programs/MAST_Programs_08042020/external_programs/petsc/linux-gnu_dbg_c++11_openblas_4mast/include
+  Library:  -Wl,-rpath,/home/username/Programs/MAST_Programs_08042020/external_programs/petsc/linux-gnu_dbg_c++11_openblas_4mast/lib -L/home/username/Programs/MAST_Programs_08042020/external_programs/petsc/linux-gnu_dbg_c++11_openblas_4mast/lib -lfftw3_mpi -lfftw3
+spai:
+  Includes: -I/home/username/Programs/MAST_Programs_08042020/external_programs/petsc/linux-gnu_dbg_c++11_openblas_4mast/include
+  Library:  -Wl,-rpath,/home/username/Programs/MAST_Programs_08042020/external_programs/petsc/linux-gnu_dbg_c++11_openblas_4mast/lib -L/home/username/Programs/MAST_Programs_08042020/external_programs/petsc/linux-gnu_dbg_c++11_openblas_4mast/lib -lspai
+sprng:
+  Includes: -I/home/username/Programs/MAST_Programs_08042020/external_programs/petsc/linux-gnu_dbg_c++11_openblas_4mast/include
+  Library:  -Wl,-rpath,/home/username/Programs/MAST_Programs_08042020/external_programs/petsc/linux-gnu_dbg_c++11_openblas_4mast/lib -L/home/username/Programs/MAST_Programs_08042020/external_programs/petsc/linux-gnu_dbg_c++11_openblas_4mast/lib -llcg
+sundials:
+  Version:  2.5.0
+  Includes: -I/home/username/Programs/MAST_Programs_08042020/external_programs/petsc/linux-gnu_dbg_c++11_openblas_4mast/include
+  Library:  -Wl,-rpath,/home/username/Programs/MAST_Programs_08042020/external_programs/petsc/linux-gnu_dbg_c++11_openblas_4mast/lib -L/home/username/Programs/MAST_Programs_08042020/external_programs/petsc/linux-gnu_dbg_c++11_openblas_4mast/lib -lsundials_cvode -lsundials_nvecserial -lsundials_nvecparallel
+valgrind:
+  Language used to compile PETSc: C
+PETSc:
+  PETSC_ARCH: linux-gnu_dbg_c++11_openblas_4mast
+  PETSC_DIR: /home/username/Programs/MAST_Programs_08042020/external_programs/petsc
+  Scalar type: real
+  Precision: double
+  Support for __float128
+  Integer size: 4 bytes
+  shared libraries: enabled
+  Memory alignment from malloc(): 16 bytes
+xxx=========================================================================xxx
+ Configure stage complete. Now build PETSc libraries with:
+   make PETSC_DIR=/home/username/Programs/MAST_Programs_08042020/external_programs/petsc PETSC_ARCH=linux-gnu_dbg_c++11_openblas_4mast all
+xxx=========================================================================xxx
+\endcode
+
+If all looks good, we can go ahead and compile PETSc itself (the configuration just compiled third-party optional packages).
+
+\code{.sh}
+make PETSC_DIR=`pwd` PETSC_ARCH="$petsc_arch_name" all
+make PETSC_DIR=`pwd` PETSC_ARCH="$petsc_arch_name" check
+PETSC_DIR_DBG=`pwd`
+PETSC_ARCH_DBG="$petsc_arch_name"
+echo "export PETSC_DIR_DBG=`pwd`" >> $HOME/.bashrc
+echo "export PETSC_ARCH_DBG=$petsc_arch_name" >> $HOME/.bashrc
+export PETSC_DIR_DBG=`pwd`
+export PETSC_ARCH_DBG="$petsc_arch_name"
+\endcode
+
+Results of the check should look similar to:
+
+\code{.sh}
+Running check examples to verify correct installation
+Using PETSC_DIR=/home/usernamej/Programs/MAST_INSTALL/external_programs/petsc and PETSC_ARCH=linux-gnu_dbg_c++11_openblas_4mast
+C/C++ example src/snes/tutorials/ex19 run successfully with 1 MPI process
+C/C++ example src/snes/tutorials/ex19 run successfully with 2 MPI processes
+C/C++ example src/snes/tutorials/ex19 run successfully with hypre
+C/C++ example src/snes/tutorials/ex19 run successfully with mumps
+C/C++ example src/snes/tutorials/ex19 run successfully with superlu_dist
+C/C++ example src/vec/vec/tests/ex47 run successfully with hdf5
+C/C++ example src/snes/tutorials/ex19 run successfully with ml
+C/C++ example src/snes/tutorials/ex19 run successfully with suitesparse
+Fortran example src/snes/tutorials/ex5f run successfully with 1 MPI process
+Completed test examples
+\endcode
+
+\subsubsection install-ubuntu1804-petsc-4py PETSc4Py Installation (Optional)
+
+We can also install PETSc4Py to be able to use PETSc via Python.  Note that this requires installing MPI4Py which can be done with the instructions above.
+
+\code{.sh}
+cd "$ID_MAST/external_programs"
+mkdir -p petsc4py
+tar xvzf "$EXT_PKGS"/petsc4py.tar.gz -C petsc4py --strip-components 1
+# Note that here we are building PETSc4Py with the debug version of PETSc
+export PETSC_DIR="$PETSC_DIR_DBG"
+export PETSC_ARCH="$PETSC_ARCH_DBG"
+"$HOME/Programs/anaconda3/bin/pip" install ./petsc4py
+unset PETSC_DIR
+unset PETSC_ARCH
+\endcode
+
+\subsection install-ubuntu1804-slepc SLEPc
+
+Now that PETSc is installed, we can install its counterpart known as SLEPc.  SLEPc allows us to solve a variety of linear and nonlinear eigenproblems. As with PETSc, we'll install both an optimized and debug version.  
+
+\subsubsection install-ubuntu1804-slepc-opt SLEPC - Optimized Version
+
+First, the optimized version.
+
+\code{.sh}
+# Install SLEPc
+cd "$ID_MAST/external_programs"
+mkdir -p slepc
+tar xvzf "$EXT_PKGS"/slepc.tar.gz -C slepc --strip-components 1
+cd slepc
+unset SLEPC_DIR
+unset SLEPC_ARCH
+PETSC_DIR="$PETSC_DIR_OPT" PETSC_ARCH="$PETSC_ARCH_OPT" \
+SLEPC_ARCH="$PETSC_ARCH_OPT" /usr/bin/python2.7 ./configure \
+--with-clean=1 \
+--download-arpack="$EXT_PKGS/arpack.tar.gz" \
+--download-blopex="$EXT_PKGS/blopex.tar.gz" \
+--download-primme="$EXT_PKGS/primme.tar.gz" \
+--download-trlan="$EXT_PKGS/trlan.tar.gz"
+make SLEPC_DIR=`pwd` PETSC_DIR="$PETSC_DIR_OPT" PETSC_ARCH="$PETSC_ARCH_OPT"
+make SLEPC_DIR=`pwd` PETSC_DIR="$PETSC_DIR_OPT" PETSC_ARCH="$PETSC_ARCH_OPT" check
+SLEPC_DIR_OPT=`pwd`
+echo "export SLEPC_DIR_OPT=`pwd`" >> $HOME/.bashrc
+export SLEPC_DIR_OPT=`pwd`
+\endcode
+
+\subsubsection install-ubuntu1804-slepc-dbg SLEPC - Debug Version
+
+Now, to intall the debug version of SLEPc.
+#FIXME: Error installing ARPACK.
+
+\code{.sh}
+# Debug Version of SLEPc Below
+unset SLEPC_DIR
+unset SLEPC_ARCH
+PETSC_DIR="$PETSC_DIR_DBG" PETSC_ARCH="$PETSC_ARCH_DBG" \
+SLEPC_ARCH="$PETSC_ARCH_DBG" /usr/bin/python2.7 ./configure \
+--with-clean=1 \
+--download-arpack="$EXT_PKGS/arpack.tar.gz" \
+--download-blopex="$EXT_PKGS/blopex.tar.gz" \
+--download-primme="$EXT_PKGS/primme.tar.gz" \
+--download-trlan="$EXT_PKGS/trlan.tar.gz"
+\endcode
+
+The configuration output of SLEPc should look similar to the following.
+
+\code{.sh}
+================================================================================
+SLEPc Configuration
+================================================================================
+
+SLEPc directory:
+ /home/username/Programs/MAST_Programs_08042020/external_programs/slepc
+PETSc directory:
+ /home/username/Programs/MAST_Programs_08042020/external_programs/petsc
+Architecture "linux-gnu_dbg_c++11_openblas_4mast" with double precision real numbers
+ARPACK library flags:
+ -Wl,-rpath,/home/username/Programs/MAST_Programs_08042020/external_programs/slepc/linux-gnu_dbg_c++11_openblas_4mast/lib -L/home/username/Programs/MAST_Programs_08042020/external_programs/slepc/linux-gnu_dbg_c++11_openblas_4mast/lib -lparpack -larpack
+BLOPEX library flags:
+ -Wl,-rpath,/home/username/Programs/MAST_Programs_08042020/external_programs/slepc/linux-gnu_dbg_c++11_openblas_4mast/lib -L/home/username/Programs/MAST_Programs_08042020/external_programs/slepc/linux-gnu_dbg_c++11_openblas_4mast/lib -lBLOPEX -I/home/username/Programs/MAST_Programs_08042020/external_programs/slepc/linux-gnu_dbg_c++11_openblas_4mast/include -I/home/username/Programs/MAST_Programs_08042020/external_programs/slepc/linux-gnu_dbg_c++11_openblas_4mast/include/blopex
+PRIMME library flags:
+ -Wl,-rpath,/home/username/Programs/MAST_Programs_08042020/external_programs/slepc/linux-gnu_dbg_c++11_openblas_4mast/lib -L/home/username/Programs/MAST_Programs_08042020/external_programs/slepc/linux-gnu_dbg_c++11_openblas_4mast/lib -lprimme -I/home/username/Programs/MAST_Programs_08042020/external_programs/slepc/linux-gnu_dbg_c++11_openblas_4mast/include
+TRLAN library flags:
+ -Wl,-rpath,/home/username/Programs/MAST_Programs_08042020/external_programs/slepc/linux-gnu_dbg_c++11_openblas_4mast/lib -L/home/username/Programs/MAST_Programs_08042020/external_programs/slepc/linux-gnu_dbg_c++11_openblas_4mast/lib -ltrlan_mpi
+
+xxx==========================================================================xxx
+ Configure stage complete. Now build the SLEPc library with:
+   make SLEPC_DIR=/home/username/Programs/MAST_Programs_08042020/external_programs/slepc PETSC_DIR=/home/username/Programs/MAST_Programs_08042020/external_programs/petsc PETSC_ARCH=linux-gnu_dbg_c++11_openblas_4mast
+xxx==========================================================================xxx
+\endcode
+
+\code{.sh}
+make SLEPC_DIR=`pwd` PETSC_DIR="$PETSC_DIR_DBG" PETSC_ARCH="$PETSC_ARCH_DBG"
+make SLEPC_DIR=`pwd` PETSC_DIR="$PETSC_DIR_DBG" PETSC_ARCH="$PETSC_ARCH_DBG" check
+SLEPC_DIR_DBG=`pwd`
+echo "export SLEPC_DIR_DBG=`pwd`" >> $HOME/.bashrc
+export SLEPC_DIR_DBG=`pwd`
+\endcode
+
+Results of the check should look similar to:
+
+\code{.sh}
+Running test examples to verify correct installation
+Using SLEPC_DIR=/home/usernamej/Programs/MAST_INSTALL/external_programs/slepc, PETSC_DIR=/home/usernamej/Programs/MAST_INSTALL/external_programs/petsc and PETSC_ARCH=linux-gnu_dbg_c++11_openblas_4mast
+C/C++ example src/eps/tests/test10 run successfully with 1 MPI process
+C/C++ example src/eps/tests/test10 run successfully with 2 MPI process
+Fortran example src/eps/tests/test7f run successfully with 1 MPI process
+BLOPEX example src/eps/tests/test5 run successfully with 1 MPI process
+Completed test examples
+\endcode
+
+\subsubsection install-ubuntu1804-slepc-4py SLEPc4Py Installation (Optional)
+
+We can also install SLEPc4Py to be able to use SLEPc via Python.  Note that this requires installing MPI4Py and PETSc4Py which can be done with the instructions above.
+
+\code{.sh}
+cd "$ID_MAST/external_programs"
+mkdir -p slepc4py
+tar xvzf "$EXT_PKGS"/slepc4py.tar.gz -C slepc4py --strip-components 1
+# Note that here we are building SLEPc4Py with the debug version of SLEPc
+export PETSC_DIR="$PETSC_DIR_DBG"
+export PETSC_ARCH="$PETSC_ARCH_DBG"
+export SLEPC_DIR="$SLEPC_DIR_DBG"
+"$HOME/Programs/anaconda3/bin/pip" install ./slepc4py
+unset PETSC_DIR
+unset PETSC_ARCH
+unset SLEPC_DIR
+\endcode
+
+\subsection install-ubuntu1804-nlopt NLOPT
+
+Now we'll install NLOPT which is a free optimization library with a variety of algorithms.
+
+\code{.sh}
+# Install NLOPT
+cd "$ID_MAST/external_programs"
+mkdir -p nlopt
+tar xvzf "$EXT_PKGS"/nlopt.tar.gz -C nlopt --strip-components 1
+cd nlopt
+export CXX="icpc"
+export CC="icc"
+export FC="ifort"
+export F77="ifort"
+export CFLAGS="-O3 -march=native -mtune=native"
+export CXXFLAGS="-O3 -march=native -mtune=native"
+export FFLAGS="-O3 -march=native -mtune=native"
+export FCFLAGS="-O3 -march=native -mtune=native"
+mkdir -p build
+cd build
+cmake -DCMAKE_INSTALL_PREFIX="$ID_MAST" -DPYTHON_EXECUTABLE="$HOME/Programs/anaconda3/bin/python" ..
+make -j "$N_CORES"
+make test
+\endcode
+
+The test output should look similar to:
+
+\code{.sh}
+Running tests...
+Test project /home/usernamej/Programs/MAST_INSTALL/external_programs/nlopt/build
+      Start  1: check_tutorial
+ 1/57 Test  #1: check_tutorial ...................   Passed    0.00 sec
+      Start  2: testopt_algo0_obj0
+ 2/57 Test  #2: testopt_algo0_obj0 ...............   Passed    0.01 sec
+      Start  3: testopt_algo0_obj1
+ 3/57 Test  #3: testopt_algo0_obj1 ...............   Passed    0.00 sec
+      Start  4: testopt_algo1_obj0
+ 4/57 Test  #4: testopt_algo1_obj0 ...............   Passed    0.00 sec
+      Start  5: testopt_algo1_obj1
+ 5/57 Test  #5: testopt_algo1_obj1 ...............   Passed    0.00 sec
+      Start  6: testopt_algo2_obj0
+ 6/57 Test  #6: testopt_algo2_obj0 ...............   Passed    0.00 sec
+      Start  7: testopt_algo2_obj1
+ 7/57 Test  #7: testopt_algo2_obj1 ...............   Passed    0.00 sec
+      Start  8: testopt_algo3_obj0
+ 8/57 Test  #8: testopt_algo3_obj0 ...............   Passed    0.00 sec
+      Start  9: testopt_algo3_obj1
+ 9/57 Test  #9: testopt_algo3_obj1 ...............   Passed    0.00 sec
+      Start 10: testopt_algo4_obj0
+10/57 Test #10: testopt_algo4_obj0 ...............   Passed    0.00 sec
+      Start 11: testopt_algo4_obj1
+11/57 Test #11: testopt_algo4_obj1 ...............   Passed    0.00 sec
+      Start 12: testopt_algo5_obj0
+12/57 Test #12: testopt_algo5_obj0 ...............   Passed    0.00 sec
+      Start 13: testopt_algo5_obj1
+13/57 Test #13: testopt_algo5_obj1 ...............   Passed    0.00 sec
+      Start 14: testopt_algo6_obj0
+14/57 Test #14: testopt_algo6_obj0 ...............   Passed    0.00 sec
+      Start 15: testopt_algo6_obj1
+15/57 Test #15: testopt_algo6_obj1 ...............   Passed    0.00 sec
+      Start 16: testopt_algo7_obj0
+16/57 Test #16: testopt_algo7_obj0 ...............   Passed    0.00 sec
+      Start 17: testopt_algo7_obj1
+17/57 Test #17: testopt_algo7_obj1 ...............   Passed    0.00 sec
+      Start 18: testopt_algo8_obj0
+18/57 Test #18: testopt_algo8_obj0 ...............   Passed    0.00 sec
+      Start 19: testopt_algo8_obj1
+19/57 Test #19: testopt_algo8_obj1 ...............   Passed    0.00 sec
+      Start 20: testopt_algo9_obj0
+20/57 Test #20: testopt_algo9_obj0 ...............   Passed    0.00 sec
+      Start 21: testopt_algo9_obj1
+21/57 Test #21: testopt_algo9_obj1 ...............   Passed    0.00 sec
+      Start 22: testopt_algo11_obj0
+22/57 Test #22: testopt_algo11_obj0 ..............   Passed    0.00 sec
+      Start 23: testopt_algo11_obj1
+23/57 Test #23: testopt_algo11_obj1 ..............   Passed    0.00 sec
+      Start 24: testopt_algo12_obj0
+24/57 Test #24: testopt_algo12_obj0 ..............   Passed    0.00 sec
+      Start 25: testopt_algo12_obj1
+25/57 Test #25: testopt_algo12_obj1 ..............   Passed    0.00 sec
+      Start 26: testopt_algo13_obj0
+26/57 Test #26: testopt_algo13_obj0 ..............   Passed    0.00 sec
+      Start 27: testopt_algo13_obj1
+27/57 Test #27: testopt_algo13_obj1 ..............   Passed    0.00 sec
+      Start 28: testopt_algo14_obj0
+28/57 Test #28: testopt_algo14_obj0 ..............   Passed    0.00 sec
+      Start 29: testopt_algo14_obj1
+29/57 Test #29: testopt_algo14_obj1 ..............   Passed    0.00 sec
+      Start 30: testopt_algo15_obj0
+30/57 Test #30: testopt_algo15_obj0 ..............   Passed    0.00 sec
+      Start 31: testopt_algo15_obj1
+31/57 Test #31: testopt_algo15_obj1 ..............   Passed    0.00 sec
+      Start 32: testopt_algo16_obj0
+32/57 Test #32: testopt_algo16_obj0 ..............   Passed    0.00 sec
+      Start 33: testopt_algo16_obj1
+33/57 Test #33: testopt_algo16_obj1 ..............   Passed    0.00 sec
+      Start 34: testopt_algo17_obj0
+34/57 Test #34: testopt_algo17_obj0 ..............   Passed    0.00 sec
+      Start 35: testopt_algo17_obj1
+35/57 Test #35: testopt_algo17_obj1 ..............   Passed    0.00 sec
+      Start 36: testopt_algo18_obj0
+36/57 Test #36: testopt_algo18_obj0 ..............   Passed    0.00 sec
+      Start 37: testopt_algo18_obj1
+37/57 Test #37: testopt_algo18_obj1 ..............   Passed    0.00 sec
+      Start 38: testopt_algo19_obj0
+38/57 Test #38: testopt_algo19_obj0 ..............   Passed    0.00 sec
+      Start 39: testopt_algo19_obj1
+39/57 Test #39: testopt_algo19_obj1 ..............   Passed    0.00 sec
+      Start 40: testopt_algo20_obj0
+40/57 Test #40: testopt_algo20_obj0 ..............   Passed    0.00 sec
+      Start 41: testopt_algo20_obj1
+41/57 Test #41: testopt_algo20_obj1 ..............   Passed    0.00 sec
+      Start 42: testopt_algo21_obj0
+42/57 Test #42: testopt_algo21_obj0 ..............   Passed    0.00 sec
+      Start 43: testopt_algo21_obj1
+43/57 Test #43: testopt_algo21_obj1 ..............   Passed    0.00 sec
+      Start 44: testopt_algo22_obj0
+44/57 Test #44: testopt_algo22_obj0 ..............   Passed    0.00 sec
+      Start 45: testopt_algo22_obj1
+45/57 Test #45: testopt_algo22_obj1 ..............   Passed    0.00 sec
+      Start 46: testopt_algo23_obj0
+46/57 Test #46: testopt_algo23_obj0 ..............   Passed    0.00 sec
+      Start 47: testopt_algo23_obj1
+47/57 Test #47: testopt_algo23_obj1 ..............   Passed    0.01 sec
+      Start 48: testopt_algo24_obj0
+48/57 Test #48: testopt_algo24_obj0 ..............   Passed    0.00 sec
+      Start 49: testopt_algo24_obj1
+49/57 Test #49: testopt_algo24_obj1 ..............   Passed    0.00 sec
+      Start 50: testopt_algo25_obj0
+50/57 Test #50: testopt_algo25_obj0 ..............   Passed    0.00 sec
+      Start 51: testopt_algo25_obj1
+51/57 Test #51: testopt_algo25_obj1 ..............   Passed    0.00 sec
+      Start 52: testopt_algo26_obj0
+52/57 Test #52: testopt_algo26_obj0 ..............   Passed    0.00 sec
+      Start 53: testopt_algo26_obj1
+53/57 Test #53: testopt_algo26_obj1 ..............   Passed    0.00 sec
+      Start 54: testopt_algo28_obj0
+54/57 Test #54: testopt_algo28_obj0 ..............   Passed    0.00 sec
+      Start 55: testopt_algo28_obj1
+55/57 Test #55: testopt_algo28_obj1 ..............   Passed    0.00 sec
+      Start 56: testopt_algo29_obj0
+56/57 Test #56: testopt_algo29_obj0 ..............   Passed    0.00 sec
+      Start 57: testopt_algo29_obj1
+57/57 Test #57: testopt_algo29_obj1 ..............   Passed    0.00 sec
+
+100% tests passed, 0 tests failed out of 57
+
+Total Test time (real) =   0.16 sec
+\endcode
+
+If the test were successful, finish installing with the commands below
+
+\code{.sh}
+make install
+unset CC
+unset CXX
+unset FC
+unset F77
+unset CFLAGS
+unset CXXFLAGS
+unset FFLAGS
+unset FCFLAGS
+\endcode
+
+We can then remove the leftover files.
+
+\code{.sh}
+cd "$ID_MAST/external_programs"
+rm -r ./nlopt
+rm nlopt.tar.gz
+\endcode
+
+So far we've installed software to be able to solve sytems of equations and optimization problems.  We still need to install software to define the equations of the governing physics and software to discretize those equations to obtain our system of equations. MAST will be defining the physics equations and we'll be using libMesh to discretize those equations.
+
+\subsection install-ubuntu1804-libmesh libMesh
+
+Now we'll install libMesh. libMesh provides a few different build versions.  There is an optimized version (opt), a development version (devel), and a debug version (dbg). Note that you can get more information about libmesh configuration by running "./configure --help"
+
+\subsubsection install-ubuntu1804-libmesh-dbg libMesh - Debug Version
+
+We'll install the debug version of libMesh as this provide a lot of useful information when debugging MAST issues.
+
+\code{.sh}
+# Install libmesh (Debug)
+cd "$ID_MAST/external_programs"
+#mkdir -p libmesh
+#tar xvzf "$EXT_PKGS"/libmesh.tar.gz -C libmesh --strip-components 1
+cd libmesh
+git submodule update --init --recursive
+unset PETSC_DIR
+unset PETSC_ARCH
+unset SLEPC_DIR
+unset SLEPC_ARCH
+mkdir -p build_dbg
+cd build_dbg
+PETSC_DIR="$PETSC_DIR_DBG" PETSC_ARCH="$PETSC_ARCH_DBG" \
+SLEPC_DIR="$SLEPC_DIR_DBG" SLEPC_ARCH="$PETSC_ARCH_DBG" \
+FC="$ID_MAST/openmpi_gcc10/bin/mpif90" \
+F77="$ID_MAST/openmpi_gcc10/bin/mpif77" \
+CC="$ID_MAST/openmpi_gcc10/bin/mpicc" \
+CXX="$ID_MAST/openmpi_gcc10/bin/mpicxx" \
+../configure \
+--prefix="$ID_MAST" \
+--with-methods="dbg" \
+--enable-dependency-tracking \
+--enable-fortran \
+--enable-shared \
+--enable-exceptions \
+--enable-tracefiles \
+--enable-amr \
+--enable-vsmoother \
+--enable-periodic \
+--enable-dirichlet \
+--enable-parmesh \
+--enable-nodeconstraint \
+--enable-ghosted \
+--enable-pfem \
+--enable-ifem \
+--enable-second \
+--enable-xdr \
+--enable-reference-counting \
+--enable-perflog \
+--enable-examples \
+--enable-libHilbert \
+--enable-nanoflann \
+--enable-tetgen \
+--enable-triangle \
+--enable-sfc \
+--enable-mpi \
+--enable-metis \
+--enable-parmetis \
+--enable-boost \
+--enable-hdf5 \
+--enable-exodus \
+--enable-shared \
+--enable-petsc \
+--enable-slepc \
+--enable-netcdf \
+--enable-eigen \
+--with-mpi="$ID_MAST/openmpi_gcc10" \
+--with-metis=internal \
+--with-hdf5="$PETSC_DIR_DBG/$PETSC_ARCH_DBG" \
+--with-eigen-include="$PETSC_DIR_DBG/$PETSC_ARCH_DBG/include/eigen3" \
+--with-ml="$PETSC_DIR_DBG/$PETSC_ARCH_DBG" \
+--with-boost="$ID_MAST" \
+--with-nlopt-include="$ID_MAST/include" \
+--with-nlopt-lib="$ID_MAST/lib64" \
+--with-glpk-include="$ID_MAST/include" \
+--with-glpk-lib="$ID_MAST/lib" \
+--with-vtk-include="$ID_MAST/include/vtk-9.0" \
+--with-vtk-lib="$ID_MAST/lib64" \
+--enable-unique-id \
+--disable-tecplot                                    \
+--disable-tecio                                      \
+--disable-trilinos                                   \
+--disable-tbb                                        \
+--disable-openmp \
+--disable-default-comm-world \
+--disable-strict-lgpl
+\endcode
+
+Results of libmesh's configuration should look similar to the output below.
+
+\code{.sh}
+----------------------------------- SUMMARY -----------------------------------
+
+Package version............... : timpi-1.1.3
+
+C++ compiler.................. : /home/usernamej/Programs/MAST_INSTALL/bin/mpicxx
+Build Methods...................... : dbg
+CPPFLAGS...(dbg)................... : -DDEBUG  -I/home/usernamej/Programs/MAST_INSTALL/external_programs/petsc/linux-gnu_dbg_c++11_openblas_4mast/include 
+CXXFLAGS...(dbg)................... :  -O0 -felide-constructors -g -pedantic -W -Wall -Wextra -Wno-long-long -Wunused -Wpointer-arith -Wformat -Wparentheses -Woverloaded-virtual   
+
+Install dir................... : /home/usernamej/Programs/MAST_INSTALL
+Build user.................... : usernamej
+Build host.................... : ubuntu18044vm
+Configure date................ : 2020-08-04 11:00
+Build architecture............ : x86_64-pc-linux-gnu
+Git revision number........... : be823140324fc4e25dbac35ce7e6ff7d2d66086f
+
+-------------------------------------------------------------------------------
+Optional Packages for Testing:
+  MPI......................... : yes
+  MPI_IMPL.................... : mpi
+  timpi_optional_INCLUDES..... : -I/home/usernamej/Programs/MAST_INSTALL/include 
+  timpi_optional_LIBS......... : -L/home/usernamej/Programs/MAST_INSTALL/lib -lmpi  
+
+Configure complete, now type \'make\' and then \'make install\'.
+
+
+----------------------------------- SUMMARY -----------------------------------
+
+Package version.................... : libmesh-1.6.0-pre
+
+C++ compiler type.................. : gcc7
+C++ compiler....................... : /home/usernamej/Programs/MAST_INSTALL/bin/mpicxx
+C compiler......................... : /home/usernamej/Programs/MAST_INSTALL/bin/mpicc
+Fortran compiler................... : /home/usernamej/Programs/MAST_INSTALL/bin/mpif90
+Build Methods...................... : dbg
+
+CPPFLAGS...(dbg)................... : -DDEBUG 
+CXXFLAGS...(dbg)................... :  -O0 -felide-constructors -g -pedantic -W -Wall -Wextra -Wno-long-long -Wunused -Wpointer-arith -Wformat -Wparentheses -Woverloaded-virtual   
+CFLAGS.....(dbg)................... : -g -Wimplicit   
+
+Any warnings-to-errors flags....... : 
+Any extra paranoid warning flags... : 
+Install dir........................ : /home/usernamej/Programs/MAST_INSTALL
+Build user......................... : usernamej
+Build host......................... : ubuntu18044vm
+Build architecture................. : x86_64-pc-linux-gnu
+Git revision....................... : 94822d34e07d0cdd31c309eb00f1540502b0a168
+
+Library Features:
+  library warnings................. : yes
+  library deprecated code support.. : yes
+  adaptive mesh refinement......... : yes
+  blocked matrix/vector storage.... : no
+  complex variables................ : no
+  example suite.................... : yes
+  ghosted vectors.................. : yes
+  high-order shape functions....... : yes
+  unique-id support................ : yes
+  id size (boundaries)............. : 2 bytes
+  id size (dofs)................... : 4 bytes
+  id size (unique)................. : 8 bytes
+  id size (processors)............. : 4 bytes
+  id size (subdomains)............. : 2 bytes
+  infinite elements................ : yes
+  Dirichlet constraints............ : yes
+  node constraints................. : yes
+  parallel mesh.................... : yes
+  performance logging.............. : yes
+  periodic boundary conditions..... : yes
+  reference counting............... : yes
+  shape function 2nd derivatives... : yes
+  stack trace files................ : yes
+  track node valence............... : yes
+  variational smoother............. : yes
+  xdr binary I/O................... : yes
+
+Optional Packages:
+  boost............................ : yes
+  capnproto........................ : no
+  cppunit.......................... : no
+  curl............................. : no
+  eigen............................ : yes
+  exodus........................... : yes
+     version....................... : v5.22
+  fparser.......................... : yes
+     build from version............ : release
+  glpk............................. : yes
+  gmv.............................. : yes
+  gzstream......................... : no
+  hdf5............................. : yes
+  laspack.......................... : yes
+  libhilbert....................... : yes
+  metaphysicl...................... : yes
+  metis............................ : yes
+  mpi.............................. : yes
+  nanoflann........................ : yes
+  nemesis.......................... : yes
+     version....................... : v5.22
+  netcdf........................... : yes
+     version....................... : 4
+  nlopt............................ : yes
+  parmetis......................... : yes
+  petsc............................ : yes
+     version....................... : 3.13.3
+  qhull............................ : yes
+  sfcurves......................... : yes
+  slepc............................ : yes
+     version....................... : 3.13.3
+  thread model..................... : pthread
+  c++ rtti ........................ : yes
+  tecio............................ : no
+  tecplot...(vendor binaries)...... : no
+  tetgen........................... : yes
+  triangle......................... : yes
+  trilinos......................... : no
+  vtk.............................. : yes
+     version....................... : 9.0.1
+
+  libmesh_optional_INCLUDES........ : -I/home/usernamej/Programs/MAST_INSTALL/external_programs/petsc/linux-gnu_dbg_c++11_openblas_4mast/include -I/home/usernamej/Programs/MAST_INSTALL/include -I/home/usernamej/Programs/MAST_INSTALL/external_programs/petsc/linux-gnu_dbg_c++11_openblas_4mast/include/eigen3 -I/home/usernamej/Programs/MAST_INSTALL/include/vtk-9.0 -I/home/usernamej/Programs/MAST_INSTALL/external_programs/slepc/include -I/home/usernamej/Programs/MAST_INSTALL/external_programs/slepc/linux-gnu_dbg_c++11_openblas_4mast/include -I/home/usernamej/Programs/MAST_INSTALL/external_programs/petsc/include
+
+  libmesh_optional_LIBS............ : -L/home/usernamej/Programs/MAST_INSTALL/external_programs/petsc/linux-gnu_dbg_c++11_openblas_4mast/lib -Wl,-rpath,/home/usernamej/Programs/MAST_INSTALL/external_programs/petsc/linux-gnu_dbg_c++11_openblas_4mast/lib -Wl,-rpath,/home/usernamej/Programs/MAST_INSTALL/lib -L/home/usernamej/Programs/MAST_INSTALL/lib -L/home/usernamej/Programs/MAST_INSTALL/lib64 -Wl,-rpath,/home/usernamej/Programs/MAST_INSTALL/external_programs/slepc/linux-gnu_dbg_c++11_openblas_4mast/lib -L/home/usernamej/Programs/MAST_INSTALL/external_programs/slepc/linux-gnu_dbg_c++11_openblas_4mast/lib -Wl,-rpath,/usr/lib/gcc/x86_64-linux-gnu/7 -L/usr/lib/gcc/x86_64-linux-gnu/7 -Wl,-rpath,/usr/lib/x86_64-linux-gnu -L/usr/lib/x86_64-linux-gnu -Wl,-rpath,/lib/x86_64-linux-gnu -L/lib/x86_64-linux-gnu -lnlopt -lglpk -lvtkIOCore-9.0 -lvtkCommonCore-9.0 -lvtkCommonDataModel-9.0 -lvtkFiltersCore-9.0 -lvtkIOXML-9.0 -lvtkImagingCore-9.0 -lvtkIOImage-9.0 -lvtkImagingMath-9.0 -lvtkIOParallelXML-9.0 -lvtkParallelMPI-9.0 -lvtkParallelCore-9.0 -lvtkCommonExecutionModel-9.0 -lslepc -lBLOPEX -lprimme -ltrlan_mpi -lparpack -larpack -lpetsc -lHYPRE -lbasetools2d.Linux.64.mpicxx.mpif90.DEBUG -lamrelliptic2d.Linux.64.mpicxx.mpif90.DEBUG -lamrtimedependent2d.Linux.64.mpicxx.mpif90.DEBUG -lamrtools2d.Linux.64.mpicxx.mpif90.DEBUG -lboxtools2d.Linux.64.mpicxx.mpif90.DEBUG -lcmumps -ldmumps -lsmumps -lzmumps -lmumps_common -lpord -lscalapack -lumfpack -lklu -lcholmod -lbtf -lccolamd -lcolamd -lcamd -lamd -lsuitesparseconfig -lsuperlu -lsuperlu_dist -lml -lfftw3_mpi -lfftw3 -lspai -lsundials_cvode -lsundials_nvecserial -lsundials_nvecparallel -lopenblas -lhwloc -ltriangle -lX11 -lnetcdf -lpnetcdf -lhdf5hl_fortran -lhdf5_fortran -lhdf5_hl -lhdf5 -lchaco -lparmetis -lmetis -lz -llcg -lmpi_usempif08 -lmpi_usempi_ignore_tkr -lmpi_mpifh -lgfortran -lm -lgcc_s -lpthread -lquadmath -lstdc++ -ldl -lmpi
+
+
+-------------------------------------------------------------------------------
+Configure complete, now type 'make' and then 'make install'.
+
+---------------------------------------------
+--------- Done Configuring libMesh ----------
+---------------------------------------------
+\endcode
+
+If the configuration looks correct, then you can build libmesh.  Building libmesh can take a long time.
+
+\code{.sh}
+PETSC_DIR="$PETSC_DIR_DBG" PETSC_ARCH="$PETSC_ARCH_DBG" \
+SLEPC_DIR="$SLEPC_DIR_DBG" SLEPC_ARCH="$PETSC_ARCH_DBG" \
+FC="$ID_MAST/openmpi_gcc10/bin/mpif90" \
+F77="$ID_MAST/openmpi_gcc10/bin/mpif77" \
+CC="$ID_MAST/openmpi_gcc10/bin/mpicc" \
+CXX="$ID_MAST/openmpi_gcc10/bin/mpicxx" \
+make -j "$N_CORES"
+
+## As of libMesh commit 94822d34e07d0cdd31c309eb00f1540502b0a168, the check fails so we skip it.
+PETSC_DIR="$PETSC_DIR_DBG" PETSC_ARCH="$PETSC_ARCH_DBG" \
+SLEPC_DIR="$SLEPC_DIR_DBG" SLEPC_ARCH="$PETSC_ARCH_DBG" \
+FC="$ID_MAST/openmpi_gcc10/bin/mpif90" \
+F77="$ID_MAST/openmpi_gcc10/bin/mpif77" \
+CC="$ID_MAST/openmpi_gcc10/bin/mpicc" \
+CXX="$ID_MAST/openmpi_gcc10/bin/mpicxx" \
+make -j "$N_CORES" check
+
+PETSC_DIR="$PETSC_DIR_DBG" PETSC_ARCH="$PETSC_ARCH_DBG" \
+SLEPC_DIR="$SLEPC_DIR_DBG" SLEPC_ARCH="$PETSC_ARCH_DBG" \
+FC="$ID_MAST/openmpi_gcc10/bin/mpif90" \
+F77="$ID_MAST/openmpi_gcc10/bin/mpif77" \
+CC="$ID_MAST/openmpi_gcc10/bin/mpicc" \
+CXX="$ID_MAST/openmpi_gcc10/bin/mpicxx" \
+make install
+\endcode
+
+
+\section install-ubuntu1804-seacase SEACAS
+
+Sandia Engineering Analysis Code Access System (SEACAS) is a suite of preprocessing, postprocessing, translation, and utility applications supporting finite element analysis software using the Exodus databse file format. It is particuarly useful for the MAST python interface for writing output to Exodus files beyond which libMesh alone supports.  Build instructions are taken from https://github.com/gsjaardema/seacas#get-the-sources.
+
+\code{.sh}
+cd "$ID_MAST/external_programs"
+mkdir -p seacas
+tar xvzf "$EXT_PKGS"/seacas.tar.gz -C seacas --strip-components 1
+cd seacas
+export ACCESS=`pwd`
+mkdir -p "$ID_MAST/seacas"
+INSTALL_PATH="$ID_MAST/seacas" JOBS="$N_CORES" MPI=ON METIS=ON PARMETIS=ON ./install-tpl.sh
+cd $ACCESS
+mkdir -p build
+cd build
+INSTALL_PATH="$ID_MAST/seacas" BUILD_TYPE=release ../cmake-config
+\endcode
+
+Output of configuration step should look similar to those below.
+
+\code{.sh}
+-- Build files have been written to: /home/username/Programs/MAST_Programs_08042020/external_programs/seacas/build
+
+          OS: Linux
+      ACCESS: /home/username/Programs/MAST_Programs_08042020/external_programs/seacas
+INSTALL_PATH: /home/username/Programs/MAST_Programs_08042020/seacas
+  
+         CC: mpicc
+        CXX: mpicxx
+         FC: mpif77
+        MPI: ON
+     SHARED: ON
+ BUILD_TYPE: release
+ THREADSAFE: OFF
+ PYTHON_VER: 3.0
+ 
+     NETCDF: ON
+      MATIO: ON
+       CGNS: ON
+     KOKKOS: OFF
+     ZOLTAN: ON
+     ADIOS2: OFF
+      METIS: ON
+   PARMETIS: ON
+      GTEST: OFF
+    DOXYGEN: OFF
+\endcode
+
+\code{.sh}
+make -j "$N_CORES"
+make install
+export PYTHONPATH="$ID_MAST/seacas/lib:$PYTHONPATH"
+echo "export PYTHONPATH=\"$ID_MAST/seacas/lib:\$PYTHONPATH\"" >> "$HOME/.bashrc"
+\endcode
+
+To ensure SEACAS is working correctly, you can run
+
+\code{.sh}
+make test
+\endcode
+
+The output should look similar to the following.  Note that two CGNS related tests failed with commit d0f05d3. However, for the purposes of MAST we will primarily be using the Exodus functionality of SEACAS, so it doesn't affect us if the CGNS cases fail.
+
+\code{.sh}
+Running tests...
+Test project /home/username/Programs/MAST_Programs_08042020/external_programs/seacas/build
+      Start  1: SEACASExodus_CreateEdgeFaceWithConcats_MPI_1
+ 1/61 Test  #1: SEACASExodus_CreateEdgeFaceWithConcats_MPI_1 ......................   Passed    0.02 sec
+      Start  2: SEACASExodus_ReadEdgeFaceWithConcats_MPI_1
+ 2/61 Test  #2: SEACASExodus_ReadEdgeFaceWithConcats_MPI_1 ........................   Passed    0.02 sec
+      Start  3: SEACASExodus_exodus_unit_tests
+ 3/61 Test  #3: SEACASExodus_exodus_unit_tests ....................................   Passed    0.36 sec
+      Start  4: SEACASExodus_exodus_unit_tests_nc4_env
+ 4/61 Test  #4: SEACASExodus_exodus_unit_tests_nc4_env ............................   Passed    1.61 sec
+      Start  5: SEACASExodus_exodus_nc4_unit_tests
+ 5/61 Test  #5: SEACASExodus_exodus_nc4_unit_tests ................................   Passed    0.09 sec
+      Start  6: SEACASExodus_exodus_unit_tests_nc5_env
+ 6/61 Test  #6: SEACASExodus_exodus_unit_tests_nc5_env ............................   Passed    0.34 sec
+      Start  7: SEACASExodus_for_exodus_unit_tests
+ 7/61 Test  #7: SEACASExodus_for_exodus_unit_tests ................................   Passed    0.12 sec
+      Start  8: SEACASExoIIv2for32_exodus_unit_tests
+ 8/61 Test  #8: SEACASExoIIv2for32_exodus_unit_tests ..............................   Passed    0.06 sec
+      Start  9: SEACASExoIIv2for32_exodus_unit_tests_nc4_env
+ 9/61 Test  #9: SEACASExoIIv2for32_exodus_unit_tests_nc4_env ......................   Passed    0.21 sec
+      Start 10: SEACASExoIIv2for32_exodus_nc4_unit_tests
+10/61 Test #10: SEACASExoIIv2for32_exodus_nc4_unit_tests ..........................   Passed    0.17 sec
+      Start 11: SEACASNemesis_ne_ctest_wrap_MPI_1
+11/61 Test #11: SEACASNemesis_ne_ctest_wrap_MPI_1 .................................   Passed    0.05 sec
+      Start 12: SEACASIoss_exodus32_to_exodus32
+12/61 Test #12: SEACASIoss_exodus32_to_exodus32 ...................................   Passed    0.11 sec
+      Start 13: SEACASIoss_exodus_fpp_serialize
+13/61 Test #13: SEACASIoss_exodus_fpp_serialize ...................................   Passed    0.52 sec
+      Start 14: SEACASIoss_create_path_fpp
+14/61 Test #14: SEACASIoss_create_path_fpp ........................................   Passed    0.36 sec
+      Start 15: SEACASIoss_exodus32_to_exodus64
+15/61 Test #15: SEACASIoss_exodus32_to_exodus64 ...................................   Passed    0.25 sec
+      Start 16: SEACASIoss_exodus32_to_exodus32_pnetcdf
+16/61 Test #16: SEACASIoss_exodus32_to_exodus32_pnetcdf ...........................   Passed    0.07 sec
+      Start 17: SEACASIoss_exodus64_to_unstructured_cgns
+17/61 Test #17: SEACASIoss_exodus64_to_unstructured_cgns ..........................   Passed    1.08 sec
+      Start 18: SEACASIoss_generated32_to_unstructured_cgns
+18/61 Test #18: SEACASIoss_generated32_to_unstructured_cgns .......................   Passed    0.13 sec
+      Start 19: SEACASIoss_generated64_to_unstructured_cgns
+19/61 Test #19: SEACASIoss_generated64_to_unstructured_cgns .......................   Passed    0.14 sec
+      Start 20: SEACASIoss_exodus32_to_unstructured_cgns
+20/61 Test #20: SEACASIoss_exodus32_to_unstructured_cgns ..........................   Passed    1.09 sec
+      Start 21: SEACASIoss_exodus_to_unstructured_cgns_to_exodus
+21/61 Test #21: SEACASIoss_exodus_to_unstructured_cgns_to_exodus ..................   Passed    1.60 sec
+      Start 22: SEACASIoss_exodus_to_unstructured_cgns_file_per_state_to_exodus
+22/61 Test #22: SEACASIoss_exodus_to_unstructured_cgns_file_per_state_to_exodus ...***Failed
+      Start 23: SEACASIoss_exodus_to_unstructured_cgns_to_exodus_single_block
+23/61 Test #23: SEACASIoss_exodus_to_unstructured_cgns_to_exodus_single_block .....   Passed    0.28 sec
+      Start 24: SEACASIoss_exodus_to_unstructured_cgns_to_exodus_double_block
+24/61 Test #24: SEACASIoss_exodus_to_unstructured_cgns_to_exodus_double_block .....   Passed    0.37 sec
+      Start 25: SEACASIoss_cgns_bc_no_parents_to_exodus
+25/61 Test #25: SEACASIoss_cgns_bc_no_parents_to_exodus ...........................   Passed    0.14 sec
+      Start 26: SEACASIoss_cgns_Q2_bc_no_parents_to_exodus
+26/61 Test #26: SEACASIoss_cgns_Q2_bc_no_parents_to_exodus ........................   Passed    0.12 sec
+      Start 27: SEACASIoss_cgns_Q2_parents_no_parent_compare_random_decomp
+27/61 Test #27: SEACASIoss_cgns_Q2_parents_no_parent_compare_random_decomp ........   Passed    0.29 sec
+      Start 28: SEACASIoss_unstructured_cgns_to_exodus
+28/61 Test #28: SEACASIoss_unstructured_cgns_to_exodus ............................   Passed    0.13 sec
+      Start 29: SEACASIoss_structured_cgns_to_unstructured
+29/61 Test #29: SEACASIoss_structured_cgns_to_unstructured ........................   Passed    0.09 sec
+      Start 30: SEACASIoss_structured_cgns_roundtrip_with_flush
+30/61 Test #30: SEACASIoss_structured_cgns_roundtrip_with_flush ...................   Passed    0.50 sec
+      Start 31: SEACASIoss_structured_cgns_self_looping
+31/61 Test #31: SEACASIoss_structured_cgns_self_looping ...........................   Passed    0.19 sec
+      Start 32: SEACASIoss_structured_cgns_roundtrip_zgc
+32/61 Test #32: SEACASIoss_structured_cgns_roundtrip_zgc ..........................   Passed    0.54 sec
+      Start 33: SEACASIoss_structured_cgns_periodic_roundtrip_fpp
+33/61 Test #33: SEACASIoss_structured_cgns_periodic_roundtrip_fpp .................   Passed    0.44 sec
+      Start 34: SEACASIoss_structured_cgns_roundtrip_fpp
+34/61 Test #34: SEACASIoss_structured_cgns_roundtrip_fpp ..........................   Passed    0.46 sec
+      Start 35: SEACASIoss_structured_cgns_roundtrip_fpp2
+35/61 Test #35: SEACASIoss_structured_cgns_roundtrip_fpp2 .........................   Passed    0.33 sec
+      Start 36: SEACASIoss_structured_cgns_roundtrip_fields
+36/61 Test #36: SEACASIoss_structured_cgns_roundtrip_fields .......................   Passed    0.20 sec
+      Start 37: SEACASIoss_structured_cgns_embedded_nodeblock_fields
+37/61 Test #37: SEACASIoss_structured_cgns_embedded_nodeblock_fields ..............   Passed    0.39 sec
+      Start 38: SEACASIoss_structured_cgns_append
+38/61 Test #38: SEACASIoss_structured_cgns_append .................................   Passed    1.69 sec
+      Start 39: SEACASIoss_structured_cgns_roundtrip_reordered_zones_fields
+39/61 Test #39: SEACASIoss_structured_cgns_roundtrip_reordered_zones_fields .......   Passed    2.38 sec
+      Start 40: SEACASIoss_structured_cgns_roundtrip_single_fpp_single_fields
+40/61 Test #40: SEACASIoss_structured_cgns_roundtrip_single_fpp_single_fields .....   Passed    0.62 sec
+      Start 41: SEACASIoss_structured_cgns_pre_split_join
+41/61 Test #41: SEACASIoss_structured_cgns_pre_split_join .........................   Passed    0.17 sec
+      Start 42: SEACASIoss_structured_cgns_assembly_copy
+42/61 Test #42: SEACASIoss_structured_cgns_assembly_copy ..........................   Passed    0.60 sec
+	  Start 43: SEACASIoss_structured_cgns_assembly_copy_fpp
+43/61 Test #43: SEACASIoss_structured_cgns_assembly_copy_fpp ......................***Timeout 1500.12 sec
+	  Start 44: SEACASIoss_io_info_config_has_zoltan_MPI_1
+44/61 Test #44: SEACASIoss_io_info_config_has_zoltan_MPI_1 ........................   Passed    2.06 sec
+      Start 45: SEACASIoss_io_info_config_has_parmetis_MPI_1
+45/61 Test #45: SEACASIoss_io_info_config_has_parmetis_MPI_1 ......................   Passed    2.05 sec
+      Start 46: SEACASIoss_Utst_utils_MPI_1
+46/61 Test #46: SEACASIoss_Utst_utils_MPI_1 .......................................   Passed    0.04 sec
+      Start 47: SEACASIoss_Utst_ioel_MPI_1
+47/61 Test #47: SEACASIoss_Utst_ioel_MPI_1 ........................................   Passed    0.05 sec
+      Start 48: SEACASIoss_Utst_blob_write_read_MPI_4
+48/61 Test #48: SEACASIoss_Utst_blob_write_read_MPI_4 .............................   Passed    0.48 sec
+      Start 49: SEACASIoss_Utst_sort_MPI_1
+49/61 Test #49: SEACASIoss_Utst_sort_MPI_1 ........................................   Passed    5.86 sec
+      Start 50: SEACASIoss_Utst_map_MPI_1
+50/61 Test #50: SEACASIoss_Utst_map_MPI_1 .........................................   Passed    0.02 sec
+      Start 51: SEACASIoss_Utst_structured_decomp_MPI_1
+51/61 Test #51: SEACASIoss_Utst_structured_decomp_MPI_1 ...........................   Passed    4.12 sec
+      Start 52: SEACASIoss_Utst_superelement_MPI_1
+52/61 Test #52: SEACASIoss_Utst_superelement_MPI_1 ................................   Passed    0.04 sec
+      Start 53: SEACASAprepro_lib_aprepro_lib_unit_test
+53/61 Test #53: SEACASAprepro_lib_aprepro_lib_unit_test ...........................   Passed    0.03 sec
+      Start 54: SEACASAprepro_lib_aprepro_lib_array_test
+54/61 Test #54: SEACASAprepro_lib_aprepro_lib_array_test ..........................   Passed    0.04 sec
+      Start 55: SEACASSupes_exttest_MPI_1
+55/61 Test #55: SEACASSupes_exttest_MPI_1 .........................................   Passed    0.02 sec
+      Start 56: SEACASAprepro_aprepro_unit_test
+56/61 Test #56: SEACASAprepro_aprepro_unit_test ...................................   Passed    0.03 sec
+      Start 57: SEACASAprepro_aprepro_array_test
+57/61 Test #57: SEACASAprepro_aprepro_array_test ..................................   Passed    0.04 sec
+      Start 58: SEACASAprepro_aprepro_command_line_vars_test
+58/61 Test #58: SEACASAprepro_aprepro_command_line_vars_test ......................   Passed    0.03 sec
+      Start 59: SEACASAprepro_aprepro_command_line_include_test
+59/61 Test #59: SEACASAprepro_aprepro_command_line_include_test ...................   Passed    0.03 sec
+      Start 60: SEACASAprepro_aprepro_test_dump_reread
+60/61 Test #60: SEACASAprepro_aprepro_test_dump_reread ............................   Passed    0.05 sec
+      Start 61: SEACASAprepro_aprepro_test_exodus
+61/61 Test #61: SEACASAprepro_aprepro_test_exodus .................................   Passed    0.03 sec
+
+97% tests passed, 2 tests failed out of 61
+
+Subproject Time Summary:
+SEACAS    = 6068.08 sec*proc (61 tests)
+
+Total Test time (real) = 1539.98 sec
+
+The following tests FAILED:
+	 22 - SEACASIoss_exodus_to_unstructured_cgns_file_per_state_to_exodus (Failed)
+	 43 - SEACASIoss_structured_cgns_assembly_copy_fpp (Timeout)
+Errors while running CTest
+Makefile:151: recipe for target 'test' failed
+make: *** [test] Error 8
+\endcode
+
+
+\section install-ubuntu1804-mast MAST
+
+Now that we've compiled the dependencies, we can build MAST itself. Here we build a debug version of MAST.
+
+# -DBLAS_LIBRARIES="$MKLROOT/lib/intel64/libmkl_intel_lp64.so;$MKLROOT/lib/intel64/libmkl_core.so;$MKLROOT/lib/intel64/libmkl_intel_thread.so;/opt/intel/compilers_and_libraries_2020.1.217/linux/compiler/lib/intel64_lin/libiomp5.so"
+# -DLAPACK_LIBRARIES="$MKLROOT/lib/intel64/libmkl_intel_lp64.so;$MKLROOT/lib/intel64/libmkl_core.so;$MKLROOT/lib/intel64/libmkl_intel_thread.so;/opt/intel/compilers_and_libraries_2020.1.217/linux/compiler/lib/intel64_lin/libiomp5.so"
+
+# -DBLAS_LIBRARIES="$MKLROOT/lib/intel64/libmkl_rt.so"
+# -DLAPACK_LIBRARIES="$MKLROOT/lib/intel64/libmkl_rt.so"
+
+\code{.sh}
+# Install MAST with OpenBLAS
+# Look at mast-multiphysics/CMakeLists.txt for better understanding
+cd "$ID_MAST/external_programs"
+mkdir -p MAST
+tar xvzf "$EXT_PKGS"/mast.tar.gz -C MAST --strip-components 1
+cd MAST
+mkdir -p build/dbg
+cd build/dbg
+# Good idea to "rm CMakeCache.txt" if you need to reconfigure
+# Use HDF5_ROOT environment variable (NOT cmake variable) to point CMake to
+# the HDF5 you want to use. This is feature of CMake.
+rm CMakeCache.txt
+HDF5_ROOT="$PETSC_DIR_DBG/$PETSC_ARCH_DBG" cmake ../../ \
+-DMPI_C_COMPILER="$ID_MAST/openmpi_gcc10/bin/mpicc" \
+-DMPI_CXX_COMPILER="$ID_MAST/openmpi_gcc10/bin/mpicxx" \
+-DCMAKE_C_COMPILER="$ID_MAST/openmpi_gcc10/bin/mpicc" \
+-DCMAKE_CXX_COMPILER="$ID_MAST/openmpi_gcc10/bin/mpicxx" \
+-DCMAKE_Fortran_COMPILER="$ID_MAST/openmpi_gcc10/bin/mpif90" \
+-DBLAS_LIBRARIES="$MKLROOT/lib/intel64/libmkl_intel_lp64.so;$MKLROOT/lib/intel64/libmkl_core.so;$MKLROOT/lib/intel64/libmkl_intel_thread.so;/opt/intel/compilers_and_libraries_2020.1.217/linux/compiler/lib/intel64_lin/libiomp5.so" \
+-DLAPACK_LIBRARIES="$MKLROOT/lib/intel64/libmkl_intel_lp64.so;$MKLROOT/lib/intel64/libmkl_core.so;$MKLROOT/lib/intel64/libmkl_intel_thread.so;/opt/intel/compilers_and_libraries_2020.1.217/linux/compiler/lib/intel64_lin/libiomp5.so" \
+-DBOOST_ROOT="$ID_MAST" \
+-DlibMesh_DIR="$ID_MAST" \
+-DPETSc_DIR="$PETSC_DIR_DBG" \
+-DPETSc_ARCH="$PETSC_ARCH_DBG" \
+-DSLEPc_DIR="$SLEPC_DIR_DBG" \
+-DSLEPc_ARCH="$PETSC_ARCH_DBG" \
+-DEIGEN3_ROOT="$PETSC_DIR_DBG/$PETSC_ARCH_DBG" \
+-DCMAKE_BUILD_TYPE=Debug \
+-DCMAKE_CXX_FLAGS="-std=c++14 -Og -g3" \
+-DCMAKE_C_FLAGS="-Og -g3" \
+-DENABLE_NLOPT=ON \
+-DNLOPT_DIR="$ID_MAST" \
+-DENABLE_NASTRANIO=OFF \
+-DENABLE_GCMMA=OFF \
+-DENABLE_DOT=OFF \
+-DENABLE_SNOPT=OFF \
+-DENABLE_CYTHON=OFF \
+-DBUILD_DOC=OFF
+make -j "$N_CORES" # Some examples are failing to build as of this writing.
+make check # FIXME: This hangs occassionally on MPI tests, maybe just run sequential tests for now?
+# Running examples below
+cd examples
+./structural/example_1/structural_example_1
+./structural/example_2/structural_example_2
+./structural/example_3/structural_example_3
+./structural/example_4/structural_example_4
+./fluid/example_1/fluid_example_1
+\endcode
