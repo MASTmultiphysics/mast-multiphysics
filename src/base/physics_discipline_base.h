@@ -149,6 +149,11 @@ namespace MAST {
          *   adds the specified point load
          */
         void add_point_load(MAST::PointLoadCondition& load);
+        
+        /*!
+         *   remove the specified point load
+         */
+        void remove_point_load(MAST::PointLoadCondition& load);
 
         
         /*!

@@ -151,9 +151,17 @@ MAST::PhysicsDisciplineBase::remove_volume_load(libMesh::subdomain_id_type sid,
 void
 MAST::PhysicsDisciplineBase::add_point_load(MAST::PointLoadCondition& load) {
 
-    libmesh_assert(!_point_loads.count(&load));
+    libmesh_assert(!_point_loads.count(&load));  // Assert that this load does not already exist in the set.
     
     _point_loads.insert(&load);
+}
+
+
+void 
+MAST::PhysicsDisciplineBase::remove_point_load(MAST::PointLoadCondition& load) {
+    libmesh_assert(_point_loads.count(&load));  // Assert that this load does exist in the set.
+    
+    _point_loads.erase(&load);
 }
 
 
