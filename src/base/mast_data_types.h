@@ -29,8 +29,11 @@
 #include "Eigen/Dense"
 using namespace Eigen;
 
+typedef unsigned int uint_type;
+typedef int int_type;
 typedef libMesh::Real Real;
 typedef libMesh::Complex Complex;
+#define ComplexStepDelta 1.e-12
 
 typedef Matrix<Real, Dynamic, 1> RealVectorX;
 typedef Matrix<Real, 3, 1> RealVector3;
@@ -55,5 +58,60 @@ typedef libMesh::DenseMatrix<Complex> DenseComplexMatrix;
 
 typedef libMesh::DenseVector<Real> DenseRealVector;
 typedef libMesh::DenseVector<Complex> DenseComplexVector;
+
+template <typename ScalarType>
+struct EigenVector
+{
+    using type     =  Eigen::Matrix<ScalarType, Dynamic, 1>;
+    using map_type =  Eigen::Map<type>;
+};
+
+template <typename ScalarType>
+struct EigenRowVector
+{
+    using type     =  Eigen::Matrix<ScalarType, 1, Dynamic>;
+    using map_type =  Eigen::Map<type>;
+};
+
+
+template <typename ScalarType>
+struct EigenMatrix
+{
+    using type     =  Eigen::Matrix<ScalarType, Dynamic, Dynamic, RowMajor>;
+    using map_type =  Eigen::Map<type>;
+};
+
+
+struct EigenTraits {
+
+    template <typename ScalarType>
+    using matrix_type     = typename EigenMatrix<ScalarType>::type;
+    template <typename ScalarType>
+    using matrix_map_type = typename EigenMatrix<ScalarType>::map_type;
+    template <typename ScalarType>
+    using vector_type     = typename EigenVector<ScalarType>::type;
+    template <typename ScalarType>
+    using vector_map_type = typename EigenVector<ScalarType>::map_type;
+};
+
+
+namespace MAST {
+
+template <typename NodalScalarType, typename SolScalarType>
+struct DeducedScalarType { };
+
+template <>
+struct DeducedScalarType<Real, Real> { using type = Real;};
+
+template <>
+struct DeducedScalarType<std::complex<Real>, Real> { using type = std::complex<Real>;};
+
+template <>
+struct DeducedScalarType<Real, std::complex<Real>> { using type = std::complex<Real>;};
+
+template <>
+struct DeducedScalarType<std::complex<Real>, std::complex<Real>> { using type = std::complex<Real>;};
+
+}
 
 #endif // __mast__data_types__

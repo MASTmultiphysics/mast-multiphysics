@@ -21,18 +21,5 @@
 #include "numerics/fem_operator_matrix.h"
 
 
-MAST::FEMOperatorMatrix::FEMOperatorMatrix():
-_n_interpolated_vars(0),
-_n_discrete_vars(0),
-_n_dofs_per_var(0)
-{
-    
-}
-
-
-MAST::FEMOperatorMatrix::~FEMOperatorMatrix()
-{
-    this->clear();
-}
 
 

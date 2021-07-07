@@ -11,6 +11,7 @@ target_sources(mast
         ${CMAKE_CURRENT_LIST_DIR}/complex_assembly_elem_operations.h
         ${CMAKE_CURRENT_LIST_DIR}/complex_mesh_field_function.cpp
         ${CMAKE_CURRENT_LIST_DIR}/complex_mesh_field_function.h
+        ${CMAKE_CURRENT_LIST_DIR}/compute_kernel.h
         ${CMAKE_CURRENT_LIST_DIR}/constant_field_function.cpp
         ${CMAKE_CURRENT_LIST_DIR}/constant_field_function.h
         ${CMAKE_CURRENT_LIST_DIR}/dof_coupling_base.cpp
