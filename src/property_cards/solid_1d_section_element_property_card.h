@@ -23,6 +23,8 @@
 
 // MAST includes
 #include "property_cards/element_property_card_1D.h"
+#include "base/field_function_base.h"
+
 
 namespace MAST {
     
