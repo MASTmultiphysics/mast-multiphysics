@@ -124,8 +124,44 @@ if (ENABLE_NASTRANIO)
     else()
         message(STATUS "  Numpy package found")
     endif()
-    
+
+    set(MAST_ENABLE_NASTRANIO 1)
+else()
+    set(MAST_ENABLE_NASTRANIO 0)
 endif()
+
+
+# Get the URL of the Git Repository
+# TODO: This will fail if MAST source code directory is not a git clone
+execute_process(
+    COMMAND git config --get remote.origin.url
+    OUTPUT_VARIABLE MAST_REPOSITORY
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+
+# Get the name of the Git Branch
+# TODO: This will fail if MAST source code directory is not a git clone
+execute_process(
+    COMMAND git rev-parse --abbrev-ref HEAD
+    OUTPUT_VARIABLE MAST_BRANCH
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+
+# Get the commit ID
+# TODO: This will fail if MAST source code directory is not a git clone
+execute_process(
+    COMMAND git rev-parse HEAD
+    OUTPUT_VARIABLE MAST_COMMIT
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+
+
+## Store Configuration Information
+#CONFIGURE_FILE(
+#    "MAST_config.h.in"
+#    "MAST_config.h"
+#    @ONLY
+#    )
 
 # THIRD PARTY/CONTRIB
 # - This directory contains files developed by third parties and are included in the
@@ -138,6 +174,9 @@ add_subdirectory(src)
 # DOCUMENTATION
 if(BUILD_DOC)
     add_subdirectory(doc)
+    set(MAST_BUILD_DOC 1)
+else()
+    set(MAST_BUILD_DOC 0)
 endif()
 
 # TESTS
