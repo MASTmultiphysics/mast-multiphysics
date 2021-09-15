@@ -136,6 +136,7 @@ endif()
 execute_process(
     COMMAND git config --get remote.origin.url
     OUTPUT_VARIABLE MAST_REPOSITORY
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     OUTPUT_STRIP_TRAILING_WHITESPACE
     )
 
@@ -144,6 +145,7 @@ execute_process(
 execute_process(
     COMMAND git rev-parse --abbrev-ref HEAD
     OUTPUT_VARIABLE MAST_BRANCH
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     OUTPUT_STRIP_TRAILING_WHITESPACE
     )
 
@@ -152,16 +154,9 @@ execute_process(
 execute_process(
     COMMAND git rev-parse HEAD
     OUTPUT_VARIABLE MAST_COMMIT
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     OUTPUT_STRIP_TRAILING_WHITESPACE
     )
-
-
-## Store Configuration Information
-#CONFIGURE_FILE(
-#    "MAST_config.h.in"
-#    "MAST_config.h"
-#    @ONLY
-#    )
 
 # THIRD PARTY/CONTRIB
 # - This directory contains files developed by third parties and are included in the
