@@ -7,11 +7,21 @@
 
 # Find the headers.
 # Search CMake variable paths first (PETSc_DIR) and then environment variable paths next (PETSC_DIR)
-find_path(PETSc_INCLUDE_DIR petsc.h
+find_path(PETSc_INCLUDE_DIR1 petsc.h
           HINTS "${PETSc_DIR}/include"
                 "${PETSc_DIR}/${PETSc_ARCH}/include" 
                 "$ENV{PETSC_DIR}/include"
                 "$ENV{PETSC_DIR}/$ENV{PETSC_ARCH}/include")
+
+# Search for petscconf.h, which could be in a different location than petsc.h if an ARCH was specified
+find_path(PETSc_INCLUDE_DIR2 petscconf.h
+          HINTS "${PETSc_DIR}/include"
+                "${PETSc_DIR}/${PETSc_ARCH}/include" 
+                "$ENV{PETSC_DIR}/include"
+                "$ENV{PETSC_DIR}/$ENV{PETSC_ARCH}/include")
+
+# Use both PETSc include directories found above
+set(PETSc_INCLUDE_DIR "${PETSc_INCLUDE_DIR1};${PETSc_INCLUDE_DIR2}")
 
 # Find the libraries. 
 # Search CMake variable paths first (PETSc_DIR) and then environment variable paths next (PETSC_DIR)
@@ -24,7 +34,7 @@ find_library(PETSc_LIBRARY
 
 # Find PETSc version.
 if(PETSc_INCLUDE_DIR)
-    set(HEADER "${PETSc_INCLUDE_DIR}/petscversion.h")
+    set(HEADER "${PETSc_INCLUDE_DIR1}/petscversion.h")
     file(STRINGS "${HEADER}" major REGEX "define +PETSC_VERSION_MAJOR")
     file(STRINGS "${HEADER}" minor REGEX "define +PETSC_VERSION_MINOR")
     file(STRINGS "${HEADER}" patch REGEX "define +PETSC_VERSION_SUBMINOR")

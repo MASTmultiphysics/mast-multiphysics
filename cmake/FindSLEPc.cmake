@@ -1,4 +1,5 @@
-# This module relies on SLEPc_DIR being set.
+# This module relies on SLEPc_DIR and SLEPc_ARCH being set in CMake or
+# SLEPC_DIR and SLEPC_ARCH being set in the environment
 #
 # SLEPc_FOUND - system has SLEPc.
 # SLEPc_INCLUDE_DIRS - SLEPc include directories.
