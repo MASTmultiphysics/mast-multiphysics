@@ -25,6 +25,16 @@
 #define MAST_COMMIT "@MAST_COMMIT@"
 
 
+// MAST Build Configuration
+// ========================
+#define MAST_INSTALL_PREFIX "@CMAKE_INSTALL_PREFIX@"
+#define MAST_BUILD_TYPE "@CMAKE_BUILD_TYPE@"
+#define MAST_CXX_COMPILER "@CMAKE_CXX_COMPILER@"
+#define MAST_CXX_FLAGS "@CMAKE_CXX_FLAGS@"
+#define MAST_C_COMPILER "@CMAKE_C_COMPILER@"
+#define MAST_C_FLAGS "@CMAKE_C_FLAGS@"
+
+
 // MAST Options
 // ============
 #cmakedefine01 MAST_ENABLE_CYTHON
@@ -38,11 +48,19 @@
 
 // MAST Dependencies
 // =================
+#define MAST_BOOST_INCLUDE_DIR "@Boost_INCLUDE_DIR@"
+#define MAST_BOOST_LIBRARY_DIR_DEBUG "@Boost_LIBRARY_DIR_DEBUG@"
+#define MAST_BOOST_LIBRARY_DIR_RELEASE "@Boost_LIBRARY_DIR_RELEASE@"
+
 #define MAST_DOT_LIBRARIES "@DOT_LIBRARIES@"
 
 #define MAST_EIGEN3_INCLUDE_DIR "@EIGEN3_INCLUDE_DIR@"
 
 #define MAST_GCMMA_LIBRARY "@GCMMA_LIBRARIES@"
+
+#define MAST_HDF5_C_LIBRARY "@HDF5_C_LIBRARY_hdf5@"
+
+#define MAST_LAPACK_LIBRARIES "@LAPACK_LIBRARIES@"
 
 #define MAST_libMesh_INCLUDE_DIRS "@libMesh_INCLUDE_DIRS@"
 #define MAST_libMesh_dbg_LIBRARIES "@libMesh_dbg_LIBRARIES@"
