@@ -45,6 +45,8 @@ jobs:
         echo "Triggered by (GITHUB_EVENT_NAME): ${GITHUB_EVENT_NAME}"
         echo "Initiated by (GITHUB_ACTOR): ${GITHUB_ACTOR}"
 
+    - name: Install dependencies
+      run: ci/build_dependencies.sh
     # # Update packages fromt apt repos.
     # - name: Install APT dependencies
     #   run: |
