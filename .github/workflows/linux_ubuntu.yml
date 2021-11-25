@@ -20,14 +20,16 @@ jobs:
   build_and_test:
     strategy:
       matrix:
-        os: [ubuntu-18.04, ubuntu-20.04]
-        libmesh: [1.5.1, 1.6.2] 
+        os: [ubuntu-20.04]
+        libmesh: [1.5.1] 
         build: [Debug, Release]
 
     runs-on: ${{ matrix.os }}
 
     env:
       MY_OS: ${{ matrix.os }}
+      MY_LIBMESH_VERSION: ${{ matrix.libmesh }}
+      MY_CMAKE_BUILD_TYPE: ${{ matrix.build }}
 
     steps:
     - name: Clone repository
@@ -38,6 +40,9 @@ jobs:
       run: |
         echo "MY_OS_TYPE: ${MY_OS_TYPE}"
         echo "MY_OS: ${MY_OS}"
+        echo "MY_WORK_PATH: ${MY_WORK_PATH}"
+        echo "MY_LIBMESH_VERSION: ${MY_LIBMESH_VERSION}"
+        echo "MY_CMAKE_BUILD_TYPE: ${MY_CMAKE_BUILD_TYPE}"
         echo "GITHUB_WORKFLOW: ${GITHUB_WORKFLOW}"
         echo "Run #${GITHUB_RUN_NUMBER}"
         echo "Run ID: ${GITHUB_RUN_ID}"
@@ -47,32 +52,11 @@ jobs:
 
     - name: Install dependencies
       run: ci/build_dependencies.sh
-    # # Update packages fromt apt repos.
-    # - name: Install APT dependencies
-    #   run: |
-    #     sudo apt-get update
-    #     sudo apt-get -qq install -y \
-    #       build-essential gfortran wget less m4 git cmake \
-    #       python3-all python3-all-dev python3-all-dbg \
-    #       openmpi-bin libopenmpi-dev python3-mpi4py python3-mpi4py-dbg \
-    #       petsc-dev python3-petsc4py \
-    #       slepc-dev python3-slepc4py \
-    #       libparpack2-dev \
-    #       libmetis-dev \
-    #       libnetcdf-dev \
-    #       libboost-all-dev \
-    #       libeigen3-dev \
-    #       libnlopt-dev \
-    #       libadolc-dev \
-    #       doxygen graphviz rsync
-    
-    # - name: Setup working directory & get libMesh binary
-    #   run: |
-    #     mkdir ${MY_WORK_PATH}
-    #     cd ${MY_WORK_PATH}
-    #     wget -nv "https://github.com/MASTmultiphysics/mast-ci-packages/releases/download/gha-ubuntu20.04/libmesh-1.5.1-1.deb"
-    #     sudo apt install "./libmesh-1.5.1-1.deb"
-
+  
+    - name: Setup working directory & get libMesh binary
+      run: |
+        mkdir "${MY_WORK_PATH}"
+        ci/get_libmesh.sh
   
     # - name: Configure CMake
     # #   # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
