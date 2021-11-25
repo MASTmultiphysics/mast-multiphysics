@@ -21,7 +21,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-18.04, ubuntu-20.04]
-        libmesh: [1.5.1] 
+        libmesh: [1.5.1, 1.6.2] 
         build: [Debug, Release]
 
     runs-on: ${{ matrix.os }}
@@ -70,9 +70,11 @@ jobs:
         make -j 2
         make install
 
-    # - name: Unit tests
-    #   cd ${{ github.workspace }}/build/tests
-    #   ctest --force-new-ctest-process --output-on-failure --timeout 10
+    - name: Unit tests
+      run: |
+        cd ${{ github.workspace }}/build/tests
+        ctest --force-new-ctest-process --output-on-failure --timeout 10
+
     #   run: |
     #     cd ${GITHUB_WORKSPACE}/build_dbg
     #     make -j 1
