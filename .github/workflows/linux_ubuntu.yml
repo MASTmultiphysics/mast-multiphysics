@@ -20,8 +20,8 @@ jobs:
   build_and_test:
     strategy:
       matrix:
-        os: [ubuntu-20.04]
-        libmesh: [1.5.1, 1.6.2] 
+        os: [ubuntu-18.04, ubuntu-20.04]
+        libmesh: [1.5.1] 
         build: [Debug, Release]
 
     runs-on: ${{ matrix.os }}
@@ -64,33 +64,15 @@ jobs:
         cd ${{ github.workspace }}/build
         ${{ github.workspace }}/ci/configure_mast.sh
 
-        
-    # #   # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
-    # #   # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
-    #   run: | 
-    #     mkdir ${GITHUB_WORKSPACE}/build_dbg
-    #     cd ${GITHUB_WORKSPACE}/build_dbg
-    #     cmake .. \
-    #       -DCMAKE_BUILD_TYPE=Debug \
-    #       -DCMAKE_INSTALL_PREFIX="${GITHUB_WORKSPACE}/mast" \
-    #       -DCMAKE_C_COMPILER=mpicc \
-    #       -DCMAKE_CXX_COMPILER=mpic++ \
-    #       -DCMAKE_Fortran_COMPILER=mpifort \
-    #       -DlibMesh_DIR=/usr/local \
-    #       -DPETSc_DIR=/usr/lib/petscdir/petsc3.12/x86_64-linux-gnu-real \
-    #       -DSLEPc_DIR=/usr/lib/slepcdir/slepc3.12/x86_64-linux-gnu-real \
-    #       -DEIGEN3_ROOT=/usr/include/eigen3 \
-    #       -DPython3_DIR=/usr \
-    #       -DBOOST_ROOT=/usr \
-    #       -DBUILD_DOC=ON \
-    #       -DENABLE_DOT=OFF \
-    #       -DENABLE_GCMMA=OFF \
-    #       -DENABLE_SNOPT=OFF \
-    #       -DENABLE_NASTRANIO=OFF \
-    #       -DENABLE_CYTHON=OFF
-    # #    cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+    - name: Build/install MAST
+      run: |
+        cd ${{ github.workspace }}/build
+        make -j 2
+        make install
 
-    # - name: Build
+    # - name: Unit tests
+    #   cd ${{ github.workspace }}/build/tests
+    #   ctest --force-new-ctest-process --output-on-failure --timeout 10
     #   run: |
     #     cd ${GITHUB_WORKSPACE}/build_dbg
     #     make -j 1

@@ -4,30 +4,34 @@
 if [ "${MY_OS_TYPE}" = Ubuntu ]; then # Ubuntu Linux
 
   if [ "${MY_OS}" = ubuntu-20.04 ]; then # Ubuntu 20.04 Focal Fossa
-
-    cmake .. \
-          -DCMAKE_BUILD_TYPE=${MY_CMAKE_BUILD_TYPE} \
-          -DCMAKE_INSTALL_PREFIX="${MY_WORK_PATH}/mast" \
-          -DCMAKE_C_COMPILER=mpicc \
-          -DCMAKE_CXX_COMPILER=mpic++ \
-          -DCMAKE_Fortran_COMPILER=mpifort \
-          -DlibMesh_DIR=/usr/local \
-          -DPETSc_DIR=/usr/lib/petscdir/petsc3.12/x86_64-linux-gnu-real \
-          -DSLEPc_DIR=/usr/lib/slepcdir/slepc3.12/x86_64-linux-gnu-real \
-          -DEIGEN3_ROOT=/usr/include/eigen3 \
-          -DPython3_DIR=/usr \
-          -DBOOST_ROOT=/usr \
-          -DBUILD_DOC=ON \
-          -DENABLE_DOT=OFF \
-          -DENABLE_GCMMA=OFF \
-          -DENABLE_SNOPT=OFF \
-          -DENABLE_NASTRANIO=OFF \
-          -DENABLE_CYTHON=OFF
-
+    PETSc_DIR=/usr/lib/petscdir/petsc3.12/x86_64-linux-gnu-real
+    SLEPc_DIR=/usr/lib/slepcdir/slepc3.12/x86_64-linux-gnu-real
+  elif [ "${MY_OS}" = ubuntu-18.04 ]; then
+    PETSc_DIR=/usr/lib/petsc
+    SLEPc_DIR=/usr/lib/slepc
   else
     echo "INVALID LINUX DISTRO: ${MY_OS}"
     exit 1
   fi
+
+  cmake .. \
+    -DCMAKE_BUILD_TYPE=${MY_CMAKE_BUILD_TYPE} \
+    -DCMAKE_INSTALL_PREFIX="${MY_WORK_PATH}/mast" \
+    -DCMAKE_C_COMPILER=mpicc \
+    -DCMAKE_CXX_COMPILER=mpic++ \
+    -DCMAKE_Fortran_COMPILER=mpifort \
+    -DlibMesh_DIR=/usr/local \
+    -DPETSc_DIR=${PETSc_DIR} \
+    -DSLEPc_DIR=${SLEPc_DIR} \
+    -DEIGEN3_ROOT=/usr/include/eigen3 \
+    -DPython3_DIR=/usr \
+    -DBOOST_ROOT=/usr \
+    -DBUILD_DOC=ON \
+    -DENABLE_DOT=OFF \
+    -DENABLE_GCMMA=OFF \
+    -DENABLE_SNOPT=OFF \
+    -DENABLE_NASTRANIO=OFF \
+    -DENABLE_CYTHON=OFF
 
 # elif [ "${TRAVIS_OS_NAME}" = osx ]; then # macOS 10.14, XCode 10.2
 

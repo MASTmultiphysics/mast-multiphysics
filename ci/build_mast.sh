@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# NOTE: This file is not currently utilized for the GitHub Actions CI system. It is an
+#       artifact of the old Travis-CI system and is currently left here for reference.
+
 # Steps common to all OS/toolchains.
 export MAST_INSTALL_DIR=${HOME}/mast || exit
 cd "${TRAVIS_BUILD_DIR}" || exit
