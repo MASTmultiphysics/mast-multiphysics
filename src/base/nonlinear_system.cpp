@@ -801,7 +801,9 @@ MAST::NonlinearSystem::adjoint_solve(const libMesh::NumericVector<Real>& X,
                                      MAST::AssemblyElemOperations&       elem_ops,
                                      MAST::OutputAssemblyElemOperations& output,
                                      MAST::AssemblyBase&                 assembly,
-                                     bool if_assemble_jacobian) {
+                                     bool if_assemble_jacobian,
+                                     bool compute_adjoint_rhs,
+                                     unsigned int i) {
     
 
     libmesh_assert(_operation == MAST::NonlinearSystem::NONE);
@@ -812,19 +814,21 @@ MAST::NonlinearSystem::adjoint_solve(const libMesh::NumericVector<Real>& X,
     LOG_SCOPE("adjoint_solve()", "NonlinearSystem");
     
     libMesh::NumericVector<Real>
-    &dsol  = this->add_adjoint_solution(),
-    &rhs   = this->add_adjoint_rhs();
+    &dsol  = this->add_adjoint_solution(i),
+    &rhs   = this->add_adjoint_rhs(i);
 
     assembly.set_elem_operation_object(elem_ops);
 
     if (if_assemble_jacobian)
         assembly.residual_and_jacobian(*solution, nullptr, matrix, *this);
     
-    assembly.calculate_output_derivative(X, if_localize_sol, output, rhs);
+    if (compute_adjoint_rhs)
+    {
+        assembly.calculate_output_derivative(X, if_localize_sol, output, rhs);
+        rhs.scale(-1.);
+    }
 
     assembly.clear_elem_operation_object();
-
-    rhs.scale(-1.);
     
     // Our iteration counts and residuals will be sums of the individual
     // results
