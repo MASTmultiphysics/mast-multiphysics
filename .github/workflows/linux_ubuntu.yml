@@ -34,6 +34,8 @@ jobs:
     steps:
     - name: Clone repository
       uses: actions/checkout@v2
+      with: 
+        submodules: true
 
     # Print out some useful diagnostic info about the job/environment.
     - name: Diagnostic info
@@ -75,10 +77,49 @@ jobs:
         cd ${{ github.workspace }}/build/tests
         ctest --force-new-ctest-process --output-on-failure --timeout 10
 
+    - name: Build Doxygen documentation
+      run: |
+        cd ${{ github.workspace }}/build
+        make doc_doxygen
+        mkdir ${MY_WORK_PATH}/website
+        cd ${MY_WORK_PATH}/website
+        rsync -r ${{ github.workspace }}/build/doc/doxygen/html/ .
+        cp ${{ github.workspace }}/doc/.htaccess .
+
+    - name: 'Upload Artifacts (MAST Doxygen website)'
+      uses: actions/upload-artifact@v2
+      with:
+        name: "mast_website_${{ matrix.os }}_libmesh_v${{ matrix.libmesh }}_${{ matrix.build }}"
+        path: "${{ env.MY_WORK_PATH }}/website"
+        retention-days: 1
+
+  deploy_docs_website:
+    runs-on: ubuntu-20.04
+    needs: build_and_test
+    
+    steps:
+    - name: Download Artifact (MAST Doxygen website)
+      uses: actions/download-artifact@v2
+      with:
+          name: mast_website_ubuntu-20.04_libmesh_v1.6.2_Release
+          path: website
+
+    - name: Info  
+      run: |
+        echo ${PWD}
+        ls -la
+        cd website
+        echo ${PWD}
+        ls -la
+
+
+
+    
     #   run: |
     #     cd ${GITHUB_WORKSPACE}/build_dbg
     #     make -j 1
     #     make install
+    
     # #   # Build your program with the given configuration
     # #   run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
 

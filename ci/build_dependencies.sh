@@ -18,7 +18,8 @@ if [ "${MY_OS_TYPE}" = Ubuntu ]; then # Ubuntu Linux
       libeigen3-dev \
       libnlopt-dev \
       libadolc-dev \
-      doxygen graphviz rsync
+      doxygen graphviz rsync \
+      texlive-latex-base dvi2ps ghostscript
 
   elif [ "${MY_OS}" = ubuntu-18.04 ]; then # Ubuntu 18.04 Bionic Beaver
     # Regular libMesh/MAST dependencies.
@@ -36,7 +37,8 @@ if [ "${MY_OS_TYPE}" = Ubuntu ]; then # Ubuntu Linux
         libeigen3-dev \
         libnlopt-dev \
         libadolc-dev \
-        doxygen graphviz rsync
+        doxygen graphviz rsync \
+        texlive-latex-base dvi2ps ghostscript
         # sudo apt-get -qq install -y texlive-latex-base dvi2ps ghostscript
 
   else
