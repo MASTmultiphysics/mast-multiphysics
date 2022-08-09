@@ -23,6 +23,7 @@
 #define MAST_REPOSITORY "@MAST_REPOSITORY@"
 #define MAST_BRANCH "@MAST_BRANCH@"
 #define MAST_COMMIT "@MAST_COMMIT@"
+#define MAST_COMMIT_DATE "@MAST_COMMIT_DATE@"
 
 
 // MAST Build Configuration
@@ -62,6 +63,7 @@
 
 #define MAST_LAPACK_LIBRARIES "@LAPACK_LIBRARIES@"
 
+#define MAST_libMesh_VERSION_AT_BUILD @LIBMESH_VERSION_AT_BUILD@
 #define MAST_libMesh_INCLUDE_DIRS "@libMesh_INCLUDE_DIRS@"
 #define MAST_libMesh_dbg_LIBRARIES "@libMesh_dbg_LIBRARIES@"
 #define MAST_libMesh_dev_LIBRARIES "@libMesh_dev_LIBRARIES@"

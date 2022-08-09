@@ -158,6 +158,23 @@ execute_process(
     OUTPUT_STRIP_TRAILING_WHITESPACE
     )
 
+# Get the commit date
+# TODO: This will fail if MAST source code directory is not a git clone
+execute_process(
+    COMMAND git show -s --format=%ci
+    OUTPUT_VARIABLE MAST_COMMIT_DATE
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+
+# Get the libMesh version at build time
+execute_process(
+    COMMAND bash "-c" "cat ${libMesh_INCLUDE_DIRS}/libmesh/libmesh_config.h | grep -i '#define LIBMESH_PACKAGE_VERSION' | cut -d ' ' -f3"
+    OUTPUT_VARIABLE LIBMESH_VERSION_AT_BUILD
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+
 # THIRD PARTY/CONTRIB
 # - This directory contains files developed by third parties and are included in the
 #   MAST source for convenience.
