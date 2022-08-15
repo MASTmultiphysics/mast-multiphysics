@@ -25,6 +25,7 @@
 #include "base/assembly_base.h"
 
 // libMesh includes
+#include "libmesh/libmesh_logging.h"
 #include "libmesh/nonlinear_implicit_system.h"
 
 
