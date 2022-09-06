@@ -14,6 +14,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 include(GNUInstallDirs)
 
 # Build options with defaults.
+option(USE_RPATH        "Set RPATH/RUNPATH on the installed MAST library" OFF)
 option(ENABLE_GCMMA     "Build with GCMMA interface"  OFF)
 option(ENABLE_DOT       "Build with DOT interface"    OFF)
 option(ENABLE_SNOPT     "Build with SNOPT interface"  OFF)
@@ -22,7 +23,7 @@ option(ENABLE_NASTRANIO "Build with support for reading Nastran meshes" OFF)
 option(ENABLE_CYTHON    "Build with support for Cython development"     OFF)
 option(BUILD_DOC        "Build documentation"         OFF)
 option(BUILD_EXAMPLES	"Build examples"	      OFF)
-option(BUILD_TESTS	"Build tests"		      OFF)
+option(BUILD_TESTS	    "Build tests"		      OFF)
 
 # Dependency paths (optional) - these paths help CMake find dependencies.
 set(MAST_ROOT_DIR ${CMAKE_CURRENT_LIST_DIR})
