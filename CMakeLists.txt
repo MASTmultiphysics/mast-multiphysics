@@ -100,7 +100,7 @@ else()
 endif()
 
 if (ENABLE_NLOPT)
-   find_package(NLOpt REQUIRED)
+   find_package(NLOPT REQUIRED)
 else()
     set (MAST_ENABLE_NLOPT 0)
 endif()
@@ -168,13 +168,67 @@ execute_process(
     OUTPUT_STRIP_TRAILING_WHITESPACE
     )
 
-# Get the libMesh version at build time
-execute_process(
-    COMMAND bash "-c" "cat ${libMesh_INCLUDE_DIRS}/libmesh/libmesh_config.h | grep -i '#define LIBMESH_PACKAGE_VERSION' | cut -d ' ' -f3"
-    OUTPUT_VARIABLE LIBMESH_VERSION_AT_BUILD
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    OUTPUT_STRIP_TRAILING_WHITESPACE
+IF(CMAKE_BUILD_TYPE STREQUAL Debug)
+    SET(ALL_C_FLAGS "${CMAKE_C_FLAGS} ${CMAKE_C_FLAGS_DEBUG}")
+    SET(ALL_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_DEBUG}")
+ELSEIF(CMAKE_BUILD_TYPE STREQUAL Release)
+    SET(ALL_C_FLAGS "${CMAKE_C_FLAGS} ${CMAKE_C_FLAGS_RELEASE}")
+    SET(ALL_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_RELEASE}")
+ELSE()
+    SET(ALL_C_FLAGS "${CMAKE_C_FLAGS}")
+    SET(ALL_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+ENDIF()
+
+
+# Manually get the MPI include directories if they were not set by CMake
+IF (NOT DEFINED MPI_CXX_COMPILER_INCLUDE_DIRS OR MPI_CXX_COMPILER_INCLUDE_DIRS STREQUAL "")
+    MESSAGE(WARNING "MPI_CXX_COMPILER_INCLUDE_DIRS was not defined by CMake, trying to manually set it now...")
+    execute_process(
+        COMMAND "${MPI_CXX_COMPILER}" --showme:compile
+        OUTPUT_VARIABLE MPICC_SHOWME
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        OUTPUT_STRIP_TRAILING_WHITESPACE
     )
+    string(REPLACE " " ";" MPICC_SHOWME_LIST "${MPICC_SHOWME}")
+    set(MPI_CXX_COMPILER_INCLUDE_DIRS "")
+    foreach(ENTRY ${MPICC_SHOWME_LIST})
+        IF(ENTRY MATCHES "^-I")
+            STRING(REGEX REPLACE "-I([^ ]*)" "\\1" INCLUDE_DIR ${ENTRY})
+            IF(MPI_CXX_COMPILER_INCLUDE_DIRS STREQUAL "")
+                set(MPI_CXX_COMPILER_INCLUDE_DIRS "${INCLUDE_DIR}")
+            ELSE()
+                set(MPI_CXX_COMPILER_INCLUDE_DIRS "${MPI_CXX_COMPILER_INCLUDE_DIRS};${INCLUDE_DIR}")
+            ENDIF()
+        ENDIF()
+    endforeach()
+ENDIF()
+
+
+# Manually get the MPI include directories if they were not set by CMake
+IF (NOT DEFINED MPI_mpi_LIBRARY OR MPI_mpi_LIBRARY STREQUAL "")
+    MESSAGE(WARNING "MPI_mpi_LIBRARY was not defined by CMake, trying to manually set it now...")
+    execute_process(
+        COMMAND "${MPI_CXX_COMPILER}" --showme:link
+        OUTPUT_VARIABLE MPICC_SHOWME
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    string(REPLACE " " ";" MPICC_SHOWME_LIST "${MPICC_SHOWME}")
+    set(MPI_mpi_LIBRARY "")
+    foreach(ENTRY ${MPICC_SHOWME_LIST})
+        IF(ENTRY MATCHES "^-L")
+            STRING(REGEX REPLACE "-L([^ ]*)" "\\1" LIB_DIR ${ENTRY})
+            IF(EXISTS "${LIB_DIR}/libmpi.so")
+                set(MPI_mpi_LIBRARY "${LIB_DIR}/libmpi.so")
+                break()
+            ELSEIF(EXISTS "${LIB_DIR}/libmpi.dylib")
+                set(MPI_mpi_LIBRARY "${LIB_DIR}/libmpi.dylib")
+                break()
+            ENDIF()
+        ENDIF()
+    endforeach()
+ENDIF()
+
 
 # THIRD PARTY/CONTRIB
 # - This directory contains files developed by third parties and are included in the
