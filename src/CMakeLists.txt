@@ -31,8 +31,16 @@ set(MAST_LINK_LIBS
 
 # Define the RPATH which will be set on the installed MAST library
 if (USE_RPATH)
-    set(CMAKE_INSTALL_RPATH "")
     message("Setting RPATH/RUNPATH...")
+    if(UNIX AND NOT APPLE)
+        message(STATUS "Running on Linux...")
+    elseif (UNIX AND APPLE)
+        message(STATUS "Running on Mac...")
+        message(STATUS "Setting CMAKE_MACOSX_RPATH = 1")
+        set(CMAKE_MACOSX_RPATH 1)
+    endif()
+    set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+    list( APPEND CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib64")
     foreach(library_full_path ${MAST_LINK_LIBS})
         get_filename_component(lib_dir "${library_full_path}" PATH)
         string(REPLACE "$<$<STREQUAL:${CMAKE_BUILD_TYPE},RelWithDebInfo>:" "" lib_dir "${lib_dir}")
