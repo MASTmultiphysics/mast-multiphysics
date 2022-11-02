@@ -38,14 +38,14 @@ CTEST_OUTPUT_ON_FAILURE=1.")
 #
 if (CMAKE_CONFIGURATION_TYPES)
     add_custom_target(check
-        COMMAND python ${CMAKE_CURRENT_LIST_DIR}/GenerateTestDependencyGraph.py ${CMAKE_CURRENT_LIST_DIR}/CMakeLists.txt
+        COMMAND "${Python3_EXECUTABLE}" ${CMAKE_CURRENT_LIST_DIR}/GenerateTestDependencyGraph.py ${CMAKE_CURRENT_LIST_DIR}/CMakeLists.txt
         COMMAND ${CMAKE_CTEST_COMMAND} --force-new-ctest-process --output-on-failure --output-log ./test_results.log --build-config "$<CONFIGURATION>" || (exit 0)
-        COMMAND python ${CMAKE_CURRENT_LIST_DIR}/GenerateTestResultsGraph.py ./test_dependency_graph.dot ./test_results.log)
+        COMMAND "${Python3_EXECUTABLE}" ${CMAKE_CURRENT_LIST_DIR}/GenerateTestResultsGraph.py ./test_dependency_graph.dot ./test_results.log)
 else()
     add_custom_target(check
-        COMMAND python ${CMAKE_CURRENT_LIST_DIR}/GenerateTestDependencyGraph.py ${CMAKE_CURRENT_LIST_DIR}/CMakeLists.txt
+        COMMAND "${Python3_EXECUTABLE}" ${CMAKE_CURRENT_LIST_DIR}/GenerateTestDependencyGraph.py ${CMAKE_CURRENT_LIST_DIR}/CMakeLists.txt
         COMMAND ${CMAKE_CTEST_COMMAND} --force-new-ctest-process --output-on-failure --output-log ./test_results.log || (exit 0)
-        COMMAND python ${CMAKE_CURRENT_LIST_DIR}/GenerateTestResultsGraph.py ./test_dependency_graph.dot ./test_results.log)
+        COMMAND "${Python3_EXECUTABLE}" ${CMAKE_CURRENT_LIST_DIR}/GenerateTestResultsGraph.py ./test_dependency_graph.dot ./test_results.log)
 endif()
 
 
@@ -53,4 +53,4 @@ endif()
 # dependencies when run. This allows test dependencies to be visualized without
 # having to run the entire "make check" command.
 add_custom_target(test_graph
-    COMMAND python ${CMAKE_CURRENT_LIST_DIR}/GenerateTestDependencyGraph.py ${CMAKE_CURRENT_LIST_DIR}/CMakeLists.txt)
+    COMMAND "${Python3_EXECUTABLE}" ${CMAKE_CURRENT_LIST_DIR}/GenerateTestDependencyGraph.py ${CMAKE_CURRENT_LIST_DIR}/CMakeLists.txt)
