@@ -7,6 +7,9 @@ build
 src/base/mast_config.h
 CMakeCache.txt
 
+# Precompiled headers
+*.gch
+
 # CLion IDE files.
 .idea/
 cmake-build*/
