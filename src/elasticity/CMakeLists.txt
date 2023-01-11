@@ -69,6 +69,8 @@ target_sources(mast
         ${CMAKE_CURRENT_LIST_DIR}/structural_transient_assembly.h
         ${CMAKE_CURRENT_LIST_DIR}/timoshenko_bending_operator.cpp
         ${CMAKE_CURRENT_LIST_DIR}/timoshenko_bending_operator.h
+        ${CMAKE_CURRENT_LIST_DIR}/volume_output.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/volume_output.h
         ${CMAKE_CURRENT_LIST_DIR}/warping_system_initialization.cpp
         ${CMAKE_CURRENT_LIST_DIR}/warping_system_initialization.h)
 
