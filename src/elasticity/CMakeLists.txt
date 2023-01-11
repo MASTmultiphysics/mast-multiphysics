@@ -5,6 +5,8 @@ target_sources(mast
         ${CMAKE_CURRENT_LIST_DIR}/bending_structural_element.cpp
         ${CMAKE_CURRENT_LIST_DIR}/bending_structural_element.h
         ${CMAKE_CURRENT_LIST_DIR}/bernoulli_bending_operator.h
+        ${CMAKE_CURRENT_LIST_DIR}/center_of_mass_output.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/center_of_mass_output.h
         ${CMAKE_CURRENT_LIST_DIR}/complex_normal_rotation_mesh_function.cpp
         ${CMAKE_CURRENT_LIST_DIR}/complex_normal_rotation_mesh_function.h
         ${CMAKE_CURRENT_LIST_DIR}/compliance_output.cpp
