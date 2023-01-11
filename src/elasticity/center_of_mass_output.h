@@ -208,4 +208,4 @@ namespace MAST {
     };
 }
 
-#endif // __mast__mass_output__
+#endif // __mast__center_of_mass_output__
