@@ -105,7 +105,6 @@ MAST::CenterOfMassOutput::evaluate() {
         // Initialize some variables
         Real rho = 0.0;
         Real Vc = 0.0;
-        const MAST::FieldFunction<Real>* Vc_f;
 
         // Create a unity field function that evaluate to 1 over the entire domain, used for 3D elements
         MAST::Parameter one("one", 1.0);
@@ -145,16 +144,18 @@ MAST::CenterOfMassOutput::evaluate() {
             const MAST::FieldFunction<Real>& _hy;
             const MAST::FieldFunction<Real>& _hz;
         };
-        Area1DFieldFunction A1d_f(section_property.get<MAST::FieldFunction<Real>>("hy"),
-                                  section_property.get<MAST::FieldFunction<Real>>("hz"));
         // TODO: Once the 1D cross-section library is implemented in this branch, the class and field function above will no longer be needed.
         //   this is only used for "old" MAST where only rectangular cross sections were supported.
 
         // To get the total volume for integration, we need to multiply by area for 1D elements and by thickness for 2D elements
+        std::unique_ptr<Area1DFieldFunction> A1d_f;
+        const MAST::FieldFunction<Real>* Vc_f;
         if (section_property.dim() == 1) {
+            A1d_f = std::unique_ptr<Area1DFieldFunction>(new Area1DFieldFunction(section_property.get<MAST::FieldFunction<Real>>("hy"),
+                                                                                 section_property.get<MAST::FieldFunction<Real>>("hz")));
             // Get the area for 1D elements since volume = JxW * A in this case
             // Vc_f = &(section_property.get<MAST::FieldFunction<Real>>("A"));
-            Vc_f = &A1d_f;
+            Vc_f = A1d_f.get();
         }
         else if (section_property.dim() == 2) {
             // Get the thickness for 2D elements since volume = JxW * h in this case
@@ -217,7 +218,6 @@ MAST::CenterOfMassOutput::evaluate_sensitivity(const MAST::FunctionBase &f) {
         Real drho = 0.0;
         Real Vc = 0.0;
         Real dVc = 0.0;
-        const MAST::FieldFunction<Real>* Vc_f;
 
         // Create a unity field function that evaluate to 1 over the entire domain, used for 3D elements
         MAST::Parameter one("one", 1.0);
@@ -257,16 +257,18 @@ MAST::CenterOfMassOutput::evaluate_sensitivity(const MAST::FunctionBase &f) {
             const MAST::FieldFunction<Real>& _hy;
             const MAST::FieldFunction<Real>& _hz;
         };
-        Area1DFieldFunction A1d_f(section_property.get<MAST::FieldFunction<Real>>("hy"),
-                                  section_property.get<MAST::FieldFunction<Real>>("hz"));
         // TODO: Once the 1D cross-section library is implemented in this branch, the class and field function above will no longer be needed.
         //   this is only used for "old" MAST where only rectangular cross sections were supported.
 
         // To get the total volume for integration, we need to multiply by area for 1D elements and by thickness for 2D elements
+        std::unique_ptr<Area1DFieldFunction> A1d_f;
+        const MAST::FieldFunction<Real>* Vc_f;
         if (section_property.dim() == 1) {
+            A1d_f = std::unique_ptr<Area1DFieldFunction>(new Area1DFieldFunction(section_property.get<MAST::FieldFunction<Real>>("hy"),
+                                                                                 section_property.get<MAST::FieldFunction<Real>>("hz")));
             // Get the area for 1D elements since volume = JxW * A in this case
             // Vc_f = &(section_property.get<MAST::FieldFunction<Real>>("A"));
-            Vc_f = &A1d_f;
+            Vc_f = A1d_f.get();
         }
         else if (section_property.dim() == 2) {
             // Get the thickness for 2D elements since volume = JxW * h in this case
