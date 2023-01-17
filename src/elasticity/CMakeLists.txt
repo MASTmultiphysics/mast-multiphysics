@@ -12,6 +12,8 @@ target_sources(mast
         ${CMAKE_CURRENT_LIST_DIR}/compliance_output.cpp
         ${CMAKE_CURRENT_LIST_DIR}/compliance_output.h
         ${CMAKE_CURRENT_LIST_DIR}/dkt_bending_operator.h
+        ${CMAKE_CURRENT_LIST_DIR}/first_mass_moments_of_inertia_output.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/first_mass_moments_of_inertia_output.h
         ${CMAKE_CURRENT_LIST_DIR}/fluid_structure_assembly_elem_operations.cpp
         ${CMAKE_CURRENT_LIST_DIR}/fluid_structure_assembly_elem_operations.h
         ${CMAKE_CURRENT_LIST_DIR}/fsi_generalized_aero_force_assembly.cpp
@@ -33,6 +35,8 @@ target_sources(mast
         ${CMAKE_CURRENT_LIST_DIR}/normal_rotation_mesh_function.h
         ${CMAKE_CURRENT_LIST_DIR}/piston_theory_boundary_condition.cpp
         ${CMAKE_CURRENT_LIST_DIR}/piston_theory_boundary_condition.h
+        ${CMAKE_CURRENT_LIST_DIR}/second_mass_moments_of_inertia_output.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/second_mass_moments_of_inertia_output.h
         ${CMAKE_CURRENT_LIST_DIR}/smooth_ramp_stress_output.cpp
         ${CMAKE_CURRENT_LIST_DIR}/smooth_ramp_stress_output.h
         ${CMAKE_CURRENT_LIST_DIR}/solid_element_3d.cpp
