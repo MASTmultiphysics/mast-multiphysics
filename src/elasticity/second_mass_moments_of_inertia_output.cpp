@@ -188,13 +188,13 @@ MAST::SecondMassMomentsOfInertiaOutput::evaluate() {
             y = xyz[ind_qp](1);
             z = xyz[ind_qp](2);
 
-            _second_mass_moments_of_inertia.coeffRef(0,0) += mass_elem * (x * y);
-            _second_mass_moments_of_inertia.coeffRef(1,0) += mass_elem * (y * z);
-            _second_mass_moments_of_inertia.coeffRef(2,0) += mass_elem * (x * z);
+            _second_mass_moments_of_inertia.coeffRef(0,0) += mass_elem * (y*y + z*z);
+            _second_mass_moments_of_inertia.coeffRef(1,0) += mass_elem * (x*x + z*z);
+            _second_mass_moments_of_inertia.coeffRef(2,0) += mass_elem * (x*x + y*y);
 
-            _second_mass_moment_of_inertia_xx += mass_elem * (x * y);
-            _second_mass_moment_of_inertia_yy += mass_elem * (y * z);
-            _second_mass_moment_of_inertia_zz += mass_elem * (x * z);
+            _second_mass_moment_of_inertia_xx += mass_elem * (y*y + z*z);
+            _second_mass_moment_of_inertia_yy += mass_elem * (x*x + z*z);
+            _second_mass_moment_of_inertia_zz += mass_elem * (x*x + y*y);
         }
     }
     // FIXME: Product moments of inertia will change with displacements. Need to account for that in these calculations.
@@ -309,13 +309,13 @@ MAST::SecondMassMomentsOfInertiaOutput::evaluate_sensitivity(const MAST::Functio
             dy = 0;  // FIXME: If the parameter is nodal coordinates (shape sensitivity) then this may be nonzero
             dz = 0;  // FIXME: If the parameter is nodal coordinates (shape sensitivity) then this may be nonzero
 
-            _dsecond_mass_moments_of_inertia_dp.coeffRef(0,0) += (dx*y*rho*Vc + x*dy*rho*Vc + x*y*drho*Vc + x*y*rho*dVc) * JxW[ind_qp];
-            _dsecond_mass_moments_of_inertia_dp.coeffRef(1,0) += (dy*z*rho*Vc + y*dz*rho*Vc + y*z*drho*Vc + y*z*rho*dVc) * JxW[ind_qp];
-            _dsecond_mass_moments_of_inertia_dp.coeffRef(2,0) += (dz*x*rho*Vc + z*dx*rho*Vc + z*x*drho*Vc + z*x*rho*dVc) * JxW[ind_qp];
+            _dsecond_mass_moments_of_inertia_dp.coeffRef(0,0) += ((2*y*dy + 2*z*dz)*rho*Vc + (y*y + z*z)*drho*Vc + (y*y + z*z)*rho*dVc) * JxW[ind_qp];
+            _dsecond_mass_moments_of_inertia_dp.coeffRef(1,0) += ((2*x*dx + 2*z*dz)*rho*Vc + (x*x + z*z)*drho*Vc + (x*x + z*z)*rho*dVc) * JxW[ind_qp];
+            _dsecond_mass_moments_of_inertia_dp.coeffRef(2,0) += ((2*x*dx + 2*y*dy)*rho*Vc + (x*x + y*y)*drho*Vc + (x*x + y*y)*rho*dVc) * JxW[ind_qp];
 
-            _dsecond_mass_moment_of_inertia_xx_dp += (dx*y*rho*Vc + x*dy*rho*Vc + x*y*drho*Vc + x*y*rho*dVc) * JxW[ind_qp];
-            _dsecond_mass_moment_of_inertia_yy_dp += (dy*z*rho*Vc + y*dz*rho*Vc + y*z*drho*Vc + y*z*rho*dVc) * JxW[ind_qp];
-            _dsecond_mass_moment_of_inertia_zz_dp += (dz*x*rho*Vc + z*dx*rho*Vc + z*x*drho*Vc + z*x*rho*dVc) * JxW[ind_qp];
+            _dsecond_mass_moment_of_inertia_xx_dp += ((2*y*dy + 2*z*dz)*rho*Vc + (y*y + z*z)*drho*Vc + (y*y + z*z)*rho*dVc) * JxW[ind_qp];
+            _dsecond_mass_moment_of_inertia_yy_dp += ((2*x*dx + 2*z*dz)*rho*Vc + (x*x + z*z)*drho*Vc + (x*x + z*z)*rho*dVc) * JxW[ind_qp];
+            _dsecond_mass_moment_of_inertia_zz_dp += ((2*x*dx + 2*y*dy)*rho*Vc + (x*x + y*y)*drho*Vc + (x*x + y*y)*rho*dVc) * JxW[ind_qp];
         }
     }
 }
