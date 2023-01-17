@@ -28,6 +28,8 @@ target_sources(mast
         ${CMAKE_CURRENT_LIST_DIR}/level_set_stress_assembly.h
     	${CMAKE_CURRENT_LIST_DIR}/mass_output.cpp
     	${CMAKE_CURRENT_LIST_DIR}/mass_output.h
+        ${CMAKE_CURRENT_LIST_DIR}/mass_products_of_inertia_output.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/mass_products_of_inertia_output.h
         ${CMAKE_CURRENT_LIST_DIR}/mindlin_bending_operator.cpp
         ${CMAKE_CURRENT_LIST_DIR}/mindlin_bending_operator.h
         ${CMAKE_CURRENT_LIST_DIR}/normal_rotation_function_base.h
