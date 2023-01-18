@@ -30,7 +30,7 @@
 #include "libmesh/nonlinear_implicit_system.h"
 #include "libmesh/enum_eigen_solver_type.h"
 #include "libmesh/eigen_system.h"
-
+#include "libmesh/numeric_vector.h"
 
 namespace MAST {
     
