@@ -17,8 +17,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#ifndef __mast__expression_field_function__
-#define __mast__expression_field_function__
+#ifndef __mast__expression_vector_field_function__
+#define __mast__expression_vector_field_function__
 
 // MAST includes
 #include "base/field_function_base.h"
@@ -32,21 +32,21 @@ namespace MAST {
     // Forward declerations
     class Parameter;
     
-    class ExpressionFieldFunction:
-    public MAST::FieldFunction<Real> {
+    class ExpressionVectorFieldFunction:
+    public MAST::FieldFunction<RealVectorX> {
     
     public:
 
-        ExpressionFieldFunction(const std::string& nm,
-                                const std::string expr,
-                                const std::set<MAST::Parameter*> params);
+        ExpressionVectorFieldFunction(const std::string& nm,
+                                      const std::vector<std::string> expr,
+                                      const std::set<MAST::Parameter*> params);
 
-        ExpressionFieldFunction(const std::string& nm,
-                                const std::string expr,
-                                const std::map<const std::string, const std::string> dexpr,
-                                const std::set<MAST::Parameter*> params);
+        ExpressionVectorFieldFunction(const std::string& nm,
+                                      const std::vector<std::string> expr,
+                                      const std::map<const std::string, const std::vector<std::string>> dexpr,
+                                      const std::set<MAST::Parameter*> params);
 
-        virtual ~ExpressionFieldFunction();
+        virtual ~ExpressionVectorFieldFunction();
 
         
         /*!
@@ -55,7 +55,7 @@ namespace MAST {
          */
         virtual void operator() (const libMesh::Point& p,
                                  const Real t,
-                                 Real& v);
+                                 RealVectorX& v);
         
         
         /*!
@@ -65,40 +65,43 @@ namespace MAST {
         virtual void derivative (const MAST::FunctionBase& f,
                                  const libMesh::Point& p,
                                  const Real t,
-                                 Real& v);
+                                 RealVectorX& v);
+
 
         void derivative (const MAST::FunctionBase& f,
                          const libMesh::Point& p,
                          const Real t,
-                         Real& v,
+                         RealVectorX& v,
                          const Real h);
+
+    
+        void derivative (const std::string& f,
+                         const libMesh::Point& p,
+                         const Real t,
+                         RealVectorX& v);
 
 
         void derivative (const std::string& f,
                          const libMesh::Point& p,
                          const Real t,
-                         Real& v);
-
-        void derivative (const std::string& f,
-                         const libMesh::Point& p,
-                         const Real t,
-                         Real& v,
+                         RealVectorX& v,
                          const Real h);
 
-        const std::string get_expression() const;
+
+        const std::vector<std::string> get_expression() const;
 
         
     protected:
 
-        const std::string _expr;
-        const std::map<const std::string, const std::string> _dexpr;
-        exprtk::expression<Real> _expression;
-        std::map<const std::string, exprtk::expression<Real>> _dexpression;
+        const std::vector<std::string> _expr;
+        const std::map<const std::string, const std::vector<std::string>> _dexpr;
+        std::vector<exprtk::expression<Real>> _expression;
+        std::map<const std::string, std::vector<exprtk::expression<Real>>> _dexpression;
         Real _x, _y, _z, _t;  // Spatial coordinates (x,y,z) and time (t)
-        std::map<std::string, Real> _param_vars;
-        std::map<std::string, MAST::Parameter*> _params;
+        std::unordered_map<std::string, Real> _param_vars;
+        std::unordered_map<std::string, MAST::Parameter*> _params;
     };
 }
 
 
-#endif // __mast__expression_field_function__
+#endif // __mast__expression_vector_field_function__

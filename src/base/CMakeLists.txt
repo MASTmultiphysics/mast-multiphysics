@@ -23,6 +23,8 @@ target_sources(mast
         ${CMAKE_CURRENT_LIST_DIR}/elem_base.h
         ${CMAKE_CURRENT_LIST_DIR}/expression_field_function.cpp
         ${CMAKE_CURRENT_LIST_DIR}/expression_field_function.h
+        ${CMAKE_CURRENT_LIST_DIR}/expression_vector_field_function.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/expression_vector_field_function.h
         ${CMAKE_CURRENT_LIST_DIR}/field_function_base.h
         ${CMAKE_CURRENT_LIST_DIR}/function_base.cpp
         ${CMAKE_CURRENT_LIST_DIR}/function_base.h
