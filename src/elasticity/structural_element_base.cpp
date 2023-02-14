@@ -283,7 +283,7 @@ MAST::StructuralElementBase::inertial_residual (bool request_jacobian,
     vec2_n2    = RealVectorX::Zero(n2),
     local_f    = RealVectorX::Zero(n2);
     
-    std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
+    std::unique_ptr<const MAST::FieldFunction<RealMatrixX> >
     mat_inertia  = _property.inertia_matrix(*this);
     
     MAST::FEMOperatorMatrix Bmat;
@@ -430,7 +430,7 @@ MAST::StructuralElementBase::inertial_residual_sensitivity (const MAST::Function
     vec2_n2    = RealVectorX::Zero(n2),
     local_f    = RealVectorX::Zero(n2);
     
-    std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
+    std::unique_ptr<const MAST::FieldFunction<RealMatrixX> >
     mat_inertia  = _property.inertia_matrix(*this);
     
     MAST::FEMOperatorMatrix Bmat;
@@ -555,7 +555,7 @@ inertial_residual_boundary_velocity (const MAST::FunctionBase& p,
     }
     
 
-    std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
+    std::unique_ptr<const MAST::FieldFunction<RealMatrixX> >
     mat_inertia  = _property.inertia_matrix(*this);
     
     MAST::FEMOperatorMatrix Bmat;
@@ -1193,7 +1193,7 @@ surface_pressure_residual(bool request_jacobian,
     
     
     // get the function from this boundary condition
-    MAST::FieldFunction<Real>& func =
+    const MAST::FieldFunction<Real>& func =
     bc.get<MAST::FieldFunction<Real> >("pressure");
     
     Real press;
@@ -1269,7 +1269,7 @@ surface_pressure_residual_sensitivity(const MAST::FunctionBase& p,
     
     
     // get the function from this boundary condition
-    MAST::FieldFunction<Real>& func =
+    const MAST::FieldFunction<Real>& func =
     bc.get<MAST::FieldFunction<Real> >("pressure");
     
     Real press;
@@ -1349,7 +1349,7 @@ surface_pressure_boundary_velocity(const MAST::FunctionBase& p,
     
     
     // get the function from this boundary condition
-    MAST::FieldFunction<Real>& func =
+    const MAST::FieldFunction<Real>& func =
     bc.get<MAST::FieldFunction<Real> >("pressure");
     
     Real press;
@@ -1417,7 +1417,7 @@ linearized_surface_pressure_residual(bool request_jacobian,
     libmesh_assert(!follower_forces); // not implemented yet for follower forces
     libmesh_assert_equal_to(bc.type(), MAST::SURFACE_PRESSURE);
     
-    MAST::FieldFunction<Real>&
+    const MAST::FieldFunction<Real>&
     press_fn  = bc.get<MAST::FieldFunction<Real> >("pressure");
     
     std::unique_ptr<MAST::FEBase> fe(_elem.init_fe(false, false));
@@ -1495,9 +1495,9 @@ linearized_frequency_domain_surface_pressure_residual
     libmesh_assert(!follower_forces); // not implemented yet for follower forces
     libmesh_assert_equal_to(bc.type(), MAST::SURFACE_PRESSURE);
     
-    MAST::FieldFunction<Real>&
+    const MAST::FieldFunction<Real>&
     press_fn   = bc.get<MAST::FieldFunction<Real> >("pressure");
-    MAST::FieldFunction<Complex>&
+    const MAST::FieldFunction<Complex>&
     dpress_fn  = bc.get<MAST::FieldFunction<Complex> >("frequency_domain_pressure");
     
     std::unique_ptr<MAST::FEBase> fe(_elem.init_fe(false, false));

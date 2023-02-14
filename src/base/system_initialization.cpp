@@ -153,3 +153,44 @@ initialize_solution(const MAST::FieldFunction<RealVectorX>& sol) {
 }
 
 
+void
+MAST::SystemInitialization::
+initialize_solution(MAST::FieldFunction<RealVectorX>& sol) {
+    
+    // now create a function and use it for initialization
+    class SolutionFunction:
+    public libMesh::FunctionBase<Real> {
+    public:
+        SolutionFunction(const unsigned int n_vars,
+                         MAST::FieldFunction<RealVectorX>& s):
+        libMesh::FunctionBase<Real>(),
+        _nvars(n_vars),
+        _sol(s) { }
+        
+        virtual std::unique_ptr<libMesh::FunctionBase<Real> > clone () const {
+            libMesh::FunctionBase<Real> *rval = new SolutionFunction(_nvars, _sol);
+            return std::unique_ptr<libMesh::FunctionBase<Real> >(rval);
+        }
+        
+        // this should not get called
+        virtual Real operator()
+        (const libMesh::Point& p, const Real time) {libmesh_assert(false);}
+        
+        virtual void
+        operator() (const libMesh::Point& p,
+                    const Real time,
+                    libMesh::DenseVector<Real>& output) {
+            
+            RealVectorX v = RealVectorX::Zero(_nvars);
+            _sol(p, time, v);
+            MAST::copy(output, v);
+        }
+    protected:
+        const unsigned int _nvars;
+        MAST::FieldFunction<RealVectorX>& _sol;
+    };
+    
+    SolutionFunction sol_func(_vars.size(), sol);
+    
+    _system.project_solution(&sol_func);
+}

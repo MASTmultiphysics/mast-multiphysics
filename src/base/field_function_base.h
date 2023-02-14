@@ -92,6 +92,18 @@ namespace MAST {
             
             libmesh_error_msg("Must be implemented in derived class; " << __PRETTY_FUNCTION__ << " in " << __FILE__ << " at line " << __LINE__);
         }
+
+        
+        /*!
+         *    calculates the value of the function at the specified point,
+         *    \p p, and time, \p t, and returns it in \p v.
+         */
+        virtual void operator() (const libMesh::Point& p,
+                                 const Real t,
+                                 ValType& v) {
+            
+            libmesh_error_msg("You are attempting to call the non-const version of operator(). If this is what you meant to do, you must implement this function in a derived class. Otherwise, set whatever instance of FieldFunction you got this error from to const." << __PRETTY_FUNCTION__ << " in " << __FILE__ << " at line " << __LINE__);
+        }
         
         
         /*!
@@ -104,6 +116,19 @@ namespace MAST {
                                    ValType& v) const {
             
             libmesh_error_msg("Must be implemented in derived class; " << __PRETTY_FUNCTION__ << " in " << __FILE__ << " at line " << __LINE__);
+        }
+        
+        
+        /*!
+         *    calculates the value of a perturbation in function at the 
+         *    specified point, \p p, and time, \p t, and returns it
+         *    in \p v.
+         */
+        virtual void perturbation (const libMesh::Point& p,
+                                   const Real t,
+                                   ValType& v) {
+            
+            libmesh_error_msg("You are attempting to call the non-const version of perturbation(). If this is what you meant to do, you must implement this function in a derived class. Otherwise, set whatever instance of FieldFunction you got this error from to const." << __PRETTY_FUNCTION__ << " in " << __FILE__ << " at line " << __LINE__);
         }
 
         
@@ -119,6 +144,20 @@ namespace MAST {
             
             libmesh_error_msg("Must be implemented in derived class; " << __PRETTY_FUNCTION__ << " in " << __FILE__ << " at line " << __LINE__);
         }
+
+        
+        /*!
+         *    calculates the value of the derivative of function with respect to
+         *    the function \p f at the specified point, \p p, and time,
+         *    \p t, and returns it in \p v.
+         */
+        virtual void derivative (const MAST::FunctionBase& f,
+                                 const libMesh::Point& p,
+                                 const Real t,
+                                 ValType& v) {
+            
+            libmesh_error_msg("You are attempting to call a non-const version of derivative(). If this is what you meant to do, you must implement this function in a derived class. Otherwise, set whatever instance of FieldFunction you got this error from to const." << __PRETTY_FUNCTION__ << " in " << __FILE__ << " at line " << __LINE__);
+        }
         
         
         /*!
@@ -131,7 +170,7 @@ namespace MAST {
                                  const Real t,
                                  ValType& v) {
             
-            libmesh_error_msg("Must be implemented in derived class; " << __PRETTY_FUNCTION__ << " in " << __FILE__ << " at line " << __LINE__);
+            libmesh_error_msg("You are attempting to call a non-const version of derivative(). If this is what you meant to do, you must implement this function in a derived class. Otherwise, set whatever instance of FieldFunction you got this error from to const." << __PRETTY_FUNCTION__ << " in " << __FILE__ << " at line " << __LINE__);
         }
         
     protected:
