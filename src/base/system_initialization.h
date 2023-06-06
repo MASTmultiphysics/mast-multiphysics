@@ -110,6 +110,12 @@ namespace MAST {
          */
         void initialize_solution(const MAST::FieldFunction<RealVectorX>& sol);
 
+        /*!
+         *    initializes the FE solution vector to the non-const function
+         *    solution provided in \p sol.
+         */
+        void initialize_solution(MAST::FieldFunction<RealVectorX>& sol);
+
         
     protected:
         

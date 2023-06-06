@@ -72,7 +72,7 @@ MAST::HeatConductionElementBase::internal_residual (bool request_jacobian,
     vec2_n2  = RealVectorX::Zero(n_phi),
     flux     = RealVectorX::Zero(dim);
     
-    std::unique_ptr<MAST::FieldFunction<RealMatrixX> > conductance =
+    std::unique_ptr<const MAST::FieldFunction<RealMatrixX> > conductance =
     _property.thermal_conductance_matrix(*this);
     
     std::vector<MAST::FEMOperatorMatrix> dBmat(dim);
@@ -176,7 +176,7 @@ MAST::HeatConductionElementBase::velocity_residual (bool request_jacobian,
     vec2_n2 = RealVectorX::Zero(n_phi),
     local_f = RealVectorX::Zero(n_phi);
     
-    std::unique_ptr<MAST::FieldFunction<RealMatrixX> > capacitance =
+    std::unique_ptr<const MAST::FieldFunction<RealMatrixX> > capacitance =
     _property.thermal_capacitance_matrix(*this);
     
     for (unsigned int qp=0; qp<JxW.size(); qp++) {
@@ -571,7 +571,7 @@ internal_residual_sensitivity (const MAST::FunctionBase& p,
     vec2_n2  = RealVectorX::Zero(n_phi),
     flux     = RealVectorX::Zero(dim);
     
-    std::unique_ptr<MAST::FieldFunction<RealMatrixX> > conductance =
+    std::unique_ptr<const MAST::FieldFunction<RealMatrixX> > conductance =
     _property.thermal_conductance_matrix(*this);
     
     std::vector<MAST::FEMOperatorMatrix> dBmat(dim);
@@ -645,7 +645,7 @@ internal_residual_boundary_velocity (const MAST::FunctionBase& p,
     flux     = RealVectorX::Zero(dim),
     vel      = RealVectorX::Zero(dim);
     
-    std::unique_ptr<MAST::FieldFunction<RealMatrixX> > conductance =
+    std::unique_ptr<const MAST::FieldFunction<RealMatrixX> > conductance =
     _property.thermal_conductance_matrix(*this);
     
     std::vector<MAST::FEMOperatorMatrix> dBmat(dim);
@@ -730,7 +730,7 @@ velocity_residual_sensitivity (const MAST::FunctionBase& p,
     vec2_n2 = RealVectorX::Zero(n_phi),
     local_f = RealVectorX::Zero(n_phi);
     
-    std::unique_ptr<MAST::FieldFunction<RealMatrixX> > capacitance =
+    std::unique_ptr<const MAST::FieldFunction<RealMatrixX> > capacitance =
     _property.thermal_capacitance_matrix(*this);
     
     for (unsigned int qp=0; qp<JxW.size(); qp++) {
@@ -808,7 +808,7 @@ velocity_residual_boundary_velocity (const MAST::FunctionBase& p,
     local_f = RealVectorX::Zero(n_phi),
     vel     = RealVectorX::Zero(dim);
     
-    std::unique_ptr<MAST::FieldFunction<RealMatrixX> > capacitance =
+    std::unique_ptr<const MAST::FieldFunction<RealMatrixX> > capacitance =
     _property.thermal_capacitance_matrix(*this);
 
     Real

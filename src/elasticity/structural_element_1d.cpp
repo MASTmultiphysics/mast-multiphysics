@@ -604,7 +604,7 @@ MAST::StructuralElement1D::internal_residual (bool request_jacobian,
                                                    fe->get_qpoints()).release());
 
     
-    std::unique_ptr<MAST::FieldFunction<RealMatrixX > >
+    std::unique_ptr<const MAST::FieldFunction<RealMatrixX > >
     mat_stiff_A  = _property.stiffness_A_matrix(*this),
     mat_stiff_B  = _property.stiffness_B_matrix(*this),
     mat_stiff_D  = _property.stiffness_D_matrix(*this);
@@ -755,7 +755,7 @@ MAST::StructuralElement1D::internal_residual_sensitivity (const MAST::FunctionBa
                                                    *this,
                                                    fe->get_qpoints()).release());
 
-    std::unique_ptr<MAST::FieldFunction<RealMatrixX > >
+    std::unique_ptr<const MAST::FieldFunction<RealMatrixX > >
     mat_stiff_A = _property.stiffness_A_matrix(*this),
     mat_stiff_B = _property.stiffness_B_matrix(*this),
     mat_stiff_D = _property.stiffness_D_matrix(*this);
@@ -878,7 +878,7 @@ internal_residual_jac_dot_state_sensitivity (RealMatrixX& jac) {
     if (!if_vk)
         return false;
     
-    std::unique_ptr<MAST::FieldFunction<RealMatrixX > >
+    std::unique_ptr<const MAST::FieldFunction<RealMatrixX > >
     mat_stiff_A  = _property.stiffness_A_matrix(*this),
     mat_stiff_B  = _property.stiffness_B_matrix(*this),
     mat_stiff_D  = _property.stiffness_D_matrix(*this);
@@ -1364,7 +1364,7 @@ MAST::StructuralElement1D::prestress_residual (bool request_jacobian,
                                                    *this,
                                                    fe->get_qpoints()).release());
 
-    std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
+    std::unique_ptr<const MAST::FieldFunction<RealMatrixX> >
     prestress_A = _property.prestress_A_matrix(*this),
     prestress_B = _property.prestress_B_matrix(*this);
     
@@ -1520,7 +1520,7 @@ MAST::StructuralElement1D::prestress_residual_sensitivity (const MAST::FunctionB
                                                    *this,
                                                    fe->get_qpoints()).release());
 
-    std::unique_ptr<MAST::FieldFunction<RealMatrixX> >
+    std::unique_ptr<const MAST::FieldFunction<RealMatrixX> >
     prestress_A = _property.prestress_A_matrix(*this),
     prestress_B = _property.prestress_B_matrix(*this);
     
@@ -1837,7 +1837,7 @@ MAST::StructuralElement1D::thermal_residual (bool request_jacobian,
                                                    *this,
                                                    fe->get_qpoints()).release());
 
-    std::unique_ptr<MAST::FieldFunction<RealMatrixX > >
+    std::unique_ptr<const MAST::FieldFunction<RealMatrixX > >
     expansion_A = _property.thermal_expansion_A_matrix(*this),
     expansion_B = _property.thermal_expansion_B_matrix(*this);
     
@@ -2006,7 +2006,7 @@ MAST::StructuralElement1D::thermal_residual_sensitivity (const MAST::FunctionBas
                                                    *this,
                                                    fe->get_qpoints()).release());
 
-    std::unique_ptr<MAST::FieldFunction<RealMatrixX > >
+    std::unique_ptr<const MAST::FieldFunction<RealMatrixX > >
     expansion_A = _property.thermal_expansion_A_matrix(*this),
     expansion_B = _property.thermal_expansion_B_matrix(*this);
     
@@ -2154,7 +2154,7 @@ piston_theory_residual(bool request_jacobian,
     dwdx_f  ("dwdx", dwdx_p),
     dwdt_f  ("dwdx", dwdt_p);
     
-    std::unique_ptr<MAST::FieldFunction<Real> >
+    std::unique_ptr<const MAST::FieldFunction<Real> >
     pressure        (piston_bc.get_pressure_function(dwdx_f, dwdt_f).release()),
     dpressure_dx    (piston_bc.get_dpdx_function    (dwdx_f, dwdt_f).release()),
     dpressure_dxdot (piston_bc.get_dpdxdot_function (dwdx_f, dwdt_f).release());
@@ -2346,7 +2346,7 @@ piston_theory_residual_sensitivity(const MAST::FunctionBase& p,
     dwdx_f  ("dwdx", dwdx_p),
     dwdt_f  ("dwdx", dwdt_p);
     
-    std::unique_ptr<MAST::FieldFunction<Real> >
+    std::unique_ptr<const MAST::FieldFunction<Real> >
     pressure        (piston_bc.get_pressure_function(dwdx_f, dwdt_f).release()),
     dpressure_dx    (piston_bc.get_dpdx_function    (dwdx_f, dwdt_f).release()),
     dpressure_dxdot (piston_bc.get_dpdxdot_function (dwdx_f, dwdt_f).release());
